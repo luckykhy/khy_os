@@ -13,6 +13,7 @@
  */
 const { sequelize } = require('../config/database');
 const User = require('./User');
+const AuthSession = require('./AuthSession');
 const Strategy = require('./Strategy');
 const Backtest = require('./Backtest');
 const Trade = require('./Trade');
@@ -98,6 +99,10 @@ Signal.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(ApiKey, { foreignKey: 'user_id', as: 'apiKeys' });
 ApiKey.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// AuthSession 关联关系（用于会话撤销校验）
+User.hasMany(AuthSession, { foreignKey: 'user_id', as: 'authSessions' });
+AuthSession.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 // 多租户网关：每用户独立 relay 配置 + custom provider/key 池。
 // constraints:false —— 与 Conversation / UserInstalledPlugin 同理（见下文 sentinel 0
 // 说明）。本地单机 / 可信网络旁路模式下 user_id 为哨兵 0（无对应 users 行），若强制
@@ -159,6 +164,7 @@ UserInstalledPlugin.belongsTo(MarketplacePlugin, { foreignKey: 'plugin_id', as: 
 module.exports = {
   sequelize,
   User,
+  AuthSession,
   Strategy,
   Backtest,
   Trade,

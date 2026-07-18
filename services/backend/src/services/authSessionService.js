@@ -348,24 +348,22 @@ async function revokeSessionById(sessionId, reason = 'logout') {
 async function revokeUserSessions(userId, options = {}) {
   const reason = String(options.reason || 'logout_all');
   const excludeSessionId = String(options.excludeSessionId || '').trim();
-  const sessions = await AuthSession.findAll({
-    where: {
-      userId,
-      revokedAt: null,
-      status: 'active',
-    },
-  });
 
-  let revokedCount = 0;
-  for (const session of sessions) {
-    if (excludeSessionId && String(session.id) === excludeSessionId) continue;
-    await session.update({
-      status: 'revoked',
-      revokedAt: new Date(),
-      revokedReason: reason,
-    });
-    revokedCount += 1;
+  // Bulk revoke to avoid TOCTOU race: between findAll + individual updates,
+  // a newly-created session could escape revocation.
+  const where = {
+    userId,
+    revokedAt: null,
+    status: 'active',
+  };
+  if (excludeSessionId) {
+    where.id = { [Op.ne]: excludeSessionId };
   }
+
+  const [revokedCount] = await AuthSession.update(
+    { status: 'revoked', revokedAt: new Date(), revokedReason: reason },
+    { where }
+  );
 
   return { revokedCount };
 }

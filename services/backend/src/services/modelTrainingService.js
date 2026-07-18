@@ -42,6 +42,28 @@ function isWritableDir(dir) {
   }
 }
 
+/**
+ * Validate model name to prevent command injection and path traversal.
+ *
+ * Allowed pattern: khy-<version> where version is digits and dots only
+ * (e.g. khy-1.0, khy-2.3.1). Rejects path separators, shell metacharacters,
+ * and any name that doesn't match the expected registry naming scheme.
+ */
+function validateModelName(name) {
+  if (typeof name !== 'string') {
+    throw new Error('Model name must be a string');
+  }
+  // Reject path traversal and shell metacharacters
+  if (/[\\/;|&$`(){}[\]<>!~\n\r]/.test(name)) {
+    throw new Error(`Invalid model name: "${name}" contains forbidden characters`);
+  }
+  // Enforce khy-<version> pattern
+  if (!/^khy-\d+(\.\d+)*$/.test(name)) {
+    throw new Error(`Invalid model name: "${name}". Expected format: khy-<version> (e.g. khy-1.0)`);
+  }
+  return true;
+}
+
 function logWaterQualityDebug(message, details = {}) {
   if (String(process.env.TRAIN_WATER_QUALITY_DEBUG || '').toLowerCase() !== 'true') return;
   const safeDetails = {};
@@ -714,6 +736,7 @@ function verifyExportPassword(_password) {
  * Register a trained model in the local registry.
  */
 function registerModel(name, metadata) {
+  validateModelName(name);
   const registry = loadModelRegistry();
   registry[name] = { ...metadata, registeredAt: new Date().toISOString() };
   ensureDir(TRAINING_DIR);
@@ -746,6 +769,7 @@ function listModels() {
  * @returns {Promise<{ success: boolean, ggufPath: string }>}
  */
 async function exportGGUF(modelName, quantization = 'q4_k_m', password = '') {
+  validateModelName(modelName);
   if (!verifyExportPassword(password)) {
     throw new Error('导出密码错误。模型导出需要输入正确的密码。');
   }
@@ -817,6 +841,7 @@ except Exception as e:
  * The LoRA adapter is already in safetensors format; this merges it with base.
  */
 async function exportSafetensors(modelName, password = '') {
+  validateModelName(modelName);
   if (!verifyExportPassword(password)) {
     throw new Error('导出密码错误。模型导出需要输入正确的密码。');
   }
@@ -880,6 +905,7 @@ print(f"SUCCESS:{output_path}")
  * @param {string} ggufPath
  */
 async function registerWithOllama(modelName, ggufPath) {
+  validateModelName(modelName);
   if (!fs.existsSync(ggufPath)) throw new Error(`GGUF file not found: ${ggufPath}`);
 
   const modelfile = `FROM ${ggufPath}
@@ -921,6 +947,7 @@ PARAMETER num_ctx 4096
  * @returns {Promise<{ success: boolean, url: string, message: string }>}
  */
 async function uploadToHuggingFace(modelName, opts = {}) {
+  validateModelName(modelName);
   const { repoId, password, private: isPrivate = true, onProgress } = opts;
 
   // Verify export password
@@ -1196,6 +1223,7 @@ function getRelayConfig() {
  * @returns {Promise<{ success: boolean, url: string, message: string }>}
  */
 async function uploadToGitRepo(modelName, opts = {}) {
+  validateModelName(modelName);
   const { platform = 'github', repo, owner, token, password } = opts;
 
   // Verify export password
@@ -1266,19 +1294,39 @@ khy train import ${modelName} --from ${remoteUrl}
       execSync(`git commit -m "Upload ${modelName}"`, { cwd: modelPath, stdio: 'pipe' });
     } catch { /* already committed */ }
 
-    // Set remote
+    // Set remote (without embedding token in URL)
+    const cleanRemoteUrl = platform === 'gitee'
+      ? `https://gitee.com/${gitOwner}/${repo}.git`
+      : `https://github.com/${gitOwner}/${repo}.git`;
+
     try {
       execSync(`git remote remove origin`, { cwd: modelPath, stdio: 'pipe' });
     } catch { /* no remote */ }
-    execSync(`git remote add origin ${remoteUrl}`, { cwd: modelPath, stdio: 'pipe' });
+    execSync(`git remote add origin ${cleanRemoteUrl}`, { cwd: modelPath, stdio: 'pipe' });
 
     // Try to create repo via API (if token provided)
     if (token) {
       await createRemoteRepo(platform, repo, token, gitOwner);
     }
 
-    // Push
-    execSync('git push -u origin main --force', { cwd: modelPath, stdio: 'pipe', timeout: 300000 });
+    // Push — inject token via temporary credential helper to avoid
+    // embedding it in the remote URL (which would persist in .git/config
+    // and appear in process listings).
+    if (token) {
+      const host = platform === 'gitee' ? 'gitee.com' : 'github.com';
+      const credHelperPath = path.join(modelPath, '.git-credentials-tmp');
+      fs.writeFileSync(credHelperPath, `https://${gitOwner}:${token}@${host}\n`, { mode: 0o600 });
+      try {
+        execSync(`git config credential.helper "store --file=${credHelperPath}"`, { cwd: modelPath, stdio: 'pipe' });
+        execSync('git push -u origin main --force', { cwd: modelPath, stdio: 'pipe', timeout: 300000 });
+      } finally {
+        // Always clean up the temporary credential file
+        try { fs.unlinkSync(credHelperPath); } catch { /* ignore */ }
+        try { execSync('git config --unset credential.helper', { cwd: modelPath, stdio: 'pipe' }); } catch { /* ignore */ }
+      }
+    } else {
+      execSync('git push -u origin main --force', { cwd: modelPath, stdio: 'pipe', timeout: 300000 });
+    }
 
     const publicUrl = platform === 'gitee'
       ? `https://gitee.com/${gitOwner}/${repo}`
@@ -1575,6 +1623,7 @@ module.exports = {
   exportSafetensors,
   registerWithOllama,
   abliterateModel,
+  validateModelName,
 
   // Version management & Relay
   getNextVersion,

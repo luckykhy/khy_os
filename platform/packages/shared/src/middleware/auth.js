@@ -9,7 +9,7 @@
  */
 const jwt = require('jsonwebtoken');
 const { QueryTypes } = require('sequelize');
-const { User, ApiKey, sequelize } = require('../models');
+const { User, ApiKey, AuthSession, sequelize } = require('../models');
 const { hashApiKey } = require('../utils/apiKeyHash');
 
 const API_KEY_SCHEMA_CACHE_MS = 60 * 1000;
@@ -119,7 +119,7 @@ async function findApiKeyRecord(apiKeyValue) {
 const authMiddleware = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -127,9 +127,22 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.userId);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      if (error?.name === 'TokenExpiredError') {
+        return res.status(401).json({ success: false, message: '认证令牌已过期' });
+      }
+      return res.status(401).json({ success: false, message: '认证失败' });
+    }
 
+    const userId = Number(decoded?.userId || 0);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: '缺少用户标识' });
+    }
+
+    const user = await User.findByPk(userId);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -142,6 +155,38 @@ const authMiddleware = async (req, res, next) => {
         success: false,
         message: '账户已被禁用'
       });
+    }
+
+    // Check session revocation if token carries a sessionId
+    if (decoded.sessionId) {
+      const session = await AuthSession.findByPk(String(decoded.sessionId));
+      if (!session || Number(session.userId) !== userId) {
+        return res.status(401).json({
+          success: false,
+          message: '登录会话已失效，请重新登录'
+        });
+      }
+      if (session.revokedAt || session.status === 'revoked') {
+        return res.status(401).json({
+          success: false,
+          message: '登录会话已失效，请重新登录'
+        });
+      }
+      if (new Date(session.expiresAt).getTime() <= Date.now()) {
+        return res.status(401).json({
+          success: false,
+          message: '登录会话已失效，请重新登录'
+        });
+      }
+      // Token version check
+      const decodedVersion = Number(decoded.tokenVersion || 0);
+      const sessionVersion = Number(session.tokenVersion || 0);
+      if (decodedVersion && sessionVersion && decodedVersion !== sessionVersion) {
+        return res.status(401).json({
+          success: false,
+          message: '登录会话已失效，请重新登录'
+        });
+      }
     }
 
     req.user = user;
@@ -178,6 +223,16 @@ const flexibleAuth = async (req, res, next) => {
       }
       if (user.status !== 'active') {
         return res.status(403).json({ success: false, message: 'Account disabled' });
+      }
+      // Check session revocation
+      if (decoded.sessionId) {
+        const session = await AuthSession.findByPk(String(decoded.sessionId));
+        if (!session || Number(session.userId) !== Number(decoded.userId) || session.revokedAt || session.status === 'revoked') {
+          return res.status(401).json({ success: false, message: 'Session revoked, please re-authenticate' });
+        }
+        if (new Date(session.expiresAt).getTime() <= Date.now()) {
+          return res.status(401).json({ success: false, message: 'Session expired, please re-authenticate' });
+        }
       }
       req.user = user;
       req.authMethod = 'jwt';
