@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 7: Packaging &amp; Registration · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 7: Packaging &amp; Registration</div>
+      <header class="hero reveal"><h1>Stage 7: Packaging &amp; Registration</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-7-packaging-registration">Stage 7: Packaging &amp; Registration</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#python-packaging">Python Packaging</a></li><li class="lvl-2"><a href="#node-js-packaging">Node.js Packaging</a></li><li class="lvl-2"><a href="#khy-os-registration">KHY OS Registration</a></li><li class="lvl-2"><a href="#verification">Verification</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-7-packaging-registration">Stage 7: Packaging &amp; Registration<a class="anchor" href="#stage-7-packaging-registration" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Create distributable package, install locally, and register with KHY OS.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li>Complete source tree from Stage 3-6</li></ul>
+<h2 id="python-packaging">Python Packaging<a class="anchor" href="#python-packaging" aria-label="锚点">#</a></h2>
+<ol><li><strong>Generate <code>setup.py</code></strong>:</li></ol>
+<pre><code class="language-python">   from setuptools import setup, find_namespace_packages
+
+   setup(
+       name='cli-anything-&lt;SOFTWARE&gt;',
+       version='1.0.0',
+       packages=find_namespace_packages(include=['cli_anything.*']),
+       entry_points={
+           'console_scripts': [
+               'cli-anything-&lt;SOFTWARE&gt;=cli_anything.&lt;SOFTWARE&gt;.&lt;SOFTWARE&gt;_cli:cli',
+           ],
+       },
+       install_requires=['click&gt;=8.0'],
+       python_requires='&gt;=3.8',
+   )</code></pre>
+<ol><li><strong>Install locally</strong>: <code>pip install -e .</code></li><li><strong>Verify installation</strong>: <code>cli-anything-&lt;SOFTWARE&gt; --version</code></li></ol>
+<h2 id="node-js-packaging">Node.js Packaging<a class="anchor" href="#node-js-packaging" aria-label="锚点">#</a></h2>
+<ol><li><strong>Ensure <code>package.json</code></strong> has:</li></ol>
+<pre><code class="language-json">   {
+     &quot;name&quot;: &quot;khy-cli-&lt;SOFTWARE&gt;&quot;,
+     &quot;version&quot;: &quot;1.0.0&quot;,
+     &quot;bin&quot;: { &quot;cli-anything-&lt;SOFTWARE&gt;&quot;: &quot;./src/index.js&quot; },
+     &quot;main&quot;: &quot;./src/index.js&quot;
+   }</code></pre>
+<ol><li><strong>Install locally</strong>: <code>npm link</code></li><li><strong>Verify installation</strong>: <code>cli-anything-&lt;SOFTWARE&gt; --version</code></li></ol>
+<h2 id="khy-os-registration">KHY OS Registration<a class="anchor" href="#khy-os-registration" aria-label="锚点">#</a></h2>
+<p>After successful install, the system automatically:</p>
+<ol><li><strong>Discovers</strong> the new CLI via <code>discoverInstalled()</code></li><li><strong>Registers as KHY App</strong> via <code>appRegistry.register()</code> with <code>runtime: 'external'</code></li><li><strong>Registers as KHY Tool</strong> via <code>defineTool()</code> with <code>cli_anything__&lt;SOFTWARE&gt;</code> name</li><li><strong>Converts SKILL.md</strong> to KHY skill at <code>~/.khy/skills/cli-anything-&lt;SOFTWARE&gt;/</code></li></ol>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy app cli-list                # Should show the new CLI
+khy skill list                  # Should show cli-anything-&lt;SOFTWARE&gt; skill
+khy app cli-invoke &lt;SOFTWARE&gt; --help  # Should display help</code></pre>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li>Installable package</li><li>CLI registered in KHY OS tool/skill/app registries</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_6_DOCS.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 6: Documentation &amp; SKILL.md</div></a><a class="next" href="../../../../../services/backend/src/skills/built-in/api-and-interface-design/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">API and Interface Design</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_7_PACKAGE.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+{
+  "sessionId": "1bb8a6de-1974-4290-b6aa-0640f94e20f6",
+  "title": "",
+  "model": "api:agnes:agnes-2.0-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。] [System: T s task has multiple steps. Before starting, briefly outline your approach (2-5 numbered steps with specific file/function names). Wrap it in <execution_plan> tags. Then immediately begin the first step. Steps that can run in parallel should share a parallel_group label, e.g. \"2. [read] Read config ← parallel_group: A\". Between steps, provide a brief status update. Do NOT just silently chain tool calls.] [System: 给计划里每个步骤标注优先级 P0(阻塞/必须最先做)、P1(高/关键路径)、P2(中)、P3(低/可延后),把高优先级步骤排在前面、先做 P0,并简述定级理由。格式形如 \"1. [P0] …\"。] [System: T s task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.] 我想配置Opencode 集成指南 复制页面 Agnes 模型的 Opencode 集成指南 概述 本教程介绍如何在 OpenCode 中接入 Agnes-2.0-Flash 模型。 配置完成后，你可以在 OpenCode 中直接使用 Agnes 模型进行代码生成、项目分析、代码修改和多轮对话。 本教程基于 OpenCode 1.15.13 版本整理。 准备工作 开始配置前，请确保你已完成以下准备： 已注册 Agnes AI 账号 已进入 Agnes API Platform 已创建并复制 API Key 当前网络环境可以访问 Agnes API Gateway 配置项 值 Provider Agnes Base URL https://apihub.agnes-ai.com/v1 Model agnes-2.0-flash API Key 使用你在 Agnes Platform 创建的 API Key API"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "你想在 OpenCode 中配置 Agnes 模型，配置项如下：\n\n| 配置项 | 值 |\n|--------|-----|\n| Provider | Agnes |\n| Base URL | https://apihub.agnes-ai.com/v1 |\n| Model | agnes-2.0-flash |\n| API Key | 需要你提供 |\n\n要完成配置，我需要你提供在 Agnes Platform 创建的 API Key。请粘贴你的 API Key（我会脱敏处理，不会回显完整值）。"
+        },
+        {
+          "type": "tool_use",
+          "id": "loop_6wkcru1k",
+          "name": "web_search",
+          "input": {}
+        },
+        {
+          "type": "tool_use",
+          "id": "loop_3nsjix79",
+          "name": "web_search",
+          "input": {}
+        },
+        {
+          "type": "tool_use",
+          "id": "loop_f9axl6z6",
+          "name": "web_search",
+          "input": {}
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "loop_6wkcru1k",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"Claude Code 无限 token,爽麻了!_Agnes_模型_Switch\",\"url\":\"https://www.sohu.com/a/1041441181_122073250\",\"snippet\":\"3天前文本模型:agnes-2.0-flash 图片模型:agnes-image-2.1-flash 视频模型:agnes-video-v2.0 第一步:获取 Agnes API Key 先访问 Agnes API Platform:https://platform.agnes-ai.com/ 注册登录后,进入 API Key 页面,创建并复制一个新的 Key。 第二步:安装 CC Switc 搜狐网\",\"publishedDate\":\"2026-06-24\",\"domain\":\"www.sohu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"2026年开发者必备:opencode开源框架部署入门必看-CSDN博客\",\"url\":\"https://blog.csdn.net/weixin_35756892/article/details/157866625\",\"snippet\":\"2026年2月8日单有OpenCode 还不够——再好的框架,也需要一个响应快、显存省、效果稳的本地模型来驱动。 这就是为什么我们推荐vLLM + OpenCode的组合:vLLM 是目前最成熟的 LLM 推理引擎之一,对 Qwen3-4B-Instruct-2507 这类中等规模模型做了深度优化—— 同样一张 A10(24G 显存),vLLM 可以稳定跑满 8 个并发请求,而... CSDN博客  播报  暂停\",\"publishedDate\":\"2026-02-08\",\"domain\":\"blog.csdn.net\",\"type\":\"blog\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"opencode项目规划Agent实战:需求拆解到代码生成完整流程-CSDN博客\",\"url\":\"https://blog.csdn.net/weixin_42515340/article/details/156961565\",\"snippet\":\"2026年3月21日这条命令会自动拉取最新的OpenCode镜像并启动容器。安装完成后,直接在终端输入opencode就能进入应用界面。 2.2 配置模型文件 为了获得最佳效果,建议使用官方推荐的模型。在你的项目根目录下新建一个opencode.json配置文件: { \\\"$schema\\\": \\\"https://opencode.ai/config.json\\\", \\\"provider\\\": { \\\"myprovider\\\": { \\\"n... CSDN博客  播报  暂停\",\"publishedDate\":\"2026-03-21\",\"domain\":\"blog.csdn.net\",\"type\":\"blog\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"OpenCode 超级详细入门指南,打造你的高效 AI 编程助手 - 知乎\",\"url\":\"https://zhuanlan.zhihu.com/p/1991988522329085820\",\"snippet\":\"2026年1月6日OpenCode 支持 Build 和 Plan 两种核心模式,目的是通过权限分离来确保代码操作的安全性与准确... 5 知乎  播报  暂停\",\"publishedDate\":\"2026-01-06\",\"domain\":\"zhuanlan.zhihu.com\",\"type\":\"forum\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"我（汉语汉字）_百度百科\",\"url\":\"https://baike.baidu.com/item/%E6%88%91/85\",\"snippet\":\"我，汉语一级通用规范汉字（常用字），读作wǒ，最早见于甲骨文，其甲骨文本义指奴隶社会里一种用来行刑杀人和肢解牲口的凶器，后由本义衍生出“手持大戉，呐喊示威”等意；但到了战国时代，“我”字 …\",\"publishedDate\":\"\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"OpenCode 落地指南:从模型配置到 agency-agents 智能体专家集成...\",\"url\":\"https://zhuanlan.zhihu.com/p/2022377157461057893\",\"snippet\":\"2026年4月3日这是一套通过命令行安装 OpenCode、配置火山方舟等多模型接入,并集成 agency-agents 智能体... 5 知乎\",\"publishedDate\":\"2026-04-03\",\"domain\":\"zhuanlan.zhihu.com\",\"type\":\"forum\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"我（2000年张国荣演唱的流行歌曲）_百度百科\",\"url\":\"https://baike.baidu.com/item/%E6%88%91/10637921\",\"snippet\":\"2000年7月1日 · 《我》是张国荣演唱的歌曲，由林夕填词，张国荣谱曲，赵增熹编曲。 该曲分为粤语和普通话两个版本，均收录于张国荣2000年7月1日发行的录音室专辑《大热》。 从歌名即可看出，《 …\",\"publishedDate\":\"2000-07-01\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"全面掌握 OpenCode:从零基础到精通开源 AI 编程助手的完全指南...\",\"url\":\"https://blog.51cto.com/u_12228/14573472\",\"snippet\":\"2026年4月28日• 敏感环境通过{env:VAR}或{file:path}动态注入配置。 OpenCode完全使用指南:开源 AI 编程助手入门到精通 本教程基于OpenCodeopencode.ai/docs)和 GitHub 仓库(https://github.com/anomalyco/opencode)编写,适合零基础新手入门。 📚 目录 什么是OpenCode ... 51CTO博客  播报  暂停\",\"publishedDate\":\"2026-04-28\",\"domain\":\"blog.51cto.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1}],\"formatted\":\"### 1. Claude Code 无限 token,爽麻了!_Agnes_模型_Switch\\nURL: https://www.sohu.com/a/1041441181_122073250\\n3天前文本模型:agnes-2.0-flash 图片模型:agnes-image-2.1-flash 视频模型:agnes-video-v2.0 第一步:获取 Agnes API Key 先访问 Agnes API Platform:https://platform.agnes-ai.com/ 注册登录后,进入 API Key 页面,创建并复制一个新的 Key。 第二步:安装 CC Switc 搜狐网\\nPublished: 2026-06-24\\n\\n---\\n\\n### 2. 2026年开发者必备:opencode开源框架部署入门必看-CSDN博客 [Blog]\\nURL: https://blog.csdn.net/weixin_35756892/article/details/157866625\\n2026年2月8日单有OpenCode 还不够——再好的框架,也需要一个响应快、显存省、效果稳的本地模型来驱动。 这就是为什么我们推荐vLLM + OpenCode的组合:vLLM 是目前最成熟的 LLM 推理引擎之一,对 Qwen3-4B-Instruct-2507 这类中等规模模型做了深度优化—— 同样一张 A10(24G 显存),vLLM 可以稳定跑满 8 个并发请求,而... CSDN博客  播报  暂停\\nPublished: 2026-02-08\\n\\n---\\n\\n### 3. opencode项目规划Agent实战:需求拆解到代码生成完整流程-CSDN博客 [Blog]\\nURL: https://blog.csdn.net/weixin_42515340/article/details/156961565\\n2026年3月21日这条命令会自动拉取最新的OpenCode镜像并启动容器。安装完成后,直接在终端输入opencode就能进入应用界面。 2.2 配置模型文件 为了获得最佳效果,建议使用官方推荐的模型。在你的项目根目录下新建一个opencode.json配置文件: { \\\"$schema\\\": \\\"https://opencode.ai/config.json\\\", \\\"provider\\\": { \\\"myprovider\\\": { \\\"n... CSDN博客  播报  暂停\\nPublished: 2026-03-21\\n\\n---\\n\\n### 4. OpenCode 超级详细入门指南,打造你的高效 AI 编程助手 - 知乎 [Forum]\\nURL: https://zhuanlan.zhihu.com/p/1991988522329085820\\n2026年1月6日OpenCode 支持 Build 和 Plan 两种核心模式,目的是通过权限分离来确保代码操作的安全性与准确... 5 知乎  播报  暂停\\nPublished: 2026-01-06\\n\\n---\\n\\n### 5. 我（汉语汉字）_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/%E6%88%91/85\\n我，汉语一级通用规范汉字（常用字），读作wǒ，最早见于甲骨文，其甲骨文本义指奴隶社会里一种用来行刑杀人和肢解牲口的凶器，后由本义衍生出“手持大戉，呐喊示威”等意；但到了战国时代，“我”字 …\\n\\n---\\n\\n### 6. OpenCode 落地指南:从模型配置到 agency-agents 智能体专家集成... [Forum]\\nURL: https://zhuanlan.zhihu.com/p/2022377157461057893\\n2026年4月3日这是一套通过命令行安装 OpenCode、配置火山方舟等多模型接入,并集成 agency-agents 智能体... 5 知乎\\nPublished: 2026-04-03\\n\\n---\\n\\n### 7. 我（2000年张国荣演唱的流行歌曲）_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/%E6%88%91/10637921\\n2000年7月1日 · 《我》是张国荣演唱的歌曲，由林夕填词，张国荣谱曲，赵增熹编曲。 该曲分为粤语和普通话两个版本，均收录于张国荣2000年7月1日发行的录音室专辑《大热》。 从歌名即可看出，《 …\\nPublished: 2000-07-01\\n\\n---\\n\\n### 8. 全面掌握 OpenCode:从零基础到精通开源 AI 编程助手的完全指南...\\nURL: https://blog.51cto.com/u_12228/14573472\\n2026年4月28日• 敏感环境通过{env:VAR}或{file:path}动态注入配置。 OpenCode完全使用指南:开源 AI 编程助手入门到精通 本教程基于OpenCodeopencode.ai/docs)和 GitHub 仓库(https://github.com/anomalyco/opencode)编写,适合零基础新手入门。 📚 目录 什么是OpenCode ... 51CTO博客  播报  暂停\\nPublished: 2026-04-28\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\\n\\n---\\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\\n  • sohu.com（出现 1 次）\",\"partialFailures\":[{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"},{\"engine\":\"sogou\",\"message\":\"Sogou: no results parsed from response\"}],\"discoveredSources\":[{\"host\":\"sohu.com\",\"hits\":1,\"maxEngineCount\":1,\"bestRank\":0,\"sample\":\"Claude Code 无限 token,爽麻了!_Agnes_模型_Switch\",\"score\":1.5}],\"suggestedSiteQueries\":[\"site:sohu.com 我想配置Opencode 集成指南 复制页面 Agnes 模型的 Opencode 集成指南 ​ 概述 本教程介绍如何在 OpenCode 中接入 Agnes-2.0-Flash 模型。 配置完成后，你可以在 OpenCode 中直接使用 Agnes 模型进行代码生成、项目分析、代码修改和多轮对话。 本教程基于 OpenCode 1.15.13 版本整理。 ​ 准备工作 开始配置前，请确保你已完成\"]}"
+        },
+        {
+          "type": "tool_result",
+          "tool_use_id": "loop_3nsjix79",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"可以免费使用的 Agnes多模态大模型,很多人还不知道!_agnes ai官网-CSDN...\",\"url\":\"https://blog.csdn.net/young_mie/article/details/161600618\",\"snippet\":\"2026年6月1日API平台直达:https://platform.agnes-ai.com/login 2.首先部署agnes-2.0-flash文本模型:前往workbuddy,点击配置自定义模型 提供商选择 其他-自定义,接口地址和模型名称必须原样复制粘贴,如图: 接口地址:https://apihub.agnes-ai.com/v1 模型名称:agnes-2.0-flash 在APIkey一栏填入AP 4 CSDN博客  播报  暂停\",\"publishedDate\":\"2026-06-01\",\"domain\":\"blog.csdn.net\",\"type\":\"blog\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Modelence Deploys AI-Generated Backends in Minutes, Powered...\",\"url\":\"https://www.mongodb.com/company/blog/innovation/modelence-deploys-ai-generated-backends-in-minutes-powered-by-mongodb-atlas\",\"snippet\":\"查看此网页的中文翻译，请点击 翻译此页 2025年12月8日ambiguity. The document model absorbs most schema changes without requiring manual ... MongoDB官网\",\"publishedDate\":\"2025-12-08\",\"domain\":\"www.mongodb.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Agentic AI-Powered Payments Orchestration - Atlas...\",\"url\":\"https://www.mongodb.com/docs/atlas/architecture/current/solutions-library/agentic-powered-payments/\",\"snippet\":\"Schema Flexibility : The MongoDB document model aligns naturally with canonical payment formats. Developers can evolve data models without migrations, store related data (canonical JSON, metadata, audit trail) in a single document, and handle diverse message structures without schema conflicts. ...\",\"publishedDate\":\"\",\"domain\":\"www.mongodb.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"agnes 免费大模型实测支持文图、视频生成,其免费模式将如何影响...\",\"url\":\"https://www.zhihu.com/question/2047764568705914721/answer/2052362433923223767\",\"snippet\":\"6天前一边是 Token 量在疯涨，另一边Agnes模型能力也在持续升级。最近文本模型Agnes-2.0-Flash正式上线百万 T... 4 知乎\",\"publishedDate\":\"2026-06-21\",\"domain\":\"www.zhihu.com\",\"type\":\"forum\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Model（英语单词）_百度百科\",\"url\":\"https://baike.baidu.com/item/Model/63324941\",\"snippet\":\"Model是源自英语的多功能词汇，发音为英 [ˈmɒd (ə)l]/美 [ˈmɑːd (ə)l]，兼具名词、动词、形容词三种词性，核心语义涵盖模型构建、行为模仿与典范特质，广泛应用于工程设计、科学研究和商业运营等领域。\",\"publishedDate\":\"\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"model-atoms\",\"url\":\"https://service-atoms.com/\",\"snippet\":\"Typed— every atom validates against a JSON Schema. Versioned— every atom has a semverversionfield. Machine-readable—/exports/catalog.jsonis the canonical manifest. Composable— model compositions reference atoms by ID. Open— Apache-2.0 licensed. ... service-atoms.com/\",\"publishedDate\":\"\",\"domain\":\"service-atoms.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Model 3 – 运动电动轿车 | 特斯拉中国\",\"url\":\"https://www.tesla.cn/model3\",\"snippet\":\"了解 Model 3，一款兼具高性能和经济性的中型电动轿车，加速快、续航里程长且使用成本低。\",\"publishedDate\":\"\",\"domain\":\"www.tesla.cn\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"cursor-vip/docs/models-gemini-2.0_CN.md at main · bloomwang...\",\"url\":\"https://github.com/zhengxiake/cursor-vip/blob/main/docs/models-gemini-2.0_CN.md\",\"snippet\":\"2024年12月16日谷歌最近发布了它们的最新大模型 Gemini 2.0,速度是之前的 2 倍,只要成为开发者就能够免费通过 API 的方式使用 gemini-2.0-flash-exp 模型。 step 1: 创建 Google AI Studio API 密钥 访问Google AI Studio点击创建 API 密钥。 step 2: 在 Cursor 设置 Google API Key ... GitHub\",\"publishedDate\":\"2024-12-16\",\"domain\":\"github.com\",\"type\":\"code\",\"engines\":[\"baidu\"],\"engineCount\":1}],\"formatted\":\"### 1. 可以免费使用的 Agnes多模态大模型,很多人还不知道!_agnes ai官网-CSDN... [Blog]\\nURL: https://blog.csdn.net/young_mie/article/details/161600618\\n2026年6月1日API平台直达:https://platform.agnes-ai.com/login 2.首先部署agnes-2.0-flash文本模型:前往workbuddy,点击配置自定义模型 提供商选择 其他-自定义,接口地址和模型名称必须原样复制粘贴,如图: 接口地址:https://apihub.agnes-ai.com/v1 模型名称:agnes-2.0-flash 在APIkey一栏填入AP 4 CSDN博客  播报  暂停\\nPublished: 2026-06-01\\n\\n---\\n\\n### 2. Modelence Deploys AI-Generated Backends in Minutes, Powered...\\nURL: https://www.mongodb.com/company/blog/innovation/modelence-deploys-ai-generated-backends-in-minutes-powered-by-mongodb-atlas\\n查看此网页的中文翻译，请点击 翻译此页 2025年12月8日ambiguity. The document model absorbs most schema changes without requiring manual ... MongoDB官网\\nPublished: 2025-12-08\\n\\n---\\n\\n### 3. Agentic AI-Powered Payments Orchestration - Atlas...\\nURL: https://www.mongodb.com/docs/atlas/architecture/current/solutions-library/agentic-powered-payments/\\nSchema Flexibility : The MongoDB document model aligns naturally with canonical payment formats. Developers can evolve data models without migrations, store related data (canonical JSON, metadata, audit trail) in a single document, and handle diverse message structures without schema conflicts. ...\\n\\n---\\n\\n### 4. agnes 免费大模型实测支持文图、视频生成,其免费模式将如何影响... [Forum]\\nURL: https://www.zhihu.com/question/2047764568705914721/answer/2052362433923223767\\n6天前一边是 Token 量在疯涨，另一边Agnes模型能力也在持续升级。最近文本模型Agnes-2.0-Flash正式上线百万 T... 4 知乎\\nPublished: 2026-06-21\\n\\n---\\n\\n### 5. Model（英语单词）_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/Model/63324941\\nModel是源自英语的多功能词汇，发音为英 [ˈmɒd (ə)l]/美 [ˈmɑːd (ə)l]，兼具名词、动词、形容词三种词性，核心语义涵盖模型构建、行为模仿与典范特质，广泛应用于工程设计、科学研究和商业运营等领域。\\n\\n---\\n\\n### 6. model-atoms\\nURL: https://service-atoms.com/\\nTyped— every atom validates against a JSON Schema. Versioned— every atom has a semverversionfield. Machine-readable—/exports/catalog.jsonis the canonical manifest. Composable— model compositions reference atoms by ID. Open— Apache-2.0 licensed. ... service-atoms.com/\\n\\n---\\n\\n### 7. Model 3 – 运动电动轿车 | 特斯拉中国\\nURL: https://www.tesla.cn/model3\\n了解 Model 3，一款兼具高性能和经济性的中型电动轿车，加速快、续航里程长且使用成本低。\\n\\n---\\n\\n### 8. cursor-vip/docs/models-gemini-2.0_CN.md at main · bloomwang... [Code]\\nURL: https://github.com/zhengxiake/cursor-vip/blob/main/docs/models-gemini-2.0_CN.md\\n2024年12月16日谷歌最近发布了它们的最新大模型 Gemini 2.0,速度是之前的 2 倍,只要成为开发者就能够免费通过 API 的方式使用 gemini-2.0-flash-exp 模型。 step 1: 创建 Google AI Studio API 密钥 访问Google AI Studio点击创建 API 密钥。 step 2: 在 Cursor 设置 Google API Key ... GitHub\\nPublished: 2024-12-16\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\\n\\n---\\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\\n  • mongodb.com（出现 2 次）\",\"partialFailures\":[{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"},{\"engine\":\"sogou\",\"message\":\"Sogou: no results parsed from response\"}],\"discoveredSources\":[{\"host\":\"mongodb.com\",\"hits\":2,\"maxEngineCount\":1,\"bestRank\":1,\"sample\":\"Modelence Deploys AI-Generated Backends in Minutes, Powered...\",\"score\":1.875}],\"suggestedSiteQueries\":[\"site:mongodb.com model agnes/agnes-2.0-flash $schema official documentation\"]}"
+        },
+        {
+          "type": "tool_result",
+          "tool_use_id": "loop_f9axl6z6",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"好消息,Agnes 推出免费 LLM Token,不用买 Coding Plan 啦!-腾讯云...\",\"url\":\"https://cloud.tencent.com/developer/article/2696885\",\"snippet\":\"4天前Agnes-2.0-Flash 在 Claw-Eval 基准测试中取得了强劲表现,在 General Leaderboard 中排名第 9,有 1M 上下文能力,在面向智能体工作流、工具调用、编程任务、推理、多轮对话、图片理解,处理复杂命令指令,都有不错的标签。 此APIKey,你可以在官网免费申请 ApiKey 替换后进行测试。这部分API,在后文会配置到软 6 腾讯云计算  播报  暂停\",\"publishedDate\":\"2026-06-23\",\"domain\":\"cloud.tencent.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Codex客户端接入Agnes-2.0-Flash教程:实现免费使用多模态大模型AI编程...\",\"url\":\"https://blog.csdn.net/weixin_41961749/article/details/161663207\",\"snippet\":\"2026年6月3日经过测试,我发现通过CC-Switch + Agnes AI的组合,可以非常方便地将Agnes-2.0-Flash接入到 ... 2 CSDN博客  播报  暂停\",\"publishedDate\":\"2026-06-03\",\"domain\":\"blog.csdn.net\",\"type\":\"blog\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Claude 限制接入龙虾智能体?Agnes AI 厂家直接掀桌:多模态 API...\",\"url\":\"https://cloud.tencent.com/developer/article/2696718\",\"snippet\":\"4天前Claude 在限制,Agnes 在放开。 一个是筑墙,一个是掀桌。 Agnes AI 2.0 Flash 永久免费,让多模态 API 直接变成公共基础设施。拼的就是谁能用最低成本、最硬核的智能体缝合技术,把生产边际成本逼近零。 你觉得 Agnes AI 的永久免费,是慈善,还是在下一盘更大的生态棋?你在 Hermes 或 OpenClaw 接入时,有没有... 腾讯云计算\",\"publishedDate\":\"2026-06-23\",\"domain\":\"cloud.tencent.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Agnes AI 免费API接入Claude Code,免费 Token 随便烧!-CSDN博客\",\"url\":\"https://blog.csdn.net/2602_94958286/article/details/162127614\",\"snippet\":\"3天前{\\\"env\\\":{\\\"ANTHROPIC_BASE_URL\\\":\\\"https://apihub.agnes-ai.com/v1\\\",\\\"ANTHROPIC_AUTH_TOKEN\\\":\\\"sk-xxxx你的API密钥\\\",\\\"ANTHROPIC_DEFAULT_SONNET_MODEL\\\":\\\"agnes-2.0-flash\\\",\\\"ANTHROPIC_DEFAULT_SONNET_MODEL_NAME\\\":\\\"agnes-2.0-flash\\\",\\\"ANTHROPIC_DEFAULT_OPUS_MODEL\\\":\\\"agnes-image-2.1-flash\\\",\\\"ANTHROPIC_DEFAU... CSDN博客  播报 \",\"publishedDate\":\"2026-06-24\",\"domain\":\"blog.csdn.net\",\"type\":\"blog\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Model（英语单词）_百度百科\",\"url\":\"https://baike.baidu.com/item/Model/63324941\",\"snippet\":\"Model是源自英语的多功能词汇，发音为英 [ˈmɒd (ə)l]/美 [ˈmɑːd (ə)l]，兼具名词、动词、形容词三种词性，核心语义涵盖模型构建、行为模仿与典范特质，广泛应用于工程设计、科学研究和商业运营等领域。\",\"publishedDate\":\"\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"开发者冲爆了!全球前十AI Lab无限免费,一周烧出3.12万亿Token...\",\"url\":\"https://hub.baai.ac.cn/view/55659\",\"snippet\":\"2026年6月19日升级点 A:Agnes-2.0-Flash 1M 原生超长上下文将落地 本周内,文本模型将原生支持 1M Token... 智源社区  播报  暂停\",\"publishedDate\":\"2026-06-19\",\"domain\":\"hub.baai.ac.cn\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"Model 3 – 运动电动轿车 | 特斯拉中国\",\"url\":\"https://www.tesla.cn/model3\",\"snippet\":\"了解 Model 3，一款兼具高性能和经济性的中型电动轿车，加速快、续航里程长且使用成本低。\",\"publishedDate\":\"\",\"domain\":\"www.tesla.cn\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"今天起,无限期免费!全球首个全模态API开放,Top 10 AI Lab出手_创...\",\"url\":\"http://finance.sina.com.cn/tech/csj/2026-06-01/doc-inhzwist5375854.shtml\",\"snippet\":\"2026年6月1日根据Agnes披露的信息,Agnes-2.0-Flash进入Claw-Eval榜单,图像模型Agnes-Image-2.0-Flash进入Ar... 11 新浪财经  播报  暂停\",\"publishedDate\":\"2026-06-27\",\"domain\":\"finance.sina.com.cn\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1}],\"formatted\":\"### 1. 好消息,Agnes 推出免费 LLM Token,不用买 Coding Plan 啦!-腾讯云...\\nURL: https://cloud.tencent.com/developer/article/2696885\\n4天前Agnes-2.0-Flash 在 Claw-Eval 基准测试中取得了强劲表现,在 General Leaderboard 中排名第 9,有 1M 上下文能力,在面向智能体工作流、工具调用、编程任务、推理、多轮对话、图片理解,处理复杂命令指令,都有不错的标签。 此APIKey,你可以在官网免费申请 ApiKey 替换后进行测试。这部分API,在后文会配置到软 6 腾讯云计算  播报  暂停\\nPublished: 2026-06-23\\n\\n---\\n\\n### 2. Codex客户端接入Agnes-2.0-Flash教程:实现免费使用多模态大模型AI编程... [Blog]\\nURL: https://blog.csdn.net/weixin_41961749/article/details/161663207\\n2026年6月3日经过测试,我发现通过CC-Switch + Agnes AI的组合,可以非常方便地将Agnes-2.0-Flash接入到 ... 2 CSDN博客  播报  暂停\\nPublished: 2026-06-03\\n\\n---\\n\\n### 3. Claude 限制接入龙虾智能体?Agnes AI 厂家直接掀桌:多模态 API...\\nURL: https://cloud.tencent.com/developer/article/2696718\\n4天前Claude 在限制,Agnes 在放开。 一个是筑墙,一个是掀桌。 Agnes AI 2.0 Flash 永久免费,让多模态 API 直接变成公共基础设施。拼的就是谁能用最低成本、最硬核的智能体缝合技术,把生产边际成本逼近零。 你觉得 Agnes AI 的永久免费,是慈善,还是在下一盘更大的生态棋?你在 Hermes 或 OpenClaw 接入时,有没有... 腾讯云计算\\nPublished: 2026-06-23\\n\\n---\\n\\n### 4. Agnes AI 免费API接入Claude Code,免费 Token 随便烧!-CSDN博客 [Blog]\\nURL: https://blog.csdn.net/2602_94958286/article/details/162127614\\n3天前{\\\"env\\\":{\\\"ANTHROPIC_BASE_URL\\\":\\\"https://apihub.agnes-ai.com/v1\\\",\\\"ANTHROPIC_AUTH_TOKEN\\\":\\\"sk-xxxx你的API密钥\\\",\\\"ANTHROPIC_DEFAULT_SONNET_MODEL\\\":\\\"agnes-2.0-flash\\\",\\\"ANTHROPIC_DEFAULT_SONNET_MODEL_NAME\\\":\\\"agnes-2.0-flash\\\",\\\"ANTHROPIC_DEFAULT_OPUS_MODEL\\\":\\\"agnes-image-2.1-flash\\\",\\\"ANTHROPIC_DEFAU... CSDN博客  播报 \\nPublished: 2026-06-24\\n\\n---\\n\\n### 5. Model（英语单词）_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/Model/63324941\\nModel是源自英语的多功能词汇，发音为英 [ˈmɒd (ə)l]/美 [ˈmɑːd (ə)l]，兼具名词、动词、形容词三种词性，核心语义涵盖模型构建、行为模仿与典范特质，广泛应用于工程设计、科学研究和商业运营等领域。\\n\\n---\\n\\n### 6. 开发者冲爆了!全球前十AI Lab无限免费,一周烧出3.12万亿Token...\\nURL: https://hub.baai.ac.cn/view/55659\\n2026年6月19日升级点 A:Agnes-2.0-Flash 1M 原生超长上下文将落地 本周内,文本模型将原生支持 1M Token... 智源社区  播报  暂停\\nPublished: 2026-06-19\\n\\n---\\n\\n### 7. Model 3 – 运动电动轿车 | 特斯拉中国\\nURL: https://www.tesla.cn/model3\\n了解 Model 3，一款兼具高性能和经济性的中型电动轿车，加速快、续航里程长且使用成本低。\\n\\n---\\n\\n### 8. 今天起,无限期免费!全球首个全模态API开放,Top 10 AI Lab出手_创...\\nURL: http://finance.sina.com.cn/tech/csj/2026-06-01/doc-inhzwist5375854.shtml\\n2026年6月1日根据Agnes披露的信息,Agnes-2.0-Flash进入Claw-Eval榜单,图像模型Agnes-Image-2.0-Flash进入Ar... 11 新浪财经  播报  暂停\\nPublished: 2026-06-27\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\\n\\n---\\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\\n  • cloud.tencent.com（出现 2 次）\",\"partialFailures\":[{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"},{\"engine\":\"sogou\",\"message\":\"Sogou: no results parsed from response\"}],\"discoveredSources\":[{\"host\":\"cloud.tencent.com\",\"hits\":2,\"maxEngineCount\":1,\"bestRank\":0,\"sample\":\"好消息,Agnes 推出免费 LLM Token,不用买 Coding Plan 啦!-腾讯云...\",\"score\":2}],\"suggestedSiteQueries\":[\"site:cloud.tencent.com model agnes/agnes-2.0-flash $schema API reference\"]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 10]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：外部查到 8 条，我把要点整理出来再回到正题。 外部查到 8 条，我把要点整理出来再回到正题。 外部查到 8 条，我把要点整理出来再回到正题。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "明白了，你想在 OpenCode 中配置 Agnes-2.0-Flash 模型。让我先检查 OpenCode 是否已安装，以及它的配置方式。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_de4ab32df5b949d097fedf2a",
+          "name": "Bash",
+          "input": {
+            "command": "where opencode 2>NUL || echo \"opencode not found in PATH\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_de4ab32df5b949d097fedf2a",
+          "content": "\"opencode not found in PATH\"\r\n"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 9]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：命令跑通了，我接着往下走。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "OpenCode 未安装在 PATH 中。让我检查一下是否已安装以及配置文件的位置。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_a313cd5a74e14a99a830a188",
+          "name": "Bash",
+          "input": {
+            "command": "dir \"%APPDATA%\\opencode\" 2>NUL && echo \"Found opencode config dir\" || echo \"No opencode config dir found\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_a313cd5a74e14a99a830a188",
+          "content": " 驱动器 C 中的卷是 Windows\r\n 卷的序列号是 04C4-1C6A\r\n\r\n C:\\Users\\25789\\AppData\\Roaming 的目录\r\n\r\n\"No opencode config dir found\"\r\n"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 8]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：命令跑通了，我接着往下走。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: Bash]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_530fb6b385a04c249a04741a",
+          "name": "Bash",
+          "input": {
+            "command": "dir \"%APPDATA%\\opencode\" 2>NUL && echo \"Found opencode config dir\" || echo \"No opencode config dir found\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_530fb6b385a04c249a04741a",
+          "content": "Tool: shell_command [tool_use_id=call_530fb6b385a04c249a04741a] (SKIPPED — identical call already succeeded. Do NOT call it again with the same parameters. Use the previous result or try a DIFFERENT approach.)\n 驱动器 C 中的卷是 Windows\r\n 卷的序列号是 04C4-1C6A\r\n\r\n C:\\Users\\25789\\AppData\\Roaming 的目录\r\n\r\n\"No opencode config dir found\"\r\n"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：命令跑通了，我接着往下走。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: Bash]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_e45e27eb00b64486b9de1292",
+          "name": "Bash",
+          "input": {
+            "command": "dir \"%APPDATA%\\opencode\" 2>NUL && echo \"Found opencode config dir\" || echo \"No opencode config dir found\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。] 我是想在khy中配置"
+    },
+    {
+      "role": "assistant",
+      "content": "明白了，你想在 KHY 中配置 Agnes 模型。配置信息如下：\n\n| 配置项 | 值 |\n|--------|-----|\n| Provider | Agnes |\n| Base URL | https://apihub.agnes-ai.com/v1 |\n| Model | agnes-2.0-flash |\n\n要完成配置，我需要你提供在 Agnes Platform 创建的 API Key。请粘贴你的 API Key（我会脱敏处理，不会回显完整值）。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。] sk-QwWaiiCfTy86mY2UBr22I1XiZKT6MzWz6Lglydhf63puDtVI"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "收到，配置信息确认如下：\n\n| 配置项 | 值 |\n|--------|-----|\n| Provider | Agnes |\n| Base URL | https://apihub.agnes-ai.com/v1 |\n| Model | agnes-2.0-flash |\n| API Key | sk-QwW***DtVI |\n\n确认无误，开始配置。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_5f681c075c73482d984b0350",
+          "name": "configureModelProvider",
+          "input": {
+            "provider": "Agnes",
+            "api_key": "sk-QwWaiiCfTy86mY2UBr22I1XiZKT6MzWz6Lglydhf63puDtVI",
+            "endpoint": "https://apihub.agnes-ai.com/v1",
+            "model": "agnes-2.0-flash",
+            "kind": "custom"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_5f681c075c73482d984b0350",
+          "content": "{\"kind\":\"custom\",\"provider\":\"Agnes\",\"poolKey\":\"agnes\",\"model\":\"agnes-2.0-flash\",\"endpoint\":\"https://apihub.agnes-ai.com/v1\",\"keyRedacted\":\"sk-QwW...DtVI\",\"keyCount\":1,\"models\":[\"agnes-2.0-flash\"]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 8]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "配置成功！Agnes 模型已接入 KHY：\n\n| 配置项 | 值 |\n|--------|-----|\n| Provider | Agnes |\n| Base URL | https://apihub.agnes-ai.com/v1 |\n| Model | agnes-2.0-flash |\n| API Key | sk-QwW***DtVI |\n\n现在你可以在 KHY 中使用 Agnes-2.0-Flash 模型进行代码生成、项目分析、代码修改和多轮对话了。\n\n<finding type=\"breakthrough\">Agnes 模型已成功配置到 KHY，API Key 已脱敏存储，模型 agnes-2.0-flash 已注册到网关路由。</finding>",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。]"
+    },
+    {
+      "role": "assistant",
+      "content": "已完成。Agnes 模型配置成功，可以直接使用了。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。] ，你是什么模型"
+    },
+    {
+      "role": "assistant",
+      "content": "我是 Agnes-2.0-Flash，由 Sapiens AI 开发。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 20,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782547453016,
+  "updatedAt": 1782547453016
+}

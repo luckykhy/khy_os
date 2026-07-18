@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫</div>
+      <header class="hero reveal"><h1>[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-109-纯文本模型图片-ocr-兜底覆盖率诚实告诫">[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫</a></li><li class="lvl-2"><a href="#一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)</a></li><li class="lvl-2"><a href="#二-修复-全-additive-逐字节可回退">二、修复(全 additive,逐字节可回退)</a></li><li class="lvl-3"><a href="#纯叶-services-backend-src-services-gateway-ocrcoveragenotice-js">纯叶 `services/backend/src/services/gateway/ocrCoverageNotice.js`</a></li><li class="lvl-3"><a href="#接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js">接线 `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`</a></li><li class="lvl-2"><a href="#三-诚实边界-b2-b3">三、诚实边界(B2/B3)</a></li><li class="lvl-2"><a href="#四-验收">四、验收</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-109-纯文本模型图片-ocr-兜底覆盖率诚实告诫">[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫<a class="anchor" href="#ops-man-109-纯文本模型图片-ocr-兜底覆盖率诚实告诫" aria-label="锚点">#</a></h1>
+<blockquote><p>状态:已实现(未提交,待用户点头)。承接 [OPS-MAN-104] 低置信诚实告诫,补<strong>正交</strong>的第二条诚实维度。<br>门控:<code>KHY_OCR_COVERAGE_NOTICE</code>(default-on,<code>0/false/off/no</code> 关 → 逐字节回退)。</p></blockquote>
+<h2 id="一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)<a class="anchor" href="#一-背景与缺口-goal-2026-07-12" aria-label="锚点">#</a></h2>
+<p>当运行模型为<strong>纯文本 / 非多模态</strong>、且识图模型不可用时,khy 落到本地 OCR 兜底,把提取到的文字<br>当作「请据此作答」的权威依据注入 prompt。gateway 三处注入点都以:</p>
+<pre><code class="language-js">extractImageOcrDetails(images, { maxImages: 3, maxChars: 1200 })</code></pre>
+<p>提取。其中 <code>aiGateway.js</code> 的实现对图片做 <code>images.slice(0, maxImages)</code> —— <strong>第 4 张起被静默丢弃</strong>,<br>无计数、无标记;此外部分图片(纯照片 / 场景图 / 缺字库)会<strong>提取不到文字</strong>,在这批明细里静默消失。</p>
+<p>于是模型收到 <code>【图片1】【图片2】【图片3】</code> 三块并被告知「以下为图片 OCR 识别文本,请据此作答」,<br>却以为这就是全部。用户发了 5 张、其中 2 张读不出时,模型基于<strong>残缺</strong>输入自信作答而毫不知情——<br>这正是「silent truncation reads as covered everything」反模式:上限已在代码里生效,却从不向作答的<br>模型披露被截断 / 被丢弃了什么。</p>
+<p><strong>与 OPS-104 的正交关系</strong>:OPS-104(<code>ocrConfidenceCaveat</code>)管<strong>准确性</strong>——识别出的字可能是错的;<br>本条(<code>ocrCoverageNotice</code>)管<strong>完整性</strong>——注入的文本可能没覆盖全部图片。二者是同一 consumer<br>(OCR 注入点)上两条互相独立的诚实轴,可同时出现、互不替代。</p>
+<h2 id="二-修复-全-additive-逐字节可回退">二、修复(全 additive,逐字节可回退)<a class="anchor" href="#二-修复-全-additive-逐字节可回退" aria-label="锚点">#</a></h2>
+<h3 id="纯叶-services-backend-src-services-gateway-ocrcoveragenotice-js">纯叶 <code>services/backend/src/services/gateway/ocrCoverageNotice.js</code><a class="anchor" href="#纯叶-services-backend-src-services-gateway-ocrcoveragenotice-js" aria-label="锚点">#</a></h3>
+<ul><li><code>computeCoverage({ totalImages, ocrTextCount, maxImages })</code> → 纯算术推出</li></ul>
+<p><code>{ total, cap, attempted, withText, omitted, unreadable }</code>;非法输入一律夹紧到 0,绝不抛。</p>
+<ul><li><code>attempted = cap&gt;0 ? min(total, cap) : total</code></li><li><code>omitted = cap&gt;0 ? max(0, total - attempted) : 0</code>(超上限、从未尝试的图)</li><li><code>unreadable = max(0, attempted - withText)</code>(已尝试但无文字的图)</li></ul>
+<p>诚实告诫,否则返回 <code>null</code>。门关 / 无缺口(<code>omitted&lt;1 &amp;&amp; unreadable&lt;1</code>)/ 异常 → <code>null</code>。</p>
+<ul><li>门 <code>KHY_OCR_COVERAGE_NOTICE</code>(default-on),登记于 <code>flagRegistry.js</code>(与 sibling</li></ul>
+<p><code>KHY_OCR_LOW_CONFIDENCE_CAVEAT</code> 并列)。</p>
+<h3 id="接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js">接线 <code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code><a class="anchor" href="#接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js" aria-label="锚点">#</a></h3>
+<p>新增助手 <code>_appendOcrCoverageNotice(prompt, { totalImages, ocrTextCount, maxImages })</code>(fail-soft),<br>在<strong>三处</strong> OCR 注入点、紧随 <code>_appendOcrLowConfidenceCaveat</code> 之后、<code>_appendVisionKeyOffer</code> 之前追加:</p>
+<ol><li>失败总结分支(全部视觉候选失败后剥图 + OCR 兜底);</li><li><code>ocr-fallback</code> 分支(当前 provider 无任何视觉候选);</li><li>adapter 级联分支(适配器不支持图像时的 OCR 辅助)。</li></ol>
+<p><code>totalImages</code> 取注入时仍完整的输入图片数(<code>options.images.length</code> / <code>adapterOptions.images.length</code>,<br>均在清图之前读取),<code>ocrTextCount</code> 取已提取到文字的条数,<code>maxImages</code> 为该处字面量 <code>3</code>。<br><strong>不改</strong> <code>extractImageOcrDetails</code> 本身。</p>
+<h2 id="三-诚实边界-b2-b3">三、诚实边界(B2/B3)<a class="anchor" href="#三-诚实边界-b2-b3" aria-label="锚点">#</a></h2>
+<ul><li>只在<strong>真有覆盖缺口</strong>时告诫;干净的单图 / 全覆盖 → 不告诫,逐字节回退,绝不对每一次完整提取误报。</li><li><code>unreadable</code> 只统计「已尝试但无文字」,不把超上限未尝试的图重复计入(那归 <code>omitted</code>)。</li><li>全部读不出(<code>withText===0</code>)时注入分支根本不跑本告诫,由 <code>visionOcrFallback.buildVisionUnreadableNote</code></li></ul>
+<p>兜底,故本条与其<strong>不重叠</strong>。</p>
+<ul><li>纯装饰:不改成败归属、不改剥图 / 清图不变量;任何异常 fail-safe 视为「不告诫」,绝不抛。</li></ul>
+<h2 id="四-验收">四、验收<a class="anchor" href="#四-验收" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:ocr-coverage-notice     # 叶 15/15 + 接线 4/4
+node --check services/backend/src/services/gateway/ocrCoverageNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
+<p>接线端到端(真实 <code>gateway.generate</code>,DI 解耦 totalImages 与 ocrTextCount):</p>
+<ul><li>发 5 张、仅 3 张有文本 → prompt 含「共 5 张 / 另有 2 张未做识别 / 并未覆盖全部图片」;</li><li>发 3 张、仅 2 张有文本 → prompt 含「1 张图片未能提取到文字」,无 omitted 段;</li><li>干净单图 → <strong>无</strong>覆盖告诫(无误报);</li><li>门关 → 逐字节回退,即便超上限也不注入。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-108] 还原归档形制可提取性对账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-110] 还原解密套件可执行性对账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

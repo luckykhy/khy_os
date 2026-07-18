@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-rekordbox · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-rekordbox<span class="sep">›</span>cli-anything-rekordbox</div>
+      <header class="hero reveal"><h1>cli-anything-rekordbox</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-rekordbox">cli-anything-rekordbox</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#library">Library</a></li><li class="lvl-3"><a href="#playlist">Playlist</a></li><li class="lvl-3"><a href="#deck-live-midi">Deck (live MIDI)</a></li><li class="lvl-3"><a href="#top-level">Top-level</a></li><li class="lvl-2"><a href="#how-it-works">How it works</a></li><li class="lvl-2"><a href="#json-output">JSON output</a></li><li class="lvl-2"><a href="#license">License</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-rekordbox&quot;<br>description: &gt;-<br>  Command-line interface for Pioneer Rekordbox 6/7 - DJ library and live-deck control via guarded SQLCipher master.db access (pyrekordbox) + virtual MIDI mapping. Provides library inspection, playlist creation/add/clear, and live-deck mixing (play/sync/crossfade/EQ). Pioneer ships no playback REST API; this harness combines the only two real surfaces (encrypted DB + MIDI) into one agent-native CLI.</p>
+<hr>
+<h1 id="cli-anything-rekordbox">cli-anything-rekordbox<a class="anchor" href="#cli-anything-rekordbox" aria-label="锚点">#</a></h1>
+<p>Agent-native CLI for Pioneer Rekordbox 6/7. Drives the DJ library and live decks programmatically.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-rekordbox</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>Rekordbox 6 or 7 installed (<code>master.db</code> must exist)</li><li>Virtual MIDI driver for live-deck control:<ul><li>Windows: loopMIDI / LoopBe / teVirtualMIDI</li><li>macOS: IAC Driver</li><li>Linux: ALSA virtual MIDI (<code>snd-virmidi</code>)</li></ul></li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Status check
+cli-anything-rekordbox status
+
+# REPL mode
+cli-anything-rekordbox
+
+# JSON output for agents
+cli-anything-rekordbox --json library search &quot;Daft Punk&quot;</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="library">Library<a class="anchor" href="#library" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>count</code></td><td>Total track count</td></tr><tr><td><code>search QUERY</code></td><td>Find tracks by title/artist substring</td></tr><tr><td><code>info TRACK_ID</code></td><td>Full track metadata</td></tr><tr><td><code>dump --out FILE.json</code></td><td>Export full library as JSON</td></tr></tbody></table>
+<h3 id="playlist">Playlist<a class="anchor" href="#playlist" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>All playlists</td></tr><tr><td><code>create NAME [--force] [--no-backup]</code></td><td>New playlist</td></tr><tr><td><code>add NAME --track-title T [--force] [--no-backup]</code></td><td>Add track</td></tr><tr><td><code>clear NAME [--force] [--no-backup]</code></td><td>Empty a playlist</td></tr></tbody></table>
+<p>Playlist writes create a <code>master.db</code> backup before mutation. They refuse to run<br>while Rekordbox is open unless <code>--force</code> is supplied; forced writes still require<br>a backup. <code>--no-backup</code> is only accepted when Rekordbox is closed.</p>
+<h3 id="deck-live-midi">Deck (live MIDI)<a class="anchor" href="#deck-live-midi" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>play --deck N</code></td><td>Play/pause</td></tr><tr><td><code>sync --deck N</code></td><td>Tempo sync</td></tr><tr><td><code>crossfade FROM TO --secs S</code></td><td>Smooth crossfade</td></tr><tr><td><code>eq --deck N --hi --mid --lo</code></td><td>EQ control</td></tr><tr><td><code>hot-cue --deck N --slot 1-8</code></td><td>Trigger hot cue</td></tr></tbody></table>
+<h3 id="top-level">Top-level<a class="anchor" href="#top-level" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Runtime / DB / MIDI state</td></tr><tr><td><code>install-mapping</code></td><td>Drop Bunker.midi.csv into rekordbox's MidiMappings folder</td></tr><tr><td><code>mix A B --secs S</code></td><td>High-level: search + load + sync + crossfade</td></tr></tbody></table>
+<h2 id="how-it-works">How it works<a class="anchor" href="#how-it-works" aria-label="锚点">#</a></h2>
+<pre><code>+------------------+
+|   Your Agent     |
++--------+---------+
+         |
+         v
++------------------+
+| cli-anything-    |
+| rekordbox CLI    |
++--------+---------+
+   |          |
+   v          v
++----------+  +----------+
+|pyrekord- |  |  mido +  |
+|box DB    |  |  virtual |
+|writes    |  |  MIDI    |
++----------+  +----------+
+   |               |
+   v               v
++----------+  +-----------+
+| master.db|  | Rekordbox |
+|SQLCipher |  | live decks|
++----------+  +-----------+</code></pre>
+<ul><li><strong>master.db</strong> is encrypted with a static AES-256 key shared by all rekordbox 6/7 installs (auto-extracted by pyrekordbox)</li><li><strong>Virtual MIDI</strong> mapping uses Pioneer's standard <code>.midi.csv</code> format; this CLI ships <code>Bunker.midi.csv</code> and an <code>install-mapping</code> command to drop it into rekordbox's <code>MidiMappings/</code> folder</li></ul>
+<h2 id="json-output">JSON output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>Every command supports <code>--json</code>:</p>
+<pre><code class="language-bash">$ cli-anything-rekordbox --json library count
+{&quot;track_count&quot;: 30344}</code></pre>
+<h2 id="license">License<a class="anchor" href="#license" aria-label="锚点">#</a></h2>
+<p>MIT</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-quietshrink/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">quietshrink — Agent Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-renderdoc/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">RenderDoc CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rekordbox/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

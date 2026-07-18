@@ -1,0 +1,103 @@
+{
+  "name": "django-rest",
+  "description": "Django REST Framework API project",
+  "triggers": ["Django", "django rest", "DRF", "Django后端", "Django服务", "Django API"],
+  "variables": {
+    "projectName": { "default": "myproject", "description": "Django project name" },
+    "appName": { "default": "api", "description": "Django app name" },
+    "port": { "default": "8000", "description": "Server port" }
+  },
+  "directories": [
+    "{projectName}",
+    "{appName}",
+    "{appName}/migrations",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "requirements.txt",
+      "content": "django>=5.0\ndjangorestframework>=3.15.0\ndjango-cors-headers>=4.3.0\ngunicorn>=22.0.0\npsycopg2-binary>=2.9.9"
+    },
+    {
+      "path": "manage.py",
+      "content": "#!/usr/bin/env python\nimport os\nimport sys\n\ndef main():\n    os.environ.setdefault('DJANGO_SETTINGS_MODULE', '{projectName}.settings')\n    from django.core.management import execute_from_command_line\n    execute_from_command_line(sys.argv)\n\nif __name__ == '__main__':\n    main()"
+    },
+    {
+      "path": "{projectName}/__init__.py",
+      "content": ""
+    },
+    {
+      "path": "{projectName}/settings.py",
+      "content": "from pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent.parent\nSECRET_KEY = 'django-insecure-change-me-in-production'\nDEBUG = True\nALLOWED_HOSTS = ['*']\n\nINSTALLED_APPS = [\n    'django.contrib.admin',\n    'django.contrib.auth',\n    'django.contrib.contenttypes',\n    'django.contrib.sessions',\n    'django.contrib.messages',\n    'django.contrib.staticfiles',\n    'rest_framework',\n    'corsheaders',\n    '{appName}',\n]\n\nMIDDLEWARE = [\n    'corsheaders.middleware.CorsMiddleware',\n    'django.middleware.security.SecurityMiddleware',\n    'django.contrib.sessions.middleware.SessionMiddleware',\n    'django.middleware.common.CommonMiddleware',\n    'django.middleware.csrf.CsrfViewMiddleware',\n    'django.contrib.auth.middleware.AuthenticationMiddleware',\n    'django.contrib.messages.middleware.MessageMiddleware',\n]\n\nROOT_URLCONF = '{projectName}.urls'\nCORS_ALLOW_ALL_ORIGINS = True\n\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.sqlite3',\n        'NAME': BASE_DIR / 'db.sqlite3',\n    }\n}\n\nSTATIC_URL = 'static/'\nDEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'"
+    },
+    {
+      "path": "{projectName}/urls.py",
+      "content": "from django.contrib import admin\nfrom django.urls import path, include\n\nurlpatterns = [\n    path('admin/', admin.site.urls),\n    path('api/', include('{appName}.urls')),\n]"
+    },
+    {
+      "path": "{appName}/__init__.py",
+      "content": ""
+    },
+    {
+      "path": "{appName}/models.py",
+      "content": "from django.db import models\n\nclass User(models.Model):\n    name = models.CharField(max_length=100)\n    email = models.EmailField(unique=True)\n    created_at = models.DateTimeField(auto_now_add=True)\n\n    def __str__(self):\n        return self.name"
+    },
+    {
+      "path": "{appName}/serializers.py",
+      "content": "from rest_framework import serializers\nfrom .models import User\n\nclass UserSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = User\n        fields = '__all__'"
+    },
+    {
+      "path": "{appName}/views.py",
+      "content": "from rest_framework import viewsets\nfrom rest_framework.decorators import api_view\nfrom rest_framework.response import Response\nfrom .models import User\nfrom .serializers import UserSerializer\n\n@api_view(['GET'])\ndef health(request):\n    return Response({'status': 'ok'})\n\nclass UserViewSet(viewsets.ModelViewSet):\n    queryset = User.objects.all()\n    serializer_class = UserSerializer"
+    },
+    {
+      "path": "{appName}/urls.py",
+      "content": "from django.urls import path, include\nfrom rest_framework.routers import DefaultRouter\nfrom .views import UserViewSet, health\n\nrouter = DefaultRouter()\nrouter.register('users', UserViewSet)\n\nurlpatterns = [\n    path('health/', health),\n    path('', include(router.urls)),\n]"
+    },
+    {
+      "path": "{appName}/migrations/__init__.py",
+      "content": ""
+    },
+    {
+      "path": ".gitignore",
+      "content": "__pycache__/\n*.pyc\ndb.sqlite3\n.env\nvenv/"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "FROM python:3.12-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY . .\n\nEXPOSE {port}\n\nCMD [\"gunicorn\", \"{projectName}.wsgi:application\", \"--bind\", \"0.0.0.0:{port}\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: \"3.9\"\n\nservices:\n  app:\n    build: .\n    ports:\n      - \"{port}:{port}\"\n    depends_on:\n      - db\n    environment:\n      - DATABASE_URL=postgres://postgres:postgres@db:5432/{projectName}\n    volumes:\n      - .:/app\n\n  db:\n    image: postgres:16-alpine\n    environment:\n      - POSTGRES_DB={projectName}\n      - POSTGRES_USER=postgres\n      - POSTGRES_PASSWORD=postgres\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n\nvolumes:\n  pgdata:"
+    },
+    {
+      "path": ".dockerignore",
+      "content": "__pycache__\n.venv\n.git\n.env\n*.pyc\ndb.sqlite3"
+    },
+    {
+      "path": "unit_tests/__init__.py",
+      "content": ""
+    },
+    {
+      "path": "unit_tests/test_models.py",
+      "content": "from django.test import TestCase\nfrom {appName}.models import User\n\n\nclass UserModelTest(TestCase):\n    def setUp(self):\n        self.user = User.objects.create(name=\"Alice\", email=\"alice@example.com\")\n\n    def test_user_str(self):\n        \"\"\"Test that User __str__ returns the name.\"\"\"\n        self.assertEqual(str(self.user), \"Alice\")\n\n    def test_user_creation(self):\n        \"\"\"Test that a user can be created with valid fields.\"\"\"\n        self.assertEqual(self.user.name, \"Alice\")\n        self.assertEqual(self.user.email, \"alice@example.com\")\n        self.assertIsNotNone(self.user.created_at)\n        self.assertIsInstance(self.user.pk, int)"
+    },
+    {
+      "path": "API_tests/__init__.py",
+      "content": ""
+    },
+    {
+      "path": "API_tests/test_api.py",
+      "content": "from rest_framework.test import APITestCase\nfrom rest_framework import status\nfrom {appName}.models import User\n\n\nclass UserAPITest(APITestCase):\n    def test_create_user(self):\n        \"\"\"POST /api/users/ should create a new user.\"\"\"\n        data = {\"name\": \"Bob\", \"email\": \"bob@example.com\"}\n        response = self.client.post(\"/api/users/\", data, format=\"json\")\n        self.assertEqual(response.status_code, status.HTTP_201_CREATED)\n        self.assertEqual(User.objects.count(), 1)\n        self.assertEqual(User.objects.first().name, \"Bob\")\n\n    def test_list_users(self):\n        \"\"\"GET /api/users/ should return all users.\"\"\"\n        User.objects.create(name=\"Alice\", email=\"alice@example.com\")\n        User.objects.create(name=\"Bob\", email=\"bob@example.com\")\n        response = self.client.get(\"/api/users/\")\n        self.assertEqual(response.status_code, status.HTTP_200_OK)\n        self.assertEqual(len(response.data), 2)\n\n    def test_health_endpoint(self):\n        \"\"\"GET /api/health/ should return status ok.\"\"\"\n        response = self.client.get(\"/api/health/\")\n        self.assertEqual(response.status_code, status.HTTP_200_OK)\n        self.assertEqual(response.data[\"status\"], \"ok\")"
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/usr/bin/env bash\nset -e\n\npip install -r requirements.txt\npython manage.py test unit_tests API_tests -v 2"
+    },
+    {
+      "path": "README.md",
+      "content": "# {projectName}\n\nA REST API built with **Django 5** and **Django REST Framework**.\n\n## Quick Start with Docker\n\n```bash\ndocker-compose up --build\n```\n\nThe API will be available at `http://<HOST>:{port}`.\n\n## Manual Setup\n\n```bash\npython -m venv venv\nsource venv/bin/activate\npip install -r requirements.txt\npython manage.py migrate\npython manage.py runserver {port}\n```\n\n## API Endpoints\n\n| Endpoint | Method | Description |\n|---|---|---|\n| `/admin/` | GET | Django admin panel |\n| `/api/users/` | GET | List all users |\n| `/api/users/` | POST | Create a new user |\n| `/api/users/<id>/` | GET | Retrieve a user |\n| `/api/users/<id>/` | PUT/PATCH | Update a user |\n| `/api/users/<id>/` | DELETE | Delete a user |\n| `/api/health/` | GET | Health check |\n\n## Running Tests\n\n```bash\nbash run_tests.sh\n```\n\nOr manually:\n\n```bash\npython manage.py test unit_tests API_tests -v 2\n```\n\n## Project Structure\n\n```\n{projectName}/\n  __init__.py\n  settings.py\n  urls.py\n{appName}/\n  __init__.py\n  models.py\n  serializers.py\n  views.py\n  urls.py\n  migrations/\nunit_tests/\n  __init__.py\n  test_models.py\nAPI_tests/\n  __init__.py\n  test_api.py\nDockerfile\ndocker-compose.yml\nmanage.py\nrequirements.txt\nrun_tests.sh\n```"
+    }
+  ]
+}

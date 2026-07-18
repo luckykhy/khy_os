@@ -1,0 +1,27 @@
+{
+  "sessionId": "be6d4025-68ee-49ed-8b5c-6804a3747fd1",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！👋 我是 **Khy OS**，一个友好的 AI 助手。很高兴见到你！有什么我可以帮忙的吗？无论是回答问题、处理文件、搜索信息，还是其他任务，尽管说～😊",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781689614327,
+  "updatedAt": 1781689614327
+}

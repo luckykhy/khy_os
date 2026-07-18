@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature Access / Proxy Boundary 系统提示词 Capsule · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>Feature Access / Proxy Boundary 系统提示词 Capsule</div>
+      <header class="hero reveal"><h1>Feature Access / Proxy Boundary 系统提示词 Capsule</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#feature-access-proxy-boundary-系统提示词-capsule">Feature Access / Proxy Boundary 系统提示词 Capsule</a></li><li class="lvl-2"><a href="#1-适用场景">1. 适用场景</a></li><li class="lvl-2"><a href="#2-常驻极简原则">2. 常驻极简原则</a></li><li class="lvl-2"><a href="#3-on-demand-注入版">3. On-Demand 注入版</a></li><li class="lvl-2"><a href="#4-推荐配套验证">4. 推荐配套验证</a></li><li class="lvl-2"><a href="#5-推荐配套文档">5. 推荐配套文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-OTHER-004 | 阶段: 设计 | 原路径: docs/模板/特性访问-提示词胶囊-2026-06-01.md --&gt;</p>
+<h1 id="feature-access-proxy-boundary-系统提示词-capsule">Feature Access / Proxy Boundary 系统提示词 Capsule<a class="anchor" href="#feature-access-proxy-boundary-系统提示词-capsule" aria-label="锚点">#</a></h1>
+<p><strong>日期</strong>: 2026-06-01<br><strong>用途</strong>: 把本轮 feature access 与代理/登录解耦修复，压成可按需注入的系统提示词片段</p>
+<hr>
+<h2 id="1-适用场景">1. 适用场景<a class="anchor" href="#1-适用场景" aria-label="锚点">#</a></h2>
+<p>只在任务涉及下面任一主题时注入本 capsule：</p>
+<ul><li><code>khy claude</code> 启动链路</li><li><code>proxy</code> / <code>gateway relay</code> / <code>gateway manage</code> / IDE 入口的登录边界</li><li><code>authGuard</code> 访问策略</li><li><code>featureKeyBuilder</code> 中的 feature key / family prefix / label 命名</li><li>调用侧如何接入 <code>requireFeatureAccess(...)</code></li></ul>
+<p>如果用户只是：</p>
+<ul><li>解释 Git 流程</li><li>改无关 UI</li><li>修普通业务逻辑</li><li>查阅与代理/登录边界无关的代码</li></ul>
+<p>则不要注入本 capsule。</p>
+<hr>
+<h2 id="2-常驻极简原则">2. 常驻极简原则<a class="anchor" href="#2-常驻极简原则" aria-label="锚点">#</a></h2>
+<p>如果只能常驻一句话，保留这一句：</p>
+<blockquote><p>涉及代理、IDE、gateway、登录边界或 feature naming 时，优先把策略收口到 <code>authGuard</code>，把命名收口到 <code>featureKeyBuilder</code>，调用层只做最小接线，不在业务层散写登录判断或重复手写 feature 字符串。</p></blockquote>
+<hr>
+<h2 id="3-on-demand-注入版">3. On-Demand 注入版<a class="anchor" href="#3-on-demand-注入版" aria-label="锚点">#</a></h2>
+<p>下面这段可以在命中场景时直接解压注入系统提示词：</p>
+<pre><code class="language-text">你正在处理 KHY 的 feature access / proxy boundary 相关任务。必须遵循以下规则：
+
+1. 先判定问题层级，再动手：
+   - `khy claude` 启动/代理拉起问题，先看 `khy_platform/cli.py`
+   - 登录边界问题，先看 `backend/src/services/authGuard.js`
+   - feature key / prefix / label 命名问题，先看 `backend/src/services/featureKeyBuilder.js`
+   - handler / adapter 只做最小接线，不先在调用层硬修策略
+
+2. 保持最小落点：
+   - 只修改离根因最近的一层
+   - 不因为一个 access boundary 问题顺手扩散重构整条链路
+   - 不把多个 family 的命名或策略同时改大
+
+3. 登录策略规则：
+   - 谁需要登录，由 `authGuard` 集中声明
+   - 业务层统一优先走 `requireFeatureAccess(featureKey, fallbackLabel)`
+   - 不要在 handler、adapter、CLI 分支里散写 `requireLogin(...)`
+
+4. feature naming 规则：
+   - 不要在多个文件里手写 `gateway.relay`、`proxy.relay.web`、`claude.launch` 这类字符串
+   - family prefix、regex、label 优先从 `featureKeyBuilder` 获取
+   - 新代码优先使用 `getFeatureFamilyPrefix(...)`、`buildFeatureFamilyPrefixRegex(...)`、`joinFeatureKey(...)`
+
+5. 当前边界语义：
+   - `proxy.*`：免登录
+   - `gateway.manage.*`：免登录
+   - `claude|codex|cursor|kiro|trae.*`：免登录
+   - `gateway.relay.*`：需要登录
+   - 未匹配 feature：默认需要登录
+
+6. 关于 `khy claude`：
+   - 把它视为本地代理能力，不要轻易重新绑回完整外层 CLI / router / auth 分发链路
+   - 如果改代理启动逻辑，优先保持“本地直启守护进程 + 必要时回退”的结构
+
+7. 兼容层规则：
+   - 某些专用 helper 仍可存在，但视为内部兼容层
+   - 新代码不要继续优先依赖薄包装 helper；优先依赖通用 family API
+
+8. 最小验证：
+   - 只验证被影响的启动链路、access boundary、feature naming 和最近调用侧
+   - 优先跑最小相关测试，不要为了一个边界修复把全仓库测试全部拉起</code></pre>
+<hr>
+<h2 id="4-推荐配套验证">4. 推荐配套验证<a class="anchor" href="#4-推荐配套验证" aria-label="锚点">#</a></h2>
+<p>当任务真的命中这个 capsule 时，优先使用这组最小验证：</p>
+<pre><code class="language-bash">python3 -m py_compile khy_platform/cli.py
+python3 -m unittest unit_tests.test_claude_proxy_bootstrap unit_tests.test_proxy_endpoint_discovery
+node --check backend/src/services/authGuard.js
+node --check backend/src/services/featureKeyBuilder.js
+npm --prefix backend test -- --runTestsByPath \
+  tests/security/featureKeyBuilder.test.js \
+  tests/security/authGuard.exports.test.js \
+  tests/gateway/relayAccessBoundary.test.js \
+  tests/cli/ide.access.test.js</code></pre>
+<hr>
+<h2 id="5-推荐配套文档">5. 推荐配套文档<a class="anchor" href="#5-推荐配套文档" aria-label="锚点">#</a></h2>
+<p>需要背景时再读下面两份，不要每次都把长文整段注入：</p>
+<ul><li><code>docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-035] 特性访问-维护速查-2026-06-01.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-003] khy-系统提示词结构图.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 系统提示词结构图</div></a><a class="next" href="../../docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 设计分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

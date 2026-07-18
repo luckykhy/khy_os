@@ -1,0 +1,12 @@
+{
+  "name": "khy-gateway-fix",
+  "description": "Khy-OS AI 网关与模型路由排错：404 model_not_found(模型名泄漏给不认识它的通道)、鉴权形态过时、请求侧新字段被丢、视觉模型误判纯文本退回 OCR、默认模型硬编码散落。网关相关报错或模型路由异常时激活。",
+  "user_invocable": true,
+  "trigger": "/khy-gateway-fix",
+  "aliases": ["/khy-gateway", "/网关排错"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "gateway", "model-routing", "404", "auth", "vision"],
+  "platforms": ["khy-os"],
+  "when_to_use": "网关报 404/model_not_found、鉴权失败、请求字段丢失、视觉识别异常、或模型路由行为不对时。",
+  "context": "inline"
+}

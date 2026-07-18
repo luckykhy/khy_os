@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-videocaptioner · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-videocaptioner<span class="sep">›</span>cli-anything-videocaptioner</div>
+      <header class="hero reveal"><h1>cli-anything-videocaptioner</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-videocaptioner">cli-anything-videocaptioner</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#transcribe-speech-to-subtitles">transcribe — Speech to subtitles</a></li><li class="lvl-3"><a href="#subtitle-optimize-and-translate">subtitle — Optimize and translate</a></li><li class="lvl-3"><a href="#synthesize-burn-subtitles-into-video">synthesize — Burn subtitles into video</a></li><li class="lvl-3"><a href="#process-full-pipeline">process — Full pipeline</a></li><li class="lvl-3"><a href="#review-consistency-check-and-preview">review — Consistency check and preview</a></li><li class="lvl-3"><a href="#styles-list-style-presets">styles — List style presets</a></li><li class="lvl-3"><a href="#config-manage-settings">config — Manage settings</a></li><li class="lvl-3"><a href="#download-download-online-video">download — Download online video</a></li><li class="lvl-2"><a href="#json-output">JSON Output</a></li><li class="lvl-2"><a href="#backend-notes">Backend Notes</a></li><li class="lvl-2"><a href="#target-languages">Target Languages</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-videocaptioner&quot;<br>description: &gt;-<br>  AI-powered video captioning — transcribe speech, optimize/translate subtitles, and burn them into video via the stable VideoCaptioner backend. Free ASR and translation included.</p>
+<hr>
+<h1 id="cli-anything-videocaptioner">cli-anything-videocaptioner<a class="anchor" href="#cli-anything-videocaptioner" aria-label="锚点">#</a></h1>
+<p>AI-powered video captioning tool. Transcribe speech → optimize subtitles → translate → burn into video.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-videocaptioner</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10-3.12 (<code>videocaptioner</code> 1.4.1 requires <code>&gt;=3.10,&lt;3.13</code>)</li><li><code>videocaptioner</code> must be installed (<code>pip install videocaptioner</code>)</li><li>FFmpeg required for video synthesis</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-videocaptioner --help
+
+# Start interactive REPL mode
+cli-anything-videocaptioner
+
+# Transcribe a video (free, no setup)
+cli-anything-videocaptioner transcribe video.mp4 --asr bijian
+
+# Translate subtitles (free Bing translator)
+cli-anything-videocaptioner subtitle input.srt --translator bing --target-language en
+
+# Full pipeline: transcribe → translate → burn subtitles
+cli-anything-videocaptioner process video.mp4 --asr bijian --translator bing --target-language en --subtitle-mode hard
+
+# Review subtitle/script consistency before a final hard-burn
+cli-anything-videocaptioner synthesize video.mp4 -s subtitles.srt \
+  --subtitle-mode hard \
+  --review-script approved_script.txt
+
+# Render a one-frame subtitle preview for review
+cli-anything-videocaptioner review subtitles.srt \
+  --script approved_script.txt \
+  --preview-video video.mp4 \
+  --preview-output review_5s.png
+
+# JSON output (for agent consumption)
+cli-anything-videocaptioner --json transcribe video.mp4 --asr bijian</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-videocaptioner
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="transcribe-speech-to-subtitles">transcribe — Speech to subtitles<a class="anchor" href="#transcribe-speech-to-subtitles" aria-label="锚点">#</a></h3>
+<pre><code>transcribe &lt;input&gt; [--asr bijian|jianying|whisper-api|whisper-cpp] [--language CODE] [--format srt|ass|txt|json] [-o PATH]</code></pre>
+<ul><li><code>bijian</code> (default): Free, Chinese &amp; English, no setup</li><li><code>whisper-api</code>: All languages, requires <code>--whisper-api-key</code></li></ul>
+<h3 id="subtitle-optimize-and-translate">subtitle — Optimize and translate<a class="anchor" href="#subtitle-optimize-and-translate" aria-label="锚点">#</a></h3>
+<pre><code>subtitle &lt;input.srt&gt; [--translator llm|bing|google] [--target-language CODE] [--layout target-above|source-above|target-only|source-only] [--no-optimize] [--no-translate] [-o PATH]</code></pre>
+<ul><li>Three steps: Split → Optimize → Translate</li><li>Bing/Google translators are free</li><li>38 target languages supported (BCP 47 codes)</li></ul>
+<h3 id="synthesize-burn-subtitles-into-video">synthesize — Burn subtitles into video<a class="anchor" href="#synthesize-burn-subtitles-into-video" aria-label="锚点">#</a></h3>
+<pre><code>synthesize &lt;video&gt; -s &lt;subtitle&gt; [--subtitle-mode soft|hard] [--quality ultra|high|medium|low] [-o PATH] [--review-script PATH] [--max-script-diff-ratio FLOAT]</code></pre>
+<ul><li>Mirrors the stable backend synthesize surface</li><li>Subtitle look is controlled by the subtitle asset/backend version, not extra harness flags</li><li><code>--review-script</code> checks subtitle/script drift before the final export</li><li>Lower <code>--max-script-diff-ratio</code> when copy accuracy matters more than resilience</li></ul>
+<h3 id="process-full-pipeline">process — Full pipeline<a class="anchor" href="#process-full-pipeline" aria-label="锚点">#</a></h3>
+<pre><code>process &lt;input&gt; [--asr ...] [--translator ...] [--target-language ...] [--subtitle-mode ...] [--layout ...] [--no-optimize] [--no-translate] [--no-synthesize] [-o PATH]</code></pre>
+<h3 id="review-consistency-check-and-preview">review — Consistency check and preview<a class="anchor" href="#review-consistency-check-and-preview" aria-label="锚点">#</a></h3>
+<pre><code>review &lt;input.srt|input.ass&gt; [--script PATH] [--max-diff-ratio FLOAT] [--preview-video PATH] [--preview-at TC] [--preview-output PATH]</code></pre>
+<ul><li>Detects subtitle/script drift before a hard-burn</li><li>Can render a single review frame instead of producing a full final video</li></ul>
+<h3 id="styles-list-style-presets">styles — List style presets<a class="anchor" href="#styles-list-style-presets" aria-label="锚点">#</a></h3>
+<pre><code>styles</code></pre>
+<ul><li>Reports whether the installed backend exposes preset styling support</li></ul>
+<h3 id="config-manage-settings">config — Manage settings<a class="anchor" href="#config-manage-settings" aria-label="锚点">#</a></h3>
+<pre><code>config show
+config set &lt;key&gt; &lt;value&gt;</code></pre>
+<h3 id="download-download-online-video">download — Download online video<a class="anchor" href="#download-download-online-video" aria-label="锚点">#</a></h3>
+<pre><code>download &lt;URL&gt; [-o DIR]</code></pre>
+<h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-videocaptioner --json transcribe video.mp4 --asr bijian
+# {&quot;output_path&quot;: &quot;/path/to/output.srt&quot;}</code></pre>
+<h2 id="backend-notes">Backend Notes<a class="anchor" href="#backend-notes" aria-label="锚点">#</a></h2>
+<ul><li>The upstream backend currently requires Python <code>&gt;=3.10,&lt;3.13</code>; prefer Python <code>3.12</code> for matrix runs.</li><li>Advanced synthesize-time style flags are backend-version dependent. Use <code>styles</code> to check whether the installed backend exposes them.</li><li>Compatibility flags such as <code>layout</code>, <code>render_mode</code>, <code>style</code>, <code>style_override</code>, and <code>font_file</code> should be treated as non-stable unless <code>styles</code> and the installed backend confirm they are supported.</li></ul>
+<h2 id="target-languages">Target Languages<a class="anchor" href="#target-languages" aria-label="锚点">#</a></h2>
+<p>BCP 47 codes: <code>zh-Hans</code> <code>zh-Hant</code> <code>en</code> <code>ja</code> <code>ko</code> <code>fr</code> <code>de</code> <code>es</code> <code>ru</code> <code>pt</code> <code>it</code> <code>ar</code> <code>th</code> <code>vi</code> <code>id</code> and 23 more.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unrealinsights/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-unrealinsights</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-wiremock/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Overview</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-videocaptioner/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyquant/indicators · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>wasm-indicators<span class="sep">›</span>khyquant/indicators</div>
+      <header class="hero reveal"><h1>khyquant/indicators</h1></header>
+      
+      <article class="doc-body">
+<h1 id="khyquant-indicators">khyquant/indicators<a class="anchor" href="#khyquant-indicators" aria-label="锚点">#</a></h1>
+<p>MoonBit technical indicator package (pure compute).</p>
+<h2 id="offline-test-run-no-network">Offline test run (no network)<a class="anchor" href="#offline-test-run-no-network" aria-label="锚点">#</a></h2>
+<p>From repository root:</p>
+<pre><code class="language-bash">scripts/moonbit/run-wasm-indicators-tests-offline.sh</code></pre>
+<p>Default local tar paths used by the script:</p>
+<ul><li><code>/home/kodehu03/Downloads/moonbit-linux-x86_64.tar(1).gz</code></li><li><code>/home/kodehu03/Downloads/moonbit-wasm.tar.gz</code></li></ul>
+<p>You can override them:</p>
+<pre><code class="language-bash">MOONBIT_LINUX_TAR=/abs/path/moonbit-linux.tar.gz \
+MOONBIT_WASM_TAR=/abs/path/moonbit-wasm.tar.gz \
+scripts/moonbit/run-wasm-indicators-tests-offline.sh</code></pre>
+<p>By default, the script enforces warning-free checks (<code>--deny-warn</code>).<br>If you need temporary non-strict mode for diagnosis:</p>
+<pre><code class="language-bash">MOON_DENY_WARN=false scripts/moonbit/run-wasm-indicators-tests-offline.sh</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../services/backend/wasm-indicators/README.html"><div class="dir">← 上一篇</div><div class="ttl">khyquant/indicators</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="services/backend/wasm-indicators/README.mbt.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

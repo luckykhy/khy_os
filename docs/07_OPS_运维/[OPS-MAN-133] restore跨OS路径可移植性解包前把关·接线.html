@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-133-restore-跨-os-路径可移植性-解包前把关-让-khy-restore-事前诚实告知-这批路径在你这台-windows-macos-上会缺文件-改名">[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」）</a></li><li class="lvl-2"><a href="#这一层闭合什么-snapshot-是-path-blind-跨-os-还原会-悄悄少文件-却只事后猜">这一层闭合什么：snapshot 是 path-blind，跨 OS 还原会「悄悄少文件」却只事后猜</a></li><li class="lvl-2"><a href="#离机场景为什么最毒">离机场景为什么最毒</a></li><li class="lvl-2"><a href="#这一层怎么做-全-additive-门-default-on-有界枚举永不卡死">这一层怎么做（全 additive · 门 default-on · 有界枚举永不卡死）</a></li><li class="lvl-3"><a href="#判定叶-bundled-纯叶-零-io-绝不抛">判定叶（bundled 纯叶·零 IO·绝不抛）</a></li><li class="lvl-3"><a href="#接线-publish-js">接线 `publish.js`</a></li><li class="lvl-2"><a href="#和已接线的还原诊断族正交-别混淆">和已接线的还原诊断族正交（别混淆）</a></li><li class="lvl-2"><a href="#恒久红线-继承还原家族">恒久红线（继承还原家族）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#how-to-extend-抄写式">HOW-TO-EXTEND（抄写式）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-133-restore-跨-os-路径可移植性-解包前把关-让-khy-restore-事前诚实告知-这批路径在你这台-windows-macos-上会缺文件-改名">[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」）<a class="anchor" href="#ops-man-133-restore-跨-os-路径可移植性-解包前把关-让-khy-restore-事前诚实告知-这批路径在你这台-windows-macos-上会缺文件-改名" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是运行时接线，无 <code>--gen-doc</code> 生成器）。承接还原诊断族<br>OPS-MAN-119（解密前预检 <code>restorePreflightCheck</code>）、OPS-MAN-128（解密后归档形制<br><code>restoreArchiveExtractCheck</code>）、OPS-MAN-130（成功横幅来源可溯性 <code>restoreProvenanceCheck</code>）。<br>判定叶：<code>services/backend/src/services/restorePathPortabilityCheck.js</code>（bundled 纯叶·零 IO·绝不抛）。<br>接线：<code>services/backend/src/cli/handlers/publish.js</code> 的 <code>_restoreFromSnapshot</code>（解包前枚举）<br>与 <code>handleRestore</code>（诚实横幅）。</p></blockquote>
+<h2 id="这一层闭合什么-snapshot-是-path-blind-跨-os-还原会-悄悄少文件-却只事后猜">这一层闭合什么：snapshot 是 path-blind，跨 OS 还原会「悄悄少文件」却只事后猜<a class="anchor" href="#这一层闭合什么-snapshot-是-path-blind-跨-os-还原会-悄悄少文件-却只事后猜" aria-label="锚点">#</a></h2>
+<p><code>makeSourceSnapshot</code> 把源码树打成一团 tar.gz，条目名是在 <strong>Linux</strong> 上铸的——Linux 文件系统<br>几乎什么名字都收。这团归档随 pip / npm 发到<strong>陌生机器与陌生系统</strong>。运行时 <code>handleRestore</code><br>解密 + 校 sha256 后，直接把 <code>tar -xzf</code> 写死盲解包，<strong>从不预先看归档里的条目名到底能不能在<br>目标文件系统落地</strong>。</p>
+<p>换到 <strong>Windows / macOS</strong> 还原时，同一批 Linux-valid 的名字里有相当一部分会<strong>静默失败或改写</strong>：</p>
+<table><thead><tr><th>危害类别</th><th>例子</th><th>在目标系统上的后果</th></tr></thead><tbody><tr><td><code>reserved</code>（Windows 保留设备名）</td><td><code>aux.js</code> · <code>com1.txt</code> · <code>NUL</code></td><td>Windows 上<strong>根本建不出来</strong></td></tr><tr><td><code>illegalChar</code>（非法字符 `&lt; &gt; : &quot; \</td><td>? *` + 0x00-0x1F）</td><td><code>a:b.js</code> · <code>p*.md</code></td></tr><tr><td><code>trailingDotSpace</code>（段结尾点 / 空格）</td><td><code>foo.</code> · <code>bar </code></td><td>Windows <strong>静默剥掉</strong> → 改名 / 撞名</td></tr><tr><td><code>tooLong</code>（全路径 &gt; 259 = MAX_PATH）</td><td>深层长路径</td><td>旧式 API 下<strong>超长条目被跳过</strong></td></tr><tr><td><code>caseCollision</code>（大小写不敏感碰撞）</td><td><code>Foo.js</code> vs <code>foo.js</code></td><td>NTFS / APFS 默认卷上<strong>后者覆盖前者</strong></td></tr></tbody></table>
+<p>结果：落地文件比归档里<strong>少</strong>。而运行时对此<strong>一无所知</strong>——唯一的跨 OS 信号是 completeness<br>对账（OPS-116/117）<strong>事后</strong>发现「文件数少了」时，才打一句泛泛的反应式提示<br>（&quot;可能路径过长(Windows MAX_PATH) / tar 跳过条目…&quot;，<code>publish.js:877</code> 附近）。那是<strong>事后猜测</strong>：<br>既不知道<strong>是哪些</strong>路径出问题，也不知道<strong>为什么</strong>。</p>
+<p><code>grep</code> 归档条目名在解包<strong>前</strong>的消费者 = 零。运行时从来没有一个<strong>解包前</strong>的路径可移植性<br>预扫描器（断桥）。</p>
+<h2 id="离机场景为什么最毒">离机场景为什么最毒<a class="anchor" href="#离机场景为什么最毒" aria-label="锚点">#</a></h2>
+<p>这台云电脑过期，pip / npm 是唯二的离机渠道，源码只能靠还原到<strong>别人的机器与系统</strong>上复活。<br>Linux 开发者随手建的 <code>Foo.js</code> / <code>foo.js</code> 并存、或某个含冒号的临时文件名，在本机毫无问题；<br>可一旦被打进快照发到 Windows 维护者的机器上还原：</p>
+<ul><li>大小写碰撞的两个文件<strong>只落一个</strong>，另一个被无声覆盖；</li><li>保留名 / 非法字符条目<strong>根本没解出来</strong>；</li><li>维护者只看到「还原完成」的横幅 + 事后一句「文件数好像少了，可能路径过长」——</li></ul>
+<p><strong>不知道是哪几条、也不知道为什么</strong>，无从排查。</p>
+<p>诚实的还原应该在<strong>动手解包之前</strong>就指名道姓地说清楚：「这几条路径在你这台 Windows / macOS 上<br>不会原样落地」。</p>
+<h2 id="这一层怎么做-全-additive-门-default-on-有界枚举永不卡死">这一层怎么做（全 additive · 门 default-on · 有界枚举永不卡死）<a class="anchor" href="#这一层怎么做-全-additive-门-default-on-有界枚举永不卡死" aria-label="锚点">#</a></h2>
+<h3 id="判定叶-bundled-纯叶-零-io-绝不抛">判定叶（bundled 纯叶·零 IO·绝不抛）<a class="anchor" href="#判定叶-bundled-纯叶-零-io-绝不抛" aria-label="锚点">#</a></h3>
+<p><code>restorePathPortabilityCheck.js</code> 只做<strong>纯字符串分类</strong>，绝不碰任何密钥：</p>
+<ul><li><code>assessPathPortability(entryNames, opts)</code> —— 逐条把归档条目名按上表五类危害分类，</li></ul>
+<p>桶里放<strong>惹祸的原始名字</strong>（每桶截断到 <code>_BUCKET_CAP=50</code>，防超大归档撑爆裁决对象）。<br>  <code>ok===true</code> <strong>仅当</strong>五桶全空——即这批名字在 Windows / macOS 上也能原样落地。</p>
+<ul><li><code>buildPortabilityBannerLine(verdict, opts)</code> —— <strong>按宿主系统</strong>把裁决翻成一行横幅</li></ul>
+<p>（host-aware，因为「会不会真犯事」取决于<strong>你正在哪台机器上还原</strong>）：</p>
+<ul><li><code>win32</code> → 五类全是真实解包失败 → <code>severity:'warn'</code>。</li><li><code>darwin</code> → <code>caseCollision</code> 是默认卷上真实覆盖 → <code>warn</code>；其余 Windows 专属危害 → <code>info</code>。</li><li><code>linux</code> 等 → 本机能原样落地，但换到 Windows / macOS 会出问题 → 有危害则 <code>info</code></li></ul>
+<p>（跨 OS 前瞻提醒），无危害则 <code>null</code>（不打行，横幅字节等价旧行为）。</p>
+<ul><li>例名截断到前 3 条，超出附 <code> …</code>。严重度路由（printWarn vs printInfo）留给 <code>publish.js</code>。</li></ul>
+<h3 id="接线-publish-js">接线 <code>publish.js</code><a class="anchor" href="#接线-publish-js" aria-label="锚点">#</a></h3>
+<ul><li>门 <code>KHY_RESTORE_PATH_PORTABILITY</code>（default-on；env ∈ {0,false,off,no} → 关 = 逐字节回退</li></ul>
+<p>直入 <code>tar -xzf</code>，无枚举开销）。内联读门，<strong>不进 flagRegistry</strong>（同 <code>KHY_MEMORY_NOTICE</code> 先例）。</p>
+<ul><li>宿主覆盖 <code>KHY_RESTORE_PLATFORM_OVERRIDE</code>（默认 <code>process.platform</code>）——让单机也能演练</li></ul>
+<p>win32 / darwin 分支做测试。</p>
+<ul><li>IO 助手 <code>_listTarGzEntries(tarGzBuffer)</code> 落在 <code>publish.js</code>（已有 handler，保叶纯净）：</li></ul>
+<p>临时落盘密文的解密结果后 <code>spawnSync('tar', ['-tzf', tmp], { timeout: 20000, ... })</code><br>  <strong>只列条目不解包</strong>，解析 stdout、剥前导 <code>./</code> 与结尾 <code>/</code>，<strong>fail-soft → null</strong>（tar 缺失 /<br>  超时 / 非零退出 / 畸形 → 直接放行，字节等价旧行为），<code>finally</code> 清理临时文件。</p>
+<ul><li>在 <code>_restoreFromSnapshot</code> 里 <code>mkdirSync(dest)</code> <strong>之后</strong>、<code>_extractTarGz(plaintext, dest)</code></li></ul>
+<p><strong>之前</strong>枚举 + 评估，把 <code>pathPortability</code> 裁决塞进返回值。</p>
+<ul><li>在 <code>handleRestore</code> 的 provenance 横幅块<strong>之后</strong>、<code>docInDest</code> 之前，用</li></ul>
+<p><code>buildPortabilityBannerLine(result.pathPortability, { hostPlatform: _restoreHostPlatform() })</code><br>  渲染：<code>severity==='warn'</code> → printWarn，否则 printInfo。<strong>纯诊断</strong>，绝不 <code>_markFailure</code>，<br>  门控 + try/catch fail-soft。</p>
+<h2 id="和已接线的还原诊断族正交-别混淆">和已接线的还原诊断族正交（别混淆）<a class="anchor" href="#和已接线的还原诊断族正交-别混淆" aria-label="锚点">#</a></h2>
+<p>四层读的是<strong>不同的东西</strong>，字段集不重叠：</p>
+<table><thead><tr><th>层</th><th>时机</th><th>读什么</th><th>问的问题</th></tr></thead><tbody><tr><td><code>restorePreflightCheck</code>（OPS-119）</td><td>解密<strong>前</strong></td><td>外层信封 format + 加密套件</td><td>本机解不解得开密文</td></tr><tr><td><code>restoreArchiveExtractCheck</code>（OPS-128）</td><td>解密后、解包<strong>前</strong></td><td>内层归档 plaintextFormat/layout</td><td>本机 tar 认不认识这团归档</td></tr><tr><td><strong>本层（OPS-133）</strong></td><td>解密后、解包<strong>前</strong></td><td>归档<strong>条目名</strong> vs 本机命名规则</td><td>每个名字能不能在本机落地</td></tr><tr><td><code>restoreCompletenessCheck</code>（OPS-116/117）</td><td>解包<strong>后</strong></td><td>磁盘落地文件数 vs fileCount</td><td>数量对不对</td></tr></tbody></table>
+<p>本层是 completeness 的<strong>前置主动版</strong>：completeness 事后发现「少了」，本层事前说清「会少哪些、<br>为什么」。</p>
+<h2 id="恒久红线-继承还原家族">恒久红线（继承还原家族）<a class="anchor" href="#恒久红线-继承还原家族" aria-label="锚点">#</a></h2>
+<ul><li><strong>只披露不阻拦</strong>：本层<strong>绝不改变还原成败、绝不 markFailure</strong>——超长 / 保留名 / 碰撞是</li></ul>
+<p><strong>目标系统</strong>的命名限制，不是这团归档坏了；在 Linux 上还原它照样完整。本层只把<br>  「悄悄少文件」变成「事前诚实告知」。</p>
+<ul><li><strong>只读条目名字符串，绝不碰任何密钥</strong>：入参是解密后归档的<strong>文件名</strong>，本层只做字符串分类，</li></ul>
+<p>裁决对象里不含任何密文 / 密钥 / 文件内容（单测断言裁决 JSON 无 secret/key/token/cipher）。</p>
+<ul><li><strong>有界枚举永不卡死</strong>：<code>tar -tzf</code> 只列不解、带 20s 超时；任何异常 fail-soft 回退直入解包。</li><li><strong>纯计算、零 IO、无时钟、无随机、绝不抛</strong>：任何入参缺失 / 非法 → 保守（total:0, ok:true, 空桶）。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/restorePathPortabilityCheck.js
+node --check services/backend/src/cli/handlers/publish.js
+npm run test:restore-path-portability          # 纯叶单测 25/25 全绿
+npm run test:maintainer:safety                 # 聚合无回归
+npm run arch:god                               # 改动文件不得新增超限</code></pre>
+<p><strong>LIVE 真还原证据</strong>（真 <code>sourceSnapshotCrypto.encrypt</code> AES-256-GCM + 真 <code>tar -czf</code> 驱动真实<br><code>handleRestore([], { from, into, force })</code>，劫持 <code>process.stdout.write</code> 断言横幅，<br><code>KHY_RESTORE_PLATFORM_OVERRIDE</code> 在单台 Linux 上证 win32 / darwin 分支）：</p>
+<ul><li>含 <code>Foo.js</code>/<code>foo.js</code>/<code>aux.js</code>/<code>a:b.js</code> 的快照，override=win32 → 横幅 <code>severity:warn</code></li></ul>
+<p>指名道姓列出危害条目；<strong>文件仍在 Linux 上完整落地</strong>（不阻拦）。</p>
+<ul><li>override=darwin → 仅碰撞 warn、其余 info。</li><li>override=linux（无危害快照）→ 无横幅行（字节等价旧行为）。</li><li>门 <code>KHY_RESTORE_PATH_PORTABILITY=0</code> → 直入 <code>tar -xzf</code>，无枚举、无横幅行（字节等价）。</li></ul>
+<h2 id="how-to-extend-抄写式">HOW-TO-EXTEND（抄写式）<a class="anchor" href="#how-to-extend-抄写式" aria-label="锚点">#</a></h2>
+<p>新增一类跨 OS 命名危害时：① 在 <code>HAZARD_KINDS</code> 登记它的 key；② 在 <code>_classifyEntry</code> 里加一条<br>纯字符串判定，命中就 push 进对应桶；③ 若它在某个宿主系统上是<strong>真实失败</strong>（不只是提醒），<br>在 <code>buildPortabilityBannerLine</code> 的 host 分支里把它列进该 host 的 warn 级集合。<code>ok</code> 的定义<br>只有一个出口（五桶皆空）——别在别处放行。保留名 / 非法字符集若要扩充，改 <code>RESERVED_NAMES</code> /<br><code>ILLEGAL_CHARS_RE</code> 一处即可。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-132] prep期OCR兜底非verbose实时状态告知已降级到OCR.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-132] prep 期 OCR 兜底非-verbose 实时状态告知已降级到 OCR</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-134] 视觉级联网络不可达终局诊断（networkunreachable reason class）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-133] restore跨OS路径可移植性解包前把关·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

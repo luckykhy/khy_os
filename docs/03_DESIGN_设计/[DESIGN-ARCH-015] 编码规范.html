@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoF 23 设计模式标注规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>GoF 23 设计模式标注规范</div>
+      <header class="hero reveal"><h1>GoF 23 设计模式标注规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#gof-23-设计模式标注规范">GoF 23 设计模式标注规范</a></li><li class="lvl-2"><a href="#项目级设计模式-facade-外观模式">项目级设计模式 — Facade（外观模式）</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#pattern-标签规范">@pattern 标签规范</a></li><li class="lvl-3"><a href="#规则">规则</a></li><li class="lvl-2"><a href="#23-种设计模式名称映射">23 种设计模式名称映射</a></li><li class="lvl-3"><a href="#创建型-5种-口诀-单工抽建原">创建型（5种）— 口诀：单工抽建原</a></li><li class="lvl-3"><a href="#结构型-7种-口诀-适桥组装外享代">结构型（7种）— 口诀：适桥组装外享代</a></li><li class="lvl-3"><a href="#行为型-11种-口诀-责命解迭中备观状策模访">行为型（11种）— 口诀：责命解迭中备观状策模访</a></li><li class="lvl-2"><a href="#分类优先级">分类优先级</a></li><li class="lvl-2"><a href="#ci-验证">CI 验证</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-015 | 阶段: 设计 | 原路径: docs/设计模式/编码规范.md --&gt;</p>
+<h1 id="gof-23-设计模式标注规范">GoF 23 设计模式标注规范<a class="anchor" href="#gof-23-设计模式标注规范" aria-label="锚点">#</a></h1>
+<h2 id="项目级设计模式-facade-外观模式">项目级设计模式 — Facade（外观模式）<a class="anchor" href="#项目级设计模式-facade-外观模式" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS 整体 = Facade</strong></p>
+<pre><code>                        用户
+                         │
+                    ┌────▼────┐
+                    │  Facade │
+                    │ khy CLI │
+                    │ Web UI  │
+                    │REST API │
+                    └────┬────┘
+         ┌───────┬───────┼───────┬──────────┐
+      Kernel   AI网关  量化引擎  插件系统   前端UI
+      (C/ASM) (Node.js) (Python) (packages) (Vue)</code></pre>
+<p>Khy-OS 对外暴露单一入口（<code>khy</code> 命令 / Web UI / REST API），将内核、AI 网关、量化引擎、插件系统、前端 UI 等异构子系统的全部复杂性封装在一个统一外观之后。用户无需了解底层子系统的存在即可操作整个平台，这正是 Facade 模式的核心定义。</p>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>本项目要求每个源文件（排除测试、构建产物、node_modules）都必须至少归属一种 GoF 23 设计模式。</p>
+<ul><li><strong>标注方式</strong>: 文件头部 JSDoc 注释中使用 <code>@pattern</code> 标签</li><li><strong>机器映射</strong>: <code>docs/design-patterns/pattern-registry.json</code> 存储全量映射</li><li><strong>CI 验证</strong>: <code>scripts/ci/check-pattern-coverage.js</code> 确保 100% 覆盖</li></ul>
+<h2 id="pattern-标签规范">@pattern 标签规范<a class="anchor" href="#pattern-标签规范" aria-label="锚点">#</a></h2>
+<p>在文件头部注释中添加（已有头部注释则追加，无则新建）：</p>
+<pre><code class="language-js">/**
+ * @pattern Strategy, Facade
+ */</code></pre>
+<pre><code class="language-c">/**
+ * @pattern Singleton, Builder
+ */</code></pre>
+<pre><code class="language-python"># @pattern Template Method, Command</code></pre>
+<pre><code class="language-vue">&lt;!-- @pattern Composite, Observer --&gt;</code></pre>
+<pre><code class="language-asm">; @pattern Template Method</code></pre>
+<pre><code class="language-sh"># @pattern Command, Template Method</code></pre>
+<h3 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h3>
+<ol><li>一个文件可以标注多个模式，用英文逗号分隔</li><li>模式名使用英文全称（见下表）</li><li>标注必须有代码结构支撑，不为模式而模式</li><li><code>pattern-registry.json</code> 是权威来源，注释是辅助</li></ol>
+<h2 id="23-种设计模式名称映射">23 种设计模式名称映射<a class="anchor" href="#23-种设计模式名称映射" aria-label="锚点">#</a></h2>
+<h3 id="创建型-5种-口诀-单工抽建原">创建型（5种）— 口诀：单工抽建原<a class="anchor" href="#创建型-5种-口诀-单工抽建原" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>英文名</th><th>中文名</th><th>助记</th><th>典型场景</th></tr></thead><tbody><tr><td>Singleton</td><td>单例模式</td><td>单</td><td>模块级单例状态、注册表、管理器、Pinia stores</td></tr><tr><td>Factory Method</td><td>工厂方法模式</td><td>工</td><td>工具注册工厂、agent 创建、技能加载器</td></tr><tr><td>Abstract Factory</td><td>抽象工厂模式</td><td>抽</td><td>插件上下文工厂、适配器系列创建</td></tr><tr><td>Builder</td><td>建造者模式</td><td>建</td><td>prompt 构建、配置构建、GDT/IDT 构建</td></tr><tr><td>Prototype</td><td>原型模式</td><td>原</td><td>agent 上下文 fork、进程 fork、模板克隆</td></tr></tbody></table>
+<h3 id="结构型-7种-口诀-适桥组装外享代">结构型（7种）— 口诀：适桥组装外享代<a class="anchor" href="#结构型-7种-口诀-适桥组装外享代" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>英文名</th><th>中文名</th><th>助记</th><th>典型场景</th></tr></thead><tbody><tr><td>Adapter</td><td>适配器模式</td><td>适</td><td>gateway adapters、平台适配、硬件驱动、格式转换</td></tr><tr><td>Bridge</td><td>桥接模式</td><td>桥</td><td>协议转换层、SDK transport、远程审批桥</td></tr><tr><td>Composite</td><td>组合模式</td><td>组</td><td>Vue 组件树、菜单树、文件系统树、agent 组合</td></tr><tr><td>Decorator</td><td>装饰器模式</td><td>装</td><td>日志增强、审计追踪、性能剖析、中间件包装</td></tr><tr><td>Facade</td><td>外观模式</td><td>外</td><td>服务入口、API 层、仪表盘、数据聚合服务</td></tr><tr><td>Flyweight</td><td>享元模式</td><td>享</td><td>常量/配置共享、类型定义、别名表、共享缓存</td></tr><tr><td>Proxy</td><td>代理模式</td><td>代</td><td>中间件守卫、限流代理、沙箱、资源守护</td></tr></tbody></table>
+<h3 id="行为型-11种-口诀-责命解迭中备观状策模访">行为型（11种）— 口诀：责命解迭中备观状策模访<a class="anchor" href="#行为型-11种-口诀-责命解迭中备观状策模访" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>英文名</th><th>中文名</th><th>助记</th><th>典型场景</th></tr></thead><tbody><tr><td>Chain of Responsibility</td><td>责任链模式</td><td>责</td><td>中间件链、钩子执行链、权限检查链</td></tr><tr><td>Command</td><td>命令模式</td><td>命</td><td>工具文件、路由处理器、CLI handler、系统调用</td></tr><tr><td>Interpreter</td><td>解释器模式</td><td>解</td><td>TDX 公式引擎、ELF/PE 解析、指令解析</td></tr><tr><td>Iterator</td><td>迭代器模式</td><td>迭</td><td>流解析(SSE/NDJSON)、round-robin、CSV 解析</td></tr><tr><td>Mediator</td><td>中介者模式</td><td>中</td><td>REPL 协调、消息路由、设备配对、IPC</td></tr><tr><td>Memento</td><td>备忘录模式</td><td>备</td><td>状态持久化、崩溃恢复、会话快照、localStorage</td></tr><tr><td>Observer</td><td>观察者模式</td><td>观</td><td>Vue 响应式、SSE 事件流、WebSocket、钩子注册</td></tr><tr><td>State</td><td>状态模式</td><td>状</td><td>断路器、任务状态机、进程状态机、连接状态</td></tr><tr><td>Strategy</td><td>策略模式</td><td>策</td><td>算法选择、调度模式、限流策略、渲染策略</td></tr><tr><td>Template Method</td><td>模板方法模式</td><td>模</td><td>工具执行骨架、启动流程、脚本、迁移</td></tr><tr><td>Visitor</td><td>访问者模式</td><td>访</td><td>文档树遍历、CI 文件检查、任务思维导图渲染</td></tr></tbody></table>
+<h2 id="分类优先级">分类优先级<a class="anchor" href="#分类优先级" aria-label="锚点">#</a></h2>
+<p>当一个文件可归属多种模式时，按以下优先级选择主模式（可同时标注多个）：</p>
+<ol><li><strong>最具结构特征的模式</strong>（如文件实现了 Adapter 接口 → 首选 Adapter）</li><li><strong>核心职责对应的模式</strong>（如文件是状态机 → 首选 State）</li><li><strong>次要特征模式</strong>（如同时使用了 Singleton → 追加 Singleton）</li></ol>
+<h2 id="ci-验证">CI 验证<a class="anchor" href="#ci-验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node scripts/ci/check-pattern-coverage.js</code></pre>
+<ul><li>覆盖率必须 = 100%</li><li>每种模式至少使用 1 次</li><li>文件不在 registry 中视为未覆盖</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-014] 模式图谱.html"><div class="dir">← 上一篇</div><div class="ttl">GoF 23 设计模式全量映射</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 生态 AI Agent 显示规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-015] 编码规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

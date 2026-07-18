@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing Patterns Reference · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>test-driven-development<span class="sep">›</span>references<span class="sep">›</span>Testing Patterns Reference</div>
+      <header class="hero reveal"><h1>Testing Patterns Reference</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#testing-patterns-reference">Testing Patterns Reference</a></li><li class="lvl-2"><a href="#table-of-contents">Table of Contents</a></li><li class="lvl-2"><a href="#test-structure-arrange-act-assert">Test Structure (Arrange-Act-Assert)</a></li><li class="lvl-2"><a href="#test-naming-conventions">Test Naming Conventions</a></li><li class="lvl-2"><a href="#common-assertions">Common Assertions</a></li><li class="lvl-2"><a href="#mocking-patterns">Mocking Patterns</a></li><li class="lvl-3"><a href="#mock-functions">Mock Functions</a></li><li class="lvl-3"><a href="#mock-modules">Mock Modules</a></li><li class="lvl-3"><a href="#mock-at-boundaries-only">Mock at Boundaries Only</a></li><li class="lvl-2"><a href="#react-component-testing">React/Component Testing</a></li><li class="lvl-2"><a href="#api-integration-testing">API / Integration Testing</a></li><li class="lvl-2"><a href="#e2e-testing-playwright">E2E Testing (Playwright)</a></li><li class="lvl-2"><a href="#test-anti-patterns">Test Anti-Patterns</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="testing-patterns-reference">Testing Patterns Reference<a class="anchor" href="#testing-patterns-reference" aria-label="锚点">#</a></h1>
+<p>Quick reference for common testing patterns across the stack. Use alongside the <code>test-driven-development</code> skill.</p>
+<h2 id="table-of-contents">Table of Contents<a class="anchor" href="#table-of-contents" aria-label="锚点">#</a></h2>
+<ul><li><a href="#test-structure-arrange-act-assert">Test Structure (Arrange-Act-Assert)</a></li><li><a href="#test-naming-conventions">Test Naming Conventions</a></li><li><a href="#common-assertions">Common Assertions</a></li><li><a href="#mocking-patterns">Mocking Patterns</a></li><li><a href="#reactcomponent-testing">React/Component Testing</a></li><li><a href="#api--integration-testing">API / Integration Testing</a></li><li><a href="#e2e-testing-playwright">E2E Testing (Playwright)</a></li><li><a href="#test-anti-patterns">Test Anti-Patterns</a></li></ul>
+<h2 id="test-structure-arrange-act-assert">Test Structure (Arrange-Act-Assert)<a class="anchor" href="#test-structure-arrange-act-assert" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">it('describes expected behavior', () =&gt; {
+  // Arrange: Set up test data and preconditions
+  const input = { title: 'Test Task', priority: 'high' };
+
+  // Act: Perform the action being tested
+  const result = createTask(input);
+
+  // Assert: Verify the outcome
+  expect(result.title).toBe('Test Task');
+  expect(result.priority).toBe('high');
+  expect(result.status).toBe('pending');
+});</code></pre>
+<h2 id="test-naming-conventions">Test Naming Conventions<a class="anchor" href="#test-naming-conventions" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">// Pattern: [unit] [expected behavior] [condition]
+describe('TaskService.createTask', () =&gt; {
+  it('creates a task with default pending status', () =&gt; {});
+  it('throws ValidationError when title is empty', () =&gt; {});
+  it('trims whitespace from title', () =&gt; {});
+  it('generates a unique ID for each task', () =&gt; {});
+});</code></pre>
+<h2 id="common-assertions">Common Assertions<a class="anchor" href="#common-assertions" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">// Equality
+expect(result).toBe(expected);           // Strict equality (===)
+expect(result).toEqual(expected);        // Deep equality (objects/arrays)
+expect(result).toStrictEqual(expected);  // Deep equality + type matching
+
+// Truthiness
+expect(result).toBeTruthy();
+expect(result).toBeFalsy();
+expect(result).toBeNull();
+expect(result).toBeDefined();
+expect(result).toBeUndefined();
+
+// Numbers
+expect(result).toBeGreaterThan(5);
+expect(result).toBeLessThanOrEqual(10);
+expect(result).toBeCloseTo(0.3, 5);      // Floating point
+
+// Strings
+expect(result).toMatch(/pattern/);
+expect(result).toContain('substring');
+
+// Arrays / Objects
+expect(array).toContain(item);
+expect(array).toHaveLength(3);
+expect(object).toHaveProperty('key', 'value');
+
+// Errors
+expect(() =&gt; fn()).toThrow();
+expect(() =&gt; fn()).toThrow(ValidationError);
+expect(() =&gt; fn()).toThrow('specific message');
+
+// Async
+await expect(asyncFn()).resolves.toBe(value);
+await expect(asyncFn()).rejects.toThrow(Error);</code></pre>
+<h2 id="mocking-patterns">Mocking Patterns<a class="anchor" href="#mocking-patterns" aria-label="锚点">#</a></h2>
+<h3 id="mock-functions">Mock Functions<a class="anchor" href="#mock-functions" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">const mockFn = jest.fn();
+mockFn.mockReturnValue(42);
+mockFn.mockResolvedValue({ data: 'test' });
+mockFn.mockImplementation((x) =&gt; x * 2);
+
+expect(mockFn).toHaveBeenCalled();
+expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
+expect(mockFn).toHaveBeenCalledTimes(3);</code></pre>
+<h3 id="mock-modules">Mock Modules<a class="anchor" href="#mock-modules" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Mock an entire module
+jest.mock('./database', () =&gt; ({
+  query: jest.fn().mockResolvedValue([{ id: 1, title: 'Test' }]),
+}));
+
+// Mock specific exports
+jest.mock('./utils', () =&gt; ({
+  ...jest.requireActual('./utils'),
+  generateId: jest.fn().mockReturnValue('test-id'),
+}));</code></pre>
+<h3 id="mock-at-boundaries-only">Mock at Boundaries Only<a class="anchor" href="#mock-at-boundaries-only" aria-label="锚点">#</a></h3>
+<pre><code>Mock these:                    Don't mock these:
+├── Database calls             ├── Internal utility functions
+├── HTTP requests              ├── Business logic
+├── File system operations     ├── Data transformations
+├── External API calls         ├── Validation functions
+└── Time/Date (when needed)    └── Pure functions</code></pre>
+<h2 id="react-component-testing">React/Component Testing<a class="anchor" href="#react-component-testing" aria-label="锚点">#</a></h2>
+<pre><code class="language-tsx">import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+describe('TaskForm', () =&gt; {
+  it('submits the form with entered data', async () =&gt; {
+    const onSubmit = jest.fn();
+    render(&lt;TaskForm onSubmit={onSubmit} /&gt;);
+
+    // Find elements by accessible role/label (not test IDs)
+    await screen.findByRole('textbox', { name: /title/i });
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'New Task' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    await waitFor(() =&gt; {
+      expect(onSubmit).toHaveBeenCalledWith({ title: 'New Task' });
+    });
+  });
+
+  it('shows validation error for empty title', async () =&gt; {
+    render(&lt;TaskForm onSubmit={jest.fn()} /&gt;);
+
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
+  });
+});</code></pre>
+<h2 id="api-integration-testing">API / Integration Testing<a class="anchor" href="#api-integration-testing" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">import request from 'supertest';
+import { app } from '../src/app';
+
+describe('POST /api/tasks', () =&gt; {
+  it('creates a task and returns 201', async () =&gt; {
+    const response = await request(app)
+      .post('/api/tasks')
+      .send({ title: 'Test Task' })
+      .set('Authorization', `Bearer ${testToken}`)
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: expect.any(String),
+      title: 'Test Task',
+      status: 'pending',
+    });
+  });
+
+  it('returns 422 for invalid input', async () =&gt; {
+    const response = await request(app)
+      .post('/api/tasks')
+      .send({ title: '' })
+      .set('Authorization', `Bearer ${testToken}`)
+      .expect(422);
+
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 401 without authentication', async () =&gt; {
+    await request(app)
+      .post('/api/tasks')
+      .send({ title: 'Test' })
+      .expect(401);
+  });
+});</code></pre>
+<h2 id="e2e-testing-playwright">E2E Testing (Playwright)<a class="anchor" href="#e2e-testing-playwright" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">import { test, expect } from '@playwright/test';
+
+test('user can create and complete a task', async ({ page }) =&gt; {
+  // Navigate and authenticate
+  await page.goto('/');
+  await page.fill('[name=&quot;email&quot;]', 'test@example.com');
+  await page.fill('[name=&quot;password&quot;]', 'testpass123');
+  await page.click('button:has-text(&quot;Log in&quot;)');
+
+  // Create a task
+  await page.click('button:has-text(&quot;New Task&quot;)');
+  await page.fill('[name=&quot;title&quot;]', 'Buy groceries');
+  await page.click('button:has-text(&quot;Create&quot;)');
+
+  // Verify task appears
+  await expect(page.locator('text=Buy groceries')).toBeVisible();
+
+  // Complete the task
+  await page.click('[aria-label=&quot;Complete Buy groceries&quot;]');
+  await expect(page.locator('text=Buy groceries')).toHaveCSS(
+    'text-decoration-line', 'line-through'
+  );
+});</code></pre>
+<h2 id="test-anti-patterns">Test Anti-Patterns<a class="anchor" href="#test-anti-patterns" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Anti-Pattern</th><th>Problem</th><th>Better Approach</th></tr></thead><tbody><tr><td>Testing implementation details</td><td>Breaks on refactor</td><td>Test inputs/outputs</td></tr><tr><td>Snapshot everything</td><td>No one reviews snapshot diffs</td><td>Assert specific values</td></tr><tr><td>Shared mutable state</td><td>Tests pollute each other</td><td>Setup/teardown per test</td></tr><tr><td>Testing third-party code</td><td>Wastes time, not your bug</td><td>Mock the boundary</td></tr><tr><td>Skipping tests to pass CI</td><td>Hides real bugs</td><td>Fix or delete the test</td></tr><tr><td>Using <code>test.skip</code> permanently</td><td>Dead code</td><td>Remove or fix it</td></tr><tr><td>Overly broad assertions</td><td>Doesn't catch regressions</td><td>Be specific</td></tr><tr><td>No async error handling</td><td>Swallowed errors, false passes</td><td>Always <code>await</code> async tests</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/test-driven-development/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Test-Driven Development</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/update-config/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Update Config — Configuration File Manager</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/test-driven-development/references/testing-patterns.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

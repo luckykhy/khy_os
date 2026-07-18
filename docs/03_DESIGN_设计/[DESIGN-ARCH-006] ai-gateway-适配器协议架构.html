@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Gateway 适配器协议架构 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>AI Gateway 适配器协议架构</div>
+      <header class="hero reveal"><h1>AI Gateway 适配器协议架构</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ai-gateway-适配器协议架构">AI Gateway 适配器协议架构</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#架构总览">架构总览</a></li><li class="lvl-2"><a href="#核心模块">核心模块</a></li><li class="lvl-3"><a href="#protocolregistry-js-协议元数据与自动选择">`_protocolRegistry.js` — 协议元数据与自动选择</a></li><li class="lvl-3"><a href="#protocolpipeline-js-协议管线工厂">`_protocolPipeline.js` — 协议管线工厂</a></li><li class="lvl-3"><a href="#responsesssestream-js-responses-api-sse-流解析-出站">`_responsesSseStream.js` — Responses API SSE 流解析(出站)</a></li><li class="lvl-3"><a href="#responsesformat-js-responses-输出共享纯函数">`_responsesFormat.js` — Responses 输出共享纯函数</a></li><li class="lvl-3"><a href="#responses-api-入站服务-proxyserver-handlemultiprotocol-codex-分支">Responses API 入站服务(`proxyServer.handleMultiProtocol`,codex 分支)</a></li><li class="lvl-3"><a href="#responses-api-出站消费-relay-api-的-responses-协议">Responses API 出站消费(`relay_api` 的 `responses` 协议)</a></li><li class="lvl-3"><a href="#anthropicssestream-js-anthropic-sse-流解析">`_anthropicSseStream.js` — Anthropic SSE 流解析</a></li><li class="lvl-3"><a href="#responsebuilder-js-标准化响应构建">`_responseBuilder.js` — 标准化响应构建</a></li><li class="lvl-2"><a href="#自动协议选择流程">自动协议选择流程</a></li><li class="lvl-2"><a href="#适配器开发指南">适配器开发指南</a></li><li class="lvl-3"><a href="#新建适配器">新建适配器</a></li><li class="lvl-3"><a href="#添加新协议">添加新协议</a></li><li class="lvl-2"><a href="#共享模块依赖图">共享模块依赖图</a></li><li class="lvl-2"><a href="#文件清单">文件清单</a></li><li class="lvl-2"><a href="#设计原则">设计原则</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-006 | 阶段: 设计 | 原路径: docs/架构/ai-gateway-适配器协议架构.md --&gt;</p>
+<h1 id="ai-gateway-适配器协议架构">AI Gateway 适配器协议架构<a class="anchor" href="#ai-gateway-适配器协议架构" aria-label="锚点">#</a></h1>
+<blockquote><p>版本: v0.1.100 | 日期: 2026-06-14</p></blockquote>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>AI Gateway 通过 16 个适配器对接不同的 AI 服务端点（云端 API、IDE 插件、本地模型、中继代理等）。<br>本文档描述协议层的统一抽象设计，以及模型接入后如何自动选择最合适的协议。</p>
+<h2 id="架构总览">架构总览<a class="anchor" href="#架构总览" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">客户端请求 (OpenAI / Anthropic / Gemini / Codex)
+    │
+    ▼
+proxyServer.js ── protocolConverter/ ── 路径检测协议
+    │
+    ▼
+modelRouter.resolveModelRoute()
+    │  返回 { adapterKey, modelId, protocolHint }
+    ▼
+aiGateway.generate()
+    │  级联选择适配器 → 注入 _resolvedProtocol
+    ▼
+adapter.generate(prompt, { ..., _resolvedProtocol })
+    │  内部调用 _protocolPipeline handler
+    ▼
+_protocolPipeline.createProtocolHandler({ protocol })
+    │  ┌─ openai:     _messageBuilder + _toolSchemaConverter + _openaiSseStream
+    │  ├─ anthropic:  _messageBuilder + _anthropicSseStream
+    │  └─ (扩展: codewhisperer / codex / ...)
+    ▼
+_responseBuilder.buildSuccess / buildFailure → 标准化响应</code></pre>
+<h2 id="核心模块">核心模块<a class="anchor" href="#核心模块" aria-label="锚点">#</a></h2>
+<h3 id="protocolregistry-js-协议元数据与自动选择"><code>_protocolRegistry.js</code> — 协议元数据与自动选择<a class="anchor" href="#protocolregistry-js-协议元数据与自动选择" aria-label="锚点">#</a></h3>
+<p>声明每个适配器支持的协议，多协议适配器提供 <code>resolveProtocol()</code> 动态选择。</p>
+<pre><code class="language-js">// 查询适配器的协议
+getProtocolForAdapter('cursor', 'gpt-4o', {})       // → 'openai'
+getProtocolForAdapter('claude', 'claude-sonnet', {}) // → 'anthropic'
+getProtocolForAdapter('trae', model, opts)           // → 动态: 'openai' | 'codewhisperer' | 'trae-native'
+
+// 查询支持某协议的所有适配器
+getAdaptersForProtocol('anthropic')  // → ['claude', 'relay_api', 'api']
+
+// 从模型名推断协议
+inferProtocolFromModel('claude-sonnet-4-6')  // → 'anthropic'
+inferProtocolFromModel('gpt-4o')             // → 'openai'
+inferProtocolFromModel('unknown-model')      // → null</code></pre>
+<p><strong>协议标识符</strong>:</p>
+<table><thead><tr><th>协议</th><th>适配器</th></tr></thead><tbody><tr><td><code>openai</code></td><td>cursor, vscode, windsurf, cursor2api, ollama, trae(HTTP), relay_api, api</td></tr><tr><td><code>anthropic</code></td><td>claude(直连), relay_api(Anthropic端点), api</td></tr><tr><td><code>codewhisperer</code></td><td>kiro, trae(CW路径)</td></tr><tr><td><code>codex</code></td><td>codex(直连)</td></tr><tr><td><code>responses</code></td><td>relay_api(Responses 端点) — 出站消费 OpenAI <code>/v1/responses</code></td></tr><tr><td><code>cli-stream-json</code></td><td>claude(桥接), codex(CLI), cli</td></tr><tr><td><code>trae-native</code></td><td>trae(原生协议)</td></tr><tr><td><code>direct</code></td><td>localLLM</td></tr><tr><td><code>manual</code></td><td>relay, clipboard, warp</td></tr></tbody></table>
+<blockquote><p><strong>命名陷阱</strong>:<code>codex</code> 与 <code>responses</code> 都对应 OpenAI 的 Responses 线格式(<code>/v1/responses</code>),但分属两个方向:</p>
+<ul><li><code>codex</code> —— <strong>入站服务端</strong>。<code>proxyServer.js</code> 把外部 Responses 客户端的请求转为内部 canonical,</li></ul>
+<p>并以真流式 Responses 事件序列回写(见下文「Responses API 入站服务」)。</p>
+<ul><li><code>responses</code> —— <strong>出站消费端</strong>。KhyOS 作为客户端经 <code>relay_api</code> 向上游 Responses 端点发请求</li></ul>
+<p>(见下文「Responses API 出站消费」)。两者共用 <code>protocolConverter</code> 的 codex 转换器,但走不同的管线分支。</p></blockquote>
+<h3 id="protocolpipeline-js-协议管线工厂"><code>_protocolPipeline.js</code> — 协议管线工厂<a class="anchor" href="#protocolpipeline-js-协议管线工厂" aria-label="锚点">#</a></h3>
+<p>为每种协议提供统一的请求构建和响应解析，消除适配器间的重复代码。</p>
+<pre><code class="language-js">const handler = createProtocolHandler({ protocol: 'openai', adapterName: 'cursor' });
+
+// 构建请求体（自动处理消息格式、工具转换、图片附加）
+const { body, system } = handler.buildRequestBody(prompt, options);
+
+// 解析 JSON 响应（提取 content、toolUseBlocks、usage、thinking）
+const result = handler.parseJsonResponse(rawResponse);
+
+// 解析 SSE 流式响应
+const result = await handler.parseStreamResponse(stream, onChunk, { signal });</code></pre>
+<p>内部按协议委托到专用模块：</p>
+<ul><li><strong>openai</strong>: <code>_messageBuilder</code>(消息解析) → <code>_toolSchemaConverter</code>(Anthropic→OpenAI工具转换) → <code>_openaiSseStream</code>(流解析)</li><li><strong>anthropic</strong>: <code>_messageBuilder</code>(消息解析) → <code>_imageCompat</code>(图片转换) → <code>_anthropicSseStream</code>(流解析)</li><li><strong>responses</strong>: 复用 openai handler 构建 canonical 后经 <code>protocolConverter</code> 转 Responses <code>input[]</code>+<code>instructions</code> → <code>_responsesSseStream</code>(流解析) / <code>_responsesFormat.parseDirectResponse</code>(JSON 解析)</li></ul>
+<h3 id="responsesssestream-js-responses-api-sse-流解析-出站"><code>_responsesSseStream.js</code> — Responses API SSE 流解析(出站)<a class="anchor" href="#responsesssestream-js-responses-api-sse-流解析-出站" aria-label="锚点">#</a></h3>
+<p>KhyOS 作为客户端消费上游 <code>/v1/responses</code> 的 SSE 时使用。<code>parseResponsesSseStream(stream, onChunk, opts)</code><br>按 <code>item_id</code> 累积输出项,返回 <code>{ content, model, toolUseBlocks, finishReason, usage }</code>:</p>
+<ul><li><code>response.output_text.delta</code> → 累积 content,<code>onChunk({type:'text'})</code></li><li><code>response.output_item.added</code>(function_call) → 记录 <code>item_id</code>(<code>fc_…</code>)/<code>call_id</code>(<code>call_…</code>)/name,<code>onChunk({type:'tool_use_start'})</code></li><li><code>response.function_call_arguments.delta</code> → 累积 argsBuffer,<code>onChunk({type:'tool_use_input_delta'})</code></li><li><code>response.function_call_arguments.done</code> / <code>response.output_item.done</code> → <code>onChunk({type:'tool_use_end'})</code></li><li><code>response.completed</code> → 读 <code>usage</code> 终止(<strong>无 <code>[DONE]</code> 哨兵</strong>);若流中未见增量事件,</li></ul>
+<p>退回 <code>completed</code> 快照的 <code>output[]</code> 经 <code>parseDirectResponse</code> 重建 content/toolCalls</p>
+<ul><li>name 始终取自 <code>output_item.added</code>(忽略 <code>…arguments.done</code> 内 <code>name:null</code> 的 SDK 怪癖)</li><li><code>item_id</code>(<code>fc_</code>)与 <code>call_id</code>(<code>call_</code>)严格区分:前者键 arg-delta 事件,后者供客户端下一轮</li></ul>
+<p><code>function_call_output</code> 引用</p>
+<h3 id="responsesformat-js-responses-输出共享纯函数"><code>_responsesFormat.js</code> — Responses 输出共享纯函数<a class="anchor" href="#responsesformat-js-responses-输出共享纯函数" aria-label="锚点">#</a></h3>
+<p>从 <code>codexAdapter.js</code> 抽取,供出站 handler 与 codex 适配器共用,消除重复:</p>
+<ul><li><code>extractMessageText</code> / <code>extractThinkingTags</code> / <code>extractReasoningText</code></li><li><code>parseDirectResponse(output)</code> → <code>{ textParts, functionCalls, reasoningParts }</code>:</li></ul>
+<p>解析非流式 Responses <code>output[]</code>(message→text、function_call→<code>JSON.parse(arguments)</code>+<code>call_id</code>、reasoning→thinking)</p>
+<h3 id="responses-api-入站服务-proxyserver-handlemultiprotocol-codex-分支">Responses API 入站服务(<code>proxyServer.handleMultiProtocol</code>,codex 分支)<a class="anchor" href="#responses-api-入站服务-proxyserver-handlemultiprotocol-codex-分支" aria-label="锚点">#</a></h3>
+<p>外部 Responses 客户端 POST <code>/v1/responses</code> 时,<code>proxyServer.js</code> 把请求经 <code>protocolConverter</code><br>转为 canonical,生成回复后以<strong>真流式</strong> Responses 事件序列回写(单调 <code>sequence_number</code> 从 0 起):</p>
+<ul><li>文本:<code>response.created</code> → <code>response.in_progress</code> → <code>response.output_item.added</code>(message)</li></ul>
+<p>→ <code>response.content_part.added</code> → <code>response.output_text.delta</code>(多次)<br>  → <code>response.output_text.done</code> → <code>response.content_part.done</code> → <code>response.output_item.done</code><br>  → <code>response.completed</code></p>
+<ul><li>工具调用:<code>output_item.added</code>(function_call)→ <code>response.function_call_arguments.delta</code>(多次)</li></ul>
+<p>→ <code>response.function_call_arguments.done</code> → <code>response.output_item.done</code>(function_call <strong>无</strong> content_part 事件)</p>
+<ul><li><code>created</code> / <code>completed</code> 必带完整 <code>response</code> 快照;<code>completed</code> 快照由 <code>fromCanonical</code> 生成,</li></ul>
+<p>杜绝流事件与终态分叉;<strong>禁发 <code>[DONE]</code></strong>(<code>response.completed</code> 即终止)</p>
+<ul><li>首版丢弃入站 thinking,避免发畸形 reasoning item</li></ul>
+<p><strong>会话状态链(<code>previous_response_id</code> / <code>store</code>)</strong> —— <code>responseSessionStore.js</code>(进程内 LRU+TTL):</p>
+<ul><li><code>put/get</code>,env <code>RESPONSES_STORE_TTL_MS</code>(默认 3600000)、<code>RESPONSES_STORE_MAX</code>(默认 1000)</li><li>非流式/流式两路完成后生成 <code>resp_</code>+24hex 作 response <code>id</code>;<code>store !== false</code> 时持久化</li></ul>
+<p><code>{id, messages, createdAt}</code></p>
+<ul><li>请求带 <code>previous_response_id</code>:命中则把持久化历史<strong>前置</strong>到当前 input;未命中/过期 →</li></ul>
+<p>Responses 风格 <code>400</code>(<code>{error:{type:'invalid_request_error', code:'previous_response_not_found'}}</code>),<br>  <code>RESPONSES_STORE_STRICT=false</code> 可改宽松忽略</p>
+<ul><li>多进程局限:集群下后续请求可能命中无该条目的 worker → 当过期处理。接口稳定,</li></ul>
+<p>未来可换 sqlite/redis 不动调用方</p>
+<h3 id="responses-api-出站消费-relay-api-的-responses-协议">Responses API 出站消费(<code>relay_api</code> 的 <code>responses</code> 协议)<a class="anchor" href="#responses-api-出站消费-relay-api-的-responses-协议" aria-label="锚点">#</a></h3>
+<p><code>relay_api</code> 适配器在 <code>serviceType==='responses'</code> 或端点指向 <code>/responses</code> 时,经 <code>responses</code> handler:</p>
+<ul><li>URL 构造 <code>${endpoint}/v1/responses</code>(或 <code>/responses</code>),Bearer 鉴权</li><li><code>buildRequestBody</code> 复用 openai handler 产 canonical 后 <code>convertRequestBetween(body,'openai','codex')</code></li></ul>
+<p>得 <code>input[]</code>+<code>instructions</code>,不重写</p>
+<ul><li>非流式经 <code>parseDirectResponse</code> 解析 <code>output[]</code>,usage 映射 <code>input_tokens</code>/<code>output_tokens</code>/<code>total_tokens</code></li><li>流式委托 <code>_responsesSseStream</code></li></ul>
+<h3 id="anthropicssestream-js-anthropic-sse-流解析"><code>_anthropicSseStream.js</code> — Anthropic SSE 流解析<a class="anchor" href="#anthropicssestream-js-anthropic-sse-流解析" aria-label="锚点">#</a></h3>
+<p>与 <code>_openaiSseStream.js</code> 对称，处理 Anthropic Messages API 的 SSE 事件：</p>
+<ul><li><code>message_start</code> → 提取 model、input_tokens</li><li><code>content_block_start/delta/stop</code> → 累积 text、tool_use、thinking 块</li><li><code>message_delta</code> → 提取 stop_reason、output_tokens</li><li>兼容两种 SSE 帧格式（两行 <code>event: + data:</code> 和内联 <code>data: {type:...}</code>）</li><li>工具输入 JSON 容错：<code>safeJsonParse</code> 兜底</li></ul>
+<h3 id="responsebuilder-js-标准化响应构建"><code>_responseBuilder.js</code> — 标准化响应构建<a class="anchor" href="#responsebuilder-js-标准化响应构建" aria-label="锚点">#</a></h3>
+<p>所有适配器统一使用：</p>
+<pre><code class="language-js">buildSuccess(content, { adapter, provider, model, toolUseBlocks, stopReason, usage })
+buildFailure(error, { adapter, provider, statusCode, errorType })</code></pre>
+<h2 id="自动协议选择流程">自动协议选择流程<a class="anchor" href="#自动协议选择流程" aria-label="锚点">#</a></h2>
+<p>当模型接入后，系统自动选择最合适的协议，无需手动配置：</p>
+<pre><code class="language-text">1. modelRouter.resolveModelRoute({ model: 'claude-sonnet-4-6' })
+   → protocolHint: 'anthropic'  (从模型名前缀推断)
+
+2. aiGateway.autoSelectModel(taskType, { model })
+   → 优先选择支持 'anthropic' 协议的适配器 (claude &gt; relay_api &gt; api)
+   → 若协议过滤后无可用适配器，退回全量优先级列表
+
+3. aiGateway._generateWithAdapterIsolation(entry, prompt, options)
+   → options._resolvedProtocol = getProtocolForAdapter(entry.key, model, options)
+   → 适配器内部读取 _resolvedProtocol 选择正确的管线处理器</code></pre>
+<p><strong>多协议适配器的动态选择</strong>:</p>
+<table><thead><tr><th>适配器</th><th>决策逻辑</th></tr></thead><tbody><tr><td><code>claude</code></td><td><code>GATEWAY_CLAUDE_MODE</code> env / <code>model::mode</code> 后缀 / API key 存在性 → <code>anthropic</code> 或 <code>cli-stream-json</code></td></tr><tr><td><code>trae</code></td><td>nativeToken 存在 → <code>trae-native</code>；否则 → CW 或 <code>openai</code> 级联</td></tr><tr><td><code>codex</code></td><td><code>GATEWAY_CODEX_MODE=direct</code> 或有图片 → <code>codex</code>；否则 → <code>cli-stream-json</code></td></tr><tr><td><code>relay_api</code></td><td><code>serviceType==='responses'</code> 或端点含 <code>/responses</code> → <code>responses</code>;端点含 <code>/anthropic</code> → <code>anthropic</code>;否则 → <code>openai</code></td></tr></tbody></table>
+<h2 id="适配器开发指南">适配器开发指南<a class="anchor" href="#适配器开发指南" aria-label="锚点">#</a></h2>
+<h3 id="新建适配器">新建适配器<a class="anchor" href="#新建适配器" aria-label="锚点">#</a></h3>
+<ol><li>在 <code>_protocolRegistry.js</code> 的 <code>ADAPTER_PROTOCOL_MAP</code> 中声明协议支持</li><li>在适配器中创建管线处理器：</li></ol>
+<pre><code class="language-js">   const { createProtocolHandler } = require('./_protocolPipeline');
+   const _handler = createProtocolHandler({ protocol: 'openai', adapterName: 'myAdapter' });</code></pre>
+<ol><li><code>generate()</code> 中使用管线：</li></ol>
+<pre><code class="language-js">   const { body } = _handler.buildRequestBody(prompt, options);
+   // ... 发送 HTTP 请求 ...
+   const result = _handler.parseJsonResponse(rawResponse);
+   return buildSuccess(result.content, { adapter: 'myAdapter', ...result });</code></pre>
+<ol><li>在 <code>aiGateway.js</code> 的 <code>_adapters</code> 数组中注册</li></ol>
+<h3 id="添加新协议">添加新协议<a class="anchor" href="#添加新协议" aria-label="锚点">#</a></h3>
+<ol><li>在 <code>_protocolRegistry.js</code> 的 <code>PROTOCOLS</code> 中添加协议标识符</li><li>在 <code>_protocolPipeline.js</code> 的 <code>createProtocolHandler</code> switch 中添加分支</li><li>实现 <code>buildRequestBody</code> / <code>parseJsonResponse</code> / <code>parseStreamResponse</code></li></ol>
+<h2 id="共享模块依赖图">共享模块依赖图<a class="anchor" href="#共享模块依赖图" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">_protocolPipeline.js
+ ├── _messageBuilder.js        消息源解析 (rawMessages / structuredMessages / messages / prompt)
+ ├── _toolSchemaConverter.js   工具格式转换 (Anthropic ↔ OpenAI ↔ CW)
+ ├── _imageCompat.js           图片格式转换 (OpenAI / Anthropic / Ollama / Codex / Gemini)
+ ├── _openaiSseStream.js       OpenAI SSE 流解析
+ └── _anthropicSseStream.js    Anthropic SSE 流解析
+
+_responseBuilder.js            标准化响应构建 (独立，所有适配器直接引用)
+_protocolRegistry.js           协议元数据 (独立，aiGateway / modelRouter 引用)
+_errorClassifiers.js           错误分类 (_responseBuilder 引用)</code></pre>
+<h2 id="文件清单">文件清单<a class="anchor" href="#文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>行数</th><th>职责</th></tr></thead><tbody><tr><td><code>_protocolRegistry.js</code></td><td>~190</td><td>协议声明 + 自动选择 + 模型名推断 (含 <code>responses</code>)</td></tr><tr><td><code>_protocolPipeline.js</code></td><td>~260</td><td>管线工厂 (openai / anthropic / cw / responses handler)</td></tr><tr><td><code>_anthropicSseStream.js</code></td><td>~230</td><td>Anthropic SSE 流解析</td></tr><tr><td><code>_responsesSseStream.js</code></td><td>~200</td><td>Responses API SSE 流解析 (出站)</td></tr><tr><td><code>_responsesFormat.js</code></td><td>~120</td><td>Responses 输出共享纯函数 (parseDirectResponse 等)</td></tr><tr><td><code>responseSessionStore.js</code></td><td>~90</td><td>Responses 会话状态链 LRU+TTL (previous_response_id / store)</td></tr><tr><td><code>_responseBuilder.js</code></td><td>~108</td><td>标准化响应 buildSuccess / buildFailure</td></tr><tr><td><code>_messageBuilder.js</code></td><td>~127</td><td>消息源解析 (4 种输入 → 统一消息数组)</td></tr><tr><td><code>_toolSchemaConverter.js</code></td><td>~210</td><td>工具格式转换 (Anthropic / OpenAI / CW)</td></tr><tr><td><code>_openaiSseStream.js</code></td><td>~222</td><td>OpenAI SSE 流解析</td></tr><tr><td><code>_imageCompat.js</code></td><td>~220</td><td>图片格式转换</td></tr><tr><td><code>_errorClassifiers.js</code></td><td>-</td><td>错误类型分类</td></tr></tbody></table>
+<h2 id="设计原则">设计原则<a class="anchor" href="#设计原则" aria-label="锚点">#</a></h2>
+<ol><li><strong>组合优于继承</strong> — 适配器通过组合共享模块获得协议能力，不通过类继承。每个适配器保持独立的 <code>module.exports = { detect, generate, getStatus }</code> 模式。</li><li><strong>协议归协议，传输归传输</strong> — 管线只负责消息格式和响应解析，HTTP/SDK/CLI 等传输逻辑留在适配器内部。</li><li><strong>渐进增强</strong> — 管线不是强制的。不使用管线的适配器（如 kiro 的 CW 路径）可以继续直接操作协议格式。</li><li><strong>协议选择可覆盖</strong> — 自动选择是建议性的，适配器的 <code>resolveProtocol()</code> 有最终决定权。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-005] agentfs-智能体文件系统.html"><div class="dir">← 上一篇</div><div class="ttl">AgentFS — 智能体文件系统</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-007] m1-微内核-ipc-moonbit.html"><div class="dir">下一篇 →</div><div class="ttl">M1 微内核 + IPC + MoonBit 接口草案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-006] ai-gateway-适配器协议架构.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

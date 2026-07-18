@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-073] 离机渠道启动入口契约自检清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-073] 离机渠道启动入口契约自检清单</div>
+      <header class="hero reveal"><h1>[OPS-MAN-073] 离机渠道启动入口契约自检清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-073-离机渠道启动入口契约自检清单">[OPS-MAN-073] 离机渠道启动入口契约自检清单</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口">为什么需要它（真实缺口）</a></li><li class="lvl-2"><a href="#单一真源与分层">单一真源与分层</a></li><li class="lvl-2"><a href="#启动地板清单-launch-critical-bundle-paths">启动地板清单（`LAUNCH_CRITICAL_BUNDLE_PATHS`）</a></li><li class="lvl-2"><a href="#两道防线">两道防线</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-073-离机渠道启动入口契约自检清单">[OPS-MAN-073] 离机渠道启动入口契约自检清单<a class="anchor" href="#ops-man-073-离机渠道启动入口契约自检清单" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼的第五个角度。前四件礼分别管「进化提示词」「反向症状分诊」「还原环境自检」<br>「已装副本完整性」。本篇补上最基础的一环：<strong>每条离机渠道，必须亲自审查自己真正<br>exec 的那个启动脚本是否被打进包</strong>。缺了它，khy 连第一行都跑不起来——「简单还原」<br>无从谈起。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>pip（<code>khy-os</code>）与 npm（<code>@khy-os/khy-os</code>）是唯二的离机渠道。每条渠道发布前都会在<br>即将报废的构建机上审自己的产物；本契约要求：<strong>渠道 X 真正 exec 的启动脚本，必须写进<br>渠道 X 自己的发布完整性清单</strong>。否则一个丢了启动脚本的包能通过发布审计、正常发出去，<br>却在别人机器上一装即死。</p>
+<h2 id="为什么需要它-真实缺口">为什么需要它（真实缺口）<a class="anchor" href="#为什么需要它-真实缺口" aria-label="锚点">#</a></h2>
+<p>pip 的启动壳在 <code>platform/khy_platform/cli.py:2304</code> 直接 exec<br><code>&lt;bundle&gt;/services/backend/bin/khy.js</code>；文件缺失即在 <code>cli.py:2307</code> 致命退出<br>（&quot;错误：找不到 CLI 入口脚本 …&quot;）。</p>
+<p>历史上 npm 的发布完整性清单<br>（<code>packaging/npm/scripts/audit-purity.js</code> 的 <code>REQUIRED_PATHS</code>）已同时钉死<br><code>bin/khy.js</code> 与 <code>server.js</code>；但 pip 的清单<br>（<code>scripts/release/pip_packaging_rules.py</code> 的 <code>REQUIRED_WHEEL_PATHS</code> /<br><code>REQUIRED_SDIST_PATHS</code>）只钉死了 <code>models/index.js</code>、<code>auth.js</code>、<code>main.js</code> 等，<br><strong>唯独漏了它自己 exec 的启动脚本</strong>。后果：一个丢了 <code>bin/khy.js</code> 的 wheel 能通过<br><code>scripts/release/audit_pip_artifacts.py</code>、正常发布，然后 <code>pip install khy-os</code> 在<br>别人机器上直接死在启动第一行。</p>
+<p><code>installIntegrity</code>（OPS-MAN-069）是<strong>装完之后</strong>在幸存者机器上离线自检，其反漂移断言<br>刻意用 <code>inPip || inNpm</code>（渠道无关，任一背书即可），因此<strong>容忍</strong> <code>bin/khy.js</code> 仅由<br>npm 背书。本契约是<strong>发布之前</strong>、<strong>逐渠道</strong>的更强不变量，专堵这种渠道非对称。</p>
+<h2 id="单一真源与分层">单一真源与分层<a class="anchor" href="#单一真源与分层" aria-label="锚点">#</a></h2>
+<ul><li>纯叶子 <code>scripts/lib/bundleLaunchContract.js</code>：零 IO、绝不抛。</li></ul>
+<p><code>LAUNCH_CRITICAL_BUNDLE_PATHS</code> 列出每条渠道启动早期真正 exec 的「地板」文件；<br>  <code>assessChannelParity({pipWheelText, pipSdistText, npmText})</code> 给定三份权威清单的<br>  <strong>原文文本</strong>，算出各渠道各缺哪些。</p>
+<ul><li>数据真源 <code>scripts/release/pip_packaging_rules.py</code>：<code>REQUIRED_WHEEL_PATHS</code></li></ul>
+<p>（前缀 <code>khy_os/bundled/</code>）与 <code>REQUIRED_SDIST_PATHS</code>（无前缀）——已补上<br>  <code>services/backend/bin/khy.js</code> 与 <code>services/backend/server.js</code>。</p>
+<ul><li>数据真源 <code>packaging/npm/scripts/audit-purity.js</code>：<code>REQUIRED_PATHS</code></li></ul>
+<p>（前缀 <code>package/bundled/</code>）——早已含两者。</p>
+<ul><li>真正读盘的 IO 在配套测试里（解析磁盘上三份清单再喂进纯叶子）。</li></ul>
+<h2 id="启动地板清单-launch-critical-bundle-paths">启动地板清单（<code>LAUNCH_CRITICAL_BUNDLE_PATHS</code>）<a class="anchor" href="#启动地板清单-launch-critical-bundle-paths" aria-label="锚点">#</a></h2>
+<p>| bundle 相对路径 | 来源 |</p>
+<p>| <code>services/backend/bin/khy.js</code> | pip 壳 <code>cli.py:2304</code> 直接 exec；缺失即 <code>cli.py:2307</code> 致命退出 |</p>
+<p>| <code>services/backend/server.js</code> | 管理后端服务入口 |</p>
+<p>| <code>services/backend/src/models/index.js</code> | 后端启动早期即 require 的数据模型入口 |</p>
+<p>| <code>services/ai-backend/src/middleware/auth.js</code> | 缺它曾让 bundled 安装的每条 proxy/user-gateway 路由 500 |</p>
+<p>| <code>apps/ai-frontend/src/main.js</code> | 前端 SPA 入口，缺则管理页白屏 |</p>
+<p>| <code>software/khyquant/frontend/src/main.js</code> | khyquant 前端入口 |</p>
+<blockquote><p>⚠️ <strong>深挖修正（渠道非对称）</strong>：本清单初版只列前 2 条。深挖发现 pip 的<br><code>REQUIRED_WHEEL_PATHS</code> / <code>REQUIRED_SDIST_PATHS</code> 早已三处钉死全部 6 条运行时关键<br>文件，而 npm 的 <code>packaging/npm/scripts/audit-purity.js</code> 的 <code>REQUIRED_PATHS</code> <strong>只钉了<br>前 2 条</strong>——一个丢了 <code>ai-backend/src/middleware/auth.js</code> 的 npm tarball 能通过 npm<br>自己的 purity 审计并发布，却在别人机器上让每条 proxy/user-gateway 路由 500（该文件<br>曾真实掉出打包一次）。已把全部 6 条补进 <code>LAUNCH_CRITICAL_BUNDLE_PATHS</code>（本契约的<br>SSOT）与 npm <code>REQUIRED_PATHS</code>，三份清单现逐条一致。</p></blockquote>
+<h2 id="两道防线">两道防线<a class="anchor" href="#两道防线" aria-label="锚点">#</a></h2>
+<blockquote><p>⚠️ <strong>深挖修正（substring false-GREEN 边界锚定）</strong>：一致性断言的匹配逻辑起初是裸<br>子串 <code>text.includes(prefix+path)</code>。在 sdist 的<strong>空前缀</strong>下这能被 FALSE-GREEN 欺骗——<br>一个启动地板路径哪怕只作为<strong>更长路径的子串</strong>（<code>.../server.js.template</code>）或<strong>注释<br>文本</strong>出现，也会被误判「已钉死」，守卫于是对一个真没钉死该文件的清单<strong>放行</strong>（最危险<br>的失败：说安全其实不安全）。已改为锚定收尾引号：<code>&lt;prefix&gt;&lt;path&gt;</code> 紧后必须是 <code>&quot;</code> 或 <code>'</code>，<br>只有作为<strong>完整带引号条目</strong>出现才算数（<code>_pinnedAsQuotedEntry</code>）。三份清单的 required-path<br>都是带引号字面量，故真实清单不受影响；伪命中（子串/注释）不再放行。</p></blockquote>
+<ol><li><strong>构建自由的一致性断言</strong>（<code>must</code> + pre-commit）：</li></ol>
+<p><code>scripts/tests/bundleLaunchContract.test.js</code> 解析磁盘上三份权威清单，断言三渠道都<br>   钉死了启动地板。无需构建、不联网、纯读盘。任一渠道漏钉即变红并点名。已并入<br>   <code>npm run test:maintainer:safety</code>（发布门 <code>maintainer-safety</code> 为 <code>must</code> 阶段，<br>   pre-commit 亦跑）。</p>
+<ol><li><strong>真实产物审计</strong>：<code>scripts/release/audit_pip_artifacts.py</code> 现在会对真实</li></ol>
+<p>wheel/sdist 强制这两条路径（数据已补进 <code>REQUIRED_*_PATHS</code>）。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:bundle-launch-contract     # 纯叶子 + 三份真实清单一致性
+npm run test:maintainer:safety          # 契约已并入的 must 守卫集</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<p>又出现某条渠道在启动早期就会 exec/require 的新「地板」文件（缺它即整体起不来）：</p>
+<ol><li>先把它加进 <code>scripts/release/pip_packaging_rules.py</code> 的 <code>REQUIRED_WHEEL_PATHS</code></li></ol>
+<p>与 <code>REQUIRED_SDIST_PATHS</code>，以及 <code>packaging/npm/scripts/audit-purity.js</code> 的<br>   <code>REQUIRED_PATHS</code>。</p>
+<ol><li>再把 bundle 相对路径加进 <code>scripts/lib/bundleLaunchContract.js</code> 的</li></ol>
+<p><code>LAUNCH_CRITICAL_BUNDLE_PATHS</code>。</p>
+<ol><li>配套测试会解析三份真实清单、强制三渠道一致；只加一处会红，这是刻意的护栏。</li><li>改完跑：<code>npm run test:bundle-launch-contract</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>数据补丁只<strong>增加</strong>断言，从不删既有清单项；对既有 wheel/sdist 的行为逐字节保持</li></ul>
+<p>（文件本就随 <code>BASE_COPY_PAYLOADS</code> 打进包，本契约只是让审计终于会核对它们）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-072] 目标连续多日运行不中断的底气自检.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-072] 目标连续多日运行不中断的底气自检</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-074] 首启崩溃真实原因加方法归因.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-073] 离机渠道启动入口契约自检清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

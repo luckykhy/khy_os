@@ -1,0 +1,17 @@
+{
+  "name": "khy-cli-{{SOFTWARE}}",
+  "version": "1.0.0",
+  "description": "CLI-Anything agent tool for {{SOFTWARE}}",
+  "main": "src/index.js",
+  "bin": {
+    "cli-anything-{{SOFTWARE}}": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "keywords": ["cli-anything", "{{SOFTWARE}}", "agent-tool"],
+  "license": "MIT"
+}

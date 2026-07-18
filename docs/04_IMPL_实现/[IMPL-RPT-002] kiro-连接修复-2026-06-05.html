@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiro 连接修复（CW SDK 缺失 + 级联 404） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>Kiro 连接修复（CW SDK 缺失 + 级联 404）</div>
+      <header class="hero reveal"><h1>Kiro 连接修复（CW SDK 缺失 + 级联 404）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#kiro-连接修复-cw-sdk-缺失-级联-404">Kiro 连接修复（CW SDK 缺失 + 级联 404）</a></li><li class="lvl-2"><a href="#1-现象">1. 现象</a></li><li class="lvl-2"><a href="#2-根因">2. 根因</a></li><li class="lvl-3"><a href="#2-1-kiro-适配器依赖一个从未安装的-sdk">2.1 Kiro 适配器依赖一个从未安装的 SDK</a></li><li class="lvl-3"><a href="#2-2-级联-failover-打到必然-404-的-openai-通道">2.2 级联 failover 打到必然 404 的 OpenAI 通道</a></li><li class="lvl-2"><a href="#3-修复">3. 修复</a></li><li class="lvl-3"><a href="#3-1-把-cw-sdk-声明为常规依赖">3.1 把 CW SDK 声明为常规依赖</a></li><li class="lvl-3"><a href="#3-2-引导期自愈-向后兼容老安装">3.2 引导期自愈（向后兼容老安装）</a></li><li class="lvl-3"><a href="#3-3-配套消噪-删除所有-openai-风格-api-trae-ai-端点">3.3 配套消噪：删除所有 OpenAI 风格 `api.trae.ai` 端点</a></li><li class="lvl-2"><a href="#4-效果">4. 效果</a></li><li class="lvl-2"><a href="#5-验证">5. 验证</a></li><li class="lvl-2"><a href="#6-涉及文件">6. 涉及文件</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-002 | 阶段: 实现 | 原路径: docs/修复记录/kiro-连接修复-2026-06-05.md --&gt;</p>
+<h1 id="kiro-连接修复-cw-sdk-缺失-级联-404">Kiro 连接修复（CW SDK 缺失 + 级联 404）<a class="anchor" href="#kiro-连接修复-cw-sdk-缺失-级联-404" aria-label="锚点">#</a></h1>
+<p>发布日期：2026-06-05 · 版本：v0.1.90</p>
+<hr>
+<h2 id="1-现象">1. 现象<a class="anchor" href="#1-现象" aria-label="锚点">#</a></h2>
+<p>使用 Kiro 模型时报错，并连锁触发其它通道失败、最终重试预算耗尽：</p>
+<pre><code>真实失败原因:
+ • Kiro [unavailable]: CW SDK not installed. Run: cd backend &amp;&amp; npm install @aws/codewhisperer-streaming-client
+ • kiro [timeout]: CW SDK not installed...
+ • OpenAI [unknown]: Request failed with status code 404
+ • api [unknown]: ...404...
+ • Relay API (claude-sonnet-4-5-20250514) (404) [unavailable]: HTTP 404
+ • relay_api [unavailable]: recent unavailable failure cached: HTTP 404 (cooldown 30s)
+请求重试预算已用尽: 总尝试次数超限 (5/4)
+[relay_api] HTTP 404 from https://api.trae.ai/v1/chat/completions | model=gpt-5.4-beta</code></pre>
+<p>表面看是&quot;多个通道一起坏了&quot;，实际是<strong>单点缺失被级联放大</strong>。</p>
+<hr>
+<h2 id="2-根因">2. 根因<a class="anchor" href="#2-根因" aria-label="锚点">#</a></h2>
+<h3 id="2-1-kiro-适配器依赖一个从未安装的-sdk">2.1 Kiro 适配器依赖一个从未安装的 SDK<a class="anchor" href="#2-1-kiro-适配器依赖一个从未安装的-sdk" aria-label="锚点">#</a></h3>
+<p>Kiro 走的是 AWS CodeWhisperer 的<strong>原生加密流式协议</strong>（<code>GenerateAssistantResponse</code>），不是 OpenAI 兼容接口。适配器通过 <code>@aws/codewhisperer-streaming-client</code> 与之通信，并在 <code>_cwStreamParser.js</code> 里惰性加载该 SDK：</p>
+<pre><code class="language-javascript">// services/backend/src/services/gateway/adapters/_cwStreamParser.js
+async function getCWModule() {
+  // ...
+  return await import('@aws/codewhisperer-streaming-client'); // 缺失时抛错
+  // throw new Error('CW SDK not installed. Run: cd backend &amp;&amp; npm install @aws/codewhisperer-streaming-client')
+}</code></pre>
+<p>问题：该 SDK <strong>既没有在 <code>package.json</code> 里声明为依赖，安装时也就不会被装进 <code>node_modules</code></strong>。于是 <code>getCWModule()</code> 每次都抛 <code>CW SDK not installed</code>，Kiro 通道直接 <code>unavailable</code>。</p>
+<h3 id="2-2-级联-failover-打到必然-404-的-openai-通道">2.2 级联 failover 打到必然 404 的 OpenAI 通道<a class="anchor" href="#2-2-级联-failover-打到必然-404-的-openai-通道" aria-label="锚点">#</a></h3>
+<p>Kiro 不可用后，网关按级联策略 failover 到其它启用的通道。用户把 <code>RELAY_API_ENDPOINT</code> 配成了 <code>https://api.trae.ai/v1</code>——但 <strong>Trae 的真实网关是加密原生协议（<code>adaptive-api.trae.ai</code>），不是 OpenAI 兼容</strong>，对 <code>/v1/chat/completions</code> 一律返回 404（TLB 网关）。</p>
+<p>于是每个 OpenAI 风格通道（relay_api / api / OpenAI）都撞上 404，叠加 30s 冷却与重试预算上限（5/4），最终&quot;请求重试预算已用尽&quot;。<strong>Kiro 的单点缺失 → 级联到一组注定 404 的通道 → 整体失败</strong>。</p>
+<hr>
+<h2 id="3-修复">3. 修复<a class="anchor" href="#3-修复" aria-label="锚点">#</a></h2>
+<h3 id="3-1-把-cw-sdk-声明为常规依赖">3.1 把 CW SDK 声明为常规依赖<a class="anchor" href="#3-1-把-cw-sdk-声明为常规依赖" aria-label="锚点">#</a></h3>
+<p><code>services/backend/package.json</code>：</p>
+<pre><code class="language-jsonc">&quot;dependencies&quot;: {
+  &quot;@aws/codewhisperer-streaming-client&quot;: &quot;^1.0.45&quot;,  // Kiro 原生流式协议 SDK
+  // ...
+}</code></pre>
+<p>该包是 AWS 公开发布的 npm 包，npmmirror 镜像已覆盖，国内安装无需访问 GitHub。声明为依赖后，常规 <code>npm install</code> 即可装好，<code>getCWModule()</code> 不再抛错。</p>
+<h3 id="3-2-引导期自愈-向后兼容老安装">3.2 引导期自愈（向后兼容老安装）<a class="anchor" href="#3-2-引导期自愈-向后兼容老安装" aria-label="锚点">#</a></h3>
+<p>仅靠 <code>package.json</code> 只能覆盖<strong>新装</strong>用户；已经装过、<code>node_modules</code> 里没有 CW SDK 的<strong>老安装</strong>不会自动补齐。为此在首启引导器加入标记位守卫的自愈逻辑。</p>
+<p><code>platform/khy_platform/_bootstrap.py</code>：</p>
+<pre><code class="language-python"># Kiro CodeWhisperer SDK 修复标记：避免每次启动重复检查/安装
+KIRO_CW_SDK_MARKER_FILE = &quot;.khy_kiro_cw_sdk_fixed&quot;
+
+def _has_cw_sdk(node_modules: Path) -&gt; bool:
+    &quot;&quot;&quot;Check if the Kiro CodeWhisperer streaming SDK is installed.&quot;&quot;&quot;
+    return _path_exists_safe(node_modules / &quot;@aws&quot; / &quot;codewhisperer-streaming-client&quot;)
+
+def _maybe_repair_kiro_cw_sdk(backend_dir: Path, marker: Path) -&gt; None:
+    &quot;&quot;&quot;Self-heal: install the Kiro CW SDK if missing (marker-guarded, runs once).&quot;&quot;&quot;
+    if marker.exists():
+        return
+    node_modules = backend_dir / &quot;node_modules&quot;
+    if _has_cw_sdk(node_modules):
+        _write_marker(marker, &quot;ok&quot;)
+        return
+    # Stream the install so the user sees progress instead of a frozen prompt.
+    rc = _run_npm_streaming(
+        [npm_cmd, &quot;install&quot;, &quot;@aws/codewhisperer-streaming-client&quot;, &quot;--no-audit&quot;, &quot;--no-fund&quot;],
+        backend_dir, _NPM_TIMEOUT,
+    )
+    _write_marker(marker, &quot;installed&quot; if rc == 0 and _has_cw_sdk(node_modules) else &quot;failed&quot;)</code></pre>
+<p>接入 <code>ensure_bootstrapped()</code> 的<strong>两条路径</strong>：</p>
+<ul><li><strong>已引导分支</strong>：在可选依赖修复之后调用 <code>_maybe_repair_kiro_cw_sdk(...)</code>，让老用户下次启动时补齐。</li><li><strong>首次安装路径（step 6b）</strong>：在 step 6 之后调用，保证全新安装也显式校验一次。</li></ul>
+<p>标记文件 <code>.khy_kiro_cw_sdk_fixed</code> 确保只在缺失时检查/安装一次，不拖慢每次启动。</p>
+<blockquote><p><code>_run_npm_streaming(...)</code> 是本版本新增的流式安装助手：用 <code>Popen</code> 逐行转发 <code>npm</code> 输出（<code>npm | ...</code>），看门狗线程每 5s 探活、静默 ≥15s 打印中文心跳（<code>仍在安装中（已用 N s）…</code>），超时则杀进程并抛 <code>TimeoutExpired</code>。解决了 Windows 非 TTY 下 <code>npm install</code> 长时间&quot;看起来卡死&quot;的问题。</p></blockquote>
+<h3 id="3-3-配套消噪-删除所有-openai-风格-api-trae-ai-端点">3.3 配套消噪：删除所有 OpenAI 风格 <code>api.trae.ai</code> 端点<a class="anchor" href="#3-3-配套消噪-删除所有-openai-风格-api-trae-ai-端点" aria-label="锚点">#</a></h3>
+<p>级联 404 的放大器是那些指向 <code>api.trae.ai/v1</code> 的 OpenAI 通道。把它们<strong>全部移除</strong>，让 Trae 只走原生协议端点 <code>adaptive-api.trae.ai</code>，未配置 OpenAI 兼容代理时优雅降级而非发出必然 404 的请求：</p>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/services/multiFreeService.js</code></td><td>Trae <code>baseUrl</code> 默认值 <code>https://api.trae.ai</code> → <code>''</code>（需显式 <code>TRAE_API_ENDPOINT</code>）</td></tr><tr><td><code>services/backend/src/services/apiKeyPool.js</code></td><td><code>ENV_KEY_MAP.trae.default</code> → <code>''</code></td></tr><tr><td><code>services/backend/src/cli/handlers/gateway.js</code></td><td>两处 <code>defaultEndpoint: 'https://api.trae.ai/v1'</code> → <code>''</code></td></tr><tr><td><code>services/backend/src/services/gateway/adapters/traeAdapter.js</code></td><td>删除 JWT 回退盲加 <code>api.trae.ai/v1</code>，无候选端点时让上层降级</td></tr><tr><td><code>services/backend/src/services/gateway/adapters/relayApiAdapter.js</code></td><td>连通性探测加 <code>_probe</code> 标志，抑制探测期 4xx 噪音告警</td></tr><tr><td><code>services/ai-backend/src/services/gateway/adapters/traeAdapter.js</code></td><td>（Docker-only 微服务）改为读 <code>TRAE_API_ENDPOINT</code>，未配置时优雅失败，不再硬编码 <code>api.trae.ai</code></td></tr></tbody></table>
+<p>保留的原生端点 <code>adaptive-api.trae.ai</code> 未动——那是 Trae 真正的网关。</p>
+<hr>
+<h2 id="4-效果">4. 效果<a class="anchor" href="#4-效果" aria-label="锚点">#</a></h2>
+<ul><li><strong>Kiro 可用</strong>：CW SDK 随安装到位（新装）或首启自愈（老装），不再 <code>CW SDK not installed</code>。</li><li><strong>不再级联 404</strong>：移除 <code>api.trae.ai</code> OpenAI 端点后，Kiro 失败不会再连锁触发一组注定 404 的通道，重试预算不被无谓耗尽。</li><li><strong>安装可见</strong>：<code>_run_npm_streaming</code> 让补装过程有进度与心跳，不再&quot;看起来卡死&quot;。</li></ul>
+<hr>
+<h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">python3 -m py_compile platform/khy_platform/_bootstrap.py    # 引导器语法
+node --check services/backend/src/services/multiFreeService.js
+node --check services/backend/src/services/apiKeyPool.js
+node --check services/backend/src/cli/handlers/gateway.js
+node --check services/backend/src/services/gateway/adapters/traeAdapter.js
+node --check services/backend/src/services/gateway/adapters/relayApiAdapter.js
+node --check services/ai-backend/src/services/gateway/adapters/traeAdapter.js
+# 全仓扫描：剩余 api.trae.ai 字样全部为解释性注释，无功能代码再使用裸 api.trae.ai</code></pre>
+<p>全部通过。</p>
+<hr>
+<h2 id="6-涉及文件">6. 涉及文件<a class="anchor" href="#6-涉及文件" aria-label="锚点">#</a></h2>
+<ul><li><code>services/backend/package.json</code> — 声明 CW SDK 依赖</li><li><code>platform/khy_platform/_bootstrap.py</code> — <code>KIRO_CW_SDK_MARKER_FILE</code> / <code>_has_cw_sdk</code> / <code>_maybe_repair_kiro_cw_sdk</code> / <code>_run_npm_streaming</code> + 两条接入路径</li><li><code>services/backend/src/services/gateway/adapters/_cwStreamParser.js</code> — 惰性加载点（错误信息来源，未改逻辑）</li><li><code>multiFreeService.js</code> / <code>apiKeyPool.js</code> / <code>cli/handlers/gateway.js</code> / <code>adapters/traeAdapter.js</code> / <code>adapters/relayApiAdapter.js</code> — 移除 OpenAI 风格 <code>api.trae.ai</code></li><li><code>services/ai-backend/src/services/gateway/adapters/traeAdapter.js</code> — Docker-only 微服务同步消除硬编码 <code>api.trae.ai</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-001] executeCode-进程级真隔离-2026-06-10.html"><div class="dir">← 上一篇</div><div class="ttl">executeCode 进程级真隔离修复</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-003] tui-inquirer闪退修复-2026-06-05.html"><div class="dir">下一篇 →</div><div class="ttl">TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-002] kiro-连接修复-2026-06-05.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantitative Analysis Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>quant<span class="sep">›</span>quant-analysis<span class="sep">›</span>Quantitative Analysis Skill</div>
+      <header class="hero reveal"><h1>Quantitative Analysis Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#quantitative-analysis-skill">Quantitative Analysis Skill</a></li><li class="lvl-2"><a href="#when-to-activate">When to Activate</a></li><li class="lvl-2"><a href="#analysis-pipeline">Analysis Pipeline</a></li><li class="lvl-3"><a href="#step-1-data-retrieval">Step 1: Data Retrieval</a></li><li class="lvl-3"><a href="#step-2-technical-indicator-calculation">Step 2: Technical Indicator Calculation</a></li><li class="lvl-3"><a href="#step-3-signal-generation">Step 3: Signal Generation</a></li><li class="lvl-3"><a href="#step-4-output-format">Step 4: Output Format</a></li><li class="lvl-2"><a href="#constraints">Constraints</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: quant-analysis<br>version: 1.0.0<br>description: AI-powered stock analysis with technical indicators, trend detection, and trading signal generation. Triggered when user asks to analyze a stock, check market conditions, or evaluate trading signals.<br>layer: domain<br>lifecycle: operations<br>tags: [quant, analysis, stock, technical-indicators, trading]<br>platforms: [khy-quant, claude-code]<br>maintainers:</p>
+<ul><li>khy-qqb</li></ul>
+<hr>
+<h1 id="quantitative-analysis-skill">Quantitative Analysis Skill<a class="anchor" href="#quantitative-analysis-skill" aria-label="锚点">#</a></h1>
+<p>Analyze stocks and generate trading signals using technical indicators.</p>
+<h2 id="when-to-activate">When to Activate<a class="anchor" href="#when-to-activate" aria-label="锚点">#</a></h2>
+<ul><li>User asks to analyze a specific stock (e.g., &quot;analyze 000001&quot;, &quot;分析贵州茅台&quot;)</li><li>User asks about market trends or conditions</li><li>User requests trading signal evaluation</li><li>User mentions technical indicators (MA, RSI, MACD, KDJ, BOLL)</li></ul>
+<h2 id="analysis-pipeline">Analysis Pipeline<a class="anchor" href="#analysis-pipeline" aria-label="锚点">#</a></h2>
+<h3 id="step-1-data-retrieval">Step 1: Data Retrieval<a class="anchor" href="#step-1-data-retrieval" aria-label="锚点">#</a></h3>
+<p>Fetch recent K-line data (daily, 60min) via the data service.<br>Required fields: open, high, low, close, volume, turnover.</p>
+<h3 id="step-2-technical-indicator-calculation">Step 2: Technical Indicator Calculation<a class="anchor" href="#step-2-technical-indicator-calculation" aria-label="锚点">#</a></h3>
+<p>Calculate the following indicators:</p>
+<ul><li><strong>MA</strong>: 5, 10, 20, 60 day moving averages</li><li><strong>RSI</strong>: 6, 12, 24 period relative strength index</li><li><strong>MACD</strong>: DIF, DEA, histogram</li><li><strong>KDJ</strong>: K, D, J values</li><li><strong>BOLL</strong>: upper, middle, lower bands</li><li><strong>Volume</strong>: volume MA comparison, volume-price divergence</li></ul>
+<h3 id="step-3-signal-generation">Step 3: Signal Generation<a class="anchor" href="#step-3-signal-generation" aria-label="锚点">#</a></h3>
+<p>Based on indicator values, generate:</p>
+<ul><li>Trend direction (bullish / bearish / neutral)</li><li>Signal strength (strong / moderate / weak)</li><li>Key support and resistance levels</li><li>Risk assessment</li></ul>
+<h3 id="step-4-output-format">Step 4: Output Format<a class="anchor" href="#step-4-output-format" aria-label="锚点">#</a></h3>
+<p>Present results as a structured analysis report:</p>
+<ol><li>Current price and trend summary</li><li>Key indicator readings</li><li>Trading signal with confidence level</li><li>Risk warnings</li></ol>
+<h2 id="constraints">Constraints<a class="anchor" href="#constraints" aria-label="锚点">#</a></h2>
+<ul><li>Never provide specific buy/sell advice or price targets</li><li>Always include risk disclaimers</li><li>Data delay acknowledgment for real-time analysis</li><li>Chinese market hours: 09:30-15:00 CST</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/monitor-perf/system-monitor/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">System Monitor Skill</div></a><a class="next" href="../../../../../../services/backend/src/skills/security/cve-query/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">CVE Query Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/quant/quant-analysis/SKILL.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "tool": "khy-learn",
+  "type": "learning-progress",
+  "version": 1,
+  "exportedAt": "2026-06-15T06:39:35.008Z",
+  "progress": {
+    "completedTopics": [],
+    "viewedTopics": [],
+    "currentLayer": 0,
+    "totalXP": 0,
+    "startedAt": "2026-05-29T09:23:37.965Z",
+    "lastVisit": null,
+    "streak": {
+      "count": 0,
+      "lastDate": null
+    },
+    "notes": {}
+  }
+}

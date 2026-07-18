@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-obsstudio · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-obs-studio<span class="sep">›</span>cli-anything-obsstudio</div>
+      <header class="hero reveal"><h1>cli-anything-obsstudio</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-obs-studio">cli-anything-obs_studio</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#scene-group">Scene Group</a></li><li class="lvl-3"><a href="#source-group">Source Group</a></li><li class="lvl-3"><a href="#filter-group">Filter Group</a></li><li class="lvl-3"><a href="#audio-group">Audio Group</a></li><li class="lvl-3"><a href="#transition-group">Transition Group</a></li><li class="lvl-3"><a href="#output-group">Output Group</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-obs-studio&quot;<br>description: &gt;-<br>  Command-line interface for Obs Studio - A stateful command-line interface for OBS Studio scene collection editing, following the same patter...</p>
+<hr>
+<h1 id="cli-anything-obs-studio">cli-anything-obs_studio<a class="anchor" href="#cli-anything-obs-studio" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for OBS Studio scene collection editing, following the same patterns as the Blender CLI harness. Uses a JSON scene collection format. No OBS installation required for editing.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-obs_studio package:</p>
+<pre><code class="language-bash">pip install cli-anything-obs_studio</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>obs_studio must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-obs_studio --help
+
+# Start interactive REPL mode
+cli-anything-obs_studio
+
+# Create a new project
+cli-anything-obs_studio project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-obs_studio --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-obs_studio
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new OBS scene collection</td></tr><tr><td><code>open</code></td><td>Open an existing project</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show project information</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="scene-group">Scene Group<a class="anchor" href="#scene-group" aria-label="锚点">#</a></h3>
+<p>Scene management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a new scene</td></tr><tr><td><code>remove</code></td><td>Remove a scene by index</td></tr><tr><td><code>duplicate</code></td><td>Duplicate a scene</td></tr><tr><td><code>set-active</code></td><td>Set the active scene</td></tr><tr><td><code>list</code></td><td>List all scenes</td></tr></tbody></table>
+<h3 id="source-group">Source Group<a class="anchor" href="#source-group" aria-label="锚点">#</a></h3>
+<p>Source management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a source to a scene</td></tr><tr><td><code>remove</code></td><td>Remove a source by index</td></tr><tr><td><code>duplicate</code></td><td>Duplicate a source</td></tr><tr><td><code>set</code></td><td>Set a source property (name, visible, locked, opacity, rotation)</td></tr><tr><td><code>transform</code></td><td>Transform a source (position, size, crop, rotation)</td></tr><tr><td><code>list</code></td><td>List all sources in a scene</td></tr></tbody></table>
+<h3 id="filter-group">Filter Group<a class="anchor" href="#filter-group" aria-label="锚点">#</a></h3>
+<p>Filter management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a filter to a source</td></tr><tr><td><code>remove</code></td><td>Remove a filter from a source</td></tr><tr><td><code>set</code></td><td>Set a filter parameter</td></tr><tr><td><code>list</code></td><td>List all filters on a source</td></tr><tr><td><code>list-available</code></td><td>List all available filter types</td></tr></tbody></table>
+<h3 id="audio-group">Audio Group<a class="anchor" href="#audio-group" aria-label="锚点">#</a></h3>
+<p>Audio management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a global audio source</td></tr><tr><td><code>remove</code></td><td>Remove a global audio source</td></tr><tr><td><code>volume</code></td><td>Set volume for an audio source (0.0-3.0)</td></tr><tr><td><code>mute</code></td><td>Mute an audio source</td></tr><tr><td><code>unmute</code></td><td>Unmute an audio source</td></tr><tr><td><code>monitor</code></td><td>Set audio monitoring type</td></tr><tr><td><code>list</code></td><td>List all audio sources</td></tr></tbody></table>
+<h3 id="transition-group">Transition Group<a class="anchor" href="#transition-group" aria-label="锚点">#</a></h3>
+<p>Transition management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a transition</td></tr><tr><td><code>remove</code></td><td>Remove a transition</td></tr><tr><td><code>set-active</code></td><td>Set the active transition</td></tr><tr><td><code>duration</code></td><td>Set transition duration in milliseconds</td></tr><tr><td><code>list</code></td><td>List all transitions</td></tr></tbody></table>
+<h3 id="output-group">Output Group<a class="anchor" href="#output-group" aria-label="锚点">#</a></h3>
+<p>Output/streaming/recording configuration.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>streaming</code></td><td>Configure streaming settings</td></tr><tr><td><code>recording</code></td><td>Configure recording settings</td></tr><tr><td><code>settings</code></td><td>Configure output settings</td></tr><tr><td><code>info</code></td><td>Show current output configuration</td></tr><tr><td><code>presets</code></td><td>List available encoding presets</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new obs_studio project file.</p>
+<pre><code class="language-bash">cli-anything-obs_studio project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-obs_studio --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-obs_studio
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-obs_studio project info -p project.json
+
+# JSON output for agents
+cli-anything-obs_studio --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nslogger/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-nslogger</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obsidian/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-obsidian</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obs-studio/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

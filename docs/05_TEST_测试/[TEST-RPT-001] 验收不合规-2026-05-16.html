@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 不合格情况记录（2026-05-16） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>Khy-OS 不合格情况记录（2026-05-16）</div>
+      <header class="hero reveal"><h1>Khy-OS 不合格情况记录（2026-05-16）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-不合格情况记录-2026-05-16">Khy-OS 不合格情况记录（2026-05-16）</a></li><li class="lvl-2"><a href="#0-修复后复测更新-2026-05-16-22-42-0800">0. 修复后复测更新（2026-05-16 22:42 +0800）</a></li><li class="lvl-3"><a href="#0-1-已修复项-本轮通过">0.1 已修复项（本轮通过）</a></li><li class="lvl-3"><a href="#0-2-仍待整改项-质量维度">0.2 仍待整改项（质量维度）</a></li><li class="lvl-3"><a href="#0-3-当前判定-更新">0.3 当前判定（更新）</a></li><li class="lvl-2"><a href="#1-记录信息">1. 记录信息</a></li><li class="lvl-2"><a href="#2-红线不合格项-3-1-3-2-红线优先">2. 红线不合格项（3.1 / 3.2 红线优先）</a></li><li class="lvl-2"><a href="#3-质量不合格项-3-3-3-6">3. 质量不合格项（3.3 ~ 3.6）</a></li><li class="lvl-2"><a href="#4-不可验收项-3-7">4. 不可验收项（3.7）</a></li><li class="lvl-2"><a href="#5-提交流程不合规项">5. 提交流程不合规项</a></li><li class="lvl-2"><a href="#6-本次核查命令-摘要">6. 本次核查命令（摘要）</a></li><li class="lvl-2"><a href="#7-当前判定">7. 当前判定</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: TEST-RPT-001 | 阶段: 测试 | 原路径: docs/报告/验收不合规-2026-05-16.md --&gt;</p>
+<h1 id="khy-os-不合格情况记录-2026-05-16">Khy-OS 不合格情况记录（2026-05-16）<a class="anchor" href="#khy-os-不合格情况记录-2026-05-16" aria-label="锚点">#</a></h1>
+<h2 id="0-修复后复测更新-2026-05-16-22-42-0800">0. 修复后复测更新（2026-05-16 22:42 +0800）<a class="anchor" href="#0-修复后复测更新-2026-05-16-22-42-0800" aria-label="锚点">#</a></h2>
+<h3 id="0-1-已修复项-本轮通过">0.1 已修复项（本轮通过）<a class="anchor" href="#0-1-已修复项-本轮通过" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>条款</th><th>状态</th><th>复测证据</th></tr></thead><tbody><tr><td>3.1.1 / 3.7.1 自动化启动</td><td>已修复</td><td><code>docker compose up -d --build</code> 成功；<code>docker compose ps</code> 显示 <code>backend/ai-backend</code> healthy，前端服务运行中。</td></tr><tr><td>3.1.1 文档一致性</td><td>已修复</td><td>README 已补充 Docker 一键启动与验收地址，端口与 compose 默认值一致。</td></tr><tr><td>3.7.2 依赖人工干预</td><td>已修复</td><td>新增 <code>.env.example</code>，并在 <code>docker-compose.yml</code> 中为关键变量提供默认值，无需手工补齐即可启动。</td></tr><tr><td>3.3.4 测试标准（目录+脚本）</td><td>已修复</td><td>已具备 <code>unit_tests/</code>、<code>API_tests/</code>、<code>run_tests.sh</code>；<code>./run_tests.sh</code> 通过（unit 4/4，api 1/1）。</td></tr><tr><td>3.7.5 依赖污染</td><td>已修复</td><td>清理后执行 <code>find . -maxdepth 3 -type d \( -name node_modules -o -name .venv -o -name .pytest_cache -o -name dist \)</code> 无输出。</td></tr></tbody></table>
+<h3 id="0-2-仍待整改项-质量维度">0.2 仍待整改项（质量维度）<a class="anchor" href="#0-2-仍待整改项-质量维度" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>条款</th><th>当前状态</th><th>说明</th></tr></thead><tbody><tr><td>3.3.1 架构分层/可维护性</td><td>待整改</td><td>仍存在超大职责文件（如 <code>Dashboard.vue</code>、<code>router.js</code>、<code>largeTasks.js</code>），建议继续拆分。</td></tr><tr><td>3.2.2 真实逻辑实现</td><td>待整改</td><td>仍有失败路径回落 mock/模拟数据的实现风险，需按题目要求逐项确认是否允许。</td></tr><tr><td>3.3.2 代码整洁度</td><td>待整改</td><td>部分调试日志与冗余输出仍需系统性清理。</td></tr></tbody></table>
+<h3 id="0-3-当前判定-更新">0.3 当前判定（更新）<a class="anchor" href="#0-3-当前判定-更新" aria-label="锚点">#</a></h3>
+<ul><li><strong>红线项（3.1/3.7）本轮已解除。</strong></li><li>仍有质量项待整改，建议继续按 3.3/3.2.2 清单推进后再提交最终验收。</li></ul>
+<h2 id="1-记录信息">1. 记录信息<a class="anchor" href="#1-记录信息" aria-label="锚点">#</a></h2>
+<ul><li>记录时间：2026-05-16 22:04:25 +0800</li><li>评估对象：<code>/home/kodehu03/Khy-OS</code></li><li>评估标准：你提供的 3.1 ~ 3.7 验收标准</li><li>初次评估结论：<strong>不合格（当时触发 3.1 与 3.7 红线）</strong></li></ul>
+<h2 id="2-红线不合格项-3-1-3-2-红线优先">2. 红线不合格项（3.1 / 3.2 红线优先）<a class="anchor" href="#2-红线不合格项-3-1-3-2-红线优先" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>条款</th><th>结果</th><th>问题描述</th><th>证据</th></tr></thead><tbody><tr><td>3.1.1 / 3.7.1 自动化启动</td><td>不合格</td><td><code>docker compose up -d</code> 失败，前端镜像构建在 <code>npm ci</code> 阶段报错（<code>package.json</code> 与 <code>package-lock.json</code> 不一致，EUSAGE）。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/Dockerfile:7">frontend/Dockerfile</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/package.json:40">frontend/package.json</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/package-lock.json:30">frontend/package-lock.json</span></td></tr><tr><td>3.1.1 文档一致性</td><td>不合格</td><td>README 未提供可直接执行的 <code>docker compose up</code> 全栈启动与验收步骤。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/README.md:110">README.md</span></td></tr><tr><td>3.7.2 依赖人工干预</td><td>不合格</td><td>缺少 <code>.env.example</code>，但 compose 依赖 <code>JWT_SECRET</code>（以及 profile 下 <code>POSTGRES_PASSWORD</code>），新环境需人工猜测/补配置。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/docker-compose.yml:53">docker-compose.yml</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/docker-compose.yml:11">docker-compose.yml</span></td></tr></tbody></table>
+<h2 id="3-质量不合格项-3-3-3-6">3. 质量不合格项（3.3 ~ 3.6）<a class="anchor" href="#3-质量不合格项-3-3-3-6" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>条款</th><th>结果</th><th>问题描述</th><th>证据</th></tr></thead><tbody><tr><td>3.3.4 测试标准</td><td>不合格</td><td>缺少根目录 <code>unit_tests/</code>、<code>API_tests/</code>、<code>run_tests.sh</code>；现有 <code>backend/tests</code> 不满足要求的目录与统一 Shell 编排格式。</td><td>实测：<code>unit_tests_missing</code>, <code>API_tests_missing</code>, <code>run_tests_missing</code></td></tr><tr><td>3.3.1 架构分层/可维护性</td><td>风险高</td><td>存在超大“上帝文件”，职责聚合过重。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue">frontend/src/views/Dashboard.vue</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/backend/src/cli/router.js">backend/src/cli/router.js</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/backend/src/routes/largeTasks.js">backend/src/routes/largeTasks.js</span></td></tr><tr><td>3.2.2 真实逻辑实现</td><td>风险高</td><td>多处核心数据路径在失败时直接回落到 <code>mock/模拟数据</code>；若题目未明确允许 mock，将判定不达标。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/backend/src/controllers/comprehensiveDataController.js:149">backend/src/controllers/comprehensiveDataController.js</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/backend/src/routes/marketData.js:37">backend/src/routes/marketData.js</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue:1251">frontend/src/views/Dashboard.vue</span></td></tr><tr><td>3.3.2 代码整洁度</td><td>不合格</td><td>存在大量调试日志（<code>console.log</code> 等）未清理。</td><td><span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/frontend/src/api/marketData.js:54">frontend/src/api/marketData.js</span>, <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/backend/src/controllers/marketController.js:27">backend/src/controllers/marketController.js</span></td></tr></tbody></table>
+<h2 id="4-不可验收项-3-7">4. 不可验收项（3.7）<a class="anchor" href="#4-不可验收项-3-7" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>条款</th><th>结果</th><th>问题描述</th><th>证据</th></tr></thead><tbody><tr><td>3.7.1 自动化启动失败</td><td>不可验收</td><td>构建失败导致容器未起来。</td><td>实测 <code>docker compose ps --all</code> 无运行容器</td></tr><tr><td>3.7.5 依赖污染</td><td>不合格</td><td>项目目录中存在 <code>node_modules/</code>、<code>dist/</code>、<code>.pytest_cache/</code> 等。</td><td>目录实测：<code>./node_modules</code>, <code>./frontend/node_modules</code>, <code>./backend/node_modules</code>, <code>./frontend/dist</code>, <code>./dist</code>, <code>./.pytest_cache</code></td></tr></tbody></table>
+<h2 id="5-提交流程不合规项">5. 提交流程不合规项<a class="anchor" href="#5-提交流程不合规项" aria-label="锚点">#</a></h2>
+<ul><li>未发现按“AI report prompt 测试指令”提交的自测合格度报告产物。</li><li><code>docs/报告/</code> 目前仅见 skill eval 结果，不等同于本次验收要求的自测报告。</li></ul>
+<h2 id="6-本次核查命令-摘要">6. 本次核查命令（摘要）<a class="anchor" href="#6-本次核查命令-摘要" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">docker compose up -d
+docker compose ps --all
+find . -maxdepth 2 -type d \( -name unit_tests -o -name API_tests -o -name tests \) | sort
+[ -d unit_tests ] &amp;&amp; echo unit_tests_exists || echo unit_tests_missing
+[ -d API_tests ] &amp;&amp; echo API_tests_exists || echo API_tests_missing
+[ -f run_tests.sh ] &amp;&amp; echo run_tests_exists || echo run_tests_missing
+wc -l frontend/src/views/Dashboard.vue backend/src/cli/router.js backend/src/routes/largeTasks.js</code></pre>
+<h2 id="7-当前判定">7. 当前判定<a class="anchor" href="#7-当前判定" aria-label="锚点">#</a></h2>
+<ul><li>按你的规则，3.1 与 3.7 命中即一票否决。</li><li><strong>当前状态：不合格，建议先修复红线项后再进入返修与评分流程。</strong></li></ul>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 测试文档（中文）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

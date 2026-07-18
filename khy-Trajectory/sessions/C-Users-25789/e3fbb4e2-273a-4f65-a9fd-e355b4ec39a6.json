@@ -1,0 +1,40 @@
+{
+  "sessionId": "e3fbb4e2-273a-4f65-a9fd-e355b4ec39a6",
+  "title": "",
+  "model": "claude-sonnet-4.5",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你是什么模型"
+    },
+    {
+      "role": "assistant",
+      "content": "Not logged in · Please run /login",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "Not logged in · Please run /login",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 4,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "Kiro IDE"
+  },
+  "createdAt": 1781535859352,
+  "updatedAt": 1781535859352
+}

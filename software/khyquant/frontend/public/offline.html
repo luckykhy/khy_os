@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2d3d">
+  <title>KHY-Quant - 离线</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .offline-card {
+      text-align: center;
+      padding: 48px 36px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+    .offline-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .offline-icon svg {
+      width: 32px;
+      height: 32px;
+      fill: #909399;
+    }
+    .offline-card h1 {
+      color: #303133;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .offline-card p {
+      color: #909399;
+      font-size: 14px;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .retry-btn {
+      background: #409eff;
+      color: #fff;
+      border: none;
+      padding: 10px 32px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .retry-btn:hover { background: #66b1ff; }
+    .retry-btn:active { background: #3a8ee6; }
+  </style>
+</head>
+<body>
+  <div class="offline-card">
+    <div class="offline-icon">
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2 1.27-1.27L4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z"/></svg>
+    </div>
+    <h1>当前无网络连接</h1>
+    <p>请检查网络设置后重试<br>部分已缓存的页面仍可正常访问</p>
+    <button class="retry-btn" onclick="window.location.reload()">重新连接</button>
+  </div>
+</body>
+</html>

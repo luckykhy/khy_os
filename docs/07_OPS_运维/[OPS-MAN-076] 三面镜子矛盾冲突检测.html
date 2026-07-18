@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-076] 三面镜子矛盾冲突检测 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-076] 三面镜子矛盾冲突检测</div>
+      <header class="hero reveal"><h1>[OPS-MAN-076] 三面镜子矛盾冲突检测</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-076-三面镜子矛盾冲突检测">[OPS-MAN-076] 三面镜子矛盾冲突检测</a></li><li class="lvl-2"><a href="#这份检测是干什么的">这份检测是干什么的</a></li><li class="lvl-2"><a href="#两级冲突">两级冲突</a></li><li class="lvl-2"><a href="#检测的冲突规则">检测的冲突规则</a></li><li class="lvl-2"><a href="#保证-继承项目章程">保证（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-076-三面镜子矛盾冲突检测">[OPS-MAN-076] 三面镜子矛盾冲突检测<a class="anchor" href="#ops-man-076-三面镜子矛盾冲突检测" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-conflicts.js --gen-doc</code> 确定性生成，请勿手改；<br>规则改在 <code>scripts/lib/restoreConflictDetector.js</code> 的 <code>_CONFLICT_RULES</code>，再重新生成。</p></blockquote>
+<h2 id="这份检测是干什么的">这份检测是干什么的<a class="anchor" href="#这份检测是干什么的" aria-label="锚点">#</a></h2>
+<p>khyos 有三面独立还原镜子，探同一批事实却走不同代码路径：</p>
+<ul><li><code>restore-check</code>（OPS-MAN-068）：这台机器能不能还原？</li><li><code>verify-install</code>（OPS-MAN-069）：已装副本完整吗？</li><li><code>hydration-doctor</code>（OPS-MAN-070）：首启水合成功了吗？</li></ul>
+<p><code>restore-plan</code>（OPS-MAN-075）把三者<strong>合成</strong>成一份有序还原方案——但它<strong>默认三面镜子一致</strong>。<br>不同代码路径可能给出<strong>互相矛盾的结论</strong>。一个 agent 若拿着<strong>自相矛盾的世界模型</strong><br>去无人值守自动还原，会照着一面绿灯猛冲、无视另一面红灯。本检测补上这层<strong>元诊断</strong>：<br>在 agent 信任方案、开始自动还原<strong>之前</strong>，先问「三面镜子彼此一致吗？」。</p>
+<pre><code class="language-bash">node scripts/restore-conflicts.js --json   # landing agent 先读这个
+# safeToAutodrive=false（有硬矛盾）→ agent 必须停下：重探或升级交人</code></pre>
+<h2 id="两级冲突">两级冲突<a class="anchor" href="#两级冲突" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>contradiction</code>（硬矛盾）</strong>：两面镜子对重叠事实给出逻辑不相容的结论，</li></ul>
+<p>或某面镜子自身顶层判定与明细自相矛盾。→ 世界模型不可信，<strong>禁止自动还原</strong>。</p>
+<ul><li><strong><code>severity</code>（分级分歧）</strong>：两面镜子认同同一事实但给了不同严重度</li></ul>
+<p>（如 node_modules 尚未水合：一面当首启正常提醒、一面当拦路项）。→ 事实一致、<br>  不阻断自动还原，但如实标注供 agent 权衡。</p>
+<p>消解取向恒为<strong>安全优先</strong>：矛盾时一律信更悲观那面镜子；每条冲突的自主度恒为<br><code>human</code>（不确定就交人，绝不让 agent 替你赌）。<code>safeToAutodrive</code> 为 false 当且仅当<br>存在 <code>contradiction</code> 级冲突。</p>
+<h2 id="检测的冲突规则">检测的冲突规则<a class="anchor" href="#检测的冲突规则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则 id</th><th>级别</th><th>涉及镜子</th><th>信谁</th><th>症状</th></tr></thead><tbody><tr><td><code>ready-but-bundle-incomplete</code></td><td>硬矛盾</td><td>restore ✕ integrity</td><td>integrity</td><td>还原自检说「就绪」，但完整性自检说「已装副本缺运行时关键文件」——两面镜子结论相悖</td></tr><tr><td><code>ready-but-hydration-blocked</code></td><td>硬矛盾</td><td>restore ✕ hydration</td><td>hydration</td><td>还原自检说「就绪」，但水合自检说「不健康（有拦路项）」——两面镜子结论相悖</td></tr><tr><td><code>intact-but-restore-bundle-missing</code></td><td>硬矛盾</td><td>integrity ✕ restore</td><td>restore</td><td>完整性自检说「副本完整」，但还原自检说「bundled 源码缺失」——同一 bundle 既完整又缺失，传感器互斥</td></tr><tr><td><code>restore-internal-inconsistent</code></td><td>硬矛盾</td><td>restore</td><td>blockers</td><td>还原自检自相矛盾：顶层判「就绪」却带着非空拦路项清单</td></tr><tr><td><code>integrity-internal-inconsistent</code></td><td>硬矛盾</td><td>integrity</td><td>missing</td><td>完整性自检自相矛盾：顶层判「完整」却带着非空缺失清单</td></tr><tr><td><code>hydration-internal-inconsistent</code></td><td>硬矛盾</td><td>hydration</td><td>blockers</td><td>水合自检自相矛盾：顶层判「健康」却带着非空拦路项清单</td></tr></tbody></table>
+<blockquote><p>注：<code>ready-but-hydration-blocked</code> 会在运行期按 hydration 的 blocker 内容动态降级——<br>若 blocker 全是首启正常态（node_modules 尚未水合）则降为 <code>severity</code>，否则维持硬矛盾。</p></blockquote>
+<h2 id="保证-继承项目章程">保证（继承项目章程）<a class="anchor" href="#保证-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>纯比对、零 IO、绝不抛：异常退化为「不放行自动还原」（不确定不自动，安全优先）。</li><li>处置建议绝不含 commit/push/rm/curl/publish 类危险动作；来源若不慎命中则隐去。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-075] Agent 还原方案合成器</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

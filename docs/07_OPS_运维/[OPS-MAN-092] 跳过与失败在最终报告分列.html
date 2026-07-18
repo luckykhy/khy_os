@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-092-跳过与失败在最终报告分列-收结果的诚实最后一公里">[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-一个跨轮次产出的字段在最后一公里无消费者">为什么需要它（真实缺口 = 一个跨轮次产出的字段在最后一公里无消费者）</a></li><li class="lvl-2"><a href="#单一真源与分层">单一真源与分层</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不改非跳过项行为">语义与保守降级（绝不改非跳过项行为）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-092-跳过与失败在最终报告分列-收结果的诚实最后一公里">[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）<a class="anchor" href="#ops-man-092-跳过与失败在最终报告分列-收结果的诚实最后一公里" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第四发（收结果的诚实最后一公里）。承 [OPS-MAN-083] 依赖感知波次调度、<br>[OPS-MAN-087] 波次执行故障感知、[OPS-MAN-091] 波次前驱结果注入。本条补上<br>「收结果」诚实性的<strong>最后一行</strong>——被依赖失败牵连而跳过的子任务，在最终报告里<br>不再和真正跑失败的子任务混为一谈。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>khy 已能有序拆波、并行执行、依赖失败则跳过下游并如实汇报、下游波携带前驱产出。<br>但<strong>最终把所有子任务结果折叠成用户可读报告</strong>的那一步（<code>mergeResults</code>）此前<br><strong>从不消费</strong> <code>skipped</code> 标记——一个「因上游失败被跳过」的子任务，和一个「真的跑起来<br>然后失败」的子任务，在报告里长得一模一样（同一句 <code>失败:</code>、同一个 <code>失败: N 项</code><br>计数）。本条让 <code>mergeResults</code> 消费 <code>skipped</code>：跳过项渲成独立状态<br><code>跳过（依赖失败）</code>，footer 拆出独立的 <code>跳过（依赖失败）: N 项</code> 计数，与 <code>失败: N 项</code><br>分列。用户一眼看清「谁真失败、谁是被牵连」。</p>
+<h2 id="为什么需要它-真实缺口-一个跨轮次产出的字段在最后一公里无消费者">为什么需要它（真实缺口 = 一个跨轮次产出的字段在最后一公里无消费者）<a class="anchor" href="#为什么需要它-真实缺口-一个跨轮次产出的字段在最后一公里无消费者" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line，producer/consumer 断桥）：</strong></p>
+<ul><li><strong>Producer</strong>：<code>services/backend/src/services/agenticHarnessService.js:1176</code></li></ul>
+<p>（OPS-MAN-087）为被上游失败牵连的子任务合成<br>  <code>{ success:false, skipped:true, error:'依赖失败，已跳过' }</code>。</p>
+<ul><li><strong>Consumer（唯一渲染路径）</strong>：<code>services/backend/src/services/taskDecomposer.js</code></li></ul>
+<p>的 <code>mergeResults</code>——它逐项只读 <code>result.success</code> / <code>result.error</code>，<strong>从不看<br>  <code>result.skipped</code></strong>。跳过项 <code>success !== false</code> 为假 → 落进 <code>failCount</code> → 渲成<br>  <code>**状态**: 失败: 依赖失败，已跳过</code>，并计进 footer 的 <code>失败: N 项</code>。</p>
+<p><strong>后果：</strong> 用户看最终报告无法区分「3 项失败」与「1 项真失败、2 项因它被跳过」。<br>OPS-MAN-087 在上游辛苦建立的<strong>因果区分</strong>，在最后一公里的 merge 步被抹平。且<br><code>mergeResults</code> 此前<strong>零直接测试覆盖</strong>（唯一 require <code>taskDecomposer</code> 的测试是<br>wave-scheduler，不测 merge 的 skip 行为）。</p>
+<p><strong>与前三发的区别（换透镜）：</strong> 083/087/091 都收割同一段零调用者死代码<br><code>subAgentOrchestrator.js</code> 的 <code>executeDependencyAware</code>（透镜二：死代码印证设计意图）。<br>本条改用<strong>透镜一</strong>——追一条数据字段从产出到消费的全链，找断桥。<code>skipped</code> 就是一个<br><strong>跨轮次产出、但在渲染层无消费者的死字段</strong>。</p>
+<h2 id="单一真源与分层">单一真源与分层<a class="anchor" href="#单一真源与分层" aria-label="锚点">#</a></h2>
+<ul><li><code>mergeResults</code>（<code>services/backend/src/services/taskDecomposer.js</code>）是所有</li></ul>
+<p>子任务结果折叠成用户报告的<strong>唯一</strong>入口。本条只在此单函数内加消费逻辑：</p>
+<ul><li>新增计数器 <code>skipCount</code>（与 <code>successCount</code> / <code>failCount</code> 并列）。</li><li>逐项判定 <code>const isSkipped = _skipDistinctEnabled() &amp;&amp; result.skipped === true;</code><ul><li>跳过项：<code>skipCount++</code>，渲 <code>**状态**: 跳过（依赖失败）</code> + <code>result.error</code></li></ul></li></ul>
+<p>（<strong>不</strong>渲 <code>(无输出)</code> 噪声），<strong>不</strong>计入 <code>failCount</code>、<strong>不</strong>采集<br>      <code>filesModified</code>（跳过项没跑、无产出）。</p>
+<ul><li>非跳过项：<strong>逐字节保持今日逻辑</strong>。</li></ul>
+<p><strong>每调用读一次</strong>（便于测试注入 env、纯、绝不抛），<strong>不进 flagRegistry</strong><br>  （同 <code>KHY_DEP_WAVE_SCHEDULE</code> / <code>_FAULT_STOP</code> / <code>_CONTEXT_INJECT</code> 三门先例，<br>  各自独立）。</p>
+<h2 id="语义与保守降级-绝不改非跳过项行为">语义与保守降级（绝不改非跳过项行为）<a class="anchor" href="#语义与保守降级-绝不改非跳过项行为" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_MERGE_SKIP_DISTINCT=0/false/off/no</code> | <code>isSkipped</code> 恒 false → 跳过项照今日走 <code>失败</code> 分支、计入 failCount、无 <code>跳过</code> footer（逐字节回退） |</p>
+<p>| 门开 + <code>result.skipped === true</code> | 渲 <code>跳过（依赖失败）</code>、<code>skipCount++</code>、不计 failCount、不采 filesModified |</p>
+<p>| 门开 + 非跳过项（真成功/真失败） | 逐字节保持今日 <code>success = result.success !== false</code> 分支 |</p>
+<p>| 门开 + 无跳过项 | footer 无 <code>跳过</code> 行（与今日一致） |</p>
+<p>| <code>result</code> 为 null | <code>未执行</code>（不变，不当作跳过） |</p>
+<p>| <code>aggregated</code> 为空 | <code>所有子任务未返回结果。</code>（不变） |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_MERGE_SKIP_DISTINCT</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p><code>mergeResults</code> 对跳过项逐字节退化为今日「折进失败」行为（无回归）。sibling 门<br>  直读 env，<strong>不进 flagRegistry</strong>。四门（三个 <code>KHY_DEP_WAVE_*</code> + 本门）各自独立。</p>
+<ul><li><strong>不碰</strong> god-file / orchestrator / <code>AgentTool/index.js</code>；只编辑 <code>mergeResults</code></li></ul>
+<p>单函数 + 新测 + 登记。<code>skipped</code> 的 producer（<code>agenticHarnessService</code> 波循环）<br>  <strong>本条不改</strong>——只补 consumer 端。</p>
+<ul><li>诚实边界：只在<strong>多波 + fault-stop 真产出 skip 项</strong>时可见效果；单波/无跳过 →</li></ul>
+<p>footer 无 <code>跳过</code> 行、逐字节今日行为。<code>skipped</code> 来源仍是 OPS-MAN-087<br>  （<code>KHY_DEP_WAVE_FAULT_STOP</code> default-on）；fault-stop 关则无 skip 项产出，本条<br>  consumer 自然 no-op。dev 机验证止于 node:test 门开/门关双路径 + 边界，不实跑<br>  多智能体端到端（需真 LLM 渠道产真 skip 链）。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:merge-skip-distinct        # 本条 node:test（门开分列 + 门关回退 + 边界）7/7
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要改「跳过项如何渲染」：改 <code>mergeResults</code> 里 <code>isSkipped</code> 分支的状态文案</li></ol>
+<p>（<code>跳过（依赖失败）</code>）与 body 取值（<code>result.error || '依赖失败，已跳过'</code>）。<br>   保持不采集 <code>filesModified</code>、不渲 <code>(无输出)</code>。</p>
+<ol><li>要改「跳过与失败在 footer 如何计数」：改 <code>skipCount</code> 的初始化与 footer 的</li></ol>
+<p><code>跳过（依赖失败）: N 项</code> push。保持 <code>skipCount</code> 不并入 <code>failCount</code>。</p>
+<ol><li>要新增一类「非真失败」的终态（如「已取消」）：在 <code>mergeResults</code> 里比照</li></ol>
+<p><code>isSkipped</code> 加一个 <code>isCancelled</code> 判定 + 独立计数 + 独立 footer 行，切勿把它<br>   折进 <code>失败</code>。相应的 producer 标记（如 <code>result.cancelled</code>）在<br>   <code>agenticHarnessService</code> 波循环合成。</p>
+<ol><li>改完跑 <code>npm run test:merge-skip-distinct</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive；非跳过项路径逐字节不变；门关（<code>KHY_MERGE_SKIP_DISTINCT=off</code>）→</li></ul>
+<p>跳过项照今日走 <code>失败</code> 分支 = 逐字节回退。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-091] 波次前驱结果注入.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-093] 确定性顺序链拆解.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-092] 跳过与失败在最终报告分列.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

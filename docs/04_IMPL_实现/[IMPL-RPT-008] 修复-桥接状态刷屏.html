@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bugfix: Claude 中转桥接状态刷屏 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>Bugfix: Claude 中转桥接状态刷屏</div>
+      <header class="hero reveal"><h1>Bugfix: Claude 中转桥接状态刷屏</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#bugfix-claude-中转桥接状态刷屏">Bugfix: Claude 中转桥接状态刷屏</a></li><li class="lvl-2"><a href="#现象">现象</a></li><li class="lvl-2"><a href="#根因">根因</a></li><li class="lvl-2"><a href="#尝试过但失败的方案-5-次">尝试过但失败的方案（5 次）</a></li><li class="lvl-2"><a href="#最终修复">最终修复</a></li><li class="lvl-2"><a href="#修改文件">修改文件</a></li><li class="lvl-2"><a href="#防御性改进保留">防御性改进保留</a></li><li class="lvl-2"><a href="#经验总结">经验总结</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-008 | 阶段: 实现 | 原路径: docs/修复记录/修复-桥接状态刷屏.md --&gt;</p>
+<h1 id="bugfix-claude-中转桥接状态刷屏">Bugfix: Claude 中转桥接状态刷屏<a class="anchor" href="#bugfix-claude-中转桥接状态刷屏" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本修复落在自研 REPL 运行时 <code>liteRepl.js</code> 上，该文件已于 2026-06-05 随 TUI 迁移官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>）一并删除。本文仅作历史修复记录保留，最新 TUI 行为请参阅 <a href="%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<p><strong>日期</strong>: 2026-06-03<br><strong>影响范围</strong>: 交互式 REPL (<code>khy</code> 命令)<br><strong>严重程度</strong>: P1 — 终端输出完全被淹没，无法正常使用</p>
+<h2 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h2>
+<p>在交互模式下发送任何消息（如 <code>你好</code>），终端被 <code>中转桥接：通过 Claude CLI 子进程启动... (0s)</code> 反复刷屏，时间戳递增 (0s → 1s → 2s)，持续到请求结束。</p>
+<h2 id="根因">根因<a class="anchor" href="#根因" aria-label="锚点">#</a></h2>
+<p><code>claudeAdapter.js</code> 在启动 Claude CLI 子进程时发射了一个 <code>onChunk({ type: 'status', text: '🔗 中转桥接：...' })</code> 状态块。虽然该状态只发射一次，但在交互式 REPL 中触发了 <strong>spinner / keepalive / prompt 重绘</strong> 的连锁反应：</p>
+<pre><code>claudeAdapter 发射 status chunk (1次)
+    ↓
+repl.js onChunk handler
+    ↓
+emitRuntimeStatus → _writeTransientStatus
+    ↓ 调用 spinner.stop() + process.stdout.write('\r\x1b[K...')
+    ↓ 状态行写入当前终端行（无换行）
+    ↓
+500ms busy prompt keepalive 定时器触发
+    ↓ showBusyInterjectPrompt() → 清除当前行 + console.log(hint) + prompt
+    ↓ 状态行被推到新行（变成永久输出）
+    ↓
+spinner.start('request') 被某处重新调用
+    ↓ spinner 以 120ms 间隔渲染 &quot;Thinking... (Ns)&quot;
+    ↓ 但 spinner._phase 或显示路径以某种方式包含了桥接文本
+    ↓
+每 120ms 产生一行新的 &quot;中转桥接... (Ns)&quot; → 刷屏</code></pre>
+<p>核心矛盾：<strong>REPL 的 busy prompt keepalive (500ms) 和 DynamicSpinner (120ms) 两个独立定时器争抢同一个终端行</strong>。任何 <code>\r\x1b[K</code> 原地覆盖策略都会被另一个定时器的 <code>console.log</code> / <code>process.stdout.write</code> 打断，导致状态行被推到新行。</p>
+<h2 id="尝试过但失败的方案-5-次">尝试过但失败的方案（5 次）<a class="anchor" href="#尝试过但失败的方案-5-次" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>方案</th><th>失败原因</th></tr></thead><tbody><tr><td>1</td><td>行计数 <code>_transientTotalRows</code> + 光标上移</td><td>patched <code>console.log</code> 触发 <code>showBusyInterjectPrompt</code>，行数不可预测</td></tr><tr><td>2</td><td><code>_busyStreaming = true</code> 抑制 console.log patch</td><td>spinner 本身就是刷屏源，不经过 console.log</td></tr><tr><td>3</td><td><code>_writeTransientStatus</code> 纯 <code>\r\x1b[K</code> 原地写入</td><td>keepalive 500ms 后覆盖状态行，spinner 重启</td></tr><tr><td>4</td><td><code>_transientStatusActive</code> 标志位阻止 keepalive/prompt</td><td>标志位工作正常，但 spinner 通过未知路径仍在渲染桥接文本</td></tr><tr><td>5</td><td><code>emitRuntimeStatus</code> 入口过滤 + 只显示一次</td><td>同上，渲染管道中某处仍将文本喂给 spinner</td></tr></tbody></table>
+<p><strong>关键教训</strong>: 5 次方案全部试图在渲染管道中修复，但 REPL 的渲染管道有 3+ 个并发定时器（spinner 120ms、keepalive 500ms、adapter pulse 4s）共享同一个 stdout 行，竞态条件难以在非 TTY 测试中复现。<code>-p</code> 模式不触发 busy prompt keepalive，因此无法复现。</p>
+<h2 id="最终修复">最终修复<a class="anchor" href="#最终修复" aria-label="锚点">#</a></h2>
+<p><strong>从源头消除</strong> — 在 <code>claudeAdapter.js</code> 中删除桥接状态块的发射。</p>
+<pre><code class="language-js">// Before (claudeAdapter.js:812-819)
+try {
+  onChunk({
+    type: 'status',
+    text: '🔗 中转桥接：通过 Claude CLI 子进程启动...',
+  });
+} catch { /* best effort */ }
+
+// After — 完全移除，替换为注释
+// Bridge handshake status suppressed — the adapter pulse
+// (&quot;Claude Code 正在生成响应（已耗时 Ns）&quot;) already communicates
+// progress, and emitting a status chunk here caused terminal flooding.</code></pre>
+<p><strong>理由</strong>: 适配器脉冲 <code>&quot;Claude Code 正在生成响应（已耗时 Ns）&quot;</code> 每 4s 自动发射，已经向用户传达了&quot;请求正在进行&quot;的信息。桥接握手消息没有额外的用户价值。</p>
+<h2 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>backend/src/services/gateway/adapters/claudeAdapter.js</code></td><td>删除桥接 status chunk 发射（根因修复）</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td>添加 <code>_transientStatusActive</code> 防护（防御性改进，防止其他 status 刷屏）</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td><code>emitRuntimeStatus</code> 入口添加&quot;中转桥接&quot;过滤（双保险）</td></tr><tr><td><code>backend/src/cli/liteRepl.js</code></td><td>同步添加&quot;中转桥接&quot;过滤</td></tr></tbody></table>
+<h2 id="防御性改进保留">防御性改进保留<a class="anchor" href="#防御性改进保留" aria-label="锚点">#</a></h2>
+<p>虽然根因修复只需要 <code>claudeAdapter.js</code> 一行删除，但 <code>repl.js</code> 中的 <code>_transientStatusActive</code> 机制作为防御性改进保留：</p>
+<ul><li><code>_transientStatusActive</code> 标志位阻止 <code>showBusyInterjectPrompt()</code> 和 500ms keepalive 覆盖原地状态行</li><li>对其他可能的 transient status 刷屏场景（适配器切换、重试状态等）提供保护</li><li>在 <code>_writeTransientStatus</code> / <code>_writeOnStatusTransient</code> / <code>_isDynamicProgressStatus</code> 路径中设置</li><li>在 <code>_flushTransientStatus</code> / <code>_flushLiveStatusLine</code> / 内容到达 / 请求结束时清除</li></ul>
+<h2 id="经验总结">经验总结<a class="anchor" href="#经验总结" aria-label="锚点">#</a></h2>
+<ol><li><strong>当渲染管道有多个并发定时器争抢同一个终端行时，从管道内部修复几乎不可能</strong> — 竞态条件太多，测试环境无法复现</li><li><strong>优先从源头消除问题</strong> — 如果一条消息可以不发，就不要发</li><li><strong><code>-p</code> 模式和交互模式的代码路径差异很大</strong> — busy prompt keepalive 只在交互模式存在，必须在交互模式下测试</li><li><strong>信息冗余是 bug 的温床</strong> — 适配器脉冲已经提供了进度反馈，桥接状态消息是多余的</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-007] v0.1.84-修复说明.html"><div class="dir">← 上一篇</div><div class="ttl">v0.1.84 缺陷修复</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.html"><div class="dir">下一篇 →</div><div class="ttl">Feature Access 收口与代理/登录解耦修复记录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-008] 修复-桥接状态刷屏.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

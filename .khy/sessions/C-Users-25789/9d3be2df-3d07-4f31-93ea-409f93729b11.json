@@ -1,0 +1,22 @@
+{
+  "sessionId": "9d3be2df-3d07-4f31-93ea-409f93729b11",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！我是SenseNova 6.7 Flash-Lite，由商汤科技开发的AI助手。很高兴见到你！今天有什么我可以帮你的吗？😊"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781186204921,
+  "updatedAt": 1781186204921
+}

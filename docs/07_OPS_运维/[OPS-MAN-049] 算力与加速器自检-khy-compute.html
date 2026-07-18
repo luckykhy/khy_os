@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>算力与加速器自检（khy compute） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>算力与加速器自检（khy compute）</div>
+      <header class="hero reveal"><h1>算力与加速器自检（khy compute）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#算力与加速器自检-khy-compute">算力与加速器自检（`khy compute`）</a></li><li class="lvl-2"><a href="#一-它是什么">一、它是什么</a></li><li class="lvl-2"><a href="#二-用法-就这一条">二、用法（就这一条）</a></li><li class="lvl-2"><a href="#三-读懂结果">三、读懂结果</a></li><li class="lvl-2"><a href="#四-相关文档">四、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-049 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-049] 算力与加速器自检-khy-compute.md --&gt;</p>
+<h1 id="算力与加速器自检-khy-compute">算力与加速器自检（<code>khy compute</code>）<a class="anchor" href="#算力与加速器自检-khy-compute" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy compute</code> 是一条<strong>只读体检命令</strong>——一眼看清这台机器能不能跑本地训练/推理：CPU、内存、Python、PyTorch、以及 CUDA / MPS / <code>nvidia-smi</code> 加速器情况。<strong>没有子命令、没有 flag</strong>，跑一次看结果即可。</p>
+<p>实现：<code>modelTrainingService.getComputeStatus()</code>，dispatch 在 <code>router.js:2348</code>。</p></blockquote>
+<hr>
+<h2 id="一-它是什么">一、它是什么<a class="anchor" href="#一-它是什么" aria-label="锚点">#</a></h2>
+<p><code>khy train</code>（本地微调）在开训前需要知道「这台机器用什么设备、要不要开 fp16」。<code>khy compute</code> 就是把这套判定逻辑单独暴露出来，让你<strong>先体检再训练</strong>：</p>
+<ul><li>探测 <strong>CPU 核数 / 内存</strong>；</li><li>探测 <strong>Python</strong> 是否可用及版本；</li><li>探测 <strong>PyTorch</strong> 是否安装；</li><li>探测加速器：<strong>CUDA</strong>（NVIDIA，配合 <code>nvidia-smi</code>）/ <strong>MPS</strong>（Apple Silicon）/ 否则回落 <strong>CPU</strong>；</li><li>据此给出建议设备（cuda/mps/cpu）与是否启用 fp16。</li></ul>
+<hr>
+<h2 id="二-用法-就这一条">二、用法（就这一条）<a class="anchor" href="#二-用法-就这一条" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy compute</code></pre>
+<p>输出会列出各项检测结果。把它当作 <code>khy train</code> 的<strong>前置体检</strong>：</p>
+<pre><code class="language-bash">khy compute                       # 1) 先看设备
+khy train start --base qwen-3b    # 2) 设备 OK 再开训</code></pre>
+<hr>
+<h2 id="三-读懂结果">三、读懂结果<a class="anchor" href="#三-读懂结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>检测项</th><th>含义 / 你该做什么</th></tr></thead><tbody><tr><td>Python 不可用</td><td>装 Python 3.10+，否则 <code>khy train</code> 无法运行</td></tr><tr><td>PyTorch 未安装</td><td><code>pip install torch</code>（按你的 CUDA 版本选 wheel）</td></tr><tr><td>CUDA 可用</td><td>有 NVIDIA GPU，可大幅加速、通常开 fp16</td></tr><tr><td>MPS 可用</td><td>Apple Silicon（M 系列），可用 GPU 加速</td></tr><tr><td>仅 CPU</td><td>仍可训练但很慢，建议用最小基座（如 qwen-1.5b）+ <code>quick</code> 档</td></tr></tbody></table>
+<hr>
+<h2 id="四-相关文档">四、相关文档<a class="anchor" href="#四-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-048] 本地模型微调（<code>khy train</code>）—— 体检通过后在这里开训。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-048] 本地模型微调-khy-train.html"><div class="dir">← 上一篇</div><div class="ttl">本地模型微调（khy train）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-050] 成长档案迁移-khy-growth.html"><div class="dir">下一篇 →</div><div class="ttl">成长档案迁移（khy growth）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-049] 算力与加速器自检-khy-compute.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

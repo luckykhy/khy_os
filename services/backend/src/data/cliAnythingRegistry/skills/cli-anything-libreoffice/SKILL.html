@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-libreoffice · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-libreoffice<span class="sep">›</span>cli-anything-libreoffice</div>
+      <header class="hero reveal"><h1>cli-anything-libreoffice</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-libreoffice">cli-anything-libreoffice</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#document">Document</a></li><li class="lvl-3"><a href="#writer">Writer</a></li><li class="lvl-3"><a href="#calc">Calc</a></li><li class="lvl-3"><a href="#impress">Impress</a></li><li class="lvl-3"><a href="#style-group">Style Group</a></li><li class="lvl-3"><a href="#export-group">Export Group</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-libreoffice&quot;<br>description: &gt;-<br>  Command-line interface for Libreoffice - A stateful command-line interface for document editing, producing real ODF files (ZIP archives with ...</p>
+<hr>
+<h1 id="cli-anything-libreoffice">cli-anything-libreoffice<a class="anchor" href="#cli-anything-libreoffice" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for document editing, producing real ODF files (ZIP archives with XML). Designed for AI agents and power users who need to create and manipulate Writer, Calc, and Impress documents without a GUI or LibreOffice installation.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-libreoffice package:</p>
+<pre><code class="language-bash">pip install cli-anything-libreoffice</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>libreoffice must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-libreoffice --help
+
+# Start interactive REPL mode
+cli-anything-libreoffice
+
+# Create a new project
+cli-anything-libreoffice project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-libreoffice --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-libreoffice
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="document">Document<a class="anchor" href="#document" aria-label="锚点">#</a></h3>
+<p>Document management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new document</td></tr><tr><td><code>open</code></td><td>Open project JSON, or import an existing Office/ODF file</td></tr><tr><td><code>import</code></td><td>Import an existing Office/ODF file to project JSON</td></tr><tr><td><code>import-formats</code></td><td>List supported import formats</td></tr><tr><td><code>save</code></td><td>Save the current document</td></tr><tr><td><code>info</code></td><td>Show document information</td></tr><tr><td><code>profiles</code></td><td>List available page profiles</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="writer">Writer<a class="anchor" href="#writer" aria-label="锚点">#</a></h3>
+<p>Writer (word processor) commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-paragraph</code></td><td>Add a paragraph to the document</td></tr><tr><td><code>add-heading</code></td><td>Add a heading to the document</td></tr><tr><td><code>add-list</code></td><td>Add a list to the document</td></tr><tr><td><code>add-table</code></td><td>Add a table to the document</td></tr><tr><td><code>add-page-break</code></td><td>Add a page break</td></tr><tr><td><code>remove</code></td><td>Remove a content item by index</td></tr><tr><td><code>list</code></td><td>List all content items</td></tr><tr><td><code>set-text</code></td><td>Set the text of a content item</td></tr></tbody></table>
+<h3 id="calc">Calc<a class="anchor" href="#calc" aria-label="锚点">#</a></h3>
+<p>Calc (spreadsheet) commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-sheet</code></td><td>Add a new sheet</td></tr><tr><td><code>remove-sheet</code></td><td>Remove a sheet by index</td></tr><tr><td><code>rename-sheet</code></td><td>Rename a sheet</td></tr><tr><td><code>set-cell</code></td><td>Set a cell value</td></tr><tr><td><code>get-cell</code></td><td>Get a cell value</td></tr><tr><td><code>list-sheets</code></td><td>List all sheets</td></tr></tbody></table>
+<h3 id="impress">Impress<a class="anchor" href="#impress" aria-label="锚点">#</a></h3>
+<p>Impress (presentation) commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-slide</code></td><td>Add a slide to the presentation</td></tr><tr><td><code>remove-slide</code></td><td>Remove a slide by index</td></tr><tr><td><code>set-content</code></td><td>Update a slide's title and/or content</td></tr><tr><td><code>list-slides</code></td><td>List all slides</td></tr><tr><td><code>add-element</code></td><td>Add an element to a slide</td></tr></tbody></table>
+<h3 id="style-group">Style Group<a class="anchor" href="#style-group" aria-label="锚点">#</a></h3>
+<p>Style management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>create</code></td><td>Create a new style</td></tr><tr><td><code>modify</code></td><td>Modify an existing style</td></tr><tr><td><code>list</code></td><td>List all styles</td></tr><tr><td><code>apply</code></td><td>Apply a style to a content item (Writer only)</td></tr><tr><td><code>remove</code></td><td>Remove a style</td></tr></tbody></table>
+<h3 id="export-group">Export Group<a class="anchor" href="#export-group" aria-label="锚点">#</a></h3>
+<p>Export/render commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>presets</code></td><td>List export presets</td></tr><tr><td><code>preset-info</code></td><td>Show preset details</td></tr><tr><td><code>render</code></td><td>Export the document to a file</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new libreoffice project file.</p>
+<pre><code class="language-bash">cli-anything-libreoffice project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-libreoffice --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-libreoffice
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-libreoffice --project myproject.json export render output.pdf --overwrite</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Existing file import</strong>: Convert ODF/DOCX/XLSX/PPTX and related formats into editable project JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-libreoffice project info -p project.json
+
+# JSON output for agents
+cli-anything-libreoffice --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Import existing Office files to JSON first</strong> with <code>document import input.docx -o work.json</code></li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-krita/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-krita</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-lldb/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">LLDB CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-libreoffice/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

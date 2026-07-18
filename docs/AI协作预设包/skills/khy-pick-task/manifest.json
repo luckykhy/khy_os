@@ -1,0 +1,12 @@
+{
+  "name": "khy-pick-task",
+  "description": "Khy-OS 选活与发展路径决策：没头绪时，用一套优先级(命脉>缺陷>兼容>体验>能力)和只读体检定位下一步该做什么，并把它转成一个可安全执行的加法式小任务。想推进项目但不知从何下手时激活。",
+  "user_invocable": true,
+  "trigger": "/khy-pick-task",
+  "aliases": ["/khy-next", "/选活"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "roadmap", "prioritize", "task-selection", "decision"],
+  "platforms": ["khy-os"],
+  "when_to_use": "想推进 Khy-OS 但不确定下一步做什么、或需要在多个候选任务间取舍时。",
+  "context": "inline"
+}

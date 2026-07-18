@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI-Anything Skills · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>CLI-Anything Skills</div>
+      <header class="hero reveal"><h1>CLI-Anything Skills</h1></header>
+      
+      <article class="doc-body">
+<h1 id="cli-anything-skills">CLI-Anything Skills<a class="anchor" href="#cli-anything-skills" aria-label="锚点">#</a></h1>
+<p>This directory is the canonical <code>npx skills</code> surface for in-repo CLI-Anything<br>harnesses.</p>
+<p>Layout:</p>
+<pre><code class="language-text">skills/
+  cli-anything-audacity/SKILL.md
+  cli-anything-blender/SKILL.md
+  ...</code></pre>
+<p>Typical usage:</p>
+<pre><code class="language-bash">npx skills add HKUDS/CLI-Anything --list
+npx skills add HKUDS/CLI-Anything --skill cli-anything-audacity -g -y</code></pre>
+<p>The <code>SKILL.md</code> files here are the canonical repo-root copies. Installed harness<br>packages still ship compatibility copies inside <code>cli_anything/&lt;software&gt;/skills/</code><br>for local runtime discovery.</p>
+<p>CI rule:</p>
+<ul><li>If a harness keeps a deep packaged <code>SKILL.md</code>, it must also have a matching</li></ul>
+<p>repo-root <code>skills/&lt;skill-id&gt;/SKILL.md</code>.</p>
+<ul><li>A future harness that only defines its canonical skill directly in <code>skills/</code></li></ul>
+<p>is also valid.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-hub-meta-skill/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">CLI-Hub Meta-Skill</div></a><a class="next" href="../../../../../../services/backend/src/data/cliAnythingTemplates/HARNESS_PROMPT.html"><div class="dir">下一篇 →</div><div class="ttl">CLI-Anything Agent Harness — Master Prompt</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/README.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

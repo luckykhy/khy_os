@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 微内核 + IPC + MoonBit 接口草案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>M1 微内核 + IPC + MoonBit 接口草案</div>
+      <header class="hero reveal"><h1>M1 微内核 + IPC + MoonBit 接口草案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#m1-微内核-ipc-moonbit-接口草案">M1 微内核 + IPC + MoonBit 接口草案</a></li><li class="lvl-2"><a href="#1-m1-范围">1) M1 范围</a></li><li class="lvl-2"><a href="#2-进程与能力模型">2) 进程与能力模型</a></li><li class="lvl-2"><a href="#3-syscall-abi-内核边界">3) Syscall ABI（内核边界）</a></li><li class="lvl-3"><a href="#3-1-通用-syscall-入口">3.1 通用 syscall 入口</a></li><li class="lvl-3"><a href="#3-2-m1-syscall-id">3.2 M1 syscall ID</a></li><li class="lvl-3"><a href="#3-3-rust-布局定义-repr-c">3.3 Rust 布局定义（`repr(C)`）</a></li><li class="lvl-2"><a href="#4-ipc-消息契约">4) IPC 消息契约</a></li><li class="lvl-2"><a href="#5-服务-id-与方法-id-m1">5) 服务 ID 与方法 ID（M1）</a></li><li class="lvl-2"><a href="#6-moonbit-接口定义-宿主-ffi-sdk">6) MoonBit 接口定义（宿主 FFI + SDK）</a></li><li class="lvl-3"><a href="#6-1-原始宿主导入-khy-sys-模块">6.1 原始宿主导入（`khy_sys` 模块）</a></li><li class="lvl-3"><a href="#6-2-建议的-moonbit-sdk-接口-面向应用">6.2 建议的 MoonBit SDK 接口（面向应用）</a></li><li class="lvl-3"><a href="#6-3-天气应用调用示例-moonbit">6.3 天气应用调用示例（MoonBit）</a></li><li class="lvl-2"><a href="#7-端到端流程-m1">7) 端到端流程（M1）</a></li><li class="lvl-2"><a href="#8-兼容性说明">8) 兼容性说明</a></li><li class="lvl-2"><a href="#9-本地模拟-当前仓库">9) 本地模拟（当前仓库）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-007 | 阶段: 设计 | 原路径: docs/架构/m1-微内核-ipc-moonbit.md --&gt;</p>
+<h1 id="m1-微内核-ipc-moonbit-接口草案">M1 微内核 + IPC + MoonBit 接口草案<a class="anchor" href="#m1-微内核-ipc-moonbit-接口草案" aria-label="锚点">#</a></h1>
+<p>本文档为该架构定义了一个具体的 M1 基线：</p>
+<ul><li>微内核（microkernel）仅保留调度、物理内存与中断转发。</li><li>操作系统组件（<code>netd</code>、<code>fsd</code>、<code>wmd</code>）作为相互隔离的用户态进程运行。</li><li>应用程序运行于 MoonBit/WASM 沙箱中，仅能通过 IPC 访问系统能力（capability）。</li></ul>
+<h2 id="1-m1-范围">1) M1 范围<a class="anchor" href="#1-m1-范围" aria-label="锚点">#</a></h2>
+<p>M1 的目标是打通一条完整路径：</p>
+<p><code>MoonBit weather app -&gt; IPC -&gt; netd -&gt; external HTTP API -&gt; response -&gt; app render</code></p>
+<p>M1 不包含以下内容：</p>
+<ul><li>完整的 POSIX 兼容</li><li>async/await IPC 多路复用</li><li>DMA 零拷贝网络</li><li>GPU 加速</li></ul>
+<h2 id="2-进程与能力模型">2) 进程与能力模型<a class="anchor" href="#2-进程与能力模型" aria-label="锚点">#</a></h2>
+<p>每个进程从启动器（launcher）获得一个能力位集（capability bitset）。默认采用拒绝优先（deny-by-default）策略。</p>
+<p>建议的 M1 能力位：</p>
+<pre><code class="language-text">CAP_IPC        = 1 &lt;&lt; 0
+CAP_NET        = 1 &lt;&lt; 1
+CAP_FS_READ    = 1 &lt;&lt; 2
+CAP_FS_WRITE   = 1 &lt;&lt; 3
+CAP_WINDOW     = 1 &lt;&lt; 4
+CAP_SHM        = 1 &lt;&lt; 5
+CAP_IRQ_BIND   = 1 &lt;&lt; 6</code></pre>
+<p>规则：</p>
+<ul><li>MoonBit 应用不直接访问硬件或内核对象。</li><li>MoonBit 应用只能调用宿主导入（host-imported）的 API。</li><li>宿主 API 在转发 IPC 请求前会校验能力位。</li></ul>
+<h2 id="3-syscall-abi-内核边界">3) Syscall ABI（内核边界）<a class="anchor" href="#3-syscall-abi-内核边界" aria-label="锚点">#</a></h2>
+<h3 id="3-1-通用-syscall-入口">3.1 通用 syscall 入口<a class="anchor" href="#3-1-通用-syscall-入口" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">syscall(id, a0, a1, a2, a3, a4, a5) -&gt; isize</code></pre>
+<ul><li><code>&gt;= 0</code>：成功返回值</li><li><code>&lt; 0</code>：<code>-errno</code></li></ul>
+<h3 id="3-2-m1-syscall-id">3.2 M1 syscall ID<a class="anchor" href="#3-2-m1-syscall-id" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>名称</th><th>参数</th></tr></thead><tbody><tr><td><code>0x01</code></td><td><code>proc_spawn</code></td><td><code>a0=*ProcSpawnReq</code>, <code>a1=*ProcSpawnResp</code></td></tr><tr><td><code>0x02</code></td><td><code>proc_exit</code></td><td><code>a0=exit_code</code></td></tr><tr><td><code>0x03</code></td><td><code>cap_grant</code></td><td><code>a0=pid</code>, <code>a1=cap_bits_low</code>, <code>a2=cap_bits_high</code></td></tr><tr><td><code>0x04</code></td><td><code>cap_revoke</code></td><td><code>a0=pid</code>, <code>a1=cap_bits_low</code>, <code>a2=cap_bits_high</code></td></tr><tr><td><code>0x10</code></td><td><code>ipc_call</code></td><td><code>a0=*IpcCallReq</code></td></tr><tr><td><code>0x11</code></td><td><code>ipc_reply</code></td><td><code>a0=*IpcReplyReq</code></td></tr><tr><td><code>0x12</code></td><td><code>ipc_send</code></td><td><code>a0=*IpcSendReq</code></td></tr><tr><td><code>0x13</code></td><td><code>ipc_recv</code></td><td><code>a0=*IpcRecvReq</code></td></tr><tr><td><code>0x20</code></td><td><code>shm_create</code></td><td><code>a0=*ShmCreateReq</code>, <code>a1=*ShmCreateResp</code></td></tr><tr><td><code>0x21</code></td><td><code>shm_map</code></td><td><code>a0=*ShmMapReq</code></td></tr><tr><td><code>0x30</code></td><td><code>irq_bind</code></td><td><code>a0=*IrqBindReq</code></td></tr><tr><td><code>0x31</code></td><td><code>irq_ack</code></td><td><code>a0=irq_no</code></td></tr></tbody></table>
+<h3 id="3-3-rust-布局定义-repr-c">3.3 Rust 布局定义（<code>repr(C)</code>）<a class="anchor" href="#3-3-rust-布局定义-repr-c" aria-label="锚点">#</a></h3>
+<pre><code class="language-rust">#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KErrno {
+  EPERM = 1,
+  ENOENT = 2,
+  EIO = 5,
+  ENOMEM = 12,
+  EACCES = 13,
+  EINVAL = 22,
+  ENOSYS = 38,
+  ETIMEDOUT = 60,
+  EPROTO = 71,
+  EMSGSIZE = 90,
+}
+
+#[repr(C)]
+pub struct ProcSpawnReq {
+  pub image_ptr: u64,
+  pub image_len: u32,
+  pub flags: u32,
+  pub name_ptr: u64,
+  pub name_len: u32,
+  pub reserved0: u32,
+  pub cap_bits: u64,
+}
+
+#[repr(C)]
+pub struct ProcSpawnResp {
+  pub pid: u32,
+  pub reserved0: u32,
+}
+
+#[repr(C)]
+pub struct IpcCallReq {
+  pub target_pid: u32,
+  pub service_id: u16,
+  pub method_id: u16,
+  pub timeout_ms: u32,
+  pub in_ptr: u64,
+  pub in_len: u32,
+  pub reserved0: u32,
+  pub out_ptr: u64,
+  pub out_cap: u32,
+  pub flags: u32,
+}
+
+#[repr(C)]
+pub struct IpcReplyReq {
+  pub request_id: u64,
+  pub status: i32,
+  pub reserved0: u32,
+  pub out_ptr: u64,
+  pub out_len: u32,
+  pub flags: u32,
+}
+
+#[repr(C)]
+pub struct IpcSendReq {
+  pub channel_id: u32,
+  pub reserved0: u32,
+  pub in_ptr: u64,
+  pub in_len: u32,
+  pub flags: u32,
+}
+
+#[repr(C)]
+pub struct IpcRecvReq {
+  pub channel_id: u32,
+  pub timeout_ms: u32,
+  pub out_ptr: u64,
+  pub out_cap: u32,
+  pub reserved0: u32,
+  pub out_len_ptr: u64,   // writes actual bytes
+  pub from_pid_ptr: u64,  // writes sender pid
+}
+
+#[repr(C)]
+pub struct ShmCreateReq {
+  pub size: u64,
+  pub perms: u32,
+  pub flags: u32,
+}
+
+#[repr(C)]
+pub struct ShmCreateResp {
+  pub handle: u32,
+  pub reserved0: u32,
+}
+
+#[repr(C)]
+pub struct ShmMapReq {
+  pub handle: u32,
+  pub target_pid: u32,
+  pub offset: u64,
+  pub length: u64,
+  pub map_flags: u32,
+  pub reserved0: u32,
+  pub out_addr_ptr: u64,
+}
+
+#[repr(C)]
+pub struct IrqBindReq {
+  pub irq_no: u32,
+  pub target_pid: u32,
+  pub queue_depth: u16,
+  pub flags: u16,
+}</code></pre>
+<h2 id="4-ipc-消息契约">4) IPC 消息契约<a class="anchor" href="#4-ipc-消息契约" aria-label="锚点">#</a></h2>
+<p>对于组件间消息传递，采用固定头部 + 载荷（payload）的形式。</p>
+<pre><code class="language-rust">#[repr(C)]
+pub struct IpcHeader {
+  pub magic: u32,       // 0x4B48_5950 ('KHYP')
+  pub version: u16,     // M1 = 1
+  pub msg_type: u16,    // 1=req, 2=resp, 3=event, 4=error
+  pub request_id: u64,
+  pub service_id: u16,
+  pub method_id: u16,
+  pub flags: u32,
+  pub status: i32,      // response/error only
+  pub payload_len: u32,
+}</code></pre>
+<p>M1 限制：</p>
+<ul><li>单个 IPC 帧的最大载荷：<code>64 KiB</code></li><li>更大的数据使用 <code>shm_create + shm_map</code>，并通过 IPC 发送句柄元数据</li><li>默认调用超时：<code>3000 ms</code></li></ul>
+<h2 id="5-服务-id-与方法-id-m1">5) 服务 ID 与方法 ID（M1）<a class="anchor" href="#5-服务-id-与方法-id-m1" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">SERVICE_FS  = 1
+SERVICE_NET = 2
+SERVICE_WM  = 3</code></pre>
+<p>建议的方法：</p>
+<pre><code class="language-text">FS_READ_FILE      = 1
+FS_STAT           = 2
+
+NET_HTTP_GET      = 1
+NET_DNS_RESOLVE   = 2
+
+WM_PRESENT_TEXT   = 1
+WM_BLIT_RGBA      = 2</code></pre>
+<p>M1 中的载荷编码：UTF-8 JSON 字节。</p>
+<h2 id="6-moonbit-接口定义-宿主-ffi-sdk">6) MoonBit 接口定义（宿主 FFI + SDK）<a class="anchor" href="#6-moonbit-接口定义-宿主-ffi-sdk" aria-label="锚点">#</a></h2>
+<p>MoonBit 应用侧使用宿主导入的函数。原始导入（raw import）保持窄接口且为数值型；可在其之上构建更友好的封装。</p>
+<h3 id="6-1-原始宿主导入-khy-sys-模块">6.1 原始宿主导入（<code>khy_sys</code> 模块）<a class="anchor" href="#6-1-原始宿主导入-khy-sys-模块" aria-label="锚点">#</a></h3>
+<pre><code class="language-moonbit">// Capability probe: returns 1 if granted, otherwise 0.
+fn cap_check(cap_bit : Int) -&gt; Int = &quot;khy_sys&quot; &quot;cap_check&quot;
+
+// Synchronous IPC call.
+// Returns &gt;= 0 on success, or negative errno.
+fn ipc_call(
+  service_id : Int,
+  method_id : Int,
+  req_ptr : Int,
+  req_len : Int,
+  resp_ptr : Int,
+  resp_cap : Int,
+  timeout_ms : Int
+) -&gt; Int = &quot;khy_sys&quot; &quot;ipc_call&quot;
+
+// Query response metadata from last ipc_call.
+fn ipc_last_len() -&gt; Int = &quot;khy_sys&quot; &quot;ipc_last_len&quot;
+fn ipc_last_status() -&gt; Int = &quot;khy_sys&quot; &quot;ipc_last_status&quot;
+
+// Async send/recv channel APIs.
+fn ipc_send(channel_id : Int, msg_ptr : Int, msg_len : Int, flags : Int) -&gt; Int = &quot;khy_sys&quot; &quot;ipc_send&quot;
+fn ipc_recv(channel_id : Int, out_ptr : Int, out_cap : Int, timeout_ms : Int) -&gt; Int = &quot;khy_sys&quot; &quot;ipc_recv&quot;
+
+// Shared memory APIs.
+fn shm_create(size : Int, perms : Int) -&gt; Int = &quot;khy_sys&quot; &quot;shm_create&quot;
+fn shm_map(handle : Int, offset : Int, length : Int) -&gt; Int = &quot;khy_sys&quot; &quot;shm_map&quot;</code></pre>
+<h3 id="6-2-建议的-moonbit-sdk-接口-面向应用">6.2 建议的 MoonBit SDK 接口（面向应用）<a class="anchor" href="#6-2-建议的-moonbit-sdk-接口-面向应用" aria-label="锚点">#</a></h3>
+<pre><code class="language-moonbit">pub let CAP_NET = 1 &lt;&lt; 1
+pub let CAP_FS_READ = 1 &lt;&lt; 2
+pub let CAP_WINDOW = 1 &lt;&lt; 4
+
+pub let SERVICE_NET = 2
+pub let NET_HTTP_GET = 1
+
+pub fn has_capability(cap : Int) -&gt; Bool {
+  cap_check(cap) == 1
+}
+
+// High-level wrapper contract:
+// - input/output are UTF-8 JSON bytes
+// - ipc_call return value is status (0 success, &lt;0 -errno)
+// - actual response length comes from ipc_last_len()
+pub fn call_json(
+  service_id : Int,
+  method_id : Int,
+  request_json : Bytes,
+  timeout_ms : Int
+) -&gt; (Int, Bytes)</code></pre>
+<h3 id="6-3-天气应用调用示例-moonbit">6.3 天气应用调用示例（MoonBit）<a class="anchor" href="#6-3-天气应用调用示例-moonbit" aria-label="锚点">#</a></h3>
+<pre><code class="language-moonbit">pub fn fetch_weather() -&gt; (Int, Bytes) {
+  if !has_capability(CAP_NET) {
+    return (-13, b&quot;{\&quot;error\&quot;:\&quot;CAP_NET required\&quot;}&quot;)
+  }
+
+  // Example payload in UTF-8 JSON bytes.
+  let req = b&quot;{\&quot;city\&quot;:\&quot;shanghai\&quot;}&quot;
+  call_json(SERVICE_NET, NET_HTTP_GET, req, 3000)
+}</code></pre>
+<h2 id="7-端到端流程-m1">7) 端到端流程（M1）<a class="anchor" href="#7-端到端流程-m1" aria-label="锚点">#</a></h2>
+<ol><li>启动器以 <code>CAP_IPC | CAP_NET | CAP_WINDOW</code> 启动天气应用。</li><li>MoonBit 应用调用 <code>call_json(SERVICE_NET, NET_HTTP_GET, ...)</code>。</li><li>宿主运行时校验能力，构建 <code>IpcHeader</code>，执行 <code>ipc_call</code>。</li><li><code>netd</code> 执行 DNS + HTTP GET，并以 JSON 载荷回复。</li><li>运行时将字节返回给 MoonBit 应用。</li><li>应用通过 <code>SERVICE_WM / WM_PRESENT_TEXT</code> 渲染文本，或打印到 CLI。</li></ol>
+<h2 id="8-兼容性说明">8) 兼容性说明<a class="anchor" href="#8-兼容性说明" aria-label="锚点">#</a></h2>
+<ul><li>所有 ID（<code>service_id</code>、<code>method_id</code>、syscall 编号）一旦发布即保持稳定。</li><li>通过扩展方式新增方法，绝不复用旧 ID。</li><li>若载荷格式变更，递增 <code>IpcHeader.version</code>，并在一个大版本内保留向后兼容的解析器。</li><li>当前宿主适配器（<code>backend/src/services/wasm-sandbox/khySysHost.js</code>）期望 <code>ipc_call(req_ptr, req_len, resp_ptr, resp_cap, ...)</code> 采用基于线性内存的 <code>u32 ptr/len</code> ABI。</li><li>MoonBit <code>wasm-gc</code> 构建可能为 <code>Bytes</code> FFI 参数传入非指针的 <code>externref</code> 字节对象。在当前仓库中，这种不匹配会被拒绝为 <code>-EPROTO</code> 并附带明确的 ABI 不匹配错误。</li><li>当模块导入 <code>khy_sys.ipc_call</code> 但未导出预期的内存符号时，<code>app register --abi numeric-v1</code> 现在会快速失败（以避免运行时后期才暴露的故障）。</li><li><code>app register</code> 现在会在前期校验导入兼容性。不受支持的导入会被尽早拒绝；当前宿主支持 <code>khy_sys.*</code>（<code>cap_check</code>、<code>ipc_call</code>、<code>ipc_last_len</code>、<code>ipc_last_status</code>、<code>shm_create</code>、<code>shm_map</code>）以及 <code>spectest.print_char</code>。</li><li><code>app register --abi string-v2|json-v2</code> 现在会校验所需的 ABI 导出（<code>memory</code>、<code>alloc</code>、可选的 <code>free</code>），且当前仅接受 <code>return-mode=i64-ptr-len</code>。</li><li><code>wasmAppService.runFunction(..., abi=numeric-v1)</code> 现在会执行一次预检：若模块导入 <code>khy_sys.ipc_call</code> 但未导出预期的线性内存，则在执行目标导出之前拒绝该调用。</li><li>为在当前宿主中可靠地执行进程内 <code>khy_sys.ipc_call</code>，请使用暴露指针兼容内存 ABI 的模块。</li></ul>
+<h2 id="9-本地模拟-当前仓库">9) 本地模拟（当前仓库）<a class="anchor" href="#9-本地模拟-当前仓库" aria-label="锚点">#</a></h2>
+<p>仓库现已提供宿主侧的回环（loopback）传输，用于 M1 IPC 模拟。</p>
+<p>注册一个带显式能力的 WASM 应用：</p>
+<pre><code class="language-bash">khy app register weather \
+  --runtime wasm \
+  --wasm /abs/path/weather.wasm \
+  --abi json-v2 \
+  --export run \
+  --caps ipc,net</code></pre>
+<p>直接调用回环 NET 服务（无需真实内核/网络驱动）：</p>
+<pre><code class="language-bash">khy app ipc weather net http_get --json '{&quot;city&quot;:&quot;shanghai&quot;}'</code></pre>
+<p>也可以使用数值 ID：</p>
+<pre><code class="language-bash">khy app ipc weather 2 1 --json '{&quot;city&quot;:&quot;beijing&quot;}'</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-006] ai-gateway-适配器协议架构.html"><div class="dir">← 上一篇</div><div class="ttl">AI Gateway 适配器协议架构</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-008] moonbit-系统边界.html"><div class="dir">下一篇 →</div><div class="ttl">MoonBit OS 边界</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-007] m1-微内核-ipc-moonbit.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

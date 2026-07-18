@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条纠正型轴） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条纠正型轴）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条纠正型轴）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-115-纯文本模型图片-ocr-兜底-方向自动校正-第一条-纠正型-轴">[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条**纠正型**轴）</a></li><li class="lvl-2"><a href="#背景-前四条只-告知-这条真-修好">背景（前四条只「告知」，这条真「修好」）</a></li><li class="lvl-2"><a href="#断桥-转向图-高置信度的乱码">断桥（转向图 = 高置信度的乱码）</a></li><li class="lvl-2"><a href="#修复-全-additive-门-khy-ocr-auto-orient-default-on-门关逐字节回退">修复（全 additive · 门 `KHY_OCR_AUTO_ORIENT` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-115-纯文本模型图片-ocr-兜底-方向自动校正-第一条-纠正型-轴">[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条<strong>纠正型</strong>轴）<a class="anchor" href="#ops-man-115-纯文本模型图片-ocr-兜底-方向自动校正-第一条-纠正型-轴" aria-label="锚点">#</a></h1>
+<h2 id="背景-前四条只-告知-这条真-修好">背景（前四条只「告知」，这条真「修好」）<a class="anchor" href="#背景-前四条只-告知-这条真-修好" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract），把图里文字提取出来注入<br>提示词让文本模型据此作答。围绕「准确识别图片」，已建立多条<strong>正交</strong>诚实轴：</p>
+<table><thead><tr><th>OPS</th><th>轴</th><th>性质</th><th>回答的问题</th></tr></thead><tbody><tr><td>OPS-MAN-104</td><td>置信度（accuracy）</td><td>告知</td><td>提取出的<strong>每个词</strong>可不可信？</td></tr><tr><td>OPS-MAN-109</td><td>覆盖度（coverage）</td><td>告知</td><td>是不是<strong>所有图片</strong>都被 OCR 了？</td></tr><tr><td>OPS-MAN-111</td><td>单图截断（completeness）</td><td>告知</td><td><strong>一张图</strong>的文本被 maxChars 切短了吗？</td></tr><tr><td>OPS-MAN-112</td><td>语言包可用性（language）</td><td>告知</td><td><strong>请求的语言</strong>本机跑没跑起来？</td></tr><tr><td><strong>OPS-MAN-115</strong></td><td><strong>方向自动校正（orientation）</strong></td><td><strong>纠正</strong></td><td>图是不是<strong>转向了</strong>？——并<strong>真的把它转正读对</strong></td></tr></tbody></table>
+<p>前四条都只是把问题<strong>披露</strong>给模型（「这段文字可能不可信 / 不完整 / 语言没装」）；本条是第一条<br><strong>纠正型</strong>轴：它不止告知「图转向了」，而是真的把图旋正、重新 OCR、用<strong>读对的文本</strong>替换乱码，<br>最直接地服务于「<strong>准确</strong>识别图片」。</p>
+<h2 id="断桥-转向图-高置信度的乱码">断桥（转向图 = 高置信度的乱码）<a class="anchor" href="#断桥-转向图-高置信度的乱码" aria-label="锚点">#</a></h2>
+<p>一张旋转 90° 的照片，tesseract 在原方向会 OCR 出<strong>看着置信度不低的乱码</strong>：实测单行乱码<br>conf ≈ 51、两行乱码 conf ≈ 62——<strong>≥60 的那部分恰好逃过 OPS-104 的 <code>&lt;60 → needsAiFallback</code><br>低置信度旗标</strong>；而同一张图旋正后 conf ≈ 95。也就是说：只靠置信度轴，转向图会被当成「置信度<br>还行」的文本原样注入，模型被喂了乱码却以为权威。tesseract 自带的方向检测 <code>--psm 0</code>（OSD）<br>在<strong>稀疏文本</strong>上不可靠（&quot;Too few characters. Skipping this page&quot;），不能依赖。</p>
+<h2 id="修复-全-additive-门-khy-ocr-auto-orient-default-on-门关逐字节回退">修复（全 additive · 门 <code>KHY_OCR_AUTO_ORIENT</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-门-khy-ocr-auto-orient-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>在 <code>docHelper.py</code> 用<strong>暴力择优</strong>（不依赖 OSD）真正把图转正：</p>
+<ol><li><strong><code>docHelper.py._maybe_reorient(bin_path, image_path, eff_lang, base)</code></strong>：<ul><li>门关（<code>KHY_OCR_AUTO_ORIENT=off/0/false/no</code>）→ 原样返回 <code>base</code>。</li><li><strong>只在可能有问题时才尝试</strong>：已经读得好的页面（<code>needsAiFallback</code> 不为 True 且</li></ul></li></ol>
+<p><code>base conf &gt;= 80</code>，<code>_ORIENT_SKIP_CONF = 80.0</code>）<strong>绝不扰动</strong>。</p>
+<ul><li>需要 PIL/Pillow；缺失或任何异常 → 逐字节回退 <code>base</code>。</li><li>暴力试 90/180/270（<code>Image.rotate(-deg, expand=True)</code>），每个方向用</li></ul>
+<p><code>_ocr_via_cli_with_confidence</code> 重新 OCR，保留置信度最高的成功结果。</p>
+<ul><li><strong>接受门槛（防「高置信乱码」误纠正）</strong>：仅当 <code>best conf &gt;= 60</code> <strong>且</strong></li></ul>
+<p><code>best conf &gt;= base conf + 20</code> 才接受，否则回退 <code>base</code>。</p>
+<ul><li>接受时打 <code>orientationCorrected=&lt;applied deg&gt;</code>；未纠正则 <code>orientationCorrected=0</code>。</li><li>接线进 3 个 OCR 成功出口：<code>_ocr_via_cli</code> 诚实路径、纯文本降级路径（=0）、</li></ul>
+<p><code>ocr_image</code> 的 pytesseract 路径。</p>
+<ol><li><strong><code>ocrSnippetService.js</code></strong>：<code>_ocrImageWithDocHelper(Async)</code> 与</li></ol>
+<p><code>extractImageOcrSnippet(Async)</code> 输出对象透传 <code>orientationCorrected</code>。</p>
+<ol><li><strong><code>aiGateway.js</code></strong>：<code>extractImageOcrDetails</code> 每条 detail 携带 <code>orientationCorrected</code>。</li><li><strong>纯叶 <code>gateway/ocrOrientationNotice.js</code></strong>：<ul><li><code>computeCorrectedOrientations(details)</code> —— 收集所有 <code>orientationCorrected &gt; 0</code> 的角度，</li></ul></li></ol>
+<p>去重升序；缺字段（旧缓存明细）/ 畸形 / 非数组 → <code>[]</code>，绝不抛。</p>
+<ul><li><code>buildOrientationNotice({ corrected, env })</code> —— 渲染中文告诫，点名旋正角度、说明</li></ul>
+<p>文本取自旋正后的图像、原方向乱码已丢弃；空 / 门关 / 非数组 → <code>null</code>。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code></strong>：新增 <code>_appendOcrOrientationNotice(prompt, ocrDetails)</code>，</li></ol>
+<p>在 3 个 OCR 注入点紧接 <code>_appendOcrLanguageNotice</code> 之后调用（fail-soft try/catch）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>纠正是真的、告诫是装饰</strong>：文本确被旋正复原（真收获）；那段中文告诫只是说明来源，</li></ul>
+<p>可被门关抑制，绝不改变成功/失败归属，绝不动「非多模态模型永不收裸图」的剥图不变量。</p>
+<ul><li><strong>保守不误纠</strong>：好页面（conf≥80 且未触发 fallback）绝不扰动；旋转结果须比原方向高</li></ul>
+<p>≥20 分且绝对 ≥60 才接受——专门挡住「高置信乱码」把好图旋歪。</p>
+<ul><li><strong>门关即回退</strong>：<code>KHY_OCR_AUTO_ORIENT=off</code> → 单趟 OCR 原始结果，逐字节还原，<code>orientationCorrected=0</code>。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶：<code>node --test services/backend/tests/gateway/ocrOrientationNotice.test.js</code>（13/13）。</li><li>接线（断桥闭合）：<code>imageOcrOrientationWiring.test.js</code>（3/3，自带录制 adapter + DI）。</li><li><strong>真实图片核验（<code>/goal</code> 要求）</strong>：<code>ocrOrientationRecovery.test.js</code>（3/3，0 skip），</li></ul>
+<p>用 PIL 渲染 &quot;INVOICE ACME 2026&quot; / &quot;TOTAL USD 1234&quot; 再旋转，在<strong>无多模态模型</strong>的纯 OCR 路径上：</p>
+<ul><li>门关 + 旋转图：原方向读出乱码（不含 <code>/INVOICE/</code>），<code>orientationCorrected===0</code>；此乱码</li></ul>
+<p>conf ≈ 62（<code>needsAiFallback===false</code>）——正是逃过置信度轴、只有纠正型轴能读对的那一类。</p>
+<ul><li>门开 + 旋转图：文本被旋正复原，命中 <code>/INVOICE/</code> 与 <code>/1234/</code>（<strong>准确识别</strong>），</li></ul>
+<p><code>orientationCorrected&gt;0</code>，<code>computeCorrectedOrientations</code> 非空、告诫触发命中 <code>/旋转校正/</code>。</p>
+<ul><li>门开 + 正向图（对照）：好图<strong>绝不被误旋转</strong>，<code>orientationCorrected===0</code>，无告诫，照常识别。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>兜底诚实性的下一层不止「披露问题」，还能「纠正问题」——这是第一条真正<strong>恢复正确文本</strong>的轴。<br>转向图产出的「高置信度乱码」（conf 51–62）<strong>部分逃过</strong>了低置信度旗标（&lt;60），所以单靠置信度轴<br>不够；必须用暴力择优（OSD 在稀疏文本上不可靠）把图转正，并用「best ≥ base+20 且 ≥60」的<br>接受门槛挡住误纠正。判据 = 上游能算出更优方向（旋正后 conf 远高于原方向）却从不尝试、把乱码<br>当权威注入。纠正只在<strong>确有更优方向且提升够大</strong>时发生，绝不把好图旋歪。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-114] 还原字段归属探针（label preservation）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条纠正型轴）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

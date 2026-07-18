@@ -1,0 +1,8 @@
+{
+  "name": "skillify",
+  "command": "/skillify",
+  "description": "Convert a conversation into a reusable skill",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["skill", "creation"]
+}

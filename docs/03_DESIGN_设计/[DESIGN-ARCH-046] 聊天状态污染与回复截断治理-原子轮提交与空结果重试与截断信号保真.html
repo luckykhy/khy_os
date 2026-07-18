@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-046-聊天状态污染与回复截断治理-原子轮提交-空结果自动重试与截断信号保真">[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真</a></li><li class="lvl-2"><a href="#1-症状与病灶">1. 症状与病灶</a></li><li class="lvl-2"><a href="#2-设计-三处外科手术式修复-正常路径零代价">2. 设计：三处外科手术式修复，正常路径零代价</a></li><li class="lvl-3"><a href="#2-1-原子轮提交-chatstateisolation-状态隔离-治本">2.1 原子轮提交 — `chatStateIsolation`（状态隔离，治本）</a></li><li class="lvl-3"><a href="#2-2-空回复有界自动重试-tooluseloop">2.2 空回复有界自动重试 — `toolUseLoop`</a></li><li class="lvl-3"><a href="#2-3-截断信号保真-anthropicssestream">2.3 截断信号保真 — `_anthropicSseStream`</a></li><li class="lvl-3"><a href="#2-4-权威历史孤儿轮回滚-ai-js-复盘补强-修对账本">2.4 权威历史孤儿轮回滚 — `ai.js`（复盘补强：修对账本）</a></li><li class="lvl-2"><a href="#3-硬性约束的工程化保证">3. 硬性约束的工程化保证</a></li><li class="lvl-2"><a href="#4-验收">4. 验收</a></li><li class="lvl-2"><a href="#5-非目标-刻意不动">5. 非目标（刻意不动）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-046-聊天状态污染与回复截断治理-原子轮提交-空结果自动重试与截断信号保真">[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真<a class="anchor" href="#design-arch-046-聊天状态污染与回复截断治理-原子轮提交-空结果自动重试与截断信号保真" aria-label="锚点">#</a></h1>
+<p>状态：已实现（[EvoRequirement]「聊天状态污染与回复截断导致的对话僵化」闭环）<br>依赖前序：[DESIGN-ARCH-028] 通信防御零静默失败（E01–E08 归因） · [DESIGN-ARCH-044] Agent 自愈微循环<br>实现位置：</p>
+<ul><li><code>services/backend/src/services/chatStateIsolation/index.js</code>（原子轮提交，纯模块）</li><li><code>services/backend/src/services/queryEngine.js</code>（会话历史两处提交站点改道 + 轮快照 <code>_turnHistoryMark</code>）</li><li><code>services/backend/src/cli/ai.js</code>（<strong>权威历史孤儿轮回滚</strong> <code>_uncommitOrphanTurn</code>——见 §2.4）</li><li><code>services/backend/src/services/toolUseLoop.js</code>（空回复有界自动重试）</li><li><code>services/backend/src/services/gateway/adapters/_anthropicSseStream.js</code>（提前关闭→截断信号保真）</li></ul>
+<p>验收测试：</p>
+<ul><li><code>services/backend/tests/services/chatStateIsolation/chatStateIsolation.test.js</code>（10 例，纯模块）</li><li><code>services/backend/tests/services/chatStateIsolation/orphanTurnRollback.test.js</code>（4 例，真 <code>ai.js</code> 模块闭包历史）</li><li><code>services/backend/tests/services/chatStateIsolation/emptyReplyRetry.test.js</code>（3 例，真 <code>runToolUseLoop</code>）</li><li><code>services/backend/tests/services/chatStateIsolation/sseTruncationSignal.test.js</code>（4 例，真 SSE 解析器）</li></ul>
+<hr>
+<h2 id="1-症状与病灶">1. 症状与病灶<a class="anchor" href="#1-症状与病灶" aria-label="锚点">#</a></h2>
+<p><strong>症状一「一次异常导致后续回复复读」</strong>：一次模型调用异常（网络/超时/格式错误）后，系统进入「污染状态」，<br>后续所有正常请求都返回同一句罐头话（如「抱歉，我无法回答这个问题」）。</p>
+<p><strong>症状二「截断/空结果需二次触发」</strong>：回复被意外截断（流式中断、超时）或返回空结果时，系统不自动重试也不提示，<br>而是僵在「等用户二次提问」的状态，必须用户主动再问才会重新执行。</p>
+<p><strong>病灶定位（三处精确缺陷）</strong>：</p>
+<ol><li><strong>状态污染</strong>：会话历史的两处 push 站点（<code>queryEngine.js</code> 主路径与 harness 路径）只看 <code>reply</code> 非空，</li></ol>
+<p>对「真实回答」与「兜底错误文案」一视同仁。于是一次异常把罐头文案写进 <code>_messages</code>，<br>   下一轮作为上下文重放，模型照抄——「复读」由此而来。</p>
+<ol><li><strong>空结果无自动恢复</strong>：<code>toolUseLoop</code> 的空回复分支直接返回罐头兜底（带 E01 归因），未先尝试重试，</li></ol>
+<p>把「再问一次」的责任推给用户。<code>_isTransientLoopErrorType</code> 不含 <code>empty_reply</code>，空回复拿不到既有的瞬时重试预算。</p>
+<ol><li><strong>截断信号被抹平</strong>：Anthropic SSE 解析器在流 <code>end</code> 时无条件 <code>finishReason: finishReason || 'end_turn'</code>。</li></ol>
+<p>若 socket 在生成中途断开（无 <code>message_delta.stop_reason</code>、无 <code>message_stop</code>），半截话被当作正常 <code>end_turn</code> 收尾，<br>   既有的 <code>length</code> 续传恢复路径永远不会触发。</p>
+<h2 id="2-设计-三处外科手术式修复-正常路径零代价">2. 设计：三处外科手术式修复，正常路径零代价<a class="anchor" href="#2-设计-三处外科手术式修复-正常路径零代价" aria-label="锚点">#</a></h2>
+<h3 id="2-1-原子轮提交-chatstateisolation-状态隔离-治本">2.1 原子轮提交 — <code>chatStateIsolation</code>（状态隔离，治本）<a class="anchor" href="#2-1-原子轮提交-chatstateisolation-状态隔离-治本" aria-label="锚点">#</a></h3>
+<p>新纯模块 <code>chatStateIsolation/index.js</code>，把「这一轮该不该落历史」收敛为可单测的纯判定 + <strong>原子提交</strong>语义：</p>
+<ul><li><code>isErrorTurn(finalResult)</code>：结构化判错——<code>finalResult</code> 携带 <code>errorType</code>（timeout/network/empty_reply/...）</li></ul>
+<p>或 <code>error_code</code>（E01..E08）即为失败轮。复用 DESIGN-ARCH-028 的精准归因产物，<strong>不对文案做字符串匹配</strong>。</p>
+<ul><li><code>commitTurn(messages, { reply, finalResult, maxHistory, historyMark })</code>：就地变异调用方持有的数组（不重赋引用）：<ul><li><strong>成功轮</strong>：push assistant 回复，按 <code>maxHistory</code> 截断（与原行为逐字节一致）。</li><li><strong>失败轮</strong>：回滚到 <code>historyMark</code>（本轮开始前的历史长度快照），<strong>连同本轮已 push 的 user 消息一并撤回</strong>。</li></ul></li></ul>
+<p>这既实现「异常后自动重置对话上下文」，又避免「孤儿 user 消息」破坏 user/assistant 角色交替。</p>
+<p><code>queryEngine.js</code> 在 push 本轮 user 消息后记下 <code>this._turnHistoryMark = this._messages.length - 1</code>，<br>两处提交站点统一改道 <code>commitTurn(...)</code>。罐头文案从此<strong>绝不进入</strong> <code>_messages</code>，下一次请求从干净状态开始。</p>
+<h3 id="2-2-空回复有界自动重试-tooluseloop">2.2 空回复有界自动重试 — <code>toolUseLoop</code><a class="anchor" href="#2-2-空回复有界自动重试-tooluseloop" aria-label="锚点">#</a></h3>
+<p>空回复分支（<code>!aiResult.reply</code>）在返回罐头兜底<strong>之前</strong>，先尝试有界自动重试：</p>
+<ul><li>预算 <code>_resolveEmptyRecoveryMax</code>：默认 <code>1</code>（「自动触发一次重试」），env <code>KHY_TOOL_LOOP_EMPTY_RECOVERIES</code> 可调，</li></ul>
+<p>clamp 到 <code>[0,3]</code>。独立于瞬时重试预算——即便小任务关闭了 <code>transientRecovery</code>，空回复仍享有这一次重试。</p>
+<ul><li>重试前经 <code>onToolResult('_system_retry', ...)</code> 推送「生成被中断或为空，正在重试（n/m）…」状态，用户被告知而非空等。</li><li>注入续写提示并 <code>continue</code> 重跑循环；预算耗尽后才返回带 E01 归因的罐头兜底（再由 §2.1 隔离出历史）。</li><li><strong>守卫</strong>：请求已 abort 不重试；模型返回了结构化 <code>toolUseBlocks</code>（合法工具轮）不重试。</li></ul>
+<h3 id="2-3-截断信号保真-anthropicssestream">2.3 截断信号保真 — <code>_anthropicSseStream</code><a class="anchor" href="#2-3-截断信号保真-anthropicssestream" aria-label="锚点">#</a></h3>
+<ul><li>新增 <code>sawTerminal</code> 标志：<code>message_delta.stop_reason</code> 或 <code>message_stop</code> 任一到达即置真。</li><li>流 <code>end</code> 时，若 <strong>无任何终止标记</strong> 且 <strong>已有内容</strong>，把 <code>finishReason</code> 置为 <code>'length'</code>（提前关闭=截断），</li></ul>
+<p>而非抹平成 <code>end_turn</code>。该信号汇入既有的续传恢复（<code>claudeAdapter</code> 的 <code>finishReason==='length'</code> 续写 +<br>  <code>toolUseLoop</code> 的 <code>_maxTokensRecovery</code>），用「从上次中断处继续，勿重复」续写补全半截话。</p>
+<ul><li>干净流（带终止标记）保留真实 <code>stop_reason</code>；无内容的空流不臆造截断（交由 §2.2 空回复重试处理）。</li></ul>
+<h3 id="2-4-权威历史孤儿轮回滚-ai-js-复盘补强-修对账本">2.4 权威历史孤儿轮回滚 — <code>ai.js</code>（复盘补强：修对账本）<a class="anchor" href="#2-4-权威历史孤儿轮回滚-ai-js-复盘补强-修对账本" aria-label="锚点">#</a></h3>
+<p><strong>复盘发现</strong>：系统存在两套并行历史。<code>queryEngine._messages</code>（§2.1 作用对象）<strong>不喂给模型</strong>——它只经<br><code>initialMessages</code> 进入 <code>toolUseLoop</code> 的 token 估算器。模型真正看到的上下文 <code>conversationPrompt</code> 由<br><strong><code>ai.js</code> 模块级 <code>_messages</code></strong> 构建（<code>ai.js</code> 的 <code>routeContextStrategy(_messages,...)</code> → <code>buildFlatConversation</code>）。<br><code>clearHistory()</code> 需同时清两者（<code>queryEngine.js</code> 注释「both engine and ai.js」）即为佐证。</p>
+<p><strong>真正的半途丢弃</strong>：<code>ai.chat</code> 先 push 本轮 user 消息，再调用网关；生成为空/出错时<strong>提前 return</strong>，<br>走不到末尾的 assistant push。于是 user 消息被<strong>孤儿化</strong>——记进权威历史却无配对 assistant，破坏 user/assistant<br>角色交替，下一轮再 push user 即出现连续两个 user，污染模型上下文。这才是 REPL「复读」的真凶。</p>
+<p><strong>修复</strong>：<code>_uncommitOrphanTurn(committedMsg)</code> 在两处失败提前 return 前，<strong>仅按引用身份弹出本次调用刚 push 的<br>那一条孤儿消息</strong>（且必须仍是尾部）：</p>
+<ul><li><strong>绝不</strong>回滚整轮——多轮工具任务中，前序已完成的工具迭代（任务进度）必须原样保留，否则才是「丢弃数据导致</li></ul>
+<p>无法完成使命」的真正灾难。</p>
+<ul><li>意图不丢失：空回复由 §2.2 的循环重试重新供给同一条消息（不重复堆叠）；非重试失败本就无答案可承接。</li><li>防呆：非尾部目标（已被 trim）/空历史/null 目标一律安全 no-op，绝不静默误删。</li></ul>
+<blockquote><p>注：daemon <code>/api/ai/chat/stream</code> 路径走 <code>gw.generate(message)</code> <strong>无状态单发</strong>，不累积历史、不受此污染；<br>受影响的仅 REPL（含 <code>queryEngine</code> 模式）累积历史的路径。</p></blockquote>
+<h2 id="3-硬性约束的工程化保证">3. 硬性约束的工程化保证<a class="anchor" href="#3-硬性约束的工程化保证" aria-label="锚点">#</a></h2>
+<blockquote><p>1）绝不增加正常对话延迟（如不必要的重试）；2）绝不因自动重试导致内容重复或逻辑混乱；<br>3）必须通过构造异常场景回归测试。</p></blockquote>
+<p>落到代码与测试：</p>
+<ol><li><strong>正常路径零代价</strong>。<code>commitTurn</code> 成功轮与旧 push 行为等价；空回复重试块仅在 <code>reply</code> 已空时进入</li></ol>
+<p>（<code>emptyReplyRetry.test.js</code> 的「非空首回复 → chat 仅调 1 次」用例守护）；SSE 截断改写仅在<br>   「无终止标记且有内容」时命中，干净流逐字节不变（<code>sseTruncationSignal.test.js</code> 的 end_turn 用例守护）。</p>
+<ol><li><strong>不重复、不死循环</strong>。空回复无内容可重复；重试预算有界（默认 1，clamp ≤3），耗尽即兜底</li></ol>
+<p>（<code>emptyReplyRetry.test.js</code> 的「持续空回复→恰两次调用」用例守护）；截断续写用「勿重复」提示。<br>   失败轮罐头文案被隔离出历史，根除「复读」（<code>chatStateIsolation.test.js</code> 的 REPRO 用例守护）。</p>
+<ol><li><strong>异常场景回归</strong>。三套 <code>node:test</code> 套件构造了网络/超时错误轮、强制截断流式输出（提前关闭无终止标记）、</li></ol>
+<p>空结果三类异常场景，共 17 例，全绿。</p>
+<h2 id="4-验收">4. 验收<a class="anchor" href="#4-验收" aria-label="锚点">#</a></h2>
+<ul><li><code>chatStateIsolation.test.js</code>（10 例）：判错信号识别 / 成功轮 push+trim 等价 / 失败轮回滚 / E01 不落历史 /</li></ul>
+<p>「一次异常不污染后续正常轮」REPRO / 坏 mark 防呆（最坏不回滚但绝不落兜底）/ 非数组安全 no-op。</p>
+<ul><li><code>orphanTurnRollback.test.js</code>（4 例）：尾部孤儿 user 弹出 / <strong>保留前序工具迭代（任务进度不丢）</strong> /</li></ul>
+<p>非尾部目标安全 no-op / 空历史·null 目标安全 no-op。驱动真 <code>ai.js</code> 模块闭包历史。</p>
+<ul><li><code>emptyReplyRetry.test.js</code>（3 例）：空→一次重试→真答案（含「正在重试」状态）/ 持续空→有界两次→E01 兜底 /</li></ul>
+<p>非空首回复零重试（硬约束①）。</p>
+<ul><li><code>sseTruncationSignal.test.js</code>（4 例）：提前关闭+有内容→<code>length</code> / 干净 <code>end_turn</code> 保真 / 真 <code>max_tokens</code> 保真 /</li></ul>
+<p>提前关闭无内容不臆造截断。</p>
+<ul><li>邻近回归：<code>toolUseLoop.bareRefusal</code> / <code>pseudoRefusal</code> / <code>failsafe</code> / <code>channelLifecycle</code> / <code>channelLogGating</code></li></ul>
+<p>合计 69 例零回归（<code>queryEngine.*</code> 与 <code>toolUseLoop.terminalNotice</code> 等 jest 套件本 env 无 jest 跑不了，与本次改动无关）。</p>
+<h2 id="5-非目标-刻意不动">5. 非目标（刻意不动）<a class="anchor" href="#5-非目标-刻意不动" aria-label="锚点">#</a></h2>
+<ul><li>不接管全局上下文压缩 / 认知快照（DESIGN-ARCH-035）——本次只隔离「失败轮副产物」，不动正常轮的历史管理。</li><li>不改 <code>_maxTokensRecovery</code> 续传策略与 <code>claudeAdapter</code> 续写循环——截断信号只是把「提前关闭」正确归类为 <code>length</code>，</li></ul>
+<p>复用既有恢复管道，零新增重试逻辑。</p>
+<ul><li>不改 OpenAI SSE 解析器——本次症状定位在 Anthropic 直连流；OpenAI 路径如需同等保真应另行验收。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-045] 非活跃通道生命周期治理-僵尸后台收回与日志越权阻断.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-047] 轨迹溯源标准-溯源信封与防篡改链与注入隔离.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-046] 聊天状态污染与回复截断治理-原子轮提交与空结果重试与截断信号保真.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

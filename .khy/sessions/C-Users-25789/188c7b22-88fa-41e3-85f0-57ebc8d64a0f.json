@@ -1,0 +1,66 @@
+{
+  "sessionId": "188c7b22-88fa-41e3-85f0-57ebc8d64a0f",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！我是商量（SensenNova），商汤科技开发的AI助手。很高兴见到你！今天有什么我可以帮你的吗？😊",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "你是什么模型"
+    },
+    {
+      "role": "assistant",
+      "content": "我是商量（SensenNova），由商汤科技开发的日日新融合模态大模型，当前版本是 v6.7-Flash。我擅长多模态交互、代码工程、量化分析等任务。有什么可以帮你的吗？😊",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "为什么没识别"
+    },
+    {
+      "role": "assistant",
+      "content": "我需要先确认一下您具体指的是什么没有被识别？😊\n\n从我们的对话来看，目前主要有以下几种可能：\n\n1. **身份识别**：您是在问为什么我没有识别出您的身份或意图吗？\n2. **内容识别**：您之前是否发送了某些内容（如图片、文件等）但我没有正确识别？\n3. **功能识别**：您是在测试某个特定功能（如图像识别、文件解析等）吗？\n\n由于我们的对话刚开始，我还没有收到过图片或文件。如果您有具体的内容需要我识别或分析，请直接发送给我，我会尽力帮您处理！\n\n请告诉我您具体遇到了什么问题，我会针对性地为您解答。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！我是商量（SensenNova），商汤科技开发的AI助手。很高兴见到你！今天有什么我可以帮你的吗？😊",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 8,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782217582230,
+  "updatedAt": 1782217582230
+}

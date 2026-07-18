@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-147] 次级读取工具统一读前防卡死前检 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-147] 次级读取工具统一读前防卡死前检</div>
+      <header class="hero reveal"><h1>[OPS-MAN-147] 次级读取工具统一读前防卡死前检</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-147-次级读取工具统一读前防卡死前检">[OPS-MAN-147] 次级读取工具统一读前防卡死前检</a></li><li class="lvl-2"><a href="#背景与缺口">背景与缺口</a></li><li class="lvl-2"><a href="#修复-全-additive">修复(全 additive)</a></li><li class="lvl-3"><a href="#设计边界">设计边界</a></li><li class="lvl-2"><a href="#验证-全绿">验证(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-147-次级读取工具统一读前防卡死前检">[OPS-MAN-147] 次级读取工具统一读前防卡死前检<a class="anchor" href="#ops-man-147-次级读取工具统一读前防卡死前检" aria-label="锚点">#</a></h1>
+<h2 id="背景与缺口">背景与缺口<a class="anchor" href="#背景与缺口" aria-label="锚点">#</a></h2>
+<p>防卡死读守卫族此前只覆盖两条<strong>主</strong>读路径:</p>
+<ul><li><code>readFile.js</code>(OPS-121 二进制内容 / OPS-123 格式路由 / OPS-125 特殊文件 FIFO·套接字·设备 / OPS-129 伪文件有界读)。</li><li><code>FileReadTool</code>(模型主调的 <code>Read</code>,OPS-146 补齐 parity)。</li></ul>
+<p>但<strong>次级</strong>读取工具同样面向模型、同样触碰字节,却<strong>零防卡死守卫</strong>:</p>
+<ul><li><code>inspectDocument.js</code>(别名 <code>read_format</code> / <code>inspect_format</code> / <code>doc_format</code>):<code>execute()</code> 在 <code>existsSync</code> 后立刻 <code>detectFile(absPath)</code>(读 magic bytes → 对 FIFO / 阻塞伪文件<strong>永久卡死</strong>),随后 <code>fs.readFileSync(absPath,'utf-8')</code> 也会阻塞。</li><li><code>replaceAtLocation.js</code>(别名 <code>replace_at</code>):同样 <code>detectFile(absPath)</code> 后 <code>fs.readFileSync(absPath,'utf-8')</code>,同一卡死暴露。</li></ul>
+<p>即:把 khy 指向含 FIFO / 设备节点 / <code>/proc·/sys</code> 阻塞项的目录,再用这两个工具就会永久卡死——正是 /goal「不要再次因为阅读工具不对不支持，长时间卡死」诉求的残余缺口。</p>
+<h2 id="修复-全-additive">修复(全 additive)<a class="anchor" href="#修复-全-additive" aria-label="锚点">#</a></h2>
+<p>新增<strong>合成纯叶</strong> <code>services/backend/src/tools/filePreReadHangGuard.js</code>,导出 <code>classifyPreReadHang({absPath, stat, env})</code>,把三条会<strong>永久卡死</strong>的读前向量合成单一调用:</p>
+<ol><li><strong>Windows 保留设备名</strong>(CON/PRN/AUX/NUL/COM1-9/LPT1-9、<code>\\.\…</code>)—— 纯路径判定,无需 stat。委派 <code>winDeviceReadGuard</code>。</li><li><strong>特殊文件</strong>(FIFO / 套接字 / 字符或块设备)—— 用已算好的 <code>stat</code> 类型谓词(<code>statSync</code> 对设备只读元数据,不阻塞)。委派 <code>specialFileReadGuard</code>。</li><li><strong>阻塞伪文件</strong>(Linux <code>/proc·/sys</code>)—— 路径 + stat 谓词检测。委派 <code>pseudoFileReadGuard.shouldBoundedRead</code>;本合成器面向「只需拒绝」的工具,故<strong>检测即拒绝</strong>(不做有界读回内容,与 <code>readFile.js</code> 的有界读路径分工)。</li></ol>
+<p>每条向量各自沿用其族门(default-on):门关 → 该向量返 <code>null</code>(逐字节回退历史行为)。纯判定、零副作用、<strong>绝不抛</strong>。返回 <code>null</code>(安全)或 <code>{ blocked:true, kind, error }</code>。</p>
+<p><strong>接线</strong>(两处对称,均在 <code>detectFile</code> / <code>readFileSync</code> 触碰字节之前):</p>
+<ul><li><code>inspectDocument.js</code>:<code>existsSync</code> 后、<code>detectFile(absPath)</code> 前,<code>fs.statSync</code> + <code>classifyPreReadHang</code>,命中即 <code>return { success:false, error, blockedRead:kind }</code>。</li><li><code>replaceAtLocation.js</code>:同一插入点(<code>existsSync</code> 后、<code>detectFile</code> 前)。</li></ul>
+<p><code>try/catch</code> 包裹,任何异常回退历史行为(fail-soft)。</p>
+<h3 id="设计边界">设计边界<a class="anchor" href="#设计边界" aria-label="锚点">#</a></h3>
+<p><code>readFile.js</code> / <code>FileReadTool</code> <strong>不</strong>改用本合成器:它们有更细的读路径(pseudo 走<strong>有界读</strong>取回内容、binary 走<strong>格式路由</strong>),保留各自读专用内联守卫。本合成器只服务「命中即拒绝、不需读回内容」的次级读类工具。</p>
+<h2 id="验证-全绿">验证(全绿)<a class="anchor" href="#验证-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node --check filePreReadHangGuard.js / inspectDocument.js / replaceAtLocation.js   # OK
+node --test tests/tools/filePreReadHangGuard.test.js                              # 12/12 pass</code></pre>
+<p>LIVE 防卡死冒烟(经真实 execute 路径):</p>
+<table><thead><tr><th>工具</th><th>目标</th><th>结果</th><th>耗时</th></tr></thead><tbody><tr><td>inspectDocument.execute</td><td>FIFO</td><td>success:false · blockedRead=special:fifo</td><td>3ms</td></tr><tr><td>replaceAtLocation.execute</td><td>FIFO</td><td>success:false · blockedRead=special:fifo</td><td>3ms</td></tr><tr><td>inspectDocument.execute</td><td>/proc/self/status</td><td>success:false · blockedRead=pseudo:proc</td><td>0ms</td></tr><tr><td>inspectDocument.execute</td><td>普通文本文件</td><td>正常通过(不误伤)</td><td>—</td></tr></tbody></table>
+<p>(修复前这些目标会永久卡死。)</p>
+<p>门禁:</p>
+<pre><code>change-safety(我 4 文件 positional)   # no findings · exit0
+check-leaf-contract filePreReadHangGuard.js   # passed
+check-flag-registry                    # passed(复用既有族门,无新门)
+check-agent-rules(我 4 文件)           # passed
+check:node-syntax                      # 4354 files · passed
+wc -l   # 叶 74 / inspect 224 / replace 144 / test 138  —— 均 &lt; 2500(arch:god)
+maintainer:check                       # exit0(已登记 file-preread-hang-guard 条目)
+维护映射表.json                        # JSON valid</code></pre>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>防卡死向量要按「<strong>哪些工具触碰字节</strong>」全量盘点——主读路径(readFile / FileReadTool)修好后,次级读工具(inspectDocument / replaceAtLocation)是同一缺口的残余面。</li><li><code>detectFile</code> 读 magic bytes,本身就会对 FIFO / 阻塞伪文件卡死——守卫<strong>必须</strong>在 <code>detectFile</code> 之前。</li><li>多个「只需拒绝」的读工具应共用一个<strong>合成前检叶</strong>,而非各自复制三段守卫:新增向量时只改叶,调用方零改动。</li><li><code>replaceAtLocation</code> 的写路径限定在 cwd 内(traversal 检查先于本守卫),故其 FIFO 行为测的临时管道须落 cwd 内。</li><li>不 commit(feat/0.1.104);1.0.0 发布与真机手动门由用户执行。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-146] 主读工具FileReadTool防卡死守卫族parity接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-147] 次级读取工具统一读前防卡死前检.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY-OS 与 LibreChat 差距修复路线图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY-OS 与 LibreChat 差距修复路线图</div>
+      <header class="hero reveal"><h1>KHY-OS 与 LibreChat 差距修复路线图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-与-librechat-差距修复路线图">KHY-OS 与 LibreChat 差距修复路线图</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-基线-当前对比">2. 基线（当前对比）</a></li><li class="lvl-2"><a href="#3-优先级矩阵">3. 优先级矩阵</a></li><li class="lvl-2"><a href="#p0-必须优先完成-生产风险">P0（必须优先完成，生产风险）</a></li><li class="lvl-2"><a href="#p1-重要-平台成熟度">P1（重要，平台成熟度）</a></li><li class="lvl-2"><a href="#p2-扩展性与生态">P2（扩展性与生态）</a></li><li class="lvl-2"><a href="#4-四周执行计划">4. 四周执行计划</a></li><li class="lvl-2"><a href="#第-1-周-p0-启动-测试-ci">第 1 周（P0 启动：测试 + CI）</a></li><li class="lvl-2"><a href="#第-2-周-p0-继续-可观测性-法务一致性">第 2 周（P0 继续：可观测性 + 法务一致性）</a></li><li class="lvl-2"><a href="#第-3-周-p0-p1-架构风险-权限">第 3 周（P0/P1：架构风险 + 权限）</a></li><li class="lvl-2"><a href="#第-4-周-p1-p2-治理-i18n-部署">第 4 周（P1/P2：治理 + i18n + 部署）</a></li><li class="lvl-2"><a href="#5-验收指标-第-4-周结束">5. 验收指标（第 4 周结束）</a></li><li class="lvl-2"><a href="#6-风险控制">6. 风险控制</a></li><li class="lvl-2"><a href="#7-建议负责人">7. 建议负责人</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-002 | 阶段: 项目管理 | 原路径: docs/指南/khy-librechat-差距修复路线图.md --&gt;</p>
+<h1 id="khy-os-与-librechat-差距修复路线图">KHY-OS 与 LibreChat 差距修复路线图<a class="anchor" href="#khy-os-与-librechat-差距修复路线图" aria-label="锚点">#</a></h1>
+<p>更新日期：2026-05-15  <br>范围：<code>/home/kodehu03/Khy-OS</code> vs <code>/tmp/librechat_cmp/LibreChat-main</code></p>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>在 4 周内，弥合测试、CI 质量门禁、可观测性、权限模型与发布治理等核心工程差距，使 KHY-OS 能够支撑更快速、更安全的迭代。</p>
+<h2 id="2-基线-当前对比">2. 基线（当前对比）<a class="anchor" href="#2-基线-当前对比" aria-label="锚点">#</a></h2>
+<ul><li>CI 工作流：KHY <code>5</code> vs LibreChat <code>26</code></li><li>测试相关文件：KHY <code>230</code> vs LibreChat <code>610</code></li><li>E2E 覆盖文件：KHY <code>1</code> vs LibreChat <code>23</code></li><li>TS 代码量：KHY <code>8</code> vs LibreChat <code>2218</code></li><li>Helm chart 支持：KHY <code>none</code> vs LibreChat <code>present</code></li><li>Husky 预提交工作流：KHY <code>none</code> vs LibreChat <code>present</code></li><li>前端语言包目录：KHY <code>0</code> vs LibreChat <code>41</code></li></ul>
+<h2 id="3-优先级矩阵">3. 优先级矩阵<a class="anchor" href="#3-优先级矩阵" aria-label="锚点">#</a></h2>
+<h2 id="p0-必须优先完成-生产风险">P0（必须优先完成，生产风险）<a class="anchor" href="#p0-必须优先完成-生产风险" aria-label="锚点">#</a></h2>
+<ol><li>前端自动化测试与 CI 强制执行</li><li>统一的根级脚本（<code>build/test/lint/e2e</code>）与流水线质量门禁</li><li>可观测性基线（<code>/metrics</code>、请求延迟/错误指标、基础追踪钩子）</li><li>许可证与元数据一致性修复（仓库 LICENSE 与 package 元数据）</li><li><code>backend</code> 与 <code>ai-backend</code> 网关代码的去重策略</li></ol>
+<h2 id="p1-重要-平台成熟度">P1（重要，平台成熟度）<a class="anchor" href="#p1-重要-平台成熟度" aria-label="锚点">#</a></h2>
+<ol><li>细粒度的能力/授权权限模型（超越 <code>admin/user</code>）</li><li>前端 i18n 架构基线</li><li>安全/治理文档：<code>CONTRIBUTING.md</code>、<code>SECURITY.md</code>、<code>CODE_OF_CONDUCT.md</code></li></ol>
+<h2 id="p2-扩展性与生态">P2（扩展性与生态）<a class="anchor" href="#p2-扩展性与生态" aria-label="锚点">#</a></h2>
+<ol><li>部署矩阵加固（Helm 或等效的部署模板）</li><li>更强的依赖治理（<code>overrides</code>/锁定策略、依赖漂移检查）</li></ol>
+<h2 id="4-四周执行计划">4. 四周执行计划<a class="anchor" href="#4-四周执行计划" aria-label="锚点">#</a></h2>
+<h2 id="第-1-周-p0-启动-测试-ci">第 1 周（P0 启动：测试 + CI）<a class="anchor" href="#第-1-周-p0-启动-测试-ci" aria-label="锚点">#</a></h2>
+<p>交付物：</p>
+<ol><li>引入前端单元测试框架，并至少为认证、路由、核心视图编写冒烟测试。</li><li>引入根级脚本：<ul><li><code>test</code></li><li><code>test:frontend</code></li><li><code>test:backend</code></li><li><code>e2e</code></li></ul></li><li>更新 CI，使合并在以下情况被阻断：<ul><li>前端测试</li><li>后端测试</li><li>lint</li><li>build</li></ul></li></ol>
+<p>退出标准：</p>
+<ol><li>前端测试失败时 PR 失败。</li><li>CI 时长与通过率可在工作流摘要中度量。</li></ol>
+<h2 id="第-2-周-p0-继续-可观测性-法务一致性">第 2 周（P0 继续：可观测性 + 法务一致性）<a class="anchor" href="#第-2-周-p0-继续-可观测性-法务一致性" aria-label="锚点">#</a></h2>
+<p>交付物：</p>
+<ol><li>添加带鉴权保护令牌的 <code>/metrics</code> 端点。</li><li>添加计数器/直方图：<ul><li>请求总数</li><li>请求延迟</li><li>错误总数</li></ul></li><li>为关键服务（gateway、auth、proxy）添加结构化的启动/运行时日志。</li><li>解决以下各处之间的许可证不一致问题：<ul><li><code>LICENSE</code></li><li><code>pyproject.toml</code></li><li><code>backend/package.json</code></li><li>发布文档</li></ul></li></ol>
+<p>退出标准：</p>
+<ol><li>在本地与容器化运行中均可抓取到指标。</li><li>许可证声明实现单一来源、保持一致。</li></ol>
+<h2 id="第-3-周-p0-p1-架构风险-权限">第 3 周（P0/P1：架构风险 + 权限）<a class="anchor" href="#第-3-周-p0-p1-架构风险-权限" aria-label="锚点">#</a></h2>
+<p>交付物：</p>
+<ol><li>决定并实施网关整合方案：<ul><li>抽取共享包，或</li><li>严格的单一归属模块并通过 import 引用</li></ul></li><li>消除重复网关文件之间的漂移。</li><li>为选定的管理类 API 引入基于能力（capability）的权限校验。</li><li>为权限提升与拒绝路径添加回归测试。</li></ol>
+<p>退出标准：</p>
+<ol><li>不存在缺乏明确归属的重复网关逻辑。</li><li>权限测试同时覆盖允许/拒绝两条流程。</li></ol>
+<h2 id="第-4-周-p1-p2-治理-i18n-部署">第 4 周（P1/P2：治理 + i18n + 部署）<a class="anchor" href="#第-4-周-p1-p2-治理-i18n-部署" aria-label="锚点">#</a></h2>
+<p>交付物：</p>
+<ol><li>添加治理文档：<ul><li><code>CONTRIBUTING.md</code></li><li><code>SECURITY.md</code></li><li><code>CODE_OF_CONDUCT.md</code></li></ul></li><li>建立前端 i18n 基线：<ul><li>语言包目录</li><li>语言切换机制</li><li>回退策略</li></ul></li><li>添加部署模板加固（Helm 或等效方案）与快速启动验证。</li></ol>
+<p>退出标准：</p>
+<ol><li>新贡献者仅凭文档即可运行 lint/test/build。</li><li>至少两种语言能够渲染核心 UI 文本。</li><li>部署模板能够通过干净环境的冒烟测试。</li></ol>
+<h2 id="5-验收指标-第-4-周结束">5. 验收指标（第 4 周结束）<a class="anchor" href="#5-验收指标-第-4-周结束" aria-label="锚点">#</a></h2>
+<ol><li>CI 必需检查项 ≥ 8 且全部对 PR 形成阻断。</li><li>前端自动化测试存在并在 CI 中运行。</li><li>E2E 场景数量超过当前基线，并包含登录 + 关键路径。</li><li><code>/metrics</code> 可用且具备受保护的访问控制。</li><li>许可证与 package 元数据完全一致。</li><li>网关重复已消除或已正式集中化。</li><li>基于能力的访问控制已在管理类关键路径上线。</li></ol>
+<h2 id="6-风险控制">6. 风险控制<a class="anchor" href="#6-风险控制" aria-label="锚点">#</a></h2>
+<ol><li>将每一周作为独立的里程碑；不要把未完成的 P0 堆积到 P2。</li><li>任何触及 gateway/auth 的重构，必须先有回归测试保护。</li><li>不得为临时便利而放宽权限或绕过校验。</li><li>若 CI 运行时长增长过多，应先对测试分片并缓存依赖，再考虑削减覆盖率。</li></ol>
+<h2 id="7-建议负责人">7. 建议负责人<a class="anchor" href="#7-建议负责人" aria-label="锚点">#</a></h2>
+<ol><li>运行时/后端负责人：可观测性、网关整合、权限模型</li><li>前端负责人：测试搭建、i18n 基线</li><li>DevOps 负责人：CI 质量门禁、部署模板</li><li>仓库维护者：治理文档与许可证对齐</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-001] khy-os-体验改进计划-2026-05-26.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 功能扫描与体验改进建议（2026-05-26）</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-003] khy-大任务框架蓝图.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 最小化大任务框架蓝图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-002] khy-librechat-差距修复路线图.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

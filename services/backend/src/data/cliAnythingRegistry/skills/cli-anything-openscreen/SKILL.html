@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-openscreen · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-openscreen<span class="sep">›</span>cli-anything-openscreen</div>
+      <header class="hero reveal"><h1>cli-anything-openscreen</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-openscreen">cli-anything-openscreen</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">project</a></li><li class="lvl-3"><a href="#zoom">zoom</a></li><li class="lvl-3"><a href="#speed">speed</a></li><li class="lvl-3"><a href="#trim">trim</a></li><li class="lvl-3"><a href="#crop">crop</a></li><li class="lvl-3"><a href="#annotation">annotation</a></li><li class="lvl-3"><a href="#media">media</a></li><li class="lvl-3"><a href="#export">export</a></li><li class="lvl-3"><a href="#preview">preview</a></li><li class="lvl-3"><a href="#session">session</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#editor-settings">Editor Settings</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-openscreen&quot;<br>description: &gt;-<br>  Command-line interface for Openscreen — a screen recording editor.<br>  A stateful CLI for editing screen recordings with zoom, speed ramps,<br>  trim, crop, annotations, and polished exports. Built on the Openscreen<br>  JSON project format with ffmpeg as the rendering backend. Designed for<br>  AI agents and power users who need programmatic video editing.</p>
+<hr>
+<h1 id="cli-anything-openscreen">cli-anything-openscreen<a class="anchor" href="#cli-anything-openscreen" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for editing screen recordings. Transform raw<br>captures into polished demo videos with zoom effects, speed adjustments,<br>trimming, annotations, and beautiful backgrounds.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-openscreen</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>ffmpeg must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-openscreen --help
+cli-anything-openscreen                     # REPL mode
+cli-anything-openscreen project new -v recording.mp4 -o project.openscreen
+cli-anything-openscreen --json project info</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>Run <code>cli-anything-openscreen</code> without arguments to enter interactive mode.<br>Type <code>help</code> for available commands, <code>quit</code> to exit.</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Create, open, save, and configure projects.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>project new [-v VIDEO] [-o PATH]</code></td><td>Create new project with optional video</td></tr><tr><td><code>project open &lt;path&gt;</code></td><td>Open existing .openscreen project</td></tr><tr><td><code>project save [-o PATH]</code></td><td>Save project to file</td></tr><tr><td><code>project info</code></td><td>Show project metadata and region counts</td></tr><tr><td><code>project set-video &lt;path&gt;</code></td><td>Set source video file</td></tr><tr><td><code>project set &lt;key&gt; &lt;value&gt;</code></td><td>Set editor setting (padding, wallpaper, etc.)</td></tr></tbody></table>
+<h3 id="zoom">zoom<a class="anchor" href="#zoom" aria-label="锚点">#</a></h3>
+<p>Manage zoom regions — smooth zoom effects on specific timeline areas.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>zoom list</code></td><td>List all zoom regions</td></tr><tr><td><code>zoom add --start MS --end MS [--depth 1-6] [--focus-x 0-1] [--focus-y 0-1]</code></td><td>Add zoom</td></tr><tr><td><code>zoom remove &lt;id&gt;</code></td><td>Remove zoom region</td></tr></tbody></table>
+<p>Zoom depths: 1=1.25x, 2=1.5x, 3=1.8x, 4=2.2x, 5=3.5x, 6=5.0x</p>
+<h3 id="speed">speed<a class="anchor" href="#speed" aria-label="锚点">#</a></h3>
+<p>Manage speed regions — speed up idle time, slow down important moments.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>speed list</code></td><td>List all speed regions</td></tr><tr><td><code>speed add --start MS --end MS [--speed 0.25-2.0]</code></td><td>Add speed change</td></tr><tr><td><code>speed remove &lt;id&gt;</code></td><td>Remove speed region</td></tr></tbody></table>
+<p>Valid speeds: 0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.0</p>
+<h3 id="trim">trim<a class="anchor" href="#trim" aria-label="锚点">#</a></h3>
+<p>Manage trim regions — cut out sections of the recording.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>trim list</code></td><td>List all trim regions</td></tr><tr><td><code>trim add --start MS --end MS</code></td><td>Cut out a section</td></tr><tr><td><code>trim remove &lt;id&gt;</code></td><td>Remove trim region</td></tr></tbody></table>
+<h3 id="crop">crop<a class="anchor" href="#crop" aria-label="锚点">#</a></h3>
+<p>Set the visible area of the recording.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>crop get</code></td><td>Show current crop region</td></tr><tr><td><code>crop set --x 0-1 --y 0-1 --width 0-1 --height 0-1</code></td><td>Set crop (normalized)</td></tr></tbody></table>
+<h3 id="annotation">annotation<a class="anchor" href="#annotation" aria-label="锚点">#</a></h3>
+<p>Add text overlays to the recording.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>annotation list</code></td><td>List all annotations</td></tr><tr><td><code>annotation add-text --start MS --end MS --text &quot;...&quot; [--x 0-1] [--y 0-1]</code></td><td>Add text</td></tr><tr><td><code>annotation remove &lt;id&gt;</code></td><td>Remove annotation</td></tr></tbody></table>
+<h3 id="media">media<a class="anchor" href="#media" aria-label="锚点">#</a></h3>
+<p>Inspect and validate media files.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>media probe &lt;path&gt;</code></td><td>Show video metadata (resolution, duration, codec)</td></tr><tr><td><code>media check &lt;path&gt;</code></td><td>Validate a video file</td></tr><tr><td><code>media thumbnail &lt;input&gt; &lt;output&gt; [-t TIME]</code></td><td>Extract a frame</td></tr></tbody></table>
+<h3 id="export">export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<p>Render the final polished video.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>export presets</code></td><td>List available export presets</td></tr><tr><td><code>export render &lt;output_path&gt;</code></td><td>Render project to video file</td></tr></tbody></table>
+<h3 id="preview">preview<a class="anchor" href="#preview" aria-label="锚点">#</a></h3>
+<p>Capture truthful review bundles from the current Openscreen project.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>preview recipes</code></td><td>List available preview recipes</td></tr><tr><td><code>preview capture --recipe quick</code></td><td>Render a low-res preview bundle</td></tr><tr><td><code>preview latest [--recipe quick]</code></td><td>Return the latest existing bundle</td></tr></tbody></table>
+<p>Current preview support is static rather than live. A <code>quick</code> bundle typically<br>contains:</p>
+<ul><li>a low-res preview clip</li><li>sampled frames</li><li>a <code>hero</code> frame for quick inspection</li><li><code>summary.json</code> with trim/zoom/speed facts</li></ul>
+<p>Bundle capture also writes or updates a stable recipe-level <code>trajectory.json</code><br>beside the preview root so agents can reconstruct preview history over time.</p>
+<p>Viewer commands:</p>
+<pre><code class="language-bash">cli-hub previews inspect /path/to/bundle
+cli-hub previews html /path/to/bundle -o page.html
+cli-hub previews open /path/to/bundle</code></pre>
+<h3 id="session">session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Manage session state with undo/redo.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>session status</code></td><td>Show session info</td></tr><tr><td><code>session undo</code></td><td>Undo last operation</td></tr><tr><td><code>session redo</code></td><td>Redo last undone operation</td></tr><tr><td><code>session save</code></td><td>Save session state to disk</td></tr><tr><td><code>session list</code></td><td>List all saved sessions</td></tr></tbody></table>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of undo history</li><li><strong>Project persistence</strong>: JSON <code>.openscreen</code> files</li><li><strong>Session tracking</strong>: auto-tracks modifications</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<ul><li>Human-readable (default): Formatted key-value pairs</li><li>Machine-readable (<code>--json</code>): Structured JSON output</li></ul>
+<h2 id="editor-settings">Editor Settings<a class="anchor" href="#editor-settings" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Setting</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>aspectRatio</code></td><td>string</td><td>&quot;16:9&quot;</td><td>16:9, 9:16, 1:1, 4:3, 4:5</td></tr><tr><td><code>wallpaper</code></td><td>string</td><td>&quot;gradient_dark&quot;</td><td>Background preset</td></tr><tr><td><code>padding</code></td><td>int</td><td>50</td><td>0-100, padding around video</td></tr><tr><td><code>borderRadius</code></td><td>int</td><td>12</td><td>Corner radius in pixels</td></tr><tr><td><code>shadowIntensity</code></td><td>float</td><td>0</td><td>0-1, drop shadow strength</td></tr><tr><td><code>motionBlurAmount</code></td><td>float</td><td>0</td><td>0-1, motion blur during zoom</td></tr><tr><td><code>exportQuality</code></td><td>string</td><td>&quot;good&quot;</td><td>medium, good, source</td></tr><tr><td><code>exportFormat</code></td><td>string</td><td>&quot;mp4&quot;</td><td>mp4, gif</td></tr></tbody></table>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<ol><li>Always use <code>--json</code> for parseable output</li><li>Check return codes — 0 = success, non-zero = error</li><li>Parse stderr for error messages in non-JSON mode</li><li>Use absolute file paths</li><li>After <code>export render</code>, verify the output exists and probe it</li><li>Times are in <strong>milliseconds</strong> for all region commands</li><li>Coordinates (focus, crop, position) are <strong>normalized 0-1</strong></li><li>Use <code>preview capture --json</code> to validate zoom, trim, annotation, and timing visually</li><li>Read returned bundle artifact paths from the JSON payload; images and clips live on disk</li><li>Use <code>cli-hub previews ...</code> only to inspect/open existing bundles</li></ol>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-ollama/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-ollama</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-pm2/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-pm2</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-openscreen/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

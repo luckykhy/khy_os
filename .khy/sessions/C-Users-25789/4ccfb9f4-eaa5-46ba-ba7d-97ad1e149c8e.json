@@ -1,0 +1,22 @@
+{
+  "sessionId": "4ccfb9f4-eaa5-46ba-ba7d-97ad1e149c8e",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "写个文档放在桌面"
+    },
+    {
+      "role": "assistant",
+      "content": "好的，我可以帮你创建一个文档放在桌面。不过我需要知道：\n\n1. **文档内容**：你想写什么内容？\n2. **文档标题**：文档叫什么名字？\n3. **文档格式**：需要 Word (.docx) 格式还是纯文本 (.txt)？\n\n请告诉我这些信息，我马上帮你创建。"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781019280633,
+  "updatedAt": 1781019280633
+}

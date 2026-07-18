@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-103-写记忆-召回记忆时明确告知用户-记忆操作可见化纯叶">[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-已有动作静默无回声">为什么需要它（真实缺口 = 已有动作静默无回声）</a></li><li class="lvl-2"><a href="#怎么做的-外科式-门控-纯叶">怎么做的（外科式 + 门控 + 纯叶）</a></li><li class="lvl-2"><a href="#诚实边界">诚实边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-103-写记忆-召回记忆时明确告知用户-记忆操作可见化纯叶">[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）<a class="anchor" href="#ops-man-103-写记忆-召回记忆时明确告知用户-记忆操作可见化纯叶" aria-label="锚点">#</a></h1>
+<blockquote><p>直接回应用户诉求：「然后在关键节点主动写记忆文件，包括全局记忆和项目记忆等，<br>需要用时主动召回记忆，<strong>写记忆和回忆时明确告知用户</strong>。」<br>本条闭合两条断桥：khy 已经会<strong>自动写记忆</strong>（<code>_maybeAutoSaveMemory</code>）与<strong>自动召回记忆</strong><br>（memory engine surface + [RELEVANT_MEMORY] 注入），但两条路径都<strong>静默执行</strong>——用户看不到<br>「khy 刚记住了什么」或「khy 这轮召回了哪些记忆」。本条补一个纯叶把这两个已有动作<strong>渲染成<br>用户可见的状态提示</strong>，让「主动写/召回记忆」这件事对用户透明。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>写记忆与召回记忆的<strong>执行</strong>早就接好了，但<strong>告知</strong>这一步从缺——<code>_maybeAutoSaveMemory</code> 成功后<br>只把结果当布尔丢掉，召回的记忆名字（<code>_memSurfaced</code>）也从不回流给用户。本条抽纯叶<br><code>memoryOpsNotice.js</code>：把「写入成功的记忆」渲染成 <code>🧠 已写入…记忆（已落盘/本会话）：&lt;name&gt;</code>，<br>把「本轮召回的命名记忆」渲染成 <code>🧠 召回 N 条相关记忆：a、b、c 等 N 条</code>，经既有 <code>onStatus</code><br>状态通道推给用户。零 IO、绝不抛、门控 default-on。</p>
+<h2 id="为什么需要它-真实缺口-已有动作静默无回声">为什么需要它（真实缺口 = 已有动作静默无回声）<a class="anchor" href="#为什么需要它-真实缺口-已有动作静默无回声" aria-label="锚点">#</a></h2>
+<ul><li><strong>写记忆断桥</strong>：<code>ai.js</code> 的 <code>_maybeAutoSaveMemory</code> 成功路径原本 <code>return !!(res &amp;&amp; res.success)</code></li></ul>
+<p>——把「记住了什么类型、什么名字、落盘还是本会话」全部坍缩成一个布尔后丢弃，<br>  <code>aiChatCore.js</code> 调用点连布尔都不看。用户无从得知 khy 刚刚记住了一条身份/反馈/项目记忆。</p>
+<ul><li><strong>召回断桥</strong>：memory engine 每轮把相关记忆 surface 进上下文（命名记忆进 <code>_memSurfaced</code>），</li></ul>
+<p>[RELEVANT_MEMORY] 块把它们注入提示词，但<strong>注入完就结束</strong>——名字从不回流给用户，<br>  用户看不到「这轮回答基于哪几条记忆」。</p>
+<ul><li><strong>用户明确点名</strong>：<code>/goal</code> 原话「写记忆和回忆时明确告知用户」是显式需求，不是推断。</li></ul>
+<h2 id="怎么做的-外科式-门控-纯叶">怎么做的（外科式 + 门控 + 纯叶）<a class="anchor" href="#怎么做的-外科式-门控-纯叶" aria-label="锚点">#</a></h2>
+<p><strong>纯叶</strong> <code>services/backend/src/services/memoryOpsNotice.js</code>（零 IO、确定性、绝不抛、SSOT）：</p>
+<ul><li><code>isNoticeEnabled()</code>：门 <code>KHY_MEMORY_NOTICE</code>，default-on；CANON falsy</li></ul>
+<p><code>['0','false','off','no']</code>（大小写/空白归一）才关闭。<strong>不进 flagRegistry</strong>（sibling 门各自读 env）。</p>
+<ul><li><code>formatWriteNotice(result)</code>：只对 <code>{kind:'memory', success:true}</code> 且有非空 <code>name</code> 的富描述符</li></ul>
+<p>渲染；<code>action</code> 为 <code>skip</code>/<code>skip-duplicate</code> → <code>🧠 记忆已存在（未重复写入）：&lt;类型&gt;·&lt;name&gt;</code>；<br>  否则按 <code>ephemeral</code> 渲 <code>已落盘</code>/<code>本会话</code> → <code>🧠 已写入&lt;类型&gt;记忆（&lt;where&gt;）：&lt;name&gt;</code>。<br>  类型标签 <code>_TYPE_LABEL</code>（user→身份 / feedback→反馈 / project→项目 / reference→参考，缺省「记忆」）。<br>  任何非法输入（null/非对象/非 memory/未成功/空名/门关）→ 返回 <code>''</code>（静默）。</p>
+<ul><li><code>formatRecallNotice(filenames)</code>：接受数组 / Set / 任意可迭代；逐项 <code>_prettyName</code>（剥 <code>.md</code>）；</li></ul>
+<p>取前 <code>_RECALL_NAME_CAP</code>（3）个展示，超出加 <code> 等 N 条</code> 尾巴 →<br>  <code>🧠 召回 N 条相关记忆：a、b、c 等 N 条</code>。空/无命名项/门关 → <code>''</code>。</p>
+<ul><li>全部 <code>try/catch</code> 兜底返回 <code>''</code>——通知是 best-effort，绝不因渲染异常打断对话。</li></ul>
+<p><strong>接线</strong>（均 additive、门关逐字节回退）：</p>
+<ul><li><code>ai.js</code> <code>_maybeAutoSaveMemory</code> 成功路径改为返回富描述符</li></ul>
+<p><code>{kind:'memory', success:true, name, type, tier, action, ephemeral}</code>（向后兼容：对象仍是 truthy，<br>  唯一既有消费者只做丢弃）；指令自动保存路径<strong>仍留裸布尔</strong>（<code>formatWriteNotice(true)</code> → <code>''</code> = 静默，正确）。</p>
+<ul><li><code>aiChatCore.js</code> 写入点：<code>_maybeAutoSaveMemory(userMessage)</code> 的返回值传给 <code>formatWriteNotice</code>，</li></ul>
+<p>非空则经 <code>onStatus({phase:'init', message})</code> 推给用户。</p>
+<ul><li><code>aiChatCore.js</code> 召回点：memory engine 块之后把 <code>_memSurfaced</code>（命名/可核验的召回集合）传给</li></ul>
+<p><code>formatRecallNotice</code>，非空则同样经 <code>onStatus</code> 推出。</p>
+<h2 id="诚实边界">诚实边界<a class="anchor" href="#诚实边界" aria-label="锚点">#</a></h2>
+<ul><li><strong>只告知命名可核验的召回</strong>：<code>_memSurfaced</code> 只收有名字的记忆；[RELEVANT_MEMORY] 注入块</li></ul>
+<p>读取但不追加名字（那部分召回没有可靠名字来源）——宁可少报，绝不伪造记忆名。</p>
+<ul><li><strong>写入指令路径静默</strong>：指令类自动保存返回裸布尔 → <code>formatWriteNotice</code> 得非富描述符 → <code>''</code>，</li></ul>
+<p>即只有「带完整元信息的记忆写入」才通知，避免噪声。</p>
+<ul><li><strong>纯叶零 IO</strong>：本叶只做字符串格式化，不读文件、不查磁盘——记忆的真实读写仍由既有引擎负责，</li></ul>
+<p>本叶只把<strong>已发生</strong>的动作渲染出来。门关 → 两处通知恒 <code>''</code> = 逐字节回退到原静默行为。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:memory-notice                  # 纯叶 11/11
+node --check services/backend/src/services/memoryOpsNotice.js
+node --check services/backend/src/cli/ai.js
+node --check services/backend/src/cli/aiChatCore.js
+npm run arch:god                            # aiChatCore 加行后无新增超限</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-102] 卡住任务的强制终止逃生舱.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

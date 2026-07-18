@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create MCP Server · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>create-mcp-server<span class="sep">›</span>Create MCP Server</div>
+      <header class="hero reveal"><h1>Create MCP Server</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#create-mcp-server">Create MCP Server</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#important">Important</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="create-mcp-server">Create MCP Server<a class="anchor" href="#create-mcp-server" aria-label="锚点">#</a></h1>
+<p>You are helping the user scaffold a new MCP (Model Context Protocol) server.</p>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li>Ask the user for:<ul><li>Server name (e.g., &quot;my-mcp-server&quot;)</li><li>Description</li><li>What tools the server should expose (at least one)</li></ul></li></ol>
+<ol><li>Create the project structure:</li></ol>
+<pre><code>   &lt;server-name&gt;/
+     package.json
+     tsconfig.json
+     src/
+       index.ts        — Main server entry point
+       tools/
+         index.ts      — Tool registry
+         &lt;tool&gt;.ts     — Individual tool implementations
+     README.md</code></pre>
+<ol><li>For each tool, generate:<ul><li>Tool name, description, and input schema (JSON Schema)</li><li>A stub implementation that returns a placeholder result</li><li>Proper TypeScript types</li></ul></li></ol>
+<ol><li>The <code>src/index.ts</code> should:<ul><li>Import and register all tools</li><li>Set up the MCP server with stdio transport</li><li>Handle tool list and tool call requests</li></ul></li></ol>
+<ol><li>The <code>package.json</code> should include:<ul><li><code>@modelcontextprotocol/sdk</code> as a dependency</li><li>TypeScript build scripts</li><li>A <code>bin</code> entry pointing to the compiled output</li></ul></li></ol>
+<ol><li>After scaffolding, show the user how to:<ul><li>Install dependencies: <code>npm install</code></li><li>Build: <code>npm run build</code></li><li>Test locally: <code>node dist/index.js</code></li><li>Add to their AI tool's MCP config</li></ul></li></ol>
+<h2 id="important">Important<a class="anchor" href="#important" aria-label="锚点">#</a></h2>
+<ul><li>Use the latest MCP SDK version</li><li>Follow MCP protocol specification for tool definitions</li><li>Include proper error handling in tool implementations</li><li>Add JSDoc/TSDoc comments for all public APIs</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/context-engineering/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Context Engineering</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/create-skill/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Create Custom Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/create-mcp-server/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

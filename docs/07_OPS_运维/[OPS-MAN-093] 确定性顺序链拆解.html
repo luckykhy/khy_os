@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-093-确定性顺序链拆解-让整条波次-arc-在默认离机路径活起来">[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-arc-的-producer-端总断桥">为什么需要它（真实缺口 = arc 的 producer 端总断桥）</a></li><li class="lvl-2"><a href="#单一真源与分层">单一真源与分层</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不误伤无顺序标记的消息">语义与保守降级（绝不误伤无顺序标记的消息）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-093-确定性顺序链拆解-让整条波次-arc-在默认离机路径活起来">[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）<a class="anchor" href="#ops-man-093-确定性顺序链拆解-让整条波次-arc-在默认离机路径活起来" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第五发（收结果的第一公里 — producer 端）。承 [OPS-MAN-083] 依赖感知波次<br>调度、[OPS-MAN-087] 波次执行故障感知、[OPS-MAN-091] 波次前驱结果注入、<br>[OPS-MAN-092] 跳过与失败在最终报告分列。前四发都在 arc 的<strong>执行/渲染层</strong>，<br>都假设子任务<strong>已经带</strong> <code>dependencies</code>。本条补上唯一缺的一环：一个<strong>确定性</strong>的<br><code>dependencies</code> producer，让整条 arc 在 <strong>pip/npm 默认离机安装、无 LLM key</strong> 的<br>机器上真正生效。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>khy 已能有序拆波、并行执行、依赖失败则跳过下游、下游波携带前驱产出、报告分列。<br>但 <code>taskDecomposer</code> 的四个确定性策略（编号列表 / 括号编号 / 并行标记 / 多文件）产出的<br>子任务<strong>只有</strong> <code>{prompt, role, originIndex}</code>、<strong>没有</strong> <code>dependencies</code>。唯一发<br><code>dependencies</code> 的是 opt-in 的 LLM 策略（strategy 5，需 <code>KHY_LLM_DECOMPOSE</code> + 活模型），<br>而 arc 入口 <code>agenticHarnessService.decompose(...)</code> 调用时<strong>不传</strong> <code>deps.callModel</code>——<br>所以在<strong>默认离机路径</strong>（装完没有任何 key）strategy 5 从不触发，每个子任务到达<br><code>planWaves</code> 时都零依赖边 → 恒单波 → <strong>整条 083/087/091/092 arc 全程 no-op</strong>，khy 仍是<br>「拍平抢跑」。本条新增<strong>确定性顺序链拆解策略</strong> <code>_splitSequentialChain</code>——识别显式顺序<br>标记（先…再…、然后、接着、之后、最后、首先、其次、基于上一步、then、after that、next、<br>finally）把消息拆成<strong>有序步骤</strong>，每步发 <code>dependencies: [&lt;前一步 1-based 索引&gt;]</code>，构成线性<br>链。这正是 <code>planWaves</code> 的 <code>_normalizeDeps</code> 一直在等的确定性 producer。</p>
+<h2 id="为什么需要它-真实缺口-arc-的-producer-端总断桥">为什么需要它（真实缺口 = arc 的 producer 端总断桥）<a class="anchor" href="#为什么需要它-真实缺口-arc-的-producer-端总断桥" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line，producer/consumer 断桥）：</strong></p>
+<ul><li><strong>Consumer</strong>：<code>services/backend/src/services/orchestrator/dependencyWaveScheduler.js</code></li></ul>
+<p>的 <code>planWaves</code>——它的头部注释（第 6-18 行）<strong>亲口写明</strong>这个缺口：<br>  &quot;taskDecomposer's deterministic strategies emit only {prompt, role, originIndex}<br>  — no deps ... So the field <code>_llmDecomposer</code> spends tokens to produce has NO<br>  consumer&quot;。<code>_normalizeDeps</code>（第 95 行）已接受 1-based 数字索引引用，只等一个<br>  producer 供给 <code>dependencies</code>。</p>
+<ul><li><strong>缺失的 Producer</strong>：<code>services/backend/src/services/taskDecomposer.js</code> 的四个确定性</li></ul>
+<p>策略（<code>_splitNumberedList</code> / <code>_splitParenNumbering</code> / <code>_splitParallelMarkers</code> /<br>  <code>_splitMultiFileTargets</code>）<strong>从不</strong>发 <code>dependencies</code>。唯一发它的 <code>_llmDecomposer</code><br>  在离机路径不触发（<code>agenticHarnessService.decompose</code> 无 <code>callModel</code>）。</p>
+<p><strong>后果：</strong> 在用户最关心的「pip/npm 装到别的电脑后完整地简单地还原」场景——<strong>没有任何<br>LLM key</strong> 的默认安装——<code>planWaves</code> 永远拿到零边 → 单波 → 前四发全部空转。用户说的「让<br>khy 自己拆任务、有序并行、最后把结果收回来」在默认路径上<strong>从未真正发生过</strong>。</p>
+<p><strong>与前四发的区别（透镜一的 producer 端）：</strong> 083/087/091 都收割同一段零调用者死代码<br><code>subAgentOrchestrator.executeDependencyAware</code>（透镜二）；092 换透镜一，追一条字段到<br><strong>渲染层</strong>的断桥。本条仍是透镜一，但追到<strong>最上游</strong>——一个 consumer（<code>planWaves</code>）等待的<br>字段若<strong>没有任何确定性 producer 供给</strong>，则该 consumer 及其整条下游 arc 在默认路径全程<br>no-op（比「有 producer 但中间某层丢弃」更隐蔽：happy-path 测全绿，因为 LLM 路径能触发；<br>但默认离机路径从不触发）。</p>
+<h2 id="单一真源与分层">单一真源与分层<a class="anchor" href="#单一真源与分层" aria-label="锚点">#</a></h2>
+<ul><li><code>_splitSequentialChain</code>（<code>taskDecomposer.js</code>）是唯一的<strong>确定性</strong> <code>dependencies</code></li></ul>
+<p>producer。它插入 <code>decompose</code> 的策略数组，位置<strong>在 <code>_splitParenNumbering</code> 之后</strong><br>  （显式编号列表优先）、<strong>在 <code>_splitParallelMarkers</code> 之前</strong>（「先…再…」的顺序意图不能<br>  被误当成无序并行拆掉）。<strong>既有四策略函数体、<code>decompose</code> 其余逻辑一字不改</strong>，只在数组<br>  里加一项。</p>
+<ul><li>切分算法：以一个绝不会出现在用户消息里的 sentinel（<code> SEQ </code>）在每个 leading 连接词</li></ul>
+<p>前插入边界，再 <code>split</code>——因此<strong>英文消息不会被逐词打散</strong>（若用裸空格 split，英文早有<br>  空格会碎成单词）。<code>先…再…</code> 对在两者都存在时被别名成 <code>首先/然后</code> 边界。</p>
+<ul><li>每步 <code>dependencies: i === 0 ? [] : [i]</code>（<code>[i]</code> = 前一步的 1-based 索引，被</li></ul>
+<p><code>_normalizeDeps</code> 认作 <code>t&lt;i&gt;</code>）——线性链，不构造 DAG（DAG 仍是 LLM strategy 5 的活）。</p>
+<ul><li>门 <code>KHY_SEQ_CHAIN_DECOMPOSE</code>（default-on）由 <code>_seqChainEnabled()</code> 函数式**每调用读</li></ul>
+<p>一次<strong>（便于测试注入 env、纯、绝不抛），</strong>不进 flagRegistry**（同<br>  <code>KHY_DEP_WAVE_SCHEDULE</code> / <code>_FAULT_STOP</code> / <code>_CONTEXT_INJECT</code> / <code>KHY_MERGE_SKIP_DISTINCT</code><br>  五门先例，各自独立）。</p>
+<h2 id="语义与保守降级-绝不误伤无顺序标记的消息">语义与保守降级（绝不误伤无顺序标记的消息）<a class="anchor" href="#语义与保守降级-绝不误伤无顺序标记的消息" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_SEQ_CHAIN_DECOMPOSE=0/false/off/no</code> | <code>_splitSequentialChain</code> 返回 null → 策略被跳过 → decompose 逐字节回退今日「四策略 / no_pattern」 |</p>
+<p>| 门开 + 消息含顺序标记且切出 ≥2 步 | 产 <code>reason:'sequential_chain'</code>，每步带线性 <code>dependencies</code> |</p>
+<p>| 门开 + 无顺序标记（如「修改登录逻辑」） | 返回 null（不误伤，落回其它策略） |</p>
+<p>| 门开 + 并行标记（如「同时分析 A 和 B」） | 返回 null（<code>_splitParallelMarkers</code> 处理，不被顺序链抢） |</p>
+<p>| 门开 + 仅单个 先/再（不成对、切不出 ≥2 步） | 返回 null（信号太弱） |</p>
+<p>| 非字符串 / 空串 / 畸形输入 | 返回 null（纯、绝不抛） |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_SEQ_CHAIN_DECOMPOSE</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p><code>_splitSequentialChain</code> 返回 null，<code>decompose</code> 逐字节退化为今日行为（无回归）。<br>  sibling 门直读 env，<strong>不进 flagRegistry</strong>。六门（五个既有 + 本门）各自独立。</p>
+<ul><li><strong>不碰</strong> god-file / orchestrator / <code>AgentTool/index.js</code>；只编辑 <code>taskDecomposer.js</code></li></ul>
+<p>（加一个策略函数 + 策略数组插一项 + <code>ROLE_PATTERNS.explore</code> 补 <code>探索</code> 一词）+ 新测</p>
+<ul><li>登记。<code>planWaves</code> / <code>_normalizeDeps</code> <strong>本条不改</strong>——只做它的确定性 producer。</li></ul>
+<p>score/isComplex），本条不改该门槛，只在通过门槛后多一条确定性顺序策略。</p>
+<ul><li>诚实边界：只把「先…再…然后…」这类<strong>显式顺序标记</strong>的消息拆成链；无标记消息不误伤。</li></ul>
+<p>不做语义级顺序推断（那是 LLM strategy 5 的活）。dev 机验证止于 node:test 门开/门关<br>  双路径 + 边界 + <strong>与 <code>planWaves</code> 的端到端联通断言</strong>（<code>waveCount===3</code>），不实跑多智能体<br>  端到端（需真子任务执行）。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:seq-chain-decompose        # 本条 node:test（门开链 + 门关回退 + 无误伤 + 端到端 planWaves 12/12）
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要教一类<strong>新的顺序连接词</strong>（如「紧接着」「其后」）：把它加进 <code>_SEQ_LEADING</code>、</li></ol>
+<p><code>_SEQ_PRESENCE</code>、<code>_SEQ_STRIP</code> 三个常量（若该词应从段首剥离则也加进 <code>_SEQ_STRIP</code>；<br>   若它自身携带语义应保留则<strong>只</strong>加进 <code>_SEQ_LEADING</code>/<code>_SEQ_PRESENCE</code>，仿 <code>基于上一步</code>）。<br>   保持纯、绝不抛、门关返回 null。加一条 node:test 覆盖新词。</p>
+<ol><li>要改<strong>链的依赖形状</strong>（如让每步依赖<strong>全部</strong>前驱而非仅直接前一步）：改</li></ol>
+<p><code>_splitSequentialChain</code> 里 <code>dependencies: i === 0 ? [] : [i]</code> 一处。注意<br>   <code>_normalizeDeps</code> 接受数组，<code>[1,2,...,i]</code> 也合法；但线性链已足够让波次串行，且与<br>   <code>planWaves</code> 的 Kahn 分层精确匹配——除非有真实需求，别改成 DAG。</p>
+<ol><li>要改<strong>策略优先级</strong>（本策略在数组中的位置）：改 <code>decompose</code> 的 <code>strategies</code> 数组</li></ol>
+<p>顺序。铁律：顺序链必须在 <code>_splitParallelMarkers</code> <strong>之前</strong>（否则「先…再…」被误当并行<br>   拆掉、丢掉顺序），在显式编号策略<strong>之后</strong>（编号列表更具体）。</p>
+<ol><li>改完跑 <code>npm run test:seq-chain-decompose</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive；既有四策略函数体逐字节不变；门关（<code>KHY_SEQ_CHAIN_DECOMPOSE=off</code>）→</li></ul>
+<p><code>_splitSequentialChain</code> 返回 null → 策略被跳过 = 逐字节回退今日行为。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-092] 跳过与失败在最终报告分列.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-094] 角色工具作用域.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-093] 确定性顺序链拆解.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自动保护系统 — 防止改到一半项目损坏 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>自动保护系统 — 防止改到一半项目损坏</div>
+      <header class="hero reveal"><h1>自动保护系统 — 防止改到一半项目损坏</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#自动保护系统-防止改到一半项目损坏">自动保护系统 — 防止改到一半项目损坏</a></li><li class="lvl-2"><a href="#两层防护">两层防护</a></li><li class="lvl-3"><a href="#第一层-项目级自动检查点">第一层：项目级自动检查点</a></li><li class="lvl-3"><a href="#第二层-文件级自动快照">第二层：文件级自动快照</a></li><li class="lvl-2"><a href="#用户命令">用户命令</a></li><li class="lvl-3"><a href="#checkpoint-手动保存检查点">`/checkpoint` — 手动保存检查点</a></li><li class="lvl-3"><a href="#rollback-回滚到检查点">`/rollback` — 回滚到检查点</a></li><li class="lvl-3"><a href="#workspace-命令-高级检查点管理">`workspace` 命令 — 高级检查点管理</a></li><li class="lvl-2"><a href="#断电恢复流程">断电恢复流程</a></li><li class="lvl-3"><a href="#场景-ai-改到一半突然断电">场景：AI 改到一半突然断电</a></li><li class="lvl-3"><a href="#恢复步骤">恢复步骤</a></li><li class="lvl-3"><a href="#场景-只想恢复某一个文件">场景：只想恢复某一个文件</a></li><li class="lvl-2"><a href="#技术细节">技术细节</a></li><li class="lvl-3"><a href="#检查点模式">检查点模式</a></li><li class="lvl-3"><a href="#文件快照结构">文件快照结构</a></li><li class="lvl-3"><a href="#检查点存储结构">检查点存储结构</a></li><li class="lvl-2"><a href="#常见问题">常见问题</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-033 | 阶段: 运维 | 原路径: docs/指南/自动保护与回滚.md --&gt;</p>
+<h1 id="自动保护系统-防止改到一半项目损坏">自动保护系统 — 防止改到一半项目损坏<a class="anchor" href="#自动保护系统-防止改到一半项目损坏" aria-label="锚点">#</a></h1>
+<p>AI 编辑文件时如果 token 耗尽、电脑断电或网络中断，项目可能处于半成品状态。KHY OS 内置了两层自动保护机制，确保你随时可以一键回滚。</p>
+<hr>
+<h2 id="两层防护">两层防护<a class="anchor" href="#两层防护" aria-label="锚点">#</a></h2>
+<h3 id="第一层-项目级自动检查点">第一层：项目级自动检查点<a class="anchor" href="#第一层-项目级自动检查点" aria-label="锚点">#</a></h3>
+<p>每次 AI 开始对话前，系统自动创建一个 <code>git-diff</code> 检查点，记录当前项目所有未提交的改动。</p>
+<ul><li><strong>触发时机</strong>：AI 对话开始前（自动，无需手动操作）</li><li><strong>冷却时间</strong>：30 秒内不重复创建，防止频繁对话刷屏</li><li><strong>存储位置</strong>：<code>~/.khyquant/checkpoints/&lt;项目哈希&gt;/</code></li><li><strong>存储格式</strong>：git diff 补丁文件（仅记录差异，通常 &lt;10KB）</li><li><strong>容量上限</strong>：最多保留 50 个检查点，超出自动清理最旧的</li><li><strong>耗时</strong>：&lt;50ms，不影响正常使用</li></ul>
+<h3 id="第二层-文件级自动快照">第二层：文件级自动快照<a class="anchor" href="#第二层-文件级自动快照" aria-label="锚点">#</a></h3>
+<p>每次 AI 编辑或覆写文件前，系统自动保存该文件的当前内容作为快照。</p>
+<ul><li><strong>触发时机</strong>：FileEditTool / FileWriteTool / ApplyPatchTool 写入文件前</li><li><strong>存储位置</strong>：<code>~/.khyquant/file_history/&lt;会话ID&gt;/</code></li><li><strong>容量上限</strong>：每个文件最多 100 个快照</li><li><strong>文件大小限制</strong>：&gt;1MB 的文件自动跳过（避免大文件占用磁盘）</li><li><strong>新建文件</strong>：不创建快照（因为没有原始内容需要保护）</li></ul>
+<hr>
+<h2 id="用户命令">用户命令<a class="anchor" href="#用户命令" aria-label="锚点">#</a></h2>
+<h3 id="checkpoint-手动保存检查点"><code>/checkpoint</code> — 手动保存检查点<a class="anchor" href="#checkpoint-手动保存检查点" aria-label="锚点">#</a></h3>
+<p>在你认为项目处于稳定状态时，可以手动保存一个检查点。</p>
+<pre><code>&gt; /checkpoint
+✔ 检查点已保存: ckpt-20260601153022-a1b2c3 (git-diff, 5 文件)</code></pre>
+<h3 id="rollback-回滚到检查点"><code>/rollback</code> — 回滚到检查点<a class="anchor" href="#rollback-回滚到检查点" aria-label="锚点">#</a></h3>
+<p>回滚项目到最近的检查点（自动或手动创建的都算）。</p>
+<p><strong>TUI 模式：</strong></p>
+<pre><code>&gt; /rollback
+✔ 已回滚到最近检查点: ckpt-20260601153022-a1b2c3 (auto: AI 对话前)</code></pre>
+<p>也可以指定检查点 ID：</p>
+<pre><code>&gt; /rollback ckpt-20260601150000-x9y8z7
+✔ 已回滚到检查点: ckpt-20260601150000-x9y8z7</code></pre>
+<p><strong>经典 REPL 模式：</strong></p>
+<p>输入 <code>/rollback</code> 后会弹出最近 10 个检查点的列表，用方向键选择要回滚到的版本。</p>
+<h3 id="workspace-命令-高级检查点管理"><code>workspace</code> 命令 — 高级检查点管理<a class="anchor" href="#workspace-命令-高级检查点管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">workspace list                    # 列出所有检查点
+workspace diff &lt;id&gt;               # 查看检查点包含的改动
+workspace delete &lt;id&gt;             # 删除指定检查点
+workspace cleanup --keep 10       # 只保留最近 10 个检查点
+workspace stats                   # 查看检查点统计信息</code></pre>
+<hr>
+<h2 id="断电恢复流程">断电恢复流程<a class="anchor" href="#断电恢复流程" aria-label="锚点">#</a></h2>
+<h3 id="场景-ai-改到一半突然断电">场景：AI 改到一半突然断电<a class="anchor" href="#场景-ai-改到一半突然断电" aria-label="锚点">#</a></h3>
+<ol><li>AI 正在修改多个文件（比如重构一个模块）</li><li>改到第 3 个文件时突然断电/token 耗尽</li><li>重启后项目处于不一致状态：有些文件改了，有些没改</li></ol>
+<h3 id="恢复步骤">恢复步骤<a class="anchor" href="#恢复步骤" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 1. 启动 KHY OS
+khy
+
+# 2. 查看可用检查点
+workspace list
+
+# 3. 回滚到 AI 开始之前的状态
+/rollback
+
+# 4. 确认恢复成功
+git status
+git diff</code></pre>
+<h3 id="场景-只想恢复某一个文件">场景：只想恢复某一个文件<a class="anchor" href="#场景-只想恢复某一个文件" aria-label="锚点">#</a></h3>
+<p>如果只有某个文件被改坏了，不需要整体回滚：</p>
+<pre><code class="language-bash"># 查看哪些文件有快照
+# 文件快照在 ~/.khyquant/file_history/ 下按会话组织
+ls ~/.khyquant/file_history/</code></pre>
+<hr>
+<h2 id="技术细节">技术细节<a class="anchor" href="#技术细节" aria-label="锚点">#</a></h2>
+<h3 id="检查点模式">检查点模式<a class="anchor" href="#检查点模式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>说明</th><th>适用场景</th></tr></thead><tbody><tr><td><code>git-diff</code></td><td>保存 <code>git diff HEAD</code> 输出</td><td>Git 仓库（默认）</td></tr><tr><td><code>git-stash</code></td><td>使用 <code>git stash push</code></td><td>需要更完整的保护</td></tr><tr><td><code>tar-full</code></td><td>完整打包项目目录</td><td>非 Git 项目</td></tr><tr><td><code>auto</code></td><td>自动选择（Git 用 diff，非 Git 用 tar）</td><td>推荐</td></tr></tbody></table>
+<h3 id="文件快照结构">文件快照结构<a class="anchor" href="#文件快照结构" aria-label="锚点">#</a></h3>
+<pre><code>~/.khyquant/file_history/
+  s_1717234567_a1b2c3/           # 会话 ID
+    &lt;sha256_of_filepath&gt;.json     # 每个文件一个 JSON</code></pre>
+<p>每个 JSON 文件包含该文件的历史快照数组：</p>
+<pre><code class="language-json">[
+  {
+    &quot;timestamp&quot;: 1717234567890,
+    &quot;content&quot;: &quot;文件原始内容...&quot;,
+    &quot;reason&quot;: &quot;FileEditTool&quot;
+  }
+]</code></pre>
+<h3 id="检查点存储结构">检查点存储结构<a class="anchor" href="#检查点存储结构" aria-label="锚点">#</a></h3>
+<pre><code>~/.khyquant/checkpoints/
+  &lt;项目路径哈希&gt;/
+    manifest.json                 # 检查点索引
+    ckpt-20260601153022-a1b2c3.patch  # git diff 补丁</code></pre>
+<hr>
+<h2 id="常见问题">常见问题<a class="anchor" href="#常见问题" aria-label="锚点">#</a></h2>
+<p><strong>Q: 自动检查点会拖慢 AI 响应吗？</strong></p>
+<p>不会。<code>git-diff</code> 模式只执行 <code>git diff HEAD</code> 和 <code>git ls-files</code>，在典型项目中 &lt;50ms。</p>
+<p><strong>Q: 检查点占用多少磁盘空间？</strong></p>
+<p>极小。<code>git-diff</code> 模式只保存差异，通常每个检查点 1-50KB。50 个检查点上限约 2.5MB。</p>
+<p><strong>Q: 非 Git 项目有保护吗？</strong></p>
+<p>有。自动检查点会使用 <code>tar-full</code> 模式打包整个项目。文件级快照不依赖 Git，始终可用。</p>
+<p><strong>Q: 回滚后 AI 的对话历史会丢失吗？</strong></p>
+<p>不会。回滚只影响文件系统，不影响对话历史。你可以继续和 AI 对话，让它在回滚后的干净状态上重新开始。</p>
+<p><strong>Q: 可以关闭自动保护吗？</strong></p>
+<p>自动检查点在非 Git 目录如果没有 tar 会自动跳过（静默失败）。文件快照在 fileHistoryService 不可用时也会静默跳过。两者都不会阻断正常流程。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-032] 网关-自定义provider配置-agnes.html"><div class="dir">← 上一篇</div><div class="ttl">网关 · 自定义 Provider 配置（以 Agnes 为例）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-034] TODO.html"><div class="dir">下一篇 →</div><div class="ttl">当前协作待办</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-033] 自动保护与回滚.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

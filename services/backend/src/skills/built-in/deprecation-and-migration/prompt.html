@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deprecation and Migration · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>deprecation-and-migration<span class="sep">›</span>Deprecation and Migration</div>
+      <header class="hero reveal"><h1>Deprecation and Migration</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#deprecation-and-migration">Deprecation and Migration</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#core-principles">Core Principles</a></li><li class="lvl-3"><a href="#code-is-a-liability">Code Is a Liability</a></li><li class="lvl-3"><a href="#hyrum-s-law-makes-removal-hard">Hyrum's Law Makes Removal Hard</a></li><li class="lvl-3"><a href="#deprecation-planning-starts-at-design-time">Deprecation Planning Starts at Design Time</a></li><li class="lvl-2"><a href="#the-deprecation-decision">The Deprecation Decision</a></li><li class="lvl-2"><a href="#compulsory-vs-advisory-deprecation">Compulsory vs Advisory Deprecation</a></li><li class="lvl-2"><a href="#the-migration-process">The Migration Process</a></li><li class="lvl-3"><a href="#step-1-build-the-replacement">Step 1: Build the Replacement</a></li><li class="lvl-3"><a href="#step-2-announce-and-document">Step 2: Announce and Document</a></li><li class="lvl-3"><a href="#step-3-migrate-incrementally">Step 3: Migrate Incrementally</a></li><li class="lvl-3"><a href="#step-4-remove-the-old-system">Step 4: Remove the Old System</a></li><li class="lvl-2"><a href="#migration-patterns">Migration Patterns</a></li><li class="lvl-3"><a href="#strangler-pattern">Strangler Pattern</a></li><li class="lvl-3"><a href="#adapter-pattern">Adapter Pattern</a></li><li class="lvl-3"><a href="#feature-flag-migration">Feature Flag Migration</a></li><li class="lvl-2"><a href="#zombie-code">Zombie Code</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="deprecation-and-migration">Deprecation and Migration<a class="anchor" href="#deprecation-and-migration" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Code is a liability, not an asset. Every line of code has ongoing maintenance cost — bugs to fix, dependencies to update, security patches to apply, and new engineers to onboard. Deprecation is the discipline of removing code that no longer earns its keep, and migration is the process of moving users safely from the old to the new.</p>
+<p>Most engineering organizations are good at building things. Few are good at removing them. This skill addresses that gap.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Replacing an old system, API, or library with a new one</li><li>Sunsetting a feature that's no longer needed</li><li>Consolidating duplicate implementations</li><li>Removing dead code that nobody owns but everybody depends on</li><li>Planning the lifecycle of a new system (deprecation planning starts at design time)</li><li>Deciding whether to maintain a legacy system or invest in migration</li></ul>
+<h2 id="core-principles">Core Principles<a class="anchor" href="#core-principles" aria-label="锚点">#</a></h2>
+<h3 id="code-is-a-liability">Code Is a Liability<a class="anchor" href="#code-is-a-liability" aria-label="锚点">#</a></h3>
+<p>Every line of code has ongoing cost: it needs tests, documentation, security patches, dependency updates, and mental overhead for anyone working nearby. The value of code is the functionality it provides, not the code itself. When the same functionality can be provided with less code, less complexity, or better abstractions — the old code should go.</p>
+<h3 id="hyrum-s-law-makes-removal-hard">Hyrum's Law Makes Removal Hard<a class="anchor" href="#hyrum-s-law-makes-removal-hard" aria-label="锚点">#</a></h3>
+<p>With enough users, every observable behavior becomes depended on — including bugs, timing quirks, and undocumented side effects. This is why deprecation requires active migration, not just announcement. Users can't &quot;just switch&quot; when they depend on behaviors the replacement doesn't replicate.</p>
+<h3 id="deprecation-planning-starts-at-design-time">Deprecation Planning Starts at Design Time<a class="anchor" href="#deprecation-planning-starts-at-design-time" aria-label="锚点">#</a></h3>
+<p>When building something new, ask: &quot;How would we remove this in 3 years?&quot; Systems designed with clean interfaces, feature flags, and minimal surface area are easier to deprecate than systems that leak implementation details everywhere.</p>
+<h2 id="the-deprecation-decision">The Deprecation Decision<a class="anchor" href="#the-deprecation-decision" aria-label="锚点">#</a></h2>
+<p>Before deprecating anything, answer these questions:</p>
+<pre><code>1. Does this system still provide unique value?
+   → If yes, maintain it. If no, proceed.
+
+2. How many users/consumers depend on it?
+   → Quantify the migration scope.
+
+3. Does a replacement exist?
+   → If no, build the replacement first. Don't deprecate without an alternative.
+
+4. What's the migration cost for each consumer?
+   → If trivially automated, do it. If manual and high-effort, weigh against maintenance cost.
+
+5. What's the ongoing maintenance cost of NOT deprecating?
+   → Security risk, engineer time, opportunity cost of complexity.</code></pre>
+<h2 id="compulsory-vs-advisory-deprecation">Compulsory vs Advisory Deprecation<a class="anchor" href="#compulsory-vs-advisory-deprecation" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Type</th><th>When to Use</th><th>Mechanism</th></tr></thead><tbody><tr><td><strong>Advisory</strong></td><td>Migration is optional, old system is stable</td><td>Warnings, documentation, nudges. Users migrate on their own timeline.</td></tr><tr><td><strong>Compulsory</strong></td><td>Old system has security issues, blocks progress, or maintenance cost is unsustainable</td><td>Hard deadline. Old system will be removed by date X. Provide migration tooling.</td></tr></tbody></table>
+<p><strong>Default to advisory.</strong> Use compulsory only when the maintenance cost or risk justifies forcing migration. Compulsory deprecation requires providing migration tooling, documentation, and support — you can't just announce a deadline.</p>
+<h2 id="the-migration-process">The Migration Process<a class="anchor" href="#the-migration-process" aria-label="锚点">#</a></h2>
+<h3 id="step-1-build-the-replacement">Step 1: Build the Replacement<a class="anchor" href="#step-1-build-the-replacement" aria-label="锚点">#</a></h3>
+<p>Don't deprecate without a working alternative. The replacement must:</p>
+<ul><li>Cover all critical use cases of the old system</li><li>Have documentation and migration guides</li><li>Be proven in production (not just &quot;theoretically better&quot;)</li></ul>
+<h3 id="step-2-announce-and-document">Step 2: Announce and Document<a class="anchor" href="#step-2-announce-and-document" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown">## Deprecation Notice: OldService
+
+**Status:** Deprecated as of 2025-03-01
+**Replacement:** NewService (see migration guide below)
+**Removal date:** Advisory — no hard deadline yet
+**Reason:** OldService requires manual scaling and lacks observability.
+            NewService handles both automatically.
+
+### Migration Guide
+1. Replace `import { client } from 'old-service'` with `import { client } from 'new-service'`
+2. Update configuration (see examples below)
+3. Run the migration verification script: `npx migrate-check`</code></pre>
+<h3 id="step-3-migrate-incrementally">Step 3: Migrate Incrementally<a class="anchor" href="#step-3-migrate-incrementally" aria-label="锚点">#</a></h3>
+<p>Migrate consumers one at a time, not all at once. For each consumer:</p>
+<pre><code>1. Identify all touchpoints with the deprecated system
+2. Update to use the replacement
+3. Verify behavior matches (tests, integration checks)
+4. Remove references to the old system
+5. Confirm no regressions</code></pre>
+<p><strong>The Churn Rule:</strong> If you own the infrastructure being deprecated, you are responsible for migrating your users — or providing backward-compatible updates that require no migration. Don't announce deprecation and leave users to figure it out.</p>
+<h3 id="step-4-remove-the-old-system">Step 4: Remove the Old System<a class="anchor" href="#step-4-remove-the-old-system" aria-label="锚点">#</a></h3>
+<p>Only after all consumers have migrated:</p>
+<pre><code>1. Verify zero active usage (metrics, logs, dependency analysis)
+2. Remove the code
+3. Remove associated tests, documentation, and configuration
+4. Remove the deprecation notices
+5. Celebrate — removing code is an achievement</code></pre>
+<h2 id="migration-patterns">Migration Patterns<a class="anchor" href="#migration-patterns" aria-label="锚点">#</a></h2>
+<h3 id="strangler-pattern">Strangler Pattern<a class="anchor" href="#strangler-pattern" aria-label="锚点">#</a></h3>
+<p>Run old and new systems in parallel. Route traffic incrementally from old to new. When the old system handles 0% of traffic, remove it.</p>
+<pre><code>Phase 1: New system handles 0%, old handles 100%
+Phase 2: New system handles 10% (canary)
+Phase 3: New system handles 50%
+Phase 4: New system handles 100%, old system idle
+Phase 5: Remove old system</code></pre>
+<h3 id="adapter-pattern">Adapter Pattern<a class="anchor" href="#adapter-pattern" aria-label="锚点">#</a></h3>
+<p>Create an adapter that translates calls from the old interface to the new implementation. Consumers keep using the old interface while you migrate the backend.</p>
+<pre><code class="language-typescript">// Adapter: old interface, new implementation
+class LegacyTaskService implements OldTaskAPI {
+  constructor(private newService: NewTaskService) {}
+
+  // Old method signature, delegates to new implementation
+  getTask(id: number): OldTask {
+    const task = this.newService.findById(String(id));
+    return this.toOldFormat(task);
+  }
+}</code></pre>
+<h3 id="feature-flag-migration">Feature Flag Migration<a class="anchor" href="#feature-flag-migration" aria-label="锚点">#</a></h3>
+<p>Use feature flags to switch consumers from old to new system one at a time:</p>
+<pre><code class="language-typescript">function getTaskService(userId: string): TaskService {
+  if (featureFlags.isEnabled('new-task-service', { userId })) {
+    return new NewTaskService();
+  }
+  return new LegacyTaskService();
+}</code></pre>
+<h2 id="zombie-code">Zombie Code<a class="anchor" href="#zombie-code" aria-label="锚点">#</a></h2>
+<p>Zombie code is code that nobody owns but everybody depends on. It's not actively maintained, has no clear owner, and accumulates security vulnerabilities and compatibility issues. Signs:</p>
+<ul><li>No commits in 6+ months but active consumers exist</li><li>No assigned maintainer or team</li><li>Failing tests that nobody fixes</li><li>Dependencies with known vulnerabilities that nobody updates</li><li>Documentation that references systems that no longer exist</li></ul>
+<p><strong>Response:</strong> Either assign an owner and maintain it properly, or deprecate it with a concrete migration plan. Zombie code cannot stay in limbo — it either gets investment or removal.</p>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;It still works, why remove it?&quot;</td><td>Working code that nobody maintains accumulates security debt and complexity. Maintenance cost grows silently.</td></tr><tr><td>&quot;Someone might need it later&quot;</td><td>If it's needed later, it can be rebuilt. Keeping unused code &quot;just in case&quot; costs more than rebuilding.</td></tr><tr><td>&quot;The migration is too expensive&quot;</td><td>Compare migration cost to ongoing maintenance cost over 2-3 years. Migration is usually cheaper long-term.</td></tr><tr><td>&quot;We'll deprecate it after we finish the new system&quot;</td><td>Deprecation planning starts at design time. By the time the new system is done, you'll have new priorities. Plan now.</td></tr><tr><td>&quot;Users will migrate on their own&quot;</td><td>They won't. Provide tooling, documentation, and incentives — or do the migration yourself (the Churn Rule).</td></tr><tr><td>&quot;We can maintain both systems indefinitely&quot;</td><td>Two systems doing the same thing is double the maintenance, testing, documentation, and onboarding cost.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Deprecated systems with no replacement available</li><li>Deprecation announcements with no migration tooling or documentation</li><li>&quot;Soft&quot; deprecation that's been advisory for years with no progress</li><li>Zombie code with no owner and active consumers</li><li>New features added to a deprecated system (invest in the replacement instead)</li><li>Deprecation without measuring current usage</li><li>Removing code without verifying zero active consumers</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After completing a deprecation:</p>
+<ul><li>[ ] Replacement is production-proven and covers all critical use cases</li><li>[ ] Migration guide exists with concrete steps and examples</li><li>[ ] All active consumers have been migrated (verified by metrics/logs)</li><li>[ ] Old code, tests, documentation, and configuration are fully removed</li><li>[ ] No references to the deprecated system remain in the codebase</li><li>[ ] Deprecation notices are removed (they served their purpose)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/debugging-and-error-recovery/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Debugging and Error Recovery</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/documentation-and-adrs/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Documentation and ADRs</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/deprecation-and-migration/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

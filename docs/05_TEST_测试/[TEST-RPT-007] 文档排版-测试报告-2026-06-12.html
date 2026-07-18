@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《文档排版》测试报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>《文档排版》测试报告</div>
+      <header class="hero reveal"><h1>《文档排版》测试报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#文档排版-测试报告">《文档排版》测试报告</a></li><li class="lvl-2"><a href="#1-如何运行">1. 如何运行</a></li><li class="lvl-2"><a href="#2-测试矩阵">2. 测试矩阵</a></li><li class="lvl-2"><a href="#3-关键断言-核心诉求与防呆逐条对应">3. 关键断言：核心诉求与防呆逐条对应</a></li><li class="lvl-2"><a href="#4-端到端证据-python-docx-在位时">4. 端到端证据（python-docx 在位时）</a></li><li class="lvl-2"><a href="#5-回归">5. 回归</a></li><li class="lvl-2"><a href="#6-结论">6. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="文档排版-测试报告">《文档排版》测试报告<a class="anchor" href="#文档排版-测试报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：TEST-RPT-007<br>日期：2026-06-12<br>被测：内容与样式分离文档排版子系统（[DESIGN-ARCH-023] / [IMPL-RPT-023]）<br>运行环境：jest（默认框架），python 3 + python-docx 1.2.0<br>结论：<strong>4 suites / 60 cases 全绿</strong>，含 python-docx 端到端渲染断言</p></blockquote>
+<hr>
+<h2 id="1-如何运行">1. 如何运行<a class="anchor" href="#1-如何运行" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 在 services/backend 下（jest 在仓库根 node_modules）
+../../node_modules/.bin/jest --rootDir . \
+  tests/services/typeset tests/tools/renderDocument.test.js</code></pre>
+<p>端到端用例在<strong>检测不到 python-docx 时自动 skip</strong>（<code>describe.skip</code>），单测部分（防呆/解析/<br>模板/工具契约）无 python 依赖恒可跑。</p>
+<hr>
+<h2 id="2-测试矩阵">2. 测试矩阵<a class="anchor" href="#2-测试矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>测试文件</th><th style="text-align:center">用例数</th><th>覆盖维度</th></tr></thead><tbody><tr><td><code>tests/services/typeset/contentSchema.test.js</code></td><td style="text-align:center">26</td><td>块文法结构校验；防呆拦截 LaTeX 命令/宏、HTML/XML（含 docx <code>w:</code> 标签）、内联 CSS、RTF；<code>a &lt; b</code> 不等式不误判；code 块正文豁免</td></tr><tr><td><code>tests/services/typeset/markdownToAst.test.js</code></td><td style="text-align:center">15</td><td>标题/段落/列表/引文/代码/表格解析；<code>[[newpage]]</code> 与 <code>&lt;&lt;&lt;pagebreak&gt;&gt;&gt;</code> 换页；水平线与空行<strong>不</strong>换页；<code>**bold**</code>/<code>*italic*</code>→语义 run</td></tr><tr><td><code>tests/services/typeset/styleTemplates.test.js</code></td><td style="text-align:center">9</td><td>三模板发现；gbt7714 国标签名；未知模板报错列内置；内联/部分模板继承 default 完整基线；overrides 深合并；<code>_deepMerge</code> 语义</td></tr><tr><td><code>tests/tools/renderDocument.test.js</code></td><td style="text-align:center">10</td><td>工具契约（name/category/isReadOnly/aliases/schema）；输入闸门（空内容/缺路径/防呆拒 LaTeX·HTML/未知模板列可选/路径封禁拒写 <code>/etc</code>）；<strong>端到端</strong>渲染真 .docx 反解断言</td></tr><tr><td><strong>合计</strong></td><td style="text-align:center"><strong>60</strong></td><td></td></tr></tbody></table>
+<hr>
+<h2 id="3-关键断言-核心诉求与防呆逐条对应">3. 关键断言：核心诉求与防呆逐条对应<a class="anchor" href="#3-关键断言-核心诉求与防呆逐条对应" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>诉求 / 防呆</th><th>对应用例</th><th>断言</th></tr></thead><tbody><tr><td>①模型只管语义</td><td><code>防呆: a LaTeX command … rejected</code>、<code>… an HTML tag … rejected</code></td><td>夹带排版代码 → <code>success:false</code>，渲染前即拒</td></tr><tr><td>②模板驱动</td><td><code>gbt7714 carries its 国标 signatures</code>、<code>overrides deep-merge …</code></td><td>格式来自模板键值；覆盖深合并不重述基线</td></tr><tr><td>③原子化排版</td><td>端到端 <code>renders a real .docx …</code></td><td>模型只给 Markdown+模板名，排版由程序落地</td></tr><tr><td>防呆①拦截排版代码</td><td>contentSchema 11 条 <code>scanFormatCodes flags …</code> + 3 条 <code>validateDocument rejects …</code></td><td>LaTeX/HTML/CSS/RTF 全拦；code 块正文豁免</td></tr><tr><td>防呆②中文 eastAsia</td><td>端到端反解探针</td><td><strong>每个有文本的中文 run 的 eastAsia 全覆盖：<code>missing_eastAsia=0</code></strong></td></tr><tr><td>防呆③换页确定性</td><td><code>[[newpage]] … pagebreak</code>、<code>horizontal rule is NOT a page break</code>、<code>blank lines never create a page break</code></td><td>换页只来自哨兵/结构块；空行、<code>---</code> 绝不换页</td></tr></tbody></table>
+<hr>
+<h2 id="4-端到端证据-python-docx-在位时">4. 端到端证据（python-docx 在位时）<a class="anchor" href="#4-端到端证据-python-docx-在位时" aria-label="锚点">#</a></h2>
+<p>用例 <code>renders a real .docx and verifies A4 + applied formatting</code>（256ms）输入一篇含<br>标题/正文强调/列表/<code>[[newpage]]</code>/表格的 Markdown，模板 <code>gbt7714</code>，渲染后：</p>
+<ol><li>工具返回 <code>success:true</code>、<code>template:&quot;builtin:gbt7714&quot;</code>、<code>validation.pageSizeA4:true</code>、</li></ol>
+<p><code>validation.headingSizeOk:true</code>。</p>
+<ol><li>再用独立 python-docx 探针<strong>反向解析</strong>产物 .docx：<ul><li><code>abs(page_width - 210mm) &lt; 1mm</code> 且 <code>abs(page_height - 297mm) &lt; 1mm</code> → A4 ✓</li><li>段落文本含&quot;引言&quot;(H1) 与&quot;方法&quot;(H2) ✓</li><li>遍历所有 run，统计漏设 <code>w:eastAsia</code> 的有文本 run 数 → <strong>0</strong> ✓</li><li>输出 <code>OK missing_eastAsia=0 sections=1</code></li></ul></li></ol>
+<p>这证明写后校验+打补丁闭环真实生效（首次渲染时页脚页码域的 1 个 run 漏 eastAsia，被<br><code>_verify_and_patch</code> 捕获并补丁——见 <code>validation.patched</code>）。</p>
+<hr>
+<h2 id="5-回归">5. 回归<a class="anchor" href="#5-回归" aria-label="锚点">#</a></h2>
+<ul><li>禁令单一真源：<code>node --test tests/agentConstraints.test.js</code> → 6/6，新增红线未破坏体例。</li><li>边界守恒：未改 <code>createDocument</code>/核心调度器/无关业务，相关既有套件不在本次改动面内。</li></ul>
+<hr>
+<h2 id="6-结论">6. 结论<a class="anchor" href="#6-结论" aria-label="锚点">#</a></h2>
+<p>文档排版子系统的语义层、样式层、渲染层、工具入口与写后校验闭环<strong>全部通过验证</strong>，<br>核心诉求三项与防呆四条均有对应绿色断言背书。可投入使用。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-006] khy-os-交付验证-2026-05-09.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 交付验证（2026-05-09）</div></a><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-008] 元帅双模式任命-测试报告-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">元帅（Marshal）双模式任命与约束 — 测试报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-007] 文档排版-测试报告-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

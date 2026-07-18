@@ -1,0 +1,35 @@
+{
+  "sessionId": "83c80cb6-a78f-403d-a2c3-a2bca1e3ad31",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "打开夸克 [SYSTEM: For app launch tasks, use the open_app tool first. Avoid shell probing commands like w ch/ps/nohup/grep unless open_app has already failed and you explain that failure.]"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: open_app]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_fb2e6f346b0e48a68d064772",
+          "name": "open_app",
+          "input": {
+            "name": "夸克"
+          }
+        }
+      ]
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1780935394928,
+  "updatedAt": 1780935394928
+}

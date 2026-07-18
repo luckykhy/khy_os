@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance Checklist · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>shipping-and-launch<span class="sep">›</span>references<span class="sep">›</span>Performance Checklist</div>
+      <header class="hero reveal"><h1>Performance Checklist</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#performance-checklist">Performance Checklist</a></li><li class="lvl-2"><a href="#table-of-contents">Table of Contents</a></li><li class="lvl-2"><a href="#core-web-vitals-targets">Core Web Vitals Targets</a></li><li class="lvl-2"><a href="#ttfb-diagnosis">TTFB Diagnosis</a></li><li class="lvl-2"><a href="#frontend-checklist">Frontend Checklist</a></li><li class="lvl-3"><a href="#images">Images</a></li><li class="lvl-3"><a href="#javascript">JavaScript</a></li><li class="lvl-3"><a href="#css">CSS</a></li><li class="lvl-3"><a href="#fonts">Fonts</a></li><li class="lvl-3"><a href="#network">Network</a></li><li class="lvl-3"><a href="#rendering">Rendering</a></li><li class="lvl-2"><a href="#backend-checklist">Backend Checklist</a></li><li class="lvl-3"><a href="#database">Database</a></li><li class="lvl-3"><a href="#api">API</a></li><li class="lvl-3"><a href="#infrastructure">Infrastructure</a></li><li class="lvl-2"><a href="#measurement-commands">Measurement Commands</a></li><li class="lvl-3"><a href="#inp-field-data-and-devtools-workflow">INP field data and DevTools workflow</a></li><li class="lvl-2"><a href="#common-anti-patterns">Common Anti-Patterns</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="performance-checklist">Performance Checklist<a class="anchor" href="#performance-checklist" aria-label="锚点">#</a></h1>
+<p>Quick reference checklist for web application performance. Use alongside the <code>performance-optimization</code> skill.</p>
+<h2 id="table-of-contents">Table of Contents<a class="anchor" href="#table-of-contents" aria-label="锚点">#</a></h2>
+<ul><li><a href="#core-web-vitals-targets">Core Web Vitals Targets</a></li><li><a href="#ttfb-diagnosis">TTFB Diagnosis</a></li><li><a href="#frontend-checklist">Frontend Checklist</a></li><li><a href="#backend-checklist">Backend Checklist</a></li><li><a href="#measurement-commands">Measurement Commands</a></li><li><a href="#common-anti-patterns">Common Anti-Patterns</a></li></ul>
+<h2 id="core-web-vitals-targets">Core Web Vitals Targets<a class="anchor" href="#core-web-vitals-targets" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Metric</th><th>Good</th><th>Needs Work</th><th>Poor</th></tr></thead><tbody><tr><td>LCP (Largest Contentful Paint)</td><td>≤ 2.5s</td><td>≤ 4.0s</td><td>&gt; 4.0s</td></tr><tr><td>INP (Interaction to Next Paint)</td><td>≤ 200ms</td><td>≤ 500ms</td><td>&gt; 500ms</td></tr><tr><td>CLS (Cumulative Layout Shift)</td><td>≤ 0.1</td><td>≤ 0.25</td><td>&gt; 0.25</td></tr></tbody></table>
+<h2 id="ttfb-diagnosis">TTFB Diagnosis<a class="anchor" href="#ttfb-diagnosis" aria-label="锚点">#</a></h2>
+<p>When TTFB is slow (&gt; 800ms), check each component in DevTools Network waterfall:</p>
+<ul><li>[ ] <strong>DNS resolution</strong> slow → add <code>&lt;link rel=&quot;dns-prefetch&quot;&gt;</code> or <code>&lt;link rel=&quot;preconnect&quot;&gt;</code> for known origins</li><li>[ ] <strong>TCP/TLS handshake</strong> slow → enable HTTP/2, consider edge deployment, verify keep-alive</li><li>[ ] <strong>Server processing</strong> slow → profile backend, check slow queries, add caching</li></ul>
+<h2 id="frontend-checklist">Frontend Checklist<a class="anchor" href="#frontend-checklist" aria-label="锚点">#</a></h2>
+<h3 id="images">Images<a class="anchor" href="#images" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Images use modern formats (WebP, AVIF)</li><li>[ ] Images are responsively sized (<code>srcset</code> and <code>sizes</code>)</li><li>[ ] Images and <code>&lt;source&gt;</code> elements have explicit <code>width</code> and <code>height</code> (prevents CLS in art direction)</li><li>[ ] Below-the-fold images use <code>loading=&quot;lazy&quot;</code> and <code>decoding=&quot;async&quot;</code></li><li>[ ] Hero/LCP images use <code>fetchpriority=&quot;high&quot;</code> and no lazy loading</li></ul>
+<h3 id="javascript">JavaScript<a class="anchor" href="#javascript" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Bundle size under 200KB gzipped (initial load)</li><li>[ ] Code splitting with dynamic <code>import()</code> for routes and heavy features</li><li>[ ] Tree shaking enabled (verify dependency ships ESM and marks <code>sideEffects: false</code>)</li><li>[ ] No blocking JavaScript in <code>&lt;head&gt;</code> (use <code>defer</code> or <code>async</code>)</li><li>[ ] Heavy computation offloaded to Web Workers (if applicable)</li><li>[ ] <code>React.memo()</code> on expensive components that re-render with same props</li><li>[ ] <code>useMemo()</code> / <code>useCallback()</code> only where profiling shows benefit</li><li>[ ] Long tasks (&gt; 50ms) broken up to keep the main thread available — main lever for INP</li><li>[ ] <code>yieldToMain</code> pattern used inside long-running loops so input events can run between chunks</li><li>[ ] Modern scheduling APIs used where available: <code>scheduler.yield()</code> (preferred), <code>scheduler.postTask()</code> with priorities, <code>isInputPending()</code> to yield only when needed</li><li>[ ] <code>requestIdleCallback</code> for deferrable, non-urgent work (analytics flush, prefetch, warmup)</li><li>[ ] Non-critical work deferred out of event handlers (e.g. analytics, logging) so the response to the interaction is not delayed</li><li>[ ] Third-party scripts loaded with <code>async</code> / <code>defer</code>, audited for size, and fronted by a facade when heavy (chat widgets, embeds)</li></ul>
+<h3 id="css">CSS<a class="anchor" href="#css" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Critical CSS inlined or preloaded</li><li>[ ] No render-blocking CSS for non-critical styles</li><li>[ ] No CSS-in-JS runtime cost in production (use extraction)</li></ul>
+<h3 id="fonts">Fonts<a class="anchor" href="#fonts" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Limited to 2–3 font families, 2–3 weights each (every additional weight is another request)</li><li>[ ] WOFF2 format only (smallest, universal support — skip WOFF/TTF/EOT)</li><li>[ ] Self-hosted when possible (third-party font CDNs add DNS + TCP + TLS round-trips)</li><li>[ ] LCP-critical fonts preloaded: <code>&lt;link rel=&quot;preload&quot; as=&quot;font&quot; type=&quot;font/woff2&quot; crossorigin&gt;</code></li><li>[ ] <code>font-display: swap</code> (or <code>optional</code> for non-critical) to avoid FOIT blocking render</li><li>[ ] Subsetted via <code>unicode-range</code> to ship only the glyphs each page needs</li><li>[ ] Variable fonts considered when multiple weights/styles are required (one file replaces many)</li><li>[ ] Fallback font metrics adjusted with <code>size-adjust</code>, <code>ascent-override</code>, <code>descent-override</code> to reduce CLS on font swap</li><li>[ ] System font stack considered before any custom font</li></ul>
+<h3 id="network">Network<a class="anchor" href="#network" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Static assets cached with long <code>max-age</code> + content hashing</li><li>[ ] API responses cached where appropriate (<code>Cache-Control</code>)</li><li>[ ] HTTP/2 or HTTP/3 enabled</li><li>[ ] Resources preconnected (<code>&lt;link rel=&quot;preconnect&quot;&gt;</code>) for known origins</li><li>[ ] <code>fetchpriority</code> used on critical non-image resources (e.g., key <code>&lt;link rel=&quot;preload&quot;&gt;</code>, above-the-fold <code>&lt;script&gt;</code>) — not only on <code>&lt;img&gt;</code></li><li>[ ] No unnecessary redirects</li></ul>
+<h3 id="rendering">Rendering<a class="anchor" href="#rendering" aria-label="锚点">#</a></h3>
+<ul><li>[ ] No layout thrashing (forced synchronous layouts)</li><li>[ ] Animations use <code>transform</code> and <code>opacity</code> (GPU-accelerated)</li><li>[ ] Long lists use virtualization (e.g., <code>react-window</code>)</li><li>[ ] No unnecessary full-page re-renders</li><li>[ ] Off-screen sections use <code>content-visibility: auto</code> with <code>contain-intrinsic-size</code> to skip layout/paint of non-visible areas</li><li>[ ] No <code>unload</code> event handlers and no <code>Cache-Control: no-store</code> on HTML responses — preserves back/forward cache (bfcache) eligibility</li></ul>
+<h2 id="backend-checklist">Backend Checklist<a class="anchor" href="#backend-checklist" aria-label="锚点">#</a></h2>
+<h3 id="database">Database<a class="anchor" href="#database" aria-label="锚点">#</a></h3>
+<ul><li>[ ] No N+1 query patterns (use eager loading / joins)</li><li>[ ] Queries have appropriate indexes</li><li>[ ] List endpoints paginated (never <code>SELECT * FROM table</code>)</li><li>[ ] Connection pooling configured</li><li>[ ] Slow query logging enabled</li></ul>
+<h3 id="api">API<a class="anchor" href="#api" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Response times &lt; 200ms (p95)</li><li>[ ] No synchronous heavy computation in request handlers</li><li>[ ] Bulk operations instead of loops of individual calls</li><li>[ ] Response compression (gzip/brotli)</li><li>[ ] Appropriate caching (in-memory, Redis, CDN)</li></ul>
+<h3 id="infrastructure">Infrastructure<a class="anchor" href="#infrastructure" aria-label="锚点">#</a></h3>
+<ul><li>[ ] CDN for static assets</li><li>[ ] Server located close to users (or edge deployment)</li><li>[ ] Horizontal scaling configured (if needed)</li><li>[ ] Health check endpoint for load balancer</li></ul>
+<h2 id="measurement-commands">Measurement Commands<a class="anchor" href="#measurement-commands" aria-label="锚点">#</a></h2>
+<h3 id="inp-field-data-and-devtools-workflow">INP field data and DevTools workflow<a class="anchor" href="#inp-field-data-and-devtools-workflow" aria-label="锚点">#</a></h3>
+<ol><li><strong>Field data first</strong> — check <a href="https://developer.chrome.com/docs/crux/vis" target="_blank" rel="noopener">CrUX Vis</a> or your RUM tool for real-user INP before optimising</li><li><strong>Identify slow interactions</strong> — open DevTools → Performance panel → record while interacting; look for long tasks triggered by clicks/keystrokes</li><li><strong>Test on mid-range Android</strong> — INP issues often only surface on slower hardware; use a real device or DevTools CPU throttling (4×–6× slowdown)</li></ol>
+<pre><code class="language-bash"># Lighthouse CLI
+npx lighthouse https://localhost:3000 --output json --output-path ./report.json
+
+# Bundle analysis
+npx webpack-bundle-analyzer stats.json
+# or for Vite:
+npx vite-bundle-visualizer
+
+# Check bundle size
+npx bundlesize
+
+# Web Vitals in code
+import { onLCP, onINP, onCLS } from 'web-vitals';
+onLCP(console.log);
+onINP(console.log);
+onCLS(console.log);
+
+# INP with interaction-level detail (attribution build)
+import { onINP } from 'web-vitals/attribution';
+onINP(({ value, attribution }) =&gt; {
+  const { interactionTarget, inputDelay, processingDuration, presentationDelay } = attribution;
+  console.log({ value, interactionTarget, inputDelay, processingDuration, presentationDelay });
+});</code></pre>
+<h2 id="common-anti-patterns">Common Anti-Patterns<a class="anchor" href="#common-anti-patterns" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Anti-Pattern</th><th>Impact</th><th>Fix</th></tr></thead><tbody><tr><td>N+1 queries</td><td>Linear DB load growth</td><td>Use joins, includes, or batch loading</td></tr><tr><td>Unbounded queries</td><td>Memory exhaustion, timeouts</td><td>Always paginate, add LIMIT</td></tr><tr><td>Missing indexes</td><td>Slow reads as data grows</td><td>Add indexes for filtered/sorted columns</td></tr><tr><td>Layout thrashing</td><td>Jank, dropped frames</td><td>Batch DOM reads, then batch writes</td></tr><tr><td>Unoptimized images</td><td>Slow LCP, wasted bandwidth</td><td>Use WebP, responsive sizes, lazy load</td></tr><tr><td>Large bundles</td><td>Slow Time to Interactive</td><td>Code split, tree shake, audit deps</td></tr><tr><td>Blocking main thread</td><td>Poor INP, unresponsive UI</td><td>Chunk long tasks with <code>scheduler.yield()</code> / <code>yieldToMain</code>, offload to Web Workers</td></tr><tr><td>Memory leaks</td><td>Growing memory, eventual crash</td><td>Clean up listeners, intervals, refs</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/shipping-and-launch/references/accessibility-checklist.html"><div class="dir">← 上一篇</div><div class="ttl">Accessibility Checklist</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/shipping-and-launch/references/security-checklist.html"><div class="dir">下一篇 →</div><div class="ttl">Security Checklist</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/shipping-and-launch/references/performance-checklist.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

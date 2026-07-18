@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</div>
+      <header class="hero reveal"><h1>[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-122-post-failure-救援网-剥图必留痕与-ocr-无文本-分支解耦">[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</a></li><li class="lvl-2"><a href="#背景-承-ops-118-ops-120-第三处-剥图-必留痕-断桥">背景（承 OPS-118 / OPS-120，第三处「剥图 ⟹ 必留痕」断桥）</a></li><li class="lvl-2"><a href="#断桥">断桥</a></li><li class="lvl-2"><a href="#修复-全-additive-独立门-khy-vision-rescue-strip-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 `KHY_VISION_RESCUE_STRIP_FLOOR` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-122-post-failure-救援网-剥图必留痕与-ocr-无文本-分支解耦">[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦<a class="anchor" href="#ops-man-122-post-failure-救援网-剥图必留痕与-ocr-无文本-分支解耦" aria-label="锚点">#</a></h1>
+<h2 id="背景-承-ops-118-ops-120-第三处-剥图-必留痕-断桥">背景（承 OPS-118 / OPS-120，第三处「剥图 ⟹ 必留痕」断桥）<a class="anchor" href="#背景-承-ops-118-ops-120-第三处-剥图-必留痕-断桥" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 应落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract），并守住两条配对的安全不变量：<br><strong>① 非视觉模型永不收到裸图（剥图）；② 绝不谎称没收到图（留痕）</strong>。前两条底线解耦轴都在<br><strong>prep 期的描述级联失败救援</strong>（Site 1）：</p>
+<table><thead><tr><th>OPS</th><th>站点</th><th>解耦对象</th></tr></thead><tbody><tr><td>OPS-MAN-118</td><td>prep 期 Site 1：描述级联全失败 → 可靠到达 OCR 底线</td><td>装饰门 <code>KHY_VISION_FAILURE_SUMMARY</code></td></tr><tr><td>OPS-MAN-120</td><td>prep 期 Site 1：空 OCR 时最小底线兜住剥图</td><td>功能门 <code>KHY_VISION_OCR_FALLBACK</code></td></tr><tr><td><strong>OPS-MAN-122</strong></td><td><strong>post-failure 救援网：OCR 无文本时剥图 + 留痕</strong></td><td><strong>救援网空 OCR 分支（第三个站点）</strong></td></tr></tbody></table>
+<p>本条 OPS-122 断桥在<strong>另一个站点</strong>：不是 prep 期的描述级联，而是<strong>主级联失败后的 vision-fallback<br>救援网</strong>（<code>aiGatewayGenerateMethod.js</code> 约 2755–2825）。当当前模型被判<strong>支持视觉</strong><br>（<code>decideVisionRouting</code> = <code>keep</code>，图保留到主级联），某适配器在<strong>运行时</strong>以 <code>404 / model_not_found</code><br>拒图 → <code>shouldOcrRescue</code> 把它提升为 <code>_visionFallback</code> → 救援网退回本地 OCR。</p>
+<h2 id="断桥">断桥<a class="anchor" href="#断桥" aria-label="锚点">#</a></h2>
+<p>救援网里，OCR <strong>提取到文本</strong>时会剥图 + 注入 OCR 文本（既有行为）；但 OCR <strong>无文本 / 抛错</strong><br>（常见：照片 / 场景类无字图，或 OCR 引擎抛错）时，历史上救援网只 <code>emitStatus(...)</code> 就 <code>break</code>：</p>
+<pre><code>OCR 无文本 → 只发一条状态提示 → break
+= 图不剥、痕不留
+→ 级联带着裸图继续 → 下游纯文本适配器静默丢图
+→ 文本模型：「关键发现：当前对话中没有任何图片附件。我无法描述不存在的内容。」</code></pre>
+<p>（2026-07-12 用户实测 vision 级联 <code>glm-4.6v-flash → glm-4v-flash → 404 → socket hang up</code>，三次<br>幻觉「消息里没有附带图片 / 请把图片发给我 / 当前对话中没有任何图片附件」。）</p>
+<p>根因：OCR-<strong>成功</strong>分支已<strong>无条件</strong>剥图并转纯文本继续级联，故 OCR-<strong>无文本</strong>分支也应<strong>同款</strong>剥图<br>并留痕——而非把裸图交给一个<strong>神话中的下游视觉适配器</strong>（<code>shouldOcrRescue</code> 已判定此适配器拒图，<br>prep 期视觉路由亦已穷尽更优选项）。这是与 prep 期 Site1/Site2 <strong>同症、正交站点</strong>的第三处断桥。</p>
+<h2 id="修复-全-additive-独立门-khy-vision-rescue-strip-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 <code>KHY_VISION_RESCUE_STRIP_FLOOR</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-独立门-khy-vision-rescue-strip-floor-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>把 post-failure 救援网的「剥图必留痕」与「OCR 无文本」分支<strong>解耦</strong>：</p>
+<ol><li><strong>纯叶 <code>gateway/visionOcrFallback.js</code></strong> 新增 <code>isRescueStripFloorEnabled(env)</code>：default-on，</li></ol>
+<p>仅显式 <code>0/false/off/no</code> 关闭；env 经 opts 注入可测。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code>（<code>_visionFallback</code> 块，<code>break</code> 之前）</strong>：加一处<strong>门控守卫</strong>，</li></ol>
+<p>仅当门开 且 <code>hasImageInput</code> 且 <code>!_ocrFallbackApplied</code> 且仍有图像时触发（故 OCR-成功分支<br>   已 <code>_ocrFallbackApplied=true</code> 时<strong>跳过</strong>，无回归）——与 OCR-成功分支<strong>同款无条件剥图</strong>并注入<br>   诚实底线：优先 <code>buildVisionUnreadableNote</code>（救援网前置条件是 <code>KHY_VISION_OCR_FALLBACK</code> <strong>开</strong>，<br>   故此说明可用），叶子/说明缺失时退回 <code>buildStrippedImageFloorNote</code> 兜底：</p>
+<pre><code class="language-js">   const _rescueFloorOn = require('./visionOcrFallback').isRescueStripFloorEnabled(process.env);
+   if (_rescueFloorOn &amp;&amp; hasImageInput &amp;&amp; !adapterOptions._ocrFallbackApplied
+       &amp;&amp; Array.isArray(adapterOptions.images) &amp;&amp; adapterOptions.images.length &gt; 0) {
+     let _note = null;
+     try { _note = require('./visionOcrFallback').buildVisionUnreadableNote({ count: _imgCount }); } catch {}
+     if (!_note) {
+       try { _note = require('./visionOcrFallback')
+         .buildStrippedImageFloorNote({ count: _imgCount, env: process.env }); } catch {}
+     }
+     if (_note) prompt = `${prompt || ''}\n\n${_note}`;
+     adapterOptions.images = [];
+     adapterOptions._ocrFallbackApplied = true;
+     options = { ...options, images: undefined, _ocrFallbackApplied: true };
+     hasImageInput = false;
+   }</code></pre>
+<ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
+<p><code>KHY_VISION_RESCUE_STRIP_FLOOR: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>
+<p><strong>逐字节回退</strong>：<code>KHY_VISION_RESCUE_STRIP_FLOOR=off</code>（或叶子不可用）→ 守卫不触发 → 图留着、<br>仅上方状态提示，等同历史行为（把断桥交回，证明纯 additive 解耦）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>剥图 ⟹ 必留痕</strong>：救援网 OCR 无文本时，只要非视觉适配器的裸图被剥离，就至少留下一句</li></ul>
+<p>「收到图但读不出」，绝不让裸图静默漂到下游被丢弃。</p>
+<ul><li><strong>前置条件</strong>：救援网本身受 <code>KHY_VISION_OCR_FALLBACK</code> 约束（<code>shouldOcrRescue</code> 门关恒 false），</li></ul>
+<p>故 <code>_visionFallback</code> 触发时 OCR 功能门必然是开的 → 注入的是标准 <code>buildVisionUnreadableNote</code>，<br>  <code>buildStrippedImageFloorNote</code> 仅作叶子不可用时的防御兜底。</p>
+<ul><li><strong>三门正交、三站点覆盖同一不变量</strong>：<code>KHY_VISION_OCR_FALLBACK</code>（OCR 救援是否启用 / OCR 说明是否渲染）</li></ul>
+<p>· <code>KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR</code>（OPS-118，prep 期底线路径是否执行）<br>  · <code>KHY_VISION_STRIP_IMAGE_FLOOR</code>（OPS-120，prep 期 OCR 说明缺席时最小底线）<br>  · <code>KHY_VISION_RESCUE_STRIP_FLOOR</code>（OPS-122，post-failure 救援网 OCR 无文本时剥图 + 留痕）。</p>
+<ul><li><strong>门关即回退</strong>：证明本轮改动是纯 additive 的解耦。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶 + 接线：<code>node --test services/backend/tests/gateway/visionRescueStripFloorWiring.test.js</code>（4/4）：<ul><li>A) 救援网触发 + OCR 无文本 + 底线门<strong>开</strong>（默认）→ 剥图 + 注入底线（<code>[图像无法读取]</code> +</li></ul></li></ul>
+<p>「绝不能说没有收到图片」）+ 下游文本适配器据实作答；</p>
+<ul><li>B) 底线门<strong>关</strong>（<code>KHY_VISION_RESCUE_STRIP_FLOOR=off</code>）→ <strong>逐字节回退</strong>（裸图存活到下游、无痕）；</li><li>C) OCR <strong>有文本</strong> → 走既有 OCR 文本注入，救援底线不登场（无回归）。</li></ul>
+<p>tesseract/eng/Pillow 或空白图意外出字时干净 skip）：PIL 渲染真 PNG（无字渐变，让<strong>真 tesseract</strong><br>  读空），模型 <code>gpt-4o</code>（视觉可用 → keep → 图保留到主级联），DI 一个<strong>逐字节镜像生产实现</strong><br>  （base64 → <code>saveBase64ToTemp</code> → 真 tesseract）的 <code>extractImageOcrDetails</code>，双适配器级联<br>  （#1 运行时 404 拒图触发 <code>_visionFallback</code>，#2 记录型文本适配器承接续跑），断言：修复点剥图 + 留痕<br>  （<code>[图像无法读取]</code>），下游文本适配器据实作答；并附门关逐字节回退分支（裸图存活到下游）。</p>
+<ul><li>聚合：<code>npm run test:vision-rescue-strip-floor</code>，并入 <code>test:maintainer:safety</code>。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>OPS-118 判据「安全代码被藏进<strong>装饰门</strong>」→ OPS-120「安全代码被藏进<strong>功能门</strong>」→ 本轮 OPS-122<br>把同一「剥图 ⟹ 必留痕」不变量追到<strong>第三个站点</strong>：prep 期两条底线（118/120）都假设走<br>describe 级联失败路径，而<strong>主级联失败后的 vision-fallback 救援网</strong>是另一条正交控制流——其空 OCR<br>分支历史上只发状态提示就 break，裸图静默漂到下游被丢弃。判据 = 找「OCR-<strong>成功</strong>分支已无条件剥图 +<br>留痕」而「OCR-<strong>无文本</strong> / 抛错分支只 emitStatus 就 break」的<strong>同一不变量在同一救援网内的不对称</strong>；<br>修法 = 用独立 default-on 门把空 OCR 分支补成与成功分支同款「剥图 + 留痕」，并保留逐字节回退。<br>方法论：相同提示词每轮新收获 = 沿同一 consumer / 同一症状（「谎称没收到图」）找下一条<strong>正交站点</strong><br>的断桥。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

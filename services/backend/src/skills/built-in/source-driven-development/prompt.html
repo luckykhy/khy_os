@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Source-Driven Development · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>source-driven-development<span class="sep">›</span>Source-Driven Development</div>
+      <header class="hero reveal"><h1>Source-Driven Development</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#source-driven-development">Source-Driven Development</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-process">The Process</a></li><li class="lvl-3"><a href="#step-1-detect-stack-and-versions">Step 1: Detect Stack and Versions</a></li><li class="lvl-3"><a href="#step-2-fetch-official-documentation">Step 2: Fetch Official Documentation</a></li><li class="lvl-3"><a href="#step-3-implement-following-documented-patterns">Step 3: Implement Following Documented Patterns</a></li><li class="lvl-3"><a href="#step-4-cite-your-sources">Step 4: Cite Your Sources</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="source-driven-development">Source-Driven Development<a class="anchor" href="#source-driven-development" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Every framework-specific code decision must be backed by official documentation. Don't implement from memory — verify, cite, and let the user see your sources. Training data goes stale, APIs get deprecated, best practices evolve. This skill ensures the user gets code they can trust because every pattern traces back to an authoritative source they can check.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>The user wants code that follows current best practices for a given framework</li><li>Building boilerplate, starter code, or patterns that will be copied across a project</li><li>The user explicitly asks for documented, verified, or &quot;correct&quot; implementation</li><li>Implementing features where the framework's recommended approach matters (forms, routing, data fetching, state management, auth)</li><li>Reviewing or improving code that uses framework-specific patterns</li><li>Any time you are about to write framework-specific code from memory</li></ul>
+<p><strong>When NOT to use:</strong></p>
+<ul><li>Correctness does not depend on a specific version (renaming variables, fixing typos, moving files)</li><li>Pure logic that works the same across all versions (loops, conditionals, data structures)</li><li>The user explicitly wants speed over verification (&quot;just do it quickly&quot;)</li></ul>
+<h2 id="the-process">The Process<a class="anchor" href="#the-process" aria-label="锚点">#</a></h2>
+<pre><code>DETECT ──→ FETCH ──→ IMPLEMENT ──→ CITE
+  │          │           │            │
+  ▼          ▼           ▼            ▼
+ What       Get the    Follow the   Show your
+ stack?     relevant   documented   sources
+            docs       patterns</code></pre>
+<h3 id="step-1-detect-stack-and-versions">Step 1: Detect Stack and Versions<a class="anchor" href="#step-1-detect-stack-and-versions" aria-label="锚点">#</a></h3>
+<p>Read the project's dependency file to identify exact versions:</p>
+<pre><code>package.json    → Node/React/Vue/Angular/Svelte
+composer.json   → PHP/Symfony/Laravel
+requirements.txt / pyproject.toml → Python/Django/Flask
+go.mod          → Go
+Cargo.toml      → Rust
+Gemfile         → Ruby/Rails</code></pre>
+<p>State what you found explicitly:</p>
+<pre><code>STACK DETECTED:
+- React 19.1.0 (from package.json)
+- Vite 6.2.0
+- Tailwind CSS 4.0.3
+→ Fetching official docs for the relevant patterns.</code></pre>
+<p>If versions are missing or ambiguous, <strong>ask the user</strong>. Don't guess — the version determines which patterns are correct.</p>
+<h3 id="step-2-fetch-official-documentation">Step 2: Fetch Official Documentation<a class="anchor" href="#step-2-fetch-official-documentation" aria-label="锚点">#</a></h3>
+<p>Fetch the specific documentation page for the feature you're implementing. Not the homepage, not the full docs — the relevant page.</p>
+<p><strong>Source hierarchy (in order of authority):</strong></p>
+<table><thead><tr><th>Priority</th><th>Source</th><th>Example</th></tr></thead><tbody><tr><td>1</td><td>Official documentation</td><td>react.dev, docs.djangoproject.com, symfony.com/doc</td></tr><tr><td>2</td><td>Official blog / changelog</td><td>react.dev/blog, nextjs.org/blog</td></tr><tr><td>3</td><td>Web standards references</td><td>MDN, web.dev, html.spec.whatwg.org</td></tr><tr><td>4</td><td>Browser/runtime compatibility</td><td>caniuse.com, node.green</td></tr></tbody></table>
+<p><strong>Not authoritative — never cite as primary sources:</strong></p>
+<ul><li>Stack Overflow answers</li><li>Blog posts or tutorials (even popular ones)</li><li>AI-generated documentation or summaries</li><li>Your own training data (that is the whole point — verify it)</li></ul>
+<p><strong>Be precise with what you fetch:</strong></p>
+<pre><code>BAD:  Fetch the React homepage
+GOOD: Fetch react.dev/reference/react/useActionState
+
+BAD:  Search &quot;django authentication best practices&quot;
+GOOD: Fetch docs.djangoproject.com/en/6.0/topics/auth/</code></pre>
+<p>After fetching, extract the key patterns and note any deprecation warnings or migration guidance.</p>
+<p>When official sources conflict with each other (e.g. a migration guide contradicts the API reference), surface the discrepancy to the user and verify which pattern actually works against the detected version.</p>
+<h3 id="step-3-implement-following-documented-patterns">Step 3: Implement Following Documented Patterns<a class="anchor" href="#step-3-implement-following-documented-patterns" aria-label="锚点">#</a></h3>
+<p>Write code that matches what the documentation shows:</p>
+<ul><li>Use the API signatures from the docs, not from memory</li><li>If the docs show a new way to do something, use the new way</li><li>If the docs deprecate a pattern, don't use the deprecated version</li><li>If the docs don't cover something, flag it as unverified</li></ul>
+<p><strong>When docs conflict with existing project code:</strong></p>
+<pre><code>CONFLICT DETECTED:
+The existing codebase uses useState for form loading state,
+but React 19 docs recommend useActionState for this pattern.
+(Source: react.dev/reference/react/useActionState)
+
+Options:
+A) Use the modern pattern (useActionState) — consistent with current docs
+B) Match existing code (useState) — consistent with codebase
+→ Which approach do you prefer?</code></pre>
+<p>Surface the conflict. Don't silently pick one.</p>
+<h3 id="step-4-cite-your-sources">Step 4: Cite Your Sources<a class="anchor" href="#step-4-cite-your-sources" aria-label="锚点">#</a></h3>
+<p>Every framework-specific pattern gets a citation. The user must be able to verify every decision.</p>
+<p><strong>In code comments:</strong></p>
+<pre><code class="language-typescript">// React 19 form handling with useActionState
+// Source: https://react.dev/reference/react/useActionState#usage
+const [state, formAction, isPending] = useActionState(submitOrder, initialState);</code></pre>
+<p><strong>In conversation:</strong></p>
+<pre><code>I'm using useActionState instead of manual useState for the
+form submission state. React 19 replaced the manual
+isPending/setIsPending pattern with this hook.
+
+Source: https://react.dev/blog/2024/12/05/react-19#actions
+&quot;useTransition now supports async functions [...] to handle
+pending states automatically&quot;</code></pre>
+<p><strong>Citation rules:</strong></p>
+<ul><li>Full URLs, not shortened</li><li>Prefer deep links with anchors where possible (e.g. <code>/useActionState#usage</code> over <code>/useActionState</code>) — anchors survive doc restructuring better than top-level pages</li><li>Quote the relevant passage when it supports a non-obvious decision</li><li>Include browser/runtime support data when recommending platform features</li><li>If you cannot find documentation for a pattern, say so explicitly:</li></ul>
+<pre><code>UNVERIFIED: I could not find official documentation for this
+pattern. This is based on training data and may be outdated.
+Verify before using in production.</code></pre>
+<p>Honesty about what you couldn't verify is more valuable than false confidence.</p>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;I'm confident about this API&quot;</td><td>Confidence is not evidence. Training data contains outdated patterns that look correct but break against current versions. Verify.</td></tr><tr><td>&quot;Fetching docs wastes tokens&quot;</td><td>Hallucinating an API wastes more. The user debugs for an hour, then discovers the function signature changed. One fetch prevents hours of rework.</td></tr><tr><td>&quot;The docs won't have what I need&quot;</td><td>If the docs don't cover it, that's valuable information — the pattern may not be officially recommended.</td></tr><tr><td>&quot;I'll just mention it might be outdated&quot;</td><td>A disclaimer doesn't help. Either verify and cite, or clearly flag it as unverified. Hedging is the worst option.</td></tr><tr><td>&quot;This is a simple task, no need to check&quot;</td><td>Simple tasks with wrong patterns become templates. The user copies your deprecated form handler into ten components before discovering the modern approach exists.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Writing framework-specific code without checking the docs for that version</li><li>Using &quot;I believe&quot; or &quot;I think&quot; about an API instead of citing the source</li><li>Implementing a pattern without knowing which version it applies to</li><li>Citing Stack Overflow or blog posts instead of official documentation</li><li>Using deprecated APIs because they appear in training data</li><li>Not reading <code>package.json</code> / dependency files before implementing</li><li>Delivering code without source citations for framework-specific decisions</li><li>Fetching an entire docs site when only one page is relevant</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After implementing with source-driven development:</p>
+<ul><li>[ ] Framework and library versions were identified from the dependency file</li><li>[ ] Official documentation was fetched for framework-specific patterns</li><li>[ ] All sources are official documentation, not blog posts or training data</li><li>[ ] Code follows the patterns shown in the current version's documentation</li><li>[ ] Non-trivial decisions include source citations with full URLs</li><li>[ ] No deprecated APIs are used (checked against migration guides)</li><li>[ ] Conflicts between docs and existing code were surfaced to the user</li><li>[ ] Anything that could not be verified is explicitly flagged as unverified</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/skillify/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Skillify — Conversation to Skill Converter</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/spec-driven-development/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Spec-Driven Development</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/source-driven-development/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

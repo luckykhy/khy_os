@@ -1,0 +1,27 @@
+{
+  "sessionId": "3ca0877e-d0db-4fa0-8661-961a98156288",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "对自己做一个评价"
+    },
+    {
+      "role": "assistant",
+      "content": "好的，来一个坦诚的自我评价：\n\n---\n\n**擅长的事：**\n- **股票分析与量化** — khyquant 生态的原生支持，回测、策略、实时行情一条龙\n- **代码生成与调试** — 尤其 Python/JS 栈，命令行工具链熟练\n- **系统底层操作** — KHY OS 内核 shell、Ring 3 ELF、磁盘块读写，是真·OS 助手\n- **Windows 环境实操** — 原生 cmd/PowerShell，不走 WSL 绕弯子\n- **多轮复杂任务** — 会分步追踪进度、并行发子代理、保持上下文连贯\n\n**不擅长/红线：**\n- 不做真实交易决策 — 分析归分析，下单是你的事\n- 不泄露密钥凭证 — 打死也不说\n- 不编造 API 路径或文件 — 不知道就说不知道\n- 不做无谓的客套 — 直奔问题，不绕弯\n\n**风格：**\n先给结论，再补依据。能跑代码就不写作文。该确认时确认，能直接干就直接干。\n\n**一句话总结：**\n实用主义导向的工程助手，股票和代码双修，不演暖男，不画大饼。有用就完事了。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781617811814,
+  "updatedAt": 1781617811814
+}

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI-Anything 接入案例：Abu-Cowork (阿布) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>CLI-Anything 接入案例：Abu-Cowork (阿布)</div>
+      <header class="hero reveal"><h1>CLI-Anything 接入案例：Abu-Cowork (阿布)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-接入案例-abu-cowork-阿布">CLI-Anything 接入案例：Abu-Cowork (阿布)</a></li><li class="lvl-2"><a href="#1-目标软件概况">1. 目标软件概况</a></li><li class="lvl-3"><a href="#源码结构">源码结构</a></li><li class="lvl-2"><a href="#2-接入命令">2. 接入命令</a></li><li class="lvl-2"><a href="#3-七阶段生成流水线">3. 七阶段生成流水线</a></li><li class="lvl-3"><a href="#stage-0-源码获取">Stage 0 — 源码获取</a></li><li class="lvl-3"><a href="#stage-1-代码分析">Stage 1 — 代码分析</a></li><li class="lvl-3"><a href="#stage-2-架构设计">Stage 2 — 架构设计</a></li><li class="lvl-3"><a href="#stage-3-实现">Stage 3 — 实现</a></li><li class="lvl-3"><a href="#stage-4-5-测试">Stage 4~5 — 测试</a></li><li class="lvl-3"><a href="#stage-6-skill-md">Stage 6 — SKILL.md</a></li><li class="lvl-3"><a href="#stage-7-打包注册">Stage 7 — 打包注册</a></li><li class="lvl-2"><a href="#4-通信协议-backend-js-如何桥接-abu">4. 通信协议：backend.js 如何桥接 Abu</a></li><li class="lvl-3"><a href="#4-1-http-api-首选">4.1 HTTP API（首选）</a></li><li class="lvl-3"><a href="#4-2-文件协议-离线操作">4.2 文件协议（离线操作）</a></li><li class="lvl-3"><a href="#4-3-tauri-cli-备选">4.3 Tauri CLI（备选）</a></li><li class="lvl-3"><a href="#协议选择逻辑">协议选择逻辑</a></li><li class="lvl-2"><a href="#5-使用示例">5. 使用示例</a></li><li class="lvl-3"><a href="#5-1-cli-直接调用">5.1 CLI 直接调用</a></li><li class="lvl-3"><a href="#5-2-ai-对话自动调用">5.2 AI 对话自动调用</a></li><li class="lvl-3"><a href="#5-3-注册状态验证">5.3 注册状态验证</a></li><li class="lvl-2"><a href="#6-输出格式约定">6. 输出格式约定</a></li><li class="lvl-3"><a href="#成功">成功</a></li><li class="lvl-3"><a href="#失败">失败</a></li><li class="lvl-2"><a href="#7-数据流全景">7. 数据流全景</a></li><li class="lvl-2"><a href="#8-注意事项">8. 注意事项</a></li><li class="lvl-2"><a href="#9-关联文件">9. 关联文件</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-006 | 阶段: 运维 | 原路径: docs/指南/cli-万能接入-abu-案例.md --&gt;</p>
+<h1 id="cli-anything-接入案例-abu-cowork-阿布">CLI-Anything 接入案例：Abu-Cowork (阿布)<a class="anchor" href="#cli-anything-接入案例-abu-cowork-阿布" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档以 Abu-Cowork 为实例，记录 KHY OS 通过 CLI-Anything 接入第三方桌面应用的完整流程与协议规范。</p></blockquote>
+<hr>
+<h2 id="1-目标软件概况">1. 目标软件概况<a class="anchor" href="#1-目标软件概况" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>属性</th><th>值</th></tr></thead><tbody><tr><td>名称</td><td>Abu-Cowork (阿布)</td></tr><tr><td>版本</td><td>v0.19.5</td></tr><tr><td>定位</td><td>本地 AI 桌面办公助手</td></tr><tr><td>技术栈</td><td>Tauri 2 (Rust) + React (TypeScript) + Vite</td></tr><tr><td>协议</td><td>Apache 2.0</td></tr><tr><td>核心能力</td><td>多 Agent、28 内置 Skill、定时任务、IM 机器人、浏览器操控、MCP 连接器、安全沙箱</td></tr></tbody></table>
+<h3 id="源码结构">源码结构<a class="anchor" href="#源码结构" aria-label="锚点">#</a></h3>
+<pre><code>Abu-Cowork-main/
+├── src-tauri/src/           # Rust 后端
+│   ├── lib.rs               # Tauri 命令注册 (52K)
+│   ├── computer_use.rs      # 电脑操控
+│   ├── sandbox.rs           # 沙箱隔离
+│   ├── trigger_server.rs    # HTTP 触发器服务
+│   ├── feishu_ws.rs         # 飞书 WebSocket
+│   ├── secrets.rs           # 密钥管理
+│   └── proxy.rs             # 代理
+├── src/core/                # TypeScript 核心
+│   ├── agent/               # Agent 系统
+│   ├── skill/               # 技能管理
+│   ├── tools/               # 工具注册与安全
+│   ├── session/             # 会话管理
+│   ├── scheduler/           # 定时任务
+│   ├── im/                  # IM 频道 (飞书/钉钉/企微/Slack)
+│   ├── mcp/                 # MCP 连接器
+│   ├── llm/                 # LLM 调用
+│   ├── memdir/              # 记忆目录
+│   ├── safety/              # 内容安全扫描
+│   └── search/              # 搜索
+├── builtin-skills/          # 28 个内置技能
+│   ├── Abu-Browser/         # 浏览器操控
+│   ├── pdf/, pptx/, docx/   # 文档处理
+│   ├── schedule/            # 定时任务
+│   ├── mermaid-diagram/     # 流程图
+│   ├── frontend-design/     # 前端设计
+│   ├── create-agent/        # 创建 Agent
+│   └── ...
+└── builtin-agents/          # 预置 Agent</code></pre>
+<hr>
+<h2 id="2-接入命令">2. 接入命令<a class="anchor" href="#2-接入命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 标准命令
+khy app cli-gen /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
+
+# 中文别名
+软件接入 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
+工具生成 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
+cli生成 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node</code></pre>
+<p>选择 <code>--runtime node</code> 的理由：Abu 本身是 TypeScript/Tauri 项目，Node.js CLI 可直接复用其类型定义和 API 结构。</p>
+<hr>
+<h2 id="3-七阶段生成流水线">3. 七阶段生成流水线<a class="anchor" href="#3-七阶段生成流水线" aria-label="锚点">#</a></h2>
+<h3 id="stage-0-源码获取">Stage 0 — 源码获取<a class="anchor" href="#stage-0-源码获取" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;software&quot;: &quot;abu-cowork&quot;,
+  &quot;sourcePath&quot;: &quot;~/.khy/cli-anything/generated/abu-cowork/source/&quot;,
+  &quot;language&quot;: &quot;javascript&quot;,
+  &quot;buildSystem&quot;: &quot;npm&quot;,
+  &quot;entryPoints&quot;: [&quot;src/main.tsx&quot;, &quot;src-tauri/src/main.rs&quot;],
+  &quot;hasTests&quot;: true,
+  &quot;hasDocs&quot;: true
+}</code></pre>
+<h3 id="stage-1-代码分析">Stage 1 — 代码分析<a class="anchor" href="#stage-1-代码分析" aria-label="锚点">#</a></h3>
+<p>AI 分析 Abu 源码后生成 SOP 文档，识别出以下可控能力域：</p>
+<table><thead><tr><th>能力域</th><th>来源模块</th><th>可 CLI 化操作</th></tr></thead><tbody><tr><td>Agent 任务</td><td><code>src/core/agent/</code></td><td>创建/运行/停止/列出 Agent 任务</td></tr><tr><td>技能管理</td><td><code>src/core/skill/</code> + <code>builtin-skills/</code></td><td>列出/搜索/运行/自进化技能</td></tr><tr><td>定时任务</td><td><code>src/core/scheduler/</code></td><td>创建/删除/启停 Cron 任务</td></tr><tr><td>会话管理</td><td><code>src/core/session/</code></td><td>列出/恢复/导出会话</td></tr><tr><td>IM 频道</td><td><code>src/core/im/</code></td><td>发送/接收/配置 IM 消息</td></tr><tr><td>工具调用</td><td><code>src/core/tools/</code></td><td>列出/搜索/调用注册工具</td></tr><tr><td>MCP 连接</td><td><code>src/core/mcp/</code></td><td>连接/断开 MCP 服务器</td></tr><tr><td>记忆系统</td><td><code>src/core/memdir/</code></td><td>读取/写入/搜索记忆</td></tr><tr><td>安全扫描</td><td><code>src/core/safety/</code></td><td>触发内容安全扫描</td></tr><tr><td>诊断</td><td><code>src/core/diagnostic/</code></td><td>系统自检、健康报告</td></tr></tbody></table>
+<h3 id="stage-2-架构设计">Stage 2 — 架构设计<a class="anchor" href="#stage-2-架构设计" aria-label="锚点">#</a></h3>
+<pre><code>cli-anything-abu
+├── agent       # run, stop, list, status
+├── skill       # list, search, run, evolve
+├── schedule    # create, delete, enable, disable, list
+├── session     # list, resume, export, delete
+├── im          # send, channels, config
+├── tool        # list, search, invoke
+├── mcp         # connect, disconnect, list
+├── memory      # get, set, search, clear
+├── diagnostic  # check, report
+└── project     # create, open, list, info</code></pre>
+<h3 id="stage-3-实现">Stage 3 — 实现<a class="anchor" href="#stage-3-实现" aria-label="锚点">#</a></h3>
+<p>生成 <code>khy-cli-abu/</code> Node.js CLI 包：</p>
+<pre><code>khy-cli-abu/
+├── openclaw.plugin.json
+├── package.json
+├── src/
+│   ├── index.js               # Commander CLI 入口
+│   ├── core/
+│   │   ├── project.js         # 项目管理
+│   │   ├── session.js         # undo/redo 快照
+│   │   └── export.js          # 导出对话/报告
+│   └── backend.js             # Abu 通信桥接
+├── skills/
+│   ├── manifest.json
+│   └── prompt.md
+└── tests/</code></pre>
+<h3 id="stage-4-5-测试">Stage 4~5 — 测试<a class="anchor" href="#stage-4-5-测试" aria-label="锚点">#</a></h3>
+<p>覆盖所有命令组的 happy path、error case、<code>--json</code> 模式验证。</p>
+<h3 id="stage-6-skill-md">Stage 6 — SKILL.md<a class="anchor" href="#stage-6-skill-md" aria-label="锚点">#</a></h3>
+<pre><code class="language-markdown">---
+name: cli-anything-abu
+description: AI desktop office assistant — manage agents, skills, schedules, IM channels, and sessions
+version: 1.0.0
+tags: [abu, desktop-assistant, agent, skill, scheduler, im, cli-anything]
+entry_point: cli-anything-abu
+---
+You have access to cli-anything-abu, a command-line tool for controlling Abu (阿布) AI desktop assistant.
+...</code></pre>
+<h3 id="stage-7-打包注册">Stage 7 — 打包注册<a class="anchor" href="#stage-7-打包注册" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm link                       # 全局注册 cli-anything-abu 命令
+khy app cli-sync               # 自动发现 + 注册到 KHY</code></pre>
+<p>注册结果：</p>
+<ul><li><strong>KHY App</strong>: <code>cli-anything-abu</code> (runtime: external)</li><li><strong>KHY Tool</strong>: <code>cli_anything__abu</code> (AI 对话可调用)</li><li><strong>KHY Skill</strong>: <code>~/.khy/skills/cli-anything-abu/manifest.json</code></li></ul>
+<hr>
+<h2 id="4-通信协议-backend-js-如何桥接-abu">4. 通信协议：backend.js 如何桥接 Abu<a class="anchor" href="#4-通信协议-backend-js-如何桥接-abu" aria-label="锚点">#</a></h2>
+<p>Abu 是 Tauri 桌面应用，不是传统 CLI 工具。CLI-Anything 的 <code>backend.js</code> 按优先级使用三种通信方式：</p>
+<h3 id="4-1-http-api-首选">4.1 HTTP API（首选）<a class="anchor" href="#4-1-http-api-首选" aria-label="锚点">#</a></h3>
+<p>Abu 内置 <code>trigger_server.rs</code>，在本地端口暴露 HTTP 接口。</p>
+<pre><code class="language-javascript">// backend.js
+const BASE_URL = 'http://127.0.0.1:21222'; // Abu trigger server
+
+async function callAbu(endpoint, payload) {
+  const resp = await fetch(`${BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return resp.json();
+}</code></pre>
+<p>适用场景：Abu 正在运行时，所有实时操作（Agent 任务、IM 发送、工具调用）。</p>
+<h3 id="4-2-文件协议-离线操作">4.2 文件协议（离线操作）<a class="anchor" href="#4-2-文件协议-离线操作" aria-label="锚点">#</a></h3>
+<p>直接读写 Abu 的本地数据目录。</p>
+<pre><code class="language-javascript">// 路径约定
+const ABU_DATA = path.join(os.homedir(), 'Library', 'Application Support', 'com.abu.app');
+const MEMDIR   = path.join(ABU_DATA, 'memdir');
+const SKILLS   = path.join(ABU_DATA, 'skills');
+const SCHEDULE = path.join(ABU_DATA, 'schedules.json');</code></pre>
+<p>适用场景：Abu 未运行时，读取/修改配置、记忆、技能定义。</p>
+<h3 id="4-3-tauri-cli-备选">4.3 Tauri CLI（备选）<a class="anchor" href="#4-3-tauri-cli-备选" aria-label="锚点">#</a></h3>
+<p>如果 Abu 暴露了 Tauri CLI 命令入口：</p>
+<pre><code class="language-javascript">const { execFileSync } = require('child_process');
+const result = execFileSync('abu', ['agent', 'run', '--task', task, '--json'], {
+  encoding: 'utf-8', timeout: 60000,
+});</code></pre>
+<h3 id="协议选择逻辑">协议选择逻辑<a class="anchor" href="#协议选择逻辑" aria-label="锚点">#</a></h3>
+<pre><code>                      ┌──────────────┐
+                      │ Abu running?  │
+                      └──────┬───────┘
+                        yes  │  no
+                    ┌────────┴────────┐
+                    ▼                 ▼
+            HTTP API (4.1)    File Protocol (4.2)
+            port 21222        direct R/W</code></pre>
+<hr>
+<h2 id="5-使用示例">5. 使用示例<a class="anchor" href="#5-使用示例" aria-label="锚点">#</a></h2>
+<h3 id="5-1-cli-直接调用">5.1 CLI 直接调用<a class="anchor" href="#5-1-cli-直接调用" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Agent
+khy app cli-invoke abu agent run --task &quot;整理本周工作报告&quot; --json
+khy app cli-invoke abu agent list --json
+khy app cli-invoke abu agent stop --id agent_0xa3f --json
+
+# Skill
+khy app cli-invoke abu skill list --json
+khy app cli-invoke abu skill run --name pdf --input report.pdf --json
+khy app cli-invoke abu skill search --query &quot;文档处理&quot; --json
+
+# Schedule
+khy app cli-invoke abu schedule create --cron &quot;0 9 * * 1-5&quot; --task &quot;晨报汇总&quot; --json
+khy app cli-invoke abu schedule list --json
+khy app cli-invoke abu schedule delete --id sched_01 --json
+
+# Session
+khy app cli-invoke abu session list --json
+khy app cli-invoke abu session export --id sess_01 --format markdown --json
+
+# IM
+khy app cli-invoke abu im send --channel feishu --message &quot;日报已生成&quot; --json
+khy app cli-invoke abu im channels --json
+
+# Memory
+khy app cli-invoke abu memory search --query &quot;用户偏好&quot; --json
+
+# Diagnostic
+khy app cli-invoke abu diagnostic check --json</code></pre>
+<h3 id="5-2-ai-对话自动调用">5.2 AI 对话自动调用<a class="anchor" href="#5-2-ai-对话自动调用" aria-label="锚点">#</a></h3>
+<pre><code>用户: 帮我用阿布创建一个每天早上9点自动汇总邮件的定时任务
+AI:   [调用 cli_anything__abu]
+      → schedule create --cron &quot;0 9 * * *&quot; --task &quot;汇总今日收件箱邮件&quot; --json
+      → 返回: {&quot;status&quot;:&quot;success&quot;,&quot;data&quot;:{&quot;id&quot;:&quot;sched_0xf3a&quot;,&quot;cron&quot;:&quot;0 9 * * *&quot;}}
+      已创建定时任务 sched_0xf3a，每天 09:00 自动执行。
+
+用户: 列出阿布现在有哪些技能
+AI:   [调用 cli_anything__abu]
+      → skill list --json
+      → 返回: {&quot;status&quot;:&quot;success&quot;,&quot;data&quot;:{&quot;total&quot;:28,&quot;skills&quot;:[...]}}
+      Abu 当前有 28 个技能：PDF 处理、PPTX 生成、浏览器操控、前端设计...
+
+用户: 用阿布的 PDF 技能把这个文件转成摘要
+AI:   [调用 cli_anything__abu]
+      → skill run --name pdf --input /path/to/doc.pdf --action summarize --json
+      → 返回: {&quot;status&quot;:&quot;success&quot;,&quot;data&quot;:{&quot;summary&quot;:&quot;...&quot;}}</code></pre>
+<h3 id="5-3-注册状态验证">5.3 注册状态验证<a class="anchor" href="#5-3-注册状态验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-list
+# 输出:
+# cli-anything-abu  v0.19.5  [public]  AI Desktop Assistant - agents, skills, scheduler, IM
+
+khy skill list
+# 输出:
+# cli-anything-abu  &quot;AI desktop office assistant&quot;  [cli-anything]
+
+agent工具
+# 同 khy app cli-list</code></pre>
+<hr>
+<h2 id="6-输出格式约定">6. 输出格式约定<a class="anchor" href="#6-输出格式约定" aria-label="锚点">#</a></h2>
+<p>所有命令支持 <code>--json</code> 参数，输出统一的 JSON 格式：</p>
+<h3 id="成功">成功<a class="anchor" href="#成功" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;command&quot;: &quot;agent.run&quot;,
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;agent_0xa3f&quot;,
+    &quot;task&quot;: &quot;整理本周工作报告&quot;,
+    &quot;state&quot;: &quot;running&quot;
+  },
+  &quot;metadata&quot;: {
+    &quot;duration_ms&quot;: 234,
+    &quot;abu_version&quot;: &quot;0.19.5&quot;
+  }
+}</code></pre>
+<h3 id="失败">失败<a class="anchor" href="#失败" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;error&quot;,
+  &quot;command&quot;: &quot;agent.run&quot;,
+  &quot;error&quot;: &quot;Abu is not running&quot;,
+  &quot;code&quot;: &quot;ABU_NOT_RUNNING&quot;,
+  &quot;details&quot;: &quot;Start Abu desktop app first, or use file protocol for offline operations&quot;
+}</code></pre>
+<hr>
+<h2 id="7-数据流全景">7. 数据流全景<a class="anchor" href="#7-数据流全景" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────┐     khy app cli-invoke abu ...     ┌──────────────────────┐
+│  KHY OS CLI  │ ──────────────────────────────────▶│  cli-anything-abu    │
+│  或 AI 对话   │◀─────── JSON 结构化输出 ───────────│  (Node.js CLI)       │
+└─────────────┘                                     └──────────┬───────────┘
+                                                               │
+                                          ┌────────────────────┼────────────────────┐
+                                          ▼                    ▼                    ▼
+                                   HTTP API             File Protocol         Tauri CLI
+                                   port 21222           ~/Library/.../abu     abu &lt;cmd&gt;
+                                          │                    │                    │
+                                          └────────────────────┴────────────────────┘
+                                                               │
+                                                               ▼
+                                                     ┌──────────────────┐
+                                                     │  Abu Desktop App  │
+                                                     │  Tauri + React    │
+                                                     │  28 Skills        │
+                                                     │  Agent System     │
+                                                     │  Scheduler        │
+                                                     │  IM Channels      │
+                                                     └──────────────────┘</code></pre>
+<hr>
+<h2 id="8-注意事项">8. 注意事项<a class="anchor" href="#8-注意事项" aria-label="锚点">#</a></h2>
+<ol><li><strong>Abu 必须在运行中</strong> 才能使用 HTTP API 通信方式，否则回退到文件协议</li><li><strong>安全权限</strong>：Abu 的沙箱和权限系统仍然生效，CLI 调用同样受限</li><li><strong>首次生成耗时</strong>：7 阶段流水线需要 AI 分析完整源码，首次约 5-10 分钟</li><li><strong>断点续传</strong>：流水线中断后可从上次完成的阶段恢复</li><li><strong>双向同步</strong>：通过 <code>khy app cli-sync</code> 可随时刷新注册状态</li><li><strong>版本跟踪</strong>：Abu 升级后建议重新运行 <code>khy app cli-gen</code> 以更新 CLI 包装</li></ol>
+<hr>
+<h2 id="9-关联文件">9. 关联文件<a class="anchor" href="#9-关联文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>用途</th></tr></thead><tbody><tr><td><code>backend/src/services/cliAnythingService.js</code></td><td>CLI-Anything 桥接服务</td></tr><tr><td><code>backend/src/services/cliAnythingGenerator.js</code></td><td>7 阶段生成流水线</td></tr><tr><td><code>backend/src/cli/handlers/app.js</code></td><td>CLI 子命令路由</td></tr><tr><td><code>backend/src/data/cliAnythingTemplates/</code></td><td>阶段提示词 + 骨架模板</td></tr><tr><td><code>docs/07_OPS_运维/[OPS-MAN-007] cli-万能接入-集成指南.md</code></td><td>通用集成指南</td></tr><tr><td><code>~/.khy/cli-anything/generated/abu-cowork/</code></td><td>生成产物目录</td></tr><tr><td><code>~/.khy/skills/cli-anything-abu/</code></td><td>注册的 KHY 技能</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-005] claude-code-规则到-khy-映射表.html"><div class="dir">← 上一篇</div><div class="ttl">Claude Code 规则到 KHY 映射表</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-007] cli-万能接入-集成指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS × CLI-Anything 集成指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-006] cli-万能接入-abu-案例.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

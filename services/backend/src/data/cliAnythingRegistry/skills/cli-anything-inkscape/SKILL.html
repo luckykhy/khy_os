@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-inkscape · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-inkscape<span class="sep">›</span>cli-anything-inkscape</div>
+      <header class="hero reveal"><h1>cli-anything-inkscape</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-inkscape">cli-anything-inkscape</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#document">Document</a></li><li class="lvl-3"><a href="#shape">Shape</a></li><li class="lvl-3"><a href="#text">Text</a></li><li class="lvl-3"><a href="#style">Style</a></li><li class="lvl-3"><a href="#transform">Transform</a></li><li class="lvl-3"><a href="#layer">Layer</a></li><li class="lvl-3"><a href="#path-group">Path Group</a></li><li class="lvl-3"><a href="#gradient">Gradient</a></li><li class="lvl-3"><a href="#export-group">Export Group</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-3"><a href="#wrapped-text-layout">Wrapped Text Layout</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-inkscape&quot;<br>description: &gt;-<br>  Command-line interface for Inkscape - A stateful command-line interface for vector graphics editing, following the same patterns as the GI...</p>
+<hr>
+<h1 id="cli-anything-inkscape">cli-anything-inkscape<a class="anchor" href="#cli-anything-inkscape" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for vector graphics editing, following the same patterns as the GIMP and Blender CLI harnesses. Directly manipulates SVG (XML) documents with a JSON project format for state tracking.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-inkscape package:</p>
+<pre><code class="language-bash">pip install cli-anything-inkscape</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>inkscape must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-inkscape --help
+
+# Start interactive REPL mode
+cli-anything-inkscape
+
+# Create a new document
+cli-anything-inkscape document new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-inkscape --json document info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-inkscape
+# Enter commands interactively with tab-completion and history</code></pre>
+<p>You can also start the REPL with a nonexistent project path. The CLI now seeds a<br>new in-memory document instead of failing immediately:</p>
+<pre><code class="language-bash">cli-anything-inkscape --project /abs/path/new-title.inkscape-cli.json</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="document">Document<a class="anchor" href="#document" aria-label="锚点">#</a></h3>
+<p>Document management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new document</td></tr><tr><td><code>open</code></td><td>Open an existing project</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show document information</td></tr><tr><td><code>profiles</code></td><td>List available document profiles</td></tr><tr><td><code>canvas-size</code></td><td>Set the canvas size</td></tr><tr><td><code>units</code></td><td>Set the document units</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="shape">Shape<a class="anchor" href="#shape" aria-label="锚点">#</a></h3>
+<p>Shape management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-rect</code></td><td>Add a rectangle</td></tr><tr><td><code>add-circle</code></td><td>Add a circle</td></tr><tr><td><code>add-ellipse</code></td><td>Add an ellipse</td></tr><tr><td><code>add-line</code></td><td>Add a line</td></tr><tr><td><code>add-polygon</code></td><td>Add a polygon</td></tr><tr><td><code>add-path</code></td><td>Add a path</td></tr><tr><td><code>add-star</code></td><td>Add a star</td></tr><tr><td><code>remove</code></td><td>Remove a shape by index</td></tr><tr><td><code>duplicate</code></td><td>Duplicate a shape</td></tr><tr><td><code>list</code></td><td>List all shapes/objects</td></tr><tr><td><code>get</code></td><td>Get detailed info about a shape</td></tr></tbody></table>
+<h3 id="text">Text<a class="anchor" href="#text" aria-label="锚点">#</a></h3>
+<p>Text management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a text element; supports <code>--box-width</code>, <code>--box-height</code>, and <code>--line-height</code> for wrapped layouts</td></tr><tr><td><code>set</code></td><td>Set a text property (text, font-family, font-size, fill, box-width, box-height, line-height, etc.)</td></tr><tr><td><code>list</code></td><td>List all text objects</td></tr></tbody></table>
+<h3 id="style">Style<a class="anchor" href="#style" aria-label="锚点">#</a></h3>
+<p>Style management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>set-fill</code></td><td>Set the fill color of an object</td></tr><tr><td><code>set-stroke</code></td><td>Set the stroke color (and optionally width) of an object</td></tr><tr><td><code>set-opacity</code></td><td>Set the opacity of an object (0.0-1.0)</td></tr><tr><td><code>set</code></td><td>Set an arbitrary style property on an object</td></tr><tr><td><code>get</code></td><td>Get the style properties of an object</td></tr><tr><td><code>list-properties</code></td><td>List all available style properties</td></tr></tbody></table>
+<h3 id="transform">Transform<a class="anchor" href="#transform" aria-label="锚点">#</a></h3>
+<p>Transform operations (translate, rotate, scale, skew).</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>translate</code></td><td>Translate (move) an object</td></tr><tr><td><code>rotate</code></td><td>Rotate an object</td></tr><tr><td><code>scale</code></td><td>Scale an object</td></tr><tr><td><code>skew-x</code></td><td>Skew an object horizontally</td></tr><tr><td><code>skew-y</code></td><td>Skew an object vertically</td></tr><tr><td><code>get</code></td><td>Get the current transform of an object</td></tr><tr><td><code>clear</code></td><td>Clear all transforms from an object</td></tr></tbody></table>
+<h3 id="layer">Layer<a class="anchor" href="#layer" aria-label="锚点">#</a></h3>
+<p>Layer management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a new layer</td></tr><tr><td><code>remove</code></td><td>Remove a layer by index</td></tr><tr><td><code>move-object</code></td><td>Move an object to a different layer</td></tr><tr><td><code>set</code></td><td>Set a layer property (name, visible, locked, opacity)</td></tr><tr><td><code>list</code></td><td>List all layers</td></tr><tr><td><code>reorder</code></td><td>Move a layer from one position to another</td></tr><tr><td><code>get</code></td><td>Get detailed info about a layer</td></tr></tbody></table>
+<h3 id="path-group">Path Group<a class="anchor" href="#path-group" aria-label="锚点">#</a></h3>
+<p>Path boolean operations.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>union</code></td><td>Union of two objects</td></tr><tr><td><code>intersection</code></td><td>Intersection of two objects</td></tr><tr><td><code>difference</code></td><td>Difference of two objects (A minus B)</td></tr><tr><td><code>exclusion</code></td><td>Exclusion (XOR) of two objects</td></tr><tr><td><code>convert</code></td><td>Convert a shape to a path</td></tr><tr><td><code>list-operations</code></td><td>List available path boolean operations</td></tr></tbody></table>
+<h3 id="gradient">Gradient<a class="anchor" href="#gradient" aria-label="锚点">#</a></h3>
+<p>Gradient management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-linear</code></td><td>Add a linear gradient</td></tr><tr><td><code>add-radial</code></td><td>Add a radial gradient</td></tr><tr><td><code>apply</code></td><td>Apply a gradient to an object</td></tr><tr><td><code>list</code></td><td>List all gradients</td></tr></tbody></table>
+<h3 id="export-group">Export Group<a class="anchor" href="#export-group" aria-label="锚点">#</a></h3>
+<p>Export/render commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>png</code></td><td>Render the document to PNG</td></tr><tr><td><code>svg</code></td><td>Export the document as SVG</td></tr><tr><td><code>pdf</code></td><td>Export the document as PDF (requires Inkscape)</td></tr><tr><td><code>presets</code></td><td>List export presets</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new inkscape project file.</p>
+<pre><code class="language-bash">cli-anything-inkscape document new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-inkscape --json document new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-inkscape
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-inkscape --project myproject.json export pdf output.pdf --overwrite</code></pre>
+<h3 id="wrapped-text-layout">Wrapped Text Layout<a class="anchor" href="#wrapped-text-layout" aria-label="锚点">#</a></h3>
+<p>For title cards, chips, and portrait-safe panels, prefer wrapped text boxes<br>instead of manually inserting line breaks:</p>
+<pre><code class="language-bash">cli-anything-inkscape --project title.json text add \
+  --text &quot;Real capture + Veo cold open + Gemini score + thumbnail plate&quot; \
+  --x 180 --y 470 --font-size 118 \
+  --box-width 1180 --box-height 260 --line-height 1.05
+
+cli-anything-inkscape --project title.json text set 0 box-width 980
+cli-anything-inkscape --project title.json text set 0 line-height 1.15</code></pre>
+<p>Notes:</p>
+<ul><li><code>box-width</code> wraps long copy into multiple exported SVG <code>tspan</code> lines.</li><li><code>box-height</code> lets long copy fail safely instead of running off-canvas.</li><li>Use wrapped text boxes for long-copy graphics before resorting to manual line breaking.</li></ul>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-inkscape project info -p project.json
+
+# JSON output for agents
+cli-anything-inkscape --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li><li><strong>Prefer wrapped text boxes</strong> for headlines and variable-length copy so layouts remain stable across edits</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-godot/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Godot Engine CLI</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-intelwatch/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-intelwatch</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-inkscape/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

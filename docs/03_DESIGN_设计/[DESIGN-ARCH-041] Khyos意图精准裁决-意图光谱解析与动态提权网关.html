@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-041-khyos意图精准裁决-意图光谱解析与动态提权网关">[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关</a></li><li class="lvl-2"><a href="#一-目标">一、目标</a></li><li class="lvl-2"><a href="#二-意图光谱-3-1">二、意图光谱（§3.1）</a></li><li class="lvl-2"><a href="#三-动态提权特征引擎-3-2">三、动态提权特征引擎（§3.2）</a></li><li class="lvl-2"><a href="#四-分级沙箱网-3-3-门面编排-4">四、分级沙箱网（§3.3）+ 门面编排（§4）</a></li><li class="lvl-2"><a href="#五-误判淬火-3-4-防呆③">五、误判淬火（§3.4 / 防呆③）</a></li><li class="lvl-2"><a href="#六-防呆铁律-写死-不可绕过">六、防呆铁律（写死，不可绕过）</a></li><li class="lvl-2"><a href="#七-验证">七、验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-041-khyos意图精准裁决-意图光谱解析与动态提权网关">[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关<a class="anchor" href="#design-arch-041-khyos意图精准裁决-意图光谱解析与动态提权网关" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：定稿 · 归属：<code>services/backend/src/services/intentArbiter/</code> · 关联：[[DESIGN-ARCH-040]]（数据主权网关，执行带下游）、[[DESIGN-ARCH-019]]（用户输入预处理规范）、[[DESIGN-ARCH-037]]（自举闭环自愈，进化需求）</p></blockquote>
+<h2 id="一-目标">一、目标<a class="anchor" href="#一-目标" aria-label="锚点">#</a></h2>
+<p>在「<strong>防误触</strong>（宁可沉默也绝不误动）」与「<strong>识意图</strong>（绝不漏掉真实命令）」之间建立动态平衡的精准裁决层。摒弃非黑即白的硬关键词分类，把任意自然语言输入坍缩为连续的「指令置信度」∈[0,1]，再按光谱分段路由到安全等级递增的分级沙箱；并把用户对误判的纠正行为升维为针对意图引擎自身的进化需求。</p>
+<p>零侵入、加法式：自成纯子系统，不接管输入主循环。可由后续 PR 把真实 NL 输入接入 <code>dispatch</code>，把执行带放行结果串到数据主权网关与权限审批之前。</p>
+<h2 id="二-意图光谱-3-1">二、意图光谱（§3.1）<a class="anchor" href="#二-意图光谱-3-1" aria-label="锚点">#</a></h2>
+<p>连续置信度三段，左闭右开覆盖 [0,1]：</p>
+<table><thead><tr><th>区间</th><th>光谱段</th><th>沙箱</th><th>语义</th></tr></thead><tbody><tr><td>[0.0, 0.3)</td><td>安全对话带</td><td><code>ChatSandbox</code></td><td>纯生成、零工具。闲聊 / 「你是什么模型」物理隔绝于系统模式</td></tr><tr><td>[0.3, 0.7)</td><td>歧义模糊带</td><td><code>ConfirmSandbox</code></td><td>只产出零风险确认请求，<strong>禁止自主猜测执行</strong>（防呆②）</td></tr><tr><td>[0.7, 1.0]</td><td>指令执行带</td><td><code>ExecutionGateway</code></td><td>意图明确，放行入闸；执行前仍须经数据主权网关 + 权限审批</td></tr></tbody></table>
+<h2 id="三-动态提权特征引擎-3-2">三、动态提权特征引擎（§3.2）<a class="anchor" href="#三-动态提权特征引擎-3-2" aria-label="锚点">#</a></h2>
+<p>置信度由多特征<strong>综合</strong>叠加（绝不单因子决定，防呆①）。权重单源 <code>intentLexicon.js</code>：</p>
+<table><thead><tr><th>特征</th><th>权重</th><th>说明</th></tr></thead><tbody><tr><td>基线 BASE</td><td>0.1</td><td>默认偏闲聊</td></tr><tr><td>特权动词 PRIVILEGED_VERB</td><td>0.45</td><td>进入/执行/切换/调用/开启/关闭… 最强提权</td></tr><tr><td>目标宾语 TARGET_OBJECT</td><td>0.2</td><td>本地模式/调试工具/系统/内核…（关键词 + 「X模式」「X工具」构词正则）</td></tr><tr><td>强调副词 EMPHASIS</td><td>0.2</td><td>明确要求/立刻/必须/务必…</td></tr><tr><td>弱动词 WEAK_VERB</td><td>0.2</td><td>看看/瞧瞧/了解…（仅拉入歧义带，不足以执行）</td></tr><tr><td>祈使引导 IMPERATIVE_LEAD</td><td>0.1</td><td>给我/请/帮我…（句法结构，祈使 &gt;&gt; 疑问）</td></tr><tr><td>疑问衰减 QUESTION_DAMPEN</td><td>×0.5</td><td>命中疑问标记 → 提权项整体衰减</td></tr><tr><td><strong>NO_VERB_CAP</strong></td><td>0.69</td><td>防呆①硬上限：缺特权动词时置信度封顶，绝不入执行带</td></tr></tbody></table>
+<p>示例：<code>你是什么模型</code> → 0.1（疑问、无动词无目标）；<code>看看本地模式</code> → 0.5（弱动词+目标，歧义带）；<code>我明确要求进入本地模式</code> → 1.0（特权动词+目标+强调+祈使，执行带）。</p>
+<h2 id="四-分级沙箱网-3-3-门面编排-4">四、分级沙箱网（§3.3）+ 门面编排（§4）<a class="anchor" href="#四-分级沙箱网-3-3-门面编排-4" aria-label="锚点">#</a></h2>
+<p>三个命名类 + 门面：</p>
+<ul><li><strong><code>IntentSpectrumAnalyzer</code></strong> — <code>analyze(text)</code> → <code>{confidence, band, features, reasons}</code>；纯函数确定性，不调模型。</li><li><strong><code>TieredResponseRouter</code></strong> — <code>route(analysis)</code> 映射三沙箱；<code>assertZeroRisk</code> 在装配确认沙箱时断言零副作用（防呆④）。</li><li><strong><code>MisjudgmentQuencher</code></strong> — <code>classifySignal</code> / <code>quench</code> 把误触/漏判纠正升维为 <code>EvoRequirement</code>（复用 [[DESIGN-ARCH-037]] 的 <code>evoRequirement</code> 真源）。</li><li><strong><code>IntentArbiter</code>（门面）</strong> — <code>dispatch(text)</code>（解析→路由）；<code>confirm(originalText, reply)</code>（二次裁决，显式确认才放行）；<code>feedback(correctionText, ctx)</code>（淬火落 <code>evoLedger</code> 不可变哈希链，branch <code>intent_arbiter_pool</code>）。</li></ul>
+<h2 id="五-误判淬火-3-4-防呆③">五、误判淬火（§3.4 / 防呆③）<a class="anchor" href="#五-误判淬火-3-4-防呆③" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>误判类型</th><th>触发信号</th><th>进化等级</th><th>定向目标</th></tr></thead><tbody><tr><td>误触（过激进）</td><td>「我没让你执行」「只是在聊天」</td><td>L0 启发式补丁</td><td>增加负样本、下调相关特征提权权重</td></tr><tr><td>漏判（过保守）</td><td>「我刚才说了」「快执行」</td><td>L1 器官新生</td><td>扩充特权动词库、新增语义框架解析工具</td></tr></tbody></table>
+<p><code>why</code> 措辞经 <code>evoLevels.classify</code> 校准锁定等级，规避「网关/调度/压缩/核心流转」L2 触发词；<code>_decorate</code> 内置 L2→L1 不变式自检兜底。</p>
+<h2 id="六-防呆铁律-写死-不可绕过">六、防呆铁律（写死，不可绕过）<a class="anchor" href="#六-防呆铁律-写死-不可绕过" aria-label="锚点">#</a></h2>
+<ol><li><strong>绝对禁止</strong> 意图解析器仅依靠单一关键词（如「模式」）进行路由，必须结合动词类型、句式结构和强调词进行综合提权或降权。 → <code>IntentSpectrumAnalyzer._score</code> 硬上限 <code>NO_VERB_CAP=0.69</code>：缺特权动词时无论命中多少关键词都不得入执行带。</li><li><strong>必须强制</strong> 对于落入歧义模糊带(0.3-0.7)的输入，系统绝对禁止自主猜测并执行，必须生成确认请求交由用户裁决。 → 歧义带只入 <code>ConfirmSandbox</code>；唯有 <code>confirm()</code> 收到显式肯定答复才升入执行带。</li><li><strong>必须强制</strong> 用户的否定反馈（「我没说…」「别执行…」）与肯定追加（「我刚才说了…」「快执行…」）必须作为淬火信号，自动触发 <code>MisjudgmentQuencher</code>，生成针对意图解析引擎的进化需求。 → <code>feedback()</code> → <code>quench()</code> → <code>evoLedger</code>。</li><li><strong>绝对禁止</strong> 在 ConfirmSandbox（确认沙箱）中包含任何具有副作用的工具调用或状态变更接口，确认过程必须是零风险的。 → <code>assertZeroRisk</code> 断言确认沙箱 <code>sideEffectsAllowed=false</code>、<code>toolsAllowed=false</code>、无 exec/tool/mutate/apply/commit/downstream 接口，渗入即抛 <code>ZeroRiskViolationError</code>。</li></ol>
+<h2 id="七-验证">七、验证<a class="anchor" href="#七-验证" aria-label="锚点">#</a></h2>
+<p><code>tests/services/intentArbiter/intentArbiter.test.js</code> — 22 测试全绿：光谱场景表、祈使&gt;&gt;疑问、防呆①封顶、三沙箱映射、防呆④零风险断言、dispatch 分流、防呆②确认/否决/仍歧义、防呆③误触L0/漏判L1/落账本、哈希链校验、空输入降级。邻近回归（dataSovereignty/envSymbiosis/evoEngine）83 测试零回归。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-037] Khyos自举创世-需求内源发生器与闭环自愈引擎.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html"><div class="dir">下一篇 →</div><div class="ttl">khy-agent-sdk — Claude Agent SDK 对齐与 D1–D6 治理融合规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-041] Khyos意图精准裁决-意图光谱解析与动态提权网关.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

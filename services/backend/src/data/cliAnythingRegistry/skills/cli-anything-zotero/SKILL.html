@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-zotero · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-zotero<span class="sep">›</span>cli-anything-zotero</div>
+      <header class="hero reveal"><h1>cli-anything-zotero</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-zotero">cli-anything-zotero</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#entry-points">Entry Points</a></li><li class="lvl-2"><a href="#important-constraints">Important Constraints</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#app">App</a></li><li class="lvl-3"><a href="#collection">Collection</a></li><li class="lvl-3"><a href="#item">Item</a></li><li class="lvl-3"><a href="#search">Search</a></li><li class="lvl-3"><a href="#tag">Tag</a></li><li class="lvl-3"><a href="#style">Style</a></li><li class="lvl-3"><a href="#import">Import</a></li><li class="lvl-3"><a href="#note">Note</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#runtime-status">Runtime Status</a></li><li class="lvl-3"><a href="#read-selected-collection">Read Selected Collection</a></li><li class="lvl-3"><a href="#render-citation">Render Citation</a></li><li class="lvl-3"><a href="#add-child-note">Add Child Note</a></li><li class="lvl-3"><a href="#build-llm-context">Build LLM Context</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-zotero&quot;<br>description: &gt;-<br>  CLI harness for Zotero.</p>
+<hr>
+<h1 id="cli-anything-zotero">cli-anything-zotero<a class="anchor" href="#cli-anything-zotero" aria-label="锚点">#</a></h1>
+<p><code>cli-anything-zotero</code> is an agent-native CLI for Zotero desktop. It does not reimplement Zotero. Instead, it composes Zotero's real local surfaces:</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install -e .</code></pre>
+<h2 id="entry-points">Entry Points<a class="anchor" href="#entry-points" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-zotero
+python -m cli_anything.zotero</code></pre>
+<h2 id="important-constraints">Important Constraints<a class="anchor" href="#important-constraints" aria-label="锚点">#</a></h2>
+<ul><li><code>search items</code>, <code>item export</code>, <code>item citation</code>, and <code>item bibliography</code> require Zotero's Local API to be enabled.</li><li><code>note add</code> depends on the live Zotero GUI context and expects the same library to be selected in the app.</li><li>Import-time PDF attachment support is limited to items created in the same connector session; arbitrary existing-item attachment upload is still out of scope.</li><li>Experimental SQLite write commands are local-only, user-library-only, and should be treated as non-stable power-user operations.</li><li>If a bare key is duplicated across libraries, set <code>session use-library &lt;id&gt;</code> before follow-up commands.</li></ul>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="app">App<a class="anchor" href="#app" aria-label="锚点">#</a></h3>
+<p>Application and runtime inspection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Execute <code>status</code>.</td></tr><tr><td><code>version</code></td><td>Execute <code>version</code>.</td></tr><tr><td><code>launch</code></td><td>Execute <code>launch</code>.</td></tr><tr><td><code>enable-local-api</code></td><td>Execute <code>enable-local-api</code>.</td></tr><tr><td><code>ping</code></td><td>Execute <code>ping</code>.</td></tr></tbody></table>
+<h3 id="collection">Collection<a class="anchor" href="#collection" aria-label="锚点">#</a></h3>
+<p>Collection inspection and selection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>Execute <code>list</code>.</td></tr><tr><td><code>find</code></td><td>Execute <code>find</code>.</td></tr><tr><td><code>tree</code></td><td>Execute <code>tree</code>.</td></tr><tr><td><code>get</code></td><td>Execute <code>get</code>.</td></tr><tr><td><code>items</code></td><td>Execute <code>items</code>.</td></tr><tr><td><code>use-selected</code></td><td>Execute <code>use-selected</code>.</td></tr><tr><td><code>create</code></td><td>Execute <code>create</code>.</td></tr></tbody></table>
+<h3 id="item">Item<a class="anchor" href="#item" aria-label="锚点">#</a></h3>
+<p>Item inspection and rendering commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>Execute <code>list</code>.</td></tr><tr><td><code>find</code></td><td>Execute <code>find</code>.</td></tr><tr><td><code>get</code></td><td>Execute <code>get</code>.</td></tr><tr><td><code>children</code></td><td>Execute <code>children</code>.</td></tr><tr><td><code>notes</code></td><td>Execute <code>notes</code>.</td></tr><tr><td><code>attachments</code></td><td>Execute <code>attachments</code>.</td></tr><tr><td><code>file</code></td><td>Execute <code>file</code>.</td></tr><tr><td><code>export</code></td><td>Execute <code>export</code>.</td></tr><tr><td><code>citation</code></td><td>Execute <code>citation</code>.</td></tr><tr><td><code>bibliography</code></td><td>Execute <code>bibliography</code>.</td></tr><tr><td><code>context</code></td><td>Execute <code>context</code>.</td></tr><tr><td><code>analyze</code></td><td>Execute <code>analyze</code>.</td></tr><tr><td><code>add-to-collection</code></td><td>Execute <code>add-to-collection</code>.</td></tr><tr><td><code>move-to-collection</code></td><td>Execute <code>move-to-collection</code>.</td></tr></tbody></table>
+<h3 id="search">Search<a class="anchor" href="#search" aria-label="锚点">#</a></h3>
+<p>Saved-search inspection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>Execute <code>list</code>.</td></tr><tr><td><code>get</code></td><td>Execute <code>get</code>.</td></tr><tr><td><code>items</code></td><td>Execute <code>items</code>.</td></tr></tbody></table>
+<h3 id="tag">Tag<a class="anchor" href="#tag" aria-label="锚点">#</a></h3>
+<p>Tag inspection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>Execute <code>list</code>.</td></tr><tr><td><code>items</code></td><td>Execute <code>items</code>.</td></tr></tbody></table>
+<h3 id="style">Style<a class="anchor" href="#style" aria-label="锚点">#</a></h3>
+<p>Installed CSL style inspection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>Execute <code>list</code>.</td></tr></tbody></table>
+<h3 id="import">Import<a class="anchor" href="#import" aria-label="锚点">#</a></h3>
+<p>Official Zotero import and write commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>file</code></td><td>Execute <code>file</code>.</td></tr><tr><td><code>json</code></td><td>Execute <code>json</code>.</td></tr></tbody></table>
+<h3 id="note">Note<a class="anchor" href="#note" aria-label="锚点">#</a></h3>
+<p>Read and add child notes.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>get</code></td><td>Execute <code>get</code>.</td></tr><tr><td><code>add</code></td><td>Execute <code>add</code>.</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session and REPL context commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Execute <code>status</code>.</td></tr><tr><td><code>use-library</code></td><td>Execute <code>use-library</code>.</td></tr><tr><td><code>use-collection</code></td><td>Execute <code>use-collection</code>.</td></tr><tr><td><code>use-item</code></td><td>Execute <code>use-item</code>.</td></tr><tr><td><code>use-selected</code></td><td>Execute <code>use-selected</code>.</td></tr><tr><td><code>clear-library</code></td><td>Execute <code>clear-library</code>.</td></tr><tr><td><code>clear-collection</code></td><td>Execute <code>clear-collection</code>.</td></tr><tr><td><code>clear-item</code></td><td>Execute <code>clear-item</code>.</td></tr><tr><td><code>history</code></td><td>Execute <code>history</code>.</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="runtime-status">Runtime Status<a class="anchor" href="#runtime-status" aria-label="锚点">#</a></h3>
+<p>Inspect Zotero paths and backend availability.</p>
+<pre><code class="language-bash">cli-anything-zotero app status --json</code></pre>
+<h3 id="read-selected-collection">Read Selected Collection<a class="anchor" href="#read-selected-collection" aria-label="锚点">#</a></h3>
+<p>Persist the collection selected in the Zotero GUI.</p>
+<pre><code class="language-bash">cli-anything-zotero collection use-selected --json</code></pre>
+<h3 id="render-citation">Render Citation<a class="anchor" href="#render-citation" aria-label="锚点">#</a></h3>
+<p>Render a citation using Zotero's Local API.</p>
+<pre><code class="language-bash">cli-anything-zotero item citation &lt;item-key&gt; --style apa --locale en-US --json</code></pre>
+<h3 id="add-child-note">Add Child Note<a class="anchor" href="#add-child-note" aria-label="锚点">#</a></h3>
+<p>Create a child note under an existing Zotero item.</p>
+<pre><code class="language-bash">cli-anything-zotero note add &lt;item-key&gt; --text &quot;Key takeaway&quot; --json</code></pre>
+<h3 id="build-llm-context">Build LLM Context<a class="anchor" href="#build-llm-context" aria-label="锚点">#</a></h3>
+<p>Assemble structured context for downstream model analysis.</p>
+<pre><code class="language-bash">cli-anything-zotero item context &lt;item-key&gt; --include-notes --include-links --json</code></pre>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>0.1.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zoom/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-zoom</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-hub-meta-skill/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">CLI-Hub Meta-Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zotero/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

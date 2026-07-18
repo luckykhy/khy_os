@@ -1,0 +1,2233 @@
+
+.professional-trading {
+
+  height: 100vh;
+
+  background: #0a0a0a;
+
+  color: #ffffff;
+
+  font-family: 'Microsoft YaHei', Arial, sans-serif;
+
+  font-size: 12px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: auto;
+
+  position: relative;
+
+  z-index: 1;
+
+}
+
+
+
+/* 顶部股票信息栏 */
+
+.stock-info-bar {
+
+  height: 60px;
+
+  background: linear-gradient(to bottom, #1a1a1a, #0a0a0a);
+
+  border-bottom: 1px solid #333;
+
+  display: flex;
+
+  align-items: center;
+
+  padding: 0 15px;
+
+  gap: 20px;
+
+}
+
+
+
+.stock-selector {
+
+  min-width: 200px;
+
+}
+
+
+
+.symbol-select {
+
+  width: 100%;
+
+}
+
+
+
+:deep(.symbol-select .el-select__wrapper) {
+
+  background: #1a1a1a;
+
+  border-color: rgba(42, 46, 57, 0.8);
+
+  color: #d1d4dc;
+
+}
+
+
+
+:deep(.symbol-select .el-select__placeholder) {
+
+  color: #787b86;
+
+}
+
+
+
+:deep(.symbol-select .el-input__inner) {
+
+  color: #d1d4dc;
+
+}
+
+
+
+.option-code {
+
+  font-family: 'Consolas', 'Monaco', monospace;
+
+  font-weight: 600;
+
+  color: #2962FF;
+
+  margin-right: 8px;
+
+}
+
+
+
+.option-name {
+
+  color: #d1d4dc;
+
+}
+
+
+
+.current-stock {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  flex: 1;
+
+}
+
+
+
+.current-stock .data-source-badge {
+
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  color: white;
+
+  padding: 4px 12px;
+
+  border-radius: 12px;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+
+}
+
+
+
+.current-stock .data-source-badge.real-data {
+
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+
+  box-shadow: 0 2px 8px rgba(56, 239, 125, 0.3);
+
+}
+
+
+
+.current-stock .symbol {
+
+  font-size: 18px;
+
+  font-weight: bold;
+
+  color: white;
+
+  font-family: 'Consolas', 'Monaco', monospace;
+
+}
+
+
+
+.current-stock .name {
+
+  font-size: 14px;
+
+  color: #ccc;
+
+}
+
+
+
+.current-stock .price {
+
+  font-size: 24px;
+
+  font-weight: bold;
+
+  font-family: 'Consolas', 'Monaco', monospace;
+
+}
+
+
+
+.current-stock .change {
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  font-family: 'Consolas', 'Monaco', monospace;
+
+}
+
+
+
+.stock-details {
+
+  display: flex;
+
+  gap: 20px;
+
+}
+
+
+
+.detail-item {
+
+  color: #888;
+
+  font-size: 12px;
+
+}
+
+
+
+.detail-item .value {
+
+  color: #ccc;
+
+  font-weight: 600;
+
+  margin-left: 4px;
+
+}
+
+
+
+/* 主要内容区域 */
+
+.main-content {
+
+  height: calc(100vh - 60px - 24px); /* 减去顶部信息栏和底部状态栏 */
+
+  display: flex;
+
+  overflow: visible; /* 🔥 改为 visible 让左侧按钮可见 */
+
+}
+
+
+
+/* 左侧智能策略面板 */
+
+.left-panel {
+
+  width: 320px;
+
+  flex-shrink: 0; /* 🔥 防止被压缩 */
+
+  background: #111;
+
+  border-right: 1px solid #333;
+
+  display: flex;
+
+  flex-direction: column;
+
+  transition: all 0.3s ease;
+
+  overflow: visible; /* 🔥 改为 visible 让按钮可以显示在外侧 */
+
+  position: relative;
+
+  min-width: 0;
+
+}
+
+
+
+.left-panel.is-collapsed {
+
+  width: 0; /* 🔥 折叠后完全消失 */
+
+  border-right: none; /* 🔥 移除边框 */
+
+  overflow: hidden; /* 🔥 折叠时隐藏内容 */
+
+}
+
+
+
+/* 🔥 折叠时隐藏面板内容（除了按钮） */
+
+.left-panel.is-collapsed > *:not(.left-panel-toggle-btn) {
+
+  display: none;
+
+}
+
+
+
+/* 左侧面板收缩按钮 */
+
+.left-panel-toggle-btn {
+
+  position: absolute;
+
+  right: -25px; /* 🔥 按钮放在面板外侧 */
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 24px;
+
+  height: 60px;
+
+  background: #1a1a1a;
+
+  border: 1px solid #333;
+
+  border-left: none;
+
+  border-radius: 0 4px 4px 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  cursor: pointer;
+
+  z-index: 100; /* 🔥 提高 z-index 确保按钮在最上层 */
+
+  transition: all 0.3s ease;
+
+}
+
+
+
+/* 🔥 折叠时按钮固定在左侧边缘 */
+
+.left-panel.is-collapsed .left-panel-toggle-btn {
+
+  position: fixed;
+
+  left: 0;
+
+  right: auto;
+
+  border-left: 1px solid #333;
+
+  border-right: none;
+
+  border-radius: 0 4px 4px 0;
+
+  z-index: 100; /* 🔥 确保折叠时也在最上层 */
+
+}
+
+
+
+.left-panel-toggle-btn:hover {
+
+  background: #2a2a2a;
+
+  width: 28px;
+
+}
+
+
+
+.left-panel-toggle-btn .el-icon {
+
+  color: #888;
+
+  font-size: 16px;
+
+  transition: color 0.3s;
+
+}
+
+
+
+.left-panel-toggle-btn:hover .el-icon {
+
+  color: #409eff;
+
+}
+
+
+
+/* 中间图表区域 */
+
+.center-panel {
+
+  flex: 1;
+
+  display: flex;
+
+  flex-direction: column;
+
+  background: #0a0a0a;
+
+  transition: all 0.3s ease;
+
+}
+
+
+
+.center-panel.full-width {
+
+  margin-left: 0;
+
+}
+
+.strategy-control-bar {
+
+  height: 40px;
+
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+
+  border-bottom: 1px solid #333;
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 0 15px;
+
+}
+
+
+
+.strategy-info {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+}
+
+
+
+.strategy-name {
+
+  font-weight: bold;
+
+  color: #00aaff;
+
+  font-size: 14px;
+
+}
+
+
+
+.strategy-symbol {
+
+  font-family: 'Consolas', 'Monaco', monospace;
+
+  color: #ccc;
+
+  font-size: 12px;
+
+}
+
+
+
+.strategy-actions {
+
+  display: flex;
+
+  gap: 8px;
+
+}
+
+
+
+/* Replay control bar */
+
+.replay-control-bar {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 8px 16px;
+
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+
+  border-bottom: 1px solid #0f3460;
+
+  flex-wrap: wrap;
+
+}
+
+
+
+.replay-config {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+}
+
+
+
+.replay-controls {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  flex: 1;
+
+}
+
+
+
+.replay-info {
+
+  font-size: 12px;
+
+  color: #a0aec0;
+
+  margin-left: 8px;
+
+}
+
+
+
+.replay-account {
+
+  font-size: 13px;
+
+  color: #e2e8f0;
+
+  margin-left: auto;
+
+}
+
+
+
+.slide-down-enter-active, .slide-down-leave-active {
+
+  transition: all 0.3s ease;
+
+}
+
+.slide-down-enter-from, .slide-down-leave-to {
+
+  opacity: 0;
+
+  transform: translateY(-10px);
+
+}
+
+
+
+/* 统一交易界面容器 */
+
+.unified-interface-container {
+
+  flex: 1;
+
+  display: flex;
+
+  flex-direction: column;
+
+  background: #0d1421;
+
+  min-height: 0;
+
+}
+
+
+
+/* 底部状态栏 */
+
+.bottom-status {
+
+  height: 24px;
+
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+
+  border-top: 1px solid #333;
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 0 10px;
+
+  font-size: 11px;
+
+}
+
+
+
+.status-left, .status-right {
+
+  display: flex;
+
+  gap: 15px;
+
+}
+
+
+
+.status-item {
+
+  color: #888;
+
+}
+
+
+
+/* 价格颜色 */
+
+.price-up {
+
+  color: #ff4444 !important;
+
+}
+
+
+
+.price-down {
+
+  color: #00aa00 !important;
+
+}
+
+
+
+.price-flat {
+
+  color: #ffffff !important;
+
+}
+
+
+
+/* 滚动条样式 */
+
+::-webkit-scrollbar {
+
+  width: 6px;
+
+  height: 6px;
+
+}
+
+
+
+::-webkit-scrollbar-track {
+
+  background: #1a1a1a;
+
+}
+
+
+
+::-webkit-scrollbar-thumb {
+
+  background: #555;
+
+  border-radius: 3px;
+
+}
+
+
+
+::-webkit-scrollbar-thumb:hover {
+
+  background: #777;
+
+}
+
+
+
+/* Element Plus 样式覆盖 */
+
+:deep(.el-button) {
+
+  background: #333;
+
+  border-color: #555;
+
+  color: #ccc;
+
+}
+
+
+
+:deep(.el-button:hover) {
+
+  background: #555;
+
+  border-color: #777;
+
+  color: #00aaff;
+
+}
+
+
+
+:deep(.el-button--primary) {
+
+  background: #00aaff;
+
+  border-color: #00aaff;
+
+  color: white;
+
+}
+
+
+
+:deep(.el-button--primary:hover) {
+
+  background: #0099ee;
+
+  border-color: #0099ee;
+
+}
+
+
+
+/* 响应式设计 */
+
+@media (max-width: 1400px) {
+
+  .left-panel {
+
+    width: 240px;
+
+  }
+
+}
+
+
+
+@media (max-width: 1200px) {
+
+  .left-panel {
+
+    width: 200px;
+
+  }
+
+  
+
+  .stock-details {
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+  }
+
+}
+
+
+
+/* 移动端适配 - 专业股票APP风格 */
+
+@media (max-width: 768px) {
+
+  .professional-trading {
+
+    height: 100vh;
+
+    overflow: visible; /* 🔥 改为 visible，允许固定定位的持仓面板显示 */
+
+    display: flex;
+
+    flex-direction: column;
+
+  }
+
+
+
+  /* 顶部股票信息栏 - 紧凑布局 */
+
+  .stock-info-bar {
+
+    height: auto;
+
+    min-height: auto;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    padding: 12px 15px 8px;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+
+  }
+
+
+
+  /* 股票选择器 - 隐藏或最小化 */
+
+  .stock-selector {
+
+    display: none; /* 移动端隐藏选择器，通过其他方式切换股票 */
+
+  }
+
+
+
+  /* 当前股票信息 - 紧凑横向布局 */
+
+  .current-stock {
+
+    flex-direction: row;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding: 0;
+
+    flex-wrap: wrap;
+
+  }
+
+
+
+  .current-stock .symbol {
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+  }
+
+
+
+  .current-stock .name {
+
+    font-size: 13px;
+
+    color: #999;
+
+  }
+
+
+
+  .current-stock .price {
+
+    font-size: 28px;
+
+    font-weight: bold;
+
+    flex: 1 0 100%;
+
+    margin: 4px 0;
+
+  }
+
+
+
+  .current-stock .change {
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+  }
+
+
+
+  /* 详细信息 - 网格布局 */
+
+  .stock-details {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 8px 12px;
+
+    width: 100%;
+
+    padding: 8px 0 4px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+  }
+
+
+
+  .detail-item {
+
+    font-size: 11px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+
+  }
+
+
+
+  .detail-item .value {
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+  }
+
+
+
+  /* 主要内容区域 - 占据剩余空间 */
+
+  .main-content {
+
+    flex: 1;
+
+    height: 0; /* 配合flex使用 */
+
+    flex-direction: column;
+
+    overflow: visible; /* 🔥 改为 visible，允许固定定位的持仓面板显示 */
+
+  }
+
+
+
+  /* 左侧面板 - 完全隐藏 */
+
+  .left-panel {
+
+    display: none !important;
+
+  }
+
+
+
+  /* 右侧面板 - 完全隐藏 */
+
+  .right-panel {
+
+    display: none !important;
+
+  }
+
+
+
+  /* 左侧面板按钮 - 改为浮动按钮 */
+
+  .left-panel-toggle-btn {
+
+    position: fixed;
+
+    left: 10px;
+
+    bottom: 80px;
+
+    right: auto;
+
+    top: auto;
+
+    transform: none;
+
+    width: 48px;
+
+    height: 48px;
+
+    border-radius: 50%;
+
+    background: rgba(0, 170, 255, 0.9);
+
+    border: 2px solid rgba(255, 255, 255, 0.2);
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    z-index: 1000;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+  }
+
+
+
+  .left-panel-toggle-btn:hover {
+
+    width: 48px;
+
+    background: rgba(0, 170, 255, 1);
+
+  }
+
+
+
+  .left-panel-toggle-btn .el-icon {
+
+    color: white;
+
+    font-size: 20px;
+
+  }
+
+
+
+  /* 中间图表区域 - 占据所有可用空间 */
+
+  .center-panel {
+
+    width: 100%;
+
+    height: 100%;
+
+    max-width: 100%;
+
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    overflow: hidden;
+
+  }
+
+
+
+  /* 策略控制栏 - 紧凑布局 */
+
+  .strategy-control-bar {
+
+    height: auto;
+
+    min-height: auto;
+
+    padding: 8px 12px;
+
+    flex-direction: row;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    flex-shrink: 0;
+
+  }
+
+
+
+  .strategy-info {
+
+    flex-direction: row;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex: 1;
+
+    min-width: 0;
+
+  }
+
+
+
+  .strategy-name {
+
+    font-size: 13px;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+  }
+
+
+
+  .strategy-symbol {
+
+    font-size: 11px;
+
+  }
+
+
+
+  .strategy-actions {
+
+    display: flex;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+
+  }
+
+
+
+  .strategy-actions .el-button {
+
+    min-height: 32px;
+
+    padding: 6px 12px;
+
+    font-size: 12px;
+
+  }
+
+
+
+  /* 统一交易界面容器 - 占据剩余空间 */
+
+  .unified-interface-container {
+
+    flex: 1;
+
+    height: 0; /* 配合flex使用 */
+
+    overflow: hidden;
+
+  }
+
+
+
+  /* 底部状态栏 - 隐藏或最小化 */
+
+  .bottom-status {
+
+    display: none; /* 移动端隐藏状态栏，节省空间 */
+
+  }
+
+
+
+  /* 按钮触摸优化 */
+
+  :deep(.el-button) {
+
+    min-height: 40px;
+
+    padding: 10px 16px;
+
+    font-size: 14px;
+
+  }
+
+
+
+  /* 选择器触摸优化 */
+
+  :deep(.el-select) {
+
+    min-height: 40px;
+
+  }
+
+
+
+  :deep(.el-select .el-input__wrapper) {
+
+    min-height: 40px;
+
+  }
+
+
+
+  /* 滚动条在移动端隐藏 */
+
+  ::-webkit-scrollbar {
+
+    width: 0;
+
+    height: 0;
+
+  }
+
+}
+
+
+
+/* 横屏模式优化 */
+
+@media (max-width: 768px) and (orientation: landscape) {
+
+  .professional-trading {
+
+    height: 100vh;
+
+  }
+
+
+
+  .stock-info-bar {
+
+    min-height: 80px;
+
+    flex-direction: row;
+
+    flex-wrap: wrap;
+
+  }
+
+
+
+  .stock-selector {
+
+    width: 200px;
+
+  }
+
+
+
+  .current-stock {
+
+    flex-direction: row;
+
+    flex-wrap: wrap;
+
+    flex: 1;
+
+  }
+
+
+
+  .left-panel:not(.is-collapsed) {
+
+    max-height: 300px;
+
+  }
+
+
+
+  .center-panel {
+
+    min-height: calc(100vh - 200px);
+
+  }
+
+
+
+  .bottom-status {
+
+    flex-direction: row;
+
+    min-height: 30px;
+
+  }
+
+
+
+  .status-left,
+
+  .status-right {
+
+    flex-direction: row;
+
+    width: auto;
+
+  }
+
+}
+
+
+
+/* 移动端适配 - 专业股票APP风格 */
+
+@media (max-width: 768px) {
+
+  .professional-trading.mobile-mode {
+
+    height: 100vh;
+
+    overflow: visible; /* 🔥 改为 visible，允许固定定位的持仓面板显示 */
+
+    display: flex;
+
+    flex-direction: column;
+
+    padding: 0;
+
+  }
+
+
+
+  /* 顶部股票信息栏 - 紧凑布局 */
+
+  .stock-info-bar.mobile {
+
+    height: auto;
+
+    max-height: 80px;
+
+    padding: 8px 12px;
+
+    display: grid;
+
+    grid-template-columns: 1fr auto;
+
+    grid-template-rows: auto auto;
+
+    gap: 4px 12px;
+
+    border-bottom: 1px solid #2a2a2a;
+
+    flex-shrink: 0;
+
+  }
+
+
+
+  /* 股票选择器 - 移动端隐藏 */
+
+  .stock-selector {
+
+    display: none;
+
+  }
+
+
+
+  /* 当前股票信息 - 紧凑横向布局 */
+
+  .current-stock.mobile {
+
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: center;
+
+    gap: 8px;
+
+    grid-column: 1 / 2;
+
+    grid-row: 1 / 2;
+
+  }
+
+
+
+  .current-stock.mobile .symbol {
+
+    font-size: 16px;
+
+    font-weight: 700;
+
+    color: #fff;
+
+    white-space: nowrap;
+
+  }
+
+
+
+  .current-stock.mobile .name {
+
+    display: none; /* 移动端隐藏名称，节省空间 */
+
+  }
+
+
+
+  .current-stock.mobile .price {
+
+    font-size: 22px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+  }
+
+
+
+  .current-stock.mobile .change {
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+
+  }
+
+
+
+  /* 股票详细信息 - 移动端使用Grid紧凑显示 */
+
+  .stock-details {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 4px 8px;
+
+    grid-column: 1 / 3;
+
+    grid-row: 2 / 3;
+
+    font-size: 11px;
+
+  }
+
+
+
+  .stock-details .detail-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 2px;
+
+    color: #999;
+
+    white-space: nowrap;
+
+  }
+
+
+
+  .stock-details .detail-item .value {
+
+    color: #fff;
+
+    font-weight: 500;
+
+  }
+
+
+
+  /* 主内容区域 */
+
+  .main-content {
+
+    flex-direction: column;
+
+    height: calc(100vh - 60px);
+
+    flex: 1;
+
+    overflow: visible; /* 🔥 改为 visible，允许固定定位的持仓面板显示 */
+
+  }
+
+
+
+  /* 左侧面板 - 移动端隐藏 */
+
+  .left-panel {
+
+    display: none;
+
+  }
+
+
+
+  /* 中间K线图区域 - 全宽 */
+
+  .center-panel.full-width {
+
+    width: 100%;
+
+    margin: 0;
+
+    flex: 1;
+
+    overflow: visible; /* 🔥 改为 visible，允许固定定位的持仓面板显示 */
+
+  }
+
+
+
+  /* 底部状态栏 - 移动端隐藏 */
+
+  .bottom-status {
+
+    display: none;
+
+  }
+
+
+
+  /* 移动端交易面板样式 */
+
+  .mobile-trading-panel {
+
+    padding: 16px;
+
+    background: #1a1a1a;
+
+  }
+
+
+
+  .mobile-trading-panel h3 {
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    margin: 0 0 16px 0;
+
+    color: #fff;
+
+  }
+
+}
+
+
+
+/* 横屏模式 */
+
+@media (max-width: 768px) and (orientation: landscape) {
+
+  .stock-info-bar.mobile {
+
+    height: 50px;
+
+    padding: 6px 12px;
+
+  }
+
+
+
+  .main-content {
+
+    height: calc(100vh - 50px);
+
+  }
+
+}
+
+
+
+/* 小屏幕手机优化 */
+
+@media (max-width: 480px) {
+
+  .stock-info-bar {
+
+    padding: 8px;
+
+  }
+
+
+
+  .current-stock .symbol {
+
+    font-size: 14px;
+
+  }
+
+
+
+  .current-stock .price {
+
+    font-size: 18px;
+
+  }
+
+
+
+  .detail-item {
+
+    flex: 1 1 100%;
+
+    font-size: 10px;
+
+  }
+
+
+
+  .strategy-name {
+
+    font-size: 13px;
+
+  }
+
+
+
+  :deep(.el-button) {
+
+    padding: 10px 16px;
+
+    font-size: 13px;
+
+  }
+
+}
+
+
+
+/* ===== Mobile FABs ===== */
+
+.mobile-fab-trade {
+
+  position: fixed;
+
+  right: 16px;
+
+  bottom: calc(24px + env(safe-area-inset-bottom));
+
+  width: 56px;
+
+  height: 56px;
+
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  border: none;
+
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  cursor: pointer;
+
+  z-index: 800;
+
+  color: white;
+
+  touch-action: manipulation;
+
+}
+
+.mobile-fab-trade:active { transform: scale(0.92); }
+
+
+
+.mobile-fab-bot {
+
+  position: fixed;
+
+  left: 16px;
+
+  bottom: calc(24px + env(safe-area-inset-bottom));
+
+  width: 56px;
+
+  height: 56px;
+
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, #00b894, #00cec9);
+
+  border: none;
+
+  box-shadow: 0 4px 12px rgba(0, 184, 148, 0.4);
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  cursor: pointer;
+
+  z-index: 800;
+
+  color: white;
+
+  touch-action: manipulation;
+
+}
+
+.mobile-fab-bot:active { transform: scale(0.92); }
+
+
+
+/* ===== Mobile symbol chip (top bar) ===== */
+
+.mobile-symbol-chip {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 4px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  border-radius: 16px;
+
+  padding: 6px 12px;
+
+  color: #fff;
+
+  font-size: 13px;
+
+  cursor: pointer;
+
+  min-height: 44px;
+
+  min-width: 44px;
+
+  touch-action: manipulation;
+
+}
+
+.mobile-symbol-chip:active { background: rgba(255, 255, 255, 0.15); }
+
+
+
+/* ===== Mobile symbol picker overlay ===== */
+
+.mobile-symbol-overlay {
+
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.6);
+
+  z-index: 2000;
+
+  display: flex;
+
+  align-items: flex-end;
+
+}
+
+.mobile-symbol-sheet {
+
+  width: 100%;
+
+  max-height: 70vh;
+
+  background: #1a1a1a;
+
+  border-radius: 16px 16px 0 0;
+
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+
+  display: flex;
+
+  flex-direction: column;
+
+}
+
+.sheet-handle {
+
+  width: 36px;
+
+  height: 4px;
+
+  background: #555;
+
+  border-radius: 2px;
+
+  margin: 0 auto 12px;
+
+}
+
+.sheet-title {
+
+  color: #fff;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  margin: 0 0 12px;
+
+}
+
+.sheet-search {
+
+  width: 100%;
+
+  padding: 10px 14px;
+
+  background: #2a2a2a;
+
+  border: 1px solid #444;
+
+  border-radius: 8px;
+
+  color: #fff;
+
+  font-size: 14px;
+
+  outline: none;
+
+  margin-bottom: 8px;
+
+  min-height: 44px;
+
+}
+
+.sheet-search::placeholder { color: #888; }
+
+.sheet-list {
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  -webkit-overflow-scrolling: touch;
+
+}
+
+.sheet-symbol-item {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px 8px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  min-height: 48px;
+
+  touch-action: manipulation;
+
+}
+
+.sheet-symbol-item:active { background: rgba(255, 255, 255, 0.08); }
+
+.sheet-symbol-item.active { background: rgba(64, 158, 255, 0.12); }
+
+.sym-code { color: #409eff; font-family: monospace; font-weight: 600; font-size: 14px; }
+
+.sym-name { color: #ccc; font-size: 13px; }
+
+
+
+/* ===== Mobile bottom drawer ===== */
+
+.mobile-drawer-overlay {
+
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.5);
+
+  z-index: 1500;
+
+  display: flex;
+
+  align-items: flex-end;
+
+}
+
+.mobile-bottom-drawer {
+
+  width: 100%;
+
+  background: #1a1a1a;
+
+  border-radius: 16px 16px 0 0;
+
+  transition: height 0.2s ease;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+}
+
+.drawer-drag-handle {
+
+  width: 36px;
+
+  height: 4px;
+
+  background: #555;
+
+  border-radius: 2px;
+
+  margin: 10px auto 8px;
+
+  flex-shrink: 0;
+
+}
+
+.drawer-content {
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  -webkit-overflow-scrolling: touch;
+
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+
+}
+
+.drawer-section {
+
+  padding: 12px 0;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+}
+
+.drawer-section:last-child { border-bottom: none; }
+
+.drawer-section-title {
+
+  color: #fff;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  margin: 0 0 10px;
+
+}
+
+.drawer-price-row {
+
+  display: flex;
+
+  align-items: baseline;
+
+  gap: 12px;
+
+}
+
+.drawer-price {
+
+  font-size: 28px;
+
+  font-weight: 700;
+
+  font-family: monospace;
+
+}
+
+.drawer-change {
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+}
+
+.drawer-order-type {
+
+  display: flex;
+
+  gap: 8px;
+
+  margin-bottom: 12px;
+
+}
+
+.order-type-btn {
+
+  flex: 1;
+
+  min-height: 44px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  background: #2a2a2a;
+
+  color: #888;
+
+  touch-action: manipulation;
+
+}
+
+.order-type-btn.active { background: #00aa00; color: #fff; }
+
+.order-type-btn.sell.active { background: #ff4444; color: #fff; }
+
+.drawer-input-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 10px;
+
+}
+
+.drawer-input-row label {
+
+  color: #888;
+
+  font-size: 13px;
+
+  width: 60px;
+
+  flex-shrink: 0;
+
+}
+
+.drawer-input {
+
+  flex: 1;
+
+  padding: 10px 12px;
+
+  background: #2a2a2a;
+
+  border: 1px solid #444;
+
+  border-radius: 8px;
+
+  color: #fff;
+
+  font-size: 15px;
+
+  min-height: 44px;
+
+  outline: none;
+
+}
+
+.drawer-input:focus { border-color: #409eff; }
+
+.drawer-quick-qty {
+
+  display: flex;
+
+  gap: 8px;
+
+  margin-bottom: 14px;
+
+}
+
+.quick-qty-btn {
+
+  flex: 1;
+
+  min-height: 36px;
+
+  border: 1px solid #444;
+
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #ccc;
+
+  font-size: 13px;
+
+  cursor: pointer;
+
+  touch-action: manipulation;
+
+}
+
+.quick-qty-btn:active { background: rgba(255, 255, 255, 0.08); }
+
+.drawer-submit-btn {
+
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  color: #fff;
+
+  touch-action: manipulation;
+
+}
+
+.drawer-submit-btn.buy { background: #00aa00; }
+
+.drawer-submit-btn.sell { background: #ff4444; }
+
+.drawer-submit-btn:active { opacity: 0.85; }
+
+
+
+.drawer-positions-placeholder {
+
+  padding: 20px 0;
+
+  text-align: center;
+
+}
+
+
+
+/* Transition helpers */
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.slide-up-enter-from, .slide-up-leave-to { opacity: 0; }
+
+.slide-up-enter-from .mobile-bottom-drawer,
+
+.slide-up-leave-to .mobile-bottom-drawer { transform: translateY(100%); }
+
+
+
+/* ===== Mobile chart full-screen override ===== */
+
+@media (max-width: 767px) {
+
+  .professional-trading {
+
+    touch-action: manipulation;
+
+  }
+
+
+
+  .unified-interface-container {
+
+    height: calc(100vh - 120px) !important;
+
+    flex: none !important;
+
+  }
+
+
+
+  /* Horizontal scrollable indicator chips */
+
+  .strategy-control-bar {
+
+    overflow-x: auto;
+
+    white-space: nowrap;
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+
+  }
+
+  .strategy-control-bar::-webkit-scrollbar { display: none; }
+
+
+
+  /* Hide FABs on desktop */
+
+  .mobile-fab-trade,
+
+  .mobile-fab-bot,
+
+  .mobile-symbol-chip {
+
+    display: flex;
+
+  }
+
+}
+
+
+
+@media (min-width: 768px) {
+
+  .mobile-fab-trade,
+
+  .mobile-fab-bot,
+
+  .mobile-symbol-chip,
+
+  .mobile-symbol-overlay,
+
+  .mobile-drawer-overlay {
+
+    display: none !important;
+
+  }
+
+}
+

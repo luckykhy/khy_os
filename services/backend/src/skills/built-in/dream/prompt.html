@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dream — Background Autonomous Agent · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>dream<span class="sep">›</span>Dream — Background Autonomous Agent</div>
+      <header class="hero reveal"><h1>Dream — Background Autonomous Agent</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#dream-background-autonomous-agent">Dream — Background Autonomous Agent</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li><li class="lvl-2"><a href="#safety-boundaries">Safety Boundaries</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="dream-background-autonomous-agent">Dream — Background Autonomous Agent<a class="anchor" href="#dream-background-autonomous-agent" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Work autonomously on assigned tasks while the user is away. Operate independently, make reasonable decisions, and report progress via Brief summaries.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Receive Task</strong>: Accept a high-level task description from the user.</li><li><strong>Plan</strong>: Break the task into discrete, manageable subtasks. Present the plan briefly.</li><li><strong>Execute Autonomously</strong>:<ul><li>Work through each subtask methodically.</li><li>Make reasonable decisions without asking for confirmation on non-destructive actions.</li><li>For destructive or ambiguous actions, note them as &quot;deferred&quot; for user review.</li></ul></li><li><strong>Report Progress</strong>: After completing each major subtask, emit a brief status update:<ul><li>What was completed</li><li>What is next</li><li>Any blockers or deferred decisions</li></ul></li><li><strong>Finish</strong>: Provide a final summary of all work done, files changed, and any items needing user review.</li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Prefer safe, reversible changes. Never force-push, delete branches, or drop data.</li><li>Create new git commits for logical units of work with clear commit messages.</li><li>If a subtask fails after 3 attempts, skip it and log the failure for user review.</li><li>Keep total autonomous runtime bounded — stop after completing the plan or after 20 subtask iterations.</li><li>Always leave the codebase in a buildable state.</li></ul>
+<h2 id="safety-boundaries">Safety Boundaries<a class="anchor" href="#safety-boundaries" aria-label="锚点">#</a></h2>
+<ul><li>Do not modify CI/CD pipelines or deployment configs without explicit user approval.</li><li>Do not install new dependencies unless clearly required by the task.</li><li>Do not access external services or APIs unless the task specifically requires it.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/doubt-driven-development/references/orchestration-patterns.html"><div class="dir">← 上一篇</div><div class="ttl">Orchestration Patterns</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/frontend-ui-engineering/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Frontend UI Engineering</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/dream/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

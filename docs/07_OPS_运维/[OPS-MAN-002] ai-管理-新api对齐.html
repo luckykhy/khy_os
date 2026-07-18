@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 管理页 NewAPI 对齐说明（对比度 + 配置能力） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）</div>
+      <header class="hero reveal"><h1>AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ai-管理页-newapi-对齐说明-对比度-配置能力">AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）</a></li><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#样式改造范围">样式改造范围</a></li><li class="lvl-3"><a href="#全局主题">全局主题</a></li><li class="lvl-3"><a href="#关键页面">关键页面</a></li><li class="lvl-2"><a href="#功能补齐范围">功能补齐范围</a></li><li class="lvl-3"><a href="#1-模型与-api-key-配置-hermes-openclaw-opencode-风格">1) 模型与 API Key 配置（Hermes/OpenClaw/OpenCode 风格）</a></li><li class="lvl-3"><a href="#2-api-key-多格式解析">2) API Key 多格式解析</a></li><li class="lvl-3"><a href="#3-新增总览页面-对齐-newapi-dashboard-思路">3) 新增总览页面（对齐 NewAPI Dashboard 思路）</a></li><li class="lvl-3"><a href="#4-监控中心能力增强-对齐-newapi-使用日志思路">4) 监控中心能力增强（对齐 NewAPI 使用日志思路）</a></li><li class="lvl-3"><a href="#5-桥接渠道管理页-claude-codex-kiro-其它中转通道">5) 桥接渠道管理页（Claude/Codex/Kiro/其它中转通道）</a></li><li class="lvl-3"><a href="#6-oauth-provider-凭据管理-新增">6) OAuth Provider 凭据管理（新增）</a></li><li class="lvl-2"><a href="#与工程规则一致性">与工程规则一致性</a></li><li class="lvl-2"><a href="#验证记录">验证记录</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-002 | 阶段: 运维 | 原路径: docs/指南/ai-管理-新api对齐.md --&gt;</p>
+<h1 id="ai-管理页-newapi-对齐说明-对比度-配置能力">AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）<a class="anchor" href="#ai-管理页-newapi-对齐说明-对比度-配置能力" aria-label="锚点">#</a></h1>
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<p>针对 <code>new-api-main</code> 的可读性与配置交互体验，对 KHY 的 AI 管理页面进行两类补强：</p>
+<ol><li>页面可读性：提升字体与背景对比度，减少“灰字看不清”问题。</li><li>配置能力：补齐 OpenAI-compatible 模型与 API Key 的多格式输入能力，并覆盖密钥池导入。</li></ol>
+<blockquote><p>📌 <strong>找「每家 provider 怎么配」？</strong> 本文聚焦管理页的 NewAPI 风格对齐与后端配置能力。若你想按<strong>来源类型</strong>快速选对配置路径（登录态导入 / 订阅登录 / API-Key 直连 / 本地中继四类模式），见 [OPS-MAN-003] §8「网关来源四类配置模式总览」；API-Key 自定义 provider 的预设机制见 [OPS-MAN-032]。</p></blockquote>
+<hr>
+<h2 id="样式改造范围">样式改造范围<a class="anchor" href="#样式改造范围" aria-label="锚点">#</a></h2>
+<h3 id="全局主题">全局主题<a class="anchor" href="#全局主题" aria-label="锚点">#</a></h3>
+<ul><li>新增高对比主题文件：<code>apps/ai-frontend/src/styles/newapi-theme.css</code></li><li>已在 <code>apps/ai-frontend/src/main.js</code> 全局引入。</li><li>主要改动：<ul><li>改为 NewAPI 风格浅色基底 + 高对比文本，避免“黑底深灰字”</li><li>Element Plus 全局颜色变量重写（表格、表单、弹窗、描述列表、统计组件）</li><li>提升 placeholder、secondary text、header text 对比度</li><li>菜单 hover/active 可见性增强</li></ul></li></ul>
+<h3 id="关键页面">关键页面<a class="anchor" href="#关键页面" aria-label="锚点">#</a></h3>
+<ul><li><code>apps/ai-frontend/src/views/Layout.vue</code><ul><li>顶部导航栏视觉重构（高对比、阴影、边界线）</li></ul></li><li><code>apps/ai-frontend/src/views/Login.vue</code><ul><li>登录卡片、标题、提示文本可读性提升</li><li>增加“默认管理员账号填充”按钮（<code>admin / admin123</code>）</li></ul></li><li><code>apps/ai-frontend/src/views/AIGateway.vue</code><ul><li>标题、卡片、提示、配置动作区等统一为高对比风格</li></ul></li><li><code>apps/ai-frontend/src/views/AIMonitor.vue</code><ul><li>新增筛选栏（适配器/状态/时间/关键词）</li><li>新增自动刷新与详情弹窗（可查看 prompt/response/error/cascade）</li></ul></li><li><code>apps/ai-frontend/src/views/AIChat.vue</code><ul><li>聊天窗、气泡、输入区整体重做为高对比样式</li></ul></li><li><code>apps/ai-frontend/src/views/AIDashboard.vue</code><ul><li>新增总览页（适配器、密钥池、账号池、客户、请求统计、快捷入口、最近请求）</li></ul></li></ul>
+<hr>
+<h2 id="功能补齐范围">功能补齐范围<a class="anchor" href="#功能补齐范围" aria-label="锚点">#</a></h2>
+<h3 id="1-模型与-api-key-配置-hermes-openclaw-opencode-风格">1) 模型与 API Key 配置（Hermes/OpenClaw/OpenCode 风格）<a class="anchor" href="#1-模型与-api-key-配置-hermes-openclaw-opencode-风格" aria-label="锚点">#</a></h3>
+<p>前端页面：<code>AIGateway -&gt; 模型与 API Key 配置</code></p>
+<p>后端接口：</p>
+<ul><li><code>GET /api/ai-gateway/model-config</code></li><li><code>PUT /api/ai-gateway/model-config</code></li></ul>
+<p>支持能力：</p>
+<ul><li>Base URL 自动规范化：若缺失 <code>/v1</code> 自动补全</li><li>兼容协议：<code>openai | anthropic | unknown</code></li><li>动态模型 ID（非固定某个模型名）</li><li>可选清空 Key（同时清理 <code>RELAY_API_KEY</code> / <code>RELAY_API_KEYS</code>）</li></ul>
+<h3 id="2-api-key-多格式解析">2) API Key 多格式解析<a class="anchor" href="#2-api-key-多格式解析" aria-label="锚点">#</a></h3>
+<p>后端统一支持以下输入：</p>
+<ul><li>单 Key：<code>sk-xxx</code></li><li>Bearer：<code>Bearer sk-xxx</code></li><li>KV：<code>key=sk-xxx</code> / <code>token: sk-xxx</code></li><li>多 Key：换行 / 逗号 / 分号分隔</li><li>JSON：数组/对象（含 <code>key</code>/<code>apiKey</code>/<code>token</code>/<code>keys</code>/<code>tokens</code>）</li></ul>
+<p>落地点：</p>
+<ul><li><code>PUT /api/ai-gateway/model-config</code>（模型配置）</li><li><code>POST /api/ai-gateway/pool/:provider/keys</code>（密钥池导入）</li></ul>
+<p>密钥池新增行为：</p>
+<ul><li>一次可导入多个 Key</li><li>自动跳过重复 Key</li><li>返回导入统计（成功数/跳过数）</li></ul>
+<h3 id="3-新增总览页面-对齐-newapi-dashboard-思路">3) 新增总览页面（对齐 NewAPI Dashboard 思路）<a class="anchor" href="#3-新增总览页面-对齐-newapi-dashboard-思路" aria-label="锚点">#</a></h3>
+<p>新增路由：</p>
+<ul><li><code>/dashboard</code>（默认首页）</li></ul>
+<p>新增能力：</p>
+<ul><li>一屏查看关键运营指标（适配器可用数、密钥总量、账号活跃、客户与令牌、请求量、时延）</li><li>自动刷新开关</li><li>快捷跳转到网关/账号池/资产客户/监控/对话</li><li>最近请求列表（快速排查）</li></ul>
+<p>涉及文件：</p>
+<ul><li><code>apps/ai-frontend/src/views/AIDashboard.vue</code></li><li><code>apps/ai-frontend/src/router/index.js</code></li><li><code>apps/ai-frontend/src/views/Layout.vue</code></li></ul>
+<h3 id="4-监控中心能力增强-对齐-newapi-使用日志思路">4) 监控中心能力增强（对齐 NewAPI 使用日志思路）<a class="anchor" href="#4-监控中心能力增强-对齐-newapi-使用日志思路" aria-label="锚点">#</a></h3>
+<ul><li>筛选参数：<code>provider</code> / <code>success</code> / <code>since</code> / <code>keyword</code></li><li>自动刷新（15s）</li><li>行点击详情弹窗（请求、响应、错误、级联尝试）</li></ul>
+<p>涉及文件：</p>
+<ul><li><code>apps/ai-frontend/src/views/AIMonitor.vue</code></li><li><code>apps/ai-frontend/src/composables/useAIMonitor.js</code></li></ul>
+<h3 id="5-桥接渠道管理页-claude-codex-kiro-其它中转通道">5) 桥接渠道管理页（Claude/Codex/Kiro/其它中转通道）<a class="anchor" href="#5-桥接渠道管理页-claude-codex-kiro-其它中转通道" aria-label="锚点">#</a></h3>
+<p>新增页面与路由：</p>
+<ul><li>页面：<code>apps/ai-frontend/src/views/BridgeChannels.vue</code></li><li>路由：<code>/bridge-channels</code></li></ul>
+<p>补齐能力：</p>
+<ul><li>按渠道管理 Token/API Key（支持多格式、多 Key 导入）</li><li>渠道级 API Endpoint、标签、优先级编辑</li><li>渠道默认模型、服务协议（OpenAI/Anthropic/Auto）配置</li><li>渠道适配器状态展示（是否可用 + 状态说明）</li><li>覆盖渠道从 <code>claude/codex</code> 扩展为：<ul><li><code>kiro</code></li><li><code>cursor</code></li><li><code>trae</code></li><li><code>windsurf</code></li><li><code>api</code>（通用 OpenAI-compatible 中转）</li><li><code>relay</code>（手动中转）</li><li><code>ollama</code></li></ul></li></ul>
+<p>后端能力补充：</p>
+<ul><li><code>PUT /api/ai-gateway/pool/:provider/keys/:keyId</code>（编辑 endpoint/label/priority）</li><li><code>GET /api/ai-gateway/pool</code> 返回项新增 <code>endpoint</code></li></ul>
+<h3 id="6-oauth-provider-凭据管理-新增">6) OAuth Provider 凭据管理（新增）<a class="anchor" href="#6-oauth-provider-凭据管理-新增" aria-label="锚点">#</a></h3>
+<p>新增后端接口：</p>
+<ul><li><code>GET /api/ai-gateway/oauth/providers</code><ul><li>返回 OAuth provider 能力（是否支持 refresh、是否有 token/revoke endpoint）</li><li>返回每个 provider 的注册状态（hasClientId/hasRefreshToken/expiresIn/error）</li></ul></li><li><code>GET /api/ai-gateway/oauth/credentials/:provider</code><ul><li>查询单个 provider 的凭据状态（不返回明文 token）</li></ul></li><li><code>PUT /api/ai-gateway/oauth/credentials/:provider</code><ul><li>保存或增量更新 OAuth 凭据（clientId/clientSecret/refreshToken/accessToken/expiresAt）</li></ul></li><li><code>DELETE /api/ai-gateway/oauth/credentials/:provider</code><ul><li>清除 provider 的 OAuth 凭据</li></ul></li><li><code>POST /api/ai-gateway/oauth/:provider/refresh</code><ul><li>手动触发 token refresh，并返回最新状态</li></ul></li></ul>
+<p>前端桥接页新增 OAuth 面板：</p>
+<ul><li>列表查看 provider 的 OAuth 状态与能力标签</li><li>对 <code>codex/kiro</code> 等支持 refresh 的 provider 可直接触发刷新</li><li>支持配置/清除凭据，满足“Claude/Codex/Kiro/其它中转”统一入口管理诉求</li></ul>
+<hr>
+<h2 id="与工程规则一致性">与工程规则一致性<a class="anchor" href="#与工程规则一致性" aria-label="锚点">#</a></h2>
+<p>已移除本次变更文件中的 <code>localhost:port</code> 硬编码示例，改为环境驱动或通用提示文案，避免违反“零硬编码端点”规则。</p>
+<hr>
+<h2 id="验证记录">验证记录<a class="anchor" href="#验证记录" aria-label="锚点">#</a></h2>
+<p>已执行：</p>
+<pre><code class="language-bash">node --check services/ai-backend/src/routes/aiGatewayAdmin.js
+npm --prefix apps/ai-frontend run build
+node scripts/check-agent-rules.js services/ai-backend/src/routes/aiGatewayAdmin.js apps/ai-frontend/src/views/AIGateway.vue apps/ai-frontend/src/views/AIChat.vue apps/ai-frontend/src/views/AIMonitor.vue apps/ai-frontend/src/styles/newapi-theme.css</code></pre>
+<p>结果：</p>
+<ul><li>语法检查通过</li><li>前端构建通过</li><li>规则检查无 error（存在部分 warning，主要为通用 <code>loading</code> 检测提示）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-001] ai-快速通道.html"><div class="dir">← 上一篇</div><div class="ttl">KHY AI 快速通道（AI Fast Lane）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-003] ai-管理-访问与登录.html"><div class="dir">下一篇 →</div><div class="ttl">KHY AI 管理页访问与登录说明</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

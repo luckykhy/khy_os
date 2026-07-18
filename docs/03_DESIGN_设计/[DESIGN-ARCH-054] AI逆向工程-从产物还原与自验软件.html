@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-054-ai-逆向工程-从产物还原与自验软件">[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件</a></li><li class="lvl-2"><a href="#1-背景与目标">1. 背景与目标</a></li><li class="lvl-2"><a href="#2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）</a></li><li class="lvl-2"><a href="#3-模块-7-纯模块-1-门面">3. 模块（7 纯模块 + 1 门面）</a></li><li class="lvl-3"><a href="#3-1-formatregistry-js-制品格式单一真源">3.1 `formatRegistry.js` —— 制品格式单一真源</a></li><li class="lvl-3"><a href="#3-2-artifactscanner-js-只读分诊">3.2 `artifactScanner.js` —— 只读分诊</a></li><li class="lvl-3"><a href="#3-3-stringharvester-js-字符串证据">3.3 `stringHarvester.js` —— 字符串证据</a></li><li class="lvl-3"><a href="#3-4-sourcerecoverer-js-自包含产物还原-source-档主路径">3.4 `sourceRecoverer.js` —— 自包含产物还原（SOURCE 档主路径）</a></li><li class="lvl-3"><a href="#3-5-toolorchestrator-js-外部反编译-反汇编编排">3.5 `toolOrchestrator.js` —— 外部反编译/反汇编编排</a></li><li class="lvl-3"><a href="#3-6-reconstructionport-js-证据-结构化重建">3.6 `reconstructionPort.js` —— 证据 → 结构化重建</a></li><li class="lvl-3"><a href="#3-7-verificationledger-js-保真度自验">3.7 `verificationLedger.js` —— 保真度自验</a></li><li class="lvl-3"><a href="#3-8-index-js-门面">3.8 `index.js` —— 门面</a></li><li class="lvl-2"><a href="#4-工具契约-reverse-engineer">4. 工具契约 `reverse_engineer`</a></li><li class="lvl-2"><a href="#5-验证">5. 验证</a></li><li class="lvl-2"><a href="#6-后续增强-未接线-留后续-pr">6. 后续增强（未接线，留后续 PR）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-054-ai-逆向工程-从产物还原与自验软件">[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件<a class="anchor" href="#design-arch-054-ai-逆向工程-从产物还原与自验软件" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（确定性核心 + 模型增益 + 自验闭环）<br>子系统：<code>services/backend/src/services/reverseEngineer/</code><br>工具：<code>reverse_engineer</code>（<code>services/backend/src/tools/reverseEngineer.js</code>）<br>测试：<code>services/backend/tests/services/reverseEngineer/reverseEngineer.test.js</code>（36 例绿）</p></blockquote>
+<h2 id="1-背景与目标">1. 背景与目标<a class="anchor" href="#1-背景与目标" aria-label="锚点">#</a></h2>
+<p>打包后常常只剩一个 <code>exe</code>/<code>dll</code>/<code>so</code>/<code>jar</code>/<code>wasm</code>，源码丢失或不在手边。诉求是让 Khy-OS 具备<br><strong>AI 逆向分析、还原软件结构</strong>的能力，从而 <strong>khy 自己生成的软件也能由 khy 更好地验证</strong>。</p>
+<p>目标拆成两层：</p>
+<ol><li><strong>还原/分析</strong>：从编译产物尽可能取回源码或重建高层结构（语言、工具链、模块、入口、伪源码）。</li><li><strong>自验</strong>：当产物由 khy 构建（有构建清单）时，逆向还原的结构能与清单比对，给出<strong>保真度评分</strong>，</li></ol>
+<p>形成「构建 → 产物 → 逆向 → 比对」的闭环。</p>
+<h2 id="2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）<a class="anchor" href="#2-设计原则-与全局工程铁律一致" aria-label="锚点">#</a></h2>
+<ul><li><strong>只读、绝不执行被分析的制品</strong>（防呆①）。逆向永远只读字节，不运行不可信二进制。</li><li><strong>确定性优先、模型增益</strong>：分诊/字符串/源码还原/比对全部确定性、零模型；模型只在最后做</li></ul>
+<p>「证据 → 结构」的推断，且<strong>无模型也能跑</strong>（退化为证据报告）。</p>
+<ul><li><strong>证据 ≠ 推断</strong>（防呆①续）：报告里确定性证据与模型推断严格分离，模型产物标 <code>source:'model'</code></li></ul>
+<p>且带 <code>confidence</code>，绝不把猜测混进事实。</p>
+<ul><li><strong>外部工具不存在就如实说</strong>（防呆②）：反编译器一律运行时探活，没有就给安装提示并降级，</li></ul>
+<p><strong>绝不伪造反汇编/反编译输出</strong>。</p>
+<ul><li><strong>零硬编码、单一真源</strong>：格式签名集中在 <code>formatRegistry</code>，工具计划集中在 <code>toolOrchestrator.PLANS</code>。</li><li><strong>沙箱安全</strong>：解包复用 unpackTool 同源护栏（路径穿越/绝对路径/盘符/总量上限）（防呆④）；</li></ul>
+<p>外部工具一律 <code>execFile</code>（无 shell）+ 超时 + 输出上限，制品路径作参数注入而非拼命令行（防呆⑤）。</p>
+<ul><li><strong>授权语义</strong>：逆向定位为「自验自有/受权软件」（防呆⑥）。未提供构建清单且未显式 <code>authorized</code></li></ul>
+<p>时，仅做只读分诊与字符串归纳，不驱动反编译与源码还原。</p>
+<ul><li><strong>fail-soft</strong>：任一阶段失败只降级该段证据，绝不冒泡使整条流水线崩溃；门面 <code>analyze</code> 永不抛。</li></ul>
+<h2 id="3-模块-7-纯模块-1-门面">3. 模块（7 纯模块 + 1 门面）<a class="anchor" href="#3-模块-7-纯模块-1-门面" aria-label="锚点">#</a></h2>
+<h3 id="3-1-formatregistry-js-制品格式单一真源">3.1 <code>formatRegistry.js</code> —— 制品格式单一真源<a class="anchor" href="#3-1-formatregistry-js-制品格式单一真源" aria-label="锚点">#</a></h3>
+<p>声明式表：魔数签名（偏移+字节）、家族、<strong>可还原档位</strong>（SOURCE/BYTECODE/NATIVE/ARCHIVE）、<br>候选外部工具、还原策略提示。另有 <code>EMBEDDED_MARKERS</code>（.NET/PyInstaller/Node SEA/pkg/nexe/Go/Rust）<br>用内嵌特征二次升级档位。数据与匹配逻辑分离（匹配在 scanner）。</p>
+<h3 id="3-2-artifactscanner-js-只读分诊">3.2 <code>artifactScanner.js</code> —— 只读分诊<a class="anchor" href="#3-2-artifactscanner-js-只读分诊" aria-label="锚点">#</a></h3>
+<p>读头部签名 + 头/尾窗口标记，输出格式/家族/档位/架构/大小/SHA-256/命中标记。处理 <code>cafebabe</code><br>撞号消歧（Java class ↔ macOS fat Mach-O，用 major 版本字节判定）。畸形/不可读降级为 <code>unknown</code>，永不抛。</p>
+<h3 id="3-3-stringharvester-js-字符串证据">3.3 <code>stringHarvester.js</code> —— 字符串证据<a class="anchor" href="#3-3-stringharvester-js-字符串证据" aria-label="锚点">#</a></h3>
+<p>提取 ASCII + UTF-16LE 可打印串（带偏移），按 URL/路径/版本/邮箱/密钥分类，并匹配工具链指纹<br>（gcc/clang/msvc/rustc/go/python/node/dotnet/electron/upx）。纯确定性，信息密度最高的免费证据。</p>
+<h3 id="3-4-sourcerecoverer-js-自包含产物还原-source-档主路径">3.4 <code>sourceRecoverer.js</code> —— 自包含产物还原（SOURCE 档主路径）<a class="anchor" href="#3-4-sourcerecoverer-js-自包含产物还原-source-档主路径" aria-label="锚点">#</a></h3>
+<p>ZIP 家族（jar/whl/nupkg/apk/asar-zip）安全解包并编目成员（source/bytecode/asset）；脚本直接登记；<br>PyInstaller/Node 自包含产物<strong>诚实交棒</strong>给 toolOrchestrator（不重写易错的 CArchive 解析器）。<br>默认仅编目（listOnly），给出 <code>outDir</code> 才落盘抽取。</p>
+<h3 id="3-5-toolorchestrator-js-外部反编译-反汇编编排">3.5 <code>toolOrchestrator.js</code> —— 外部反编译/反汇编编排<a class="anchor" href="#3-5-toolorchestrator-js-外部反编译-反汇编编排" aria-label="锚点">#</a></h3>
+<p><code>PLANS</code>：family → 候选工具链（objdump/nm/readelf/radare2/otool/ilspycmd/jadx/javap/wasm2wat/<br>decompyle3…）。<code>probe</code> 探活，<code>orchestrate</code> 选最高优先级可用工具执行（execFile+超时+输出上限），<br>无工具则给安装提示并降级。绝不伪造输出。</p>
+<h3 id="3-6-reconstructionport-js-证据-结构化重建">3.6 <code>reconstructionPort.js</code> —— 证据 → 结构化重建<a class="anchor" href="#3-6-reconstructionport-js-证据-结构化重建" aria-label="锚点">#</a></h3>
+<p>注入式 <code>brain</code>：把证据包交模型推断语言/工具链/模块/入口/伪源码/置信度/caveats。无模型/超时/<br>非 JSON 一律降级为确定性证据报告（基于指纹的保守语言推断）。模型产物归一化 + <code>confidence</code> 钳制。</p>
+<h3 id="3-7-verificationledger-js-保真度自验">3.7 <code>verificationLedger.js</code> —— 保真度自验<a class="anchor" href="#3-7-verificationledger-js-保真度自验" aria-label="锚点">#</a></h3>
+<p><code>buildManifest</code> 记录构建清单（源文件 sha256 + 入口 + 工具链 + 产物 sha256）；<code>verify</code> 比对还原<br>成员 vs 清单：产物哈希同一性（占 50%）+ 源覆盖率（占 50%）→ <code>fidelity</code> 评分与 <code>verdict</code><br>（verified/partial/mismatch）。无清单 → <code>no-baseline</code>，不阻断。</p>
+<h3 id="3-8-index-js-门面">3.8 <code>index.js</code> —— 门面<a class="anchor" href="#3-8-index-js-门面" aria-label="锚点">#</a></h3>
+<p><code>analyze(artifactPath, opts)</code> 串联 ①分诊 → 授权判定（显式或清单存在）→ ②字符串 →（授权后）<br>③还原 → ④编排 → ⑤重建 → ⑥自验，产出结构化 <code>ReconstructionReport</code>。永不抛。</p>
+<h2 id="4-工具契约-reverse-engineer">4. 工具契约 <code>reverse_engineer</code><a class="anchor" href="#4-工具契约-reverse-engineer" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>入参</th><th>说明</th></tr></thead><tbody><tr><td><code>path</code> (必填)</td><td>产物路径</td></tr><tr><td><code>authorized</code></td><td>断言拥有/受权（启用源码还原 + 反编译编排）；发现构建清单时自动 true</td></tr><tr><td><code>runTools</code></td><td>是否真正执行外部反编译器（默认 false，仅探活）</td></tr><tr><td><code>outDir</code></td><td>提供则把可还原成员沙箱抽取到此目录</td></tr><tr><td><code>manifestPath</code></td><td>指定构建清单（默认产物同目录 <code>.khy-build-manifest.json</code>）</td></tr><tr><td><code>maxTools</code></td><td>runTools 时每 family 执行的工具上限（默认 2）</td></tr></tbody></table>
+<p><code>isReadOnly:true</code>、<code>category:execution</code>、<code>risk:medium</code>。返回 <code>{success, data: ReconstructionReport}</code>。</p>
+<h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/reverseEngineer/reverseEngineer.test.js</code> → 36 例绿，覆盖：格式识别与<br><code>cafebabe</code> 消歧、嵌入标记升级档位、字符串/指纹分类、ZIP 安全解包与抽取、路径穿越拒绝、外部工具<br>缺失诚实降级、模型 JSON 解析/超时/非 JSON 三路降级、清单比对四种判决、门面端到端（未授权仅分诊 /<br>授权 ZIP 还原 / 清单旁置自动授权 verified / 产物缺失 no-artifact）。合成产物逐字节构造，全程 hermetic。</p>
+<h2 id="6-后续增强-未接线-留后续-pr">6. 后续增强（未接线，留后续 PR）<a class="anchor" href="#6-后续增强-未接线-留后续-pr" aria-label="锚点">#</a></h2>
+<ul><li>PyInstaller CArchive / Node SEA 的内置纯 JS 抽取器（当前交外部工具）。</li><li>把 agent 主循环的模型作为 <code>brain</code> 注入 reconstructionPort，实现工具内深度重建（当前由调用方</li></ul>
+<p>模型读证据包自行重建）。</p>
+<ul><li>khy 构建命令（<code>khy build</code> / <code>deploy</code> / <code>compile</code>）在产出产物时自动写 <code>.khy-build-manifest.json</code>，</li></ul>
+<p>让自验默认开箱即用。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-053] 命令与第三方应用输出折叠-几行预览与Ctrl+O展开.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-055] 对抗式训练-极端环境抗压自检与加固.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-054] AI逆向工程-从产物还原与自验软件.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

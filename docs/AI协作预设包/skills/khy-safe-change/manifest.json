@@ -1,0 +1,12 @@
+{
+  "name": "khy-safe-change",
+  "description": "Khy-OS 唯一正确的改代码姿势：加法式改动 + 纯叶子模块 + 默认开的 KHY_* 门控 + 关闭即逐字节回退。给出可照抄的叶子与接线模板，确保弱模型改动可回退、不破坏既有行为、守卫能拦。改任何代码前激活。",
+  "user_invocable": true,
+  "trigger": "/khy-safe-change",
+  "aliases": ["/khy-change", "/加法式"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "safe-change", "leaf", "gate", "revert", "discipline"],
+  "platforms": ["khy-os"],
+  "when_to_use": "在为 Khy-OS 修改或新增任何代码逻辑之前，用它约束改动方式。",
+  "context": "inline"
+}

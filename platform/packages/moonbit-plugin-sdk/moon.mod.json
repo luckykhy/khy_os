@@ -1,0 +1,9 @@
+{
+  "name": "khyos/moonbit_plugin_sdk",
+  "version": "0.1.0",
+  "readme": "README.mbt.md",
+  "repository": "",
+  "license": "Apache-2.0",
+  "keywords": ["khy", "moonbit", "wasm", "ipc", "microkernel"],
+  "description": "MoonBit SDK for KHY OS M1 IPC host interface (khy_sys)"
+}

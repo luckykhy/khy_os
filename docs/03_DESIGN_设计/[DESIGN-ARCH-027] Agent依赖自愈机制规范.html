@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-027 · Agent 依赖自愈机制规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-027 · Agent 依赖自愈机制规范</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-027 · Agent 依赖自愈机制规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-027-agent-依赖自愈机制规范">DESIGN-ARCH-027 · Agent 依赖自愈机制规范</a></li><li class="lvl-2"><a href="#1-问题陈述">1. 问题陈述</a></li><li class="lvl-3"><a href="#1-1-自调查结论-硬中断点审计">1.1 自调查结论（硬中断点审计）</a></li><li class="lvl-2"><a href="#2-设计目标">2. 设计目标</a></li><li class="lvl-2"><a href="#3-架构">3. 架构</a></li><li class="lvl-2"><a href="#4-核心流程-依赖自愈循环">4. 核心流程（依赖自愈循环）</a></li><li class="lvl-2"><a href="#5-防呆-硬约束">5. 防呆（硬约束）</a></li><li class="lvl-2"><a href="#6-开关与可调项">6. 开关与可调项</a></li><li class="lvl-2"><a href="#7-验收-34-用例绿-全程零网络-零真实进程-零真实-fs">7. 验收（34 用例绿，全程零网络/零真实进程/零真实 FS）</a></li><li class="lvl-2"><a href="#8-参考采用者">8. 参考采用者</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-027-agent-依赖自愈机制规范">DESIGN-ARCH-027 · Agent 依赖自愈机制规范<a class="anchor" href="#design-arch-027-agent-依赖自愈机制规范" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（services/backend）<br>关联代码：<code>services/backend/src/services/dependency/</code>、<code>services/toolCalling.executeTool</code>、<code>services/toolError.js</code><br>关联测试：<code>tests/services/dependency/dependencyHealing.test.js</code>（34 用例绿）<br>关联规范：[DESIGN-ARCH-026] 系统级服务调用审批网关（共用交互通道）、[DESIGN-ARCH-025] 元规划协议</p></blockquote>
+<h2 id="1-问题陈述">1. 问题陈述<a class="anchor" href="#1-问题陈述" aria-label="锚点">#</a></h2>
+<p>工具或依赖不完整时，Agent 此前是<strong>硬中断</strong>：要么硬抛 <code>throw new Error('… not found / install …')</code>，<br>要么软失败返回 <code>{ success:false, note:'Install with: …' }</code>。两者都把&quot;安装&quot;这件可自动化的事<br>甩给用户，且缺失场景在错误分类里与&quot;文件未找到&quot;混为一谈（<code>RESOURCE_NOT_FOUND</code>），Agent<br>无法在程序上区分、也无法发起一次&quot;安装→重试&quot;的修复。</p>
+<h3 id="1-1-自调查结论-硬中断点审计">1.1 自调查结论（硬中断点审计）<a class="anchor" href="#1-1-自调查结论-硬中断点审计" aria-label="锚点">#</a></h3>
+<p>对 <code>services/backend/src</code> 全量扫描，依赖缺失硬中断点分四类：</p>
+<table><thead><tr><th>类别</th><th>代表缺失项</th><th>代表位置</th><th>形态</th></tr></thead><tbody><tr><td>浏览器</td><td>puppeteer / playwright / chromium</td><td><code>tools/WebBrowserTool</code>、<code>services/playwrightSearch.js</code></td><td>软失败 / 优雅降级</td></tr><tr><td>Python</td><td>python3 / torch / huggingface_hub / khy-os[doc]</td><td><code>services/modelTrainingService.js</code>、<code>tools/imageOcr.js</code></td><td>硬抛 / 软失败</td></tr><tr><td>系统命令</td><td>ffmpeg / tar / 7z / pdftoppm / sox / whisper / 语言服务器</td><td><code>tools/videoAnalyze.js</code>、<code>services/runtimeProvisioner.js</code>、<code>services/lspClient.js</code>、<code>services/voiceService.js</code></td><td>硬抛 / 软失败</td></tr><tr><td>Node 模块</td><td>各 LSP / @babel/parser 等</td><td><code>services/lspClient.js</code></td><td>硬抛 / 优雅降级</td></tr></tbody></table>
+<p>共用的二元失败语义：<strong>软失败</strong> <code>{ success:false, error|note }</code>（在 <code>executeTool</code> 被包成 <code>ToolError</code>），<br><strong>硬抛</strong> 落入 <code>executeTool</code> 的 catch 转 <code>ToolError</code>。<code>searchExecutable()</code>（<code>tools/platformUtils.js</code>）<br>是唯一的&quot;二进制是否在 PATH&quot;探针原语。<code>toolError.js</code> <strong>此前没有</strong>专门的依赖缺失错误码。</p>
+<h2 id="2-设计目标">2. 设计目标<a class="anchor" href="#2-设计目标" aria-label="锚点">#</a></h2>
+<ol><li>依赖缺失从&quot;硬中断&quot;转为&quot;交互式修复&quot;：探测缺失 → 询问安装 → 隔离执行 → 校验 → 重试<strong>恰一次</strong>。</li><li><strong>零侵入</strong>接管现存所有硬抛/软失败：不逐个改工具，靠错误文本回溯辨认。</li><li>安全不放松：安装须人确认；命令只来自受控注册表；任何异常 fail-safe 退回原错误。</li></ol>
+<h2 id="3-架构">3. 架构<a class="anchor" href="#3-架构" aria-label="锚点">#</a></h2>
+<p>单一子系统 <code>services/dependency/</code>，门面 <code>index.js</code>：</p>
+<pre><code>registry.js        依赖单一真源：probe 声明 + install(argv) + matchers + 标签/文档/风险
+resolver.js        probe()/ensure()/detectFromError()/buildInstallPlan()/MissingDependencyError
+installRunner.js   隔离执行 argv（execFile 无 shell）+ followUp 串联 + 超时/尾部回溯
+healingLoop.js     自愈编排（询问→安装→校验→重试），会话级状态，summarizeForAgent()</code></pre>
+<p>接入点是<strong>唯一工具漏斗</strong> <code>toolCalling.executeTool</code>，非侵入：工具失败（软返回或硬抛）后调用<br><code>healingLoop.heal()</code>；重试闭包 <code>_runDescriptor</code> 只重跑裸工具调用，<strong>不</strong>再套自愈层 → 结构上<br>杜绝递归。错误码 <code>MISSING_DEPENDENCY</code> 新增到 <code>toolError.js</code>，使依赖缺失与 <code>RESOURCE_NOT_FOUND</code><br>程序可分。</p>
+<h2 id="4-核心流程-依赖自愈循环">4. 核心流程（依赖自愈循环）<a class="anchor" href="#4-核心流程-依赖自愈循环" aria-label="锚点">#</a></h2>
+<pre><code>工具失败信号 ──detectFromError──▶ 命中某依赖？
+   │未命中 → 返回 null（非依赖问题，原错误原样透出，零回归）
+   ▼命中
+re-probe（去伪）── 其实已就绪 → null（matcher 误报/瞬态，原错误自负）
+   ▼确实缺失
+本会话已试过该依赖？── 是 → {healed:false, alreadyAttempted}（防死循环）
+   ▼否
+有可执行安装计划？── 无 → {degraded, manual-required}（结构化指引，不崩）
+   ▼有
+经 onControlRequest 询问（once / always / skip）
+   │无通道 → {degraded, no-control-channel}（绝不静默安装）
+   │skip   → {declined}
+   ▼install/always
+隔离执行安装（命令仅来自 registry）── 失败 → {installFailed}
+   ▼成功
+re-probe 校验 ── 仍缺失 → {installVerifyFailed}
+   ▼就绪
+重试原调用「恰一次」── {healed:true, result}</code></pre>
+<p>交互通道复用审批网关同一契约（<code>onControlRequest({ requestId, request:{ subtype:'can_use_tool',<br>tool_name:'install-dependency:&lt;id&gt;', input:{ kind:'dependency-install', … } } })</code>），<br>解码 <code>true|'always'|false|{behavior}</code> → <code>install|always|skip</code>。<strong>TUI 零改动</strong>即可运行；<br>未实现键入确认的宿主下，无通道 → 降级为手动指引（安全方向）。</p>
+<h2 id="5-防呆-硬约束">5. 防呆（硬约束）<a class="anchor" href="#5-防呆-硬约束" aria-label="锚点">#</a></h2>
+<ul><li><strong>①永不无确认安装</strong>：无交互通道 / 用户 skip → 一律不执行安装，只给结构化指引。</li><li><strong>②永不死循环</strong>：会话级 <code>attempted</code> 集合按 depId 去重 + 单次重试；重试闭包不套自愈层。</li><li><strong>③优雅降级</strong>：无通道/无安装方案 → <code>summarizeForAgent()</code> 产出可读可操作指引，绝不崩。</li><li><strong>④命令绝不来自模型/报错文本</strong>：安装 argv 只能取自 <code>registry.buildInstallPlan</code>，<code>execFile</code></li></ul>
+<p>无 shell 执行 → 杜绝命令注入；全局/系统级安装标 <code>scope:'global'</code> 提高审批强度，<br>  且<strong>默认不自动 sudo</strong>（需提权只提示，不替用户提权）。</p>
+<ul><li><strong>⑤编排 fail-safe</strong>：<code>heal()</code> 任何分支异常都返回 <code>null</code> → 原错误照常透出，绝不放大故障。</li><li><strong>⑥授权不跨会话续命</strong>：会话状态纯内存，进程退出即蒸发；<code>always</code> 仅本会话免问。</li></ul>
+<h2 id="6-开关与可调项">6. 开关与可调项<a class="anchor" href="#6-开关与可调项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>环境变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_DEP_HEALING</code></td><td>开</td><td><code>=off</code> 显式关闭自愈，回退纯原错误透出</td></tr><tr><td><code>KHY_DEP_INSTALL_TIMEOUT_MS</code></td><td>180000</td><td>单条安装命令超时</td></tr></tbody></table>
+<h2 id="7-验收-34-用例绿-全程零网络-零真实进程-零真实-fs">7. 验收（34 用例绿，全程零网络/零真实进程/零真实 FS）<a class="anchor" href="#7-验收-34-用例绿-全程零网络-零真实进程-零真实-fs" aria-label="锚点">#</a></h2>
+<ul><li>registry 单一真源（条目/平台覆盖/argv 命令均来自表）；</li><li>probe 三类探针（node-module / system-command / python-package）；</li><li>detectFromError 回溯辨认既有硬抛与软失败文本，且&quot;File not found&quot;/网络错误不误伤（→ null）；</li><li><code>MISSING_DEPENDENCY</code> 错误码 + <code>MissingDependencyError</code> 形状；install 文本 → <code>MISSING_DEPENDENCY</code>，</li></ul>
+<p><code>ENOENT</code>/&quot;File not found&quot; 仍 <code>RESOURCE_NOT_FOUND</code>（零回归）；</p>
+<ul><li>自愈四分支（确认→安装→重试成功 / 拒绝 / 安装失败 / 无通道降级）+ 去伪 + attempted 去重 +</li></ul>
+<p>编排异常 fail-safe + 开关。</p>
+<p>全量 node:test 回归 542/542 绿。</p>
+<h2 id="8-参考采用者">8. 参考采用者<a class="anchor" href="#8-参考采用者" aria-label="锚点">#</a></h2>
+<p><code>tools/WebBrowserTool</code> 改为 <code>dependency.ensure('puppeteer')</code> 主动发出结构化<br><code>MISSING_DEPENDENCY</code>（替代原 dead-end note），作为工具侧主动声明依赖的范例；其余既有<br>硬抛/软失败工具无需改动，由 <code>detectFromError</code> 在漏斗处统一接管。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 系统级服务调用审批网关规范》</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-028] Agent通信防御-零静默失败与精准归因.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-027] Agent依赖自愈机制规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

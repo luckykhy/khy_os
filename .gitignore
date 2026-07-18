@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Build artifacts
+*.log
+*.tmp
+*.temp
+coverage/
+.nyc_output/
+
+# Git
+!.gitignore
+
+# Project-specific
+.khy_*
+.qoder/
+_source/encrypted_snapshots/
+data/cache/
+data/sessions/
+
+# Temp / debug scripts
+scan_test.js

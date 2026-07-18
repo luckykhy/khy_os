@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-146-主读工具-filereadtool-防卡死守卫族-parity-接线">[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#断桥判据-为什么这是真缺口">断桥判据(为什么这是真缺口)</a></li><li class="lvl-2"><a href="#本次改动-全-additive-各门-default-on-门关字节回退历史行为">本次改动(全 additive · 各门 default-on · 门关字节回退历史行为)</a></li><li class="lvl-2"><a href="#顺序不变量-为何这样排">顺序不变量(为何这样排)</a></li><li class="lvl-2"><a href="#验收-本次全绿">验收(本次全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-146-主读工具-filereadtool-防卡死守卫族-parity-接线">[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线<a class="anchor" href="#ops-man-146-主读工具-filereadtool-防卡死守卫族-parity-接线" aria-label="锚点">#</a></h1>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>把整个防卡死读守卫族(special / pseudo / binary / format)从 <code>readFile.js</code> 补齐到<strong>面向模型的主读工具 <code>Read</code>(FileReadTool)</strong>。承 OPS-143(win-device 已接两条路径),本发关掉「主读路径裸奔」这个最大遗留缺口——模型按 Claude Code 惯例主要调 <code>Read</code>,而它此前只有 winDevice 一条守卫。</p>
+<h2 id="断桥判据-为什么这是真缺口">断桥判据(为什么这是真缺口)<a class="anchor" href="#断桥判据-为什么这是真缺口" aria-label="锚点">#</a></h2>
+<p><code>tools/index.js</code> 同时把两条读定义暴露给模型:</p>
+<ul><li><code>Read</code> → 形参 <code>file_path</code>,由 <code>FileReadTool/index.js</code> 承载,<code>alwaysLoad</code>,<strong>模型主要调它</strong>。</li><li><code>readFile</code> → 形参 <code>path</code>,由 <code>readFile.js</code> 承载。</li></ul>
+<p>靠 <code>getDefinitions()</code> + 各自 <code>inputSchema</code> 形参名实证两条并存的 backing。历史上 OPS-118/120/121/123 的整个防卡死守卫族<strong>只接在 readFile.js</strong>;FileReadTool 自有 <code>execute()</code> 独立 <code>existsSync</code>/<code>statSync</code>,<code>validateInput</code> 仅 <code>validateNotDevicePath</code>(POSIX /dev/* 精确集)+ <code>validateNotUNCPath</code>(<code>\\</code> 前缀)。→ 模型走 <code>Read</code> 时:</p>
+<ul><li>FIFO / 套接字 / 字符或块设备 → 读第一个字节<strong>永久阻塞</strong>(卡死),无守卫。</li><li><code>/proc/kmsg</code> 等阻塞伪文件 → 读<strong>永久阻塞</strong>(卡死),无守卫。</li><li>二进制/压缩文件 → 解码成乱码注入模型上下文(拖垮请求),无守卫。</li></ul>
+<h2 id="本次改动-全-additive-各门-default-on-门关字节回退历史行为">本次改动(全 additive · 各门 default-on · 门关字节回退历史行为)<a class="anchor" href="#本次改动-全-additive-各门-default-on-门关字节回退历史行为" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>变更</th></tr></thead><tbody><tr><td><code>services/backend/src/tools/FileReadTool/index.js</code></td><td><code>execute()</code> 内接三块守卫(与 readFile.js 同门、同叶函数):<strong>special</strong>(<code>KHY_READFILE_SPECIAL_GUARD</code>)在 <code>isDirectory</code> 后、图片检测前,用已算好的 <code>stat</code> 类型谓词拦 FIFO/设备;<strong>pseudo</strong>(<code>KHY_READFILE_PSEUDO_GUARD</code>)紧随其后,对 <code>/proc</code>·<code>/sys</code> 走可被 timeout 杀掉的子进程有界读;<strong>binary + format</strong>(<code>KHY_READFILE_BINARY_GUARD</code> / <code>KHY_READFILE_FORMAT_ROUTE</code>)包在 <code>if (!isImage)</code> 内、文本读取前,命中二进制先按格式路由到提取器、否则 OPS-121 拒绝。全部 fail-soft。</td></tr><tr><td><code>services/backend/tests/tools/fileReadToolGuardParity.test.js</code></td><td><strong>新测</strong>(9 例):源级接线断言(三块 require + 门控消费 + 顺序:special/pseudo 排在图片检测与文本读取前、binary 仅对非图片生效)+ execute 行为断言(纯文本无回归 / 二进制被拒不解码 / .png 不被二进制守卫拦仍走图片路 / FIFO 瞬时拦下不卡死)。</td></tr></tbody></table>
+<h2 id="顺序不变量-为何这样排">顺序不变量(为何这样排)<a class="anchor" href="#顺序不变量-为何这样排" aria-label="锚点">#</a></h2>
+<ol><li><strong>special / pseudo 必须在图片检测与 <code>readTextFileSmart</code> 之前</strong>:读非常规文件/阻塞伪文件的第一个字节即卡死,连 <code>detectFile</code> 探 magic 字节都会先挂;<code>fs.statSync</code> 对 FIFO/设备只读元数据、瞬时返回不阻塞,故用 stat 类型谓词安全判定。</li><li><strong>binary 守卫仅对非图片生效(<code>if (!isImage)</code>)</strong>:图片(按扩展名)走 FileReadTool 既有 base64/OCR 专路;若 binary 守卫在图片前生效,PNG/JPG 是二进制会被 formatRouter 抢走 → 破坏图片行为。故包在 <code>!isImage</code> 内,只拦非图片二进制。</li></ol>
+<h2 id="验收-本次全绿">验收(本次全绿)<a class="anchor" href="#验收-本次全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check</code> FileReadTool + 新测 OK。</li><li>新 parity 测 <strong>9/9</strong>;FileReadTool 自身行为 <strong>23/0</strong> 零回归;族叶(binary/special/pseudo/format/winDevice)<strong>87/0</strong>。</li><li><strong>主读路径 LIVE 冒烟 5/5</strong>(经 <code>FileReadTool.execute</code>):FIFO 1ms 拦下(不卡死)/ <code>/proc/cpuinfo</code> 23ms 有界读出(不卡死)/ ELF 二进制被拒(<code>binary:true</code> 不解码)/ 纯文本正常读出 / <code>.png</code> 仍走图片路(<code>type:image</code>,未被二进制拦)。</li><li>change-safety(显式 positional 2 文件)exit0 · agent-rules / leaf-contract / flag-registry passed · node-syntax <strong>4352 净</strong> · maintainer0。</li><li>god-file:FileReadTool 331 行 / 新测 105 行(均 &lt; 2500;本仓 arch:god 靠 <code>wc -l</code> 直验)。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ul><li><strong>主读工具靠 <code>getDefinitions()</code> + <code>inputSchema</code> 形参名实证</strong>,别信 <code>tools/index.js</code> 注释「子目录工具优先」——实测 <code>Read</code>(FileReadTool)与 <code>readFile</code>(readFile.js)双暴露,守卫只接非主路径 = 真缺口。</li><li>防卡死守卫族接<strong>任何</strong>读路径时,顺序不变量比接线本身更关键:阻塞类(special/pseudo)排在一切读之前;格式类(binary)仅对非图片生效,别抢图片专路。</li><li>承 OPS-143 的诚实遗留,逐条补齐 + 每条配源级接线断言 + 真实 <code>execute</code> 行为断言(含 FIFO/<code>/proc</code> 真跑,证不卡死),不静默扩容。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-147] 次级读取工具统一读前防卡死前检.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-147] 次级读取工具统一读前防卡死前检</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-146] 主读工具FileReadTool防卡死守卫族parity接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

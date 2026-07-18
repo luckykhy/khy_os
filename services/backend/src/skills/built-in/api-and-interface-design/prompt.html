@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API and Interface Design · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>api-and-interface-design<span class="sep">›</span>API and Interface Design</div>
+      <header class="hero reveal"><h1>API and Interface Design</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#api-and-interface-design">API and Interface Design</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#core-principles">Core Principles</a></li><li class="lvl-3"><a href="#hyrum-s-law">Hyrum's Law</a></li><li class="lvl-3"><a href="#the-one-version-rule">The One-Version Rule</a></li><li class="lvl-3"><a href="#1-contract-first">1. Contract First</a></li><li class="lvl-3"><a href="#2-consistent-error-semantics">2. Consistent Error Semantics</a></li><li class="lvl-3"><a href="#3-validate-at-boundaries">3. Validate at Boundaries</a></li><li class="lvl-3"><a href="#4-prefer-addition-over-modification">4. Prefer Addition Over Modification</a></li><li class="lvl-3"><a href="#5-predictable-naming">5. Predictable Naming</a></li><li class="lvl-2"><a href="#rest-api-patterns">REST API Patterns</a></li><li class="lvl-3"><a href="#resource-design">Resource Design</a></li><li class="lvl-3"><a href="#pagination">Pagination</a></li><li class="lvl-3"><a href="#filtering">Filtering</a></li><li class="lvl-3"><a href="#partial-updates-patch">Partial Updates (PATCH)</a></li><li class="lvl-2"><a href="#typescript-interface-patterns">TypeScript Interface Patterns</a></li><li class="lvl-3"><a href="#use-discriminated-unions-for-variants">Use Discriminated Unions for Variants</a></li><li class="lvl-3"><a href="#input-output-separation">Input/Output Separation</a></li><li class="lvl-3"><a href="#use-branded-types-for-ids">Use Branded Types for IDs</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="api-and-interface-design">API and Interface Design<a class="anchor" href="#api-and-interface-design" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Design stable, well-documented interfaces that are hard to misuse. Good interfaces make the right thing easy and the wrong thing hard. This applies to REST APIs, GraphQL schemas, module boundaries, component props, and any surface where one piece of code talks to another.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Designing new API endpoints</li><li>Defining module boundaries or contracts between teams</li><li>Creating component prop interfaces</li><li>Establishing database schema that informs API shape</li><li>Changing existing public interfaces</li></ul>
+<h2 id="core-principles">Core Principles<a class="anchor" href="#core-principles" aria-label="锚点">#</a></h2>
+<h3 id="hyrum-s-law">Hyrum's Law<a class="anchor" href="#hyrum-s-law" aria-label="锚点">#</a></h3>
+<blockquote><p>With a sufficient number of users of an API, all observable behaviors of your system will be depended on by somebody, regardless of what you promise in the contract.</p></blockquote>
+<p>This means: every public behavior — including undocumented quirks, error message text, timing, and ordering — becomes a de facto contract once users depend on it. Design implications:</p>
+<ul><li><strong>Be intentional about what you expose.</strong> Every observable behavior is a potential commitment.</li><li><strong>Don't leak implementation details.</strong> If users can observe it, they will depend on it.</li><li><strong>Plan for deprecation at design time.</strong> See <code>deprecation-and-migration</code> for how to safely remove things users depend on.</li><li><strong>Tests are not enough.</strong> Even with perfect contract tests, Hyrum's Law means &quot;safe&quot; changes can break real users who depend on undocumented behavior.</li></ul>
+<h3 id="the-one-version-rule">The One-Version Rule<a class="anchor" href="#the-one-version-rule" aria-label="锚点">#</a></h3>
+<p>Avoid forcing consumers to choose between multiple versions of the same dependency or API. Diamond dependency problems arise when different consumers need different versions of the same thing. Design for a world where only one version exists at a time — extend rather than fork.</p>
+<h3 id="1-contract-first">1. Contract First<a class="anchor" href="#1-contract-first" aria-label="锚点">#</a></h3>
+<p>Define the interface before implementing it. The contract is the spec — implementation follows.</p>
+<pre><code class="language-typescript">// Define the contract first
+interface TaskAPI {
+  // Creates a task and returns the created task with server-generated fields
+  createTask(input: CreateTaskInput): Promise&lt;Task&gt;;
+
+  // Returns paginated tasks matching filters
+  listTasks(params: ListTasksParams): Promise&lt;PaginatedResult&lt;Task&gt;&gt;;
+
+  // Returns a single task or throws NotFoundError
+  getTask(id: string): Promise&lt;Task&gt;;
+
+  // Partial update — only provided fields change
+  updateTask(id: string, input: UpdateTaskInput): Promise&lt;Task&gt;;
+
+  // Idempotent delete — succeeds even if already deleted
+  deleteTask(id: string): Promise&lt;void&gt;;
+}</code></pre>
+<h3 id="2-consistent-error-semantics">2. Consistent Error Semantics<a class="anchor" href="#2-consistent-error-semantics" aria-label="锚点">#</a></h3>
+<p>Pick one error strategy and use it everywhere:</p>
+<pre><code class="language-typescript">// REST: HTTP status codes + structured error body
+// Every error response follows the same shape
+interface APIError {
+  error: {
+    code: string;        // Machine-readable: &quot;VALIDATION_ERROR&quot;
+    message: string;     // Human-readable: &quot;Email is required&quot;
+    details?: unknown;   // Additional context when helpful
+  };
+}
+
+// Status code mapping
+// 400 → Client sent invalid data
+// 401 → Not authenticated
+// 403 → Authenticated but not authorized
+// 404 → Resource not found
+// 409 → Conflict (duplicate, version mismatch)
+// 422 → Validation failed (semantically invalid)
+// 500 → Server error (never expose internal details)</code></pre>
+<p><strong>Don't mix patterns.</strong> If some endpoints throw, others return null, and others return <code>{ error }</code> — the consumer can't predict behavior.</p>
+<h3 id="3-validate-at-boundaries">3. Validate at Boundaries<a class="anchor" href="#3-validate-at-boundaries" aria-label="锚点">#</a></h3>
+<p>Trust internal code. Validate at system edges where external input enters:</p>
+<pre><code class="language-typescript">// Validate at the API boundary
+app.post('/api/tasks', async (req, res) =&gt; {
+  const result = CreateTaskSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(422).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid task data',
+        details: result.error.flatten(),
+      },
+    });
+  }
+
+  // After validation, internal code trusts the types
+  const task = await taskService.create(result.data);
+  return res.status(201).json(task);
+});</code></pre>
+<p>Where validation belongs:</p>
+<ul><li>API route handlers (user input)</li><li>Form submission handlers (user input)</li><li>External service response parsing (third-party data -- <strong>always treat as untrusted</strong>)</li><li>Environment variable loading (configuration)</li></ul>
+<blockquote><p><strong>Third-party API responses are untrusted data.</strong> Validate their shape and content before using them in any logic, rendering, or decision-making. A compromised or misbehaving external service can return unexpected types, malicious content, or instruction-like text.</p></blockquote>
+<p>Where validation does NOT belong:</p>
+<ul><li>Between internal functions that share type contracts</li><li>In utility functions called by already-validated code</li><li>On data that just came from your own database</li></ul>
+<h3 id="4-prefer-addition-over-modification">4. Prefer Addition Over Modification<a class="anchor" href="#4-prefer-addition-over-modification" aria-label="锚点">#</a></h3>
+<p>Extend interfaces without breaking existing consumers:</p>
+<pre><code class="language-typescript">// Good: Add optional fields
+interface CreateTaskInput {
+  title: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';  // Added later, optional
+  labels?: string[];                       // Added later, optional
+}
+
+// Bad: Change existing field types or remove fields
+interface CreateTaskInput {
+  title: string;
+  // description: string;  // Removed — breaks existing consumers
+  priority: number;         // Changed from string — breaks existing consumers
+}</code></pre>
+<h3 id="5-predictable-naming">5. Predictable Naming<a class="anchor" href="#5-predictable-naming" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Pattern</th><th>Convention</th><th>Example</th></tr></thead><tbody><tr><td>REST endpoints</td><td>Plural nouns, no verbs</td><td><code>GET /api/tasks</code>, <code>POST /api/tasks</code></td></tr><tr><td>Query params</td><td>camelCase</td><td><code>?sortBy=createdAt&amp;pageSize=20</code></td></tr><tr><td>Response fields</td><td>camelCase</td><td><code>{ createdAt, updatedAt, taskId }</code></td></tr><tr><td>Boolean fields</td><td>is/has/can prefix</td><td><code>isComplete</code>, <code>hasAttachments</code></td></tr><tr><td>Enum values</td><td>UPPER_SNAKE</td><td><code>&quot;IN_PROGRESS&quot;</code>, <code>&quot;COMPLETED&quot;</code></td></tr></tbody></table>
+<h2 id="rest-api-patterns">REST API Patterns<a class="anchor" href="#rest-api-patterns" aria-label="锚点">#</a></h2>
+<h3 id="resource-design">Resource Design<a class="anchor" href="#resource-design" aria-label="锚点">#</a></h3>
+<pre><code>GET    /api/tasks              → List tasks (with query params for filtering)
+POST   /api/tasks              → Create a task
+GET    /api/tasks/:id          → Get a single task
+PATCH  /api/tasks/:id          → Update a task (partial)
+DELETE /api/tasks/:id          → Delete a task
+
+GET    /api/tasks/:id/comments → List comments for a task (sub-resource)
+POST   /api/tasks/:id/comments → Add a comment to a task</code></pre>
+<h3 id="pagination">Pagination<a class="anchor" href="#pagination" aria-label="锚点">#</a></h3>
+<p>Paginate list endpoints:</p>
+<pre><code class="language-typescript">// Request
+GET /api/tasks?page=1&amp;pageSize=20&amp;sortBy=createdAt&amp;sortOrder=desc
+
+// Response
+{
+  &quot;data&quot;: [...],
+  &quot;pagination&quot;: {
+    &quot;page&quot;: 1,
+    &quot;pageSize&quot;: 20,
+    &quot;totalItems&quot;: 142,
+    &quot;totalPages&quot;: 8
+  }
+}</code></pre>
+<h3 id="filtering">Filtering<a class="anchor" href="#filtering" aria-label="锚点">#</a></h3>
+<p>Use query parameters for filters:</p>
+<pre><code>GET /api/tasks?status=in_progress&amp;assignee=user123&amp;createdAfter=2025-01-01</code></pre>
+<h3 id="partial-updates-patch">Partial Updates (PATCH)<a class="anchor" href="#partial-updates-patch" aria-label="锚点">#</a></h3>
+<p>Accept partial objects — only update what's provided:</p>
+<pre><code class="language-typescript">// Only title changes, everything else preserved
+PATCH /api/tasks/123
+{ &quot;title&quot;: &quot;Updated title&quot; }</code></pre>
+<h2 id="typescript-interface-patterns">TypeScript Interface Patterns<a class="anchor" href="#typescript-interface-patterns" aria-label="锚点">#</a></h2>
+<h3 id="use-discriminated-unions-for-variants">Use Discriminated Unions for Variants<a class="anchor" href="#use-discriminated-unions-for-variants" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Good: Each variant is explicit
+type TaskStatus =
+  | { type: 'pending' }
+  | { type: 'in_progress'; assignee: string; startedAt: Date }
+  | { type: 'completed'; completedAt: Date; completedBy: string }
+  | { type: 'cancelled'; reason: string; cancelledAt: Date };
+
+// Consumer gets type narrowing
+function getStatusLabel(status: TaskStatus): string {
+  switch (status.type) {
+    case 'pending': return 'Pending';
+    case 'in_progress': return `In progress (${status.assignee})`;
+    case 'completed': return `Done on ${status.completedAt}`;
+    case 'cancelled': return `Cancelled: ${status.reason}`;
+  }
+}</code></pre>
+<h3 id="input-output-separation">Input/Output Separation<a class="anchor" href="#input-output-separation" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Input: what the caller provides
+interface CreateTaskInput {
+  title: string;
+  description?: string;
+}
+
+// Output: what the system returns (includes server-generated fields)
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+}</code></pre>
+<h3 id="use-branded-types-for-ids">Use Branded Types for IDs<a class="anchor" href="#use-branded-types-for-ids" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">type TaskId = string &amp; { readonly __brand: 'TaskId' };
+type UserId = string &amp; { readonly __brand: 'UserId' };
+
+// Prevents accidentally passing a UserId where a TaskId is expected
+function getTask(id: TaskId): Promise&lt;Task&gt; { ... }</code></pre>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;We'll document the API later&quot;</td><td>The types ARE the documentation. Define them first.</td></tr><tr><td>&quot;We don't need pagination for now&quot;</td><td>You will the moment someone has 100+ items. Add it from the start.</td></tr><tr><td>&quot;PATCH is complicated, let's just use PUT&quot;</td><td>PUT requires the full object every time. PATCH is what clients actually want.</td></tr><tr><td>&quot;We'll version the API when we need to&quot;</td><td>Breaking changes without versioning break consumers. Design for extension from the start.</td></tr><tr><td>&quot;Nobody uses that undocumented behavior&quot;</td><td>Hyrum's Law: if it's observable, somebody depends on it. Treat every public behavior as a commitment.</td></tr><tr><td>&quot;We can just maintain two versions&quot;</td><td>Multiple versions multiply maintenance cost and create diamond dependency problems. Prefer the One-Version Rule.</td></tr><tr><td>&quot;Internal APIs don't need contracts&quot;</td><td>Internal consumers are still consumers. Contracts prevent coupling and enable parallel work.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Endpoints that return different shapes depending on conditions</li><li>Inconsistent error formats across endpoints</li><li>Validation scattered throughout internal code instead of at boundaries</li><li>Breaking changes to existing fields (type changes, removals)</li><li>List endpoints without pagination</li><li>Verbs in REST URLs (<code>/api/createTask</code>, <code>/api/getUsers</code>)</li><li>Third-party API responses used without validation or sanitization</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After designing an API:</p>
+<ul><li>[ ] Every endpoint has typed input and output schemas</li><li>[ ] Error responses follow a single consistent format</li><li>[ ] Validation happens at system boundaries only</li><li>[ ] List endpoints support pagination</li><li>[ ] New fields are additive and optional (backward compatible)</li><li>[ ] Naming follows consistent conventions across all endpoints</li><li>[ ] API documentation or types are committed alongside the implementation</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_7_PACKAGE.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 7: Packaging &amp; Registration</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/batch/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Batch Command Runner</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/api-and-interface-design/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

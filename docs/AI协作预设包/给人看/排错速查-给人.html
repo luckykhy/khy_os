@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🔎 排错速查（给你自己看） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给人看<span class="sep">›</span>🔎 排错速查（给你自己看）</div>
+      <header class="hero reveal"><h1>🔎 排错速查（给你自己看）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#排错速查-给你自己看">🔎 排错速查（给你自己看）</a></li><li class="lvl-2"><a href="#第一反应-先止血-别慌着让-ai-继续改">第一反应：先止血，别慌着让 AI 继续改</a></li><li class="lvl-2"><a href="#症状-对应错误编号-去-错误自查手册-发那条给-ai">症状 → 对应错误编号（去「错误自查手册」发那条给 AI）</a></li><li class="lvl-2"><a href="#让-ai-自己体检的一句话-复制发给它">让 AI 自己体检的一句话（复制发给它）</a></li><li class="lvl-2"><a href="#三条你要盯死的红线-ai-最容易在这翻车">三条你要盯死的红线（AI 最容易在这翻车）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: 人(你自己) | 用途: AI出错时，你先快速判断是哪类问题、该发哪条给它 --&gt;<br>&lt;!-- 这些是给你（人）看的判断表。发给 AI 去修的完整内容在 ../给AI看/错误自查手册.md 。 --&gt;</p>
+<h1 id="排错速查-给你自己看">🔎 排错速查（给你自己看）<a class="anchor" href="#排错速查-给你自己看" aria-label="锚点">#</a></h1>
+<blockquote><p>AI 出错、或你怀疑它把项目改坏时，先用这张表<strong>判断是哪类问题</strong>，<br>然后去 <code>给AI看/错误自查手册.md</code> 找对应编号，把那一条发给 AI 让它修。<br>你不用懂技术，只要能对上「症状」，就知道发哪条。</p></blockquote>
+<hr>
+<h2 id="第一反应-先止血-别慌着让-ai-继续改">第一反应：先止血，别慌着让 AI 继续改<a class="anchor" href="#第一反应-先止血-别慌着让-ai-继续改" aria-label="锚点">#</a></h2>
+<pre><code>1) 先让 AI 停手，别再改文件。
+2) 你自己敲一句只读体检（不会改任何东西）：
+   node services/backend/bin/khy.js maintain freshness
+3) 如果它刚提交过而你担心改坏了，看《命脉自保清单》里的&quot;怎么回退&quot;。</code></pre>
+<hr>
+<h2 id="症状-对应错误编号-去-错误自查手册-发那条给-ai">症状 → 对应错误编号（去「错误自查手册」发那条给 AI）<a class="anchor" href="#症状-对应错误编号-去-错误自查手册-发那条给-ai" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你看到/感觉到的症状</th><th>大概是哪类</th><th>发给 AI 的编号</th></tr></thead><tbody><tr><td>AI 说&quot;已经做完/已接入&quot;，但功能根本没生效</td><td>假装做完</td><td><strong>P1</strong></td></tr><tr><td>发现有两套做同一件事的代码</td><td>重复造轮子</td><td><strong>P2</strong></td></tr><tr><td>改动没法一键关掉、关不掉恢复不了原样</td><td>忘了加开关</td><td><strong>P3 / P4</strong></td></tr><tr><td>AI 查了半天只说&quot;下一步我会…&quot;就停了，没给结果</td><td>只报进度不交付</td><td><strong>P5 / W8</strong></td></tr><tr><td>AI 想用 <code>--no-verify</code> 跳过提交检查</td><td>想绕守卫</td><td><strong>P6</strong>（禁止它这么做）</td></tr><tr><td>AI 引用了一个根本不存在的文件/函数</td><td>幻觉</td><td><strong>P8</strong></td></tr><tr><td>某个文件越来越大、几千行</td><td>上帝组件</td><td><strong>P9 / T2 任务卡</strong></td></tr><tr><td>小模型跑着跑着输出被截断/答非所问</td><td>小模型上下文</td><td><strong>W1 / W2</strong></td></tr><tr><td>小模型报错拒收工具消息、或工具调用解析失败</td><td>小模型格式</td><td><strong>W3 / W4</strong></td></tr><tr><td>中文网站抓下来是乱码</td><td>字符集</td><td><strong>B9</strong></td></tr><tr><td>选了 auto 模型报 404 / model_not_found</td><td>模型名泄漏</td><td><strong>G1</strong></td></tr><tr><td>换了新版 API key 报&quot;格式无效&quot;</td><td>鉴权过时</td><td><strong>G3</strong></td></tr><tr><td>新模型的某能力(如深度思考)线上打不出来</td><td>请求字段丢了</td><td><strong>G4</strong></td></tr><tr><td>图片识别莫名退回本地 OCR</td><td>视觉误判</td><td><strong>G5</strong></td></tr><tr><td>改好的东西 pip 用户拿不到</td><td>没重新打包</td><td><strong>E2</strong></td></tr><tr><td>发布后版本号对不上</td><td>版本不一致</td><td><strong>E3</strong></td></tr><tr><td><code>git commit</code> 被钩子挡住不让提交</td><td>守卫红了</td><td><strong>E5</strong></td></tr><tr><td>跑测试出现莫名其妙的失败</td><td>测试框架混用</td><td><strong>E6</strong></td></tr><tr><td>在 cache/data/.tmp 里找不到源码</td><td>找错地方</td><td><strong>E7</strong></td></tr></tbody></table>
+<blockquote><p>找不到完全对上的？把 AI 的<strong>完整报错</strong>、<strong>它改了哪些文件</strong>、<strong>跑了什么命令</strong>原样发给它，<br>并说「对照错误自查手册逐条自审，别臆测硬改」。</p></blockquote>
+<hr>
+<h2 id="让-ai-自己体检的一句话-复制发给它">让 AI 自己体检的一句话（复制发给它）<a class="anchor" href="#让-ai-自己体检的一句话-复制发给它" aria-label="锚点">#</a></h2>
+<pre><code>对照 ../给AI看/错误自查手册.md 逐条自审你刚才的改动，命中哪条就修哪条，
+并按&quot;诚实收尾模板&quot;告诉我：测了什么、几个绿、守卫是否全绿、有没有没做完的。</code></pre>
+<hr>
+<h2 id="三条你要盯死的红线-ai-最容易在这翻车">三条你要盯死的红线（AI 最容易在这翻车）<a class="anchor" href="#三条你要盯死的红线-ai-最容易在这翻车" aria-label="锚点">#</a></h2>
+<ol><li><strong>它说&quot;做完了&quot;时，追问一句</strong>：「这个改动接到 executeTool / toolUseLoop / aiManagementServer 哪个入口了？」</li></ol>
+<p>答不上来 = 没真生效（错误 P1）。</p>
+<ol><li><strong>它改完时，让它证明能回退</strong>：「把 KHY_那个开关 设成 off，行为和改之前一样吗？」</li></ol>
+<p>不一样 = 破坏了回退（错误 P4）。</p>
+<ol><li><strong>守卫红了别妥协</strong>：它想 <code>--no-verify</code> 绕过时，坚决不许，让它先把守卫修绿。</li></ol>
+<hr>
+<p><em>完整修复步骤在 <code>给AI看/错误自查手册.md</code>；怕改坏/要发布看 <code>命脉自保清单-给人.md</code>。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给人看/命脉自保清单-给人.html"><div class="dir">← 上一篇</div><div class="ttl">🛟 命脉自保清单（给你自己看）</div></a><a class="next" href="../../../docs/AI协作预设包/给人看/使用说明-怎么用这套包.html"><div class="dir">下一篇 →</div><div class="ttl">🧑 使用说明 · 这套包怎么用（给你自己看）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给人看/排错速查-给人.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

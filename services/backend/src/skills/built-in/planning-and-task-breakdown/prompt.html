@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planning and Task Breakdown · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>planning-and-task-breakdown<span class="sep">›</span>Planning and Task Breakdown</div>
+      <header class="hero reveal"><h1>Planning and Task Breakdown</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#planning-and-task-breakdown">Planning and Task Breakdown</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-planning-process">The Planning Process</a></li><li class="lvl-3"><a href="#step-1-enter-plan-mode">Step 1: Enter Plan Mode</a></li><li class="lvl-3"><a href="#step-2-identify-the-dependency-graph">Step 2: Identify the Dependency Graph</a></li><li class="lvl-3"><a href="#step-3-slice-vertically">Step 3: Slice Vertically</a></li><li class="lvl-3"><a href="#step-4-write-tasks">Step 4: Write Tasks</a></li><li class="lvl-3"><a href="#step-5-order-and-checkpoint">Step 5: Order and Checkpoint</a></li><li class="lvl-2"><a href="#task-sizing-guidelines">Task Sizing Guidelines</a></li><li class="lvl-2"><a href="#plan-document-template">Plan Document Template</a></li><li class="lvl-2"><a href="#parallelization-opportunities">Parallelization Opportunities</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="planning-and-task-breakdown">Planning and Task Breakdown<a class="anchor" href="#planning-and-task-breakdown" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Decompose work into small, verifiable tasks with explicit acceptance criteria. Good task breakdown is the difference between an agent that completes work reliably and one that produces a tangled mess. Every task should be small enough to implement, test, and verify in a single focused session.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>You have a spec and need to break it into implementable units</li><li>A task feels too large or vague to start</li><li>Work needs to be parallelized across multiple agents or sessions</li><li>You need to communicate scope to a human</li><li>The implementation order isn't obvious</li></ul>
+<p><strong>When NOT to use:</strong> Single-file changes with obvious scope, or when the spec already contains well-defined tasks.</p>
+<h2 id="the-planning-process">The Planning Process<a class="anchor" href="#the-planning-process" aria-label="锚点">#</a></h2>
+<h3 id="step-1-enter-plan-mode">Step 1: Enter Plan Mode<a class="anchor" href="#step-1-enter-plan-mode" aria-label="锚点">#</a></h3>
+<p>Before writing any code, operate in read-only mode:</p>
+<ul><li>Read the spec and relevant codebase sections</li><li>Identify existing patterns and conventions</li><li>Map dependencies between components</li><li>Note risks and unknowns</li></ul>
+<p><strong>Do NOT write code during planning.</strong> The output is a plan document, not implementation.</p>
+<h3 id="step-2-identify-the-dependency-graph">Step 2: Identify the Dependency Graph<a class="anchor" href="#step-2-identify-the-dependency-graph" aria-label="锚点">#</a></h3>
+<p>Map what depends on what:</p>
+<pre><code>Database schema
+    │
+    ├── API models/types
+    │       │
+    │       ├── API endpoints
+    │       │       │
+    │       │       └── Frontend API client
+    │       │               │
+    │       │               └── UI components
+    │       │
+    │       └── Validation logic
+    │
+    └── Seed data / migrations</code></pre>
+<p>Implementation order follows the dependency graph bottom-up: build foundations first.</p>
+<h3 id="step-3-slice-vertically">Step 3: Slice Vertically<a class="anchor" href="#step-3-slice-vertically" aria-label="锚点">#</a></h3>
+<p>Instead of building all the database, then all the API, then all the UI — build one complete feature path at a time:</p>
+<p><strong>Bad (horizontal slicing):</strong></p>
+<pre><code>Task 1: Build entire database schema
+Task 2: Build all API endpoints
+Task 3: Build all UI components
+Task 4: Connect everything</code></pre>
+<p><strong>Good (vertical slicing):</strong></p>
+<pre><code>Task 1: User can create an account (schema + API + UI for registration)
+Task 2: User can log in (auth schema + API + UI for login)
+Task 3: User can create a task (task schema + API + UI for creation)
+Task 4: User can view task list (query + API + UI for list view)</code></pre>
+<p>Each vertical slice delivers working, testable functionality.</p>
+<h3 id="step-4-write-tasks">Step 4: Write Tasks<a class="anchor" href="#step-4-write-tasks" aria-label="锚点">#</a></h3>
+<p>Each task follows this structure:</p>
+<pre><code class="language-markdown">## Task [N]: [Short descriptive title]
+
+**Description:** One paragraph explaining what this task accomplishes.
+
+**Acceptance criteria:**
+- [ ] [Specific, testable condition]
+- [ ] [Specific, testable condition]
+
+**Verification:**
+- [ ] Tests pass: `npm test -- --grep &quot;feature-name&quot;`
+- [ ] Build succeeds: `npm run build`
+- [ ] Manual check: [description of what to verify]
+
+**Dependencies:** [Task numbers this depends on, or &quot;None&quot;]
+
+**Files likely touched:**
+- `src/path/to/file.ts`
+- `tests/path/to/test.ts`
+
+**Estimated scope:** [Small: 1-2 files | Medium: 3-5 files | Large: 5+ files]</code></pre>
+<h3 id="step-5-order-and-checkpoint">Step 5: Order and Checkpoint<a class="anchor" href="#step-5-order-and-checkpoint" aria-label="锚点">#</a></h3>
+<p>Arrange tasks so that:</p>
+<ol><li>Dependencies are satisfied (build foundation first)</li><li>Each task leaves the system in a working state</li><li>Verification checkpoints occur after every 2-3 tasks</li><li>High-risk tasks are early (fail fast)</li></ol>
+<p>Add explicit checkpoints:</p>
+<pre><code class="language-markdown">## Checkpoint: After Tasks 1-3
+- [ ] All tests pass
+- [ ] Application builds without errors
+- [ ] Core user flow works end-to-end
+- [ ] Review with human before proceeding</code></pre>
+<h2 id="task-sizing-guidelines">Task Sizing Guidelines<a class="anchor" href="#task-sizing-guidelines" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Size</th><th>Files</th><th>Scope</th><th>Example</th></tr></thead><tbody><tr><td><strong>XS</strong></td><td>1</td><td>Single function or config change</td><td>Add a validation rule</td></tr><tr><td><strong>S</strong></td><td>1-2</td><td>One component or endpoint</td><td>Add a new API endpoint</td></tr><tr><td><strong>M</strong></td><td>3-5</td><td>One feature slice</td><td>User registration flow</td></tr><tr><td><strong>L</strong></td><td>5-8</td><td>Multi-component feature</td><td>Search with filtering and pagination</td></tr><tr><td><strong>XL</strong></td><td>8+</td><td><strong>Too large — break it down further</strong></td><td>—</td></tr></tbody></table>
+<p>If a task is L or larger, it should be broken into smaller tasks. An agent performs best on S and M tasks.</p>
+<p><strong>When to break a task down further:</strong></p>
+<ul><li>It would take more than one focused session (roughly 2+ hours of agent work)</li><li>You cannot describe the acceptance criteria in 3 or fewer bullet points</li><li>It touches two or more independent subsystems (e.g., auth and billing)</li><li>You find yourself writing &quot;and&quot; in the task title (a sign it is two tasks)</li></ul>
+<h2 id="plan-document-template">Plan Document Template<a class="anchor" href="#plan-document-template" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown"># Implementation Plan: [Feature/Project Name]
+
+## Overview
+[One paragraph summary of what we're building]
+
+## Architecture Decisions
+- [Key decision 1 and rationale]
+- [Key decision 2 and rationale]
+
+## Task List
+
+### Phase 1: Foundation
+- [ ] Task 1: ...
+- [ ] Task 2: ...
+
+### Checkpoint: Foundation
+- [ ] Tests pass, builds clean
+
+### Phase 2: Core Features
+- [ ] Task 3: ...
+- [ ] Task 4: ...
+
+### Checkpoint: Core Features
+- [ ] End-to-end flow works
+
+### Phase 3: Polish
+- [ ] Task 5: ...
+- [ ] Task 6: ...
+
+### Checkpoint: Complete
+- [ ] All acceptance criteria met
+- [ ] Ready for review
+
+## Risks and Mitigations
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| [Risk] | [High/Med/Low] | [Strategy] |
+
+## Open Questions
+- [Question needing human input]</code></pre>
+<h2 id="parallelization-opportunities">Parallelization Opportunities<a class="anchor" href="#parallelization-opportunities" aria-label="锚点">#</a></h2>
+<p>When multiple agents or sessions are available:</p>
+<ul><li><strong>Safe to parallelize:</strong> Independent feature slices, tests for already-implemented features, documentation</li><li><strong>Must be sequential:</strong> Database migrations, shared state changes, dependency chains</li><li><strong>Needs coordination:</strong> Features that share an API contract (define the contract first, then parallelize)</li></ul>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;I'll figure it out as I go&quot;</td><td>That's how you end up with a tangled mess and rework. 10 minutes of planning saves hours.</td></tr><tr><td>&quot;The tasks are obvious&quot;</td><td>Write them down anyway. Explicit tasks surface hidden dependencies and forgotten edge cases.</td></tr><tr><td>&quot;Planning is overhead&quot;</td><td>Planning is the task. Implementation without a plan is just typing.</td></tr><tr><td>&quot;I can hold it all in my head&quot;</td><td>Context windows are finite. Written plans survive session boundaries and compaction.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Starting implementation without a written task list</li><li>Tasks that say &quot;implement the feature&quot; without acceptance criteria</li><li>No verification steps in the plan</li><li>All tasks are XL-sized</li><li>No checkpoints between tasks</li><li>Dependency order isn't considered</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>Before starting implementation, confirm:</p>
+<ul><li>[ ] Every task has acceptance criteria</li><li>[ ] Every task has a verification step</li><li>[ ] Task dependencies are identified and ordered correctly</li><li>[ ] No task touches more than ~5 files</li><li>[ ] Checkpoints exist between major phases</li><li>[ ] The human has reviewed and approved the plan</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/performance-optimization/references/performance-checklist.html"><div class="dir">← 上一篇</div><div class="ttl">Performance Checklist</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/remember/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Remember — Persistent Memory</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/planning-and-task-breakdown/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

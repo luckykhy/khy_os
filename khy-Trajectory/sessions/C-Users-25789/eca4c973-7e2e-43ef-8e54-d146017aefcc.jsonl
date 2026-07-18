@@ -1,0 +1,7 @@
+{"uuid":"a3965007361cbf90","parentUuid":null,"role":"user","content":"你觉得khy还有什么不足","timestamp":1781258356348,"isMeta":false,"isCompactSummary":false}
+{"uuid":"a0c89bdd37e7d571","parentUuid":"a3965007361cbf90","role":"user","content":"你觉得khy还有什么不足","timestamp":1781258356349,"isMeta":false,"isCompactSummary":false}
+{"uuid":"18e56b6a6067219f","parentUuid":"a0c89bdd37e7d571","role":"user","content":"你觉得khy还有什么不足","timestamp":1781258356349,"isMeta":false,"isCompactSummary":false}
+{"uuid":"7edd09553fec0af8","parentUuid":"18e56b6a6067219f","role":"user","content":"你觉得khy还有什么不足","timestamp":1781258356349,"isMeta":false,"isCompactSummary":false}
+{"uuid":"66a920f39b14d75f","parentUuid":"7edd09553fec0af8","role":"assistant","content":"Not logged in · Please run /login","timestamp":1781258356350,"isMeta":false,"isCompactSummary":false}
+{"uuid":"fd69f93c63987f76","parentUuid":"66a920f39b14d75f","role":"user","content":"你觉得khy还有什么不足","timestamp":1781258359184,"isMeta":false,"isCompactSummary":false}
+{"uuid":"1c2e52b23fc5d5d0","parentUuid":"fd69f93c63987f76","role":"assistant","content":"Not logged in · Please run /login","timestamp":1781258359184,"isMeta":false,"isCompactSummary":false}

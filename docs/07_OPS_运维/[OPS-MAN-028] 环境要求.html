@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>环境要求 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>环境要求</div>
+      <header class="hero reveal"><h1>环境要求</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#环境要求">环境要求</a></li><li class="lvl-2"><a href="#一-用户最低运行要求">一、用户最低运行要求</a></li><li class="lvl-3"><a href="#1-1-软件门槛">1.1 软件门槛</a></li><li class="lvl-3"><a href="#1-2-硬件与网络">1.2 硬件与网络</a></li><li class="lvl-3"><a href="#1-3-系统软件包">1.3 系统软件包</a></li><li class="lvl-3"><a href="#1-4-启动检查">1.4 启动检查</a></li><li class="lvl-3"><a href="#1-5-npm-引导模式-可选">1.5 npm 引导模式（可选）</a></li><li class="lvl-2"><a href="#二-维护-构建要求-面向维护者-普通用户可跳过">二、维护 / 构建要求（面向维护者，普通用户可跳过）</a></li><li class="lvl-3"><a href="#2-1-打包约束">2.1 打包约束</a></li><li class="lvl-3"><a href="#2-2-vmware-镜像构建要求-可选">2.2 VMware 镜像构建要求（可选）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-028 | 阶段: 运维 | 原路径: docs/指南/环境要求.md --&gt;</p>
+<h1 id="环境要求">环境要求<a class="anchor" href="#环境要求" aria-label="锚点">#</a></h1>
+<blockquote><p>📦 <strong>pip 安装后，先读哪篇？</strong></p>
+<table><thead><tr><th>你的目的</th><th>看这篇</th></tr></thead><tbody><tr><td>第一次装完，想最快跑起来</td><td>[OPS-MAN-027] 快速开始</td></tr><tr><td>想按成长阶梯一步步进阶</td><td>[OPS-MAN-043] 从 0 到高手</td></tr><tr><td>想知道装完到底能干什么</td><td>[OPS-MAN-023] 完整功能清单</td></tr><tr><td>想按需开启某个具体功能</td><td>[OPS-MAN-024] 按需配置体验</td></tr><tr><td>还原源码树 / 自研内核全功能</td><td>[OPS-MAN-037] 完整还原与全功能开启</td></tr><tr><td><strong>本文</strong></td><td>安装与运行的软硬件门槛</td></tr></tbody></table></blockquote>
+<p>本文分两层：<strong>用户最低运行要求</strong>（纯 <code>pip install khy-os</code> 用户都要看）与<br><strong>维护 / 构建要求</strong>（只在你要打包、构建内核镜像时才需要，普通用户可跳过）。</p>
+<hr>
+<h2 id="一-用户最低运行要求">一、用户最低运行要求<a class="anchor" href="#一-用户最低运行要求" aria-label="锚点">#</a></h2>
+<p>纯 <code>pip install khy-os</code> 的用户，只需满足下面这些就能启动。</p>
+<h3 id="1-1-软件门槛">1.1 软件门槛<a class="anchor" href="#1-1-软件门槛" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>要求</th><th>说明 / 权威源</th></tr></thead><tbody><tr><td>Python</td><td><code>&gt;= 3.8</code></td><td>pip 安装门槛，权威源 <code>pyproject.toml</code> 的 <code>requires-python</code></td></tr><tr><td>Node.js</td><td><code>&gt;= 20</code></td><td>后端运行时硬性 engines 约束，权威源 <code>services/backend/package.json</code>。<strong>缺失时会自动下载便携版</strong>（见下）</td></tr><tr><td>npm</td><td>PATH 中可用</td><td>首次启动用它安装后端依赖</td></tr></tbody></table>
+<blockquote><p><strong>Node 缺失会自动补齐</strong>：如果系统没有 Node ≥ 20，启动器会自动下载便携版<br><strong>Node 22.12.0</strong> 到 <code>~/.khyquant/node</code>（Windows 为 <code>%LOCALAPPDATA%\khy\node</code>，回退<br><code>~/.khyquant/node</code>），不污染系统全局环境。</p>
+<ul><li>想换版本：设置 <code>KHY_NODE_VERSION=22.12.0</code>（取你需要的版本号）。</li><li>想禁用自动下载（例如离线、受控环境）：设置 <code>KHY_AUTO_INSTALL_NODE=0</code>，</li></ul>
+<p>此时你需要自己事先装好 Node ≥ 20。</p></blockquote>
+<h3 id="1-2-硬件与网络">1.2 硬件与网络<a class="anchor" href="#1-2-硬件与网络" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>建议</th><th>说明</th></tr></thead><tbody><tr><td>磁盘空间</td><td>预留 ≥ 2 GB</td><td>后端 <code>node_modules</code> 依赖 + 便携 Node + 缓存。仅核心运行约数百 MB，留余量更稳</td></tr><tr><td>内存</td><td>≥ 2 GB 可用</td><td>仅运行 KHY 后端 / 网关足够；<strong>本地大模型推理另算</strong>（见下）</td></tr><tr><td>网络</td><td><strong>首次启动需联网</strong></td><td>首启会 <code>npm install</code> 拉取后端依赖、并可能自动下载便携 Node。装好后日常使用可离线（云端 AI 除外）</td></tr></tbody></table>
+<blockquote><p><strong>本地模型推理的额外要求</strong>（可选，仅当你用 Ollama / llama.cpp 跑本地模型时）：<br>内存 / 显存随模型大小而定，<code>&gt;= 8B</code> 的模型建议用 GPU（NVIDIA CUDA 或 Apple M 系列）。<br>仅用云端 AI（如配置 API Key 走在线服务商）则无此要求。详见 [OPS-MAN-024] 本地模型一节。</p></blockquote>
+<h3 id="1-3-系统软件包">1.3 系统软件包<a class="anchor" href="#1-3-系统软件包" aria-label="锚点">#</a></h3>
+<p>按平台准备以下基础工具（多数系统已自带）：</p>
+<p><strong>Linux</strong></p>
+<pre><code class="language-bash"># Debian / Ubuntu
+sudo apt-get install -y git curl ca-certificates</code></pre>
+<ul><li><code>git</code>、<code>curl</code>、<code>ca-certificates</code></li></ul>
+<p><strong>macOS</strong></p>
+<pre><code class="language-bash"># 需要先装 Homebrew：https://brew.sh
+brew install node python git</code></pre>
+<ul><li>系统通常已自带 <code>git</code> / <code>curl</code>；用 Homebrew 一并补齐 Node 与 Python 更省心。</li></ul>
+<p><strong>Windows</strong></p>
+<ul><li>推荐用官方安装包或包管理器装好 Python（≥ 3.8）与 Node（≥ 20）；</li></ul>
+<p><code>git</code> / <code>curl</code> 可选（Node 缺失时启动器仍会自动下载便携版）。</p>
+<h3 id="1-4-启动检查">1.4 启动检查<a class="anchor" href="#1-4-启动检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy doctor
+khy gateway status</code></pre>
+<p><strong>通过的样子（成功判据）</strong>：</p>
+<ul><li><code>khy doctor</code> 末尾给出汇总，关键项显示 <code>[ OK ]</code>（Node ≥ 20、依赖已装、端口可用）；</li></ul>
+<p>若有 <code>[FAIL]</code> 会附可直接粘贴的修复命令。</p>
+<ul><li><code>khy gateway status</code> 列出已配置的服务商及其在线状态；<strong>装完默认还没配 key 属正常</strong>，</li></ul>
+<p>配置见 [OPS-MAN-023] / [OPS-MAN-024]。</p>
+<blockquote><p>想要一条更早、不触发 Node 后端的体检：<code>khy preflight</code>（别名 <code>khy precheck</code>）。<br>区别见 [OPS-MAN-043] 阶段 0：<code>preflight</code> 只体检并给你粘贴命令，<code>doctor</code> 会尝试替你动手修。</p></blockquote>
+<h3 id="1-5-npm-引导模式-可选">1.5 npm 引导模式（可选）<a class="anchor" href="#1-5-npm-引导模式-可选" aria-label="锚点">#</a></h3>
+<ul><li>默认 npm 引导使用精简模式（<code>--omit=optional</code>）。</li><li>如需包含可选的重量级依赖，请设置：<ul><li><code>KHY_NPM_INCLUDE_OPTIONAL=true</code></li></ul></li></ul>
+<hr>
+<h2 id="二-维护-构建要求-面向维护者-普通用户可跳过">二、维护 / 构建要求（面向维护者，普通用户可跳过）<a class="anchor" href="#二-维护-构建要求-面向维护者-普通用户可跳过" aria-label="锚点">#</a></h2>
+<p>只有在你要<strong>自己打 wheel 发布</strong>或<strong>构建自研内核镜像</strong>时才需要本节。</p>
+<h3 id="2-1-打包约束">2.1 打包约束<a class="anchor" href="#2-1-打包约束" aria-label="锚点">#</a></h3>
+<ul><li>pip 分发硬性上限：<code>&lt;= 1000000000 bytes</code>（即 ≤ 1 GB）。</li></ul>
+<h3 id="2-2-vmware-镜像构建要求-可选">2.2 VMware 镜像构建要求（可选）<a class="anchor" href="#2-2-vmware-镜像构建要求-可选" aria-label="锚点">#</a></h3>
+<ul><li>root 权限（<code>sudo</code>）</li><li><code>parted</code>、<code>losetup</code>、<code>rsync</code>、<code>grub-install</code>、<code>mkfs.vfat</code>、<code>mkfs.ext4</code></li><li>可选的 VMDK 导出：<code>qemu-img</code></li></ul>
+<p>快速检查：</p>
+<pre><code class="language-bash">bash scripts/khytogo/make-khytogo.sh --mode vmware-plan</code></pre>
+<blockquote><p>注意：<code>scripts/khytogo/</code> 属<strong>源码树</strong>脚本。纯 <code>pip install</code> 的用户安装目录里没有它——<br>先 <code>khy restore</code>（还原可读源码树）或 <code>git clone</code> 仓库后，再在源码树根目录执行。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-027] 快速开始.html"><div class="dir">← 上一篇</div><div class="ttl">KHY-OS 快速开始 — 安装与使用</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-029] 磁盘守卫-防膨胀机制.html"><div class="dir">下一篇 →</div><div class="ttl">磁盘守卫 — 防膨胀机制</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-028] 环境要求.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

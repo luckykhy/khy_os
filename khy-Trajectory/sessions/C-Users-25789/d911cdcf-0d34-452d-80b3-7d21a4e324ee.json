@@ -1,0 +1,63 @@
+{
+  "sessionId": "d911cdcf-0d34-452d-80b3-7d21a4e324ee",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的桌面上有什么"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: LS]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_fc5717e0a13e4bef976a3889",
+          "name": "LS",
+          "input": {
+            "path": "D:\\HuaweiMoveData\\Users\\25789\\Desktop"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_fc5717e0a13e4bef976a3889",
+          "content": "[LoopWarning: Unknown tool \"ls\". 0 unknown calls so far. — try a different tool or approach]\n[{\"name\":\"22.28\",\"path\":\"22.28\",\"type\":\"directory\"},{\"name\":\"半年计划_从零到开发\",\"path\":\"半年计划_从零到开发\",\"type\":\"directory\"},{\"name\":\"毕业论文\",\"path\":\"毕业论文\",\"type\":\"directory\"},{\"name\":\"测试临时\",\"path\":\"测试临时\",\"type\":\"directory\"},{\"name\":\"测试文件夹\",\"path\":\"测试文件夹\",\"type\":\"directory\"},{\"name\":\"改名文件夹1号\",\"path\":\"改名文件夹1号\",\"type\":\"directory\"},{\"name\":\"临时\",\"path\":\"临时\",\"type\":\"directory\"},{\"name\":\"六个文件\",\"path\":\"六个文件\",\"type\":\"directory\"},{\"name\":\"旅游\",\"path\":\"旅游\",\"type\":\"directory\"},{\"name\":\"千问.lnk\",\"path\":\"千问.lnk\",\"type\":\"file\"},{\"name\":\"提示词1\",\"path\":\"提示词1\",\"type\":\"directory\"},{\"name\":\"通知文件\",\"path\":\"通知文件\",\"type\":\"directory\"},{\"name\":\"项目\",\"path\":\"项目\",\"type\":\"directory\"},{\"name\":\"学习\",\"path\":\"学习\",\"type\":\"directory\"},{\"name\":\"学习资料\",\"path\":\"学习资料\",\"type\":\"directory\"},{\"name\":\"学校考试\",\"path\":\"学校考试\",\"type\":\"directory\"},{\"name\":\"KHY-Documents\",\"path\":\"KHY-Documents\",\"type\":\"directory\"},{\"name\":\"KHY-Executables\",\"path\":\"KHY-Executables\",\"type\":\"directory\"},{\"name\":\"linghun.lnk\",\"path\":\"linghun.lnk\",\"type\":\"file\"},{\"name\":\"Nirvana\",\"path\":\"Nirvana\",\"type\":\"directory\"},{\"name\":\"s22\",\"path\":\"s22\",\"type\":\"directory\"},{\"name\":\"S22631742820孔浩原,毕业材料表格\",\"path\":\"S22631742820孔浩原,毕业材料表格\",\"type\":\"directory\"},{\"name\":\"test-files\",\"path\":\"test-files\",\"type\":\"directory\"},{\"name\":\"Trae.lnk\",\"path\":\"Trae.lnk\",\"type\":\"file\"}]\n[Metadata: 24 results]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "你的桌面上有以下内容：\n\n**文件夹 (21个):**\n- 22.28\n- 半年计划_从零到开发\n- 毕业论文\n- 测试临时\n- 测试文件夹\n- 改名文件夹1号\n- 临时\n- 六个文件\n- 旅游\n- 提示词1\n- 通知文件\n- 项目\n- 学习\n- 学习资料\n- 学校考试\n- KHY-Documents\n- KHY-Executables\n- Nirvana\n- s22\n- S22631742820孔浩原,毕业材料表格\n- test-files\n\n**快捷方式 (3个):**\n- 千问.lnk\n- linghun.lnk\n- Trae.lnk\n\n看起来你的桌面内容比较丰富，有很多学习和项目相关的文件夹。需要我帮你查看某个具体文件夹里的内容吗？",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 4,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782267071571,
+  "updatedAt": 1782267071571
+}

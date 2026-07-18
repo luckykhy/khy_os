@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-058-细粒度权限策略中间件-记忆主动化引擎-记忆定期蒸馏">DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏</a></li><li class="lvl-2"><a href="#一-目录结构">一、目录结构</a></li><li class="lvl-2"><a href="#二-模块一-细粒度权限控制中间件">二、模块一：细粒度权限控制中间件</a></li><li class="lvl-3"><a href="#2-1-配置文件-permissions-json">2.1 配置文件 `/permissions.json`</a></li><li class="lvl-3"><a href="#2-2-评估契约-evaluate-toolname-params-ctx">2.2 评估契约 `evaluate(toolName, params, ctx)`</a></li><li class="lvl-3"><a href="#2-3-接入-toolcalling-requestpermission-真正的前置拦截器">2.3 接入 `toolCalling.requestPermission`（真正的前置拦截器）</a></li><li class="lvl-3"><a href="#2-4-permissions-命令">2.4 `/permissions` 命令</a></li><li class="lvl-2"><a href="#三-模块二-记忆主动化引擎">三、模块二：记忆主动化引擎</a></li><li class="lvl-3"><a href="#3-1-排序-scoring-rankmemories-query-opts">3.1 排序 `scoring.rankMemories(query, opts)`</a></li><li class="lvl-3"><a href="#3-2-主动框定与注入">3.2 主动框定与注入</a></li><li class="lvl-3"><a href="#3-3-remember-type-结构化记忆">3.3 `/remember --type` 结构化记忆</a></li><li class="lvl-2"><a href="#三-五-模块三-记忆定期蒸馏器">三·五、模块三：记忆定期蒸馏器</a></li><li class="lvl-3"><a href="#3-5-1-分析-analyze-nowms-纯函数-不改盘">3.5.1 分析 `analyze({nowMs})` —— 纯函数，不改盘</a></li><li class="lvl-3"><a href="#3-5-2-归档式-忘记-可恢复-绝不硬删">3.5.2 归档式「忘记」（可恢复，绝不硬删）</a></li><li class="lvl-3"><a href="#3-5-3-周期闸门与编排">3.5.3 周期闸门与编排</a></li><li class="lvl-3"><a href="#3-5-4-接入">3.5.4 接入</a></li><li class="lvl-2"><a href="#四-验证">四、验证</a></li><li class="lvl-2"><a href="#五-设计红线对齐">五、设计红线对齐</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-058-细粒度权限策略中间件-记忆主动化引擎-记忆定期蒸馏">DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏<a class="anchor" href="#design-arch-058-细粒度权限策略中间件-记忆主动化引擎-记忆定期蒸馏" aria-label="锚点">#</a></h1>
+<blockquote><p>三个相互独立、与主循环解耦的子系统：</p>
+<ul><li><strong>模块一</strong>：配置驱动的细粒度权限控制中间件（真正的调用前拦截器）。</li><li><strong>模块二</strong>：记忆主动化引擎（真正注入系统提示词的动态注入器）。</li><li><strong>模块三</strong>：记忆定期蒸馏器（明白哪些该忘记、哪些该记住；忘记=可恢复归档）。</li></ul>
+<p>三者均遵循「未配置即零行为变更、失败安全（fail-closed / fail-soft）、只增不减保护」三原则，<br>默认开关存在但不破坏任何既有路径。<strong>绝不静默删除用户数据</strong>：蒸馏的「忘记」一律为<br>可逆归档（移动至 <code>.archive/</code> 并记录清单），周期运行默认仅报告、不改盘。</p></blockquote>
+<hr>
+<h2 id="一-目录结构">一、目录结构<a class="anchor" href="#一-目录结构" aria-label="锚点">#</a></h2>
+<pre><code>services/backend/src/
+  services/
+    permissionPolicy/          # 模块一：权限策略中间件
+      config.js                #   策略文件加载/保存/脚手架（&lt;dataHome&gt;/permissions.json）
+      matchers.js              #   纯分类与匹配（detectCategory / glob / path / url / 敏感操作）
+      index.js                 #   evaluate() 评估器 + 管理助手（admin helpers）
+    memoryEngine/              # 模块二：记忆主动化引擎
+      scoring.js               #   关键词 × 时间衰减 × 类型过滤 的排序
+      index.js                 #   主动检索 + 提示词框定 + addStructuredMemory
+  memdir/                      # 既有记忆基座（被模块二复用）
+    memdir.js                  #   新增导出 _tokenizeForRecall / _overlapCount（单一真源）
+
+接入点（已改造）：
+  services/backend/src/services/toolCalling.js   # requestPermission 漏斗接入模块一
+  services/backend/src/tools/executeCode.js      # 执行超时受策略上限收紧
+  services/backend/src/cli/ai.js                 # 系统提示词装配接入模块二
+  services/backend/src/cli/router.js             # /permissions 与 /remember --type
+  services/backend/src/constants/commandSchema.js# /permissions 路由 + permissions 命令白名单
+
+测试：
+  services/backend/tests/services/permissionPolicy/permissionPolicy.test.js  # 19 例
+  services/backend/tests/services/memoryEngine/memoryEngine.test.js          # 12 例</code></pre>
+<hr>
+<h2 id="二-模块一-细粒度权限控制中间件">二、模块一：细粒度权限控制中间件<a class="anchor" href="#二-模块一-细粒度权限控制中间件" aria-label="锚点">#</a></h2>
+<h3 id="2-1-配置文件-permissions-json">2.1 配置文件 <code>&lt;dataHome&gt;/permissions.json</code><a class="anchor" href="#2-1-配置文件-permissions-json" aria-label="锚点">#</a></h3>
+<p>通过 <code>utils/dataHome.getDataHome()</code> 解析（默认 <code>~/.khy</code>，可由 <code>KHY_DATA_HOME</code> /<br><code>.location.json</code> 指针覆盖）。<strong>与既有的 profile 式 <code>~/.khyquant/permissions.json</code><br>（permissionStore）是两个独立命名空间</strong>，互不影响。</p>
+<pre><code class="language-jsonc">{
+  &quot;version&quot;: 1,
+  &quot;defaultPolicy&quot;: &quot;confirm&quot;,         // 全局默认：auto | confirm | deny
+  &quot;tools&quot;: { &quot;shellCommand&quot;: &quot;deny&quot; },// 逐工具覆盖（按名，支持别名/规范化匹配）
+  &quot;filesystem&quot;: {
+    &quot;pathWhitelist&quot;:   [&quot;/work/**&quot;],  // 所有文件操作通用
+    &quot;readWhitelist&quot;:   [],            // 进一步按动词限制
+    &quot;writeWhitelist&quot;:  [],
+    &quot;deleteWhitelist&quot;: []
+  },
+  &quot;network&quot;:  { &quot;urlWhitelist&quot;: [&quot;*.github.com&quot;, &quot;https://api.example.com/*&quot;] },
+  &quot;codeExecution&quot;: {
+    &quot;allowedLanguages&quot;: [&quot;javascript&quot;, &quot;python&quot;],
+    &quot;limits&quot;: { &quot;cpuSeconds&quot;: 0, &quot;memoryMb&quot;: 0, &quot;timeoutMs&quot;: 0 }  // 0 = 不额外限制
+  },
+  &quot;sensitiveOperations&quot;: {
+    &quot;requireConfirm&quot;: [&quot;git push&quot;, &quot;git reset --hard&quot;, &quot;deploy&quot;, &quot;rm -rf&quot;, &quot;drop table&quot;, &quot;批量删除&quot;]
+  }
+}</code></pre>
+<ul><li><strong>文件不存在 ⇒ 中间件完全无操作</strong>，现有权限流程 100% 不变（用户写文件后才生效）。</li><li>文件损坏 ⇒ 降级为「无策略」，在评估层 fail-closed（只会增加保护）。</li><li>杀手开关：<code>KHY_PERMISSION_POLICY=off</code>。</li></ul>
+<h3 id="2-2-评估契约-evaluate-toolname-params-ctx">2.2 评估契约 <code>evaluate(toolName, params, ctx)</code><a class="anchor" href="#2-2-评估契约-evaluate-toolname-params-ctx" aria-label="锚点">#</a></h3>
+<p>返回 <code>{ decision, category, reason, matched, limits }</code> 或 <code>null</code>（无策略 ⇒ 调用方按原流程继续）。</p>
+<p>判定顺序（每一步只增不减保护）：</p>
+<ol><li><strong>敏感操作</strong> 命中 <code>sensitiveOperations.requireConfirm</code> ⇒ 强制 <code>confirm</code>（除非已是 <code>deny</code>，deny 更严）。</li><li><strong>deny</strong> 直接阻断。</li><li><strong>代码执行语言闸门</strong>：配置了 <code>allowedLanguages</code> 且语言不在列表 ⇒ <code>deny</code>；否则按基础策略并附带 <code>limits</code>。</li><li><strong>白名单类（文件/网络）</strong>：<code>auto</code> 模式下「白名单内放行 / 白名单外拒绝」；无白名单时 <code>auto</code> 不施加限制（放行）。</li><li><strong>其余类（shell/git/other）</strong>：按基础策略；<code>auto</code> 即放行。</li></ol>
+<h3 id="2-3-接入-toolcalling-requestpermission-真正的前置拦截器">2.3 接入 <code>toolCalling.requestPermission</code>（真正的前置拦截器）<a class="anchor" href="#2-3-接入-toolcalling-requestpermission-真正的前置拦截器" aria-label="锚点">#</a></h3>
+<p>接入点位于 preflight 之后、permissionStore 之前：</p>
+<pre><code>EXEC_APPROVED → criticalGate（不可绕过红线）→ plan-mode deny → preflight
+   → 【策略中间件 evaluate】
+       deny     → 立即拒绝（fail-closed）
+       confirm  → 置 policyConfirm 标志（抑制后续 acceptEdits/bypass/已批准 的自动放行）
+       auto     → 置 policyAutoAllow 标志
+   → permissionStore（显式 deny 仍优先）
+   → 【policyAutoAllow &amp;&amp; !criticalGate ⇒ 放行】
+   → safe/low 自动放行（受 !policyConfirm 约束）
+   → acceptEdits / bypass（受 !criticalGate &amp;&amp; !policyConfirm 约束）
+   → 已批准（受 !criticalGate &amp;&amp; !policyConfirm 约束）
+   → 交互式确认</code></pre>
+<p>关键不变量：</p>
+<ul><li>策略<strong>永不放松</strong>关键红线（<code>criticalGate</code>）——白名单 <code>auto</code> 仍要过红线。</li><li>策略 <code>confirm</code> <strong>强制弹窗</strong>，即使处于 acceptEdits/bypass/已批准也不静默放行。</li><li>代码执行超时上限只会<strong>收紧</strong>（<code>min(默认, 策略 timeoutMs)</code>），绝不放宽（<code>executeCode.js</code> fail-soft 接入）。</li></ul>
+<h3 id="2-4-permissions-命令">2.4 <code>/permissions</code> 命令<a class="anchor" href="#2-4-permissions-命令" aria-label="锚点">#</a></h3>
+<pre><code>/permissions                                  查看当前策略
+/permissions init                             生成保守默认策略文件
+/permissions default &lt;auto|confirm|deny&gt;      设置全局默认
+/permissions tool &lt;名称&gt; &lt;策略|clear&gt;         逐工具覆盖 / 清除
+/permissions allow-path &lt;glob&gt; [read|write|delete]   加入路径白名单
+/permissions allow-url &lt;pattern&gt;              加入 URL/域名白名单</code></pre>
+<hr>
+<h2 id="三-模块二-记忆主动化引擎">三、模块二：记忆主动化引擎<a class="anchor" href="#三-模块二-记忆主动化引擎" aria-label="锚点">#</a></h2>
+<h3 id="3-1-排序-scoring-rankmemories-query-opts">3.1 排序 <code>scoring.rankMemories(query, opts)</code><a class="anchor" href="#3-1-排序-scoring-rankmemories-query-opts" aria-label="锚点">#</a></h3>
+<p>在 memdir 关键词重叠基线上叠加两路信号：</p>
+<ul><li><strong>时间衰减</strong>：<code>recencyMultiplier = 0.5 ^ (ageDays / halfLife)</code>，半衰期 <code>KHY_MEMORY_HALFLIFE_DAYS</code>（默认 30 天）。</li><li><strong>类型过滤</strong>：按 <code>user|feedback|project|reference</code> 限定候选集。</li></ul>
+<p>综合得分 <code>= 关键词重叠分 × 时间衰减</code>，复用 memdir 的 <code>_tokenizeForRecall</code> / <code>_overlapCount</code>（单一真源，不重复造分词器）。</p>
+<h3 id="3-2-主动框定与注入">3.2 主动框定与注入<a class="anchor" href="#3-2-主动框定与注入" aria-label="锚点">#</a></h3>
+<p><code>buildProactiveSystemSection(userMessage)</code> 在系统提示词装配阶段（<code>ai.js</code>）追加一段<br><code>[PROACTIVE_MEMORY]</code> 上下文：指示模型在确有帮助时，于回应开头<strong>自然主动提及</strong><br>（「我记得你之前提到过…」「你偏好…，这次要不要也用同样的方式？」），并按记忆类型给出导语<br>（用户画像 / 协作偏好 / 项目背景 / 外部资源）。受字符预算约束，与当前请求无关则忽略。</p>
+<ul><li>杀手开关：<code>KHY_PROACTIVE_MEMORY=off</code>（仅关主动框定层）/ <code>KHY_DISABLE_MEMORY=1</code>（关全部召回）。</li><li>旋钮：<code>KHY_MEMORY_PROACTIVE_LIMIT</code>（默认 3）、<code>KHY_MEMORY_PROACTIVE_CHARS</code>（默认 900）。</li><li>fail-soft：任何异常都不破坏提示词装配。</li></ul>
+<h3 id="3-3-remember-type-结构化记忆">3.3 <code>/remember --type</code> 结构化记忆<a class="anchor" href="#3-3-remember-type-结构化记忆" aria-label="锚点">#</a></h3>
+<pre><code>/remember --type &lt;user|feedback|project|reference&gt; --name &quot;标题&quot; [--desc &quot;摘要&quot;] &lt;内容&gt;</code></pre>
+<p>经 <code>addStructuredMemory</code> 写入带 frontmatter 的记忆文件并刷新 <code>MEMORY.md</code> 索引。<br><strong>文件名采用 <code>_safeFilename</code></strong>：在 ASCII slug 基础上追加名称的 sha1 短哈希，<br>解决 memdir 默认 slug 对纯中文名折叠为 <code>&lt;type&gt;_.md</code> 造成的覆盖冲突。<br>（无 <code>--type</code> 时退化为原 <code>/remember</code> 快速追加到 khy.md。）</p>
+<hr>
+<h2 id="三-五-模块三-记忆定期蒸馏器">三·五、模块三：记忆定期蒸馏器<a class="anchor" href="#三-五-模块三-记忆定期蒸馏器" aria-label="锚点">#</a></h2>
+<p>文件：<code>services/backend/src/services/memoryEngine/distiller.js</code><br>测试：<code>services/backend/tests/services/memoryEngine/distiller.test.js</code>（16 例）</p>
+<p>随时间推移，记忆库会沉积<strong>空记忆、近似重复、陈旧</strong>条目，稀释主动召回的信噪比。<br>蒸馏器透明、可逆地决定「该留什么、该忘什么」。</p>
+<h3 id="3-5-1-分析-analyze-nowms-纯函数-不改盘">3.5.1 分析 <code>analyze({nowMs})</code> —— 纯函数，不改盘<a class="anchor" href="#3-5-1-分析-analyze-nowms-纯函数-不改盘" aria-label="锚点">#</a></h3>
+<p>产出计划 <code>{ keep, forget, merge, stats }</code>，每条决定附 <code>reason</code>：</p>
+<table><thead><tr><th>reason</th><th>判定</th><th>旋钮（默认）</th></tr></thead><tbody><tr><td><code>empty</code></td><td>正文短于阈值</td><td><code>KHY_MEMORY_MIN_BODY_CHARS</code>（12）</td></tr><tr><td><code>duplicate</code></td><td>同类型 token Jaccard ≥ 阈值，保留价值更高者</td><td><code>KHY_MEMORY_DUP_THRESHOLD</code>（0.82）</td></tr><tr><td><code>stale</code></td><td>超过<strong>按类型</strong>保鲜期（user≫feedback≈reference≫project）</td><td><code>KHY_MEMORY_STALE_DAYS_{USER 3650/FEEDBACK 540/REFERENCE 365/PROJECT 180}</code></td></tr></tbody></table>
+<p>价值分（透明用途）= <code>durability(type) × recency × richness</code>，用于在近似重复组中挑选幸存者并解释保留决定。<br>分词复用 memdir <code>_tokenizeForRecall</code>（单一真源）。</p>
+<h3 id="3-5-2-归档式-忘记-可恢复-绝不硬删">3.5.2 归档式「忘记」（可恢复，绝不硬删）<a class="anchor" href="#3-5-2-归档式-忘记-可恢复-绝不硬删" aria-label="锚点">#</a></h3>
+<ul><li><code>applyPlan(plan)</code>：把 forget 集<strong>移动</strong>至 <code>&lt;memoryDir&gt;/.archive/</code>，写 <code>manifest.json</code></li></ul>
+<p>（记录原名/归档名/reason/detail/类型/时间戳），并从 <code>MEMORY.md</code> 索引剔除被归档项。<br>  <code>listMemories()</code> 非递归 ⇒ 归档目录不会被重新扫描。</p>
+<ul><li><code>restore({filename?})</code>：全部或按文件名恢复；目标已存在则<strong>跳过以免覆盖</strong>（防呆）。</li><li><code>listArchived()</code>：读取清单。</li></ul>
+<h3 id="3-5-3-周期闸门与编排">3.5.3 周期闸门与编排<a class="anchor" href="#3-5-3-周期闸门与编排" aria-label="锚点">#</a></h3>
+<ul><li><code>.distill.json</code> 记录 <code>lastRunMs</code>；<code>intervalElapsed(nowMs)</code> 按</li></ul>
+<p><code>KHY_MEMORY_DISTILL_INTERVAL_DAYS</code>（默认 7）判定是否到期。</p>
+<ul><li><code>distill({apply, nowMs})</code>：分析 +（可选）归档 + 盖运行戳。</li><li><code>maybeDistill({nowMs, force})</code>：周期入口，<strong>fail-soft</strong>。模式由</li></ul>
+<p><code>KHY_MEMORY_DISTILL_AUTO</code> 控制：<code>off</code> 关闭 / <code>report</code>（<strong>默认</strong>，仅分析盖戳、不改盘）/<br>  <code>archive</code>（自动归档，仍可恢复）。</p>
+<h3 id="3-5-4-接入">3.5.4 接入<a class="anchor" href="#3-5-4-接入" aria-label="锚点">#</a></h3>
+<ul><li><code>cli/ai.js</code> 系统提示词装配：在主动记忆块之后调用 <code>maybeDistill()</code>（默认 report-only，</li></ul>
+<p>到期才跑一次）；若有可忘记项，追加一行 <code>[MEMORY_DISTILLATION]</code> 提示，让助手可<strong>主动、简短地</strong><br>  建议用户运行 <code>/memory distill</code>（呼应模块二的「主动提及」理念）。fail-soft，绝不破坏装配。</p>
+<ul><li><code>cli/router.js</code> <code>/memory distill</code> 子命令：</li></ul>
+<pre><code>  /memory distill                 分析并报告（dry-run，不改动任何记忆）
+  /memory distill --apply         归档建议忘记的记忆（可恢复）
+  /memory distill archived        列出已归档记忆
+  /memory distill restore [文件]  恢复一条（或全部）已归档记忆</code></pre>
+<hr>
+<h2 id="四-验证">四、验证<a class="anchor" href="#四-验证" aria-label="锚点">#</a></h2>
+<pre><code>$ jest tests/services/permissionPolicy            → 19 passed
+$ jest tests/services/memoryEngine/memoryEngine   → 12 passed
+$ jest tests/services/memoryEngine/distiller      → 16 passed（模块三）
+$ jest tests/services/memoryEngine memdir memory  → 58 passed（含模块二、三）
+$ jest commandSchema router                        → cli/router 绿（contextRouter 为既有无关失败）
+$ jest tools/ permission syscallGateway toolCalling → 201 passed（零回归）</code></pre>
+<p>端到端冒烟：<code>khy permissions init</code>、<code>khy remember --type feedback ...</code> 均按预期落盘，<br>两条不同中文标题得到两个互不冲突的文件名。</p>
+<hr>
+<h2 id="五-设计红线对齐">五、设计红线对齐<a class="anchor" href="#五-设计红线对齐" aria-label="锚点">#</a></h2>
+<ul><li><strong>解耦</strong>：两模块均为独立子系统，主循环仅在单点接入（<code>requestPermission</code> / 系统提示词装配）。</li><li><strong>只增不减保护</strong>：权限层只能 deny / 强制 confirm，绝不放松 <code>criticalGate</code>。</li><li><strong>零硬编码</strong>：所有阈值/开关均 env 可调。</li><li><strong>状态透明</strong>：<code>/permissions</code> 显式呈现当前策略；<code>[PROACTIVE_MEMORY]</code> 块明示记忆来源与「可能过时需核对」。</li><li><strong>失败安全</strong>：策略读失败 fail-closed；记忆失败 fail-soft，绝不阻断主流程。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-056] khyos桌面操控-眼耳嘴与模拟操作.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-059] 能力即代码.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-059 能力即代码（capability-as-code）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-058] 细粒度权限策略与记忆主动化引擎.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

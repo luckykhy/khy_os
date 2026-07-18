@@ -1,0 +1,1635 @@
+[
+  {
+    "version": 1,
+    "seq": 0,
+    "kind": "requirement",
+    "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "at": 1782036126637,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "fdc48c171a3fd1cf955da44e5d48ff557d5982584c78d66090cdc9a416f560ae"
+  },
+  {
+    "version": 1,
+    "seq": 1,
+    "kind": "requirement",
+    "prevHash": "fdc48c171a3fd1cf955da44e5d48ff557d5982584c78d66090cdc9a416f560ae",
+    "at": 1782036200564,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_b41ceb5dcd8e1343",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "open_app：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "open_app"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "open_app"
+    },
+    "hash": "63fa7a44b4eb34aae1edf29652bb496e35cb726937488f46fa4a67a6c90648c9"
+  },
+  {
+    "version": 1,
+    "seq": 2,
+    "kind": "requirement",
+    "prevHash": "63fa7a44b4eb34aae1edf29652bb496e35cb726937488f46fa4a67a6c90648c9",
+    "at": 1782036252455,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_04492162cb7b0c9b",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "74399d0b1c10f4d8bc3060ece50637fb20163de7a2eba5aef8d56cc961d3b77d"
+  },
+  {
+    "version": 1,
+    "seq": 3,
+    "kind": "requirement",
+    "prevHash": "74399d0b1c10f4d8bc3060ece50637fb20163de7a2eba5aef8d56cc961d3b77d",
+    "at": 1782046699935,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "11acdf82b084c08a55f6478ebd871a00ea2532a05f0ed25404e859118aec9489"
+  },
+  {
+    "version": 1,
+    "seq": 4,
+    "kind": "requirement",
+    "prevHash": "11acdf82b084c08a55f6478ebd871a00ea2532a05f0ed25404e859118aec9489",
+    "at": 1782050387954,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "0f5216ead3a83d7d13f31fbcf6469ef2a3d5ac30cab18f5c1cccb821c496fb57"
+  },
+  {
+    "version": 1,
+    "seq": 5,
+    "kind": "requirement",
+    "prevHash": "0f5216ead3a83d7d13f31fbcf6469ef2a3d5ac30cab18f5c1cccb821c496fb57",
+    "at": 1782050448094,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_9aa444cc01107b75",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "khyos：运行时缺失（可执行命令不在 PATH）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：运行时缺失（可执行命令不在 PATH）。",
+        "surface": "khyos"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "khyos"
+    },
+    "hash": "9604ee1ce7bc1f3e23f50070474c4f64fad63cf8a8e9b386e934e327fab9eb95"
+  },
+  {
+    "version": 1,
+    "seq": 6,
+    "kind": "requirement",
+    "prevHash": "9604ee1ce7bc1f3e23f50070474c4f64fad63cf8a8e9b386e934e327fab9eb95",
+    "at": 1782090157540,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f0db7b486ecc015",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "readFile：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "readFile"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "readFile"
+    },
+    "hash": "8fb10fd43b5dd6394ca82ca806fe0d7e8bccb0752bc93defbae25b7e47f5fe8a"
+  },
+  {
+    "version": 1,
+    "seq": 7,
+    "kind": "requirement",
+    "prevHash": "8fb10fd43b5dd6394ca82ca806fe0d7e8bccb0752bc93defbae25b7e47f5fe8a",
+    "at": 1782104194658,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "5b25f721d49f11460d69a348652a6822a532ec7f8fd989264835c8b308c850b7"
+  },
+  {
+    "version": 1,
+    "seq": 8,
+    "kind": "requirement",
+    "prevHash": "5b25f721d49f11460d69a348652a6822a532ec7f8fd989264835c8b308c850b7",
+    "at": 1782104234241,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_68a1eaaabbc4f32c",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "59d904a2561be9a67470a7a61fca41646cbab4c87628b3d4e225aed4a435600f"
+  },
+  {
+    "version": 1,
+    "seq": 9,
+    "kind": "requirement",
+    "prevHash": "59d904a2561be9a67470a7a61fca41646cbab4c87628b3d4e225aed4a435600f",
+    "at": 1782104382754,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_ac210e32d9d944f5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "PowerShell：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "PowerShell"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "PowerShell"
+    },
+    "hash": "ac0802f50aa0e29ec5762c47406cadd0b13a56a68728e8afbd98b77e5676cf64"
+  },
+  {
+    "version": 1,
+    "seq": 10,
+    "kind": "requirement",
+    "prevHash": "ac0802f50aa0e29ec5762c47406cadd0b13a56a68728e8afbd98b77e5676cf64",
+    "at": 1782122094328,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "f4249114db29052c9dc8b73401f62a8f7229576d4d7cf757d1573ea44a419625"
+  },
+  {
+    "version": 1,
+    "seq": 11,
+    "kind": "requirement",
+    "prevHash": "f4249114db29052c9dc8b73401f62a8f7229576d4d7cf757d1573ea44a419625",
+    "at": 1782128928331,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "dc03535a4869d440826b0c519968e617a73d32577c3df7e6575e372427a10b37"
+  },
+  {
+    "version": 1,
+    "seq": 12,
+    "kind": "requirement",
+    "prevHash": "dc03535a4869d440826b0c519968e617a73d32577c3df7e6575e372427a10b37",
+    "at": 1782202403985,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_0e506f07cd772695",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "DesktopControl：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "DesktopControl"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "DesktopControl"
+    },
+    "hash": "e3450f395d61f6ab3205fe004e76cc74b1a255d9f45524f8655f7e74c27282b4"
+  },
+  {
+    "version": 1,
+    "seq": 13,
+    "kind": "requirement",
+    "prevHash": "e3450f395d61f6ab3205fe004e76cc74b1a255d9f45524f8655f7e74c27282b4",
+    "at": 1782202578763,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "8a377e74f3464812b73ff1b87aa681e136bf95a7e8bdb1b19fed11fe9ac796d6"
+  },
+  {
+    "version": 1,
+    "seq": 14,
+    "kind": "requirement",
+    "prevHash": "8a377e74f3464812b73ff1b87aa681e136bf95a7e8bdb1b19fed11fe9ac796d6",
+    "at": 1782205337100,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "2ea08713fd1cada86f8201eeb9eb127c9e510fc0ad77b636e95609c5c7a17066"
+  },
+  {
+    "version": 1,
+    "seq": 15,
+    "kind": "requirement",
+    "prevHash": "2ea08713fd1cada86f8201eeb9eb127c9e510fc0ad77b636e95609c5c7a17066",
+    "at": 1782223658014,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f93f7daffa99d50",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "image_generate：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "image_generate"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "image_generate"
+    },
+    "hash": "b86676d26245f0ffd498c0534359397e66e1e016c91ce6396d7dc2a1931fef9f"
+  },
+  {
+    "version": 1,
+    "seq": 16,
+    "kind": "requirement",
+    "prevHash": "b86676d26245f0ffd498c0534359397e66e1e016c91ce6396d7dc2a1931fef9f",
+    "at": 1782260644557,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "52bd903662c9eef14aab7fad3fa765f5f0a8cadd760512e477f9524e072f7373"
+  },
+  {
+    "version": 1,
+    "seq": 17,
+    "kind": "requirement",
+    "prevHash": "52bd903662c9eef14aab7fad3fa765f5f0a8cadd760512e477f9524e072f7373",
+    "at": 1782295896268,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "2e132ad00c92e19826e41b476ab28489cb79d93b53059803e29b90e774e0aacf"
+  },
+  {
+    "version": 1,
+    "seq": 18,
+    "kind": "requirement",
+    "prevHash": "2e132ad00c92e19826e41b476ab28489cb79d93b53059803e29b90e774e0aacf",
+    "at": 1782344825864,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "a4c921e3c92ea6bdfcb0c363b38a913092f2d787503e06eb12bf2933aa0d06fc"
+  },
+  {
+    "version": 1,
+    "seq": 19,
+    "kind": "requirement",
+    "prevHash": "a4c921e3c92ea6bdfcb0c363b38a913092f2d787503e06eb12bf2933aa0d06fc",
+    "at": 1782374017359,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_386cc296c2478b48",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：端口占用 / 本地服务未启动（ECONNREFUSED）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：端口占用 / 本地服务未启动（ECONNREFUSED）。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "c243e28adda11157e8eb1ce4a80eed427e31ae310ae0a848b15a4cfb91942955"
+  },
+  {
+    "version": 1,
+    "seq": 20,
+    "kind": "requirement",
+    "prevHash": "c243e28adda11157e8eb1ce4a80eed427e31ae310ae0a848b15a4cfb91942955",
+    "at": 1782380470878,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_16830581655b193f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：运行时缺失（可执行命令不在 PATH）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：运行时缺失（可执行命令不在 PATH）。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "d6f785ce3fd3aa82f3e727337bb422f3ad697062dbdb261635a6cc347f8ab6b1"
+  },
+  {
+    "version": 1,
+    "seq": 21,
+    "kind": "requirement",
+    "prevHash": "d6f785ce3fd3aa82f3e727337bb422f3ad697062dbdb261635a6cc347f8ab6b1",
+    "at": 1782380556307,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f0db7b486ecc015",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "readFile：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "readFile"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "readFile"
+    },
+    "hash": "76ec60784a9a747b17f5dc5fd710feb65965bef931fcb0ae3df6fda9215c4c5c"
+  },
+  {
+    "version": 1,
+    "seq": 22,
+    "kind": "requirement",
+    "prevHash": "76ec60784a9a747b17f5dc5fd710feb65965bef931fcb0ae3df6fda9215c4c5c",
+    "at": 1782393943699,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_4e9802459847287f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "c2d73107ca05f7a086a0736545c66d7c3a63010fa83d6db92dff86a11ab54166"
+  },
+  {
+    "version": 1,
+    "seq": 23,
+    "kind": "requirement",
+    "prevHash": "c2d73107ca05f7a086a0736545c66d7c3a63010fa83d6db92dff86a11ab54166",
+    "at": 1782438161961,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_0e506f07cd772695",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "DesktopControl：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "DesktopControl"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "DesktopControl"
+    },
+    "hash": "989239c740a2b44f92389542f3e3d9a3c08ba350a23c649c28014cc896035fb1"
+  },
+  {
+    "version": 1,
+    "seq": 24,
+    "kind": "requirement",
+    "prevHash": "989239c740a2b44f92389542f3e3d9a3c08ba350a23c649c28014cc896035fb1",
+    "at": 1782438207716,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "2af236ab4b9f5219a5c1264ffe460e4487c51455c8c5b3940800b698d943b741"
+  },
+  {
+    "version": 1,
+    "seq": 25,
+    "kind": "requirement",
+    "prevHash": "2af236ab4b9f5219a5c1264ffe460e4487c51455c8c5b3940800b698d943b741",
+    "at": 1782439090905,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "697272b68f20c5c48eec60a2f0efab75fc9be426e85e2884ad2ceff6147f3fa7"
+  },
+  {
+    "version": 1,
+    "seq": 26,
+    "kind": "requirement",
+    "prevHash": "697272b68f20c5c48eec60a2f0efab75fc9be426e85e2884ad2ceff6147f3fa7",
+    "at": 1782455499198,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "a599657d0153939033d396b4bcb5ce9b9ab63c1978d466665ffbfdd5084a288b"
+  },
+  {
+    "version": 1,
+    "seq": 27,
+    "kind": "requirement",
+    "prevHash": "a599657d0153939033d396b4bcb5ce9b9ab63c1978d466665ffbfdd5084a288b",
+    "at": 1782468059643,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_22136e58d929d95b",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "glob：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "glob"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "glob"
+    },
+    "hash": "3983fa271e40bb82361701ee94ff728c51557326621182e7ddf819b96bd5a11f"
+  },
+  {
+    "version": 1,
+    "seq": 28,
+    "kind": "requirement",
+    "prevHash": "3983fa271e40bb82361701ee94ff728c51557326621182e7ddf819b96bd5a11f",
+    "at": 1782468105402,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_ac210e32d9d944f5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "PowerShell：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "PowerShell"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "PowerShell"
+    },
+    "hash": "b40b8434b29a6c8321959c3bfc5e608d1d914fb7d6c4c14953a51a8961639867"
+  },
+  {
+    "version": 1,
+    "seq": 29,
+    "kind": "requirement",
+    "prevHash": "b40b8434b29a6c8321959c3bfc5e608d1d914fb7d6c4c14953a51a8961639867",
+    "at": 1782468129639,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "92361dfa3e71dbeb649c3274cad05dd60addfe3b0172a792d88ad5672b5d429d"
+  },
+  {
+    "version": 1,
+    "seq": 30,
+    "kind": "requirement",
+    "prevHash": "92361dfa3e71dbeb649c3274cad05dd60addfe3b0172a792d88ad5672b5d429d",
+    "at": 1782603525807,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "9b207f100310d19800af705ebfeaf2ad107cd61be271e82ae4661f0a953b5bdd"
+  },
+  {
+    "version": 1,
+    "seq": 31,
+    "kind": "requirement",
+    "prevHash": "9b207f100310d19800af705ebfeaf2ad107cd61be271e82ae4661f0a953b5bdd",
+    "at": 1782610910544,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "6ee43f55c4780270213f8a0e0b115fca6978bace6896827bc5bf1c7ec606feec"
+  },
+  {
+    "version": 1,
+    "seq": 32,
+    "kind": "requirement",
+    "prevHash": "6ee43f55c4780270213f8a0e0b115fca6978bace6896827bc5bf1c7ec606feec",
+    "at": 1782616897839,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_e8af0e9b2cb6347e",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "build_project：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "build_project"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "build_project"
+    },
+    "hash": "30740be6f31106611b6e5edbefcaa1b0f30328a341940613fbed578f0dbf006b"
+  },
+  {
+    "version": 1,
+    "seq": 33,
+    "kind": "requirement",
+    "prevHash": "30740be6f31106611b6e5edbefcaa1b0f30328a341940613fbed578f0dbf006b",
+    "at": 1782631573235,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "3b7f075cf17eb7816686d6a1b9c84f34bd900237d28bad8d01de3c6dba53b166"
+  },
+  {
+    "version": 1,
+    "seq": 34,
+    "kind": "requirement",
+    "prevHash": "3b7f075cf17eb7816686d6a1b9c84f34bd900237d28bad8d01de3c6dba53b166",
+    "at": 1782744392704,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "79eb7fe20366365a259d354c96d0051d2de21524e26c58f301e0ba175bde81c4"
+  },
+  {
+    "version": 1,
+    "seq": 35,
+    "kind": "requirement",
+    "prevHash": "79eb7fe20366365a259d354c96d0051d2de21524e26c58f301e0ba175bde81c4",
+    "at": 1782744557661,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_68a1eaaabbc4f32c",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "826f6ba652fbb8be42fdc1dcdc2e8d9395d0173cd5d66603b8e180accb441be6"
+  },
+  {
+    "version": 1,
+    "seq": 36,
+    "kind": "requirement",
+    "prevHash": "826f6ba652fbb8be42fdc1dcdc2e8d9395d0173cd5d66603b8e180accb441be6",
+    "at": 1782800497922,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "8c89ce9b7529f5731661ed1351ed31ac8190a52cd9708acdc2470cfd83e2699d"
+  },
+  {
+    "version": 1,
+    "seq": 37,
+    "kind": "requirement",
+    "prevHash": "8c89ce9b7529f5731661ed1351ed31ac8190a52cd9708acdc2470cfd83e2699d",
+    "at": 1782802095712,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f0db7b486ecc015",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "readFile：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "readFile"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "readFile"
+    },
+    "hash": "bf362309386838629d36d7ed3164ca91dc8210fe11efddcbd9cf820d438060fe"
+  },
+  {
+    "version": 1,
+    "seq": 38,
+    "kind": "requirement",
+    "prevHash": "bf362309386838629d36d7ed3164ca91dc8210fe11efddcbd9cf820d438060fe",
+    "at": 1782808975297,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_9e7c2169f1d71831",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：权限不足 / 需认证（HTTP 403/401）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：权限不足 / 需认证（HTTP 403/401）。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "39c277586cdceb69bc66f41453178d8bbf6e48843714b2e7b02d54e36fc8217b"
+  },
+  {
+    "version": 1,
+    "seq": 39,
+    "kind": "requirement",
+    "prevHash": "39c277586cdceb69bc66f41453178d8bbf6e48843714b2e7b02d54e36fc8217b",
+    "at": 1782811503557,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "601fd9f25d4c67859f1490f93cedb73a802e3c81a61e1360998c72c398ad831f"
+  },
+  {
+    "version": 1,
+    "seq": 40,
+    "kind": "requirement",
+    "prevHash": "601fd9f25d4c67859f1490f93cedb73a802e3c81a61e1360998c72c398ad831f",
+    "at": 1782825347386,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "80279cb7a443c7fd3987a1d9314a4e6ef06781dcfee1e86862eea752ee4d75e6"
+  },
+  {
+    "version": 1,
+    "seq": 41,
+    "kind": "requirement",
+    "prevHash": "80279cb7a443c7fd3987a1d9314a4e6ef06781dcfee1e86862eea752ee4d75e6",
+    "at": 1782868173618,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_8d2b6487a6cc3f46",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "image_detect：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "image_detect"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "image_detect"
+    },
+    "hash": "5244c489d80b7d6eac24d0ef37161733dc1237352805a286ab8863da49e94679"
+  },
+  {
+    "version": 1,
+    "seq": 42,
+    "kind": "requirement",
+    "prevHash": "5244c489d80b7d6eac24d0ef37161733dc1237352805a286ab8863da49e94679",
+    "at": 1782868244011,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_c1bb1ac273b30415",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "imageOcr：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "imageOcr"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "imageOcr"
+    },
+    "hash": "d52d7547c81e6866dd758da9146cdf62d8b091830532e53e6ca6ec758bf6438d"
+  },
+  {
+    "version": 1,
+    "seq": 43,
+    "kind": "requirement",
+    "prevHash": "d52d7547c81e6866dd758da9146cdf62d8b091830532e53e6ca6ec758bf6438d",
+    "at": 1782895287347,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_939494d31e5af76c",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "configureModelProvider：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "configureModelProvider"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "configureModelProvider"
+    },
+    "hash": "4c043af5612d231d3886514dcd2f0cb7bfe821b00058686b64269a82a0863ebd"
+  },
+  {
+    "version": 1,
+    "seq": 44,
+    "kind": "requirement",
+    "prevHash": "4c043af5612d231d3886514dcd2f0cb7bfe821b00058686b64269a82a0863ebd",
+    "at": 1782902276026,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_939494d31e5af76c",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "configureModelProvider：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "configureModelProvider"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "configureModelProvider"
+    },
+    "hash": "4fcc8b5ddf04a64139bb598d70b15fbaae1c3b0405713554ee6e339c57465787"
+  },
+  {
+    "version": 1,
+    "seq": 45,
+    "kind": "requirement",
+    "prevHash": "4fcc8b5ddf04a64139bb598d70b15fbaae1c3b0405713554ee6e339c57465787",
+    "at": 1782903064923,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_939494d31e5af76c",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "configureModelProvider：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "configureModelProvider"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "configureModelProvider"
+    },
+    "hash": "c2c40f41dd62acbc4bf72012d7694b9f1a3c4403ef1f37ee14fd7a460ed0b9ee"
+  },
+  {
+    "version": 1,
+    "seq": 46,
+    "kind": "requirement",
+    "prevHash": "c2c40f41dd62acbc4bf72012d7694b9f1a3c4403ef1f37ee14fd7a460ed0b9ee",
+    "at": 1782973257680,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "0f105ca051b76081e9b1247c28192c2f24086089082b445065f941f5ad7461f0"
+  },
+  {
+    "version": 1,
+    "seq": 47,
+    "kind": "requirement",
+    "prevHash": "0f105ca051b76081e9b1247c28192c2f24086089082b445065f941f5ad7461f0",
+    "at": 1782973546438,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_ac210e32d9d944f5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "PowerShell：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "PowerShell"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "PowerShell"
+    },
+    "hash": "e4444df1dfb8f46d20b1e21df2464d9dcca53b158c2c69d33f50958cd663fb0c"
+  },
+  {
+    "version": 1,
+    "seq": 48,
+    "kind": "requirement",
+    "prevHash": "e4444df1dfb8f46d20b1e21df2464d9dcca53b158c2c69d33f50958cd663fb0c",
+    "at": 1782973861809,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_bc4b63dd240262fa",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "PowerShell：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "PowerShell"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "PowerShell"
+    },
+    "hash": "0aac74d32f6f9c5c0cfd1d5e2322d49b327c96a2aaab62c3e07a5c5c0197981b"
+  },
+  {
+    "version": 1,
+    "seq": 49,
+    "kind": "requirement",
+    "prevHash": "0aac74d32f6f9c5c0cfd1d5e2322d49b327c96a2aaab62c3e07a5c5c0197981b",
+    "at": 1783087476513,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f0db7b486ecc015",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "readFile：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "readFile"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "readFile"
+    },
+    "hash": "94c5887dc3f1b41519d0ab7c0487424146245bc88b6b0f25e07a20d2a264d517"
+  },
+  {
+    "version": 1,
+    "seq": 50,
+    "kind": "requirement",
+    "prevHash": "94c5887dc3f1b41519d0ab7c0487424146245bc88b6b0f25e07a20d2a264d517",
+    "at": 1783124587307,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_a7eb07a4f1c7ffd4",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "RtkGain：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "RtkGain"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "RtkGain"
+    },
+    "hash": "e5af28890dfb5959221b20e12ba618ddb92a3c41320c7deed77a8ff5f3a25d9f"
+  },
+  {
+    "version": 1,
+    "seq": 51,
+    "kind": "requirement",
+    "prevHash": "e5af28890dfb5959221b20e12ba618ddb92a3c41320c7deed77a8ff5f3a25d9f",
+    "at": 1783147335965,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_4e9802459847287f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "e1e334c4bb9f1cdb8515924f65d1dda02a7e3eda53101a92cb41e064745c1a1c"
+  },
+  {
+    "version": 1,
+    "seq": 52,
+    "kind": "requirement",
+    "prevHash": "e1e334c4bb9f1cdb8515924f65d1dda02a7e3eda53101a92cb41e064745c1a1c",
+    "at": 1783155006576,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "0d161a10d58bfebdfd4e23814ec193a53906fdd8ec4c5c8d48b06df3c667fded"
+  },
+  {
+    "version": 1,
+    "seq": 53,
+    "kind": "requirement",
+    "prevHash": "0d161a10d58bfebdfd4e23814ec193a53906fdd8ec4c5c8d48b06df3c667fded",
+    "at": 1783157009302,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_123120a25c926aa2",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：模型输出格式错 / 参数缺失（读到 null/undefined 属性）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：模型输出格式错 / 参数缺失（读到 null/undefined 属性）。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "c8f2e9d7a1cae22ecb705d321840ea7600fd6dd8a28e08b6f556483149337d65"
+  },
+  {
+    "version": 1,
+    "seq": 54,
+    "kind": "requirement",
+    "prevHash": "c8f2e9d7a1cae22ecb705d321840ea7600fd6dd8a28e08b6f556483149337d65",
+    "at": 1783219182174,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "62e06f00189cf8bc421dab07d581889998aab1d4afcf94ab804d0fc3cdb53a91"
+  },
+  {
+    "version": 1,
+    "seq": 55,
+    "kind": "requirement",
+    "prevHash": "62e06f00189cf8bc421dab07d581889998aab1d4afcf94ab804d0fc3cdb53a91",
+    "at": 1783242688332,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f0db7b486ecc015",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "readFile：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "readFile"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "readFile"
+    },
+    "hash": "619a038c422bfcab96022a2e86152c22c88a5fd162e72c7720b9afbba13d823c"
+  },
+  {
+    "version": 1,
+    "seq": 56,
+    "kind": "requirement",
+    "prevHash": "619a038c422bfcab96022a2e86152c22c88a5fd162e72c7720b9afbba13d823c",
+    "at": 1783258167983,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f93f7daffa99d50",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "image_generate：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "image_generate"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "image_generate"
+    },
+    "hash": "960f41e8abeb84fcf8c9a178416e103e5291a44d74b10de3c944e34a5f18ce8d"
+  },
+  {
+    "version": 1,
+    "seq": 57,
+    "kind": "requirement",
+    "prevHash": "960f41e8abeb84fcf8c9a178416e103e5291a44d74b10de3c944e34a5f18ce8d",
+    "at": 1783301114924,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "fc96315189a30acbd9633827dd7336e368cd5d810b97046700cdedfad6d0cc41"
+  },
+  {
+    "version": 1,
+    "seq": 58,
+    "kind": "requirement",
+    "prevHash": "fc96315189a30acbd9633827dd7336e368cd5d810b97046700cdedfad6d0cc41",
+    "at": 1783304375272,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "8da74dca0d88bd944c7ba82fef815dfbe2d98c0a460dc11413ca1acbcc04ed46"
+  },
+  {
+    "version": 1,
+    "seq": 59,
+    "kind": "requirement",
+    "prevHash": "8da74dca0d88bd944c7ba82fef815dfbe2d98c0a460dc11413ca1acbcc04ed46",
+    "at": 1783389349050,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_562099452bc7edb5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "repoAudit：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "repoAudit"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "repoAudit"
+    },
+    "hash": "7ca63ee1fe9f13e14a0e13ec99b60d5e35d9ca09082d622173031aeb3f8869b9"
+  },
+  {
+    "version": 1,
+    "seq": 60,
+    "kind": "requirement",
+    "prevHash": "7ca63ee1fe9f13e14a0e13ec99b60d5e35d9ca09082d622173031aeb3f8869b9",
+    "at": 1783390502027,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_4e9802459847287f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：网络层熔断",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：网络层熔断。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "fd42e6aaddb19bb6c4ec9176dca810190315a3f6d2b22d744214a414e917b106"
+  },
+  {
+    "version": 1,
+    "seq": 61,
+    "kind": "requirement",
+    "prevHash": "fd42e6aaddb19bb6c4ec9176dca810190315a3f6d2b22d744214a414e917b106",
+    "at": 1783391606271,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_ab1f48ef5e11df56",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：运行时缺失（可执行命令不在 PATH）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：运行时缺失（可执行命令不在 PATH）。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "61be0c95f58daae361d7b4a8cf38fb5a67aa8e786a504f3f5d7af0c0de74eb8d"
+  },
+  {
+    "version": 1,
+    "seq": 62,
+    "kind": "requirement",
+    "prevHash": "61be0c95f58daae361d7b4a8cf38fb5a67aa8e786a504f3f5d7af0c0de74eb8d",
+    "at": 1783393195847,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "927b75acda1c808068972136467b25adc25a0116b0dfcfc478a60b5e4b41c876"
+  },
+  {
+    "version": 1,
+    "seq": 63,
+    "kind": "requirement",
+    "prevHash": "927b75acda1c808068972136467b25adc25a0116b0dfcfc478a60b5e4b41c876",
+    "at": 1783412040868,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_04492162cb7b0c9b",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "ede1e93ee10529168e730b5b65215bcf8d575fa813648148dd1ddb3d7fffa1d2"
+  },
+  {
+    "version": 1,
+    "seq": 64,
+    "kind": "requirement",
+    "prevHash": "ede1e93ee10529168e730b5b65215bcf8d575fa813648148dd1ddb3d7fffa1d2",
+    "at": 1783434634511,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_16830581655b193f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：运行时缺失（可执行命令不在 PATH）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：运行时缺失（可执行命令不在 PATH）。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "ae85857baae3021f9daf0271fc88c64043f53966174b2c6586c7006738d16823"
+  },
+  {
+    "version": 1,
+    "seq": 65,
+    "kind": "requirement",
+    "prevHash": "ae85857baae3021f9daf0271fc88c64043f53966174b2c6586c7006738d16823",
+    "at": 1783674637713,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "334466e5f70756e469a13d7622c4b5fbc5b8e6cf3f3d9f879c66a8983a8b3144"
+  },
+  {
+    "version": 1,
+    "seq": 66,
+    "kind": "requirement",
+    "prevHash": "334466e5f70756e469a13d7622c4b5fbc5b8e6cf3f3d9f879c66a8983a8b3144",
+    "at": 1783691387464,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "5bb550508f65d9644457812027797e5d180fbd32085ff150e69566d3fa4cc3ad"
+  },
+  {
+    "version": 1,
+    "seq": 67,
+    "kind": "requirement",
+    "prevHash": "5bb550508f65d9644457812027797e5d180fbd32085ff150e69566d3fa4cc3ad",
+    "at": 1783768883408,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_5f7dac4389a4169a",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "executeCode：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "executeCode"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "executeCode"
+    },
+    "hash": "369a0ec6e3be4112c303eced58e3af56a5bd4d2ea1566ffe922ea15f96465b52"
+  },
+  {
+    "version": 1,
+    "seq": 68,
+    "kind": "requirement",
+    "prevHash": "369a0ec6e3be4112c303eced58e3af56a5bd4d2ea1566ffe922ea15f96465b52",
+    "at": 1783812464730,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_ac210e32d9d944f5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "PowerShell：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "PowerShell"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "PowerShell"
+    },
+    "hash": "e3839e07cc3043d99bdce9451625a11054f027cf81ec544e96de4e117743f221"
+  },
+  {
+    "version": 1,
+    "seq": 69,
+    "kind": "requirement",
+    "prevHash": "e3839e07cc3043d99bdce9451625a11054f027cf81ec544e96de4e117743f221",
+    "at": 1784038025230,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_16830581655b193f",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "WebFetch：运行时缺失（可执行命令不在 PATH）",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：运行时缺失（可执行命令不在 PATH）。",
+        "surface": "WebFetch"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "WebFetch"
+    },
+    "hash": "9b4bab041ac405a37fe8e3467acdf788d238a2f7ab011c191ef8f52f7b3d9654"
+  },
+  {
+    "version": 1,
+    "seq": 70,
+    "kind": "requirement",
+    "prevHash": "9b4bab041ac405a37fe8e3467acdf788d238a2f7ab011c191ef8f52f7b3d9654",
+    "at": 1784200242819,
+    "payload": {
+      "source": "runtime-friction",
+      "requirementId": "evo_d19706cc537c51b5",
+      "signal": "tool-failure",
+      "level": "L2",
+      "executionLevel": "L0",
+      "painPoint": "shellCommand：工具执行崩溃",
+      "attribution": {
+        "kind": "logic-gap",
+        "why": "工具调用失败且非已知可修复类——疑似核心流转逻辑死角。诊断病因：工具执行崩溃。",
+        "surface": "shellCommand"
+      },
+      "impact": "低-中：当前任务受阻，需评估是否跨场景复现。",
+      "surface": "shellCommand"
+    },
+    "hash": "c1bb165e641f59c1ad62dd0fbce0ec3ed2258facad271b93fe1914f4945bcb55"
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "sessionId": "994fbb85-2a17-4a03-a6d0-1406231366aa",
+  "title": "",
+  "model": "api:agnes:agnes-2.0-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] [结构化提示词] 下面是对你请求的结构解析(帮你快速抓意图);任何冲突以「## 内容」原文为准。 ## 结构 / Structure - 任务类型: 通用请求 - 期望产出: 直接完成请求并给出结果 ## 内容 / Content 请先描述图片中的关键信息，再结合当前任务上下文推断我想完成的目标，并给出下一步可执行操作。"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: Read]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_c54199d9679f47a198597dc0",
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\25789\\Desktop\\下载.png"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1783740067515,
+  "updatedAt": 1783740067515
+}

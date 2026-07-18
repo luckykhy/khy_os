@@ -1,0 +1,10 @@
+{
+  "name": "simplify",
+  "description": "Review changed code for reuse, quality, and efficiency, then fix any issues found",
+  "user_invocable": true,
+  "trigger": "/simplify",
+  "aliases": ["/review", "/cleanup"],
+  "category": "devops",
+  "tags": ["code-review", "refactoring", "quality"],
+  "platforms": ["khy-os", "khy-quant"]
+}

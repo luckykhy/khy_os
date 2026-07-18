@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布说明：Pip 打包对等性（2026-05-17） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>发布说明：Pip 打包对等性（2026-05-17）</div>
+      <header class="hero reveal"><h1>发布说明：Pip 打包对等性（2026-05-17）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#发布说明-pip-打包对等性-2026-05-17">发布说明：Pip 打包对等性（2026-05-17）</a></li><li class="lvl-2"><a href="#变更内容">变更内容</a></li><li class="lvl-2"><a href="#用户影响">用户影响</a></li><li class="lvl-2"><a href="#打包规则更新">打包规则更新</a></li><li class="lvl-2"><a href="#校验快照">校验快照</a></li><li class="lvl-2"><a href="#参考">参考</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-009 | 阶段: 部署 | 原路径: docs/报告/pip-打包对等-发布说明-2026-05-17.md --&gt;</p>
+<h1 id="发布说明-pip-打包对等性-2026-05-17">发布说明：Pip 打包对等性（2026-05-17）<a class="anchor" href="#发布说明-pip-打包对等性-2026-05-17" aria-label="锚点">#</a></h1>
+<h2 id="变更内容">变更内容<a class="anchor" href="#变更内容" aria-label="锚点">#</a></h2>
+<p>我们修复了一个打包对等性缺陷，该缺陷导致安装行为因产物路径不同而存在差异：</p>
+<ul><li>从预构建的 wheel 执行 <code>pip install</code> 时，行为符合预期。</li><li>从 sdist 重新构建的 wheel 可能会遗漏捆绑的运行时资源。</li></ul>
+<p>现在两条路径都能产出等价的安装载荷。</p>
+<h2 id="用户影响">用户影响<a class="anchor" href="#用户影响" aria-label="锚点">#</a></h2>
+<p>从 sdist 重新构建的安装现在会保留所需的运行时文件，包括：</p>
+<ul><li><code>khy_os/bundled/frontend/dist/**</code></li><li><code>khy_os/bundled/backend/bin/ollama-runner/**</code></li><li><code>khy_os/bundled/backend/bin/llama-cpp/**</code></li></ul>
+<p>这避免了因缺失 Web 资源或本地 LLM 二进制文件而导致的安装质量下降。</p>
+<h2 id="打包规则更新">打包规则更新<a class="anchor" href="#打包规则更新" aria-label="锚点">#</a></h2>
+<ul><li><code>MANIFEST.in</code> 现在包含重新构建捆绑载荷所需的完整源码树。</li><li><code>frontend/dist</code> 保留在 sdist 输入中。</li><li><code>khy_os/bundled</code> 从 sdist 中剔除，以避免载荷重复和体积膨胀。</li></ul>
+<h2 id="校验快照">校验快照<a class="anchor" href="#校验快照" aria-label="锚点">#</a></h2>
+<ul><li>直接 wheel：<code>~83MB</code></li><li>sdist：<code>~83MB</code></li><li>从 sdist 重新构建的 wheel：<code>~83MB</code></li><li>对等性检查：文件数量与未压缩总字节数一致（<code>1336</code> 个文件，<code>175717621</code> 字节）。</li></ul>
+<h2 id="参考">参考<a class="anchor" href="#参考" aria-label="锚点">#</a></h2>
+<p>完整的根因分析与验证步骤，请参见：</p>
+<ul><li>[pip-打包对等-发现-2026-05-17.md](/home/kodehu03/Khy-OS/docs/06_DEPLOY_部署/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.md)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-008] TWITTER.html"><div class="dir">← 上一篇</div><div class="ttl">X / Twitter 长推草稿</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.html"><div class="dir">下一篇 →</div><div class="ttl">Pip 打包对等性发现（2026-05-17）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-009] pip-打包对等-发布说明-2026-05-17.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

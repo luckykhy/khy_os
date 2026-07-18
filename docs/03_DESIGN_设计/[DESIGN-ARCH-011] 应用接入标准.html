@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 生态应用接入标准（Ecosystem App Standard） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 生态应用接入标准（Ecosystem App Standard）</div>
+      <header class="hero reveal"><h1>khyos 生态应用接入标准（Ecosystem App Standard）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-生态应用接入标准-ecosystem-app-standard">khyos 生态应用接入标准（Ecosystem App Standard）</a></li><li class="lvl-2"><a href="#一-底座原则-khyos-绝不依赖任何应用">一、底座原则：khyos 绝不依赖任何应用</a></li><li class="lvl-2"><a href="#二-动态发现机制-底座提供">二、动态发现机制（底座提供）</a></li><li class="lvl-2"><a href="#三-应用生命周期协议-应用实现">三、应用生命周期协议（应用实现）</a></li><li class="lvl-2"><a href="#四-双模运行标准-所有应用必须遵守">四、双模运行标准（所有应用必须遵守）</a></li><li class="lvl-2"><a href="#五-数据主权与物理隔离-核心红线">五、数据主权与物理隔离（核心红线）</a></li><li class="lvl-2"><a href="#六-新应用接入清单-checklist">六、新应用接入清单（Checklist）</a></li><li class="lvl-2"><a href="#七-现状与遗留-eco-arch-unresolved">七、现状与遗留（[Eco-Arch-Unresolved]）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-011 | 阶段: 设计 | 原路径: docs/生态架构/应用接入标准.md --&gt;</p>
+<h1 id="khyos-生态应用接入标准-ecosystem-app-standard">khyos 生态应用接入标准（Ecosystem App Standard）<a class="anchor" href="#khyos-生态应用接入标准-ecosystem-app-standard" aria-label="锚点">#</a></h1>
+<blockquote><p>版本：v1（第一根桩）  ·  适用：khyos 生态下的所有应用（首款示范应用：khyquant）</p>
+<p>本标准定义「生态底座（khyos）」与「生态应用（khyquant / 未来 khytrade / khydata …）」<br>之间的接入契约，目标是<strong>底座与应用绝对解耦</strong>：底座不依赖任何应用，应用可独立运行，<br>也可作为插件接入底座。</p></blockquote>
+<pre><code>                  ┌───────────────────────┐
+                  │      khyos 生态底座     │
+                  │  核心调度 / 公共API / 发现机制 │
+                  └──────────┬────────────┘
+                             │ 动态发现 (entry_points / 注册表扫描)
+          ┌──────────────────┼──────────────────┐
+          ▼                  ▼                  ▼
+   ┌──────────┐       ┌──────────┐       ┌──────────┐
+   │ khyquant │       │ 未来应用B │       │ 未来应用C │
+   │ (首款)   │       │ khytrade │       │ khydata  │
+   └────┬─────┘       └────┬─────┘       └────┬─────┘
+        ▼                  ▼                  ▼
+   ~/.khyquant/        ~/.khytrade/        ~/.khydata/
+   ├─ data/            ├─ data/            ├─ data/
+   ├─ models/          ├─ models/          ├─ models/
+   ├─ cache/           ├─ cache/           ├─ cache/
+   └─ logs/            └─ logs/            └─ logs/
+
+   底座自身数据 → ~/.khyos/{data,cache,models,logs}</code></pre>
+<hr>
+<h2 id="一-底座原则-khyos-绝不依赖任何应用">一、底座原则：khyos 绝不依赖任何应用<a class="anchor" href="#一-底座原则-khyos-绝不依赖任何应用" aria-label="锚点">#</a></h2>
+<ol><li><strong>源码零依赖</strong>：khyos 源码（<code>platform/khy_platform</code>、<code>platform/khy_os</code>）中</li></ol>
+<p><strong>禁止</strong>出现对应用包的硬 <code>import</code>（如 <code>import khyquant</code>）。</p>
+<ul><li>唯一例外：<code>platform/khy_platform/cli.py</code> 对 <code>khy_quant_backend</code>（底座<strong>自身</strong> Node</li></ul>
+<p>后端的独立打包）的探测，且已包在 <code>try/except ImportError</code> 内——属底座定位自身后端，<br>     非依赖应用。</p>
+<ol><li><strong>无应用也能运行</strong>：底座启动时动态发现应用，有则加载、无则跳过，绝不报错崩溃。</li></ol>
+<h2 id="二-动态发现机制-底座提供">二、动态发现机制（底座提供）<a class="anchor" href="#二-动态发现机制-底座提供" aria-label="锚点">#</a></h2>
+<p>单一真源：<code>platform/khy_platform/app_protocol.py</code>。</p>
+<p>底座通过两路来源发现应用，按 <code>name</code> 去重（entry_points 优先）：</p>
+<ol><li><strong>entry_points</strong>（推荐，最权威）——应用在自身 <code>pyproject.toml</code> 声明：</li></ol>
+<pre><code class="language-toml">   [project.entry-points.&quot;khyos.apps&quot;]
+   khyquant = &quot;khy_quant.app:create_app&quot;</code></pre>
+<ol><li><strong>注册表目录扫描</strong>——清单 JSON 落在底座归属的 <code>~/.khyos/apps/&lt;name&gt;.json</code></li></ol>
+<p>（兼容历史位置 <code>~/.khyquant/apps/</code>）。清单 schema 见 <code>AppManifest</code>：</p>
+<pre><code class="language-json">   {
+     &quot;name&quot;: &quot;khyquant&quot;,
+     &quot;version&quot;: &quot;0.1.78&quot;,
+     &quot;description&quot;: &quot;量化交易系统&quot;,
+     &quot;commands&quot;: [&quot;khyquant&quot;, &quot;quant&quot;],
+     &quot;entry&quot;: &quot;/abs/path/to/server.js&quot;,
+     &quot;source&quot;: &quot;registry&quot;
+   }</code></pre>
+<p>查看已发现应用：<code>khy apps</code>（或 <code>khy apps --json</code>）。</p>
+<h2 id="三-应用生命周期协议-应用实现">三、应用生命周期协议（应用实现）<a class="anchor" href="#三-应用生命周期协议-应用实现" aria-label="锚点">#</a></h2>
+<p>应用应实现 <code>app_protocol.KhyApp</code> 基类，声明双模初始化入口：</p>
+<pre><code class="language-python">from khy_platform.app_protocol import KhyApp, EcoContext
+
+class KhyQuant(KhyApp):
+    name = &quot;khyquant&quot;
+    version = &quot;0.1.78&quot;
+
+    def standalone_init(self) -&gt; None:
+        ...  # 独立模式：自建日志/配置/数据目录，提供降级体验
+
+    def eco_init(self, ctx: EcoContext) -&gt; None:
+        ...  # 生态模式：接入底座注入的上下文与生命周期</code></pre>
+<h2 id="四-双模运行标准-所有应用必须遵守">四、双模运行标准（所有应用必须遵守）<a class="anchor" href="#四-双模运行标准-所有应用必须遵守" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模式</th><th>触发</th><th>初始化</th></tr></thead><tbody><tr><td><strong>独立</strong> <code>standalone</code></td><td>默认；或 <code>KHYOS_ECO_MODE=0</code></td><td>应用自备日志/配置/数据目录</td></tr><tr><td><strong>生态</strong> <code>eco</code></td><td><code>KHYOS_ECO_MODE=1</code>；或检测到底座 <code>app_protocol</code> 可导入</td><td>接入底座上下文与生命周期</td></tr></tbody></table>
+<p>环境感知由应用入口在启动时完成（参考 <code>khy_quant/cli.py:_detect_mode()</code>），<br>并经环境变量 <code>KHYQUANT_MODE</code> / <code>KHYQUANT_HOME</code> 下传给运行时（Node 后端）。</p>
+<h2 id="五-数据主权与物理隔离-核心红线">五、数据主权与物理隔离（核心红线）<a class="anchor" href="#五-数据主权与物理隔离-核心红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>归属</th><th>home</th><th>数据库</th><th>模型/缓存/日志</th><th>解析器</th></tr></thead><tbody><tr><td>底座 khyos</td><td><code>~/.khyos/</code></td><td><code>~/.khyos/data/khyos.db</code></td><td><code>~/.khyos/{models,cache,logs}</code></td><td><code>dataHome.getBaseHome()</code> / <code>app_protocol.base_home()</code></td></tr><tr><td>应用 khyquant</td><td><code>~/.khyquant/</code></td><td><code>~/.khyquant/data/khyq.db</code></td><td><code>~/.khyquant/{models,cache,logs}</code></td><td><code>dataHome.getDataHome()</code> / <code>app_protocol.app_home(&quot;khyquant&quot;)</code></td></tr></tbody></table>
+<p>红线：</p>
+<ul><li><strong>DB 物理分离</strong>：底座与应用各自的 <code>.db</code> 文件独立，<strong>禁止互相直接读写对方 DB 文件</strong>。</li><li><strong>文件系统隔离</strong>：<code>~/.khyos/</code> 与 <code>~/.khyquant/</code> 各存各的模型、缓存、日志。</li><li><strong>跨域通信走公共 API</strong>：应用需要底座数据时调用底座暴露的公共 API；底座需要应用数据时</li></ul>
+<p>通过应用暴露的接口获取。<strong>禁止跨库直连 SQL</strong>。</p>
+<h2 id="六-新应用接入清单-checklist">六、新应用接入清单（Checklist）<a class="anchor" href="#六-新应用接入清单-checklist" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 自身 <code>pyproject.toml</code> 声明 <code>[project.entry-points.&quot;khyos.apps&quot;]</code>。</li><li>[ ] 实现 <code>KhyApp</code> 子类，提供 <code>standalone_init()</code> 与 <code>eco_init(ctx)</code>。</li><li>[ ] 入口实现环境感知（<code>KHYOS_ECO_MODE</code> + 底座可导入探测），默认独立可运行。</li><li>[ ] 数据全部落在 <code>~/.&lt;app&gt;/{data,cache,models,logs}</code>，不写入 <code>~/.khyos/</code> 或别的应用目录。</li><li>[ ] 需要底座数据时只走底座公共 API，不直连底座 DB。</li></ul>
+<h2 id="七-现状与遗留-eco-arch-unresolved">七、现状与遗留（[Eco-Arch-Unresolved]）<a class="anchor" href="#七-现状与遗留-eco-arch-unresolved" aria-label="锚点">#</a></h2>
+<p>本次「第一根桩」建立了协议、发现机制、双模入口与路径所有权标准；以下涉及<strong>活体数据迁移</strong>，<br>按防呆规则未在无人值守流程内盲目执行，留待人工评估并设计带回滚的迁移脚本：</p>
+<ol><li><strong>应用数据家收敛</strong>：后端现存两类应用数据家混用——统一解析器 <code>getDataHome()</code> 默认 <code>~/.khy</code>，</li></ol>
+<p>而多个服务（<code>cleanupService</code>/<code>skillRegistry</code>/<code>adminService</code> 等）硬编码 <code>~/.khyquant</code>。<br>   需收敛到单一应用数据家。（标注于 <code>services/backend/src/utils/dataHome.js</code>）</p>
+<ol><li><strong>底座/应用表物理拆分</strong>：将真正归属底座的表/文件从应用数据家迁出到 <code>~/.khyos/data/khyos.db</code>，</li></ol>
+<p>需数据迁移脚本。</p>
+<ol><li><strong>回放后退</strong>等应用侧能力缺口与本标准无关，另见各自 TODO。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-010] 核心架构.html"><div class="dir">← 上一篇</div><div class="ttl">核心架构</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-012] 工具延迟加载.html"><div class="dir">下一篇 →</div><div class="ttl">功能：工具延迟加载（deferloading）—— Anthropic API 协议集成</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-011] 应用接入标准.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

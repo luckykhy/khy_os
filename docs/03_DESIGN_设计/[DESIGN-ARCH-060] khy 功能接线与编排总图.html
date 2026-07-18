@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-060] khy 功能接线与编排总图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-060] khy 功能接线与编排总图</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-060] khy 功能接线与编排总图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-060-khy-功能接线与编排总图">[DESIGN-ARCH-060] khy 功能接线与编排总图</a></li><li class="lvl-2"><a href="#一-接线契约-五件套铁律">一、接线契约(五件套铁律)</a></li><li class="lvl-2"><a href="#二-编排主线-一个对话回合的生命周期">二、编排主线:一个对话回合的生命周期</a></li><li class="lvl-3"><a href="#编排铁律-三槽不对称-memory-绝不自注入">编排铁律:三槽不对称(memory 绝不自注入)</a></li><li class="lvl-2"><a href="#三-旁路命令面-不在热路径-用户-cli-显式触发">三、旁路命令面(不在热路径,用户/CLI 显式触发)</a></li><li class="lvl-2"><a href="#四-接线审计基线-2026-06-30-核出">四、接线审计基线(2026-06-30 核出)</a></li><li class="lvl-3"><a href="#已对账缺口-cli-pty-js-刻意保留-不接线">已对账缺口:`cli/pty.js`(刻意保留,不接线)</a></li><li class="lvl-2"><a href="#五-新功能落地自查清单">五、新功能落地自查清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-060-khy-功能接线与编排总图">[DESIGN-ARCH-060] khy 功能接线与编排总图<a class="anchor" href="#design-arch-060-khy-功能接线与编排总图" aria-label="锚点">#</a></h1>
+<blockquote><p>目的:khy 已累积大量功能(全仓 <strong>1371</strong> 个唯一 <code>KHY_*</code> 标识、<strong>195</strong> 个 router 命令名<br>[<code>getRouterCommandNames()</code>]、<strong>165</strong> 个标注「纯叶子」的源文件)。本文回答两个问题:<br><strong>怎么准确&quot;接线&quot;</strong>(每个功能挂到对的切点、登记齐、可回退)、<br><strong>怎么&quot;编排&quot;</strong>(零散功能如何串成一条连贯的运行时主线)。</p>
+<p>本文所有数字与行号均由 node 直读源码核出(非 grep——本仓 grep 经 rtk 代理会污染输出,审计一律用<br><code>node -e fs.readFileSync</code> 或 <code>find</code>)。</p></blockquote>
+<hr>
+<h2 id="一-接线契约-五件套铁律">一、接线契约(五件套铁律)<a class="anchor" href="#一-接线契约-五件套铁律" aria-label="锚点">#</a></h2>
+<p>任何新功能落地都必须同时满足以下五条,缺一即&quot;半接线&quot;:</p>
+<ol><li><strong>纯叶子(leaf)</strong> — 零 IO、零业务 require 的确定性核心,过 <code>scripts/check-leaf-contract.js</code>。</li><li><strong>薄壳(thin shell)</strong> — handler/service 注入协作者调用叶子,不在壳里重写算法。</li><li><strong>三处登记(命令类功能)</strong> — <code>constants/commandSchema.js</code>(ROUTER 行 + <code>getRouterCommandNames</code>)<ul><li><code>cli/router.js</code> 的 <code>ROUTER_COMMANDS</code> 允许集 + <code>switch case</code>。三者缺一,命令要么不可达、要么死 case。</li></ul></li><li><strong>门控字节回退</strong> — <code>KHY_&lt;FEATURE&gt;</code>,默认开;<code>=0/false/off/no</code> 时<strong>逐字节</strong>回退到 legacy 行为。</li><li><strong>bundled 三副本重建</strong> — <code>platform/khy_os/bundled</code>、<code>packaging/npm/bundled</code>、<code>build/lib/khy_os/bundled</code></li></ol>
+<p>三处副本须随 wheel/npm 重建(裸 require 新叶子否则抛)。三副本 git-ignored,<strong>绝不手改</strong>。</p>
+<blockquote><p>这五条是&quot;接线准不准&quot;的判据,不是风格偏好。审计脚本与 <code>.ai/GUARDS.md</code> 红线据此设防。</p></blockquote>
+<hr>
+<h2 id="二-编排主线-一个对话回合的生命周期">二、编排主线:一个对话回合的生命周期<a class="anchor" href="#二-编排主线-一个对话回合的生命周期" aria-label="锚点">#</a></h2>
+<p>零散功能不是平行的 N 个开关,而是沿&quot;一个 chat 回合&quot;挂在不同切点上的。看时间轴就不乱了<br>(<code>services/backend/src/cli/ai.js</code>,行号 node 核实):</p>
+<pre><code>┌─ 回合开始:系统提示装配(按此顺序拼接 sp)──────────────────────────┐
+│ ai.js:5186  proactive 记忆段       buildProactiveSystemSection       │
+│ ai.js:5191  短期会话记忆段         buildSessionMemorySection         │
+│ ai.js:5200  会话拓扑「你在这里」    buildHereLineForCurrent  (KHY_SESSION_TOPOLOGY)
+│ ai.js:5202  一次性 insight 收件箱  consumeInsightForCurrent (KHY_SESSION_SLOTS)
+│ ai.js:5226  学习应答风格信号        recordResponseFeedback   (KHY_USAGE_HABITS)
+│ ai.js:5228  使用习惯段             getHabitContext                   │
+├─ 回合中:工具循环 + 渲染 ─────────────────────────────────────────┤
+│ toolUseLoop  结果守卫收尾兜底       resultGuard              (KHY_RESULT_GUARD)
+│ toolUseLoop  死开关意图裁决         intentArbiter            (KHY_INTENT_ARBITER)
+│ repl/router  /diff 采集+着色        gitDiffCollect           (KHY_DIFF_INCLUDE_UNTRACKED)
+│ repl         出口去重               renderDedup              (KHY_RENDER_DEDUP)
+│ App.js       ↑/↓ 编辑中浏览历史     historyBrowseDecision    (KHY_HISTORY_BROWSE_EDITING)
+├─ 回合结束 ────────────────────────────────────────────────────────┤
+│ ai.js:6157  consolidate 蒸馏进 memory 槽(fire-and-forget,不 await,绝不翻红当轮)
+│             consolidateCurrent       (KHY_SESSION_SLOTS · 节拍 KHY_CONSOLIDATE_EVERY)
+└───────────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="编排铁律-三槽不对称-memory-绝不自注入">编排铁律:三槽不对称(memory 绝不自注入)<a class="anchor" href="#编排铁律-三槽不对称-memory-绝不自注入" aria-label="锚点">#</a></h3>
+<p>会话节点除 history 外挂三个生命周期各异的槽(<code>cli/sessionSlots.js</code>):</p>
+<table><thead><tr><th>槽</th><th>生命周期</th><th>注入</th></tr></thead><tbody><tr><td><code>systemPrompt</code></td><td>持久,fork 时 4 层合并继承</td><td>每轮注入</td></tr><tr><td><code>insight</code></td><td>一次性收件箱,注入一次即清</td><td>每轮注入(消费后清空)</td></tr><tr><td><code>memory</code></td><td><strong>外向</strong>摘要,由 orchestrator/跨支综合读</td><td><strong>绝不</strong>注入本节点自身上下文</td></tr></tbody></table>
+<p><code>INJECTABLE_SLOTS = ['systemPrompt','insight']</code>,<strong>刻意不含 memory</strong>。consolidate 只把 memory <strong>写出去</strong>;<br>任何&quot;顺手把 memory 也注进 sp&quot;就是把外向摘要喂回自身,引入潜伏 bug。fork 经 <code>_applyForkSlots</code> 门控:<br>保父 <code>systemPrompt</code>,恒清子 <code>insight</code>/<code>memory</code>(子自产)。</p>
+<hr>
+<h2 id="三-旁路命令面-不在热路径-用户-cli-显式触发">三、旁路命令面(不在热路径,用户/CLI 显式触发)<a class="anchor" href="#三-旁路命令面-不在热路径-用户-cli-显式触发" aria-label="锚点">#</a></h2>
+<p>命令通过 <code>cli/router.js</code> 的 <code>switch(parsed.command)</code> 分发。两类入口:</p>
+<ul><li><strong>Session 内 slash 命令</strong>(195 个,经 <code>getRouterCommandNames</code> 允许集守门):如</li></ul>
+<p><code>/topology</code>、<code>/orchestrate schedule</code>、<code>/fork</code>、<code>/autonomy</code>、<code>/proactive</code>、<code>/onboarding</code>、<code>/btw</code>、<code>/lang</code>…</p>
+<ul><li><strong>CLI 专用命令</strong>(不在 slash 允许集,经 <code>khy &lt;cmd&gt;</code> 从命令行进):<code>khy os</code>(kernel)、<code>khy verdict emit</code></li></ul>
+<p>(改动反馈)、<code>khy restore-source</code>(解包源码)。这些有 handler + case 但<strong>刻意不暴露为 slash</strong>。</p>
+<blockquote><p>连字符命令用堆叠 fall-through case 兼容无连字符别名(<code>case 'autofix-pr': case 'autofixpr':</code>)。</p></blockquote>
+<hr>
+<h2 id="四-接线审计基线-2026-06-30-核出">四、接线审计基线(2026-06-30 核出)<a class="anchor" href="#四-接线审计基线-2026-06-30-核出" aria-label="锚点">#</a></h2>
+<p>用 node(非 grep)对全功能面做一致性审计,结论:</p>
+<table><thead><tr><th>审计项</th><th>方法</th><th>结论</th></tr></thead><tbody><tr><td>命令名→switch case</td><td>195 名(含别名)vs 203 case 双向差集</td><td>✅ 每个命令名都有 case,无半登记</td></tr><tr><td>未匹配 case</td><td>6 个</td><td>✅ 全有解(3 别名堆叠 + 3 CLI 专用)</td></tr><tr><td>孤儿叶子</td><td>fs 扫 165 叶子的全仓 require 引用(29226 文件穷尽)</td><td>✅ <strong>0 个事故性孤儿</strong>(<code>cli/pty.js</code> 已对账为保留能力)</td></tr><tr><td>死门控</td><td>GUARDS 声明门控 vs 代码读取</td><td>✅ 0 个(候选均假阳性:setup.py/computed read)</td></tr></tbody></table>
+<h3 id="已对账缺口-cli-pty-js-刻意保留-不接线">已对账缺口:<code>cli/pty.js</code>(刻意保留,不接线)<a class="anchor" href="#已对账缺口-cli-pty-js-刻意保留-不接线" aria-label="锚点">#</a></h3>
+<p>完整实现了 <code>/bash</code> 全 PTY 交互 shell(支持 sudo/vim/top,node-pty 不可用时降级 child_process),导出<br><code>launchPtyShell</code>/<code>isPtyAvailable</code>——经 29226 文件穷尽核查<strong>零引用</strong>,schema/router/case 三处皆无 <code>bash</code><br>命令,连 <code>[DESIGN-ARCH-053]</code> 里的 <code>pty</code> 也只是输出折叠 scope 的<strong>工具名字符串</strong>而非本模块。</p>
+<p><strong>处置(已落 GUARDS 红线三)</strong>:<strong>保留且刻意不接线</strong>。</p>
+<ul><li><strong>不删</strong>:非本会话作者所建,删除会销毁他人产物(违反&quot;未创建即不擅动&quot;约束)。</li><li><strong>不接线</strong>:常驻 sudo 交互 shell 的安全面与 khy「人闸门 + 权限层」哲学相悖;一次性命令需求已由经典</li></ul>
+<p>REPL <code>!</code> shell-escape 覆盖。</p>
+<ul><li><strong>审计契约</strong>:后续孤儿扫描视 pty.js 为已登记例外,不再当事故性缺口翻红。若未来确需 <code>/bash</code>,须走完整</li></ul>
+<p>接线五件套 + 交互前安全确认 + 独立设计评审。</p>
+<blockquote><p>注:经典 REPL 的 <code>!</code> shell-escape 走 records 式 <code>formatShellEscapeContext</code>,与 pty.js <strong>无关</strong>,<br>不能互相替代。</p></blockquote>
+<hr>
+<h2 id="五-新功能落地自查清单">五、新功能落地自查清单<a class="anchor" href="#五-新功能落地自查清单" aria-label="锚点">#</a></h2>
+<pre><code>□ 叶子过 leaf-contract:  node scripts/check-leaf-contract.js &lt;leaf&gt;.js
+□ 命令三处登记齐:        commandSchema(ROUTER 行+名)+ router ROUTER_COMMANDS + switch case
+□ 门控字节回退已验:      KHY_&lt;F&gt;=0 时逐字节 == legacy
+□ 三守卫过:              leaf-contract / agent-rules / model-hardcoding
+□ bundled 三副本已重建:  随 wheel/npm 构建,绝不手改
+□ 接进编排主线:          想清楚挂在「回合开始注入 / 回合中 / 回合结束 / 旁路命令」哪个切点</code></pre>
+<hr>
+<p>承 <code>.ai/GUARDS.md</code> 全部红线;与 <code>[DESIGN-ARCH-014] 模式图谱</code> 互补(那篇讲模式,本篇讲接线与编排切点)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-059] 能力即代码.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-059 能力即代码（capability-as-code）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-061] 更新包学习-取其精华弃其糟粕.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-060] khy 功能接线与编排总图.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

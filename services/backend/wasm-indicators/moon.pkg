@@ -1,0 +1,6 @@
+// Library package configuration for `khyquant/indicators`.
+// Keep this package non-main; executable entrypoints live under `cmd/`.
+
+import {
+  "moonbitlang/core/double",
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅</div>
+      <header class="hero reveal"><h1>[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-135-工作流列表载入本页降级-不泄漏全局横幅">[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅</a></li><li class="lvl-2"><a href="#现象-用户复现">现象（用户复现）</a></li><li class="lvl-2"><a href="#断桥根因">断桥根因</a></li><li class="lvl-2"><a href="#修复-外科手术式-遵既有约定">修复（外科手术式，遵既有约定）</a></li><li class="lvl-2"><a href="#不安装二进制是否也能正确代理-已验证的答复">「不安装二进制是否也能正确代理」——已验证的答复</a></li><li class="lvl-2"><a href="#验收门-全绿">验收门（全绿）</a></li><li class="lvl-2"><a href="#footprint">Footprint</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-135-工作流列表载入本页降级-不泄漏全局横幅">[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅<a class="anchor" href="#ops-man-135-工作流列表载入本页降级-不泄漏全局横幅" aria-label="锚点">#</a></h1>
+<h2 id="现象-用户复现">现象（用户复现）<a class="anchor" href="#现象-用户复现" aria-label="锚点">#</a></h2>
+<p>在<strong>代理管理</strong>页顶部出现红色横幅：</p>
+<blockquote><p>网络连接异常：无法访问 /api/workflow。请确认 ai-backend 服务可用后重试。</p></blockquote>
+<p>困惑点：用户人在「代理管理」页，该页自身工作正常（订阅 / 代理组 / 出站状态都能读），横幅却提示一个与本页无关的 <code>/api/workflow</code>。</p>
+<h2 id="断桥根因">断桥根因<a class="anchor" href="#断桥根因" aria-label="锚点">#</a></h2>
+<p>该横幅是 <code>apps/ai-frontend/src/api/request.js</code> 拦截器对<strong>非 silent</strong> 失败请求弹的<strong>全局</strong> <code>notifyError</code>（Element Plus <code>ElMessage</code>，挂在 <code>document.body</code>，与当前路由/页面无关）。</p>
+<ul><li><code>/api/workflow</code>（列表）与 <code>/api/proxy-egress</code> 由<strong>同一</strong> daemon（<code>aiManagementServer.js</code>）承载，同源同端口。</li><li>工作流列表载入链：<code>Workflows.vue onMounted</code> → <code>useWorkflow.listWorkflows()</code> → <code>request.get('/api/workflow')</code>。此调用此前<strong>未标 <code>silent</code></strong>，且视图<strong>无本页降级 UI</strong>。</li><li><code>request.js</code> 对网络类失败（无响应：ECONNREFUSED / network error / timeout / ECONNABORTED）先<strong>重试一次</strong>（350ms）再落 <code>error.userMessage</code>，请求可在<strong>导航离开工作流页之后</strong>才最终 reject。</li><li>reject 命中 <code>request.js:95-96</code> 非 silent 分支 → 全局 <code>notifyError</code> → 横幅<strong>渲染在用户当前所在页面</strong>（代理管理页），造成「无关页面弹出 /api/workflow 报错」。</li></ul>
+<p>即：横幅并非源自代理页，而是工作流页的一次<strong>导航遗留 / 后端不可达</strong>的列表请求，因未 silent 而把全局提示<strong>跨页泄漏</strong>过来。</p>
+<h2 id="修复-外科手术式-遵既有约定">修复（外科手术式，遵既有约定）<a class="anchor" href="#修复-外科手术式-遵既有约定" aria-label="锚点">#</a></h2>
+<p><code>request.js:88-94</code> 已明确约定：调用方自带可见降级 UI 时，请求应标 <code>config.silent === true</code>，不再叠全局 toast（既有先例：FeatureCatalog 错误态、AgentDashboard 轮询退避）。工作流列表载入本应属于同类，只是漏了。</p>
+<ol><li><strong><code>useWorkflow.js</code></strong><ul><li>新增 <code>loadError</code> ref（本页可见降级状态），并在 <code>listWorkflows</code> 每次开始时清零、失败时落 <code>err.userMessage / response.data.message / message / '加载工作流失败'</code>。</li><li>列表 GET 改为 <code>request.get('/api/workflow', { silent: true })</code> —— 失败不再触发全局 <code>notifyError</code>。</li><li>导出 <code>loadError</code>。</li><li>其余写操作（create / put / delete / templates / coze / generate）URL 组装与行为<strong>逐字不变</strong>。</li></ul></li></ol>
+<ol><li><strong><code>Workflows.vue</code></strong><ul><li>解构 <code>loadError</code>；表格上方增设 <code>el-alert</code>（error，<code>v-if=&quot;loadError&quot;</code>）+「重试」按钮 <code>retryLoad</code>。</li><li><code>onMounted(listWorkflows)</code> → <code>onMounted(retryLoad)</code>，<code>retryLoad</code> 内 <code>listWorkflows().catch(() =&gt; {})</code> 吞掉 rejection，避免未处理拒绝，失败仅落 <code>loadError</code> 就地渲染。</li></ul></li></ol>
+<p>失败信息因此<strong>始终限定在工作流页</strong>（inline 报错 + 重试），<strong>永不跨页泄漏为全局横幅</strong>。</p>
+<h2 id="不安装二进制是否也能正确代理-已验证的答复">「不安装二进制是否也能正确代理」——已验证的答复<a class="anchor" href="#不安装二进制是否也能正确代理-已验证的答复" aria-label="锚点">#</a></h2>
+<p>与本修复<strong>正交</strong>，属代理出站桥子系统（proxy-egress），<strong>已实现且有测试覆盖，无需改动</strong>：</p>
+<ul><li><code>proxyConfigService.activateNode</code> 依 <code>proxyCoreConfigGen.classifyNodeEgress</code> 分三路：<ul><li><strong>direct-connect（http / https）</strong>：节点自身即 CONNECT 代理，<strong>无需 mihomo 内核</strong>，直接写 <code>HTTP_PROXY</code> env（被网关 <code>_proxyTunnel</code> 消费）即时生效。→ <code>proxyConfigService.egress.test.js</code>「direct-connect 可达 → 写 HTTP_PROXY env + egressMode」断言。</li><li><strong>core-required（vmess / vless / trojan / ss / ssr）</strong>：需本机内核（门 <code>KHY_PROXY_CORE</code>）；门关 / 内核缺失 → <strong>原样透传结构化 guidance，绝不谎报生效</strong>，不写 env。→ 同套件「门关透传 guidance」「内核缺失 core-missing 指引」断言。</li></ul></li></ul>
+<p>结论：<strong>不安装二进制时，http / https（直连型）节点可以正确代理</strong>；raw 协议节点则诚实提示需内核、不会假装已生效。整套 <code>test:maintainer:proxy-egress</code> 80/80 绿。</p>
+<h2 id="验收门-全绿">验收门（全绿）<a class="anchor" href="#验收门-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check apps/ai-frontend/src/composables/useWorkflow.js</code></li><li><code>npm run test:workflow-list-degraded</code>（<code>useWorkflow.wiring.test.js</code> 6/6）</li><li><code>npm run build --prefix apps/ai-frontend</code>（前端构建通过）</li><li><code>npm run test:maintainer:proxy-egress</code>（seam #2 回归 80/80）</li><li>三守卫 / arch:god / <code>maintainer:check</code> / metadata 2-pass</li></ul>
+<h2 id="footprint">Footprint<a class="anchor" href="#footprint" aria-label="锚点">#</a></h2>
+<p>改：<code>useWorkflow.js</code>、<code>Workflows.vue</code>、<code>package.json</code>、<code>维护映射表.json</code><br>新：<code>useWorkflow.wiring.test.js</code>、本 OPS 文档</p>
+<p>不 commit（分支 <code>feat/0.1.104-multi-subsystem-batch</code>，遵红线 AI 不自动 commit/push）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-134] 视觉级联网络不可达终局诊断（networkunreachable reason class）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

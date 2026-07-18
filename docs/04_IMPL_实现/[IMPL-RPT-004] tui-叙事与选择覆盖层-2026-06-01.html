@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TUI 高级工程师叙事模式 + 交互选择覆盖层 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>TUI 高级工程师叙事模式 + 交互选择覆盖层</div>
+      <header class="hero reveal"><h1>TUI 高级工程师叙事模式 + 交互选择覆盖层</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-高级工程师叙事模式-交互选择覆盖层">TUI 高级工程师叙事模式 + 交互选择覆盖层</a></li><li class="lvl-2"><a href="#1-工作叙事协议-让-ai-边做边汇报">1. 工作叙事协议 — 让 AI 边做边汇报</a></li><li class="lvl-3"><a href="#问题">问题</a></li><li class="lvl-3"><a href="#根因">根因</a></li><li class="lvl-3"><a href="#修复">修复</a></li><li class="lvl-2"><a href="#2-交互选择覆盖层-choice-overlay">2. 交互选择覆盖层 (Choice Overlay)</a></li><li class="lvl-3"><a href="#新增功能">新增功能</a></li><li class="lvl-3"><a href="#涉及文件">涉及文件</a></li><li class="lvl-3"><a href="#键盘操作">键盘操作</a></li><li class="lvl-3"><a href="#oncontrolrequest-回调">onControlRequest 回调</a></li><li class="lvl-2"><a href="#3-表格渲染修复">3. 表格渲染修复</a></li><li class="lvl-3"><a href="#现象">现象</a></li><li class="lvl-3"><a href="#根因-2">根因</a></li><li class="lvl-3"><a href="#修复-2">修复</a></li><li class="lvl-2"><a href="#4-默认配置变更">4. 默认配置变更</a></li><li class="lvl-3"><a href="#默认登录-admin05">默认登录 admin05</a></li><li class="lvl-3"><a href="#thinking-默认开启">Thinking 默认开启</a></li><li class="lvl-2"><a href="#5-跨平台兼容性修复-对标-claude-code">5. 跨平台兼容性修复（对标 Claude Code）</a></li><li class="lvl-3"><a href="#问题-2">问题</a></li><li class="lvl-3"><a href="#第一轮修复-基础兼容">第一轮修复（基础兼容）</a></li><li class="lvl-3"><a href="#第二轮修复-cc-模式移植">第二轮修复（CC 模式移植）</a></li><li class="lvl-3"><a href="#已确认不需要修复的项">已确认不需要修复的项</a></li><li class="lvl-2"><a href="#6-khy-代理-websearch-透传修复">6. KHY 代理 WebSearch 透传修复</a></li><li class="lvl-3"><a href="#问题-3">问题</a></li><li class="lvl-3"><a href="#根因-3">根因</a></li><li class="lvl-3"><a href="#修复-3">修复</a></li><li class="lvl-2"><a href="#7-搜索工具路由错误修复">7. 搜索工具路由错误修复</a></li><li class="lvl-3"><a href="#问题-4">问题</a></li><li class="lvl-3"><a href="#根因-4">根因</a></li><li class="lvl-3"><a href="#修复-4">修复</a></li><li class="lvl-2"><a href="#8-tui-文字无法复制修复">8. TUI 文字无法复制修复</a></li><li class="lvl-3"><a href="#问题-5">问题</a></li><li class="lvl-3"><a href="#根因-5">根因</a></li><li class="lvl-3"><a href="#修复-5">修复</a></li><li class="lvl-2"><a href="#涉及文件清单">涉及文件清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-004 | 阶段: 实现 | 原路径: docs/修复记录/tui-叙事与选择覆盖层-2026-06-01.md --&gt;</p>
+<h1 id="tui-高级工程师叙事模式-交互选择覆盖层">TUI 高级工程师叙事模式 + 交互选择覆盖层<a class="anchor" href="#tui-高级工程师叙事模式-交互选择覆盖层" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本文档描述的自研 TUI 运行时（<code>tuiShell.js</code> / <code>OverlayHost.js</code> / <code>TranscriptViewport.js</code> / <code>PromptFrame.js</code> / <code>FooterBar.js</code> / <code>keypressParser.js</code> / <code>alternateScreen.js</code> 等）已于 2026-06-05 全面迁移至官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>），上述文件均已删除。本文仅作历史修复记录保留，最新 TUI 行为请参阅 <a href="%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<p><strong>日期</strong>: 2026-06-01<br><strong>版本</strong>: v0.1.80<br><strong>范围</strong>: 系统提示叙事协议、交互选择 UI、表格渲染修复、默认配置变更</p>
+<hr>
+<h2 id="1-工作叙事协议-让-ai-边做边汇报">1. 工作叙事协议 — 让 AI 边做边汇报<a class="anchor" href="#1-工作叙事协议-让-ai-边做边汇报" aria-label="锚点">#</a></h2>
+<h3 id="问题">问题<a class="anchor" href="#问题" aria-label="锚点">#</a></h3>
+<p>KHY TUI 中 AI 执行多步任务时只显示静默的工具卡片，两个工具调用之间没有任何文字说明。<br>对比 Claude Code，后者在工具调用之间有：执行前说明、结果解读、阶段性总结、完成汇报、不确定时给出选项。</p>
+<h3 id="根因">根因<a class="anchor" href="#根因" aria-label="锚点">#</a></h3>
+<p>文本渲染管线完好（text chunk 不会丢失），但系统提示中只有 3 行简略的 &quot;Broadcast + Preview + Interject&quot;，<br>AI 模型没有被指示产出叙事文本。</p>
+<h3 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h3>
+<p><strong><code>backend/src/constants/prompts.js</code></strong> — <code>_coreProfile()</code> 替换为详细工作叙事协议：</p>
+<ul><li>工具调用前：一句话说明要做什么、为什么</li><li>工具结果后：一句话说明结果对任务的意义</li><li>步骤之间：串联上一步结果和下一步动作</li><li>进度检查点：连续 3+ 次工具调用后简要汇总</li><li>完成时：总结做了什么、改了什么、需要验证什么</li><li>不确定时：列出编号选项请用户选择</li><li>硬规则：禁止两个工具卡片背靠背出现</li></ul>
+<p><strong><code>backend/src/constants/outputStyles.js</code></strong> — <code>senior-engineer</code> 风格追加 2 条叙事指令。</p>
+<hr>
+<h2 id="2-交互选择覆盖层-choice-overlay">2. 交互选择覆盖层 (Choice Overlay)<a class="anchor" href="#2-交互选择覆盖层-choice-overlay" aria-label="锚点">#</a></h2>
+<h3 id="新增功能">新增功能<a class="anchor" href="#新增功能" aria-label="锚点">#</a></h3>
+<p>支持 AI 向用户提问并收集选择（对标 Claude Code 的 AskUserQuestion）。</p>
+<h3 id="涉及文件">涉及文件<a class="anchor" href="#涉及文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改项</th></tr></thead><tbody><tr><td><code>OverlayHost.js</code></td><td>新增 <code>renderChoice()</code> — 居中卡片、单选/多选、编号快捷键</td></tr><tr><td><code>AppShell.js</code></td><td>覆盖层高度兼容 <code>choice</code> 类型（用 <code>options</code> 而非 <code>matches</code>）</td></tr><tr><td><code>tuiShell.js</code></td><td>choice 键盘路由 + <code>_openChoiceOverlay</code> Promise 封装</td></tr><tr><td><code>tuiShell.js</code></td><td><code>onControlRequest</code> 回调接入 <code>ai().chat()</code></td></tr></tbody></table>
+<h3 id="键盘操作">键盘操作<a class="anchor" href="#键盘操作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>按键</th><th>单选</th><th>多选</th></tr></thead><tbody><tr><td>↑/↓</td><td>移动高亮</td><td>移动高亮</td></tr><tr><td>Enter</td><td>确认当前项</td><td>确认所有已勾选项</td></tr><tr><td>Esc</td><td>取消 (返回 null)</td><td>取消</td></tr><tr><td>Space</td><td>—</td><td>切换勾选</td></tr><tr><td>1-9</td><td>直接选中并确认</td><td>切换对应项勾选</td></tr></tbody></table>
+<h3 id="oncontrolrequest-回调">onControlRequest 回调<a class="anchor" href="#oncontrolrequest-回调" aria-label="锚点">#</a></h3>
+<p><code>ai().chat()</code> 现在传入 <code>onControlRequest</code> 回调，处理两种场景：</p>
+<ol><li><strong>AskUserQuestion</strong> — 遍历问题列表，每个弹出 choice 覆盖层，收集答案后返回 <code>{ behavior: 'allow', updatedInput: { answers } }</code></li><li><strong>通用工具权限</strong> — 弹出&quot;允许/拒绝&quot;二选一，返回 <code>{ behavior: 'allow' | 'deny' }</code></li></ol>
+<p>调用链路：<code>claudeAdapter</code> → <code>onControlRequest</code> → <code>_openChoiceOverlay</code> (Promise) → 用户键盘 → <code>_choiceResolve</code> → 返回适配器 → <code>normalizeControlResponse</code></p>
+<hr>
+<h2 id="3-表格渲染修复">3. 表格渲染修复<a class="anchor" href="#3-表格渲染修复" aria-label="锚点">#</a></h2>
+<h3 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h3>
+<p>TUI 中 AI 返回的 Markdown 表格显示混乱 — box-drawing 边框断裂，列错位。</p>
+<h3 id="根因-2">根因<a class="anchor" href="#根因-2" aria-label="锚点">#</a></h3>
+<p><code>markdownRenderer</code> 已将表格渲染为带 <code>╭│├╰</code> box-drawing 字符的对齐行，<br>但 <code>TranscriptViewport.wrapText()</code> 不知道这些行是预格式化的，对它们做了二次自动换行。</p>
+<h3 id="修复-2">修复<a class="anchor" href="#修复-2" aria-label="锚点">#</a></h3>
+<p><strong><code>TranscriptViewport.js</code></strong> — markdown 渲染完成后逐行判断：</p>
+<ul><li>包含 box-drawing 字符的行 → 直接保留，不经 <code>wrapText</code></li><li>普通文本行 → 继续走 <code>wrapText</code> 自动换行</li></ul>
+<p>检测正则：<code>/[╭╮╰╯│├┤┬┴┼─╌╎┌┐└┘┠┨╟╢▕▏]/</code></p>
+<hr>
+<h2 id="4-默认配置变更">4. 默认配置变更<a class="anchor" href="#4-默认配置变更" aria-label="锚点">#</a></h2>
+<h3 id="默认登录-admin05">默认登录 admin05<a class="anchor" href="#默认登录-admin05" aria-label="锚点">#</a></h3>
+<p><strong><code>backend/bin/khy.js</code></strong> — <code>ensureAuthenticated()</code> 首次使用时自动以 <code>admin05</code> 登录：</p>
+<ul><li>pip 安装后无需手动输入用户名密码，直接进入管理员模式</li><li>会话过期后的登录提示也更新为 <code>admin05 / 012003</code></li><li>自动登录失败时回退到手动注册流程</li></ul>
+<h3 id="thinking-默认开启">Thinking 默认开启<a class="anchor" href="#thinking-默认开启" aria-label="锚点">#</a></h3>
+<p><code>ai.js</code> 中 <code>_thinkingEnabled = true</code> 已确认为默认值。</p>
+<p>行为说明：</p>
+<ul><li><code>/thinking</code> 命令只控制<strong>显示</strong>，不控制模型是否思考</li><li>模型始终思考（gateway 始终传 <code>thinkingEnabled: true</code>，非原生模型注入 CoT 提示）</li><li>关闭 thinking 显示时，thinking chunk 被 <code>onChunk</code> 过滤，不进入 UI</li></ul>
+<hr>
+<h2 id="5-跨平台兼容性修复-对标-claude-code">5. 跨平台兼容性修复（对标 Claude Code）<a class="anchor" href="#5-跨平台兼容性修复-对标-claude-code" aria-label="锚点">#</a></h2>
+<h3 id="问题-2">问题<a class="anchor" href="#问题-2" aria-label="锚点">#</a></h3>
+<p>审计 CC 源码后发现 KHY 在 Windows/Linux 兼容方面存在多项差距：信号处理、进程杀死、Shell 派发、路径处理、终端检测等。</p>
+<h3 id="第一轮修复-基础兼容">第一轮修复（基础兼容）<a class="anchor" href="#第一轮修复-基础兼容" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修复</th></tr></thead><tbody><tr><td><code>alternateScreen.js</code></td><td><code>SIGHUP</code> 信号在 win32 上排除</td></tr><tr><td><code>gateway.js</code></td><td><code>process.env.HOME</code> → <code>os.homedir()</code></td></tr><tr><td><code>auditLog.js</code></td><td>添加 <code>process.env.USERNAME</code> 回退（Windows 无 <code>USER</code>）</td></tr><tr><td><code>cronScheduler.js</code></td><td><code>spawn('sh')</code> → 平台感知 <code>cmd/sh</code> 二选一</td></tr><tr><td><code>plugin-loader/index.js</code></td><td>npm 全局路径区分 Windows (<code>prefix/node_modules</code>) / Unix (<code>prefix/lib/node_modules</code>)</td></tr><tr><td><code>multiTerminalBackend.js</code></td><td>tmux init 添加 win32 早退</td></tr><tr><td><code>oauthTokenStore.js</code></td><td>添加 Windows 权限注释（<code>mode: 0o600</code> 在 Windows 静默忽略）</td></tr></tbody></table>
+<h3 id="第二轮修复-cc-模式移植">第二轮修复（CC 模式移植）<a class="anchor" href="#第二轮修复-cc-模式移植" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修复</th></tr></thead><tbody><tr><td><code>platformUtils.js</code></td><td>+<code>isMintty()</code> — 检测 Git Bash/MSYS2 终端</td></tr><tr><td><code>platformUtils.js</code></td><td>+<code>isModernWinTerminal()</code> — 组合检测现代 Windows 终端</td></tr><tr><td><code>alternateScreen.js</code></td><td>+<code>getClearSequence(opts)</code> — legacy Windows 用 <code>cls</code>，现代终端用 VT 序列</td></tr><tr><td><code>cronScheduler.js</code></td><td><code>.kill('SIGTERM')</code> → <code>safeKill(proc)</code> 进程树杀死</td></tr><tr><td><code>windowsClipboardImg2FileService.js</code></td><td><code>.kill(signal)</code> → <code>safeKill(target, ...)</code></td></tr><tr><td><code>cliAnythingService.js</code></td><td><code>_which()</code> 委托 <code>searchExecutable()</code>；<code>_getVersion/_getHelp</code> 用 <code>execFileSync</code> 无 shell</td></tr><tr><td><code>node_skeleton/backend.js</code></td><td>模板中 <code>which</code> → <code>where/which</code> 平台选择</td></tr><tr><td><code>shutdown.js</code></td><td>+8s failsafe timer — <code>process.exit()</code> 卡住时 SIGKILL 自杀</td></tr></tbody></table>
+<h3 id="已确认不需要修复的项">已确认不需要修复的项<a class="anchor" href="#已确认不需要修复的项" aria-label="锚点">#</a></h3>
+<ul><li><strong>tree-kill</strong> → <code>safeKill()</code> 已等价实现（<code>taskkill /T /F</code> + process group kill）</li><li><strong>孤儿检测</strong> → <code>shutdown.js:101-109</code> 已有 30s 轮询</li><li><strong><code>processAgent.js:144</code></strong> → 调用的是 <code>ProcessAgent.kill()</code> 方法，内部已用 <code>safeKill</code></li><li><strong>路径转换</strong> → <code>pathCompat.js</code> 已有 <code>windowsPathToPosix/posixPathToWindows</code></li></ul>
+<hr>
+<h2 id="6-khy-代理-websearch-透传修复">6. KHY 代理 WebSearch 透传修复<a class="anchor" href="#6-khy-代理-websearch-透传修复" aria-label="锚点">#</a></h2>
+<h3 id="问题-3">问题<a class="anchor" href="#问题-3" aria-label="锚点">#</a></h3>
+<p>Claude Code 通过 KHY 代理 (<code>http://127.0.0.1:9100</code>) 连接 Anthropic API 时，<code>WebSearch</code> 工具返回 &quot;Did 0 searches&quot;。</p>
+<h3 id="根因-3">根因<a class="anchor" href="#根因-3" aria-label="锚点">#</a></h3>
+<p>Anthropic 的 <code>web_search</code> 是<strong>服务端工具</strong> (<code>type: &quot;web_search_20250305&quot;</code>)，不同于普通函数工具。KHY 代理管线在请求侧将其破坏：</p>
+<ol><li><code>protocolConverter/anthropic.js</code> — <code>toCanonical()</code> 把 <code>{ type: &quot;web_search_20250305&quot; }</code> 映射为 <code>{ name, description, parameters }</code>，丢失 <code>type</code> 字段</li><li><code>proxyServer.js</code> — <code>generateOptions.tools</code> 只传 canonical tools，无原始工具定义</li><li><code>claudeAdapter.js</code> — passthrough body 用 <code>buildDirectToolDefs()</code> 重建本地工具，完全不看客户端的工具定义</li></ol>
+<h3 id="修复-3">修复<a class="anchor" href="#修复-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改</th></tr></thead><tbody><tr><td><code>proxyServer.js</code></td><td>+<code>rawTools: body.tools</code> — 保留原始工具定义（含 <code>type</code> 字段）</td></tr><tr><td><code>claudeAdapter.js</code></td><td>passthrough body 优先用 <code>options.rawTools</code> — 服务端工具原样到达上游 API</td></tr></tbody></table>
+<p>响应侧无需改动 — passthrough 已直接 pipe 原始 SSE。</p>
+<hr>
+<h2 id="7-搜索工具路由错误修复">7. 搜索工具路由错误修复<a class="anchor" href="#7-搜索工具路由错误修复" aria-label="锚点">#</a></h2>
+<h3 id="问题-4">问题<a class="anchor" href="#问题-4" aria-label="锚点">#</a></h3>
+<p>非 Claude 模型（如 minimax-m2.5）调用 <code>Search({query: &quot;最新新闻&quot;})</code> 后卡死。状态显示&quot;完成&quot;但回复不完整，搜索结果从未显示。</p>
+<h3 id="根因-4">根因<a class="anchor" href="#根因-4" aria-label="锚点">#</a></h3>
+<p><code>claudeCompat.js</code> 中 <code>TOOL_ALIASES</code> 将 <code>search</code> 映射到文件搜索工具（grep），而非 <code>webSearch</code>。模型的 web 搜索意图被路由到错误的工具：</p>
+<ul><li><code>Search({query: &quot;最新新闻&quot;})</code> → <code>_lookupKey</code> → <code>'search'</code> → <code>TOOL_ALIASES['search']</code> → <strong>grep 工具</strong></li><li>grep 在文件系统中搜不到新闻 → 返回空结果 → 模型放弃</li></ul>
+<h3 id="修复-4">修复<a class="anchor" href="#修复-4" aria-label="锚点">#</a></h3>
+<p><strong><code>claudeCompat.js</code></strong> — <code>normalizeToolCall()</code> 新增参数感知消歧：</p>
+<pre><code class="language-javascript">if (normalizedName === 'search' &amp;&amp; params) {
+  const hasWebParams = 'query' in params || 'q' in params;
+  const hasGrepParams = 'pattern' in params || 'regex' in params || 'path' in params;
+  if (hasWebParams &amp;&amp; !hasGrepParams) normalizedName = 'webSearch';
+}</code></pre>
+<ul><li>参数含 <code>query</code>/<code>q</code> → <code>webSearch</code>（网页搜索）</li><li>参数含 <code>pattern</code>/<code>regex</code>/<code>path</code> → <code>search</code>（文件搜索）</li></ul>
+<hr>
+<h2 id="8-tui-文字无法复制修复">8. TUI 文字无法复制修复<a class="anchor" href="#8-tui-文字无法复制修复" aria-label="锚点">#</a></h2>
+<h3 id="问题-5">问题<a class="anchor" href="#问题-5" aria-label="锚点">#</a></h3>
+<p>TUI 中生成的文字无法通过鼠标选择复制。</p>
+<h3 id="根因-5">根因<a class="anchor" href="#根因-5" aria-label="锚点">#</a></h3>
+<p><code>keypressParser.js</code> 启用了 <code>?1000h</code>（鼠标点击捕获），终端把所有鼠标事件（包括点击和拖选）发给 KHY 而非做原生文字选择。KHY 只处理滚轮事件（buttons 64/65），点击和拖选事件被静默丢弃。</p>
+<p>对比 Claude Code：CC 也启用鼠标追踪，但自行实现了完整的文字选择系统（anchor/focus、word/line 选择、OSC52 剪贴板、copy-on-select）。KHY 没有这套系统。</p>
+<h3 id="修复-5">修复<a class="anchor" href="#修复-5" aria-label="锚点">#</a></h3>
+<p><strong><code>keypressParser.js</code></strong> — 移除 <code>?1000h</code>（基础点击捕获），只保留 <code>?1002h</code>（button-event，含滚轮）+ <code>?1006h</code>（SGR 格式）：</p>
+<pre><code class="language-javascript">// 改前：
+this._stdout.write('\x1b[?1000h\x1b[?1002h\x1b[?1006h');
+// 改后：
+this._stdout.write('\x1b[?1002h\x1b[?1006h');</code></pre>
+<p>不捕获点击事件后，终端的原生文字选择/复制功能恢复正常，同时滚轮事件仍可正常工作。</p>
+<hr>
+<h2 id="涉及文件清单">涉及文件清单<a class="anchor" href="#涉及文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>修改项</th></tr></thead><tbody><tr><td><code>pyproject.toml</code></td><td>版本 → 0.1.80</td></tr><tr><td><code>backend/package.json</code></td><td>版本 → 0.1.80</td></tr><tr><td><code>khy_platform/__init__.py</code></td><td>版本 → 0.1.80</td></tr><tr><td><code>backend/src/constants/prompts.js</code></td><td>工作叙事协议</td></tr><tr><td><code>backend/src/constants/outputStyles.js</code></td><td>senior-engineer 风格补强</td></tr><tr><td><code>backend/src/cli/tui/components/OverlayHost.js</code></td><td>renderChoice + renderHistorySearch</td></tr><tr><td><code>backend/src/cli/tui/layout/AppShell.js</code></td><td>覆盖层高度兼容</td></tr><tr><td><code>backend/src/cli/tui/tuiShell.js</code></td><td>choice/history-search 键盘 + onControlRequest + Ctrl+R</td></tr><tr><td><code>backend/src/cli/tui/components/TranscriptViewport.js</code></td><td>表格行保护</td></tr><tr><td><code>backend/src/cli/tui/components/PromptFrame.js</code></td><td>任务进度面板</td></tr><tr><td><code>backend/src/cli/tui/components/FooterBar.js</code></td><td>￥计价显示</td></tr><tr><td><code>backend/bin/khy.js</code></td><td>默认 admin05 登录</td></tr><tr><td><code>backend/src/cli/tui/runtime/alternateScreen.js</code></td><td>SIGHUP win32 排除 + getClearSequence</td></tr><tr><td><code>backend/src/cli/tui/runtime/keypressParser.js</code></td><td>移除 ?1000h 恢复文字选择</td></tr><tr><td><code>backend/src/cli/handlers/gateway.js</code></td><td>HOME→homedir + withTimeout</td></tr><tr><td><code>backend/src/services/auditLog.js</code></td><td>+USERNAME 回退</td></tr><tr><td><code>backend/src/services/cronScheduler.js</code></td><td>平台 shell + safeKill</td></tr><tr><td><code>backend/src/services/windowsClipboardImg2FileService.js</code></td><td>safeKill</td></tr><tr><td><code>backend/src/services/multiTerminalBackend.js</code></td><td>tmux win32 早退</td></tr><tr><td><code>backend/src/services/cliAnythingService.js</code></td><td>跨平台命令发现</td></tr><tr><td><code>backend/src/services/mcp/oauthTokenStore.js</code></td><td>Windows 权限注释</td></tr><tr><td><code>backend/src/tools/platformUtils.js</code></td><td>+isMintty +isModernWinTerminal</td></tr><tr><td><code>backend/src/plugin-loader/index.js</code></td><td>npm 全局路径跨平台</td></tr><tr><td><code>backend/src/data/cliAnythingTemplates/node_skeleton/backend.js</code></td><td>which→where/which</td></tr><tr><td><code>backend/src/bootstrap/shutdown.js</code></td><td>+failsafe timer</td></tr><tr><td><code>backend/src/services/gateway/proxyServer.js</code></td><td>+rawTools 透传</td></tr><tr><td><code>backend/src/services/gateway/adapters/claudeAdapter.js</code></td><td>passthrough 用 rawTools</td></tr><tr><td><code>backend/src/services/claudeCompat.js</code></td><td>Search 参数消歧 → webSearch</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-003] tui-inquirer闪退修复-2026-06-05.html"><div class="dir">← 上一篇</div><div class="ttl">TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-005] tui-权限授权掉cooked模式修复-2026-06-09.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-004] tui-叙事与选择覆盖层-2026-06-01.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《文档排版——内容与样式分离》实现报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>《文档排版——内容与样式分离》实现报告</div>
+      <header class="hero reveal"><h1>《文档排版——内容与样式分离》实现报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#文档排版-内容与样式分离-实现报告">《文档排版——内容与样式分离》实现报告</a></li><li class="lvl-2"><a href="#1-目标与背景">1. 目标与背景</a></li><li class="lvl-2"><a href="#2-交付物一览">2. 交付物一览</a></li><li class="lvl-2"><a href="#3-关键实现决策">3. 关键实现决策</a></li><li class="lvl-3"><a href="#3-1-渲染引擎选-python-docx">3.1 渲染引擎选 python-docx</a></li><li class="lvl-3"><a href="#3-2-模型输入双形态-markdown-优先-ast-兜底">3.2 模型输入双形态：Markdown 优先，AST 兜底</a></li><li class="lvl-3"><a href="#3-3-防呆拦截在语义层-不在工具层堆正则">3.3 防呆拦截在语义层，不在工具层堆正则</a></li><li class="lvl-3"><a href="#3-4-换页确定性-api-绝不靠空行">3.4 换页确定性 API，绝不靠空行</a></li><li class="lvl-3"><a href="#3-5-写后必验-就地打补丁-绝不退回模型">3.5 写后必验 + 就地打补丁，绝不退回模型</a></li><li class="lvl-2"><a href="#4-过程中发现并修复的真实缺陷">4. 过程中发现并修复的真实缺陷</a></li><li class="lvl-2"><a href="#5-验证证据">5. 验证证据</a></li><li class="lvl-2"><a href="#6-边界与未尽事项">6. 边界与未尽事项</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="文档排版-内容与样式分离-实现报告">《文档排版——内容与样式分离》实现报告<a class="anchor" href="#文档排版-内容与样式分离-实现报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：IMPL-RPT-023<br>日期：2026-06-12<br>关联设计：[DESIGN-ARCH-023] khyos 文档排版与格式控制规范<br>关联实现：<code>services/backend/src/services/typeset/*</code>、<code>src/templates/docstyles/*.json</code>、<br><code>src/services/docTypeset.py</code>、<code>src/tools/renderDocument.js</code>、<code>src/agents/constraints.js</code><br>关联测试：[TEST-RPT-007] 文档排版-测试报告<br>提交：<code>d7fd385</code> → <code>2846656</code> → <code>70dd961</code> → <code>393de7c</code></p></blockquote>
+<hr>
+<h2 id="1-目标与背景">1. 目标与背景<a class="anchor" href="#1-目标与背景" aria-label="锚点">#</a></h2>
+<p>解决 agent 写论文/报告时<strong>无法精确控制字体、颜色、页面、换页</strong>的问题。</p>
+<p><strong>自调查结论</strong>：旧路径 <code>createDocument.js</code> → <code>docHelper.py</code> 的 <code>text2docx</code> 把<strong>内容生成与<br>格式排版彻底耦合</strong>——按换行符把文本一段段裸塞进 docx，零字体/字号/页边距/行距/换页控制。<br>要让产物像论文，只能让模型自己写排版代码（<code>\textbf</code>、docx <code>w:rPr</code> XML、HTML <code>&lt;font&gt;</code>），而<br><strong>模型对格式代码的输出是不确定的</strong>：同一意图这次 <code>\textbf</code>、下次 <code>**</code>、再下次 <code>&lt;b&gt;</code>；字号<br>忽&quot;三号&quot;忽&quot;16pt&quot;；中文设了 <code>font.name</code> 却漏 <code>eastAsia</code> 致整篇回退。这正是格式错乱根因。</p>
+<p><strong>改造思路</strong>：把格式决策权从模型手里彻底收走——模型只产语义，程序按模板确定性排版。</p>
+<hr>
+<h2 id="2-交付物一览">2. 交付物一览<a class="anchor" href="#2-交付物一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>文件</th><th>行数</th><th>职责</th></tr></thead><tbody><tr><td>语义</td><td><code>src/services/typeset/contentSchema.js</code></td><td>283</td><td>闭合块 AST + 防呆排版代码拦截</td></tr><tr><td>语义</td><td><code>src/services/typeset/markdownToAst.js</code></td><td>202</td><td>确定性 Markdown→AST</td></tr><tr><td>样式</td><td><code>src/services/typeset/styleTemplates.js</code></td><td>121</td><td>模板加载/解析/覆盖</td></tr><tr><td>样式</td><td><code>src/templates/docstyles/{default,gbt7714,ieee}.json</code></td><td>37×3</td><td>格式唯一真源（纯数据）</td></tr><tr><td>渲染</td><td><code>src/services/docTypeset.py</code></td><td>551</td><td>python-docx 原子排版 + 写后校验</td></tr><tr><td>工具</td><td><code>src/tools/renderDocument.js</code></td><td>282</td><td>khyos 工具入口</td></tr><tr><td>禁令</td><td><code>src/agents/constraints.js</code></td><td>+1 行</td><td>禁手写排版代码红线</td></tr><tr><td>测试</td><td><code>tests/services/typeset/*</code> + <code>tests/tools/renderDocument.test.js</code></td><td>509</td><td>60 例</td></tr></tbody></table>
+<hr>
+<h2 id="3-关键实现决策">3. 关键实现决策<a class="anchor" href="#3-关键实现决策" aria-label="锚点">#</a></h2>
+<h3 id="3-1-渲染引擎选-python-docx">3.1 渲染引擎选 python-docx<a class="anchor" href="#3-1-渲染引擎选-python-docx" aria-label="锚点">#</a></h3>
+<p>项目已依赖 python-docx v1.2.0（<code>createDocument</code> 既有路径），目标亦明确点名它与 eastAsia 坑。<br>相比 Pandoc+LaTeX（重、需 TeX 发行版）与 reportlab（PDF 非 docx），python-docx 复用既有<br>子进程范式（<code>findPython</code> + spawn + 滑动超时 + JSON stdout），零新增系统依赖。</p>
+<h3 id="3-2-模型输入双形态-markdown-优先-ast-兜底">3.2 模型输入双形态：Markdown 优先，AST 兜底<a class="anchor" href="#3-2-模型输入双形态-markdown-优先-ast-兜底" aria-label="锚点">#</a></h3>
+<p><code>_toAst</code> 接受三态：AST 对象 / AST JSON 串（<code>{</code> 开头且含 <code>blocks</code> 数组）/ Markdown 串。<br>Markdown 是模型最自然的语义载体（目标明确祝福&quot;如 Markdown 的 #&quot;），AST 供需要精确结构<br>（如 figure 路径、reference 条目）时使用。两者都过 <code>validateDocument</code> 防呆闸门。</p>
+<h3 id="3-3-防呆拦截在语义层-不在工具层堆正则">3.3 防呆拦截在语义层，不在工具层堆正则<a class="anchor" href="#3-3-防呆拦截在语义层-不在工具层堆正则" aria-label="锚点">#</a></h3>
+<p><code>FORMAT_CODE_PATTERNS</code> 集中在 <code>contentSchema.js</code>，是结构校验的一部分；<code>renderDocument.js</code><br>只调 <code>validateDocument</code> 一次即获拦截。code 块正文豁免（原样渲染等宽，永不解释），避免把<br>合法代码清单误杀。</p>
+<h3 id="3-4-换页确定性-api-绝不靠空行">3.4 换页确定性 API，绝不靠空行<a class="anchor" href="#3-4-换页确定性-api-绝不靠空行" aria-label="锚点">#</a></h3>
+<p>换页只有三个确定性来源：结构化 <code>{type:&quot;pagebreak&quot;}</code> 块、Markdown <code>[[newpage]]</code>/<br><code>&lt;&lt;&lt;pagebreak&gt;&gt;&gt;</code> 哨兵、模板&quot;H1 前自动换页&quot;策略。<code>markdownToAst</code> 显式把空行仅作段落分隔、<br>把 <code>---</code> 水平线<strong>忽略</strong>（不换页），从源头杜绝&quot;模型插空行占位换页&quot;的不确定行为。</p>
+<h3 id="3-5-写后必验-就地打补丁-绝不退回模型">3.5 写后必验 + 就地打补丁，绝不退回模型<a class="anchor" href="#3-5-写后必验-就地打补丁-绝不退回模型" aria-label="锚点">#</a></h3>
+<p><code>_verify_and_patch</code> 反解已存 docx：页面非 A4 则改 section 尺寸；任何有文本的 run 漏<br>eastAsia 则用 XML 补 <code>w:rFonts/@w:eastAsia</code>；H1 字号抽检不符则修正。任何不合都在引擎内<br>修复重存——<strong>绝不把文件退回模型重写</strong>，消除二次不确定性。</p>
+<hr>
+<h2 id="4-过程中发现并修复的真实缺陷">4. 过程中发现并修复的真实缺陷<a class="anchor" href="#4-过程中发现并修复的真实缺陷" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>缺陷</th><th>修复</th></tr></thead><tbody><tr><td>1</td><td>HTML 标签正则 `&lt;\s<em>\/?\s</em>(?:b\</td><td>i\</td></tr><tr><td>2</td><td>测试 doc 注释含 <code>**bold**/*italic*</code>，其中 <code>*/</code> 提前闭合块注释致 <code>SyntaxError</code></td><td>改写注释文字去除 <code>*/</code> 字面（与历史同类 bug 一致）</td></tr><tr><td>3</td><td>023 设计文档误写入 stray 目录 <code>services/backend/docs/</code>（实际 docs 在仓库根）</td><td>迁回 <code>docs/03_DESIGN_设计/</code> 并删 stray 树，索引链接重新解析正确</td></tr></tbody></table>
+<hr>
+<h2 id="5-验证证据">5. 验证证据<a class="anchor" href="#5-验证证据" aria-label="锚点">#</a></h2>
+<pre><code>Test Suites: 4 passed, 4 total
+Tests:       60 passed, 60 total</code></pre>
+<p>端到端用例 <code>renders a real .docx and verifies A4 + applied formatting</code>（256ms）：以 gbt7714<br>渲染含标题/正文强调/列表/换页/表格的真 .docx，再用 python-docx 反解断言<br><code>page_width/height≈A4</code>、H1/H2 在位、<strong>每个有文本的中文 run 的 eastAsia 全覆盖<br>（missing_eastAsia=0）</strong>。详见 [TEST-RPT-007]。</p>
+<p>回归：<code>constraints.js</code> 单行新增经 <code>node --test tests/agentConstraints.test.js</code> 6/6 通过，<br>禁令单一真源体例不破。</p>
+<hr>
+<h2 id="6-边界与未尽事项">6. 边界与未尽事项<a class="anchor" href="#6-边界与未尽事项" aria-label="锚点">#</a></h2>
+<ul><li><strong>只新增不改核心</strong>：未触碰 <code>createDocument</code> 老路径、核心调度器（<code>toolUseLoop</code>/</li></ul>
+<p><code>toolExecutionEngine</code>）、任何无关业务；唯一对既有文件的改动是 <code>constraints.js</code> 增一条禁令红线。</p>
+<ul><li><strong>IEEE 双栏</strong>：python-docx 不便实现，<code>ieee.json</code> 取单栏近似，双栏需后处理（已在模板 description 标注）。</li><li><strong>&quot;N 字符&quot;缩进</strong>：按 N×字号磅值近似 CJK 字宽，非精确字符网格；对中文场景足够。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-022] HOTFIX_MODEL_SELECTION.html"><div class="dir">← 上一篇</div><div class="ttl">/model 命令修复说明 (2026-06-04)</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-024] 元帅双模式任命与约束-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">元帅（Marshal）双模式任命与约束 — 实现报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-023] 文档排版-内容与样式分离-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

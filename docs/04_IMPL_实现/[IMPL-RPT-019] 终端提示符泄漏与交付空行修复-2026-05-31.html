@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>终端提示符泄漏与交付空行修复报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>终端提示符泄漏与交付空行修复报告</div>
+      <header class="hero reveal"><h1>终端提示符泄漏与交付空行修复报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#终端提示符泄漏与交付空行修复报告">终端提示符泄漏与交付空行修复报告</a></li><li class="lvl-2"><a href="#一-问题背景">一、问题背景</a></li><li class="lvl-2"><a href="#二-问题现象">二、问题现象</a></li><li class="lvl-3"><a href="#2-1-提示符污染正文">2.1 提示符污染正文</a></li><li class="lvl-3"><a href="#2-2-交付正文贴在执行输出后">2.2 交付正文贴在执行输出后</a></li><li class="lvl-2"><a href="#三-根因分析">三、根因分析</a></li><li class="lvl-3"><a href="#3-1-泄漏根因">3.1 `❯` 泄漏根因</a></li><li class="lvl-3"><a href="#3-2-正文粘连根因">3.2 正文粘连根因</a></li><li class="lvl-2"><a href="#四-修复目标">四、修复目标</a></li><li class="lvl-2"><a href="#五-实施改动">五、实施改动</a></li><li class="lvl-3"><a href="#5-1-busy-prompt-可见性状态化">5.1 busy prompt 可见性状态化</a></li><li class="lvl-3"><a href="#5-2-正式输出前先清-prompt">5.2 正式输出前先清 prompt</a></li><li class="lvl-3"><a href="#5-3-full-repl-增加-交付空行-边界">5.3 full REPL 增加“交付空行”边界</a></li><li class="lvl-3"><a href="#5-4-lite-repl-在-ai-回复-后补空行">5.4 lite REPL 在 `AI 回复` 后补空行</a></li><li class="lvl-3"><a href="#5-5-one-shot-路径统一">5.5 one-shot 路径统一</a></li><li class="lvl-2"><a href="#六-回归测试">六、回归测试</a></li><li class="lvl-3"><a href="#6-1-忙碌提示符泄漏回归">6.1 忙碌提示符泄漏回归</a></li><li class="lvl-3"><a href="#6-2-交付空行回归">6.2 交付空行回归</a></li><li class="lvl-2"><a href="#七-验证结果">七、验证结果</a></li><li class="lvl-3"><a href="#7-1-定向测试">7.1 定向测试</a></li><li class="lvl-3"><a href="#7-2-规则检查">7.2 规则检查</a></li><li class="lvl-3"><a href="#7-3-真实-pty-验证">7.3 真实 PTY 验证</a></li><li class="lvl-2"><a href="#八-影响范围">八、影响范围</a></li><li class="lvl-2"><a href="#九-经验总结">九、经验总结</a></li><li class="lvl-3"><a href="#9-1-临时-ui-不得混入正式输出">9.1 临时 UI 不得混入正式输出</a></li><li class="lvl-3"><a href="#9-2-交付边界必须显式建模">9.2 交付边界必须显式建模</a></li><li class="lvl-3"><a href="#9-3-真实-pty-验证不可省">9.3 真实 PTY 验证不可省</a></li><li class="lvl-2"><a href="#十-后续约束">十、后续约束</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-019 | 阶段: 实现 | 原路径: docs/指南/终端提示符泄漏与交付空行修复-2026-05-31.md --&gt;</p>
+<h1 id="终端提示符泄漏与交付空行修复报告">终端提示符泄漏与交付空行修复报告<a class="anchor" href="#终端提示符泄漏与交付空行修复报告" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>部分已过期</strong>：本报告中针对 <code>backend/src/cli/liteRepl.js</code> 的修复随该文件于 2026-06-05 迁移官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>）一并失效；<code>repl.js</code> 相关部分仍有效。本文仅作历史修复记录保留，最新 TUI 行为请参阅 <a href="%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<blockquote><p>日期: 2026-05-31<br>涉及文件: <code>backend/src/cli/repl.js</code> · <code>backend/src/cli/liteRepl.js</code> · <code>backend/tests/cli/repl.busyPromptRendering.test.js</code> · <code>backend/tests/cli/repl.deliverySpacing.test.js</code><br>状态: 已实施，定向测试通过，真实 PTY 验证通过</p></blockquote>
+<hr>
+<h2 id="一-问题背景">一、问题背景<a class="anchor" href="#一-问题背景" aria-label="锚点">#</a></h2>
+<p>本轮修复聚焦两个终端显示缺陷：</p>
+<ol><li><strong>忙碌提示符泄漏</strong> — 在 KHY 执行工具、打印状态或开始交付正文时，临时输入提示 <code>❯</code> 会残留到输出前缀，看起来像每段输出都带了一个提示符</li><li><strong>执行过程与交付正文粘连</strong> — 工具结果、状态行或 <code>AI 回复</code> 头部后，正文直接紧贴输出，阅读层次不清晰</li></ol>
+<p>用户的预期很明确：</p>
+<ul><li><code>❯</code> 只应出现在输入态</li><li>一旦系统开始输出正式内容，<code>❯</code> 必须消失</li><li>执行过程和最终交付之间应有一行空白分隔</li></ul>
+<hr>
+<h2 id="二-问题现象">二、问题现象<a class="anchor" href="#二-问题现象" aria-label="锚点">#</a></h2>
+<h3 id="2-1-提示符污染正文">2.1 提示符污染正文<a class="anchor" href="#2-1-提示符污染正文" aria-label="锚点">#</a></h3>
+<p>典型异常表现：</p>
+<pre><code class="language-text">❯  Read 已读取目标文件...
+❯  第一段交付正文...
+❯  第二段交付正文...</code></pre>
+<p>这里的 <code>❯</code> 并不是正文的一部分，而是忙碌期间临时重绘出来的输入提示没有被清除。</p>
+<h3 id="2-2-交付正文贴在执行输出后">2.2 交付正文贴在执行输出后<a class="anchor" href="#2-2-交付正文贴在执行输出后" aria-label="锚点">#</a></h3>
+<p>典型异常表现：</p>
+<pre><code class="language-text">● Read 已读取目标文件，定位到执行输出与正文交付边界
+第一段交付正文：...</code></pre>
+<p>工具执行结束后直接进入正文，没有视觉缓冲，用户很难一眼区分“过程”和“结论”。</p>
+<hr>
+<h2 id="三-根因分析">三、根因分析<a class="anchor" href="#三-根因分析" aria-label="锚点">#</a></h2>
+<h3 id="3-1-泄漏根因">3.1 <code>❯</code> 泄漏根因<a class="anchor" href="#3-1-泄漏根因" aria-label="锚点">#</a></h3>
+<p><code>repl.js</code> 和 <code>liteRepl.js</code> 都有“忙碌时允许用户插话”的临时 prompt 机制。这个 prompt 会在 AI 工作中重绘到底部，提示用户可以：</p>
+<ul><li>直接输入排队</li><li><code>/s</code> 补充修正</li><li><code>/i</code> 发起中断</li></ul>
+<p>问题不在于 prompt 被显示，而在于：</p>
+<ol><li>busy prompt 已经画到终端上</li><li>后续状态行、工具输出、流式正文直接开始打印</li><li>打印前没有先清掉这条临时 prompt</li></ol>
+<p>于是终端 scrollback 里就留下了一个看似属于输出内容的 <code>❯</code> 前缀。</p>
+<h3 id="3-2-正文粘连根因">3.2 正文粘连根因<a class="anchor" href="#3-2-正文粘连根因" aria-label="锚点">#</a></h3>
+<p>交付正文的来源有多条路径：</p>
+<ul><li>full REPL 流式正文</li><li>full REPL 非流式最终回填</li><li>lite REPL 的 <code>AI 回复</code></li><li>full/lite 的 one-shot 单次查询</li></ul>
+<p>这些路径此前没有统一的“交付边界”处理。有的直接 <code>console.log(body)</code>，有的从工具输出后直接进入首段正文，因此版式不稳定。</p>
+<hr>
+<h2 id="四-修复目标">四、修复目标<a class="anchor" href="#四-修复目标" aria-label="锚点">#</a></h2>
+<p>修复后必须满足以下规则：</p>
+<ol><li>busy prompt 只能存在于“等待用户输入”的瞬间</li><li>任何正式输出前，都必须先清理可见的 busy prompt</li><li>执行过程和交付正文之间固定插入一个空行</li><li>full REPL、lite REPL、one-shot 路径行为一致</li><li>用回归测试锁死，避免后续改动重新引入</li></ol>
+<hr>
+<h2 id="五-实施改动">五、实施改动<a class="anchor" href="#五-实施改动" aria-label="锚点">#</a></h2>
+<h3 id="5-1-busy-prompt-可见性状态化">5.1 busy prompt 可见性状态化<a class="anchor" href="#5-1-busy-prompt-可见性状态化" aria-label="锚点">#</a></h3>
+<p>在 <code>repl.js</code> 与 <code>liteRepl.js</code> 中都引入了可见性状态：</p>
+<pre><code class="language-js">let _busyPromptVisible = false;</code></pre>
+<p>同时补充统一清理函数：</p>
+<ul><li><code>repl.js</code>：<code>_clearVisibleBusyPromptLine()</code></li><li><code>liteRepl.js</code>：<code>_clearVisibleBusyPromptLine()</code></li></ul>
+<p>设计原则是：</p>
+<ul><li>prompt 重绘时标记为可见</li><li>用户提交输入、终端换边界、正式输出开始前，将其清除并重置状态</li></ul>
+<h3 id="5-2-正式输出前先清-prompt">5.2 正式输出前先清 prompt<a class="anchor" href="#5-2-正式输出前先清-prompt" aria-label="锚点">#</a></h3>
+<p>以下输出入口都改成“先清 prompt，再打印内容”：</p>
+<ul><li>动态状态行</li><li><code>console.log</code> 驱动的普通状态输出</li><li>首段流式正文</li><li>工具执行过程输出</li></ul>
+<p>这使得 <code>❯</code> 不再混入：</p>
+<ul><li>状态行前缀</li><li>工具结果前缀</li><li>最终正文前缀</li></ul>
+<h3 id="5-3-full-repl-增加-交付空行-边界">5.3 full REPL 增加“交付空行”边界<a class="anchor" href="#5-3-full-repl-增加-交付空行-边界" aria-label="锚点">#</a></h3>
+<p>在 <code>backend/src/cli/repl.js</code> 中新增了交付分隔状态：</p>
+<ul><li><code>_deliveryGapPending</code></li><li><code>_markDeliveryGapPending()</code></li><li><code>_flushDeliveryGap()</code></li></ul>
+<p>逻辑如下：</p>
+<ol><li>当状态输出、工具输出、完成面板输出结束时，标记“下一段如果进入正文，需要先补空行”</li><li>首段流式正文开始前执行 <code>_flushDeliveryGap()</code></li><li>非流式最终正文回填前也执行 <code>_flushDeliveryGap()</code></li></ol>
+<p>这样不管正文来自流式还是最终回填，都能稳定与前面的执行信息分隔。</p>
+<h3 id="5-4-lite-repl-在-ai-回复-后补空行">5.4 lite REPL 在 <code>AI 回复</code> 后补空行<a class="anchor" href="#5-4-lite-repl-在-ai-回复-后补空行" aria-label="锚点">#</a></h3>
+<p><code>backend/src/cli/liteRepl.js</code> 的主要交付路径更直接：</p>
+<ol><li><code>renderer.printStepLine('success', 'AI 回复', ...)</code></li><li>输出 token/meta</li><li>渲染正文</li></ol>
+<p>本次在步骤头和正文之间显式加入：</p>
+<pre><code class="language-js">console.log('');</code></pre>
+<p>确保 <code>AI 回复</code> 头部和正文始终隔开。</p>
+<h3 id="5-5-one-shot-路径统一">5.5 one-shot 路径统一<a class="anchor" href="#5-5-one-shot-路径统一" aria-label="锚点">#</a></h3>
+<p>此前 one-shot 路径也存在同样问题：</p>
+<ul><li><code>startRepl({ oneShot: true })</code></li><li><code>startLiteRepl({ oneShot: true })</code></li></ul>
+<p>本次同步修复，在 <code>AI 回复</code> 步骤行后先插入一行空白，再渲染正文。</p>
+<hr>
+<h2 id="六-回归测试">六、回归测试<a class="anchor" href="#六-回归测试" aria-label="锚点">#</a></h2>
+<h3 id="6-1-忙碌提示符泄漏回归">6.1 忙碌提示符泄漏回归<a class="anchor" href="#6-1-忙碌提示符泄漏回归" aria-label="锚点">#</a></h3>
+<p>新增测试文件：</p>
+<ul><li><code>backend/tests/cli/repl.busyPromptRendering.test.js</code></li></ul>
+<p>覆盖点：</p>
+<ol><li>full REPL 动态状态分支在直接写终端前会清理 busy prompt</li><li>full REPL 首段流式正文开始前会清理 busy prompt</li><li>lite REPL 在 busy 状态日志打印前后会清理并恢复 prompt</li></ol>
+<h3 id="6-2-交付空行回归">6.2 交付空行回归<a class="anchor" href="#6-2-交付空行回归" aria-label="锚点">#</a></h3>
+<p>新增测试文件：</p>
+<ul><li><code>backend/tests/cli/repl.deliverySpacing.test.js</code></li></ul>
+<p>覆盖点：</p>
+<ol><li>full REPL：状态输出后接非流式正文</li><li>full REPL：首段流式正文前必须先执行交付分隔</li><li>lite REPL：<code>AI 回复</code> 头后接正文</li><li>full REPL one-shot：<code>AI 回复</code> 后接正文</li><li>lite REPL one-shot：<code>AI 回复</code> 后接正文</li></ol>
+<p>这些测试共同锁住了“提示符清理”和“交付空行”两个边界。</p>
+<hr>
+<h2 id="七-验证结果">七、验证结果<a class="anchor" href="#七-验证结果" aria-label="锚点">#</a></h2>
+<h3 id="7-1-定向测试">7.1 定向测试<a class="anchor" href="#7-1-定向测试" aria-label="锚点">#</a></h3>
+<p>执行：</p>
+<pre><code class="language-bash">npm --prefix backend test -- --runInBand \
+  backend/tests/cli/repl.deliverySpacing.test.js \
+  backend/tests/cli/repl.busyPromptRendering.test.js \
+  backend/tests/cli/liteRepl.rendering.test.js \
+  backend/tests/cli/repl.tasks.interaction.test.js</code></pre>
+<p>结果：</p>
+<ul><li>4 个 test suite 通过</li><li>13/13 tests 通过</li></ul>
+<p>one-shot 补充后再次执行：</p>
+<pre><code class="language-bash">npm --prefix backend test -- --runInBand \
+  backend/tests/cli/repl.deliverySpacing.test.js \
+  backend/tests/cli/repl.busyPromptRendering.test.js</code></pre>
+<p>结果：</p>
+<ul><li>2 个 test suite 通过</li><li>8/8 tests 通过</li></ul>
+<h3 id="7-2-规则检查">7.2 规则检查<a class="anchor" href="#7-2-规则检查" aria-label="锚点">#</a></h3>
+<p>执行：</p>
+<pre><code class="language-bash">node scripts/check-agent-rules.js --changed</code></pre>
+<p>结果：</p>
+<ul><li>通过，无规则违规</li></ul>
+<h3 id="7-3-真实-pty-验证">7.3 真实 PTY 验证<a class="anchor" href="#7-3-真实-pty-验证" aria-label="锚点">#</a></h3>
+<p>使用真实 PTY 会话分别验证：</p>
+<ol><li>full REPL 交互路径</li><li>lite REPL 交互路径</li></ol>
+<p>通过可控 mock 流量触发：</p>
+<ul><li>状态输出</li><li><code>tool_use</code></li><li><code>tool_result</code></li><li>正文交付</li></ul>
+<p>实际观察到的输出满足：</p>
+<ul><li>工具结果后先空一行，再进入正文</li><li><code>AI 回复</code> 头后先空一行，再进入正文</li><li>正文前没有可见 <code>❯</code> 泄漏</li></ul>
+<hr>
+<h2 id="八-影响范围">八、影响范围<a class="anchor" href="#八-影响范围" aria-label="锚点">#</a></h2>
+<p>本次修复覆盖以下主路径：</p>
+<ol><li>full REPL 流式交付</li><li>full REPL 非流式最终回填</li><li>full REPL one-shot</li><li>lite REPL 交互式回复</li><li>lite REPL one-shot</li></ol>
+<p>因此当前 KHY 终端的主要 AI 交付入口都已统一到同一套显示规则。</p>
+<hr>
+<h2 id="九-经验总结">九、经验总结<a class="anchor" href="#九-经验总结" aria-label="锚点">#</a></h2>
+<h3 id="9-1-临时-ui-不得混入正式输出">9.1 临时 UI 不得混入正式输出<a class="anchor" href="#9-1-临时-ui-不得混入正式输出" aria-label="锚点">#</a></h3>
+<p>像 <code>❯</code> 这种 busy prompt，本质上是<strong>可擦除的临时 UI</strong>，不能被当成输出历史的一部分。任何 CLI 只要存在：</p>
+<ul><li>prompt repaint</li><li>inline status</li><li>streaming text</li></ul>
+<p>就必须明确区分：</p>
+<ul><li>输入态临时内容</li><li>正式输出内容</li></ul>
+<h3 id="9-2-交付边界必须显式建模">9.2 交付边界必须显式建模<a class="anchor" href="#9-2-交付边界必须显式建模" aria-label="锚点">#</a></h3>
+<p>“执行过程”和“交付正文”不是自然就能分开的，它们必须有一个统一边界。否则不同分支会各自 <code>console.log()</code>，最终表现一定不一致。</p>
+<p>本次引入 <code>_deliveryGapPending</code> 的核心价值不只是补一行空白，而是把“进入交付正文之前的版式切换”变成了显式状态机。</p>
+<h3 id="9-3-真实-pty-验证不可省">9.3 真实 PTY 验证不可省<a class="anchor" href="#9-3-真实-pty-验证不可省" aria-label="锚点">#</a></h3>
+<p>这类问题单靠源码阅读不够，单靠单元测试也不够。因为：</p>
+<ul><li>scrollback 污染是终端行为</li><li>busy prompt 泄漏依赖真实 TTY 重绘</li><li>交付空行是否稳定，需要看真实输出顺序</li></ul>
+<p>所以这类终端渲染修复，必须同时具备：</p>
+<ol><li>源码级保护</li><li>单元测试回归</li><li>真实 PTY smoke test</li></ol>
+<hr>
+<h2 id="十-后续约束">十、后续约束<a class="anchor" href="#十-后续约束" aria-label="锚点">#</a></h2>
+<p>后续任何涉及终端渲染的改动，都应检查以下三项：</p>
+<ol><li>新输出路径是否会在打印前清理可见 busy prompt</li><li>新交付路径是否在过程输出和正文之间补出明确边界</li><li>新分支是否被纳入 <code>repl.busyPromptRendering.test.js</code> 或 <code>repl.deliverySpacing.test.js</code></li></ol>
+<p>如果这三项没有同时满足，就有较高概率再次引入同类回归。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-018] 管理前端自动可用修复-2026-05-31.html"><div class="dir">← 上一篇</div><div class="ttl">管理前端自动可用修复</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.html"><div class="dir">下一篇 →</div><div class="ttl">网关断链问题修复记录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

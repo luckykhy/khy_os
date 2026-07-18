@@ -1,0 +1,19 @@
+{
+  "id": "olap",
+  "kind": "concept",
+  "name": "OLAP",
+  "category": "data",
+  "triggers": ["OLAP", "Online Analytical Processing", "联机分析处理", "数据分析", "数仓"],
+  "summary": "联机分析处理：面向大规模聚合分析与多维查询，列存、星型/雪花建模，吞吐优先而非低延迟；典型是数仓(ClickHouse/Snowflake/BigQuery)。",
+  "whenToUse": [
+    "报表、BI、趋势分析等扫描大量历史数据的聚合查询。",
+    "维度建模(事实表+维度表)支持多维切片。"
+  ],
+  "antiPatterns": [
+    "拿 OLAP 当业务库做高频点写/事务（不擅长）。",
+    "把规范化 OLTP 模型直接搬进 OLAP 不做维度建模。",
+    "实时性要求极高却走批量数仓。"
+  ],
+  "minimalSkeleton": "列存 + 维度建模(星型: 事实表+维度表)\n批量/微批入库\n聚合扫描优先, 吞吐 > 延迟\n数据来自 OLTP 经 ETL/CDC",
+  "relatedArchetypes": []
+}

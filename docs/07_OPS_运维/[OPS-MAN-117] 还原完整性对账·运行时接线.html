@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-117-还原完整性对账-运行时接线-让-khy-restore-横幅诚实">[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）</a></li><li class="lvl-2"><a href="#这一层闭合什么-把-ops-095-的能力真正接进运行时-restore">这一层闭合什么：把 OPS-095 的能力真正接进运行时 restore</a></li><li class="lvl-2"><a href="#为什么-tar-退出-0-仍可能少解">为什么 tar 退出 0 仍可能少解</a></li><li class="lvl-2"><a href="#判定档-最保守优先-纯叶-verifyrestorecompleteness">判定档（最保守优先 · 纯叶 `verifyRestoreCompleteness`）</a></li><li class="lvl-2"><a href="#横幅行为-诚实但克制">横幅行为（诚实但克制）</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-117-还原完整性对账-运行时接线-让-khy-restore-横幅诚实">[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）<a class="anchor" href="#ops-man-117-还原完整性对账-运行时接线-让-khy-restore-横幅诚实" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是 bundled 运行时接线，无 <code>--gen-doc</code> 生成器）。<br>裁决逻辑改在 <code>services/backend/src/services/restoreCompletenessCheck.js</code>，<br>接线改在 <code>services/backend/src/cli/handlers/publish.js</code> 的 <code>_restoreFromSnapshot</code> /<br><code>handleRestore</code>。</p></blockquote>
+<h2 id="这一层闭合什么-把-ops-095-的能力真正接进运行时-restore">这一层闭合什么：把 OPS-095 的能力真正接进运行时 restore<a class="anchor" href="#这一层闭合什么-把-ops-095-的能力真正接进运行时-restore" aria-label="锚点">#</a></h2>
+<p>OPS-MAN-095 早已诊断出「快照头 <code>fileCount</code> 是个死字段」并写好对账裁决逻辑<br>（<code>scripts/lib/restoreCompletenessVerifier.js</code>），还 LIVE 验证过口径——<strong>但它只被<br>一个 dev CLI（<code>scripts/restore-verify-complete.js</code>）消费，从未接进真正的运行时还原<br>命令 <code>khy restore</code></strong>。于是运行时 <code>handleRestore</code> 依旧只把 <code>header.fileCount</code><br><strong>原样打印</strong>（“共 N 个文件 · 目录布局原样”），陌生机器上的普通用户要额外跑一条<br>dev 脚本才能知道「数量真吻合吗」——绝大多数人不会跑。= <strong>能力存在、没接线的代码</strong>。</p>
+<p>本层就是那条缺失的接线：在 bundled 运行时里，解包成功后立即拿磁盘上真正落地的<br>文件数与快照清单对账，让 <code>khy restore</code> 的横幅自己诚实起来，无需任何额外命令。</p>
+<pre><code class="language-bash">khy restore ./Khy-OS        # 解包后自动对账：落地数 === 清单数 才敢说「完整还原」</code></pre>
+<h2 id="为什么-tar-退出-0-仍可能少解">为什么 tar 退出 0 仍可能少解<a class="anchor" href="#为什么-tar-退出-0-仍可能少解" aria-label="锚点">#</a></h2>
+<p><code>_extractTarGz</code> 只看 <code>tar</code> 的退出码；<code>header.sha256</code> 只防<strong>整包传输损坏</strong>，都不防<br><strong>解包阶段少落地</strong>：磁盘中途写满、路径过长（Windows MAX_PATH）、不被支持的条目<br>类型、权限/符号链接被跳过……tar 都可能退 0 却少写文件。此时旧横幅绿字「源码已<br>完整还原」而磁盘缺文件 = 对用户最重要那条路径上的最毒假绿。</p>
+<h2 id="判定档-最保守优先-纯叶-verifyrestorecompleteness">判定档（最保守优先 · 纯叶 <code>verifyRestoreCompleteness</code>）<a class="anchor" href="#判定档-最保守优先-纯叶-verifyrestorecompleteness" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>期望缺失/非正 或 实际缺失/非法</td><td><code>unverifiable</code>：证据不足，<strong>保持旧横幅</strong>，绝不多喊「完整」</td><td>✗</td></tr><tr><td>2</td><td>实际 <strong>&lt;</strong> 期望</td><td><code>incomplete</code>：<strong>静默少解</strong>（断桥要抓的假绿）</td><td>✗</td></tr><tr><td>3</td><td>实际 <strong>&gt;</strong> 期望</td><td><code>over-extracted</code>：目标目录疑有残留，据实提示</td><td>✗</td></tr><tr><td>4</td><td>实际 <strong>===</strong> 期望</td><td><code>complete</code>：唯一敢说「源码已完整还原」</td><td>✓</td></tr></tbody></table>
+<ul><li>上游若已因 <code>sha256</code> 不符 / <code>tar</code> 非 0 退出而 <code>throw</code>，根本到不了对账点，故本叶</li></ul>
+<p>不重复 <code>corrupt</code> 档——只对账两个计数。</p>
+<ul><li><strong>对账口径</strong>：<code>expected</code> = 快照头 <code>fileCount</code>（<code>makeSourceSnapshot</code> 用</li></ul>
+<p><code>git ls-tree -r --name-only</code> 数出、<code>git archive</code> 同一 treeish 打包的应有文件数）；<br>  <code>actual</code> = <code>sourceHealService._collectRelFiles(dest).length</code>（递归数还原目录里的<br>  常规文件，跳过 <code>node_modules</code>/<code>.git</code>/<code>__pycache__</code>/<code>.pytest_cache</code>）。两者对齐<br>  <code>git archive</code> 落地口径，故干净成功还原时 <code>actual === expected</code>（OPS-095 已 LIVE 证实）。</p>
+<h2 id="横幅行为-诚实但克制">横幅行为（诚实但克制）<a class="anchor" href="#横幅行为-诚实但克制" aria-label="锚点">#</a></h2>
+<ul><li><code>complete</code> / <code>unverifiable</code> / 门关 → <strong>保持原横幅字节等价</strong>（不多喊、不误降级）。</li><li><code>incomplete</code> → 降级为 ⚠️ 告警，打印「落地 A · 清单 B · 缺 C」+ 排障提示（清空目录后</li></ul>
+<p>加 <code>--force</code> 重试）。</p>
+<ul><li><code>over-extracted</code> → 成功横幅 + ⚠️ 提示目标目录可能有残留。</li></ul>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯诊断叠加层：绝不让还原失败</strong>。对账最坏只把成功横幅降级为 ⚠️ 告警，</li></ul>
+<p><code>handleRestore</code> 仍 <code>return true</code>，绝不 <code>_markFailure</code>。</p>
+<ul><li>门控 <code>KHY_RESTORE_VERIFY_COMPLETENESS</code>（default-on；仅 env ∈ {0,false,off,no}</li></ul>
+<p>归一后关闭）：关 → 不对账、横幅字节等价旧行为。</p>
+<ul><li>证据不足绝不谎报 <code>complete</code>；<code>ok===true</code> 仅当 <code>status === complete</code>。</li><li>叶子纯计算、零 IO、绝不抛；真正数磁盘的 IO 在 handler 里、fail-soft（异常吞掉、</li></ul>
+<p>不附 verdict → 回退旧横幅）。</p>
+<ul><li>真 key/token 永不进包、不落盘；对账只碰<strong>文件计数</strong>，不触任何密钥/头值；</li></ul>
+<p>pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:restore-completeness-check      # 纯叶单测（11 用例）
+# LIVE：真快照还原横幅显「完整」；人为抽掉一个落地文件后再对账 → incomplete 告警</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条纠正型轴）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

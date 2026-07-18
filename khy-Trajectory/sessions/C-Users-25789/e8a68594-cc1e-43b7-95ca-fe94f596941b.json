@@ -1,0 +1,22 @@
+{
+  "sessionId": "e8a68594-cc1e-43b7-95ca-fe94f596941b",
+  "title": "",
+  "model": "api:glm:glm-4.6v-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。]"
+    },
+    {
+      "role": "assistant",
+      "content": "明白，我会遵守这个标记规则：只在真正遇到关键发现时使用 `<finding type=\"root_cause\">`、`<finding type=\"breakthrough\">`、`<finding type=\"blocked\">` 三种标记，不输出占位内容。\n\n需要我做什么？"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1783640785054,
+  "updatedAt": 1783640785054
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-3mf · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-threemf<span class="sep">›</span>cli-anything-3mf</div>
+      <header class="hero reveal"><h1>cli-anything-3mf</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-3mf">cli-anything-3mf</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#commands">Commands</a></li><li class="lvl-2"><a href="#json-output">JSON Output</a></li><li class="lvl-2"><a href="#key-features">Key Features</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-threemf&quot;<br>description: &quot;3MF mesh geometry editor — detect and resize cylindrical holes, repair meshes, compare 3D printing files. Works with BambuStudio and PrusaSlicer 3MF files.&quot;</p>
+<hr>
+<h1 id="cli-anything-3mf">cli-anything-3mf<a class="anchor" href="#cli-anything-3mf" aria-label="锚点">#</a></h1>
+<p>3MF mesh geometry editor for 3D printing files.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=3MF/agent-harness</code></pre>
+<h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Show mesh info (vertices, faces, bounding box, watertight status, volume)
+cli-anything-3mf info &lt;file.3mf&gt;
+
+# Detect cylindrical holes (center, diameter, confidence)
+cli-anything-3mf inspect &lt;file.3mf&gt;
+
+# Resize holes to target diameter
+cli-anything-3mf resize &lt;file.3mf&gt; --hole 0 --hole 1 --diameter 4.2 -o output.3mf
+
+# Fix mesh issues (degenerate faces, duplicate vertices, normals)
+cli-anything-3mf repair &lt;file.3mf&gt; -o repaired.3mf
+
+# Compare two 3MF files
+cli-anything-3mf compare &lt;file1.3mf&gt; &lt;file2.3mf&gt;</code></pre>
+<h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-3mf --json inspect model.3mf</code></pre>
+<h2 id="key-features">Key Features<a class="anchor" href="#key-features" aria-label="锚点">#</a></h2>
+<ul><li>Detects cylindrical holes via multi-plane cross-section analysis</li><li>Resizes holes by radial vertex scaling (preserves mesh topology)</li><li>Preserves slicer metadata (BambuStudio, PrusaSlicer) during file repack</li><li>Repairs degenerate faces and duplicate vertices after modification</li><li>Works with any 3MF file conforming to the 3MF Core Specification</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-slay-the-spire-ii/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-slay-the-spire-ii</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Uni-Mol Tools - Molecular Property Prediction CLI</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-threemf/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip 安装后完整部署与推送指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>pip 安装后完整部署与推送指南</div>
+      <header class="hero reveal"><h1>pip 安装后完整部署与推送指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pip-安装后完整部署与推送指南">pip 安装后完整部署与推送指南</a></li><li class="lvl-2"><a href="#1-pip-安装后直接使用">1. pip 安装后直接使用</a></li><li class="lvl-2"><a href="#2-导出部署包-四种方式">2. 导出部署包（四种方式）</a></li><li class="lvl-3"><a href="#方式-a-标准-docker-部署包-推荐">方式 A：标准 Docker 部署包（推荐）</a></li><li class="lvl-3"><a href="#方式-b-pip-安装目录-docker-部署入口-完整快照">方式 B：pip 安装目录 + Docker 部署入口（完整快照）</a></li><li class="lvl-3"><a href="#方式-c-还原-origin-code-项目结构-用于二次开发-归档">方式 C：还原 origin code 项目结构（用于二次开发/归档）</a></li><li class="lvl-3"><a href="#方式-d-npm-安装目录-docker-部署入口">方式 D：npm 安装目录 + Docker 部署入口</a></li><li class="lvl-2"><a href="#3-接收方-docker-部署步骤">3. 接收方 Docker 部署步骤</a></li><li class="lvl-2"><a href="#4-一键推送到-github-gitee-gitlab">4. 一键推送到 GitHub/Gitee/GitLab</a></li><li class="lvl-3"><a href="#已配置-remote-直接推送">已配置 remote，直接推送</a></li><li class="lvl-3"><a href="#首次配置并推送-owner-repo-形式">首次配置并推送（owner/repo 形式）</a></li><li class="lvl-3"><a href="#使用完整仓库-url-ssh-https-都支持">使用完整仓库 URL（SSH/HTTPS 都支持）</a></li><li class="lvl-3"><a href="#有未提交改动时自动提交再推送">有未提交改动时自动提交再推送</a></li><li class="lvl-2"><a href="#5-khy-自修复与自发布">5. KHY 自修复与自发布</a></li><li class="lvl-3"><a href="#5-1-一键自修复-review-fix-verify">5.1 一键自修复（Review -&gt; Fix -&gt; Verify）</a></li><li class="lvl-3"><a href="#5-2-一键自发布到-pypi-先修复再发布">5.2 一键自发布到 PyPI（先修复再发布）</a></li><li class="lvl-2"><a href="#6-关键说明">6. 关键说明</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-011 | 阶段: 部署 | 原路径: docs/指南/pip-docker-打包部署.md --&gt;</p>
+<h1 id="pip-安装后完整部署与推送指南">pip 安装后完整部署与推送指南<a class="anchor" href="#pip-安装后完整部署与推送指南" aria-label="锚点">#</a></h1>
+<p>适用场景：你已通过 <code>pip install khy-os</code>（或 <code>pip install khy-quant</code>）安装 KHY，希望：</p>
+<ol><li>本机安装后可直接使用  </li><li>导出可转发压缩包给别人 Docker 部署  </li><li>一键推送到 GitHub / Gitee / GitLab</li></ol>
+<h2 id="1-pip-安装后直接使用">1. pip 安装后直接使用<a class="anchor" href="#1-pip-安装后直接使用" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy --version
+khy</code></pre>
+<p>只要本机有 Node.js（&gt;=18），<code>pip</code> 安装后即可直接运行，无需先克隆源码仓库。</p>
+<p>首次安装后首次启动会自动显示安装位置（Install root / Backend dir）；版本升级后也会再次提示一次，便于定位当前实际运行目录。</p>
+<h2 id="2-导出部署包-四种方式">2. 导出部署包（四种方式）<a class="anchor" href="#2-导出部署包-四种方式" aria-label="锚点">#</a></h2>
+<h3 id="方式-a-标准-docker-部署包-推荐">方式 A：标准 Docker 部署包（推荐）<a class="anchor" href="#方式-a-标准-docker-部署包-推荐" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish docker-bundle</code></pre>
+<p>可选参数：</p>
+<pre><code class="language-bash">khy publish docker-bundle --out ./dist/docker-bundles
+khy publish docker-bundle --name khy-os-docker-share</code></pre>
+<h3 id="方式-b-pip-安装目录-docker-部署入口-完整快照">方式 B：pip 安装目录 + Docker 部署入口（完整快照）<a class="anchor" href="#方式-b-pip-安装目录-docker-部署入口-完整快照" aria-label="锚点">#</a></h3>
+<p>会打包 <code>pip</code> 安装目录里的 <code>khy_platform</code>、<code>khy_os</code>，并附带 <code>docker-compose.yml</code> 可直接部署。</p>
+<pre><code class="language-bash">khy publish pip-dir-bundle</code></pre>
+<p>可选参数：</p>
+<pre><code class="language-bash">khy publish pip-dir-bundle --out ./dist/docker-bundles
+khy publish pip-dir-bundle --name khy-os-pip-share
+
+# 若自动探测不到 site-packages，可手动指定
+khy publish pip-dir-bundle --pip-root /path/to/site-packages</code></pre>
+<p>默认生成目录：</p>
+<p><code>dist/docker-bundles/</code></p>
+<p>默认文件名：</p>
+<ul><li><code>khy-os-docker-&lt;version&gt;-&lt;timestamp&gt;.tar.gz</code>（标准 Docker 包）</li><li><code>khy-os-pip-install-&lt;version&gt;-&lt;timestamp&gt;.tar.gz</code>（pip 目录包）</li></ul>
+<blockquote><p>Windows 下自动生成 <code>.zip</code>。</p></blockquote>
+<p>每个导出的压缩包都包含：</p>
+<ul><li><code>INSTALL_LAYOUT.md</code>：可读目录树 + 源码来源映射</li><li><code>INSTALL_LAYOUT.json</code>：机器可读结构映射（便于自动检查）</li></ul>
+<h3 id="方式-c-还原-origin-code-项目结构-用于二次开发-归档">方式 C：还原 origin code 项目结构（用于二次开发/归档）<a class="anchor" href="#方式-c-还原-origin-code-项目结构-用于二次开发-归档" aria-label="锚点">#</a></h3>
+<p>从 pip 安装目录反向还原接近原仓库的目录结构（<code>backend/frontend/docs/alpine/scripts/packages/shared/khy_platform</code>）：</p>
+<pre><code class="language-bash">khy publish origin-code</code></pre>
+<p>源码完整还原支持密钥门禁：</p>
+<ul><li>提供正确密钥（<code>khy2026</code>）时：导出完整还原包</li><li>未提供或密钥错误时：自动降级为“扰乱后发布”，核心技术实现会被移除/扰乱，不再是可完整复原源码的包</li></ul>
+<p>可选参数：</p>
+<pre><code class="language-bash">khy publish origin-code --out ./dist/origin-code
+khy publish origin-code --name khy-os-origin-restore
+khy publish origin-code --secret khy2026
+khy publish origin-code --pip-root /path/to/site-packages
+# npm 安装目录场景可显式指定
+khy publish origin-code --install npm --npm-root /path/to/npm-install-root</code></pre>
+<h3 id="方式-d-npm-安装目录-docker-部署入口">方式 D：npm 安装目录 + Docker 部署入口<a class="anchor" href="#方式-d-npm-安装目录-docker-部署入口" aria-label="锚点">#</a></h3>
+<p>适用于通过 npm 安装的运行目录（或你指定的 npm backend 目录）：</p>
+<pre><code class="language-bash">khy publish npm-dir-bundle</code></pre>
+<p>可选参数：</p>
+<pre><code class="language-bash">khy publish npm-dir-bundle --out ./dist/docker-bundles
+khy publish npm-dir-bundle --name khy-os-npm-share
+khy publish npm-dir-bundle --npm-root /path/to/npm-install-root</code></pre>
+<h2 id="3-接收方-docker-部署步骤">3. 接收方 Docker 部署步骤<a class="anchor" href="#3-接收方-docker-部署步骤" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">tar -xzf khy-os-*.tar.gz
+cd khy-os-*
+cp .env.example .env
+docker compose up -d --build</code></pre>
+<p>查看状态：</p>
+<pre><code class="language-bash">docker compose ps
+docker compose logs -f khy-backend</code></pre>
+<p>默认访问地址：</p>
+<ul><li>API: <code>http://&lt;host&gt;:13000</code></li><li>Health: <code>http://&lt;host&gt;:13000/health</code></li></ul>
+<h2 id="4-一键推送到-github-gitee-gitlab">4. 一键推送到 GitHub/Gitee/GitLab<a class="anchor" href="#4-一键推送到-github-gitee-gitlab" aria-label="锚点">#</a></h2>
+<h3 id="已配置-remote-直接推送">已配置 remote，直接推送<a class="anchor" href="#已配置-remote-直接推送" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish git-push</code></pre>
+<p>源码推送同样受密钥门禁控制：</p>
+<ul><li>提供正确密钥（<code>--secret khy2026</code>）才执行真实推送</li><li>未提供或密钥错误时，自动切换为扰乱发布模式（仅 dry-run 输出推送计划，不推送真实源码）</li></ul>
+<h3 id="首次配置并推送-owner-repo-形式">首次配置并推送（owner/repo 形式）<a class="anchor" href="#首次配置并推送-owner-repo-形式" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># GitHub
+khy publish git-push --platform github --repo yourname/khy-os --remote github --set-upstream
+
+# Gitee
+khy publish git-push --platform gitee --repo yourname/khy-os --remote gitee --set-upstream
+
+# GitLab
+khy publish git-push --platform gitlab --repo yourname/khy-os --remote gitlab --set-upstream</code></pre>
+<h3 id="使用完整仓库-url-ssh-https-都支持">使用完整仓库 URL（SSH/HTTPS 都支持）<a class="anchor" href="#使用完整仓库-url-ssh-https-都支持" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish git-push git@github.com:yourname/khy-os.git --remote github --set-upstream</code></pre>
+<h3 id="有未提交改动时自动提交再推送">有未提交改动时自动提交再推送<a class="anchor" href="#有未提交改动时自动提交再推送" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish git-push --auto-commit --commit-message &quot;chore: sync latest&quot;</code></pre>
+<p>仅预览命令不执行：</p>
+<pre><code class="language-bash">khy publish git-push --dry-run</code></pre>
+<p>带密钥执行真实推送：</p>
+<pre><code class="language-bash">khy publish git-push --secret khy2026 --platform github --repo yourname/khy-os</code></pre>
+<h2 id="5-khy-自修复与自发布">5. KHY 自修复与自发布<a class="anchor" href="#5-khy-自修复与自发布" aria-label="锚点">#</a></h2>
+<h3 id="5-1-一键自修复-review-fix-verify">5.1 一键自修复（Review -&gt; Fix -&gt; Verify）<a class="anchor" href="#5-1-一键自修复-review-fix-verify" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish self-fix --yes</code></pre>
+<p>可选参数：</p>
+<pre><code class="language-bash">khy publish self-fix --max-rounds 5 --yes</code></pre>
+<h3 id="5-2-一键自发布到-pypi-先修复再发布">5.2 一键自发布到 PyPI（先修复再发布）<a class="anchor" href="#5-2-一键自发布到-pypi-先修复再发布" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish self-pypi --version 0.1.10 --yes</code></pre>
+<p>发布到 TestPyPI：</p>
+<pre><code class="language-bash">khy publish self-testpypi --version 0.1.10 --yes</code></pre>
+<p>若只发布不跑修复：</p>
+<pre><code class="language-bash">khy publish self-pypi --skip-fix --yes</code></pre>
+<p>仅做 self-testpypi 演练（检查 + 构建 + twine 命令预览，不实际上传）：</p>
+<pre><code class="language-bash">khy publish self-testpypi --skip-fix --yes --dry-run</code></pre>
+<h2 id="6-关键说明">6. 关键说明<a class="anchor" href="#6-关键说明" aria-label="锚点">#</a></h2>
+<ul><li>默认数据库为 SQLite，数据保存在 Docker 卷 <code>backend_data</code>。</li><li>首次启动会先执行 <code>node scripts/seed.js</code> 再启动服务。</li><li>生产环境务必在 <code>.env</code> 中修改 <code>JWT_SECRET</code>。</li><li><code>git-push</code> 默认不会自动提交改动；如需自动提交请显式加 <code>--auto-commit</code>。</li><li><code>self-pypi</code>/<code>self-testpypi</code> 依赖你本机已有 PyPI/TestPyPI 凭据（token 或 <code>.pypirc</code>）。</li><li>pip 安装目录与源码映射细节，见：<code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code>。</li><li><code>origin-code</code> 还原包用于结构回放与二次开发，不包含 <code>.git/</code> 和被打包流程裁剪的产物。</li><li><code>origin-code</code> 在未通过密钥校验时会自动导出“扰乱后发布”包：目录骨架保留，但核心技术实现会被移除/改写。</li><li><code>pip-dir-bundle</code>/<code>origin-code</code> 默认 <code>auto</code> 探测安装布局；可用 <code>--install pip|npm</code> 强制指定。</li><li><code>auto</code> 探测在 pip 与 npm 同时存在时会进行冲突仲裁：优先更高版本；版本相同再选最近更新的一侧，避免两套安装互相覆盖冲突。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.html"><div class="dir">← 上一篇</div><div class="ttl">Pip 打包对等性发现（2026-05-17）</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-012] pip发布后-github发布手册.html"><div class="dir">下一篇 →</div><div class="ttl">pip 发布后:外网机 pip install → 还原真实源码 → 推送 GitHub</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

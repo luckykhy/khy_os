@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 架构债治理报告（Architecture Debt Governance） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 架构债治理报告（Architecture Debt Governance）</div>
+      <header class="hero reveal"><h1>khyos 架构债治理报告（Architecture Debt Governance）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-架构债治理报告-architecture-debt-governance">khyos 架构债治理报告（Architecture Debt Governance）</a></li><li class="lvl-2"><a href="#0-调查方法与覆盖面">0. 调查方法与覆盖面</a></li><li class="lvl-2"><a href="#1-识别到的架构债-按规则归类">1. 识别到的架构债（按规则归类）</a></li><li class="lvl-3"><a href="#r1-分层倒置-layering-inversion-系统级-最高优先">R1 分层倒置（Layering inversion）— 系统级，最高优先</a></li><li class="lvl-3"><a href="#r2-巨石文件-god-file-可维护性-高优先">R2 巨石文件（God-file）— 可维护性，高优先</a></li><li class="lvl-3"><a href="#r3-循环依赖-circular-require-系统级">R3 循环依赖（Circular require）— 系统级</a></li><li class="lvl-3"><a href="#r4-重复实现-抽取漂移-duplication-drift-隐患">R4 重复实现 / 抽取漂移（Duplication drift）— 隐患</a></li><li class="lvl-3"><a href="#r5-历史-文档债-小而局部-多为有意延迟">R5 历史/文档债 — 小而局部，多为有意延迟</a></li><li class="lvl-2"><a href="#2-整体-全局关联-分析">2. 整体（全局关联）分析</a></li><li class="lvl-2"><a href="#3-修复优先级-影响范围-修复成本-业务价值">3. 修复优先级（影响范围 × 修复成本 × 业务价值）</a></li><li class="lvl-2"><a href="#4-工具集成-已交付-自研架构债静态分析器">4. 工具集成（已交付）：自研架构债静态分析器</a></li><li class="lvl-2"><a href="#5-已执行的示范修复-含代码示例">5. 已执行的示范修复（含代码示例）</a></li><li class="lvl-2"><a href="#5-2-p1-轮已执行修复-2026-06-12-r3-3-1">5.2 P1 轮已执行修复（2026-06-12，R3 3→1）</a></li><li class="lvl-2"><a href="#6-修复验证-防呆-修复后必测">6. 修复验证（防呆：修复后必测）</a></li><li class="lvl-3"><a href="#p0-轮-commandschema-下沉">P0 轮（commandSchema 下沉）</a></li><li class="lvl-3"><a href="#p1-轮-二元环消解-2026-06-12">P1 轮（二元环消解，2026-06-12）</a></li><li class="lvl-2"><a href="#7-治理路线图-增量-可持续">7. 治理路线图（增量、可持续）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-020 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-020] 架构债治理报告.md（新建） --&gt;</p>
+<h1 id="khyos-架构债治理报告-architecture-debt-governance">khyos 架构债治理报告（Architecture Debt Governance）<a class="anchor" href="#khyos-架构债治理报告-architecture-debt-governance" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.1（2026-06-12）。本报告从<strong>系统全局视角</strong>识别 khyos 后端（<code>services/backend</code>，<br>812 个源文件 / 410 个测试）的架构债，做关联性分析、优先级排序，给出<strong>可执行</strong>修复<br>步骤与代码示例，并交付一个<strong>自定义静态分析器</strong>作为持续治理的 CI 门禁。</p>
+<p>治理纪律（防呆，硬约束）：<strong>只动架构相关代码，不碰核心业务算法</strong>；修复<strong>保留功能<br>兼容</strong>；修复后<strong>必测验证</strong>；存量历史债以<strong>基线</strong>承认、增量治理，不一刀切误杀。</p></blockquote>
+<hr>
+<h2 id="0-调查方法与覆盖面">0. 调查方法与覆盖面<a class="anchor" href="#0-调查方法与覆盖面" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>手段</th><th>覆盖</th></tr></thead><tbody><tr><td>代码</td><td>自研 <code>scripts/archDebtScan.js</code>：require 图 + 行数 + 分层规则</td><td>全量 812 文件</td></tr><tr><td>耦合</td><td>require 扇入/扇出统计、Tarjan 强连通分量（循环依赖）</td><td>全量</td></tr><tr><td>历史</td><td><code>git log</code>、仓库根 <code>*_log.md</code>、<code>[*-Unresolved]</code> 约定标记</td><td>近 200 提交 + 4 日志</td></tr><tr><td>文档</td><td><code>.ai/</code> 种子文档路径抽检、文档漂移核对</td><td>MAP/CONTEXT/GUARDS</td></tr></tbody></table>
+<hr>
+<h2 id="1-识别到的架构债-按规则归类">1. 识别到的架构债（按规则归类）<a class="anchor" href="#1-识别到的架构债-按规则归类" aria-label="锚点">#</a></h2>
+<h3 id="r1-分层倒置-layering-inversion-系统级-最高优先">R1 分层倒置（Layering inversion）— 系统级，最高优先<a class="anchor" href="#r1-分层倒置-layering-inversion-系统级-最高优先" aria-label="锚点">#</a></h3>
+<p>约定依赖方向是 <code>cli/router → cli/handlers → services</code>（见 <code>.ai/MAP.md</code>）。但<strong>修复前<br>30 处</strong> <code>src/services/**</code> 反向 <code>require('../cli/**')</code>，服务层回指 CLI 层 = 依赖倒置。</p>
+<ul><li><strong>真实双向环（最严重）</strong>：<code>services/toolCalling.js</code> ⇄ <code>cli/ai.js</code></li></ul>
+<p>（<code>cli/ai.js:1763</code> require <code>toolCalling</code>，而 <code>toolCalling.js:1858/1863/1868</code> require <code>cli/ai</code>）。<br>  仅靠<strong>惰性 require</strong> 才没在加载期崩溃——这是脆弱的隐性约束。</p>
+<ul><li><strong>层环</strong>：<code>services/contextCompressor.js</code> ↔ <code>cli</code>（回指 <code>cli/hooks/hookSystem</code>、<code>cli/aiRenderer</code>）。</li><li>最常见的反向符号是 <code>cli/ai</code>（被 <code>queryEngine</code>、<code>toolUseLoop</code>、<code>ultraplanService</code>、</li></ul>
+<p><code>workflowExecutor</code>、<code>capabilityAssessment</code>、<code>aiManagementServer</code> 等消费）。</p>
+<ul><li>唯一<strong>加载期</strong>（非惰性）倒置：<code>extensionMarketplace.js:27</code> → <code>cli/extensions/extensionManager</code>。</li></ul>
+<h3 id="r2-巨石文件-god-file-可维护性-高优先">R2 巨石文件（God-file）— 可维护性，高优先<a class="anchor" href="#r2-巨石文件-god-file-可维护性-高优先" aria-label="锚点">#</a></h3>
+<p>单文件 &gt; 2500 行、职责混杂的有 <strong>11 个</strong>：</p>
+<table><thead><tr><th>行数</th><th>文件</th><th>混杂职责（节选）</th></tr></thead><tbody><tr><td>8115</td><td><code>cli/repl.js</code></td><td>启动渲染 + ANSI 布局 + 粘贴状态机 + 斜杠/@ 选择器 + 流式事件消费，<strong>全部塞在单个 <code>startRepl()</code> 闭包</strong>（93 个嵌套函数共享可变闭包态）</td></tr><tr><td>6784</td><td><code>cli/handlers/gateway.js</code></td><td>网关命令分发</td></tr><tr><td>6404</td><td><code>services/toolUseLoop.js</code></td><td>Agent 工具循环 + 解析 + 能力门控 + 审批 + 意图启发 + 恢复</td></tr><tr><td>6075</td><td><code>services/gateway/aiGateway.js</code></td><td>级联路由 + 熔断</td></tr><tr><td>5285</td><td><code>cli/ai.js</code></td><td>会话持久化 + 模型能力 + 上下文预算 + 提示构造 + 多模态 + <strong>1700 行的 <code>chat()</code> 单函数</strong></td></tr><tr><td>4211</td><td><code>cli/router.js</code></td><td>大 switch 命令路由</td></tr><tr><td>其余</td><td><code>accountPool</code> 3256 / <code>codexAdapter</code> 3127 / <code>aiManagementServer</code> 3101 / <code>proxy</code> 3070 / <code>toolCalling</code> 2937</td><td>—</td></tr></tbody></table>
+<h3 id="r3-循环依赖-circular-require-系统级">R3 循环依赖（Circular require）— 系统级<a class="anchor" href="#r3-循环依赖-circular-require-系统级" aria-label="锚点">#</a></h3>
+<p>Tarjan SCC 初检出 <strong>3 个强连通分量</strong>（P1 轮已消解 2 个，<strong>现存 1 个</strong>）：</p>
+<ul><li><strong>1 个巨型 SCC（~130 节点）</strong>：cli 全层 + 多数 services + 全部 gateway 适配器纠缠成一团。</li></ul>
+<p>根因是 R1 的惰性反向 require 把 cli↔services 焊死成一个环。<strong>这是 R1 的系统级显影</strong>，<br>  须先解 R1 才能瓦解，本轮不动。</p>
+<ul><li><del><strong>2 个干净二元环</strong></del> → <strong>✅ P1 轮已消解（2026-06-12）</strong>：<ul><li><code>services/sessionPersistence.js</code> ⇄ <code>services/sessionSearchIndex.js</code></li></ul></li></ul>
+<p>→ 引入零依赖端口 <code>services/sessionSourcePort.js</code>（IoC）：持久化层自注册为会话源，<br>    搜索索引 <code>reindexAll</code> 经端口取源,不再反向 require 持久化。</p>
+<ul><li><code>services/worktreeManager.js</code> ⇄ <code>tools/_taskStore.js</code></li></ul>
+<p>→ 纯函数 <code>validateName</code> 抽到零依赖叶子 <code>utils/worktreeName.js</code>，双方同向依赖它。</p>
+<h3 id="r4-重复实现-抽取漂移-duplication-drift-隐患">R4 重复实现 / 抽取漂移（Duplication drift）— 隐患<a class="anchor" href="#r4-重复实现-抽取漂移-duplication-drift-隐患" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>toolUseLoop.js</code> 半截抽取</strong>：Phase-1A…1I 助手模块（<code>toolCallParser</code>/<code>deliveryFormatter</code>/</li></ul>
+<p><code>platformRewrite</code> 等）已抽出并 re-export，<strong>但 <code>runToolUseLoop</code> 内部仍调本地旧副本</strong><br>  （如 <code>_parseToolCalls</code>@3911、<code>_buildToolResultMessage</code>@4514）。<strong>测试跑的是助手副本，<br>  生产跑的是本地副本</strong>——一旦漂移，测试绿而行为变。属<strong>高风险业务热区</strong>，本轮只报告不动。</p>
+<ul><li>散点重复：<code>_formatDuration</code> 4 处、<code>_resolveTaskScale</code> 包装 3 处、<code>_normToolName</code> 2 处。</li></ul>
+<h3 id="r5-历史-文档债-小而局部-多为有意延迟">R5 历史/文档债 — 小而局部，多为有意延迟<a class="anchor" href="#r5-历史-文档债-小而局部-多为有意延迟" aria-label="锚点">#</a></h3>
+<p>后端源码<strong>内联债极少</strong>：真实 <code>TODO/FIXME</code> 个位数（多数是提示词字面量误报）。<br><code>[*-Unresolved]</code> 4 处均为<strong>有意延迟</strong>的契约缺口：</p>
+<ul><li><code>utils/dataHome.js:38</code> <code>[Eco-Arch-Unresolved]</code>：<code>~/.khy</code> 与硬编码 <code>~/.khyquant</code> 双数据家未收敛，</li></ul>
+<p>底座表物理拆分到 <code>~/.khyos</code> 待<strong>人工撰写带回滚的迁移脚本</strong>（活体数据，故意不自动跑）。</p>
+<ul><li><code>metaToolEngine.js:477</code> <code>[MetaTool-Trigger-Unresolved]</code>、<code>agentDevLog.js:316</code></li></ul>
+<p><code>[Agent-Display-Unresolved]</code>：待 host 侧绑定，优雅降级中。</p>
+<ul><li><code>claudeAdapter.js:1390</code> <code>@deprecated dispatchDirectTool()</code>：回滚保险留存的死 shim，可择机删。</li><li>标准红线基线：27 套件 / 39 用例因<strong>沙箱无网络 + 计时抖动</strong>而红（既有债，非本轮引入）。</li></ul>
+<p>文档侧无实质漂移（<code>.ai/</code> 由 <code>khy metadata refresh</code> 确定性自刷新）。</p>
+<hr>
+<h2 id="2-整体-全局关联-分析">2. 整体（全局关联）分析<a class="anchor" href="#2-整体-全局关联-分析" aria-label="锚点">#</a></h2>
+<p><strong>根因链</strong>：<code>R1（分层倒置）</code> 是核心。服务层为复用 CLI 的渲染/AI 入口而反向 require，<br>惰性 require 规避了加载崩溃，<strong>代价是把 cli↔services 焊成一个 ~130 节点的巨型环（R3）</strong>。<br>环内任一模块改动都可能产生跨层涟漪，于是开发者倾向「就地加代码」而非拆分，<br><strong>助长了 R2 巨石文件</strong>膨胀；巨石文件难测，又催生 <code>R4</code> 的「抽一半、留旧副本」折中。</p>
+<pre><code>R1 服务层反向依赖 cli ──(惰性 require 规避崩溃)──► R3 巨型循环依赖簇
+        │                                                │
+        ▼                                                ▼
+  跨层涟漪→不敢拆分 ───────────────► R2 巨石文件膨胀 ───► R4 半截抽取/重复</code></pre>
+<p><strong>结论</strong>：必须从 R1 入手做<strong>方向修复</strong>（把被双方共享的叶子模块下沉到中立层），<br>逐步瓦解巨型环，而非在巨石文件内做局部最优。局部重构巨石文件若不先解耦，<br>只会在环内搬运复杂度、引入新隐患。</p>
+<hr>
+<h2 id="3-修复优先级-影响范围-修复成本-业务价值">3. 修复优先级（影响范围 × 修复成本 × 业务价值）<a class="anchor" href="#3-修复优先级-影响范围-修复成本-业务价值" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>优先级</th><th>项</th><th>影响范围</th><th>修复成本</th><th>风险</th><th>决策</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>工具集成：静态分析门禁</td><td>全局（防新增债）</td><td>低（新增工具）</td><td>无（只读）</td><td><strong>本轮已做</strong></td></tr><tr><td><strong>P0</strong></td><td>R1 叶子下沉示范（<code>commandSchema</code>）</td><td>5 文件</td><td>低（纯数据叶子）</td><td>极低</td><td><strong>本轮已做</strong></td></tr><tr><td>P1</td><td>R3 二元环消解（sessionPersistence/worktreeManager）</td><td>2×2 文件</td><td>中</td><td>中</td><td><strong>✅ 已做（2026-06-12，R3 3→1）</strong></td></tr><tr><td><del>P1</del></td><td><del>R1 共享 UI/渲染叶子下沉（hudRenderer/permissionDialog）</del></td><td>—</td><td>—</td><td>—</td><td><strong>重判：经审视非纯叶子，改为 P2 反转</strong>（见 §5.2 发现）</td></tr><tr><td>P2</td><td>R4 <code>toolUseLoop</code> 完成抽取（删本地副本，统一走助手模块）</td><td>业务热区</td><td>高</td><td><strong>高</strong></td><td>路线图（需专项＋全回归）</td></tr><tr><td>P2</td><td>R2 巨石文件分解（<code>repl.js</code>/<code>ai.js</code> 按职责拆 helper）</td><td>高扇入</td><td>高</td><td><strong>高</strong></td><td>路线图（先解 R1/R3 再拆）</td></tr><tr><td>P3</td><td>R5 删 <code>@deprecated</code> shim、收敛 dataHome、补 <code>routes/ai.js</code> SSE 断连</td><td>局部</td><td>低-中</td><td>低</td><td>单独 PR</td></tr></tbody></table>
+<p><strong>防呆遵循</strong>：P2/P3 涉及业务热区（<code>runToolUseLoop</code>、<code>chat()</code>）的项<strong>本轮不动</strong>，<br>只列入路线图并要求「专项 + 全回归」，严守「不碰核心业务算法」。</p>
+<hr>
+<h2 id="4-工具集成-已交付-自研架构债静态分析器">4. 工具集成（已交付）：自研架构债静态分析器<a class="anchor" href="#4-工具集成-已交付-自研架构债静态分析器" aria-label="锚点">#</a></h2>
+<p><code>services/backend/scripts/archDebtScan.js</code>（零外部依赖，纯 Node 内置）。<br><strong>为何不用 SonarQube/ESLint</strong>：本仓奉行「零依赖、确定性、CI 离线可跑」纪律<br>（同 <code>khy metadata check</code>）。自研规则更贴合本仓<strong>分层契约</strong>这一架构语义。</p>
+<p>能力：</p>
+<ul><li><strong>R1</strong> 扫 <code>services/**</code> 反向 require <code>cli/**</code>；</li><li><strong>R2</strong> 行数超阈值（<code>KHY_ARCH_GOD_FILE_LOC</code>，默认 2500）；</li><li><strong>R3</strong> require 有向图 + Tarjan SCC 检出循环依赖簇；</li><li><strong>基线机制</strong>：<code>arch-debt-baseline.json</code> 承认存量债，CI <strong>只拦新增</strong>（增量治理）。</li></ul>
+<p>用法（已加 npm 脚本）：</p>
+<pre><code class="language-bash">npm run arch:debt            # 人类报告；有超基线新增 → 退出码 1（CI 门禁）
+npm run arch:debt -- --json  # 机器可读
+npm run arch:debt:baseline   # 重铸基线（承认现状，确定性无时间戳）</code></pre>
+<p>测试：<code>tests/scripts/archDebtScan.test.js</code>（13 用例，合成 fixture，确定性）。</p>
+<hr>
+<h2 id="5-已执行的示范修复-含代码示例">5. 已执行的示范修复（含代码示例）<a class="anchor" href="#5-已执行的示范修复-含代码示例" aria-label="锚点">#</a></h2>
+<p><strong>修复：把被 cli 与 services </strong>双方共享<strong>的纯数据叶子 <code>commandSchema.js</code> 从 <code>cli/</code><br>下沉到中立的 <code>constants/</code> 层</strong>——这是 R1 的方向修复范式：共享叶子应位于依赖方之下，<br>而非某一依赖方内部。</p>
+<ul><li><strong>选型理由</strong>：<code>commandSchema.js</code> 零出站 require、纯静态命令元数据 + 纯 getter、</li></ul>
+<p>无状态无 I/O、是真正的<strong>叶子</strong>——下沉<strong>不可能</strong>制造新环，且一次性消除 2 条服务层反向边。</p>
+<ul><li><strong>兼容性</strong>：导出签名不变，仅路径变更；5 个引用方同步改路径，零逻辑改动。</li></ul>
+<pre><code class="language-diff"># 文件迁移（保留 git 历史）
+- src/cli/commandSchema.js
++ src/constants/commandSchema.js
+
+# 服务层（恢复正确方向：services → constants，不再 → cli）
+# src/services/selfProfile.js:28
+-   if (!_commandSchema) _commandSchema = require('../cli/commandSchema');
++   if (!_commandSchema) _commandSchema = require('../constants/commandSchema');
+# src/services/knowledgeTeachingService.js:1111
+-   const commandSchema = require('../cli/commandSchema');
++   const commandSchema = require('../constants/commandSchema');
+
+# CLI 层（cli → constants，合法方向）
+# src/cli/router.js / featureCapabilityMap.js / commandRegistry.js
+-   require('./commandSchema')
++   require('../constants/commandSchema')</code></pre>
+<p><strong>效果验证</strong>：</p>
+<ul><li>分层倒置 <strong>30 → 28</strong>（<code>archDebtScan</code> 实测；<code>commandSchema</code> 不再出现在 R1 列表）；</li><li>全部 5 引用方加载通过；命令解析功能不变（124 路由命令 / 84 斜杠命令 / 55 子命令组）；</li><li>无任何测试引用旧路径；分析器自身 13 用例 + 真基线门禁绿。</li></ul>
+<h2 id="5-2-p1-轮已执行修复-2026-06-12-r3-3-1">5.2 P1 轮已执行修复（2026-06-12，R3 3→1）<a class="anchor" href="#5-2-p1-轮已执行修复-2026-06-12-r3-3-1" aria-label="锚点">#</a></h2>
+<p><strong>消环一 · <code>worktreeManager</code> ⇄ <code>tools/_taskStore</code>（纯函数下沉范式）</strong><br>反向边仅因 <code>_taskStore.bindWorktree</code> 回头 require <code>worktreeManager.validateName</code>（一个<br>纯校验函数）。把 <code>validateName</code> 抽到零依赖叶子 <code>utils/worktreeName.js</code>，双方同向依赖它：</p>
+<pre><code>   A ⇄ B            A → C ← B
+（互相 require）  （纯函数 validateName 下沉到 C，环消解）</code></pre>
+<ul><li><code>worktreeManager</code> 改为从叶子导入并<strong>再导出</strong>（保 <code>wt.validateName</code> 兼容，测试不破）。</li><li><code>_taskStore</code> 改 require 叶子，反向边消失。导出签名零变更。</li></ul>
+<p><strong>消环二 · <code>sessionPersistence</code> ⇄ <code>sessionSearchIndex</code>（端口注册 / IoC 范式）</strong><br>此环不是「共用纯函数」，而是<strong>功能性反向边</strong>：搜索索引 <code>reindexAll()</code> 回头 require 持久化<br>以枚举全部会话做批量重建。共用纯函数无从抽取，故用<strong>控制反转</strong>：</p>
+<pre><code>  index ──require──► persistence            index ──get()──► [port] ◄──register── persistence
+   （反向边，成环）                          （索引经端口取源，持久化自注册，环消解）</code></pre>
+<ul><li>新增零依赖端口 <code>services/sessionSourcePort.js</code>：<code>register/getSessionSource</code>。</li><li>持久化层加载时 <code>registerSessionSource(module.exports)</code> 自注册（端口是叶子，无环）。</li><li><code>reindexAll</code> 改 <code>opts.source || port.getSessionSource()</code>；持久化未加载时优雅返回空结果</li></ul>
+<p>（与既有 best-effort 同形）。导出签名不变，并新增 <code>opts.source</code> 显式注入通道。</p>
+<p><strong>R1 发现（诚实记录，本轮未动 R1）</strong>：原计划「下沉 <code>hudRenderer</code>/<code>permissionDialog</code><br>纯格式化叶子」经逐一审视<strong>不成立</strong>——<code>formatPermissionDialog</code>/<code>formatBatchPermissionDialog</code><br>名为 format 实为<strong>交互 I/O 编排</strong>（直接 <code>console.log</code> + <code>promptChoiceMenu</code> readline 阻塞</p>
+<ul><li>读 fs）；<code>hudRenderer</code> 的 <code>setCompacting/updateTodos</code> 是<strong>有状态 HUD 控制</strong>。复核全部</li></ul>
+<p>28 条 R1 边,<strong>无一是纯零副作用叶子</strong>:它们都是「服务层调用住在 cli 的<em>行为</em>」(AI 入口<br><code>cli/ai</code>×13 / 交互提示 / 有状态 HUD·hooks·taskPanelState)。唯一纯叶子 <code>commandSchema</code><br>已在 P0 抽走。消解这些边需<strong>反转调用语义</strong>(事件总线 / 回调注入 / DI),属较重重构且多数<br>触及 <code>cli/ai</code> 业务热区——按防呆「只下沉纯叶子、业务热区不动」,改列入 §7 路线图 P2。</p>
+<hr>
+<h2 id="6-修复验证-防呆-修复后必测">6. 修复验证（防呆：修复后必测）<a class="anchor" href="#6-修复验证-防呆-修复后必测" aria-label="锚点">#</a></h2>
+<h3 id="p0-轮-commandschema-下沉">P0 轮（commandSchema 下沉）<a class="anchor" href="#p0-轮-commandschema-下沉" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>验证</th><th>结果</th></tr></thead><tbody><tr><td>5 个引用方 + 迁移模块加载</td><td>✅ 全通过</td></tr><tr><td>命令元数据解析（路由/斜杠/子命令）</td><td>✅ 124 / 84 / 55，与修复前一致</td></tr><tr><td>无残留旧路径引用</td><td>✅ grep 清零</td></tr><tr><td><code>archDebtScan</code> R1 计数</td><td>✅ 30 → 28</td></tr><tr><td>分析器测试套件</td><td>✅ 13/13</td></tr><tr><td>真实基线 CI 门禁</td><td>✅ 退出码 0（无超基线新增）</td></tr></tbody></table>
+<h3 id="p1-轮-二元环消解-2026-06-12">P1 轮（二元环消解，2026-06-12）<a class="anchor" href="#p1-轮-二元环消解-2026-06-12" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>验证</th><th>结果</th></tr></thead><tbody><tr><td><code>archDebtScan</code> R3 环数</td><td>✅ 3 → 1（仅余巨型 SCC）</td></tr><tr><td><code>archDebtScan</code> R1 计数</td><td>✅ 保持 28（未增，无安全叶子可降）</td></tr><tr><td>worktree:<code>bindWorktree</code> 经 relocated <code>validateName</code> 合法/穿越/空名三路</td><td>✅ 行为一致</td></tr><tr><td>worktree jest 套件</td><td>✅ exit 0</td></tr><tr><td>session 端到端 reindexAll（端口 + <code>opts.source</code> 注入两路）</td><td>✅ 重建+搜索命中</td></tr><tr><td>session 相关 jest 套件（searchIndex/handler/rag）</td><td>✅ 3/3 exit 0</td></tr><tr><td>持久化自注册链路（加载后端口拿到源 === 导出）</td><td>✅</td></tr><tr><td>分析器自测 + 基线门禁（刷新后）</td><td>✅ 13/13，gate exit 0</td></tr></tbody></table>
+<hr>
+<h2 id="7-治理路线图-增量-可持续">7. 治理路线图（增量、可持续）<a class="anchor" href="#7-治理路线图-增量-可持续" aria-label="锚点">#</a></h2>
+<ol><li><strong>第一轮 P0（已完成）</strong>：静态分析门禁 + 基线 + <code>commandSchema</code> 示范下沉（R1 30→28）。</li><li><strong>第二轮 P1（已完成，2026-06-12）</strong>：消解 2 个二元环（R3 3→1，端口注册 + 纯函数下沉），</li></ol>
+<p>基线单调收紧至 cycles=1。R1 渲染叶子下沉经审视<strong>非纯叶子，撤回</strong>，转入下条。</p>
+<ol><li><strong>专项（P2）</strong>：<ul><li><strong>R1 反转</strong>：用事件总线 / 回调注入 / DI 反转 <code>services → cli/ai</code>（×13）等行为调用，</li></ul></li></ol>
+<p>瓦解 ~130 节点巨型 SCC。<strong>触及业务热区，须专项 + 全回归</strong>。</p>
+<ul><li><strong>R4</strong>：<code>toolUseLoop</code> 完成抽取（删本地副本、统一助手模块）+ 全量 <code>toolUseLoop.*</code> 回归。</li><li><strong>R2</strong>：<code>repl.js</code>/<code>ai.js</code> 按职责拆 helper，<strong>先解环再拆</strong>。</li></ul>
+<p>收敛 dataHome（需人工迁移脚本 + 回滚）；补 <code>routes/ai.js</code> SSE 断连处理。</p>
+<p><strong>门禁纪律</strong>：每次降债后 <code>npm run arch:debt:baseline</code> 刷新基线并提交，使基线<strong>单调收紧</strong>，<br>新增债被 CI 拦截，存量债逐轮削减——架构健康度持续可度量。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-019] 用户输入预处理规范.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 用户输入预处理规范（Input Sanitization）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-021] 巨型环反转设计.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 巨型环反转设计（Giant-SCC Inversion Design）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-020] 架构债治理报告.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "sessionId": "0563d604-157f-4cb4-830d-e2b60b589525",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我想玩贪吃蛇可以制作一个exe小游戏吗"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "好的，先检查一下你电脑上的 Python 环境和相关工具。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_00_E2OOpMezsEG7owJSxuwG5942",
+          "name": "Bash",
+          "input": {
+            "command": "python --version && pip show pygame 2>NUL && pip show pyinstaller 2>NUL"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781690193441,
+  "updatedAt": 1781690193441
+}

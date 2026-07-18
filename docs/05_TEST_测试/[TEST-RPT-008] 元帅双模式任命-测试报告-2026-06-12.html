@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元帅（Marshal）双模式任命与约束 — 测试报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>元帅（Marshal）双模式任命与约束 — 测试报告</div>
+      <header class="hero reveal"><h1>元帅（Marshal）双模式任命与约束 — 测试报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#元帅-marshal-双模式任命与约束-测试报告">元帅（Marshal）双模式任命与约束 — 测试报告</a></li><li class="lvl-2"><a href="#1-运行方式与结果">1. 运行方式与结果</a></li><li class="lvl-2"><a href="#2-覆盖矩阵">2. 覆盖矩阵</a></li><li class="lvl-2"><a href="#3-端到端三场景-目标第-6-阶段硬性要求">3. 端到端三场景（目标第 6 阶段硬性要求）</a></li><li class="lvl-2"><a href="#4-核心诉求达成">4. 核心诉求达成</a></li><li class="lvl-2"><a href="#5-结论">5. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="元帅-marshal-双模式任命与约束-测试报告">元帅（Marshal）双模式任命与约束 — 测试报告<a class="anchor" href="#元帅-marshal-双模式任命与约束-测试报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：TEST-RPT-008<br>日期：2026-06-12<br>被测：<code>services/backend/src/services/marshal/*</code>、<code>platform/khy_platform/cli.py</code>（<code>--marshal</code>）<br>用例：<code>services/backend/tests/services/marshal/marshalSubsystem.test.js</code>（node:test，35 用例）<br>关联：[DESIGN-ARCH-024]、[IMPL-RPT-024]</p></blockquote>
+<hr>
+<h2 id="1-运行方式与结果">1. 运行方式与结果<a class="anchor" href="#1-运行方式与结果" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd services/backend
+node --test tests/services/marshal/marshalSubsystem.test.js
+# ℹ tests 35   ℹ pass 35   ℹ fail 0</code></pre>
+<p>全部 35 用例通过。纯确定性、零外部依赖、零网络。</p>
+<h2 id="2-覆盖矩阵">2. 覆盖矩阵<a class="anchor" href="#2-覆盖矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模块 / 主题</th><th>用例要点</th></tr></thead><tbody><tr><td><code>capabilityVector</code></td><td>分数随层级单调下降（T0&gt;T1&gt;T2&gt;T3）；强/弱按 reasoning 阈值切分；<code>KHY_MARSHAL_STRONG_THRESHOLD</code> 环境覆盖</td></tr><tr><td><code>marshalAppointment</code></td><td>混合池归一化；自动选举挑 reasoning 最高；用户指定→<code>user-override</code>；<strong>防呆②</strong> 不在线立刻报错；最弱模型也能被任命</td></tr><tr><td><code>strategySOP</code></td><td>schema 枚举=全部意图且含逃生地板（恒只读）；合法选择接受 / 非法 sopId 拒绝并给因</td></tr><tr><td><code>ruleEngineGuard</code>（<strong>防呆①</strong>）</td><td>只读放行；弱主不可逆→降级须审批；强主不可逆→跨级放行；逃生地板恒可行；红线硬拦截不可审批解除</td></tr><tr><td><code>weakMasterProtocol</code></td><td><strong>防呆③</strong> Prompt 逐字含需求且声明只改「怎么做」；解析合法/非法；investigate 只读放行；minimal_change 编辑须审批；decompose 确定性拆解</td></tr><tr><td><code>strongMasterProtocol</code></td><td>全权/跨级/反省能力开关；Prompt 精简无 SOP 菜单、含需求、反省态加修正头；ingest 原样接受</td></tr><tr><td><code>contextBaton</code>（<strong>防呆③</strong>）</td><td><code>businessRequest</code> 冻结不可篡改；mutator 返回新接力棒不污染原态；handover 只换指挥、<code>assertRequestIntact</code> 为真、失败日志无损携带</td></tr><tr><td><code>impeachment</code>（§5）</td><td>连续两次非法触发、其间一次合法清零；逼宫文案逐字精确、候选为排除失败者后最优；拒绝→挂起、批准→移交清零</td></tr></tbody></table>
+<h2 id="3-端到端三场景-目标第-6-阶段硬性要求">3. 端到端三场景（目标第 6 阶段硬性要求）<a class="anchor" href="#3-端到端三场景-目标第-6-阶段硬性要求" aria-label="锚点">#</a></h2>
+<p>同一复杂任务 <code>TASK = 重构后端登录模块…保持对外 API 不变</code>：</p>
+<table><thead><tr><th>#</th><th>场景</th><th>断言要点</th><th>结果</th></tr></thead><tbody><tr><td>①</td><td><strong>自动选举</strong></td><td><code>mode:auto</code> 选出 <code>claude-opus-4-8</code>；<code>protocol:strong</code>；Prompt 逐字含需求；<code>strong_plan</code> 接受；快照需求逐字</td><td>✅</td></tr><tr><td>②</td><td><strong>强主指定</strong></td><td><code>--marshal=claude-sonnet-4-6</code> → <code>user-override</code> + <code>strong</code>；自由计划被接受、<code>freePlanning:true</code></td><td>✅</td></tr><tr><td>③</td><td><strong>弱主指定</strong></td><td><code>--marshal=qwen-4b</code> → <code>weak</code>；选择题 Prompt 含 SOP 菜单+需求；<code>investigate</code> 微步放行；<code>minimal_change</code> 编辑 <code>requiresApproval:true</code>（系统底线不死）</td><td>✅</td></tr><tr><td>③b</td><td><strong>弹劾→无缝移交</strong></td><td><code>gpt-4o-mini</code> 连续 2 次非法 → <code>impeach_proposed</code> 逐字文案、候选 <code>claude-opus-4-8</code>；用户批准 → <code>handover_done</code>、<code>requestIntact:true</code>、新协议 <code>strong</code>、失败日志无损接力；移交后恢复治理</td><td>✅</td></tr><tr><td>③c</td><td><strong>用户拒绝弹劾</strong></td><td>拒绝 → <code>suspended</code>，仍为原元帅，绝不静默覆盖用户意志</td><td>✅</td></tr><tr><td>—</td><td><strong>防呆②（端到端）</strong></td><td>指定不在线模型 → <code>appoint</code> 立刻 <code>model_not_in_pool</code>，协调器不进入治理态</td><td>✅</td></tr></tbody></table>
+<h2 id="4-核心诉求达成">4. 核心诉求达成<a class="anchor" href="#4-核心诉求达成" aria-label="锚点">#</a></h2>
+<ul><li><strong>用户意志至上</strong>：最弱模型可被任命；拒绝弹劾即挂起等用户，系统从不擅自换将。</li><li><strong>系统底线不死</strong>：弱主一切可变动作经规则引擎降级须审批，红线硬拦截，逃生地板恒在。</li><li><strong>无缝切换</strong>：移交后 <code>businessRequest</code> 逐字无损（<code>requestIntact:true</code>），步骤/失败日志随接力棒携带。</li></ul>
+<h2 id="5-结论">5. 结论<a class="anchor" href="#5-结论" aria-label="锚点">#</a></h2>
+<p>四条防呆红线、三大核心诉求、三场景端到端流转均有对应断言并全部通过。无回归（仅新增模块 + cli.py 透传）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-007] 文档排版-测试报告-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">《文档排版》测试报告</div></a><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-009] 元规划协议与动态约束注入-测试报告-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">元规划协议与动态约束注入 — 测试报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-008] 元帅双模式任命-测试报告-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

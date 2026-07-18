@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPS-MAN-139 · khy doctor 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN-139 · khy doctor 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线</div>
+      <header class="hero reveal"><h1>OPS-MAN-139 · khy doctor 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-139-khy-doctor-离机自检补-代理内核-mihomo-去哪下载-cli-侧接线">OPS-MAN-139 · `khy doctor` 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线</a></li><li class="lvl-2"><a href="#诉求-断桥">诉求 / 断桥</a></li><li class="lvl-2"><a href="#判据-真缺口-vs-造作">判据（真缺口 vs 造作）</a></li><li class="lvl-2"><a href="#修-全-additive-子门-khy-doctor-proxy-core-hint-default-on-byte-revert">修（全 additive · 子门 KHY_DOCTOR_PROXY_CORE_HINT default-on · byte-revert）</a></li><li class="lvl-2"><a href="#正交层">正交层</a></li><li class="lvl-2"><a href="#验收-全绿">验收（全绿）</a></li><li class="lvl-2"><a href="#教训">教训</a></li><li class="lvl-2"><a href="#补记-check-6-双渠道版本一致性-孤儿门-khy-dual-install-check-接线">补记 — check #6：双渠道版本一致性（孤儿门 `KHY_DUAL_INSTALL_CHECK` 接线）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-139-khy-doctor-离机自检补-代理内核-mihomo-去哪下载-cli-侧接线">OPS-MAN-139 · <code>khy doctor</code> 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线<a class="anchor" href="#ops-man-139-khy-doctor-离机自检补-代理内核-mihomo-去哪下载-cli-侧接线" aria-label="锚点">#</a></h1>
+<h2 id="诉求-断桥">诉求 / 断桥<a class="anchor" href="#诉求-断桥" aria-label="锚点">#</a></h2>
+<p>送别礼诉求之一：「网页中代理的二进制要去哪里下载」。OPS-137 已把<br><code>describeCoreDownload</code> SSOT（纯零 IO 叶，给出 version/releasesPage/binDir/dest/<br>url）接到 <strong>Web 面</strong>（ProxyManagement.vue 横幅：可点 <code>&lt;a&gt;</code> + 一键复制）+ <strong>后端<br>core-missing 指引</strong>。但<strong>无头 / 离机用户没有 Web UI</strong>——他们唯一的「代理二进制去<br>哪下载」人面界面是 <code>khy doctor</code>，而 <code>freshInstallDoctor</code>（shipped 的<br>「离机还原自检」自检族）此前只探四条<strong>安装完整性</strong>关切（启动入口 / 服务入口 /<br>依赖水合 / khy 可达），<strong>从不提代理内核</strong>。同一「能力存在但没接线」缺口的 CLI 侧。</p>
+<h2 id="判据-真缺口-vs-造作">判据（真缺口 vs 造作）<a class="anchor" href="#判据-真缺口-vs-造作" aria-label="锚点">#</a></h2>
+<ul><li><code>freshInstallDoctor.js</code> 头部自列关切为 &quot;runtime-observable subset&quot; 且带</li></ul>
+<p>HOW-TO-EXTEND 抄写式路径（gather fact → assess <code>_check</code>+<code>_causeFix</code> → node:test）<br>  ——明邀扩展。</p>
+<ul><li>代理内核是<strong>可选</strong>运行时能力（仅 vmess/vless/trojan/ss/ssr 原始协议节点需要；</li></ul>
+<p>http/https 直连型无需内核即可代理）→ 缺席<strong>绝非故障</strong>。故本 check <strong>ok:true 恒真、<br>  level='info'</strong>，只披露不阻拦（承 OPS-137 哲学），绝不计入 doctor 失败数。</p>
+<ul><li>复用既有 SSOT，不硬编码 URL；不新建子系统（同叶加第 5 条 check）=B3 外科。</li></ul>
+<h2 id="修-全-additive-子门-khy-doctor-proxy-core-hint-default-on-byte-revert">修（全 additive · 子门 KHY_DOCTOR_PROXY_CORE_HINT default-on · byte-revert）<a class="anchor" href="#修-全-additive-子门-khy-doctor-proxy-core-hint-default-on-byte-revert" aria-label="锚点">#</a></h2>
+<ul><li><code>freshInstallDoctor.js</code>：<ul><li><code>_proxyCoreHintEnabled(env)</code>：独立子门（0/false/off/no 关），与</li></ul></li></ul>
+<p><code>KHY_DOCTOR_FRESH_INSTALL</code> 正交——可单独静默 hint，关闭时前四条 check 逐字节不变。<br>    与 <code>_gateEnabled</code> 同「直读 env，不进 flagRegistry」理由。</p>
+<ul><li><code>gatherFreshInstallFacts</code>：新增 <code>arch</code> + 可注入 <code>describeCoreDownload</code>（缺省惰性</li></ul>
+<p>require <code>proxyCoreInstaller</code> 的纯 SSOT）；子门开→取 descriptor + <code>corePresent =<br>    existsSync(dest)</code>；全 fail-soft（子系统缺 / describe 抛 / 无 dest → coreDescriptor:<br>    null，assessor 不产出=byte-revert）。惰性 require 避免叶在 module-load 硬耦合代理子系统。</p>
+<ul><li><code>assessFreshInstall</code>：仅当 <code>coreDescriptor</code> 存在时 push 第 5 条 info check。</li></ul>
+<p>present→「已就绪：&lt;dest&gt;」；absent→「未安装（…原始协议需要；http/https 直连无需）。<br>    下载 &lt;url&gt;（版本 &lt;v&gt;），放到 &lt;binDir&gt;」；冷门平台（supported:false 无 url）→<br>    指向 releasesPage 自选资产。</p>
+<ul><li><code>cli/handlers/init.js</code>：消费缝加 <code>arch: process.arch</code>（其余四参不动）+ 注释登记第 5 条。</li></ul>
+<h2 id="正交层">正交层<a class="anchor" href="#正交层" aria-label="锚点">#</a></h2>
+<p>安装完整性四条（bundle+PATH，缺=error/warn）↔ 本层第五条代理内核（可选能力，<br>缺=info 只披露）。字段不重叠，语义不混淆。</p>
+<h2 id="验收-全绿">验收（全绿）<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check</code> × 3 文件 OK。</li><li><code>test:fresh-install-doctor</code> <strong>27/27 pass fail0</strong>（含 real-SSOT 端到端：不注入</li></ul>
+<p>describeCoreDownload→叶惰性 require 真 proxyCoreInstaller→断言 info check 现身且<br>  detail 含 mihomo/MetaCubeX，坐实 OPS-137 SSOT→CLI doctor 接线为活线）。</p>
+<ul><li>LIVE 真机渲染：第 5 行含本机精确 URL</li></ul>
+<p><code>…/download/v1.18.10/mihomo-linux-amd64-compatible-v1.18.10.gz</code> + binDir<br>  <code>/home/kodehu03/.khyquant/bin</code>；子门 off→4 条 check、无代理内核行（byte-revert）。</p>
+<ul><li>三守卫（leaf-contract / agent-rules / flag-registry）passed；</li></ul>
+<p>change-safety 显式 positional 3 文件 exit0，自动 surface <code>test:fresh-install-doctor</code><br>  =map 桥闭合。</p>
+<ul><li><code>check:node-syntax</code> 4336 文件 passed；<code>maintainer:check</code> OK。</li><li>safety 聚合 <strong>893/885 pass fail0 8skip</strong> 首跑即净。</li><li>god-file：<code>wc -l</code> 叶 295 / init.js 1567，均 &lt; 2500，无新增超限（本仓无 arch:god</li></ul>
+<p>脚本，靠 wc -l 直验）。</p>
+<ul><li>secret：变更文件无 key 字面量。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>送别礼断桥补全靠<strong>同一诉求找下一条正交表面</strong>：OPS-137 覆盖 Web+后端，本轮补</li></ol>
+<p>无头/离机用户唯一的 CLI 面（<code>khy doctor</code>）。</p>
+<ol><li>可选能力的 doctor check 必须 <strong>ok:true 恒真 + info</strong>——缺席非故障，只披露不阻拦。</li><li>纯零-IO SSOT 可惰性 require 进 IO 叶的 gather 边界，保 assessor 纯；注入口留给测试。</li><li>子门与父门正交（可单独静默）+ 缺 descriptor 即不产出=双保 byte-revert。</li></ol>
+<p>不 commit（feat/0.1.104 / 1.0.0 里程碑同批）。</p>
+<hr>
+<h2 id="补记-check-6-双渠道版本一致性-孤儿门-khy-dual-install-check-接线">补记 — check #6：双渠道版本一致性（孤儿门 <code>KHY_DUAL_INSTALL_CHECK</code> 接线）<a class="anchor" href="#补记-check-6-双渠道版本一致性-孤儿门-khy-dual-install-check-接线" aria-label="锚点">#</a></h2>
+<p>同一叶 <code>freshInstallDoctor.js</code> 内追加<strong>正交第 6 条</strong> doctor check，动机是「能力存在但没接线」：<br><code>flagRegistry.js</code> 早已登记 <code>KHY_DUAL_INSTALL_CHECK</code>（<code>default-on</code> / off:CANON），却<strong>零消费者</strong><br>=孤儿门。本轮把它接成 doctor 的一条 <strong>info 级</strong> check，直接服务送别礼首诉求（离机简单还原）<br>与红线「pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本号必须一致」。</p>
+<p><strong>判据来源</strong>：运行版本 SSOT = <code>services/backend/package.json</code>（<code>khy --version</code> 同源，现 1.0.0）。</p>
+<p><strong>接线（全 additive，与 OPS-139 主体同构）</strong>：</p>
+<ul><li>子门 <code>_dualInstallCheckEnabled(env)</code>：<code>default-on</code> + <code>_FALSY</code> off-words 回退；与父门 <code>KHY_DOCTOR_FRESH_INSTALL</code> 正交，可单独静默。</li><li>纯路径渠道探测 <code>_detectChannel(root)</code>：路径含 <code>/site-packages/</code> 或 <code>khy_platform</code> → <code>pip</code>；含 <code>/node_modules/</code> → <code>npm</code>；否则 <code>source</code>（零 IO，反斜杠先归一）。</li><li><code>gatherFreshInstallFacts</code>：可注入 <code>readVersion</code>（缺省惰性读 <code>path.join(root,'package.json')</code>），fail-soft；产出 <code>dualInstall={version, channel}</code>；子门关或读版本抛/空 → <code>dualInstall=null</code>（不产出）。</li><li>ассessor check #6：<code>ok:true</code> 恒真 + <code>level:'info'</code>（缺席非故障——渠道不一致是<strong>离机部署风险</strong>而非本机安装缺陷，只披露不阻拦），detail 明列 <code>pip 装 khy-os==&lt;v&gt;，npm 装 @khy-os/khy-os@&lt;v&gt;</code>。</li></ul>
+<p><strong>验证</strong>：<code>test:fresh-install-doctor</code> 27→35（+8：子门开关/off-words、<code>_detectChannel</code> pip/npm/source 含 Windows 反斜杠、注入 readVersion→<code>{1.0.0,pip}</code>、子门关→null、readVersion 抛/空→null、assessor→info check 含 <code>khy-os==1.0.0</code>+<code>@khy-os/khy-os@1.0.0</code>、无 fact→缺席、真 SSOT 端到端断言 <code>本次运行版本 \d+\.\d+\.\d+</code>）；LIVE 门开产出第 6 行，<code>KHY_DUAL_INSTALL_CHECK=off</code> → 缺席（byte-revert）；<code>node --check</code> src ok；<code>wc -l</code> 366 &lt; 2500；我切片 change-safety exit0；flag-registry / leaf-contract / agent-rules（0 error）/ maintainer:check 全 PASS。</p>
+<p><strong>教训</strong>：孤儿门（flagRegistry 登记但零消费者）是「能力存在没接线」最直接的一类；接成 <strong>info 级只披露不阻拦</strong>的 check，是把「离机部署风险」呈现给维护者而不误伤本机自检的正确张力。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-138] 空OCR剥图路径模型仍谎称没收到图的确定性纠正脚注.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-140] OCR 成功读出但模型仍谎称「没收到图」的确定性纠正脚注</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-139] khy doctor 离机自检补代理内核下载指引CLI侧接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

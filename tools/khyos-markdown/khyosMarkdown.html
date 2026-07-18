@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>khyosMarkdown · 内嵌 MD 工作台</title>
+<!--
+  khyosMarkdown.html — 零外部依赖的单文件 Markdown 工作台。
+
+  宪法红线（本文件硬约束）：
+    红线1 零外部依赖：MD 解析、编辑器、预览、CSS、图标全部内联，绝不加载任何外部 CSS/JS/字体/CDN。
+                      内网断网环境可直接双击运行。
+                      * 例外（用户批准）：可选加载**同源本地**的 muya 引擎产物 vendor/khyos-muya.{js,css}
+                        （由桥接器同源 /vendor/* 服务或 file:// 同目录，随包分发、离线自包含、字体已内联为 data:）。
+                        仍不引入任何 CDN/外网；当 KHY_MD_WYSIWYG 关、产物缺失或加载失败时，逐字节回退本文件的
+                        零依赖内联引擎（下方现有代码整体留存作为 fallback）。
+    红线2 跨域绝路：右键打开本地文件时，由 khyos-md-bridge.js 以 http://127.0.0.1 同源服务本页面，
+                    fetch 同源 /api/read，从根上消灭 file:// 的 CORS 读取限制。
+    红线3 路径免疫：路径经 encodeURIComponent 传入、由桥接器 WHATWG URL 解码，完美处理空格/中文/特殊字符。
+    红线4 系统纯净：本页面不触碰系统，注册仅由用户级脚本写 HKCU / ~/.local，无 UAC、无 sudo。
+
+  双模启动：
+    项目内嵌模式：桥接器无参启动 → 本页面经 /api/list 浏览本项目 docs/ 下文档（相对根）。
+    全局工具模式：右键某 .md → 桥接器带绝对路径启动 → 本页面 ?path=<绝对路径> 渲染任意位置文件。
+
+  file:// 降级：若未经桥接器、直接双击本文件打开（file://），fetch 受限，自动降级为
+                文件选择 / 拖拽 / 粘贴，仍可阅读编辑（但无法右键传参，故推荐经桥接器）。
+-->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --border: #d1d9e0;
+    --accent: #0969da; --code-bg: #f6f8fa; --code-fg: #1f2328; --sidebar-bg: #f6f8fa;
+    --quote-border: #d0d7de; --table-stripe: #f6f8fa; --shadow: rgba(31,35,40,0.08);
+    --mark: #fff8c5; --danger: #cf222e; --ok: #1a7f37;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #30363d;
+    --accent: #4493f8; --code-bg: #161b22; --code-fg: #e6edf3; --sidebar-bg: #0d1117;
+    --quote-border: #30363d; --table-stripe: #161b22; --shadow: rgba(0,0,0,0.4);
+    --mark: #574c1c; --danger: #ff7b72; --ok: #3fb950;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+      "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
+    color: var(--fg); background: var(--bg); display: flex; flex-direction: column; height: 100vh;
+    font-size: 15px; line-height: 1.6;
+  }
+  /* ── 顶部工具条 ── */
+  header {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-bottom: 1px solid var(--border); background: var(--bg); flex: 0 0 auto; flex-wrap: wrap;
+  }
+  header .brand { font-weight: 700; letter-spacing: .2px; margin-right: 6px; white-space: nowrap; }
+  header .brand small { color: var(--muted); font-weight: 400; }
+  header .spacer { flex: 1 1 auto; }
+  header .path { color: var(--muted); font-size: 12px; max-width: 42vw; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+  button, .seg {
+    font: inherit; font-size: 13px; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  .seg-group { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg-group button { border: none; border-right: 1px solid var(--border); border-radius: 0; }
+  .seg-group button:last-child { border-right: none; }
+  .seg-group button.active { background: var(--accent); color: #fff; }
+  /* ── 主体 ── */
+  .main { flex: 1 1 auto; display: flex; min-height: 0; }
+  aside {
+    flex: 0 0 250px; border-right: 1px solid var(--border); background: var(--sidebar-bg);
+    overflow: auto; padding: 8px; font-size: 13px;
+  }
+  aside.hidden { display: none; }
+  aside .tree-title { font-weight: 700; color: var(--muted); padding: 4px 6px; font-size: 12px; text-transform: uppercase; }
+  /* 侧边栏搜索框：即时过滤当前目录内的 Markdown（纯客户端、离线、失败不致命）。 */
+  aside .tree-search {
+    width: 100%; margin: 4px 0 6px; padding: 5px 8px; font: inherit; font-size: 12.5px;
+    color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; outline: none;
+  }
+  aside .tree-search:focus { border-color: var(--accent); }
+  aside .tree-empty { color: var(--muted); padding: 8px 6px; font-size: 12px; }
+  aside a { display: block; padding: 4px 8px; color: var(--fg); text-decoration: none; border-radius: 5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  aside a:hover { background: var(--code-bg); }
+  aside a.active { background: var(--accent); color: #fff; }
+  aside .tree-dir { display: block; padding: 4px 8px; color: var(--muted); font-weight: 600;
+    font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default;
+    user-select: none; }
+  .panes { flex: 1 1 auto; display: flex; min-width: 0; }
+  .pane { flex: 1 1 0; min-width: 0; overflow: auto; }
+  .pane.editor { border-right: 1px solid var(--border); display: flex; }
+  .pane.editor.hidden, .pane.preview.hidden { display: none; }
+  /* muya WYSIWYG 宿主（仅在 muya 引擎加载成功后启用；否则整块留空不显示）。 */
+  #muyaHost { flex: 1 1 0; min-width: 0; overflow: auto; }
+  #muyaHost .mu-mount { min-height: 100%; }
+  #muyaHost .mu-container, #muyaHost .muya { height: 100%; }
+  textarea {
+    flex: 1 1 auto; width: 100%; border: none; outline: none; resize: none; padding: 16px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13.5px; line-height: 1.7; color: var(--fg); background: var(--bg); tab-size: 4;
+  }
+  .markdown-body { padding: 24px 40px; max-width: 980px; margin: 0 auto; }
+  /* ── Markdown 渲染样式 ── */
+  .markdown-body h1, .markdown-body h2 { border-bottom: 1px solid var(--border); padding-bottom: .3em; }
+  .markdown-body h1 { font-size: 2em; margin: .67em 0 .6em; }
+  .markdown-body h2 { font-size: 1.5em; margin: 1.2em 0 .5em; }
+  .markdown-body h3 { font-size: 1.25em; margin: 1em 0 .4em; }
+  .markdown-body h4 { font-size: 1em; margin: 1em 0 .4em; }
+  .markdown-body h5 { font-size: .9em; } .markdown-body h6 { font-size: .85em; color: var(--muted); }
+  .markdown-body p { margin: .6em 0; }
+  .markdown-body a { color: var(--accent); text-decoration: none; }
+  .markdown-body a:hover { text-decoration: underline; }
+  .markdown-body code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 85%;
+    background: var(--code-bg); padding: .2em .4em; border-radius: 6px;
+  }
+  .markdown-body pre {
+    background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow: auto; line-height: 1.5;
+  }
+  .markdown-body pre code { background: none; padding: 0; font-size: 90%; color: var(--code-fg); }
+  .markdown-body blockquote {
+    margin: .6em 0; padding: 0 1em; color: var(--muted); border-left: .25em solid var(--quote-border);
+  }
+  .markdown-body ul, .markdown-body ol { padding-left: 2em; margin: .5em 0; }
+  .markdown-body li { margin: .2em 0; }
+  .markdown-body li.task { list-style: none; margin-left: -1.4em; }
+  .markdown-body li.task input { margin-right: .5em; }
+  .markdown-body table { border-collapse: collapse; margin: .8em 0; display: block; overflow: auto; }
+  .markdown-body th, .markdown-body td { border: 1px solid var(--border); padding: 6px 13px; }
+  .markdown-body tr:nth-child(2n) { background: var(--table-stripe); }
+  .markdown-body img { max-width: 100%; }
+  .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
+  .markdown-body mark { background: var(--mark); }
+  .markdown-body del { color: var(--muted); }
+  /* ── 状态条 / 提示 ── */
+  .status { flex: 0 0 auto; border-top: 1px solid var(--border); padding: 4px 12px;
+    font-size: 12px; color: var(--muted); display: flex; gap: 16px; }
+  .status .err { color: var(--danger); } .status .ok { color: var(--ok); }
+  .dropzone { position: fixed; inset: 0; background: rgba(9,105,218,.08);
+    border: 3px dashed var(--accent); display: none; align-items: center; justify-content: center;
+    font-size: 22px; color: var(--accent); z-index: 50; }
+  .dropzone.show { display: flex; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+  .empty code { background: var(--code-bg); padding: 2px 6px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">khyosMarkdown <small>· MD 工作台</small></span>
+  <div class="seg-group" id="viewSeg">
+    <button data-view="preview" class="active" title="仅预览">预览</button>
+    <button data-view="split" title="分屏编辑">分屏</button>
+    <button data-view="source" title="仅源码">源码</button>
+  </div>
+  <button id="btnSidebar" title="切换文档树">☰ 目录</button>
+  <button id="btnSave" title="保存到原文件（经桥接器）">💾 保存</button>
+  <button id="btnOpen" title="打开本地 .md 文件">📂 打开</button>
+  <button id="btnPrint" title="打印 / 导出 PDF">🖨 打印</button>
+  <span class="spacer"></span>
+  <span class="path" id="curPath" title=""></span>
+  <button id="btnTheme" title="切换明暗">🌓</button>
+</header>
+
+<div class="main">
+  <aside id="sidebar" class="hidden">
+    <div class="tree-title" id="treeTitle">文档</div>
+    <input id="treeSearch" class="tree-search" type="search" placeholder="🔍 搜索 Markdown…" autocomplete="off" spellcheck="false" />
+    <div id="tree"></div>
+  </aside>
+  <div class="panes">
+    <div class="pane editor hidden"><textarea id="src" spellcheck="false" placeholder="在此输入 Markdown…"></textarea></div>
+    <div class="pane preview"><div class="markdown-body" id="out"></div></div>
+    <!-- muya WYSIWYG 宿主：默认隐藏，仅在引擎加载成功后由脚本接管显示。 -->
+    <div class="pane" id="muyaHost" style="display:none"></div>
+  </div>
+</div>
+
+<div class="status">
+  <span id="stMode">模式：—</span>
+  <span id="stStat"></span>
+  <span class="spacer" style="flex:1"></span>
+  <span id="stCount"></span>
+</div>
+
+<div class="dropzone" id="dropzone">松开以打开 .md 文件</div>
+<input type="file" id="filePick" accept=".md,.markdown,.txt,text/markdown" style="display:none" />
+
+<script>
+"use strict";
+/* =====================================================================
+ * 1) 零依赖 Markdown 解析器（块级 + 行内，先转义后渲染，杜绝注入）
+ * ===================================================================== */
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+// 行内渲染：代码段先占位保护，再处理图片/链接/强调/删除线/自动链接，最后回填。
+function renderInline(text) {
+  const codes = [];
+  let s = text.replace(/`([^`]+)`/g, (_, c) => {
+    codes.push("<code>" + escapeHtml(c) + "</code>");
+    return " " + (codes.length - 1) + " ";
+  });
+  s = escapeHtml(s);
+  // 图片 ![alt](src "title")
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
+    (_, alt, src, title) => `<img src="${src}" alt="${alt}"${title ? ` title="${title}"` : ""} />`);
+  // 链接 [text](href "title")
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
+    (_, t, href, title) => `<a href="${href}"${title ? ` title="${title}"` : ""}>${t}</a>`);
+  // 粗体 / 斜体 / 删除线 / 高亮
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+       .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+       .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
+       .replace(/(^|[^_])_([^_]+)_/g, "$1<em>$2</em>")
+       .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+       .replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  // 裸 URL 自动链接（避免吞掉已生成标签内的 URL）
+  s = s.replace(/(^|[\s(])((?:https?:\/\/)[^\s<)]+)/g, '$1<a href="$2">$2</a>');
+  // 回填代码段
+  s = s.replace(/ (\d+) /g, (_, i) => codes[+i]);
+  return s;
+}
+function mdToHtml(src) {
+  const lines = String(src).replace(/\r\n?/g, "\n").split("\n");
+  let html = "", i = 0;
+  const closeList = (stack) => { while (stack.length) html += stack.pop().tag === "ol" ? "</ol>" : "</ul>"; };
+  const listStack = [];
+  while (i < lines.length) {
+    let line = lines[i];
+    // 围栏代码块
+    const fence = line.match(/^\s*```+\s*([\w+-]*)\s*$/);
+    if (fence) {
+      closeList(listStack);
+      const lang = fence[1] || "";
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
+      i++; // 跳过结束围栏
+      html += `<pre><code${lang ? ` class="language-${lang}"` : ""}>` + escapeHtml(buf.join("\n")) + "</code></pre>";
+      continue;
+    }
+    // 空行
+    if (/^\s*$/.test(line)) { closeList(listStack); i++; continue; }
+    // 标题
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { closeList(listStack); const lv = h[1].length;
+      const id = h[2].trim().toLowerCase().replace(/[^\w一-龥]+/g, "-").replace(/^-|-$/g, "");
+      html += `<h${lv} id="${id}">${renderInline(h[2].trim())}</h${lv}>`; i++; continue; }
+    // 水平线
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { closeList(listStack); html += "<hr />"; i++; continue; }
+    // 引用（聚合连续行）
+    if (/^\s*>\s?/.test(line)) { closeList(listStack);
+      const buf = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, "")); i++; }
+      html += "<blockquote>" + mdToHtml(buf.join("\n")) + "</blockquote>"; continue; }
+    // 表格（首行 | 次行分隔）
+    if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(lines[i + 1])) {
+      closeList(listStack);
+      const splitRow = (r) => r.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(c => c.trim());
+      const heads = splitRow(line);
+      const aligns = splitRow(lines[i + 1]).map(c => {
+        const l = c.startsWith(":"), r = c.endsWith(":"); return l && r ? "center" : r ? "right" : l ? "left" : "";
+      });
+      i += 2; let t = "<table><thead><tr>";
+      heads.forEach((c, k) => t += `<th${aligns[k] ? ` style="text-align:${aligns[k]}"` : ""}>${renderInline(c)}</th>`);
+      t += "</tr></thead><tbody>";
+      while (i < lines.length && /\|/.test(lines[i]) && !/^\s*$/.test(lines[i])) {
+        const cells = splitRow(lines[i]); t += "<tr>";
+        heads.forEach((_, k) => t += `<td${aligns[k] ? ` style="text-align:${aligns[k]}"` : ""}>${renderInline(cells[k] || "")}</td>`);
+        t += "</tr>"; i++;
+      }
+      html += t + "</tbody></table>"; continue;
+    }
+    // 列表（有序/无序 + 任务项 + 两空格缩进嵌套）
+    const li = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if (li) {
+      const indent = li[1].replace(/\t/g, "  ").length;
+      const ordered = /\d/.test(li[2]);
+      const depth = Math.floor(indent / 2);
+      while (listStack.length > depth + 1) html += listStack.pop().tag === "ol" ? "</ol>" : "</ul>";
+      if (listStack.length === depth + 1 && listStack[depth] && listStack[depth].ordered !== ordered) {
+        html += listStack.pop().tag === "ol" ? "</ol>" : "</ul>";
+      }
+      while (listStack.length < depth + 1) {
+        const tag = ordered ? "ol" : "ul"; html += "<" + tag + ">"; listStack.push({ tag, ordered });
+      }
+      let content = li[3];
+      const task = content.match(/^\[([ xX])\]\s+(.*)$/);
+      if (task) {
+        const checked = task[1].toLowerCase() === "x";
+        html += `<li class="task"><input type="checkbox" disabled${checked ? " checked" : ""} /> ${renderInline(task[2])}</li>`;
+      } else {
+        html += "<li>" + renderInline(content) + "</li>";
+      }
+      i++; continue;
+    }
+    // 段落（聚合到下一个空行/块起点）
+    closeList(listStack);
+    const buf = [line]; i++;
+    while (i < lines.length && !/^\s*$/.test(lines[i]) &&
+           !/^(\s*```|#{1,6}\s|\s*>\s?|\s*([-*+]|\d+[.)])\s)/.test(lines[i]) &&
+           !/^\s*([-*_])(\s*\1){2,}\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
+    html += "<p>" + renderInline(buf.join("\n")).replace(/\n/g, "<br />") + "</p>";
+  }
+  closeList(listStack);
+  return html;
+}
+
+/* =====================================================================
+ * 2) 应用状态 + 双模启动
+ * ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const out = $("out"), srcEl = $("src");
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get("token") || "";
+// 经桥接器服务时为 http(s) 同源；直接双击为 file://（降级）。
+const VIA_BRIDGE = location.protocol === "http:" || location.protocol === "https:";
+let currentPath = params.get("path") || "";       // 当前文件绝对/相对路径
+let dirty = false;
+const WYSIWYG_WANTED = params.get("wysiwyg") !== "0";
+// DEBUG
+console.log("[khyosMarkdown] URL params:", { path: currentPath, token: TOKEN ? "***" : "(empty)", wysiwyg: WYSIWYG_WANTED });
+let muyaEditor = null, MUYA_READY = false, _lastView = "preview";
+
+function loadAsset(tag, attrs) {
+  return new Promise((res, rej) => {
+    const el = document.createElement(tag);
+    Object.assign(el, attrs);
+    el.onload = () => res(true);
+    el.onerror = () => rej(new Error("load failed: " + (attrs.src || attrs.href)));
+    document.head.appendChild(el);
+  });
+}
+// 同源本地加载 muya 产物（桥接器 /vendor/* 或 file:// 同目录 vendor/）。绝不触网。
+async function tryInitMuya() {
+  if (!WYSIWYG_WANTED) return false;
+  try {
+    // CSS 缺失不致命（onerror 也 resolve），JS 缺失才判失败。
+    await loadAsset("link", { rel: "stylesheet", href: "vendor/khyos-muya.css" }).catch(() => {});
+    await loadAsset("script", { src: "vendor/khyos-muya.js" });
+    if (!window.KhyMuya || typeof window.KhyMuya.create !== "function") return false;
+    MUYA_READY = true;
+    return true;
+  } catch (_) { return false; }
+}
+function destroyMuya() {
+  if (muyaEditor) { try { muyaEditor.destroy(); } catch (_) {} muyaEditor = null; }
+  const host = $("muyaHost"); if (host) host.innerHTML = "";
+}
+// 永久降级到零依赖内联引擎：隐藏 muya 宿主、显示预览面板、重渲染。全程 null-safe(即便 muya
+// 已把宿主节点从 DOM 摘除也不抛),这样任何 muya 运行期异常都只会退化到可用的内联预览,绝不白屏。
+function fallbackToInline() {
+  MUYA_READY = false; muyaEditor = null;
+  const mh = $("muyaHost"); if (mh) mh.style.display = "none";
+  const pv = document.querySelector(".pane.preview"); if (pv) pv.classList.remove("hidden");
+  try { render(); } catch (_) {}
+}
+// 用给定 markdown 挂载/重建 muya；失败则永久降级到内联引擎。
+// 关键:把 muya 挂到 #muyaHost 内部新建的子节点上,而非 #muyaHost 本身——muya 构造过程可能替换/
+// 摘除传入的容器节点,若直接传 #muyaHost,失败后 $("muyaHost") 会返回 null,导致 catch 里访问
+// .style 二次抛出(即用户所见「读取失败: can't access property "style", $(...) is null」)。
+function mountMuya(markdown) {
+  if (!MUYA_READY) return;
+  destroyMuya();
+  const host = $("muyaHost");
+  if (!host) { fallbackToInline(); return; }
+  const mount = document.createElement("div");
+  mount.className = "mu-mount";
+  host.appendChild(mount);
+  try {
+    muyaEditor = window.KhyMuya.create(mount, { markdown: String(markdown || ""), locale: "zh" });
+    muyaEditor.on("json-change", () => {
+      try { srcEl.value = muyaEditor.getMarkdown(); } catch (_) {}
+      dirty = true; updateCount();
+    });
+  } catch (_) {
+    // muya 运行期异常：彻底放弃 WYSIWYG，回退内联引擎并显示预览（null-safe）。
+    fallbackToInline();
+  }
+}
+// 保存/切到源码前，把 muya 的最新内容同步进 textarea（textarea 恒为落盘真源）。
+function syncFromMuya() {
+  if (muyaEditor) { try { srcEl.value = muyaEditor.getMarkdown(); } catch (_) {} }
+}
+
+function api(p) { return p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN); }
+function setStatus(msg, kind) { const e = $("stStat"); e.textContent = msg || ""; e.className = kind || ""; }
+function setMode(m) { $("stMode").textContent = "模式：" + m; }
+
+function updateCount() {
+  const text = srcEl.value;
+  const words = (text.match(/\S+/g) || []).length;
+  $("stCount").textContent = text.length + " 字符 · " + words + " 词";
+}
+function render() {
+  const text = srcEl.value;
+  out.innerHTML = text.trim() ? mdToHtml(text) : '<div class="empty">空文档</div>';
+  updateCount();
+}
+
+function loadText(text, path) {
+  srcEl.value = text; currentPath = path || currentPath; dirty = false;
+  $("curPath").textContent = currentPath || "（未命名）";
+  $("curPath").title = currentPath || "";
+  render();
+  // muya 就绪时用新内容重建 WYSIWYG（除非当前正处于「源码」视图）。
+  if (MUYA_READY && _lastView !== "source") mountMuya(text);
+  updateCount();
+}
+
+async function openByPath(path) {
+  if (!VIA_BRIDGE) { setStatus("file:// 无法读取任意路径，请用「打开」按钮或拖拽", "err"); return; }
+  setStatus("加载中…");
+  try {
+    const r = await fetch(api("/api/read?path=" + encodeURIComponent(path)));
+    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 120));
+    const text = await r.text();
+    loadText(text, path);
+    setStatus("已加载", "ok");
+    highlightTree(path);
+  } catch (e) { setStatus("读取失败：" + e.message, "err"); }
+}
+
+// 侧边栏文件列表(单一真源:最近一次 /api/list 的结果),搜索框据此即时过滤重渲染。
+let _treeFiles = [];
+// 据搜索词过滤并重渲染文件树。filter 为空 → 全量(保留目录深度缩进);有词 → 按文件名/相对路径
+// 大小写不敏感子串匹配(过滤态下去掉缩进,便于跨目录看清命中)。纯客户端、离线、失败不致命。
+function renderTree(filter) {
+  const tree = $("tree"); if (!tree) return;
+  const term = String(filter || "").trim().toLowerCase();
+  tree.innerHTML = "";
+  let shown = 0;
+  _treeFiles.forEach(f => {
+    const name = String(f.name || ""), fp = String(f.path || "");
+    const isDir = f.type === "dir";
+    // 搜索态：只平铺匹配的文件（跨目录看清命中），目录节点略去。
+    if (term) {
+      if (isDir) return;
+      if (!(name.toLowerCase().includes(term) || fp.toLowerCase().includes(term))) return;
+    }
+    const el = document.createElement(isDir ? "div" : "a");
+    // 非搜索态用 padding-left 按 depth 缩进，体现目录层级；搜索态平铺不缩进。
+    el.style.paddingLeft = (8 + (!term && f.depth ? f.depth : 0) * 14) + "px";
+    el.textContent = (isDir ? "📁 " : "") + name;   // 📁 目录前缀
+    el.title = f.path;
+    if (isDir) {
+      el.className = "tree-dir";
+    } else {
+      el.href = "#"; el.dataset.path = f.path;
+      el.onclick = (ev) => { ev.preventDefault(); guardThenOpen(f.path); };
+      shown++;
+    }
+    tree.appendChild(el);
+  });
+  if (term && shown === 0) {
+    const e = document.createElement("div"); e.className = "tree-empty"; e.textContent = "无匹配文档";
+    tree.appendChild(e);
+  }
+  highlightTree(currentPath);   // 重渲染后恢复当前文件高亮
+}
+
+async function buildTree() {
+  if (!VIA_BRIDGE) return;
+  try {
+    const r = await fetch(api("/api/list"));
+    if (!r.ok) return;
+    const data = await r.json();
+    const tt = $("treeTitle"); if (tt) tt.textContent = data.label || "文档";
+    _treeFiles = data.files || [];
+    const ts = $("treeSearch");
+    renderTree(ts ? ts.value : "");
+    if (_treeFiles.length) { const sb = $("sidebar"); if (sb) sb.classList.remove("hidden"); }
+  } catch (_) { /* 列目录失败不致命 */ }
+}
+function highlightTree(path) {
+  document.querySelectorAll("#tree a").forEach(a =>
+    a.classList.toggle("active", a.dataset.path === path));
+}
+function guardThenOpen(path) {
+  if (dirty && !confirm("当前文档未保存，切换将丢失修改，继续？")) return;
+  openByPath(path);
+}
+
+async function saveFile() {
+  syncFromMuya();
+  if (!VIA_BRIDGE) { setStatus("file:// 模式无法写回，请经桥接器打开", "err"); return; }
+  if (!currentPath) { setStatus("无目标路径，无法保存", "err"); return; }
+  setStatus("保存中…");
+  try {
+    const r = await fetch(api("/api/save?path=" + encodeURIComponent(currentPath)), {
+      method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: srcEl.value,
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 120));
+    dirty = false; setStatus("已保存", "ok");
+  } catch (e) { setStatus("保存失败：" + e.message, "err"); }
+}
+
+/* =====================================================================
+ * 3) 视图 / 主题 / 交互
+ * ===================================================================== */
+function setView(v) {
+  const ed = document.querySelector(".pane.editor"), pv = document.querySelector(".pane.preview");
+  const mh = MUYA_READY ? $("muyaHost") : null;
+  if (MUYA_READY && mh) {
+    // muya 模式：WYSIWYG 取代「预览」；「源码」显示 textarea；「分屏」两者并列。
+    if (v === "source") {
+      syncFromMuya();                       // 进源码前先把 muya 内容落回 textarea
+      mh.style.display = "none";
+      pv.classList.add("hidden");
+      ed.classList.remove("hidden");
+    } else {
+      // 从源码切回，或首次进入 → 用 textarea 内容(重新)构建 muya。
+      if (!muyaEditor || _lastView === "source") mountMuya(srcEl.value);
+      mh.style.display = "";
+      pv.classList.add("hidden");
+      ed.classList.toggle("hidden", v !== "split");
+    }
+  } else {
+    // 无 muya(或宿主节点丢失)→ 内联引擎:源码/预览/分屏。宿主丢失时永久降级避免再走 muya 分支。
+    if (MUYA_READY && !mh) MUYA_READY = false;
+    ed.classList.toggle("hidden", v === "preview");
+    pv.classList.toggle("hidden", v === "source");
+  }
+  document.querySelectorAll("#viewSeg button").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  _lastView = v;
+  try { localStorage.setItem("khyosmd.view", v); } catch (_) {}
+}
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("khyosmd.theme", t); } catch (_) {}
+}
+document.querySelectorAll("#viewSeg button").forEach(b => b.onclick = () => setView(b.dataset.view));
+$("btnTheme").onclick = () => setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+$("btnSidebar").onclick = () => $("sidebar").classList.toggle("hidden");
+// 侧边栏搜索：即时过滤文件树(纯客户端;fail-soft,元素缺失不致命)。
+(function () { const ts = $("treeSearch"); if (ts) ts.addEventListener("input", () => renderTree(ts.value)); })();
+$("btnSave").onclick = saveFile;
+$("btnPrint").onclick = () => window.print();
+$("btnOpen").onclick = () => $("filePick").click();
+$("filePick").onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { loadText(rd.result, f.name); setStatus("已从本地打开（只读，保存需经桥接器）", "ok"); };
+  rd.readAsText(f, "utf-8");
+};
+srcEl.addEventListener("input", () => { dirty = true; render(); });
+// Ctrl/Cmd+S 保存
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveFile(); }
+});
+// 拖拽打开
+const dz = $("dropzone");
+window.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("show"); });
+window.addEventListener("dragleave", (e) => { if (e.relatedTarget === null) dz.classList.remove("show"); });
+window.addEventListener("drop", (e) => {
+  e.preventDefault(); dz.classList.remove("show");
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { loadText(rd.result, f.name); setStatus("已拖入打开", "ok"); };
+  rd.readAsText(f, "utf-8");
+});
+// 离开前提醒未保存
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+/* =====================================================================
+ * 4) 启动
+ * ===================================================================== */
+(async function boot() {
+  try { setTheme(localStorage.getItem("khyosmd.theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")); } catch (_) { setTheme("light"); }
+  // 先尝试加载 muya（同源本地、离线）；成功后 setView/loadText 会走 WYSIWYG，失败则内联引擎兜底。
+  await tryInitMuya();
+  try { setView(localStorage.getItem("khyosmd.view") || "preview"); } catch (_) { setView("preview"); }
+  if (VIA_BRIDGE) {
+    setMode(currentPath ? "全局工具（绝对路径）" : "项目内嵌（docs 浏览）");
+    console.log("[khyosMarkdown] VIA_BRIDGE, currentPath:", currentPath);
+    buildTree();
+    if (currentPath) {
+      console.log("[khyosMarkdown] Calling openByPath:", currentPath);
+      openByPath(currentPath).catch(e => {
+        console.error("[khyosMarkdown] openByPath failed:", e);
+        setStatus("加载失败：" + e.message, "err");
+      });
+    } else {
+      loadText("", ""); setStatus("从左侧目录选择文档，或拖入 .md 文件", "");
+    }
+    // 心跳 + 关闭信标：让 autoShutdown 桥接器随本标签生命周期自我了断，不留常驻孤儿进程。
+    // 周期性 ping 喂看门狗；关标签/卸载时 sendBeacon 通知立即退出（桥接器未启用 autoShutdown 时二者皆为无害 200）。
+    try {
+      const ping = () => { try { fetch(api("/api/ping"), { cache: "no-store" }).catch(() => {}); } catch (_) {} };
+      ping();
+      setInterval(ping, 20000);
+      const bye = () => {
+        try {
+          const u = api("/api/close");
+          if (navigator.sendBeacon) navigator.sendBeacon(u);
+          else fetch(u, { method: "POST", keepalive: true }).catch(() => {});
+        } catch (_) {}
+      };
+      window.addEventListener("pagehide", bye);
+      window.addEventListener("beforeunload", bye);
+    } catch (_) { /* 心跳失败不致命：桥接器初始宽限超时后仍会自关 */ }
+  } else {
+    setMode("file://（降级：选择/拖拽/粘贴）");
+    loadText("", "");
+    setStatus("提示：经 khyos-md-bridge 打开可消除 file:// 读取限制并支持右键传参", "");
+    out.innerHTML = '<div class="empty"><p>当前为 <code>file://</code> 降级模式。</p>' +
+      '<p>请点击 <b>📂 打开</b> 选择文件，或将 <code>.md</code> 拖入窗口。</p>' +
+      '<p>右键「使用 khyosMarkdown 打开」走桥接器，体验最佳。</p></div>';
+  }
+})();
+</script>
+</body>
+</html>

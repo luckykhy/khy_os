@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-140] OCR 成功读出但模型仍谎称「没收到图」的确定性纠正脚注 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-140] OCR 成功读出但模型仍谎称「没收到图」的确定性纠正脚注</div>
+      <header class="hero reveal"><h1>[OPS-MAN-140] OCR 成功读出但模型仍谎称「没收到图」的确定性纠正脚注</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-140-ocr-成功读出-但模型仍谎称-没收到图-的确定性纠正脚注">[OPS-MAN-140] OCR **成功读出**但模型仍谎称「没收到图」的确定性纠正脚注</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)</a></li><li class="lvl-2"><a href="#四-教训">四、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-140-ocr-成功读出-但模型仍谎称-没收到图-的确定性纠正脚注">[OPS-MAN-140] OCR <strong>成功读出</strong>但模型仍谎称「没收到图」的确定性纠正脚注<a class="anchor" href="#ops-man-140-ocr-成功读出-但模型仍谎称-没收到图-的确定性纠正脚注" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-138] 空 OCR 剥图路径的确定性纠正 —— 补其<strong>镜像格</strong>。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p>OPS-138 已封住「空 OCR(读不出文字)+ 模型否认收到图」这一格。本轮沿同一 consumer(finishResult 成功侧<br>脚注族)找<strong>正交镜像格</strong>:</p>
+<ul><li><strong>OCR 成功读出文本</strong>(<code>_ocrImageTextRead === true</code>,文本已注入 prompt)、</li><li>模型<strong>却仍在正文否认</strong>收到图(<code>当前对话中没有任何图片附件</code> 等)。</li></ul>
+<p>这一格恰好落在两条既有脚注的<strong>判据盲区</strong>之间:</p>
+<table><thead><tr><th>判据</th><th>脚注</th><th>覆盖</th></tr></thead><tbody><tr><td><code>_ocrImageTextRead === true</code></td><td>ocrUsageFootnote(OPS-126)</td><td>只在<strong>模型没否认</strong>时说「用了 OCR」</td></tr><tr><td><code>_ocrFallbackApplied &amp;&amp; !_ocrImageTextRead</code></td><td>空 OCR 变体(OPS-138)</td><td>只覆盖<strong>读不出</strong>路径</td></tr><tr><td><strong><code>_ocrImageTextRead === true &amp;&amp; 模型否认</code></strong></td><td><strong>无</strong></td><td><strong>本轮补</strong></td></tr></tbody></table>
+<p>更糟的是:该格 <code>ocrUsageFootnote</code>(aiGatewayGenerateMethod.js:858)<strong>照旧触发</strong>,追加一句<br>「以上关于<strong>这张图片</strong>的内容是通过本地 OCR 读取的」——可模型正文明明否认了图片存在,「以上关于这张图片的<br>内容」<strong>不成立</strong>,那句脚注既<strong>自相矛盾</strong>又<strong>不纠正否认</strong>。用户看到:「当前对话中没有任何图片附件」+ 一句<br>自相矛盾的脚注,零确定性纠正。含字截图(如 khy 自身 UI 截图,OCR 必读出)正是这一格。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>单一真源门</strong>:<code>KHY_VISION_DENIAL_CORRECTION_OCR_READ</code>(default-on,与父门<br><code>KHY_VISION_DENIAL_CORRECTION</code> 正交独立)。门关 → 逐字节回退到普通 ocrUsageFootnote。</p>
+<ol><li><strong>纯叶子扩展</strong> <code>visionDenialCorrection.js</code>(承 138 同叶,扩展优于新建):<ul><li>新增 <code>OCR_READ_FLAG</code> / <code>isOcrReadDenialEnabled(env)</code> / 独立 <code>DENIAL_CORRECTION_OCR_READ_MARKER</code>。</li><li><code>buildDenialCorrectionNote({count,env,ocrTextRead})</code>:<code>ocrTextRead === true</code> → OCR-成功变体</li></ul></li></ol>
+<p>(「你确实发了图、OCR <strong>已成功读出文字</strong>、是模型没采用、请<strong>据 OCR 文本重新作答</strong>」);缺省 → 空 OCR<br>     变体(既有措辞逐字节不变)。</p>
+<ol><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code> branch-1(<code>_ocrImageTextRead</code> 成功侧块):<ul><li><code>detectImageDenial(content)</code> 命中且子门开 → 追加 OCR-成功变体,置 <code>_appended = true</code>。</li><li><code>if (!_appended)</code> → 落回普通 <code>ocrUsageFootnote</code>(<strong>取代而非叠加</strong>,<code>_appended</code> 门闩保证同格只追加</li></ul></li></ol>
+<p>一条脚注 → <strong>减少心灵噪音</strong>)。</p>
+<ul><li>门关 / 模型未否认 → <code>_appended</code> 恒 false → 普通脚注,逐字节回退历史行为。</li></ul>
+<p>正交四层(全 default-on):prompt 侧底线三门(剥图必留痕)· ocrUsageFootnote(OCR 成功·模型没否认)·<br>空 OCR 变体(OCR 读空·模型否认)· <strong>OCR-成功变体(OCR 成功·模型仍否认)</strong>。</p>
+<h2 id="三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)<a class="anchor" href="#三-验收-b2-没跑过验证不许说修好了" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>visionDenialCorrection.test.js</code> 24/24(含子门正交、独立 marker、门关 null、变体隔离)。</li><li>接线单测 <code>visionDenialCorrectionWiring.test.js</code> 11/11(子门判据、独立 marker、<code>ocrTextRead:true</code>、</li></ul>
+<p><code>_appended</code> 短路、否认优先于普通脚注)。</p>
+<ul><li><strong>真图 E2E</strong> <code>visionDenialCorrectionRealImage.test.js</code> 4/4 0-skip:真 PIL 渲含字 PNG</li></ul>
+<p>(<code>RECEIPT NO 7788 / PAID USD 4321.00</code>)→ 真 tesseract 读出 → 注入 prompt → 模型故意否认 →<br>  断言追加 OCR-成功变体 marker、<strong>取代</strong>普通脚注、原正文保留;子门关 → 落回普通脚注(逐字节回退)。</p>
+<ul><li>门:<code>node --check</code> × 3 源文件 · god-file <code>wc -l</code> · flag-registry / leaf-contract / agent-rules ·</li></ul>
+<p>change-safety(positional 闭 map 桥)· maintainer:check · safety 聚合。</p>
+<h2 id="四-教训">四、教训<a class="anchor" href="#四-教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>断桥补全靠正交镜像格</strong>:OPS-138 判据 <code>!_ocrImageTextRead</code> 恰好把「OCR 成功但模型仍否认」挡在门外;</li></ol>
+<p>补全靠沿同一脚注族找那条被两个判据夹在中间的盲区。</p>
+<ol><li><strong>取代而非叠加</strong>:该格普通脚注仍触发且自相矛盾 → 用 <code>_appended</code> 门闩<strong>取代</strong>它,同格只留一条脚注,</li></ol>
+<p>直服「减少心灵噪音」。</p>
+<ol><li><strong>含字图 OCR-成功场景</strong>:真图渲含字 ASCII → 真 tesseract 读出 → <code>_ocrImageTextRead=true</code>;模型 content</li></ol>
+<p>故意否认且不提 OCR(避免命中 ACK 正则)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-139] khy doctor 离机自检补代理内核下载指引CLI侧接线.html"><div class="dir">← 上一篇</div><div class="ttl">OPS-MAN-139 · khy doctor 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-141] 代理内核安装显式CLI表面接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气</div>
+      <header class="hero reveal"><h1>通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#通过-khy-学习模式-从-0-到-1-拿下大厂-agent-岗的底气">通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气</a></li><li class="lvl-2"><a href="#0-为什么-khy-os-是绝佳的面试素材">0. 为什么 KHY-OS 是绝佳的面试素材</a></li><li class="lvl-2"><a href="#1-学习模式怎么用-命令速查">1. 学习模式怎么用（命令速查）</a></li><li class="lvl-2"><a href="#1-5-成长段位与进度携带-从-白纸-到-大师">1.5 成长段位与进度携带（从「白纸」到「大师」）</a></li><li class="lvl-2"><a href="#2-课程地图-12-层-面试价值分级">2. 课程地图（12 层 → 面试价值分级）</a></li><li class="lvl-2"><a href="#3-核心-khy-内部叫法-大厂面试标准术语翻译表">3. ⭐核心：KHY 内部叫法 → 大厂面试标准术语翻译表</a></li><li class="lvl-3"><a href="#3-1-agent-循环-层-5">3.1 Agent 循环（层 5）</a></li><li class="lvl-3"><a href="#3-2-工具调用-层-4">3.2 工具调用（层 4）</a></li><li class="lvl-3"><a href="#3-3-provider-抽象-层-3">3.3 Provider 抽象（层 3）</a></li><li class="lvl-3"><a href="#3-4-多-agent-与编排-层-9-记忆里的治理子系统">3.4 多 Agent 与编排（层 9 + 记忆里的治理子系统）</a></li><li class="lvl-3"><a href="#3-5-rag-learningretrieval-之前那段对话">3.5 RAG（learningRetrieval + 之前那段对话）</a></li><li class="lvl-3"><a href="#3-6-系统底层-层-11-差异化王牌">3.6 系统底层（层 11，差异化王牌）</a></li><li class="lvl-2"><a href="#4-四周冲刺计划-可压缩-拉长">4. 四周冲刺计划（可压缩/拉长）</a></li><li class="lvl-2"><a href="#5-大厂-agent-岗面试自检清单-学完逐条打勾">5. 大厂 Agent 岗面试自检清单（学完逐条打勾）</a></li><li class="lvl-2"><a href="#6-khy-没覆盖-需要外部补的-诚实清单">6. KHY 没覆盖、需要外部补的（诚实清单）</a></li><li class="lvl-2"><a href="#7-一句话心法">7. 一句话心法</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="通过-khy-学习模式-从-0-到-1-拿下大厂-agent-岗的底气">通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气<a class="anchor" href="#通过-khy-学习模式-从-0-到-1-拿下大厂-agent-岗的底气" aria-label="锚点">#</a></h1>
+<blockquote><p>个人学习路线图。把 KHY-OS（一套真实的端到端 Agent 系统）作为「带参考实现的教科书」，<br>用 <code>khy learn</code> 系统过一遍，再把 KHY 的内部叫法翻译成大厂面试通用术语，<br>最终能在白板/系统设计/项目深挖三类面试环节都接得住。</p></blockquote>
+<hr>
+<h2 id="0-为什么-khy-os-是绝佳的面试素材">0. 为什么 KHY-OS 是绝佳的面试素材<a class="anchor" href="#0-为什么-khy-os-是绝佳的面试素材" aria-label="锚点">#</a></h2>
+<p>大厂「Agent / Applied AI / Agent Infra」岗位面试，本质考的就这几块：<br><strong>Agent 循环、工具调用、上下文管理、多 Agent 编排、Provider 抽象、可靠性、护栏、RAG、流式、评测。</strong></p>
+<p>而 KHY-OS <strong>每一块都有真实可读的实现</strong>，不是 PPT。这意味着每道面试题你都能答：<br><strong>「我不是看过文章，我读过/写过一套完整实现，它是这么做的、为什么这么做、踩过哪些坑。」</strong><br>这就是「底气」的来源——<strong>用一套你能讲到代码行的系统，覆盖整张面试地图。</strong></p>
+<hr>
+<h2 id="1-学习模式怎么用-命令速查">1. 学习模式怎么用（命令速查）<a class="anchor" href="#1-学习模式怎么用-命令速查" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy learn                 # 进入课程总览（12 层）
+khy learn 3               # 学第 3 层（AI 网关）整层
+khy learn 3.2             # 学第 3 层第 2 个知识点（适配器协议层）
+khy learn next            # 顺着进度学下一个知识点
+khy learn progress        # 看已学进度
+khy learn &lt;关键词&gt;         # 按关键词检索知识点（如 khy learn 工具循环）
+khy learn check           # 校验课程链接完整性（94 检查点）
+khy learn refresh         # 课程自进化：扫新模块/自愈失效引用/（有模型时）AI 扩充讲解
+khy learn refresh clear   # 清空动态覆盖层，回到纯随包课程（地板）
+khy learn reset           # 重置进度
+khy learn note / memory   # 记笔记 / 看你的学习记忆
+
+# 零基础讲解档位（持久化，默认 normal）
+khy learn level           # 看当前讲解档位
+khy learn level beginner  # 切「零基础」：先生活比喻→逐行点关键语法+「这门语言为什么这样写」→算法讲直觉→Agent 概念日常类比→结尾主动指出本段可改进点
+khy learn level normal    # 切回常规档位（同一知识点回到原讲解，无零基础块）
+
+# 边学边发现不足并完善（改进清单，只产建议不改代码）
+khy learn improve &lt;一句话描述&gt;   # 把刚学知识点的「不足」记入清单；有模型时附 AI 修复提议（仅展示、不自动应用）
+khy learn improve list           # 复盘改进清单（最新在前）
+khy learn improve &lt;描述&gt; --route # 额外路由到 evo 改进管线（需 KHY_EVO_ENGINE=1，默认关）</code></pre>
+<blockquote><p><strong>零基础专用</strong>：档位与改进清单都落 <code>~/.khyos/growth/</code>（随 pip 升级不丢），与进度同主权域；<br>无模型/无网时 <code>improve</code> 仍记清单（只是没有 AI 提议），banner 会显示「改进清单 N」。<br>别名：<code>难度/档位 → level</code>、<code>零基础 → level beginner</code>、<code>改进/反馈/记不足 → improve</code>、<code>改进清单 → improve list</code>。</p></blockquote>
+<p><strong>三种模式</strong>（系统自动按能力探测，无需手配）：</p>
+<ul><li>模式 1（无模型/无网）：纯静态——源码预览 + 导航，照样能学。</li><li>模式 2（有网/无模型）：词法 RAG 补检索。</li><li>模式 3（有模型 + 混合 RAG）：<strong>面谈式</strong>讲解，像和资深工程师对话——<strong>面试备战首选这个</strong>。</li></ul>
+<p>接一个云端网关（claude/kiro/cursor 等）即进入模式 3。</p>
+<blockquote><p>学法建议：每个知识点先 <code>khy learn &lt;N&gt;.&lt;M&gt;</code> 让它讲，<strong>然后自己打开它指向的源码文件读一遍</strong>，<br>再用下面 §3 的翻译表把这块「我用面试语言怎么讲」写进 <code>khy learn note</code>。</p></blockquote>
+<p><strong>课程随能力自我进化（不再硬编码）</strong>：随包的 12 层课程是<strong>离线确定性地板</strong>——无网、无模型也永远能学。<br>但当文件系统/网络/模型可用时，课程会在地板之上叠加一个<strong>动态覆盖层</strong>，自动做三件事：<br><strong>①发现新模块</strong>（仓库里新写的子系统自动进课程）、<strong>②自愈失效引用</strong>（源码重构后路径变了，按文件名在仓库内唯一匹配重定位）、<br><strong>③AI 扩充讲解</strong>（接了云端网关时，为新发现的知识点现场生成要点、闭环扩充课程）。<br>动态内容会打「动态/AI 生成」徽标，写到 <code>~/.khyos/growth/curriculum_overlay.json</code>（<strong>绝不改随包 JSON</strong>），<br>随时 <code>khy learn refresh clear</code> 一键回到纯地板。离线场景下一切仍以随包课程为准，所以<strong>断网照样能学、段位毕业线只按随包地板层计算</strong>（动态新增的内容不会让「大师」线漂移）。<br>进 <code>khy learn</code> 时会低频机会式刷新（带 TTL + 指纹门禁，不卡顿）；设 <code>KHY_LEARN_DYNAMIC=0</code> 可完全关闭，强制纯地板。</p>
+<hr>
+<h2 id="1-5-成长段位与进度携带-从-白纸-到-大师">1.5 成长段位与进度携带（从「白纸」到「大师」）<a class="anchor" href="#1-5-成长段位与进度携带-从-白纸-到-大师" aria-label="锚点">#</a></h2>
+<p>学习不是无感的，KHY 给你一条<strong>修仙式成长路线</strong>：每<strong>通关一层</strong>（该层所有知识点都 <code>learn done</code>）<br>就可能突破一个境界。零基础起步也有清晰路标和成长反馈。</p>
+<pre><code class="language-bash">khy learn roadmap     # 看完整成长路线图（修仙阶梯 + 当前境界 + 距下一境界还差几层）
+khy learn rank        # 同上（别名）
+khy learn export      # 导出进度到 ./khy-learning-progress.json（换电脑带得走）
+khy learn export /path/to/p.json    # 导出到指定路径
+khy learn import &lt;文件&gt;             # 在新设备导入（默认合并：取并集 + 较高 XP）
+khy learn import &lt;文件&gt; --replace   # 整体覆盖本机进度</code></pre>
+<p><strong>八重境界</strong>（按已通关层数解锁）：</p>
+<table><thead><tr><th>等级</th><th>境界</th><th>解锁条件（已通关层数）</th></tr></thead><tbody><tr><td>Lv0</td><td>凡人（白纸）</td><td>0</td></tr><tr><td>Lv1</td><td>练气</td><td>≥1</td></tr><tr><td>Lv2</td><td>筑基</td><td>≥3</td></tr><tr><td>Lv3</td><td>金丹</td><td>≥5</td></tr><tr><td>Lv4</td><td>元婴</td><td>≥7</td></tr><tr><td>Lv5</td><td>化神</td><td>≥9</td></tr><tr><td>Lv6</td><td>大乘</td><td>通关全部内容层（≥11）</td></tr><tr><td>Lv7</td><td>大师（渡劫飞升）</td><td>通关全部层（含 Bug 层）= 毕业认证</td></tr></tbody></table>
+<p><strong>三种「不丢进度」保障</strong>：</p>
+<ol><li><strong>升级不丢</strong>：进度存于 <code>~/.khyos/growth/learning_progress.json</code>（在你的主目录、属底座领地），</li></ol>
+<p><code>pip install -U</code> 升级/重装 KHY <strong>不会覆盖</strong>它；每次写入还会原子落盘 + 轮转一份 <code>.bak</code> 兜底。</p>
+<ol><li><strong>换电脑带得走</strong>：<code>export</code> 导出成一个可携带 JSON，到新机器 <code>import</code> 即可合并恢复。</li><li><strong>课程随包自带</strong>：12 层课程数据（<code>curriculum.json</code>）随 pip 包一起发布，</li></ol>
+<p>离线、无模型也能 <code>khy learn</code> 开始修行（详见 §1 的「三种模式」）。</p>
+<blockquote><p>旧版本进度若存在于 <code>~/.khyquant/growth/</code>，首次运行会<strong>自动迁移</strong>到 <code>~/.khyos/growth/</code>，<br>旧文件保留不删——绝不丢进度。</p></blockquote>
+<hr>
+<h2 id="2-课程地图-12-层-面试价值分级">2. 课程地图（12 层 → 面试价值分级）<a class="anchor" href="#2-课程地图-12-层-面试价值分级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>主题</th><th>面试价值</th><th>说明</th></tr></thead><tbody><tr><td>0</td><td>项目总览与愿景</td><td>⭐</td><td>建立全局观，面试讲项目背景用</td></tr><tr><td>1</td><td>启动链路</td><td>⭐</td><td>工程基本功，非重点</td></tr><tr><td>2</td><td>CLI 路由系统</td><td>⭐</td><td>软件工程，非 agent 重点</td></tr><tr><td><strong>3</strong></td><td><strong>AI 网关 / 适配器 / 密钥选择</strong></td><td>⭐⭐⭐</td><td><strong>Provider 抽象、多路由、熔断——系统设计高频</strong></td></tr><tr><td><strong>4</strong></td><td><strong>工具系统 / 工具调用编排</strong></td><td>⭐⭐⭐</td><td><strong>Function calling、工具 schema、结果结构化——必考</strong></td></tr><tr><td><strong>5</strong></td><td><strong>工具循环引擎 / Nudge / 安全守护 / 上下文管理</strong></td><td>⭐⭐⭐</td><td><strong>Agent 循环核心——这是面试的心脏</strong></td></tr><tr><td>6</td><td>REPL 交互层 / 流式渲染</td><td>⭐⭐</td><td>流式 SSE、TUI，加分项</td></tr><tr><td>7</td><td>量化核心</td><td>☆</td><td>与 agent 无关，可跳过（除非面金融方向）</td></tr><tr><td>8</td><td>前端系统</td><td>☆</td><td>可跳过（除非全栈岗）</td></tr><tr><td><strong>9</strong></td><td><strong>多 Agent 协调 / WASM 沙箱 / 技能系统</strong></td><td>⭐⭐⭐</td><td><strong>多 Agent 编排 + 沙箱隔离——高级岗差异化</strong></td></tr><tr><td><strong>11</strong></td><td><strong>内核 ⇄ Agent 协同协议（A1–A8）</strong></td><td>⭐⭐</td><td><strong>系统底层深度——稀缺差异化，讲出来面试官记得住</strong></td></tr></tbody></table>
+<p><strong>优先级学习顺序（面试导向）</strong>：<code>5 → 4 → 3 → 9 → 6 → 11 → 0 → 1/2</code>，<br>量化(7)/前端(8)按目标岗位取舍。</p>
+<hr>
+<h2 id="3-核心-khy-内部叫法-大厂面试标准术语翻译表">3. ⭐核心：KHY 内部叫法 → 大厂面试标准术语翻译表<a class="anchor" href="#3-核心-khy-内部叫法-大厂面试标准术语翻译表" aria-label="锚点">#</a></h2>
+<blockquote><p>KHY 有很多自创中文名（元规划/熔炉/淬火…），<strong>面试时千万别用这些名字</strong>——<br>它们背后是标准 agent 工程模式。下表把「你在 KHY 学到的东西」翻译成「面试官听得懂的话」。<br>这张表是本路线图的核心资产：<strong>学完每一层，回到这里确认你能用右列的话讲左列的实现。</strong></p></blockquote>
+<h3 id="3-1-agent-循环-层-5">3.1 Agent 循环（层 5）<a class="anchor" href="#3-1-agent-循环-层-5" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>工具循环引擎主循环 <code>toolUseLoop</code></td><td><strong>Agent loop / ReAct loop</strong></td><td>「思考→调用工具→观察结果→再思考」的循环，直到模型不再请求工具或触发停止条件</td></tr><tr><td>max_tokens 恢复 / 循环检测</td><td><strong>Loop detection &amp; stopping conditions</strong></td><td>检测重复 tool_call 防死循环、设 max iterations、token 预算耗尽即停</td></tr><tr><td>Nudge 机制</td><td><strong>Steering / re-prompting</strong></td><td>模型卡住或不调工具时注入引导，类似 reflection / self-correction</td></tr><tr><td>上下文管理（冷热分区 / 压缩）</td><td><strong>Context window management / compaction</strong></td><td>长对话超窗时摘要旧轮次、保留近窗，区分 RAW/压缩层</td></tr><tr><td>安全守护（guard）</td><td><strong>Guardrails / policy checks</strong></td><td>工具执行前的红线校验</td></tr></tbody></table>
+<h3 id="3-2-工具调用-层-4">3.2 工具调用（层 4）<a class="anchor" href="#3-2-工具调用-层-4" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>工具基类 / 注册</td><td><strong>Tool / function schema (JSON Schema)</strong></td><td>工具用 JSON Schema 声明参数，模型按 schema 生成调用</td></tr><tr><td>工具调用编排 <code>executeTool</code> 单入口</td><td><strong>Tool dispatcher / single funnel</strong></td><td>所有工具走单一漏斗，便于统一鉴权/审计/锁/限流</td></tr><tr><td>结构化 tool_result</td><td><strong>Structured tool results</strong></td><td>工具结果回传用结构化（非纯文本），含 isError/错误码，模型可消费</td></tr><tr><td>文件锁装饰器</td><td><strong>Concurrency control / idempotency</strong></td><td>多实例并发时工具层加锁，绝不静默覆盖</td></tr></tbody></table>
+<h3 id="3-3-provider-抽象-层-3">3.3 Provider 抽象（层 3）<a class="anchor" href="#3-3-provider-抽象-层-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>AI 网关 + 16 适配器</td><td><strong>Provider abstraction / LLM gateway</strong></td><td>统一接口屏蔽各家 API 差异（OpenAI/Anthropic 协议）</td></tr><tr><td>适配器级联 + fast-fail</td><td><strong>Fallback chain / failover</strong></td><td>主 provider 失败级联到备用</td></tr><tr><td>断路器 / 冷却</td><td><strong>Circuit breaker</strong></td><td>连续失败的 provider 暂时熔断，避免雪崩</td></tr><tr><td>modelRouter 模型→适配器</td><td><strong>Model routing</strong></td><td>按 tier/能力/成本把请求路由到合适模型</td></tr><tr><td>密钥选择器 P2C</td><td><strong>Load balancing (power-of-two-choices)</strong></td><td>多账号/多 key 间负载均衡</td></tr></tbody></table>
+<h3 id="3-4-多-agent-与编排-层-9-记忆里的治理子系统">3.4 多 Agent 与编排（层 9 + 记忆里的治理子系统）<a class="anchor" href="#3-4-多-agent-与编排-层-9-记忆里的治理子系统" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>多 Agent 协调</td><td><strong>Multi-agent orchestration</strong></td><td>planner/executor、子代理 fan-out/fan-in、handoff</td></tr><tr><td>元规划协议（metaplan）</td><td><strong>Planner-executor / task decomposition</strong></td><td>执行前先规划、动态约束注入（≈ 计划阶段 + 受控执行）</td></tr><tr><td>WASM 沙箱 / executeCode 进程隔离</td><td><strong>Sandboxing / isolation</strong></td><td>不可信代码在沙箱执行，进程级隔离防逃逸</td></tr><tr><td>系统级服务调用审批网关</td><td><strong>Human-in-the-loop approval / capability-based security</strong></td><td>高危操作分级审批（L0绿/L1黄/L2红），能力隔离</td></tr><tr><td>依赖自愈 / 自愈微循环</td><td><strong>Self-healing / error recovery</strong></td><td>错误先归因再自动修复，熔断防死循环重试</td></tr><tr><td>通信防御零静默失败</td><td><strong>Structured error handling / observability</strong></td><td>杜绝「未知错误」，所有失败带错误码 + 字段</td></tr></tbody></table>
+<h3 id="3-5-rag-learningretrieval-之前那段对话">3.5 RAG（learningRetrieval + 之前那段对话）<a class="anchor" href="#3-5-rag-learningretrieval-之前那段对话" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>混合检索（词法 + 向量）</td><td><strong>Hybrid retrieval (BM25 + dense)</strong></td><td>词法兜底 + 向量召回，向量重排提召回率</td></tr><tr><td>三模式降级</td><td><strong>Graceful degradation</strong></td><td>无向量时退词法，无网退本地，永不挂死</td></tr><tr><td>「Agent 而非 RAG 处理代码」</td><td><strong>当 RAG 不适用：agentic retrieval</strong></td><td>代码价值在关系里，切片破坏逻辑；用 agent 按需 grep/read 重建结构。<strong>这是高级面试的加分论述</strong></td></tr></tbody></table>
+<h3 id="3-6-系统底层-层-11-差异化王牌">3.6 系统底层（层 11，差异化王牌）<a class="anchor" href="#3-6-系统底层-层-11-差异化王牌" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>KHY 实现</th><th>面试标准术语</th><th>面试怎么讲</th></tr></thead><tbody><tr><td>A5 决策面 OS→agent 阻塞问答</td><td><strong>Agent-in-the-loop syscall / blocking RPC</strong></td><td>内核遇决策点阻塞，向 agent 求决策，3s 超时兜底</td></tr><tr><td>A1–A2 COBS+CRC16 帧协议</td><td><strong>Wire protocol / framing</strong></td><td>自定义二进制协议、校验、跨进程边界</td></tr><tr><td>host 桥二进制⇄JSON</td><td><strong>Protocol bridging / serialization</strong></td><td></td></tr></tbody></table>
+<blockquote><p>这一层别人没有，<strong>讲出来能让面试官记住你</strong>——「我做过一个让操作系统内核在决策点回调 AI agent 的协议」。</p></blockquote>
+<hr>
+<h2 id="4-四周冲刺计划-可压缩-拉长">4. 四周冲刺计划（可压缩/拉长）<a class="anchor" href="#4-四周冲刺计划-可压缩-拉长" aria-label="锚点">#</a></h2>
+<p><strong>第 1 周 · Agent 心脏</strong>（层 5 + 4）</p>
+<ul><li><code>khy learn 5</code>（循环引擎四个知识点）→ 读 <code>toolUseLoop.js</code> 全文</li><li><code>khy learn 4</code>（工具系统）→ 读 <code>executeTool</code> 单入口</li><li>产出：能在白板画出完整 agent loop（含停止条件、循环检测、上下文压缩点）</li><li>自测题：「设计一个 agent 执行循环，如何防死循环？上下文爆了怎么办？」</li></ul>
+<p><strong>第 2 周 · 基础设施</strong>（层 3 + 6）</p>
+<ul><li><code>khy learn 3</code>（网关/适配器/路由/熔断/密钥）</li><li><code>khy learn 6</code>（REPL/流式渲染）</li><li>产出：能讲清「多 provider 网关 + fallback + circuit breaker」系统设计</li><li>自测题：「设计一个支持多 LLM provider、有容灾的网关。」</li></ul>
+<p><strong>第 3 周 · 高级编排与安全</strong>（层 9 + 记忆里的治理子系统）</p>
+<ul><li><code>khy learn 9</code>（多 agent / 沙箱 / 技能）</li><li>读 metaplan / resilience / 审批网关 / 自愈 子系统源码（<code>services/backend/src/services/</code> 下）</li><li>产出：能讲多 agent 编排 + 沙箱隔离 + human-in-the-loop 审批</li><li>自测题：「多 agent 系统如何拆分任务、如何防一个 agent 拖垮全局、危险操作怎么管控？」</li></ul>
+<p><strong>第 4 周 · 差异化 + 整合</strong>（层 11 + 0 + 模拟面试）</p>
+<ul><li><code>khy learn 11</code>（内核⇄agent 协议，A1–A8）</li><li><code>khy learn 0</code>（项目愿景，准备项目介绍话术）</li><li>把 §3 翻译表过一遍，每行都能用右列的话脱口而出</li><li>做 §5 的模拟面试自检</li></ul>
+<hr>
+<h2 id="5-大厂-agent-岗面试自检清单-学完逐条打勾">5. 大厂 Agent 岗面试自检清单（学完逐条打勾）<a class="anchor" href="#5-大厂-agent-岗面试自检清单-学完逐条打勾" aria-label="锚点">#</a></h2>
+<p><strong>概念层（口述 30 秒讲清）</strong></p>
+<ul><li>[ ] 什么是 agent loop / ReAct？停止条件有哪些？</li><li>[ ] Function calling 的协议流程？tool schema 怎么设计？结果为什么要结构化？</li><li>[ ] 上下文窗口管理：压缩 vs RAG vs 长上下文，各自取舍</li><li>[ ] Provider 抽象 + fallback + circuit breaker 为什么需要</li><li>[ ] 多 agent 编排模式：planner-executor、子代理、handoff</li><li>[ ] RAG 的 chunking/embedding/rerank/hybrid；<strong>什么时候不该用 RAG</strong></li><li>[ ] Guardrails / 沙箱 / human-in-the-loop 审批</li><li>[ ] 流式 SSE、token streaming</li><li>[ ] 可靠性：重试、超时、降级、结构化错误、自愈</li></ul>
+<p><strong>系统设计层（能画图 + 取舍）</strong></p>
+<ul><li>[ ] 设计一个 coding agent（工具循环 + 文件操作 + 沙箱执行 + 上下文管理）</li><li>[ ] 设计一个多 provider LLM 网关（路由 + 容灾 + 限流 + 计费）</li><li>[ ] 设计一个多 agent 任务系统（拆分 + 调度 + 故障隔离 + 结果合并）</li></ul>
+<p><strong>项目深挖层（你的王牌）</strong></p>
+<ul><li>[ ] 用 §3 翻译表，把「我在 KHY-OS 做过/读过 X」翻成标准术语讲出来</li><li>[ ] 准备 2–3 个「踩坑 + 怎么解决」的故事（KHY 记忆里全是真实案例：</li></ul>
+<p>工具循环 tool_result 丢失、适配器级联、文件锁、内核 lost-wakeup…）</p>
+<ul><li>[ ] 准备「KHY 内核⇄agent 协议」作为差异化记忆点</li></ul>
+<hr>
+<h2 id="6-khy-没覆盖-需要外部补的-诚实清单">6. KHY 没覆盖、需要外部补的（诚实清单）<a class="anchor" href="#6-khy-没覆盖-需要外部补的-诚实清单" aria-label="锚点">#</a></h2>
+<p>KHY-OS 强在「端到端真实实现」，但有几块面试会问、KHY 较弱，需自行补：</p>
+<ol><li><strong>Agent 评测（Eval）</strong>：KHY 有 A/B 回归，但大厂要系统化 eval（成功率/轨迹评估/LLM-as-judge）。</li></ol>
+<p>补：读 agent eval 框架思路（轨迹评估、工具调用准确率、端到端任务成功率）。</p>
+<ol><li><strong>规模化 / 分布式</strong>：KHY 偏单机。大厂关心高并发、低延迟、成本优化、KV cache、batching。</li></ol>
+<p>补：prompt caching、请求批处理、并发限流在分布式下的做法。</p>
+<ol><li><strong>业界标准框架词汇</strong>：面试官可能用 LangGraph / function calling spec 等术语。</li></ol>
+<p>补：把 KHY 概念映射到 1–2 个主流框架的命名（用 §3 表反向对照即可）。</p>
+<ol><li><strong>学术脉络</strong>：ReAct、Reflexion、Toolformer、Tree-of-Thoughts 的一句话来历。</li></ol>
+<p>补：每篇知道「解决什么问题 + 核心思想」即可，不必深读。</p>
+<hr>
+<h2 id="7-一句话心法">7. 一句话心法<a class="anchor" href="#7-一句话心法" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>不要去「背」agent 知识。把 KHY-OS 当成你能讲到代码行的参考实现，<br>学完每一层就用 §3 翻译表把它翻成面试语言。</strong><br>当每一道面试题你都能回答「这个我读过/做过，KHY 是这么实现的，取舍是 X，坑是 Y」——<br>底气就有了。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-040] Git入门-main-HEAD-分支-工作树-结合本仓库.html"><div class="dir">← 上一篇</div><div class="ttl">Git 入门：main / HEAD / 分支 / 工作树（结合本仓库）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-041] 通过KHY学习模式-从0到1面试大厂Agent岗-路线图-2026-06-15.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

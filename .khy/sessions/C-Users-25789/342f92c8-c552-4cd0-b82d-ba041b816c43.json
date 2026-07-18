@@ -1,0 +1,22 @@
+{
+  "sessionId": "342f92c8-c552-4cd0-b82d-ba041b816c43",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "khy chat"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！我是小K，你的AI助手。有什么我可以帮你的吗？无论是代码问题、数据分析、还是日常事务，我都可以协助你。"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781184451845,
+  "updatedAt": 1781184451845
+}

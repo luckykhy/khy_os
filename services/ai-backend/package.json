@@ -1,0 +1,32 @@
+{
+  "name": "khy-ai-backend",
+  "version": "1.6.5",
+  "description": "KHY-Quant AI Management Backend — gateway, adapters, monitor, plugins",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@khy/shared": "^1.6.5",
+    "axios": "^1.6.5",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.8.0",
+    "chalk": "^4.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.3.2",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.2",
+    "node-stream-zip": "^1.15.0",
+    "pg": "^8.11.3",
+    "sequelize": "^6.35.2",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "ws": "^8.16.0"
+  },
+  "optionalDependencies": {
+    "@aws/codewhisperer-streaming-client": "^1.0.39"
+  }
+}

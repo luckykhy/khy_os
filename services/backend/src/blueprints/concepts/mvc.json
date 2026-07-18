@@ -1,0 +1,19 @@
+{
+  "id": "mvc",
+  "kind": "concept",
+  "name": "MVC",
+  "category": "architecture",
+  "triggers": ["MVC", "Model-View-Controller", "模型视图控制器"],
+  "summary": "把应用分为 Model(数据与业务规则)、View(展示)、Controller(接收输入、调度 Model 并选 View) 三块，降低耦合、便于分工与测试。",
+  "whenToUse": [
+    "服务端渲染的传统 Web 应用（如 Spring MVC、Django、Rails）。",
+    "团队需要按层分工、把业务规则与展示解耦。"
+  ],
+  "antiPatterns": [
+    "Controller 里写业务逻辑（应下沉到 Model/Service）。",
+    "View 直接访问数据库或修改 Model 状态。",
+    "Model 反向依赖 View/Controller。"
+  ],
+  "minimalSkeleton": "Controller: 解析请求 → 调 Service/Model → 返回 View\nModel/Service: 业务规则 + 数据访问\nView: 只渲染 Model 给的数据",
+  "relatedArchetypes": ["ssm"]
+}

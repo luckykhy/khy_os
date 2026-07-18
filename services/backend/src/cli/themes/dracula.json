@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "dracula",
+    "label": "Dracula",
+    "description": "Dracula theme — purple-heavy dark palette"
+  },
+  "colors": {
+    "claude": "#BD93F9",
+    "success": "#50FA7B",
+    "error": "#FF5555",
+    "warning": "#F1FA8C",
+    "text": "#F8F8F2",
+    "secondaryText": "#6272A4",
+    "subtle": "#44475A",
+    "bashBorder": "#FF79C6",
+    "permission": "#F1FA8C",
+    "link": "#8BE9FD",
+    "diffAdded": "#1E3A28",
+    "diffRemoved": "#3A1E1E",
+    "diffAddedDimmed": "#2A4A34",
+    "diffRemovedDimmed": "#4A2A2A",
+    "diffAddedWord": "#50FA7B",
+    "diffRemovedWord": "#FF5555",
+    "permissionPurple": "#BD93F9",
+    "userMessageBg": "#282A36"
+  }
+}

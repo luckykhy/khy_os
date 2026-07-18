@@ -1,0 +1,7 @@
+import {
+  "khyquant/indicators" @ind,
+}
+
+options(
+  "is-main": true,
+)

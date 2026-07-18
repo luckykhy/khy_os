@@ -1,0 +1,133 @@
+{
+  "sessionId": "c6783ac9-0956-4824-868e-71353302c7a4",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "最近有什么中国的新闻"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: news]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_86e2d2b6c8574a45b1bb4079",
+          "name": "news",
+          "input": {
+            "query": "中国 最新新闻",
+            "limit": 10
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_86e2d2b6c8574a45b1bb4079",
+          "content": "[ERROR:EXECUTION_ERROR] HTML 解析依赖 cheerio 未安装，无 key 搜索引擎（百度/Bing/DuckDuckGo）已降级。请在 services/backend 目录执行 npm install，或配置 Kiro 令牌使用 MCP 搜索。\nHint: Review the error details and try a different approach\nRetryable: no",
+          "is_error": true
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "新闻工具本地依赖不完整，我换个方式查。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_4552581fc7ef4e808919cd89",
+          "name": "WebSearch",
+          "input": {
+            "query": "中国 最新新闻 2026年6月",
+            "limit": 10
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_4552581fc7ef4e808919cd89",
+          "content": "{\"success\":false,\"error\":\"HTML 解析依赖 cheerio 未安装，无 key 搜索引擎（百度/Bing/DuckDuckGo）已降级。请在 services/backend 目录执行 npm install，或配置 Kiro 令牌使用 MCP 搜索。\",\"partialFailures\":[{\"engine\":\"baidu\",\"message\":\"Baidu: no results parsed from response\"},{\"engine\":\"bing-cn\",\"message\":\"No results from Bing\"},{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"},{\"engine\":\"kiro\",\"message\":\"User is not authorized to make this call.\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 6]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "搜索后端依赖缺失，我换个方式 — 直接用浏览器访问新闻站点"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_189294908c37452eb1effd6e",
+          "name": "WebBrowser",
+          "input": {
+            "action": "navigate",
+            "url": "https://news.baidu.com"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_189294908c37452eb1effd6e",
+          "content": "Error: Unknown error",
+          "is_error": true
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 5]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: WebFetch]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_de926ea8c4db40babaa96c82",
+          "name": "WebFetch",
+          "input": {
+            "url": "https://news.baidu.com"
+          }
+        }
+      ]
+    }
+  ],
+  "messageCount": 8,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781260716481,
+  "updatedAt": 1781260716481
+}

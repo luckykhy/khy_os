@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uni-Mol Tools - Molecular Property Prediction CLI · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-unimol-tools<span class="sep">›</span>Uni-Mol Tools - Molecular Property Prediction CLI</div>
+      <header class="hero reveal"><h1>Uni-Mol Tools - Molecular Property Prediction CLI</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#uni-mol-tools-molecular-property-prediction-cli">Uni-Mol Tools - Molecular Property Prediction CLI</a></li><li class="lvl-2"><a href="#description">Description</a></li><li class="lvl-2"><a href="#key-features">Key Features</a></li><li class="lvl-2"><a href="#common-commands">Common Commands</a></li><li class="lvl-3"><a href="#project-management">Project Management</a></li><li class="lvl-3"><a href="#training">Training</a></li><li class="lvl-3"><a href="#model-management">Model Management</a></li><li class="lvl-3"><a href="#storage-cleanup">Storage &amp; Cleanup</a></li><li class="lvl-3"><a href="#prediction">Prediction</a></li><li class="lvl-2"><a href="#data-format">Data Format</a></li><li class="lvl-2"><a href="#task-types">Task Types</a></li><li class="lvl-2"><a href="#json-mode">JSON Mode</a></li><li class="lvl-2"><a href="#interactive-mode">Interactive Mode</a></li><li class="lvl-2"><a href="#test-data">Test Data</a></li><li class="lvl-2"><a href="#requirements">Requirements</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#documentation">Documentation</a></li><li class="lvl-2"><a href="#testing">Testing</a></li><li class="lvl-2"><a href="#performance-tips">Performance Tips</a></li><li class="lvl-2"><a href="#troubleshooting">Troubleshooting</a></li><li class="lvl-2"><a href="#related">Related</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-unimol-tools&quot;<br>description: &gt;-<br>  Interactive CLI for Uni-Mol molecular property prediction training and inference workflows.</p>
+<hr>
+<h1 id="uni-mol-tools-molecular-property-prediction-cli">Uni-Mol Tools - Molecular Property Prediction CLI<a class="anchor" href="#uni-mol-tools-molecular-property-prediction-cli" aria-label="锚点">#</a></h1>
+<p><strong>Package</strong>: <code>cli-anything-unimol-tools</code><br><strong>Command</strong>: <code>python3 -m cli_anything.unimol_tools</code></p>
+<h2 id="description">Description<a class="anchor" href="#description" aria-label="锚点">#</a></h2>
+<p>Interactive CLI for training and inference of molecular property prediction models using Uni-Mol Tools. Supports 5 task types: binary classification, regression, multiclass, multilabel classification, and multilabel regression.</p>
+<h2 id="key-features">Key Features<a class="anchor" href="#key-features" aria-label="锚点">#</a></h2>
+<ul><li><strong>Project Management</strong>: Organize experiments with named projects</li><li><strong>5 Task Types</strong>: Classification, regression, multiclass, multilabel variants</li><li><strong>Model Tracking</strong>: Automatic performance history and rankings</li><li><strong>Smart Storage</strong>: Analyze usage and clean up underperformers</li><li><strong>JSON API</strong>: Full automation support with <code>--json</code> flag</li></ul>
+<h2 id="common-commands">Common Commands<a class="anchor" href="#common-commands" aria-label="锚点">#</a></h2>
+<h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create a new project
+project create --name drug_discovery
+
+# List all projects
+project list
+
+# Switch to a project
+project switch --name drug_discovery</code></pre>
+<h3 id="training">Training<a class="anchor" href="#training" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Train a classification model
+train --data-path train.csv --target-col active --task-type classification --epochs 10
+
+# Train a regression model
+train --data-path train.csv --target-col affinity --task-type regression --epochs 10</code></pre>
+<h3 id="model-management">Model Management<a class="anchor" href="#model-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List all trained models
+models list
+
+# Show model details and performance
+models show --model-id &lt;id&gt;
+
+# Rank models by performance
+models rank</code></pre>
+<h3 id="storage-cleanup">Storage &amp; Cleanup<a class="anchor" href="#storage-cleanup" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Analyze storage usage
+storage analyze
+
+# Automatic cleanup of poor performers
+cleanup auto
+
+# Manual cleanup with criteria
+cleanup manual --max-models 10 --min-score 0.7</code></pre>
+<h3 id="prediction">Prediction<a class="anchor" href="#prediction" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Make predictions with a trained model
+predict --model-id &lt;id&gt; --data-path test.csv</code></pre>
+<h2 id="data-format">Data Format<a class="anchor" href="#data-format" aria-label="锚点">#</a></h2>
+<p>CSV files must contain:</p>
+<ul><li><code>SMILES</code> column: Molecular structures in SMILES format</li><li>Target column(s): Values to predict (name specified via <code>--target-col</code>)</li></ul>
+<p>Example:</p>
+<pre><code class="language-csv">SMILES,target
+CCO,1
+CCCO,0
+CC(C)O,1</code></pre>
+<h2 id="task-types">Task Types<a class="anchor" href="#task-types" aria-label="锚点">#</a></h2>
+<ol><li><strong>classification</strong>: Binary classification (0/1)</li><li><strong>regression</strong>: Continuous value prediction</li><li><strong>multiclass</strong>: Multiple class classification</li><li><strong>multilabel_classification</strong>: Multiple binary labels</li><li><strong>multilabel_regression</strong>: Multiple continuous values</li></ol>
+<h2 id="json-mode">JSON Mode<a class="anchor" href="#json-mode" aria-label="锚点">#</a></h2>
+<p>Add <code>--json</code> flag to any command for machine-readable output:</p>
+<pre><code class="language-bash">python3 -m cli_anything.unimol_tools --json models list</code></pre>
+<p>Output format:</p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;data&quot;: [...],
+  &quot;message&quot;: &quot;...&quot;
+}</code></pre>
+<h2 id="interactive-mode">Interactive Mode<a class="anchor" href="#interactive-mode" aria-label="锚点">#</a></h2>
+<p>Launch without commands for interactive REPL:</p>
+<pre><code class="language-bash">python3 -m cli_anything.unimol_tools</code></pre>
+<p>Features:</p>
+<ul><li>Tab completion</li><li>Command history</li><li>Contextual help</li><li>Project state persistence</li></ul>
+<h2 id="test-data">Test Data<a class="anchor" href="#test-data" aria-label="锚点">#</a></h2>
+<p>Example datasets available at:<br>https://github.com/545487677/CLI-Anything-unimol-tools/tree/main/unimol_tools/examples</p>
+<p>Includes data for all 5 task types.</p>
+<h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
+<ul><li>Python 3.8+</li><li>PyTorch 1.12+</li><li>Uni-Mol Tools backend</li><li>4GB+ RAM (8GB+ recommended for training)</li></ul>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd unimol_tools/agent-harness
+pip install -e .</code></pre>
+<h2 id="documentation">Documentation<a class="anchor" href="#documentation" aria-label="锚点">#</a></h2>
+<ul><li><strong>SOP</strong>: <span class="deadlink" title="目标不存在：../UNIMOL_TOOLS.html">UNIMOL_TOOLS.md</span></li><li><strong>Quick Start</strong>: <span class="deadlink" title="目标不存在：../docs/guides/02-QUICK-START.html">docs/guides/02-QUICK-START.md</span></li><li><strong>Full Documentation</strong>: <span class="deadlink" title="目标不存在：../docs/README.html">docs/README.md</span></li></ul>
+<h2 id="testing">Testing<a class="anchor" href="#testing" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd docs/test
+bash run_tests.sh --unit -v    # Unit tests (67 tests)
+bash run_tests.sh --full -v    # Full test suite</code></pre>
+<h2 id="performance-tips">Performance Tips<a class="anchor" href="#performance-tips" aria-label="锚点">#</a></h2>
+<ul><li>Start with 10 epochs for initial experiments</li><li>Use smaller batch sizes if memory is limited</li><li>Monitor storage with <code>storage analyze</code></li><li>Use <code>models rank</code> to identify best performers</li><li>Clean up regularly with <code>cleanup auto</code></li></ul>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" href="#troubleshooting" aria-label="锚点">#</a></h2>
+<ul><li><strong>CUDA errors</strong>: Reduce batch size or use CPU mode</li><li><strong>CSV not recognized</strong>: Verify SMILES column exists</li><li><strong>Low accuracy</strong>: Try more epochs or adjust learning rate</li><li><strong>Storage full</strong>: Run <code>cleanup auto</code> to free space</li></ul>
+<h2 id="related">Related<a class="anchor" href="#related" aria-label="锚点">#</a></h2>
+<ul><li><strong>Uni-Mol Tools</strong>: https://github.com/dptech-corp/Uni-Mol/tree/main/unimol_tools</li><li><strong>Uni-Mol Paper</strong>: https://arxiv.org/abs/2209.11126</li><li><strong>CLI-Anything</strong>: https://github.com/HKUDS/CLI-Anything</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-threemf/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-3mf</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unrealinsights/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-unrealinsights</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

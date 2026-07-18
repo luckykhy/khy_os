@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条纠正型轴） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条纠正型轴）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条纠正型轴）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-116-纯文本模型图片-ocr-兜底-低分辨率自动放大-第二条-纠正型-轴">[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条**纠正型**轴）</a></li><li class="lvl-2"><a href="#背景-六条正交诚实轴-两条纠正">背景（六条正交诚实轴，两条纠正）</a></li><li class="lvl-2"><a href="#断桥-低分辨率图-原尺寸读出-空">断桥（低分辨率图 = 原尺寸读出「空」）</a></li><li class="lvl-2"><a href="#修复-全-additive-门-khy-ocr-upscale-default-on-门关逐字节回退">修复（全 additive · 门 `KHY_OCR_UPSCALE` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-116-纯文本模型图片-ocr-兜底-低分辨率自动放大-第二条-纠正型-轴">[OPS-MAN-116] 纯文本模型图片 OCR 兜底 —— 低分辨率自动放大（第二条<strong>纠正型</strong>轴）<a class="anchor" href="#ops-man-116-纯文本模型图片-ocr-兜底-低分辨率自动放大-第二条-纠正型-轴" aria-label="锚点">#</a></h1>
+<h2 id="背景-六条正交诚实轴-两条纠正">背景（六条正交诚实轴，两条纠正）<a class="anchor" href="#背景-六条正交诚实轴-两条纠正" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract），把图里文字提取出来注入<br>提示词让文本模型据此作答。围绕「准确识别图片」，已建立多条<strong>正交</strong>诚实轴：</p>
+<table><thead><tr><th>OPS</th><th>轴</th><th>性质</th><th>回答的问题</th></tr></thead><tbody><tr><td>OPS-MAN-104</td><td>置信度（accuracy）</td><td>告知</td><td>提取出的<strong>每个词</strong>可不可信？</td></tr><tr><td>OPS-MAN-109</td><td>覆盖度（coverage）</td><td>告知</td><td>是不是<strong>所有图片</strong>都被 OCR 了？</td></tr><tr><td>OPS-MAN-111</td><td>单图截断（completeness）</td><td>告知</td><td><strong>一张图</strong>的文本被 maxChars 切短了吗？</td></tr><tr><td>OPS-MAN-112</td><td>语言包可用性（language）</td><td>告知</td><td><strong>请求的语言</strong>本机跑没跑起来？</td></tr><tr><td>OPS-MAN-115</td><td>方向自动校正（orientation）</td><td><strong>纠正</strong></td><td>图是不是<strong>转向了</strong>？——并<strong>真的把它转正读对</strong></td></tr><tr><td><strong>OPS-MAN-116</strong></td><td><strong>低分辨率自动放大（resolution）</strong></td><td><strong>纠正</strong></td><td>图是不是<strong>太小/太糊</strong>？——并<strong>真的把它放大读对</strong></td></tr></tbody></table>
+<p>前四条只把问题<strong>披露</strong>给模型；OPS-115 与本条是两条<strong>纠正型</strong>轴，真正<strong>恢复正确文本</strong>：<br>方向轴管「转正」，本条管「放大」——两条正交（一张图可能既转向又低分辨率，各自独立处理）。<br>本条最直接地服务于「<strong>准确</strong>识别图片」中<strong>分辨率过低的小图</strong>这一类。</p>
+<h2 id="断桥-低分辨率图-原尺寸读出-空">断桥（低分辨率图 = 原尺寸读出「空」）<a class="anchor" href="#断桥-低分辨率图-原尺寸读出-空" aria-label="锚点">#</a></h2>
+<p>tesseract 想要约 300 DPI。一张分辨率过低的小图（例如把 460×120 的发票硬缩到 92×24），在<br><strong>原始尺寸</strong>下 tesseract <strong>读不出任何东西</strong>——不是 OPS-115 那种「看着置信度不低的乱码」，而是<br>直接 <code>success:false / 空文本</code>。也就是说：低分辨率图在原尺寸下让纯文本模型<strong>一个字都拿不到</strong>，<br>而同一张图放大 2× 后 conf ≈ 95、准确读出全文。上游明明能通过放大算出可用文本，却从不尝试。</p>
+<h2 id="修复-全-additive-门-khy-ocr-upscale-default-on-门关逐字节回退">修复（全 additive · 门 <code>KHY_OCR_UPSCALE</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-门-khy-ocr-upscale-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>在 <code>docHelper.py</code> 用<strong>暴力择优放大</strong>真正把小图读对：</p>
+<ol><li><strong><code>docHelper.py._maybe_upscale(bin_path, image_path, eff_lang, base)</code></strong>：<ul><li>门关（<code>KHY_OCR_UPSCALE=off/0/false/no</code>）→ 原样返回 <code>base</code>。</li><li><strong>只在可能有问题时才尝试</strong>：已经读得好的页面（<code>needsAiFallback</code> 不为 True 且</li></ul></li></ol>
+<p><code>base conf &gt;= 80</code>，<code>_UPSCALE_SKIP_CONF = 80.0</code>）<strong>绝不放大</strong>。</p>
+<ul><li>需要 PIL/Pillow；缺失或任何异常 → 逐字节回退 <code>base</code>。</li><li><strong>源图已够大则跳过</strong>：<code>max(w,h) &gt;= 1000</code>（<code>_UPSCALE_MAX_SRC</code>）不放大。</li><li>暴力试 2/3/4×（<code>Image.resize(..., Image.LANCZOS)</code>），放大后若超过 4000px</li></ul>
+<p>（<code>_UPSCALE_MAX_DST</code>）跳过该倍数；每个倍数用 <code>_ocr_via_cli_with_confidence</code> 重新 OCR，<br>     保留置信度最高的成功结果。</p>
+<ul><li><strong>接受门槛（防无谓放大）</strong>：仅当 <code>best conf &gt;= 60</code>，<strong>且</strong>（当 <code>base</code> 本已有文本时）</li></ul>
+<p><code>best conf &gt;= base conf + 20</code> 才接受，否则回退 <code>base</code>。</p>
+<ul><li>接受时打 <code>upscaledFactor=&lt;applied factor&gt;</code>；未放大则 <code>upscaledFactor=0</code>。</li><li>接线进 3 个 OCR 成功出口：<code>_ocr_via_cli</code> 诚实路径、纯文本降级路径（=0）、</li></ul>
+<p><code>ocr_image</code> 的 pytesseract 路径。</p>
+<ol><li><strong><code>ocrSnippetService.js</code></strong>：<code>_ocrImageWithDocHelper(Async)</code> 与</li></ol>
+<p><code>extractImageOcrSnippet(Async)</code> 输出对象透传 <code>upscaledFactor</code>。</p>
+<ol><li><strong><code>aiGateway.js</code></strong>：<code>extractImageOcrDetails</code> 每条 detail 携带 <code>upscaledFactor</code>。</li><li><strong>纯叶 <code>gateway/ocrResolutionNotice.js</code></strong>：<ul><li><code>computeUpscaledFactors(details)</code> —— 收集所有 <code>upscaledFactor &gt; 1</code> 的倍数，去重升序；</li></ul></li></ol>
+<p>缺字段（旧缓存明细）/ 畸形 / 非数组 → <code>[]</code>，绝不抛。</p>
+<ul><li><code>buildResolutionNotice({ upscaled, env })</code> —— 渲染中文告诫，点名放大倍数、说明文本取自</li></ul>
+<p>放大后的低分辨率图像、结果可能仍不完整、建议改用高清原图或多模态模型复核；<br>     空 / 门关 / 非数组 → <code>null</code>。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code></strong>：新增 <code>_appendOcrResolutionNotice(prompt, ocrDetails)</code>，</li></ol>
+<p>在 3 个 OCR 注入点紧接 <code>_appendOcrOrientationNotice</code> 之后调用（fail-soft try/catch）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>纠正是真的、告诫是装饰</strong>：文本确从原尺寸读空的小图放大复原（真收获）；那段中文告诫只是</li></ul>
+<p>说明来源，可被门关抑制，绝不改变成功/失败归属，绝不动「非多模态模型永不收裸图」的剥图不变量。</p>
+<ul><li><strong>保守不误放大</strong>：好页面（conf≥80 且未触发 fallback）绝不放大；源图已 ≥1000px 跳过；放大结果</li></ul>
+<p>须比原方向高 ≥20 分（当原本有文本时）且绝对 ≥60 才接受——专门挡住无谓放大。</p>
+<ul><li><strong>门关即回退</strong>：<code>KHY_OCR_UPSCALE=off</code> → 单趟 OCR 原始结果，逐字节还原，<code>upscaledFactor=0</code>。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶：<code>node --test services/backend/tests/gateway/ocrResolutionNotice.test.js</code>（13/13）。</li><li>接线（断桥闭合）：<code>imageOcrResolutionWiring.test.js</code>（3/3，自带录制 adapter + DI）。</li><li><strong>真实图片核验（<code>/goal</code> 要求）</strong>：<code>ocrResolutionRecovery.test.js</code>（3/3，0 skip），</li></ul>
+<p>用 PIL 渲染 &quot;INVOICE ACME 2026&quot; 再硬缩到约 92×24，在<strong>无多模态模型</strong>的纯 OCR 路径上：</p>
+<ul><li>门关 + 低分辨率图：原尺寸读不出（<code>success:false</code>，不含 <code>/INVOICE/</code>），<code>upscaledFactor===0</code>；</li></ul>
+<p>这与方向轴不同——低分辨率图读出的是<strong>空</strong>而非乱码。</p>
+<ul><li>门开 + 低分辨率图：文本被放大复原，命中 <code>/INVOICE/</code>（<strong>准确识别</strong>），<code>upscaledFactor&gt;1</code></li></ul>
+<p>（实测 2×），<code>computeUpscaledFactors</code> 非空、告诫触发命中 <code>/自动放大/</code> 与倍数。</p>
+<ul><li>门开 + 高清图（对照）：清晰图<strong>绝不被无谓放大</strong>，<code>upscaledFactor===0</code>，无告诫，照常识别。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>兜底诚实性的第二条<strong>纠正型</strong>轴。与方向轴（转向图产出「高置信乱码」、部分逃过低置信旗标）不同，<br>低分辨率图在原尺寸下产出的是<strong>空</strong>——上游明明能通过放大算出可用文本却从不尝试，是另一种断桥。<br>判据 = 上游能算出更优结果（放大后从「读空」变「conf 95 读对」）却从不尝试。纠正只在<strong>放大确有<br>更优结果且提升够大</strong>时发生：好图/大图绝不放大，须 <code>best≥60</code> 且（原有文本时）<code>best≥base+20</code>。<br>「测不猜」纪律关键：初始假设「小字号 OCR 失败」是错的——清晰合成文字即便 10px 也能读；真正的<br>低分辨率断桥要用「渲大 → 硬缩」制造，实测恢复窗口在缩放 0.20（92×24，原尺寸读空、2× 放大读对）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条纠正型轴）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

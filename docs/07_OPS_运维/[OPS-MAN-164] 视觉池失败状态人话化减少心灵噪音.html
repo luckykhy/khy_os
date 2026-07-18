@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音</div>
+      <header class="hero reveal"><h1>[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-164-视觉池失败状态-人话化-减少心灵噪音">[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音</a></li><li class="lvl-2"><a href="#断桥-缺口">断桥(缺口)</a></li><li class="lvl-2"><a href="#修-全-additive-纯叶-门控-fail-soft-逐字节回退">修(全 additive · 纯叶 · 门控 · fail-soft · 逐字节回退)</a></li><li class="lvl-2"><a href="#验收-全绿">验收(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-164-视觉池失败状态-人话化-减少心灵噪音">[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音<a class="anchor" href="#ops-man-164-视觉池失败状态-人话化-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼。/goal「减少显示的心灵噪音」+「无感明显告知用户用了 ocr 但能正确识别图片」。<br>沿视觉→OCR 兜底成功路径上,失败墙之外的<strong>实时状态流</strong>找下一枚正交心灵噪音。</p></blockquote>
+<h2 id="断桥-缺口">断桥(缺口)<a class="anchor" href="#断桥-缺口" aria-label="锚点">#</a></h2>
+<p>视觉→本地 OCR 兜底<strong>成功</strong>后,最终生成循环仍会尝试视觉池适配器并 404,<br><code>aiGatewayGenerateMethod</code> 的两处适配器失败发射(~2589 / ~3202)实时打出原始诊断状态:</p>
+<pre><code>[status] 检测到图片输入：当前模型 不支持图像识别，已降级用本地 OCR 成功提取 1 张图片文本并据此作答
+[status] visionpool 失败: OpenAI: 404 model_not_found   ← 次级心灵噪音
+[status] textonly 已连接并响应</code></pre>
+<p>图片内容早已被本地 OCR 读出并据此作答,这行 <code>visionpool 失败: 404</code> 看起来像&quot;出错了&quot;的红字,<br>却对用户毫无意义——是<strong>次级心灵噪音</strong>。但这行诊断在<strong>真失败</strong>(未经 OCR 兜底)时是可定位根因的<br>有用信息,不能一删了之。</p>
+<p>发射处结构(两站相同):</p>
+<pre><code>const resolvedErrMsg = _extractResultErrorMessage(result);
+emitStatus(`${entry.adapter.getStatus().name} 失败: ${resolvedErrMsg}`);</code></pre>
+<p><code>entry.adapter.getStatus().name</code> = <code>visionpool</code>;<code>options._ocrImageTextRead</code> 在 OCR 兜底路径<br>(Site1 ~1685 / Site2 ~1835)已置 <code>true</code>,两发射站均在作用域内。</p>
+<h2 id="修-全-additive-纯叶-门控-fail-soft-逐字节回退">修(全 additive · 纯叶 · 门控 · fail-soft · 逐字节回退)<a class="anchor" href="#修-全-additive-纯叶-门控-fail-soft-逐字节回退" aria-label="锚点">#</a></h2>
+<p>新纯叶 <code>services/backend/src/services/gateway/visionPoolFailStatus.js</code>:</p>
+<pre><code>buildVisionPoolFailStatus({ poolName, ocrRescued, env }):
+  门关(KHY_VISION_POOL_FAIL_STATUS_HUMANIZE=off)      → null
+  ocrRescued !== true(严格)                          → null   // 真失败保留诊断
+  poolName 不匹配 /vision/i                            → null   // 非视觉池保留诊断
+  否则                                                → '视觉通道当前不可用，已用本地 OCR 兜底'</code></pre>
+<p><code>aiGatewayGenerateMethod.js</code> 两发射站(~2589 / ~3202):先算原始 <code>${name} 失败: ${errMsg}</code>,<br>门开且叶返回非空则替换,否则逐字节回退原始行(catch → fail-soft 原始行)。<br><code>env: process.env</code>、<code>ocrRescued: options._ocrImageTextRead === true</code>、<code>poolName: entry.adapter.getStatus().name</code>。</p>
+<p><code>flagRegistry.js</code>:登记 <code>KHY_VISION_POOL_FAIL_STATUS_HUMANIZE</code><br><code>{ mode: 'default-on', off: 'CANON', default: true }</code>。<strong>god-file 净零</strong>:凝练本会话自己的<br>OPS-150 / OPS-161 注释块腾出空间,2499 → 2498 行,不触 2500 红线(只动自己的行)。</p>
+<p>谓词严格:<code>ocrRescued===true</code>(避免 truthy-but-not-true 误吞真失败诊断)、<code>/vision/i</code> 名匹配<br>(仅视觉通道 →「视觉通道不可用」在语义上才成立,不硬编码字符串常量)。</p>
+<h2 id="验收-全绿">验收(全绿)<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>test:vision-pool-fail-status-humanize</code> 10/10:<ul><li>纯叶单元 A–F(门 / 兜底严格 true / 池名 /vision/i / 畸形 fail-soft / 谓词默认开)。</li><li>源级接线 G(两发射站都委派本叶,<code>require('./visionPoolFailStatus')</code>,<code>_ocrImageTextRead === true</code>)。</li><li>端到端 H(门开 → 人话化,不再打原始 404)/ I(门关 → 逐字节回退 <code>visionpool 失败: 404</code>)。</li><li>真实图片 K(真 tesseract OCR 准确识别 1234 / INVOICE + 门开人话化;缺工具链干净跳过)。</li></ul></li><li><code>node --check</code> visionPoolFailStatus.js / aiGatewayGenerateMethod.js / flagRegistry.js / 测试。</li><li>flagRegistry 2498 行 &lt; 2500;visionPoolFailStatus 叶 &lt; 2500。</li><li>既有视觉 / OCR 测试套件零回归 · 三守卫 · change-safety(决定性切片)· maintainer:check。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>送别礼断桥沿<strong>同一路径的另一表面</strong>:失败墙(assistant_message)之外,实时<strong>状态流</strong></li></ol>
+<p>(status)也各自发一遍降级事实——OCR 已兜底后,视觉池 404 是次级噪音。</p>
+<ol><li><strong>显示 vs 诊断分离</strong>:人话化只在「OCR 已兜底 + 视觉池」这一确切子情形替换,真失败 / 非视觉池</li></ol>
+<p>保留可定位根因诊断——<code>/vision/i</code> 名匹配而非硬编码字符串常量,语义对齐。</p>
+<ol><li><strong>测试隔离陷阱</strong>:该 god-file 有 per-model 路由记忆单例,同名 model 第 2 次起走缓存决策、</li></ol>
+<p>跳过视觉位失败发射 → in-process e2e 每个场景用<strong>唯一 model 名</strong>规避,而非误判为改动缺陷。</p>
+<ol><li>桩泄漏:<code>setAiGatewayGenerateMethodDeps</code> 的 <code>extractImageOcrDetails</code> 桩跨测试持续,真实图片测试</li></ol>
+<p>须显式注入 harness 生产镜像真实 OCR(<code>h.realExtractImageOcrDetails</code>),否则读到前测桩文本。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-163] 动作契约核验器CI强制接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-165] khy 个性化调优与使用建议.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-165] khy 个性化调优与使用建议</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-164] 视觉池失败状态人话化减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

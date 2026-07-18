@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-082] 三面镜子还原收敛与防循环 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-082] 三面镜子还原收敛与防循环</div>
+      <header class="hero reveal"><h1>[OPS-MAN-082] 三面镜子还原收敛与防循环</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-082-三面镜子还原收敛与防循环">[OPS-MAN-082] 三面镜子还原收敛与防循环</a></li><li class="lvl-2"><a href="#这一层在解决什么">这一层在解决什么</a></li><li class="lvl-2"><a href="#为什么开环规划不够-真实的-agent-失败模式">为什么开环规划不够（真实的 agent 失败模式）</a></li><li class="lvl-2"><a href="#四种单步判定与停止条件">四种单步判定与停止条件</a></li><li class="lvl-2"><a href="#判定优先级-安全优先-宁可早停不可空转">判定优先级（安全优先，宁可早停不可空转）</a></li><li class="lvl-2"><a href="#保证-继承项目章程">保证（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-082-三面镜子还原收敛与防循环">[OPS-MAN-082] 三面镜子还原收敛与防循环<a class="anchor" href="#ops-man-082-三面镜子还原收敛与防循环" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-converge.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/restoreConvergenceVerifier.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层在解决什么">这一层在解决什么<a class="anchor" href="#这一层在解决什么" aria-label="锚点">#</a></h2>
+<p>还原家族已有四层，本文件是<strong>第五层（收官层）</strong>：</p>
+<ol><li>三面镜子 <code>restore-check</code> / <code>verify-install</code> / <code>hydration-doctor</code>（各自诊断，<strong>看</strong>）；</li><li><code>restore-plan</code>（OPS-MAN-075）把三者合成为有序还原方案（<strong>排序</strong>）；</li><li><code>restore-conflicts</code>（OPS-MAN-076）检测三镜子是否互相矛盾（<strong>矛盾</strong>）；</li><li><code>restore-resolve</code>（OPS-MAN-079）把矛盾升级成有序恢复链，标出何处交人（<strong>走出</strong>）；</li><li><code>restore-converge</code>（本文件）在 agent <strong>执行</strong>每一步、重探到新快照后，判定这一步</li></ol>
+<p>是否真的推进了还原，并产出停止条件（<strong>收手 / 继续 / 升级</strong>）。</p>
+<p>前四层全是<strong>开环规划</strong>：它们产出「agent 该做什么」的 move（带 action + verify），<br>但没有一层<strong>闭合执行反馈环</strong>——agent 跑完一步后，没有东西判定它到底有没有让还原前进。<br>本层就是那缺失的一环：把开环规划器变成<strong>有原则、安全优先、防死循环的闭环自驱 agent</strong>。</p>
+<h2 id="为什么开环规划不够-真实的-agent-失败模式">为什么开环规划不够（真实的 agent 失败模式）<a class="anchor" href="#为什么开环规划不够-真实的-agent-失败模式" aria-label="锚点">#</a></h2>
+<p>一个自驱 agent 按 move 执行还原时会踩三个坑，而前四层都没人守：</p>
+<ul><li><strong>无进展死循环</strong>：反复重探，镜子快照一动不动，agent 无限空转。</li></ul>
+<p>（这正是 khy 自己内存里反复出现的「khy 卡住」「idle-watchdog 被自身心跳续命」的<br>  同一自驱失败模式——只是<strong>还原层此前没人守</strong>。）</p>
+<ul><li><strong>倒退未被察觉</strong>：某个 move 反而让状态变差（冒出新 blocker），agent 却继续往下走。</li><li><strong>已收敛却不收手</strong>：还原其实已完成（三镜子全绿），agent 仍机械地跑剩余 move。</li></ul>
+<p>本层取<strong>前后两个镜子快照</strong> + <strong>刚尝试的 move</strong>，判定这一步的性质并给出停止条件。</p>
+<pre><code class="language-bash">node scripts/restore-converge.js --json   # 自驱 agent 的闭环用这个
+# 每步：执行前采 before → 执行一步 → 重探采 after →
+#       verifyConvergence({before, after, move, stallCount})</code></pre>
+<h2 id="四种单步判定与停止条件">四种单步判定与停止条件<a class="anchor" href="#四种单步判定与停止条件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>判定</th><th>触发</th><th>停止条件</th><th>语义</th></tr></thead><tbody><tr><td><code>converged</code></td><td>after 三镜子全绿且无未决项</td><td><code>converged-stop</code></td><td>还原完成，停止并声称成功</td></tr><tr><td><code>regressed</code></td><td>after 冒出 before 没有的新未决项</td><td><code>escalate-human</code></td><td>倒退最危险，立即止步交人</td></tr><tr><td><code>advanced</code></td><td>未决项严格减少且无新增</td><td><code>continue</code></td><td>在推进，继续下一步</td></tr><tr><td><code>stalled</code></td><td>未决项集合无变化</td><td>continue→escalate</td><td>无进展累计；连续达上限即判死循环交人</td></tr></tbody></table>
+<blockquote><p>防循环阈值 <code>STALL_LIMIT = 2</code>：连续 2 次执行无任何进展<br>（未决项集合既没减也没加），即判定死循环，强制升级交人——不再给第三次空转的机会。</p></blockquote>
+<h2 id="判定优先级-安全优先-宁可早停不可空转">判定优先级（安全优先，宁可早停不可空转）<a class="anchor" href="#判定优先级-安全优先-宁可早停不可空转" aria-label="锚点">#</a></h2>
+<ol><li><strong>已完全还原</strong>优先于一切：即便同时有噪声，三镜子全绿就应收手（converged-stop）。</li><li><strong>倒退</strong>次之：只要冒出净新增未决项，立即 escalate，绝不在倒退上继续自动执行。</li><li><strong>推进</strong>：未决项严格减少 → continue。</li><li><strong>无进展</strong>：集合不变 → 累计；未达上限再给一次机会，达上限即 escalate。</li></ol>
+<h2 id="保证-继承项目章程">保证（继承项目章程）<a class="anchor" href="#保证-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>纯计算、零 IO、绝不抛：判定过程异常一律安全降级为 <code>escalate-human</code>（不确定即交人，</li></ul>
+<p><strong>绝不假报已收敛</strong>）。</p>
+<ul><li>只<strong>读快照做判定</strong>，绝不触 IO、绝不执行 move——执行副作用永不进本叶子。</li><li>任何回传给 agent 的 action 文本先过危险令牌自检；命中 commit/push/rm/curl/publish 即隐去。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-081] npm 渠道 Node 版本预检.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-083] 依赖感知波次调度.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-083] 依赖感知波次调度（拆任务 → 有序并行）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-082] 三面镜子还原收敛与防循环.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

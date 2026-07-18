@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-053-命令与第三方应用输出折叠-几行预览与-ctrl-o-展开">[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开</a></li><li class="lvl-2"><a href="#1-问题">1. 问题</a></li><li class="lvl-2"><a href="#2-设计原则">2. 设计原则</a></li><li class="lvl-2"><a href="#3-改动">3. 改动</a></li><li class="lvl-2"><a href="#4-防呆">4. 防呆</a></li><li class="lvl-2"><a href="#5-实证">5. 实证</a></li><li class="lvl-2"><a href="#6-关联">6. 关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-053-命令与第三方应用输出折叠-几行预览与-ctrl-o-展开">[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开<a class="anchor" href="#design-arch-053-命令与第三方应用输出折叠-几行预览与-ctrl-o-展开" aria-label="锚点">#</a></h1>
+<blockquote><p>渲染层 <code>services/backend/src/cli/tui/ink-components/</code>（ink TUI，默认交互渲染器）<br>目标:bash 命令(如 <code>ls</code>)与 khy 终端内第三方应用(如 claude code)的 stdout,默认只显示<strong>几行</strong>,其余折叠为 <code>… +N 行 (ctrl+o 展开)</code>(Claude Code 风格),按 <strong>Ctrl+O</strong> 展开完整结果。agent 自身的说明与结构化结果<strong>完整真实显示,绝不折叠</strong>。</p></blockquote>
+<h2 id="1-问题">1. 问题<a class="anchor" href="#1-问题" aria-label="锚点">#</a></h2>
+<p>ink TUI(默认渲染器,<code>KHY_FULL_TUI</code> 默认开)里命令输出走两层折叠,结果是<strong>默认看不到命令输出</strong>:</p>
+<ol><li><code>ToolLines.js</code> 旧逻辑:成功工具折叠时只显示 <code>✓ 完成</code>/摘要,展开时 <code>slice(0,12)</code> 静默裁剪 —— 命令 stdout 既无折叠标记也无 Ctrl+O 承诺。</li><li><code>ProcessGroup.js</code> 折叠态:<code>stepTools = showAll ? tools : failed</code> —— <strong>成功步骤全部并入表头 <code>✓N</code> 计数</strong>,连一行预览都不留。</li></ol>
+<p>经典 REPL 渲染器(<code>toolDisplay.js</code>)早有 <code>foldOutput</code>+<code>_expandableOutputs</code>+Ctrl+O,但它在 TTY 下提前 return(交给 TUI),所以交互态从未生效。缺口完全在 ink TUI。</p>
+<h2 id="2-设计原则">2. 设计原则<a class="anchor" href="#2-设计原则" aria-label="锚点">#</a></h2>
+<ul><li><strong>范围严格限定</strong>:只有 shell 族工具(<code>bash/shell/command/terminal/pty</code>)与第三方应用 stdout 享受&quot;几行+折叠+Ctrl+O&quot;;agent 散文与非命令结构化结果<strong>永不在此折叠</strong>。</li><li><strong>不太长就全展开</strong>:折叠仅在超过阈值时触发。TUI 专用 <code>SHELL_COLLAPSED_POLICY = {maxLines:20, foldHead:12, foldTail:6}</code> —— ≤20 行<strong>完整显示</strong>,&gt;20 行才折为头 12 + 标记 + 尾 6。比共享 <code>bash</code> 策略(maxLines:6)宽松,因为用户把命令输出当一个整体读,6 行太激进。</li><li><strong>三类内容视觉区分(Claude Code 风格)</strong>:<ul><li>用户提问 <code>❯</code>(cyan 粗体);</li><li>用户 <code>!</code> 直跑命令 <code>!</code>(magenta 粗体);</li><li>AI 生成输出:纯 markdown,<strong>无连接符</strong>;</li><li><strong>命令原生结果:首行 <code>⎿ </code> 弯头连接符 + 续行 <code>  </code> 对齐缩进(整块 dim gray)</strong>,读作&quot;命令输出块&quot;,与 AI 散文一眼分清。这是 Claude Code 的既有视觉语言(经典 REPL <code>toolDisplay.js</code> 早已用 <code>⎿</code>);agent 工具 stdout(<code>ToolLines</code>)与用户 <code>!</code> 输出(<code>bash-output</code>)共用同一弯头语言。</li></ul></li><li><strong>单一真源</strong>:折叠规则复用 <code>toolDisplayPolicy.foldOutput</code>(与经典 REPL 同源);shell 判定 <code>isShellResult</code> 由 <code>ToolLines</code> 导出,<code>ProcessGroup</code> 复用同一函数,折叠决策与逐步渲染锁步。</li><li><strong>默认即可见</strong>:命令输出是用户运行的结果,折叠态(默认)也要露几行,不并入 <code>✓</code> 计数。</li><li><strong>诚实</strong>:<code>… +N 行 (ctrl+o 展开)</code> 标记仅在折叠且确有隐藏行时出现;展开后不再承诺。</li><li><strong>失败/退出码永不静默</strong>:<code>success:true, exitCode:2</code> 的命令在折叠 stdout 下补 <code>↳ 退出码 N</code>;失败步骤一律可见(沿用红线)。</li></ul>
+<h2 id="3-改动">3. 改动<a class="anchor" href="#3-改动" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>ToolLines.js</code></td><td>新增 <code>SHELL_FAMILY</code> 集合 + <code>isShellResult(name)</code>(规整大小写/分隔符);shell 分支:<code>git diff</code> 形 stdout 走红绿着色,否则 <code>foldOutput(allLines, SHELL_COLLAPSED_POLICY)</code>(20 行阈值,展开态放宽到 400 行)折叠;<strong>首行加 <code>⎿ </code> 弯头连接符 + 续行 <code>  </code> 对齐</strong>(<code>SHELL_ELBOW</code>/<code>SHELL_CONT</code>,整块 dim gray,CC 风格)标识命令原生输出;补非零 <code>退出码 N</code> 黄色脚注。导出 <code>isShellResult</code> 供 <code>ProcessGroup</code> 复用。</td></tr><tr><td><code>ProcessGroup.js</code></td><td>折叠态 <code>stepTools</code> 由 <code>failed</code> 扩为 <code>tools.filter(t =&gt; 失败 ‖ isShellResult(t))</code> —— 成功 shell 步骤折叠态仍可见(经 <code>ToolLines</code> 折叠出几行预览),非 shell 成功步骤仍并入 <code>✓</code> 计数。</td></tr><tr><td><code>Transcript.js</code></td><td><code>bash-output</code>(用户 <code>!</code> 直跑命令的 stdout)首行加同款 <code>⎿ </code> 弯头 + 续行 <code>  </code> 对齐,与 agent 命令输出共用 CC 视觉语言。</td></tr><tr><td><code>toolDisplayPolicy.js</code></td><td><code>foldOutput</code> 折叠标记改 Claude Code 风格 <code>… +N 行 (ctrl+o 展开)</code>(单 <code>…</code> 省略号),两渲染器同源。</td></tr><tr><td><code>useQueryBridge.js</code></td><td><code>projectToolResultForView</code> 透传 <code>exitCode</code>(此前被字段白名单剥离,属 [[project_tui_bridge_field_stripping]] 同族),使折叠 stdout 能标注退出码。</td></tr></tbody></table>
+<h2 id="4-防呆">4. 防呆<a class="anchor" href="#4-防呆" aria-label="锚点">#</a></h2>
+<ol><li><strong>范围锁</strong>:<code>isShellResult</code> 单一判定,非 shell 工具与 agent 散文不进折叠分支。</li><li><strong>退出码不静默</strong>:有 stdout 时非零退出码补黄色脚注;无 stdout 时摘要已带 <code>[退出码 N]</code>。</li><li><strong>展开诚实</strong>:展开态绝不显示 <code>ctrl+o 展开</code> 承诺,折叠态确有隐藏行才显示标记。</li><li><strong>失败永显</strong>:<code>ProcessGroup</code> 折叠态失败步骤恒可见。</li><li><strong>单源复用</strong>:折叠 <code>foldOutput</code>、shell 判定 <code>isShellResult</code> 均单一真源,两渲染器/两组件不重复实现。</li></ol>
+<h2 id="5-实证">5. 实证<a class="anchor" href="#5-实证" aria-label="锚点">#</a></h2>
+<ul><li><code>tests/tui/inkRenderSmoke.test.js</code> 新增 6 例(长 stdout 折叠+<code>ctrl+o 展开</code> 标记/展开全显无承诺/<strong>不太长全显无折叠</strong>/<strong><code>⎿</code> 弯头区分</strong>/第三方 <code>terminal</code> 同折叠+带弯头/<code>ProcessGroup</code> 折叠态保留 shell 输出而非 shell 成功并入计数)。</li><li><code>tests/tui/foldOutputMarker.test.js</code> 新增 3 例<strong>回归锁</strong>:锁死 <code>foldOutput</code> 标记必须是 CC 形 <code>… +N 行 (ctrl+o 展开)</code>——单 <code>…</code> 省略号(非 <code>...</code>)、含 <code>+N</code> 隐藏计数、绝不含旧文案 <code>查看完整</code>;短输入不折叠、长输入头+标记+尾且 hiddenCount 诚实。</li><li>经典 REPL <code>streamRender.js</code> 超长 AI 输出折叠标记同步对齐 <code>… +N 行 (ctrl+o 展开)</code>(全产品一致),<code>ProcessGroup.js</code> 陈旧注释同步。</li></ul>
+<p>全套 TUI <strong>194 例绿</strong>。</p>
+<h2 id="6-关联">6. 关联<a class="anchor" href="#6-关联" aria-label="锚点">#</a></h2>
+<ul><li>上位显示规范 <code>[DESIGN-ARCH-016] AI_Agent显示规范</code>;字段剥离族 [[project_tui_bridge_field_stripping]];折叠策略源 <code>toolDisplayPolicy.foldOutput</code>(经典 REPL <code>toolDisplay.js</code> 同源)。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划-精准而非全知.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-054] AI逆向工程-从产物还原与自验软件.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-053] 命令与第三方应用输出折叠-几行预览与Ctrl+O展开.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

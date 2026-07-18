@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-071-卸载第三方应用怎么保证卸干净-原生自带卸载器-t2-层">[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)</a></li><li class="lvl-2"><a href="#一句话结论">一句话结论</a></li><li class="lvl-2"><a href="#t2-是本次填补的真实缺口">T2 是本次填补的真实缺口</a></li><li class="lvl-2"><a href="#红线-与-install-ledger-同口径">红线(与 install-ledger 同口径)</a></li><li class="lvl-2"><a href="#平台边界-诚实降级">平台边界(诚实降级)</a></li><li class="lvl-2"><a href="#门控">门控</a></li><li class="lvl-2"><a href="#入口">入口</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-071-卸载第三方应用怎么保证卸干净-原生自带卸载器-t2-层">[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)<a class="anchor" href="#ops-man-071-卸载第三方应用怎么保证卸干净-原生自带卸载器-t2-层" aria-label="锚点">#</a></h1>
+<blockquote><p>场景:让 khy 去卸载<strong>当前设备上的某个应用</strong>(exe 或 CLI),而不是卸载 khy 自己。<br>与 [OPS-MAN-069]/[install-ledger] 是<strong>镜像问题</strong>:卸自己有台账(创建时记了),<br>卸别人<strong>没有台账</strong>,只能委托给「知道文件清单的东西」。</p></blockquote>
+<h2 id="一句话结论">一句话结论<a class="anchor" href="#一句话结论" aria-label="锚点">#</a></h2>
+<p>「卸干净」= <strong>先找清单/卸载器再动手,绝不猜删安装目录</strong>。按可靠度分三档,路由由<br><code>decideUninstallRoute</code> 确定性判定:</p>
+<table><thead><tr><th>档</th><th>场景</th><th>靠什么卸干净</th><th>代码</th></tr></thead><tbody><tr><td><strong>T1 pm</strong></td><td>包管理器装的(winget/choco/scoop/brew/apt/dnf/pacman)</td><td>包管理器自带文件清单,精确回收</td><td><code>deviceAppsPolicy</code> + <code>deviceAppManager</code>(已有)</td></tr><tr><td><strong>T2 native</strong></td><td>原生安装器的裸 exe(MSI/Inno/NSIS),不被任何包管理器跟踪</td><td>跑 <strong>app 自己在注册表登记的卸载器</strong>(它知道全部文件)</td><td><code>nativeUninstallPolicy</code> + <code>nativeUninstaller</code>(本手册)</td></tr><tr><td><strong>T3 refuse</strong></td><td>既无清单也无自带卸载器(如 `curl\</td><td>sh` 丢的裸二进制)</td><td><strong>诚实拒绝</strong>——没有清单谁都只能猜,宁可不删</td></tr></tbody></table>
+<h2 id="t2-是本次填补的真实缺口">T2 是本次填补的真实缺口<a class="anchor" href="#t2-是本次填补的真实缺口" aria-label="锚点">#</a></h2>
+<p>Windows 上大量 exe 由 <strong>MSI / Inno Setup / NSIS</strong> 之类原生安装器落盘,不被包管理器跟踪——<br>但它们<strong>自己在注册表里登记了一个卸载器</strong>:<br><code>HKLM/HKCU\SOFTWARE\...\Microsoft\Windows\CurrentVersion\Uninstall\&lt;key&gt;</code> 下的<br><code>UninstallString</code> / <code>QuietUninstallString</code> / (MSI 的)<code>ProductCode</code>。</p>
+<p><code>nativeUninstaller</code>(IO 壳,仅 win32)用 <code>reg query &lt;root&gt; /s</code> 读这三个根(64 位 / WOW6432Node /<br>HKCU),<code>nativeUninstallPolicy</code>(纯叶子)把每条记录归一 + 分类,再构造<strong>卸载 argv</strong>:</p>
+<ul><li><strong>MSI</strong> → <code>msiexec /x {ProductCode} /qn /norestart</code>(最稳、天然静默、系统级回收)。</li><li><strong>Inno</strong>(<code>unins000.exe</code>)→ 优先用作者给的 <code>QuietUninstallString</code>,否则补 <code>/VERYSILENT /NORESTART</code>。</li><li><strong>NSIS</strong>(<code>uninstall.exe</code>)→ 补 <code>/S</code>。</li><li><strong>generic</strong>(卸载串在但形态不认识)→ 原样执行,不猜静默参数。</li></ul>
+<h2 id="红线-与-install-ledger-同口径">红线(与 install-ledger 同口径)<a class="anchor" href="#红线-与-install-ledger-同口径" aria-label="锚点">#</a></h2>
+<ol><li><strong>命令一律是 argv 数组</strong>(execFile 直传,绝不拼 shell 字符串)。</li><li><strong><code>UninstallString</code> 为空 → 拒绝</strong>,绝不退化成 <code>rmdir</code>/<code>rm</code> 猜删安装目录。猜删 = 不干净 = 红线。</li><li>MSI ProductCode 必过 GUID 白名单;卸载器路径必是绝对 <code>.exe</code>,否则拒绝。</li><li>破坏性:<code>uninstall(record, {confirmed:true})</code> 才真执行;未确认只回计划(argv)。</li></ol>
+<h2 id="平台边界-诚实降级">平台边界(诚实降级)<a class="anchor" href="#平台边界-诚实降级" aria-label="锚点">#</a></h2>
+<ul><li><strong>仅 Windows</strong> 有注册表 Uninstall 键。Linux/macOS 的原生安装不走注册表,由 <strong>T1 包管理器</strong>覆盖;</li></ul>
+<p>非 win32 时 <code>getNativeUninstaller</code> 返回 <code>available:false</code> 并说明原因。</p>
+<ul><li>T3 拒绝<strong>不是 bug 而是正确姿态</strong>:没有清单的东西,任何工具都只能猜;khy 拒绝假装卸干净。</li></ul>
+<h2 id="门控">门控<a class="anchor" href="#门控" aria-label="锚点">#</a></h2>
+<ul><li><code>KHY_DEVICE_APPS_NATIVE_UNINSTALL</code>(默认开,父 <code>KHY_DEVICE_APPS</code>)。</li></ul>
+<p>关 → <code>nativeUninstaller</code> 报 <code>available:false</code>,路由回退到「仅 T1 + T3 拒绝」,逐字节回退。</p>
+<h2 id="入口">入口<a class="anchor" href="#入口" aria-label="锚点">#</a></h2>
+<pre><code>khy device uninstall &lt;包ID或应用名&gt;      # 自动分档:T1 包管理器 → T2 自带卸载器 → T3 拒绝</code></pre>
+<ul><li>传<strong>包管理器标识</strong>(如 <code>Microsoft.VisualStudioCode</code>)→ 走 T1。</li><li>传<strong>应用显示名</strong>(如 <code>My Editor</code>,含空格)→ 注册表匹配自带卸载器,走 T2。</li><li>多个同名条目 → 列出让用户选更精确的名称(<code>ambiguous</code>)。</li><li>都没有 → T3 诚实拒绝,提示「khy 只在能找到清单或自带卸载器时才卸载」。</li></ul>
+<p>LLM 工具 <code>DeviceApps</code>(action <code>uninstall</code>)走同一路由;<code>confirm:true</code> 才执行,否则只回计划。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:maintainer:native-uninstall</code></pre>
+<p>覆盖:policy 归一/分类/argv 构造/无卸载器即拒绝、uninstaller 注册表解析/过滤/去重/确认门、<br>路由三档判定、CLI+tool 接线源级断言。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-070] 首启依赖 hydration 自检清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-072] 目标连续多日运行不中断的底气自检.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-072] 目标连续多日运行不中断的底气自检</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-071] 卸载第三方应用怎么保证卸干净-原生自带卸载器.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

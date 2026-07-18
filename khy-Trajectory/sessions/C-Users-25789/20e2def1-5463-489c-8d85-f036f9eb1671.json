@@ -1,0 +1,76 @@
+{
+  "sessionId": "20e2def1-5463-489c-8d85-f036f9eb1671",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "中国最好的大学"
+    },
+    {
+      "role": "assistant",
+      "content": "中国大学排名通常参考 **QS、泰晤士（THE）、US News、软科（ARWU）** 几个主流榜单。综合近2-3年的数据，公认的顶级梯队如下：\n\n## Top 2（清北，无可争议）\n| 排名 | 大学 | 说明 |\n|------|------|------|\n| 1 | **清华大学** | 工科全球顶尖，综合实力国内最强 |\n| 2 | **北京大学** | 人文社科+理学底蕴最深厚，医学也很强 |\n\n## Top 5（华五+）\n| 排名 | 大学 | 优势 |\n|------|------|------|\n| 3 | **浙江大学** | 学科门类最全，工科/农学/医学都很强 |\n| 4 | **上海交通大学** | 工科/医学/商科强势，上海区位加分 |\n| 5 | **复旦大学** | 文理医均衡，学术声望高 |\n| 6 | **南京大学** | 理科底蕴深厚，小而精 |\n| 7 | **中国科学技术大学** | 理科/科研极强，出国深造比例高 |\n\n## 其他实力强劲的学校\n- **华中科大 / 武汉大学** —— 中西部双子星\n- **中山大学** —— 华南第一，医学突出\n- **哈工大 / 西交大** —— C9成员，工科传统强校\n\n## 按维度推荐\n| 领域 | 推荐 |\n|------|------|\n| **工科** | 清华 > 浙大 > 上交 ≈ 哈工大 |\n| **理科** | 北大 > 中科大 > 南大 |\n| **医学** | 北大医学部 ≈ 上交医学院 ≈ 复旦上海医学院 > 浙大 |\n| **经管** | 北大光华 ≈ 清华经管 ≈ 上交安泰 |\n\n如果你有明确的方向（专业、地域、就业意向），我可以帮你更精准匹配。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "南阳师范学院怎么样"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: web_search]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_3002a05218bd4b2bb79f050e",
+          "name": "web_search",
+          "input": {
+            "query": "南阳师范学院 排名 2025 2026 实力"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_3002a05218bd4b2bb79f050e",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"河南教育宣传网:再创新高!南阳师范学院2025自然指数论文研究领导...\",\"url\":\"http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9MVJ5U4w3gpav_K2pbWH39a\",\"snippet\":\"2025年6月17日6月11日,2025自然指数论文研究领导者榜单揭晓(统计时间节点:2024.1.1-2024.12.31),南阳师范学院位列河南省第5名,创近5年排名新高,充分彰显了学校在自然科学研究领域的强劲发展势头和持续提升的原始创新能力,进一步扩大了学校的影响力。 自然指数论文研究领导者榜单是基于一个科研机构在145种自然科学和健康科学期刊上的出版物产出, 南阳师范学院  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"河南教育宣传网:南阳师范学院最新自然指数排名位列省内第四名...\",\"url\":\"http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9E9OpMNOWDuCiVBZyoL6ve_\",\"snippet\":\"2025年8月28日8月9日,自然指数官网更新了最新排名(统计时间节点:2024.5.1-2025.4.30),南阳师范学院排名持续提高,跃居省内第4名,创近5年排名新高。据统计,河南省仅有8所高校跻身全国排名前250名,我校居第204名,排名仅次于郑州大学、河南大学、河南师范大学,充分彰显了学校近年来在自然科学基础研究领域取得的显著进步和日益提升的... 南阳师范学院  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"南阳师范学院人事处\",\"url\":\"http://www.baidu.com/link?url=4Iu_XSdo45B0gOOV1d4B9Ago_k_HuF_rE2WsVQOSCltPwVFc0zAZDrN0CVSsdh7prZ7YCPAp-3aREfVsbk6ura\",\"snippet\":\"2026年5月28日南阳师范学院2026年诚聘高层次人才启事 2026-03-14 博士报到提交材料要求 2025-06-11 2026年第四批拟引进高层次人员公示 2026-05-28 2026年第三批拟引进高层次人员公示 2026-05-15 2026年第二批拟引进高层次人员公示 2026-04-23 2026年第一批拟引进高层次人员公示 2026-04-13 ... 南阳师范学院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"通知公告-南阳师范学院研究生处(党委研究生工作部 学科建设办公室)\",\"url\":\"http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOrbaW2qXehLYg5vjbg-1CzeBWw5KrBbGOjOTj0AULYD9q\",\"snippet\":\"2026年4月30日2025年硕士研究生入学考试初试成绩查询通知 2025-02-23 关于申报2026年河南省高等教育教学成果等级评定工作(研究生教育类)的通知 2026-04-02 关于做好2025年河南省研究生教育改革与质量提升工程项目结项工作的通知 2025-11-25 南阳师范学院关于开展2025 年河南省优秀学位论文评选工作(研究生类)校内推荐评审结果... ... 南阳师范学院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"软科中国大学排名——南阳师范学院\",\"url\":\"http://www.baidu.com/link?url=TGi361mRlODF7vSdRc0rViZoubMWl7Ho11-dKXqJVL4zTlcmATYeAeRK7-bBFe22cOxi4RNEnqWZ82hJ5gdpWdq6Pz8-LdVTR0Hczw7o7fy6og16u4ImMzBxMX0BBP0ab-GkkcCDUoqxDlUz1of5tNBhxQTRpM7hmFpDqQj03VwvdOyZHrgSH4I94TyFcNWsHJa1VsT6U6bFzjWK1sV-UYBS8hyNE0vELoVegNEraFt1C_eHUgMfoS28HwrdORU5hdVuZg5XTES0_QSWHj6xx_\",\"snippet\":\"2025年4月15日2025年4月15日,高等教育专业评价机构软科正式发布“2025软科中国大学排名”。“软科中国大学... 微信公众平台  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"南师融媒-南阳师范学院\",\"url\":\"http://www.baidu.com/link?url=4Iu_XSdo45B0gOOV1d4B9FsSoy73OC8B19QS81ux5_mH9D-gQ7bFV9ysQeIrlf0Q4B7KiN5Ko0swodqkGlOzCa\",\"snippet\":\"092025-10 南阳师范学院2026年硕士研究生招生简章 282025-09 2025级迎新晚会,超燃现场! 242025-09 南师,你的兵来啦! 182025-09 不能忘!不敢忘!不会忘! 112025-09 看,南师最美教师! 102025-09 终于见面了,小25们! 052025-09 南阳师范学院师生热议纪念中国人民抗日战争暨世界反法西斯战争胜利80周年大会 ... 南阳师范学院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"关于开展2025年教学优秀奖评选活动的通知-南阳师范学院\",\"url\":\"http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9hmiapngVigdeoKQ4knmlDa\",\"snippet\":\"2026年1月7日为深化教育教学改革,推进教师教学发展,提高教学质量和教学水平,根据《南阳师范学院教学优秀奖评选与奖励办法》的通知》(宛院发〔2024〕63号)文件要求,经学校研究,决定开展南阳师范学院2025年教学优秀奖评选活动。现将有关事宜通知如下: 一、指导思想 为深入贯彻党的二十大、全国教育大会和新时代全国高等学校本科教育工作... 南阳师范学院  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"},{\"title\":\"人才招聘-南阳师范学院人事处\",\"url\":\"http://www.baidu.com/link?url=4TNXTjgNvA3WkTIP_IntOSccK3vMzf4eV9pIplCAwIh9D1EFkhe0woNU6wt6Xa6hmh_RppGrZQCH-uIE2lCW__\",\"snippet\":\"4天前2026-03 南阳师范学院2026年诚聘高层次人才启事 南阳师范学院为河南省属普通本科高校。学校占地面积2460亩,现有全日制在校生3万余人,教职工1900余人,其中具有高级专业技术职称... 11 2025-06 博士报到提交材料要求 https://www2.nynu.edu.cn/xzbm/renshichu/info/1039/2055.ht ... 南阳师范学院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\"}],\"formatted\":\"### 1. 河南教育宣传网:再创新高!南阳师范学院2025自然指数论文研究领导...\\nURL: http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9MVJ5U4w3gpav_K2pbWH39a\\n2025年6月17日6月11日,2025自然指数论文研究领导者榜单揭晓(统计时间节点:2024.1.1-2024.12.31),南阳师范学院位列河南省第5名,创近5年排名新高,充分彰显了学校在自然科学研究领域的强劲发展势头和持续提升的原始创新能力,进一步扩大了学校的影响力。 自然指数论文研究领导者榜单是基于一个科研机构在145种自然科学和健康科学期刊上的出版物产出, 南阳师范学院  播报  暂停\\n\\n---\\n\\n### 2. 河南教育宣传网:南阳师范学院最新自然指数排名位列省内第四名...\\nURL: http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9E9OpMNOWDuCiVBZyoL6ve_\\n2025年8月28日8月9日,自然指数官网更新了最新排名(统计时间节点:2024.5.1-2025.4.30),南阳师范学院排名持续提高,跃居省内第4名,创近5年排名新高。据统计,河南省仅有8所高校跻身全国排名前250名,我校居第204名,排名仅次于郑州大学、河南大学、河南师范大学,充分彰显了学校近年来在自然科学基础研究领域取得的显著进步和日益提升的... 南阳师范学院  播报  暂停\\n\\n---\\n\\n### 3. 南阳师范学院人事处\\nURL: http://www.baidu.com/link?url=4Iu_XSdo45B0gOOV1d4B9Ago_k_HuF_rE2WsVQOSCltPwVFc0zAZDrN0CVSsdh7prZ7YCPAp-3aREfVsbk6ura\\n2026年5月28日南阳师范学院2026年诚聘高层次人才启事 2026-03-14 博士报到提交材料要求 2025-06-11 2026年第四批拟引进高层次人员公示 2026-05-28 2026年第三批拟引进高层次人员公示 2026-05-15 2026年第二批拟引进高层次人员公示 2026-04-23 2026年第一批拟引进高层次人员公示 2026-04-13 ... 南阳师范学院\\n\\n---\\n\\n### 4. 通知公告-南阳师范学院研究生处(党委研究生工作部 学科建设办公室)\\nURL: http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOrbaW2qXehLYg5vjbg-1CzeBWw5KrBbGOjOTj0AULYD9q\\n2026年4月30日2025年硕士研究生入学考试初试成绩查询通知 2025-02-23 关于申报2026年河南省高等教育教学成果等级评定工作(研究生教育类)的通知 2026-04-02 关于做好2025年河南省研究生教育改革与质量提升工程项目结项工作的通知 2025-11-25 南阳师范学院关于开展2025 年河南省优秀学位论文评选工作(研究生类)校内推荐评审结果... ... 南阳师范学院\\n\\n---\\n\\n### 5. 软科中国大学排名——南阳师范学院\\nURL: http://www.baidu.com/link?url=TGi361mRlODF7vSdRc0rViZoubMWl7Ho11-dKXqJVL4zTlcmATYeAeRK7-bBFe22cOxi4RNEnqWZ82hJ5gdpWdq6Pz8-LdVTR0Hczw7o7fy6og16u4ImMzBxMX0BBP0ab-GkkcCDUoqxDlUz1of5tNBhxQTRpM7hmFpDqQj03VwvdOyZHrgSH4I94TyFcNWsHJa1VsT6U6bFzjWK1sV-UYBS8hyNE0vELoVegNEraFt1C_eHUgMfoS28HwrdORU5hdVuZg5XTES0_QSWHj6xx_\\n2025年4月15日2025年4月15日,高等教育专业评价机构软科正式发布“2025软科中国大学排名”。“软科中国大学... 微信公众平台  播报  暂停\\n\\n---\\n\\n### 6. 南师融媒-南阳师范学院\\nURL: http://www.baidu.com/link?url=4Iu_XSdo45B0gOOV1d4B9FsSoy73OC8B19QS81ux5_mH9D-gQ7bFV9ysQeIrlf0Q4B7KiN5Ko0swodqkGlOzCa\\n092025-10 南阳师范学院2026年硕士研究生招生简章 282025-09 2025级迎新晚会,超燃现场! 242025-09 南师,你的兵来啦! 182025-09 不能忘!不敢忘!不会忘! 112025-09 看,南师最美教师! 102025-09 终于见面了,小25们! 052025-09 南阳师范学院师生热议纪念中国人民抗日战争暨世界反法西斯战争胜利80周年大会 ... 南阳师范学院\\n\\n---\\n\\n### 7. 关于开展2025年教学优秀奖评选活动的通知-南阳师范学院\\nURL: http://www.baidu.com/link?url=uQIZZHFdeEb-I3iYZUD1SCsxG5jXU960cnG_1E71eOsg1Ldg2s0ijHukJRe9pCg9hmiapngVigdeoKQ4knmlDa\\n2026年1月7日为深化教育教学改革,推进教师教学发展,提高教学质量和教学水平,根据《南阳师范学院教学优秀奖评选与奖励办法》的通知》(宛院发〔2024〕63号)文件要求,经学校研究,决定开展南阳师范学院2025年教学优秀奖评选活动。现将有关事宜通知如下: 一、指导思想 为深入贯彻党的二十大、全国教育大会和新时代全国高等学校本科教育工作... 南阳师范学院  播报  暂停\\n\\n---\\n\\n### 8. 人才招聘-南阳师范学院人事处\\nURL: http://www.baidu.com/link?url=4TNXTjgNvA3WkTIP_IntOSccK3vMzf4eV9pIplCAwIh9D1EFkhe0woNU6wt6Xa6hmh_RppGrZQCH-uIE2lCW__\\n4天前2026-03 南阳师范学院2026年诚聘高层次人才启事 南阳师范学院为河南省属普通本科高校。学校占地面积2460亩,现有全日制在校生3万余人,教职工1900余人,其中具有高级专业技术职称... 11 2025-06 博士报到提交材料要求 https://www2.nynu.edu.cn/xzbm/renshichu/info/1039/2055.ht ... 南阳师范学院\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\",\"partialFailures\":[{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "## 南阳师范学院 · 总体评价\n\n**省属普通本科师范院校**，整体实力在全国处于中游偏下（非双一流），但在**河南省内同层次院校中属中等偏上**，近几年科研上升势头比较明显。\n\n### 关键数据\n\n| 项目 | 数据 |\n|------|------|\n| 性质 | 河南省属本科 |\n| 在校生 | 约 3 万余人 |\n| 教职工 | 约 1,900 人 |\n| 占地 | 2,460 亩 |\n| 软科排名 | 全国 300-400 名区间（省属师范类中等） |\n\n### 优势/亮点\n\n- **自然指数（Nature Index）表现亮眼**：2025年自然指数排名，南阳师范学院**河南省第4名**，全国前250名（第204位），仅次于郑大、河大、河师大。这对于一所普通师范院校来说是不错的成绩。\n- **科研投入在加强**：从近5年自然指数排名持续提升来看，学校在自然科学基础研究方面有持续投入。\n- **有硕士点**：已经开展硕士研究生招生，学科建设在逐步完善。\n\n### 不足/需要注意\n\n- **非双一流 / 非省重点**：不是211、双一流，也不是河南省重点支持的高水平大学。\n- **综合排名偏低**：软科综合排名全国 300+，与头部师范院校（北师大、华东师大、南师大等）差距明显。\n- **地理位置**：南阳在河南省内经济相对靠后，实习、就业资源不如郑州、洛阳。\n- **学校定位是师范**：如果目标是师范类就业（教师编制），性价比尚可；但如果追求计算机、金融等热门方向的就业竞争力，资源相对有限。\n\n### 适合什么人？\n\n| 情况 | 建议 |\n|------|------|\n| 河南本地考生、分数在一本线附近 | 可以考虑，性价比尚可 |\n| 想当老师（师范就业） | 省属师范类，考编有认可度 |\n| 追求名校/双一流/就业竞争力 | 不推荐，建议优先省重点 |\n| 考研/科研方向 | 个别学科（化学、生物等自然学科）有上升趋势，但整体平台有限 |\n\n**总结：河南省内一所正在上升期的普通师范院校，对分数中等、想留河南当老师的考生来说是个合理选择，但谈不上\"好大学\"——层次决定了上限。**",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 6,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781744914802,
+  "updatedAt": 1781744914802
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）</div>
+      <header class="hero reveal"><h1>按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#按需加载与零噪音重构日志-lazy-load-zero-noise-log">按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）</a></li><li class="lvl-2"><a href="#一-模块依赖按需导入-一">一、模块依赖按需导入（【一】）</a></li><li class="lvl-2"><a href="#二-插件与应用按需唤醒-二">二、插件与应用按需唤醒（【二】）</a></li><li class="lvl-2"><a href="#三-资源与数据按需挂载-三">三、资源与数据按需挂载（【三】）</a></li><li class="lvl-2"><a href="#四-零待机噪音污染-四-本轮实际修复">四、零待机噪音污染（【四】）—— 本轮实际修复</a></li><li class="lvl-2"><a href="#五-提交记录-本轮">五、提交记录（本轮）</a></li><li class="lvl-2"><a href="#六-未触碰-保守边界">六、未触碰（保守边界）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="按需加载与零噪音重构日志-lazy-load-zero-noise-log">按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）<a class="anchor" href="#按需加载与零噪音重构日志-lazy-load-zero-noise-log" aria-label="锚点">#</a></h1>
+<blockquote><p>哲学：<strong>不用不载，用完即释</strong>。启动不为「可能用到」占资源；待机不产生任何日志/进程噪音。<br>范围：khyos 底座（<code>platform/khy_platform</code>、<code>platform/khy_os</code>）+ khyquant 应用（<code>software/khyquant</code>）</p>
+<ul><li>共享后端服务（<code>services/backend</code>）。执行方式：无人值守、证据驱动、保守防呆。</li></ul></blockquote>
+<hr>
+<h2 id="一-模块依赖按需导入-一">一、模块依赖按需导入（【一】）<a class="anchor" href="#一-模块依赖按需导入-一" aria-label="锚点">#</a></h2>
+<p><strong>审计结论：启动热路径本就零重度导入。</strong></p>
+<ul><li><code>khy</code> / <code>khyquant</code> 的 Python 入口（<code>cli.py</code>、<code>_bootstrap.py</code>、<code>__init__.py</code>）<strong>只导入标准库</strong></li></ul>
+<p>（os/sys/subprocess/json/time/threading/pathlib/datetime），架构是「壳层 shell-out 到 Node」，<br>  Python 侧不在启动期触碰任何重三方库。</p>
+<ul><li>所有 <code>pandas/numpy/sklearn/xgboost/lightgbm/joblib</code> 顶层导入**全部锁在 <code>services/*.py</code>、<code>ml/*.py</code></li></ul>
+<p>的独立 <code>__main__</code> 脚本里<strong>——这些脚本由 Node 后端按需 <code>python xxx.py</code> 子进程拉起，其「启动」<br>  本身就是重活，顶层导入是必需且正确的（下沉进函数零启动收益、徒增噪音）。经核验</strong>无任何模块在<br>  启动期 import 它们**（<code>khy_quant/__init__.py</code> 为空，无跨模块 <code>import services/ml</code>）。</p>
+<ul><li>可选依赖（akshare/adata/efinance 等）只在对应脚本运行时加载，缺失即该脚本降级，不影响底座与主流程。</li></ul>
+<p>→ 按防呆规则 #2「不确定就保守」：未对独立脚本做无收益的 import 下沉。</p>
+<h2 id="二-插件与应用按需唤醒-二">二、插件与应用按需唤醒（【二】）<a class="anchor" href="#二-插件与应用按需唤醒-二" aria-label="锚点">#</a></h2>
+<p><strong>轻量注册 / 重量初始化，已落地为可用机制。</strong></p>
+<ul><li><strong>发现阶段零导入</strong>：<code>app_protocol.discover_apps()</code> 通过 <code>importlib.metadata</code> 只读 entry_point 的</li></ul>
+<p><code>name</code>/<code>value</code> 元数据与注册表 JSON，<strong>绝不 <code>ep.load()</code>、绝不 import 应用包</strong>。实测 discover 后<br>  <code>khy_quant.app</code> 不在 <code>sys.modules</code>。</p>
+<ul><li><strong>新增懒激活入口</strong> <code>app_protocol.load_app(name)</code>：仅在用户显式触发时才 <code>ep.load()</code> 加载应用工厂并</li></ul>
+<p>实例化（重量级初始化此刻才发生）；任何失败优雅返 <code>None</code>，底座永不因单应用激活失败而崩溃。</p>
+<ul><li><strong>触发命令</strong> <code>khy apps activate &lt;name&gt;</code>：暴露上述触发路径。<code>khy apps</code> 列表/发现仍是纯元数据。</li><li>测试：<code>tests/unit/test_eco_app_protocol.py</code> 12 passed（+3 懒激活：触发才 load、未知返 None、失败降级）。</li></ul>
+<h2 id="三-资源与数据按需挂载-三">三、资源与数据按需挂载（【三】）<a class="anchor" href="#三-资源与数据按需挂载-三" aria-label="锚点">#</a></h2>
+<ul><li><strong>数据库懒连接</strong>：<code>@khy/shared/config/database.js</code> 模块加载只 <code>new Sequelize(...)</code> 构造实例</li></ul>
+<p>（Sequelize 实例化不建连），<strong>无任何顶层 <code>authenticate/sync/connect</code> 副作用</strong>；真正连接只发生在<br>  Express 服务器启动的异步 <code>initDatabase()</code>（服务器的合法首用）。纯 CLI 路径不碰 DB。→ 已满足，不改运行中服务。</p>
+<ul><li><strong>模型/大文件</strong>：维持既有架构约定「绝不打包、绝不预下载」，仅推理脚本运行时按需加载。一次性</li></ul>
+<p>推理脚本退出即由 OS 回收内存，未画蛇添足加 gc（防呆 #2）。</p>
+<h2 id="四-零待机噪音污染-四-本轮实际修复">四、零待机噪音污染（【四】）—— 本轮实际修复<a class="anchor" href="#四-零待机噪音污染-四-本轮实际修复" aria-label="锚点">#</a></h2>
+<p>后端 85 处 <code>setInterval</code> 逐一甄别：后台常驻单例<strong>已普遍 <code>.unref()</code></strong>（与既往内存治理一致），<br>CLI/TUI 前台动画与请求/会话级定时器随前台进程退出、非待机靶点。真·outlier 两处已修：</p>
+<table><thead><tr><th>文件</th><th>问题</th><th>修复</th></tr></thead><tbody><tr><td><code>networkDetector.js</code></td><td>每 5 分钟无条件 <code>info</code> 日志（待机日均 ~288 行吐痰）+ 周期 interval 未 unref</td><td>仅 online↔offline <strong>状态跃迁</strong>才记日志，稳态待机静默；interval <code>.unref()</code></td></tr><tr><td><code>credentialWatcherService.js</code></td><td>30s 轮询 fallback 定时器未 unref</td><td>补 <code>.unref()</code>（等价 daemon=True，零进程残留）</td></tr></tbody></table>
+<p>复核确认<strong>已合规、未改动</strong>：<code>memoryDreaming</code>/<code>keyHealthProbe</code>/<code>modelCuration</code>/<code>antivirusService</code>/<br><code>securityGuardService</code>/<code>resourceGuard</code>（均已 unref，且仅在真实威胁/告警/失败时记日志，待机静默）；<br><code>diagnosticEvents</code>（5s flush 空缓冲即返回，静默 + 已 unref）；<code>_bootstrap</code> 安装进度 watchdog<br>（npm install 长任务触发、daemon=True、Event 即时退出、仅静默&gt;15s 才提示——合理保活，非待机噪音）。</p>
+<h2 id="五-提交记录-本轮">五、提交记录（本轮）<a class="anchor" href="#五-提交记录-本轮" aria-label="锚点">#</a></h2>
+<ol><li><code>perf: 实现零待机噪音-networkDetector仅状态跃迁记日志并unref周期探测</code></li><li><code>perf: 实现零待机噪音-credentialWatcher轮询定时器unref</code></li><li><code>perf: 实现按需唤醒-应用懒激活入口load_app与khy apps activate</code></li></ol>
+<h2 id="六-未触碰-保守边界">六、未触碰（保守边界）<a class="anchor" href="#六-未触碰-保守边界" aria-label="锚点">#</a></h2>
+<ul><li>56 处 NO_UNREF 启发式命中里的 CLI/TUI 前台与请求级定时器：非待机靶点，前台退出即随之结束，</li></ul>
+<p>盲加 unref 无益且可能误伤故意保活逻辑——按防呆 #1/#2 不动。</p>
+<ul><li>独立 <code>__main__</code> 脚本的顶层重度导入：是其正确形态，不做无收益下沉。</li><li>运行中 Express 服务器的 DB 启动连接：服务器合法首用，活体系统不夜间盲改。</li></ul>
+<blockquote><p>系统现态：启动像猎豹般蛰伏（壳层零重载、发现零导入、DB 零预连），待机绝对干净（无周期日志、<br>后台定时器全 unref），触发才重量级唤醒。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-027] 前后端对接与交互重构日志-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">前后端对接与交互重构日志（夜间无人值守）</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-029] 夜间代码质量与健壮性完善日志-2026-06-11.html"><div class="dir">下一篇 →</div><div class="ttl">夜间无人值守 · 代码质量与健壮性完善日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-028] 按需加载与零噪音重构日志-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

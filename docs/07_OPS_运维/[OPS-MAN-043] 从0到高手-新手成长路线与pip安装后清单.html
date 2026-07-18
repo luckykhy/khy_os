@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单</div>
+      <header class="hero reveal"><h1>[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-043-从-0-到高手-新手成长路线与-pip-安装后清单">[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单</a></li><li class="lvl-2"><a href="#0-一句话路线图">0. 一句话路线图</a></li><li class="lvl-2"><a href="#阶段-0-装完第一件事-先体检-别急着用">阶段 0 · 装完第一件事：先体检，别急着用</a></li><li class="lvl-2"><a href="#阶段-1-配一个-ai-让-khy-真正会说话">阶段 1 · 配一个 AI：让 khy 真正会说话</a></li><li class="lvl-2"><a href="#阶段-2-日常使用-对话-一次性问-写代码">阶段 2 · 日常使用：对话、一次性问、写代码</a></li><li class="lvl-2"><a href="#阶段-3-进阶能力-学习模式-工作流-智能体">阶段 3 · 进阶能力：学习模式、工作流、智能体</a></li><li class="lvl-2"><a href="#阶段-4-成为高手-内核-远程-还原-量化">阶段 4 · 成为高手：内核、远程、还原、量化</a></li><li class="lvl-2"><a href="#随时-出问题怎么自救-按顺序试">随时 · 出问题怎么自救（按顺序试）</a></li><li class="lvl-2"><a href="#一页速查-打印贴墙">一页速查（打印贴墙）</a></li><li class="lvl-2"><a href="#下一条阶梯-从-会用-到-会开发">下一条阶梯：从&quot;会用&quot;到&quot;会开发&quot;</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-043-从-0-到高手-新手成长路线与-pip-安装后清单">[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单<a class="anchor" href="#ops-man-043-从-0-到高手-新手成长路线与-pip-安装后清单" aria-label="锚点">#</a></h1>
+<blockquote><p>目的：把&quot;刚 <code>pip install</code> 完、完全 0 基础&quot;的你，沿一条<strong>线性阶梯</strong>带到&quot;khy 使用高手&quot;。<br>每一级只回答三件事：<strong>这一步要达到什么 → 抄哪条命令 → 你由此学会了什么、下一步去哪</strong>。<br>本文是<strong>导航阶梯</strong>，不重复各专题文档的细节——每级末尾给出&quot;深入读哪篇&quot;。<br>适用版本：khy-os ≥ 0.1.139（命令以仓库实测为准，非杜撰）。</p>
+<p>📖 <strong>美观阅读版</strong>：本文另有同目录同名的 <strong><code>.html</code></strong>（屏幕阅读：浮动目录 + 排版美化）与 <strong><code>.pdf</code></strong>（打印 / 分享）版本；<br>还有把本文与 [OPS-MAN-044] 合在一起的<strong>合订本</strong> <code>[OPS-MAN-043+044] 从使用入门到开发精通-合订本.{html,pdf}</code>。<br>重新生成：<code>npm run docs:pdf:onboarding</code>（详见 [OPS-MAN-044] D6）。</p></blockquote>
+<hr>
+<h2 id="0-一句话路线图">0. 一句话路线图<a class="anchor" href="#0-一句话路线图" aria-label="锚点">#</a></h2>
+<pre><code>阶段 0  装完先体检 ──►  阶段 1  配一个 AI ──►  阶段 2  日常对话/编程
+   preflight/where          gateway config        khy · khy ai · khy claude
+        │                        │                        │
+        ▼                        ▼                        ▼
+阶段 3  进阶能力 ──►  阶段 4  成为高手 ──►  （随时）出问题怎么自救
+  learn/workflow/agent     os/mobile/restore/量化     doctor · preflight</code></pre>
+<p><strong>最短可用路径（3 条命令就能开聊）：</strong></p>
+<pre><code class="language-bash">khy preflight          # 体检：Node/依赖/PATH 是否就绪
+khy gateway config     # 配一个 AI 服务商（填你自己的 key）
+khy                    # 进入 agentic 终端，开始对话</code></pre>
+<hr>
+<h2 id="阶段-0-装完第一件事-先体检-别急着用">阶段 0 · 装完第一件事：先体检，别急着用<a class="anchor" href="#阶段-0-装完第一件事-先体检-别急着用" aria-label="锚点">#</a></h2>
+<p>刚 <code>pip install khy-os</code>（或 <code>npm install -g @khy-os/khy-os</code>）之后，<strong>第一条命令永远是体检</strong>，<br>而不是直接开聊。原因：khy 后端是 Node 写的（需 Node ≥ 20），首次运行还会自动初始化运行目录，<br>先体检能把&quot;找不到命令&quot;&quot;缺依赖&quot;&quot;PATH 没配好&quot;这类问题一次性照出来。</p>
+<table><thead><tr><th>你要达到</th><th>抄这条命令</th><th>它做什么</th></tr></thead><tbody><tr><td>确认环境就绪</td><td><code>khy preflight</code></td><td>集中体检四层启动依赖（Node、Python、依赖包、PATH），<strong>给出可直接粘贴的修复指令</strong>。别名：<code>khy precheck</code>。</td></tr><tr><td>知道装到哪了</td><td><code>khy where</code></td><td>打印可执行文件位置、运行目录、依赖是否安装。别名：<code>khy which</code> / <code>khy whereami</code>。</td></tr><tr><td>能修就顺手修</td><td><code>khy doctor</code></td><td>体检环境，并对跨语言运行时做<strong>按需自愈</strong>（依赖、工具链等）。默认不改你的配置；加 <code>--fix-claude-conflict</code> 才会修复 Claude 配置冲突。别名：<code>khy check</code>、<code>khy 诊断</code>。</td></tr></tbody></table>
+<blockquote><p><strong>preflight 与 doctor 的区别</strong>：<code>preflight</code> 只体检 + 给你&quot;自己粘贴执行&quot;的命令；<code>doctor</code> 会替你动手修。<br>拿不准时先 <code>preflight</code>，看明白了再 <code>doctor</code>。</p></blockquote>
+<p><strong>首次运行会发生什么</strong>：第一次跑 <code>khy</code> 时会自动创建运行目录与默认配置（auto-init），属正常行为，无需手动 init。</p>
+<p>✅ <strong>这一级你学会了</strong>：khy 的&quot;自检三件套&quot; <code>preflight / where / doctor</code>——以后任何&quot;用不起来&quot;先跑它们。<br>➡️ <strong>深入读</strong>：[OPS-MAN-022] pip-安装布局参考（装到哪、目录长什么样）、[OPS-MAN-028] 环境要求。</p>
+<hr>
+<h2 id="阶段-1-配一个-ai-让-khy-真正会说话">阶段 1 · 配一个 AI：让 khy 真正会说话<a class="anchor" href="#阶段-1-配一个-ai-让-khy-真正会说话" aria-label="锚点">#</a></h2>
+<p>khy 自带一个<strong>多服务商 AI 网关</strong>——你<strong>自带 key</strong>，数据留在本地。装完默认还没有任何 key，<br>所以这一步是&quot;从能跑到能聊&quot;的关键一跳。</p>
+<table><thead><tr><th>你要达到</th><th>抄这条命令</th><th>它做什么</th></tr></thead><tbody><tr><td>配置一个服务商</td><td><code>khy gateway config</code></td><td>交互式填写一个 AI 服务商（如 Claude / Qwen / Ollama 等）的 key 与地址。</td></tr><tr><td>看谁在线</td><td><code>khy gateway status</code></td><td>列出已配置的各后端是否可用、当前优先级。</td></tr><tr><td>自动探测本地模型</td><td><code>khy gateway detect</code></td><td>探测本机可用的本地后端（如 Ollama）。</td></tr></tbody></table>
+<blockquote><p>配好至少一个服务商后，网关会在某个通道挂掉时<strong>自动级联切换</strong>到下一个可用通道——这是 khy 的稳定性底座，<br>你平时无感。</p></blockquote>
+<p>✅ <strong>这一级你学会了</strong>：khy 的 AI 不是写死一家，而是<strong>一个网关管多家、自带 key、自动容错</strong>。<br>➡️ <strong>深入读</strong>：[OPS-MAN-024] pip安装后-按需配置体验、[OPS-MAN-002] ai-管理-新api对齐、[OPS-MAN-032] 网关-自定义provider配置-agnes。</p>
+<hr>
+<h2 id="阶段-2-日常使用-对话-一次性问-写代码">阶段 2 · 日常使用：对话、一次性问、写代码<a class="anchor" href="#阶段-2-日常使用-对话-一次性问-写代码" aria-label="锚点">#</a></h2>
+<p>配好 AI，就能进入 khy 的&quot;日常三形态&quot;。三者用同一个网关，区别只是<strong>交互方式</strong>。</p>
+<table><thead><tr><th>场景</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>沉浸式对话 / 干活</td><td><code>khy</code></td><td>进入 agentic 终端（Ink TUI）：流式输出、可折叠的工具过程、真实上下文占用条。<strong>这是主力入口</strong>。</td></tr><tr><td>问一句就走</td><td><code>khy ai &quot;总结一下这个仓库&quot;</code></td><td>一次性提问，不进 REPL，适合脚本里调用。</td></tr><tr><td>Claude Code 风格编程</td><td><code>khy claude</code></td><td>以 Claude-Code 的工具循环跑编程任务（工具调用、权限门控、子代理）。</td></tr><tr><td>选/切模型</td><td><code>khy model</code></td><td>查看与切换当前使用的模型。</td></tr></tbody></table>
+<blockquote><p>在 <code>khy</code> 终端里，输入 <code>/</code> 可以看到斜杠命令（如切模型、看上下文等）。不必背，用到再看。</p></blockquote>
+<p>✅ <strong>这一级你学会了</strong>：<code>khy</code>（泡在里面）/ <code>khy ai</code>（问完即走）/ <code>khy claude</code>（编程专精）三种姿势按需切换。<br>➡️ <strong>深入读</strong>：[OPS-MAN-027] 快速开始（最全的逐步上手）、[OPS-MAN-001] ai-快速通道、[OPS-MAN-004] claude-code-代理配置。</p>
+<hr>
+<h2 id="阶段-3-进阶能力-学习模式-工作流-智能体">阶段 3 · 进阶能力：学习模式、工作流、智能体<a class="anchor" href="#阶段-3-进阶能力-学习模式-工作流-智能体" aria-label="锚点">#</a></h2>
+<p>会聊天之后，khy 的&quot;广度&quot;才开始展开。这一级把你从&quot;会用 AI&quot;带到&quot;会指挥 khy 干成体系的活&quot;。</p>
+<table><thead><tr><th>能力</th><th>抄这条命令</th><th>它给你什么</th></tr></thead><tbody><tr><td>内置学习模式</td><td><code>khy learn</code></td><td>交互式学习路线；<code>khy learn roadmap</code> 看路线、<code>khy learn progress</code> 看进度、<code>khy learn next</code> 进入下一节。</td></tr><tr><td>可视化/可执行工作流</td><td><code>khy workflow list</code> / <code>khy wf run &lt;名&gt;</code></td><td>把多步编排成工作流并用原生引擎执行；支持导入。</td></tr><tr><td>子代理 / 智能体</td><td>（在 <code>khy</code> 终端里派发）</td><td>boss 把任务派发给 worker 子代理并行干活。</td></tr></tbody></table>
+<blockquote><p><strong>学习模式</strong>是 0 基础最该用的一档：它把&quot;该学什么、学到哪了&quot;结构化，而不是漫无目的地问。</p></blockquote>
+<p>✅ <strong>这一级你学会了</strong>：khy 不止是聊天框——它能<strong>学（learn）、能编排（workflow）、能分身（agent）</strong>。<br>➡️ <strong>深入读</strong>：[OPS-MAN-011] khy-os-学习指南、[OPS-MAN-017] khy-智能体-五步实施、[OPS-MAN-041] 通过KHY学习模式-从0到1面试大厂Agent岗-路线图。</p>
+<hr>
+<h2 id="阶段-4-成为高手-内核-远程-还原-量化">阶段 4 · 成为高手：内核、远程、还原、量化<a class="anchor" href="#阶段-4-成为高手-内核-远程-还原-量化" aria-label="锚点">#</a></h2>
+<p>到这一级，你开始碰 khy &quot;深度&quot;的部分——它底下是一台<strong>真的手写操作系统</strong>，外面还有远程、源码还原、量化等专业能力。</p>
+<table><thead><tr><th>高手能力</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>跑真内核</td><td><code>khy os</code></td><td>在 QEMU 里启动 khy 手写内核。需主机装有 <code>qemu-system-x86_64</code>（缺了会给出真实的安装指引，<strong>不会</strong>虚假承诺&quot;自动下载&quot;）。</td></tr><tr><td>构建内核 ISO</td><td><code>khy os build</code></td><td>从内核源码构建可启动 ISO。别名：<code>khy os rebuild</code>。</td></tr><tr><td>内核环境体检</td><td><code>khy os doctor</code></td><td>体检内核运行/构建所需的工具链与 QEMU。</td></tr><tr><td>移动端 / 远程</td><td><code>khy mobile</code></td><td>把 khy 接到移动端 / 远程使用。</td></tr><tr><td>源码一字不差还原</td><td><code>khy restore</code></td><td>把 pip/npm 装进来的加密源码快照解密、校验 sha256 后还原成可读源码树（默认无需密码）。</td></tr><tr><td>量化（内置应用）</td><td>见 khyquant 文档</td><td>khy 自带的默认应用：行情、回测、自选股等。</td></tr></tbody></table>
+<blockquote><p><strong>源码还原</strong>是 khy 的一个硬承诺：你 <code>pip install</code> 得到的不是黑箱——<code>khy restore</code> 能把<strong>与发布时工作树字节一致</strong>的源码还原出来供你研读。</p></blockquote>
+<p>✅ <strong>这一级你学会了</strong>：khy 是&quot;从内核到智能体&quot;的一整套，你可以一路深到操作系统、远程与专业应用。<br>➡️ <strong>深入读</strong>：[OPS-MAN-037] pip安装后-完整还原与全功能开启指南、[OPS-MAN-030] 移动端远程指南、[OPS-MAN-019] khy-远程ssh-实施清单、[OPS-MAN-036] khyos跨平台构建-Windows支持方案。</p>
+<hr>
+<h2 id="随时-出问题怎么自救-按顺序试">随时 · 出问题怎么自救（按顺序试）<a class="anchor" href="#随时-出问题怎么自救-按顺序试" aria-label="锚点">#</a></h2>
+<p>任何阶段卡住，<strong>不要先怀疑&quot;网络不好&quot;</strong>——khy 的设计是把真实原因告诉你。按这个顺序自救：</p>
+<pre><code class="language-bash">khy preflight      # 1) 启动依赖体检（Node/依赖/PATH），给可粘贴的修复命令
+khy where          # 2) 确认装在哪、依赖是否就绪
+khy doctor         # 3) 让它尝试自动修复
+khy os doctor      # 4) 只在跑内核出问题时：体检 QEMU/工具链</code></pre>
+<table><thead><tr><th>症状</th><th>多半是</th><th>去哪</th></tr></thead><tbody><tr><td><code>khy</code> 命令找不到</td><td>PATH 没配好</td><td>先 <code>khy where</code>（若连它都找不到，看 [OPS-MAN-027] 第 A/B 部分的 PATH 段）</td></tr><tr><td>启动报缺 Node / 版本低</td><td>Node &lt; 20</td><td>装 Node ≥ 20（[OPS-MAN-028] 环境要求）</td></tr><tr><td>AI 不回话 / 报错</td><td>没配 key 或通道挂了</td><td><code>khy gateway status</code> 看在线情况，重配 <code>khy gateway config</code></td></tr><tr><td>跑内核报缺 QEMU</td><td>主机没装 QEMU</td><td>按提示装 <code>qemu-system-x86_64</code> 并加 PATH（提示里会给真实步骤）</td></tr></tbody></table>
+<hr>
+<h2 id="一页速查-打印贴墙">一页速查（打印贴墙）<a class="anchor" href="#一页速查-打印贴墙" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>我想……</th><th>命令</th></tr></thead><tbody><tr><td>装完先体检</td><td><code>khy preflight</code></td></tr><tr><td>看装哪了</td><td><code>khy where</code></td></tr><tr><td>自动修复</td><td><code>khy doctor</code></td></tr><tr><td>配 AI</td><td><code>khy gateway config</code></td></tr><tr><td>看 AI 在线</td><td><code>khy gateway status</code></td></tr><tr><td>开聊 / 干活</td><td><code>khy</code></td></tr><tr><td>问一句就走</td><td><code>khy ai &quot;……&quot;</code></td></tr><tr><td>写代码</td><td><code>khy claude</code></td></tr><tr><td>学习模式</td><td><code>khy learn</code></td></tr><tr><td>工作流</td><td><code>khy workflow list</code></td></tr><tr><td>跑内核</td><td><code>khy os</code></td></tr><tr><td>构建内核</td><td><code>khy os build</code></td></tr><tr><td>还原源码</td><td><code>khy restore</code></td></tr></tbody></table>
+<hr>
+<h2 id="下一条阶梯-从-会用-到-会开发">下一条阶梯：从&quot;会用&quot;到&quot;会开发&quot;<a class="anchor" href="#下一条阶梯-从-会用-到-会开发" aria-label="锚点">#</a></h2>
+<p>走完本文，你已是 khy 的<strong>使用高手</strong>。如果你想更进一步——<strong>改 khy 本身、给它加能力（接新模型/写工具）、<br>甚至改内核、参与维护与发布</strong>——请接续 <strong>[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</strong>：<br>拿到可读源码 → 搭 editable 环境 → 走通主链路 → 第一次改 CLI 命令 → 扩展网关/前端 → 深入内核 → 可维护性与发布纪律。</p>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>上手最全的逐步文档：[OPS-MAN-027] 快速开始。</li><li>装完功能全景：[OPS-MAN-023] pip安装后-完整功能清单。</li><li>完整还原与全功能开启：[OPS-MAN-037]。</li><li><strong>开发者成长路线（本文的开发续篇）</strong>：[OPS-MAN-044] 从使用入门到开发精通。</li><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-044] 从使用入门到开发精通-开发者成长路线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-043] 从0到高手-新手成长路线与pip安装后清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

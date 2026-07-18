@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📊 概念入门文档站 — 完成度报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>📊 概念入门文档站 — 完成度报告</div>
+      <header class="hero reveal"><h1>📊 概念入门文档站 — 完成度报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#概念入门文档站-完成度报告">📊 概念入门文档站 — 完成度报告</a></li><li class="lvl-2"><a href="#一-这一轮做了什么-本批新增">一、这一轮做了什么（本批新增）</a></li><li class="lvl-2"><a href="#二-互动件覆盖统计-当前全景">二、互动件覆盖统计（当前全景）</a></li><li class="lvl-2"><a href="#三-全站健康度-验证门实测输出">三、全站健康度（验证门实测输出）</a></li><li class="lvl-2"><a href="#四-还剩什么没做-诚实的待办清单">四、还剩什么没做（诚实的待办清单）</a></li><li class="lvl-2"><a href="#五-一句话总结">五、一句话总结</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="概念入门文档站-完成度报告">📊 概念入门文档站 — 完成度报告<a class="anchor" href="#概念入门文档站-完成度报告" aria-label="锚点">#</a></h1>
+<blockquote><p>本报告记录「面向小白文档站」这一轮增强的落地情况：新增了什么、当前覆盖到什么程度、还剩什么没做。<br>生成方式：全部数字来自 <code>npm run docs:build</code> / <code>docs:lint</code> / <code>docs:verify</code> 的真实输出，非估算。<br>想直接开始学？回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a>。</p></blockquote>
+<hr>
+<h2 id="一-这一轮做了什么-本批新增">一、这一轮做了什么（本批新增）<a class="anchor" href="#一-这一轮做了什么-本批新增" aria-label="锚点">#</a></h2>
+<p>这一轮是「继续优化」——在已达教科书级的概念站上做<strong>纯追加</strong>，不重写任何既有文档。共四件事：</p>
+<ol><li><strong>新增互动件类型：时间轴（timeline）</strong></li></ol>
+<p>作者只需写一个 <code> </code>`<code>timeline </code> 围栏，每行 <code>标签 | 描述</code>，即可渲染成一条竖向、逐条滚动进入的时间线。纯 CSS 实现、复用既有的滚动进入动画（<code>initReveal</code>），零新增 JS。已配套写进 linter（防呆校验）与单元测试。</p>
+<ol><li><strong>补齐 flip 翻卡平权：5 篇 CONCEPT 各 +1</strong></li></ol>
+<p>CONCEPT-21/23/24/26/28 原本没有 flip 翻卡，这一轮各补一张，放在每篇「X vs Y 对比」那一节，让&quot;先猜后翻&quot;的互动在进阶篇里也齐整。（00_INDEX 是纯导航页，合理保持无 flip。）</p>
+<ol><li><strong>新增 3 篇概念文档（㉙㉚㉛）——&quot;动手接入 + 避坑&quot;实战篇</strong></li></ol>
+<table><thead><tr><th>编号</th><th>文档</th><th>讲什么</th></tr></thead><tbody><tr><td>㉙</td><td><a href="./[CONCEPT-29]%20什么是API与SDK.html">什么是 API 与 SDK</a></td><td>一动手就绕不开的两个词，附「首用 timeline」演示接入方式的演进</td></tr><tr><td>㉚</td><td><a href="./[CONCEPT-30]%20函数调用与MCP辨析.html">函数调用与 MCP 辨析</a></td><td>掰清&quot;函数调用/工具调用/MCP&quot;这组最容易混的词</td></tr><tr><td>㉛</td><td><a href="./[CONCEPT-31]%20什么是幻觉-Hallucination.html">什么是幻觉（Hallucination）</a></td><td>AI 为什么&quot;一本正经胡说&quot;、又该怎么防</td></tr></tbody></table>
+<p>三篇均沿用九节骨架，并已在 00_INDEX 表格与结语注册、彼此交叉链接。</p>
+<hr>
+<h2 id="二-互动件覆盖统计-当前全景">二、互动件覆盖统计（当前全景）<a class="anchor" href="#二-互动件覆盖统计-当前全景" aria-label="锚点">#</a></h2>
+<p>概念站现有 <strong>31 篇 CONCEPT + 1 篇 INDEX = 32 篇</strong>（本报告不计入教学篇计数）。核心互动件覆盖如下：</p>
+<table><thead><tr><th>互动件</th><th>作用</th><th>覆盖情况</th></tr></thead><tbody><tr><td><strong>callout（吉祥物插话）</strong></td><td>tip/note/warn/star/ask 五种语气的旁白</td><td>31 篇 CONCEPT <strong>全覆盖</strong>（每篇 ≥1）</td></tr><tr><td><strong>quiz（练习互动窗）</strong></td><td>选择题 + 逐项解释，做错也长知识</td><td>31 篇 CONCEPT <strong>全覆盖</strong>（每篇 =1）</td></tr><tr><td><strong>flip（翻卡）</strong></td><td>先猜后翻的 3D 卡片</td><td>31 篇 CONCEPT <strong>全覆盖</strong>（本轮补齐 5 篇后无缺口）</td></tr><tr><td><strong>mermaid（图表）</strong></td><td>流程图/关系图，把抽象讲成画面</td><td>31 篇 CONCEPT <strong>全覆盖</strong>（每篇多张）</td></tr><tr><td><strong>popover（行内弹窗）</strong></td><td>行内 <code>+[文字](提示)</code> 悬浮补充</td><td>31 篇 CONCEPT <strong>全覆盖</strong></td></tr><tr><td><strong>timeline（时间轴）</strong></td><td>演进/阶段流程的竖向时间线</td><td>本轮新增件，首个消费者 CONCEPT-29；按需铺开</td></tr></tbody></table>
+<blockquote><p>新增 3 篇的实测件数（<code>grep</code> 核对）：</p>
+<ul><li>CONCEPT-29：callout×5 · quiz×1 · flip×2 · <strong>timeline×1</strong> · mermaid×1 · popover×2</li><li>CONCEPT-30：callout×5 · quiz×1 · flip×1 · mermaid×2 · popover×3</li><li>CONCEPT-31：callout×4 · quiz×1 · flip×1 · mermaid×3 · popover×1</li></ul>
+<p>三篇均满足硬性门槛 <code>flip≥1 · quiz=1 · callout≥1 · mermaid≥1 · popover≥1</code>。</p></blockquote>
+<hr>
+<h2 id="三-全站健康度-验证门实测输出">三、全站健康度（验证门实测输出）<a class="anchor" href="#三-全站健康度-验证门实测输出" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>验证门</th><th>命令</th><th>结果</th></tr></thead><tbody><tr><td>互动件防呆</td><td><code>npm run docs:lint</code></td><td>✅ 扫描 427 md · error 0 · warning 0</td></tr><tr><td>md↔html 配对 + 链接可达</td><td><code>docs:verify</code>（verify_docs_site）</td><td>✅ 658 md → 659 html · 8331 链接全部可达</td></tr><tr><td>面向小白体检</td><td><code>docs:verify</code>（check_beginner_docs）</td><td>✅ 无孤儿页 · 编号连续 · 故事均有凡人笔记 · 正文均有底部导航</td></tr><tr><td>widget 单元测试</td><td><code>node --test build_docs_site.test.js</code></td><td>✅ 13/13 pass</td></tr></tbody></table>
+<blockquote><p>对比上一轮基线（655 md / 656 html / 8273 链接）：本轮 md 计数上抬至 658（+3 新概念篇），链接总数增至 8331，<strong>零死链、零孤儿页</strong>——是健康增长，不是回归。</p></blockquote>
+<hr>
+<h2 id="四-还剩什么没做-诚实的待办清单">四、还剩什么没做（诚实的待办清单）<a class="anchor" href="#四-还剩什么没做-诚实的待办清单" aria-label="锚点">#</a></h2>
+<p>按「不做静默截断」的原则，明确列出本轮<strong>刻意留到下一批</strong>的部分：</p>
+<ol><li><strong>概念篇待补（下一批）</strong><ul><li><strong>Token 计费与成本</strong>：把&quot;一次调用要花多少钱、怎么估算、怎么省&quot;讲透（现散见于 CONCEPT-08）。</li><li><strong>Eval / 评测</strong>：怎么衡量一个 AI 应用&quot;到底好不好、有没有变差&quot;。</li></ul></li></ol>
+<ol><li><strong>修仙故事番外（㉙㉚㉛ 的孪生）——刻意不加，理由如下</strong></li></ol>
+<p><code>09_STORY_修仙学AI/</code> 是一部<strong>已完结、结构自洽</strong>的修仙长篇（孔浩原从药童到渡劫飞升，境界阶梯层层对应概念）。为 ㉙㉚㉛ 硬插三章中段番外，会<strong>打断这条已封笔的修炼主线</strong>（B3 外科原则：不顺手改动不该动的完整作品）。<br>   值得一提的是：幻觉（㉛）这个概念，在故事里<strong>其实已由&quot;幻魔道&quot;反派线承载</strong>（&quot;求真 vs 造假&quot;的对抗）——再单开一章反而重复。<br>   因此这三篇的故事化，作为<strong>独立议题留待后续</strong>：要么等故事作者决定如何在不破坏主线的前提下扩写，要么以别的轻量形式（如概念篇内的小故事段）承载。</p>
+<ol><li><strong>timeline 的更多消费点</strong></li></ol>
+<p>本轮 timeline 仅在 CONCEPT-29 首用（形成闭环验证）。其它适合&quot;演进/阶段&quot;叙事的篇目（如 RLHF 的训练三步、Transformer 的发展史）可在后续按需补挂——非必需，属锦上添花。</p>
+<hr>
+<h2 id="五-一句话总结">五、一句话总结<a class="anchor" href="#五-一句话总结" aria-label="锚点">#</a></h2>
+<p>这一轮把「面向小白文档站」又往前推了一步：<strong>多了一种时间轴互动件、补齐了 5 篇翻卡、新增 3 篇&quot;动手接入+避坑&quot;实战概念篇</strong>，全站 32 篇概念文档的五类核心互动件已<strong>全覆盖</strong>，验证门全绿、零死链、零孤儿页。剩余的 Token 计费篇、Eval 篇与故事番外，已如实列入下一批，未做任何静默截断。</p>
+<p>👉 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> · 或直接读 <a href="./[CONCEPT-29]%20什么是API与SDK.html">㉙ 什么是 API 与 SDK</a> 开始新一批内容。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-32] 什么是MVP-最小可行产品.html"><div class="dir">← 上一篇</div><div class="ttl">㉜ 什么是 MVP（最小可行产品）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html"><div class="dir">下一篇 →</div><div class="ttl">概念入门总览：从零看懂 AI 编程助手</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/00_完成度报告.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

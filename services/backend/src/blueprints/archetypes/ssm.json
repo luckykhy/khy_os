@@ -1,0 +1,159 @@
+{
+  "id": "ssm",
+  "kind": "archetype",
+  "label": "SSM (Spring + SpringMVC + MyBatis)",
+  "templateName": "spring-boot-mybatis",
+  "triggers": ["SSM", "ssm", "三层架构", "spring mybatis", "spring boot mybatis"],
+  "summary": "Java 经典三层 Web 后端：Controller→Service→Mapper，MyBatis 接 MySQL，Maven 构建，Docker 一键起。",
+  "stack": {
+    "language": "Java 17",
+    "framework": "Spring Boot 3.x",
+    "persistence": "MyBatis + MySQL 8",
+    "build": "Maven",
+    "container": "Docker / docker-compose"
+  },
+  "conventions": [
+    "严格三层：controller 只接 HTTP、service 只写业务、mapper 只做数据访问，禁止跨层直连。",
+    "实体在 entity 包；接口在 service/mapper，实现放 service/impl。",
+    "MyBatis SQL 写在 resources/mapper/*.xml，namespace 对齐 mapper 接口全限定名。",
+    "REST 路径用 /api/<资源复数>，遵循 GET/POST/PUT/DELETE 语义。"
+  ],
+  "build": {
+    "install": "mvn -q dependency:resolve",
+    "run": "mvn spring-boot:run",
+    "compose": "docker compose up --build",
+    "port": 8080
+  },
+  "verify": [
+    "mvn -q -DskipTests package  # 能编译打包",
+    "docker compose up --build   # db+app 一起起",
+    "curl -s localhost:8080/api/users  # 返回 JSON 数组"
+  ],
+  "milestones": [
+    {
+      "id": "m1-skeleton",
+      "title": "项目骨架与依赖",
+      "goal": "搭起 Maven 工程、Spring Boot 入口、数据库 schema 与容器化，确保能编译能起。",
+      "conventions": [
+        "groupId 决定 Java 包名(groupPath)，所有源码包必须以它为根。",
+        "application.yml 的 datasource 指向 docker-compose 里的 db 服务，端口 8080。"
+      ],
+      "steps": [
+        "写 pom.xml：parent=spring-boot-starter-parent，依赖 web + mybatis-spring-boot-starter + mysql-connector-j + test。",
+        "写 application.yml：server.port=8080，datasource 连 MySQL，mybatis.mapper-locations=classpath:mapper/*.xml。",
+        "写 Application.java：@SpringBootApplication 入口。",
+        "写 sql/schema.sql：建库 + user 表(id/username/email/时间戳)。",
+        "写 Dockerfile(多阶段构建) + docker-compose.yml(db+app) + .dockerignore。"
+      ],
+      "files": [
+        "pom.xml",
+        "src/main/resources/application.yml",
+        "src/main/java/{groupPath}/Application.java",
+        "sql/schema.sql",
+        "Dockerfile",
+        "docker-compose.yml",
+        ".dockerignore"
+      ],
+      "acceptance": [
+        "mvn -q dependency:resolve 成功",
+        "mvn -q -DskipTests package 能打出 jar",
+        "docker compose 配置语法合法"
+      ]
+    },
+    {
+      "id": "m2-data",
+      "title": "数据层（实体 + Mapper）",
+      "goal": "定义 User 实体与 MyBatis 数据访问，打通到 MySQL 的 CRUD。",
+      "conventions": [
+        "UserMapper.xml 的 namespace 必须等于 {groupId}.mapper.UserMapper。",
+        "@MapperScan 指向 mapper 包，否则接口不被扫描。"
+      ],
+      "steps": [
+        "写 entity/User.java：id/username/email 三字段 + getter/setter。",
+        "写 mapper/UserMapper.java：findAll/findById/insert/update/deleteById 接口，加 @Mapper。",
+        "写 resources/mapper/UserMapper.xml：对应 5 条 SQL + resultMap。",
+        "写 config/MyBatisConfig.java：@MapperScan 注册 mapper 包。"
+      ],
+      "files": [
+        "src/main/java/{groupPath}/entity/User.java",
+        "src/main/java/{groupPath}/mapper/UserMapper.java",
+        "src/main/resources/mapper/UserMapper.xml",
+        "src/main/java/{groupPath}/config/MyBatisConfig.java"
+      ],
+      "acceptance": [
+        "mapper 接口方法与 XML 的 id 一一对应",
+        "namespace 与接口全限定名一致",
+        "启动时无 'Invalid bound statement' 报错"
+      ]
+    },
+    {
+      "id": "m3-service",
+      "title": "服务层（业务逻辑）",
+      "goal": "在 mapper 之上封装业务接口与实现，隔离 controller 与数据访问。",
+      "conventions": [
+        "service 是接口，实现放 service/impl，用构造器注入 mapper。",
+        "业务规则(校验/组合)只在这层，不下沉到 mapper、不上浮到 controller。"
+      ],
+      "steps": [
+        "写 service/UserService.java：findAll/findById/create/update/deleteById 接口。",
+        "写 service/impl/UserServiceImpl.java：@Service，构造器注入 UserMapper，逐方法委派。"
+      ],
+      "files": [
+        "src/main/java/{groupPath}/service/UserService.java",
+        "src/main/java/{groupPath}/service/impl/UserServiceImpl.java"
+      ],
+      "acceptance": [
+        "UserServiceImpl 实现 UserService 全部方法",
+        "deleteById 按受影响行数返回布尔",
+        "Spring 能装配出 UserService Bean"
+      ]
+    },
+    {
+      "id": "m4-web",
+      "title": "控制层（REST 端点）",
+      "goal": "暴露 RESTful CRUD 端点，把 HTTP 请求映射到 service。",
+      "conventions": [
+        "@RestController + @RequestMapping(\"/api/users\")，路径资源用复数。",
+        "controller 只做参数绑定与状态码，不写业务。"
+      ],
+      "steps": [
+        "写 controller/UserController.java：GET 列表/按 id、POST 创建、PUT 更新、DELETE 删除，404 用 ResponseEntity.notFound。"
+      ],
+      "files": [
+        "src/main/java/{groupPath}/controller/UserController.java"
+      ],
+      "acceptance": [
+        "5 个端点齐全且 HTTP 动词正确",
+        "找不到资源返回 404",
+        "curl /api/users 返回 JSON"
+      ]
+    },
+    {
+      "id": "m5-test",
+      "title": "测试与运行",
+      "goal": "补单元测试、API 测试与运行脚本/文档，形成可交付闭环。",
+      "conventions": [
+        "单元测试用 Mockito mock mapper，不连真库；API 测试用 MockMvc。",
+        "README 必须给出 docker compose 一键起与端点表。"
+      ],
+      "steps": [
+        "写 src/test/.../ApplicationTests.java：contextLoads 冒烟。",
+        "写 unit_tests/UserServiceTest.java：Mockito 覆盖 service 五法。",
+        "写 API_tests/UserApiTest.java：MockMvc 验证 create/list/404。",
+        "写 run_tests.sh 跑单元+API；写 README.md 给快速开始与端点表。"
+      ],
+      "files": [
+        "src/test/java/{groupPath}/ApplicationTests.java",
+        "unit_tests/UserServiceTest.java",
+        "API_tests/UserApiTest.java",
+        "run_tests.sh",
+        "README.md"
+      ],
+      "acceptance": [
+        "mvn test 全绿",
+        "run_tests.sh 可执行且退码 0",
+        "README 覆盖运行与 API 两节"
+      ]
+    }
+  ]
+}

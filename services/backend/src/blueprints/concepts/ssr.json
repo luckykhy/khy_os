@@ -1,0 +1,19 @@
+{
+  "id": "ssr",
+  "kind": "concept",
+  "name": "SSR",
+  "category": "frontend",
+  "triggers": ["SSR", "Server-Side Rendering", "服务端渲染"],
+  "summary": "服务端渲染：每次请求在服务器生成完整 HTML 再返回，首屏快、利于 SEO，随后在客户端水合(hydrate)接管交互(Next.js/Nuxt)。",
+  "whenToUse": [
+    "需 SEO 且内容随用户/请求动态变化（电商、资讯）。",
+    "首屏性能关键、数据时效高。"
+  ],
+  "antiPatterns": [
+    "对完全静态内容用 SSR（应 SSG，省服务器算力）。",
+    "服务端渲染里放重计算/慢 IO，拖垮 TTFB。",
+    "水合不匹配(hydration mismatch)，前后端 HTML 不一致。"
+  ],
+  "minimalSkeleton": "请求 → 服务器渲染 HTML(含数据)\n→ 浏览器展示 + 加载 JS\n→ hydrate 接管交互",
+  "relatedArchetypes": []
+}

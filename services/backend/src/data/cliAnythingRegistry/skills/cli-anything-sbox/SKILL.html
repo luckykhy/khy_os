@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>s&amp;box CLI · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-sbox<span class="sep">›</span>s&amp;box CLI</div>
+      <header class="hero reveal"><h1>s&amp;box CLI</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#s-box-cli">s&amp;box CLI</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#requirements">Requirements</a></li><li class="lvl-2"><a href="#global-options">Global Options</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project-manage-s-box-projects">project - Manage s&amp;box projects</a></li><li class="lvl-3"><a href="#scene-manipulate-scene-files">scene - Manipulate `.scene` files</a></li><li class="lvl-3"><a href="#prefab-manage-prefab-files">prefab - Manage `.prefab` files</a></li><li class="lvl-3"><a href="#codegen-generate-c-code">codegen - Generate C# code</a></li><li class="lvl-3"><a href="#input-manage-input-config">input - Manage `Input.config`</a></li><li class="lvl-3"><a href="#collision-manage-collision-config">collision - Manage `Collision.config`</a></li><li class="lvl-3"><a href="#material-manage-vmat-materials">material - Manage `.vmat` materials</a></li><li class="lvl-3"><a href="#sound-manage-sound-events">sound - Manage `.sound` events</a></li><li class="lvl-3"><a href="#localization-manage-translations">localization - Manage translations</a></li><li class="lvl-3"><a href="#server-dedicated-server">server - Dedicated server</a></li><li class="lvl-3"><a href="#asset-asset-management-reverse-lookups">asset - Asset management &amp; reverse lookups</a></li><li class="lvl-3"><a href="#session-state-management">session - State management</a></li><li class="lvl-3"><a href="#test-automated-map-scene-generation-harness">test - Automated map/scene generation harness</a></li><li class="lvl-3"><a href="#launch-open-project-in-s-box-editor">launch - Open project in s&amp;box editor</a></li><li class="lvl-2"><a href="#component-presets">Component Presets</a></li><li class="lvl-2"><a href="#agent-usage-pattern">Agent Usage Pattern</a></li><li class="lvl-2"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#environment-variables">Environment Variables</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-sbox&quot;<br>description: &gt;-<br>  Agent-native CLI for the s&amp;box game engine (Facepunch Studios, Source 2):<br>  project management, scene/prefab editing, material/sound/localization configs,<br>  C# code generation, asset graph queries, project validation, and editor launch.</p>
+<hr>
+<h1 id="s-box-cli">s&amp;box CLI<a class="anchor" href="#s-box-cli" aria-label="锚点">#</a></h1>
+<p>Agent-native CLI for the s&amp;box game engine (Facepunch Studios, Source 2). 79+ commands across 14 groups. Manipulate <code>.scene</code>, <code>.prefab</code>, <code>.vmat</code>, <code>.sound</code>, <code>Input.config</code>, <code>Collision.config</code> JSON files directly, generate idiomatic C# components, and run a real-time asset graph over the project.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=sbox/agent-harness</code></pre>
+<h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
+<ul><li>Python 3.10+</li><li>s&amp;box installed via Steam - auto-detected, or set <code>SBOX_PATH</code> to a custom installation directory.</li><li>Most commands work entirely on the project's JSON files - s&amp;box does not need to be running.</li></ul>
+<h2 id="global-options">Global Options<a class="anchor" href="#global-options" aria-label="锚点">#</a></h2>
+<pre><code>--json          Machine-readable JSON output (always pass for agent use)
+--project PATH  Project directory (auto-detects from cwd .sbproj if omitted)</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project-manage-s-box-projects">project - Manage s&amp;box projects<a class="anchor" href="#project-manage-s-box-projects" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox project new --name MyGame --output-dir ./MyGame
+cli-anything-sbox --json project info
+cli-anything-sbox project config --max-players 32 --tick-rate 64
+cli-anything-sbox --json --project ./MyGame project add-package facepunch.libsdf
+cli-anything-sbox --json --project ./MyGame project remove-package facepunch.libsdf
+# Lint: broken asset refs, duplicate GUIDs, malformed Input.config
+cli-anything-sbox --json --project ./MyGame project validate
+cli-anything-sbox --project ./MyGame project validate --no-inputs --no-guids</code></pre>
+<h3 id="scene-manipulate-scene-files">scene - Manipulate <code>.scene</code> files<a class="anchor" href="#scene-manipulate-scene-files" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox scene new --name gameplay -o ./Assets/scenes/gameplay.scene
+cli-anything-sbox --json scene info ./scene.scene
+cli-anything-sbox --json scene list ./scene.scene
+cli-anything-sbox scene add-object ./scene.scene Enemy --position &quot;100,0,0&quot; --components &quot;model,box_collider,rigidbody&quot; --tags &quot;enemy&quot;
+cli-anything-sbox scene remove-object ./scene.scene --name Enemy
+cli-anything-sbox scene add-component ./scene.scene &lt;object-guid&gt; Sandbox.PointLight
+cli-anything-sbox scene remove-component ./scene.scene &lt;object-guid&gt; --component-type Sandbox.Rigidbody
+cli-anything-sbox --json scene modify-object ./scene.scene --guid &lt;guid&gt; --name NewName --position &quot;200,0,0&quot;
+cli-anything-sbox --json scene clone-object ./scene.scene --name Enemy --new-name EnemyCopy --position &quot;300,0,0&quot;
+cli-anything-sbox --json scene get-object ./scene.scene --name Sun
+cli-anything-sbox scene set-property ./scene.scene --fixed-update-freq 64 --timescale 0.5
+cli-anything-sbox scene set-navmesh ./scene.scene --enabled --agent-height 72 --agent-radius 16
+cli-anything-sbox --json scene list-presets
+cli-anything-sbox --json scene modify-component ./scene.scene &lt;object-guid&gt; &lt;component-guid&gt; --properties '{&quot;Damage&quot;:50}'
+
+# Find objects matching one or more filters (AND-combined)
+cli-anything-sbox --json scene query ./scene.scene --has-component rigidbody --has-tag tower
+cli-anything-sbox --json scene query ./scene.scene --name-regex &quot;^Tower\d$&quot; --in-bounds &quot;0,-500,-50,1000,500,50&quot;
+
+# Extract every asset reference (.vmdl, .vmat, .vsnd, .vtex, .vpcf, .prefab) from a scene
+cli-anything-sbox --json scene refs ./scene.scene
+
+# Apply the same modification to every object that matches a query
+cli-anything-sbox --json scene bulk-modify ./scene.scene --has-tag tower --position &quot;0,0,100&quot; --enable
+
+# Structural diff between two scenes (added/removed/modified GameObjects + SceneProperties)
+cli-anything-sbox --json scene diff ./old.scene ./new.scene
+
+# Insert a prefab as a GameObject in a scene
+cli-anything-sbox --json scene instantiate-prefab ./level.scene ./Assets/prefabs/bullet.prefab --position &quot;10,0,0&quot;</code></pre>
+<h3 id="prefab-manage-prefab-files">prefab - Manage <code>.prefab</code> files<a class="anchor" href="#prefab-manage-prefab-files" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox prefab new --name Bullet -o ./Assets/prefabs/bullet.prefab --components &quot;model,sphere_collider,rigidbody&quot;
+cli-anything-sbox --json prefab info ./Assets/prefabs/bullet.prefab
+cli-anything-sbox prefab from-scene ./scene.scene &lt;object-guid&gt; -o ./Assets/prefabs/extracted.prefab
+cli-anything-sbox --json prefab add-component ./prefab.prefab rigidbody
+cli-anything-sbox prefab remove-component ./prefab.prefab --component-type Sandbox.Rigidbody
+cli-anything-sbox --json prefab list
+
+# Asset references inside a prefab
+cli-anything-sbox --json prefab refs ./prefab.prefab
+
+# Modify component properties on a prefab (by component type or component GUID)
+cli-anything-sbox --json prefab modify-component ./prefab.prefab --component-type Sandbox.Rigidbody --properties '{&quot;Gravity&quot;:false,&quot;MassOverride&quot;:50}'
+
+# Structural diff between two prefabs (root + named children)
+cli-anything-sbox --json prefab diff ./old.prefab ./new.prefab</code></pre>
+<h3 id="codegen-generate-c-code">codegen - Generate C# code<a class="anchor" href="#codegen-generate-c-code" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Plain Component
+cli-anything-sbox codegen component --name PlayerController --methods OnUpdate,OnFixedUpdate -o ./Code/PlayerController.cs
+
+# Component with [Property] fields
+cli-anything-sbox --json codegen component --name Tower --properties '[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;},{&quot;name&quot;:&quot;Range&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;500f&quot;}]'
+
+# Networked component (partial class) with RPC method stubs
+cli-anything-sbox codegen component --name NetPlayer --networked --methods OnUpdate,OnFixedUpdate --rpc-methods &quot;Fire:Broadcast,TakeDamage:Host&quot; -o ./Code/NetPlayer.cs
+
+# GameResource
+cli-anything-sbox codegen gameresource --name TowerData --display-name &quot;Tower Data&quot; --extension tower -o ./Code/TowerData.cs
+
+# Editor menu (Editor/ assembly)
+cli-anything-sbox codegen editor-menu --name MyTools --menu-path &quot;Editor/My Tools/Open&quot; -o ./Editor/MyTools.cs
+
+# Plain Razor UI component (.razor + .razor.scss)
+cli-anything-sbox codegen razor --name HudPanel --properties '[{&quot;name&quot;:&quot;Score&quot;,&quot;type&quot;:&quot;int&quot;,&quot;default&quot;:&quot;0&quot;}]' -o ./UI/HudPanel.razor
+
+# Static or base-derived class
+cli-anything-sbox codegen class --name Math2 --static -o ./Code/Math2.cs
+
+# PanelComponent + sibling ScreenPanel scaffold (handles the s&amp;box quirk where
+# PanelComponent input only works when both are on the same GameObject).
+# Emits .razor + .razor.scss + a paste-ready GameObject snippet, or appends
+# directly to a scene with --scene.
+cli-anything-sbox --json codegen panel-component --name HudBar -o ./UI/HudBar.razor
+cli-anything-sbox codegen panel-component --name Crosshair -o ./UI/Crosshair.razor --scene ./Assets/scenes/game.scene</code></pre>
+<h3 id="input-manage-input-config">input - Manage <code>Input.config</code><a class="anchor" href="#input-manage-input-config" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox --json input list
+cli-anything-sbox input add --name PlaceTower --group Gameplay --keyboard mouse1 --gamepad RightTrigger
+cli-anything-sbox input remove --name PlaceTower
+cli-anything-sbox input set --name Attack1 --keyboard mouse1</code></pre>
+<h3 id="collision-manage-collision-config">collision - Manage <code>Collision.config</code><a class="anchor" href="#collision-manage-collision-config" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox --json collision list
+cli-anything-sbox collision add-layer --name projectile --default Collide
+cli-anything-sbox collision add-rule --layer-a projectile --layer-b solid --result Collide
+cli-anything-sbox collision remove-rule --layer-a projectile --layer-b solid
+cli-anything-sbox collision remove-layer --name projectile</code></pre>
+<h3 id="material-manage-vmat-materials">material - Manage <code>.vmat</code> materials<a class="anchor" href="#material-manage-vmat-materials" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox --json material new --name floor --shader complex --color-texture &quot;textures/floor.tga&quot; --metalness 0.3 -o ./Assets/materials/floor.vmat
+cli-anything-sbox --json material info ./Assets/materials/floor.vmat
+cli-anything-sbox --json material list
+cli-anything-sbox --json material set ./Assets/materials/floor.vmat --metalness 0.8</code></pre>
+<h3 id="sound-manage-sound-events">sound - Manage <code>.sound</code> events<a class="anchor" href="#sound-manage-sound-events" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox --json sound new --name gunshot --sounds &quot;sounds/gun1.vsnd,sounds/gun2.vsnd&quot; --volume 0.8 -o ./Assets/sounds/gunshot.sound
+cli-anything-sbox --json sound info ./Assets/sounds/gunshot.sound
+cli-anything-sbox --json sound list
+cli-anything-sbox --json sound set ./Assets/sounds/gunshot.sound --volume 0.5</code></pre>
+<h3 id="localization-manage-translations">localization - Manage translations<a class="anchor" href="#localization-manage-translations" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox localization new --lang en -o ./Localization/en.json
+cli-anything-sbox localization set ./Localization/en.json --key &quot;game.title&quot; --value &quot;My Game&quot;
+cli-anything-sbox --json localization list ./Localization/en.json
+cli-anything-sbox localization get ./Localization/en.json --key &quot;game.title&quot;
+cli-anything-sbox localization remove ./Localization/en.json --key &quot;game.title&quot;
+cli-anything-sbox localization bulk-set ./Localization/en.json --keys '{&quot;ui.start&quot;:&quot;Start&quot;,&quot;ui.quit&quot;:&quot;Quit&quot;}'</code></pre>
+<h3 id="server-dedicated-server">server - Dedicated server<a class="anchor" href="#server-dedicated-server" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox server info
+cli-anything-sbox server start --game my_game --map facepunch.flatgrass</code></pre>
+<h3 id="asset-asset-management-reverse-lookups">asset - Asset management &amp; reverse lookups<a class="anchor" href="#asset-asset-management-reverse-lookups" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox --json asset list --type scene
+cli-anything-sbox --json asset info ./Assets/scenes/minimal.scene
+cli-anything-sbox asset compile ./Assets/materials/floor.vmat
+
+# Which scenes/prefabs reference this asset?
+cli-anything-sbox --json --project ./MyGame asset find-refs models/myteam/widget.vmdl
+
+# Find unreferenced assets (per type, or across all referenceable types)
+cli-anything-sbox --json --project ./MyGame asset find-unused
+cli-anything-sbox --json --project ./MyGame asset find-unused --type model --type material
+
+# Rename an asset and update every scene/prefab reference (extension preserved if omitted)
+cli-anything-sbox --json --project ./MyGame asset rename models/team/widget.vmdl gizmo
+cli-anything-sbox --project ./MyGame asset rename models/team/widget.vmdl gizmo --dry-run
+
+# Move an asset across directories and update every reference
+cli-anything-sbox --json --project ./MyGame asset move models/team/widget.vmdl models/shared/widget.vmdl</code></pre>
+<h3 id="session-state-management">session - State management<a class="anchor" href="#session-state-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox session status
+cli-anything-sbox session undo
+cli-anything-sbox session redo</code></pre>
+<h3 id="test-automated-map-scene-generation-harness">test - Automated map/scene generation harness<a class="anchor" href="#test-automated-map-scene-generation-harness" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox test setup
+cli-anything-sbox --json test run</code></pre>
+<h3 id="launch-open-project-in-s-box-editor">launch - Open project in s&amp;box editor<a class="anchor" href="#launch-open-project-in-s-box-editor" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-sbox launch</code></pre>
+<h2 id="component-presets">Component Presets<a class="anchor" href="#component-presets" aria-label="锚点">#</a></h2>
+<p>29 short names usable with <code>--components</code> on <code>scene add-object</code>, <code>prefab new</code>, etc. Each maps to a <code>Sandbox.*</code> component type.</p>
+<table><thead><tr><th>Preset</th><th>Component Type</th></tr></thead><tbody><tr><td><code>model</code></td><td><code>Sandbox.ModelRenderer</code></td></tr><tr><td><code>box_collider</code></td><td><code>Sandbox.BoxCollider</code></td></tr><tr><td><code>sphere_collider</code></td><td><code>Sandbox.SphereCollider</code></td></tr><tr><td><code>capsule_collider</code></td><td><code>Sandbox.CapsuleCollider</code></td></tr><tr><td><code>plane_collider</code></td><td><code>Sandbox.PlaneCollider</code></td></tr><tr><td><code>model_collider</code></td><td><code>Sandbox.ModelCollider</code></td></tr><tr><td><code>rigidbody</code></td><td><code>Sandbox.Rigidbody</code></td></tr><tr><td><code>character_controller</code></td><td><code>Sandbox.CharacterController</code></td></tr><tr><td><code>player_controller</code></td><td><code>Sandbox.PlayerController</code></td></tr><tr><td><code>camera</code></td><td><code>Sandbox.CameraComponent</code></td></tr><tr><td><code>light_directional</code></td><td><code>Sandbox.DirectionalLight</code></td></tr><tr><td><code>light_point</code></td><td><code>Sandbox.PointLight</code></td></tr><tr><td><code>spot_light</code></td><td><code>Sandbox.SpotLight</code></td></tr><tr><td><code>ambient_light</code></td><td><code>Sandbox.AmbientLight</code></td></tr><tr><td><code>sprite_renderer</code></td><td><code>Sandbox.SpriteRenderer</code></td></tr><tr><td><code>skinned_model_renderer</code></td><td><code>Sandbox.SkinnedModelRenderer</code></td></tr><tr><td><code>text_renderer</code></td><td><code>Sandbox.TextRenderer</code></td></tr><tr><td><code>line_renderer</code></td><td><code>Sandbox.LineRenderer</code></td></tr><tr><td><code>decal_renderer</code></td><td><code>Sandbox.DecalRenderer</code></td></tr><tr><td><code>trail_renderer</code></td><td><code>Sandbox.TrailRenderer</code></td></tr><tr><td><code>particle_effect</code></td><td><code>Sandbox.ParticleEffect</code></td></tr><tr><td><code>sound_point</code></td><td><code>Sandbox.SoundPointComponent</code></td></tr><tr><td><code>nav_mesh_agent</code></td><td><code>Sandbox.NavMeshAgent</code></td></tr><tr><td><code>screen_panel</code></td><td><code>Sandbox.ScreenPanel</code></td></tr><tr><td><code>world_panel</code></td><td><code>Sandbox.WorldPanel</code></td></tr><tr><td><code>fixed_joint</code></td><td><code>Sandbox.FixedJoint</code></td></tr><tr><td><code>hinge_joint</code></td><td><code>Sandbox.HingeJoint</code></td></tr><tr><td><code>spring_joint</code></td><td><code>Sandbox.SpringJoint</code></td></tr><tr><td><code>ball_socket_joint</code></td><td><code>Sandbox.BallSocketJoint</code></td></tr></tbody></table>
+<p><code>scene list-presets</code> returns the live preset registry as JSON.</p>
+<h2 id="agent-usage-pattern">Agent Usage Pattern<a class="anchor" href="#agent-usage-pattern" aria-label="锚点">#</a></h2>
+<p>Pass <code>--json</code> for every agent-driven invocation. Pipe through <code>jq</code> to thread GUIDs and paths between commands:</p>
+<pre><code class="language-bash"># Bootstrap a project
+sbproj=$(cli-anything-sbox --json project new --name MyGame --output-dir /tmp/MyGame | jq -r '.sbproj')
+cd /tmp/MyGame
+
+# Add a tower with a specific component layout, capture its GUID
+guid=$(cli-anything-sbox --json scene add-object ./Assets/scenes/main.scene Tower \
+    --components &quot;model,box_collider,rigidbody&quot; --tags &quot;tower&quot; \
+    | jq -r '.guid')
+
+# Generate the corresponding C# component, networked
+cli-anything-sbox --json codegen component --name Tower --networked \
+    --rpc-methods &quot;Fire:Host&quot; --properties '[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;}]' \
+    -o ./Code/Tower.cs
+
+# Bulk-tweak every tower in the scene
+cli-anything-sbox --json scene bulk-modify ./Assets/scenes/main.scene \
+    --has-tag tower --enable --position-y-add 50
+
+# Validate before committing
+cli-anything-sbox --json project validate</code></pre>
+<h2 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h2>
+<p><code>cli-anything-sbox</code> with no arguments enters an interactive REPL with a styled prompt:</p>
+<pre><code>$ cli-anything-sbox
+cli-anything-sbox&gt; project info
+cli-anything-sbox&gt; scene list ./Assets/scenes/main.scene
+cli-anything-sbox&gt; codegen component --name Foo -o ./Code/Foo.cs
+cli-anything-sbox&gt; quit</code></pre>
+<h2 id="environment-variables">Environment Variables<a class="anchor" href="#environment-variables" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Variable</th><th>Description</th><th>Default</th></tr></thead><tbody><tr><td><code>SBOX_PATH</code></td><td>s&amp;box installation directory</td><td>Auto-detected from Steam library folders</td></tr><tr><td><code>CLI_ANYTHING_SKILL_REPO</code></td><td>Override the repo <code>repl_skin</code> reads SKILL.md from</td><td><code>HKUDS/CLI-Anything</code></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-safari/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-safari</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-seaclip/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-seaclip</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-sbox/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

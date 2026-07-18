@@ -1,0 +1,31 @@
+#!/sbin/openrc-run
+# KHY OS Console — interactive CLI on tty1
+# Replaces the default agetty login prompt with the KHY REPL.
+
+description="KHY OS interactive console"
+command="/usr/bin/node"
+command_args="/opt/khy-os/backend/bin/khy-os-init.js --interactive"
+pidfile="/run/${RC_SVCNAME}.pid"
+respawn_delay=2
+respawn_max=0
+
+depend() {
+    need khy-os-backend
+    keyword -docker -lxc -prefix
+}
+
+start() {
+    ebegin "Starting KHY OS console on tty1"
+    start-stop-daemon --start \
+        --exec $command \
+        -- $command_args \
+        </dev/tty1 >/dev/tty1 2>&1 &
+    echo $! > "$pidfile"
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping KHY OS console"
+    start-stop-daemon --stop --pidfile "$pidfile"
+    eend $?
+}

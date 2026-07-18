@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-028-agent-通信防御-零静默失败与精准归因">DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因</a></li><li class="lvl-2"><a href="#1-问题陈述">1. 问题陈述</a></li><li class="lvl-2"><a href="#2-设计目标-铁律">2. 设计目标（铁律）</a></li><li class="lvl-2"><a href="#3-架构">3. 架构</a></li><li class="lvl-2"><a href="#4-错误字典-e01-e08-单一真源">4. 错误字典（E01–E08，单一真源）</a></li><li class="lvl-2"><a href="#5-归因映射-classifier-按优先级">5. 归因映射（classifier，按优先级）</a></li><li class="lvl-2"><a href="#6-防呆-硬约束">6. 防呆（硬约束）</a></li><li class="lvl-2"><a href="#7-接入点-最小侵入">7. 接入点（最小侵入）</a></li><li class="lvl-2"><a href="#8-开关与可调项">8. 开关与可调项</a></li><li class="lvl-2"><a href="#9-验收-32-用例绿-零网络-零真实进程-零真实-fs">9. 验收（32 用例绿，零网络/零真实进程/零真实 FS）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-028-agent-通信防御-零静默失败与精准归因">DESIGN-ARCH-028 · Agent 通信防御：零静默失败与精准归因<a class="anchor" href="#design-arch-028-agent-通信防御-零静默失败与精准归因" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（services/backend）<br>关联代码：<code>services/backend/src/services/failsafe/</code>、<code>services/toolUseLoop.js</code>、<code>services/aiManagementServer.js</code><br>关联测试：<code>tests/services/failsafe/failsafe.test.js</code>（32 用例绿）<br>关联规范：[DESIGN-ARCH-027] 依赖自愈（E05 来源）、[DESIGN-ARCH-026] 审批网关（E07 来源）</p></blockquote>
+<h2 id="1-问题陈述">1. 问题陈述<a class="anchor" href="#1-问题陈述" aria-label="锚点">#</a></h2>
+<p>用户对 Agent 的最高诉求之一：<strong>绝不出现模糊的&quot;AI 未返回有效回复 / 未知错误 / 请求失败&quot;</strong>。<br>此前存在三类&quot;静默失败&quot;：</p>
+<ol><li><strong>空响应丢归因</strong>：<code>toolUseLoop</code> 空回复分支返回的对象<strong>不带</strong> <code>errorType</code>，前端只能显示固定</li></ol>
+<p>兜底文案。<code>aiManagementServer</code> SSE 空内容分支只发 <code>{type:'error', message:'AI 未返回有效回复'}</code>，<br>   <strong>无错误码</strong>。</p>
+<ol><li><strong>原始错误直抛</strong>：catch 分支 <code>sendEvent({type:'error', message: err.message})</code> 把未脱敏、未归类的</li></ol>
+<p>原始错误甩给前端。</p>
+<ol><li><strong>进程被杀即无声</strong>：流式过程中进程崩溃 / 被信号杀掉，连接直接断开，前端只看到&quot;卡住&quot;。</li></ol>
+<h2 id="2-设计目标-铁律">2. 设计目标（铁律）<a class="anchor" href="#2-设计目标-铁律" aria-label="锚点">#</a></h2>
+<ol><li><strong>零空响应</strong>：任何 LLM / 工具 / 外部通信的返回若为空 / 非法，必被转换为结构化错误，绝不透传空值。</li><li><strong>零模糊归因</strong>：所有非正常终止落到 <strong>E01–E08</strong> 之一并携带必填字段；reason 文案固定取自单一真源。</li><li><strong>兜底不可绕过</strong>：即便进程被 <code>SIGTERM</code>/<code>SIGINT</code> 杀掉或 <code>uncaughtException</code>，流式拦截器也在</li></ol>
+<p>最后一刻补写 E04/E06。</p>
+<h2 id="3-架构">3. 架构<a class="anchor" href="#3-架构" aria-label="锚点">#</a></h2>
+<p>单一子系统 <code>services/failsafe/</code>，门面 <code>index.js</code>：</p>
+<pre><code>errorCodes.js     E01–E08 单一真源：reason 文案 / 必填字段 / 脱敏标记 / 兜底回落
+classifier.js     ErrorClassifier：任意原始信号 → E0x 标准结构（E02/E07 脱敏）
+safeResponse.js   SafeResponseWrapper：拦截 LLM/工具/外部通信返回，空值/非法 → 结构化错误
+streamInjector.js StreamFailSafeInjector：三层兜底注入（应用层 / 流意外结束 / 进程级）
+types.d.ts        TS 类型契约（运行时为纯 JS，避免死代码；契约供 IDE / 未来 TS 消费方）</code></pre>
+<h2 id="4-错误字典-e01-e08-单一真源">4. 错误字典（E01–E08，单一真源）<a class="anchor" href="#4-错误字典-e01-e08-单一真源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>码</th><th>分类</th><th>必填字段</th><th>可重试</th><th>脱敏</th></tr></thead><tbody><tr><td>E01</td><td>模型静默空响应</td><td>model, prompt_tokens</td><td>✓</td><td></td></tr><tr><td>E02</td><td>模型强制中断（安全）</td><td>model, finish_reason</td><td></td><td>✓</td></tr><tr><td>E03</td><td>上下文溢出</td><td>model, ctx_limit, required_tokens</td><td></td><td></td></tr><tr><td>E04</td><td>工具执行崩溃</td><td>tool_name, raw_error_stack</td><td></td><td></td></tr><tr><td>E05</td><td>依赖缺失阻断</td><td>tool_name, missing_dep</td><td>✓</td><td></td></tr><tr><td>E06</td><td>网络层熔断</td><td>endpoint, timeout_ms, retry_count</td><td>✓</td><td></td></tr><tr><td>E07</td><td>权限拦截</td><td>tool_name, approval_level, deny_reason</td><td></td><td>✓</td></tr><tr><td>E08</td><td>格式校验失败</td><td>expected_schema, raw_output_snippet</td><td>✓</td><td></td></tr></tbody></table>
+<p>输出统一结构：</p>
+<pre><code class="language-json">{ &quot;status&quot;: &quot;failed&quot;, &quot;error_code&quot;: &quot;E04&quot;, &quot;reason&quot;: &quot;工具内部抛出未捕获异常&quot;,
+  &quot;detail&quot;: &quot;工具 WebBrowser 执行时抛出未捕获异常：Browser closed unexpectedly&quot;,
+  &quot;suggestion&quot;: &quot;请检查该工具的依赖与参数，或改用功能相近的替代工具。&quot;,
+  &quot;retryable&quot;: false, &quot;sensitive&quot;: false, &quot;category&quot;: &quot;工具执行崩溃&quot;,
+  &quot;fields&quot;: { &quot;tool_name&quot;: &quot;WebBrowser&quot;, &quot;raw_error_stack&quot;: &quot;…&quot; },
+  &quot;attribution_complete&quot;: true }</code></pre>
+<h2 id="5-归因映射-classifier-按优先级">5. 归因映射（classifier，按优先级）<a class="anchor" href="#5-归因映射-classifier-按优先级" aria-label="锚点">#</a></h2>
+<pre><code>已带 error_code(E0x)        → 幂等沿用
+errorType:'empty_reply'     → E01
+errorType:'schema'          → E08
+审批裁决 {allow:false,…}     → E07   （权限拦截优先）
+MissingDependencyError/code → E05
+finish_reason ∈ 安全停止     → E02
+ToolError code              → MISSING_DEPENDENCY→E05 / PERMISSION_DENIED→E07 /
+                              TIMEOUT|NETWORK→E06 / 其余→E04
+expected_schema 在场         → E08
+errorClassifier.kind         → refusal→E02 / context_length→E03 / permission→E07 /
+                              timeout|network|rate_limit|overloaded|server_error→E06
+兜底                         → E04（绝不返回空）</code></pre>
+<p>复用既有 <code>errorClassifier.detectErrorKindDeep</code>（深链探测 + HTTP 状态）与 <code>redactSensitiveText</code><br>（密钥脱敏），不重复造轮子。必填字段逐项填充，缺失填 <code>'unknown'</code> 并置 <code>attribution_complete=false</code><br>（归因仍可用，但显式标注不完整）。</p>
+<h2 id="6-防呆-硬约束">6. 防呆（硬约束）<a class="anchor" href="#6-防呆-硬约束" aria-label="锚点">#</a></h2>
+<ul><li><strong>①catch 绝不空 return</strong>：<code>SafeResponseWrapper.guard</code> 捕获的异常一律 <code>classify()</code> 归因，</li></ul>
+<p>返回结构化错误或抛出携带 <code>.failure</code> 的错误；从结构上禁止&quot;只 console.error 然后空 return&quot;。</p>
+<ul><li><strong>②原始 Error 不直抛前端</strong>：所有对外错误都经 <code>classifier</code> 脱敏（密钥）+ 归类（E0x），</li></ul>
+<p>detail/stack 经 <code>redactSensitiveText</code> 后截断。</p>
+<ul><li><strong>③E02/E07 脱敏</strong>：sensitive 码从<strong>采集源头</strong>就只取白名单字段——E02 仅 <code>model+finish_reason</code>；</li></ul>
+<p>E07 仅 <code>tool_name+approval_level</code>，<code>deny_reason</code> 归一化为 <code>[已触发系统管控策略]</code>。detail 用<br>  固定安全模板，<strong>绝不</strong>含系统 Prompt / 内部审批 reasons / 命中策略。</p>
+<ul><li><strong>④兜底协议不可绕过</strong>：<code>StreamFailSafeInjector</code> 三层——应用层 <code>fail()</code>、流意外结束 <code>finalize()</code>、</li></ul>
+<p>进程级 <code>uncaughtException</code>/<code>unhandledRejection</code>→E04 与 <code>SIGTERM</code>/<code>SIGINT</code>→E06 全局清扫。</p>
+<ul><li><strong>⑤幂等终结</strong>：每个注入器只终结一次（<code>finalized</code> 闸门），重复调用 no-op，杜绝双写终态。</li><li><strong>⑥失败兜底之上再兜底</strong>：<code>classify</code> 自身异常 → 兜底码 E04；<code>_safeClassify</code> 再包一层，</li></ul>
+<p>绝不让兜底协议自身失败而无输出。</p>
+<h2 id="7-接入点-最小侵入">7. 接入点（最小侵入）<a class="anchor" href="#7-接入点-最小侵入" aria-label="锚点">#</a></h2>
+<ul><li><code>toolUseLoop.js</code> 空回复分支：附 <code>error_code:'E01'</code>（安全停止则 <code>content_filter</code>）+ <code>attribution</code>，</li></ul>
+<p>保留人读 <code>finalResponse</code>，fail-soft（归因失败不影响降级返回）。</p>
+<ul><li><code>aiManagementServer.js</code> SSE：<code>sendEvent</code> 外包 <code>StreamFailSafeInjector</code>；done→<code>markDone</code>、</li></ul>
+<p>空内容→<code>fail(E01/E02)</code>、catch→<code>fail(归类 err)</code>、finally→<code>finalize()</code>（未终结即注入兜底）。<br>  注入事件携带 <code>error_code/reason/detail/suggestion/fields</code>，并保留 <code>message=&quot;[E0x] reason&quot;</code><br>  向后兼容旧前端（内容为精准 reason，而非&quot;未返回有效回复&quot;）。</p>
+<h2 id="8-开关与可调项">8. 开关与可调项<a class="anchor" href="#8-开关与可调项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>环境变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_FAILSAFE_PROCESS_GUARD</code></td><td>开</td><td><code>=off</code> 关闭进程级 uncaughtException/信号兜底守卫</td></tr></tbody></table>
+<h2 id="9-验收-32-用例绿-零网络-零真实进程-零真实-fs">9. 验收（32 用例绿，零网络/零真实进程/零真实 FS）<a class="anchor" href="#9-验收-32-用例绿-零网络-零真实进程-零真实-fs" aria-label="锚点">#</a></h2>
+<ul><li>字典单一真源（八码 + 必填字段 + 脱敏标记 + 未知码回落）；</li><li>八类信号各归正确码 + 必填字段填充 + <code>attribution_complete</code>；幂等；无法归类 → E04 非空；</li><li>脱敏：E02/E07 detail/fields 不含敏感关键词 / 系统 Prompt / 原始 reasons；</li><li><code>SafeResponseWrapper</code>：空 LLM→E01、工具 null→E04、权限软失败→E07、异常→E04、<code>_safeCall</code> 抛带 <code>.failure</code>；</li><li><code>StreamFailSafeInjector</code>：流意外结束注入 E04（partial 标记）、<code>sweepActive</code> 进程清扫补写 E06、</li></ul>
+<p>幂等终结、<code>markDone</code> 出册、<code>res.end</code> 调用。</p>
+<p>全量 node:test 回归 574/574 绿。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-027] Agent依赖自愈机制规范.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-027 · Agent 依赖自愈机制规范</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-029] Agent有限窗口降级与强制兜底执行协议.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-029 · Agent「有限窗口降级与强制兜底」执行协议</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-028] Agent通信防御-零静默失败与精准归因.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

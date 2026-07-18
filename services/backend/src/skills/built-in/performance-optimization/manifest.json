@@ -1,0 +1,21 @@
+{
+  "name": "performance-optimization",
+  "description": "Optimizes application performance. Use when performance requirements exist, when you suspect performance regressions, or when Core Web Vitals or load times need improvement. Use when profiling reveals bottlenecks that need fixing.",
+  "user_invocable": true,
+  "trigger": "/performance-optimization",
+  "aliases": [
+    "/perf"
+  ],
+  "category": "performance",
+  "tags": [
+    "performance",
+    "optimization",
+    "profiling"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}

@@ -1,0 +1,99 @@
+/**
+ * Responsive breakpoints for KHY-Quant
+ * Does NOT touch Trading.vue / SmartTrading.vue dark theme.
+ * Only adds layout adjustments via media queries.
+ */
+
+/* ===== Tablet (768px - 1024px) ===== */
+@media screen and (max-width: 1024px) {
+  /* Layout header: shrink logo, reduce menu spacing */
+  .layout-container .top-header .header-content {
+    padding: 0 8px;
+  }
+  .layout-container .top-header .logo-image {
+    max-height: 28px;
+  }
+  .layout-container .top-menu .el-menu-item {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .layout-container .top-menu .el-menu-item .el-icon {
+    margin-right: 2px;
+  }
+
+  /* Dashboard cards: 2 columns */
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Login card: slightly narrower */
+  .login-card {
+    max-width: 380px;
+    padding: 24px !important;
+  }
+}
+
+/* ===== Mobile (< 768px) ===== */
+@media screen and (max-width: 768px) {
+  /* Hide desktop header items that don't fit */
+  .layout-container .top-menu .el-menu-item span {
+    display: none;
+  }
+  .layout-container .top-menu .el-menu-item {
+    padding: 0 8px;
+  }
+
+  /* Dashboard: single column */
+  .dashboard-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Login card: full width with margin */
+  .login-card {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    margin: 16px;
+    padding: 20px !important;
+  }
+  .login-card h2 {
+    font-size: 20px;
+  }
+
+  /* El-dialog: full-width on mobile */
+  .el-dialog {
+    width: 95vw !important;
+    margin: 8px auto !important;
+  }
+
+  /* El-table: allow horizontal scroll */
+  .el-table {
+    font-size: 12px;
+  }
+
+  /* Sidebar panels in trading views: collapse to full width */
+  .trading-sidebar,
+  .smart-trading-sidebar {
+    width: 100% !important;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+}
+
+/* ===== Small mobile (< 480px) ===== */
+@media screen and (max-width: 480px) {
+  .layout-container .top-header {
+    height: 48px !important;
+  }
+  .layout-container .top-menu .el-menu-item .el-icon {
+    font-size: 18px;
+  }
+
+  /* Stack header actions vertically */
+  .header-right {
+    gap: 4px;
+  }
+  .header-right .el-button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}

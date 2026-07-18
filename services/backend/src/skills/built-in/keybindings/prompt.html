@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keybindings — Keyboard Shortcut Reference · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>keybindings<span class="sep">›</span>Keybindings — Keyboard Shortcut Reference</div>
+      <header class="hero reveal"><h1>Keybindings — Keyboard Shortcut Reference</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#keybindings-keyboard-shortcut-reference">Keybindings — Keyboard Shortcut Reference</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#output-format">Output Format</a></li><li class="lvl-2"><a href="#keybinding-groups">Keybinding Groups</a></li><li class="lvl-3"><a href="#general">General</a></li><li class="lvl-3"><a href="#vim-mode-when-enabled">Vim Mode (when enabled)</a></li><li class="lvl-3"><a href="#navigation">Navigation</a></li><li class="lvl-3"><a href="#special">Special</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="keybindings-keyboard-shortcut-reference">Keybindings — Keyboard Shortcut Reference<a class="anchor" href="#keybindings-keyboard-shortcut-reference" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Display all available keyboard shortcuts and keybindings for the CLI interface.</p>
+<h2 id="output-format">Output Format<a class="anchor" href="#output-format" aria-label="锚点">#</a></h2>
+<p>Present keybindings in organized groups using a clean table format.</p>
+<h2 id="keybinding-groups">Keybinding Groups<a class="anchor" href="#keybinding-groups" aria-label="锚点">#</a></h2>
+<h3 id="general">General<a class="anchor" href="#general" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>Submit input</td></tr><tr><td><code>Ctrl+C</code></td><td>Cancel current operation / clear input</td></tr><tr><td><code>Ctrl+D</code></td><td>Exit the CLI</td></tr><tr><td><code>Ctrl+L</code></td><td>Clear screen</td></tr><tr><td><code>Tab</code></td><td>Autocomplete commands and file paths</td></tr><tr><td><code>Up/Down</code></td><td>Navigate command history</td></tr></tbody></table>
+<h3 id="vim-mode-when-enabled">Vim Mode (when enabled)<a class="anchor" href="#vim-mode-when-enabled" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>Escape</code></td><td>Enter normal mode</td></tr><tr><td><code>i</code></td><td>Enter insert mode</td></tr><tr><td><code>v</code></td><td>Enter visual mode</td></tr><tr><td><code>dd</code></td><td>Delete line</td></tr><tr><td><code>yy</code></td><td>Yank (copy) line</td></tr><tr><td><code>p</code></td><td>Paste</td></tr><tr><td><code>/</code></td><td>Search</td></tr><tr><td><code>u</code></td><td>Undo</td></tr></tbody></table>
+<h3 id="navigation">Navigation<a class="anchor" href="#navigation" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>Ctrl+A</code></td><td>Move cursor to beginning of line</td></tr><tr><td><code>Ctrl+E</code></td><td>Move cursor to end of line</td></tr><tr><td><code>Ctrl+W</code></td><td>Delete word before cursor</td></tr><tr><td><code>Ctrl+U</code></td><td>Delete from cursor to beginning of line</td></tr><tr><td><code>Ctrl+K</code></td><td>Delete from cursor to end of line</td></tr><tr><td><code>Alt+B</code></td><td>Move back one word</td></tr><tr><td><code>Alt+F</code></td><td>Move forward one word</td></tr></tbody></table>
+<h3 id="special">Special<a class="anchor" href="#special" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>Ctrl+R</code></td><td>Reverse search history</td></tr><tr><td><code>Ctrl+Z</code></td><td>Suspend process</td></tr><tr><td><code>Ctrl+\\</code></td><td>Force quit</td></tr></tbody></table>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Display all groups by default.</li><li>If the user asks about a specific key, show just that binding.</li><li>Note platform differences (e.g., Alt key behavior on macOS vs Linux).</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/interview-me/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Interview Me</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/loop/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Loop — Iterative Test-Fix Cycle</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/keybindings/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

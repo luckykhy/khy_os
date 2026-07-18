@@ -1,0 +1,18 @@
+{
+  "sessionId": "0dc44a38-02f9-48de-9c7f-87e1defa190b",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "讲个笑话"
+    }
+  ],
+  "messageCount": 1,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782299673708,
+  "updatedAt": 1782299673708
+}

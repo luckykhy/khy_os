@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>概念入门总览：从零看懂 AI 编程助手 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>概念入门总览：从零看懂 AI 编程助手</div>
+      <header class="hero reveal"><h1>概念入门总览：从零看懂 AI 编程助手</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#概念入门总览-从零看懂-ai-编程助手">概念入门总览：从零看懂 AI 编程助手</a></li><li class="lvl-2"><a href="#一-先建立一个整体画面">一、先建立一个整体画面</a></li><li class="lvl-2"><a href="#二-建议的阅读顺序">二、建议的阅读顺序</a></li><li class="lvl-2"><a href="#三-一个最小的例子-把五个概念串起来">三、一个最小的例子，把五个概念串起来</a></li><li class="lvl-2"><a href="#四-这套概念和-khy-os-的关系">四、这套概念和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#五-进阶阅读-读完五个核心概念之后">五、进阶阅读：读完五个核心概念之后</a></li><li class="lvl-2"><a href="#六-想换种轻松方式学-读一部修仙小说">六、想换种轻松方式学？读一部修仙小说</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="概念入门总览-从零看懂-ai-编程助手">概念入门总览：从零看懂 AI 编程助手<a class="anchor" href="#概念入门总览-从零看懂-ai-编程助手" aria-label="锚点">#</a></h1>
+<blockquote><p>这份文档是给<strong>完全的新手</strong>看的。你不需要有编程经验，也不需要懂人工智能。<br>我们会用生活里的比喻，把 AI 编程助手（比如 Khy-OS）背后的五个核心概念讲清楚。</p></blockquote>
+<p>Khy-OS 既是一个<strong>真实可用的工具</strong>，也是作者入行 AI 的第一个项目。所以这套文档刻意写得啰嗦、把话说透——<strong>宁可多解释一句，也不让你卡住。</strong></p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白别怕</div><p>第一次看到 Agent、Tool Calling 这些词，觉得懵是完全正常的！这套文档会把每个词都拆成生活比喻。你只要<strong>按顺序读</strong>，遇到吉祥物插话就停一下想想，做做小测和翻卡，五个概念自然就串起来了。深呼吸，我们开始～ 🐣</p></div></aside>
+<hr>
+<h2 id="一-先建立一个整体画面">一、先建立一个整体画面<a class="anchor" href="#一-先建立一个整体画面" aria-label="锚点">#</a></h2>
+<p>你可以把一个 AI 编程助手想象成一位<strong>会自己动手干活的助理</strong>：</p>
+<ul><li>你给它一个目标（&quot;帮我修好这个 bug&quot;）；</li><li>它自己<strong>思考</strong>该怎么做；</li><li>它会<strong>动手用工具</strong>（读文件、改代码、跑测试）；</li><li>干完一步看结果，<strong>再决定下一步</strong>；</li><li>直到目标达成，才回来告诉你&quot;做完了&quot;。</li></ul>
+<p>这一整套能力，拆开来看就是下面五个概念。它们像积木一样层层叠起来：</p>
+<pre class="mermaid">flowchart TB
+  A[&quot;① Agent 智能体&lt;br/&gt;会自己做决定的'助理'本体&quot;]
+  B[&quot;② Tool Calling 工具调用&lt;br/&gt;助理伸手去用一个具体工具&quot;]
+  C[&quot;③ Tool Loop 工具循环&lt;br/&gt;用工具→看结果→再用工具，反复直到完成&quot;]
+  D[&quot;④ MCP 模型上下文协议&lt;br/&gt;给助理'插'新工具的标准插座&quot;]
+  E[&quot;⑤ Skill 技能&lt;br/&gt;把一套做事套路打包成'一键手册'&quot;]
+  A --&gt; B --&gt; C
+  C -. &quot;需要新能力时&quot; .-&gt; D
+  C -. &quot;需要固定套路时&quot; .-&gt; E</pre>
+<p>一句话记忆：</p>
+<table><thead><tr><th>概念</th><th>一句话</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>Agent</strong></td><td>会自己拿主意的 AI 助理</td><td>一个能独立干活的实习生</td></tr><tr><td><strong>Tool Calling</strong></td><td>助理调用某个具体工具</td><td>实习生拿起电话打给客户</td></tr><tr><td><strong>Tool Loop</strong></td><td>反复&quot;用工具→看结果→再决定&quot;</td><td>实习生一步步把任务推进到完成</td></tr><tr><td><strong>MCP</strong></td><td>给助理接新工具的标准接口</td><td>USB 插座，插上就能用</td></tr><tr><td><strong>Skill</strong></td><td>打包好的做事套路</td><td>一本&quot;新员工操作手册&quot;</td></tr></tbody></table>
+<hr>
+<h2 id="二-建议的阅读顺序">二、建议的阅读顺序<a class="anchor" href="#二-建议的阅读顺序" aria-label="锚点">#</a></h2>
+<p>请按顺序读，每一篇都建立在前一篇的基础上：</p>
+<ol><li><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent（智能体）</a></li><li><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 什么是 Tool Calling（工具调用）</a></li><li><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 什么是 Tool Loop（工具循环）</a></li><li><a href="./[CONCEPT-04]%20什么是MCP-模型上下文协议.html">④ 什么是 MCP（模型上下文协议）</a></li><li><a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ 什么是 Skill（技能）</a></li></ol>
+<p>读完这五篇，你再回到<a href="../index.html">文档站首页</a>，就能看懂 Khy-OS 其它文档在讲什么了。</p>
+<hr>
+<h2 id="三-一个最小的例子-把五个概念串起来">三、一个最小的例子，把五个概念串起来<a class="anchor" href="#三-一个最小的例子-把五个概念串起来" aria-label="锚点">#</a></h2>
+<p>假设你对 Khy-OS 说：<strong>&quot;帮我看看 README 里有没有错别字，有就改掉。&quot;</strong></p>
+<pre class="mermaid">sequenceDiagram
+  participant 你
+  participant Agent as Agent（AI 助理）
+  participant 工具 as 工具（读文件/改文件）
+  你-&gt;&gt;Agent: 目标：检查并修正 README 错别字
+  Note over Agent: ① 它是 Agent：自己决定先读文件
+  Agent-&gt;&gt;工具: ② Tool Calling：读取 README.md
+  工具--&gt;&gt;Agent: 返回文件内容
+  Note over Agent: ③ Tool Loop：看到内容，发现一处错别字
+  Agent-&gt;&gt;工具: ② Tool Calling：把&quot;的的&quot;改成&quot;的&quot;
+  工具--&gt;&gt;Agent: 修改成功
+  Note over Agent: ③ 再看一眼，确认没有别的错了
+  Agent--&gt;&gt;你: 完成：改了 1 处错别字</pre>
+<ul><li>它<strong>自己决定</strong>先读后改——这是 <strong>Agent</strong>。</li><li>它每一次&quot;读文件&quot;&quot;改文件&quot;——这是 <strong>Tool Calling</strong>。</li><li>它&quot;读→发现→改→再检查&quot;这个反复过程——这是 <strong>Tool Loop</strong>。</li><li>如果这些&quot;读/改文件&quot;的能力是通过标准接口接进来的——那就是 <strong>MCP</strong>。</li><li>如果&quot;检查错别字&quot;这件事被打包成一个固定套路随时可调用——那就是 <strong>Skill</strong>。</li></ul>
+<hr>
+<h2 id="四-这套概念和-khy-os-的关系">四、这套概念和 Khy-OS 的关系<a class="anchor" href="#四-这套概念和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>Khy-OS 把上面五个概念都做成了真实代码。等你读完概念，可以对照工程实现：</p>
+<ul><li>工具循环的真实实现：见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 里的网关与执行相关设计。</li><li>技能（Skill）的真实例子：见 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a> 目录，里面每个子目录就是一个 Skill。</li><li>运维与上手：见 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a>。</li></ul>
+<blockquote><p><strong>给自己的提醒</strong>：概念是地图，代码是地形。先看地图（本系列），再走地形（源码），不容易迷路。</p></blockquote>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 五个概念的关系，下面哪个说法对？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">Agent 是&quot;人&quot;，工具调用是&quot;迈一步&quot;，工具循环是&quot;走到终点&quot;，MCP 管&quot;工具从哪来&quot;，Skill 是&quot;做事的剧本&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">它们是五个互相竞争、只能选一个用的技术</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">MCP 会取代工具调用，Skill 会取代 Agent</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">只要懂 Agent 一个词就够了，其它四个是重复的</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 五个概念是<strong>协作</strong>关系不是竞争关系：Agent（谁在干）用工具调用（一次动作）在工具循环（反复接力）里干活，工具可以经 MCP（来源）接入，而 Skill（剧本）告诉它某类事该怎么按套路做。读完五篇再回看这题，会更有底气。</div></div>
+<hr>
+<h2 id="五-进阶阅读-读完五个核心概念之后">五、进阶阅读：读完五个核心概念之后<a class="anchor" href="#五-进阶阅读-读完五个核心概念之后" aria-label="锚点">#</a></h2>
+<p>上面五篇是<strong>地基</strong>。读透之后，你八成会冒出更细的问题：模型本身到底是什么？为什么它会&quot;忘事&quot;？它怎么&quot;记住&quot;我给的资料？这些问题，下面这条<strong>进阶链</strong>逐个讲透。它们同样面向小白，可以按顺序读，也可以挑你最好奇的那篇：</p>
+<pre class="mermaid">flowchart TB
+  subgraph 核心5篇[&quot;🧱 核心地基（先读这 5 篇）&quot;]
+    C1[&quot;① Agent 智能体&quot;]
+    C2[&quot;② Tool Calling 工具调用&quot;]
+    C3[&quot;③ Tool Loop 工具循环&quot;]
+    C4[&quot;④ MCP 协议&quot;]
+    C5[&quot;⑤ Skill 技能&quot;]
+    C1 --&gt; C2 --&gt; C3 --&gt; C4 --&gt; C5
+  end
+  subgraph 进阶8篇[&quot;📚 进阶拓展（想深入再读）&quot;]
+    C6[&quot;⑥ LLM 大语言模型&quot;]
+    C7[&quot;⑦ Prompt 提示词&quot;]
+    C8[&quot;⑧ Context 与 Token&quot;]
+    C9[&quot;⑨ Embedding 向量&quot;]
+    C10[&quot;⑩ 向量数据库&quot;]
+    C11[&quot;⑪ RAG 检索增强&quot;]
+    C12[&quot;⑫ 机器学习&quot;]
+    C13[&quot;⑬ 深度学习&quot;]
+    C14[&quot;⑭ Transformer&quot;]
+    C15[&quot;⑮ PyTorch&quot;]
+    C16[&quot;⑯ Harness 运行骨架&quot;]
+    C17[&quot;⑰ YOLO 目标检测&quot;]
+    C18[&quot;⑱ 系统提示词&quot;]
+    C19[&quot;⑲ ReAct 推理模式&quot;]
+    C20[&quot;⑳ 智能体编排&quot;]
+    C21[&quot;㉑ 思维链 CoT&quot;]
+    C22[&quot;㉒ 反思 Reflection&quot;]
+    C23[&quot;㉓ 计划与执行&quot;]
+    C24[&quot;㉔ 思维树 ToT&quot;]
+    C25[&quot;㉕ 微调&quot;]
+    C26[&quot;㉖ 强化学习 / RLHF&quot;]
+    C27[&quot;㉗ 多模态&quot;]
+    C28[&quot;㉘ 采样与温度&quot;]
+    C6 --&gt; C7 --&gt; C8 --&gt; C9 --&gt; C10 --&gt; C11
+    C12 --&gt; C13 --&gt; C14 --&gt; C15 --&gt; C16 --&gt; C17
+    C18 --&gt; C19 --&gt; C20
+    C21 --&gt; C22 --&gt; C23 --&gt; C24
+    C25 --&gt; C26 --&gt; C27 --&gt; C28
+    C29[&quot;㉙ API 与 SDK&quot;]
+    C30[&quot;㉚ 函数调用与 MCP 辨析&quot;]
+    C31[&quot;㉛ 幻觉 Hallucination&quot;]
+    C32[&quot;㉜ MVP 最小可行产品&quot;]
+    C28 --&gt; C29 --&gt; C30 --&gt; C31 --&gt; C32
+    C20 -. &quot;再进阶：设计模式与算法&quot; .-&gt; C21
+  end
+  C5 -. &quot;想知道'模型本身'是什么&quot; .-&gt; C6
+  C9 -. &quot;向量怎么存怎么查&quot; .-&gt; C10
+  C11 -. &quot;背后的学习原理&quot; .-&gt; C12</pre>
+<p>进阶链清单（点标题直接跳）：</p>
+<table><thead><tr><th>#</th><th>概念</th><th>一句话：读了能解决什么困惑</th></tr></thead><tbody><tr><td>⑥</td><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">什么是 LLM（大语言模型）</a></td><td>前五篇一直说的&quot;大模型&quot;到底是什么、怎么来的</td></tr><tr><td>⑦</td><td><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">什么是 Prompt（提示词）</a></td><td>你打给它的字，为什么写法不同效果差很多</td></tr><tr><td>⑧</td><td><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">什么是 Context 与 Token（上下文与令牌）</a></td><td>为什么它会&quot;忘事&quot;、为什么有&quot;长度限制&quot;</td></tr><tr><td>⑨</td><td><a href="./[CONCEPT-09]%20什么是Embedding-向量.html">什么是 Embedding（向量）</a></td><td>文字怎么变成一串数字、机器怎么&quot;懂意思&quot;</td></tr><tr><td>⑩</td><td><a href="./[CONCEPT-10]%20什么是向量数据库.html">什么是向量数据库</a></td><td>那些&quot;意思相近&quot;的资料存哪、怎么秒查</td></tr><tr><td>⑪</td><td><a href="./[CONCEPT-11]%20什么是RAG-检索增强生成.html">什么是 RAG（检索增强生成）</a></td><td>它怎么&quot;边查资料边回答&quot;、少编瞎话</td></tr><tr><td>⑫</td><td><a href="./[CONCEPT-12]%20什么是机器学习-MachineLearning.html">什么是机器学习</a></td><td>这一切&quot;会学习&quot;的底层原理</td></tr><tr><td>⑬</td><td><a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">什么是深度学习</a></td><td>现代大模型为什么这么强的技术根子</td></tr><tr><td>⑭</td><td><a href="./[CONCEPT-14]%20什么是Transformer-变换器.html">什么是 Transformer（变换器）</a></td><td>现代大模型的&quot;骨架&quot;、它的绝招&quot;注意力机制&quot;到底神在哪</td></tr><tr><td>⑮</td><td><a href="./[CONCEPT-15]%20什么是PyTorch-深度学习框架.html">什么是 PyTorch（深度学习框架）</a></td><td>工程师用什么&quot;电动工具箱&quot;把模型真正造出来、训出来</td></tr><tr><td>⑯</td><td><a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">什么是 Harness（智能体运行骨架）</a></td><td>模型只会&quot;吐字&quot;，那到底是谁替它读文件、跑命令、把圈转起来——Khy-OS 的真身</td></tr><tr><td>⑰</td><td><a href="./[CONCEPT-17]%20什么是YOLO-实时目标检测.html">什么是 YOLO（实时目标检测）</a></td><td>AI 怎么&quot;一眼&quot;看清一张图里有哪些东西、还框出来——自动驾驶/安防都靠它</td></tr><tr><td>⑱</td><td><a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">什么是系统提示词（System Prompt）</a></td><td>为什么它一&quot;出生&quot;就有身份、有规矩、有脾气——那份看不见的&quot;入职手册&quot;在哪</td></tr><tr><td>⑲</td><td><a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">什么是 ReAct（智能体推理模式）</a></td><td>它做事时&quot;边想边做&quot;的套路叫什么、为什么把思考写出来就更不容易犯傻</td></tr><tr><td>⑳</td><td><a href="./[CONCEPT-20]%20什么是智能体编排-Orchestration.html">什么是智能体编排（Orchestration）</a></td><td>一个 AI 忙不过来时，怎么当&quot;总指挥&quot;拆活、派给一群小 AI、再收结果</td></tr><tr><td>㉑</td><td><a href="./[CONCEPT-21]%20什么是思维链-ChainOfThought.html">什么是思维链（Chain of Thought）</a></td><td>为什么让它&quot;把推理一步步写出来&quot;，答案反而更准、更少犯错</td></tr><tr><td>㉒</td><td><a href="./[CONCEPT-22]%20什么是反思-Reflection.html">什么是反思（Reflection）</a></td><td>它怎么&quot;回头看自己刚才做得对不对&quot;、发现错了再改一遍</td></tr><tr><td>㉓</td><td><a href="./[CONCEPT-23]%20什么是计划与执行-PlanAndExecute.html">什么是计划与执行（Plan and Execute）</a></td><td>面对复杂任务，为什么&quot;先列计划再逐步做&quot;比一步到位更靠谱</td></tr><tr><td>㉔</td><td><a href="./[CONCEPT-24]%20什么是思维树-TreeOfThoughts.html">什么是思维树（Tree of Thoughts）</a></td><td>它怎么&quot;同时想好几条路、比一比再选最优的一条&quot;走下去</td></tr><tr><td>㉕</td><td><a href="./[CONCEPT-25]%20什么是微调-FineTuning.html">什么是微调（Fine-Tuning）</a></td><td>怎么在通用大模型上&quot;再训一小轮&quot;，把它调成你这行的专家</td></tr><tr><td>㉖</td><td><a href="./[CONCEPT-26]%20什么是强化学习-RLHF.html">什么是强化学习（RLHF）</a></td><td>它怎么靠&quot;人给的好评差评&quot;越练越懂人话、越来越会说人味的答案</td></tr><tr><td>㉗</td><td><a href="./[CONCEPT-27]%20什么是多模态-Multimodal.html">什么是多模态（Multimodal）</a></td><td>为什么现在的 AI 不止会读字，还能看图、听声、连起来一起理解</td></tr><tr><td>㉘</td><td><a href="./[CONCEPT-28]%20什么是采样与温度-Sampling.html">什么是采样与温度（Sampling）</a></td><td>同一句话它为什么每次回答都不一样、&quot;temperature&quot;到底调的是什么</td></tr><tr><td>㉙</td><td><a href="./[CONCEPT-29]%20什么是API与SDK.html">什么是 API 与 SDK</a></td><td>你一动手就绕不开的两个词——&quot;约定&quot;与&quot;工具箱&quot;到底谁包着谁、钥匙(Key)为什么绝不能进代码库</td></tr><tr><td>㉚</td><td><a href="./[CONCEPT-30]%20函数调用与MCP辨析.html">函数调用与 MCP 辨析</a></td><td>&quot;函数调用/工具调用/MCP&quot;这几个词到底谁管谁、一次调用里各在哪一步登场</td></tr><tr><td>㉛</td><td><a href="./[CONCEPT-31]%20什么是幻觉-Hallucination.html">什么是幻觉（Hallucination）</a></td><td>AI 为什么会&quot;一本正经地胡说&quot;、又该怎么防——你入行第一个必须搞懂的坑</td></tr><tr><td>㉜</td><td><a href="./[CONCEPT-32]%20什么是MVP-最小可行产品.html">什么是 MVP（最小可行产品）</a></td><td>点子一大堆，到底先做哪个——怎么砍到&quot;最小但能验证&quot;、先跑起来看反馈再加码</td></tr></tbody></table>
+<blockquote><p>📌 ⑭ Transformer 与 ⑮ PyTorch 是 <strong>AI 圈最常挂在嘴边的两个词</strong>；⑯ Harness 则是<strong>理解 Khy-OS 自身的钥匙</strong>（它本身就是一个 harness）；⑰ YOLO 帮你看到&quot;AI 不止会读字，还会看图&quot;的另一半江山。最后 ⑱ 系统提示词、⑲ ReAct、⑳ 智能体编排是<strong>理解&quot;智能体怎么被设定、怎么思考、怎么协作&quot;的三块拼图</strong>——⑱ 讲它&quot;出生就带的身份和规矩&quot;，⑲ 讲它&quot;边想边做&quot;的套路，⑳ 讲它当&quot;总指挥&quot;调度一群小 AI。除了 ⑯⑱⑳ 直指本项目，其余 Khy-OS 不一定直接用到——但作为你入行 AI 的第一站，把它们也吃透，日后和人聊 AI 才不露怯。而 ㉑~㉔（思维链 / 反思 / 计划与执行 / 思维树）是四路最常见的 <strong>&quot;AI 设计模式&quot;</strong>，教 AI&quot;怎么想得更稳、更周全&quot;；㉕~㉘（微调 / 强化学习·RLHF / 多模态 / 采样与温度）则补上&quot;模型怎么被训、怎么懂图、怎么随机作答&quot;这几块底子——这八篇合起来，把&quot;智能体的思考模式 + 绕不开的算法概念&quot;补成了一张完整地图。最后 ㉙~㉛（API 与 SDK / 函数调用与 MCP 辨析 / 幻觉）是三篇<strong>&quot;动手接入 + 避坑&quot;</strong>的实战篇：㉙ 讲你一动手就绕不开的&quot;约定与工具箱&quot;、㉚ 掰清&quot;函数调用/MCP&quot;这组最容易混的词、㉛ 讲怎么防 AI&quot;一本正经地胡说&quot;——它们最贴近你真正开始写代码、用工具的那一刻。最后 ㉜（MVP 最小可行产品）把镜头从&quot;AI 概念&quot;拉回到&quot;你自己动手做项目&quot;：点子一大堆时怎么砍到&quot;最小但能验证&quot;的一版先跑起来、用真实反馈校准方向——这是你入行 AI 的第一个项目最该先学会的做事纪律，也正是 Khy-OS 里 <code>/idea-refine</code>（点子打磨）技能每次都在帮你做的事。</p></blockquote>
+<aside class="callout callout-tip reveal"><div class="callout-mascot" aria-hidden="true">🐣</div><div class="callout-body"><div class="callout-title">💡 不用一口气读完</div><p>进阶这些篇不是&quot;必修课&quot;。你完全可以只读核心 5 篇就去用 Khy-OS，遇到某个词卡住了，再回来查对应那篇。学习像 <span class="popover" tabindex="0"><span class="popover-anchor">滚雪球</span><span class="popover-tip" role="tooltip">先有个小内核，用起来遇到问题再往上粘，比一次背完更扎实</span></span>——先把地基踩实，其它的用到再补。</p></div></aside>
+<hr>
+<h2 id="六-想换种轻松方式学-读一部修仙小说">六、想换种轻松方式学？读一部修仙小说<a class="anchor" href="#六-想换种轻松方式学-读一部修仙小说" aria-label="锚点">#</a></h2>
+<p>如果对着概念文档觉得枯燥，我们还写了一部<strong>修仙长篇小说</strong>——<strong><a href="../09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.html">《算道天书》：修仙学 AI</a></strong>。</p>
+<p>主人公<strong>孔浩原</strong>从山村药童起步，一路修炼成一代 <strong>AI 大师</strong>。他修的每一层境界，都精确对应上面的一个概念：</p>
+<ul><li><strong>炼气</strong>（接龙诀）＝ <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM 大模型</a></li><li><strong>筑基</strong>（言灵咒 / 纳言之窗）＝ <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a> / <a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ 上下文与令牌</a></li><li><strong>金丹</strong>（驭器术 / 周天循环）＝ <a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a> / <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 工具循环</a></li><li><strong>元婴 / 化神</strong>（观例悟法 / 神识重楼）＝ <a href="./[CONCEPT-12]%20什么是机器学习-MachineLearning.html">⑫ 机器学习</a> / <a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a></li><li><strong>炼虚 / 合体</strong>（万象坐标 / 藏经阁 / 开卷问道）＝ <a href="./[CONCEPT-09]%20什么是Embedding-向量.html">⑨ 向量</a> / <a href="./[CONCEPT-10]%20什么是向量数据库.html">⑩ 向量数据库</a> / <a href="./[CONCEPT-11]%20什么是RAG-检索增强生成.html">⑪ RAG</a></li><li><strong>大乘 / 飞升</strong>（万法归一 / 化身万千）＝ <a href="./[CONCEPT-04]%20什么是MCP-模型上下文协议.html">④ MCP</a> / <a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ Skill</a> / <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 自主 Agent</a></li><li><strong>番外</strong>（观照之眼 / 炼器工坊 / 护道法阵 / 法眼观物）＝ <a href="./[CONCEPT-14]%20什么是Transformer-变换器.html">⑭ Transformer</a> / <a href="./[CONCEPT-15]%20什么是PyTorch-深度学习框架.html">⑮ PyTorch</a> / <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ Harness</a> / <a href="./[CONCEPT-17]%20什么是YOLO-实时目标检测.html">⑰ YOLO</a>（正传之外的彩蛋，讲大模型的&quot;骨架&quot;&quot;铸炉工坊&quot;&quot;运行外壳&quot;与&quot;看图神通&quot;）</li><li><strong>番外·续</strong>（立身法旨 / 思行合一 / 万化调兵）＝ <a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">⑱ 系统提示词</a> / <a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct</a> / <a href="./[CONCEPT-20]%20什么是智能体编排-Orchestration.html">⑳ 智能体编排</a>（讲智能体&quot;出生就带的法旨&quot;&quot;边想边做的心诀&quot;与&quot;一化万、万归一的调兵之术&quot;）</li><li><strong>番外·再续</strong>（步步推演 / 回照自省 / 先谋后动 / 万途并参）＝ <a href="./[CONCEPT-21]%20什么是思维链-ChainOfThought.html">㉑ 思维链</a> / <a href="./[CONCEPT-22]%20什么是反思-Reflection.html">㉒ 反思</a> / <a href="./[CONCEPT-23]%20什么是计划与执行-PlanAndExecute.html">㉓ 计划与执行</a> / <a href="./[CONCEPT-24]%20什么是思维树-TreeOfThoughts.html">㉔ 思维树</a>（四路&quot;AI 设计模式&quot;：把推理显式化、回头挑错、先谋后动、分叉择优）</li><li><strong>番外·终章</strong>（点化真身 / 赏罚淬心 / 六识同参 / 火候心诀）＝ <a href="./[CONCEPT-25]%20什么是微调-FineTuning.html">㉕ 微调</a> / <a href="./[CONCEPT-26]%20什么是强化学习-RLHF.html">㉖ 强化学习</a> / <a href="./[CONCEPT-27]%20什么是多模态-Multimodal.html">㉗ 多模态</a> / <a href="./[CONCEPT-28]%20什么是采样与温度-Sampling.html">㉘ 采样与温度</a>（四个绕不开的概念与算法：改内功、按赏罚淬炼、眼耳并用、火候调随机，共<strong>十五篇彩蛋</strong>）</li></ul>
+<p>每章末尾都有一节 <strong>📒 凡人笔记</strong>，把&quot;仙法&quot;翻译回真实 AI 术语。<strong>当爽文看会上头，当教材看会开窍。</strong> 👉 <a href="../09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.html">进入《算道天书》</a></p>
+<hr>
+<p>👉 准备好了就从第一篇开始：<a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent（智能体）</a></p>
+<hr>
+<blockquote><p>📊 想知道这套文档站现在做到了什么程度、还剩什么没补？看 <a href="./00_完成度报告.html">概念入门文档站 · 完成度报告</a>——互动件覆盖、验证门实测、诚实的待办清单，一页看全。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/00_完成度报告.html"><div class="dir">← 上一篇</div><div class="ttl">📊 概念入门文档站 — 完成度报告</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

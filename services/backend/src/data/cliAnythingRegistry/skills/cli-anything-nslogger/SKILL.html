@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-nslogger · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-nslogger<span class="sep">›</span>cli-anything-nslogger</div>
+      <header class="hero reveal"><h1>cli-anything-nslogger</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-nslogger">cli-anything-nslogger</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#command-reference">Command Reference</a></li><li class="lvl-3"><a href="#generate-create-sample-files-for-testing">`generate` — Create sample files for testing</a></li><li class="lvl-3"><a href="#read-display-messages-from-a-file">`read` — Display messages from a file</a></li><li class="lvl-3"><a href="#filter-advanced-filtering">`filter` — Advanced filtering</a></li><li class="lvl-3"><a href="#export-export-to-text-json-csv">`export` — Export to text/JSON/CSV</a></li><li class="lvl-3"><a href="#stats-summary-statistics">`stats` — Summary statistics</a></li><li class="lvl-3"><a href="#listen-receive-live-connections">`listen` — Receive live connections</a></li><li class="lvl-3"><a href="#repl-interactive-command-repl">`repl` — Interactive Command REPL</a></li><li class="lvl-2"><a href="#log-levels">Log Levels</a></li><li class="lvl-2"><a href="#message-json-shape">Message JSON Shape</a></li><li class="lvl-2"><a href="#agent-workflow-examples">Agent Workflow Examples</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-nslogger&quot;<br>description: CLI harness for NSLogger — parse, filter, export, and monitor NSLogger log files (.rawnsloggerdata / .nsloggerdata)<br>version: 0.1.0<br>install: pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=nslogger/agent-harness<br>binary: cli-anything-nslogger<br>tags: [logging, ios, macos, debugging, nslogger]</p>
+<hr>
+<h1 id="cli-anything-nslogger">cli-anything-nslogger<a class="anchor" href="#cli-anything-nslogger" aria-label="锚点">#</a></h1>
+<p>A complete CLI harness for <a href="https://github.com/fpillet/NSLogger" target="_blank" rel="noopener">NSLogger</a>, the macOS log viewer for iOS/macOS apps.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd nslogger/agent-harness
+pip install -e .
+# Verify
+cli-anything-nslogger --help</code></pre>
+<h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
+<h3 id="generate-create-sample-files-for-testing"><code>generate</code> — Create sample files for testing<a class="anchor" href="#generate-create-sample-files-for-testing" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nslogger generate sample.rawnsloggerdata --count 50</code></pre>
+<h3 id="read-display-messages-from-a-file"><code>read</code> — Display messages from a file<a class="anchor" href="#read-display-messages-from-a-file" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># All messages
+cli-anything-nslogger read session.rawnsloggerdata
+
+# Errors only (level 0)
+cli-anything-nslogger read session.rawnsloggerdata --level 0
+
+# Filter by tag and text search
+cli-anything-nslogger read session.rawnsloggerdata --tag Network --search &quot;timeout&quot;
+
+# First 20 messages as JSON
+cli-anything-nslogger read session.rawnsloggerdata --limit 20 --json</code></pre>
+<h3 id="filter-advanced-filtering"><code>filter</code> — Advanced filtering<a class="anchor" href="#filter-advanced-filtering" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Errors and warnings only
+cli-anything-nslogger filter session.rawnsloggerdata --level 1
+
+# By tag
+cli-anything-nslogger filter session.rawnsloggerdata --tag Auth --tag Network
+
+# Regex search
+cli-anything-nslogger filter session.rawnsloggerdata --regex &quot;(timeout|failed|error)&quot;
+
+# By thread
+cli-anything-nslogger filter session.rawnsloggerdata --thread &quot;main&quot;
+
+# JSON output
+cli-anything-nslogger filter session.rawnsloggerdata --level 0 --json</code></pre>
+<h3 id="export-export-to-text-json-csv"><code>export</code> — Export to text/JSON/CSV<a class="anchor" href="#export-export-to-text-json-csv" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># JSON to stdout
+cli-anything-nslogger export session.rawnsloggerdata --format json
+
+# CSV to file
+cli-anything-nslogger export session.rawnsloggerdata --format csv --output logs.csv
+
+# Filtered text export
+cli-anything-nslogger export session.rawnsloggerdata --format text --level 1 --tag Network</code></pre>
+<h3 id="stats-summary-statistics"><code>stats</code> — Summary statistics<a class="anchor" href="#stats-summary-statistics" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Human-readable summary
+cli-anything-nslogger stats session.rawnsloggerdata
+
+# JSON for agent consumption
+cli-anything-nslogger stats session.rawnsloggerdata --json</code></pre>
+<p>JSON output shape:</p>
+<pre><code class="language-json">{
+  &quot;total&quot;: 342,
+  &quot;by_level&quot;: {&quot;ERROR&quot;: 12, &quot;WARNING&quot;: 34, &quot;INFO&quot;: 200, &quot;DEBUG&quot;: 96},
+  &quot;by_tag&quot;: {&quot;Network&quot;: 89, &quot;Auth&quot;: 45, &quot;UI&quot;: 120},
+  &quot;by_thread&quot;: {&quot;main&quot;: 200, &quot;bg-queue&quot;: 142},
+  &quot;by_type&quot;: {&quot;text&quot;: 340, &quot;client_info&quot;: 1, &quot;disconnect&quot;: 1},
+  &quot;clients&quot;: [&quot;MyApp&quot;],
+  &quot;first_timestamp&quot;: &quot;2024-01-01T10:00:00+00:00&quot;,
+  &quot;last_timestamp&quot;: &quot;2024-01-01T10:05:30+00:00&quot;,
+  &quot;duration_seconds&quot;: 330.0
+}</code></pre>
+<h3 id="listen-receive-live-connections"><code>listen</code> — Receive live connections<a class="anchor" href="#listen-receive-live-connections" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Match the NSLogger.app GUI Bonjour behavior for iOS auto-discovery
+cli-anything-nslogger listen --bonjour --name bazinga --debug
+
+# Mirror live logs to a text file while still printing stdout
+cli-anything-nslogger listen --bonjour --name bazinga --output app.log
+
+# Write machine-readable JSON Lines
+cli-anything-nslogger listen --bonjour --name bazinga --output app.jsonl --output-format jsonl
+
+# Direct TCP/TLS mode for manually configured clients
+cli-anything-nslogger listen --port 50000 --ssl --debug
+
+# Show only errors while listening, output as JSON stream
+cli-anything-nslogger listen --bonjour --name bazinga --level 0 --json
+
+# Run until Ctrl-C
+cli-anything-nslogger listen --bonjour --name bazinga</code></pre>
+<p>Use Bonjour mode first for iOS apps because it matches the desktop NSLogger GUI:<br>the CLI publishes a native macOS <code>NetService</code> with <code>_nslogger-ssl._tcp</code> and<br>accepts TLS NSLogger frames. Use direct TCP/TLS only when the app is manually<br>configured with the Mac host and port.</p>
+<h3 id="repl-interactive-command-repl"><code>repl</code> — Interactive Command REPL<a class="anchor" href="#repl-interactive-command-repl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nslogger repl session.rawnsloggerdata
+# Or launch it by running cli-anything-nslogger with no subcommand.</code></pre>
+<h2 id="log-levels">Log Levels<a class="anchor" href="#log-levels" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Value</th><th>Name</th><th>Use for</th></tr></thead><tbody><tr><td>0</td><td>ERROR</td><td>Unrecoverable failures</td></tr><tr><td>1</td><td>WARNING</td><td>Recoverable issues</td></tr><tr><td>2</td><td>INFO</td><td>Normal operation</td></tr><tr><td>3</td><td>DEBUG</td><td>Developer details</td></tr><tr><td>4</td><td>VERBOSE</td><td>Trace-level noise</td></tr></tbody></table>
+<h2 id="message-json-shape">Message JSON Shape<a class="anchor" href="#message-json-shape" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;sequence&quot;: 42,
+  &quot;timestamp&quot;: &quot;2024-01-01T10:01:23+00:00&quot;,
+  &quot;timestamp_ms&quot;: 456,
+  &quot;thread_id&quot;: &quot;main&quot;,
+  &quot;tag&quot;: &quot;Network&quot;,
+  &quot;level&quot;: 0,
+  &quot;level_name&quot;: &quot;ERROR&quot;,
+  &quot;type&quot;: &quot;text&quot;,
+  &quot;text&quot;: &quot;Connection timed out after 30s&quot;,
+  &quot;image_width&quot;: 0,
+  &quot;image_height&quot;: 0,
+  &quot;client_name&quot;: &quot;MyApp&quot;,
+  &quot;client_version&quot;: &quot;2.1.0&quot;,
+  &quot;os_name&quot;: &quot;iOS&quot;,
+  &quot;os_version&quot;: &quot;17.0&quot;,
+  &quot;machine&quot;: &quot;iPhone15,2&quot;
+}</code></pre>
+<h2 id="agent-workflow-examples">Agent Workflow Examples<a class="anchor" href="#agent-workflow-examples" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1. Inspect a captured crash session
+cli-anything-nslogger stats crash.rawnsloggerdata --json
+
+# 2. Find all errors in the 5 minutes before crash
+cli-anything-nslogger filter crash.rawnsloggerdata --level 0 --json
+
+# 3. Get network failures only
+cli-anything-nslogger filter crash.rawnsloggerdata --tag Network --regex &quot;fail|timeout|error&quot; --json
+
+# 4. Export full log for offline analysis
+cli-anything-nslogger export crash.rawnsloggerdata --format json --output crash_log.json
+
+# 5. Monitor an iOS app live and keep a local copy
+cli-anything-nslogger listen --bonjour --name bazinga --output app.log --debug</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nsight-graphics/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Nsight Graphics CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obs-studio/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-obsstudio</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nslogger/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

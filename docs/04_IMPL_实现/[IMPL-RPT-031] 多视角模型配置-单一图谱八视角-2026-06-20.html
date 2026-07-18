@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-031-多视角模型配置-单一目录图谱-八视角分组">[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组</a></li><li class="lvl-2"><a href="#一-背景与目标">一、背景与目标</a></li><li class="lvl-2"><a href="#二-核心设计-单一读层-八视角全是纯-group-by">二、核心设计：单一读层，八视角全是纯 group-by</a></li><li class="lvl-2"><a href="#三-实现内容">三、实现内容</a></li><li class="lvl-3"><a href="#3-1-后端图谱与分类器-全局平面">3.1 后端图谱与分类器（全局平面）</a></li><li class="lvl-3"><a href="#3-2-cli-全局">3.2 CLI（全局）</a></li><li class="lvl-3"><a href="#3-3-web-全局-apps-ai-frontend-src-views-aigateway-vue">3.3 Web（全局）`apps/ai-frontend/src/views/AIGateway.vue`</a></li><li class="lvl-3"><a href="#3-4-每用户平面-多租户">3.4 每用户平面（多租户）</a></li><li class="lvl-2"><a href="#四-零硬编码与状态透明">四、零硬编码与状态透明</a></li><li class="lvl-2"><a href="#五-测试">五、测试</a></li><li class="lvl-2"><a href="#六-跨分类关联">六、跨分类关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-031-多视角模型配置-单一目录图谱-八视角分组">[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组<a class="anchor" href="#impl-rpt-031-多视角模型配置-单一目录图谱-八视角分组" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 <code>docs/03_DESIGN_设计/</code>，本目录索引见 <code>00_INDEX_实现-分类索引.md</code></p></blockquote>
+<ul><li><strong>日期</strong>：2026-06-20</li><li><strong>范围</strong>：同一份「供应商 / 模型 / Key」数据，从多个维度查看与管理；CLI + Web 双端，全局 + 每用户双平面。</li><li><strong>状态</strong>：定稿（后端 36 + 回归 40 绿，每用户 8 绿，前端 build 绿；未提交）</li></ul>
+<h2 id="一-背景与目标">一、背景与目标<a class="anchor" href="#一-背景与目标" aria-label="锚点">#</a></h2>
+<p>此前模型配置只有<strong>单一视角</strong>：按适配器/供应商分组。用户要求按多个维度组织同一份数据：</p>
+<ol><li>按模型 → 下面有供应商</li><li>按供应商 → 下面有它的模型（已存在）</li><li>按 Key → 下面是该 Key 支持的模型</li><li>其它（按需补充）</li><li>按能力类型：文本 / 语音 / 图片 / 视频</li></ol>
+<p>确认范围：CLI + Web 双端、全局 + 每用户双平面、<strong>查看 + 视角内管理</strong>（非只读）；额外视角全要：按档位 T0–T3 / 按健康状态 / 按连接模式 / 全局搜索扁平过滤。共<strong>八视角</strong>。</p>
+<p>根因复杂点：数据被拆在三个全局存储（<code>custom_providers.json</code> + <code>api_keys.json</code> + 若干 env map）+ 每用户 DB 平面；<strong>模型不是一等公民</strong>（仅 <code>provider.models[]</code> 字符串 + 实时 <code>/v1/models</code> + overrides）；<strong>Key 只绑 provider 不绑 model</strong>；图像/视频模型<strong>不在</strong> provider 注册表里，只活在 <code>KHY_IMAGE_GEN_AGNES_*</code> / <code>KHY_VIDEO_GEN_AGNES_*</code> env 命名空间（见 [IMPL-RPT-030]）。</p>
+<h2 id="二-核心设计-单一读层-八视角全是纯-group-by">二、核心设计：单一读层，八视角全是纯 group-by<a class="anchor" href="#二-核心设计-单一读层-八视角全是纯-group-by" aria-label="锚点">#</a></h2>
+<p><strong>一处 join，绝不建八个独立读取器。</strong> 新建「目录图谱」模块产出扁平 edge 列表，所有视角都从这一份列表派生；新增<strong>一个</strong>后端 catalog 端点供 CLI 与 Web 共享，杜绝漂移。管理动作<strong>复用现有</strong>增删改路径，图谱只读。</p>
+<p>Edge 形状（全局与每用户同形）：</p>
+<pre><code>{ provider, providerLabel, model, keyIds[], keyCount, capability,
+  tier, status, connectionMode, isDefault, source }</code></pre>
+<p><strong>by-key 关系</strong>：v1 采用<strong>派生</strong>——Key 支持的模型 = Key 所属 provider 的模型（零存储改动）；按 Key 加白名单（per-key allow-list）记为 future。</p>
+<h2 id="三-实现内容">三、实现内容<a class="anchor" href="#三-实现内容" aria-label="锚点">#</a></h2>
+<h3 id="3-1-后端图谱与分类器-全局平面">3.1 后端图谱与分类器（全局平面）<a class="anchor" href="#3-1-后端图谱与分类器-全局平面" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/gateway/modelCapability.js</code>（新）：把 modelId 分类为 <code>text|audio|image|video</code>，与 <code>modelTier</code>（T0–T3）正交。解析顺序：来源提示 → env 覆盖 <code>KHY_MODEL_CAPABILITY_MAP</code> → 正则兜底（video 先于 image）→ 默认 text。env 缓存照搬 <code>modelTier.js</code> 写法。</li><li><code>services/backend/src/services/gateway/modelCatalogGraph.js</code>（新）：唯一 join。<code>buildCatalogGraph({live})</code> 合并 <code>customProviderRegistry.listProviders()</code> + 池中有注册表无的 builtin + <code>apiKeyPool.getPoolStatus</code> + <code>modelTier</code> + <code>modelCapability</code> + <code>imageGenService.catalogModels()</code> + <code>videoGenService.catalogModels()</code>。<code>status</code> 聚合 Key（任一 active→active，否则 cooldown，否则 disabled）；<code>connectionMode</code> 优先级：有池 Key→account-pool，否则 proxy 路由无 Key→proxy，否则 direct。<code>live=true</code> 复用 <code>apiAdapter.listModels()</code> 解析 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code>。</li><li><code>services/backend/src/services/gateway/modelCatalogPivots.js</code>（新）：纯 group-by，八视角一次定义，CLI 与测试共用。</li><li><code>imageGenService.js</code> / <code>videoGenService.js</code>：各新增 <code>catalogModels()</code>，把 env 命名空间里的图像/视频模型暴露给图谱——<strong>这是 by-capability 唯一能看到图像/视频的途径</strong>。</li><li><code>apiAdapter.js</code>：导出 <code>getPoolDefaultModelMap</code>。</li><li>端点：<code>aiManagementServer.js</code> 新增 <code>handleAiGatewayCatalog</code>，在原始 dispatcher 只插一行路由 <code>GET /api/ai-gateway/catalog</code>，纯 dump。</li></ul>
+<p><strong>关键修正</strong>：图谱对 chat 注册表模型<strong>不再</strong>强制 <code>source:'text'</code>。注册表经对话端点暴露，但其中可能列出真正的多模态模型（如 <code>&lt;name&gt;-image</code>）；放开后由 env 覆盖 + 正则 + 默认链按其<strong>本质</strong>分类，而非按暴露它的端点分类。来源提示仅保留给图像/视频 service（那里来源才是权威）。</p>
+<h3 id="3-2-cli-全局">3.2 CLI（全局）<a class="anchor" href="#3-2-cli-全局" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/cli/handlers/gateway.js</code>：<code>handleGatewayModels</code> 的 list 路径新增 <code>--view &lt;…&gt;</code> + <code>--search &lt;q&gt;</code>；<code>_renderCatalogView</code> 调图谱 + pivot，每组打印 section header + 表格（列：供应商/模型/能力/档位/状态/连接/Keys），<code>--json</code> 返回 <code>{ ok, view, search, groups, sources }</code>。<code>list/add/remove</code> 动词不动。</p>
+<p><strong>子命令注册修复</strong>：<code>constants/commandSchema.js</code> 的 gateway 子命令数组原缺 <code>models</code>（只有单数 <code>model</code>），导致 <code>gateway models</code> 落到默认 status 分支。已补 <code>'models'</code>。</p>
+<h3 id="3-3-web-全局-apps-ai-frontend-src-views-aigateway-vue">3.3 Web（全局）<code>apps/ai-frontend/src/views/AIGateway.vue</code><a class="anchor" href="#3-3-web-全局-apps-ai-frontend-src-views-aigateway-vue" aria-label="锚点">#</a></h3>
+<ul><li><code>composables/useModelPivots.js</code>（新）：后端 <code>modelCatalogPivots.js</code> 的<strong>忠实 JS 镜像</strong>——同八视角、同 group-by、同标签映射。前后端各保留一份单源，杜绝漂移。</li><li><code>composables/useGateway.js</code>：加 <code>fetchCatalog()</code> 调 <code>/api/ai-gateway/catalog</code>，存 <code>catalogEdges</code> / <code>catalogSources</code>，并入 <code>fetchAll</code>。</li><li><code>AIGateway.vue</code>：加分段控件（八视角）+ 搜索框。<code>by-provider</code> 且无搜索时<strong>保留</strong>原有富管理卡片（逐模型验证/改名/隐藏/设默认字节级不变）；其它视角或搜索时切到轻量 pivot 渲染器，每条 edge 展示真实解析出的供应商/能力/档位/状态/连接/Key 数。</li></ul>
+<h3 id="3-4-每用户平面-多租户">3.4 每用户平面（多租户）<a class="anchor" href="#3-4-每用户平面-多租户" aria-label="锚点">#</a></h3>
+<ul><li><code>services/ai-backend/src/services/gateway/userModelCatalogGraph.js</code>（新）：全局图谱的每用户孪生，产出同形 edge。<strong>数据模型现实</strong>：每用户平面<strong>不存模型列表</strong>——一个用户至多一条 relay 上游（单模型）+ 若干 <code>UserProvider</code>（provider + key + baseUrl，<strong>无模型</strong>）。故诚实派生：relay 单模型 → 一条 edge；每个 <code>UserProvider</code> Key → 一条 provider 级 edge（模型留空，<strong>绝不臆造</strong>，请求时再解析）。能力/档位分类器从 backend 包 <strong>import 复用</strong>（两模块纯函数零依赖，避免跨包重复）。live <code>/v1/models</code> 发现记为 future。</li><li>端点：<code>services/ai-backend/src/routes/userGateway.js</code> 加 <code>GET /api/user-gateway/catalog</code>（<code>authenticateToken</code>，scope <code>req.user.id</code>，Key 脱敏只露不透明 id）。</li><li>Web：<code>MyGateway.vue</code> 加「我的模型目录」卡片（分段控件 + 搜索），经 <code>useUserGateway.js</code> 的 <code>fetchCatalog()</code> 取数，<strong>共用</strong>全局同一个 <code>useModelPivots.js</code>。</li></ul>
+<h2 id="四-零硬编码与状态透明">四、零硬编码与状态透明<a class="anchor" href="#四-零硬编码与状态透明" aria-label="锚点">#</a></h2>
+<ul><li>无任何 Key/URL/模型写死：供应商/Key/模型/URL/档位全部来自注册表、Key 池、env map、图像/视频 service 自身的 env 解析器。</li><li>每个视图都报告<strong>真实解析</strong>出的后端/供应商/Key；图谱返回 <code>sources</code> 块（实际读了什么、是否 live），部分态浮现而非隐藏。</li><li>每用户平面只用脱敏快照，绝不返回解密 Key 材料；模型未配置时留空并以「—」呈现，绝不编造模型名。</li><li>铁律延续：图像/视频模型<strong>绝不</strong>进入 <code>PROXY_MODEL_ROUTE_MAP</code>（[IMPL-RPT-030]）。</li></ul>
+<h2 id="五-测试">五、测试<a class="anchor" href="#五-测试" aria-label="锚点">#</a></h2>
+<p>后端（<code>node ~/Khy-OS/node_modules/jest/bin/jest.js</code>，从 <code>services/backend</code>）：</p>
+<table><thead><tr><th>测试文件</th><th>用例</th><th>结果</th></tr></thead><tbody><tr><td>tests/modelCapability.test.js</td><td>来源/Agnes 三元组/env/正则/默认</td><td>绿</td></tr><tr><td>tests/modelCatalogGraph.test.js</td><td>join/图像视频浮现/by-key 派生/档位/状态/连接</td><td>绿</td></tr><tr><td>tests/modelCatalogPivots.test.js</td><td>八视角 + flat 搜索</td><td>绿</td></tr><tr><td>tests/gatewayModelsView.test.js</td><td>CLI 各 <code>--view</code> 渲染 + JSON + 旧路径不触图谱</td><td>绿</td></tr><tr><td>tests/agnesProvisioner / customProviderRegistrar / agnesImage / agnesVideo（回归）</td><td>40</td><td>绿</td></tr></tbody></table>
+<p>合计后端 36 新 + 40 回归绿。每用户（从 <code>services/ai-backend</code>）：</p>
+<table><thead><tr><th>测试文件</th><th>用例</th><th>结果</th></tr></thead><tbody><tr><td>test/userModelCatalogGraph.test.js</td><td>relay/provider 派生/标签/租户隔离/透明</td><td>5 绿</td></tr><tr><td>test/userGatewayCatalog.route.test.js</td><td>端点可达/鉴权/租户隔离</td><td>3 绿</td></tr><tr><td>test/userGateway.routes.test.js（回归）</td><td>8</td><td>绿</td></tr></tbody></table>
+<p>前端 <code>apps/ai-frontend</code> <code>npm run build</code> 绿。CLI 手验 <code>gateway models --view by-model/by-key/by-capability/by-tier/--view flat --search …</code> + <code>--json</code> 均出正确分组。</p>
+<h2 id="六-跨分类关联">六、跨分类关联<a class="anchor" href="#六-跨分类关联" aria-label="锚点">#</a></h2>
+<ul><li>单一读层：<code>modelCatalogGraph.js</code>（全局）/ <code>userModelCatalogGraph.js</code>（每用户）；纯分组：<code>modelCatalogPivots.js</code>（后端）/ <code>useModelPivots.js</code>（前端）。</li><li>图像/视频出注册表来源：[IMPL-RPT-030] Agnes 四模型一键置备。</li><li>环境持久化：<code>services/backend/src/services/gatewayEnvFile.js</code>。</li><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>；本目录索引：<code>00_INDEX_实现-分类索引.md</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-030] Agnes四模型一键置备-文生图图改图视频-2026-06-20.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-032] 有学习价值的Bug汇编-UX漂移与half-wired.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-031] 多视角模型配置-单一图谱八视角-2026-06-20.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

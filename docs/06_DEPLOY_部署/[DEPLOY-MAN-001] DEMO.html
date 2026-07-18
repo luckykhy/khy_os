@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>演示视频（把它录下来——这是第一杠杆） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>演示视频（把它录下来——这是第一杠杆）</div>
+      <header class="hero reveal"><h1>演示视频（把它录下来——这是第一杠杆）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#演示视频-把它录下来-这是第一杠杆">演示视频（把它录下来——这是第一杠杆）</a></li><li class="lvl-2"><a href="#要拍什么-45-秒脚本">要拍什么（45 秒脚本）</a></li><li class="lvl-2"><a href="#如何录制">如何录制</a></li><li class="lvl-2"><a href="#接进-readme">接进 README</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="演示视频-把它录下来-这是第一杠杆">演示视频（把它录下来——这是第一杠杆）<a class="anchor" href="#演示视频-把它录下来-这是第一杠杆" aria-label="锚点">#</a></h1>
+<p>像 khy 这样的项目，成败系于一段 30–45 秒的片子，让人看完惊呼<br>「等等，这是<em>一个人</em>做出来的？」。录一次，就能在 README / HN / X / PH 上反复复用。</p>
+<h2 id="要拍什么-45-秒脚本">要拍什么（45 秒脚本）<a class="anchor" href="#要拍什么-45-秒脚本" aria-label="锚点">#</a></h2>
+<p>故事线：<strong>安装 → 智能体干真活 → 内核是真的。</strong></p>
+<ol><li><strong>（0–6s）安装。</strong> 一个干净的终端：</li></ol>
+<pre><code class="language-bash">   pip install khy-os &amp;&amp; khy --version</code></pre>
+<p>让版本号打印出来。快速切镜。</p>
+<ol><li><strong>（6–26s）智能体做点真事。</strong> 启动 <code>khy</code>，敲一个真实任务：</li></ol>
+<pre><code>   › add a /healthz route to the backend and a test for it, then run it</code></pre>
+<p>让真实的 TUI 展现出来：折叠的 <code>💭 思考</code>、<code>▸ 读取 · 编辑 · 执行命令</code><br>   进程组一路 <code>✓✓✓</code>、实时的 <code>⠹ 生成中… · Ns · ~tok</code> spinner，以及最后<br>   一个通过的测试。<strong>不要</strong>做不自然的加速——真实感才是重点。</p>
+<ol><li><strong>（26–40s）内核是真的。</strong> 切到：</li></ol>
+<pre><code class="language-bash">   khy iso build --output dist/khy-os.iso
+   qemu-system-x86_64 -cdrom dist/khy-os.iso</code></pre>
+<p>展示内核启动和一个 shell 提示符；敲一条命令（例如一个管道<br>   <code>ls | …</code>）来证明这是活的 shell，不是截图。</p>
+<ol><li><strong>（40–45s）尾卡。</strong> 切回 README banner / 仓库 URL。</li></ol>
+<h2 id="如何录制">如何录制<a class="anchor" href="#如何录制" aria-label="锚点">#</a></h2>
+<ul><li>终端部分用 <strong>asciinema</strong>（清晰、体积小、可复制粘贴）：</li></ul>
+<pre><code class="language-bash">  asciinema rec demo.cast
+  # ...do the steps...  then Ctrl-D</code></pre>
+<p>用 <code>agg demo.cast assets/demo.gif</code> 转成 GIF（或保留 .cast 并嵌入<br>  asciinema 播放器链接）。</p>
+<ul><li>QEMU 启动部分，录制窗口画面（例如 <code>peek</code>、<code>ffmpeg</code> 或 OBS），</li></ul>
+<p>再与 asciinema GIF 拼接。</p>
+<h2 id="接进-readme">接进 README<a class="anchor" href="#接进-readme" aria-label="锚点">#</a></h2>
+<p>一旦 <code>assets/demo.gif</code> 就位，把 <code>README.md</code> 里的占位块<br>（那段「📽️ Demo recording」备注）替换为：</p>
+<pre><code class="language-markdown">&lt;p align=&quot;center&quot;&gt;&lt;img src=&quot;assets/demo.gif&quot; alt=&quot;khy in action&quot; width=&quot;800&quot;&gt;&lt;/p&gt;</code></pre>
+<p>把文件控制在 ~5 MB 以内，好让它在 GitHub 上瞬间加载——必要时裁剪或降低<br>帧率。一段要 8 秒才加载出来的演示，等于没人看的演示。</p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-002] PRODUCT_HUNT.html"><div class="dir">下一篇 →</div><div class="ttl">Product Hunt 文案草稿</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-001] DEMO.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

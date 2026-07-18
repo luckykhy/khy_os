@@ -1,0 +1,101 @@
+{
+  "sessionId": "a8079d39-fbea-49a0-87f7-c8697d51278b",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你可以在桌面创建一个文件夹，然后在里面放上几个文件吗"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "好的，先在桌面创建文件夹，再往里放几个文件。\n\n先确定桌面路径：`D:\\HuaweiMoveData\\Users\\25789\\Desktop"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_14188d7f353345ec9773767f",
+          "name": "Bash",
+          "input": {
+            "command": "mkdir \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\\test_folder\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_14188d7f353345ec9773767f",
+          "content": "Error: [ExecApproval] Approval required (risk: medium)",
+          "is_error": true
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7 注意：当前系统是 Windows (cmd.exe)，请使用 Windows 命令语法（dir/type/copy/move/del/findstr/where），不要使用 bash 语法。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "好的，先在桌面创建文件夹，再往里放几个文件。\n\n先确定桌面路径：`D:\\HuaweiMoveData\\Users\\25789\\Desktop"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_14188d7f353345ec9773767f",
+          "name": "Bash",
+          "input": {
+            "command": "mkdir \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\\test_folder\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_14188d7f353345ec9773767f",
+          "content": "Error: [ExecApproval] Approval required (risk: medium)",
+          "is_error": true
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7 注意：当前系统是 Windows (cmd.exe)，请使用 Windows 命令语法（dir/type/copy/move/del/findstr/where），不要使用 bash 语法。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "好的，先在桌面创建文件夹，再往里放几个文件。\n\n先确定桌面路径：`D:\\HuaweiMoveData\\Users\\25789\\Desktop",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 6,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781740272611,
+  "updatedAt": 1781740272611
+}

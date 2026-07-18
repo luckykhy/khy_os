@@ -1,0 +1,37 @@
+{
+  "name": "khy-trae-bridge",
+  "displayName": "KHY Trae Bridge",
+  "description": "将 Trae 登录态桥接到 KHY OS CLI — 自动提取 icube.marscode token",
+  "version": "0.2.1",
+  "publisher": "khy",
+  "license": "LicenseRef-Source-Available",
+  "homepage": "https://github.com/kodehu03/khy-os#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kodehu03/khy-os.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kodehu03/khy-os/issues"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "khy-trae-bridge.sync",
+        "title": "KHY: 同步 Trae 登录态"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.1"
+  }
+}

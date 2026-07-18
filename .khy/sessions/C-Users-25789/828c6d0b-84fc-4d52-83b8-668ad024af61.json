@@ -1,0 +1,22 @@
+{
+  "sessionId": "828c6d0b-84fc-4d52-83b8-668ad024af61",
+  "title": "",
+  "model": "claude-haiku-4.5",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "Not logged in · Please run /login"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "Kiro IDE"
+  },
+  "createdAt": 1781413846476,
+  "updatedAt": 1781413846476
+}

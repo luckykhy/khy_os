@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-adguardhome · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-adguardhome<span class="sep">›</span>cli-anything-adguardhome</div>
+      <header class="hero reveal"><h1>cli-anything-adguardhome</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-adguardhome">cli-anything-adguardhome</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#config">Config</a></li><li class="lvl-3"><a href="#server">Server</a></li><li class="lvl-3"><a href="#filter">Filter</a></li><li class="lvl-3"><a href="#blocking">Blocking</a></li><li class="lvl-3"><a href="#blocked-services">Blocked-Services</a></li><li class="lvl-3"><a href="#clients">Clients</a></li><li class="lvl-3"><a href="#stats">Stats</a></li><li class="lvl-3"><a href="#log">Log</a></li><li class="lvl-3"><a href="#rewrite">Rewrite</a></li><li class="lvl-3"><a href="#dhcp">DHCP</a></li><li class="lvl-3"><a href="#tls">TLS</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#check-server-status">Check Server Status</a></li><li class="lvl-3"><a href="#manage-filter-lists">Manage Filter Lists</a></li><li class="lvl-3"><a href="#dns-rewrites">DNS Rewrites</a></li><li class="lvl-3"><a href="#client-management">Client Management</a></li><li class="lvl-3"><a href="#query-statistics">Query Statistics</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-adguardhome&quot;<br>description: &gt;-<br>  Command-line interface for AdGuard Home - Network-wide ad blocking and DNS management via AdGuard Home REST API. Designed for AI agents and power users who need to manage filtering, DNS rewrites, clients, DHCP, and query logs without a GUI.</p>
+<hr>
+<h1 id="cli-anything-adguardhome">cli-anything-adguardhome<a class="anchor" href="#cli-anything-adguardhome" aria-label="锚点">#</a></h1>
+<p>Network-wide ad blocking and DNS management via the AdGuard Home REST API. Designed for AI agents and power users who need to manage filtering, DNS rewrites, clients, DHCP, and query logs without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-adguardhome package:</p>
+<pre><code class="language-bash">pip install cli-anything-adguardhome</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>AdGuard Home must be installed and running</li><li>Install AdGuard Home: <code>curl -s -S -L https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh | sh -s -- -v</code></li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-adguardhome --help
+
+# Start interactive REPL mode
+cli-anything-adguardhome
+
+# Check server status
+cli-anything-adguardhome server status
+
+# Run with JSON output (for agent consumption)
+cli-anything-adguardhome --json server status</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-adguardhome
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="config">Config<a class="anchor" href="#config" aria-label="锚点">#</a></h3>
+<p>Connection and configuration management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>show</code></td><td>Show current connection configuration</td></tr><tr><td><code>save</code></td><td>Save connection settings to a config file</td></tr><tr><td><code>test</code></td><td>Test the connection to AdGuard Home</td></tr></tbody></table>
+<h3 id="server">Server<a class="anchor" href="#server" aria-label="锚点">#</a></h3>
+<p>Server status and control commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show server protection status</td></tr><tr><td><code>version</code></td><td>Show AdGuard Home version</td></tr><tr><td><code>restart</code></td><td>Restart the AdGuard Home server</td></tr></tbody></table>
+<h3 id="filter">Filter<a class="anchor" href="#filter" aria-label="锚点">#</a></h3>
+<p>DNS filter list management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all configured filter lists</td></tr><tr><td><code>status</code></td><td>Show filtering status</td></tr><tr><td><code>toggle</code></td><td>Enable or disable filtering globally</td></tr><tr><td><code>add</code></td><td>Add a new filter list by URL</td></tr><tr><td><code>remove</code></td><td>Remove a filter list</td></tr><tr><td><code>enable</code></td><td>Enable a specific filter list</td></tr><tr><td><code>disable</code></td><td>Disable a specific filter list</td></tr><tr><td><code>refresh</code></td><td>Force-refresh all filter lists</td></tr></tbody></table>
+<h3 id="blocking">Blocking<a class="anchor" href="#blocking" aria-label="锚点">#</a></h3>
+<p>Parental control, safe browsing, and safe search settings.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>parental status</code></td><td>Show parental control status</td></tr><tr><td><code>parental enable</code></td><td>Enable parental control</td></tr><tr><td><code>parental disable</code></td><td>Disable parental control</td></tr><tr><td><code>safebrowsing status</code></td><td>Show safe browsing status</td></tr><tr><td><code>safebrowsing enable</code></td><td>Enable safe browsing</td></tr><tr><td><code>safebrowsing disable</code></td><td>Disable safe browsing</td></tr><tr><td><code>safesearch status</code></td><td>Show safe search status</td></tr><tr><td><code>safesearch enable</code></td><td>Enable safe search</td></tr><tr><td><code>safesearch disable</code></td><td>Disable safe search</td></tr></tbody></table>
+<h3 id="blocked-services">Blocked-Services<a class="anchor" href="#blocked-services" aria-label="锚点">#</a></h3>
+<p>Manage blocked internet services.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List currently blocked services</td></tr><tr><td><code>set</code></td><td>Set the list of blocked services</td></tr></tbody></table>
+<h3 id="clients">Clients<a class="anchor" href="#clients" aria-label="锚点">#</a></h3>
+<p>Client device management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all configured clients</td></tr><tr><td><code>add</code></td><td>Add a new client by name and IP</td></tr><tr><td><code>remove</code></td><td>Remove a client</td></tr><tr><td><code>show</code></td><td>Show details for a specific client</td></tr></tbody></table>
+<h3 id="stats">Stats<a class="anchor" href="#stats" aria-label="锚点">#</a></h3>
+<p>Query statistics.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>show</code></td><td>Show DNS query statistics</td></tr><tr><td><code>reset</code></td><td>Reset all statistics</td></tr><tr><td><code>config</code></td><td>View or update statistics retention interval</td></tr></tbody></table>
+<h3 id="log">Log<a class="anchor" href="#log" aria-label="锚点">#</a></h3>
+<p>DNS query log management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>show</code></td><td>Show recent DNS query log entries</td></tr><tr><td><code>config</code></td><td>View or update query log settings</td></tr><tr><td><code>clear</code></td><td>Clear the query log</td></tr></tbody></table>
+<h3 id="rewrite">Rewrite<a class="anchor" href="#rewrite" aria-label="锚点">#</a></h3>
+<p>DNS rewrite rules.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all DNS rewrite rules</td></tr><tr><td><code>add</code></td><td>Add a DNS rewrite rule</td></tr><tr><td><code>remove</code></td><td>Remove a DNS rewrite rule</td></tr></tbody></table>
+<h3 id="dhcp">DHCP<a class="anchor" href="#dhcp" aria-label="锚点">#</a></h3>
+<p>DHCP server management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show DHCP server status</td></tr><tr><td><code>leases</code></td><td>List active DHCP leases</td></tr><tr><td><code>add-static</code></td><td>Add a static DHCP lease</td></tr><tr><td><code>remove-static</code></td><td>Remove a static DHCP lease</td></tr></tbody></table>
+<h3 id="tls">TLS<a class="anchor" href="#tls" aria-label="锚点">#</a></h3>
+<p>TLS/HTTPS configuration.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show TLS configuration status</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="check-server-status">Check Server Status<a class="anchor" href="#check-server-status" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-adguardhome server status
+cli-anything-adguardhome server version</code></pre>
+<h3 id="manage-filter-lists">Manage Filter Lists<a class="anchor" href="#manage-filter-lists" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List current filters
+cli-anything-adguardhome filter list
+
+# Add a new blocklist
+cli-anything-adguardhome filter add --url https://somehost.com/list.txt --name &quot;My List&quot;
+
+# Refresh all filters
+cli-anything-adguardhome filter refresh</code></pre>
+<h3 id="dns-rewrites">DNS Rewrites<a class="anchor" href="#dns-rewrites" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Add a local DNS entry
+cli-anything-adguardhome rewrite add --domain &quot;myserver.local&quot; --answer &quot;192.168.1.50&quot;
+
+# List all rewrites
+cli-anything-adguardhome rewrite list</code></pre>
+<h3 id="client-management">Client Management<a class="anchor" href="#client-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-adguardhome clients add --name &quot;My PC&quot; --ip 192.168.1.100
+cli-anything-adguardhome clients list</code></pre>
+<h3 id="query-statistics">Query Statistics<a class="anchor" href="#query-statistics" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show stats (human-readable)
+cli-anything-adguardhome stats show
+
+# Show stats (JSON for agents)
+cli-anything-adguardhome --json stats show</code></pre>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-adguardhome filter list
+
+# JSON output for agents
+cli-anything-adguardhome --json filter list</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Test connection first</strong> with <code>config test</code> before other commands</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/contracts/mobile/README.html"><div class="dir">← 上一篇</div><div class="ttl">KHY Mobile Contracts</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-anygen/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-anygen</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-adguardhome/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

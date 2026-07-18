@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 三项目深度学习报告 — UX 体验与产品交付能力 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS 三项目深度学习报告 — UX 体验与产品交付能力</div>
+      <header class="hero reveal"><h1>KHY OS 三项目深度学习报告 — UX 体验与产品交付能力</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-三项目深度学习报告-ux-体验与产品交付能力">KHY OS 三项目深度学习报告 — UX 体验与产品交付能力</a></li><li class="lvl-2"><a href="#一-十维度对比矩阵">一、十维度对比矩阵</a></li><li class="lvl-2"><a href="#二-30-项差距清单-g1-g30">二、30 项差距清单 (G1-G30)</a></li><li class="lvl-3"><a href="#p0-核心体验-影响每次使用">P0 — 核心体验 (影响每次使用)</a></li><li class="lvl-3"><a href="#p1-竞争力-影响用户留存">P1 — 竞争力 (影响用户留存)</a></li><li class="lvl-3"><a href="#p2-差异化-形成独特卖点">P2 — 差异化 (形成独特卖点)</a></li><li class="lvl-3"><a href="#p3-远期完善">P3 — 远期完善</a></li><li class="lvl-2"><a href="#三-设计模式学习清单">三、设计模式学习清单</a></li><li class="lvl-3"><a href="#从-deepseek-tui-学习">从 DeepSeek-TUI 学习</a></li><li class="lvl-3"><a href="#从-hermes-agent-学习">从 Hermes Agent 学习</a></li><li class="lvl-3"><a href="#从-opencode-学习">从 OpenCode 学习</a></li><li class="lvl-2"><a href="#四-实施路线图">四、实施路线图</a></li><li class="lvl-3"><a href="#phase-1-核心体验-1-2-周-g1-g2-g3-g6-g7-g8">Phase 1: 核心体验 (1-2 周) — G1,G2,G3,G6,G7,G8</a></li><li class="lvl-3"><a href="#phase-2-竞争力-2-3-周-g4-g5-g9-g10-g13-g16">Phase 2: 竞争力 (2-3 周) — G4,G5,G9,G10,G13,G16</a></li><li class="lvl-3"><a href="#phase-3-差异化-3-4-周-g11-g12-g14-g15-g17-g24">Phase 3: 差异化 (3-4 周) — G11,G12,G14,G15,G17-G24</a></li><li class="lvl-3"><a href="#phase-4-远期完善-5-周-g25-g30">Phase 4: 远期完善 (5+ 周) — G25-G30</a></li><li class="lvl-2"><a href="#五-关键文件拆分建议">五、关键文件拆分建议</a></li><li class="lvl-2"><a href="#六-预期收益">六、预期收益</a></li><li class="lvl-2"><a href="#附录-参考项目源码关键路径">附录: 参考项目源码关键路径</a></li><li class="lvl-3"><a href="#deepseek-tui-tmp-deepseek-tui-deepseek-tui-main">DeepSeek-TUI (`/tmp/deepseek-tui/DeepSeek-TUI-main/`)</a></li><li class="lvl-3"><a href="#hermes-agent-tmp-hermes-agent-hermes-agent-main">Hermes Agent (`/tmp/hermes-agent/hermes-agent-main/`)</a></li><li class="lvl-3"><a href="#opencode-tmp-opencode-opencode-dev">OpenCode (`/tmp/opencode/opencode-dev/`)</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-011 | 阶段: 项目管理 | 原路径: docs/报告/三项目深度学习-2026-05-21.md --&gt;</p>
+<h1 id="khy-os-三项目深度学习报告-ux-体验与产品交付能力">KHY OS 三项目深度学习报告 — UX 体验与产品交付能力<a class="anchor" href="#khy-os-三项目深度学习报告-ux-体验与产品交付能力" aria-label="锚点">#</a></h1>
+<blockquote><p>对标: DeepSeek-TUI (Rust/ratatui) | Hermes Agent (Python/prompt_toolkit) | OpenCode (TS/SolidJS+OpenTUI)<br>基线: KHY OS (Node.js/readline+Ink)<br>日期: 2026-05-21</p></blockquote>
+<hr>
+<h2 id="一-十维度对比矩阵">一、十维度对比矩阵<a class="anchor" href="#一-十维度对比矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>维度</th><th>DeepSeek-TUI</th><th>Hermes Agent</th><th>OpenCode</th><th>KHY OS</th><th>KHY 差距</th></tr></thead><tbody><tr><td>D1</td><td>流式渲染管线</td><td>★★★★★</td><td>★★★☆☆</td><td>★★★★☆</td><td>★★★☆☆</td><td>缺换行门控+自适应分块</td></tr><tr><td>D2</td><td>主题/色彩</td><td>★★★★★</td><td>★★★★☆</td><td>★★★★★</td><td>★★☆☆☆</td><td>仅 2 主题，无色深检测</td></tr><tr><td>D3</td><td>输入编辑器</td><td>★★★★★</td><td>★★★★☆</td><td>★★★★★</td><td>★★★☆☆</td><td>无 Vim 操作符，无多行编辑器</td></tr><tr><td>D4</td><td>权限系统</td><td>★★★☆☆</td><td>★★★★☆</td><td>★★★★★</td><td>★★★☆☆</td><td>缺通配符模式+diff预览+自动学习</td></tr><tr><td>D5</td><td>子代理编排</td><td>★★★★★</td><td>★★★★★</td><td>★★★★☆</td><td>★★★☆☆</td><td>无类型化角色+并行安全分类+租约</td></tr><tr><td>D6</td><td>会话管理</td><td>★★★★★</td><td>★★★★★</td><td>★★★★★</td><td>★★★☆☆</td><td>无原子写入+分支+全文搜索</td></tr><tr><td>D7</td><td>错误弹性</td><td>★★★★★</td><td>★★★★☆</td><td>★★★★☆</td><td>★★★★☆</td><td>缺统一 ErrorEnvelope+重试装饰器</td></tr><tr><td>D8</td><td>记忆/知识</td><td>★★☆☆☆</td><td>★★★★★</td><td>★★★☆☆</td><td>★★☆☆☆</td><td>无 Plugin 记忆+FTS5 CJK 搜索</td></tr><tr><td>D9</td><td>配置/引导</td><td>★★★★★</td><td>★★★★★</td><td>★★★★☆</td><td>★★☆☆☆</td><td>无引导流程+Provider别名+Schema校验</td></tr><tr><td>D10</td><td>产品交付</td><td>★★★★★</td><td>★★★★★</td><td>★★★★★</td><td>★★★☆☆</td><td>缺 Homebrew/Snap+多架构 Docker+E2E</td></tr></tbody></table>
+<p><strong>KHY 综合: 2.7/5 → 目标 4.2/5</strong></p>
+<hr>
+<h2 id="二-30-项差距清单-g1-g30">二、30 项差距清单 (G1-G30)<a class="anchor" href="#二-30-项差距清单-g1-g30" aria-label="锚点">#</a></h2>
+<h3 id="p0-核心体验-影响每次使用">P0 — 核心体验 (影响每次使用)<a class="anchor" href="#p0-核心体验-影响每次使用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>差距</th><th>参考来源</th><th>当前 KHY 状态</th><th>改进方案</th></tr></thead><tbody><tr><td>G1</td><td><strong>流式换行门控</strong></td><td>DeepSeek <code>line_buffer.rs</code></td><td>无，直接在 <code>\n\n</code> 切割</td><td>新增 <code>LineBuffer</code> 类：<code>push(delta)</code> 追加，<code>take()</code> 只释放到最后一个 <code>\n</code>，thinking 绕过门控</td></tr><tr><td>G2</td><td><strong>自适应分块策略</strong></td><td>DeepSeek <code>chunking.rs</code></td><td>无，固定逐段 flush</td><td>双档 Smooth/CatchUp + 迟滞控制器：queue≥160行 进入 CatchUp，&lt;32行+250ms 冷却退出</td></tr><tr><td>G3</td><td><strong>Markdown 解析/渲染分离</strong></td><td>DeepSeek <code>markdown_render.rs</code></td><td><code>renderMarkdownLite</code> 单函数</td><td>拆为 <code>parseMarkdown(text) → AST</code> + <code>renderAST(ast, width) → lines</code>，resize 只执行 render</td></tr><tr><td>G4</td><td><strong>主题扩充+色深检测</strong></td><td>DeepSeek <code>palette.rs</code> / OpenCode 33 主题</td><td>2 主题，无色深检测</td><td>新增 8+ 主题 (catppuccin/tokyo-night/nord/gruvbox/solarized/dracula/system)；检测 <code>COLORTERM</code>/<code>WT_SESSION</code> → TrueColor/256/16 三级降级</td></tr><tr><td>G5</td><td><strong>权限 diff 预览+自动学习</strong></td><td>OpenCode <code>permission.tsx</code></td><td>仅 yes/no 确认</td><td>权限对话框显示 edit diff 预览；&quot;Allow always&quot; 写入运行时规则集；通配符模式匹配 <code>src/**</code></td></tr><tr><td>G6</td><td><strong>会话原子写入+检查点</strong></td><td>DeepSeek <code>session_manager.rs</code></td><td>直接 <code>writeFileSync</code></td><td>改用 tmp+fsync+rename 原子写入；每次 AI 完整回复后 checkpoint；崩溃时从 checkpoint 恢复</td></tr><tr><td>G7</td><td><strong>统一 ErrorEnvelope</strong></td><td>DeepSeek <code>error_taxonomy.rs</code></td><td>13 类分类但无统一信封</td><td>新增 <code>ErrorEnvelope { category, severity, recoverable, code, message }</code>；所有错误源适配到 Envelope</td></tr><tr><td>G8</td><td><strong>首次引导流程</strong></td><td>DeepSeek <code>OnboardingState</code></td><td>无，直接进入 REPL</td><td>状态机引导：Language → API Key → Trust Directory → Tips → Done；从 <code>LANG</code> 自动检测语言</td></tr></tbody></table>
+<h3 id="p1-竞争力-影响用户留存">P1 — 竞争力 (影响用户留存)<a class="anchor" href="#p1-竞争力-影响用户留存" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>差距</th><th>参考来源</th><th>当前 KHY 状态</th><th>改进方案</th></tr></thead><tbody><tr><td>G9</td><td><strong>子代理类型化角色</strong></td><td>DeepSeek 7 类型 / Hermes delegate</td><td>通用 Worker + 深度控制</td><td>定义 5 种角色 (General/Explore/Plan/Implementer/Verifier)，每种有独立 system prompt + 工具集白名单</td></tr><tr><td>G10</td><td><strong>并行工具安全分类</strong></td><td>Hermes <code>_PARALLEL_SAFE_TOOLS</code></td><td>无，工具串行执行</td><td>标记 <code>isConcurrencySafe</code> → 只读工具并行 (read_file/grep/glob)；写入工具按路径分区并行；交互工具强制串行</td></tr><tr><td>G11</td><td><strong>目标持久化 (Ralph Loop)</strong></td><td>Hermes <code>goals.py</code></td><td>无持久目标系统</td><td><code>/goal &lt;text&gt;</code> 设置跨轮次目标；每轮 judge 判定是否完成；未完成自动 continuation；<code>/subgoal</code> 添加子目标</td></tr><tr><td>G12</td><td><strong>会话分支+全文搜索</strong></td><td>DeepSeek/OpenCode</td><td>无分支，简单索引搜索</td><td><code>/branch</code> 从当前节点 fork 新会话；SQLite FTS5 全文搜索 + trigram CJK 支持</td></tr><tr><td>G13</td><td><strong>帧率限制器</strong></td><td>DeepSeek <code>frame_rate_limiter.rs</code></td><td>无，每次状态变化即刷新</td><td>双档 120fps/30fps 限制器；低运动模式(reduce-motion)自动降频</td></tr><tr><td>G14</td><td><strong>记忆 Plugin 架构</strong></td><td>Hermes 8 个 memory provider</td><td>无结构化记忆</td><td>定义 <code>MemoryProvider</code> 接口；内置 MEMORY.md provider；支持外部插件 (mem0/retaindb)；FTS5 搜索</td></tr><tr><td>G15</td><td><strong>Kanban 任务板</strong></td><td>Hermes <code>kanban_db.py</code></td><td>文件型 TaskBoard</td><td>SQLite WAL + CAS 原子 claim；7 状态 (triage/todo/ready/running/blocked/done/archived)；heartbeat TTL</td></tr><tr><td>G16</td><td><strong>Compaction 经济学</strong></td><td>DeepSeek 500K 硬地板</td><td>简单 token 阈值压缩</td><td>引入前缀缓存经济学：低 token 数不压缩(保护缓存)；默认 80% 窗口触发；工具结果优先裁剪</td></tr></tbody></table>
+<h3 id="p2-差异化-形成独特卖点">P2 — 差异化 (形成独特卖点)<a class="anchor" href="#p2-差异化-形成独特卖点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>差距</th><th>参考来源</th><th>当前 KHY 状态</th><th>改进方案</th></tr></thead><tbody><tr><td>G17</td><td><strong>皮肤引擎</strong></td><td>Hermes <code>skin_engine.py</code></td><td>JSON 主题仅覆盖颜色</td><td>YAML 皮肤文件：colors + spinnerChars + branding (agent_name/welcome/goodbye/prompt_symbol) + 自定义 ASCII art</td></tr><tr><td>G18</td><td><strong>人格系统</strong></td><td>Hermes 14 种预置人格</td><td>无</td><td><code>/personality &lt;name&gt;</code> 切换人格；内置 helpful/concise/technical/creative/teacher 5 种；SOUL.md 完全自定义</td></tr><tr><td>G19</td><td><strong>Cron 定时任务</strong></td><td>Hermes <code>cron/</code></td><td>无</td><td>定时执行 agent 任务；输出持久化到文件；支持 webhook/notification 交付；注入防护</td></tr><tr><td>G20</td><td><strong>Provider 别名容错</strong></td><td>DeepSeek/Hermes 多别名</td><td>严格字符串匹配</td><td>&quot;nvidia&quot;/&quot;nvidia-nim&quot;/&quot;nim&quot; 均映射到同一 provider；API key 支持 OS keyring 存储</td></tr><tr><td>G21</td><td><strong>工具结果智能裁剪</strong></td><td>DeepSeek <code>prune_tool_results_until</code></td><td>简单截断</td><td>旧工具输出去重+摘要裁剪；大上下文 120K chars / 普通 24K chars 分档；保留最近 2 轮完整输出</td></tr><tr><td>G22</td><td><strong>命令面板</strong></td><td>OpenCode <code>CommandPalette</code></td><td><code>/</code> 拾取器</td><td>Ctrl+P 打开全局命令面板；聚合所有命令/设置/会话/模型/主题；模糊搜索+分类</td></tr><tr><td>G23</td><td><strong>终端色深自适应</strong></td><td>DeepSeek <code>ColorDepth</code></td><td>直接使用 hex 颜色</td><td>检测 TrueColor/256/16 能力；<code>nearest_ansi16()</code> + <code>rgb_to_ansi256()</code> 降级映射</td></tr><tr><td>G24</td><td><strong>安全审计日志</strong></td><td>DeepSeek <code>log_sensitive_event</code></td><td>无</td><td>敏感操作(密钥读写/权限变更/危险命令)写入审计日志 <code>~/.khyquant/audit.jsonl</code></td></tr></tbody></table>
+<h3 id="p3-远期完善">P3 — 远期完善<a class="anchor" href="#p3-远期完善" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>差距</th><th>参考来源</th><th>当前 KHY 状态</th><th>改进方案</th></tr></thead><tbody><tr><td>G25</td><td><strong>会话元数据快速加载</strong></td><td>DeepSeek 64KB 前缀扫描</td><td>反序列化完整 JSON</td><td>会话列表只读前 64KB 提取 title/time/model；大型会话打开延迟 ms 级</td></tr><tr><td>G26</td><td><strong>上下文注入扫描</strong></td><td>Hermes <code>_CONTEXT_THREAT_PATTERNS</code></td><td>无</td><td>加载 AGENTS.md/.cursorrules 前扫描 prompt injection 模式；检测到则 <code>[BLOCKED]</code> 替换</td></tr><tr><td>G27</td><td><strong>多架构 Docker</strong></td><td>DeepSeek QEMU+Buildx</td><td>仅 amd64</td><td>添加 <code>linux/arm64</code> 构建目标；Homebrew tap 自动更新</td></tr><tr><td>G28</td><td><strong>Parity 测试门控</strong></td><td>DeepSeek snapshot/protocol/state 3 项</td><td>无</td><td>CI 添加 snapshot parity (TUI 输出快照)、protocol parity (API schema 一致)、state parity (持久化格式一致)</td></tr><tr><td>G29</td><td><strong>离线队列</strong></td><td>DeepSeek <code>OfflineQueueState</code></td><td>无</td><td>网络断开时消息排入本地队列；恢复连接后自动重发；队列绑定 session_id 防止泄漏</td></tr><tr><td>G30</td><td><strong>Profile 多实例隔离</strong></td><td>Hermes <code>profiles.py</code></td><td>无</td><td><code>khy -p &lt;profile&gt;</code> 切换独立配置目录；每个 profile 有独立 config/sessions/memory/skills</td></tr></tbody></table>
+<hr>
+<h2 id="三-设计模式学习清单">三、设计模式学习清单<a class="anchor" href="#三-设计模式学习清单" aria-label="锚点">#</a></h2>
+<h3 id="从-deepseek-tui-学习">从 DeepSeek-TUI 学习<a class="anchor" href="#从-deepseek-tui-学习" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>实现位置</th><th>KHY 应用场景</th></tr></thead><tbody><tr><td><strong>迟滞控制器</strong></td><td><code>chunking.rs</code> Smooth/CatchUp 不同进入/退出阈值</td><td>流式分块策略，避免状态边界振荡</td></tr><tr><td><strong>两阶段渲染</strong></td><td><code>markdown_render.rs</code> parse→AST, render(AST,width)→lines</td><td>markdown 渲染性能优化，resize 零解析成本</td></tr><tr><td><strong>原子写入+检查点</strong></td><td><code>session_manager.rs</code> NamedTempFile+fsync+persist</td><td>会话持久化崩溃安全</td></tr><tr><td><strong>Golden Master Testing</strong></td><td>snapshot/protocol/state 三项 parity 测试</td><td>CI 质量门控，防止跨版本行为漂移</td></tr><tr><td><strong>缓存经济学</strong></td><td><code>compaction.rs</code> 500K 硬地板保护前缀缓存</td><td>避免低 token 时压缩导致缓存失效成本大于收益</td></tr><tr><td><strong>版本计数器</strong></td><td><code>history_version: u64</code> per-cell 版本追踪</td><td>增量渲染，只重绘变化的 cell</td></tr><tr><td><strong>三级色深适配</strong></td><td><code>ColorDepth</code> TrueColor/256/16 + nearest_ansi16()</td><td>兼容所有终端环境</td></tr><tr><td><strong>Lease Pattern</strong></td><td><code>RESIDENT_LEASES</code> 子代理文件所有权</td><td>防止多子代理同时修改同一文件</td></tr></tbody></table>
+<h3 id="从-hermes-agent-学习">从 Hermes Agent 学习<a class="anchor" href="#从-hermes-agent-学习" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>实现位置</th><th>KHY 应用场景</th></tr></thead><tbody><tr><td><strong>迭代预算</strong></td><td><code>IterationBudget</code> 父90轮/子45轮</td><td>防止 agent 无限循环消耗 token</td></tr><tr><td><strong>并行安全分类</strong></td><td><code>_PARALLEL_SAFE_TOOLS</code> + <code>_NEVER_PARALLEL_TOOLS</code></td><td>工具并行执行策略，只读并行/写入分区/交互串行</td></tr><tr><td><strong>CAS 原子 Claim</strong></td><td><code>kanban_db.py</code> BEGIN IMMEDIATE + status CAS</td><td>多 worker 竞争任务的无锁分配</td></tr><tr><td><strong>Plugin Provider ABC</strong></td><td><code>MemoryProvider</code> 接口 + <code>discover_memory_providers()</code></td><td>可扩展记忆系统，支持第三方存储</td></tr><tr><td><strong>Prompt 注入防护</strong></td><td><code>_CONTEXT_THREAT_PATTERNS</code> regex 扫描</td><td>上下文文件安全加载</td></tr><tr><td><strong>三态忙碌输入</strong></td><td>interrupt/queue/steer 模式</td><td>(已实现) 继续优化 steer 注入时机</td></tr><tr><td><strong>Goal-Judge 循环</strong></td><td><code>goals.py</code> 目标 + 辅助模型判定 + continuation</td><td>持久化跨轮次任务追踪</td></tr><tr><td><strong>数据驱动皮肤</strong></td><td><code>skin_engine.py</code> YAML 定义 colors+spinner+branding</td><td>用户完全自定义视觉主题</td></tr></tbody></table>
+<h3 id="从-opencode-学习">从 OpenCode 学习<a class="anchor" href="#从-opencode-学习" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模式</th><th>实现位置</th><th>KHY 应用场景</th></tr></thead><tbody><tr><td><strong>Leader 键序列</strong></td><td><code>@opentui/keymap</code> 超时序列</td><td>类 Vim leader 键扩展快捷键空间</td></tr><tr><td><strong>命令面板</strong></td><td><code>CommandPaletteProvider</code> Ctrl+P</td><td>统一的命令/设置/会话发现入口</td></tr><tr><td><strong>权限通配符匹配</strong></td><td><code>evaluate.ts</code> last-match-wins + Wildcard</td><td>精细的路径级权限控制 <code>src/**</code> → allow</td></tr><tr><td><strong>Schema 预编译</strong></td><td><code>Schema.decodeUnknownEffect</code> 初始化时编译</td><td>工具参数校验一次编译多次复用</td></tr><tr><td><strong>双进程 Worker</strong></td><td><code>thread.ts</code> TUI 渲染 + Worker AI 后端</td><td>渲染不阻塞 AI 请求，AI 不阻塞 UI</td></tr><tr><td><strong>System 主题</strong></td><td>从终端 16 色自动推导完整主题</td><td>自动适配用户终端配色</td></tr><tr><td><strong>Toast 通知</strong></td><td>variant(error/warning/info) + 持续时间</td><td>非阻塞状态反馈</td></tr><tr><td><strong>Doom Loop 检测</strong></td><td>连续 3 次失败触发</td><td>防止 AI 陷入重复失败循环</td></tr></tbody></table>
+<hr>
+<h2 id="四-实施路线图">四、实施路线图<a class="anchor" href="#四-实施路线图" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-核心体验-1-2-周-g1-g2-g3-g6-g7-g8">Phase 1: 核心体验 (1-2 周) — G1,G2,G3,G6,G7,G8<a class="anchor" href="#phase-1-核心体验-1-2-周-g1-g2-g3-g6-g7-g8" aria-label="锚点">#</a></h3>
+<pre><code>Week 1:
+  G1 流式换行门控 — repl.js 新增 LineBuffer 类
+  G2 自适应分块 — repl.js 双档 Smooth/CatchUp
+  G6 会话原子写入 — sessionPersistence.js tmp+fsync+rename
+  G7 统一 ErrorEnvelope — 新建 errorEnvelope.js
+
+Week 2:
+  G3 Markdown 解析/渲染分离 — 拆分 aiRenderer.js
+  G8 首次引导流程 — 新建 onboarding.js 状态机</code></pre>
+<h3 id="phase-2-竞争力-2-3-周-g4-g5-g9-g10-g13-g16">Phase 2: 竞争力 (2-3 周) — G4,G5,G9,G10,G13,G16<a class="anchor" href="#phase-2-竞争力-2-3-周-g4-g5-g9-g10-g13-g16" aria-label="锚点">#</a></h3>
+<pre><code>Week 3:
+  G4 主题扩充+色深检测 — themeRegistry.js 扩展
+  G13 帧率限制器 — 新建 frameRateLimiter.js
+  G16 Compaction 经济学 — contextCompressor.js 优化
+
+Week 4:
+  G5 权限 diff 预览+学习 — permissionDialog.js 增强
+  G9 子代理类型化角色 — workerAgent.js 角色枚举
+  G10 并行工具分类 — toolPipeline.js 并行调度</code></pre>
+<h3 id="phase-3-差异化-3-4-周-g11-g12-g14-g15-g17-g24">Phase 3: 差异化 (3-4 周) — G11,G12,G14,G15,G17-G24<a class="anchor" href="#phase-3-差异化-3-4-周-g11-g12-g14-g15-g17-g24" aria-label="锚点">#</a></h3>
+<pre><code>Week 5-6:
+  G11 目标持久化 — 新建 goalSystem.js
+  G12 会话分支+FTS5 — sessionPersistence.js → SQLite
+  G14 记忆 Plugin — 新建 memoryManager.js
+  G15 Kanban 任务板 — 升级 taskBoard.js
+  G22 命令面板 — repl.js 新增 Ctrl+P
+
+Week 7-8:
+  G17 皮肤引擎 — 扩展 themeRegistry.js
+  G18 人格系统 — 新建 soulManager.js
+  G19 Cron 定时任务 — 新建 cronScheduler.js
+  G20 Provider 别名容错 — gateway 配置增强
+  G21 工具结果裁剪 — contextCompressor.js
+  G23 终端色深自适应 — palette.js
+  G24 安全审计日志 — auditLog.js</code></pre>
+<h3 id="phase-4-远期完善-5-周-g25-g30">Phase 4: 远期完善 (5+ 周) — G25-G30<a class="anchor" href="#phase-4-远期完善-5-周-g25-g30" aria-label="锚点">#</a></h3>
+<pre><code>  G25 会话元数据快速加载
+  G26 上下文注入扫描
+  G27 多架构 Docker
+  G28 Parity 测试门控
+  G29 离线队列
+  G30 Profile 多实例隔离</code></pre>
+<hr>
+<h2 id="五-关键文件拆分建议">五、关键文件拆分建议<a class="anchor" href="#五-关键文件拆分建议" aria-label="锚点">#</a></h2>
+<p>当前巨型文件是最大的工程债务，阻碍所有改进的实施效率：</p>
+<table><thead><tr><th>文件</th><th>当前大小</th><th>拆分方案</th></tr></thead><tbody><tr><td><code>repl.js</code> (324KB)</td><td>1 文件</td><td>→ <code>repl.js</code> (核心循环) + <code>lineBuffer.js</code> (流式缓冲) + <code>inputPicker.js</code> (拾取器) + <code>busyInput.js</code> (忙碌输入) + <code>historyManager.js</code> (历史) + <code>commandPalette.js</code> (命令面板)</td></tr><tr><td><code>aiRenderer.js</code> (147KB)</td><td>1 文件</td><td>→ <code>aiRenderer.js</code> (管线入口) + <code>markdownParser.js</code> (AST 解析) + <code>markdownRenderer.js</code> (渲染) + <code>tableRenderer.js</code> (表格) + <code>mermaidRenderer.js</code> (图表) + <code>treeRenderer.js</code> (树) + <code>diffRenderer.js</code> (diff) + <code>codeHighlighter.js</code> (语法)</td></tr></tbody></table>
+<hr>
+<h2 id="六-预期收益">六、预期收益<a class="anchor" href="#六-预期收益" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>当前</th><th>Phase 1 后</th><th>Phase 3 后</th></tr></thead><tbody><tr><td>综合评分</td><td>2.7/5</td><td>3.5/5</td><td>4.2/5</td></tr><tr><td>流式渲染质量</td><td>3/5</td><td>4.5/5</td><td>4.5/5</td></tr><tr><td>主题/视觉</td><td>2/5</td><td>3.5/5</td><td>4.5/5</td></tr><tr><td>会话可靠性</td><td>3/5</td><td>4.5/5</td><td>5/5</td></tr><tr><td>Agent 能力</td><td>3/5</td><td>3/5</td><td>4.5/5</td></tr><tr><td>产品交付</td><td>3/5</td><td>3/5</td><td>4/5</td></tr></tbody></table>
+<hr>
+<h2 id="附录-参考项目源码关键路径">附录: 参考项目源码关键路径<a class="anchor" href="#附录-参考项目源码关键路径" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-tui-tmp-deepseek-tui-deepseek-tui-main">DeepSeek-TUI (<code>/tmp/deepseek-tui/DeepSeek-TUI-main/</code>)<a class="anchor" href="#deepseek-tui-tmp-deepseek-tui-deepseek-tui-main" aria-label="锚点">#</a></h3>
+<ul><li>流式管线: <code>crates/tui/src/tui/streaming/{mod,line_buffer,chunking}.rs</code></li><li>主题: <code>crates/tui/src/palette.rs</code> (1698行)</li><li>Markdown: <code>crates/tui/src/tui/markdown_render.rs</code></li><li>会话: <code>crates/tui/src/session_manager.rs</code> (1856行)</li><li>错误: <code>crates/tui/src/error_taxonomy.rs</code> (735行)</li><li>Compaction: <code>crates/tui/src/compaction.rs</code> (2774行)</li><li>子代理: <code>crates/tui/src/tools/subagent/mod.rs</code></li><li>帧率: <code>crates/tui/src/tui/frame_rate_limiter.rs</code></li><li>Vim: <code>crates/tui/src/tui/vim_mode.rs</code></li><li>CI: <code>.github/workflows/release.yml</code></li></ul>
+<h3 id="hermes-agent-tmp-hermes-agent-hermes-agent-main">Hermes Agent (<code>/tmp/hermes-agent/hermes-agent-main/</code>)<a class="anchor" href="#hermes-agent-tmp-hermes-agent-hermes-agent-main" aria-label="锚点">#</a></h3>
+<ul><li>核心循环: <code>run_agent.py</code> (16408行)</li><li>CLI: <code>cli.py</code> (14166行)</li><li>目标: <code>hermes_cli/goals.py</code></li><li>Kanban: <code>hermes_cli/kanban_db.py</code></li><li>记忆: <code>agent/memory_manager.py</code> + <code>plugins/memory/</code></li><li>工具: <code>tools/registry.py</code> + <code>toolsets.py</code></li><li>皮肤: <code>hermes_cli/skin_engine.py</code></li><li>认证: <code>hermes_cli/auth.py</code> + <code>hermes_cli/providers.py</code></li><li>Cron: <code>cron/scheduler.py</code></li><li>i18n: <code>agent/i18n.py</code> + <code>locales/</code></li><li>安全: <code>tools/tirith_security.py</code> + <code>agent/tool_guardrails.py</code></li></ul>
+<h3 id="opencode-tmp-opencode-opencode-dev">OpenCode (<code>/tmp/opencode/opencode-dev/</code>)<a class="anchor" href="#opencode-tmp-opencode-opencode-dev" aria-label="锚点">#</a></h3>
+<ul><li>TUI 入口: <code>packages/opencode/src/cli/cmd/tui/app.tsx</code></li><li>键绑定: <code>packages/opencode/src/cli/cmd/tui/keymap.tsx</code> + <code>config/keybind.ts</code></li><li>权限: <code>packages/opencode/src/permission/{index,evaluate}.ts</code></li><li>工具: <code>packages/opencode/src/tool/{tool,registry,truncate}.ts</code></li><li>会话: <code>packages/opencode/src/session/session.ts</code> + <code>compaction.ts</code></li><li>主题: <code>packages/opencode/src/cli/cmd/tui/context/theme.tsx</code> (33 主题)</li><li>Markdown: <code>packages/ui/src/components/markdown-stream.ts</code></li><li>Agent: <code>packages/opencode/src/agent/agent.ts</code></li><li>安装: <code>install</code> (跨平台 bash)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-010] windows-工具调用循环冻结-2026-05-28.html"><div class="dir">← 上一篇</div><div class="ttl">Windows 工具调用冻结排查与快速修复（2026-05-28）</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-012] ai-显示-对标与对齐.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS AI 显示系统 — 四项目对标分析与对齐方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-011] 三项目深度学习-2026-05-21.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

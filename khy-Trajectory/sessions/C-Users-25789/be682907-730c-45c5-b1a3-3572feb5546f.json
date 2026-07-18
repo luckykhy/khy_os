@@ -1,0 +1,22 @@
+{
+  "sessionId": "be682907-730c-45c5-b1a3-3572feb5546f",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "讲个笑话"
+    },
+    {
+      "role": "assistant",
+      "content": "程序员去买西瓜，问老板：\"这瓜甜不甜？\"\n老板说：\"不甜不要钱！\"\n程序员立马抱起一个瓜就走：\"太好了，那这个不甜的给我。\"\n\n💡 知识点：二分查找算法的时间复杂度是 O(log n)，每次比较都能将搜索范围缩小一半，就像程序员买瓜时直接锁定\"不甜\"的那一半。"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781186336697,
+  "updatedAt": 1781186336697
+}

@@ -1,0 +1,10 @@
+{
+  "name": "commit",
+  "description": "Create a git commit with proper message following repository conventions",
+  "user_invocable": true,
+  "trigger": "/commit",
+  "aliases": ["/gc"],
+  "category": "devops",
+  "tags": ["git", "commit", "version-control"],
+  "platforms": ["khy-os", "khy-quant"]
+}

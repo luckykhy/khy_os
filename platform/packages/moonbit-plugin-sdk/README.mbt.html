@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos/moonbitpluginsdk · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>platform<span class="sep">›</span>packages<span class="sep">›</span>moonbit-plugin-sdk<span class="sep">›</span>khyos/moonbitpluginsdk</div>
+      <header class="hero reveal"><h1>khyos/moonbitpluginsdk</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-moonbit-plugin-sdk">khyos/moonbit_plugin_sdk</a></li><li class="lvl-2"><a href="#scope">Scope</a></li><li class="lvl-2"><a href="#host-contract">Host Contract</a></li><li class="lvl-2"><a href="#usage-example">Usage Example</a></li><li class="lvl-2"><a href="#notes">Notes</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-moonbit-plugin-sdk">khyos/moonbit_plugin_sdk<a class="anchor" href="#khyos-moonbit-plugin-sdk" aria-label="锚点">#</a></h1>
+<p>MoonBit SDK for KHY OS M1 host IPC (<code>khy_sys</code>).</p>
+<h2 id="scope">Scope<a class="anchor" href="#scope" aria-label="锚点">#</a></h2>
+<p>This package provides:</p>
+<ul><li>Capability constants (<code>CAP_IPC</code>, <code>CAP_NET</code>, ...)</li><li>Service/method constants (<code>SERVICE_NET</code>, <code>NET_HTTP_GET</code>, ...)</li><li>Raw <code>khy_sys</code> bindings (<code>ipc_call</code>, <code>ipc_last_len</code>, ...)</li><li>Safe wrappers:<ul><li><code>call_json(...)</code></li><li><code>call_json_with(...)</code></li><li><code>call_json_utf8(...)</code></li><li><code>payload_utf8(...)</code></li></ul></li></ul>
+<h2 id="host-contract">Host Contract<a class="anchor" href="#host-contract" aria-label="锚点">#</a></h2>
+<p>The host runtime must provide imported symbols in module <code>&quot;khy_sys&quot;</code>:</p>
+<ul><li><code>cap_check</code></li><li><code>ipc_call</code></li><li><code>ipc_last_len</code></li><li><code>ipc_last_status</code></li><li><code>shm_create</code></li><li><code>shm_map</code></li></ul>
+<p>Current repository implementation:</p>
+<ul><li><code>backend/src/services/wasm-sandbox/khySysHost.js</code></li><li><code>backend/src/services/wasm-sandbox/moonbitHostBridge.js</code></li><li><code>backend/src/services/wasm-sandbox/loopbackTransport.js</code></li></ul>
+<h2 id="usage-example">Usage Example<a class="anchor" href="#usage-example" aria-label="锚点">#</a></h2>
+<pre><code class="language-moonbit">let result = @sdk.call_json_utf8(
+  @sdk.SERVICE_NET,
+  @sdk.NET_HTTP_GET,
+  &quot;{\&quot;city\&quot;:\&quot;shanghai\&quot;}&quot;,
+)
+
+if result.status &lt; 0 {
+  println(&quot;ipc failed: \{result.status}&quot;)
+} else {
+  let json = @sdk.payload_utf8(result)
+  println(&quot;ipc ok: \{json}&quot;)
+}</code></pre>
+<h2 id="notes">Notes<a class="anchor" href="#notes" aria-label="锚点">#</a></h2>
+<ul><li><code>call_json_with</code> writes into an internal fixed response buffer and truncates to <code>ipc_last_len()</code>.</li><li>On errors, host returns negative errno values (for example <code>-13</code>, <code>-22</code>, <code>-90</code>).</li><li><code>DEFAULT_RESPONSE_CAPACITY</code> is <code>65536</code> bytes (M1 frame limit).</li><li>Current host-side <code>khySysHost</code> implementation in this repository expects pointer-style <code>u32</code> req/resp ABI. If module/runtime combination provides non-pointer <code>externref</code> byte arguments to <code>ipc_call</code>, runtime will reject with <code>-EPROTO</code>.</li><li><code>app register --abi numeric-v1</code> will also reject such modules early when <code>khy_sys.ipc_call</code> is imported but expected memory export is missing.</li><li><code>app register</code> also performs import compatibility checks and rejects unsupported imports early (host supports <code>khy_sys.*</code> and <code>spectest.print_char</code>).</li><li>For <code>string-v2/json-v2</code>, registration now validates ABI-required exports and currently supports only <code>return-mode=i64-ptr-len</code>.</li><li>For <code>numeric-v1</code> app execution, host runtime also performs an early module precheck (<code>imports khy_sys.ipc_call</code> + <code>missing expected memory export</code>) and fails fast with an explicit ABI mismatch error.</li></ul>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="platform/packages/moonbit-plugin-sdk/README.mbt.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

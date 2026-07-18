@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude API — Anthropic API Usage Guide · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>claude-api<span class="sep">›</span>Claude API — Anthropic API Usage Guide</div>
+      <header class="hero reveal"><h1>Claude API — Anthropic API Usage Guide</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-api-anthropic-api-usage-guide">Claude API — Anthropic API Usage Guide</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#topics">Topics</a></li><li class="lvl-3"><a href="#model-selection">Model Selection</a></li><li class="lvl-3"><a href="#api-basics">API Basics</a></li><li class="lvl-3"><a href="#tool-use-function-calling">Tool Use (Function Calling)</a></li><li class="lvl-3"><a href="#best-practices">Best Practices</a></li><li class="lvl-3"><a href="#common-patterns">Common Patterns</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="claude-api-anthropic-api-usage-guide">Claude API — Anthropic API Usage Guide<a class="anchor" href="#claude-api-anthropic-api-usage-guide" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Provide guidance on using the Anthropic API, selecting Claude models, leveraging tool use, and following best practices.</p>
+<h2 id="topics">Topics<a class="anchor" href="#topics" aria-label="锚点">#</a></h2>
+<h3 id="model-selection">Model Selection<a class="anchor" href="#model-selection" aria-label="锚点">#</a></h3>
+<ul><li><strong>Claude Opus 4</strong>: Most capable model. Best for complex reasoning, coding, and multi-step tasks.</li><li><strong>Claude Sonnet 4</strong>: Balanced performance and speed. Good default for most tasks.</li><li><strong>Claude Haiku 3.5</strong>: Fastest and most cost-effective. Best for simple tasks and high-volume use.</li></ul>
+<h3 id="api-basics">API Basics<a class="anchor" href="#api-basics" aria-label="锚点">#</a></h3>
+<ul><li>Base URL: <code>https://api.anthropic.com/v1/messages</code></li><li>Authentication: <code>x-api-key</code> header with your API key</li><li>Required headers: <code>anthropic-version: 2023-06-01</code>, <code>content-type: application/json</code></li><li>Key parameters: <code>model</code>, <code>messages</code>, <code>max_tokens</code>, <code>system</code></li></ul>
+<h3 id="tool-use-function-calling">Tool Use (Function Calling)<a class="anchor" href="#tool-use-function-calling" aria-label="锚点">#</a></h3>
+<ul><li>Define tools in the <code>tools</code> array with <code>name</code>, <code>description</code>, and <code>input_schema</code></li><li>The model returns <code>tool_use</code> content blocks when it wants to call a tool</li><li>Send tool results back as <code>tool_result</code> content blocks</li><li>Support for parallel tool calls and sequential chains</li></ul>
+<h3 id="best-practices">Best Practices<a class="anchor" href="#best-practices" aria-label="锚点">#</a></h3>
+<ul><li>Use the system prompt for persistent instructions and context</li><li>Set <code>max_tokens</code> appropriately to avoid truncation</li><li>Use streaming (<code>stream: true</code>) for better user experience on long responses</li><li>Implement exponential backoff for rate limit errors (429)</li><li>Cache system prompts with prompt caching to reduce costs</li><li>Use <code>stop_sequences</code> to control output format</li></ul>
+<h3 id="common-patterns">Common Patterns<a class="anchor" href="#common-patterns" aria-label="锚点">#</a></h3>
+<ul><li><strong>Multi-turn conversation</strong>: Maintain the full message history</li><li><strong>Structured output</strong>: Use tool use to get JSON responses</li><li><strong>Extended thinking</strong>: Enable <code>thinking</code> for complex reasoning tasks</li><li><strong>Batch API</strong>: Use <code>/v1/messages/batches</code> for high-volume async processing</li></ul>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Always check the latest API documentation for current model names and features.</li><li>Include practical code examples in Python or JavaScript when explaining concepts.</li><li>Mention pricing considerations when recommending models.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/ci-cd-and-automation/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">CI/CD and Automation</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/code-review-and-quality/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Code Review and Quality</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/claude-api/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

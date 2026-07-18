@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-119-还原-解密前-兼容性预检-运行时接线-让套件不兼容不再谎报口令错">[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）</a></li><li class="lvl-2"><a href="#这一层闭合什么-把-ops-105-ops-110-的能力真正接进运行时-restore">这一层闭合什么：把 OPS-105 / OPS-110 的能力真正接进运行时 restore</a></li><li class="lvl-2"><a href="#二级严重度-只在-证明性不可解-时硬拦-绝不误伤-zero-false-block">二级严重度：只在「证明性不可解」时硬拦，绝不误伤（zero false-block）</a></li><li class="lvl-2"><a href="#判定档-最保守优先-纯叶-assessrestorepreflight">判定档（最保守优先 · 纯叶 `assessRestorePreflight`）</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-119-还原-解密前-兼容性预检-运行时接线-让套件不兼容不再谎报口令错">[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）<a class="anchor" href="#ops-man-119-还原-解密前-兼容性预检-运行时接线-让套件不兼容不再谎报口令错" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是 bundled 运行时接线，无 <code>--gen-doc</code> 生成器）。<br>裁决逻辑改在 <code>services/backend/src/services/restorePreflightCheck.js</code>，<br>接线改在 <code>services/backend/src/cli/handlers/publish.js</code> 的 <code>_restoreFromSnapshot</code>。</p></blockquote>
+<h2 id="这一层闭合什么-把-ops-105-ops-110-的能力真正接进运行时-restore">这一层闭合什么：把 OPS-105 / OPS-110 的能力真正接进运行时 restore<a class="anchor" href="#这一层闭合什么-把-ops-105-ops-110-的能力真正接进运行时-restore" aria-label="锚点">#</a></h2>
+<p>OPS-MAN-105（快照格式兼容）与 OPS-MAN-110（加密套件可解密性）早已写好两个 dev 纯叶<br>（<code>scripts/lib/snapshotFormatCompat.js</code> / <code>scripts/lib/cryptoSuiteCompat.js</code>），能据快照头<br>判断「本机 khy 到底解不解得开这个快照」——<strong>但它们只被 dev CLI 消费，从未接进真正的<br>运行时还原命令 <code>khy restore</code></strong>。运行时 <code>_restoreFromSnapshot</code> 在解密前唯一的守卫只是<br><code>header.crypto</code> 是否存在，然后直接 <code>decrypt()</code>。而 <code>decrypt()</code>：</p>
+<ul><li>只认 <code>algo === 'aes-256-gcm'</code>（其它抛 <code>unsupported or missing snapshot crypto header</code>）；</li><li><strong>总是跑 <code>scryptSync</code>，从不读 <code>crypto.kdf</code></strong>。</li></ul>
+<p>于是未来一个 <code>kdf:'argon2'</code> 或未知 <code>algo</code> 的快照送到旧机器：运行时要么抛底层天书，<br>要么盲跑 scrypt 派生出<strong>错误密钥</strong> → GCM 认证失败。而这两种失败在 <code>publish.js</code> 的<br><code>catch</code> 里被<strong>一律</strong>改写成误导性的<br>「该快照由自定义密钥加密，请用 <code>--secret &lt;密钥&gt;</code> 指定」——<br>把「本机能力缺失、请升级 khy」<strong>谎报成「你密钥/口令错了」</strong>。陌生机器上的用户于是<br>一直找错方向。= <strong>能力存在、没接线的代码</strong>。</p>
+<p>本层就是那条缺失的接线：在 bundled 运行时里，<strong>解密之前</strong>给已解析的快照头跑一遍<br>兼容性预检，把「真因」明确出来，取代那条误导消息。</p>
+<pre><code class="language-bash">khy restore ./Khy-OS   # 解密前先判本机能否解开：套件不兼容 → 提前拦下并说清「请升级 khy」</code></pre>
+<h2 id="二级严重度-只在-证明性不可解-时硬拦-绝不误伤-zero-false-block">二级严重度：只在「证明性不可解」时硬拦，绝不误伤（zero false-block）<a class="anchor" href="#二级严重度-只在-证明性不可解-时硬拦-绝不误伤-zero-false-block" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>判据</th><th>severity</th><th>运行时动作</th></tr></thead><tbody><tr><td>加密套件</td><td><code>algo</code> 缺失/不受支持、<code>kdf</code> 存在且不受支持、salt/iv/authTag 残缺</td><td><strong>block</strong></td><td>解密前 <code>throw pf.message</code>（精确成因）</td></tr><tr><td>格式</td><td><code>format</code> 陌生、<code>formatVersion</code> 过新/过旧</td><td><strong>warn</strong></td><td><code>printWarn(pf.message)</code> 后<strong>仍继续</strong>尝试解密</td></tr><tr><td>受支持 / 证据不足</td><td>supported / unverifiable</td><td>none</td><td>静默继续，权威留给 <code>decrypt</code> 本身</td></tr></tbody></table>
+<ul><li><strong>block = 证明性不可解</strong>：这些条件<strong>必然</strong>让运行时 <code>decrypt()</code> 失败（今天只给误导</li></ul>
+<p>消息），故提前拦下并说清「请先升级 khy 再还原，这不是密钥/口令问题」= 严格改善、<br>  <strong>零误伤</strong>（一个本来能解的快照不会被 block）。</p>
+<ul><li><strong>warn = 未必阻止解密</strong>：v2 若只改了 tar 内布局、仍用同套件，v1 khy 也能解出字节，</li></ul>
+<p>故只提示、仍尝试，绝不 false-block 一个其实能还原的快照。</p>
+<h2 id="判定档-最保守优先-纯叶-assessrestorepreflight">判定档（最保守优先 · 纯叶 <code>assessRestorePreflight</code>）<a class="anchor" href="#判定档-最保守优先-纯叶-assessrestorepreflight" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>status</th><th>条件</th><th>severity</th><th>ok</th></tr></thead><tbody><tr><td><code>unverifiable</code></td><td>缺头 / 数组头 / crypto 非对象 / 预检异常</td><td>none（保守放行）</td><td>✗</td></tr><tr><td><code>incomplete-material</code></td><td>缺 <code>algo</code> 或缺 salt/iv/authTag</td><td>block</td><td>✗</td></tr><tr><td><code>unsupported-algo</code></td><td><code>algo</code> 不在本机支持集</td><td>block</td><td>✗</td></tr><tr><td><code>unsupported-kdf</code></td><td><code>kdf</code> 存在且不在本机支持集</td><td>block</td><td>✗</td></tr><tr><td><code>alien-format</code></td><td><code>format</code> 存在且非 <code>khy-source-snapshot</code></td><td>warn</td><td>✗</td></tr><tr><td><code>too-new-format</code> / <code>too-old-format</code></td><td><code>formatVersion</code> 越出理解区间</td><td>warn</td><td>✗</td></tr><tr><td><code>supported</code></td><td>套件齐全受支持、格式在理解区间</td><td>none</td><td>✓</td></tr></tbody></table>
+<ul><li><strong>顺序</strong>：加密套件（block）优先于格式（warn）——「证明性不可解」比「格式偏差」更该</li></ul>
+<p>先说清，且能解开与否由套件决定。</p>
+<ul><li><strong>本机支持集对齐运行时真身</strong>：默认 <code>supportedAlgos:['aes-256-gcm']</code>、</li></ul>
+<p><code>supportedKdfs:['scrypt']</code>，与 <code>sourceSnapshotCrypto.js</code> 的 <code>decrypt</code> 实际能执行集合同步。<br>  接线处显式传入运行时的 <code>ALGO</code> 常量（<code>sourceSnapshotCrypto.ALGO</code>）保持 DRY，未来改算法<br>  单点同步。</p>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯诊断/保护叠加层</strong>：block 只把「今天会失败并误报」的解密<strong>提前</strong>拦成清晰错误，</li></ul>
+<p>绝不 block 一个本能成功的还原；warn 从不阻断。门关或异常 → 退化为旧行为（字节等价<br>  直入 <code>decrypt</code>）。</p>
+<ul><li>门控 <code>KHY_RESTORE_PREFLIGHT</code>（default-on；仅 env ∈ {0,false,off,no} 归一后关闭）。</li><li><strong>红线密钥卫生</strong>：预检只读 <code>algo</code>/<code>kdf</code>/<code>format</code> 字符串、<code>formatVersion</code> 数字、以及</li></ul>
+<p>salt/iv/authTag 的<strong>存在性布尔</strong>；<strong>绝不</strong>把 salt/iv/authTag 的<strong>值</strong>读进变量或裁决<br>  输出（单测断言裁决 JSON 序列化不含密钥值）。</p>
+<ul><li>叶子纯计算、零 IO、绝不抛；<code>ok===true</code> 仅当 <code>status === supported</code>。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:restore-preflight     # 纯叶单测（15 用例）
+# LIVE：合成 kdf:'argon2' 头 → block（解密前抛「请升级 khy」）；
+#       合成 format:'v2' 头 → warn（提示后仍尝试）；真快照头 → supported（安心还原）；
+#       KHY_RESTORE_PREFLIGHT=0 → 字节等价旧行为，直入 decrypt。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

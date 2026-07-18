@@ -1,0 +1,27 @@
+{
+  "sessionId": "aa23b5ff-a4ee-4c76-a8d4-ea607bf95bd7",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "讲个笑话"
+    },
+    {
+      "role": "assistant",
+      "content": "程序员小王去修Bug，修了三天三夜，终于把Bug修好了。\n　　他兴奋地跑去找老板：“老板，Bug修好了！”\n　   老板点点头：“很好，那现在系统里还有几个Bug？”\n　   小王自信地说：“一个都没有了！”\n　   老板叹了口气：“那你刚才修的那个，是第几个？”\n\n💡 知识点：在软件开发中，修改代码时进行回归测试（Regression Testing）非常重要，确保修复一个Bug不会引入新的Bug。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782223877554,
+  "updatedAt": 1782223877554
+}

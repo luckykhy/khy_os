@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-comfyui · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-comfyui<span class="sep">›</span>cli-anything-comfyui</div>
+      <header class="hero reveal"><h1>cli-anything-comfyui</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-comfyui">cli-anything-comfyui</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#workflow">Workflow</a></li><li class="lvl-3"><a href="#queue">Queue</a></li><li class="lvl-3"><a href="#models">Models</a></li><li class="lvl-3"><a href="#images">Images</a></li><li class="lvl-3"><a href="#system">System</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#check-system-status">Check System Status</a></li><li class="lvl-3"><a href="#discover-available-models">Discover Available Models</a></li><li class="lvl-3"><a href="#queue-and-monitor-generation">Queue and Monitor Generation</a></li><li class="lvl-3"><a href="#download-generated-images">Download Generated Images</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-comfyui&quot;<br>description: &gt;-<br>  Command-line interface for ComfyUI - AI image generation workflow management via ComfyUI REST API. Designed for AI agents and power users who need to queue workflows, manage models, download generated images, and monitor the generation queue without a GUI.</p>
+<hr>
+<h1 id="cli-anything-comfyui">cli-anything-comfyui<a class="anchor" href="#cli-anything-comfyui" aria-label="锚点">#</a></h1>
+<p>AI image generation workflow management via the ComfyUI REST API. Designed for AI agents and power users who need to queue workflows, manage models, download generated images, and monitor the generation queue without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-comfyui package:</p>
+<pre><code class="language-bash">pip install cli-anything-comfyui</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>ComfyUI must be installed and running at http://localhost:8188</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-comfyui --help
+
+# Start interactive REPL mode
+cli-anything-comfyui repl
+
+# Check server stats
+cli-anything-comfyui system stats
+
+# Run with JSON output (for agent consumption)
+cli-anything-comfyui --json system stats</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>Start an interactive session for exploratory use:</p>
+<pre><code class="language-bash">cli-anything-comfyui repl
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h3>
+<p>Workflow management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List saved workflows</td></tr><tr><td><code>load</code></td><td>Load a workflow from a JSON file</td></tr><tr><td><code>validate</code></td><td>Validate a workflow JSON against the ComfyUI node graph</td></tr></tbody></table>
+<h3 id="queue">Queue<a class="anchor" href="#queue" aria-label="锚点">#</a></h3>
+<p>Generation queue management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>prompt</code></td><td>Queue a workflow for execution</td></tr><tr><td><code>status</code></td><td>Show current queue status (running and pending)</td></tr><tr><td><code>clear</code></td><td>Clear the generation queue</td></tr><tr><td><code>history</code></td><td>Show prompt execution history</td></tr><tr><td><code>interrupt</code></td><td>Interrupt the currently running generation</td></tr></tbody></table>
+<h3 id="models">Models<a class="anchor" href="#models" aria-label="锚点">#</a></h3>
+<p>Model discovery commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>checkpoints</code></td><td>List available checkpoint models</td></tr><tr><td><code>loras</code></td><td>List available LoRA models</td></tr><tr><td><code>vaes</code></td><td>List available VAE models</td></tr><tr><td><code>controlnets</code></td><td>List available ControlNet models</td></tr><tr><td><code>node-info</code></td><td>Show detailed info for a specific node type</td></tr><tr><td><code>list-nodes</code></td><td>List all available node types</td></tr></tbody></table>
+<h3 id="images">Images<a class="anchor" href="#images" aria-label="锚点">#</a></h3>
+<p>Generated image management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List generated images on the server</td></tr><tr><td><code>download</code></td><td>Download a specific generated image</td></tr><tr><td><code>download-all</code></td><td>Download all images from a prompt execution</td></tr></tbody></table>
+<h3 id="system">System<a class="anchor" href="#system" aria-label="锚点">#</a></h3>
+<p>Server status and information.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>stats</code></td><td>Show ComfyUI system statistics (GPU, CPU, memory)</td></tr><tr><td><code>info</code></td><td>Show ComfyUI server info and extensions</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="check-system-status">Check System Status<a class="anchor" href="#check-system-status" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Server stats
+cli-anything-comfyui system stats
+
+# Server info
+cli-anything-comfyui system info</code></pre>
+<h3 id="discover-available-models">Discover Available Models<a class="anchor" href="#discover-available-models" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List checkpoints
+cli-anything-comfyui models checkpoints
+
+# List LoRAs
+cli-anything-comfyui models loras
+
+# List all node types
+cli-anything-comfyui models list-nodes</code></pre>
+<h3 id="queue-and-monitor-generation">Queue and Monitor Generation<a class="anchor" href="#queue-and-monitor-generation" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Queue a workflow
+cli-anything-comfyui queue prompt --workflow my_workflow.json
+
+# Check queue status
+cli-anything-comfyui queue status
+
+# View execution history
+cli-anything-comfyui --json queue history</code></pre>
+<h3 id="download-generated-images">Download Generated Images<a class="anchor" href="#download-generated-images" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List generated images
+cli-anything-comfyui images list
+
+# Download a specific image
+cli-anything-comfyui images download --filename ComfyUI_00001_.png --output ./out.png
+
+# Download all images from a prompt
+cli-anything-comfyui images download-all --prompt-id &lt;id&gt; --output-dir ./outputs</code></pre>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-comfyui system stats
+
+# JSON output for agents
+cli-anything-comfyui --json system stats</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify ComfyUI is running</strong> with <code>system stats</code> before other commands</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-cloudcompare/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-cloudcompare</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-dify-workflow/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Dify Workflow CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-comfyui/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refinement &amp; Evaluation Criteria · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>idea-refine<span class="sep">›</span>Refinement &amp; Evaluation Criteria</div>
+      <header class="hero reveal"><h1>Refinement &amp; Evaluation Criteria</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#refinement-evaluation-criteria">Refinement &amp; Evaluation Criteria</a></li><li class="lvl-2"><a href="#core-evaluation-dimensions">Core Evaluation Dimensions</a></li><li class="lvl-3"><a href="#1-user-value">1. User Value</a></li><li class="lvl-3"><a href="#2-feasibility">2. Feasibility</a></li><li class="lvl-3"><a href="#3-differentiation">3. Differentiation</a></li><li class="lvl-2"><a href="#assumption-audit">Assumption Audit</a></li><li class="lvl-3"><a href="#must-be-true-dealbreakers">Must Be True (Dealbreakers)</a></li><li class="lvl-3"><a href="#should-be-true-important">Should Be True (Important)</a></li><li class="lvl-3"><a href="#might-be-true-nice-to-have">Might Be True (Nice to Have)</a></li><li class="lvl-2"><a href="#decision-framework">Decision Framework</a></li><li class="lvl-2"><a href="#mvp-scoping-principles">MVP Scoping Principles</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="refinement-evaluation-criteria">Refinement &amp; Evaluation Criteria<a class="anchor" href="#refinement-evaluation-criteria" aria-label="锚点">#</a></h1>
+<p>Use this rubric during Phase 2 (Evaluate &amp; Converge) to stress-test idea directions. Not every criterion applies to every idea — use judgment about which dimensions matter most for the specific context.</p>
+<h2 id="core-evaluation-dimensions">Core Evaluation Dimensions<a class="anchor" href="#core-evaluation-dimensions" aria-label="锚点">#</a></h2>
+<h3 id="1-user-value">1. User Value<a class="anchor" href="#1-user-value" aria-label="锚点">#</a></h3>
+<p>The most important dimension. If the value isn't clear, nothing else matters.</p>
+<p><strong>Painkiller vs. Vitamin:</strong></p>
+<ul><li><strong>Painkiller:</strong> Solves an acute, frequent problem. Users will actively seek this out. They'll switch from their current solution. Signs: people describe the problem with emotion, they've built workarounds, they'll pay for a solution.</li><li><strong>Vitamin:</strong> Nice to have. Makes something marginally better. Users won't go out of their way. Signs: people nod politely, say &quot;that's cool,&quot; then don't change behavior.</li></ul>
+<p><strong>Questions to ask:</strong></p>
+<ul><li>Can you name 3 specific people who have this problem right now?</li><li>What are they doing today instead? (The real competitor is always the current workaround.)</li><li>Would they switch from their current approach? What would make them switch?</li><li>How often do they encounter this problem? (Daily problems &gt; monthly problems)</li><li>Is this a &quot;pull&quot; problem (users are asking for this) or a &quot;push&quot; problem (you think they should want this)?</li></ul>
+<p><strong>Red flags:</strong></p>
+<ul><li>&quot;Everyone could use this&quot; — if you can't name a specific user, the value isn't clear</li><li>&quot;It's like X but better&quot; — marginal improvements rarely drive adoption</li><li>The problem is real but rare — high intensity but low frequency rarely justifies a product</li></ul>
+<h3 id="2-feasibility">2. Feasibility<a class="anchor" href="#2-feasibility" aria-label="锚点">#</a></h3>
+<p>Can you actually build this? Not just technically, but practically.</p>
+<p><strong>Technical feasibility:</strong></p>
+<ul><li>Does the core technology exist and work reliably?</li><li>What's the hardest technical problem? Is it a known-hard problem or a novel one?</li><li>Are there dependencies on third parties, APIs, or data sources you don't control?</li><li>What's the minimum technical stack needed? (If the answer is &quot;a lot,&quot; that's a signal.)</li></ul>
+<p><strong>Resource feasibility:</strong></p>
+<ul><li>What's the minimum team/effort to build an MVP?</li><li>Does it require specialized expertise you don't have?</li><li>Are there regulatory, legal, or compliance requirements?</li></ul>
+<p><strong>Time-to-value:</strong></p>
+<ul><li>How quickly can you get something in front of users?</li><li>Is there a version that delivers value in days/weeks, not months?</li><li>What's the critical path? What has to happen first?</li></ul>
+<p><strong>Red flags:</strong></p>
+<ul><li>&quot;We just need to solve [very hard research problem] first&quot;</li><li>Multiple dependencies that all need to work simultaneously</li><li>MVP still requires months of work — likely not minimal enough</li></ul>
+<h3 id="3-differentiation">3. Differentiation<a class="anchor" href="#3-differentiation" aria-label="锚点">#</a></h3>
+<p>What makes this genuinely different? Not better — <em>different</em>.</p>
+<p><strong>Questions to ask:</strong></p>
+<ul><li>If a user described this to a friend, what would they say? Is that description compelling?</li><li>What's the one thing this does that nothing else does? (If you can't name one, that's a problem.)</li><li>Is this differentiation durable? Can a competitor copy it in a week?</li><li>Is the difference something users actually care about, or just something builders find interesting?</li></ul>
+<p><strong>Types of differentiation (strongest to weakest):</strong></p>
+<ol><li><strong>New capability:</strong> Does something that was previously impossible</li><li><strong>10x improvement:</strong> So much better on a key dimension that it changes behavior</li><li><strong>New audience:</strong> Brings an existing capability to people who were excluded</li><li><strong>New context:</strong> Works in a situation where existing solutions fail</li><li><strong>Better UX:</strong> Same capability, dramatically simpler experience</li><li><strong>Cheaper:</strong> Same thing, lower cost (weakest — easily competed away)</li></ol>
+<p><strong>Red flags:</strong></p>
+<ul><li>Differentiation is entirely about technology, not user experience</li><li>&quot;We're faster/cheaper/prettier&quot; without a structural reason why</li><li>The feature that differentiates is not the feature users care most about</li></ul>
+<h2 id="assumption-audit">Assumption Audit<a class="anchor" href="#assumption-audit" aria-label="锚点">#</a></h2>
+<p>For every idea direction, explicitly list assumptions in three categories:</p>
+<h3 id="must-be-true-dealbreakers">Must Be True (Dealbreakers)<a class="anchor" href="#must-be-true-dealbreakers" aria-label="锚点">#</a></h3>
+<p>Assumptions that, if wrong, kill the idea entirely. These need validation before building.</p>
+<p>Example: &quot;Users will share their data with us&quot; — if they won't, the entire product doesn't work.</p>
+<h3 id="should-be-true-important">Should Be True (Important)<a class="anchor" href="#should-be-true-important" aria-label="锚点">#</a></h3>
+<p>Assumptions that significantly impact success but don't kill the idea. You can adjust the approach if these are wrong.</p>
+<p>Example: &quot;Users prefer self-serve over talking to a person&quot; — if wrong, you need a different go-to-market, but the core product can still work.</p>
+<h3 id="might-be-true-nice-to-have">Might Be True (Nice to Have)<a class="anchor" href="#might-be-true-nice-to-have" aria-label="锚点">#</a></h3>
+<p>Assumptions about secondary features or optimizations. Don't validate these until the core is proven.</p>
+<p>Example: &quot;Users will want to share their results with teammates&quot; — a growth feature, not a core value proposition.</p>
+<h2 id="decision-framework">Decision Framework<a class="anchor" href="#decision-framework" aria-label="锚点">#</a></h2>
+<p>When choosing between directions, rank on this matrix:</p>
+<table><thead><tr><th></th><th>High Feasibility</th><th>Low Feasibility</th></tr></thead><tbody><tr><td><strong>High Value</strong></td><td>Do this first</td><td>Worth the risk</td></tr><tr><td><strong>Low Value</strong></td><td>Only if trivial</td><td>Don't do this</td></tr></tbody></table>
+<p>Then use differentiation as the tiebreaker between options in the same quadrant.</p>
+<h2 id="mvp-scoping-principles">MVP Scoping Principles<a class="anchor" href="#mvp-scoping-principles" aria-label="锚点">#</a></h2>
+<p>When defining MVP scope for the chosen direction:</p>
+<ol><li><strong>One job, done well.</strong> The MVP should nail exactly one user job. Not three jobs done partially.</li><li><strong>The riskiest assumption first.</strong> The MVP's primary purpose is to test the assumption most likely to be wrong.</li><li><strong>Time-box, not feature-list.</strong> &quot;What can we build and test in [timeframe]?&quot; is better than &quot;What features do we need?&quot;</li><li><strong>The 'Not Doing' list is mandatory.</strong> Explicitly name what you're cutting and why. This prevents scope creep and forces honest prioritization.</li><li><strong>If it's not embarrassing, you waited too long.</strong> The first version should feel incomplete to the builder. If it doesn't, you over-built.</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/idea-refine/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Idea Refine</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/incremental-implementation/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Incremental Implementation</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/idea-refine/refinement-criteria.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

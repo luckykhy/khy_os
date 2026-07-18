@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS — 项目定位 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>01_INIT_立项<span class="sep">›</span>KHY OS — 项目定位</div>
+      <header class="hero reveal"><h1>KHY OS — 项目定位</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-项目定位">KHY OS — 项目定位</a></li><li class="lvl-2"><a href="#khy-是什么">KHY 是什么？</a></li><li class="lvl-2"><a href="#架构栈">架构栈</a></li><li class="lvl-2"><a href="#分层详解">分层详解</a></li><li class="lvl-3"><a href="#khy-kernel-内核层">KHY Kernel（内核层）</a></li><li class="lvl-3"><a href="#khy-shell-终端层">KHY Shell（终端层）</a></li><li class="lvl-3"><a href="#khy-gateway-网关层">KHY Gateway（网关层）</a></li><li class="lvl-3"><a href="#khy-apps-应用层">KHY Apps（应用层）</a></li><li class="lvl-3"><a href="#khyquant-旗舰应用">khyquant（旗舰应用）</a></li><li class="lvl-2"><a href="#khy-与现有工具的区别">KHY 与现有工具的区别</a></li><li class="lvl-2"><a href="#当前成熟度">当前成熟度</a></li><li class="lvl-2"><a href="#安装">安装</a></li><li class="lvl-2"><a href="#链接">链接</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: INIT-PRD-002 | 阶段: 立项 | 原路径: docs/项目-定位.md --&gt;</p>
+<h1 id="khy-os-项目定位">KHY OS — 项目定位<a class="anchor" href="#khy-os-项目定位" aria-label="锚点">#</a></h1>
+<blockquote><p>状态: <strong>草案</strong> (2026-05-30) — 方向已确定，尚未最终敲定。</p></blockquote>
+<h2 id="khy-是什么">KHY 是什么？<a class="anchor" href="#khy-是什么" aria-label="锚点">#</a></h2>
+<p>KHY OS 是一个 AI 原生操作系统项目。从自研 x86_64 混合微内核，到 AI 驱动的终端、WASM 应用运行时、多通道 AI 网关——作为一个垂直整合的平台统一起来。</p>
+<p>与跑在现有操作系统之上的 AI 编程工具不同，KHY 将 AI 视为系统级能力——从内核的 IPC 和系统调用层到交互式终端，AI 都是原生的。</p>
+<h2 id="架构栈">架构栈<a class="anchor" href="#架构栈" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────────────────────────┐
+│  KHY 应用层                                      │
+│  ┌───────────┐  ┌───────────┐  ┌─────────────┐  │
+│  │ khyquant  │  │ WASM 应用 │  │ 用户插件    │  │
+│  │ (量化交易)│  │ (沙箱运行)│  │ (CLI/Web    │  │
+│  │           │  │           │  │  扩展)      │  │
+│  └───────────┘  └───────────┘  └─────────────┘  │
+├─────────────────────────────────────────────────┤
+│  KHY Shell — AI 原生终端                         │
+│  100+ 命令 · 工具调用 · 目标模式                   │
+│  上下文管理 · 会话持久化                           │
+├─────────────────────────────────────────────────┤
+│  KHY Gateway — 多通道 AI 路由器                    │
+│  16 适配器 · 优先级级联 · 速率限制                   │
+│  协议转换 · OAuth · 健康广播                       │
+├─────────────────────────────────────────────────┤
+│  KHY Runtime — 平台服务                           │
+│  应用注册 · WASM 沙箱 (M1 风格 IPC)                │
+│  本地大脑 · MCP 服务器 · 插件加载器                  │
+├─────────────────────────────────────────────────┤
+│  KHY Kernel — x86_64 混合微内核                    │
+│  PMM/VMM · 调度器 · IPC (端口式)                   │
+│  VFS · ELF+PE 加载器 · 窗口管理器                   │
+│  能力模型 · 系统调用 · MoonBit 桥接                  │
+└─────────────────────────────────────────────────┘</code></pre>
+<h2 id="分层详解">分层详解<a class="anchor" href="#分层详解" aria-label="锚点">#</a></h2>
+<h3 id="khy-kernel-内核层">KHY Kernel（内核层）<a class="anchor" href="#khy-kernel-内核层" aria-label="锚点">#</a></h3>
+<p>真实可启动的 x86_64 混合微内核，C 语言编写，汇编启动链。不是模拟器或封装——通过 GRUB 启动，管理物理/虚拟内存，运行协作式调度器，提供端口式 IPC。</p>
+<p>核心能力：</p>
+<ul><li>4 级 x86_64 分页，每进程独立地址空间</li><li>端口式同步 IPC（32 端口，能力控制）</li><li>ELF 和 PE 双格式加载器（同时运行 Linux 和 Windows 可执行文件）</li><li>内核级 VFS + RAMFS</li><li>帧缓冲窗口管理器（16 窗口，Z 序排列）</li><li>MoonBit 语言集成（编译为 C，链接入内核）</li><li>构建为可启动 GRUB ISO，可在 QEMU 中运行</li></ul>
+<h3 id="khy-shell-终端层">KHY Shell（终端层）<a class="anchor" href="#khy-shell-终端层" aria-label="锚点">#</a></h3>
+<p>AI 原生终端，取代传统 shell 体验。这是当前主要的用户交互界面。</p>
+<p>核心能力：</p>
+<ul><li>100+ 命令，中文/英文/拼音别名</li><li>AI 编程助手，完整工具调用（文件操作、git、shell、搜索等）</li><li>目标模式（Goal Mode）— 自主多步骤任务执行</li><li>上下文管理，支持压缩与会话持久化</li><li>继续回忆 — &quot;继续&quot; 自动重新注入原始任务上下文</li><li>本地大脑服务 — 确定性操作零 token 消耗</li></ul>
+<h3 id="khy-gateway-网关层">KHY Gateway（网关层）<a class="anchor" href="#khy-gateway-网关层" aria-label="锚点">#</a></h3>
+<p>多通道 AI 路由器，消除供应商锁定。</p>
+<p>核心能力：</p>
+<ul><li>16 个适配器：Claude、Codex、Kiro、Trae、Windsurf、Cursor、Ollama、本地 LLM、中继 API 等</li><li>优先级级联 + 断路器 + 自动冷却</li><li>协议转换（Anthropic / OpenAI / Gemini / Grok / Codex 格式）</li><li>速率限制（Redis 支持）、OAuth 管理、密钥轮换</li><li>跨所有连接通道的模型发现</li></ul>
+<h3 id="khy-apps-应用层">KHY Apps（应用层）<a class="anchor" href="#khy-apps-应用层" aria-label="锚点">#</a></h3>
+<p>平台级应用运行时。</p>
+<p>核心能力：</p>
+<ul><li>WASM 沙箱，M1 风格微内核 IPC 模拟</li><li>三种 ABI 模式：numeric-v1、string-v2、json-v2</li><li>基于能力的访问控制（IPC、NET、FS_READ、FS_WRITE、WINDOW、SHM）</li><li>应用注册、生命周期管理、自动启动</li><li>插件/扩展生态</li></ul>
+<h3 id="khyquant-旗舰应用">khyquant（旗舰应用）<a class="anchor" href="#khyquant-旗舰应用" aria-label="锚点">#</a></h3>
+<p>AI 驱动的量化交易平台——KHY OS 上构建的第一个应用。展示平台处理真实工作负载的能力。</p>
+<ul><li>多 Agent 分析：6 个分析师角色 + 多空研究员 + 交易执行者</li><li>回测引擎：权益曲线、夏普比率、回撤分析</li><li>ML 推理（XGBoost/LightGBM）本地模型分析</li><li>A 股市场数据，多数据源（AKShare、TuShare、efinance、iFind）</li><li>通达信公式解释器，兼容已有策略</li></ul>
+<h2 id="khy-与现有工具的区别">KHY 与现有工具的区别<a class="anchor" href="#khy-与现有工具的区别" aria-label="锚点">#</a></h2>
+<table><thead><tr><th></th><th>Claude Code / Cursor</th><th>KHY OS</th></tr></thead><tbody><tr><td>本质</td><td>终端工具</td><td>操作系统</td></tr><tr><td>模型支持</td><td>单一供应商</td><td>任意模型、任意通道</td></tr><tr><td>底层基础</td><td>运行在宿主 OS 上</td><td>拥有自己的内核</td></tr><tr><td>功能范围</td><td>代码编辑</td><td>平台级——编程、量化、更多</td></tr><tr><td>AI 集成深度</td><td>应用层</td><td>系统级（内核到终端）</td></tr><tr><td>应用生态</td><td>无</td><td>WASM 沙箱 + 插件运行时</td></tr></tbody></table>
+<h2 id="当前成熟度">当前成熟度<a class="anchor" href="#当前成熟度" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>成熟度</th></tr></thead><tbody><tr><td>内核</td><td>可演示 — 可启动、运行进程、IPC 工作。早期阶段</td></tr><tr><td>Shell (CLI)</td><td>生产可用 — 日常用于开发</td></tr><tr><td>网关</td><td>生产可用 — 16 适配器，级联路由</td></tr><tr><td>应用运行时</td><td>可演示 — WASM 沙箱、IPC 模拟可用</td></tr><tr><td>khyquant</td><td>功能完整 — 多 Agent、回测、多数据源</td></tr><tr><td>Web 前端</td><td>可用 — 交易仪表盘 + AI 管理面板</td></tr></tbody></table>
+<h2 id="安装">安装<a class="anchor" href="#安装" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install khy-os
+khy --version
+khy doctor</code></pre>
+<p>环境要求：Python &gt;= 3.8，Node.js &gt;= 18。支持：Linux / macOS / Windows。</p>
+<h2 id="链接">链接<a class="anchor" href="#链接" aria-label="锚点">#</a></h2>
+<ul><li>PyPI: <code>khy-os</code></li><li>架构: <a href="../03_DESIGN_设计/%5BDESIGN-ARCH-010%5D%20核心架构.html">核心架构</a></li><li>内核 IPC: <a href="../03_DESIGN_设计/%5BDESIGN-ARCH-007%5D%20m1-微内核-ipc-moonbit.html">M1 微内核 IPC MoonBit</a></li><li>智能体路线图: <a href="../08_MGMT_项目管理/%5BMGMT-PLAN-006%5D%20智能体-操作系统-路线图.html">智能体操作系统路线图</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/01_INIT_立项/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」</div></a><a class="next" href="../../docs/01_INIT_立项/00_INDEX_立项-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 立项分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/01_INIT_立项/[INIT-PRD-002] 项目-定位.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

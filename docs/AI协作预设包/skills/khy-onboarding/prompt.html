@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 接手速成（开工前必读） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-onboarding<span class="sep">›</span>Khy-OS 接手速成（开工前必读）</div>
+      <header class="hero reveal"><h1>Khy-OS 接手速成（开工前必读）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-接手速成-开工前必读">Khy-OS 接手速成（开工前必读）</a></li><li class="lvl-2"><a href="#一-这是什么项目">一、这是什么项目</a></li><li class="lvl-2"><a href="#二-我要改-x-去哪">二、我要改 X 去哪</a></li><li class="lvl-2"><a href="#三-绝不能做的红线-先记住">三、绝不能做的红线（先记住）</a></li><li class="lvl-2"><a href="#四-改代码只有一种正确姿势">四、改代码只有一种正确姿势</a></li><li class="lvl-2"><a href="#五-语言与协作">五、语言与协作</a></li><li class="lvl-2"><a href="#下一步">下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-接手速成-开工前必读">Khy-OS 接手速成（开工前必读）<a class="anchor" href="#khy-os-接手速成-开工前必读" aria-label="锚点">#</a></h1>
+<p>你现在要为 <strong>Khy-OS</strong> 做开发或修改。本 skill 让你一次读懂全局。读完不要立刻改文件，等具体任务。</p>
+<h2 id="一-这是什么项目">一、这是什么项目<a class="anchor" href="#一-这是什么项目" aria-label="锚点">#</a></h2>
+<p>Khy-OS = 自研 x86_64 C 内核 + Node.js AI 后端 + host 桥(agent⇄OS) + Python(pip) 启动器。</p>
+<ul><li><strong>内核</strong>：<code>kernel/</code>（C + 少量 MoonBit + 汇编），QEMU 可启动。</li><li><strong>AI 后端</strong>：<code>services/backend/</code>（业务主体在此，Node.js），命令名 <code>khy</code>，是 CLI/TUI 跨模型助手。</li><li><strong>分发</strong>：pip 包名 <code>khy-os</code>，pip 启动器是薄壳，真正跑的是 Node 后端。</li></ul>
+<p><strong>两条现实约束（决定一切取舍）：</strong></p>
+<ol><li><strong>pip 是唯一分发渠道</strong>。改动最终要能打成 wheel 发布；pip 包是打包时的源码快照，改了仓库源码必须重新打包才对已安装用户生效。</li><li><strong>项目要能被&quot;一个人、甚至非工程师、没有强 AI&quot;继续维护</strong>。所以：<strong>稳定 &gt; 可回退 &gt; 守卫可拦 &gt; 炫技</strong>。</li></ol>
+<h2 id="二-我要改-x-去哪">二、我要改 X 去哪<a class="anchor" href="#二-我要改-x-去哪" aria-label="锚点">#</a></h2>
+<ul><li>CLI 命令/路由：<code>services/backend/src/cli/router.js</code>（大 switch）→ <code>handlers/</code></li><li>AI 网关/模型路由：<code>services/backend/src/services/gateway/aiGateway.js</code> → <code>modelRouter.js</code></li><li>本地离线能力（算/文本/找文件/上下文）：<code>services/backend/src/services/localBrain*.js</code></li><li>工具调用主循环：<code>services/backend/src/services/toolUseLoop.js</code></li><li><strong>唯一工具执行漏斗</strong>：<code>services/backend/src/services/toolCalling.js</code> 的 <code>executeTool()</code></li><li>前端：<code>apps/ai-frontend/</code></li><li>pip 启动：<code>platform/khy_platform/cli.py</code></li><li><strong>先读的地图与红线</strong>：<code>.ai/MAP.md</code>、<code>.ai/GUARDS.md</code>、<code>.ai/GUARDS-AI.md</code>、<code>.ai/CONTEXT.yaml</code></li></ul>
+<h2 id="三-绝不能做的红线-先记住">三、绝不能做的红线（先记住）<a class="anchor" href="#三-绝不能做的红线-先记住" aria-label="锚点">#</a></h2>
+<ul><li>❌ 不绕过 <code>executeTool</code> 另开工具执行旁路（会绕过权限门控与审批）。</li><li>❌ 不为同一概念建第二份&quot;真源&quot;（约束格/能力向量/错误分类/破坏性动作模式库各有唯一权威实现，见 <code>.ai/GUARDS-AI.md §2</code>）。</li><li>❌ 单文件不超 <strong>2500 行</strong>。</li><li>❌ 没接到三真实入口（<code>executeTool</code> / <code>toolUseLoop.js</code> / <code>aiManagementServer.js</code>）之一，就不许声称&quot;已落地/已接入&quot;——隔离单测全绿 ≠ 在产。</li><li>❌ 不用 <code>--no-verify</code> 跳过守卫。</li></ul>
+<h2 id="四-改代码只有一种正确姿势">四、改代码只有一种正确姿势<a class="anchor" href="#四-改代码只有一种正确姿势" aria-label="锚点">#</a></h2>
+<p><strong>加法式改动 + 纯叶子模块 + 默认开的 <code>KHY_*</code> 门控 + 关闭即逐字节回退。</strong><br>细节激活 <code>/khy-safe-change</code>。</p>
+<h2 id="五-语言与协作">五、语言与协作<a class="anchor" href="#五-语言与协作" aria-label="锚点">#</a></h2>
+<ul><li>交流与文档用<strong>中文</strong>；代码标识符/字符串字面量用<strong>英文</strong>。</li><li>每步动手前先说：要改哪个文件、加哪个 <code>KHY_</code> 门控、关掉后怎么逐字节回退——用户确认后再动手。</li><li>每轮最多问一个澄清问题，且先给出你能给的答案再问。</li></ul>
+<h2 id="下一步">下一步<a class="anchor" href="#下一步" aria-label="锚点">#</a></h2>
+<ul><li>要改代码 → 激活 <code>/khy-safe-change</code></li><li>出错了 → 激活 <code>/khy-troubleshoot</code></li><li>不知道做什么 → 激活 <code>/khy-pick-task</code></li><li>做完了 → 激活 <code>/khy-honest-closure</code></li></ul>
+<p>现在确认你已读懂全局，等待用户的具体任务。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-honest-closure/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 诚实收尾（说&quot;做完了&quot;之前照做）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-pick-task/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 选活与发展路径（不知做什么时）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-onboarding/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

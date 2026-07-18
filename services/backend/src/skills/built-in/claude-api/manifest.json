@@ -1,0 +1,8 @@
+{
+  "name": "claude-api",
+  "command": "/claude-api",
+  "description": "Guide for using the Anthropic API and Claude models",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["api", "guide"]
+}

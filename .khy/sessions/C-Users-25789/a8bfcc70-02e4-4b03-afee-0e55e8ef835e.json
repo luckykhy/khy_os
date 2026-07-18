@@ -1,0 +1,68 @@
+{
+  "sessionId": "a8bfcc70-02e4-4b03-afee-0e55e8ef835e",
+  "title": "",
+  "model": "api:agnes:agnes-2.0-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 讲个故事"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "<think>\n\n</think>"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_654484c271884aea8cef89c5",
+          "name": "local_knowledge",
+          "input": {
+            "query": "程序员笑话 软件工程"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_654484c271884aea8cef89c5",
+          "content": "[LoopWarning: Unknown tool \"local_knowledge\". 0 unknown calls so far. — try a different tool or approach]\nError: No offline knowledge found for: 程序员笑话 软件工程. Try rephrasing or use web_search instead.",
+          "is_error": true
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 8]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：没通：No offline knowledge found for: 程序员笑话 软件工程. Try rephrasing or use web_search instead.——我据此调整，不盲试。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "好，给你讲一个程序员的故事：\n\n---\n\n**《第一个 bug》**\n\n有个程序员第一次约会。\n\n女生问：\"你觉得我哪里最好看？\"\n\n程序员想了想，认真地说：\"你的眼睛。\"\n\n女生很开心：\"真的吗？\"\n\n程序员点点头：\"因为你的眼睛是双眼皮，有明显的特征边界，最容易识别。\"\n\n女生沉默了三秒：\"……你走吧。\"\n\n程序员很困惑：\"为什么？我刚才做了特征提取啊。\"\n\n---\n\n再来一个短的：\n\n> 为什么程序员总是分不清万圣节和圣诞节？\n> \n> 因为 Oct 31 == Dec 25。\n> \n> （八进制的31 等于 十进制的25）\n\n---\n\n想听什么类型的故事？我可以讲技术圈的、生活类的，或者来一段编程实战的\"冒险故事\"。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 4,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1783342895776,
+  "updatedAt": 1783342895776
+}

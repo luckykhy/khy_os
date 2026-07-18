@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>旗舰特性目录 — vault / notify / mesh / insights / forge / image2web · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>旗舰特性目录 — vault / notify / mesh / insights / forge / image2web</div>
+      <header class="hero reveal"><h1>旗舰特性目录 — vault / notify / mesh / insights / forge / image2web</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#旗舰特性目录-vault-notify-mesh-insights-forge-image2web">旗舰特性目录 — vault / notify / mesh / insights / forge / image2web</a></li><li class="lvl-2"><a href="#一-vault-本地密钥保险库">一、`vault` — 本地密钥保险库 ✅</a></li><li class="lvl-2"><a href="#二-notify-终端外推送">二、`notify` — 终端外推送 ✅</a></li><li class="lvl-2"><a href="#三-mesh-同机多实例协作">三、`mesh` — 同机多实例协作 ✅</a></li><li class="lvl-2"><a href="#四-insights-会话洞见">四、`insights` — 会话洞见 ✅</a></li><li class="lvl-2"><a href="#五-forge-跨平台仓库搜索与拉取">五、`forge` — 跨平台仓库搜索与拉取 ✅</a></li><li class="lvl-2"><a href="#六-image2web-截图变可运行网页">六、`image2web` — 截图变可运行网页 ✅</a></li><li class="lvl-2"><a href="#七-voice-语音控制">七、`voice` — 语音控制 🚧</a></li><li class="lvl-2"><a href="#八-延伸-khy-expand-虚拟模型">八、延伸：`khy-expand` 虚拟模型</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-046 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-046] 旗舰特性目录-vault-notify-mesh-insights-forge-image2web.md --&gt;</p>
+<h1 id="旗舰特性目录-vault-notify-mesh-insights-forge-image2web">旗舰特性目录 — vault / notify / mesh / insights / forge / image2web<a class="anchor" href="#旗舰特性目录-vault-notify-mesh-insights-forge-image2web" aria-label="锚点">#</a></h1>
+<blockquote><p>KHY 内置了一批「代码里早就有、文档里却找不到」的实用命令。本文把它们逐个讲清楚：是什么、入口命令、典型用法、当前状态。所有命令都可直接照抄。</p>
+<p>状态图例：✅ 可用（已实现）｜🚧 开发中（占位桩，暂不可用）。</p></blockquote>
+<table><thead><tr><th>命令</th><th>一句话</th><th>状态</th></tr></thead><tbody><tr><td><code>khy vault</code></td><td>本地密钥保险库，密钥永不进模型上下文</td><td>✅</td></tr><tr><td><code>khy notify</code></td><td>把长任务完成/阻塞点推送到手机或桌面</td><td>✅</td></tr><tr><td><code>khy mesh</code></td><td>同机多实例互相发现与跨进程消息</td><td>✅</td></tr><tr><td><code>khy insights</code></td><td>会话洞见：轮次/工具/话题/耗时复盘</td><td>✅</td></tr><tr><td><code>khy forge</code></td><td>跨 GitHub/Gitee/GitLab 搜索与克隆仓库</td><td>✅</td></tr><tr><td><code>khy image2web</code></td><td>截图 → 可运行 HTML 网页</td><td>✅</td></tr><tr><td><code>khy voice</code></td><td>语音控制</td><td>🚧</td></tr></tbody></table>
+<hr>
+<h2 id="一-vault-本地密钥保险库">一、<code>vault</code> — 本地密钥保险库 ✅<a class="anchor" href="#一-vault-本地密钥保险库" aria-label="锚点">#</a></h2>
+<p>把 API Key、令牌等敏感值存在本地保险库（<code>~/.khyos/vault</code>，文件权限 0600）。在提示词、HTTP 配置里用占位符 <code>{{vault:NAME}}</code> 引用，真实值在<strong>服务端注入</strong>，<strong>永远不进入模型上下文</strong>。</p>
+<pre><code class="language-bash">khy vault list                 # 列出全部密钥（始终打码显示）
+khy vault set &lt;name&gt; [value]   # 存/改一个密钥；省略 value 则从 stdin 读入
+khy vault get &lt;name&gt; --reveal  # 查看；不加 --reveal 默认打码
+khy vault rm &lt;name&gt;            # 删除
+khy vault on | off             # 启用/停用保险库</code></pre>
+<p>引用语法（例如在自定义 HTTP 请求头里）：</p>
+<pre><code>Authorization: Bearer {{vault:MY_TOKEN}}</code></pre>
+<blockquote><p>适合：不想把密钥明文写进提示词或配置文件，又要让 KHY 在请求里用到它。</p></blockquote>
+<hr>
+<h2 id="二-notify-终端外推送">二、<code>notify</code> — 终端外推送 ✅<a class="anchor" href="#二-notify-终端外推送" aria-label="锚点">#</a></h2>
+<p>配置一个推送目标，让 KHY 在<strong>长任务完成 / 遇到阻塞点</strong>时，把消息推到你的手机或桌面。配置存 <code>~/.khyos/push.json</code>（0600）。KHY 自身不带推送后端，你提供目标即可。</p>
+<pre><code class="language-bash">khy notify status                  # 查看当前配置（目标打码）
+khy notify set &lt;provider&gt; &lt;target&gt; # 设目标；省略 target 从 stdin 读
+khy notify test                    # 发一条测试通知
+khy notify send &lt;title&gt; [body]     # 手动发一条
+khy notify clear                   # 清空配置
+khy notify on | off                # 启用/停用</code></pre>
+<p>支持的 provider：<strong>ntfy / Bark / Discord / Slack / 通用 webhook</strong>。</p>
+<pre><code class="language-bash"># 例：用 ntfy 推到自己的主题
+khy notify set ntfy https://ntfy.sh/my-khy-topic
+khy notify test</code></pre>
+<hr>
+<h2 id="三-mesh-同机多实例协作">三、<code>mesh</code> — 同机多实例协作 ✅<a class="anchor" href="#三-mesh-同机多实例协作" aria-label="锚点">#</a></h2>
+<p>让同一台机器上的多个 KHY 实例互相发现、挂接、收发消息（注册表在 <code>~/.khyos/peers/</code>，存活性用进程探测）。适合一个窗口跑长任务、另一个窗口给它发指令。</p>
+<pre><code class="language-bash">khy mesh peers                       # 列出在线实例（自动清理已退出的）
+khy mesh register --name dev         # 注册本实例，打印其 id
+khy mesh send &lt;peerId&gt; &quot;&lt;消息&gt;&quot;       # 给某实例的收件箱投递消息
+khy mesh inbox &lt;id&gt;                  # 读取并清空某实例收件箱
+khy mesh attach &lt;selfId&gt; &lt;peerId&gt;    # 把本实例挂接到某实例（设默认对端）
+khy mesh detach &lt;selfId&gt;             # 解除挂接
+khy mesh on | off                    # 启用/停用</code></pre>
+<hr>
+<h2 id="四-insights-会话洞见">四、<code>insights</code> — 会话洞见 ✅<a class="anchor" href="#四-insights-会话洞见" aria-label="锚点">#</a></h2>
+<p>对一次会话做复盘：对话轮次、最常用的工具、话题关键词、耗时。读取已持久化的会话记录。</p>
+<pre><code class="language-bash">khy insights                # 复盘当前/最近一次会话
+khy insights &lt;sessionId&gt;    # 复盘指定会话
+khy insights list           # 列出可分析的历史会话
+khy insights on | off       # 启用/停用</code></pre>
+<hr>
+<h2 id="五-forge-跨平台仓库搜索与拉取">五、<code>forge</code> — 跨平台仓库搜索与拉取 ✅<a class="anchor" href="#五-forge-跨平台仓库搜索与拉取" aria-label="锚点">#</a></h2>
+<p>跨 <strong>GitHub / Gitee / GitLab</strong> 搜索、勘察、克隆、更新仓库。令牌从环境变量读取（<code>GITHUB_TOKEN</code> / <code>GITEE_TOKEN</code> / <code>GITLAB_TOKEN</code>），从不回显。</p>
+<pre><code class="language-bash">khy forge search &quot;&lt;关键词&gt;&quot; [--platform github|gitee|gitlab] [--limit N] [--json]
+khy forge recon &lt;owner/repo|git-url&gt; [--platform ...] [--ref BRANCH]
+khy forge commits &lt;owner/repo|git-url&gt; [--platform ...] [--limit N]
+khy forge code &quot;&lt;查询&gt;&quot; [--repo owner/repo]      # 仅 GitHub
+khy forge ratelimit                              # 仅 GitHub
+khy forge clone &lt;owner/repo|git-url&gt; [--dir NAME] [--depth 1] [--ssh]
+khy forge update [dir] [--remote origin] [--branch main]   # 别名 pull</code></pre>
+<ul><li><code>search</code> / <code>recon</code> / <code>commits</code> / <code>clone</code> / <code>update</code> 三平台都支持；<code>code</code>、<code>ratelimit</code> <strong>仅 GitHub</strong>。</li><li>每个子命令都支持 <code>--json</code> 输出，便于脚本消费。</li><li>推送/提交不在 forge 里：用 <code>khy repo publish</code>（推送）、<code>khy repo save</code>（提交）。</li></ul>
+<pre><code class="language-bash"># 例：搜 Gitee 上的 agent 项目并克隆第一个
+khy forge search &quot;ai agent&quot; --platform gitee --limit 5
+khy forge clone owner/some-repo --depth 1</code></pre>
+<hr>
+<h2 id="六-image2web-截图变可运行网页">六、<code>image2web</code> — 截图变可运行网页 ✅<a class="anchor" href="#六-image2web-截图变可运行网页" aria-label="锚点">#</a></h2>
+<p>把一张网页截图（文件或剪贴板）交给 AI 网关，<strong>还原成单文件可运行的 HTML</strong>。若 AI 只返回片段，会自动包成完整 <code>&lt;!doctype html&gt;</code> 文档。</p>
+<pre><code class="language-bash">khy image2web &lt;图片路径|paste&gt; [还原提示词] [--out index.html] [--overwrite]</code></pre>
+<p>参数：</p>
+<ul><li>输入来源：图片路径，或 <code>paste</code> / <code>--clipboard</code> / <code>--paste</code> 从剪贴板取图。</li><li>输出：<code>--out</code>（或 <code>--output</code>）指定文件名；目标已存在会自动改名，除非 <code>--overwrite</code>（或 <code>--force</code>）。</li><li>只看不存：<code>--print</code> / <code>--stdout</code> / <code>--no-save</code> 把 HTML 打到标准输出而不落盘。</li></ul>
+<pre><code class="language-bash">khy image2web ./landing.png 还原这个网页为可运行 HTML --out landing.html
+khy image2web paste 还原成响应式网页 --out clipboard-page.html</code></pre>
+<p>成功后打印输出路径与所用的 AI provider/模型。</p>
+<hr>
+<h2 id="七-voice-语音控制">七、<code>voice</code> — 语音控制 🚧<a class="anchor" href="#七-voice-语音控制" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy voice</code></pre>
+<p><strong>当前为占位桩，暂无实际功能</strong>（<code>router.js:2874</code> 注释 <code>Voice control placeholder</code>，运行只打印「语音控制功能正在开发中…」并提示用系统级 Win+H 语音输入）。列在此处是为了如实说明它的状态——请勿据此预期可用的语音能力。</p>
+<hr>
+<h2 id="八-延伸-khy-expand-虚拟模型">八、延伸：<code>khy-expand</code> 虚拟模型<a class="anchor" href="#八-延伸-khy-expand-虚拟模型" aria-label="锚点">#</a></h2>
+<p>如果你想把 KHY 的<strong>全部能力栈当成一个可订阅的模型</strong>对外提供，KHY 暴露了虚拟模型 <code>khy-expand</code>：外部客户端在网关 HTTP API 里选择 <code>model: &quot;khy-expand&quot;</code>，即可命中 KHY 的本地确定性能力 → 协同注入 → 直路由的完整链路（详见 [OPS-MAN-045] 多租户一节与网关文档）。它不是 CLI 子命令，而是网关侧的虚拟模型入口。</p>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-045] 账号池与多租户-深度指南</li><li>[OPS-MAN-023] pip安装后-完整功能清单</li><li>[OPS-MAN-035] 特性访问-维护速查</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-045] 账号池与多租户-深度指南.html"><div class="dir">← 上一篇</div><div class="ttl">账号池与多租户 — 深度指南（khy pool）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-047] 代理服务器深度指南-khy-proxy.html"><div class="dir">下一篇 →</div><div class="ttl">代理服务器深度指南（khy proxy）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-046] 旗舰特性目录-vault-notify-mesh-insights-forge-image2web.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

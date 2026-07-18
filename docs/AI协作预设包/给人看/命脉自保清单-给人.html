@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🛟 命脉自保清单（给你自己看） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给人看<span class="sep">›</span>🛟 命脉自保清单（给你自己看）</div>
+      <header class="hero reveal"><h1>🛟 命脉自保清单（给你自己看）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#命脉自保清单-给你自己看">🛟 命脉自保清单（给你自己看）</a></li><li class="lvl-2"><a href="#项目靠这四根支柱活着-心里有数就行">项目靠这四根支柱活着（心里有数就行）</a></li><li class="lvl-2"><a href="#我怕改坏-先做只读体检-不会改任何东西">我怕改坏 · 先做只读体检（不会改任何东西）</a></li><li class="lvl-2"><a href="#ai-改完了-我该验什么-发布前的最小闭环">AI 改完了 · 我该验什么（发布前的最小闭环）</a></li><li class="lvl-2"><a href="#我要发布到-pip-照手册做">我要发布到 pip · 照手册做</a></li><li class="lvl-2"><a href="#坏了要回退-怎么恢复">坏了要回退 · 怎么恢复</a></li><li class="lvl-2"><a href="#绝对不要做的事">绝对不要做的事</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: 人(你自己) | 用途: 怕把项目改坏、要发布、要回退时看 --&gt;<br>&lt;!-- 这些是给你（人）看的保命清单。更完整的人类手册在 docs/传承/ 。 --&gt;</p>
+<h1 id="命脉自保清单-给你自己看">🛟 命脉自保清单（给你自己看）<a class="anchor" href="#命脉自保清单-给你自己看" aria-label="锚点">#</a></h1>
+<blockquote><p>你<strong>怕把项目搞坏、要发布、或要回退</strong>时看这篇。全部是你自己敲的命令或双击的入口，<br><strong>不依赖 AI</strong>。命令都尽量用完整路径（最抗坏）。更完整版见 <code>docs/传承/KHY-OS-传承书.md</code>。</p></blockquote>
+<hr>
+<h2 id="项目靠这四根支柱活着-心里有数就行">项目靠这四根支柱活着（心里有数就行）<a class="anchor" href="#项目靠这四根支柱活着-心里有数就行" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>支柱</th><th>是什么</th><th>没了会怎样</th></tr></thead><tbody><tr><td><strong>pip 生命线</strong></td><td>唯一的下载与发布渠道（打成 wheel 上传 PyPI）</td><td>无法分发，等于消失</td></tr><tr><td><strong>守卫免疫系统</strong></td><td>提交时自动拦截&quot;越改越差&quot;的机器门禁</td><td>弱模型/手滑会慢慢腐蚀代码</td></tr><tr><td><strong><code>.ai/</code> 种子文档</strong></td><td>机器可读的项目地图与红线</td><td>新人/新 AI 看不懂结构</td></tr><tr><td><strong><code>maintenance/</code> 双击 + <code>khy maintain</code></strong></td><td>不懂命令行也能维护的图形入口</td><td>非技术维护者无从下手</td></tr></tbody></table>
+<hr>
+<h2 id="我怕改坏-先做只读体检-不会改任何东西">我怕改坏 · 先做只读体检（不会改任何东西）<a class="anchor" href="#我怕改坏-先做只读体检-不会改任何东西" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness   # 与时俱进体检（只读）
+node services/backend/bin/khy.js maintain             # 维护者驾驶舱（只读）
+node services/backend/bin/khy.js health               # 顶层自助诊断</code></pre>
+<p><strong>不会敲命令</strong>？双击 <code>maintenance/</code> 里名字排最前的 <code>维护-0-从这里开始</code><br>（macOS <code>.command</code> / Windows <code>windows\*.bat</code> / Linux <code>linux/*.sh</code>），按编号选。</p>
+<p>常用双击入口：</p>
+<table><thead><tr><th>想干什么</th><th>双击这个</th></tr></thead><tbody><tr><td>看现在健不健康</td><td><code>维护-一键健康体检</code></td></tr><tr><td>升级前先备份</td><td><code>维护-备份关键数据配置</code></td></tr><tr><td>升级坏了要回滚</td><td><code>维护-回滚到最近稳定版本</code></td></tr><tr><td>依赖坏了重装</td><td><code>维护-一键重装依赖</code></td></tr><tr><td>求助前导出诊断</td><td><code>维护-导出诊断日志</code></td></tr></tbody></table>
+<blockquote><p>🆘 <strong>慌乱中只想止血</strong>？翻 <code>docs/传承/紧急恢复卡片.md</code>——一页纸，每种&quot;坏了&quot;都给两条路。</p></blockquote>
+<hr>
+<h2 id="ai-改完了-我该验什么-发布前的最小闭环">AI 改完了 · 我该验什么（发布前的最小闭环）<a class="anchor" href="#ai-改完了-我该验什么-发布前的最小闭环" aria-label="锚点">#</a></h2>
+<p>按顺序，任何一步红就别发布：</p>
+<pre><code class="language-bash"># 1) 只读体检无红
+node services/backend/bin/khy.js maintain freshness
+
+# 2) 守卫全绿（做一次提交就会自动触发 pre-commit 钩子；红了先修）
+git add -A &amp;&amp; git commit -m &quot;...&quot;     # 钩子会自动跑 scripts/check-*.js
+
+# 3) 上帝组件没恶化
+npm --prefix services/backend run arch:god</code></pre>
+<p><strong>盯死这三个问题问 AI</strong>（它答不好就别信&quot;做完了&quot;）：</p>
+<ol><li>「这改动接到 executeTool / toolUseLoop / aiManagementServer 哪个入口了？」</li><li>「把那个 KHY_ 开关设成 off，行为和改之前一样吗？」</li><li>「守卫全绿吗？没绕过对吧？」</li></ol>
+<hr>
+<h2 id="我要发布到-pip-照手册做">我要发布到 pip · 照手册做<a class="anchor" href="#我要发布到-pip-照手册做" aria-label="锚点">#</a></h2>
+<p><strong>权威手册</strong>：<code>docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md</code>（无 AI 也能照做）。</p>
+<p>要记住的两件事：</p>
+<ol><li><strong>改了仓库源码，pip 用户拿不到</strong>，除非重新打包发版。</li><li><strong>版本号要多处一致</strong>——别只改一处（历史上出过 backend package.json 与发布版本不一致的问题）。</li></ol>
+<hr>
+<h2 id="坏了要回退-怎么恢复">坏了要回退 · 怎么恢复<a class="anchor" href="#坏了要回退-怎么恢复" aria-label="锚点">#</a></h2>
+<ul><li><strong>双击</strong>：<code>维护-回滚到最近稳定版本</code>。</li><li><strong>命令</strong>（在仓库根目录）：</li></ul>
+<pre><code class="language-bash">git log --oneline -10          # 看最近提交，找改坏之前那个的哈希
+git stash                      # 先把当前没提交的改动收起来（保险）
+git checkout &lt;好的那个哈希&gt; -- &lt;被改坏的文件&gt;   # 只回退某个文件
+# 或整棵树回到某个提交（谨慎，会丢之后的改动）：
+# git reset --hard &lt;好的那个哈希&gt;</code></pre>
+<ul><li><strong>依赖坏了</strong>：双击 <code>维护-一键重装依赖</code>。</li><li><strong>完全懵</strong>：<code>docs/传承/紧急恢复卡片.md</code> + <code>维护-导出诊断日志</code>（把诊断发给会帮你的人/AI）。</li></ul>
+<hr>
+<h2 id="绝对不要做的事">绝对不要做的事<a class="anchor" href="#绝对不要做的事" aria-label="锚点">#</a></h2>
+<ul><li>❌ 不要让 AI 用 <code>git commit --no-verify</code> 跳过守卫——守卫红=有真问题。</li><li>❌ 不要在没备份的情况下让 AI 做&quot;大重构/批量改&quot;。先双击 <code>维护-备份关键数据配置</code>。</li><li>❌ 不要相信&quot;隔离测试全绿=功能生效&quot;——问它接到哪个真实入口了（见排错速查红线）。</li><li>❌ 不要在 <code>cache/</code> <code>data/</code> <code>.tmp/</code> <code>.khy/</code> 里找源码或删东西——那是运行时产物，源码看 <code>.ai/MAP.md</code>。</li></ul>
+<hr>
+<p><em>怎么用整套包看 <code>使用说明-怎么用这套包.md</code>；排错看 <code>排错速查-给人.md</code>；选活看 <code>发展路径-决策与选活.md</code>。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给人看/发展路径-决策与选活.html"><div class="dir">← 上一篇</div><div class="ttl">🧭 发展路径 · 决策与选活（给你自己看）</div></a><a class="next" href="../../../docs/AI协作预设包/给人看/排错速查-给人.html"><div class="dir">下一篇 →</div><div class="ttl">🔎 排错速查（给你自己看）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给人看/命脉自保清单-给人.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

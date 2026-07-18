@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 最小化大任务框架蓝图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY 最小化大任务框架蓝图</div>
+      <header class="hero reveal"><h1>KHY 最小化大任务框架蓝图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-最小化大任务框架蓝图">KHY 最小化大任务框架蓝图</a></li><li class="lvl-2"><a href="#0-目标与范围">0. 目标与范围</a></li><li class="lvl-2"><a href="#1-执行语义-必须最先确定">1. 执行语义（必须最先确定）</a></li><li class="lvl-2"><a href="#2-架构-控制面-数据面">2. 架构（控制面 + 数据面）</a></li><li class="lvl-2"><a href="#3-规范状态机">3. 规范状态机</a></li><li class="lvl-2"><a href="#4-最小持久化模型">4. 最小持久化模型</a></li><li class="lvl-3"><a href="#4-1-tasks">4.1 `tasks`</a></li><li class="lvl-3"><a href="#4-2-task-attempts">4.2 `task_attempts`</a></li><li class="lvl-3"><a href="#4-3-task-checkpoints">4.3 `task_checkpoints`</a></li><li class="lvl-2"><a href="#5-副作用治理-默认安全模式">5. 副作用治理（默认安全模式）</a></li><li class="lvl-2"><a href="#6-幂等性与精确一次边界">6. 幂等性与精确一次边界</a></li><li class="lvl-2"><a href="#7-韧性护栏">7. 韧性护栏</a></li><li class="lvl-2"><a href="#8-可观测性基线">8. 可观测性基线</a></li><li class="lvl-2"><a href="#9-khy-os-映射-当前代码库">9. KHY-OS 映射（当前代码库）</a></li><li class="lvl-2"><a href="#10-7-天实施计划">10. 7 天实施计划</a></li><li class="lvl-2"><a href="#11-第-1-阶段验收标准">11. 第 1 阶段验收标准</a></li><li class="lvl-2"><a href="#12-实施状态-2026-05-16">12. 实施状态（2026-05-16）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-003 | 阶段: 项目管理 | 原路径: docs/指南/khy-大任务框架蓝图.md --&gt;</p>
+<h1 id="khy-最小化大任务框架蓝图">KHY 最小化大任务框架蓝图<a class="anchor" href="#khy-最小化大任务框架蓝图" aria-label="锚点">#</a></h1>
+<p>本文档定义了一个实用的最小化框架蓝图，用于处理 KHY-OS 中长时运行、依赖繁重、易于失败的任务。</p>
+<h2 id="0-目标与范围">0. 目标与范围<a class="anchor" href="#0-目标与范围" aria-label="锚点">#</a></h2>
+<p>目标：</p>
+<ul><li>为大任务构建一个可控、可恢复、可观测的运行时。</li><li>避免彻底重写；在现有 KHY 组件的基础上演进。</li></ul>
+<p>非目标：</p>
+<ul><li>第 1 阶段不追求分布式执行。</li><li>第 1 阶段不解决全局的精确一次（exactly-once）语义。</li></ul>
+<h2 id="1-执行语义-必须最先确定">1. 执行语义（必须最先确定）<a class="anchor" href="#1-执行语义-必须最先确定" aria-label="锚点">#</a></h2>
+<p>采用以下基线：</p>
+<ul><li>投递语义：<code>at-least-once</code></li><li>重试策略：瞬时错误可重试，并采用带上限的指数退避</li><li>超时策略：基于活跃度的空闲超时（而非硬性的墙钟时间强杀）</li></ul>
+<p>隐含含义：</p>
+<ul><li>按设计，重复投递是可能发生的。</li><li>所有产生副作用的操作都必须在业务边界处具备幂等性。</li></ul>
+<h2 id="2-架构-控制面-数据面">2. 架构（控制面 + 数据面）<a class="anchor" href="#2-架构-控制面-数据面" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">API/CLI -&gt; Task Controller -&gt; Queue/Scheduler -&gt; Worker Pool
+                     |                |
+                     v                v
+                Task DB &lt;---- Checkpoint Store
+                     |
+                     v
+             Metrics + Logs + Traces</code></pre>
+<p>控制面职责：</p>
+<ul><li>任务生命周期管理</li><li>租约/认领/心跳/取消/暂停/恢复（Lease/claim/heartbeat/cancel/pause/resume）</li><li>重试调度与死信路由</li></ul>
+<p>数据面职责：</p>
+<ul><li>执行具体的任务步骤</li><li>发出进度事件</li><li>持久化检查点</li></ul>
+<h2 id="3-规范状态机">3. 规范状态机<a class="anchor" href="#3-规范状态机" aria-label="锚点">#</a></h2>
+<p>允许的状态：</p>
+<ul><li><code>queued</code></li><li><code>claimed</code></li><li><code>running</code></li><li><code>retry_wait</code></li><li><code>pausing</code></li><li><code>paused</code></li><li><code>cancelling</code></li><li><code>succeeded</code></li><li><code>failed</code></li><li><code>cancelled</code></li><li><code>dead_letter</code></li></ul>
+<p>关键转换：</p>
+<ul><li><code>queued -&gt; claimed -&gt; running -&gt; succeeded</code></li><li><code>running -&gt; retry_wait -&gt; claimed</code></li><li><code>running -&gt; pausing -&gt; paused -&gt; running</code></li><li><code>running|paused -&gt; cancelling -&gt; cancelled</code></li><li><code>retry_wait -&gt; dead_letter</code>（超出重试预算）</li></ul>
+<p>规则：</p>
+<ul><li>所有转换都必须经过集中式校验。</li><li>终态不可变。</li></ul>
+<h2 id="4-最小持久化模型">4. 最小持久化模型<a class="anchor" href="#4-最小持久化模型" aria-label="锚点">#</a></h2>
+<h3 id="4-1-tasks">4.1 <code>tasks</code><a class="anchor" href="#4-1-tasks" aria-label="锚点">#</a></h3>
+<p>核心字段：</p>
+<ul><li><code>id</code> (pk)</li><li><code>type</code></li><li><code>status</code></li><li><code>payload_json</code></li><li><code>priority</code></li><li><code>attempt_count</code></li><li><code>max_attempts</code></li><li><code>next_run_at</code></li><li><code>lease_owner</code></li><li><code>lease_until</code></li><li><code>heartbeat_at</code></li><li><code>progress_pct</code></li><li><code>idempotency_key</code>（可空，存在时唯一）</li><li><code>trace_id</code></li><li><code>created_at</code></li><li><code>updated_at</code></li></ul>
+<h3 id="4-2-task-attempts">4.2 <code>task_attempts</code><a class="anchor" href="#4-2-task-attempts" aria-label="锚点">#</a></h3>
+<p>核心字段：</p>
+<ul><li><code>task_id</code></li><li><code>attempt_no</code></li><li><code>worker_id</code></li><li><code>started_at</code></li><li><code>ended_at</code></li><li><code>result_status</code></li><li><code>error_type</code></li><li><code>error_message</code></li><li><code>retry_delay_ms</code></li></ul>
+<h3 id="4-3-task-checkpoints">4.3 <code>task_checkpoints</code><a class="anchor" href="#4-3-task-checkpoints" aria-label="锚点">#</a></h3>
+<p>核心字段：</p>
+<ul><li><code>task_id</code></li><li><code>step_no</code></li><li><code>progress_pct</code></li><li><code>state_blob_json</code></li><li><code>schema_version</code></li><li><code>created_at</code></li></ul>
+<p>检查点规则：</p>
+<ul><li>在稳定边界处保存（步骤完成、批次完成、偏移量提交）。</li><li>从最新的兼容检查点恢复。</li></ul>
+<h2 id="5-副作用治理-默认安全模式">5. 副作用治理（默认安全模式）<a class="anchor" href="#5-副作用治理-默认安全模式" aria-label="锚点">#</a></h2>
+<p>大任务运行时必须强制执行“默认无副作用”原则：</p>
+<ol><li><code>plan()</code> 阶段：</li><li>只读</li><li>计算并校验执行计划</li><li>不进行任何外部写入</li></ol>
+<ol><li><code>commit()</code> 阶段：</li><li>仅在显式提交意图下才允许副作用</li><li>所有副作用都通过同一个执行器边界</li></ol>
+<p>必需模式：</p>
+<ul><li>默认 <code>dry_run=true</code></li><li>执行副作用必须 <code>commit=true</code></li></ul>
+<h2 id="6-幂等性与精确一次边界">6. 幂等性与精确一次边界<a class="anchor" href="#6-幂等性与精确一次边界" aria-label="锚点">#</a></h2>
+<p><code>idempotency_key</code> 并不会消除副作用本身。<br>它保证的是在重试场景下“相同意图至多执行一次副作用”。</p>
+<p>服务端要求：</p>
+<ul><li>唯一键约束（<code>scope + idempotency_key</code>）</li><li>业务写入与键记录在同一事务中完成</li><li>使用相同键的重复调用返回原始结果（响应回放）</li></ul>
+<h2 id="7-韧性护栏">7. 韧性护栏<a class="anchor" href="#7-韧性护栏" aria-label="锚点">#</a></h2>
+<p>必备项：</p>
+<ul><li>带抖动且有上限的指数退避</li><li>针对不稳定下游的熔断器</li><li>截止时间与空闲超时分离</li><li>重试预算与死信队列</li><li>取消令牌（cancellation token）传播</li></ul>
+<p>加分项（第 2 阶段）：</p>
+<ul><li>自适应并发槽位</li><li>动态优先级老化（priority aging）</li></ul>
+<h2 id="8-可观测性基线">8. 可观测性基线<a class="anchor" href="#8-可观测性基线" aria-label="锚点">#</a></h2>
+<p>每个任务事件都应包含：</p>
+<ul><li><code>trace_id</code></li><li><code>task_id</code></li><li><code>attempt_no</code></li><li><code>state_from</code>、<code>state_to</code></li><li><code>latency_ms</code></li><li><code>error_type</code>（如有）</li></ul>
+<p>指标基线：</p>
+<ul><li>队列深度</li><li>认领延迟</li><li>成功率</li><li>重试率</li><li>死信率</li><li>端到端 P95/P99 延迟</li></ul>
+<h2 id="9-khy-os-映射-当前代码库">9. KHY-OS 映射（当前代码库）<a class="anchor" href="#9-khy-os-映射-当前代码库" aria-label="锚点">#</a></h2>
+<p>现有的可用组件：</p>
+<ul><li><code>backend/src/services/retryWithBackoff.js</code></li><li><code>backend/src/services/circuitBreaker.js</code></li><li><code>backend/src/utils/spawnWithIdleTimeout.js</code></li><li><code>backend/src/services/backgroundTaskManager.js</code></li><li><code>backend/src/tasks/taskStore.js</code></li><li><code>backend/src/tasks/diskOutput.js</code></li></ul>
+<p>当前差距：</p>
+<ul><li>存在多个任务存储（<code>tasks/taskStore</code>、<code>backgroundTaskManager</code>、<code>tools/_taskStore</code>）</li><li>需要一个由持久化存储支撑的、唯一的事实来源（single source of truth）</li></ul>
+<h2 id="10-7-天实施计划">10. 7 天实施计划<a class="anchor" href="#10-7-天实施计划" aria-label="锚点">#</a></h2>
+<p>第 1-2 天：</p>
+<ul><li>引入持久化任务表</li><li>实现集中式状态转换校验器</li></ul>
+<p>第 3-4 天：</p>
+<ul><li>实现认领/租约/心跳/重试/死信流程</li><li>通过租约过期实现 worker 崩溃恢复</li></ul>
+<p>第 5 天：</p>
+<ul><li>增加检查点的保存/加载/恢复</li><li>增加检查点 schema 版本兼容性检查</li></ul>
+<p>第 6 天：</p>
+<ul><li>增加结构化日志 + trace_id 传播</li><li>增加看板级别的指标聚合</li></ul>
+<p>第 7 天：</p>
+<ul><li>故障演练：杀死 worker、注入网络故障、重复投递、慢速下游</li><li>验证无数据损坏且可从检查点恢复</li></ul>
+<h2 id="11-第-1-阶段验收标准">11. 第 1 阶段验收标准<a class="anchor" href="#11-第-1-阶段验收标准" aria-label="锚点">#</a></h2>
+<ul><li>长任务在进程崩溃后能从检查点恢复。</li><li>重复投递不会重复执行关键副作用。</li><li>空闲超时绝不会杀死有活跃进度的任务。</li><li>任务状态可端到端查询与审计。</li><li>死信任务包含可操作的失败元数据。</li></ul>
+<h2 id="12-实施状态-2026-05-16">12. 实施状态（2026-05-16）<a class="anchor" href="#12-实施状态-2026-05-16" aria-label="锚点">#</a></h2>
+<p>代码库中已实现：</p>
+<ul><li>规范的持久化运行时存储：<ul><li><code>backend/src/tasks/largeTaskRuntimeStore.js</code></li><li>集中式状态转换、重试、死信、检查点、幂等记录、事件流、指标</li><li>重试分类策略（可重试 vs 不可重试），永久性错误立即进入终态失败</li><li>可配置的重试策略（<code>getRetryPolicy</code>/<code>setRetryPolicy</code>），用于：<ul><li>不可重试的错误类型/状态码/错误种类</li><li>可重试的错误种类</li><li>默认的未知错误行为（<code>default_retryable</code>）</li></ul></li><li>重试策略持久化 + 审计轨迹：<ul><li>持久化的 <code>retry_policy</code> 快照</li><li>持久化的 <code>retry_policy_events</code> 事件流，带元数据（<code>trace_id</code>、<code>actor</code>、<code>source</code>、<code>reason</code>、<code>before_policy</code>、<code>after_policy</code>）</li><li>通过 <code>after_id</code> 和 <code>trace_id</code> 进行事件分页/过滤</li></ul></li><li>重试策略高风险审批工作流：<ul><li>持久化的 <code>retry_policy_approval_tickets</code></li><li>补丁哈希绑定，防止审批票据在不同补丁上被重放</li><li>审批生命周期：<code>pending -&gt; approved/rejected -&gt; consumed/expired</code></li><li>对终态审批票据/事件进行保留压缩（按年龄 + 数量限界，保留 pending 票据）</li></ul></li></ul></li><li>带 plan/commit 副作用闸门的编排器：<ul><li><code>backend/src/tasks/largeTaskOrchestrator.js</code></li><li>副作用提交受按 scope 的熔断器保护（熔断打开时快速失败）</li><li>执行期间感知控制面的暂停/取消（<code>task_paused</code> / <code>task_cancelled</code>）</li><li>基于活跃度的滑动空闲超时（<code>idle_timeout_ms</code>），带进度感知重置（<code>markActivity</code>、<code>reportProgress</code>、<code>saveCheckpoint</code>、<code>commit</code>）</li></ul></li><li>持续运行的 worker 循环服务：<ul><li><code>backend/src/tasks/largeTaskWorkerService.js</code></li><li>start/stop/status/runTick</li><li>租约重新入队 + 每个 tick 的运行预算 + 队列深度/最近一次运行摘要</li><li>将 <code>idle_timeout_ms</code> 传播到每次任务运行</li><li>将 <code>retry_policy</code> 传播到每次任务运行</li><li>控制面 HTTP 路由：</li><li><code>backend/src/routes/largeTasks.js</code></li><li>任务 API + 指标/事件/SSE + worker API：<ul><li><code>GET /api/large-tasks/worker/status</code></li><li><code>POST /api/large-tasks/worker/start</code></li><li><code>POST /api/large-tasks/worker/stop</code></li><li><code>GET /api/large-tasks/circuit/commit?scope=...</code>（提交熔断器可观测性）</li><li><code>POST /api/large-tasks/:taskId/run</code> 接受 <code>idle_timeout_ms</code></li><li><code>POST /api/large-tasks/run-next</code> 接受 <code>idle_timeout_ms</code></li><li>任务运行选项接受 <code>retry_policy</code> 覆盖</li><li><code>GET /api/large-tasks/retry-policy</code>（可选包含审计事件）</li><li><code>GET /api/large-tasks/retry-policy/events</code>（审计事件流查询）</li><li><code>POST /api/large-tasks/retry-policy</code>（带审计记录的策略更新）</li><li><code>GET /api/large-tasks/retry-policy/approvals/pending</code></li><li><code>GET /api/large-tasks/retry-policy/approvals/retention</code></li><li><code>POST /api/large-tasks/retry-policy/approvals/retention</code>（在线调整审批票据/事件保留策略，带审计事件）</li><li><code>GET /api/large-tasks/retry-policy/approvals/retention/events</code>（保留策略审计事件查询）</li><li><code>GET /api/large-tasks/retry-policy/approvals/retention/stream</code>（保留策略审计 SSE 回放 + 监听 + Last-Event-ID 续传）</li><li><code>GET /api/large-tasks/retry-policy/approvals/events</code>（历史审批事件查询，带 <code>after_id</code>/过滤分页）</li><li><code>POST /api/large-tasks/retry-policy/approvals/decision</code></li><li>高风险更新路径返回 <code>202 approval_required</code>，最终应用需要 <code>approval_ticket_id</code></li><li><code>GET /api/large-tasks/retry-policy/approvals/stream</code>（SSE 回放 + 监听 + Last-Event-ID 续传）</li><li><code>POST /api/large-tasks/:taskId/pause</code></li><li><code>POST /api/large-tasks/:taskId/resume</code></li><li><code>POST /api/large-tasks/:taskId/cancel</code></li></ul></li><li>重试策略更新安全校验：<ul><li>严格的允许键集合</li><li>token 格式/长度检查</li><li>状态码范围检查</li><li>数组基数上限</li><li>护栏底线规则阻止危险组合（例如 <code>default_retryable=false</code> 且没有任何瞬时重试信号）</li></ul></li><li>审计/事件重试元数据契约：<ul><li>attempts/events 暴露 <code>retryable</code>、<code>retry_classification</code>、<code>error_kind</code>、<code>status_code</code></li><li>重试策略结果可从 <code>GET /api/large-tasks/:taskId/audit</code> 和 <code>GET /api/large-tasks/events</code> 查询</li></ul></li><li>跨设备交接快照 API：<ul><li><code>GET /api/large-tasks/handover/snapshot</code></li><li>面向移动端渲染的紧凑模式：<code>GET /api/large-tasks/handover/snapshot?format=mobile</code></li><li>返回最近的关键操作 + 保留策略变更摘要 + 活跃任务摘要 + 待处理审批/待办</li></ul></li></ul></li></ul>
+<p>验证：</p>
+<ul><li>路由/服务/运行时/编排器测试通过：<ul><li><code>backend/tests/services/largeTaskRuntimeStore.test.js</code></li><li><code>backend/tests/services/largeTaskOrchestrator.test.js</code></li><li><code>backend/tests/services/largeTaskWorkerService.test.js</code></li><li><code>backend/tests/routes/largeTasks.route.test.js</code></li></ul></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-002] khy-librechat-差距修复路线图.html"><div class="dir">← 上一篇</div><div class="ttl">KHY-OS 与 LibreChat 差距修复路线图</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-004] 三项目改进计划-2026-05-24.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 三项目取长补短深度分析</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-003] khy-大任务框架蓝图.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

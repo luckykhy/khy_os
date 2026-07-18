@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</div>
+      <header class="hero reveal"><h1>《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-远景演进路线图-从当前基线到-开机即进-khy-os">《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</a></li><li class="lvl-2"><a href="#0-北极星与当前坐标">0. 北极星与当前坐标</a></li><li class="lvl-3"><a href="#0-1-北极星-三年终局">0.1 北极星（三年终局）</a></li><li class="lvl-3"><a href="#0-2-当前坐标-2026-06-12-实测基线">0.2 当前坐标（2026-06-12 实测基线）</a></li><li class="lvl-2"><a href="#1-演进总览-四阶段里程碑">1. 演进总览（四阶段里程碑）</a></li><li class="lvl-2"><a href="#2-主线-a-内核-从-qemu-玩具到可自托管日用-os">2. 主线 A — 内核：从 QEMU 玩具到可自托管日用 OS</a></li><li class="lvl-3"><a href="#a1-块设备持久化深化-m1-关键路径">A1. 块设备持久化深化（M1，关键路径）</a></li><li class="lvl-3"><a href="#a2-真实键盘-stdin-全链路-m1-m2">A2. 真实键盘 stdin 全链路（M1→M2）</a></li><li class="lvl-3"><a href="#a3-内核内自托管工具链-m2-里程碑核心">A3. 内核内自托管工具链（M2，里程碑核心）</a></li><li class="lvl-3"><a href="#a4-内存-调度健壮化-贯穿-m1-m2">A4. 内存/调度健壮化（贯穿 M1–M2）</a></li><li class="lvl-3"><a href="#a5-网络栈实用化-m3">A5. 网络栈实用化（M3）</a></li><li class="lvl-3"><a href="#a6-裸机-稳定虚机自托管-m4-终局">A6. 裸机/稳定虚机自托管（M4，终局）</a></li><li class="lvl-2"><a href="#3-主线-b-agent-os-协同-从旁路桥到内核级自主体">3. 主线 B — Agent⇄OS 协同：从旁路桥到内核级自主体</a></li><li class="lvl-3"><a href="#b1-决策面真接内核决策点-m1-关键路径">B1. 决策面真接内核决策点（M1，关键路径）</a></li><li class="lvl-3"><a href="#b2-内核内-agent-常驻雏形-m2-m3">B2. 内核内 agent 常驻雏形（M2→M3）</a></li><li class="lvl-3"><a href="#b3-故障自愈闭环-m3-m4-终局能力">B3. 故障自愈闭环（M3→M4，终局能力）</a></li><li class="lvl-3"><a href="#b4-协议加固与安全-贯穿">B4. 协议加固与安全（贯穿）</a></li><li class="lvl-2"><a href="#4-主线-c-ai-shell-与网关-从-cli-到工业级-agentic-运行时">4. 主线 C — AI Shell 与网关：从 CLI 到工业级 agentic 运行时</a></li><li class="lvl-3"><a href="#c1-元规划接管真实执行-m1-与主线-d-共享关键路径">C1. 元规划接管真实执行（M1，与主线 D 共享关键路径）</a></li><li class="lvl-3"><a href="#c2-hooks-系统-m2">C2. Hooks 系统（M2）</a></li><li class="lvl-3"><a href="#c3-pty-headless-sdk-模式-m2-m3">C3. PTY + Headless/SDK 模式（M2→M3）</a></li><li class="lvl-3"><a href="#c4-网关韧性与成本-贯穿">C4. 网关韧性与成本（贯穿）</a></li><li class="lvl-3"><a href="#c5-可观测性深化-m3">C5. 可观测性深化（M3）</a></li><li class="lvl-2"><a href="#5-主线-d-约束与自愈-元帅-元规划真正接管">5. 主线 D — 约束与自愈：元帅 + 元规划真正接管</a></li><li class="lvl-3"><a href="#d1-元规划执行接管-c1-m1">D1. 元规划执行接管（= C1，M1）</a></li><li class="lvl-3"><a href="#d2-元帅接管宏观规划-m2">D2. 元帅接管宏观规划（M2）</a></li><li class="lvl-3"><a href="#d3-system-block-接备份引擎-m2">D3. System_Block 接备份引擎（M2）</a></li><li class="lvl-3"><a href="#d4-信任熔断的跨会话学习-m3">D4. 信任熔断的跨会话学习（M3）</a></li><li class="lvl-3"><a href="#d5-安全内核对标-m3-吸收-mgmt-plan-006-的-agent-sec-core">D5. 安全内核对标（M3，吸收 MGMT-PLAN-006 的 Agent Sec Core）</a></li><li class="lvl-2"><a href="#6-主线-e-应用生态-从协议到市场与抽成">6. 主线 E — 应用生态：从协议到市场与抽成</a></li><li class="lvl-3"><a href="#e1-wasm-应用运行时-m3-里程碑核心">E1. WASM 应用运行时（M3，里程碑核心）</a></li><li class="lvl-3"><a href="#e2-第二-第三款应用-m3-m4-终局指标">E2. 第二/第三款应用（M3→M4，终局指标）</a></li><li class="lvl-3"><a href="#e3-应用市场雏形-抽成-m4">E3. 应用市场雏形 + 抽成（M4）</a></li><li class="lvl-3"><a href="#e4-khyquant-作为旗舰示范-贯穿">E4. khyquant 作为旗舰示范（贯穿）</a></li><li class="lvl-2"><a href="#7-主线-f-发行-可维护-社区-从-pip-到开机即用">7. 主线 F — 发行 / 可维护 / 社区：从 pip 到开机即用</a></li><li class="lvl-3"><a href="#f1-开机即用-iso-m4-终局载体">F1. 开机即用 ISO（M4，终局载体）</a></li><li class="lvl-3"><a href="#f2-工作区快照-ws-ckpt-m2-被-d3-复用">F2. 工作区快照 ws-ckpt（M2，被 D3 复用）</a></li><li class="lvl-3"><a href="#f3-github-爆款发布-m1-已就绪待发">F3. GitHub 爆款发布（M1，已就绪待发）</a></li><li class="lvl-3"><a href="#f4-文档与可维护性自动化-贯穿">F4. 文档与可维护性自动化（贯穿）</a></li><li class="lvl-3"><a href="#f5-社区与扩展生态-m3-m4">F5. 社区与扩展生态（M3→M4）</a></li><li class="lvl-2"><a href="#8-主线-g-商业化-从许可到-saas-私有化-教育">8. 主线 G — 商业化：从许可到 SaaS / 私有化 / 教育</a></li><li class="lvl-2"><a href="#9-横切关注-贯穿所有主线">9. 横切关注（贯穿所有主线）</a></li><li class="lvl-2"><a href="#10-里程碑验收指标体系-可证伪">10. 里程碑验收指标体系（可证伪）</a></li><li class="lvl-2"><a href="#11-依赖关系与关键路径">11. 依赖关系与关键路径</a></li><li class="lvl-2"><a href="#12-风险登记与单人开发取舍">12. 风险登记与单人开发取舍</a></li><li class="lvl-2"><a href="#13-最近-90-天可执行清单-m1-冲刺">13. 最近 90 天可执行清单（M1 冲刺）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-007 | 阶段: 项目管理 | 主题: 远景演进路线图 --&gt;</p>
+<h1 id="khy-os-远景演进路线图-从当前基线到-开机即进-khy-os">《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》<a class="anchor" href="#khy-os-远景演进路线图-从当前基线到-开机即进-khy-os" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：MGMT-PLAN-007<br>日期：2026-06-12<br>状态：<strong>统领性战略路线图</strong>（取代 [MGMT-PLAN-006] 的对标视角，以真实代码基线重构演进主线）<br>范围：内核 / Agent⇄OS 协同 / AI Shell 与网关 / 约束自愈 / 应用生态 / 发行与社区 / 商业化，七条主线<br>对齐：[INIT-PRD-001] 定位与愿景、[DESIGN-ARCH-024] 元帅、[DESIGN-ARCH-025] 元规划、<code>.ai/MAP.md</code><br>读法：本文是「方向 + 落点 + 验收 + 依赖 + 风险」的工程级路线图，不是营销稿。每条主线可独立推进，<br>关键路径见 §6。单人开发的现实取舍贯穿全文（§7）。</p></blockquote>
+<hr>
+<h2 id="0-北极星与当前坐标">0. 北极星与当前坐标<a class="anchor" href="#0-北极星与当前坐标" aria-label="锚点">#</a></h2>
+<h3 id="0-1-北极星-三年终局">0.1 北极星（三年终局）<a class="anchor" href="#0-1-北极星-三年终局" aria-label="锚点">#</a></h3>
+<blockquote><p><strong>用户开机，直接进入 Khy-OS；AI 是系统级能力而非外挂应用；从内核到 agent 垂直整合、无供应商锁定；<br>平台能长出第三方应用并形成生态抽成。</strong></p></blockquote>
+<p>终局可证伪的三个硬指标：</p>
+<ol><li><strong>可日用</strong>：在真实硬件（或稳定虚机）上自托管运行 ≥ 8 小时不崩，能编辑代码、跑 agent、联网。</li><li><strong>AI 原生</strong>：内核内常驻 agent 能在无外部网络兜底时，自主完成「读—改—验—修」闭环至少一类任务。</li><li><strong>生态</strong>：≥ 3 个由他人开发、经 <code>khyos.apps</code> 协议接入的应用稳定运行，其中 ≥ 1 个走付费/抽成。</li></ol>
+<h3 id="0-2-当前坐标-2026-06-12-实测基线">0.2 当前坐标（2026-06-12 实测基线）<a class="anchor" href="#0-2-当前坐标-2026-06-12-实测基线" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>已落地</th><th>成熟度</th></tr></thead><tbody><tr><td>内核</td><td>引导/分页COW/进程fork-exec-wait/抢占调度/syscall/IPC/VFS+磁盘持久化/信号/管道/ELF+PE 双格式/窗口管理/MoonBit 内嵌；阶段 1–9 全 QEMU 实测</td><td><strong>QEMU 可用，未自托管</strong></td></tr><tr><td>Agent⇄OS</td><td>AgentBus A1–A8（控制面/决策面/事件面，COM2+COBS+CRC16）+ host 桥 + MCP 注册 + 内置 brain 接网关</td><td><strong>旁路协同闭合，未接管调度</strong></td></tr><tr><td>AI Shell/网关</td><td>CLI REPL + 16 适配器级联网关 + 104 工具 + 工作流引擎 + TUI（ink）+ 多租户网关</td><td><strong>Claude-Code 级，工业化进行中</strong></td></tr><tr><td>约束/自愈</td><td>元帅双模式（Goal10）+ 元规划/动态约束注入/信任熔断/宪法红线（Goal11）</td><td><strong>协议层完成，未接管 executeTool</strong></td></tr><tr><td>应用生态</td><td><code>app_protocol.py</code> 单一真源 + entry_points 发现/懒激活 + 路径主权隔离；khyquant 首款应用</td><td><strong>协议就绪，无第三方应用、无市场</strong></td></tr><tr><td>发行</td><td>pip/npm 双渠道孪生 + 双阶段自愈 devenv + <code>.ai/</code> 种子文档 + 项目元数据 pre-commit</td><td><strong>可一键装，无开机即用 ISO</strong></td></tr><tr><td>商业化</td><td>许可变现可执行 + 多租户网关 SaaS 雏形</td><td><strong>路径清晰，未规模化</strong></td></tr></tbody></table>
+<p><strong>一句话</strong>：协议与地基已厚，<strong>三道&quot;最后一公里&quot;未通</strong>——内核未自托管、agent 未接管执行、生态无第三方。<br>本路线图即围绕打通这三道关组织。</p>
+<hr>
+<h2 id="1-演进总览-四阶段里程碑">1. 演进总览（四阶段里程碑）<a class="anchor" href="#1-演进总览-四阶段里程碑" aria-label="锚点">#</a></h2>
+<blockquote><p>时间锚是「单人开发、尽力而为」的相对节奏，非承诺工期。每阶段以<strong>可证伪的出口判据</strong>收口。</p></blockquote>
+<table><thead><tr><th>阶段</th><th>代号</th><th>周期</th><th>主题</th><th>出口判据（全部满足才算过）</th></tr></thead><tbody><tr><td><strong>M1</strong></td><td>收口闭环</td><td>~3 月</td><td>把已建协议接到真实执行路径</td><td>元规划真接管 ≥1 类工具写入；AgentBus 决策面真驱动一次内核内决策；内核块设备持久化跨重启稳定</td></tr><tr><td><strong>M2</strong></td><td>自托管</td><td>~6 月</td><td>内核从 QEMU 走向可自托管开发环</td><td>内核内 shell 能编辑+编译+运行一个 C 程序；磁盘 FS 支撑 ≥ 100 文件读写不丢；真实键盘 stdin 全链路</td></tr><tr><td><strong>M3</strong></td><td>生态启动</td><td>~9 月</td><td>第三方应用 + WASM 运行时 + 市场雏形</td><td>≥1 个非 khyquant 应用经协议接入并上架；WASM 沙箱跑通一个真实应用；抽成计费打通一笔</td></tr><tr><td><strong>M4</strong></td><td>开机即用</td><td>~12–18 月</td><td>裸机/稳定虚机日用 + 内核常驻 agent</td><td>真机/虚机自托管 8h 不崩；内核内 agent 完成一类「读改验修」闭环；3 个第三方应用稳定</td></tr></tbody></table>
+<hr>
+<h2 id="2-主线-a-内核-从-qemu-玩具到可自托管日用-os">2. 主线 A — 内核：从 QEMU 玩具到可自托管日用 OS<a class="anchor" href="#2-主线-a-内核-从-qemu-玩具到可自托管日用-os" aria-label="锚点">#</a></h2>
+<blockquote><p>红线（不可违背）：<strong>&quot;内核绝不乱动，沙箱任你卷&quot;</strong>——核心微/宏混合层用 C，可替换层用 MoonBit WASM；<br>每一步必须保留 QEMU 一键复现 + 回归绿。落点全部在 <code>kernel/</code>。</p></blockquote>
+<h3 id="a1-块设备持久化深化-m1-关键路径">A1. 块设备持久化深化（M1，关键路径）<a class="anchor" href="#a1-块设备持久化深化-m1-关键路径" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：<code>ata.c</code>+<code>persist.c</code>+<code>diskfs.c</code> 已挂 <code>/disk</code>，但持久化深度未经压力验证。</li><li><strong>细节</strong>：<ul><li><code>diskfs.c</code> 增加 inode 位图 + 块分配器的崩溃一致性（写前日志或双写 superblock）。</li><li><code>ata.c</code> 支持 LBA48 + 多扇区 DMA（当前若为 PIO 单扇区，吞吐瓶颈）。</li><li>落 <code>fsck</code> 式启动自检：挂载前校验 superblock magic + 块计数。</li></ul></li><li><strong>验收</strong>：QEMU 内创建 100 个文件、各写 4KB、<code>sync</code>、重启，全部内容逐字一致；断电模拟（QEMU <code>quit</code> 写中途）后启动能自检并丢弃半写块而非挂死。</li></ul>
+<h3 id="a2-真实键盘-stdin-全链路-m1-m2">A2. 真实键盘 stdin 全链路（M1→M2）<a class="anchor" href="#a2-真实键盘-stdin-全链路-m1-m2" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：<code>keyboard.c</code> 驱动 + shell 行编辑可用，但进程级 <code>read(fd0)</code> 阻塞读真实键盘的全链路待打通。</li><li><strong>细节</strong>：键盘中断 → 行规程缓冲（canonical/raw 两态）→ <code>tty</code> 设备 → <code>vfs</code> 的 <code>/dev/tty</code> → 进程 <code>read(0)</code> 唤醒。复用 <code>ipc.c</code> 的 lost-wakeup-safe 阻塞范式。</li><li><strong>验收</strong>：内核内运行一个读 <code>stdin</code> 的 C 程序（如 <code>cat</code>），键盘输入实时回显并被进程读到；Ctrl-C 经信号链 <code>sigaction</code> 中断。</li></ul>
+<h3 id="a3-内核内自托管工具链-m2-里程碑核心">A3. 内核内自托管工具链（M2，里程碑核心）<a class="anchor" href="#a3-内核内自托管工具链-m2-里程碑核心" aria-label="锚点">#</a></h3>
+<ul><li><strong>目标</strong>：内核内能「编辑 → 编译 → 运行」一个 C 程序，迈出&quot;自托管&quot;第一步。</li><li><strong>细节</strong>：<ul><li>移植一个极简编辑器（或强化 <code>shell.c</code> 的行编辑为多行）。</li><li>评估两条路：①移植 <code>tcc</code>（Tiny C Compiler，单文件、ELF 输出，最契合）；②MoonBit→WASM→内核 WASM 运行时。优先 ①验证可行性。</li><li><code>exec</code> 已支持 ELF，编译产物可直接 <code>exec</code>。</li></ul></li><li><strong>验收</strong>：内核 shell 里 <code>edit hello.c</code> → <code>cc hello.c -o hello</code> → <code>./hello</code> 打印 &quot;hello&quot;，全程不出 QEMU。</li><li><strong>风险</strong>：tcc 依赖的 libc 子集需裁剪移植，工作量大；可先支持 freestanding 子集。</li></ul>
+<h3 id="a4-内存-调度健壮化-贯穿-m1-m2">A4. 内存/调度健壮化（贯穿 M1–M2）<a class="anchor" href="#a4-内存-调度健壮化-贯穿-m1-m2" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：<code>vmm.c</code> 的 COW 缺页加引用计数回收审计；<code>sched.c</code> 加优先级老化防饥饿；<code>kheap.c</code> 加 use-after-free 红区探测（debug 构建）。</li><li><strong>验收</strong>：跑 <code>fork</code> 炸弹（受限）+ 长时调度压力 1h，无页泄漏（pmm 空闲页计数回到基线 ±阈值）、无死锁。</li></ul>
+<h3 id="a5-网络栈实用化-m3">A5. 网络栈实用化（M3）<a class="anchor" href="#a5-网络栈实用化-m3" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：<code>net.c</code> 存在但能力浅。</li><li><strong>细节</strong>：补 ARP/ICMP/UDP→最小 TCP；目标是内核内 agent 能发一次 HTTP 请求兜底（与决策面互补）。</li><li><strong>验收</strong>：内核内 <code>ping</code> 网关通；UDP echo 通；TCP 能完成一次短连接 GET。</li></ul>
+<h3 id="a6-裸机-稳定虚机自托管-m4-终局">A6. 裸机/稳定虚机自托管（M4，终局）<a class="anchor" href="#a6-裸机-稳定虚机自托管-m4-终局" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：真实硬件驱动补齐（AHCI/NVMe 之一、USB 键盘、真实显卡 framebuffer via GOP）；或锁定一个稳定虚机配置（QEMU/KVM 固定机型）作为&quot;官方日用环境&quot;。</li><li><strong>验收</strong>：在目标环境自托管运行 8h，期间编辑代码 + 跑 agent + 联网不崩。</li><li><strong>取舍</strong>：真机驱动是无底洞；<strong>单人现实下优先&quot;稳定虚机日用&quot;</strong>，真机作为长尾彩蛋。</li></ul>
+<hr>
+<h2 id="3-主线-b-agent-os-协同-从旁路桥到内核级自主体">3. 主线 B — Agent⇄OS 协同：从旁路桥到内核级自主体<a class="anchor" href="#3-主线-b-agent-os-协同-从旁路桥到内核级自主体" aria-label="锚点">#</a></h2>
+<blockquote><p>已完成 A1–A8 八阶段（控制面/决策面/事件面三面闭合）。下一程是<strong>让 agent 从&quot;旁观+被问&quot;走向&quot;参与内核决策与自愈&quot;</strong>。落点 <code>kernel/</code>（agentbus 族）+ <code>kernel/bridge/</code>。</p></blockquote>
+<h3 id="b1-决策面真接内核决策点-m1-关键路径">B1. 决策面真接内核决策点（M1，关键路径）<a class="anchor" href="#b1-决策面真接内核决策点-m1-关键路径" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：A5 已实现 <code>SYSCALL_AGENT_ASK</code>（OS→agent 提问，3s 兜底永不挂死），但内核中实际&quot;问 agent 再决策&quot;的决策点仅示例级。</li><li><strong>细节</strong>：选 1–2 个<strong>安全可逆</strong>的内核决策点接入决策面，例如：<ul><li>缺页时的换页策略提示（agent 给 hint，内核保留兜底）；</li><li>shell 未知命令的智能纠错建议（agent 返建议，用户确认）。</li><li>严守：&quot;agent 只给 hint，内核永远有确定性兜底，超时即兜底&quot;——绝不让 agent 成为内核存活的必要条件。</li></ul></li><li><strong>验收</strong>：拔掉 agent（bridge 不连），内核所有决策点走兜底正常运行；接上 agent，决策点采纳建议且可观测。</li></ul>
+<h3 id="b2-内核内-agent-常驻雏形-m2-m3">B2. 内核内 agent 常驻雏形（M2→M3）<a class="anchor" href="#b2-内核内-agent-常驻雏形-m2-m3" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：让 host 桥的内置 brain（<code>khy-brain-gateway.js</code>）能以&quot;内核内常驻任务&quot;形态运行一个轻量决策循环（而非纯外部进程）；用 MoonBit WASM 在内核内跑一个极小的策略核，重决策仍出 COM2 问外部网关。</li><li><strong>验收</strong>：QEMU 内 agent 任务常驻，事件面（SPAWN/EXIT/FAULT）触发它做出一次记录/建议动作。</li></ul>
+<h3 id="b3-故障自愈闭环-m3-m4-终局能力">B3. 故障自愈闭环（M3→M4，终局能力）<a class="anchor" href="#b3-故障自愈闭环-m3-m4-终局能力" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：事件面 FAULT → 内核内 agent 捕获 → 经决策面/工具面读取故障进程上下文 → 提出修复（重启/隔离/打补丁建议）→ 控制面执行可逆动作。这正是北极星指标 ②&quot;读—改—验—修&quot;的内核版。</li><li><strong>验收</strong>：构造一个会 fault 的进程，agent 自动隔离它并产出一条人类可读的根因+建议，全程不崩内核。</li><li><strong>依赖</strong>：B1（决策面接入）+ 主线 D（约束保证 agent 的修复动作受元规划/红线约束）。</li></ul>
+<h3 id="b4-协议加固与安全-贯穿">B4. 协议加固与安全（贯穿）<a class="anchor" href="#b4-协议加固与安全-贯穿" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：控制面写操作的 <code>/bin</code> 越权 EPERM 守卫已有；补：决策面/工具面的能力令牌（capability，复用 <code>cap_init</code>/<code>capability.c</code>）+ 帧重放防护（序号+nonce）。</li><li><strong>验收</strong>：伪造帧/重放帧被拒；越权写被 EPERM；模糊测试 1h 不崩。</li></ul>
+<hr>
+<h2 id="4-主线-c-ai-shell-与网关-从-cli-到工业级-agentic-运行时">4. 主线 C — AI Shell 与网关：从 CLI 到工业级 agentic 运行时<a class="anchor" href="#4-主线-c-ai-shell-与网关-从-cli-到工业级-agentic-运行时" aria-label="锚点">#</a></h2>
+<blockquote><p>这是<strong>当前核心卖点</strong>，也是营收最近的一条线。落点 <code>services/backend/</code>。</p></blockquote>
+<h3 id="c1-元规划接管真实执行-m1-与主线-d-共享关键路径">C1. 元规划接管真实执行（M1，与主线 D 共享关键路径）<a class="anchor" href="#c1-元规划接管真实执行-m1-与主线-d-共享关键路径" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：Goal11 的 <code>MetaPlanCoordinator</code> 协议层完成，但<strong>未接管 <code>executeTool</code></strong>（toolCalling.js:2342）。</li><li><strong>细节</strong>：在 <code>executeTool</code> 前置一道可开关的钩子（<code>KHY_METAPLAN_ENFORCE</code>），对<strong>写类工具</strong>（editFile/writeFile/createDocument/executeCode/runShell）按元规划流程跑：渲染元规划 prompt → 模型产出 → ingest → validateExecution → 执行 → recordOutcome。读类工具与低风险默认快放行。</li><li><strong>验收</strong>：改注释走 Soft 极速；重构走 Hard 真 babel 校验；删库被宪法红线强制 Block；连续 2 次 Soft 翻车后同会话强制 Hard——全部在真实工具链上复现，且开关关闭时行为与今天完全一致（零回归）。</li><li><strong>风险</strong>：每次写都让模型先产元规划会增加一轮往返；故默认只对&quot;风险工具 + 非平凡改动&quot;启用，平凡改动走启发式直通。</li></ul>
+<h3 id="c2-hooks-系统-m2">C2. Hooks 系统（M2）<a class="anchor" href="#c2-hooks-系统-m2" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：<code>PreToolUse</code>/<code>PostToolUse</code>/<code>PrePrompt</code>/<code>PostResponse</code> 四事件，声明式 <code>hooks.json</code>；与已有 <code>hookRunner</code>/守卫审批链整合（记忆中 guardApproval 已铺垫）。</li><li><strong>验收</strong>：用户配一条 PreToolUse 钩子拦截 <code>rm -rf</code> 并改写为回收站移动，实测生效。</li></ul>
+<h3 id="c3-pty-headless-sdk-模式-m2-m3">C3. PTY + Headless/SDK 模式（M2→M3）<a class="anchor" href="#c3-pty-headless-sdk-模式-m2-m3" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：<code>node-pty</code> 伪终端支持交互式/sudo 命令；JSON stdin/stdout 非交互协议供 CI、IDE 后端、ACP 对接。Python SDK 与 Node SDK 双绑定（记忆中 SDK v1.1.0 已起步）。</li><li><strong>验收</strong>：外部进程经 headless 协议驱动一次完整 agent 任务并取回结构化结果；PTY 下 <code>top</code>/<code>vim</code> 可交互。</li></ul>
+<h3 id="c4-网关韧性与成本-贯穿">C4. 网关韧性与成本（贯穿）<a class="anchor" href="#c4-网关韧性与成本-贯穿" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：16 适配器的健康度自动巡检 + 模型能力分级（modelTier 已有）按任务路由最省钱够用的后端；Token 优化（Schema/Response 压缩，对标 Tokenless）。</li><li><strong>验收</strong>：同一批任务在开启智能路由后总 Token/成本下降可量化（看板出数）。</li></ul>
+<h3 id="c5-可观测性深化-m3">C5. 可观测性深化（M3）<a class="anchor" href="#c5-可观测性深化-m3" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：工具调用、模型推理、适配器路由、状态流转的<strong>全程透明</strong>是差异化卖点（&quot;教练车&quot;）。补语义事件流 + 可回放的 trace 时间线（traceAudit 已有地基）。</li><li><strong>验收</strong>：任一次 agent 任务可在 UI 上逐步回放：每个工具的入参/出参/耗时/路由决策/约束策略一目了然。</li></ul>
+<hr>
+<h2 id="5-主线-d-约束与自愈-元帅-元规划真正接管">5. 主线 D — 约束与自愈：元帅 + 元规划真正接管<a class="anchor" href="#5-主线-d-约束与自愈-元帅-元规划真正接管" aria-label="锚点">#</a></h2>
+<blockquote><p>Goal10（元帅）+ Goal11（元规划）已建协议，本主线让它们<strong>从&quot;旁置子系统&quot;变成&quot;执行路径的实际守门人&quot;</strong>。落点 <code>services/backend/src/services/{marshal,metaplan}/</code> + 调度器接线。</p></blockquote>
+<h3 id="d1-元规划执行接管-c1-m1">D1. 元规划执行接管（= C1，M1）<a class="anchor" href="#d1-元规划执行接管-c1-m1" aria-label="锚点">#</a></h3>
+<p>见 C1。这是 D 主线的入口。</p>
+<h3 id="d2-元帅接管宏观规划-m2">D2. 元帅接管宏观规划（M2）<a class="anchor" href="#d2-元帅接管宏观规划-m2" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：把 <code>MarshalCoordinator</code> 接到 Goal Mode / 大任务编排的&quot;主控选择&quot;上：用户 <code>--marshal</code> 指定或自动选举的元帅，其产出的计划经元规划逐微步落地；弱主走选择题+规则引擎兜底，强主放权。</li><li><strong>验收</strong>：用一个弱模型当元帅跑一个多步任务，全程不产生不可逆破坏、计划逻辑自洽；强模型当元帅则自由规划。</li></ul>
+<h3 id="d3-system-block-接备份引擎-m2">D3. System_Block 接备份引擎（M2）<a class="anchor" href="#d3-system-block-接备份引擎-m2" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：Goal11 的 <code>System_Block</code> 以 <code>requireSnapshot/requireConfirmation</code> 暴露契约，未绑实际快照。</li><li><strong>细节</strong>：绑定 <code>rollbackService</code>（记忆中已存在）：Block 级动作执行前自动打工作区快照，失败可一键回滚；复用主线 F 的 ws-ckpt（工作区快照）能力。</li><li><strong>验收</strong>：一个 Block 级危险动作执行前自动快照，人工拒绝则零副作用，执行后可回滚到快照点。</li></ul>
+<h3 id="d4-信任熔断的跨会话学习-m3">D4. 信任熔断的跨会话学习（M3）<a class="anchor" href="#d4-信任熔断的跨会话学习-m3" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：当前熔断是会话级；升级为可选的跨会话持久化&quot;风险画像&quot;（某类操作历史翻车率高→默认提高约束级别），写入 <code>~/.khyos</code>。</li><li><strong>验收</strong>：历史上常翻车的操作类型，新会话默认起步即 Code_Hard，可被用户重置。</li></ul>
+<h3 id="d5-安全内核对标-m3-吸收-mgmt-plan-006-的-agent-sec-core">D5. 安全内核对标（M3，吸收 MGMT-PLAN-006 的 Agent Sec Core）<a class="anchor" href="#d5-安全内核对标-m3-吸收-mgmt-plan-006-的-agent-sec-core" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：Prompt 注入检测（规则+语义+ML 三层）、代码扫描引擎、技能签名验证——作为元规划&quot;宪法红线&quot;的扩展规则源。</li><li><strong>验收</strong>：已知 Prompt 注入样本被拦截；危险代码块在写入前被代码扫描标记。</li></ul>
+<hr>
+<h2 id="6-主线-e-应用生态-从协议到市场与抽成">6. 主线 E — 应用生态：从协议到市场与抽成<a class="anchor" href="#6-主线-e-应用生态-从协议到市场与抽成" aria-label="锚点">#</a></h2>
+<blockquote><p>架构已解耦（<code>app_protocol.py</code> 单一真源、路径主权、entry_points 发现/懒激活）。本主线把&quot;能接应用&quot;变成&quot;有应用、能赚钱&quot;。落点 <code>platform/khy_platform/</code> + 新增运行时/市场。</p></blockquote>
+<h3 id="e1-wasm-应用运行时-m3-里程碑核心">E1. WASM 应用运行时（M3，里程碑核心）<a class="anchor" href="#e1-wasm-应用运行时-m3-里程碑核心" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：MoonBit→WASM 作为跨平台应用首选交付格式；后端起一个 WASM 沙箱执行器（wasmtime/wasmer 绑定，记忆中 wasmAppService 已有雏形），暴露受限系统能力（文件走应用主权目录、网络走公共 API）。</li><li><strong>验收</strong>：一个 MoonBit 写的小应用编译为 WASM，经 <code>khyos.apps</code> 协议接入，在沙箱内跑通且无法越权访问底座数据。</li></ul>
+<h3 id="e2-第二-第三款应用-m3-m4-终局指标">E2. 第二/第三款应用（M3→M4，终局指标）<a class="anchor" href="#e2-第二-第三款应用-m3-m4-终局指标" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：自研或引导他人开发 ≥ 2 个非 khyquant 应用（如：笔记/知识库 agent、本地自动化 agent），验证协议的通用性；沉淀&quot;应用开发脚手架&quot;（<code>khy create-app</code>）。</li><li><strong>验收</strong>：≥ 3 个应用（含 khyquant）经协议稳定共存，互不污染数据主权。</li></ul>
+<h3 id="e3-应用市场雏形-抽成-m4">E3. 应用市场雏形 + 抽成（M4）<a class="anchor" href="#e3-应用市场雏形-抽成-m4" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：<code>khy apps search/install/publish</code>；签名与版本；付费应用走计费（复用多租户网关的计量能力）抽成。</li><li><strong>验收</strong>：一笔付费应用安装→计费→抽成全链路打通（哪怕测试金额）。</li></ul>
+<h3 id="e4-khyquant-作为旗舰示范-贯穿">E4. khyquant 作为旗舰示范（贯穿）<a class="anchor" href="#e4-khyquant-作为旗舰示范-贯穿" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：持续把 khyquant 打磨成&quot;协议能力的活样板&quot;（双模入口、路径隔离、Android APK 已通），它的每个新能力都反哺协议。</li><li><strong>验收</strong>：khyquant 不再依赖任何底座内部实现，仅经公共 API/协议——作为解耦的反向证明。</li></ul>
+<hr>
+<h2 id="7-主线-f-发行-可维护-社区-从-pip-到开机即用">7. 主线 F — 发行 / 可维护 / 社区：从 pip 到开机即用<a class="anchor" href="#7-主线-f-发行-可维护-社区-从-pip-到开机即用" aria-label="锚点">#</a></h2>
+<blockquote><p>已有 pip/npm 双渠道孪生、双阶段自愈、<code>.ai/</code> 种子文档、项目元数据 pre-commit。本主线通向&quot;开机即用&quot;与&quot;可持续维护&quot;。落点 <code>platform/</code>、<code>packaging/</code>、<code>scripts/</code>、<code>.github/</code>。</p></blockquote>
+<h3 id="f1-开机即用-iso-m4-终局载体">F1. 开机即用 ISO（M4，终局载体）<a class="anchor" href="#f1-开机即用-iso-m4-终局载体" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：两条 OS 路径并存——①自研内核 ISO（<code>khy os build</code>，记忆中已实现一键还原）；②基于稳定 Linux 的&quot;Khy-OS 发行版&quot;（开机直进 Khy Shell，对标定制发行版）。M4 优先 ②作为日用，①作为纯血理想。</li><li><strong>验收</strong>：刻录/挂载 ISO，开机 60s 内进入 Khy Shell 可用界面。</li></ul>
+<h3 id="f2-工作区快照-ws-ckpt-m2-被-d3-复用">F2. 工作区快照 ws-ckpt（M2，被 D3 复用）<a class="anchor" href="#f2-工作区快照-ws-ckpt-m2-被-d3-复用" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：overlayfs/btrfs（发行版路径）或自研 diskfs 快照（内核路径）；守护进程定时快照 + 命令式快照。</li><li><strong>验收</strong>：一次危险操作前后可秒级快照/回滚。</li></ul>
+<h3 id="f3-github-爆款发布-m1-已就绪待发">F3. GitHub 爆款发布（M1，已就绪待发）<a class="anchor" href="#f3-github-爆款发布-m1-已就绪待发" aria-label="锚点">#</a></h3>
+<ul><li><strong>现状</strong>：记忆中专有许可+README/banner/.github/发帖工具包全就绪，待录 demo + 设远端 + 发帖。</li><li><strong>细节</strong>：录 60s demo（透明 agent + 内核启动 + 工作流）；设远端；按工具包发帖。</li><li><strong>验收</strong>：仓库公开可见，首批 star/issue 进来。</li></ul>
+<h3 id="f4-文档与可维护性自动化-贯穿">F4. 文档与可维护性自动化（贯穿）<a class="anchor" href="#f4-文档与可维护性自动化-贯穿" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：<code>.ai/</code> 种子文档 + 项目元数据 pre-commit 已确定性维护；扩展到&quot;每条主线的 DESIGN/IMPL/TEST 三件套随实现自动登记索引&quot;。</li><li><strong>验收</strong>：新功能提交后，索引/元数据/指针文件零手工漂移。</li></ul>
+<h3 id="f5-社区与扩展生态-m3-m4">F5. 社区与扩展生态（M3→M4）<a class="anchor" href="#f5-社区与扩展生态-m3-m4" aria-label="锚点">#</a></h3>
+<ul><li><strong>细节</strong>：扩展系统（<code>openclaw.plugin.json</code> 兼容）+ MCP 服务器市场 + 技能库远程发现（SKILL.md 标准）。</li><li><strong>验收</strong>：一个第三方扩展/技能能被发现、安装、启用。</li></ul>
+<hr>
+<h2 id="8-主线-g-商业化-从许可到-saas-私有化-教育">8. 主线 G — 商业化：从许可到 SaaS / 私有化 / 教育<a class="anchor" href="#8-主线-g-商业化-从许可到-saas-私有化-教育" aria-label="锚点">#</a></h2>
+<blockquote><p>定位 v2 已明确多条变现路径。本主线排序&quot;今天可执行 → 规模化&quot;。落点 = 许可/计费/部署。</p></blockquote>
+<table><thead><tr><th>优先级</th><th>路径</th><th>现状</th><th>下一步</th></tr></thead><tbody><tr><td>P0（今天）</td><td><strong>许可变现</strong></td><td>专有许可就绪</td><td>定价页 + 个人/团队授权码签发（owner secret 体系已有）</td></tr><tr><td>P1</td><td><strong>多租户网关 SaaS</strong></td><td>per-user 隔离 + 数据面隔离 + MyGateway 前端已通（阶段1–4绿）</td><td>计量计费 + 配额 + 注册付费闭环</td></tr><tr><td>P2</td><td><strong>私有化部署</strong></td><td>pip/npm 双渠道 + 离线自愈</td><td>企业内网一键部署包 + 许可绑定</td></tr><tr><td>P3</td><td><strong>应用生态抽成</strong></td><td>协议就绪（主线 E）</td><td>随 E3 市场上线</td></tr><tr><td>P4</td><td><strong>教育/教练车</strong></td><td>全程透明 + /learn 三模式 + 知识闭环已有</td><td>课程化（curriculum 已有 11 层）+ 订阅</td></tr></tbody></table>
+<ul><li><strong>验收（M3）</strong>：至少 P0+P1 任一条产生真实可计量收入闭环（哪怕一笔）。</li></ul>
+<hr>
+<h2 id="9-横切关注-贯穿所有主线">9. 横切关注（贯穿所有主线）<a class="anchor" href="#9-横切关注-贯穿所有主线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>关注</th><th>当前</th><th>演进</th></tr></thead><tbody><tr><td><strong>安全</strong></td><td>路径主权隔离、EPERM 守卫、宪法红线、authGuard</td><td>+ capability 令牌、Prompt 注入检测、技能签名、帧重放防护</td></tr><tr><td><strong>可观测</strong></td><td>traceAudit、tokenUsage、aiMonitor</td><td>+ 语义事件流、可回放 trace、内核事件面 UI</td></tr><tr><td><strong>性能/成本</strong></td><td>网关级联、熔断、modelTier</td><td>+ 智能路由省钱、Token 压缩、DMA/分页吞吐</td></tr><tr><td><strong>跨平台</strong></td><td>ELF+PE 双格式、Windows 工具兼容、Android APK、WSL/Docker 内核构建</td><td>+ WASM 首选交付、真机驱动长尾</td></tr><tr><td><strong>零回归纪律</strong></td><td>405+ 后端测试、QEMU 实测、<code>.ai/</code> 元数据门禁</td><td>每条主线接管真实路径必须&quot;开关可关 = 行为同今天&quot;</td></tr></tbody></table>
+<hr>
+<h2 id="10-里程碑验收指标体系-可证伪">10. 里程碑验收指标体系（可证伪）<a class="anchor" href="#10-里程碑验收指标体系-可证伪" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>M1</th><th>M2</th><th>M3</th><th>M4（北极星）</th></tr></thead><tbody><tr><td>内核自托管时长</td><td>QEMU 稳定跑</td><td>内核内编译运行 C</td><td>+ 网络兜底</td><td>真机/虚机 8h 不崩</td></tr><tr><td>Agent 接管深度</td><td>决策面驱动 1 决策点</td><td>内核内 agent 常驻</td><td>故障自愈闭环</td><td>「读改验修」一类任务</td></tr><tr><td>元规划接管面</td><td>≥1 类写工具</td><td>元帅接宏观规划</td><td>跨会话风险学习</td><td>全写路径默认守门</td></tr><tr><td>第三方应用数</td><td>0（协议就绪）</td><td>脚手架</td><td>≥1 上架</td><td>≥3 稳定共存</td></tr><tr><td>收入闭环</td><td>许可定价上线</td><td>—</td><td>≥1 笔可计量</td><td>多路径并行</td></tr><tr><td>公开度</td><td>仓库公开+demo</td><td>首批贡献者</td><td>扩展/技能市场雏形</td><td>生态社区</td></tr></tbody></table>
+<hr>
+<h2 id="11-依赖关系与关键路径">11. 依赖关系与关键路径<a class="anchor" href="#11-依赖关系与关键路径" aria-label="锚点">#</a></h2>
+<pre><code>关键路径（决定终局节奏的最长链）：
+  A1 块设备持久化 ─┐
+                  ├─→ A3 内核自托管工具链 ─→ A6 自托管日用 ─┐
+  A2 真实 stdin ──┘                                        │
+                                                           ├─→ M4 开机即用
+  B1 决策面接入 ─→ B2 常驻 agent ─→ B3 故障自愈 ───────────┤
+                                                           │
+  C1/D1 元规划接管 ─→ D2 元帅接管 ─→ D3 备份引擎 ──────────┘
+                                                           
+  E1 WASM 运行时 ─→ E2 第三方应用 ─→ E3 市场抽成（生态线，可并行）</code></pre>
+<ul><li><strong>最关键单点</strong>：<code>A3 内核自托管工具链</code>（tcc 移植）与 <code>C1/D1 元规划接管 executeTool</code>——前者决定&quot;内核是不是真 OS&quot;，后者决定&quot;agent 是不是真受控&quot;。两者都已有清晰落点，建议<strong>优先 C1/D1</strong>（投入产出比最高、立即提升卖点），A3 作为 M2 攻坚。</li><li><strong>可并行</strong>：主线 E（生态）、F3（GitHub 发布）、G（商业化 P0/P1）与内核线无强依赖，可随时推进换取现金流与曝光。</li></ul>
+<hr>
+<h2 id="12-风险登记与单人开发取舍">12. 风险登记与单人开发取舍<a class="anchor" href="#12-风险登记与单人开发取舍" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>风险</th><th>级别</th><th>应对</th></tr></thead><tbody><tr><td>真机驱动是无底洞</td><td>高</td><td>M4 优先&quot;稳定虚机日用&quot;，真机作长尾；不把终局押在真机</td></tr><tr><td>tcc/自托管工具链移植量大</td><td>高</td><td>先 freestanding 子集；失败则退守 WASM 运行时路线</td></tr><tr><td>元规划接管增加往返延迟</td><td>中</td><td>默认只守&quot;风险工具+非平凡改动&quot;，平凡改动启发式直通；开关可关</td></tr><tr><td>单人精力分散于七主线</td><td>高</td><td>严守关键路径优先级（§11）；生态/商业化线换现金流反哺</td></tr><tr><td>内核回归脆弱</td><td>中</td><td>每步保留 QEMU 一键复现 + 接管路径&quot;开关可关=同今天&quot;</td></tr><tr><td>生态冷启动（无第三方）</td><td>中</td><td>自研第 2/3 应用打样 + <code>khy create-app</code> 脚手架降低门槛</td></tr><tr><td>安全面扩大（agent 入内核）</td><td>高</td><td>capability 令牌 + 宪法红线 + agent 永非内核存活必要条件</td></tr></tbody></table>
+<p><strong>取舍总纲</strong>：内核线求&quot;够用日用&quot;而非&quot;功能齐全&quot;；agent 线求&quot;受控自主&quot;而非&quot;全自动&quot;；<br>生态/商业线求&quot;先有一笔/一个&quot;而非&quot;先有规模&quot;。<strong>宁可窄而通，不要宽而虚。</strong></p>
+<hr>
+<h2 id="13-最近-90-天可执行清单-m1-冲刺">13. 最近 90 天可执行清单（M1 冲刺）<a class="anchor" href="#13-最近-90-天可执行清单-m1-冲刺" aria-label="锚点">#</a></h2>
+<ol><li><strong>C1/D1</strong>：元规划接管 <code>executeTool</code> 写类工具（开关 <code>KHY_METAPLAN_ENFORCE</code>），含真实 babel/python 校验落地 + 零回归验证。〔最高优先〕</li><li><strong>D3</strong>：<code>System_Block</code> 绑 <code>rollbackService</code> 打快照。</li><li><strong>B1</strong>：决策面接 1 个安全可逆内核决策点（shell 未知命令纠错建议），拔 agent 兜底验证。</li><li><strong>A1</strong>：<code>diskfs</code> 崩溃一致性 + 100 文件压力测试。</li><li><strong>F3</strong>：录 60s demo + 设远端 + 按工具包发首帖。〔并行换曝光〕</li><li><strong>G-P0</strong>：许可定价页 + 授权码签发闭环。〔并行换现金流〕</li></ol>
+<p>每项完成即按既有规范产出 DESIGN/IMPL/TEST 三件套并登记索引，保持&quot;无 AI 也能维护&quot;。</p>
+<hr>
+<blockquote><p>本路线图是活文档：每过一个里程碑出口判据，回填实测结果并校准下一阶段。<br>终局不变——<strong>开机即进 Khy-OS</strong>；路径可调——<strong>永远沿关键路径、窄而通地推进</strong>。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-006] 智能体-操作系统-路线图.html"><div class="dir">← 上一篇</div><div class="ttl">Khy OS Agentic OS 实施路线图</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-001] deepseek-tui-对标.html"><div class="dir">下一篇 →</div><div class="ttl">DeepSeek-TUI 对齐 — khy 对齐清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-007] Khy-OS远景演进路线图-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "id": "jam",
+  "kind": "concept",
+  "name": "JAMstack",
+  "category": "frontend",
+  "triggers": ["JAM", "JAMstack", "JAM stack", "JAMStack"],
+  "summary": "JAMstack：JavaScript + APIs + Markup。预渲染静态 Markup 上 CDN，动态能力靠客户端 JS 调用可复用 API/无服务器函数，强调解耦、性能与安全。",
+  "whenToUse": [
+    "内容站/电商前台，要快、要安全、要易扩展。",
+    "后端能力以 API/Serverless 形式复用。"
+  ],
+  "antiPatterns": [
+    "强依赖大量实时服务端状态时硬套 JAMstack。",
+    "把所有逻辑塞进前端 JS，API 边界混乱。"
+  ],
+  "minimalSkeleton": "Markup: 预渲染静态页(SSG)上 CDN\nAPIs: Serverless/第三方 API 提供动态\nJavaScript: 客户端编排调用 API",
+  "relatedArchetypes": []
+}

@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "name": "mono",
+    "label": "Monochrome",
+    "description": "Grayscale theme for minimal visual noise"
+  },
+  "colors": {
+    "claude": "#AAAAAA",
+    "success": "#CCCCCC",
+    "error": "#999999",
+    "warning": "#BBBBBB",
+    "text": "#EEEEEE",
+    "secondaryText": "#888888",
+    "subtle": "#555555",
+    "bashBorder": "#777777",
+    "permission": "#BBBBBB",
+    "link": "#AAAAAA",
+    "diffAdded": "#404040",
+    "diffRemoved": "#404040",
+    "diffAddedDimmed": "#505050",
+    "diffRemovedDimmed": "#505050",
+    "diffAddedWord": "#CCCCCC",
+    "diffRemovedWord": "#888888",
+    "permissionPurple": "#AAAAAA",
+    "userMessageBg": "#1A1A1A"
+  },
+  "spinnerChars": {
+    "darwin": ["●", "○", "◉", "○", "●", "○"],
+    "fallback": ["●", "o", "O", "o", "●", "o"]
+  },
+  "thinkingVerbs": [
+    "Thinking", "Reasoning", "Inferring", "Analyzing", "Considering",
+    "Evaluating", "Reflecting", "Pondering", "Processing", "Pollinating"
+  ],
+  "phaseLabels": {
+    "init": "Initializing",
+    "security": "Security check",
+    "preprocess": "Preprocessing",
+    "request": "Thinking",
+    "thinking": "Thinking",
+    "analyzing": "Analyzing",
+    "generating": "Generating",
+    "tools": "Running tools",
+    "explore": "Searching",
+    "reading": "Reading",
+    "writing": "Writing",
+    "tool": "Running tool",
+    "done": "Done"
+  },
+  "toolDisplayNames": {
+    "bash": "Bash",
+    "shell": "Bash",
+    "shellcommand": "Bash",
+    "command": "Bash",
+    "read": "Read",
+    "readfile": "Read",
+    "write": "Write",
+    "writefile": "Write",
+    "createfile": "Write",
+    "edit": "Update",
+    "editfile": "Update",
+    "multiedit": "Update",
+    "notebookedit": "Update",
+    "glob": "Search",
+    "grep": "Search",
+    "find": "Search",
+    "findfiles": "Search",
+    "search": "Search",
+    "searchcontent": "Search",
+    "websearch": "Search",
+    "webfetch": "Fetch",
+    "todowrite": "Todo",
+    "notebookread": "Read",
+    "agent": "Agent",
+    "task": "Task",
+    "ls": "Search"
+  }
+}

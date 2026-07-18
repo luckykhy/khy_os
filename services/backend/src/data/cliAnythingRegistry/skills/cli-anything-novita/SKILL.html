@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-novita · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-novita<span class="sep">›</span>cli-anything-novita</div>
+      <header class="hero reveal"><h1>cli-anything-novita</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-novita">cli-anything-novita</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#chat">Chat</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-3"><a href="#config">Config</a></li><li class="lvl-3"><a href="#utility">Utility</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#configure-api-key">Configure API Key</a></li><li class="lvl-3"><a href="#chat-with-deepseek">Chat with DeepSeek</a></li><li class="lvl-3"><a href="#test-connectivity">Test Connectivity</a></li><li class="lvl-2"><a href="#default-models">Default Models</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-novita&quot;<br>description: &gt;-<br>  Command-line interface for Novita AI - An OpenAI-compatible AI API client for DeepSeek, GLM, and other models.</p>
+<hr>
+<h1 id="cli-anything-novita">cli-anything-novita<a class="anchor" href="#cli-anything-novita" aria-label="锚点">#</a></h1>
+<p>A CLI harness for <strong>Novita AI</strong> - an OpenAI-compatible API service for AI models like DeepSeek, GLM, and others.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-novita package:</p>
+<pre><code class="language-bash">pip install cli-anything-novita</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>Novita API key from <a href="https://novita.ai" target="_blank" rel="noopener">novita.ai</a></li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-novita --help
+
+# Start interactive REPL mode
+cli-anything-novita
+
+# Chat with model
+cli-anything-novita chat --prompt &quot;What is AI?&quot; --model deepseek/deepseek-v3.2
+
+# Streaming chat
+cli-anything-novita stream --prompt &quot;Write a poem about code&quot;
+
+# List available models
+cli-anything-novita models
+
+# JSON output (for agent consumption)
+cli-anything-novita --json chat --prompt &quot;Hello&quot;</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-novita
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="chat">Chat<a class="anchor" href="#chat" aria-label="锚点">#</a></h3>
+<p>Chat with AI models through the Novita API.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>chat</code></td><td>Chat with the Novita API</td></tr><tr><td><code>stream</code></td><td>Stream chat completion</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management for chat history.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>clear</code></td><td>Clear session history</td></tr><tr><td><code>history</code></td><td>Show command history</td></tr></tbody></table>
+<h3 id="config">Config<a class="anchor" href="#config" aria-label="锚点">#</a></h3>
+<p>Configuration management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>set</code></td><td>Set a configuration value</td></tr><tr><td><code>get</code></td><td>Get a configuration value (or show all)</td></tr><tr><td><code>delete</code></td><td>Delete a configuration value</td></tr><tr><td><code>path</code></td><td>Show the config file path</td></tr></tbody></table>
+<h3 id="utility">Utility<a class="anchor" href="#utility" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>test</code></td><td>Test API connectivity</td></tr><tr><td><code>models</code></td><td>List available models</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="configure-api-key">Configure API Key<a class="anchor" href="#configure-api-key" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Set API key via config file (recommended)
+cli-anything-novita config set api_key &quot;sk-xxx&quot;
+
+# Or use environment variable
+export NOVITA_API_KEY=&quot;sk-xxx&quot;</code></pre>
+<h3 id="chat-with-deepseek">Chat with DeepSeek<a class="anchor" href="#chat-with-deepseek" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Simple chat
+cli-anything-novita chat --prompt &quot;Explain quantum computing&quot; --model deepseek/deepseek-v3.2
+
+# Streaming chat
+cli-anything-novita stream --prompt &quot;Write a Python function to calculate factorial&quot;</code></pre>
+<h3 id="test-connectivity">Test Connectivity<a class="anchor" href="#test-connectivity" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Verify API key and connectivity
+cli-anything-novita test --model deepseek/deepseek-v3.2
+
+# List all available models
+cli-anything-novita models</code></pre>
+<h2 id="default-models">Default Models<a class="anchor" href="#default-models" aria-label="锚点">#</a></h2>
+<p>The Novita API supports multiple model providers:</p>
+<table><thead><tr><th>Model ID</th><th>Provider</th><th>Description</th></tr></thead><tbody><tr><td><code>deepseek/deepseek-v3.2</code></td><td>DeepSeek</td><td>DeepSeek V3.2 model (default)</td></tr><tr><td><code>zai-org/glm-5</code></td><td>Zhipu AI</td><td>GLM-5 model</td></tr><tr><td><code>minimax/minimax-m2.5</code></td><td>MiniMax</td><td>MiniMax M2.5 model</td></tr></tbody></table>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-novita chat --prompt &quot;Hello&quot;
+
+# JSON output for agents
+cli-anything-novita --json chat --prompt &quot;Hello&quot;</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-notebooklm/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-notebooklm</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nsight-graphics/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Nsight Graphics CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-novita/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

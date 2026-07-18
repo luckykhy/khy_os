@@ -1,0 +1,10 @@
+{
+  "name": "khy-cli-{{SOFTWARE}}",
+  "version": "1.0.0",
+  "description": "CLI-Anything agent tool for {{SOFTWARE}}",
+  "entry": "./src/index.js",
+  "runtime": "external",
+  "source": "cli-anything",
+  "commands": ["cli-{{SOFTWARE}}"],
+  "skills": ["cli-anything-{{SOFTWARE}}"]
+}

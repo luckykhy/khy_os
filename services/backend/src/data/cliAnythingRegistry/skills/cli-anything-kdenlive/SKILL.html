@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-kdenlive · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-kdenlive<span class="sep">›</span>cli-anything-kdenlive</div>
+      <header class="hero reveal"><h1>cli-anything-kdenlive</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-kdenlive">cli-anything-kdenlive</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#bin-group">Bin Group</a></li><li class="lvl-3"><a href="#timeline">Timeline</a></li><li class="lvl-3"><a href="#filter-group">Filter Group</a></li><li class="lvl-3"><a href="#transition">Transition</a></li><li class="lvl-3"><a href="#guide">Guide</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-kdenlive&quot;<br>description: &gt;-<br>  Command-line interface for Kdenlive - A stateful command-line interface for video editing, following the same patterns as the Blender CLI ...</p>
+<hr>
+<h1 id="cli-anything-kdenlive">cli-anything-kdenlive<a class="anchor" href="#cli-anything-kdenlive" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for video editing, following the same patterns as the Blender CLI harness. Uses a JSON project format with MLT XML generation for Kdenlive/melt.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-kdenlive package:</p>
+<pre><code class="language-bash">pip install cli-anything-kdenlive</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>kdenlive must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-kdenlive --help
+
+# Start interactive REPL mode
+cli-anything-kdenlive
+
+# Create a new project
+cli-anything-kdenlive project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-kdenlive --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-kdenlive
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new project</td></tr><tr><td><code>open</code></td><td>Open an existing project</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show project information</td></tr><tr><td><code>profiles</code></td><td>List available video profiles</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="bin-group">Bin Group<a class="anchor" href="#bin-group" aria-label="锚点">#</a></h3>
+<p>Media bin management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>import</code></td><td>Import a clip into the media bin</td></tr><tr><td><code>remove</code></td><td>Remove a clip from the bin</td></tr><tr><td><code>list</code></td><td>List all clips in the bin</td></tr><tr><td><code>get</code></td><td>Get detailed clip info</td></tr></tbody></table>
+<h3 id="timeline">Timeline<a class="anchor" href="#timeline" aria-label="锚点">#</a></h3>
+<p>Timeline management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add-track</code></td><td>Add a track to the timeline</td></tr><tr><td><code>remove-track</code></td><td>Remove a track</td></tr><tr><td><code>add-clip</code></td><td>Add a clip to a track</td></tr><tr><td><code>remove-clip</code></td><td>Remove a clip from a track</td></tr><tr><td><code>trim</code></td><td>Trim a clip's in/out points</td></tr><tr><td><code>split</code></td><td>Split a clip at a time offset</td></tr><tr><td><code>move</code></td><td>Move a clip to a new position</td></tr><tr><td><code>list</code></td><td>List all tracks</td></tr></tbody></table>
+<h3 id="filter-group">Filter Group<a class="anchor" href="#filter-group" aria-label="锚点">#</a></h3>
+<p>Filter/effect management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a filter to a clip</td></tr><tr><td><code>remove</code></td><td>Remove a filter from a clip</td></tr><tr><td><code>set</code></td><td>Set a filter parameter</td></tr><tr><td><code>list</code></td><td>List filters on a clip</td></tr><tr><td><code>available</code></td><td>List all available filters</td></tr></tbody></table>
+<h3 id="transition">Transition<a class="anchor" href="#transition" aria-label="锚点">#</a></h3>
+<p>Transition management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a transition between tracks</td></tr><tr><td><code>remove</code></td><td>Remove a transition</td></tr><tr><td><code>set</code></td><td>Set a transition parameter</td></tr><tr><td><code>list</code></td><td>List all transitions</td></tr></tbody></table>
+<h3 id="guide">Guide<a class="anchor" href="#guide" aria-label="锚点">#</a></h3>
+<p>Guide/marker management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a guide at a position (seconds)</td></tr><tr><td><code>remove</code></td><td>Remove a guide</td></tr><tr><td><code>list</code></td><td>List all guides</td></tr></tbody></table>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<p>Export and render commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>xml</code></td><td>Generate Kdenlive/MLT XML</td></tr><tr><td><code>presets</code></td><td>List available render presets</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new kdenlive project file.</p>
+<pre><code class="language-bash">cli-anything-kdenlive project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-kdenlive --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-kdenlive
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-kdenlive --project myproject.json export render output.pdf --overwrite</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-kdenlive project info -p project.json
+
+# JSON output for agents
+cli-anything-kdenlive --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-iterm2/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-iterm2</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-krita/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-krita</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-kdenlive/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

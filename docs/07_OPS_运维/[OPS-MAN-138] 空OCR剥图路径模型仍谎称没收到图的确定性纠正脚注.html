@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注</div>
+      <header class="hero reveal"><h1>[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-138-空-ocr-剥图路径-模型仍谎称-没收到图-的确定性纠正脚注">[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-修复-b3-外科手术式改动-全-additive">二、修复(B3 外科手术式改动,全 additive)</a></li><li class="lvl-2"><a href="#三-正交关系">三、正交关系</a></li><li class="lvl-2"><a href="#四-验证-全绿">四、验证(全绿)</a></li><li class="lvl-2"><a href="#五-教训">五、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-138-空-ocr-剥图路径-模型仍谎称-没收到图-的确定性纠正脚注">[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注<a class="anchor" href="#ops-man-138-空-ocr-剥图路径-模型仍谎称-没收到图-的确定性纠正脚注" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-118/120/122]「剥图 ⟹ 必留痕」三处不变量 + [OPS-MAN-126] 确定性脚注哲学。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」。</p>
+<p>本轮针对用户 2026-07-12 实测失败现象(<code>paste-cache 92c0154d</code>,截图 khy OS v0.1.193、模型<br><code>api:agnes:agnes-2.0-flash</code>)复现的<strong>最后一条断桥</strong>:</p>
+<pre><code>❯ 请先描述图片中的关键信息…  📎×1
+… 正在调用 glm/glm-4.6v-flash 进行识别…（404 model_not_found）
+… 正在调用 glm-4v-flash 进行识别…（socket hang up）
+我注意到你发了一条结构化提示，但消息里没有附带图片。
+关键发现：当前对话中没有任何图片附件。… 我无法描述不存在的内容。</code></pre>
+<p><strong>链路真相</strong>:纯文本模型 + 带图 → 视觉描述级联全 404 → 落 OCR 兜底,但图是<strong>非文字类</strong>(照片 / 截图 /<br>图表)或缺对应语言字库 → 本地 OCR <strong>读不出任何文字</strong> → aiGateway 三处「空 OCR」站点<br>(prep Site1 <code>~1626</code> / prep Site2 <code>~1736</code> / post-failure 救援网 <code>~2927</code>)都<strong>无条件剥图</strong><br>(<code>images: undefined</code>、<code>_ocrFallbackApplied: true</code>)并注入一条面向<strong>模型</strong>的「收到图但读不出、绝不能说<br>没收到图」诚实底线。</p>
+<p><strong>断桥</strong>:那条底线<strong>只是一条 prompt 指令,模型可以不听</strong>。实测里模型正是无视它,正文谎称「消息里没有<br>附带图片」。而 <code>finishResult</code> 成功侧本有一整族<strong>确定性</strong>真值脚注(<code>answerVerifier</code> / <code>modelIdentityTruth</code> /<br><code>cacheMetricsTruth</code> / <code>ocrUsageFootnote</code>),无论模型怎么写都在末尾确定性追加真相——<strong>唯独<br><code>ocrUsageFootnote</code>(:858)只在 <code>_ocrImageTextRead === true</code>(OCR 成功读出文本)时触发</strong>;空 OCR 剥图<br>只置 <code>_ocrFallbackApplied</code>、<strong>不置</strong> <code>_ocrImageTextRead</code> → 恰好落在那条脚注判据之外 → 模型谎称没收到图时,<br><strong>零确定性纠正</strong>。</p>
+<p>判据:找到「一条应当确定性触达用户的真相(你确实上传了图),却只靠一条模型可忽略的 prompt 底线传达」的<br>断桥——它正落在既有确定性脚注族的判据盲区(<code>_ocrFallbackApplied &amp;&amp; !_ocrImageTextRead</code>)。</p>
+<h2 id="二-修复-b3-外科手术式改动-全-additive">二、修复(B3 外科手术式改动,全 additive)<a class="anchor" href="#二-修复-b3-外科手术式改动-全-additive" aria-label="锚点">#</a></h2>
+<p>独立 default-on 门 <code>KHY_VISION_DENIAL_CORRECTION</code>。</p>
+<ol><li><strong>纯叶</strong> <code>services/backend/src/services/gateway/visionDenialCorrection.js</code>:<ul><li><code>isEnabled(env)</code> — 门控(经 <code>flagRegistry</code>),default-on,仅 CANON off-words <code>{0,false,off,no}</code> 关。</li><li><code>detectImageDenial(content)</code> — 正文是否在<strong>否认收到图</strong>:命中保守否认正则(<code>没有…图片</code> /</li></ul></li></ol>
+<p><code>当前对话中没有…图片</code> / <code>无法描述不存在的内容</code> / <code>图片并未成功上传</code> 等,取自实测语料)<strong>且未</strong>同时命中<br>     承认正则(<code>收到图但读不出</code> / <code>当前模型不支持视觉</code> / <code>OCR</code> 等)。承认正则用 lookbehind <code>(?&lt;!没有|没|未|不)</code><br>     排除「没有<strong>收到图片</strong>」里的假承认。非字符串 / 空 → false(保守回退)。</p>
+<ul><li><code>buildDenialCorrectionNote({count,env})</code> — 门开 → 用户可见纠正脚注(含 marker、明确「图片<strong>已经收到</strong>」、</li></ul>
+<p>直接反驳「并非『没有图片』」、给出换视觉模型 / 装字库 / 粘贴文字三方案);门关 → null(逐字节回退)。</p>
+<ul><li><code>DENIAL_CORRECTION_MARKER</code> — 去重标记。全程零 IO、绝不抛。</li></ul>
+<ol><li><strong>flagRegistry 登记</strong> <code>KHY_VISION_DENIAL_CORRECTION</code>:<code>{ mode: 'default-on', off: 'CANON', default: true }</code>,</li></ol>
+<p>附断桥说明 + 与 <code>KHY_OCR_USAGE_FOOTNOTE</code> / 三条 prompt 侧底线门的正交关系。</p>
+<ol><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code> <code>finishResult</code> 成功侧(紧接 <code>ocrUsageFootnote</code> 块之后):</li></ol>
+<pre><code>   if (result &amp;&amp; result.success === true &amp;&amp; options._ocrFallbackApplied &amp;&amp; !options._ocrImageTextRead) {
+     try {
+       const _vdc = require('./visionDenialCorrection');
+       if (_vdc.isEnabled(process.env)
+           &amp;&amp; !String(result.content || '').includes(_vdc.DENIAL_CORRECTION_MARKER)
+           &amp;&amp; _vdc.detectImageDenial(result.content)) {
+         const _imgN = Array.isArray(options.images) ? options.images.length : options._ocrImageTextCount;
+         const _footer = _vdc.buildDenialCorrectionNote({ count: _imgN, env: process.env });
+         if (_footer) result.content = `${String(result.content || '')}${_footer}`;
+       }
+     } catch { /* fail-soft */ }
+   }</code></pre>
+<p>marker 去重 + <code>detectImageDenial</code> 守卫 + fail-soft;门关 → <code>buildDenialCorrectionNote</code> 返 null →<br>   <code>result.content</code> 逐字节不变。</p>
+<h2 id="三-正交关系">三、正交关系<a class="anchor" href="#三-正交关系" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>门</th><th>判据</th><th>作用</th></tr></thead><tbody><tr><td>prompt 侧底线(三处)</td><td><code>KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR</code> / <code>KHY_VISION_STRIP_IMAGE_FLOOR</code> / <code>KHY_VISION_RESCUE_STRIP_FLOOR</code></td><td>剥图站点</td><td>保证「剥图 ⟹ prompt 留痕」</td></tr><tr><td>答复侧脚注(OCR 成功)</td><td><code>KHY_OCR_USAGE_FOOTNOTE</code></td><td><code>_ocrImageTextRead=true</code></td><td>模型没提 OCR → 追加「用了 OCR」</td></tr><tr><td><strong>答复侧纠正(OCR 读空)</strong></td><td><strong><code>KHY_VISION_DENIAL_CORRECTION</code></strong></td><td><strong><code>_ocrFallbackApplied &amp;&amp; !_ocrImageTextRead</code></strong></td><td><strong>模型否认收到图 → 确定性纠正(本发)</strong></td></tr></tbody></table>
+<p>本发是<strong>最后一道用户可见防线</strong>:当模型无视 prompt 侧留痕、仍谎称没收到图时,答复侧确定性纠正兜底。</p>
+<h2 id="四-验证-全绿">四、验证(全绿)<a class="anchor" href="#四-验证-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check</code> × 3(叶 / gateway / flagRegistry)。</li><li><code>npm run test:vision-denial-correction</code> <strong>22/22</strong>(纯叶 14 + wiring 6 + 真图 2)。<ul><li><strong>真图端到端</strong>:真 PIL 渲<strong>无字彩块</strong> PNG → 真 tesseract 读空 → 剥图 + 原文本模型<strong>故意否认收到图</strong></li></ul></li></ul>
+<p>(复刻实测语料)→ 断言末尾出现 <code>DENIAL_CORRECTION_MARKER</code> 纠正脚注、原正文保留;门关 → 无脚注(字节回退)。</p>
+<ul><li><code>arch:god</code>(wc -l:叶 &lt; 2500;<code>aiGatewayGenerateMethod.js</code> grandfathered 超限,本发 additive 无新 god-file)。</li><li>三守卫 <code>--changed</code> / positional、<code>maintainer:check</code>、safety 聚合(pre-existing 真图 flaky 决定性对照甄别)。</li></ul>
+<h2 id="五-教训">五、教训<a class="anchor" href="#五-教训" aria-label="锚点">#</a></h2>
+<ol><li>断桥补全靠沿同一 consumer 找<strong>判据盲区</strong>:既有确定性脚注族只覆盖 <code>_ocrImageTextRead=true</code>,</li></ol>
+<p>空 OCR 剥图路径(<code>_ocrFallbackApplied &amp;&amp; !_ocrImageTextRead</code>)恰是盲区。</p>
+<ol><li>prompt 侧底线(模型可忽略)必须有答复侧确定性脚注兜底——「无感<em>明显</em>告知」的「明显」不能只押注模型配合。</li><li>否认正则的假承认陷阱:<code>收到图片</code> 会在「没有<strong>收到图片</strong>」里假命中承认 → 承认正则须 lookbehind 排除前置否定。</li><li>真图核验制造空 OCR 场景 = 渲<strong>无字彩块</strong>(<code>texts: []</code>),本机若从彩块读出文字则 <code>test.skip</code>(可移植性)。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-137] 网页代理内核二进制去哪下载·接确切官方URL到前端横幅.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-139] khy doctor 离机自检补代理内核下载指引CLI侧接线.html"><div class="dir">下一篇 →</div><div class="ttl">OPS-MAN-139 · khy doctor 离机自检补「代理内核 mihomo 去哪下载」CLI 侧接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-138] 空OCR剥图路径模型仍谎称没收到图的确定性纠正脚注.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

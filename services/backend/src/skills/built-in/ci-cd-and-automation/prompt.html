@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI/CD and Automation · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>ci-cd-and-automation<span class="sep">›</span>CI/CD and Automation</div>
+      <header class="hero reveal"><h1>CI/CD and Automation</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ci-cd-and-automation">CI/CD and Automation</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-quality-gate-pipeline">The Quality Gate Pipeline</a></li><li class="lvl-2"><a href="#github-actions-configuration">GitHub Actions Configuration</a></li><li class="lvl-3"><a href="#basic-ci-pipeline">Basic CI Pipeline</a></li><li class="lvl-3"><a href="#with-database-integration-tests">With Database Integration Tests</a></li><li class="lvl-3"><a href="#e2e-tests">E2E Tests</a></li><li class="lvl-2"><a href="#feeding-ci-failures-back-to-agents">Feeding CI Failures Back to Agents</a></li><li class="lvl-2"><a href="#deployment-strategies">Deployment Strategies</a></li><li class="lvl-3"><a href="#preview-deployments">Preview Deployments</a></li><li class="lvl-3"><a href="#feature-flags">Feature Flags</a></li><li class="lvl-3"><a href="#staged-rollouts">Staged Rollouts</a></li><li class="lvl-3"><a href="#rollback-plan">Rollback Plan</a></li><li class="lvl-2"><a href="#environment-management">Environment Management</a></li><li class="lvl-2"><a href="#automation-beyond-ci">Automation Beyond CI</a></li><li class="lvl-3"><a href="#dependabot-renovate">Dependabot / Renovate</a></li><li class="lvl-3"><a href="#build-cop-role">Build Cop Role</a></li><li class="lvl-3"><a href="#pr-checks">PR Checks</a></li><li class="lvl-2"><a href="#ci-optimization">CI Optimization</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ci-cd-and-automation">CI/CD and Automation<a class="anchor" href="#ci-cd-and-automation" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Automate quality gates so that no change reaches production without passing tests, lint, type checking, and build. CI/CD is the enforcement mechanism for every other skill — it catches what humans and agents miss, and it does so consistently on every single change.</p>
+<p><strong>Shift Left:</strong> Catch problems as early in the pipeline as possible. A bug caught in linting costs minutes; the same bug caught in production costs hours. Move checks upstream — static analysis before tests, tests before staging, staging before production.</p>
+<p><strong>Faster is Safer:</strong> Smaller batches and more frequent releases reduce risk, not increase it. A deployment with 3 changes is easier to debug than one with 30. Frequent releases build confidence in the release process itself.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Setting up a new project's CI pipeline</li><li>Adding or modifying automated checks</li><li>Configuring deployment pipelines</li><li>When a change should trigger automated verification</li><li>Debugging CI failures</li></ul>
+<h2 id="the-quality-gate-pipeline">The Quality Gate Pipeline<a class="anchor" href="#the-quality-gate-pipeline" aria-label="锚点">#</a></h2>
+<p>Every change goes through these gates before merge:</p>
+<pre><code>Pull Request Opened
+    │
+    ▼
+┌─────────────────┐
+│   LINT CHECK     │  eslint, prettier
+│   ↓ pass         │
+│   TYPE CHECK     │  tsc --noEmit
+│   ↓ pass         │
+│   UNIT TESTS     │  jest/vitest
+│   ↓ pass         │
+│   BUILD          │  npm run build
+│   ↓ pass         │
+│   INTEGRATION    │  API/DB tests
+│   ↓ pass         │
+│   E2E (optional) │  Playwright/Cypress
+│   ↓ pass         │
+│   SECURITY AUDIT │  npm audit
+│   ↓ pass         │
+│   BUNDLE SIZE    │  bundlesize check
+└─────────────────┘
+    │
+    ▼
+  Ready for review</code></pre>
+<p><strong>No gate can be skipped.</strong> If lint fails, fix lint — don't disable the rule. If a test fails, fix the code — don't skip the test.</p>
+<h2 id="github-actions-configuration">GitHub Actions Configuration<a class="anchor" href="#github-actions-configuration" aria-label="锚点">#</a></h2>
+<h3 id="basic-ci-pipeline">Basic CI Pipeline<a class="anchor" href="#basic-ci-pipeline" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"># .github/workflows/ci.yml
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test -- --coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Security audit
+        run: npm audit --audit-level=high</code></pre>
+<h3 id="with-database-integration-tests">With Database Integration Tests<a class="anchor" href="#with-database-integration-tests" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml">  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: &gt;-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://ci_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5432/testdb
+      - name: Integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://ci_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5432/testdb</code></pre>
+<blockquote><p><strong>Note:</strong> Even for CI-only test databases, use GitHub Secrets for credentials rather than hardcoding values. This builds good habits and prevents accidental reuse of test credentials in other contexts.</p></blockquote>
+<h3 id="e2e-tests">E2E Tests<a class="anchor" href="#e2e-tests" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml">  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Run E2E tests
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/</code></pre>
+<h2 id="feeding-ci-failures-back-to-agents">Feeding CI Failures Back to Agents<a class="anchor" href="#feeding-ci-failures-back-to-agents" aria-label="锚点">#</a></h2>
+<p>The power of CI with AI agents is the feedback loop. When CI fails:</p>
+<pre><code>CI fails
+    │
+    ▼
+Copy the failure output
+    │
+    ▼
+Feed it to the agent:
+&quot;The CI pipeline failed with this error:
+[paste specific error]
+Fix the issue and verify locally before pushing again.&quot;
+    │
+    ▼
+Agent fixes → pushes → CI runs again</code></pre>
+<p><strong>Key patterns:</strong></p>
+<pre><code>Lint failure → Agent runs `npm run lint --fix` and commits
+Type error  → Agent reads the error location and fixes the type
+Test failure → Agent follows debugging-and-error-recovery skill
+Build error → Agent checks config and dependencies</code></pre>
+<h2 id="deployment-strategies">Deployment Strategies<a class="anchor" href="#deployment-strategies" aria-label="锚点">#</a></h2>
+<h3 id="preview-deployments">Preview Deployments<a class="anchor" href="#preview-deployments" aria-label="锚点">#</a></h3>
+<p>Every PR gets a preview deployment for manual testing:</p>
+<pre><code class="language-yaml"># Deploy preview on PR (Vercel/Netlify/etc.)
+deploy-preview:
+  runs-on: ubuntu-latest
+  if: github.event_name == 'pull_request'
+  steps:
+    - uses: actions/checkout@v4
+    - name: Deploy preview
+      run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}</code></pre>
+<h3 id="feature-flags">Feature Flags<a class="anchor" href="#feature-flags" aria-label="锚点">#</a></h3>
+<p>Feature flags decouple deployment from release. Deploy incomplete or risky features behind flags so you can:</p>
+<ul><li><strong>Ship code without enabling it.</strong> Merge to main early, enable when ready.</li><li><strong>Roll back without redeploying.</strong> Disable the flag instead of reverting code.</li><li><strong>Canary new features.</strong> Enable for 1% of users, then 10%, then 100%.</li><li><strong>Run A/B tests.</strong> Compare behavior with and without the feature.</li></ul>
+<pre><code class="language-typescript">// Simple feature flag pattern
+if (featureFlags.isEnabled('new-checkout-flow', { userId })) {
+  return renderNewCheckout();
+}
+return renderLegacyCheckout();</code></pre>
+<p><strong>Flag lifecycle:</strong> Create → Enable for testing → Canary → Full rollout → Remove the flag and dead code. Flags that live forever become technical debt — set a cleanup date when you create them.</p>
+<h3 id="staged-rollouts">Staged Rollouts<a class="anchor" href="#staged-rollouts" aria-label="锚点">#</a></h3>
+<pre><code>PR merged to main
+    │
+    ▼
+  Staging deployment (auto)
+    │ Manual verification
+    ▼
+  Production deployment (manual trigger or auto after staging)
+    │
+    ▼
+  Monitor for errors (15-minute window)
+    │
+    ├── Errors detected → Rollback
+    └── Clean → Done</code></pre>
+<h3 id="rollback-plan">Rollback Plan<a class="anchor" href="#rollback-plan" aria-label="锚点">#</a></h3>
+<p>Every deployment should be reversible:</p>
+<pre><code class="language-yaml"># Manual rollback workflow
+name: Rollback
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rollback to'
+        required: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rollback deployment
+        run: |
+          # Deploy the specified previous version
+          npx vercel rollback ${{ inputs.version }}</code></pre>
+<h2 id="environment-management">Environment Management<a class="anchor" href="#environment-management" aria-label="锚点">#</a></h2>
+<pre><code>.env.example       → Committed (template for developers)
+.env                → NOT committed (local development)
+.env.test           → Committed (test environment, no real secrets)
+CI secrets          → Stored in GitHub Secrets / vault
+Production secrets  → Stored in deployment platform / vault</code></pre>
+<p>CI should never have production secrets. Use separate secrets for CI testing.</p>
+<h2 id="automation-beyond-ci">Automation Beyond CI<a class="anchor" href="#automation-beyond-ci" aria-label="锚点">#</a></h2>
+<h3 id="dependabot-renovate">Dependabot / Renovate<a class="anchor" href="#dependabot-renovate" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"># .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5</code></pre>
+<h3 id="build-cop-role">Build Cop Role<a class="anchor" href="#build-cop-role" aria-label="锚点">#</a></h3>
+<p>Designate someone responsible for keeping CI green. When the build breaks, the Build Cop's job is to fix or revert — not the person whose change caused the break. This prevents broken builds from accumulating while everyone assumes someone else will fix it.</p>
+<h3 id="pr-checks">PR Checks<a class="anchor" href="#pr-checks" aria-label="锚点">#</a></h3>
+<ul><li><strong>Required reviews:</strong> At least 1 approval before merge</li><li><strong>Required status checks:</strong> CI must pass before merge</li><li><strong>Branch protection:</strong> No force-pushes to main</li><li><strong>Auto-merge:</strong> If all checks pass and approved, merge automatically</li></ul>
+<h2 id="ci-optimization">CI Optimization<a class="anchor" href="#ci-optimization" aria-label="锚点">#</a></h2>
+<p>When the pipeline exceeds 10 minutes, apply these strategies in order of impact:</p>
+<pre><code>Slow CI pipeline?
+├── Cache dependencies
+│   └── Use actions/cache or setup-node cache option for node_modules
+├── Run jobs in parallel
+│   └── Split lint, typecheck, test, build into separate parallel jobs
+├── Only run what changed
+│   └── Use path filters to skip unrelated jobs (e.g., skip e2e for docs-only PRs)
+├── Use matrix builds
+│   └── Shard test suites across multiple runners
+├── Optimize the test suite
+│   └── Remove slow tests from the critical path, run them on a schedule instead
+└── Use larger runners
+    └── GitHub-hosted larger runners or self-hosted for CPU-heavy builds</code></pre>
+<p><strong>Example: caching and parallelism</strong></p>
+<pre><code class="language-yaml">jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - run: npm test -- --coverage</code></pre>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;CI is too slow&quot;</td><td>Optimize the pipeline (see CI Optimization below), don't skip it. A 5-minute pipeline prevents hours of debugging.</td></tr><tr><td>&quot;This change is trivial, skip CI&quot;</td><td>Trivial changes break builds. CI is fast for trivial changes anyway.</td></tr><tr><td>&quot;The test is flaky, just re-run&quot;</td><td>Flaky tests mask real bugs and waste everyone's time. Fix the flakiness.</td></tr><tr><td>&quot;We'll add CI later&quot;</td><td>Projects without CI accumulate broken states. Set it up on day one.</td></tr><tr><td>&quot;Manual testing is enough&quot;</td><td>Manual testing doesn't scale and isn't repeatable. Automate what you can.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>No CI pipeline in the project</li><li>CI failures ignored or silenced</li><li>Tests disabled in CI to make the pipeline pass</li><li>Production deploys without staging verification</li><li>No rollback mechanism</li><li>Secrets stored in code or CI config files (not secrets manager)</li><li>Long CI times with no optimization effort</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After setting up or modifying CI:</p>
+<ul><li>[ ] All quality gates are present (lint, types, tests, build, audit)</li><li>[ ] Pipeline runs on every PR and push to main</li><li>[ ] Failures block merge (branch protection configured)</li><li>[ ] CI results feed back into the development loop</li><li>[ ] Secrets are stored in the secrets manager, not in code</li><li>[ ] Deployment has a rollback mechanism</li><li>[ ] Pipeline runs in under 10 minutes for the test suite</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/browser-testing-with-devtools/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Browser Testing with DevTools</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/claude-api/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Claude API — Anthropic API Usage Guide</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/ci-cd-and-automation/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

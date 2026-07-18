@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Commit Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>commit<span class="sep">›</span>Git Commit Skill</div>
+      <header class="hero reveal"><h1>Git Commit Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#git-commit-skill">Git Commit Skill</a></li><li class="lvl-2"><a href="#procedure">Procedure</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="git-commit-skill">Git Commit Skill<a class="anchor" href="#git-commit-skill" aria-label="锚点">#</a></h1>
+<p>Create a well-formed git commit by analyzing staged and unstaged changes.</p>
+<h2 id="procedure">Procedure<a class="anchor" href="#procedure" aria-label="锚点">#</a></h2>
+<ol><li><strong>Inspect repository state</strong> (run in parallel):<ul><li><code>git status</code> to see all untracked and modified files.</li><li><code>git diff --cached</code> and <code>git diff</code> to see staged and unstaged changes.</li><li><code>git log --oneline -10</code> to understand the commit message style of the repository.</li></ul></li></ol>
+<ol><li><strong>Analyze the changes</strong>:<ul><li>Classify the change type: new feature, enhancement, bug fix, refactoring, test, docs, chore.</li><li>Identify files that should NOT be committed (secrets, <code>.env</code>, credentials, large binaries).</li><li>If no changes exist, inform the user and do not create an empty commit.</li></ul></li></ol>
+<ol><li><strong>Stage relevant files</strong>:<ul><li>Prefer adding specific files by name rather than <code>git add -A</code> or <code>git add .</code>.</li><li>Warn the user if any file appears to contain secrets.</li></ul></li></ol>
+<ol><li><strong>Draft the commit message</strong>:<ul><li>Follow the repository's existing commit message convention (conventional commits, imperative mood, etc.).</li><li>Keep the subject line under 72 characters.</li><li>Summarize the &quot;why&quot; rather than the &quot;what&quot;.</li><li>Add a body if the change is non-trivial.</li></ul></li></ol>
+<ol><li><strong>Create the commit</strong>:<ul><li>Use a HEREDOC to pass the message to ensure correct formatting.</li><li>Never amend an existing commit unless the user explicitly requests it.</li><li>Never use <code>--no-verify</code> or skip hooks unless the user explicitly requests it.</li></ul></li></ol>
+<ol><li><strong>Verify</strong>:<ul><li>Run <code>git status</code> after committing to confirm success.</li><li>If a pre-commit hook fails, fix the issue, re-stage, and create a NEW commit.</li></ul></li></ol>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<p>Report what was committed, summarizing file changes and the commit message used.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/code-simplification/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Code Simplification</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/context-engineering/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Context Engineering</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/commit/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

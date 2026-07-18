@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫</div>
+      <header class="hero reveal"><h1>[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-104-纯文本模型图片-ocr-兜底与低置信诚实告诫">[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫</a></li><li class="lvl-2"><a href="#症状-触发场景">症状 / 触发场景</a></li><li class="lvl-2"><a href="#兜底链路-数据流">兜底链路(数据流)</a></li><li class="lvl-2"><a href="#本轮闭合的死字段-dead-field">本轮闭合的死字段(dead-field)</a></li><li class="lvl-2"><a href="#诚实边界-b2-b3-纪律-关键陷阱">诚实边界(B2/B3 纪律 — 关键陷阱)</a></li><li class="lvl-2"><a href="#门控">门控</a></li><li class="lvl-2"><a href="#verify">verify</a></li><li class="lvl-2"><a href="#相关文件">相关文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-104-纯文本模型图片-ocr-兜底与低置信诚实告诫">[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫<a class="anchor" href="#ops-man-104-纯文本模型图片-ocr-兜底与低置信诚实告诫" aria-label="锚点">#</a></h1>
+<blockquote><p>area: <code>ocr-fallback-confidence</code> ·  /goal 2026-07-11<br>when: 运行模型是纯文本/非多模态、且识图模型不可用时,khy 如何正确兜底提取图片信息;以及<br>OCR 置信度偏低时如何诚实告诫、绝不把误识文字当铁定事实。</p></blockquote>
+<h2 id="症状-触发场景">症状 / 触发场景<a class="anchor" href="#症状-触发场景" aria-label="锚点">#</a></h2>
+<ul><li>用户把图片发给 khy,但当前模型不识图(纯文本 / 非多模态),且没有任何可用的视觉模型。</li><li>期望:khy <strong>不能</strong>把裸图丢给读不懂它的模型,也<strong>不能</strong>静默丢掉用户的图,而应落到本地</li></ul>
+<p>OCR 把图里的文字提取出来注入 prompt,让文本模型据此作答。</p>
+<ul><li>进阶诚实缺口:OCR 引擎自评置信度偏低(模糊、低对比、非常规字体)时,文本模型仍把注入的</li></ul>
+<p>OCR 文字当成权威事实自信作答,用户拿到一个「基于误识文字」的错误回答却毫不知情。</p>
+<h2 id="兜底链路-数据流">兜底链路(数据流)<a class="anchor" href="#兜底链路-数据流" aria-label="锚点">#</a></h2>
+<pre><code>gateway generate(images, text-only model)
+  → decideVisionRouting 判定 keep / switch-model / ocr-fallback (visionRouting.js)
+  → ocr-fallback:extractImageOcrDetails(images)           [aiGateway.js]
+      → ocrSnippetService.extractImageOcrSnippet(Async)
+        → docHelper.py 'ocr' 命令 → tesseract (chi_sim+eng)
+  → 剥掉裸图 + 注入「当前模型不支持视觉…OCR 识别结果…请据此作答」块
+  → _appendOcrLowConfidenceCaveat:若有正向低置信信号 → 追加诚实告诫
+      [aiGatewayGenerateMethod.js → ocrConfidenceCaveat.js]</code></pre>
+<p>三个注入点(全部经 <code>extractImageOcrDetails</code> + 低置信告诫):</p>
+<ol><li><code>ocr-fallback</code> 分支(无视觉候选)。</li><li>视觉级联失败分支(有候选但 404/无 key 不可达)。</li><li>rate-limit rescue / cascade augment 分支。</li></ol>
+<h2 id="本轮闭合的死字段-dead-field">本轮闭合的死字段(dead-field)<a class="anchor" href="#本轮闭合的死字段-dead-field" aria-label="锚点">#</a></h2>
+<p>tesseract 的每词置信度会算出平均分:pytesseract 路径据此设<br><code>needsAiFallback = avg_conf &lt; 60</code>。但这个「质量信号」此前在<br><code>docHelper CLI 路径(硬编码 confidence:0) → ocrSnippetService → extractImageOcrTexts → 注入点</code><br>一路被丢弃。姊妹的 <code>RecognizeImage</code> 工具路径(<code>imageOcr.js</code>)早已消费 <code>needsAiFallback</code><br>(打 lowConfidence 标记);gateway 侧却把低置信 OCR 文本原样当权威依据注入 = <strong>非对称</strong>。</p>
+<p>本轮补齐:</p>
+<ul><li><strong>docHelper.py</strong>:<code>_ocr_via_cli_with_confidence</code> 用单趟</li></ul>
+<p><code>tesseract img outbase -l lang txt tsv</code> 同时产出<strong>字节等价文本</strong>(outbase.txt)与逐词置信度<br>  (outbase.tsv);<code>_mean_tsv_confidence</code> 只平均严格正的 conf 值,无可用值时返 <code>None</code><br>  (<strong>绝不伪造分数</strong>)。据此设真实 <code>confidence</code> / <code>needsAiFallback</code>;无 tsv 时降级为<br>  <code>confidence:0, needsAiFallback:false</code>(<strong>逐字节回退</strong>历史 CLI 契约)。</p>
+<ul><li><strong>ocrSnippetService.js</strong>:把 <code>needsAiFallback</code> 透传进返回对象与缓存 round-trip。</li><li><strong>ocrConfidenceCaveat.js</strong>(新纯叶子):<code>isLowConfidence</code> / <code>countLowConfidence</code> /</li></ul>
+<p><code>buildLowConfidenceCaveat</code>。</p>
+<ul><li><strong>gateway 接线</strong>:<code>extractImageOcrTexts</code> 演进为 <code>extractImageOcrDetails</code>(带</li></ul>
+<p><code>{text, confidence, needsAiFallback}</code>);<code>extractImageOcrTexts</code> 保留为薄委托(字节等价)。</p>
+<h2 id="诚实边界-b2-b3-纪律-关键陷阱">诚实边界(B2/B3 纪律 — 关键陷阱)<a class="anchor" href="#诚实边界-b2-b3-纪律-关键陷阱" aria-label="锚点">#</a></h2>
+<p><strong>只在有正向低置信信号时告诫。</strong> CLI 路径在无 tsv 时 <code>confidence</code> 退化为 0(未知)且<br><code>needsAiFallback=false</code> —— 那是「没测量」而非「测量到低」。判据:</p>
+<pre><code>isLowConfidence = needsAiFallback===true  OR  (有限 confidence ∈ (0, 60))</code></pre>
+<p><code>0 / 缺失 / 非有限</code> 且 <code>needsAiFallback≠true</code> → <strong>不告诫</strong>(否则每一次干净的 CLI 提取都会<br>误报低置信)。告诫只是<strong>装饰</strong>:可被门关掉、绝不改变 success/failure 归属、畸形输入绝不抛。</p>
+<h2 id="门控">门控<a class="anchor" href="#门控" aria-label="锚点">#</a></h2>
+<p><code>KHY_OCR_LOW_CONFIDENCE_CAVEAT</code>(default-on,仅 <code>0/false/off/no</code> 关)。关 →<br><code>buildLowConfidenceCaveat</code> 返 <code>null</code>,不注入,逐字节回退到「只注入 OCR 文本不带告诫」。</p>
+<h2 id="verify">verify<a class="anchor" href="#verify" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:ocr-confidence-caveat                                   # 叶子 12/12 + 接线 4/4
+node --test services/backend/tests/gateway/imageOcrFallbackRealImage.test.js  # 真图端到端,高置信不误报
+python3 -m unittest tests.unit.test_dochelper_ocr_confidence          # _mean_tsv_confidence 数学 6/6</code></pre>
+<h2 id="相关文件">相关文件<a class="anchor" href="#相关文件" aria-label="锚点">#</a></h2>
+<ul><li><code>services/backend/src/services/gateway/ocrConfidenceCaveat.js</code>(纯叶子)</li><li><code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code>(接线 + <code>_appendOcrLowConfidenceCaveat</code>)</li><li><code>services/backend/src/services/gateway/aiGateway.js</code>(<code>extractImageOcrDetails</code> + 委托)</li><li><code>services/backend/src/services/ocrSnippetService.js</code>(透传 <code>needsAiFallback</code>)</li><li><code>services/backend/src/services/docHelper.py</code>(CLI 路径诚实置信度)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-105] 还原快照格式兼容性对账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

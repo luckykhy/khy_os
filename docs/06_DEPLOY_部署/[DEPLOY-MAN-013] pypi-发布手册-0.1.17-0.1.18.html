@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）</div>
+      <header class="hero reveal"><h1>PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pypi-发布手册-0-1-17-补丁-0-1-18-多平台">PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）</a></li><li class="lvl-2"><a href="#1-范围">1. 范围</a></li><li class="lvl-2"><a href="#2-事故摘要-0-1-17">2. 事故摘要（0.1.17）</a></li><li class="lvl-3"><a href="#2-1-现象">2.1 现象</a></li><li class="lvl-3"><a href="#2-2-根因">2.2 根因</a></li><li class="lvl-3"><a href="#2-3-已采取的修复">2.3 已采取的修复</a></li><li class="lvl-2"><a href="#3-0-1-17-当前构件状态">3. 0.1.17 当前构件状态</a></li><li class="lvl-2"><a href="#4-0-1-17-的补丁上传-windows-wheel">4. 0.1.17 的补丁上传（Windows Wheel）</a></li><li class="lvl-3"><a href="#4-1-安全优先">4.1 安全优先</a></li><li class="lvl-3"><a href="#4-2-上传命令-非交互式">4.2 上传命令（非交互式）</a></li><li class="lvl-3"><a href="#4-3-校验">4.3 校验</a></li><li class="lvl-2"><a href="#5-0-1-18-的标准多平台发布">5. 0.1.18 的标准多平台发布</a></li><li class="lvl-3"><a href="#5-0-打包策略-推荐">5.0 打包策略（推荐）</a></li><li class="lvl-3"><a href="#5-1-版本同步-强制">5.1 版本同步（强制）</a></li><li class="lvl-3"><a href="#5-2-构建矩阵">5.2 构建矩阵</a></li><li class="lvl-3"><a href="#5-3-上传顺序">5.3 上传顺序</a></li><li class="lvl-3"><a href="#5-4-发布后验收">5.4 发布后验收</a></li><li class="lvl-2"><a href="#6-常见陷阱与修复">6. 常见陷阱与修复</a></li><li class="lvl-2"><a href="#7-操作者最小检查清单">7. 操作者最小检查清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-013 | 阶段: 部署 | 原路径: docs/指南/pypi-发布手册-0.1.17-0.1.18.md --&gt;</p>
+<h1 id="pypi-发布手册-0-1-17-补丁-0-1-18-多平台">PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）<a class="anchor" href="#pypi-发布手册-0-1-17-补丁-0-1-18-多平台" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本手册针对 0.1.17–0.1.18 的发布流程，已被最新的发布说明取代。当前发布流程请参阅 <a href="%5BDEPLOY-MAN-014%5D%20发布说明-0.1.27.html">发布说明-0.1.27.md</a>。本文仅作历史记录保留。</p></blockquote>
+<h2 id="1-范围">1. 范围<a class="anchor" href="#1-范围" aria-label="锚点">#</a></h2>
+<p>本文档记录：</p>
+<ol><li>为什么 <code>0.1.17</code> 起初只是部分支持跨平台。</li><li>如何通过上传缺失的 Windows wheel 来为 <code>0.1.17</code> 打补丁。</li><li>如何正确发布 <code>0.1.18</code>，使 <code>pip</code> 能按平台自动选择构件。</li></ol>
+<p>日期：2026-05-20</p>
+<h2 id="2-事故摘要-0-1-17">2. 事故摘要（0.1.17）<a class="anchor" href="#2-事故摘要-0-1-17" aria-label="锚点">#</a></h2>
+<h3 id="2-1-现象">2.1 现象<a class="anchor" href="#2-1-现象" aria-label="锚点">#</a></h3>
+<ol><li>PyPI 接受了 <code>sdist</code> 和 Linux wheel，但 Windows 用户仍可能回退到源码构建。</li><li>一个标记为 <code>linux_x86_64</code> 的 Linux wheel 被 PyPI 拒绝。</li><li>部分 Windows 安装尝试在从源码构建依赖时失败（例如 <code>cffi</code> 需要 MSVC）。</li></ol>
+<h3 id="2-2-根因">2.2 根因<a class="anchor" href="#2-2-根因" aria-label="锚点">#</a></h3>
+<ol><li>Linux wheel 的标签与 PyPI 不兼容。</li><li>Windows wheel 已在本地构建，但尚未上传。</li><li>在某些环境中，pip 命令的用法混用了仅源码安装与未预装 wheel 依赖。</li></ol>
+<h3 id="2-3-已采取的修复">2.3 已采取的修复<a class="anchor" href="#2-3-已采取的修复" aria-label="锚点">#</a></h3>
+<ol><li>更新了 <code>setup.py</code> 中的 wheel 平台标签映射：<ul><li><code>linux_x86_64</code> -&gt; <code>manylinux2014_x86_64</code></li><li><code>linux_aarch64</code> / <code>linux_arm64</code> -&gt; <code>manylinux2014_aarch64</code></li></ul></li><li><code>MANIFEST.in</code> 已包含 <code>scripts/release</code>，以保证源码分发构建的一致性。</li><li>发布脚本现在同时支持 Windows 上的 <code>py</code> 和 <code>python</code> 启动器。</li></ol>
+<h2 id="3-0-1-17-当前构件状态">3. 0.1.17 当前构件状态<a class="anchor" href="#3-0-1-17-当前构件状态" aria-label="锚点">#</a></h2>
+<p>已发布到 PyPI：</p>
+<ol><li><code>khy_os-0.1.17.tar.gz</code></li><li><code>khy_os-0.1.17-py3-none-manylinux2014_x86_64.whl</code></li></ol>
+<p>已校验、待补丁上传的 Windows wheel：</p>
+<ol><li>文件：<code>khy_os-0.1.17-py3-none-win_amd64.whl</code></li><li>SHA256：<code>44410aeb5e42e2d0d99626cd9b5d7b0c934090761797bcaf4f279d410d6a4a8f</code></li><li><code>twine check</code>：通过</li></ol>
+<h2 id="4-0-1-17-的补丁上传-windows-wheel">4. 0.1.17 的补丁上传（Windows Wheel）<a class="anchor" href="#4-0-1-17-的补丁上传-windows-wheel" aria-label="锚点">#</a></h2>
+<h3 id="4-1-安全优先">4.1 安全优先<a class="anchor" href="#4-1-安全优先" aria-label="锚点">#</a></h3>
+<p>如果任何 token 曾在聊天/日志/终端截图中暴露，请立即吊销并创建新的 PyPI token。</p>
+<h3 id="4-2-上传命令-非交互式">4.2 上传命令（非交互式）<a class="anchor" href="#4-2-上传命令-非交互式" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+python3 -m twine upload /home/kodehu03/Downloads/khy_os-0.1.17-py3-none-win_amd64.whl</code></pre>
+<h3 id="4-3-校验">4.3 校验<a class="anchor" href="#4-3-校验" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 - &lt;&lt;'PY'
+import json, urllib.request
+u = 'https://pypi.org/pypi/khy-os/0.1.17/json'
+data = json.load(urllib.request.urlopen(u, timeout=20))
+for f in data['urls']:
+    print(f['filename'])
+PY</code></pre>
+<p>预期输出必须包含全部 3 个文件：</p>
+<ol><li><code>khy_os-0.1.17.tar.gz</code></li><li><code>khy_os-0.1.17-py3-none-manylinux2014_x86_64.whl</code></li><li><code>khy_os-0.1.17-py3-none-win_amd64.whl</code></li></ol>
+<h2 id="5-0-1-18-的标准多平台发布">5. 0.1.18 的标准多平台发布<a class="anchor" href="#5-0-1-18-的标准多平台发布" aria-label="锚点">#</a></h2>
+<h3 id="5-0-打包策略-推荐">5.0 打包策略（推荐）<a class="anchor" href="#5-0-打包策略-推荐" aria-label="锚点">#</a></h3>
+<p>采用<strong>默认轻量化</strong>打包方式：</p>
+<ol><li>默认 wheel 不包含捆绑的本地运行时二进制（<code>backend/bin/ollama-runner</code>、<code>backend/bin/llama-cpp</code>）。</li><li>本地运行时仍作为可选能力保留，通过系统 Ollama / 外部运行时配置启用。</li><li>这样可避免 wheel 过大以及 PyPI 上传被拒。</li></ol>
+<p>构建开关：</p>
+<ol><li>默认（轻量化）：无需任何环境变量。</li><li>含运行时构建：在构建前设置 <code>KHY_INCLUDE_LOCAL_RUNTIME=1</code>。</li></ol>
+<h3 id="5-1-版本同步-强制">5.1 版本同步（强制）<a class="anchor" href="#5-1-版本同步-强制" aria-label="锚点">#</a></h3>
+<p>将以下三个文件全部更新为 <code>0.1.18</code>：</p>
+<ol><li><code>pyproject.toml</code></li><li><code>khy_platform/__init__.py</code></li><li><code>backend/package.json</code></li></ol>
+<h3 id="5-2-构建矩阵">5.2 构建矩阵<a class="anchor" href="#5-2-构建矩阵" aria-label="锚点">#</a></h3>
+<ol><li>轻量化模式（推荐）：<ul><li>构建一次并发布通用 wheel（<code>py3-none-any</code>）+ sdist。</li></ul></li><li>含运行时模式（可选的内部分发）：<ul><li>Linux 构建机：<code>manylinux2014_x86_64</code> wheel + sdist。</li><li>Windows 构建机：<code>win_amd64</code> wheel。</li></ul></li></ol>
+<h3 id="5-3-上传顺序">5.3 上传顺序<a class="anchor" href="#5-3-上传顺序" aria-label="锚点">#</a></h3>
+<p>推荐顺序：</p>
+<ol><li>上传 <code>sdist</code></li><li>上传 Linux wheel</li><li>上传 Windows wheel</li></ol>
+<p>示例：</p>
+<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+python3 -m twine upload dist/khy_os-0.1.18.tar.gz
+
+TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+python3 -m twine upload dist/khy_os-0.1.18-py3-none-manylinux2014_x86_64.whl
+
+TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+python3 -m twine upload /path/to/khy_os-0.1.18-py3-none-win_amd64.whl</code></pre>
+<p>轻量化模式构建命令示例：</p>
+<pre><code class="language-bash">rm -rf dist build khy_os.egg-info
+python3 setup.py sdist bdist_wheel
+ls -lh dist</code></pre>
+<p>含运行时模式构建命令示例：</p>
+<pre><code class="language-bash">rm -rf dist build khy_os.egg-info
+KHY_INCLUDE_LOCAL_RUNTIME=1 python3 setup.py sdist bdist_wheel
+ls -lh dist</code></pre>
+<h3 id="5-4-发布后验收">5.4 发布后验收<a class="anchor" href="#5-4-发布后验收" aria-label="锚点">#</a></h3>
+<p>在 Windows 上：</p>
+<pre><code class="language-powershell">python -m pip install -U khy-os==0.1.18
+khy --version
+khy gateway status</code></pre>
+<p>在 Linux 上：</p>
+<pre><code class="language-bash">python3 -m pip install -U khy-os==0.1.18
+khy --version
+khy gateway status</code></pre>
+<h2 id="6-常见陷阱与修复">6. 常见陷阱与修复<a class="anchor" href="#6-常见陷阱与修复" aria-label="锚点">#</a></h2>
+<ol><li><code>Expand-Archive</code> 报告找不到文件：<ul><li>根因：路径错误或复制命令时引入了换行。</li><li>修复：将完整路径赋给变量并使用 <code>-LiteralPath</code>。</li></ul></li><li>Windows 上找不到 <code>py</code> 命令：<ul><li>改用 <code>python</code>。</li></ul></li><li><code>twine upload</code> 交互式索要 token：<ul><li>在同一条命令中使用 <code>TWINE_USERNAME</code> 和 <code>TWINE_PASSWORD</code>。</li></ul></li><li>试图“把 0.1.17 wheel 重命名为 0.1.18”：<ul><li>无效。wheel 内部的版本元数据必须与构件版本一致。</li></ul></li><li>Windows wheel 过大导致 PyPI 返回 <code>HTTP 400</code>：<ul><li>切换到轻量化模式（默认）并重新构建。</li></ul></li></ol>
+<h2 id="7-操作者最小检查清单">7. 操作者最小检查清单<a class="anchor" href="#7-操作者最小检查清单" aria-label="锚点">#</a></h2>
+<p>上传前：</p>
+<ol><li><code>python -m twine check &lt;artifact&gt;</code></li><li><code>sha256sum &lt;artifact&gt;</code>（或在 PowerShell 上用 <code>Get-FileHash</code>）</li><li>确认 3 个项目文件中的版本已同步。</li></ol>
+<p>上传后：</p>
+<ol><li>通过 PyPI JSON API 检查目标版本的文件列表。</li><li>在干净的 Windows 与 Linux 环境中安装。</li><li>验证 <code>khy --version</code> 和 <code>khy gateway status</code>。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-012] pip发布后-github发布手册.html"><div class="dir">← 上一篇</div><div class="ttl">pip 发布后:外网机 pip install → 还原真实源码 → 推送 GitHub</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-014] 发布说明-0.1.27.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS v0.1.27 发布说明</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-013] pypi-发布手册-0.1.17-0.1.18.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

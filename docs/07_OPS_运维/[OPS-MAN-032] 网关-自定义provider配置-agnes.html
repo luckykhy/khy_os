@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网关 · 自定义 Provider 配置（以 Agnes 为例） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>网关 · 自定义 Provider 配置（以 Agnes 为例）</div>
+      <header class="hero reveal"><h1>网关 · 自定义 Provider 配置（以 Agnes 为例）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#网关-自定义-provider-配置-以-agnes-为例">网关 · 自定义 Provider 配置（以 Agnes 为例）</a></li><li class="lvl-2"><a href="#0-这是什么">0. 这是什么</a></li><li class="lvl-3"><a href="#agnes-连接参数">Agnes 连接参数</a></li><li class="lvl-2"><a href="#1-web-前端-aigateway-页面">1. Web 前端（AIGateway 页面）</a></li><li class="lvl-2"><a href="#2-khy-tui-终端图形界面">2. khy TUI（终端图形界面）</a></li><li class="lvl-2"><a href="#3-命令行-cli">3. 命令行（CLI）</a></li><li class="lvl-2"><a href="#4-逐模型能力档位-tier-覆盖">4. 逐模型能力档位（tier）覆盖</a></li><li class="lvl-2"><a href="#5-写入的环境变量">5. 写入的环境变量</a></li><li class="lvl-2"><a href="#5-5-不止-agnes-内置预设目录与自定义覆盖-api-key-模式通用机制">5.5 不止 Agnes：内置预设目录与自定义覆盖（API-Key 模式通用机制）</a></li><li class="lvl-2"><a href="#5-6-中转站-relay-一分钟接入-同一机制-换个叫法">5.6 中转站 / relay 一分钟接入（同一机制，换个叫法）</a></li><li class="lvl-2"><a href="#6-排错">6. 排错</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-032 | 阶段: 运维 | 原路径: docs/指南/网关-自定义provider配置-agnes.md --&gt;</p>
+<h1 id="网关-自定义-provider-配置-以-agnes-为例">网关 · 自定义 Provider 配置（以 Agnes 为例）<a class="anchor" href="#网关-自定义-provider-配置-以-agnes-为例" aria-label="锚点">#</a></h1>
+<blockquote><p>适用版本：2026-06-08 起。本文记录如何在 <strong>Web 前端 / khy TUI / 命令行</strong> 三种入口，<br>一站式接入 Agnes（及任意 OpenAI 兼容自定义 Provider）。</p></blockquote>
+<h2 id="0-这是什么">0. 这是什么<a class="anchor" href="#0-这是什么" aria-label="锚点">#</a></h2>
+<p>KHY 网关支持把任意「OpenAI-Compatible」服务作为一个<strong>自定义 Provider</strong> 接入密钥池<br>（<code>apiAdapter</code> + <code>apiKeyPool</code> + <code>customProviderRegistry</code> 路径）。接入后：</p>
+<ul><li>模型以 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code> 形式自动出现在 <code>/v1/models</code>，无需静态注册；</li><li>可与其它 Provider（deepseek/qwen/relay…）并存，支持多模型；</li><li>三个入口（Web / TUI / CLI）共用<strong>同一套注册逻辑</strong>，行为一致、互通。</li></ul>
+<p>注册核心是单一真源 <code>services/backend/src/services/customProviderRegistrar.js</code>；<br>env 读写集中在 <code>services/backend/src/services/gatewayEnvFile.js</code>。CLI 与后端实时 API 都复用它们。</p>
+<h3 id="agnes-连接参数">Agnes 连接参数<a class="anchor" href="#agnes-连接参数" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>Base URL</td><td><code>https://apihub.agnes-ai.com/v1</code></td></tr><tr><td>默认模型</td><td><code>agnes-2.0-flash</code></td></tr><tr><td>鉴权</td><td>API Key（标准 OpenAI <code>Authorization: Bearer</code>）</td></tr><tr><td>协议</td><td>OpenAI Chat Completions 兼容</td></tr></tbody></table>
+<p>Agnes 已作为<strong>内置预设</strong>提供，三个入口选「Agnes」即自动 prefill base URL / 模型 / 显示名，<br>只需补 API Key。</p>
+<hr>
+<h2 id="1-web-前端-aigateway-页面">1. Web 前端（AIGateway 页面）<a class="anchor" href="#1-web-前端-aigateway-页面" aria-label="锚点">#</a></h2>
+<p>最直观，推荐日常使用。</p>
+<ol><li>启动后端与 <code>apps/ai-frontend</code>，登录后进入 <strong>AI 网关（AIGateway）</strong> 页。</li><li>在「<strong>API 密钥池</strong>」卡片头部点击「<strong>添加自定义 Provider</strong>」（绿色按钮，与「添加 Key」并列）。</li><li>弹窗中：<ul><li><strong>预设</strong>下拉选「<strong>Agnes AI</strong>」→ 自动填好显示名 / Provider ID / Base URL / 默认模型；</li></ul></li></ol>
+<p>选「手动填写」则逐项自填，可接入任意 OpenAI 兼容服务。</p>
+<ul><li>填入 <strong>API Key</strong>（支持一行一个/逗号分隔的多 key，进池轮询）。</li><li>可选「其他模型」「能力档位（tier）」——见 <a href="#4-逐模型能力档位-tier-覆盖">§4 tier 覆盖</a>。</li></ul>
+<p>（默认保留池中 key，勾选连带删除才清 key）。</p>
+<p>底层 REST 接口（真正入口 <code>aiManagementServer.js handleAiGatewayNamespace</code>）：</p>
+<table><thead><tr><th>方法</th><th>路径</th><th>作用</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/ai-gateway/custom-providers</code></td><td>返回 <code>{ providers, presets }</code></td></tr><tr><td><code>POST</code></td><td><code>/api/ai-gateway/custom-providers</code></td><td>注册（body 同 CLI 字段）</td></tr><tr><td><code>DELETE</code></td><td><code>/api/ai-gateway/custom-providers/:poolKey</code></td><td>删除；<code>?removeKeys=true</code> 连带删 key</td></tr></tbody></table>
+<blockquote><p>响应<strong>绝不回显原始 API Key</strong>，仅返回脱敏元数据。</p></blockquote>
+<hr>
+<h2 id="2-khy-tui-终端图形界面">2. khy TUI（终端图形界面）<a class="anchor" href="#2-khy-tui-终端图形界面" aria-label="锚点">#</a></h2>
+<p>TUI 内有两类网关命令：</p>
+<ul><li><code>/gateway model</code> → 原生 <strong>ModelPicker</strong> 覆盖层，切换当前模型；</li><li><code>/gateway config</code> → 原生 <strong>API Key 配置</strong> 覆盖层（<code>runApiKeyConfig</code>），改 key / endpoint。</li></ul>
+<p><strong>注册新的自定义 Provider</strong> 走 <code>gateway add</code>：在 TUI 输入框输入 <code>gateway add</code> 即可。<br>该命令未被 TUI 拦截为原生覆盖层，会<strong>让出全屏</strong>进入交互式问答（inquirer）流程——<br>与 CLI 的 <code>khy gateway add</code> 完全一致（含 Agnes 预设、tier 追问、连接测试），<br>完成后自动回到 TUI。期间顶栏临时挂起，结束即恢复。</p>
+<blockquote><p>提示：若偏好图形化表单，直接用 Web 前端（§1）体验更顺滑；TUI 的 <code>gateway add</code><br>适合纯终端环境下不离开会话即可完成接入。</p></blockquote>
+<hr>
+<h2 id="3-命令行-cli">3. 命令行（CLI）<a class="anchor" href="#3-命令行-cli" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy gateway add
+# 别名同样可用： khy wg add / khy 网关 add</code></pre>
+<p>交互流程：</p>
+<ol><li><strong>选择预设</strong>：<code>Agnes AI</code> / <code>手动填写</code>。选 Agnes 自动 prefill 显示名 / Provider ID（<code>agnes</code>）/</li></ol>
+<p>Base URL / 默认模型，仅追问 API Key 与可选 tier。</p>
+<ol><li>输入 <strong>API Key</strong>（可多 key）。</li><li>可选 <strong>能力档位（tier）</strong>：自动 / T0 / T1 / T2 / T3。</li><li>注册完成后做一次<strong>连接测试</strong>（用首个 key 探活），成功即落盘。</li></ol>
+<p>完成后验证：</p>
+<pre><code class="language-bash">khy gateway status          # 看到 agnes Provider 与其模型
+curl http://&lt;gateway&gt;/v1/models | grep agnes   # 出现 api:agnes:agnes-2.0-flash</code></pre>
+<p>相关命令：</p>
+<ul><li><code>khy gateway config</code> / <code>khy apikey</code> / <code>khy 密钥配置</code> → 改已有池的 key/endpoint。</li><li><code>khy gateway model</code> → 切模型。</li></ul>
+<hr>
+<h2 id="4-逐模型能力档位-tier-覆盖">4. 逐模型能力档位（tier）覆盖<a class="anchor" href="#4-逐模型能力档位-tier-覆盖" aria-label="锚点">#</a></h2>
+<p>KHY 按模型能力分档（T0 前沿 / T1 强 / T2 默认 / T3 弱）套不同脚手架。<br><code>agnes-2.0-flash</code> 名字含 <code>flash</code>，会被默认正则误判为 <strong>T3（弱）</strong>。若实际更强，可显式声明：</p>
+<ul><li><strong>入口</strong>：上面三处「tier」字段任选其一（Web 下拉 / TUI/CLI 追问）；</li><li><strong>底层</strong>：写入环境映射 <code>KHY_MODEL_TIER_MAP</code>，形如</li></ul>
+<p><code>{&quot;agnes-2.0-flash&quot;:&quot;T1&quot;}</code>（JSON，大小写不敏感精确匹配）。</p>
+<ul><li><strong>优先级</strong>：全局 <code>KHY_CAPABILITY_TIER</code> &gt; <code>KHY_MODEL_TIER_MAP</code> &gt; 正则自动判定。</li></ul>
+<p>不声明时维持自动（<code>flash</code> → T3）。</p>
+<p>也可直接手改 <code>.env</code>，无需重注册——<code>KHY_MODEL_TIER_MAP</code> 即时生效。</p>
+<hr>
+<h2 id="5-写入的环境变量">5. 写入的环境变量<a class="anchor" href="#5-写入的环境变量" aria-label="锚点">#</a></h2>
+<p>注册成功后，下列变量被合并写入 <code>.env</code>（规范文件 <code>services/backend/.env</code>，<br>并镜像到 <code>services/.env</code>，除非 <code>KHY_ENV_SYNC_ROOT=false</code>）：</p>
+<table><thead><tr><th>变量</th><th>作用</th><th>示例片段</th></tr></thead><tbody><tr><td><code>GATEWAY_API_POOL_SERVICE_MAP</code></td><td>poolKey → 适配器类型</td><td><code>{&quot;agnes&quot;:&quot;openai&quot;}</code></td></tr><tr><td><code>GATEWAY_API_POOL_DEFAULT_MODEL_MAP</code></td><td>poolKey → 默认模型</td><td><code>{&quot;agnes&quot;:&quot;agnes-2.0-flash&quot;}</code></td></tr><tr><td><code>PROXY_MODEL_ROUTE_MAP</code></td><td>模型 → 路由目标</td><td><code>{&quot;agnes-2.0-flash&quot;:{&quot;target&quot;:&quot;api:agnes:agnes-2.0-flash&quot;,&quot;strict&quot;:true}}</code></td></tr><tr><td><code>KHY_MODEL_TIER_MAP</code></td><td>模型 → 能力档位（仅声明 tier 时）</td><td><code>{&quot;agnes-2.0-flash&quot;:&quot;T1&quot;}</code></td></tr></tbody></table>
+<p>Provider 元数据（显示名 / endpoint / 默认模型 / 可选 tier）另存于<br><code>~/.khyquant/custom_providers.json</code>（<code>customProviderRegistry</code>）。</p>
+<blockquote><p>覆盖锚点可用 <code>KHY_ENV_FILE</code> 改写规范 .env 路径，<code>KHY_ENV_SYNC_ROOT=false</code> 关闭根镜像。</p></blockquote>
+<hr>
+<h2 id="5-5-不止-agnes-内置预设目录与自定义覆盖-api-key-模式通用机制">5.5 不止 Agnes：内置预设目录与自定义覆盖（API-Key 模式通用机制）<a class="anchor" href="#5-5-不止-agnes-内置预设目录与自定义覆盖-api-key-模式通用机制" aria-label="锚点">#</a></h2>
+<p>Agnes 只是<strong>内置预设目录</strong>里的一条。本文的所有步骤对任意 OpenAI 兼容服务都通用——这正是网关「四类配置模式」中的<strong>模式 ③（API-Key 直连）</strong>（四类总览见 [OPS-MAN-003] §8）。</p>
+<p>预设的来源是两层单一真源：</p>
+<ul><li><strong>内置 provider 目录</strong> <code>services/backend/src/services/builtinProviderConfig.js</code>（<code>BUILTIN_PROVIDERS</code>，<code>:33-43</code>）——决定哪些 provider 默认可被网关识别。</li><li><strong>预设清单</strong> <code>services/backend/src/services/providerPresets.js</code>（<code>:49-62</code>）——为每个预设提供 prefill 字段。Agnes 即其中一条（<code>:55</code>，<code>id:'agnes'</code> / <code>baseUrl: https://apihub.agnes-ai.com/v1</code> / <code>apiFormat:'openai'</code>），同目录还内置了 moonshot、zhipu 等常见服务。选预设时这些字段被自动填好，你只需补 API Key。</li></ul>
+<p><strong>自定义/覆盖预设</strong>：用环境变量 <code>KHY_PROVIDER_PRESETS</code> 注入或覆盖预设（JSON），无需改源码即可让 <code>khy gateway add</code> 的预设下拉出现你自己的服务：</p>
+<pre><code class="language-bash"># 追加一个自定义预设（按目标服务的 id / baseUrl / 默认模型填）
+export KHY_PROVIDER_PRESETS='[{&quot;id&quot;:&quot;myllm&quot;,&quot;displayName&quot;:&quot;My LLM&quot;,&quot;baseUrl&quot;:&quot;https://api.example.com/v1&quot;,&quot;defaultModel&quot;:&quot;my-model-1&quot;,&quot;apiFormat&quot;:&quot;openai&quot;}]'
+khy gateway add     # 预设下拉里就会多出 &quot;My LLM&quot;</code></pre>
+<blockquote><p>即使不写预设也能接入：<code>khy gateway add</code> 选「手动填写」，逐项填 Base URL / 模型 ID / API Key 即可。预设只是把常用服务的字段提前填好，省去手填。</p></blockquote>
+<p>落键流程统一走 <code>khy gateway config</code>（改已有池的 key/endpoint）与 <code>khy gateway add</code>（新接入），三入口（Web / TUI / CLI）共用同一套注册逻辑（<code>customProviderRegistrar.js</code>）。</p>
+<hr>
+<h2 id="5-6-中转站-relay-一分钟接入-同一机制-换个叫法">5.6 中转站 / relay 一分钟接入（同一机制，换个叫法）<a class="anchor" href="#5-6-中转站-relay-一分钟接入-同一机制-换个叫法" aria-label="锚点">#</a></h2>
+<p>很多人把「不是官方直连、而是<strong>代理转发官方模型</strong>的 OpenAI 兼容服务」叫<strong>中转站</strong>（relay / 代理站 / API 中转）。<br>在 KHY 网关里，<strong>中转站不是一种新东西</strong>——它就是本文一路讲的<strong>自定义 Provider（模式 ③ API-Key 直连）</strong>：<br>你从中转站拿到的永远是「一个 Base URL + 一个 API Key + 若干模型名」，接入路径与上面接 Agnes <strong>完全一致</strong>。</p>
+<p><strong>最短接入（任选一入口）</strong>：</p>
+<pre><code class="language-bash"># CLI：一条命令进入交互接入向导
+khy gateway add
+#   预设下拉选「手动填写」
+#   Base URL   ← 中转站给你的地址（形如 https://xxx.example.com/v1，务必带 /v1）
+#   模型 ID    ← 中转站文档里列出的模型名（如 gpt-4o / claude-3-5-sonnet）
+#   API Key    ← 中转站分配的 key（支持一行一个 / 逗号分隔多 key 进池轮询）</code></pre>
+<p>Web 入口：AIGateway 页 →「API 密钥池」卡片 →「添加自定义 Provider」→ 预设选「手动填写」，同样三项。<br>接入后模型以 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code> 出现在 <code>/v1/models</code>，与官方直连模型并存、可混用。</p>
+<p><strong>常配错的三个点（照着自查）</strong>：</p>
+<table><thead><tr><th>症状</th><th>多半原因</th><th>处理</th></tr></thead><tbody><tr><td>401 / 鉴权失败</td><td>Key 填错，或中转站要求非标准鉴权头</td><td>确认 Key；标准中转站走 <code>Authorization: Bearer</code>，本文机制默认即此</td></tr><tr><td>404 / 路径不对</td><td>Base URL 漏了 <code>/v1</code>，或把网页地址当成了 API 地址</td><td>Base URL 以 <code>/v1</code> 结尾；用中转站<strong>文档里的 API 地址</strong>，不是它的官网</td></tr><tr><td>模型名对不上</td><td>中转站的模型命名与官方不一致（如加了前缀）</td><td>用中转站文档里<strong>原样</strong>的模型名，别自己猜</td></tr></tbody></table>
+<blockquote><p><strong>内置 <code>relay</code> 与你接的中转站是两回事</strong>：<code>relay/gpt-4o</code> 里的 <code>relay</code> 是一个<strong>内置预设 poolKey 名</strong>（见 [OPS-MAN-012] §模型清单），<br>指某个已内置配置的转发通道；而你自己接的中转站是<strong>新建</strong>一个自定义 Provider，poolKey 由你命名。二者互不影响，可并存。</p></blockquote>
+<blockquote><p><strong>安全提醒</strong>：中转站会看到你的全部请求内容。只接<strong>你信任的</strong>中转站；Key 通过上述向导写入本机 <code>.env</code>（见 §5），<br><strong>绝不要</strong>把含 Key 的 <code>.env</code> 提交进 git（仓库 <code>.gitignore</code> 已默认忽略 <code>.env</code>，但自建目录时请自行确认）。</p></blockquote>
+<hr>
+<h2 id="6-排错">6. 排错<a class="anchor" href="#6-排错" aria-label="锚点">#</a></h2>
+<ul><li><strong>模型没出现在 <code>/v1/models</code></strong>：确认 <code>PROXY_MODEL_ROUTE_MAP</code> 已含该模型，且后端已重载</li></ul>
+<p>（注册会同步写 <code>process.env</code>，但已运行的进程需重启或触发刷新）。</p>
+<ul><li><strong>被当作弱模型套了重脚手架</strong>：见 §4，声明 tier。</li><li><strong>删了仍能调用</strong>：删除默认保留池中 key；需 <code>?removeKeys=true</code>（Web 勾选「连带删除 key」）。</li><li><strong>接入非 Agnes 服务</strong>：预设选「手动填写」，按目标服务的 Base URL / 模型 ID 填即可，路径通用。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-031] 终端-tui-有框输入区重构方案-2026-05-31.html"><div class="dir">← 上一篇</div><div class="ttl">终端 TUI 有框输入区重构方案</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-033] 自动保护与回滚.html"><div class="dir">下一篇 →</div><div class="ttl">自动保护系统 — 防止改到一半项目损坏</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-032] 网关-自定义provider配置-agnes.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

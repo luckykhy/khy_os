@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-050-项目整体意识与自驱收尾保障">[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障</a></li><li class="lvl-2"><a href="#1-背景与痛点">1. 背景与痛点</a></li><li class="lvl-2"><a href="#2-设计铁律">2. 设计铁律</a></li><li class="lvl-2"><a href="#3-子系统结构-services-backend-src-services-projectcoherence">3. 子系统结构 `services/backend/src/services/projectCoherence/`</a></li><li class="lvl-3"><a href="#3-1-importgraph-js-跨文件依赖-导出解析">3.1 importGraph.js — 跨文件依赖/导出解析</a></li><li class="lvl-3"><a href="#3-2-resolver-js-本地模块解析">3.2 resolver.js — 本地模块解析</a></li><li class="lvl-3"><a href="#3-3-coherenceanalyzer-js-整体一致性分析">3.3 coherenceAnalyzer.js — 整体一致性分析</a></li><li class="lvl-3"><a href="#3-4-coherencegate-js-决策与注入文案">3.4 coherenceGate.js — 决策与注入文案</a></li><li class="lvl-3"><a href="#3-5-deliverableclosure-js-自驱收尾保障-痛点-2">3.5 deliverableClosure.js — 自驱收尾保障（痛点 2）</a></li><li class="lvl-3"><a href="#3-6-index-js-门面-4-编排">3.6 index.js — 门面（§4 编排）</a></li><li class="lvl-2"><a href="#4-主循环接线-tooluseloop-js-非侵入">4. 主循环接线（toolUseLoop.js，非侵入）</a></li><li class="lvl-2"><a href="#5-环境开关">5. 环境开关</a></li><li class="lvl-2"><a href="#6-验证">6. 验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-050-项目整体意识与自驱收尾保障">[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障<a class="anchor" href="#design-arch-050-项目整体意识与自驱收尾保障" aria-label="锚点">#</a></h1>
+<blockquote><p>规范号：DESIGN-ARCH-050<br>状态：已实现（services/backend/src/services/projectCoherence/）<br>关联实现：<code>toolUseLoop.js</code>（收尾时刻非侵入接线）<br>测试：<code>tests/services/projectCoherence.test.js</code>（25 例 node:test 全绿）</p></blockquote>
+<h2 id="1-背景与痛点">1. 背景与痛点<a class="anchor" href="#1-背景与痛点" aria-label="锚点">#</a></h2>
+<p>Khyos 已能逐个地把文件写对，但缺两块「整体性」基因，导致两类用户可感知的失败：</p>
+<ol><li><strong>缺乏项目整体意识。</strong> 文件一个个看都没问题，<strong>聚成项目后</strong>却跑不起来——</li></ol>
+<p>导入指向不存在的模块、<code>package.json</code> 入口指空、按名导入了目标模块根本没导出的符号。<br>   这类断裂只在「装配期」暴露，逐文件审查永远发现不了。</p>
+<ol><li><strong>不推不出结果。</strong> 用户不用提示词推它，模型有时只回一句进度前言</li></ol>
+<p>（「让我先看看…」「我来检查一下…」）或空壳就收尾，把<strong>过程</strong>当成<strong>结果</strong>交付。<br>   根因：既有的「你还没真正交付」类 nudge 全挂在 <code>_harnessProfile.nudges</code> 之后，<br>   对强模型档（T0）默认关闭。</p>
+<p>本规范定义一个<strong>确定性、零模型、fail-safe、有界</strong>的子系统 <code>projectCoherence</code>，<br>在 Agent 主循环（<code>toolUseLoop</code>）的「模型想收尾」时刻介入，分别封堵这两类失败。</p>
+<h2 id="2-设计铁律">2. 设计铁律<a class="anchor" href="#2-设计铁律" aria-label="锚点">#</a></h2>
+<ul><li><strong>零依赖、零模型</strong>：纯正则 + Node 内建。所有分析/决策不调模型、不抛错、不死循环。</li><li><strong>高置信度才拦截</strong>：宁可漏报，不可错误阻塞交付。只有 HIGH 级断裂默认硬拦截。</li><li><strong>与模型档无关</strong>：两道保障都不看 <code>_harnessProfile.nudges</code>，强模型档同样生效。</li><li><strong>非侵入接线</strong>：主循环只在收尾时刻惰性 <code>require</code> 门面、据返回 message 决定是否再推一轮；</li></ul>
+<p>关闭环境开关即完全旁路，核心循环行为不变。</p>
+<ul><li><strong>有界</strong>：一致性门有轮次上限（默认 2），收尾保障一次性，到顶放行并标注。</li></ul>
+<h2 id="3-子系统结构-services-backend-src-services-projectcoherence">3. 子系统结构 <code>services/backend/src/services/projectCoherence/</code><a class="anchor" href="#3-子系统结构-services-backend-src-services-projectcoherence" aria-label="锚点">#</a></h2>
+<h3 id="3-1-importgraph-js-跨文件依赖-导出解析">3.1 importGraph.js — 跨文件依赖/导出解析<a class="anchor" href="#3-1-importgraph-js-跨文件依赖-导出解析" aria-label="锚点">#</a></h3>
+<p>把单个源文件坍缩成两份结构化事实：<code>imports</code>（向外索取什么）与 <code>exports</code>（向外承诺什么）。</p>
+<ul><li><code>detectLang(file)</code> → <code>'js' | 'py' | null</code>（按扩展名）。</li><li><code>parseFile(file, src)</code> → <code>{ lang, imports:[{spec,names,kind}], exports:{names:Set, hasDefault, dynamic} }</code>。</li><li>覆盖 ESM（default/named/namespace/副作用/混合/re-export）、CJS（require 解构、module.exports 对象/属性）、</li></ul>
+<p>动态 <code>import()</code>、Python <code>from .mod import ...</code>。</p>
+<ul><li><strong>动态导出标记</strong>：<code>Object.assign(exports,…)</code>、<code>export *</code>、计算键 <code>exports['x']</code>、以及<strong>所有 Python 模块</strong></li></ul>
+<p>一律标 <code>dynamic:true</code>，使下游「命名导出检查」对该模块<strong>整体跳过</strong>——从根上杜绝误报。</p>
+<ul><li>fail-safe：解析异常返回保守空图，绝不抛错。</li></ul>
+<h3 id="3-2-resolver-js-本地模块解析">3.2 resolver.js — 本地模块解析<a class="anchor" href="#3-2-resolver-js-本地模块解析" aria-label="锚点">#</a></h3>
+<p>回答：某文件里的 <code>import/require/from</code> 说明符，在「本会话产物 + 磁盘」并集里指向哪个真实文件？</p>
+<ul><li><code>resolveImport(spec, fromFile, lang, io)</code> → <code>{ local, resolved, candidates }</code>。</li><li><strong>只解析本地说明符</strong>（相对 <code>./ ../</code>、绝对项目内、Python 相对包 <code>.mod</code>）。</li></ul>
+<p>裸说明符（<code>react</code>、<code>@scope/x</code>、<code>node:fs</code>、Python 绝对包）一律判为 non-local 跳过——<br>  它们可能来自 node_modules / site-packages，静态无法证伪，强判会变成大规模误报。</p>
+<ul><li>JS：逐一尝试原样 + 扩展名（.js/.mjs/.cjs/.jsx/.ts/.tsx/.json/.node）+ <code>/index.*</code>。</li><li>Python：按前导点数定位包目录，尝试 <code>.py/.pyi/__init__.py</code>/命名空间包目录。</li><li><code>makeIoFromSet(knownFiles, alsoDisk=true)</code>：用「已知文件集合 + 祖先目录」构造可注入的 <code>exists/isDir</code>，</li></ul>
+<p>集合未命中时回落真实磁盘——把会话内刚写的文件稳定视为「已存在」，免受磁盘时序抖动误判。</p>
+<h3 id="3-3-coherenceanalyzer-js-整体一致性分析">3.3 coherenceAnalyzer.js — 整体一致性分析<a class="anchor" href="#3-3-coherenceanalyzer-js-整体一致性分析" aria-label="锚点">#</a></h3>
+<p>把「一批刚写好的文件」当作整体体检，只揪三类断裂：</p>
+<table><thead><tr><th>kind</th><th>级别</th><th>含义</th></tr></thead><tbody><tr><td><code>unresolved_import</code></td><td>HIGH</td><td>文件 import 了本地模块，但目标在「产物 + 磁盘」里根本不存在（装配失败头号原因）。</td></tr><tr><td><code>broken_manifest</code></td><td>HIGH</td><td><code>package.json</code> 的 <code>main/module/types/bin/exports</code> 指向不存在的文件。</td></tr><tr><td><code>missing_export</code></td><td>MEDIUM</td><td>按名导入 <code>{ foo }</code> 但目标模块没导出 foo（<strong>仅当</strong>目标导出面可静态确定、非 dynamic 时才判）。</td></tr></tbody></table>
+<ul><li><code>analyze({ files, cwd, readFile, knownFiles, maxFiles })</code> → <code>{ gaps, analyzed, skipped }</code>。</li><li><code>readFile</code>/<code>knownFiles</code> 可注入，便于纯内存单测；默认走 fs。</li><li><code>maxFiles</code> 默认 400，防大项目扫描爆量。</li><li>绝不上报低置信度结论（孤儿文件、无入口、风格不一致）。</li></ul>
+<h3 id="3-4-coherencegate-js-决策与注入文案">3.4 coherenceGate.js — 决策与注入文案<a class="anchor" href="#3-4-coherencegate-js-决策与注入文案" aria-label="锚点">#</a></h3>
+<p>纯决策，不读文件不调模型：</p>
+<ul><li><code>decide({ gaps, codeFileCount, rounds, maxRounds=2, minFiles=2, blockOnMedium=false })</code></li></ul>
+<p>→ <code>{ shouldGate, blocking, reason }</code>，reason ∈ <code>too_few_files | rounds_exhausted | no_blocking_gaps | incoherent</code>。</p>
+<ul><li>单文件改动不触发（<code>codeFileCount &lt; minFiles</code>）——「整体意识」只对多文件项目有意义。</li><li>默认只对 HIGH 硬拦截；MEDIUM 随文案附带提示，是否拦截由 <code>blockOnMedium</code> 决定。</li><li><code>buildGateMessage(blocking, round, maxRounds, allGaps)</code> → 中文系统注入：逐条列出断裂、</li></ul>
+<p>要求用工具修复后再收尾，并允许模型在判定为误报（外部依赖提供）时简要说明理由后放行。</p>
+<h3 id="3-5-deliverableclosure-js-自驱收尾保障-痛点-2">3.5 deliverableClosure.js — 自驱收尾保障（痛点 2）<a class="anchor" href="#3-5-deliverableclosure-js-自驱收尾保障-痛点-2" aria-label="锚点">#</a></h3>
+<p><strong>与模型档无关</strong>的兜底：确实干了活却只回进度/空壳时，强制再推一轮要最终结果。</p>
+<ul><li><code>looksLikeProgressOnly(text)</code>：<strong>精确策略</strong>（零误报优先）——只有「空」或「首句是进度腔且全文无任何结论词」</li></ul>
+<p>才算未交付。<strong>不</strong>用长度阈值（CJK 下「已启动: 夸克」只几个字却是完整交付，长度判定会误伤）。</p>
+<ul><li><code>CONCLUSION_RE</code> 与 <code>toolUseLoop.hasConclusion</code> 口径对齐，并补齐应用启动类终态动词</li></ul>
+<p>（已启动/已打开/launched/opened…）。</p>
+<ul><li><code>shouldForceClosure({ reply, pendingToolCalls, totalToolCalls, used })</code>：</li></ul>
+<p><code>used</code> 已用过、<code>pendingToolCalls&gt;0</code>（还在执行）、<code>totalToolCalls&lt;=0</code>（没干活）任一为真即不介入。</p>
+<ul><li><code>buildClosureMessage(userMessage)</code>：命令模型基于已有工具结果直接写出完整最终答复，不许再说过程话。</li></ul>
+<h3 id="3-6-index-js-门面-4-编排">3.6 index.js — 门面（§4 编排）<a class="anchor" href="#3-6-index-js-门面-4-编排" aria-label="锚点">#</a></h3>
+<p><code>evaluateCoherenceGate(opts)</code> → <code>{ shouldGate, message, gaps, blocking, reason }</code>；<br><code>evaluateClosure(opts)</code> → <code>{ shouldForce, message }</code>；<br><code>analyzeProjectCoherence(opts)</code>、<code>countCodeFiles(files)</code>、<code>SEVERITY</code>。<br>全部 try/catch fail-safe，任何异常返回安全默认（不拦截/不强制）。</p>
+<h2 id="4-主循环接线-tooluseloop-js-非侵入">4. 主循环接线（toolUseLoop.js，非侵入）<a class="anchor" href="#4-主循环接线-tooluseloop-js-非侵入" aria-label="锚点">#</a></h2>
+<p>状态变量（<code>runToolUseLoop</code> 内）：<code>_coherenceGateRounds</code>、<code>_coherenceGateExhausted</code>、<code>_closureGuardUsed</code>。</p>
+<ol><li><strong>一致性门</strong>（<code>toolCalls.length === 0 &amp;&amp; _allModifiedFiles.size &gt;= 2 &amp;&amp; KHY_PROJECT_COHERENCE</code>，</li></ol>
+<p>位于非编辑证据门之后、精简 nudge 之前）：惰性 require 门面 → <code>evaluateCoherenceGate</code> →<br>   <code>shouldGate</code> 时递增轮次、<code>currentMessage = message; continue;</code>；到顶置 <code>_coherenceGateExhausted</code>。</p>
+<ol><li><strong>收尾保障</strong>（<code>toolCalls.length === 0</code> 块内，`!concludeNow &amp;&amp; !_closureGuardUsed &amp;&amp; totalToolCalls &gt; 0 &amp;&amp;</li></ol>
+<p>KHY_DELIVERABLE_CLOSURE<code>）：</code>evaluateClosure<code> → </code>shouldForce<code> 时置 </code>_closureGuardUsed<code>、<br>   </code>currentMessage = message; continue;<code>。让位给 </code>concludeNow`（实质长回复不打扰）。</p>
+<ol><li><strong>到顶标注</strong>：<code>_coherenceGateExhausted</code> 时在最终文本追加人工复核提示。</li></ol>
+<h2 id="5-环境开关">5. 环境开关<a class="anchor" href="#5-环境开关" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>含义</th></tr></thead><tbody><tr><td><code>KHY_PROJECT_COHERENCE</code></td><td>on</td><td>项目整体一致性门总开关。</td></tr><tr><td><code>KHY_PROJECT_COHERENCE_ROUNDS</code></td><td>2</td><td>一致性门轮次上限（1–5）。</td></tr><tr><td><code>KHY_PROJECT_COHERENCE_MEDIUM</code></td><td>off</td><td>是否让 MEDIUM（命名导出缺失）也参与硬拦截。</td></tr><tr><td><code>KHY_DELIVERABLE_CLOSURE</code></td><td>on</td><td>自驱收尾保障总开关。</td></tr></tbody></table>
+<h2 id="6-验证">6. 验证<a class="anchor" href="#6-验证" aria-label="锚点">#</a></h2>
+<ul><li><code>tests/services/projectCoherence.test.js</code>：25 例 node:test，全程内存注入（readFile/knownFiles），</li></ul>
+<p>覆盖 importGraph/resolver/analyzer/gate/closure/façade 及 fail-safe，全绿。</p>
+<ul><li><code>toolUseLoop</code> 既有 jest 套件零回归（含 <code>appLaunchIntentFilter</code> 终态确认用例）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-049] 轨迹即教材-AI引导回放.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-051] 单人维护者健康驾驶舱.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-051] 单人维护者健康驾驶舱</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

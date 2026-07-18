@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-066-前端代理出站桥-选节点实际路由-启用-停用开关">[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</a></li><li class="lvl-2"><a href="#一-目标">一、目标</a></li><li class="lvl-2"><a href="#二-诚实边界-硬约束">二、诚实边界(硬约束)</a></li><li class="lvl-2"><a href="#三-分层实现-5-tier">三、分层实现(5 Tier)</a></li><li class="lvl-2"><a href="#四-可验证性声明-b2-纪律">四、可验证性声明(B2 纪律)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-066-前端代理出站桥-选节点实际路由-启用-停用开关">[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关<a class="anchor" href="#design-arch-066-前端代理出站桥-选节点实际路由-启用-停用开关" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：定稿 · 归属：<code>services/backend/src/services/proxy/</code> + <code>aiManagementProxyEgress.js</code> + 前端 <code>ProxyManagement.vue</code> · 关联：[[DESIGN-ARCH-026]]（系统级服务调用审批网关）、[[IMPL-RPT-009]]（特性访问与代理解耦）</p></blockquote>
+<h2 id="一-目标">一、目标<a class="anchor" href="#一-目标" aria-label="锚点">#</a></h2>
+<p>把前端「代理管理」从<strong>只读节点浏览器</strong>升级为可<strong>选中某节点实际路由流量</strong> + <strong>一键启用/停用代理</strong>。</p>
+<p>此前存在两套互不相连的代理系统:</p>
+<ul><li><strong>A. 每用户订阅浏览器</strong>(前端唯一接触):<code>/api/proxy-subscriptions</code> REST + <code>ProxyManagement.vue</code>,纯展示(导入/列出/刷新/浏览/复制),节点对象无 id、无 active。</li><li><strong>B. 机器级真实出站</strong>(此前仅 CLI 触碰):<code>proxyConfigService.js</code>(<code>~/.khyquant/proxy.json</code>),<code>applyProxy()</code> 把 <code>HTTP_PROXY/HTTPS_PROXY</code> 写进 <code>process.env</code>,被网关出站 <code>gateway/adapters/_proxyTunnel.js</code> 消费。</li></ul>
+<p><strong>空白 = A 与 B 之间没有线</strong>。本设计补上这条线。</p>
+<h2 id="二-诚实边界-硬约束">二、诚实边界(硬约束)<a class="anchor" href="#二-诚实边界-硬约束" aria-label="锚点">#</a></h2>
+<p>仓库<strong>不含代理内核</strong>(clash/mihomo/xray/sing-box)。一个 vmess/ss/trojan 节点的解析对象<strong>本身不能承载流量</strong>——只有 HTTP CONNECT 端点能真正代理。故出站按节点协议分三条路(<code>proxyCoreConfigGen.classifyNodeEgress</code>):</p>
+<table><thead><tr><th>通道</th><th>协议</th><th>承载方式</th><th>是否需内核</th></tr></thead><tbody><tr><td><code>direct-connect</code></td><td>http / https</td><td>节点自身即 CONNECT 代理 → <code>applyProxy(node.server:port)</code></td><td>否,即时生效</td></tr><tr><td><code>core-required</code></td><td>vmess / vless / trojan / ss / ssr</td><td>本机 mihomo 生成配置 + spawn 暴露混合端口 → <code>applyProxy(127.0.0.1:mixedPort)</code></td><td>是,门 <code>KHY_PROXY_CORE</code></td></tr><tr><td><code>unsupported</code></td><td>socks5 / wireguard / hysteria / tuic …</td><td>首版不接</td><td>—</td></tr></tbody></table>
+<p><strong>绝不静默失败、绝不谎报生效</strong>:内核缺失时 <code>proxyCoreManager</code> 返回结构化 <code>{ success:false, reason:'core-missing', guidance }</code>,前端<strong>显式弹指引</strong>(装 mihomo 到 <code>~/.khyquant/bin/</code> / 改用 http 节点 / 本机 Clash)。</p>
+<h2 id="三-分层实现-5-tier">三、分层实现(5 Tier)<a class="anchor" href="#三-分层实现-5-tier" aria-label="锚点">#</a></h2>
+<ul><li><strong>Tier-1 纯叶子</strong> <code>proxy/proxyCoreConfigGen.js</code>:零 IO、确定性、绝不抛、不 mutate 入参。<code>classifyNodeEgress</code> + <code>buildMihomoConfig</code>(逐协议必填字段校验 + 白名单透传 clash-native 字段 + 生成最小 mihomo 配置骨架 <code>{mixed-port, allow-lan:false, mode:global, proxies, proxy-groups:[{name:KHY}], rules:['MATCH,KHY']}</code>)。</li><li><strong>Tier-2 内核生命周期</strong> <code>proxy/proxyCoreManager.js</code>:抄 <code>tlsSidecar/index.js</code> 形态(spawn + stdout 握手 + 10s 超时 + SIGTERM→SIGKILL + TCP 探活)。二进制解析 <code>~/.khyquant/bin/mihomo[.exe]</code>,<strong>不 buildFromSource</strong>(mihomo 非本仓 Go 源)。门 <code>KHY_PROXY_CORE</code>(opt-in 默认关)。依赖(spawn/fs/net)可注入 → 测试喂 fake 全离线证绿。</li><li><strong>Tier-3 出站编排</strong> <code>proxyConfigService.js</code> 新增(纯 additive,旧 <code>enableProxy/disableProxy/getStatus</code> 行为不变):<code>activateNode(node, options)</code>(按分类走 direct-connect 直接生效 / core-required 经内核 / unsupported 返 reason)、<code>deactivate()</code>、<code>getStatus()</code> 扩展(附 <code>activeNode</code> + <code>coreStatus</code>)。</li><li><strong>Tier-4 REST 桥</strong> <code>aiManagementProxyEgress.js</code>(DI 叶子,抄 <code>aiManagementProjects.js</code> 形态 <code>setProxyEgressDeps</code>):<code>GET /api/proxy-egress</code>、<code>POST /api/proxy-egress/enable {node}</code>、<code>POST /api/proxy-egress/disable</code>。全走已认证每用户路径(<code>resolveAuthUserId</code>),无匿名端点。宿主 <code>aiManagementServer.js</code> <code>routeRequest</code> 分派。</li><li><strong>Tier-5 前端</strong> <code>useProxies.js</code>(egressStatus + fetchEgressStatus/enableNode/disableEgress)+ <code>ProxyManagement.vue</code>(顶部启用/停用 el-switch + 当前激活节点/内核状态状态条 + 节点表「使用此节点」按钮 + 当前节点高亮 + 内核缺失显式指引)。</li></ul>
+<h2 id="四-可验证性声明-b2-纪律">四、可验证性声明(B2 纪律)<a class="anchor" href="#四-可验证性声明-b2-纪律" aria-label="锚点">#</a></h2>
+<p>Tier-1/2/3/4/5 可全离线 <code>node:test</code> 证绿(注入 fake spawn/fs/net)。真实 spawn mihomo 二进制并证明流量经真实节点出站<strong>无法离线证绿</strong>——仓库无内核二进制、无 live 节点。故内核管理器交付「生命周期 + 配置生成 + 二进制缺失时指名可执行指引」,真实隧道 E2E 留作运行时(需用户装 mihomo 内核)。</p>
+<p>验证:<code>npm run test:maintainer:proxy-egress</code>(5 测文件)+ <code>npm run build --prefix apps/ai-frontend</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-065] Hermes Agent v0.18.0 参考学习-判断验证自我进化.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.html"><div class="dir">下一篇 →</div><div class="ttl">Khyos 数学重塑 · 实施提示词链</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

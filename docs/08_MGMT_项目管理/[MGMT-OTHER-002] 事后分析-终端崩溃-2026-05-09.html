@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事后分析：ISO 构建破坏宿主终端 (2026-05-09) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>事后分析：ISO 构建破坏宿主终端 (2026-05-09)</div>
+      <header class="hero reveal"><h1>事后分析：ISO 构建破坏宿主终端 (2026-05-09)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#事后分析-iso-构建破坏宿主终端-2026-05-09">事后分析：ISO 构建破坏宿主终端 (2026-05-09)</a></li><li class="lvl-2"><a href="#事故摘要">事故摘要</a></li><li class="lvl-2"><a href="#时间线">时间线</a></li><li class="lvl-2"><a href="#根因分析">根因分析</a></li><li class="lvl-3"><a href="#1-经由-live-bind-mount-的-rm-rf">1. 经由 live bind-mount 的 `rm -rf`</a></li><li class="lvl-3"><a href="#2-devpts-挂载覆盖宿主机">2. `devpts` 挂载覆盖宿主机</a></li><li class="lvl-3"><a href="#3-销毁性清理前缺少安全检查">3. 销毁性清理前缺少安全检查</a></li><li class="lvl-2"><a href="#已实施修复-commit-3f70078">已实施修复（commit 3f70078）</a></li><li class="lvl-3"><a href="#修复-1-挂载隔离">修复 1：挂载隔离</a></li><li class="lvl-3"><a href="#修复-2-rm-前的安全检查">修复 2：`rm` 前的安全检查</a></li><li class="lvl-3"><a href="#修复-3-正确的卸载顺序">修复 3：正确的卸载顺序</a></li><li class="lvl-2"><a href="#恢复命令">恢复命令</a></li><li class="lvl-2"><a href="#经验教训">经验教训</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-OTHER-002 | 阶段: 项目管理 | 原路径: docs/事后分析-终端崩溃-2026-05-09.md --&gt;</p>
+<h1 id="事后分析-iso-构建破坏宿主终端-2026-05-09">事后分析：ISO 构建破坏宿主终端 (2026-05-09)<a class="anchor" href="#事后分析-iso-构建破坏宿主终端-2026-05-09" aria-label="锚点">#</a></h1>
+<h2 id="事故摘要">事故摘要<a class="anchor" href="#事故摘要" aria-label="锚点">#</a></h2>
+<p>在首次对 <code>scripts/alpine/build-khy-os-iso.sh</code> 进行真实环境测试时，<br>构建过程被多次中断（通过 <code>kill</code> / 任务停止）。<br>每次中断都会留下仍处于激活状态的 bind-mount，而清理流程中的 <code>rm -rf</code><br>经由这条仍然生效的 bind-mount 摧毁了宿主机的设备节点，导致<br>Linux 终端无法使用。</p>
+<h2 id="时间线">时间线<a class="anchor" href="#时间线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Time</th><th>Event</th></tr></thead><tbody><tr><td>11:17</td><td>启动首次 ISO 构建；因 DNS 故障被终止</td></tr><tr><td>11:17</td><td><code>/dev</code> 仍处于 bind-mount 状态时执行了 <code>rm -rf /tmp/khy-os-rootfs.*</code> → <strong><code>/dev/null</code> 被摧毁</strong>（变成了一个普通文件）</td></tr><tr><td>11:49</td><td>用户报告：&quot;Failed to open PTY: No such file or directory&quot;</td></tr><tr><td>11:53</td><td>通过 <code>mknod /dev/null c 1 3; chmod 666 /dev/null</code> 恢复 <code>/dev/null</code></td></tr><tr><td>11:54</td><td>启动第二次构建；<code>mount -t devpts devpts …/dev/pts</code> 以 <code>ptmxmode=000</code> <strong>覆盖了宿主机的 <code>/dev/pts</code></strong></td></tr><tr><td>11:54</td><td>用户报告：&quot;Text was empty (or contained only whitespace)&quot;</td></tr><tr><td>11:56</td><td>以正确选项重新挂载宿主机 <code>/dev/pts</code>；GNOME Terminal 配置文件中 <code>use-custom-command=true</code> 但命令为空；重置为 <code>false</code></td></tr><tr><td>11:58</td><td>终端完全恢复</td></tr></tbody></table>
+<h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
+<h3 id="1-经由-live-bind-mount-的-rm-rf">1. 经由 live bind-mount 的 <code>rm -rf</code><a class="anchor" href="#1-经由-live-bind-mount-的-rm-rf" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># DANGEROUS: if /dev is still bind-mounted, this deletes HOST device nodes
+mount --bind /dev &quot;${ROOTFS}/dev&quot;
+# ... build interrupted ...
+rm -rf &quot;${STAGING}&quot;   # deletes ${ROOTFS}/dev/* = HOST /dev/*</code></pre>
+<p><strong>影响</strong>：宿主机上的 <code>/dev/null</code> 和 <code>/dev/ptmx</code> 被删除。</p>
+<h3 id="2-devpts-挂载覆盖宿主机">2. <code>devpts</code> 挂载覆盖宿主机<a class="anchor" href="#2-devpts-挂载覆盖宿主机" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># DANGEROUS: mounts a NEW devpts over the host's /dev/pts
+mount -t devpts devpts &quot;${ROOTFS}/dev/pts&quot;</code></pre>
+<p>在缺少 <code>newinstance</code> 的情况下，这会用一个采用受限默认值（<code>ptmxmode=000</code>）的新<br>实例替换掉宿主机的 devpts 挂载，从而在整个系统范围内阻止任何新的<br>PTY 分配。</p>
+<h3 id="3-销毁性清理前缺少安全检查">3. 销毁性清理前缺少安全检查<a class="anchor" href="#3-销毁性清理前缺少安全检查" aria-label="锚点">#</a></h3>
+<p><code>cleanup()</code> 函数假定 <code>umount</code> 总是成功，随后无条件执行了<br><code>rm -rf</code>。在构建被中断的情况下，<code>umount</code> 可能会静默失败<br>（目标繁忙、已被子进程卸载等）。</p>
+<h2 id="已实施修复-commit-3f70078">已实施修复（commit 3f70078）<a class="anchor" href="#已实施修复-commit-3f70078" aria-label="锚点">#</a></h2>
+<h3 id="修复-1-挂载隔离">修复 1：挂载隔离<a class="anchor" href="#修复-1-挂载隔离" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">mount --bind /dev &quot;${ROOTFS}/dev&quot;
+mount --make-rslave &quot;${ROOTFS}/dev&quot;          # NEW: prevent propagation
+mount -t devpts devpts &quot;${ROOTFS}/dev/pts&quot; \
+  -o newinstance,gid=5,mode=620,ptmxmode=666 # NEW: isolated instance</code></pre>
+<ul><li><code>--make-rslave</code>：chroot 内部的卸载事件不会传播到宿主机</li><li><code>newinstance</code>：创建一个独立的 devpts 文件系统，宿主机 <code>/dev/pts</code> 不受影响</li></ul>
+<h3 id="修复-2-rm-前的安全检查">修复 2：<code>rm</code> 前的安全检查<a class="anchor" href="#修复-2-rm-前的安全检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cleanup() {
+  umount -lf &quot;${ROOTFS}/dev/pts&quot; 2&gt;/dev/null || true
+  umount -lf &quot;${ROOTFS}/dev&quot;     2&gt;/dev/null || true
+  # ...
+  if mountpoint -q &quot;${ROOTFS}/dev&quot; 2&gt;/dev/null; then
+    warn &quot;dev still mounted! Skipping rm to protect host.&quot;
+    return 1
+  fi
+  rm -rf &quot;${STAGING}&quot;
+}</code></pre>
+<h3 id="修复-3-正确的卸载顺序">修复 3：正确的卸载顺序<a class="anchor" href="#修复-3-正确的卸载顺序" aria-label="锚点">#</a></h3>
+<p>改为按相反顺序卸载：<code>proc → sys → dev/pts → dev</code>。</p>
+<h2 id="恢复命令">恢复命令<a class="anchor" href="#恢复命令" aria-label="锚点">#</a></h2>
+<p>若再次发生此问题，使用以下命令恢复：</p>
+<pre><code class="language-bash"># Restore /dev/null
+sudo mknod /dev/null c 1 3
+sudo chmod 666 /dev/null
+
+# Restore /dev/ptmx
+sudo mknod /dev/ptmx c 5 2
+sudo chmod 666 /dev/ptmx
+
+# Fix /dev/pts permissions
+sudo mount -o remount,gid=5,mode=620,ptmxmode=666 /dev/pts
+
+# If GNOME Terminal shows &quot;Text was empty&quot;
+dconf write /org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/use-custom-command false</code></pre>
+<h2 id="经验教训">经验教训<a class="anchor" href="#经验教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>绝不要对包含 bind-mount 的目录树执行 <code>rm -rf</code></strong> —— 务必先用</li></ol>
+<p><code>mountpoint -q</code> 进行验证。</p>
+<ol><li><strong>在 chroot 中挂载 devpts 时务必使用 <code>newinstance</code></strong> —— 否则</li></ol>
+<p>宿主机的 PTY 子系统会被静默替换。</p>
+<ol><li><strong>在 bind-mount 上使用 <code>--make-rslave</code></strong>，以阻止事件在 chroot</li></ol>
+<p>与宿主机之间传播。</p>
+<ol><li><strong>构建被中断是常态，而非例外</strong> —— 清理逻辑必须能够</li></ol>
+<p>稳健应对部分完成的状态。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-OTHER-001] RESTORE_WINDOWS.html"><div class="dir">← 上一篇</div><div class="ttl">还原后重建指南（Windows / Linux 通用）</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-OTHER-003] 索引.html"><div class="dir">下一篇 →</div><div class="ttl">文档索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-OTHER-002] 事后分析-终端崩溃-2026-05-09.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

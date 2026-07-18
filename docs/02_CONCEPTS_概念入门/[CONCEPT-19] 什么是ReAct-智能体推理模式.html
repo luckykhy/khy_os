@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑲ 什么是 ReAct（智能体的推理模式） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑲ 什么是 ReAct（智能体的推理模式）</div>
+      <header class="hero reveal"><h1>⑲ 什么是 ReAct（智能体的推理模式）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑲-什么是-react-智能体的推理模式">⑲ 什么是 ReAct（智能体的推理模式）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要-react-因为-闷头一把梭-会翻车">二、为什么需要 ReAct？——因为&quot;闷头一把梭&quot;会翻车</a></li><li class="lvl-2"><a href="#三-核心比喻-像人一样-边想边做">三、核心比喻：像人一样&quot;边想边做&quot;</a></li><li class="lvl-3"><a href="#比喻一-老侦探破案-而不是算命先生">比喻一：老侦探破案，而不是算命先生</a></li><li class="lvl-3"><a href="#比喻二-走夜路的人-走一步-照一步">比喻二：走夜路的人，走一步、照一步</a></li><li class="lvl-2"><a href="#四-拆开看-react-的三拍节奏">四、拆开看：ReAct 的三拍节奏</a></li><li class="lvl-2"><a href="#五-react-不是唯一的模式-认识几个-思考流派">五、ReAct 不是唯一的模式——认识几个&quot;思考流派&quot;</a></li><li class="lvl-2"><a href="#六-感觉一下-一段-react-的-内心独白">六、感觉一下：一段 ReAct 的&quot;内心独白&quot;</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-react-是某个软件-某个工具">误区 1：以为 ReAct 是某个软件、某个工具</a></li><li class="lvl-3"><a href="#误区-2-把-react-和-tool-loop-完全画等号">误区 2：把 ReAct 和 Tool Loop 完全画等号</a></li><li class="lvl-3"><a href="#误区-3-以为-把思考写出来-是浪费">误区 3：以为&quot;把思考写出来&quot;是浪费</a></li><li class="lvl-3"><a href="#误区-4-以为-react-就一定不会出错">误区 4：以为 ReAct 就一定不会出错</a></li><li class="lvl-3"><a href="#误区-5-以为-react-是唯一-正确-的模式">误区 5：以为 ReAct 是唯一&quot;正确&quot;的模式</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-用两种模式-回答同一个刁钻问题">实验：用两种模式，回答同一个刁钻问题</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑲-什么是-react-智能体的推理模式">⑲ 什么是 ReAct（智能体的推理模式）<a class="anchor" href="#⑲-什么是-react-智能体的推理模式" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a>、<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 什么是 Tool Loop</a> 和 <a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">⑱ 什么是系统提示词</a>。那几篇讲了&quot;AI 会自己干活&quot;&quot;反复用工具直到完成&quot;&quot;开发者给它定了做事规矩&quot;。这一篇要回答一个更深的问题：<strong>AI 在动手之前，脑子里到底是&quot;怎么想&quot;的？它是闷头一把梭，还是像个靠谱的人那样&quot;先想一步、做一步、看一眼结果、再想下一步&quot;？</strong> 这套&quot;边想边做&quot;的思考套路，就是本篇的主角——<strong>ReAct 模式</strong>，以及它的几个兄弟模式。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>ReAct = 让 AI 像人一样&quot;想一步、做一步、看一眼结果、再想下一步&quot;的一种做事套路（Reason 推理 + Act 行动，交替进行）。</strong></p>
+<p>&quot;ReAct&quot;这个名字就是拼出来的：<strong>Rea</strong>son（推理）+ Act（行动）= ReAct。如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>别让 AI 闷头一口气把话说完、把事做完。让它把每一步都拆成三拍：先&quot;想&quot;（我现在该干嘛）→ 再&quot;做&quot;（真的去用个工具）→ 然后&quot;看&quot;（工具给了我什么结果）——看完再进下一轮的&quot;想&quot;。想—做—看，想—做—看，直到事成。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>你可能会问：&quot;这不就是 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 工具循环</a> 吗？反复用工具直到完成？&quot;——非常接近，但有个关键差别！工具循环讲的是<strong>那个&quot;圈&quot;的机械流程</strong>（用工具→看结果→再用工具）；而 ReAct 强调的是圈里那个<strong>&quot;想&quot;的动作被明明白白地摆出来了</strong>——AI 每次动手前，会先<span class="popover" tabindex="0"><span class="popover-anchor">把自己的思路&quot;说出声&quot;</span><span class="popover-tip" role="tooltip">后面你会看到，ReAct 里 AI 会先写一句 &quot;Thought：我需要先读一下配置文件&quot;，再去动手——这句&quot;想&quot;不是给你看的废话，而是它给自己理清下一步的草稿</span></span>：为什么这么做、下一步打算干嘛。<strong>&quot;把思考显式地写出来，再行动&quot;</strong>，这才是 ReAct 的灵魂。这一篇不用懂代码，抓住&quot;三花猫走路：想一步、迈一步、看一步&quot;就行～ 🐣</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 是&quot;那个循环的骨架&quot;，ReAct 是&quot;在循环里，让 AI 每步都先想清楚再动手&quot;的思考纪律</strong>——它是给那个圈填进去的&quot;聪明的走法&quot;。</p>
+<hr>
+<h2 id="二-为什么需要-react-因为-闷头一把梭-会翻车">二、为什么需要 ReAct？——因为&quot;闷头一把梭&quot;会翻车<a class="anchor" href="#二-为什么需要-react-因为-闷头一把梭-会翻车" aria-label="锚点">#</a></h2>
+<p>要理解 ReAct 的价值，先看看&quot;没有它&quot;会怎样。</p>
+<p>大模型的本能，是<strong>顺着往下&quot;一口气&quot;接话</strong>（还记得 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a> 讲的&quot;文字接龙&quot;吗）。如果你让它做一件需要好几步、还依赖真实信息的事，它的本能反应是——<strong>不管三七二十一，凭想象一路编到底。</strong></p>
+<p>举个例子。你问：&quot;帮我查查我这个项目现在用的是哪个版本的某个库，然后告诉我要不要升级。&quot;</p>
+<ul><li><strong>闷头一把梭的 AI</strong>：它没去读你的文件，纯靠&quot;猜&quot;，张口就说&quot;你用的是 3.2 版，建议升到最新的 5.0&quot;——<strong>可你项目里根本没装这个库，它全编的。</strong> 这就是 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a> 讲的&quot;幻觉&quot;。</li><li><strong>用 ReAct 的 AI</strong>：它会先停下来<strong>想</strong>——&quot;要回答这个，我得先真的去看一眼配置文件&quot;；然后<strong>做</strong>——真去读了 <code>package.json</code>；再<strong>看</strong>——哦，实际装的是 4.1 版；再<strong>想</strong>——&quot;现在有真实依据了，可以给建议了&quot;；最后才回答。</li></ul>
+<pre class="mermaid">flowchart TB
+  subgraph 一把梭[&quot;😱 闷头一把梭&quot;]
+    Q1[&quot;你的问题&quot;] --&gt; BLIND[&quot;🧠 凭想象一路编&lt;br/&gt;（没查任何真实信息）&quot;] --&gt; WRONG[&quot;❌ 说得头头是道，&lt;br/&gt;但可能全是编的&quot;]
+  end
+  subgraph react[&quot;🎯 ReAct：想—做—看&quot;]
+    Q2[&quot;你的问题&quot;] --&gt; T1[&quot;💭 想：我得先读配置文件&quot;]
+    T1 --&gt; A1[&quot;🖐️ 做：真的去读文件&quot;]
+    A1 --&gt; O1[&quot;👀 看：实际是 4.1 版&quot;]
+    O1 --&gt; T2[&quot;💭 想：有真依据了，可以答&quot;]
+    T2 --&gt; RIGHT[&quot;✅ 基于真实信息作答&quot;]
+  end</pre>
+<p><strong>ReAct 的价值就一句话：把 AI 从&quot;凭想象一把梭&quot;，掰成&quot;先查证、再下判断&quot;的靠谱做法。</strong> 它逼着 AI 在每个岔路口先想清楚、去拿真实信息、看完再走——这正是它比&quot;闷头输出&quot;可靠得多的根本原因。</p>
+<hr>
+<h2 id="三-核心比喻-像人一样-边想边做">三、核心比喻：像人一样&quot;边想边做&quot;<a class="anchor" href="#三-核心比喻-像人一样-边想边做" aria-label="锚点">#</a></h2>
+<p>&quot;推理—行动交替&quot;这个说法太抽象，用两个你天天在做的画面就能焊死它。</p>
+<h3 id="比喻一-老侦探破案-而不是算命先生">比喻一：老侦探破案，而不是算命先生<a class="anchor" href="#比喻一-老侦探破案-而不是算命先生" aria-label="锚点">#</a></h3>
+<p>一个<strong>算命先生</strong>（闷头一把梭），你一坐下，他不问不查，张口就把你下半辈子编得天花乱坠——听着热闹，全是瞎猜。</p>
+<p>一个<strong>老侦探</strong>（ReAct），破案是这样的：<strong>想</strong>——&quot;死者手上有泥，我该去看看后院&quot;；<strong>做</strong>——真的去后院勘查；<strong>看</strong>——发现一个脚印；<strong>想</strong>——&quot;这脚印偏小，凶手可能个子不高&quot;；<strong>做</strong>——去比对嫌疑人身高……<strong>每一步推理，都踩在上一步查到的真凭实据上。</strong> 他从不凭空下结论，而是&quot;想一点、查一点、再想一点&quot;。</p>
+<p><strong>AI 用 ReAct，就是从&quot;算命先生&quot;变成&quot;老侦探&quot;。</strong></p>
+<h3 id="比喻二-走夜路的人-走一步-照一步">比喻二：走夜路的人，走一步、照一步<a class="anchor" href="#比喻二-走夜路的人-走一步-照一步" aria-label="锚点">#</a></h3>
+<p>想象你打着手电走一条陌生的夜路。你不会闭着眼一路狂奔（闷头一把梭，非摔沟里不可）。你会：<strong>想</strong>——&quot;前面黑，我照一下&quot;；<strong>做</strong>——把手电往前一照；<strong>看</strong>——哦，前面有个坑；<strong>想</strong>——&quot;得绕左边&quot;；<strong>做</strong>——迈左脚……<strong>每迈一步，都先照一下、看清了再走。</strong></p>
+<p><strong>ReAct = 打着手电走夜路：想一步、照一步（拿真实信息）、看清了再迈下一步。</strong></p>
+<pre class="mermaid">flowchart LR
+  T[&quot;💭 想&lt;br/&gt;（下一步该干嘛）&quot;] --&gt; A[&quot;🖐️ 做&lt;br/&gt;（真的动手 / 用工具）&quot;]
+  A --&gt; O[&quot;👀 看&lt;br/&gt;（拿到真实结果）&quot;]
+  O --&gt;|&quot;还没到终点，&lt;br/&gt;带着新信息再想&quot;| T
+  O --&gt;|&quot;够了，收工&quot;| DONE[&quot;✅ 给出答案&quot;]</pre>
+<p>两个比喻的<strong>共同内核</strong>：<strong>不凭空一把梭，而是&quot;每走一步都先想清楚、去拿真凭实据、看完再决定下一步&quot;。</strong> 记住这一点，ReAct 是什么就再也不会忘。</p>
+<hr>
+<h2 id="四-拆开看-react-的三拍节奏">四、拆开看：ReAct 的三拍节奏<a class="anchor" href="#四-拆开看-react-的三拍节奏" aria-label="锚点">#</a></h2>
+<p>把 ReAct 的一轮拆开，就是雷打不动的三拍。业内常用三个英文词，但你只要记中文：</p>
+<table><thead><tr><th>一拍</th><th>英文</th><th>大白话</th><th>老侦探版</th></tr></thead><tbody><tr><td><strong>① 想</strong></td><td>Thought（思考）</td><td>&quot;我现在该干嘛、为什么&quot;</td><td>&quot;死者手上有泥，我该去后院看看&quot;</td></tr><tr><td><strong>② 做</strong></td><td>Action（行动）</td><td>真的去用一个工具（读文件/搜索/跑命令）</td><td>真的走去后院勘查</td></tr><tr><td><strong>③ 看</strong></td><td>Observation（观察）</td><td>拿到工具返回的真实结果</td><td>在后院发现一个脚印</td></tr></tbody></table>
+<p>这三拍转成一个圈，就是 ReAct 的&quot;心跳&quot;：</p>
+<pre class="mermaid">flowchart TB
+  START[&quot;🙋 你的目标&quot;] --&gt; LOOP
+  subgraph LOOP[&quot;🔁 ReAct 的一轮心跳&quot;]
+    THINK[&quot;💭 ① Thought 想：&lt;br/&gt;基于目前所知，下一步该干嘛&quot;] --&gt; ACT[&quot;🖐️ ② Action 做：&lt;br/&gt;选一个工具，真的去用&quot;]
+    ACT --&gt; OBS[&quot;👀 ③ Observation 看：&lt;br/&gt;工具返回了什么真实结果&quot;]
+    OBS --&gt; CHECK{{&quot;够了吗？&lt;br/&gt;能回答了吗？&quot;}}
+    CHECK --&gt;|&quot;还不够，带着&lt;br/&gt;新观察再想一轮&quot;| THINK
+  end
+  CHECK --&gt;|&quot;够了&quot;| ANSWER[&quot;✅ 给出最终答案&quot;]</pre>
+<p><strong>看懂这张图，你就看懂了一个&quot;靠谱的 AI&quot;脑子里在干什么</strong>：它不是把你的问题一口气编完，而是把&quot;想&quot;这个动作<strong>显式地摆出来、每一步都拿真实观察去校准下一步的想法</strong>。这，就是 ReAct 让 AI 变可靠的秘密。</p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>ReAct 最反直觉、也最关键的一点是：<strong>它逼 AI 把&quot;思考&quot;写出来。</strong> 你可能觉得&quot;想&quot;是内心戏、写出来是废话——恰恰相反，正是这句写出来的&quot;Thought：我需要先……&quot;，让 AI 给自己理清了下一步、避免了脑子一热就乱动手。<strong>把思路显式化，是 ReAct 让 AI 少犯浑的核心机关。</strong></p></div></aside>
+<hr>
+<h2 id="五-react-不是唯一的模式-认识几个-思考流派">五、ReAct 不是唯一的模式——认识几个&quot;思考流派&quot;<a class="anchor" href="#五-react-不是唯一的模式-认识几个-思考流派" aria-label="锚点">#</a></h2>
+<p>ReAct 是最经典、最常用的一种智能体做事模式，但它有几个&quot;兄弟&quot;。你不用记全，但认个脸，日后聊 AI 不露怯。它们的区别，全在<strong>&quot;想&quot;和&quot;做&quot;怎么排布</strong>：</p>
+<table><thead><tr><th>模式</th><th>大白话</th><th>像什么人</th><th>什么时候合适</th></tr></thead><tbody><tr><td><strong>思维链（CoT）</strong></td><td>只在脑子里一步步想清楚，<strong>不动手用工具</strong>，然后一口气答</td><td>学生在草稿纸上分步演算数学题</td><td>纯推理题（算数、逻辑），不需要外部信息</td></tr><tr><td><strong>ReAct</strong></td><td>想—做—看 交替，<strong>边想边用工具拿真实信息</strong></td><td>老侦探边推理边取证</td><td>需要读文件、查资料、跑命令的真实任务</td></tr><tr><td><strong>先规划后执行（Plan-and-Execute）</strong></td><td><strong>先把整个计划列全</strong>，再一条条照着做</td><td>出门前先列好完整购物清单，再照单采购</td><td>步骤多、能提前想清楚的大任务</td></tr><tr><td><strong>反思（Reflexion）</strong></td><td>做完先<strong>自我复盘</strong>&quot;哪儿没做好&quot;，再改进重来</td><td>运动员看回放找毛病，再练一遍</td><td>允许多试几次、追求越做越好的任务</td></tr></tbody></table>
+<pre class="mermaid">flowchart TB
+  COT[&quot;🧮 思维链 CoT&lt;br/&gt;只想不做&lt;br/&gt;想想想 → 答&quot;]
+  REACT[&quot;🕵️ ReAct&lt;br/&gt;边想边做&lt;br/&gt;想→做→看→想→做→看&quot;]
+  PLAN[&quot;📋 先规划后执行&lt;br/&gt;先想全 → 再挨个做&lt;br/&gt;想想想 → 做做做&quot;]
+  REFLEX[&quot;🔁 反思 Reflexion&lt;br/&gt;做完复盘再来&lt;br/&gt;做 → 反思 → 再做得更好&quot;]</pre>
+<p>一句话点破它们的关系：<strong>它们不是互相竞争、你死我活，而是&quot;针对不同活儿的不同走法&quot;。</strong> 纯算数题用 CoT（不用动手）；要读文件查资料的真实任务用 ReAct（边想边取证）；步骤明确的大工程可以先 Plan 再 Execute；追求精益求精可以加一层 Reflexion。<strong>一个成熟的 AI 助手，常常是这几种混着用。</strong> 而 ReAct，是其中最百搭、最常见的那一款。</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">既然有&quot;先规划后执行&quot;能一次把计划想全，那为什么不总用它，非要 ReAct 走一步看一步？（点一下翻到背面）<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">因为真实世界会&quot;打脸计划&quot;。你出门前列好购物清单（先规划），可到了超市发现&quot;要买的酱油卖光了&quot;——计划当场作废，得临时改。真实任务里，你<strong>读了文件才知道里面写了啥、跑了测试才知道哪儿报错</strong>，很多信息不动手根本拿不到。ReAct 的&quot;走一步看一步&quot;，恰恰能<strong>根据每一步的真实结果随时调整</strong>，不会被一个过时的计划带沟里去。所以：<strong>能提前想全的用规划，充满未知、需要边走边探的用 ReAct</strong>——现实中后者更多，这也是 ReAct 最常用的原因。</div></div></div>
+<hr>
+<h2 id="六-感觉一下-一段-react-的-内心独白">六、感觉一下：一段 ReAct 的&quot;内心独白&quot;<a class="anchor" href="#六-感觉一下-一段-react-的-内心独白" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段你完全不用会写。</strong> 放它在这，只是让你<strong>亲眼看一眼</strong>——一个用 ReAct 的 AI，在完成&quot;查库版本、给升级建议&quot;这个任务时，脑子里那串&quot;想—做—看&quot;长什么样。请只体会那个<strong>三拍循环的节奏</strong>：</p>
+<pre><code class="language-text">🙋 你的目标：查我项目里某个库的版本，告诉我要不要升级
+
+💭 Thought（想）：要回答，我不能瞎猜，得先看真实的依赖文件。
+🖐️ Action（做）：读取 package.json
+👀 Observation（看）：里面写着 &quot;某库&quot;: &quot;4.1.0&quot;
+
+💭 Thought（想）：现在装的是 4.1.0。我还得知道最新版是多少，才好比较。
+🖐️ Action（做）：查询该库的最新版本
+👀 Observation（看）：最新是 4.3.2，且 4.3 修了一个安全漏洞
+
+💭 Thought（想）：4.1 → 4.3 是小版本升级，风险低，还能修安全洞。
+              信息够了，可以给结论了。
+✅ 最终答案：你现在是 4.1.0，建议升级到 4.3.2——升级平滑，
+            还能修掉一个已知安全漏洞。</code></pre>
+<p>看到那个反复出现的&quot;想 → 做 → 看&quot;了吗？<strong>这就是 ReAct 的真身。</strong> AI 没有一上来就下结论，而是每一步都先&quot;想清楚要干嘛&quot;，再&quot;真的去拿一手信息&quot;，&quot;看到结果&quot;后再想下一步——直到攒够真实依据，才给答案。</p>
+<p><strong>整段独白里，那些&quot;想&quot;（Thought）不是废话，而是 AI 给自己搭的台阶——每一层台阶都踩在上一步&quot;看&quot;到的真实结果上。</strong> 这就是为什么用 ReAct 的 AI，比闷头一把梭的 AI 靠谱得多。</p>
+<p>把上面这段&quot;内心独白&quot;演成一幕小短剧——你会看到同一个任务，闷头一把梭 vs 想—做—看三拍，下场完全不同：</p>
+<div class="scene"><div class="scene-title">查库升级：想一步、做一步、看一步</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>查一下我项目里某个库的版本，告诉我要不要升级。</div></div><div class="scene-caption reveal">反面教材：闷头一把梭，不看真实文件就下结论。</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">一把梭 AI</b>这库嘛……我印象里最新是 4.0，你八成已经最新了，不用升！（全凭记忆瞎猜）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😵</span><div class="scene-bubble"><b class="scene-who">旁白</b>它没读你的文件、没查最新版，纯靠印象——这正是幻觉高发的一把梭。</div></div><div class="scene-caption reveal">正解：ReAct，每一步先想清楚，再真的去拿一手信息。</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">💭</span><div class="scene-bubble"><b class="scene-who">ReAct AI（想）</b>不能瞎猜，我得先看真实的依赖文件。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">ReAct AI（做）</b>读取 package.json……</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">👀</span><div class="scene-bubble"><b class="scene-who">ReAct AI（看）</b>里面写着 &quot;某库&quot;: &quot;4.1.0&quot;。哦，现在装的是 4.1.0。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">💭</span><div class="scene-bubble"><b class="scene-who">ReAct AI（想）</b>光知道现装版本还不够，得查最新版才好比较。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">ReAct AI（做）</b>查询该库最新版本……</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">👀</span><div class="scene-bubble"><b class="scene-who">ReAct AI（看）</b>最新是 4.3.2，而且 4.3 修了一个安全漏洞。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">💭</span><div class="scene-bubble"><b class="scene-who">ReAct AI（想）</b>4.1→4.3 是小版本、风险低，还能补安全洞。依据够了，可以下结论。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">✅</span><div class="scene-bubble"><b class="scene-who">ReAct AI</b>你现在是 4.1.0，建议升到 4.3.2——升级平滑，还能修掉一个已知安全漏洞。</div></div><div class="scene-caption reveal">看到那反复出现的 <span class="popover" tabindex="0"><span class="popover-anchor">想→做→看</span><span class="popover-tip" role="tooltip">Thought→Action→Observation：每一步的&quot;想&quot;都踩在上一步&quot;看&quot;到的真实结果上，而不是凭印象</span></span> 了吗？这就是 ReAct 比一把梭靠谱的根。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;ReAct&quot;的理解跑偏。</p>
+<h3 id="误区-1-以为-react-是某个软件-某个工具">误区 1：以为 ReAct 是某个软件、某个工具<a class="anchor" href="#误区-1-以为-react-是某个软件-某个工具" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：ReAct 是不是一个我可以下载安装的程序？</li><li>✅ <strong>正确理解</strong>：<strong>ReAct 不是软件，是一种&quot;做事的套路 / 思考模式&quot;。</strong> 它是&quot;让 AI 想一步做一步看一步&quot;的一套方法论，通常是通过 <a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">⑱ 系统提示词</a> 教给模型的，而不是一个能装的 App。</li></ul>
+<h3 id="误区-2-把-react-和-tool-loop-完全画等号">误区 2：把 ReAct 和 Tool Loop 完全画等号<a class="anchor" href="#误区-2-把-react-和-tool-loop-完全画等号" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：ReAct 和 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 工具循环</a> 是一模一样的东西。</li><li>✅ <strong>正确理解</strong>：<strong>很近，但侧重点不同。</strong> 工具循环讲的是&quot;那个圈的机械流程&quot;（用工具→看结果→再用工具，由 harness 推着转）；ReAct 讲的是&quot;圈里 AI 该怎么想&quot;——强调<strong>把'思考'显式地摆出来、每步用真实观察校准</strong>。可以说：<strong>ReAct 是给工具循环填进去的一种&quot;聪明走法&quot;。</strong> 循环是舞台，ReAct 是舞台上的走位。</li></ul>
+<h3 id="误区-3-以为-把思考写出来-是浪费">误区 3：以为&quot;把思考写出来&quot;是浪费<a class="anchor" href="#误区-3-以为-把思考写出来-是浪费" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：让 AI 先写一句&quot;我在想……&quot;再动手，多此一举、浪费字数吧？</li><li>✅ <strong>正确理解</strong>：<strong>那句&quot;想&quot;恰恰是 ReAct 的灵魂。</strong> 显式地写出思路，能让 AI 给自己理清下一步、暴露自己的推理链、少犯&quot;脑子一热就乱动手&quot;的错。省掉这句&quot;想&quot;，AI 就容易退回&quot;闷头一把梭&quot;。<strong>把思考写出来，是可靠性的来源，不是浪费。</strong></li></ul>
+<h3 id="误区-4-以为-react-就一定不会出错">误区 4：以为 ReAct 就一定不会出错<a class="anchor" href="#误区-4-以为-react-就一定不会出错" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：只要用了 ReAct，AI 就绝不犯错了。</li><li>✅ <strong>正确理解</strong>：<strong>ReAct 大幅提高可靠性，但不是万能保险。</strong> 它让 AI&quot;基于真实信息决策&quot;，可 AI 仍可能&quot;想岔了&quot;&quot;看错了结果&quot;&quot;工具本身返回了错的信息&quot;。ReAct 让 AI 更像个谨慎的人，但&quot;谨慎的人&quot;也会犯错——所以还需要 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ Harness</a> 的安全闸门、以及你自己的把关。</li></ul>
+<h3 id="误区-5-以为-react-是唯一-正确-的模式">误区 5：以为 ReAct 是唯一&quot;正确&quot;的模式<a class="anchor" href="#误区-5-以为-react-是唯一-正确-的模式" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：既然 ReAct 这么好，那所有 AI 都该、都只用 ReAct。</li><li>✅ <strong>正确理解</strong>：<strong>看活儿下菜。</strong> 纯算数逻辑题，用不着动手拿信息，思维链 CoT（只想不做）更利落；步骤能提前想全的大工程，可以先规划后执行；追求越做越好，可以加反思。<strong>ReAct 最百搭、最常用，但不是唯一——真正厉害的助手会按任务混着用。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;ReAct 模式&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">ReAct 是&quot;推理 + 行动&quot;交替：想一步 → 做一步 → 看一步结果 → 再想下一步</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">它比&quot;闷头一把梭&quot;可靠，是因为每步都基于真实观察来校准下一步，而不是凭想象编</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">ReAct 是一个可以下载安装的软件工具</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">D</span><span class="quiz-text">&quot;把思考显式地写出来（Thought）&quot;是 ReAct 的核心，不是浪费</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">E</span><span class="quiz-text">只要用了 ReAct，AI 就绝对不会犯错了</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。Reason（想）+ Act（做）+ Observation（看）循环往复，直到攒够真实依据再作答。<br>对。老侦探边推理边取证，而不是算命先生凭空瞎编——这正是它少犯幻觉的原因。<br>错。它是一种&quot;做事套路/思考模式&quot;，通常靠系统提示词教给模型，不是能装的 App。<br>对。写出思路能让 AI 理清下一步、暴露推理链、少犯浑——省掉它就退回闷头一把梭了。<br>错。它大幅提高可靠性但非万能，AI 仍可能想岔、看错，还需 harness 闸门和你的把关兜底。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如在脑子里走一遍。下面的思想实验不用写代码，只用想。</p>
+<h3 id="实验-用两种模式-回答同一个刁钻问题">实验：用两种模式，回答同一个刁钻问题<a class="anchor" href="#实验-用两种模式-回答同一个刁钻问题" aria-label="锚点">#</a></h3>
+<p>问题：&quot;我家冰箱里现在还能不能做一顿番茄炒蛋？&quot;</p>
+<p><strong>A. 闷头一把梭（没有 ReAct）</strong>：AI 不看你的冰箱，直接猜——&quot;当然可以，番茄炒蛋很简单！&quot;——<strong>可你冰箱里根本没鸡蛋，它在瞎说。</strong></p>
+<p><strong>B. 用 ReAct（想—做—看）</strong>：</p>
+<pre class="mermaid">flowchart TB
+  Q[&quot;🙋 冰箱里还能做番茄炒蛋吗？&quot;] --&gt; T1[&quot;💭 想：得先看看冰箱里有啥&quot;]
+  T1 --&gt; A1[&quot;🖐️ 做：打开冰箱看一眼&quot;]
+  A1 --&gt; O1[&quot;👀 看：有番茄，没有鸡蛋&quot;]
+  O1 --&gt; T2[&quot;💭 想：缺鸡蛋，做不成经典版；&lt;br/&gt;但可以提示替代方案&quot;]
+  T2 --&gt; ANS[&quot;✅ 答：暂时不行——有番茄但没鸡蛋。&lt;br/&gt;要么先买蛋，要么做个番茄汤&quot;]</pre>
+<p>走完这一遍，请你回答自己三个问题：</p>
+<ol><li>A 和 B，哪个的回答&quot;有真凭实据&quot;？——<strong>B，因为它真的去&quot;看&quot;了冰箱。</strong></li><li>B 里那句&quot;想：得先看看冰箱里有啥&quot;，起了什么作用？——<strong>它让 AI 意识到&quot;不能瞎猜，得先取证&quot;，这就是 ReAct 的关键一步。</strong></li><li>如果冰箱里其实有蛋，B 的答案会不会自动变对？——<strong>会。因为它的结论是跟着&quot;看到的真实结果&quot;走的，而不是提前编死的。</strong></li></ol>
+<p><strong>关键体会</strong>：你刚刚亲眼看到，&quot;先想、去看、再答&quot;这套 ReAct 节奏，是怎么把一个爱瞎猜的 AI，变成一个&quot;讲证据&quot;的 AI 的。下次你用 AI，不妨留意它是不是&quot;先去查了再答&quot;——<strong>会查证的 AI，才是用了 ReAct 的靠谱 AI。</strong></p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>ReAct 站在好几个概念的交叉口上——它是&quot;填进循环里的思考纪律&quot;。</p>
+<pre class="mermaid">flowchart TB
+  REACT[&quot;🕵️ ReAct（想—做—看的思考纪律）&quot;]
+  TL[&quot;③ Tool Loop&lt;br/&gt;（ReAct 就跑在这个圈里）&quot;]
+  TC[&quot;② Tool Calling&lt;br/&gt;（ReAct 里的'做'=调一个工具）&quot;]
+  SYS[&quot;⑱ 系统提示词&lt;br/&gt;（常在这里教 AI 用 ReAct）&quot;]
+  LLM[&quot;⑥ LLM&lt;br/&gt;（ReAct 专治它'一把梭'的幻觉）&quot;]
+  AGENT[&quot;① Agent&lt;br/&gt;（用了 ReAct 的 Agent 更靠谱）&quot;]
+  SYS --&gt;|&quot;教它这么想&quot;| REACT
+  REACT --&gt;|&quot;跑在其中&quot;| TL
+  REACT --&gt;|&quot;每轮的'做'就是&quot;| TC
+  REACT --&gt;|&quot;抑制&quot;| LLM
+  REACT --&gt;|&quot;让它更聪明&quot;| AGENT</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td><td>ReAct 就<strong>跑在工具循环这个圈里</strong>，是圈里的&quot;聪明走法&quot;</td><td>循环是跑道，ReAct 是跑步的姿势</td></tr><tr><td><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a></td><td>ReAct 三拍里的&quot;做&quot;（Action），就是<strong>调用一个工具</strong></td><td>侦探&quot;去后院勘查&quot;这个动作</td></tr><tr><td><a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">⑱ 系统提示词</a></td><td>AI 该用哪种思考模式，<strong>常写在系统提示词里</strong></td><td>守则里写明&quot;做事前先想清楚再动手&quot;</td></tr><tr><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a></td><td>ReAct 专门<strong>克制大模型&quot;凭想象一把梭&quot;的幻觉</strong></td><td>逼算命先生变成讲证据的侦探</td></tr><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>用了 ReAct 的 <strong>Agent 做事更谨慎、更靠谱</strong></td><td>一个&quot;三思而后行&quot;的助理</td></tr></tbody></table>
+<p>一句话串起来：<strong>ReAct 是由系统提示词教给模型、跑在工具循环这个圈里、每一轮用一次工具调用去拿真实信息、专治大模型幻觉、让 Agent 变得&quot;三思而后行&quot;的那套&quot;想—做—看&quot;的思考纪律。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>这一节和你手上的项目关系很紧：</p>
+<p><strong>Khy-OS 让 AI 干活时，走的正是 ReAct 这一路的思考模式。</strong></p>
+<p>你在用 Khy-OS 时应该注意到过：它不是你一提问就&quot;啪&quot;地甩给你一个答案，而是——先说一句它打算干嘛，然后真的去读某个文件、跑某条命令，把结果拿回来，再接着往下做。<strong>这，就是 ReAct 的&quot;想—做—看&quot;在真实项目里的样子。</strong></p>
+<ul><li>它每一步<strong>先表明意图</strong>（想）——对应 Thought；</li><li>它<strong>真的去调用工具</strong>（做）——对应 Action，也就是 <a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a>；</li><li>它<strong>拿到工具的真实结果</strong>（看）——对应 Observation；</li><li>然后<strong>基于真实结果再决定下一步</strong>，一圈圈推进，直到把你的活干完。</li></ul>
+<p>而 Khy-OS 的项目章程里那些方法论——&quot;先想再写&quot;&quot;目标驱动、每步带验证&quot;&quot;没跑过验证不许说修好了&quot;——本质上就是在把 AI 往<strong>更严格的 ReAct（甚至带反思）</strong>上引导：<strong>别凭空说做完了，去真的跑一遍、看到绿灯，才算数。</strong> 这份&quot;讲证据、看真实结果&quot;的纪律，正是 ReAct 精神的延伸。</p>
+<blockquote><p>💡 换个角度说：<strong>学会&quot;ReAct&quot;这个概念，你就看穿了&quot;靠谱 AI&quot;和&quot;话痨 AI&quot;的分水岭。</strong> 一个只会顺着你的话往下编的 AI，和一个&quot;先想、去查、看到真结果再答&quot;的 AI，可靠性天差地别。你从第一天就知道该期待后者——这份判断力，会让你既用得好 AI，也不会被它一本正经的胡说八道带偏。</p></blockquote>
+<blockquote><p>⚠️ 诚实说一句边界：具体用哪种模式、怎么在系统提示词和 harness 里落地，属于设计与实现层面，各家做法不同。Khy-OS 的具体机制你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 与项目章程里深入了解。本文只讲&quot;ReAct 等模式是什么、为什么需要它&quot;这一层概念地图。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>ReAct = 让 AI&quot;想一步、做一步、看一眼结果、再想下一步&quot;的做事套路</strong>（Reason 推理 + Act 行动，交替进行）。</li><li><strong>为什么需要它</strong>：大模型的本能是&quot;凭想象一口气编到底&quot;（幻觉）；ReAct 逼它&quot;先查证、再下判断&quot;，每步都踩在真实结果上，可靠得多。</li><li><strong>核心比喻</strong>：<strong>老侦探</strong>边推理边取证（而非算命先生瞎猜）、<strong>走夜路的人</strong>走一步照一步。</li><li><strong>三拍节奏</strong>：① Thought 想（下一步干嘛）→ ② Action 做（真的用工具）→ ③ Observation 看（拿真实结果），循环直到能作答。</li><li><strong>它有兄弟模式</strong>：思维链 CoT（只想不做，适合纯推理）、先规划后执行（先想全再挨个做）、反思 Reflexion（做完复盘再改进）——<strong>按任务混着用，ReAct 最百搭</strong>。</li><li><strong>五大误区</strong>：它是套路不是软件、和 Tool Loop 近但侧重&quot;怎么想&quot;、&quot;把思考写出来&quot;是灵魂不是浪费、它提高可靠但非万能、它不是唯一正确的模式。</li><li><strong>和 Khy-OS 的关系</strong>：Khy-OS 让 AI&quot;先说意图→真的用工具→看到结果→再决定&quot;，正是 ReAct；章程的&quot;目标驱动、每步验证、没验证不许说修好了&quot;是它的延伸。</li></ul>
+<p>🎉 <strong>恭喜，你看穿了&quot;靠谱 AI&quot;的思考纪律！</strong> 从此你再看 AI 干活，就能分辨它是&quot;闷头一把梭的话痨&quot;，还是&quot;想—做—看的老侦探&quot;——而这份分辨力，正是内行的眼光。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。</p>
+<p>👈 上一篇 <a href="./[CONCEPT-18]%20什么是系统提示词-SystemPrompt.html">⑱ 什么是系统提示词</a>——回顾一下是谁给 AI 定下了&quot;先想再做&quot;这类规矩。</p>
+<p>👉 下一篇 <a href="./[CONCEPT-20]%20什么是智能体编排-Orchestration.html">⑳ 什么是智能体编排</a>——一个 AI 会&quot;想—做—看&quot;了，那<strong>一群 AI</strong>该怎么被指挥、分工、协作？看看&quot;调兵遣将&quot;的艺术。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-18] 什么是系统提示词-SystemPrompt.html"><div class="dir">← 上一篇</div><div class="ttl">⑱ 什么是系统提示词（System Prompt）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-20] 什么是智能体编排-Orchestration.html"><div class="dir">下一篇 →</div><div class="ttl">⑳ 什么是智能体编排（Agent Orchestration）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-19] 什么是ReAct-智能体推理模式.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

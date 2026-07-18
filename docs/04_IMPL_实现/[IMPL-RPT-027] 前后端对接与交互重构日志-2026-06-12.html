@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>前后端对接与交互重构日志（夜间无人值守） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>前后端对接与交互重构日志（夜间无人值守）</div>
+      <header class="hero reveal"><h1>前后端对接与交互重构日志（夜间无人值守）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#前后端对接与交互重构日志-夜间无人值守">前后端对接与交互重构日志（夜间无人值守）</a></li><li class="lvl-2"><a href="#一-扫描结论-空壳分布">一、扫描结论（空壳分布）</a></li><li class="lvl-2"><a href="#二-已打通的空壳-按凭据强弱排序">二、已打通的空壳（按凭据强弱排序）</a></li><li class="lvl-3"><a href="#1-订单详情-livetradingcenter-vue-310-已对接">1. 订单详情 · `LiveTradingCenter.vue:310` ✅ 已对接</a></li><li class="lvl-3"><a href="#2-交易记录导出-professionaltradehistory-vue-584-已对接">2. 交易记录导出 · `ProfessionalTradeHistory.vue:584` ✅ 已对接</a></li><li class="lvl-3"><a href="#3-回放单步后退-datareplay-vue-532-后端缺失-标注待审">3. 回放单步后退 · `DataReplay.vue:532` ⚠️ 后端缺失，标注待审</a></li><li class="lvl-2"><a href="#三-已确认无需改动-容错型-mock-非空壳">三、已确认无需改动（容错型 mock，非空壳）</a></li><li class="lvl-2"><a href="#四-留给你的-todo">四、留给你的 TODO</a></li><li class="lvl-2"><a href="#五-验证与提交">五、验证与提交</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="前后端对接与交互重构日志-夜间无人值守">前后端对接与交互重构日志（夜间无人值守）<a class="anchor" href="#前后端对接与交互重构日志-夜间无人值守" aria-label="锚点">#</a></h1>
+<blockquote><p>任务：有凭据地补全前端空壳，实现极简透明、零污染的交互。<br>范围：扫描全前端（apps/ai-frontend、software/khyquant/frontend、TUI、Python CLI），<br>仅对「已存在后端逻辑、且直接响应用户意图或含 &gt;1.5s 网络往返」的空壳补显示。<br>约束：只调用后端、不增删后端核心逻辑；每打通一个即独立提交。</p></blockquote>
+<hr>
+<h2 id="一-扫描结论-空壳分布">一、扫描结论（空壳分布）<a class="anchor" href="#一-扫描结论-空壳分布" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>前端面</th><th>根目录</th><th>结论</th></tr></thead><tbody><tr><td>AI 网关/Agent UI</td><td><code>apps/ai-frontend/src</code>（Vue3+Vite）</td><td><strong>无空壳</strong>，全部运行时拉取真实数据</td></tr><tr><td>KhyQuant 交易前端</td><td><code>software/khyquant/frontend/src</code>（Vue3+Vite）</td><td>空壳集中于此，见下</td></tr><tr><td>TUI</td><td><code>services/backend/src/cli/tui</code>（Ink/React）</td><td>无 UI 空壳（占位仅输入框 placeholder）</td></tr><tr><td>Python CLI</td><td><code>platform/khy_platform</code>（启动器）</td><td>无功能空壳</td></tr></tbody></table>
+<p>前端→后端通道：khyquant 经 <code>axios</code>（<code>utils/connectionMode.js</code> 的 <code>getApiBaseUrl()</code> 感知<br>local/cloud/lan）+ WebSocket；<code>request</code> 拦截器直接返回响应体（<code>response.success</code> 可用）。</p>
+<hr>
+<h2 id="二-已打通的空壳-按凭据强弱排序">二、已打通的空壳（按凭据强弱排序）<a class="anchor" href="#二-已打通的空壳-按凭据强弱排序" aria-label="锚点">#</a></h2>
+<h3 id="1-订单详情-livetradingcenter-vue-310-已对接">1. 订单详情 · <code>LiveTradingCenter.vue:310</code> ✅ 已对接<a class="anchor" href="#1-订单详情-livetradingcenter-vue-310-已对接" aria-label="锚点">#</a></h3>
+<ul><li><strong>修改前</strong>：<code>viewOrderDetail = (order) =&gt; ElMessage.info('订单详情功能开发中...')</code>（纯空壳）。</li><li><strong>修改后</strong>：绑定<strong>已存在</strong>的 <code>tradeAPI.getOrderDetail(order.id)</code> → 后端 <code>GET /trading/order/:id</code></li></ul>
+<p>（<code>software/khyquant/routes/trade.js:702</code>，真实存在）。</p>
+<ul><li><strong>有凭据的 UI 显示及凭据</strong>：<ul><li>单行 <code>ElLoading</code>「检索订单详情 {symbol}…」——<strong>凭据：直接响应用户「查看详情」点击意图 + 含网络往返（可能 &gt;1.5s）</strong>。等待过程单行呈现、完成即自动消失，零残留。</li><li>成功仅渲染<strong>关键字段摘要</strong>（合约/方向/状态/委托价/数量/已成交/策略/下单时间，状态走 <code>getStatusText</code> 转人话），<strong>原始字段折叠进 <code>&lt;details&gt;</code></strong> 降噪。</li><li>失败走精准报错闭环：<code>查看订单详情失败 · 订单 {symbol}：{人话原因}。请稍后重试或刷新列表</code>（404→「订单不存在或已被清理」），<strong>不抛 stacktrace</strong>。HTML 值统一转义防注入。</li></ul></li><li><strong>提交</strong>：<code>feat: 对接订单详情空壳，实现单行Loading+折叠式透明反馈</code></li></ul>
+<h3 id="2-交易记录导出-professionaltradehistory-vue-584-已对接">2. 交易记录导出 · <code>ProfessionalTradeHistory.vue:584</code> ✅ 已对接<a class="anchor" href="#2-交易记录导出-professionaltradehistory-vue-584-已对接" aria-label="锚点">#</a></h3>
+<ul><li><strong>修改前</strong>：<code>exportTrades() { ElMessage.info('导出功能开发中...') }</code>（纯空壳）。</li><li><strong>修改后</strong>：基于<strong>已就绪</strong>的 <code>filteredTrades</code>（来自 <code>tradeAPI.getTrades()</code>）本地组装</li></ul>
+<p>UTF-8(BOM) CSV 并触发浏览器下载（文件名带时间戳）。</p>
+<ul><li><strong>有凭据的 UI 显示及凭据</strong>：<ul><li><strong>未加 Loading 控件</strong>——<strong>凭据：纯客户端组装 &lt;1.5s</strong>，按凭据原则不为快操作加状态位；</li><li>完成仅一行结果摘要 <code>✔ 已导出 N 笔交易记录</code>，隐藏过程；</li><li>空结果：<code>导出交易记录：当前筛选结果为空，请调整筛选条件后再试</code>；</li><li>异常走精准报错闭环：<code>导出交易记录失败：{原因}。请改用 Chrome/Edge 或检查下载权限</code>。</li><li>导出列与表格展示一致且转人话（买/卖、方式标签、状态文本、盈亏）。</li></ul></li><li><strong>提交</strong>：<code>feat: 对接交易记录导出空壳，实现客户端CSV真导出</code></li></ul>
+<h3 id="3-回放单步后退-datareplay-vue-532-后端缺失-标注待审">3. 回放单步后退 · <code>DataReplay.vue:532</code> ⚠️ 后端缺失，标注待审<a class="anchor" href="#3-回放单步后退-datareplay-vue-532-后端缺失-标注待审" aria-label="锚点">#</a></h3>
+<ul><li><strong>修改前</strong>：<code>stepBack = () =&gt; ElMessage.info('暂不支持后退，请重新开始回放')</code>。</li><li><strong>判定</strong>：后端回放仅有 <code>GET /:sessionId/next</code>（<code>routes/replay.js:84</code>），<strong>无 <code>/prev</code></strong>。</li></ul>
+<p>按「不增删后端核心逻辑」约束，<strong>不擅自补后端</strong>。</p>
+<ul><li><strong>修改后</strong>：加 <code>// TODO: [Integration-Unresolved] 需人工审查</code> 标注（指明需人工评估为回放引擎</li></ul>
+<p>补 <code>/prev</code> 步进或快照回滚），并将提示精准化为<br>  <code>单步后退暂未支持：回放引擎当前仅能前进，请点击「重新开始」从头回放</code>（动作+原因+建议）。</p>
+<ul><li><strong>提交</strong>：<code>chore: 回放后退空壳标注待人工审查并精准化降级提示</code></li></ul>
+<hr>
+<h2 id="三-已确认无需改动-容错型-mock-非空壳">三、已确认无需改动（容错型 mock，非空壳）<a class="anchor" href="#三-已确认无需改动-容错型-mock-非空壳" aria-label="锚点">#</a></h2>
+<p>下列「mock」均为<strong>成功路径已接真后端</strong>的离线/失败降级，且<strong>已自标注</strong>，符合透明原则，未改动：</p>
+<ul><li><code>InstrumentSelector.vue:143 useMockData()</code> — 失败时已设 <code>dataSource='模拟数据'</code> +</li></ul>
+<p><code>ElMessage.warning('API不可用,使用模拟数据')</code>，真后端 <code>routes/instruments.js</code>。</p>
+<ul><li><code>SimpleTradingInterface.js</code> 持仓 mock、`RealTimeKLineChart/SimpleKLineChart/priceDataService/</li></ul>
+<p>marketDataService<code> 的 K 线/行情 mock — 均为「真→缓存→模拟」三级降级，真后端<br>  </code>routes/klineData.js<code>/</code>marketData.js` 存在。</p>
+<blockquote><p>说明：这些是有意的离线韧性且已诚实标注数据来源，<strong>强行加提示反成新的显示污染</strong>，故保留。</p></blockquote>
+<hr>
+<h2 id="四-留给你的-todo">四、留给你的 TODO<a class="anchor" href="#四-留给你的-todo" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>[Integration-Unresolved]</code> 回放后退</strong>（<code>DataReplay.vue:532</code>）：如需真正单步后退，需人工决策为</li></ol>
+<p>回放引擎补 <code>/replay/:sessionId/prev</code>（或基于快照回滚），再由前端对接。属后端能力新增，已按约束留给人工。</p>
+<ol><li><strong>基准收益率未实现</strong>（<code>SimpleTradingInterface.js:5385</code> <code>benchmarkReturn: 0 // 暂未实现</code>）：</li></ol>
+<p>回测结果中的内部指标，硬编码为 0。实算需拉取基准指数序列对比，属功能新增而非接线缺口；<br>   按「不暴露纯内部项 / 不擅自补后端」暂未处理，待你确认是否纳入路线。</p>
+<ol><li><strong>导出端点（可选增强）</strong>：当前导出为客户端 CSV，已满足意图；若未来需服务端大批量导出/带签名，</li></ol>
+<p>可另议在 <code>routes/trade.js</code> 增 <code>GET /trading/export</code>（后端改动，需你授权）。</p>
+<hr>
+<h2 id="五-验证与提交">五、验证与提交<a class="anchor" href="#五-验证与提交" aria-label="锚点">#</a></h2>
+<ul><li>三处改动均通过 <code>@vue/compiler-sfc</code> 编译校验（SFC compile OK）；订单详情对接经括号配平核对。</li><li>每个空壳独立 commit（共 3 笔），message 标明改动与凭据；<strong>全程未触碰后端业务逻辑/数据库查询/核心算法</strong>。</li><li>未运行整包 <code>vite build</code>（沙箱无网络，且与本轮改动解耦）；如需绿色基线请在 CI 跑全量构建。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">生态架构重塑日志（Eco-Arch Log）</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-028] 按需加载与零噪音重构日志-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-027] 前后端对接与交互重构日志-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

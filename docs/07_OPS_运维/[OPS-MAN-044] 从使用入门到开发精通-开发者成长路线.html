@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-044-从使用入门到开发精通-khy-开发者成长路线">[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</a></li><li class="lvl-2"><a href="#0-两条阶梯如何衔接">0. 两条阶梯如何衔接</a></li><li class="lvl-2"><a href="#d0-拿到可读源码-看懂地图">D0 · 拿到可读源码 + 看懂地图</a></li><li class="lvl-2"><a href="#d1-搭-editable-开发环境">D1 · 搭 editable 开发环境</a></li><li class="lvl-2"><a href="#d2-走通主链路-跑测试">D2 · 走通主链路 + 跑测试</a></li><li class="lvl-2"><a href="#d3-第一次改代码-改一个-cli-命令">D3 · 第一次改代码：改一个 CLI 命令</a></li><li class="lvl-2"><a href="#d4-扩展能力-网关适配器-工具-前端">D4 · 扩展能力：网关适配器 / 工具 / 前端</a></li><li class="lvl-2"><a href="#d5-深入内核">D5 · 深入内核</a></li><li class="lvl-2"><a href="#d6-精通-可维护性纪律-发布">D6 · 精通：可维护性纪律 + 发布</a></li><li class="lvl-3"><a href="#把文档导出为美观-html-pdf">把文档导出为美观 HTML/PDF</a></li><li class="lvl-2"><a href="#一页速查-开发者版">一页速查（开发者版）</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-044-从使用入门到开发精通-khy-开发者成长路线">[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线<a class="anchor" href="#ops-man-044-从使用入门到开发精通-khy-开发者成长路线" aria-label="锚点">#</a></h1>
+<blockquote><p>目的：接续 <strong>[OPS-MAN-043] 新手成长路线</strong>（那条把你带到&quot;会用 khy&quot;），本文把你从<br><strong>&quot;会用 khy&quot;</strong> 一路带到 <strong>&quot;能开发、能扩展、能维护 khy&quot;</strong>——即从<strong>使用入门</strong>到<strong>开发精通</strong>。<br>每一级仍只回答三件事：<strong>这一步要达到什么 → 抄哪条命令 → 你由此学会了什么、深入读哪篇</strong>。<br>本文是<strong>开发者导航阶梯</strong>，深度细节交给 <code>CONTRIBUTING.md</code>、<code>.ai/</code> 种子文档与 [OPS-MAN-013] 开发者指南——<br>这里负责给你<strong>正确的顺序与最短路径</strong>，不重复它们。<br>全文命令均以仓库实测为准（root <code>package.json</code> / <code>services/backend/package.json</code> scripts、<code>scripts/</code>、CLI 路由），非杜撰。</p>
+<p>📖 <strong>美观阅读版</strong>：本文另有同目录同名的 <strong><code>.html</code></strong> / <strong><code>.pdf</code></strong>，以及与 [OPS-MAN-043] 的<strong>合订本</strong>；<br>由 <code>npm run docs:pdf:onboarding</code> 生成（实现见下方 D6「把文档导出为美观 HTML/PDF」）。</p></blockquote>
+<hr>
+<h2 id="0-两条阶梯如何衔接">0. 两条阶梯如何衔接<a class="anchor" href="#0-两条阶梯如何衔接" aria-label="锚点">#</a></h2>
+<pre><code>[OPS-MAN-043] 使用阶梯                    [OPS-MAN-044] 开发阶梯（本文）
+─────────────────────────              ─────────────────────────────
+阶段0 装完体检                            D0 拿到可读源码 + 看懂地图
+阶段1 配 AI                              D1 搭 editable 开发环境
+阶段2 日常对话/编程        ──衔接──►       D2 走通主链路 + 跑测试
+阶段3 进阶(learn/wf/agent)               D3 第一次改代码（改 CLI 命令）
+阶段4 高手(内核/远程/还原)                D4 扩展能力（网关适配器/工具/前端）
+                                        D5 深入内核
+                                        D6 精通：可维护性 + 发布纪律</code></pre>
+<blockquote><p>分界线：<strong>用 khy 干你的活</strong> = 使用；<strong>改 khy 本身、给它加能力、维护它的质量</strong> = 开发。<br>你不必学完全部——挑你要改的那一块，沿对应那一级深入即可。</p></blockquote>
+<p><strong>开发者最短上手路径（5 条命令摸到全貌）：</strong></p>
+<pre><code class="language-bash">khy restore                         # 1) 把装进来的加密源码还原成可读源码树
+python3 scripts/dev-install.py      # 2) editable 安装：改 canonical 即生效
+node scripts/ci/print-maintainer-map.js   # 3) 打印&quot;改 X 去哪&quot;的维护映射
+npm run check:version-sync          # 4) 跑最小仓库检查
+khy doctor                          # 5) 改启动/路由/网络/打包前先体检</code></pre>
+<hr>
+<h2 id="d0-拿到可读源码-看懂地图">D0 · 拿到可读源码 + 看懂地图<a class="anchor" href="#d0-拿到可读源码-看懂地图" aria-label="锚点">#</a></h2>
+<p>开发的第一步不是写代码，而是<strong>让自己能读到源码、并看懂仓库地图</strong>。pip/npm 装进来的是加密快照，<br>先还原成可读源码树；然后读三件套地图，避免一上来就在 6000+ 文件里迷路。</p>
+<table><thead><tr><th>你要达到</th><th>抄这条命令 / 读这个</th><th>说明</th></tr></thead><tbody><tr><td>还原可读源码</td><td><code>khy restore</code></td><td>把发布时<strong>与工作树字节一致</strong>的源码解密、校验 sha256 后还原（默认无需密码）。也可直接 <code>git clone</code> 仓库。</td></tr><tr><td>看仓库骨架</td><td>读 <code>.ai/MAP.md</code></td><td>&quot;顶层目录职责&quot;+&quot;我要改 X → 去哪&quot;速查表+核心入口点+构建运行。<strong>开发前必读</strong>。</td></tr><tr><td>看调用链/符号</td><td>读 <code>.ai/CONTEXT.yaml</code></td><td>机器可读契约：stack、entry_points、谁调用谁、每文件符号表。</td></tr><tr><td>看红线</td><td>读 <code>.ai/GUARDS.md</code> + <code>AGENTS.md</code></td><td>哪些<strong>绝不能碰</strong>、哪些是派生件不可手改（如 <code>bundled/</code>、<code>MANIFEST.in</code>）。</td></tr><tr><td>看产品/运行边界</td><td>读 <code>README.md</code></td><td>产品全貌与运行时边界。</td></tr></tbody></table>
+<blockquote><p><code>.ai/</code> 三件套（MAP→CONTEXT→GUARDS）是为&quot;低算力/无记忆&quot;读者设计的，人也最该先读。<br><code>SKELETON.auto.md</code> 是机器派生层，由 <code>khy metadata refresh</code> 维护，别手改。</p></blockquote>
+<p>✅ <strong>你学会了</strong>：khy 不是黑箱——源码可字节还原，且自带&quot;去哪找代码&quot;的地图。<br>➡️ <strong>深入读</strong>：[OPS-MAN-038] AI元数据-.ai-种子文档-用法指南、[OPS-MAN-037] pip安装后-完整还原与全功能开启指南。</p>
+<hr>
+<h2 id="d1-搭-editable-开发环境">D1 · 搭 editable 开发环境<a class="anchor" href="#d1-搭-editable-开发环境" aria-label="锚点">#</a></h2>
+<p>让&quot;改源码 → 立刻生效&quot;成立，不必每次重装。</p>
+<table><thead><tr><th>你要达到</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>editable 安装</td><td><code>python3 scripts/dev-install.py</code></td><td>等价的 editable 安装：改 canonical 源码即生效（详见 [OPS-MAN-013] §3.3 &quot;editable 安装与重构韧性&quot;）。</td></tr><tr><td>装 Node 依赖</td><td><code>npm --prefix services/backend install</code></td><td>后端是业务代码主体（Node ≥ 20）。</td></tr><tr><td>装可选本地守闸</td><td><code>npm run hooks:install</code></td><td>安装仓库管理的 <code>pre-commit</code> 钩子（来自 <code>.githooks/</code>），提交前自动跑门禁。</td></tr></tbody></table>
+<p>✅ <strong>你学会了</strong>：khy 的开发循环是&quot;改 canonical → 即生效&quot;，<code>bundled/</code> 副本只在发布时由构建重建。<br>➡️ <strong>深入读</strong>：[OPS-MAN-013] khy-os-开发者指南 §2-§4（环境要求、初始化、开发启动方式）、[OPS-MAN-028] 环境要求。</p>
+<hr>
+<h2 id="d2-走通主链路-跑测试">D2 · 走通主链路 + 跑测试<a class="anchor" href="#d2-走通主链路-跑测试" aria-label="锚点">#</a></h2>
+<p>改代码前，先在脑子里跑通&quot;一条命令是怎么从 pip 壳走到 handler 的&quot;，并确认你能跑测试。</p>
+<p><strong>核心运行链路（命令类 bug 从这里顺藤摸瓜，别从随机 service 文件起手）：</strong></p>
+<pre><code>platform/khy_platform/cli.py        # pip 壳：查 Node≥20 → 定位 bin/khy.js → subprocess
+ └─ services/backend/bin/khy.js      # Node 入口
+     └─ services/backend/src/cli/repl.js
+         └─ services/backend/src/cli/router.js     # 大 switch 分发
+             └─ services/backend/src/cli/handlers/&lt;area&gt;.js</code></pre>
+<table><thead><tr><th>你要达到</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>打印维护映射</td><td><code>node scripts/ci/print-maintainer-map.js</code></td><td>比盲目 <code>rg</code> 更快：给出各维护区的入口文件、常见症状、最小验证命令。<code>--list-areas</code> 看分区、<code>--area cli-routing</code> 看某区。</td></tr><tr><td>最小仓库检查</td><td><code>npm run check:version-sync &amp;&amp; npm run check:node-syntax &amp;&amp; npm run check:python-syntax</code></td><td>First-30-Minutes 的最小集。</td></tr><tr><td>改动安全门禁</td><td><code>node scripts/check-agent-rules.js --changed</code></td><td>按改动文件检查是否触红线。</td></tr><tr><td>启动前体检</td><td><code>khy doctor</code></td><td>改启动/路由/网络/打包前先跑。</td></tr></tbody></table>
+<p>✅ <strong>你学会了</strong>：khy 的执行主链很短（5 跳），且有&quot;维护映射&quot;替你定位入口——不靠猜。<br>➡️ <strong>深入读</strong>：<code>CONTRIBUTING.md</code> 的 &quot;Core Runtime Chain&quot; 与 &quot;Maintainer Map&quot;、[OPS-MAN-013] §7 质量检查与测试。</p>
+<hr>
+<h2 id="d3-第一次改代码-改一个-cli-命令">D3 · 第一次改代码：改一个 CLI 命令<a class="anchor" href="#d3-第一次改代码-改一个-cli-命令" aria-label="锚点">#</a></h2>
+<p>最小、最安全的&quot;改 khy 本身&quot;练习。按固定顺序改 4 个文件，再跑该区的最小验证。</p>
+<p><strong>改/加 CLI 命令的顺序（来自 <code>CONTRIBUTING.md</code> Change Recipes）：</strong></p>
+<pre><code>1) services/backend/src/constants/commandSchema.js  # 命令 schema（子命令 SSOT）
+2) services/backend/src/cli/aliases.js          # 别名
+3) services/backend/src/cli/handlers/&lt;area&gt;.js  # 实现
+4) services/backend/src/cli/router.js           # 接到大 switch</code></pre>
+<p>最小验证：</p>
+<pre><code class="language-bash">npm run test:maintainer:cli-routing
+node -e &quot;require('./services/backend/src/cli/router')&quot;</code></pre>
+<p>✅ <strong>你学会了</strong>：khy 的命令是&quot;schema→alias→handler→router&quot;四件套，且每个维护区都有<strong>专属最小测试</strong>。<br>➡️ <strong>深入读</strong>：[OPS-MAN-013] §5 CLI 命令开发规范（4 步）、<code>CONTRIBUTING.md</code> &quot;Add or fix a CLI command&quot;。</p>
+<hr>
+<h2 id="d4-扩展能力-网关适配器-工具-前端">D4 · 扩展能力：网关适配器 / 工具 / 前端<a class="anchor" href="#d4-扩展能力-网关适配器-工具-前端" aria-label="锚点">#</a></h2>
+<p>把 khy 接到新模型、给它加工具、改管理页——这是开发者最常做的&quot;加能力&quot;。</p>
+<table><thead><tr><th>我想加</th><th>入口顺序</th><th>最小验证</th></tr></thead><tbody><tr><td>AI 网关适配器（接新模型）</td><td><code>gateway/adapters/&lt;adapter&gt;.js</code> → <code>gateway/aiGateway.js</code> → 相关 protocol/proxy 助手</td><td><code>npm run test:maintainer:gateway</code></td></tr><tr><td>修代理/守护/端口漂移</td><td><code>daemonManager.js</code> → <code>gateway/proxyServer.js</code> → <code>utils/proxyBaseUrl.js</code> → <code>constants/serviceDefaults.js</code></td><td><code>npm run test:maintainer:runtime</code></td></tr><tr><td>改前端</td><td>先认清是哪块：交易 UI <code>software/khyquant/frontend/</code> 还是 AI 管理 UI <code>apps/ai-frontend/</code>(+<code>services/ai-backend/</code>)</td><td>对应前端构建/测试</td></tr><tr><td>接生态应用</td><td>经 <code>pyproject [project.entry-points.&quot;khyos.apps&quot;]</code> 暴露 <code>KhyApp</code> 工厂；<code>khy app list</code> 列出、<code>khy app start &lt;name&gt;</code> 启动（子命令实现见 <code>cli/handlers/app.js</code>：<code>install</code>/<code>start</code>/<code>stop</code>/<code>run</code>/<code>list</code>）</td><td>见 DESIGN-ARCH-011 应用接入标准</td></tr></tbody></table>
+<blockquote><p>适配器路径均在 <code>services/backend/src/services/gateway/</code>；模型→适配器的路由在 <code>modelRouter.js</code>，级联+熔断在 <code>aiGateway.js</code>。</p></blockquote>
+<p>✅ <strong>你学会了</strong>：扩展点是有边界的——网关、工具、两套前端、生态应用各有入口与专属测试，不要&quot;反射式两边都改&quot;。<br>➡️ <strong>深入读</strong>：[OPS-MAN-013] §6 AI 适配器开发规范、[OPS-MAN-012] 应用接入指南、[OPS-MAN-007] cli-万能接入-集成指南、[OPS-MAN-032] 网关-自定义provider配置。</p>
+<hr>
+<h2 id="d5-深入内核">D5 · 深入内核<a class="anchor" href="#d5-深入内核" aria-label="锚点">#</a></h2>
+<p>khy 底下是一台<strong>手写 x86_64 C 内核</strong>。到这一级你开始改/构建真内核。</p>
+<table><thead><tr><th>你要达到</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>构建内核 ISO</td><td><code>khy os build</code></td><td>等价于 <code>make -C kernel iso</code>（<code>nasm -f elf64</code> + freestanding <code>gcc</code> + <code>ld -T linker.ld</code>）。产物 <code>kernel/build/khy-os-kernel.iso</code>。</td></tr><tr><td>跑内核</td><td><code>khy os</code></td><td>QEMU 启动；需主机 <code>qemu-system-x86_64</code>。</td></tr><tr><td>内核体检</td><td><code>khy os doctor</code></td><td>体检构建/运行工具链与 QEMU。</td></tr></tbody></table>
+<p><strong>读内核从这里起</strong>：引导 <code>kernel/boot/boot.asm</code> <code>_start</code> → C 入口 <code>kernel/src/main.c:124 kernel_main</code>；<br><code>.ai/MAP.md</code> 的&quot;启动初始化流程&quot;列出了 <code>kmain</code> 内 25 步真实调用顺序与模块依赖图。</p>
+<p>✅ <strong>你学会了</strong>：khy 是从引导扇区往上自建的真内核，构建/运行/读码都有确定入口。<br>➡️ <strong>深入读</strong>：<code>.ai/MAP.md</code>（启动流程+模块依赖图）、[OPS-MAN-036] khyos跨平台构建-Windows支持方案、<code>kernel/Makefile</code>。</p>
+<hr>
+<h2 id="d6-精通-可维护性纪律-发布">D6 · 精通：可维护性纪律 + 发布<a class="anchor" href="#d6-精通-可维护性纪律-发布" aria-label="锚点">#</a></h2>
+<p>&quot;精通&quot;不是会写更多代码，而是<strong>改动不破坏可维护性、且能干净发布</strong>。这是 khy 开发者的终点段。</p>
+<table><thead><tr><th>纪律</th><th>抄这条命令 / 读这个</th><th>说明</th></tr></thead><tbody><tr><td>不造&quot;上帝组件&quot;</td><td><code>npm --prefix services/backend run arch:god</code></td><td>单文件硬上限 <strong>2500 行</strong>；超额会被门禁拦。拆分范式=抽纯叶子模块 + 原文件同名别名 re-export 保契约。</td></tr><tr><td>刷新 .ai 元数据</td><td><code>khy metadata refresh</code></td><td>改了结构后让三件套/<code>SKELETON.auto.md</code> 与代码同步（确定性，不覆盖手写三件套）。</td></tr><tr><td>维护体检</td><td><code>npm run maintainer:check</code> / <code>node scripts/ci/print-maintainer-map.js --check</code></td><td>验证维护映射与代码一致。</td></tr><tr><td>守红线</td><td>读 <code>.ai/GUARDS.md</code> + <code>AGENTS.md</code></td><td>派生件（<code>bundled/</code>、<code>MANIFEST.in</code> 由 <code>pip_packaging_rules.py</code> 生成）<strong>绝不手改</strong>。</td></tr><tr><td>干净发布</td><td><code>bash scripts/release/publish-dual.sh &lt;版本&gt; --tag --push -y</code></td><td>双渠道（PyPI + npm）+ 纯净度审计 + 打 tag。见 [OPS-MAN-042]。</td></tr></tbody></table>
+<blockquote><p>改打包行为时：<code>scripts/release/pip_packaging_rules.py</code> 是单一真源；<code>MANIFEST.in</code> 自它生成，不要手改。<br>验证：<code>npm run check:version-sync &amp;&amp; npm run check:manifest-sync &amp;&amp; bash scripts/release/build-and-audit-pip-purity.sh</code>。</p></blockquote>
+<h3 id="把文档导出为美观-html-pdf">把文档导出为美观 HTML/PDF<a class="anchor" href="#把文档导出为美观-html-pdf" aria-label="锚点">#</a></h3>
+<p>markdown 文档可一键导出<strong>屏幕阅读用 HTML</strong>（浮动目录 + 排版美化）与<strong>打印/分享用 PDF</strong>，<br>零新增依赖：复用仓库已 vendored 的 <code>markdown-it</code> 渲染、系统 <code>google-chrome</code> 的 <code>--print-to-pdf</code>、<br>Noto Sans/Serif CJK 字体（中文不变豆腐块）。转换器是 <code>scripts/docs/md-to-pdf.js</code>。</p>
+<table><thead><tr><th>你要做</th><th>抄这条命令</th><th>说明</th></tr></thead><tbody><tr><td>生成成长路线套件</td><td><code>npm run docs:pdf:onboarding</code></td><td>一次产出 043 / 044 各自的 <code>.html</code>+<code>.pdf</code>，再加一本<strong>合订本</strong>。预设源在脚本顶部 <code>ONBOARDING_DOCS</code>。</td></tr><tr><td>转任意 md</td><td><code>npm run docs:pdf -- &quot;&lt;某文档&gt;.md&quot;</code></td><td>同目录产出同名 <code>.html</code>+<code>.pdf</code>。<code>--html-only</code> 只出网页、<code>--pdf-only</code> 只出 PDF。</td></tr><tr><td>合并多篇为一本</td><td><code>node scripts/docs/md-to-pdf.js --combined &quot;&lt;标题&gt;&quot; &quot;&lt;basename&gt;&quot; a.md b.md</code></td><td>多篇按分页合成一份 HTML/PDF。</td></tr></tbody></table>
+<blockquote><p>缺 chrome 时会给出真实指引（装 <code>google-chrome</code> 或设 <code>KHY_DOCS_CHROME</code>，或加 <code>--html-only</code>），<strong>不</strong>静默失败。<br>生成物是<strong>派生件</strong>：随时可由源 markdown 重建，markdown 才是单一真源。</p></blockquote>
+<p>✅ <strong>你学会了</strong>：khy 的&quot;精通&quot;= 一文件一职责的架构纪律 + 元数据/红线/审计 + 机械化双渠道发布。<br>➡️ <strong>深入读</strong>：[OPS-MAN-042] 发布手册-pip与npm-无AI照做、[OPS-MAN-022] pip-安装布局参考、[OPS-MAN-040] Git入门、<code>CONTRIBUTING.md</code> Guardrails / Handoff Format。</p>
+<hr>
+<h2 id="一页速查-开发者版">一页速查（开发者版）<a class="anchor" href="#一页速查-开发者版" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>我想……</th><th>命令</th></tr></thead><tbody><tr><td>拿到可读源码</td><td><code>khy restore</code></td></tr><tr><td>editable 开发安装</td><td><code>python3 scripts/dev-install.py</code></td></tr><tr><td>打印&quot;改 X 去哪&quot;</td><td><code>node scripts/ci/print-maintainer-map.js</code></td></tr><tr><td>最小仓库检查</td><td><code>npm run check:version-sync</code></td></tr><tr><td>改动安全门禁</td><td><code>node scripts/check-agent-rules.js --changed</code></td></tr><tr><td>CLI 命令区测试</td><td><code>npm run test:maintainer:cli-routing</code></td></tr><tr><td>网关适配器测试</td><td><code>npm run test:maintainer:gateway</code></td></tr><tr><td>全维护区测试</td><td><code>npm run test:maintainer:all</code></td></tr><tr><td>上帝组件体检</td><td><code>npm --prefix services/backend run arch:god</code></td></tr><tr><td>刷新 .ai 元数据</td><td><code>khy metadata refresh</code></td></tr><tr><td>构建内核</td><td><code>khy os build</code></td></tr><tr><td>双渠道发布</td><td><code>bash scripts/release/publish-dual.sh &lt;版本&gt; --tag --push -y</code></td></tr></tbody></table>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>上一阶梯（使用入门）：[OPS-MAN-043] 从0到高手-新手成长路线与pip安装后清单。</li><li>开发者深度参考：[OPS-MAN-013] khy-os-开发者指南（结构/环境/CLI 与适配器规范/测试/发布全展开）。</li><li>工程红线与变更配方：仓库根 <code>CONTRIBUTING.md</code> + <code>AGENTS.md</code> + <code>.ai/GUARDS.md</code>。</li><li>仓库骨架与导航：<code>.ai/MAP.md</code> + <code>.ai/CONTEXT.yaml</code>。</li><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-043] 从0到高手-新手成长路线与pip安装后清单.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-045] 账号池与多租户-深度指南.html"><div class="dir">下一篇 →</div><div class="ttl">账号池与多租户 — 深度指南（khy pool）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-044] 从使用入门到开发精通-开发者成长路线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

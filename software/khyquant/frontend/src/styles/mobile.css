@@ -1,0 +1,1175 @@
+/* ========================================
+   KHY-Quant 移动端响应式样式
+   ======================================== */
+
+/* 移动端断点 */
+:root {
+  --mobile-breakpoint: 768px;
+  --tablet-breakpoint: 1024px;
+}
+
+/* ========================================
+   全局移动端优化
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 基础字体大小调整 */
+  body {
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* 触摸优化 - 增大可点击区域 */
+  button,
+  a,
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 移除悬停效果（移动端无意义） */
+  .hover-lift:hover {
+    transform: none;
+  }
+
+  /* 优化滚动 */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 禁用文本选择（提升触摸体验） */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* ========================================
+   导航栏移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Element Plus 菜单适配 */
+  .el-menu {
+    border-right: none !important;
+  }
+
+  .el-menu--horizontal {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .el-menu-item,
+  .el-sub-menu__title {
+    height: 56px !important;
+    line-height: 56px !important;
+    font-size: 16px !important;
+    padding: 0 20px !important;
+  }
+
+  /* 侧边栏适配 */
+  .el-aside {
+    width: 100% !important;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    background: white;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .el-aside.mobile-open {
+    left: 0;
+  }
+
+  /* 移动端菜单按钮 */
+  .mobile-menu-btn {
+    display: block !important;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1001;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: none;
+    cursor: pointer;
+  }
+
+  /* 遮罩层 */
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* ========================================
+   卡片和容器移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 卡片间距调整 */
+  .el-card {
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  .el-card__header {
+    padding: 16px;
+  }
+
+  .el-card__body {
+    padding: 16px;
+  }
+
+  /* 统计卡片 */
+  .stat-card {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card-value {
+    font-size: 24px !important;
+  }
+
+  .stat-card-label {
+    font-size: 12px !important;
+  }
+
+  .stat-icon-wrapper {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .stat-icon-large {
+    font-size: 24px !important;
+  }
+
+  /* 内容卡片 */
+  .content-card {
+    margin-bottom: 16px;
+  }
+
+  /* 页面容器 */
+  .page-container {
+    padding: 12px !important;
+  }
+
+  /* 欢迎横幅 */
+  .welcome-banner {
+    flex-direction: column;
+    padding: 20px 16px !important;
+    text-align: center;
+  }
+
+  .welcome-title {
+    font-size: 20px !important;
+  }
+
+  .welcome-subtitle {
+    font-size: 14px !important;
+  }
+
+  .welcome-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .welcome-actions .el-button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   表格移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 表格横向滚动 */
+  .el-table {
+    font-size: 12px !important;
+  }
+
+  .el-table__header th,
+  .el-table__body td {
+    padding: 8px 4px !important;
+  }
+
+  /* 表格容器 */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 隐藏不重要的列 */
+  .el-table .mobile-hide {
+    display: none !important;
+  }
+
+  /* 表格操作按钮 */
+  .el-table .el-button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /* 分页器 */
+  .el-pagination {
+    padding: 12px 0;
+    text-align: center;
+  }
+
+  .el-pagination .el-pager li {
+    min-width: 32px;
+    height: 32px;
+    line-height: 32px;
+    font-size: 14px;
+  }
+
+  .el-pagination button {
+    padding: 0 8px;
+  }
+}
+
+/* ========================================
+   表单移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 表单项 */
+  .el-form-item {
+    margin-bottom: 20px;
+  }
+
+  .el-form-item__label {
+    font-size: 14px;
+    line-height: 40px;
+  }
+
+  /* 输入框 */
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 16px !important; /* 防止iOS自动缩放 */
+  }
+
+  .el-input--large .el-input__inner {
+    height: 44px;
+  }
+
+  /* 选择器 */
+  .el-select {
+    width: 100%;
+  }
+
+  /* 日期选择器 */
+  .el-date-editor {
+    width: 100% !important;
+  }
+
+  /* 按钮组 */
+  .el-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .el-button-group .el-button {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* 表单按钮 */
+  .form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-actions .el-button {
+    width: 100%;
+    height: 44px;
+  }
+}
+
+/* ========================================
+   对话框移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 对话框 */
+  .el-dialog {
+    width: 95% !important;
+    margin: 0 auto !important;
+  }
+
+  .el-dialog__header {
+    padding: 16px;
+  }
+
+  .el-dialog__body {
+    padding: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .el-dialog__footer {
+    padding: 12px 16px;
+  }
+
+  /* 抽屉 */
+  .el-drawer {
+    width: 90% !important;
+  }
+
+  .el-drawer__body {
+    padding: 16px;
+  }
+
+  /* 消息提示 */
+  .el-message {
+    min-width: 300px;
+    max-width: 90%;
+  }
+
+  /* 通知 */
+  .el-notification {
+    width: 90%;
+    max-width: 330px;
+  }
+}
+
+/* ========================================
+   图表移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* ECharts 容器 */
+  .chart-container {
+    height: 300px !important;
+    margin-bottom: 16px;
+  }
+
+  /* K线图 */
+  .kline-chart {
+    height: 350px !important;
+  }
+
+  /* 图表工具栏 */
+  .chart-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chart-toolbar .el-button {
+    flex: 1;
+    min-width: calc(50% - 4px);
+  }
+}
+
+/* ========================================
+   策略管理移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 策略卡片 */
+  .strategy-card {
+    padding: 16px;
+  }
+
+  .strategy-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .strategy-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .strategy-actions .el-button {
+    flex: 1;
+  }
+
+  /* 代码编辑器 */
+  .code-editor {
+    height: 400px !important;
+  }
+
+  /* 回测结果 */
+  .backtest-result {
+    padding: 16px;
+  }
+
+  .backtest-metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .metric-item {
+    padding: 12px;
+  }
+
+  .metric-value {
+    font-size: 20px !important;
+  }
+}
+
+/* ========================================
+   交易页面移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 交易面板 */
+  .trading-panel {
+    flex-direction: column;
+  }
+
+  .trading-chart {
+    height: 300px;
+    margin-bottom: 16px;
+  }
+
+  .trading-form {
+    width: 100%;
+  }
+
+  /* 订单簿 */
+  .order-book {
+    max-height: 300px;
+  }
+
+  /* 持仓列表 */
+  .position-list {
+    overflow-x: auto;
+  }
+
+  /* 快速交易按钮 */
+  .quick-trade-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+
+/* ========================================
+   仪表板移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 统计卡片网格 */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* 图表网格 */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* 最近活动 */
+  .recent-activities {
+    padding: 16px;
+  }
+
+  .activity-item {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   登录/注册页面移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+  .login-container,
+  .register-container {
+    padding: 20px;
+  }
+
+  .login-card,
+  .register-card {
+    width: 100% !important;
+    max-width: 400px;
+  }
+
+  .card-header h2 {
+    font-size: 24px !important;
+  }
+
+  .card-header p {
+    font-size: 13px !important;
+  }
+
+  /* 社交登录按钮 */
+  .social-login {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .social-login .el-button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   工具类
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 显示/隐藏 */
+  .mobile-show {
+    display: block !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* 间距调整 */
+  .mobile-p-sm {
+    padding: 8px !important;
+  }
+
+  .mobile-p-md {
+    padding: 16px !important;
+  }
+
+  .mobile-m-sm {
+    margin: 8px !important;
+  }
+
+  .mobile-m-md {
+    margin: 16px !important;
+  }
+
+  /* 文字大小 */
+  .mobile-text-sm {
+    font-size: 12px !important;
+  }
+
+  .mobile-text-md {
+    font-size: 14px !important;
+  }
+
+  .mobile-text-lg {
+    font-size: 16px !important;
+  }
+
+  /* 宽度 */
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  /* 弹性布局 */
+  .mobile-flex-col {
+    flex-direction: column !important;
+  }
+
+  .mobile-flex-wrap {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* ========================================
+   平板适配 (768px - 1024px)
+   ======================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* 容器宽度 */
+  .container {
+    max-width: 960px;
+    padding: 0 24px;
+  }
+
+  /* 网格布局 */
+  .grid-3-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-4-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 侧边栏 */
+  .el-aside {
+    width: 200px !important;
+  }
+
+  /* 卡片 */
+  .stat-card-value {
+    font-size: 28px !important;
+  }
+}
+
+/* ========================================
+   横屏适配
+   ======================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  /* 减小垂直间距 */
+  .welcome-banner {
+    padding: 16px !important;
+  }
+
+  .stat-card {
+    padding: 12px !important;
+  }
+
+  /* 图表高度调整 */
+  .chart-container {
+    height: 250px !important;
+  }
+
+  /* 对话框高度 */
+  .el-dialog__body {
+    max-height: 50vh;
+  }
+}
+
+/* ========================================
+   触摸优化
+   ======================================== */
+
+@media (hover: none) and (pointer: coarse) {
+  /* 增大可点击区域 */
+  button,
+  a,
+  .el-button,
+  .el-link {
+    padding: 12px 16px;
+  }
+
+  /* 优化滚动 */
+  .scrollable {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ========================================
+   性能优化
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* 减少动画 */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+
+  /* 简化阴影 */
+  .card,
+  .el-card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* 禁用复杂效果 */
+  .glass-effect {
+    backdrop-filter: none;
+    background: white;
+  }
+}
+
+/* ========================================
+   安全区域适配 (iPhone X 等)
+   ======================================== */
+
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .page-container {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .mobile-menu-btn {
+      left: max(16px, env(safe-area-inset-left));
+    }
+
+    .el-dialog,
+    .el-drawer {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+
+/* ==========================================
+   策略管理页面移动端优化
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 策略列表卡片 */
+  .strategy-list-card .card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .strategy-list-card .header-actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+  }
+
+  .strategy-list-card .header-actions .el-button {
+    flex: 1 !important;
+    font-size: 12px !important;
+  }
+
+  /* 批量操作工具栏 */
+  .batch-toolbar {
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .batch-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .batch-actions .el-button {
+    width: 100% !important;
+  }
+
+  /* 策略表格 - 隐藏部分列 */
+  .strategies-page .el-table__column--selection {
+    display: none !important;
+  }
+
+  .strategies-page .el-table th:nth-child(3),
+  .strategies-page .el-table td:nth-child(3) {
+    display: none !important; /* 隐藏描述列 */
+  }
+
+  .strategies-page .el-table th:nth-child(6),
+  .strategies-page .el-table td:nth-child(6) {
+    display: none !important; /* 隐藏创建时间列 */
+  }
+
+  /* 操作列 - 桌面端按钮隐藏，显示移动端菜单 */
+  .desktop-actions {
+    display: none !important;
+  }
+
+  .mobile-actions {
+    display: block !important;
+  }
+
+  /* 策略表格操作列宽度 */
+  .strategies-page .el-table__fixed-right {
+    width: 60px !important;
+  }
+
+  /* 分页器优化 */
+  .el-pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    padding: 12px 0 !important;
+  }
+
+  .el-pagination .el-pagination__sizes {
+    display: none !important;
+  }
+
+  .el-pagination .el-pagination__jump {
+    display: none !important;
+  }
+}
+
+/* 桌面端 - 隐藏移动端菜单 */
+@media (min-width: 769px) {
+  .mobile-actions {
+    display: none !important;
+  }
+
+  .desktop-actions {
+    display: flex !important;
+    gap: 4px !important;
+  }
+}
+
+/* ==========================================
+   K线图移动端优化
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 图表容器 */
+  .chart-container,
+  .backtest-chart,
+  .trading-chart,
+  #backtest-chart,
+  #trading-chart {
+    width: 100% !important;
+    height: 350px !important;
+    min-height: 350px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 图表工具栏 */
+  .chart-toolbar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
+  .chart-toolbar .el-button-group {
+    width: 100% !important;
+  }
+
+  .chart-toolbar .el-button {
+    flex: 1 !important;
+    font-size: 11px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* 图表选择器 */
+  .symbol-selector,
+  .timeframe-selector {
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* 图表信息面板 */
+  .chart-info-panel {
+    font-size: 11px !important;
+    padding: 8px !important;
+  }
+
+  /* 图表图例 */
+  .chart-legend {
+    font-size: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* 回测结果图表 */
+  .backtest-results .chart-section {
+    margin-bottom: 16px !important;
+  }
+
+  .backtest-results .chart-row {
+    flex-direction: column !important;
+  }
+
+  .backtest-results .chart-col {
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* 策略信号标记 */
+  .signal-marker {
+    font-size: 10px !important;
+  }
+
+  /* 图表加载状态 */
+  .chart-loading {
+    height: 350px !important;
+  }
+
+  /* 图表卡片 */
+  .chart-card .el-card__body {
+    padding: 8px !important;
+  }
+}
+
+/* ==========================================
+   管理员日志页面移动端优化
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 日志页面头部 */
+  .admin-user-logs .card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .admin-user-logs .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* 筛选区域 */
+  .filter-section .el-row {
+    flex-direction: column !important;
+  }
+
+  .filter-section .el-col {
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .filter-section .el-date-picker {
+    width: 100% !important;
+  }
+
+  /* 日志表格 - 隐藏部分列 */
+  .admin-user-logs .el-table th:nth-child(2),
+  .admin-user-logs .el-table td:nth-child(2) {
+    display: none !important; /* 隐藏用户ID */
+  }
+
+  .admin-user-logs .el-table th:nth-child(6),
+  .admin-user-logs .el-table td:nth-child(6) {
+    display: none !important; /* 隐藏IP地址 */
+  }
+
+  /* 日志表格列宽调整 */
+  .admin-user-logs .el-table th:nth-child(1),
+  .admin-user-logs .el-table td:nth-child(1) {
+    width: 50px !important; /* ID列 */
+  }
+
+  .admin-user-logs .el-table th:nth-child(3),
+  .admin-user-logs .el-table td:nth-child(3) {
+    min-width: 80px !important; /* 用户名列 */
+  }
+
+  .admin-user-logs .el-table th:nth-child(4),
+  .admin-user-logs .el-table td:nth-child(4) {
+    min-width: 90px !important; /* 操作类型列 */
+  }
+
+  .admin-user-logs .el-table th:nth-child(5),
+  .admin-user-logs .el-table td:nth-child(5) {
+    min-width: 120px !important; /* 操作描述列 */
+    max-width: 150px !important;
+  }
+
+  /* 操作描述文本截断 */
+  .admin-user-logs .el-table td:nth-child(5) {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* 统计信息区域 */
+  .stats-section .el-row {
+    flex-direction: column !important;
+  }
+
+  .stats-section .el-col {
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+
+  .stats-section .el-statistic {
+    text-align: center !important;
+  }
+
+  /* 日志详情对话框 */
+  .admin-user-logs .el-descriptions {
+    font-size: 12px !important;
+  }
+
+  .admin-user-logs .el-descriptions__label {
+    width: 80px !important;
+  }
+
+  .admin-user-logs pre {
+    font-size: 10px !important;
+    max-height: 150px !important;
+  }
+}
+
+/* ==========================================
+   表格通用移动端优化
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 表格容器添加横向滚动 */
+  .el-table__body-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 表格最小宽度 */
+  .el-table {
+    min-width: 100% !important;
+    font-size: 12px !important;
+  }
+
+  .el-table th,
+  .el-table td {
+    padding: 8px 4px !important;
+  }
+
+  /* 表格单元格内容 */
+  .el-table .cell {
+    word-break: break-word !important;
+    line-height: 1.4 !important;
+  }
+
+  /* 标签优化 */
+  .el-tag {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+  }
+
+  /* 下拉菜单优化 */
+  .el-dropdown-menu {
+    min-width: 150px !important;
+  }
+
+  .el-dropdown-menu__item {
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px !important;
+  }
+
+  .el-dropdown-menu__item .el-icon {
+    margin-right: 8px !important;
+    font-size: 16px !important;
+  }
+
+  /* 卡片优化 */
+  .el-card {
+    margin-bottom: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  .el-card__header {
+    padding: 12px !important;
+  }
+
+  .el-card__body {
+    padding: 12px !important;
+  }
+
+  /* 对话框优化 */
+  .el-dialog {
+    width: 95% !important;
+    margin: 0 auto !important;
+  }
+
+  .el-dialog__header {
+    padding: 12px !important;
+  }
+
+  .el-dialog__body {
+    padding: 12px !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* ==========================================
+   触摸设备优化
+   ========================================== */
+
+@media (hover: none) and (pointer: coarse) {
+  /* 增大可点击区域 */
+  .el-button,
+  .el-link,
+  .el-dropdown__trigger {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* 表格行点击区域 */
+  .el-table__row {
+    cursor: pointer !important;
+  }
+
+  /* 移除hover效果 */
+  .el-button:hover,
+  .el-link:hover {
+    transform: none !important;
+  }
+
+  /* 添加active效果 */
+  .el-button:active,
+  .el-link:active {
+    opacity: 0.7 !important;
+    transform: scale(0.98) !important;
+  }
+}
+
+/* ==========================================
+   横屏模式优化
+   ========================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  /* 图表容器在横屏时增加高度 */
+  .chart-container,
+  .backtest-chart,
+  .trading-chart {
+    height: 280px !important;
+  }
+
+  /* 对话框在横屏时调整 */
+  .el-dialog__body {
+    max-height: 60vh !important;
+  }
+}
+
+/* ==========================================
+   小屏手机优化 (≤375px)
+   ========================================== */
+
+@media (max-width: 375px) {
+  /* 进一步减小字体 */
+  body {
+    font-size: 12px !important;
+  }
+
+  .el-table {
+    font-size: 11px !important;
+  }
+
+  /* 按钮更紧凑 */
+  .el-button {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* 图表高度调整 */
+  .chart-container,
+  .backtest-chart,
+  .trading-chart {
+    height: 280px !important;
+  }
+
+  /* 卡片间距 */
+  .el-card {
+    margin-bottom: 8px !important;
+  }
+
+  .el-card__header,
+  .el-card__body {
+    padding: 8px !important;
+  }
+}

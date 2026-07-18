@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show HN 文案草稿 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>Show HN 文案草稿</div>
+      <header class="hero reveal"><h1>Show HN 文案草稿</h1></header>
+      
+      <article class="doc-body">
+<h1 id="show-hn-文案草稿">Show HN 文案草稿<a class="anchor" href="#show-hn-文案草稿" aria-label="锚点">#</a></h1>
+<p><strong>标题：</strong><br><code>Show HN: khy – a one-person AI-native OS (hand-written kernel + agentic CLI)</code></p>
+<p><strong>URL：</strong> GitHub 仓库（不是博客文章——HN 更偏好源码）。</p>
+<p><strong>首条评论（提交后立刻由你自己发出）：</strong></p>
+<hr>
+<p>Hi HN. khy is a project I've been building largely solo. It's an attempt to put<br>every layer of an &quot;AI-native&quot; computer in one repo you can <code>pip install</code>:</p>
+<ul><li>a hand-written OS kernel in C — preemptive scheduler, demand paging,</li></ul>
+<p>copy-on-write <code>fork</code>, POSIX-style signals, pipes, per-process fd tables, and a<br>  dual ELF + PE loader. It boots and runs under QEMU. It is still experimental<br>  (next up: real keyboard stdin and block-device persistence), and I'd rather<br>  undersell it than oversell it.</p>
+<ul><li>a terminal agent in the Claude Code / Qwen Code mold — streaming TUI, a</li></ul>
+<p>tool-calling loop with structured results and loop detection, permission<br>  gating, sub-agents, and a goal mode.</p>
+<ul><li>a gateway that fronts 16 AI backends (Claude, Qwen, Cursor, Kiro, Ollama,</li></ul>
+<p>Codex, …) behind one API, with cascade failover and circuit breaking, so you<br>  bring your own keys and aren't locked to one vendor.</p>
+<p>It ships through two parallel channels (<code>pip install khy-os</code> and<br><code>npm i -g @khy-os/khy-os</code>) that carry a byte-identical workshop, with a self-healing<br>multi-language dev environment.</p>
+<p>Why build all of it instead of one piece? I wanted to see whether a single<br>person, with AI assistance, could credibly span kernel-to-agent — and to have a<br>machine where the terminal <em>is</em> an agent, end to end, with no vendor lock-in.</p>
+<p>Honest caveats: the kernel is a learning-grade microkernel/monolithic hybrid, not<br>a daily driver; &quot;Claude-Code-class&quot; means the loop/TUI feature set, benchmarked<br>against those tools, not that it beats them on every task. The license is<br>source-available (free to run/study/use non-commercially), not OSI open source —<br>happy to discuss that choice.</p>
+<p>I'd love brutal feedback on: (1) the agent loop's correctness vs Claude Code,<br>(2) the kernel design, (3) whether the gateway's failover model makes sense.</p>
+<p>Repo: &lt;link&gt;  ·  Demo: &lt;gif link&gt;</p>
+<hr>
+<blockquote><p>说明：HN 是英文社区，上面的标题与首条评论请保持英文原文照发，<br>不要翻译成中文再投递。以下为对内团队的中文备注。</p></blockquote>
+<p><strong>互动提示：</strong></p>
+<ul><li>在头 90 分钟内回复<em>每一条</em>顶层评论。</li><li>当有人质疑「这真的是 OS 吗？」——认同其中的细微之处，附上</li></ul>
+<p>QEMU 已测试的能力表。不要辩护式回应；坦然承认局限。HN<br>  奖励坦诚，惩罚炒作。</p>
+<ul><li>备好演示 GIF；「让我看它跑起来」是第一诉求。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-006] REPO_META.html"><div class="dir">← 上一篇</div><div class="ttl">GitHub 仓库元数据（在 Settings → General + About 侧栏设置）</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-008] TWITTER.html"><div class="dir">下一篇 →</div><div class="ttl">X / Twitter 长推草稿</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-007] SHOW_HN.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

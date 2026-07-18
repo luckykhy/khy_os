@@ -1,0 +1,14 @@
+[
+  {
+    "version": 1,
+    "seq": 0,
+    "uuid": "9a48cdee9d8715ee",
+    "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "producer": "khy-local",
+    "trust": "verified",
+    "contentHash": "3082557aed3159933d44fa3430b5f1e42eb36cc9a569d75531a4a70acaa25a37",
+    "at": 1782295702927,
+    "hash": "9c30ad83c3e83d75935bf67c7c845309ca8c30f090c207945006823ed525d8c5",
+    "seal": "3a803215d70bb599d7ba51c8c007696273b4901ae29b4f85a34914fc6d06c16b"
+  }
+]

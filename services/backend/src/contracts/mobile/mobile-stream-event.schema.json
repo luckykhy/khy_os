@@ -1,0 +1,590 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/mobile/mobile-stream-event.schema.json",
+  "title": "KHY Mobile Stream Event",
+  "type": "object",
+  "required": [
+    "version",
+    "event_id",
+    "trace_id",
+    "sequence",
+    "ts",
+    "stream",
+    "kind",
+    "severity",
+    "title",
+    "payload",
+    "redaction_applied"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^ev_[a-z0-9]{8,32}$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stream": {
+      "type": "string",
+      "enum": [
+        "ops",
+        "code",
+        "test",
+        "sync",
+        "system"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "status",
+        "batch_step",
+        "approval_ticket",
+        "diff_preview",
+        "test_result",
+        "handover_snapshot",
+        "task_state",
+        "final_summary"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "warn",
+        "wait",
+        "error",
+        "info"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 280
+    },
+    "payload": {
+      "type": "object"
+    },
+    "redaction_applied": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "status"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "action",
+              "target",
+              "progress"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "progress": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "elapsed_ms": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "batch_step"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "step_index",
+              "step_total",
+              "command",
+              "status"
+            ],
+            "properties": {
+              "step_index": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "step_total": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "warn",
+                  "wait",
+                  "error"
+                ]
+              },
+              "elapsed_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "summary": {
+                "type": "string",
+                "maxLength": 180
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "approval_ticket"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/approvalTicketPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "diff_preview"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "path",
+              "hunks"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 260
+              },
+              "hunks": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "header",
+                    "additions",
+                    "deletions",
+                    "preview_lines"
+                  ],
+                  "properties": {
+                    "header": {
+                      "type": "string",
+                      "maxLength": 140
+                    },
+                    "additions": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deletions": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "preview_lines": {
+                      "type": "array",
+                      "maxItems": 30,
+                      "items": {
+                        "type": "string",
+                        "maxLength": 260
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "test_result"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "suite",
+              "total",
+              "passed",
+              "failed",
+              "duration_ms",
+              "status"
+            ],
+            "properties": {
+              "suite": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "passed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "duration_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              "failed_cases": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string",
+                  "maxLength": 180
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "handover_snapshot"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/handoverSnapshotPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "task_state"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "task_id",
+              "status"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "paused",
+                  "retry_wait",
+                  "succeeded",
+                  "failed",
+                  "cancelled"
+                ]
+              },
+              "progress_pct": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "pid": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "final_summary"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": [
+              "summary"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "highlights": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "maxLength": 160
+                }
+              },
+              "next_actions": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "maxLength": 160
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "approvalTicketPayload": {
+      "type": "object",
+      "required": [
+        "ticket_id",
+        "risk_level",
+        "requested_action",
+        "target",
+        "reason",
+        "impact_summary",
+        "command_preview",
+        "expires_at",
+        "choices"
+      ],
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "pattern": "^ap_[a-z0-9]{8,32}$"
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "requested_action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "impact_summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "command_preview": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject",
+              "edit_then_approve"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "handoverSnapshotPayload": {
+      "type": "object",
+      "required": [
+        "recent_actions",
+        "background_tasks",
+        "pending_approvals",
+        "todos"
+      ],
+      "properties": {
+        "recent_actions": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "maxLength": 240
+          }
+        },
+        "background_tasks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "pending_approvals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "todos": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "version": "1.0",
+      "event_id": "ev_6jk4m9p2r1",
+      "trace_id": "tr_20260516_6e9a3f21",
+      "sequence": 12,
+      "ts": "2026-05-16T10:31:12Z",
+      "stream": "ops",
+      "kind": "batch_step",
+      "severity": "ok",
+      "title": "Batch Task Progress",
+      "message": "Step 1 completed.",
+      "payload": {
+        "step_index": 1,
+        "step_total": 3,
+        "command": "git pull origin main",
+        "status": "ok",
+        "elapsed_ms": 842,
+        "summary": "3 files updated"
+      },
+      "redaction_applied": true
+    }
+  ]
+}

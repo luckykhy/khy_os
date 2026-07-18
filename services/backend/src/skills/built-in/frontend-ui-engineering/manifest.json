@@ -1,0 +1,21 @@
+{
+  "name": "frontend-ui-engineering",
+  "description": "Builds production-quality UIs. Use when building or modifying user-facing interfaces. Use when creating components, implementing layouts, managing state, or when the output needs to look and feel production-quality rather than AI-generated.",
+  "user_invocable": true,
+  "trigger": "/frontend-ui-engineering",
+  "aliases": [
+    "/frontend"
+  ],
+  "category": "frontend",
+  "tags": [
+    "frontend",
+    "ui",
+    "accessibility"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}

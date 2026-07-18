@@ -1,0 +1,7 @@
+import {
+  "khyos/moonbit_plugin_sdk" @sdk,
+}
+
+options(
+  "is-main": true,
+)

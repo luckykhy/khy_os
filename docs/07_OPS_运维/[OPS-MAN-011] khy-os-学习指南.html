@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 学习文档（中文） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS 学习文档（中文）</div>
+      <header class="hero reveal"><h1>KHY OS 学习文档（中文）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-学习文档-中文">KHY OS 学习文档（中文）</a></li><li class="lvl-2"><a href="#1-学习目标">1. 学习目标</a></li><li class="lvl-2"><a href="#2-技术栈总览">2. 技术栈总览</a></li><li class="lvl-2"><a href="#3-推荐学习顺序">3. 推荐学习顺序</a></li><li class="lvl-3"><a href="#3-1-先看整体">3.1 先看整体</a></li><li class="lvl-3"><a href="#3-2-再看启动链路">3.2 再看启动链路</a></li><li class="lvl-3"><a href="#3-3-再看业务核心">3.3 再看业务核心</a></li><li class="lvl-3"><a href="#3-4-再看前端与部署">3.4 再看前端与部署</a></li><li class="lvl-2"><a href="#4-你可以直接用到的技术">4. 你可以直接用到的技术</a></li><li class="lvl-2"><a href="#5-适合练手的扩展点">5. 适合练手的扩展点</a></li><li class="lvl-3"><a href="#5-1-cli-扩展">5.1 CLI 扩展</a></li><li class="lvl-3"><a href="#5-2-ai-适配器扩展">5.2 AI 适配器扩展</a></li><li class="lvl-3"><a href="#5-3-前端页面扩展">5.3 前端页面扩展</a></li><li class="lvl-3"><a href="#5-4-测试与质量门禁">5.4 测试与质量门禁</a></li><li class="lvl-2"><a href="#6-学习时最重要的概念">6. 学习时最重要的概念</a></li><li class="lvl-2"><a href="#7-入门练习建议">7. 入门练习建议</a></li><li class="lvl-2"><a href="#8-相关文档">8. 相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-011 | 阶段: 运维 | 原路径: docs/指南/khy-os-学习指南.md --&gt;</p>
+<h1 id="khy-os-学习文档-中文">KHY OS 学习文档（中文）<a class="anchor" href="#khy-os-学习文档-中文" aria-label="锚点">#</a></h1>
+<p>本文档面向想快速理解 KHY OS 代码结构、技术栈和可扩展点的人。</p>
+<h2 id="1-学习目标">1. 学习目标<a class="anchor" href="#1-学习目标" aria-label="锚点">#</a></h2>
+<p>你可以从这份文档了解：</p>
+<ul><li>KHY OS 的整体分层</li><li>可以使用哪些技术开发、扩展和测试</li><li>各类功能对应的关键目录和入口</li><li>推荐的学习顺序</li></ul>
+<h2 id="2-技术栈总览">2. 技术栈总览<a class="anchor" href="#2-技术栈总览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层级</th><th>技术</th><th>用途</th><th>关键目录</th></tr></thead><tbody><tr><td>启动层</td><td>Python、pip、setuptools</td><td>启动 CLI、处理首次初始化、打包分发</td><td><code>platform/khy_platform/</code>、<code>setup.py</code>、<code>pyproject.toml</code></td></tr><tr><td>核心运行时</td><td>Node.js、Express</td><td>CLI 分发、HTTP 服务、后台逻辑</td><td><code>services/backend/</code></td></tr><tr><td>数据层</td><td>Sequelize、SQLite、PostgreSQL</td><td>ORM、数据库访问、迁移与 seed</td><td><code>services/backend/src/config/</code>、<code>services/backend/src/models/</code></td></tr><tr><td>AI 网关</td><td>axios、ws、jsonwebtoken、bcryptjs、ioredis、node-cron</td><td>统一模型适配、认证、会话、调度</td><td><code>services/backend/src/services/gateway/</code></td></tr><tr><td>主前端</td><td>Vue 3、Vite、Pinia、Vue Router、Element Plus、Axios</td><td>交易 UI、管理界面、交互层</td><td><code>software/khyquant/frontend/</code></td></tr><tr><td>AI 管理前端</td><td>Vue 3、Vite、Pinia、Element Plus、Axios</td><td>AI 管理页、网关控制台</td><td><code>apps/ai-frontend/</code></td></tr><tr><td>部署</td><td>Docker、docker compose、Bash、PowerShell</td><td>本地/容器部署、验收与发布</td><td><code>docker-compose.yml</code>、<code>services/backend/Dockerfile</code>、<code>software/khyquant/frontend/Dockerfile</code>、<code>services/ai-backend/Dockerfile</code>、<code>apps/ai-frontend/Dockerfile</code></td></tr><tr><td>测试</td><td>Jest、curl、Shell 脚本</td><td>单元测试、冒烟测试、质量检查</td><td><code>unit_tests/</code>、<code>API_tests/</code>、<code>scripts/ci/</code></td></tr></tbody></table>
+<h2 id="3-推荐学习顺序">3. 推荐学习顺序<a class="anchor" href="#3-推荐学习顺序" aria-label="锚点">#</a></h2>
+<h3 id="3-1-先看整体">3.1 先看整体<a class="anchor" href="#3-1-先看整体" aria-label="锚点">#</a></h3>
+<ol><li><code>README.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.md</code></li><li><code>docs/03_DESIGN_设计/[DESIGN-ARCH-010] 核心架构.md</code></li></ol>
+<h3 id="3-2-再看启动链路">3.2 再看启动链路<a class="anchor" href="#3-2-再看启动链路" aria-label="锚点">#</a></h3>
+<ol><li><code>platform/khy_platform/_bootstrap.py</code></li><li><code>platform/khy_platform/cli.py</code></li><li><code>services/backend/bin/khy.js</code></li><li><code>services/backend/src/cli/router.js</code></li><li><code>services/backend/src/cli/aliases.js</code></li></ol>
+<h3 id="3-3-再看业务核心">3.3 再看业务核心<a class="anchor" href="#3-3-再看业务核心" aria-label="锚点">#</a></h3>
+<ol><li><code>services/backend/src/services/gateway/aiGateway.js</code></li><li><code>services/backend/src/services/gateway/adapters/</code></li><li><code>services/backend/src/services/aiManagementServer.js</code></li><li><code>services/backend/src/routes/</code></li></ol>
+<h3 id="3-4-再看前端与部署">3.4 再看前端与部署<a class="anchor" href="#3-4-再看前端与部署" aria-label="锚点">#</a></h3>
+<ol><li><code>software/khyquant/frontend/src/</code></li><li><code>apps/ai-frontend/src/</code></li><li><code>docker-compose.yml</code></li><li><code>setup.py</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code></li></ol>
+<h2 id="4-你可以直接用到的技术">4. 你可以直接用到的技术<a class="anchor" href="#4-你可以直接用到的技术" aria-label="锚点">#</a></h2>
+<p>如果你要扩展这个项目，常见可用技术如下：</p>
+<ul><li>Python：启动器、打包、脚本、自动化</li><li>JavaScript：CLI、后端服务、前端逻辑</li><li>Vue 3：页面组件与视图</li><li>Vite：前端开发和构建</li><li>Express：HTTP API</li><li>Sequelize：ORM 和数据库迁移</li><li>SQLite / PostgreSQL：数据存储</li><li>Docker / docker compose：容器化部署和测试</li><li>Jest：单元测试</li><li>Shell / Bash / PowerShell：自动化与运维</li><li>WebSocket：实时通信</li><li>Redis / node-cron：缓存、队列、调度</li><li>axios：请求层</li><li>Element Plus：UI 组件库</li></ul>
+<h2 id="5-适合练手的扩展点">5. 适合练手的扩展点<a class="anchor" href="#5-适合练手的扩展点" aria-label="锚点">#</a></h2>
+<h3 id="5-1-cli-扩展">5.1 CLI 扩展<a class="anchor" href="#5-1-cli-扩展" aria-label="锚点">#</a></h3>
+<p>适合学习：命令路由、别名、参数解析、格式化输出。</p>
+<p>对应目录：</p>
+<ul><li><code>services/backend/src/cli/commandSchema.js</code></li><li><code>services/backend/src/cli/aliases.js</code></li><li><code>services/backend/src/cli/handlers/</code></li><li><code>services/backend/src/cli/router.js</code></li></ul>
+<h3 id="5-2-ai-适配器扩展">5.2 AI 适配器扩展<a class="anchor" href="#5-2-ai-适配器扩展" aria-label="锚点">#</a></h3>
+<p>适合学习：适配器模式、统一接口、失败回退。</p>
+<p>对应目录：</p>
+<ul><li><code>services/backend/src/services/gateway/adapters/</code></li><li><code>services/backend/src/services/gateway/aiGateway.js</code></li></ul>
+<h3 id="5-3-前端页面扩展">5.3 前端页面扩展<a class="anchor" href="#5-3-前端页面扩展" aria-label="锚点">#</a></h3>
+<p>适合学习：组件化、状态管理、页面路由、接口请求。</p>
+<p>对应目录：</p>
+<ul><li><code>software/khyquant/frontend/src/</code></li><li><code>apps/ai-frontend/src/</code></li></ul>
+<h3 id="5-4-测试与质量门禁">5.4 测试与质量门禁<a class="anchor" href="#5-4-测试与质量门禁" aria-label="锚点">#</a></h3>
+<p>适合学习：单元测试、API 冒烟、CI 门禁、发布前自检。</p>
+<p>对应目录：</p>
+<ul><li><code>unit_tests/</code></li><li><code>API_tests/</code></li><li><code>scripts/ci/</code></li></ul>
+<h2 id="6-学习时最重要的概念">6. 学习时最重要的概念<a class="anchor" href="#6-学习时最重要的概念" aria-label="锚点">#</a></h2>
+<ul><li><code>khy</code> 是平台入口，不是单一应用</li><li><code>khyquant</code> 是兼容入口</li><li>首次启动会自动做 bootstrap</li><li>管理页可能从主站回退到独立会话</li><li>pip 包只保留运行所需边界，不包含大模型文件</li><li>目录存在不等于文件必须存在，某些目录只保留占位</li></ul>
+<h2 id="7-入门练习建议">7. 入门练习建议<a class="anchor" href="#7-入门练习建议" aria-label="锚点">#</a></h2>
+<ol><li>给一个现有命令加一个别名</li><li>增加一个新的 gateway adapter</li><li>给一个服务补一条 Jest 测试</li><li>给 <code>ai-frontend</code> 加一个页面</li><li>修改 <code>setup.py</code> 后重新打包验证</li></ol>
+<h2 id="8-相关文档">8. 相关文档<a class="anchor" href="#8-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</code></li><li><code>docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-010] hermes风格-模型配置.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 中的 Hermes 风格模型配置</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-012] khy-os-应用接入指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 应用接入指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

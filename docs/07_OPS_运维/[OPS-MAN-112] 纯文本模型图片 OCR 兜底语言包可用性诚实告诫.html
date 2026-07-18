@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫</div>
+      <header class="hero reveal"><h1>[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-112-纯文本模型图片-ocr-兜底-语言包可用性诚实告诫">[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫</a></li><li class="lvl-2"><a href="#背景-这是第四条正交诚实轴">背景（这是第四条正交诚实轴）</a></li><li class="lvl-2"><a href="#死字段-断桥">死字段（断桥）</a></li><li class="lvl-2"><a href="#修复-全-additive-门-khy-ocr-language-notice-default-on-门关逐字节回退">修复（全 additive · 门 `KHY_OCR_LANGUAGE_NOTICE` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-112-纯文本模型图片-ocr-兜底-语言包可用性诚实告诫">[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫<a class="anchor" href="#ops-man-112-纯文本模型图片-ocr-兜底-语言包可用性诚实告诫" aria-label="锚点">#</a></h1>
+<h2 id="背景-这是第四条正交诚实轴">背景（这是第四条正交诚实轴）<a class="anchor" href="#背景-这是第四条正交诚实轴" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 会落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract），把图片里的文字提取出来<br>注入提示词，让文本模型据此作答。围绕「准确识别图片」这一目标，已建立多条<strong>正交</strong>的诚实轴：</p>
+<table><thead><tr><th>OPS</th><th>轴</th><th>回答的问题</th></tr></thead><tbody><tr><td>OPS-MAN-104</td><td>置信度（accuracy）</td><td>提取出的<strong>每个词</strong>可不可信？</td></tr><tr><td>OPS-MAN-109</td><td>覆盖度（coverage across images）</td><td>是不是<strong>所有图片</strong>都被 OCR 了？（超 maxImages / 不可读被略过）</td></tr><tr><td>OPS-MAN-111</td><td>单图截断（completeness within one image）</td><td><strong>一张图</strong>的 OCR 文本是不是被 maxChars 切短了？</td></tr><tr><td><strong>OPS-MAN-112</strong></td><td><strong>语言包可用性（language availability）</strong></td><td><strong>请求的 OCR 语言</strong>本机到底跑没跑起来？</td></tr></tbody></table>
+<p>第四条最直接服务于「准确识别图片」：即便文字清晰、图片完整、文本没截断，只要<strong>本机没装对应<br>语言的 traineddata</strong>，tesseract 也识不出那种语言的文字。</p>
+<h2 id="死字段-断桥">死字段（断桥）<a class="anchor" href="#死字段-断桥" aria-label="锚点">#</a></h2>
+<p><code>docHelper.py._resolve_lang(requested, available)</code> 会把请求的语言规格（如 <code>chi_sim+eng</code>）<br><strong>静默收窄</strong>成本机已安装 traineddata 的子集；若一个都没装，退回 <code>eng</code>，再退回任意非 <code>osd</code> 语言。<br>它<strong>只返回收窄后的 <code>lang</code>，从不返回原始请求</strong>。</p>
+<p>后果：用户发一张中文发票给纯文本模型，本机只装了 <code>eng</code>。tesseract 用 <code>eng</code> 去识中文，<br>要么识不出、要么把汉字误转写成乱码英文；而 khy 仍把这段不可靠文本原样注入、告诉模型<br>「请据此作答」。用户看不到「你要的中文语言包根本没装」——这就是死字段：上游算出了收窄<br>（<code>_resolve_lang</code> 内部知道丢了哪些语言），但这个信号跨层被丢弃，从不到达用户。</p>
+<h2 id="修复-全-additive-门-khy-ocr-language-notice-default-on-门关逐字节回退">修复（全 additive · 门 <code>KHY_OCR_LANGUAGE_NOTICE</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-门-khy-ocr-language-notice-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>信号链补齐（让被丢弃的原始请求一路带出来）：</p>
+<ol><li><strong><code>docHelper.py</code></strong>：在 3 个 OCR 成功出口（<code>_ocr_via_cli</code> 的诚实结果与纯文本回退、</li></ol>
+<p><code>ocr_image</code> 的 pytesseract 成功）除已有的 <code>lang</code>（= 生效语言）外，新增<br>   <code>requestedLang</code>（= 原始请求 <code>lang</code>）。</p>
+<ol><li><strong><code>ocrSnippetService.js</code></strong>：<code>_ocrImageWithDocHelper(Async)</code> 与</li></ol>
+<p><code>extractImageOcrSnippet(Async)</code> 的输出对象透传 <code>requestedLang</code>。</p>
+<ol><li><strong><code>aiGateway.js</code></strong>：<code>extractImageOcrDetails</code> 每条 detail 携带 <code>lang</code> 与 <code>requestedLang</code>。</li><li><strong>纯叶 <code>gateway/ocrLanguageNotice.js</code></strong>：<ul><li><code>computeDroppedLangs(details)</code> —— 对每张图做「请求语言集 − 生效语言集」的集合差，</li></ul></li></ol>
+<p>去重排序返回被丢的语言；<code>osd</code> 不计（方向/脚本检测，非文本语言）；缺 <code>requestedLang</code><br>     或畸形 → <code>[]</code>，绝不谎报。</p>
+<ul><li><code>buildLanguageNotice({ dropped, env })</code> —— 渲染中文告诫，点名被丢语言 + 给出安装提示</li></ul>
+<p>（如 <code>apt install tesseract-ocr-&lt;lang&gt;</code>）；空 / 门关 → <code>null</code>。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code></strong>：新增 <code>_appendOcrLanguageNotice(prompt, ocrDetails)</code>，</li></ol>
+<p>在 3 个 OCR 注入点紧接 <code>_appendOcrTruncationNotice</code> 之后调用（fail-soft try/catch，<br>   叶子不可用则原样返回 prompt）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>只在真发生收窄时告警</strong>：<code>requestedLang</code> 有、生效 <code>lang</code> 没有的语言才算被丢。请求 == 生效</li></ul>
+<p>（语言包齐全）或 Python 无法内省（原样返回请求）→ 无丢弃、无告警、逐字节回退。</p>
+<ul><li><strong>纯装饰</strong>：只追加一段告诫，绝不改变成功/失败归属，绝不动「非多模态模型永不收裸图」的</li></ul>
+<p>剥图不变量，畸形绝不抛。</p>
+<ul><li><strong>门关即回退</strong>：<code>KHY_OCR_LANGUAGE_NOTICE=off/0/false/no</code> → prompt 逐字节还原。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶：<code>node --test services/backend/tests/gateway/ocrLanguageNotice.test.js</code>（13/13）。</li><li>接线（断桥闭合）：<code>imageOcrLanguageWiring.test.js</code>（3/3，自带录制 adapter + DI）。</li><li><strong>真实图片核验（<code>/goal</code> 要求）</strong>：<code>ocrLanguageNarrowing.test.js</code>（2/2，0 skip）</li></ul>
+<p>用 PIL 渲染 &quot;INVOICE ACME 2026&quot; / &quot;TOTAL USD 1234&quot;，在<strong>无多模态模型</strong>的纯 OCR 路径上：</p>
+<ul><li>A：<code>lang=eng</code>（已装）→ 文本命中 <code>/INVOICE/</code>、<code>/1234/</code>（准确识别），<code>requestedLang===lang===eng</code>，</li></ul>
+<p><code>computeDroppedLangs===[]</code>，<code>buildLanguageNotice===null</code>（不误报）。</p>
+<ul><li>B：<code>lang=eng+zzz</code>（<code>zzz</code> 永不存在）→ 文本仍命中 <code>/INVOICE/</code>，<code>requestedLang==='eng+zzz'</code>、</li></ul>
+<p><code>lang==='eng'</code>，<code>computeDroppedLangs===['zzz']</code>，告警触发命中 <code>/未安装以下 OCR 语言包/</code> 与 <code>/zzz/</code>。</p>
+<ul><li>聚合：<code>npm run test:ocr-language-notice</code>（三文件），并入 <code>test:maintainer:safety</code>。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>兜底诚实性不止「提取到文字」「文字可信」「文字完整」，还要「请求的语言到底跑没跑起来」。<br>上游 <code>_resolve_lang</code> 内部知道自己收窄了哪些语言，却只把生效语言带出、把原始请求丢弃——<br>这个「上游算出 + 跨层被默默丢弃」的 quality signal 就是死字段。判据 = grep 收窄后的<br>字段（<code>lang</code>）有消费者、而原始请求（<code>requestedLang</code>）在整条链路零消费者。装饰型告警只在<br><strong>确有丢弃</strong>时触发，绝不把「未知 / 未收窄」谎报成「语言缺失」。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

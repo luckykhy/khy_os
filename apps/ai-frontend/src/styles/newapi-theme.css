@@ -1,0 +1,500 @@
+/* =========================================================================
+ * KHY AI Frontend — design tokens & Element Plus theming
+ *
+ * Token-driven, dual-theme (light / dark). The design language is adapted
+ * from new-api's shadcn/oklch palette but expressed as hex/rgb so it can map
+ * cleanly onto Element Plus CSS variables.
+ *
+ * Theme switching is driven by the `dark` class on <html> (see
+ * src/composables/useTheme.js). Element Plus dark css-vars are imported in
+ * main.js; the overrides below re-point both EP and our --khy-* tokens so the
+ * whole surface reacts to a single class toggle.
+ * ========================================================================= */
+
+:root {
+  /* Surfaces */
+  --khy-bg-main: #f4f7fc;
+  --khy-bg-elevated: #ffffff;
+  --khy-bg-card: #ffffff;
+  --khy-bg-card-grad: linear-gradient(180deg, #ffffff, #fcfdff);
+  --khy-bg-soft: #eff4ff;
+  --khy-bg-hover: #f5f8ff;
+
+  /* Text */
+  --khy-text-main: #1f2937;
+  --khy-text-strong: #101828;
+  --khy-text-secondary: #475467;
+  --khy-text-muted: #667085;
+
+  /* Lines */
+  --khy-border: #d6e0ef;
+  --khy-border-light: #e5ebf5;
+
+  /* Brand / semantic */
+  --khy-primary: #2f7ef7;
+  --khy-primary-strong: #1f68df;
+  --khy-primary-soft: #eaf2ff;
+  --khy-success: #079455;
+  --khy-warning: #dc6803;
+  --khy-danger: #d92d20;
+
+  /* Geometry */
+  --khy-radius: 12px;
+  --khy-radius-sm: 8px;
+  --khy-radius-lg: 16px;
+  --khy-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --khy-shadow-lift: 0 14px 36px rgba(15, 23, 42, 0.10);
+  --khy-font: 'Public Sans', 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* Monospace stack — many cards reference var(--khy-font-mono, monospace) for
+   * keys / IDs / model names. Defining it here upgrades all of them from raw
+   * `monospace` to a coherent, legible dev-font stack in one place. */
+  --khy-font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', 'Menlo', 'Consolas', 'Roboto Mono', 'Noto Sans Mono', monospace;
+
+  /* Page background layers (radial light + base gradient) */
+  --khy-bg-glow-1: rgba(86, 137, 255, 0.14);
+  --khy-bg-glow-2: rgba(82, 177, 255, 0.12);
+  --khy-bg-base: linear-gradient(180deg, #f9fbff 0%, #f4f7fc 100%);
+
+  /* Skeleton shimmer */
+  --khy-skeleton-base: #e8eef7;
+  --khy-skeleton-highlight: #f6f9ff;
+}
+
+html.dark {
+  /* Surfaces — deep blue-grey, raised cards (adapted from new-api .dark) */
+  --khy-bg-main: #161b26;
+  --khy-bg-elevated: #1e2533;
+  --khy-bg-card: #1e2533;
+  --khy-bg-card-grad: linear-gradient(180deg, #232b3b, #1c2330);
+  --khy-bg-soft: #232c3d;
+  --khy-bg-hover: #283245;
+
+  /* Text */
+  --khy-text-main: #d4dbe8;
+  --khy-text-strong: #eef2f8;
+  --khy-text-secondary: #9aa7bd;
+  --khy-text-muted: #7c8aa3;
+
+  /* Lines */
+  --khy-border: #313c4f;
+  --khy-border-light: #2a3445;
+
+  /* Brand / semantic (slightly brighter for contrast on dark) */
+  --khy-primary: #5fa0ff;
+  --khy-primary-strong: #7db4ff;
+  --khy-primary-soft: #21304a;
+  --khy-success: #34d399;
+  --khy-warning: #fbbf24;
+  --khy-danger: #f87171;
+
+  --khy-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  --khy-shadow-lift: 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  --khy-bg-glow-1: rgba(64, 110, 200, 0.16);
+  --khy-bg-glow-2: rgba(46, 120, 180, 0.12);
+  --khy-bg-base: linear-gradient(180deg, #181e2a 0%, #141925 100%);
+
+  --khy-skeleton-base: #283142;
+  --khy-skeleton-highlight: #36425a;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--khy-font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--khy-text-main);
+  background:
+    radial-gradient(circle at 10% 0%, var(--khy-bg-glow-1), transparent 36%),
+    radial-gradient(circle at 88% 2%, var(--khy-bg-glow-2), transparent 34%),
+    var(--khy-bg-base);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Element Plus global mapping (token-driven, reacts to html.dark) ── */
+:root {
+  --el-bg-color: var(--khy-bg-main);
+  --el-bg-color-page: var(--khy-bg-main);
+  --el-bg-color-overlay: var(--khy-bg-elevated);
+  --el-fill-color-light: var(--khy-bg-soft);
+  --el-fill-color-lighter: var(--khy-bg-soft);
+  --el-fill-color-blank: var(--khy-bg-card);
+  --el-border-color: var(--khy-border);
+  --el-border-color-light: var(--khy-border-light);
+  --el-border-color-lighter: var(--khy-border-light);
+  --el-text-color-primary: var(--khy-text-strong);
+  --el-text-color-regular: var(--khy-text-main);
+  --el-text-color-secondary: var(--khy-text-secondary);
+  --el-text-color-placeholder: var(--khy-text-muted);
+  --el-color-primary: var(--khy-primary);
+  --el-color-primary-light-3: #5f9af9;
+  --el-color-primary-light-5: #82b1fb;
+  --el-color-primary-light-7: #b7d4fd;
+  --el-color-primary-light-9: var(--khy-primary-soft);
+  --el-color-primary-dark-2: var(--khy-primary-strong);
+  --el-mask-color: rgba(12, 16, 26, 0.45);
+  --el-mask-color-extra-light: rgba(12, 16, 26, 0.2);
+}
+
+html.dark {
+  --el-color-primary-light-3: #4f86e0;
+  --el-color-primary-light-5: #3f6cb8;
+  --el-color-primary-light-7: #2f4f86;
+  --el-color-primary-light-9: var(--khy-primary-soft);
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+  --el-mask-color-extra-light: rgba(0, 0, 0, 0.35);
+}
+
+.el-card {
+  border: 1px solid var(--khy-border);
+  border-radius: var(--khy-radius);
+  background: var(--khy-bg-card-grad);
+  box-shadow: var(--khy-shadow);
+}
+
+.el-card__header {
+  border-bottom-color: var(--khy-border-light);
+}
+
+.el-table {
+  color: var(--khy-text-main);
+  --el-table-header-bg-color: var(--khy-bg-soft);
+  --el-table-row-hover-bg-color: var(--khy-bg-hover);
+  --el-table-tr-bg-color: var(--khy-bg-card);
+  --el-table-bg-color: var(--khy-bg-card);
+  --el-table-border-color: var(--khy-border-light);
+  --el-table-text-color: var(--khy-text-main);
+  --el-table-header-text-color: var(--khy-text-secondary);
+}
+
+.el-table th.el-table__cell {
+  color: var(--khy-text-secondary);
+  font-weight: 700;
+}
+
+.el-table td.el-table__cell,
+.el-descriptions__content,
+.el-form-item__content {
+  color: var(--khy-text-main);
+}
+
+.el-descriptions__label {
+  color: var(--khy-text-secondary);
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  background-color: var(--khy-bg-card);
+  box-shadow: 0 0 0 1px var(--khy-border) inset;
+}
+
+.el-input__inner,
+.el-textarea__inner {
+  color: var(--khy-text-main);
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: var(--khy-text-muted);
+}
+
+.el-button:not(.is-text):not(.is-link) {
+  font-weight: 600;
+}
+
+.el-statistic__head,
+.el-statistic .el-statistic__head {
+  color: var(--khy-text-secondary);
+  font-weight: 600;
+}
+
+.el-statistic__content,
+.el-statistic .el-statistic__content {
+  color: var(--khy-text-strong) !important;
+}
+
+.el-dialog {
+  border: 1px solid var(--khy-border);
+  border-radius: var(--khy-radius);
+  background: var(--khy-bg-elevated);
+}
+
+/* Vertical menu (sidebar) */
+.el-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--khy-text-secondary);
+  --el-menu-hover-text-color: var(--khy-primary-strong);
+  --el-menu-hover-bg-color: var(--khy-bg-soft);
+  --el-menu-active-color: var(--khy-primary-strong);
+  border-right: none;
+}
+
+.el-menu--horizontal > .el-menu-item {
+  color: var(--khy-text-secondary);
+  font-weight: 600;
+}
+
+.el-menu--horizontal > .el-menu-item:hover,
+.el-menu--horizontal > .el-menu-item.is-active {
+  color: var(--khy-primary-strong);
+}
+
+.khy-page-title {
+  margin: 0 0 18px 0;
+  color: var(--khy-text-strong);
+  letter-spacing: 0.2px;
+}
+
+/* ── Page wrapper (single source of truth) ──
+   `.layout-main` already owns the 20px outer gutter, so a routed view's root
+   must NOT re-add its own padding (that double-pads the page). This utility
+   centers the content and caps its width — adopt it on a view root instead of
+   a bespoke `padding: 20px`. */
+.khy-page {
+  max-width: var(--khy-page-max, 1320px);
+  margin: 0 auto;
+}
+
+/* ── Unified card hover lift ── */
+.el-card[class*="section-card"],
+.el-card[class*="metric-card"],
+.el-card[class*="home-card"] {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.el-card[class*="section-card"]:hover,
+.el-card[class*="metric-card"]:hover,
+.el-card[class*="home-card"]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--khy-shadow-lift);
+}
+
+/* ── Smooth page transitions ── */
+.layout-main .ai-dashboard-page,
+.layout-main .ai-gateway-admin,
+.layout-main .ai-monitor-page,
+.layout-main .bridge-page,
+.layout-main .account-pool-page,
+.layout-main .assets-customers-page,
+.layout-main .ai-chat-page,
+.layout-main .user-home-page {
+  animation: khy-fade-in 0.28s ease-out;
+}
+
+@keyframes khy-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Metric card gradient variants ── */
+.metric-card--blue  { border-left: 3px solid #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 60%); }
+.metric-card--green { border-left: 3px solid #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 60%); }
+.metric-card--amber { border-left: 3px solid #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 60%); }
+.metric-card--purple { border-left: 3px solid #8b5cf6; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 60%); }
+.metric-card--rose  { border-left: 3px solid #f43f5e; background: linear-gradient(135deg, #fff1f2 0%, #ffffff 60%); }
+.metric-card--cyan  { border-left: 3px solid #06b6d4; background: linear-gradient(135deg, #ecfeff 0%, #ffffff 60%); }
+
+/* Dark variants: tint the left border, keep card surface from token */
+html.dark .metric-card--blue   { background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, var(--khy-bg-card) 60%); }
+html.dark .metric-card--green  { background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, var(--khy-bg-card) 60%); }
+html.dark .metric-card--amber  { background: linear-gradient(135deg, rgba(245,158,11,0.12) 0%, var(--khy-bg-card) 60%); }
+html.dark .metric-card--purple { background: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, var(--khy-bg-card) 60%); }
+html.dark .metric-card--rose   { background: linear-gradient(135deg, rgba(244,63,94,0.12) 0%, var(--khy-bg-card) 60%); }
+html.dark .metric-card--cyan   { background: linear-gradient(135deg, rgba(6,182,212,0.12) 0%, var(--khy-bg-card) 60%); }
+
+/* ── Metric card icon area ── */
+.metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.metric-icon--blue   { background: #dbeafe; color: #2563eb; }
+.metric-icon--green  { background: #d1fae5; color: #059669; }
+.metric-icon--amber  { background: #fef3c7; color: #d97706; }
+.metric-icon--purple { background: #ede9fe; color: #7c3aed; }
+.metric-icon--rose   { background: #ffe4e6; color: #e11d48; }
+.metric-icon--cyan   { background: #cffafe; color: #0891b2; }
+
+html.dark .metric-icon--blue   { background: rgba(37,99,235,0.22);  color: #7fb0ff; }
+html.dark .metric-icon--green  { background: rgba(5,150,105,0.22);  color: #5ee0ad; }
+html.dark .metric-icon--amber  { background: rgba(217,119,6,0.22);  color: #fcc25a; }
+html.dark .metric-icon--purple { background: rgba(124,58,237,0.22); color: #b69bff; }
+html.dark .metric-icon--rose   { background: rgba(225,29,72,0.22);  color: #ff8aa1; }
+html.dark .metric-icon--cyan   { background: rgba(8,145,178,0.22);  color: #56d3ec; }
+
+/* ── Status dot indicator ── */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.status-dot--green  { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.45); }
+.status-dot--yellow { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.45); }
+.status-dot--red    { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.45); }
+.status-dot--gray   { background: #9ca3af; }
+
+/* ── Tag improvements ── */
+.el-tag {
+  border-radius: 6px;
+}
+
+/* ── Brand logo tile (single source of truth) ──
+   The gradient "K" badge used in the sidebar, login, and landing hero.
+   Use the size modifiers instead of re-declaring the gradient per view. */
+.khy-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--khy-primary), var(--khy-primary-strong));
+  color: #fff;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.khy-brand-logo--sm { width: 30px; height: 30px; border-radius: 9px;  font-size: 17px; }
+.khy-brand-logo--md { width: 46px; height: 46px; border-radius: 13px; font-size: 24px; box-shadow: 0 8px 20px rgba(47, 126, 247, 0.32); }
+.khy-brand-logo--lg { width: 52px; height: 52px; border-radius: 14px; font-size: 26px; }
+
+/* ── Better empty state ── */
+.el-empty__description p {
+  color: var(--khy-text-muted);
+}
+
+/* ── Skeleton shimmer (loading placeholder) ── */
+.khy-skeleton {
+  border-radius: var(--khy-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--khy-skeleton-base) 0%,
+    var(--khy-skeleton-base) 33%,
+    var(--khy-skeleton-highlight) 50%,
+    var(--khy-skeleton-base) 67%,
+    var(--khy-skeleton-base) 100%
+  );
+  background-size: 300% 100%;
+  animation: khy-skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes khy-skeleton-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .khy-skeleton {
+    animation: none;
+    background: var(--khy-skeleton-base);
+  }
+  body { transition: none; }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--khy-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--khy-text-muted);
+}
+
+/* =========================================================================
+ * Interaction polish pass
+ *
+ * Tasteful micro-interactions layered on top of the token system: soft focus
+ * halos on fields, a gentle hover lift on buttons, crisper card headers, a
+ * segmented-control sheen, and deeper dialog elevation. Pure presentation —
+ * everything resolves through the same --khy-* tokens, so light + dark and
+ * reduced-motion all stay correct. Loaded last (main.js), so these win on
+ * equal specificity with Element Plus' own theme.
+ * ========================================================================= */
+
+/* Fields: hairline hover, soft primary halo on focus (replaces the flat ring).
+   The base wrapper ring is declared above; these add interaction states. */
+.el-input__wrapper:hover,
+.el-textarea__inner:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--khy-primary-strong) inset;
+}
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus,
+.el-select__wrapper.is-focused,
+.el-select__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--khy-primary) inset, 0 0 0 3px var(--khy-primary-soft);
+  border-color: var(--khy-primary);
+}
+
+/* Buttons: a 1px lift + shadow swell on hover, settling on press. Filled
+   primaries carry a soft brand glow so the main action reads first. */
+.el-button {
+  transition: transform 0.12s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease, border-color 0.2s ease;
+}
+.el-button--primary:not(.is-text):not(.is-link) {
+  box-shadow: 0 4px 12px rgba(47, 126, 247, 0.24);
+}
+html.dark .el-button--primary:not(.is-text):not(.is-link) {
+  box-shadow: 0 4px 14px rgba(95, 160, 255, 0.28);
+}
+.el-button:not(.is-text):not(.is-link):not(.is-disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--khy-shadow);
+}
+.el-button:not(.is-text):not(.is-link):not(.is-disabled):active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Card header: heavier title, hairline accent under the rule for definition. */
+.el-card__header {
+  font-weight: 700;
+  color: var(--khy-text-strong);
+}
+
+/* Segmented control (el-radio-button) — used by the catalog pivot switcher. */
+.el-radio-button__inner {
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.el-radio-button:first-child .el-radio-button__inner { border-radius: var(--khy-radius-sm) 0 0 var(--khy-radius-sm); }
+.el-radio-button:last-child .el-radio-button__inner { border-radius: 0 var(--khy-radius-sm) var(--khy-radius-sm) 0; }
+
+/* Tags: a touch more rounding for a softer, modern read. */
+.el-tag { border-radius: 7px; }
+
+/* Dialogs / message boxes: deeper elevation so modals clearly float. */
+.el-dialog,
+.el-message-box {
+  box-shadow: var(--khy-shadow-lift);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .el-button,
+  .el-button:not(.is-text):not(.is-link):not(.is-disabled):hover,
+  .el-button:not(.is-text):not(.is-link):not(.is-disabled):active {
+    transition: none;
+    transform: none;
+  }
+}

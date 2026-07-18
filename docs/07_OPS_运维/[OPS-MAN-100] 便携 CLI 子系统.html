@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-100] 便携 CLI 子系统（claude/codex/opencode 开箱即用、可更新） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-100] 便携 CLI 子系统（claude/codex/opencode 开箱即用、可更新）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-100] 便携 CLI 子系统（claude/codex/opencode 开箱即用、可更新）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-100-便携-cli-子系统-claude-codex-opencode-开箱即用-可更新">[OPS-MAN-100] 便携 CLI 子系统（claude/codex/opencode 开箱即用、可更新）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-只认-path-的裸-spawn">为什么需要它（真实缺口 = 只认 PATH 的裸 spawn）</a></li><li class="lvl-2"><a href="#怎么做的-ssot-纯叶解析-变更安装器-交互桥-god-file-外科接线">怎么做的（SSOT + 纯叶解析 + 变更安装器 + 交互桥 + god-file 外科接线）</a></li><li class="lvl-2"><a href="#诚实边界">诚实边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-100-便携-cli-子系统-claude-codex-opencode-开箱即用-可更新">[OPS-MAN-100] 便携 CLI 子系统（claude/codex/opencode 开箱即用、可更新）<a class="anchor" href="#ops-man-100-便携-cli-子系统-claude-codex-opencode-开箱即用-可更新" aria-label="锚点">#</a></h1>
+<blockquote><p>直接回应用户诉求：「我希望 npm 安装后，khy 可以把 claude、codex、opencode 做成<br>可更新的便携版，开箱即用。」现象（Windows 终端实测）：<code>khy claude</code> / <code>khy codex</code> /<br><code>khy opencode</code> 全部报「未检测到 xxx 命令」（<code>spawn codex ENOENT</code>），因为这三个 CLI 只被<br>spawn 裸命令、完全依赖系统 PATH，用户机器上没全局装 → 恒 ENOENT。本条把它们做成装进<br>khy 数据家 <code>~/.khy/tools/</code> 下、由 khy 自己解析路径 / 自己拉起 / 可 <code>khy tools update</code><br>保持最新的便携版；且在 <code>khy claude</code> 启动前若未安装 → <strong>交互确认</strong>「是否现在安装便携版?[Y/n]」，<br>点头即装、装完复检直接继续本次启动。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>claude（<code>@anthropic-ai/claude-code</code>）与 codex（<code>@openai/codex</code>）npm 包发布的是<strong>带<br>node shebang 的 JS 入口</strong>；npm 在 Windows 上生成 <code>.cmd</code>/<code>.ps1</code> shim，直接 spawn 裸名依赖<br>PATH → 便携安装不在 PATH → 恒 ENOENT。本子系统<strong>绕开全部 shim/PATH 问题</strong>：读<strong>已安装包<br><code>package.json</code> 的 <code>bin</code> 字段</strong> → 定位真实 JS 入口 → 返回启动规格<br><code>{ command: process.execPath, argsPrefix: [entryAbs] }</code>，即用当前 Node 直接跑入口脚本，<br>跨平台一致、不碰 PATH、不碰 <code>.cmd</code>。原生二进制入口（shebang 嗅探）回退为直接执行。<br>opencode 保留其既有专用解析器 <code>opencodeBinResolver</code>，泛化解析器对它返回 null（不打架）。</p>
+<h2 id="为什么需要它-真实缺口-只认-path-的裸-spawn">为什么需要它（真实缺口 = 只认 PATH 的裸 spawn）<a class="anchor" href="#为什么需要它-真实缺口-只认-path-的裸-spawn" aria-label="锚点">#</a></h2>
+<ul><li><strong>确定性缺陷</strong>：claudeAdapter/codexAdapter 的 spawn 分支只会 <code>spawn('claude'|'codex', ...)</code></li></ul>
+<p>（Windows 上 <code>cmd.exe /c claude.cmd</code>），完全依赖系统 PATH。用户没全局装 → ENOENT。</p>
+<ul><li><strong>便携安装约定</strong>：<code>npm install &lt;pkg&gt;@latest --prefix ~/.khy/tools/&lt;pkg&gt;-portable</code>，</li></ul>
+<p>包自成 <code>node_modules</code> 隔离安装，不污染全局、不需管理员权限。</p>
+<ul><li><strong>可更新</strong>：<code>khy tools update &lt;tool&gt;</code> = 重跑同一 <code>@latest</code> 安装命令。</li></ul>
+<h2 id="怎么做的-ssot-纯叶解析-变更安装器-交互桥-god-file-外科接线">怎么做的（SSOT + 纯叶解析 + 变更安装器 + 交互桥 + god-file 外科接线）<a class="anchor" href="#怎么做的-ssot-纯叶解析-变更安装器-交互桥-god-file-外科接线" aria-label="锚点">#</a></h2>
+<p><strong>纯叶</strong> <code>services/backend/src/services/gateway/adapters/portableCliRegistry.js</code>（SSOT）：</p>
+<ul><li>冻结 <code>_TOOLS</code>：claude/codex/opencode 各自 <code>{key,pkg,bin,portableDir,versionArgs}</code>。</li><li><code>_NATIVE_RESOLVER = new Set(['opencode'])</code>：交由专用解析器处理，泛化解析器跳过。</li><li><code>listTools/isKnownTool/getTool/hasNativeResolver</code>；HOW-TO-EXTEND 抄写式注释。</li></ul>
+<p><strong>纯叶</strong> <code>portableCliResolver.js</code>（除 fs 只读探测外无副作用、绝不抛）：</p>
+<ul><li><code>resolveLaunchSpec(toolKey, {env,toolsRoot})</code>：门 <code>KHY_PORTABLE_CLI</code>（default-on）关 → null；</li></ul>
+<p>opencode → null；<code>KHY_&lt;TOOL&gt;_BIN</code> 覆盖优先；便携命中 → 读 <code>package.json.bin</code> 定位入口 →<br>  <code>_isNodeEntry</code>（.js/.cjs/.mjs 或 node shebang）→ node 规格，否则直接执行。</p>
+<ul><li><code>resolveSpawn(toolKey, args, {fallback})</code>：命中 → <code>argsPrefix + 业务 args</code>；未命中 → 逐字节</li></ul>
+<p>回退调用方给的裸命令 fallback。<code>isInstalled</code> / <code>packageDir</code> 供 detect / 诊断。</p>
+<p><strong>变更叶（有网络+落盘）</strong> <code>portableCliInstaller.js</code>：门 <code>KHY_PORTABLE_CLI_INSTALL</code>（default-on）；<br><code>install(toolKey)</code> = <code>npm install &lt;pkg&gt;@latest --prefix &lt;root&gt;/&lt;portableDir&gt; --no-audit --no-fund</code><br>（<strong>参数数组</strong>、杜绝命令注入；包名/前缀来自 SSOT + 受信数据家，不含用户自由文本；绝不写 key）；<br>win32 经 <code>cmd.exe /d /s /c npm ...</code>。<code>update</code> 是 <code>install</code> 的语义别名（<code>@latest</code>）。</p>
+<p><strong>极薄接线叶</strong> <code>portableAdapterSpawn.js</code>：<code>forTool(key)</code> → <code>{portableSpawn, portableInstalled}</code><br>两个绑定 toolKey 且<strong>绝不抛</strong>的封装，使 codex/claude 两个逼近 2500 行上限的 god-file 的<br>spawn/detect 接线各仅数行（默认便携根 <code>~/.khy/tools</code>，用 <code>getDataHome()+'tools'</code> 而非<br><code>getDataDir</code> 避免在热路径顺手建空目录）。</p>
+<p><strong>交互桥</strong> <code>cli/handlers/_portableAutoInstall.js</code>：门 <code>KHY_PORTABLE_CLI_AUTOINSTALL</code>（default-on）；<br>适配器不可用 + 便携工具 + 交互环境（有 rl + TTY）→ 问「[Y/n]」→ 点头装 → 强制 <code>detect(true)</code><br>复检 available。非交互/门关/非便携工具 → 不提示（走原报错路径）。</p>
+<p><strong>god-file 外科接线</strong>（additive、逐字节回退）：</p>
+<ul><li>codexAdapter/claudeAdapter：module 顶 `const {portableSpawn,portableInstalled} =</li></ul>
+<p>require('./portableAdapterSpawn').forTool('codex'|'claude');<code>；spawn else 分支先算裸命令<br>  fallback、再 </code>const _sp = portableSpawn(args, fbCmd, fbArgs); spawn(_sp.command, _sp.args, ...)<code>；<br>  detect 尾 </code>if (!_available &amp;&amp; portableInstalled()) _available = true;`；getStatus 不可用<br>  detail 追加「可运行 khy tools install &lt;tool&gt; 安装便携版」。</p>
+<ul><li>ide.js 可用性门（:60）：不可用时先经 <code>_portableAutoInstall</code>，装成功即复检继续。</li><li>opencodeBinResolver：<code>_candidateBases</code> 增补数据家 <code>getDataHome()</code>（<code>_PORTABLE_TAIL[0]==='tools'</code></li></ul>
+<p>故根是数据家本身）候选，让 <code>khy tools install opencode</code> 落到 <code>~/.khy/tools/</code> 也能被解析。</p>
+<p><strong>管理命令</strong> <code>cli/handlers/tools.js</code> + <code>router.js</code> <code>case 'tools'</code> + <code>commandSchema.js</code> 登记：<br><code>khy tools list|install &lt;tool&gt;|update &lt;tool&gt;|path &lt;tool&gt;</code>。</p>
+<h2 id="诚实边界">诚实边界<a class="anchor" href="#诚实边界" aria-label="锚点">#</a></h2>
+<ul><li>门全 default-on、CANON falsy <code>['0','false','off','no']</code> 关闭 → 逐字节回退到原裸命令行为。</li><li>安装器绝不把任何 key/token 写盘或入参；仅执行固定 <code>npm install</code>（参数数组防注入）。</li><li>交互桥仅在 TTY + 有 rl 时提示；非交互环境不替用户拍板下载。</li><li>opencode 走既有专用解析器，本子系统只为它补一个数据家候选，不接管其解析。</li><li>便携根默认 <code>~/.khy/tools</code>（<code>KHY_TOOLS_DIR</code> 覆盖），只读路径（list/path）不建空目录。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:portable-cli                   # 纯逻辑 25/25(门开命中/门关回退/恶意 env 不抛/win32·posix)
+node --check services/backend/src/services/gateway/adapters/portableCliRegistry.js
+node --check services/backend/src/services/gateway/adapters/portableCliResolver.js
+node --check services/backend/src/services/gateway/adapters/portableCliInstaller.js
+node --check services/backend/src/services/gateway/adapters/portableAdapterSpawn.js
+node --check services/backend/src/cli/handlers/tools.js
+node --check services/backend/src/cli/handlers/_portableAutoInstall.js
+npm run arch:god                            # codex/claude 接线后无新增超限(codex 2492, claude 2448)</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-099] 空产出成功检测.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-099] 空产出成功检测（成功但零产出的子任务如实告警）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-101] 角色归属诚实.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-101] 角色归属诚实（最终报告按角色标注子任务并把失败按类型分布）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-100] 便携 CLI 子系统.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

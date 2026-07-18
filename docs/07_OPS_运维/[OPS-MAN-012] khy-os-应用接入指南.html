@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 应用接入指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS 应用接入指南</div>
+      <header class="hero reveal"><h1>KHY OS 应用接入指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-应用接入指南">KHY OS 应用接入指南</a></li><li class="lvl-2"><a href="#一-khy-os-提供了什么">一、KHY OS 提供了什么</a></li><li class="lvl-2"><a href="#二-接入层级">二、接入层级</a></li><li class="lvl-2"><a href="#三-level-0-api-消费者-5-分钟接入">三、Level 0 — API 消费者（5 分钟接入）</a></li><li class="lvl-3"><a href="#3-1-ai-代理-api">3.1 AI 代理 API</a></li><li class="lvl-3"><a href="#3-2-获取-auth-token">3.2 获取 Auth Token</a></li><li class="lvl-3"><a href="#3-3-模型路由规则">3.3 模型路由规则</a></li><li class="lvl-3"><a href="#3-4-管理-api">3.4 管理 API</a></li><li class="lvl-2"><a href="#四-level-1-sdk-集成">四、Level 1 — SDK 集成</a></li><li class="lvl-3"><a href="#4-1-node-js-sdk-khy-sdk">4.1 Node.js SDK (`@khy/sdk`)</a></li><li class="lvl-3"><a href="#4-2-python-sdk-khy-sdk-python">4.2 Python SDK (`@khy/sdk-python`)</a></li><li class="lvl-3"><a href="#4-3-java-sdk-khy-sdk-java">4.3 Java SDK (`@khy/sdk-java`)</a></li><li class="lvl-3"><a href="#4-4-mcp-客户端">4.4 MCP 客户端</a></li><li class="lvl-2"><a href="#五-level-2-技能贡献">五、Level 2 — 技能贡献</a></li><li class="lvl-3"><a href="#5-1-创建技能">5.1 创建技能</a></li><li class="lvl-3"><a href="#5-2-项目级技能">5.2 项目级技能</a></li><li class="lvl-3"><a href="#5-3-带-handler-的技能">5.3 带 Handler 的技能</a></li><li class="lvl-2"><a href="#六-level-3-扩展开发">六、Level 3 — 扩展开发</a></li><li class="lvl-3"><a href="#6-1-扩展结构">6.1 扩展结构</a></li><li class="lvl-3"><a href="#6-2-扩展清单">6.2 扩展清单</a></li><li class="lvl-3"><a href="#6-3-注册-cli-命令">6.3 注册 CLI 命令</a></li><li class="lvl-3"><a href="#6-4-网关插件">6.4 网关插件</a></li><li class="lvl-3"><a href="#6-5-安装与发布">6.5 安装与发布</a></li><li class="lvl-2"><a href="#七-注册自定义工具">七、注册自定义工具</a></li><li class="lvl-3"><a href="#7-1-函数式定义">7.1 函数式定义</a></li><li class="lvl-3"><a href="#7-2-工具在扩展中自动注册">7.2 工具在扩展中自动注册</a></li><li class="lvl-2"><a href="#八-mcp-服务器接入">八、MCP 服务器接入</a></li><li class="lvl-3"><a href="#8-1-配置已有-mcp-服务器">8.1 配置已有 MCP 服务器</a></li><li class="lvl-3"><a href="#8-2-项目级配置">8.2 项目级配置</a></li><li class="lvl-3"><a href="#8-3-内建-mcp-工具">8.3 内建 MCP 工具</a></li><li class="lvl-2"><a href="#九-实时监控接入">九、实时监控接入</a></li><li class="lvl-3"><a href="#9-1-sse-订阅">9.1 SSE 订阅</a></li><li class="lvl-3"><a href="#9-2-websocket-实时聊天">9.2 WebSocket 实时聊天</a></li><li class="lvl-2"><a href="#十-开发规范">十、开发规范</a></li><li class="lvl-3"><a href="#10-1-三大工程规则">10.1 三大工程规则</a></li><li class="lvl-3"><a href="#10-2-文件-命名规范">10.2 文件/命名规范</a></li><li class="lvl-3"><a href="#10-3-配置位置">10.3 配置位置</a></li><li class="lvl-3"><a href="#10-4-测试你的接入">10.4 测试你的接入</a></li><li class="lvl-2"><a href="#十一-接入检查清单">十一、接入检查清单</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-012 | 阶段: 运维 | 原路径: docs/指南/khy-os-应用接入指南.md --&gt;</p>
+<h1 id="khy-os-应用接入指南">KHY OS 应用接入指南<a class="anchor" href="#khy-os-应用接入指南" aria-label="锚点">#</a></h1>
+<blockquote><p>让你的项目享受 KHY OS 的 AI 能力、工具体系和跨平台基础设施。</p></blockquote>
+<hr>
+<h2 id="一-khy-os-提供了什么">一、KHY OS 提供了什么<a class="anchor" href="#一-khy-os-提供了什么" aria-label="锚点">#</a></h2>
+<p>你的应用接入 KHY OS 后，可以直接使用以下平台能力：</p>
+<table><thead><tr><th>能力</th><th>说明</th><th>接入方式</th></tr></thead><tbody><tr><td><strong>AI 统一代理</strong></td><td>16+ 模型一个端点调用，自动路由/降级/计费</td><td>HTTP API (端口 9100)</td></tr><tr><td><strong>工具体系</strong></td><td>50+ 内建工具 (文件/Shell/Git/搜索/MCP/...)</td><td>SDK / Tool API</td></tr><tr><td><strong>技能系统</strong></td><td>可复用的 AI 技能包 (commit/review/debug/...)</td><td>Skill 目录</td></tr><tr><td><strong>网关插件</strong></td><td>拦截/修改/监控所有 AI 请求</td><td>JS 插件文件</td></tr><tr><td><strong>MCP 服务器</strong></td><td>标准化上下文协议，连接任何数据源</td><td>mcp.json 配置</td></tr><tr><td><strong>扩展市场</strong></td><td>发布/安装/更新完整扩展包</td><td>openclaw.plugin.json</td></tr><tr><td><strong>监控 SSE</strong></td><td>实时 AI 请求追踪流</td><td>SSE 订阅</td></tr><tr><td><strong>配置管理</strong></td><td>统一配置读写</td><td>REST API / CLI</td></tr></tbody></table>
+<hr>
+<h2 id="二-接入层级">二、接入层级<a class="anchor" href="#二-接入层级" aria-label="锚点">#</a></h2>
+<p>根据你的需求深度，选择合适的接入层级：</p>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│  Level 0: API 消费者  —  调用 AI 代理 API 即可      │
+│  (5 分钟接入，任何语言)                               │
+├─────────────────────────────────────────────────────┤
+│  Level 1: SDK 集成    —  用 @khy/sdk 深度集成        │
+│  (Node.js/Python/Java)                               │
+├─────────────────────────────────────────────────────┤
+│  Level 2: 技能贡献    —  为生态贡献可复用 AI 技能     │
+│  (prompt.md + manifest.json)                         │
+├─────────────────────────────────────────────────────┤
+│  Level 3: 扩展开发    —  完整扩展包（技能+插件+MCP）  │
+│  (openclaw.plugin.json)                              │
+└─────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="三-level-0-api-消费者-5-分钟接入">三、Level 0 — API 消费者（5 分钟接入）<a class="anchor" href="#三-level-0-api-消费者-5-分钟接入" aria-label="锚点">#</a></h2>
+<h3 id="3-1-ai-代理-api">3.1 AI 代理 API<a class="anchor" href="#3-1-ai-代理-api" aria-label="锚点">#</a></h3>
+<p>KHY OS 运行一个 <strong>OpenAI/Anthropic/Gemini 兼容</strong> 的代理服务器，你的应用用任何 AI SDK 都能直接调用。</p>
+<p><strong>启动代理：</strong></p>
+<pre><code class="language-bash">khy                    # 启动 KHY OS，代理自动运行在 9100 端口</code></pre>
+<p><strong>Python (OpenAI SDK)：</strong></p>
+<pre><code class="language-python">from openai import OpenAI
+
+client = OpenAI(
+    base_url=&quot;http://127.0.0.1:9100/v1&quot;,
+    api_key=&quot;khy-your-token&quot;     # 从 ~/.khy/proxy_server_auth.json 读取
+)
+
+resp = client.chat.completions.create(
+    model=&quot;claude/claude-sonnet-4-20250514&quot;,   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;你好&quot;}],
+    stream=True
+)
+for chunk in resp:
+    print(chunk.choices[0].delta.content, end=&quot;&quot;)</code></pre>
+<p><strong>Node.js (Anthropic SDK)：</strong></p>
+<pre><code class="language-javascript">import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  baseURL: 'http://127.0.0.1:9100',
+  apiKey: 'khy-your-token'
+});
+
+const msg = await client.messages.create({
+  model: 'claude-sonnet-4-20250514',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: '你好' }]
+});</code></pre>
+<p><strong>curl：</strong></p>
+<pre><code class="language-bash">curl http://127.0.0.1:9100/v1/chat/completions \
+  -H &quot;Authorization: Bearer khy-your-token&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;model&quot;:&quot;claude/claude-sonnet-4-20250514&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;你好&quot;}]}'</code></pre>
+<h3 id="3-2-获取-auth-token">3.2 获取 Auth Token<a class="anchor" href="#3-2-获取-auth-token" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 自动生成的 token 在这里
+cat ~/.khy/proxy_server_auth.json
+
+# 或通过管理 API 创建专用 token
+curl -X POST http://127.0.0.1:9090/api/ai-gateway/customers \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;name&quot;:&quot;my-app&quot;,&quot;tier&quot;:&quot;standard&quot;}'</code></pre>
+<h3 id="3-3-模型路由规则">3.3 模型路由规则<a class="anchor" href="#3-3-模型路由规则" aria-label="锚点">#</a></h3>
+<p>在 <code>model</code> 字段中指定适配器前缀即可路由到不同后端：</p>
+<table><thead><tr><th>model 格式</th><th>路由到</th></tr></thead><tbody><tr><td><code>claude/claude-sonnet-4-20250514</code></td><td>Claude 适配器</td></tr><tr><td><code>ollama/qwen2.5:7b</code></td><td>本地 Ollama</td></tr><tr><td><code>trae/deepseek-v3</code></td><td>Trae IDE 适配器</td></tr><tr><td><code>kiro/claude-sonnet-4-20250514</code></td><td>Kiro 适配器</td></tr><tr><td><code>relay/gpt-4o</code></td><td>中转站</td></tr><tr><td><code>deepseek-chat</code></td><td>无前缀时走默认适配器</td></tr></tbody></table>
+<h3 id="3-4-管理-api">3.4 管理 API<a class="anchor" href="#3-4-管理-api" aria-label="锚点">#</a></h3>
+<p>端口 9090 提供完整的管理接口：</p>
+<pre><code class="language-bash"># 健康检查
+curl http://127.0.0.1:9090/api/health
+
+# 列出所有可用模型
+curl http://127.0.0.1:9090/api/models
+
+# 查看用量
+curl http://127.0.0.1:9090/api/usage
+
+# 查看所有工具定义
+curl http://127.0.0.1:9090/api/tools
+
+# 执行一个工具
+curl -X POST http://127.0.0.1:9090/api/tools/FileReadTool \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;file_path&quot;:&quot;/tmp/test.txt&quot;}'</code></pre>
+<hr>
+<h2 id="四-level-1-sdk-集成">四、Level 1 — SDK 集成<a class="anchor" href="#四-level-1-sdk-集成" aria-label="锚点">#</a></h2>
+<h3 id="4-1-node-js-sdk-khy-sdk">4.1 Node.js SDK (<code>@khy/sdk</code>)<a class="anchor" href="#4-1-node-js-sdk-khy-sdk" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 在 KHY OS 仓库的 monorepo 中已可用
+cd packages/sdk</code></pre>
+<pre><code class="language-javascript">const { KhyClient } = require('@khy/sdk');
+
+// 连接到正在运行的 KHY 实例
+const khy = new KhyClient();
+await khy.connect();
+
+// 发送查询
+const stream = khy.query('帮我分析这段代码的性能问题', {
+  model: 'claude-sonnet-4-20250514',
+  tools: true             // 允许使用工具
+});
+
+for await (const event of stream) {
+  if (event.type === 'text') process.stdout.write(event.text);
+  if (event.type === 'tool_call') console.log('调用工具:', event.tool);
+}</code></pre>
+<h3 id="4-2-python-sdk-khy-sdk-python">4.2 Python SDK (<code>@khy/sdk-python</code>)<a class="anchor" href="#4-2-python-sdk-khy-sdk-python" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd packages/sdk-python
+pip install -e .</code></pre>
+<pre><code class="language-python">from khy_sdk import KhyClient
+
+client = KhyClient()
+response = client.chat(&quot;分析这个策略的回撤风险&quot;)
+print(response.text)</code></pre>
+<h3 id="4-3-java-sdk-khy-sdk-java">4.3 Java SDK (<code>@khy/sdk-java</code>)<a class="anchor" href="#4-3-java-sdk-khy-sdk-java" aria-label="锚点">#</a></h3>
+<pre><code class="language-xml">&lt;dependency&gt;
+  &lt;groupId&gt;dev.khy&lt;/groupId&gt;
+  &lt;artifactId&gt;khy-sdk&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+<h3 id="4-4-mcp-客户端">4.4 MCP 客户端<a class="anchor" href="#4-4-mcp-客户端" aria-label="锚点">#</a></h3>
+<p>你的应用可以通过 KHY OS 的 MCP 客户端连接任何 MCP 服务器：</p>
+<pre><code class="language-javascript">const { MCPClient } = require('@khy/sdk/mcp');
+
+// 使用 KHY OS 已配置的 MCP 服务器
+const tools = await khy.mcp.listTools();
+const result = await khy.mcp.callTool('mcp__filesystem__read_file', {
+  path: '/tmp/data.csv'
+});</code></pre>
+<hr>
+<h2 id="五-level-2-技能贡献">五、Level 2 — 技能贡献<a class="anchor" href="#五-level-2-技能贡献" aria-label="锚点">#</a></h2>
+<p>技能是 KHY OS 中最轻量的复用单元 — 一个 prompt 模板 + 元数据。</p>
+<h3 id="5-1-创建技能">5.1 创建技能<a class="anchor" href="#5-1-创建技能" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">mkdir -p ~/.khy/skills/my-data-analyzer</code></pre>
+<p><strong><code>~/.khy/skills/my-data-analyzer/manifest.json</code>：</strong></p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;data-analyzer&quot;,
+  &quot;description&quot;: &quot;分析 CSV/JSON 数据文件，输出统计摘要和可视化建议&quot;,
+  &quot;trigger&quot;: &quot;analyze-data&quot;,
+  &quot;user_invocable&quot;: true,
+  &quot;tags&quot;: [&quot;data&quot;, &quot;analysis&quot;, &quot;visualization&quot;],
+  &quot;aliases&quot;: [&quot;分析数据&quot;, &quot;数据分析&quot;]
+}</code></pre>
+<p><strong><code>~/.khy/skills/my-data-analyzer/prompt.md</code>：</strong></p>
+<pre><code class="language-markdown">You are a data analysis assistant. When the user provides a data file:
+
+1. Read the file using the FileReadTool
+2. Identify column types (numeric, categorical, datetime)
+3. Calculate summary statistics (mean, median, std, missing %)
+4. Suggest 3 visualizations with chart type rationale
+5. Output a structured report in markdown
+
+Focus on actionable insights, not just numbers.</code></pre>
+<p><strong>使用：</strong></p>
+<pre><code class="language-bash">khy
+&gt; /data-analyzer sales_2026.csv
+# 或
+&gt; 分析数据 sales_2026.csv</code></pre>
+<h3 id="5-2-项目级技能">5.2 项目级技能<a class="anchor" href="#5-2-项目级技能" aria-label="锚点">#</a></h3>
+<p>放在项目目录下，仅对该项目生效：</p>
+<pre><code class="language-bash">mkdir -p .khy/skills/deploy-check
+# manifest.json + prompt.md 同上</code></pre>
+<h3 id="5-3-带-handler-的技能">5.3 带 Handler 的技能<a class="anchor" href="#5-3-带-handler-的技能" aria-label="锚点">#</a></h3>
+<p>需要自定义逻辑时，添加 <code>handler.js</code>：</p>
+<pre><code class="language-javascript">// .khy/skills/my-skill/handler.js
+module.exports = {
+  async execute(args, context) {
+    // context.tools — 可用工具
+    // context.ai    — AI 调用接口
+    // context.cwd   — 工作目录
+    const data = await context.tools.execute('FileReadTool', { file_path: args });
+    return { prompt: `分析以下数据:\n${data}` };
+  }
+};</code></pre>
+<hr>
+<h2 id="六-level-3-扩展开发">六、Level 3 — 扩展开发<a class="anchor" href="#六-level-3-扩展开发" aria-label="锚点">#</a></h2>
+<p>扩展是完整的功能包，可以同时注册技能、网关插件、MCP 服务器和 CLI 命令。</p>
+<h3 id="6-1-扩展结构">6.1 扩展结构<a class="anchor" href="#6-1-扩展结构" aria-label="锚点">#</a></h3>
+<pre><code>my-khy-extension/
+├── openclaw.plugin.json      # 扩展清单（必需）
+├── package.json
+├── src/
+│   └── index.js              # 入口（注册 CLI 命令）
+├── skills/
+│   └── my-skill/
+│       ├── manifest.json
+│       └── prompt.md
+├── plugins/
+│   └── my-gateway-plugin.js  # 网关插件
+└── mcp/
+    └── server.js             # MCP 服务器</code></pre>
+<h3 id="6-2-扩展清单">6.2 扩展清单<a class="anchor" href="#6-2-扩展清单" aria-label="锚点">#</a></h3>
+<p><strong><code>openclaw.plugin.json</code>：</strong></p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;my-khy-extension&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;为 KHY OS 添加数据分析能力&quot;,
+  &quot;author&quot;: &quot;your-name&quot;,
+  &quot;capabilities&quot;: [&quot;skill&quot;, &quot;gateway-plugin&quot;, &quot;mcp-server&quot;, &quot;cli-command&quot;],
+  &quot;entry&quot;: &quot;./src/index.js&quot;,
+  &quot;skills&quot;: [&quot;./skills/my-skill&quot;],
+  &quot;mcp&quot;: {
+    &quot;command&quot;: &quot;node&quot;,
+    &quot;args&quot;: [&quot;./mcp/server.js&quot;]
+  }
+}</code></pre>
+<h3 id="6-3-注册-cli-命令">6.3 注册 CLI 命令<a class="anchor" href="#6-3-注册-cli-命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// src/index.js
+module.exports = function activate(ctx) {
+  ctx.commands.register({
+    name: 'analyze',
+    description: '数据分析命令',
+    handler: async (subCommand, args) =&gt; {
+      // 你的逻辑
+      return true;
+    }
+  });
+};</code></pre>
+<h3 id="6-4-网关插件">6.4 网关插件<a class="anchor" href="#6-4-网关插件" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// plugins/my-gateway-plugin.js
+module.exports = {
+  name: 'my-analytics',
+  priority: 100,
+  enabled: true,
+  hooks: {
+    async onBeforeRequest(ctx, next) {
+      // 在所有 AI 请求前注入上下文
+      if (ctx.messages) {
+        ctx.messages.unshift({
+          role: 'system',
+          content: '当前用户的数据分析偏好: ...'
+        });
+      }
+      return next(ctx);
+    },
+    async onAfterResponse(ctx, next) {
+      // 记录所有 AI 响应的 token 用量
+      console.log(`[analytics] ${ctx.model}: ${ctx.usage?.totalTokens} tokens`);
+      return next(ctx);
+    }
+  }
+};</code></pre>
+<h3 id="6-5-安装与发布">6.5 安装与发布<a class="anchor" href="#6-5-安装与发布" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 本地开发模式（符号链接，实时生效）
+khy extension link /path/to/my-khy-extension
+
+# 从 Git 仓库安装
+khy extension install https://github.com/user/my-khy-extension
+
+# 从扩展市场安装
+khy extension install my-khy-extension
+
+# 发布到扩展市场
+khy extension publish</code></pre>
+<hr>
+<h2 id="七-注册自定义工具">七、注册自定义工具<a class="anchor" href="#七-注册自定义工具" aria-label="锚点">#</a></h2>
+<h3 id="7-1-函数式定义">7.1 函数式定义<a class="anchor" href="#7-1-函数式定义" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const { defineTool } = require('@khy/plugin-sdk');
+
+const myTool = defineTool({
+  name: 'DataFetchTool',
+  description: '从指定 API 拉取数据',
+  category: 'data',
+  risk: 'low',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'API 地址' },
+      format: { type: 'string', enum: ['json', 'csv'], default: 'json' }
+    },
+    required: ['url']
+  },
+  async execute({ url, format }) {
+    const resp = await fetch(url);
+    return format === 'csv' ? await resp.text() : await resp.json();
+  }
+});</code></pre>
+<h3 id="7-2-工具在扩展中自动注册">7.2 工具在扩展中自动注册<a class="anchor" href="#7-2-工具在扩展中自动注册" aria-label="锚点">#</a></h3>
+<p>扩展入口的 <code>ctx</code> 对象提供工具注册能力，不需要直接操作 toolRegistry。</p>
+<hr>
+<h2 id="八-mcp-服务器接入">八、MCP 服务器接入<a class="anchor" href="#八-mcp-服务器接入" aria-label="锚点">#</a></h2>
+<p>KHY OS 完整支持 MCP 协议 (2024-11-05)，你可以让你的应用作为 MCP 服务器暴露数据。</p>
+<h3 id="8-1-配置已有-mcp-服务器">8.1 配置已有 MCP 服务器<a class="anchor" href="#8-1-配置已有-mcp-服务器" aria-label="锚点">#</a></h3>
+<p><strong><code>~/.khy/mcp.json</code>：</strong></p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;my-database&quot;: {
+      &quot;command&quot;: &quot;node&quot;,
+      &quot;args&quot;: [&quot;./my-mcp-server.js&quot;],
+      &quot;env&quot;: { &quot;DB_URL&quot;: &quot;postgres://localhost/mydb&quot; }
+    },
+    &quot;filesystem&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;@anthropic/mcp-server-filesystem&quot;, &quot;/data&quot;]
+    }
+  }
+}</code></pre>
+<h3 id="8-2-项目级配置">8.2 项目级配置<a class="anchor" href="#8-2-项目级配置" aria-label="锚点">#</a></h3>
+<p><strong><code>.khy/mcp.json</code></strong> (项目目录下)：仅在该项目中加载。</p>
+<h3 id="8-3-内建-mcp-工具">8.3 内建 MCP 工具<a class="anchor" href="#8-3-内建-mcp-工具" aria-label="锚点">#</a></h3>
+<p>配置后，MCP 服务器的工具会自动注册到 KHY OS 工具系统中，命名格式：<code>mcp__&lt;server&gt;__&lt;tool&gt;</code>。AI 可以直接调用。</p>
+<hr>
+<h2 id="九-实时监控接入">九、实时监控接入<a class="anchor" href="#九-实时监控接入" aria-label="锚点">#</a></h2>
+<h3 id="9-1-sse-订阅">9.1 SSE 订阅<a class="anchor" href="#9-1-sse-订阅" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const es = new EventSource('http://127.0.0.1:9090/api/ai-gateway/monitor/stream');
+
+es.addEventListener('trace:start', (e) =&gt; {
+  const trace = JSON.parse(e.data);
+  console.log(`[请求开始] ${trace.adapter} / ${trace.model}`);
+});
+
+es.addEventListener('trace:end', (e) =&gt; {
+  const trace = JSON.parse(e.data);
+  console.log(`[请求完成] ${trace.tokens} tokens, ${trace.latencyMs}ms`);
+});</code></pre>
+<h3 id="9-2-websocket-实时聊天">9.2 WebSocket 实时聊天<a class="anchor" href="#9-2-websocket-实时聊天" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const ws = new WebSocket('ws://127.0.0.1:9090/ws');
+
+ws.onopen = () =&gt; {
+  ws.send(JSON.stringify({ type: 'auth', token: 'your-token' }));
+  ws.send(JSON.stringify({ type: 'chat', message: '你好' }));
+};
+
+ws.onmessage = (e) =&gt; {
+  const msg = JSON.parse(e.data);
+  if (msg.type === 'text') process.stdout.write(msg.content);
+};</code></pre>
+<hr>
+<h2 id="十-开发规范">十、开发规范<a class="anchor" href="#十-开发规范" aria-label="锚点">#</a></h2>
+<p>你的应用如果要成为 KHY OS 生态的一部分，请遵守以下规范：</p>
+<h3 id="10-1-三大工程规则">10.1 三大工程规则<a class="anchor" href="#10-1-三大工程规则" aria-label="锚点">#</a></h3>
+<ol><li><strong>零硬编码</strong> — 所有可变值（端口、路径、密钥、URL）必须走配置或环境变量</li><li><strong>状态透明</strong> — 任何运行状态必须可查询、可导出</li><li><strong>活跃度超时</strong> — 长连接/后台任务必须有超时和自愈机制</li></ol>
+<h3 id="10-2-文件-命名规范">10.2 文件/命名规范<a class="anchor" href="#10-2-文件-命名规范" aria-label="锚点">#</a></h3>
+<ul><li>源码文件：<code>camelCase.js</code></li><li>CLI 命令：<code>kebab-case</code></li><li>配置文件：<code>snake_case.json</code></li><li>文档：<code>SCREAMING_SNAKE_CASE.md</code></li></ul>
+<h3 id="10-3-配置位置">10.3 配置位置<a class="anchor" href="#10-3-配置位置" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>范围</th><th>路径</th><th>说明</th></tr></thead><tbody><tr><td>全局</td><td><code>~/.khy/</code></td><td>用户级配置、SDK、MCP、扩展</td></tr><tr><td>项目</td><td><code>.khy/</code></td><td>项目级技能、MCP、配置覆盖</td></tr><tr><td>运行时</td><td><code>~/.khyquant/</code></td><td>Growth 数据、网关插件、运行状态</td></tr></tbody></table>
+<h3 id="10-4-测试你的接入">10.4 测试你的接入<a class="anchor" href="#10-4-测试你的接入" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 检查 KHY OS 是否运行
+curl http://127.0.0.1:9100/health
+
+# 检查你的扩展是否加载
+khy extension list
+
+# 检查你的技能是否注册
+khy skill list
+
+# 检查你的 MCP 服务器是否连接
+khy mcp status</code></pre>
+<hr>
+<h2 id="十一-接入检查清单">十一、接入检查清单<a class="anchor" href="#十一-接入检查清单" aria-label="锚点">#</a></h2>
+<p>开发完成后，用此清单验证：</p>
+<ul><li>[ ] 应用能通过 <code>127.0.0.1:9100</code> 调用 AI（Level 0）</li><li>[ ] 无硬编码端口/路径/密钥</li><li>[ ] 配置通过环境变量或 <code>.khy/</code> 目录管理</li><li>[ ] 长连接有超时和重连机制</li><li>[ ] 技能有 <code>manifest.json</code> + <code>prompt.md</code>（Level 2+）</li><li>[ ] 扩展有 <code>openclaw.plugin.json</code>（Level 3）</li><li>[ ] <code>khy extension link</code> 可以加载你的扩展</li><li>[ ] 文档更新到 KHY OS 学习课程（<code>learn edit add-topic</code>）</li></ul>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="%5BOPS-MAN-013%5D%20khy-os-开发者指南.html">KHY OS 开发者指南</a> — 环境搭建、构建、发布</li><li><a href="%5BOPS-MAN-015%5D%20khy-os-用户指南.html">KHY OS 用户指南</a> — CLI 使用</li><li><a href="%5BOPS-MAN-011%5D%20khy-os-学习指南.html">KHY OS 学习课程</a> — 从零学习</li><li><a href="%5BOPS-MAN-004%5D%20claude-code-代理配置.html">Claude Code 代理配置</a> — Claude Code 接入</li><li><a href="../03_DESIGN_设计/%5BDESIGN-ARCH-010%5D%20核心架构.html">系统架构</a> — 整体架构</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 学习文档（中文）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 开发文档（中文）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-012] khy-os-应用接入指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

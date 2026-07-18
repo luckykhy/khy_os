@@ -1,0 +1,6 @@
+// Library package configuration for `khyos/moonbit_plugin_sdk`.
+// This package exposes the M1 host interface wrappers used by MoonBit/WASM apps.
+
+import {
+  "moonbitlang/core/encoding/utf8",
+}

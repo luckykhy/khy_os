@@ -1,0 +1,27 @@
+{
+  "sessionId": "5c35f056-7c3b-4ee6-b967-6c027d7ff274",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 这些标记会被单独提取展示，正文无需重复其内容。] 最近有什么ai技术上的新发现"
+    },
+    {
+      "role": "assistant",
+      "content": "<tool_call>\n{\"name\": \"web_search\", \"params\": {\"query\": \"AI technology breakthroughs June 2026\", \"freshness\": \"week\"}}\n</tool_call>\n<tool_call>{\"name\": \"web_search\", \"params\": {\"query\": \"最新AI技术突破 2026年6月\", \"freshness\": \"week\"}}\n</tool_call>",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782808502730,
+  "updatedAt": 1782808502730
+}

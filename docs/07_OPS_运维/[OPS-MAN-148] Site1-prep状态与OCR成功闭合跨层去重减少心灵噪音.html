@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-148-site1-prep-状态与-ocr-成功闭合的跨层去重-减少心灵噪音">[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)</a></li><li class="lvl-2"><a href="#四-教训">四、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-148-site1-prep-状态与-ocr-成功闭合的跨层去重-减少心灵噪音">[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)<a class="anchor" href="#ops-man-148-site1-prep-状态与-ocr-成功闭合的跨层去重-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-132] prep 期 OCR 兜底非 verbose 实时状态 + [OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合。<br>本轮补<strong>同一 OCR 降级被两层各发一遍永久行的去重侧</strong>。/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p>用户复现的<strong>确切路径</strong>:非 verbose 会话 · describe 视觉级联全失败 → 本地 OCR <strong>成功</strong>读出。在这条路径上,<br>同一条「已降级到 OCR 并成功识别」的事实被<strong>两层各发一遍、且都是永久行</strong>:</p>
+<pre><code>[status]             检测到图片输入：&lt;模型&gt; 不支持图像识别，已降级用本地 OCR 成功提取 1 张图片文本并据此作答
+                     ↑ OPS-132 prep-status（buildOcrRescuePrepStatus）。文本含「成功」→ emitRuntimeStatus
+                       误分类为 _printTerminalStatus('done','模型已连接') → 永久行，且标签错成「模型已连接」
+[assistant_message]  视觉模型均不可用，已改用本地 OCR 成功识别图片，正在据此作答。
+                     ↑ OPS-144 闭合（buildOcrSuccessClosure），干净 bot 气泡</code></pre>
+<p><strong>断桥</strong>:OPS-132 当初补 prep-status,是为了让<strong>非 verbose 用户在 prep 期也能看到 OCR 降级</strong>(那时还没有<br>OPS-144 闭合)。但 OPS-144 闭合落地后,恰在 <strong>Site1(级联失败)</strong> 这条路径上,闭合已经把「明显告知用了 OCR」<br>交付了 → prep-status 沦为<strong>冗余且措辞更差</strong>(还被误标「模型已连接」)的第二遍公告。判据 = 同一 OCR 降级事实<br>在 Site1 路径上产生两条永久行。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>核心思路</strong>:在<strong>闭合确将发射时</strong>抑制 Site1 的冗余 prep-status,只留更清晰的闭合。</p>
+<p><strong>★仅限 Site1</strong>:Site2(ocr-fallback,无级联 → 无悬空「请稍候」承诺 → 无闭合)必须<strong>始终保留</strong> prep-status,<br>否则非 verbose 用户在那条路径又变回沉默。守卫谓词只在 Site1 调用点触发。</p>
+<p><strong>单一真源门</strong>:<code>KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP</code>(default-on)。门关 / 异常 → 不抑制 = 逐字节回退<br>(prep-status 与闭合并存,OPS-132 + OPS-144 历史行为)。</p>
+<ol><li><strong>纯叶子(扩展优于新建)</strong> 扩 <code>ocrRescueStatusNotice.js</code>(零 IO、DI env、绝不抛):<ul><li><code>isPrepClosureDedupEnabled(env)</code> 经 flagRegistry 读门;</li><li><code>shouldSuppressPrepForClosure({ intermediateEnabled, closureEnabled, env })</code>:<ul><li>仅当 去重门开 <strong>且</strong> <code>intermediateEnabled === true</code> <strong>且</strong> <code>closureEnabled === true</code> → 返 <code>true</code>(抑制);</li><li>门关 / 闭合不会发 / 畸形 → 返 <code>false</code>(不抑制,逐字节回退);</li><li><strong>严格 <code>=== true</code> 布尔判定</strong>:truthy-but-not-true 值绝不误抑制;</li></ul></li><li><code>PREP_CLOSURE_DEDUP_FLAG = 'KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP'</code>。</li></ul></li><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code>(<strong>Site1</strong> OCR-成功分支,~1663):<ul><li>先算 <code>_closureWillFire = _intermediateEnabled &amp;&amp; visionOcrSuccessClosure.isVisionOcrSuccessClosureEnabled(env)</code>;</li><li><code>_suppressPrep = shouldSuppressPrepForClosure({ intermediateEnabled: _intermediateEnabled===true, closureEnabled: _closureWillFire===true, env })</code>;</li><li><code>if (!_suppressPrep) { const _prep = buildOcrRescuePrepStatus(...); if (_prep) emitStatus(_prep); }</code>;</li><li>fail-soft try/catch → 叶不可用则按历史静默;</li><li><strong>Site2(~1796)完全不动</strong>,始终保留 prep-status。</li></ul></li><li><strong>门登记</strong> <code>flagRegistry.js</code>:</li></ol>
+<p><code>KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP: { mode:'default-on', off:'CANON', default:true }</code>。</p>
+<p><strong>正交</strong>:OPS-132 <strong>加</strong>了 prep-status(补非 verbose 缺口);OPS-144 <strong>加</strong>了闭合(闭合悬空承诺);<br>OPS-148 <strong>减</strong>去两者在 Site1 上对同一事实的<strong>重复</strong>。独立门,门关逐字节回退到 OPS-132 + OPS-144 并存。</p>
+<h2 id="三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)<a class="anchor" href="#三-验收-b2-没跑过验证不许说修好了" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>ocrRescueStatusNotice.test.js</code> 16/16(新增 <code>shouldSuppressPrepForClosure</code> 8 例:FLAG 名 · 门 default-on +</li></ul>
+<p>off-words · 门开 + 闭合将发 → true · 门关 → false(byte-revert)· closureEnabled=false → false ·<br>  intermediateEnabled=false → false · 非严格布尔(truthy 但非 true)→ false · 畸形 / 无参 → false 绝不抛)。</p>
+<ul><li>接线单测 <code>ocrRescuePrepClosureDedupWiring.test.js</code> 3/3:A) 去重门开 → Site1 prep-status 被抑制、闭合照发</li></ul>
+<p>= 净 1 条公告;B) 去重门关 → prep-status 与闭合并存(byte-revert)= 2 条公告;C) Site2(ocr-fallback,<br>  无闭合)prep-status 始终保留(守卫仅限 Site1)。</p>
+<ul><li><strong>真图 E2E</strong> <code>ocrRescuePrepClosureDedupRealImage.test.js</code> 2/2:真 PIL 渲含字 PNG(<code>INVOICE ACME 2026</code>)→</li></ul>
+<p>内置 GLM pin 级联全 404 → 真 tesseract 读出 → 非 verbose 同时收 status 与 assistant_message;门开 → 只发闭合、<br>  无冗余 prep-status、finalPrompt 真含 INVOICE;门关 → 两条并存。</p>
+<ul><li>统一别名:<code>npm run test:ocr-rescue-prep-closure-dedup</code>(16+3+2 = 21/21)。</li><li>门:<code>node --check</code> × 源文件 · god-file <code>wc -l</code>(叶 &lt; 2500;aiGatewayGenerateMethod additive grandfathered)·</li></ul>
+<p>flag-registry / leaf-contract / agent-rules · change-safety(positional 闭 map 桥)· maintainer:check ·<br>  safety 聚合。</p>
+<h2 id="四-教训">四、教训<a class="anchor" href="#四-教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>断桥补全靠沿同一 consumer 找下一条正交噪音</strong>:OPS-132 加 prep-status、OPS-144 加闭合,两次都在「补告知」;</li></ol>
+<p>本轮沿同一 Site1 OCR-成功分支发现两层对<strong>同一事实</strong>各发一遍永久行——补的太多也是噪音,缺口是<strong>重复</strong>。</p>
+<ol><li><strong>加了要减、减要限定作用域</strong>:OPS-148 只在 Site1(闭合确将发)抑制 prep-status;Site2 无闭合,守卫绝不触及,</li></ol>
+<p>否则非 verbose 用户又变回沉默。作用域是灵魂。</p>
+<ol><li><strong>严格布尔 <code>=== true</code></strong>:<code>shouldSuppressPrepForClosure</code> 用严格判定,truthy-but-not-true 绝不误抑制——抑制型</li></ol>
+<p>谓词宁可少抑制(保留公告)也不误吞。</p>
+<ol><li><strong>共享前提 + 独立门</strong>:去重共享 <code>_intermediateEnabled</code>(闭合都不发就无从重复),但用独立门</li></ol>
+<p><code>KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP</code> 单独可关(byte-revert 到 OPS-132 + OPS-144 并存)。</p>
+<ol><li><strong>OPS 号双查 + 精确逐文件 renumber</strong>:原 147 被并行 session(次级读取工具防卡死前检)占 → 逐文件 sed</li></ol>
+<p>147 → 148 仅我 6 文件,绝不全局 sed。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-147] 次级读取工具统一读前防卡死前检.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-147] 次级读取工具统一读前防卡死前检</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

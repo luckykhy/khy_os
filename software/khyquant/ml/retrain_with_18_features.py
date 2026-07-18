@@ -1,0 +1,1 @@
+# @pattern Command, Template Method

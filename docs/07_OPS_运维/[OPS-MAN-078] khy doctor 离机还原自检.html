@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-078] khy doctor 离机还原自检（真实原因 + 解决方法） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-078] khy doctor 离机还原自检（真实原因 + 解决方法）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-078] khy doctor 离机还原自检（真实原因 + 解决方法）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-078-khy-doctor-离机还原自检-真实原因-解决方法">[OPS-MAN-078] `khy doctor` 离机还原自检（真实原因 + 解决方法）</a></li><li class="lvl-2"><a href="#定位-三个还原视角的第三块拼图">定位：三个还原视角的第三块拼图</a></li><li class="lvl-2"><a href="#自检项-均为运行期可观测子集">自检项（均为运行期可观测子集）</a></li><li class="lvl-2"><a href="#分层与-ssot">分层与 SSOT</a></li><li class="lvl-2"><a href="#how-to-extend">HOW-TO-EXTEND</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-078-khy-doctor-离机还原自检-真实原因-解决方法">[OPS-MAN-078] <code>khy doctor</code> 离机还原自检（真实原因 + 解决方法）<a class="anchor" href="#ops-man-078-khy-doctor-离机还原自检-真实原因-解决方法" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼「capstone」角度。pip 与 npm 是唯二离机渠道。一个落到<strong>新机器</strong>的开发者 /<br>使用者 / 维护者，需要<strong>一条命令</strong>告诉他：装完之后到底哪里不对、怎么一步修好——<br>用大白话给出「真实原因 + 解决方法」。本子系统把这份自检接进已有的 <code>khy doctor</code>。</p></blockquote>
+<h2 id="定位-三个还原视角的第三块拼图">定位：三个还原视角的第三块拼图<a class="anchor" href="#定位-三个还原视角的第三块拼图" aria-label="锚点">#</a></h2>
+<p>khy 有三块「还原」能力，消费者不同：</p>
+<table><thead><tr><th>视角</th><th>消费者</th><th>形态</th><th>位置</th></tr></thead><tbody><tr><td>构建期三镜子（restoreReadiness / installIntegrity / hydrationHealth）</td><td>发包守卫</td><td>发布前门禁</td><td><code>scripts/lib/</code>（<strong>不随 bundle 发布</strong>）</td></tr><tr><td>agentRestorePlan</td><td>landing agent</td><td>JSON + autonomy 标注</td><td>发布</td></tr><tr><td><strong>本子系统 freshInstallDoctor</strong></td><td><strong>人（开发者/用户/维护者）</strong></td><td><strong><code>khy doctor</code> 里的一段中文报告</strong></td><td><strong>发布</strong></td></tr></tbody></table>
+<p>构建期镜子不进 bundle，agent 方案给机器读 JSON。装到用户机器上、给<strong>人</strong>看的「原因+方法」此前是缺的——本子系统补上。</p>
+<h2 id="自检项-均为运行期可观测子集">自检项（均为运行期可观测子集）<a class="anchor" href="#自检项-均为运行期可观测子集" aria-label="锚点">#</a></h2>
+<p><code>khy doctor</code> 新增分类 <strong>「离机还原自检」</strong>，每个失败项自带原因与修复命令：</p>
+<ol><li><strong>启动入口 <code>bin/khy.js</code></strong> — pip/npm 壳每次 <code>khy</code> 都 exec 它；缺失即首启崩。</li></ol>
+<p>失败 → 原因：包的启动脚本缺失（半装中断/安全软件误删）；解决方法：<code>pip install --force-reinstall khy-os</code>（npm 重装 <code>@khy-os/khy-os</code>）。</p>
+<ol><li><strong>服务入口 <code>server.js</code></strong> — 后端服务入口；同上不完整。</li><li><strong>依赖水合 <code>node_modules</code></strong> — 存在 <strong>且非空</strong>。判定与 pip 启动器自身的水合 SSOT</li></ol>
+<p>完全一致（<code>platform/khy_platform/cli.py:1820</code>：<code>node_modules.is_dir() and<br>   any(node_modules.iterdir())</code>——<strong>内容无关</strong>，只看目录非空）。<br>   失败 → 原因：首启依赖水合未完成（缺失或空壳）；解决方法：项目根跑 <code>khy</code>（触发水合）或 <code>npm install</code>。</p>
+<blockquote><p>⚠️ <strong>深挖修正（SSOT 对齐）</strong>：早期实现用名单探针（<code>express</code> / <code>.package-lock.json</code> /<br><code>.bin</code>）判定「已水合」。但 khy 用<strong>提升式（hoisted / workspace）</strong> node_modules——<br>真实依赖装在<strong>仓库根</strong> <code>node_modules</code>，<code>services/backend/node_modules</code> 只留少量<br>提升残留（如 <code>ansi-regex</code> / <code>@khy</code>），既无 <code>express</code> 也无 <code>.package-lock.json</code>。<br>启动器认它已水合（非空即可），名单探针却会误报「空壳」→ 把健康机器的用户支去白跑<br><code>npm install</code>。现改为注入 <code>readdir</code> 做「非空目录」判定，与启动器逐字一致；名单探针<br>仅作无法注入 <code>readdir</code> 时的降级兜底。</p></blockquote>
+<ol><li><strong>khy 命令可达</strong> — <code>khy</code> 是否在 PATH。<strong>与托盘左右键无反应同一根因</strong>（开机自启/detached 启动继承的 PATH 常不含 pip Scripts 目录）。</li></ol>
+<p>不在 PATH → <strong>warn（非 error）</strong>，因为 <code>python -m khy_platform &lt;命令&gt;</code> 是保底可用入口；解决方法即用它，或把 Scripts/bin 加进 PATH。</p>
+<h2 id="分层与-ssot">分层与 SSOT<a class="anchor" href="#分层与-ssot" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯断言器</strong> <code>assessFreshInstall(facts)</code>：零 IO、绝不抛（异常→<code>[]</code>，doctor 不因附加项崩溃），把已采集事实翻译成 doctor 形状的检查项（<code>{category,label,ok,detail,level}</code>），失败项 detail 内嵌「原因：… 解决方法：…」。</li><li><strong>IO 采集器</strong> <code>gatherFreshInstallFacts(deps)</code>：探 bundle 目录 + PATH，全部依赖注入（<code>existsSync</code>/<code>env</code>/<code>platform</code>/<code>which</code>），fail-soft（异常→保守 false 事实）。</li><li><strong>门</strong> <code>KHY_DOCTOR_FRESH_INSTALL</code> default-on；关（0/false/off/no）→ <code>freshInstallChecks</code> 返 <code>[]</code>，<code>khy doctor</code> 逐字节回退（不显示新分类）。</li><li>接线单点：<code>init.js</code> <code>runDoctorChecks()</code> 尾部 <code>try{ …push(freshInstallChecks({bundleRoot:ROOT,…})) }catch{}</code>。</li></ul>
+<h2 id="how-to-extend">HOW-TO-EXTEND<a class="anchor" href="#how-to-extend" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>gatherFreshInstallFacts</code> 采一个新事实（布尔/字符串）。</li><li>在 <code>assessFreshInstall</code> 用 <code>_check(label, ok, detail, level)</code> + <code>_causeFix(cause, fix)</code> 推一条检查项。</li><li>加 node:test：断言 ok 形态 <strong>与</strong> 失败形态（detail 含原因+解决方法）。保持断言器纯净。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:fresh-install-doctor
+# 或
+node --test services/backend/tests/services/freshInstallDoctor.test.js
+# 实机观察
+khy doctor            # 应出现「离机还原自检」分类</code></pre>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li><code>services/backend/src/services/freshInstallDoctor.js</code>（纯断言器 + IO 采集器）</li><li><code>services/backend/src/cli/handlers/init.js</code>（<code>runDoctorChecks</code> 接线点）</li><li>[OPS-MAN-074] 首启崩溃真实原因加方法归因（运行期崩溃归因，互补）</li><li>agentRestorePlan（agent 面 JSON 还原方案）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-079] 三面镜子矛盾冲突消解.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-079] 三面镜子矛盾冲突消解</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-078] khy doctor 离机还原自检.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+{
+  "sessionId": "dd8bfc30-8963-4632-8769-5f2f1b483931",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "高考差分网址"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "高考查分没有统一的\"全国差分网址\"，各省的查分入口不一样。我帮你搜一下最新的各省官方查分渠道。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_00_rgLMJMu6C7ov8FPuDZHg6851",
+          "name": "WebSearch",
+          "input": {
+            "query": "2026年高考成绩查询官方网址 各省教育考试院"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_00_rgLMJMu6C7ov8FPuDZHg6851",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"2026年_百度百科\",\"url\":\"https://baike.baidu.com/item/2026%E5%B9%B4/9536516\",\"snippet\":\"联合国决议本年为“可持续发展志愿者国际年”。 2026年1月1日起，中国全面禁止生产含汞体温计和含汞血压计产品，增值税法及修订 …\",\"publishedDate\":\"\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"2026是个什么年？_新闻频道_央视网 (cctv.com)\",\"url\":\"https://news.cctv.com/2025/12/30/ARTIaITlMlgvT9c3y2g3h5mZ251230.shtml\",\"snippet\":\"2025年12月30日 · 2026，将迎丙午马年，春节假期共9天；2026，是“十五五”开局之年，也是红军长征胜利90周年，接续奋斗，走好我 …\",\"publishedDate\":\"\",\"domain\":\"news.cctv.com\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"国务院办公厅关于2026年部分节假日安排的通知_国务院文件 ...\",\"url\":\"https://www.gov.cn/zhengce/zhengceku/202511/content_7047091.htm\",\"snippet\":\"2025年11月4日 · 经国务院批准，现将2026年元旦、春节、清明节、劳动节、端午节、中秋节和国庆节放假调休日期的具体安排通知如 …\",\"publishedDate\":\"\",\"domain\":\"www.gov.cn\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"FIFA World Cup 2026™ | Fixtures, groups, teams & more\",\"url\":\"https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/fifa-world-cup-2026-hosts-cities-dates-usa-mexico-canada\",\"snippet\":\"2026年6月9日 · Discover the 48 teams taking part in the FIFA World Cup 2026 Canada, Mexico, USA™, including host cities, groups …\",\"publishedDate\":\"\",\"domain\":\"www.fifa.com\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"2026 Calendar\",\"url\":\"https://www.calendar-365.com/2026-calendar.html\",\"snippet\":\"2026年1月1日 · 2026 Calendar. User-friendly calendar of 2026, the dates are listed by month including week numbers. View the …\",\"publishedDate\":\"\",\"domain\":\"www.calendar-365.com\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"多部门发声，2026年要做这些事！_政策解读_中国政府网\",\"url\":\"https://www.gov.cn/zhengce/202512/content_7053054.htm\",\"snippet\":\"2025年12月29日 · 根据全国能源工作会议，2026年，持续提高新能源供给比重，全年新增风电、太阳能发电装机2亿千瓦以上，有序推 …\",\"publishedDate\":\"\",\"domain\":\"www.gov.cn\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"国务院办公厅关于2026年部分节假日安排的通知_新闻频道 ...\",\"url\":\"https://news.cctv.cn/2025/11/04/ARTIzBycPZbvvPD4uW0iYbKR251104.shtml\",\"snippet\":\"2025年11月4日 · 经国务院批准，现将2026年元旦、春节、清明节、劳动节、端午节、中秋节和国庆节放假调休日期的具体安排通知如 …\",\"publishedDate\":\"\",\"domain\":\"news.cctv.cn\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"World Cup 2026 | Match schedule, fixtures & stadiums\",\"url\":\"https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums\",\"snippet\":\"2026年6月16日 · On this page you'll find the full FIFA World Cup 2026™ schedule, including all match fixtures, dates and venues, …\",\"publishedDate\":\"\",\"domain\":\"www.fifa.com\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1}],\"formatted\":\"### 1. 2026年_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/2026%E5%B9%B4/9536516\\n联合国决议本年为“可持续发展志愿者国际年”。 2026年1月1日起，中国全面禁止生产含汞体温计和含汞血压计产品，增值税法及修订 …\\n\\n---\\n\\n### 2. 2026是个什么年？_新闻频道_央视网 (cctv.com)\\nURL: https://news.cctv.com/2025/12/30/ARTIaITlMlgvT9c3y2g3h5mZ251230.shtml\\n2025年12月30日 · 2026，将迎丙午马年，春节假期共9天；2026，是“十五五”开局之年，也是红军长征胜利90周年，接续奋斗，走好我 …\\n\\n---\\n\\n### 3. 国务院办公厅关于2026年部分节假日安排的通知_国务院文件 ...\\nURL: https://www.gov.cn/zhengce/zhengceku/202511/content_7047091.htm\\n2025年11月4日 · 经国务院批准，现将2026年元旦、春节、清明节、劳动节、端午节、中秋节和国庆节放假调休日期的具体安排通知如 …\\n\\n---\\n\\n### 4. FIFA World Cup 2026™ | Fixtures, groups, teams & more\\nURL: https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/fifa-world-cup-2026-hosts-cities-dates-usa-mexico-canada\\n2026年6月9日 · Discover the 48 teams taking part in the FIFA World Cup 2026 Canada, Mexico, USA™, including host cities, groups …\\n\\n---\\n\\n### 5. 2026 Calendar\\nURL: https://www.calendar-365.com/2026-calendar.html\\n2026年1月1日 · 2026 Calendar. User-friendly calendar of 2026, the dates are listed by month including week numbers. View the …\\n\\n---\\n\\n### 6. 多部门发声，2026年要做这些事！_政策解读_中国政府网\\nURL: https://www.gov.cn/zhengce/202512/content_7053054.htm\\n2025年12月29日 · 根据全国能源工作会议，2026年，持续提高新能源供给比重，全年新增风电、太阳能发电装机2亿千瓦以上，有序推 …\\n\\n---\\n\\n### 7. 国务院办公厅关于2026年部分节假日安排的通知_新闻频道 ...\\nURL: https://news.cctv.cn/2025/11/04/ARTIzBycPZbvvPD4uW0iYbKR251104.shtml\\n2025年11月4日 · 经国务院批准，现将2026年元旦、春节、清明节、劳动节、端午节、中秋节和国庆节放假调休日期的具体安排通知如 …\\n\\n---\\n\\n### 8. World Cup 2026 | Match schedule, fixtures & stadiums\\nURL: https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums\\n2026年6月16日 · On this page you'll find the full FIFA World Cup 2026™ schedule, including all match fixtures, dates and venues, …\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\",\"partialFailures\":[{\"engine\":\"baidu\",\"message\":\"Baidu: no results parsed from response\"},{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：外部查到 8 条，我把要点整理出来再回到正题。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "搜索结果跑偏了，我重新搜一下\"高考查分\"相关的官方入口"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_b82c14623865400586e6aed2",
+          "name": "WebSearch",
+          "input": {
+            "query": "2026年高考查分网站 各省教育考试院官网入口"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_b82c14623865400586e6aed2",
+          "content": "{\"success\":true,\"results\":[{\"title\":\"2026高考成绩查询登录入口及官网网址各省汇总-高考100\",\"url\":\"http://www.baidu.com/link?url=GDOqAGNz1v5OZ9V1Q-LqMKr3_CcYmo8G454T9vl7jwt_a599WAqEWLFGppnMWuat\",\"snippet\":\"3天前入口:河南省教育考试院 网址: http://www.haeea.cn/ 11.湖南 入口:湖南省普通高校招生考试考生综合信息平台 网址: https://ks.hneao.cn/ 12.山东 入口:山东省教育招生考试院网站 网址: https://www.sdzk.cn/ 13.天津 入口:天津招考资讯网 网址: http://www.zhaokao.net/ 14.四川 入口 高考100网  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"广东省教育考试院\",\"url\":\"http://www.baidu.com/link?url=xXzZ6HrwDODw-Lv2eplQxJE-wB4WqXvz9YHZWzx4JCO\",\"snippet\":\"关于公布广东省2026年普通高校招生录取最低分数线的通知 2026年9月(第78次)全国计算机等级考试(NCRE)广东考区报考简章 2026年全国联招填报志愿说明及问答 2026年全国联招考试成绩查询、志愿填报及录取安排的通知 考试招生 MORE 普通高考 成人高考 研究生考试 广东省教育考试院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"江西省教育考试院\",\"url\":\"http://www.baidu.com/link?url=hdXQzzU6gTWOwqBSXYQnEYUBHkGRi0JAp_frXFcKjOO\",\"snippet\":\"2026年普通高考成绩查询入口3>> 江西省教育厅官网入口>>江西省教育考试院官网入口>>... 江西省教育考试院\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"2026年高考成绩查询_阳光高考\",\"url\":\"http://www.baidu.com/link?url=Mxy1wM4vefUkwzXAEc4Xj1gl7LiDfOIbBqRcJ4Q9Hk312V5ina_9v_wY7q2T2-WuxeHwPr3lCG7ceILH7I-XhK\",\"snippet\":\"2026年高考成绩公布时间及查询方式汇总 陆续更新,敬请期待…… 省市出分时间成绩查询渠道北京6月25日点击查看天津6月23日点击查看河北6月25日点击查看山西6月25日点击查看内蒙古6月23日点击查看辽宁6月24日 阳光高考\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"2026年_百度百科\",\"url\":\"https://baike.baidu.com/item/2026%E5%B9%B4/9536516\",\"snippet\":\"联合国决议本年为“可持续发展志愿者国际年”。 2026年1月1日起，中国全面禁止生产含汞体温计和含汞血压计产品，增值税法及修订后的《中华人民共和国治安管理处罚法》《中华人民共和国国家公园法》 …\",\"publishedDate\":\"\",\"domain\":\"baike.baidu.com\",\"type\":\"reference\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"速看!2026年高考查分官方入口,多渠道操作全指南 —教育在线\",\"url\":\"http://www.baidu.com/link?url=hdXQzzU6gTWOwqBSXYQnERUmkvwAniZ8g3ZdWvvaekQu3p2JarKgyBeiAf5zRxqD3IV9IA2JB0LS0oUDZEZeV5S8jzyTmwo5vKKLJnl2jum\",\"snippet\":\"3天前一、2026 年高考查分官方入口分类及适用场景 各地搭建的 2026 年高考查分官方入口分为四类,全部免费开放,适配不同使用设备与需求,考生可按需选择。 省级教育考试院电脑官网入口 这是2026 年高考查分官方入口里数据完整度较高的渠道,域名多以edu.cn结尾。进入网站首页就能找到查分专区,可查看总分、单科成绩、全省位次与... 教育在线  播报  暂停\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1},{\"title\":\"2026是个什么年？_新闻频道_央视网 (cctv.com)\",\"url\":\"https://news.cctv.com/2025/12/30/ARTIaITlMlgvT9c3y2g3h5mZ251230.shtml\",\"snippet\":\"2025年12月30日 · 2026，将迎丙午马年，春节假期共9天；2026，是“十五五”开局之年，也是红军长征胜利90周年，接续奋斗，走好我们这一代人的长征路；2026，有米兰冬奥会、美加墨世界杯，为拼搏 …\",\"publishedDate\":\"\",\"domain\":\"news.cctv.com\",\"type\":\"other\",\"engines\":[\"bing-cn\"],\"engineCount\":1},{\"title\":\"成绩查询 - 中国教育考试网\",\"url\":\"http://www.baidu.com/link?url=Mxy1wM4vefUkwzXAEc4XjIeYkzZdsLdJq-ZhfhNWFAapTV0dh7Ui2Vbgs83rW1nDxAMcKv8ekaX3OOtBs8lzw2juIdZAFcsKW7SELFkrJwO\",\"snippet\":\"省级教育考试机构 北京教育考试院 天津市教育招生考试院 河北省教育考试院 中国教育考试网\",\"publishedDate\":\"\",\"domain\":\"www.baidu.com\",\"type\":\"other\",\"engines\":[\"baidu\"],\"engineCount\":1}],\"formatted\":\"### 1. 2026高考成绩查询登录入口及官网网址各省汇总-高考100\\nURL: http://www.baidu.com/link?url=GDOqAGNz1v5OZ9V1Q-LqMKr3_CcYmo8G454T9vl7jwt_a599WAqEWLFGppnMWuat\\n3天前入口:河南省教育考试院 网址: http://www.haeea.cn/ 11.湖南 入口:湖南省普通高校招生考试考生综合信息平台 网址: https://ks.hneao.cn/ 12.山东 入口:山东省教育招生考试院网站 网址: https://www.sdzk.cn/ 13.天津 入口:天津招考资讯网 网址: http://www.zhaokao.net/ 14.四川 入口 高考100网  播报  暂停\\n\\n---\\n\\n### 2. 广东省教育考试院\\nURL: http://www.baidu.com/link?url=xXzZ6HrwDODw-Lv2eplQxJE-wB4WqXvz9YHZWzx4JCO\\n关于公布广东省2026年普通高校招生录取最低分数线的通知 2026年9月(第78次)全国计算机等级考试(NCRE)广东考区报考简章 2026年全国联招填报志愿说明及问答 2026年全国联招考试成绩查询、志愿填报及录取安排的通知 考试招生 MORE 普通高考 成人高考 研究生考试 广东省教育考试院\\n\\n---\\n\\n### 3. 江西省教育考试院\\nURL: http://www.baidu.com/link?url=hdXQzzU6gTWOwqBSXYQnEYUBHkGRi0JAp_frXFcKjOO\\n2026年普通高考成绩查询入口3>> 江西省教育厅官网入口>>江西省教育考试院官网入口>>... 江西省教育考试院\\n\\n---\\n\\n### 4. 2026年高考成绩查询_阳光高考\\nURL: http://www.baidu.com/link?url=Mxy1wM4vefUkwzXAEc4Xj1gl7LiDfOIbBqRcJ4Q9Hk312V5ina_9v_wY7q2T2-WuxeHwPr3lCG7ceILH7I-XhK\\n2026年高考成绩公布时间及查询方式汇总 陆续更新,敬请期待…… 省市出分时间成绩查询渠道北京6月25日点击查看天津6月23日点击查看河北6月25日点击查看山西6月25日点击查看内蒙古6月23日点击查看辽宁6月24日 阳光高考\\n\\n---\\n\\n### 5. 2026年_百度百科 [Reference]\\nURL: https://baike.baidu.com/item/2026%E5%B9%B4/9536516\\n联合国决议本年为“可持续发展志愿者国际年”。 2026年1月1日起，中国全面禁止生产含汞体温计和含汞血压计产品，增值税法及修订后的《中华人民共和国治安管理处罚法》《中华人民共和国国家公园法》 …\\n\\n---\\n\\n### 6. 速看!2026年高考查分官方入口,多渠道操作全指南 —教育在线\\nURL: http://www.baidu.com/link?url=hdXQzzU6gTWOwqBSXYQnERUmkvwAniZ8g3ZdWvvaekQu3p2JarKgyBeiAf5zRxqD3IV9IA2JB0LS0oUDZEZeV5S8jzyTmwo5vKKLJnl2jum\\n3天前一、2026 年高考查分官方入口分类及适用场景 各地搭建的 2026 年高考查分官方入口分为四类,全部免费开放,适配不同使用设备与需求,考生可按需选择。 省级教育考试院电脑官网入口 这是2026 年高考查分官方入口里数据完整度较高的渠道,域名多以edu.cn结尾。进入网站首页就能找到查分专区,可查看总分、单科成绩、全省位次与... 教育在线  播报  暂停\\n\\n---\\n\\n### 7. 2026是个什么年？_新闻频道_央视网 (cctv.com)\\nURL: https://news.cctv.com/2025/12/30/ARTIaITlMlgvT9c3y2g3h5mZ251230.shtml\\n2025年12月30日 · 2026，将迎丙午马年，春节假期共9天；2026，是“十五五”开局之年，也是红军长征胜利90周年，接续奋斗，走好我们这一代人的长征路；2026，有米兰冬奥会、美加墨世界杯，为拼搏 …\\n\\n---\\n\\n### 8. 成绩查询 - 中国教育考试网\\nURL: http://www.baidu.com/link?url=Mxy1wM4vefUkwzXAEc4XjIeYkzZdsLdJq-ZhfhNWFAapTV0dh7Ui2Vbgs83rW1nDxAMcKv8ekaX3OOtBs8lzw2juIdZAFcsKW7SELFkrJwO\\n省级教育考试机构 北京教育考试院 天津市教育招生考试院 河北省教育考试院 中国教育考试网\\n\\n---\\nTo read the full content of any result, use WebFetch with the URL above.\",\"partialFailures\":[{\"engine\":\"duckduckgo\",\"message\":\"Search timed out\"}]}"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 6]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：外部查到 8 条，我把要点整理出来再回到正题。]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "搜到了。2026年高考查分没有全国统一的\"差分网址\"，是按省分开放的。我帮你拉一下官方汇总页面。"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_a0efe0fe79c0406c967f53cc",
+          "name": "WebFetch",
+          "input": {
+            "url": "https://gaokao.chsi.com.cn/",
+            "prompt": "2026年高考成绩查询时间及入口"
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_a0efe0fe79c0406c967f53cc",
+          "content": "快速入口\r    [阳光志愿](/zyck/)\r    [阳光选科](/xkkm/)\r    [院校查询](/sch/search--ss-on,option-qg,searchType-1,start-0.dhtml)\r    [专业查询](/zyk/zybk/)\r    [招生章程](/zsgs/zhangcheng/listVerifedZszc--method-index,lb-1.dhtml)\r    [院校满意度](/zyk/pub/myd/schAppraisalTop.action)\r    [专业满意度](/zyk/pub/myd/specAppraisalTop.action)\r    [专业推荐](/zyk/pub/zytj/recommendTop.action)\r    [专业解读](/zyk/zybk/zyjd/listPage)\r    [名单公示](/zsgs/mdgs.jsp)\r    [招办访谈](/gkzt/zbft)\r    [特殊类型招生信息服务平台](https://bm.chsi.com.cn/)\r    高考月历\r    - {{item.month}}\r    - [警惕招录骗局](/gkxx/zt/gkfzp.shtml)\r- [我要举报](/wap/tsjb/index)\r    - [专题汇总](/wap/news/zthz/)\r    [招生章程](/zsgs/zhangcheng/listVerifedZszc--method-index,lb-1.dhtml)\r| \r[高考专题汇总](https://gaokao.chsi.com.cn/wap/news/zthz/)\r| \r[全国高等学校名单](/gkxx/zc/moe/202606/20260618/2293826311.html)\r    教育要闻\r    [2026年高考“云咨询周”于6月22日至28日举行](/gkxx/zc/moe/202606/20260618/2293826010.html) \r    [2026年高考录取控制分数线（陆续更新）](/z/gkbmfslq/pcx.jsp)\r    考生必读\r    [高考常见100问](/gkxx/zt/2026gkzx.shtml) [警惕招录骗局](/gkxx/zt/gkfzp.shtml) [高考志愿填报官方工具](/gkxx/zc/moe/202606/20260616/2293810958.html)\r    [2026高考志愿填报指南](/gkzt/tbzyzn) | [走近基础学科](/gkxx/zt/zjjcxk.shtml) | [高考选专业](/gkzt/xzy) | [招办访谈](/gkzt/zbft)\r    省市动态\r[天津高考总成绩分数段统计情况](/gkxx/zc/ss/202606/20260624/2293845980.html) | [山东高招录取工作进程表](/gkxx/zc/ss/202606/20260624/2293845947.html)\r    政策与资讯\n    招生政策\r    广东省2026年普通高校招生录取最低分数线公布\r安徽：我省2026年高考成绩查询方式公布\r重庆：关于我市2026年普通高考成绩查询有关事宜的公告\r广西：2026年高考成绩查询方式公布，预计考生可于6月25日14:00查询高考成绩\r天津：2026年高考总成绩分数段统计情况\r海南：2026年普通高考成绩发布及查询公告\r    教育部关于公布《普通高等学校本科专业目录（2026年）》的通知\r教育部关于公布2026年高等职业教育专科专业设置备案和审批结果的通知\r教育部关于深化职业教育教学关键要素改革的意见\r教育部关于做好2026年普通高校招生工作的通知\r高职本科专业学士学位授予学科门类对应表\r2026年普通高等学校部分特殊类型招生基本要求\r    工作动态\r    上海：2026年普通高校招生全国统一考试成绩将于6月23日公布\r江苏：省教育考试院部署2026年高考志愿填报工作\r天津：2026年高考平稳顺利结束\r浙江：2026年高考顺利结束，预计26日左右公布成绩\r黑龙江：2026年普通高考顺利结束\r沪高考成绩6月23日公布 等级性考试成绩今起可查\r    教育部公布2026年高考“云咨询周”时间安排\r教育部会同有关部门全力以赴保障2026年高考安全\r教育部会同有关部门启动实施“2026年高考护航行动”\r《普通高等学校本科专业目录（2026年）》发布\r教育部关于公布《普通高等学校本科专业目录（2026年）》的通知\r2026年全国普通高校招生考试安全工作视频会议召开\r    招考热点\r    [2026年三大专项计划帮农村生上好大学](/gkxx/zt/2026sdzx.shtml)\r[2026年强基计划报考指南](/gkzt/jcxkzs)\r[本科与职业本科新设专业一览](/gkxx/zt/xzzy.shtml)\r[2026年高考报名分数录取查询](/z/gkbmfslq/index.jsp)\r    地方站\r**\r    [北京](/beijing/)\r[天津](/tianjin/)\r[河北](/hebei/)\r[山西](/shanxi/)\r[内蒙古](/neimenggu/)\r[辽宁](/liaoning/)\r[吉林](/jilin/)\r[黑龙江](/heilongjiang/)\r[上海](/shanghai/)\r[江苏](/jiangsu/)\r[浙江](/zhejiang/)\r[安徽](/anhui/)\r[福建](/fujian/)\r[江西](/jiangxi/)\r[山东](/shandong/)\r[河南](/henan/)\r[湖北](/hubei/)\r[湖南](/hunan/)\r[广东](/guangdong/)\r[广西](/guangxi/)\r[海南](/hainan/)\r[重庆](/chongqing/)\r[四川](/sichuan/)\r[贵州](/guizhou/)\r[云南](/yunnan/)\r[西藏](/xizang/)\r[陕西](/shaanxi/)\r[甘肃](/gansu/)\r[青海](/qinghai/)\r[宁夏](/ningxia/)\r[新疆](/xinjiang/)\r    大学 · 专业\n    院校招生\r高校动态\r    6月27日，三亚学院校园开放日等您来！\r速览 | 北方民族大学2026年报考指南电子书发布！\r重磅！首都师范大学2026年本科招生十大亮点发布！\r广州新华学院2026年普通本科招生情况介绍\r南宁理工学院2026年广西本科招生计划表\r首都医科大学2026年校园开放日暨招生咨询活动\r    [[重庆对外经贸学院](/sch/listBulletin--schId-1834,categoryId-64885.dhtml)] [重庆对外经贸学院2026年重庆市招生计划](/sch/viewBulletin--schId-1834,infoId-7772626036,categoryId-64885.dhtml)\n    [[汉江师范学院](/sch/listBulletin--schId-400,categoryId-11866.dhtml)] [汉江师范学院近几年录取分数查询](/sch/viewBulletin--schId-400,infoId-7772637251,categoryId-11866.dhtml)\n    [[重庆建筑科技职业学院](/sch/listBulletin--schId-1301,categoryId-43478.dhtml)] [2026年招生章程](/sch/viewBulletin--schId-1301,infoId-7771986764,categoryId-43478.dhtml)\n    [[华中科技大学](/sch/listBulletin--schId-384,categoryId-381495.dhtml)] [华中科技大学信息公开网](/sch/viewBulletin--schId-384,infoId-5595291001,categoryId-381495.dhtml)\n    [[长沙健康学院](/sch/listBulletin--schId-7721443821,categoryId-7721443906.dhtml)] [长沙健康学院2026年学费及住宿费收费标准公示](/sch/viewBulletin--schId-7721443821,infoId-7743346810,categoryId-7721443906.dhtml)\n    [[保定幼儿师范高等专科学校](/sch/listBulletin--schId-609378918,categoryId-609379008.dhtml)] [2026年统招招生停招专业](/sch/viewBulletin--schId-609378918,infoId-7768793903,categoryId-609379008.dhtml)\n    专业百科\r专业与就业\r    基础学科：长期主义者的好选择\r从专业之“新”，见未来之“形”\r本科专业调整折射哪些新趋势\r紧扣“十五五”战略急需，“AI+”时代科学规划大学专业选择\r【图解专业】电子信息工程：研究信息的获取与处理\r【图解专业】能源化学工程：擘画零碳蓝图，重塑能源格局\r    具身智能：让AI拥有“身体”，未来产业新风口！\r想投身量子计算？高中选科→大学专业→核心职业的必备攻略\r1330万条数据反映北京需要什么人才\r我国再添17项新职业——从新职业透视经济新活力\r为何越来越多年轻人选择做“绿领”？\r“绿领”职业成为就业“香饽饽”\r    专业解读\r    [量子信息科学：安全、算力与感知——它将如何改变世界](/zyk/zybk/zyjd/viewPage/s9usexkttqgphdla)\r[智能医学工程：让AI成为医生的“最强外脑”](/zyk/zybk/zyjd/viewPage/50wr72mub2597s59)\r    强基计划\r    北京大学2026年强基计划招生简章\r吉林大学2026年强基计划招生简章\r强基计划今年招生有这些变化\r上海交通大学2026年强基计划招生简章\r北京航空航天大学2026年强基计划招生简章\r北京理工大学2026年强基计划招生简章\r    招办主任访谈\r    中国社会科学院大学： 新增1个专业、2个招生省份\r中南财经政法大学：财经政法强强联合、深度融通“双一流”\r西北农林科技大学：2026年78个本科专业计划招收6260人\r湖南科技大学：优化专业组设置，新增特色班及前沿专业\r武汉科技大学：31省计划招生6800人，新增6个本科招生专业\r湘潭大学：新增11个特色实验班，加快培养高素质复合型创新人才\r    招办主任访谈\r    [兰州大学](/gkxx/zbzrft/zx/202606/20260622/2293835013.html)\r[长江大学](/gkxx/zbzrft/zx/202606/20260616/2293812331.html)\r[中国石油大学（北京）](/gkxx/zbzrft/zx/202605/20260526/2293490551.html)\r    中国社会科学院大学： 新增1个专业、2个招生省份\r中南财经政法大学：财经政法强强联合、深度融通“双一流”\r    高校专项\r    青海：我省2026年高校专项计划招生不再单独进行报名申请的公告\r陕西：关于做好2026年重点高校在陕招生专项计划工作的通知\r甘肃：关于做好2026年重点高校招生专项计划工作的通知\r山东省教育厅关于做好2026年面向农村和脱贫地区学生招生专项计划工作的通知\r贵州：关于2026年普通高校招生高校专项计划资格申报工作的通告\r福建：关于做好2026年重点高校招生专项计划工作的通知\r    港澳高校招生\r    “2025学在港澳”说明会，期待你的参与!\r内地生报读香港高校热度持续 人工智能成大热专业\r“2024学在港澳”说明会，期待你的参与！\r澳门高等学校名单\r香港高等学校名单\r去大湾区读书！2024年多所港澳高校面向内地招生\r    特殊类型招生\r    [强基计划](/gkzt/jcxkzs)\r[高校专项](/gkzt/gxzxjh2025)\r[保送生](/gkzt/bss2026)\r[运动队](/gkzt/gspydd2026)\r[艺术类](/gkzt/ysl2026)\r[体育类](/gkzt/tyl2026)\r[空军招飞](/gkzt/kjzf)\r[海军招飞](/gkzt/hjzf)\r[民航招飞](/gkzt/mhzf)\r[港澳高校招生](/gkzt/gagx2026)\r[军校招生](/gkzt/jxzs) \r[公费师范生](/gkxx/zt/gfsfs2024.shtml)\r    志愿\n    报考指南\r政策解读\r    福建：高考志愿 | 2026年高招录取“百问百答”第一期\r安徽省2026年高考百问百答（一）\r天津：高考生志愿填报之填报策略及技巧\r高考志愿填报：在热门与热爱之间\r河南：2026年高考百问百答\r广西：关于做好我区2026年普通高校招生统一考试志愿填报工作的通知\r    青海：2026年普通高考招生考试政策百问百答（二）\r青海：2026年普通高考招生考试政策百问百答（一）\r《内蒙古自治区2026年普通高等学校招生工作规定》问题解答\r山西：2026年普通高校招生工作规定\r河南：2026年普通高校招生考生指南（一）考试注意事项\r2026年甘肃省普通高校招生统一考试问题集锦（一）\r    考生必读\r    五类高考常见诈骗话术需警惕\r多所高校发布2026年本科招生章程，怎么看？怎么用？\r考前紧张是本能 用“平常心”为高考“助攻”\r同济大学焦子朔：归纳与总结——搭建自己的知识宝库\r大连理工大学李远志：首考启新程，逐梦向未来\r南开大学卢沂泽：我的高三备考之路与大学新起点\r    [全国各高校及省市招办网站导航](/gdwz.do)\r    专题汇总\r[更多](/wap/news/zthz/)\r    高考常识\n    招生章程\n    [招生章程知多少](https://gaokao.chsi.com.cn/gkxx/gkcs/202303/20230315/2266235549.html)\r[章程中包含的重要信息](https://gaokao.chsi.com.cn/gkxx/ksbd/202406/20240604/2293295370.html)\r    高校名单\n    [全国高等学校名单](https://gaokao.chsi.com.cn/sch/search--ss-on,option-qg,searchType-1,start-0.dhtml)\r[“双一流”建设高校及学科名单](https://gaokao.chsi.com.cn/gkxx/zcdh/202202/20220214/2164603457.html)\r    考试科目\n    [“3+3”模式](https://gaokao.chsi.com.cn/gkxx/gkcs/202203/20220315/2266235554.html)\r[“3+1+2”模式](https://gaokao.chsi.com.cn/gkxx/gkcs/202203/20220315/2266235555.html)\r    专业目录\n    [本科（普通教育）专业](https://gaokao.chsi.com.cn/gkxx/zcdh/202604/20260428/2293468784.html)\r[本科（职业教育）专业](https://gaokao.chsi.com.cn/gkxx/zybk/202412/20241216/2293350038.html)\r[高职（专科）专业](https://gaokao.chsi.com.cn/gkxx/zcdh/202103/20210322/2041286243.html)\r    三大专项\n    [“三大专项计划”](https://gaokao.chsi.com.cn/gkxx/gkcs/202604/20260423/2293468577.html)\r[招生对象](https://gaokao.chsi.com.cn/gkxx/gkcs/202204/20220408/2179816564-2.html)\r    体检军检\n    [体检结果](https://gaokao.chsi.com.cn/gkxx/gkcs/201605/20160519/1534553244.html)\r[常见问题](https://gaokao.chsi.com.cn/gkxx/gkcs/201303/20130301/392643718.html)\r[军队院校体检要求](https://gaokao.chsi.com.cn/gkxx/jxzs/202310/20231021/2293385980.html)\r    历年分数线\n    [2026](https://gaokao.chsi.com.cn/z/gkbmfslq/pcx.jsp)\r[2025](https://gaokao.chsi.com.cn/z/gkbmfslq2025/pcx.jsp)\r[2024](https://gaokao.chsi.com.cn/z/gkbmfslq2024/pcx.jsp)\r    志愿填报\n    [院校调档线](https://gaokao.chsi.com.cn/gkxx/gkcs/202303/20230315/2266235548.html)\r    [平行志愿](https://gaokao.chsi.com.cn/gkxx/zytb/201806/20180619/1698742562.html)\r    [院校专业组志愿](https://gaokao.chsi.com.cn/gkxx/gkcs/202303/20230315/2266307318.html)\r    [大类招生](https://gaokao.chsi.com.cn/gkxx/gkcs/202203/20220315/2266235551.html)\r    [专业（专业类）平行志愿](https://gaokao.chsi.com.cn/gkxx/gkcs/202303/20230315/2266307320.html)\r    帮助中心\r[更多](/help/)\r    统考招生\r    **\r[{{ item.title }}]('/help/?tagid='+hotHelp.gk_tk+'&id=' + item.param.id)\r    暂无内容\r    特殊类型招生\r    **\r[{{ item.title }}]('/help/ts.jsp?tagid='+hotHelp.gk_ts+'&id=' + item.param.id)\r    暂无内容\r    特殊类型报名\r    **\r[{{ item.title }}]('/help/wb.jsp?tagid='+hotHelp.gk_wb+'&id=' + item.param.id)\r    暂无内容\r    友情链接\n    [学籍查询](https://my.chsi.com.cn/)\r[学历查询](https://www.chsi.com.cn/xlcx/)\r[学位查询](https://www.chsi.com.cn/xwcx/)\r[在线验证](https://www.chsi.com.cn/xlcx/bgcx.jsp)\r[出国教育背景信息服务](https://www.chsi.com.cn/xlrz/index2.jsp)\r[图像校对](https://my.chsi.com.cn/archive/index.jsp#txjd)\r[学信档案](https://my.chsi.com.cn/)\r[高考](https://gaokao.chsi.com.cn/)\r[研招](https://yz.chsi.com.cn/)\r[港澳台招生](https://www.gatzs.com.cn/)\r[征兵](https://www.gfbzb.gov.cn/)\r[就业](https://www.ncss.cn/)\r[学职平台](https://xz.chsi.com.cn/)\r    [学信网](//www.chsi.com.cn/)\r[中心简介](https://chesicc.chsi.com.cn/zxgw/zxjs/201604/20160418/1529506207.html)\r[联系我们](//www.chsi.com.cn/about/contact.shtml)\r[版权声明](//www.chsi.com.cn/about/copyright.shtml)\r[帮助中心](/help/)\r[网站地图](/sitemap.jsp)\r[网站宣传](//www.chsi.com.cn/ad/202403/20240322/2293272452.html)\r    主办单位：[教育部学生服务与素质发展中心](https://chesicc.chsi.com.cn/)\nCopyright © 2003-2026 [学信网](//www.chsi.com.cn/) All Rights Reserved\n[京ICP备19004913号-1](https://beian.miit.gov.cn)\r[京公网安备11010202009747号](https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010202009747)\r    官方微信\r[官方微博](http://weibo.com/chsigk)\r    客服热线：010-67410388\n客服邮箱：kefu@chsi.com.cn\r    # 阳光高考\n[&ensp;](/)\r    *|\r    [登录](/user/userAccountLogin.do?entrytype=gkstu)\r[注册](https://account.chsi.com.cn/account/preregbymphone.action?from=gaokao-zixun)\r    |\r[管理部门登录](/htgl/)\r|\r[帮助中心](/help/)\r    - 0, 'active': isActiveNav(nav) }\">\r[{{ nav.name }}](nav.href)\r{{ nav.name }}\r0\" class=\"gk-header-nav-dropdown\">\r    [{{ item.name }}](item.href)*\r{{ ssmc }}\r**\r    - {{ item.value }}\r    {{ ssData.orgName }}\r官方信息\r    **\r微信\r    {{ ssData.wxmc }}\r    微信号：{{ ssData.wxh }}\r    无\r    **\r微博\r    [{{ ssData.wbmc }}](ssData.wbwz)\r    {{ ssData.wbmc }}\r    无\r    **\r百家号\r    {{ ssData.bjhmc }}\r    ID：{{ ssData.bjhIdh }}\r    无\r    **\r新媒体\r    {{ sph.ptmc }}：{{ sph.mc }}\r    ID：{{ sph.ptId }}\r    无\r    官网地址：\r    [{{ ssData.zbgwdz }}](ssData.zbgwdz)\r    {{ ssData.zbgwdz || '-' }}\r    咨询电话：\r    {{ ssData.dh || '-' }}\r    本地志愿参考服务：\r{{ ssData.zyckxtmc }}（{{ ssData.zyckxtsm }}）\r    暂无数据\n    展开\r**\r    高考流程\n    报名时间\r成绩查询\r批次线\r志愿填报\r录取结果\r    报名时间：\r    报名材料：\r    报名网址：\r    详细信息：\r    陆续更新中，敬请期待……\n    出分时间：\r    成绩查询渠道：\r    陆续更新中，敬请期待……\n    [查看](/z/gkbmfslq/pcx.jsp)\r    填报志愿时间：\r    志愿设置：\r    考生须知：\r    陆续更新中，敬请期待……\n    各录取批次时间安排：\r    征集志愿时间安排：\r    录取结果查询方式：\r    陆续更新中，敬请期待……\n    展开\r**\r    招生政策\r    工作动态\r    - [{{ item.title }}](item.uri)\r    - [{{ item.title }}](item.uri)"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 5]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: 以下为可选的参考旁白，你可以自然地采用、改写或忽略，用你自己的话承接这一步的结果并点出下一步；不要逐字照搬，也不要提及本提示：外部信息拿到了，我把要点整理出来。]"
+        }
+      ]
+    }
+  ],
+  "messageCount": 7,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782355193477,
+  "updatedAt": 1782355193477
+}

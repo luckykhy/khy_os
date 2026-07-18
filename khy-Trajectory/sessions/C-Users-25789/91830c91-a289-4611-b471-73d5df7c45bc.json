@@ -1,0 +1,64 @@
+{
+  "sessionId": "91830c91-a289-4611-b471-73d5df7c45bc",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "最近新闻"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: news]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_00_TwNsgCpGVSPCvbq45Lny0500",
+          "name": "news",
+          "input": {
+            "query": "最新新闻 2026年6月",
+            "limit": 15
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_00_TwNsgCpGVSPCvbq45Lny0500",
+          "content": "News for \"最新新闻 2026年6月\" — 8 article(s) via web:\n1. 最新滚动新闻_网易新闻中心 — news.163.com\n   1 天前 · (2026-06-19 13:39:38) [国内] 3名男子在天然溶洞盗采金矿死亡调查：一氧化碳中毒 (2026-06-19 13:30:38) [国际] 加拿大球员 …\n2. Google 新闻 — www.baidu.com\n   焦点新闻 厦门大学新闻网 展开 东南网:山海同行三十载|青春续写闽宁情——专访厦大第25届研支团闽宁分队支教队员梁怡婷 12小时前 手机新浪网 展开 闽宁同心三十载!央媒持续聚焦东西部协作的典范 20小时前 新华网 展开 第一观察|常态化做好东西部协作的根本遵循 4小时前 中国青年网 展开 30年不\n3. 新闻新闻哪家强?速来了解 — www.baidu.com\n   对比多家后,新闻新闻脱颖而出,值得信赖.下载新闻新闻,掌握一手资讯,今日就试!\n4. 澎湃新闻 — www.baidu.com\n   һ����ԭ������Ϊ����ȫý��������Ѷƽ̨ �˺������¼ @thepaper.cn ��д�����Ѵ� ��������� ��һ�� 5�����Զ���¼ Ϊ������˺Ű�ȫ�����������ɻ��õ�����ʹ�ô˹��ܣ� [����Ա��¼](http:/\n5. 澎湃新闻-专注时政与思想-ThePaper.cn — www.baidu.com\n   [习言道丨习近平亲自命名的村庄，从“干沙滩”变成“金沙滩”](https://www.chinanews.com.cn/gn/2026/06-19/10643746.shtml) [中南海](/list_25488)1小时前 [伊朗军方宣布关闭霍尔木兹海峡](/newsDetail_forward_\n6. [中国新闻]上合组织青岛峰会6月举行 — www.baidu.com\n   [中国新闻]上合组织青岛峰会6月举行 选集 更多 《中国新闻》 20260616 21:00 《中国新闻》 20260616 19:00 《中国新闻》 20260616 18:00 《中国新闻》 20260616 12:00 《中国新闻》 20260616 04:00 《中国新闻》 20260616\n7. 《新闻联播》 20260612 19:00 - CCTV节目官网 — tv.cctv.com\n   2026年6月12日 · 12.国内联播快讯： （1）大湾区内地九市前5个月对APEC其他经济体进出口2.8万亿元； （2）《中国个人信息保护 …\n8. [中国新闻]2026年高考全国统考将于6月7日开始举行 — www.baidu.com\n    视频[中国新闻]2026年高考全国统考将于6月7日开始举行 选集 更多 《中国新闻》 20260522 07:... m.app.cctv.com/vsetv/det...\n[Metadata: 8 results]"
+        },
+        {
+          "type": "text",
+          "text": "[SYSTEM: Tool results above. Continue the task: if done, give final summary; if not, call the next tool. Remaining iterations: 7]"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "以下是 2026 年 6 月近期主要新闻摘要：\n\n**国内要闻**\n- **上合组织青岛峰会** — 6 月举行，聚焦区域合作\n- **习近平总书记命名的闽宁镇** — 从\"干沙滩\"变成\"金沙滩\"，媒体聚焦闽宁协作 30 周年\n- **2026 年高考** — 全国统考 6 月 7 日开始举行\n- **《新闻联播》报道** — 大湾区内地九市前 5 个月对 APEC 其他经济体进出口 2.8 万亿元；《中国个人信息保护...》进展\n- **社会新闻** — 3 名男子在天然溶洞盗采金矿死亡，调查认定为一氧化碳中毒\n\n**国际**\n- **伊朗军方宣布关闭霍尔木兹海峡** — 地区局势紧张\n- **加拿大球员相关事件** — 具体细节可进一步查询\n\n要深入了解某条新闻的详情吗？我可以帮你打开具体链接。",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 4,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781965407132,
+  "updatedAt": 1781965407132
+}

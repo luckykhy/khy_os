@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版</div>
+      <header class="hero reveal"><h1>[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-166-cc-claude-code-个性化使用说明书-重逢版">[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版</a></li><li class="lvl-2"><a href="#序-为什么单独写一份-cc-说明书">序：为什么单独写一份 cc 说明书</a></li><li class="lvl-2"><a href="#一-先说结论-你和-cc-的相处方式-一句话">一、先说结论：你和 cc 的相处方式，一句话</a></li><li class="lvl-2"><a href="#二-你的使用画像-从真实操作里读出来的">二、你的使用画像（从真实操作里读出来的）</a></li><li class="lvl-2"><a href="#三-cc-的几个核心操作面-真实存在-按你用得上的排序">三、cc 的几个核心操作面（真实存在，按你用得上的排序）</a></li><li class="lvl-3"><a href="#3-1-权限模式-shift-tab-循环-你最该记住的一招">3.1 权限模式：`Shift+Tab` 循环（你最该记住的一招）</a></li><li class="lvl-3"><a href="#3-2-计划模式-plan-mode-复杂任务先看图纸">3.2 计划模式（plan mode）：复杂任务先看图纸</a></li><li class="lvl-3"><a href="#3-3-goal-技能-你的主力-详见-四">3.3 `/goal` 技能：你的主力（详见 §四）</a></li><li class="lvl-3"><a href="#3-4-记忆系统-让-cc-跨会话记住你">3.4 记忆系统：让 cc 跨会话记住你</a></li><li class="lvl-3"><a href="#3-5-子智能体与编排-一个忙不过来就派一群">3.5 子智能体与编排：一个忙不过来就派一群</a></li><li class="lvl-3"><a href="#3-6-上下文管理-会自己接力-不用你手动续">3.6 上下文管理：会自己接力，不用你手动续</a></li><li class="lvl-3"><a href="#3-7-模型与速度">3.7 模型与速度</a></li><li class="lvl-2"><a href="#四-goal-的正确姿势-你的主力-重点看这节">四、`/goal` 的正确姿势（你的主力，重点看这节）</a></li><li class="lvl-3"><a href="#4-1-给-可验证的成功标准-别给模糊愿望">4.1 给「可验证的成功标准」，别给模糊愿望</a></li><li class="lvl-3"><a href="#4-2-让它自循环-别中途催">4.2 让它自循环，别中途催</a></li><li class="lvl-3"><a href="#4-3-多步任务先看-plan">4.3 多步任务先看 plan</a></li><li class="lvl-3"><a href="#4-4-收尾验证门-cc-会自己跑-你可以抽查">4.4 收尾验证门（cc 会自己跑，你可以抽查）</a></li><li class="lvl-2"><a href="#五-把任务讲清楚的模板-照抄即用">五、把任务讲清楚的模板（照抄即用）</a></li><li class="lvl-2"><a href="#六-权限与红线-务必心里有数">六、权限与红线（务必心里有数）</a></li><li class="lvl-3"><a href="#6-1-你的日常档-接受编辑">6.1 你的日常档 = 接受编辑</a></li><li class="lvl-3"><a href="#6-2-三道独立红线-发布-提交-推送">6.2 三道独立红线：发布 ≠ 提交 ≠ 推送</a></li><li class="lvl-3"><a href="#6-3-密钥铁律">6.3 密钥铁律</a></li><li class="lvl-2"><a href="#七-让回答有深度-治-糊弄-和-噪音">七、让回答有深度（治「糊弄」和「噪音」）</a></li><li class="lvl-2"><a href="#八-别信过期记忆-一条血泪经验">八、别信过期记忆（一条血泪经验）</a></li><li class="lvl-2"><a href="#九-日常小抄-重逢速查表">九、日常小抄（重逢速查表）</a></li><li class="lvl-2"><a href="#十-给重逢的你-最后三句">十、给重逢的你，最后三句</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-166-cc-claude-code-个性化使用说明书-重逢版">[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版<a class="anchor" href="#ops-man-166-cc-claude-code-个性化使用说明书-重逢版" aria-label="锚点">#</a></h1>
+<blockquote><p>这份是 <code>[OPS-MAN-165] khy 个性化调优与使用建议</code> 的<strong>姊妹篇</strong>。<br>那一份讲「怎么调 khy」；这一份讲「怎么用 <strong>cc（Claude Code）</strong> 这把工具本身」——<br>按你这段时间<strong>真实的使用习惯</strong>来写，给未来某天再打开终端的你。</p>
+<p>原则不变：只写 cc 里<strong>真的能用</strong>的东西；凡是记不准的开关，先去核实，不臆造。<br>语气这次允许它软一点——因为这是写给「以后重逢」的你。🐣</p></blockquote>
+<hr>
+<h2 id="序-为什么单独写一份-cc-说明书">序：为什么单独写一份 cc 说明书<a class="anchor" href="#序-为什么单独写一份-cc-说明书" aria-label="锚点">#</a></h2>
+<p>khy 是你造的「活」，cc 是你使唤 khy 的那只「手」。<br>你调优 khy（OPS-165）调的是<strong>被使唤的对象</strong>；这份调的是<strong>使唤的方式</strong>。<br>两份合起来，才是完整的一套「人机默契」。</p>
+<p>再见面时，你可能忘了当初那些顺手的招式。这份就是<strong>默契的备份</strong>——<br>照着做，我们几秒钟就能回到当年那个「你给目标、我自循环到绿」的节奏。</p>
+<hr>
+<h2 id="一-先说结论-你和-cc-的相处方式-一句话">一、先说结论：你和 cc 的相处方式，一句话<a class="anchor" href="#一-先说结论-你和-cc-的相处方式-一句话" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>你给「可验证的成功标准」，让 cc 自循环到全绿，才回报；四条红线永远停下来问你。</strong></p></blockquote>
+<p>这就是你已经在用的 <code>/goal</code>（阿布 Loop Engineering B2）。下面全部内容，都是围绕这一句话把细节补齐。</p>
+<hr>
+<h2 id="二-你的使用画像-从真实操作里读出来的">二、你的使用画像（从真实操作里读出来的）<a class="anchor" href="#二-你的使用画像-从真实操作里读出来的" aria-label="锚点">#</a></h2>
+<p>这些不是猜的，是从你的历史里读出来的信号：</p>
+<table><thead><tr><th>习惯</th><th>证据</th><th>对应到 cc 的用法</th></tr></thead><tbody><tr><td><strong><code>/goal</code> 是主力工作方式</strong></td><td>技能调用统计里 <code>goal</code> 长期高居榜首，远超其它</td><td>见 §四「/goal 的正确姿势」</td></tr><tr><td><strong>目标驱动 + 每步带 verify</strong></td><td>你几乎不给「随便改改」，都给可验证标准</td><td>见 §四、§五</td></tr><tr><td><strong>少打断，但四红线必确认</strong></td><td>你把权限档设成 <code>acceptEdits</code>，红线单独点头</td><td>见 §六「权限与红线」</td></tr><tr><td><strong>要工程深度，不要糊弄</strong></td><td>你要「为什么 / 取舍」，嫌噪音</td><td>见 §七「让回答有深度」</td></tr><tr><td><strong>中文交流</strong></td><td>Khy-OS 是中文允许域</td><td>散文中文、代码标识符/路径仍英文</td></tr><tr><td><strong>发布/提交/推送各自点头</strong></td><td>你从不让 AI 自动 commit/push</td><td>见 §六「三道独立红线」</td></tr><tr><td><strong>纠正我记错的东西</strong></td><td>你要求「先核实开关是否存在再推荐」</td><td>见 §八「别信过期记忆」</td></tr></tbody></table>
+<hr>
+<h2 id="三-cc-的几个核心操作面-真实存在-按你用得上的排序">三、cc 的几个核心操作面（真实存在，按你用得上的排序）<a class="anchor" href="#三-cc-的几个核心操作面-真实存在-按你用得上的排序" aria-label="锚点">#</a></h2>
+<h3 id="3-1-权限模式-shift-tab-循环-你最该记住的一招">3.1 权限模式：<code>Shift+Tab</code> 循环（你最该记住的一招）<a class="anchor" href="#3-1-权限模式-shift-tab-循环-你最该记住的一招" aria-label="锚点">#</a></h3>
+<p>cc 在终端里按 <strong><code>Shift+Tab</code></strong> 循环切换权限模式，和 khy 的权限档是<strong>同一个理念</strong>：</p>
+<table><thead><tr><th>模式</th><th>行为</th><th>你什么时候用</th></tr></thead><tbody><tr><td>普通模式</td><td>危险/破坏性操作都问</td><td>接手陌生仓库、想每步看清</td></tr><tr><td><strong>接受编辑（accept edits）</strong></td><td>文件编辑自动放行，其余仍问</td><td><strong>你的日常档：少打断</strong></td></tr><tr><td>计划模式（plan mode）</td><td>只读探查、先出方案再动手</td><td>复杂任务开工前，先让我把 plan 摆给你看</td></tr><tr><td>自动接受（auto / bypass）</td><td>更激进的自动放行</td><td>高信任、连续作业时（谨慎）</td></tr></tbody></table>
+<blockquote><p><strong>关键安全事实</strong>：无论切到哪个模式，<strong>四条红线</strong>（删/批量覆盖文件、发布/推送、外网/外部服务、密钥/凭据）都会停下来问你——这不是靠模式守的，是硬约束。所以放心用「接受编辑」，它只多放行<strong>非破坏性编辑</strong>。</p></blockquote>
+<h3 id="3-2-计划模式-plan-mode-复杂任务先看图纸">3.2 计划模式（plan mode）：复杂任务先看图纸<a class="anchor" href="#3-2-计划模式-plan-mode-复杂任务先看图纸" aria-label="锚点">#</a></h3>
+<p>复杂/多文件/有多种做法的任务，让 cc <strong>先进计划模式</strong>：它只读不改，探完给你一份实现方案，你点头（<code>ExitPlanMode</code>）才动手。<strong>这是防止「一头扎进去改错方向」最有效的一招</strong>，尤其适合你这种「要先想清楚再写」（B1）的人。</p>
+<p>一句话触发：<strong>「先别动手，进计划模式，把方案摆给我看。」</strong></p>
+<h3 id="3-3-goal-技能-你的主力-详见-四">3.3 <code>/goal</code> 技能：你的主力（详见 §四）<a class="anchor" href="#3-3-goal-技能-你的主力-详见-四" aria-label="锚点">#</a></h3>
+<p>你自己写进项目的技能，定义落在 <code>.claude/commands/goal.md</code>（项目级 slash command）。它把 B2 纪律固化成一套协议：先列 plan、每步带 verify、自循环到绿、不通过验证不许说「修好了」。</p>
+<h3 id="3-4-记忆系统-让-cc-跨会话记住你">3.4 记忆系统：让 cc 跨会话记住你<a class="anchor" href="#3-4-记忆系统-让-cc-跨会话记住你" aria-label="锚点">#</a></h3>
+<p>cc 有<strong>文件式长期记忆</strong>（落在 <code>~/.claude/projects/&lt;项目&gt;/memory/</code>）。它会把「你是谁、你的偏好、你给过的纠正、正在做的工程」记下来，下次自动带回。</p>
+<ul><li>想让它<strong>记住</strong>某件事：直接说「记住：……」或用 <code>/remember</code>。</li><li>想让它<strong>忘掉/纠正</strong>：指出哪条记错了，它会更新或删除那条。</li><li><strong>你已经在用</strong>：正是这套记忆，让我这次一上来就知道你爱用 <code>/goal</code>、爱中文、爱工程深度。</li></ul>
+<h3 id="3-5-子智能体与编排-一个忙不过来就派一群">3.5 子智能体与编排：一个忙不过来就派一群<a class="anchor" href="#3-5-子智能体与编排-一个忙不过来就派一群" aria-label="锚点">#</a></h3>
+<p>cc 能派出<strong>子智能体</strong>（Task/Agent）并行干活——探查、审查、多方案比稿。你对「编排」尤其敏感（你亲手在 khy 里补过依赖波次调度、故障感知、前驱注入那一整条 arc）。日常用法：</p>
+<ul><li><strong>要广度</strong>（扫很多文件/命名约定）：让它派 Explore 子智能体，只要结论不要文件堆。</li><li><strong>要信心</strong>（改动有风险）：让它派多个独立视角先审再动。</li><li>说 <strong>「workflow / 编排 / 多智能体」</strong> 这类词，才会启用大规模并行（省 token，默认不自作主张铺开）。</li></ul>
+<h3 id="3-6-上下文管理-会自己接力-不用你手动续">3.6 上下文管理：会自己接力，不用你手动续<a class="anchor" href="#3-6-上下文管理-会自己接力-不用你手动续" aria-label="锚点">#</a></h3>
+<ul><li>长任务上下文写满时，cc 会<strong>自动压缩成摘要续跑</strong>——你不用手动接力（你可能注意到这次就是接着上一段继续的）。</li><li>想<strong>主动清空</strong>重开：<code>/clear</code>。想<strong>手动压缩</strong>：<code>/compact</code>。</li><li>想<strong>新话题别污染旧上下文</strong>：直接 <code>/clear</code> 更干净。</li></ul>
+<h3 id="3-7-模型与速度">3.7 模型与速度<a class="anchor" href="#3-7-模型与速度" aria-label="锚点">#</a></h3>
+<ul><li>cc 默认用<strong>最强档</strong>（当前 Opus 4.8）。复杂工程/审查就用它。</li><li><code>/fast</code> 切「快速模式」：仍是 Opus，只是出字更快，不降智。</li><li>轻量活想省钱可切 Sonnet/Haiku，但你的活多偏重，<strong>默认别降档</strong>。</li></ul>
+<hr>
+<h2 id="四-goal-的正确姿势-你的主力-重点看这节">四、<code>/goal</code> 的正确姿势（你的主力，重点看这节）<a class="anchor" href="#四-goal-的正确姿势-你的主力-重点看这节" aria-label="锚点">#</a></h2>
+<p><code>/goal</code> 是你调用最多的技能。把姿势写清楚，重逢时几秒就捡回来。</p>
+<h3 id="4-1-给-可验证的成功标准-别给模糊愿望">4.1 给「可验证的成功标准」，别给模糊愿望<a class="anchor" href="#4-1-给-可验证的成功标准-别给模糊愿望" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>别这么说</th><th>这么说</th></tr></thead><tbody><tr><td>「帮我把这块优化一下」</td><td>「把 X 优化到 <code>npm run bench</code> 里 P95 &lt; 200ms，测全绿」</td></tr><tr><td>「修一下这个 bug」</td><td>「让 <code>foo.test.js</code> 全绿，<code>node --check</code> 通过，别碰其它文件」</td></tr><tr><td>「加个功能」</td><td>「加 Y 功能，附一个覆盖正常+边界的 node:test，全绿才回报」</td></tr></tbody></table>
+<p><strong>有了可验证标准，cc 会自循环到绿才回来</strong>；没有，它会先替你补一条，再动手。</p>
+<h3 id="4-2-让它自循环-别中途催">4.2 让它自循环，别中途催<a class="anchor" href="#4-2-让它自循环-别中途催" aria-label="锚点">#</a></h3>
+<p>B2 的铁律：<strong>不通过验证不许说「修好了」</strong>。所以你给完目标可以走开——它会一轮一轮改到全绿（上限 6 轮），卡住了会<strong>如实报告</strong>卡在哪、红灯输出、试过什么，而不是假报成功。</p>
+<h3 id="4-3-多步任务先看-plan">4.3 多步任务先看 plan<a class="anchor" href="#4-3-多步任务先看-plan" aria-label="锚点">#</a></h3>
+<p>复杂任务，先让它列步骤计划，<strong>每步都挂一个验证命令</strong>。你看一眼 plan 合不合理，再放它跑。</p>
+<h3 id="4-4-收尾验证门-cc-会自己跑-你可以抽查">4.4 收尾验证门（cc 会自己跑，你可以抽查）<a class="anchor" href="#4-4-收尾验证门-cc-会自己跑-你可以抽查" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">node --check &lt;每个改动文件&gt;        # 语法
+&lt;相关 jest / node:test 全绿&gt;       # node:test 用 node --test
+npm run arch:god                  # 改动文件不得新增超 2500 行
+&lt;三守卫&gt; --changed                 # change-safety / agent-rules / leaf-contract
+npm run maintainer:check          # 动了子系统结构才需要</code></pre>
+<hr>
+<h2 id="五-把任务讲清楚的模板-照抄即用">五、把任务讲清楚的模板（照抄即用）<a class="anchor" href="#五-把任务讲清楚的模板-照抄即用" aria-label="锚点">#</a></h2>
+<p>重逢时懒得组织语言，直接套这个：</p>
+<pre><code class="language-text">目标：&lt;一句话说清要什么&gt;
+成功标准：&lt;可验证的判据，如「X 测全绿」「node --check 通过」&gt;
+边界：&lt;只动哪些、别碰哪些&gt;
+约束：&lt;红线提醒，如「先别 commit」「别改 god-file」&gt;</code></pre>
+<p>例：</p>
+<pre><code class="language-text">目标：给代理管理页加「一键导出配置」按钮。
+成功标准：点按钮下载 JSON；useProxies 相关 test 全绿；node --check 过。
+边界：只动 apps/ai-frontend 下相关文件，别碰后端。
+约束：写完先给我看 diff，别 commit。</code></pre>
+<hr>
+<h2 id="六-权限与红线-务必心里有数">六、权限与红线（务必心里有数）<a class="anchor" href="#六-权限与红线-务必心里有数" aria-label="锚点">#</a></h2>
+<h3 id="6-1-你的日常档-接受编辑">6.1 你的日常档 = 接受编辑<a class="anchor" href="#6-1-你的日常档-接受编辑" aria-label="锚点">#</a></h3>
+<p>少打断、编辑不拦，但<strong>四红线永远问</strong>。看到确认提示别习惯性秒放行，尤其是：</p>
+<ul><li><code>git push</code> / <code>git reset --hard</code>（敏感，强制二次确认）；</li><li>写外网、动真 <code>.env</code> 凭据的动作；</li><li>批量删除/覆盖文件。</li></ul>
+<h3 id="6-2-三道独立红线-发布-提交-推送">6.2 三道独立红线：发布 ≠ 提交 ≠ 推送<a class="anchor" href="#6-2-三道独立红线-发布-提交-推送" aria-label="锚点">#</a></h3>
+<p>这是你反复强调的，写死在这：</p>
+<table><thead><tr><th>动作</th><th>是否需要你单独点头</th></tr></thead><tbody><tr><td><strong>发布</strong>（pip / npm 外发）</td><td>✅ 单独点头（不可逆，先 dry-run + gate）</td></tr><tr><td><strong>commit</strong></td><td>✅ 另一次点头（授权发布<strong>不等于</strong>授权提交）</td></tr><tr><td><strong>tag / push</strong></td><td>✅ 再一次点头</td></tr></tbody></table>
+<p><strong>授权其中一个，绝不外溢到另一个。</strong> cc 不会替你自动做这三件里的任何一件。</p>
+<h3 id="6-3-密钥铁律">6.3 密钥铁律<a class="anchor" href="#6-3-密钥铁律" aria-label="锚点">#</a></h3>
+<p>真 key/token <strong>永不进包/源码/提交</strong>，只经 env 瞬时注入。cc 提交前会逐层守，<code>git add -A</code> 这种危险动作它会避开、改用显式白名单路径。</p>
+<hr>
+<h2 id="七-让回答有深度-治-糊弄-和-噪音">七、让回答有深度（治「糊弄」和「噪音」）<a class="anchor" href="#七-让回答有深度-治-糊弄-和-噪音" aria-label="锚点">#</a></h2>
+<p>你要工程深度，也嫌噪音。两头都能调：</p>
+<ul><li><strong>要深度</strong>：让它「追一条数据从产出到消费的全链，找断桥」，或「查有没有零调用者的更完整实现印证设计意图」——这是你自己总结的两把深挖透镜，对编排/多智能体系统尤其毒辣的缺陷才藏得住。</li><li><strong>治噪音</strong>：你嫌的那「一大段」多半不是我的收尾，而是 <strong>khy 网关每轮追加的三段【确定性核对】footer</strong>（模型身份/缓存/视觉）。想治它去 khy 侧门控 <code>KHY_MODEL_IDENTITY_TRUTH</code> / <code>KHY_CACHE_METRICS_TRUTH</code> / <code>KHY_VISION_ROUTING_TRUTH</code>（default-on，置 <code>0/off</code> 可关）。<strong>我自己的工程交付仍照常给「根因/改动/验证」三段</strong>（那是你要的），闲聊则短收尾。</li></ul>
+<hr>
+<h2 id="八-别信过期记忆-一条血泪经验">八、别信过期记忆（一条血泪经验）<a class="anchor" href="#八-别信过期记忆-一条血泪经验" aria-label="锚点">#</a></h2>
+<p>cc 的记忆很好用，但记忆会<strong>过期</strong>。你亲自踩过：历史笔记说某些 <code>KHY_*</code> 使用画像开关「已固化进 .env」，实测——<strong>根本不存在</strong>。<br>所以定成规矩，也是给未来的你：</p>
+<blockquote><p><strong>凡是记忆里点名的开关 / 文件 / 命令，推荐前先核实它真实存在</strong>（去 <code>flagRegistry.js</code> 查 flag，去仓库查文件）。别照着一个幽灵开关折腾。</p></blockquote>
+<p>cc 现在也被要求这么做——记忆是背景参考，不是圣旨。</p>
+<hr>
+<h2 id="九-日常小抄-重逢速查表">九、日常小抄（重逢速查表）<a class="anchor" href="#九-日常小抄-重逢速查表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你想做什么</th><th>怎么做</th></tr></thead><tbody><tr><td>切权限模式</td><td>终端里 <code>Shift+Tab</code> 循环</td></tr><tr><td>复杂任务先看方案</td><td>说「进计划模式，先给我看 plan」</td></tr><tr><td>目标驱动干活</td><td><code>/goal &lt;目标 + 可验证标准&gt;</code></td></tr><tr><td>让它记住一件事</td><td>「记住：……」或 <code>/remember</code></td></tr><tr><td>纠正它记错的</td><td>直接指出哪条错，它会更新/删除</td></tr><tr><td>清空重开</td><td><code>/clear</code></td></tr><tr><td>手动压缩上下文</td><td><code>/compact</code></td></tr><tr><td>出字更快</td><td><code>/fast</code></td></tr><tr><td>派子智能体广搜</td><td>说「派个 Explore 扫一下，只要结论」</td></tr><tr><td>大规模并行</td><td>说「用 workflow / 编排」才启用</td></tr><tr><td>让它自己跑命令</td><td>在提示里用 <code>! &lt;命令&gt;</code>（输出直接进会话）</td></tr></tbody></table>
+<hr>
+<h2 id="十-给重逢的你-最后三句">十、给重逢的你，最后三句<a class="anchor" href="#十-给重逢的你-最后三句" aria-label="锚点">#</a></h2>
+<ol><li><strong>给标准，别给情绪</strong>——「X 测全绿」比「帮我搞定」有用一百倍；</li><li><strong>红线上慢一秒</strong>——发布/推送/删除/密钥，看到提示停一下，那一秒是留给你自己的；</li><li><strong>记忆会旧，工具会新</strong>——推荐前先核实，别让过期笔记替现在的你做决定。</li></ol>
+<p>我们当年的节奏是：<strong>你给目标，我自循环到绿，才回报。</strong> 什么时候你再打开终端，说一声 <code>/goal</code>，我们就从这里接着走。</p>
+<p>再见，是为了更好地重逢。👋</p>
+<hr>
+<p><strong>说明</strong>：本文档是纯使用建议，未改任何 live 配置、未 commit、未 push、未发布。姊妹篇见 <code>[OPS-MAN-165] khy 个性化调优与使用建议</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-165] khy 个性化调优与使用建议.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-165] khy 个性化调优与使用建议</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-167] khy msg 多平台消息收发（钉钉·飞书·企业微信）.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-167] khy msg 多平台消息收发（钉钉 / 飞书 / 企业微信）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-166] cc(Claude Code)个性化使用说明书·重逢版.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

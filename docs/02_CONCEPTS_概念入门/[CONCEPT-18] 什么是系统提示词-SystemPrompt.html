@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑱ 什么是系统提示词（System Prompt） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑱ 什么是系统提示词（System Prompt）</div>
+      <header class="hero reveal"><h1>⑱ 什么是系统提示词（System Prompt）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑱-什么是系统提示词-system-prompt">⑱ 什么是系统提示词（System Prompt）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要系统提示词">二、为什么需要系统提示词？</a></li><li class="lvl-2"><a href="#三-核心比喻-上岗前贴在墙上的-岗位守则">三、核心比喻：上岗前贴在墙上的&quot;岗位守则&quot;</a></li><li class="lvl-3"><a href="#比喻一-新员工的-入职手册-岗位说明书">比喻一：新员工的《入职手册 + 岗位说明书》</a></li><li class="lvl-3"><a href="#比喻二-演员的-角色设定-剧本总纲">比喻二：演员的&quot;角色设定 + 剧本总纲&quot;</a></li><li class="lvl-2"><a href="#四-系统提示词-vs-用户提示词-最关键的一张对照">四、系统提示词 vs 用户提示词：最关键的一张对照</a></li><li class="lvl-2"><a href="#五-系统提示词里通常写些什么">五、系统提示词里通常写些什么？</a></li><li class="lvl-2"><a href="#六-感觉一下-那段-你没看到的字">六、感觉一下：那段&quot;你没看到的字&quot;</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为系统提示词就是-我打的那句话">误区 1：以为系统提示词就是&quot;我打的那句话&quot;</a></li><li class="lvl-3"><a href="#误区-2-以为系统提示词会-修改模型本身">误区 2：以为系统提示词会&quot;修改模型本身&quot;</a></li><li class="lvl-3"><a href="#误区-3-以为系统提示词是-绝对铁律-永远不会被突破">误区 3：以为系统提示词是&quot;绝对铁律，永远不会被突破&quot;</a></li><li class="lvl-3"><a href="#误区-4-以为系统提示词越长越好">误区 4：以为系统提示词越长越好</a></li><li class="lvl-3"><a href="#误区-5-以为系统提示词和-知识-记忆-是一回事">误区 5：以为系统提示词和&quot;知识/记忆&quot;是一回事</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-给同一个-演员-换两份角色设定">实验：给同一个&quot;演员&quot;换两份角色设定</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑱-什么是系统提示词-system-prompt">⑱ 什么是系统提示词（System Prompt）<a class="anchor" href="#⑱-什么是系统提示词-system-prompt" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ 什么是 Prompt</a>、<a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a> 和 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ 什么是 Harness</a>。那几篇讲了&quot;怎么问决定怎么答&quot;&quot;AI 助理会自己干活&quot;&quot;是外面的骨架在替大脑跑腿&quot;。这一篇要回答一个你天天在用、却可能从没想过的问题：<strong>同一个大模型，为什么用在 Khy-OS 里它像个严谨的程序员，用在别的地方却像个话痨或诗人？是谁在它开口之前，就悄悄给它定好了&quot;你是谁、你该守什么规矩&quot;？</strong> 答案，就是本篇的主角——<strong>系统提示词（System Prompt）</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>系统提示词 = 在你每一句话之前，就已经&quot;焊死&quot;在对话最前面、由开发者预先设定、规定 AI「你是谁、守什么规矩、能用哪些工具、用什么口吻」的那段常驻指令。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>你每次打的字（用户提示词）是&quot;这一趟的差遣&quot;；系统提示词是&quot;上岗前就签好、贴在墙上、每一趟都生效&quot;的那份岗位守则。你看不见它，但 AI 每次开口前都先读了它一遍。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>你可能会问：&quot;我跟 AI 聊天，明明只打了我自己的问题啊，哪来什么'系统提示词'？&quot;——问得好！关键就在这个&quot;你看不见&quot;。系统提示词是<strong>开发者写好、藏在幕后</strong>的一段话，它被 <span class="popover" tabindex="0"><span class="popover-anchor">悄悄拼在你的问题前面</span><span class="popover-tip" role="tooltip">后面「六、感觉一下」会给你看一眼这个&quot;拼接&quot;长什么样——你打一句，程序其实在你这句话前面又垫了一大段你没看到的指令</span></span> 一起发给模型。所以你以为模型只看到了你的问题，其实它先读了一大段&quot;你是一个严谨、诚实、只用中文回答的编程助手，不许乱删文件……&quot;。这一篇不需要你懂代码，抓住&quot;每次对话前，AI 都先被人偷偷叮嘱了一遍&quot;这个画面就行～ 🐣</p></div></aside>
+<p>一句话摆清它和 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a> 的关系：<strong>Prompt（提示词）是个大概念，指&quot;发给模型的所有文字&quot;；而系统提示词，是这段文字里最特殊的一截——它由开发者设定、常驻不变、优先级最高，专门用来&quot;立规矩、定人设&quot;。</strong></p>
+<hr>
+<h2 id="二-为什么需要系统提示词">二、为什么需要系统提示词？<a class="anchor" href="#二-为什么需要系统提示词" aria-label="锚点">#</a></h2>
+<p><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a> 那一篇讲过：你怎么问，决定它怎么答。但那里的&quot;问&quot;，是你<strong>每一次</strong>临时打的字。这带来一个问题——</p>
+<p><strong>有些规矩，是&quot;每一次对话都必须遵守&quot;的，你总不能每次都手打一遍吧？</strong></p>
+<p>想象你请了一个新助理，如果没有任何&quot;入职守则&quot;，你每次交代任务都得从头说：</p>
+<ul><li>&quot;记住，你是我的编程助理，不是诗人，别给我写诗。&quot;</li><li>&quot;只准用中文回答。&quot;</li><li>&quot;删文件之前必须先问我。&quot;</li><li>&quot;不许瞎编，不知道就说不知道。&quot;</li></ul>
+<p>每一次、每一句都重复一遍——累死人，还容易漏。<strong>系统提示词，就是把这些&quot;每次都要守的规矩&quot;一次性写好、焊在最前面，让它在每一轮对话里自动生效。</strong> 你只管交代具体任务，那些底层规矩，系统提示词替你守着。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 没有系统提示词[&quot;😩 假如没有系统提示词&quot;]
+    U1[&quot;你：帮我改代码，&lt;br/&gt;记住只用中文、别删文件、&lt;br/&gt;不知道就说不知道……&quot;] --&gt; M1[&quot;🧠 模型&quot;]
+    U2[&quot;你：再改一处，&lt;br/&gt;记住只用中文、别删文件、&lt;br/&gt;不知道就说不知道……&quot;] --&gt; M1
+    NOTE1[&quot;每次都得重复叮嘱，&lt;br/&gt;累且易漏 ❌&quot;]
+  end
+  subgraph 有系统提示词[&quot;😌 有了系统提示词&quot;]
+    SYS[&quot;📜 系统提示词（一次写好，常驻）：&lt;br/&gt;你是中文编程助理 / 别删文件 / 不许瞎编&quot;] --&gt; M2[&quot;🧠 模型&quot;]
+    U3[&quot;你：帮我改代码&quot;] --&gt; M2
+    U4[&quot;你：再改一处&quot;] --&gt; M2
+    NOTE2[&quot;规矩焊在前面，&lt;br/&gt;你只管交代任务 ✅&quot;]
+  end</pre>
+<p><strong>所以系统提示词的价值就一句话：把&quot;每次都要守的规矩&quot;从&quot;你每次手打&quot;里解放出来，变成&quot;开发者写一次、永远生效&quot;的常驻守则。</strong> 这就是为什么每一个正经的 AI 产品（Khy-OS、Claude Code、Cursor……）背后，都藏着一份精心打磨的系统提示词。</p>
+<hr>
+<h2 id="三-核心比喻-上岗前贴在墙上的-岗位守则">三、核心比喻：上岗前贴在墙上的&quot;岗位守则&quot;<a class="anchor" href="#三-核心比喻-上岗前贴在墙上的-岗位守则" aria-label="锚点">#</a></h2>
+<p>&quot;系统提示词&quot;这个词听着技术，用两个生活里的画面就能焊死它。</p>
+<h3 id="比喻一-新员工的-入职手册-岗位说明书">比喻一：新员工的《入职手册 + 岗位说明书》<a class="anchor" href="#比喻一-新员工的-入职手册-岗位说明书" aria-label="锚点">#</a></h3>
+<p>你入职一家公司，第一天 HR 会给你一份手册：<strong>你的岗位是什么、公司有哪些红线（不能泄密、不能私自动用公款）、汇报给谁、用什么语气对客户说话。</strong> 这份手册你上岗前就得读、天天都得守——它不是某个具体任务，而是<strong>贴在你身份底层、每件事都适用</strong>的框架。</p>
+<p><strong>系统提示词 = 这份《入职手册》；你每天接到的具体活儿 = 用户提示词。</strong> 手册定&quot;你是谁、守什么规矩&quot;，具体活儿定&quot;今天干什么&quot;。</p>
+<h3 id="比喻二-演员的-角色设定-剧本总纲">比喻二：演员的&quot;角色设定 + 剧本总纲&quot;<a class="anchor" href="#比喻二-演员的-角色设定-剧本总纲" aria-label="锚点">#</a></h3>
+<p>一个演员上台前，导演先给他一份角色设定：&quot;你演的是一位冷静、寡言、正义感极强的老警探，说话简短，从不爆粗口。&quot; 这是<strong>总纲</strong>——之后无论台上发生什么临场对话，他都得<strong>保持这个人设</strong>。观众看到的是一句句台词（用户提示词），但每一句背后，都被那份&quot;角色设定&quot;约束着。</p>
+<p><strong>系统提示词 = 角色设定与总纲（定人设、定底线）；每一句临场台词 = 用户提示词。</strong> 换一份角色设定，同一个演员就能从老警探变成小丑——<strong>同一个大模型，换一份系统提示词，就能从严谨程序员变成段子手。</strong></p>
+<pre class="mermaid">flowchart TB
+  ACTOR[&quot;🧠 同一个大模型&lt;br/&gt;（同一个演员）&quot;]
+  S1[&quot;📜 系统提示词 A：&lt;br/&gt;'你是严谨的中文编程助理，&lt;br/&gt;诚实、不删文件'&quot;] --&gt; R1[&quot;🤖 表现得像：&lt;br/&gt;一丝不苟的工程师&quot;]
+  S2[&quot;📜 系统提示词 B：&lt;br/&gt;'你是毒舌吐槽役，&lt;br/&gt;句句带梗'&quot;] --&gt; R2[&quot;😜 表现得像：&lt;br/&gt;网络段子手&quot;]
+  ACTOR --&gt; S1
+  ACTOR --&gt; S2</pre>
+<p>两个比喻的<strong>共同内核</strong>：<strong>系统提示词不是&quot;某一次的任务&quot;，而是&quot;贴在 AI 身份最底层、每一次都生效的框架和底线&quot;。</strong> 记住这一点，系统提示词是什么就再也不会忘。</p>
+<hr>
+<h2 id="四-系统提示词-vs-用户提示词-最关键的一张对照">四、系统提示词 vs 用户提示词：最关键的一张对照<a class="anchor" href="#四-系统提示词-vs-用户提示词-最关键的一张对照" aria-label="锚点">#</a></h2>
+<p>新手最容易把这两个搞混。它们都是&quot;发给模型的字&quot;（都属于广义的 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">Prompt</a>），但地位天差地别。请把这张表刻进脑子：</p>
+<table><thead><tr><th>对比项</th><th>🧑‍💻 用户提示词（User Prompt）</th><th>📜 系统提示词（System Prompt）</th></tr></thead><tbody><tr><td><strong>谁写的</strong></td><td>你（用户），每次现打</td><td>开发者，事先写好</td></tr><tr><td><strong>多久变一次</strong></td><td>每一轮都不同</td><td>常驻不变（整场对话都一样）</td></tr><tr><td><strong>管什么</strong></td><td>&quot;这一趟具体干什么&quot;</td><td>&quot;你是谁、守什么规矩、什么口吻&quot;</td></tr><tr><td><strong>你看得见吗</strong></td><td>看得见，就是你打的字</td><td>通常看不见，藏在幕后</td></tr><tr><td><strong>优先级</strong></td><td>服从系统提示词的框架</td><td><strong>更高</strong>——冲突时以它为准</td></tr><tr><td><strong>类比</strong></td><td>今天派给你的活儿</td><td>入职手册 / 角色设定</td></tr></tbody></table>
+<p>一句话记住它俩的关系：</p>
+<pre class="mermaid">flowchart LR
+  SYS[&quot;📜 系统提示词&lt;br/&gt;（框架 · 底线 · 常驻）&quot;] --&gt; BOX
+  USR[&quot;🧑‍💻 用户提示词&lt;br/&gt;（这趟的具体差遣）&quot;] --&gt; BOX
+  BOX[&quot;📨 拼在一起，一并发给模型&quot;] --&gt; M[&quot;🧠 模型：&lt;br/&gt;先读框架，再读差遣，&lt;br/&gt;在框架内完成差遣&quot;]</pre>
+<p><strong>系统提示词划出&quot;操场的边界线&quot;，用户提示词是&quot;你在场内怎么踢球&quot;。</strong> 你能在场内自由发挥，但踢出边界线（违反系统提示词的红线）时，一个设计良好的 AI 会拒绝——因为系统提示词的优先级更高。</p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>为什么同样问一句&quot;帮我把这个文件夹删了&quot;，有的 AI 直接删、有的会停下来问你&quot;确定吗&quot;？<strong>差别常常不在模型，而在系统提示词</strong>——后者的系统提示词里写了&quot;危险操作前必须先确认&quot;。你看到的是模型的&quot;性格&quot;，其实那性格，是系统提示词给它定的。</p></div></aside>
+<hr>
+<h2 id="五-系统提示词里通常写些什么">五、系统提示词里通常写些什么？<a class="anchor" href="#五-系统提示词里通常写些什么" aria-label="锚点">#</a></h2>
+<p>一份成熟的系统提示词（比如 Khy-OS 的），通常包含这么几大块。你不用会写，但看一眼它管的范围，就明白它多重要：</p>
+<table><thead><tr><th>板块</th><th>写什么</th><th>举个例子</th></tr></thead><tbody><tr><td><strong>① 身份/角色</strong></td><td>你是谁、干哪一行</td><td>&quot;你是一位资深软件工程师助理&quot;</td></tr><tr><td><strong>② 行为规矩</strong></td><td>该怎么做事、什么风格</td><td>&quot;回答简洁、直接、给可执行方案&quot;</td></tr><tr><td><strong>③ 能用的工具</strong></td><td>手上有哪些工具、怎么用</td><td>&quot;你可以读文件、跑命令、搜索代码&quot;</td></tr><tr><td><strong>④ 安全红线</strong></td><td>绝对不能碰的底线</td><td>&quot;删文件/推送代码前必须先征得用户同意&quot;</td></tr><tr><td><strong>⑤ 语言/格式</strong></td><td>用什么语言、什么排版</td><td>&quot;只用中文回答；代码放进代码块&quot;</td></tr><tr><td><strong>⑥ 环境信息</strong></td><td>当前处境的背景</td><td>&quot;当前项目目录、操作系统、今天日期&quot;</td></tr></tbody></table>
+<pre class="mermaid">flowchart TB
+  SYS[&quot;📜 一份系统提示词&quot;]
+  SYS --&gt; A[&quot;① 身份：你是谁&quot;]
+  SYS --&gt; B[&quot;② 规矩：怎么做事&quot;]
+  SYS --&gt; C[&quot;③ 工具：能用什么&quot;]
+  SYS --&gt; D[&quot;④ 红线：不能碰什么&quot;]
+  SYS --&gt; E[&quot;⑤ 语言格式：怎么表达&quot;]
+  SYS --&gt; F[&quot;⑥ 环境：当前背景&quot;]</pre>
+<p>看懂这张表，你就明白：<strong>系统提示词几乎&quot;塑造&quot;了这个 AI 的一切外在表现。</strong> 它是不是靠谱、安不安全、说话合不合你胃口——很大一部分，都是这份幕后守则决定的。</p>
+<hr>
+<h2 id="六-感觉一下-那段-你没看到的字">六、感觉一下：那段&quot;你没看到的字&quot;<a class="anchor" href="#六-感觉一下-那段-你没看到的字" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段东西你完全不用会写。</strong> 放它在这，只是让你<strong>亲眼看一眼</strong>——你以为只发了自己的问题，模型实际收到的却是&quot;系统提示词 + 你的问题&quot;拼在一起的一大段。</p>
+<p>假设你只在 Khy-OS 里打了一句：</p>
+<pre><code>帮我删掉 build 文件夹</code></pre>
+<p>而模型<strong>实际收到</strong>的，是这样一段（前面那一大截是你从没看到的系统提示词）：</p>
+<pre><code class="language-text">【系统提示词 · 你看不到，但每次都在最前面】
+你是一位资深软件工程师助理。
+- 只用中文回答，语气简洁专业。
+- 你可以读文件、改文件、跑命令。
+- 【安全红线】删除文件/文件夹、推送代码等危险操作，
+  必须先停下来向用户确认，得到明确同意才执行。
+- 不确定的事，如实说不确定，绝不编造。
+
+【用户提示词 · 你刚打的那句】
+帮我删掉 build 文件夹</code></pre>
+<p>看到了吗？正因为前面那段系统提示词写了&quot;删除前必须先确认&quot;，模型才不会闷头就删，而是回你一句&quot;确定要删除 build 文件夹吗？&quot;。</p>
+<p><strong>你打的只有一句话，但决定它&quot;怎么回你这句话&quot;的，一大半是你没看到的那段系统提示词。</strong> 这就是它的威力——<strong>沉默地站在最前面，塑造着每一次回答。</strong></p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">既然系统提示词优先级最高，那我用户是不是就&quot;说了不算&quot;、被它完全管死了？（点一下翻到背面）<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">不是&quot;管死&quot;，是&quot;划边界 + 定底线&quot;。在边界之内，你（用户提示词）说了算——你想改哪个文件、想怎么改、要什么风格，模型都听你的。系统提示词管的是<strong>底线和框架</strong>（比如&quot;危险操作先确认&quot;&quot;别瞎编&quot;），这些恰恰是<strong>保护你</strong>的。好比开车：系统提示词是&quot;红灯停、别逆行&quot;的交规，你依然可以自由决定去哪、走哪条路。<strong>框架保安全，你在框架里自由——两者不是压制，是配合。</strong></div></div></div>
+<p>把这段&quot;你只打了一句、模型却收到一大段&quot;演成一幕小短剧——重点看那段你从没看到的系统提示词，是怎么在幕后拦住&quot;闷头就删&quot;的：</p>
+<div class="scene"><div class="scene-title">沉默的第一段：你没看到的那截，决定了它怎么回你</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>帮我删掉 build 文件夹。</div></div><div class="scene-caption reveal">你以为发出去的只有这一句。但在它前面，还悄悄拼着一大段你从没看到的系统提示词——</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">📜</span><div class="scene-bubble"><b class="scene-who">系统提示词</b>（每次都在最前面，你看不到）你是资深工程助理；危险操作要先停下来确认；不确定就说不确定，绝不编造。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">模型</b>我收到的其实是「上面那段守则 + 你这句话」。守则里写了&quot;删除前必须先确认&quot;，那我就不能闷头删。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">模型</b>确定要删除 build 文件夹吗？删了不可恢复，请回复&quot;确认&quot;我再动手。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😌</span><div class="scene-bubble"><b class="scene-who">旁白</b>你只打了一句话，可决定&quot;它怎么回你这句话&quot;的，一大半是那段 <span class="popover" tabindex="0"><span class="popover-anchor">你没看到的系统提示词</span><span class="popover-tip" role="tooltip">它沉默地站在每一次对话的最前面，塑造模型的语气、边界和底线——你看不到，但它每次都在</span></span>。</div></div><div class="scene-caption reveal">框架在暗处保安全，你在框架里自由——这就是系统提示词的真身。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;系统提示词&quot;的理解跑偏。</p>
+<h3 id="误区-1-以为系统提示词就是-我打的那句话">误区 1：以为系统提示词就是&quot;我打的那句话&quot;<a class="anchor" href="#误区-1-以为系统提示词就是-我打的那句话" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我发给 AI 的问题，就是系统提示词。</li><li>✅ <strong>正确理解</strong>：<strong>你打的那句是&quot;用户提示词&quot;。</strong> 系统提示词是<strong>开发者预先写好、藏在你那句话前面</strong>的常驻指令，通常你根本看不到。两者拼在一起才是模型收到的完整输入。</li></ul>
+<h3 id="误区-2-以为系统提示词会-修改模型本身">误区 2：以为系统提示词会&quot;修改模型本身&quot;<a class="anchor" href="#误区-2-以为系统提示词会-修改模型本身" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：写系统提示词，是不是在给模型&quot;重新编程&quot;、改它的大脑？</li><li>✅ <strong>正确理解</strong>：<strong>一个字都没改模型。</strong> 模型（那颗训练好的&quot;大脑&quot;）纹丝不动，系统提示词只是<strong>每次对话时垫在最前面的一段文字</strong>，靠&quot;文字引导&quot;让它表现出某种人设。换个系统提示词，同一个模型立刻换个样——因为变的是&quot;叮嘱的话&quot;，不是大脑。</li></ul>
+<h3 id="误区-3-以为系统提示词是-绝对铁律-永远不会被突破">误区 3：以为系统提示词是&quot;绝对铁律，永远不会被突破&quot;<a class="anchor" href="#误区-3-以为系统提示词是-绝对铁律-永远不会被突破" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：只要在系统提示词里写了&quot;不许干坏事&quot;，模型就 100% 做不到。</li><li>✅ <strong>正确理解</strong>：<strong>系统提示词是&quot;强引导&quot;，不是&quot;物理锁&quot;。</strong> 它优先级最高、绝大多数时候有效，但本质仍是&quot;文字劝导&quot;。所以真正的安全，还得靠 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ Harness</a> 那道&quot;代码级的闸门&quot;（危险动作强制弹窗确认）来兜底——<strong>提示词管&quot;劝&quot;，harness 管&quot;拦&quot;，双保险才靠谱。</strong></li></ul>
+<h3 id="误区-4-以为系统提示词越长越好">误区 4：以为系统提示词越长越好<a class="anchor" href="#误区-4-以为系统提示词越长越好" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：把所有能想到的规矩全塞进去，写得越详细越好。</li><li>✅ <strong>正确理解</strong>：<strong>系统提示词也占 <a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">Token</a>、也占记忆窗口。</strong> 它太长会挤占宝贵的上下文空间，还可能让模型&quot;抓不住重点&quot;。好的系统提示词是<strong>精炼、有条理、抓大放小</strong>——把最关键的身份、红线、风格讲透，而不是堆成一本厚字典。</li></ul>
+<h3 id="误区-5-以为系统提示词和-知识-记忆-是一回事">误区 5：以为系统提示词和&quot;知识/记忆&quot;是一回事<a class="anchor" href="#误区-5-以为系统提示词和-知识-记忆-是一回事" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：想让 AI&quot;记住&quot;我项目的所有细节，全写进系统提示词就行了。</li><li>✅ <strong>正确理解</strong>：<strong>系统提示词管的是&quot;怎么做事的框架&quot;，不是&quot;海量知识库&quot;。</strong> 塞大量项目细节进去，既占空间又低效。&quot;临时要用的大量资料&quot;该走 <a href="./[CONCEPT-11]%20什么是RAG-检索增强生成.html">⑪ RAG</a>（用时再查）；&quot;做事的规矩和人设&quot;才放系统提示词。<strong>别拿守则当仓库。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;系统提示词&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">它由开发者预先写好、常驻在对话最前面，通常用户看不到</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">系统提示词就是用户每次打给 AI 的那句话</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">C</span><span class="quiz-text">换一份系统提示词，同一个模型能表现出完全不同的&quot;性格&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">D</span><span class="quiz-text">它优先级高，但本质是&quot;强引导&quot;而非&quot;物理锁&quot;，真正的安全还要靠 harness 的闸门兜底</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">E</span><span class="quiz-text">想让 AI 记住海量项目资料，最好全塞进系统提示词</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。你只打了自己的问题，系统提示词被悄悄垫在你那句话前面一起发给模型。<br>错。用户打的是&quot;用户提示词&quot;；系统提示词是幕后那段常驻守则，两者地位不同、优先级不同。<br>对。它靠文字引导塑造人设，改守则不改模型，就像给同一个演员换角色设定。<br>对。提示词负责&quot;劝&quot;，harness 负责代码级地&quot;拦&quot;，双保险才安全。<br>错。系统提示词管&quot;做事框架&quot;不是知识仓库；海量资料该走 RAG 用时再查，塞进去既占空间又低效。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如在脑子里走一遍。下面的思想实验不用写代码，只用想。</p>
+<h3 id="实验-给同一个-演员-换两份角色设定">实验：给同一个&quot;演员&quot;换两份角色设定<a class="anchor" href="#实验-给同一个-演员-换两份角色设定" aria-label="锚点">#</a></h3>
+<p>想象你手上有一个万能演员（大模型），你要拍两部戏。你什么都不改，只递给他两份不同的&quot;角色设定&quot;（系统提示词），然后对他说同一句台词（用户提示词）：&quot;今天天气不错。&quot;</p>
+<pre class="mermaid">flowchart TB
+  LINE[&quot;🧑‍💻 同一句用户提示词：&lt;br/&gt;'今天天气不错'&quot;]
+  SET1[&quot;📜 角色设定 A：&lt;br/&gt;'你是惜字如金的老船长'&quot;] --&gt; OUT1[&quot;🧭 '嗯。'&quot;]
+  SET2[&quot;📜 角色设定 B：&lt;br/&gt;'你是热情洋溢的导游'&quot;] --&gt; OUT2[&quot;🎉 '是呀！这么好的天，&lt;br/&gt;正适合出门走走，我给您推荐几个好去处～'&quot;]
+  LINE --&gt; SET1
+  LINE --&gt; SET2</pre>
+<p>同样一句&quot;今天天气不错&quot;，配&quot;老船长&quot;设定，回你一个字&quot;嗯&quot;；配&quot;热情导游&quot;设定，回你热情洋溢一大段。<strong>台词（用户提示词）没变，回答却天差地别——变的，是那份你递过去的角色设定（系统提示词）。</strong></p>
+<p>走完这一遍，请你回答自己三个问题：</p>
+<ol><li>那句台词（用户提示词）变了吗？——没有，一模一样。</li><li>是什么让回答天差地别？——<strong>是两份不同的系统提示词（角色设定）。</strong></li><li>演员（模型）本身被改动过吗？——没有，同一个演员，只是被&quot;叮嘱&quot;成了不同的人。</li></ol>
+<p><strong>关键体会</strong>：你刚刚亲眼看到，系统提示词是如何&quot;隔空塑造&quot;AI 的表现的。下次你觉得某个 AI&quot;很懂你&quot;或&quot;很死板&quot;，别只夸模型或怪模型——<strong>它的性格，一大半是那份你看不见的系统提示词给的。</strong></p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>系统提示词不是孤立的词，它站在好几个概念的交叉口上。</p>
+<pre class="mermaid">flowchart TB
+  SYS[&quot;📜 系统提示词&lt;br/&gt;（常驻守则 / 人设 / 红线）&quot;]
+  PROMPT[&quot;⑦ Prompt&lt;br/&gt;（发给模型的所有字）&quot;]
+  CTX[&quot;⑧ Context/Token&lt;br/&gt;（它也占记忆窗口）&quot;]
+  HARNESS[&quot;⑯ Harness&lt;br/&gt;（它由 harness 组装进对话）&quot;]
+  AGENT[&quot;① Agent&lt;br/&gt;（它定义了这个助理的'人设'）&quot;]
+  PROMPT --&gt;|&quot;系统提示词是它最特殊的一截&quot;| SYS
+  SYS --&gt;|&quot;占用一部分&quot;| CTX
+  HARNESS --&gt;|&quot;每轮把它拼在最前面&quot;| SYS
+  SYS --&gt;|&quot;塑造&quot;| AGENT</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a></td><td>系统提示词是 Prompt 里<strong>最特殊、优先级最高</strong>的一截</td><td>岗位守则是&quot;公司下发文件&quot;里最高级别那一份</td></tr><tr><td><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ Context 与 Token</a></td><td>系统提示词也<strong>占记忆窗口</strong>，所以要精炼</td><td>守则太厚，也会占掉你桌上的空间</td></tr><tr><td><a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ Harness</a></td><td>每一轮，是 <strong>harness 把系统提示词拼在最前面</strong>发给模型</td><td>亲兵每次都先把&quot;军规&quot;念给军师听</td></tr><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>系统提示词<strong>定义了这个 Agent 的人设和底线</strong></td><td>给这位助理写好&quot;你是谁、守什么规矩&quot;</td></tr><tr><td><a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct 等模式</a></td><td>系统提示词里常<strong>指定 AI 用哪种思考模式</strong>（比如&quot;先想再做&quot;)</td><td>守则里写明&quot;做事前先在草稿纸上想清楚&quot;</td></tr></tbody></table>
+<p>一句话串起来：<strong>系统提示词是 harness 每轮垫在最前面、占着一部分记忆窗口、给这个 Agent 定下人设与红线、还常常规定它该用哪种思考模式的——那份最高优先级的常驻守则。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>这一节和你手上的项目关系很紧：</p>
+<p><strong>你正在读的这套规矩，Khy-OS 里就有一份活生生的系统提示词。</strong></p>
+<p>Khy-OS 作为一个 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">harness</a>，它每次向模型发起请求时，都会在你的话前面，拼上一大段精心设计的系统提示词。你在这个项目里见过的很多&quot;规矩&quot;，本质上就是系统提示词层面的约束：</p>
+<ul><li><strong>身份</strong>：&quot;你是资深软件工程师助理&quot;；</li><li><strong>语言规矩</strong>：什么场景用什么语言回答；</li><li><strong>安全红线</strong>：不许 AI 自动提交/推送代码、危险命令要先确认、真密钥绝不落盘——这些&quot;红线&quot;，一部分正是靠系统提示词反复叮嘱模型来守住的；</li><li><strong>做事方法论</strong>：先想再写、目标驱动、外科手术式改动……这些也可以写进系统提示词，成为它每次干活的&quot;心法&quot;。</li></ul>
+<p>所以，当你日后翻看 Khy-OS 里那些&quot;章程&quot;&quot;守则&quot;&quot;预设包&quot;时，你就会认出来：<strong>哦，这些就是喂给模型的系统提示词的一部分——它们不是给人看的说明书，而是每一轮都真真切切塞给模型、约束着它一举一动的&quot;幕后守则&quot;。</strong></p>
+<blockquote><p>💡 换个角度说：<strong>学会&quot;系统提示词&quot;这个概念，你就掌握了&quot;给 AI 立规矩&quot;的方向盘。</strong> 很多人用 AI 只会临时打问题（用户提示词），而你从第一天就知道：想让 AI 稳定、可靠、安全地按你的心意办事，真正的功夫在那份<strong>幕后常驻的系统提示词</strong>上。这是从&quot;会用 AI&quot;迈向&quot;会调教 AI&quot;的关键一步。</p></blockquote>
+<blockquote><p>⚠️ 诚实说一句边界：系统提示词具体写什么、怎么组织、怎么和 harness 配合，属于设计与实现层面，各家做法不同。Khy-OS 的具体做法你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 与项目章程里深入了解。本文只讲&quot;系统提示词是什么、为什么需要它&quot;这一层概念地图。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>系统提示词 = 开发者预先写好、焊在对话最前面、常驻不变、优先级最高的那段指令</strong>——规定 AI 的身份、规矩、工具、语气和红线。</li><li><strong>为什么需要它</strong>：有些规矩&quot;每次都要守&quot;，不能靠你每回手打；系统提示词把它们一次写好、永远生效，你只管交代具体任务。</li><li><strong>核心比喻</strong>：新员工的<strong>入职手册/岗位说明书</strong>、演员的<strong>角色设定/剧本总纲</strong>——定人设、定底线，换一份就换个&quot;AI 性格&quot;。</li><li><strong>和用户提示词的区别</strong>：用户提示词是&quot;这趟的差遣&quot;（你现打、每次变）；系统提示词是&quot;常驻守则&quot;（开发者写、优先级更高、通常看不见）。</li><li><strong>它通常写</strong>：身份、行为规矩、可用工具、安全红线、语言格式、环境信息。</li><li><strong>五大误区</strong>：它不是你打的那句话、它不改模型只是&quot;叮嘱&quot;、它是强引导不是物理锁（安全还要 harness 兜底）、不是越长越好（占记忆窗口）、不是知识仓库（海量资料走 RAG）。</li><li><strong>和 Khy-OS 的关系</strong>：Khy-OS 里那些&quot;章程/红线/守则&quot;，一部分正是每轮塞给模型的<strong>系统提示词</strong>——学会它，你就握住了&quot;给 AI 立规矩&quot;的方向盘。</li></ul>
+<p>🎉 <strong>恭喜，你摸到了&quot;调教 AI&quot;的第一根方向盘！</strong> 从此你再用任何 AI 助手，都会多想一层：它此刻的&quot;性格&quot;和&quot;底线&quot;，是幕后那份系统提示词给的——而会写、会读这份守则，正是内行与外行的分水岭。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。</p>
+<p>👈 上一篇 <a href="./[CONCEPT-17]%20什么是YOLO-实时目标检测.html">⑰ 什么是 YOLO</a>——回顾一下 AI 是怎么&quot;一眼&quot;看清一张图的。</p>
+<p>👉 下一篇 <a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ 什么是 ReAct（智能体推理模式）</a>——定好了规矩，AI 到底是&quot;怎么想、怎么做&quot;的？看看它脑子里那套&quot;边想边做&quot;的套路。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-17] 什么是YOLO-实时目标检测.html"><div class="dir">← 上一篇</div><div class="ttl">⑰ 什么是 YOLO（实时目标检测）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-19] 什么是ReAct-智能体推理模式.html"><div class="dir">下一篇 →</div><div class="ttl">⑲ 什么是 ReAct（智能体的推理模式）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-18] 什么是系统提示词-SystemPrompt.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-048-khyos-轨迹回放与确定性复现-回放账本-内容寻址复现包与分档重放引擎">[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎</a></li><li class="lvl-2"><a href="#1-问题-轨迹-可溯源-可复现">1. 问题：轨迹「可溯源」≠「可复现」</a></li><li class="lvl-2"><a href="#2-标准化轨迹格式-本规范核心交付物">2. 标准化轨迹格式（本规范核心交付物）</a></li><li class="lvl-3"><a href="#2-1-回放账本条目-replay-ledger-jsonl-与-jsonl-transcript-同目录-append-only">2.1 回放账本条目（`*.replay-ledger.jsonl`，与 JSONL transcript 同目录、append-only）</a></li><li class="lvl-3"><a href="#2-2-回放包-manifest-自包含可移植复现单元">2.2 回放包 manifest（自包含可移植复现单元）</a></li><li class="lvl-2"><a href="#3-回放分档模型-tierregistry-js-单一真源-frozen">3. 回放分档模型（`tierRegistry.js` 单一真源，frozen）</a></li><li class="lvl-2"><a href="#4-回放协议-replayengine-replay-线性-fail-fast">4. 回放协议（`replayEngine.replay`，线性 fail-fast）</a></li><li class="lvl-3"><a href="#4-1-权限闸协作-不可伪造-绝不全局放松">4.1 权限闸协作（不可伪造、绝不全局放松）</a></li><li class="lvl-2"><a href="#5-六防呆红线">5. 六防呆红线</a></li><li class="lvl-2"><a href="#6-cli">6. CLI</a></li><li class="lvl-2"><a href="#7-环境旋钮-零硬编码">7. 环境旋钮（零硬编码）</a></li><li class="lvl-2"><a href="#8-与-design-arch-047-的关系">8. 与 [DESIGN-ARCH-047] 的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-048-khyos-轨迹回放与确定性复现-回放账本-内容寻址复现包与分档重放引擎">[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎<a class="anchor" href="#design-arch-048-khyos-轨迹回放与确定性复现-回放账本-内容寻址复现包与分档重放引擎" aria-label="锚点">#</a></h1>
+<p>状态：已实现（PHASE 1–5 全闭环；P6 文档收尾。用户需求「在相对静止环境假设下，把轨迹导出后载入回放功能，<br>即使产物被删、即使无 AI 沿轨迹走，也能重放工具步骤、确定性复现成果，并以此进一步规范 khyos 轨迹格式」）</p>
+<p>依赖前序：</p>
+<ul><li>[DESIGN-ARCH-047] 轨迹溯源标准（轨迹记录的上游；本规范是其「可回放」延伸。047 只存在于代码注释中无文档时由本任务补口为首个文档化补充，现已成文）</li><li>[DESIGN-ARCH-026] khyos 系统级服务调用审批网关（回放经同一权限闸 + L0/L1/L2 分级；回放对档内合格步以 host 控制通道作非交互但策略化应答）</li><li>[DESIGN-ARCH-022] 多实例跨进程文件锁（回放经 executeTool 漏斗，文件锁全程保留）</li></ul>
+<p>实现位置：</p>
+<ul><li><code>services/backend/src/services/trajectoryReplay/</code>（新核子系统，6 纯模块 + barrel）<ul><li><code>replayLedger.js</code>——回放账本读写（sidecar <code>*.replay-ledger.jsonl</code>，镜像 traceChain 原子/路径）+ 会话级内容仓（内容寻址）</li><li><code>tierRegistry.js</code>——回放分档单一真源（<code>TIER{FILE,SHELL,NETWORK_AI}</code> frozen；<code>normalize</code>/<code>classify</code>/<code>effectiveTier</code>，未知→SHELL 最保守）</li><li><code>artifactHash.js</code>——<code>sha256Hex</code> 薄封装 + params/result 规范哈希（全 fail-soft）</li><li><code>envFingerprint.js</code>——环境指纹 <code>capture</code>/<code>compare</code>（os/node/cwd/toolchain/manifestHash，缺项→null）</li><li><code>replayBundle.js</code>——自包含回放包 <code>exportBundle</code>/<code>readBundle</code>/<code>verifyBundle</code>（manifest + ledger + env + 内容仓 + 可选链）</li><li><code>replayEngine.js</code>——分档重放引擎 <code>replay(bundle,opts)</code>（环境闸 → 分档 → 前置防呆 → 漏斗重放 → 产物校验 → 分歧即停）</li><li><code>index.js</code>——barrel</li></ul></li><li><code>services/backend/src/services/toolUseLoop.js</code>——并行批与顺序两处 <code>_finalizeWriteDiff</code> 后各加 best-effort <code>recordToolTurn</code>（result 后执行，绝不改 result/模型可见内容）</li><li><code>services/backend/src/services/toolCalling.js</code>——<code>_runDepHealing</code> 加一行 <code>if (traceContext?.replay) return null;</code>（回放旁路依赖自愈这一非确定性副作用；normal run 无此标志，零回归）</li><li><code>services/backend/src/services/sessionPersistence.js</code>——新增公开 <code>jsonlPathFor(sessionId, projectDir)</code>（供账本同目录定位）</li><li><code>services/backend/src/cli/handlers/replay.js</code>（新）+ <code>router.js</code> + <code>constants/commandSchema.js</code> + <code>cli/aliases.js</code>——<code>khy replay</code> 命令接线</li></ul>
+<p>验收测试（node:test；共 32 例 + 回归零回归）：</p>
+<ul><li><code>tests/services/trajectoryReplay/p1Ledger.test.js</code>（9 例：条目格式 + seq 单调 + 坏路径不抛 + classify 三档/未知→SHELL + artifactHash≡sha256Hex）</li><li><code>tests/services/trajectoryReplay/p2EnvFingerprint.test.js</code>（7 例：必需键齐 + 同指纹 match + 改 node 版本 1 diff + 慢探测不挂死）</li><li><code>tests/services/trajectoryReplay/p3Bundle.test.js</code>（6 例：导出含 manifest+ledger+blob + verifyBundle ok + 篡改 blob 报错 + NETWORK_AI 计 skipped）</li><li><code>tests/services/trajectoryReplay/p4Engine.test.js</code>（8 例：还原已删文件 + 哈希失配 diverged + NETWORK_AI 恒跳 + SHELL 预批准/确认 + env 失配拒绝/--force + 前置防呆不毁未录数据 + 幂等跳过）</li><li><code>tests/services/trajectoryReplay/e2eReplay.test.js</code>（2 例：经真漏斗 record→export→delete→replay 全链复现 + 篡改记录哈希 diverged@0）</li><li><code>tests/cli/handlers/replayHandler.test.js</code>（6 例：schema 含 replay + 未知子命令不崩 + list/export 友好兜底 + CLI 端到端复现已删产物 + 篡改包停机显式）</li></ul>
+<hr>
+<h2 id="1-问题-轨迹-可溯源-可复现">1. 问题：轨迹「可溯源」≠「可复现」<a class="anchor" href="#1-问题-轨迹-可溯源-可复现" aria-label="锚点">#</a></h2>
+<p>[DESIGN-ARCH-047] 已让每条轨迹条目带 <code>_khyTrace</code> 信封（谁产的 / 可信级别 / 是否本地验证）+ 防篡改哈希链——<br>轨迹<strong>可溯源、可审计</strong>。但「我看得见这条轨迹做了什么」与「我能不靠 AI 把这条轨迹的成果重新做出来」是两回事。</p>
+<p>经对代码核实的复现阻碍：</p>
+<table><thead><tr><th>阻碍</th><th>现状</th><th>后果</th></tr></thead><tbody><tr><td>结构化结果被丢弃</td><td><code>workflowExecutor.runGraph</code> 的 toolCall 节点 <code>extractText(await executeTool(...))</code> 只留正文</td><td>无 params/产物哈希可回放</td></tr><tr><td>自动注入工具 params 为空</td><td><code>toolUseLoop</code> 自动注入工具存 <code>input:{}</code>，NL 文本循环只存正文</td><td>transcript 不足以确定性回放</td></tr><tr><td>无环境基线</td><td><code>envSymbiosis</code> 已归档删除（DESIGN-ARCH-039 orphan）</td><td>无法判定「相对静止环境」假设是否成立</td></tr><tr><td>删除的产物无字节</td><td>轨迹只引用路径</td><td>产物被删后无从还原</td></tr></tbody></table>
+<p><strong>目标产出</strong>：一套「可回放」的轨迹标准——录制侧产出完整保真<strong>回放账本</strong>（含产物哈希 + 内容寻址字节仓），<br>导出为<strong>自包含回放包</strong>，由<strong>分档重放引擎</strong>在「相对静止环境」假设下不靠任何 AI 确定性重放工具步骤、<br>复现成果，每步校验、分歧即停。</p>
+<hr>
+<h2 id="2-标准化轨迹格式-本规范核心交付物">2. 标准化轨迹格式（本规范核心交付物）<a class="anchor" href="#2-标准化轨迹格式-本规范核心交付物" aria-label="锚点">#</a></h2>
+<h3 id="2-1-回放账本条目-replay-ledger-jsonl-与-jsonl-transcript-同目录-append-only">2.1 回放账本条目（<code>*.replay-ledger.jsonl</code>，与 JSONL transcript 同目录、append-only）<a class="anchor" href="#2-1-回放账本条目-replay-ledger-jsonl-与-jsonl-transcript-同目录-append-only" aria-label="锚点">#</a></h3>
+<p>账本是录制侧的<strong>真源</strong>，只存<strong>哈希</strong>以保持热路径轻量；复现已删文件所需的<strong>字节</strong>进会话级内容仓（内容寻址）。</p>
+<pre><code class="language-js">{
+  v: 1, seq: 0, at: &lt;epochMs&gt;,
+  name: &quot;write_file&quot;, normName: &quot;writefile&quot;, tier: &quot;FILE&quot;,   // FILE|SHELL|NETWORK_AI（frozen）
+  params: { /* 完整未截断 */ }, paramsHash: &quot;sha256…&quot;,
+  result: { success: true, exitCode: 0, outputHash: &quot;sha256…&quot;, denied: false },
+  writeDiff: { filePath: &quot;/abs&quot;, beforeHash: &quot;sha256|null&quot;, afterHash: &quot;sha256|null&quot; }, // 非文件变更=null
+  artifacts: [ { path: &quot;/abs&quot;, sha256: &quot;…&quot;, op: &quot;create|modify|delete&quot; } ]
+}</code></pre>
+<h3 id="2-2-回放包-manifest-自包含可移植复现单元">2.2 回放包 manifest（自包含可移植复现单元）<a class="anchor" href="#2-2-回放包-manifest-自包含可移植复现单元" aria-label="锚点">#</a></h3>
+<p>目录 <code>getProjectDataDir('trajectory_replay', &lt;sessionId&gt;)/&lt;sessionId&gt;.replaybundle/</code>：<br><code>manifest.json</code> + <code>ledger.jsonl</code> + <code>env.json</code> + <code>content/&lt;sha256&gt;</code>（FILE 产物 after 字节，内容寻址去重）+ <code>chain.json</code>（可选，溯源链副本）。</p>
+<pre><code class="language-js">manifest = {
+  v: 1, kind: &quot;khyos-replay-bundle&quot;, sessionId, createdAt, producer: &quot;khyos&quot;,
+  env: &lt;EnvFingerprint&gt;,
+  steps: [ &lt;LedgerEntry…按 seq&gt; ],
+  contentManifest: { &quot;&lt;sha256&gt;&quot;: { bytes: N } },
+  summary: { total, byTier: { FILE, SHELL, NETWORK_AI }, artifacts },
+  integrity: { ledgerHash: &quot;sha256(ledger.jsonl)&quot;, chainStatus: {…} }
+}</code></pre>
+<hr>
+<h2 id="3-回放分档模型-tierregistry-js-单一真源-frozen">3. 回放分档模型（<code>tierRegistry.js</code> 单一真源，frozen）<a class="anchor" href="#3-回放分档模型-tierregistry-js-单一真源-frozen" aria-label="锚点">#</a></h2>
+<p>用户锁定「智能分档」——按工具的<strong>确定性可复现性</strong>分三档，旋钮全走 env，绝不硬编码：</p>
+<table><thead><tr><th>档</th><th>成员（种子）</th><th>回放策略</th><th>理由</th></tr></thead><tbody><tr><td><code>FILE</code></td><td>write_file / edit_file / multi_edit / notebook_edit / 删除…</td><td><strong>自动重放</strong></td><td>文件操作在静止环境下确定性</td></tr><tr><td><code>SHELL</code></td><td>shell/bash/exec/run_command…</td><td><strong>仅预批准或确认</strong>（<code>--shell-allow=PATTERN</code>，复用 <code>execApproval.matchCommandPattern</code>；否则跳过）</td><td>壳命令副作用面广，须人控</td></tr><tr><td><code>NETWORK_AI</code></td><td>web_search/web_fetch/agent/task/subagent…</td><td><strong>恒跳过</strong>，标「不可确定性复现」</td><td>网络/模型非确定，复现无意义</td></tr></tbody></table>
+<p><strong>未知工具→SHELL</strong>（最保守，绝不自动当 FILE 重放）。</p>
+<hr>
+<h2 id="4-回放协议-replayengine-replay-线性-fail-fast">4. 回放协议（<code>replayEngine.replay</code>，线性 fail-fast）<a class="anchor" href="#4-回放协议-replayengine-replay-线性-fail-fast" aria-label="锚点">#</a></h2>
+<ol><li><strong>环境闸（防呆⑤）</strong>：<code>compare(manifest.env, capture())</code>；失配且非 <code>--force</code> → <code>status:'env-mismatch'</code> 并列全部 diff，绝不「差不多」静默续跑。</li><li><strong>按 seq 迭代</strong>：NETWORK_AI → 跳过标注；SHELL → 仅预批准/确认放行，否则跳过；FILE → 自动。</li><li><strong>前置防呆（防呆⑥）</strong>：删/覆盖前先验目标当前哈希 == <code>beforeHash</code>；已达终态 → 跳过（幂等）；前态分歧 → <strong>HALT</strong>（绝不毁未录数据）。</li><li><strong>经唯一漏斗重放</strong>：<code>executeTool(name, params, {sessionId, source:'replay', replay:true, onControlRequest})</code>——file lock / 路径归一 / registry validate 全部保留。</li><li><strong>每步产物校验（防呆③）</strong>：重算 sha256 比对 <code>artifacts[].sha256</code>；任一分歧 <strong>立即 HALT</strong>，返回 <code>status:'diverged'</code> + <code>divergedAt</code> + <code>{path,expected,actual}</code>。</li><li><strong>活跃度超时</strong>：每步受 <code>KHY_REPLAY_STEP_TIMEOUT_MS</code>（默认 120000）兜底，挂死的工具不拖死回放。</li></ol>
+<p>报告：<code>ReplayReport{ status, envDiffs, steps[{seq,name,tier,action,verify,reason}], divergedAt, summary{replayed,skipped,halted,restored} }</code>。<br><code>status ∈ {completed, env-mismatch, diverged, error}</code>。</p>
+<h3 id="4-1-权限闸协作-不可伪造-绝不全局放松">4.1 权限闸协作（不可伪造、绝不全局放松）<a class="anchor" href="#4-1-权限闸协作-不可伪造-绝不全局放松" aria-label="锚点">#</a></h3>
+<p>回放不绕过 [DESIGN-ARCH-026] 审批网关。网关在 <code>requestPermission</code> 之前独立运行、独立于 <code>EXEC_APPROVED</code> 评估，<br>故引擎对<strong>档内已批准重放</strong>的步骤以 host 控制通道 <code>onControlRequest</code> 作<strong>非交互但策略化</strong>应答（approve + 供 L2<br>确认词，词走 <code>KHY_REPLAY_L2_CONFIRM</code> 默认 <code>YES</code>）；同时按合格步逐次盖不可伪造的 <code>EXEC_APPROVED</code> Symbol。<br>该应答仅对引擎决定重放的步骤触发（FILE 恒、SHELL 仅预批准/确认）——NETWORK_AI 在到闸前已跳过——因此严格<br>受限于用户锁定的回放策略，绝非全局放宽。</p>
+<hr>
+<h2 id="5-六防呆红线">5. 六防呆红线<a class="anchor" href="#5-六防呆红线" aria-label="锚点">#</a></h2>
+<ol><li><strong>热路径只增不破</strong>：账本/内容录制 best-effort try/catch、result 后执行，绝不改 result/模型可见内容/破坏消息写入。</li><li><strong>AI 永不入回放环</strong>：NETWORK_AI 档恒跳过、永不执行、显式标「不可确定性复现」；引擎不 import 任何模型路径。</li><li><strong>分歧即停</strong>：任一每步哈希失配立即 HALT 带 seq+path+expected/actual，绝不静默续跑或「尽力修」。</li><li><strong>越权不复现</strong>：<code>EXEC_APPROVED</code> 仅对档内合格步逐次盖；SHELL 无预批准/确认在到闸前即跳过；file lock 保留。</li><li><strong>环境失配显式</strong>：默认拒绝 + 列全 diff，仅显式 <code>--force</code> 继续，无「差不多」静默。</li><li><strong>不毁未录数据</strong>：删/覆盖前验前态 == beforeHash，前态分歧 HALT；每步活跃度超时兜底。</li></ol>
+<hr>
+<h2 id="6-cli">6. CLI<a class="anchor" href="#6-cli" aria-label="锚点">#</a></h2>
+<pre><code>khy replay list                列出可回放会话（账本条数 + 分档摘要）
+khy replay export [session]    导出会话为自包含回放包（缺省=最近一条）
+khy replay verify [session|dir] 校验回放包完整性（账本哈希 + 内容 blob）
+khy replay run [session|dir] [--force] [--shell-allow=PATTERN] [--from-seq=N]
+                               确定性回放并复现产物；环境失配/分歧红色显式</code></pre>
+<p>裸别名：<code>回放</code> / <code>hf</code> → <code>replay run</code>。与只读的 <code>khy trace</code>（DESIGN-ARCH-047）正交：trace 看「发生了什么」，replay 做「重新发生」。</p>
+<hr>
+<h2 id="7-环境旋钮-零硬编码">7. 环境旋钮（零硬编码）<a class="anchor" href="#7-环境旋钮-零硬编码" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>env</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_REPLAY_CAPTURE_CONTENT</code></td><td>on</td><td>录制时把 FILE after 字节写会话内容仓（已删文件仍可复现）</td></tr><tr><td><code>KHY_REPLAY_FINGERPRINT_TOOLS</code></td><td><code>node</code></td><td>环境指纹探测的工具表</td></tr><tr><td><code>KHY_REPLAY_PROBE_TIMEOUT_MS</code></td><td>3000</td><td>单个指纹探测活跃度超时</td></tr><tr><td><code>KHY_REPLAY_STEP_TIMEOUT_MS</code></td><td>120000</td><td>单步回放活跃度超时</td></tr><tr><td><code>KHY_REPLAY_SHELL_ALLOW</code></td><td>（空）</td><td>预批准 SHELL 命令模式（逗号/换行分隔）</td></tr><tr><td><code>KHY_REPLAY_L2_CONFIRM</code></td><td><code>YES</code></td><td>回放对 L2 红线步骤的确认词</td></tr></tbody></table>
+<hr>
+<h2 id="8-与-design-arch-047-的关系">8. 与 [DESIGN-ARCH-047] 的关系<a class="anchor" href="#8-与-design-arch-047-的关系" aria-label="锚点">#</a></h2>
+<p>047（溯源）与 048（回放）是同一份轨迹的两个正交维度：047 给每条记录盖溯源信封 + 防篡改链，让轨迹<strong>可信、可审计、人机双读</strong>；<br>048 在其上增设回放账本（含产物哈希 + 内容仓）让轨迹<strong>可确定性复现</strong>。048 的回放包可选携带 047 的链副本（<code>chain.json</code>），<br>回放前可一并核验来源真伪——溯源是回放的信任根，回放是溯源的能力延伸。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-047] 轨迹溯源标准-溯源信封与防篡改链与注入隔离.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-049] 轨迹即教材-AI引导回放.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-048] khyos轨迹回放与确定性复现.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

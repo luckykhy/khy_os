@@ -1,0 +1,90 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "khyos/moonbit_plugin_sdk"
+
+// Values
+pub const CAP_FS_READ : Int = 4
+
+pub const CAP_FS_WRITE : Int = 8
+
+pub const CAP_IPC : Int = 1
+
+pub const CAP_IRQ_BIND : Int = 64
+
+pub const CAP_NET : Int = 2
+
+pub const CAP_SHM : Int = 32
+
+pub const CAP_WINDOW : Int = 16
+
+pub const DEFAULT_RESPONSE_CAPACITY : Int = 65536
+
+pub const DEFAULT_TIMEOUT_MS : Int = 3000
+
+pub const ERRNO_EACCES : Int = -13
+
+pub const ERRNO_EINVAL : Int = -22
+
+pub const ERRNO_EIO : Int = -5
+
+pub const ERRNO_EMSGSIZE : Int = -90
+
+pub const ERRNO_ENOENT : Int = -2
+
+pub const ERRNO_ENOMEM : Int = -12
+
+pub const ERRNO_ENOSYS : Int = -38
+
+pub const ERRNO_EPERM : Int = -1
+
+pub const ERRNO_EPROTO : Int = -71
+
+pub const ERRNO_ETIMEDOUT : Int = -60
+
+pub const FS_READ_FILE : Int = 1
+
+pub const FS_STAT : Int = 2
+
+pub const NET_DNS_RESOLVE : Int = 2
+
+pub const NET_HTTP_GET : Int = 1
+
+pub const SERVICE_FS : Int = 1
+
+pub const SERVICE_NET : Int = 2
+
+pub const SERVICE_WM : Int = 3
+
+pub const WM_BLIT_RGBA : Int = 2
+
+pub const WM_PRESENT_TEXT : Int = 1
+
+pub fn call_json(Int, Int, Bytes) -> IpcCallResult
+
+pub fn call_json_utf8(Int, Int, String) -> IpcCallResult
+
+pub fn call_json_with(Int, Int, Bytes, Int, Int) -> IpcCallResult
+
+pub fn has_capability(Int) -> Bool
+
+pub fn ipc_last_len() -> Int
+
+pub fn ipc_last_status() -> Int
+
+pub fn payload_utf8(IpcCallResult) -> String
+
+pub fn shm_create(Int, Int) -> Int
+
+pub fn shm_map(Int, Int, Int) -> Int
+
+// Errors
+
+// Types and methods
+pub struct IpcCallResult {
+  status : Int
+  payload : Bytes
+}
+
+// Type aliases
+
+// Traits
+

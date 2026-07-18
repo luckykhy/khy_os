@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容</div>
+      <header class="hero reveal"><h1>[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-080-recap-的-cjk-化-让会话回顾在中文会话下产出内容">[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容</a></li><li class="lvl-2"><a href="#真实原因-数据级证实">真实原因（数据级证实）</a></li><li class="lvl-2"><a href="#解决方法-本子系统所做">解决方法（本子系统所做）</a></li><li class="lvl-3"><a href="#1-纯叶子-services-backend-src-services-sessionrecapcjk-js">1. 纯叶子 `services/backend/src/services/sessionRecapCjk.js`</a></li><li class="lvl-3"><a href="#2-服务层最小接线-sessionrecapservice-js">2. 服务层最小接线（`sessionRecapService.js`）</a></li><li class="lvl-3"><a href="#修后输出">修后输出</a></li><li class="lvl-2"><a href="#诚实边界">诚实边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-080-recap-的-cjk-化-让会话回顾在中文会话下产出内容">[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容<a class="anchor" href="#ops-man-080-recap-的-cjk-化-让会话回顾在中文会话下产出内容" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼「khy 缺少了 recap」角度。用户反馈截图：khy 里 <code>/recap</code> 命令在、接线全，<br>但对 khy 实际运行的<strong>中文会话</strong>产不出内容 —— 决策 / 洞见 / 未决问题三段全空，<br>文件名还被全角标点截断。本子系统把 recap 的抽取器 CJK 化。</p></blockquote>
+<h2 id="真实原因-数据级证实">真实原因（数据级证实）<a class="anchor" href="#真实原因-数据级证实" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/sessionRecapService.js</code> 的抽取器全是<strong>英文正则</strong>：</p>
+<ul><li><code>_extractDecisions</code>：<code>/(?:I'll|I will|Let me|decided to|created|wrote|...)/</code></li><li><code>_extractInsights</code>：<code>/(?:important|note|the root cause|because|...)/</code></li><li><code>_extractOpenQuestions</code>：只按 ASCII <code>?</code> 切句</li><li><code>_extractFileReferences</code>：右边界不含 CJK 全角标点（<code>。，；！？</code>）</li></ul>
+<p>而 khy 是<strong>中文优先</strong>工具 —— assistant 用中文说话。对真实中文会话跑<br><code>generateRecap</code>：</p>
+<pre><code>输入(中文会话):
+  assistant: 我将创建一个纯叶子模块。根本原因是白名单只放行五种协议。
+             重要:mihomo 原生支持 hysteria2。我已经创建了 proxyCoreConfigGen.js，...
+  user:      那 tuic 呢？还有 wireguard 支持吗？
+
+修前输出:
+  decisions:     []          ← 全空
+  keyInsights:   []          ← 全空
+  openQuestions: []          ← 全空
+  filesChanged:  [&quot;router.js&quot;]  ← proxyCoreConfigGen.js 被全角逗号「，」截断而漏抓</code></pre>
+<p><code>/recap</code> 命令在、<code>router</code> / <code>routerDispatchSlash</code> / <code>commandSchema</code> 全接线，却对 khy<br>实际运行的语言<strong>产不出内容</strong>。这就是「缺少了 recap」的真身。</p>
+<h2 id="解决方法-本子系统所做">解决方法（本子系统所做）<a class="anchor" href="#解决方法-本子系统所做" aria-label="锚点">#</a></h2>
+<p><strong>全 additive · 门 <code>KHY_RECAP_CJK</code>（default-on）· 关字节回退。</strong></p>
+<h3 id="1-纯叶子-services-backend-src-services-sessionrecapcjk-js">1. 纯叶子 <code>services/backend/src/services/sessionRecapCjk.js</code><a class="anchor" href="#1-纯叶子-services-backend-src-services-sessionrecapcjk-js" aria-label="锚点">#</a></h3>
+<p>纯函数、零 IO、绝不抛（异常保守返回空）。四个 CJK 抽取器，与英文侧<strong>加性合并</strong><br>（union），绝不替换：</p>
+<ul><li><code>extractCjkDecisions</code> —— 冻结词干表 <code>_CJK_DECISION_MARKERS</code>（我将/决定/创建/修复/</li></ul>
+<p>重构/回滚…），以词干起、到下一个 CJK 终结符止取片段。</p>
+<ul><li><code>extractCjkInsights</code> —— <code>_CJK_INSIGHT_MARKERS</code>（重要/根本原因/因为/之所以…），只看</li></ul>
+<p>最近 5 条 assistant 消息。</p>
+<ul><li><code>extractCjkQuestions</code> —— 抽以全角「？」结尾的句子。</li><li><code>extractCjkFileReferences</code> —— 文件名正则的左右边界纳入 CJK 全角标点</li></ul>
+<p>（<code>。，；！？、（）「」【】：</code>），补齐被截断的引用。</p>
+<p><strong>含子去重</strong> <code>_pushContainmentUnique</code>：同一句可能同时命中多个词干（「我已经创建了 X」<br>既中「我已」又中「创建」），只保留最完整的片段一次。</p>
+<h3 id="2-服务层最小接线-sessionrecapservice-js">2. 服务层最小接线（<code>sessionRecapService.js</code>）<a class="anchor" href="#2-服务层最小接线-sessionrecapservice-js" aria-label="锚点">#</a></h3>
+<p>防御式 <code>require('./sessionRecapCjk')</code>（缺失也不致命），在 decisions / filesChanged /<br>openQuestions / keyInsights 四个抽取点做 <code>_mergeUnique(英文结果, CJK结果)</code>。门关或 CJK<br>叶子缺失 → 各 helper 返回 <code>[]</code> → union 空 → <strong>逐字节回退</strong>到原英文行为。</p>
+<h3 id="修后输出">修后输出<a class="anchor" href="#修后输出" aria-label="锚点">#</a></h3>
+<pre><code>decisions:     [&quot;我将创建一个纯叶子模块&quot;,&quot;我已经创建了 proxyCoreConfigGen.js&quot;,&quot;修复了白名单&quot;,...]
+keyInsights:   [&quot;重要:mihomo 原生支持 hysteria2&quot;,&quot;根本原因是白名单只放行五种协议&quot;,...]
+openQuestions: [&quot;那 tuic 呢？&quot;,&quot;还有 wireguard 支持吗？&quot;]
+filesChanged:  [&quot;proxyCoreConfigGen.js&quot;,&quot;proxyUriParsers.js&quot;]  ← 全角标点后的文件名补齐</code></pre>
+<h2 id="诚实边界">诚实边界<a class="anchor" href="#诚实边界" aria-label="锚点">#</a></h2>
+<ul><li><code>/recap</code> 仍是<strong>确定性</strong>抽取（无模型、离线、可复现），CJK 化只扩大抽取覆盖，不引入模型。</li><li><code>formatRecap</code> 的段标题（Topics / Key Decisions / …）仍为英文，属渲染层，本次未动</li></ul>
+<p>（外科手术式，不顺手扩范围）。</p>
+<ul><li>门 <code>KHY_RECAP_CJK</code> 为 sibling 问题类门，不进 flagRegistry（同家族先例）。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:recap-cjk        # 叶子契约 18/18 + 服务层合并 4/4
+node --test services/backend/tests/services/sessionRecapCjk.test.js
+node --test services/backend/tests/services/sessionRecapService.cjk.test.js</code></pre>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>命令薄壳：<code>services/backend/src/cli/handlers/recap.js</code>（门 <code>KHY_RECAP</code>）</li><li>底座服务：<code>services/backend/src/services/sessionRecapService.js</code></li><li>对齐参考：Claude Code <code>/recap</code>（离开期间的模型生成回顾；khy 无 away 边界，故对整段</li></ul>
+<p>当前会话做确定性回顾）</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-079] 三面镜子矛盾冲突消解.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-079] 三面镜子矛盾冲突消解</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-081] npm 渠道 Node 版本预检.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-080] recap 的 CJK 化.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

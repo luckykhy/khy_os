@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MacroCLI CLI · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-macrocli<span class="sep">›</span>MacroCLI CLI</div>
+      <header class="hero reveal"><h1>MacroCLI CLI</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#macrocli-cli">MacroCLI CLI</a></li><li class="lvl-2"><a href="#what-it-is">What It Is</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#quick-start-for-agents">Quick Start (for agents)</a></li><li class="lvl-2"><a href="#command-reference">Command Reference</a></li><li class="lvl-3"><a href="#global-flags">Global Flags</a></li><li class="lvl-3"><a href="#macro-group">`macro` group</a></li><li class="lvl-3"><a href="#session-group">`session` group</a></li><li class="lvl-3"><a href="#backends">`backends`</a></li><li class="lvl-2"><a href="#macro-parameters">Macro Parameters</a></li><li class="lvl-2"><a href="#output-format-json">Output Format (--json)</a></li><li class="lvl-2"><a href="#execution-backends">Execution Backends</a></li><li class="lvl-2"><a href="#writing-macros">Writing Macros</a></li><li class="lvl-2"><a href="#agent-usage-rules">Agent Usage Rules</a></li><li class="lvl-2"><a href="#example-workflow">Example Workflow</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-macrocli&quot;<br>description: &gt;<br>  Use when the agent wants to define, list, inspect, or execute GUI macros<br>  via the MacroCLI CLI. Macros are parameterized, CLI-callable<br>  workflows — the agent invokes <code>macro run &lt;name&gt;</code> and the system handles<br>  backend routing (plugin, file transform, accessibility, compiled GUI replay).</p>
+<hr>
+<h1 id="macrocli-cli">MacroCLI CLI<a class="anchor" href="#macrocli-cli" aria-label="锚点">#</a></h1>
+<h2 id="what-it-is">What It Is<a class="anchor" href="#what-it-is" aria-label="锚点">#</a></h2>
+<p>The MacroCLI converts valuable GUI workflows into parameterized,<br>CLI-callable macros. Agents <strong>never touch the GUI directly</strong> — they call macros<br>through this stable CLI, and the runtime routes execution to the best available<br>backend (native plugin/API, file transformation, semantic UI control, or<br>precompiled GUI macro replay).</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd macrocli/agent-harness
+pip install -e .</code></pre>
+<p><strong>Requirements:</strong> Python 3.10+, PyYAML, click, prompt-toolkit.</p>
+<h2 id="quick-start-for-agents">Quick Start (for agents)<a class="anchor" href="#quick-start-for-agents" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1. See what macros are available
+cli-anything-macrocli macro list --json
+
+# 2. Inspect a macro's parameters
+cli-anything-macrocli macro info export_file --json
+
+# 3. Dry-run to check params without side effects
+cli-anything-macrocli --dry-run macro run export_file \
+    --param output=/tmp/test.txt --json
+
+# 4. Execute a macro
+cli-anything-macrocli macro run export_file \
+    --param output=/tmp/result.txt --json
+
+# 5. See what backends are available
+cli-anything-macrocli backends --json</code></pre>
+<h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
+<h3 id="global-flags">Global Flags<a class="anchor" href="#global-flags" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Flag</th><th>Description</th></tr></thead><tbody><tr><td><code>--json</code></td><td>Machine-readable JSON output on stdout</td></tr><tr><td><code>--dry-run</code></td><td>Simulate all steps, skip side effects</td></tr><tr><td><code>--session-id &lt;id&gt;</code></td><td>Resume or create a named session</td></tr></tbody></table>
+<h3 id="macro-group"><code>macro</code> group<a class="anchor" href="#macro-group" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>macro list</code></td><td>List all available macros</td></tr><tr><td><code>macro info &lt;name&gt;</code></td><td>Show macro schema (parameters, steps, conditions)</td></tr><tr><td><code>macro run &lt;name&gt; --param k=v</code></td><td>Execute a macro</td></tr><tr><td><code>macro dry-run &lt;name&gt; --param k=v</code></td><td>Simulate without side effects</td></tr><tr><td><code>macro validate [name]</code></td><td>Structural validation</td></tr><tr><td><code>macro define &lt;name&gt;</code></td><td>Scaffold a new macro YAML</td></tr></tbody></table>
+<h3 id="session-group"><code>session</code> group<a class="anchor" href="#session-group" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>session status</code></td><td>Show session statistics</td></tr><tr><td><code>session history</code></td><td>Show recent run history</td></tr><tr><td><code>session save</code></td><td>Persist session to disk</td></tr><tr><td><code>session list</code></td><td>List all saved sessions</td></tr></tbody></table>
+<h3 id="backends"><code>backends</code><a class="anchor" href="#backends" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-macrocli backends --json
+# Shows: native_api, file_transform, semantic_ui, gui_macro, recovery
+# and whether each is available in the current environment.</code></pre>
+<h2 id="macro-parameters">Macro Parameters<a class="anchor" href="#macro-parameters" aria-label="锚点">#</a></h2>
+<p>Pass parameters with <code>--param key=value</code>. Repeat for multiple:</p>
+<pre><code class="language-bash">cli-anything-macrocli macro run transform_json \
+    --param file=/path/to/data.json \
+    --param key=settings.theme \
+    --param value=dark \
+    --json</code></pre>
+<h2 id="output-format-json">Output Format (--json)<a class="anchor" href="#output-format-json" aria-label="锚点">#</a></h2>
+<p>All commands output JSON when <code>--json</code> is set:</p>
+<pre><code class="language-json">{
+  &quot;success&quot;: true,
+  &quot;macro_name&quot;: &quot;export_file&quot;,
+  &quot;output&quot;: {
+    &quot;exported_file&quot;: &quot;/tmp/result.txt&quot;
+  },
+  &quot;error&quot;: &quot;&quot;,
+  &quot;telemetry&quot;: {
+    &quot;duration_ms&quot;: 312,
+    &quot;steps_total&quot;: 2,
+    &quot;steps_run&quot;: 2,
+    &quot;backends_used&quot;: [&quot;native_api&quot;],
+    &quot;dry_run&quot;: false
+  }
+}</code></pre>
+<p>On failure (<code>&quot;success&quot;: false</code>), read the <code>&quot;error&quot;</code> field for the reason.<br>Exit code is 1 on failure.</p>
+<h2 id="execution-backends">Execution Backends<a class="anchor" href="#execution-backends" aria-label="锚点">#</a></h2>
+<p>Backends are selected automatically based on the macro step definition:</p>
+<table><thead><tr><th>Backend</th><th>Triggered by</th><th>Use case</th></tr></thead><tbody><tr><td><code>native_api</code></td><td><code>backend: native_api</code></td><td>Subprocess / shell command</td></tr><tr><td><code>file_transform</code></td><td><code>backend: file_transform</code></td><td>XML, JSON, text file editing</td></tr><tr><td><code>semantic_ui</code></td><td><code>backend: semantic_ui</code></td><td>Accessibility / keyboard shortcuts</td></tr><tr><td><code>gui_macro</code></td><td><code>backend: gui_macro</code></td><td>Precompiled coordinate replay</td></tr><tr><td><code>recovery</code></td><td><code>backend: recovery</code></td><td>Retry / fallback orchestration</td></tr></tbody></table>
+<h2 id="writing-macros">Writing Macros<a class="anchor" href="#writing-macros" aria-label="锚点">#</a></h2>
+<p>Macros are YAML files in <code>cli_anything/macrocli/macro_definitions/</code>.<br>Scaffold one with:</p>
+<pre><code class="language-bash">cli-anything-macrocli macro define my_macro --output \
+    cli_anything/macrocli/macro_definitions/examples/my_macro.yaml</code></pre>
+<p>Minimal schema:</p>
+<pre><code class="language-yaml">name: my_macro
+version: &quot;1.0&quot;
+description: What this macro does.
+
+parameters:
+  output:
+    type: string
+    required: true
+    description: Where to write results.
+    example: /tmp/result.txt
+
+preconditions:
+  - file_exists: /path/to/input
+
+steps:
+  - id: step1
+    backend: native_api
+    action: run_command
+    params:
+      command: [my-app, --export, &quot;${output}&quot;]
+    timeout_ms: 30000
+    on_failure: fail  # or: skip, continue
+
+postconditions:
+  - file_exists: ${output}
+  - file_size_gt: [${output}, 100]
+
+outputs:
+  - name: result_file
+    path: ${output}
+
+agent_hints:
+  danger_level: safe  # safe | moderate | dangerous
+  side_effects: [creates_file]
+  reversible: true</code></pre>
+<h2 id="agent-usage-rules">Agent Usage Rules<a class="anchor" href="#agent-usage-rules" aria-label="锚点">#</a></h2>
+<ol><li><strong>Always use <code>--json</code></strong> for programmatic output.</li><li><strong>Use <code>--dry-run</code> to validate params</strong> before executing side-effectful macros.</li><li><strong>Check <code>success</code> field</strong> — do not assume success from exit code alone.</li><li><strong>Read <code>error</code> field</strong> when <code>success</code> is false — it explains what failed.</li><li><strong>Use <code>macro info &lt;name&gt;</code> to discover params</strong> before calling <code>macro run</code>.</li><li><strong>Use absolute paths</strong> for all file parameters.</li></ol>
+<h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Step 1: What's available?
+cli-anything-macrocli macro list --json
+
+# Step 2: What params does transform_json need?
+cli-anything-macrocli macro info transform_json --json
+
+# Step 3: Test safely
+cli-anything-macrocli --dry-run macro run transform_json \
+    --param file=/tmp/config.json \
+    --param key=theme \
+    --param value=dark --json
+
+# Step 4: Execute for real
+cli-anything-macrocli macro run transform_json \
+    --param file=/tmp/config.json \
+    --param key=theme \
+    --param value=dark --json</code></pre>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-lldb/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">LLDB CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mailchimp/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-mailchimp</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-macrocli/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

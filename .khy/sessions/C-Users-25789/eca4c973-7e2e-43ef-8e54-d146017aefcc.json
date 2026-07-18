@@ -1,0 +1,42 @@
+{
+  "sessionId": "eca4c973-7e2e-43ef-8e54-d146017aefcc",
+  "title": "",
+  "model": "deepseek-3.2",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你觉得khy还有什么不足"
+    },
+    {
+      "role": "user",
+      "content": "你觉得khy还有什么不足"
+    },
+    {
+      "role": "user",
+      "content": "你觉得khy还有什么不足"
+    },
+    {
+      "role": "user",
+      "content": "你觉得khy还有什么不足"
+    },
+    {
+      "role": "assistant",
+      "content": "Not logged in · Please run /login"
+    },
+    {
+      "role": "user",
+      "content": "你觉得khy还有什么不足"
+    },
+    {
+      "role": "assistant",
+      "content": "Not logged in · Please run /login"
+    }
+  ],
+  "messageCount": 7,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "Kiro IDE"
+  },
+  "createdAt": 1781258359184,
+  "updatedAt": 1781258359184
+}

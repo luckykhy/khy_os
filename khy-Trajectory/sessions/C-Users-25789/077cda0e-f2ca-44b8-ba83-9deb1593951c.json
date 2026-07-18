@@ -1,0 +1,27 @@
+{
+  "sessionId": "077cda0e-f2ca-44b8-ba83-9deb1593951c",
+  "title": "",
+  "model": "claude-sonnet-4.5",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好！我是 Kiro，你的 AI 开发助手。无论是写代码、分析问题还是规划项目，我都可以帮你搞定。今天有什么需要我帮忙的？",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "Kiro IDE"
+  },
+  "createdAt": 1781535926410,
+  "updatedAt": 1781535926410
+}

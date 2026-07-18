@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 功能扫描与体验改进建议（2026-05-26） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS 功能扫描与体验改进建议（2026-05-26）</div>
+      <header class="hero reveal"><h1>KHY OS 功能扫描与体验改进建议（2026-05-26）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-功能扫描与体验改进建议-2026-05-26">KHY OS 功能扫描与体验改进建议（2026-05-26）</a></li><li class="lvl-2"><a href="#1-目标与结论">1. 目标与结论</a></li><li class="lvl-2"><a href="#2-扫描范围">2. 扫描范围</a></li><li class="lvl-2"><a href="#3-关键发现-按体验影响排序">3. 关键发现（按体验影响排序）</a></li><li class="lvl-3"><a href="#3-1-命令规模过大-认知负担高-高影响">3.1 命令规模过大，认知负担高（高影响）</a></li><li class="lvl-3"><a href="#3-2-命令入口存在模式分叉-高影响">3.2 命令入口存在模式分叉（高影响）</a></li><li class="lvl-3"><a href="#3-3-暴露了未闭环功能-高影响">3.3 暴露了未闭环功能（高影响）</a></li><li class="lvl-3"><a href="#3-4-关键模块过于庞大-高影响">3.4 关键模块过于庞大（高影响）</a></li><li class="lvl-3"><a href="#3-5-超时治理不完全一致-高影响">3.5 超时治理不完全一致（高影响）</a></li><li class="lvl-3"><a href="#3-6-状态文案可观测性不足-中高影响">3.6 状态文案可观测性不足（中高影响）</a></li><li class="lvl-3"><a href="#3-7-文档与版本信息不同步-中影响">3.7 文档与版本信息不同步（中影响）</a></li><li class="lvl-3"><a href="#3-8-代码库存在-并行形态-与潜在重复-中影响">3.8 代码库存在“并行形态”与潜在重复（中影响）</a></li><li class="lvl-2"><a href="#4-改进建议-p0-p1-p2">4. 改进建议（P0/P1/P2）</a></li><li class="lvl-2"><a href="#p0-先做-直接决定从-15-分提升到-50">P0（先做，直接决定从 15 分提升到 50+）</a></li><li class="lvl-2"><a href="#p1-第二阶段-推动到-70">P1（第二阶段，推动到 70+）</a></li><li class="lvl-2"><a href="#p2-第三阶段-冲击-80">P2（第三阶段，冲击 80+）</a></li><li class="lvl-2"><a href="#5-提分预估-主观">5. 提分预估（主观）</a></li><li class="lvl-2"><a href="#6-建议的-4-周执行节奏">6. 建议的 4 周执行节奏</a></li><li class="lvl-2"><a href="#7-验收指标-建议">7. 验收指标（建议）</a></li><li class="lvl-2"><a href="#8-逐项对齐清单-可直接执行">8. 逐项对齐清单（可直接执行）</a></li><li class="lvl-2"><a href="#9-对齐执行顺序-建议">9. 对齐执行顺序（建议）</a></li><li class="lvl-2"><a href="#10-每项完成后的提交模板-建议">10. 每项完成后的提交模板（建议）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-001 | 阶段: 项目管理 | 原路径: docs/报告/khy-os-体验改进计划-2026-05-26.md --&gt;</p>
+<h1 id="khy-os-功能扫描与体验改进建议-2026-05-26">KHY OS 功能扫描与体验改进建议（2026-05-26）<a class="anchor" href="#khy-os-功能扫描与体验改进建议-2026-05-26" aria-label="锚点">#</a></h1>
+<h2 id="1-目标与结论">1. 目标与结论<a class="anchor" href="#1-目标与结论" aria-label="锚点">#</a></h2>
+<ul><li>目标：基于当前 <code>khy-os</code> 能力，评估体验短板，并给出可执行的改进路线。</li><li>当前主观体验基线：<strong>15/100</strong>（按“CLI 编程工具可用性”标准评估）。</li><li>结论：当前主要问题不是“功能不够多”，而是“能力过载、路径分叉、状态不确定、部分能力未闭环”。</li></ul>
+<hr>
+<h2 id="2-扫描范围">2. 扫描范围<a class="anchor" href="#2-扫描范围" aria-label="锚点">#</a></h2>
+<ul><li>CLI 命令体系：<code>backend/src/cli/*</code></li><li>工具与智能体执行链路：<code>backend/src/tools/*</code>、<code>backend/src/services/toolUseLoop.js</code></li><li>AI 网关与多适配器：<code>backend/src/services/gateway/*</code></li><li>启动与引导链路：<code>khy_platform/cli.py</code>、<code>khy_platform/_bootstrap.py</code>、<code>backend/bin/khy.js</code></li><li>前端状态反馈：<code>frontend/src/api/request.js</code>、<code>frontend/src/utils/request.js</code></li><li>文档与版本一致性：<code>README.md</code>、<code>pyproject.toml</code>、<code>backend/package.json</code></li></ul>
+<hr>
+<h2 id="3-关键发现-按体验影响排序">3. 关键发现（按体验影响排序）<a class="anchor" href="#3-关键发现-按体验影响排序" aria-label="锚点">#</a></h2>
+<h3 id="3-1-命令规模过大-认知负担高-高影响">3.1 命令规模过大，认知负担高（高影响）<a class="anchor" href="#3-1-命令规模过大-认知负担高-高影响" aria-label="锚点">#</a></h3>
+<ul><li>主命令数量：110</li><li>子命令总量：271</li><li>结果：新用户很难建立“先用什么、后用什么”的心智模型。</li><li>证据：<code>backend/src/cli/commandSchema.js</code></li></ul>
+<h3 id="3-2-命令入口存在模式分叉-高影响">3.2 命令入口存在模式分叉（高影响）<a class="anchor" href="#3-2-命令入口存在模式分叉-高影响" aria-label="锚点">#</a></h3>
+<ul><li><code>khy</code> 与 <code>khyquant</code> 的职责分层对新用户不直观。</li><li>用户输入后出现“请改用 khy xxx”的二次跳转，损耗操作流畅度。</li><li>证据：<code>backend/src/cli/router.js</code> 中 <code>khyquant app-only</code> 分支提示。</li></ul>
+<h3 id="3-3-暴露了未闭环功能-高影响">3.3 暴露了未闭环功能（高影响）<a class="anchor" href="#3-3-暴露了未闭环功能-高影响" aria-label="锚点">#</a></h3>
+<ul><li><code>order/watch/rank/voice</code> 等能力仍为预览或开发中提示，但暴露在主命令路径。</li><li>结果：用户期望与实际交付不一致，降低信任。</li><li>证据：<code>backend/src/cli/router.js</code>（预览模式/开发中提示）。</li></ul>
+<h3 id="3-4-关键模块过于庞大-高影响">3.4 关键模块过于庞大（高影响）<a class="anchor" href="#3-4-关键模块过于庞大-高影响" aria-label="锚点">#</a></h3>
+<ul><li><code>router.js</code> / <code>repl.js</code> / <code>liteRepl.js</code> / <code>aiGateway.js</code> / <code>toolUseLoop.js</code> 合计约 2.3 万行。</li><li>结果：回归风险高、迭代慢、定位成本高。</li></ul>
+<h3 id="3-5-超时治理不完全一致-高影响">3.5 超时治理不完全一致（高影响）<a class="anchor" href="#3-5-超时治理不完全一致-高影响" aria-label="锚点">#</a></h3>
+<ul><li>工具主循环已有 activity-aware idle timeout。</li><li>但 <code>cronScheduler</code> 中仍有 <code>Promise.race + hard timeout</code> 路径。</li><li>结果：长任务即使有进展，也可能被硬切断。</li><li>证据：<code>backend/src/services/toolUseLoop.js</code>、<code>backend/src/services/cronScheduler.js</code></li></ul>
+<h3 id="3-6-状态文案可观测性不足-中高影响">3.6 状态文案可观测性不足（中高影响）<a class="anchor" href="#3-6-状态文案可观测性不足-中高影响" aria-label="锚点">#</a></h3>
+<ul><li>前端与部分 CLI 状态文案仍有“加载中/稍后”类泛化描述。</li><li>缺少 Action + Target + Progress，用户不清楚系统卡在哪里。</li><li>证据：<code>frontend/src/api/request.js</code>、<code>frontend/src/utils/request.js</code></li></ul>
+<h3 id="3-7-文档与版本信息不同步-中影响">3.7 文档与版本信息不同步（中影响）<a class="anchor" href="#3-7-文档与版本信息不同步-中影响" aria-label="锚点">#</a></h3>
+<ul><li><code>README.md</code> 仍展示 0.1.3/0.1.2 发布说明。</li><li>实际版本为 <code>0.1.51</code>（Python/Node 已同步）。</li><li>结果：对外认知与实际交付不一致。</li><li>证据：<code>README.md</code>、<code>pyproject.toml</code>、<code>backend/package.json</code></li></ul>
+<h3 id="3-8-代码库存在-并行形态-与潜在重复-中影响">3.8 代码库存在“并行形态”与潜在重复（中影响）<a class="anchor" href="#3-8-代码库存在-并行形态-与潜在重复-中影响" aria-label="锚点">#</a></h3>
+<ul><li>存在 <code>backend/frontend</code> 与 <code>ai-backend/ai-frontend</code> 等并行目录。</li><li>工具体系存在多种实现形态（目录工具、平铺工具、legacy bridge）。</li><li>结果：维护边界不清、协作心智成本高。</li></ul>
+<hr>
+<h2 id="4-改进建议-p0-p1-p2">4. 改进建议（P0/P1/P2）<a class="anchor" href="#4-改进建议-p0-p1-p2" aria-label="锚点">#</a></h2>
+<h2 id="p0-先做-直接决定从-15-分提升到-50">P0（先做，直接决定从 15 分提升到 50+）<a class="anchor" href="#p0-先做-直接决定从-15-分提升到-50" aria-label="锚点">#</a></h2>
+<ol><li>建立“模式化命令视图”</li><li>提供 <code>khy code</code> / <code>khy quant</code> / <code>khy ops</code> 三种入口视图。</li><li>默认只展示对应模式命令，<code>help</code> 做分层。</li><li>预期收益：显著降低学习成本与误用率。</li></ol>
+<ol><li>对未闭环能力做“下线或隔离”</li><li>未完成功能移到 <code>--experimental</code> 或隐藏菜单，不在主路径展示。</li><li>只有通过最小验收（可执行、有结果、有错误处理）才进入主命令。</li></ol>
+<ol><li>统一入口策略</li><li><code>khy</code> 作为唯一主入口；<code>khyquant</code> 保留兼容但不再作为推荐入口。</li><li>避免“命令重定向提示”成为常见路径。</li></ol>
+<ol><li>AI 请求路由优化</li><li>首选通道失败时进行短链路降级，不做长链盲探测。</li><li>对“不可用适配器”增加冷却期与快速跳过策略。</li></ol>
+<ol><li>统一超时模型</li><li>所有长任务改为 activity/sliding timeout。</li><li>严禁“固定墙钟时间硬杀”活跃任务。</li></ol>
+<h2 id="p1-第二阶段-推动到-70">P1（第二阶段，推动到 70+）<a class="anchor" href="#p1-第二阶段-推动到-70" aria-label="锚点">#</a></h2>
+<ol><li>拆分超大模块</li><li>将 <code>router/repl/gateway/toolLoop</code> 按域拆分：解析层、策略层、渲染层、执行层。</li><li>增加边界测试与契约测试，降低回归概率。</li></ol>
+<ol><li>状态透明化改造</li><li>CLI/前端统一状态协议：<code>动作 + 目标 + 进度 + 下一步</code>。</li><li>例如：<code>连接 Codex 通道（第 1/3 次）</code>、<code>同步会话索引（342/1280）</code>。</li></ol>
+<ol><li>工具体系收敛</li><li>统一 tool 定义规范，逐步移除 legacy 双轨桥接层。</li><li>建立“工具能力目录 + 风险标签 + 所属域 + 生命周期”清单。</li></ol>
+<ol><li>端口与服务发现统一</li><li>启动后统一输出“实际监听端口 + 对应客户端配置”。</li><li>避免用户看到默认端口但服务实际已自增到其它端口。</li></ol>
+<h2 id="p2-第三阶段-冲击-80">P2（第三阶段，冲击 80+）<a class="anchor" href="#p2-第三阶段-冲击-80" aria-label="锚点">#</a></h2>
+<ol><li>体验级测试补齐</li><li>前端补 Vitest + 核心 E2E（登录、路由切换、关键请求失败恢复）。</li><li>CLI 增加用户旅程测试（新手首日路径、网络受限路径、本地模型路径）。</li></ol>
+<ol><li>文档自动同步</li><li>发布流程自动生成并校验 release notes 版本一致性。</li><li>README 首页只保留最新稳定版摘要，旧版本移到 changelog。</li></ol>
+<ol><li>目录治理</li><li>明确 <code>backend/frontend</code> 与 <code>ai-*</code> 的定位（合并、拆分或桥接说明）。</li><li>对重复能力建立唯一权威模块，减少多处演化。</li></ol>
+<hr>
+<h2 id="5-提分预估-主观">5. 提分预估（主观）<a class="anchor" href="#5-提分预估-主观" aria-label="锚点">#</a></h2>
+<ul><li>完成 P0：15 → <strong>50~60</strong></li><li>完成 P0 + P1：15 → <strong>70~80</strong></li><li>完成 P0 + P1 + P2：15 → <strong>80~85</strong></li></ul>
+<hr>
+<h2 id="6-建议的-4-周执行节奏">6. 建议的 4 周执行节奏<a class="anchor" href="#6-建议的-4-周执行节奏" aria-label="锚点">#</a></h2>
+<ul><li>第 1 周：命令分层视图、未闭环能力隔离、入口统一</li><li>第 2 周：AI 路由与超时统一、状态透明化一期</li><li>第 3 周：核心大文件拆分与回归测试补齐</li><li>第 4 周：文档/发布同步、目录治理与技术债收口</li></ul>
+<hr>
+<h2 id="7-验收指标-建议">7. 验收指标（建议）<a class="anchor" href="#7-验收指标-建议" aria-label="锚点">#</a></h2>
+<ul><li>新用户首次完成核心任务成功率（安装、配置、首条 AI 任务）</li><li>首次可用时间（TTFS: Time To First Success）</li><li>命令误用率（重定向/未知命令触发率）</li><li>AI 任务失败率、平均恢复时间、超时中断率</li><li>CLI 与前端关键路径自动化覆盖率</li></ul>
+<hr>
+<h2 id="8-逐项对齐清单-可直接执行">8. 逐项对齐清单（可直接执行）<a class="anchor" href="#8-逐项对齐清单-可直接执行" aria-label="锚点">#</a></h2>
+<p>说明：</p>
+<ul><li><code>状态</code>：<code>未开始</code> / <code>进行中</code> / <code>已完成</code></li><li>当前默认全部标记为 <code>未开始</code>，后续每次改动后更新本表。</li></ul>
+<table><thead><tr><th>编号</th><th>建议项</th><th>状态</th><th>当前现状（扫描）</th><th>目标状态（对齐标准）</th><th>主要改动点（文件）</th><th>验收方式</th></tr></thead><tbody><tr><td>P0-1</td><td>模式化命令视图（code/quant/ops）</td><td>未开始</td><td>命令总量 110 + 子命令 271，首屏信息密度高</td><td><code>help</code> 与 <code>/</code> 菜单按模式分层展示，默认仅展示核心集</td><td><code>backend/src/cli/commandSchema.js</code>, <code>backend/src/cli/repl.js</code>, <code>backend/src/cli/router.js</code></td><td>新用户 3 分钟内完成首次任务；未知命令率下降</td></tr><tr><td>P0-2</td><td>未闭环功能隔离</td><td>未开始</td><td><code>order/watch/rank/voice</code> 有预览/开发中提示但在主路径可见</td><td>未达标能力移至 <code>--experimental</code> 或隐藏，不污染主路径</td><td><code>backend/src/cli/router.js</code>, <code>backend/src/cli/commandSchema.js</code>, <code>backend/src/cli/aliases.js</code></td><td>主命令无“开发中”提示；占位能力仅实验入口可见</td></tr><tr><td>P0-3</td><td>统一入口策略（khy 主入口）</td><td>未开始</td><td><code>khyquant</code> 常触发“请使用 khy xxx”重定向提示</td><td>文档与交互均以 <code>khy</code> 为唯一推荐入口，<code>khyquant</code> 仅兼容别名</td><td><code>khy_platform/cli.py</code>, <code>backend/bin/khy.js</code>, <code>README.md</code></td><td>用户主流程不再出现入口纠偏提示</td></tr><tr><td>P0-4</td><td>AI 路由快速降级</td><td>未开始</td><td>多适配器探测链较长，失败恢复路径复杂</td><td>首选失败后按短链路降级，失败通道带冷却窗口</td><td><code>backend/src/services/gateway/aiGateway.js</code>, <code>backend/src/cli/ai.js</code></td><td>首次可用成功率提升；平均响应时间下降</td></tr><tr><td>P0-5</td><td>统一超时模型（activity-based）</td><td>未开始</td><td>主循环已 activity-aware，但 cron 仍 hard timeout</td><td>长任务统一滑动超时；仅 idle 才超时</td><td><code>backend/src/services/cronScheduler.js</code>, <code>backend/src/services/toolUseLoop.js</code></td><td>长任务无误杀；超时信息包含已完成/未完成项</td></tr><tr><td>P1-6</td><td>拆分超大模块</td><td>未开始</td><td><code>router/repl/gateway/toolLoop</code> 体量大，耦合高</td><td>解析/调度/渲染/执行分层，单文件体量可控</td><td><code>backend/src/cli/router.js</code>, <code>backend/src/cli/repl.js</code>, <code>backend/src/services/gateway/aiGateway.js</code>, <code>backend/src/services/toolUseLoop.js</code></td><td>拆分后测试全绿；关键路径无行为回归</td></tr><tr><td>P1-7</td><td>状态透明化</td><td>未开始</td><td>存在“加载中...”等弱信息提示</td><td>状态文案统一 Action + Target + Progress</td><td><code>frontend/src/api/request.js</code>, <code>frontend/src/utils/request.js</code>, <code>backend/src/cli/*</code></td><td>状态可定位卡点；用户无需猜当前阶段</td></tr><tr><td>P1-8</td><td>工具体系收敛</td><td>未开始</td><td>目录工具 + 平铺工具 + legacy bridge 并存</td><td>统一 tool 定义规范，逐步下线 legacy 入口</td><td><code>backend/src/tools/index.js</code>, <code>backend/src/services/toolCalling.js</code>, <code>backend/src/tools/*</code></td><td>工具注册链路单一；重复实现减少</td></tr><tr><td>P1-9</td><td>端口与服务发现统一</td><td>未开始</td><td>自动端口递增已存在，但客户端提示不总是同源</td><td>始终输出“实际端口 + 客户端配置方式”</td><td><code>backend/server.js</code>, <code>backend/src/cli/handlers/service.js</code>, <code>frontend/src/config/*</code></td><td>端口冲突下仍可一次连通</td></tr><tr><td>P2-10</td><td>前端/旅程测试补齐</td><td>未开始</td><td>后端测试较多，前端自动化较弱</td><td>前端关键链路自动化 + CLI 用户旅程测试</td><td><code>frontend/*</code>, <code>.github/workflows/*</code>, <code>backend/tests/cli/*</code></td><td>回归缺陷前置发现率提升</td></tr><tr><td>P2-11</td><td>文档自动同步</td><td>未开始</td><td>README 发布说明版本滞后于 0.1.51</td><td>发布流程自动更新/校验文档版本块</td><td><code>README.md</code>, <code>scripts/ci/*</code>, <code>.github/workflows/release*.yml</code></td><td>文档版本与发布版本始终一致</td></tr><tr><td>P2-12</td><td>目录治理与能力归一</td><td>未开始</td><td><code>backend/frontend</code> 与 <code>ai-*</code> 并行，边界心智成本高</td><td>明确边界：合并、桥接或淘汰路线</td><td><code>docs/03_DESIGN_设计/*</code>, <code>package.json</code>, <code>scripts/*</code></td><td>新成员可在 30 分钟内理解目录职责</td></tr></tbody></table>
+<hr>
+<h2 id="9-对齐执行顺序-建议">9. 对齐执行顺序（建议）<a class="anchor" href="#9-对齐执行顺序-建议" aria-label="锚点">#</a></h2>
+<ol><li>先做 P0-2（下线占位能力）与 P0-3（入口统一），立刻减少“误导体验”。</li><li>再做 P0-5（超时统一）与 P0-4（路由降级），解决“可用性不稳定”。</li><li>最后做 P0-1（模式化视图），在稳定基础上优化“可学性”。</li></ol>
+<hr>
+<h2 id="10-每项完成后的提交模板-建议">10. 每项完成后的提交模板（建议）<a class="anchor" href="#10-每项完成后的提交模板-建议" aria-label="锚点">#</a></h2>
+<pre><code>feat(cli): align P0-2 hide unfinished commands behind experimental flag
+
+- move order/watch/rank preview commands out of default help/menu
+- add explicit --experimental access path
+- update docs and command aliases
+
+Acceptance:
+- no preview placeholder in default command flow
+- tests: backend tests/cli/* pass</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-OTHER-004] 事后分析-Windows内核构建为何之前失败现在成功-2026-06-26.html"><div class="dir">← 上一篇</div><div class="ttl">事后分析：Windows 上 khy os build 为何之前失败、现在成功 (2026-06-26)</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-002] khy-librechat-差距修复路线图.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-OS 与 LibreChat 差距修复路线图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-001] khy-os-体验改进计划-2026-05-26.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

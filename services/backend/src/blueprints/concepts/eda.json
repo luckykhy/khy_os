@@ -1,0 +1,19 @@
+{
+  "id": "eda",
+  "kind": "concept",
+  "name": "EDA",
+  "category": "architecture",
+  "triggers": ["EDA", "Event-Driven Architecture", "事件驱动", "事件驱动架构"],
+  "summary": "事件驱动架构：组件通过异步发布/订阅事件解耦，生产者不知消费者；提升弹性、可扩展与实时性。",
+  "whenToUse": [
+    "高并发、需解耦与异步处理（订单、通知、流式数据）。",
+    "多消费者对同一事件做不同反应。"
+  ],
+  "antiPatterns": [
+    "事件粒度混乱、缺 schema 治理，演进即破坏。",
+    "用事件做强一致同步调用（应同步 RPC）。",
+    "忽视幂等与重复投递，导致重复副作用。"
+  ],
+  "minimalSkeleton": "Producer: 发布事件到 Broker(Kafka/MQ)\nEvent: 带 schema 的不可变事实\nConsumer: 订阅并幂等处理\nDLQ: 处理失败兜底",
+  "relatedArchetypes": []
+}

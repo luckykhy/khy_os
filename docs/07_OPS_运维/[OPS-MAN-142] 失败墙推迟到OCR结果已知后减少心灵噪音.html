@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-142-失败墙推迟到-ocr-结果已知后-减少心灵噪音">[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)</a></li><li class="lvl-2"><a href="#四-教训">四、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-142-失败墙推迟到-ocr-结果已知后-减少心灵噪音">[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)<a class="anchor" href="#ops-man-142-失败墙推迟到-ocr-结果已知后-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-138] / [OPS-MAN-140] 答复侧确定性纠正 —— 本轮补<strong>实时告知侧</strong>的噪音源。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p>前几轮治的是「是否告知」「重复几遍」「模型谎称没收到图」。本轮沿同一 consumer(视觉级联全失败的<br>describe-fail 兜底块)找<strong>最响的一条噪音</strong>:</p>
+<p><code>aiGatewayGenerateMethod.js</code> 在 describe-and-return 级联全失败后,于 <strong>OCR 兜底之前</strong>(~line 1590)<br><strong>无条件</strong> <code>emitAssistantMessage</code> 那块吓人的失败墙(<code>buildVisionFailureMessage</code>,含<br>「图像识别失败…粘贴 GLM API Key」)。控制流是:</p>
+<pre><code>视觉级联全失败 → 立刻甩「图像识别失败 + 配置 key」大块墙 → 之后才跑本地 OCR</code></pre>
+<p>当图是<strong>含字图</strong>、随后本地 OCR <strong>成功读出文字</strong>时,那块吓人失败墙<strong>已经先甩给用户</strong>——与紧接着的<br>「已用 OCR 成功识别图片」<strong>自相矛盾</strong>,是用户实测日志(paste-cache <code>92c0154d</code>)里<strong>最响的心灵噪音</strong>:<br>先说识别彻底失败、叫用户去粘贴 key,转头又正确读出了图。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>核心思路</strong>:把失败墙的<strong>发射时机</strong>从「OCR 之前无条件」改为「OCR 结果已知之后再决定」。<br>OCR 成功救回 → 墙纯属误导 → <strong>抑制</strong>;OCR 读空 / 失败 → 真需用户介入 → <strong>照发</strong>。</p>
+<p><strong>单一真源门</strong>:<code>KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS</code>(default-on,与父门<br><code>KHY_VISION_FAILURE_SUMMARY</code> 正交独立)。门关 → 逐字节回退到「墙在 OCR 之前无条件发射」的历史行为。</p>
+<ol><li><strong>纯叶子扩展</strong> <code>visionFailureSummary.js</code>(承既有叶,扩展优于新建):<ul><li>新增谓词 <code>isFailureSummaryOcrSuppressEnabled(env)</code>,镜像 <code>isVisionFailureSummaryEnabled</code>,</li></ul></li></ol>
+<p>经 flagRegistry 读门、本地 CANON 回退、绝不抛。</p>
+<ol><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code>(describe-fail 兜底块 ~1590):<ul><li>读 <code>_ocrSuppressOn</code>;<code>_summaryOn</code> 时构造墙:子门开 → 存入 <code>_deferredFailureMsg</code>(<strong>不立刻发</strong>);</li></ul></li></ol>
+<p>子门关 → 照旧 <code>emitAssistantMessage</code>(逐字节回退)。</p>
+<ul><li>OCR <strong>成功</strong>分支(<code>_ocrTexts.length &gt; 0</code>)→ <code>_deferredFailureMsg</code> 保持不发(<strong>抑制</strong>)。</li><li>OCR <strong>读空</strong>分支(<code>else</code>)→ 补发 <code>_deferredFailureMsg</code>(真失败,用户仍需介入)。</li></ul>
+<p><code>KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS: { mode:'default-on', off:'CANON', default:true }</code>。</p>
+<p><strong>噪音守恒</strong>:墙<strong>至多发射一次</strong>——要么急发(门关),要么推迟发(门开 + OCR 读空)。门开 + OCR 成功时<br>发射<strong>零次</strong>。与父门正交:父门决定「墙的文案是否为诚实总结」,本子门决定「墙在 OCR 成功时是否还发」;<br>父门关 → <code>buildVisionFailureMessage</code> 返 null → 无墙,子门推迟不复活它。</p>
+<h2 id="三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)<a class="anchor" href="#三-验收-b2-没跑过验证不许说修好了" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>visionFailureSummary.test.js</code> 17/17(含新谓词 default-on / off-word / 与父门正交 / 不抛)。</li><li>接线单测 <code>visionFailureSummaryOcrSuppressWiring.test.js</code> 4/4(onChunk 捕获失败墙):</li></ul>
+<p>A) 子门开 + OCR 有文本 → 墙被抑制;B) 子门开 + OCR 读空 → 墙照发;<br>  C) 子门关 + OCR 有文本 → 墙于 OCR 前照旧发射(逐字节回退);D) 父门关 → 从不构造墙。</p>
+<ul><li><strong>真图 E2E</strong> <code>visionFailureSummaryOcrSuppressRealImage.test.js</code> 2/2:真 PIL 渲含字 PNG</li></ul>
+<p>(<code>INVOICE ACME 2026</code>)→ 真 tesseract 读出 → 断言墙被抑制、OCR 文本注入;无字彩块图 → 真 tesseract<br>  读空 → 断言墙照发。</p>
+<ul><li>统一别名:<code>npm run test:vision-failure-summary-ocr-suppress</code>(17+4+2 = 23/23)。</li><li>门:<code>node --check</code> × 源文件 · god-file <code>wc -l</code> · flag-registry / leaf-contract / agent-rules ·</li></ul>
+<p>change-safety(positional 闭 map 桥)· maintainer:check · safety 聚合。</p>
+<h2 id="四-教训">四、教训<a class="anchor" href="#四-教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>断桥补全靠沿同一 consumer 找下一条正交噪音</strong>:前几轮治答复侧,本轮沿 describe-fail 兜底块找到</li></ol>
+<p><strong>实时告知侧</strong>最响的一条——失败墙在 OCR 结果已知前无条件发射。</p>
+<ol><li><strong>时机 = 噪音的作用域</strong>:同一块墙,发早了(OCR 前)就与 OCR 成功自相矛盾;把发射推迟到结果已知后,</li></ol>
+<p>同一文案零改动即从噪音变为按需告知。</p>
+<ol><li><strong>噪音守恒 + 父子正交</strong>:墙至多发一次(急发 xor 推迟发),OCR 成功时零发;子门只管「何时发」,</li></ol>
+<p>不复活父门关掉的墙。</p>
+<ol><li><strong>OPS 号碰撞</strong>:原 OPS-141 被并行 session(代理内核 CLI 表面接线)占用 → 精确逐文件 renumber 到</li></ol>
+<p>OPS-142,绝不全局 sed 跨他人文件。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-141] 代理内核安装显式CLI表面接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-143] Windows保留设备名读前防护.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

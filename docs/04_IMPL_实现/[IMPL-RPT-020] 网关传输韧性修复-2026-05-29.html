@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网关断链问题修复记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>网关断链问题修复记录</div>
+      <header class="hero reveal"><h1>网关断链问题修复记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#网关断链问题修复记录">网关断链问题修复记录</a></li><li class="lvl-2"><a href="#1-问题背景">1. 问题背景</a></li><li class="lvl-2"><a href="#2-用户可见症状">2. 用户可见症状</a></li><li class="lvl-3"><a href="#2-1-请求在正常执行中突然中断">2.1 请求在正常执行中突然中断</a></li><li class="lvl-3"><a href="#2-2-一次抖动放大为长时间不可用">2.2 一次抖动放大为长时间不可用</a></li><li class="lvl-3"><a href="#2-3-流式输出尾部缺失">2.3 流式输出尾部缺失</a></li><li class="lvl-2"><a href="#3-根因分析">3. 根因分析</a></li><li class="lvl-3"><a href="#3-1-多层超时策略互相叠加">3.1 多层超时策略互相叠加</a></li><li class="lvl-3"><a href="#3-2-错误分类过于激进">3.2 错误分类过于激进</a></li><li class="lvl-3"><a href="#3-3-sse-收尾未冲刷背压队列">3.3 SSE 收尾未冲刷背压队列</a></li><li class="lvl-2"><a href="#4-修复方案">4. 修复方案</a></li><li class="lvl-3"><a href="#4-1-统一方向-从-固定墙钟强杀-改为-滑动空闲超时">4.1 统一方向：从“固定墙钟强杀”改为“滑动空闲超时”</a></li><li class="lvl-3"><a href="#4-2-codexadapter-js">4.2 `codexAdapter.js`</a></li><li class="lvl-3"><a href="#4-3-clitooladapter-js">4.3 `cliToolAdapter.js`</a></li><li class="lvl-3"><a href="#4-4-aigateway-js">4.4 `aiGateway.js`</a></li><li class="lvl-3"><a href="#4-5-proxyserver-js">4.5 `proxyServer.js`</a></li><li class="lvl-3"><a href="#4-6-ssebackpressure-js-与-ssekeepalive-js">4.6 `sseBackpressure.js` 与 `sseKeepalive.js`</a></li><li class="lvl-2"><a href="#5-变更文件">5. 变更文件</a></li><li class="lvl-2"><a href="#6-新增与调整的测试">6. 新增与调整的测试</a></li><li class="lvl-3"><a href="#6-1-新增测试">6.1 新增测试</a></li><li class="lvl-3"><a href="#6-2-更新测试">6.2 更新测试</a></li><li class="lvl-2"><a href="#7-验证结果">7. 验证结果</a></li><li class="lvl-3"><a href="#7-1-语法检查">7.1 语法检查</a></li><li class="lvl-3"><a href="#7-2-针对性测试">7.2 针对性测试</a></li><li class="lvl-3"><a href="#7-3-回归测试">7.3 回归测试</a></li><li class="lvl-3"><a href="#7-4-规则检查">7.4 规则检查</a></li><li class="lvl-2"><a href="#8-修复后的行为变化">8. 修复后的行为变化</a></li><li class="lvl-3"><a href="#修复前">修复前</a></li><li class="lvl-3"><a href="#修复后">修复后</a></li><li class="lvl-2"><a href="#9-后续建议">9. 后续建议</a></li><li class="lvl-3"><a href="#9-1-建议保留的观察项">9.1 建议保留的观察项</a></li><li class="lvl-3"><a href="#9-2-仍可继续优化的点">9.2 仍可继续优化的点</a></li><li class="lvl-2"><a href="#10-结论">10. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-020 | 阶段: 实现 | 原路径: docs/指南/网关传输韧性修复-2026-05-29.md --&gt;</p>
+<h1 id="网关断链问题修复记录">网关断链问题修复记录<a class="anchor" href="#网关断链问题修复记录" aria-label="锚点">#</a></h1>
+<blockquote><p>修复日期：2026-05-29<br>涉及模块：<code>codexAdapter.js</code> · <code>cliToolAdapter.js</code> · <code>aiGateway.js</code> · <code>proxyServer.js</code> · <code>sseBackpressure.js</code> · <code>sseKeepalive.js</code></p></blockquote>
+<hr>
+<h2 id="1-问题背景">1. 问题背景<a class="anchor" href="#1-问题背景" aria-label="锚点">#</a></h2>
+<p>近期 KHY 的 AI 网关在使用 Codex / CLI 桥接通道时，存在明显的“经常断链”体感：</p>
+<ul><li>长思考、长工具调用时被过早中止</li><li>一次瞬时通道抖动后，后续几十秒到数分钟持续失败</li><li>有时流没有完全断开，但最后几段内容或结束事件丢失</li></ul>
+<p>这不是单点故障，而是三类问题叠加：</p>
+<ol><li>多层独立 idle watchdog 同时存在，且阈值偏紧</li><li>短暂传输抖动被升级为 process 故障，触发 fast-fail / circuit breaker</li><li>SSE 背压队列在结束阶段没有强制 flush，导致尾包丢失</li></ol>
+<hr>
+<h2 id="2-用户可见症状">2. 用户可见症状<a class="anchor" href="#2-用户可见症状" aria-label="锚点">#</a></h2>
+<h3 id="2-1-请求在正常执行中突然中断">2.1 请求在正常执行中突然中断<a class="anchor" href="#2-1-请求在正常执行中突然中断" aria-label="锚点">#</a></h3>
+<p>典型场景：</p>
+<ul><li>Codex 正在长时间思考</li><li>CLI 工具正在执行较慢的本地命令</li><li>模型调用外部工具但短时间没有 stdout/stderr 输出</li></ul>
+<p>用户侧表现为：</p>
+<ul><li>响应在 45s 到 120s 左右突然结束</li><li>CLI / Web 端显示像“断链”或“通道中断”</li></ul>
+<h3 id="2-2-一次抖动放大为长时间不可用">2.2 一次抖动放大为长时间不可用<a class="anchor" href="#2-2-一次抖动放大为长时间不可用" aria-label="锚点">#</a></h3>
+<p>典型 stderr / error 文案：</p>
+<ul><li><code>Reconnecting</code></li><li><code>channel closed</code></li><li><code>failed to record rollout items</code></li></ul>
+<p>这些原本更接近“暂时性传输抖动”，但旧逻辑把它们当成 <code>process</code> 故障处理，导致：</p>
+<ul><li>本次请求立即失败</li><li>后续请求命中 fast-fail</li><li>连续失败后进入 cooldown 和指数退避熔断</li></ul>
+<h3 id="2-3-流式输出尾部缺失">2.3 流式输出尾部缺失<a class="anchor" href="#2-3-流式输出尾部缺失" aria-label="锚点">#</a></h3>
+<p>在 SSE 背压场景下，末尾几段内容可能仍留在 <code>_queuedLines</code> 中。如果连接进入 <code>done()</code> / <code>stop()</code> 时没有主动 <code>flushAll()</code>，用户会看到：</p>
+<ul><li>最后一小段内容消失</li><li><code>done</code> 事件没有按预期送达</li><li>前端表现像“输出被截断”</li></ul>
+<hr>
+<h2 id="3-根因分析">3. 根因分析<a class="anchor" href="#3-根因分析" aria-label="锚点">#</a></h2>
+<h3 id="3-1-多层超时策略互相叠加">3.1 多层超时策略互相叠加<a class="anchor" href="#3-1-多层超时策略互相叠加" aria-label="锚点">#</a></h3>
+<p>修复前，至少存在三层独立的空闲判死逻辑：</p>
+<table><thead><tr><th>层级</th><th>文件</th><th>旧行为</th></tr></thead><tbody><tr><td>Codex 适配层</td><td><code>backend/src/services/gateway/adapters/codexAdapter.js</code></td><td>默认 45s，无子进程输出即强杀</td></tr><tr><td>通用 CLI 桥接层</td><td><code>backend/src/services/gateway/adapters/cliToolAdapter.js</code></td><td>120s idle timeout；非流式还使用 <code>spawn(..., { timeout })</code> 硬墙钟</td></tr><tr><td>代理流转发层</td><td><code>backend/src/services/gateway/proxyServer.js</code></td><td>默认再叠一层 90s stream idle abort</td></tr></tbody></table>
+<p>这三层不是同一个统一策略，而是各自独立判死。结果是：</p>
+<ul><li>同一请求会被多次抢着中止</li><li>上游并不知道下游是否仍在健康推进</li><li>正常的长耗时任务很容易被误杀</li></ul>
+<h3 id="3-2-错误分类过于激进">3.2 错误分类过于激进<a class="anchor" href="#3-2-错误分类过于激进" aria-label="锚点">#</a></h3>
+<p>修复前，<code>aiGateway.classifyError()</code> 会把下列文案归类为 <code>process</code>：</p>
+<ul><li><code>reconnecting</code></li><li><code>channel closed</code></li><li><code>failed to record rollout items</code></li><li><code>adapter ... queue timeout</code></li><li><code>queue task timeout</code></li></ul>
+<p>而 <code>process</code> 在网关内部会触发更激进的失败路径：</p>
+<ul><li>纳入 fast-fail</li><li>可能进入 cooldown</li><li>连续失败后打开 circuit breaker</li></ul>
+<p>这会把一次短暂通道抖动放大成一段时间内持续不可用。</p>
+<h3 id="3-3-sse-收尾未冲刷背压队列">3.3 SSE 收尾未冲刷背压队列<a class="anchor" href="#3-3-sse-收尾未冲刷背压队列" aria-label="锚点">#</a></h3>
+<p><code>sseBackpressure.write()</code> 在高频写入场景下会把部分 payload 暂存到 <code>_queuedLines</code>。但修复前：</p>
+<ul><li><code>writeSync()</code> 不会先冲刷旧队列</li><li><code>sseKeepalive.done()</code> / <code>stop()</code> 不会主动 <code>flushAll()</code></li></ul>
+<p>因此只要最后几段事件刚好落在队列中，就可能永远发不出去。</p>
+<hr>
+<h2 id="4-修复方案">4. 修复方案<a class="anchor" href="#4-修复方案" aria-label="锚点">#</a></h2>
+<h3 id="4-1-统一方向-从-固定墙钟强杀-改为-滑动空闲超时">4.1 统一方向：从“固定墙钟强杀”改为“滑动空闲超时”<a class="anchor" href="#4-1-统一方向-从-固定墙钟强杀-改为-滑动空闲超时" aria-label="锚点">#</a></h3>
+<p>本次修复没有简单地“把所有 timeout 调大”，而是改成：</p>
+<ul><li>只在“长时间无活动”时才中止</li><li>每次 stdout / stderr / stream chunk 都刷新活动时间</li><li>减少多层重复判死</li></ul>
+<h3 id="4-2-codexadapter-js">4.2 <code>codexAdapter.js</code><a class="anchor" href="#4-2-codexadapter-js" aria-label="锚点">#</a></h3>
+<p>关键调整：</p>
+<ol><li>将默认空闲等待窗口提升到更适合长任务的级别</li><li>增加 <code>resolveExecIdleTimeoutMs()</code>，支持 env 和最小下限保护</li><li>对 <code>reconnecting / channel closed / failed to record rollout items</code> 不再立即 <code>SIGKILL</code></li><li>将这类错误最终归类为 <code>network</code>，而不是 <code>process</code></li></ol>
+<p>新增 / 使用的环境变量：</p>
+<ul><li><code>GATEWAY_CODEX_IDLE_TIMEOUT_MS</code></li><li><code>KHY_CODEX_IDLE_TIMEOUT_MS</code></li><li><code>GATEWAY_CODEX_MIN_IDLE_TIMEOUT_MS</code></li></ul>
+<p>设计意图：</p>
+<ul><li>允许 Codex 长时间思考或执行工具</li><li>瞬时传输抖动优先等待恢复，而不是立刻判死</li></ul>
+<h3 id="4-3-clitooladapter-js">4.3 <code>cliToolAdapter.js</code><a class="anchor" href="#4-3-clitooladapter-js" aria-label="锚点">#</a></h3>
+<p>关键调整：</p>
+<ol><li>增加 <code>resolveToolIdleTimeoutMs()</code>，统一 CLI 工具空闲超时解析</li><li>删除非流式分支的 <code>spawn(..., { timeout })</code> 硬墙钟</li><li>非流式分支改为 sliding idle timeout</li><li><code>Codex</code> 出现 transient transport 文案时不再立即强杀</li><li><code>classifyCliErrorType()</code> 将相关文案改归为 <code>network</code></li></ol>
+<p>新增 / 使用的环境变量：</p>
+<ul><li><code>GATEWAY_CLI_TOOL_IDLE_TIMEOUT_MS</code></li><li><code>KHY_CLI_TOOL_IDLE_TIMEOUT_MS</code></li><li><code>GATEWAY_CLI_TOOL_MIN_IDLE_TIMEOUT_MS</code></li><li><code>GATEWAY_&lt;TOOL&gt;_IDLE_TIMEOUT_MS</code></li></ul>
+<p>设计意图：</p>
+<ul><li>所有 CLI 桥接工具共用“有活动就续命”的模型</li><li>彻底移除违反 Rule 3 的固定执行超时</li></ul>
+<h3 id="4-4-aigateway-js">4.4 <code>aiGateway.js</code><a class="anchor" href="#4-4-aigateway-js" aria-label="锚点">#</a></h3>
+<p>关键调整：</p>
+<ol><li><code>reconnecting / channel closed / failed to record rollout items</code> 改归类为 <code>network</code></li><li><code>adapter ... queue timeout / queue task timeout</code> 改归类为 <code>timeout</code></li><li><code>network / timeout / rate_limit / overloaded / cancelled</code> 不再参与 circuit breaker 打开条件</li></ol>
+<p>这意味着：</p>
+<ul><li>transient 错误仍会有短冷却，避免立刻重试打爆通道</li><li>但不会再被放大成“连续数十秒到数分钟都像断链”</li></ul>
+<h3 id="4-5-proxyserver-js">4.5 <code>proxyServer.js</code><a class="anchor" href="#4-5-proxyserver-js" aria-label="锚点">#</a></h3>
+<p>关键调整：</p>
+<ol><li>新增 <code>mergeAbortSignals(...)</code></li><li>代理层默认关闭额外的 stream idle abort</li><li>如显式启用，代理层只补一层可选保护，不再覆盖上游 <code>abortSignal</code></li></ol>
+<p>新增环境变量：</p>
+<ul><li><code>PROXY_STREAM_IDLE_ABORT_ENABLED</code></li><li><code>PROXY_STREAM_IDLE_TIMEOUT_MS</code></li></ul>
+<p>设计意图：</p>
+<ul><li>代理层不再与适配器层重复抢着判死</li><li>保留可选保护能力，但默认优先让上游统一管理任务生命周期</li></ul>
+<h3 id="4-6-ssebackpressure-js-与-ssekeepalive-js">4.6 <code>sseBackpressure.js</code> 与 <code>sseKeepalive.js</code><a class="anchor" href="#4-6-ssebackpressure-js-与-ssekeepalive-js" aria-label="锚点">#</a></h3>
+<p>关键调整：</p>
+<ol><li><code>writeSync()</code> 在直写前先尝试冲刷排队内容</li><li><code>SSEKeepalive.done()</code> 在发送 <code>done</code> 前后都执行 <code>flushAll()</code></li><li><code>SSEKeepalive.stop()</code> 在销毁前执行 <code>flushAll()</code></li><li><code>close</code> 回调改为异步 stop，避免直接丢尾包</li></ol>
+<p>设计意图：</p>
+<ul><li>把 SSE 队列里的最后几段内容真正送出去</li><li>降低前端把“尾包丢失”感知成“断链”的概率</li></ul>
+<hr>
+<h2 id="5-变更文件">5. 变更文件<a class="anchor" href="#5-变更文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>修复内容</th></tr></thead><tbody><tr><td><code>backend/src/services/gateway/adapters/codexAdapter.js</code></td><td>放宽 Codex idle timeout；transient transport 不再立即强杀；错误分类降级为 <code>network</code></td></tr><tr><td><code>backend/src/services/gateway/adapters/cliToolAdapter.js</code></td><td>移除非流式硬墙钟 timeout；统一 sliding idle timeout；CLI transient transport 改判为 <code>network</code></td></tr><tr><td><code>backend/src/services/gateway/aiGateway.js</code></td><td>调整 <code>classifyError()</code>；transient 错误不再打开 circuit breaker</td></tr><tr><td><code>backend/src/services/gateway/proxyServer.js</code></td><td>合并 abort signal；默认关闭代理层附加 stream idle abort</td></tr><tr><td><code>backend/src/services/sseBackpressure.js</code></td><td><code>writeSync()</code> 先 flush 队列</td></tr><tr><td><code>backend/src/services/sseKeepalive.js</code></td><td><code>done()</code> / <code>stop()</code> 结束前强制 flush 背压队列</td></tr></tbody></table>
+<hr>
+<h2 id="6-新增与调整的测试">6. 新增与调整的测试<a class="anchor" href="#6-新增与调整的测试" aria-label="锚点">#</a></h2>
+<h3 id="6-1-新增测试">6.1 新增测试<a class="anchor" href="#6-1-新增测试" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/tests/gateway/transportResilience.test.js</code></li><li><code>backend/tests/services/sseKeepalive.test.js</code></li></ul>
+<p>覆盖点：</p>
+<ul><li>reconnect / channel closed / rollout record failure 改判为 transient</li><li>queue timeout 改判为 <code>timeout</code></li><li>Codex / CLI idle timeout 下限符合新策略</li><li>transient network 失败不会打开 circuit breaker</li><li>SSE queued tail content 在 <code>done()</code> / <code>stop()</code> 时会被 flush</li></ul>
+<h3 id="6-2-更新测试">6.2 更新测试<a class="anchor" href="#6-2-更新测试" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/tests/aiGateway.stability.test.js</code></li><li><code>backend/tests/gatewayAdapters.stability.test.js</code></li></ul>
+<p>更新原因：</p>
+<ul><li>旧测试把 <code>reconnecting session</code> 当作 <code>process</code></li><li>修复后它属于 <code>network</code></li></ul>
+<hr>
+<h2 id="7-验证结果">7. 验证结果<a class="anchor" href="#7-验证结果" aria-label="锚点">#</a></h2>
+<p>本次修复后已完成以下验证：</p>
+<h3 id="7-1-语法检查">7.1 语法检查<a class="anchor" href="#7-1-语法检查" aria-label="锚点">#</a></h3>
+<p>已通过 <code>node -c</code> 检查：</p>
+<ul><li><code>codexAdapter.js</code></li><li><code>cliToolAdapter.js</code></li><li><code>aiGateway.js</code></li><li><code>proxyServer.js</code></li><li><code>sseBackpressure.js</code></li><li><code>sseKeepalive.js</code></li></ul>
+<h3 id="7-2-针对性测试">7.2 针对性测试<a class="anchor" href="#7-2-针对性测试" aria-label="锚点">#</a></h3>
+<p>已通过：</p>
+<pre><code class="language-bash">npm test -- --runInBand \
+  tests/gateway/transportResilience.test.js \
+  tests/services/sseKeepalive.test.js \
+  tests/aiGateway.stability.test.js \
+  tests/gatewayAdapters.stability.test.js</code></pre>
+<p>结果：</p>
+<ul><li>4 个 test suite</li><li>93 个测试</li><li>全部通过</li></ul>
+<h3 id="7-3-回归测试">7.3 回归测试<a class="anchor" href="#7-3-回归测试" aria-label="锚点">#</a></h3>
+<p>已通过：</p>
+<pre><code class="language-bash">npm test -- --runInBand \
+  tests/gatewayManage.portDrift.integration.test.js \
+  tests/gatewayManage.apiDisplay.test.js \
+  tests/services/serviceDefaults.test.js \
+  tests/routes/aiGatewayAdmin.modelSlots.test.js \
+  tests/services/proxyBaseUrl.test.js \
+  tests/cli/daemon.handler.test.js \
+  tests/daemonManager.runtimePort.test.js</code></pre>
+<p>结果：</p>
+<ul><li>7 个 test suite</li><li>17 个测试</li><li>全部通过</li></ul>
+<h3 id="7-4-规则检查">7.4 规则检查<a class="anchor" href="#7-4-规则检查" aria-label="锚点">#</a></h3>
+<p>已执行：</p>
+<pre><code class="language-bash">node scripts/check-agent-rules.js \
+  backend/src/services/gateway/adapters/codexAdapter.js \
+  backend/src/services/gateway/adapters/cliToolAdapter.js \
+  backend/src/services/gateway/aiGateway.js \
+  backend/src/services/gateway/proxyServer.js \
+  backend/src/services/sseBackpressure.js \
+  backend/src/services/sseKeepalive.js</code></pre>
+<p>结果：</p>
+<ul><li><code>0 error</code></li><li>仍有少量既有 warning，集中在与本次核心修复无关的旧代码位置</li></ul>
+<hr>
+<h2 id="8-修复后的行为变化">8. 修复后的行为变化<a class="anchor" href="#8-修复后的行为变化" aria-label="锚点">#</a></h2>
+<h3 id="修复前">修复前<a class="anchor" href="#修复前" aria-label="锚点">#</a></h3>
+<ul><li>长任务容易被多层 watchdog 叠加误杀</li><li>一次 transient transport 抖动可能被放大成长时间 fast-fail / circuit-open</li><li>SSE 末尾内容可能丢失</li></ul>
+<h3 id="修复后">修复后<a class="anchor" href="#修复后" aria-label="锚点">#</a></h3>
+<ul><li>任务只会在“持续无活动”时被判 idle timeout</li><li>transient transport 抖动优先按 <code>network</code> / <code>timeout</code> 处理</li><li>circuit breaker 不再因为短暂网络抖动被轻易打开</li><li>SSE 结束前会冲刷尾部队列，减少输出截断</li></ul>
+<hr>
+<h2 id="9-后续建议">9. 后续建议<a class="anchor" href="#9-后续建议" aria-label="锚点">#</a></h2>
+<h3 id="9-1-建议保留的观察项">9.1 建议保留的观察项<a class="anchor" href="#9-1-建议保留的观察项" aria-label="锚点">#</a></h3>
+<p>后续可以继续观察以下指标：</p>
+<ul><li>Codex / CLI 请求的平均时长与超时率</li><li><code>network</code> 与 <code>process</code> 错误类型的分布变化</li><li>前端侧 <code>done</code> 事件缺失率是否下降</li></ul>
+<h3 id="9-2-仍可继续优化的点">9.2 仍可继续优化的点<a class="anchor" href="#9-2-仍可继续优化的点" aria-label="锚点">#</a></h3>
+<p>本次修复优先解决“断链”主路径，但仍有进一步优化空间：</p>
+<ol><li>将更多流式适配器统一到同一套 idle timeout helper</li><li>为 SSE flush 增加更细的集成测试覆盖真实 <code>writableLength</code> 背压场景</li><li>清理规则检查里现存的少量 warning</li></ol>
+<hr>
+<h2 id="10-结论">10. 结论<a class="anchor" href="#10-结论" aria-label="锚点">#</a></h2>
+<p>这次修复的核心不是“把某一个 timeout 调大”，而是把整条链路从“多层固定墙钟 + 激进故障放大 + 尾包丢失”修正为：</p>
+<ul><li><strong>活动感知的空闲超时</strong></li><li><strong>transient 错误与 permanent 错误分流</strong></li><li><strong>流结束阶段的显式 flush</strong></li></ul>
+<p>因此，KHY 常见“断链”问题的三个主要放大器已经被同时削弱，后续如果仍出现个别失败，更容易定位为单一适配器或单一网络环境的问题，而不是整条网关链路的系统性误判。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.html"><div class="dir">← 上一篇</div><div class="ttl">终端提示符泄漏与交付空行修复报告</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-021] 网关超时与帧修复.html"><div class="dir">下一篇 →</div><div class="ttl">网关超时优化与 REPL 输入框边框修复</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

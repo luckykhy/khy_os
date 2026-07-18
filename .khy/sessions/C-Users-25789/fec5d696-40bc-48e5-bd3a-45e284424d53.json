@@ -1,0 +1,18 @@
+{
+  "sessionId": "fec5d696-40bc-48e5-bd3a-45e284424d53",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "khy chat"
+    }
+  ],
+  "messageCount": 1,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782295702989,
+  "updatedAt": 1782295702989
+}

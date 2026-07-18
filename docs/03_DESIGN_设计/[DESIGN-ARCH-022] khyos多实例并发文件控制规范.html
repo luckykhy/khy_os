@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《khyos 多实例并发文件控制规范》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>《khyos 多实例并发文件控制规范》</div>
+      <header class="hero reveal"><h1>《khyos 多实例并发文件控制规范》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-多实例并发文件控制规范">《khyos 多实例并发文件控制规范》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-2"><a href="#1-设计目标与硬约束">1. 设计目标与硬约束</a></li><li class="lvl-3"><a href="#1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）</a></li><li class="lvl-3"><a href="#1-2-防呆规则-不可违反">1.2 防呆规则（不可违反）</a></li><li class="lvl-3"><a href="#1-3-锁粒度">1.3 锁粒度</a></li><li class="lvl-2"><a href="#2-锁机制设计-读共享-写独占">2. 锁机制设计（读共享、写独占）</a></li><li class="lvl-3"><a href="#2-1-互斥原语-目录原子创建">2.1 互斥原语：目录原子创建</a></li><li class="lvl-3"><a href="#2-2-读共享-写独占">2.2 读共享 / 写独占</a></li><li class="lvl-3"><a href="#2-3-可重入-防自死锁">2.3 可重入（防自死锁）</a></li><li class="lvl-2"><a href="#3-冲突解决策略-绝不静默覆盖">3. 冲突解决策略（绝不静默覆盖）</a></li><li class="lvl-2"><a href="#4-防死锁与僵尸锁">4. 防死锁与僵尸锁</a></li><li class="lvl-3"><a href="#4-1-健康判定-isstale-meta">4.1 健康判定 `_isStale(meta)`</a></li><li class="lvl-3"><a href="#4-2-心跳">4.2 心跳</a></li><li class="lvl-3"><a href="#4-3-安全回收-原子-rename-steal">4.3 安全回收：原子 rename-steal</a></li><li class="lvl-3"><a href="#4-4-释放只删自己的锁-token-匹配">4.4 释放只删自己的锁（token 匹配）</a></li><li class="lvl-2"><a href="#5-代码改造示例">5. 代码改造示例</a></li><li class="lvl-3"><a href="#5-1-文件工具加锁装饰器-单一执行漏斗-零侵入调度器">5.1 文件工具加锁装饰器（单一执行漏斗，零侵入调度器）</a></li><li class="lvl-3"><a href="#5-2-锁清理守护逻辑-僵尸回收-已内联进-acquire-重试环">5.2 锁清理守护逻辑（僵尸回收，已内联进 acquire 重试环）</a></li><li class="lvl-3"><a href="#5-3-可调参数-全-env-覆盖-运维友好">5.3 可调参数（全 env 覆盖，运维友好）</a></li><li class="lvl-2"><a href="#6-测试与验证">6. 测试与验证</a></li><li class="lvl-2"><a href="#7-已知边界与取舍">7. 已知边界与取舍</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-多实例并发文件控制规范">《khyos 多实例并发文件控制规范》<a class="anchor" href="#khyos-多实例并发文件控制规范" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-022<br>主题：多个 khyos 实例同目录运行时的文件抢夺与冲突控制<br>范围：<code>services/backend</code> 文件操作工具层<br>关联实现：<code>src/tools/_fileLock.js</code>、<code>src/services/toolCalling.js</code>、<code>tests/fileLock.test.js</code></p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>khyos 没有&quot;每实例独立工作区&quot;的概念——所有文件工具一律以<br><code>process.env.KHYQUANT_CWD || process.cwd()</code> 为根。这意味着<strong>在同一目录下并行启动多个<br>khyos 实例，它们物理共享同一份文件系统</strong>。</p>
+<p>而所有写工具（<code>Write</code> / <code>Edit</code> / <code>MultiEdit</code> / <code>NotebookEdit</code> / <code>FileOp</code> …）此前都是<br><strong>裸写</strong>（<code>fs.writeFileSync</code>，无任何跨进程协调）。其中编辑族工具（Edit/MultiEdit/<br>NotebookEdit/ApplyPatch）是<strong>读-改-写</strong>：先把整文件读进内存、在内存里改、再整体写回。<br>两个实例同时编辑同一文件时会发生经典的 lost-update：</p>
+<pre><code>实例A 读到 v0 ──► 内存改成 v0+a ─────────────► 写回 v0+a
+实例B 读到 v0 ──────────► 内存改成 v0+b ──────────────► 写回 v0+b  ← A 的修改被静默吞掉</code></pre>
+<blockquote><p>注意：进程内已有的串行化（<code>toolExecutionEngine.js</code> 的 <code>partitionIntoBatches</code> +<br><code>WRITE_PATH_TOOLS</code>）只在<strong>同一进程、同一批次</strong>内把&quot;同路径重复写&quot;降级为串行，<br><strong>完全不防跨进程</strong>。本规范解决的正是跨进程这一层。</p></blockquote>
+<hr>
+<h2 id="1-设计目标与硬约束">1. 设计目标与硬约束<a class="anchor" href="#1-设计目标与硬约束" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）<a class="anchor" href="#1-1-核心诉求-必须满足" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th></tr></thead><tbody><tr><td>①</td><td><strong>绝对防覆盖</strong></td><td>写独占锁 + 先到先得；后到者阻塞等待，超时则抛异常交由 Agent 走冲突流程，<strong>绝不静默覆盖</strong>。</td></tr><tr><td>②</td><td><strong>跨平台兼容</strong></td><td>零原生依赖：仅依赖 <code>fs.mkdirSync</code> 的原子性（Linux ext4/tmpfs + Windows NTFS 均保证）与 <code>process.kill(pid,0)</code> 存活探测（两 OS 通用）。pip / npm 安装环境均可用。</td></tr><tr><td>③</td><td><strong>僵尸锁免疫</strong></td><td>每个持有者落 <code>{pid, host, heartbeatAt}</code> 并跑心跳；持有进程崩溃/被强杀后，其他实例通过死 PID（同主机）或过期心跳（跨主机）探测并<strong>原子 rename-steal 回收</strong>，绝不永久死锁。</td></tr></tbody></table>
+<h3 id="1-2-防呆规则-不可违反">1.2 防呆规则（不可违反）<a class="anchor" href="#1-2-防呆规则-不可违反" aria-label="锚点">#</a></h3>
+<ol><li><strong>锁超时必须设上限</strong>（默认 30 秒），超时<strong>抛出明确异常</strong>（<code>FileLockTimeoutError</code>）交由 Agent 处理，<strong>绝不无限挂起</strong>。</li><li><strong>加锁逻辑必须包裹在文件操作的工具层</strong>，不可侵入核心调度器（<code>toolUseLoop</code> / <code>toolExecutionEngine</code>）或业务算法（CB-SSP 等）。</li><li>修改文件操作工具时，<strong>保留原有的 diff 输出等已实现功能</strong>（见 [DESIGN-ARCH] 红绿 diff，Goal 7）。</li></ol>
+<h3 id="1-3-锁粒度">1.3 锁粒度<a class="anchor" href="#1-3-锁粒度" aria-label="锚点">#</a></h3>
+<p><strong>单文件级</strong>（一文件一锁），<strong>绝不锁整个目录</strong>——否则无关文件互相阻塞，性能塌方。<br>锁键 = <code>sha256(规范化绝对路径)</code> 取前 32 hex，落 <code>os.tmpdir()/khy-file-locks/&lt;key&gt;.lock/</code>。<br>Windows 上路径先 <code>toLowerCase()</code>，与其大小写不敏感文件系统行为一致（<code>A.txt</code> 与 <code>a.txt</code> 视作同锁）。</p>
+<hr>
+<h2 id="2-锁机制设计-读共享-写独占">2. 锁机制设计（读共享、写独占）<a class="anchor" href="#2-锁机制设计-读共享-写独占" aria-label="锚点">#</a></h2>
+<h3 id="2-1-互斥原语-目录原子创建">2.1 互斥原语：目录原子创建<a class="anchor" href="#2-1-互斥原语-目录原子创建" aria-label="锚点">#</a></h3>
+<p>不依赖任何锁库。<code>fs.mkdirSync(lockDir)</code>（不带 <code>recursive</code>）在两大平台都是<strong>原子</strong>的：<br>对同一路径，并发的多个 <code>mkdir</code> 中<strong>恰好一个成功</strong>，其余抛 <code>EEXIST</code>。成功者即锁的持有者。</p>
+<pre><code>acquire(absPath):
+  key, lockDir = lockPaths(absPath)
+  loop:
+    try mkdir(lockDir)               # 原子；成功=拿到锁
+      写 meta.json {pid,host,token,mode,acquiredAt,heartbeatAt}
+      启动心跳定时器(unref)
+      return handle
+    catch EEXIST:                    # 被占用
+      meta = readMeta(lockDir)
+      if isStale(meta): reclaimStale(lockDir); continue   # 僵尸锁→回收重试
+      if now &gt;= deadline: throw FileLockTimeoutError(holder)  # 防呆①
+      sleep(jitter backoff); continue
+    catch 其他FS错误:                # 权限等异常
+      throw EFILELOCKUNAVAILABLE     # 装饰器据此降级为&quot;裸跑&quot;，绝不困住写</code></pre>
+<h3 id="2-2-读共享-写独占">2.2 读共享 / 写独占<a class="anchor" href="#2-2-读共享-写独占" aria-label="锚点">#</a></h3>
+<ul><li><strong>写</strong>：<code>acquireForToolCall</code> 一律以 <code>mode:'exclusive'</code> 申请，写者之间严格互斥。</li><li><strong>读</strong>：读工具不在 <code>WRITE_TOOL_NAMES</code> 内，<code>acquireForToolCall</code> 直接返回 <code>null</code>（零开销裸跑），</li></ul>
+<p>天然&quot;读共享&quot;——读不阻塞读，也不阻塞写（advisory 语义：khyos 内部协调，不阻止外部进程）。<br>  <code>meta.mode</code> 字段已为将来真正的&quot;共享读锁计数&quot;预留，当前实现以&quot;写独占 + 读无锁&quot;满足诉求且零性能损耗。</p>
+<h3 id="2-3-可重入-防自死锁">2.3 可重入（防自死锁）<a class="anchor" href="#2-3-可重入-防自死锁" aria-label="锚点">#</a></h3>
+<p>进程内 <code>_heldLocks: Map&lt;key, {count,token,lockDir,heartbeatTimer}&gt;</code>。同一进程对<strong>已持有</strong>的路径<br>再次 <code>acquire</code> 时只做 refcount + 1（返回 <code>reentrant:true</code> 句柄），<strong>不</strong>再对自己的锁 <code>mkdir</code>，<br>避免编辑工具内部嵌套调用导致的自死锁。<code>release</code> 按 refcount 递减，归零才真正删锁目录。</p>
+<hr>
+<h2 id="3-冲突解决策略-绝不静默覆盖">3. 冲突解决策略（绝不静默覆盖）<a class="anchor" href="#3-冲突解决策略-绝不静默覆盖" aria-label="锚点">#</a></h2>
+<p>获取失败时的处置，<strong>默认 = 抛异常交由 Agent</strong>（满足防呆①&quot;超时必须抛出明确异常&quot;）：</p>
+<ol><li><strong>阻塞等待 + 超时重试</strong>：<code>acquire</code> 在 <code>deadline</code> 前持续带抖动退避重试（<code>POLL_MIN_MS=25</code> ~</li></ol>
+<p><code>POLL_MAX_MS=250</code> 随机，避免多实例惊群）。先到先得。</p>
+<ol><li><strong>超时抛 <code>FileLockTimeoutError</code></strong>：异常携带 <code>filePath / timeoutMs / holder{pid,host,acquiredAt}</code>，</li></ol>
+<p>消息明确提示 Agent：&quot;Retry, write to a conflict copy, or ask the user which version to keep — do not overwrite.&quot;<br>   该异常经 <code>toolCalling.js</code> 既有 <code>ToolError</code> 通道结构化回传给模型。</p>
+<ol><li><strong>冲突副本（Agent 驱动恢复）</strong>：提供 <code>conflictCopyPath(absPath, tag)</code> 助手，把</li></ol>
+<p><code>/dir/app.py</code> 变 <code>/dir/app_conflict_khy&lt;tag&gt;.py</code>。Agent（或将来的自动回退）可据此把被抢占的<br>   写<strong>改道到冲突副本</strong>而非覆盖原文件——<strong>绝不静默覆盖</strong>，原数据零丢失。</p>
+<ol><li><strong>交互式询问</strong>：Agent 收到结构化超时异常后，可走 <code>AskUserQuestion</code> 流程让用户选保留哪个版本。</li></ol>
+<blockquote><p>设计取舍：默认<strong>不</strong>自动生成冲突副本，而是抛异常上交决策权——因为&quot;该重试、该另存、还是该问人&quot;<br>是上下文相关的判断，属于 Agent 决策面而非锁层机械动作。锁层只保证<strong>绝不覆盖</strong>，把&quot;怎么和解&quot;留给上层。</p></blockquote>
+<hr>
+<h2 id="4-防死锁与僵尸锁">4. 防死锁与僵尸锁<a class="anchor" href="#4-防死锁与僵尸锁" aria-label="锚点">#</a></h2>
+<h3 id="4-1-健康判定-isstale-meta">4.1 健康判定 <code>_isStale(meta)</code><a class="anchor" href="#4-1-健康判定-isstale-meta" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>meta 情形</th><th>判定</th><th>依据</th></tr></thead><tbody><tr><td>meta 缺失/损坏（mid-write）</td><td><strong>stale</strong></td><td>无可信持有者</td></tr><tr><td>PID 在<strong>本机</strong>已死（<code>ESRCH</code>）</td><td><strong>stale</strong></td><td><code>process.kill(pid,0)</code> 探测</td></tr><tr><td>PID 在<strong>本机</strong>存活（成功 / <code>EPERM</code>）</td><td>不 stale</td><td>尊重活持有者</td></tr><tr><td><strong>跨主机</strong>（<code>meta.host !== os.hostname()</code>）</td><td>看心跳：<code>now - heartbeatAt &gt; STALE_MS(15s)</code> 才 stale</td><td>无法跨机探 PID，只能靠心跳新鲜度；未来时间戳（时钟偏移）按新鲜处理</td></tr></tbody></table>
+<p>PID 存活探测三态：<code>true</code>（存活）/ <code>false</code>（ESRCH 死）/ <code>null</code>（跨主机不可探）。未知错误<strong>保守按存活</strong>，<br>绝不误抢活锁。</p>
+<h3 id="4-2-心跳">4.2 心跳<a class="anchor" href="#4-2-心跳" aria-label="锚点">#</a></h3>
+<p>持有者每 <code>HEARTBEAT_MS</code>（默认 5s）刷新 <code>meta.heartbeatAt</code>。定时器 <code>unref()</code>——<strong>绝不</strong>因为一个心跳<br>而让进程无法退出。<code>STALE_MS</code>（15s）= 3× 心跳，容忍偶发卡顿。</p>
+<h3 id="4-3-安全回收-原子-rename-steal">4.3 安全回收：原子 rename-steal<a class="anchor" href="#4-3-安全回收-原子-rename-steal" aria-label="锚点">#</a></h3>
+<p>回收僵尸锁<strong>不能直接 <code>rmSync</code></strong>——否则可能删掉一个刚被别的活实例重新获取的锁。改用 rename-steal：</p>
+<pre><code>reclaimStale(lockDir):
+  steal = lockDir + &quot;.stale-&quot; + pid + &quot;-&quot; + randomHex
+  try renameSync(lockDir, steal)   # 原子：并发回收者中只有一个成功
+  catch: return false              # 别人已抢先回收/刷新 → 重新读 holder
+  rmSync(steal, recursive,force)   # best-effort；残留临时目录无害
+  return true</code></pre>
+<p><code>rename</code> 的原子性保证<strong>多个回收者中恰好一个赢</strong>，输者拿到 <code>ENOENT</code> 重新循环、重读（此时已新鲜的）<br>持有者。<strong>绝不会删掉刚被重新获取的锁</strong>。</p>
+<h3 id="4-4-释放只删自己的锁-token-匹配">4.4 释放只删自己的锁（token 匹配）<a class="anchor" href="#4-4-释放只删自己的锁-token-匹配" aria-label="锚点">#</a></h3>
+<p><code>release</code> 删目录前先 <code>readMeta</code>，仅当 <code>meta.token === 我持有的 token</code> 才 <code>rmSync</code>——若我的锁<br>曾被当作僵尸抢走并交给了别人，我<strong>绝不</strong>误删那个新锁。<code>release</code> 幂等（<code>released</code> 标志）、refcount 感知。</p>
+<hr>
+<h2 id="5-代码改造示例">5. 代码改造示例<a class="anchor" href="#5-代码改造示例" aria-label="锚点">#</a></h2>
+<h3 id="5-1-文件工具加锁装饰器-单一执行漏斗-零侵入调度器">5.1 文件工具加锁装饰器（单一执行漏斗，零侵入调度器）<a class="anchor" href="#5-1-文件工具加锁装饰器-单一执行漏斗-零侵入调度器" aria-label="锚点">#</a></h3>
+<p>挂接点选在<strong>唯一的工具执行漏斗</strong> <code>executeTool</code>（<code>src/services/toolCalling.js</code>），而非 12+ 个<br>单独写入点——它<strong>横跨整个 <code>execute()</code></strong>（这对读-改-写编辑工具是正确的：锁必须罩住&quot;读+改+写&quot;全程），<br>且锁逻辑全在 <code>../tools/_fileLock</code> 模块内，<strong>调度器一行未动</strong>（满足防呆②）。</p>
+<pre><code class="language-js">// services/backend/src/services/toolCalling.js  （executeTool 内）
+let _fileLockHandle = null;
+try {
+  try {
+    _fileLockHandle = await require('../tools/_fileLock')
+      .acquireForToolCall(permissionKey, normalizedParams);
+  } catch (lockErr) {
+    if (lockErr &amp;&amp; lockErr.code === 'EFILELOCKTIMEOUT') throw lockErr; // → ToolError → Agent
+    _fileLockHandle = null; // 任何其它锁故障：防呆——绝不困住写
+  }
+
+  // …原有工具分发（builtin.handler / registry.execute / compat）原样不动…
+  // …原有 diff 输出（Goal 7 红绿 ±）原样保留（防呆③）…
+  return structuredResult;
+
+} finally {
+  if (_fileLockHandle) {
+    try { _fileLockHandle.release(); } catch { /* best-effort */ }
+  }
+}</code></pre>
+<p>要点：</p>
+<ul><li>非写工具 / 无单路径目标（如 <code>apply_patch</code> 的多文件 patch 文本）→ <code>acquireForToolCall</code> 返回</li></ul>
+<p><code>null</code>，<strong>零开销裸跑</strong>；该工具故意不纳入锁（单路径快照不成立），已文档化的取舍。</p>
+<ul><li>仅 <code>EFILELOCKTIMEOUT</code>（真冲突超时）上抛；其它锁故障（权限等）一律降级为&quot;无锁裸跑&quot;，</li></ul>
+<p>锁子系统<strong>绝不</strong>让一个与真实争用无关的写失败。</p>
+<ul><li><code>finally</code> 保证任何路径（成功/异常/提前 return）都释放锁。</li></ul>
+<h3 id="5-2-锁清理守护逻辑-僵尸回收-已内联进-acquire-重试环">5.2 锁清理守护逻辑（僵尸回收，已内联进 acquire 重试环）<a class="anchor" href="#5-2-锁清理守护逻辑-僵尸回收-已内联进-acquire-重试环" aria-label="锚点">#</a></h3>
+<p>本方案<strong>不需要独立常驻守护进程</strong>——回收是<strong>机会式</strong>的、内联在每次 <code>acquire</code> 的争用重试里：<br>谁想拿一把僵尸锁，谁就地把它回收掉（§4.3）。这比独立 GC 守护更健壮：</p>
+<ul><li>无单点：不存在&quot;守护进程自己也崩了&quot;的问题；</li><li>无竞态删活锁：rename-steal + token 匹配双重保证；</li><li>零空转：没人争用的锁不必清理，争用时才回收，正是需要它的时刻。</li></ul>
+<blockquote><p>运维补充：<code>*.stale-*</code> 临时目录为 best-effort 删除，极端情况下可能残留（无害）。<br>可选地由外部 cron <code>find $TMPDIR/khy-file-locks -name '*.stale-*' -mmin +60 -delete</code> 兜底，<br>但<strong>非必需</strong>——不影响正确性。</p></blockquote>
+<h3 id="5-3-可调参数-全-env-覆盖-运维友好">5.3 可调参数（全 env 覆盖，运维友好）<a class="anchor" href="#5-3-可调参数-全-env-覆盖-运维友好" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>env</th><th>默认</th><th>含义</th></tr></thead><tbody><tr><td><code>KHY_FILE_LOCK_DIR</code></td><td><code>$TMPDIR/khy-file-locks</code></td><td>锁根目录（测试隔离 / 多用户分隔用）</td></tr><tr><td><code>KHY_FILE_LOCK_TIMEOUT_MS</code></td><td><code>30000</code></td><td>防呆①硬上限</td></tr><tr><td><code>KHY_FILE_LOCK_HEARTBEAT_MS</code></td><td><code>5000</code></td><td>心跳间隔</td></tr><tr><td><code>KHY_FILE_LOCK_STALE_MS</code></td><td><code>15000</code></td><td>跨主机判过期阈值（3× 心跳）</td></tr><tr><td><code>KHY_FILE_LOCK_DISABLED</code></td><td>（未设）</td><td><code>=1</code> 全局关锁（回退裸跑）</td></tr></tbody></table>
+<hr>
+<h2 id="6-测试与验证">6. 测试与验证<a class="anchor" href="#6-测试与验证" aria-label="锚点">#</a></h2>
+<p><code>services/backend/tests/fileLock.test.js</code>（<code>node:test</code>，18/18 绿）：</p>
+<ul><li><strong>绝对防覆盖（核心 killer 测试）</strong>：<code>child_process.fork</code> 启 <strong>8 个真实独立进程</strong>，各自对同一文件做</li></ul>
+<p>读-改-写（中间 hold 40ms 放大竞态窗口）。无锁必丢更新；有锁后 <strong>8 行全部存活</strong>，零丢失。</p>
+<ul><li><strong>写独占</strong>：植入一把本进程 PID（必活）的锁 → 第二次 <code>acquire(timeoutMs:300)</code> 抛 <code>FileLockTimeoutError</code>。</li><li><strong>僵尸免疫</strong>：植入死 PID（同主机）/ 过期心跳（跨主机）锁 → 被回收并成功获取。</li><li><strong><code>_isStale</code> 真值表</strong>：死 PID / 本进程活 / 跨主机过期 / 跨主机新鲜 / null meta 五情形。</li><li><strong>可重入 + 幂等释放</strong>：内层 release 不影响外层；重复 release 不抛。</li><li><strong>装饰器门控 + 助手</strong>：非写工具/无路径→null、<code>KHY_FILE_LOCK_DISABLED</code>、<code>isWriteTool</code>、</li></ul>
+<p><code>resolveTargetPath</code>、<code>conflictCopyPath</code>。</p>
+<p>回归：<code>writeDiff.test.js</code> 19/19 绿（防呆③：Goal 7 红绿 diff 未受影响）；<code>toolCalling.js</code><br><code>node --check</code> + <code>require</code> 均 OK。</p>
+<hr>
+<h2 id="7-已知边界与取舍">7. 已知边界与取舍<a class="anchor" href="#7-已知边界与取舍" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>apply_patch</code> 不加锁</strong>：其 patch 文本可跨多文件，没有单一目标路径；强行解析其 patch 体等于</li></ol>
+<p>复刻它的解析器。故意 fail-soft 返回 <code>null</code>（裸跑），已文档化。</p>
+<ol><li><strong>advisory（协作式）语义</strong>：锁只协调 khyos 实例之间。非 khyos 的外部进程（编辑器、<code>cat &gt;</code>）</li></ol>
+<p>不认这把锁——这是 OS 级 advisory 锁的固有边界，符合&quot;防 khyos 自相残杀&quot;的目标定位。</p>
+<ol><li><strong>真共享读锁未实装</strong>：当前以&quot;写独占 + 读无锁&quot;满足诉求且零开销；<code>meta.mode</code> 已为将来读计数预留。</li><li><strong>pip / npm 生效</strong>：本改动是 backend JS；随 <code>khyos.js</code> 类改动需重建 wheel/镜像才在 pip 环境落地</li></ol>
+<p>（见 [[project_pip_multilang_distribution]] 打包纪律）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-021] 巨型环反转设计.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 巨型环反转设计（Giant-SCC Inversion Design）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-023] khyos文档排版与格式控制规范.html"><div class="dir">下一篇 →</div><div class="ttl">《khyos 文档排版与格式控制规范》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-022] khyos多实例并发文件控制规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

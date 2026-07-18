@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-129-readfile-伪文件系统-proc-sys-有界超时读-接线-让-khy-不再因读到会阻塞的-proc-伪文件而永久卡死">[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）</a></li><li class="lvl-2"><a href="#这一层闭合什么-按-文件位置-拦下会永久阻塞的-常规-伪文件-第四条卡死向量">这一层闭合什么：按「文件位置」拦下会永久阻塞的**常规**伪文件（第四条卡死向量）</a></li><li class="lvl-2"><a href="#为什么不-一律拒绝-而是-有界读-承-ops-123-教训">为什么不「一律拒绝」，而是「有界读」（承 OPS-123 教训）</a></li><li class="lvl-2"><a href="#关键架构点-同步阻塞读无法在进程内超时-必须搬进可被杀的子进程">关键架构点：同步阻塞读无法在进程内超时 → 必须搬进可被杀的子进程</a></li><li class="lvl-2"><a href="#修法-特殊文件守卫之后-detectfile-二进制守卫之前插入有界读">修法：特殊文件守卫之后、detectFile / 二进制守卫之前插入有界读</a></li><li class="lvl-2"><a href="#四层守卫顺序-都在内容读取之前-逐层放行到下一层">四层守卫顺序（都在内容读取之前，逐层放行到下一层）</a></li><li class="lvl-2"><a href="#门控-fail-soft">门控 / fail-soft</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-129-readfile-伪文件系统-proc-sys-有界超时读-接线-让-khy-不再因读到会阻塞的-proc-伪文件而永久卡死">[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）<a class="anchor" href="#ops-man-129-readfile-伪文件系统-proc-sys-有界超时读-接线-让-khy-不再因读到会阻塞的-proc-伪文件而永久卡死" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是工具接线，无 <code>--gen-doc</code> 生成器）。承接 OPS-MAN-121 / OPS-MAN-123 / OPS-MAN-125。<br>判定 + 有界读改在 <code>services/backend/src/tools/pseudoFileReadGuard.js</code>（纯叶·绝不抛），<br>接线改在 <code>services/backend/src/tools/readFile.js</code> 的 <code>execute</code>。</p></blockquote>
+<h2 id="这一层闭合什么-按-文件位置-拦下会永久阻塞的-常规-伪文件-第四条卡死向量">这一层闭合什么：按「文件位置」拦下会永久阻塞的<strong>常规</strong>伪文件（第四条卡死向量）<a class="anchor" href="#这一层闭合什么-按-文件位置-拦下会永久阻塞的-常规-伪文件-第四条卡死向量" aria-label="锚点">#</a></h2>
+<p>读工具此前有三道卡死守卫，各按「文件的某个属性」拦：</p>
+<table><thead><tr><th>OPS</th><th>守卫</th><th>拦的键</th></tr></thead><tbody><tr><td>121</td><td>readBinaryGuard</td><td><strong>二进制内容</strong> → 拒绝</td></tr><tr><td>123</td><td>readFileFormatRouter</td><td><strong>格式</strong>（pdf/图片/压缩包/docx）→ 路由到有界提取器</td></tr><tr><td>125</td><td>specialFileReadGuard</td><td><strong>文件类型</strong>（FIFO/套接字/字符或块设备）→ 快速拒绝</td></tr></tbody></table>
+<p>但仍有一类<strong>会让进程永久卡死</strong>的目标从这三道下溜过去：<strong>Linux 伪文件系统 <code>/proc</code>·<code>/sys</code><br>下的条目</strong>。它们是<strong>常规文件</strong>（<code>stat.isFile() === true</code>）、<code>stat.size === 0</code>、内容在读时由<br>内核<strong>现生成</strong>——其中一部分（<code>/proc/kmsg</code>、某些 <code>/sys</code> poll 属性等）<strong>读第一个字节就永久阻塞</strong>。</p>
+<p>它们让每一道既有守卫都失效：</p>
+<ul><li>是常规文件 → 溜过 OPS-125 的<strong>类型谓词</strong>（<code>isFIFO/isSocket/isCharacterDevice/isBlockDevice</code></li></ul>
+<p>全 <code>false</code>）；</p>
+<ul><li><code>size === 0</code> → 溜过 OPS-121 之后的「超限」检查（<code>0 &gt; maxBytes</code> 恒 <code>false</code>）；</li><li>多非二进制 → <code>detectFile()</code> 为判格式会去<strong>读 magic 字节</strong>，恰在此处对阻塞伪文件卡死，</li></ul>
+<p>连二进制守卫自己都先挂住。</p>
+<p>已实测：<code>/proc/cpuinfo</code> 就是 <code>size === 0</code> 的常规文件，四个特殊文件谓词全 <code>false</code>——即它是<br>OPS-121/123/125 三道守卫都放行、却会被 <code>detectFile</code> 读 magic 字节卡住的隐蔽目标。</p>
+<h2 id="为什么不-一律拒绝-而是-有界读-承-ops-123-教训">为什么不「一律拒绝」，而是「有界读」（承 OPS-123 教训）<a class="anchor" href="#为什么不-一律拒绝-而是-有界读-承-ops-123-教训" aria-label="锚点">#</a></h2>
+<p>OPS-123 的教训：<strong>拒绝不是终态</strong>——能读的要真读出来。<code>/proc</code>·<code>/sys</code> 下<strong>大多数</strong>伪文件是<br><strong>有限</strong>的（<code>cpuinfo</code>、<code>uptime</code>、<code>self/status</code>…），秒读即得可用内容；只有<strong>少数</strong>会阻塞。<br>所以本层不「拒绝伪文件」，而是「用有界方式读伪文件」：有内容 → 返回文本；到点仍阻塞 →<br>才返回信息性拒绝。</p>
+<h2 id="关键架构点-同步阻塞读无法在进程内超时-必须搬进可被杀的子进程">关键架构点：同步阻塞读无法在进程内超时 → 必须搬进可被杀的子进程<a class="anchor" href="#关键架构点-同步阻塞读无法在进程内超时-必须搬进可被杀的子进程" aria-label="锚点">#</a></h2>
+<p>这是 OPS-125 的血泪延伸：<code>fs.readFileSync</code> / <code>readTextFileSmart</code> 是<strong>同步</strong>读，一旦卡在阻塞<br><code>read()</code> 上就<strong>锁死事件循环</strong>，进程内 <code>Promise.race</code> / <code>setTimeout</code> <strong>永不触发</strong>——在同一进程里<br>无论如何都无法给同步阻塞读加超时。</p>
+<p>唯一同步安全的解法：把阻塞读<strong>搬进子进程</strong>，用 <code>spawnSync</code> 的 <code>timeout</code> 选项杀掉它。子进程<br><code>head -c &lt;maxBytes&gt; &lt;path&gt;</code> 阻塞在 <code>read()</code> 上 → 到点收 <code>SIGTERM</code> 而死，父进程在 timeout 处<br>返回 <code>error.code === 'ETIMEDOUT'</code>。</p>
+<ul><li><strong>有限伪文件</strong>（<code>/proc/cpuinfo</code>）：<code>head</code> 读满退出 0 → 返回内容；</li><li><strong>阻塞伪文件</strong>（<code>/proc/kmsg</code>，root 可读时）：<code>head</code> 卡住 → 到点被杀 → 有界返回，<strong>绝不无限挂起</strong>。</li></ul>
+<p>已实测：真 <code>spawnSync('head', ['-c', N, path], {timeout:1500})</code> 对无写端 FIFO（真实阻塞源，<br>等价于阻塞 <code>/proc</code> 文件）<strong>在 1502ms 处被杀</strong>（<code>timedOut:true</code>），而非卡死。</p>
+<h2 id="修法-特殊文件守卫之后-detectfile-二进制守卫之前插入有界读">修法：特殊文件守卫之后、detectFile / 二进制守卫之前插入有界读<a class="anchor" href="#修法-特殊文件守卫之后-detectfile-二进制守卫之前插入有界读" aria-label="锚点">#</a></h2>
+<p><code>readFile.execute</code> 在 OPS-125 特殊文件守卫的 <code>catch</code> 之后：</p>
+<pre><code class="language-js">try {
+  const { shouldBoundedRead, readPseudoFileBounded } = require('./pseudoFileReadGuard');
+  const _pkind = shouldBoundedRead({ absPath: filePath, stat, env: process.env }); // 'proc'|'sys'|null
+  if (_pkind) {
+    const routed = readPseudoFileBounded({ filePath, kind: _pkind, env: process.env });
+    if (routed &amp;&amp; routed.handled) return routed.result;  // 有界读到内容 / 超时拒绝 → 直接返回
+  }
+} catch { /* 判定/有界读失败 → 回退历史读取行为 */ }</code></pre>
+<p><code>shouldBoundedRead</code> 仅当<strong>全部</strong>成立才返回 kind：门开 + 平台 linux + <code>stat.isFile()</code> +<br><code>stat.size === 0</code> + 路径落在 <code>/proc/</code> 或 <code>/sys/</code> 挂载下。其中 <code>isPseudoFsPath</code> 精确匹配<br><code>/proc</code>、<code>/proc/...</code>、<code>/sys</code>、<code>/sys/...</code>——工程目录里名为 <code>proc</code>/<code>sys</code> 的子目录（如<br><code>/home/x/proc/y</code>）、前缀陷阱（<code>/procession</code>）<strong>不</strong>匹配；非 linux 平台恒 <code>null</code>。<strong>零误伤常规文件</strong>。</p>
+<p><code>readPseudoFileBounded</code> 返回：</p>
+<ul><li>子进程退出 0 且有内容 → <code>{handled:true, result:{success:true, content:'【/proc 伪文件 · 有界读】\n…', format:'pseudo-fs-proc', extractedBy:'bounded-read', size, truncated}}</code>；</li><li>超时 / 被信号杀 → <code>{handled:true, result:{success:false, error:超时拒绝消息, pseudoFile, timedOut:true}}</code>；</li><li><code>head</code> 不存在（ENOENT）/ status≠0 / 空入参 / 抛错 → <code>{handled:false}</code>（调用方回退历史读取路径）。</li></ul>
+<h2 id="四层守卫顺序-都在内容读取之前-逐层放行到下一层">四层守卫顺序（都在内容读取之前，逐层放行到下一层）<a class="anchor" href="#四层守卫顺序-都在内容读取之前-逐层放行到下一层" aria-label="锚点">#</a></h2>
+<ol><li><strong>目录</strong>（fsReadErrorGuard.directoryReadMessage，KHY_FS_ERROR_HUMANIZE）。</li><li><strong>特殊文件</strong>（OPS-125 KHY_READFILE_SPECIAL_GUARD）：FIFO/套接字/设备 → 快速拒绝。</li><li><strong>伪文件系统</strong>（本层 KHY_READFILE_PSEUDO_GUARD，default-on）：<code>/proc</code>·<code>/sys</code> 常规伪文件 →</li></ol>
+<p>有界子进程读，<strong>绝不卡死</strong>。</p>
+<ol><li><strong>二进制/格式路由</strong>（OPS-123 → OPS-121）。</li><li>常规文本 → 有界窗口读取 + 分页提示。</li></ol>
+<h2 id="门控-fail-soft">门控 / fail-soft<a class="anchor" href="#门控-fail-soft" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_READFILE_PSEUDO_GUARD</code>（默认开；env ∈ {0,false,off,no} 归一后关）。关 → 逐字节</li></ul>
+<p>回退历史行为（对阻塞伪文件照旧走 detectFile/解码 → 卡死），本防护完全旁路（LIVE 已验：<br>  <code>/proc/cpuinfo</code> GUARD-OFF → <code>format=undefined size=0</code> 走旧解码路径）。</p>
+<ul><li>纯叶各函数绝不抛；任一步抛错 → readFile 的 try/catch 跳过，回退历史读取路径。</li></ul>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li>只读伪文件内容（有界），不碰任何密钥；有界子进程 <code>head</code> 只读、无副作用。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:readfile-pseudo-guard      # 纯叶 DI 单测(27 用例)
+npm run test:readfile-special-guard     # OPS-125 无回归
+npm run test:readfile-binary-guard      # OPS-121 无回归
+npm run test:readfile-format-route      # OPS-123 无回归
+# LIVE(经真 readFile.execute + 真 spawnSync，带 timeout 防自身卡死):
+#   真 /proc/cpuinfo GUARD-ON → success:true format=pseudo-fs-proc 33ms(有界读出真内容);
+#   /proc/uptime、/proc/self/status → 同样秒读出;
+#   KHY_READFILE_PSEUDO_GUARD=0 + /proc/cpuinfo → format=undefined 走旧解码路径(字节等价回退);
+#   真无写端 FIFO(阻塞源) + 真 spawnSync timeout=1500 → 1502ms 被杀 timedOut:true(不卡死);
+#   /proc/kmsg(root-only) 非 root → EACCES 快速 handled:false(2ms,不卡死)。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-128] restore 解密后内层归档形制解包前把关 · 接线（让陌生机器上盲目 tar -xzf 变成「请升级 khy」精确成因）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-130] 还原来源可溯性 · 接线运行时横幅（让 khy restore 诚实告知「这份源码等于哪个 git 状态」）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 编程智能体风险预防与诊断计划 (2026-05-30) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY 编程智能体风险预防与诊断计划 (2026-05-30)</div>
+      <header class="hero reveal"><h1>KHY 编程智能体风险预防与诊断计划 (2026-05-30)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-编程智能体风险预防与诊断计划-2026-05-30">KHY 编程智能体风险预防与诊断计划 (2026-05-30)</a></li><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#高优先级风险">高优先级风险</a></li><li class="lvl-2"><a href="#中优先级风险">中优先级风险</a></li><li class="lvl-2"><a href="#落地顺序">落地顺序</a></li><li class="lvl-2"><a href="#验收标准">验收标准</a></li><li class="lvl-2"><a href="#当前执行状态">当前执行状态</a></li><li class="lvl-2"><a href="#本次修复记录">本次修复记录</a></li><li class="lvl-3"><a href="#1-跨进程诊断证据断裂">1. 跨进程诊断证据断裂</a></li><li class="lvl-3"><a href="#2-requestid-级语言诊断串扰">2. requestId 级语言诊断串扰</a></li><li class="lvl-3"><a href="#3-requestid-复盘可读性不足">3. requestId 复盘可读性不足</a></li><li class="lvl-3"><a href="#4-活跃长任务被总时长误杀">4. 活跃长任务被总时长误杀</a></li><li class="lvl-3"><a href="#5-状态提示过于模糊">5. 状态提示过于模糊</a></li><li class="lvl-2"><a href="#受影响文件">受影响文件</a></li><li class="lvl-2"><a href="#已验证">已验证</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-018 | 阶段: 运维 | 原路径: docs/指南/khy-编程智能体-风险预防-2026-05-30.md --&gt;</p>
+<h1 id="khy-编程智能体风险预防与诊断计划-2026-05-30">KHY 编程智能体风险预防与诊断计划 (2026-05-30)<a class="anchor" href="#khy-编程智能体风险预防与诊断计划-2026-05-30" aria-label="锚点">#</a></h1>
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<p>把 <code>khy</code> 作为编程智能体长期使用时最常见的异常提前暴露、提前诊断、提前降级，避免出现“能聊天但不能稳定交付代码”的假可用状态。</p>
+<h2 id="高优先级风险">高优先级风险<a class="anchor" href="#高优先级风险" aria-label="锚点">#</a></h2>
+<ol><li>KHY 协议优先级被上游适配器二次覆盖<ul><li>现象: 用户要求中文，但适配器仍输出英文，或 <code>khy.md</code> 被兼容文件覆盖</li><li>风险适配器: <code>codex</code>、<code>claude</code>、<code>cursor</code>、<code>windsurf</code>、<code>trae</code>、<code>vscode</code></li><li>现有控制:<ul><li>网关统一注入 KHY 最高优先级协议</li><li><code>khy gateway status</code></li><li><code>khy gateway debug-prompt</code></li><li><code>khy doctor</code></li></ul></li><li>后续控制:<ul><li>对高风险适配器增加首包语言一致性检查</li><li>支持按 adapter 维度回放最新注入摘要</li></ul></li></ul></li></ol>
+<ol><li>通道连通但编程代理工作流不可用<ul><li>现象: 能回复，但不会稳定读文件、改文件、执行命令或校验结果</li><li>风险来源: 仅连通测试通过，不代表 coding workflow 可执行</li><li>控制方向:<ul><li>在 <code>khy doctor</code> 中加入 coding-agent smoke test</li><li>区分“通道可用”和“编程代理可用”</li></ul></li></ul></li></ol>
+<ol><li>长任务无输出，看似卡死<ul><li>现象: 长时间停留在模糊状态，用户无法判断是否仍在推进</li><li>控制方向:<ul><li>统一 activity-based idle timeout</li><li>所有适配器输出动作 + 目标 + 进度</li><li>关键循环发出 heartbeat / progress 事件</li></ul></li></ul></li></ol>
+<ol><li>上下文过大导致指令漂移<ul><li>现象: 多轮后忘记语言协议、忽略用户限制、误改无关文件</li><li>控制方向:<ul><li>保持 KHY 协议块短而硬</li><li>长会话自动 compact</li><li>大文件默认摘要化</li></ul></li></ul></li></ol>
+<ol><li>脏工作区被误覆盖<ul><li>现象: 用户已有修改被智能体新补丁覆盖</li><li>控制方向:<ul><li>写文件前识别 dirty target</li><li>对目标文件已有非本轮改动时切换谨慎模式</li></ul></li></ul></li></ol>
+<h2 id="中优先级风险">中优先级风险<a class="anchor" href="#中优先级风险" aria-label="锚点">#</a></h2>
+<ol><li>代理 / 网络 / API 池切换导致行为忽好忽坏</li><li>模型切换后能力不一致</li><li>回复格式正确但实际未执行</li><li>排障链有日志但缺少全链路关联</li></ol>
+<h2 id="落地顺序">落地顺序<a class="anchor" href="#落地顺序" aria-label="锚点">#</a></h2>
+<ol><li><code>doctor</code> 增加 coding-agent smoke test</li><li>网关请求、工具调用、最终回复增加统一 <code>request-id</code></li><li>对高风险适配器增加语言一致性首包检查</li><li><code>gateway status --json</code> 增加 <code>agentReadiness</code></li><li>增加脏工作区保护提示</li></ol>
+<h2 id="验收标准">验收标准<a class="anchor" href="#验收标准" aria-label="锚点">#</a></h2>
+<ol><li>用户执行 <code>khy doctor</code> 时，能直接看到编程智能体是否具备:<ul><li>活跃通道</li><li>coding tool profile</li><li>关键工具组</li><li>临时工作区写入能力</li></ul></li><li>用户执行 <code>khy gateway status --json</code> 时，能看到:<ul><li>活跃通道</li><li>KHY 协议风险</li><li>最近一次注入摘要</li><li>后续扩展的 agent readiness</li></ul></li><li>高风险适配器出现语言漂移时，能快速回溯到:<ul><li>adapter</li><li>注入时间</li><li>system/prompt 摘要</li><li>request-id</li></ul></li></ol>
+<h2 id="当前执行状态">当前执行状态<a class="anchor" href="#当前执行状态" aria-label="锚点">#</a></h2>
+<ul><li>已完成:<ul><li>网关统一注入 KHY 最高优先级协议</li><li><code>gateway status</code> 暴露协议风险</li><li><code>gateway debug-prompt</code></li><li><code>doctor</code> 集成 KHY 协议风险诊断</li><li><code>debug-prompt</code> 支持 <code>--adapter</code></li><li><code>status --json</code> 暴露最近注入摘要</li><li><code>doctor</code> coding-agent smoke test</li><li>全链路 <code>requestId</code> 统一贯穿 <code>diagnosticEvents / aiGateway / toolUseLoop / toolCalling / toolPipeline</code></li><li>高风险适配器首段语言一致性检查</li><li><code>gateway status --json</code> / <code>doctor</code> 暴露最近交付链路摘要</li><li><code>khy gateway trace [requestId]</code> requestId 级复盘入口</li><li><code>gateway trace</code> 时间线阶段标注</li><li>最近 session 自动回退，修复跨进程诊断证据断裂</li><li>同 session 按 <code>requestId</code> 过滤语言摘要，修复多请求串扰</li><li><code>aiGateway</code> 活动状态从模糊“处理中”改为动作化进度提示</li><li><code>aiGateway.generate()</code> 从全局 hard wall-clock timeout 切换为网关级 activity-based idle watchdog</li></ul></li><li>进行中:<ul><li><code>agentReadiness</code> 结构化汇总</li><li>脏工作区保护</li><li>CLI 渲染层状态文本去模糊化</li></ul></li><li>待执行:<ul><li><code>doctor</code> 直接附短 requestId 标签</li><li><code>gateway trace --tail-events N</code></li><li>更多前置上下文阶段的 activity-based timeout 收敛</li></ul></li></ul>
+<h2 id="本次修复记录">本次修复记录<a class="anchor" href="#本次修复记录" aria-label="锚点">#</a></h2>
+<h3 id="1-跨进程诊断证据断裂">1. 跨进程诊断证据断裂<a class="anchor" href="#1-跨进程诊断证据断裂" aria-label="锚点">#</a></h3>
+<ul><li>问题:<ul><li><code>getLatestDeliveryRequestSummary()</code> 和 <code>getLatestLanguageConsistencySummary()</code> 之前优先依赖当前进程 <code>sessionId</code></li><li>当用户在另一个进程执行 <code>khy doctor</code> 或 <code>khy gateway status</code> 时，刚刚失败的请求证据可能直接丢失</li></ul></li><li>修复:<ul><li>两个摘要接口统一改为先取当前 session，取不到再回退到最近持久化 session</li></ul></li><li>结果:<ul><li><code>doctor</code> / <code>gateway status</code> 在新进程里也能看到最近一次交付链和语言一致性证据</li></ul></li></ul>
+<h3 id="2-requestid-级语言诊断串扰">2. requestId 级语言诊断串扰<a class="anchor" href="#2-requestid-级语言诊断串扰" aria-label="锚点">#</a></h3>
+<ul><li>问题:<ul><li>同一 session 中如果连续发起多个请求，<code>gateway trace &lt;旧 requestId&gt;</code> 可能会拿到更新请求的语言事件</li></ul></li><li>修复:<ul><li>语言一致性摘要支持按 <code>requestId</code> 精确过滤</li></ul></li><li>结果:<ul><li><code>khy gateway trace &lt;requestId&gt;</code> 可以稳定复盘目标请求，不再被后续请求污染</li></ul></li></ul>
+<h3 id="3-requestid-复盘可读性不足">3. requestId 复盘可读性不足<a class="anchor" href="#3-requestid-复盘可读性不足" aria-label="锚点">#</a></h3>
+<ul><li>问题:<ul><li>时间线之前只有原始事件名，用户需要自己推断处于哪个阶段</li></ul></li><li>修复:<ul><li><code>gateway trace</code> 时间线增加阶段标注:<ul><li><code>model_request</code></li><li><code>tool_call</code></li><li><code>tool_result</code></li><li><code>model_response</code></li><li><code>delivery_final</code></li><li><code>language_first_chunk</code></li><li><code>language_final_response</code></li></ul></li></ul></li><li>结果:<ul><li>用户可以更快定位交付断点，不再需要手动从原始事件名反推阶段</li></ul></li></ul>
+<h3 id="4-活跃长任务被总时长误杀">4. 活跃长任务被总时长误杀<a class="anchor" href="#4-活跃长任务被总时长误杀" aria-label="锚点">#</a></h3>
+<ul><li>问题:<ul><li><code>aiGateway.generate()</code> 之前有全局 <code>wall-clock</code> 硬超时</li><li>即使请求仍在持续输出 chunk、状态或工具结果，只要总时长达到阈值，就会被直接终止</li><li>这会造成“任务其实还在推进，但交付链被强行砍断”的假失败</li></ul></li><li>修复:<ul><li>保留 <code>GATEWAY_WALL_CLOCK_TIMEOUT_MS</code> 配置名兼容</li><li>但将其语义改为“网关级无活动超时”</li><li>新逻辑:<ul><li>有内容 chunk / 状态 / 活动事件 -&gt; 续命</li><li>整条链路持续无推进 -&gt; 才超时终止</li></ul></li></ul></li><li>结果:<ul><li>活跃长任务不会再被总时长误杀</li><li>真正卡死时仍会按 idle watchdog 超时退出</li></ul></li></ul>
+<h3 id="5-状态提示过于模糊">5. 状态提示过于模糊<a class="anchor" href="#5-状态提示过于模糊" aria-label="锚点">#</a></h3>
+<ul><li>问题:<ul><li><code>aiGateway</code> 之前会输出 <code>处理中（Ns）</code> 这类模糊状态</li></ul></li><li>修复:<ul><li>改为动作化状态，例如 <code>正在生成响应（已耗时 Ns）</code></li></ul></li><li>结果:<ul><li>用户能更清楚判断当前是在工作、等待还是卡住</li></ul></li></ul>
+<h2 id="受影响文件">受影响文件<a class="anchor" href="#受影响文件" aria-label="锚点">#</a></h2>
+<ul><li><code>backend/src/services/traceAuditService.js</code></li><li><code>backend/src/services/gateway/aiGateway.js</code></li><li><code>backend/src/cli/handlers/gateway.js</code></li><li><code>backend/src/cli/handlers/init.js</code></li><li><code>backend/src/cli/router.js</code></li><li><code>backend/src/cli/commandSchema.js</code></li><li><code>backend/src/services/diagnosticEvents.js</code></li><li><code>backend/src/services/toolUseLoop.js</code></li><li><code>backend/src/services/toolCalling.js</code></li><li><code>backend/src/services/toolPipeline.js</code></li></ul>
+<h2 id="已验证">已验证<a class="anchor" href="#已验证" aria-label="锚点">#</a></h2>
+<ul><li>语法检查:<ul><li><code>node --check backend/src/services/traceAuditService.js</code></li><li><code>node --check backend/src/cli/handlers/gateway.js</code></li><li><code>node --check backend/src/services/gateway/aiGateway.js</code></li></ul></li><li>关键测试:<ul><li><code>npx jest backend/tests/services/traceAuditService.requestId.test.js --runInBand</code></li><li><code>npx jest backend/tests/gatewayTrace.test.js --runInBand</code></li><li><code>npx jest backend/tests/gatewayStatus.endpointVisibility.test.js --runInBand</code></li><li><code>npx jest backend/tests/initDoctor.codingAgentSmoke.test.js --runInBand</code></li><li><code>npx jest backend/tests/gateway/transportResilience.test.js --runInBand</code></li><li><code>npx jest backend/tests/gatewayAdapters.stability.test.js --runInBand</code></li><li><code>npx jest backend/tests/aiGateway.stability.regressions.test.js --runInBand</code></li></ul></li><li>规则检查:<ul><li><code>node scripts/check-agent-rules.js --changed</code></li><li>结果: <code>0 error(s)</code>，仅剩仓库既有 warning</li></ul></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-017] khy-智能体-五步实施.html"><div class="dir">← 上一篇</div><div class="ttl">KHY Agent 五步实施</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-019] khy-远程ssh-实施清单.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 远程 SSH 上线实施清单（Phase 0.7）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-018] khy-编程智能体-风险预防-2026-05-30.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

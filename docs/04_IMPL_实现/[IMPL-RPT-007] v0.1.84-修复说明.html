@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v0.1.84 缺陷修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>v0.1.84 缺陷修复</div>
+      <header class="hero reveal"><h1>v0.1.84 缺陷修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#v0-1-84-缺陷修复">v0.1.84 缺陷修复</a></li><li class="lvl-2"><a href="#1-windows-terminal-文本选中失效">1. Windows Terminal 文本选中失效</a></li><li class="lvl-2"><a href="#2-移动端桥接消息重复">2. 移动端桥接消息重复</a></li><li class="lvl-2"><a href="#3-思考-停滞状态污染-model-菜单">3. 思考/停滞状态污染 `/model` 菜单</a></li><li class="lvl-3"><a href="#3a-交互守卫增加-inquirer-检查">3a. 交互守卫增加 inquirer 检查</a></li><li class="lvl-3"><a href="#3b-emitruntimestatus-增加守卫">3b. emitRuntimeStatus 增加守卫</a></li><li class="lvl-3"><a href="#3c-tracker-start-与适配器事件处理器增加守卫">3c. tracker.start 与适配器事件处理器增加守卫</a></li><li class="lvl-2"><a href="#修改的文件">修改的文件</a></li><li class="lvl-2"><a href="#测试说明">测试说明</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-007 | 阶段: 实现 | 原路径: docs/修复记录/v0.1.84-修复说明.md --&gt;</p>
+<h1 id="v0-1-84-缺陷修复">v0.1.84 缺陷修复<a class="anchor" href="#v0-1-84-缺陷修复" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本文档涉及的自研 TUI 运行时（<code>liteRepl.js</code>、<code>keypressParser.js</code>、<code>tuiShell.js</code> 等）已于 2026-06-05 全面迁移至官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>）。本文仅作历史修复记录保留，最新 TUI 行为请参阅 <a href="%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<p>发布日期：2026-06-02</p>
+<hr>
+<h2 id="1-windows-terminal-文本选中失效">1. Windows Terminal 文本选中失效<a class="anchor" href="#1-windows-terminal-文本选中失效" aria-label="锚点">#</a></h2>
+<p><strong>现象</strong>：Windows 上安装 khy 后，无法用鼠标选中、复制终端内的任何文本。</p>
+<p><strong>根因</strong>：<code>keypressParser.js</code> 在 Windows Terminal (<code>WT_SESSION</code>) 上启用了 <code>\x1b[?1002h</code> (button-event tracking) + <code>\x1b[?1006h</code> (SGR mouse mode)。虽然代码注释声称只用 <code>?1002h</code>（不用 <code>?1000h</code>）就能保留原生选中，但实际上 <strong>Windows Terminal 下 <code>?1002h</code> 同样会捕获拖拽事件</strong>，导致无法框选文本。</p>
+<p><strong>修复</strong> (<code>backend/src/cli/tui/runtime/keypressParser.js</code>):</p>
+<pre><code class="language-javascript">// Before: Windows 现代终端也启用鼠标报告
+const hasModernWinTerm = isWin &amp;&amp; (process.env.WT_SESSION || ...);
+if (!isWin || hasModernWinTerm) {
+  this._stdout.write('\x1b[?1002h\x1b[?1006h');
+}
+
+// After: Windows 上完全不启用鼠标报告
+if (!isWin) {
+  this._stdout.write('\x1b[?1002h\x1b[?1006h');
+}</code></pre>
+<p><strong>权衡</strong>：Windows 上不再有 SGR 鼠标滚轮事件。滚轮滚动由 Windows Terminal 自动翻译为方向键序列（<code>\x1b[A</code>/<code>\x1b[B</code>），在 busy 状态下等效于 viewport 滚动，空闲状态为历史导航——行为合理无功能损失。</p>
+<hr>
+<h2 id="2-移动端桥接消息重复">2. 移动端桥接消息重复<a class="anchor" href="#2-移动端桥接消息重复" aria-label="锚点">#</a></h2>
+<p><strong>现象</strong>：手机端发一条消息，聊天记录里显示两条相同的用户消息。</p>
+<p><strong>根因</strong>：消息在两个位置各被渲染一次：</p>
+<ol><li><code>doSend()</code> 发送时立即调用 <code>addUserMsg(text)</code> 显示在本地</li><li>后端 <code>tuiShell.js</code> 收到消息后广播 <code>{ type: 'turn_start', input: text }</code> 给所有客户端，手机端的 <code>turn_start</code> handler 又调用了 <code>addUserMsg(msg.input)</code></li></ol>
+<p><strong>修复</strong> (<code>backend/src/bridge/mobilePage.js</code>):</p>
+<pre><code class="language-javascript">// 发送时记录最近发出的文本
+var _lastSentText = null;
+function doSend(){
+  _lastSentText = text;
+  wsSend({type:'input', text: text});
+  addUserMsg(text);  // 本地立即显示
+  ...
+}
+
+// 收到 turn_start 时去重
+case 'turn_start':
+  if(msg.input &amp;&amp; msg.input !== _lastSentText) addUserMsg(msg.input);
+  _lastSentText = null;  // 重置，确保重连回放时仍能显示
+  ...</code></pre>
+<p><strong>设计说明</strong>：使用文本匹配而非 clientId 排除，因为 <code>broadcastOutput</code> 不支持 excludeClient，且此方案零改动服务端。重连回放场景中 <code>_lastSentText</code> 已被清空，历史消息仍能正确回显。</p>
+<hr>
+<h2 id="3-思考-停滞状态污染-model-菜单">3. 思考/停滞状态污染 <code>/model</code> 菜单<a class="anchor" href="#3-思考-停滞状态污染-model-菜单" aria-label="锚点">#</a></h2>
+<p><strong>现象</strong>：在 AI 思考/请求过程中打开 <code>/model</code> 选择菜单，后台的 spinner（&quot;Thinking... (35s)&quot;）和 stall 检测消息（&quot;after 25000ms without meaningful model progress...&quot;）持续输出到 stdout，破坏 inquirer 选择列表的显示。</p>
+<p><strong>根因</strong>：两套 inquirer 保护机制互不感知：</p>
+<ul><li><code>liteRepl.js</code> 的 <code>inqPrompt()</code> wrapper 设置 module-level <code>_inquirerActive</code></li><li><code>gateway.js</code> 的 <code>promptWithReplGuard()</code> 设置 <code>global.__KHY_INQUIRER_ACTIVE__</code></li><li>Spinner <code>_render()</code> 依赖 <code>isInteractiveInputActive()</code> guard，但该 guard 只检查&quot;busy 且用户在打字&quot;</li><li><code>emitRuntimeStatus()</code> 和 <code>tracker.start()</code> 完全没有 inquirer 状态检查</li></ul>
+<p><strong>修复</strong> (<code>backend/src/cli/liteRepl.js</code>, 三处修改):</p>
+<h3 id="3a-交互守卫增加-inquirer-检查">3a. 交互守卫增加 inquirer 检查<a class="anchor" href="#3a-交互守卫增加-inquirer-检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// Before: 只在用户打字时抑制 spinner
+renderer.setInteractiveGuard(() =&gt; (
+  _busy &amp;&amp; (rl.line.length &gt; 0 || Date.now() &lt; _busyTypingUntil)
+));
+
+// After: inquirer 活跃时也抑制
+renderer.setInteractiveGuard(() =&gt; (
+  _inquirerActive || global.__KHY_INQUIRER_ACTIVE__
+  || (_busy &amp;&amp; (rl.line.length &gt; 0 || Date.now() &lt; _busyTypingUntil))
+));</code></pre>
+<p><strong>效果</strong>：<code>DynamicSpinner._render()</code> 和 <code>startSparkle()</code> 的 setInterval 回调在 inquirer 活跃期间短路返回，不写任何 stdout 内容。</p>
+<h3 id="3b-emitruntimestatus-增加守卫">3b. emitRuntimeStatus 增加守卫<a class="anchor" href="#3b-emitruntimestatus-增加守卫" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const emitRuntimeStatus = (text = '') =&gt; {
+  if (_inquirerActive || global.__KHY_INQUIRER_ACTIVE__) return;
+  ...
+};</code></pre>
+<p><strong>效果</strong>：codexAdapter 的 stall 超时消息、适配器状态回传等通过 <code>onChunk({ type: 'status' })</code> 产生的 console.log 输出在菜单期间被静默丢弃。</p>
+<h3 id="3c-tracker-start-与适配器事件处理器增加守卫">3c. tracker.start 与适配器事件处理器增加守卫<a class="anchor" href="#3c-tracker-start-与适配器事件处理器增加守卫" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// status chunk handler
+if (raw &amp;&amp; !_inquirerActive &amp;&amp; !global.__KHY_INQUIRER_ACTIVE__)
+  tracker.start(...);
+
+// adapter status event
+_adapterStatusHandler = (text) =&gt; {
+  if (!_inquirerActive &amp;&amp; !global.__KHY_INQUIRER_ACTIVE__) emitRuntimeStatus(text);
+};</code></pre>
+<hr>
+<h2 id="修改的文件">修改的文件<a class="anchor" href="#修改的文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>backend/src/cli/tui/runtime/keypressParser.js</code></td><td>Windows 不启用鼠标报告</td></tr><tr><td><code>backend/src/bridge/mobilePage.js</code></td><td>turn_start 去重 + _lastSentText 标记</td></tr><tr><td><code>backend/src/cli/liteRepl.js</code></td><td>interactiveGuard/emitRuntimeStatus/tracker/adapter handler 增加 inquirer 检查</td></tr></tbody></table>
+<h2 id="测试说明">测试说明<a class="anchor" href="#测试说明" aria-label="锚点">#</a></h2>
+<ul><li>Windows: 验证文本选中、Ctrl+C 复制、右键粘贴均正常</li><li>手机: 验证发送消息只显示一次，断线重连后历史消息正常回放</li><li><code>/model</code> 菜单: 在 AI 请求进行中打开，确认无任何 stall/spinner 输出干扰选择列表</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-006] tui-流式与上下文显示-2026-06-01.html"><div class="dir">← 上一篇</div><div class="ttl">TUI 流式显示与上下文窗口修复记录</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-008] 修复-桥接状态刷屏.html"><div class="dir">下一篇 →</div><div class="ttl">Bugfix: Claude 中转桥接状态刷屏</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-007] v0.1.84-修复说明.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

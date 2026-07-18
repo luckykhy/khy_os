@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-096] 多模型类型 Provider 配置对账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-096] 多模型类型 Provider 配置对账</div>
+      <header class="hero reveal"><h1>[OPS-MAN-096] 多模型类型 Provider 配置对账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-096-多模型类型-provider-配置对账">[OPS-MAN-096] 多模型类型 Provider 配置对账</a></li><li class="lvl-2"><a href="#解决的问题">解决的问题</a></li><li class="lvl-2"><a href="#用法">用法</a></li><li class="lvl-2"><a href="#判定语义-纯叶-scripts-lib-modeltypeproviderplan-js">判定语义（纯叶 `scripts/lib/modelTypeProviderPlan.js`）</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-096-多模型类型-provider-配置对账">[OPS-MAN-096] 多模型类型 Provider 配置对账<a class="anchor" href="#ops-man-096-多模型类型-provider-配置对账" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>node scripts/model-type-providers.js --gen-doc</code> 生成，请勿手改。</p></blockquote>
+<h2 id="解决的问题">解决的问题<a class="anchor" href="#解决的问题" aria-label="锚点">#</a></h2>
+<p>Khy 对四类用户可见模型分别在<strong>互不相通的 env 命名空间</strong>里解析 provider：</p>
+<table><thead><tr><th>类型</th><th>解析路径</th><th>中转/直连可见性</th></tr></thead><tbody><tr><td>文本 text</td><td>apiKeyPool + providerPresets + gateway pool</td><td>无</td></tr><tr><td>视频 video</td><td><code>KHY_VIDEO_GEN_*</code>（在 provider 注册表之外）+ pool bridge</td><td>无</td></tr><tr><td>向量 vector</td><td><code>EMBED_URL</code> / ollama / gateway <code>/v1/embeddings</code></td><td>无</td></tr><tr><td>角色 role</td><td><code>subAgentModelSelect</code>（复用文本池，<code>KHY_SUBAGENT_MODEL_AUTOSELECT</code>）</td><td>无</td></tr></tbody></table>
+<p>陌生机器上的用户想给不同类型配不同 API（中转站或直连）时，没有任何单一入口能回答：<br>“哪几类模型已就绪，各自是怎么接线的？”本工具就是这个入口。</p>
+<h2 id="用法">用法<a class="anchor" href="#用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node scripts/model-type-providers.js            # 人类可读表格
+node scripts/model-type-providers.js --json     # 机器 JSON（非全就绪 exit 2）
+node scripts/model-type-providers.js --gen-doc  # 重新生成本文件</code></pre>
+<h2 id="判定语义-纯叶-scripts-lib-modeltypeproviderplan-js">判定语义（纯叶 <code>scripts/lib/modelTypeProviderPlan.js</code>）<a class="anchor" href="#判定语义-纯叶-scripts-lib-modeltypeproviderplan-js" aria-label="锚点">#</a></h2>
+<ul><li><code>channel</code> 仅由 base URL 主机对比 <code>providerPresets</code> 官方 SSOT 主机名判定：</li></ul>
+<p>loopback → <code>local</code>；主机 ∈ 官方名单 → <code>direct</code>（直连）；其它公网主机 → <code>relay</code>（中转站）。</p>
+<ul><li><code>configured</code> 需要可用凭据路径：有 key，或本地后端（本地无需 key）。</li></ul>
+<p>有 base URL 但无 key → <code>keyless</code>（非就绪）。</p>
+<ul><li>输入畸形/破损 → 全部判为未配置，<strong>绝不抛异常、绝不伪造就绪</strong>。</li><li>本工具只读凭据<strong>存在性</strong>（布尔），绝不读取或打印 key/token 值（红线）。</li></ul>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>SSOT：<code>services/backend/src/services/gateway/providerPresets.js</code>（官方/合作/中转 preset）</li><li>自定义 provider 注册：<code>services/backend/src/services/customProviderRegistrar.js</code></li><li>能力分桶：<code>services/backend/src/services/gateway/modelCapability.js</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-095] 还原解包完整性对账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-095] 还原解包完整性对账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-097] 角色工具作用域接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-096] 多模型类型 Provider 配置对账.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

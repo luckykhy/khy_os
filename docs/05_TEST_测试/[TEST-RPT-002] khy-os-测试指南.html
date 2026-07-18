@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 测试文档（中文） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>KHY OS 测试文档（中文）</div>
+      <header class="hero reveal"><h1>KHY OS 测试文档（中文）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-测试文档-中文">KHY OS 测试文档（中文）</a></li><li class="lvl-2"><a href="#1-测试分类">1. 测试分类</a></li><li class="lvl-3"><a href="#1-1-单元测试">1.1 单元测试</a></li><li class="lvl-3"><a href="#1-2-api-冒烟测试">1.2 API 冒烟测试</a></li><li class="lvl-3"><a href="#1-3-静态质量检查">1.3 静态质量检查</a></li><li class="lvl-3"><a href="#1-4-手工验收">1.4 手工验收</a></li><li class="lvl-2"><a href="#2-常用测试命令">2. 常用测试命令</a></li><li class="lvl-3"><a href="#2-1-全量测试">2.1 全量测试</a></li><li class="lvl-3"><a href="#2-2-单元测试">2.2 单元测试</a></li><li class="lvl-3"><a href="#2-3-api-冒烟测试">2.3 API 冒烟测试</a></li><li class="lvl-3"><a href="#2-4-静态检查">2.4 静态检查</a></li><li class="lvl-2"><a href="#3-单元测试说明">3. 单元测试说明</a></li><li class="lvl-2"><a href="#4-api-冒烟测试说明">4. API 冒烟测试说明</a></li><li class="lvl-2"><a href="#5-推荐测试顺序">5. 推荐测试顺序</a></li><li class="lvl-3"><a href="#5-1-提交前">5.1 提交前</a></li><li class="lvl-3"><a href="#5-2-发布前">5.2 发布前</a></li><li class="lvl-2"><a href="#6-常见失败定位">6. 常见失败定位</a></li><li class="lvl-3"><a href="#6-1-单元测试失败">6.1 单元测试失败</a></li><li class="lvl-3"><a href="#6-2-api-测试失败">6.2 API 测试失败</a></li><li class="lvl-3"><a href="#6-3-静态检查失败">6.3 静态检查失败</a></li><li class="lvl-2"><a href="#7-相关技术">7. 相关技术</a></li><li class="lvl-2"><a href="#8-相关文档">8. 相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: TEST-RPT-002 | 阶段: 测试 | 原路径: docs/指南/khy-os-测试指南.md --&gt;</p>
+<h1 id="khy-os-测试文档-中文">KHY OS 测试文档（中文）<a class="anchor" href="#khy-os-测试文档-中文" aria-label="锚点">#</a></h1>
+<p>本文档说明 KHY OS 的测试分层、执行方式、依赖环境和排查思路。</p>
+<h2 id="1-测试分类">1. 测试分类<a class="anchor" href="#1-测试分类" aria-label="锚点">#</a></h2>
+<h3 id="1-1-单元测试">1.1 单元测试<a class="anchor" href="#1-1-单元测试" aria-label="锚点">#</a></h3>
+<p>目标：验证核心业务逻辑、任务编排、路由与服务层。</p>
+<p>当前主要由以下套件组成：</p>
+<ul><li><code>services/backend/tests/services/largeTaskRuntimeStore.test.js</code></li><li><code>services/backend/tests/services/largeTaskOrchestrator.test.js</code></li><li><code>services/backend/tests/services/largeTaskWorkerService.test.js</code></li><li><code>services/backend/tests/routes/largeTasks.route.test.js</code></li></ul>
+<h3 id="1-2-api-冒烟测试">1.2 API 冒烟测试<a class="anchor" href="#1-2-api-冒烟测试" aria-label="锚点">#</a></h3>
+<p>目标：确认后端健康检查和错误路由行为正常。</p>
+<p>当前脚本：</p>
+<ul><li><code>API_tests/test_health.sh</code></li></ul>
+<h3 id="1-3-静态质量检查">1.3 静态质量检查<a class="anchor" href="#1-3-静态质量检查" aria-label="锚点">#</a></h3>
+<p>目标：在提交或发布前发现版本、语法和规则问题。</p>
+<p>当前检查：</p>
+<ul><li>版本同步</li><li>Node 语法</li><li>Python 语法</li><li>Agent 规则</li><li>质量门禁总检</li></ul>
+<h3 id="1-4-手工验收">1.4 手工验收<a class="anchor" href="#1-4-手工验收" aria-label="锚点">#</a></h3>
+<p>目标：验证真实使用路径是否正常，尤其是 Windows 管理页和首次启动流程。</p>
+<p>常见验收项：</p>
+<ul><li><code>khy doctor</code></li><li><code>khy gateway status</code></li><li><code>khy guanli</code></li><li><code>khy db status</code></li></ul>
+<h2 id="2-常用测试命令">2. 常用测试命令<a class="anchor" href="#2-常用测试命令" aria-label="锚点">#</a></h2>
+<h3 id="2-1-全量测试">2.1 全量测试<a class="anchor" href="#2-1-全量测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">./run_tests.sh</code></pre>
+<h3 id="2-2-单元测试">2.2 单元测试<a class="anchor" href="#2-2-单元测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">bash unit_tests/run_unit_tests.sh</code></pre>
+<h3 id="2-3-api-冒烟测试">2.3 API 冒烟测试<a class="anchor" href="#2-3-api-冒烟测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">bash API_tests/run_api_tests.sh</code></pre>
+<h3 id="2-4-静态检查">2.4 静态检查<a class="anchor" href="#2-4-静态检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run check:version-sync
+npm run check:node-syntax
+npm run check:python-syntax
+npm run check:agent-rules
+npm run check:quality-gates</code></pre>
+<h2 id="3-单元测试说明">3. 单元测试说明<a class="anchor" href="#3-单元测试说明" aria-label="锚点">#</a></h2>
+<p><code>unit_tests/run_unit_tests.sh</code> 会通过 <code>docker compose run</code> 在隔离容器中执行测试，默认会重新安装后端依赖并运行 Jest 套件。</p>
+<p>因此需要：</p>
+<ul><li>本机已安装 Docker / Docker Compose</li><li>后端镜像可构建</li><li>终端具备 <code>docker compose</code> 命令</li></ul>
+<p>如果失败，优先检查：</p>
+<ul><li>Docker 是否已启动</li><li><code>services/backend/Dockerfile</code> 是否可正常构建</li><li>本地是否存在阻塞端口或损坏缓存</li></ul>
+<h2 id="4-api-冒烟测试说明">4. API 冒烟测试说明<a class="anchor" href="#4-api-冒烟测试说明" aria-label="锚点">#</a></h2>
+<p><code>API_tests/test_health.sh</code> 会检查两件事：</p>
+<ol><li><code>GET /health</code> 返回 <code>200</code> 或 <code>503</code></li><li>不存在的路由返回 <code>404</code></li></ol>
+<p>默认地址：</p>
+<ul><li><code>http://127.0.0.1:${BACKEND_PORT:-13000}</code></li></ul>
+<p>需要的工具：</p>
+<ul><li><code>curl</code></li><li>已运行的后端服务</li></ul>
+<p>如果测试失败，优先确认：</p>
+<ul><li><code>khy gateway status</code></li><li><code>docker compose ps</code></li><li><code>BACKEND_PORT</code> 是否与实际端口一致</li></ul>
+<h2 id="5-推荐测试顺序">5. 推荐测试顺序<a class="anchor" href="#5-推荐测试顺序" aria-label="锚点">#</a></h2>
+<h3 id="5-1-提交前">5.1 提交前<a class="anchor" href="#5-1-提交前" aria-label="锚点">#</a></h3>
+<ol><li><code>npm run check:version-sync</code></li><li><code>npm run check:node-syntax</code></li><li><code>npm run check:python-syntax</code></li><li><code>npm run check:agent-rules</code></li><li><code>bash API_tests/run_api_tests.sh</code></li></ol>
+<h3 id="5-2-发布前">5.2 发布前<a class="anchor" href="#5-2-发布前" aria-label="锚点">#</a></h3>
+<ol><li><code>npm run check:quality-gates</code></li><li><code>./run_tests.sh</code></li><li>Windows 上手工验证一次 <code>khy guanli</code></li></ol>
+<h2 id="6-常见失败定位">6. 常见失败定位<a class="anchor" href="#6-常见失败定位" aria-label="锚点">#</a></h2>
+<h3 id="6-1-单元测试失败">6.1 单元测试失败<a class="anchor" href="#6-1-单元测试失败" aria-label="锚点">#</a></h3>
+<ul><li>查看失败套件日志</li><li>检查容器内依赖是否安装完整</li><li>检查测试是否依赖未启动服务</li></ul>
+<h3 id="6-2-api-测试失败">6.2 API 测试失败<a class="anchor" href="#6-2-api-测试失败" aria-label="锚点">#</a></h3>
+<ul><li>检查后端是否已启动</li><li>检查端口是否被别的服务占用</li><li>检查 <code>/health</code> 返回体是否仍符合约定</li></ul>
+<h3 id="6-3-静态检查失败">6.3 静态检查失败<a class="anchor" href="#6-3-静态检查失败" aria-label="锚点">#</a></h3>
+<ul><li>版本不一致时先修复：<code>platform/khy_platform/__init__.py</code>、<code>pyproject.toml</code>、<code>services/backend/package.json</code></li><li>语法检查失败时先修复对应文件语法</li><li>规则检查失败时先修复硬编码、模糊状态文本、超时逻辑等问题</li></ul>
+<h2 id="7-相关技术">7. 相关技术<a class="anchor" href="#7-相关技术" aria-label="锚点">#</a></h2>
+<p>测试中常用到的技术/工具包括：</p>
+<ul><li>Bash</li><li>Docker Compose</li><li>curl</li><li>Jest</li><li>Node.js</li><li>Python</li><li>GitHub Actions / CI 脚本</li></ul>
+<h2 id="8-相关文档">8. 相关文档<a class="anchor" href="#8-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 不合格情况记录（2026-05-16）</div></a><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-003] windows-ui-聊天回归报告模板.html"><div class="dir">下一篇 →</div><div class="ttl">Windows UI Chat 回归执行记录模板</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

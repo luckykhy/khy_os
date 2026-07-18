@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-070] 首启依赖 hydration 自检清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-070] 首启依赖 hydration 自检清单</div>
+      <header class="hero reveal"><h1>[OPS-MAN-070] 首启依赖 hydration 自检清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-070-首启依赖-hydration-自检清单">[OPS-MAN-070] 首启依赖 hydration 自检清单</a></li><li class="lvl-2"><a href="#这份清单是干什么的">这份清单是干什么的</a></li><li class="lvl-2"><a href="#与其他自检的分工-三层各管一段">与其他自检的分工（三层各管一段）</a></li><li class="lvl-2"><a href="#最阴险的一种-裂脑-splitbrain">最阴险的一种：裂脑（splitbrain）</a></li><li class="lvl-2"><a href="#关键运行时依赖-缺任一则后端塌陷">关键运行时依赖（缺任一则后端塌陷）</a></li><li class="lvl-2"><a href="#自检会检查这些项">自检会检查这些项</a></li><li class="lvl-2"><a href="#人工修复步骤-照着做">人工修复步骤（照着做）</a></li><li class="lvl-2"><a href="#红线-继承项目章程">红线（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-070-首启依赖-hydration-自检清单">[OPS-MAN-070] 首启依赖 hydration 自检清单<a class="anchor" href="#ops-man-070-首启依赖-hydration-自检清单" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/hydration-doctor.js --gen-doc</code> 确定性生成，请勿手改；<br>规则改在 <code>scripts/lib/hydrationHealth.js</code> 的 <code>_RULES</code> / <code>CRITICAL_PACKAGES</code>，再重新生成。</p></blockquote>
+<h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
+<p>khyos 两条离机渠道的包都<strong>不打包 <code>node_modules</code></strong>——后端 44 个依赖在<br><strong>首次运行时联网</strong> <code>npm install</code> 补齐（Node 运行时也是首启自动下便携版）。<br>这一步是新机还原<strong>最脆弱</strong>的一环：断网、registry 不通、半截下载、<br>workspace 软链断裂，都会让「装好了包却起不来」。本 doctor 专查这一步。</p>
+<pre><code class="language-bash">node scripts/hydration-doctor.js      # 或 npm run hydration-doctor</code></pre>
+<h2 id="与其他自检的分工-三层各管一段">与其他自检的分工（三层各管一段）<a class="anchor" href="#与其他自检的分工-三层各管一段" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>自检</th><th>回答的问题</th></tr></thead><tbody><tr><td><code>restore-check</code>（OPS-MAN-068）</td><td>这台机<strong>能不能开始</strong>还原？（Node/npm/tar/版本/目录可写）</td></tr><tr><td><code>verify-install</code>（OPS-MAN-069）</td><td>发出来的 <strong>bundle 源码</strong>齐不齐？（关键源码文件完整性）</td></tr><tr><td><code>hydration-doctor</code>（本清单）</td><td>首启<strong>hydrate 出来的依赖</strong>到底成没成？（含裂脑检测）</td></tr></tbody></table>
+<h2 id="最阴险的一种-裂脑-splitbrain">最阴险的一种：裂脑（splitbrain）<a class="anchor" href="#最阴险的一种-裂脑-splitbrain" aria-label="锚点">#</a></h2>
+<p>首启成功后会写 marker <code>.khy_quant_bootstrapped</code>，后续启动<strong>见 marker 即短路</strong>，<br>不再重跑 hydrate。若此后 node_modules 被误删/被清理工具清掉，marker 仍在——<br>系统以为「装好了」，实则依赖已空，且<strong>不会自愈</strong>。本 doctor 的 <code>splitbrain-marker</code><br>规则专抓这种「marker 说好了但 node_modules 不在」的裂脑，修法是删 marker 让它重跑。</p>
+<h2 id="关键运行时依赖-缺任一则后端塌陷">关键运行时依赖（缺任一则后端塌陷）<a class="anchor" href="#关键运行时依赖-缺任一则后端塌陷" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>包</th><th>缺失后果</th></tr></thead><tbody><tr><td><code>express</code></td><td>HTTP 服务骨架缺失——后端不监听任何端口，管理面/网关全部 502。</td></tr><tr><td><code>@khy/shared</code></td><td>workspace 共享包软链断裂——大量内部 require 崩（file: 依赖需 lock 条目，删 lock 重装可修）。</td></tr><tr><td><code>better-sqlite3</code></td><td>本地 SQLite 绑定缺失——数据层打不开，启动即崩。</td></tr><tr><td><code>ws</code></td><td>WebSocket 库缺失——管理面/网关的实时通道断。</td></tr><tr><td><code>dotenv</code></td><td>.env 加载器缺失——所有环境配置读不到，行为回退到裸默认。</td></tr><tr><td><code>sequelize</code></td><td>ORM 缺失——模型层入口塌陷，任何 DB 操作报错。</td></tr></tbody></table>
+<h2 id="自检会检查这些项">自检会检查这些项<a class="anchor" href="#自检会检查这些项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>级别</th><th>症状</th><th>修法</th></tr></thead><tbody><tr><td><code>no-node-modules</code></td><td>拦路</td><td>后端 node_modules 完全缺失（首启 hydrate 未跑或被清空，后端无法启动）</td><td>联网后重跑一次 khy（或 khy doctor）触发首启 hydrate；bootstrap 会在后端目录 <code>npm install</code> 补齐 44 个依赖。</td></tr><tr><td><code>splitbrain-marker</code></td><td>拦路</td><td>裂脑：hydration marker 声称已就绪，但 node_modules 不在（marker 会短路重装，不自愈）</td><td>删掉过期 marker 让 bootstrap 重跑：删除后端目录下的 <code>.khy_quant_bootstrapped</code> 文件，再跑 khy 触发重新 hydrate。</td></tr><tr><td><code>missing-critical-package</code></td><td>拦路</td><td>关键运行时依赖缺失（node_modules 存在但半装，核心包不在）</td><td>在后端目录重跑 <code>npm install</code> 补齐缺失包；若仍缺，删 <code>.khy_quant_bootstrapped</code> 与 <code>package-lock.json</code> 后重跑 khy 全量重装。</td></tr><tr><td><code>shared-link-broken</code></td><td>拦路</td><td>@khy/shared workspace 链接断裂（file: 依赖软链失效，大量内部模块 require 失败）</td><td>删后端目录的 <code>package-lock.json</code> 再重跑 khy——bootstrap 会重装并重建 <code>@khy/shared</code> 链接（这正是它对 file: 依赖的既有修复路径）。</td></tr><tr><td><code>portable-node-missing</code></td><td>提醒</td><td>便携 Node 未落好且未探到达标的系统 Node（后端是 Node 运行时，须有其一）</td><td>khy 首启会自动下载便携版 Node（KHY_AUTO_INSTALL_NODE 默认开）；若被禁用，装系统 Node ≥ 20 后重跑 khy。</td></tr><tr><td><code>seed-missing</code></td><td>提醒</td><td>依赖已就位但数据库 seed 未完成（首启 seed 步骤未跑完，部分默认数据可能缺）</td><td>再跑一次 khy（或 khy doctor）让 bootstrap 完成 DB seed；seed 幂等，重跑安全。</td></tr><tr><td><code>optional-degraded</code></td><td>提醒</td><td>可选依赖降级（如 node-llama-cpp 未装成，本地推理走 fallback，不影响云端功能）</td><td>如需本地推理：在后端目录 <code>npm install node-llama-cpp --no-audit --no-fund</code>；装不上属正常，云端通道不受影响，可忽略。</td></tr></tbody></table>
+<h2 id="人工修复步骤-照着做">人工修复步骤（照着做）<a class="anchor" href="#人工修复步骤-照着做" aria-label="锚点">#</a></h2>
+<ol><li>跑自检，看它报哪几条拦路项：</li></ol>
+<pre><code class="language-bash">   node scripts/hydration-doctor.js</code></pre>
+<ol><li>最常见——依赖没装齐或裂脑，联网后重跑首启：</li></ol>
+<pre><code class="language-bash">   khy doctor</code></pre>
+<ol><li>若报裂脑（marker 说好了但依赖不在），删后端目录的 <code>.khy_quant_bootstrapped</code> 再重跑 khy。</li><li>若报 <code>@khy/shared</code> 链接断裂，删后端目录的 <code>package-lock.json</code> 再重跑 khy（bootstrap 会重建软链）。</li></ol>
+<h2 id="红线-继承项目章程">红线（继承项目章程）<a class="anchor" href="#红线-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>真 key/token 永不进包、不落盘；占位 key 一眼假。</li><li>pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本号必须一致。</li><li>本清单不教任何 commit/push/rm 危险文件/curl/publish 类危险动作（删 marker/lock 属安全局部操作）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-069] 已装副本完整性自检清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-071] 卸载第三方应用怎么保证卸干净-原生自带卸载器.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

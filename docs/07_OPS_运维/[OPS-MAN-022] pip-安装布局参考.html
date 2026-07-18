@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip 安装目录结构与源码映射参考 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>pip 安装目录结构与源码映射参考</div>
+      <header class="hero reveal"><h1>pip 安装目录结构与源码映射参考</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pip-安装目录结构与源码映射参考">pip 安装目录结构与源码映射参考</a></li><li class="lvl-2"><a href="#1-快速定位-pip-安装根目录">1. 快速定位 pip 安装根目录</a></li><li class="lvl-2"><a href="#2-安装后核心目录-逻辑结构">2. 安装后核心目录（逻辑结构）</a></li><li class="lvl-2"><a href="#3-源码-pip-安装目录映射">3. 源码 -&gt; pip 安装目录映射</a></li><li class="lvl-2"><a href="#4-运行时-backend-定位顺序">4. 运行时 backend 定位顺序</a></li><li class="lvl-2"><a href="#5-一致性自检建议">5. 一致性自检建议</a></li><li class="lvl-3"><a href="#5-1-校验关键目录存在">5.1 校验关键目录存在</a></li><li class="lvl-3"><a href="#5-2-校验-khy-shared-依赖已本地化">5.2 校验 `@khy/shared` 依赖已本地化</a></li><li class="lvl-2"><a href="#6-导出包内结构说明文件">6. 导出包内结构说明文件</a></li><li class="lvl-2"><a href="#7-npm-安装场景说明">7. npm 安装场景说明</a></li><li class="lvl-2"><a href="#8-源码发布密钥与扰乱模式">8. 源码发布密钥与扰乱模式</a></li><li class="lvl-2"><a href="#9-pip-npm-冲突仲裁-auto-模式">9. pip / npm 冲突仲裁（auto 模式）</a></li><li class="lvl-2"><a href="#10-为什么-pip-装完后不能直接-khy-就跑起来-启动故障排查">10. 为什么 pip 装完后不能直接 `khy` 就跑起来（启动故障排查）</a></li><li class="lvl-3"><a href="#10-1-一键体检-khy-preflight">10.1 一键体检：`khy preflight`</a></li><li class="lvl-3"><a href="#10-2-各层典型修复">10.2 各层典型修复</a></li><li class="lvl-2"><a href="#11-pip-打包规则维护约定">11. pip 打包规则维护约定</a></li><li class="lvl-3"><a href="#11-1-单一真源">11.1 单一真源</a></li><li class="lvl-3"><a href="#11-2-sdist-和-wheel-的职责">11.2 sdist 和 wheel 的职责</a></li><li class="lvl-3"><a href="#11-3-修改流程">11.3 修改流程</a></li><li class="lvl-3"><a href="#11-4-如何判断警告是不是问题">11.4 如何判断警告是不是问题</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-022 | 阶段: 运维 | 原路径: docs/指南/pip-安装布局参考.md --&gt;</p>
+<h1 id="pip-安装目录结构与源码映射参考">pip 安装目录结构与源码映射参考<a class="anchor" href="#pip-安装目录结构与源码映射参考" aria-label="锚点">#</a></h1>
+<p>本文件用于说明：<code>pip install khy-os</code>（或 <code>khy-quant</code>）后，安装目录里每一块内容来自源码仓库的哪里。</p>
+<blockquote><p>若你使用 npm 安装，同样可用本项目的 <code>origin-code</code> / <code>npm-dir-bundle</code> 导出结构，见下文第 7 节。</p></blockquote>
+<h2 id="1-快速定位-pip-安装根目录">1. 快速定位 pip 安装根目录<a class="anchor" href="#1-快速定位-pip-安装根目录" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">python -c &quot;import pathlib, khy_platform; p=pathlib.Path(khy_platform.__file__).resolve(); print(p.parent.parent)&quot;</code></pre>
+<p>输出一般是某个 <code>site-packages</code> 路径，例如：</p>
+<p><code>/path/to/python/lib/python3.x/site-packages</code></p>
+<h2 id="2-安装后核心目录-逻辑结构">2. 安装后核心目录（逻辑结构）<a class="anchor" href="#2-安装后核心目录-逻辑结构" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">site-packages/
+|-- khy_platform/
+|   |-- cli.py
+|   \-- ...
+|-- khy_os/
+|   \-- bundled/
+|       |-- services/backend/          (Node 后端：业务主体)
+|       |-- apps/ai-frontend/          (AI 管理前端)
+|       |-- software/khyquant/         (量化应用，含其 frontend)
+|       |-- kernel/                    (自研 C 内核源码，无预编译 ISO)
+|       |-- docs/
+|       |-- alpine/
+|       |-- scripts/
+|       |-- extensions/
+|       \-- platform/
+\-- khy_os-&lt;version&gt;.dist-info/   (或 khy_platform-&lt;version&gt;.dist-info)</code></pre>
+<h2 id="3-源码-pip-安装目录映射">3. 源码 -&gt; pip 安装目录映射<a class="anchor" href="#3-源码-pip-安装目录映射" aria-label="锚点">#</a></h2>
+<ul><li><code>khy_platform/</code> -&gt; <code>site-packages/khy_platform/</code></li><li><code>services/backend/</code> -&gt; <code>site-packages/khy_os/bundled/services/backend/</code></li><li><code>apps/ai-frontend/</code> -&gt; <code>site-packages/khy_os/bundled/apps/ai-frontend/</code></li><li><code>software/khyquant/</code> -&gt; <code>site-packages/khy_os/bundled/software/khyquant/</code></li><li><code>kernel/</code>（源码，无预编译 ISO）-&gt; <code>site-packages/khy_os/bundled/kernel/</code></li><li><code>docs/</code> -&gt; <code>site-packages/khy_os/bundled/docs/</code></li><li><code>alpine/</code> -&gt; <code>site-packages/khy_os/bundled/alpine/</code></li><li><code>scripts/</code> -&gt; <code>site-packages/khy_os/bundled/scripts/</code></li><li><code>packages/shared/</code> -&gt; <code>site-packages/khy_os/bundled/services/backend/vendor/shared/</code>（额外复制，确保 <code>@khy/shared</code> 可解析）</li></ul>
+<h2 id="4-运行时-backend-定位顺序">4. 运行时 backend 定位顺序<a class="anchor" href="#4-运行时-backend-定位顺序" aria-label="锚点">#</a></h2>
+<p><code>khy_platform/cli.py</code> 会按以下顺序定位 backend：</p>
+<ol><li>独立后端包（<code>khy-quant-backend</code>）</li><li>源码开发模式：仓库内 <code>services/backend</code>（当 <code>.git</code> 存在时优先，避免与 bundled 漂移）</li><li>pip 模式：<code>khy_os/bundled/services/backend</code></li><li>兜底：源码 <code>services/backend</code></li></ol>
+<p>这保证了：</p>
+<ul><li>本地开发优先用源码目录</li><li>pip 安装时优先用 wheel 内 bundled backend</li></ul>
+<h2 id="5-一致性自检建议">5. 一致性自检建议<a class="anchor" href="#5-一致性自检建议" aria-label="锚点">#</a></h2>
+<h3 id="5-1-校验关键目录存在">5.1 校验关键目录存在<a class="anchor" href="#5-1-校验关键目录存在" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+import pathlib, khy_platform
+site = pathlib.Path(khy_platform.__file__).resolve().parent.parent
+checks = [
+    site / &quot;khy_platform&quot; / &quot;cli.py&quot;,
+    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;package.json&quot;,
+    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;server.js&quot;,
+    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;apps&quot; / &quot;ai-frontend&quot; / &quot;package.json&quot;,
+]
+for p in checks:
+    print((&quot;OK   &quot; if p.exists() else &quot;MISS &quot;), p)
+PY</code></pre>
+<h3 id="5-2-校验-khy-shared-依赖已本地化">5.2 校验 <code>@khy/shared</code> 依赖已本地化<a class="anchor" href="#5-2-校验-khy-shared-依赖已本地化" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+import json, pathlib, khy_platform
+site = pathlib.Path(khy_platform.__file__).resolve().parent.parent
+pkg = site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;package.json&quot;
+dep = json.loads(pkg.read_text(encoding=&quot;utf-8&quot;)).get(&quot;dependencies&quot;, {}).get(&quot;@khy/shared&quot;)
+print(dep)
+PY</code></pre>
+<p>期望输出：<code>file:./vendor/shared</code></p>
+<h2 id="6-导出包内结构说明文件">6. 导出包内结构说明文件<a class="anchor" href="#6-导出包内结构说明文件" aria-label="锚点">#</a></h2>
+<p>通过以下命令导出的包会自动携带结构说明：</p>
+<ul><li><code>khy publish docker-bundle</code></li><li><code>khy publish pip-dir-bundle</code></li><li><code>khy publish npm-dir-bundle</code></li><li><code>khy publish origin-code</code></li></ul>
+<p>压缩包根目录会包含：</p>
+<ul><li><code>INSTALL_LAYOUT.md</code>（可读）</li><li><code>INSTALL_LAYOUT.json</code>（可解析）</li></ul>
+<h2 id="7-npm-安装场景说明">7. npm 安装场景说明<a class="anchor" href="#7-npm-安装场景说明" aria-label="锚点">#</a></h2>
+<p>当在 npm 安装场景下导出时（自动探测或 <code>--install npm</code>）：</p>
+<ul><li><code>khy publish npm-dir-bundle</code> 会导出 <code>npm-install/backend</code> 为 Docker 部署入口。</li><li><code>khy publish origin-code --install npm</code> 会尽可能从 npm 安装目录还原：<ul><li><code>backend/</code>（必有）</li><li><code>frontend/</code>, <code>docs/</code>, <code>alpine/</code>, <code>scripts/alpine/</code>, <code>packages/shared/</code>（若安装目录中存在）</li></ul></li></ul>
+<p>常用命令：</p>
+<pre><code class="language-bash">khy publish npm-dir-bundle --npm-root /path/to/npm-install-root
+khy publish origin-code --install npm --npm-root /path/to/npm-install-root</code></pre>
+<h2 id="8-源码发布密钥与扰乱模式">8. 源码发布密钥与扰乱模式<a class="anchor" href="#8-源码发布密钥与扰乱模式" aria-label="锚点">#</a></h2>
+<p><code>origin-code</code> 与 <code>git-push</code> 属于源码能力，支持密钥门禁：</p>
+<ul><li>完整模式：提供密钥后执行完整源码还原/推送。密钥来源（任一即可）：<ul><li>环境变量 <code>KHY_SOURCE_PUBLISH_SECRET</code>（或 <code>KHY_OWNER_SECRET</code>）；</li><li>命令行 <code>--secret &lt;你的密钥&gt;</code>。</li><li>说明：<code>khy2026</code> 是代码内置的<strong>默认学习口令</strong>（<code>DEFAULT_SOURCE_SECRET</code>），用它加密的学习快照可零额外步骤还原——它按设计是公开默认值，<strong>不是</strong>需要保密的凭据。生产/自有快照请用上面的环境变量设你自己的密钥覆盖它。</li></ul></li><li>扰乱模式：未提供密钥或密钥错误时自动降级</li></ul>
+<p>扰乱模式行为：</p>
+<ul><li><code>origin-code</code>：保留目录骨架，但会移除/改写核心技术实现文件</li><li><code>git-push</code>：自动转为 <code>dry-run</code>，仅输出推送计划，不执行真实源码推送</li></ul>
+<h2 id="9-pip-npm-冲突仲裁-auto-模式">9. pip / npm 冲突仲裁（auto 模式）<a class="anchor" href="#9-pip-npm-冲突仲裁-auto-模式" aria-label="锚点">#</a></h2>
+<p>当 <code>--install auto</code> 且本机同时检测到 pip 与 npm 安装布局时，发布器会自动仲裁：</p>
+<ol><li>先比较 backend 版本号，优先更高版本</li><li>版本相同则比较 <code>package.json</code> 最近修改时间，优先更新更晚的一侧</li><li>若仍相同，默认回退到 pip</li></ol>
+<p>这样可以让 pip 与 npm 安装互相更新时，以“最新有效安装”为准，避免固定优先级造成冲突。</p>
+<h2 id="10-为什么-pip-装完后不能直接-khy-就跑起来-启动故障排查">10. 为什么 pip 装完后不能直接 <code>khy</code> 就跑起来（启动故障排查）<a class="anchor" href="#10-为什么-pip-装完后不能直接-khy-就跑起来-启动故障排查" aria-label="锚点">#</a></h2>
+<p><code>pip install</code> 只完成了<strong>「Python 启动器」</strong>这一层。<code>khy</code>（首启入口）真正跑起来，是 Python<br>启动器再去拉起 Node.js 后端，因此在 Windows 上还需另外几层依赖，缺一不可：</p>
+<table><thead><tr><th>层</th><th>检查项</th><th>缺失时的现象</th></tr></thead><tbody><tr><td>1</td><td><code>khy</code> 可执行文件在 PATH 上</td><td><code>'khy' 不是内部或外部命令</code></td></tr><tr><td>2</td><td>Node.js &gt;= 20</td><td>提示 “Node.js not found / &gt;= 20 required”</td></tr><tr><td>3</td><td><code>services/backend/node_modules</code> 已安装</td><td>首启卡在 <code>npm install</code> 或 <code>Cannot find module</code></td></tr><tr><td>4</td><td>全局 <code>claude</code> CLI（<strong>仅</strong> <code>khy claude</code> 需要，普通对话不需要）</td><td><code>错误: 未找到 claude 命令</code></td></tr></tbody></table>
+<h3 id="10-1-一键体检-khy-preflight">10.1 一键体检：<code>khy preflight</code><a class="anchor" href="#10-1-一键体检-khy-preflight" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy preflight        # 别名：khy precheck</code></pre>
+<p>该命令在启动早期对上述四层集中体检，<strong>不触发 Node 后端</strong>，逐项输出<br><code>[ OK ] / [WARN] / [FAIL]</code> 并给出 Windows 专属、可直接粘贴执行的修复指引。<br>退出码：存在阻塞项=1，仅警告或全部通过=0。</p>
+<blockquote><p>若 <code>khy</code> 还没进 PATH（第 1 层就失败），用兜底方式调用：<br><code>python -m khy_platform preflight</code></p></blockquote>
+<h3 id="10-2-各层典型修复">10.2 各层典型修复<a class="anchor" href="#10-2-各层典型修复" aria-label="锚点">#</a></h3>
+<ul><li><strong>第 1 层（PATH）</strong>：pip 把 <code>khy.exe</code> 放在 Scripts 目录（全局</li></ul>
+<p><code>&lt;Python&gt;\Scripts\</code>，或 <code>pip install --user</code> 的<br>  <code>%APPDATA%\Python\Python3X\Scripts\</code>），该目录默认不在 PATH。<br>  <code>khy preflight</code> 会打印实际目录与可粘贴的 PowerShell 加 PATH 命令；<br>  或始终可用 <code>python -m khy_platform &lt;子命令&gt;</code> 兜底（等价于 <code>khy &lt;子命令&gt;</code>，如<br>  <code>python -m khy_platform preflight</code>）。</p>
+<ul><li><strong>第 2 层（Node）</strong>：<code>winget install OpenJS.NodeJS.LTS</code>（国内可用</li></ul>
+<p>npmmirror 镜像）。</p>
+<ul><li><strong>第 3 层（依赖）</strong>：跑一次正常启动会自动 <code>npm install</code>；手动修复</li></ul>
+<p><code>cd &lt;bundled/services/backend&gt; &amp;&amp; npm install</code>。Windows 上若因长路径失败，启用<br>  Win32 长路径或 <code>git config --system core.longpaths true</code>；若 site-packages<br>  只读，改用 <code>pip install --user khy-os</code>。</p>
+<ul><li><strong>第 4 层（claude）</strong>：<code>npm install -g @anthropic-ai/claude-code</code>。</li></ul>
+<p>实现见 <code>platform/khy_platform/cli.py</code> 的 <code>_run_preflight_cli</code> 及 <code>_pf_check_*</code> 系列函数。</p>
+<h2 id="11-pip-打包规则维护约定">11. pip 打包规则维护约定<a class="anchor" href="#11-pip-打包规则维护约定" aria-label="锚点">#</a></h2>
+<p>这一节是维护者的操作准则，目标是防止打包时漏文件、重复打文件，或者出现<br>“sdist 和 wheel 各自一套规则”的漂移问题。</p>
+<h3 id="11-1-单一真源">11.1 单一真源<a class="anchor" href="#11-1-单一真源" aria-label="锚点">#</a></h3>
+<ul><li>规则真源只有一份：<code>scripts/release/pip_packaging_rules.py</code></li><li><code>MANIFEST.in</code> 是生成文件，禁止手工编辑</li><li><code>setup.py</code>、<code>MANIFEST.in</code>、打包审计脚本都必须从同一份规则读取</li></ul>
+<h3 id="11-2-sdist-和-wheel-的职责">11.2 sdist 和 wheel 的职责<a class="anchor" href="#11-2-sdist-和-wheel-的职责" aria-label="锚点">#</a></h3>
+<ul><li>sdist 负责保留“可重建 wheel 的源码和构建输入”</li><li>wheel 负责保留“运行时真正需要的 bundled 载荷”</li><li>任何 <code>node_modules</code>、编译产物、模型权重、缓存、临时目录，都不应该进入 pip 产物</li><li>任何重建 wheel 需要的文件，都必须显式进入 sdist</li></ul>
+<h3 id="11-3-修改流程">11.3 修改流程<a class="anchor" href="#11-3-修改流程" aria-label="锚点">#</a></h3>
+<p>新增、删除或移动 pip 打包文件时，按这个顺序操作：</p>
+<ol><li>先改 <code>scripts/release/pip_packaging_rules.py</code></li><li>再运行 <code>python3 scripts/release/render_manifest.py</code></li><li>再运行 <code>python3 scripts/release/check_manifest_sync.py</code></li><li>再运行 <code>bash scripts/release/build-and-audit-pip-purity.sh</code></li></ol>
+<p>如果本地环境无法联网，但已经装好了 <code>build</code>、<code>setuptools</code>、<code>wheel</code>，可改用：</p>
+<pre><code class="language-bash">bash scripts/release/build-and-audit-pip-purity.sh --no-isolation</code></pre>
+<h3 id="11-4-如何判断警告是不是问题">11.4 如何判断警告是不是问题<a class="anchor" href="#11-4-如何判断警告是不是问题" aria-label="锚点">#</a></h3>
+<ul><li><code>no previously-included ...</code> 一类警告，通常只是说明当前工作区里没有命中对应路径</li><li>只有以下情况才算真正的打包问题：<ul><li>该出现的源码没进 sdist 或 wheel</li><li>不该出现的第三方依赖树、二进制、模型文件进了产物</li><li><code>MANIFEST.in</code> 和规则真源不同步</li></ul></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html"><div class="dir">← 上一篇</div><div class="ttl">OpenCode 任务编排机制学习记录</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-023] pip安装后-完整功能清单.html"><div class="dir">下一篇 →</div><div class="ttl">pip 安装后：开启完整功能清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

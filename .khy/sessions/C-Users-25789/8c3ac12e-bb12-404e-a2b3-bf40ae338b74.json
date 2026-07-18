@@ -1,0 +1,40 @@
+{
+  "sessionId": "8c3ac12e-bb12-404e-a2b3-bf40ae338b74",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "我的桌面上有什么"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: Bash]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_00_kEM0Zs6gpfUDgE2zjCOT7969",
+          "name": "Bash",
+          "input": {
+            "command": "dir \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782108119952,
+  "updatedAt": 1782108119952
+}

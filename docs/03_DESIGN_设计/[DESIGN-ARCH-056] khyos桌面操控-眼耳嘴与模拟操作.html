@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-056-khyos-桌面操控-眼-耳-嘴与模拟操作">[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作</a></li><li class="lvl-2"><a href="#1-背景与目标">1. 背景与目标</a></li><li class="lvl-2"><a href="#2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）</a></li><li class="lvl-2"><a href="#3-模块-8-纯模块-1-门面">3. 模块（8 纯模块 + 1 门面）</a></li><li class="lvl-3"><a href="#3-1-感知层数据流-看清-知道怎么操控-操控">3.1 感知层数据流（看清 → 知道怎么操控 → 操控）</a></li><li class="lvl-2"><a href="#4-授权光谱-khy-desktop-control">4. 授权光谱（`KHY_DESKTOP_CONTROL`）</a></li><li class="lvl-2"><a href="#5-防呆清单">5. 防呆清单</a></li><li class="lvl-2"><a href="#6-工具入口">6. 工具入口</a></li><li class="lvl-2"><a href="#7-跨平台后端矩阵">7. 跨平台后端矩阵</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-056-khyos-桌面操控-眼-耳-嘴与模拟操作">[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作<a class="anchor" href="#design-arch-056-khyos-桌面操控-眼-耳-嘴与模拟操作" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（确定性核心 + fail-closed 安全闸门 + 结构化感知层 + 复用既有 TTS/STT/OCR）<br>子系统：<code>services/backend/src/services/desktopControl/</code><br>工具：<code>DesktopControl</code>（<code>services/backend/src/tools/DesktopControlTool/index.js</code>）<br>测试：<code>services/backend/tests/services/desktopControl/desktopControl.test.js</code>（47 例绿）<br>　　　<code>services/backend/tests/services/desktopControl/desktopPerception.test.js</code>（32 例绿）</p></blockquote>
+<h2 id="1-背景与目标">1. 背景与目标<a class="anchor" href="#1-背景与目标" aria-label="锚点">#</a></h2>
+<p>诉求（迭代）：<strong>给 Khyos 装上「眼、耳、嘴」，让它能模拟点击操控电脑、填写表单</strong>；<br>进一步<strong>「让它看得更清，并把可点击按钮作为可点击结构化数据返回，让 AI 知道怎么操控」</strong>。</p>
+<p>把四感官落到物理能力：</p>
+<table><thead><tr><th>感官</th><th>能力</th><th>落点</th></tr></thead><tbody><tr><td>眼</td><td>桌面截屏 → 喂 OCR/多模态「看懂」屏幕</td><td><code>screenCapture</code>（新）</td></tr><tr><td>手</td><td>模拟真实鼠标点击/拖拽/滚轮 + 键盘打字/按键/组合键</td><td><code>inputController</code>（新）</td></tr><tr><td>手</td><td>自动填写原生/Web 表单</td><td><code>formFiller</code>（新）</td></tr><tr><td>嘴</td><td>文本朗读（TTS）</td><td><code>voiceBridge</code> → 既有 <code>voiceService.speak</code></td></tr><tr><td>耳</td><td>录音转写（STT）</td><td><code>voiceBridge</code> → 既有 <code>voiceService.listen</code></td></tr></tbody></table>
+<p>「嘴/耳」早已存在于 <code>voiceService</code>，本子系统<strong>绝不重造</strong>，只做适配与一致化；新增的是<br>「眼/手」与统一的安全门面。</p>
+<p><strong>感知层（迭代新增）</strong>：仅有像素截图不足以让 AI「知道怎么操控」。新增「结构化感知」把屏幕<br>解析成<strong>可寻址、可点击的元素清单</strong>（set-of-marks）——AI 不再靠猜坐标，而是按 <strong>id（<code>e3</code>）/<br>序号 / 可见标签（「提交」/「Submit」）</strong> 引用元素，由系统解析成中心点再走同一条受闸门的点击<br>路径。这正是「把可点击按钮作为可点击结构化数据返回」的落点。</p>
+<table><thead><tr><th>能力</th><th>落点</th></tr></thead><tbody><tr><td>眼·看清（结构化元素）</td><td><code>uiInspector</code>（新）+ <code>elementModel</code>（新）+ <code>backendRegistry</code> 的 <code>inspect</code> 后端（新）</td></tr><tr><td>按引用点击 / 按引用填表</td><td>门面 <code>clickElement()</code> / `fillForm({fields:[{element\</td></tr></tbody></table>
+<h2 id="2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）<a class="anchor" href="#2-设计原则-与全局工程铁律一致" aria-label="锚点">#</a></h2>
+<ul><li><strong>fail-closed 默认关闭</strong>：模拟鼠标键盘能接管整台机器，是最高危能力之一。未经人类显式授权，</li></ul>
+<p>一切截屏/操控被<strong>硬拒绝</strong>（<code>KHY_DESKTOP_CONTROL</code> 缺省 = <code>off</code>）。</p>
+<ul><li><strong>唯一咽喉</strong>：所有 capture/actuate 必经 <code>safetyGate.authorize</code>。门面 <code>DesktopController</code> 是唯一</li></ul>
+<p>对外入口，「先授权后操作」由结构保证；绕过门面直调底层即绕过审批，仅限内部/测试。</p>
+<ul><li><strong>只增加拒绝，绝不放松保护</strong>：本闸门叠加在工具层既有权限/<code>syscallGateway</code> 之上，是<strong>新增</strong>否决层；</li></ul>
+<p>任何一层判拒即拒。模型驱动路径仍受既有审批管线把关。</p>
+<ul><li><strong>零硬编码、单一真源</strong>：所有 OS 原生命令（<code>screencapture</code>/<code>grim</code>/<code>scrot</code>/<code>xdotool</code>/<code>cliclick</code>/</li></ul>
+<p><code>powershell</code>/<code>pyautogui</code>…）集中在 <code>backendRegistry</code>，新增平台/后端只在此登记。</p>
+<ul><li><strong>注入安全</strong>：每条命令只产出 <code>{cmd, args[]}</code>，全程 <code>execFile</code>（<strong>无 shell 拼接</strong>）。坐标经校验为</li></ul>
+<p>有限非负整数；文本作为单个 argv 元素传入（pyautogui 经 <code>sys.argv</code>，PowerShell SendKeys 转义元字符）。</p>
+<ul><li><strong>缺后端不抛错</strong>：探测不到后端则降级并给安装提示（接依赖自愈），<strong>绝不伪造</strong>点击/截屏。</li><li><strong>会话级熔断预算</strong>：单会话操作数封顶（<code>KHY_DESKTOP_MAX_ACTUATIONS</code>，默认 500），超限自动吊销</li></ul>
+<p>授权，挡住失控循环。</p>
+<h2 id="3-模块-8-纯模块-1-门面">3. 模块（8 纯模块 + 1 门面）<a class="anchor" href="#3-模块-8-纯模块-1-门面" aria-label="锚点">#</a></h2>
+<pre><code>desktopControl/
+├── backendRegistry.js   单一真源：按平台×后端构建截屏/鼠标/键盘/无障碍树的 execFile argv
+├── backendDetector.js   探活本机后端(which+深探 import)，汇总眼/感知/手/嘴/耳能力图
+├── screenCapture.js     眼：全屏/区域截屏到受管目录，落盘校验
+├── elementModel.js      感知·纯模型：跨平台角色归一 + 元素规范化 + 去重 + 寻址(id/序号/名称)
+├── uiInspector.js       眼·看清：抓无障碍树→规范成可点击结构化元素清单，缺后端 OCR 兜底/诚实降级
+├── inputController.js    手：鼠标/键盘原语，坐标/文本校验 + 不支持动作明确降级
+├── formFiller.js        填表：纯计划器 planFill + 执行器 executeFill（Web 委派/原生注入）
+├── voiceBridge.js       嘴+耳：薄封装 voiceService.speak/listen
+├── safetyGate.js        唯一咽喉：环境开关 + 会话授权 + 熔断预算 + 网关 backstop
+└── index.js             门面 DesktopController：五感官统一，actuation 前置授权 + 按引用操控</code></pre>
+<h3 id="3-1-感知层数据流-看清-知道怎么操控-操控">3.1 感知层数据流（看清 → 知道怎么操控 → 操控）<a class="anchor" href="#3-1-感知层数据流-看清-知道怎么操控-操控" aria-label="锚点">#</a></h3>
+<pre><code>observe()
+  ├─ screenshot()         → PNG 路径（给多模态视觉「看」）
+  └─ inspect()            → 无障碍树
+       ├─ backendRegistry  macOS AX(osascript JXA) / Linux AT-SPI(python3 pyatspi) / Win UIA(PowerShell)
+       │                    脚本均为**常量**（无用户数据内插），execFile argv 传入（注入免疫）
+       ├─ elementModel.normalizeAll
+       │    canonicalRole 角色归一 → 计算中心点 → clickable/editable 判定 → IoU 去重 → 稳定 id(e1,e2…)
+       └─ 输出 { elements, marks:[{id,role,label,center,clickable,editable}], clickable, count, clickableCount }
+
+AI 读 marks → clickElement(&quot;提交&quot;|&quot;e3&quot;|序号) / fillForm({fields:[{element:&quot;邮箱&quot;, value}]})
+  └─ elementModel.resolveTarget(ref)  精确&gt;前缀&gt;包含，多候选标 ambiguous
+       └─ 解析出 center{x,y} → 走 _guarded 点击/输入（与裸坐标同一条受闸门路径）</code></pre>
+<p><strong>降级铁律</strong>：无任何无障碍后端时，若注入了带框 OCR(<code>ocrWords</code>) 则退化为 OCR 文本元素<br>（标 <code>source:'ocr'</code>、<code>clickable=false</code>——不臆造可点击性）；否则诚实返回 <code>elements:[]</code> +<br><code>installHints</code>，<strong>绝不伪造</strong>元素或坐标。无包围盒的节点 <code>center=null</code> 且永不可点击。</p>
+<h2 id="4-授权光谱-khy-desktop-control">4. 授权光谱（<code>KHY_DESKTOP_CONTROL</code>）<a class="anchor" href="#4-授权光谱-khy-desktop-control" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>值</th><th>语义</th></tr></thead><tbody><tr><td><code>off</code> / 未设</td><td>全拒（默认，安全）。仅 <code>capabilities</code>（只读元数据）与 <code>speak/listen</code>（归 voiceService）放行。</td></tr><tr><td><code>on</code> / <code>1</code> / <code>true</code></td><td>本会话<strong>自主放行</strong>——环境开关即「我允许 Khyos 操控本机」的签名。仍受熔断预算约束。适合无人值守。</td></tr><tr><td><code>ask</code></td><td>每会话<strong>首次经宿主审批一次</strong>，之后自主放行（经 <code>syscallGateway</code> backstop）。</td></tr><tr><td><code>strict</code></td><td><strong>每个真实操作都审批</strong>（最高安全，牺牲自主性，网关 L2 键入确认）。</td></tr></tbody></table>
+<p>操作分类（<code>OP_CLASS</code> 单一真源）：<code>capability</code>（永放行）/ <code>capture</code>（受闸门）/ <code>actuate</code><br>（受闸门 + 预算）/ <code>voice</code>（归 voiceService）。未知动作保守按 <code>actuate</code>。</p>
+<h2 id="5-防呆清单">5. 防呆清单<a class="anchor" href="#5-防呆清单" aria-label="锚点">#</a></h2>
+<ol><li><strong>默认即拒</strong>：环境开关缺省 off，截屏/操控一律拒绝并返回启用指引。</li><li><strong>唯一入口</strong>：门面包装 <code>_guarded</code>，任何 actuation 不过闸门不触底层注入器（测试实证 <code>touched=false</code>）。</li><li><strong>注入免疫</strong>：危险文本（<code>rm -rf /</code>、<code>$(reboot)</code>）作为单个 argv 传入，绝不被 shell 解释。</li><li><strong>降级不伪造</strong>：后端不支持的动作 builder 返回 <code>null</code> → 明确报「不支持」，不静默吞。</li><li><strong>熔断兜底</strong>：单会话操作数超上限即吊销授权，防失控循环燃尽。</li><li><strong>网关 backstop</strong>：<code>ask/strict</code> 经 <code>syscallGateway</code>；网关被关闭时高危操作仍<strong>保守拒绝</strong>，不无人把守。</li><li><strong>感知不臆造</strong>：无包围盒的节点 <code>center=null</code> 且 <code>clickable=false</code>；缺无障碍后端时诚实返回</li></ol>
+<p><code>elements:[]</code> + 安装提示（或 OCR 文本兜底，标 <code>clickable=false</code>），绝不伪造可点击元素或坐标。</p>
+<ol><li><strong>按引用即受闸门</strong>：<code>clickElement</code>/元素引用填表先经 <code>inspect</code>（capture 类，受闸门），解析出</li></ol>
+<p>中心点后走与裸坐标<strong>同一条</strong> <code>_guarded</code> 点击路径——感知层不开任何绕过闸门的旁路。</p>
+<h2 id="6-工具入口">6. 工具入口<a class="anchor" href="#6-工具入口" aria-label="锚点">#</a></h2>
+<p><code>DesktopControl</code>（risk=<code>critical</code>，category=<code>system</code>，<code>shouldDefer</code>）单 <code>action</code> 枚举：<br><code>capabilities | observe | inspect | screenshot | see | clickElement | move | click | doubleClick |<br>rightClick | drag | scroll | type | key | hotkey | fillForm | speak | listen</code>。</p>
+<p>推荐工作流（让 AI「知道怎么操控」）：<strong><code>observe</code> → 读 <code>marks</code> → <code>clickElement</code>/<code>type</code>/<code>fillForm</code><br>按元素引用操作</strong>。<code>observe</code> 一步给出截图路径（多模态看）+ 结构化 <code>marks</code>（可点击数据）；<br><code>clickElement</code> 的 <code>target</code> 可为 id（<code>e3</code>）/序号/可见标签（「提交」）；<code>fillForm</code> 的字段支持<br><code>{element|ref, value}</code>，自动经一次 inspect 解析成坐标（默认 <code>clearFirst</code>）。<code>clickElement</code> 归<br>actuation（高危）。</p>
+<p>两条集成面：</p>
+<ul><li><strong>门面（程序化）</strong>：其他子系统/自动化流程在人类设好 <code>KHY_DESKTOP_CONTROL</code> 后可经</li></ul>
+<p><code>DesktopController</code> 自主多步操控（无逐次 YES）。</p>
+<ul><li><strong>工具（模型驱动）</strong>：模型经 <code>DesktopControl</code> 工具调用，除主闸门外仍走既有审批管线，保守把关。</li></ul>
+<h2 id="7-跨平台后端矩阵">7. 跨平台后端矩阵<a class="anchor" href="#7-跨平台后端矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>平台</th><th>眼（截屏）</th><th>眼·看清（无障碍树）</th><th>手（鼠标/键盘）</th></tr></thead><tbody><tr><td>macOS</td><td><code>screencapture</code>(内置)</td><td><code>osascript</code> JXA → System Events AX（内置）</td><td><code>cliclick</code> ▸ <code>pyautogui</code> ▸ <code>osascript</code>(仅键盘)</td></tr><tr><td>Linux</td><td><code>grim</code>(Wayland) ▸ <code>maim</code> ▸ <code>scrot</code> ▸ <code>import</code> ▸ <code>gnome-screenshot</code></td><td><code>python3</code> + <code>pyatspi</code>(AT-SPI，深探 import)</td><td><code>xdotool</code>(X11) ▸ <code>ydotool</code>(Wayland) ▸ <code>pyautogui</code></td></tr><tr><td>Windows</td><td>PowerShell System.Drawing</td><td>PowerShell <code>UIAutomationClient</code>(UIA，内置)</td><td>PowerShell user32(SetCursorPos/mouse_event)+SendKeys ▸ <code>pyautogui</code></td></tr></tbody></table>
+<p>缺后端时按优先级回退；全缺则降级给对应安装提示（看清层另有 OCR 兜底）。无障碍后端脚本均为<br>常量字符串集中在 <code>backendRegistry</code>，经 <code>execFile</code> argv 注入安全。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-055] 对抗式训练-极端环境抗压自检与加固.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-058] 细粒度权限策略与记忆主动化引擎.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-056] khyos桌面操控-眼耳嘴与模拟操作.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

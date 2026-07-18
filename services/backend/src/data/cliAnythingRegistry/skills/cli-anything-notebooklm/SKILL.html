@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-notebooklm · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-notebooklm<span class="sep">›</span>cli-anything-notebooklm</div>
+      <header class="hero reveal"><h1>cli-anything-notebooklm</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-notebooklm">cli-anything-notebooklm</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#requirements">Requirements</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-2"><a href="#agent-workflow">Agent Workflow</a></li><li class="lvl-2"><a href="#agent-guidance">Agent Guidance</a></li><li class="lvl-2"><a href="#references">References</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-notebooklm&quot;<br>description: Experimental NotebookLM harness for listing notebooks, managing sources, asking questions, generating artifacts, and downloading outputs through an installed notebooklm CLI.</p>
+<hr>
+<h1 id="cli-anything-notebooklm">cli-anything-notebooklm<a class="anchor" href="#cli-anything-notebooklm" aria-label="锚点">#</a></h1>
+<p>Experimental NotebookLM harness for CLI-Anything.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This package is intended to be installed from the harness directory:</p>
+<pre><code class="language-bash">cd notebooklm/agent-harness
+python3 -m pip install -e .</code></pre>
+<p>Install the upstream NotebookLM CLI if needed:</p>
+<pre><code class="language-bash">python3 -m pip install --user 'notebooklm-py[browser]'
+python3 -m playwright install chromium</code></pre>
+<h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
+<ul><li><code>notebooklm</code> command installed locally</li><li>Valid local NotebookLM login session</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-notebooklm --help
+
+# Start with a notebook context
+cli-anything-notebooklm --notebook nb_123 source list
+
+# Prefer JSON for agent use
+cli-anything-notebooklm --json notebook list</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Group</th><th>Purpose</th></tr></thead><tbody><tr><td><code>auth</code></td><td>login and auth validation</td></tr><tr><td><code>notebook</code></td><td>notebook list, create, summary</td></tr><tr><td><code>source</code></td><td>source listing and URL add</td></tr><tr><td><code>chat</code></td><td>ask questions and inspect history</td></tr><tr><td><code>artifact</code></td><td>list and generate artifacts</td></tr><tr><td><code>download</code></td><td>fetch generated outputs</td></tr><tr><td><code>share</code></td><td>inspect sharing state</td></tr></tbody></table>
+<h2 id="agent-workflow">Agent Workflow<a class="anchor" href="#agent-workflow" aria-label="锚点">#</a></h2>
+<ol><li>Check auth with <code>cli-anything-notebooklm auth status</code></li><li>Discover notebook IDs with <code>cli-anything-notebooklm --json notebook list</code></li><li>Use explicit <code>--notebook</code> for follow-up commands</li><li>Prefer <code>--json</code> only where the upstream <code>notebooklm</code> command supports it</li></ol>
+<h2 id="agent-guidance">Agent Guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
+<ul><li>Prefer explicit notebook IDs with <code>--notebook</code>.</li><li>Use <code>--json</code> for machine-readable output only on commands that support it upstream.</li><li>Treat this harness as experimental and unofficial.</li><li>Do not expose auth files or cookies in logs.</li><li>NotebookLM is a Google product; this harness is unofficial and not affiliated with Google.</li></ul>
+<h2 id="references">References<a class="anchor" href="#references" aria-label="锚点">#</a></h2>
+<ul><li>CLI-Anything: https://github.com/HKUDS/CLI-Anything</li><li>CLI-Anything HARNESS.md: https://github.com/HKUDS/CLI-Anything/blob/main/cli-anything-plugin/HARNESS.md</li><li>notebooklm-py: https://github.com/teng-lin/notebooklm-py</li><li>Google NotebookLM help: https://support.google.com/notebooklm/answer/16206563</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-n8n/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-n8n</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-novita/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-novita</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-notebooklm/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

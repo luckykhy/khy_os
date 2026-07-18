@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code vs KHY OS：架构深度对比 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>Claude Code vs KHY OS：架构深度对比</div>
+      <header class="hero reveal"><h1>Claude Code vs KHY OS：架构深度对比</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-code-vs-khy-os-架构深度对比">Claude Code vs KHY OS：架构深度对比</a></li><li class="lvl-2"><a href="#1-顶层架构对比">1. 顶层架构对比</a></li><li class="lvl-2"><a href="#2-入口与启动">2. 入口与启动</a></li><li class="lvl-3"><a href="#claude-code">Claude Code</a></li><li class="lvl-3"><a href="#khy-os">KHY OS</a></li><li class="lvl-3"><a href="#关键差异">关键差异</a></li><li class="lvl-2"><a href="#3-agent-循环-核心差异点">3. Agent 循环（核心差异点）</a></li><li class="lvl-3"><a href="#claude-code-异步生成器循环">Claude Code：异步生成器循环</a></li><li class="lvl-3"><a href="#khy-os-多路径状态机">KHY OS：多路径状态机</a></li><li class="lvl-3"><a href="#对比分析">对比分析</a></li><li class="lvl-2"><a href="#4-工具系统">4. 工具系统</a></li><li class="lvl-3"><a href="#claude-code-2">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-2">KHY OS</a></li><li class="lvl-3"><a href="#关键差异-2">关键差异</a></li><li class="lvl-2"><a href="#5-tui-渲染系统">5. TUI / 渲染系统</a></li><li class="lvl-3"><a href="#claude-code-魔改-ink-react">Claude Code：魔改 Ink（React）</a></li><li class="lvl-3"><a href="#khy-os-自研-flux-store-双渲染器">KHY OS：自研 Flux Store + 双渲染器</a></li><li class="lvl-3"><a href="#对比分析-2">对比分析</a></li><li class="lvl-2"><a href="#6-权限系统">6. 权限系统</a></li><li class="lvl-3"><a href="#claude-code-3">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-3">KHY OS</a></li><li class="lvl-3"><a href="#关键差异-3">关键差异</a></li><li class="lvl-2"><a href="#7-上下文-记忆管理">7. 上下文 / 记忆管理</a></li><li class="lvl-3"><a href="#claude-code-4">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-4">KHY OS</a></li><li class="lvl-3"><a href="#关键差异-4">关键差异</a></li><li class="lvl-2"><a href="#8-多-agent-架构">8. 多 Agent 架构</a></li><li class="lvl-3"><a href="#claude-code-5">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-5">KHY OS</a></li><li class="lvl-3"><a href="#关键差异-5">关键差异</a></li><li class="lvl-2"><a href="#9-网关-供应商抽象">9. 网关 / 供应商抽象</a></li><li class="lvl-3"><a href="#claude-code-6">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-6">KHY OS</a></li><li class="lvl-3"><a href="#分析">分析</a></li><li class="lvl-2"><a href="#10-扩展-插件系统">10. 扩展 / 插件系统</a></li><li class="lvl-3"><a href="#claude-code-7">Claude Code</a></li><li class="lvl-3"><a href="#khy-os-7">KHY OS</a></li><li class="lvl-3"><a href="#关键差异-6">关键差异</a></li><li class="lvl-2"><a href="#11-代码规模对比">11. 代码规模对比</a></li><li class="lvl-2"><a href="#12-架构优势与取舍">12. 架构优势与取舍</a></li><li class="lvl-3"><a href="#claude-code-优势">Claude Code 优势</a></li><li class="lvl-3"><a href="#claude-code-取舍">Claude Code 取舍</a></li><li class="lvl-3"><a href="#khy-os-优势">KHY OS 优势</a></li><li class="lvl-3"><a href="#khy-os-取舍">KHY OS 取舍</a></li><li class="lvl-2"><a href="#13-功能矩阵">13. 功能矩阵</a></li><li class="lvl-2"><a href="#14-趋同建议">14. 趋同建议</a></li><li class="lvl-3"><a href="#khy-应从-cc-吸收的">KHY 应从 CC 吸收的：</a></li><li class="lvl-3"><a href="#cc-可从-khy-借鉴的">CC 可从 KHY 借鉴的：</a></li><li class="lvl-2"><a href="#15-结论">15. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-019 | 阶段: 项目管理 | 原路径: docs/架构/架构对比-cc-vs-khy.md --&gt;</p>
+<h1 id="claude-code-vs-khy-os-架构深度对比">Claude Code vs KHY OS：架构深度对比<a class="anchor" href="#claude-code-vs-khy-os-架构深度对比" aria-label="锚点">#</a></h1>
+<blockquote><p>生成日期：2026-06-04 | CC 源码：Claude-Code-main（最新开源版本）| KHY：v0.1.98</p></blockquote>
+<blockquote><p>⚠️ <strong>勘误（2026-07-08 核出，本文成文于 v0.1.98，其后 khy 已迭代，以下以当前源码为准）</strong>：</p>
+<ol><li><strong>TUI 已切官方 <code>ink</code> 包</strong>，经 CJS 桥接层 <code>src/cli/tui/inkRuntime.js</code> 加载；旧的**自研 Flux store /</li></ol>
+<p>VirtualScreen 已移除**（下表「UI 框架」一行的 khy 侧描述已过期）。</p>
+<ol><li><strong>queryEngine 的 V2 状态机已删除</strong>（<code>queryEngine.js:14-21</code>）；当前是 legacy loop + 可选 agentic</li></ol>
+<p>harness 双路，底层统一委托 <code>toolUseLoop.js</code>。<code>KHY_QUERY_ENGINE_V2</code> 已废弃无效。</p>
+<ol><li><strong>全仓仅一个 <code>KHY_DEFER_TOOLS</code> defer 门</strong>（<code>tools/index.js:38</code>），不存在复数 defer 门族。</li><li><strong>后台任务已落地</strong>：<code>khy tasks run</code>（每任务一个分离子进程 <code>scripts/task-runner.js</code>，关掉 REPL 也存活），</li></ol>
+<p>见 <code>backgroundTaskSpec.js</code>/<code>backgroundTaskLauncher.js</code>。</p>
+<ol><li><strong>执行治理守卫是 7 个</strong> <code>scripts/check-*.js</code>（leaf-contract / agent-rules / change-safety /</li></ol>
+<p>flag-registry / lifecycle-policy / model-hardcoding / tool-contract），不止「三守卫」。</p>
+<ol><li><strong>工具面按角色裁剪</strong> <code>toolProfile</code> 的 profile 为 <code>minimal/coding/analysis/verification</code>；&quot;Explore&quot; 是</li></ol>
+<p><strong>Agent 角色名</strong>（映射到 minimal profile），非独立 profile。</p>
+<p>想看按当前源码组织的架构导览，见 <strong><a href="../03_DESIGN_设计/%5BDESIGN-ARCH-063%5D%20对照《Claude%20Code%20架构》一书读懂%20Khy-OS.html"><code>[DESIGN-ARCH-063]</code> 对照《Claude Code 架构》一书读懂 Khy-OS</a></strong>。本文保留作历史对比快照。</p></blockquote>
+<hr>
+<h2 id="1-顶层架构对比">1. 顶层架构对比<a class="anchor" href="#1-顶层架构对比" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>Claude Code</th><th>KHY OS</th></tr></thead><tbody><tr><td>语言</td><td>TypeScript（Bun 运行时）</td><td>JavaScript（Node.js）</td></tr><tr><td>范式</td><td>单供应商单体应用</td><td>多供应商平台</td></tr><tr><td>AI 后端</td><td>仅 Anthropic API</td><td>14+ 适配器级联（Claude/Codex/Cursor/Kiro/Trae/Windsurf/Ollama/Relay...）</td></tr><tr><td>UI 框架</td><td>魔改版 Ink（终端 React）</td><td>自研 Flux store + VirtualScreen / InlineRenderer</td></tr><tr><td>工具系统</td><td>静态类型注册表（Zod schema）</td><td>自动发现注册表（约定式加载）</td></tr><tr><td>Agent 模型</td><td>单父进程 + 派生子 agent</td><td>层次化：cliAgentRunner（多角色）+ workerAgent（进程级）+ subAgentOrchestrator</td></tr><tr><td>入口</td><td>单二进制（<code>claude</code>）</td><td>双二进制（<code>khy</code> 轻量 / <code>khyquant</code> 全栈）</td></tr><tr><td>扩展模型</td><td>MCP + Skills + Hooks + Plugins（DXT）</td><td>MCP + CLI 插件 + handler 模块</td></tr><tr><td>配置系统</td><td>分层 Zod 校验（MDM/remote/managed/enterprise/project/user）</td><td>Dotenv + settings.json（user/project 两级）</td></tr><tr><td>状态管理</td><td>全局可变单例（<code>bootstrap/state.ts</code>）+ React state</td><td>Flux store（replStore）+ 模块级单例</td></tr></tbody></table>
+<hr>
+<h2 id="2-入口与启动">2. 入口与启动<a class="anchor" href="#2-入口与启动" aria-label="锚点">#</a></h2>
+<h3 id="claude-code">Claude Code<a class="anchor" href="#claude-code" aria-label="锚点">#</a></h3>
+<pre><code>cli.tsx (快速路径: --version/--dump)
+  -&gt; init() [memoized，一次性：env、proxy、telemetry、repo 检测]
+    -&gt; main.tsx [commander 解析]
+      -&gt; launchRepl() | headless QueryEngine</code></pre>
+<ul><li><strong>冷启动策略</strong>：快速路径在重型 import 之前退出；MDM/keychain 预取在 import 阶段并行启动。</li><li><strong>进程模型</strong>：单进程、单会话。</li></ul>
+<h3 id="khy-os">KHY OS<a class="anchor" href="#khy-os" aria-label="锚点">#</a></h3>
+<pre><code>bin/khy.js [双二进制路由: khy vs khyquant]
+  -&gt; bootstrap/init.js [dotenv, env, proxy, CA, shutdown]
+    -&gt; bootstrap/setup.js [DB, migrations — khy 模式跳过]
+      -&gt; cli/repl.js -&gt; tui/tuiShell.js | 传统 readline</code></pre>
+<ul><li><strong>冷启动策略</strong>：fire-and-forget <code>_initPromise</code>；全局懒加载 <code>require()</code>。</li><li><strong>进程模型</strong>：单进程，但支持 daemon 模式、bridge 服务器（移动协作）和 worker 进程（coordinator）。</li></ul>
+<h3 id="关键差异">关键差异<a class="anchor" href="#关键差异" aria-label="锚点">#</a></h3>
+<ul><li>CC 使用 Bun 打包器 tree-shaking + <code>feature()</code> 门控做死代码消除；KHY 依赖运行时 <code>require()</code> 懒加载。</li><li>CC 无数据库依赖；KHY（khyquant 模式）需要 DB 迁移。</li><li>KHY 有双重身份入口（平台 OS vs 量化应用）；CC 纯粹是 AI 编码助手。</li></ul>
+<hr>
+<h2 id="3-agent-循环-核心差异点">3. Agent 循环（核心差异点）<a class="anchor" href="#3-agent-循环-核心差异点" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-异步生成器循环">Claude Code：异步生成器循环<a class="anchor" href="#claude-code-异步生成器循环" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// 简化版: query.ts
+async function* query(messages, options): AsyncGenerator&lt;StreamEvent | Message, Terminal&gt; {
+  while (true) {
+    const response = await callAPI(messages);
+    yield* streamResponse(response);
+
+    const toolUses = extractToolUses(response);
+    if (toolUses.length === 0) return { type: 'end_turn' };
+
+    const results = await runTools(toolUses); // 只读工具并行，写入工具串行
+    messages.push(...results);
+  }
+}</code></pre>
+<ul><li><strong>单一执行路径</strong>（一个 API 供应商，一种循环形态）。</li><li><strong>工具并发</strong>：分为并发安全（只读，最多 10 并行）和非安全（串行）。</li><li><strong>恢复策略</strong>：max_output_tokens 升级、413 时响应式压缩。</li><li><strong>流式输出</strong>：异步生成器 yield 事件 — 消费者（UI 或 SDK）按自身节奏拉取。</li></ul>
+<h3 id="khy-os-多路径状态机">KHY OS：多路径状态机<a class="anchor" href="#khy-os-多路径状态机" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// 简化版: queryEngine.js (V2 路径)
+class QueryEngine {
+  async *run(prompt) {
+    let state = 'NEXT_TURN';
+    while (state !== 'DONE') {
+      switch (state) {
+        case 'NEXT_TURN': state = await this._executeTurn(); break;
+        case 'COMPACT_RETRY': state = await this._compact(); break;
+        case 'MAX_OUTPUT_RECOVERY': state = await this._escalateTokens(); break;
+        case 'MODEL_FALLBACK': state = await this._fallbackModel(); break;
+      }
+      yield* this._drainEvents();
+    }
+  }
+}</code></pre>
+<ul><li><strong>三条执行路径</strong>逐级回退：V2 状态机 -&gt; harness 托管 -&gt; 传统循环。</li><li><strong>丰富启发式</strong>：验证 nudge（3+ 次文件写入未测试时提醒）、循环检测（<code>ToolLoopDetector</code>）、交付完整性关键词覆盖、529 模型降级。</li><li><strong>模型降级</strong>：连续 3 次 529 时通过 gateway 级联到更便宜的模型。</li><li><strong>流式输出</strong>：同为异步生成器，额外加了 <code>StreamingChunker</code>（平滑/追赶双档）做 TUI 帧率管理。</li></ul>
+<h3 id="对比分析">对比分析<a class="anchor" href="#对比分析" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方面</th><th>CC</th><th>KHY</th></tr></thead><tbody><tr><td>鲁棒性</td><td>高（单路径，充分测试）</td><td>更高（多回退、模型级联）</td></tr><tr><td>复杂度</td><td>中等（核心循环 ~2K LoC）</td><td>高（含所有路径 ~5K LoC）</td></tr><tr><td>供应商锁定</td><td>仅 Anthropic</td><td>供应商无关</td></tr><tr><td>自我修正</td><td>压缩 + 重试</td><td>压缩 + 重试 + 模型降级 + 循环检测 + nudge</td></tr><tr><td>工具解析</td><td>结构化（原生 API tool_use 块）</td><td>双模：结构化（API）+ XML 提取（传统模型）</td></tr></tbody></table>
+<hr>
+<h2 id="4-工具系统">4. 工具系统<a class="anchor" href="#4-工具系统" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-2">Claude Code<a class="anchor" href="#claude-code-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">interface Tool&lt;Input, Output, Progress&gt; {
+  name: string;
+  inputSchema: ZodType&lt;Input&gt;;
+  call(args: Input, context: ToolUseContext): Promise&lt;ToolResult&lt;Output&gt;&gt;;
+  isReadOnly(input: Input): boolean;
+  isConcurrencySafe(input: Input): boolean;
+  interruptBehavior(): 'cancel' | 'block';
+  isEnabled(): boolean;
+}</code></pre>
+<ul><li><strong>注册方式</strong>：<code>tools.ts</code> 中静态导入，feature 门控。</li><li><strong>约 30 个工具</strong>：Bash、FileRead/Write/Edit、Glob、Grep、Agent、WebFetch/Search、MCP、Cron、Todo、Notebook、Plan、Worktree、Task、Team、Skill、LSP、Config 等。</li><li><strong>Schema</strong>：Zod 做校验，JSON Schema 做 API 定义。</li><li><strong>并发控制</strong>：显式 <code>isConcurrencySafe()</code> 分类。</li></ul>
+<h3 id="khy-os-2">KHY OS<a class="anchor" href="#khy-os-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// 约定式加载
+// 1. 子目录: tools/FileReadTool/index.js (class BaseTool)
+// 2. 扁平文件: tools/shellCommand.js (defineTool() 格式)
+// 3. MCP 桥接: 从连接的服务器自动导入
+
+const registry = new Map(); // name -&gt; { execute, definition, profile }</code></pre>
+<ul><li><strong>注册方式</strong>：启动时扫描 <code>src/tools/</code> 自动发现。</li><li><strong>50+ 工具</strong>：CC 全部等价物 + PowerShell、REPL、PDF、OCR、多终端、剪贴板图片、代理工具。</li><li><strong>Schema</strong>：纯 JSON Schema 对象（无 Zod）。</li><li><strong>Profile</strong>：<code>toolProfile.js</code> 提供按能力过滤（coding/minimal/verification/explorer），每种 agent 角色看到不同工具子集。</li><li><strong>平台工具</strong>：<code>platformUtils.js</code>（28K）处理 Windows/Linux/macOS 跨平台差异。</li></ul>
+<h3 id="关键差异-2">关键差异<a class="anchor" href="#关键差异-2" aria-label="锚点">#</a></h3>
+<ul><li>CC 工具<strong>端到端静态类型</strong>（input -&gt; output -&gt; progress）；KHY 使用运行时鸭子类型。</li><li>KHY 有<strong>工具 Profile</strong> — 不同 agent 看到不同工具子集（CC 对所有 agent 暴露全部工具）。</li><li>KHY 有<strong>延迟工具加载</strong>（<code>KHY_DEFER_TOOLS</code>）— 根据上下文动态揭示工具。</li><li>CC 的工具执行上下文（<code>ToolUseContext</code>）是类型化的包；KHY 传递松散的 options 对象。</li></ul>
+<hr>
+<h2 id="5-tui-渲染系统">5. TUI / 渲染系统<a class="anchor" href="#5-tui-渲染系统" aria-label="锚点">#</a></h2>
+<blockquote><p>⚠️ <strong>本节已过期</strong>：本节描述的 &quot;KHY OS：自研 Flux Store + 双渲染器&quot;（<code>tuiShell.js</code> / <code>store/replStore.js</code> / <code>components/*</code> 等）已于 2026-06-05 被官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>）取代，相关自研文件已删除。本节仅作历史架构对比保留，最新 TUI 实现请参阅 <a href="../04_IMPL_实现/%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">../修复记录/tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<h3 id="claude-code-魔改-ink-react">Claude Code：魔改 Ink（React）<a class="anchor" href="#claude-code-魔改-ink-react" aria-label="锚点">#</a></h3>
+<pre><code>ink.tsx (定制 Ink 运行时, 246K)
+  -&gt; reconciler.ts (react-reconciler)
+    -&gt; render-node-to-output.ts -&gt; screen.ts -&gt; terminal
+
+hooks/useReplBridge.tsx (113K) — 将 query 循环桥接到 React 状态</code></pre>
+<ul><li>完整 React 组件模型：hooks、refs、state、effects。</li><li>通过 react-reconciler 做虚拟 DOM diff。</li><li>丰富的终端特性：虚拟滚动、选择、搜索、双向文本、vim 模式。</li><li><strong>代价</strong>：运行时体积大（Ink + React 超过 300K），心智模型复杂。</li></ul>
+<h3 id="khy-os-自研-flux-store-双渲染器">KHY OS：自研 Flux Store + 双渲染器<a class="anchor" href="#khy-os-自研-flux-store-双渲染器" aria-label="锚点">#</a></h3>
+<pre><code>tuiShell.js (99K, 主循环 + 快捷键)
+  -&gt; store/replStore.js (Flux/Redux 模式)
+    -&gt; AppShell.js (布局管理器)
+      -&gt; VirtualScreen (全屏模式: 双缓冲 + 行级 diff)
+      -&gt; InlineRenderer (默认: 静态/动态分离, 单次 stdout.write)</code></pre>
+<ul><li>无 React 依赖 — 命令式渲染 + 脏行追踪。</li><li><strong>两种渲染模式</strong>：<ul><li><strong>内联</strong>（默认）：保留原生滚动/选择；已提交块自然滚动，动态区域（提示符）原地重绘。</li><li><strong>全屏</strong>（可选）：备用屏幕 + 绝对光标定位。</li></ul></li><li><strong>StreamingChunker</strong>：平滑/追赶双档自适应缓冲，管理流式文本帧率。</li><li><strong>代价</strong>：运行时开销低，但手动状态管理复杂。</li></ul>
+<h3 id="对比分析-2">对比分析<a class="anchor" href="#对比分析-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>方面</th><th>CC（Ink/React）</th><th>KHY（自研）</th></tr></thead><tbody><tr><td>开发体验</td><td>高（JSX、hooks、组合）</td><td>中等（命令式、手动布局）</td></tr><tr><td>运行时体积</td><td>重（~300K+ 打包后）</td><td>轻（总共 ~120K）</td></tr><tr><td>终端兼容性</td><td>良好（Ink 处理大部分）</td><td>优秀（自定义转义码处理、Windows 兼容）</td></tr><tr><td>可扩展性</td><td>基于组件（容易）</td><td>手动（较难）</td></tr><tr><td>滚动/选择</td><td>自定义虚拟滚动（捕获鼠标）</td><td>原生（内联模式）或自定义（全屏）</td></tr><tr><td>帧率</td><td>React reconciler 决定</td><td>显式帧率上限（流式 120fps，空闲 30fps）</td></tr></tbody></table>
+<hr>
+<h2 id="6-权限系统">6. 权限系统<a class="anchor" href="#6-权限系统" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-3">Claude Code<a class="anchor" href="#claude-code-3" aria-label="锚点">#</a></h3>
+<pre><code>分层解析：
+1. 设置规则 (always-allow / always-deny / always-ask) — 按 MDM/enterprise/project/user 分级
+2. 权限模式 (default / auto / bypass)
+3. 分类器 (auto 模式下对 bash 命令的推测性安全分析)
+4. 交互式 UI 提示 (default 模式)
+5. Swarm 委派 (worker 继承父级权限)</code></pre>
+<ul><li>权限是<strong>逐工具、逐输入</strong>的（如只允许 <code>BashTool</code> 执行 <code>npm test</code>）。</li><li><code>yolo-classifier-prompts/</code> — 基于 LLM 的命令安全分类。</li><li>YOLO 模式（bypass）等同于 KHY 的 bypass。</li></ul>
+<h3 id="khy-os-3">KHY OS<a class="anchor" href="#khy-os-3" aria-label="锚点">#</a></h3>
+<pre><code>多层防护：
+1. cliAuthService (会话认证: 用户名/密码)
+2. authGuard.js (API 密钥校验、速率限制)
+3. shellSafetyValidator (命令风险分析: safe/moderate/dangerous)
+4. execApproval (交互式权限提示)
+5. hookSystem ToolGuards (执行前 hook 可阻断)
+6. securityGuardService (AI 处理前的输入消毒)
+7. ssrfGuard (URL 校验)</code></pre>
+<ul><li>KHY 有<strong>用户认证</strong>（登录/注册/会话）— CC 无（信任本地用户）。</li><li>KHY 的 shell 安全是规则驱动（正则匹配）；CC 使用 LLM 分类。</li><li>KHY 有 SSRF 防护；CC 依赖操作系统级沙箱。</li></ul>
+<h3 id="关键差异-3">关键差异<a class="anchor" href="#关键差异-3" aria-label="锚点">#</a></h3>
+<ul><li>CC 的权限模型是<strong>声明式</strong>（设置文件中的规则）；KHY 是<strong>过程式</strong>（校验器函数）。</li><li>CC 支持<strong>企业 MDM 强制执行</strong>；KHY 无 MDM 概念。</li><li>KHY 增加了<strong>认证</strong>（多用户能力）；CC 按设计就是单用户。</li></ul>
+<hr>
+<h2 id="7-上下文-记忆管理">7. 上下文 / 记忆管理<a class="anchor" href="#7-上下文-记忆管理" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-4">Claude Code<a class="anchor" href="#claude-code-4" aria-label="锚点">#</a></h3>
+<pre><code>策略（按激进程度排序）：
+1. Micro-compact：裁剪最旧消息
+2. Auto-compact：摘要 + 替换较旧消息（阈值触发）
+3. Session memory compact：压缩时将持久事实提取到 CLAUDE.md
+4. Reactive compact：413 错误时压缩并重试
+5. Snip：用户手动局部裁剪上下文
+
+记忆持久化：
+- CLAUDE.md 文件（project/user 两级）
+- 会话记忆自动提取
+- 记忆命令 (/memory add/list/remove)</code></pre>
+<h3 id="khy-os-4">KHY OS<a class="anchor" href="#khy-os-4" aria-label="锚点">#</a></h3>
+<pre><code>策略：
+1. contextPruner：token 预算感知的消息修剪
+2. compact/sessionMemoryCompact：用结构化摘要完整替换
+3. compact/microCompact：增量裁剪最旧消息
+4. query/compactPipeline：查询循环中的多阶段渐进压缩
+5. Reactive：上下文溢出 (413) 时触发管线
+
+记忆持久化：
+- sessionRecapService（后台提取）
+- contextCompressor（激进摘要）
+- 无等价的 CLAUDE.md 自动记忆系统（依赖 .claude/ 下的外部 MEMORY.md）</code></pre>
+<h3 id="关键差异-4">关键差异<a class="anchor" href="#关键差异-4" aria-label="锚点">#</a></h3>
+<ul><li>CC 的<strong>会话记忆提取</strong>紧密集成 — 压缩时主动将有用事实保存到磁盘。KHY 的 <code>sessionRecapService</code> 是后台进程，集成度较低。</li><li>CC 有 <strong>Snip</strong>（用户手动删除上下文块）；KHY 没有。</li><li>CC 的记忆是<strong>结构化</strong>的（frontmatter + 类型化文件）；KHY 使用扁平 markdown。</li><li>CC 有<strong>团队记忆同步</strong>；KHY 无团队概念。</li></ul>
+<hr>
+<h2 id="8-多-agent-架构">8. 多 Agent 架构<a class="anchor" href="#8-多-agent-架构" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-5">Claude Code<a class="anchor" href="#claude-code-5" aria-label="锚点">#</a></h3>
+<pre><code>层次结构：
+1. 主 REPL（父 agent）
+2. AgentTool（派生子 agent，fork 上下文，独立工具集）
+3. Swarm/Team（TeamCreateTool, InProcessTeammateTask）
+   - 队友共享 TaskBoard
+   - SendMessage 做 agent 间通信
+   - Coordinator 模式（父管理子）
+
+隔离：进程内（共享内存，独立消息历史）
+最大深度：可配置，通常 2-3 层</code></pre>
+<h3 id="khy-os-5">KHY OS<a class="anchor" href="#khy-os-5" aria-label="锚点">#</a></h3>
+<pre><code>层次结构（3 套独立系统）：
+1. cliAgentRunner — 多角色分解：
+   - 按关键词匹配任务到 20+ 角色模板
+   - 最多 3 个并行 agent（200ms 交错启动）
+   - 通过最终 AI 调用合成结果
+
+2. coordinator/workerAgent — 进程级隔离：
+   - Worker 有结构化输出契约（SUMMARY/CHANGES/EVIDENCE/RISKS/BLOCKERS）
+   - 最大深度 3，最多 3 个并发子进程，5 分钟超时
+   - Watchdog 资源守卫
+   - IPC 协议通信
+
+3. subAgentOrchestrator — 会话 fork：
+   - 继承父上下文 + 权限
+   - 基于作用域的工具访问
+   - 工作区物化（可创建隔离工作目录）
+
+隔离：进程级（workerAgent）或进程内（cliAgentRunner、subAgentOrchestrator）</code></pre>
+<h3 id="关键差异-5">关键差异<a class="anchor" href="#关键差异-5" aria-label="锚点">#</a></h3>
+<ul><li>CC 的 agent 系统是<strong>统一的</strong>（一个 AgentTool + 一个 Team 系统）；KHY 有<strong>三套独立</strong>编排系统（角色、进程、会话）。</li><li>KHY 的 <code>workerAgent</code> 有<strong>结构化输出契约</strong>（强制响应格式）；CC 子 agent 返回自由文本。</li><li>KHY 支持<strong>进程级隔离</strong> + IPC；CC 始终在进程内。</li><li>CC 的 team 系统支持 <strong>agent 间点对点消息</strong>；KHY 严格父子关系。</li><li>KHY 的 <code>cliAgentRunner</code> 做<strong>基于关键词的任务分解</strong>（领域角色如&quot;基本面分析师&quot;、&quot;技术分析师&quot;）；CC 的 AgentTool 让 AI 自主决定分解方式。</li></ul>
+<hr>
+<h2 id="9-网关-供应商抽象">9. 网关 / 供应商抽象<a class="anchor" href="#9-网关-供应商抽象" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-6">Claude Code<a class="anchor" href="#claude-code-6" aria-label="锚点">#</a></h3>
+<ul><li><strong>单一供应商</strong>：仅 Anthropic API。</li><li>无适配器层 — 直接使用 SDK（<code>@anthropic-ai/sdk</code>）。</li><li>重试逻辑内置于 SDK。</li><li>无模型降级（始终使用配置的 Claude 模型）。</li></ul>
+<h3 id="khy-os-6">KHY OS<a class="anchor" href="#khy-os-6" aria-label="锚点">#</a></h3>
+<pre><code>aiGateway.js (232K) — 中心路由单例
+  -&gt; 14+ 适配器 (每个 40-110K):
+     IDE: claude, codex, cursor, kiro, trae, windsurf, warp, vscode
+     API: api, ollama, localLLM, relayApi, cursor2api
+     Relay: webRelay, clipboardRelay
+
+核心特性：
+- 按优先级排序的级联 + 健康追踪
+- 适配器故障自动切换
+- 速率限制（按 key + Redis 支持）
+- 能力感知路由（modelRouter）
+- API 密钥轮换（keySelector）
+- 指纹模拟（逐适配器）
+- 流格式归一化（Anthropic SSE / OpenAI SSE / raw）
+- 协议管线 (_protocolPipeline.js)：统一请求/响应变换</code></pre>
+<h3 id="分析">分析<a class="anchor" href="#分析" aria-label="锚点">#</a></h3>
+<p>这是<strong>最大的架构分歧</strong>。CC 故意做单一供应商（Anthropic 同时控制模型和工具）。KHY 是<strong>模型无关平台</strong>，可通过任何供应商路由，包括搭载 IDE 订阅（Cursor、Windsurf、Kiro、Trae）或本地模型（Ollama）。</p>
+<hr>
+<h2 id="10-扩展-插件系统">10. 扩展 / 插件系统<a class="anchor" href="#10-扩展-插件系统" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-7">Claude Code<a class="anchor" href="#claude-code-7" aria-label="锚点">#</a></h3>
+<pre><code>4 种扩展机制：
+1. MCP 服务器（工具 + 资源 + 提示词，来自外部进程）
+2. Skills（从 .claude/skills/ 或内置加载的提示词模板文件）
+3. Hooks（生命周期事件触发的 shell/HTTP/agent 脚本）
+4. Plugins（DXT 包 — 早期阶段，打包的扩展）
+
+配置：settings.json（作用域：MDM &gt; enterprise &gt; project &gt; user）</code></pre>
+<h3 id="khy-os-7">KHY OS<a class="anchor" href="#khy-os-7" aria-label="锚点">#</a></h3>
+<pre><code>3 种扩展机制：
+1. MCP 服务器（兼容 CC 的 mcpServers schema）
+2. CLI 插件（cli/plugins.js — 从 ~/.khy/plugins/ 加载的命令扩展）
+3. Handler 模块（src/cli/handlers/ — 按领域组织的命令族）
+
+无等价物：
+- CC 的 Skills 系统（提示词模板）
+- CC 的 Hooks 系统（生命周期事件）
+- CC 的 DXT 包</code></pre>
+<h3 id="关键差异-6">关键差异<a class="anchor" href="#关键差异-6" aria-label="锚点">#</a></h3>
+<ul><li>CC 有<strong>更丰富的扩展模型</strong>（4 种机制 vs 3 种）。</li><li>CC 的 <strong>Hooks</strong> 尤其强大 — 在生命周期事件（工具执行前后、压缩、会话开始/结束）上执行任意 shell 命令。KHY 有 <code>hookSystem</code> 但仅内部使用（ToolGuards），不对用户开放配置。</li><li>CC 的 <strong>Skills</strong> 允许用户编写可复用提示词；KHY 无等价物。</li><li>KHY 的 <strong>handler 模块</strong> 体积巨大（gateway.js: 212K、proxy.js: 118K）— 它们包含完整的子应用逻辑，不仅仅是路由。</li></ul>
+<hr>
+<h2 id="11-代码规模对比">11. 代码规模对比<a class="anchor" href="#11-代码规模对比" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>Claude Code</th><th>KHY OS</th></tr></thead><tbody><tr><td>源码体积 (src/)</td><td>~2.1 MB TypeScript</td><td>~4.8 MB JavaScript</td></tr><tr><td>最大文件</td><td>ink.tsx (246K)</td><td>aiGateway.js (232K)</td></tr><tr><td>工具数量</td><td>~30</td><td>~50+</td></tr><tr><td>适配器数量</td><td>1（Anthropic SDK）</td><td>14+</td></tr><tr><td>测试框架</td><td>（开源版未包含）</td><td>Jest（~50 个测试文件）</td></tr><tr><td>核心依赖</td><td>Bun + React + react-reconciler + Zod + commander</td><td>Node.js + chalk + readline + axios</td></tr></tbody></table>
+<hr>
+<h2 id="12-架构优势与取舍">12. 架构优势与取舍<a class="anchor" href="#12-架构优势与取舍" aria-label="锚点">#</a></h2>
+<h3 id="claude-code-优势">Claude Code 优势<a class="anchor" href="#claude-code-优势" aria-label="锚点">#</a></h3>
+<ol><li><strong>端到端类型安全</strong> — Zod schema + TypeScript + 类型化工具接口，防止运行时错误。</li><li><strong>React 组件模型</strong> — 可组合 UI，Web 开发者熟悉。</li><li><strong>企业级配置</strong> — MDM、远程托管设置、分层覆盖。</li><li><strong>干净的单供应商路径</strong> — 无适配器复杂度，针对一个模型深度优化。</li><li><strong>成熟的扩展生态</strong> — Skills + Hooks + MCP + DXT 提供多种集成点。</li></ol>
+<h3 id="claude-code-取舍">Claude Code 取舍<a class="anchor" href="#claude-code-取舍" aria-label="锚点">#</a></h3>
+<ol><li><strong>供应商锁定</strong> — 无法使用非 Anthropic 模型。</li><li><strong>运行时重</strong> — React + Ink 增加 ~300K+ 开销。</li><li><strong>Bun 依赖</strong> — 可移植性不如 Node.js。</li><li><strong>无多用户</strong> — 信任本地 OS 用户，无认证层。</li></ol>
+<h3 id="khy-os-优势">KHY OS 优势<a class="anchor" href="#khy-os-优势" aria-label="锚点">#</a></h3>
+<ol><li><strong>供应商无关</strong> — 适配任何 AI 供应商，包括免费 IDE 订阅。</li><li><strong>高韧性</strong> — 多重回退（模型级联、适配器故障转移、执行路径回退）。</li><li><strong>轻量运行时</strong> — 无 React 依赖，冷启动快。</li><li><strong>进程级 agent 隔离</strong> — 更安全的多 agent 执行。</li><li><strong>跨平台专注</strong> — 完善的 Windows 兼容层。</li><li><strong>多用户能力</strong> — 认证系统支持多用户。</li></ol>
+<h3 id="khy-os-取舍">KHY OS 取舍<a class="anchor" href="#khy-os-取舍" aria-label="锚点">#</a></h3>
+<ol><li><strong>无类型安全</strong> — 纯 JavaScript 无类型；可能出现运行时错误。</li><li><strong>高复杂度</strong> — 三套 agent 系统、三条执行路径、14 个适配器。</li><li><strong>大文件</strong> — 多个文件超过 100K（维护负担）。</li><li><strong>扩展模型较弱</strong> — 无面向终端用户的 hooks/skills。</li><li><strong>测试缺口</strong> — 测试存在但覆盖率低于 CC 内部套件。</li></ol>
+<hr>
+<h2 id="13-功能矩阵">13. 功能矩阵<a class="anchor" href="#13-功能矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>功能</th><th style="text-align:center">CC</th><th style="text-align:center">KHY</th><th>备注</th></tr></thead><tbody><tr><td>结构化 tool_use（原生 API）</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td>KHY 还支持非 Anthropic 模型的 XML 回退</td></tr><tr><td>自动压缩</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td>策略相似</td></tr><tr><td>会话记忆提取</td><td style="text-align:center">Yes</td><td style="text-align:center">部分</td><td>KHY 的是后台方式，集成度较低</td></tr><tr><td>响应式压缩（413 重试）</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>过载时模型降级</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>KHY 在 529 时级联到更便宜模型</td></tr><tr><td>循环检测</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>KHY 的 ToolLoopDetector</td></tr><tr><td>验证 Nudge</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>3+ 次文件写入后提醒测试</td></tr><tr><td>Team/Swarm agents</td><td style="text-align:center">Yes</td><td style="text-align:center">部分</td><td>KHY 有进程 worker 但无点对点消息</td></tr><tr><td>IDE 适配器搭载</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>复用 Cursor/Windsurf/Kiro/Trae 订阅</td></tr><tr><td>MCP 支持</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td>兼容 schema</td></tr><tr><td>Skills（提示词模板）</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td></td></tr><tr><td>用户可配置 Hooks</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td>KHY hooks 仅内部使用</td></tr><tr><td>DXT 插件</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td></td></tr><tr><td>MDM/企业配置</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td></td></tr><tr><td>用户认证</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>SSRF 防护</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>剪贴板图片分析</td><td style="text-align:center">部分</td><td style="text-align:center">Yes</td><td>KHY 有专用服务</td></tr><tr><td>Bridge（移动协作）</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>手机/平板通过 bridgeServer 接入</td></tr><tr><td>Daemon 模式</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>后台进程</td></tr><tr><td>多终端后端</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>量化交易模块</td><td style="text-align:center">No</td><td style="text-align:center">Yes</td><td>khyquant 领域</td></tr><tr><td>Worktree 隔离</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>Plan 模式</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td></td></tr><tr><td>Cron 调度</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td></td></tr></tbody></table>
+<hr>
+<h2 id="14-趋同建议">14. 趋同建议<a class="anchor" href="#14-趋同建议" aria-label="锚点">#</a></h2>
+<h3 id="khy-应从-cc-吸收的">KHY 应从 CC 吸收的：<a class="anchor" href="#khy-应从-cc-吸收的" aria-label="锚点">#</a></h3>
+<ol><li><strong>用户可配置 Hooks</strong> — 允许 <code>.khy/hooks.json</code> 定义生命周期事件触发器。</li><li><strong>Skills 系统</strong> — 从 <code>.khy/skills/</code> 加载的提示词模板。</li><li><strong>类型化工具接口</strong> — 即使在 JS 中，也强制 input/output schema 校验。</li><li><strong>分层设置优先级</strong> — 形式化 MDM &gt; enterprise &gt; project &gt; user 覆盖链。</li><li><strong>Snip 命令</strong> — 手动裁剪上下文块。</li></ol>
+<h3 id="cc-可从-khy-借鉴的">CC 可从 KHY 借鉴的：<a class="anchor" href="#cc-可从-khy-借鉴的" aria-label="锚点">#</a></h3>
+<ol><li><strong>供应商抽象</strong> — 适配器级联实现模型无关。</li><li><strong>模型降级</strong> — 过载时自动降级。</li><li><strong>循环检测</strong> — 防止无限工具循环。</li><li><strong>进程级 agent 隔离</strong> — 更安全的子 agent 执行。</li><li><strong>内联渲染模式</strong> — 保留原生终端滚动/选择（CC 的 Ink 全量捕获）。</li></ol>
+<hr>
+<h2 id="15-结论">15. 结论<a class="anchor" href="#15-结论" aria-label="锚点">#</a></h2>
+<p>Claude Code 和 KHY OS 代表了两种根本不同的哲学：</p>
+<ul><li><strong>CC</strong> 是<strong>垂直整合产品</strong> — 一个模型、一个供应商、一个用途（AI 编码助手）。每个架构决策都为这个狭窄用例优化。类型安全、React UI 和干净的抽象边界体现了 Anthropic 的工程纪律。</li><li><strong>KHY</strong> 是<strong>水平平台</strong> — 多模型、多供应商、多用途（编码 + 交易 + 协作 + 守护进程）。适配器级联、多 agent 层次和双二进制入口体现了&quot;瑞士军刀&quot;哲学。代价是复杂度。</li></ul>
+<p>两者都是生产级系统。CC 更<strong>精致、可维护</strong>；KHY 更<strong>能力强、韧性高</strong>。KHY 的理想演进方向是吸收 CC 的人机工程学模式（hooks、skills、类型化工具），同时保持自身独有优势（供应商无关、高韧性、平台灵活性）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-018] 项目矛盾审计-2026-05-21.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 项目矛盾审计与修复报告</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-020] 项目痛点诊断报告-2026-06-13.html"><div class="dir">下一篇 →</div><div class="ttl">项目痛点诊断报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-019] 架构对比-cc-vs-khy.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

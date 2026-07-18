@@ -1,0 +1,10 @@
+{
+  "name": "init-project",
+  "description": "Initialize a new project with best practices: git, linting, testing, CI/CD, and documentation",
+  "user_invocable": true,
+  "trigger": "/init",
+  "aliases": ["/init-project", "/scaffold"],
+  "category": "devops",
+  "tags": ["init", "project", "scaffold", "setup", "new"],
+  "platforms": ["khy-os"]
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-065-hermes-agent-v0-18-0-参考学习-判断-验证-自我进化">DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化</a></li><li class="lvl-2"><a href="#一-研究对象与方法">一、研究对象与方法</a></li><li class="lvl-2"><a href="#二-hermes-v0-18-0-四特性设计-附-hermes-侧锚点">二、Hermes v0.18.0 四特性设计（附 Hermes 侧锚点）</a></li><li class="lvl-3"><a href="#2-1-判断-mixture-of-agents-moa">2.1 判断 · Mixture-of-Agents（MoA）</a></li><li class="lvl-3"><a href="#2-2-验证-completion-contract-evidence-based-verification">2.2 验证 · completion contract + evidence-based verification</a></li><li class="lvl-3"><a href="#2-3-自我进化-learn">2.3 自我进化 · /learn</a></li><li class="lvl-3"><a href="#2-4-自我进化-journey">2.4 自我进化 · /journey</a></li><li class="lvl-2"><a href="#三-gap-分析-hermes-vs-khy-os-现状">三、Gap 分析（Hermes vs Khy-OS 现状）</a></li><li class="lvl-2"><a href="#四-本次落地-goal-证据门-khy-goal-evidence-gate">四、本次落地：`/goal` 证据门（KHY_GOAL_EVIDENCE_GATE）</a></li><li class="lvl-3"><a href="#4-1-设计">4.1 设计</a></li><li class="lvl-3"><a href="#4-2-判定流-evaluategoalstop-内">4.2 判定流（evaluateGoalStop 内）</a></li><li class="lvl-3"><a href="#4-3-安全性-误判方向皆有界">4.3 安全性（误判方向皆有界）</a></li><li class="lvl-3"><a href="#4-4-验证证据">4.4 验证证据</a></li><li class="lvl-2"><a href="#五-后续候选-本次不实现-给移植路线">五、后续候选（本次不实现，给移植路线）</a></li><li class="lvl-2"><a href="#六-传承指针">六、传承指针</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-065-hermes-agent-v0-18-0-参考学习-判断-验证-自我进化">DESIGN-ARCH-065 Hermes Agent v0.18.0 参考学习：判断 / 验证 / 自我进化<a class="anchor" href="#design-arch-065-hermes-agent-v0-18-0-参考学习-判断-验证-自我进化" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>核心判断</strong>：Hermes Agent v0.18.0 的三大关键词——<strong>判断（MoA）/ 验证（evidence-based<br>completion）/ 自我进化（/learn·/journey）</strong>——对 Khy-OS 各有不同的落地价值。经<strong>只读研究 +<br>逐特性 gap 分析</strong>后判定:<strong>「验证」支柱最贴合、最高杠杆、且 Khy-OS 基础设施已就位</strong>——遂将其<br>落地为 <code>/goal</code> 的<strong>证据门</strong>（本设计的可交付实现）；<strong>「判断」（MoA）与「自我进化」缺口较大、<br>工程量高，列为后续候选</strong>，本文给出移植路线但不在本次实现。</p>
+<p>本研究遵循 [DESIGN-ARCH-061]（更新包学习：取其精华弃其糟粕）的红线：<strong>只读研究、绝不整包合并、<br>取舍留给掌握上下文的人</strong>。样本仅供设计参考，未引入任何 Hermes 源码/依赖。</p></blockquote>
+<hr>
+<h2 id="一-研究对象与方法">一、研究对象与方法<a class="anchor" href="#一-研究对象与方法" aria-label="锚点">#</a></h2>
+<ul><li><strong>样本</strong>：<code>hermes-agent-main</code>（<code>pyproject.toml</code> version = <strong>0.18.2</strong>），Python agentic CLI。仅</li></ul>
+<p>在 <code>/tmp</code> 沙盒内<strong>只读</strong>探查，未落盘进本仓、未合并任何文件。</p>
+<ul><li><strong>方法</strong>：四路并行 Explore（每特性一路，读节选定位实现，产出 file:line 锚点而非文件堆），再对</li></ul>
+<p>Khy-OS 现状做对照 gap 分析（两路 Explore），全部锚点经二次核验。</p>
+<ul><li><strong>非目标</strong>：不移植 Hermes 代码；不做语义 diff；不追求把四特性全部落地——只落地经论证的最高价值项。</li></ul>
+<hr>
+<h2 id="二-hermes-v0-18-0-四特性设计-附-hermes-侧锚点">二、Hermes v0.18.0 四特性设计（附 Hermes 侧锚点）<a class="anchor" href="#二-hermes-v0-18-0-四特性设计-附-hermes-侧锚点" aria-label="锚点">#</a></h2>
+<h3 id="2-1-判断-mixture-of-agents-moa">2.1 判断 · Mixture-of-Agents（MoA）<a class="anchor" href="#2-1-判断-mixture-of-agents-moa" aria-label="锚点">#</a></h3>
+<p>MoA 不是工具、也不是特殊循环，而是一个<strong>虚拟 provider <code>moa</code></strong>，其「模型」即命名 <strong>preset</strong>。选中后<br>主 agent 循环不变，只是把 <code>agent.client</code> 换成进程内 facade <code>MoAClient</code>——它拦截每次<br>chat-completions 调用，扇出到「参考模型」，再让 aggregator 作为真实模型作答。</p>
+<ul><li>虚拟 provider 注册：<code>hermes_cli/providers.py:47</code>；preset 作为「可选模型」出现在选择器：</li></ul>
+<p><code>hermes_cli/inventory.py:497</code>。</p>
+<ul><li>装配点：<code>agent/agent_init.py:816</code>（<code>provider=='moa'</code> → 装 <code>MoAClient</code>）。</li><li>编排引擎：<code>agent/moa_loop.py:800</code>（<code>MoAChatCompletions.create()</code>）。</li><li><strong>参考模型并行</strong>：<code>agent/moa_loop.py:336</code>（<code>ThreadPoolExecutor</code>，上限 8，<strong>等全部完成</strong>、保序）。</li><li><strong>aggregator 策略</strong>：参考输出以 <code>Reference N — provider:model:</code> 编号拼接，<strong>追加到消息数组末尾</strong></li></ul>
+<p>（<code>_attach_reference_guidance</code>，<code>moa_loop.py:661</code>）——刻意置尾以保 KV-cache 前缀稳定；aggregator<br>  带真实 tools/stream 调用，其输出即用户可见答案。</p>
+<ul><li><strong>fail-soft</strong>：单个参考失败返回 <code>[failed: …]</code> 标注、不抛，aggregator 仍以部分上下文作答。</li><li>单元数据结构：<code>(label, text, _RefAccounting)</code> 三元组（<code>moa_loop.py:30</code>），按各自模型计价。</li></ul>
+<h3 id="2-2-验证-completion-contract-evidence-based-verification">2.2 验证 · completion contract + evidence-based verification<a class="anchor" href="#2-2-验证-completion-contract-evidence-based-verification" aria-label="锚点">#</a></h3>
+<p>本特性核心在 <code>hermes_cli/goals.py</code>：一个 <strong>judge 模型把门的 Ralph 式循环</strong>——每轮结束后由辅助<br>「judge」模型对用户预定义的<strong>契约</strong>裁决 <code>done/continue/wait</code>，只有非 <code>done</code> 才重新注入续驱提示。<br><strong>agent 不能自证完成，由外部 judge 裁决，且被要求索取具体证据</strong>。</p>
+<ul><li>契约数据模型 <code>GoalContract</code>（5 字段：outcome / verification / constraints / boundaries /</li></ul>
+<p>stop_when）：<code>goals.py:293</code>；<code>/goal draft</code> 用辅助模型把朴素目标扩成 5 字段：<code>goals.py:987</code>。</p>
+<ul><li>judge 提示（<strong>证据必需</strong>决策规则）：<code>goals.py:193</code>——原文要点：*&quot;DONE only when the Verification</li></ul>
+<p>criterion is satisfied AND the response shows concrete evidence of it (a command result, file<br>  contents excerpt, test/benchmark output) — not a claim like 'done' or 'all tests pass' without<br>  evidence&quot;*。</p>
+<ul><li>门（防提前 done）：<code>evaluate_after_turn</code>（<code>goals.py:1382</code>）——judge→verdict→continue/done/wait/pause；</li></ul>
+<p>续驱提示 <code>goals.py:83</code>；后台进程未结束时返回 <code>wait</code> 而非误 continue：<code>goals.py:967</code>。</p>
+<ul><li>兜底：turn 预算、连续 parse 失败自动 pause。</li></ul>
+<h3 id="2-3-自我进化-learn">2.3 自我进化 · /learn<a class="anchor" href="#2-3-自我进化-learn" aria-label="锚点">#</a></h3>
+<p><code>/learn</code> <strong>没有蒸馏引擎</strong>——它是「提示构造」特性：拼一条受标准约束的指令注入 agent 输入队列，agent<br>用既有工具（read_file / web_extract / skill_manage）自行采集并撰写 skill。</p>
+<ul><li>一条指令按来源类型分支（目录/文件、URL、&quot;刚才做的&quot;、粘贴笔记）：<code>agent/learn_prompt.py:134</code>。</li><li>产物 = <code>SKILL.md</code>（YAML frontmatter + markdown），落 <code>~/.hermes/skills/&lt;category&gt;/&lt;name&gt;/</code>：</li></ul>
+<p>写入 <code>tools/skill_manager_tool.py:793</code>，路径 <code>:579</code>。</p>
+<ul><li>「学习图」<strong>读时派生</strong>（非单一图文件）：<code>agent/learning_graph.py:254</code>；节点=学到的 skill + memory 卡。</li><li>检索：紧凑 name+description <strong>索引</strong>注入系统提示（描述 ≤60 字符），按需再全量载入：</li></ul>
+<p><code>agent/prompt_builder.py:1445</code>。</p>
+<h3 id="2-4-自我进化-journey">2.4 自我进化 · /journey<a class="anchor" href="#2-4-自我进化-journey" aria-label="锚点">#</a></h3>
+<p>终端原生「让学习可见」：把学到的 skill + memory 按时间线（旧→新）渲染成条形图。</p>
+<ul><li>载荷 <code>build_learning_graph()</code>：<code>agent/learning_graph.py:254</code>（skill 只留「学到的」：非 base 且</li></ul>
+<p>agent-created 或 use_count&gt;0，<code>:263</code>；memory 卡读 <code>MEMORY.md</code>/<code>USER.md</code> 按 <code>\n§\n</code> 切，<code>:193</code>）。</p>
+<ul><li>增删改：<code>journey list|delete|edit</code>（<code>hermes_cli/journey.py:332</code>）→ <code>learning_mutations.py:124</code></li></ul>
+<p>（删 skill=可恢复归档；改 skill=重写 SKILL.md；memory 原子重写）。</p>
+<ul><li>时间线渲染：<code>agent/learning_graph_render.py:455</code>。</li><li>（附）后台子 agent 并行：<code>tools/delegate_tool.py:2538</code>（<code>DaemonThreadPoolExecutor</code> 扇出）。</li></ul>
+<hr>
+<h2 id="三-gap-分析-hermes-vs-khy-os-现状">三、Gap 分析（Hermes vs Khy-OS 现状）<a class="anchor" href="#三-gap-分析-hermes-vs-khy-os-现状" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>支柱</th><th>Hermes v0.18.0</th><th>Khy-OS 现状（锚点）</th><th>Gap</th><th>结论</th></tr></thead><tbody><tr><td>判断 · MoA</td><td>虚拟 provider + 参考并行 + aggregator 综合作答</td><td><strong>无综合式集成</strong>；仅 Arena「比较排名」不综合（<code>services/arenaManager.js:68</code>，未接入 goal/tool-loop）</td><td>高</td><td>后续候选（工程量大）</td></tr><tr><td>验证 · 证据</td><td>5 字段契约 + 外部 judge 裁决 + <strong>要求具体证据</strong>才判 done</td><td>自由文本目标（<code>goalCore.js</code> 无契约）+ <strong>正则自证</strong>（<code>goalStopGate.looksLikeGoalSatisfied:125</code>）+ turn 预算；<strong>无证据门</strong></td><td><strong>高，且基础设施已就位</strong></td><td>★<strong>本次落地</strong></td></tr><tr><td>进化 · /learn</td><td>目录/网页/工作流 → SKILL.md</td><td><code>skill learn</code> 仅 npm/github/工作流序列（<code>cli/handlers/skill.js:200</code>），<strong>缺目录/网页</strong></td><td>中</td><td>后续候选</td></tr><tr><td>进化 · /journey</td><td>时间线可视化 memory+skills，可增删改</td><td>memdir（<code>memdir/memdir.js</code>）+ <code>skill *</code> CLI 分散，<strong>无统一 /journey 视图</strong></td><td>中</td><td>后续候选</td></tr></tbody></table>
+<p><strong>为何选「验证」落地</strong>：</p>
+<ol><li><strong>直击现有弱点</strong>：<code>goalStopGate.js:105</code> 把「已验证通过 / 全部测试通过 / all tests passed」直接</li></ol>
+<p>当作完成信号——这正是 Hermes judge 明确拒绝的「无证据的声称」。当前 khy 完全接受空口声称。</p>
+<ol><li><strong>基础设施已就位</strong>：<code>goalStopGate.evaluateGoalStop</code> 已是纯叶子决策中枢，<code>redrive</code> 预算、门控父子</li></ol>
+<p>链、字节回退机制齐备——加一道证据校验是<strong>自然扩展</strong>而非新建子系统。</p>
+<ol><li><strong>成本/风险最低</strong>：纯叶子 + 默认开门控 + 关即字节回退 + 有界 redrive；误判方向皆有界安全（见 §4.3）。</li><li><strong>对齐用户诉求</strong>：用户原话强调「以前很多 Agent 做完只说'我完成了'…v0.18 更强调 evidence」。</li></ol>
+<hr>
+<h2 id="四-本次落地-goal-证据门-khy-goal-evidence-gate">四、本次落地：<code>/goal</code> 证据门（KHY_GOAL_EVIDENCE_GATE）<a class="anchor" href="#四-本次落地-goal-证据门-khy-goal-evidence-gate" aria-label="锚点">#</a></h2>
+<h3 id="4-1-设计">4.1 设计<a class="anchor" href="#4-1-设计" aria-label="锚点">#</a></h3>
+<p>在 <code>goalStopGate.evaluateGoalStop</code> 的 <code>satisfied</code> 分支<strong>插入一道证据校验</strong>（不改既有判定语义，只加拦截）：<br>当达成判定<strong>建立在一个「验证声称」之上</strong>（如「已验证通过」「全部测试通过」「all tests passed」）却<br><strong>看不到任何具体证据</strong>时，把 <code>clear/satisfied</code> <strong>降级为 <code>redrive</code></strong>，注入一条要求出具证据的指令。</p>
+<ul><li>纯叶子实现（Khy-OS 侧锚点，均在 <code>services/backend/src/services/goalStopGate.js</code>）：<ul><li><code>_VERIFICATION_CLAIM_RE</code>：识别「验证/测试/检查成功」的声称。</li><li><code>_EVIDENCE_RE</code> + <code>hasConcreteEvidence(reply)</code>：识别真实产物——代码块 ```<code> </code>`<code> </code>```、测试通过数</li></ul></li></ul>
+<p>（<code>12 passed</code>/<code>8 通过</code>）、比值（<code>9/9</code>）、退出码（<code>exit code 0</code>/<code>退出码 0</code>）、TAP/node:test 行<br>    （<code>ok 1</code>/<code># pass 8</code>）、对勾叉号（✓✔✅❌）、jest <code>PASS</code>/<code>FAIL</code>、shell 提示符（<code>$ …</code>）、测试框架<br>    调用（<code>npm test</code>/<code>node --test</code>/<code>pytest</code>/<code>jest</code>）。</p>
+<ul><li><code>claimsVerificationWithoutEvidence(reply)</code>：<strong>声称验证 ∧ 无证据</strong> → true。</li><li><code>buildEvidenceRedriveMessage(goal)</code>：要求<strong>实际运行</strong>验证并<strong>原样粘贴</strong>输出后再收尾。</li><li><code>isEvidenceGateEnabled(env)</code>：门 <code>KHY_GOAL_EVIDENCE_GATE</code>，父 <code>KHY_GOAL_STOP_GATE</code>。</li></ul>
+<h3 id="4-2-判定流-evaluategoalstop-内">4.2 判定流（evaluateGoalStop 内）<a class="anchor" href="#4-2-判定流-evaluategoalstop-内" aria-label="锚点">#</a></h3>
+<pre><code>satisfied?
+ ├─ 否 → 原 redrive/pass 逻辑不变
+ └─ 是 → 证据门开 且 claimsVerificationWithoutEvidence?
+          ├─ 否 → clear / pass（原逻辑，纯&quot;目标已完成&quot;不受扰动）
+          └─ 是 → redrive 预算未耗尽 ? redrive(evidence-missing) : pass(evidence-missing-exhausted)</code></pre>
+<p>预算耗尽时<strong>降级为 <code>pass</code> 而非 <code>clear</code></strong>——不自动清除一个未经证实的目标，交由每轮开头的 goalCore<br>指令注入 + 跨轮轮次预算继续兜底。</p>
+<h3 id="4-3-安全性-误判方向皆有界">4.3 安全性（误判方向皆有界）<a class="anchor" href="#4-3-安全性-误判方向皆有界" aria-label="锚点">#</a></h3>
+<ul><li><strong>保守不扰动</strong>：仅拦「声称了验证却无证据」这一精确失败模式；纯「目标已完成」（不声称验证）走原</li></ul>
+<p>接受路径不变。</p>
+<ul><li><strong>证据识别偏松</strong>：<code>hasConcreteEvidence</code> 内部异常 → 偏向「有证据」（不误拦）；即便漏判也只多推一次</li></ul>
+<p>（有界 redrive 预算），代价小且可控。</p>
+<ul><li><strong>关即字节回退</strong>：<code>KHY_GOAL_EVIDENCE_GATE=0</code>（或父门 <code>KHY_GOAL_STOP_GATE</code>/祖父门 <code>KHY_GOAL</code> 关）</li></ul>
+<p>→ 逐字节回退到「声称即接受」的今日行为。</p>
+<ul><li><strong>纯叶子零 IO</strong>：判定/文案全在叶子，绝不抛。</li></ul>
+<h3 id="4-4-验证证据">4.4 验证证据<a class="anchor" href="#4-4-验证证据" aria-label="锚点">#</a></h3>
+<pre><code>$ node --test src/services/__tests__/goalStopGate.test.js
+ℹ tests 26  ℹ pass 26  ℹ fail 0
+$ node --test tests/services/flagRegistry.test.js
+ℹ tests 44  ℹ pass 44  ℹ fail 0</code></pre>
+<p>守卫（对 untracked 新叶子显式扫，<code>--changed</code> 走 git diff 不含 untracked）：</p>
+<pre><code>leaf-contract / agent-rules / change-safety / model-hardcoding : PASS（我文件净）
+check:flag-registry : registry table is structurally sound</code></pre>
+<hr>
+<h2 id="五-后续候选-本次不实现-给移植路线">五、后续候选（本次不实现，给移植路线）<a class="anchor" href="#五-后续候选-本次不实现-给移植路线" aria-label="锚点">#</a></h2>
+<ul><li><strong>MoA（判断）</strong>：Khy-OS 已有 Arena（比较排名）与网关多适配器/apiKeyPool/accountPool 兜底，但缺</li></ul>
+<p><strong>综合作答</strong>。移植路线：新增一个「aggregator」纯叶子（拼接编号参考输出 + 置尾引导，复用<br>  <code>arenaManager</code> 的并行扇出采集），由网关 <code>generate</code> 边缘在选中「moa」伪模型时接住。风险：计价/流式<br>  /工具调用穿透，工程量高——须单独立项。</p>
+<ul><li><strong>/learn 目录+网页蒸馏（进化）</strong>：扩 <code>skillLearningService</code>（<code>services/ai-backend</code>）新增</li></ul>
+<p><code>learnFromDirectory</code> / <code>learnFromUrl</code> 两来源，产物仍走既有 skill 目录格式与索引注入。中等工程量。</p>
+<ul><li><strong>/journey 统一视图（进化）</strong>：Khy-OS 已有 memdir + <code>skill *</code> CLI，缺统一时间线。移植路线：新增</li></ul>
+<p>纯叶子聚合 memdir 索引 + skill 注册表为时间线数据 + ASCII 渲染叶子（复用 upstreamStudyReport 同构），<br>  再加 <code>/journey list|edit|delete</code> 路由分派。中等工程量。</p>
+<hr>
+<h2 id="六-传承指针">六、传承指针<a class="anchor" href="#六-传承指针" aria-label="锚点">#</a></h2>
+<ul><li>承 [DESIGN-ARCH-061]（更新包学习红线）、[DESIGN-ARCH-060/064]（接线/生命周期总图）。</li><li>实现文件：<code>services/backend/src/services/goalStopGate.js</code>（证据门叶子）、<code>flagRegistry.js</code>（门注册）、</li></ul>
+<p><code>services/backend/src/services/__tests__/goalStopGate.test.js</code>（+11 用例）。</p>
+<ul><li>门控清单新增：<code>KHY_GOAL_EVIDENCE_GATE</code>（default-on，父 <code>KHY_GOAL_STOP_GATE</code>）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-065] Hermes Agent v0.18.0 参考学习-判断验证自我进化.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

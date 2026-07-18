@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文档排版用法指南：让 agent 写出格式精确的 Word · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>文档排版用法指南：让 agent 写出格式精确的 Word</div>
+      <header class="hero reveal"><h1>文档排版用法指南：让 agent 写出格式精确的 Word</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#文档排版用法指南-让-agent-写出格式精确的-word">文档排版用法指南：让 agent 写出格式精确的 Word</a></li><li class="lvl-2"><a href="#0-为什么不直接让模型写-docx-latex">0. 为什么不直接让模型写 docx / LaTeX？</a></li><li class="lvl-2"><a href="#1-最快上手">1. 最快上手</a></li><li class="lvl-2"><a href="#2-三套内置模板">2. 三套内置模板</a></li><li class="lvl-2"><a href="#3-内容怎么写-语义-不是格式">3. 内容怎么写（语义，不是格式）</a></li><li class="lvl-3"><a href="#3-1-markdown-推荐-最自然">3.1 Markdown（推荐，最自然）</a></li><li class="lvl-3"><a href="#3-2-文档-ast-需要精确结构时">3.2 文档 AST（需要精确结构时）</a></li><li class="lvl-2"><a href="#4-换页-只用确定性-api-别插空行">4. 换页：只用确定性 API，别插空行</a></li><li class="lvl-2"><a href="#5-自定义格式-两种方式">5. 自定义格式：两种方式</a></li><li class="lvl-3"><a href="#5-1-临时微调-overrides">5.1 临时微调：`overrides`</a></li><li class="lvl-3"><a href="#5-2-自定义模板文件">5.2 自定义模板文件</a></li><li class="lvl-2"><a href="#6-中文支持要点">6. 中文支持要点</a></li><li class="lvl-2"><a href="#7-排错">7. 排错</a></li><li class="lvl-2"><a href="#8-与旧-createdocument-的区别">8. 与旧 `createDocument` 的区别</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="文档排版用法指南-让-agent-写出格式精确的-word">文档排版用法指南：让 agent 写出格式精确的 Word<a class="anchor" href="#文档排版用法指南-让-agent-写出格式精确的-word" aria-label="锚点">#</a></h1>
+<blockquote><p>适用对象：用 KHY OS 让 AI 生成论文、报告、说明书等需要<strong>精确排版</strong>的 Word 文档的用户。<br>一句话：<strong>你（或模型）只写内容，格式交给模板。</strong> 字体、字号、页边距、行距、换页全部<br>由样式模板确定性决定，模型不碰任何排版代码。</p>
+<p>设计原理见 [DESIGN-ARCH-023]；实现见 [IMPL-RPT-023]。</p></blockquote>
+<hr>
+<h2 id="0-为什么不直接让模型写-docx-latex">0. 为什么不直接让模型写 docx / LaTeX？<a class="anchor" href="#0-为什么不直接让模型写-docx-latex" aria-label="锚点">#</a></h2>
+<p>因为模型对&quot;格式代码&quot;的输出<strong>不稳定</strong>：同一个&quot;加粗标题&quot;意图，它这次写 <code>\textbf</code>、下次写<br><code>**</code>、再下次写 <code>&lt;b&gt;</code>；中文字体常漏 <code>eastAsia</code> 属性导致整篇回退成默认字体。<strong>只要格式决策<br>留在模型手里，排版就无法复现。</strong> KHY OS 的做法是把格式收归&quot;样式模板&quot;，模型只输出语义结构。</p>
+<hr>
+<h2 id="1-最快上手">1. 最快上手<a class="anchor" href="#1-最快上手" aria-label="锚点">#</a></h2>
+<p>让 AI 调用 <code>renderDocument</code> 工具（别名 <code>typeset_document</code> / <code>render_docx</code> / <code>create_paper</code>），<br>只需给两样东西：<strong>语义内容</strong>（Markdown）+ <strong>模板名</strong>。</p>
+<pre><code class="language-jsonc">// renderDocument 的入参
+{
+  &quot;content&quot;: &quot;# 引言\n\n这是正文，包含 **重点**。\n\n## 方法\n\n- 步骤一\n- 步骤二&quot;,
+  &quot;template&quot;: &quot;gbt7714&quot;,                 // 国标中文学术；可选 default / ieee
+  &quot;title&quot;: &quot;基于 X 的 Y 研究&quot;,            // 可选，用模板标题样式渲染
+  &quot;outputPath&quot;: &quot;~/Desktop/paper.docx&quot;   // 限项目目录或家目录子树
+}</code></pre>
+<p>产物就是排好版的 <code>.docx</code>：一级标题黑体三号居中、正文宋体小四 1.5 倍行距首行缩进 2 字符、<br>A4 页面、页脚页码——<strong>全部来自模板，无需你指定一个字号</strong>。</p>
+<hr>
+<h2 id="2-三套内置模板">2. 三套内置模板<a class="anchor" href="#2-三套内置模板" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模板名</th><th>适用</th><th>关键样式</th></tr></thead><tbody><tr><td><code>default</code></td><td>通用 A4 文档</td><td>完整基线，中性字体；其它模板都叠加在它之上</td></tr><tr><td><code>gbt7714</code></td><td>国标 GB/T 7714 中文学术（学位论文/期刊）</td><td>H1 黑体三号(16pt)居中<strong>前自动换页</strong>；正文宋体小四(12pt) 1.5 倍行距首行缩进 2 字符；参考文献宋体五号悬挂缩进</td></tr><tr><td><code>ieee</code></td><td>IEEE 英文会议/期刊</td><td>Times New Roman 正文，标题加粗分级，紧凑行距（单栏近似；双栏需后处理）</td></tr></tbody></table>
+<p>不填 <code>template</code> 默认用 <code>default</code>。</p>
+<hr>
+<h2 id="3-内容怎么写-语义-不是格式">3. 内容怎么写（语义，不是格式）<a class="anchor" href="#3-内容怎么写-语义-不是格式" aria-label="锚点">#</a></h2>
+<h3 id="3-1-markdown-推荐-最自然">3.1 Markdown（推荐，最自然）<a class="anchor" href="#3-1-markdown-推荐-最自然" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>想要</th><th>写法</th><th>说明</th></tr></thead><tbody><tr><td>各级标题</td><td><code># 一级</code> <code>## 二级</code> <code>### 三级</code></td><td>层级映射模板的 heading1~4 样式</td></tr><tr><td>正文</td><td>直接写；空行分段</td><td>同段换行会合并为一段</td></tr><tr><td>加粗 / 斜体</td><td><code>**重点**</code> / <code>*强调*</code></td><td>这是<strong>语义</strong>标记，由模板用强调字体渲染</td></tr><tr><td>列表</td><td><code>- 项</code> 或 <code>1. 项</code></td><td>有序/无序</td></tr><tr><td>引用</td><td><code>&gt; 引文</code></td><td>引文样式</td></tr><tr><td>表格</td><td>`</td><td>A</td></tr><tr><td>代码</td><td>用 ``` 围栏</td><td>等宽渲染，正文原样不解释</td></tr><tr><td><strong>换页</strong></td><td>单独一行 <code>[[newpage]]</code></td><td>见 §4</td></tr></tbody></table>
+<h3 id="3-2-文档-ast-需要精确结构时">3.2 文档 AST（需要精确结构时）<a class="anchor" href="#3-2-文档-ast-需要精确结构时" aria-label="锚点">#</a></h3>
+<p>复杂结构（图片、参考文献条目）可直接给 AST JSON：</p>
+<pre><code class="language-jsonc">{
+  &quot;blocks&quot;: [
+    { &quot;type&quot;: &quot;heading&quot;, &quot;level&quot;: 1, &quot;text&quot;: &quot;结论&quot; },
+    { &quot;type&quot;: &quot;paragraph&quot;, &quot;runs&quot;: [
+        { &quot;text&quot;: &quot;总体表现&quot; }, { &quot;text&quot;: &quot;显著&quot;, &quot;bold&quot;: true }, { &quot;text&quot;: &quot;优于基线。&quot; } ] },
+    { &quot;type&quot;: &quot;figure&quot;, &quot;path&quot;: &quot;./fig1.png&quot;, &quot;caption&quot;: &quot;图 1 系统架构&quot; },
+    { &quot;type&quot;: &quot;pagebreak&quot; },
+    { &quot;type&quot;: &quot;reference&quot;, &quot;entries&quot;: [
+        &quot;[1] 张三. 论文标题[J]. 期刊, 2024, 12(3): 1-10.&quot; ] }
+  ]
+}</code></pre>
+<p>可用块类型：<code>heading</code> / <code>paragraph</code> / <code>list</code> / <code>table</code> / <code>quote</code> / <code>code</code> / <code>pagebreak</code> /<br><code>figure</code> / <code>reference</code>。</p>
+<hr>
+<h2 id="4-换页-只用确定性-api-别插空行">4. 换页：只用确定性 API，别插空行<a class="anchor" href="#4-换页-只用确定性-api-别插空行" aria-label="锚点">#</a></h2>
+<p>换页<strong>只</strong>认这三种来源，其余一律不换页：</p>
+<ol><li>Markdown 单独一行 <code>[[newpage]]</code>（或 <code>&lt;&lt;&lt;pagebreak&gt;&gt;&gt;</code>）；</li><li>AST 里的 <code>{ &quot;type&quot;: &quot;pagebreak&quot; }</code> 块；</li><li>模板策略：<code>gbt7714</code> 默认<strong>每个一级标题前自动换页</strong>。</li></ol>
+<blockquote><p>⚠️ 多打几个空行<strong>不会</strong>换页，<code>---</code> 水平线也<strong>不会</strong>换页——这是刻意设计，避免&quot;靠空白<br>占位&quot;的不确定排版。</p></blockquote>
+<hr>
+<h2 id="5-自定义格式-两种方式">5. 自定义格式：两种方式<a class="anchor" href="#5-自定义格式-两种方式" aria-label="锚点">#</a></h2>
+<h3 id="5-1-临时微调-overrides">5.1 临时微调：<code>overrides</code><a class="anchor" href="#5-1-临时微调-overrides" aria-label="锚点">#</a></h3>
+<p>只改一两个键、不想另写模板时，传 <code>overrides</code> 深合并到所选模板之上：</p>
+<pre><code class="language-jsonc">{
+  &quot;content&quot;: &quot;…&quot;,
+  &quot;template&quot;: &quot;gbt7714&quot;,
+  &quot;overrides&quot;: { &quot;paragraph&quot;: { &quot;lineSpacing&quot;: 2.0 } },   // 改成 2 倍行距，其余不变
+  &quot;outputPath&quot;: &quot;paper.docx&quot;
+}</code></pre>
+<h3 id="5-2-自定义模板文件">5.2 自定义模板文件<a class="anchor" href="#5-2-自定义模板文件" aria-label="锚点">#</a></h3>
+<p>把一份 JSON 模板存到任意位置，<code>template</code> 传它的<strong>绝对路径</strong>即可。模板会自动叠加在<br><code>default</code> 基线上，所以你<strong>只需写要改的键</strong>。最小示例：</p>
+<pre><code class="language-jsonc">// ~/my-style.json
+{
+  &quot;name&quot;: &quot;my-style&quot;,
+  &quot;label&quot;: &quot;我的公司报告风格&quot;,
+  &quot;paragraph&quot;: { &quot;lineSpacing&quot;: 1.25, &quot;firstLineIndentChars&quot;: 0 },
+  &quot;fonts&quot;: {
+    &quot;heading1&quot;: { &quot;ascii&quot;: &quot;Arial&quot;, &quot;eastAsia&quot;: &quot;微软雅黑&quot;, &quot;size&quot;: 18, &quot;bold&quot;: true, &quot;align&quot;: &quot;left&quot;, &quot;color&quot;: &quot;1F4E79&quot; },
+    &quot;default&quot;:  { &quot;ascii&quot;: &quot;Calibri&quot;, &quot;eastAsia&quot;: &quot;微软雅黑&quot;, &quot;size&quot;: 11 }
+  }
+}</code></pre>
+<pre><code class="language-jsonc">{ &quot;content&quot;: &quot;…&quot;, &quot;template&quot;: &quot;/home/me/my-style.json&quot;, &quot;outputPath&quot;: &quot;report.docx&quot; }</code></pre>
+<p>模板字段速查：</p>
+<ul><li><code>page</code>：<code>size</code>(A4/Letter)、<code>margins</code>(top/bottom/left/right + unit:cm)、<code>footer.pageNumber</code></li><li><code>paragraph</code>：<code>lineSpacing</code>、<code>lineSpacingRule</code>(multiple/exact)、<code>spaceBefore/After</code>、<code>firstLineIndentChars</code></li><li><code>fonts.&lt;key&gt;</code>：<code>ascii</code>、<code>eastAsia</code>(中文字体，<strong>必填否则中文回退</strong>)、<code>size</code>(pt)、<code>bold</code>、<code>italic</code>、<code>align</code>、<code>color</code>(十六进制)、<code>pageBreakBefore</code><ul><li>key 包括 <code>default</code>/<code>title</code>/<code>heading1~4</code>/<code>quote</code>/<code>code</code>/<code>caption</code>/<code>reference</code>/<code>list</code>/<code>tableCell</code></li></ul></li><li><code>pagination.pageBreakBeforeHeading1</code>：是否每个一级标题前自动换页</li></ul>
+<p>中文字号 → pt 对照：二号 22 / 三号 16 / 小三 13 / 四号 14 / 小四 12 / 五号 10.5。</p>
+<hr>
+<h2 id="6-中文支持要点">6. 中文支持要点<a class="anchor" href="#6-中文支持要点" aria-label="锚点">#</a></h2>
+<p>渲染器对<strong>每一个 run 都强制写 <code>eastAsia</code> 中文字体</strong>，并在写后校验阶段再次核查、对漏设的<br>run 自动打补丁——所以你用 <code>gbt7714</code> 或任何设了 <code>eastAsia</code> 的模板，中文都不会回退。<br>自定义模板时务必给每个 <code>fonts.&lt;key&gt;</code> 填 <code>eastAsia</code>（如&quot;宋体&quot;/&quot;黑体&quot;/&quot;微软雅黑&quot;）。</p>
+<hr>
+<h2 id="7-排错">7. 排错<a class="anchor" href="#7-排错" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现象</th><th>原因</th><th>解决</th></tr></thead><tbody><tr><td><code>Structured-content check failed: … forbidden LaTeX/HTML …</code></td><td>内容里夹了排版代码（<code>\textbf</code>、<code>&lt;b&gt;</code> 等）</td><td>删掉，改用 Markdown 语义或模板控制格式</td></tr><tr><td><code>Unknown style template &quot;xxx&quot;</code></td><td>模板名拼错</td><td>用 <code>default</code>/<code>gbt7714</code>/<code>ieee</code> 或自定义模板绝对路径</td></tr><tr><td><code>Refused to write …</code> / 路径相关错误</td><td>输出路径越界</td><td>写到项目目录或家目录（Desktop/Documents/Downloads）子树内</td></tr><tr><td>工具不可用</td><td>缺 python 或 python-docx</td><td>安装 <code>pip install python-docx</code>；<code>khy preflight</code> 体检</td></tr><tr><td>中文变方框/回退</td><td>自定义模板某 font 漏 <code>eastAsia</code></td><td>给该 font 补 <code>eastAsia</code> 字体名</td></tr></tbody></table>
+<hr>
+<h2 id="8-与旧-createdocument-的区别">8. 与旧 <code>createDocument</code> 的区别<a class="anchor" href="#8-与旧-createdocument-的区别" aria-label="锚点">#</a></h2>
+<p><code>createDocument</code> 把文本按行裸塞、无样式控制，适合&quot;随手存个 txt 转 docx&quot;。<br>要<strong>精确排版</strong>（论文/正式报告）一律用 <code>renderDocument</code>。两者并存，互不影响。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-038] AI元数据-.ai-种子文档-用法指南-2026-06-15.html"><div class="dir">← 上一篇</div><div class="ttl">AI 元数据（.ai/ 种子文档）用法指南</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-040] Git入门-main-HEAD-分支-工作树-结合本仓库.html"><div class="dir">下一篇 →</div><div class="ttl">Git 入门：main / HEAD / 分支 / 工作树（结合本仓库）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-039] 文档排版-用法指南-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

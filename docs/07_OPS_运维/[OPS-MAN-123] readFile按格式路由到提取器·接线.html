@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-123-readfile-按格式路由到已存在提取器-接线-让-khy-真正-读-各种格式-而非拒绝-卡死">[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）</a></li><li class="lvl-2"><a href="#这一层闭合什么-把已存在的提取器能力接进读工具">这一层闭合什么：把已存在的提取器能力接进读工具</a></li><li class="lvl-2"><a href="#修法-命中二进制后-先路由到提取器读出内容-无提取器才落-ops-121-拒绝">修法：命中二进制后，先路由到提取器读出内容，无提取器才落 OPS-121 拒绝</a></li><li class="lvl-2"><a href="#三层可逐级回退-诚实降级">三层可逐级回退（诚实降级）</a></li><li class="lvl-2"><a href="#保守边界-fail-soft">保守边界 / fail-soft</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-123-readfile-按格式路由到已存在提取器-接线-让-khy-真正-读-各种格式-而非拒绝-卡死">[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）<a class="anchor" href="#ops-man-123-readfile-按格式路由到已存在提取器-接线-让-khy-真正-读-各种格式-而非拒绝-卡死" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是工具接线，无 <code>--gen-doc</code> 生成器）。承接 OPS-MAN-121。<br>编排逻辑改在 <code>services/backend/src/tools/readFileFormatRouter.js</code>（纯叶·async·DI 可测），<br>接线改在 <code>services/backend/src/tools/readFile.js</code> 的 <code>execute</code>。</p></blockquote>
+<h2 id="这一层闭合什么-把已存在的提取器能力接进读工具">这一层闭合什么：把已存在的提取器能力接进读工具<a class="anchor" href="#这一层闭合什么-把已存在的提取器能力接进读工具" aria-label="锚点">#</a></h2>
+<p>上一轮 OPS-MAN-121 给 <code>readFile.js</code> 接了「读前二进制探测 → 快速拒绝」，止住了把 <code>tar.gz</code><br>当文本注入模型导致的 1h+ 卡死。但用户明确反馈：<strong>「各种格式 khy 都要能阅读」——拒绝不是<br>终态</strong>。</p>
+<p>仓库里 PDF / 图片 / 压缩包 / docx 的<strong>提取器早已存在且有界</strong>（各自带超时 + 体积上限，故路由<br>天然不会卡死），但读工具 <code>readFile.js</code> 一个都没接线：</p>
+<table><thead><tr><th>格式</th><th>提取器入口</th><th>位置</th></tr></thead><tbody><tr><td>PDF→文本</td><td><code>extractDocumentSnippetAsync</code></td><td><code>services/documentSnippetService.js</code>（pdftotext→pypdf→strings，超时 4.5s，≤24MB，扫描件回退 OCR）</td></tr><tr><td>图片→OCR</td><td><code>extractImageOcrSnippetAsync</code></td><td><code>services/ocrSnippetService.js</code>（docHelper.py tesseract，超时 4s，≤20MB）</td></tr><tr><td>压缩包→清单+peek</td><td><code>inspectArchive</code> + <code>buildArchiveManifest</code></td><td><code>services/archiveInspectService.js</code> / <code>services/archiveManifestPolicy.js</code>（node-tar/node-stream-zip <strong>只列目录零解压</strong> + 文本 peek）</td></tr><tr><td>docx→文本</td><td><code>docHelper.py docx_to_text</code></td><td><code>services/docHelper.py</code>（python-docx，写 .txt）</td></tr></tbody></table>
+<p>这些提取器现只被 multimodal / upload / UpstreamStudy 消费，读工具从不 dispatch = 典型<br><strong>能力存在、没接线</strong>。本层把这条线接上。</p>
+<h2 id="修法-命中二进制后-先路由到提取器读出内容-无提取器才落-ops-121-拒绝">修法：命中二进制后，先路由到提取器读出内容，无提取器才落 OPS-121 拒绝<a class="anchor" href="#修法-命中二进制后-先路由到提取器读出内容-无提取器才落-ops-121-拒绝" aria-label="锚点">#</a></h2>
+<p><code>readFile.execute</code> 在检测到二进制（<code>isBinaryForRead(fmt) === true</code>）后：</p>
+<pre><code class="language-js">if (isBinaryForRead(fmt)) {
+  try {
+    const { routeFormatRead } = require('./readFileFormatRouter');
+    const routed = await routeFormatRead({ filePath, fmt, size: stat.size, env: process.env });
+    if (routed &amp;&amp; routed.handled) return routed.result;   // 真正读到内容 → 直接返回
+  } catch { /* 路由失败 → 落 OPS-121 拒绝兜底 */ }
+  return { success:false, error: buildBinaryReadRefusal({...}), binary:true, ... }; // OPS-121 不变
+}</code></pre>
+<p><code>routeFormatRead({ filePath, fmt, size, env, deps })</code>（<code>readFileFormatRouter.js</code>）按 detectFile<br>结果路由：</p>
+<ul><li><code>category === 'image'</code> → <code>extractImageOcr</code> → <code>【图片 OCR · &lt;engine&gt;】\n&lt;text&gt;</code></li><li><code>format/magicFormat === 'pdf'</code> → <code>extractPdf</code> → <code>【PDF 文本 · &lt;engine&gt; · 取x/共y页】\n&lt;text&gt;</code></li><li><code>format/magicFormat === 'docx'</code> → <code>extractDocx</code>（spawn `python3 docHelper.py docx_to_text</li></ul>
+<p>&lt;in&gt; &lt;tmp.txt&gt;<code>，读回 tmp，**用后即删**）→ </code>【DOCX 文本 · python-docx】\n&lt;text&gt;`</p>
+<ul><li>压缩包（<code>category === 'archive'</code> 或路径像 <code>.zip/.tar/.tar.gz/.tgz</code>——裸 tar.gz magic 检测不到，</li></ul>
+<p>靠扩展名）→ <code>inspectArchive</code> → <code>buildArchiveManifest</code> → 清单 + 抽读文本条目</p>
+<ul><li>其它（ELF/PE/xlsx/pptx/未知，或任一提取器返回 success:false / 抛错）→ <code>{ handled:false }</code></li></ul>
+<p>→ 调用方落 OPS-121 拒绝。</p>
+<h2 id="三层可逐级回退-诚实降级">三层可逐级回退（诚实降级）<a class="anchor" href="#三层可逐级回退-诚实降级" aria-label="锚点">#</a></h2>
+<ol><li><strong>格式路由</strong>（门 <code>KHY_READFILE_FORMAT_ROUTE</code>，default-on）：真正读出可读内容。</li><li>门关 / 无提取器 / 提取失败 → <strong>OPS-121 信息性拒绝</strong>（门 <code>KHY_READFILE_BINARY_GUARD</code>，</li></ol>
+<p>default-on）：点明类型+大小 + 重定向 analyzeBinary/UpstreamStudy/校验解压。</p>
+<ol><li>两门都关 → <strong>更旧的解码注入</strong>（历史行为，逐字节回退）。</li></ol>
+<h2 id="保守边界-fail-soft">保守边界 / fail-soft<a class="anchor" href="#保守边界-fail-soft" aria-label="锚点">#</a></h2>
+<ul><li><code>routeFormatRead</code> 整体 try/catch，<strong>绝不抛</strong>；任一提取器缺依赖（无 tesseract/pdftotext/python）</li></ul>
+<p>/ 超时 / 失败 → <code>{ handled:false }</code>，落 OPS-121 拒绝，绝不让正常读取失败、绝不卡死<br>  （提取器全有界）。</p>
+<ul><li>真正的提取器调用经 <code>deps</code>（DI）注入，默认 lazy-require 真实 service，故纯叶单测无需真跑</li></ul>
+<p>python/pdftotext/tar。</p>
+<ul><li>只碰文件内容提取，不触任何密钥；docx 临时文件用后即删（不落盘残留）。</li></ul>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li>纯叶 <code>readFileFormatRouter.js</code> 除 docx 的 python spawn（有界·超时·清理）外无重 IO；真正的</li></ul>
+<p>提取 IO 在既有 service 里。</p>
+<ul><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:readfile-format-route      # 纯叶 DI 单测（20 用例）
+npm run test:readfile-binary-guard      # OPS-121 无回归（9 用例）
+# LIVE：真图 sample.png → success:true 含 OCR 文本；真 tar.gz → success:true 含目录清单+peek；
+#       真 PDF → success:true 含 PDF 文本；KHY_READFILE_FORMAT_ROUTE=0 → 回退 OPS-121 拒绝；
+#       真 ELF → 无提取器 → OPS-121 拒绝 + 重定向。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

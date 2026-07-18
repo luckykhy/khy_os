@@ -1,0 +1,92 @@
+{
+  "sessionId": "c775055b-31d2-404f-a804-8af77cce6bc4",
+  "title": "",
+  "model": "api:sensenova:deepseek-v4-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "，我桌面上有些什么"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: shellCommand]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_70218328d2664f55825ebc23",
+          "name": "shellCommand",
+          "input": {
+            "command": "dir \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "结果呢"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: shellCommand]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_5ae381569b794e3fa423b422",
+          "name": "shellCommand",
+          "input": {
+            "command": "dir \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "做个总结桌面上有些什么"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "[模型请求执行工具: shellCommand]"
+        },
+        {
+          "type": "tool_use",
+          "id": "call_511f43bcca89428bbbd1fc33",
+          "name": "shellCommand",
+          "input": {
+            "command": "dir /b \"D:\\HuaweiMoveData\\Users\\25789\\Desktop\""
+          }
+        }
+      ],
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 6,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1782173951339,
+  "updatedAt": 1782173951339
+}

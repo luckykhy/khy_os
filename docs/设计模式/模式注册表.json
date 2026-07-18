@@ -1,0 +1,3626 @@
+{
+  "ai-backend/scripts/reset-admin-password.js": [
+    "Command"
+  ],
+  "ai-backend/server.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/config/database.js": [
+    "Flyweight"
+  ],
+  "ai-backend/src/config/env.js": [
+    "Flyweight"
+  ],
+  "ai-backend/src/middleware/auth.js": [
+    "Proxy"
+  ],
+  "ai-backend/src/routes/ai.js": [
+    "Command"
+  ],
+  "ai-backend/src/routes/aiGatewayAdmin.js": [
+    "Command"
+  ],
+  "ai-backend/src/routes/auth.js": [
+    "Command"
+  ],
+  "ai-backend/src/routes/news.js": [
+    "Command"
+  ],
+  "ai-backend/src/services/accountPool.js": [
+    "State"
+  ],
+  "ai-backend/src/services/aiAssetCustomerService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/aiMonitor.js": [
+    "Observer"
+  ],
+  "ai-backend/src/services/apiKeyPool.js": [
+    "Iterator"
+  ],
+  "ai-backend/src/services/cacheService.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/services/cloudSync.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/concurrencySlots.js": [
+    "State"
+  ],
+  "ai-backend/src/services/gateway/adapters/apiAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/claudeAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/cliToolAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/clipboardRelayAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/codexAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/cursorAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/ideDetector.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/ipAnonymizer.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/kiroAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/ollamaAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/relayApiAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/traeAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/vscodeAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/webRelayAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/adapters/windsurfAdapter.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/aiGateway.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/services/gateway/appLaunchInterceptor.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/example_plugins/cache-plugin.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/example_plugins/cost-guard.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/oauthManager.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/services/gateway/pluginChain.js": [
+    "Chain of Responsibility"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/anthropic.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/canonical.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/codex.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/formats.js": [
+    "Adapter",
+    "Flyweight"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/gemini.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/grok.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/index.js": [
+    "Adapter",
+    "Bridge",
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/protocolConverter/openai.js": [
+    "Adapter"
+  ],
+  "ai-backend/src/services/gateway/proxyServer.js": [
+    "Proxy",
+    "Singleton"
+  ],
+  "ai-backend/src/services/gateway/relayPage.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/tlsSidecar/index.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/gateway/tlsSidecar/installer.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/growthService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/inputPreprocessor.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/knowledgeTeachingService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/llmService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/mcpClient.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/modelTrainingService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/nvidiaModelService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/ollamaModelManager.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/services/planModeService.js": [
+    "State"
+  ],
+  "ai-backend/src/services/projectMemoryService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/promptLibraryService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/securityGuardService.js": [
+    "Proxy"
+  ],
+  "ai-backend/src/services/selfOptimizer.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/skillLearningService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/skillRegistry.js": [
+    "Singleton"
+  ],
+  "ai-backend/src/services/smartAIService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/stockAnalysisEngine.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/tokenUsageService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/toolCalling.js": [
+    "Facade"
+  ],
+  "ai-backend/src/services/webSearchService.js": [
+    "Facade"
+  ],
+  "ai-backend/src/utils/logger.js": [
+    "Decorator"
+  ],
+  "ai-backend/src/utils/pythonPath.js": [
+    "Strategy"
+  ],
+  "ai-frontend/src/App.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/api/request.js": [
+    "Proxy"
+  ],
+  "ai-frontend/src/composables/useAIMonitor.js": [
+    "Observer"
+  ],
+  "ai-frontend/src/composables/useAccountPool.js": [
+    "Observer",
+    "State"
+  ],
+  "ai-frontend/src/composables/useAssetCustomer.js": [
+    "Observer"
+  ],
+  "ai-frontend/src/composables/useGateway.js": [
+    "Observer"
+  ],
+  "ai-frontend/src/main.js": [
+    "Facade"
+  ],
+  "ai-frontend/src/router/index.js": [
+    "Strategy"
+  ],
+  "ai-frontend/src/stores/user.js": [
+    "Memento",
+    "Singleton"
+  ],
+  "ai-frontend/src/styles/newapi-theme.css": [
+    "Flyweight"
+  ],
+  "ai-frontend/src/views/AIAssetsCustomers.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/AIChat.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/AIDashboard.vue": [
+    "Composite",
+    "Facade",
+    "Observer"
+  ],
+  "ai-frontend/src/views/AIGateway.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/AIMonitor.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/AccountPool.vue": [
+    "Composite",
+    "Observer",
+    "State"
+  ],
+  "ai-frontend/src/views/BridgeChannels.vue": [
+    "Bridge",
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/Layout.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/Login.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/src/views/UserHome.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "ai-frontend/vite.config.js": [
+    "Builder"
+  ],
+  "backend/akshare_scripts/akshare_data.py": [
+    "Command"
+  ],
+  "backend/akshare_scripts/akshare_data_fixed.py": [
+    "Command"
+  ],
+  "backend/akshare_scripts/akshare_data_full_history.py": [
+    "Command"
+  ],
+  "backend/akshare_scripts/akshare_data_server.py": [
+    "Command"
+  ],
+  "backend/akshare_scripts/akshare_data_v2.py": [
+    "Command"
+  ],
+  "backend/akshare_scripts/alternative_data_sources.py": [
+    "Command"
+  ],
+  "backend/bin/khy-os-init.js": [
+    "Command"
+  ],
+  "backend/bin/khy.js": [
+    "Command"
+  ],
+  "backend/check-env.js": [
+    "Flyweight",
+    "Visitor"
+  ],
+  "backend/create-test-users.js": [
+    "Strategy"
+  ],
+  "backend/esbuild.config.js": [
+    "Builder"
+  ],
+  "backend/inference_server.py": [
+    "Template Method"
+  ],
+  "backend/migrations/add-close-fields.js": [
+    "Command"
+  ],
+  "backend/migrations/add-order-type-field.js": [
+    "Command"
+  ],
+  "backend/migrations/add-webauthn-to-users.js": [
+    "Command"
+  ],
+  "backend/migrations/create-kline-cache-table.js": [
+    "Command"
+  ],
+  "backend/migrations/create-user-favorites-table.js": [
+    "Command"
+  ],
+  "backend/migrations/fix-instruments-name-nullable.js": [
+    "Command"
+  ],
+  "backend/ml/check_model_features.py": [
+    "Template Method"
+  ],
+  "backend/ml/data_collector.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/ml/distillation/__init__.py": [
+    "Template Method"
+  ],
+  "backend/ml/distillation/generate_labels.py": [
+    "Template Method"
+  ],
+  "backend/ml/feature_engineer.py": [
+    "Template Method"
+  ],
+  "backend/ml/predict.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/ml/retrain_distilled.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/ml/retrain_with_18_features.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/ml/train_18_features.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/ml/trainer.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/reset-database.js": [
+    "Strategy"
+  ],
+  "backend/scripts/ai-manage-daemon.js": [
+    "Command"
+  ],
+  "backend/scripts/comprehensive-instruments.js": [
+    "Command"
+  ],
+  "backend/scripts/create-admin.js": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/scripts/patch_gguf_rope.py": [
+    "Command",
+    "Interpreter"
+  ],
+  "backend/scripts/patch_gguf_tensors.py": [
+    "Command",
+    "Interpreter"
+  ],
+  "backend/scripts/proxy-daemon.js": [
+    "Command",
+    "Proxy"
+  ],
+  "backend/scripts/seed.js": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/scripts/uncensor_model.py": [
+    "Command"
+  ],
+  "backend/scripts/windows-clipboard-img2file.ps1": [
+    "Command"
+  ],
+  "backend/server.js": [
+    "Singleton"
+  ],
+  "backend/setup.js": [
+    "Template Method"
+  ],
+  "backend/src/agents/built-in/exploreAgent.js": [
+    "Strategy"
+  ],
+  "backend/src/agents/built-in/generalPurposeAgent.js": [
+    "Strategy"
+  ],
+  "backend/src/agents/built-in/khyGuideAgent.js": [
+    "Strategy"
+  ],
+  "backend/src/agents/built-in/planAgent.js": [
+    "Strategy"
+  ],
+  "backend/src/agents/built-in/statuslineSetup.js": [
+    "Template Method"
+  ],
+  "backend/src/agents/built-in/verificationAgent.js": [
+    "Strategy"
+  ],
+  "backend/src/agents/builtInAgents.js": [
+    "Factory Method"
+  ],
+  "backend/src/agents/index.js": [
+    "Factory Method"
+  ],
+  "backend/src/agents/loadAgents.js": [
+    "Factory Method"
+  ],
+  "backend/src/agents/prompt.js": [
+    "Builder"
+  ],
+  "backend/src/agents/types.js": [
+    "Flyweight"
+  ],
+  "backend/src/assistant/autoDream.js": [
+    "Template Method"
+  ],
+  "backend/src/assistant/consolidationLock.js": [
+    "Template Method"
+  ],
+  "backend/src/assistant/dailyLog.js": [
+    "Template Method"
+  ],
+  "backend/src/assistant/index.js": [
+    "Strategy"
+  ],
+  "backend/src/assistant/proactive.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/dbAutoMigration.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/init.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/migrations.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/prefetch.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/setup.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/shutdown.js": [
+    "Template Method"
+  ],
+  "backend/src/bootstrap/startupProfiler.js": [
+    "Decorator",
+    "Template Method"
+  ],
+  "backend/src/bootstrap/state.js": [
+    "Singleton",
+    "Template Method"
+  ],
+  "backend/src/bridge/bridgeClient.js": [
+    "Bridge"
+  ],
+  "backend/src/bridge/bridgeServer.js": [
+    "Bridge",
+    "Singleton"
+  ],
+  "backend/src/bridge/stateSync.js": [
+    "Bridge",
+    "Memento"
+  ],
+  "backend/src/buddy/companion.js": [
+    "Strategy"
+  ],
+  "backend/src/buddy/index.js": [
+    "Strategy"
+  ],
+  "backend/src/buddy/renderer.js": [
+    "Strategy"
+  ],
+  "backend/src/buddy/sprites.js": [
+    "Flyweight"
+  ],
+  "backend/src/buddy/types.js": [
+    "Flyweight"
+  ],
+  "backend/src/cli/agentRenderer.js": [
+    "Command"
+  ],
+  "backend/src/cli/ai.js": [
+    "Command"
+  ],
+  "backend/src/cli/aiRenderer.js": [
+    "Command"
+  ],
+  "backend/src/cli/aliases.js": [
+    "Flyweight"
+  ],
+  "backend/src/cli/bootstrap.js": [
+    "Command"
+  ],
+  "backend/src/cli/commandRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/cli/commandSchema.js": [
+    "Interpreter"
+  ],
+  "backend/src/cli/errorSummary.js": [
+    "Command"
+  ],
+  "backend/src/cli/extensions/extensionManager.js": [
+    "Singleton"
+  ],
+  "backend/src/cli/featureCapabilityMap.js": [
+    "Singleton"
+  ],
+  "backend/src/cli/formatters.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/app.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/arena.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/assistant.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/backtest.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/cloud.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/config.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/cron.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/daemon.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/data.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/docs.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/extension.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/gateway.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/ide.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/init.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/learning.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/linux.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/plugin-dev.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/pool.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/proxy.js": [
+    "Command",
+    "Proxy"
+  ],
+  "backend/src/cli/handlers/publish.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/remote.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/review.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/security.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/service.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/session.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/settings.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/skill.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/training.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/ultraplan.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/verify.js": [
+    "Command"
+  ],
+  "backend/src/cli/handlers/workspace.js": [
+    "Command"
+  ],
+  "backend/src/cli/hooks/hookRegistry.js": [
+    "Observer",
+    "Singleton"
+  ],
+  "backend/src/cli/hooks/hookRunner.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/cli/hooks/hookSystem.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/cli/hudRenderer.js": [
+    "Command"
+  ],
+  "backend/src/cli/lineBuffer.js": [
+    "Iterator"
+  ],
+  "backend/src/cli/liteRepl.js": [
+    "Mediator"
+  ],
+  "backend/src/cli/menu.js": [
+    "Composite"
+  ],
+  "backend/src/cli/nonInteractive.js": [
+    "Command"
+  ],
+  "backend/src/cli/onboarding.js": [
+    "Facade"
+  ],
+  "backend/src/cli/palette.js": [
+    "Strategy"
+  ],
+  "backend/src/cli/plugins.js": [
+    "Command"
+  ],
+  "backend/src/cli/pty.js": [
+    "Mediator"
+  ],
+  "backend/src/cli/repl.js": [
+    "Mediator"
+  ],
+  "backend/src/cli/riskConfirm.js": [
+    "Command"
+  ],
+  "backend/src/cli/router.js": [
+    "Mediator"
+  ],
+  "backend/src/cli/routerHandlers.js": [
+    "Command"
+  ],
+  "backend/src/cli/symbolResolver.js": [
+    "Strategy"
+  ],
+  "backend/src/cli/syncOutput.js": [
+    "Command"
+  ],
+  "backend/src/cli/taskMindMap.js": [
+    "Composite",
+    "Visitor"
+  ],
+  "backend/src/cli/tasksControlContract.js": [
+    "Command"
+  ],
+  "backend/src/cli/themeRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/cli/ui/diffViewer.js": [
+    "Command"
+  ],
+  "backend/src/cli/ui/inkComponents.js": [
+    "Composite"
+  ],
+  "backend/src/cli/ui/permissionDialog.js": [
+    "Command"
+  ],
+  "backend/src/cli/ui/progressBar.js": [
+    "Command"
+  ],
+  "backend/src/config/database.js": [
+    "Flyweight"
+  ],
+  "backend/src/config/env.js": [
+    "Flyweight"
+  ],
+  "backend/src/config/referencePrices.js": [
+    "Flyweight"
+  ],
+  "backend/src/config/settingsWhitelist.js": [
+    "Flyweight"
+  ],
+  "backend/src/config/sqliteCompat.js": [
+    "Adapter",
+    "Flyweight"
+  ],
+  "backend/src/constants/cyberRiskInstruction.js": [
+    "Flyweight"
+  ],
+  "backend/src/constants/outputStyles.js": [
+    "Flyweight",
+    "Strategy"
+  ],
+  "backend/src/constants/prompts.js": [
+    "Builder",
+    "Flyweight"
+  ],
+  "backend/src/constants/serviceDefaults.js": [
+    "Flyweight"
+  ],
+  "backend/src/constants/systemPromptSections.js": [
+    "Builder",
+    "Flyweight"
+  ],
+  "backend/src/constants/wasmDefaults.js": [
+    "Flyweight"
+  ],
+  "backend/src/controllers/cacheController.js": [
+    "Strategy"
+  ],
+  "backend/src/controllers/comprehensiveDataController.js": [
+    "Facade"
+  ],
+  "backend/src/controllers/instrumentController.js": [
+    "Strategy"
+  ],
+  "backend/src/controllers/marketController.js": [
+    "Strategy"
+  ],
+  "backend/src/coordinator/agentWorkerEntry.js": [
+    "Strategy"
+  ],
+  "backend/src/coordinator/coordinatorMode.js": [
+    "Mediator"
+  ],
+  "backend/src/coordinator/ipcProtocol.js": [
+    "Mediator"
+  ],
+  "backend/src/coordinator/processAgent.js": [
+    "State"
+  ],
+  "backend/src/coordinator/taskBoard.js": [
+    "Strategy"
+  ],
+  "backend/src/coordinator/workerAgent.js": [
+    "Prototype"
+  ],
+  "backend/src/i18n/index.js": [
+    "Strategy"
+  ],
+  "backend/src/index.js": [
+    "Strategy"
+  ],
+  "backend/src/jobs/cronScheduler.js": [
+    "Strategy"
+  ],
+  "backend/src/memdir/index.js": [
+    "Strategy"
+  ],
+  "backend/src/memdir/memdir.js": [
+    "Strategy"
+  ],
+  "backend/src/memdir/paths.js": [
+    "Strategy"
+  ],
+  "backend/src/middleware/auditLog.js": [
+    "Decorator",
+    "Proxy"
+  ],
+  "backend/src/middleware/auth.js": [
+    "Proxy"
+  ],
+  "backend/src/middleware/errorHandler.js": [
+    "Chain of Responsibility",
+    "Proxy"
+  ],
+  "backend/src/middleware/rateLimit.js": [
+    "Proxy"
+  ],
+  "backend/src/middleware/requestLogger.js": [
+    "Decorator",
+    "Proxy"
+  ],
+  "backend/src/migrations/run.js": [
+    "Command"
+  ],
+  "backend/src/models/AISuggestion.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Announcement.js": [
+    "Strategy"
+  ],
+  "backend/src/models/AnnouncementRead.js": [
+    "Strategy"
+  ],
+  "backend/src/models/ApiKey.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Backtest.js": [
+    "Strategy"
+  ],
+  "backend/src/models/BankTransfer.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Feedback.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Instrument.js": [
+    "Strategy"
+  ],
+  "backend/src/models/KlineCache.js": [
+    "Strategy"
+  ],
+  "backend/src/models/KlineData.js": [
+    "Strategy"
+  ],
+  "backend/src/models/MarketData.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Signal.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Strategy.js": [
+    "Strategy"
+  ],
+  "backend/src/models/SystemSetting.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Trade.js": [
+    "Strategy"
+  ],
+  "backend/src/models/User.js": [
+    "Strategy"
+  ],
+  "backend/src/models/UserFavorite.js": [
+    "Strategy"
+  ],
+  "backend/src/models/UserLog.js": [
+    "Strategy"
+  ],
+  "backend/src/models/Watchlist.js": [
+    "Strategy"
+  ],
+  "backend/src/models/index.js": [
+    "Facade"
+  ],
+  "backend/src/observability/index.js": [
+    "Strategy"
+  ],
+  "backend/src/observability/metrics.js": [
+    "Strategy"
+  ],
+  "backend/src/observability/otel.js": [
+    "Strategy"
+  ],
+  "backend/src/permissions/bashSecurity.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/permissions/index.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/permissions/rules.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/plugin-loader/contextFactory.js": [
+    "Abstract Factory",
+    "Factory Method"
+  ],
+  "backend/src/plugin-loader/index.js": [
+    "Abstract Factory"
+  ],
+  "backend/src/routes/admin.js": [
+    "Command"
+  ],
+  "backend/src/routes/ai.js": [
+    "Command"
+  ],
+  "backend/src/routes/aiGatewayAdmin.js": [
+    "Command"
+  ],
+  "backend/src/routes/announcement.js": [
+    "Command"
+  ],
+  "backend/src/routes/apiKey.js": [
+    "Command"
+  ],
+  "backend/src/routes/auth.js": [
+    "Command"
+  ],
+  "backend/src/routes/backtest.js": [
+    "Command"
+  ],
+  "backend/src/routes/bankTransfer.js": [
+    "Command"
+  ],
+  "backend/src/routes/cache.js": [
+    "Command"
+  ],
+  "backend/src/routes/chain.js": [
+    "Command"
+  ],
+  "backend/src/routes/comprehensiveData.js": [
+    "Command"
+  ],
+  "backend/src/routes/dashboard.js": [
+    "Command"
+  ],
+  "backend/src/routes/downloads.js": [
+    "Command"
+  ],
+  "backend/src/routes/external.js": [
+    "Command"
+  ],
+  "backend/src/routes/favorites.js": [
+    "Command"
+  ],
+  "backend/src/routes/feedback.js": [
+    "Command"
+  ],
+  "backend/src/routes/freeLLM.js": [
+    "Command"
+  ],
+  "backend/src/routes/futuresTickData.js": [
+    "Command"
+  ],
+  "backend/src/routes/instrumentSync.js": [
+    "Command"
+  ],
+  "backend/src/routes/instruments.js": [
+    "Command"
+  ],
+  "backend/src/routes/klineData.js": [
+    "Command"
+  ],
+  "backend/src/routes/largeTasks.js": [
+    "Command"
+  ],
+  "backend/src/routes/largeTasks/retryPolicy.js": [
+    "Command",
+    "Strategy"
+  ],
+  "backend/src/routes/largeTasks/routeHelpers.js": [
+    "Command",
+    "Strategy"
+  ],
+  "backend/src/routes/market.js": [
+    "Command"
+  ],
+  "backend/src/routes/marketData.js": [
+    "Command"
+  ],
+  "backend/src/routes/news.js": [
+    "Command"
+  ],
+  "backend/src/routes/passwordReset.js": [
+    "Command"
+  ],
+  "backend/src/routes/remoteSsh.js": [
+    "Command"
+  ],
+  "backend/src/routes/replay.js": [
+    "Command"
+  ],
+  "backend/src/routes/settings.js": [
+    "Command"
+  ],
+  "backend/src/routes/stockProxy.js": [
+    "Command"
+  ],
+  "backend/src/routes/strategy.js": [
+    "Command"
+  ],
+  "backend/src/routes/system.js": [
+    "Command"
+  ],
+  "backend/src/routes/tickBacktest.js": [
+    "Command"
+  ],
+  "backend/src/routes/trade.js": [
+    "Command"
+  ],
+  "backend/src/routes/trades.js": [
+    "Command"
+  ],
+  "backend/src/routes/tradingAgents.js": [
+    "Command"
+  ],
+  "backend/src/routes/user.js": [
+    "Command"
+  ],
+  "backend/src/routes/watchlist.js": [
+    "Command"
+  ],
+  "backend/src/routes/webauthn.js": [
+    "Command"
+  ],
+  "backend/src/routes/webhooks.js": [
+    "Command"
+  ],
+  "backend/src/services/acceptanceCriteria.js": [
+    "Facade"
+  ],
+  "backend/src/services/accountPool.js": [
+    "State"
+  ],
+  "backend/src/services/acpTransport.js": [
+    "Bridge"
+  ],
+  "backend/src/services/adaptiveOutput.js": [
+    "Strategy"
+  ],
+  "backend/src/services/adataMarketService.py": [
+    "Facade"
+  ],
+  "backend/src/services/adataService.py": [
+    "Facade"
+  ],
+  "backend/src/services/adminService.js": [
+    "Facade"
+  ],
+  "backend/src/services/advancedDiagnostics.js": [
+    "Decorator"
+  ],
+  "backend/src/services/agentCommunicationService.js": [
+    "Mediator"
+  ],
+  "backend/src/services/agentContext.js": [
+    "Prototype"
+  ],
+  "backend/src/services/agenticHarnessService.js": [
+    "Composite"
+  ],
+  "backend/src/services/agentsight/discover.js": [
+    "Visitor"
+  ],
+  "backend/src/services/agentsight/genaiEvents.js": [
+    "Observer"
+  ],
+  "backend/src/services/aiManagementServer.js": [
+    "Facade",
+    "Singleton"
+  ],
+  "backend/src/services/aiMonitor.js": [
+    "Observer"
+  ],
+  "backend/src/services/akshareDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/akshareService.py": [
+    "Facade"
+  ],
+  "backend/src/services/akshareUpdater.js": [
+    "Facade"
+  ],
+  "backend/src/services/alternativeDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/antivirusService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/apiKeyFormat.js": [
+    "Facade"
+  ],
+  "backend/src/services/apiKeyPool.js": [
+    "Iterator"
+  ],
+  "backend/src/services/apiKeyRotation.js": [
+    "Facade"
+  ],
+  "backend/src/services/appRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/services/arenaManager.js": [
+    "Singleton"
+  ],
+  "backend/src/services/arenaResultStore.js": [
+    "Memento"
+  ],
+  "backend/src/services/auditLog.js": [
+    "Decorator"
+  ],
+  "backend/src/services/authGuard.js": [
+    "Proxy"
+  ],
+  "backend/src/services/autoReasoning.js": [
+    "Strategy"
+  ],
+  "backend/src/services/autoReplyPipeline.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/services/backgroundTaskManager.js": [
+    "Singleton",
+    "State"
+  ],
+  "backend/src/services/backtestEngine.js": [
+    "Facade"
+  ],
+  "backend/src/services/baseSelfCheckService.js": [
+    "Template Method"
+  ],
+  "backend/src/services/binaryAnalyzer.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/bootstrapBudget.js": [
+    "Facade"
+  ],
+  "backend/src/services/boulderState.js": [
+    "Singleton"
+  ],
+  "backend/src/services/brokerService.js": [
+    "Facade"
+  ],
+  "backend/src/services/bugfixRegressionGate.js": [
+    "State"
+  ],
+  "backend/src/services/cacheService.js": [
+    "Singleton"
+  ],
+  "backend/src/services/canonicalState.js": [
+    "Singleton"
+  ],
+  "backend/src/services/capacityFlow.js": [
+    "State"
+  ],
+  "backend/src/services/chainWasm.js": [
+    "Facade"
+  ],
+  "backend/src/services/changeRegressionGate.js": [
+    "State"
+  ],
+  "backend/src/services/channels/_baseChannel.js": [
+    "Factory Method",
+    "Template Method"
+  ],
+  "backend/src/services/channels/messageRouter.js": [
+    "Mediator"
+  ],
+  "backend/src/services/channels/slackChannel.js": [
+    "Facade"
+  ],
+  "backend/src/services/chatLatencyAutoTuner.js": [
+    "Facade"
+  ],
+  "backend/src/services/ciStatusService.js": [
+    "Facade"
+  ],
+  "backend/src/services/circuitBreaker.js": [
+    "State"
+  ],
+  "backend/src/services/claudeCompat.js": [
+    "Adapter"
+  ],
+  "backend/src/services/cleanupService.js": [
+    "Facade"
+  ],
+  "backend/src/services/cliAgentRunner.js": [
+    "Facade"
+  ],
+  "backend/src/services/cliAuthService.js": [
+    "Facade"
+  ],
+  "backend/src/services/cloudSync.js": [
+    "Facade"
+  ],
+  "backend/src/services/coherenceState.js": [
+    "Singleton"
+  ],
+  "backend/src/services/commitMessageService.js": [
+    "Facade"
+  ],
+  "backend/src/services/commitmentTracker.js": [
+    "Facade"
+  ],
+  "backend/src/services/compact/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/compact/prompt.js": [
+    "Builder"
+  ],
+  "backend/src/services/comprehensiveDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/comprehensiveDataStaticConfig.js": [
+    "Facade"
+  ],
+  "backend/src/services/concurrencyLimiter.js": [
+    "State"
+  ],
+  "backend/src/services/concurrencySlots.js": [
+    "State"
+  ],
+  "backend/src/services/configMigration.js": [
+    "Singleton"
+  ],
+  "backend/src/services/contextCompressor.js": [
+    "Strategy"
+  ],
+  "backend/src/services/contextPruner.js": [
+    "Strategy"
+  ],
+  "backend/src/services/contextRouter.js": [
+    "Mediator",
+    "Strategy"
+  ],
+  "backend/src/services/contextWasm.js": [
+    "Facade"
+  ],
+  "backend/src/services/contextWindowGuard.js": [
+    "Strategy"
+  ],
+  "backend/src/services/crashRecovery.js": [
+    "Memento"
+  ],
+  "backend/src/services/credentialWatcherService.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/services/cronScheduler.js": [
+    "Facade"
+  ],
+  "backend/src/services/cursor2apiIntegrationService.js": [
+    "Facade"
+  ],
+  "backend/src/services/customProviderRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/services/daemonClient.js": [
+    "Facade"
+  ],
+  "backend/src/services/daemonEntry.js": [
+    "Facade"
+  ],
+  "backend/src/services/daemonManager.js": [
+    "Singleton"
+  ],
+  "backend/src/services/data_source.py": [
+    "Command",
+    "Template Method"
+  ],
+  "backend/src/services/dedupeCache.js": [
+    "Singleton"
+  ],
+  "backend/src/services/deliveryGate.js": [
+    "State"
+  ],
+  "backend/src/services/deliveryValidator.js": [
+    "Facade"
+  ],
+  "backend/src/services/devicePairing.js": [
+    "Mediator"
+  ],
+  "backend/src/services/diagnosticEvents.js": [
+    "Decorator"
+  ],
+  "backend/src/services/directiveParser.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/docHelper.py": [
+    "Template Method"
+  ],
+  "backend/src/services/documentSnippetService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/efinanceService.py": [
+    "Facade"
+  ],
+  "backend/src/services/enhancedMockDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/errorClassifier.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/execApproval.js": [
+    "Facade"
+  ],
+  "backend/src/services/extensionMarketplace.js": [
+    "Facade"
+  ],
+  "backend/src/services/featureFlags.js": [
+    "Singleton"
+  ],
+  "backend/src/services/fetchTimeout.js": [
+    "Strategy"
+  ],
+  "backend/src/services/fileHistoryService.js": [
+    "Memento"
+  ],
+  "backend/src/services/fileIntegrityService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/finlightNewsService.js": [
+    "Facade"
+  ],
+  "backend/src/services/flowsEngine.js": [
+    "Facade"
+  ],
+  "backend/src/services/followupSuggestionService.js": [
+    "Facade"
+  ],
+  "backend/src/services/freeStockDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/futuresTickDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_abortHelpers.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_adapterUtils.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_baseAdapter.js": [
+    "Adapter",
+    "Factory Method",
+    "Template Method"
+  ],
+  "backend/src/services/gateway/adapters/_errorClassifiers.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/gateway/adapters/_fingerprint.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_ideTokenMixin.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_imageCompat.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/adapters/_proxyTunnel.js": [
+    "Proxy"
+  ],
+  "backend/src/services/gateway/adapters/_sseParser.js": [
+    "Iterator"
+  ],
+  "backend/src/services/gateway/adapters/_streamProcessor.js": [
+    "Iterator"
+  ],
+  "backend/src/services/gateway/adapters/apiAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/claudeAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/cliToolAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/clipboardRelayAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/codexAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/cursor2apiAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/cursorAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/ideDetector.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/ipAnonymizer.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/kiroAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/localLLMAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/ollamaAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/relayApiAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/traeAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/vscodeAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/warpAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/webRelayAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/adapters/windsurfAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/aiGateway.js": [
+    "Singleton"
+  ],
+  "backend/src/services/gateway/appLaunchInterceptor.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/channelHealthBroadcaster.js": [
+    "Bridge",
+    "Observer"
+  ],
+  "backend/src/services/gateway/customerRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/services/gateway/example_plugins/cache-plugin.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/example_plugins/cost-guard.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/keySelector.js": [
+    "Iterator"
+  ],
+  "backend/src/services/gateway/modelDiscovery.js": [
+    "Iterator"
+  ],
+  "backend/src/services/gateway/modelRouter.js": [
+    "Strategy"
+  ],
+  "backend/src/services/gateway/oauthManager.js": [
+    "Singleton"
+  ],
+  "backend/src/services/gateway/pluginChain.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/services/gateway/protocolConverter/anthropic.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/protocolConverter/canonical.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/protocolConverter/codex.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/protocolConverter/formats.js": [
+    "Adapter",
+    "Flyweight"
+  ],
+  "backend/src/services/gateway/protocolConverter/gemini.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/protocolConverter/grok.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/protocolConverter/index.js": [
+    "Adapter",
+    "Bridge",
+    "Facade"
+  ],
+  "backend/src/services/gateway/protocolConverter/openai.js": [
+    "Adapter"
+  ],
+  "backend/src/services/gateway/proxyServer.js": [
+    "Proxy",
+    "Singleton"
+  ],
+  "backend/src/services/gateway/redisHealthStore.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/redisRateLimiter.js": [
+    "Proxy",
+    "Strategy"
+  ],
+  "backend/src/services/gateway/relayPage.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/requestDedup.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/safeJsonParse.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/gateway/streamingToolCallParser.js": [
+    "Iterator"
+  ],
+  "backend/src/services/gateway/tlsSidecar/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/gateway/tlsSidecar/installer.js": [
+    "Facade"
+  ],
+  "backend/src/services/get_all_index_codes.py": [
+    "Template Method"
+  ],
+  "backend/src/services/get_all_instruments_by_type.py": [
+    "Template Method"
+  ],
+  "backend/src/services/get_all_instruments_from_cache.py": [
+    "Template Method"
+  ],
+  "backend/src/services/get_all_stock_codes.py": [
+    "Template Method"
+  ],
+  "backend/src/services/get_instruments_stock_index_only.py": [
+    "Template Method"
+  ],
+  "backend/src/services/gettingStartedService.js": [
+    "Facade"
+  ],
+  "backend/src/services/gitContextService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/gitOperationTracker.js": [
+    "Facade"
+  ],
+  "backend/src/services/goalModeService.js": [
+    "State"
+  ],
+  "backend/src/services/growthService.js": [
+    "Facade"
+  ],
+  "backend/src/services/hardwareProfileService.js": [
+    "Facade"
+  ],
+  "backend/src/services/heartbeatCooldown.js": [
+    "Observer"
+  ],
+  "backend/src/services/heartbeatRunner.js": [
+    "Observer"
+  ],
+  "backend/src/services/ifindService.py": [
+    "Facade"
+  ],
+  "backend/src/services/imageService.js": [
+    "Facade"
+  ],
+  "backend/src/services/imageToWebService.js": [
+    "Facade"
+  ],
+  "backend/src/services/indicators/benchmark.js": [
+    "Strategy"
+  ],
+  "backend/src/services/indicators/fastIndicators.js": [
+    "Strategy"
+  ],
+  "backend/src/services/indicators/index.js": [
+    "Facade",
+    "Strategy"
+  ],
+  "backend/src/services/inputPreprocessor.js": [
+    "Facade"
+  ],
+  "backend/src/services/instructionFileService.js": [
+    "Facade"
+  ],
+  "backend/src/services/instrumentService.js": [
+    "Facade"
+  ],
+  "backend/src/services/instrumentSyncService.js": [
+    "Facade"
+  ],
+  "backend/src/services/intelligentStrategyAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/intentGate.js": [
+    "State"
+  ],
+  "backend/src/services/jsDataSources.js": [
+    "Facade"
+  ],
+  "backend/src/services/keyHealthProbe.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/services/khyUpgradeRuntime.js": [
+    "Template Method"
+  ],
+  "backend/src/services/khyshareService.py": [
+    "Facade"
+  ],
+  "backend/src/services/klineDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/knowledgeTeachingService.js": [
+    "Facade"
+  ],
+  "backend/src/services/liveModelSwitch.js": [
+    "State"
+  ],
+  "backend/src/services/llmService.js": [
+    "Facade"
+  ],
+  "backend/src/services/localLLMService.js": [
+    "Facade"
+  ],
+  "backend/src/services/lspClient.js": [
+    "Facade"
+  ],
+  "backend/src/services/marketDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/mcp/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/mcp/oauthTokenStore.js": [
+    "Facade"
+  ],
+  "backend/src/services/mcp/types.js": [
+    "Flyweight"
+  ],
+  "backend/src/services/mcpClient.js": [
+    "Facade"
+  ],
+  "backend/src/services/mediaTranscriptionService.js": [
+    "Facade"
+  ],
+  "backend/src/services/mediaUnderstanding.js": [
+    "Facade"
+  ],
+  "backend/src/services/memoryDreaming.js": [
+    "Facade"
+  ],
+  "backend/src/services/mlAgentService.js": [
+    "Facade"
+  ],
+  "backend/src/services/modelImportService.js": [
+    "Facade"
+  ],
+  "backend/src/services/modelTrainingService.js": [
+    "Facade"
+  ],
+  "backend/src/services/multiFreeService.js": [
+    "Facade"
+  ],
+  "backend/src/services/multiTerminalBackend.js": [
+    "Mediator"
+  ],
+  "backend/src/services/multimodalInputService.js": [
+    "Facade"
+  ],
+  "backend/src/services/ndjsonStream.js": [
+    "Iterator"
+  ],
+  "backend/src/services/networkDetector.js": [
+    "Observer"
+  ],
+  "backend/src/services/notificationService.js": [
+    "Observer"
+  ],
+  "backend/src/services/notifier.py": [
+    "Observer"
+  ],
+  "backend/src/services/ocrSnippetService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/ollamaModelManager.js": [
+    "Singleton"
+  ],
+  "backend/src/services/ownerControlService.js": [
+    "Facade"
+  ],
+  "backend/src/services/permissionStore.js": [
+    "Memento"
+  ],
+  "backend/src/services/planModeService.js": [
+    "State"
+  ],
+  "backend/src/services/prCreateService.js": [
+    "Facade"
+  ],
+  "backend/src/services/preflightPermission.js": [
+    "Proxy"
+  ],
+  "backend/src/services/projectMemoryService.js": [
+    "Facade"
+  ],
+  "backend/src/services/projectTemplateService.js": [
+    "Prototype"
+  ],
+  "backend/src/services/promptCacheService.js": [
+    "Singleton"
+  ],
+  "backend/src/services/promptLibraryService.js": [
+    "Facade"
+  ],
+  "backend/src/services/proxyConfigService.js": [
+    "Proxy"
+  ],
+  "backend/src/services/pythonDataSourceService.js": [
+    "Facade"
+  ],
+  "backend/src/services/pythonStrategyEngine.js": [
+    "Strategy"
+  ],
+  "backend/src/services/query/compactPipeline.js": [
+    "Builder"
+  ],
+  "backend/src/services/query/queryConfig.js": [
+    "Builder"
+  ],
+  "backend/src/services/query/queryDeps.js": [
+    "Facade"
+  ],
+  "backend/src/services/query/queryState.js": [
+    "Builder",
+    "Singleton"
+  ],
+  "backend/src/services/query/stopHooks.js": [
+    "Facade"
+  ],
+  "backend/src/services/query/streamingToolExecutor.js": [
+    "Iterator"
+  ],
+  "backend/src/services/query/tokenBudget.js": [
+    "Strategy"
+  ],
+  "backend/src/services/queryEngine.js": [
+    "Facade"
+  ],
+  "backend/src/services/ragRetrievalService.js": [
+    "Facade"
+  ],
+  "backend/src/services/rateLimiter.js": [
+    "Proxy",
+    "Strategy"
+  ],
+  "backend/src/services/realtimeDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/remote/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/remote/remoteApprovalBridge.js": [
+    "Bridge"
+  ],
+  "backend/src/services/remote/remoteExecService.js": [
+    "Facade"
+  ],
+  "backend/src/services/remote/remoteExecStreamStore.js": [
+    "Memento"
+  ],
+  "backend/src/services/remote/remoteStatePersistence.js": [
+    "Memento"
+  ],
+  "backend/src/services/remote/remoteStateSyncService.js": [
+    "Memento"
+  ],
+  "backend/src/services/remote/remoteWorkspaceResolver.js": [
+    "Facade"
+  ],
+  "backend/src/services/remote/sshConfigService.js": [
+    "Builder"
+  ],
+  "backend/src/services/remote/sshConnectionManager.js": [
+    "Singleton",
+    "State"
+  ],
+  "backend/src/services/remote/sshCredentialGuard.js": [
+    "Facade"
+  ],
+  "backend/src/services/resourceGuard.js": [
+    "Proxy"
+  ],
+  "backend/src/services/retryWithBackoff.js": [
+    "Strategy"
+  ],
+  "backend/src/services/seamManager.js": [
+    "Singleton"
+  ],
+  "backend/src/services/security/codeScanner/index.js": [
+    "Facade",
+    "Visitor"
+  ],
+  "backend/src/services/security/skillLedger/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/securityGuardService.js": [
+    "Proxy"
+  ],
+  "backend/src/services/selfOptimizer.js": [
+    "Facade"
+  ],
+  "backend/src/services/selfProfile.js": [
+    "Facade"
+  ],
+  "backend/src/services/sequentialQueue.js": [
+    "Facade"
+  ],
+  "backend/src/services/serviceRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/services/sessionFileRepair.js": [
+    "Memento"
+  ],
+  "backend/src/services/sessionPersistence.js": [
+    "Memento"
+  ],
+  "backend/src/services/sessionRecapService.js": [
+    "Memento"
+  ],
+  "backend/src/services/sessionSearchIndex.js": [
+    "Memento",
+    "Visitor"
+  ],
+  "backend/src/services/sessionTitleService.js": [
+    "Facade"
+  ],
+  "backend/src/services/sessionTraceSummary.js": [
+    "Facade"
+  ],
+  "backend/src/services/shellSafetyValidator.js": [
+    "Proxy"
+  ],
+  "backend/src/services/shellToToolMapper.js": [
+    "Strategy"
+  ],
+  "backend/src/services/skillCuratorService.js": [
+    "Visitor"
+  ],
+  "backend/src/services/skillLearningService.js": [
+    "Facade"
+  ],
+  "backend/src/services/skillRegistry.js": [
+    "Singleton"
+  ],
+  "backend/src/services/skillSearch.js": [
+    "Visitor"
+  ],
+  "backend/src/services/smartAIService.js": [
+    "Facade"
+  ],
+  "backend/src/services/smartTruncation.js": [
+    "Strategy"
+  ],
+  "backend/src/services/sqliteBackupService.js": [
+    "Memento"
+  ],
+  "backend/src/services/sseKeepalive.js": [
+    "Observer"
+  ],
+  "backend/src/services/ssrfGuard.js": [
+    "Proxy"
+  ],
+  "backend/src/services/stockAnalysisEngine.js": [
+    "Facade"
+  ],
+  "backend/src/services/strategyEngine.js": [
+    "Strategy"
+  ],
+  "backend/src/services/strategyMonitor.js": [
+    "Observer"
+  ],
+  "backend/src/services/strategyRecommender.js": [
+    "Strategy"
+  ],
+  "backend/src/services/subAgentOrchestrator.js": [
+    "Mediator"
+  ],
+  "backend/src/services/subscriptionService.js": [
+    "Facade"
+  ],
+  "backend/src/services/systemSettingService.js": [
+    "Facade"
+  ],
+  "backend/src/services/taskControlService.js": [
+    "State"
+  ],
+  "backend/src/services/tdxFormulaEngine.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/tdxInterpreter.js": [
+    "Interpreter"
+  ],
+  "backend/src/services/tdxPythonBridge.js": [
+    "Bridge",
+    "Interpreter"
+  ],
+  "backend/src/services/telemetryService.js": [
+    "Decorator"
+  ],
+  "backend/src/services/tickBacktestEngine.js": [
+    "Facade"
+  ],
+  "backend/src/services/tickDataAdapter.js": [
+    "Adapter"
+  ],
+  "backend/src/services/timeFormat.js": [
+    "Facade"
+  ],
+  "backend/src/services/tokenUsageService.js": [
+    "Facade"
+  ],
+  "backend/src/services/tokenless/commandRewriter.js": [
+    "Strategy"
+  ],
+  "backend/src/services/tokenless/index.js": [
+    "Facade"
+  ],
+  "backend/src/services/tokenless/responseCompressor.js": [
+    "Strategy"
+  ],
+  "backend/src/services/tokenless/schemaCompressor.js": [
+    "Strategy"
+  ],
+  "backend/src/services/tokenless/toonCodec.js": [
+    "Strategy"
+  ],
+  "backend/src/services/toolCalling.js": [
+    "Facade"
+  ],
+  "backend/src/services/toolError.js": [
+    "Facade"
+  ],
+  "backend/src/services/toolGuards.js": [
+    "Proxy"
+  ],
+  "backend/src/services/toolLoopDetector.js": [
+    "Facade"
+  ],
+  "backend/src/services/toolPipeline.js": [
+    "Chain of Responsibility"
+  ],
+  "backend/src/services/toolSandbox.js": [
+    "Proxy"
+  ],
+  "backend/src/services/toolUseLoop.js": [
+    "Facade"
+  ],
+  "backend/src/services/traceAuditService.js": [
+    "Decorator"
+  ],
+  "backend/src/services/tradingAgentsService.js": [
+    "Facade"
+  ],
+  "backend/src/services/trainingDataService.js": [
+    "Facade"
+  ],
+  "backend/src/services/transcriptRepair.js": [
+    "Visitor"
+  ],
+  "backend/src/services/transparencyService.js": [
+    "Observer"
+  ],
+  "backend/src/services/ultraplanService.js": [
+    "Facade"
+  ],
+  "backend/src/services/updateRunner.js": [
+    "Template Method"
+  ],
+  "backend/src/services/usageFormatter.js": [
+    "Facade"
+  ],
+  "backend/src/services/usageHabitService.js": [
+    "Facade"
+  ],
+  "backend/src/services/usageTracker.js": [
+    "Observer"
+  ],
+  "backend/src/services/userLogService.js": [
+    "Facade"
+  ],
+  "backend/src/services/userProfile.js": [
+    "Facade"
+  ],
+  "backend/src/services/verificationAgent.js": [
+    "Facade"
+  ],
+  "backend/src/services/versionService.js": [
+    "Facade"
+  ],
+  "backend/src/services/voiceService.js": [
+    "Facade"
+  ],
+  "backend/src/services/wasm-sandbox/index.js": [
+    "Facade",
+    "Proxy"
+  ],
+  "backend/src/services/wasm-sandbox/ipcCodec.js": [
+    "Mediator",
+    "Proxy"
+  ],
+  "backend/src/services/wasm-sandbox/khySysHost.js": [
+    "Proxy"
+  ],
+  "backend/src/services/wasm-sandbox/loopbackTransport.js": [
+    "Bridge",
+    "Proxy"
+  ],
+  "backend/src/services/wasm-sandbox/m1Constants.js": [
+    "Flyweight",
+    "Proxy"
+  ],
+  "backend/src/services/wasm-sandbox/moonbitHostBridge.js": [
+    "Bridge",
+    "Proxy"
+  ],
+  "backend/src/services/wasmAppService.js": [
+    "Facade"
+  ],
+  "backend/src/services/webSearchService.js": [
+    "Facade"
+  ],
+  "backend/src/services/windowsClipboardImg2FileService.js": [
+    "Facade"
+  ],
+  "backend/src/services/workspace/checkpointService.js": [
+    "Memento"
+  ],
+  "backend/src/services/worktreeManager.js": [
+    "Singleton"
+  ],
+  "backend/src/skills/index.js": [
+    "Factory Method"
+  ],
+  "backend/src/skills/skillLoader.js": [
+    "Factory Method"
+  ],
+  "backend/src/tasks/diskOutput.js": [
+    "Memento"
+  ],
+  "backend/src/tasks/index.js": [
+    "Strategy"
+  ],
+  "backend/src/tasks/largeTaskOrchestrator.js": [
+    "State"
+  ],
+  "backend/src/tasks/largeTaskRuntimeStore.js": [
+    "Memento"
+  ],
+  "backend/src/tasks/largeTaskWorkerService.js": [
+    "State"
+  ],
+  "backend/src/tasks/taskStore.js": [
+    "Memento"
+  ],
+  "backend/src/tools/AgentTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ApplyPatchTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/AskUserQuestionTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/BriefTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ConfigTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/CronDeleteTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/CronListTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/DiscoverSkillsTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/EnterPlanModeTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/EnterWorktreeTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ExitPlanModeTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ExitWorktreeTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/FileEditTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/FileReadTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/FileWriteTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/GlobTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/GrepTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/LSPTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ListMcpResourcesTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/MCPTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/McpAuthTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/MonitorTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/NotebookEditTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/PowerShellTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/REPLTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ReadMcpResourceTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/RemoteTriggerTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ReviewArtifactTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/ScheduleCronTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SendMessageTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SendUserFileTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SkillTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SleepTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SnipTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/SyntheticOutputTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskCreateTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskGetTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskListTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskOutputTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskStopTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TaskUpdateTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TeamCreateTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TeamDeleteTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TerminalCaptureTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/TodoWriteTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/VerifyPlanExecutionTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/WebBrowserTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/WebFetchTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/WebSearchTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/WorkflowTool/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/_baseTool.js": [
+    "Factory Method",
+    "Template Method"
+  ],
+  "backend/src/tools/_taskStore.js": [
+    "Memento"
+  ],
+  "backend/src/tools/agentTool.js": [
+    "Command"
+  ],
+  "backend/src/tools/backtest.js": [
+    "Command"
+  ],
+  "backend/src/tools/buildProject.js": [
+    "Command"
+  ],
+  "backend/src/tools/dataFetch.js": [
+    "Command"
+  ],
+  "backend/src/tools/editFile.js": [
+    "Command"
+  ],
+  "backend/src/tools/executeCode.js": [
+    "Command"
+  ],
+  "backend/src/tools/exploreTool.js": [
+    "Command"
+  ],
+  "backend/src/tools/gitCommit.js": [
+    "Command"
+  ],
+  "backend/src/tools/gitDiff.js": [
+    "Command"
+  ],
+  "backend/src/tools/gitStatus.js": [
+    "Command"
+  ],
+  "backend/src/tools/glob.js": [
+    "Command"
+  ],
+  "backend/src/tools/grep.js": [
+    "Command"
+  ],
+  "backend/src/tools/image2web.js": [
+    "Command"
+  ],
+  "backend/src/tools/imageOcr.js": [
+    "Command"
+  ],
+  "backend/src/tools/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "backend/src/tools/inputValidators.js": [
+    "Command"
+  ],
+  "backend/src/tools/lintCode.js": [
+    "Command"
+  ],
+  "backend/src/tools/lsp.js": [
+    "Command"
+  ],
+  "backend/src/tools/manageDeps.js": [
+    "Command"
+  ],
+  "backend/src/tools/optimizeConfig.js": [
+    "Command"
+  ],
+  "backend/src/tools/pdfToWord.js": [
+    "Command"
+  ],
+  "backend/src/tools/platformUtils.js": [
+    "Adapter"
+  ],
+  "backend/src/tools/projectTemplate.js": [
+    "Command"
+  ],
+  "backend/src/tools/quote.js": [
+    "Command"
+  ],
+  "backend/src/tools/readFile.js": [
+    "Command"
+  ],
+  "backend/src/tools/runTests.js": [
+    "Command"
+  ],
+  "backend/src/tools/scaffoldFiles.js": [
+    "Command"
+  ],
+  "backend/src/tools/search.js": [
+    "Command"
+  ],
+  "backend/src/tools/sendMessageTool.js": [
+    "Command"
+  ],
+  "backend/src/tools/shellClassifier.js": [
+    "Command",
+    "Interpreter"
+  ],
+  "backend/src/tools/shellCommand.js": [
+    "Command"
+  ],
+  "backend/src/tools/shutdownTool.js": [
+    "Command"
+  ],
+  "backend/src/tools/strategyList.js": [
+    "Command"
+  ],
+  "backend/src/tools/toolProfile.js": [
+    "Decorator"
+  ],
+  "backend/src/tools/toolSearch.js": [
+    "Command"
+  ],
+  "backend/src/tools/unpackTool.js": [
+    "Command"
+  ],
+  "backend/src/tools/verifyArtifact.js": [
+    "Command"
+  ],
+  "backend/src/tools/webSearch.js": [
+    "Command"
+  ],
+  "backend/src/tools/writeFile.js": [
+    "Command"
+  ],
+  "backend/src/utils/arrayChunk.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/dataHome.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/expressAsyncPatch.js": [
+    "Decorator"
+  ],
+  "backend/src/utils/lineEndings.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/logger.js": [
+    "Decorator"
+  ],
+  "backend/src/utils/notifier.js": [
+    "Observer"
+  ],
+  "backend/src/utils/pathCompat.js": [
+    "Adapter"
+  ],
+  "backend/src/utils/pythonPath.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/response.js": [
+    "Builder"
+  ],
+  "backend/src/utils/retry.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/sleep.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/spawnWithIdleTimeout.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/systemEncoding.js": [
+    "Strategy"
+  ],
+  "backend/src/utils/xdg.js": [
+    "Strategy"
+  ],
+  "backend/src/vim/motions.js": [
+    "Strategy"
+  ],
+  "backend/src/vim/operators.js": [
+    "Strategy"
+  ],
+  "backend/src/vim/settings.js": [
+    "Strategy"
+  ],
+  "backend/src/vim/textObjects.js": [
+    "Strategy"
+  ],
+  "backend/src/vim/transitions.js": [
+    "State"
+  ],
+  "backend/src/vim/types.js": [
+    "Flyweight"
+  ],
+  "backend/src/vim/vimInput.js": [
+    "State"
+  ],
+  "backend/start-with-db.js": [
+    "Strategy"
+  ],
+  "backend/test-db-connection.js": [
+    "Strategy"
+  ],
+  "backend/wasm-chain/chain.mbt": [
+    "Strategy"
+  ],
+  "backend/wasm-chain/chain_test.mbt": [
+    "Template Method"
+  ],
+  "backend/wasm-chain/cmd/main/main.mbt": [
+    "Facade",
+    "Strategy"
+  ],
+  "backend/wasm-context/cmd/main/main.mbt": [
+    "Facade",
+    "Strategy"
+  ],
+  "backend/wasm-context/context_utils.mbt": [
+    "Strategy"
+  ],
+  "backend/wasm-indicators/cmd/main/main.mbt": [
+    "Facade",
+    "Strategy"
+  ],
+  "backend/wasm-indicators/indicators.mbt": [
+    "Strategy"
+  ],
+  "backend/wasm-indicators/indicators_test.mbt": [
+    "Strategy",
+    "Template Method"
+  ],
+  "backend/wasm-indicators/indicators_wbtest.mbt": [
+    "Strategy",
+    "Template Method"
+  ],
+  "frontend/capacitor.config.ts": [
+    "Flyweight"
+  ],
+  "frontend/eslint.config.js": [
+    "Visitor"
+  ],
+  "frontend/src/App.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/api/admin.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/auth.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/instruments.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/largeTasks.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/marketData.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/request.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/settings.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/strategy.js": [
+    "Proxy"
+  ],
+  "frontend/src/api/trade.js": [
+    "Proxy"
+  ],
+  "frontend/src/components/ApiExample.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ApiKeyManager.vue": [
+    "Composite",
+    "Observer",
+    "Singleton"
+  ],
+  "frontend/src/components/BottomDrawer.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ChannelHealthIndicator.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/CleanKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/CollapsiblePositionBar.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ComprehensiveDataViewer.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/DataSourceIndicator.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/EnhancedKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/EnhancedPositionsPanel.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/EnhancedTradingPanel.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/FirstLaunchLoader.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/GlobalErrorBoundary.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/InstrumentSelector.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/InstrumentTable.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/IntelligentStrategySelector.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/JavaScriptEditor.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/LightweightKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/LiveTradingCenter.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/MobileLayout.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/MobileNav.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/MobileStrategySelector.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/MobileSymbolSelector.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/MobileToast.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ModernTradingPanel.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/OfflineIndicator.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/PositionsPanel.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ProfessionalTradeHistory.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/ProfessionalTradingChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/PwaUpdatePrompt.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/PythonEditor.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/RealTimeKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/RecentTradesPanel.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/SendKeyBinding.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/SimpleKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/SimpleTradingInterface.css": [
+    "Flyweight"
+  ],
+  "frontend/src/components/SimpleTradingInterface.js": [
+    "Strategy"
+  ],
+  "frontend/src/components/SimpleTradingInterface.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/StrategyKLineChart.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/StrategyManager.vue": [
+    "Composite",
+    "Observer",
+    "Singleton"
+  ],
+  "frontend/src/components/SyncNotification.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/TdxFormulaEditor.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/TestBot.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/TradingAgentsBotSimple.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/components/UnifiedTradingInterface.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/composables/useChannelHealth.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useDashboardHandover.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useDashboardLanAccess.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useDashboardQuotes.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useFuturesTickData.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useOnlineStatus.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useResponsive.ts": [
+    "Observer"
+  ],
+  "frontend/src/composables/useStreamChat.js": [
+    "Observer"
+  ],
+  "frontend/src/composables/useTouchGestures.ts": [
+    "Observer"
+  ],
+  "frontend/src/config/api.dev.js": [
+    "Flyweight"
+  ],
+  "frontend/src/config/api.js": [
+    "Flyweight"
+  ],
+  "frontend/src/main.js": [
+    "Facade"
+  ],
+  "frontend/src/plugins/mobileToast.ts": [
+    "Flyweight"
+  ],
+  "frontend/src/plugins/pluginManager.js": [
+    "Factory Method"
+  ],
+  "frontend/src/router/index.js": [
+    "Strategy"
+  ],
+  "frontend/src/services/dataSourceService.js": [
+    "Facade"
+  ],
+  "frontend/src/services/intelligentStrategyAdapter.js": [
+    "Adapter"
+  ],
+  "frontend/src/services/intelligentStrategyService.js": [
+    "Facade"
+  ],
+  "frontend/src/services/localAuthService.js": [
+    "Memento"
+  ],
+  "frontend/src/services/marketDataService.js": [
+    "Facade"
+  ],
+  "frontend/src/services/priceDataService.js": [
+    "Facade"
+  ],
+  "frontend/src/services/wasm/wasmBridge.js": [
+    "Bridge"
+  ],
+  "frontend/src/services/websocket.js": [
+    "Observer"
+  ],
+  "frontend/src/services/websocketService.js": [
+    "Observer"
+  ],
+  "frontend/src/stores/analysis.js": [
+    "Memento",
+    "Singleton"
+  ],
+  "frontend/src/stores/strategyStore.js": [
+    "Memento",
+    "Singleton"
+  ],
+  "frontend/src/stores/user.js": [
+    "Memento",
+    "Singleton"
+  ],
+  "frontend/src/styles/mobile-scroll.css": [
+    "Flyweight"
+  ],
+  "frontend/src/styles/mobile.css": [
+    "Flyweight"
+  ],
+  "frontend/src/styles/responsive.css": [
+    "Flyweight"
+  ],
+  "frontend/src/styles/theme.css": [
+    "Flyweight"
+  ],
+  "frontend/src/utils/arrayGuards.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/chartCleanup.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/clientMode.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/connectionMode.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/device.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/errorMessage.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/indicators.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/localEncrypt.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/markdown.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/mobileChartConfig.ts": [
+    "Flyweight"
+  ],
+  "frontend/src/utils/networkMonitor.js": [
+    "Observer"
+  ],
+  "frontend/src/utils/performanceOptimizer.ts": [
+    "Flyweight"
+  ],
+  "frontend/src/utils/request.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/requestInterceptor.js": [
+    "Proxy"
+  ],
+  "frontend/src/utils/sandboxExecute.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/simpleTradingHelpers.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/simpleTradingMarketData.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/simpleTradingSignalGenerator.js": [
+    "Strategy"
+  ],
+  "frontend/src/utils/tickCsvParser.js": [
+    "Iterator"
+  ],
+  "frontend/src/utils/tvTime.js": [
+    "Adapter"
+  ],
+  "frontend/src/views/AdminAnnouncements.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminDashboard.vue": [
+    "Composite",
+    "Facade",
+    "Observer"
+  ],
+  "frontend/src/views/AdminFeedback.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminLayout.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminLogin.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminLogs.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminSystem.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/AdminUsers.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Announcements.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/ApiKeyManage.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/BacktestAnalysis.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/BacktestDetail.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Dashboard.vue": [
+    "Composite",
+    "Facade",
+    "Observer"
+  ],
+  "frontend/src/views/DataReplay.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/DataSourceManagement-Multi.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/DataSourceManagement.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Debug.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Feedback.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/ForgotPassword.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Layout.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Login.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/MarketQuotes.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Profile.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Register.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/SmartTrading.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Strategies.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Trades.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/Trading.css": [
+    "Flyweight"
+  ],
+  "frontend/src/views/Trading.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "frontend/src/views/admin/Dashboard.vue": [
+    "Composite",
+    "Facade",
+    "Observer"
+  ],
+  "frontend/vite.config.js": [
+    "Builder"
+  ],
+  "install.ps1": [
+    "Template Method"
+  ],
+  "install.sh": [
+    "Template Method"
+  ],
+  "kernel/boot/boot.asm": [
+    "Template Method"
+  ],
+  "kernel/boot/context_switch.asm": [
+    "Template Method"
+  ],
+  "kernel/boot/isr.asm": [
+    "Template Method"
+  ],
+  "kernel/boot/long_mode.asm": [
+    "Template Method"
+  ],
+  "kernel/boot/usermode.asm": [
+    "Template Method"
+  ],
+  "kernel/moonbit/lib/khy_kernel/main.mbt": [
+    "Facade",
+    "Strategy"
+  ],
+  "kernel/src/capability.c": [
+    "Strategy"
+  ],
+  "kernel/src/capability.h": [
+    "Strategy"
+  ],
+  "kernel/src/elf.c": [
+    "Interpreter"
+  ],
+  "kernel/src/elf.h": [
+    "Strategy"
+  ],
+  "kernel/src/framebuffer.c": [
+    "Adapter"
+  ],
+  "kernel/src/framebuffer.h": [
+    "Strategy"
+  ],
+  "kernel/src/gdt.c": [
+    "Builder"
+  ],
+  "kernel/src/gdt.h": [
+    "Strategy"
+  ],
+  "kernel/src/idt.c": [
+    "Builder"
+  ],
+  "kernel/src/idt.h": [
+    "Strategy"
+  ],
+  "kernel/src/ipc.c": [
+    "Mediator"
+  ],
+  "kernel/src/ipc.h": [
+    "Strategy"
+  ],
+  "kernel/src/kheap.c": [
+    "Strategy"
+  ],
+  "kernel/src/kheap.h": [
+    "Strategy"
+  ],
+  "kernel/src/main.c": [
+    "Facade"
+  ],
+  "kernel/src/moonbit_bridge.c": [
+    "Bridge"
+  ],
+  "kernel/src/moonbit_bridge.h": [
+    "Bridge"
+  ],
+  "kernel/src/moonbit_os_api.c": [
+    "Strategy"
+  ],
+  "kernel/src/moonbit_os_api.h": [
+    "Strategy"
+  ],
+  "kernel/src/net.c": [
+    "Strategy"
+  ],
+  "kernel/src/net.h": [
+    "Strategy"
+  ],
+  "kernel/src/net_service.c": [
+    "Strategy"
+  ],
+  "kernel/src/net_service.h": [
+    "Strategy"
+  ],
+  "kernel/src/pe.c": [
+    "Interpreter"
+  ],
+  "kernel/src/pe.h": [
+    "Strategy"
+  ],
+  "kernel/src/pic.c": [
+    "Adapter"
+  ],
+  "kernel/src/pic.h": [
+    "Strategy"
+  ],
+  "kernel/src/pmm.c": [
+    "Strategy"
+  ],
+  "kernel/src/pmm.h": [
+    "Strategy"
+  ],
+  "kernel/src/process.c": [
+    "Prototype"
+  ],
+  "kernel/src/process.h": [
+    "Strategy"
+  ],
+  "kernel/src/ramfs.c": [
+    "Composite"
+  ],
+  "kernel/src/ramfs.h": [
+    "Strategy"
+  ],
+  "kernel/src/sched.c": [
+    "State"
+  ],
+  "kernel/src/sched.h": [
+    "Strategy"
+  ],
+  "kernel/src/serial.c": [
+    "Adapter"
+  ],
+  "kernel/src/serial.h": [
+    "Strategy"
+  ],
+  "kernel/src/shell.c": [
+    "Strategy"
+  ],
+  "kernel/src/shell.h": [
+    "Strategy"
+  ],
+  "kernel/src/string.c": [
+    "Strategy"
+  ],
+  "kernel/src/string.h": [
+    "Strategy"
+  ],
+  "kernel/src/syscall.c": [
+    "Command"
+  ],
+  "kernel/src/syscall.h": [
+    "Strategy"
+  ],
+  "kernel/src/timer.c": [
+    "Strategy"
+  ],
+  "kernel/src/timer.h": [
+    "Strategy"
+  ],
+  "kernel/src/vfs.c": [
+    "Composite"
+  ],
+  "kernel/src/vfs.h": [
+    "Strategy"
+  ],
+  "kernel/src/vfs_service.c": [
+    "Strategy"
+  ],
+  "kernel/src/vfs_service.h": [
+    "Strategy"
+  ],
+  "kernel/src/vga.c": [
+    "Adapter"
+  ],
+  "kernel/src/vga.h": [
+    "Strategy"
+  ],
+  "kernel/src/vmm.c": [
+    "Strategy"
+  ],
+  "kernel/src/vmm.h": [
+    "Strategy"
+  ],
+  "kernel/src/wincompat.c": [
+    "Adapter"
+  ],
+  "kernel/src/wincompat.h": [
+    "Adapter"
+  ],
+  "kernel/src/wm.c": [
+    "Mediator"
+  ],
+  "kernel/src/wm.h": [
+    "Strategy"
+  ],
+  "khy_os/__init__.py": [
+    "Template Method"
+  ],
+  "khy_platform/__init__.py": [
+    "Template Method"
+  ],
+  "khy_platform/__main__.py": [
+    "Template Method"
+  ],
+  "khy_platform/_bootstrap.py": [
+    "Template Method"
+  ],
+  "khy_platform/bundle_tools.py": [
+    "Template Method"
+  ],
+  "khy_platform/cli.py": [
+    "Command"
+  ],
+  "packages/backend/khy_quant_backend/__init__.py": [
+    "Template Method"
+  ],
+  "packages/backend/khy_quant_backend/_bootstrap.py": [
+    "Template Method"
+  ],
+  "packages/backend/khy_quant_backend/cli.py": [
+    "Command"
+  ],
+  "packages/frontend/khy_quant_frontend/__init__.py": [
+    "Template Method"
+  ],
+  "packages/khy-chain/bridge/chainService.js": [
+    "Bridge"
+  ],
+  "packages/khy-chain/service/app.py": [
+    "Template Method"
+  ],
+  "packages/khy-chain/service/chains.py": [
+    "Template Method"
+  ],
+  "packages/khy-chain/service/test_chains.py": [
+    "Template Method"
+  ],
+  "packages/khy-hello/src/index.js": [
+    "Strategy"
+  ],
+  "packages/khy-quant/frontend/dev/DevApp.vue": [
+    "Composite",
+    "Observer"
+  ],
+  "packages/khy-quant/frontend/dev/main.js": [
+    "Facade"
+  ],
+  "packages/khy-quant/frontend/index.js": [
+    "Strategy"
+  ],
+  "packages/khy-quant/frontend/vite.config.js": [
+    "Builder"
+  ],
+  "packages/khy-quant/src/commands/analyze.js": [
+    "Command"
+  ],
+  "packages/khy-quant/src/commands/backtest.js": [
+    "Command"
+  ],
+  "packages/khy-quant/src/commands/data.js": [
+    "Command"
+  ],
+  "packages/khy-quant/src/commands/quote.js": [
+    "Command"
+  ],
+  "packages/khy-quant/src/commands/strategy.js": [
+    "Command"
+  ],
+  "packages/khy-quant/src/index.js": [
+    "Strategy"
+  ],
+  "packages/khy-quant/src/services/index.js": [
+    "Facade"
+  ],
+  "packages/khy-quant/src/tools/index.js": [
+    "Facade"
+  ],
+  "packages/moonbit-plugin-sdk/cmd/weather-demo/main.mbt": [
+    "Facade",
+    "Strategy"
+  ],
+  "packages/moonbit-plugin-sdk/khy_sys.mbt": [
+    "Strategy"
+  ],
+  "packages/plugin-sdk/src/index.js": [
+    "Abstract Factory"
+  ],
+  "packages/plugin-sdk/src/testing.js": [
+    "Strategy"
+  ],
+  "packages/plugin-sdk/src/types.d.ts": [
+    "Flyweight"
+  ],
+  "packages/sdk-python/src/khy_sdk/__init__.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/src/khy_sdk/errors.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/src/khy_sdk/protocol.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/src/khy_sdk/query.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/src/khy_sdk/sync_query.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/src/khy_sdk/transport.py": [
+    "Bridge"
+  ],
+  "packages/sdk-python/src/khy_sdk/types.py": [
+    "Flyweight"
+  ],
+  "packages/sdk-python/tests/__init__.py": [
+    "Template Method"
+  ],
+  "packages/sdk-python/tests/test_sdk.py": [
+    "Template Method"
+  ],
+  "packages/sdk/src/asyncStream.js": [
+    "Iterator"
+  ],
+  "packages/sdk/src/bridgeTransport.js": [
+    "Bridge"
+  ],
+  "packages/sdk/src/constants.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/conversation.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/daemonClient.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/errors.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/index.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/jsonLines.js": [
+    "Iterator"
+  ],
+  "packages/sdk/src/logger.js": [
+    "Decorator"
+  ],
+  "packages/sdk/src/mcp.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/processTransport.js": [
+    "Bridge"
+  ],
+  "packages/sdk/src/query.js": [
+    "Strategy"
+  ],
+  "packages/sdk/src/sseParser.js": [
+    "Iterator"
+  ],
+  "packages/sdk/src/types.d.ts": [
+    "Flyweight"
+  ],
+  "packages/sdk/src/validation.js": [
+    "Strategy"
+  ],
+  "packages/sdk/testing/index.js": [
+    "Strategy"
+  ],
+  "packages/shared/config/database.js": [
+    "Flyweight"
+  ],
+  "packages/shared/config/env.js": [
+    "Flyweight"
+  ],
+  "packages/shared/config/sqliteCompat.js": [
+    "Adapter",
+    "Flyweight"
+  ],
+  "packages/shared/src/config/database.js": [
+    "Flyweight"
+  ],
+  "packages/shared/src/config/env.js": [
+    "Flyweight"
+  ],
+  "packages/shared/src/config/sqliteCompat.js": [
+    "Adapter",
+    "Flyweight"
+  ],
+  "packages/shared/src/index.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/middleware/auth.js": [
+    "Proxy"
+  ],
+  "packages/shared/src/middleware/errorHandler.js": [
+    "Chain of Responsibility",
+    "Proxy"
+  ],
+  "packages/shared/src/middleware/rateLimit.js": [
+    "Proxy"
+  ],
+  "packages/shared/src/models/AIAccount.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/AISuggestion.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Announcement.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/AnnouncementRead.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/ApiKey.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Backtest.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/BankTransfer.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Feedback.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Instrument.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/KlineCache.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/KlineData.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/MarketData.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Signal.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Strategy.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/SystemSetting.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Trade.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/User.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/UserFavorite.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/UserLog.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/Watchlist.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/models/index.js": [
+    "Facade"
+  ],
+  "packages/shared/src/services/cacheService.js": [
+    "Singleton"
+  ],
+  "packages/shared/src/utils/apiKeyHash.js": [
+    "Strategy"
+  ],
+  "packages/shared/src/utils/logger.js": [
+    "Decorator"
+  ],
+  "packages/vscode-extension/src/extension.js": [
+    "Strategy"
+  ],
+  "pip-install.ps1": [
+    "Template Method"
+  ],
+  "run_tests.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/ab-compare.js": [
+    "Command"
+  ],
+  "scripts/ab-dual-dev.js": [
+    "Command"
+  ],
+  "scripts/alpine/build-iso-docker.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/alpine/build-iso-docker.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/alpine/build-iso-windows.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/alpine/build-khy-os-iso.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/alpine/windows-iso-preflight.ps1": [
+    "Command"
+  ],
+  "scripts/build-khy-os.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/check-agent-rules.js": [
+    "Command",
+    "Visitor"
+  ],
+  "scripts/ci/annotate-patterns.js": [
+    "Visitor",
+    "Command"
+  ],
+  "scripts/ci/check-node-syntax.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/check-pattern-coverage.js": [
+    "Visitor",
+    "Template Method"
+  ],
+  "scripts/ci/check-python-syntax.py": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/check-skill-evals.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/check-skill-scenarios.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/check-version-sync.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/export-dimension-health.js": [
+    "Template Method"
+  ],
+  "scripts/ci/export-pyproject-dependencies.py": [
+    "Template Method"
+  ],
+  "scripts/ci/export-quality-dashboard.js": [
+    "Template Method"
+  ],
+  "scripts/ci/generate-pattern-registry.js": [
+    "Visitor",
+    "Template Method"
+  ],
+  "scripts/ci/run-python.js": [
+    "Template Method"
+  ],
+  "scripts/deploy-server.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/install/check-boot-capability.sh": [
+    "Command",
+    "Visitor"
+  ],
+  "scripts/install/install-khy-cli.sh": [
+    "Command"
+  ],
+  "scripts/install/install-khy.sh": [
+    "Command"
+  ],
+  "scripts/khytogo/make-khytogo.sh": [
+    "Command"
+  ],
+  "scripts/moonbit/run-wasm-indicators-tests-offline.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/obfuscate.js": [
+    "Command",
+    "Strategy"
+  ],
+  "scripts/portable/build-usb-portable.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/portable/install-portable-cli.sh": [
+    "Command"
+  ],
+  "scripts/release/build-khy-wheel-with-ollama-runtime.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/release/build-platform-wheel.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/release/build-platform-wheel.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "scripts/release/check-pip-dist-size.sh": [
+    "Command",
+    "Visitor"
+  ],
+  "scripts/release/generate-pip-part-manifest.py": [
+    "Command"
+  ],
+  "scripts/release/publish-from-pip-dual.ps1": [
+    "Command"
+  ],
+  "setup.py": [
+    "Template Method"
+  ],
+  "todo/__init__.py": [
+    "Template Method"
+  ],
+  "upgrade_khy.sh": [
+    "Template Method"
+  ]
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>核心架构 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>核心架构</div>
+      <header class="hero reveal"><h1>核心架构</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#核心架构">核心架构</a></li><li class="lvl-2"><a href="#运行时路径">运行时路径</a></li><li class="lvl-2"><a href="#受-alpine-启发的启动分层-参考模型">受 Alpine 启发的启动分层（参考模型）</a></li><li class="lvl-2"><a href="#来自-alpine-standard-3-23-0-x86-64-iso-的具体参考点">来自 `alpine-standard-3.23.0-x86_64.iso` 的具体参考点</a></li><li class="lvl-2"><a href="#层级映射-当前-khy-os">层级映射（当前 Khy OS）</a></li><li class="lvl-3"><a href="#1-应用层">1) 应用层</a></li><li class="lvl-3"><a href="#2-wasm-沙箱层">2) WASM 沙箱层</a></li><li class="lvl-3"><a href="#3-os-组件层">3) OS 组件层</a></li><li class="lvl-3"><a href="#4-ipc-层">4) IPC 层</a></li><li class="lvl-3"><a href="#5-微内核层-仓库范围之外">5) 微内核层（仓库范围之外）</a></li><li class="lvl-2"><a href="#核心模块">核心模块</a></li><li class="lvl-2"><a href="#设计规则">设计规则</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-010 | 阶段: 设计 | 原路径: docs/架构/核心架构.md --&gt;</p>
+<h1 id="核心架构">核心架构<a class="anchor" href="#核心架构" aria-label="锚点">#</a></h1>
+<h2 id="运行时路径">运行时路径<a class="anchor" href="#运行时路径" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">User -&gt; khy CLI (Python) -&gt; Node CLI router -&gt; services/routes -&gt; data/storage</code></pre>
+<h2 id="受-alpine-启发的启动分层-参考模型">受 Alpine 启发的启动分层（参考模型）<a class="anchor" href="#受-alpine-启发的启动分层-参考模型" aria-label="锚点">#</a></h2>
+<p>本项目可以借鉴 Alpine 的分层启动思路：</p>
+<pre><code class="language-text">Bootloader -&gt; minimal init/bootstrap -&gt; core runtime -&gt; upper apps/plugins</code></pre>
+<p>映射到 Khy OS：</p>
+<ul><li>启动/入口：<ul><li><code>khy_platform/cli.py</code>（Python 启动器，环境检查，bootstrap 移交）</li></ul></li><li>核心运行时：<ul><li><code>backend/bin/khy.js</code> + <code>backend/src/bootstrap/*</code> + CLI router/services</li></ul></li><li>上层应用/插件：<ul><li><code>khyquant</code> 作为默认应用兼容入口</li><li><code>backend/src/cli/handlers/app.js</code> + 插件/技能生态</li></ul></li></ul>
+<p>实践规则：</p>
+<ul><li>将 <code>khy</code> 保持为操作系统级的主命令。</li><li>将应用逻辑（如量化交易）保持为可替换的上层模块。</li></ul>
+<h2 id="来自-alpine-standard-3-23-0-x86-64-iso-的具体参考点">来自 <code>alpine-standard-3.23.0-x86_64.iso</code> 的具体参考点<a class="anchor" href="#来自-alpine-standard-3-23-0-x86-64-iso-的具体参考点" aria-label="锚点">#</a></h2>
+<ul><li>极简启动配置：<ul><li><code>/BOOT/GRUB/GRUB.CFG;1</code></li><li><code>/BOOT/SYSLINUX/SYSLINUX.CFG;1</code></li><li>让启动路径保持精简且确定。</li></ul></li><li>分层运行时产物：<ul><li>kernel：<code>/BOOT/VMLINUZ_LTS.;1</code></li><li>early userspace：<code>/BOOT/INITRAMFS_LTS.;1</code></li><li>模块化运行时镜像：<code>/BOOT/MODLOOP_LTS.;1</code></li></ul></li><li>由软件包驱动的系统组装：<ul><li><code>/APKS/X86_64/APKINDEX_TAR.GZ;1</code> + APK 软件包。</li><li>在 Khy OS 中的对应物：让应用/插件的安装/更新由包/索引驱动。</li></ul></li><li>显式的 init 到 runtime 移交：<ul><li>initramfs 的 <code>init</code> 脚本以 <code>switch_root</code> 结束。</li><li>在 Khy OS 中的对应物：让 launcher/bootstrap/runtime 之间的边界保持显式且可测试。</li></ul></li><li>已签名的模块信任链：<ul><li>modloop 的签名密钥在软件包安装之前预先就位。</li><li>在 Khy OS 中的对应物：插件/运行时产物应在激活之前可验证。</li></ul></li></ul>
+<h2 id="层级映射-当前-khy-os">层级映射（当前 Khy OS）<a class="anchor" href="#层级映射-当前-khy-os" aria-label="锚点">#</a></h2>
+<h3 id="1-应用层">1) 应用层<a class="anchor" href="#1-应用层" aria-label="锚点">#</a></h3>
+<ul><li>浏览器应用（Vue UI）、CLI 应用，以及外部插件应用。</li><li>WASM 应用通过以下方式注册和执行：<ul><li><code>backend/src/cli/handlers/app.js</code></li><li><code>backend/src/services/wasmAppService.js</code></li></ul></li></ul>
+<h3 id="2-wasm-沙箱层">2) WASM 沙箱层<a class="anchor" href="#2-wasm-沙箱层" aria-label="锚点">#</a></h3>
+<ul><li>纯逻辑模块运行在 WebAssembly 中（MoonBit/Rust/C/C++ 编译为 WASM）。</li><li>宿主保留 I/O、网络、文件、进程和设备访问能力。</li><li>浏览器端桥接：<ul><li><code>frontend/src/services/wasm/wasmBridge.js</code></li></ul></li></ul>
+<h3 id="3-os-组件层">3) OS 组件层<a class="anchor" href="#3-os-组件层" aria-label="锚点">#</a></h3>
+<ul><li>后端服务按职责拆分（gateway、routing、data、auth、plugins）。</li><li>组件之间通过显式的 API/命令通信，而非直接的 UI 耦合。</li></ul>
+<h3 id="4-ipc-层">4) IPC 层<a class="anchor" href="#4-ipc-层" aria-label="锚点">#</a></h3>
+<ul><li>CLI 命令分发（<code>stdin/stdout</code>）</li><li>HTTP/JSON API（<code>backend/src/routes</code>）</li><li>可选的 WebSocket/事件通道</li></ul>
+<h3 id="5-微内核层-仓库范围之外">5) 微内核层（仓库范围之外）<a class="anchor" href="#5-微内核层-仓库范围之外" aria-label="锚点">#</a></h3>
+<ul><li>CPU 调度、物理内存管理和中断路由仍保留在宿主内核/hypervisor 中。</li><li>Khy OS 与既有的 Linux/hypervisor 栈集成，以支持 VMware/裸机交付流程。</li></ul>
+<h2 id="核心模块">核心模块<a class="anchor" href="#核心模块" aria-label="锚点">#</a></h2>
+<ul><li><code>khy_platform/cli.py</code>：Python 入口点与后端 bootstrap 移交。</li><li><code>backend/bin/khy.js</code>：Node CLI 入口。</li><li><code>backend/src/cli/router.js</code>：命令解析 + 分发。</li><li><code>backend/src/services/</code>：领域服务与 WASM 执行宿主。</li><li><code>backend/src/routes/</code>：HTTP API 路由。</li><li><code>frontend/src/services/wasm/wasmBridge.js</code>：浏览器 JS &lt;-&gt; WASM 桥接。</li></ul>
+<h2 id="设计规则">设计规则<a class="anchor" href="#设计规则" aria-label="锚点">#</a></h2>
+<ul><li>将内核职责保持在业务运行时之外。</li><li>将 I/O 保持在宿主层（CLI/routes/services），而非 WASM 模块内部。</li><li>让 WASM 模块保持纯粹、确定且可替换。</li><li>让命令与服务的边界保持显式且可测试。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-009] 可视化拖拽工作流编辑器-2026-06-09.html"><div class="dir">← 上一篇</div><div class="ttl">可视化拖拽工作流编辑器（MVP / Phase 1）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-011] 应用接入标准.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 生态应用接入标准（Ecosystem App Standard）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-010] 核心架构.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

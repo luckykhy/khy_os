@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 3: Implementation · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 3: Implementation</div>
+      <header class="hero reveal"><h1>Stage 3: Implementation</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-3-implementation">Stage 3: Implementation</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#python-implementation">Python Implementation</a></li><li class="lvl-3"><a href="#key-implementation-rules">Key Implementation Rules</a></li><li class="lvl-2"><a href="#node-js-implementation">Node.js Implementation</a></li><li class="lvl-3"><a href="#key-implementation-rules-2">Key Implementation Rules</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-3-implementation">Stage 3: Implementation<a class="anchor" href="#stage-3-implementation" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Generate the complete CLI source code based on the architecture design.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li><code>architecture.json</code> from Stage 2</li></ul>
+<h2 id="python-implementation">Python Implementation<a class="anchor" href="#python-implementation" aria-label="锚点">#</a></h2>
+<p>Generate the following file structure:</p>
+<pre><code>cli_anything/&lt;SOFTWARE&gt;/
+├── __init__.py          # version, metadata
+├── __main__.py          # python -m entry
+├── &lt;SOFTWARE&gt;_cli.py    # Click CLI with all command groups
+├── core/
+│   ├── __init__.py
+│   ├── project.py       # Project management (create, open, save)
+│   ├── session.py       # Undo/redo session with deep-copy snapshots
+│   └── export.py        # Export/render operations
+├── utils/
+│   ├── __init__.py
+│   ├── backend.py       # find_exe() + subprocess wrapper
+│   └── repl_skin.py     # Optional REPL mode
+└── skills/
+    └── SKILL.md          # (generated in Stage 6)</code></pre>
+<h3 id="key-implementation-rules">Key Implementation Rules<a class="anchor" href="#key-implementation-rules" aria-label="锚点">#</a></h3>
+<ol><li><strong>backend.py</strong>: <code>find_exe(&lt;SOFTWARE&gt;)</code> searches PATH, common install locations, env vars</li><li><strong>session.py</strong>: <code>SessionManager</code> with <code>copy.deepcopy(state)</code> before each mutation</li><li><strong>&lt;SOFTWARE&gt;_cli.py</strong>: Every <code>@click.command()</code> has <code>@click.option('--json', 'as_json', is_flag=True)</code></li><li><strong>Error handling</strong>: Try/except around all subprocess calls, return structured errors</li></ol>
+<h2 id="node-js-implementation">Node.js Implementation<a class="anchor" href="#node-js-implementation" aria-label="锚点">#</a></h2>
+<p>Generate the following file structure:</p>
+<pre><code>khy-cli-&lt;SOFTWARE&gt;/
+├── openclaw.plugin.json   # KHY extension manifest
+├── package.json
+├── src/
+│   ├── index.js           # Commander CLI + KHY command registration
+│   ├── core/
+│   │   ├── project.js     # Project management
+│   │   ├── session.js     # Undo/redo session
+│   │   └── export.js      # Export operations
+│   └── backend.js         # find executable + child_process wrapper
+├── skills/
+│   ├── manifest.json
+│   └── prompt.md
+└── tests/</code></pre>
+<h3 id="key-implementation-rules-2">Key Implementation Rules<a class="anchor" href="#key-implementation-rules-2" aria-label="锚点">#</a></h3>
+<ol><li><strong>backend.js</strong>: <code>findExe()</code> uses <code>which</code> + common paths, <code>execFileSync</code> with timeout</li><li><strong>session.js</strong>: <code>structuredClone(state)</code> before each mutation</li><li><strong>index.js</strong>: Commander CLI with <code>.option('--json', 'JSON output')</code></li><li><strong>openclaw.plugin.json</strong>: Registers as KHY extension with commands</li></ol>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li>Complete source tree at <code>~/.khy/cli-anything/generated/&lt;SOFTWARE&gt;/</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_2_DESIGN.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 2: Architecture Design</div></a><a class="next" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_4_TESTPLAN.html"><div class="dir">下一篇 →</div><div class="ttl">Stage 4: Test Planning</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_3_IMPLEMENT.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

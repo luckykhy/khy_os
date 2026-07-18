@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI-Hub Meta-Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-hub-meta-skill<span class="sep">›</span>CLI-Hub Meta-Skill</div>
+      <header class="hero reveal"><h1>CLI-Hub Meta-Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-hub-meta-skill">CLI-Hub Meta-Skill</a></li><li class="lvl-2"><a href="#quick-start">Quick Start</a></li><li class="lvl-2"><a href="#live-catalog">Live Catalog</a></li><li class="lvl-2"><a href="#what-can-you-do">What Can You Do?</a></li><li class="lvl-2"><a href="#how-it-works">How It Works</a></li><li class="lvl-2"><a href="#preview-consumption">Preview Consumption</a></li><li class="lvl-2"><a href="#how-to-use">How to Use</a></li><li class="lvl-2"><a href="#example-workflow">Example Workflow</a></li><li class="lvl-2"><a href="#more-info">More Info</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: cli-hub-meta-skill<br>description: &gt;-<br>  Discover agent-native CLIs for professional software. Access the live catalog<br>  to find tools for creative workflows, productivity, AI, and more.</p>
+<hr>
+<h1 id="cli-hub-meta-skill">CLI-Hub Meta-Skill<a class="anchor" href="#cli-hub-meta-skill" aria-label="锚点">#</a></h1>
+<p>CLI-Hub is a marketplace of agent-native command-line interfaces that make professional software accessible to AI agents.</p>
+<h2 id="quick-start">Quick Start<a class="anchor" href="#quick-start" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Install the CLI Hub package manager
+pip install cli-anything-hub
+
+# Browse all available CLIs
+cli-hub list
+
+# Search by category or keyword
+cli-hub search image
+cli-hub search &quot;3d modeling&quot;
+
+# Install a CLI
+cli-hub install gimp
+
+# Show details for a CLI
+cli-hub info gimp</code></pre>
+<h2 id="live-catalog">Live Catalog<a class="anchor" href="#live-catalog" aria-label="锚点">#</a></h2>
+<p><strong>URL</strong>: <a href="https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md" target="_blank" rel="noopener"><code>https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md</code></a></p>
+<p>The catalog is auto-updated and provides:</p>
+<ul><li>Full list of available CLIs organized by category</li><li>One-line <code>cli-hub install</code> commands for each tool</li><li>Complete descriptions and usage patterns</li></ul>
+<h2 id="what-can-you-do">What Can You Do?<a class="anchor" href="#what-can-you-do" aria-label="锚点">#</a></h2>
+<p>CLI-Hub covers a broad range of software and codebases, empowering agents to conduct complex workflows via CLI:</p>
+<ul><li><strong>Creative workflows</strong>: Image editing, 3D modeling, video production, audio processing, music notation</li><li><strong>Productivity tools</strong>: Office suites, knowledge management, live streaming</li><li><strong>AI platforms</strong>: Local LLMs, image generation, AI APIs, research assistants</li><li><strong>Communication</strong>: Video conferencing and collaboration</li><li><strong>Development</strong>: Diagramming, browser automation, network management</li><li><strong>Content generation</strong>: AI-powered document and media creation</li></ul>
+<p>Each CLI provides stateful operations, JSON output for agents, REPL mode, and integrates with real software backends.</p>
+<h2 id="how-it-works">How It Works<a class="anchor" href="#how-it-works" aria-label="锚点">#</a></h2>
+<p><code>cli-hub</code> is a lightweight wrapper around <code>pip</code>. When you run <code>cli-hub install gimp</code>, it installs a separate Python package (<code>cli-anything-gimp</code>) with its own CLI entry point (<code>cli-anything-gimp</code>). Each CLI is an independent pip package — <code>cli-hub</code> simply resolves names from the registry and tracks installs.</p>
+<h2 id="preview-consumption">Preview Consumption<a class="anchor" href="#preview-consumption" aria-label="锚点">#</a></h2>
+<p>Some installed harnesses also support preview workflows. The command split is:</p>
+<ul><li><code>cli-anything-&lt;software&gt; preview ...</code> creates or updates real preview artifacts</li><li><code>cli-hub previews ...</code> inspects, renders, watches, or opens those existing artifacts</li></ul>
+<p>Use:</p>
+<pre><code class="language-bash"># From the harness side: publish preview state
+cli-anything-blender --json --project scene.blend-cli.json preview capture --recipe quick
+
+# From cli-hub: inspect or open the resulting bundle or live session
+cli-hub previews inspect /path/to/bundle-or-session
+cli-hub previews html /path/to/bundle-or-session -o page.html
+cli-hub previews watch /path/to/session --open
+cli-hub previews open /path/to/bundle-or-session</code></pre>
+<p>For live sessions, <code>cli-hub previews</code> reads:</p>
+<ul><li><code>session.json</code> for the current head</li><li><code>trajectory.json</code> for append-only history</li><li>the current bundle manifest and artifacts</li></ul>
+<h2 id="how-to-use">How to Use<a class="anchor" href="#how-to-use" aria-label="锚点">#</a></h2>
+<ol><li><strong>Install cli-hub</strong>: <code>pip install cli-anything-hub</code></li><li><strong>Find your tool</strong>: <code>cli-hub search &lt;keyword&gt;</code> or <code>cli-hub list -c &lt;category&gt;</code></li><li><strong>Install</strong>: <code>cli-hub install &lt;name&gt;</code> (installs the <code>cli-anything-&lt;name&gt;</code> pip package)</li><li><strong>Run</strong>: <code>cli-anything-&lt;name&gt;</code> for REPL, or <code>cli-anything-&lt;name&gt; &lt;command&gt;</code> for one-shot</li><li><strong>JSON output</strong>: All CLIs support <code>--json</code> flag for machine-readable output</li><li><strong>Preview-capable CLIs</strong>: use <code>cli-anything-&lt;name&gt; preview ... --json</code> to publish,</li></ol>
+<p>then <code>cli-hub previews ...</code> to inspect or open the result</p>
+<h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Install the hub
+pip install cli-anything-hub
+
+# Find what you need
+cli-hub search video
+
+# Install it
+cli-hub install kdenlive
+
+# Use it with JSON output
+cli-anything-kdenlive --json project create --name my-project</code></pre>
+<h2 id="more-info">More Info<a class="anchor" href="#more-info" aria-label="锚点">#</a></h2>
+<ul><li>Live Catalog: https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md</li><li>Web Hub: https://clianything.cc</li><li>Repository: https://github.com/HKUDS/CLI-Anything</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zotero/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-zotero</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/README.html"><div class="dir">下一篇 →</div><div class="ttl">CLI-Anything Skills</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-hub-meta-skill/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

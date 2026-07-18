@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全守护（khy security） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>安全守护（khy security）</div>
+      <header class="hero reveal"><h1>安全守护（khy security）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#安全守护-khy-security">安全守护（`khy security`）</a></li><li class="lvl-2"><a href="#一-入口与全部子命令">一、入口与全部子命令</a></li><li class="lvl-2"><a href="#二-权限模式-profile-重点">二、权限模式：`profile`（重点）</a></li><li class="lvl-2"><a href="#三-诚实边界-monitor-的真实形态">三、诚实边界（`monitor` 的真实形态）</a></li><li class="lvl-2"><a href="#四-典型用法">四、典型用法</a></li><li class="lvl-2"><a href="#五-相关文档">五、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-052 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-052] 安全守护-khy-security.md --&gt;</p>
+<h1 id="安全守护-khy-security">安全守护（<code>khy security</code>）<a class="anchor" href="#安全守护-khy-security" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy security</code> 做两件事：① 对本机做<strong>真实的安全扫描</strong>（挖矿木马、可疑进程、异常 crontab、矿池端口、<code>/tmp</code> 可执行文件、SSH <code>authorized_keys</code>）；② 管理 KHY 自身的<strong>权限模式</strong>（<code>profile</code>）。本文讲清全部子命令，并<strong>如实标注</strong> <code>monitor</code> 的真实形态。</p>
+<p>实现：<code>services/backend/src/services/securityGuardService.js</code>，dispatch 在 <code>router.js:3046</code>。</p></blockquote>
+<hr>
+<h2 id="一-入口与全部子命令">一、入口与全部子命令<a class="anchor" href="#一-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy security scan</code></td><td>一次性安全扫描（见下方检测项）</td></tr><tr><td><code>khy security monitor</code></td><td>周期性后台扫描（⚠️ 进程内计时器，见 §三诚实边界）</td></tr><tr><td><code>khy security integrity</code></td><td>完整性检查（KHY 自身文件是否被篡改）</td></tr><tr><td><code>khy security status</code></td><td>安全状态总览</td></tr><tr><td><code>khy security profile [模式]</code></td><td>查看 / 设置<strong>权限模式</strong>（= KHY 的操作授权级别）</td></tr><tr><td><code>khy security audit [--tool &lt;名&gt;] [--limit &lt;n&gt;]</code></td><td>审计工具调用记录</td></tr><tr><td><code>khy security permissions</code></td><td>查看当前权限配置</td></tr></tbody></table>
+<p><strong><code>scan</code> 检测项</strong>：挖矿/木马进程、CPU 异常占用、可疑 crontab 项、已知矿池端口连接、<code>/tmp</code> 下可执行文件、SSH <code>authorized_keys</code> 异常。</p>
+<hr>
+<h2 id="二-权限模式-profile-重点">二、权限模式：<code>profile</code>（重点）<a class="anchor" href="#二-权限模式-profile-重点" aria-label="锚点">#</a></h2>
+<p><code>khy security profile</code> 设置的是 <strong>KHY 执行工具时的授权级别</strong>（不是「威胁画像」）：</p>
+<table><thead><tr><th>模式</th><th>含义</th></tr></thead><tbody><tr><td><code>strict</code></td><td>最严格，几乎所有动作都要确认</td></tr><tr><td><code>normal</code></td><td><strong>默认</strong>，常规确认策略</td></tr><tr><td><code>acceptEdits</code></td><td>自动接受文件编辑类动作</td></tr><tr><td><code>yolo</code></td><td>放开确认；<strong>同时</strong>开启 toolCalling 的危险模式</td></tr></tbody></table>
+<pre><code class="language-bash">khy security profile              # 看当前模式
+khy security profile strict       # 切到最严格
+khy security profile normal       # 切回默认</code></pre>
+<blockquote><p>⚠️ <code>yolo</code> 会让 KHY 在不二次确认的情况下执行高风险动作（含 toolCalling 危险模式），仅在你完全清楚后果且环境隔离时使用。</p></blockquote>
+<hr>
+<h2 id="三-诚实边界-monitor-的真实形态">三、诚实边界（<code>monitor</code> 的真实形态）<a class="anchor" href="#三-诚实边界-monitor-的真实形态" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>khy security monitor</code> 不是脱离式守护进程</strong>：它在<strong>当前进程内</strong>用 <code>setInterval</code> 每约 <strong>10 分钟</strong>跑一次扫描（<code>securityGuardService.js:603-630</code>），并且调用了 <code>.unref()</code>——意味着它<strong>不会单独保活</strong>，当前进程退出它就停。要常驻请配合常驻入口（如 <code>khy daemon</code>）运行，不要以为关掉终端它还在跑。</li><li>扫描结果写入 <code>~/.khyquant/security.log</code>（<code>securityGuardService.js:16</code>）。</li><li><code>scan</code> / <code>integrity</code> 的检测是<strong>真实的 OS 探测</strong>，不是桩。</li></ul>
+<hr>
+<h2 id="四-典型用法">四、典型用法<a class="anchor" href="#四-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy security scan                 # 立即体检一次
+khy security status               # 看总览
+khy security integrity            # 查 KHY 自身完整性
+khy security audit --tool bash --limit 20   # 审计最近 20 条 bash 工具调用
+tail -f ~/.khyquant/security.log  # 跟踪安全日志</code></pre>
+<hr>
+<h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-053] 监控与自检（<code>khy monitor</code>）—— 系统健康自检与 AI 请求遥测。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-051] 知识库与教学自我认知-khy-knowledge.html"><div class="dir">← 上一篇</div><div class="ttl">知识库与教学自我认知（khy knowledge）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-053] 监控与自检-khy-monitor.html"><div class="dir">下一篇 →</div><div class="ttl">监控与自检（khy monitor）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-052] 安全守护-khy-security.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

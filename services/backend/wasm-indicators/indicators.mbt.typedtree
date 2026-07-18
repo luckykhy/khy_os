@@ -1,0 +1,1288 @@
+((Timpl_fun_decl
+  ((kind Fun_kind_regular) (fn_binder sma)
+   (fn
+    ((params
+      ((Param data/0
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        T_blackhole)
+       (Param period/1 ((Tname ((lid Int)) () Int)) Int)))
+     (body
+      (Texpr_let (Tpat_var n/2 Int)
+       (Texpr_apply
+        (Texpr_ident length/3 () Normal (() -> Int (generic_ false)))
+        ((Texpr_ident data/0 () Normal T_blackhole)) Int Dot)
+       (((binder n/2) (binder_typ Int)))
+       (Texpr_let
+        (Tpat_constraint (Tpat_var result/4 T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         T_blackhole)
+        (Texpr_apply
+         (Texpr_method /5 () (Tname_path (name "")) ()
+          ((Int Unit) -> T_blackhole (generic_ false)))
+         ((Texpr_ident n/2 () Normal Int)
+          (Texpr_ident $double.nan () Normal Unit))
+         T_blackhole Normal)
+        (((binder result/4) (binder_typ T_blackhole)))
+        (Texpr_sequence
+         ((Texpr_if
+           (Texpr_or
+            (Texpr_apply
+             (Texpr_ident Compare::op_le|Int| () (Prim (Pcomparison I32 Le))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int) (Texpr_constant 0 Int))
+             Bool Infix)
+            (Texpr_apply
+             (Texpr_ident Compare::op_gt|Int| () (Prim (Pcomparison I32 Gt))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int)
+              (Texpr_ident n/2 () Normal Int))
+             Bool Infix)
+            8:18-8:20)
+           (Texpr_return ((Texpr_ident result/4 () Normal T_blackhole)) Unit)
+           () Unit))
+         (Texpr_letmut sum/6 () (Texpr_constant 0.0 Double)
+          (Texpr_sequence
+           ((Texpr_for ((i/7 (Texpr_constant 0 Int)))
+             ((Texpr_apply
+               (Texpr_ident Compare::op_lt|Int| ()
+                (Prim (Pcomparison I32 Lt))
+                ((Int Int) -> Bool (generic_ false)))
+               ((Texpr_ident i/7 () Normal Int)
+                (Texpr_ident period/1 () Normal Int))
+               Bool Infix))
+             ((i/7
+               (Texpr_apply
+                (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident i/7 () Normal Int) (Texpr_constant 1 Int)) Int
+                Infix)))
+             (Texpr_assign sum/6
+              (Texpr_apply
+               (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_ident sum/6 () Mutable Double)
+                (Texpr_apply
+                 (Texpr_ident op_get/8 () Normal
+                  ((Int) -> Double (generic_ false)))
+                 ((Texpr_ident data/0 () Normal T_blackhole)
+                  (Texpr_ident i/7 () Normal Int))
+                 Double Dot))
+               Double Infix)
+              Unit)
+             () Unit)
+            (Texpr_apply
+             (Texpr_ident op_set/9 () Normal
+              ((Int Double) -> Unit (generic_ false)))
+             ((Texpr_ident result/4 () Normal T_blackhole)
+              (Texpr_apply
+               (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                ((Int Int) -> Int (generic_ false)))
+               ((Texpr_ident period/1 () Normal Int) (Texpr_constant 1 Int))
+               Int Infix)
+              (Texpr_apply
+               (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_ident sum/6 () Mutable Double)
+                (Texpr_apply
+                 (Texpr_ident to_double/10 () Normal
+                  (() -> Double (generic_ false)))
+                 ((Texpr_ident period/1 () Normal Int)) Double Dot))
+               Double Infix))
+             Unit Dot)
+            (Texpr_for ((i/11 (Texpr_ident period/1 () Normal Int)))
+             ((Texpr_apply
+               (Texpr_ident Compare::op_lt|Int| ()
+                (Prim (Pcomparison I32 Lt))
+                ((Int Int) -> Bool (generic_ false)))
+               ((Texpr_ident i/11 () Normal Int)
+                (Texpr_ident n/2 () Normal Int))
+               Bool Infix))
+             ((i/11
+               (Texpr_apply
+                (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident i/11 () Normal Int) (Texpr_constant 1 Int)) Int
+                Infix)))
+             (Texpr_sequence
+              ((Texpr_assign sum/6
+                (Texpr_apply
+                 (Texpr_ident Sub::sub|Double| () (Prim (Parith F64 Sub))
+                  ((Double Double) -> Double (generic_ false)))
+                 ((Texpr_apply
+                   (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                    ((Double Double) -> Double (generic_ false)))
+                   ((Texpr_ident sum/6 () Mutable Double)
+                    (Texpr_apply
+                     (Texpr_ident op_get/12 () Normal
+                      ((Int) -> Double (generic_ false)))
+                     ((Texpr_ident data/0 () Normal T_blackhole)
+                      (Texpr_ident i/11 () Normal Int))
+                     Double Dot))
+                   Double Infix)
+                  (Texpr_apply
+                   (Texpr_ident op_get/13 () Normal
+                    ((Int) -> Double (generic_ false)))
+                   ((Texpr_ident data/0 () Normal T_blackhole)
+                    (Texpr_apply
+                     (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                      ((Int Int) -> Int (generic_ false)))
+                     ((Texpr_ident i/11 () Normal Int)
+                      (Texpr_ident period/1 () Normal Int))
+                     Int Infix))
+                   Double Dot))
+                 Double Infix)
+                Unit))
+              (Texpr_apply
+               (Texpr_ident op_set/14 () Normal
+                ((Int Double) -> Unit (generic_ false)))
+               ((Texpr_ident result/4 () Normal T_blackhole)
+                (Texpr_ident i/11 () Normal Int)
+                (Texpr_apply
+                 (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                  ((Double Double) -> Double (generic_ false)))
+                 ((Texpr_ident sum/6 () Mutable Double)
+                  (Texpr_apply
+                   (Texpr_ident to_double/15 () Normal
+                    (() -> Double (generic_ false)))
+                   ((Texpr_ident period/1 () Normal Int)) Double Dot))
+                 Double Infix))
+               Unit Dot)
+              Unit)
+             () Unit))
+           (Texpr_ident result/4 () Normal T_blackhole) T_blackhole)
+          T_blackhole)
+         T_blackhole)
+        T_blackhole)
+       T_blackhole))
+     (ret_constraint
+      ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)))
+     (err_constraint No_error_typ)
+     (ty ((T_blackhole Int) -> T_blackhole (generic_ false)))))
+   (is_pub true)
+   (doc_
+    ((comment
+      (" Simple Moving Average (SMA)"
+       " Returns array of same length as input; first (period-1) values are NaN."))
+     (loc 3:1-4:76)))
+   (attrs ())))
+ (Timpl_fun_decl
+  ((kind Fun_kind_regular) (fn_binder ema)
+   (fn
+    ((params
+      ((Param data/0
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        T_blackhole)
+       (Param period/1 ((Tname ((lid Int)) () Int)) Int)))
+     (body
+      (Texpr_let (Tpat_var n/2 Int)
+       (Texpr_apply
+        (Texpr_ident length/3 () Normal (() -> Int (generic_ false)))
+        ((Texpr_ident data/0 () Normal T_blackhole)) Int Dot)
+       (((binder n/2) (binder_typ Int)))
+       (Texpr_let
+        (Tpat_constraint (Tpat_var result/4 T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         T_blackhole)
+        (Texpr_apply
+         (Texpr_method /5 () (Tname_path (name "")) ()
+          ((Int Unit) -> T_blackhole (generic_ false)))
+         ((Texpr_ident n/2 () Normal Int)
+          (Texpr_ident $double.nan () Normal Unit))
+         T_blackhole Normal)
+        (((binder result/4) (binder_typ T_blackhole)))
+        (Texpr_sequence
+         ((Texpr_if
+           (Texpr_or
+            (Texpr_apply
+             (Texpr_ident Compare::op_le|Int| () (Prim (Pcomparison I32 Le))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int) (Texpr_constant 0 Int))
+             Bool Infix)
+            (Texpr_apply
+             (Texpr_ident Compare::op_gt|Int| () (Prim (Pcomparison I32 Gt))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int)
+              (Texpr_ident n/2 () Normal Int))
+             Bool Infix)
+            28:18-28:20)
+           (Texpr_return ((Texpr_ident result/4 () Normal T_blackhole)) Unit)
+           () Unit))
+         (Texpr_letmut sum/6 () (Texpr_constant 0.0 Double)
+          (Texpr_sequence
+           ((Texpr_for ((i/7 (Texpr_constant 0 Int)))
+             ((Texpr_apply
+               (Texpr_ident Compare::op_lt|Int| ()
+                (Prim (Pcomparison I32 Lt))
+                ((Int Int) -> Bool (generic_ false)))
+               ((Texpr_ident i/7 () Normal Int)
+                (Texpr_ident period/1 () Normal Int))
+               Bool Infix))
+             ((i/7
+               (Texpr_apply
+                (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident i/7 () Normal Int) (Texpr_constant 1 Int)) Int
+                Infix)))
+             (Texpr_assign sum/6
+              (Texpr_apply
+               (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_ident sum/6 () Mutable Double)
+                (Texpr_apply
+                 (Texpr_ident op_get/8 () Normal
+                  ((Int) -> Double (generic_ false)))
+                 ((Texpr_ident data/0 () Normal T_blackhole)
+                  (Texpr_ident i/7 () Normal Int))
+                 Double Dot))
+               Double Infix)
+              Unit)
+             () Unit))
+           (Texpr_let (Tpat_var seed/9 Double)
+            (Texpr_apply
+             (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+              ((Double Double) -> Double (generic_ false)))
+             ((Texpr_ident sum/6 () Mutable Double)
+              (Texpr_apply
+               (Texpr_ident to_double/10 () Normal
+                (() -> Double (generic_ false)))
+               ((Texpr_ident period/1 () Normal Int)) Double Dot))
+             Double Infix)
+            (((binder seed/9) (binder_typ Double)))
+            (Texpr_sequence
+             ((Texpr_apply
+               (Texpr_ident op_set/11 () Normal
+                ((Int Double) -> Unit (generic_ false)))
+               ((Texpr_ident result/4 () Normal T_blackhole)
+                (Texpr_apply
+                 (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                  ((Int Int) -> Int (generic_ false)))
+                 ((Texpr_ident period/1 () Normal Int)
+                  (Texpr_constant 1 Int))
+                 Int Infix)
+                (Texpr_ident seed/9 () Normal Double))
+               Unit Dot))
+             (Texpr_let (Tpat_var k/12 Double)
+              (Texpr_apply
+               (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_constant 2.0 Double)
+                (Texpr_apply
+                 (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                  ((Double Double) -> Double (generic_ false)))
+                 ((Texpr_apply
+                   (Texpr_ident to_double/13 () Normal
+                    (() -> Double (generic_ false)))
+                   ((Texpr_ident period/1 () Normal Int)) Double Dot)
+                  (Texpr_constant 1.0 Double))
+                 Double Infix))
+               Double Infix)
+              (((binder k/12) (binder_typ Double)))
+              (Texpr_letmut prev/14 () (Texpr_ident seed/9 () Normal Double)
+               (Texpr_sequence
+                ((Texpr_for ((i/15 (Texpr_ident period/1 () Normal Int)))
+                  ((Texpr_apply
+                    (Texpr_ident Compare::op_lt|Int| ()
+                     (Prim (Pcomparison I32 Lt))
+                     ((Int Int) -> Bool (generic_ false)))
+                    ((Texpr_ident i/15 () Normal Int)
+                     (Texpr_ident n/2 () Normal Int))
+                    Bool Infix))
+                  ((i/15
+                    (Texpr_apply
+                     (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                      ((Int Int) -> Int (generic_ false)))
+                     ((Texpr_ident i/15 () Normal Int)
+                      (Texpr_constant 1 Int))
+                     Int Infix)))
+                  (Texpr_let (Tpat_var val/16 Double)
+                   (Texpr_apply
+                    (Texpr_hole ((Unit Double) -> Double (generic_ false))
+                     Synthesized)
+                    ((Texpr_apply
+                      (Texpr_hole ((Unit Double) -> Unit (generic_ false))
+                       Synthesized)
+                      ((Texpr_apply
+                        (Texpr_ident op_get/17 () Normal
+                         ((Int) -> Unit (generic_ false)))
+                        ((Texpr_ident data/0 () Normal T_blackhole)
+                         (Texpr_ident i/15 () Normal Int))
+                        Unit Dot)
+                       (Texpr_ident k/12 () Normal Double))
+                      Unit Infix)
+                     (Texpr_apply
+                      (Texpr_ident Mul::mul|Double| ()
+                       (Prim (Parith F64 Mul))
+                       ((Double Double) -> Double (generic_ false)))
+                      ((Texpr_ident prev/14 () Mutable Double)
+                       (Texpr_apply
+                        (Texpr_ident Sub::sub|Double| ()
+                         (Prim (Parith F64 Sub))
+                         ((Double Double) -> Double (generic_ false)))
+                        ((Texpr_constant 1.0 Double)
+                         (Texpr_ident k/12 () Normal Double))
+                        Double Infix))
+                      Double Infix))
+                    Double Infix)
+                   (((binder val/16) (binder_typ Double)))
+                   (Texpr_sequence
+                    ((Texpr_apply
+                      (Texpr_ident op_set/18 () Normal
+                       ((Int Double) -> Unit (generic_ false)))
+                      ((Texpr_ident result/4 () Normal T_blackhole)
+                       (Texpr_ident i/15 () Normal Int)
+                       (Texpr_ident val/16 () Normal Double))
+                      Unit Dot))
+                    (Texpr_assign prev/14
+                     (Texpr_ident val/16 () Normal Double) Unit)
+                    Unit)
+                   Unit)
+                  () Unit))
+                (Texpr_ident result/4 () Normal T_blackhole) T_blackhole)
+               T_blackhole)
+              T_blackhole)
+             T_blackhole)
+            T_blackhole)
+           T_blackhole)
+          T_blackhole)
+         T_blackhole)
+        T_blackhole)
+       T_blackhole))
+     (ret_constraint
+      ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)))
+     (err_constraint No_error_typ)
+     (ty ((T_blackhole Int) -> T_blackhole (generic_ false)))))
+   (is_pub true)
+   (doc_
+    ((comment
+      (" Exponential Moving Average (EMA)"
+       " Uses smoothing factor k = 2 / (period + 1)."))
+     (loc 23:1-24:48)))
+   (attrs ())))
+ (Timpl_fun_decl
+  ((kind Fun_kind_regular) (fn_binder macd)
+   (fn
+    ((params
+      ((Param data/0
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        T_blackhole)
+       (Param fast_period/1 ((Tname ((lid Int)) () Int)) Int)
+       (Param slow_period/2 ((Tname ((lid Int)) () Int)) Int)
+       (Param signal_period/3 ((Tname ((lid Int)) () Int)) Int)))
+     (body
+      (Texpr_let (Tpat_var n/4 Int)
+       (Texpr_apply
+        (Texpr_ident length/5 () Normal (() -> Int (generic_ false)))
+        ((Texpr_ident data/0 () Normal T_blackhole)) Int Dot)
+       (((binder n/4) (binder_typ Int)))
+       (Texpr_let (Tpat_var ema_fast/6 T_blackhole)
+        (Texpr_apply
+         (Texpr_ident ema () Normal
+          ((T_blackhole Int) -> T_blackhole (generic_ false)))
+         ((Texpr_ident data/0 () Normal T_blackhole)
+          (Texpr_ident fast_period/1 () Normal Int))
+         T_blackhole Normal)
+        (((binder ema_fast/6) (binder_typ T_blackhole)))
+        (Texpr_let (Tpat_var ema_slow/7 T_blackhole)
+         (Texpr_apply
+          (Texpr_ident ema () Normal
+           ((T_blackhole Int) -> T_blackhole (generic_ false)))
+          ((Texpr_ident data/0 () Normal T_blackhole)
+           (Texpr_ident slow_period/2 () Normal Int))
+          T_blackhole Normal)
+         (((binder ema_slow/7) (binder_typ T_blackhole)))
+         (Texpr_let
+          (Tpat_constraint (Tpat_var macd_line/8 T_blackhole)
+           (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+            T_blackhole)
+           T_blackhole)
+          (Texpr_apply
+           (Texpr_method /9 () (Tname_path (name "")) ()
+            ((Int Unit) -> T_blackhole (generic_ false)))
+           ((Texpr_ident n/4 () Normal Int)
+            (Texpr_ident $double.nan () Normal Unit))
+           T_blackhole Normal)
+          (((binder macd_line/8) (binder_typ T_blackhole)))
+          (Texpr_sequence
+           ((Texpr_for ((i/10 (Texpr_constant 0 Int)))
+             ((Texpr_apply
+               (Texpr_ident Compare::op_lt|Int| ()
+                (Prim (Pcomparison I32 Lt))
+                ((Int Int) -> Bool (generic_ false)))
+               ((Texpr_ident i/10 () Normal Int)
+                (Texpr_ident n/4 () Normal Int))
+               Bool Infix))
+             ((i/10
+               (Texpr_apply
+                (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident i/10 () Normal Int) (Texpr_constant 1 Int)) Int
+                Infix)))
+             (Texpr_if
+              (Texpr_and
+               (Texpr_apply
+                (Texpr_ident not () Normal ((Unit) -> Bool (generic_ false)))
+                ((Texpr_apply
+                  (Texpr_ident is_nan/11 () Normal
+                   (() -> Unit (generic_ false)))
+                  ((Texpr_apply
+                    (Texpr_ident op_get/12 () Normal
+                     ((Int) -> Unit (generic_ false)))
+                    ((Texpr_ident ema_fast/6 () Normal T_blackhole)
+                     (Texpr_ident i/10 () Normal Int))
+                    Unit Dot))
+                  Unit Dot))
+                Bool Normal)
+               (Texpr_apply
+                (Texpr_ident not () Normal ((Unit) -> Bool (generic_ false)))
+                ((Texpr_apply
+                  (Texpr_ident is_nan/13 () Normal
+                   (() -> Unit (generic_ false)))
+                  ((Texpr_apply
+                    (Texpr_ident op_get/14 () Normal
+                     ((Int) -> Unit (generic_ false)))
+                    ((Texpr_ident ema_slow/7 () Normal T_blackhole)
+                     (Texpr_ident i/10 () Normal Int))
+                    Unit Dot))
+                  Unit Dot))
+                Bool Normal)
+               62:34-62:36)
+              (Texpr_apply
+               (Texpr_ident op_set/15 () Normal
+                ((Int Unit) -> Unit (generic_ false)))
+               ((Texpr_ident macd_line/8 () Normal T_blackhole)
+                (Texpr_ident i/10 () Normal Int)
+                (Texpr_apply
+                 (Texpr_hole ((Unit Unit) -> Unit (generic_ false))
+                  Synthesized)
+                 ((Texpr_apply
+                   (Texpr_ident op_get/16 () Normal
+                    ((Int) -> Unit (generic_ false)))
+                   ((Texpr_ident ema_fast/6 () Normal T_blackhole)
+                    (Texpr_ident i/10 () Normal Int))
+                   Unit Dot)
+                  (Texpr_apply
+                   (Texpr_ident op_get/17 () Normal
+                    ((Int) -> Unit (generic_ false)))
+                   ((Texpr_ident ema_slow/7 () Normal T_blackhole)
+                    (Texpr_ident i/10 () Normal Int))
+                   Unit Dot))
+                 Unit Infix))
+               Unit Dot)
+              () Unit)
+             () Unit))
+           (Texpr_let (Tpat_var valid_start/18 Int)
+            (Texpr_apply
+             (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+              ((Int Int) -> Int (generic_ false)))
+             ((Texpr_ident slow_period/2 () Normal Int)
+              (Texpr_constant 1 Int))
+             Int Infix)
+            (((binder valid_start/18) (binder_typ Int)))
+            (Texpr_let
+             (Tpat_constraint
+              (Tpat_var valid_data/19
+               (T_constr Array (Unit) (generic_ false)))
+              (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+               (T_constr Array (Unit) (generic_ false)))
+              (T_constr Array (Unit) (generic_ false)))
+             (Texpr_array () (T_constr Array (Unit) (generic_ false)) Array)
+             (((binder valid_data/19)
+               (binder_typ (T_constr Array (Unit) (generic_ false)))))
+             (Texpr_sequence
+              ((Texpr_for ((i/20 (Texpr_ident valid_start/18 () Normal Int)))
+                ((Texpr_apply
+                  (Texpr_ident Compare::op_lt|Int| ()
+                   (Prim (Pcomparison I32 Lt))
+                   ((Int Int) -> Bool (generic_ false)))
+                  ((Texpr_ident i/20 () Normal Int)
+                   (Texpr_ident n/4 () Normal Int))
+                  Bool Infix))
+                ((i/20
+                  (Texpr_apply
+                   (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                    ((Int Int) -> Int (generic_ false)))
+                   ((Texpr_ident i/20 () Normal Int) (Texpr_constant 1 Int))
+                   Int Infix)))
+                (Texpr_apply
+                 (Texpr_ident push/21 () Normal
+                  ((Unit) -> Unit (generic_ false)))
+                 ((Texpr_ident valid_data/19 () Normal
+                   (T_constr Array (Unit) (generic_ false)))
+                  (Texpr_apply
+                   (Texpr_ident op_get/22 () Normal
+                    ((Int) -> Unit (generic_ false)))
+                   ((Texpr_ident macd_line/8 () Normal T_blackhole)
+                    (Texpr_ident i/20 () Normal Int))
+                   Unit Dot))
+                 Unit Dot)
+                () Unit))
+              (Texpr_let (Tpat_var signal_raw/23 T_blackhole)
+               (Texpr_apply
+                (Texpr_ident ema () Normal
+                 ((T_blackhole Int) -> T_blackhole (generic_ false)))
+                ((Texpr_ident valid_data/19 () Normal
+                  (T_constr Array (Unit) (generic_ false)))
+                 (Texpr_ident signal_period/3 () Normal Int))
+                T_blackhole Normal)
+               (((binder signal_raw/23) (binder_typ T_blackhole)))
+               (Texpr_let
+                (Tpat_constraint (Tpat_var signal_line/24 T_blackhole)
+                 (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+                  T_blackhole)
+                 T_blackhole)
+                (Texpr_apply
+                 (Texpr_method /9 () (Tname_path (name "")) ()
+                  ((Int Unit) -> T_blackhole (generic_ false)))
+                 ((Texpr_ident n/4 () Normal Int)
+                  (Texpr_ident $double.nan () Normal Unit))
+                 T_blackhole Normal)
+                (((binder signal_line/24) (binder_typ T_blackhole)))
+                (Texpr_let
+                 (Tpat_constraint (Tpat_var histogram/25 T_blackhole)
+                  (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+                   T_blackhole)
+                  T_blackhole)
+                 (Texpr_apply
+                  (Texpr_method /9 () (Tname_path (name "")) ()
+                   ((Int Unit) -> T_blackhole (generic_ false)))
+                  ((Texpr_ident n/4 () Normal Int)
+                   (Texpr_ident $double.nan () Normal Unit))
+                  T_blackhole Normal)
+                 (((binder histogram/25) (binder_typ T_blackhole)))
+                 (Texpr_sequence
+                  ((Texpr_for ((i/26 (Texpr_constant 0 Int)))
+                    ((Texpr_apply
+                      (Texpr_ident Compare::op_lt|Int| ()
+                       (Prim (Pcomparison I32 Lt))
+                       ((Int Int) -> Bool (generic_ false)))
+                      ((Texpr_ident i/26 () Normal Int)
+                       (Texpr_apply
+                        (Texpr_ident length/27 () Normal
+                         (() -> Int (generic_ false)))
+                        ((Texpr_ident valid_data/19 () Normal
+                          (T_constr Array (Unit) (generic_ false))))
+                        Int Dot))
+                      Bool Infix))
+                    ((i/26
+                      (Texpr_apply
+                       (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                        ((Int Int) -> Int (generic_ false)))
+                       ((Texpr_ident i/26 () Normal Int)
+                        (Texpr_constant 1 Int))
+                       Int Infix)))
+                    (Texpr_let (Tpat_var idx/28 Int)
+                     (Texpr_apply
+                      (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                       ((Int Int) -> Int (generic_ false)))
+                      ((Texpr_ident i/26 () Normal Int)
+                       (Texpr_ident valid_start/18 () Normal Int))
+                      Int Infix)
+                     (((binder idx/28) (binder_typ Int)))
+                     (Texpr_sequence
+                      ((Texpr_apply
+                        (Texpr_ident op_set/29 () Normal
+                         ((Int Unit) -> Unit (generic_ false)))
+                        ((Texpr_ident signal_line/24 () Normal T_blackhole)
+                         (Texpr_ident idx/28 () Normal Int)
+                         (Texpr_apply
+                          (Texpr_ident op_get/30 () Normal
+                           ((Int) -> Unit (generic_ false)))
+                          ((Texpr_ident signal_raw/23 () Normal T_blackhole)
+                           (Texpr_ident i/26 () Normal Int))
+                          Unit Dot))
+                        Unit Dot))
+                      (Texpr_if
+                       (Texpr_and
+                        (Texpr_apply
+                         (Texpr_ident not () Normal
+                          ((Unit) -> Bool (generic_ false)))
+                         ((Texpr_apply
+                           (Texpr_ident is_nan/31 () Normal
+                            (() -> Unit (generic_ false)))
+                           ((Texpr_apply
+                             (Texpr_ident op_get/32 () Normal
+                              ((Int) -> Unit (generic_ false)))
+                             ((Texpr_ident signal_raw/23 () Normal
+                               T_blackhole)
+                              (Texpr_ident i/26 () Normal Int))
+                             Unit Dot))
+                           Unit Dot))
+                         Bool Normal)
+                        (Texpr_apply
+                         (Texpr_ident not () Normal
+                          ((Unit) -> Bool (generic_ false)))
+                         ((Texpr_apply
+                           (Texpr_ident is_nan/33 () Normal
+                            (() -> Unit (generic_ false)))
+                           ((Texpr_apply
+                             (Texpr_ident op_get/34 () Normal
+                              ((Int) -> Unit (generic_ false)))
+                             ((Texpr_ident macd_line/8 () Normal T_blackhole)
+                              (Texpr_ident idx/28 () Normal Int))
+                             Unit Dot))
+                           Unit Dot))
+                         Bool Normal)
+                        79:36-79:38)
+                       (Texpr_apply
+                        (Texpr_ident op_set/35 () Normal
+                         ((Int Unit) -> Unit (generic_ false)))
+                        ((Texpr_ident histogram/25 () Normal T_blackhole)
+                         (Texpr_ident idx/28 () Normal Int)
+                         (Texpr_apply
+                          (Texpr_hole ((Unit Unit) -> Unit (generic_ false))
+                           Synthesized)
+                          ((Texpr_apply
+                            (Texpr_ident op_get/36 () Normal
+                             ((Int) -> Unit (generic_ false)))
+                            ((Texpr_ident macd_line/8 () Normal T_blackhole)
+                             (Texpr_ident idx/28 () Normal Int))
+                            Unit Dot)
+                           (Texpr_apply
+                            (Texpr_ident op_get/37 () Normal
+                             ((Int) -> Unit (generic_ false)))
+                            ((Texpr_ident signal_raw/23 () Normal
+                              T_blackhole)
+                             (Texpr_ident i/26 () Normal Int))
+                            Unit Dot))
+                          Unit Infix))
+                        Unit Dot)
+                       () Unit)
+                      Unit)
+                     Unit)
+                    () Unit))
+                  (Texpr_tuple
+                   ((Texpr_ident macd_line/8 () Normal T_blackhole)
+                    (Texpr_ident signal_line/24 () Normal T_blackhole)
+                    (Texpr_ident histogram/25 () Normal T_blackhole))
+                   (Tproduct (T_blackhole T_blackhole T_blackhole)
+                    (generic_ false)))
+                  (Tproduct (T_blackhole T_blackhole T_blackhole)
+                   (generic_ false)))
+                 (Tproduct (T_blackhole T_blackhole T_blackhole)
+                  (generic_ false)))
+                (Tproduct (T_blackhole T_blackhole T_blackhole)
+                 (generic_ false)))
+               (Tproduct (T_blackhole T_blackhole T_blackhole)
+                (generic_ false)))
+              (Tproduct (T_blackhole T_blackhole T_blackhole)
+               (generic_ false)))
+             (Tproduct (T_blackhole T_blackhole T_blackhole)
+              (generic_ false)))
+            (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+           (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+          (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+         (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+        (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+       (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false))))
+     (ret_constraint
+      ((T_tuple
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))))
+     (err_constraint No_error_typ)
+     (ty
+      ((T_blackhole Int Int Int) ->
+       (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false))
+       (generic_ false)))))
+   (is_pub true)
+   (doc_
+    ((comment
+      (" MACD (Moving Average Convergence Divergence)"
+       " Returns (macd_line, signal_line, histogram)."))
+     (loc 48:1-49:49)))
+   (attrs ())))
+ (Timpl_fun_decl
+  ((kind Fun_kind_regular) (fn_binder rsi)
+   (fn
+    ((params
+      ((Param data/0
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        T_blackhole)
+       (Param period/1 ((Tname ((lid Int)) () Int)) Int)))
+     (body
+      (Texpr_let (Tpat_var n/2 Int)
+       (Texpr_apply
+        (Texpr_ident length/3 () Normal (() -> Int (generic_ false)))
+        ((Texpr_ident data/0 () Normal T_blackhole)) Int Dot)
+       (((binder n/2) (binder_typ Int)))
+       (Texpr_let
+        (Tpat_constraint (Tpat_var result/4 T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         T_blackhole)
+        (Texpr_apply
+         (Texpr_method /5 () (Tname_path (name "")) ()
+          ((Int Unit) -> T_blackhole (generic_ false)))
+         ((Texpr_ident n/2 () Normal Int)
+          (Texpr_ident $double.nan () Normal Unit))
+         T_blackhole Normal)
+        (((binder result/4) (binder_typ T_blackhole)))
+        (Texpr_sequence
+         ((Texpr_if
+           (Texpr_or
+            (Texpr_apply
+             (Texpr_ident Compare::op_le|Int| () (Prim (Pcomparison I32 Le))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int) (Texpr_constant 0 Int))
+             Bool Infix)
+            (Texpr_apply
+             (Texpr_ident Compare::op_ge|Int| () (Prim (Pcomparison I32 Ge))
+              ((Int Int) -> Bool (generic_ false)))
+             ((Texpr_ident period/1 () Normal Int)
+              (Texpr_ident n/2 () Normal Int))
+             Bool Infix)
+            91:18-91:20)
+           (Texpr_return ((Texpr_ident result/4 () Normal T_blackhole)) Unit)
+           () Unit))
+         (Texpr_letmut avg_gain/6 () (Texpr_constant 0.0 Double)
+          (Texpr_letmut avg_loss/7 () (Texpr_constant 0.0 Double)
+           (Texpr_sequence
+            ((Texpr_for ((i/8 (Texpr_constant 1 Int)))
+              ((Texpr_apply
+                (Texpr_ident Compare::op_le|Int| ()
+                 (Prim (Pcomparison I32 Le))
+                 ((Int Int) -> Bool (generic_ false)))
+                ((Texpr_ident i/8 () Normal Int)
+                 (Texpr_ident period/1 () Normal Int))
+                Bool Infix))
+              ((i/8
+                (Texpr_apply
+                 (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                  ((Int Int) -> Int (generic_ false)))
+                 ((Texpr_ident i/8 () Normal Int) (Texpr_constant 1 Int)) Int
+                 Infix)))
+              (Texpr_let (Tpat_var change/9 Double)
+               (Texpr_apply
+                (Texpr_hole ((Unit Unit) -> Double (generic_ false))
+                 Synthesized)
+                ((Texpr_apply
+                  (Texpr_ident op_get/10 () Normal
+                   ((Int) -> Unit (generic_ false)))
+                  ((Texpr_ident data/0 () Normal T_blackhole)
+                   (Texpr_ident i/8 () Normal Int))
+                  Unit Dot)
+                 (Texpr_apply
+                  (Texpr_ident op_get/11 () Normal
+                   ((Int) -> Unit (generic_ false)))
+                  ((Texpr_ident data/0 () Normal T_blackhole)
+                   (Texpr_apply
+                    (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                     ((Int Int) -> Int (generic_ false)))
+                    ((Texpr_ident i/8 () Normal Int) (Texpr_constant 1 Int))
+                    Int Infix))
+                  Unit Dot))
+                Double Infix)
+               (((binder change/9) (binder_typ Double)))
+               (Texpr_if
+                (Texpr_apply
+                 (Texpr_hole ((Double Double) -> Bool (generic_ false))
+                  Synthesized)
+                 ((Texpr_ident change/9 () Normal Double)
+                  (Texpr_constant 0.0 Double))
+                 Bool Infix)
+                (Texpr_assign avg_gain/6
+                 (Texpr_apply
+                  (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                   ((Double Double) -> Double (generic_ false)))
+                  ((Texpr_ident avg_gain/6 () Mutable Double)
+                   (Texpr_ident change/9 () Normal Double))
+                  Double Infix)
+                 Unit)
+                ((Texpr_assign avg_loss/7
+                  (Texpr_apply
+                   (Texpr_ident Sub::sub|Double| () (Prim (Parith F64 Sub))
+                    ((Double Double) -> Double (generic_ false)))
+                   ((Texpr_ident avg_loss/7 () Mutable Double)
+                    (Texpr_ident change/9 () Normal Double))
+                   Double Infix)
+                  Unit))
+                Unit)
+               Unit)
+              () Unit)
+             (Texpr_assign avg_gain/6
+              (Texpr_apply
+               (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_ident avg_gain/6 () Mutable Double)
+                (Texpr_apply
+                 (Texpr_ident to_double/12 () Normal
+                  (() -> Double (generic_ false)))
+                 ((Texpr_ident period/1 () Normal Int)) Double Dot))
+               Double Infix)
+              Unit)
+             (Texpr_assign avg_loss/7
+              (Texpr_apply
+               (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                ((Double Double) -> Double (generic_ false)))
+               ((Texpr_ident avg_loss/7 () Mutable Double)
+                (Texpr_apply
+                 (Texpr_ident to_double/13 () Normal
+                  (() -> Double (generic_ false)))
+                 ((Texpr_ident period/1 () Normal Int)) Double Dot))
+               Double Infix)
+              Unit)
+             (Texpr_if
+              (Texpr_apply
+               (Texpr_ident Eq::equal|Double| () (Prim (Pcomparison F64 Eq))
+                ((Double Double) -> Bool (generic_ false)))
+               ((Texpr_ident avg_loss/7 () Mutable Double)
+                (Texpr_constant 0.0 Double))
+               Bool Infix)
+              (Texpr_apply
+               (Texpr_ident op_set/14 () Normal
+                ((Int Double) -> Unit (generic_ false)))
+               ((Texpr_ident result/4 () Normal T_blackhole)
+                (Texpr_ident period/1 () Normal Int)
+                (Texpr_constant 100.0 Double))
+               Unit Dot)
+              ((Texpr_apply
+                (Texpr_ident op_set/15 () Normal
+                 ((Int Double) -> Unit (generic_ false)))
+                ((Texpr_ident result/4 () Normal T_blackhole)
+                 (Texpr_ident period/1 () Normal Int)
+                 (Texpr_apply
+                  (Texpr_ident Sub::sub|Double| () (Prim (Parith F64 Sub))
+                   ((Double Double) -> Double (generic_ false)))
+                  ((Texpr_constant 100.0 Double)
+                   (Texpr_apply
+                    (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                     ((Double Double) -> Double (generic_ false)))
+                    ((Texpr_constant 100.0 Double)
+                     (Texpr_apply
+                      (Texpr_ident Add::add|Double| ()
+                       (Prim (Parith F64 Add))
+                       ((Double Double) -> Double (generic_ false)))
+                      ((Texpr_constant 1.0 Double)
+                       (Texpr_apply
+                        (Texpr_ident Div::div|Double| ()
+                         (Prim (Parith F64 Div))
+                         ((Double Double) -> Double (generic_ false)))
+                        ((Texpr_ident avg_gain/6 () Mutable Double)
+                         (Texpr_ident avg_loss/7 () Mutable Double))
+                        Double Infix))
+                      Double Infix))
+                    Double Infix))
+                  Double Infix))
+                Unit Dot))
+              Unit))
+            (Texpr_let (Tpat_var period_f/16 Double)
+             (Texpr_apply
+              (Texpr_ident to_double/17 () Normal
+               (() -> Double (generic_ false)))
+              ((Texpr_ident period/1 () Normal Int)) Double Dot)
+             (((binder period_f/16) (binder_typ Double)))
+             (Texpr_sequence
+              ((Texpr_for
+                ((i/18
+                  (Texpr_apply
+                   (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                    ((Int Int) -> Int (generic_ false)))
+                   ((Texpr_ident period/1 () Normal Int)
+                    (Texpr_constant 1 Int))
+                   Int Infix)))
+                ((Texpr_apply
+                  (Texpr_ident Compare::op_lt|Int| ()
+                   (Prim (Pcomparison I32 Lt))
+                   ((Int Int) -> Bool (generic_ false)))
+                  ((Texpr_ident i/18 () Normal Int)
+                   (Texpr_ident n/2 () Normal Int))
+                  Bool Infix))
+                ((i/18
+                  (Texpr_apply
+                   (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                    ((Int Int) -> Int (generic_ false)))
+                   ((Texpr_ident i/18 () Normal Int) (Texpr_constant 1 Int))
+                   Int Infix)))
+                (Texpr_let (Tpat_var change/19 Double)
+                 (Texpr_apply
+                  (Texpr_hole ((Unit Unit) -> Double (generic_ false))
+                   Synthesized)
+                  ((Texpr_apply
+                    (Texpr_ident op_get/20 () Normal
+                     ((Int) -> Unit (generic_ false)))
+                    ((Texpr_ident data/0 () Normal T_blackhole)
+                     (Texpr_ident i/18 () Normal Int))
+                    Unit Dot)
+                   (Texpr_apply
+                    (Texpr_ident op_get/21 () Normal
+                     ((Int) -> Unit (generic_ false)))
+                    ((Texpr_ident data/0 () Normal T_blackhole)
+                     (Texpr_apply
+                      (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                       ((Int Int) -> Int (generic_ false)))
+                      ((Texpr_ident i/18 () Normal Int)
+                       (Texpr_constant 1 Int))
+                      Int Infix))
+                    Unit Dot))
+                  Double Infix)
+                 (((binder change/19) (binder_typ Double)))
+                 (Texpr_let (Tpat_var gain/22 Double)
+                  (Texpr_if
+                   (Texpr_apply
+                    (Texpr_hole ((Double Double) -> Bool (generic_ false))
+                     Synthesized)
+                    ((Texpr_ident change/19 () Normal Double)
+                     (Texpr_constant 0.0 Double))
+                    Bool Infix)
+                   (Texpr_ident change/19 () Normal Double)
+                   ((Texpr_constant 0.0 Double)) Double)
+                  (((binder gain/22) (binder_typ Double)))
+                  (Texpr_let (Tpat_var loss/23 Double)
+                   (Texpr_if
+                    (Texpr_apply
+                     (Texpr_ident Compare::op_lt|Double| ()
+                      (Prim (Pcomparison F64 Lt))
+                      ((Double Double) -> Bool (generic_ false)))
+                     ((Texpr_ident change/19 () Normal Double)
+                      (Texpr_constant 0.0 Double))
+                     Bool Infix)
+                    (Texpr_apply
+                     (Texpr_ident Neg::neg|Double| () (Prim (Parith F64 Neg))
+                      ((Double) -> Double (generic_ false)))
+                     ((Texpr_ident change/19 () Normal Double)) Double
+                     Prefix)
+                    ((Texpr_constant 0.0 Double)) Double)
+                   (((binder loss/23) (binder_typ Double)))
+                   (Texpr_sequence
+                    ((Texpr_assign avg_gain/6
+                      (Texpr_apply
+                       (Texpr_ident Div::div|Double| ()
+                        (Prim (Parith F64 Div))
+                        ((Double Double) -> Double (generic_ false)))
+                       ((Texpr_apply
+                         (Texpr_ident Add::add|Double| ()
+                          (Prim (Parith F64 Add))
+                          ((Double Double) -> Double (generic_ false)))
+                         ((Texpr_apply
+                           (Texpr_ident Mul::mul|Double| ()
+                            (Prim (Parith F64 Mul))
+                            ((Double Double) -> Double (generic_ false)))
+                           ((Texpr_ident avg_gain/6 () Mutable Double)
+                            (Texpr_apply
+                             (Texpr_ident Sub::sub|Double| ()
+                              (Prim (Parith F64 Sub))
+                              ((Double Double) -> Double (generic_ false)))
+                             ((Texpr_ident period_f/16 () Normal Double)
+                              (Texpr_constant 1.0 Double))
+                             Double Infix))
+                           Double Infix)
+                          (Texpr_ident gain/22 () Normal Double))
+                         Double Infix)
+                        (Texpr_ident period_f/16 () Normal Double))
+                       Double Infix)
+                      Unit)
+                     (Texpr_assign avg_loss/7
+                      (Texpr_apply
+                       (Texpr_ident Div::div|Double| ()
+                        (Prim (Parith F64 Div))
+                        ((Double Double) -> Double (generic_ false)))
+                       ((Texpr_apply
+                         (Texpr_ident Add::add|Double| ()
+                          (Prim (Parith F64 Add))
+                          ((Double Double) -> Double (generic_ false)))
+                         ((Texpr_apply
+                           (Texpr_ident Mul::mul|Double| ()
+                            (Prim (Parith F64 Mul))
+                            ((Double Double) -> Double (generic_ false)))
+                           ((Texpr_ident avg_loss/7 () Mutable Double)
+                            (Texpr_apply
+                             (Texpr_ident Sub::sub|Double| ()
+                              (Prim (Parith F64 Sub))
+                              ((Double Double) -> Double (generic_ false)))
+                             ((Texpr_ident period_f/16 () Normal Double)
+                              (Texpr_constant 1.0 Double))
+                             Double Infix))
+                           Double Infix)
+                          (Texpr_ident loss/23 () Normal Double))
+                         Double Infix)
+                        (Texpr_ident period_f/16 () Normal Double))
+                       Double Infix)
+                      Unit))
+                    (Texpr_if
+                     (Texpr_apply
+                      (Texpr_ident Eq::equal|Double| ()
+                       (Prim (Pcomparison F64 Eq))
+                       ((Double Double) -> Bool (generic_ false)))
+                      ((Texpr_ident avg_loss/7 () Mutable Double)
+                       (Texpr_constant 0.0 Double))
+                      Bool Infix)
+                     (Texpr_apply
+                      (Texpr_ident op_set/24 () Normal
+                       ((Int Double) -> Unit (generic_ false)))
+                      ((Texpr_ident result/4 () Normal T_blackhole)
+                       (Texpr_ident i/18 () Normal Int)
+                       (Texpr_constant 100.0 Double))
+                      Unit Dot)
+                     ((Texpr_apply
+                       (Texpr_ident op_set/25 () Normal
+                        ((Int Double) -> Unit (generic_ false)))
+                       ((Texpr_ident result/4 () Normal T_blackhole)
+                        (Texpr_ident i/18 () Normal Int)
+                        (Texpr_apply
+                         (Texpr_ident Sub::sub|Double| ()
+                          (Prim (Parith F64 Sub))
+                          ((Double Double) -> Double (generic_ false)))
+                         ((Texpr_constant 100.0 Double)
+                          (Texpr_apply
+                           (Texpr_ident Div::div|Double| ()
+                            (Prim (Parith F64 Div))
+                            ((Double Double) -> Double (generic_ false)))
+                           ((Texpr_constant 100.0 Double)
+                            (Texpr_apply
+                             (Texpr_ident Add::add|Double| ()
+                              (Prim (Parith F64 Add))
+                              ((Double Double) -> Double (generic_ false)))
+                             ((Texpr_constant 1.0 Double)
+                              (Texpr_apply
+                               (Texpr_ident Div::div|Double| ()
+                                (Prim (Parith F64 Div))
+                                ((Double Double) -> Double (generic_ false)))
+                               ((Texpr_ident avg_gain/6 () Mutable Double)
+                                (Texpr_ident avg_loss/7 () Mutable Double))
+                               Double Infix))
+                             Double Infix))
+                           Double Infix))
+                         Double Infix))
+                       Unit Dot))
+                     Unit)
+                    Unit)
+                   Unit)
+                  Unit)
+                 Unit)
+                () Unit))
+              (Texpr_ident result/4 () Normal T_blackhole) T_blackhole)
+             T_blackhole)
+            T_blackhole)
+           T_blackhole)
+          T_blackhole)
+         T_blackhole)
+        T_blackhole)
+       T_blackhole))
+     (ret_constraint
+      ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)))
+     (err_constraint No_error_typ)
+     (ty ((T_blackhole Int) -> T_blackhole (generic_ false)))))
+   (is_pub true)
+   (doc_
+    ((comment
+      (" Relative Strength Index (RSI)" " Uses Wilder's smoothing method."))
+     (loc 86:1-87:36)))
+   (attrs ())))
+ (Timpl_fun_decl
+  ((kind Fun_kind_regular) (fn_binder bollinger_bands)
+   (fn
+    ((params
+      ((Param data/0
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        T_blackhole)
+       (Param period/1 ((Tname ((lid Int)) () Int)) Int)
+       (Param num_std/2 ((Tname ((lid Double)) () Double)) Double)))
+     (body
+      (Texpr_let (Tpat_var n/3 Int)
+       (Texpr_apply
+        (Texpr_ident length/4 () Normal (() -> Int (generic_ false)))
+        ((Texpr_ident data/0 () Normal T_blackhole)) Int Dot)
+       (((binder n/3) (binder_typ Int)))
+       (Texpr_let (Tpat_var middle/5 T_blackhole)
+        (Texpr_apply
+         (Texpr_ident sma () Normal
+          ((T_blackhole Int) -> T_blackhole (generic_ false)))
+         ((Texpr_ident data/0 () Normal T_blackhole)
+          (Texpr_ident period/1 () Normal Int))
+         T_blackhole Normal)
+        (((binder middle/5) (binder_typ T_blackhole)))
+        (Texpr_let
+         (Tpat_constraint (Tpat_var upper/6 T_blackhole)
+          (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+           T_blackhole)
+          T_blackhole)
+         (Texpr_apply
+          (Texpr_method /7 () (Tname_path (name "")) ()
+           ((Int Unit) -> T_blackhole (generic_ false)))
+          ((Texpr_ident n/3 () Normal Int)
+           (Texpr_ident $double.nan () Normal Unit))
+          T_blackhole Normal)
+         (((binder upper/6) (binder_typ T_blackhole)))
+         (Texpr_let
+          (Tpat_constraint (Tpat_var lower/8 T_blackhole)
+           (Tname ((lid Array)) ((Tname ((lid Double)) () Double))
+            T_blackhole)
+           T_blackhole)
+          (Texpr_apply
+           (Texpr_method /7 () (Tname_path (name "")) ()
+            ((Int Unit) -> T_blackhole (generic_ false)))
+           ((Texpr_ident n/3 () Normal Int)
+            (Texpr_ident $double.nan () Normal Unit))
+           T_blackhole Normal)
+          (((binder lower/8) (binder_typ T_blackhole)))
+          (Texpr_sequence
+           ((Texpr_for
+             ((i/9
+               (Texpr_apply
+                (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident period/1 () Normal Int) (Texpr_constant 1 Int))
+                Int Infix)))
+             ((Texpr_apply
+               (Texpr_ident Compare::op_lt|Int| ()
+                (Prim (Pcomparison I32 Lt))
+                ((Int Int) -> Bool (generic_ false)))
+               ((Texpr_ident i/9 () Normal Int)
+                (Texpr_ident n/3 () Normal Int))
+               Bool Infix))
+             ((i/9
+               (Texpr_apply
+                (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                 ((Int Int) -> Int (generic_ false)))
+                ((Texpr_ident i/9 () Normal Int) (Texpr_constant 1 Int)) Int
+                Infix)))
+             (Texpr_letmut sum_sq/10 () (Texpr_constant 0.0 Double)
+              (Texpr_let (Tpat_var mean/11 Unit)
+               (Texpr_apply
+                (Texpr_ident op_get/12 () Normal
+                 ((Int) -> Unit (generic_ false)))
+                ((Texpr_ident middle/5 () Normal T_blackhole)
+                 (Texpr_ident i/9 () Normal Int))
+                Unit Dot)
+               (((binder mean/11) (binder_typ Unit)))
+               (Texpr_sequence
+                ((Texpr_for
+                  ((j/13
+                    (Texpr_apply
+                     (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                      ((Int Int) -> Int (generic_ false)))
+                     ((Texpr_apply
+                       (Texpr_ident Sub::sub|Int| () (Prim (Parith I32 Sub))
+                        ((Int Int) -> Int (generic_ false)))
+                       ((Texpr_ident i/9 () Normal Int)
+                        (Texpr_ident period/1 () Normal Int))
+                       Int Infix)
+                      (Texpr_constant 1 Int))
+                     Int Infix)))
+                  ((Texpr_apply
+                    (Texpr_ident Compare::op_le|Int| ()
+                     (Prim (Pcomparison I32 Le))
+                     ((Int Int) -> Bool (generic_ false)))
+                    ((Texpr_ident j/13 () Normal Int)
+                     (Texpr_ident i/9 () Normal Int))
+                    Bool Infix))
+                  ((j/13
+                    (Texpr_apply
+                     (Texpr_ident Add::add|Int| () (Prim (Parith I32 Add))
+                      ((Int Int) -> Int (generic_ false)))
+                     ((Texpr_ident j/13 () Normal Int)
+                      (Texpr_constant 1 Int))
+                     Int Infix)))
+                  (Texpr_let (Tpat_var diff/14 Double)
+                   (Texpr_apply
+                    (Texpr_hole ((Unit Unit) -> Double (generic_ false))
+                     Synthesized)
+                    ((Texpr_apply
+                      (Texpr_ident op_get/15 () Normal
+                       ((Int) -> Unit (generic_ false)))
+                      ((Texpr_ident data/0 () Normal T_blackhole)
+                       (Texpr_ident j/13 () Normal Int))
+                      Unit Dot)
+                     (Texpr_ident mean/11 () Normal Unit))
+                    Double Infix)
+                   (((binder diff/14) (binder_typ Double)))
+                   (Texpr_assign sum_sq/10
+                    (Texpr_apply
+                     (Texpr_ident Add::add|Double| () (Prim (Parith F64 Add))
+                      ((Double Double) -> Double (generic_ false)))
+                     ((Texpr_ident sum_sq/10 () Mutable Double)
+                      (Texpr_apply
+                       (Texpr_ident Mul::mul|Double| ()
+                        (Prim (Parith F64 Mul))
+                        ((Double Double) -> Double (generic_ false)))
+                       ((Texpr_ident diff/14 () Normal Double)
+                        (Texpr_ident diff/14 () Normal Double))
+                       Double Infix))
+                     Double Infix)
+                    Unit)
+                   Unit)
+                  () Unit))
+                (Texpr_let (Tpat_var std/16 Double)
+                 (Texpr_apply
+                  (Texpr_ident sqrt/17 () Normal
+                   (() -> Double (generic_ false)))
+                  ((Texpr_apply
+                    (Texpr_ident Div::div|Double| () (Prim (Parith F64 Div))
+                     ((Double Double) -> Double (generic_ false)))
+                    ((Texpr_ident sum_sq/10 () Mutable Double)
+                     (Texpr_apply
+                      (Texpr_ident to_double/18 () Normal
+                       (() -> Double (generic_ false)))
+                      ((Texpr_ident period/1 () Normal Int)) Double Dot))
+                    Double Infix))
+                  Double Dot)
+                 (((binder std/16) (binder_typ Double)))
+                 (Texpr_sequence
+                  ((Texpr_apply
+                    (Texpr_ident op_set/19 () Normal
+                     ((Int Unit) -> Unit (generic_ false)))
+                    ((Texpr_ident upper/6 () Normal T_blackhole)
+                     (Texpr_ident i/9 () Normal Int)
+                     (Texpr_apply
+                      (Texpr_hole ((Unit Double) -> Unit (generic_ false))
+                       Synthesized)
+                      ((Texpr_ident mean/11 () Normal Unit)
+                       (Texpr_apply
+                        (Texpr_ident Mul::mul|Double| ()
+                         (Prim (Parith F64 Mul))
+                         ((Double Double) -> Double (generic_ false)))
+                        ((Texpr_ident num_std/2 () Normal Double)
+                         (Texpr_ident std/16 () Normal Double))
+                        Double Infix))
+                      Unit Infix))
+                    Unit Dot))
+                  (Texpr_apply
+                   (Texpr_ident op_set/20 () Normal
+                    ((Int Unit) -> Unit (generic_ false)))
+                   ((Texpr_ident lower/8 () Normal T_blackhole)
+                    (Texpr_ident i/9 () Normal Int)
+                    (Texpr_apply
+                     (Texpr_hole ((Unit Double) -> Unit (generic_ false))
+                      Synthesized)
+                     ((Texpr_ident mean/11 () Normal Unit)
+                      (Texpr_apply
+                       (Texpr_ident Mul::mul|Double| ()
+                        (Prim (Parith F64 Mul))
+                        ((Double Double) -> Double (generic_ false)))
+                       ((Texpr_ident num_std/2 () Normal Double)
+                        (Texpr_ident std/16 () Normal Double))
+                       Double Infix))
+                     Unit Infix))
+                   Unit Dot)
+                  Unit)
+                 Unit)
+                Unit)
+               Unit)
+              Unit)
+             () Unit))
+           (Texpr_tuple
+            ((Texpr_ident upper/6 () Normal T_blackhole)
+             (Texpr_ident middle/5 () Normal T_blackhole)
+             (Texpr_ident lower/8 () Normal T_blackhole))
+            (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+           (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+          (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+         (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+        (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))
+       (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false))))
+     (ret_constraint
+      ((T_tuple
+        ((Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole)
+         (Tname ((lid Array)) ((Tname ((lid Double)) () Double)) T_blackhole))
+        (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false)))))
+     (err_constraint No_error_typ)
+     (ty
+      ((T_blackhole Int Double) ->
+       (Tproduct (T_blackhole T_blackhole T_blackhole) (generic_ false))
+       (generic_ false)))))
+   (is_pub true)
+   (doc_
+    ((comment (" Bollinger Bands" " Returns (upper, middle, lower)."))
+     (loc 129:1-130:36)))
+   (attrs ()))))

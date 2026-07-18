@@ -1,0 +1,22 @@
+{
+  "sessionId": "a1065b8f-6cac-4e4f-852f-f1acb754c17f",
+  "title": "",
+  "model": "api:sensenova:sensenova-6.7-flash-lite",
+  "messages": [
+    {
+      "role": "user",
+      "content": "khy chat"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! 👋 I'm SenseNova 6.7 Flash-Lite, your AI assistant. How can I help you today?"
+    }
+  ],
+  "messageCount": 2,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1781049137431,
+  "updatedAt": 1781049137431
+}

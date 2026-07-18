@@ -1,0 +1,8 @@
+{
+  "name": "verify",
+  "command": "/verify",
+  "description": "Verify that recent changes work correctly by running tests and checks",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["testing", "verification"]
+}

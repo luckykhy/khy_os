@@ -1,0 +1,4 @@
+// Library package for `khyos/chain`.
+// Provides chain execution primitives: prompt templating, memory buffer,
+// tool dispatch protocol, and ReAct loop state machine.
+// Executable entrypoints live under `cmd/`.

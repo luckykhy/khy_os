@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-032-内嵌-md-工作台与跨平台右键集成">[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-架构总览">2. 架构总览</a></li><li class="lvl-2"><a href="#3-关键设计决策">3. 关键设计决策</a></li><li class="lvl-3"><a href="#3-1-为何用桥接器而非纯-file">3.1 为何用桥接器而非纯 file://</a></li><li class="lvl-3"><a href="#3-2-双模启动">3.2 双模启动</a></li><li class="lvl-3"><a href="#3-3-端口与鉴权">3.3 端口与鉴权</a></li><li class="lvl-3"><a href="#3-4-平台启动器">3.4 平台启动器</a></li><li class="lvl-2"><a href="#4-红线符合性">4. 红线符合性</a></li><li class="lvl-2"><a href="#5-交付物">5. 交付物</a></li><li class="lvl-2"><a href="#6-验收">6. 验收</a></li><li class="lvl-2"><a href="#7-跨分类关联指引">7. 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-032-内嵌-md-工作台与跨平台右键集成">[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成<a class="anchor" href="#design-arch-032-内嵌-md-工作台与跨平台右键集成" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>架构设计（ARCH）</td></tr><tr><td>适用范围</td><td><code>tools/khyos-markdown/</code> 内嵌 Markdown 工作台及双平台右键集成</td></tr><tr><td>强制级别</td><td>设计基线（实现须符合本文「红线符合性」一节）</td></tr><tr><td>上位治理</td><td>[MGMT-STD-002]（合并系统提示词）、[MGMT-STD-001]（文档结构铁律）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p><code>.md</code> 文件在系统记事本中阅读体验极差。本设计交付一个<strong>零外部依赖的单文件工作台</strong>，使本项目文档<br><strong>开箱即阅</strong>，并可作为<strong>全局工具</strong>打开电脑上任意位置的 <code>.md</code>，覆盖 Windows 与 Linux 双平台右键集成。</p>
+<h2 id="2-架构总览">2. 架构总览<a class="anchor" href="#2-架构总览" aria-label="锚点">#</a></h2>
+<pre><code>右键 .md ──▶ 平台启动器 ──▶ khyos-md-bridge.js ──▶ http://127.0.0.1:&lt;随机端口&gt;
+  (Win: VBS / Linux: .desktop)        │                    │
+                                       │ 同源服务            ├─ GET  /            → khyosMarkdown.html
+                                       │ token 鉴权          ├─ GET  /api/read    → 读目标文件（UTF-8）
+                                       └────────────────────┼─ GET  /api/list    → 列 docs/ 的 .md
+                                                            └─ POST /api/save    → 写回原文件</code></pre>
+<ul><li><strong>单文件工作台</strong> <code>khyosMarkdown.html</code>：内联手写 MD 解析器（块级 + 行内，先转义后渲染防注入）、</li></ul>
+<p>编辑器（textarea）、实时预览、明暗主题、文档树、分屏/预览/源码三视图，全部 CSS/JS 内联，零 CDN。</p>
+<ul><li><strong>桥接器</strong> <code>khyos-md-bridge.js</code>：纯 Node 零依赖。以本机回环同源服务页面与 API，从<strong>根上消除</strong></li></ul>
+<p><code>file://</code> 的 CORS 限制（不是放宽 CORS，而是让请求不跨域）。随机空闲端口、一次性 token 鉴权。</p>
+<h2 id="3-关键设计决策">3. 关键设计决策<a class="anchor" href="#3-关键设计决策" aria-label="锚点">#</a></h2>
+<h3 id="3-1-为何用桥接器而非纯-file">3.1 为何用桥接器而非纯 file://<a class="anchor" href="#3-1-为何用桥接器而非纯-file" aria-label="锚点">#</a></h3>
+<p>浏览器禁止 <code>file://</code> 页面 <code>fetch</code> 本地文件（同源策略）。若右键直接以 <code>file://</code> 打开 HTML，将<strong>无法读取</strong><br>被右键的目标文件。桥接器以 <code>http://127.0.0.1</code> 同源服务页面与 <code>/api/read</code>，请求与页面<strong>同源</strong>，CORS 不再适用。</p>
+<h3 id="3-2-双模启动">3.2 双模启动<a class="anchor" href="#3-2-双模启动" aria-label="锚点">#</a></h3>
+<ul><li><strong>项目内嵌模式</strong>：桥接器无路径参数启动，<code>projectRoot</code> 经 <code>tools/khyos-markdown/</code> 上溯两级自定位，</li></ul>
+<p><code>/api/list</code> 默认列本仓库 <code>docs/</code>，文档树相对浏览。</p>
+<ul><li><strong>全局工具模式</strong>：右键传入绝对路径（<code>%1</code> / <code>%f</code>），页面 <code>?path=&lt;encodeURIComponent&gt;</code> 渲染任意位置文件。</li></ul>
+<h3 id="3-3-端口与鉴权">3.3 端口与鉴权<a class="anchor" href="#3-3-端口与鉴权" aria-label="锚点">#</a></h3>
+<p>端口取 <code>0</code> 由 OS 分配空闲端口，避免硬编码冲突。每次启动生成 <code>crypto.randomBytes(16)</code> token 并附于 URL；<br><code>/api/*</code> 校验 token，防止本机其他网页/进程越权调用本端口读取磁盘。仅监听 <code>127.0.0.1</code>，不对外暴露。</p>
+<h3 id="3-4-平台启动器">3.4 平台启动器<a class="anchor" href="#3-4-平台启动器" aria-label="锚点">#</a></h3>
+<ul><li><strong>Windows</strong>：右键命令 <code>wscript.exe &quot;&lt;自定位&gt;\khyos-md-launch.vbs&quot; &quot;%1&quot;</code>。VBS 经 <code>ScriptFullName</code></li></ul>
+<p>自定位、以隐藏窗口模式后台起 node，避免控制台闪窗。注册仅写 <code>HKCU\...\SystemFileAssociations\.md\shell</code>，<br>  <strong>不触发 UAC</strong>。</p>
+<ul><li><strong>Linux</strong>：<code>~/.local/share/applications/khyosMarkdown.desktop</code>（<code>Exec=node &lt;bridge&gt; %f</code>，<code>MimeType=text/markdown</code>）<ul><li><code>~/.local/share/mime</code> 确保 <code>.md → text/markdown</code> 映射存在，<code>xdg-mime default</code> 设为默认，全用户级<strong>无 sudo</strong>。</li></ul></li></ul>
+<h2 id="4-红线符合性">4. 红线符合性<a class="anchor" href="#4-红线符合性" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>宪法红线</th><th>落点</th></tr></thead><tbody><tr><td>零外部依赖</td><td><code>khyosMarkdown.html</code> 内联 MD 解析器/编辑器/预览/CSS，无任何外部 CSS/JS/字体/CDN，断网可用</td></tr><tr><td>跨域绝路</td><td>桥接器 <code>127.0.0.1</code> 同源服务页面与 API，消除 <code>file://</code> CORS；右键打开绝不因 CORS 读取失败</td></tr><tr><td>路径免疫</td><td>路径 <code>encodeURIComponent</code> 传入、WHATWG <code>URL.searchParams</code> 解码；VBS/<code>.desktop</code> 双引号/<code>%f</code> 包裹，空格/中文/特殊字符不断裂</td></tr><tr><td>系统纯净</td><td>注册仅写 HKCU / <code>~/.local</code>，无 UAC、无 sudo；<code>unregister-*</code> 脚本对称清除，零残留</td></tr><tr><td>规范服从</td><td>文件编号（本文 <code>DESIGN-ARCH-032</code>、合并提示词 <code>MGMT-STD-002</code>）由读取目录现有序列后动态决策，未写死格式</td></tr></tbody></table>
+<h2 id="5-交付物">5. 交付物<a class="anchor" href="#5-交付物" aria-label="锚点">#</a></h2>
+<pre><code>tools/khyos-markdown/
+  khyosMarkdown.html          单文件工作台（零依赖）
+  khyos-md-bridge.js          纯 Node 桥接器（同源消除 CORS + token + 双模）
+  khyos-md-launch.vbs         Windows 隐藏启动器（自定位）
+  register-windows.ps1        Windows 右键注册（仅 HKCU，无 UAC）
+  unregister-windows.ps1      Windows 卸载（零残留）
+  register-linux.sh           Linux 关联注册（仅 ~/.local，无 sudo）
+  unregister-linux.sh         Linux 卸载（零残留）
+  README.md                   工具内操作快速上手
+  test/bridge.test.js         桥接器 13 用例
+  test/parser.test.js         解析器 12 用例</code></pre>
+<h2 id="6-验收">6. 验收<a class="anchor" href="#6-验收" aria-label="锚点">#</a></h2>
+<p><code>node --test test/bridge.test.js test/parser.test.js</code> → <strong>25 用例绿</strong>：</p>
+<ul><li>桥接器：同源服务 HTML、token 缺/错 403、含空格+中文路径读取、不存在 404、缺 path 400、<code>/api/list</code></li></ul>
+<p>递归列 md 且忽略非文本、保存写回、拒写非文本扩展名、未知路由 404、token 不可预测、<code>startBridge</code> 绑回环<br>  随机端口、<code>openBrowser</code> 跨平台命令选择。</p>
+<ul><li>解析器（从 HTML 切出纯函数沙箱 eval）：标题/强调/代码块/列表/任务项/表格对齐/引用/链接图片自动链接/</li></ul>
+<p>水平线/HTML 注入转义/段落软换行/真实文档冒烟。</p>
+<p>零网络、隔离 tmp、测后清理。</p>
+<h2 id="7-跨分类关联指引">7. 跨分类关联指引<a class="anchor" href="#7-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>合并系统提示词与宪法红线全文：<code>docs/08_MGMT_项目管理/[MGMT-STD-002]</code>。</li><li>文档结构与索引铁律：<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>。</li><li>实现代码：<code>tools/khyos-markdown/</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-031] 网关日志租界隔离-按需可见与净味翻译.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-034] 动态自适应约束求解引擎.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-034] 动态自适应约束求解引擎</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-032] 内嵌MD工作台与跨平台右键集成.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

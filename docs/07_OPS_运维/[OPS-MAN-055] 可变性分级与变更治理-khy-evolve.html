@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>可变性分级与变更治理（khy evolve） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>可变性分级与变更治理（khy evolve）</div>
+      <header class="hero reveal"><h1>可变性分级与变更治理（khy evolve）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#可变性分级与变更治理-khy-evolve">可变性分级与变更治理（`khy evolve`）</a></li><li class="lvl-2"><a href="#一-可变性分级">一、可变性分级</a></li><li class="lvl-2"><a href="#二-入口与全部子命令">二、入口与全部子命令</a></li><li class="lvl-2"><a href="#三-典型用法">三、典型用法</a></li><li class="lvl-2"><a href="#四-诚实边界-只读咨询-不自改">四、诚实边界（只读咨询，不自改）</a></li><li class="lvl-2"><a href="#五-相关文档">五、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-055 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-055] 可变性分级与变更治理-khy-evolve.md --&gt;</p>
+<h1 id="可变性分级与变更治理-khy-evolve">可变性分级与变更治理（<code>khy evolve</code>）<a class="anchor" href="#可变性分级与变更治理-khy-evolve" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy evolve</code>（别名 <code>khy evolution</code>）把代码路径按<strong>可变性</strong>分级（哪些绝不能动、哪些受守护、哪些可自由演进），评估当前 git diff 是否越界，并给出联动义务。它<strong>严格只读 / 咨询</strong>——<strong>不会自我修改任何代码</strong>。本文讲清全部子命令与门控。</p>
+<p>实现：<code>services/backend/src/cli/handlers/evolve.js</code> + <code>evolutionPolicy</code> / <code>evolutionSafety</code>，dispatch 在 <code>router.js:4648-4651</code>。</p></blockquote>
+<hr>
+<h2 id="一-可变性分级">一、可变性分级<a class="anchor" href="#一-可变性分级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>标记</th><th>级别</th><th>含义</th></tr></thead><tbody><tr><td>🔒</td><td>immutable</td><td>绝不可改（红线）</td></tr><tr><td>🛡️</td><td>guarded</td><td>受守护，改动需满足额外义务</td></tr><tr><td>🌱</td><td>evolvable</td><td>可自由演进</td></tr><tr><td>❔</td><td>unknown</td><td>未分级</td></tr></tbody></table>
+<hr>
+<h2 id="二-入口与全部子命令">二、入口与全部子命令<a class="anchor" href="#二-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy evolve</code>（或 <code>status</code>）</td><td>演进治理总览</td></tr><tr><td><code>khy evolve rules</code></td><td>查看分级规则（spec）</td></tr><tr><td><code>khy evolve safety</code></td><td>安全约束说明</td></tr><tr><td><code>khy evolve classify &lt;path…&gt;</code></td><td>对指定路径分级</td></tr><tr><td><code>khy evolve check [--changed]</code></td><td>评估变更是否越界（<code>--changed</code> 看当前改动）</td></tr><tr><td><code>khy evolve cascades</code></td><td>查看联动义务（改了 A 必须连带处理 B）</td></tr><tr><td><code>khy evolve --json</code></td><td>机读输出</td></tr></tbody></table>
+<hr>
+<h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy evolve                       # 总览
+khy evolve classify services/backend/src/cli/router.js   # 这个文件什么级别？
+khy evolve check --changed       # 我当前的改动有没有碰红线？
+khy evolve cascades              # 改这些文件还要连带做什么？
+khy evolve rules                 # 分级规则是怎么定的</code></pre>
+<hr>
+<h2 id="四-诚实边界-只读咨询-不自改">四、诚实边界（只读咨询，不自改）<a class="anchor" href="#四-诚实边界-只读咨询-不自改" aria-label="锚点">#</a></h2>
+<ul><li><code>khy evolve</code> <strong>只报告与建议</strong>：它能把一次越界变更标为 <code>blocked</code> 并说明理由，但<strong>实际的强制拦截 / 回滚发生在别处</strong>（自愈事务流程内），本命令<strong>不会</strong>替你修改或还原代码。</li><li>分级与评估本身是<strong>真实确定</strong>的逻辑，不是桩；只是「执行后果」不由它落地。</li><li>门控环境变量 <code>KHY_EVOLUTION_POLICY</code>；越权覆盖用 <code>KHY_EVOLUTION_OVERRIDE</code>。</li></ul>
+<hr>
+<h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-054] 变更裁决（<code>khy verdict</code>）—— 评估「这次改得好不好」。</li><li>[OPS-MAN-056] 按需依赖自愈（<code>khy deps</code>）—— 会真实安装的另一条治理线。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-054] 变更裁决-khy-verdict.html"><div class="dir">← 上一篇</div><div class="ttl">变更裁决（khy verdict）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-056] 按需依赖自愈-khy-deps.html"><div class="dir">下一篇 →</div><div class="ttl">按需依赖自愈（khy deps）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-055] 可变性分级与变更治理-khy-evolve.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

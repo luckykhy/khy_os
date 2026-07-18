@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPS-MAN-152 交付门人类可读报告落盘接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OPS-MAN-152 交付门人类可读报告落盘接线</div>
+      <header class="hero reveal"><h1>OPS-MAN-152 交付门人类可读报告落盘接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-152-交付门人类可读报告落盘接线">OPS-MAN-152 交付门人类可读报告落盘接线</a></li><li class="lvl-2"><a href="#背景-能力存在但没接线">背景 — 能力存在但没接线</a></li><li class="lvl-2"><a href="#修改-全-additive-门控-fail-soft-字节回退">修改 — 全 additive · 门控 · fail-soft · 字节回退</a></li><li class="lvl-3"><a href="#触碰的文件">触碰的文件</a></li><li class="lvl-2"><a href="#验证-全绿">验证(全绿)</a></li><li class="lvl-2"><a href="#不变量">不变量</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-152-交付门人类可读报告落盘接线">OPS-MAN-152 交付门人类可读报告落盘接线<a class="anchor" href="#ops-man-152-交付门人类可读报告落盘接线" aria-label="锚点">#</a></h1>
+<h2 id="背景-能力存在但没接线">背景 — 能力存在但没接线<a class="anchor" href="#背景-能力存在但没接线" aria-label="锚点">#</a></h2>
+<p><code>deliveryGateReporter.js</code>(225 行)提供 <code>generateDeliveryReport</code> /<br><code>saveDeliveryReport</code> / <code>extractGateBMetrics</code>,能把 deliveryGate 的评估结果渲染成<br>带<strong>逐条判定 + 缺失项 + 改进建议</strong>的 markdown/text 报告。叶子全实现、有单测<br>(<code>deliveryGateReporter.test.js</code>),但<strong>零生产消费者</strong>——只有它自己的测试 require 它。</p>
+<p>同时,活跃的 <code>deliveryGate.evaluateDelivery</code> 被 <code>agenticHarnessService.js</code>(37 处引用)<br>消费,harness 跑完把结果:</p>
+<ul><li>挂到返回值 <code>harness.deliveryGate</code>(结构化摘要:verdict/passed/missing 标签);</li><li>经 <code>saveSessionTrace</code> 记录结构化摘要。</li></ul>
+<p>但<strong>从不产出 markdown 报告</strong>。<code>delivery_verdict</code> 事件也只带<br>verdict/blockedBy/summary,REPL 的 <code>onEvent</code> 处理器根本没有渲染分支<br>(retry/continuation/regression 有,delivery 全被丢弃)。于是 <code>generateDeliveryReport</code><br>这份「让 verdict 更可见」的能力完全没有触达用户/维护者的路径。</p>
+<h2 id="修改-全-additive-门控-fail-soft-字节回退">修改 — 全 additive · 门控 · fail-soft · 字节回退<a class="anchor" href="#修改-全-additive-门控-fail-soft-字节回退" aria-label="锚点">#</a></h2>
+<p>在 harness 最终 verdict 定案处(<code>delivery_verdict</code> 事件紧邻其后,<code>deliveryGateReport</code><br>在作用域内),把完整报告经 <code>saveDeliveryReport</code> 落到本项目轨迹目录:</p>
+<pre><code>~/.khyquant/projects/&lt;hash&gt;/delivery-gate-report.md</code></pre>
+<p>该目录与 <code>saveSessionTrace</code> 同源(<code>projectMemoryService.getProjectDir</code>,自动<br><code>ensureDir</code>),是维护者已知的每项目落盘位置。并发 <code>delivery_gate_report</code> 事件告知<br>路径与 verdict。</p>
+<ul><li><strong>门控</strong>:<code>KHY_DELIVERY_GATE_REPORT</code>(default-on)。关(env ∈ {0,false,off,no})</li></ul>
+<p>→ 不 require、不落盘、不发事件 → harness 行为<strong>逐字节回退</strong>。off-word 列表与既有<br>  <code>KHY_VERIFICATION_GATE</code> 门同形。</p>
+<ul><li><strong>fail-soft</strong>:落盘全包在 <code>try/catch</code>,报告是装饰性,绝不打断主流程(与</li></ul>
+<p><code>delivery_gate</code> best-effort 约定一致)。</p>
+<ul><li><strong>两个 orphan export 都被激活</strong>:<code>saveDeliveryReport</code> 内部调用</li></ul>
+<p><code>generateDeliveryReport</code>。</p>
+<h3 id="触碰的文件">触碰的文件<a class="anchor" href="#触碰的文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>注册 <code>KHY_DELIVERY_GATE_REPORT</code> default-on</td></tr><tr><td><code>services/backend/src/services/agenticHarnessService.js</code></td><td><code>delivery_verdict</code> 后新增门控落盘块</td></tr><tr><td><code>services/backend/tests/services/deliveryGateReporter.test.js</code></td><td>+3 测(落盘一致性 / harness 接线源级断言 / 门注册)</td></tr><tr><td><code>docs/维护者/维护映射表.json</code></td><td>新增 area <code>delivery-gate-report-artifact</code></td></tr></tbody></table>
+<p>god-file 检查:agenticHarnessService 1882 行、flagRegistry 2483 行,均 &lt; 2500。</p>
+<h2 id="验证-全绿">验证(全绿)<a class="anchor" href="#验证-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node services/backend/tests/services/deliveryGateReporter.test.js   # 9/9 通过
+node --check services/backend/src/services/agenticHarnessService.js # OK
+node --check services/backend/src/services/flagRegistry.js          # OK</code></pre>
+<p><strong>LIVE 端到端</strong>:真实 <code>evaluateDelivery</code>(3 条 criteria over 真 backend 目录·1 缺失·<br>1 警告)→ 输出直接喂 <code>generateDeliveryReport</code> / <code>saveDeliveryReport</code> → 833 字节 markdown<br>报告,verdict/statistics/missing/remediation 全渲染、无抛错。证明形状匹配为真(非仅<br>对手写 mock),报告是 evaluateDelivery 输出的干净 drop-in。</p>
+<h2 id="不变量">不变量<a class="anchor" href="#不变量" aria-label="锚点">#</a></h2>
+<ol><li>门关 → 字节回退(不 require deliveryGateReporter,harness 与改前逐字节一致)。</li><li><code>deliveryGateReport</code> 为 null(criteria 为空 / 门评估异常)→ 跳过,不落盘。</li><li>落盘 fail-soft,任何 IO 异常都被吞,主返回不受影响。</li></ol>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ul><li>「能力存在没接线」的真身有两种:零消费者的 flag,以及**全实现+有测但只有自己</li></ul>
+<p>测试 require 的叶子**。deliveryGateReporter 属后者。</p>
+<ul><li>接线前必先证「触达路径真实」:先确认 onEvent 的消费者(replSession/queryEngine)</li></ul>
+<p>是否渲染该类事件——发现 delivery 事件被全丢弃 → 改用<strong>落盘到已知轨迹目录</strong>这条<br>  真实可达的表面,而不是发一个没人渲染的事件(那还是「接进虚空」)。</p>
+<ul><li>形状匹配靠读真源(evaluateDelivery 返回对象 439-456 行)+ LIVE 端到端跑真</li></ul>
+<p>evaluateDelivery,而非只信手写 mock——早前一次 field-presence grep 因属性简写<br>  (<code>passedCount,</code> / <code>results,</code>)误报缺字段,读真源才纠正。</p>
+<p>不 commit(feat/0.1.104,红线:禁 AI 自动 commit/push)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-151] 缓存前缀击穿归因接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-153] 会话快照损坏兜底修复接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-153] 会话快照损坏兜底修复接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

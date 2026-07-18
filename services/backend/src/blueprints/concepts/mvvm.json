@@ -1,0 +1,19 @@
+{
+  "id": "mvvm",
+  "kind": "concept",
+  "name": "MVVM",
+  "category": "architecture",
+  "triggers": ["MVVM", "Model-View-ViewModel", "双向绑定"],
+  "summary": "Model-View-ViewModel：ViewModel 暴露可绑定的状态与命令，View 通过数据绑定自动同步，适合富交互前端(Vue/WPF/SwiftUI)。",
+  "whenToUse": [
+    "声明式 UI 框架，依赖数据绑定（Vue、Angular、WPF、SwiftUI）。",
+    "View 状态复杂、希望可单测 ViewModel 而不依赖 UI。"
+  ],
+  "antiPatterns": [
+    "把业务逻辑塞进 View（模板/组件），绕过 ViewModel。",
+    "ViewModel 直接持有 View 引用，破坏可测试性。",
+    "Model 里混入 UI 状态。"
+  ],
+  "minimalSkeleton": "View: 模板，绑定 ViewModel 的状态/命令\nViewModel: 可观察状态 + 命令，调用 Model\nModel: 领域数据与规则",
+  "relatedArchetypes": []
+}

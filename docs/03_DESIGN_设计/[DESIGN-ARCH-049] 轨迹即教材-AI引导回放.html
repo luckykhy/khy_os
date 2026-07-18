@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-049-轨迹即教材-ai-引导回放-地图模板与弱模型上下文引导">[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导</a></li><li class="lvl-2"><a href="#1-问题-轨迹-可确定性复现-能用-ai-完整复现-且-弱模型能照着走">1. 问题：轨迹「可确定性复现」≠「能用 AI 完整复现」且「弱模型能照着走」</a></li><li class="lvl-2"><a href="#2-三项锁定决策-用户拍板">2. 三项锁定决策（用户拍板）</a></li><li class="lvl-3"><a href="#2-1-ai-介入边界-补桥但守红线">2.1 AI 介入边界 =「补桥但守红线」</a></li><li class="lvl-3"><a href="#2-2-地图模板格式-两者都要">2.2 地图模板格式 =「两者都要」</a></li><li class="lvl-3"><a href="#2-3-弱模型引导强度-上下文引导">2.3 弱模型引导强度 =「上下文引导」</a></li><li class="lvl-2"><a href="#3-引擎增量补丁-replayengine-replay-缺省-byte-identical-048-零回归">3. 引擎增量补丁（`replayEngine.replay` — 缺省 byte-identical，048 零回归）</a></li><li class="lvl-2"><a href="#4-ai-补桥子代理-aibridge-js-唯一触模型模块-在引擎外">4. AI 补桥子代理（`aiBridge.js`，唯一触模型模块，在引擎外）</a></li><li class="lvl-2"><a href="#5-地图模板-蒸馏-持久化-导出-能力-c">5. 地图模板：蒸馏 → 持久化 → 导出（能力 C）</a></li><li class="lvl-2"><a href="#6-弱模型上下文引导-能力-b">6. 弱模型上下文引导（能力 B）</a></li><li class="lvl-2"><a href="#7-cli-面">7. CLI 面</a></li><li class="lvl-2"><a href="#8-六防呆红线">8. 六防呆红线</a></li><li class="lvl-2"><a href="#9-env-旋钮-config-js-单一真源-命名默认">9. env 旋钮（`config.js` 单一真源，命名默认）</a></li><li class="lvl-2"><a href="#10-与-048-047-的关系">10. 与 048/047 的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-049-轨迹即教材-ai-引导回放-地图模板与弱模型上下文引导">[DESIGN-ARCH-049] 轨迹即教材 — AI 引导回放、地图模板与弱模型上下文引导<a class="anchor" href="#design-arch-049-轨迹即教材-ai-引导回放-地图模板与弱模型上下文引导" aria-label="锚点">#</a></h1>
+<p>状态：已实现（G1–G10 全闭环。用户需求「轨迹在有 AI 时，子代理能真正完整复现项目成果；不够聪明的小模型<br>参照已有轨迹走成功率最高的路径、避免无谓探索；允许聪明的高智商大模型直接给小模型画地图模板，让小模型<br>或效果差的大模型照着轨迹走」）</p>
+<p>依赖前序：</p>
+<ul><li>[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现（本规范是其「AI 维度」叠加层：确定性核心走不通处由 AI 补桥；</li></ul>
+<p>录制 sha256 仍是唯一成功判据。048 引擎保持 model-free，本规范绝不改其确定性语义）</p>
+<ul><li>[DESIGN-ARCH-047] 轨迹溯源标准（轨迹记录的上游）</li><li>[DESIGN-ARCH-026] 系统级服务调用审批网关（补桥子代理仍走同一 <code>executeTool</code> 漏斗 + <code>onControlRequest</code>；</li></ul>
+<p>绝不自动批准超录制策略的 SHELL/L2）</p>
+<ul><li><code>marshal/capabilityVector</code>（强/弱模型分级单一真源；marshal 引擎已归档，叶子 capabilityVector 仍在产）</li><li><code>selfHeal/microLoopExecutor</code>（<code>MAX_LOOP=1</code> 一次修复上限范式，本规范补桥镜像之）</li></ul>
+<p>实现位置：</p>
+<ul><li><code>services/backend/src/services/trajectoryGuide/</code>（新子系统，8 模块 + barrel；旋钮全 env、缺省安全）<ul><li><code>config.js</code>——env 旋钮单一真源（命名默认，全 off/保守）</li><li><code>aiBridge.js</code>——<strong>唯一触模型模块</strong>（在引擎外）：repair 钩子工厂，per-seq 计数强制 <code>MAX=repairMax()</code></li><li><code>mapAuthor.js</code>——蒸馏轨迹为地图模板（强模型闸；确定性 qualityScore；产 map.json + SKILL.md 两格式）</li><li><code>mapStore.js</code>——地图持久化（<code>getProjectDataDir('trajectoryGuide','maps')</code>，原子写，纯 FS）</li><li><code>mapExport.js</code>——地图导出进技能生态（委托 <code>skillPackageService.importSkill</code>，md|folder）</li><li><code>guideRetriever.js</code>——为新任务检索相关地图（复用 <code>learningRetrieval.buildContext</code> + <code>extraPaths</code>，质量分混合）</li><li><code>guideInjector.js</code>——弱模型限定的「推荐路径」系统提示词块（纯函数、可每轮安全调用）</li><li><code>index.js</code>——barrel</li></ul></li><li><code>services/backend/src/services/trajectoryReplay/replayEngine.js</code>——纯增量补丁：新增私有 <code>_maybeRepair</code> +</li></ul>
+<p>5 处 seam 守卫分支 + <code>summary.repaired</code> 字段（<strong>无任何模型 import</strong>；缺省 <code>opts.repair</code> 缺席 = 字节级 048 原引擎）</p>
+<ul><li><code>services/backend/src/cli/ai.js</code>——<code>makeSystemPrompt</code> 之后追加 <code>trajectoryGuideBlock</code>（异步预算、同步追加；缓存零污染）</li><li><code>services/backend/src/cli/handlers/replay.js</code>——<code>run</code> 加 <code>--ai</code> flag，仅 env/<code>--ai</code> 开时构造 <code>opts.repair</code></li><li><code>services/backend/src/cli/handlers/guide.js</code>（新）+ <code>router.js</code> + <code>constants/commandSchema.js</code> + <code>cli/aliases.js</code>——<code>khy guide</code> 命令接线</li></ul>
+<p>验收测试（node:test；共 36 例 + 048 零回归 38 例）：</p>
+<ul><li><code>tests/services/trajectoryGuide/config.test.js</code>（5 例：默认全 off + override 解析）</li><li><code>tests/services/trajectoryReplay/g2EngineRepairSeam.test.js</code>（6 例：假 <code>opts.repair</code> 走 repaired + 省略钩子复现 048 全行为）</li><li><code>tests/services/trajectoryGuide/aiBridge.test.js</code>（5 例：紧窄 prompt + 结构化契约 + <code>MAX_LOOP=1</code> + <code>onControlRequest</code> 透传 + 抛错被捕获 + 端到端复现已删产物）</li><li><code>tests/cli/handlers/replayHandlerAi.test.js</code>（3 例：env on/off/<code>--ai</code> 三路 banner）</li><li><code>tests/services/trajectoryGuide/mapAuthor.test.js</code>（5 例：强模型蒸馏 + 弱模型拒绝 + SKILL.md 经 <code>parseSkillContent</code> 回环 + mapStore 存读 + qualityScore 可复现）</li><li><code>tests/services/trajectoryGuide/mapExport.test.js</code>（3 例：md/folder 两格式落技能根 + 未知 mapId 报错）</li><li><code>tests/services/trajectoryGuide/guideRetriever.test.js</code>（4 例：RAG 关→null + 无地图→null + 相关地图被检出且质量分混合 + id 还原）</li><li><code>tests/services/trajectoryGuide/guideInjector.test.js</code>（5 例：注入关→null + 强模型→null + 弱模型命中→推荐路径块 + 弱模型无地图→null + 预算截断）</li><li><code>tests/cli/handlers/guideHandler.test.js</code>（6 例：强模型蒸馏持久化 + 弱模型拒绝 + list 显示 + export 入技能 + 未知 mapId/子命令友好报错）</li></ul>
+<hr>
+<h2 id="1-问题-轨迹-可确定性复现-能用-ai-完整复现-且-弱模型能照着走">1. 问题：轨迹「可确定性复现」≠「能用 AI 完整复现」且「弱模型能照着走」<a class="anchor" href="#1-问题-轨迹-可确定性复现-能用-ai-完整复现-且-弱模型能照着走" aria-label="锚点">#</a></h2>
+<p>[DESIGN-ARCH-048] 已让一条轨迹在「相对静止环境」假设下<strong>不靠任何 AI</strong> 确定性重放工具步骤、复现产物。<br>但确定性回放有三类天然边界，恰是 AI 维度该补的地方：</p>
+<table><thead><tr><th>确定性边界</th><th>048 行为</th><th>本规范叠加</th></tr></thead><tbody><tr><td>NETWORK_AI 步（含真模型推理）</td><td>恒跳过、标「不可确定性复现」</td><td>有 AI 时由子代理接手真正复现成果</td></tr><tr><td>未预批准的 SHELL 步</td><td>默认跳过</td><td>有 AI 时子代理在同一审批闸下尝试</td></tr><tr><td>产物哈希分歧 / 前置失配</td><td>立即停机</td><td>有 AI 时子代理补桥一次，再以录制 sha256 复检</td></tr><tr><td>弱模型为新任务从零探索</td><td>不涉及（048 无模型）</td><td>检索既有成功轨迹，注入「推荐路径」省去无谓试错</td></tr><tr><td>强模型经验无法传给弱模型</td><td>不涉及</td><td>强模型蒸馏轨迹为「地图模板」，弱模型照着走</td></tr></tbody></table>
+<p><strong>三个耦合能力</strong>（用户原话拆解）：</p>
+<ul><li><strong>A. AI 辅助复现</strong>：有 AI 时，子代理在确定性走不通处接手，把成果真正完整复现。</li><li><strong>B. 弱模型引导</strong>：弱/小模型参照既有成功轨迹走「成功率最高路径」，避免「想一堆还走差结果」。</li><li><strong>C. 地图模板</strong>：强模型把一条轨迹蒸馏成地图模板，导出进技能生态，供弱模型/效果差的大模型照着走。</li></ul>
+<hr>
+<h2 id="2-三项锁定决策-用户拍板">2. 三项锁定决策（用户拍板）<a class="anchor" href="#2-三项锁定决策-用户拍板" aria-label="锚点">#</a></h2>
+<h3 id="2-1-ai-介入边界-补桥但守红线">2.1 AI 介入边界 =「补桥但守红线」<a class="anchor" href="#2-1-ai-介入边界-补桥但守红线" aria-label="锚点">#</a></h3>
+<ul><li>AI <strong>只在确定性走不通处补桥</strong>；正常 FILE 步仍由 048 确定性核重放，AI 绝不插手。</li><li>录制产物 <strong>sha256 恒为唯一成功判据</strong>：补桥后成功仅由 <code>_verifyArtifacts(step)</code> 判定；</li></ul>
+<p>子代理<strong>绝不</strong>为凑哈希改任何文件或改 <code>artifacts[].sha256</code>，必须真正执行录制操作。</p>
+<ul><li><strong>最多修一次</strong>（镜像 selfHeal <code>MAX_LOOP=1</code>）：<code>aiBridge</code> per-<code>step.seq</code> 计数 + 引擎每 seam 至多调一次。</li><li><strong>红线全保留</strong>：补桥子代理走同一 <code>executeTool</code> 漏斗 + <code>onControlRequest</code>；越权（超录制策略 SHELL / L2 / 宪法红线）即返红线 halt。</li></ul>
+<h3 id="2-2-地图模板格式-两者都要">2.2 地图模板格式 =「两者都要」<a class="anchor" href="#2-2-地图模板格式-两者都要" aria-label="锚点">#</a></h3>
+<ul><li>内部 <strong>map.json</strong>：<code>{id, sessionId, task, steps:[{seq,name,tier,intent,artifacts}], qualityScore, env, createdBy, createdTier}</code>，</li></ul>
+<p>供 guideRetriever / guideInjector 消费。</p>
+<ul><li>可导出 <strong>SKILL.md</strong>：frontmatter（<code>name/description/tags/version/entry_point</code>）+ 推荐路径正文，</li></ul>
+<p>可被 <code>skillLoader.parseSkillContent</code> 回读，经 <code>skillPackageService.importSkill</code> 入技能目录。</p>
+<h3 id="2-3-弱模型引导强度-上下文引导">2.3 弱模型引导强度 =「上下文引导」<a class="anchor" href="#2-3-弱模型引导强度-上下文引导" aria-label="锚点">#</a></h3>
+<ul><li>注入「推荐路径」块，措辞为<strong>强力建议、不硬锁</strong>（「You MAY follow … guidance, not a constraint」）。</li><li>env 默认关（<code>KHY_TRAJ_GUIDE_INJECT</code> off）→ 系统提示词 <code>sp</code> 字节不变，零回归。</li><li>内部再限 <code>strength==='weak'</code>：强模型不消费地图（消费地图本就是给弱模型的）。</li></ul>
+<hr>
+<h2 id="3-引擎增量补丁-replayengine-replay-缺省-byte-identical-048-零回归">3. 引擎增量补丁（<code>replayEngine.replay</code> — 缺省 byte-identical，048 零回归）<a class="anchor" href="#3-引擎增量补丁-replayengine-replay-缺省-byte-identical-048-零回归" aria-label="锚点">#</a></h2>
+<p>新增私有助手 <code>_maybeRepair(step, opts, kind)</code>（文件内，<strong>不新增任何 import</strong>；模型只经注入的 <code>opts.repair</code> 闭包进入）：</p>
+<pre><code class="language-js">async function _maybeRepair(step, opts, kind) {
+  if (typeof opts.repair !== 'function') return null;   // 零回归闸：无钩子即 048 原引擎
+  let r;
+  try { r = await opts.repair(step, { kind }); }
+  catch (e) { return { decision: 'halt', reason: `repair error: ${e &amp;&amp; e.message}` }; }
+  if (!r || r.attempted === false) return null;          // 桥放弃 → 落原确定性路径
+  const v = _verifyArtifacts(step);                      // sha256 仍是唯一 oracle
+  if (v.ok) return { decision: 'repaired' };
+  return { decision: 'halt', reason: r.reason || '产物哈希分歧（修复后仍不一致）', detail: v.detail };
+}</code></pre>
+<p>在 <strong>5 处</strong>非完成 seam 各插一段 <code>typeof opts.repair === 'function'</code> 守卫下的前置分支（原 halt/skip 块原样保留在下方）：<br>NETWORK_AI 跳过（<code>kind:'network_ai'</code>）、未批准 SHELL 跳过（<code>'shell'</code>）、前置分歧（<code>'precondition'</code>）、<br>执行失败 catch（<code>'exec'</code>）、产物校验失配（<code>'post-verify'</code>）。<code>repaired</code> 时 <code>rec.action='repaired'</code>、<br><code>rec.reason='AI 桥接复现（哈希校验通过）'</code>、<code>summary.replayed</code>+<code>summary.repaired</code>+<code>restored</code> 各递增；<br><code>halt</code> 时 <code>rec.action='halted'</code>、<code>status='diverged'</code>、<code>divergedAt</code> 语义与 048 一致。</p>
+<p><strong>接线</strong>：CLI（<code>handlers/replay.js run</code>）仅当 <code>--ai</code> 或 <code>config.isAiReplayEnabled()</code> 才构造<br><code>opts.repair = aiBridge.createRepairHook({...})</code>，否则 <code>undefined</code> = 纯 048 引擎。</p>
+<hr>
+<h2 id="4-ai-补桥子代理-aibridge-js-唯一触模型模块-在引擎外">4. AI 补桥子代理（<code>aiBridge.js</code>，唯一触模型模块，在引擎外）<a class="anchor" href="#4-ai-补桥子代理-aibridge-js-唯一触模型模块-在引擎外" aria-label="锚点">#</a></h2>
+<p><code>createRepairHook(opts) → async repair(step, ctx)</code>：</p>
+<ul><li>闭包内 <code>attemptsBySeq</code> per-<code>step.seq</code> 计数，强制 <code>MAX=repairMax()</code>（缺省 1）；超额返 <code>{attempted:false, reason:'repair budget exhausted'}</code>。</li><li>构造<strong>紧窄</strong>子代理目标（<code>_buildRepairPrompt</code>）：点名目标文件 <code>step.artifacts[].path</code> + 必需 sha256；</li></ul>
+<p>明文「<strong>不得仅为凑哈希改任何文件</strong>（do NOT …），须真正执行录制操作；录制哈希是唯一成功判据（sole success criterion）」。</p>
+<ul><li><code>tool.execute({prompt, subagent_type:'verify', preferred_model:repairModel(), timeout}, {traceContext:{onControlRequest}})</code>，</li></ul>
+<p><code>onControlRequest</code> 经 <code>traceContext</code> 下钻子壳审批（红线在此闸内执行）。</p>
+<ul><li>返回 <code>{attempted, ok?, reason, agent?}</code>；<strong>绝不</strong>自己写录制文件 / 改 sha256，校验交还引擎；</li></ul>
+<p>AgentTool 抛错被捕获为 <code>{attempted:true, ok:false, reason:'repair agent error: …'}</code>，绝不向引擎外传播。</p>
+<hr>
+<h2 id="5-地图模板-蒸馏-持久化-导出-能力-c">5. 地图模板：蒸馏 → 持久化 → 导出（能力 C）<a class="anchor" href="#5-地图模板-蒸馏-持久化-导出-能力-c" aria-label="锚点">#</a></h2>
+<ul><li><strong>蒸馏</strong>（<code>mapAuthor.authorMap(bundle, {modelId, task})</code>）：闸</li></ul>
+<p><code>if (config.mapAuthorMinStrength()==='strong' &amp;&amp; assess(modelId).strength!=='strong') throw MAP_AUTHOR_FORBIDDEN</code>——<br>  仅强模型可作者地图。蒸馏本身<strong>确定性、无模型调用</strong>（模型角色 = 授权 + 可选后续增强）：</p>
+<ul><li><code>_stepIntent</code>：按分档 + 产物 basename 生成短意图（<code>create index.js</code> / <code>run: npm install</code> / <code>… (network/AI — guidance only)</code>）。</li><li><code>_qualityScore</code>：<code>0.6*FILE占比 + 0.3*产物加成 + 0.1*(1-NET占比)</code>，<strong>无时钟无随机</strong>，同轨迹⇒同分（检索排名可复现）。</li><li><code>_mapId</code>：<code>map-&lt;sessionId&gt;-&lt;sha256(steps前12)&gt;</code>，由内容派生（无时钟）。</li></ul>
+<p><code>skillPackageService.importSkill</code>（md|folder），落用户技能根；未知 mapId → <code>MAP_NOT_FOUND</code>。</p>
+<hr>
+<h2 id="6-弱模型上下文引导-能力-b">6. 弱模型上下文引导（能力 B）<a class="anchor" href="#6-弱模型上下文引导-能力-b" aria-label="锚点">#</a></h2>
+<ul><li><strong>检索</strong>（<code>guideRetriever.findGuide(query, {allowVector})</code>）：复用 <code>learningRetrieval.buildContext</code>，</li></ul>
+<p>以 <code>extraPaths=listMaps().map(pathFor)</code> 把地图喂进语料；继承既有混合（词法 + 可选向量）排名与 <code>RAG_ENABLED</code> 闸。<br>  retrieval 分与存储 qualityScore <strong>混合</strong>：<code>blended = retrievalScore * (0.5 + 0.5*quality)</code>（质量分作 [0.5,1] 乘性先验，<br>  绝不从噪音中拔高）。RAG 关 / 无相关 → <code>null</code>（非错误）。</p>
+<ul><li><strong>注入</strong>（<code>guideInjector.buildGuideBlock({userMessage, modelId})</code>）：三重闸——</li></ul>
+<p><code>isGuideInjectEnabled()</code> + <code>assess(modelId).strength==='weak'</code> + 检索命中——任一不满足返 <code>null</code>。<br>  命中则按 <code>guideChars()</code> 预算渲「# Recommended Path (from a past successful trajectory)」块。</p>
+<ul><li><strong>接线</strong>（<code>cli/ai.js</code>）：在 <code>makeSystemPrompt</code> 返回<strong>之后</strong>异步预算 <code>trajectoryGuideBlock</code>，同步追加到 <code>sp</code>；</li></ul>
+<p>builder 是同步 IIFE，故预算在外层 async scope 完成、IIFE 内只追加，sha256 提示词缓存零污染；关 → <code>sp</code> 字节不变。</p>
+<hr>
+<h2 id="7-cli-面">7. CLI 面<a class="anchor" href="#7-cli-面" aria-label="锚点">#</a></h2>
+<pre><code>khy replay run [session|dir] --ai             # 开 AI 修桥（等价 KHY_TRAJ_AI_REPLAY=on 单次）
+khy guide map [session] [--model=&lt;强模型ID&gt;]  # 强模型蒸馏轨迹 → map.json（+qualityScore）
+khy guide export &lt;mapId&gt; [--format=md|folder] # map → SKILL.md 入技能生态
+khy guide list                                # 列已蒸馏 map（task + qualityScore，按质量分降序）</code></pre>
+<p>裸别名：<code>回放</code>/<code>hf</code> → <code>replay run</code>；<code>地图</code>/<code>dt</code> → <code>guide map</code>。</p>
+<hr>
+<h2 id="8-六防呆红线">8. 六防呆红线<a class="anchor" href="#8-六防呆红线" aria-label="锚点">#</a></h2>
+<ol><li><strong>引擎保持 model-free</strong>：<code>replayEngine.js</code> 不新增任何模型 / AgentTool import；模型只经注入的 <code>opts.repair</code> 闭包进入。</li><li><strong>sha256 恒为唯一 oracle</strong>：补桥后成功仅由 <code>_verifyArtifacts</code>（录制 sha256）判定；桥<strong>绝不</strong>为凑哈希写录制文件或改 <code>artifacts[].sha256</code>。</li><li><strong>一步只修一次</strong>：<code>aiBridge</code> per-seq 计数 + 引擎每 seam 至多调一次 repair（镜像 selfHeal <code>MAX_LOOP=1</code>），repaired 步不再入修。</li><li><strong>红线不放松</strong>：补桥子代理仍走同一 <code>executeTool</code> 漏斗 + <code>onControlRequest</code>；绝不自动批准超录制策略的 SHELL/L2，越权即返红线 halt。</li><li><strong>缺省零回归</strong>：<code>opts.repair</code> 缺席 = 纯 048 引擎；<code>KHY_TRAJ_*</code> 默认全 off；提示词注入在 builder 之后、缓存零污染。</li><li><strong>状态透明</strong>：每次补桥/跳过/停机 push <code>rec</code>+<code>onStep</code>（新 <code>action:'repaired'</code>、<code>reason</code>），CLI/<code>--json</code> 可见 AI 介入点。</li></ol>
+<hr>
+<h2 id="9-env-旋钮-config-js-单一真源-命名默认">9. env 旋钮（<code>config.js</code> 单一真源，命名默认）<a class="anchor" href="#9-env-旋钮-config-js-单一真源-命名默认" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>旋钮</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_TRAJ_AI_REPLAY</code></td><td>off</td><td>是否启用 AI 补桥（等价 <code>khy replay run --ai</code>）</td></tr><tr><td><code>KHY_TRAJ_GUIDE_INJECT</code></td><td>off</td><td>是否向弱模型注入「推荐路径」系统提示词块</td></tr><tr><td><code>KHY_TRAJ_REPAIR_MAX</code></td><td>1</td><td>单步补桥上限（镜像 <code>MAX_LOOP=1</code>）</td></tr><tr><td><code>KHY_TRAJ_REPAIR_TIMEOUT_MS</code></td><td>120000</td><td>单次补桥子代理超时</td></tr><tr><td><code>KHY_TRAJ_REPAIR_MODEL</code></td><td>（空）</td><td>补桥子代理首选模型（空 = 子代理默认）</td></tr><tr><td><code>KHY_TRAJ_MAP_AUTHOR_MIN_STRENGTH</code></td><td>strong</td><td>蒸馏地图所需最低模型强度</td></tr><tr><td><code>KHY_TRAJ_GUIDE_CHARS</code></td><td>1200</td><td>注入块字符预算</td></tr></tbody></table>
+<p>复用既有：<code>KHY_LEARN_RAG</code>（检索总闸，guideRetriever 经 <code>learningRetrieval.RAG_ENABLED</code> 间接受其控制）。</p>
+<hr>
+<h2 id="10-与-048-047-的关系">10. 与 048/047 的关系<a class="anchor" href="#10-与-048-047-的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong>047</strong>（溯源）→ <strong>048</strong>（确定性可回放）→ <strong>049</strong>（AI 维度叠加）三层递进：能看见 → 不靠 AI 复现 → 有 AI 时完整复现 + 弱模型照着走。</li><li>049 对 048 <strong>纯增量、缺省 byte-identical</strong>：删除 trajectoryGuide 子系统 + 还原引擎 5 处守卫分支即回到 048，无残留耦合。</li><li>引擎确定性语义 / sha256 唯一判据 / 文件锁 / 审批闸全由 048/026/022 提供，049 <strong>绝不放松</strong>，只在其边界外补 AI 桥。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-048] khyos轨迹回放与确定性复现.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-050] 项目整体意识与自驱收尾保障</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-049] 轨迹即教材-AI引导回放.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

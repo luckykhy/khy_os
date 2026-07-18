@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-blender · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-blender<span class="sep">›</span>cli-anything-blender</div>
+      <header class="hero reveal"><h1>cli-anything-blender</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-blender">cli-anything-blender</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#scene">Scene</a></li><li class="lvl-3"><a href="#object-group">Object Group</a></li><li class="lvl-3"><a href="#material">Material</a></li><li class="lvl-3"><a href="#modifier-group">Modifier Group</a></li><li class="lvl-3"><a href="#camera">Camera</a></li><li class="lvl-3"><a href="#light">Light</a></li><li class="lvl-3"><a href="#animation">Animation</a></li><li class="lvl-3"><a href="#render-group">Render Group</a></li><li class="lvl-3"><a href="#preview">Preview</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#preview-workflow">Preview Workflow</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-blender&quot;<br>description: &gt;-<br>  Command-line interface for Blender - A stateful command-line interface for 3D scene editing, following the same patterns as the GIMP CLI ...</p>
+<hr>
+<h1 id="cli-anything-blender">cli-anything-blender<a class="anchor" href="#cli-anything-blender" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for 3D scene editing, following the same patterns as the GIMP CLI harness. Uses a JSON scene description format with bpy script generation for actual Blender rendering.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-blender package:</p>
+<pre><code class="language-bash">pip install cli-anything-blender</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>blender (&gt;= 4.2) must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-blender --help
+
+# Start interactive REPL mode
+cli-anything-blender
+
+# Create a new scene project
+cli-anything-blender scene new -o scene.blend-cli.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-blender --json --project scene.blend-cli.json scene info</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-blender
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="scene">Scene<a class="anchor" href="#scene" aria-label="锚点">#</a></h3>
+<p>Scene management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new scene</td></tr><tr><td><code>open</code></td><td>Open an existing scene</td></tr><tr><td><code>save</code></td><td>Save the current scene</td></tr><tr><td><code>info</code></td><td>Show scene information</td></tr><tr><td><code>profiles</code></td><td>List available scene profiles</td></tr><tr><td><code>json</code></td><td>Print raw scene JSON</td></tr></tbody></table>
+<h3 id="object-group">Object Group<a class="anchor" href="#object-group" aria-label="锚点">#</a></h3>
+<p>3D object management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a 3D primitive object</td></tr><tr><td><code>remove</code></td><td>Remove an object by index</td></tr><tr><td><code>duplicate</code></td><td>Duplicate an object</td></tr><tr><td><code>transform</code></td><td>Transform an object (translate, rotate, scale)</td></tr><tr><td><code>set</code></td><td>Set an object property (name, visible, location, rotation, scale, parent)</td></tr><tr><td><code>list</code></td><td>List all objects</td></tr><tr><td><code>get</code></td><td>Get detailed info about an object</td></tr></tbody></table>
+<h3 id="material">Material<a class="anchor" href="#material" aria-label="锚点">#</a></h3>
+<p>Material management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>create</code></td><td>Create a new material</td></tr><tr><td><code>assign</code></td><td>Assign a material to an object</td></tr><tr><td><code>set</code></td><td>Set a material property (color, metallic, roughness, specular, alpha, etc.)</td></tr><tr><td><code>list</code></td><td>List all materials</td></tr><tr><td><code>get</code></td><td>Get detailed info about a material</td></tr></tbody></table>
+<h3 id="modifier-group">Modifier Group<a class="anchor" href="#modifier-group" aria-label="锚点">#</a></h3>
+<p>Modifier management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list-available</code></td><td>List all available modifiers</td></tr><tr><td><code>info</code></td><td>Show details about a modifier</td></tr><tr><td><code>add</code></td><td>Add a modifier to an object</td></tr><tr><td><code>remove</code></td><td>Remove a modifier by index</td></tr><tr><td><code>set</code></td><td>Set a modifier parameter</td></tr><tr><td><code>list</code></td><td>List modifiers on an object</td></tr></tbody></table>
+<h3 id="camera">Camera<a class="anchor" href="#camera" aria-label="锚点">#</a></h3>
+<p>Camera management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a camera to the scene</td></tr><tr><td><code>set</code></td><td>Set a camera property</td></tr><tr><td><code>set-active</code></td><td>Set the active camera</td></tr><tr><td><code>list</code></td><td>List all cameras</td></tr></tbody></table>
+<h3 id="light">Light<a class="anchor" href="#light" aria-label="锚点">#</a></h3>
+<p>Light management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a light to the scene</td></tr><tr><td><code>set</code></td><td>Set a light property</td></tr><tr><td><code>list</code></td><td>List all lights</td></tr></tbody></table>
+<h3 id="animation">Animation<a class="anchor" href="#animation" aria-label="锚点">#</a></h3>
+<p>Animation and keyframe commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>keyframe</code></td><td>Set a keyframe on an object</td></tr><tr><td><code>remove-keyframe</code></td><td>Remove a keyframe from an object</td></tr><tr><td><code>frame-range</code></td><td>Set the animation frame range</td></tr><tr><td><code>fps</code></td><td>Set the animation FPS</td></tr><tr><td><code>list-keyframes</code></td><td>List keyframes for an object</td></tr></tbody></table>
+<h3 id="render-group">Render Group<a class="anchor" href="#render-group" aria-label="锚点">#</a></h3>
+<p>Render settings and output commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>settings</code></td><td>Configure render settings</td></tr><tr><td><code>info</code></td><td>Show current render settings</td></tr><tr><td><code>presets</code></td><td>List available render presets</td></tr><tr><td><code>execute</code></td><td>Render the scene (generates bpy script)</td></tr><tr><td><code>script</code></td><td>Generate bpy script without rendering</td></tr></tbody></table>
+<h3 id="preview">Preview<a class="anchor" href="#preview" aria-label="锚点">#</a></h3>
+<p>Real preview bundle capture and live preview session commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>preview recipes</code></td><td>List available preview recipes</td></tr><tr><td><code>preview capture</code></td><td>Render a real preview bundle for the active scene</td></tr><tr><td><code>preview latest</code></td><td>Return the latest existing preview bundle</td></tr><tr><td><code>preview live start</code></td><td>Start a live preview session and publish the first bundle</td></tr><tr><td><code>preview live push</code></td><td>Publish a refreshed bundle into the live session</td></tr><tr><td><code>preview live status</code></td><td>Read current live-session state without rendering</td></tr><tr><td><code>preview live stop</code></td><td>Stop the live session without deleting artifacts</td></tr></tbody></table>
+<p>Typical bundle artifacts for recipe <code>quick</code>:</p>
+<ul><li><code>hero.png</code> from real Eevee preview rendering</li><li><code>workbench.png</code> from real Blender Workbench rendering</li></ul>
+<p>Live sessions persist:</p>
+<ul><li><code>session.json</code> as the mutable head</li><li>immutable bundle directories</li><li><code>trajectory.json</code> as append-only command-to-preview history</li></ul>
+<p>Viewer side:</p>
+<ul><li><code>cli-hub previews inspect &lt;bundle-or-session&gt;</code></li><li><code>cli-hub previews html &lt;bundle-or-session&gt; -o page.html</code></li><li><code>cli-hub previews watch &lt;session-dir&gt; --open</code></li><li><code>cli-hub previews open &lt;bundle-or-session&gt;</code></li></ul>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new Blender scene project file.</p>
+<pre><code class="language-bash">cli-anything-blender scene new -o myscene.blend-cli.json
+# Or with JSON output for programmatic use
+cli-anything-blender --json scene new -o myscene.blend-cli.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-blender
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-blender --project scene.blend-cli.json scene info
+
+# JSON output for agents
+cli-anything-blender --json --project scene.blend-cli.json scene info</code></pre>
+<h2 id="preview-workflow">Preview Workflow<a class="anchor" href="#preview-workflow" aria-label="锚点">#</a></h2>
+<p>Use Blender previews when the agent needs truthful visual checkpoints:</p>
+<pre><code class="language-bash"># List preview recipes
+cli-anything-blender --project scene.blend-cli.json preview recipes
+
+# Capture a real preview bundle
+cli-anything-blender --json --project scene.blend-cli.json preview capture --recipe quick
+
+# Start a live preview loop
+cli-anything-blender --json --project scene.blend-cli.json preview live start --recipe quick --mode poll --source-poll-ms 500
+
+# Query current live head without rendering
+cli-anything-blender --json --project scene.blend-cli.json preview live status --recipe quick</code></pre>
+<p>For agents, <code>preview capture --json</code> returns bundle metadata plus artifact file<br>paths. <code>preview live status --json</code> returns session metadata plus a compact<br><code>trajectory_summary</code>.</p>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>MANDATORY: Use absolute paths</strong> for all file operations (rendering, project files). Relative paths are prone to failure in background execution.</li><li><strong>Use <code>preview capture</code> or <code>preview live ...</code> for visual verification</strong> instead of inferring scene quality from JSON alone</li><li><strong>Read returned artifact paths</strong> such as <code>hero.png</code> and <code>workbench.png</code>; the JSON payload references files, it does not inline image bytes</li><li><strong>Treat <code>_bundle_dir</code> as one snapshot only</strong>; for stable live history, use <code>_session_dir</code> plus <code>_trajectory_path</code></li><li><strong>Use <code>cli-hub previews ...</code> only to inspect/open existing previews</strong>; preview generation itself always happens through <code>cli-anything-blender preview ...</code></li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-audacity/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-audacity</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-browser/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-browser</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-blender/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

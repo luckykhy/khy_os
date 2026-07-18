@@ -1,0 +1,79 @@
+{
+  "sessionId": "34d7d60f-41bd-4fcb-9bd9-a2024d278ac9",
+  "title": "",
+  "model": "api:agnes:agnes-2.0-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": "[Tool Result]\n[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 讲个笑话 [SYSTEM: Previous round failed due transient channel interruption. Resume from completed progress. Do NOT repeat successful tool calls. Continue execution.]"
+    },
+    {
+      "role": "assistant",
+      "content": "好的，来一个：\n\n问：为什么程序员总是分不清万圣节和圣诞节？\n\n答：因为 Oct 31 == Dec 25。（八进制的31等于十进制的25）",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 讲个笑话"
+    },
+    {
+      "role": "assistant",
+      "content": "问：为什么程序员总是分不清万圣节和圣诞节？\n\n答：因为 Oct 31 == Dec 25。（八进制的31等于十进制的25）",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 讲个笑话"
+    },
+    {
+      "role": "assistant",
+      "content": "问：为什么程序员总是分不清万圣节和圣诞节？\n\n答：因为 Oct 31 == Dec 25。（八进制的31等于十进制的25）",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[Tool Result]\n[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 换一个笑话 [SYSTEM: Previous round failed due transient channel interruption. Resume from completed progress. Do NOT repeat successful tool calls. Continue execution.]"
+    },
+    {
+      "role": "assistant",
+      "content": "问：一个程序员下班回家，老婆让他去买东西：\n\n\"买十个包子，如果看到卖西瓜的，就买一个。\"\n\n结��程序员买了**一个包子**回家。\n\n老婆问：\"你怎么只买了一个包子？\"\n\n程序员答：\"因为我看到卖西瓜的了。\"",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    },
+    {
+      "role": "user",
+      "content": "[System: 执行过程中遇到关键发现请主动汇报，单独成行用以下标记（仅在真正命中时使用，不要为凑数而写）: - 定位到 bug 的根本原因 → <finding type=\"root_cause\">一句话说清是什么导致、在哪一层</finding> - 攻克一个卡住的难题 → <finding type=\"breakthrough\">一句话说清突破口</finding> - 受阻或失败 → <finding type=\"blocked\">一句话说清卡在哪 + 下一步打算怎么做</finding> 没有命中时不要输出任何 <finding> 标记（不要写「无」「暂无」「这是简单请求」之类占位内容）。 这些标记会被单独提取展示，正文无需重复其内容。] 换一个笑话"
+    },
+    {
+      "role": "assistant",
+      "content": "问：SQL 查询走进酒吧，看到两张桌子，走过去问：\n\n\"能给我加个 join 吗？\"",
+      "_khyProvenance": {
+        "producer": "khy-local",
+        "producerId": null,
+        "trust": "verified"
+      }
+    }
+  ],
+  "messageCount": 10,
+  "metadata": {
+    "cwd": "C:\\Users\\25789",
+    "adapter": "API 云端服务"
+  },
+  "createdAt": 1784072627627,
+  "updatedAt": 1784072627627
+}
