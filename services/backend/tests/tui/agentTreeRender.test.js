@@ -152,7 +152,9 @@ describeOrSkip('AgentTree ink render', () => {
   test('ToolLines falls back to the normal row before any child spawns (_agentTree empty)', async () => {
     const tools = [{ id: 'tool-A', name: 'agent', input: { prompt: 'X' }, _agentTree: [] }];
     const frame = await frameFor(ToolLines, { tools, expanded: false, live: true });
-    expect(frame).toContain('agent'); // the normal ◆ agent(...) row
+    // Header display name goes through the CC-parity SSOT (toolHeaderDisplayName
+    // → renderTheme.getToolDisplayName), which maps agent → 'Agent'.
+    expect(frame).toContain('Agent(X)'); // the normal ◆ Agent(...) row
     expect(frame).not.toContain('Running'); // no tree header yet
   });
 });

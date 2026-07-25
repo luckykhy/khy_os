@@ -36,6 +36,12 @@ const React = require('react');
 
 const rt = require('../../src/cli/tui/inkRuntime');
 
+// Disable the background prewarm effect (useQueryBridge KHY_TUI_PREWARM gate):
+// under jest its staged sync requires of heavy modules (toolUseLoop, ai, hooks,
+// localBrain) go through the babel transform and can freeze the event loop past
+// the 5s test budget. This suite asserts rendering, not prewarm behaviour.
+process.env.KHY_TUI_PREWARM = '0';
+
 // Capability gate: dynamic import('ink') only works when node was started with
 // --experimental-vm-modules (propagated to jest workers via NODE_OPTIONS).
 const VM_MODULES = (process.env.NODE_OPTIONS || '').includes('experimental-vm-modules');
@@ -216,6 +222,8 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
   });
 
   // One render assertion per component: mounts, paints a non-empty frame, unmounts clean.
+  // 15s budget: App mounts the full tree (useQueryBridge service graph); its cold
+  // require + mount-time effects exceed jest's default 5s under the babel transform.
   for (const [name, props] of Object.entries(CASES)) {
     test(`${name} mounts and renders a non-empty frame`, async () => {
       const Comp = require(`../../src/cli/tui/ink-components/${name}`);
@@ -231,7 +239,7 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       const frame = stdout.getBuffer();
       instance.unmount();
       expect(frame.length).toBeGreaterThan(0);
-    });
+    }, 15000);
   }
 
   // ── 输入体验三缺口:门控开/关帧断言(Fix 1a/1b/§3) ──────────────────────────
@@ -521,7 +529,8 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
 
   test('a failure with no reason text still shows an explanation (never a bare ✗)', async () => {
     const frame = await bridgeToolFrame('someTool', { success: false });
-    expect(frame).toContain('failed');
+    // User-facing strings are Chinese: the guaranteed headline is '失败'.
+    expect(frame).toContain('失败');
   });
 
   // 刀18: multi-line tool errors (stack traces, build/stderr output) fold to CC
