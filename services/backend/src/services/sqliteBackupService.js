@@ -15,7 +15,7 @@ class SqliteBackupService {
 
   init() {
     try {
-      const Database = require('better-sqlite3');
+      const Database = require('../config/sqlite-adapter');
       this.db = new Database(DB_PATH);
       this.db.pragma('journal_mode = WAL');
       // Lower auto-checkpoint threshold (pages) to prevent unbounded WAL growth

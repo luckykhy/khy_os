@@ -6,7 +6,7 @@
  * - 支持 sequelize sqlite dialect 依赖的 Database/run/all/get/close/serialize 接口。
  */
 
-const BetterSqlite3 = require('better-sqlite3');
+const BetterSqlite3 = require('./sqlite-adapter');
 
 const OPEN_READWRITE = 0x00000002;
 const OPEN_CREATE = 0x00000004;

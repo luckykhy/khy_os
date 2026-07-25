@@ -130,7 +130,7 @@ async function _runMysql(connection, sql, bind, overrideStatementMs) {
 
 function _runSqlite(connection, sql, bind) {
   let Database;
-  try { Database = require('better-sqlite3'); } catch { return { _missing: true }; }
+  try { Database = require('../config/sqlite-adapter'); } catch { return { _missing: true }; }
   // connection is a file path (or ':memory:'); strip an optional sqlite:// prefix.
   const file = String(connection).replace(/^sqlite:(\/\/)?/i, '') || ':memory:';
   let db;

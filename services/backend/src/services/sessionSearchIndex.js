@@ -44,7 +44,7 @@ function init() {
 
   let Database;
   try {
-    Database = require('better-sqlite3');
+    Database = require('../config/sqlite-adapter');
   } catch {
     // better-sqlite3 not available — search is silently disabled
     _available = false;
