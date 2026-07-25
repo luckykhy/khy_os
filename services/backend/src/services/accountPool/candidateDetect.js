@@ -439,7 +439,7 @@ function walkCandidateFiles(rootPath, options = {}) {
 function readCursorTokenFromVscdb(dbPath) {
   let db = null;
   try {
-    const Database = require('better-sqlite3');
+    const Database = require('../../config/sqlite-adapter');
     db = new Database(dbPath, { readonly: true, fileMustExist: true });
     const tokenKeys = [
       'cursorAuth/accessToken',

@@ -42,6 +42,17 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// ── V8 compile cache: reuse bytecode across launches (Node >= 22.8) ──
+// The startup require graph (babel, react, ink ESM import) is dominated by
+// V8 parse/compile time, not disk I/O. enableCompileCache() persists compiled
+// bytecode (CJS + ESM) into Node's default on-disk cache so every launch after
+// the first skips recompilation. No-op with a warning-free fallback on older
+// Node versions; opt out via NODE_DISABLE_COMPILE_CACHE=1 (Node's own switch).
+try {
+  const nodeModule = require('module');
+  if (typeof nodeModule.enableCompileCache === 'function') nodeModule.enableCompileCache();
+} catch { /* compile cache is a best-effort accelerator */ }
+
 // ── Windows 派生黑框闪烁 + 启动慢:在任何模块 require('child_process') 并解构派生函数之前,
 // 给 child_process 打一层薄包装,在 win32 上默认注入 windowsHide:true(集中修复,覆盖全部 600+
 // 派生调用点)。非 win32 完全不打补丁;门控 KHY_WINDOWS_SPAWN_HIDE 关时逐字节回退。必须置于此处
@@ -1514,6 +1525,21 @@ async function main() {
       printError('认证失败，无法使用终端。如需重置请删除 ~/.khyquant/credentials.json');
       process.exit(1);
     }
+
+    // ── 启动自检：SQLite 驱动子进程探针（防 better-sqlite3 段错误静默死亡）──
+    // 仅本无参交互完整启动分支接入（--help 等其他分支零影响）；探针预算约 1.2s，
+    // 超时/探针自身异常一律放行（checked=false），绝不阻断正常启动。
+    try {
+      const { runStartupSqliteProbe } = require('../src/bootstrap/startupSqliteProbe');
+      const probe = runStartupSqliteProbe();
+      if (probe && probe.checked && !probe.ok) {
+        printError('启动自检失败：SQLite 驱动不可用（为避免原生模块段错误导致静默退出，已中止启动）。');
+        printError(`原因：${probe.detail || '未知'}`);
+        printError('修复指引：1) 使用 Node.js >= 23.4（内置 node:sqlite，无需编译）；2) 在项目根用与运行时相同的 Node 版本执行 npm rebuild better-sqlite3；3) 便携版可运行 khy repair 或 node scripts/portable-health-check.js 查看详情。');
+        process.exit(1);
+      }
+      checkpoint('khyquant:sqlite-probe-done');
+    } catch { /* 探针容错：自身异常不得阻断启动 */ }
 
     // 完整模式的会话级初始化（数据库预检查 + 数据迁移）
     try {

@@ -77,7 +77,7 @@ function _initDb() {
 
   let Database;
   try {
-    Database = require('better-sqlite3');
+    Database = require('../config/sqlite-adapter');
   } catch {
     _available = false;
     return false;

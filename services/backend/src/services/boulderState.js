@@ -37,7 +37,7 @@ let _sqliteAvailable = false;
 function _initSqlite() {
   if (_db) return _sqliteAvailable;
   try {
-    const Database = require('better-sqlite3');
+    const Database = require('../config/sqlite-adapter');
     const { getDataDir } = require('../utils/dataHome');
     const dbPath = path.join(getDataDir('boulder'), 'boulder.db');
     _db = new Database(dbPath);

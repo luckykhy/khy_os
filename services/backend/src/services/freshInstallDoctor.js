@@ -353,8 +353,193 @@ function freshInstallChecks(deps) {
   }
 }
 
+// ── 便携自检（portable self-heal）───────────────────────────────────────────
+// 与上方「离机还原自检」同模式的新增探针组：SQLite 驱动（子进程隔离防段错误）、
+// junction/symlink 断链、数据指针一致性。`khy doctor --fix` 时 fixPortableIssues
+// 对可修复项（断链重建、指针校准）自动修复。门控 KHY_DOCTOR_PORTABLE 默认开；
+// 0/false/off/no 关闭（byte-revert：doctor 不出现任何新条目）。
+
+const PORTABLE_CATEGORY = '便携自检';
+
+function _portableGateEnabled(env) {
+  const v = (env || {}).KHY_DOCTOR_PORTABLE;
+  if (v === undefined || v === null) return true;
+  return !_FALSY.has(String(v).trim().toLowerCase());
+}
+
+function _portableRootOf(deps) {
+  const d = deps || {};
+  const env = d.env || process.env;
+  if (env.KHYQUANT_PORTABLE_ROOT) return path.resolve(env.KHYQUANT_PORTABLE_ROOT);
+  if (d.bundleRoot) return path.resolve(d.bundleRoot, '..', '..');
+  return path.resolve(__dirname, '..', '..', '..', '..');
+}
+
+/** 已知链接清单（与 scripts/link-shared-dev.js、scripts/portable-health-check.js 对齐）。 */
+function _knownPortableLinks(root) {
+  return [
+    { label: 'services/backend/vendor/shared',
+      linkPath: path.join(root, 'services', 'backend', 'vendor', 'shared'),
+      target: path.join(root, 'platform', 'packages', 'shared'), optional: false },
+    { label: 'services/backend/node_modules/@khy/shared',
+      linkPath: path.join(root, 'services', 'backend', 'node_modules', '@khy', 'shared'),
+      target: path.join(root, 'services', 'backend', 'vendor', 'shared'), optional: true },
+    { label: 'node_modules/@khy/shared',
+      linkPath: path.join(root, 'node_modules', '@khy', 'shared'),
+      target: path.join(root, 'platform', 'packages', 'shared'), optional: true },
+  ];
+}
+
+function _linkStatus(fsMod, link) {
+  let st = null;
+  try { st = fsMod.lstatSync(link.linkPath); } catch (_) { /* missing */ }
+  if (!st) return link.optional ? 'absent-optional' : 'missing';
+  if (!st.isSymbolicLink()) return 'real-copy';
+  try { fsMod.realpathSync(link.linkPath); return 'linked'; } catch (_) { return 'broken'; }
+}
+
+/** IO 采集：SQLite 子进程探针 + 链接状态 + 指针状态（注入式、fail-soft）。 */
+function gatherPortableFacts(deps) {
+  const d = deps || {};
+  const fsMod = d.fs || require('fs');
+  const root = _portableRootOf(d);
+  let sqlite = { ok: false, driver: '', detail: '' };
+  try {
+    const probe = typeof d.probeSqlite === 'function'
+      ? d.probeSqlite
+      : () => require('../bootstrap/startupSqliteProbe').runStartupSqliteProbe({ timeoutMs: 8000 });
+    const r = probe();
+    if (r && r.checked === false) {
+      sqlite = { ok: true, driver: (r.driver || ''), detail: `探针未得出结论（${r.detail || 'inconclusive'}），放行` };
+    } else {
+      sqlite = { ok: !!(r && r.ok), driver: (r && r.driver) || '', detail: (r && r.detail) || '' };
+    }
+  } catch (err) {
+    sqlite = { ok: true, driver: '', detail: `探针自身异常（${err && err.message ? err.message : err}），放行` };
+  }
+  const links = _knownPortableLinks(root).map((link) => ({ ...link, status: _linkStatus(fsMod, link) }));
+  const pointer = { present: false, missing: [] };
+  try {
+    const dh = require('../utils/dataHome');
+    const p = dh._readPointer();
+    if (p) {
+      pointer.present = true;
+      for (const key of ['dataHome', 'projectDataHome']) {
+        const target = p[key];
+        if (typeof target === 'string' && target && !fsMod.existsSync(target)) pointer.missing.push({ key, target });
+      }
+    }
+  } catch (_) { /* 指针不可读 → 视为未建立 */ }
+  return { root, sqlite, links, pointer };
+}
+
+/** 纯装配：facts → doctor checks（绝不 IO / 绝不 throw）。 */
+function assessPortable(facts) {
+  try {
+    const f = facts || {};
+    const checks = [];
+    const sq = f.sqlite || {};
+    checks.push(_check(
+      'SQLite 驱动', !!sq.ok,
+      sq.ok
+        ? (sq.driver ? `驱动 ${sq.driver} 可用（子进程探针通过）` : (sq.detail || '探针通过'))
+        : _causeFix(
+            sq.detail || 'SQLite 驱动子进程探针失败（疑似 better-sqlite3 段错误 / ABI 不匹配）',
+            '使用 Node.js >= 23.4（内置 node:sqlite），或在项目根执行 `npm rebuild better-sqlite3`'),
+      'error'));
+    const bad = (f.links || []).filter((l) => l.status === 'broken' || l.status === 'missing');
+    checks.push(_check(
+      'junction/symlink 链接', bad.length === 0,
+      bad.length === 0
+        ? '已知链接全部有效（或为实体目录/可选缺省）'
+        : _causeFix(
+            bad.map((l) => `${l.label}（${l.status === 'broken' ? '断链' : '缺失'}）`).join('、') + '——常见于整目录迁移后',
+            '运行 `khy doctor --fix` 或 `khy repair` 自动重建'),
+      'error'));
+    const ptr = f.pointer || {};
+    const ptrOk = !ptr.present || (ptr.missing || []).length === 0;
+    checks.push(_check(
+      '数据指针一致性', ptrOk,
+      ptrOk
+        ? (ptr.present ? '指针目标全部存在' : '指针尚未建立（首启自动生成）')
+        : _causeFix(
+            (ptr.missing || []).map((m) => `${m.key} → ${m.target} 不存在`).join('；'),
+            '运行 `khy doctor --fix` 或 `khy repair` 按当前便携根校准指针'),
+      'error'));
+    return checks;
+  } catch (_) { return []; }
+}
+
+/** 门控 → 采集 → 装配（供 runDoctorChecks 追加；门关时返回 []）。 */
+function portableSelfHealChecks(deps) {
+  try {
+    if (!_portableGateEnabled((deps || {}).env)) return [];
+    return assessPortable(gatherPortableFacts(deps)).map((c) => ({ ...c, category: PORTABLE_CATEGORY }));
+  } catch (_) { return []; }
+}
+
+/**
+ * `khy doctor --fix`：对可修复项自动修复（断链重建、指针校准）。
+ * 返回 { fixed, failed, skipped }（均为字符串数组），绝不 throw。
+ */
+function fixPortableIssues(deps) {
+  const out = { fixed: [], failed: [], skipped: [] };
+  try {
+    const d = deps || {};
+    const fsMod = d.fs || require('fs');
+    const root = _portableRootOf(d);
+    for (const link of _knownPortableLinks(root)) {
+      const status = _linkStatus(fsMod, link);
+      if (status !== 'broken' && status !== 'missing') continue;
+      if (!fsMod.existsSync(link.target)) { out.failed.push(`${link.label}：目标不存在（${link.target}）`); continue; }
+      try {
+        try { fsMod.unlinkSync(link.linkPath); }
+        catch (_) { try { fsMod.renameSync(link.linkPath, `${link.linkPath}.broken-${Date.now()}`); } catch (_2) { /* 可能本就缺失 */ } }
+        fsMod.mkdirSync(path.dirname(link.linkPath), { recursive: true });
+        const rel = path.relative(path.dirname(link.linkPath), link.target);
+        try { fsMod.symlinkSync(rel, link.linkPath, 'dir'); out.fixed.push(`${link.label}：已重建 symlink → ${rel}`); }
+        catch (_) { fsMod.symlinkSync(link.target, link.linkPath, 'junction'); out.fixed.push(`${link.label}：已重建 junction → ${link.target}`); }
+      } catch (err) { out.failed.push(`${link.label}：重建失败（${err && err.message ? err.message : err}）`); }
+    }
+    try {
+      const dh = require('../utils/dataHome');
+      const pointer = dh._readPointer();
+      let rawObj = null;
+      try { rawObj = JSON.parse(fsMod.readFileSync(dh._pointerFile(), 'utf8')); } catch (_) { rawObj = null; }
+      if (pointer) {
+        for (const key of ['dataHome', 'projectDataHome']) {
+          const target = pointer[key];
+          if (typeof target !== 'string' || !target) continue;
+          if (fsMod.existsSync(target)) {
+            // 读取端自愈（尾部重定位）已生效但文件里还是旧值 → 固化写回便携相对形式。
+            const rawVal = rawObj ? rawObj[key] : undefined;
+            const wantVal = typeof dh._toPortablePointerValue === 'function' ? dh._toPortablePointerValue(target) : target;
+            if (typeof rawVal === 'string' && rawVal !== wantVal) {
+              dh._writePointer(key === 'projectDataHome'
+                ? { projectDataHome: target, projectSource: 'doctor-fix', projectPinnedReason: 'doctor-fix-recalibrate' }
+                : { dataHome: target, source: 'doctor-fix', pinnedReason: 'doctor-fix-recalibrate' });
+              out.fixed.push(`指针 ${key}：已固化为便携相对形式（${wantVal}）`);
+            }
+            continue;
+          }
+          if (key === 'projectDataHome') {
+            const fallback = path.join(root, '.khy');
+            fsMod.mkdirSync(fallback, { recursive: true });
+            dh._writePointer({ projectDataHome: fallback, projectSource: 'doctor-fix', projectPinnedReason: 'doctor-fix-recalibrate' });
+            out.fixed.push(`指针 projectDataHome：已校准 → ${fallback}`);
+          } else {
+            out.skipped.push(`指针 ${key}：目标 ${target} 不可达且无法重定位（可能是可移动盘未挂载），不自动改写`);
+          }
+        }
+      }
+    } catch (err) { out.failed.push(`指针校准异常（${err && err.message ? err.message : err}）`); }
+  } catch (err) { out.failed.push(`便携修复自身异常（${err && err.message ? err.message : err}）`); }
+  return out;
+}
+
 module.exports = {
   CATEGORY,
+  PORTABLE_CATEGORY,
   assessFreshInstall,
   gatherFreshInstallFacts,
   freshInstallChecks,
@@ -363,4 +548,10 @@ module.exports = {
   _dualInstallCheckEnabled,
   _detectChannel,
   _defaultWhich,
+  portableSelfHealChecks,
+  gatherPortableFacts,
+  assessPortable,
+  fixPortableIssues,
+  _portableGateEnabled,
+  _knownPortableLinks,
 };

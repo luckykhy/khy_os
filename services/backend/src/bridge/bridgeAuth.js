@@ -22,7 +22,7 @@ function _loadDeps() {
   if (!_bcrypt) _bcrypt = require('bcryptjs');
   if (!_jwt) _jwt = require('jsonwebtoken');
   if (!_Database) {
-    const mod = require('better-sqlite3');
+    const mod = require('../config/sqlite-adapter');
     _Database = mod.default || mod;
   }
 }
