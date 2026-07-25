@@ -8,6 +8,12 @@ __pycache__/
 # Build outputs
 dist/
 build/
+# Exception: packaging/build/ holds CI build scripts (source, not output).
+# The broad build/ rule above must not swallow them, or the
+# Build Standalone Executables workflow fails with MODULE_NOT_FOUND.
+!packaging/build/
+!packaging/build/*.js
+!packaging/build/*.json
 *.iso
 *.db
 *.db-shm
