@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: services/backend/package-lock.json
 
@@ -47,8 +47,12 @@ jobs:
         working-directory: services/backend
         run: npm ci
 
-      - name: Install pkg globally
-        run: npm install -g pkg@5
+      # esbuild is required by packaging/build/esbuild-modules.js and
+      # @yao-pkg/pkg by packaging/build/pack-executable.js (pkg@5 is
+      # unmaintained and has no node20 base binaries). Versions are pinned
+      # and installed with --no-save so root package.json/lock stay untouched.
+      - name: Install build toolchain (esbuild + pkg)
+        run: npm install --no-save --ignore-scripts --workspaces=false esbuild@0.28.1 @yao-pkg/pkg@6.21.0
 
       - name: Bundle modules (esbuild)
         run: node packaging/build/esbuild-modules.js --prod ${{ github.event.inputs.module && format('--module {0}', github.event.inputs.module) || '' }}

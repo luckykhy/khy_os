@@ -1,12 +1,12 @@
 {
   "version": "1.1.8",
-  "nodeTarget": "node20",
+  "nodeTarget": "node22",
   "modules": [
     {
       "id": "khy-ai",
       "name": "AI 聊天 REPL",
       "description": "Interactive AI chat REPL with multi-model support and conversation management",
-      "entry": "khy-ai.js",
+      "entry": "khy-ai-entry.js",
       "handlers": [
         "arena",
         "assistant",
@@ -29,7 +29,7 @@
       "id": "khy-gateway",
       "name": "AI 网关服务",
       "description": "AI gateway service with provider routing, key pool management and protocol conversion",
-      "entry": "services/ai-backend/server.js",
+      "entry": "khy-gateway-entry.js",
       "handlers": [
         "gateway",
         "gatewayConfigEditor",
@@ -48,7 +48,7 @@
       "id": "khy-quant",
       "name": "量化交易工具",
       "description": "Quantitative trading toolkit with backtesting, market data and model training",
-      "entry": "khy-quant.js",
+      "entry": "khy-quant-entry.js",
       "handlers": [
         "backtest",
         "data",
@@ -67,7 +67,7 @@
       "id": "khy-server",
       "name": "Web 管理后台",
       "description": "Web management backend with Express routes, admin panel and database models",
-      "entry": "services/backend/server.js",
+      "entry": "khy-server-entry.js",
       "handlers": [],
       "services": ["expressRoutes", "models", "admin"],
       "excludeDeps": ["ink", "react", "react-devtools-core", "inquirer", "ora", "node-pty"],
@@ -78,7 +78,7 @@
       "id": "khy-tools",
       "name": "开发者工具集",
       "description": "Developer toolset for CI/CD, deployment, proxy management and extension development",
-      "entry": "khy-tools.js",
+      "entry": "khy-tools-entry.js",
       "handlers": [
         "ci",
         "convert",
@@ -105,7 +105,7 @@
       "id": "khy",
       "name": "完整平台",
       "description": "Full Khy OS platform with all modules, handlers and services included",
-      "entry": "khy.js",
+      "entry": "khy-full-entry.js",
       "handlers": ["*"],
       "services": ["*"],
       "excludeDeps": [],
