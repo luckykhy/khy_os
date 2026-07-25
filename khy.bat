@@ -11,6 +11,18 @@ set "HTTP_PROXY="
 set "HTTPS_PROXY="
 set "http_proxy="
 set "https_proxy="
+:: --- khy repair: one-shot portable self-repair (Node only, bypasses python cli) ---
+if /i "%~1"=="repair" (
+    where node >nul 2>&1
+    if !ERRORLEVEL! neq 0 (
+        echo [ERROR] khy repair needs Node.js 20+ in PATH: https://nodejs.org/
+        exit /b 1
+    )
+    set "KHYQUANT_PORTABLE_ROOT=%~dp0"
+    node "%~dp0scripts\repair-portable.js" %2 %3 %4 %5 %6 %7 %8 %9
+    exit /b !ERRORLEVEL!
+)
+
 :: --- Detect Python 3.8+ ---
 set "PYTHON_CMD="
 
