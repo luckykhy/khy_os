@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>㉜ 什么是 MVP（最小可行产品） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>㉜ 什么是 MVP（最小可行产品）</div>
+      <header class="hero reveal"><h1>㉜ 什么是 MVP（最小可行产品）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#㉜-什么是-mvp-最小可行产品">㉜ 什么是 MVP（最小可行产品）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么要做-mvp-三个绕不开的理由">二、为什么要做 MVP？——三个绕不开的理由</a></li><li class="lvl-3"><a href="#理由一-你脑子里的点子-八成有个错误假设">理由一：你脑子里的点子，八成有个错误假设</a></li><li class="lvl-3"><a href="#理由二-真实反馈-比想象值钱一百倍">理由二：真实反馈，比想象值钱一百倍</a></li><li class="lvl-3"><a href="#理由三-省下的是你最贵的东西-时间">理由三：省下的是你最贵的东西——时间</a></li><li class="lvl-2"><a href="#三-核心比喻-三个你一看就懂的画面">三、核心比喻：三个你一看就懂的画面</a></li><li class="lvl-3"><a href="#比喻一-先做一块能滑的滑板-别憋一辆完整汽车">比喻一：先做一块能滑的滑板，别憋一辆完整汽车</a></li><li class="lvl-3"><a href="#比喻二-开餐厅前-先摆个周末小摊">比喻二：开餐厅前，先摆个周末小摊</a></li><li class="lvl-3"><a href="#比喻三-探路的第一脚">比喻三：探路的第一脚</a></li><li class="lvl-2"><a href="#四-灵魂-怎么切出一个好的-mvp">四、灵魂：怎么切出一个好的 MVP</a></li><li class="lvl-3"><a href="#第一步-找到那-唯一一个-最核心的假设">第一步：找到那&quot;唯一一个&quot;最核心的假设</a></li><li class="lvl-3"><a href="#第二步-只留-没它这事就不成立-的功能">第二步：只留&quot;没它这事就不成立&quot;的功能</a></li><li class="lvl-3"><a href="#第三步-写一份-不做什么-清单-并说清为什么">第三步：写一份&quot;不做什么&quot;清单，并说清为什么</a></li><li class="lvl-2"><a href="#五-mvp-vs-原型-vs-完整产品-别混为一谈">五、MVP vs 原型 vs 完整产品：别混为一谈</a></li><li class="lvl-2"><a href="#六-感觉一下-同一个点子-堆功能-vs-切-mvp">六、感觉一下：同一个点子，堆功能 vs 切 MVP</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-mvp-做得很烂-半成品">误区 1：以为 MVP = &quot;做得很烂 / 半成品&quot;</a></li><li class="lvl-3"><a href="#误区-2-舍不得砍-什么功能都想塞进-第一版">误区 2：舍不得砍，什么功能都想塞进&quot;第一版&quot;</a></li><li class="lvl-3"><a href="#误区-3-以为-mvp-是-一次性的-做完就扔">误区 3：以为 MVP 是&quot;一次性的、做完就扔&quot;</a></li><li class="lvl-3"><a href="#误区-4-跳过验证-把-mvp-当成-先上线再说">误区 4：跳过验证，把 MVP 当成&quot;先上线再说&quot;</a></li><li class="lvl-3"><a href="#误区-5-以为只有创业-做-app-才用得上-mvp">误区 5：以为只有创业/做 App 才用得上 MVP</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-把你自己的一个点子-切成-mvp">实验：把你自己的一个点子，切成 MVP</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="㉜-什么是-mvp-最小可行产品">㉜ 什么是 MVP（最小可行产品）<a class="anchor" href="#㉜-什么是-mvp-最小可行产品" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a> 和 <a href="./[CONCEPT-23]%20什么是计划与执行-PlanAndExecute.html">㉓ 计划与执行</a>。那两篇讲了&quot;AI 助理会自己拿主意干活&quot;&quot;复杂任务先列计划再逐步做&quot;。这一篇要回答一个几乎每个新手做项目时都会栽的问题：<strong>我脑子里有个很酷的点子，功能想了一大堆，到底该先做哪个、能不能少做点先跑起来看看？</strong> 这个&quot;先做最小的一版、拿去验证、再决定往下加什么&quot;的做法，就是本篇的主角——<strong>MVP（Minimum Viable Product，最小可行产品）</strong>。它既是产品思维，也是 Khy-OS 里 <code>/idea-refine</code>（点子打磨）技能每次都在帮你做的事。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>MVP = 你能做出来的、最小的一版，但它必须能真正解决那个核心问题、能拿给真实用户用、能让你验证&quot;这个点子到底行不行&quot;。关键词是三个：最小（Minimum，砍到不能再砍）、可行（Viable，还能用、能验证）、产品（Product，是能交到用户手里的东西，不是半成品）。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>MVP 不是&quot;做得很烂的完整产品&quot;，而是&quot;只做那一件最核心的事、但把它做成能用能验证的样子&quot;。它的目的不是交付，而是学习——用最小的代价，最快搞清楚&quot;我这个点子值不值得继续做&quot;。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>你可能会问：&quot;那 MVP 不就是偷工减料、糊弄一个半成品吗？&quot;——恰恰相反！MVP 的难点不在&quot;做得少&quot;，而在 <span class="popover" tabindex="0"><span class="popover-anchor">砍得准</span><span class="popover-tip" role="tooltip">砍掉的是&quot;锦上添花&quot;的功能，留下的必须是&quot;没它这事就不成立&quot;的那个核心——这需要想得很清楚，比堆功能难多了</span></span>。糊弄半成品是&quot;什么都做一点、什么都不能用&quot;；MVP 是&quot;只做一件事、但那一件能用、能验证&quot;。这一篇不用懂代码，抓住&quot;最小但能验证&quot;就行～ 🐣</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong><a href="./[CONCEPT-23]%20什么是计划与执行-PlanAndExecute.html">㉓ 计划与执行</a> 讲了&quot;复杂任务先列计划再逐步做&quot;——MVP 就是这套思路用在&quot;做产品/做项目&quot;上的第一步：先别列一个庞大计划，先切出&quot;最小能验证的一小步&quot;跑起来，用真实反馈来校准后面的计划。</strong></p>
+<hr>
+<h2 id="二-为什么要做-mvp-三个绕不开的理由">二、为什么要做 MVP？——三个绕不开的理由<a class="anchor" href="#二-为什么要做-mvp-三个绕不开的理由" aria-label="锚点">#</a></h2>
+<p>MVP 不是&quot;资源不够时的妥协&quot;，而是一种主动选择的、更聪明的做事方式。三个理由：</p>
+<h3 id="理由一-你脑子里的点子-八成有个错误假设">理由一：你脑子里的点子，八成有个错误假设<a class="anchor" href="#理由一-你脑子里的点子-八成有个错误假设" aria-label="锚点">#</a></h3>
+<p>任何新点子，本质上都压着一堆<strong>你以为对、但没验证过</strong>的假设（&quot;用户会喜欢&quot;&quot;大家会为这个付钱&quot;&quot;这个功能是刚需&quot;）。你埋头做半年的完整产品，很可能是<strong>在一个错误假设上盖了一栋楼</strong>。MVP 让你在盖楼之前，先花一周验证&quot;地基到底稳不稳&quot;。</p>
+<h3 id="理由二-真实反馈-比想象值钱一百倍">理由二：真实反馈，比想象值钱一百倍<a class="anchor" href="#理由二-真实反馈-比想象值钱一百倍" aria-label="锚点">#</a></h3>
+<p>你一个人在屋里想&quot;用户会怎么用&quot;，想得再周全也是猜。<strong>把最小的一版交到真实用户手里，一天收到的反馈，胜过你闭门想一个月。</strong> MVP 的核心价值就是——<strong>尽早、尽快地拿到真实世界的反馈</strong>，用它来决定下一步。</p>
+<h3 id="理由三-省下的是你最贵的东西-时间">理由三：省下的是你最贵的东西——时间<a class="anchor" href="#理由三-省下的是你最贵的东西-时间" aria-label="锚点">#</a></h3>
+<p>功能做得越多，改起来越贵、掉头越难。先做 MVP，等于<strong>在投入最小时先探路</strong>：方向对，再往上加；方向错，及时掉头，损失的只是那一小步。</p>
+<pre class="mermaid">flowchart TB
+  IDEA[&quot;💡 一个新点子&lt;br/&gt;(压着一堆没验证的假设)&quot;] --&gt; CHOICE{&quot;怎么做?&quot;}
+  CHOICE --&gt;|&quot;埋头做完整产品&quot;| BIG[&quot;🏗️ 做半年&lt;br/&gt;才第一次见到用户&quot;]
+  BIG --&gt; RISK[&quot;😱 万一核心假设是错的&lt;br/&gt;→ 半年白干、掉头极贵&quot;]
+  CHOICE --&gt;|&quot;先做 MVP&quot;| SMALL[&quot;🔨 做一周&lt;br/&gt;只做最核心那一件事&quot;]
+  SMALL --&gt; LEARN[&quot;📊 拿给真实用户&lt;br/&gt;→ 一周就知道对不对&quot;]
+  LEARN --&gt;|&quot;对&quot;| GROW[&quot;✅ 方向验证了&lt;br/&gt;再放心往上加功能&quot;]
+  LEARN --&gt;|&quot;错&quot;| PIVOT[&quot;🔄 及时掉头&lt;br/&gt;只损失一小步&quot;]</pre>
+<p><strong>所以 MVP 的本质就一句话：用最小的代价，最快验证你点子里那个最关键的假设——对了再加码，错了早掉头。</strong></p>
+<hr>
+<h2 id="三-核心比喻-三个你一看就懂的画面">三、核心比喻：三个你一看就懂的画面<a class="anchor" href="#三-核心比喻-三个你一看就懂的画面" aria-label="锚点">#</a></h2>
+<h3 id="比喻一-先做一块能滑的滑板-别憋一辆完整汽车">比喻一：先做一块能滑的滑板，别憋一辆完整汽车<a class="anchor" href="#比喻一-先做一块能滑的滑板-别憋一辆完整汽车" aria-label="锚点">#</a></h3>
+<p>用户的真实需求是&quot;从 A 到 B&quot;。错误做法是先造一个轮子（不能用）、再造车架（还不能用）、最后憋出一辆完整汽车才第一次交付。<strong>MVP 做法是：先做一块滑板</strong>——它简陋，但<strong>现在就能从 A 到 B</strong>，用户能用、你能收反馈；然后滑板 → 滑板车 → 自行车 → 摩托车 → 汽车，<strong>每一步都是&quot;能用的完整东西&quot;</strong>，每一步都在收真实反馈。</p>
+<h3 id="比喻二-开餐厅前-先摆个周末小摊">比喻二：开餐厅前，先摆个周末小摊<a class="anchor" href="#比喻二-开餐厅前-先摆个周末小摊" aria-label="锚点">#</a></h3>
+<p>你想开一家大餐厅，梦想很大。聪明的做法不是先砸几百万装修，而是<strong>先在周末摆个小摊卖你的招牌菜</strong>——租金几乎为零，但你能立刻知道：<strong>这菜到底有没有人买、大家愿意付多少钱、回头客多不多。</strong> 摊子火了，再谈开店；没人买，你只亏了一个周末，而不是几百万。</p>
+<h3 id="比喻三-探路的第一脚">比喻三：探路的第一脚<a class="anchor" href="#比喻三-探路的第一脚" aria-label="锚点">#</a></h3>
+<p>走进一片没走过的沼泽，你不会闭着眼冲进去。你会<strong>先伸一只脚试探</strong>，踩实了再迈下一步。MVP 就是产品世界里的&quot;先伸一只脚&quot;——<strong>用最小的动作，试探前面到底是实地还是烂泥。</strong></p>
+<pre class="mermaid">flowchart LR
+  A[&quot;🛹 先做能滑的滑板&lt;br/&gt;(不是先造半个轮子)&quot;] --&gt; CORE[&quot;共同点：&lt;br/&gt;先用最小的完整动作&lt;br/&gt;换取真实反馈&lt;br/&gt;→ 再决定下一步&quot;]
+  B[&quot;🍜 开店前先摆小摊&lt;br/&gt;(不是先砸钱装修)&quot;] --&gt; CORE
+  C[&quot;🦶 沼泽里先伸一只脚&lt;br/&gt;(不是闭眼冲进去)&quot;] --&gt; CORE
+  CORE --&gt; MVP[&quot;🎯 MVP&lt;br/&gt;最小 · 可行 · 能验证&quot;]</pre>
+<p><strong>三个比喻的共同内核：都是&quot;先用最小的、但完整能用的一步，去换真实世界的反馈，再决定要不要往下走&quot;。</strong> 记住这一点，MVP 是什么就再也不会忘。</p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>MVP 最容易被误解的地方，是把&quot;Minimum（最小）&quot;听成了&quot;简陋、粗糙、做得烂&quot;。真正的重点其实是 <strong>&quot;Viable（可行）&quot;</strong>——它必须<strong>真的能用、能解决那个核心问题、能让你学到东西</strong>。一块能滑的滑板是合格的 MVP；半个轮子不是，因为它谁也载不动、什么也验证不了。<strong>判断一个 MVP 合不合格，就问一句：它能不能把那个最核心的假设验证掉？</strong></p></div></aside>
+<hr>
+<h2 id="四-灵魂-怎么切出一个好的-mvp">四、灵魂：怎么切出一个好的 MVP<a class="anchor" href="#四-灵魂-怎么切出一个好的-mvp" aria-label="锚点">#</a></h2>
+<p>切 MVP 的功夫，全在<strong>&quot;砍&quot;</strong>上。三步：</p>
+<h3 id="第一步-找到那-唯一一个-最核心的假设">第一步：找到那&quot;唯一一个&quot;最核心的假设<a class="anchor" href="#第一步-找到那-唯一一个-最核心的假设" aria-label="锚点">#</a></h3>
+<p>你的点子里，哪个假设<strong>一旦是错的，整件事就不成立</strong>？（比如做喝水提醒 App，最核心的假设可能是&quot;人们不喝水是因为提醒时机不对，而不是根本不在乎&quot;。）<strong>MVP 的唯一使命，就是验证这一个假设。</strong> 别的都往后放。</p>
+<h3 id="第二步-只留-没它这事就不成立-的功能">第二步：只留&quot;没它这事就不成立&quot;的功能<a class="anchor" href="#第二步-只留-没它这事就不成立-的功能" aria-label="锚点">#</a></h3>
+<p>把想到的所有功能列出来，对每一个问：<strong>&quot;没有它，我还能验证那个核心假设吗？&quot;</strong> 能，就砍掉（先不做）。不能，才留下。留下的，往往少得让你心疼——<strong>这是对的，心疼说明你砍到位了。</strong></p>
+<h3 id="第三步-写一份-不做什么-清单-并说清为什么">第三步：写一份&quot;不做什么&quot;清单，并说清为什么<a class="anchor" href="#第三步-写一份-不做什么-清单-并说清为什么" aria-label="锚点">#</a></h3>
+<p>这是最反直觉、也最值钱的一步：<strong>明确写下&quot;这一版我故意不做哪些功能，以及为什么&quot;。</strong> 因为&quot;聚焦&quot;的本质不是&quot;选择做什么&quot;，而是<strong>&quot;对一堆好点子说不&quot;</strong>。把不做的理由写清楚，你才不会中途手痒又把它们塞回来。</p>
+<table><thead><tr><th>切 MVP 时问自己</th><th>说明</th></tr></thead><tbody><tr><td><strong>核心假设是哪一个？</strong></td><td>找到那个&quot;错了就全盘皆输&quot;的假设，MVP 只为验证它</td></tr><tr><td><strong>没这个功能还能验证吗？</strong></td><td>能 → 砍掉；不能 → 留下。留下的越少越好</td></tr><tr><td><strong>我故意不做什么？为什么？</strong></td><td>写&quot;不做清单&quot;，把 trade-off 说清楚，防止中途反悔加码</td></tr><tr><td><strong>能不能更小？</strong></td><td>想想&quot;10 倍更简单的版本长什么样&quot;，哪怕不做，也用它校准</td></tr></tbody></table>
+<aside class="callout callout-note reveal"><div class="callout-mascot" aria-hidden="true">🐧</div><div class="callout-body"><div class="callout-title">📌 小笔记</div><p>一个特别好用的自检：<strong>&quot;如果只能保留一个功能，我留哪个？&quot;</strong> 这个问题会逼你瞬间看清什么是核心、什么是锦上添花。很多人做 MVP 失败，不是因为不会做，而是<strong>舍不得砍</strong>——总觉得&quot;这个也挺重要&quot;&quot;顺手就做了吧&quot;。记住：<strong>MVP 阶段每多做一个功能，都在推迟你拿到真实反馈的那一天。</strong></p></div></aside>
+<hr>
+<h2 id="五-mvp-vs-原型-vs-完整产品-别混为一谈">五、MVP vs 原型 vs 完整产品：别混为一谈<a class="anchor" href="#五-mvp-vs-原型-vs-完整产品-别混为一谈" aria-label="锚点">#</a></h2>
+<p>新手常把这几个搅在一起，其实差别很大：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：MVP 和&quot;原型（Prototype）&quot;最根本的区别在哪？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ 差在&quot;给不给真实用户用、要不要真的解决问题&quot;。原型（Prototype）通常是给自己/团队看的<strong>草图或演示</strong>，用来试界面、试感觉，可以是假数据、点了没反应——它验证的是&quot;长这样行不行&quot;。MVP 是<strong>真交到用户手里、真能解决那个核心问题</strong>的最小产品——它验证的是&quot;这事到底有没有人要&quot;。一句话：原型验证&quot;形态&quot;，MVP 验证&quot;价值&quot;。</div></div></div>
+<table><thead><tr><th></th><th><strong>MVP（最小可行产品）</strong></th><th><strong>原型（Prototype）</strong></th><th><strong>完整产品</strong></th></tr></thead><tbody><tr><td>给谁用</td><td><strong>真实用户</strong></td><td>通常给自己/团队</td><td>所有目标用户</td></tr><tr><td>能不能真解决问题</td><td><strong>能</strong>（哪怕只解决核心那点）</td><td>不一定（常是演示/假数据）</td><td>能，且全面</td></tr><tr><td>主要目的</td><td><strong>验证核心假设、学习</strong></td><td>试形态、试感觉</td><td>交付、规模化</td></tr><tr><td>功能多少</td><td>砍到不能再砍</td><td>看要试什么</td><td>完整</td></tr><tr><td>心态</td><td>&quot;最小代价换最快学习&quot;</td><td>&quot;先看看长这样对不对&quot;</td><td>&quot;把该有的都做好&quot;</td></tr></tbody></table>
+<p><strong>一句话点破：原型是&quot;看看长这样行不行&quot;，MVP 是&quot;看看这事有没有人真的要&quot;，完整产品是&quot;确定要了，把它做扎实做全&quot;。</strong> 三者是一条路上的三段，不是三选一。做项目的正确顺序常常是：<strong>（可选）原型试形态 → MVP 验证价值 → 验证通过再做完整产品</strong>。跳过 MVP 直奔完整产品，是新手最贵的一课。</p>
+<hr>
+<h2 id="六-感觉一下-同一个点子-堆功能-vs-切-mvp">六、感觉一下：同一个点子，堆功能 vs 切 MVP<a class="anchor" href="#六-感觉一下-同一个点子-堆功能-vs-切-mvp" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 提醒：下面不用会写代码。</strong> 只体会那个<strong>&quot;想做一大堆&quot; → &quot;砍到只剩核心一件&quot; → &quot;拿去验证&quot;</strong>的过程。假设你的点子是&quot;做一个帮人喝够水的 App&quot;：</p>
+<pre><code class="language-text">💭 新手的第一版清单（想到什么加什么）：
+   ☑ 智能水杯硬件，自动感应喝了多少
+   ☑ 每日/每周喝水量图表统计
+   ☑ 连续打卡、成就徽章、好友排行榜
+   ☑ 接入健康 App、同步体重心率
+   ☑ 多种提醒铃声、深色模式、会员订阅
+   → 想做半年，半年后才第一次见到用户。
+     万一&quot;人们根本不缺提醒、缺的是好时机&quot;——全白干。
+
+✂️ 切成 MVP（只为验证一个假设：&quot;提醒失败是因为时机不对&quot;）：
+   ☑ 读一下你的日历，只在&quot;忙完一段会议后的空档&quot;轻推一次
+   ☑ 一个&quot;喝了 💧&quot;的按钮记一下
+   ✗ 不做硬件、不做图表、不做打卡排行、不做健康同步、不做会员
+   → 一周做完，交给 10 个真实用户，一周就知道：
+     &quot;按时机提醒&quot;到底有没有让他们真的多喝水、愿不愿意留着这 App。</code></pre>
+<p>看到那两版的天壤之别了吗？<strong>同一个点子，堆功能版要赌半年、还赌在一个没验证的假设上；切 MVP 版一周就能拿到真实答案。</strong> 差别不在&quot;谁更努力&quot;，而在<strong>谁更早、更便宜地搞清楚了&quot;这事到底行不行&quot;。</strong> 这正是 Khy-OS 的 <code>/idea-refine</code>（点子打磨）技能每次都在帮你做的事——逼你把点子收敛成一份带 <strong>MVP Scope（最小范围）</strong> 和 <strong>Not Doing（不做清单）</strong> 的一页纸。</p>
+<p>把这场&quot;同一个点子，两种活法&quot;演成一幕小短剧——你会看到 MVP 不是&quot;做得少&quot;，而是<strong>&quot;想得清楚、砍得果断&quot;</strong>：</p>
+<div class="scene"><div class="scene-title">同一个点子，两种活法：堆功能 vs 切 MVP</div><div class="scene-caption reveal">你兴冲冲报出一个点子，功能想了一整页。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>我要做个喝水提醒 App！智能水杯、图表、打卡排行、健康同步、会员……全都要！</div></div><div class="scene-caption reveal">甲方案：不打磨，直接照单全做。</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🙂</span><div class="scene-bubble"><b class="scene-who">埋头做的你</b>好，那我开做，估计半年能上线。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😰</span><div class="scene-bubble"><b class="scene-who">旁白</b>半年后第一次交给用户，才发现——大家不缺提醒，缺的是&quot;别在开会时吵我&quot;。核心假设错了，半年白干。</div></div><div class="scene-caption reveal">乙方案：先用 /idea-refine 把点子打磨一遍。</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">点子打磨</b>先别急着堆功能。你赌的是&quot;人们没喝够水是因为提醒时机不对&quot;对吧?那这一版就只做一件事:读日历,在会议空档轻推一次。硬件、图表、排行——全部先不做。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>……只做这么点?</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">点子打磨</b>对。它唯一的使命是验证那个假设。一周做完,交给 10 个人,一周就知道对不对。对了再加,错了只亏一周。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🎉</span><div class="scene-bubble"><b class="scene-who">旁白</b>同一个点子——堆功能版赌半年,切 MVP 版赌一周。MVP 不是做得少,是把&quot;最该先回答的问题&quot;最快回答掉。</div></div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<h3 id="误区-1-以为-mvp-做得很烂-半成品">误区 1：以为 MVP = &quot;做得很烂 / 半成品&quot;<a class="anchor" href="#误区-1-以为-mvp-做得很烂-半成品" aria-label="锚点">#</a></h3>
+<ul><li>❌ 觉得 MVP 就是随便糊一个粗糙、bug 一堆的东西。</li><li>✅ <strong>MVP 可以功能少，但在它做的那件事上必须&quot;能用、靠谱、能验证&quot;。</strong> 重点是 <strong>Viable（可行）</strong>——一块能滑的滑板，不是半个装不上的轮子。质量不打折，只是<strong>范围</strong>打折。</li></ul>
+<h3 id="误区-2-舍不得砍-什么功能都想塞进-第一版">误区 2：舍不得砍，什么功能都想塞进&quot;第一版&quot;<a class="anchor" href="#误区-2-舍不得砍-什么功能都想塞进-第一版" aria-label="锚点">#</a></h3>
+<ul><li>❌ &quot;这个也挺重要&quot;&quot;那个顺手就做了&quot;，结果 MVP 越滚越大，最后跟完整产品没区别。</li><li>✅ <strong>MVP 的功夫全在&quot;砍&quot;。</strong> 每多留一个功能，都在推迟你拿到真实反馈的那天。反复问：&quot;没它，我还能验证核心假设吗？&quot;能就砍。</li></ul>
+<h3 id="误区-3-以为-mvp-是-一次性的-做完就扔">误区 3：以为 MVP 是&quot;一次性的、做完就扔&quot;<a class="anchor" href="#误区-3-以为-mvp-是-一次性的-做完就扔" aria-label="锚点">#</a></h3>
+<ul><li>❌ 觉得 MVP 是个临时草稿，验证完就推倒重来。</li><li>✅ <strong>好的 MVP 是&quot;能长大的最小版本&quot;</strong>（滑板 → 自行车 → 汽车，是同一条演进线）。它是你产品的<strong>第一版真身</strong>，不是一次性 demo；后续是在它上面<strong>加</strong>，而不是推倒。</li></ul>
+<h3 id="误区-4-跳过验证-把-mvp-当成-先上线再说">误区 4：跳过验证，把 MVP 当成&quot;先上线再说&quot;<a class="anchor" href="#误区-4-跳过验证-把-mvp-当成-先上线再说" aria-label="锚点">#</a></h3>
+<ul><li>❌ 做完 MVP 就急着铺广告、拉用户、加功能，忘了它本来是用来<strong>学习</strong>的。</li><li>✅ <strong>MVP 的产出不是&quot;上线&quot;，是&quot;学到&quot;。</strong> 做完一定要问：那个核心假设，到底被验证了没有？<strong>先看反馈、再决定下一步</strong>，而不是闷头往下冲。</li></ul>
+<h3 id="误区-5-以为只有创业-做-app-才用得上-mvp">误区 5：以为只有创业/做 App 才用得上 MVP<a class="anchor" href="#误区-5-以为只有创业-做-app-才用得上-mvp" aria-label="锚点">#</a></h3>
+<ul><li>❌ 觉得 MVP 是&quot;产品经理的词&quot;，跟我写代码、做小项目没关系。</li><li>✅ <strong>MVP 是一种通用的做事思维</strong>：写个脚本、搭个内部工具、甚至学一门新技术，都可以&quot;先做最小能跑通的一版，验证思路对不对，再扩&quot;。你入行 AI 的第一个项目，尤其该这么干。</li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;MVP（最小可行产品）&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">MVP 的目的是用最小代价最快验证核心假设，重点是&quot;能验证&quot;而非&quot;功能全&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">MVP 可以功能少，但在它做的那件事上必须真能用、能解决核心问题（Viable）</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">MVP 就是随便糊一个粗糙的半成品，做得烂一点没关系</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">做 MVP 时应该尽量把想到的功能都塞进第一版，免得以后漏</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">E</span><span class="quiz-text">写一份&quot;不做什么(Not Doing)&quot;清单、并说清理由，是切 MVP 最有价值的一步</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。MVP 是用来学习的——尽早拿到真实反馈，对了再加码，错了早掉头。<br>对。一块能滑的滑板是合格 MVP；半个装不上的轮子不是——质量不打折，只是范围打折。<br>错。&quot;Minimum&quot;指范围最小，不是质量最烂；核心那件事必须靠谱可用。<br>错。恰恰相反，MVP 的功夫全在&quot;砍&quot;——每多一个功能都在推迟拿到真实反馈。<br>对。聚焦的本质是&quot;对一堆好点子说不&quot;，写清不做的理由能防止中途手痒加码。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<h3 id="实验-把你自己的一个点子-切成-mvp">实验：把你自己的一个点子，切成 MVP<a class="anchor" href="#实验-把你自己的一个点子-切成-mvp" aria-label="锚点">#</a></h3>
+<p>拿一个你真正想做的点子（一个 App、一个脚本、一个小工具都行），做三件事：</p>
+<ol><li><strong>写下核心假设</strong>：这个点子，哪一个假设一旦错了就全盘皆输？（&quot;用户会用&quot;&quot;有人愿意付钱&quot;&quot;这是刚需&quot;……挑那个最要命的。）</li><li><strong>列全功能，然后狠狠砍</strong>：把你想做的功能全列出来，对每一个问&quot;没它还能验证核心假设吗&quot;，能就划掉。看看最后剩几个——大概率会少得让你心疼。</li><li><strong>写一份&quot;不做清单&quot;</strong>：把划掉的写成&quot;这一版我故意不做 X、Y、Z，因为……&quot;。</li></ol>
+<p>然后，如果你在用 Khy-OS，直接对它说 <strong>&quot;帮我用 idea-refine 打磨这个点子&quot;</strong>（或 <code>/idea-refine</code>），看它怎么带你走完这三步、最后吐出一份带 <strong>MVP Scope</strong> 和 <strong>Not Doing</strong> 的一页纸。</p>
+<pre class="mermaid">flowchart TB
+  IDEA[&quot;💡 你的一个点子&quot;] --&gt; H[&quot;① 写下最核心的假设&lt;br/&gt;(错了就全盘皆输的那个)&quot;]
+  H --&gt; CUT[&quot;② 列全功能 → 逐个问&lt;br/&gt;'没它还能验证吗?' → 狠砍&quot;]
+  CUT --&gt; NOT[&quot;③ 写'不做清单'&lt;br/&gt;+ 每条的理由&quot;]
+  NOT --&gt; MVP[&quot;🎯 一份能跑起来、&lt;br/&gt;能验证核心假设的 MVP&quot;]
+  MVP --&gt; LEARN[&quot;📊 拿去验证 → 学到 →&lt;br/&gt;对了加码 / 错了掉头&quot;]</pre>
+<p><strong>关键体会</strong>：MVP 不是玄学，也不是产品经理的专利。<strong>它就是一套&quot;先想清楚最该验证什么、狠狠砍到只剩核心、拿去换真实反馈&quot;的做事纪律。</strong> 学会它，你做任何项目——尤其是你入行 AI 的第一个项目——都会少走一大段弯路。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong><a href="./[CONCEPT-23]%20什么是计划与执行-PlanAndExecute.html">㉓ 计划与执行</a></strong>：MVP 是&quot;先列计划再逐步做&quot;用在做产品上的第一步——先切最小能验证的一步，用反馈校准后面的计划。</li><li><strong><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></strong>：Khy-OS 这个 Agent 里就内置了 <code>/idea-refine</code>（点子打磨）技能，专门帮你把点子收敛成带 MVP Scope 的一页纸。</li><li><strong><a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ Skill</a></strong>：<code>/idea-refine</code> 正是一个把&quot;打磨点子、切 MVP&quot;的套路打包好的 Skill——它每次都逼你产出&quot;不做清单&quot;。</li><li><strong><a href="./[CONCEPT-22]%20什么是反思-Reflection.html">㉒ 反思</a></strong>：MVP 拿到真实反馈后&quot;回头看假设对不对、再决定下一步&quot;，正是反思思路在产品上的体现。</li><li><strong><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a></strong>：你对 AI 说清&quot;帮我切一个 MVP、列出不做清单&quot;，本身就是一次好提示词的实践。</li></ul>
+<aside class="callout callout-tip reveal"><div class="callout-mascot" aria-hidden="true">🐣</div><div class="callout-body"><div class="callout-title">💡 一句话收尾</div><p>MVP 是你做<strong>任何</strong>项目都用得上的护身符，尤其是你入行 AI 的第一个项目。记住三句：<strong>①最小≠最烂——范围砍到不能再砍，但那件事必须真能用、能验证；②MVP 的产出不是&quot;上线&quot;，是&quot;学到&quot;——用最小代价最快验证核心假设；③最值钱的一步是写&quot;不做清单&quot;——聚焦的本质是对一堆好点子说不。</strong> 懂了这三句，你就不会再一头扎进&quot;憋半年大作、结果方向错了&quot;的坑，而是像高手一样：先伸一只脚探路，踩实了再走。</p></div></aside>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html"><div class="dir">← 上一篇</div><div class="ttl">㉛ 什么是幻觉（Hallucination）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/00_完成度报告.html"><div class="dir">下一篇 →</div><div class="ttl">📊 概念入门文档站 — 完成度报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-32] 什么是MVP-最小可行产品.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

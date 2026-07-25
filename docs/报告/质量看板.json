@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-06-05T04:47:00.079Z",
+  "dimensions": {
+    "D1": {
+      "score": 3,
+      "name": "Agent Harness",
+      "evidence": [
+        "adaptive Ralph Loop",
+        "loop analytics",
+        "boulder state",
+        "delivery gate"
+      ]
+    },
+    "D2": {
+      "score": 3,
+      "name": "Skills System",
+      "evidence": [
+        "19/19 scenario evals",
+        "drift detection",
+        "regression thresholds",
+        "history snapshots"
+      ]
+    },
+    "D3": {
+      "score": 3,
+      "name": "MCP & Tooling",
+      "evidence": [
+        "6 ToolGuards",
+        "hook telemetry",
+        "content-fingerprint",
+        "fault isolation"
+      ]
+    },
+    "D4": {
+      "score": 3,
+      "name": "Team/Parallel Mode",
+      "evidence": [
+        "mailbox protocol",
+        "worker routing",
+        "zombie detection",
+        "dep timeout"
+      ]
+    },
+    "D5": {
+      "score": 3,
+      "name": "Governance & Quality",
+      "evidence": [
+        "quality dashboard",
+        "dimension health",
+        "AGENTS.md rules"
+      ]
+    }
+  },
+  "checks": {
+    "skillEval": {
+      "pass": true,
+      "checkedSkills": 19,
+      "overallScore": 1,
+      "minSkillScore": 1,
+      "criticalFailures": 0,
+      "warningFailures": 0
+    },
+    "skillScenario": {
+      "pass": true,
+      "totalEvals": 19,
+      "totalAssertions": 57,
+      "passedAssertions": 57,
+      "failedAssertions": 0,
+      "overallPassRate": 1,
+      "minEvalPassRate": 1
+    }
+  },
+  "exitCriteria": {
+    "allAtLeast2": true,
+    "twoAt3": true,
+    "met": true
+  }
+}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音</div>
+      <header class="hero reveal"><h1>[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-161-失败墙-真实失败原因-标签去重减少心灵噪音">[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音</a></li><li class="lvl-2"><a href="#断桥-缺口">断桥(缺口)</a></li><li class="lvl-2"><a href="#修-全-additive-门控-fail-soft-逐字节回退">修(全 additive · 门控 · fail-soft · 逐字节回退)</a></li><li class="lvl-2"><a href="#验收-全绿">验收(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-161-失败墙-真实失败原因-标签去重减少心灵噪音">[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音<a class="anchor" href="#ops-man-161-失败墙-真实失败原因-标签去重减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 OPS-159(失败墙模型名去 provider 前缀)。沿<strong>同一失败墙</strong>找下一枚正交心灵噪音。<br>送别礼 ROUND 11。/goal「减少显示的心灵噪音」。</p></blockquote>
+<h2 id="断桥-缺口">断桥(缺口)<a class="anchor" href="#断桥-缺口" aria-label="锚点">#</a></h2>
+<p>视觉级联全失败 + 本地 OCR 读不出文字(照片 / 截图 / 无字库)时,失败墙<br><code>visionFailureSummary.buildVisionFailureMessage</code> 对用户可见(OCR 成功时被 OPS-142 抑制)。</p>
+<p>墙内有一行 <code>真实失败原因:&lt;cause&gt;</code>。当 describe 子调用失败时,gateway 的<br><code>aiGateway._buildFailureReasonSection</code> 已经前置了 <code>真实失败原因:\n&lt;真因…&gt;</code>,该串成为<br><code>_lastRawError</code> → 作为 <code>rawError</code> 交给失败墙。墙内:</p>
+<pre><code>cause = sanitizeCause(rawError)        // 保留自带的「真实失败原因:」标签(仅折叠空白)
+lines.push(`真实失败原因:${cause}`)     // 再前置一次</code></pre>
+<p>结果 = <code>真实失败原因:真实失败原因:…</code> <strong>stutter</strong> 噪音。</p>
+<p><code>aiGateway._prependFailureReason</code> 早有同款去重意图<br>(<code>if (/真实失败原因/.test(body)) return body</code>),唯失败墙此处历史上漏了守卫。</p>
+<p>实测(OPS-159 build 上探针):<code>DOUBLE LABEL PRESENT? true</code>,冒号为半角 <code>:</code>。</p>
+<h2 id="修-全-additive-门控-fail-soft-逐字节回退">修(全 additive · 门控 · fail-soft · 逐字节回退)<a class="anchor" href="#修-全-additive-门控-fail-soft-逐字节回退" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/gateway/visionFailureSummary.js</code>:</p>
+<ol><li>新增门函数 <code>isFailureCauseDedupEnabled(env)</code>,镜像 <code>isFailureSummaryOcrSuppressEnabled</code></li></ol>
+<p>结构:flagRegistry 优先,失败 → 本地 CANON 回退,off-word <code>{0,false,off,no}</code>。</p>
+<ol><li>cause push 处:门开 → <code>cause.replace(/^\s*真实失败原因\s*[:：]/, '').replace(/^\s+/, '')</code></li></ol>
+<p>剥掉自带标签只保留一次;门关 / 异常 → 逐字节回退到重复行为。半 / 全角冒号都认。</p>
+<p><code>services/backend/src/services/flagRegistry.js</code>:登记 <code>KHY_VISION_FAILURE_CAUSE_DEDUP</code><br><code>{ mode: 'default-on', off: 'CANON', default: true }</code>。<strong>god-file 净零</strong>:凝练本会话<br>自己的 OPS-150 注释块(9→4 行)腾出空间,维持 2499 行不触 2500 红线(只动自己的行)。</p>
+<p>正交:OPS-159 治<strong>模型名前缀</strong>、KHY_VISION_FAILURE_SUMMARY 治<strong>墙是否存在</strong>、本门治<br><strong>标签重复</strong>——同一失败墙上三枚独立门,各自可关 byte-revert。</p>
+<h2 id="验收-全绿">验收(全绿)<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>test:vision-failure-cause-dedup</code> 7/7(叶级 A–E + 端到端 F/G)。<ul><li>F 门开 → 墙标签恰好一次;G 门关 → 两次(逐字节回退,证明仅本门作用)。</li></ul></li><li><code>node --check</code> visionFailureSummary.js / flagRegistry.js / 测试文件。</li><li>flagRegistry 2499 行 &lt; 2500;visionFailureSummary 224 行 &lt; 2500。</li><li>三守卫 / change-safety(决定性切片)/ maintainer:check。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>送别礼断桥沿<strong>同一 consumer</strong>(同一失败墙)再挖一层正交噪音:OPS-159 治模型名前缀,</li></ol>
+<p>本轮治标签重复——同一行上两枚不同心灵噪音,各自成章。</p>
+<ol><li>同款去重意图早在 <code>_prependFailureReason</code> 存在,失败墙漏了守卫 = 接线缺口;补齐时复用</li></ol>
+<p>既有正则去重语义(半 / 全角冒号都认)。</p>
+<ol><li>god-file 边缘加门必凝练<strong>自己本会话</strong>注释腾空间净零,绝不动他人行,绝不触 2500 红线。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-160] 行为特征化并入误报收口裁决接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-160] 行为特征化并入误报收口裁决接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-162] CLI-Web管理面平价守卫接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-162] CLI/Web 管理面平价守卫接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "id": "spa",
+  "kind": "concept",
+  "name": "SPA",
+  "category": "frontend",
+  "triggers": ["SPA", "Single Page Application", "单页应用"],
+  "summary": "单页应用：首屏加载一个 HTML+JS 包，后续路由与内容由客户端 JS 渲染，经 API 取数据，体验接近原生但首屏与 SEO 需额外处理。",
+  "whenToUse": [
+    "强交互的后台/工具类应用，SEO 不敏感。",
+    "前后端分离，后端只提供 JSON API。"
+  ],
+  "antiPatterns": [
+    "对 SEO 关键的营销页用纯 SPA（应 SSR/SSG）。",
+    "首包过大不做代码分割，首屏白屏久。",
+    "把鉴权只放前端，后端不校验。"
+  ],
+  "minimalSkeleton": "index.html + JS bundle\nClient Router: 前端路由\nFetch API → 后端 JSON\n组件渲染全在浏览器",
+  "relatedArchetypes": []
+}

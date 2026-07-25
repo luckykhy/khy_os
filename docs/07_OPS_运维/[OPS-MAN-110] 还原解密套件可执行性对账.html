@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-110] 还原解密套件可执行性对账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-110] 还原解密套件可执行性对账</div>
+      <header class="hero reveal"><h1>[OPS-MAN-110] 还原解密套件可执行性对账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-110-还原解密套件可执行性对账">[OPS-MAN-110] 还原解密套件可执行性对账</a></li><li class="lvl-2"><a href="#这一层闭合什么-crypto-kdf-是死字段-且失败信息会骗人">这一层闭合什么：crypto.kdf 是死字段，且失败信息会骗人</a></li><li class="lvl-2"><a href="#它和家族其它层的正交关系-别混淆">它和家族其它层的正交关系（别混淆）</a></li><li class="lvl-2"><a href="#判定档-解密套件门-最保守优先">判定档：解密套件门（最保守优先）</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-110-还原解密套件可执行性对账">[OPS-MAN-110] 还原解密套件可执行性对账<a class="anchor" href="#ops-man-110-还原解密套件可执行性对账" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-check-crypto.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/cryptoSuiteCompat.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-crypto-kdf-是死字段-且失败信息会骗人">这一层闭合什么：crypto.kdf 是死字段，且失败信息会骗人<a class="anchor" href="#这一层闭合什么-crypto-kdf-是死字段-且失败信息会骗人" aria-label="锚点">#</a></h2>
+<p>快照构建期 <code>sourceSnapshotCrypto.encrypt</code> 给每个快照头盖全套加密契约：</p>
+<ul><li><code>crypto.algo: &quot;aes-256-gcm&quot;</code> —— 对称加密算法；</li><li><code>crypto.kdf: &quot;scrypt&quot;</code> —— 密钥派生函数（口令 → 密钥的算法）；</li><li><code>crypto.scrypt: { N, r, p, keylen }</code> —— scrypt 代价参数；</li><li><code>crypto.salt / iv / authTag</code> —— 派生盐 / 初始向量 / GCM 认证标签（解密必需）。</li></ul>
+<p>但解密侧 <code>sourceSnapshotCrypto.decrypt</code> <strong>只校验 <code>crypto.algo</code>，从不校验 <code>crypto.kdf</code></strong>——<br><code>grep kdf</code> 在整个代码库里只有一处：<code>encrypt</code> 的盖章（第 81 行），<strong>零消费者</strong>。更毒的是：</p>
+<ul><li><code>decrypt</code> 读 scrypt 参数时是 <code>(c.scrypt &amp;&amp; c.scrypt.N) || SCRYPT.N</code>——<strong>盲目回退到写死的 scrypt 默认值</strong>；</li><li>一个未来 <code>kdf:&quot;argon2&quot;</code>（无 <code>c.scrypt</code> 块）的快照到了<strong>旧</strong> khy：<code>decrypt</code> 不看 kdf、照用 scrypt 派生，</li></ul>
+<p>派生出<strong>错误的密钥</strong>，<code>decipher.final()</code> 抛 <code>unable to authenticate data</code>，而调用方把这句<br>  <strong>映射成「口令错误 / wrong secret」</strong>。</p>
+<p>→ 陌生机器上的用户被告知「密码不对」，真相却是「这台 khy 根本不会 argon2 这个 KDF」。<br>这是离机还原里<strong>最会误导人的假失败</strong>。<code>crypto.kdf</code> 上游花心思盖章、跨渠道送达、下游能读，却<br><strong>在解密前无人据此把关</strong> = 死字段（断桥）。本层就是那个缺失的<strong>解密前</strong>消费者：把假的<br>「口令错误」换成诚实的「本机做不了这个加密套件 / 快照材料残缺」。</p>
+<h2 id="它和家族其它层的正交关系-别混淆">它和家族其它层的正交关系（别混淆）<a class="anchor" href="#它和家族其它层的正交关系-别混淆" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>管什么</th><th>一句话</th></tr></thead><tbody><tr><td>105 <code>snapshotFormatCompat</code></td><td>外层快照信封（<code>format</code>/<code>formatVersion</code>）</td><td>「这是不是 khy 快照」</td></tr><tr><td><strong>110 本层 <code>cryptoSuiteCompat</code></strong></td><td><strong>解密套件可执行性</strong>（<code>algo</code>/<code>kdf</code> + 必需材料）</td><td><strong>「我做不做得了这个解密」</strong></td></tr><tr><td>108 <code>archiveExtractCompat</code></td><td>解密后内层归档形制（<code>plaintextFormat</code>/<code>layout</code>）</td><td>「解开后我解不解得包」</td></tr><tr><td>095 <code>completenessVerifier</code></td><td>解包后文件数</td><td>「落地数量对得上吗」</td></tr></tbody></table>
+<p>顺序恰是还原流水线：信封(105) → <strong>解密套件(本层 110)</strong> → 真解密 → 内层归档(108) → 解包 → 完整性(095)。</p>
+<pre><code class="language-bash">node scripts/restore-check-format.js  ./Khy-OS --json   # ① 信封格式：本机看得懂吗？（105）
+node scripts/restore-check-crypto.js  ./Khy-OS --json   # ② 解密套件：本机解得了吗？（本层 110）
+node scripts/restore-check-archive.js ./Khy-OS --json   # ③ 内层归档：本机解包器解得开吗？（108）
+khy restore ./Khy-OS                                    # ④ 三门都过才敢真解密解包还原
+node scripts/restore-verify-complete.js ./Khy-OS --json # ⑤ 再对账数量：真完整吗？（095）</code></pre>
+<h2 id="判定档-解密套件门-最保守优先">判定档：解密套件门（最保守优先）<a class="anchor" href="#判定档-解密套件门-最保守优先" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象 / 数组 / 无 <code>crypto</code> 块 / <code>algo</code> 非非空串</td><td><code>unverifiable</code>：证据不足，绝不谎报</td><td>✗</td></tr><tr><td>2</td><td><code>crypto.algo</code> ∉ 支持集</td><td><code>unsupported-algo</code>：本机执行不了这个算法，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>3</td><td><code>crypto.kdf</code> 存在且 ∉ 支持集</td><td><code>unsupported-kdf</code>：会误派生 → 假「口令错误」，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>4</td><td>缺 <code>salt</code>/<code>iv</code>/<code>authTag</code> 任一</td><td><code>incomplete-material</code>：快照残缺，<strong>不是口令错误</strong></td><td>✗</td></tr><tr><td>5</td><td><code>algo</code> ∈ 支持集且（<code>kdf</code> 缺省 / ∈ 支持集）且材料齐全</td><td><code>supported</code>：唯一可安心进解密的档</td><td>✓</td></tr></tbody></table>
+<ul><li>本机解密真能执行的套件由叶子常量 <code>SUPPORTED_ALGOS</code> / <code>SUPPORTED_KDFS</code> 定义</li></ul>
+<p>（当前 <code>[&quot;aes-256-gcm&quot;]</code> / <code>[&quot;scrypt&quot;]</code>）；解密实现新增支持时按叶子 HOW-TO-EXTEND 同步——<br>  <strong>只有 decrypt 真能执行了才加进支持集</strong>，别为绿灯谎报。</p>
+<ul><li><code>--json</code> 在非 <code>supported</code> 时<strong>退出码 2</strong>：陌生机器上的自驱 agent 据此<strong>不敢盲目解密</strong>、</li></ul>
+<p>也<strong>不把失败当口令错</strong>。</p>
+<h2 id="恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）<a class="anchor" href="#恒久红线-继承全家族-密钥卫生" aria-label="锚点">#</a></h2>
+<ul><li>套件陌生 / 材料残缺一律<strong>拒绝放行</strong>：绝不臆造 <code>supported</code>，绝不让残缺快照走到解密换来假「口令错误」。</li><li><strong>绝不读、绝不打印任何密钥/口令/明文材料</strong>：只看 <code>algo</code>/<code>kdf</code> 字符串与 <code>salt</code>/<code>iv</code>/<code>authTag</code> 的<strong>存在性</strong>，</li></ul>
+<p>其值绝不离开判定、绝不落盘、绝不进输出。</p>
+<ul><li><code>kdf</code> 缺省是老快照的合法向后兼容情形（decrypt 回退 scrypt）；但 <code>kdf</code> 一旦<strong>存在</strong>必须是认识的 KDF。</li><li><code>ok===true</code> 仅当 <code>status === supported</code>；叶子纯计算、零 IO、零加密调用、绝不抛。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

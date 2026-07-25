@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "nord",
+    "label": "Nord",
+    "description": "Arctic Nord color scheme"
+  },
+  "colors": {
+    "claude": "#88C0D0",
+    "success": "#A3BE8C",
+    "error": "#BF616A",
+    "warning": "#EBCB8B",
+    "text": "#ECEFF4",
+    "secondaryText": "#D8DEE9",
+    "subtle": "#4C566A",
+    "bashBorder": "#B48EAD",
+    "permission": "#EBCB8B",
+    "link": "#81A1C1",
+    "diffAdded": "#2E3440",
+    "diffRemoved": "#3B3040",
+    "diffAddedDimmed": "#3B4252",
+    "diffRemovedDimmed": "#434C5E",
+    "diffAddedWord": "#A3BE8C",
+    "diffRemovedWord": "#BF616A",
+    "permissionPurple": "#B48EAD",
+    "userMessageBg": "#2E3440"
+  }
+}

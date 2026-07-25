@@ -1,0 +1,28 @@
+# ML 训练与推理依赖
+# 固定版本确保模型文件兼容性（joblib序列化与sklearn版本强绑定）
+
+# 核心ML库 — 版本必须与训练时一致
+scikit-learn==1.8.0
+xgboost==3.2.0
+lightgbm==4.6.0
+joblib==1.5.3
+
+# 数据处理
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<3.0.0
+scipy>=1.10.0
+
+# 技术指标特征工程
+ta>=0.11.0
+
+# 模型持久化
+# pickle5 仅 Python < 3.8 需要，Docker镜像为Python3.11+无需安装
+
+# 进度显示
+tqdm>=4.65.0
+
+# 配置管理
+pyyaml>=6.0
+
+# 日志
+loguru>=0.7.0

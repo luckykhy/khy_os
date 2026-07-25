@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "description": "On-demand local inference runtime manifest. These binaries are intentionally NOT committed to git and NOT shipped in the pip wheel (see setup.py EXCLUDE_PATTERNS and MANIFEST.in prune). On first use (or via `khy runtime install`) they are downloaded per-platform, verified by SHA256, and placed at their original paths under services/backend/bin/. URLs default to official upstream releases; set the KHY_RUNTIME_MIRROR_BASE env var to fetch the same filenames from a mirror (useful for restricted networks / air-gapped hosts). The sha256 (and, if needed, sourceSubdir) values are finalized by scripts/release/pin-runtime-binaries.js. A platform entry of null, or a missing/empty sha256, means there is no pinned binary for that platform: the runtime silently falls back to the system-installed binary.",
+  "mirrorBaseEnv": "KHY_RUNTIME_MIRROR_BASE",
+  "runtimes": {
+    "ollama-runner": {
+      "description": "Ollama inference runner: the `ollama` multi-call binary plus lib/ollama/*.so. Invoked by the CLI as `ollama runner --ollama-engine ...`.",
+      "targetDir": "bin/ollama-runner",
+      "sentinel": "bin/ollama",
+      "sentinelNote": "Runtime-level default sentinel (POSIX `bin/ollama`). A platform entry may override it with its own `sentinel` when the upstream archive lays the binary out differently (the Windows zip ships `ollama.exe` at the archive root, not under bin/). The provisioner resolves `plat.sentinel || runtime.sentinel` BEFORE the present/absent fast-path so each platform is detected correctly.",
+      "version": "v0.6.8",
+      "versionNote": "The vendored runner reports version 0.0.0, so the exact upstream version is not derivable from the binary. IMPORTANT: running qwen3.5 / qwen3-next requires a runner whose Go engine registers the qwen35 architecture — the vendored binary already does (its strings contain `qwen3nextqwen35moe`). When arming sha256 via pin-runtime-binaries.js, bump this tag (and the per-platform URLs) to an upstream release new enough to support qwen3-next; the v0.6.8 URLs here are layout placeholders, not a qwen35-capable tag. The pin script fails loudly on a wrong/nonexistent tag so it can be corrected.",
+      "platforms": {
+        "linux-x64": {
+          "url": "https://github.com/ollama/ollama/releases/download/v0.6.8/ollama-linux-amd64.tgz",
+          "filename": "ollama-linux-amd64.tgz",
+          "sha256": "",
+          "format": "tar.gz",
+          "sourceSubdir": ".",
+          "chmod": ["bin/ollama"]
+        },
+        "linux-arm64": {
+          "url": "https://github.com/ollama/ollama/releases/download/v0.6.8/ollama-linux-arm64.tgz",
+          "filename": "ollama-linux-arm64.tgz",
+          "sha256": "",
+          "format": "tar.gz",
+          "sourceSubdir": ".",
+          "chmod": ["bin/ollama"]
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/ollama/ollama/releases/download/v0.6.8/ollama-darwin.tgz",
+          "filename": "ollama-darwin.tgz",
+          "sha256": "",
+          "format": "tar.gz",
+          "sourceSubdir": ".",
+          "sentinelNote": "Inherits the runtime-level `bin/ollama`. If pin --verify-layout reports the darwin universal archive lays the binary at the root (`ollama`) instead, set `sentinel`: \"ollama\" here.",
+          "chmod": ["bin/ollama"]
+        },
+        "darwin-x64": {
+          "url": "https://github.com/ollama/ollama/releases/download/v0.6.8/ollama-darwin.tgz",
+          "filename": "ollama-darwin.tgz",
+          "sha256": "",
+          "format": "tar.gz",
+          "sourceSubdir": ".",
+          "sentinelNote": "Same universal ollama-darwin.tgz as darwin-arm64. Inherits the runtime-level `bin/ollama`; override to \"ollama\" if pin --verify-layout finds a root-level binary.",
+          "chmod": ["bin/ollama"]
+        },
+        "win32-x64": {
+          "url": "https://github.com/ollama/ollama/releases/download/v0.6.8/ollama-windows-amd64.zip",
+          "filename": "ollama-windows-amd64.zip",
+          "sha256": "",
+          "format": "zip",
+          "sourceSubdir": ".",
+          "sentinel": "ollama.exe",
+          "sentinelNote": "The Windows zip ships ollama.exe at the archive root (no bin/ prefix), so this overrides the runtime-level `bin/ollama`.",
+          "chmod": []
+        }
+      }
+    },
+    "llama-cpp": {
+      "description": "llama.cpp CLI suite (build b9049): llama-cli, llama-quantize, llama-server, llama-completion, etc. plus shared libraries.",
+      "targetDir": "bin/llama-cpp/llama-b9049",
+      "sentinel": "llama-cli",
+      "version": "b9049",
+      "platforms": {
+        "linux-x64": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9049/llama-b9049-bin-ubuntu-x64.zip",
+          "filename": "llama-b9049-bin-ubuntu-x64.zip",
+          "sha256": "",
+          "format": "zip",
+          "sourceSubdir": "build/bin",
+          "sourceSubdirNote": "Hint only; the provisioner auto-detects the real payload root by locating the sentinel if this is wrong.",
+          "chmod": ["llama-cli", "llama-quantize", "llama-server", "llama-completion"]
+        },
+        "linux-arm64": null,
+        "darwin-arm64": null,
+        "darwin-x64": null,
+        "win32-x64": null
+      }
+    }
+  }
+}

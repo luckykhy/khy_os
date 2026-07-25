@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报）</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-044-agent-自愈微循环-诊断-修复-重试-先救后报">DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报）</a></li><li class="lvl-2"><a href="#1-问题陈述">1. 问题陈述</a></li><li class="lvl-2"><a href="#2-自调查结论-左-右两半">2. 自调查结论（左/右两半）</a></li><li class="lvl-2"><a href="#3-流程">3. 流程</a></li><li class="lvl-2"><a href="#4-诊断字典-单一真源-六行核心病因">4. 诊断字典（单一真源，六行核心病因）</a></li><li class="lvl-2"><a href="#5-修复分级">5. 修复分级</a></li><li class="lvl-2"><a href="#6-强制兜底报告-goal3-形状-严格对齐">6. 强制兜底报告（Goal3 形状，严格对齐）</a></li><li class="lvl-2"><a href="#7-架构">7. 架构</a></li><li class="lvl-2"><a href="#8-防呆-硬约束">8. 防呆（硬约束）</a></li><li class="lvl-2"><a href="#9-接入-零侵入">9. 接入（零侵入）</a></li><li class="lvl-2"><a href="#10-验收-26-用例绿-零网络-零真实安装-零真实-fs">10. 验收（26 用例绿，零网络/零真实安装/零真实 FS）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-044-agent-自愈微循环-诊断-修复-重试-先救后报">DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报）<a class="anchor" href="#design-arch-044-agent-自愈微循环-诊断-修复-重试-先救后报" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（services/backend）<br>关联代码：<code>services/backend/src/services/selfHeal/</code>、复用 <code>services/resilience/</code><br>关联测试：<code>tests/services/selfHeal/selfHeal.test.js</code>（26 用例绿）<br>关联规范：[DESIGN-ARCH-028] 零静默失败（E0x 错误码来源）、[DESIGN-ARCH-027] 依赖自愈（安装委派）<br>上游依赖：<code>services/resilience/</code>（降级树 + 预算 + 死循环 + 残料兜底，本规范复用其右半）</p></blockquote>
+<h2 id="1-问题陈述">1. 问题陈述<a class="anchor" href="#1-问题陈述" aria-label="锚点">#</a></h2>
+<p>Agent 遇错有两种坏味道：</p>
+<ol><li><strong>不救就报</strong>：工具一失败就 <code>throw</code> / <code>return 失败</code>，从不尝试归因与自动修复。</li><li><strong>死循环重试</strong>：<code>while/retry</code> 不改变任何状态地原地重发，或把原始 <code>Error.message</code></li></ol>
+<p>原样塞回模型让其&quot;再试一次&quot;。</p>
+<p>目标：错误必须<strong>先精准归因 + 尝试自动修复</strong>，修复失败方可降级或报错。<br>彻底杜绝上述两种坏味道。</p>
+<h2 id="2-自调查结论-左-右两半">2. 自调查结论（左/右两半）<a class="anchor" href="#2-自调查结论-左-右两半" aria-label="锚点">#</a></h2>
+<p>自调查发现 <code>services/resilience/</code> 已实现流程图<strong>右半</strong>——降级熔断树<br>（<code>MAX_FALLBACK_DEPTH=3</code>）、调用级死循环检测、预算闸门、强制残料兜底。<br>缺的是<strong>左半</strong>——「诊断→修复→重试」的自愈微循环。</p>
+<p>因此 <code>selfHeal/</code> <strong>只补左半</strong>，并把微循环作为 <code>ctx.repair</code> 钩子注入 resilience 的<br><code>BudgetAwareExecutor</code>，零侵入复用右半。三道硬上限天然落到结构上：</p>
+<ul><li>「微循环 ≤ 1 次」：每个 Plan 只被 <code>repair()</code> 调用一次（<code>MicroLoopExecutor.MAX_LOOP=1</code>）。</li><li>「每 Plan 重试 ≤ 1 次」：resilience <code>MAX_RETRY_PER_PLAN=1</code>。</li><li>「降级树深度 ≤ 3」：resilience <code>MAX_FALLBACK_DEPTH=3</code>。</li></ul>
+<h2 id="3-流程">3. 流程<a class="anchor" href="#3-流程" aria-label="锚点">#</a></h2>
+<pre><code>工具失败 → 诊断(ErrorDiagnostician)
+  ├─ 可本地/受控修复？(fixable)
+  │     ├─ 否(L2/无命中/degrade-direct) ───────────────┐
+  │     └─ 是 → 处方死循环熔断？                         │
+  │              ├─ 是(同处方再现) ─────────────────────┤
+  │              └─ 否 → (L1 询问获批) → 执行受控修复     │
+  │                       ├─ 成功 → 原 Plan 重试(≤1) → 通过→继续
+  │                       └─ 失败 ───────────────────────┤
+  │                                                       ▼
+  └────────────────────────────────→ 降级熔断树(resilience，深度≤3)
+                                          ├─ 某 Plan 成功 → 继续
+                                          └─ 穷尽仍失败 → 强制兜底报告</code></pre>
+<h2 id="4-诊断字典-单一真源-六行核心病因">4. 诊断字典（单一真源，六行核心病因）<a class="anchor" href="#4-诊断字典-单一真源-六行核心病因" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>错误签名</th><th>病因</th><th>处方动作（仅展示）</th><th>级别</th><th>需确认</th><th>fixKind</th></tr></thead><tbody><tr><td><code>ModuleNotFoundError: x</code> / <code>Cannot find module 'x'</code></td><td>依赖缺失</td><td>安装依赖 x（委派注册表）</td><td>L1</td><td>是</td><td>install-dependency</td></tr><tr><td><code>ECONNREFUSED 127.0.0.1:9222</code></td><td>端口占用/服务未起</td><td><code>lsof -i:9222</code> 只读探测</td><td>L1</td><td>是</td><td>probe-port</td></tr><tr><td><code>Cannot read properties of null</code></td><td>格式错/参数缺失</td><td>按 Schema 注入缺省值</td><td>L0</td><td>否</td><td>inject-defaults</td></tr><tr><td><code>403 Forbidden</code></td><td>权限/认证</td><td>切 WebFetch/搜索（自动降级）</td><td>L0</td><td>否</td><td>degrade-direct</td></tr><tr><td><code>Command not found: python</code></td><td>运行时缺失</td><td>固定候选 python3/node 切换</td><td>L1</td><td>是</td><td>switch-runtime</td></tr><tr><td><code>EROFS: read-only file system</code></td><td>写只读</td><td>改写目标至 /tmp</td><td>L0</td><td>否</td><td>retarget-path</td></tr></tbody></table>
+<p>外加 L2 红线（危险命令/网络越权）→ <code>refuse</code>，<strong>优先命中</strong>，绝不进微循环。</p>
+<h2 id="5-修复分级">5. 修复分级<a class="anchor" href="#5-修复分级" aria-label="锚点">#</a></h2>
+<ul><li><strong>L0 自愈</strong>：参数补全 / 路径修正 / 格式纠错——代码级硬修复，零风险，不问用户，<code>auto=true</code>。</li><li><strong>L1 交互</strong>：装依赖 / 切运行时——必问用户获批，<code>auto=false</code>。</li><li><strong>L2 拒绝</strong>：系统核心配置 / 危险命令 / 网络越权——不修，直接降级树。</li></ul>
+<h2 id="6-强制兜底报告-goal3-形状-严格对齐">6. 强制兜底报告（Goal3 形状，严格对齐）<a class="anchor" href="#6-强制兜底报告-goal3-形状-严格对齐" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;failed&quot;,
+  &quot;intent&quot;: &quot;fetch-web-content&quot;,
+  &quot;diagnosis&quot;: { &quot;error_code&quot;: &quot;E05&quot;, &quot;cause&quot;: &quot;依赖缺失（Node 模块/Python 包未安装）&quot;,
+                 &quot;reason&quot;: &quot;missing-dependency&quot;, &quot;risk&quot;: &quot;L1&quot;,
+                 &quot;prescription&quot;: &quot;安装依赖 puppeteer（委派 dependency 注册表，命令来自受控表）。&quot;,
+                 &quot;detail&quot;: &quot;…(脱敏)…&quot; },
+  &quot;attempted_fixes&quot;: [ { &quot;action&quot;: &quot;安装依赖 puppeteer…&quot;, &quot;result&quot;: &quot;failed:network-unreachable&quot;, &quot;auto&quot;: false } ],
+  &quot;salvage_data&quot;: &quot;…(降级树各 Plan 抢救到的残料)…&quot;,
+  &quot;next_action_suggestion&quot;: &quot;手动安装依赖 puppeteer… 或改用不依赖它的来源后重试。&quot;
+}</code></pre>
+<h2 id="7-架构">7. 架构<a class="anchor" href="#7-架构" aria-label="锚点">#</a></h2>
+<pre><code>selfHeal/diagnosisDictionary.js  六行病因表（单一真源）；处方=展示串，命令不出此门
+selfHeal/errorDiagnostician.js   ErrorDiagnostician：failsafe.classify(E0x) + resilience.classifyFailure(reason) + 字典(处方)
+selfHeal/deadLoopDetector.js     PrescriptionDeadLoopDetector：处方级熔断（与 resilience 调用级互补）
+selfHeal/fixActions.js           受控修复出口：按 fixKind 分派写死逻辑；install 委派 dependency 注册表
+selfHeal/microLoopExecutor.js    MicroLoopExecutor：MAX_LOOP=1；repair() 钩子 + runOnce() 独立微循环
+selfHeal/fallbackTree.js         FallbackTreeWithHeal：微循环(repair) 注入 resilience 协调器 + 兜底形状转换
+selfHeal/index.js                门面；types.d.ts TS 契约</code></pre>
+<h2 id="8-防呆-硬约束">8. 防呆（硬约束）<a class="anchor" href="#8-防呆-硬约束" aria-label="锚点">#</a></h2>
+<ul><li><strong>①微循环上限硬编码 1 次</strong>：<code>MicroLoopExecutor.MAX_LOOP=1</code>（不可配置）；resilience 每 Plan 仅调</li></ul>
+<p><code>repair()</code> 一次 + <code>MAX_RETRY_PER_PLAN=1</code> 双重保证。</p>
+<ul><li><strong>②处方只来自字典</strong>：所有安装/执行命令经 <code>FixActions</code>，来自 dependency 注册表 / 固定候选集；</li></ul>
+<p>诊断只透出受控标识（依赖名/命令名/路径/端口），<strong>禁止</strong>模型自由生成命令（防注入）。</p>
+<ul><li><strong>③L2 禁入微循环</strong>：诊断 <code>fixable=false</code>（含 <code>risk=L2</code> / <code>refuse</code> / <code>degrade-direct</code>）直接降级，</li></ul>
+<p>连处方都不开。</p>
+<ul><li><strong>④降级树深度硬上限 3 层</strong>：复用 resilience <code>MAX_FALLBACK_DEPTH=3</code>；穷尽仍失败立即触发兜底报告。</li><li><strong>⑤处方级死循环熔断</strong>：同一条处方（<code>fixKind:受控标识</code>，与工具无关）重复开具 → 判无效，</li></ul>
+<p>中断微循环走降级。</p>
+<h2 id="9-接入-零侵入">9. 接入（零侵入）<a class="anchor" href="#9-接入-零侵入" aria-label="锚点">#</a></h2>
+<pre><code class="language-js">const { FallbackTreeWithHeal } = require('.../selfHeal');
+const { makeToolRunner } = require('.../resilience');
+const heal = new FallbackTreeWithHeal({
+  runner: makeToolRunner(executeTool),         // 复用全局唯一工具漏斗
+  confirm: async ({ diagnosis }) =&gt; askUser(diagnosis.action),  // L1 获批
+  onDegrade: (text) =&gt; injectSystemTurn(text),
+});
+const out = await heal.run('fetch-web-content', { url, query, control });
+// out.status==='ok' ? out.result : out（Goal3 兜底报告）</code></pre>
+<p>不改 <code>executeTool</code> 一行；不外科手术改写 toolUseLoop。</p>
+<h2 id="10-验收-26-用例绿-零网络-零真实安装-零真实-fs">10. 验收（26 用例绿，零网络/零真实安装/零真实 FS）<a class="anchor" href="#10-验收-26-用例绿-零网络-零真实安装-零真实-fs" aria-label="锚点">#</a></h2>
+<ul><li>诊断字典六行各归正确病因/级别/fixKind + 受控标识抽取；L2 优先；未命中返回 null（不臆造）。</li><li>诊断器：依赖缺失校正 E05、L2 fixable=false、403 degrade-direct。</li><li>处方级熔断：同处方第二次 dead=true；签名与工具无关。</li><li>FixActions：retarget→/tmp、switch-runtime 固定候选、probe-only 不算修复、install 委派注入桩。</li><li>微循环：L0 自愈重试通过（恰一次）、L1 未获批降级、L2 不进循环（attempted 为空、不重试）、</li></ul>
+<p>同处方熔断。</p>
+<ul><li>全链：Puppeteer 缺失→批准安装→安装失败→降级 WebFetch→403→WebSearch→强制兜底报告（E05/</li></ul>
+<p>attempted_fixes 记安装失败/三 Plan 全走/兜底字段齐全）；自愈成功路径不降级。</p>
+<ul><li>防呆②：未知错误无处方，兜底不臆造命令。④降级硬上限 3 被复用。</li></ul>
+<p>全量 node:test 回归 623/623 绿，零回归。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html"><div class="dir">← 上一篇</div><div class="ttl">khy-agent-sdk — Claude Agent SDK 对齐与 D1–D6 治理融合规范</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-045] 非活跃通道生命周期治理-僵尸后台收回与日志越权阻断.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-044] Agent自愈微循环-诊断修复重试.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

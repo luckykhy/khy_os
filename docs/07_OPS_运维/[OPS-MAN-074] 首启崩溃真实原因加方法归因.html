@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因</div>
+      <header class="hero reveal"><h1>[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-074-首启崩溃-真实原因-方法归因">[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因</a></li><li class="lvl-2"><a href="#它补的真实缺口">它补的真实缺口</a></li><li class="lvl-2"><a href="#与四件构建期送别礼的区别">与四件构建期送别礼的区别</a></li><li class="lvl-2"><a href="#分层-同-windowsspawnhardening">分层（同 windowsSpawnHardening）</a></li><li class="lvl-2"><a href="#门控">门控</a></li><li class="lvl-2"><a href="#当前归因类别">当前归因类别</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-074-首启崩溃-真实原因-方法归因">[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因<a class="anchor" href="#ops-man-074-首启崩溃-真实原因-方法归因" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼「错误真实原因加方法」角度。pip 与 npm 是仅有的两条离机渠道。他机装完<br><strong>首次运行</strong>时，最阴险的失败不是「装不上」，而是「装上了、进程也起来了、深层<br><code>require</code> 才崩」——今日只吐一行<strong>裸 stack</strong>，使用者根本看不懂发生了什么、更不知怎么修。<br>本子系统把该崩溃归因成一句「真实原因」+ 几条照抄即用的「解决方法」。</p></blockquote>
+<h2 id="它补的真实缺口">它补的真实缺口<a class="anchor" href="#它补的真实缺口" aria-label="锚点">#</a></h2>
+<ul><li><code>platform/khy_platform/cli.py:2305</code> 早已为「<code>bin/khy.js</code> 文件缺失」示范了</li></ul>
+<p>「真实原因 + 解决方法」的好样子，但它<strong>只管文件不在</strong>的情形；且 Unix 上<br>  <code>os.execvpe</code> 之后 Python 侧的归因已不可达。</p>
+<ul><li>更常见的是<strong>依赖不齐</strong>：文件在、<code>node -e</code> 起来、加载 backend 时深层 <code>require</code></li></ul>
+<p>抛 <code>MODULE_NOT_FOUND</code>。两条渠道都会汇到这里：</p>
+<ul><li>pip：<code>_bootstrap.py</code> 首启 hydrate 失败 → marker 未写 → 仍继续启动 → 崩。</li><li>npm：<code>postinstall.js</code> / <code>devenv.js</code> 吞掉 hydrate 失败 → <code>exit 0</code> → 首启才崩。</li></ul>
+<p><code>unhandledRejection</code> 兜底）。归因逻辑仓内早有（<code>scripts/lib/hydrationHealth.js</code><br>  的 <code>_RULES</code>），但它只在 doctor CLI 跑，<strong>从不在崩溃路径</strong>。本子系统把「崩溃现场<br>  的 <code>err</code>」→「真实原因 + 方法」，交给 <code>_emitFatal</code> 追加呈现（保留裸 stack 供维护者）。</p>
+<h2 id="与四件构建期送别礼的区别">与四件构建期送别礼的区别<a class="anchor" href="#与四件构建期送别礼的区别" aria-label="锚点">#</a></h2>
+<p><code>restore-readiness</code> / <code>install-integrity</code> / <code>hydration-health</code> / <code>bundle-launch-contract</code><br>四件都是<strong>构建/发布期</strong>守卫，在发布仓跑、<strong>不进 bundle</strong>。本件是<strong>运行时</strong>错误增强，<br>随 backend 源码树一起打包进 pip/npm，故落在 <code>services/backend/src/bootstrap/</code>，而非<br><code>scripts/lib/</code>。</p>
+<h2 id="分层-同-windowsspawnhardening">分层（同 windowsSpawnHardening）<a class="anchor" href="#分层-同-windowsspawnhardening" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯核心</strong> <code>services/backend/src/bootstrap/startupFailureExplain.js</code>：零 IO、无时钟、</li></ul>
+<p>无随机、同输入恒同输出、<strong>绝不抛</strong>（任何异常退化为安全 <code>null</code>）。</p>
+<ul><li><strong>IO / 呈现</strong> 在 <code>bin/khy.js</code> 的 <code>_emitFatal</code>；且对纯叶子的 <code>require</code> 亦包 <code>try/catch</code></li></ul>
+<p>——崩溃现场依赖可能就缺，<strong>绝不让归因本身加重致命路径</strong>。</p>
+<h2 id="门控">门控<a class="anchor" href="#门控" aria-label="锚点">#</a></h2>
+<p><code>KHY_STARTUP_FAILURE_EXPLAIN</code>（default-on，CANON off 4 词：<code>0/false/off/no</code>）。<br>关 → <code>explainStartupFailure</code> 返回 <code>null</code> → <code>_emitFatal</code> <strong>逐字节回退</strong>今日裸 stack 行为。<br>刻意<strong>不进 flagRegistry</strong>（sibling 门；注册表对未登记 flag 会回默认开、吞掉 <code>off</code>，且<br>崩溃现场 <code>require</code> 注册表可能命中缺失依赖），直读 env 最简且最安全。</p>
+<h2 id="当前归因类别">当前归因类别<a class="anchor" href="#当前归因类别" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>id</th><th>触发信号</th><th>真实原因</th><th>方法要点</th></tr></thead><tbody><tr><td><code>module-not-found</code></td><td><code>err.code === 'MODULE_NOT_FOUND'</code> 或 message 含 <code>Cannot find module 'X'</code></td><td>后端依赖未装齐（首启 hydrate 未完成/被中断/半装），点名缺失模块</td><td>重跑 khy 触发 hydrate；仍缺则删 marker+lock 全量重装；win32 先 <code>khy stop</code> 再 pip 重装；源码则 <code>npm install</code></td></tr><tr><td><code>native-abi-mismatch</code></td><td><code>err.code === 'ERR_DLOPEN_FAILED'</code> 或 message 含 <code>.node</code> / <code>shared library</code> / <code>different Node</code></td><td>原生模块与本机 Node/平台 ABI 不匹配（跨平台复制未重建）</td><td><code>npm rebuild better-sqlite3</code> 或删 <code>node_modules</code> 重跑；确认 Node ≥ 20 且一致</td></tr></tbody></table>
+<p>未识别的 <code>err</code> → 返回 <code>null</code> → 逐字节回退今日裸 stack（保守，不瞎归因）。</p>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>新增一类首启崩溃归因 → 往 <code>_CLASSIFIERS</code> 追加一条 <code>{ id, match(ctx), build(ctx) }</code>。</li></ol>
+<p><code>match(ctx)</code> 纯谓词（<code>ctx = {code, message, missingModule, platform}</code>）；<code>build</code><br>   返回 <code>{ cause, fixes:{common,win32,unix} }</code>。</p>
+<ol><li>修法务必安全——不得含 <code>git commit</code>/<code>git push</code>/<code>rm -rf</code>/<code>curl</code>/<code>wget</code>/<code>npm publish</code></li></ol>
+<p>等危险动作（<code>_DANGER_TOKENS</code> 自检守此线，命中则整条放弃、回退 <code>null</code>）。</p>
+<ol><li>改完跑：<code>npm run test:startup-failure-explain</code>（node:test，须全绿）。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:startup-failure-explain
+# 或直接
+node --test services/backend/tests/bootstrap/startupFailureExplain.test.js</code></pre>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li><code>platform/khy_platform/cli.py:2305</code>（文件缺失情形的姊妹归因，本件补依赖不齐情形）</li><li><code>scripts/lib/hydrationHealth.js</code>（同源归因逻辑，doctor 路径；本件把它带到崩溃路径）</li><li>[OPS-MAN-070] hydration 健康自检、[OPS-MAN-073] 离机渠道启动入口契约</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-073] 离机渠道启动入口契约自检清单.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-073] 离机渠道启动入口契约自检清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-075] Agent 还原方案合成器</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-074] 首启崩溃真实原因加方法归因.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

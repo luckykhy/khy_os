@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 远程 SSH 上线实施清单（Phase 0.7） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY 远程 SSH 上线实施清单（Phase 0.7）</div>
+      <header class="hero reveal"><h1>KHY 远程 SSH 上线实施清单（Phase 0.7）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-远程-ssh-上线实施清单-phase-0-7">KHY 远程 SSH 上线实施清单（Phase 0.7）</a></li><li class="lvl-2"><a href="#0-范围">0. 范围</a></li><li class="lvl-2"><a href="#1-服务拆分-后端">1. 服务拆分（后端）</a></li><li class="lvl-2"><a href="#2-api-接口契约">2. API / 接口契约</a></li><li class="lvl-2"><a href="#3-事件字段-流式-追踪">3. 事件字段（流式 + 追踪）</a></li><li class="lvl-2"><a href="#4-安全与策略强制">4. 安全与策略强制</a></li><li class="lvl-2"><a href="#5-跨设备连续性要求">5. 跨设备连续性要求</a></li><li class="lvl-2"><a href="#6-最小测试矩阵">6. 最小测试矩阵</a></li><li class="lvl-2"><a href="#7-上线计划-建议">7. 上线计划（建议）</a></li><li class="lvl-2"><a href="#8-阶段退出标准">8. 阶段退出标准</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-019 | 阶段: 运维 | 原路径: docs/指南/khy-远程ssh-实施清单.md --&gt;</p>
+<h1 id="khy-远程-ssh-上线实施清单-phase-0-7">KHY 远程 SSH 上线实施清单（Phase 0.7）<a class="anchor" href="#khy-远程-ssh-上线实施清单-phase-0-7" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>状态：未交付 / CLI 当前不可用。</strong> 本文是实施清单与设计蓝图，<strong>不是</strong>成品操作手册。<br>文中 <code>khy remote …</code> 子命令在当前发行版尚未接通：CLI handler（<code>services/backend/src/cli/handlers/remote.js</code>）引用的 <code>remote.sshConfig</code> / <code>connectionManager</code> / <code>execService</code> 与服务层实际导出名 <code>sshConfigService</code> / <code>sshConnectionManager</code> / <code>remoteExecService</code>（<code>services/backend/src/services/remote/index.js</code>）不匹配，且 router 未向 handler 转发 host / 命令参数，因此每个子命令都会抛错。服务层已存在真实的 SSH 执行引擎，但尚未对接 CLI。<br>请勿据此预期可直接运行的功能；本文用于指导后续实现。</p></blockquote>
+<p>本清单将远程 SSH 愿景转化为可直接落地的任务，并适配当前 KHY-OS 架构。</p>
+<h2 id="0-范围">0. 范围<a class="anchor" href="#0-范围" aria-label="锚点">#</a></h2>
+<p>目标：</p>
+<ul><li>通过 SSH 将 KHY-OS 连接到团队托管的远程开发环境。</li><li>复用同一套安全中继、脱敏网关、审批流程与跨设备交接。</li></ul>
+<p>不在本阶段（Phase 0.7）范围内：</p>
+<ul><li>Kubernetes 级别的多节点编排。</li><li>持久化的远程 Agent 市场。</li></ul>
+<h2 id="1-服务拆分-后端">1. 服务拆分（后端）<a class="anchor" href="#1-服务拆分-后端" aria-label="锚点">#</a></h2>
+<p>在 <code>backend/src/services/remote/</code> 下新增以下服务：</p>
+<ol><li><code>sshConfigService.js</code></li><li>解析并监听 <code>~/.ssh/config</code>。</li><li>暴露规范化的主机条目（alias、host、port、user、identityFile、proxyJump）。</li></ol>
+<ol><li><code>sshCredentialGuard.js</code></li><li>校验密钥路径的可读性与文件权限模式。</li><li>按策略拦截不安全的密钥文件与不安全的 agent-forward 默认配置。</li></ol>
+<ol><li><code>sshConnectionManager.js</code></li><li>管理 SSH 连接的生命周期。</li><li>维护 <code>connection_id</code>、健康状态、重连退避与空闲关闭。</li></ol>
+<ol><li><code>remoteWorkspaceResolver.js</code></li><li>按主机配置解析远程 cwd/工作区。</li><li>校验允许的工作区前缀。</li></ol>
+<ol><li><code>remoteExecService.js</code></li><li>通过流式回调执行远程命令。</li><li>发出结构化执行事件（<code>step_start</code>、<code>stdout_chunk</code>、<code>step_end</code>）。</li></ol>
+<ol><li><code>remoteApprovalBridge.js</code></li><li>将高风险远程操作路由进同一套审批工单流程。</li><li>确保远程操作无法绕过审批。</li></ol>
+<ol><li><code>remoteStateSyncService.js</code></li><li>将远程任务状态接入跨设备快照构建器。</li><li>包含待处理审批与活跃的远程会话。</li></ol>
+<h2 id="2-api-接口契约">2. API / 接口契约<a class="anchor" href="#2-api-接口契约" aria-label="锚点">#</a></h2>
+<p>建议在 <code>backend/src/routes/remoteSsh.js</code> 下设置以下路由：</p>
+<ol><li><code>GET /api/remote/ssh/hosts</code></li><li>返回从 <code>~/.ssh/config</code> 发现的 SSH 主机。</li></ol>
+<ol><li><code>POST /api/remote/ssh/connect</code></li><li>输入：<ul><li><code>hostAlias</code>（必填）</li><li><code>workspace</code>（可选）</li><li><code>purpose</code>（可选，默认 <code>development</code>）</li></ul></li><li>输出：<ul><li><code>connection_id</code></li><li><code>status</code>（<code>connected|reconnecting|failed</code>）</li><li><code>host</code>、<code>user</code>、<code>workspace</code>、<code>trace_id</code></li></ul></li></ol>
+<ol><li><code>POST /api/remote/ssh/disconnect</code></li><li>输入：<code>connection_id</code></li><li>输出：<code>status</code></li></ol>
+<ol><li><code>POST /api/remote/ssh/exec</code></li><li>输入：<ul><li><code>connection_id</code></li><li><code>commands[]</code></li><li><code>risk_context</code>（可选）</li><li><code>dry_run</code>（默认 <code>true</code>）</li></ul></li><li>行为：<ul><li>对每条命令进行风险分级。</li><li>若为高风险且未预先审批，返回 <code>approval_required</code>。</li><li>若已审批，则执行并流式推送事件。</li></ul></li></ol>
+<ol><li><code>GET /api/remote/ssh/sessions</code></li><li>返回活跃连接与健康状态汇总。</li></ol>
+<h2 id="3-事件字段-流式-追踪">3. 事件字段（流式 + 追踪）<a class="anchor" href="#3-事件字段-流式-追踪" aria-label="锚点">#</a></h2>
+<p>所有远程事件均应包含：</p>
+<ul><li><code>trace_id</code></li><li><code>connection_id</code></li><li><code>host_alias</code></li><li><code>remote_user</code></li><li><code>remote_workspace</code></li><li><code>sequence</code></li><li><code>ts</code></li><li><code>kind</code></li><li><code>severity</code></li><li><code>redaction_applied</code></li></ul>
+<p>建议的 <code>kind</code>：</p>
+<ul><li><code>remote_connection_state</code></li><li><code>remote_exec_step</code></li><li><code>remote_exec_stdout</code></li><li><code>remote_exec_stderr</code></li><li><code>remote_approval_required</code></li><li><code>remote_exec_summary</code></li></ul>
+<h2 id="4-安全与策略强制">4. 安全与策略强制<a class="anchor" href="#4-安全与策略强制" aria-label="锚点">#</a></h2>
+<ol><li>命令风险策略：</li><li>复用现有的命令分级路径（<code>safe/moderate/dangerous/critical</code>）。</li><li>应用与本地执行相同的审批规则。</li></ol>
+<ol><li>数据出口策略：</li><li>绝不将完整源文件内容推送到移动端。</li><li>推送到移动端的远程输出须先经过脱敏网关。</li></ol>
+<ol><li>SSH 加固默认项：</li><li>在命令模板中禁用不安全的 shell 插值。</li><li>拒绝对未知主机别名执行远程操作，除非显式允许。</li><li>为主机别名保留可选的白名单（<code>KHY_REMOTE_SSH_ALLOWLIST</code>）。</li></ol>
+<ol><li>审计：</li><li>以 <code>trace_id</code> 持久化 connect/disconnect/exec/approval 事件。</li></ol>
+<h2 id="5-跨设备连续性要求">5. 跨设备连续性要求<a class="anchor" href="#5-跨设备连续性要求" aria-label="锚点">#</a></h2>
+<p>在本地终端、移动端与远程 SSH 之间切换时：</p>
+<ul><li>将活跃的远程会话纳入交接快照。</li><li>将待处理的远程审批纳入同一审批队列。</li><li>保留进行中的远程任务状态（<code>running</code>、<code>retry_wait</code>、<code>paused</code>）。</li></ul>
+<h2 id="6-最小测试矩阵">6. 最小测试矩阵<a class="anchor" href="#6-最小测试矩阵" aria-label="锚点">#</a></h2>
+<p>在 <code>backend/tests/remote/</code> 下新增测试：</p>
+<ol><li><code>sshConfigService.test.js</code></li><li>解析多主机的 <code>~/.ssh/config</code>。</li><li>处理 <code>Host *</code> 默认项与主机级覆盖。</li></ol>
+<ol><li><code>sshConnectionManager.test.js</code></li><li>成功连接/断开。</li><li>网络中断后以指数退避重连。</li></ol>
+<ol><li><code>remoteExecService.test.js</code></li><li>按序流式推送 stdout/stderr，保证 sequence 单调递增。</li><li>处理命令超时与取消。</li></ol>
+<ol><li><code>remoteApprovalBridge.test.js</code></li><li>高风险命令在执行前返回审批工单。</li><li>已审批的工单恰好执行一次。</li></ol>
+<ol><li><code>remoteStateSyncService.test.js</code></li><li>快照包含远程会话与待处理审批。</li></ol>
+<ol><li><code>remoteRedactionPipeline.test.js</code></li><li>远程输出中的密钥在推送移动端事件前被脱敏遮罩。</li></ol>
+<ol><li><code>remoteSsh.route.test.js</code></li><li>对 connect/exec/disconnect 进行路由级校验。</li><li>拒绝未授权与格式错误的载荷。</li></ol>
+<h2 id="7-上线计划-建议">7. 上线计划（建议）<a class="anchor" href="#7-上线计划-建议" aria-label="锚点">#</a></h2>
+<p>第 1 周：</p>
+<ul><li>实现主机发现、连接管理器、connect/disconnect API。</li></ul>
+<p>第 2 周：</p>
+<ul><li>实现远程 exec 流式推送 + 审批桥接 + 脱敏管线。</li></ul>
+<p>第 3 周：</p>
+<ul><li>集成跨设备快照，并补齐完整的远程测试矩阵。</li></ul>
+<h2 id="8-阶段退出标准">8. 阶段退出标准<a class="anchor" href="#8-阶段退出标准" aria-label="锚点">#</a></h2>
+<ul><li><code>~/.ssh/config</code> 中的主机能够被可靠地发现与连接。</li><li>高风险远程命令在未经审批时无法运行。</li><li>远程执行流在移动端与桌面端均可见，且已脱敏。</li><li>设备切换能保留远程任务与审批的连续性。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-018] khy-编程智能体-风险预防-2026-05-30.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 编程智能体风险预防与诊断计划 (2026-05-30)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-020] openagent-对齐日志.html"><div class="dir">下一篇 →</div><div class="ttl">oh-my-openagent 对齐学习日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-019] khy-远程ssh-实施清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

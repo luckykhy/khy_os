@@ -1,0 +1,8 @@
+{
+  "name": "hunter",
+  "command": "/hunter",
+  "description": "Hunt for bugs, security issues, or code smells in the codebase",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["security", "bugs", "quality"]
+}

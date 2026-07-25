@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-134] 视觉级联网络不可达终局诊断（networkunreachable reason class） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-134] 视觉级联网络不可达终局诊断（networkunreachable reason class）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-134] 视觉级联网络不可达终局诊断（networkunreachable reason class）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-134-视觉级联网络不可达终局诊断-network-unreachable-reason-class">[OPS-MAN-134] 视觉级联网络不可达终局诊断（network_unreachable reason class）</a></li><li class="lvl-2"><a href="#一-断桥-与-ops-122-正交-同一-vision-ocr-兜底路径的第三条终局根因类">一、断桥（与 OPS-122 正交：同一 vision→OCR 兜底路径的第三条终局根因类）</a></li><li class="lvl-2"><a href="#二-修复-全-additive-独立-default-on-子门-khy-vision-network-exhaustion-diag-门关逐字节回退">二、修复（全 additive · 独立 default-on 子门 KHY_VISION_NETWORK_EXHAUSTION_DIAG · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#三-正交性-与-rate-limit-ocr-兜底同路不撞">三、正交性（与 rate-limit OCR 兜底同路不撞）</a></li><li class="lvl-2"><a href="#四-真实图片端到端核验-goal-硬性要求">四、真实图片端到端核验（/goal 硬性要求）</a></li><li class="lvl-2"><a href="#五-门控">五、门控</a></li><li class="lvl-2"><a href="#六-验收">六、验收</a></li><li class="lvl-2"><a href="#七-footprint">七、footprint</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-134-视觉级联网络不可达终局诊断-network-unreachable-reason-class">[OPS-MAN-134] 视觉级联网络不可达终局诊断（network_unreachable reason class）<a class="anchor" href="#ops-man-134-视觉级联网络不可达终局诊断-network-unreachable-reason-class" aria-label="锚点">#</a></h1>
+<blockquote><p>承 OPS-118 / 120 / 122（model-rejection strip-floor 三站点「剥图必留痕」）。<br>本轮补齐<strong>终局根因诊断</strong>里缺失的第三条正交根因类：<strong>网络不可达（socket hang up）</strong>。<br>直击 /goal 失败转录：视觉端点 <code>socket hang up</code> 网络失败后，模型谎称「消息里没有附带图片」/<br>「当前对话中没有任何图片附件」。要求：确保正确落到 OCR 路径，用真实图片核验跑通，<br><strong>无感明显告知用了 OCR，且绝不谎称没收到图</strong>。</p></blockquote>
+<h2 id="一-断桥-与-ops-122-正交-同一-vision-ocr-兜底路径的第三条终局根因类">一、断桥（与 OPS-122 正交：同一 vision→OCR 兜底路径的第三条终局根因类）<a class="anchor" href="#一-断桥-与-ops-122-正交-同一-vision-ocr-兜底路径的第三条终局根因类" aria-label="锚点">#</a></h2>
+<p><code>diagnoseVisionExhaustion</code>（纯叶 <code>visionExhaustionDiagnostic.js</code>，早已接线于<br><code>aiGatewayGenerateMethod.js:3315</code>）把「视觉级联耗尽」翻译成指名道姓的可执行指引，前置到笼统的<br>「所有 AI 通道均不可用」墙之前。但它此前<strong>只识别两类根因</strong>：</p>
+<table><thead><tr><th>根因类</th><th>触发信号</th><th>reason</th></tr></thead><tbody><tr><td>账号未领取视觉模型</td><td><code>404 / model_not_found</code></td><td><code>model_not_provisioned</code></td></tr><tr><td>账号被限流</td><td><code>429 / code 1302</code></td><td><code>rate_limited</code></td></tr><tr><td>二者叠加</td><td>404 且 429</td><td><code>both</code></td></tr></tbody></table>
+<p>而<strong>瞬态网络失败</strong>（<code>socket hang up</code> / <code>ECONNRESET</code> / <code>tunneling socket</code> / <code>连接被重置</code> / <code>连接超时</code> /<br><code>getaddrinfo</code> …）<strong>没有对应根因类</strong>。当视觉级联在网络失败上终局耗尽、且终局 OCR <strong>读不出文本</strong><br>（照片 / 无字彩块图）时：</p>
+<ul><li><code>tryRateLimitOcrRescue</code>（:3292）虽把 <code>network</code> 纳入瞬态类，但 OCR 无文本 → 返回 <code>null</code>；</li><li>落到 <code>diagnoseVisionExhaustion</code> → 旧逻辑无 network 根因 → 返回 <code>null</code>；</li><li>于是请求直接甩笼统「所有 AI 通道均不可用」墙，<strong>丢掉了那句诚实交代</strong>：</li></ul>
+<p>「我确实收到了你的图片，但当前网络无法把它送达视觉模型识别 —— 这不是『没收到图』」。</p>
+<p><strong>判据（方法论签名）</strong>：既有诊断把 404 / 429 做成指名道姓根因，唯独<strong>网络不可达</strong>这条恰恰是用户<br>实测复现路径（<code>socket hang up</code>）却缺一条根因类 → 终局墙沉默 → 模型顺势谎称没收到图。</p>
+<h2 id="二-修复-全-additive-独立-default-on-子门-khy-vision-network-exhaustion-diag-门关逐字节回退">二、修复（全 additive · 独立 default-on 子门 KHY_VISION_NETWORK_EXHAUSTION_DIAG · 门关逐字节回退）<a class="anchor" href="#二-修复-全-additive-独立-default-on-子门-khy-vision-network-exhaustion-diag-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>修复<strong>完全落在早已接线的纯叶内部</strong>（零 aiGateway 改动）：</p>
+<ul><li><code>_NETWORK_TEXT_RE</code> — 网络签名正则（<code>socket hang up</code> / <code>econnreset</code> / <code>econnrefused</code> / <code>enetunreach</code> /</li></ul>
+<p><code>ehostunreach</code> / <code>etimedout</code> / <code>eai_again</code> / <code>getaddrinfo</code> / <code>socket disconnected</code> / <code>network error|failure</code> /<br>  <code>连接(被)重置</code> / <code>连接超时</code> / <code>无法连接到</code> / <code>tunneling socket</code> / <code>proxy error|tunnel</code>）。<strong>故意不匹配裸<br>  <code>timeout</code></strong>（只认 <code>etimedout</code> token），以保住既有「auth + timeout → null」契约。</p>
+<ul><li><code>_isNetworkFailure(att)</code> — <code>att.errorType === 'network'</code> 或 error 文本命中上述正则 → true；绝不抛。</li><li><code>_networkEnabled(env)</code> — 读独立子门 <code>KHY_VISION_NETWORK_EXHAUSTION_DIAG</code>（default-on，仅</li></ul>
+<p><code>0/false/off/no</code> 关）。子门是父门 <code>KHY_VISION_EXHAUSTION_DIAG</code> 的<strong>独立子门</strong>：父门关 → 整个诊断<br>  返回 null（含 network）；仅子门关 → network 检测逐字节回退为 null，而 404/429 分支照旧。</p>
+<ul><li><code>diagnoseVisionExhaustion</code> 检测循环新增 <code>networkFailed</code>，reason 取值扩展为：<ul><li>单 network → <code>network_unreachable</code>（`⚠ 识图失败:视觉通道网络不可达 … 我确实收到了你的图片 …</li></ul></li></ul>
+<p>这不是「没收到图」` + 检查网络/代理 · 稍后重试 · 或把图中文字粘贴过来我据此如实作答的修复指引）；</p>
+<ul><li>network + （404 和/或 429）→ <code>multiple</code>（逐条列各自根因 + 各自修复）；</li><li>无 network 时 <code>both</code> / <code>model_not_provisioned</code> / <code>rate_limited</code> 三分支<strong>逐字节不变</strong>。</li></ul>
+<h2 id="三-正交性-与-rate-limit-ocr-兜底同路不撞">三、正交性（与 rate-limit OCR 兜底同路不撞）<a class="anchor" href="#三-正交性-与-rate-limit-ocr-兜底同路不撞" aria-label="锚点">#</a></h2>
+<p>同一网络终局下，两条路径正交、互补：</p>
+<ul><li><strong>真文字图</strong> → <code>tryRateLimitOcrRescue</code>（<code>network ∈ _RATE_LIMIT_OCR_ERROR_TYPES</code>）→ 本地真 tesseract</li></ul>
+<p>读出文字 + 明确告知 <code>[视觉通道限流·本地 OCR 兜底]</code> + 发一条实时状态 → 证「无识图模型也准确识别图片」。</p>
+<ul><li><strong>无字图（OCR 读不出）</strong> → 上者返回 null → 本层 <code>network_unreachable</code> 诊断诚实交代收到图但网络不可达</li></ul>
+<p>→ 证「绝不谎称没收到图」。</p>
+<h2 id="四-真实图片端到端核验-goal-硬性要求">四、真实图片端到端核验（/goal 硬性要求）<a class="anchor" href="#四-真实图片端到端核验-goal-硬性要求" aria-label="锚点">#</a></h2>
+<p><code>services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js</code>（PIL 渲真 PNG + 真 tesseract，<br>缺依赖 skip）：</p>
+<ul><li><strong>Case A</strong>：真文字图 <code>INVOICE 1234</code> + 唯一适配器 <code>socket hang up</code>（errorType:network）终局 →</li></ul>
+<p><code>res.success === true</code>，<code>res.content</code> 含 <code>INVOICE</code>（真识别）+ <code>[视觉通道限流·本地 OCR 兜底]</code> 标记，<br>  实时状态含「本地 OCR」，且<strong>不含</strong>「没有图片」类否认句。</p>
+<ul><li><strong>Case B</strong>：真无字彩块图 + 同网络终局 + 门开 → <code>res.success === false</code>，<code>res.content</code> 含「网络不可达」<ul><li>「确实收到了你的图片」，不含否认句。</li></ul></li><li><strong>Case C</strong>：同无字图 + 子门 <code>KHY_VISION_NETWORK_EXHAUSTION_DIAG=off</code>（父门开）→ network 前置消失，</li></ul>
+<p>逐字节回退到笼统墙。</p>
+<h2 id="五-门控">五、门控<a class="anchor" href="#五-门控" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>门</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_VISION_EXHAUSTION_DIAG</code>（父门）</td><td>on</td><td>关 → 整个终局诊断（含 network）返回 null</td></tr><tr><td><code>KHY_VISION_NETWORK_EXHAUSTION_DIAG</code>（子门）</td><td>on</td><td>关 → 仅 network 检测回退为 null，404/429 分支照旧</td></tr></tbody></table>
+<h2 id="六-验收">六、验收<a class="anchor" href="#六-验收" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js
+npm run test:vision-network-exhaustion      # 24/24（21 纯叶 + 3 真图）
+npm run check:flag-registry</code></pre>
+<h2 id="七-footprint">七、footprint<a class="anchor" href="#七-footprint" aria-label="锚点">#</a></h2>
+<ul><li>改：<code>visionExhaustionDiagnostic.js</code>（network reason class）、<code>flagRegistry.js</code>（登记子门）、</li></ul>
+<p><code>visionExhaustionDiagnostic.test.js</code>（+9 network + 1 谓词，21/21）、<code>package.json</code>（别名 + safety 聚合）、<br>  维护映射表.json（area <code>vision-network-exhaustion</code>）。</p>
+<ul><li>新：<code>visionNetworkExhaustionRealImage.test.js</code>、本文档。</li><li><strong>不 commit</strong>（分支 <code>feat/0.1.104-multi-subsystem-batch</code>）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-133] restore跨OS路径可移植性解包前把关·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-133] restore 跨 OS 路径可移植性 · 解包前把关（让 khy restore 事前诚实告知「这批路径在你这台 Windows / macOS 上会缺文件 / 改名」）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/skill-eval-config.schema.json",
+  "title": "KHY Skill Eval Config",
+  "type": "object",
+  "required": [
+    "version",
+    "target",
+    "checks",
+    "thresholds"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "skillsDir",
+        "promptFilename"
+      ],
+      "properties": {
+        "skillsDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "promptFilename": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "weight",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "warning"
+            ]
+          },
+          "weight": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "required": [
+        "minOverallScore",
+        "minSkillScore",
+        "maxCriticalFailures",
+        "maxWarningFailures"
+      ],
+      "properties": {
+        "minOverallScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minSkillScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxCriticalFailures": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxWarningFailures": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

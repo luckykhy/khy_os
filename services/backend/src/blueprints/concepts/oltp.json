@@ -1,0 +1,19 @@
+{
+  "id": "oltp",
+  "kind": "concept",
+  "name": "OLTP",
+  "category": "data",
+  "triggers": ["OLTP", "Online Transaction Processing", "联机事务处理", "事务处理"],
+  "summary": "联机事务处理：面向大量短小并发事务(增删改查)，强调低延迟、高并发与 ACID 一致性；典型是业务库(MySQL/PostgreSQL)，按行存、规范化建模。",
+  "whenToUse": [
+    "订单、账户、库存等业务系统的实时读写。",
+    "需要事务一致性与高并发点查/点写。"
+  ],
+  "antiPatterns": [
+    "在 OLTP 库上跑大范围分析聚合，拖垮在线业务（应分到 OLAP）。",
+    "过度反规范化牺牲一致性。",
+    "缺索引导致点查变全表扫描。"
+  ],
+  "minimalSkeleton": "规范化表结构(3NF) + 行存\n短事务 + ACID\n主键/索引支撑点查点写\n业务库与分析库分离",
+  "relatedArchetypes": ["ssm"]
+}

@@ -1,0 +1,33 @@
+# KHY-Quant source distribution manifest.
+# Controls what goes into the sdist (.tar.gz).
+
+# Application source
+recursive-include services *.js *.py *.json
+recursive-include routes *.js
+recursive-include models *.js
+recursive-include controllers *.js
+recursive-include indicators *.js
+recursive-include handlers *.js
+recursive-include middleware *.js
+recursive-include config *.js
+recursive-include utils *.js
+recursive-include tools *.js
+recursive-include ml *.py *.yaml *.yml *.txt *.json
+
+# Frontend source + build
+recursive-include frontend/dist *
+recursive-include frontend/src *.vue *.js *.ts *.css *.html *.json
+
+# Exclude heavy / generated content
+prune frontend/node_modules
+prune frontend/android
+prune frontend/android-sdk
+prune ml/models
+prune ml/data
+prune khy_quant/bundled
+
+# Never ship database, log, or binary artifacts
+global-exclude *.db *.sqlite* *.log *.joblib
+global-exclude *.iso *.img *.gguf *.safetensors
+global-exclude *.so *.so.* *.dylib
+global-exclude .env .env.local

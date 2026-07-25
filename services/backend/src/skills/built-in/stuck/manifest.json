@@ -1,0 +1,8 @@
+{
+  "name": "stuck",
+  "command": "/stuck",
+  "description": "Help when you're stuck \u2014 suggests alternative approaches",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["help", "alternatives"]
+}

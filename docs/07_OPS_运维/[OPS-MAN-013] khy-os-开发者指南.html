@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 开发文档（中文） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS 开发文档（中文）</div>
+      <header class="hero reveal"><h1>KHY OS 开发文档（中文）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-开发文档-中文">KHY OS 开发文档（中文）</a></li><li class="lvl-2"><a href="#1-项目结构与职责">1. 项目结构与职责</a></li><li class="lvl-2"><a href="#2-本地开发环境要求">2. 本地开发环境要求</a></li><li class="lvl-2"><a href="#3-开发环境初始化">3. 开发环境初始化</a></li><li class="lvl-3"><a href="#3-1-安装-python-依赖">3.1 安装 Python 依赖</a></li><li class="lvl-3"><a href="#3-2-安装-node-依赖">3.2 安装 Node 依赖</a></li><li class="lvl-3"><a href="#3-3-editable-安装与重构韧性-重要">3.3 editable 安装与重构韧性（重要）</a></li><li class="lvl-2"><a href="#4-常见开发启动方式">4. 常见开发启动方式</a></li><li class="lvl-3"><a href="#4-1-cli-联调">4.1 CLI 联调</a></li><li class="lvl-3"><a href="#4-2-后端服务">4.2 后端服务</a></li><li class="lvl-3"><a href="#4-3-交易前端">4.3 交易前端</a></li><li class="lvl-3"><a href="#4-4-ai-管理页-推荐走-cli-管理会话">4.4 AI 管理页（推荐走 CLI 管理会话）</a></li><li class="lvl-2"><a href="#5-cli-命令开发规范-4-步">5. CLI 命令开发规范（4 步）</a></li><li class="lvl-2"><a href="#6-ai-适配器开发规范-2-步">6. AI 适配器开发规范（2 步）</a></li><li class="lvl-2"><a href="#7-质量检查与测试">7. 质量检查与测试</a></li><li class="lvl-3"><a href="#7-1-推荐最小检查集">7.1 推荐最小检查集</a></li><li class="lvl-3"><a href="#7-2-全量检查-仓库定义">7.2 全量检查（仓库定义）</a></li><li class="lvl-3"><a href="#7-3-低级模型改动保护闸门-变更回归门禁">7.3 低级模型改动保护闸门（变更回归门禁）</a></li><li class="lvl-2"><a href="#8-版本与发布流程">8. 版本与发布流程</a></li><li class="lvl-2"><a href="#9-pip-打包边界与目录约束">9. pip 打包边界与目录约束</a></li><li class="lvl-2"><a href="#10-发布后验收清单-重点-windows">10. 发布后验收清单（重点：Windows）</a></li><li class="lvl-2"><a href="#11-windows-一键构建本地推理运行时并打包-wheel">11. Windows 一键构建本地推理运行时并打包 Wheel</a></li><li class="lvl-3"><a href="#11-1-输入来源">11.1 输入来源</a></li><li class="lvl-3"><a href="#11-2-一键执行-cpu-最小可用">11.2 一键执行（CPU 最小可用）</a></li><li class="lvl-3"><a href="#11-3-仅回填预编译包-不走源码编译">11.3 仅回填预编译包（不走源码编译）</a></li><li class="lvl-3"><a href="#11-4-含依赖包-可选">11.4 含依赖包（可选）</a></li><li class="lvl-3"><a href="#11-5-自定义-ollama-构建步骤-可选">11.5 自定义 Ollama 构建步骤（可选）</a></li><li class="lvl-3"><a href="#11-6-输出产物">11.6 输出产物</a></li><li class="lvl-2"><a href="#12-本地推理运行时按需拉取-ollama-llama-cpp">12. 本地推理运行时按需拉取（ollama / llama.cpp）</a></li><li class="lvl-3"><a href="#12-1-清单-数据驱动-零硬编码">12.1 清单（数据驱动，零硬编码）</a></li><li class="lvl-3"><a href="#12-2-触发方式">12.2 触发方式</a></li><li class="lvl-3"><a href="#12-3-镜像与代理-国内-隔离网络">12.3 镜像与代理（国内 / 隔离网络）</a></li><li class="lvl-3"><a href="#12-4-固定-sha256-维护者-需-github-网络">12.4 固定 SHA256（维护者，需 GitHub 网络）</a></li><li class="lvl-3"><a href="#12-5-与第-11-节-windows-构建的关系">12.5 与第 11 节 Windows 构建的关系</a></li><li class="lvl-3"><a href="#12-6-测试钩子">12.6 测试钩子</a></li><li class="lvl-2"><a href="#13-相关文档">13. 相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-013 | 阶段: 运维 | 原路径: docs/指南/khy-os-开发者指南.md --&gt;</p>
+<h1 id="khy-os-开发文档-中文">KHY OS 开发文档（中文）<a class="anchor" href="#khy-os-开发文档-中文" aria-label="锚点">#</a></h1>
+<p>本文档面向参与 KHY OS 代码维护、功能开发、打包发布的开发者。</p>
+<h2 id="1-项目结构与职责">1. 项目结构与职责<a class="anchor" href="#1-项目结构与职责" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">Khy-OS/
+├─ platform/                    # 平台层
+│  ├─ khy_platform/             # Python 入口层（CLI 启动器）
+│  └─ packages/shared/          # 共享模块
+├─ services/                    # 后端服务（Node.js）
+│  ├─ backend/                  # 核心运行时（CLI/服务/网关）
+│  └─ ai-backend/               # AI 管理后端
+├─ apps/ai-frontend/            # AI 管理前端（Vue）
+├─ quant/khyquant/              # 默认内置应用（交易前端在 quant/khyquant/frontend/）
+├─ kernel/                      # 操作系统构建树（alpine/boot/iso/moonbit/src）
+├─ docs/                        # 文档
+└─ scripts/                     # 构建、检查、发布脚本</code></pre>
+<p>核心调用链：</p>
+<p><code>khy</code> -&gt; <code>platform/khy_platform/cli.py</code> -&gt; <code>services/backend/bin/khy.js</code> -&gt; <code>services/backend/src/cli/router.js</code></p>
+<h2 id="2-本地开发环境要求">2. 本地开发环境要求<a class="anchor" href="#2-本地开发环境要求" aria-label="锚点">#</a></h2>
+<ul><li>Python <code>&gt;=3.8</code></li><li>Node.js <code>&gt;=18</code></li><li>npm 可用</li></ul>
+<p>建议先执行：</p>
+<pre><code class="language-bash">python3 --version
+node --version
+npm --version</code></pre>
+<h2 id="3-开发环境初始化">3. 开发环境初始化<a class="anchor" href="#3-开发环境初始化" aria-label="锚点">#</a></h2>
+<h3 id="3-1-安装-python-依赖">3.1 安装 Python 依赖<a class="anchor" href="#3-1-安装-python-依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 -m pip install -e &quot;.[dev]&quot; --config-settings editable_mode=compat</code></pre>
+<p><code>--config-settings editable_mode=compat</code> 让 editable 安装以“扫描 <code>platform/</code> 目录”的方式解析 Python 包，而不是把每个包的绝对路径冻结进查找器。这样目录重构后通常无需重装，原因见 3.3。</p>
+<h3 id="3-2-安装-node-依赖">3.2 安装 Node 依赖<a class="anchor" href="#3-2-安装-node-依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm install
+npm --prefix quant/khyquant/frontend install
+npm --prefix apps/ai-frontend install</code></pre>
+<p>说明：根目录 <code>npm install</code> 会安装 workspace（含 <code>services/backend</code>、<code>services/ai-backend</code>、<code>platform/packages/shared</code>），<code>quant/khyquant/frontend</code> 与 <code>apps/ai-frontend</code> 需单独安装。</p>
+<h3 id="3-3-editable-安装与重构韧性-重要">3.3 editable 安装与重构韧性（重要）<a class="anchor" href="#3-3-editable-安装与重构韧性-重要" aria-label="锚点">#</a></h3>
+<p><code>pip install -e .</code> 会记录 Python 包的物理位置。setuptools 默认的 “lenient” 模式把 <code>khy_platform</code>、<code>khy_os</code> 的<strong>绝对路径冻结</strong>进 <code>site-packages</code> 里的 <code>__editable__..._finder.py</code>。一旦目录重构移动了这两个目录，冻结的路径就失效，<code>khy</code> 会以 <code>ModuleNotFoundError: No module named 'khy_platform'</code> 启动失败。</p>
+<p>本项目改用 <strong>compat 模式</strong>：安装时只写一行 <code>.pth</code> 指向 <code>platform/</code>，由 Python 在导入时扫描该目录。带来的韧性：</p>
+<ul><li>移动 <code>services/</code>、<code>apps/</code>、<code>quant/</code>、<code>kernel/</code>、<code>docs/</code> 等——只要不把两个 Python 包根目录移出 <code>platform/</code>——<strong>无需重跑 editable 安装</strong>。</li><li>在 <code>platform/</code> 下<strong>新增</strong>一个 Python 包，直接可导入，也无需重装。</li></ul>
+<p>唯一仍需重装的情况：把 <code>khy_platform</code> / <code>khy_os</code> 移出 <code>platform/</code>，或整体移动 <code>platform/</code>。此时执行：</p>
+<pre><code class="language-bash">npm run dev:install
+# 等价于：python3 scripts/dev-install.py</code></pre>
+<p><code>scripts/dev-install.py</code> 会自动定位 <code>khy</code> 命令背后的解释器（可用环境变量 <code>KHY_DEV_PYTHON</code> 覆盖），并以 compat 模式 <code>--force-reinstall</code> 重新生成安装。手动等价命令：</p>
+<pre><code class="language-bash">python3 -m pip install -e . --config-settings editable_mode=compat \
+  --no-build-isolation --force-reinstall --no-deps</code></pre>
+<p>重构约束：<strong>保持 <code>khy_platform</code> 与 <code>khy_os</code> 直接位于 <code>platform/</code> 下</strong>，即可让绝大多数重构对 editable 安装零影响。</p>
+<h2 id="4-常见开发启动方式">4. 常见开发启动方式<a class="anchor" href="#4-常见开发启动方式" aria-label="锚点">#</a></h2>
+<h3 id="4-1-cli-联调">4.1 CLI 联调<a class="anchor" href="#4-1-cli-联调" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 -m khy_platform.cli
+# 或
+khy</code></pre>
+<h3 id="4-2-后端服务">4.2 后端服务<a class="anchor" href="#4-2-后端服务" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm --prefix services/backend run dev
+# 或
+npm --prefix services/backend start</code></pre>
+<h3 id="4-3-交易前端">4.3 交易前端<a class="anchor" href="#4-3-交易前端" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm --prefix quant/khyquant/frontend run dev</code></pre>
+<h3 id="4-4-ai-管理页-推荐走-cli-管理会话">4.4 AI 管理页（推荐走 CLI 管理会话）<a class="anchor" href="#4-4-ai-管理页-推荐走-cli-管理会话" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy gateway manage open --daemon
+khy gateway manage status</code></pre>
+<p>如果本地前端 dev 服务不稳定，建议直接使用静态构建目录：</p>
+<pre><code class="language-bash">khy gateway manage open --daemon --frontend-dist-dir &lt;apps/ai-frontend/dist 绝对路径&gt;</code></pre>
+<h2 id="5-cli-命令开发规范-4-步">5. CLI 命令开发规范（4 步）<a class="anchor" href="#5-cli-命令开发规范-4-步" aria-label="锚点">#</a></h2>
+<p>新增命令时按以下顺序：</p>
+<ol><li><code>services/backend/src/cli/commandSchema.js</code>：补充命令与子命令</li><li><code>services/backend/src/cli/aliases.js</code>：补充中文/拼音/英文别名</li><li><code>services/backend/src/cli/handlers/</code>：新增 handler</li><li><code>services/backend/src/cli/router.js</code>：在 <code>route()</code> 中接入分发</li></ol>
+<p>新增命令后至少执行：</p>
+<pre><code class="language-bash">npm --prefix services/backend test</code></pre>
+<h2 id="6-ai-适配器开发规范-2-步">6. AI 适配器开发规范（2 步）<a class="anchor" href="#6-ai-适配器开发规范-2-步" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>services/backend/src/services/gateway/adapters/</code> 新增 <code>yourAdapter.js</code>，实现统一 <code>generate(prompt, options)</code> 接口</li><li>在 <code>services/backend/src/services/gateway/aiGateway.js</code> 注册适配器</li></ol>
+<h2 id="7-质量检查与测试">7. 质量检查与测试<a class="anchor" href="#7-质量检查与测试" aria-label="锚点">#</a></h2>
+<h3 id="7-1-推荐最小检查集">7.1 推荐最小检查集<a class="anchor" href="#7-1-推荐最小检查集" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run check:version-sync
+npm run check:node-syntax
+npm run check:python-syntax
+npm run check:agent-rules
+npm --prefix services/backend test</code></pre>
+<h3 id="7-2-全量检查-仓库定义">7.2 全量检查（仓库定义）<a class="anchor" href="#7-2-全量检查-仓库定义" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run check:quality-gates
+./run_tests.sh</code></pre>
+<h3 id="7-3-低级模型改动保护闸门-变更回归门禁">7.3 低级模型改动保护闸门（变更回归门禁）<a class="anchor" href="#7-3-低级模型改动保护闸门-变更回归门禁" aria-label="锚点">#</a></h3>
+<p>为了避免低级模型在修 bug 或新增功能时引入新问题，<code>services/backend/src/services/changeRegressionGate.js</code><br>实现了统一的变更回归门禁（Change Regression Gate，兼容旧文件 <code>bugfixRegressionGate.js</code>）。</p>
+<p>优先配置键（新命名空间）：</p>
+<ul><li><code>KHY_CHANGE_REGRESSION_GATE</code></li><li><code>KHY_CHANGE_LOW_TIER_ONLY</code></li><li><code>KHY_CHANGE_GATE_INCLUDE_FEATURE</code></li><li><code>KHY_CHANGE_MIN_REQUIRED_STEPS</code></li><li><code>KHY_CHANGE_GATE_BASELINE</code></li><li><code>KHY_CHANGE_GATE_FAIL_OPEN</code></li><li><code>KHY_CHANGE_FAIL_ON_MISSING_REQUIRED_STEPS</code></li></ul>
+<p>兼容配置键（旧命名空间）：</p>
+<ul><li><code>KHY_BUGFIX_*</code>（仅作回退，建议逐步迁移到 <code>KHY_CHANGE_*</code>）</li></ul>
+<p>建议最小验证：</p>
+<pre><code class="language-bash">npm --prefix services/backend test -- services/backend/tests/services/bugfixRegressionGate.test.js services/backend/tests/services/agenticHarnessService.test.js</code></pre>
+<h2 id="8-版本与发布流程">8. 版本与发布流程<a class="anchor" href="#8-版本与发布流程" aria-label="锚点">#</a></h2>
+<p>版本号必须三处一致：</p>
+<ol><li><code>platform/khy_platform/__init__.py</code></li><li><code>pyproject.toml</code></li><li><code>services/backend/package.json</code></li></ol>
+<p>发布前先校验：</p>
+<pre><code class="language-bash">npm run check:version-sync</code></pre>
+<p>构建与上传（标准 Python 流程）：</p>
+<pre><code class="language-bash">python3 -m build
+python3 -m twine upload dist/*</code></pre>
+<p>也可使用内置发布命令：</p>
+<pre><code class="language-bash">khy publish check
+khy publish build
+khy publish self-pypi --version &lt;x.y.z&gt;</code></pre>
+<h2 id="9-pip-打包边界与目录约束">9. pip 打包边界与目录约束<a class="anchor" href="#9-pip-打包边界与目录约束" aria-label="锚点">#</a></h2>
+<p>为控制体积与保证 Windows 可安装性，pip 包遵循以下边界：</p>
+<ul><li>不打包大模型与重型产物：<code>*.gguf</code>、<code>*.safetensors</code>、<code>*.iso</code> 等</li><li>不打包依赖大目录：<code>services/backend/node_modules</code>、<code>quant/khyquant/frontend/node_modules</code>、<code>apps/ai-frontend/node_modules</code> 等</li></ul>
+<p>同时必须保留以下目录结构（目录存在即可，文件可为空）：</p>
+<ul><li><code>services/backend/models</code></li><li><code>services/backend/ml/models</code></li><li><code>apps/ai-frontend/node_modules</code></li><li><code>platform/packages/shared/logs</code></li></ul>
+<p>这些目录用于运行时路径兼容、日志挂载和模型占位，不代表需要打包真实大文件。</p>
+<p>打包实现位于：<code>setup.py</code></p>
+<ul><li>目录裁剪：<code>PRUNE_MODEL_DIRS</code>、<code>PRUNE_GENERATED_DIRS</code></li><li>目录保留：<code>REQUIRED_EMPTY_DIRS</code></li></ul>
+<h2 id="10-发布后验收清单-重点-windows">10. 发布后验收清单（重点：Windows）<a class="anchor" href="#10-发布后验收清单-重点-windows" aria-label="锚点">#</a></h2>
+<p>建议在干净环境执行一次：</p>
+<ol><li><code>python -m pip install -U khy-os</code></li><li><code>khy --version</code></li><li><code>khy</code> 启动后确认 first-run setup 完成</li><li><code>khy gateway status</code></li><li><code>khy guanli</code>（确认管理页可正确打开）</li></ol>
+<p>若出现 seed 警告，做 strict 验证：</p>
+<pre><code class="language-powershell">$env:KHY_SEED_STRICT=&quot;true&quot;
+node .\scripts\seed.js
+$LASTEXITCODE
+Remove-Item Env:KHY_SEED_STRICT</code></pre>
+<p>返回码 <code>0</code> 代表 seed 成功。</p>
+<h2 id="11-windows-一键构建本地推理运行时并打包-wheel">11. Windows 一键构建本地推理运行时并打包 Wheel<a class="anchor" href="#11-windows-一键构建本地推理运行时并打包-wheel" aria-label="锚点">#</a></h2>
+<p>适用场景：希望 <code>khy-os</code> 在 Windows 上不依赖系统已安装 Ollama，也能使用本地推理（通过内置 <code>ollama.exe + lib/ollama</code>）。</p>
+<h3 id="11-1-输入来源">11.1 输入来源<a class="anchor" href="#11-1-输入来源" aria-label="锚点">#</a></h3>
+<p>支持两种输入：</p>
+<ol><li><code>ollama-main.zip</code>（Ollama 源码包，脚本会自动调用其 <code>build_windows.ps1</code> 编译）</li><li>预编译运行时 zip（如 <code>Ollama.zip</code> / <code>ollama-windows-amd64.zip</code>），满足以下任一结构：<ul><li><code>&lt;root&gt;/ollama.exe</code> + <code>&lt;root&gt;/lib/ollama/*</code></li><li><code>&lt;root&gt;/dist/windows-amd64/ollama.exe</code> + <code>lib/ollama/*</code></li></ul></li></ol>
+<h3 id="11-2-一键执行-cpu-最小可用">11.2 一键执行（CPU 最小可用）<a class="anchor" href="#11-2-一键执行-cpu-最小可用" aria-label="锚点">#</a></h3>
+<p>在 Windows PowerShell（建议 Developer PowerShell for VS 2022）执行：</p>
+<pre><code class="language-powershell">cd &lt;Khy-OS 根目录&gt;
+powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
+  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
+  -Arch amd64</code></pre>
+<p>该脚本会自动完成：</p>
+<ol><li>若输入为源码：编译 Ollama Windows 运行时（<code>cpu, ollama</code>）</li><li>若输入为预编译包：自动定位 <code>ollama.exe</code> 与 <code>lib/ollama</code></li><li>回填到 <code>services/backend/bin/ollama-runner/</code>：<ul><li><code>bin/ollama.exe</code></li><li><code>lib/ollama/*</code></li></ul></li><li>调用 <code>scripts/release/build-platform-wheel.ps1</code> 生成平台 wheel</li></ol>
+<h3 id="11-3-仅回填预编译包-不走源码编译">11.3 仅回填预编译包（不走源码编译）<a class="anchor" href="#11-3-仅回填预编译包-不走源码编译" aria-label="锚点">#</a></h3>
+<p>如果你已经有 <code>Ollama.zip</code>（内含 <code>ollama.exe</code> 和 <code>lib/ollama</code>），可直接执行：</p>
+<pre><code class="language-powershell">cd &lt;Khy-OS 根目录&gt;
+powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
+  -OllamaSource &quot;C:\path\Ollama.zip&quot; `
+  -Arch amd64</code></pre>
+<h3 id="11-4-含依赖包-可选">11.4 含依赖包（可选）<a class="anchor" href="#11-4-含依赖包-可选" aria-label="锚点">#</a></h3>
+<p>若需要同时生成运行时依赖（如 <code>vc_redist</code>）：</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
+  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
+  -Arch amd64 `
+  -IncludeDeps</code></pre>
+<h3 id="11-5-自定义-ollama-构建步骤-可选">11.5 自定义 Ollama 构建步骤（可选）<a class="anchor" href="#11-5-自定义-ollama-构建步骤-可选" aria-label="锚点">#</a></h3>
+<p>示例：尝试包含 CUDA 构建步骤（环境不满足会在 Ollama 脚本阶段报错）：</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
+  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
+  -Arch amd64 `
+  -OllamaBuildSteps cpu,cuda12,cuda13,ollama</code></pre>
+<h3 id="11-6-输出产物">11.6 输出产物<a class="anchor" href="#11-6-输出产物" aria-label="锚点">#</a></h3>
+<ul><li><code>dist/*.whl</code>（平台 wheel）</li><li><code>dist/*.tar.gz</code>（sdist）</li></ul>
+<p>建议检查 wheel 内是否包含：</p>
+<ul><li><code>khy_os/bundled/backend/bin/ollama-runner/bin/ollama.exe</code></li><li><code>khy_os/bundled/backend/bin/ollama-runner/lib/ollama/*</code></li></ul>
+<h2 id="12-本地推理运行时按需拉取-ollama-llama-cpp">12. 本地推理运行时按需拉取（ollama / llama.cpp）<a class="anchor" href="#12-本地推理运行时按需拉取-ollama-llama-cpp" aria-label="锚点">#</a></h2>
+<p>为控制仓库与 wheel 体积，两套本地推理二进制<strong>不再提交到 git，也不随 pip 包分发</strong>：</p>
+<ul><li><code>services/backend/bin/ollama-runner/</code>：<code>ollama</code> 多功能二进制 + <code>lib/ollama/*.so</code></li><li><code>services/backend/bin/llama-cpp/llama-b9049/</code>：<code>llama-cli</code>/<code>llama-quantize</code>/<code>llama-server</code> 等 + 共享库</li></ul>
+<p>它们改为<strong>首次使用时按平台从上游下载 + SHA256 校验 + 落到原路径</strong>。打包侧早已排除二者（<code>setup.py</code> 的 <code>EXCLUDE_PATTERNS</code>、<code>MANIFEST.in</code> 的 <code>prune</code>），本机已取消 git 跟踪（<code>git rm -r --cached</code>，磁盘文件保留，开发机命中快速路径，无需重新下载）。</p>
+<h3 id="12-1-清单-数据驱动-零硬编码">12.1 清单（数据驱动，零硬编码）<a class="anchor" href="#12-1-清单-数据驱动-零硬编码" aria-label="锚点">#</a></h3>
+<p>URL / 文件名 / SHA256 / 解压格式 / 子目录 / chmod 列表全部存于：</p>
+<pre><code>services/backend/config/runtime-binaries.json</code></pre>
+<p><code>platforms</code> 中某平台为 <code>null</code>，或 <code>sha256</code> 为空，表示该平台<strong>未固定</strong>：运行时会<strong>无声回退到系统已安装的二进制</strong>，绝不报错中断。</p>
+<h3 id="12-2-触发方式">12.2 触发方式<a class="anchor" href="#12-2-触发方式" aria-label="锚点">#</a></h3>
+<ul><li>惰性（自动）：首次启动 ollama-runner（<code>localLLMService.startOllamaRunner</code>）或导入 gguf 模型（<code>modelImportService.importFromPath</code>）前自动调用 <code>runtimeProvisioner.ensureRuntime(name)</code>。</li><li>显式（手动预拉取 / 查看状态）：</li></ul>
+<pre><code class="language-bash">khy runtime status            # 查看 present/missing + 平台来源 + 是否已固定 SHA256
+khy runtime install           # 拉取全部运行时
+khy runtime install llama-cpp # 仅拉取指定运行时</code></pre>
+<p>中文/拼音别名：<code>运行时</code>/<code>yunhangshi</code> → status；<code>安装运行时</code>/<code>runtimeinstall</code> → install。</p>
+<h3 id="12-3-镜像与代理-国内-隔离网络">12.3 镜像与代理（国内 / 隔离网络）<a class="anchor" href="#12-3-镜像与代理-国内-隔离网络" aria-label="锚点">#</a></h3>
+<ul><li><code>KHY_RUNTIME_MIRROR_BASE</code>：设置后，最终下载地址改为 <code>${KHY_RUNTIME_MIRROR_BASE}/${filename}</code>（同名文件走镜像）。</li><li><code>HTTPS_PROXY</code> / <code>HTTP_PROXY</code>：下载器（axios）自动识别，无需额外配置。</li></ul>
+<h3 id="12-4-固定-sha256-维护者-需-github-网络">12.4 固定 SHA256（维护者，需 GitHub 网络）<a class="anchor" href="#12-4-固定-sha256-维护者-需-github-网络" aria-label="锚点">#</a></h3>
+<p>清单出厂时 <code>sha256</code> 留空（安全回退）。维护者在可访问上游的环境执行 pin 脚本，下载各平台归档、计算并写回哈希：</p>
+<pre><code class="language-bash">node scripts/release/pin-runtime-binaries.js                 # 固定全部
+node scripts/release/pin-runtime-binaries.js ollama-runner   # 固定单个
+node scripts/release/pin-runtime-binaries.js --check         # 仅校验现有 pin，不写入（不符 exit 1）
+node scripts/release/pin-runtime-binaries.js --verify-layout # 额外解压并确认 sentinel 子目录</code></pre>
+<p>该脚本同样识别 <code>KHY_RUNTIME_MIRROR_BASE</code> 与 <code>HTTPS_PROXY</code>。固定后提交清单即生效。</p>
+<h3 id="12-5-与第-11-节-windows-构建的关系">12.5 与第 11 节 Windows 构建的关系<a class="anchor" href="#12-5-与第-11-节-windows-构建的关系" aria-label="锚点">#</a></h3>
+<p>第 11 节的 Windows 一键脚本仍可把编译好的 <code>ollama.exe + lib/ollama</code> 回填到同一 <code>services/backend/bin/ollama-runner/</code> 路径，用于<strong>离线 wheel</strong>场景。两条路径互补：按需拉取面向联网首次使用，Windows 构建面向预置离线包。</p>
+<h3 id="12-6-测试钩子">12.6 测试钩子<a class="anchor" href="#12-6-测试钩子" aria-label="锚点">#</a></h3>
+<p><code>runtimeProvisioner</code> 暴露 <code>KHY_RUNTIME_ROOT</code>（覆盖 backend 根）、<code>KHY_RUNTIME_MANIFEST</code>（覆盖清单路径）两个环境变量，并支持注入 <code>downloader</code> 形参，便于单测在临时目录中以真实 <code>tar</code> 解压、零网络验证（见 <code>services/backend/tests/services/runtimeProvisioner.test.js</code>）。</p>
+<h2 id="13-相关文档">13. 相关文档<a class="anchor" href="#13-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.md</code></li><li><code>docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-003] ai-管理-访问与登录.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code></li><li><code>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-012] khy-os-应用接入指南.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 应用接入指南</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-014] khy-os-用户指南-仅cli.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 使用说明（CLI 精简版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

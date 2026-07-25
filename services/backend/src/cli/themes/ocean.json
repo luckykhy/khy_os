@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "ocean",
+    "label": "Ocean Blue",
+    "description": "Deep ocean theme — cool blues and teals"
+  },
+  "colors": {
+    "claude": "#5B9BD5",
+    "success": "#4ECDC4",
+    "error": "#FF6B6B",
+    "warning": "#FFD93D",
+    "text": "#E8F1F8",
+    "secondaryText": "#8BADC4",
+    "subtle": "#2C4F6B",
+    "bashBorder": "#4ECDC4",
+    "permission": "#FFD93D",
+    "link": "#5B9BD5",
+    "diffAdded": "#1A4A42",
+    "diffRemoved": "#6B2D3C",
+    "diffAddedDimmed": "#2E5450",
+    "diffRemovedDimmed": "#5A3C44",
+    "diffAddedWord": "#2ECC71",
+    "diffRemovedWord": "#E74C3C",
+    "permissionPurple": "#9B8FE2",
+    "userMessageBg": "#1A2B3C"
+  }
+}

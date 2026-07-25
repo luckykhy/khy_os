@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 5: Test Implementation · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 5: Test Implementation</div>
+      <header class="hero reveal"><h1>Stage 5: Test Implementation</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-5-test-implementation">Stage 5: Test Implementation</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#python-tests">Python Tests</a></li><li class="lvl-2"><a href="#node-js-tests">Node.js Tests</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-5-test-implementation">Stage 5: Test Implementation<a class="anchor" href="#stage-5-test-implementation" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Implement test code based on the test plan from Stage 4.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li><code>TEST.md</code> from Stage 4</li><li>Source code from Stage 3</li></ul>
+<h2 id="python-tests">Python Tests<a class="anchor" href="#python-tests" aria-label="锚点">#</a></h2>
+<p>Generate test files at <code>tests/</code>:</p>
+<pre><code class="language-python"># tests/test_&lt;command_group&gt;.py
+import pytest
+from unittest.mock import patch, MagicMock
+from click.testing import CliRunner
+from cli_anything.&lt;SOFTWARE&gt;.&lt;SOFTWARE&gt;_cli import cli
+
+@pytest.fixture
+def runner():
+    return CliRunner()
+
+class TestProjectCommands:
+    def test_create_project(self, runner):
+        result = runner.invoke(cli, ['project', 'create', '--name', 'test'])
+        assert result.exit_code == 0
+
+    def test_create_project_json(self, runner):
+        result = runner.invoke(cli, ['project', 'create', '--name', 'test', '--json'])
+        data = json.loads(result.output)
+        assert data['status'] == 'success'
+
+    @patch('cli_anything.&lt;SOFTWARE&gt;.utils.backend.run_command')
+    def test_backend_called(self, mock_run, runner):
+        mock_run.return_value = MagicMock(returncode=0, stdout='ok')
+        result = runner.invoke(cli, ['export', 'render'])
+        mock_run.assert_called_once()</code></pre>
+<h2 id="node-js-tests">Node.js Tests<a class="anchor" href="#node-js-tests" aria-label="锚点">#</a></h2>
+<p>Generate test files at <code>tests/</code>:</p>
+<pre><code class="language-javascript">// tests/&lt;command_group&gt;.test.js
+const { execFileSync } = require('child_process');
+const path = require('path');
+const CLI = path.resolve(__dirname, '../src/index.js');
+
+describe('&lt;command_group&gt;', () =&gt; {
+  test('create project', () =&gt; {
+    const out = execFileSync('node', [CLI, 'project', 'create', '--name', 'test'], { encoding: 'utf-8' });
+    expect(out).toContain('Created');
+  });
+
+  test('create project --json', () =&gt; {
+    const out = execFileSync('node', [CLI, 'project', 'create', '--name', 'test', '--json'], { encoding: 'utf-8' });
+    const data = JSON.parse(out);
+    expect(data.status).toBe('success');
+  });
+});</code></pre>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li><code>tests/</code> directory with all test files</li><li>Updated <code>TEST.md</code> (Part 1 checked off where implemented)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_4_TESTPLAN.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 4: Test Planning</div></a><a class="next" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_6_DOCS.html"><div class="dir">下一篇 →</div><div class="ttl">Stage 6: Documentation &amp; SKILL.md</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_5_TESTCODE.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

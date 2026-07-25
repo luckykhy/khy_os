@@ -1,0 +1,10 @@
+{
+  "name": "pdf",
+  "description": "Read and analyze PDF documents, extract text, summarize content, and answer questions about PDFs",
+  "user_invocable": true,
+  "trigger": "/pdf",
+  "aliases": ["/read-pdf"],
+  "category": "tools",
+  "tags": ["pdf", "document", "read", "analyze", "extract"],
+  "platforms": ["khy-os"]
+}

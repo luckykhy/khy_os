@@ -1,0 +1,16 @@
+html,body{margin:0;padding:0;}
+body{font-family:"Microsoft YaHei","SimSun",sans-serif;background:#daedfb;color:#1a2a36;}
+
+.zj_top{height:95px;background:linear-gradient(100deg,#3d9adb 0%,#2f7fc8 60%,#2a78c3 100%);}
+#header{width:1120px;height:95px;position:relative;}
+.zj_title{position:absolute;left:42px;top:26px;color:#fff;font-size:44px;line-height:1;font-weight:700;letter-spacing:1px;}
+
+.zj_top a{position:relative;top:62px;color:#1d5678;text-decoration:none;font-size:30px;}
+.zj_top a:hover{text-decoration:underline;}
+
+#layout{width:1120px;margin:0 auto;padding-top:0;}
+#pagebody{width:1120px;overflow:hidden;}
+#leftside{float:left;overflow:hidden;}
+.mainbody{float:left;width:933px;margin-left:2px;overflow:hidden;background:#fff;}
+
+#footer{height:40px;line-height:40px;text-align:center;color:#4f6a7d;font-size:12px;}

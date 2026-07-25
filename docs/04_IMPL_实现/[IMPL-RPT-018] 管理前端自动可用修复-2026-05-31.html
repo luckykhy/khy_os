@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理前端自动可用修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>管理前端自动可用修复</div>
+      <header class="hero reveal"><h1>管理前端自动可用修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#管理前端自动可用修复">管理前端自动可用修复</a></li><li class="lvl-2"><a href="#问题">问题</a></li><li class="lvl-2"><a href="#根因分析">根因分析</a></li><li class="lvl-3"><a href="#断裂-1-setup-py-不打包-ai-frontend">断裂 1: setup.py 不打包 ai-frontend/</a></li><li class="lvl-3"><a href="#断裂-2-bootstrap-py-不装-ai-frontend-依赖">断裂 2: _bootstrap.py 不装 ai-frontend 依赖</a></li><li class="lvl-3"><a href="#断裂-3-daemon-不回退到静态-dist">断裂 3: daemon 不回退到静态 dist</a></li><li class="lvl-2"><a href="#修复">修复</a></li><li class="lvl-3"><a href="#1-setup-py-打包-ai-frontend">1. setup.py — 打包 ai-frontend/</a></li><li class="lvl-3"><a href="#2-bootstrap-py-ai-frontend-npm-install">2. _bootstrap.py — ai-frontend npm install</a></li><li class="lvl-3"><a href="#3-ai-manage-daemon-js-解析参数-静态回退">3. ai-manage-daemon.js — 解析参数 + 静态回退</a></li><li class="lvl-3"><a href="#4-gateway-js-修正提示信息">4. gateway.js — 修正提示信息</a></li><li class="lvl-2"><a href="#修复后行为">修复后行为</a></li><li class="lvl-2"><a href="#修改文件">修改文件</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-018 | 阶段: 实现 | 原路径: docs/指南/管理前端自动可用修复-2026-05-31.md --&gt;</p>
+<h1 id="管理前端自动可用修复">管理前端自动可用修复<a class="anchor" href="#管理前端自动可用修复" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-05-31 | 影响: <code>khy gateway manage</code></p></blockquote>
+<h2 id="问题">问题<a class="anchor" href="#问题" aria-label="锚点">#</a></h2>
+<p><code>khy gateway manage</code> 启动管理界面时，前端始终显示 &quot;未就绪（pip 安装暂不含预构建前端）&quot;，<br>即使 <code>ai-frontend/dist/</code> 已有完整构建产物。</p>
+<pre><code>前端: 未就绪
+前端原因: unavailable
+推荐入口: API 直管（当前无可用前端）</code></pre>
+<h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
+<p>三处断裂导致前端不可用：</p>
+<h3 id="断裂-1-setup-py-不打包-ai-frontend">断裂 1: setup.py 不打包 ai-frontend/<a class="anchor" href="#断裂-1-setup-py-不打包-ai-frontend" aria-label="锚点">#</a></h3>
+<p><code>BuildWithBundle.run()</code> 只复制 <code>frontend/dist/</code>（旧路径，已不存在），<br>从未打包 <code>ai-frontend/</code> 源码或预构建产物。pip 安装后目标机器上没有前端文件。</p>
+<h3 id="断裂-2-bootstrap-py-不装-ai-frontend-依赖">断裂 2: _bootstrap.py 不装 ai-frontend 依赖<a class="anchor" href="#断裂-2-bootstrap-py-不装-ai-frontend-依赖" aria-label="锚点">#</a></h3>
+<p>runtime <code>npm install</code> 只针对 <code>backend/</code>，从未对 <code>ai-frontend/</code> 执行。<br>即使前端源码存在，缺少 <code>node_modules</code> 导致 Vite dev server 无法启动。</p>
+<h3 id="断裂-3-daemon-不回退到静态-dist">断裂 3: daemon 不回退到静态 dist<a class="anchor" href="#断裂-3-daemon-不回退到静态-dist" aria-label="锚点">#</a></h3>
+<p><code>ai-manage-daemon.js</code> 存在以下问题：</p>
+<ul><li>不解析 <code>--frontend-dist-dir</code> 参数（spawner 传了但 daemon 忽略了）</li><li>不调用 <code>aiManagementServer.configureFrontendStatic()</code>（函数已导出但从未被使用）</li></ul>
+<p>当 <code>node_modules</code> 缺失时，<code>noAutoFrontend</code> 自动设为 <code>true</code>，<br><code>resolveFrontend()</code> 跳过 Vite dev server，外部端口探测也失败，结果 <code>frontendAvailable = false</code>。</p>
+<h2 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h2>
+<h3 id="1-setup-py-打包-ai-frontend">1. setup.py — 打包 ai-frontend/<a class="anchor" href="#1-setup-py-打包-ai-frontend" aria-label="锚点">#</a></h3>
+<p>在 <code>BuildWithBundle.run()</code> 中添加 <code>ai-frontend/</code> copytree：</p>
+<pre><code class="language-python">ai_frontend_src = ROOT / &quot;ai-frontend&quot;
+ai_frontend_dst = bundled / &quot;ai-frontend&quot;
+if ai_frontend_src.exists():
+    shutil.copytree(
+        ai_frontend_src, ai_frontend_dst,
+        ignore=shutil.ignore_patterns(*EXCLUDE_PATTERNS, 'node_modules'),
+    )</code></pre>
+<p><code>MANIFEST.in</code> 同步添加 <code>recursive-include ai-frontend *</code> + <code>prune ai-frontend/node_modules</code>。</p>
+<h3 id="2-bootstrap-py-ai-frontend-npm-install">2. _bootstrap.py — ai-frontend npm install<a class="anchor" href="#2-bootstrap-py-ai-frontend-npm-install" aria-label="锚点">#</a></h3>
+<p>在 <code>_ensure_npm_install()</code> 的 <code>finally</code> 块中添加 ai-frontend 依赖安装：</p>
+<pre><code class="language-python">ai_frontend_dir = backend_dir.parent / &quot;ai-frontend&quot;
+if ai_frontend_dir.exists() and (ai_frontend_dir / &quot;package.json&quot;).exists():
+    nm = ai_frontend_dir / &quot;node_modules&quot;
+    lock = nm / &quot;.package-lock.json&quot;
+    if not _path_exists_safe(nm) or not _path_exists_safe(lock):
+        subprocess.run(
+            [npm_cmd, &quot;install&quot;, &quot;--no-audit&quot;, &quot;--no-fund&quot;],
+            cwd=str(ai_frontend_dir), timeout=_NPM_TIMEOUT,
+            **_subprocess_kwargs(),
+        )</code></pre>
+<h3 id="3-ai-manage-daemon-js-解析参数-静态回退">3. ai-manage-daemon.js — 解析参数 + 静态回退<a class="anchor" href="#3-ai-manage-daemon-js-解析参数-静态回退" aria-label="锚点">#</a></h3>
+<p>解析 <code>--frontend-dist-dir</code> 参数：</p>
+<pre><code class="language-js">const frontendDistDir = parseStringArg(argv, '--frontend-dist-dir', '');</code></pre>
+<p><code>resolveFrontend()</code> 失败后回退到静态托管：</p>
+<pre><code class="language-js">if (!frontend.available &amp;&amp; frontendDistDir) {
+    const staticResult = aiManagementServer.configureFrontendStatic({
+        distDir: frontendDistDir,
+    });
+    if (staticResult.enabled) {
+        frontend.available = true;
+        frontend.managed = true;
+        frontend.port = apiPort;        // 静态文件从 API 端口提供
+        frontend.reason = 'static-dist';
+    }
+}</code></pre>
+<h3 id="4-gateway-js-修正提示信息">4. gateway.js — 修正提示信息<a class="anchor" href="#4-gateway-js-修正提示信息" aria-label="锚点">#</a></h3>
+<p>移除硬编码的 &quot;pip 安装暂不含预构建前端&quot; 文案，改为通用 &quot;管理前端未就绪&quot;。</p>
+<h2 id="修复后行为">修复后行为<a class="anchor" href="#修复后行为" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>前端来源</th><th>端口</th></tr></thead><tbody><tr><td>有 <code>node_modules</code></td><td>Vite dev server</td><td>8090</td></tr><tr><td>无 <code>node_modules</code>，有 <code>dist/</code></td><td><code>configureFrontendStatic()</code> 静态托管</td><td>9090 (API 同端口)</td></tr><tr><td>pip 安装首次启动</td><td>runtime <code>npm install</code> 后 Vite dev server</td><td>8090</td></tr></tbody></table>
+<p>完整链路：</p>
+<pre><code>pip install → 打包 ai-frontend/ (源码 + dist/)
+→ runtime _bootstrap.py → cd ai-frontend &amp;&amp; npm install
+→ khy gateway manage → daemon → 优先 Vite dev server (8090)
+                              → 回退 configureFrontendStatic (9090/admin/ai-gateway)
+                              → 前端可用</code></pre>
+<h2 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>setup.py</code></td><td><code>BuildWithBundle.run()</code> 添加 ai-frontend copytree</td></tr><tr><td><code>MANIFEST.in</code></td><td>添加 ai-frontend include + prune node_modules</td></tr><tr><td><code>khy_platform/_bootstrap.py</code></td><td><code>_ensure_npm_install()</code> finally 块安装 ai-frontend 依赖</td></tr><tr><td><code>backend/scripts/ai-manage-daemon.js</code></td><td>解析 <code>--frontend-dist-dir</code> + 静态回退</td></tr><tr><td><code>backend/src/cli/handlers/gateway.js</code></td><td>修正 &quot;未就绪&quot; 提示信息</td></tr></tbody></table>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 正常模式（有 node_modules）
+khy gateway manage
+# → 前端: http://127.0.0.1:8090
+
+# 模拟 pip 场景（无 node_modules）
+mv ai-frontend/node_modules ai-frontend/_bak
+khy gateway manage stop &amp;&amp; khy gateway manage start --daemon
+# → 前端: http://127.0.0.1:9090 (静态 dist 回退)
+curl -s http://127.0.0.1:9090/admin/ai-gateway | head -1
+# → &lt;!DOCTYPE html&gt;
+
+# 恢复
+khy gateway manage stop
+mv ai-frontend/_bak ai-frontend/node_modules</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-017] 守护进程端口发现修复.html"><div class="dir">← 上一篇</div><div class="ttl">守护进程端口发现机制 — 设计文档与学习指南</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.html"><div class="dir">下一篇 →</div><div class="ttl">终端提示符泄漏与交付空行修复报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-018] 管理前端自动可用修复-2026-05-31.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

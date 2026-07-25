@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch Command Runner · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>batch<span class="sep">›</span>Batch Command Runner</div>
+      <header class="hero reveal"><h1>Batch Command Runner</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#batch-command-runner">Batch Command Runner</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#input-format">Input Format</a></li><li class="lvl-2"><a href="#options">Options</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="batch-command-runner">Batch Command Runner<a class="anchor" href="#batch-command-runner" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Run multiple commands or tasks in sequence, collecting results from each step.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Parse Input</strong>: Accept a list of tasks separated by newlines. Each line is one task.</li><li><strong>Validate</strong>: Check that each task is a valid command or action before starting.</li><li><strong>Execute Sequentially</strong>: Run each task one at a time, in the order provided.<ul><li>Capture the output and exit status of each task.</li><li>If a task fails, log the error and continue to the next task unless the user specified <code>--stop-on-error</code>.</li></ul></li><li><strong>Report Results</strong>: After all tasks complete, provide a summary table:<ul><li>Task number</li><li>Task description</li><li>Status (success/failure)</li><li>Brief output or error message</li></ul></li></ol>
+<h2 id="input-format">Input Format<a class="anchor" href="#input-format" aria-label="锚点">#</a></h2>
+<pre><code>task 1 description or command
+task 2 description or command
+task 3 description or command</code></pre>
+<h2 id="options">Options<a class="anchor" href="#options" aria-label="锚点">#</a></h2>
+<ul><li><code>--stop-on-error</code>: Halt execution on the first failure instead of continuing.</li><li><code>--dry-run</code>: Show what would be executed without actually running anything.</li></ul>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Keep each task atomic and independent when possible.</li><li>For shell commands, use Bash tool. For code changes, use Edit/Write tools.</li><li>Always confirm destructive operations before executing them.</li><li>Provide a progress indicator showing which task is currently running (e.g., &quot;[2/5] Running lint...&quot;).</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/api-and-interface-design/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">API and Interface Design</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/browser-testing-with-devtools/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Browser Testing with DevTools</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/batch/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

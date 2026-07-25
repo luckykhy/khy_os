@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>④ 什么是 MCP（模型上下文协议） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>④ 什么是 MCP（模型上下文协议）</div>
+      <header class="hero reveal"><h1>④ 什么是 MCP（模型上下文协议）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#④-什么是-mcp-模型上下文协议">④ 什么是 MCP（模型上下文协议）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-先建立直觉-四个生活比喻">二、先建立直觉：四个生活比喻</a></li><li class="lvl-2"><a href="#三-没有-mcp-之前-痛在哪-n-m-灾难">三、没有 MCP 之前，痛在哪？（N×M 灾难）</a></li><li class="lvl-2"><a href="#四-有了-mcp-世界清爽了-n-m">四、有了 MCP，世界清爽了（N+M）</a></li><li class="lvl-2"><a href="#五-mcp-里的两个角色">五、MCP 里的两个角色</a></li><li class="lvl-2"><a href="#六-一个-mcp-服务器到底暴露些什么">六、一个 MCP 服务器到底暴露些什么？</a></li><li class="lvl-2"><a href="#七-它们之间是怎么-对话-的-握手-用起来">七、它们之间是怎么&quot;对话&quot;的？（握手 → 用起来）</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验-给助理插一个-天气-服务器">八、动手小实验（思想实验）：给助理插一个&quot;天气&quot;服务器</a></li><li class="lvl-2"><a href="#九-常见误区">九、常见误区（❌ / ✅）</a></li><li class="lvl-2"><a href="#十-mcp-和-工具调用-到底什么关系-正交-不冲突">十、MCP 和&quot;工具调用&quot;到底什么关系？（正交，不冲突）</a></li><li class="lvl-2"><a href="#十一-为什么-mcp-对你的项目重要">十一、为什么 MCP 对你的项目重要？</a></li><li class="lvl-2"><a href="#十二-和-khy-os-的关系">十二、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十三-小结-下一步">十三、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="④-什么是-mcp-模型上下文协议">④ 什么是 MCP（模型上下文协议）<a class="anchor" href="#④-什么是-mcp-模型上下文协议" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a> 和 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 工具循环</a>。这一篇讲：怎么给 AI <strong>标准化地插上新工具</strong>。</p></blockquote>
+<p>MCP 全称 <strong>Model Context Protocol（模型上下文协议）</strong>。名字听着吓人，其实概念很简单——<strong>它就是&quot;给 AI 接工具&quot;这件事的统一标准</strong>。</p>
+<p>读完这一篇，你会彻底搞懂三件事：MCP 到底是什么、它解决了谁的痛、它和你已经学过的&quot;工具调用/工具循环&quot;怎么配合。</p>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>MCP = 一个统一的&quot;插座标准&quot;，让任何人做的工具/数据源，都能用同一种方式插到 AI 助理上，即插即用。</strong></p>
+<p>再说得直白一点：<strong>MCP 不是某个软件、也不是某个网站，它是一份&quot;大家都同意遵守的对接规矩&quot;。</strong> 就像&quot;USB 接口&quot;不是某个具体的 U 盘，而是一份&quot;插头长什么样、几个针脚、怎么通电&quot;的约定。</p>
+<p>类比先记住这一个：<strong>USB 接口。</strong> 后面我们还会补几个比喻，帮你从不同角度理解同一件事。</p>
+<aside class="callout callout-tip reveal"><div class="callout-mascot" aria-hidden="true">🐣</div><div class="callout-body"><div class="callout-title">💡 一个类比记一辈子</div><p>MCP 就是 AI 世界的 <span class="popover" tabindex="0"><span class="popover-anchor">USB</span><span class="popover-tip" role="tooltip">一份&quot;插头长什么样、怎么通电&quot;的公共约定，不是某个具体设备</span></span>。你不用为每个品牌的 U 盘造一个新插孔——大家都遵守 USB，就能即插即用。MCP 让&quot;任何人做的工具&quot;都能用<strong>同一种方式</strong>插到 AI 上。</p></div></aside>
+<p>翻卡自测：想清楚&quot;没有 MCP&quot;和&quot;有 MCP&quot;到底差在哪——</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">正面：如果<strong>没有</strong> MCP 这种统一插座，别人做了一个新工具（比如&quot;查天气&quot;），要接到 AI 上会遇到什么麻烦？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">反面：<strong>每接一个新工具，都得为它单独写一套对接代码</strong>——就像每个品牌的 U 盘都要配一个专属插孔，换个工具就得重新改造 AI。有了 MCP，所有工具都遵守同一份&quot;插头约定&quot;，AI 这边一次性支持这个标准，之后<strong>任何遵守 MCP 的新工具插上就能用</strong>，不用再改 AI 本身。这就是&quot;标准化&quot;省下的巨大成本。</div></div></div>
+<hr>
+<h2 id="二-先建立直觉-四个生活比喻">二、先建立直觉：四个生活比喻<a class="anchor" href="#二-先建立直觉-四个生活比喻" aria-label="锚点">#</a></h2>
+<p>一个抽象概念，用多个比喻从不同侧面照一遍，就立体了。MCP 的四个比喻：</p>
+<table><thead><tr><th>比喻</th><th>现实里它长什么样</th><th>对应到 MCP 是什么</th></tr></thead><tbody><tr><td>🔌 <strong>USB 接口</strong></td><td>电脑一个 USB 口，鼠标/键盘/U盘/打印机都能插</td><td>AI 一个&quot;标准口&quot;，各种工具都能插上就用</td></tr><tr><td>⚡ <strong>电源插座标准</strong></td><td>家里插座统一，任何电器插头都能插</td><td>工具只要&quot;插头合规&quot;，接哪个 AI 都行</td></tr><tr><td>📦 <strong>快递驿站统一接口</strong></td><td>顺丰/圆通/中通都能放进同一个驿站货架</td><td>不同厂商的工具都能进同一套&quot;货架&quot;被 AI 取用</td></tr><tr><td>🗣️ <strong>翻译官统一协议</strong></td><td>两国代表各说各话，翻译官用同一套规则居中传话</td><td>AI 和工具各自实现，MCP 规定它俩&quot;怎么对话&quot;</td></tr></tbody></table>
+<p>这四个比喻讲的其实是同一件事：<strong>把&quot;接口&quot;这件事统一了，接入成本就从&quot;每次定制&quot;降成&quot;照标准插上&quot;。</strong></p>
+<blockquote><p>小提醒：比喻是脚手架，用来爬上去看清楚，不是墙的本身。真正的定义永远以&quot;一句话定义&quot;那节为准。</p></blockquote>
+<hr>
+<h2 id="三-没有-mcp-之前-痛在哪-n-m-灾难">三、没有 MCP 之前，痛在哪？（N×M 灾难）<a class="anchor" href="#三-没有-mcp-之前-痛在哪-n-m-灾难" aria-label="锚点">#</a></h2>
+<p>设想每家公司都想给 AI 加工具：A 公司做了&quot;查数据库&quot;的工具，B 公司做了&quot;查天气&quot;的工具，C 公司做了&quot;读公司文档&quot;的工具。同时市面上有好几个不同的 AI 助理。</p>
+<p>如果没有统一标准，<strong>每个工具接进每个 AI 的方式都不一样</strong>，就会变成一团乱麻——<strong>N 个 AI × M 个工具 = N×M 种对接</strong>，谁都累死：</p>
+<pre class="mermaid">flowchart LR
+  subgraph 没有统一标准（乱）
+    AI1[&quot;🤖 AI-1&quot;] --- W1[&quot;🗄️ 工具A&quot;]
+    AI1 --- W2[&quot;🌤️ 工具B&quot;]
+    AI1 --- W3[&quot;📄 工具C&quot;]
+    AI2[&quot;🤖 AI-2&quot;] --- W1
+    AI2 --- W2
+    AI2 --- W3
+  end</pre>
+<p>每一根线都要单独定制。工具作者要为&quot;AI-1 怎么接、AI-2 又怎么接&quot;各写一套；AI 作者也要为&quot;工具 A 长这样、工具 B 又长那样&quot;各适配一遍。工具一多、AI 一多，就成了一盘<strong>意大利面条</strong>：牵一发动全身，谁也不敢乱改。</p>
+<p>用生活比喻说：这就像<strong>每个电器都配一种独家插头，每面墙都开一种独家插孔</strong>。你买回家的吹风机插不进卧室的插座，得专门找师傅改线——荒不荒唐？现实里没这么荒唐，正是因为大家早就统一了插座标准。</p>
+<hr>
+<h2 id="四-有了-mcp-世界清爽了-n-m">四、有了 MCP，世界清爽了（N+M）<a class="anchor" href="#四-有了-mcp-世界清爽了-n-m" aria-label="锚点">#</a></h2>
+<p>MCP 规定了一套<strong>大家都遵守的对接格式</strong>。于是分工彻底变了：</p>
+<ul><li>工具作者只要<strong>按 MCP 标准</strong>把工具做成一个&quot;MCP 服务器&quot;，做一次就行；</li><li>任何<strong>支持 MCP 的 AI</strong>（叫&quot;MCP 客户端&quot;）就能直接用，不用再单独适配。</li></ul>
+<p>对接总量从灾难性的 <strong>N×M</strong> 骤降为清爽的 <strong>N+M</strong>——每个 AI 学一次协议、每个工具实现一次协议，就全通了。</p>
+<pre class="mermaid">flowchart LR
+  AI[&quot;🤖 AI 助理&lt;br/&gt;(MCP 客户端)&quot;]
+  P((&quot;🔌 MCP&lt;br/&gt;统一插座&quot;))
+  S1[&quot;🗄️ 数据库工具&lt;br/&gt;(MCP 服务器)&quot;]
+  S2[&quot;🌤️ 天气工具&lt;br/&gt;(MCP 服务器)&quot;]
+  S3[&quot;📄 文档工具&lt;br/&gt;(MCP 服务器)&quot;]
+  AI --- P
+  P --- S1
+  P --- S2
+  P --- S3</pre>
+<p>就像电脑只有一个 USB 口，鼠标、键盘、U 盘、打印机都能插上去。<strong>MCP 就是 AI 世界的 USB。</strong></p>
+<p>一句话记牢这节：<strong>MCP 把&quot;接工具&quot;从一对一的定制活，变成了照标准来的插拔活。</strong></p>
+<hr>
+<h2 id="五-mcp-里的两个角色">五、MCP 里的两个角色<a class="anchor" href="#五-mcp-里的两个角色" aria-label="锚点">#</a></h2>
+<p>只需记住两个词——<strong>客户端</strong>和<strong>服务器</strong>：</p>
+<table><thead><tr><th>角色</th><th>是什么</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>MCP 客户端（Client）</strong></td><td>想使用工具的 AI 宿主一侧（比如 Khy-OS）</td><td>你的电脑（带 USB 口的那台）</td></tr><tr><td><strong>MCP 服务器（Server）</strong></td><td>提供某种能力的一个小程序（查库、读文件、连某个 API…）</td><td>U 盘 / 打印机（插上就能用的外设）</td></tr></tbody></table>
+<p>注意一个容易反直觉的点：<strong>这里的&quot;服务器&quot;不一定是机房里那种大机器。</strong> 它可以就是你电脑上跑着的一个小程序，甚至一个脚本。&quot;服务器&quot;在这里是<strong>角色名</strong>——&quot;提供能力的那一方&quot;，跟它跑在哪、大不大没关系。</p>
+<p>一个 AI 客户端可以<strong>同时插很多个</strong> MCP 服务器，能力就像插排一样叠加起来：插上&quot;天气服务器&quot;→会查天气；再插上&quot;数据库服务器&quot;→又会查库。<strong>能力是累加的。</strong></p>
+<pre class="mermaid">flowchart TB
+  AI[&quot;🤖 MCP 客户端&lt;br/&gt;(一个 AI 助理)&quot;]
+  AI --- A[&quot;🌤️ 天气 MCP 服务器&quot;]
+  AI --- B[&quot;🗄️ 数据库 MCP 服务器&quot;]
+  AI --- C[&quot;📅 日程 MCP 服务器&quot;]
+  A -.提供.-&gt; A1[&quot;🔧 查天气&quot;]
+  B -.提供.-&gt; B1[&quot;🔧 查订单&quot;]
+  B -.提供.-&gt; B2[&quot;🔧 发起退款&quot;]
+  C -.提供.-&gt; C1[&quot;🔧 查空闲时间&quot;]</pre>
+<hr>
+<h2 id="六-一个-mcp-服务器到底暴露些什么">六、一个 MCP 服务器到底暴露些什么？<a class="anchor" href="#六-一个-mcp-服务器到底暴露些什么" aria-label="锚点">#</a></h2>
+<p>很多人以为 MCP 服务器只能提供&quot;工具&quot;，其实它能对外暴露<strong>三类东西</strong>。用&quot;图书馆&quot;来打比方：</p>
+<table><thead><tr><th>暴露的东西</th><th>是什么</th><th>图书馆比喻</th></tr></thead><tbody><tr><td><strong>tools（工具）</strong></td><td>AI 可以<strong>调用去执行动作</strong>的功能（查天气、发退款…）</td><td>图书馆的<strong>服务窗口</strong>：你递单子，它替你办事</td></tr><tr><td><strong>resources（资源）</strong></td><td>AI 可以<strong>读取的数据/内容</strong>（某个文件、某段数据库记录…）</td><td>图书馆的<strong>书架</strong>：你去取来读，但不改动它</td></tr><tr><td><strong>prompts（提示模板）</strong></td><td>预先写好的<strong>提问/任务模板</strong>，帮 AI 更好地干某类活</td><td>图书馆的<strong>导览手册</strong>：教你&quot;这类问题一般这么查&quot;</td></tr></tbody></table>
+<p>对新手来说，<strong>先牢牢抓住 tools 这一类就够用了</strong>——它和你上一篇学的<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a>是同一回事。resources 和 prompts 属于进阶，知道&quot;MCP 服务器不止能给工具，还能给数据和模板&quot;即可。</p>
+<hr>
+<h2 id="七-它们之间是怎么-对话-的-握手-用起来">七、它们之间是怎么&quot;对话&quot;的？（握手 → 用起来）<a class="anchor" href="#七-它们之间是怎么-对话-的-握手-用起来" aria-label="锚点">#</a></h2>
+<p>MCP 客户端和服务器之间用<strong>统一协议</strong>说话。第一次连上时有个&quot;打招呼&quot;的过程，之后就照常用。看这张时序图：</p>
+<pre class="mermaid">sequenceDiagram
+  participant AI as 🤖 MCP 客户端（AI）
+  participant MCP as 🔌 MCP 服务器（某工具）
+  Note over AI,MCP: —— 第一次连接：握手 &amp; 报家底 ——
+  AI-&gt;&gt;MCP: 你好，我支持 MCP，我们对上暗号（初始化）
+  MCP--&gt;&gt;AI: 你好，暗号对上了，我这边准备好了
+  AI-&gt;&gt;MCP: 你都提供哪些工具？（列清单）
+  MCP--&gt;&gt;AI: 我有 3 个：查订单 / 退款 / 查物流
+  Note over AI,MCP: —— 之后：需要时像普通工具调用一样用 ——
+  AI-&gt;&gt;MCP: 调用 查物流(订单号=123)
+  MCP--&gt;&gt;AI: 物流状态：运输中</pre>
+<p>拆开看两个阶段：</p>
+<ol><li><strong>握手 + 报家底</strong>：AI 一连上服务器，先对暗号确认&quot;我俩说同一套协议&quot;，然后问&quot;你都有啥工具/资源/模板？&quot;服务器回一份<strong>清单</strong>。这一步 AI 才知道自己&quot;多了哪些能力&quot;。</li><li><strong>正常使用</strong>：真要干活时，AI 就挑一个工具、填好参数发过去，服务器执行完把结果送回来。</li></ol>
+<p>看出来了吗？<strong>第 2 步对 AI 来说，和调用内置工具几乎一模一样</strong>——都是<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a>那套&quot;填申请单 → 拿结果&quot;。MCP 真正的贡献在<strong>第 1 步</strong>：它规定了&quot;工具<strong>怎么标准地被发现、被接进来</strong>&quot;。</p>
+<hr>
+<h2 id="八-动手小实验-思想实验-给助理插一个-天气-服务器">八、动手小实验（思想实验）：给助理插一个&quot;天气&quot;服务器<a class="anchor" href="#八-动手小实验-思想实验-给助理插一个-天气-服务器" aria-label="锚点">#</a></h2>
+<p>不用真写代码，跟着脑补一遍，你就懂了 MCP 的价值。</p>
+<p><strong>实验前</strong>：你的 AI 助理只会读写文件、跑命令。你问它&quot;北京今天下不下雨？&quot;——它只能凭训练时的旧知识猜，或者干脆说&quot;我查不了实时天气&quot;。它没有&quot;手&quot;能伸到天气数据那里。</p>
+<p><strong>动手一步</strong>：你找到（或自己做）一个&quot;天气查询 MCP 服务器&quot;，在配置里把它<strong>插上</strong>。</p>
+<p><strong>实验后</strong>：AI 一连上就走了第七节那套握手——问&quot;你有啥？&quot;，天气服务器回&quot;我有一个工具叫 <code>查天气(城市)</code>&quot;。<strong>从这一刻起，AI 的工具清单里就多了一项查天气的能力。</strong> 你再问&quot;北京今天下不下雨？&quot;：</p>
+<pre class="mermaid">sequenceDiagram
+  participant You as 🧑 你
+  participant AI as 🤖 AI 助理（客户端）
+  participant W as 🌤️ 天气 MCP 服务器
+  You-&gt;&gt;AI: 北京今天下不下雨？
+  Note over AI: 清单里有「查天气」这个工具，正好用它
+  AI-&gt;&gt;W: 调用 查天气(城市=&quot;北京&quot;)
+  W--&gt;&gt;AI: 今天有雨，降水概率 80%
+  AI--&gt;&gt;You: 北京今天大概率有雨（80%），记得带伞 ☔</pre>
+<p>把&quot;插上就多一项能力&quot;这一刻演成一幕小短剧——注意 AI 的本体、代码、脑子<strong>一个字都没改</strong>，它只是&quot;多插了个外设&quot;：</p>
+<div class="scene"><div class="scene-title">给助理插一个&quot;天气&quot;服务器的现场</div><div class="scene-caption reveal">实验前：AI 助理只会读写文件、跑命令，没有&quot;手&quot;能碰到实时天气。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>北京今天下不下雨？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI 助理</b>抱歉，我查不了实时天气……我的工具清单里没有这一项。</div></div><div class="scene-caption reveal">于是你找来一个&quot;天气查询 MCP 服务器&quot;，在配置里把它 <span class="popover" tabindex="0"><span class="popover-anchor">插上</span><span class="popover-tip" role="tooltip">像插 U 盘一样，不改 AI 本体，只在配置里加一条</span></span>。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI 助理</b>（连上服务器，握手）你好，我支持 MCP，你都提供哪些工具？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🌤️</span><div class="scene-bubble"><b class="scene-who">天气服务器</b>你好，我有一个工具：<code>查天气(城市)</code>。</div></div><div class="scene-caption reveal">就在这一刻，AI 的工具清单里凭空多了一项能力。你再问同一个问题——</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>北京今天下不下雨？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI 助理</b>清单里有「查天气」了！（调用它）北京今天大概率有雨（80%），记得带伞 ☔</div></div><div class="scene-caption reveal">你没有重新训练 AI，也没改它的核心代码——插上就多能力，拔掉就消失，这就是 MCP 的即插即用。</div></div>
+<p><strong>关键领悟</strong>：你<strong>没有重新训练 AI，也没有改 AI 的核心代码</strong>，只是&quot;插了个外设&quot;，它就凭空多了一项能力。拔掉这个服务器，能力又消失。这种&quot;插上就多能力、拔掉就少能力&quot;的即插即用体验，正是 MCP 想给你的。</p>
+<hr>
+<h2 id="九-常见误区">九、常见误区（❌ / ✅）<a class="anchor" href="#九-常见误区" aria-label="锚点">#</a></h2>
+<p>新手最容易在这几处翻车，逐条纠正：</p>
+<ul><li>❌ <strong>&quot;MCP 是某个具体的软件/App，下载安装它就行。&quot;</strong></li></ul>
+<p>✅ MCP 是一份<strong>协议（约定/规矩）</strong>，不是软件。就像&quot;USB&quot;不是某个 U 盘，而是插头标准。你安装的是&quot;某个 MCP 服务器程序&quot;，它<strong>遵守</strong> MCP，但它本身不叫 MCP。</p>
+<ul><li>❌ <strong>&quot;MCP 一定要联网，得像 HTTP 那样走网络才行。&quot;</strong></li></ul>
+<p>✅ MCP 只规定&quot;两边怎么对话&quot;，<strong>不规定必须走网络</strong>。很多 MCP 服务器就跑在你<strong>本机</strong>，客户端和它通过本地通道说话，全程不联网也成立。联网只是其中一种传输方式，不是前提。</p>
+<ul><li>❌ <strong>&quot;以后所有工具调用都必须走 MCP。&quot;</strong></li></ul>
+<p>✅ 不必。AI 的<strong>内置工具</strong>（自带的读写文件、跑命令等）<strong>根本不走 MCP</strong>，直接就能用。MCP 是给&quot;<strong>第三方/外部</strong>工具&quot;提供的一条标准接入通道。内置工具是&quot;自带的手&quot;，MCP 是&quot;再插外设的口&quot;，两者并存。</p>
+<ul><li>❌ <strong>&quot;MCP 和工具调用是竞争关系，二选一。&quot;</strong></li></ul>
+<p>✅ 它俩<strong>不是一个层面的东西</strong>，不冲突（详见下一节）。MCP 管&quot;工具从哪来&quot;，工具调用管&quot;工具怎么用&quot;。是搭档，不是对手。</p>
+<ul><li>❌ <strong>&quot;一个 MCP 服务器只能提供一个工具。&quot;</strong></li></ul>
+<p>✅ 一个服务器可以一次性暴露<strong>很多个</strong> tools，外加 resources 和 prompts。就像一个 U 盘里能放很多文件。</p>
+<hr>
+<h2 id="十-mcp-和-工具调用-到底什么关系-正交-不冲突">十、MCP 和&quot;工具调用&quot;到底什么关系？（正交，不冲突）<a class="anchor" href="#十-mcp-和-工具调用-到底什么关系-正交-不冲突" aria-label="锚点">#</a></h2>
+<p>这是全篇最该记住的一节。一句话理清：</p>
+<ul><li><strong>工具调用（Tool Calling）</strong>：AI <strong>用</strong>一个工具的动作——&quot;怎么用&quot;（伸手、填申请单、拿结果）。</li><li><strong>MCP</strong>：一种<strong>把外部工具标准接进来</strong>的协议——&quot;工具从哪来&quot;（插座、接入的规矩）。</li></ul>
+<p>它俩是<strong>正交</strong>的：一个管来源，一个管使用，各管一段，谁也不替代谁。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 来源[&quot;工具从哪来（MCP 负责其中一种）&quot;]
+    直接[&quot;🏠 内置工具&lt;br/&gt;(AI 自带)&quot;]
+    经MCP[&quot;🔌 MCP 服务器&lt;br/&gt;(外部接入)&quot;]
+  end
+  subgraph 使用[&quot;工具怎么用（都走工具调用）&quot;]
+    调用[&quot;📝 填申请单 → 执行 → 拿结果&quot;]
+  end
+  直接 --&gt; 调用
+  经MCP --&gt; 调用</pre>
+<p>看这张图就通透了：<strong>不管工具是&quot;自带的&quot;还是&quot;经 MCP 插进来的&quot;，最终用起来都走同一套<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a>。</strong> MCP 只是在&quot;来源&quot;那一栏多提供了一条标准通道。</p>
+<p>顺带把<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">工具循环</a>也串进来：真实任务里，AI 会一步步地反复调用工具直到目标完成（那就是工具循环）。这些被反复调用的工具，<strong>有些是内置的，有些就是从 MCP 服务器来的</strong>——在循环眼里它们没区别，都是&quot;清单上的一个工具&quot;。所以三者的关系是：</p>
+<blockquote><p><strong>MCP（工具从哪来） → 工具调用（一次怎么用） → 工具循环（多次自动接力）。</strong><br>一条清晰的链，各司其职。</p></blockquote>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 MCP 和&quot;工具调用&quot;是什么关系？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">A</span><span class="quiz-text">MCP 是工具调用的升级版，会取代它</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">两者正交：MCP 管&quot;工具从哪来&quot;，工具调用管&quot;一次怎么用&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">它俩是同一个东西的两个名字</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">有了 MCP 就不需要工具调用了</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 记住那条链：MCP（来源）→ 工具调用（使用）→ 工具循环（接力）。不管工具是内置的还是经 MCP 插进来的，用起来都走同一套工具调用——MCP 只是在&quot;来源&quot;那栏多提供一条标准通道。</div></div>
+<hr>
+<h2 id="十一-为什么-mcp-对你的项目重要">十一、为什么 MCP 对你的项目重要？<a class="anchor" href="#十一-为什么-mcp-对你的项目重要" aria-label="锚点">#</a></h2>
+<p>因为它让你的 AI 助理<strong>可扩展、可组合</strong>：</p>
+<ul><li>想让它会查你自己的数据库？做一个 MCP 服务器，插上。</li><li>想让它会操作某个内部系统？做一个 MCP 服务器，插上。</li><li>想临时试一个新能力？插上试，不合适就拔掉，<strong>不动 AI 本体</strong>。</li></ul>
+<p>这就是&quot;标准化&quot;的威力：<strong>一次约定，处处复用。</strong> 工具作者做一次就能被所有支持 MCP 的 AI 用；AI 支持一次协议，就能用上整个生态里的工具。生态越大，你的助理&quot;能插的外设&quot;就越多。</p>
+<hr>
+<h2 id="十二-和-khy-os-的关系">十二、和 Khy-OS 的关系<a class="anchor" href="#十二-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>Khy-OS 作为一个 Agent 平台，可以<strong>作为 MCP 客户端</strong>去接入外部 MCP 服务器，从而在不改核心的情况下扩展能力——把别人做好的工具&quot;插上就用&quot;。</p>
+<p>同时，Khy-OS 自身也<strong>内置了一批工具</strong>（读写文件、跑命令、搜索代码、抓网页等）。这些内置工具<strong>不走 MCP</strong>，是它&quot;自带的手&quot;；MCP 则是它&quot;再插外设的口&quot;。两者并存、互不干扰：</p>
+<ul><li><strong>自带的手</strong>（内置工具）：开箱即用，直接调用。</li><li><strong>外插的口</strong>（MCP 接入）：按需扩展，插拔灵活。</li></ul>
+<p>想深入看这些工具与接入机制在代码里长什么样，可以顺着设计文档往下读（参见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>）。本篇属于概念入门，重点是让你<strong>先建立&quot;MCP = 标准接口&quot;的心智模型</strong>，不需要记具体函数名。</p>
+<hr>
+<h2 id="十三-小结-下一步">十三、小结 + 下一步<a class="anchor" href="#十三-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>MCP = AI 世界的 USB 插座标准</strong>，让工具即插即用；它是<strong>协议/约定</strong>，不是软件、也不强制联网。</li><li>记住四个比喻同指一件事：<strong>USB 口 / 电源插座 / 快递驿站 / 翻译官协议</strong>——都在说&quot;把接口统一了&quot;。</li><li>两个角色：<strong>客户端（AI）</strong> 插 <strong>服务器（工具）</strong>；一个服务器可暴露 <strong>tools / resources / prompts</strong>，能力可叠加。</li><li>没有标准时是灾难的 <strong>N×M</strong> 定制；有了 MCP 变成清爽的 <strong>N+M</strong>。</li><li>MCP 和<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a><strong>正交</strong>：MCP 管&quot;工具从哪来&quot;，工具调用管&quot;怎么用&quot;，<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">工具循环</a>管&quot;多次接力&quot;。内置工具不走 MCP 也能用。</li><li>在 Khy-OS 里：内置工具是&quot;自带的手&quot;，MCP 是&quot;再插外设的口&quot;，并存互补。</li></ul>
+<p>工具的&quot;来源/接入&quot;讲完了。最后一个概念，讲怎么把<strong>一整套做事套路</strong>打包起来复用——<strong>Skill（技能）</strong>。</p>
+<p>👉 <a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ 什么是 Skill（技能）</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-03] 什么是ToolLoop-工具循环.html"><div class="dir">← 上一篇</div><div class="ttl">③ 什么是 Tool Loop（工具循环）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-05] 什么是Skill-技能.html"><div class="dir">下一篇 →</div><div class="ttl">⑤ 什么是 Skill（技能）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-04] 什么是MCP-模型上下文协议.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

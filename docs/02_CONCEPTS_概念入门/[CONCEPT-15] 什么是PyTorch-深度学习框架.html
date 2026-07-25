@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑮ 什么是 PyTorch（深度学习框架） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑮ 什么是 PyTorch（深度学习框架）</div>
+      <header class="hero reveal"><h1>⑮ 什么是 PyTorch（深度学习框架）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑮-什么是-pytorch-深度学习框架">⑮ 什么是 PyTorch（深度学习框架）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要-pytorch-从零手写神经网络有多苦">二、为什么需要 PyTorch？——从零手写神经网络有多苦</a></li><li class="lvl-3"><a href="#没有框架会怎样">没有框架会怎样？</a></li><li class="lvl-2"><a href="#三-核心比喻-备好的厨房-乐高积木">三、核心比喻：备好的厨房 &amp; 乐高积木</a></li><li class="lvl-3"><a href="#比喻一-一间-备好了的厨房">比喻一：一间&quot;备好了的厨房&quot;</a></li><li class="lvl-3"><a href="#比喻二-乐高积木">比喻二：&quot;乐高积木&quot;</a></li><li class="lvl-2"><a href="#四-三大法宝-张量-自动微分-gpu-加速">四、三大法宝：张量 + 自动微分 + GPU 加速</a></li><li class="lvl-3"><a href="#法宝一-张量-tensor-能跑在显卡上的-超级数组">法宝一：张量（Tensor）——能跑在显卡上的&quot;超级数组&quot;</a></li><li class="lvl-3"><a href="#法宝二-自动微分-autograd-最神奇的一样">法宝二：自动微分（autograd）——最神奇的一样</a></li><li class="lvl-3"><a href="#法宝三-gpu-加速-把计算丢给显卡-人海战术">法宝三：GPU 加速——把计算丢给显卡&quot;人海战术&quot;</a></li><li class="lvl-2"><a href="#五-感觉一下-一段极简伪代码">五、感觉一下：一段极简伪代码</a></li><li class="lvl-2"><a href="#六-生态-pytorch-不是唯一-但很多人偏爱它">六、生态：PyTorch 不是唯一，但很多人偏爱它</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-pytorch-是一种模型-一个-ai">误区 1：以为 PyTorch 是一种模型 / 一个 AI</a></li><li class="lvl-3"><a href="#误区-2-以为学-ai-必须先精通-pytorch">误区 2：以为学 AI 必须先精通 PyTorch</a></li><li class="lvl-3"><a href="#误区-3-以为没有-gpu-就不能用-pytorch">误区 3：以为没有 GPU 就不能用 PyTorch</a></li><li class="lvl-3"><a href="#误区-4-以为框架会自动-想出-一个好模型">误区 4：以为框架会自动&quot;想出&quot;一个好模型</a></li><li class="lvl-3"><a href="#误区-5-以为不同框架之间天差地别-学了这个那个就白学">误区 5：以为不同框架之间天差地别、学了这个那个就白学</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-脑内推演-教模型认猫-pytorch-在每一步给了你什么">实验：脑内推演&quot;教模型认猫&quot;，PyTorch 在每一步给了你什么</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑮-什么是-pytorch-深度学习框架">⑮ 什么是 PyTorch（深度学习框架）<a class="anchor" href="#⑮-什么是-pytorch-深度学习框架" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-14]%20什么是Transformer-变换器.html">⑭ 什么是 Transformer</a>。那一篇讲&quot;大模型内部那套让机器读懂语言的精巧架构长什么样&quot;；这一篇往下落一层，讲一个更实在的问题：<strong>这些神经网络、这套 Transformer 架构，工程师到底是拿什么&quot;工具&quot;把它搭出来、训练出来的？</strong> 答案就是本篇的主角——<strong>PyTorch</strong>。它是把 <a href="./[CONCEPT-12]%20什么是机器学习-MachineLearning.html">⑫ 机器学习</a> / <a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a> 从&quot;纸上原理&quot;落地成&quot;能跑的代码&quot;的那套<strong>电动工具套装</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>PyTorch = 一套最流行的&quot;深度学习工具箱（框架）&quot;，让工程师用几行代码就能搭出神经网络、自动算好梯度、还能用 GPU 加速训练。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>PyTorch = 炼制 AI 模型的&quot;电动工具套装&quot;——脏活累活（求导、算矩阵、调显卡）它全包了，你只管专心设计网络。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>&quot;框架&quot;&quot;PyTorch&quot;听着像很硬核的编程名词，其实道理特别朴素：你要盖房子，<strong>不会自己去烧砖、炼钢、拧每一颗螺丝</strong>——你会用现成的电钻、切割机、预制好的砖块。PyTorch 就是深度学习界的这一套 <span class="popover" tabindex="0"><span class="popover-anchor">电动工具</span><span class="popover-tip" role="tooltip">现成的神经网络层、自动求导引擎、GPU 加速——都打包好了，拿来即用，不用你从零造</span></span>。你不用会写它，只要抓住一个画面：<strong>框架把最烦、最容易出错的脏活替你干了，你腾出脑子专心想&quot;这个网络该怎么设计&quot;</strong>。这一篇不需要你会任何数学，跟着&quot;工具箱替你干脏活&quot;这根线走就行～ 🐥</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong>深度学习是&quot;用多层神经网络学规律&quot;这门本事，PyTorch 是把这门本事真正做出来、跑起来的那把趁手工具。</strong></p>
+<hr>
+<h2 id="二-为什么需要-pytorch-从零手写神经网络有多苦">二、为什么需要 PyTorch？——从零手写神经网络有多苦<a class="anchor" href="#二-为什么需要-pytorch-从零手写神经网络有多苦" aria-label="锚点">#</a></h2>
+<p>要理解框架的价值，先看看<strong>没有框架</strong>会有多惨。</p>
+<p>假设你想亲手搭一个哪怕很小的神经网络，从零开始、不用任何工具，你得干这些活：</p>
+<ul><li>自己写代码把成千上万个数字（<a href="./[CONCEPT-09]%20什么是Embedding-向量.html">⑨ Embedding</a>、权重）排成一个个矩阵，再手写矩阵乘法；</li><li><strong>最要命的一步</strong>：为了让网络能&quot;学&quot;（<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里讲的反向传播），你得对网络里<strong>每一个参数</strong>手动推导它的&quot;梯度&quot;（该往哪个方向拧、拧多少），几百万个参数就得推几百万条求导公式；</li><li>网络结构改一点点（多加一层、换个激活函数），上面所有的求导公式<strong>全得重新推一遍</strong>；</li><li>想让它跑快点、用上显卡（GPU），还得自己去写和显卡打交道的底层代码。</li></ul>
+<p>这活<strong>又繁琐、又极其容易出错</strong>——一个求导公式抄错个正负号，整个网络就学不动，你还查不出错在哪。<strong>这就是为什么绝大多数人根本不该、也不会从零手写。</strong></p>
+<p>PyTorch 换了个思路：<strong>把这些又脏又累又易错的活，全部打包成现成的工具</strong>。你不用推导求导公式、不用手写矩阵乘法、不用碰显卡底层——这些它全帮你干了。你只需要用几行清清爽爽的代码，<strong>描述&quot;我这个网络长什么样&quot;</strong>，剩下的交给它。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 手写[&quot;🧑‍🔧 从零手写（地狱模式）&quot;]
+    A1[&quot;排矩阵&lt;br/&gt;手写矩阵乘法&quot;] --&gt; A2[&quot;对每个参数&lt;br/&gt;手动推导梯度&lt;br/&gt;（几百万条公式）&quot;]
+    A2 --&gt; A3[&quot;网络一改&lt;br/&gt;公式全重推&quot;]
+    A3 --&gt; A4[&quot;自己写&lt;br/&gt;显卡底层代码&quot;]
+  end
+  subgraph 框架[&quot;⚡ 用 PyTorch（工具箱模式）&quot;]
+    B1[&quot;几行代码&lt;br/&gt;描述网络长什么样&quot;] --&gt; B2[&quot;框架自动&lt;br/&gt;算梯度 + 算矩阵 + 管 GPU&quot;]
+  end</pre>
+<h3 id="没有框架会怎样">没有框架会怎样？<a class="anchor" href="#没有框架会怎样" aria-label="锚点">#</a></h3>
+<p>那你会把 90% 的时间和精力，耗在<strong>推公式、抓 bug、调显卡</strong>这些跟&quot;你的创意&quot;毫无关系的苦差事上，真正想设计的网络反而没工夫琢磨。框架的意义，就是<strong>把你从造轮子里解放出来</strong>——让你专注在&quot;设计&quot;，而不是&quot;造工具&quot;。</p>
+<table><thead><tr><th>有没有框架</th><th>你的时间花在哪</th><th>好比</th></tr></thead><tbody><tr><td><strong>没有（从零手写）</strong></td><td>大半耗在推导求导、手写矩阵、调显卡、抓 bug</td><td>想做顿饭，却得先种菜、打铁做锅、劈柴生火</td></tr><tr><td><strong>有（用 PyTorch）</strong></td><td>几乎全花在&quot;设计网络、试想法&quot;上</td><td>走进备好食材和厨具的厨房，专心颠勺</td></tr></tbody></table>
+<hr>
+<h2 id="三-核心比喻-备好的厨房-乐高积木">三、核心比喻：备好的厨房 &amp; 乐高积木<a class="anchor" href="#三-核心比喻-备好的厨房-乐高积木" aria-label="锚点">#</a></h2>
+<p>&quot;框架&quot;这个词太抽象，用两个你天天见的东西就能彻底焊死这个概念。</p>
+<h3 id="比喻一-一间-备好了的厨房">比喻一：一间&quot;备好了的厨房&quot;<a class="anchor" href="#比喻一-一间-备好了的厨房" aria-label="锚点">#</a></h3>
+<p>你想做一顿饭，<strong>不会自己先去种菜、养鸡、打铁做锅</strong>。你走进厨房，食材、灶台、锅铲、油盐一应俱全，你只管<strong>专心把菜炒好</strong>。PyTorch 就是这样一间<strong>为炼 AI 模型备好的厨房</strong>：现成的网络层、求导引擎、优化器、跑显卡的能力，全给你摆在台面上了，你只管&quot;炒你的菜&quot;（设计你的网络）。</p>
+<h3 id="比喻二-乐高积木">比喻二：&quot;乐高积木&quot;<a class="anchor" href="#比喻二-乐高积木" aria-label="锚点">#</a></h3>
+<p>神经网络是<strong>一层一层搭起来</strong>的（<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里的流水线）。PyTorch 把每一种&quot;层&quot;都做成了一块<strong>现成的乐高积木</strong>——全连接层是一块、卷积层是一块、注意力层是一块……你要搭网络，<strong>不用自己造积木</strong>，直接把现成的积木块<strong>一块块拼起来</strong>，一个神经网络就成型了。</p>
+<pre class="mermaid">flowchart TB
+  subgraph 积木盒[&quot;🧱 PyTorch 的积木盒（现成的层）&quot;]
+    K1[&quot;全连接层&quot;]
+    K2[&quot;卷积层&quot;]
+    K3[&quot;注意力层&quot;]
+    K4[&quot;激活函数&quot;]
+  end
+  积木盒 --&gt; BUILD[&quot;🧩 你把积木拼起来&lt;br/&gt;（几行代码）&quot;]
+  BUILD --&gt; NET[&quot;🕸️ 一个神经网络&lt;br/&gt;成型了&quot;]</pre>
+<p>两个比喻的<strong>共同内核</strong>：<strong>你负责&quot;创意和组装&quot;，框架负责&quot;提供零件和干脏活&quot;。</strong> 记住这一点，PyTorch 是什么就再也不会忘。</p>
+<hr>
+<h2 id="四-三大法宝-张量-自动微分-gpu-加速">四、三大法宝：张量 + 自动微分 + GPU 加速<a class="anchor" href="#四-三大法宝-张量-自动微分-gpu-加速" aria-label="锚点">#</a></h2>
+<p>PyTorch 之所以强，靠的是三样看家本领。把这三样用大白话讲透，你就摸到它的骨架了。</p>
+<table><thead><tr><th>法宝</th><th>大白话</th><th>好比</th><th>对应深度学习的哪一步</th></tr></thead><tbody><tr><td><strong>① 张量（Tensor）</strong></td><td>能装一大堆多维数字、还能跑在显卡上的&quot;超级数组&quot;</td><td>一个能无限叠层的<strong>数字收纳盒</strong></td><td>网络里流动的数据、权重全是张量</td></tr><tr><td><strong>② 自动微分（autograd）</strong></td><td>你只管把网络&quot;正着&quot;搭好，它自动帮你算&quot;反向&quot;的梯度</td><td>你走一遍迷宫，它自动记住<strong>每一步怎么原路返回</strong></td><td>反向传播（自动帮你算&quot;旋钮该怎么拧&quot;）</td></tr><tr><td><strong>③ GPU 加速</strong></td><td>把海量计算丢给显卡&quot;人海战术&quot;并行算，快几十倍</td><td>一个人搬砖 vs 一千个人同时搬</td><td>让训练从&quot;熬几个月&quot;变成&quot;跑几小时&quot;</td></tr></tbody></table>
+<h3 id="法宝一-张量-tensor-能跑在显卡上的-超级数组">法宝一：张量（Tensor）——能跑在显卡上的&quot;超级数组&quot;<a class="anchor" href="#法宝一-张量-tensor-能跑在显卡上的-超级数组" aria-label="锚点">#</a></h3>
+<p><strong>张量 = 一个能装多维数字的&quot;超级数组&quot;。</strong> 一个数字是&quot;零维&quot;，一排数字（<a href="./[CONCEPT-09]%20什么是Embedding-向量.html">⑨ 向量</a>）是&quot;一维&quot;，一张表格是&quot;二维&quot;，一张彩色图片（宽 × 高 × 红绿蓝三通道）就是&quot;三维&quot;……张量就是把这些<strong>统一装进一个盒子</strong>的东西。</p>
+<p>它比普通数组厉害在两点：① <strong>能轻松处理多维数据</strong>（图片、视频、一段话都能装）；② <strong>能一键搬到 GPU 上</strong>去飞快地算。网络里流动的数据、每一个&quot;旋钮&quot;（参数），本质都是张量。</p>
+<blockquote><p>⚠️ 别被&quot;张量&quot;这个物理/数学名词吓到——在 PyTorch 里，你就把它当成<strong>一个会算数、还能上显卡加速的多维数组</strong>就行。不用懂它在数学上的严格定义，那跟你用它没半毛钱关系。</p></blockquote>
+<h3 id="法宝二-自动微分-autograd-最神奇的一样">法宝二：自动微分（autograd）——最神奇的一样<a class="anchor" href="#法宝二-自动微分-autograd-最神奇的一样" aria-label="锚点">#</a></h3>
+<p>这是 PyTorch <strong>最迷人</strong>的本领，直接呼应了<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里那句&quot;网络是被纠错纠出来的&quot;。</p>
+<p>回忆一下：网络学习靠的是<strong>反向传播</strong>——算出&quot;每个旋钮该往哪拧、拧多少&quot;（这个&quot;该怎么拧&quot;的信息，专业叫<strong>梯度</strong>）。从零手写时，这是<strong>最苦的一步</strong>：几百万个参数就得手推几百万条求导公式。</p>
+<p><strong>autograd 把这一步彻底自动化了。</strong> 你只需要<strong>正着</strong>把网络搭好、把数据喂进去、算出&quot;错了多少&quot;（loss）；然后喊一声&quot;开始反向&quot;（一行 <code>loss.backward()</code>），它就<strong>自动、精确地</strong>帮你把每一个参数的梯度全算好。你一条求导公式都不用推。</p>
+<p>最好的比喻是<strong>走迷宫记路</strong>：你只管<strong>正着往前走</strong>（前向传播），autograd 像个贴心的助手，<strong>默默记下你走的每一步</strong>；等你到了终点想原路返回（反向传播），它照着记录<strong>自动带你一步步走回去</strong>，一步都不会错。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 你做的[&quot;🧑 你只需要做的（正向）&quot;]
+    F1[&quot;搭好网络&quot;] --&gt; F2[&quot;喂数据&lt;br/&gt;前向算出预测&quot;]
+    F2 --&gt; F3[&quot;算 loss&lt;br/&gt;（错了多少）&quot;]
+  end
+  F3 --&gt; BW[&quot;🪄 喊一声&lt;br/&gt;loss.backward()&quot;]
+  subgraph 它做的[&quot;🤖 autograd 自动做的（反向）&quot;]
+    BW --&gt; G1[&quot;自动算出&lt;br/&gt;每个参数的梯度&quot;]
+    G1 --&gt; G2[&quot;（每个旋钮&lt;br/&gt;该往哪拧、拧多少）&quot;]
+  end</pre>
+<p>一句话记住：<strong>autograd 让&quot;反向传播&quot;从&quot;人肉推几百万条公式&quot;，变成&quot;喊一嗓子它全办了&quot;。</strong> 这是框架替你干掉的<strong>最脏、最重要</strong>的一件活。</p>
+<h3 id="法宝三-gpu-加速-把计算丢给显卡-人海战术">法宝三：GPU 加速——把计算丢给显卡&quot;人海战术&quot;<a class="anchor" href="#法宝三-gpu-加速-把计算丢给显卡-人海战术" aria-label="锚点">#</a></h3>
+<p>训练一个网络，本质是<strong>海量的、重复的、简单的数学运算</strong>（主要是矩阵乘法）。这种活有个特点：<strong>每一小块都很简单，但数量极其巨大</strong>。</p>
+<p>普通 CPU 像个<strong>博士生</strong>：很聪明，但一次只专心干一件复杂的事，让它算几亿次简单乘法，会算到天荒地老。GPU（显卡）像<strong>几千个小学生</strong>：单个不聪明，但<strong>几千个同时开工</strong>，那种&quot;量大但每块都简单&quot;的活，正好用&quot;人海战术&quot;一拥而上，<strong>快几十倍甚至上百倍</strong>。</p>
+<p>PyTorch 把用 GPU 这件事变得<strong>极其简单</strong>——你不用碰任何显卡底层代码，基本就是把张量&quot;搬&quot;到 GPU 上（一句 <code>.to(&quot;cuda&quot;)</code> 之类），后续计算就自动飞快了。</p>
+<pre class="mermaid">flowchart TB
+  TASK[&quot;🔢 训练 = 海量又简单的&lt;br/&gt;重复计算（矩阵乘法）&quot;]
+  TASK --&gt; CPU[&quot;🧑‍🎓 CPU：像 1 个博士生&lt;br/&gt;聪明但一次干一件&lt;br/&gt;→ 算到天荒地老&quot;]
+  TASK --&gt; GPU[&quot;👥 GPU：像几千个小学生&lt;br/&gt;同时开工人海战术&lt;br/&gt;→ 快几十上百倍&quot;]</pre>
+<p><strong>三大法宝合起来是一条龙</strong>：数据装进<strong>张量</strong>里流过网络（前向）→ <strong>autograd</strong> 自动算好每个参数的梯度（反向）→ 全程都跑在 <strong>GPU</strong> 上飞快完成。下面这张图，就是三样法宝协作训练一个网络的全貌：</p>
+<pre class="mermaid">flowchart LR
+  D[&quot;📥 数据&lt;br/&gt;（装进张量 Tensor）&quot;] --&gt; NET[&quot;🕸️ 网络&lt;br/&gt;（乐高积木拼成）&quot;]
+  NET --&gt; PRED[&quot;📤 预测&quot;]
+  PRED --&gt; LOSS[&quot;📏 算 loss&lt;br/&gt;（错了多少）&quot;]
+  LOSS --&gt; AG[&quot;🪄 autograd&lt;br/&gt;自动算梯度&quot;]
+  AG --&gt; OPT[&quot;🔧 优化器&lt;br/&gt;照梯度拧旋钮&quot;]
+  OPT --&gt;|&quot;下一轮更准&quot;| NET
+  GPU[&quot;⚡ 全程跑在 GPU 上&lt;br/&gt;（人海战术加速）&quot;] -.-&gt; NET
+  GPU -.-&gt; AG</pre>
+<hr>
+<h2 id="五-感觉一下-一段极简伪代码">五、感觉一下：一段极简伪代码<a class="anchor" href="#五-感觉一下-一段极简伪代码" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段代码你完全不用会写、不用看懂每一行。</strong> 放它在这，只是让你<strong>亲眼看一下</strong>——用 PyTorch 搭个网络、让它学习，代码到底有多短、多清爽。请你只体会一件事：<strong>那些最脏的活（求导、算矩阵、调显卡），代码里几乎看不见，因为框架全替你干了。</strong></p>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+
+# ① 定义网络：像拼乐高——现成的层拼起来就是一个网络
+model = nn.Sequential(
+    nn.Linear(784, 128),   # 一块积木：全连接层
+    nn.ReLU(),             # 一块积木：激活函数
+    nn.Linear(128, 10),    # 又一块积木
+)
+
+# 定义&quot;怎么算错了多少&quot;和&quot;怎么拧旋钮&quot;
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters())
+
+# ② 训练循环：反复&quot;前向 → 算错 → 自动求导 → 更新&quot;
+for images, labels in dataloader:          # 一批批喂数据
+    predictions = model(images)            # 前向：网络吐出预测
+    loss = loss_fn(predictions, labels)    # 算 loss：错了多少
+
+    optimizer.zero_grad()                  # 清掉上一轮的旧梯度
+    loss.backward()                        # 🪄 autograd 自动求导！这一行就是全部脏活
+    optimizer.step()                       # 🔧 优化器照梯度，把每个旋钮拧一点点</code></pre>
+<p>看到那行 <code>loss.backward()</code> 了吗？<strong>从零手写要推几百万条求导公式的地狱级脏活，在这里就是短短一行。</strong> 这就是框架的魔力——<strong>它把最难的部分，浓缩成了一句话。</strong></p>
+<p>再看整个 <code>for</code> 循环，是不是正好就是<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里讲的<strong>射箭三步</strong>？前向出预测（射一箭）→ 算 loss（看偏多少）→ <code>backward</code> + <code>step</code>（调姿势）→ 反复亿万次。<strong>原理你早就懂了，PyTorch 只是把这套原理变成了几行能跑的代码。</strong></p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">那行神奇的 <code>loss.backward()</code>，一句话说它到底干了啥？（点一下翻到背面）<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">它就是[⑬ 深度学习]里讲的<strong>反向传播</strong>的&quot;一键版&quot;：从零手写时，你得对几百万个参数<strong>逐个手推求导公式</strong>算出梯度（该往哪拧、拧多少），繁琐到令人绝望且极易出错；而 <code>loss.backward()</code> 让 <strong>autograd</strong> 帮你把这几百万个梯度<strong>自动、精确地全算好</strong>——一条公式都不用你推。这就是&quot;框架替你干掉最脏那件活&quot;的最典型例子。</div></div></div>
+<p>把&quot;从零手写的地狱脏活&quot; vs &quot;框架一行搞定&quot;演成一幕小短剧——你会亲眼看到那行 <code>loss.backward()</code> 到底替你扛下了什么：</p>
+<div class="scene"><div class="scene-title">一行 loss.backward()，扛下了谁的地狱</div><div class="scene-caption reveal">同一个任务：算出几百万个参数各该往哪拧、拧多少（求梯度）。两个人的活法天差地别。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😫</span><div class="scene-bubble"><b class="scene-who">从零手写派</b>我得对着几百万个参数，一个一个手推求导公式……链式法则套了十几层，一个符号写错，整个网络就训歪，还查不出来。这活能干到天亮。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🪄</span><div class="scene-bubble"><b class="scene-who">PyTorch 派</b>我只写一行：<code>loss.backward()</code>。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😫</span><div class="scene-bubble"><b class="scene-who">从零手写派</b>……就这？那几百万个梯度呢？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🪄</span><div class="scene-bubble"><b class="scene-who">PyTorch 派</b><span class="popover" tabindex="0"><span class="popover-anchor">autograd</span><span class="popover-tip" role="tooltip">自动微分：框架一路记着你的计算是怎么搭起来的，反向自动把每个参数的梯度精确算出来——一条公式都不用你推</span></span> 已经帮我全算好了，精确、不出错。我接着 <code>optimizer.step()</code> 照梯度把旋钮拧一点点，进下一轮。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🎉</span><div class="scene-bubble"><b class="scene-who">旁白</b>看见没？从零手写要推几百万条公式的地狱级脏活，在框架里就是短短一行。这就是 PyTorch 的魔力——把最难的部分，浓缩成一句话。原理你早就懂（射箭三步：前向→算错→调姿势），PyTorch 只是把它变成了几行能跑的代码。</div></div></div>
+<hr>
+<h2 id="六-生态-pytorch-不是唯一-但很多人偏爱它">六、生态：PyTorch 不是唯一，但很多人偏爱它<a class="anchor" href="#六-生态-pytorch-不是唯一-但很多人偏爱它" aria-label="锚点">#</a></h2>
+<p>PyTorch 是最流行的深度学习框架<strong>之一</strong>，但不是独一份。同类里还有几位&quot;兄弟工具&quot;:</p>
+<table><thead><tr><th>框架</th><th>一句话印象</th><th>好比</th></tr></thead><tbody><tr><td><strong>PyTorch</strong></td><td>写起来<strong>像普通 Python、调试直观</strong>，改起来灵活——科研和业界都爱用</td><td>顺手好用、随手能拆开看的国民工具箱</td></tr><tr><td><strong>TensorFlow</strong></td><td>Google 出品，工业部署生态成熟，早年是老大哥</td><td>老牌重型工具箱，厂房里用得多</td></tr><tr><td><strong>JAX</strong></td><td>Google 出品，主打极致的自动微分与高性能计算，偏研究前沿</td><td>性能怪兽，高手向的专业工具</td></tr></tbody></table>
+<p>它们的<strong>核心思想其实相通</strong>——都是&quot;张量 + 自动微分 + GPU 加速&quot;这套三板斧，只是<strong>手感、生态、偏好</strong>不同。PyTorch 出名的地方在于：<strong>写它就像写普通 Python 代码，出了问题也好一步步调试</strong>，学习曲线相对友好，所以近年在研究圈和工业界都非常受欢迎。</p>
+<blockquote><p>⚠️ 不用纠结&quot;该学哪个框架&quot;。对小白来说，<strong>它们背后的道理都一样</strong>，你现在要懂的是&quot;框架是干嘛的、帮你省了什么&quot;，而不是急着去选一个来精通。真到你要动手那天，PyTorch 通常是<strong>上手第一站</strong>的好选择。</p></blockquote>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;框架&quot;这个概念的理解跑偏。</p>
+<h3 id="误区-1-以为-pytorch-是一种模型-一个-ai">误区 1：以为 PyTorch 是一种模型 / 一个 AI<a class="anchor" href="#误区-1-以为-pytorch-是一种模型-一个-ai" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：PyTorch 是不是一个像 ChatGPT 那样的 AI / 一个训练好的模型？我下载了它就有个 AI 了？</li><li>✅ <strong>正确理解</strong>：<strong>完全不是。</strong> PyTorch 是一个<strong>工具库（工具箱）</strong>，它本身<strong>什么都不会</strong>——它是<strong>用来&quot;造&quot;和&quot;训练&quot;模型的工具</strong>，不是模型本身。就像<strong>电钻不是家具</strong>，它是用来做家具的工具。你得用 PyTorch 去搭网络、喂数据、训练，最后才会得到一个&quot;模型&quot;。</li></ul>
+<h3 id="误区-2-以为学-ai-必须先精通-pytorch">误区 2：以为学 AI 必须先精通 PyTorch<a class="anchor" href="#误区-2-以为学-ai-必须先精通-pytorch" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：想入门 AI，是不是得先把 PyTorch 学得滚瓜烂熟？</li><li>✅ <strong>正确理解</strong>：<strong>顺序反了。</strong> <strong>先懂概念，比先学工具重要得多。</strong> 你得先明白什么是<a href="./[CONCEPT-12]%20什么是机器学习-MachineLearning.html">⑫ 机器学习</a>、<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>、什么是训练/梯度/loss——<strong>懂了这些&quot;道理&quot;，工具只是把道理落地的&quot;手&quot;。</strong> 拿着工具却不懂原理，就像会用电钻却不懂怎么设计家具，钻得再溜也做不出好东西。你现在读的这些概念文档，价值远在&quot;背 PyTorch 语法&quot;之上。</li></ul>
+<h3 id="误区-3-以为没有-gpu-就不能用-pytorch">误区 3：以为没有 GPU 就不能用 PyTorch<a class="anchor" href="#误区-3-以为没有-gpu-就不能用-pytorch" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我电脑没高级显卡，是不是就玩不了 PyTorch？</li><li>✅ <strong>正确理解</strong>：<strong>能用，只是慢。</strong> PyTorch 在普通 CPU 上照样能跑，学习、做小实验完全够用。GPU 只是<strong>让训练快很多</strong>的加速器，不是&quot;没它就跑不动&quot;的必需品。大型模型训练才离不开 GPU；你入门、练手，一台普通电脑足矣。</li></ul>
+<h3 id="误区-4-以为框架会自动-想出-一个好模型">误区 4：以为框架会自动&quot;想出&quot;一个好模型<a class="anchor" href="#误区-4-以为框架会自动-想出-一个好模型" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我把数据丢给 PyTorch，它是不是就能自动设计出一个厉害的网络？</li><li>✅ <strong>正确理解</strong>：<strong>框架只负责&quot;执行&quot;，不负责&quot;设计&quot;。</strong> 网络长什么样、几层、怎么连、用什么损失函数，<strong>全得靠人（工程师）来设计</strong>。PyTorch 只是<strong>忠实地、飞快地执行你给的设计</strong>并帮你训练——它是<strong>听话的工具人，不是替你出主意的军师</strong>。厨房再好，也得你来决定做什么菜、怎么配料。</li></ul>
+<h3 id="误区-5-以为不同框架之间天差地别-学了这个那个就白学">误区 5：以为不同框架之间天差地别、学了这个那个就白学<a class="anchor" href="#误区-5-以为不同框架之间天差地别-学了这个那个就白学" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：PyTorch 和 TensorFlow 是不是两套完全不同的东西，学了一个另一个得从头再来？</li><li>✅ <strong>正确理解</strong>：<strong>核心思想是相通的。</strong> 它们都是&quot;张量 + 自动微分 + GPU&quot;这套三板斧，只是<strong>写法和手感不同</strong>。真正难的、值钱的是你脑子里那套<strong>深度学习的原理</strong>——原理懂了，换个框架只是换套&quot;方言&quot;，很快就能上手。<strong>别把工具当门槛，原理才是根。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于 PyTorch 的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">PyTorch 是一套&quot;工具箱/框架&quot;，用来搭建和训练模型，它本身不是一个 AI</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">学 AI 必须先把 PyTorch 精通了才能开始</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">C</span><span class="quiz-text">PyTorch 的三大法宝是张量（Tensor）、自动微分（autograd）、GPU 加速</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">没有高级显卡（GPU）就完全没法用 PyTorch</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">E</span><span class="quiz-text">网络怎么设计要靠人，PyTorch 只负责忠实地执行和训练，不会自己&quot;想出&quot;模型</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。它是造模型的工具（像电钻），不是模型本身（家具）。<br>错。先懂概念（机器学习/深度学习/梯度/loss）比先学工具重要得多，工具只是把道理落地的&quot;手&quot;。<br>对。数据装进张量→autograd 自动算梯度→全程跑在 GPU 上飞快完成，一条龙。<br>错。CPU 上照样能跑，只是慢；GPU 是加速器不是必需品，入门练手普通电脑就够。<br>对。框架是听话的工具人，不是替你出主意的军师；厨房再好也得你决定做什么菜。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如在脑子里走一遍流程。下面的思想实验不用写代码，只用想。</p>
+<h3 id="实验-脑内推演-教模型认猫-pytorch-在每一步给了你什么">实验：脑内推演&quot;教模型认猫&quot;，PyTorch 在每一步给了你什么<a class="anchor" href="#实验-脑内推演-教模型认猫-pytorch-在每一步给了你什么" aria-label="锚点">#</a></h3>
+<p>假设你想训练一个能&quot;认出照片里有没有猫&quot;的模型。<strong>跟着流程一步步走，每一步都留意：PyTorch 帮你把这一步变得多简单。</strong></p>
+<pre class="mermaid">flowchart TB
+  S1[&quot;① 备数据&lt;br/&gt;一大堆猫/非猫的图片 + 标签&quot;] --&gt; S2[&quot;② 搭网络&lt;br/&gt;拼几块现成的层（乐高）&quot;]
+  S2 --&gt; S3[&quot;③ 定损失&lt;br/&gt;选一个'错了多少'的算法&quot;]
+  S3 --&gt; S4[&quot;④ 循环训练&lt;br/&gt;前向→算 loss→backward→更新&lt;br/&gt;反复很多轮&quot;]
+  S4 --&gt; S5[&quot;⑤ 评估&lt;br/&gt;拿没见过的新图考它&quot;]
+  S5 --&gt;|&quot;考得好&quot;| DONE[&quot;✅ 得到一个'认猫模型'&quot;]
+  S5 --&gt;|&quot;考得差&quot;| S4</pre>
+<p>现在把每一步和 PyTorch 对上号，体会&quot;框架给你提供了积木&quot;:</p>
+<table><thead><tr><th>步骤</th><th>你在干嘛</th><th>PyTorch 递给你的&quot;积木&quot;</th></tr></thead><tbody><tr><td><strong>① 备数据</strong></td><td>把猫/非猫的图片和标签整理好、成批喂进去</td><td>现成的&quot;数据加载器&quot;，帮你自动分批、打乱、搬上 GPU</td></tr><tr><td><strong>② 搭网络</strong></td><td>决定网络长什么样，拼起来</td><td>现成的各种&quot;层&quot;（积木块），几行拼成一个网络</td></tr><tr><td><strong>③ 定损失</strong></td><td>选一个衡量&quot;猜得多离谱&quot;的尺子</td><td>现成的各种损失函数，一行选好</td></tr><tr><td><strong>④ 循环训练</strong></td><td>反复前向、算 loss、求导、更新旋钮</td><td><strong>autograd 自动求导</strong> + 现成的优化器帮你拧旋钮</td></tr><tr><td><strong>⑤ 评估</strong></td><td>拿没见过的新图考它准不准</td><td>现成的工具帮你算准确率</td></tr></tbody></table>
+<p><strong>关键体会</strong>：这五步里，<strong>每一步 PyTorch 都递给你一块现成的积木</strong>，你几乎不用从零造任何东西。你真正花心思的，只有&quot;网络怎么设计、数据怎么准备&quot;这些<strong>创意活</strong>；那些机械的、易错的脏活（尤其是第 ④ 步的求导），框架全包了。走完这一遍，你就亲手体会了&quot;<strong>框架把每一步都提供了积木</strong>&quot;这句话的分量。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>PyTorch 不是孤立的，它是把前面一串&quot;原理&quot;**落地成真&quot;的那把工具。前面几篇讲的东西，很多最终都得靠它（或它的兄弟框架）才能变成能跑的代码。</p>
+<pre class="mermaid">flowchart TB
+  ML[&quot;🎓 机器学习&lt;br/&gt;（从数据里学规律）&quot;]
+  DL[&quot;🧠 深度学习&lt;br/&gt;（用多层神经网络）&quot;]
+  TF[&quot;🔤 Transformer&lt;br/&gt;（大模型的核心架构）&quot;]
+  PT[&quot;⚡ PyTorch&lt;br/&gt;（把上面这些搭出来、训练出来的工具）&quot;]
+  LLM[&quot;💬 大模型 LLM&quot;]
+  ML --&gt; DL
+  DL --&gt; TF
+  TF -.-&gt;|&quot;常用它来实现&quot;| PT
+  DL -.-&gt;|&quot;用它来搭建训练&quot;| PT
+  PT -.-&gt;|&quot;训练 / 微调出&quot;| LLM</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-12]%20什么是机器学习-MachineLearning.html">⑫ 机器学习</a></td><td>PyTorch 是<strong>实现它</strong>（尤其是深度学习那一支）的主力工具</td><td>手艺 vs 干这门手艺的工具</td></tr><tr><td><a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a></td><td>深度学习的&quot;前向/反向/训练循环&quot;，正是 PyTorch 帮你落地的</td><td>图纸 vs 施工的电动工具</td></tr><tr><td><a href="./[CONCEPT-14]%20什么是Transformer-变换器.html">⑭ Transformer</a></td><td>这类架构<strong>通常就是用 PyTorch 写出来</strong>的</td><td>精巧的设计 vs 造出它的机床</td></tr><tr><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 大模型 LLM</a></td><td>大模型的<strong>训练和微调，很多都用 PyTorch</strong> 完成</td><td>巨型产品 vs 生产它的产线</td></tr></tbody></table>
+<p>一句话串起来：<strong>机器学习/深度学习是&quot;原理&quot;，Transformer 是&quot;架构设计&quot;，而 PyTorch 是把这些原理和设计，真正&quot;造&quot;出来、&quot;训&quot;出来的那把电动工具。</strong> 懂了它，你就知道那些神经网络、大模型，工程师究竟是拿什么把它们变成现实的。</p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>先把话说明白，<strong>这是最诚实、也最重要的一节</strong>：</p>
+<p><strong>Khy-OS 是一个 Node.js 工程，它&quot;调用和编排&quot;已经训练好的大模型，本身并不用 PyTorch 来训练模型。</strong></p>
+<p>也就是说，Khy-OS 站在&quot;<strong>用模型</strong>&quot;这一侧，而不是&quot;<strong>训模型</strong>&quot;这一侧。训练模型是模型厂商用 PyTorch（或同类框架）在海量显卡上干的事；Khy-OS 拿到的是<strong>已经炼好的成品模型</strong>，它做的是把这些模型组织成好用的智能体、工具循环、记忆与检索。所以在 Khy-OS 的代码里，你<strong>不会看到 PyTorch</strong>——它跑在 Node.js 上，干的是&quot;编排调度&quot;的活，不是&quot;炼丹训练&quot;的活。</p>
+<p>那你为什么还要懂 PyTorch？<strong>因为它帮你补全整幅地图：</strong></p>
+<ul><li><strong>知道模型从哪来</strong>：你用 Khy-OS 调用的那些大模型，它们的&quot;出生地&quot;就是 PyTorch 这类框架里的训练过程。懂了这一层，模型对你就不再是&quot;从天而降的黑盒&quot;。</li><li><strong>知道能力的边界从何而来</strong>：模型会什么、不会什么，是<strong>训练时</strong>（用 PyTorch 在某批数据上）就定下的。懂训练，你就更懂<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里讲的那些&quot;脾气&quot;（幻觉、知识截止、需要 RAG 补事实）从何而来。</li><li><strong>给未来留一条路</strong>：如果你日后不满足于&quot;用模型&quot;，想<strong>自己训练或微调一个模型</strong>，那 <strong>PyTorch 就是你要迈进的第一站</strong>。今天先把它是什么搞懂，来日方长。</li></ul>
+<blockquote><p>⚠️ 这里只讲&quot;概念级&quot;的关系——<strong>Khy-OS 用模型、而非用 PyTorch 训模型；懂 PyTorch 是为了补全&quot;模型从哪来&quot;这幅地图。</strong> Khy-OS 具体怎么接模型、怎么编排调度，属于设计与实现层面，你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 目录里进一步了解。本文不夸大、也不编造 Khy-OS 用 PyTorch 训练模型的能力。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>PyTorch = 一套最流行的&quot;深度学习工具箱（框架）&quot;，让你几行代码就能搭网络、自动算梯度、用 GPU 训练</strong>——是炼制 AI 模型的&quot;电动工具套装&quot;。</li><li><strong>为什么需要它</strong>：从零手写神经网络，光是对几百万个参数手推求导公式就苦到令人绝望且极易出错；框架把这些脏活全打包好，让你专注设计而非造轮子。</li><li><strong>核心比喻</strong>：一间<strong>备好的厨房</strong>（食材厨具齐全，你只管炒菜）/ 一盒<strong>乐高积木</strong>（现成的层拼起来就是网络）。</li><li><strong>三大法宝</strong>：① <strong>张量 Tensor</strong>（能上 GPU 的超级多维数组）② <strong>自动微分 autograd</strong>（<code>loss.backward()</code> 一行，自动算好所有梯度，替你干掉最脏的反向传播）③ <strong>GPU 加速</strong>（把海量简单计算丢给显卡人海战术，快几十倍）。</li><li><strong>感觉一下代码</strong>：<code>for</code> 训练循环正是[⑬ 深度学习]的射箭三步——前向出预测→算 loss→<code>backward</code>+<code>step</code>；你不用会写，只感受&quot;框架替你干了脏活&quot;。</li><li><strong>生态</strong>：还有 TensorFlow、JAX 等同类，核心思想相通；PyTorch 以&quot;像写普通 Python、调试直观&quot;著称，科研业界都爱用。</li><li><strong>五大误区</strong>：它<strong>不是一种模型/一个 AI</strong>（是工具库）、学 AI<strong>先懂概念比先精通它更重要</strong>、<strong>没 GPU 也能用</strong>（只是慢）、框架<strong>不会自己&quot;想出&quot;模型</strong>（只执行你的设计）、不同框架<strong>核心思想相通</strong>（别把工具当门槛）。</li><li><strong>地图位置</strong>：机器学习/深度学习是原理、Transformer 是架构，PyTorch 是把它们&quot;造出来、训出来&quot;的工具；Khy-OS 站在&quot;用模型&quot;一侧，不用 PyTorch 训练——但你想自己训模型，它是第一站。</li></ul>
+<p>🎉 <strong>恭喜，你又补上了一块关键拼图！</strong> 从此，那些神经网络、大模型不再是&quot;凭空出现的黑盒&quot;——你已经知道，工程师是拿 PyTorch 这样的电动工具，一块块积木把它们搭出来、训出来的。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。</p>
+<p>👈 上一篇 <a href="./[CONCEPT-14]%20什么是Transformer-变换器.html">⑭ 什么是 Transformer</a>——回顾一下大模型内部那套精巧的架构。</p>
+<p>👉 下一篇 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">⑯ 什么是 Harness（智能体运行骨架）</a>——回到 Khy-OS 自身：让大模型真正&quot;干活&quot;的那副外壳到底是什么。</p>
+<p>👉 想换一种更轻松、更上头的方式把这些概念再过一遍？去看 <a href="../09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.html">修仙学 AI 的故事</a>——把 Agent、工具、模型、框架，全编成了一个练功升级的江湖故事，保证你越读越明白。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-14] 什么是Transformer-变换器.html"><div class="dir">← 上一篇</div><div class="ttl">⑭ 什么是 Transformer（变换器）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-16] 什么是Harness-智能体运行骨架.html"><div class="dir">下一篇 →</div><div class="ttl">⑯ 什么是 Harness（智能体运行骨架）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-15] 什么是PyTorch-深度学习框架.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

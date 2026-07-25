@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create Custom Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>create-skill<span class="sep">›</span>Create Custom Skill</div>
+      <header class="hero reveal"><h1>Create Custom Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#create-custom-skill">Create Custom Skill</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#important">Important</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="create-custom-skill">Create Custom Skill<a class="anchor" href="#create-custom-skill" aria-label="锚点">#</a></h1>
+<p>You are helping the user create a new custom skill for khy OS.</p>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li>Ask the user for:<ul><li>Skill name (lowercase, hyphenated, e.g., &quot;analyze-logs&quot;)</li><li>Description (what the skill does)</li><li>Trigger command (e.g., &quot;/analyze-logs&quot;)</li><li>Whether it needs a custom handler.js or just a prompt template</li></ul></li></ol>
+<ol><li>Create the skill directory at <code>~/.khy/skills/&lt;skill-name&gt;/</code>:</li></ol>
+<pre><code>   &lt;skill-name&gt;/
+     manifest.json    — Skill metadata
+     prompt.md        — Prompt template (always created)
+     handler.js       — Custom logic (optional, only if requested)</code></pre>
+<ol><li>Generate <code>manifest.json</code>:</li></ol>
+<pre><code class="language-json">   {
+     &quot;name&quot;: &quot;&lt;skill-name&gt;&quot;,
+     &quot;description&quot;: &quot;&lt;description&gt;&quot;,
+     &quot;user_invocable&quot;: true,
+     &quot;trigger&quot;: &quot;/&lt;trigger&gt;&quot;,
+     &quot;aliases&quot;: [],
+     &quot;category&quot;: &quot;custom&quot;,
+     &quot;tags&quot;: [&quot;&lt;relevant&gt;&quot;, &quot;&lt;tags&gt;&quot;]
+   }</code></pre>
+<ol><li>Generate <code>prompt.md</code>:<ul><li>Clear title and purpose</li><li>Step-by-step instructions for the AI</li><li>Any constraints or important notes</li><li>Tailored to the user's described use case</li></ul></li></ol>
+<ol><li>If handler.js is requested, generate:</li></ol>
+<pre><code class="language-javascript">   module.exports = {
+     async execute(args, context) {
+       // Custom skill logic
+       return { result: 'Skill executed successfully' };
+     }
+   };</code></pre>
+<ol><li>After creating, tell the user:<ul><li>The skill is immediately available (no restart needed after cache invalidation)</li><li>They can trigger it with the configured command</li><li>They can edit the files to customize behavior</li></ul></li></ol>
+<h2 id="important">Important<a class="anchor" href="#important" aria-label="锚点">#</a></h2>
+<ul><li>Skills are stored per-user in <code>~/.khy/skills/</code> (survive updates)</li><li>Project-level skills go in <code>.khy/skills/</code> (project-specific)</li><li>Manifest.json is required; prompt.md is the default execution method</li><li>handler.js overrides prompt.md when both exist</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/create-mcp-server/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Create MCP Server</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/debug/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Debug — Systematic Debugging</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/create-skill/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

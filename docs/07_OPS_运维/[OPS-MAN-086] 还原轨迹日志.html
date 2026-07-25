@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-086] 还原轨迹日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-086] 还原轨迹日志</div>
+      <header class="hero reveal"><h1>[OPS-MAN-086] 还原轨迹日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-086-还原轨迹日志">[OPS-MAN-086] 还原轨迹日志</a></li><li class="lvl-2"><a href="#这一层在补什么缝-一个可复现的真实缺陷">这一层在补什么缝（一个可复现的真实缺陷）</a></li><li class="lvl-2"><a href="#stallcount-回放规则-与-restore-converge-逐字对齐">stallCount 回放规则（与 restore-converge 逐字对齐）</a></li><li class="lvl-2"><a href="#纯度与安全边界-继承项目章程">纯度与安全边界（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-086-还原轨迹日志">[OPS-MAN-086] 还原轨迹日志<a class="anchor" href="#ops-man-086-还原轨迹日志" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-trace.js --gen-doc</code> 确定性生成，请勿手改；<br>判定 / 回放逻辑改在 <code>scripts/lib/restoreTraceJournal.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层在补什么缝-一个可复现的真实缺陷">这一层在补什么缝（一个可复现的真实缺陷）<a class="anchor" href="#这一层在补什么缝-一个可复现的真实缺陷" aria-label="锚点">#</a></h2>
+<p><code>restore-converge</code>（OPS-MAN-082）的防死循环签名是</p>
+<pre><code>verifyConvergence({ before, after, move, stallCount })</code></pre>
+<p>其中 <code>stallCount</code>（连续无进展次数）<strong>必须由调用方自己维护</strong>。可 restore 的真实场景<br>是陌生机器上<strong>一次次独立的 CLI 调用</strong>——每次进程「起 → 判 → 退」。跨进程 <code>stallCount</code><br>每回都从 0 起，于是 agent 在同一卡点空转 100 次、每次都被判「第 1/2 次 stall」，<br><strong>防死循环在进程边界上根本不生效</strong>：永远升不了级、交不了人。这正是 khy 自己反复修的<br>「卡住 / idle-watchdog 自续命」同一类自驱失败，只是搬到了还原层、此前无人守。</p>
+<p>本层用一条<strong>追加式、可推导</strong>的事件流消灭这道缝：每尝试一步就 append 一个事件；下次<br>进程起来先回放整条轨迹 <code>deriveJournalState</code>，派生出<strong>真实的跨进程 stallCount</strong>，再喂回<br><code>verifyConvergence({ stallCount })</code>——循环计数终于跨进程连上了。</p>
+<pre><code class="language-bash">node scripts/restore-trace.js record        # 跑一次判定并落轨迹
+node scripts/restore-trace.js --stall-count  # 下次 converge 该带的 stallCount
+node scripts/restore-trace.js --json         # 恢复中的 agent 读它接着干</code></pre>
+<h2 id="stallcount-回放规则-与-restore-converge-逐字对齐">stallCount 回放规则（与 restore-converge 逐字对齐）<a class="anchor" href="#stallcount-回放规则-与-restore-converge-逐字对齐" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>verdict</th><th>对 stallCount 的贡献</th></tr></thead><tbody><tr><td><code>advanced</code></td><td>清零（0）</td></tr><tr><td><code>converged</code></td><td>清零（0）</td></tr><tr><td><code>regressed</code></td><td>保持不变</td></tr><tr><td><code>stalled</code></td><td>累加（+1）</td></tr></tbody></table>
+<blockquote><p>终结（terminal）= 见到 <code>converged</code>，或任一 <code>escalate-human</code>（regressed / stalled 达阈值）。<br>未知 verdict 保守保持 stallCount 不变——<strong>绝不虚增、亦不假报收敛</strong>。</p></blockquote>
+<h2 id="纯度与安全边界-继承项目章程">纯度与安全边界（继承项目章程）<a class="anchor" href="#纯度与安全边界-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>叶子是 <strong>reducer + 事件构造器</strong>，零 IO、绝不抛：空 / 畸形事件流 → 干净初始态</li></ul>
+<p>（attempts:0, stallCount:0, 非终结）；异常绝不假报终结。</p>
+<ul><li>落盘 / 读盘在 CLI：append 到 <code>~/.khy/.restore-trace/&lt;session&gt;.jsonl</code>，<strong>dot 前缀目录</strong></li></ul>
+<p>正好被授权门（OPS-MAN-084）的用户数据探测（过滤 <code>!startsWith('.')</code>）排除——<br>  <strong>操作轨迹不是用户数据</strong>，不会误触 overwrite-risk，家族语义自洽。</p>
+<ul><li>任何回传文本（move.action）先过 <code>_DANGER_TOKENS</code> 自检，命中即隐去——危险 shell 绝不</li></ul>
+<p>原样写进可读轨迹。</p>
+<ul><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-085] 还原补救追索</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-087] 波次执行故障感知.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

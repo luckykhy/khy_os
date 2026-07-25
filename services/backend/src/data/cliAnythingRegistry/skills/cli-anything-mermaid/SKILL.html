@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-mermaid · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-mermaid<span class="sep">›</span>cli-anything-mermaid</div>
+      <header class="hero reveal"><h1>cli-anything-mermaid</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-mermaid">cli-anything-mermaid</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#diagram">Diagram</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-and-render-a-flowchart">Create and Render a Flowchart</a></li><li class="lvl-3"><a href="#create-a-sequence-diagram">Create a Sequence Diagram</a></li><li class="lvl-3"><a href="#share-a-diagram">Share a Diagram</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-mermaid&quot;<br>description: &gt;-<br>  Command-line interface for Mermaid Live Editor - Create, edit, and render Mermaid diagrams via stateful project files and mermaid.ink renderer URLs. Designed for AI agents and power users who need to generate flowcharts, sequence diagrams, and other visualizations without a GUI.</p>
+<hr>
+<h1 id="cli-anything-mermaid">cli-anything-mermaid<a class="anchor" href="#cli-anything-mermaid" aria-label="锚点">#</a></h1>
+<p>Create, edit, and render Mermaid diagrams via stateful project files and the mermaid.ink renderer. Designed for AI agents and power users who need to generate flowcharts, sequence diagrams, and other visualizations without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-mermaid package:</p>
+<pre><code class="language-bash">pip install cli-anything-mermaid</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>No external software required (rendering uses mermaid.ink cloud service)</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-mermaid --help
+
+# Start interactive REPL mode
+cli-anything-mermaid
+
+# Create a new project
+cli-anything-mermaid project new -o diagram.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-mermaid --json project info</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-mermaid
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project lifecycle commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new Mermaid project with optional sample preset and theme</td></tr><tr><td><code>open</code></td><td>Open an existing Mermaid project file</td></tr><tr><td><code>save</code></td><td>Save the current project to a file</td></tr><tr><td><code>info</code></td><td>Show current project information</td></tr><tr><td><code>samples</code></td><td>List available sample diagram presets</td></tr></tbody></table>
+<h3 id="diagram">Diagram<a class="anchor" href="#diagram" aria-label="锚点">#</a></h3>
+<p>Diagram source manipulation commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>set</code></td><td>Replace the Mermaid source text (inline or from file)</td></tr><tr><td><code>show</code></td><td>Print the current Mermaid source code</td></tr></tbody></table>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<p>Render and share commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>render</code></td><td>Render the diagram to SVG or PNG via mermaid.ink</td></tr><tr><td><code>share</code></td><td>Generate a Mermaid Live Editor URL for sharing</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session state commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr><tr><td><code>undo</code></td><td>Undo the last diagram source change</td></tr><tr><td><code>redo</code></td><td>Redo the last undone change</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-and-render-a-flowchart">Create and Render a Flowchart<a class="anchor" href="#create-and-render-a-flowchart" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create a project with flowchart sample
+cli-anything-mermaid project new --sample flowchart -o flow.json
+
+# Replace diagram source
+cli-anything-mermaid --project flow.json diagram set --text &quot;graph TD; A--&gt;B; B--&gt;C;&quot;
+
+# Render to SVG
+cli-anything-mermaid --project flow.json export render output.svg --format svg</code></pre>
+<h3 id="create-a-sequence-diagram">Create a Sequence Diagram<a class="anchor" href="#create-a-sequence-diagram" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create project with sequence sample
+cli-anything-mermaid project new --sample sequence -o seq.json
+
+# Set diagram from file
+cli-anything-mermaid --project seq.json diagram set --file my_diagram.mmd
+
+# Render to PNG
+cli-anything-mermaid --project seq.json export render output.png --format png</code></pre>
+<h3 id="share-a-diagram">Share a Diagram<a class="anchor" href="#share-a-diagram" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Generate an editable Mermaid Live URL
+cli-anything-mermaid --project flow.json export share --mode edit
+
+# Generate a view-only URL
+cli-anything-mermaid --project flow.json export share --mode view</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-mermaid
+# new flowchart
+# set graph TD; A--&gt;B; B--&gt;C;
+# render output.svg
+# share
+# quit</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Revert or replay diagram source changes</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-mermaid project info
+
+# JSON output for agents
+cli-anything-mermaid --json project info</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after render operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mailchimp/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-mailchimp</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-minimax/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-minimax</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mermaid/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

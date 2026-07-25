@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《khyos 系统级服务调用审批网关规范》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>《khyos 系统级服务调用审批网关规范》</div>
+      <header class="hero reveal"><h1>《khyos 系统级服务调用审批网关规范》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-系统级服务调用审批网关规范">《khyos 系统级服务调用审批网关规范》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-2"><a href="#1-危险源自调查清单-原始系统调用面盘点">1. 危险源自调查清单（原始系统调用面盘点）</a></li><li class="lvl-2"><a href="#2-设计目标与硬约束-防呆①-⑤">2. 设计目标与硬约束（防呆①–⑤）</a></li><li class="lvl-2"><a href="#3-能力隔离架构">3. 能力隔离架构</a></li><li class="lvl-2"><a href="#4-三级审批矩阵">4. 三级审批矩阵</a></li><li class="lvl-2"><a href="#5-工作流预审批-权限申请清单">5. 工作流预审批（《权限申请清单》）</a></li><li class="lvl-2"><a href="#6-最小权限与越权熔断">6. 最小权限与越权熔断</a></li><li class="lvl-3"><a href="#6-1-最小权限">6.1 最小权限</a></li><li class="lvl-3"><a href="#6-2-越权熔断-breachbreaker">6.2 越权熔断（`breachBreaker`）</a></li><li class="lvl-2"><a href="#7-tui-宿主交互审批契约">7. TUI / 宿主交互审批契约</a></li><li class="lvl-2"><a href="#8-三场景验证">8. 三场景验证</a></li><li class="lvl-2"><a href="#10-风险词汇统一与-5-3-映射">10. 风险词汇统一与 5→3 映射</a></li><li class="lvl-3"><a href="#10-1-词汇对照表-各套的用途-边界-归属">10.1 词汇对照表（各套的用途 / 边界 / 归属）</a></li><li class="lvl-3"><a href="#10-2-5-级-3-级审批矩阵映射表">10.2 5 级 → 3 级审批矩阵映射表</a></li><li class="lvl-3"><a href="#10-3-为何-critical-恒-l2-而单纯-high-可能只是-l1-关键澄清">10.3 为何 `critical` 恒 L2，而单纯 `high` 可能只是 L1（关键澄清）</a></li><li class="lvl-3"><a href="#10-4-防漂移">10.4 防漂移</a></li><li class="lvl-2"><a href="#11-红线与维护-无-ai-也能维护">11. 红线与维护（无 AI 也能维护）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-系统级服务调用审批网关规范">《khyos 系统级服务调用审批网关规范》<a class="anchor" href="#khyos-系统级服务调用审批网关规范" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-026<br>主题：以「意图声明」为中心的能力隔离 + 三级审批矩阵 + 工作流预审批 + 最小权限与越权熔断，确保模型<strong>永远无法绕过用户授权操作宿主系统核心资源</strong><br>范围：<code>services/backend</code> 的<strong>底层工具调用接口与安全网关层</strong>（不触碰核心业务逻辑 / 提示词 / 模型调用逻辑）<br>关联实现：<code>src/services/syscallGateway/*</code>（含 <code>approvalRouter.js</code> 的 <code>cause</code>、<code>denialGuidance.js</code>）、<code>src/constants/riskOrder.js</code>（五级风险词汇单一真源）、<code>src/services/toolCalling.js</code>（<code>executeTool</code> 单一咽喉接管）<br>关联测试：<code>tests/services/syscallGateway.scenarios.test.js</code>、<code>tests/services/denialGuidance.test.js</code>、<code>tests/services/riskVocabulary.test.js</code><br>关联规范：[DESIGN-ARCH-002] CB-SSP（约束格 / 可逆性分层）、[DESIGN-ARCH-025] 元规划协议与动态约束注入、[OPS-MAN-060] 高危操作为何被拒与如何放行</p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>khyos 是「单人 AI 原生 OS」，其 agent 通过工具调用直接触达宿主系统：读写文件、起子进程、发网络<br>请求、改环境变量、装包、监听端口。此前所有工具最终都汇聚到 <code>toolCalling.executeTool</code> 这一单一入口，<br>但其权限判定（<code>requestPermission</code>）以<strong>工具名 + 静态风险标签</strong>为粒度，存在三个结构性缺口：</p>
+<ol><li><strong>能力未隔离</strong>——模型生成的工具调用可携带任意参数（含 <code>force:true</code>、<code>--yes</code>），权限层未系统性</li></ol>
+<p>识别「数据层夹带的免审语义」，存在被旁路的攻击面。</p>
+<ol><li><strong>风险粒度粗</strong>——同名工具（如 <code>shell_command</code>）既能 <code>ls</code> 也能 <code>rm -rf /</code>，但走同一审批路径；</li></ol>
+<p>破坏性操作可能与无害操作享受同一「记住选择」豁免。</p>
+<ol><li><strong>授权易越界 / 易续命</strong>——一次批准可能跨任务、跨会话长期有效，违背最小权限。</li></ol>
+<p>本规范引入一道<strong>系统级服务调用审批网关</strong>：模型/执行器<strong>只能声明意图，不能执行动作</strong>；每一次触达<br>宿主系统的调用都被规约成结构化《意图声明》，由网关按三级矩阵裁决。<strong>fail-closed 是贯穿全层的铁律<br>——网关自身任何异常都判 DENY，绝不因网关崩溃而放行。</strong></p>
+<hr>
+<h2 id="1-危险源自调查清单-原始系统调用面盘点">1. 危险源自调查清单（原始系统调用面盘点）<a class="anchor" href="#1-危险源自调查清单-原始系统调用面盘点" aria-label="锚点">#</a></h2>
+<p>对 <code>services/backend</code> 工具层与执行器做了一次自调查，归纳出会触达宿主核心资源的原始调用面，并映射到<br>网关的规约动作（<code>ACTIONS</code>）：</p>
+<table><thead><tr><th>危险源（原始能力）</th><th>典型载体</th><th>规约动作</th><th>默认级别</th></tr></thead><tbody><tr><td>删除 / 截断文件</td><td><code>rm</code>/<code>rmdir</code>/<code>unlink</code>/<code>rimraf</code>/<code>dd if=</code>、<code>deleteFile</code> 工具</td><td><code>DELETE</code></td><td><strong>L2</strong></td></tr><tr><td>杀进程</td><td><code>kill</code>/<code>pkill</code>/<code>taskkill</code></td><td><code>KILL</code></td><td><strong>L2</strong></td></tr><tr><td>改宿主环境变量</td><td><code>export</code>/<code>setx</code>/<code>set X=</code>、<code>process.env</code> 写</td><td><code>ENV</code></td><td><strong>L2</strong></td></tr><tr><td>全局装包</td><td><code>npm i -g</code>/<code>pip install</code>/<code>apt install</code>/<code>brew install</code>/<code>cargo install</code></td><td><code>INSTALL</code></td><td><strong>L2</strong></td></tr><tr><td>监听物理端口</td><td><code>listen</code>/<code>nc -l</code>/<code>socat</code>/<code>--port</code></td><td><code>LISTEN</code></td><td><strong>L2</strong></td></tr><tr><td>执行任意代码</td><td><code>executeCode</code>/<code>evalCode</code>/<code>pyExec</code></td><td><code>EXEC_CODE</code></td><td><strong>L2</strong></td></tr><tr><td>写系统级路径</td><td><code>writeFile</code>/<code>editFile</code> 指向项目与家目录之外</td><td><code>WRITE</code>+<code>SYSTEM</code></td><td><strong>L2</strong></td></tr><tr><td>写项目 / 家目录内文件</td><td><code>writeFile</code>/<code>editFile</code>/<code>mkdir</code>/<code>move</code></td><td><code>WRITE</code></td><td><strong>L1</strong></td></tr><tr><td>网络出站</td><td><code>fetch</code>/<code>webFetch</code>/<code>webSearch</code>/<code>curl</code></td><td><code>NETWORK</code></td><td><strong>L1</strong></td></tr><tr><td>起本地子进程（非红灯命令）</td><td><code>shell_command</code>/<code>bash</code> 其余命令</td><td><code>PROCESS</code></td><td><strong>L1</strong></td></tr><tr><td>读系统级路径</td><td><code>readFile</code>/<code>cat</code> 指向系统路径</td><td><code>READ</code>+<code>SYSTEM</code></td><td><strong>L1</strong></td></tr><tr><td>项目 / 家目录内只读</td><td><code>readFile</code>/<code>glob</code>/<code>grep</code>/<code>stat</code></td><td><code>READ</code></td><td><strong>L0</strong></td></tr></tbody></table>
+<blockquote><p><strong>保守优先原则</strong>：任何无法可靠归类的调用一律落 <strong>L2</strong>（红灯）。宁可多问一次，绝不少拦一次——<br>这是「零隐式提权」的数学下界。</p></blockquote>
+<hr>
+<h2 id="2-设计目标与硬约束-防呆①-⑤">2. 设计目标与硬约束（防呆①–⑤）<a class="anchor" href="#2-设计目标与硬约束-防呆①-⑤" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th><th>落点</th></tr></thead><tbody><tr><td>①</td><td><strong>绝不允许硬编码跳过审批</strong></td><td><code>detectBypassMarkers</code> 扫描参数键名（<code>force</code>/<code>yes</code>/<code>skipApproval</code>…）与命令 flag（<code>--yes</code>/<code>-f</code>/<code>--force</code>…），命中即判旁路企图，<strong>一次即熔断 + 拒绝</strong>，零容忍</td><td><code>intentSchema.js</code> / <code>breachBreaker.reportBypass</code></td></tr><tr><td>②</td><td><strong>L1 免审授权绝不跨会话</strong></td><td>会话免审与预审批清单<strong>只活在内存</strong>，绝不写盘；<code>resetSession</code>/进程退出即归零</td><td><code>permissionCache.js</code>（无任何 <code>fs</code> 引用）</td></tr><tr><td>③</td><td><strong>拦截 L2 时绝不能只按回车确认</strong></td><td>L2 必须<strong>严格键入确认串</strong>（默认 <code>YES</code>）；<code>''</code>/回车/小写 <code>yes</code> 一律不通过（严格全等比对）</td><td><code>approvalRouter.route</code> L2 分支</td></tr><tr><td>④</td><td><strong>网关崩溃不得放行</strong></td><td>规约 / 分级 / 路由 / 门面任一层异常都落 DENY；接线层 <code>try/catch</code> 包裹，网关不可用时回落既有管线（其自身亦 fail-safe），<strong>绝不静默放行</strong></td><td>全层 <code>try/catch</code> + <code>evaluate</code> 兜底</td></tr><tr><td>⑤</td><td><strong>只重构底层接口与安全网关层</strong></td><td>仅在 <code>executeTool</code> 的 <code>requestPermission</code> 之前插入网关；<strong>只增加拒绝，不放松既有保护</strong>；不碰提示词 / 模型调用 / 业务逻辑</td><td><code>toolCalling.js</code> 单点接线</td></tr></tbody></table>
+<hr>
+<h2 id="3-能力隔离架构">3. 能力隔离架构<a class="anchor" href="#3-能力隔离架构" aria-label="锚点">#</a></h2>
+<pre><code>模型 / 执行器
+   │  生成工具调用（只能&quot;声明意图&quot;）
+   ▼
+executeTool (单一咽喉)
+   │  ① buildIntent → 结构化《意图声明》(tool/action/scope/resource/risk/...)
+   │  ② validateIntent → detectBypassMarkers（防呆①）
+   ▼
+SyscallGateway.evaluate (单一裁决权威)
+   ├─ 熔断优先：已跳闸 → 全拒（连 L0）
+   ├─ classify → L0 / L1 / L2
+   ├─ approvalRouter.route：
+   │     L0 → 自动放行（仅日志）
+   │     L1 → 命中清单/免审→放行；否则问一次（once/session/deny）
+   │     L2 → 强制挂起，必须键入 YES；非交互→fail-closed
+   └─ 裁决
+        ├─ deny  → 立即拦截（根本不进入 requestPermission）
+        └─ allow → 盖不可伪造 EXEC_APPROVED Symbol 戳
+   ▼
+requestPermission（既有管线，识别 EXEC_APPROVED 免二次打断）
+   ▼
+真正执行</code></pre>
+<p><strong>核心不变量</strong>：模型无法伪造 <code>EXEC_APPROVED</code>（Symbol 不可经 JSON 参数构造）。网关是唯一能盖戳的主体，<br>因此成为单一裁决权威；同时网关<strong>只能追加拒绝</strong>——allow 时仍交还既有管线，deny 时直接短路，绝不弱化<br>既有 critical 红线 / permissionStore / 守卫等保护。</p>
+<hr>
+<h2 id="4-三级审批矩阵">4. 三级审批矩阵<a class="anchor" href="#4-三级审批矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>级别</th><th>语义</th><th>触发条件</th><th>处置</th><th>可免审？</th></tr></thead><tbody><tr><td><strong>L0 绿灯</strong></td><td>低风险读取</td><td>项目/家目录内只读、取系统时间、列非敏感目录</td><td><strong>自动放行 + 记日志</strong></td><td>本就无需</td></tr><tr><td><strong>L1 黄灯</strong></td><td>有限写入 / 网络</td><td>项目/家目录内写、网络出站、起本地非破坏性子进程、读系统级路径</td><td><strong>问一次</strong>（仅此次 / 本会话同类免审 / 拒绝）</td><td>✅ 会话内</td></tr><tr><td><strong>L2 红灯</strong></td><td>毁灭性 / 不可逆 / 系统级</td><td>删除、杀非 khyos 进程、改宿主环境变量、全局装包、监听端口、执行任意代码、写系统级路径</td><td><strong>强制挂起，必须键入 <code>YES</code></strong></td><td>❌ 永不</td></tr></tbody></table>
+<blockquote><p>L2 的「不可免审」是分级层的硬不变量：<code>isExemptible(L2) === false</code>，被 <code>permissionCache</code>（清单 / 会话免审）<br>与 <code>approvalRouter</code>（路由）双重保证——红灯无快捷键。</p></blockquote>
+<hr>
+<h2 id="5-工作流预审批-权限申请清单">5. 工作流预审批（《权限申请清单》）<a class="anchor" href="#5-工作流预审批-权限申请清单" aria-label="锚点">#</a></h2>
+<p>模型在元规划阶段可一次性提交《权限申请清单》（<code>[{action, scope}]</code>），网关用<strong>真实分级器</strong>逐项评估：</p>
+<ul><li><strong>L2 条目静默拒收</strong>——清单永远无法批准红灯（即便调用方伪造 <code>level: 'L0'</code>，分级器以真实语义复算）。</li><li>L0/L1 条目纳入清单后，<strong>清单内同类动作自动放行</strong>，不再逐次打断——解决体验断裂。</li><li>范围比对刻意粗到「类」（<code>level:action:scope</code>）而非具体资源：「允许写项目内文件」覆盖项目内所有写，</li></ul>
+<p>但<strong>绝不溢出</strong>到家目录或系统级。</p>
+<p>清单同样<strong>只在内存</strong>，随会话销毁。</p>
+<hr>
+<h2 id="6-最小权限与越权熔断">6. 最小权限与越权熔断<a class="anchor" href="#6-最小权限与越权熔断" aria-label="锚点">#</a></h2>
+<h3 id="6-1-最小权限">6.1 最小权限<a class="anchor" href="#6-1-最小权限" aria-label="锚点">#</a></h3>
+<ul><li>每个 <code>sessionId</code> 一套独立 <code>{ 权限缓存, 熔断器 }</code>，全程内存。</li><li>授权（会话免审 + 预审批清单）<strong>仅在单次宏任务 / 会话内有效</strong>；<code>resetSession</code> 或进程退出即清零，</li></ul>
+<p><strong>绝不跨会话 / 跨重启续命</strong>（防呆②）。</p>
+<h3 id="6-2-越权熔断-breachbreaker">6.2 越权熔断（<code>breachBreaker</code>）<a class="anchor" href="#6-2-越权熔断-breachbreaker" aria-label="锚点">#</a></h3>
+<p>两类越权信号触发跳闸：</p>
+<ol><li><strong>旁路注入</strong>（<code>force:true</code>/<code>--yes</code>…）——<strong>一次即跳闸</strong>，零容忍。</li><li><strong>L2 反复硬闯</strong>——同会话被拒 L2 累计达阈值（默认 3）——判定磨穿红线，跳闸。</li></ol>
+<blockquote><p><strong>熔断只计「真·硬闯」，不计「环境性拒绝」（重要澄清）。</strong> L2 被拒有两种性质迥异的来源：<br>一是模型<strong>反复硬闯红线</strong>（旁路注入、确认串不匹配、用户主动拒），这才是攻击信号，照常计数；<br>二是<strong>环境从未提供批准通道</strong>——在非交互 / 自主（Goal）/ 管道 / 后台场景下没有弹窗键入 <code>YES</code><br>的通道，网关按 fail-closed <strong>自动拒绝</strong>。后者是<strong>环境限制，模型无过错</strong>。若把两者混为一谈，三个<br>互不相关的合法高危操作在 headless 下撞了三次「环境从没给过的门」，就会把整个会话砖掉（跳闸后<br>连只读 L0 也全拒）。因此网关为每个 DENY 附结构化 <code>cause</code>（<code>approvalRouter.js</code>），<code>index.js</code><br>仅当 <code>cause !== 'no-interactive-channel'</code> 时才计入熔断。此行为经 <code>KHY_GATEWAY_BREAKER_SMART</code><br>门控（默认开；<code>=off</code> 逐字节回退「所有 L2 被拒都计数」的历史行为）。<strong>注意：这不放松任何红线</strong><br>——旁路注入仍一次即熔断，确认串不匹配 / 用户拒仍照常计数并可跳闸，L2 仍必须键入 <code>YES</code>。</p>
+<p>环境性拒绝时，网关还会经 <code>denialGuidance.js</code>（门控 <code>KHY_GATEWAY_DENIAL_GUIDANCE</code>，默认开）<br>向 <code>reasons[]</code> 追加<strong>可执行指引</strong>（「为什么被拒 + 三条合规放行途径」），随工具错误转述给用户，<br>而非仅冷冰冰地拒绝。放行途径详见 [OPS-MAN-060]。</p></blockquote>
+<p>跳闸后果：</p>
+<ul><li>整条流程标记高危；此后<strong>所有调用一律拒绝（连 L0）</strong>——熔断优先于一切。</li><li><strong>强制终止本会话登记在册的子进程</strong>（killer 可注入，绝不误杀宿主 / khyos 自身；killer 异常不反噬熔断）。</li><li>熔断<strong>不可在会话内自愈</strong>，只能随会话整体 <code>reset</code>——对齐「重启即归零」语义。</li></ul>
+<hr>
+<h2 id="7-tui-宿主交互审批契约">7. TUI / 宿主交互审批契约<a class="anchor" href="#7-tui-宿主交互审批契约" aria-label="锚点">#</a></h2>
+<p>网关通过 <code>makeControlPrompter(onControlRequest)</code> 适配既有宿主交互通道（Ink TUI / Web）：</p>
+<ul><li><strong>L1</strong>：弹一次审批，<code>allow → 仅此次</code>、<code>allow-always → 本会话同类免审</code>、<code>deny → 拒绝</code>。</li><li><strong>L2</strong>：要求宿主回传<strong>用户键入的确认串</strong>（<code>response.typed</code>）。既有仅 <code>allow/deny</code> 的宿主**取不到该串</li></ul>
+<p>→ 视为未确认 → fail-closed 拒绝**（防呆③④）。</p>
+<blockquote><p>该契约<strong>不要求修改 TUI 即可安全运行</strong>：未实现键入确认的宿主下，L2 恒拒绝（安全方向）。后续可在 Ink<br>PermissionsPrompt 增加 L2 键入确认输入框，回传 <code>{ typed }</code> 即接通——属安全网关层的渐进增强，不触业务热区。</p></blockquote>
+<hr>
+<h2 id="8-三场景验证">8. 三场景验证<a class="anchor" href="#8-三场景验证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>级别</th><th>预期</th><th>测试</th></tr></thead><tbody><tr><td>尝试删除文件 <code>rm important.txt</code></td><td>L2</td><td>仅严格键入 <code>YES</code> 放行；回车/空/小写一律拒；非交互 fail-closed</td><td>✅</td></tr><tr><td>尝试全局安装 <code>npm i -g http-server</code></td><td>L2</td><td>强制挂起；交互异常 → fail-closed 拒绝</td><td>✅</td></tr><tr><td>正常写入 <code>&lt;project&gt;/src/note.txt</code></td><td>L1</td><td>问一次；会话免审后第二次同类不再询问；跨会话重新询问</td><td>✅</td></tr></tbody></table>
+<p>附加防呆回归：旁路注入熔断、反复硬闯熔断+清场、清单拒收 L2、L2 永不命中清单、控制通道适配。<br><strong>全 27 测试离线确定性通过（零网络 / 零真实文件系统 / 全同步桩）。</strong></p>
+<hr>
+<h2 id="10-风险词汇统一与-5-3-映射">10. 风险词汇统一与 5→3 映射<a class="anchor" href="#10-风险词汇统一与-5-3-映射" aria-label="锚点">#</a></h2>
+<p>用户反馈「风险层级划分不清楚」。根因是仓库并存<strong>多套风险词汇</strong>，而 5 级 → 3 级的映射规则隐式散落<br>在分级器代码里、从未成文。本节把它显式化。</p>
+<h3 id="10-1-词汇对照表-各套的用途-边界-归属">10.1 词汇对照表（各套的用途 / 边界 / 归属）<a class="anchor" href="#10-1-词汇对照表-各套的用途-边界-归属" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>词汇</th><th>取值</th><th>用途</th><th>归属子系统</th></tr></thead><tbody><tr><td><code>RISK_ORDER</code> / <code>RISK_LEVELS</code>（<strong>单一真源</strong>）</td><td><code>safe/low/medium/high/critical</code>（序数 0–4）</td><td>五级风险的<strong>唯一权威定义</strong>（字符串词汇 + 升序序数）</td><td><code>constants/riskOrder.js</code>（零依赖叶子）</td></tr><tr><td><code>_baseTool.RISK_LEVELS</code></td><td>同上（数组）</td><td>工具静态声明的风险标签校验</td><td><code>tools/_baseTool.js</code>（<strong>直接复用真源</strong>）</td></tr><tr><td><code>toolCalling.RISK_LEVELS</code></td><td>同上（对象，附 <code>label/color/autoApprove</code>）</td><td>工具风险的展示与自动放行标志</td><td><code>services/toolCalling.js</code>（键集 === 真源，防漂移测试固化）</td></tr><tr><td><code>execApproval.RISK</code></td><td><code>low/medium/high/critical</code>（<strong>无 safe</strong>）</td><td>命令（shell）风险分级</td><td><code>services/execApproval.js</code>（真源子集，见 §10.3）</td></tr><tr><td><code>syscallGateway.LEVELS</code></td><td><code>L0/L1/L2</code></td><td><strong>审批矩阵</strong>的三级裁决口径（本规范 §4）</td><td><code>services/syscallGateway/*</code></td></tr><tr><td><code>capacityFlow.CapacityRiskLevel</code></td><td><code>low/medium/high/critical</code></td><td><strong>上下文窗口健康度 / 工具循环状态漂移</strong>分级（容量调度域）</td><td><code>services/capacityFlow.js</code></td></tr></tbody></table>
+<blockquote><p><strong>显式排除</strong>：<code>capacityFlow.CapacityRiskLevel</code> 属<strong>容量 / 上下文健康域</strong>，与本网关的<strong>安全审批完全<br>正交</strong>——它只是恰好复用了 low/medium/high/critical 四个词。为消歧，其规范名已从 <code>RiskLevel</code> 重命名为<br><code>CapacityRiskLevel</code>（保留 <code>RiskLevel</code> 向后兼容别名），头部注释显式声明域边界。<strong>读到 <code>CapacityRiskLevel</code><br>时不要与安全风险混淆。</strong></p></blockquote>
+<h3 id="10-2-5-级-3-级审批矩阵映射表">10.2 5 级 → 3 级审批矩阵映射表<a class="anchor" href="#10-2-5-级-3-级审批矩阵映射表" aria-label="锚点">#</a></h3>
+<p>安全审批的三级（L0/L1/L2）<strong>不是</strong>五级风险词汇的简单重命名，而是由 <strong>action / scope / 破坏性 / 风险标签</strong><br>共同决定。核心映射：</p>
+<table><thead><tr><th>五级风险标签</th><th>叠加条件（action / scope / 破坏性）</th><th>→ 审批级别</th></tr></thead><tbody><tr><td><code>safe</code> / <code>low</code></td><td>只读（<code>READ</code>），项目/家目录内</td><td><strong>L0 绿灯</strong></td></tr><tr><td><code>medium</code> / <code>high</code></td><td>项目/家目录内写（<code>WRITE</code>）、网络出站（<code>NETWORK</code>）、起本地非破坏性子进程（<code>PROCESS</code>）、读系统级路径</td><td><strong>L1 黄灯</strong></td></tr><tr><td><code>critical</code> <strong>或</strong> <code>isDestructive</code> <strong>或</strong> 系统级写/删/装/杀/执行代码/监听端口/沙箱逃逸</td><td>任一命中</td><td><strong>L2 红灯</strong></td></tr></tbody></table>
+<h3 id="10-3-为何-critical-恒-l2-而单纯-high-可能只是-l1-关键澄清">10.3 为何 <code>critical</code> 恒 L2，而单纯 <code>high</code> 可能只是 L1（关键澄清）<a class="anchor" href="#10-3-为何-critical-恒-l2-而单纯-high-可能只是-l1-关键澄清" aria-label="锚点">#</a></h3>
+<p>这正是「层级划分不清楚」的根源——<strong>L 级取决于操作的 action + scope + 破坏性，而不只是 risk 标签</strong>：</p>
+<ul><li><strong><code>critical</code> 恒 L2</strong>：<code>critical</code> 语义即「毁灭性 / 不可逆」，无论 scope 如何都落红灯。保守优先原则下，</li></ul>
+<p>任何无法可靠归类的调用也一律落 L2（§1 尾注）。这是「零隐式提权」的数学下界，不可放松。</p>
+<ul><li><strong><code>high</code> 不必然 L2</strong>：一个标注 <code>high</code> 的操作若其 action 是<strong>项目内写</strong>或<strong>网络出站</strong>（scope 受限、</li></ul>
+<p>可逆），仍归 <strong>L1</strong>（问一次即可）；只有当它同时带<strong>破坏性 / 系统级 scope</strong> 时才升到 L2。换言之，<br>  风险标签是<strong>一个输入</strong>，最终级别由 <code>resourceClassifier.classify()</code> 综合 action/scope/破坏性判定。</p>
+<ul><li><strong>命令无 <code>safe</code> 层</strong>（§10.1 中 <code>execApproval.RISK</code> 缺 <code>safe</code>）：shell 命令天然有副作用，风险自 <code>low</code></li></ul>
+<p>起，<code>safe</code> 仅适用于纯只读<strong>工具</strong>。这是<strong>有意</strong>设计而非遗漏（<code>riskVocabulary.test.js</code> 固化此断言）。</p>
+<blockquote><p><strong>一句话记忆</strong>：<em>risk 标签回答「这操作有多危险」，L 级回答「要不要拦、怎么拦」；后者综合了前者与<br>「改什么、改哪、可不可逆」。</em> 破坏性 / 系统级永远压倒一切直达 L2。</p></blockquote>
+<h3 id="10-4-防漂移">10.4 防漂移<a class="anchor" href="#10-4-防漂移" aria-label="锚点">#</a></h3>
+<p>五级词汇的单一真源是 <code>constants/riskOrder.js</code>；各消费者（<code>_baseTool</code> / <code>toolCalling</code> / <code>execApproval</code>）<br>与真源的一致性由 <code>tests/services/riskVocabulary.test.js</code> 固化为回归断言，任一处词汇漂移即测试失败。</p>
+<hr>
+<h2 id="11-红线与维护-无-ai-也能维护">11. 红线与维护（无 AI 也能维护）<a class="anchor" href="#11-红线与维护-无-ai-也能维护" aria-label="锚点">#</a></h2>
+<ul><li><strong>唯一真源</strong>：动作/作用域枚举在 <code>intentSchema.js</code>；级别矩阵在 <code>resourceClassifier.js</code>；五级风险词汇在</li></ul>
+<p><code>constants/riskOrder.js</code>；三者改动须同步本规范第 1、4、10 节。</p>
+<ul><li><strong>总开关</strong>：<code>KHY_SYSCALL_GATEWAY=off</code> 显式关闭（回退纯既有管线）；默认开启。相关子门控：</li></ul>
+<p><code>KHY_GATEWAY_BREAKER_SMART</code>（熔断排除环境性拒绝，默认开）、<code>KHY_GATEWAY_DENIAL_GUIDANCE</code><br>  （拒绝时附可执行指引，默认开）——二者 <code>=off</code> 均逐字节回退历史行为。</p>
+<ul><li><strong>不可弱化项</strong>：保守优先（未知 → L2）、L2 不可免审、fail-closed、授权不落盘、旁路注入零容忍熔断——</li></ul>
+<p>任一被改动即视为破坏安全下界，必须在 PR 显式论证并更新测试。</p>
+<ul><li><strong>面向操作者</strong>：高危被拒的排查与三条合规放行途径见 [OPS-MAN-060]。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-025] khyos元规划协议与动态约束注入规范.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 元规划协议与动态约束注入规范》</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-027] Agent依赖自愈机制规范.html"><div class="dir">下一篇 →</div><div class="ttl">DESIGN-ARCH-027 · Agent 依赖自愈机制规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

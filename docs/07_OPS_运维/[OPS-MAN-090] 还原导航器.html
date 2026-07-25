@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-090] 还原导航器 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-090] 还原导航器</div>
+      <header class="hero reveal"><h1>[OPS-MAN-090] 还原导航器</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-090-还原导航器">[OPS-MAN-090] 还原导航器</a></li><li class="lvl-2"><a href="#这一层闭合什么-完整-却不简单">这一层闭合什么：完整，却不简单</a></li><li class="lvl-2"><a href="#决策序-安全优先-木桶短板-最危险的先说话">决策序：安全优先(木桶短板，最危险的先说话)</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族">恒久红线(继承全家族)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-090-还原导航器">[OPS-MAN-090] 还原导航器<a class="anchor" href="#ops-man-090-还原导航器" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-navigate.js --gen-doc</code> 确定性生成，请勿手改；<br>导航逻辑改在 <code>scripts/lib/restoreNavigator.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-完整-却不简单">这一层闭合什么：完整，却不简单<a class="anchor" href="#这一层闭合什么-完整-却不简单" aria-label="锚点">#</a></h2>
+<p>还原家族现有 12 个纯叶 / 10 条 CLI，每条只回答自己那一小块(能不能装 / 水合齐不齐 /<br>有没有矛盾 / 该不该自驱 / 收敛没 / 学到了什么…)。诊断是<strong>完整</strong>的——但一台陌生机器上的<br>agent 或人，面对 10 条命令，<strong>得不到一个统一裁决，更没有一句「现在到底该跑哪条命令」</strong>。<br>本层就是那个缺失的汇聚者：把全家族裁决合成<strong>唯一 next-action</strong>，把「完整」补成「完整且简单」。</p>
+<p>端到端采齐(本 CLI 接线)：</p>
+<pre><code>授权门(该不该自驱) + 检测器/消解器(矛盾/恢复链) + 学习应用器(跨会话该跳哪步) + 追索(被禁怎么解锁)
+  -&gt; deriveNextAction -&gt; { status, action, command, actor, why }</code></pre>
+<pre><code class="language-bash">node scripts/restore-navigate.js --json   # 陌生机器上的自驱 agent 读它决定下一步</code></pre>
+<h2 id="决策序-安全优先-木桶短板-最危险的先说话">决策序：安全优先(木桶短板，最危险的先说话)<a class="anchor" href="#决策序-安全优先-木桶短板-最危险的先说话" aria-label="锚点">#</a></h2>
+<p>按<strong>风险从高到低</strong>逐档短路，第一个命中的档决定唯一裁决：</p>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th></tr></thead><tbody><tr><td>1</td><td>授权门 <code>forbidden</code></td><td>交人：走 recourse 最省一步(agent 绝不自驱被禁场景)</td></tr><tr><td>2</td><td>硬矛盾(<code>!safeToAutodrive</code> 且 <code>!autoResolvable</code>)</td><td>交人：<code>firstHumanMove</code></td></tr><tr><td>3</td><td>可自动消解且<strong>已 authorized</strong></td><td>自驱：第一条 <strong>LIVE</strong> plan move(尊重学习跳过)</td></tr><tr><td>3′</td><td>可自动消解但授权门判 <strong>ask-first</strong></td><td>给出<strong>同一条</strong>建议下一步，但 <code>status=ask-first</code>、<code>actor=human</code>：<strong>每步须人工确认</strong>，绝不静默自驱</td></tr><tr><td>4</td><td>计划为空且已还原(全绿)</td><td>DONE：无需动作</td></tr><tr><td>5</td><td>其它(样本不足 / 判定不清 / 畸形)</td><td>保守交人：看 <code>--json</code> 自行决定</td></tr></tbody></table>
+<ul><li><strong>ask-first 不是 authorized</strong>：授权门三态里 <code>ask-first</code>(有覆盖风险 / 链要交人但有人在场)</li></ul>
+<p>契约是「每步前须向人确认，不得静默自驱」。导航器<strong>绝不</strong>把它并进 authorized 自驱——<br>  否则会泄掉三档里最危险的那一档(在有覆盖既有用户数据风险的机器上无人值守开跑)。</p>
+<ul><li><strong>尊重学习</strong>：档 3 取第一条<strong>未被第十层判 safeToSkip</strong> 的 move；<code>mustTryDespiteDead</code></li></ul>
+<p>的步仍须跑(它是该冲突唯一出路或安全网)。</p>
+<ul><li><strong>绝不发明命令</strong>：<code>command</code> 只从既有 <code>move.verify</code> / <code>recourse.verify</code> 取，取不到给</li></ul>
+<p>一条<strong>只读</strong>复核命令(绝不给危险动作)。</p>
+<h2 id="恒久红线-继承全家族">恒久红线(继承全家族)<a class="anchor" href="#恒久红线-继承全家族" aria-label="锚点">#</a></h2>
+<ul><li><code>action</code> / <code>command</code> 先过 <code>_DANGER_TOKENS</code> 自检：命中即隐去并强制 <code>actor=human</code>。</li><li>只读既有裁决字段，绝不重排、绝不删除、绝不伪造 <code>authorized</code>(畸形 → 保守 human)。</li><li>叶子纯计算、零 IO、绝不抛：任何字段缺失 / 非对象 → 保守 UNKNOWN + human。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-089] 还原学习应用器</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-091] 波次前驱结果注入.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

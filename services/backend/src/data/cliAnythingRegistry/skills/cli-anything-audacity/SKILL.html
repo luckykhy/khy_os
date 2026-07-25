@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-audacity · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-audacity<span class="sep">›</span>cli-anything-audacity</div>
+      <header class="hero reveal"><h1>cli-anything-audacity</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-audacity">cli-anything-audacity</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#track">Track</a></li><li class="lvl-3"><a href="#clip">Clip</a></li><li class="lvl-3"><a href="#effect-group">Effect Group</a></li><li class="lvl-3"><a href="#selection">Selection</a></li><li class="lvl-3"><a href="#label">Label</a></li><li class="lvl-3"><a href="#media">Media</a></li><li class="lvl-3"><a href="#export-group">Export Group</a></li><li class="lvl-3"><a href="#session-group">Session Group</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-audacity&quot;<br>description: &gt;-<br>  Command-line interface for Audacity - A stateful command-line interface for audio editing, following the same patterns as the GIMP and Ble...</p>
+<hr>
+<h1 id="cli-anything-audacity">cli-anything-audacity<a class="anchor" href="#cli-anything-audacity" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for audio editing, following the same patterns as the GIMP and Blender CLIs in this repo.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-audacity package:</p>
+<pre><code class="language-bash">pip install cli-anything-audacity</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>audacity must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-audacity --help
+
+# Start interactive REPL mode
+cli-anything-audacity
+
+# Create a new project
+cli-anything-audacity project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-audacity --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-audacity
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new project</td></tr><tr><td><code>open</code></td><td>Open an existing project</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show project information</td></tr><tr><td><code>settings</code></td><td>View or update project settings</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="track">Track<a class="anchor" href="#track" aria-label="锚点">#</a></h3>
+<p>Track management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a new track</td></tr><tr><td><code>remove</code></td><td>Remove a track by index</td></tr><tr><td><code>list</code></td><td>List all tracks</td></tr><tr><td><code>set</code></td><td>Set a track property (name, mute, solo, volume, pan)</td></tr></tbody></table>
+<h3 id="clip">Clip<a class="anchor" href="#clip" aria-label="锚点">#</a></h3>
+<p>Clip management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>import</code></td><td>Probe/import an audio file (show metadata)</td></tr><tr><td><code>add</code></td><td>Add an audio clip to a track</td></tr><tr><td><code>remove</code></td><td>Remove a clip from a track</td></tr><tr><td><code>trim</code></td><td>Trim a clip's start and/or end</td></tr><tr><td><code>split</code></td><td>Split a clip at a given time position</td></tr><tr><td><code>move</code></td><td>Move a clip to a new start time</td></tr><tr><td><code>list</code></td><td>List clips on a track</td></tr></tbody></table>
+<h3 id="effect-group">Effect Group<a class="anchor" href="#effect-group" aria-label="锚点">#</a></h3>
+<p>Effect management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list-available</code></td><td>List all available effects</td></tr><tr><td><code>info</code></td><td>Show details about an effect</td></tr><tr><td><code>add</code></td><td>Add an effect to a track</td></tr><tr><td><code>remove</code></td><td>Remove an effect by index</td></tr><tr><td><code>set</code></td><td>Set an effect parameter</td></tr><tr><td><code>list</code></td><td>List effects on a track</td></tr></tbody></table>
+<h3 id="selection">Selection<a class="anchor" href="#selection" aria-label="锚点">#</a></h3>
+<p>Selection management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>set</code></td><td>Set selection range</td></tr><tr><td><code>all</code></td><td>Select all (entire project duration)</td></tr><tr><td><code>none</code></td><td>Clear selection</td></tr><tr><td><code>info</code></td><td>Show current selection</td></tr></tbody></table>
+<h3 id="label">Label<a class="anchor" href="#label" aria-label="锚点">#</a></h3>
+<p>Label/marker management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Add a label at a time position</td></tr><tr><td><code>remove</code></td><td>Remove a label by index</td></tr><tr><td><code>list</code></td><td>List all labels</td></tr></tbody></table>
+<h3 id="media">Media<a class="anchor" href="#media" aria-label="锚点">#</a></h3>
+<p>Media file operations.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>probe</code></td><td>Analyze an audio file</td></tr><tr><td><code>check</code></td><td>Check that all referenced audio files exist</td></tr></tbody></table>
+<h3 id="export-group">Export Group<a class="anchor" href="#export-group" aria-label="锚点">#</a></h3>
+<p>Export/render commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>presets</code></td><td>List export presets</td></tr><tr><td><code>preset-info</code></td><td>Show preset details</td></tr><tr><td><code>render</code></td><td>Render the project to an audio file</td></tr></tbody></table>
+<h3 id="session-group">Session Group<a class="anchor" href="#session-group" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new audacity project file.</p>
+<pre><code class="language-bash">cli-anything-audacity project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-audacity --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-audacity
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-audacity --project myproject.json export render output.pdf --overwrite</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-audacity project info -p project.json
+
+# JSON output for agents
+cli-anything-audacity --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-anygen/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-anygen</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-blender/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-blender</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-audacity/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《khyos 元规划协议与动态约束注入规范》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>《khyos 元规划协议与动态约束注入规范》</div>
+      <header class="hero reveal"><h1>《khyos 元规划协议与动态约束注入规范》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-元规划协议与动态约束注入规范">《khyos 元规划协议与动态约束注入规范》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-2"><a href="#1-设计目标与硬约束">1. 设计目标与硬约束</a></li><li class="lvl-3"><a href="#1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）</a></li><li class="lvl-3"><a href="#1-2-防呆红线-逐条落到代码-非仅-prompt">1.2 防呆红线（逐条落到代码，非仅 Prompt）</a></li><li class="lvl-2"><a href="#2-元规划协议-2-constraint-strategy-自决">2. 元规划协议（§2 `constraint_strategy` 自决）</a></li><li class="lvl-3"><a href="#2-1-三级约束阶梯-单调升级格">2.1 三级约束阶梯（单调升级格）</a></li><li class="lvl-3"><a href="#2-2-防偷懒升级-metaplanschema-validatemetaplan">2.2 防偷懒升级（`metaPlanSchema.validateMetaPlan`）</a></li><li class="lvl-2"><a href="#3-动态约束注入引擎-3-按需配发锁具">3. 动态约束注入引擎（§3 按需配发锁具）</a></li><li class="lvl-3"><a href="#3-1-真实代码拦截器-codeinterceptors-js-非桩">3.1 真实代码拦截器（`codeInterceptors.js`，非桩）</a></li><li class="lvl-2"><a href="#4-混合语言执行器注册表-4-武器库">4. 混合语言执行器注册表（§4 武器库）</a></li><li class="lvl-2"><a href="#5-信任熔断与宪法红线-5-防线兜底">5. 信任熔断与宪法红线（§5 防线兜底）</a></li><li class="lvl-3"><a href="#5-1-信任熔断状态机-trustcircuitbreaker-js">5.1 信任熔断状态机（`trustCircuitBreaker.js`）</a></li><li class="lvl-3"><a href="#5-2-宪法级红线-constitutionalredlines-js-不可覆盖">5.2 宪法级红线（`constitutionalRedLines.js`，不可覆盖）</a></li><li class="lvl-2"><a href="#6-编排闭环-metaplancoordinator-6">6. 编排闭环（`MetaPlanCoordinator`，§6）</a></li><li class="lvl-2"><a href="#7-验证-6-同一任务不同风险-不同策略">7. 验证（§6 同一任务不同风险 → 不同策略）</a></li><li class="lvl-2"><a href="#8-边界与后续">8. 边界与后续</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-元规划协议与动态约束注入规范">《khyos 元规划协议与动态约束注入规范》<a class="anchor" href="#khyos-元规划协议与动态约束注入规范" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-025<br>主题：模型自决「执行器选择 + 约束级别」的元规划（Meta-Plan）协议，及其动态约束注入、信任熔断与宪法红线<br>范围：<code>services/backend</code> 调度器的<strong>约束注入与执行器</strong>子系统（不触碰核心业务逻辑）<br>关联实现：<code>src/services/metaplan/*</code>、<code>tests/services/metaplan/metaPlanSubsystem.test.js</code><br>关联规范：[DESIGN-ARCH-002] CB-SSP（可逆性分层 / 约束格）、[DESIGN-ARCH-024] 元帅双模式任命与约束</p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>khyos 是「单人 AI 原生 OS」，其 agent 在 JS/Python/混合语言环境中频繁读写代码。此前的执行流存在<br>两类<strong>僵化逻辑</strong>，损耗灵活性与资源：</p>
+<ol><li><strong>系统硬编码指派工具</strong>——<code>toolCalling.executeTool</code> 是单一入口，但执行器分发是对</li></ol>
+<p><code>descriptor.source</code> 的硬编码 <code>switch</code>（<code>toolCalling.js:2609-2642</code>），模型无从根据任务特征<br>   选择「用 AST 写手还是裸字符串替换」。编辑工具本身（<code>editFile.js:110-145</code>）是<br>   <code>String.indexOf/slice/split</code> 的<strong>裸字符串替换，无任何 AST 校验</strong>。</p>
+<ol><li><strong>一刀切的约束</strong>——守卫按文件名模式统一施加（<code>toolGuards.js:358-413</code>），<strong>无风险分级</strong>；</li></ol>
+<p><code>riskGate.assess</code> 算出了 <code>stepType</code> 却只用于审计，未用于分级；<code>EXECUTION_DISCIPLINE</code> +<br>   <code>HARD_PROHIBITIONS</code> 被<strong>无条件整段注入</strong>（<code>generalPurposeAgent.js:34-36</code>）。</p>
+<p>结果是：<strong>低风险操作（改个注释）被冗长安全 Prompt 与潜在重校验拖慢、白烧 Token；高风险操作<br>（重构异步控制流）却和改注释走同一条裸路径，可能把语法错误直接写进磁盘。</strong></p>
+<p>本规范让<strong>模型在执行前自决</strong>：用哪些执行器、上多重的锁——系统据此<strong>按需配发锁具，绝不提前加锁</strong>。</p>
+<hr>
+<h2 id="1-设计目标与硬约束">1. 设计目标与硬约束<a class="anchor" href="#1-设计目标与硬约束" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）<a class="anchor" href="#1-1-核心诉求-必须满足" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th></tr></thead><tbody><tr><td>①</td><td><strong>极致灵活与极省资源</strong></td><td>低风险走 <code>Prompt_Soft</code>：跳过 AST/沙箱，仅注入一句格式提示，极速执行；高风险走 <code>Code_Hard</code>：强制挂载真实 AST 校验，绝不裸奔。锁的轻重与风险严格成比例。</td></tr><tr><td>②</td><td><strong>拒绝偷懒</strong></td><td>选 <code>Prompt_Soft</code> 必须在 <code>risk_dissent</code> 给出实质论证；论证缺失/过短由系统<strong>确定性升级</strong>为 <code>Code_Hard</code>——模型无法靠跳过论证来省事。</td></tr><tr><td>③</td><td><strong>闭环自愈</strong></td><td><code>Prompt_Soft</code> 下执行翻车 → 信任熔断把该任务类型强制降级 <code>Code_Hard</code>；连续 2 次翻车 → 全会话强制 <code>Code_Hard</code>。</td></tr></tbody></table>
+<h3 id="1-2-防呆红线-逐条落到代码-非仅-prompt">1.2 防呆红线（逐条落到代码，非仅 Prompt）<a class="anchor" href="#1-2-防呆红线-逐条落到代码-非仅-prompt" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>红线</th><th>落点</th></tr></thead><tbody><tr><td>①</td><td>元规划<strong>必须先于</strong>执行动作输出，严禁「先执行后评估」</td><td><code>metaPlanSchema.parseMetaPlan</code> 解析失败即 <code>{ok:false}</code>；<code>MetaPlanCoordinator.validateExecution</code> 无票据则拒绝并要求快照+确认</td></tr><tr><td>②</td><td>执行器<strong>必须从注册表挑选</strong>，不可凭空捏造</td><td><code>executorRegistry.validateToolchain</code> 拒绝未注册 id；schema 的 <code>toolchain.items.enum == registry.executorIds()</code></td></tr><tr><td>③</td><td>连续 2 次 <code>Prompt_Soft</code> 翻车 → 全会话强制 <code>Code_Hard</code></td><td><code>trustCircuitBreaker</code> 连击计数达阈值置 <code>_sessionLocked</code></td></tr><tr><td>④</td><td>宪法级红线<strong>绝不可被元规划覆盖</strong></td><td><code>constitutionalRedLines.enforce</code> 在所有层之后，按动作（非模型自评）匹配，经 <code>escalate</code> 单调取严</td></tr><tr><td>⑤</td><td>只重构<strong>调度引擎/约束注入/执行器层</strong>，不碰核心业务逻辑</td><td>全部新增代码自成 <code>src/services/metaplan/</code>，零侵入既有工具循环</td></tr></tbody></table>
+<hr>
+<h2 id="2-元规划协议-2-constraint-strategy-自决">2. 元规划协议（§2 <code>constraint_strategy</code> 自决）<a class="anchor" href="#2-元规划协议-2-constraint-strategy-自决" aria-label="锚点">#</a></h2>
+<p>模型在任何写入前必须先产出一份元规划 JSON：</p>
+<pre><code class="language-json">{
+  &quot;toolchain&quot;: [&quot;js_babel_writer&quot;],
+  &quot;constraint_strategy&quot;: &quot;Prompt_Soft | Code_Hard | System_Block&quot;,
+  &quot;risk_dissent&quot;: &quot;若选 Prompt_Soft，必填的风险论证&quot;
+}</code></pre>
+<ul><li><code>toolchain</code>：从武器库（§4）挑选的执行器组合，按应用顺序。enum 来自<strong>活注册表</strong>。</li><li><code>constraint_strategy</code>：自决约束级别，严格枚举三档。</li><li><code>risk_dissent</code>：<strong>防偷懒关键</strong>。选 <code>Prompt_Soft</code> 必须一句话论证「绝不引发语法崩溃或逻辑污染」。</li></ul>
+<h3 id="2-1-三级约束阶梯-单调升级格">2.1 三级约束阶梯（单调升级格）<a class="anchor" href="#2-1-三级约束阶梯-单调升级格" aria-label="锚点">#</a></h3>
+<pre><code>Prompt_Soft  ⊏  Code_Hard  ⊏  System_Block
+   rank 0         rank 1         rank 2</code></pre>
+<p><code>escalate(a,b)</code> 取更高 rank（最小上界 LUB）。<strong>任何 override 层（熔断、红线）只能加锁，不能减锁</strong>——<br>这是「强制接管只能加锁」的数学保证（<code>constraintStrategy.js</code>）。未知策略按最严 <code>System_Block</code> 处理（fail-safe）。</p>
+<h3 id="2-2-防偷懒升级-metaplanschema-validatemetaplan">2.2 防偷懒升级（<code>metaPlanSchema.validateMetaPlan</code>）<a class="anchor" href="#2-2-防偷懒升级-metaplanschema-validatemetaplan" aria-label="锚点">#</a></h3>
+<p>若 <code>declared === Prompt_Soft</code> 且 <code>risk_dissent.length &lt; KHY_METAPLAN_MIN_DISSENT</code>（默认 12 字）：<br>→ <code>effective = escalate(Soft, Code_Hard)</code>，并把原因写入 <code>escalations[]</code>。模型「连论证都懒得写」即被夺去快路径。</p>
+<hr>
+<h2 id="3-动态约束注入引擎-3-按需配发锁具">3. 动态约束注入引擎（§3 按需配发锁具）<a class="anchor" href="#3-动态约束注入引擎-3-按需配发锁具" aria-label="锚点">#</a></h2>
+<p><code>constraintInjection.resolveInjection(plan)</code> 把策略翻译为「挂什么锁」，<strong>不提前加锁</strong>：</p>
+<table><thead><tr><th>策略</th><th>mountInterceptors</th><th>requireSnapshot</th><th>requireConfirmation</th><th>promptHint</th><th>语义</th></tr></thead><tbody><tr><td><code>Prompt_Soft</code></td><td>❌</td><td>❌</td><td>❌</td><td>一句格式提示</td><td>跳过 AST/沙箱，极速、最省 Token</td></tr><tr><td><code>Code_Hard</code></td><td>✅</td><td>❌</td><td>❌</td><td>—</td><td>挂载执行器代码拦截器，校验不过坚决打回</td></tr><tr><td><code>System_Block</code></td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>系统级挂起，须先备份快照 + 确认才放行；并仍挂代码校验（双保险）</td></tr></tbody></table>
+<p><code>runHardValidation(plan, content, ctx)</code> 对 <code>Code_Hard/System_Block</code> 真正跑拦截器；<code>Prompt_Soft</code> 直接放行<br>（<code>ranValidation:false</code>）——这正是「低风险绝不被重算力拖慢」。</p>
+<h3 id="3-1-真实代码拦截器-codeinterceptors-js-非桩">3.1 真实代码拦截器（<code>codeInterceptors.js</code>，非桩）<a class="anchor" href="#3-1-真实代码拦截器-codeinterceptors-js-非桩" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>校验器 key</th><th>实现</th><th>适用</th></tr></thead><tbody><tr><td><code>babel</code></td><td><code>@babel/parser</code>（项目已装），失败回退内置 <code>vm</code> 编译探测</td><td>JS/TS/JSX</td></tr><tr><td><code>python_ast</code></td><td><code>spawnSync python3 -c &quot;import sys,ast; ast.parse(sys.stdin.read())&quot;</code></td><td>Python</td></tr><tr><td><code>vm_or_native</code></td><td>JS 走 <code>vm</code>、Python 走 ast、其它语言退化为括号/引号配平探测</td><td>跨语言</td></tr><tr><td><code>null</code></td><td>不校验（裸执行器，风险自担）</td><td>注释/文案</td></tr></tbody></table>
+<p><strong>Fail-safe 原则</strong>：解析器缺失或 python3 不可用 → 返回 <code>{ok:true, skipped:true}</code>，<strong>降级到「不比今天更差」</strong>，<br>绝不因工具链缺失而卡死 agent。校验器永不向上抛异常。</p>
+<hr>
+<h2 id="4-混合语言执行器注册表-4-武器库">4. 混合语言执行器注册表（§4 武器库）<a class="anchor" href="#4-混合语言执行器注册表-4-武器库" aria-label="锚点">#</a></h2>
+<p><code>executorRegistry.EXECUTORS</code>（闭集，单一真源）：</p>
+<table><thead><tr><th>id</th><th>语言边界</th><th>astSafetyNet</th><th>validator</th><th>适用</th></tr></thead><tbody><tr><td><code>js_babel_writer</code></td><td>js/ts/jsx/tsx</td><td>✅</td><td><code>babel</code></td><td>重构核心逻辑</td></tr><tr><td><code>py_ast_replacer</code></td><td>python</td><td>✅</td><td><code>python_ast</code></td><td>Python，保障缩进/语法</td></tr><tr><td><code>generic_syntax_writer</code></td><td>任意</td><td>✅</td><td><code>vm_or_native</code></td><td>跨语言，能力依赖语言</td></tr><tr><td><code>raw_string_injector</code></td><td>任意</td><td>❌</td><td><code>null</code></td><td>仅正则/字符串替换，无 AST，极快但风险自担（改注释/文案）</td></tr></tbody></table>
+<p><code>describeForModel()</code> 从注册表生成元规划 Prompt 里的菜单——<strong>模型可选项 == 注册表</strong>，杜绝凭空捏造（防呆②）。</p>
+<hr>
+<h2 id="5-信任熔断与宪法红线-5-防线兜底">5. 信任熔断与宪法红线（§5 防线兜底）<a class="anchor" href="#5-信任熔断与宪法红线-5-防线兜底" aria-label="锚点">#</a></h2>
+<h3 id="5-1-信任熔断状态机-trustcircuitbreaker-js">5.1 信任熔断状态机（<code>trustCircuitBreaker.js</code>）<a class="anchor" href="#5-1-信任熔断状态机-trustcircuitbreaker-js" aria-label="锚点">#</a></h3>
+<ul><li><strong>信任扣分（按任务类型）</strong>：<code>declared === Prompt_Soft</code> 且执行 <code>ok:false</code> → 该 <code>taskType</code> 入</li></ul>
+<p><code>_distrustedTypes</code>，后续同类强制 <code>Code_Hard</code>。</p>
+<ul><li><strong>会话级接管</strong>：连续 <code>_consecutiveSoftFailures &gt;= 阈值</code>（默认 2，<code>KHY_METAPLAN_SESSION_TRIP</code> 可调）</li></ul>
+<p>→ <code>_sessionLocked=true</code>，全会话所有操作强制 <code>Code_Hard</code>。</p>
+<ul><li><strong>关键区分</strong>：<code>Code_Hard/System_Block</code> 下失败<strong>不算误判</strong>（安全网生效，非信任违约）；<code>Prompt_Soft</code></li></ul>
+<p>下成功<strong>重置连击计数</strong>。仅「裸奔下翻车」才扣信任。</p>
+<h3 id="5-2-宪法级红线-constitutionalredlines-js-不可覆盖">5.2 宪法级红线（<code>constitutionalRedLines.js</code>，不可覆盖）<a class="anchor" href="#5-2-宪法级红线-constitutionalredlines-js-不可覆盖" aria-label="锚点">#</a></h3>
+<p>按<strong>具体动作</strong>（tool+params/command/path/content）匹配，<strong>无视模型自评</strong>，强制 <code>System_Block</code>：</p>
+<ol><li><strong>删库</strong>：<code>DROP/TRUNCATE TABLE</code>、<code>drop database</code>、删除 <code>*.db|*.sqlite|*.ibd</code> 等数据文件。</li><li><strong>暴露机密</strong>：删除/外泄 <code>.env</code>/<code>*.pem</code>/<code>id_rsa</code>/<code>secrets</code>，或把疑似 AWS Key/私钥/凭证写入外发或日志。</li><li><strong>删 package.json 核心依赖</strong>：删除/清空 <code>package.json</code>，或写入使 <code>dependencies</code> 块清空。</li></ol>
+<p>红线经 <code>escalate</code> 叠加，结果恒为 <code>{model, 熔断, 红线}</code> 三者中最严——绝不可被模型放松（防呆④）。</p>
+<hr>
+<h2 id="6-编排闭环-metaplancoordinator-6">6. 编排闭环（<code>MetaPlanCoordinator</code>，§6）<a class="anchor" href="#6-编排闭环-metaplancoordinator-6" aria-label="锚点">#</a></h2>
+<pre><code>renderMetaPlanPrompt(action)            // 1. 先产出元规划（防呆①）；菜单来自注册表（防呆②）
+  → ingestMetaPlan(rawOutput, action)   // 2. 解析→防偷懒升级→熔断地板→宪法红线→解析注入计划
+       → validateExecution(ticket,cand) // 3. 跑拦截器；Soft 快放行；Block 报快照/确认要求
+            → recordExecutionOutcome     // 4. 喂熔断器，自决失误自动补救（闭环自愈）</code></pre>
+<p><code>ingestMetaPlan</code> 的 override 叠加顺序：模型自评（含防偷懒升级）→ 熔断地板 → <strong>宪法红线置于最后</strong>，<br>使其不可覆盖性一目了然。每层只经 <code>escalate</code> 取严，单调不可逆。</p>
+<hr>
+<h2 id="7-验证-6-同一任务不同风险-不同策略">7. 验证（§6 同一任务不同风险 → 不同策略）<a class="anchor" href="#7-验证-6-同一任务不同风险-不同策略" aria-label="锚点">#</a></h2>
+<p><code>tests/services/metaplan/metaPlanSubsystem.test.js</code>（31 例全绿）关键断言：</p>
+<ul><li><strong>同一 JS 文件</strong>：改注释（<code>Prompt_Soft</code> + 充分 dissent）→ 跳过校验、极速；重构异步控制流</li></ul>
+<p>（<code>Code_Hard</code>）→ 真 babel 校验，坏代码 <code>async function f(){ await (</code> 被打回，正确代码通过。</p>
+<ul><li><strong>防呆①</strong>：无元规划 JSON → 拒绝执行。</li><li><strong>防呆②</strong>：<code>ghost_writer_9000</code> 等捏造执行器 → 拒绝。</li><li><strong>拒绝偷懒</strong>：<code>Prompt_Soft</code> + <code>risk_dissent:&quot;ok&quot;</code> → 升级 <code>Code_Hard</code>。</li><li><strong>防呆③</strong>：连续 2 次 Soft 翻车 → 全会话 <code>Code_Hard</code>。</li><li><strong>防呆④</strong>：选 <code>Prompt_Soft</code> 但 <code>rm app.sqlite</code> → 强制 <code>System_Block</code> + 要求快照/确认。</li><li><strong>闭环自愈</strong>：Soft 翻车后，同类型任务下一次自动被熔断器升 <code>Code_Hard</code>。</li></ul>
+<hr>
+<h2 id="8-边界与后续">8. 边界与后续<a class="anchor" href="#8-边界与后续" aria-label="锚点">#</a></h2>
+<ul><li>本子系统是<strong>协议与注入层</strong>：提供 <code>MetaPlanCoordinator</code> 供调度器在工具执行前调用，但<strong>不强行接管</strong></li></ul>
+<p>既有 <code>executeTool</code>（防呆⑤零侵入）。接入点为后续单独 PR，按 [DESIGN-ARCH-024] 同样的渐进策略。</p>
+<ul><li><code>System_Block</code> 的「备份引擎打快照」当前以 <code>requireSnapshot/requireConfirmation</code> 标志暴露契约，</li></ul>
+<p>实际快照可复用 <code>rollbackService</code>（接线时绑定）。</p>
+<ul><li>执行器目前 4 个；新增执行器只需在注册表登记 + 在 <code>codeInterceptors</code> 提供 validator，schema/prompt 自动同步。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-023] khyos文档排版与格式控制规范.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 文档排版与格式控制规范》</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.html"><div class="dir">下一篇 →</div><div class="ttl">《khyos 系统级服务调用审批网关规范》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-025] khyos元规划协议与动态约束注入规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

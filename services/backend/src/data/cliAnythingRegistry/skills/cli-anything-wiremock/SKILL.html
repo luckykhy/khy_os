@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-wiremock<span class="sep">›</span>Overview</div>
+      <header class="hero reveal"><h1>Overview</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#stub-manage-http-stub-mappings">`stub` — Manage HTTP stub mappings</a></li><li class="lvl-3"><a href="#request-inspect-served-requests">`request` — Inspect served requests</a></li><li class="lvl-3"><a href="#scenario-stateful-scenario-management">`scenario` — Stateful scenario management</a></li><li class="lvl-3"><a href="#record-record-traffic-from-a-real-backend">`record` — Record traffic from a real backend</a></li><li class="lvl-3"><a href="#settings-global-server-settings">`settings` — Global server settings</a></li><li class="lvl-3"><a href="#top-level-commands">Top-level commands</a></li><li class="lvl-2"><a href="#key-examples">Key Examples</a></li><li class="lvl-2"><a href="#agent-guidance">Agent Guidance</a></li><li class="lvl-3"><a href="#always-use-json-in-agent-contexts">Always use `--json` in agent contexts</a></li><li class="lvl-3"><a href="#connection-via-environment">Connection via environment</a></li><li class="lvl-3"><a href="#workflow-pattern-for-test-verification">Workflow pattern for test verification</a></li><li class="lvl-3"><a href="#error-handling">Error handling</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-wiremock&quot;<br>description: Python CLI harness for WireMock HTTP mock server administration<br>version: 0.1.0<br>entrypoint: cli-anything-wiremock</p>
+<hr>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p><code>cli-anything-wiremock</code> is a command-line interface that wraps the WireMock Admin REST API (<code>/__admin/</code>). It allows agents and developers to manage HTTP stub mappings, inspect served requests, control stateful scenarios, and record real backend traffic — all from the terminal or from agent tool calls.</p>
+<p>WireMock is commonly used in integration testing environments to replace real HTTP backends with controllable mock responses.</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="stub-manage-http-stub-mappings"><code>stub</code> — Manage HTTP stub mappings<a class="anchor" href="#stub-manage-http-stub-mappings" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>stub list</code></td><td>List all registered stubs</td></tr><tr><td><code>stub get &lt;id&gt;</code></td><td>Get details of a specific stub by UUID</td></tr><tr><td><code>stub create &lt;json&gt;</code></td><td>Create a stub from a JSON string</td></tr><tr><td><code>stub quick M URL S</code></td><td>Quickly create a stub: METHOD URL STATUS_CODE</td></tr><tr><td><code>stub delete &lt;id&gt;</code></td><td>Delete a stub by UUID</td></tr><tr><td><code>stub reset</code></td><td>Reset all stubs to the defaults on disk</td></tr><tr><td><code>stub save</code></td><td>Persist in-memory stubs to disk</td></tr><tr><td><code>stub import &lt;file&gt;</code></td><td>Import stubs from a JSON file</td></tr></tbody></table>
+<h3 id="request-inspect-served-requests"><code>request</code> — Inspect served requests<a class="anchor" href="#request-inspect-served-requests" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>request list</code></td><td>List recent served requests</td></tr><tr><td><code>request find &lt;pattern&gt;</code></td><td>Find requests matching a JSON pattern</td></tr><tr><td><code>request count &lt;pattern&gt;</code></td><td>Count requests matching a JSON pattern</td></tr><tr><td><code>request unmatched</code></td><td>List requests that matched no stub (404s)</td></tr><tr><td><code>request reset</code></td><td>Clear the request journal</td></tr></tbody></table>
+<h3 id="scenario-stateful-scenario-management"><code>scenario</code> — Stateful scenario management<a class="anchor" href="#scenario-stateful-scenario-management" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>scenario list</code></td><td>List all scenarios and current states</td></tr><tr><td><code>scenario set N S</code></td><td>Set scenario NAME to STATE</td></tr><tr><td><code>scenario reset</code></td><td>Reset all scenarios to their initial state</td></tr></tbody></table>
+<h3 id="record-record-traffic-from-a-real-backend"><code>record</code> — Record traffic from a real backend<a class="anchor" href="#record-record-traffic-from-a-real-backend" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>record start &lt;url&gt;</code></td><td>Start proxying + recording to TARGET_URL</td></tr><tr><td><code>record stop</code></td><td>Stop recording, return captured stubs</td></tr><tr><td><code>record status</code></td><td>Check if currently recording</td></tr><tr><td><code>record snapshot</code></td><td>Snapshot in-memory requests as stubs</td></tr></tbody></table>
+<h3 id="settings-global-server-settings"><code>settings</code> — Global server settings<a class="anchor" href="#settings-global-server-settings" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>settings get</code></td><td>Get current global WireMock settings</td></tr><tr><td><code>settings version</code></td><td>Show WireMock server version</td></tr></tbody></table>
+<h3 id="top-level-commands">Top-level commands<a class="anchor" href="#top-level-commands" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Check if WireMock is running</td></tr><tr><td><code>reset</code></td><td>Full reset: stubs + requests + scenarios</td></tr><tr><td><code>shutdown</code></td><td>Gracefully shut down the WireMock server</td></tr></tbody></table>
+<h2 id="key-examples">Key Examples<a class="anchor" href="#key-examples" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Check connectivity
+cli-anything-wiremock status
+
+# Create a stub using quick form
+cli-anything-wiremock stub quick GET /api/users 200 --body '[{&quot;id&quot;:1}]'
+
+# Create a stub using full JSON
+cli-anything-wiremock stub create '{
+  &quot;request&quot;: {&quot;method&quot;: &quot;POST&quot;, &quot;url&quot;: &quot;/api/orders&quot;},
+  &quot;response&quot;: {&quot;status&quot;: 201, &quot;body&quot;: &quot;{\&quot;id\&quot;:99}&quot;}
+}'
+
+# Verify a POST was made exactly once
+cli-anything-wiremock --json request count '{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/orders&quot;}'
+# → {&quot;count&quot;: 1}
+
+# Scenario: advance state
+cli-anything-wiremock scenario set &quot;cart-flow&quot; &quot;item-added&quot;
+
+# Record a real backend
+cli-anything-wiremock record start https://api.example.com
+# ... make requests ...
+cli-anything-wiremock record stop</code></pre>
+<h2 id="agent-guidance">Agent Guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
+<h3 id="always-use-json-in-agent-contexts">Always use <code>--json</code> in agent contexts<a class="anchor" href="#always-use-json-in-agent-contexts" aria-label="锚点">#</a></h3>
+<p>Use <code>--json</code> for all invocations in scripts or agent tool calls. JSON output varies by command type (these are distinct response types, not an envelope wrapping all responses):</p>
+<pre><code class="language-bash"># Data commands return raw WireMock API JSON directly:
+cli-anything-wiremock --json stub quick GET /api/hello 200 --body '{&quot;hello&quot;:&quot;world&quot;}'
+# → {&quot;id&quot;: &quot;abc-123&quot;, &quot;request&quot;: {...}, &quot;response&quot;: {...}, ...}
+
+cli-anything-wiremock --json stub list
+# → {&quot;mappings&quot;: [...], &quot;total&quot;: N}
+
+# Void commands (delete, reset, save) return:
+# → {&quot;status&quot;: &quot;ok&quot;}
+
+# Errors return:
+# → {&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;Connection refused&quot;}</code></pre>
+<h3 id="connection-via-environment">Connection via environment<a class="anchor" href="#connection-via-environment" aria-label="锚点">#</a></h3>
+<p>Set connection params via environment variables before calling any command:</p>
+<pre><code class="language-bash">export WIREMOCK_HOST=localhost
+export WIREMOCK_PORT=8080</code></pre>
+<h3 id="workflow-pattern-for-test-verification">Workflow pattern for test verification<a class="anchor" href="#workflow-pattern-for-test-verification" aria-label="锚点">#</a></h3>
+<ol><li>Set up stubs before running the system under test:</li></ol>
+<pre><code class="language-bash">   cli-anything-wiremock --json stub quick POST /api/payment 200 --body '{&quot;success&quot;:true}'</code></pre>
+<ol><li>Run the system under test.</li><li>Verify interactions:</li></ol>
+<pre><code class="language-bash">   cli-anything-wiremock --json request count '{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/payment&quot;}'</code></pre>
+<ol><li>Clean up:</li></ol>
+<pre><code class="language-bash">   cli-anything-wiremock reset</code></pre>
+<h3 id="error-handling">Error handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>
+<p>Non-zero exit code on all errors. In <code>--json</code> mode, errors return <code>{&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;...&quot;}</code>. Success returns the raw WireMock API response.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-videocaptioner/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-videocaptioner</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zoom/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-zoom</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-wiremock/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

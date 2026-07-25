@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>00INDEX 设计分类索引 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>00INDEX 设计分类索引</div>
+      <header class="hero reveal"><h1>00INDEX 设计分类索引</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#00-index-设计分类索引">00_INDEX 设计分类索引</a></li><li class="lvl-2"><a href="#一-分类内容边界">一、分类内容边界</a></li><li class="lvl-2"><a href="#二-文件清单">二、文件清单</a></li><li class="lvl-2"><a href="#三-已归档-已删除孤儿引擎">三、已归档（已删除孤儿引擎）</a></li><li class="lvl-2"><a href="#四-跨分类关联指引">四、跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="00-index-设计分类索引">00_INDEX 设计分类索引<a class="anchor" href="#00-index-设计分类索引" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>索引总领文件</strong> · 本目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章</p></blockquote>
+<h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
+<p>本目录（<code>docs/03_DESIGN_设计/</code>）收容<strong>架构与设计规范</strong>类文档：架构设计（ARCH）、协议、数学建模、治理规范、设计期提示词（OTHER）。<strong>不收</strong>实现报告（归 <code>04_IMPL_实现/</code>）、运维指南（归 <code>07_OPS_运维/</code>）。</p>
+<blockquote><p>注：<code>DESIGN-ARCH-026</code>、<code>DESIGN-ARCH-029</code> 历史遗留重号已治理——<code>khy-agent-sdk</code> 改 <code>DESIGN-ARCH-043</code>、<code>Agent自愈微循环</code> 改 <code>DESIGN-ARCH-044</code>，内部印记与外部引用已同步更新，全目录编号现唯一。</p></blockquote>
+<h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[DESIGN-ARCH-001] khy-移动智能体协议.md</td><td>移动智能体协议</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-002] Khyos-CB-SSP-数学建模与实现映射.md</td><td>CB-SSP数学建模</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-003] Khyos-数学重塑-受约束随机最短路径.md</td><td>受约束随机最短路径</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-004] _cbssp_progress.md</td><td>CB-SSP进度档</td><td>草稿</td></tr><tr><td>[DESIGN-ARCH-005] agentfs-智能体文件系统.md</td><td>智能体文件系统</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-006] ai-gateway-适配器协议架构.md</td><td>网关适配器协议</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-007] m1-微内核-ipc-moonbit.md</td><td>微内核IPC设计</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-008] moonbit-系统边界.md</td><td>MoonBit系统边界</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-009] 可视化拖拽工作流编辑器-2026-06-09.md</td><td>可视化工作流编辑</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-010] 核心架构.md</td><td>核心架构</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-011] 应用接入标准.md</td><td>应用接入标准</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-012] 工具延迟加载.md</td><td>工具延迟加载</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-013] 弱模型兼容.md</td><td>弱模型兼容</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-014] 模式图谱.md</td><td>模式图谱</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-015] 编码规范.md</td><td>编码规范</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-016] AI_Agent显示规范.md</td><td>Agent显示规范</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-017] 元工具系统设计.md</td><td>元工具系统</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-018] Agent提示词复用机制.md</td><td>提示词复用机制</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-019] 用户输入预处理规范.md</td><td>输入预处理规范</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-020] 架构债治理报告.md</td><td>架构债治理</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-021] 巨型环反转设计.md</td><td>巨型环反转</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-022] khyos多实例并发文件控制规范.md</td><td>多实例文件锁</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-023] khyos文档排版与格式控制规范.md</td><td>文档排版规范</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-025] khyos元规划协议与动态约束注入规范.md</td><td>元规划约束注入</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md</td><td>服务调用审批网关</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-027] Agent依赖自愈机制规范.md</td><td>依赖自愈机制</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-028] Agent通信防御-零静默失败与精准归因.md</td><td>通信防御零静默</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-029] Agent有限窗口降级与强制兜底执行协议.md</td><td>有限窗口降级兜底</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-030] 源端构建-目标机自愈运行.md</td><td>源端构建自愈部署</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-031] 网关日志租界隔离-按需可见与净味翻译.md</td><td>网关日志租界隔离</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-032] 内嵌MD工作台与跨平台右键集成.md</td><td>内嵌MD工作台右键集成</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-034] 动态自适应约束求解引擎.md</td><td>能力向量动态配约束</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-036] 万物结构化熔炉引擎.md</td><td>NL前置坍缩结构化</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-037] Khyos自举创世-需求内源发生器与闭环自愈引擎.md</td><td>自举创世闭环自愈</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-041] Khyos意图精准裁决-意图光谱解析与动态提权网关.md</td><td>意图光谱动态提权（已在产，见 GOVERNANCE-LEDGER）</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.md</td><td>agent-sdk对齐融合</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-044] Agent自愈微循环-诊断修复重试.md</td><td>自愈微循环</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-045] 非活跃通道生命周期治理-僵尸后台收回与日志越权阻断.md</td><td>非活跃通道僵尸治理</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-046] 聊天状态污染与回复截断治理-原子轮提交与空结果重试与截断信号保真.md</td><td>聊天污染与截断治理</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-047] 轨迹溯源标准-溯源信封与防篡改链与注入隔离.md</td><td>轨迹溯源与防投毒</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-048] khyos轨迹回放与确定性复现.md</td><td>轨迹回放确定性复现</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-049] 轨迹即教材-AI引导回放.md</td><td>轨迹即教材AI引导回放</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-051] 单人维护者健康驾驶舱.md</td><td>单人维护健康驾驶舱</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划-精准而非全知.md</td><td>任务驱动读取搜索范围规划</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-053] 命令与第三方应用输出折叠-几行预览与Ctrl+O展开.md</td><td>命令输出折叠与展开</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-054] AI逆向工程-从产物还原与自验软件.md</td><td>AI逆向工程还原自验</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-055] 对抗式训练-极端环境抗压自检与加固.md</td><td>对抗式训练抗压自检</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-056] khyos桌面操控-眼耳嘴与模拟操作.md</td><td>桌面操控眼耳嘴模拟操作</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-058] 细粒度权限策略与记忆主动化引擎.md</td><td>细粒度权限+记忆主动化</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-059] 能力即代码.md</td><td>能力即代码（学习落为可执行模块+测试+自动发现）</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-060] khy 功能接线与编排总图.md</td><td>接线五件套+编排主线切点图</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-061] 更新包学习-取其精华弃其糟粕.md</td><td>开源更新包只读甄别精华弃糟粕</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界.md</td><td>常驻/一次性/按需 三层 SSoT + 操作化 + 守卫</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS.md</td><td>书序架构阅读主线（书目录→khy 真源映射+术语对照）</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图.md</td><td>后端纵向逻辑关系图（一条消息下行路径·汇流点/单一出口/IoC 缝三骨架点）</td><td>定稿</td></tr><tr><td>[DESIGN-ARCH-065] Hermes Agent v0.18.0 参考学习-判断验证自我进化.md</td><td>Hermes v0.18.0 三支柱研究+gap 分析；落地 /goal 证据门（evidence-based completion）</td><td>定稿</td></tr><tr><td>[DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md</td><td>数学重塑提示词链</td><td>定稿</td></tr><tr><td>[DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md</td><td>分阶段防闪退提示</td><td>草稿</td></tr><tr><td>[DESIGN-OTHER-003] khy-系统提示词结构图.md</td><td>系统提示词结构图</td><td>定稿</td></tr><tr><td>[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.md</td><td>特性访问提示胶囊</td><td>定稿</td></tr></tbody></table>
+<h2 id="三-已归档-已删除孤儿引擎">三、已归档（已删除孤儿引擎）<a class="anchor" href="#三-已归档-已删除孤儿引擎" aria-label="锚点">#</a></h2>
+<p>下列设计稿对应的治理引擎经 2026-06-14「接线或删除」核实为 ORPHAN（三入口不可达），其实现已删除，<br>设计稿移入子目录 <code>_archive_已删除孤儿引擎/</code> 仅作历史留存，<strong>非在产</strong>：DESIGN-ARCH-024（marshal，<br>叶子 capabilityVector 仍在产）、033（dualTrack）、035（cognitiveSnapshot）、038（dualTrackForge）、<br>039（envSymbiosis）、040（dataSovereignty）、042（selfSustainingInfra）。</p>
+<ul><li>归档子索引：<code>_archive_已删除孤儿引擎/00_INDEX_已删除孤儿引擎归档.md</code>。</li><li>删除裁决与证据：<code>.ai/GOVERNANCE-LEDGER.md</code> §B.0；在产判据：<code>.ai/GUARDS-AI.md</code> §0。</li></ul>
+<h2 id="四-跨分类关联指引">四、跨分类关联指引<a class="anchor" href="#四-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li><li>设计的实现落地：<code>docs/04_IMPL_实现/</code>；验证：<code>docs/05_TEST_测试/</code>。</li><li>治理标准上位规范：<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.html"><div class="dir">← 上一篇</div><div class="ttl">Feature Access / Proxy Boundary 系统提示词 Capsule</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

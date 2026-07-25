@@ -1,0 +1,29 @@
+{
+  "format": "khy-source-snapshot",
+  "formatVersion": 1,
+  "layout": "git-archive",
+  "captureMode": "working-tree",
+  "includesUncommitted": true,
+  "dirty": true,
+  "archive": "khy-os-source.tar.gz.enc",
+  "plaintextFormat": "tar.gz",
+  "sha256": "df228e62002a72943129e1001e0c64093fd3bedccdf7b7fc4a6ee952d6e1e9e3",
+  "fileCount": 6830,
+  "version": "1.1.7",
+  "gitCommit": "9316ecc8bfb1522af69430cd6f99c6dba08b5ab4",
+  "createdAt": "2026-07-14T16:11:36.397Z",
+  "crypto": {
+    "algo": "aes-256-gcm",
+    "kdf": "scrypt",
+    "scrypt": {
+      "N": 16384,
+      "r": 8,
+      "p": 1,
+      "keylen": 32
+    },
+    "salt": "6ySjoOgMkmpvnQt/+1ryTQ==",
+    "iv": "PtKiiUb2np79NljH",
+    "authTag": "HVsAHsU8xJTJkNGJGEc+IA=="
+  },
+  "notes": "Encrypted archive of the WORKING TREE (tracked + uncommitted + untracked-not-ignored). Restore with `khy restore`."
+}

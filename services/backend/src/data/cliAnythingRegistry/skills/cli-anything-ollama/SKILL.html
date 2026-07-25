@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-ollama · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-ollama<span class="sep">›</span>cli-anything-ollama</div>
+      <header class="hero reveal"><h1>cli-anything-ollama</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-ollama">cli-anything-ollama</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#model">Model</a></li><li class="lvl-3"><a href="#generate">Generate</a></li><li class="lvl-3"><a href="#embed">Embed</a></li><li class="lvl-3"><a href="#server">Server</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#list-and-pull-models">List and Pull Models</a></li><li class="lvl-3"><a href="#generate-text">Generate Text</a></li><li class="lvl-3"><a href="#chat">Chat</a></li><li class="lvl-3"><a href="#embeddings">Embeddings</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#connect-to-remote-host">Connect to Remote Host</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-ollama&quot;<br>description: &gt;-<br>  Command-line interface for Ollama - Local LLM inference and model management via Ollama REST API. Designed for AI agents and power users who need to manage models, generate text, chat, and create embeddings without a GUI.</p>
+<hr>
+<h1 id="cli-anything-ollama">cli-anything-ollama<a class="anchor" href="#cli-anything-ollama" aria-label="锚点">#</a></h1>
+<p>Local LLM inference and model management via the Ollama REST API. Designed for AI agents and power users who need to manage models, generate text, chat, and create embeddings without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-ollama package:</p>
+<pre><code class="language-bash">pip install cli-anything-ollama</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>Ollama must be installed and running (<code>ollama serve</code>)</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-ollama --help
+
+# Start interactive REPL mode
+cli-anything-ollama
+
+# List available models
+cli-anything-ollama model list
+
+# Run with JSON output (for agent consumption)
+cli-anything-ollama --json model list</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-ollama
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="model">Model<a class="anchor" href="#model" aria-label="锚点">#</a></h3>
+<p>Model management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List locally available models</td></tr><tr><td><code>show</code></td><td>Show model details (parameters, template, license)</td></tr><tr><td><code>pull</code></td><td>Download a model from the Ollama library</td></tr><tr><td><code>rm</code></td><td>Delete a model from local storage</td></tr><tr><td><code>copy</code></td><td>Copy a model to a new name</td></tr><tr><td><code>ps</code></td><td>List models currently loaded in memory</td></tr></tbody></table>
+<h3 id="generate">Generate<a class="anchor" href="#generate" aria-label="锚点">#</a></h3>
+<p>Text generation and chat commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>text</code></td><td>Generate text from a prompt</td></tr><tr><td><code>chat</code></td><td>Send a chat completion request</td></tr></tbody></table>
+<h3 id="embed">Embed<a class="anchor" href="#embed" aria-label="锚点">#</a></h3>
+<p>Embedding generation commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>text</code></td><td>Generate embeddings for text</td></tr></tbody></table>
+<h3 id="server">Server<a class="anchor" href="#server" aria-label="锚点">#</a></h3>
+<p>Server status and info commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Check if Ollama server is running</td></tr><tr><td><code>version</code></td><td>Show Ollama server version</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session state commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr><tr><td><code>history</code></td><td>Show chat history for current session</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="list-and-pull-models">List and Pull Models<a class="anchor" href="#list-and-pull-models" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List available models
+cli-anything-ollama model list
+
+# Pull a model
+cli-anything-ollama model pull llama3.2
+
+# Show model details
+cli-anything-ollama model show llama3.2</code></pre>
+<h3 id="generate-text">Generate Text<a class="anchor" href="#generate-text" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Stream text (default)
+cli-anything-ollama generate text --model llama3.2 --prompt &quot;Explain quantum computing in one sentence&quot;
+
+# Non-streaming with JSON output (for agents)
+cli-anything-ollama --json generate text --model llama3.2 --prompt &quot;Hello&quot; --no-stream</code></pre>
+<h3 id="chat">Chat<a class="anchor" href="#chat" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Single-turn chat
+cli-anything-ollama generate chat --model llama3.2 --message &quot;user:What is Python?&quot;
+
+# Multi-turn chat
+cli-anything-ollama generate chat --model llama3.2 \
+  --message &quot;user:What is Python?&quot; \
+  --message &quot;user:How does it compare to JavaScript?&quot;
+
+# Chat from JSON file
+cli-anything-ollama generate chat --model llama3.2 --file messages.json</code></pre>
+<h3 id="embeddings">Embeddings<a class="anchor" href="#embeddings" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-ollama embed text --model nomic-embed-text --input &quot;Hello world&quot;
+cli-anything-ollama embed text --model nomic-embed-text --input &quot;Hello&quot; --input &quot;World&quot;</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session for exploratory use.</p>
+<pre><code class="language-bash">cli-anything-ollama
+# Enter commands interactively
+# Use 'help' to see available commands</code></pre>
+<h3 id="connect-to-remote-host">Connect to Remote Host<a class="anchor" href="#connect-to-remote-host" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-ollama --host http://192.168.1.100:11434 model list</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains lightweight session state:</p>
+<ul><li><strong>Current host URL</strong>: Configurable via <code>--host</code></li><li><strong>Chat history</strong>: Tracked for multi-turn conversations in REPL</li><li><strong>Last used model</strong>: Shown in REPL prompt</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-ollama model list
+
+# JSON output for agents
+cli-anything-ollama --json model list</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use <code>--no-stream</code></strong> for generate/chat to get complete responses</li><li><strong>Verify Ollama is running</strong> with <code>server status</code> before other commands</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.1</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obsidian/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-obsidian</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-openscreen/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-openscreen</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-ollama/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

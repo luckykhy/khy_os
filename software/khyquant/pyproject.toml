@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "khy-quant"
+version = "0.1.78"
+description = "KHY-Quant — AI-powered quantitative trading terminal"
+authors = [{name = "khy-qqb", email = "2578974124@qq.com"}]
+license = {text = "LicenseRef-Source-Available"}
+requires-python = ">=3.8"
+keywords = ["quant", "trading", "quantitative-finance", "ai", "backtest"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: JavaScript",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    "requests>=2.25.0",
+    "cffi>=1.15.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+data = [
+    "akshare>=1.12.0",
+    "pandas>=2.0.0,<3.0.0",
+    "numpy>=1.24.0,<3.0.0",
+]
+ml = [
+    "khy-quant[data]",
+    "scikit-learn==1.8.0",
+    "xgboost==3.2.0",
+    "lightgbm==4.6.0",
+    "joblib==1.5.3",
+    "scipy>=1.10.0",
+    "ta>=0.11.0",
+    "tqdm>=4.65.0",
+    "pyyaml>=6.0",
+    "loguru>=0.7.0",
+]
+full = ["khy-quant[data]", "khy-quant[ml]"]
+dev = ["build", "twine", "pytest"]
+
+[project.scripts]
+khyquant = "khy_quant.cli:main"
+khy-quant = "khy_quant.cli:main"
+
+# khyos 生态应用接入点：底座经 importlib.metadata 的 "khyos.apps" 组动态发现本应用。
+[project.entry-points."khyos.apps"]
+khyquant = "khy_quant.app:create_app"
+
+[project.urls]
+Homepage = "https://github.com/kodehu03/khy-os"
+Repository = "https://github.com/kodehu03/khy-os"
+
+[tool.setuptools]
+packages = ["khy_quant"]

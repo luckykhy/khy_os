@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-018] khyos Agent 提示词复用机制 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-018] khyos Agent 提示词复用机制</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-018] khyos Agent 提示词复用机制</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-018-khyos-agent-提示词复用机制">[DESIGN-ARCH-018] khyos Agent 提示词复用机制</a></li><li class="lvl-2"><a href="#0-目标与定位">0. 目标与定位</a></li><li class="lvl-2"><a href="#1-与现有提示词系统的边界-只加不改">1. 与现有提示词系统的边界（只加不改）</a></li><li class="lvl-2"><a href="#2-存储结构">2. 存储结构</a></li><li class="lvl-3"><a href="#2-1-物理布局-房屋风格对齐-arenaresultstore-js-utils-datahome">2.1 物理布局（房屋风格对齐 `arenaResultStore.js` + `utils/dataHome`）</a></li><li class="lvl-3"><a href="#2-2-配方-schema">2.2 配方 Schema</a></li><li class="lvl-3"><a href="#2-3-分词与签名-无分词器-零依赖">2.3 分词与签名（无分词器，零依赖）</a></li><li class="lvl-2"><a href="#3-检索逻辑">3. 检索逻辑</a></li><li class="lvl-3"><a href="#3-1-相似度-sørensen-dice-系数">3.1 相似度：Sørensen–Dice 系数</a></li><li class="lvl-3"><a href="#3-2-检索与排序">3.2 检索与排序</a></li><li class="lvl-2"><a href="#4-评估方法">4. 评估方法</a></li><li class="lvl-3"><a href="#4-1-效果分-computeeffectiveness-stats-0-1">4.1 效果分 `computeEffectiveness(stats) → 0..1`</a></li><li class="lvl-3"><a href="#4-2-效果信号来源-复用现有-零新增埋点">4.2 效果信号来源（复用现有，零新增埋点）</a></li><li class="lvl-3"><a href="#4-3-自动分类-classifycategory-tasktext">4.3 自动分类 `classifyCategory(taskText)`</a></li><li class="lvl-2"><a href="#5-集成点-agenticharnessservice-两处加法">5. 集成点（agenticHarnessService，两处加法）</a></li><li class="lvl-2"><a href="#6-防呆规则落地对照">6. 防呆规则落地对照</a></li><li class="lvl-2"><a href="#7-代码示例">7. 代码示例</a></li><li class="lvl-3"><a href="#7-1-存储-检索-promptreusestore-js-摘录">7.1 存储 + 检索（`promptReuseStore.js` 摘录）</a></li><li class="lvl-3"><a href="#7-2-复用推荐函数-promptreuseservice-js-摘录">7.2 复用推荐函数（`promptReuseService.js` 摘录）</a></li><li class="lvl-3"><a href="#7-3-集成-agenticharnessservice-run-摘录">7.3 集成（`agenticHarnessService.run()` 摘录）</a></li><li class="lvl-2"><a href="#8-环境开关一览">8. 环境开关一览</a></li><li class="lvl-2"><a href="#9-后续可扩展-非本期">9. 后续可扩展（非本期）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-018-khyos-agent-提示词复用机制">[DESIGN-ARCH-018] khyos Agent 提示词复用机制<a class="anchor" href="#design-arch-018-khyos-agent-提示词复用机制" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现并接入（v1）。配套代码见<br><code>services/backend/src/services/promptReuseStore.js</code>、<code>promptReuseService.js</code>，<br>集成点 <code>services/backend/src/services/agenticHarnessService.js</code>，<br>测试 <code>services/backend/tests/promptReuse.test.js</code>（Jest，17/17 绿）。</p></blockquote>
+<h2 id="0-目标与定位">0. 目标与定位<a class="anchor" href="#0-目标与定位" aria-label="锚点">#</a></h2>
+<p>让 Agent 在<strong>运行过程中自动发现并复用「被验证有效的提示词/任务打法」</strong>，而非依赖<br>静态预设。核心闭环：</p>
+<pre><code>新任务进入 ──▶ 检索历史相似任务的有效配方 ──▶ 作为「复用建议」前置给模型
+     ▲                                                      │
+     │                                                      ▼
+ 沉淀为可复用配方 ◀── 回收本次效果（成功率/耗时/反馈）◀── 任务执行完成</code></pre>
+<p>三条核心诉求与本设计的对应：</p>
+<table><thead><tr><th>诉求</th><th>落地方式</th></tr></thead><tbody><tr><td><strong>动态复用</strong></td><td>配方完全来自历史真实运行（<code>recordUsage</code> + <code>recordOutcome</code>），无任何静态预设清单。</td></tr><tr><td><strong>效果导向</strong></td><td>检索按「相似度 × 效果分」排序；效果分由成功率（贝叶斯平滑）+ 用户反馈合成。</td></tr><tr><td><strong>轻量集成</strong></td><td>仅在 Agent 执行 choke-point 做<strong>两处加法 hook</strong>；不触碰 <code>constants/prompts.js</code> 系统提示词装配，不改写任何现有提示词内容。</td></tr></tbody></table>
+<h2 id="1-与现有提示词系统的边界-只加不改">1. 与现有提示词系统的边界（只加不改）<a class="anchor" href="#1-与现有提示词系统的边界-只加不改" aria-label="锚点">#</a></h2>
+<p>现有系统提示词装配链（<strong>本机制绝不修改</strong>）：</p>
+<ul><li><code>constants/prompts.js</code> —— 系统提示词分节构造 + 意图门控引擎；</li><li><code>constants/systemPromptSections.js</code> —— 分节缓存与有序装配；</li><li><code>agents/prompt.js</code> / <code>agents/index.js</code> —— 子 Agent 提示词片段。</li></ul>
+<p>本机制是一条<strong>平行的附加链路</strong>：它沉淀的不是「系统提示词」，而是「历史上对某类任务<br>有效的打法/提示片段」。检索结果以显式 <code>[SYSTEM: 提示词复用建议 …]</code> 块<strong>前置到用户<br>消息</strong>，交给模型自行采纳或忽略，<strong>不混入、不改写</strong>既有提示词。</p>
+<h2 id="2-存储结构">2. 存储结构<a class="anchor" href="#2-存储结构" aria-label="锚点">#</a></h2>
+<h3 id="2-1-物理布局-房屋风格对齐-arenaresultstore-js-utils-datahome">2.1 物理布局（房屋风格对齐 <code>arenaResultStore.js</code> + <code>utils/dataHome</code>）<a class="anchor" href="#2-1-物理布局-房屋风格对齐-arenaresultstore-js-utils-datahome" aria-label="锚点">#</a></h3>
+<p>每个「配方（recipe）」一份 JSON：</p>
+<pre><code>&lt;KHY_DATA_HOME&gt;/prompts/recipes/{id}.json      # 经 getDataDir('prompts','recipes') 解析</code></pre>
+<p><code>id</code> = 任务签名 sha1 的前 16 位；文件名经路径穿越净化（<code>[^a-zA-Z0-9_-]</code> 剔除）。<br>轻量、可直接 <code>git</code>/备份/人工审阅，无需数据库。</p>
+<h3 id="2-2-配方-schema">2.2 配方 Schema<a class="anchor" href="#2-2-配方-schema" aria-label="锚点">#</a></h3>
+<pre><code class="language-jsonc">{
+  &quot;id&quot;: &quot;1fab17104c369c1d&quot;,          // 任务签名前 16 位
+  &quot;signature&quot;: &quot;1fab1710…&quot;,          // 归一化 token 排序后的 sha1（同任务去重键）
+  &quot;category&quot;: &quot;testing&quot;,             // 功能/场景分类（见 §4.3）
+  &quot;tokens&quot;: [&quot;登录&quot;, &quot;接口&quot;, &quot;jest&quot;, &quot;测试&quot;, &quot;...&quot;],  // 相似度匹配用的归一化 token 集
+  &quot;taskSamples&quot;: [&quot;给登录接口补充 Jest 单元测试&quot;, &quot;...&quot;],  // 原始任务样本（≤5，展示/二次匹配）
+  &quot;current&quot;:  { &quot;promptText&quot;: &quot;覆盖成功/401/参数校验三类用例。&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 },
+  &quot;versions&quot;: [                      // 版本历史，永不覆盖（防呆·保留）
+    { &quot;promptText&quot;: &quot;打法 A…&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 },
+    { &quot;promptText&quot;: &quot;覆盖成功/401/参数校验三类用例。&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 }
+  ],
+  &quot;stats&quot;: {
+    &quot;uses&quot;: 7, &quot;successes&quot;: 6, &quot;failures&quot;: 1,
+    &quot;avgDurationMs&quot;: 9000,
+    &quot;feedbackSum&quot;: 2, &quot;feedbackCount&quot;: 3,
+    &quot;createdAt&quot;: 0, &quot;lastUsedAt&quot;: 0, &quot;lastTraceId&quot;: &quot;…&quot;
+  },
+  &quot;effectiveness&quot;: 0.78              // 由 stats 派生缓存（saveRecipe 时重算）
+}</code></pre>
+<h3 id="2-3-分词与签名-无分词器-零依赖">2.3 分词与签名（无分词器，零依赖）<a class="anchor" href="#2-3-分词与签名-无分词器-零依赖" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>normalizeTokens(text)</code></strong>：英文按词；中文按<strong>相邻字符二元组（bigram）</strong>切分；去停用词</li></ul>
+<p>与超短 token。二元组在无中文分词器前提下显著提升相似度鲁棒性。</p>
+<ul><li><strong><code>signatureFor(text)</code></strong>：对归一化 token 集合<strong>排序后</strong>取 sha1。契约：<ul><li>同一任务文本 → 恒等签名（用于 <code>upsert</code> 去重，相同任务自然合并到一个配方）；</li><li>token 级语序无关（排序后哈希）。</li><li>注意：bigram 会跨词边界，故<strong>重排短语</strong>未必同签名——这正确，近似任务由检索的</li></ul></li></ul>
+<p>相似度兜底，签名只负责「同任务」精确合并。</p>
+<h2 id="3-检索逻辑">3. 检索逻辑<a class="anchor" href="#3-检索逻辑" aria-label="锚点">#</a></h2>
+<h3 id="3-1-相似度-sørensen-dice-系数">3.1 相似度：Sørensen–Dice 系数<a class="anchor" href="#3-1-相似度-sørensen-dice-系数" aria-label="锚点">#</a></h3>
+<pre><code>sim(A, B) = 2·|A ∩ B| / (|A| + |B|)        // A,B 为 token 集合，取值 0..1</code></pre>
+<p>选用 Dice 而非 Jaccard 的理由：对「短查询 vs 长历史任务」这类<strong>长度不对称</strong>文本更<br>宽容（召回更稳），而对几乎无交集的不相似任务仍趋近 0（不引入误推荐）。实测：</p>
+<table><thead><tr><th>查询 vs 历史</th><th>Dice</th></tr></thead><tbody><tr><td>「为登录接口写 jest 测试」 vs 「给登录接口补充 Jest 单元测试」</td><td><strong>0.476</strong>（命中）</td></tr><tr><td>「优化前端 CSS 动画性能」 vs 「给登录接口补充 Jest 单元测试」</td><td><strong>0.000</strong>（过滤）</td></tr></tbody></table>
+<h3 id="3-2-检索与排序">3.2 检索与排序<a class="anchor" href="#3-2-检索与排序" aria-label="锚点">#</a></h3>
+<p><code>retrieve(taskText, { threshold=0.35, limit=3, minUses=1, minEffectiveness=0 })</code>：</p>
+<ol><li>对每个配方计算 <code>sim</code>，<strong>剔除 <code>sim &lt; threshold</code></strong>（防呆·阈值，避免误推荐）；</li><li>过滤 <code>uses &lt; minUses</code>（未经验证的配方不推荐）与 <code>effectiveness &lt; minEffectiveness</code>；</li><li>综合排序分：<code>score = sim × (0.5 + 0.5 × effectiveness)</code></li></ol>
+<p>—— 相似度为主，效果为权；同相似度下高效配方排前；</p>
+<ol><li>取 Top-N 返回。</li></ol>
+<p>阈值与条数可经环境变量覆盖：<code>KHY_PROMPT_REUSE_THRESHOLD</code>、<code>KHY_PROMPT_REUSE_TOPK</code>。</p>
+<h2 id="4-评估方法">4. 评估方法<a class="anchor" href="#4-评估方法" aria-label="锚点">#</a></h2>
+<h3 id="4-1-效果分-computeeffectiveness-stats-0-1">4.1 效果分 <code>computeEffectiveness(stats) → 0..1</code><a class="anchor" href="#4-1-效果分-computeeffectiveness-stats-0-1" aria-label="锚点">#</a></h3>
+<pre><code>smoothed = (successes + 2·0.5) / (uses + 2)              // 贝叶斯平滑成功率，先验中性 0.5
+若无反馈:  effectiveness = smoothed
+否则:      fbScore = clamp01((mean(feedback) + 1) / 2)   // 反馈归一化 -1..1 → 0..1
+           w       = fbCount / (fbCount + 2)             // 反馈可信度随样本量上升
+           effectiveness = smoothed·(1−w) + fbScore·w</code></pre>
+<p>贝叶斯平滑的关键作用：<strong>抑制「1 次成功 = 100%」的小样本假象</strong>（<code>uses=1,success=1</code><br>仅得 ≈0.75，而非 1.0），让多次验证过的配方真正胜出。</p>
+<h3 id="4-2-效果信号来源-复用现有-零新增埋点">4.2 效果信号来源（复用现有，零新增埋点）<a class="anchor" href="#4-2-效果信号来源-复用现有-零新增埋点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>信号</th><th>来源</th></tr></thead><tbody><tr><td>任务成功/失败</td><td><code>agenticHarnessService</code> 的交付裁决 <code>deliveryVerdict.verdict !== 'fail'</code>（与现有交付/验证门同源）</td></tr><tr><td>耗时</td><td><code>harnessReport.durationMs</code></td></tr><tr><td>显式用户反馈</td><td>可选传入 <code>feedbackScore</code>（归一化 -1..1）；后续可桥接 <code>models/Feedback</code></td></tr></tbody></table>
+<h3 id="4-3-自动分类-classifycategory-tasktext">4.3 自动分类 <code>classifyCategory(taskText)</code><a class="anchor" href="#4-3-自动分类-classifycategory-tasktext" aria-label="锚点">#</a></h3>
+<p>基于关键词把任务归入有限类别（<code>testing</code> / <code>bugfix</code> / <code>refactor</code> / <code>docs</code> / <code>devops</code> /<br><code>api</code> / <code>frontend</code> / <code>data</code> / <code>feature</code> / <code>general</code>），与 <code>prompts.js</code> 意图引擎<strong>解耦</strong><br>（平行实现），仅用于本机制内部分桶与展示。</p>
+<h2 id="5-集成点-agenticharnessservice-两处加法">5. 集成点（agenticHarnessService，两处加法）<a class="anchor" href="#5-集成点-agenticharnessservice-两处加法" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Hook</th><th>位置</th><th>行为</th></tr></thead><tbody><tr><td><strong>检索/复用</strong></td><td><code>run()</code> 内 <code>effectiveUserMessage</code> 增强位（紧随 boulderState resume）</td><td><code>recommendForTask(userMessage)</code> 命中则把 <code>[SYSTEM:…]</code> 建议块前置；保持「<code>&lt;prefix&gt;\n\n&lt;userMessage&gt;</code>」单一分隔不变性（boulder 已变形时用单换行并入，避免破坏下游 <code>resumePrefix</code> 切片）；emit <code>prompt_reuse</code> 事件。</td></tr><tr><td><strong>效果回收</strong></td><td><code>run()</code> 收尾 <code>saveSessionTrace</code> 之后</td><td><code>captureOutcome({ taskText, success, durationMs, traceId })</code> 登记用法 + 回写效果。</td></tr></tbody></table>
+<p>两处<strong>均 best-effort</strong>：<code>require</code> 与调用全程 <code>try/catch</code>，任何异常静默降级，<strong>绝不阻断<br>任务、绝不崩 Agent</strong>。无历史数据时 <code>recommendForTask</code> 返回 <code>null</code>，零副作用、零噪音。</p>
+<h2 id="6-防呆规则落地对照">6. 防呆规则落地对照<a class="anchor" href="#6-防呆规则落地对照" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>防呆要求</th><th>落地</th></tr></thead><tbody><tr><td>复用需保留原提示词版本，避免覆盖</td><td><code>recordUsage</code> 对新 <code>promptText</code> <strong>追加</strong> <code>versions[]</code>，仅在哈希变化时新增；<code>MAX_VERSIONS</code> 只截最旧、永不丢最新。</td></tr><tr><td>检索需考虑相似度阈值，避免误推荐</td><td><code>retrieve</code> 强制 <code>sim ≥ threshold</code>（默认 0.35）；不相似任务 Dice≈0 必被过滤。</td></tr><tr><td>只添加复用机制，不改现有提示词内容/核心逻辑</td><td>新增两模块 + 两处加法 hook；不触碰 <code>constants/prompts.js</code>；建议块以独立 <code>[SYSTEM:…]</code> 前置，不混入既有提示词；效果信号复用现有交付裁决，无新增埋点。</td></tr><tr><td>健壮性</td><td>全链 <code>try/catch</code> 静默降级；损坏配方文件读取时跳过；env <code>KHY_PROMPT_REUSE=0</code> 一键整体停用。</td></tr></tbody></table>
+<h2 id="7-代码示例">7. 代码示例<a class="anchor" href="#7-代码示例" aria-label="锚点">#</a></h2>
+<h3 id="7-1-存储-检索-promptreusestore-js-摘录">7.1 存储 + 检索（<code>promptReuseStore.js</code> 摘录）<a class="anchor" href="#7-1-存储-检索-promptreusestore-js-摘录" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">// 登记一次「任务 → 有效提示词」用法（含版本保留）
+function recordUsage({ taskText, promptText, category, traceId }) {
+  const id = idFor(taskText);                 // = signatureFor(taskText).slice(0,16)
+  let recipe = loadRecipe(id);
+  const promptHash = promptText ? _sha1(promptText) : '';
+  if (!recipe) {
+    recipe = { id, /* … */ versions: promptText ? [{ promptText, hash: promptHash, createdAt: Date.now() }] : [],
+               current: promptText ? { promptText, hash: promptHash, createdAt: Date.now() } : null,
+               stats: { uses: 1, successes: 0, failures: 0, /* … */ } };
+  } else {
+    recipe.stats.uses += 1;
+    // 防呆·保留：promptText 变化 → 追加版本，绝不覆盖历史
+    if (promptText &amp;&amp; (!recipe.current || recipe.current.hash !== promptHash)) {
+      recipe.versions.push({ promptText, hash: promptHash, createdAt: Date.now() });
+      recipe.current = { promptText, hash: promptHash, createdAt: Date.now() };
+    }
+  }
+  saveRecipe(recipe);                          // saveRecipe 内重算 effectiveness
+  return { id, recipe };
+}
+
+// 检索：相似度阈值过滤 + 「相似度 × 效果」排序
+function retrieve(taskText, { threshold = 0.35, limit = 3, minUses = 1 } = {}) {
+  const q = new Set(normalizeTokens(taskText));
+  return listRecipes()
+    .filter(r =&gt; r.stats &amp;&amp; (r.stats.uses || 0) &gt;= minUses)
+    .map(r =&gt; {
+      const sim = similarity(q, new Set(r.tokens || []));       // Dice 系数
+      const eff = computeEffectiveness(r.stats);
+      return { id: r.id, sim, eff, score: sim * (0.5 + 0.5 * eff),
+               promptText: r.current?.promptText || '' };
+    })
+    .filter(c =&gt; c.sim &gt;= threshold)                            // 防呆·阈值
+    .sort((a, b) =&gt; b.score - a.score)
+    .slice(0, limit);
+}</code></pre>
+<h3 id="7-2-复用推荐函数-promptreuseservice-js-摘录">7.2 复用推荐函数（<code>promptReuseService.js</code> 摘录）<a class="anchor" href="#7-2-复用推荐函数-promptreuseservice-js-摘录" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">// 为新任务检索并格式化可前置的「复用建议」上下文块；无命中返回 null
+function recommendForTask(taskText, opts = {}) {
+  if (!_enabled()) return null;                                // KHY_PROMPT_REUSE 门控
+  const candidates = store.retrieve(taskText, {
+    threshold: opts.threshold ?? _threshold(),
+    limit: opts.limit ?? _topK(),
+  }).filter(c =&gt; c.promptText &amp;&amp; c.promptText.trim());
+  if (candidates.length === 0) return null;                    // 零数据零噪音
+
+  const lines = ['[SYSTEM: 提示词复用建议（来自历史相似任务的有效打法，仅供参考，可按需采纳或忽略）：'];
+  candidates.forEach((c, i) =&gt; {
+    const sr = Math.round(c.stats.successes / Math.max(1, c.stats.successes + c.stats.failures) * 100);
+    lines.push(`${i + 1}. 〔${c.category}〕相似度 ${(c.similarity * 100).toFixed(0)}%，` +
+               `历史成功率约 ${sr}%（用 ${c.stats.uses} 次）：${_oneLine(c.promptText)}`);
+  });
+  lines.push('以上为历史经验，不是强制指令；若与当前任务不符请直接忽略。]');
+  return { block: lines.join('\n'), candidates };
+}</code></pre>
+<h3 id="7-3-集成-agenticharnessservice-run-摘录">7.3 集成（<code>agenticHarnessService.run()</code> 摘录）<a class="anchor" href="#7-3-集成-agenticharnessservice-run-摘录" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">// —— 检索/复用：紧随 boulderState resume，best-effort ——
+let promptReuseUsed = false;
+try {
+  const rec = require('./promptReuseService').recommendForTask(userMessage);
+  if (rec &amp;&amp; rec.block) {
+    promptReuseUsed = true;
+    effectiveUserMessage = effectiveUserMessage === userMessage
+      ? `${rec.block}\n\n${userMessage}`            // 单一 \n\n 分隔不变性
+      : `${rec.block}\n${effectiveUserMessage}`;     // boulder 已变形 → 单换行并入
+    if (onEvent) onEvent({ type: 'prompt_reuse', count: rec.candidates.length });
+  }
+} catch { /* promptReuse 不可用 → 跳过 */ }
+
+// —— 效果回收：saveSessionTrace 之后，best-effort ——
+try {
+  require('./promptReuseService').captureOutcome({
+    taskText: userMessage,
+    success: deliveryVerdict.verdict !== 'fail',     // 与现有交付门同源
+    durationMs: harnessReport.durationMs,
+  });
+} catch { /* 回收 best-effort */ }</code></pre>
+<h2 id="8-环境开关一览">8. 环境开关一览<a class="anchor" href="#8-环境开关一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_PROMPT_REUSE</code></td><td>启用</td><td><code>0/false/off/no</code> → 整体停用（recommend=null，capture no-op）</td></tr><tr><td><code>KHY_PROMPT_REUSE_THRESHOLD</code></td><td><code>0.35</code></td><td>相似度阈值覆盖</td></tr><tr><td><code>KHY_PROMPT_REUSE_TOPK</code></td><td><code>2</code></td><td>推荐条数上限</td></tr><tr><td><code>KHY_DATA_HOME</code></td><td><code>~/.khy</code></td><td>配方存储根（经 <code>utils/dataHome</code>）</td></tr></tbody></table>
+<h2 id="9-后续可扩展-非本期">9. 后续可扩展（非本期）<a class="anchor" href="#9-后续可扩展-非本期" aria-label="锚点">#</a></h2>
+<ul><li>桥接 <code>models/Feedback</code> 显式评分自动回灌 <code>feedbackScore</code>；</li><li>向量化重排（接 <code>learningRetrieval</code> 的可选 embedding 通道）提升语义召回；</li><li>暴露 <code>khy prompts</code> CLI/REST：列出/审阅/删除/导出配方，人工策展高价值打法。</li></ul>
+<blockquote><p>TODO: [Prompt-Reuse-Unresolved] 当宿主侧提供统一的「任务有效 promptText 抽取」信号<br>（目前 <code>captureOutcome</code> 仅登记任务文本与效果，<code>promptText</code> 留待显式回填）后，可在收尾<br>自动从成功轨迹蒸馏可复用打法片段，进一步闭合「自动发现」。当前按防呆不做启发式猜测。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-017] 元工具系统设计.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 元工具系统设计（Meta-Tool / Tool-Forging）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-019] 用户输入预处理规范.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 用户输入预处理规范（Input Sanitization）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-018] Agent提示词复用机制.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

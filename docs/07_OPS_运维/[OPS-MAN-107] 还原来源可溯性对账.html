@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-107] 还原来源可溯性对账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-107] 还原来源可溯性对账</div>
+      <header class="hero reveal"><h1>[OPS-MAN-107] 还原来源可溯性对账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-107-还原来源可溯性对账">[OPS-MAN-107] 还原来源可溯性对账</a></li><li class="lvl-2"><a href="#这一层闭合什么-capturemode-includesuncommitted-是死字段">这一层闭合什么：captureMode / includesUncommitted 是死字段</a></li><li class="lvl-2"><a href="#判定档-来源诚实门-最保守优先-没有正面证据绝不谎称-clean">判定档：来源诚实门（最保守优先 · 没有正面证据绝不谎称 clean）</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族">恒久红线（继承全家族）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-107-还原来源可溯性对账">[OPS-MAN-107] 还原来源可溯性对账<a class="anchor" href="#ops-man-107-还原来源可溯性对账" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-provenance.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/restoreProvenance.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-capturemode-includesuncommitted-是死字段">这一层闭合什么：captureMode / includesUncommitted 是死字段<a class="anchor" href="#这一层闭合什么-capturemode-includesuncommitted-是死字段" aria-label="锚点">#</a></h2>
+<p>快照构建期 <code>makeSourceSnapshot.js</code> 忠实记录了这份快照是<strong>怎么捕获</strong>的：</p>
+<ul><li><code>captureMode: &quot;working-tree&quot; | &quot;HEAD&quot;</code> —— 从工作树打包，还是从某个提交 archive；</li><li><code>includesUncommitted: true | false</code> —— 是否含未提交改动（tracked 改动 + untracked）；</li><li><code>dirty: true | false</code> —— 捕获时工作树是否脏；</li><li><code>gitCommit: &quot;&lt;sha&gt;&quot;</code> —— 捕获时 HEAD 所在提交。</li></ul>
+<p>这些随 pip/npm 包送到陌生机器。但还原侧 <code>cli/handlers/publish.js</code> 的成功横幅<br><strong>只打印 <code>gitCommit</code></strong>（<code>commit 44a491fb · 目录布局原样</code>），<br><strong>从不读 <code>includesUncommitted</code> / <code>captureMode</code></strong>——<code>grep includesUncommitted</code> 在还原代码里<br><strong>零消费者</strong>。后果对维护者最毒：</p>
+<ul><li>真实 shipped 快照就是<strong>脏捕获</strong>（<code>captureMode=&quot;working-tree&quot;</code> · <code>includesUncommitted=true</code>）——</li></ul>
+<p>还原出来的源码 = 提交 <code>44a491fb</code> <strong>加上未提交增量</strong>，<strong>不等于</strong> <code>44a491fb</code> 这个干净提交；</p>
+<ul><li>但维护者在陌生机器上只看到横幅那句「commit 44a491fb · 目录布局原样」→ 合理地误判</li></ul>
+<p>「我还原的就是 44a491fb」→ 拿它去 <code>git diff 44a491fb</code> 看到一堆幻影差异、或把它当成<br>  「发布的那份代码」——全错，因为它比那个提交多了未提交的活儿。</p>
+<p><code>captureMode</code> / <code>includesUncommitted</code> 上游忠实记录、跨渠道送达、下游能读，却<strong>在还原时<br>无人据此向维护者澄清来源</strong> = 死字段（断桥）。本层就是那个缺失的消费者：把「这份还原源码<br>到底等于哪个 git 状态」从一句会误导的「commit X」，变成一次诚实的裁决。</p>
+<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json     # ① 格式看得懂吗？（105）
+khy restore ./Khy-OS                                     # ② 解密还原
+node scripts/restore-verify-complete.js ./Khy-OS --json  # ③ 文件数对得上吗？（095）
+node scripts/restore-provenance.js ./Khy-OS --json       # ④ 这源码到底等于哪个 git 状态？（本层）</code></pre>
+<h2 id="判定档-来源诚实门-最保守优先-没有正面证据绝不谎称-clean">判定档：来源诚实门（最保守优先 · 没有正面证据绝不谎称 clean）<a class="anchor" href="#判定档-来源诚实门-最保守优先-没有正面证据绝不谎称-clean" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象</td><td><code>unverifiable</code>：无从判断来源</td><td>✗</td></tr><tr><td>2</td><td>无 <code>gitCommit</code></td><td><code>no-provenance</code>：没记录任何提交，无从溯源</td><td>✗</td></tr><tr><td>3</td><td><code>includesUncommitted===true</code> 或 <code>dirty===true</code></td><td><code>dirty</code>：== 提交 X + 未提交增量，<strong>不等于干净提交</strong></td><td>✗</td></tr><tr><td>4</td><td>HEAD 归档，或 working-tree 且 <code>includesUncommitted===false</code></td><td><code>clean</code>：可证 == 提交 X</td><td>✓</td></tr><tr><td>5</td><td>有提交、非脏，但无正面 clean 证据</td><td><code>indeterminate</code>：保守，不臆断 clean</td><td>✗</td></tr></tbody></table>
+<ul><li><code>ok===true</code> <strong>仅当</strong> <code>status===clean</code>（还原源码可证等于某个干净提交）——「简单还原」里最强的一档：</li></ul>
+<p>维护者可以放心把它当成「就是那个提交」。</p>
+<ul><li><code>--json</code> 在非 <code>clean</code> 时<strong>退出码 2</strong>：陌生机器上的自驱 agent 据此<strong>不把还原源码当作发布快照</strong>。</li><li><strong>只披露不阻拦</strong>：<code>dirty</code> 是<strong>合法且完整</strong>的还原（内容一字不缺），只是不等于干净提交——</li></ul>
+<p>本层把「静默误导」变成「诚实标注」，不改变还原本身的成败。</p>
+<h2 id="恒久红线-继承全家族">恒久红线（继承全家族）<a class="anchor" href="#恒久红线-继承全家族" aria-label="锚点">#</a></h2>
+<ul><li>没有正面 clean 证据绝不谎称 <code>clean</code>：任何脏 / 不确定 / 缺来源 → <code>ok:false</code>，诚实披露。</li><li><code>ok===true</code> 仅当 <code>status === clean</code>；其余一律 <code>ok:false</code>。</li><li>叶子纯计算、零 IO、绝不抛；真正读 <code>snapshot.json</code> 的 IO 在 CLI 里、fail-soft。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-108] 还原归档形制可提取性对账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-107] 还原来源可溯性对账.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

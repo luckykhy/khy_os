@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑯ 什么是 Harness（智能体运行骨架） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑯ 什么是 Harness（智能体运行骨架）</div>
+      <header class="hero reveal"><h1>⑯ 什么是 Harness（智能体运行骨架）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑯-什么是-harness-智能体运行骨架">⑯ 什么是 Harness（智能体运行骨架）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要-harness-大模型是-缸里的大脑">二、为什么需要 Harness？——大模型是&quot;缸里的大脑&quot;</a></li><li class="lvl-2"><a href="#三-核心比喻-给大脑装一身-机甲外骨骼">三、核心比喻：给大脑装一身&quot;机甲外骨骼&quot;</a></li><li class="lvl-3"><a href="#比喻一-钢铁侠的战甲">比喻一：钢铁侠的战甲</a></li><li class="lvl-3"><a href="#比喻二-坐在轮椅上指挥的-军师-与替他跑腿的-亲兵">比喻二：坐在轮椅上指挥的&quot;军师&quot;与替他跑腿的&quot;亲兵&quot;</a></li><li class="lvl-2"><a href="#四-harness-到底在忙什么-一轮循环里的五件事">四、Harness 到底在忙什么？——一轮循环里的五件事</a></li><li class="lvl-2"><a href="#五-harness-还悄悄干了两件-脏活">五、Harness 还悄悄干了两件&quot;脏活&quot;</a></li><li class="lvl-3"><a href="#脏活一-管住-记忆的容量-上下文管理">脏活一：管住&quot;记忆的容量&quot;（上下文管理）</a></li><li class="lvl-3"><a href="#脏活二-守住-安全的闸门-权限与确认">脏活二：守住&quot;安全的闸门&quot;（权限与确认）</a></li><li class="lvl-2"><a href="#六-感觉一下-harness-就是那段-主程序">六、感觉一下：Harness 就是那段&quot;主程序&quot;</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-是-ai-在读我的文件-跑我的命令">误区 1：以为&quot;是 AI 在读我的文件、跑我的命令&quot;</a></li><li class="lvl-3"><a href="#误区-2-以为-harness-就是那个大模型">误区 2：以为 Harness 就是那个大模型</a></li><li class="lvl-3"><a href="#误区-3-以为-harness-越-聪明-越好">误区 3：以为 Harness 越&quot;聪明&quot;越好</a></li><li class="lvl-3"><a href="#误区-4-以为-tool-loop-和-harness-是一回事">误区 4：以为 Tool Loop 和 Harness 是一回事</a></li><li class="lvl-3"><a href="#误区-5-以为换个更强的模型就够了-harness-无所谓">误区 5：以为换个更强的模型就够了，harness 无所谓</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-把你自己想象成-harness-替-缸中大脑-跑一趟腿">实验：把你自己想象成 Harness，替&quot;缸中大脑&quot;跑一趟腿</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑯-什么是-harness-智能体运行骨架">⑯ 什么是 Harness（智能体运行骨架）<a class="anchor" href="#⑯-什么是-harness-智能体运行骨架" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a>、<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 什么是 Tool Loop</a> 和 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM</a>。那几篇讲了&quot;大模型会接龙&quot;&quot;助理会自己用工具&quot;&quot;反复用工具直到完成&quot;。这一篇要回答一个你可能一直没想通的问题：<strong>大模型自己明明只会&quot;吐字&quot;，那到底是谁在替它读文件、跑命令、把结果再喂回去？谁在管那个&quot;反复&quot;的循环？</strong> 答案，就是本篇的主角——<strong>Harness（运行骨架）</strong>。它就是 <strong>Khy-OS 这个项目本身的真身</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>Harness = 包在大模型外面、让它能真正&quot;干活&quot;的那层运行骨架（外壳 + 循环 + 手脚）。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>大模型是&quot;缸里的大脑&quot;——它只会想、会说，却没有手、没有眼、没有脚。Harness 就是给这颗大脑接上眼睛、双手和双脚，再推着它一圈圈把活干完的那套&quot;外骨骼&quot;。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>&quot;Harness&quot;这个词看着陌生，其实你天天在用它——你用的 Khy-OS、别人用的 Claude Code、Cursor，<strong>这些工具本身就是 harness</strong>。大模型（比如 GPT、Claude）是别人训练好的&quot;大脑&quot;，可大脑光会说话没用啊：它说&quot;我要读 README 文件&quot;，谁去读？它说&quot;帮我跑一下测试&quot;，谁去跑？是 harness！Harness 就是那个<strong>听懂大脑的话、真的伸手去干、再把结果回报给大脑</strong>的<span class="popover" tabindex="0"><span class="popover-anchor">外壳程序</span><span class="popover-tip" role="tooltip">它是一段真实的软件——Khy-OS 就是用 Node.js 写的——不是模型的一部分，而是把模型&quot;包&quot;起来用的那层程序</span></span>。这一篇不需要你懂任何代码，抓住&quot;给大脑装身体&quot;这个画面就行～ 🐣</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">Agent</a> 是&quot;会自己拿主意的助理&quot;这个概念，<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 是&quot;反复用工具&quot;这套流程——而 Harness，是把这两者真正落地成一个能跑的程序的那个&quot;身体&quot;。</strong></p>
+<hr>
+<h2 id="二-为什么需要-harness-大模型是-缸里的大脑">二、为什么需要 Harness？——大模型是&quot;缸里的大脑&quot;<a class="anchor" href="#二-为什么需要-harness-大模型是-缸里的大脑" aria-label="锚点">#</a></h2>
+<p>要理解 harness 的价值，先得看清一个很多人没意识到的真相：<strong>大模型本身，什么都干不了。</strong></p>
+<p><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a> 那一篇讲过，大模型的本事就一样：<strong>给它一段文字，它接着往下吐字。</strong> 就这么点能力。它：</p>
+<ul><li><strong>看不见</strong>你的文件——它没有眼睛；</li><li><strong>动不了</strong>你的键盘、跑不了任何命令——它没有手；</li><li><strong>记不住</strong>上一句话之外的事，除非你把上下文再喂给它——它没有长期记忆；</li><li>甚至<strong>不知道现在几点</strong>——它只是个&quot;文字接龙&quot;引擎。</li></ul>
+<p>打个比方：大模型就像科幻片里那个<strong>泡在营养液缸里的大脑</strong>——它绝顶聪明，能思考、能对话，可它没有身体。你问它&quot;窗外天气如何&quot;，它只能凭空猜，因为它<strong>没有眼睛去看、没有腿走到窗边</strong>。</p>
+<pre class="mermaid">flowchart LR
+  BRAIN[&quot;🧠 大模型&lt;br/&gt;（缸里的大脑）&lt;br/&gt;只会：读一段字 → 接着吐字&quot;]
+  BRAIN -.-&gt;|&quot;想读文件？&lt;br/&gt;没有眼睛 ❌&quot;| X1[&quot;📄 你的文件&quot;]
+  BRAIN -.-&gt;|&quot;想跑命令？&lt;br/&gt;没有手 ❌&quot;| X2[&quot;⌨️ 你的电脑&quot;]
+  BRAIN -.-&gt;|&quot;想记住进度？&lt;br/&gt;没有记忆 ❌&quot;| X3[&quot;📌 上一步的结果&quot;]</pre>
+<p>那么问题来了：既然大模型只会吐字，我们平时用的 AI 编程助手，怎么就能<strong>真的帮我们读文件、改代码、跑测试</strong>了呢？</p>
+<p><strong>答案就是 harness。</strong> Harness 是包在大脑外面的一套&quot;外骨骼&quot;，它给这颗大脑装上了：眼睛（读文件的能力）、双手（执行命令的能力）、记忆（管理上下文）、还有一个不知疲倦的&quot;监工&quot;（推动循环一圈圈跑）。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 外骨骼[&quot;🦾 Harness（外骨骼 / 运行骨架）&quot;]
+    EYE[&quot;👁️ 眼睛&lt;br/&gt;读文件&quot;]
+    HAND[&quot;✋ 双手&lt;br/&gt;跑命令 / 改文件&quot;]
+    MEM[&quot;📌 记忆&lt;br/&gt;管上下文&quot;]
+    LOOP[&quot;🔁 监工&lt;br/&gt;推动循环&quot;]
+  end
+  BRAIN[&quot;🧠 大模型&lt;br/&gt;（只会吐字）&quot;]
+  外骨骼 &lt;--&gt;|&quot;来回对话&quot;| BRAIN
+  外骨骼 &lt;--&gt; WORLD[&quot;🌍 真实世界&lt;br/&gt;你的文件 / 电脑 / 网络&quot;]</pre>
+<p><strong>没有 harness，大模型就是个只会聊天的&quot;缸中大脑&quot;；套上 harness，它才变成能真正干活的&quot;智能体&quot;（Agent）。</strong> 这，就是为什么需要 harness。</p>
+<hr>
+<h2 id="三-核心比喻-给大脑装一身-机甲外骨骼">三、核心比喻：给大脑装一身&quot;机甲外骨骼&quot;<a class="anchor" href="#三-核心比喻-给大脑装一身-机甲外骨骼" aria-label="锚点">#</a></h2>
+<p>&quot;运行骨架&quot;这个词太抽象，用两个你在电影里见过的画面就能彻底焊死这个概念。</p>
+<h3 id="比喻一-钢铁侠的战甲">比喻一：钢铁侠的战甲<a class="anchor" href="#比喻一-钢铁侠的战甲" aria-label="锚点">#</a></h3>
+<p>托尼·斯塔克（钢铁侠）本人，聪明绝顶，可肉身也就是个普通人——扛不住子弹、飞不上天。真正让他能上天入地的，是那身<strong>战甲</strong>：战甲有推进器（腿）、有机械臂（手）、有平视显示器（眼睛和仪表盘）、有中控 AI 管着这一切。</p>
+<p><strong>大模型 = 托尼本人（聪明的大脑）；Harness = 那身战甲（让聪明能真正使出来的身体）。</strong> 脱了战甲，再聪明也只是个凡人；穿上战甲，才是钢铁侠。</p>
+<h3 id="比喻二-坐在轮椅上指挥的-军师-与替他跑腿的-亲兵">比喻二：坐在轮椅上指挥的&quot;军师&quot;与替他跑腿的&quot;亲兵&quot;<a class="anchor" href="#比喻二-坐在轮椅上指挥的-军师-与替他跑腿的-亲兵" aria-label="锚点">#</a></h3>
+<p>想象一位运筹帷幄的军师，脑子里全是妙计，可他腿脚不便，出不了帐篷。他身边有个亲兵：军师说&quot;去看看城墙有没有破损&quot;，亲兵就跑去看，回来禀报；军师说&quot;传令三营向左&quot;，亲兵就跑去传令，再回来复命。军师<strong>只负责想、只负责下令</strong>；亲兵<strong>负责真的跑腿、真的动手、再把结果如实回报</strong>。</p>
+<p><strong>大模型 = 军师（只想、只下令）；Harness = 亲兵（真跑腿、真动手、真回报，还一趟趟往返直到事成）。</strong></p>
+<pre class="mermaid">flowchart TB
+  subgraph 一次来回[&quot;🔁 军师与亲兵的一次来回（就是一轮 Tool Loop）&quot;]
+    M1[&quot;🧠 军师（大模型）：&lt;br/&gt;'去读一下 README'&quot;] --&gt; H1[&quot;🏃 亲兵（Harness）：&lt;br/&gt;真的跑去读文件&quot;]
+    H1 --&gt; H2[&quot;📄 亲兵拿到文件内容&lt;br/&gt;回来禀报军师&quot;]
+    H2 --&gt; M2[&quot;🧠 军师：'发现错别字，&lt;br/&gt;把它改掉'&quot;]
+    M2 --&gt; H3[&quot;🏃 亲兵：真的动手改文件&lt;br/&gt;再回来复命&quot;]
+  end</pre>
+<p>两个比喻的<strong>共同内核</strong>：<strong>聪明的那一方（大脑/军师）只负责&quot;想和说&quot;，身体的那一方（战甲/亲兵）负责&quot;真的去做、并把结果带回来&quot;。</strong> 记住这一点，harness 是什么就再也不会忘。</p>
+<hr>
+<h2 id="四-harness-到底在忙什么-一轮循环里的五件事">四、Harness 到底在忙什么？——一轮循环里的五件事<a class="anchor" href="#四-harness-到底在忙什么-一轮循环里的五件事" aria-label="锚点">#</a></h2>
+<p>把 harness 拆开看，它在每一轮里其实就忙五件事，环环相扣。这五件事，正好把前面几篇的概念都串了起来。</p>
+<table><thead><tr><th>步骤</th><th>Harness 干的活</th><th>大白话</th><th>对应哪一篇概念</th></tr></thead><tbody><tr><td><strong>① 组装</strong></td><td>把你的话 + 历史 + 可用工具清单，拼成一段完整的提示词发给模型</td><td>亲兵把&quot;战况简报&quot;整理好递给军师</td><td><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt</a> / <a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ Context</a></td></tr><tr><td><strong>② 接话</strong></td><td>收到模型吐出的字，判断它是想&quot;说话&quot;还是想&quot;用工具&quot;</td><td>听懂军师这句是闲聊还是下令</td><td><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a></td></tr><tr><td><strong>③ 动手</strong></td><td>如果模型要用工具，<strong>真的去执行</strong>（读文件、跑命令……）</td><td>亲兵真的跑去干那件事</td><td><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a></td></tr><tr><td><strong>④ 回喂</strong></td><td>把工具执行的结果，塞回给模型，让它接着想下一步</td><td>亲兵把结果如实回报军师</td><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td></tr><tr><td><strong>⑤ 判停</strong></td><td>判断&quot;任务到底完没完&quot;——没完就回到①再转一圈，完了就收工</td><td>亲兵判断&quot;还要不要再跑一趟&quot;</td><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td></tr></tbody></table>
+<p>把这五步连起来，就是 harness 的&quot;心跳&quot;——一个转不停的圈：</p>
+<pre class="mermaid">flowchart TB
+  YOU[&quot;🙋 你：给个目标&lt;br/&gt;'修好这个 bug'&quot;] --&gt; ASSEMBLE
+  subgraph 心跳[&quot;🔁 Harness 的一轮心跳&quot;]
+    ASSEMBLE[&quot;① 组装提示词&lt;br/&gt;（你的话 + 历史 + 工具清单）&quot;] --&gt; ASK[&quot;② 发给大模型&lt;br/&gt;收它吐出的字&quot;]
+    ASK --&gt; JUDGE{{&quot;② 它是想说话&lt;br/&gt;还是想用工具？&quot;}}
+    JUDGE --&gt;|&quot;想用工具&quot;| RUN[&quot;③ 真的去执行工具&lt;br/&gt;（读文件 / 跑命令）&quot;]
+    RUN --&gt; FEED[&quot;④ 把结果回喂给模型&quot;]
+    FEED --&gt; DONE{{&quot;⑤ 任务完成了吗？&quot;}}
+    DONE --&gt;|&quot;没完，再转一圈&quot;| ASSEMBLE
+  end
+  JUDGE --&gt;|&quot;只是说话/收工&quot;| REPLY
+  DONE --&gt;|&quot;完成了&quot;| REPLY[&quot;✅ 把最终结果&lt;br/&gt;回给你&quot;]</pre>
+<p>看懂这张图，你就看懂了<strong>你每次用 Khy-OS 时，屏幕背后到底在发生什么</strong>：不是模型自己在读你的文件——是 harness 在读，读完喂给模型，模型说&quot;下一步这么办&quot;，harness 再去办。<strong>大模型负责决策，harness 负责一切&quot;真实的动作&quot;和&quot;把圈转起来&quot;。</strong></p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>你可能一直以为&quot;是 AI 在读我的文件、跑我的命令&quot;。真相是：<strong>AI（大模型）从头到尾一个字节都没碰过你的电脑</strong>——所有真实动作，都是 harness 这个程序替它做的。模型只是在&quot;出主意&quot;。想通这一层，你对 AI 助手的理解就上了一个台阶。</p></div></aside>
+<hr>
+<h2 id="五-harness-还悄悄干了两件-脏活">五、Harness 还悄悄干了两件&quot;脏活&quot;<a class="anchor" href="#五-harness-还悄悄干了两件-脏活" aria-label="锚点">#</a></h2>
+<p>除了上面那个主循环，一个成熟的 harness（比如 Khy-OS）还默默扛着两件又重要、又容易被忽略的活。</p>
+<h3 id="脏活一-管住-记忆的容量-上下文管理">脏活一：管住&quot;记忆的容量&quot;（上下文管理）<a class="anchor" href="#脏活一-管住-记忆的容量-上下文管理" aria-label="锚点">#</a></h3>
+<p><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ Context 与 Token</a> 讲过，大模型的&quot;记忆窗口&quot;是有限的，装满了就会&quot;忘事&quot;。可一个复杂任务，来来回回几十轮，历史越堆越长，迟早撑爆窗口。</p>
+<p><strong>是 harness 在替你操心这件事</strong>：它会决定&quot;哪些旧对话可以压缩、哪些必须留着&quot;，在窗口快满时<strong>把前面的过程总结成摘要</strong>，腾出空间让任务能继续走下去。你能连续干一个大活儿而不是刚聊几句就&quot;失忆&quot;，全靠 harness 在背后管理这块记忆。</p>
+<h3 id="脏活二-守住-安全的闸门-权限与确认">脏活二：守住&quot;安全的闸门&quot;（权限与确认）<a class="anchor" href="#脏活二-守住-安全的闸门-权限与确认" aria-label="锚点">#</a></h3>
+<p>大模型有时会&quot;想当然&quot;地说&quot;把这个文件夹删了吧&quot;。如果直接照做，可能就闯祸了。</p>
+<p><strong>Harness 是那道闸门</strong>：危险的动作（删文件、跑一条能改动系统的命令、往外网发数据），它会<strong>先停下来问你一句&quot;确定吗？&quot;</strong>，得到你点头才继续。这道&quot;人来把关&quot;的闸门，正是 harness 的安全底线——它让&quot;AI 自动干活&quot;不至于变成&quot;AI 闯祸没人拦&quot;。</p>
+<pre class="mermaid">flowchart LR
+  MODEL[&quot;🧠 模型说：&lt;br/&gt;'把 build 文件夹删了'&quot;] --&gt; GATE{{&quot;🚦 Harness 闸门：&lt;br/&gt;这动作危险吗？&quot;}}
+  GATE --&gt;|&quot;危险（删文件）&quot;| ASKYOU[&quot;🙋 停下来问你：&lt;br/&gt;'确定要删吗？'&quot;]
+  ASKYOU --&gt;|&quot;你点头 ✅&quot;| GO[&quot;执行&quot;]
+  ASKYOU --&gt;|&quot;你拒绝 ❌&quot;| STOP[&quot;不执行，回报模型&quot;]
+  GATE --&gt;|&quot;安全（只是读文件）&quot;| GO</pre>
+<blockquote><p>⚠️ 这一节很重要：<strong>AI 助手&quot;安全不安全&quot;，很大程度上不取决于模型本身，而取决于外面这层 harness 的闸门设计得好不好。</strong> 一个好的 harness，会在&quot;让 AI 自由发挥&quot;和&quot;别让它闯祸&quot;之间守住平衡。</p></blockquote>
+<hr>
+<h2 id="六-感觉一下-harness-就是那段-主程序">六、感觉一下：Harness 就是那段&quot;主程序&quot;<a class="anchor" href="#六-感觉一下-harness-就是那段-主程序" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段极简伪代码你完全不用会写、不用看懂每一行。</strong> 放它在这，只是让你<strong>亲眼看一下</strong>——harness 的核心，其实就是一个&quot;转圈&quot;的主程序。请你只体会一件事：<strong>模型（<code>ask_model</code>）只被&quot;问&quot;、只负责&quot;出主意&quot;；真正&quot;动手&quot;（<code>run_tool</code>）和&quot;转圈&quot;（<code>while</code>）的，全是 harness 这段程序。</strong></p>
+<pre><code class="language-python"># 这就是一个 harness 最核心的骨架——一个&quot;转圈&quot;的主程序
+history = [你的目标]                      # ① 一开始，历史里只有你的目标
+
+while True:                              # 🔁 转圈：一轮一轮来
+    reply = ask_model(history)          # ② 把历史发给大模型，收它的回话
+    history.append(reply)
+
+    if reply.想用工具:                    # ③ 模型说它想用某个工具？
+        result = run_tool(reply.工具)    #    ← harness 真的去执行！（模型碰不到这一步）
+        history.append(result)          # ④ 把结果塞回历史，喂给模型
+        # 回到 while 顶部，再转一圈
+    else:                               # ⑤ 模型不再要工具了 = 任务做完
+        break                           #    收工，把 reply 回给你
+
+回给你(reply)</code></pre>
+<p>看到那个 <code>while True</code> 了吗？<strong>那就是 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 的真身</strong>——harness 靠这个圈，推着模型&quot;用工具→看结果→再决定&quot;，一圈圈直到任务完成。而 <code>run_tool(...)</code> 那一行，就是 harness 那双&quot;真的会动手&quot;的手。</p>
+<p><strong>整段程序里，<code>ask_model</code> 只是&quot;问一句&quot;，其余全是 harness 的活。</strong> 这就是为什么我们说：<strong>Khy-OS（一个 harness）才是那个真正在&quot;干活&quot;的主体，大模型只是被它反复请教的&quot;军师&quot;。</strong></p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">既然真正干活的是 harness，那大模型岂不是可有可无？（点一下翻到背面）<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">恰恰相反——两者缺一不可，是<strong>黄金搭档</strong>：harness 有手有脚有循环，却<strong>没脑子</strong>（它不知道&quot;下一步该干嘛&quot;，那得靠模型的判断）；大模型绝顶聪明会决策，却<strong>没手没脚</strong>（它动不了你的电脑）。Harness 提供&quot;身体和循环&quot;，大模型提供&quot;大脑和决策&quot;。就像战甲再强也得有托尼来穿，托尼再聪明也得有战甲才能上天——<strong>身体 + 大脑，合起来才是一个能干活的智能体（Agent）。</strong></div></div></div>
+<p>把那段&quot;转圈主程序&quot;演成一幕小短剧——重点看模型只动嘴出主意，真正动手和转圈的全是 harness：</p>
+<div class="scene"><div class="scene-title">军师与亲兵：出主意的和真动手的，不是同一个</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>帮我看看 config.json 里端口配的是多少。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🦾</span><div class="scene-bubble"><b class="scene-who">Harness</b>（把你的目标放进历史，开始转圈）我先把历史递给模型，问它下一步干嘛。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">模型（军师）</b>要回答这个，得读 config.json。我不能自己读——我只能&quot;说&quot;我想读。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🦾</span><div class="scene-bubble"><b class="scene-who">Harness</b>收到。模型说想用&quot;读文件&quot;工具——那<strong>我</strong>真的去执行（模型碰不到这一步）。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🦾</span><div class="scene-bubble"><b class="scene-who">Harness</b>读完了，把文件内容塞回历史，再喂给模型。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">模型（军师）</b>看到了，里面写着 &quot;port&quot;: 8080。信息够了，不用再动工具。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🦾</span><div class="scene-bubble"><b class="scene-who">Harness</b>模型这轮不要工具了 = 任务做完，跳出循环，把结论回给你。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">✅</span><div class="scene-bubble"><b class="scene-who">Harness</b>config.json 里端口配的是 8080。</div></div><div class="scene-caption reveal">模型只&quot;问一句、出主意&quot;，<span class="popover" tabindex="0"><span class="popover-anchor">真的动手和转圈的全是 harness</span><span class="popover-tip" role="tooltip">ask_model 只负责出主意，run_tool 和 while 循环全是 harness——身体+大脑合起来才是能干活的 Agent</span></span>——这就是 harness 的真身。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;harness&quot;这个概念的理解跑偏。</p>
+<h3 id="误区-1-以为-是-ai-在读我的文件-跑我的命令">误区 1：以为&quot;是 AI 在读我的文件、跑我的命令&quot;<a class="anchor" href="#误区-1-以为-是-ai-在读我的文件-跑我的命令" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我让 Claude Code / Khy-OS 改代码，是那个 AI 大模型亲自在操作我的电脑。</li><li>✅ <strong>正确理解</strong>：<strong>大模型从没碰过你的电脑。</strong> 它只会吐字（比如吐出&quot;我想读 README.md&quot;）。真正去读文件、跑命令、改代码的，是外面这层 <strong>harness 程序</strong>。模型出主意，harness 干活——分工分明。</li></ul>
+<h3 id="误区-2-以为-harness-就是那个大模型">误区 2：以为 Harness 就是那个大模型<a class="anchor" href="#误区-2-以为-harness-就是那个大模型" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：Khy-OS、Cursor 这些工具，是不是就等于里面的那个 AI 模型？</li><li>✅ <strong>正确理解</strong>：<strong>是两码事。</strong> 大模型（GPT、Claude 等）是别人训练好的&quot;大脑&quot;，通常通过网络接口调用。Harness（Khy-OS）是<strong>包在模型外面、运行在你这边</strong>的一整套程序——它决定怎么组装提示词、有哪些工具可用、怎么管上下文、怎么把关安全。<strong>同一个模型，配不同的 harness，用起来能天差地别。</strong></li></ul>
+<h3 id="误区-3-以为-harness-越-聪明-越好">误区 3：以为 Harness 越&quot;聪明&quot;越好<a class="anchor" href="#误区-3-以为-harness-越-聪明-越好" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：好的 harness 是不是应该自己也很&quot;智能&quot;、自己会思考？</li><li>✅ <strong>正确理解</strong>：<strong>Harness 恰恰不需要&quot;聪明&quot;，它需要&quot;可靠&quot;。</strong> 思考交给模型；harness 要做的是<strong>稳、准、安全</strong>：准确地执行工具、老实地回喂结果、稳当地管好上下文、严格地守住安全闸门。一个&quot;自作聪明&quot;乱改模型意图的 harness，反而是灾难。<strong>大脑要灵，身体要稳。</strong></li></ul>
+<h3 id="误区-4-以为-tool-loop-和-harness-是一回事">误区 4：以为 Tool Loop 和 Harness 是一回事<a class="anchor" href="#误区-4-以为-tool-loop-和-harness-是一回事" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 和 harness 好像都在讲&quot;反复干活&quot;，是不是同一个东西？</li><li>✅ <strong>正确理解</strong>：<strong>Tool Loop 是&quot;那个循环&quot;这套流程；Harness 是&quot;跑这个循环的整个程序&quot;。</strong> 关系是：<strong>Tool Loop 是 harness 的心跳，但 harness 不止有心跳</strong>——它还管组装提示词、管上下文、守安全闸门。可以说：<strong>Harness ⊃ Tool Loop</strong>（循环是骨架的一部分，骨架比循环更大）。</li></ul>
+<h3 id="误区-5-以为换个更强的模型就够了-harness-无所谓">误区 5：以为换个更强的模型就够了，harness 无所谓<a class="anchor" href="#误区-5-以为换个更强的模型就够了-harness-无所谓" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：只要模型够强，harness 随便写写都行吧？</li><li>✅ <strong>正确理解</strong>：<strong>再强的大脑，也要靠身体才能使出来。</strong> 同一个顶级模型，配一个糟糕的 harness（工具给得少、上下文管得烂、安全没把关），体验会很差甚至危险；配一个精心设计的 harness，才能把模型的能力完整、安全地发挥出来。<strong>Khy-OS 这类项目的全部价值，正在于把这层&quot;身体&quot;做好。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于 Harness 的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">大模型只负责&quot;出主意&quot;，真正读文件、跑命令的是 harness 这层程序</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">Harness 就是那个大语言模型本身</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">C</span><span class="quiz-text">Tool Loop（工具循环）是 harness 的核心心跳，但 harness 干的活不止这个循环</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">D</span><span class="quiz-text">Harness 会在危险动作（如删文件）前停下来问你，这是它的安全闸门</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">E</span><span class="quiz-text">只要模型够强，harness 写得好不好无所谓</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。模型从没碰过你的电脑，所有真实动作都由 harness 替它执行。<br>错。模型是&quot;大脑&quot;（别人训练好的），harness 是包在外面、运行在你这边的整套程序（比如 Khy-OS）。<br>对。Harness 还管组装提示词、管上下文容量、守安全闸门——循环只是它的一部分。<br>对。人来把关的闸门，是 harness 的安全底线。<br>错。再强的大脑也要靠身体才能使出来；同一个模型配不同 harness，体验能天差地别。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如在脑子里走一遍流程。下面的思想实验不用写代码，只用想。</p>
+<h3 id="实验-把你自己想象成-harness-替-缸中大脑-跑一趟腿">实验：把你自己想象成 Harness，替&quot;缸中大脑&quot;跑一趟腿<a class="anchor" href="#实验-把你自己想象成-harness-替-缸中大脑-跑一趟腿" aria-label="锚点">#</a></h3>
+<p>假设有位绝顶聪明但<strong>看不见、动不了</strong>的军师（大模型）坐在帐中，你是他唯一的亲兵（harness）。他给你的任务是：&quot;帮我确认 <code>README.md</code> 里没有错别字，有就改掉。&quot; <strong>跟着流程一步步走，每一步都留意：哪些是军师做的（想），哪些是你做的（真动手）。</strong></p>
+<pre class="mermaid">flowchart TB
+  S1[&quot;① 你把任务简报递给军师&lt;br/&gt;（组装提示词）&quot;] --&gt; S2[&quot;🧠 军师：'先去读 README'&quot;]
+  S2 --&gt; S3[&quot;🏃 你真的跑去读文件&lt;br/&gt;（执行工具）&quot;]
+  S3 --&gt; S4[&quot;📄 你把内容回报军师&lt;br/&gt;（回喂结果）&quot;]
+  S4 --&gt; S5[&quot;🧠 军师：'第 3 行有个错别字，改掉'&quot;]
+  S5 --&gt; S6[&quot;🏃 你真的动手改文件&quot;]
+  S6 --&gt; S7[&quot;🧠 军师：'再读一遍确认'&quot;]
+  S7 --&gt; S8[&quot;🏃 你再读一遍，回报'没错别字了'&quot;]
+  S8 --&gt; S9[&quot;🧠 军师：'任务完成'&quot;]
+  S9 --&gt; DONE[&quot;✅ 你把结果回给用户&quot;]</pre>
+<p>走完这一遍，请你回答自己三个问题：</p>
+<ol><li>军师（模型）<strong>亲手碰过文件吗</strong>？——没有。他只是一直在&quot;想和下令&quot;。</li><li>每一次&quot;真的读、真的改&quot;，是谁干的？——<strong>是你，亲兵（harness）。</strong></li><li>那个&quot;读→改→再读确认&quot;的<strong>循环</strong>，是谁在推动？——<strong>也是你（harness）</strong>，你判断&quot;还要不要再跑一趟&quot;。</li></ol>
+<p><strong>关键体会</strong>：你刚刚在脑子里，亲手当了一回 harness。你会发现，<strong>harness 一点都不&quot;智能&quot;——它只是忠实、可靠地跑腿和转圈</strong>。而正是这份&quot;忠实可靠的跑腿&quot;，让一个动不了的聪明大脑，变成了真能把事办成的智能体。这，就是 harness 的全部精髓。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>Harness 不是一个孤立的词，它更像是<strong>把前面所有概念&quot;装在一起、跑起来&quot;的那个容器</strong>。</p>
+<pre class="mermaid">flowchart TB
+  HARNESS[&quot;🦾 Harness（运行骨架 / Khy-OS 本体）&quot;]
+  LLM[&quot;🧠 LLM 大模型&lt;br/&gt;（被 harness 请教的大脑）&quot;]
+  TC[&quot;✋ Tool Calling&lt;br/&gt;（harness 替模型执行的动作）&quot;]
+  TL[&quot;🔁 Tool Loop&lt;br/&gt;（harness 的核心心跳）&quot;]
+  CTX[&quot;📌 Context/Token&lt;br/&gt;（harness 要管好的记忆容量）&quot;]
+  AGENT[&quot;🤖 Agent&lt;br/&gt;（大脑+身体合体后的成品）&quot;]
+  HARNESS --&gt;|&quot;反复请教&quot;| LLM
+  HARNESS --&gt;|&quot;真正执行&quot;| TC
+  HARNESS --&gt;|&quot;内含&quot;| TL
+  HARNESS --&gt;|&quot;负责管理&quot;| CTX
+  LLM --&gt;|&quot;套上 harness 就成了&quot;| AGENT
+  HARNESS --&gt;|&quot;套上模型就成了&quot;| AGENT</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>大模型 <strong>+ harness = 一个能干活的 Agent</strong></td><td>托尼 + 战甲 = 钢铁侠</td></tr><tr><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a></td><td>Harness 反复请教的那个&quot;大脑&quot;</td><td>军师（只想、只下令）</td></tr><tr><td><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a></td><td>模型想用工具，<strong>真正去执行的是 harness</strong></td><td>亲兵真的跑去干那件事</td></tr><tr><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td><td>Tool Loop 是 harness 的<strong>核心心跳</strong></td><td>亲兵一趟趟往返直到事成</td></tr><tr><td><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ Context 与 Token</a></td><td>Harness 负责在窗口快满时<strong>压缩、管理记忆</strong></td><td>帮军师把厚厚的战报缩成简报</td></tr><tr><td><a href="./[CONCEPT-04]%20什么是MCP-模型上下文协议.html">④ MCP</a></td><td>Harness 通过 MCP 这个标准插座<strong>给模型接更多工具</strong></td><td>给战甲加装新的外接武器</td></tr></tbody></table>
+<p>一句话串起来：<strong>大模型是大脑，工具是手脚，工具循环是心跳，上下文是记忆——而 harness，就是把这一切装配在一起、通上电、让它真正&quot;活&quot;起来跑动的那副身体。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>这一节，是这整篇文档里<strong>和你手上项目关系最紧、最该记牢</strong>的一节：</p>
+<p><strong>Khy-OS 本身，就是一个 harness。</strong></p>
+<p>你正在用、正在学、正在维护的这个 Khy-OS，它不是一个大模型——它是<strong>包在大模型外面的那层运行骨架</strong>。它干的，正是这篇文档从头讲到尾的那些活：</p>
+<ul><li>它用 <strong>Node.js</strong> 写成，跑在你的机器上（模型跑在远端，通过网络请求调用）；</li><li>它把你的话、历史、可用工具<strong>组装成提示词</strong>发给模型；</li><li>模型说&quot;我要用某个工具&quot;，<strong>是 Khy-OS 真的去读文件、跑命令、改代码</strong>；</li><li>它把结果<strong>回喂</strong>给模型，靠 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 一圈圈推进；</li><li>它管着<strong>上下文容量</strong>（窗口快满就压缩），守着<strong>安全闸门</strong>（危险动作先问你）。</li></ul>
+<p>所以，当你翻看 Khy-OS 的源码时，你看到的<strong>几乎全是 harness 的实现</strong>——那些&quot;网关&quot;&quot;工具循环&quot;&quot;会话管理&quot;&quot;权限确认&quot;的代码，就是这副&quot;外骨骼&quot;的一根根骨头。</p>
+<blockquote><p>💡 换个角度说：<strong>你学 Khy-OS，本质上就是在学&quot;一个真实的 harness 是怎么造出来的&quot;。</strong> 这也正是它作为你&quot;入行 AI 第一个项目&quot;的珍贵之处——市面上很多人只会&quot;调用大模型 API&quot;，而你从第一天起，摸的就是<strong>整副身体的骨架</strong>。这幅地图你踩熟了，再看任何一个 AI 编程助手（Claude Code、Cursor……），你都能一眼看穿它&quot;身体里&quot;在干什么。</p></blockquote>
+<blockquote><p>⚠️ 诚实说一句边界：不同 harness 的具体做法（怎么管上下文、给哪些工具、怎么设计闸门）各有讲究，Khy-OS 的具体实现细节，属于设计与实现层面，你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 目录里深入了解。本文只讲&quot;harness 是什么、为什么需要它&quot;这一层概念地图。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>Harness = 包在大模型外面、让它能真正&quot;干活&quot;的那层运行骨架</strong>——给&quot;缸中大脑&quot;装上眼睛、双手、记忆和一个推动循环的监工。</li><li><strong>为什么需要它</strong>：大模型只会&quot;接龙吐字&quot;，看不见文件、动不了电脑、记不住进度；harness 给它接上了身体，才让它从&quot;会聊天的大脑&quot;变成&quot;能干活的智能体&quot;。</li><li><strong>核心比喻</strong>：钢铁侠的<strong>战甲</strong>（让聪明的托尼能上天入地）/ 替军师跑腿的<strong>亲兵</strong>（军师只想只下令，亲兵真跑腿真回报）。</li><li><strong>一轮里的五件事</strong>：① 组装提示词 → ② 接话判断（说话还是用工具）→ ③ 真的执行工具 → ④ 回喂结果 → ⑤ 判停（没完再转一圈）。</li><li><strong>两件脏活</strong>：管好<strong>上下文容量</strong>（窗口满了就压缩）、守住<strong>安全闸门</strong>（危险动作先问你）。</li><li><strong>黄金搭档</strong>：harness 有身体没脑子，模型有脑子没身体——<strong>身体 + 大脑 = 一个能干活的 Agent</strong>，缺一不可。</li><li><strong>五大误区</strong>：不是 AI 在碰你电脑（是 harness）、harness ≠ 模型、harness 要<strong>可靠不要自作聪明</strong>、Tool Loop 只是 harness 的一部分、再强的模型也要靠好 harness 才能发挥。</li><li><strong>和 Khy-OS 的关系</strong>：<strong>Khy-OS 本身就是一个 harness</strong>——你学它、维护它，就是在学&quot;一副真实的运行骨架是怎么造出来的&quot;。</li></ul>
+<p>🎉 <strong>恭喜，你摸到了整个 AI 编程助手的&quot;骨架&quot;！</strong> 从此你再用任何 AI 助手，都能看穿：屏幕背后，是一层 harness 在替一颗&quot;缸中大脑&quot;跑腿、转圈、把关——而 Khy-OS，就是这样一副你可以亲手拆开来看的骨架。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。</p>
+<p>👈 上一篇 <a href="./[CONCEPT-15]%20什么是PyTorch-深度学习框架.html">⑮ 什么是 PyTorch</a>——回顾一下模型是用什么&quot;电动工具&quot;造出来的。</p>
+<p>👉 下一篇 <a href="./[CONCEPT-17]%20什么是YOLO-实时目标检测.html">⑰ 什么是 YOLO（实时目标检测）</a>——换个领域，看看 AI 是怎么&quot;一眼&quot;看清一张图里所有东西的。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-15] 什么是PyTorch-深度学习框架.html"><div class="dir">← 上一篇</div><div class="ttl">⑮ 什么是 PyTorch（深度学习框架）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-17] 什么是YOLO-实时目标检测.html"><div class="dir">下一篇 →</div><div class="ttl">⑰ 什么是 YOLO（实时目标检测）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-16] 什么是Harness-智能体运行骨架.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

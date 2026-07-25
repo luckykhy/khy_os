@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>㉙ 什么是 API 与 SDK · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>㉙ 什么是 API 与 SDK</div>
+      <header class="hero reveal"><h1>㉙ 什么是 API 与 SDK</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#㉙-什么是-api-与-sdk">㉙ 什么是 API 与 SDK</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-用生活比喻理解">二、用生活比喻理解</a></li><li class="lvl-3"><a href="#比喻一-餐厅点菜-最经典的-api-比喻">比喻一：餐厅点菜（最经典的 API 比喻）</a></li><li class="lvl-3"><a href="#比喻二-sdk-是-会帮你点菜的私人助理">比喻二：SDK 是&quot;会帮你点菜的私人助理&quot;</a></li><li class="lvl-3"><a href="#比喻三-插座-api-与充电器套装-sdk">比喻三：插座（API）与充电器套装（SDK）</a></li><li class="lvl-2"><a href="#三-核心比喻延伸-为什么会有-api-这层-约定">三、核心比喻延伸：为什么会有 API 这层&quot;约定&quot;</a></li><li class="lvl-2"><a href="#四-灵魂-api-的三要素-你只需盯住这三样">四、灵魂：API 的三要素——你只需盯住这三样</a></li><li class="lvl-2"><a href="#五-api-vs-sdk-到底该用哪个">五、API vs SDK：到底该用哪个？</a></li><li class="lvl-2"><a href="#六-感觉一下-从-手写-http-到-一行-sdk-的演进">六、感觉一下：从&quot;手写 HTTP&quot;到&quot;一行 SDK&quot;的演进</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-api-是某种-高深的编程语言">误区 1：以为 API 是某种&quot;高深的编程语言&quot;</a></li><li class="lvl-3"><a href="#误区-2-以为用了-sdk-就不用懂-api">误区 2：以为用了 SDK 就不用懂 API</a></li><li class="lvl-3"><a href="#误区-3-把-api-key-当普通字符串到处贴">误区 3：把 API Key 当普通字符串到处贴</a></li><li class="lvl-3"><a href="#误区-4-以为-接口-和-api-是两个东西">误区 4：以为&quot;接口&quot;和&quot;API&quot;是两个东西</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="㉙-什么是-api-与-sdk">㉙ 什么是 API 与 SDK<a class="anchor" href="#㉙-什么是-api-与-sdk" aria-label="锚点">#</a></h1>
+<blockquote><p>先读<a href="./00_INDEX_概念入门-总览.html">概念入门总览</a>会更顺。这一篇讲两个你<strong>一动手就绕不开</strong>的词：<strong>API</strong> 和 <strong>SDK</strong>。读完你会明白：为什么你调用 AI、接入任何服务，都是在跟这两样东西打交道——它们是你和&quot;别人写好的能力&quot;之间的<strong>插座</strong>和<strong>工具箱</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>API = 一份&quot;怎么跟我说话&quot;的约定；SDK = 一箱&quot;帮你照着约定说话&quot;的现成工具。</strong></p>
+<ul><li><strong>API（Application Programming Interface，应用程序接口）</strong>：别人把一个能力（比如&quot;生成一段文字&quot;&quot;查天气&quot;）开了一个<strong>固定的入口</strong>，并写清楚&quot;你按什么格式发请求、我就按什么格式还你结果&quot;。这份<strong>约定本身</strong>，就是 API。</li><li><strong>SDK（Software Development Kit，软件开发工具包）</strong>：一堆<strong>已经封装好</strong>的代码库，替你把&quot;拼请求、发网络、解结果&quot;这些脏活都干了。你只要 <code>import</code> 进来、调一个函数，底下它自己去按 API 约定跟服务器交涉。</li></ul>
+<p>一句话点破：<strong>API 是&quot;规矩&quot;，SDK 是&quot;替你守规矩的帮手&quot;。</strong> 没有 SDK 你也能用 API（自己手写 HTTP 请求），有了 SDK 只是更省事。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>那我调用 Claude、调用一个大模型，用的是 API 还是 SDK？——两个都在用！你 <code>import anthropic</code>（SDK），然后 <code>client.messages.create(...)</code>（SDK 的函数）——但这个函数底下，正是在按 Anthropic 的 <span class="popover" tabindex="0"><span class="popover-anchor">REST API</span><span class="popover-tip" role="tooltip">一种最常见的 API 风格：用网址+HTTP 方法收发 JSON</span></span> 约定，往服务器发一个 HTTPS 请求。SDK 是<strong>壳</strong>，API 是<strong>壳里那份约定</strong>。</p></div></aside>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：同样是&quot;调用别人的能力&quot;，API 和 SDK 到底谁包着谁？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ SDK 包着 API。API 是最底层那份&quot;发什么、回什么&quot;的网络约定（谁都能按它手写请求）；SDK 是别人替你把这份约定封装成现成函数的工具箱。你调 SDK 的一个函数，它内部就替你发了一次符合 API 约定的请求。</div></div></div>
+<hr>
+<h2 id="二-用生活比喻理解">二、用生活比喻理解<a class="anchor" href="#二-用生活比喻理解" aria-label="锚点">#</a></h2>
+<h3 id="比喻一-餐厅点菜-最经典的-api-比喻">比喻一：餐厅点菜（最经典的 API 比喻）<a class="anchor" href="#比喻一-餐厅点菜-最经典的-api-比喻" aria-label="锚点">#</a></h3>
+<p>你去餐厅，不会冲进后厨自己炒菜。你看<strong>菜单</strong>、告诉<strong>服务员</strong>&quot;要一份宫保鸡丁&quot;，过一会儿菜就上来了。</p>
+<ul><li><strong>菜单 + 点菜规矩</strong> = <strong>API</strong>：它规定了&quot;你能点什么、怎么点、会得到什么&quot;。你不用知道后厨怎么炒，只要照菜单点。</li><li><strong>后厨</strong> = 服务提供方的内部实现：对你完全<strong>黑盒</strong>，怎么实现是它的事。</li><li>你<strong>不能乱点</strong>：菜单上没有的、或点法不对（&quot;来一份还没发明的菜&quot;），服务员会拒绝——这就是 API 的<strong>参数校验和报错</strong>。</li></ul>
+<h3 id="比喻二-sdk-是-会帮你点菜的私人助理">比喻二：SDK 是&quot;会帮你点菜的私人助理&quot;<a class="anchor" href="#比喻二-sdk-是-会帮你点菜的私人助理" aria-label="锚点">#</a></h3>
+<p>如果每次点菜你都要用一种<strong>外语</strong>、按一套复杂话术跟服务员说，很烦。于是你雇了个<strong>私人助理（SDK）</strong>：你只对助理说一句&quot;我要宫保鸡丁&quot;，助理自动翻译成标准话术、去跟服务员交涉、把菜端回你面前。</p>
+<ul><li>你说的那句大白话 = <strong>调用 SDK 的一个函数</strong>。</li><li>助理替你说的那套标准外语 = <strong>底层真正发出的 API 请求</strong>。</li><li>助理<strong>不改变菜单</strong>（API 能点什么还是什么），它只是让你<strong>点得更省心</strong>。</li></ul>
+<h3 id="比喻三-插座-api-与充电器套装-sdk">比喻三：插座（API）与充电器套装（SDK）<a class="anchor" href="#比喻三-插座-api-与充电器套装-sdk" aria-label="锚点">#</a></h3>
+<ul><li><strong>API = 墙上的插座标准</strong>：规定了插孔形状、电压。任何电器只要符合标准就能插上取电。</li><li><strong>SDK = 配好的充电器 + 各种转接头</strong>：你不用自己接线，拿起对应的头一插就能用。</li></ul>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 划重点</div><p>把这三条记死，你就再也不会混：<strong>API 是约定（能点什么、怎么点、回什么）；SDK 是替你照约定干活的工具箱；调 SDK 函数 = 底下发了一次 API 请求。</strong> 面试被问&quot;你调大模型用的什么&quot;，答&quot;用官方 SDK 调它的 REST API&quot;就很专业。</p></div></aside>
+<hr>
+<h2 id="三-核心比喻延伸-为什么会有-api-这层-约定">三、核心比喻延伸：为什么会有 API 这层&quot;约定&quot;<a class="anchor" href="#三-核心比喻延伸-为什么会有-api-这层-约定" aria-label="锚点">#</a></h2>
+<p>想象没有 API 会怎样：每个人想用别人的能力，都得<strong>先看懂对方全部内部代码</strong>，再想办法接进去。对方一改代码，你就崩。</p>
+<p>API 的伟大之处，就是立了一堵<strong>&quot;墙&quot;</strong>：</p>
+<ul><li>墙<strong>内</strong>：服务方随便改实现（换语言、换数据库、优化性能），只要墙上的&quot;入口约定&quot;不变。</li><li>墙<strong>外</strong>：你只认这个约定，对方内部怎么翻天覆地，与你无关。</li></ul>
+<p>这堵墙叫<strong>&quot;接口契约&quot;</strong>。它让<strong>亿万开发者能同时用同一个能力，而互不干扰、互不需要认识</strong>。整个互联网就是靠无数 API 拼起来的。</p>
+<pre class="mermaid">flowchart LR
+  YOU[&quot;👦 你的程序&quot;] --&gt;|&quot;按约定发请求&lt;br/&gt;(API 契约)&quot;| WALL[&quot;🧱 接口墙&quot;]
+  WALL --&gt;|&quot;转交&quot;| IMPL[&quot;🏭 服务方内部实现&lt;br/&gt;(黑盒，随便改)&quot;]
+  IMPL --&gt;|&quot;结果&quot;| WALL
+  WALL --&gt;|&quot;按约定回结果&quot;| YOU
+  SDK[&quot;🧰 SDK&lt;br/&gt;(替你拼请求/解结果)&quot;] -.封装.-&gt; WALL</pre>
+<hr>
+<h2 id="四-灵魂-api-的三要素-你只需盯住这三样">四、灵魂：API 的三要素——你只需盯住这三样<a class="anchor" href="#四-灵魂-api-的三要素-你只需盯住这三样" aria-label="锚点">#</a></h2>
+<p>不管多复杂的 API，你实际要关心的永远是这三样：</p>
+<ol><li><strong>入口（Endpoint）</strong>：往哪个网址发。比如 <code>https://api.example.com/v1/chat</code>。</li><li><strong>入参（Request）</strong>：发什么。通常是一段 <strong>JSON</strong>，规定了必填字段（如 <code>model</code>、<code>messages</code>）。</li><li><strong>出参（Response）</strong>：回什么。也通常是 JSON，你从里面取出要的字段（如 <code>text</code>）。</li></ol>
+<p>再加两个&quot;钥匙和回执&quot;：</p>
+<ul><li><strong>鉴权（Auth）</strong>：大多数 API 要带一把 <strong>API Key</strong>（身份令牌），证明&quot;你是谁、有没有权限&quot;。<strong>这把 key 是密钥，绝不能写死进代码或提交到 git</strong>——这也是 Khy-OS 的一条红线。</li><li><strong>状态码（Status）</strong>：<code>200</code> 成功、<code>401</code> 没权限、<code>429</code> 太频繁、<code>500</code> 服务方崩了。看到报错先看状态码，能省一半排查时间。</li></ul>
+<aside class="callout callout-warn reveal"><div class="callout-mascot" aria-hidden="true">🦉</div><div class="callout-body"><div class="callout-title">⚠️ 要小心</div><p>新手最容易踩的坑：<strong>把 API Key 硬编码进源码，然后 push 到公开仓库。</strong> 密钥一旦泄露，别人就能拿你的账号花钱、调你的额度。正确做法：key 只放 <span class="popover" tabindex="0"><span class="popover-anchor">环境变量</span><span class="popover-tip" role="tooltip">写在 .env 或系统 env 里、运行时才读、绝不进代码库</span></span> 里，运行时注入。记住：<strong>代码可以开源，钥匙永远不能。</strong></p></div></aside>
+<hr>
+<h2 id="五-api-vs-sdk-到底该用哪个">五、API vs SDK：到底该用哪个？<a class="anchor" href="#五-api-vs-sdk-到底该用哪个" aria-label="锚点">#</a></h2>
+<p>这是新手最纠结的选择。一句话:<strong>能用官方 SDK 就用 SDK，只有 SDK 不支持你的语言/场景时才手写 API 请求。</strong></p>
+<table><thead><tr><th></th><th><strong>直接调 API（手写请求）</strong></th><th><strong>用 SDK（现成工具箱）</strong></th></tr></thead><tbody><tr><td>像什么</td><td>自己说外语点菜</td><td>请助理替你点菜</td></tr><tr><td>要写的代码</td><td>多：手拼 URL、拼 JSON、发 HTTP、解结果、处理重试</td><td>少：<code>import</code> 进来，调一个函数</td></tr><tr><td>灵活度</td><td><strong>最高</strong>：任何 API 都能调，不挑语言</td><td>受限：只有官方出了 SDK 的语言/功能才有</td></tr><tr><td>出错概率</td><td>高（容易拼错格式、漏字段）</td><td>低（SDK 帮你校验、给类型提示）</td></tr><tr><td>适合谁</td><td>没 SDK、或要极致控制、或调冷门接口</td><td>绝大多数日常开发</td></tr></tbody></table>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：官方既然出了 SDK，那&quot;直接调 API&quot;这种手写方式是不是就没用、该淘汰了？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ 恰恰相反，API 永远是根基。SDK 只是 API 的一层&quot;方便壳&quot;——官方没给你的语言出 SDK 时、或你要调一个很冷门的接口时，你就得回到&quot;手写 API 请求&quot;。会读 API 文档、能手拼一次请求，是比会用 SDK 更底层、更通用的硬功夫。</div></div></div>
+<hr>
+<h2 id="六-感觉一下-从-手写-http-到-一行-sdk-的演进">六、感觉一下：从&quot;手写 HTTP&quot;到&quot;一行 SDK&quot;的演进<a class="anchor" href="#六-感觉一下-从-手写-http-到-一行-sdk-的演进" aria-label="锚点">#</a></h2>
+<p>&quot;调用别人的能力&quot;这件事，几十年间的接入方式一直在变简单。看这条时间轴，你就懂 SDK 为什么会出现：</p>
+<ol class="timeline"><li class="timeline-item reveal"><span class="timeline-dot" aria-hidden="true"></span><div class="timeline-label">早期</div><div class="timeline-desc">各家协议五花八门，接一个服务要读一大本手册、自己拼二进制包，苦不堪言</div></li><li class="timeline-item reveal"><span class="timeline-dot" aria-hidden="true"></span><div class="timeline-label">REST API 普及</div><div class="timeline-desc">大家约定用&quot;网址 + HTTP 方法 + JSON&quot;收发，接口终于有了统一直觉，手写请求也能上手</div></li><li class="timeline-item reveal"><span class="timeline-dot" aria-hidden="true"></span><div class="timeline-label">官方 SDK 时代</div><div class="timeline-desc">服务方把&quot;拼请求 / 发网络 / 解结果 / 重试&quot;封装成现成函数库，你 import 一下调个函数就行</div></li><li class="timeline-item reveal"><span class="timeline-dot" aria-hidden="true"></span><div class="timeline-label">Agent 框架时代</div><div class="timeline-desc">更上一层：框架把&quot;调模型 + 调工具 + 循环决策&quot;都封装好，你只描述目标，底层自动编排 API 调用</div></li></ol>
+<p>看懂这条线你就明白：<strong>每一代都是把上一代的&quot;脏活&quot;往下藏一层。</strong> 你今天写 <code>client.messages.create(...)</code> 一行搞定的事，二十年前要几百行。而这一行底下，藏的仍然是最古老那件事——<strong>按约定，发一个请求，收一个结果</strong>。</p>
+<p>把这条&quot;越来越省事&quot;的演进演成一幕小短剧——同一件事（调别人的能力），四个时代的人各干各的，越往后越轻松，但底下那件事从没变：</p>
+<div class="scene"><div class="scene-title">同一件事，四代人的干法：从手写 HTTP 到一行 SDK</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>我想调别人写好的一个能力，历朝历代都怎么接的？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🕰️</span><div class="scene-bubble"><b class="scene-who">早期程序员</b>各家协议五花八门，我得抱一本手册、自己拼二进制包收发——接一个服务能掉半条命。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🌐</span><div class="scene-bubble"><b class="scene-who">REST 时代</b>大家约好了：网址 + HTTP 方法 + JSON。我手写个请求也能上手，接口终于有了统一直觉。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">📦</span><div class="scene-bubble"><b class="scene-who">SDK 时代</b>服务方把&quot;拼请求 / 发网络 / 解结果 / 重试&quot;都封成现成函数库，我 <code>import</code> 一下、调个函数就完事。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">Agent 框架时代</b>更省：我只描述目标，框架自动把&quot;调模型 + 调工具 + 循环决策&quot;编排好，底层 API 调用我都不用管。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🙂</span><div class="scene-bubble"><b class="scene-who">旁白</b>每一代都把上一代的&quot;脏活&quot;往下藏一层——你写的越来越短，藏在底下的那件事却从没变。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>那如果哪天没有我要的语言的 SDK 呢？我就抓瞎了？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🌐</span><div class="scene-bubble"><b class="scene-who">REST 时代</b>不会。SDK 只是方便壳，底下永远是那个人人可调的 REST API——你按文档手写个带 Key 的 HTTPS 请求，照样调通。这就是 <span class="popover" tabindex="0"><span class="popover-anchor">懂 API 比只会 SDK 更值钱</span><span class="popover-tip" role="tooltip">SDK 报个 400 Bad Request，你还是得回 API 文档查哪个字段填错了——SDK 让你走得快，懂 API 让你走得远</span></span>。</div></div><div class="scene-caption reveal">一行 SDK 的底下，藏的仍是最古老那件事：按约定，发一个请求，收一个结果。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<h3 id="误区-1-以为-api-是某种-高深的编程语言">误区 1：以为 API 是某种&quot;高深的编程语言&quot;<a class="anchor" href="#误区-1-以为-api-是某种-高深的编程语言" aria-label="锚点">#</a></h3>
+<p>不是。API 只是一份<strong>约定/文档</strong>，本身不是代码。你用任何语言都能去&quot;调用&quot;一个 API。</p>
+<h3 id="误区-2-以为用了-sdk-就不用懂-api">误区 2：以为用了 SDK 就不用懂 API<a class="anchor" href="#误区-2-以为用了-sdk-就不用懂-api" aria-label="锚点">#</a></h3>
+<p>SDK 出错时（报了个 <code>400 Bad Request</code>），你还是得回去看 API 文档才知道哪个字段填错了。<strong>SDK 让你走得快，懂 API 让你走得远。</strong></p>
+<h3 id="误区-3-把-api-key-当普通字符串到处贴">误区 3：把 API Key 当普通字符串到处贴<a class="anchor" href="#误区-3-把-api-key-当普通字符串到处贴" aria-label="锚点">#</a></h3>
+<p>前面说过，这是<strong>安全红线</strong>。key = 你的身份 + 你的钱包，只进环境变量、绝不进代码库。</p>
+<h3 id="误区-4-以为-接口-和-api-是两个东西">误区 4：以为&quot;接口&quot;和&quot;API&quot;是两个东西<a class="anchor" href="#误区-4-以为-接口-和-api-是两个东西" aria-label="锚点">#</a></h3>
+<p>在开发语境里，&quot;接口&quot;&quot;API&quot;&quot;端点&quot;经常混着说，指的都是同一类东西——<strong>别人开出来给你调用的入口约定</strong>。不用纠结叫法。</p>
+<aside class="callout callout-note reveal"><div class="callout-mascot" aria-hidden="true">🐧</div><div class="callout-body"><div class="callout-title">📌 小笔记</div><p>判断你在跟什么打交道，有个土办法：<strong>看你写的是网址还是函数</strong>。你在拼一个 <code>https://...</code> 的网址、手动发请求 → 你在直接用 <strong>API</strong>；你在 <code>import</code> 一个库、调它的 <code>xxx.create()</code> 函数 → 你在用 <strong>SDK</strong>（它底下替你用了 API）。</p></div></aside>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 你在 Python 里写了 <code>from anthropic import Anthropic</code>，然后 <code>client.messages.create(model=&quot;...&quot;, messages=[...])</code>。下面哪个说法<strong>最准确</strong>？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">A</span><span class="quiz-text">你在直接手写调用了一个 REST API</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">你在用 SDK，而这个 SDK 函数底层替你发了一次符合 API 约定的请求</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">SDK 和 API 是完全无关的两回事</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">这段代码没有涉及任何网络请求</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 <code>import anthropic</code> 用的是 <strong>SDK</strong>（现成工具箱）；<code>create(...)</code> 这个函数底下，正是替你按 Anthropic 的 REST <strong>API</strong> 约定发了一次 HTTPS 请求。SDK 是壳，API 是壳里的约定——两者是&quot;包着&quot;的关系，且这一定涉及网络请求。</div></div>
+<p><strong>动手想一想</strong>：假设 Anthropic 明天没出 Rust 语言的 SDK，但你偏要用 Rust 调它的模型。你还有办法吗?——<strong>有</strong>。因为 SDK 只是方便壳，底层永远是那个人人可调的 REST API。你在 Rust 里手写一个带 API Key 的 HTTPS POST 请求、按文档拼好 JSON body，照样能调通。<strong>这就是&quot;懂 API&quot;比&quot;只会用 SDK&quot;更值钱的地方。</strong></p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ 上下文与 Token</a></strong>：你通过 API 发给模型的 <code>messages</code>，会被换算成 token 计费——API 是&quot;怎么发&quot;，token 是&quot;发了多少要花多少钱&quot;。</li><li><strong><a href="./[CONCEPT-30]%20函数调用与MCP辨析.html">㉚ 函数调用与 MCP 辨析</a></strong>：模型&quot;调工具&quot;和你&quot;调 API&quot;是两个层面的调用，很容易混——下一篇专门掰开讲。</li><li><strong><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a></strong>：Agent 用工具时，工具底下往往就是在调各种 API。</li><li><strong><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></strong>：Agent 之所以&quot;有手有脚&quot;，正是因为它能通过 API/SDK 去调用真实世界的能力。</li></ul>
+<aside class="callout callout-tip reveal"><div class="callout-mascot" aria-hidden="true">🐣</div><div class="callout-body"><div class="callout-title">💡 一句话收尾</div><p>API 是你入行后<strong>天天见</strong>的东西——调模型、接支付、查数据，全是它。今天记住一句就够了：<strong>API 是约定，SDK 是替你守约定的工具箱，钥匙（Key）永远只放环境变量。</strong> 剩下的，用多了自然熟。</p></div></aside>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-28] 什么是采样与温度-Sampling.html"><div class="dir">← 上一篇</div><div class="ttl">㉘ 什么是采样与温度（Sampling &amp; Temperature）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html"><div class="dir">下一篇 →</div><div class="ttl">㉚ 函数调用与 MCP 辨析（Function Calling vs MCP）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-29] 什么是API与SDK.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

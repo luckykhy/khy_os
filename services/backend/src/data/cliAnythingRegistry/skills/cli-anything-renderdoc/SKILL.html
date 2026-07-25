@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RenderDoc CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-renderdoc<span class="sep">›</span>RenderDoc CLI Skill</div>
+      <header class="hero reveal"><h1>RenderDoc CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#renderdoc-cli-skill">RenderDoc CLI Skill</a></li><li class="lvl-2"><a href="#capabilities">Capabilities</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#capture">capture</a></li><li class="lvl-3"><a href="#actions">actions</a></li><li class="lvl-3"><a href="#textures">textures</a></li><li class="lvl-3"><a href="#pipeline">pipeline</a></li><li class="lvl-3"><a href="#resources">resources</a></li><li class="lvl-3"><a href="#mesh">mesh</a></li><li class="lvl-3"><a href="#counters">counters</a></li><li class="lvl-2"><a href="#preview-bundles">Preview Bundles</a></li><li class="lvl-2"><a href="#json-mode">JSON Mode</a></li><li class="lvl-2"><a href="#environment-variables">Environment Variables</a></li><li class="lvl-2"><a href="#agent-usage-notes">Agent Usage Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-renderdoc&quot;<br>description: CLI harness for RenderDoc graphics debugger capture analysis<br>version: 0.1.0<br>command: cli-anything-renderdoc<br>install: pip install cli-anything-renderdoc<br>requires:</p>
+<ul><li>renderdoc (Python bindings from RenderDoc installation)</li><li>click&gt;=8.0</li><li>prompt-toolkit&gt;=3.0</li></ul>
+<p>categories:</p>
+<ul><li>graphics</li><li>debugging</li><li>gpu</li><li>rendering</li></ul>
+<hr>
+<h1 id="renderdoc-cli-skill">RenderDoc CLI Skill<a class="anchor" href="#renderdoc-cli-skill" aria-label="锚点">#</a></h1>
+<p>Headless command-line analysis of RenderDoc GPU frame captures (<code>.rdc</code> files).</p>
+<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="锚点">#</a></h2>
+<ul><li><strong>Capture inspection</strong>: metadata, sections, thumbnails, format conversion</li><li><strong>Action tree</strong>: list/search/filter draw calls, clears, dispatches, markers</li><li><strong>Texture operations</strong>: list, inspect, export (PNG/JPG/DDS/HDR/EXR), pixel picking</li><li><strong>Pipeline state</strong>: full shader/RT/viewport state at any event</li><li><strong>Shader analysis</strong>: export shader in human-readable form (HLSL/GLSL/disasm), constant buffer readback</li><li><strong>Resource inspection</strong>: buffer/texture enumeration, raw data reading</li><li><strong>Mesh data</strong>: vertex shader input/output decoding</li><li><strong>GPU counters</strong>: enumerate and fetch hardware performance counters</li></ul>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="capture">capture<a class="anchor" href="#capture" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc capture info          # Metadata + sections
+cli-anything-renderdoc -c frame.rdc capture thumb -o t.png # Extract thumbnail
+cli-anything-renderdoc -c frame.rdc capture convert -o out.rdc --format rdc</code></pre>
+<h3 id="actions">actions<a class="anchor" href="#actions" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc actions list           # All actions
+cli-anything-renderdoc -c frame.rdc actions list --draws-only  # Draw calls only
+cli-anything-renderdoc -c frame.rdc actions summary        # Counts by type
+cli-anything-renderdoc -c frame.rdc actions find &quot;Shadow&quot;  # Search by name
+cli-anything-renderdoc -c frame.rdc actions get 42         # Single action</code></pre>
+<h3 id="textures">textures<a class="anchor" href="#textures" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc textures list
+cli-anything-renderdoc -c frame.rdc textures get &lt;id&gt;
+cli-anything-renderdoc -c frame.rdc textures save &lt;id&gt; -o out.png --format png
+cli-anything-renderdoc -c frame.rdc textures save-outputs 42 -o ./renders/
+cli-anything-renderdoc -c frame.rdc textures pick &lt;id&gt; 100 200</code></pre>
+<h3 id="pipeline">pipeline<a class="anchor" href="#pipeline" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc pipeline state 42
+
+# Export shader in human-readable form
+# Text shaders (GLSL/HLSL) → saved directly
+# Binary shaders (DXBC/SPIR-V) → embedded source (HLSL/GLSL) or disassembly
+cli-anything-renderdoc -c frame.rdc pipeline shader-export 42 --stage Fragment
+cli-anything-renderdoc -c frame.rdc pipeline shader-export 42 --stage Vertex -o ./shaders/
+
+cli-anything-renderdoc -c frame.rdc pipeline cbuffer 42 --stage Vertex --index 0
+
+# Compare pipeline state between two events
+# Default output: same directory as the capture file  ;  use -o to override
+cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc
+cli-anything-renderdoc -c frame.rdc pipeline diff 100 200              # same capture
+cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc -o result.json
+cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc --no-compact</code></pre>
+<h3 id="resources">resources<a class="anchor" href="#resources" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc resources list
+cli-anything-renderdoc -c frame.rdc resources buffers
+cli-anything-renderdoc -c frame.rdc resources read-buffer &lt;id&gt; --format float32</code></pre>
+<h3 id="mesh">mesh<a class="anchor" href="#mesh" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc mesh inputs 42 --max-vertices 10
+cli-anything-renderdoc -c frame.rdc mesh outputs 42</code></pre>
+<h3 id="counters">counters<a class="anchor" href="#counters" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc counters list
+cli-anything-renderdoc -c frame.rdc counters fetch --ids 1,2,3</code></pre>
+<h2 id="preview-bundles">Preview Bundles<a class="anchor" href="#preview-bundles" aria-label="锚点">#</a></h2>
+<p>RenderDoc preview support is for truthful capture inspection rather than live<br>creative preview.</p>
+<pre><code class="language-bash"># List preview recipes
+cli-anything-renderdoc -c frame.rdc --json preview recipes
+
+# Capture a preview bundle for the active capture or a specific event
+cli-anything-renderdoc -c frame.rdc --json preview capture --recipe quick --event-id 42
+
+# Capture a diff preview bundle for two events or captures
+cli-anything-renderdoc -c frame.rdc --json preview diff 100 200
+cli-anything-renderdoc -c a.rdc --json preview diff 100 200 --capture-b b.rdc
+
+# Return the latest existing bundle for the capture
+cli-anything-renderdoc -c frame.rdc --json preview latest --recipe quick</code></pre>
+<p>Typical preview bundle contents:</p>
+<ul><li>capture thumbnail</li><li>output-target images</li><li><code>pipeline_state.json</code></li><li><code>action_summary.json</code></li></ul>
+<p>Diff bundles additionally include:</p>
+<ul><li>A/B thumbnails</li><li>A/B output-target images</li><li><code>pipeline_diff.json</code></li></ul>
+<p>RenderDoc does not currently expose live preview sessions. Instead, each<br>capture/diff bundle appends to a stable recipe-level <code>trajectory.json</code>.</p>
+<p>Viewer commands:</p>
+<pre><code class="language-bash">cli-hub previews inspect /path/to/bundle
+cli-hub previews html /path/to/bundle -o page.html
+cli-hub previews open /path/to/bundle</code></pre>
+<h2 id="json-mode">JSON Mode<a class="anchor" href="#json-mode" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc --json actions summary</code></pre>
+<h2 id="environment-variables">Environment Variables<a class="anchor" href="#environment-variables" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Variable</th><th>Description</th></tr></thead><tbody><tr><td><code>RENDERDOC_CAPTURE</code></td><td>Default capture file path</td></tr><tr><td><code>PYTHONPATH</code></td><td>Must include RenderDoc path</td></tr></tbody></table>
+<h2 id="agent-usage-notes">Agent Usage Notes<a class="anchor" href="#agent-usage-notes" aria-label="锚点">#</a></h2>
+<ul><li><strong>Use <code>pipeline shader-export</code> to extract shaders</strong> — for binary shaders (DXBC/SPIR-V) it auto-exports embedded HLSL/GLSL source or falls back to disassembly; for text shaders (GLSL/HLSL) it saves the raw source directly</li><li><strong>Shader formats by capture API</strong>:<ul><li>D3D11 → DXBC binary, exported as embedded HLSL source (<code>.hlsl</code>) or bytecode asm (<code>.dxbc.asm</code>)</li><li>OpenGL/GLES → GLSL source text (<code>.glsl</code>), already human-readable</li><li>Vulkan → SPIR-V binary, exported as embedded GLSL source (<code>.glsl</code>) or SPIR-V asm (<code>.spv.asm</code>)</li></ul></li><li><strong>Use <code>pipeline diff</code> to compare two events</strong> — it writes a JSON file and prints only the path; use <code>-b</code> for a second capture</li><li>Always specify <code>--json</code> for programmatic consumption</li><li>Use <code>actions summary</code> first to understand capture complexity</li><li>Use <code>actions list --draws-only</code> to focus on actual rendering</li><li>Use <code>preview capture</code> or <code>preview diff</code> when the agent needs a portable,</li></ul>
+<p>honest inspection bundle rather than raw replay calls alone</p>
+<ul><li>Read <code>_trajectory_path</code> from preview JSON if you need persistent capture/diff history</li><li>Use <code>cli-hub previews ...</code> only to inspect/open already-generated bundles</li><li>Pipeline state requires an event ID from the action list</li><li>Texture save supports: png, jpg, bmp, tga, hdr, exr, dds</li><li>Buffer data can be decoded as hex, float32, uint32, or raw bytes</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rekordbox/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-rekordbox</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rms/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-rms</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-renderdoc/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

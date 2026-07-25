@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY P0 执行任务清单（基于 Hermes 学习项） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY P0 执行任务清单（基于 Hermes 学习项）</div>
+      <header class="hero reveal"><h1>KHY P0 执行任务清单（基于 Hermes 学习项）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-p0-执行任务清单-基于-hermes-学习项">KHY P0 执行任务清单（基于 Hermes 学习项）</a></li><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#p0-总览">P0 总览</a></li><li class="lvl-2"><a href="#p0-1-命令体系单一真相源-command-ssot">P0-1 命令体系单一真相源（Command SSoT）</a></li><li class="lvl-3"><a href="#目标-2">目标</a></li><li class="lvl-3"><a href="#变更文件">变更文件</a></li><li class="lvl-3"><a href="#执行步骤">执行步骤</a></li><li class="lvl-3"><a href="#验收标准">验收标准</a></li><li class="lvl-2"><a href="#p0-2-网关适配器注册中心-adapter-registry">P0-2 网关适配器注册中心（Adapter Registry）</a></li><li class="lvl-3"><a href="#目标-3">目标</a></li><li class="lvl-3"><a href="#变更文件-2">变更文件</a></li><li class="lvl-3"><a href="#执行步骤-2">执行步骤</a></li><li class="lvl-3"><a href="#验收标准-2">验收标准</a></li><li class="lvl-2"><a href="#p0-3-插件生命周期收敛-unified-plugin-lifecycle">P0-3 插件生命周期收敛（Unified Plugin Lifecycle）</a></li><li class="lvl-3"><a href="#目标-4">目标</a></li><li class="lvl-3"><a href="#变更文件-3">变更文件</a></li><li class="lvl-3"><a href="#执行步骤-3">执行步骤</a></li><li class="lvl-3"><a href="#验收标准-3">验收标准</a></li><li class="lvl-2"><a href="#推荐落地节奏-两周">推荐落地节奏（两周）</a></li><li class="lvl-2"><a href="#最小回归命令建议">最小回归命令建议</a></li><li class="lvl-2"><a href="#可直接提单的-issue-模板">可直接提单的 Issue 模板</a></li><li class="lvl-3"><a href="#issue-模板-a-p0-1-命令体系单一真相源-command-ssot">Issue 模板 A — P0-1 命令体系单一真相源（Command SSoT）</a></li><li class="lvl-3"><a href="#issue-模板-b-p0-2-网关适配器注册中心-adapter-registry">Issue 模板 B — P0-2 网关适配器注册中心（Adapter Registry）</a></li><li class="lvl-3"><a href="#issue-模板-c-p0-3-插件生命周期收敛-unified-plugin-lifecycle">Issue 模板 C — P0-3 插件生命周期收敛（Unified Plugin Lifecycle）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-008 | 阶段: 项目管理 | 原路径: docs/报告/hermes-khy-p0-执行任务-2026-05-17.md --&gt;</p>
+<h1 id="khy-p0-执行任务清单-基于-hermes-学习项">KHY P0 执行任务清单（基于 Hermes 学习项）<a class="anchor" href="#khy-p0-执行任务清单-基于-hermes-学习项" aria-label="锚点">#</a></h1>
+<p>日期：2026-05-17  <br>来源文档：<code>docs/08_MGMT_项目管理/[MGMT-RPT-009] hermes-成长架构-学习清单-2026-05-17.md</code></p>
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<p>把上一份学习清单里的 3 个 P0 项，拆成可以直接开工的工程任务（按文件、步骤、验收标准）。</p>
+<h2 id="p0-总览">P0 总览<a class="anchor" href="#p0-总览" aria-label="锚点">#</a></h2>
+<ol><li>命令体系单一真相源（Command SSoT）</li><li>网关适配器注册中心（Adapter Registry）</li><li>插件生命周期收敛（Unified Plugin Lifecycle）</li></ol>
+<hr>
+<h2 id="p0-1-命令体系单一真相源-command-ssot">P0-1 命令体系单一真相源（Command SSoT）<a class="anchor" href="#p0-1-命令体系单一真相源-command-ssot" aria-label="锚点">#</a></h2>
+<h3 id="目标-2">目标<a class="anchor" href="#目标-2" aria-label="锚点">#</a></h3>
+<p>消除 <code>router</code> / <code>commandRegistry</code> / <code>aliases</code> 多处平行维护，改为“一个命令模型，多处派生”。</p>
+<h3 id="变更文件">变更文件<a class="anchor" href="#变更文件" aria-label="锚点">#</a></h3>
+<ul><li>新增：<code>backend/src/cli/commandSchema.js</code></li><li>修改：<code>backend/src/cli/router.js</code></li><li>修改：<code>backend/src/cli/commandRegistry.js</code></li><li>修改：<code>backend/src/cli/aliases.js</code></li><li>新增测试：<code>backend/tests/cli/commandSchema.consistency.test.js</code></li></ul>
+<h3 id="执行步骤">执行步骤<a class="anchor" href="#执行步骤" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 在 <code>commandSchema.js</code> 定义统一结构：<code>name</code>、<code>subCommands</code>、<code>slash</code>、<code>aliases</code>、<code>flags</code>、<code>category</code>。</li><li>[ ] <code>router.js</code> 改为从 schema 派生 <code>COMMANDS</code>/<code>SUB_COMMANDS</code>，移除手写重复列表。</li><li>[ ] <code>commandRegistry.js</code> 改为从 schema 派生内建 slash 命令（保留 tool/plugin 动态注册能力）。</li><li>[ ] <code>aliases.js</code> 只保留“别名数据”，不再承载命令定义职责。</li><li>[ ] 增加一致性测试：校验 schema、router、slash registry 的命令集合一致。</li></ul>
+<h3 id="验收标准">验收标准<a class="anchor" href="#验收标准" aria-label="锚点">#</a></h3>
+<ul><li>任何新增命令只改 schema 一处，即可自动出现在路由与 slash 菜单。</li><li><code>backend/tests/cli/*.test.js</code> 全绿，新增一致性测试通过。</li><li>无行为回归：<code>khy help</code>、<code>/</code> 菜单、别名输入都保持可用。</li></ul>
+<hr>
+<h2 id="p0-2-网关适配器注册中心-adapter-registry">P0-2 网关适配器注册中心（Adapter Registry）<a class="anchor" href="#p0-2-网关适配器注册中心-adapter-registry" aria-label="锚点">#</a></h2>
+<h3 id="目标-3">目标<a class="anchor" href="#目标-3" aria-label="锚点">#</a></h3>
+<p>把 <code>aiGateway</code> 里的硬编码适配器数组改为可注册模型，支持后续插件/扩展适配器接入。</p>
+<h3 id="变更文件-2">变更文件<a class="anchor" href="#变更文件-2" aria-label="锚点">#</a></h3>
+<ul><li>新增：<code>backend/src/services/gateway/adapterRegistry.js</code></li><li>修改：<code>backend/src/services/gateway/aiGateway.js</code></li><li>新增测试：<code>backend/tests/gateway/adapterRegistry.test.js</code></li><li>新增测试：<code>backend/tests/gateway/aiGateway.adapterRegistry.integration.test.js</code></li></ul>
+<h3 id="执行步骤-2">执行步骤<a class="anchor" href="#执行步骤-2" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 实现 <code>adapterRegistry</code>：<code>register/get/list/unregister/create</code> 基础 API。</li><li>[ ] 在 <code>aiGateway</code> 启动阶段注册内建适配器，不再在构造器里写死数组。</li><li>[ ] 保持优先级和 enable 状态可配置（兼容现有环境变量逻辑）。</li><li>[ ] 为未知 adapter、重复注册、创建失败场景补充容错日志。</li><li>[ ] 增加集成测试：注入测试 adapter，无需编辑 <code>aiGateway.js</code> 即可被发现和调用。</li></ul>
+<h3 id="验收标准-2">验收标准<a class="anchor" href="#验收标准-2" aria-label="锚点">#</a></h3>
+<ul><li>内建 adapter 全部由 registry 提供，行为与现状一致。</li><li>动态注册的测试 adapter 可被 <code>getStatus/listModels/generate</code> 路径识别。</li><li>原有 <code>backend/tests/gateway/*.test.js</code> 不出现回归失败。</li></ul>
+<hr>
+<h2 id="p0-3-插件生命周期收敛-unified-plugin-lifecycle">P0-3 插件生命周期收敛（Unified Plugin Lifecycle）<a class="anchor" href="#p0-3-插件生命周期收敛-unified-plugin-lifecycle" aria-label="锚点">#</a></h2>
+<h3 id="目标-4">目标<a class="anchor" href="#目标-4" aria-label="锚点">#</a></h3>
+<p>统一当前三条插件路径：</p>
+<ul><li><code>backend/src/plugin-loader/index.js</code></li><li><code>backend/src/cli/plugins.js</code></li><li><code>backend/src/services/gateway/pluginChain.js</code></li></ul>
+<p>形成一个主生命周期（发现、启用、禁用、加载、卸载、错误隔离）。</p>
+<h3 id="变更文件-3">变更文件<a class="anchor" href="#变更文件-3" aria-label="锚点">#</a></h3>
+<ul><li>新增：<code>backend/src/plugins/lifecycle.js</code></li><li>修改：<code>backend/src/plugin-loader/index.js</code></li><li>修改：<code>backend/src/cli/plugins.js</code></li><li>修改：<code>backend/src/services/gateway/pluginChain.js</code></li><li>新增测试：<code>backend/tests/plugins/lifecycle.integration.test.js</code></li></ul>
+<h3 id="执行步骤-3">执行步骤<a class="anchor" href="#执行步骤-3" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 抽象统一插件状态机：<code>discovered -&gt; loaded -&gt; active -&gt; disabled -&gt; failed</code>。</li><li>[ ] 定义统一插件能力声明：<code>commands</code>、<code>tools</code>、<code>gatewayHooks</code>。</li><li>[ ] <code>cli/plugins.js</code> 与 <code>gateway/pluginChain.js</code> 改为消费主生命周期，不再单独维护加载逻辑。</li><li>[ ] 保留兼容层：旧插件格式继续可用，输出 deprecation 提示。</li><li>[ ] 增加跨能力集成测试：单插件同时注册命令+网关 hook，验证生效与禁用流程。</li></ul>
+<h3 id="验收标准-3">验收标准<a class="anchor" href="#验收标准-3" aria-label="锚点">#</a></h3>
+<ul><li>同一个插件在 CLI 和 gateway 侧由同一生命周期控制。</li><li><code>enable/disable/reload</code> 操作语义一致，不再出现状态漂移。</li><li>插件异常不会中断主流程，错误有明确来源与插件名。</li></ul>
+<hr>
+<h2 id="推荐落地节奏-两周">推荐落地节奏（两周）<a class="anchor" href="#推荐落地节奏-两周" aria-label="锚点">#</a></h2>
+<ol><li>第 1-3 天：完成 P0-1（命令 SSoT）+ 测试收敛  </li><li>第 4-7 天：完成 P0-2（adapter registry）+ 网关回归  </li><li>第 8-14 天：完成 P0-3（插件生命周期）+ 兼容迁移</li></ol>
+<h2 id="最小回归命令建议">最小回归命令建议<a class="anchor" href="#最小回归命令建议" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cd backend
+npm test -- tests/cli
+npm test -- tests/gateway
+npm test -- tests/plugins</code></pre>
+<hr>
+<h2 id="可直接提单的-issue-模板">可直接提单的 Issue 模板<a class="anchor" href="#可直接提单的-issue-模板" aria-label="锚点">#</a></h2>
+<p>以下模板可直接复制到 GitHub/GitLab Issue。</p>
+<h3 id="issue-模板-a-p0-1-命令体系单一真相源-command-ssot">Issue 模板 A — P0-1 命令体系单一真相源（Command SSoT）<a class="anchor" href="#issue-模板-a-p0-1-命令体系单一真相源-command-ssot" aria-label="锚点">#</a></h3>
+<p><strong>Title</strong>  <br><code>[P0-1] 建立命令单一真相源，收敛 router/registry/aliases</code></p>
+<p><strong>Problem Statement</strong>  <br>当前命令定义分散在 <code>router.js</code>、<code>commandRegistry.js</code>、<code>aliases.js</code>，存在重复维护与漂移风险。</p>
+<p><strong>Scope</strong></p>
+<ul><li>新增 <code>backend/src/cli/commandSchema.js</code> 作为唯一命令定义源。</li><li><code>router.js</code> 从 schema 派生 <code>COMMANDS</code> 与 <code>SUB_COMMANDS</code>。</li><li><code>commandRegistry.js</code> 从 schema 派生内建 slash 命令。</li><li><code>aliases.js</code> 仅保留别名映射数据，不承载命令定义逻辑。</li><li>新增一致性测试：<code>backend/tests/cli/commandSchema.consistency.test.js</code>。</li></ul>
+<p><strong>Out of Scope</strong></p>
+<ul><li>不改动命令行为语义与参数格式。</li><li>不引入新的命令权限模型。</li></ul>
+<p><strong>Implementation Checklist</strong></p>
+<ul><li>[ ] 定义 schema 字段（<code>name</code>/<code>subCommands</code>/<code>slash</code>/<code>aliases</code>/<code>flags</code>/<code>category</code>）。</li><li>[ ] router 侧移除手写命令列表，改为 schema 派生。</li><li>[ ] registry 侧移除手写内建 slash 列表，改为 schema 派生。</li><li>[ ] 别名模块改为纯数据层。</li><li>[ ] 新增一致性测试覆盖命令集合、子命令归属、slash 子集关系。</li></ul>
+<p><strong>Acceptance Criteria</strong></p>
+<ul><li>仅修改 schema 即可驱动路由与 slash 菜单更新。</li><li><code>backend/tests/cli/*.test.js</code> 全绿，新增一致性测试通过。</li><li><code>khy help</code>、<code>/</code> 菜单、别名调用无行为回归。</li></ul>
+<p><strong>Verification Commands</strong></p>
+<pre><code class="language-bash">cd backend
+npm test -- tests/cli/router.test.js
+npm test -- tests/cli/commandRegistry.test.js
+npm test -- tests/cli/commandSchema.consistency.test.js</code></pre>
+<p><strong>Definition of Done</strong></p>
+<ul><li>PR 合并前附测试结果与影响范围说明。</li></ul>
+<h3 id="issue-模板-b-p0-2-网关适配器注册中心-adapter-registry">Issue 模板 B — P0-2 网关适配器注册中心（Adapter Registry）<a class="anchor" href="#issue-模板-b-p0-2-网关适配器注册中心-adapter-registry" aria-label="锚点">#</a></h3>
+<p><strong>Title</strong>  <br><code>[P0-2] 引入 adapterRegistry，移除 aiGateway 适配器硬编码</code></p>
+<p><strong>Problem Statement</strong>  <br><code>aiGateway</code> 构造器内硬编码适配器数组，扩展新 provider 需要改核心文件，违背可插拔目标。</p>
+<p><strong>Scope</strong></p>
+<ul><li>新增 <code>backend/src/services/gateway/adapterRegistry.js</code>。</li><li><code>aiGateway.js</code> 改为消费 registry，不再内置静态适配器清单。</li><li>支持 <code>register/get/list/unregister/create</code>。</li><li>覆盖异常场景：重复注册、未知 adapter、构造失败日志。</li><li>新增测试：<ul><li><code>backend/tests/gateway/adapterRegistry.test.js</code></li><li><code>backend/tests/gateway/aiGateway.adapterRegistry.integration.test.js</code></li></ul></li></ul>
+<p><strong>Out of Scope</strong></p>
+<ul><li>不改动各 adapter 内部推理逻辑。</li><li>不重写现有 provider 配置格式。</li></ul>
+<p><strong>Implementation Checklist</strong></p>
+<ul><li>[ ] 实现 registry API 及防重复机制。</li><li>[ ] 将内建 adapter 改为启动阶段注册。</li><li>[ ] 保留现有 enable/priority 行为兼容。</li><li>[ ] 增加动态注入测试 adapter 的集成测试。</li><li>[ ] 补充错误路径日志断言。</li></ul>
+<p><strong>Acceptance Criteria</strong></p>
+<ul><li>内建 adapter 全部通过 registry 暴露。</li><li>无需改 <code>aiGateway.js</code> 即可注入并调用测试 adapter。</li><li><code>backend/tests/gateway/*.test.js</code> 无回归失败。</li></ul>
+<p><strong>Verification Commands</strong></p>
+<pre><code class="language-bash">cd backend
+npm test -- tests/gateway/adapterRegistry.test.js
+npm test -- tests/gateway/aiGateway.adapterRegistry.integration.test.js
+npm test -- tests/gateway</code></pre>
+<p><strong>Definition of Done</strong></p>
+<ul><li>PR 提供迁移说明（旧逻辑到 registry 的映射表）。</li></ul>
+<h3 id="issue-模板-c-p0-3-插件生命周期收敛-unified-plugin-lifecycle">Issue 模板 C — P0-3 插件生命周期收敛（Unified Plugin Lifecycle）<a class="anchor" href="#issue-模板-c-p0-3-插件生命周期收敛-unified-plugin-lifecycle" aria-label="锚点">#</a></h3>
+<p><strong>Title</strong>  <br><code>[P0-3] 统一插件生命周期，收敛 plugin-loader/cli/plugins/pluginChain</code></p>
+<p><strong>Problem Statement</strong>  <br>当前插件链路分散在三处，状态语义不统一，容易出现 enable/disable 状态漂移与错误隔离不足。</p>
+<p><strong>Scope</strong></p>
+<ul><li>新增 <code>backend/src/plugins/lifecycle.js</code> 统一状态机。</li><li>收敛三条路径：<ul><li><code>backend/src/plugin-loader/index.js</code></li><li><code>backend/src/cli/plugins.js</code></li><li><code>backend/src/services/gateway/pluginChain.js</code></li></ul></li><li>定义统一能力声明（<code>commands</code>/<code>tools</code>/<code>gatewayHooks</code>）。</li><li>保留旧插件兼容层并输出 deprecation 提示。</li><li>新增 <code>backend/tests/plugins/lifecycle.integration.test.js</code>。</li></ul>
+<p><strong>Out of Scope</strong></p>
+<ul><li>不更换插件包格式。</li><li>不删除历史插件入口（先兼容、后淘汰）。</li></ul>
+<p><strong>Implementation Checklist</strong></p>
+<ul><li>[ ] 实现状态机：<code>discovered -&gt; loaded -&gt; active -&gt; disabled -&gt; failed</code>。</li><li>[ ] 统一 enable/disable/reload 语义与事件流。</li><li>[ ] CLI 与 gateway 改为消费同一生命周期实现。</li><li>[ ] 增加异常隔离与来源标记（插件名 + hook）。</li><li>[ ] 增加“单插件跨能力”集成测试。</li></ul>
+<p><strong>Acceptance Criteria</strong></p>
+<ul><li>同一插件在 CLI/Gateway 由同一状态源控制。</li><li><code>enable/disable/reload</code> 行为一致，无状态漂移。</li><li>插件失败不影响主流程，日志可定位到插件与 hook。</li></ul>
+<p><strong>Verification Commands</strong></p>
+<pre><code class="language-bash">cd backend
+npm test -- tests/plugins/lifecycle.integration.test.js
+npm test -- tests/plugins</code></pre>
+<p><strong>Definition of Done</strong></p>
+<ul><li>PR 包含兼容策略说明与后续淘汰时间线建议。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-007] cli-基准对比-2026-05-19.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 对比 5 大主流 CLI 工具：任务能力基准评测</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-009] hermes-成长架构-学习清单-2026-05-17.html"><div class="dir">下一篇 →</div><div class="ttl">Hermes Growth Architecture → KHY 学习清单 (2026-05-17)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-008] hermes-khy-p0-执行任务-2026-05-17.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

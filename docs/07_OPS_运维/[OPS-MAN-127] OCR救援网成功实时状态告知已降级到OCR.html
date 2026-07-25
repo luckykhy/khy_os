@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR</div>
+      <header class="hero reveal"><h1>[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-127-ocr-救援网成功实时状态告知已降级到-ocr">[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR</a></li><li class="lvl-2"><a href="#一-断桥-与-ops-124-126-正交的第三层-实时进度层">一、断桥(与 OPS-124/126 正交的第三层:实时进度层)</a></li><li class="lvl-2"><a href="#二-修复-全-additive-独立-default-on-门-khy-ocr-rescue-status-门关逐字节回退">二、修复(全 additive · 独立 default-on 门 KHY_OCR_RESCUE_STATUS · 门关逐字节回退)</a></li><li class="lvl-3"><a href="#三层正交-全服务-无感明显告知用户用了-ocr">三层正交(全服务「无感明显告知用户用了 OCR」)</a></li><li class="lvl-2"><a href="#三-验证门-全绿才回报">三、验证门(全绿才回报)</a></li><li class="lvl-2"><a href="#四-红线遵守">四、红线遵守</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-127-ocr-救援网成功实时状态告知已降级到-ocr">[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR<a class="anchor" href="#ops-man-127-ocr-救援网成功实时状态告知已降级到-ocr" aria-label="锚点">#</a></h1>
+<blockquote><p>承 OPS-124(模型 prompt 指令)/ OPS-126(finishResult 确定性脚注)。本轮补齐<strong>实时进度层</strong>。<br>直击 /goal「Khy 无法正确读图降级到 OCR,要能无感明显告知用户用了 OCR 但能正确识别图片」。</p></blockquote>
+<h2 id="一-断桥-与-ops-124-126-正交的第三层-实时进度层">一、断桥(与 OPS-124/126 正交的第三层:实时进度层)<a class="anchor" href="#一-断桥-与-ops-124-126-正交的第三层-实时进度层" aria-label="锚点">#</a></h2>
+<p>vision→OCR 兜底有三处 OCR-成功注入点(<code>aiGatewayGenerateMethod.js</code>)。prep 期两处成功时<strong>都发一条实时状态</strong>当场告诉用户已降级到 OCR:</p>
+<table><thead><tr><th>站点</th><th>位置</th><th>OCR 成功实时状态</th></tr></thead><tbody><tr><td>Site1(describe 级联全失败)</td><td>~1619</td><td><code>emitStatus('…已诚实说明并剥图/OCR 兜底…')</code> ✓</td></tr><tr><td>Site2(prep ocr-fallback)</td><td>~1693</td><td><code>emitStatus('…已用 OCR 提取 N 张图片文本兜底')</code> ✓</td></tr><tr><td><strong>Site3(post-failure 救援网)</strong></td><td>~2857</td><td><strong>历史上无 emitStatus</strong> ✗</td></tr></tbody></table>
+<p>Site3 的 emitStatus 仅覆盖 OCR <strong>失败/无文本</strong>(切视觉适配器,2859/2862/2865),其 <strong>OCR-成功</strong>分支从不发状态。而 Site3 正是用户实测复现的那条路径:</p>
+<pre><code>gpt-4o → keep(图保留到主级联) → 运行时某适配器 404 model_not_found 拒图
+  → shouldOcrRescue 提升 _visionFallback → 救援网退回本地 OCR</code></pre>
+<p>于是恰在复现路径上,OCR 成功降级发生时<strong>实时进度层一片沉默</strong>:用户只看到一墙视觉失败状态,看不到「已降级到本地 OCR 并成功识别」的当场告知。答复层由 OPS-124/126 兜住,但「明显告知」要求在<strong>交互当下</strong>也可见。</p>
+<p><strong>判据(方法论签名)</strong>:同一救援网内,「prep 期 Site1/Site2 的 OCR-成功都发实时状态」vs「Site3(救援网)的 OCR-成功分支从不 emitStatus」的不对称——恰在用户复现路径上缺一条实时告知。</p>
+<h2 id="二-修复-全-additive-独立-default-on-门-khy-ocr-rescue-status-门关逐字节回退">二、修复(全 additive · 独立 default-on 门 KHY_OCR_RESCUE_STATUS · 门关逐字节回退)<a class="anchor" href="#二-修复-全-additive-独立-default-on-门-khy-ocr-rescue-status-门关逐字节回退" aria-label="锚点">#</a></h2>
+<ul><li>纯叶 <code>services/backend/src/services/gateway/ocrRescueStatusNotice.js</code>:<ul><li><code>isRescueStatusEnabled(env)</code> — 读门 <code>KHY_OCR_RESCUE_STATUS</code>(异常保守 false,绝不抛)。</li><li><code>buildOcrRescueStatus({ count, adapterName, env })</code> — 门开且 <code>count&gt;0</code> 时返回实时状态串</li></ul></li></ul>
+<p><code>检测到图片输入：{adapterName} 不支持图像识别，已降级用本地 OCR 成功提取 {N 张图片}文本并据此作答</code>;<br>    门关 / count 非正 / 畸形 → <code>null</code>(调用方据此决定是否 emitStatus);零 IO,绝不抛。</p>
+<ul><li>接线 <code>aiGatewayGenerateMethod.js</code> Site3 OCR-成功分支(options 重建后):</li></ul>
+<pre><code class="language-js">  try {
+    const _msg = require('./ocrRescueStatusNotice').buildOcrRescueStatus({
+      count: ocrTexts.length, adapterName: adapterDisplayName, env: process.env,
+    });
+    if (_msg) emitStatus(_msg);
+  } catch { /* fail-soft:叶不可用则按历史静默 */ }</code></pre>
+<p>门关 → 叶返 null → 不 emitStatus → 逐字节回退「Site3 成功分支静默」。</p>
+<ul><li><code>flagRegistry.js</code> 登记 <code>KHY_OCR_RESCUE_STATUS: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ul>
+<h3 id="三层正交-全服务-无感明显告知用户用了-ocr">三层正交(全服务「无感明显告知用户用了 OCR」)<a class="anchor" href="#三层正交-全服务-无感明显告知用户用了-ocr" aria-label="锚点">#</a></h3>
+<ul><li>OPS-124 = 面向<strong>模型</strong>的 prompt <strong>指令</strong>(答复层,advisory,模型合规时无感)。</li><li>OPS-126 = finishResult 确定性<strong>脚注</strong>(答复层,guaranteed,模型忽略指令时兜底明显)。</li><li><strong>OPS-127 = 救援网确定性</strong>实时状态**(实时进度层,guaranteed,降级发生当场明显)。</li></ul>
+<h2 id="三-验证门-全绿才回报">三、验证门(全绿才回报)<a class="anchor" href="#三-验证门-全绿才回报" aria-label="锚点">#</a></h2>
+<ul><li><code>npm run test:ocr-rescue-status</code>:纯叶 8 + wiring 3 + 真图 2 = <strong>13/13</strong>。<ul><li>纯叶:门 default-on/off-words、单复数、count 畸形→null、adapterName 缺省/裁剪、fail-soft。</li><li>wiring(双适配器 gpt-4o→404→Site3,onChunk 收 <code>{type:'status'}</code>):A 门开+OCR 有文本→救援网状态出现且 OCR 文本仍注入(修复点);B 门关→救援网状态不出现(逐字节回退)且 OCR 文本照旧注入;C OCR 无文本→成功分支未进入→救援网状态不出现,答复仍成功。</li><li>真图(PIL 渲 <code>INVOICE 1234</code> → 真 tesseract 读出 → Site3):门开→实时状态出现「已降级用本地 OCR 成功提取」且 prompt 含 <code>/INVOICE/</code>;门关→救援网状态不出现,OCR 文本照旧注入。缺 tesseract/eng/Pillow 或未读出目标词 → skip。</li></ul></li><li><code>node --check</code> × 改动文件全绿。</li><li><code>npm run arch:god</code>:改动文件不得新增超限(aiGatewayGenerateMethod.js additive,4 超限为 pre-existing)。</li><li>三守卫 <code>--changed</code>(显式文件列表)/ <code>npm run maintainer:check</code> / metadata refresh 2-pass 幂等。</li></ul>
+<h2 id="四-红线遵守">四、红线遵守<a class="anchor" href="#四-红线遵守" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push。</li><li>只碰实时状态串,不触密钥。</li><li>全 additive,门关逐字节回退历史行为。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-128] restore 解密后内层归档形制解包前把关 · 接线（让陌生机器上盲目 tar -xzf 变成「请升级 khy」精确成因）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

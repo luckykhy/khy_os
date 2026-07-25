@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khy-bridge 实战联调指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>kernel<span class="sep">›</span>bridge<span class="sep">›</span>khy-bridge 实战联调指南</div>
+      <header class="hero reveal"><h1>khy-bridge 实战联调指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-bridge-实战联调指南">khy-bridge 实战联调指南</a></li><li class="lvl-2"><a href="#先决条件">先决条件</a></li><li class="lvl-2"><a href="#路线-a-内置-agent-项目-ai-网关-真模型决策">路线 A：内置 agent + 项目 AI 网关（真模型决策）</a></li><li class="lvl-2"><a href="#路线-b-外部-agent-claude-code-经-mcp-驱动-os">路线 B：外部 agent（Claude Code）经 MCP 驱动 OS</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-bridge-实战联调指南">khy-bridge 实战联调指南<a class="anchor" href="#khy-bridge-实战联调指南" aria-label="锚点">#</a></h1>
+<p>把自研内核 KHY-OS 接到真 agent 上。两条路线对应需求1的两侧，都走同一个<br><code>KhyBridge</code>（COM2 串口 ⇄ JSON，三面：控制/决策/事件），互不重复协议逻辑。</p>
+<pre><code>                ┌──────────── KHY-OS (QEMU) ────────────┐
+                │  COM1 = 人类 TTY    COM2 = agent 通道  │
+                └───────────────┬───────────────────────┘
+                                │ unix socket (/tmp/khy-agent.sock)
+                ┌───────────────┴───────────────┐
+        side a │ 内置 KHY Node agent            │ side b
+   khy-agent-run.js  (in-process, brain=网关)   khy-mcp.js (MCP server)
+        决策面真模型决策                         外部 agent（Claude Code）驱动控制面</code></pre>
+<p>任一时刻 COM2 只接一个客户端（QEMU unix socket server 单连接），所以<br>side a 与 side b 二选一连，不同时连。</p>
+<hr>
+<h2 id="先决条件">先决条件<a class="anchor" href="#先决条件" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">make -C kernel            # 构建 ISO（产物 kernel/build/khy-os-kernel.iso）</code></pre>
+<p>启动带 agent 串口的 KHY-OS（COM1 走 stdio 给人，COM2 走 unix socket 给 agent）：</p>
+<pre><code class="language-bash">make -C kernel run-agent  # COM2 默认 = /tmp/khy-agent.sock（AGENT_SOCK 可改）</code></pre>
+<hr>
+<h2 id="路线-a-内置-agent-项目-ai-网关-真模型决策">路线 A：内置 agent + 项目 AI 网关（真模型决策）<a class="anchor" href="#路线-a-内置-agent-项目-ai-网关-真模型决策" aria-label="锚点">#</a></h2>
+<p>让 OS 里的 <code>ai &lt;自然语言&gt;</code> 和 <code>agentask &lt;问题&gt;</code> 由真实大模型作答。</p>
+<ol><li>起项目 AI 网关（OpenAI 兼容，默认 <code>127.0.0.1:9100</code>，token 在</li></ol>
+<p><code>~/.khy/proxy_server_auth.json</code> 自动生成）。</p>
+<ol><li>跑内置 agent：</li></ol>
+<pre><code class="language-bash">   node kernel/bridge/khy-agent-run.js              # 连 /tmp/khy-agent.sock
+   # 或显式：node kernel/bridge/khy-agent-run.js --socket /tmp/khy-agent.sock</code></pre>
+<ol><li>在 OS 的 COM1 shell 里：</li></ol>
+<pre><code>   ai use model claude/claude-sonnet-4-20250514     # 选模型，落 /disk/etc/agent.conf
+   ai 帮我把当前模型告诉我                            # GET，回显配置
+   agentask 我可以删除整个磁盘吗                      # 决策面 → 模型判 DENY</code></pre>
+<p>选模型后让 agent 重读配置（无需重启）：<code>kill -HUP &lt;khy-agent-run 进程&gt;</code>。</p>
+<p><strong>环境变量</strong>（均可选，opts &gt; env &gt; 默认）：</p>
+<table><thead><tr><th>变量</th><th>含义</th><th>默认</th></tr></thead><tbody><tr><td><code>KHY_GATEWAY_URL</code></td><td>网关 completions URL</td><td><code>http://127.0.0.1:9100/v1/chat/completions</code></td></tr><tr><td><code>PROXY_AUTH_TOKEN</code></td><td>bearer token</td><td>读 <code>~/.khy/proxy_server_auth.json</code> 的 <code>authToken</code></td></tr><tr><td><code>KHY_BRAIN_MODEL</code></td><td>无 in-system 配置时的兜底模型</td><td><code>claude/claude-sonnet-4-20250514</code></td></tr><tr><td><code>KHY_BRAIN_TIMEOUT_MS</code></td><td>单次 HTTP 超时</td><td><code>2500</code>（&lt; 内核 3s ask 死线）</td></tr></tbody></table>
+<p><strong>松耦合保证</strong>：网关不可达 / 401 / 超时，brain 自动降级为内置规则脑（<code>defaultBrain</code>），<br>内核永远拿得到合法答案，绝不被挂死。需要 <code>/disk</code> 才能持久化模型配置，故跑 <code>ai set ...</code><br>时请给 QEMU 加 <code>-hda</code>（<code>run-agent</code> 默认未挂盘，可在 Makefile 加，或仅做非持久测试）。</p>
+<hr>
+<h2 id="路线-b-外部-agent-claude-code-经-mcp-驱动-os">路线 B：外部 agent（Claude Code）经 MCP 驱动 OS<a class="anchor" href="#路线-b-外部-agent-claude-code-经-mcp-驱动-os" aria-label="锚点">#</a></h2>
+<p>让 Claude Code 直接 list/read/write KHY-OS 文件、看进程、读配置。</p>
+<p>仓库根已带 <code>.mcp.json</code>（project-scoped），声明了 <code>khy-os</code> MCP server：</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;khy-os&quot;: {
+      &quot;command&quot;: &quot;node&quot;,
+      &quot;args&quot;: [&quot;kernel/bridge/khy-mcp.js&quot;, &quot;--socket&quot;, &quot;/tmp/khy-agent.sock&quot;],
+      &quot;env&quot;: { &quot;KHY_MCP_CONNECT_TIMEOUT_MS&quot;: &quot;60000&quot; }
+    }
+  }
+}</code></pre>
+<p>在仓库根开 Claude Code，它会发现该 server（首次需在 <code>/mcp</code> 里批准 project server）。<br>或手动注册：</p>
+<pre><code class="language-bash">claude mcp add khy-os -- node kernel/bridge/khy-mcp.js --socket /tmp/khy-agent.sock</code></pre>
+<p><code>khy-mcp.js</code> 会<strong>等待 COM2 socket 出现</strong>（上限 <code>KHY_MCP_CONNECT_TIMEOUT_MS</code>，默认 30s，<br>.mcp.json 里设 60s），所以先开 Claude Code 再 <code>make run-agent</code> 也能自动挂上。</p>
+<p>挂上后，Claude Code 会看到这些工具（与内置 agent 共用同一份 <code>khy-tools.js</code>）：</p>
+<table><thead><tr><th>工具</th><th>作用</th></tr></thead><tbody><tr><td><code>khy_list</code> / <code>khy_stat</code> / <code>khy_read</code></td><td>浏览/读取 KHY-OS 文件</td></tr><tr><td><code>khy_write</code> / <code>khy_mkdir</code> / <code>khy_remove</code></td><td>修改 KHY-OS 文件（<code>/bin</code> 受 EPERM 守卫保护）</td></tr><tr><td><code>khy_ps</code></td><td>看进程表</td></tr><tr><td><code>khy_get_config</code></td><td>读 <code>/disk/etc/agent.conf</code></td></tr></tbody></table>
+<p>例：让 Claude “列出 KHY-OS 根目录并读 /etc/motd” → 走 <code>khy_list</code> + <code>khy_read</code> →<br>真实命中内核 VFS。</p>
+<p>诊断只走 stderr，stdout 仅 MCP 协议字节，不会污染 JSON-RPC。</p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../kernel/docs/架构-agent-os双向协议.html"><div class="dir">下一篇 →</div><div class="ttl">架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="kernel/bridge/README-联调.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

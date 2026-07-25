@@ -1,0 +1,19 @@
+{
+  "id": "etl",
+  "kind": "concept",
+  "name": "ETL",
+  "category": "data",
+  "triggers": ["ETL", "Extract Transform Load", "数据管道", "ELT", "抽取转换加载"],
+  "summary": "抽取-转换-加载：从源系统抽取数据，清洗/转换为目标模型，再加载进数仓；ELT 则先加载再在数仓内转换。是 OLTP→OLAP 的桥。",
+  "whenToUse": [
+    "把业务库数据汇入数仓做分析。",
+    "多源异构数据需统一清洗、对齐口径。"
+  ],
+  "antiPatterns": [
+    "转换逻辑无幂等，重跑产生重复/脏数据。",
+    "全量抽取代替增量，成本与延迟爆炸（考虑 CDC）。",
+    "口径散落各管道，缺统一指标定义。"
+  ],
+  "minimalSkeleton": "Extract: 从源(DB/API/文件)抽取\nTransform: 清洗/去重/对齐/聚合\nLoad: 写入数仓\n调度(Airflow) + 幂等 + 增量",
+  "relatedArchetypes": []
+}

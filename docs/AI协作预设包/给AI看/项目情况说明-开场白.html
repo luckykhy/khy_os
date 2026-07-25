@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📨 项目情况说明 · 发给 AI 的开场白 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给AI看<span class="sep">›</span>📨 项目情况说明 · 发给 AI 的开场白</div>
+      <header class="hero reveal"><h1>📨 项目情况说明 · 发给 AI 的开场白</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#项目情况说明-发给-ai-的开场白">📨 项目情况说明 · 发给 AI 的开场白</a></li><li class="lvl-2"><a href="#a-全量开场白-强模型-大上下文">A · 全量开场白（强模型 / 大上下文）</a></li><li class="lvl-2"><a href="#b-精简开场白-普通模型">B · 精简开场白（普通模型）</a></li><li class="lvl-2"><a href="#c-小模型极简开场白-7b-本地模型">C · 小模型极简开场白（≤7B 本地模型）</a></li><li class="lvl-2"><a href="#d-场景补丁块-发完主开场白后按需追加">D · 场景补丁块（发完主开场白后按需追加）</a></li><li class="lvl-3"><a href="#d1-改-ai-网关-加模型适配">D1 · 改 AI 网关 / 加模型适配</a></li><li class="lvl-3"><a href="#d2-改工具-工具调用">D2 · 改工具 / 工具调用</a></li><li class="lvl-3"><a href="#d3-小模型-弱模型跑工具循环">D3 · 小模型/弱模型跑工具循环</a></li><li class="lvl-3"><a href="#d4-写文档">D4 · 写文档</a></li><li class="lvl-3"><a href="#d5-发布-打包">D5 · 发布 / 打包</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: AI(直接投喂) | 用途: 每次开新会话第一条消息，整段发给 AI --&gt;<br>&lt;!-- 这些是发给 AI 读的内容。人类使用说明在 ../给人看/ 。 --&gt;</p>
+<h1 id="项目情况说明-发给-ai-的开场白">📨 项目情况说明 · 发给 AI 的开场白<a class="anchor" href="#项目情况说明-发给-ai-的开场白" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件里 ``<code> 代码块内的文字，是**直接发给 AI 的内容**。按对方模型能力选一档，整段发送。<br>强模型/大上下文→A；普通模型→B；本地小模型(≤7B)→C。发完 A/B/C 后，若要它改代码，再发 </code>协作铁律.md`。</p></blockquote>
+<hr>
+<h2 id="a-全量开场白-强模型-大上下文">A · 全量开场白（强模型 / 大上下文）<a class="anchor" href="#a-全量开场白-强模型-大上下文" aria-label="锚点">#</a></h2>
+<pre><code>你现在要协助维护和开发一个叫 Khy-OS 的开源项目。请先完整读懂下面的情况，再动手。
+
+【这是什么项目】
+Khy-OS 是「自研 x86_64 C 内核 + Node.js AI 后端 + host 桥(agent⇄OS) + Python(pip) 启动器」
+的一体化系统。它同时是：
+- 一个能在 QEMU 启动的手写微内核（kernel/，C + 少量 MoonBit + 汇编）；
+- 一个 AI 智能体运行时与网关（services/backend/，业务主体在此，Node.js）；
+- 一个跨模型的 CLI/TUI 助手（命令名 khy）；
+- 通过 pip 分发（包名 khy-os），pip 启动器是薄壳，真正跑的是 Node 后端。
+
+【最重要的现实约束】
+1. pip 是唯一分发渠道：任何改动最终要能打成 wheel 发布，用户 `pip install khy-os` 才能拿到。
+   pip 包里带的是打包时的源码快照——改了仓库源码后，必须重新打包才对已安装用户生效。
+2. 这个项目要能被「一个人、甚至不太懂编程的人、在没有强 AI 的情况下」继续维护。
+   所以稳定、可回退、守卫可拦截，比「炫技」重要得多。
+
+【目录速记（我要改 X 去哪）】
+- 改 CLI 命令/路由：services/backend/src/cli/router.js（一个大 switch）→ handlers/
+- 改 AI 网关/模型路由：services/backend/src/services/gateway/aiGateway.js → modelRouter.js
+- 改本地离线能力（算/文本/找文件/上下文）：services/backend/src/services/localBrain*.js
+- 改工具调用主循环：services/backend/src/services/toolUseLoop.js
+- 唯一工具执行漏斗：services/backend/src/services/toolCalling.js 的 executeTool()
+- 改前端：apps/ai-frontend/（AI 前端）或 software/khyquant/frontend/（量化应用前端）
+- 改 pip 启动：platform/khy_platform/cli.py
+- 项目地图与红线（先读）：.ai/MAP.md、.ai/GUARDS.md、.ai/GUARDS-AI.md、.ai/CONTEXT.yaml
+
+【这个项目改代码只有一种正确姿势（务必遵守）】
+「加法式改动 + 纯叶子模块 + 默认开的 KHY_* 门控 + 关闭即逐字节回退」：
+- 新逻辑写成一个「纯叶子模块」：零 IO、确定性、绝不抛异常、可单测、不 require 重依赖。
+- 用一个 KHY_XXX 环境变量门控它，默认开(default-on)。
+- 门控关闭时，行为必须和改动前逐字节相同(byte-revert)；异常时 fail-soft 回退旧行为。
+- 新行为是旧行为的「严格超集」：只在旧路径漏做/做错处补正，绝不改变既有正确路径的输出。
+- 所有 KHY_* 门控登记在 services/backend/src/services/flagRegistry.js（父门控关→子门控必关）。
+目的：任何改动都能被一个开关瞬间关掉恢复原样，弱模型也难以把项目改坏。
+
+【绝不能做的事（红线）】
+- 不许绕过 executeTool 另开工具执行旁路（会绕过权限门控与审批）。
+- 不许为同一个概念新建「第二份真源」（约束格/能力向量/错误分类/破坏性动作模式库等各有唯一权威实现，见 .ai/GUARDS-AI.md）。
+- 不许把单个文件写超过 2500 行（上帝组件）。要拆成叶子模块，用同名别名 re-export 保契约。
+- 不许声称「已接入/已落地」却没有从 executeTool / toolUseLoop / aiManagementServer 三个真实入口之一可达的调用链——隔离单测全绿 ≠ 在产。
+- 不许用 git --no-verify 跳过提交守卫。守卫红了就先修红。
+
+【干活前后各做一次自检】
+- 动手前：node services/backend/bin/khy.js maintain freshness   （只读体检）
+- 改完后：跑相关单测 + 提交前守卫(scripts/check-*.js，git 钩子会自动触发)。
+
+【语言】项目文档与交流用中文即可。代码标识符、字符串字面量用英文。
+
+现在请确认你已读懂以上内容，然后等待我给你具体任务。不要立刻改任何文件。</code></pre>
+<hr>
+<h2 id="b-精简开场白-普通模型">B · 精简开场白（普通模型）<a class="anchor" href="#b-精简开场白-普通模型" aria-label="锚点">#</a></h2>
+<pre><code>你要协助开发一个叫 Khy-OS 的项目：x86_64 C 内核 + Node.js AI 后端 + pip(python) 启动器，
+命令名 khy，通过 `pip install khy-os` 分发。业务主体在 services/backend/。
+
+关键规矩，务必遵守：
+1. pip 是唯一分发渠道；改了仓库源码要重新打包才对已安装用户生效。
+2. 改代码只用一种姿势：写「纯叶子模块」(零IO/确定性/不抛异常/可单测)，
+   用一个默认开的 KHY_XXX 环境变量门控；关掉门控行为要和改动前逐字节相同；
+   异常要 fail-soft 回退旧行为；新行为是旧行为的严格超集(只多做对的事)。
+   所有 KHY_* 登记在 services/backend/src/services/flagRegistry.js。
+3. 红线：不绕过 executeTool 开工具旁路；不给同一概念建第二份真源；
+   单文件不超 2500 行；没接到真实入口(executeTool/toolUseLoop/aiManagementServer)就不算「已落地」；
+   不许用 --no-verify 跳过提交守卫。
+4. 先读 .ai/MAP.md 和 .ai/GUARDS.md 再动手；不确定就先只读体检：
+   node services/backend/bin/khy.js maintain freshness
+
+去哪改：CLI→services/backend/src/cli/router.js；AI网关→services/backend/src/services/gateway/aiGateway.js；
+本地能力→services/backend/src/services/localBrain*.js；前端→apps/ai-frontend/；pip→platform/khy_platform/cli.py。
+
+交流用中文。先确认读懂，等我派具体任务，别急着改文件。</code></pre>
+<hr>
+<h2 id="c-小模型极简开场白-7b-本地模型">C · 小模型极简开场白（≤7B 本地模型）<a class="anchor" href="#c-小模型极简开场白-7b-本地模型" aria-label="锚点">#</a></h2>
+<pre><code>项目：Khy-OS（Node.js 后端为主，命令 khy，pip 分发）。业务代码在 services/backend/src/。
+
+你只能这样改代码，别的方式一律不许：
+- 新逻辑写成一个小函数/小模块，不读写文件、不抛异常、输入坏也要返回安全默认值。
+- 用一个叫 KHY_XXX 的环境变量控制它，默认开着。
+- 关掉 KHY_XXX 时，代码行为必须和你改之前一模一样。
+
+三条死规矩：
+1. 不许新建和已有功能重复的第二份实现，先搜有没有现成的。
+2. 一个文件不许超过 2500 行。
+3. 改完要能通过 `git commit` 的自动检查（守卫），检查不过就先修，别跳过。
+
+每次我只会给你一个很小的任务。做完就停下等我，不要自作主张改别的文件。先回答「懂了」。</code></pre>
+<hr>
+<h2 id="d-场景补丁块-发完主开场白后按需追加">D · 场景补丁块（发完主开场白后按需追加）<a class="anchor" href="#d-场景补丁块-发完主开场白后按需追加" aria-label="锚点">#</a></h2>
+<h3 id="d1-改-ai-网关-加模型适配">D1 · 改 AI 网关 / 加模型适配<a class="anchor" href="#d1-改-ai-网关-加模型适配" aria-label="锚点">#</a></h3>
+<pre><code>补充：AI 网关在 services/backend/src/services/gateway/aiGateway.js，级联路由+熔断；
+模型→适配器映射在 modelRouter.js。加新模型/provider 时：
+- 模型名/默认值这类要收敛到单一真源，别散落硬编码（守卫 scripts/check-model-hardcoding.js 会拦）。
+- provider 预设在 providerPresets；内置 key 在 apiKeyPool（占位 key priority 0，用户真 key priority 10 恒盖过）。
+- auto 选模型是 adapter 级哨兵：GATEWAY_PREFERRED_ADAPTER=auto。别把某 provider 的模型名泄漏给不认识它的通道（会 404 冷却）。</code></pre>
+<h3 id="d2-改工具-工具调用">D2 · 改工具 / 工具调用<a class="anchor" href="#d2-改工具-工具调用" aria-label="锚点">#</a></h3>
+<pre><code>补充：一切工具调用必经唯一漏斗 executeTool()（services/backend/src/services/toolCalling.js）。
+不许在调度器/适配器/路由层另开执行旁路。工具名归一化要闭合大小写变体（BASH/Bash 都覆盖）。
+治理引擎只能接在既有 seam 上（见 .ai/GUARDS-AI.md 第 1 节的 6 个 seam），别新开洞。</code></pre>
+<h3 id="d3-小模型-弱模型跑工具循环">D3 · 小模型/弱模型跑工具循环<a class="anchor" href="#d3-小模型-弱模型跑工具循环" aria-label="锚点">#</a></h3>
+<pre><code>补充：弱模型跑工具循环有已知四类坑（见 docs/03_DESIGN_设计/[DESIGN-ARCH-013] 弱模型兼容.md）：
+工具结果过大撑爆上下文、max_tokens 太低中途截断、role:'tool' 消息被拒、
+JSON 被包在 markdown 代码块里解析不出。改动别破坏这些已有兼容层。</code></pre>
+<h3 id="d4-写文档">D4 · 写文档<a class="anchor" href="#d4-写文档" aria-label="锚点">#</a></h3>
+<pre><code>补充：文档放 docs/，按生命周期编号（01_INIT…08_MGMT），命名 [阶段-类型-序号] 中文名。
+规范号别猜，现场扫最大值+1：
+find docs -name '*DESIGN-ARCH*' | grep -oE 'DESIGN-ARCH-[0-9]+' | sort -u | tail -1
+新文档要在对应目录 00_INDEX 和 docs/00_INDEX_文档索引.md 各回写一行。</code></pre>
+<h3 id="d5-发布-打包">D5 · 发布 / 打包<a class="anchor" href="#d5-发布-打包" aria-label="锚点">#</a></h3>
+<pre><code>补充：发布照手册做——docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md。
+仓库改了源码，pip 用户拿不到，除非重新打包发版。版本号要多处一致，别只改一处。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给AI看/任务派发卡.html"><div class="dir">← 上一篇</div><div class="ttl">🎫 任务派发卡 · 发给 AI 当需求</div></a><a class="next" href="../../../docs/AI协作预设包/给AI看/协作铁律.html"><div class="dir">下一篇 →</div><div class="ttl">⚖️ 协作铁律 · 发给 AI，要它照做</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给AI看/项目情况说明-开场白.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

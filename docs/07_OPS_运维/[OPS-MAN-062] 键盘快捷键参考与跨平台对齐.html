@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-062] 键盘快捷键参考 · Windows / Linux 跨平台与 khyos 对齐 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-062] 键盘快捷键参考 · Windows / Linux 跨平台与 khyos 对齐</div>
+      <header class="hero reveal"><h1>[OPS-MAN-062] 键盘快捷键参考 · Windows / Linux 跨平台与 khyos 对齐</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-062-键盘快捷键参考-windows-linux-跨平台与-khyos-对齐">[OPS-MAN-062] 键盘快捷键参考 · Windows / Linux 跨平台与 khyos 对齐</a></li><li class="lvl-2"><a href="#0-这是什么">0. 这是什么</a></li><li class="lvl-2"><a href="#1-最先记住的几个">1. 最先记住的几个</a></li><li class="lvl-2"><a href="#2-换行-windows-与-linux-差异">2. 换行：Windows 与 Linux 差异</a></li><li class="lvl-2"><a href="#3-历史导航">3. 历史导航</a></li><li class="lvl-2"><a href="#4-四个输入前缀">4. 四个输入前缀</a></li><li class="lvl-2"><a href="#5-行内光标移动-emacs-风格">5. 行内光标移动（emacs 风格）</a></li><li class="lvl-2"><a href="#6-进阶键">6. 进阶键</a></li><li class="lvl-2"><a href="#7-vim-模式">7. Vim 模式</a></li><li class="lvl-2"><a href="#8-贴图片-windows-vs-linux">8. 贴图片：Windows vs Linux</a></li><li class="lvl-2"><a href="#9-khyos-对齐现状-诚实两栏">9. khyos 对齐现状（诚实两栏）</a></li><li class="lvl-3"><a href="#①-已对齐-cc-的键位">① 已对齐 CC 的键位</a></li><li class="lvl-3"><a href="#②-仍有差异-khy-刻意不同">② 仍有差异 / khy 刻意不同</a></li><li class="lvl-2"><a href="#10-自定义与查看">10. 自定义与查看</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-062 | 阶段: 运维 | 主题: 键盘快捷键跨平台参考与 khyos 对齐 --&gt;</p>
+<h1 id="ops-man-062-键盘快捷键参考-windows-linux-跨平台与-khyos-对齐">[OPS-MAN-062] 键盘快捷键参考 · Windows / Linux 跨平台与 khyos 对齐<a class="anchor" href="#ops-man-062-键盘快捷键参考-windows-linux-跨平台与-khyos-对齐" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>参考手册</strong> · 面向刚上手的用户，说明 Claude Code 交互模式在不同系统下的键盘快捷键差异，并对照 khyos 自身 TUI 已对齐 / 仍有差异的键位。</p>
+<p><strong>一句话定位</strong>：Claude Code 的键位在 Windows 与 Linux 上<strong>大体一致</strong>，差异集中在<strong>换行</strong>（Shift+Enter 需终端支持）与<strong>贴图片</strong>（Ctrl+V vs Alt+V）两处；khyos 的交互式 TUI <strong>已 ~90% 对齐 CC</strong>，本轮又补齐了 <code>\</code>+Enter 续行与 Ctrl+R 反向历史搜索。</p>
+<p><strong>关联规范</strong>：键位真源是代码里的 <code>src/services/keybindings/keybindingCatalog.js</code>（驱动 <code>/keybindings</code> 命令与 <code>?</code> 帮助浮层）。本文与它保持一致，避免两处漂移。</p></blockquote>
+<hr>
+<h2 id="0-这是什么">0. 这是什么<a class="anchor" href="#0-这是什么" aria-label="锚点">#</a></h2>
+<p>这是一份<strong>跨平台键盘快捷键参考</strong>，回答两个问题：</p>
+<ol><li>Claude Code 交互模式下常用键都是什么，Windows 和 Linux 上有什么差异。</li><li>khyos 自己的交互式 CLI（<code>khy chat</code> 的 Ink TUI）<strong>对齐到了哪些</strong>，哪些<strong>刻意不同或暂无</strong>。</li></ol>
+<p><strong>适用范围</strong>：交互式提示输入框（你敲命令 / 提问的那一行）。不涉及非交互脚本、<code>khy run &lt;task&gt;</code> 一次性调用。</p>
+<p><strong>SSOT 指针（重要）</strong>：键位的<strong>唯一真源</strong>是代码里的 <code>keybindingCatalog.js</code>。随时可以：</p>
+<ul><li>在 TUI 里敲 <code>/keybindings</code> 查看<strong>完整</strong>分组键位表；</li><li>在<strong>空输入框</strong>按 <code>?</code> 弹出精简的快捷键浮层。</li></ul>
+<p>本文档是<strong>给人读的解释与跨平台差异说明</strong>；当两者出现分歧，以 <code>/keybindings</code> 的实时输出为准。</p>
+<hr>
+<h2 id="1-最先记住的几个">1. 最先记住的几个<a class="anchor" href="#1-最先记住的几个" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>键</th><th>作用</th></tr></thead><tbody><tr><td><code>Enter</code></td><td>发送消息</td></tr><tr><td><code>\</code> + <code>Enter</code></td><td>行尾反斜杠续行：删掉反斜杠、换行而不发送（见 §2）</td></tr><tr><td><code>Esc</code></td><td>中断当前回合 / 取消计划评审</td></tr><tr><td><code>Esc</code> <code>Esc</code>（连按两次）</td><td>清空输入框 / 回溯上一步</td></tr><tr><td><code>Ctrl + C</code></td><td>忙时中断当前回合；空闲时连按两次退出</td></tr><tr><td><code>Ctrl + D</code></td><td>有文本时向后删除；空行时连按两次退出</td></tr><tr><td><code>Shift + Tab</code></td><td>切换权限模式（循环 4 档）</td></tr></tbody></table>
+<p>这七个覆盖 90% 的日常操作。其余键都是「锦上添花」，用到再查。</p>
+<hr>
+<h2 id="2-换行-windows-与-linux-差异">2. 换行：Windows 与 Linux 差异<a class="anchor" href="#2-换行-windows-与-linux-差异" aria-label="锚点">#</a></h2>
+<p>想在一条消息里换行（写多行 prompt）而不发送，有几种办法，<strong>可用性因终端而异</strong>：</p>
+<table><thead><tr><th>方式</th><th>Windows</th><th>Linux</th><th>说明</th></tr></thead><tbody><tr><td><code>\</code> + <code>Enter</code></td><td>✅ 通用</td><td>✅ 通用</td><td><strong>最稳妥的兜底</strong>：任何终端都work。行尾打一个反斜杠再回车。</td></tr><tr><td><code>Shift + Enter</code></td><td>⚠️ Windows Terminal 原生支持；VS Code / Cursor 内置终端需先跑 <code>/terminal-setup</code></td><td>⚠️ 多数现代终端支持，少数需配置</td><td>终端要把 Shift+Enter 作为独立序列上报才生效。</td></tr><tr><td><code>Alt + Enter</code></td><td>⚠️ 视终端</td><td>⚠️ 视终端</td><td>备选；不如 <code>\</code>+Enter 通用。</td></tr><tr><td><code>Ctrl + Enter</code></td><td>⚠️ 视终端</td><td>⚠️ 视终端</td><td>备选。</td></tr></tbody></table>
+<p><strong>建议</strong>：拿不准时统一用 <code>\</code> + <code>Enter</code>——它在所有系统、所有终端下都可靠。</p>
+<blockquote><p><strong>VS Code / Cursor 用户</strong>：如果 <code>Shift+Enter</code> 直接发送而不是换行，在 TUI 里跑一次 <code>/terminal-setup</code> 配置终端集成。</p></blockquote>
+<hr>
+<h2 id="3-历史导航">3. 历史导航<a class="anchor" href="#3-历史导航" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>键</th><th>作用</th><th>跨平台</th></tr></thead><tbody><tr><td><code>↑</code> / <code>↓</code></td><td>单行时浏览历史命令；多行时在缓冲内上下移动</td><td>一致</td></tr><tr><td><code>Ctrl + R</code></td><td>反向增量搜索历史命令（见下）</td><td>一致</td></tr></tbody></table>
+<p><strong>Ctrl+R 反向搜索</strong>（类似 bash 的 <code>reverse-i-search</code>）：</p>
+<ol><li>按 <code>Ctrl + R</code> 打开搜索行，开始打字即增量匹配（大小写不敏感子串）。</li><li>命中按<strong>最新→最旧</strong>排序，先选中最新的一条。</li><li>再按一次 <code>Ctrl + R</code> 跳到<strong>更旧</strong>的一条匹配（到最旧一条停住，不回绕）。</li><li><code>Enter</code> 或 <code>Tab</code>：把选中的历史命令<strong>灌入输入框</strong>（可继续编辑）。</li><li><code>Esc</code> / <code>Ctrl + C</code>：取消，输入框保持原样。</li></ol>
+<blockquote><p><strong>历史范围的诚实说明</strong>：Claude Code 按 <strong>project 目录</strong> 分别记历史；khyos 用<strong>全局单文件</strong>（<code>~/.khyquant_history</code>）。所以 khyos 的 ↑/↓ 与 Ctrl+R 会看到跨目录的所有历史，这是刻意的取舍（见 §9）。</p></blockquote>
+<hr>
+<h2 id="4-四个输入前缀">4. 四个输入前缀<a class="anchor" href="#4-四个输入前缀" aria-label="锚点">#</a></h2>
+<p>在<strong>空输入框行首</strong>敲这些字符会切换输入模式：</p>
+<table><thead><tr><th>前缀</th><th>模式</th><th>作用</th></tr></thead><tbody><tr><td><code>!</code></td><td>bash 模式</td><td>直接运行 shell 命令</td></tr><tr><td><code>#</code></td><td>记忆模式</td><td>把这行写入记忆（下次对话生效）</td></tr><tr><td><code>/</code></td><td>命令模式</td><td>斜杠命令菜单（<code>/model</code>、<code>/vim</code>、<code>/keybindings</code> …）</td></tr><tr><td><code>@</code></td><td>文件引用</td><td>引用文件路径（带补全）</td></tr></tbody></table>
+<p>外加 <code>?</code>：在空输入框显示 / 隐藏快捷键浮层。</p>
+<hr>
+<h2 id="5-行内光标移动-emacs-风格">5. 行内光标移动（emacs 风格）<a class="anchor" href="#5-行内光标移动-emacs-风格" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>键</th><th>作用</th></tr></thead><tbody><tr><td><code>Ctrl + A</code> / <code>Ctrl + E</code></td><td>移到行首 / 行尾</td></tr><tr><td><code>Ctrl + B</code> / <code>Ctrl + F</code></td><td>左移 / 右移一个字符</td></tr><tr><td><code>Ctrl + K</code> / <code>Ctrl + U</code></td><td>删除到行尾 / 行首</td></tr><tr><td><code>Ctrl + W</code></td><td>删除前一个词</td></tr><tr><td><code>Ctrl + Y</code></td><td>粘回（yank）上次删除的内容</td></tr><tr><td><code>Alt + B</code> / <code>Alt + F</code></td><td>按词左移 / 右移</td></tr><tr><td><code>Alt + D</code></td><td>删除后一个词</td></tr><tr><td><code>Meta + Backspace</code></td><td>删除前一个词</td></tr></tbody></table>
+<blockquote><p><strong>Alt 键的坑</strong>：<code>Alt + B/F/D</code> 要求终端把 <code>Alt</code> 当作 <code>Meta</code> 上报。<strong>Linux 终端默认可用</strong>；<strong>macOS 上</strong>多数终端需在设置里勾选「Use Option as Meta key」。Windows Terminal 一般可用。</p></blockquote>
+<hr>
+<h2 id="6-进阶键">6. 进阶键<a class="anchor" href="#6-进阶键" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>键</th><th>作用</th><th>khyos 现状</th></tr></thead><tbody><tr><td><code>Ctrl + O</code></td><td>展开 / 折叠过程组与工具输出</td><td>✅ 已对齐（语义与 CC 的「切换 transcript」略有不同，见 §9）</td></tr><tr><td><code>Ctrl + T</code></td><td>显示 / 隐藏任务清单面板</td><td>✅ 已对齐</td></tr><tr><td><code>Ctrl + L</code></td><td>清屏（清除已提交的对话记录）</td><td>✅ 已对齐</td></tr><tr><td><code>Ctrl + G</code></td><td>CC：打开外部编辑器编辑当前输入</td><td>⚠️ khyos 暂无（诚实标注，见 §9）</td></tr><tr><td>消息排队</td><td>忙时继续键入，回合结束后按序发送</td><td>✅ 支持</td></tr></tbody></table>
+<hr>
+<h2 id="7-vim-模式">7. Vim 模式<a class="anchor" href="#7-vim-模式" aria-label="锚点">#</a></h2>
+<p>在 TUI 里跑 <code>/vim</code> 开启模态编辑：</p>
+<ul><li><code>Esc</code> 回 NORMAL，<code>i</code> 进 INSERT，<code>v</code> 进 VISUAL；</li><li><code>h</code> / <code>j</code> / <code>k</code> / <code>l</code> 移动；</li><li><code>dd</code>（删行）、<code>cw</code>（改词）、<code>u</code>（撤销）等常用算子；</li><li><strong>不支持</strong> <code>Ctrl + V</code> 块选（与 CC 一致的取舍）。</li></ul>
+<p>底部状态行显示 <code>-- NORMAL --</code> / <code>-- INSERT --</code>。</p>
+<hr>
+<h2 id="8-贴图片-windows-vs-linux">8. 贴图片：Windows vs Linux<a class="anchor" href="#8-贴图片-windows-vs-linux" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>系统</th><th>键</th><th>说明</th></tr></thead><tbody><tr><td>Linux / macOS</td><td><code>Ctrl + V</code></td><td>把剪贴板图片暂存到下一回合</td></tr><tr><td>Windows / WSL</td><td><code>Alt + V</code></td><td>Windows 上 <code>Ctrl + V</code> 是终端自身的粘贴键、到不了应用，故改用 <code>Alt + V</code>（在 Ink 里表现为 <code>Meta + v</code>）</td></tr></tbody></table>
+<blockquote><p><strong>最稳妥的办法</strong>：不确定时，直接<strong>在 prompt 里写图片文件路径</strong>（配合 <code>@</code> 补全），跨平台零歧义。</p></blockquote>
+<hr>
+<h2 id="9-khyos-对齐现状-诚实两栏">9. khyos 对齐现状（诚实两栏）<a class="anchor" href="#9-khyos-对齐现状-诚实两栏" aria-label="锚点">#</a></h2>
+<p>khyos 的默认交互界面是 <strong>Ink(React) TUI</strong>，代码里明确对齐 Claude Code 的 <code>keybindings/defaultBindings.ts</code>。下面如实分两栏。</p>
+<h3 id="①-已对齐-cc-的键位">① 已对齐 CC 的键位<a class="anchor" href="#①-已对齐-cc-的键位" aria-label="锚点">#</a></h3>
+<ul><li>行编辑：<code>Ctrl + A/E/B/F/K/U/W/Y</code></li><li>按词：<code>Alt + B/F/D</code>、<code>Meta + Backspace</code></li><li>换行：<code>Shift / Alt / Ctrl + Enter</code>、<strong><code>\</code> + Enter</strong>（本轮新增）</li><li>历史：<code>↑</code> / <code>↓</code>、<strong><code>Ctrl + R</code> 反向搜索</strong>（本轮新增）</li><li>权限模式：<code>Shift + Tab</code> 四档循环</li><li>前缀入口：<code>!</code> / <code>#</code> / <code>/</code> / <code>@</code> / <code>?</code></li><li>退出 / 中断：<code>Ctrl + C</code>、<code>Ctrl + D</code> 双击，<code>Esc</code> / <code>Esc·Esc</code></li><li>视图：<code>Ctrl + L</code>、<code>Ctrl + O</code>、<code>Ctrl + T</code></li><li>Chat chord：<code>Meta + P</code>（模型选择器）/ <code>Meta + O</code>（fast）/ <code>Meta + T</code>（thinking）</li></ul>
+<h3 id="②-仍有差异-khy-刻意不同">② 仍有差异 / khy 刻意不同<a class="anchor" href="#②-仍有差异-khy-刻意不同" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>Ctrl + O</code> 语义</strong>：CC 是「切换 transcript 视图」，khy 是「展开 / 折叠过程组与工具输出」——khy 的是既有合理功能，不为对齐而破坏它。</li><li><strong>历史范围</strong>：CC 按 project 目录分别记；khy 用<strong>全局单文件</strong> <code>~/.khyquant_history</code>。</li><li><strong>暂无（deferred）</strong>：<code>Ctrl + G</code> 外部编辑器、<code>Ctrl + _</code> undo、<code>Meta + Y</code> yank-pop、<code>Ctrl + S</code> stash——khy 无对应底层能力，<strong>造出来是假功能</strong>，故刻意不做（见代码 <code>chatChords.js</code> 的诚实红线）。</li></ul>
+<blockquote><p>随时用 <code>/keybindings</code> 看完整实时键位表，或在空输入框按 <code>?</code> 弹浮层。</p></blockquote>
+<hr>
+<h2 id="10-自定义与查看">10. 自定义与查看<a class="anchor" href="#10-自定义与查看" aria-label="锚点">#</a></h2>
+<ul><li><strong>查看</strong>：TUI 里 <code>/keybindings</code>（完整分组表）或空输入框 <code>?</code>（精简浮层）。</li><li><strong>门控</strong>：本轮两个新键位可用环境变量关闭（默认开，关则逐字节回退历史行为）：<ul><li><code>KHY_BACKSLASH_NEWLINE=0</code> → 关闭 <code>\</code>+Enter 续行；</li><li><code>KHY_HISTORY_REVERSE_SEARCH=0</code> → 关闭 <code>Ctrl+R</code> 反向搜索。</li></ul></li></ul>
+<blockquote><p><strong>诚实说明</strong>：khyos <strong>没有</strong> <code>~/.claude/keybindings.json</code> 式的重映射引擎——键位由 <code>keybindingCatalog.js</code> 这一 SSOT 声明式驱动，不支持逐键重绑。这是与 CC 不同的取舍（理由见 <code>keybindingCatalog.js</code> 注释）：khy 选择「一份真源 + 门控整体开关」而非「完整可重映射引擎」，以避免维护半成品的重绑层。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-061] 发布门禁.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-061] 发布门禁 · 可阻断的发布彩排</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-063] cc订阅迁移到新电脑-khy-claude-adopt-env.html"><div class="dir">下一篇 →</div><div class="ttl">CC 订阅迁移到新电脑（khy claude adopt-env）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-062] 键盘快捷键参考与跨平台对齐.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

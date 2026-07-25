@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-041-qoder-接入-khy-网关与开机自启实现记录">[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录</a></li><li class="lvl-2"><a href="#一-背景与目标">一、背景与目标</a></li><li class="lvl-2"><a href="#二-架构">二、架构</a></li><li class="lvl-2"><a href="#三-核心文件">三、核心文件</a></li><li class="lvl-2"><a href="#四-实现内容">四、实现内容</a></li><li class="lvl-3"><a href="#4-1-qoder-bridge-py">4.1 qoder_bridge.py</a></li><li class="lvl-3"><a href="#4-2-配置层">4.2 配置层</a></li><li class="lvl-3"><a href="#4-3-开机自启动-startup-文件夹方案-无需管理员权限">4.3 开机自启动（Startup 文件夹方案，无需管理员权限）</a></li><li class="lvl-2"><a href="#五-配置值-env-关键项">五、配置值（.env 关键项）</a></li><li class="lvl-2"><a href="#六-验证记录">六、验证记录</a></li><li class="lvl-2"><a href="#七-排障指南">七、排障指南</a></li><li class="lvl-2"><a href="#八-注意事项">八、注意事项</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-041-qoder-接入-khy-网关与开机自启实现记录">[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录<a class="anchor" href="#impl-rpt-041-qoder-接入-khy-网关与开机自启实现记录" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 docs/03_DESIGN_设计/，本目录索引见 00_INDEX_实现-分类索引.md</p></blockquote>
+<ul><li>日期：2026-07-13</li><li>范围：将 Qoder AI 通过本地桥接服务接入 khy 网关，并配置 Windows 用户登录自启动。</li><li>状态：定稿（端到端验证通过）</li></ul>
+<h2 id="一-背景与目标">一、背景与目标<a class="anchor" href="#一-背景与目标" aria-label="锚点">#</a></h2>
+<p>khy 网关已内置两条 Qoder 接入路径，本次采用的是 Track 2（自建桥接）：</p>
+<table><thead><tr><th>路径</th><th>依赖</th><th>适用场景</th></tr></thead><tbody><tr><td>Track 1（内置，见 docs/QODER_PROXY_INTEGRATION.md）</td><td>独立的 qoder-proxy Node.js 服务</td><td>服务器/CI 环境</td></tr><tr><td>Track 2（本次，自建桥接）</td><td>qodercli.exe（随 qoder_agent_sdk pip 包捆绑）</td><td>Windows 本机开发</td></tr></tbody></table>
+<p>Track 2 直接把 Qoder IDE 自带的 CLI 包装成 OpenAI 兼容接口，零额外依赖。</p>
+<h2 id="二-架构">二、架构<a class="anchor" href="#二-架构" aria-label="锚点">#</a></h2>
+<p>khy（GATEWAY_API_POOL_PROVIDER=qoder）<br>  -&gt; custom provider 池（custom_providers.json）<br>        -&gt; http://127.0.0.1:3000/v1  &lt;- qoder_bridge.py 监听<br>              -&gt; qodercli.exe（随 qoder_agent_sdk 安装，路径因机器而异）<br>                    -&gt; Qoder AI 云端模型</p>
+<h2 id="三-核心文件">三、核心文件<a class="anchor" href="#三-核心文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td>scripts/qoder-bridge/qoder_bridge.py</td><td>本地 HTTP 服务，OpenAI 协议转译为 qodercli 子进程调用</td></tr><tr><td>scripts/qoder-bridge/start_qoder_bridge.ps1</td><td>幂等启动器，检测 3000 端口后拉起 pythonw 进程</td></tr><tr><td>scripts/qoder-bridge/install_autostart.ps1</td><td>每台机器 clone 后运行一次，动态生成 vbs 并装入 Startup 文件夹（不硬编码路径）</td></tr><tr><td>~/.khyquant/custom_providers.json</td><td>注册 qoder 池（12 个模型）</td></tr><tr><td>~/.khyquant/api_keys.json</td><td>key=qoder-local（本地哨兵，无需真实鉴权）</td></tr></tbody></table>
+<h2 id="四-实现内容">四、实现内容<a class="anchor" href="#四-实现内容" aria-label="锚点">#</a></h2>
+<h3 id="4-1-qoder-bridge-py">4.1 qoder_bridge.py<a class="anchor" href="#4-1-qoder-bridge-py" aria-label="锚点">#</a></h3>
+<p>监听 127.0.0.1:3000，三个端点：GET /health、GET /v1/models（12 个模型）、<br>POST /v1/chat/completions（调用 qodercli 子进程，300s 超时，解析 JSON 输出包装为<br>标准 chat.completion 响应）。默认模型 auto，未知模型 ID 透传给 qodercli 处理。</p>
+<p>模型目录：auto/ultimate/performance/efficient/lite/qwen3.7-max/qwen3.7-plus/<br>glm-5.2/kimi-k2.7-code/deepseek-v4-pro/deepseek-v4-flash/minimax-m3。</p>
+<h3 id="4-2-配置层">4.2 配置层<a class="anchor" href="#4-2-配置层" aria-label="锚点">#</a></h3>
+<p>setup_khy_provider.py 写入 custom_providers.json、api_keys.json，并更新<br>services/backend/.env 的 PROXY_MODEL_ROUTE_MAP / GATEWAY_API_POOL_SERVICE_MAP /<br>GATEWAY_API_POOL_DEFAULT_MODEL_MAP，设置 GATEWAY_API_POOL_PROVIDER=qoder，<br>GATEWAY_PREFERRED_MODEL=api:qoder:auto。sync_env.py 同步到根目录 .env 和<br>services/.env，防止多 .env 加载场景配置漂移。</p>
+<h3 id="4-3-开机自启动-startup-文件夹方案-无需管理员权限">4.3 开机自启动（Startup 文件夹方案，无需管理员权限）<a class="anchor" href="#4-3-开机自启动-startup-文件夹方案-无需管理员权限" aria-label="锚点">#</a></h3>
+<p>Windows 计划任务（schtasks / Register-ScheduledTask）在受限用户权限下会返回<br>&quot;拒绝访问&quot;，改用用户级 Startup 文件夹<br>（%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup）。<br>install_autostart.ps1 在每台机器上运行一次，动态生成 silent_launch.vbs<br>（内容基于 $PSScriptRoot 实时计算，不写死路径），复制进 Startup 文件夹。</p>
+<p>启动链路：Windows 登录 -&gt; Startup 中的 vbs（WScript.Shell.Run 隐藏窗口异步启动）<br>-&gt; powershell -WindowStyle Hidden -&gt; start_qoder_bridge.ps1 -&gt; 检测 3000 端口<br>-&gt; 未监听则 Start-Process pythonw.exe 拉起 qoder_bridge.py，日志写入 logs/。</p>
+<h2 id="五-配置值-env-关键项">五、配置值（.env 关键项）<a class="anchor" href="#五-配置值-env-关键项" aria-label="锚点">#</a></h2>
+<p>PROXY_PRIMARY_ADAPTER=api<br>GATEWAY_API_POOL_PROVIDER=qoder<br>GATEWAY_PREFERRED_MODEL=api:qoder:auto<br>PROXY_MODEL_ROUTE_MAP 中每个 qoder 模型均 target=api:qoder:&lt;model&gt;，strict=true<br>（strict 确保不会 fallback 到其他 provider，额度消耗可追踪）。</p>
+<h2 id="六-验证记录">六、验证记录<a class="anchor" href="#六-验证记录" aria-label="锚点">#</a></h2>
+<p>桥接健康检查、模型列表、端到端对话、开机自启、幂等保护均已在一台 Windows<br>机器上验证通过（详见开发过程记录）。</p>
+<h2 id="七-排障指南">七、排障指南<a class="anchor" href="#七-排障指南" aria-label="锚点">#</a></h2>
+<ul><li>ECONNREFUSED 127.0.0.1:3000 -&gt; 桥接未运行，运行 install_autostart.ps1 生成的</li></ul>
+<p>vbs 或直接 python scripts/qoder-bridge/qoder_bridge.py</p>
+<ul><li>502 -&gt; 查看 logs/bridge_stdout.log，常见原因 qodercli 未登录（运行 qodercli login）</li><li>模型列表无 Qoder -&gt; 确认 custom_providers.json 存在 poolKey=qoder，重启 khy</li><li>自启动未生效 -&gt; 重新运行 install_autostart.ps1，用 wscript.exe 手动测试生成的 vbs</li></ul>
+<h2 id="八-注意事项">八、注意事项<a class="anchor" href="#八-注意事项" aria-label="锚点">#</a></h2>
+<ol><li>qodercli 路径通过 QODERCLI_PATH 环境变量覆盖，默认按 sys.executable 推导。</li><li>端口 3000 与 khy backend（3001）不冲突，可通过 QODER_BRIDGE_PORT 改端口。</li><li>当前非流式：等待 qodercli 完整退出后才返回响应。</li><li>qodercli JSON 输出的 token 用量字段目前恒为 0，khy 侧统计对该通道无效。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-040] CC-zip1 命令对齐账本.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-040] CC-zip(1) 命令对齐账本(claude-code-main (1).zip)</div></a><a class="next" href="../../docs/04_IMPL_实现/00_INDEX_实现-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 实现分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-041] Qoder接入khy网关与开机自启实现记录-2026-07-13.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

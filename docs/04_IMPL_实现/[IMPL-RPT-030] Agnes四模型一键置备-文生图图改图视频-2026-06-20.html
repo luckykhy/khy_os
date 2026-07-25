@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-030-agnes-四模型一键置备-对话-文生图-图改图-视频">[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频</a></li><li class="lvl-2"><a href="#一-背景与目标">一、背景与目标</a></li><li class="lvl-2"><a href="#二-实现内容">二、实现内容</a></li><li class="lvl-3"><a href="#2-1-图像子系统-新增-agnes-后端">2.1 图像子系统（新增 agnes 后端）</a></li><li class="lvl-3"><a href="#2-2-视频子系统-全新异步服务">2.2 视频子系统（全新异步服务）</a></li><li class="lvl-3"><a href="#2-3-一键置备-agnesprovisioner">2.3 一键置备（agnesProvisioner）</a></li><li class="lvl-2"><a href="#三-零硬编码与状态透明">三、零硬编码与状态透明</a></li><li class="lvl-2"><a href="#四-测试">四、测试</a></li><li class="lvl-2"><a href="#五-跨分类关联">五、跨分类关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-030-agnes-四模型一键置备-对话-文生图-图改图-视频">[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频<a class="anchor" href="#impl-rpt-030-agnes-四模型一键置备-对话-文生图-图改图-视频" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 <code>docs/03_DESIGN_设计/</code>，本目录索引见 <code>00_INDEX_实现-分类索引.md</code></p></blockquote>
+<ul><li><strong>日期</strong>：2026-06-20</li><li><strong>范围</strong>：Agnes AI（Sapiens）四个模型全部接入 Khy-OS，一把 Key 同时开通三大子系统。</li><li><strong>状态</strong>：定稿（40 测试绿，未提交）</li></ul>
+<h2 id="一-背景与目标">一、背景与目标<a class="anchor" href="#一-背景与目标" aria-label="锚点">#</a></h2>
+<p>Agnes AI 免费开放四个模型，但它们的能力分属 Khy-OS 中<strong>三个互不相同的子系统</strong>，绝不能用同一条路径接入：</p>
+<table><thead><tr><th>模型</th><th>能力</th><th>子系统（env 命名空间）</th><th>是否走网关代理</th></tr></thead><tbody><tr><td><code>agnes-2.0-flash</code></td><td>对话 / 代码 / Agent 工具调用</td><td>对话 provider 池（<code>customProviderRegistrar</code>）</td><td>是</td></tr><tr><td><code>agnes-image-2.1-flash</code></td><td>文生图</td><td><code>imageGenService</code>（<code>KHY_IMAGE_GEN_AGNES_*</code>）</td><td>否</td></tr><tr><td><code>agnes-image-2.0-flash</code></td><td>图改图 / 多图合成</td><td>同上（编辑模型）</td><td>否</td></tr><tr><td><code>agnes-video-v2.0</code></td><td>文生视频 / 图生视频 / 多图 / 关键帧</td><td><code>videoGenService</code>（<code>KHY_VIDEO_GEN_AGNES_*</code>）</td><td>否</td></tr></tbody></table>
+<p><strong>关键约束</strong>：网关代理只转发 chat/messages/responses/models，<strong>不转发</strong>图像与视频的异步 REST 接口。因此图像/视频模型<strong>绝不能</strong>进入对话预设的 <code>PROXY_MODEL_ROUTE_MAP</code>，只能经各自 service 的 env 接线。</p>
+<h2 id="二-实现内容">二、实现内容<a class="anchor" href="#二-实现内容" aria-label="锚点">#</a></h2>
+<h3 id="2-1-图像子系统-新增-agnes-后端">2.1 图像子系统（新增 agnes 后端）<a class="anchor" href="#2-1-图像子系统-新增-agnes-后端" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/imageGenService.js</code>：</p>
+<ul><li>新增 <code>agnes</code> 后端：<code>_generateAgnes()</code> 文生图用 <code>agnes-image-2.1-flash</code>，传入 <code>images</code> 时切换 <code>agnes-image-2.0-flash</code>（图改图）。</li><li><strong>Agnes 特有兼容</strong>：<code>response_format</code> 与 img2img 的 <code>image[]</code> 必须放进 <code>extra_body</code>，置于顶层会返回 HTTP 400。默认写 <code>extra_body</code>，逃生开关 <code>KHY_IMAGE_GEN_AGNES_REQUEST_STYLE=top_level</code> 可翻转。</li><li>后端优先级：<code>openai &gt; agnes &gt; domestic &gt; sd_webui</code>，全部 env 驱动可覆盖。</li><li>新增工具 <code>services/backend/src/tools/imageEdit.js</code>（<code>image_edit</code>，别名 <code>img2img</code>/<code>图改图</code>/<code>图生图</code>/<code>换背景</code>/<code>局部编辑</code>/<code>多图合成</code>）：本地文件经 <code>_toImageRef()</code> 编码为 data URI（MIME 按扩展名，上限 12 MiB，写入路径封禁 <code>validateNoPathTraversal</code>）。</li></ul>
+<h3 id="2-2-视频子系统-全新异步服务">2.2 视频子系统（全新异步服务）<a class="anchor" href="#2-2-视频子系统-全新异步服务" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/videoGenService.js</code>（Khy-OS 首个视频能力）：</p>
+<ul><li>异步任务模型：<code>POST {base}/v1/videos</code> → 轮询 <code>GET {base}/agnesapi?video_id=...&amp;model_name=...</code>（兼容 <code>KHY_VIDEO_GEN_AGNES_POLL_STYLE=task_id</code> 的 legacy <code>/v1/videos/{task_id}</code>）→ 完成 URL 在 <code>remixed_from_video_id</code>。</li><li><code>validateFrameParams()</code>：<code>num_frames ≤ 441</code> 且满足 <code>8n+1</code>，<code>frame_rate ∈ [1,60]</code>，违反抛 <code>BAD_PARAM</code>。</li><li><code>_buildAgnesBody()</code>：单图走顶层 <code>image</code>；多图/关键帧走 <code>extra_body.image[]</code>（+ <code>extra_body.mode='keyframes'</code>）。</li><li>轮询节奏与超时 env 可调：<code>KHY_VIDEO_GEN_POLL_INTERVAL_MS</code>（默认 5s）/ <code>_MAX_WAIT_MS</code>（默认 10min），<code>_sleep</code> 用 unref 定时器。</li><li>新增工具 <code>services/backend/src/tools/videoGenerate.js</code>（<code>video_generate</code>，别名 <code>文生视频</code>/<code>图生视频</code>/<code>关键帧动画</code>/<code>text_to_video</code>/<code>image_to_video</code>）：提交→轮询→下载 MP4，下载失败时回退暴露 <code>videoUrl</code>。</li><li><code>capabilityRegistry.js</code> 新增 <code>video_gen</code> 能力维度 + 任务需求 + 中英文意图关键词。</li></ul>
+<h3 id="2-3-一键置备-agnesprovisioner">2.3 一键置备（agnesProvisioner）<a class="anchor" href="#2-3-一键置备-agnesprovisioner" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/agnesProvisioner.js</code>：一把 Key → 三子系统。</p>
+<ul><li><code>provisionAgnes({ apiKey, chat, image, video, forceImageBackend, tier })</code>：<ul><li>chat：复用 <code>customProviderRegistrar.registerCustomProvider()</code>（端点/模型取自共享预设，零硬编码）。</li><li>image：仅写 <code>KHY_IMAGE_GEN_AGNES_API_KEY</code>，base URL/模型用 service 既有默认；<code>forceImageBackend</code> 才写 <code>KHY_IMAGE_GEN_BACKEND=agnes</code>（默认不强占已有 openai 后端）。</li><li>video：仅写 <code>KHY_VIDEO_GEN_AGNES_API_KEY</code>。</li></ul></li><li><strong>状态透明</strong>：返回值逐项报告哪些能力接通、写了哪些 env key、图像当前激活后端；Key 一律脱敏（<code>sk-x…xxxx</code>）。</li><li>CLI 打通：<code>khy gateway add</code> 选 Agnes 预设后，交互式追问「是否一并接通图像/视频」；非交互式默认随同接通（<code>--media false</code> 关闭，非 Agnes 端点自动忽略）。</li></ul>
+<h2 id="三-零硬编码与状态透明">三、零硬编码与状态透明<a class="anchor" href="#三-零硬编码与状态透明" aria-label="锚点">#</a></h2>
+<ul><li>无任何 Key/URL/模型写死：Key 由调用方传入，端点取自共享预设，模型走 service env 默认且全部可被 <code>KHY_*_AGNES_*</code> 覆盖。</li><li>三处写入 sink（图像保存、视频下载、本地图编码）均经路径封禁，限定项目树/用户目录。</li></ul>
+<h2 id="四-测试">四、测试<a class="anchor" href="#四-测试" aria-label="锚点">#</a></h2>
+<p><code>node ~/Khy-OS/node_modules/jest/bin/jest.js</code>（从 <code>services/backend</code> 运行）：</p>
+<table><thead><tr><th>测试文件</th><th>用例</th><th>结果</th></tr></thead><tbody><tr><td>tests/agnesImage.test.js</td><td>13</td><td>绿</td></tr><tr><td>tests/agnesVideo.test.js</td><td>12</td><td>绿</td></tr><tr><td>tests/agnesProvisioner.test.js</td><td>8</td><td>绿</td></tr><tr><td>tests/customProviderRegistrar.test.js（回归）</td><td>7</td><td>绿</td></tr></tbody></table>
+<p>合计 40 绿。其中 provisioner 测试断言图像/视频模型<strong>绝不</strong>进入 <code>PROXY_MODEL_ROUTE_MAP</code>，守住第一节的关键约束。</p>
+<h2 id="五-跨分类关联">五、跨分类关联<a class="anchor" href="#五-跨分类关联" aria-label="锚点">#</a></h2>
+<ul><li>共享注册器：<code>services/backend/src/services/customProviderRegistrar.js</code>（chat-only 预设）。</li><li>环境持久化：<code>services/backend/src/services/gatewayEnvFile.js</code>。</li><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>；本目录索引：<code>00_INDEX_实现-分类索引.md</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-029] 夜间代码质量与健壮性完善日志-2026-06-11.html"><div class="dir">← 上一篇</div><div class="ttl">夜间无人值守 · 代码质量与健壮性完善日志</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-031] 多视角模型配置-单一图谱八视角-2026-06-20.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-030] Agnes四模型一键置备-文生图图改图视频-2026-06-20.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

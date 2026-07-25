@@ -1,0 +1,19 @@
+{
+  "id": "rag",
+  "kind": "concept",
+  "name": "RAG",
+  "category": "ai-ml",
+  "triggers": ["RAG", "Retrieval-Augmented Generation", "检索增强生成", "检索增强"],
+  "summary": "检索增强生成：先从知识库(向量/全文检索)召回相关片段，作为上下文喂给 LLM 再生成，降低幻觉、引入私有/时效知识，无需重训模型。",
+  "whenToUse": [
+    "让 LLM 回答私有文档/实时知识，且要可溯源。",
+    "知识频繁更新，不宜靠微调固化。"
+  ],
+  "antiPatterns": [
+    "切块过大/过小或不重叠，召回质量差。",
+    "只看向量相似不做重排/过滤，喂入噪声。",
+    "不附引用来源，无法验证、难防幻觉。"
+  ],
+  "minimalSkeleton": "离线: 文档→切块→Embedding→向量库\n在线: query→检索 top-k→(重排)→拼上下文\n→ LLM 生成 + 附引用来源",
+  "relatedArchetypes": []
+}

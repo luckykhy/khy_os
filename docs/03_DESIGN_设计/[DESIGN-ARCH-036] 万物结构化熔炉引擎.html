@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-036] 万物结构化熔炉引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-036] 万物结构化熔炉引擎</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-036] 万物结构化熔炉引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-036-万物结构化熔炉引擎">[DESIGN-ARCH-036] 万物结构化熔炉引擎</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-与既有地基的关系-零重复造轮子">2. 与既有地基的关系（零重复造轮子）</a></li><li class="lvl-2"><a href="#3-三级坍缩协议-3-2">3. 三级坍缩协议（§3.2）</a></li><li class="lvl-2"><a href="#4-晶格铸造规范-3-3-forgeschema-js-单一真源">4. 晶格铸造规范（§3.3，`forgeSchema.js` 单一真源）</a></li><li class="lvl-2"><a href="#5-拒损与降级机制-3-4-anomalyhandler-js">5. 拒损与降级机制（§3.4，`anomalyHandler.js`）</a></li><li class="lvl-2"><a href="#6-绝对前置拦截与封印-3-1-chaosinterceptor-js">6. 绝对前置拦截与封印（§3.1，`chaosInterceptor.js`）</a></li><li class="lvl-2"><a href="#7-防呆符合性-5">7. 防呆符合性（§5）</a></li><li class="lvl-2"><a href="#8-交付物">8. 交付物</a></li><li class="lvl-2"><a href="#9-场景验证表-4-4-高熵输入-传统-vs-熔炉模式">9. 场景验证表（§4.4，高熵输入：传统 vs 熔炉模式）</a></li><li class="lvl-2"><a href="#10-验收">10. 验收</a></li><li class="lvl-2"><a href="#11-跨分类关联指引">11. 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-036-万物结构化熔炉引擎">[DESIGN-ARCH-036] 万物结构化熔炉引擎<a class="anchor" href="#design-arch-036-万物结构化熔炉引擎" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>架构设计（ARCH）</td></tr><tr><td>适用范围</td><td><code>services/backend/src/services/structuredFurnace/</code></td></tr><tr><td>强制级别</td><td>设计基线（实现须符合本文「防呆符合性」一节）</td></tr><tr><td>上位治理</td><td>[DESIGN-ARCH-034]（动态自适应约束求解）、[DESIGN-ARCH-025]（元规划协议与动态约束注入）、[MGMT-STD-001]（文档结构铁律）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>把无序/模糊/异构的自然语言，在触达 Khyos 核心推理与业务逻辑<strong>之前</strong>，强制坍缩为高维、严谨、机器<strong>零损解析</strong>的结构化指令。终结系统处理非结构化数据时的算力浪费与歧义脑补：未经熔炉坍缩的原始自然语言字符串，永远不应出现在业务代码里（违者视为致命级架构违规）。</p>
+<h2 id="2-与既有地基的关系-零重复造轮子">2. 与既有地基的关系（零重复造轮子）<a class="anchor" href="#2-与既有地基的关系-零重复造轮子" aria-label="锚点">#</a></h2>
+<p>熔炉<strong>不新增约束代数、不复制锁级枚举</strong>，只新增「NL → 结构」的坍缩与铸造层，并把锁级桥接到现成单一真源：</p>
+<ul><li>约束阶梯单一真源：<code>metaplan/constraintStrategy.js</code>（<code>Prompt_Soft ⊏ Code_Hard ⊏ System_Block</code> 单调格 + <code>escalate</code> 取上确界）。降级与高风险动作的锁级一律经 <code>escalate</code> 单调加严，绝不自定义枚举（沿用 [DESIGN-ARCH-034] 桥接先例）。</li><li>前置拦截接缝：<code>toolUseLoop.js</code> 在 <code>applyIntentGate</code> 之后挂载 <code>maybeForgeStructuredIntent</code>（默认关闭、fail-soft）。</li></ul>
+<h2 id="3-三级坍缩协议-3-2">3. 三级坍缩协议（§3.2）<a class="anchor" href="#3-三级坍缩协议-3-2" aria-label="锚点">#</a></h2>
+<p>输入熵由 <code>entropyAssessor.assess</code> 评估，路由到三级坍缩器之一：</p>
+<table><thead><tr><th>级</th><th>触发特征</th><th>坍缩器</th><th>产出物</th></tr></thead><tbody><tr><td><strong>L0 降维打击</strong></td><td>简单单任务、无依赖（「帮我建个文件」）</td><td><code>dimensionReducer.reduce</code></td><td><code>ActionIntent</code>（动作原语 + 目标实体指针 + 原子参数）</td></tr><tr><td><strong>L1 意图织网</strong></td><td>复合、多条件、逻辑依赖（「如果 A 就 B，否则等 C」）</td><td><code>intentWeaver.weave</code></td><td><code>TaskGraph</code>（节点 + 有向边 + 条件，DAG）</td></tr><tr><td><strong>L2 骨相重构</strong></td><td>混乱、长文、自相矛盾</td><td><code>skeletonReconstructor.reconstruct</code></td><td><code>StateMachine</code>（状态集 + 转移矩阵 + 矛盾标记）</td></tr></tbody></table>
+<p>动作只能映射到 <code>forgeSchema.ACTION_PRIMITIVES</code> 固定表（<code>CREATE/READ/UPDATE/DELETE/…/UNKNOWN</code>），映射不中即 <code>UNKNOWN</code>，绝不把自然语言动词原样塞进结构、绝不脑补一个动作。</p>
+<h2 id="4-晶格铸造规范-3-3-forgeschema-js-单一真源">4. 晶格铸造规范（§3.3，<code>forgeSchema.js</code> 单一真源）<a class="anchor" href="#4-晶格铸造规范-3-3-forgeschema-js-单一真源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>铁律</th><th>校验</th></tr></thead><tbody><tr><td><strong>原子性</strong></td><td>每个节点/字段只表达一个不可再分语义；值里残留并列/条件连接词（<code>并且/然后/如果/and then/…</code>）即判非原子 ⇒ 本该拆成边或多属性</td></tr><tr><td><strong>无歧义性</strong></td><td>绝不允许「可能/大概/也许/maybe/probably」等模糊词；抽取阶段 <code>coerceVagueness</code> 先把「模糊」这一事实量化为 <code>confidence</code>（0.6）并剥离模糊词，校验阶段对残留模糊词一律拒收</td></tr><tr><td><strong>可索引性</strong></td><td>每个核心实体由 <code>EntityRegistry</code> 铸造<strong>全局 UID</strong>（内容寻址 <code>sha1(归一描述)</code>，带类别前缀 <code>file_/proc_/…</code>）；同一实体多处指代去重为单一拓扑节点，引用只走 UID 指针，绝不重复自然语言描述</td></tr></tbody></table>
+<h2 id="5-拒损与降级机制-3-4-anomalyhandler-js">5. 拒损与降级机制（§3.4，<code>anomalyHandler.js</code>）<a class="anchor" href="#5-拒损与降级机制-3-4-anomalyhandler-js" aria-label="锚点">#</a></h2>
+<p>坍缩产出存在死锁/矛盾/缺要素时，<code>adjudicate</code> 二选一裁决，<strong>绝不允许模型自行脑补调和</strong>：</p>
+<table><thead><tr><th>裁决</th><th>触发</th><th>行为</th></tr></thead><tbody><tr><td><strong>拒损 REJECT</strong></td><td>硬要素缺失 / DAG 成环（死锁）/ 多处不可调和矛盾</td><td>抛 <code>FurnaceRejection</code>（结构化异常，附 <code>missing[]</code>/<code>conflicts[]</code> 枚举），强制上层向人类回问澄清</td></tr><tr><td><strong>降级 DEGRADE</strong></td><td>低置信（<code>confidence &lt; 0.65</code>）/ 单处可隔离矛盾</td><td>不阻断，但标记 <code>degraded/sandbox/writeLocked</code>，锁级 <code>escalate</code> 至 <code>Code_Hard</code> 起步，降级为「沙箱试探执行」并锁定后续写权限</td></tr></tbody></table>
+<h2 id="6-绝对前置拦截与封印-3-1-chaosinterceptor-js">6. 绝对前置拦截与封印（§3.1，<code>chaosInterceptor.js</code>）<a class="anchor" href="#6-绝对前置拦截与封印-3-1-chaosinterceptor-js" aria-label="锚点">#</a></h2>
+<p><code>intercept(raw)</code> 串联全管线（fail-closed）：<code>assess → 路由坍缩 → forgeSchema 校验 → adjudicate 裁决 → 盖封印</code>。坍缩器内部任何意外都转为结构化拒损，<strong>绝不把原文泄回业务层</strong>。</p>
+<p>产出 <code>ForgeEnvelope</code> 带<strong>进程私有 HMAC 封印</strong>（<code>seal</code>）。业务侧消费前必须 <code>assertForged(envelope)</code> 验封：裸 payload / 缺封 / 篡改一律 fail-closed 抛错——把「只能消费熔炉产物」从约定升级为可校验的硬边界。</p>
+<h2 id="7-防呆符合性-5">7. 防呆符合性（§5）<a class="anchor" href="#7-防呆符合性-5" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>防呆</th><th>落点</th></tr></thead><tbody><tr><td>① 核心业务逻辑禁碰裸 NL</td><td><code>assertForged</code> 拒绝一切未封印输入；<code>intercept</code> 是唯一入口</td></tr><tr><td>② 时序/因果必成 DAG 非扁平</td><td><code>validateTaskGraph(opts.hadDependency=true)</code>：含依赖却零边即拒收（<code>missing:['edges']</code>）</td></tr><tr><td>③ 禁保留定语从句</td><td><code>hasRelativeClause</code> 识别 <code>的…的</code>/<code>which/that</code> 从句，校验拒收，强制拆为实体属性/关系边</td></tr><tr><td>④ 矛盾不脑补</td><td>成环 → <code>DEADLOCK_CYCLE</code> 拒损；多重矛盾 → <code>CONTRADICTION</code> 拒损；<code>StateMachine</code> 只<strong>标记</strong>矛盾不调和</td></tr><tr><td>⑤ 实体必带全局 UID</td><td><code>EntityRegistry.mint</code> 强制铸造 UID，供跨轮上下文压缩做指针化替换</td></tr></tbody></table>
+<h2 id="8-交付物">8. 交付物<a class="anchor" href="#8-交付物" aria-label="锚点">#</a></h2>
+<pre><code>services/backend/src/services/structuredFurnace/
+  entropyAssessor.js        熵评估与 L0/L1/L2 路由（§3.2）
+  entityRegistry.js         实体抽离 / UID 铸造 / 指针去重（§3.3 可索引性）
+  taskGraph.js              DAG 数据结构 + Kahn 拓扑排序（死锁检测）
+  stateMachine.js           状态机数据结构 + 转移矩阵 + 矛盾标记
+  forgeSchema.js            晶格铸造规范与手写校验器（§3.3）
+  dimensionReducer.js       L0 降维器：NL → ActionIntent
+  intentWeaver.js           L1 织网器：NL → TaskGraph（DAG）
+  skeletonReconstructor.js  L2 重构器：NL → StateMachine
+  anomalyHandler.js         拒损 / 降级裁决器（§3.4）
+  chaosInterceptor.js       绝对前置拦截 + 封印守卫（§3.1，fail-closed）
+  index.js                  Coordinator 单一导入面
+services/backend/tests/services/structuredFurnace/structuredFurnace.test.js   25 用例</code></pre>
+<p>接线：<code>toolUseLoop.maybeForgeStructuredIntent</code>（默认关闭，<code>options.structuredFurnace.enabled</code> 或 <code>KHY_STRUCTURED_FURNACE=1</code> 开启；<code>observe</code> 仅挂信封/观测，<code>enforce</code> 才上抛拒损）。<strong>零侵入既有交互流</strong>，侵入式接管 <code>executeTool</code> 留后续 PR。</p>
+<h2 id="9-场景验证表-4-4-高熵输入-传统-vs-熔炉模式">9. 场景验证表（§4.4，高熵输入：传统 vs 熔炉模式）<a class="anchor" href="#9-场景验证表-4-4-高熵输入-传统-vs-熔炉模式" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>输入</th><th>传统模式</th><th>熔炉模式</th></tr></thead><tbody><tr><td>「如果构建成功就部署，否则回滚并通知运维」</td><td>一坨字符串进业务逻辑，0 可枚举单元，条件靠模型每轮重读</td><td><code>TaskGraph</code>：节点可枚举、条件边显式（<code>cond</code>），实体 UID 指针化</td></tr><tr><td>「先拉取代码，然后构建，接着测试，最后部署」</td><td>顺序靠 NL 语序隐含，无机器可校验依赖</td><td><code>TaskGraph</code>：<code>seq</code> 边链，拓扑可排，依赖机器可校验</td></tr><tr><td>「这个需求挺乱…可能要部署但又先别…你看着办」</td><td>歧义被静默吞下，模型脑补意图</td><td>不确定性量化为 <code>confidence</code>，单矛盾 → 降级锁写；多矛盾 → 拒损带枚举</td></tr></tbody></table>
+<p>可管理性核心差异：传统模式 Token 随每轮重读 NL 线性累积、准确率受歧义侵蚀；熔炉模式产出<strong>可枚举执行单元 + UID 指针 + 量化不确定性</strong>，后续轮次只引用结构与指针，杜绝重复解析。</p>
+<h2 id="10-验收">10. 验收<a class="anchor" href="#10-验收" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/structuredFurnace/structuredFurnace.test.js</code> → <strong>25 用例绿</strong>：前置拦截+封印 4 + L0 3 + L1 3 + L2 1 + 晶格规范 5 + 拒损降级 4 + 防呆汇总 2 + 场景验证表 3。邻近子系统回归（metaplan + resilience + dependency <strong>99/99 绿</strong>；toolUseLoop 邻接 jest <strong>57/57 绿</strong>）<strong>零回归</strong>。</p>
+<h2 id="11-跨分类关联指引">11. 跨分类关联指引<a class="anchor" href="#11-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>同源治理脉络：动态约束求解 <code>[DESIGN-ARCH-034]</code>、元规划约束注入 <code>[DESIGN-ARCH-025]</code>、有限窗口降级与强制兜底 <code>[DESIGN-ARCH-029]</code>（拒损/降级同构思想）。</li><li>实现代码：<code>services/backend/src/services/structuredFurnace/</code>；锁级复用 <code>metaplan/constraintStrategy.js</code>。</li><li>文档结构与索引铁律：<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-034] 动态自适应约束求解引擎.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-034] 动态自适应约束求解引擎</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-037] Khyos自举创世-需求内源发生器与闭环自愈引擎.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-036] 万物结构化熔炉引擎.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

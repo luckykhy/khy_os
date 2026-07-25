@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代理服务器深度指南（khy proxy） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>代理服务器深度指南（khy proxy）</div>
+      <header class="hero reveal"><h1>代理服务器深度指南（khy proxy）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#代理服务器深度指南-khy-proxy">代理服务器深度指南（`khy proxy`）</a></li><li class="lvl-2"><a href="#一-它和-khy-gateway-khy-claude-的关系">一、它和 `khy gateway` / `khy claude` 的关系</a></li><li class="lvl-2"><a href="#二-生命周期与状态">二、生命周期与状态</a></li><li class="lvl-2"><a href="#三-多租户-client-与-token">三、多租户：`client` 与 `token`</a></li><li class="lvl-2"><a href="#四-https-证书-cert">四、HTTPS 证书：`cert`</a></li><li class="lvl-2"><a href="#五-上游订阅-clash-vpn-subscription-sub">五、上游订阅（Clash / VPN）：`subscription` / `sub`</a></li><li class="lvl-2"><a href="#六-tls-指纹旁路-tls">六、TLS 指纹旁路：`tls`</a></li><li class="lvl-2"><a href="#七-ide-模型代理切换-switch-center-统一-与-trae-windsurf-switch-兼容">七、IDE 模型代理切换：`switch-center`（统一）与 trae/windsurf-switch（兼容）</a></li><li class="lvl-2"><a href="#八-cursor2api-集成-cursor2api">八、cursor2api 集成：`cursor2api`</a></li><li class="lvl-2"><a href="#九-相关文档">九、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-047 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-047] 代理服务器深度指南-khy-proxy.md --&gt;</p>
+<h1 id="代理服务器深度指南-khy-proxy">代理服务器深度指南（<code>khy proxy</code>）<a class="anchor" href="#代理服务器深度指南-khy-proxy" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy proxy</code> 是 KHY 的 <strong>HTTP 反向代理服务器</strong>——把网关里可用的模型对外暴露成标准 API（Anthropic / OpenAI 协议）。Claude Code、Codex、各类 IDE 把自己的 base URL 指向它即可用上 KHY 的全部适配器。本文把它的全部子命令讲清楚，命令均可直接照抄。</p>
+<p>默认监听 <code>127.0.0.1:9100</code>（<code>PROXY_PORT</code> 改端口、<code>PROXY_HOST</code> 改绑定地址）。实现：<code>services/backend/src/cli/handlers/proxy.js</code> + <code>services/backend/src/services/gateway/proxyServer.js</code>。</p></blockquote>
+<hr>
+<h2 id="一-它和-khy-gateway-khy-claude-的关系">一、它和 <code>khy gateway</code> / <code>khy claude</code> 的关系<a class="anchor" href="#一-它和-khy-gateway-khy-claude-的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>khy proxy</code></strong> = 对外的 HTTP 服务器（协议转换 + 适配器级联 + 多租户令牌）。</li><li><strong><code>khy gateway</code></strong> = 管理「网关里有哪些来源/模型」（见 [OPS-MAN-003] §8 四类配置模式）。<code>gateway status</code>/<code>gateway model</code> 会自动触发 proxy 的 switch-center 同步（用 <code>SWITCH_CENTER_AUTO_SYNC=false</code> 关）。</li><li><strong><code>khy claude</code></strong> = 一键拉起 Claude Code 并把它的 <code>ANTHROPIC_BASE_URL</code> 指向本代理（见 [OPS-MAN-004]）。</li></ul>
+<p>一句话：网关决定「有什么模型」，proxy 决定「怎么把它们当 API 发出去、发给谁」。</p>
+<hr>
+<h2 id="二-生命周期与状态">二、生命周期与状态<a class="anchor" href="#二-生命周期与状态" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy proxy start [--port &lt;n&gt;]</code></td><td>启动反代守护进程，打印入口 URL 与 auth token</td></tr><tr><td><code>khy proxy start --https [--https-port 9443] [--tls-cert &lt;path&gt;] [--tls-key &lt;path&gt;]</code></td><td>以 HTTPS 启动；裸 <code>--https</code> 会自动在 <code>~/.khyquant/proxy_certs/</code> 生成自签证书</td></tr><tr><td><code>khy proxy stop</code></td><td>停止守护进程</td></tr><tr><td><code>khy proxy status</code></td><td>运行状态、auth 来源、令牌计数、路由模式、配置文件路径</td></tr><tr><td><code>khy proxy quickstart [客户名] [--token &lt;t&gt;]</code></td><td>一键启动并打印接入参数；给了客户名则顺手为其铸一枚令牌</td></tr></tbody></table>
+<pre><code class="language-bash">khy proxy quickstart                 # 最省心：起服务 + 打印接入参数
+khy proxy status                     # 忘了 token / 端口就看这里
+PROXY_PORT=8080 khy proxy start      # 换端口</code></pre>
+<p>客户端接入（把 base URL 指向本代理，用 <code>khy-</code> 开头的令牌鉴权）：</p>
+<pre><code class="language-bash">export ANTHROPIC_BASE_URL=http://127.0.0.1:9100
+export ANTHROPIC_API_KEY=khy-你的token        # 或 Authorization: Bearer khy-...
+# OpenAI 风格客户端：OPENAI_BASE_URL=http://127.0.0.1:9100/v1</code></pre>
+<p><strong>配置 / 状态文件</strong>：<code>~/.khyquant/proxy.json</code>（配置）、<code>~/.khyquant/proxy_server_runtime.json</code>（运行时/PID）、<code>~/.khyquant/proxy_certs/</code>（自签证书）；多租户令牌库 <code>proxy_server_auth.json</code>（位于数据主目录，默认 <code>~/.khy/</code>）。</p>
+<hr>
+<h2 id="三-多租户-client-与-token">三、多租户：<code>client</code> 与 <code>token</code><a class="anchor" href="#三-多租户-client-与-token" aria-label="锚点">#</a></h2>
+<p>把网关分享给别人时，给每个客户铸一枚<strong>独立、可单独吊销</strong>的令牌。推荐用 <code>client</code> 子命令（更现代）：</p>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy proxy client add &lt;客户名&gt; [token]</code></td><td>为客户新增令牌（不给则自动生成）</td></tr><tr><td><code>khy proxy client list</code></td><td>列出全部客户令牌（默认动作）</td></tr><tr><td><code>khy proxy client rotate &lt;token_id&gt; [新token]</code></td><td>轮换某客户令牌</td></tr><tr><td>`khy proxy client on\</td><td>off &lt;token_id&gt;`</td></tr><tr><td><code>khy proxy client del &lt;token_id&gt;</code></td><td>删除（别名 delete/remove/revoke）</td></tr></tbody></table>
+<pre><code class="language-bash">khy proxy client add acme-corp        # 给客户 acme-corp 铸一枚令牌
+khy proxy client list
+khy proxy client rotate &lt;token_id&gt;    # 疑似泄露立即轮换
+khy proxy client off &lt;token_id&gt;       # 临时停用</code></pre>
+<blockquote><p><code>khy proxy token …</code>（set/rotate/create/list/enable/disable/delete）是更早的「主令牌 + 受管令牌」兼容接口，与 <code>client</code> 操作同一套令牌库。新用户用 <code>client</code> 即可。多租户与账号池的关系见 [OPS-MAN-045]。</p></blockquote>
+<hr>
+<h2 id="四-https-证书-cert">四、HTTPS 证书：<code>cert</code><a class="anchor" href="#四-https-证书-cert" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy proxy cert generate [--force] [--cn localhost] [--days 825] \
+  [--tls-dir &lt;dir&gt;] [--tls-cert &lt;c&gt;] [--tls-key &lt;k&gt;]
+khy proxy cert status        # 看证书/私钥路径与是否存在</code></pre>
+<p>裸 <code>khy proxy start --https</code> 会在 <code>~/.khyquant/proxy_certs/</code> 自动生成证书；要自带证书就用 <code>--tls-cert/--tls-key</code> 指定。</p>
+<hr>
+<h2 id="五-上游订阅-clash-vpn-subscription-sub">五、上游订阅（Clash / VPN）：<code>subscription</code> / <code>sub</code><a class="anchor" href="#五-上游订阅-clash-vpn-subscription-sub" aria-label="锚点">#</a></h2>
+<p>当代理出口需要走机场订阅时：</p>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy proxy subscription list</code></td><td>列出已配置订阅（默认动作）</td></tr><tr><td><code>khy proxy subscription add &lt;url&gt; [name]</code></td><td>新增（别名 import）</td></tr><tr><td>`khy proxy subscription remove &lt;id\</td><td>name\</td></tr><tr><td>`khy proxy subscription use &lt;id\</td><td>name\</td></tr><tr><td>`khy proxy subscription refresh [id\</td><td>name\</td></tr><tr><td>`khy proxy subscription apply [id\</td><td>name\</td></tr></tbody></table>
+<pre><code class="language-bash">khy proxy subscription add https://example.com/sub myclash
+khy proxy subscription apply myclash --timeout 12000</code></pre>
+<hr>
+<h2 id="六-tls-指纹旁路-tls">六、TLS 指纹旁路：<code>tls</code><a class="anchor" href="#六-tls-指纹旁路-tls" aria-label="锚点">#</a></h2>
+<p>部分上游按 TLS 指纹拦截时，用指纹旁路改写握手特征：</p>
+<pre><code class="language-bash">khy proxy tls start | stop | status
+khy proxy tls fingerprint &lt;name&gt;     # name: chrome_auto / chrome_120 / firefox_auto / firefox_120 / safari / random</code></pre>
+<hr>
+<h2 id="七-ide-模型代理切换-switch-center-统一-与-trae-windsurf-switch-兼容">七、IDE 模型代理切换：<code>switch-center</code>（统一）与 trae/windsurf-switch（兼容）<a class="anchor" href="#七-ide-模型代理切换-switch-center-统一-与-trae-windsurf-switch-兼容" aria-label="锚点">#</a></h2>
+<p>把 Trae / Windsurf 这类 IDE 的模型出口统一切到 KHY 网关或自定义端点。<strong>推荐用统一入口 <code>switch-center</code></strong>：</p>
+<pre><code class="language-bash">khy proxy switch-center status [--provider trae|windsurf]
+khy proxy switch-center sync   [--provider trae|windsurf]
+khy proxy switch-center use    &lt;id|名称&gt; [--provider trae|windsurf]
+khy proxy switch-center remove &lt;id|名称&gt; [--provider trae|windsurf]
+khy proxy switch-center test   [id|名称] [--provider …] [--model xxx]
+khy proxy switch-center add --provider trae &lt;名称&gt; --endpoint &lt;openai_base&gt; --models &lt;m1,m2&gt;</code></pre>
+<blockquote><p><code>trae-switch</code> / <code>windsurf-switch</code> 是各自的<strong>旧兼容子命令</strong>（add/use/remove/test/sync），功能被 <code>switch-center</code> 收敛；新用户用 <code>switch-center</code>。</p>
+<p>注意：switch-center 同步会把 <code>RELAY_API_*</code> 与 <code>PROXY_MODEL_ROUTE_MAP</code> 写进网关 <code>.env</code>。</p></blockquote>
+<hr>
+<h2 id="八-cursor2api-集成-cursor2api">八、cursor2api 集成：<code>cursor2api</code><a class="anchor" href="#八-cursor2api-集成-cursor2api" aria-label="锚点">#</a></h2>
+<p>接入 cursor2api（把 Cursor 能力转成 API）：</p>
+<pre><code class="language-bash">khy proxy cursor2api setup &lt;zip路径&gt; [--port 3010] [--token khy-xxx]   # 解压安装（别名 extract/install/import）
+khy proxy cursor2api prepare [--force-install] [--force-build]         # 预构建（别名 build）
+khy proxy cursor2api start [--port 3010] [--token khy-xxx] [--no-auth]
+khy proxy cursor2api stop
+khy proxy cursor2api status                                            # 默认动作
+khy proxy cursor2api token status | set &lt;token&gt; | rotate | clear</code></pre>
+<hr>
+<h2 id="九-相关文档">九、相关文档<a class="anchor" href="#九-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-004] claude-code-代理配置 —— 用 <code>khy claude</code> 一键把 Claude Code 指向本代理。</li><li>[OPS-MAN-045] 账号池与多租户-深度指南 —— 令牌铸造与账号池的关系。</li><li>[OPS-MAN-003] ai-管理-访问与登录 §8 —— 网关四类配置模式总览。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-046] 旗舰特性目录-vault-notify-mesh-insights-forge-image2web.html"><div class="dir">← 上一篇</div><div class="ttl">旗舰特性目录 — vault / notify / mesh / insights / forge / image2web</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-048] 本地模型微调-khy-train.html"><div class="dir">下一篇 →</div><div class="ttl">本地模型微调（khy train）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-047] 代理服务器深度指南-khy-proxy.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

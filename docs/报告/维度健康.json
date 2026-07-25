@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-06-05T04:47:00.149Z",
+  "dimensions": {
+    "D1": {
+      "name": "Agent Harness",
+      "filesPresent": 3,
+      "filesMissing": [],
+      "exportChecks": [
+        {
+          "file": "services/agenticHarnessService.js",
+          "export": "_assessTaskComplexity",
+          "ok": true
+        }
+      ],
+      "healthy": true
+    },
+    "D2": {
+      "name": "Skills System",
+      "filesPresent": 2,
+      "filesMissing": [],
+      "exportChecks": [],
+      "healthy": true
+    },
+    "D3": {
+      "name": "MCP & Tooling",
+      "filesPresent": 2,
+      "filesMissing": [],
+      "exportChecks": [
+        {
+          "file": "services/toolGuards.js",
+          "export": "rateLimitGuard",
+          "ok": true
+        },
+        {
+          "file": "services/toolGuards.js",
+          "export": "pathTraversalGuard",
+          "ok": true
+        },
+        {
+          "file": "services/toolGuards.js",
+          "export": "errorRecoveryGuard",
+          "ok": true
+        },
+        {
+          "file": "cli/hooks/hookRunner.js",
+          "export": "getHookMetrics",
+          "ok": true
+        }
+      ],
+      "healthy": true
+    },
+    "D4": {
+      "name": "Team/Parallel Mode",
+      "filesPresent": 3,
+      "filesMissing": [],
+      "exportChecks": [
+        {
+          "file": "coordinator/workerAgent.js",
+          "export": "routeMessage",
+          "ok": true
+        },
+        {
+          "file": "coordinator/workerAgent.js",
+          "export": "detectZombies",
+          "ok": true
+        }
+      ],
+      "healthy": true
+    },
+    "D5": {
+      "name": "Governance & Quality",
+      "filesPresent": 2,
+      "filesMissing": [],
+      "exportChecks": [],
+      "healthy": true
+    }
+  }
+}

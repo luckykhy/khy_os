@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 生态 AI Agent 显示规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 生态 AI Agent 显示规范</div>
+      <header class="hero reveal"><h1>khyos 生态 AI Agent 显示规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-生态-ai-agent-显示规范">khyos 生态 AI Agent 显示规范</a></li><li class="lvl-2"><a href="#0-设计目标与分层">0. 设计目标与分层</a></li><li class="lvl-2"><a href="#1-开发者结构化日志标准-可观测层">1. 开发者结构化日志标准（可观测层）</a></li><li class="lvl-3"><a href="#1-1-格式">1.1 格式</a></li><li class="lvl-3"><a href="#1-2-字段契约">1.2 字段契约</a></li><li class="lvl-3"><a href="#1-3-脱敏-必须">1.3 脱敏（必须）</a></li><li class="lvl-3"><a href="#1-4-大文本摘要-必须">1.4 大文本摘要（必须）</a></li><li class="lvl-3"><a href="#1-5-输出去向">1.5 输出去向</a></li><li class="lvl-2"><a href="#2-用户-ui-提示标准-交互层">2. 用户 UI 提示标准（交互层）</a></li><li class="lvl-3"><a href="#2-1-三类提示">2.1 三类提示</a></li><li class="lvl-3"><a href="#2-2-硬规则">2.2 硬规则</a></li><li class="lvl-3"><a href="#2-3-通道">2.3 通道</a></li><li class="lvl-2"><a href="#3-与-khyos-底座的集成-双模运行">3. 与 khyos 底座的集成（双模运行）</a></li><li class="lvl-3"><a href="#3-1-模式判定">3.1 模式判定</a></li><li class="lvl-3"><a href="#3-2-嵌入模式-eco">3.2 嵌入模式（eco）</a></li><li class="lvl-3"><a href="#3-3-独立模式-standalone">3.3 独立模式（standalone）</a></li><li class="lvl-2"><a href="#4-反模式-严禁项-硬红线">4. 反模式 — 严禁项（硬红线）</a></li><li class="lvl-2"><a href="#5-落地检查清单">5. 落地检查清单</a></li><li class="lvl-2"><a href="#6-参考实现">6. 参考实现</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-016 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.md（新建） --&gt;</p>
+<h1 id="khyos-生态-ai-agent-显示规范">khyos 生态 AI Agent 显示规范<a class="anchor" href="#khyos-生态-ai-agent-显示规范" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.0（2026-06-12）。本规范定义 khyos 生态内<strong>所有</strong> AI Agent（含 khyos 内置<br>agent 与 khyquant 等生态应用）在运行期如何向<strong>开发者</strong>与<strong>用户</strong>呈现信息。<br>规范遵循 khyos 三条架构原则：<strong>按需加载</strong>、<strong>零待机噪音</strong>、<strong>双模运行（独立 / 嵌入）</strong>。</p>
+<p>关键词 <strong>必须 / 严禁 / 应 / 可</strong> 按 RFC 2119 语义理解。<br>本规范是<strong>硬约束</strong>：新增或重构任何涉及 Agent 运行、LLM 调用、工具调用的代码，<br>其日志与提示输出必须符合本规范，否则视为缺陷。</p></blockquote>
+<hr>
+<h2 id="0-设计目标与分层">0. 设计目标与分层<a class="anchor" href="#0-设计目标与分层" aria-label="锚点">#</a></h2>
+<p>一次 Agent 运行同时面向两类受众，二者<strong>物理隔离、互不污染</strong>：</p>
+<table><thead><tr><th>层</th><th>受众</th><th>通道</th><th>形态</th><th>触发时机</th></tr></thead><tbody><tr><td><strong>开发者可观测层</strong></td><td>开发者 / 运维 / 排障</td><td>结构化日志（stderr / 日志文件 / khyos 上报）</td><td>单行 JSON（NDJSON）</td><td>仅任务执行期间</td></tr><tr><td><strong>用户交互层</strong></td><td>终端用户</td><td>stdout（独立）/ khyos UI（嵌入）</td><td>自然语言短句</td><td>仅任务执行期间</td></tr></tbody></table>
+<p><strong>核心红线</strong>：</p>
+<ul><li>用户交互层<strong>严禁</strong>出现任何 JSON、trace_id、step 序号、token 数等内部字段。</li><li>开发者层<strong>严禁</strong>在没有任务运行时（待机、初始化、等待输入）产生任何输出。</li><li>两层共享同一个 <code>trace_id</code>，但<strong>仅开发者层</strong>可见它。</li></ul>
+<hr>
+<h2 id="1-开发者结构化日志标准-可观测层">1. 开发者结构化日志标准（可观测层）<a class="anchor" href="#1-开发者结构化日志标准-可观测层" aria-label="锚点">#</a></h2>
+<h3 id="1-1-格式">1.1 格式<a class="anchor" href="#1-1-格式" aria-label="锚点">#</a></h3>
+<p>开发者日志<strong>必须</strong>为<strong>单行 JSON（NDJSON）</strong>，一事件一行，便于 <code>grep</code> / <code>jq</code> /<br>日志管道消费。<strong>严禁</strong>多行美化 JSON，<strong>严禁</strong>自由文本穿插。</p>
+<h3 id="1-2-字段契约">1.2 字段契约<a class="anchor" href="#1-2-字段契约" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>字段</th><th>类型</th><th style="text-align:center">必填</th><th>说明</th></tr></thead><tbody><tr><td><code>ts</code></td><td>string(ISO8601)</td><td style="text-align:center">✅</td><td>事件时间戳</td></tr><tr><td><code>trace_id</code></td><td>string(32hex)</td><td style="text-align:center">✅</td><td>单次 Agent 运行的全局关联 id，贯穿所有 step</td></tr><tr><td><code>span_id</code></td><td>string(16hex)</td><td style="text-align:center">◐</td><td>子步骤 id（并行工具/子 agent 时用）</td></tr><tr><td><code>app</code></td><td>string</td><td style="text-align:center">✅</td><td>产生方，如 <code>khyos</code> / <code>khyquant</code></td></tr><tr><td><code>agent</code></td><td>string</td><td style="text-align:center">✅</td><td>agent 角色名，如 <code>technical</code> / <code>general-purpose</code></td></tr><tr><td><code>step</code></td><td>number</td><td style="text-align:center">✅</td><td>步骤序号，从 1 递增</td></tr><tr><td><code>phase</code></td><td>string</td><td style="text-align:center">✅</td><td><code>start</code> / <code>llm</code> / <code>tool</code> / <code>result</code> / <code>error</code> / <code>end</code></td></tr><tr><td><code>thought</code></td><td>string</td><td style="text-align:center">◐</td><td>思考<strong>摘要</strong>（见 §1.4 截断），<strong>严禁</strong>全量</td></tr><tr><td><code>action</code></td><td>string</td><td style="text-align:center">◐</td><td>当前动作，如 <code>llm.analyze</code> / <code>tool.getStockData</code></td></tr><tr><td><code>tokens</code></td><td>object</td><td style="text-align:center">◐</td><td><code>{in, out, total}</code>，无则省略</td></tr><tr><td><code>duration_ms</code></td><td>number</td><td style="text-align:center">◐</td><td>该 step 耗时</td></tr><tr><td><code>status</code></td><td>string</td><td style="text-align:center">◐</td><td><code>ok</code> / <code>fallback</code> / <code>error</code></td></tr><tr><td><code>detail</code></td><td>string</td><td style="text-align:center">◐</td><td>补充信息<strong>摘要</strong>（见 §1.4）</td></tr></tbody></table>
+<p>示例（一行）：</p>
+<pre><code class="language-json">{&quot;ts&quot;:&quot;2026-06-12T03:14:00.123Z&quot;,&quot;trace_id&quot;:&quot;a1b2...&quot;,&quot;app&quot;:&quot;khyquant&quot;,&quot;agent&quot;:&quot;technical&quot;,&quot;step&quot;:2,&quot;phase&quot;:&quot;llm&quot;,&quot;action&quot;:&quot;llm.analyze&quot;,&quot;tokens&quot;:{&quot;in&quot;:812,&quot;out&quot;:156,&quot;total&quot;:968},&quot;duration_ms&quot;:1340,&quot;status&quot;:&quot;ok&quot;,&quot;thought&quot;:&quot;MACD 金叉，量能温和放大…&quot;}</code></pre>
+<h3 id="1-3-脱敏-必须">1.3 脱敏（必须）<a class="anchor" href="#1-3-脱敏-必须" aria-label="锚点">#</a></h3>
+<p>开发者日志在写出前<strong>必须</strong>对以下内容打码，<strong>严禁</strong>明文落盘：</p>
+<ul><li>API Key / Token / Bearer / Secret / Password / Cookie：保留前 4 + 后 2 字符，</li></ul>
+<p>其余以 <code>***</code> 代替（如 <code>sk-1***-2</code>）；无法判断长度时整体替换为 <code>***REDACTED***</code>。</p>
+<ul><li>形如 <code>sk-…</code>、<code>khy-…</code>、<code>Bearer …</code>、<code>Authorization: …</code>、<code>token=…</code>、<code>api_key=…</code></li></ul>
+<p>的子串<strong>必须</strong>命中脱敏。</p>
+<ul><li>邮箱/手机号等 PII <strong>应</strong>按需打码（最小化原则）。</li></ul>
+<h3 id="1-4-大文本摘要-必须">1.4 大文本摘要（必须）<a class="anchor" href="#1-4-大文本摘要-必须" aria-label="锚点">#</a></h3>
+<p>任何进入日志的字符串字段（<code>thought</code> / <code>action</code> / <code>detail</code> / prompt / completion /<br>工具输入输出）<strong>必须</strong>截断：</p>
+<ul><li>默认上限 <strong>100 字符</strong>；超出则取前 100 字符 + <code>…(+N chars)</code> 后缀。</li><li><strong>严禁</strong>把完整 prompt、完整 LLM 回复、完整 DataFrame、完整工具结果打进日志。</li><li>需要全量留存时<strong>应</strong>写入专门的 trace/audit 落盘通道，<strong>不得</strong>进常规日志流。</li></ul>
+<h3 id="1-5-输出去向">1.5 输出去向<a class="anchor" href="#1-5-输出去向" aria-label="锚点">#</a></h3>
+<ul><li><strong>独立模式</strong>：写 <strong>stderr</strong>（保持 stdout 纯净，供数据/JSON-RPC 管道使用）。</li><li><strong>嵌入模式</strong>：见 §3，经 khyos 上报通道。</li><li>开发者层<strong>默认开启</strong>但<strong>仅在任务期间</strong>产生事件；<strong>可</strong>经环境变量</li></ul>
+<p><code>KHY_AGENT_LOG=0</code> 关闭（用于极致静默场景）。</p>
+<hr>
+<h2 id="2-用户-ui-提示标准-交互层">2. 用户 UI 提示标准（交互层）<a class="anchor" href="#2-用户-ui-提示标准-交互层" aria-label="锚点">#</a></h2>
+<h3 id="2-1-三类提示">2.1 三类提示<a class="anchor" href="#2-1-三类提示" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>类型</th><th>内容</th><th>形态</th><th>反例（严禁）</th></tr></thead><tbody><tr><td><strong>进度提示</strong></td><td>把内部步骤翻译成自然语言</td><td><code>正在分析技术面…</code></td><td><code>Step 2: tool_call getStockData</code></td></tr><tr><td><strong>结果汇报</strong></td><td>结论 + 简要资源消耗</td><td><code>分析完成，耗时 12 秒，建议：观望</code></td><td>直接打印结果 JSON</td></tr><tr><td><strong>错误降级</strong></td><td>用户能懂的安抚 + 可选动作</td><td><code>数据源暂时不可用，已用缓存结果继续</code></td><td>抛出堆栈 / 打印 error 对象</td></tr></tbody></table>
+<h3 id="2-2-硬规则">2.2 硬规则<a class="anchor" href="#2-2-硬规则" aria-label="锚点">#</a></h3>
+<ul><li><strong>严禁</strong>向用户暴露任何内部 JSON、trace_id、step 序号、token 原始数字、堆栈、</li></ul>
+<p>类名 / 方法名 / 文件路径。</p>
+<ul><li>进度提示<strong>应</strong>为简短现在进行时短句（&quot;正在 X…&quot;），<strong>不应</strong>逐条罗列工具调用。</li><li>结果汇报<strong>必须</strong>附<strong>简要</strong>资源消耗（至少耗时；<strong>可</strong>含 token 概数），</li></ul>
+<p>用人话表达（&quot;耗时 12 秒 / 消耗约 1.2k tokens&quot;），<strong>严禁</strong>裸露 <code>tokens:{in,out}</code>。</p>
+<ul><li>错误<strong>必须</strong>降级为自然语言，并尽量给出<strong>已采取的兜底</strong>（&quot;已切换备用数据源&quot;），</li></ul>
+<p><strong>严禁</strong>把异常对象直接 <code>console.error(error)</code> 暴露给用户通道。</p>
+<h3 id="2-3-通道">2.3 通道<a class="anchor" href="#2-3-通道" aria-label="锚点">#</a></h3>
+<ul><li><strong>独立模式</strong>：进度/错误写 <strong>stderr</strong>，最终结果<strong>可</strong>走 stdout（结构化交付）或 stderr（纯交互）；二者择一并保持一致。</li><li><strong>嵌入模式</strong>：经 khyos UI 通道（§3），由底座决定如何渲染（spinner / 折叠组 / 通知）。</li></ul>
+<hr>
+<h2 id="3-与-khyos-底座的集成-双模运行">3. 与 khyos 底座的集成（双模运行）<a class="anchor" href="#3-与-khyos-底座的集成-双模运行" aria-label="锚点">#</a></h2>
+<p>Agent <strong>必须</strong>在启动时判定运行模式，并据此选择通道。<strong>严禁</strong>两种模式混用通道。</p>
+<h3 id="3-1-模式判定">3.1 模式判定<a class="anchor" href="#3-1-模式判定" aria-label="锚点">#</a></h3>
+<p>按优先级（khyquant 既有约定，见 <code>khy_quant/cli.py</code> <code>_detect_mode</code>）：</p>
+<ol><li>显式环境变量：<code>KHYQUANT_MODE=eco|standalone</code>（Node 侧）/ <code>KHYOS_ECO_MODE</code>（Python 侧）；</li><li>能 <code>import khy_platform.app_protocol</code> / 检测到 khyos 注入的环境 → <strong>嵌入（eco）</strong>；</li><li>默认 → <strong>独立（standalone）</strong>。</li></ol>
+<h3 id="3-2-嵌入模式-eco">3.2 嵌入模式（eco）<a class="anchor" href="#3-2-嵌入模式-eco" aria-label="锚点">#</a></h3>
+<ul><li>用户进度/结果/错误<strong>必须</strong>通过 <strong>khyos 上报通道</strong>交给底座，由底座统一渲染，</li></ul>
+<p><strong>不得</strong>直接 <code>console.log</code> 抢占终端（会破坏 khyos TUI 布局）。</p>
+<ul><li>上报通道约定（当前实现，向后兼容）：<ul><li>若宿主提供 <code>khyos.api.report_status(event)</code>（Python <code>app_protocol</code> ctx 注入）→ 调用之；</li><li>否则降级为向 <strong><code>KHYOS_REPORT_FD</code></strong> 指定的文件描述符写 <strong>NDJSON 状态事件</strong></li></ul></li></ul>
+<p>（事件含 <code>{type:&quot;agent.status&quot;, trace_id, phase, message}</code>），由底座排空；</p>
+<ul><li>再降级（无 fd）→ 写 stderr 并打 <code>khyos.status</code> 前缀，供底座解析。</li></ul>
+<blockquote><p>集成点尚未由宿主提供具体 API 时，实现<strong>必须</strong>优雅降级到 stderr，并以<br><code># TODO: [Agent-Display-Unresolved]</code> 标注真正的 <code>khyos.api</code> 绑定位置，<br><strong>严禁</strong>直接调用不存在的 API 导致 Agent 崩溃。</p></blockquote>
+<h3 id="3-3-独立模式-standalone">3.3 独立模式（standalone）<a class="anchor" href="#3-3-独立模式-standalone" aria-label="锚点">#</a></h3>
+<ul><li>进度/错误 → stderr；开发者日志 → stderr（或 <code>KHY_AGENT_LOG</code> 控制）。</li><li>不依赖任何 khyos 运行时；缺失 <code>khy_platform</code> <strong>必须</strong>静默降级，<strong>严禁</strong>报错。</li></ul>
+<hr>
+<h2 id="4-反模式-严禁项-硬红线">4. 反模式 — 严禁项（硬红线）<a class="anchor" href="#4-反模式-严禁项-硬红线" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>严禁</th><th>原因</th><th>正确做法</th></tr></thead><tbody><tr><td>R1</td><td><strong>心跳/轮询日志</strong>：定时器每 N 秒吐 &quot;still alive / checking…&quot;</td><td>污染日志、淹没真实事件</td><td>仅在<strong>状态跃迁</strong>时记录（参考 <code>networkDetector._record</code>）</td></tr><tr><td>R2</td><td><strong>待机吐日志</strong>：无任务时打印（初始化、等待输入、空闲轮询）</td><td>违反零待机噪音</td><td>待机绝对静默；日志只在任务 <code>start</code>→<code>end</code> 之间产生</td></tr><tr><td>R3</td><td><strong>全量打印大文本</strong>：完整 prompt / LLM 回复 / DataFrame / 工具结果</td><td>撑爆日志、泄露、性能</td><td>一律摘要（§1.4，≤100 字符 + 长度标注）</td></tr><tr><td>R4</td><td><strong>明文密钥</strong>：API Key / Token 进日志</td><td>安全事故</td><td>强制脱敏（§1.3）</td></tr><tr><td>R5</td><td><strong>向用户暴露 JSON/内部字段</strong>：step、trace_id、tokens 裸值、堆栈</td><td>体验灾难</td><td>翻译成自然语言（§2）</td></tr><tr><td>R6</td><td><strong>嵌入模式直接 console.log</strong></td><td>破坏 khyos TUI</td><td>走 khyos 上报通道（§3.2）</td></tr><tr><td>R7</td><td><strong>吞掉错误后静默</strong>或<strong>把 error 对象丢给用户</strong></td><td>难排障 / 吓用户</td><td>开发者层记 <code>phase:error</code>，用户层降级为人话</td></tr></tbody></table>
+<hr>
+<h2 id="5-落地检查清单">5. 落地检查清单<a class="anchor" href="#5-落地检查清单" aria-label="锚点">#</a></h2>
+<p>任何 Agent 相关代码合入前，逐条自检：</p>
+<ul><li>[ ] 一次运行有唯一 <code>trace_id</code>，贯穿所有 step（§1.2）</li><li>[ ] 开发者日志为单行 JSON，字段齐全（§1.2）</li><li>[ ] 密钥/Token 已脱敏（§1.3 / R4）</li><li>[ ] 大文本已摘要 ≤100 字符（§1.4 / R3）</li><li>[ ] 用户提示是自然语言，无任何内部字段（§2 / R5）</li><li>[ ] 结果汇报含简要耗时/资源（§2.2）</li><li>[ ] 已判定双模，嵌入走 khyos 通道、独立走 stderr（§3 / R6）</li><li>[ ] 待机/初始化期间零输出（§4 R1/R2）</li><li>[ ] 错误已降级为人话且记录了兜底动作（R7）</li><li>[ ] 不确定如何改的代码<strong>保持原状</strong>并标 <code># TODO: [Agent-Display-Unresolved]</code></li></ul>
+<hr>
+<h2 id="6-参考实现">6. 参考实现<a class="anchor" href="#6-参考实现" aria-label="锚点">#</a></h2>
+<ul><li><strong>khyquant</strong>：<code>software/khyquant/services/agentDisplay.js</code>（本规范的生态应用侧参考实现：</li></ul>
+<p>trace_id、NDJSON 开发者日志、脱敏、摘要、双模上报、资源汇报、idle 静默）。</p>
+<ul><li><strong>khyos</strong>：<code>services/backend/src/services/agentDevLog.js</code>（本规范的<strong>底座侧参考实现</strong>：</li></ul>
+<p>以监听者身份消费 <code>diagnosticEvents.js</code> 的 <code>diagnostics</code> 单一事件源——贯穿调度 /<br>  LLM / 工具链路的 choke-point——在序列化边界完成 trace_id、NDJSON 单行、字段级<br>  脱敏、大文本摘要、双模上报、step 计数与 idle 静默，<strong>绝不</strong>改写既有事件对象）；<br>  由 <code>services/backend/src/services/toolUseLoop.js</code> 的 <code>runToolUseLoop</code> 起点幂等挂载。<br>  用户自然语言层见 <code>cli/aiRenderer.js</code> / <code>cli/repl.js</code>（已对工具轨迹做归一化，<br>  不向用户暴露任何内部字段）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-015] 编码规范.html"><div class="dir">← 上一篇</div><div class="ttl">GoF 23 设计模式标注规范</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-017] 元工具系统设计.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 元工具系统设计（Meta-Tool / Tool-Forging）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyosMarkdown · 内嵌 MD 工作台 + 跨平台右键集成 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>tools<span class="sep">›</span>khyos-markdown<span class="sep">›</span>khyosMarkdown · 内嵌 MD 工作台 + 跨平台右键集成</div>
+      <header class="hero reveal"><h1>khyosMarkdown · 内嵌 MD 工作台 + 跨平台右键集成</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyosmarkdown-内嵌-md-工作台-跨平台右键集成">khyosMarkdown · 内嵌 MD 工作台 + 跨平台右键集成</a></li><li class="lvl-2"><a href="#目录文件">目录文件</a></li><li class="lvl-2"><a href="#为什么需要桥接器-cors-绝路">为什么需要桥接器（CORS 绝路）</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#直接打开某个文件-全局工具模式">直接打开某个文件（全局工具模式）</a></li><li class="lvl-3"><a href="#浏览本项目文档-项目内嵌模式">浏览本项目文档（项目内嵌模式）</a></li><li class="lvl-3"><a href="#注册系统右键-使用-khyosmarkdown-打开">注册系统右键「使用 khyosMarkdown 打开」</a></li><li class="lvl-2"><a href="#运行测试">运行测试</a></li><li class="lvl-2"><a href="#宪法红线-已落地">宪法红线（已落地）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyosmarkdown-内嵌-md-工作台-跨平台右键集成">khyosMarkdown · 内嵌 MD 工作台 + 跨平台右键集成<a class="anchor" href="#khyosmarkdown-内嵌-md-工作台-跨平台右键集成" aria-label="锚点">#</a></h1>
+<p>零外部依赖的单文件 Markdown 阅读/编辑工作台，解决 <code>.md</code> 在系统记事本里阅读体验极差的问题。<br>支持两种用法：<strong>项目内嵌</strong>（浏览本仓库 <code>docs/</code>）与<strong>全局工具</strong>（右键电脑上任意 <code>.md</code> 打开）。</p>
+<blockquote><p>规范依据：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-032]</code>（架构）、<code>docs/08_MGMT_项目管理/[MGMT-STD-002]</code>（合并系统提示词与红线）。</p></blockquote>
+<h2 id="目录文件">目录文件<a class="anchor" href="#目录文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td><code>khyosMarkdown.html</code></td><td>单文件工作台：内联 MD 解析器 + 编辑器 + 预览 + CSS，零 CDN，断网可用</td></tr><tr><td><code>khyos-md-bridge.js</code></td><td>纯 Node 零依赖桥接器：<code>127.0.0.1</code> 同源服务，token 鉴权，消除 <code>file://</code> CORS</td></tr><tr><td><code>khyos-md-launch.vbs</code></td><td>Windows 隐藏式启动器（自定位，无控制台闪窗）</td></tr><tr><td><code>register-windows.ps1</code> / <code>unregister-windows.ps1</code></td><td>Windows 右键注册 / 卸载（仅 HKCU，无 UAC）</td></tr><tr><td><code>register-linux.sh</code> / <code>unregister-linux.sh</code></td><td>Linux 关联注册 / 卸载（仅 <code>~/.local</code>，无 sudo）</td></tr><tr><td><code>test/</code></td><td><code>node:test</code> 用例：桥接器 13 + 解析器 12 = 25 绿</td></tr></tbody></table>
+<h2 id="为什么需要桥接器-cors-绝路">为什么需要桥接器（CORS 绝路）<a class="anchor" href="#为什么需要桥接器-cors-绝路" aria-label="锚点">#</a></h2>
+<p>浏览器禁止 <code>file://</code> 页面 <code>fetch</code> 本地文件。桥接器以 <code>http://127.0.0.1:&lt;随机端口&gt;</code> <strong>同源</strong>服务页面与<br><code>/api/*</code>，请求根本不跨域 —— 不是放宽 CORS，而是消除它。仅监听本机回环，并用一次性 token 防止本机其他<br>网页越权调用。</p>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<p>前置：已安装 <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a>（本仓库自带）。</p>
+<h3 id="直接打开某个文件-全局工具模式">直接打开某个文件（全局工具模式）<a class="anchor" href="#直接打开某个文件-全局工具模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node khyos-md-bridge.js &quot;/path/to/任意 文档.md&quot;   # 自动起服务并打开浏览器</code></pre>
+<h3 id="浏览本项目文档-项目内嵌模式">浏览本项目文档（项目内嵌模式）<a class="anchor" href="#浏览本项目文档-项目内嵌模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node khyos-md-bridge.js                            # 无参 → 浏览本仓库 docs/</code></pre>
+<h3 id="注册系统右键-使用-khyosmarkdown-打开">注册系统右键「使用 khyosMarkdown 打开」<a class="anchor" href="#注册系统右键-使用-khyosmarkdown-打开" aria-label="锚点">#</a></h3>
+<p>Windows（PowerShell，<strong>无需管理员</strong>）：</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File register-windows.ps1
+# 卸载：
+powershell -ExecutionPolicy Bypass -File unregister-windows.ps1</code></pre>
+<p>Linux（<strong>无需 sudo</strong>）：</p>
+<pre><code class="language-bash">bash register-linux.sh
+# 卸载：
+bash unregister-linux.sh</code></pre>
+<p>注册后，右键任意 <code>.md</code> 即可见「使用 khyosMarkdown 打开」（Linux 在「打开方式」中）。</p>
+<h2 id="运行测试">运行测试<a class="anchor" href="#运行测试" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node --test test/bridge.test.js test/parser.test.js</code></pre>
+<h2 id="宪法红线-已落地">宪法红线（已落地）<a class="anchor" href="#宪法红线-已落地" aria-label="锚点">#</a></h2>
+<ol><li><strong>零外部依赖</strong>：<code>khyosMarkdown.html</code> 不加载任何外部 CSS/JS/字体；MD 解析器自带。</li><li><strong>跨域绝路</strong>：经桥接器同源服务，彻底消除 <code>file://</code> CORS；右键打开绝不因 CORS 读取失败。</li><li><strong>路径免疫</strong>：路径经 <code>encodeURIComponent</code> + WHATWG URL 解码，空格/中文/特殊字符不断裂。</li><li><strong>系统纯净</strong>：注册仅写用户级（HKCU / <code>~/.local</code>），无 UAC、无 sudo；卸载脚本零残留。</li></ol>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="tools/khyos-markdown/README.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

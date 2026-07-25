@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元规划协议与动态约束注入 — 测试报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>元规划协议与动态约束注入 — 测试报告</div>
+      <header class="hero reveal"><h1>元规划协议与动态约束注入 — 测试报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#元规划协议与动态约束注入-测试报告">元规划协议与动态约束注入 — 测试报告</a></li><li class="lvl-2"><a href="#1-范围">1. 范围</a></li><li class="lvl-2"><a href="#2-运行">2. 运行</a></li><li class="lvl-2"><a href="#3-用例矩阵-31-例">3. 用例矩阵（31 例）</a></li><li class="lvl-2"><a href="#4-核心验证-6-同一任务不同风险-不同策略">4. 核心验证（§6 同一任务不同风险 → 不同策略）</a></li><li class="lvl-2"><a href="#5-防呆与诉求逐条验证">5. 防呆与诉求逐条验证</a></li><li class="lvl-2"><a href="#6-结论">6. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="元规划协议与动态约束注入-测试报告">元规划协议与动态约束注入 — 测试报告<a class="anchor" href="#元规划协议与动态约束注入-测试报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：TEST-RPT-009<br>日期：2026-06-12<br>关联设计：[DESIGN-ARCH-025] khyos 元规划协议与动态约束注入规范<br>关联实现：[IMPL-RPT-025] 元规划协议与动态约束注入 — 实现报告</p></blockquote>
+<hr>
+<h2 id="1-范围">1. 范围<a class="anchor" href="#1-范围" aria-label="锚点">#</a></h2>
+<p>验证 <code>src/services/metaplan/*</code> 子系统：元规划解析/防偷懒升级、动态约束注入、真实代码拦截器、<br>信任熔断、宪法红线，以及 <code>MetaPlanCoordinator</code> 的端到端闭环。</p>
+<h2 id="2-运行">2. 运行<a class="anchor" href="#2-运行" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node --test tests/services/metaplan/metaPlanSubsystem.test.js
+# tests 31 / suites 7 / pass 31 / fail 0</code></pre>
+<h2 id="3-用例矩阵-31-例">3. 用例矩阵（31 例）<a class="anchor" href="#3-用例矩阵-31-例" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>套件</th><th>用例数</th><th>覆盖诉求/防呆</th></tr></thead><tbody><tr><td>constraintStrategy — 单调升级阶梯</td><td>2</td><td>LUB 取严、未知 fail-safe</td></tr><tr><td>executorRegistry — 武器库单一真源</td><td>4</td><td>防呆②（enum==注册表、拒捏造、拒空、裸网识别）</td></tr><tr><td>metaPlanSchema — 解析与防偷懒升级</td><td>4</td><td>防呆①、拒绝偷懒（Soft 缺论证升级）、非法枚举拒绝</td></tr><tr><td>constraintInjection — 按需配发锁具</td><td>4</td><td>Soft 不挂锁、Hard 挂锁、Block 要快照、真校验打回坏 JS</td></tr><tr><td>constitutionalRedLines — 不可覆盖红线</td><td>4</td><td>防呆④（删库/删机密/清 package.json 强制 Block；常规放行）</td></tr><tr><td>trustCircuitBreaker — 信任熔断</td><td>5</td><td>类型级降级、不牵连他型、防呆③连续 2 次锁会话、Hard 失败不扣信任、Soft 成功重置连击</td></tr><tr><td>MetaPlanCoordinator — 端到端</td><td>8</td><td>§6 同任务不同风险→不同策略、防呆①②、拒绝偷懒、红线覆盖、闭环自愈、缺票据兜底</td></tr></tbody></table>
+<h2 id="4-核心验证-6-同一任务不同风险-不同策略">4. 核心验证（§6 同一任务不同风险 → 不同策略）<a class="anchor" href="#4-核心验证-6-同一任务不同风险-不同策略" aria-label="锚点">#</a></h2>
+<ul><li><strong>改 JS 注释</strong>：<code>toolchain:[raw_string_injector]</code> + <code>Prompt_Soft</code> + 充分 <code>risk_dissent</code></li></ul>
+<p>→ <code>effectiveStrategy = Prompt_Soft</code>，<code>validateExecution</code> 的 <code>ranValidation = false</code>（跳过校验，极速）。</p>
+<ul><li><strong>重构 JS 异步控制流</strong>（同一文件）：<code>toolchain:[js_babel_writer]</code> + <code>Code_Hard</code></li></ul>
+<p>→ 真 babel 校验：<code>async function f(){ await (</code> 被打回（<code>allowed:false</code>），<br>  <code>async function f(){ await g(); return 1; }</code> 通过。</p>
+<p><strong>同一目标、不同风险判定 → 截然不同的执行策略与挂锁，得证。</strong></p>
+<h2 id="5-防呆与诉求逐条验证">5. 防呆与诉求逐条验证<a class="anchor" href="#5-防呆与诉求逐条验证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>用例</th><th>结果</th></tr></thead><tbody><tr><td>防呆①（先规划后执行）</td><td>无元规划 JSON → 拒绝；缺票据 → validateExecution 拒绝并要求快照</td><td>✅</td></tr><tr><td>防呆②（执行器须自注册表）</td><td><code>ghost_writer_9000</code> → 拒绝</td><td>✅</td></tr><tr><td>防呆③（连续 2 次 Soft 翻车锁会话）</td><td>两次 Soft 失败后任意新类型被升 <code>Code_Hard</code></td><td>✅</td></tr><tr><td>防呆④（红线不可覆盖）</td><td>选 <code>Prompt_Soft</code> 但 <code>rm app.sqlite</code> → 强制 <code>System_Block</code></td><td>✅</td></tr><tr><td>拒绝偷懒</td><td><code>risk_dissent:&quot;ok&quot;</code> 的 Soft → 升 <code>Code_Hard</code></td><td>✅</td></tr><tr><td>极致省资源</td><td>Soft <code>ranValidation:false</code>，零拦截器开销</td><td>✅</td></tr><tr><td>闭环自愈</td><td>Soft 翻车 → 同类型下一次自动升 <code>Code_Hard</code></td><td>✅</td></tr></tbody></table>
+<h2 id="6-结论">6. 结论<a class="anchor" href="#6-结论" aria-label="锚点">#</a></h2>
+<p>31/31 全绿。子系统满足全部核心诉求与五条防呆红线，且零侵入既有模块、无回归面。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-008] 元帅双模式任命-测试报告-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">元帅（Marshal）双模式任命与约束 — 测试报告</div></a><a class="next" href="../../docs/05_TEST_测试/00_INDEX_测试-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 测试分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-009] 元规划协议与动态约束注入-测试报告-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

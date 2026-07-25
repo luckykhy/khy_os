@@ -1,0 +1,8 @@
+{
+  "name": "keybindings",
+  "command": "/keybindings",
+  "description": "Show available keyboard shortcuts and keybindings",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["help", "keyboard"]
+}

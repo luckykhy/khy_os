@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pull Request Review Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>review-pr<span class="sep">›</span>Pull Request Review Skill</div>
+      <header class="hero reveal"><h1>Pull Request Review Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pull-request-review-skill">Pull Request Review Skill</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#procedure">Procedure</a></li><li class="lvl-2"><a href="#constraints">Constraints</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="pull-request-review-skill">Pull Request Review Skill<a class="anchor" href="#pull-request-review-skill" aria-label="锚点">#</a></h1>
+<p>Perform a thorough code review of a pull request.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li>A PR number (e.g., <code>123</code>) or a GitHub PR URL.</li><li>If no input is provided, review the current branch against the base branch.</li></ul>
+<h2 id="procedure">Procedure<a class="anchor" href="#procedure" aria-label="锚点">#</a></h2>
+<ol><li><strong>Gather context</strong>:<ul><li>If a PR number/URL is given, use <code>gh pr view &lt;number&gt; --json</code> to fetch PR metadata.</li><li>Use <code>gh pr diff &lt;number&gt;</code> to get the full diff.</li><li>If reviewing the current branch, use <code>git log main..HEAD --oneline</code> and <code>git diff main...HEAD</code>.</li></ul></li></ol>
+<ol><li><strong>Understand the change</strong>:<ul><li>Read the PR description and linked issues.</li><li>Identify the intent: bug fix, feature, refactor, config change, etc.</li><li>Determine the scope: which subsystems are touched.</li></ul></li></ol>
+<ol><li><strong>Review checklist</strong>:<ul><li><strong>Correctness</strong>: Does the code do what it claims? Are edge cases handled?</li><li><strong>Security</strong>: Are inputs validated? Any injection risks? Secrets exposed?</li><li><strong>Performance</strong>: Any O(n^2) loops, unnecessary allocations, missing caches?</li><li><strong>Error handling</strong>: Are errors propagated correctly? Missing try/catch?</li><li><strong>Testing</strong>: Are tests added or updated? Do they cover the happy path and failure cases?</li><li><strong>Style</strong>: Does the code follow project conventions? Consistent naming?</li><li><strong>Documentation</strong>: Are public APIs documented? Are complex algorithms explained?</li><li><strong>Dependencies</strong>: Are new dependencies justified? Are they well-maintained?</li><li><strong>Breaking changes</strong>: Any backwards-incompatible changes to public interfaces?</li></ul></li></ol>
+<ol><li><strong>Output format</strong>:</li></ol>
+<p>Provide a structured review:</p>
+<pre><code>   ## Summary
+   Brief description of what the PR does.
+
+   ## Findings
+
+   ### Critical
+   - [file:line] Description of critical issue
+
+   ### Suggestions
+   - [file:line] Description of improvement suggestion
+
+   ### Praise
+   - Highlight well-done aspects
+
+   ## Verdict
+   APPROVE / REQUEST_CHANGES / COMMENT</code></pre>
+<h2 id="constraints">Constraints<a class="anchor" href="#constraints" aria-label="锚点">#</a></h2>
+<ul><li>Be constructive. Explain the &quot;why&quot; behind every suggestion.</li><li>Distinguish between blocking issues and stylistic preferences.</li><li>Acknowledge good patterns and thoughtful decisions.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/remember/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Remember — Persistent Memory</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/security-and-hardening/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Security and Hardening</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/review-pr/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

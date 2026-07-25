@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview Me · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>interview-me<span class="sep">›</span>Interview Me</div>
+      <header class="hero reveal"><h1>Interview Me</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#interview-me">Interview Me</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#loading-constraints">Loading Constraints</a></li><li class="lvl-2"><a href="#the-process">The Process</a></li><li class="lvl-3"><a href="#step-1-hypothesize-with-a-confidence-number">Step 1: Hypothesize, with a confidence number</a></li><li class="lvl-3"><a href="#step-2-ask-one-question-at-a-time-each-with-a-guess-attached">Step 2: Ask one question at a time, each with a guess attached</a></li><li class="lvl-3"><a href="#step-3-listen-for-want-vs-should-want">Step 3: Listen for &quot;want vs. should want&quot;</a></li><li class="lvl-3"><a href="#step-4-restate-intent-in-the-user-s-own-words">Step 4: Restate intent in the user's own words</a></li><li class="lvl-3"><a href="#step-5-confirm-explicit-yes-not-whatever-you-think">Step 5: Confirm — explicit yes, not &quot;whatever you think&quot;</a></li><li class="lvl-3"><a href="#the-95-confidence-stop">The 95% Confidence Stop</a></li><li class="lvl-2"><a href="#output">Output</a></li><li class="lvl-2"><a href="#example">Example</a></li><li class="lvl-2"><a href="#interaction-with-other-skills">Interaction with Other Skills</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="interview-me">Interview Me<a class="anchor" href="#interview-me" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>What people ask for and what they actually want are different things. They ask for &quot;a dashboard&quot; because that's what one asks for, not because a dashboard solves their problem. They say &quot;make it faster&quot; without a number to hit.</p>
+<p>The cheapest moment to find this gap is before any plan, spec, or code exists. Once you've started building, switching costs are real, and the user will rationalize the wrong thing into a &quot;good enough&quot; thing. The misfit gets locked in.</p>
+<p>This skill closes the gap before it costs anything. The other Define-phase skills assume you already know roughly what you want: <code>idea-refine</code> generates variations from an idea, <code>spec-driven-development</code> writes the requirements down, <code>doubt-driven-development</code> stress-tests a plan after you've drafted one. Interview-me is the part before all of those, where you ask one question at a time, with your best guess attached, until you can predict what the user is going to say before they say it.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<p>Apply this skill when:</p>
+<ul><li>The ask is missing at least one of: <strong>who</strong> the user is, <strong>why</strong> they want it, what <strong>success</strong> looks like, what the binding <strong>constraint</strong> is</li><li>The request is conventional rather than specific (&quot;build me X&quot;, &quot;make it faster&quot;) and you can't unpack the convention without guessing</li><li>You're tempted to start with assumptions you haven't surfaced</li><li>The user hasn't said which value they're optimizing for when two reasonable ones are in tension (simplicity vs. flexibility, cost vs. speed)</li><li>The user explicitly invokes: &quot;interview me&quot;, &quot;grill me&quot;, &quot;before we start, are we sure?&quot;, &quot;stress-test my thinking&quot;</li></ul>
+<p><strong>When NOT to use:</strong></p>
+<ul><li>The ask is unambiguous and self-contained (&quot;rename this variable&quot;, &quot;fix this typo&quot;)</li><li>The user has explicitly asked for speed over verification</li><li>Pure information requests (&quot;how does X work?&quot;, &quot;what does this code do?&quot;)</li><li>Mechanical operations (renames, formats, file moves)</li><li>You already have ≥95% confidence; re-read the stop condition below before assuming you don't</li></ul>
+<h2 id="loading-constraints">Loading Constraints<a class="anchor" href="#loading-constraints" aria-label="锚点">#</a></h2>
+<p>This skill needs a live, responsive user. <strong>Do not invoke in non-interactive contexts</strong> like CI pipelines, scheduled runs, <code>/loop</code>, or autonomous-loop. If you're in one of those and the ask is underspecified, flag that as a blocker for the user instead of guessing.</p>
+<h2 id="the-process">The Process<a class="anchor" href="#the-process" aria-label="锚点">#</a></h2>
+<h3 id="step-1-hypothesize-with-a-confidence-number">Step 1: Hypothesize, with a confidence number<a class="anchor" href="#step-1-hypothesize-with-a-confidence-number" aria-label="锚点">#</a></h3>
+<p>Before asking anything, write down your current best read of what the user wants in <strong>one sentence</strong>, plus an honest confidence number (0–100%):</p>
+<pre><code>HYPOTHESIS: You want a way to answer &quot;how are we doing?&quot; in standup, and &quot;dashboard&quot; was the convention that came to mind.
+CONFIDENCE: ~30% — missing: who it's for, what &quot;metrics&quot; means in context, and what success looks like</code></pre>
+<p>The number forces honesty. If you wrote down a high number but can't actually predict the user's reactions to the next three questions you'd ask, the number is wrong. Start at the confidence level you can defend.</p>
+<p>When confidence is below ~70%, append a brief reason on the same line — what's still unresolved or missing. This tells the user exactly what the interview needs to surface, and prevents the number from being a vague signal.</p>
+<h3 id="step-2-ask-one-question-at-a-time-each-with-a-guess-attached">Step 2: Ask one question at a time, each with a guess attached<a class="anchor" href="#step-2-ask-one-question-at-a-time-each-with-a-guess-attached" aria-label="锚点">#</a></h3>
+<p>Format:</p>
+<pre><code>Q: &lt;one focused question&gt;
+GUESS: &lt;your hypothesis for the answer, with the reasoning that produced it&gt;</code></pre>
+<p>Wait for the user to react before asking the next question.</p>
+<p><strong>Why one at a time, not a batch:</strong></p>
+<ul><li>The user can't react to your hypotheses if you bury them in a list</li><li>Batches encourage skim-reading and surface answers</li><li>The third question often depends on the answer to the first; asking them all at once locks in the wrong framing</li><li>The user's energy for thinking carefully is finite; spend it one question at a time</li></ul>
+<p><strong>Why attach a guess:</strong></p>
+<ul><li>The user reacts faster to a wrong guess than they generate an answer from scratch</li><li>It commits you to a hypothesis you can be visibly wrong about, which keeps you honest</li><li>It surfaces <em>your</em> assumptions, which is what the interview is meant to expose</li></ul>
+<p>The risk here is a polite user agreeing with your guess to be agreeable. Mitigate by being visibly willing to be wrong, and occasionally guess in a direction you expect the user to push back on.</p>
+<h3 id="step-3-listen-for-want-vs-should-want">Step 3: Listen for &quot;want vs. should want&quot;<a class="anchor" href="#step-3-listen-for-want-vs-should-want" aria-label="锚点">#</a></h3>
+<p>The most dangerous answers are the ones where the user says what a thoughtful answer <em>sounds like</em> rather than what they actually want. Watch for:</p>
+<ul><li>Answers that pattern-match best-practice talk (&quot;I want it to be scalable&quot;, &quot;clean architecture&quot;) without specifics</li><li>Answers that defer to convention (&quot;the way most apps do it&quot;, &quot;the standard approach&quot;)</li><li>Phrases like &quot;I should probably…&quot;, &quot;I think I'm supposed to…&quot;, &quot;good engineering practice says…&quot;</li><li>Buzzwords as goals — when &quot;modern&quot;, &quot;scalable&quot;, &quot;robust&quot; are the answer instead of a specific outcome</li></ul>
+<p>When you hear these, the question to ask is:</p>
+<blockquote><p><em>&quot;If you didn't have to justify this to anyone, what would you actually want?&quot;</em></p></blockquote>
+<p>That single question often does more work than the previous five.</p>
+<h3 id="step-4-restate-intent-in-the-user-s-own-words">Step 4: Restate intent in the user's own words<a class="anchor" href="#step-4-restate-intent-in-the-user-s-own-words" aria-label="锚点">#</a></h3>
+<p>When your confidence is high, write back what you now think the user wants. Keep it tight (5–8 lines), use their language where possible, and structure it so the user can confirm or correct line by line:</p>
+<pre><code>Here's what I now think you want:
+
+- Outcome:      &lt;one line&gt;
+- User:         &lt;one line — who benefits&gt;
+- Why now:      &lt;one line — what changed&gt;
+- Success:      &lt;one line — how we know it worked&gt;
+- Constraint:   &lt;one line — the binding limit&gt;
+- Out of scope: &lt;one line — what we're explicitly not doing&gt;
+
+Yes / no / refine?</code></pre>
+<p>Including &quot;Out of scope&quot; is non-negotiable. Half of misalignment is silent disagreement about what is <em>not</em> being built.</p>
+<h3 id="step-5-confirm-explicit-yes-not-whatever-you-think">Step 5: Confirm — explicit yes, not &quot;whatever you think&quot;<a class="anchor" href="#step-5-confirm-explicit-yes-not-whatever-you-think" aria-label="锚点">#</a></h3>
+<p>The gate is an explicit &quot;yes.&quot; The following are <strong>not</strong> yes:</p>
+<ul><li>&quot;Whatever you think is best.&quot; → The user is delegating, which means they don't have 95% confidence either. Re-ask with two concrete options framed as a choice.</li><li>&quot;Sounds good.&quot; → Ambiguous. Ask: &quot;Anything you'd refine?&quot; Silence isn't confirmation.</li><li>&quot;Sure, let's go.&quot; → Often a polite exit, not an endorsement. Same follow-up.</li><li>Silence followed by &quot;okay let's start.&quot; → The user has given up on the interview, not converged. Stop and ask whether you've missed something.</li></ul>
+<p>If they correct you, fold the correction in and restate. Loop until you get an explicit yes.</p>
+<h3 id="the-95-confidence-stop">The 95% Confidence Stop<a class="anchor" href="#the-95-confidence-stop" aria-label="锚点">#</a></h3>
+<p>You're done when you can answer yes to this:</p>
+<blockquote><p><em>Can I predict the user's reaction to the next three questions I would ask?</em></p></blockquote>
+<p>If yes, you have shared understanding. Stop interviewing and produce the restate. If no, you're not done; ask the next question.</p>
+<p>This is a checkable test, not a vibe. It also has a floor: if you've gone several rounds and still can't predict, that's information about the ask, not a reason to keep grinding. Stop and tell the user: &quot;I've asked X questions and I still can't predict your reactions. Something foundational is missing. Want to step back?&quot;</p>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<p>The output of this skill is a <strong>confirmed statement of intent</strong>: the restate from Step 4, with an explicit yes from Step 5. That's the deliverable. Specs, plans, and task lists are downstream; they consume the intent this skill produces.</p>
+<p>If the user wants the intent to persist (a multi-session project, a handoff to another collaborator), offer to save it to <code>docs/intent/[topic].md</code>. Only save if they confirm.</p>
+<h2 id="example">Example<a class="anchor" href="#example" aria-label="锚点">#</a></h2>
+<p>A short before-and-after.</p>
+<p><strong>Without <code>interview-me</code>:</strong></p>
+<pre><code>User:  build me a dashboard for our metrics
+Agent: &lt;starts proposing chart libraries and layouts&gt;</code></pre>
+<p>The agent has assumed: who it's for, what metrics, what &quot;for our team&quot; means, what success looks like. None of these are stated. Every assumption is a place the user can later say &quot;that's not what I meant.&quot;</p>
+<p><strong>With <code>interview-me</code>:</strong></p>
+<pre><code>User: build me a dashboard for our metrics
+
+Agent:
+HYPOTHESIS: You want a way to answer &quot;how are we doing?&quot; in standup, and &quot;dashboard&quot; came to mind because that's the conventional answer.
+CONFIDENCE: ~30% — missing: who it's for, what &quot;metrics&quot; are, and what success looks like
+
+Q:     When you say &quot;how are we doing?&quot;, who's asking — you alone, the engineering team in standup, or up the chain (e.g., your manager, an exec, a board)?
+GUESS: engineering team in standup, because &quot;we&quot; usually scopes that way and standups are where this question gets asked. If it's for execs the metrics and the framing change a lot.
+
+User: It's actually for me. I keep losing track of which experiments are running and what their early signal looks like.
+
+Agent:
+Updated read: not a team dashboard at all. It's a personal experiment tracker. Confidence: ~60% — still missing: what &quot;early signal&quot; means and what done looks like.
+
+Q:     Is the gap that you don't know which experiments exist, or that you can't see their results in one place?
+GUESS: the second one. You have a list of experiments somewhere, but their results live in five different tools, and reconciling them by hand is what you're tired of.
+
+User: First one actually. I literally don't have a list. They're spread across different docs.
+
+Agent: &lt;continues&gt;</code></pre>
+<p>Two questions in, the agent has discovered the actual ask isn't &quot;a dashboard.&quot; It's &quot;a list.&quot; Different artifact, different scope, different work. The dashboard would have been wrong.</p>
+<h2 id="interaction-with-other-skills">Interaction with Other Skills<a class="anchor" href="#interaction-with-other-skills" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>idea-refine</code></strong>: downstream. If the confirmed intent is &quot;I want X but I don't know how to scope it,&quot; hand off to <code>idea-refine</code> to generate variations against the now-explicit intent.</li><li><strong><code>spec-driven-development</code></strong>: downstream. If the confirmed intent is concrete (&quot;I want X for Y users with Z success criteria&quot;), hand off to <code>spec-driven-development</code> to write it down.</li><li><strong><code>planning-and-task-breakdown</code></strong>: two hops downstream of this skill (after the spec).</li><li><strong><code>doubt-driven-development</code></strong>: opposite end of the timeline. Interview-me is pre-decision intent extraction; doubt-driven is post-decision artifact review. Both catch divergence, but at different moments.</li><li><strong><code>source-driven-development</code></strong>: orthogonal. Interview-me clarifies what the user wants; SDD verifies framework facts. They don't compete.</li></ul>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;The ask is clear enough&quot;</td><td>If you can't write the user's desired outcome in one sentence right now, the ask isn't clear. Run Step 1 before deciding.</td></tr><tr><td>&quot;Asking too many questions wastes their time&quot;</td><td>Time wasted by 4–6 targeted questions is small. Time wasted by building the wrong thing is enormous, and the user is the one bearing that cost.</td></tr><tr><td>&quot;I'll figure it out as I build&quot;</td><td>Switching costs after code exists are 10x what they are now. Discovery during implementation is rework.</td></tr><tr><td>&quot;They said 'whatever you think,' so I should just decide&quot;</td><td>&quot;Whatever you think&quot; is delegation, not decision. Re-ask with two concrete options as a choice.</td></tr><tr><td>&quot;I should give them several options to pick from&quot;</td><td>Options work when the user knows what they want and is choosing between trade-offs. They don't know what they want yet. Listing options widens the search; asking narrows it.</td></tr><tr><td>&quot;If I attach my guess, I'm leading them&quot;</td><td>Leading is the point. Reacting is faster than generating from scratch. The risk is sycophancy, not leading; mitigate by being visibly willing to be wrong.</td></tr><tr><td>&quot;We've talked enough, I get it&quot;</td><td>Test it: can you predict their reaction to the next three questions? If not, you don't get it yet.</td></tr><tr><td>&quot;The user said yes, we're done&quot;</td><td>If the yes followed a vague restate or an open-ended &quot;sounds good,&quot; the yes is hollow. Restate concretely and re-confirm.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Three or more questions in a single message: that's batching, not interviewing</li><li>A question without your hypothesis attached: that's surveying, not committing</li><li>Accepting &quot;whatever you think is best&quot; as a terminal answer</li><li>Producing a spec, plan, or task list before the user has explicitly confirmed your restate</li><li>Questions framed as &quot;what would be best practice?&quot; instead of &quot;what do you actually want?&quot;</li><li>The user gives a sophistication-signaling answer (&quot;scalable&quot;, &quot;clean&quot;, &quot;modern&quot;) and you accept it without probing whether it's what they actually want</li><li>Three or more rounds without your confidence visibly rising: you're asking the wrong questions, step back and reframe</li><li>A confidence number below ~70% with no reason attached: the user can't help close the gap if they don't know what's missing</li><li>Saving the intent doc before the user has confirmed (the doc itself implies a yes the user didn't give)</li><li>Skipping the &quot;Out of scope&quot; line in the restate (silent disagreement about non-goals is half of misalignment)</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After applying interview-me:</p>
+<ul><li>[ ] An explicit hypothesis with a confidence number was stated in the first turn</li><li>[ ] Every confidence number below ~70% was accompanied by a one-line reason (what's still unresolved or missing)</li><li>[ ] Questions were asked one at a time, each with the agent's guess attached</li><li>[ ] At least one &quot;what would you actually want if you didn't have to justify it?&quot; probe ran when the user gave a sophistication-signaling or convention-signaling answer</li><li>[ ] A concrete restate (Outcome / User / Why now / Success / Constraint / Out of scope) was written back to the user</li><li>[ ] The user confirmed the restate with an explicit yes (not &quot;whatever you think,&quot; not &quot;sounds good,&quot; not silence)</li><li>[ ] At the stop point, the agent could predict reactions to the next three questions it would ask</li><li>[ ] Any handoff to a downstream skill (<code>idea-refine</code>, <code>spec-driven-development</code>) was framed in terms of the confirmed intent, not the original underspecified ask</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/init-project/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Initialize Project</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/keybindings/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Keybindings — Keyboard Shortcut Reference</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/interview-me/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

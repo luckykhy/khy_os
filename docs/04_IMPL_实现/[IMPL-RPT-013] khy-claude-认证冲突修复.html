@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 与 Claude Code 认证冲突修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>KHY 与 Claude Code 认证冲突修复</div>
+      <header class="hero reveal"><h1>KHY 与 Claude Code 认证冲突修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-与-claude-code-认证冲突修复">KHY 与 Claude Code 认证冲突修复</a></li><li class="lvl-2"><a href="#问题背景">问题背景</a></li><li class="lvl-2"><a href="#根因分析">根因分析</a></li><li class="lvl-3"><a href="#故障链路">故障链路</a></li><li class="lvl-2"><a href="#修复方案">修复方案</a></li><li class="lvl-3"><a href="#1-has-external-anthropic-auth-同时检查两种来源">1. `_has_external_anthropic_auth()` — 同时检查两种来源</a></li><li class="lvl-3"><a href="#2-sync-claude-code-auth-token-增加-base-url-保护">2. `_sync_claude_code_auth_token()` — 增加 BASE_URL 保护</a></li><li class="lvl-3"><a href="#3-auto-configure-claude-settings-build-khy-proxy-env">3. `_auto_configure_claude_settings()` → `_build_khy_proxy_env()`</a></li><li class="lvl-3"><a href="#4-cleanup-khy-auth-from-settings">4. `_cleanup_khy_auth_from_settings()`</a></li><li class="lvl-2"><a href="#防护层">防护层</a></li><li class="lvl-2"><a href="#2026-05-27-补充加固">2026-05-27 补充加固</a></li><li class="lvl-2"><a href="#修复后的使用模式">修复后的使用模式</a></li><li class="lvl-2"><a href="#doctor-自动修复">Doctor 自动修复</a></li><li class="lvl-2"><a href="#验证方式">验证方式</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-013 | 阶段: 实现 | 原路径: docs/指南/khy-claude-认证冲突修复.md --&gt;</p>
+<h1 id="khy-与-claude-code-认证冲突修复">KHY 与 Claude Code 认证冲突修复<a class="anchor" href="#khy-与-claude-code-认证冲突修复" aria-label="锚点">#</a></h1>
+<blockquote><p>修复日期：2026-05-27<br>状态：已实施<br>涉及文件：<code>khy_platform/_bootstrap.py</code> · <code>khy_platform/cli.py</code></p></blockquote>
+<hr>
+<h2 id="问题背景">问题背景<a class="anchor" href="#问题背景" aria-label="锚点">#</a></h2>
+<p>每次 <code>khy</code> 启动时，Claude Code 都会变得无法使用，并报错：</p>
+<pre><code>401 {&quot;error&quot;:{&quot;message&quot;:&quot;Invalid token&quot;,&quot;type&quot;:&quot;new_api_error&quot;}}</code></pre>
+<p>以及/或：</p>
+<pre><code>⚠ Auth conflict: Both a token (ANTHROPIC_AUTH_TOKEN) and an API key
+  (ANTHROPIC_API_KEY) are set.</code></pre>
+<h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
+<p>用户的 Anthropic 认证信息存储在 <code>~/.claude/settings.json</code> 中：</p>
+<pre><code class="language-json">{
+  &quot;env&quot;: {
+    &quot;ANTHROPIC_AUTH_TOKEN&quot;: &quot;sk-xxx&quot;,
+    &quot;ANTHROPIC_BASE_URL&quot;: &quot;https://ai.mindflow.com.cn&quot;
+  }
+}</code></pre>
+<p>KHY 的 <code>_sync_claude_code_auth_token()</code> 会在每次启动时运行，并检查<br><code>os.environ</code> 中是否存在外部认证。但用户的认证信息<strong>并不在 shell 环境变量中</strong>——<br>它只存在于 <code>settings.json</code> 里。该检查漏掉了这种情况，于是向 settings.json<br>注入了 <code>ANTHROPIC_API_KEY=khy-xxx</code>。</p>
+<p>结果：settings.json 同时存在 <code>ANTHROPIC_AUTH_TOKEN</code>（Mindflow）和<br><code>ANTHROPIC_API_KEY</code>（KHY 本地代理）。Claude Code 选用了 KHY 的密钥，并<br>将其发送给 Mindflow——后者以 401 拒绝了该请求。</p>
+<p>安全路径（<code>_maybe_configure_claude_code_settings</code>）带有 BASE_URL 守卫，<br>当 URL 非本地时会阻止注入。而出问题的路径<br>（<code>_sync_claude_code_auth_token</code>）缺少这个守卫。</p>
+<h3 id="故障链路">故障链路<a class="anchor" href="#故障链路" aria-label="锚点">#</a></h3>
+<pre><code>khy startup
+  → _sync_claude_code_auth_token()
+    → _has_external_anthropic_auth() checks os.environ only → False
+    → injects ANTHROPIC_API_KEY=khy-xxx into settings.json
+      → settings.json now has AUTH_TOKEN + API_KEY + mindflow URL
+        → Claude Code sends khy-xxx to mindflow → 401</code></pre>
+<h2 id="修复方案">修复方案<a class="anchor" href="#修复方案" aria-label="锚点">#</a></h2>
+<h3 id="1-has-external-anthropic-auth-同时检查两种来源">1. <code>_has_external_anthropic_auth()</code> — 同时检查两种来源<a class="anchor" href="#1-has-external-anthropic-auth-同时检查两种来源" aria-label="锚点">#</a></h3>
+<p>修复前：仅检查 <code>os.environ</code>。<br>修复后：同时检查 <strong>shell 环境变量</strong> 和 <strong><code>~/.claude/settings.json</code></strong>，查找：</p>
+<ul><li><code>ANTHROPIC_AUTH_TOKEN</code>（非 khy 前缀）</li><li><code>ANTHROPIC_API_KEY</code>（非 khy 前缀）</li><li>指向非本地端点的 <code>ANTHROPIC_BASE_URL</code></li></ul>
+<h3 id="2-sync-claude-code-auth-token-增加-base-url-保护">2. <code>_sync_claude_code_auth_token()</code> — 增加 BASE_URL 保护<a class="anchor" href="#2-sync-claude-code-auth-token-增加-base-url-保护" aria-label="锚点">#</a></h3>
+<p>加入了 <code>_maybe_configure_claude_code_settings()</code> 中已有的同款守卫：<br>如果 settings.json 中的 <code>ANTHROPIC_BASE_URL</code> 指向非本地 URL，则<br>拒绝注入 <code>ANTHROPIC_API_KEY</code>。</p>
+<h3 id="3-auto-configure-claude-settings-build-khy-proxy-env">3. <code>_auto_configure_claude_settings()</code> → <code>_build_khy_proxy_env()</code><a class="anchor" href="#3-auto-configure-claude-settings-build-khy-proxy-env" aria-label="锚点">#</a></h3>
+<p><code>khy claude</code> 不再写入 <code>settings.json</code>。所有代理配置都通过子进程的<br>环境变量传递，并在进程退出时被丢弃——零残留。</p>
+<h3 id="4-cleanup-khy-auth-from-settings">4. <code>_cleanup_khy_auth_from_settings()</code><a class="anchor" href="#4-cleanup-khy-auth-from-settings" aria-label="锚点">#</a></h3>
+<p>当检测到外部认证时，bootstrap 会主动从 settings.json 中移除任何此前<br>注入的 KHY 密钥（<code>khy-</code> 前缀）和本地代理 URL。</p>
+<h2 id="防护层">防护层<a class="anchor" href="#防护层" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Layer</th><th>Location</th><th>Guard</th></tr></thead><tbody><tr><td>1</td><td><code>_has_external_anthropic_auth()</code></td><td>检查 shell 环境变量 + settings.json 中的外部认证</td></tr><tr><td>2</td><td><code>_sync_claude_code_auth_token()</code></td><td>BASE_URL 守卫：非本地 URL → 跳过注入</td></tr><tr><td>3</td><td><code>_maybe_configure_claude_code_settings()</code></td><td>BASE_URL 守卫（已存在）</td></tr><tr><td>4</td><td><code>_cleanup_khy_auth_from_settings()</code></td><td>主动移除残留的 khy- 密钥</td></tr><tr><td>5</td><td><code>_build_khy_proxy_env()</code> + <code>_launch_claude()</code></td><td>khy claude 仅使用子进程环境变量，不写入 settings.json</td></tr></tbody></table>
+<h2 id="2026-05-27-补充加固">2026-05-27 补充加固<a class="anchor" href="#2026-05-27-补充加固" aria-label="锚点">#</a></h2>
+<p>为避免今后与用户自管的 Claude Code 认证发生冲突，KHY 现在将<br><code>~/.claude/settings.json</code> 视为 <strong>opt-in 可写</strong>：</p>
+<ul><li>默认：KHY <strong>不</strong>写入 Claude 设置。</li><li>仅在明确需要时启用：<ul><li><code>KHY_ALLOW_WRITE_CLAUDE_SETTINGS=1</code></li><li>或旧版别名 <code>KHY_MANAGE_CLAUDE_SETTINGS=1</code></li></ul></li></ul>
+<p>这同时适用于 bootstrap 同步和 AI 网关的模型槽位 API。</p>
+<p>注意：在默认模式下，KHY 仍会执行一项范围很窄的单向卫生清理：<br>如果检测到外部 Anthropic 认证，它会从 <code>settings.json</code> 中移除残留的<br>KHY 注入的 <code>khy-*</code> API 密钥，以防止旧版冲突。</p>
+<h2 id="修复后的使用模式">修复后的使用模式<a class="anchor" href="#修复后的使用模式" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Command</th><th>Main model</th><th>Subagent</th><th>settings.json</th></tr></thead><tbody><tr><td><code>claude</code></td><td>外部认证</td><td>外部认证</td><td>不改动</td></tr><tr><td><code>khy claude</code></td><td>KHY 适配器</td><td>KHY 适配器</td><td>不改动（子进程环境变量）</td></tr><tr><td><code>khy claude --hybrid</code></td><td>外部（claude/）</td><td>KHY 适配器</td><td>不改动（子进程环境变量）</td></tr><tr><td><code>khy claude --hybrid-sub</code></td><td>KHY 适配器</td><td>外部（claude/）</td><td>不改动（子进程环境变量）</td></tr><tr><td><code>khy</code>（后端）</td><td>不适用</td><td>不适用</td><td>不改动（守卫生效中）</td></tr></tbody></table>
+<h2 id="doctor-自动修复">Doctor 自动修复<a class="anchor" href="#doctor-自动修复" aria-label="锚点">#</a></h2>
+<p>当 Claude 设置中仍残留旧版 <code>khy-*</code> 密钥时，使用内置的 doctor 修复器：</p>
+<pre><code class="language-bash">khy doctor --fix-claude-conflict</code></pre>
+<p>它会安全地移除常见的冲突残留（例如 <code>ANTHROPIC_API_KEY=khy-*</code><br>与外部 <code>ANTHROPIC_AUTH_TOKEN</code> 共存），然后重新运行诊断。</p>
+<h2 id="验证方式">验证方式<a class="anchor" href="#验证方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Simulate khy startup without shell auth (the real scenario)
+python3 -c &quot;
+import os
+os.environ.pop('ANTHROPIC_AUTH_TOKEN', None)
+os.environ.pop('ANTHROPIC_API_KEY', None)
+from khy_platform._bootstrap import _has_external_anthropic_auth
+print('Detected:', _has_external_anthropic_auth())  # Should be True
+&quot;
+
+# Full bootstrap test
+cp ~/.claude/settings.json /tmp/before.json
+khy --help  # triggers bootstrap for non-version commands
+diff /tmp/before.json ~/.claude/settings.json  # should show no change</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-012] 航天级重构白皮书-第二轮-2026-06-10.html"><div class="dir">← 上一篇</div><div class="ttl">《Khyos 航天级重构白皮书 · 第二轮》</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-014] trae-适配器-官方扫描修复-2026-05-25.html"><div class="dir">下一篇 →</div><div class="ttl">Trae 适配器官方登录态扫描修复报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-013] khy-claude-认证冲突修复.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

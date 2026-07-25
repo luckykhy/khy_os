@@ -1,0 +1,285 @@
+{
+  "total": 56,
+  "items": [
+    {
+      "from": "AGENTS.html",
+      "type": "a",
+      "href": "CONTRIBUTING.html"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "README.zh-CN.md"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "CHANGELOG.html"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "CONTRIBUTING.html"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "CODE_OF_CONDUCT.html"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "SECURITY.html"
+    },
+    {
+      "from": "README.html",
+      "type": "a",
+      "href": "LICENSE"
+    },
+    {
+      "from": "README.html",
+      "type": "img",
+      "href": "assets/banner.svg"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-024%5D%20khyos元帅双模式任命与约束规范.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-033%5D%20模型自适应与双轨热插拔架构.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-035%5D%20上下文永续与认知压缩引擎.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-038%5D%20Khyos双轨淬火-确定性保底与模型辅助增强的Bug升维引擎.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-039%5D%20Khyos环境共生-环境感知与原生亲和架构.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-040%5D%20Khyos数据主权与极权路由-数据主权绝对论与单一权威注入网关.html"
+    },
+    {
+      "from": "docs/00_INDEX_文档索引.html",
+      "type": "a",
+      "href": "03_DESIGN_设计/_archive_已删除孤儿引擎/%5BDESIGN-ARCH-042%5D%20Khyos自持基建-契约即文档与影响面评估与行为守卫.html"
+    },
+    {
+      "from": "docs/01_INIT_立项/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html",
+      "type": "a",
+      "href": "../../LICENSE"
+    },
+    {
+      "from": "docs/01_INIT_立项/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html",
+      "type": "a",
+      "href": "../../.ai/MAP.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
+      "type": "a",
+      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
+      "type": "a",
+      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
+      "type": "a",
+      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
+      "type": "a",
+      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/差异图谱.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/融合架构.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/docs/llms.txt"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
+      "type": "a",
+      "href": "../../platform/packages/agent-sdk/README.html"
+    },
+    {
+      "from": "docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html",
+      "type": "a",
+      "href": "docs/03_DESIGN_设计/%5BDESIGN-ARCH-011%5D%20应用接入标准.html"
+    },
+    {
+      "from": "docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html",
+      "type": "a",
+      "href": "platform/khy_platform/app_protocol.py"
+    },
+    {
+      "from": "docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html",
+      "type": "a",
+      "href": "software/khyquant/khy_quant/app.py"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/Dockerfile:7"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/package.json:40"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/package-lock.json:30"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/README.md:110"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/docker-compose.yml:53"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/docker-compose.yml:11"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/cli/router.js"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/routes/largeTasks.js"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/controllers/comprehensiveDataController.js:149"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/routes/marketData.js:37"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/views/Dashboard.vue:1251"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/frontend/src/api/marketData.js:54"
+    },
+    {
+      "from": "docs/05_TEST_测试/[TEST-RPT-001] 验收不合规-2026-05-16.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/backend/src/controllers/marketController.js:27"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/agent/agent.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task_status.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/background/job.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/run-state.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/status.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/processor.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/retry.ts"
+    },
+    {
+      "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
+      "type": "a",
+      "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/plan.ts"
+    },
+    {
+      "from": "docs/08_MGMT_项目管理/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",
+      "type": "a",
+      "href": "文档结构铁律"
+    },
+    {
+      "from": "docs/08_MGMT_项目管理/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",
+      "type": "a",
+      "href": "证据→计划→落地方法论"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../UNIMOL_TOOLS.html"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../docs/guides/02-QUICK-START.html"
+    },
+    {
+      "from": "services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html",
+      "type": "a",
+      "href": "../docs/README.html"
+    }
+  ]
+}

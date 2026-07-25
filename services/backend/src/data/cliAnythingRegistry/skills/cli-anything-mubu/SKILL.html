@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-mubu · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-mubu<span class="sep">›</span>cli-anything-mubu</div>
+      <header class="hero reveal"><h1>cli-anything-mubu</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-mubu">cli-anything-mubu</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#entry-points">Entry Points</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#discover">Discover</a></li><li class="lvl-3"><a href="#inspect">Inspect</a></li><li class="lvl-3"><a href="#mutate">Mutate</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#recommended-agent-workflow">Recommended Agent Workflow</a></li><li class="lvl-2"><a href="#safety-rules">Safety Rules</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#discover-current-daily-note">Discover Current Daily Note</a></li><li class="lvl-3"><a href="#dry-run-atomic-update">Dry-Run Atomic Update</a></li><li class="lvl-2"><a href="#session-state">Session State</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-mubu&quot;<br>description: &gt;-<br>  Command-line interface for Mubu - Canonical packaged entrypoint for the Mubu live bridge....</p>
+<hr>
+<h1 id="cli-anything-mubu">cli-anything-mubu<a class="anchor" href="#cli-anything-mubu" aria-label="锚点">#</a></h1>
+<p>Canonical packaged entrypoint for the Mubu live bridge.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is packaged from the canonical <code>agent-harness</code> source tree:</p>
+<pre><code class="language-bash">pip install -e .</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>An active Mubu desktop session on this machine</li><li>Local Mubu profile data available to the CLI</li><li>Set <code>MUBU_DAILY_FOLDER</code> if you want no-argument daily helpers</li></ul>
+<h2 id="entry-points">Entry Points<a class="anchor" href="#entry-points" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-mubu
+python -m cli_anything.mubu</code></pre>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session.</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="discover">Discover<a class="anchor" href="#discover" aria-label="锚点">#</a></h3>
+<p>Discovery commands for folders, documents, recency, and daily-document resolution.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody></tbody></table>
+<p>| <code>docs</code> | List latest known document snapshots from local backups. |</p>
+<p>| <code>folders</code> | List folder metadata from local RxDB storage. |</p>
+<p>| <code>folder-docs</code> | List document metadata for one folder. |</p>
+<p>| <code>path-docs</code> | List documents for one folder path or folder id. |</p>
+<p>| <code>recent</code> | List recently active documents using backups, metadata, and sync logs. |</p>
+<p>| <code>daily</code> | Find Daily-style folders and list the documents inside them. |</p>
+<p>| <code>daily-current</code> | Resolve the current daily document from one Daily-style folder. |</p>
+<h3 id="inspect">Inspect<a class="anchor" href="#inspect" aria-label="锚点">#</a></h3>
+<p>Inspection commands for tree views, search, links, sync events, and live node targeting.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody></tbody></table>
+<p>| <code>show</code> | Show the latest backup tree for one document. |</p>
+<p>| <code>search</code> | Search latest backups for matching node text or note content. |</p>
+<p>| <code>changes</code> | Parse recent client-sync change events from local logs. |</p>
+<p>| <code>links</code> | Extract outbound Mubu document links from one document backup. |</p>
+<p>| <code>open-path</code> | Open one document by full path, suffix path, title, or doc id. |</p>
+<p>| <code>doc-nodes</code> | List live document nodes with node ids and update-target paths. |</p>
+<p>| <code>daily-nodes</code> | List live nodes from the current daily document in one step. |</p>
+<h3 id="mutate">Mutate<a class="anchor" href="#mutate" aria-label="锚点">#</a></h3>
+<p>Mutation commands for dry-run-first atomic live edits against the Mubu API.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody></tbody></table>
+<p>| <code>create-child</code> | Build or execute one child-node creation against the live Mubu API. |</p>
+<p>| <code>delete-node</code> | Build or execute one node deletion against the live Mubu API. |</p>
+<p>| <code>update-text</code> | Build or execute one text update against the live Mubu API. |</p>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session and state commands for current document/node context and local command history.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody></tbody></table>
+<p>| <code>status</code> | Show the current session state. |</p>
+<p>| <code>state-path</code> | Show the session state file path. |</p>
+<p>| <code>use-doc</code> | Persist the current document reference. |</p>
+<p>| <code>use-node</code> | Persist the current node reference. |</p>
+<p>| <code>use-daily</code> | Resolve and persist the current daily document reference. |</p>
+<p>| <code>clear-doc</code> | Clear the current document reference. |</p>
+<p>| <code>clear-node</code> | Clear the current node reference. |</p>
+<p>| <code>history</code> | Show recent command history stored in session state. |</p>
+<h2 id="recommended-agent-workflow">Recommended Agent Workflow<a class="anchor" href="#recommended-agent-workflow" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">discover daily-current '&lt;daily-folder-ref&gt;' --json
+        -&gt;
+inspect daily-nodes '&lt;daily-folder-ref&gt;' --query '&lt;anchor&gt;' --json
+        -&gt;
+session use-doc '&lt;doc_path&gt;'
+        -&gt;
+mutate update-text / create-child / delete-node --json
+        -&gt;
+--execute only after payload inspection</code></pre>
+<h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>
+<ol><li>Prefer grouped commands for agent use; flat legacy commands remain for compatibility.</li><li>Use <code>--json</code> whenever an agent will parse the output.</li><li>Prefer <code>discover</code> or <code>inspect</code> commands before any <code>mutate</code> command.</li><li>Live mutations are dry-run by default and only execute with <code>--execute</code>.</li><li>Prefer <code>--node-id</code> and <code>--parent-node-id</code> over text matching.</li><li><code>delete-node</code> removes the full targeted subtree.</li><li>Even same-text updates can still advance document version history.</li><li>Pass a daily-folder reference explicitly or set <code>MUBU_DAILY_FOLDER</code> before using no-arg daily helpers.</li></ol>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with persistent document and node context.</p>
+<pre><code class="language-bash">cli-anything-mubu
+# Enter commands interactively
+# Use 'help' to see builtins
+# Use session commands to persist current-doc/current-node</code></pre>
+<h3 id="discover-current-daily-note">Discover Current Daily Note<a class="anchor" href="#discover-current-daily-note" aria-label="锚点">#</a></h3>
+<p>Resolve the current daily note from an explicit folder reference.</p>
+<pre><code class="language-bash">cli-anything-mubu --json discover daily-current '&lt;daily-folder-ref&gt;'</code></pre>
+<h3 id="dry-run-atomic-update">Dry-Run Atomic Update<a class="anchor" href="#dry-run-atomic-update" aria-label="锚点">#</a></h3>
+<p>Inspect the exact outgoing payload before a live mutation.</p>
+<pre><code class="language-bash">cli-anything-mubu mutate update-text '&lt;doc-ref&gt;' --node-id &lt;node-id&gt; --text 'new text' --json</code></pre>
+<h2 id="session-state">Session State<a class="anchor" href="#session-state" aria-label="锚点">#</a></h2>
+<p>The CLI maintains lightweight session state in JSON:</p>
+<ul><li><code>current_doc</code></li><li><code>current_node</code></li><li>local command history</li></ul>
+<p>Use the <code>session</code> command group to inspect or update this state.</p>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<ol><li>Start with <code>discover</code> or <code>inspect</code>, not <code>mutate</code>.</li><li>Use <code>session status --json</code> to recover persisted context.</li><li>Use grouped commands in generated prompts and automation.</li><li>Verify postconditions after any live mutation.</li><li>Read the package <code>TEST.md</code> and <code>README.md</code> when stricter operational detail is needed.</li></ol>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>0.1.1</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-minimax/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-minimax</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-musescore/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">MuseScore CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mubu/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

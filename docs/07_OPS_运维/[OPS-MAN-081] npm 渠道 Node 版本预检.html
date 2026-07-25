@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾</div>
+      <header class="hero reveal"><h1>[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-081-npm-渠道-node-版本预检-消除与-pip-渠道的离机还原矛盾">[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾</a></li><li class="lvl-2"><a href="#真实原因-数据级证实的跨渠道矛盾">真实原因（数据级证实的跨渠道矛盾）</a></li><li class="lvl-2"><a href="#解决方法-本子系统所做">解决方法（本子系统所做）</a></li><li class="lvl-3"><a href="#1-纯叶子-packaging-npm-scripts-nodeversionpreflight-js">1. 纯叶子 `packaging/npm/scripts/nodeVersionPreflight.js`</a></li><li class="lvl-3"><a href="#2-启动器接线-bin-khy-js-handoff-前单点">2. 启动器接线（`bin/khy.js`，handoff 前单点）</a></li><li class="lvl-3"><a href="#3-随包发布">3. 随包发布</a></li><li class="lvl-2"><a href="#诚实边界">诚实边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-081-npm-渠道-node-版本预检-消除与-pip-渠道的离机还原矛盾">[OPS-MAN-081] npm 渠道 Node 版本预检：消除与 pip 渠道的离机还原矛盾<a class="anchor" href="#ops-man-081-npm-渠道-node-版本预检-消除与-pip-渠道的离机还原矛盾" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼「离机还原 + 矛盾冲突」交叉角度。pip 与 npm 是 khy 唯二的离机渠道，本应给出<br><strong>一致</strong>的还原体验，实测却矛盾：同一台 node 18 的机器上，pip 用户看到清晰的「需要<br>Node ≥ 20 + 怎么装」，npm 用户看到后端深处的天书崩溃。本子系统补上 npm 侧的 Node<br>版本预检，把两个渠道的失败体验对齐。</p></blockquote>
+<h2 id="真实原因-数据级证实的跨渠道矛盾">真实原因（数据级证实的跨渠道矛盾）<a class="anchor" href="#真实原因-数据级证实的跨渠道矛盾" aria-label="锚点">#</a></h2>
+<p>pip 渠道 <code>platform/khy_platform/cli.py:check_node()</code>（启动关键路径）强制 <strong>Node.js ≥ 20</strong><br>（Ink@6 TUI 要求），不满足时：</p>
+<pre><code>Error: Node.js v18.19.0 found but &gt;= 20 required.
+  Install from: https://nodejs.org/ (中文环境 → npmmirror 镜像)
+  Or: brew install node / winget install ... / nodesource ...
+  → sys.exit(1)</code></pre>
+<p>但 npm 渠道启动器 <code>packaging/npm/bin/khy.js</code> <strong>没有任何 node 版本预检</strong>，直接：</p>
+<pre><code class="language-js">const res = spawnSync(process.execPath, [BACKEND_CLI, ...argv], { stdio: 'inherit', ... });</code></pre>
+<p>把后端交给<strong>当前 node</strong>。于是 <strong>同一产品</strong>在 node &lt; 20 的机器上给出<strong>两个矛盾</strong>的离机<br>还原体验：</p>
+<table><thead><tr><th>渠道</th><th>node 18 机器上的体验</th></tr></thead><tbody><tr><td>pip</td><td>「Node.js v18 found but &gt;= 20 required」+ 平台化安装提示 + 干净 exit(1)</td></tr><tr><td>npm</td><td>后端深处的现代语法 / 依赖天书崩溃，用户无从判断根因</td></tr></tbody></table>
+<p>npm 的 <code>package.json engines.node=&quot;&gt;=20&quot;</code> 只是<strong>建议性</strong>的——npm 默认只 warn 不拦，<br><code>--ignore-scripts</code> / <code>engine-strict=false</code> 下形同虚设。故这是启动器层的真实缺口。</p>
+<h2 id="解决方法-本子系统所做">解决方法（本子系统所做）<a class="anchor" href="#解决方法-本子系统所做" aria-label="锚点">#</a></h2>
+<p><strong>全 additive · 门 <code>KHY_NPM_NODE_PREFLIGHT</code>（default-on）· 关字节回退。</strong></p>
+<h3 id="1-纯叶子-packaging-npm-scripts-nodeversionpreflight-js">1. 纯叶子 <code>packaging/npm/scripts/nodeVersionPreflight.js</code><a class="anchor" href="#1-纯叶子-packaging-npm-scripts-nodeversionpreflight-js" aria-label="锚点">#</a></h3>
+<p>把 pip <code>check_node()</code> 的<strong>语义镜像</strong>到 npm 侧：纯函数、零 IO、绝不抛。</p>
+<ul><li><code>parseMajor(raw)</code> —— 解析 <code>v18.19.0</code> / <code>20</code> / 坏输入(→null)。</li><li><code>evaluate({version,env,platform})</code> —— 判定当前 <code>process.versions.node</code> 主版本是否</li></ul>
+<p>≥ <code>MIN_MAJOR</code>(=20)。返回 <code>{ok, gated, major, minMajor, hint[]}</code>。</p>
+<ul><li><code>buildHint()</code> —— 生成与 pip 对齐的多行报错：最低版本说明 + 中文环境镜像分支</li></ul>
+<p>(<code>npmmirror</code> vs <code>nodejs.org</code>) + 平台安装建议(brew/nodesource/winget)。</p>
+<ul><li><code>MIN_MAJOR = 20</code> —— 与 pip <code>check_node</code>(major&gt;=20)、backend <code>package.json</code></li></ul>
+<p>engines(&quot;&gt;=20&quot;)、<code>devenv.js</code> TOOLCHAINS('Node.js (&gt;=20)') 三处同步的 SSOT 语义。</p>
+<p><strong>保守原则</strong>：预检绝不该比它保护的启动更容易失败——版本无法解析 / 任何异常一律<br><strong>放行</strong>(ok:true)，只在能明确判定 major &lt; 20 时才拦截。</p>
+<h3 id="2-启动器接线-bin-khy-js-handoff-前单点">2. 启动器接线（<code>bin/khy.js</code>，handoff 前单点）<a class="anchor" href="#2-启动器接线-bin-khy-js-handoff-前单点" aria-label="锚点">#</a></h3>
+<p><code>spawnSync</code> handoff <strong>之前</strong>防御式 <code>require</code> + <code>evaluate()</code>；<code>ok===false</code> 才逐行打印<br>hint 并 <code>exit(1)</code>。门关 / 叶缺 / 异常 → 跳过预检 → <strong>逐字节回退</strong>到原「无预检直接<br>handoff」行为。</p>
+<h3 id="3-随包发布">3. 随包发布<a class="anchor" href="#3-随包发布" aria-label="锚点">#</a></h3>
+<p><code>packaging/npm/package.json</code> 的 <code>files[]</code> 补 <code>scripts/nodeVersionPreflight.js</code>——否则<br>启动器 require 到一个未发布的文件，<code>bin/khy.js</code> 的 try/catch 会吞成「preflight skipped」<br>（安全，但预检失效）。</p>
+<h2 id="诚实边界">诚实边界<a class="anchor" href="#诚实边界" aria-label="锚点">#</a></h2>
+<ul><li>本预检<strong>只判当前进程的 node 版本</strong>（<code>bin/khy.js</code> 与后端同 node）——它不做 pip 侧的</li></ul>
+<p>「自动下载便携 Node」自愈（那是跨语言 Python 驱动的 bootstrap，npm 侧超出启动器职责，<br>  故 hint 里明确指向 pip 渠道可自动下载）。这是刻意的外科手术边界。</p>
+<ul><li>门 <code>KHY_NPM_NODE_PREFLIGHT</code> 为 sibling 离机还原类门，不进 flagRegistry（同家族先例）。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check packaging/npm/scripts/nodeVersionPreflight.js packaging/npm/bin/khy.js
+npm run test:node-preflight     # 叶子契约 19/19
+node --test &quot;packaging/npm/test/*.test.js&quot;   # 全 npm 包 28/28(含既有 devenv 9)</code></pre>
+<p>LIVE 端到端：node 18 → <code>ok:false</code> + 中文镜像 + linux 安装建议；node 22 → 放行；<br>门关 → 字节回退；版本无法解析 → 保守放行。</p>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>对照实现（pip 侧真源）：<code>platform/khy_platform/cli.py:check_node()</code></li><li>启动器：<code>packaging/npm/bin/khy.js</code></li><li>同族离机还原子系统：<code>freshInstallDoctor</code>（OPS-MAN-078）、<code>bundle-launch-contract</code></li></ul>
+<p>（渠道入口清单 parity）、三面镜子还原家族</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-080] recap 的 CJK 化.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-080] /recap 的 CJK 化：让会话回顾在中文会话下产出内容</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-082] 三面镜子还原收敛与防循环.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-082] 三面镜子还原收敛与防循环</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-081] npm 渠道 Node 版本预检.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

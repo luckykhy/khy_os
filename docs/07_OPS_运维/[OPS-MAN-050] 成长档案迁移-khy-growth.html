@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>成长档案迁移（khy growth） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>成长档案迁移（khy growth）</div>
+      <header class="hero reveal"><h1>成长档案迁移（khy growth）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#成长档案迁移-khy-growth">成长档案迁移（`khy growth`）</a></li><li class="lvl-2"><a href="#一-它是什么">一、它是什么</a></li><li class="lvl-2"><a href="#二-入口与全部子命令">二、入口与全部子命令</a></li><li class="lvl-2"><a href="#三-典型用法-在两台机器间迁移">三、典型用法：在两台机器间迁移</a></li><li class="lvl-2"><a href="#四-存储">四、存储</a></li><li class="lvl-2"><a href="#五-相关文档">五、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-050 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-050] 成长档案迁移-khy-growth.md --&gt;</p>
+<h1 id="成长档案迁移-khy-growth">成长档案迁移（<code>khy growth</code>）<a class="anchor" href="#成长档案迁移-khy-growth" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy growth</code> 管理你的「成长档案」——XP、等级、已完成主题等学习/使用进度。它最核心的价值是<strong>可在机器之间迁移</strong>：A 机 <code>export</code> → 拷贝文件 → B 机 <code>import</code>（合并语义），不丢进度。本文讲清子命令、合并规则与不可逆操作。</p>
+<p>实现：<code>services/backend/src/services/growthService.js</code>，dispatch 在 <code>router.js:2627</code>。</p></blockquote>
+<hr>
+<h2 id="一-它是什么">一、它是什么<a class="anchor" href="#一-它是什么" aria-label="锚点">#</a></h2>
+<p>KHY 会随你的使用累积一份成长档案（XP/等级/完成的主题）。<code>khy growth</code> 让你查看、备份、迁移、重置这份档案。它与知识库（[<code>khy knowledge</code>](（见 OPS-MAN-051）)）<strong>共享</strong>同一份成长数据（XP/level 联动）。</p>
+<blockquote><p>⚠️ <strong>存储路径硬编码</strong>：成长数据固定存放在 <code>~/.khyquant/growth/</code>（含 <code>snapshots/</code>），<strong>不读</strong> <code>$KHY_DATA_HOME</code>。在多数据目录环境里迁移时要按这个真实路径找文件。</p></blockquote>
+<hr>
+<h2 id="二-入口与全部子命令">二、入口与全部子命令<a class="anchor" href="#二-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th><th>危险性</th></tr></thead><tbody><tr><td><code>khy growth</code></td><td>（无参）打印成长摘要</td><td>只读</td></tr><tr><td><code>khy growth export [--path &lt;文件&gt;]</code></td><td>导出档案为归档文件</td><td>只读</td></tr><tr><td><code>khy growth import &lt;文件&gt;</code></td><td>导入并<strong>合并</strong>到当前档案</td><td>合并（见下）</td></tr><tr><td><code>khy growth snapshot</code></td><td>打一个本地快照</td><td>追加</td></tr><tr><td><code>khy growth snapshots</code></td><td>列出已有快照</td><td>只读</td></tr><tr><td><code>khy growth restore &lt;快照&gt;</code></td><td>用快照<strong>覆盖</strong>当前档案</td><td>⚠️ 覆盖</td></tr><tr><td><code>khy growth reset</code></td><td>清空档案（<strong>不可逆</strong>，需输入 <code>YES</code>）</td><td>⛔ 不可逆</td></tr></tbody></table>
+<p><strong><code>import</code> 的合并语义</strong>（不是覆盖，是取优）：</p>
+<ul><li>XP：取<strong>较大</strong>值；</li><li>等级：<strong>高等级胜</strong>；</li><li>已完成主题（completedTopics）：取<strong>并集</strong>。</li></ul>
+<p>所以从多台机器分别 import 不会互相覆盖进度，而是汇总到最优。</p>
+<p><strong>导出格式</strong>：gzip 后的 JSON，内部 tag <code>khy-growth-archive-v1</code>。文件名虽用 <code>.tar.gz</code> 后缀，但<strong>并非真正的 tar</strong>——直接交给 <code>khy growth import</code> 即可，别用 <code>tar</code> 解。</p>
+<hr>
+<h2 id="三-典型用法-在两台机器间迁移">三、典型用法：在两台机器间迁移<a class="anchor" href="#三-典型用法-在两台机器间迁移" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># —— A 机（旧机）——
+khy growth                          # 先看看当前进度
+khy growth export --path ~/khy-growth.tar.gz
+
+# 把 ~/khy-growth.tar.gz 拷到 B 机（scp / U 盘 / 网盘均可）
+
+# —— B 机（新机）——
+khy growth import ~/khy-growth.tar.gz   # 合并：XP 取大、高 level 胜、主题并集
+khy growth                              # 确认进度已合并</code></pre>
+<p>本地备份 / 回滚：</p>
+<pre><code class="language-bash">khy growth snapshot                 # 改动前打快照
+khy growth snapshots                # 看有哪些快照
+khy growth restore &lt;快照名&gt;          # ⚠️ 覆盖当前档案</code></pre>
+<p>危险操作：</p>
+<pre><code class="language-bash">khy growth reset                    # ⛔ 不可逆，会要求输入 YES 二次确认</code></pre>
+<hr>
+<h2 id="四-存储">四、存储<a class="anchor" href="#四-存储" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>路径</th><th>内容</th></tr></thead><tbody><tr><td><code>~/.khyquant/growth/</code></td><td>成长档案根目录（硬编码，不认 <code>$KHY_DATA_HOME</code>）</td></tr><tr><td><code>~/.khyquant/growth/snapshots/</code></td><td>本地快照</td></tr><tr><td><code>~/.khyquant/growth/knowledge.json</code></td><td>与 <code>khy knowledge</code> 共享的 XP/level 数据</td></tr></tbody></table>
+<hr>
+<h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-051] 知识库与教学自我认知（<code>khy knowledge</code>）—— 与成长档案共享 XP/level。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-049] 算力与加速器自检-khy-compute.html"><div class="dir">← 上一篇</div><div class="ttl">算力与加速器自检（khy compute）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-051] 知识库与教学自我认知-khy-knowledge.html"><div class="dir">下一篇 →</div><div class="ttl">知识库与教学自我认知（khy knowledge）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-050] 成长档案迁移-khy-growth.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

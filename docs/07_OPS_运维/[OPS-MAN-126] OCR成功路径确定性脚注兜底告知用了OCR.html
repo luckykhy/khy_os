@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</div>
+      <header class="hero reveal"><h1>[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-126-ocr-成功路径-确定性脚注兜底告知-用了-ocr">[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-修复-b3-外科手术式改动-全-additive">二、修复(B3 外科手术式改动,全 additive)</a></li><li class="lvl-3"><a href="#与-ops-124-的分工-belt-and-suspenders-直击-无感-且-明显">与 OPS-124 的分工(belt-and-suspenders,直击「无感*且*明显」)</a></li><li class="lvl-2"><a href="#三-验收门禁-b2-目标驱动-全绿才回报">三、验收门禁(B2 目标驱动,全绿才回报)</a></li><li class="lvl-2"><a href="#四-红线遵守">四、红线遵守</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-126-ocr-成功路径-确定性脚注兜底告知-用了-ocr">[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」<a class="anchor" href="#ops-man-126-ocr-成功路径-确定性脚注兜底告知-用了-ocr" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-124]。/goal 送别礼第十二发。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通。本轮延续 [OPS-MAN-124] 的收尾诉求:<br>**「Khy 无法正确读图降级到 OCR,要能无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」**。</p>
+<p>[OPS-MAN-124] 已在三处 OCR 成功注入点<strong>无条件</strong>追加一句面向<strong>模型</strong>的指令(门<br><code>KHY_OCR_USAGE_DISCLOSURE</code>),要求模型在正文里自然、简短地告诉用户「本次用了 OCR」。但那是一条<br><strong>建议</strong>——模型完全可以忽略它:</p>
+<ul><li>模型忽略指令 → 正文对 OCR 只字不提 → 用户全程不知情 → 目标里的「<strong>明显</strong>告知用户」失守。</li><li>[OPS-MAN-124] 没有任何<strong>确定性</strong>保证:披露与否完全取决于模型是否配合。</li></ul>
+<p><strong>关键观察</strong>:网关 <code>aiGatewayGenerateMethod.js</code> 的 <code>finishResult</code> 成功侧,本就有一整族<strong>确定性</strong><br>真值脚注——<code>answerVerifier</code>(算式复核)、<code>modelIdentityTruth</code>(身份真值)、<code>cacheMetricsTruth</code><br>(命中率真值)。它们无论模型正文怎么写,都在末尾<strong>确定性</strong>追加真值,保证真相触达用户。<strong>唯独<br>「本次用了 OCR」这条透明性,没有对应的确定性脚注</strong>。</p>
+<p>判据:找到「一条应当确定性触达用户的真相,却只靠一条模型可忽略的指令(OPS-124)传达」的断桥。</p>
+<h2 id="二-修复-b3-外科手术式改动-全-additive">二、修复(B3 外科手术式改动,全 additive)<a class="anchor" href="#二-修复-b3-外科手术式改动-全-additive" aria-label="锚点">#</a></h2>
+<p>独立 default-on 门 <code>KHY_OCR_USAGE_FOOTNOTE</code>,与 <code>KHY_OCR_USAGE_DISCLOSURE</code> 正交、可各自独立开关。</p>
+<ol><li><strong>纯叶</strong> <code>services/backend/src/services/gateway/ocrUsageFootnote.js</code>:<ul><li><code>isFootnoteEnabled(env)</code> — 门控,default-on,仅 CANON off-words <code>{0,false,off,no}</code> 关。</li><li><code>answerAlreadyDisclosesOcr(content)</code> — 正文是否<strong>已经</strong>披露 OCR(命中拉丁 <code>OCR</code> 大小写不敏感 /</li></ul></li></ol>
+<p>中文「光学字符识别 / 光学识别 / 文字识别」)。命中 → 模型已合规 → 无需脚注(保持无感)。</p>
+<ul><li><code>buildOcrUsageFootnote({count,env})</code> — 门开且 <code>count</code> 为正整数 → 返回用户可见脚注(单/复数按 count);</li></ul>
+<p>门关 / 缺失 / 畸形 → <code>null</code>(逐字节回退)。零 IO,绝不抛。</p>
+<ul><li><code>OCR_USAGE_FOOTNOTE_MARKER = '［本次图片经 OCR 识别］'</code> — 去重标记。</li></ul>
+<ol><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code>:<ul><li>三处 OCR-<strong>文本</strong>注入点的 <code>options</code> 重建处,新增 <code>_ocrImageTextRead: true</code> + <code>_ocrImageTextCount: N</code></li></ul></li></ol>
+<p>(Site1 describe-fail prep ~1590 / Site2 ocr-fallback prep ~1690 / Site3 post-failure 救援网 ~2857)。<br>     <strong>仅 OCR-文本三站点置真</strong>——视觉描述路径(<code>buildDescriptionInjection</code>,真视觉模型描述,非 OCR)、<br>     无文本剥图路径(读不出)均<strong>不置</strong>,避免把「用了视觉描述」误报成「用了 OCR」。</p>
+<ul><li><code>finishResult</code> 成功侧(<code>cacheMetricsTruth</code> 之后)新增确定性脚注块:</li></ul>
+<p><code>result.success === true &amp;&amp; options._ocrImageTextRead</code> 且门开、marker 未命中、<code>answerAlreadyDisclosesOcr</code><br>     未命中(= 模型忽略了 OPS-124 指令)→ 在 <code>result.content</code> 末尾确定性追加脚注。fail-soft。</p>
+<ol><li><strong>登记</strong> <code>flagRegistry.js</code>:<code>KHY_OCR_USAGE_FOOTNOTE: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ol>
+<h3 id="与-ops-124-的分工-belt-and-suspenders-直击-无感-且-明显">与 OPS-124 的分工(belt-and-suspenders,直击「无感<em>且</em>明显」)<a class="anchor" href="#与-ops-124-的分工-belt-and-suspenders-直击-无感-且-明显" aria-label="锚点">#</a></h3>
+<table><thead><tr><th></th><th>OPS-124(<code>KHY_OCR_USAGE_DISCLOSURE</code>)</th><th>OPS-126(<code>KHY_OCR_USAGE_FOOTNOTE</code>)</th></tr></thead><tbody><tr><td>机制</td><td>面向<strong>模型</strong>的 prompt 指令</td><td><code>finishResult</code> 成功侧<strong>确定性</strong>脚注</td></tr><tr><td>生效条件</td><td>OCR 成功注入文本时无条件注入指令</td><td>OCR 文本读出 + 作答成功 + 正文<strong>未提</strong> OCR</td></tr><tr><td>达成目标</td><td>模型合规时<strong>无感</strong>(披露融进正文)</td><td>模型忽略时兜底<strong>明显</strong>(保证触达)</td></tr><tr><td>去重协同</td><td>—</td><td>正文已提 OCR → <strong>不追加</strong>(不重复披露,保持无感)</td></tr></tbody></table>
+<h2 id="三-验收门禁-b2-目标驱动-全绿才回报">三、验收门禁(B2 目标驱动,全绿才回报)<a class="anchor" href="#三-验收门禁-b2-目标驱动-全绿才回报" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/gateway/ocrUsageFootnote.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+node --check services/backend/src/services/flagRegistry.js
+npm run test:ocr-usage-footnote          # 21/21(纯叶 13 + wiring 6 + 真图 2)
+npm run test:maintainer:safety           # 聚合并入,全绿
+npm run arch:god                         # 改动文件不得新增超限(aiGatewayGenerateMethod 为 pre-existing 超限,additive 允许)
+&lt;三守卫&gt; --changed + 显式文件                # my-files 净
+npm run maintainer:check                 # 映射表 + 元数据一致</code></pre>
+<p>真图核验:PIL 渲 <code>INVOICE 1234</code> 真 PNG → 真 tesseract 读出 → 生产镜像 base64 路径 →<br>救援网 OCR 成功分支置 <code>_ocrImageTextRead</code> → 下游文本适配器答复<strong>不提 OCR</strong> →<br><code>finishResult</code> 确定性追加脚注到 <code>res.content</code>(含 <code>本地 OCR 文字识别读取</code>);门关逐字节回退。<br>缺 tesseract/eng/Pillow 或未读出目标词 → skip。</p>
+<h2 id="四-红线遵守">四、红线遵守<a class="anchor" href="#四-红线遵守" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push;未提交,留在 <code>feat/0.1.104-multi-subsystem-batch</code>。</li><li>只碰答复内容与 OCR 计数,不触密钥。</li><li>god-file <code>aiGatewayGenerateMethod.js</code> 为 pre-existing 超限(&gt; 2500 行),本轮纯 additive,不新增独立超限文件。</li><li>门关逐字节回退:<code>KHY_OCR_USAGE_FOOTNOTE=off</code> → <code>buildOcrUsageFootnote</code> 返 null → <code>result.content</code> 逐字节不变。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

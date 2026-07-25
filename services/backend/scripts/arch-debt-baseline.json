@@ -1,0 +1,138 @@
+{
+  "_comment": "archDebtScan 基线：已承认的存量架构债。CI 只拦截不在此列的新增项。用 --update-baseline 刷新。",
+  "_generated": "deterministic (no timestamp)",
+  "layering": [
+    {
+      "file": "src/services/aiManagementServer.js",
+      "line": 91,
+      "target": "../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/inputPreprocessor.js",
+      "line": 623,
+      "target": "../cli/ui/inkComponents",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/preflightPermission.js",
+      "line": 139,
+      "target": "../cli/ui/permissionDialog",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolCalling.js",
+      "line": 2236,
+      "target": "../cli/ui/permissionDialog",
+      "rule": "R1-layering"
+    }
+  ],
+  "godFiles": [
+    {
+      "file": "src/cli/repl.js",
+      "loc": 7978,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/toolUseLoop.js",
+      "loc": 7203,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/handlers/gateway.js",
+      "loc": 6789,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/gateway/aiGateway.js",
+      "loc": 6248,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/ai.js",
+      "loc": 5425,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/router.js",
+      "loc": 4259,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/aiManagementServer.js",
+      "loc": 3425,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/toolCalling.js",
+      "loc": 3378,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/accountPool.js",
+      "loc": 3111,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/gateway/adapters/codexAdapter.js",
+      "loc": 3086,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/handlers/proxy.js",
+      "loc": 3070,
+      "rule": "R2-god-file"
+    }
+  ],
+  "cycles": [
+    {
+      "members": [
+        "src/cli/ai.js",
+        "src/cli/formatters.js",
+        "src/cli/handlers/gateway.js",
+        "src/cli/handlers/proxy.js",
+        "src/cli/hudRenderer.js",
+        "src/cli/ui/permissionDialog.js",
+        "src/constants/prompts.js",
+        "src/coordinator/workerAgent.js",
+        "src/routes/aiGatewayAdmin.js",
+        "src/services/agentCommunicationService.js",
+        "src/services/aiManagementServer.js",
+        "src/services/cliAgentRunner.js",
+        "src/services/cronScheduler.js",
+        "src/services/expandModelService.js",
+        "src/services/gateway/adapters/claudeAdapter.js",
+        "src/services/gateway/adapters/codexAdapter.js",
+        "src/services/gateway/aiGateway.js",
+        "src/services/gateway/appLaunchInterceptor.js",
+        "src/services/gateway/customerRegistry.js",
+        "src/services/gateway/proxyServer.js",
+        "src/services/khyUpgradeRuntime.js",
+        "src/services/knowledgeTeachingService.js",
+        "src/services/localBrainService.js",
+        "src/services/management/index.js",
+        "src/services/management/resources/cron.resource.js",
+        "src/services/modelImportService.js",
+        "src/services/modelTrainingService.js",
+        "src/services/ragRetrievalService.js",
+        "src/services/reversibility.js",
+        "src/services/riskGate.js",
+        "src/services/selfProfile.js",
+        "src/services/toolCalling.js",
+        "src/tools/index.js"
+      ],
+      "rule": "R3-cycle"
+    },
+    {
+      "members": [
+        "src/services/agenticHarnessService.js",
+        "src/services/baseSelfCheckService.js",
+        "src/services/serviceRegistry.js",
+        "src/services/toolUseLoop.js",
+        "src/tools/AgentTool/index.js",
+        "src/tools/teammateBus.js"
+      ],
+      "rule": "R3-cycle"
+    }
+  ]
+}

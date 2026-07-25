@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网关配置自动修复与重置 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>网关配置自动修复与重置</div>
+      <header class="hero reveal"><h1>网关配置自动修复与重置</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#网关配置自动修复与重置">网关配置自动修复与重置</a></li><li class="lvl-2"><a href="#功能说明">功能说明</a></li><li class="lvl-3"><a href="#1-配置文件修复">1. 配置文件修复</a></li><li class="lvl-3"><a href="#2-网关配置重置">2. 网关配置重置</a></li><li class="lvl-2"><a href="#使用方式">使用方式</a></li><li class="lvl-3"><a href="#自动模式-默认">自动模式（默认）</a></li><li class="lvl-3"><a href="#关闭自动修复">关闭自动修复</a></li><li class="lvl-2"><a href="#常见场景">常见场景</a></li><li class="lvl-3"><a href="#场景-1-手动编辑配置后出错">场景 1：手动编辑配置后出错</a></li><li class="lvl-3"><a href="#场景-2-配置文件损坏">场景 2：配置文件损坏</a></li><li class="lvl-3"><a href="#场景-3-网关配置丢失">场景 3：网关配置丢失</a></li><li class="lvl-2"><a href="#技术细节">技术细节</a></li><li class="lvl-2"><a href="#相关门控">相关门控</a></li><li class="lvl-2"><a href="#相关文件">相关文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="网关配置自动修复与重置">网关配置自动修复与重置<a class="anchor" href="#网关配置自动修复与重置" aria-label="锚点">#</a></h1>
+<h2 id="功能说明">功能说明<a class="anchor" href="#功能说明" aria-label="锚点">#</a></h2>
+<p>khy 现在能够在启动时自动检测并修复配置问题：</p>
+<h3 id="1-配置文件修复">1. 配置文件修复<a class="anchor" href="#1-配置文件修复" aria-label="锚点">#</a></h3>
+<p><strong>自动检测并修复 <code>.env</code> 文件的常见问题</strong>：</p>
+<ul><li>✅ 重复的键（保留最后一次出现）</li><li>✅ 畸形行（缺少 <code>=</code> 的非注释行）</li><li>✅ 空键名（如 <code>=value</code>）</li><li>✅ 未闭合的引号</li></ul>
+<p><strong>修复时会自动创建备份</strong>：</p>
+<pre><code>.env.broken-2026-07-01T12-34-56</code></pre>
+<h3 id="2-网关配置重置">2. 网关配置重置<a class="anchor" href="#2-网关配置重置" aria-label="锚点">#</a></h3>
+<p><strong>自动检测网关配置问题</strong>：</p>
+<ul><li>配置文件已损坏</li><li>必需字段缺失（<code>GATEWAY_PREFERRED_ADAPTER</code> 或 relay 配置全空）</li><li>适配器值非法（不在支持列表中）</li></ul>
+<p><strong>出厂默认配置</strong>：</p>
+<pre><code class="language-bash">GATEWAY_PREFERRED_ADAPTER=relay_api
+RELAY_API_ENDPOINT=
+RELAY_API_KEY=
+RELAY_API_MODEL=
+RELAY_API_COMPATIBILITY=openai</code></pre>
+<h2 id="使用方式">使用方式<a class="anchor" href="#使用方式" aria-label="锚点">#</a></h2>
+<h3 id="自动模式-默认">自动模式（默认）<a class="anchor" href="#自动模式-默认" aria-label="锚点">#</a></h3>
+<p>每次启动 khy 时自动运行：</p>
+<pre><code class="language-bash">khy</code></pre>
+<p>启动时会看到类似输出：</p>
+<pre><code>Database connected (sqlite)
+配置文件已修复 (移除 2 行)
+备份: .env.broken-2026-07-01T12-34-56
+建议运行 'khy config reset' 重置网关配置</code></pre>
+<h3 id="关闭自动修复">关闭自动修复<a class="anchor" href="#关闭自动修复" aria-label="锚点">#</a></h3>
+<p>如果需要关闭自动修复功能：</p>
+<pre><code class="language-bash"># 关闭配置修复
+export KHY_CONFIG_REPAIR=off
+
+# 关闭网关重置检测
+export KHY_GATEWAY_RESET=off</code></pre>
+<h2 id="常见场景">常见场景<a class="anchor" href="#常见场景" aria-label="锚点">#</a></h2>
+<h3 id="场景-1-手动编辑配置后出错">场景 1：手动编辑配置后出错<a class="anchor" href="#场景-1-手动编辑配置后出错" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：编辑 <code>.env</code> 文件时不小心删除了 <code>=</code> 符号</p>
+<pre><code class="language-bash"># 错误的配置
+GATEWAY_PREFERRED_ADAPTER relay_api  # 缺少 =
+RELAY_API_KEY=sk-test</code></pre>
+<p><strong>解决</strong>：重新启动 khy，会自动检测并修复：</p>
+<ul><li>移除畸形行</li><li>创建备份文件</li><li>显示修复信息</li></ul>
+<h3 id="场景-2-配置文件损坏">场景 2：配置文件损坏<a class="anchor" href="#场景-2-配置文件损坏" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>.env</code> 文件包含重复键或其他问题</p>
+<p><strong>解决</strong>：启动时自动修复，保留最后一次出现的值</p>
+<h3 id="场景-3-网关配置丢失">场景 3：网关配置丢失<a class="anchor" href="#场景-3-网关配置丢失" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：升级后网关配置字段缺失或错误</p>
+<p><strong>解决</strong>：启动时检测到问题，建议重置为出厂默认值</p>
+<h2 id="技术细节">技术细节<a class="anchor" href="#技术细节" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯叶子设计</strong>：决策逻辑与 IO 操作分离</li><li><strong>fail-soft</strong>：修复失败不影响 khy 正常启动</li><li><strong>保守策略</strong>：只移除问题行，不自动填充空值</li><li><strong>完整测试</strong>：30 个测试用例确保可靠性</li></ul>
+<h2 id="相关门控">相关门控<a class="anchor" href="#相关门控" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>环境变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_CONFIG_REPAIR</code></td><td><code>true</code></td><td>配置文件自动修复</td></tr><tr><td><code>KHY_GATEWAY_RESET</code></td><td><code>true</code></td><td>网关配置重置检测</td></tr></tbody></table>
+<h2 id="相关文件">相关文件<a class="anchor" href="#相关文件" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯叶子函数</strong>：<ul><li><code>services/backend/src/services/configRepairPolicy.js</code></li><li><code>services/backend/src/services/gatewayResetPolicy.js</code></li></ul></li><li><strong>薄壳服务</strong>：<ul><li><code>services/backend/src/services/configRepairService.js</code></li><li><code>services/backend/src/services/gatewayResetService.js</code></li></ul></li><li><strong>接线点</strong>：<ul><li><code>services/backend/src/cli/bootstrap.js</code> (第 51-87 行)</li></ul></li></ul>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="docs/config-auto-repair.html";</script>
+<script src="../docs/_assets/nav-data.js"></script>
+<script src="../docs/_assets/mermaid.min.js"></script>
+<script src="../docs/_assets/docs-site.js"></script>
+</body>
+</html>

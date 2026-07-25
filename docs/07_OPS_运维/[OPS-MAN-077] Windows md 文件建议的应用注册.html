@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」</div>
+      <header class="hero reveal"><h1>[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-077-windows-让-khy-进-md-的-建议的应用">[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」</a></li><li class="lvl-2"><a href="#真实原因">真实原因</a></li><li class="lvl-2"><a href="#解决方法-本子系统所做">解决方法（本子系统所做）</a></li><li class="lvl-2"><a href="#分层与-ssot">分层与 SSOT</a></li><li class="lvl-2"><a href="#触发路径">触发路径</a></li><li class="lvl-2"><a href="#how-to-extend">HOW-TO-EXTEND</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-077-windows-让-khy-进-md-的-建议的应用">[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」<a class="anchor" href="#ops-man-077-windows-让-khy-进-md-的-建议的应用" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼「右键打开 .md 时 khy 加入建议的应用」角度。用户截图：Windows 右键 .md →<br>「选择一个应用以打开此 .md 文件」，<strong>建议的应用</strong>里有 Quark / Trae / Windsurf / 记事本，<br><strong>唯独没有 khy</strong>。本子系统补上让 khy 出现在该列表的注册机制。</p></blockquote>
+<h2 id="真实原因">真实原因<a class="anchor" href="#真实原因" aria-label="锚点">#</a></h2>
+<p><code>tools/khyos-markdown/register-windows.ps1</code> 原本写了两类项：</p>
+<ol><li>右键动词 <code>SystemFileAssociations\.md\shell\khyosMarkdown</code>（「使用 khyosMarkdown 打开」）。</li><li><code>.md\OpenWithProgids\KhyOS.Markdown</code> —— 把 ProgID 挂进「打开方式」列表。</li></ol>
+<p>但 Windows 11「选择应用打开.md」对话框顶部的<strong>建议的应用 / Recommended Programs</strong><br>并非由 <code>OpenWithProgids</code> 填充（那多落到「更多选项」），而是由</p>
+<pre><code>HKCU:\Software\Classes\Applications\&lt;app&gt;\SupportedTypes\.md</code></pre>
+<p>填充。依据 Microsoft Win32 shell 文档<br><a href="https://learn.microsoft.com/en-us/windows/win32/shell/how-to-include-an-application-on-the-open-with-dialog-box" target="_blank" rel="noopener">How to Include an Application on the Open With Dialog Box</a>：<br><code>SupportedTypes</code> 子键「<strong>causes the application to appear in the Recommended Programs list</strong>」。<br>khy 从未写这段，故不在建议的应用里。</p>
+<h2 id="解决方法-本子系统所做">解决方法（本子系统所做）<a class="anchor" href="#解决方法-本子系统所做" aria-label="锚点">#</a></h2>
+<p><code>register-windows.ps1</code> 追加一段（仅 HKCU，红线：不写 HKLM、免 UAC）：</p>
+<pre><code>HKCU:\Software\Classes\Applications\khyos-md-launch.vbs
+  FriendlyAppName = KhyOS Markdown              # 建议的应用里显示名
+  DefaultIcon                                   # 图标
+  \shell\open\command  = wscript.exe &quot;&lt;launcher&gt;&quot; &quot;%1&quot;
+  \SupportedTypes
+      .md        = &quot;&quot;                           # 值名即扩展名 → 进建议的应用
+      .markdown  = &quot;&quot;</code></pre>
+<p><code>unregister-windows.ps1</code> 对称递归删除 <code>Applications\khyos-md-launch.vbs</code>，零残留。</p>
+<h2 id="分层与-ssot">分层与 SSOT<a class="anchor" href="#分层与-ssot" aria-label="锚点">#</a></h2>
+<ul><li><strong>纯核心 SSOT</strong> <code>services/backend/src/services/mdSuggestedAppsPlan.js</code>：零 IO、绝不抛，</li></ul>
+<p><code>buildSuggestedAppsPlan()</code> 枚举「该写哪些注册项」，<code>suggestedAppsUninstallKeys()</code> 给卸载<br>  要移除的顶层键。</p>
+<ul><li><strong>IO</strong> 在 <code>register-windows.ps1</code> / <code>unregister-windows.ps1</code>（真正 <code>reg</code> 写入，仅 HKCU）。</li><li><strong>契约测</strong> <code>mdSuggestedAppsPlan.test.js</code> 既单测 plan，又静态断言两个 PS1 与 plan 不漂移、</li></ul>
+<p>且注册/卸载对称。<strong>诚实边界</strong>：本 dev 机无 Windows/PowerShell，PS1 以静态契约测验证<br>  （断言必需写入存在 + 卸载对称），非实机执行。</p>
+<h2 id="触发路径">触发路径<a class="anchor" href="#触发路径" aria-label="锚点">#</a></h2>
+<p>首启幂等自动注册 <code>services/backend/src/services/mdEditorRegister.js</code><br>（门控 <code>KHY_MD_EDITOR ∧ KHY_MD_AUTO_REGISTER</code>，均 default-on）在 win32 上 detached spawn<br><code>register-windows.ps1</code>；用户亦可 <code>khy md register</code> / <code>khy md unregister</code> 手动增删。<br>卸载经安装台账 <code>unregister-md-editor</code> → <code>khy md unregister</code> 覆盖，故本段随之清干净。</p>
+<h2 id="how-to-extend">HOW-TO-EXTEND<a class="anchor" href="#how-to-extend" aria-label="锚点">#</a></h2>
+<ol><li>新增一个想让 khy 建议打开的扩展名 → 改 <code>mdSuggestedAppsPlan.DEFAULT_EXTS</code>（或传 <code>exts</code>），</li></ol>
+<p>并让 <code>register-windows.ps1</code> 的 <code>$exts</code> 跟上（契约测会红提醒）。</p>
+<ol><li>改完跑：<code>npm run test:md-suggested-apps</code>（node:test，须全绿）。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:md-suggested-apps
+# 或
+node --test services/backend/tests/services/mdSuggestedAppsPlan.test.js</code></pre>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li><code>services/backend/src/services/mdEditorRegister.js</code>（首启幂等注册，spawn 本 PS1）</li><li>[OPS-MAN-047] 代理服务器深度指南 / <code>khy md</code> 桥接器</li><li>Microsoft：How to Include an Application on the Open With Dialog Box</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-076] 三面镜子矛盾冲突检测</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-078] khy doctor 离机还原自检.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-078] khy doctor 离机还原自检（真实原因 + 解决方法）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

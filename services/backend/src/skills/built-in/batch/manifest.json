@@ -1,0 +1,8 @@
+{
+  "name": "batch",
+  "command": "/batch",
+  "description": "Run a batch of commands or tasks sequentially",
+  "version": "1.0.0",
+  "userInvocable": true,
+  "tags": ["automation", "batch"]
+}

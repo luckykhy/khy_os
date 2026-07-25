@@ -1,0 +1,19 @@
+{
+  "id": "cdc",
+  "kind": "concept",
+  "name": "CDC",
+  "category": "data",
+  "triggers": ["CDC", "Change Data Capture", "变更数据捕获", "增量同步"],
+  "summary": "变更数据捕获：实时捕获源库的增删改(常读 binlog/WAL)，以事件流推给下游(数仓/缓存/搜索)，实现低延迟增量同步而非定时全量。",
+  "whenToUse": [
+    "需近实时把 OLTP 变更同步到 OLAP/搜索/缓存。",
+    "替代昂贵的定时全量 ETL，降延迟降负载。"
+  ],
+  "antiPatterns": [
+    "下游不幂等，重复事件造成数据错乱。",
+    "忽略 schema 变更处理，管道中断。",
+    "用轮询查询时间戳冒充 CDC，漏删除、压源库。"
+  ],
+  "minimalSkeleton": "源库 binlog/WAL → CDC(Debezium) → 事件流(Kafka)\n→ 下游消费(数仓/ES/缓存)\n保序 + 幂等 + 处理 schema 演进",
+  "relatedArchetypes": []
+}

@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "solarized",
+    "label": "Solarized Dark",
+    "description": "Ethan Schoonover's Solarized Dark palette"
+  },
+  "colors": {
+    "claude": "#CB4B16",
+    "success": "#859900",
+    "error": "#DC322F",
+    "warning": "#B58900",
+    "text": "#FDF6E3",
+    "secondaryText": "#93A1A1",
+    "subtle": "#073642",
+    "bashBorder": "#D33682",
+    "permission": "#B58900",
+    "link": "#268BD2",
+    "diffAdded": "#073642",
+    "diffRemoved": "#3B1520",
+    "diffAddedDimmed": "#0A4050",
+    "diffRemovedDimmed": "#2A2030",
+    "diffAddedWord": "#859900",
+    "diffRemovedWord": "#DC322F",
+    "permissionPurple": "#6C71C4",
+    "userMessageBg": "#002B36"
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debug — Systematic Debugging · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>debug<span class="sep">›</span>Debug — Systematic Debugging</div>
+      <header class="hero reveal"><h1>Debug — Systematic Debugging</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#debug-systematic-debugging">Debug — Systematic Debugging</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="debug-systematic-debugging">Debug — Systematic Debugging<a class="anchor" href="#debug-systematic-debugging" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Debug issues by following a systematic workflow: reproduce, isolate, identify root cause, and propose a fix.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Understand the Problem</strong>: Gather information from the user:<ul><li>What is the expected behavior?</li><li>What is the actual behavior?</li><li>When did it start happening?</li><li>Any recent changes that might be related?</li></ul></li></ol>
+<ol><li><strong>Reproduce</strong>: Attempt to reproduce the issue:<ul><li>Run the failing command or test.</li><li>Check logs for error messages and stack traces.</li><li>Note the exact error output.</li></ul></li></ol>
+<ol><li><strong>Isolate</strong>: Narrow down the root cause:<ul><li>Trace the code path from the error back to its origin.</li><li>Check recent git changes to the affected files (<code>git log -p &lt;file&gt;</code>).</li><li>Look for common issues: null references, type mismatches, missing imports, race conditions.</li><li>Search for related issues in the codebase using Grep.</li></ul></li></ol>
+<ol><li><strong>Identify Root Cause</strong>: Determine the exact cause:<ul><li>Pinpoint the file, function, and line where the bug originates.</li><li>Explain why the current code fails.</li><li>Check if the bug exists in other similar code paths.</li></ul></li></ol>
+<ol><li><strong>Propose Fix</strong>: Suggest a concrete fix:<ul><li>Show the minimal code change needed.</li><li>Explain why the fix works.</li><li>Note any edge cases the fix should handle.</li><li>Suggest a test to prevent regression.</li></ul></li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Start with the most likely cause and work outward.</li><li>Read error messages carefully — they often point directly to the problem.</li><li>Check for environment-specific issues (Node version, OS, missing env vars).</li><li>Do not apply fixes automatically — present them for user approval first.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/create-skill/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Create Custom Skill</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/debugging-and-error-recovery/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Debugging and Error Recovery</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/debug/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

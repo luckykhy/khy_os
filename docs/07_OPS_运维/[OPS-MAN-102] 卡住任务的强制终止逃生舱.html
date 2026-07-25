@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-102-卡住任务的强制终止逃生舱-busy-分支-ctrl-c-esc-三次升级结束会话">[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-busy-分支无升级路径">为什么需要它（真实缺口 = busy 分支无升级路径）</a></li><li class="lvl-2"><a href="#怎么做的-外科式-门控-纯叶">怎么做的（外科式 + 门控 + 纯叶）</a></li><li class="lvl-2"><a href="#诚实边界">诚实边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-102-卡住任务的强制终止逃生舱-busy-分支-ctrl-c-esc-三次升级结束会话">[OPS-MAN-102] 卡住任务的强制终止逃生舱（busy 分支 Ctrl+C/Esc 三次升级结束会话）<a class="anchor" href="#ops-man-102-卡住任务的强制终止逃生舱-busy-分支-ctrl-c-esc-三次升级结束会话" aria-label="锚点">#</a></h1>
+<blockquote><p>直接回应用户诉求：「khy 总是会有时执行到一半卡住，但是任务转圈还在转，<br>Ctrl+C 两次无法终止，Esc 无法打断，我需要 Ctrl+C 和 Esc 可以达到这样的效果。3 次，Ctrl+C 结束会话。」<br>本条为 REPL busy 分支加一个<strong>强制结束会话的逃生舱</strong>：前几次按键先走优雅取消（打断卡住的任务），<br>同一时间窗内<strong>累计第 3 次</strong> busy 中断 → 保存会话后 <code>process.exit(130)</code> 结束会话，<br>无论底层 adapter 是否兑现 abort 信号，只要事件循环还活着就能杀掉卡住的回合。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>转圈动画还在转 = <code>setInterval</code> 还在跑 = 事件循环仍活 = JS 处理器仍执行。所以这<strong>不是</strong><br>冻死的循环（<code>Atomics.wait</code>/<code>execSync</code> 会冻住一切、连转圈都停），而是<strong>优雅取消没传导到位 +<br>busy 分支永不升级</strong>。busy 分支的 Ctrl+C（<code>replSession.js</code> SIGINT 处理）与 Esc（busy 输入分支）<br>原本恒做「优雅取消 + <code>return</code>」并把 <code>_ctrlCCount</code> 归零，<strong>永不升级</strong>——所以一个 wedged 回合<br>（优雅取消落不了地）按几次都杀不掉。本条抽出纯叶 <code>busyInterruptEscalation.js</code> 判定「同窗口内累计第 3 次 busy 中断是否该强制结束会话」，<code>replSession</code> 在优雅取消<strong>之前</strong>先问它：该 force-exit 就<br>保存会话/历史 + 打印恢复提示 + <code>process.exit(130)</code>；否则（前两次按键或门关）照旧走优雅取消。</p>
+<h2 id="为什么需要它-真实缺口-busy-分支无升级路径">为什么需要它（真实缺口 = busy 分支无升级路径）<a class="anchor" href="#为什么需要它-真实缺口-busy-分支无升级路径" aria-label="锚点">#</a></h2>
+<ul><li><strong>事件循环存活的证据</strong>：用户明说「任务转圈还在转」。转圈是 <code>setInterval</code> 动画，它还在动</li></ul>
+<p>说明事件循环没有被同步阻塞，SIGINT/Esc 的 JS 处理器<strong>确实在跑</strong>。</p>
+<ul><li><strong>确定性缺陷</strong>：busy 分支的 Ctrl+C（<code>replSession.js</code> SIGINT busy 分支）与 Esc（busy 输入</li></ul>
+<p>分支 <code>~1955</code>）总是做优雅取消 <code>_requestRelayCancel(...)</code> 然后 <code>return</code>，并重置 <code>_ctrlCCount=0</code>；<br>  它们<strong>从不升级</strong>。于是若优雅取消没落地（底层 in-flight <code>chat()</code> 调用没吃到 abort），<br>  按几次都是同一条不升级的路径 → 永远杀不掉。</p>
+<ul><li><strong>网关 abort 链本身是接好的</strong>：<code>ai.js cancelActiveRequest</code> → 中止已注册 controller →</li></ul>
+<p><code>aiChatCore.js:530</code> 把 <code>abortSignal</code> 传给 <code>gw.generate()</code>。所以首次按键做优雅取消是<strong>合理</strong>的<br>  （多数情况能取消）；本条只补「优雅取消没生效」这条尾巴上的逃生舱，不改动正常取消路径。</p>
+<h2 id="怎么做的-外科式-门控-纯叶">怎么做的（外科式 + 门控 + 纯叶）<a class="anchor" href="#怎么做的-外科式-门控-纯叶" aria-label="锚点">#</a></h2>
+<p><strong>纯叶</strong> <code>services/backend/src/cli/repl/busyInterruptEscalation.js</code>（零 IO、绝不抛）：</p>
+<ul><li><code>busyForceExitEnabled(env)</code>：门 <code>KHY_BUSY_FORCE_EXIT</code>，default-on；CANON falsy</li></ul>
+<p><code>['0','false','off','no']</code>（大小写/空白归一）才关闭；敌意 env 绝不抛，异常兜底为<strong>开启</strong>。</p>
+<ul><li><code>resolveThreshold(env)</code>：<code>KHY_BUSY_FORCE_EXIT_PRESSES</code>，默认 3，clamp <code>[2,10]</code>，非法 → 3。</li><li><code>resolveWindowMs(env)</code>：<code>KHY_BUSY_FORCE_EXIT_WINDOW_MS</code>，默认 3000ms，clamp <code>[500,30000]</code>，非法 → 3000。</li><li><code>nextBusyInterruptState(prev, now, opts)</code>：纯状态推进。窗口外/首次 → <code>count=1</code>；窗口内递增；</li></ul>
+<p>返回 <code>{count, lastTs, shouldForceExit: count &gt;= threshold}</code>；任何异常兜底 <code>{count:1,lastTs:0,shouldForceExit:false}</code>。</p>
+<p><strong>接线</strong>（<code>replSession.js</code>，additive；此文件是已超限 god-file，只做加法、不新增违规）：</p>
+<ul><li><code>require</code> 纯叶；<code>_ctrlCCount</code> 附近加状态 <code>let _busyInterruptState = null;</code>。</li><li>新 helper <code>_maybeForceExitOnBusyInterrupt(sourceLabel)</code>：门关或未达阈值 → 返回 <code>false</code>（调用方照旧优雅取消）；</li></ul>
+<p>达阈值 → 尽力 <code>_requestRelayCancel</code> + <code>saveConversation</code> + <code>saveHistory</code> + 打印恢复提示 →<br>  <code>_intentionalExit = true</code> → <code>process.exit(130)</code>。</p>
+<ul><li>Esc busy 分支：<code>if (_maybeForceExitOnBusyInterrupt('Esc')) return;</code> 置于优雅取消之前。</li><li>SIGINT busy 分支：<code>if (_maybeForceExitOnBusyInterrupt('Ctrl+C')) return;</code> 置于 <code>_ctrlCCount = 0;</code> 之前。</li><li><code>finally</code> 重置块加 <code>_busyInterruptState = null;</code>。</li></ul>
+<h2 id="诚实边界">诚实边界<a class="anchor" href="#诚实边界" aria-label="锚点">#</a></h2>
+<ul><li>阈值默认 3 = 精确对齐用户原话「3 次，Ctrl+C 结束会话」；前两次先走优雅取消（尽量打断卡住的任务），</li></ul>
+<p>第 3 次才强制结束会话。时间窗 + busy 守卫防误触：<strong>若某次优雅取消成功</strong>，<br>  <code>_busy</code> 转 false → 下一次按键走<strong>非 busy</strong> 路径，永不进本逃生舱。</p>
+<ul><li>只在 busy 分支生效；前两次按键永不 force-exit；门关 → 逐字节回退到原优雅取消行为。</li><li><code>exit(130)</code> = 标准 SIGINT 退出码。退出前尽力保存会话与历史（best-effort，各自 try/catch）。</li><li><strong>未触碰</strong> <code>toolUseLoopCore.js:2597</code>（in-flight <code>chat()</code> 不吃 abort 是更深的回归面）——</li></ul>
+<p>逃生舱只要事件循环活着就够用，不需要改动那条更危险的路径。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:busy-interrupt-escalation      # 纯叶 12/12
+node --check services/backend/src/cli/repl/busyInterruptEscalation.js
+node --check services/backend/src/cli/replSession.js
+npm run arch:god                            # replSession 加行后无新增超限</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-101] 角色归属诚实.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-101] 角色归属诚实（最终报告按角色标注子任务并把失败按类型分布）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-103] 写记忆 / 召回记忆时明确告知用户（记忆操作可见化纯叶）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-102] 卡住任务的强制终止逃生舱.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

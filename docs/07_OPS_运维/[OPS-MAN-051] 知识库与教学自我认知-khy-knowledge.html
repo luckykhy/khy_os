@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知识库与教学自我认知（khy knowledge） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>知识库与教学自我认知（khy knowledge）</div>
+      <header class="hero reveal"><h1>知识库与教学自我认知（khy knowledge）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#知识库与教学自我认知-khy-knowledge">知识库与教学自我认知（`khy knowledge`）</a></li><li class="lvl-2"><a href="#一-它是什么">一、它是什么</a></li><li class="lvl-2"><a href="#二-入口与全部子命令">二、入口与全部子命令</a></li><li class="lvl-2"><a href="#三-典型用法">三、典型用法</a></li><li class="lvl-2"><a href="#四-存储">四、存储</a></li><li class="lvl-2"><a href="#五-相关文档">五、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-051 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-051] 知识库与教学自我认知-khy-knowledge.md --&gt;</p>
+<h1 id="知识库与教学自我认知-khy-knowledge">知识库与教学自我认知（<code>khy knowledge</code>）<a class="anchor" href="#知识库与教学自我认知-khy-knowledge" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy knowledge</code> 是 KHY 的<strong>个人知识库 + 教学自我认知</strong>入口：检索你积累的知识、查看自己的成长画像（XP/等级），并把知识库与远程 Git 仓库双向同步。所有子命令都是<strong>读取 / 查询 / 同步</strong>，不做破坏性操作。</p>
+<p>实现：<code>services/backend/src/services/knowledgeTeachingService.js</code>，dispatch 在 <code>router.js:2890</code>。</p></blockquote>
+<hr>
+<h2 id="一-它是什么">一、它是什么<a class="anchor" href="#一-它是什么" aria-label="锚点">#</a></h2>
+<p>KHY 在你使用过程中沉淀知识条目，并据此评估「自我认知」——你处在哪个学习阶段。它与成长档案（[<code>khy growth</code>](（见 OPS-MAN-050）)）<strong>共享</strong>同一份 <code>knowledge.json</code>，XP/等级联动：</p>
+<table><thead><tr><th>等级</th><th>XP 阈值</th></tr></thead><tbody><tr><td>beginner</td><td>0 – 50</td></tr><tr><td>intermediate</td><td>51 – 200</td></tr><tr><td>advanced</td><td>201+</td></tr></tbody></table>
+<hr>
+<h2 id="二-入口与全部子命令">二、入口与全部子命令<a class="anchor" href="#二-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy knowledge search &lt;query&gt;</code></td><td>在知识库中检索</td></tr><tr><td><code>khy knowledge stats</code></td><td>知识库统计（条目数、分布等）</td></tr><tr><td><code>khy knowledge self</code></td><td>查看自我认知画像（XP / 等级 / 阶段）</td></tr><tr><td><code>khy knowledge sync config &lt;owner/repo&gt; [选项]</code></td><td>配置远程同步仓库</td></tr><tr><td><code>khy knowledge sync push</code></td><td>推送本地知识库到远程</td></tr><tr><td><code>khy knowledge sync pull</code></td><td>从远程拉取知识库</td></tr><tr><td><code>khy knowledge sync status</code></td><td>查看同步状态</td></tr></tbody></table>
+<p><strong><code>sync config</code> 选项</strong>：<code>--platform github|gitee|gitlab</code>、<code>--token &lt;令牌&gt;</code>、<code>--private</code>（建私有库）。</p>
+<hr>
+<h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 检索 / 自查
+khy knowledge search &quot;工作流 校验&quot;
+khy knowledge stats
+khy knowledge self                       # 我现在是 beginner / intermediate / advanced？
+
+# 把知识库同步到自己的私有 GitHub 仓库
+khy knowledge sync config your-name/my-kb --platform github --token &lt;PAT&gt; --private
+khy knowledge sync push                  # 上传
+khy knowledge sync status                # 看状态
+# 换机后：
+khy knowledge sync pull                  # 拉回</code></pre>
+<hr>
+<h2 id="四-存储">四、存储<a class="anchor" href="#四-存储" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>路径</th><th>内容</th></tr></thead><tbody><tr><td><code>~/.khyquant/growth/knowledge.json</code></td><td>与 <code>khy growth</code> 共享的 XP/level/知识数据</td></tr><tr><td><code>~/.khyquant/growth/user_knowledge_base.json</code></td><td>用户知识库（<code>USER_KB_FILE</code>）</td></tr><tr><td><code>~/.khyquant/kb_sync.json</code></td><td>同步配置</td></tr><tr><td><code>~/.khyquant/kb-repo/</code></td><td>远程仓库的本地克隆</td></tr></tbody></table>
+<hr>
+<h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-050] 成长档案迁移（<code>khy growth</code>）—— 共享 XP/level，机器间迁移成长进度。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-050] 成长档案迁移-khy-growth.html"><div class="dir">← 上一篇</div><div class="ttl">成长档案迁移（khy growth）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-052] 安全守护-khy-security.html"><div class="dir">下一篇 →</div><div class="ttl">安全守护（khy security）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-051] 知识库与教学自我认知-khy-knowledge.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

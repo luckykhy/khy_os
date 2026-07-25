@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>㉚ 函数调用与 MCP 辨析（Function Calling vs MCP） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>㉚ 函数调用与 MCP 辨析（Function Calling vs MCP）</div>
+      <header class="hero reveal"><h1>㉚ 函数调用与 MCP 辨析（Function Calling vs MCP）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#㉚-函数调用与-mcp-辨析-function-calling-vs-mcp">㉚ 函数调用与 MCP 辨析（Function Calling vs MCP）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么会有这两个词-分别解决什么痛">二、为什么会有这两个词？——分别解决什么痛</a></li><li class="lvl-3"><a href="#痛点一-函数调用要解的-模型只会说话-怎么让它-触发动作">痛点一（函数调用要解的）：模型只会说话，怎么让它&quot;触发动作&quot;？</a></li><li class="lvl-3"><a href="#痛点二-mcp-要解的-每接一个工具都要重写一遍胶水-太累了">痛点二（MCP 要解的）：每接一个工具都要重写一遍胶水，太累了</a></li><li class="lvl-2"><a href="#三-核心比喻-餐厅的-点单-vs-供货管道">三、核心比喻：餐厅的&quot;点单&quot; vs &quot;供货管道&quot;</a></li><li class="lvl-3"><a href="#比喻一-函数调用-顾客点单">比喻一：函数调用 = 顾客点单</a></li><li class="lvl-3"><a href="#比喻二-mcp-后厨的标准化进货口">比喻二：MCP = 后厨的标准化进货口</a></li><li class="lvl-3"><a href="#比喻三-usb-接口">比喻三：USB 接口</a></li><li class="lvl-2"><a href="#四-灵魂-一次完整调用里-两者各在哪一步登场">四、灵魂：一次完整调用里，两者各在哪一步登场</a></li><li class="lvl-2"><a href="#五-函数调用-vs-mcp-一张表彻底分清">五、函数调用 vs MCP：一张表彻底分清</a></li><li class="lvl-2"><a href="#六-感觉一下-一次-查天气-里两者怎么接力">六、感觉一下：一次&quot;查天气&quot;里两者怎么接力</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-函数调用-和-mcp-是竞争关系-要二选一">误区 1：以为&quot;函数调用&quot;和&quot;MCP&quot;是竞争关系，要二选一</a></li><li class="lvl-3"><a href="#误区-2-以为模型-函数调用-时会自己执行代码">误区 2：以为模型&quot;函数调用&quot;时会自己执行代码</a></li><li class="lvl-3"><a href="#误区-3-把-函数调用-和-工具调用-当成两个不同东西">误区 3：把&quot;函数调用&quot;和&quot;工具调用&quot;当成两个不同东西</a></li><li class="lvl-3"><a href="#误区-4-以为-mcp-是-某个具体工具">误区 4：以为 MCP 是&quot;某个具体工具&quot;</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="㉚-函数调用与-mcp-辨析-function-calling-vs-mcp">㉚ 函数调用与 MCP 辨析（Function Calling vs MCP）<a class="anchor" href="#㉚-函数调用与-mcp-辨析-function-calling-vs-mcp" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 什么是工具调用</a>、<span class="deadlink" title="目标不存在：./[CONCEPT-05]%20什么是MCP-模型上下文协议.html">⑤ 什么是 MCP</span> 和 <a href="./[CONCEPT-29]%20什么是API与SDK.html">㉙ 什么是 API 与 SDK</a>。这一篇专治一个新手一进门就绕晕的问题：<strong>&quot;函数调用（Function Calling）&quot;&quot;工具调用（Tool Calling）&quot;&quot;MCP&quot;——这几个词到底是不是一回事？谁管谁？</strong> 读完你会一次性把它们摆到各自的格子里，再也不混。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>函数调用 = 模型&quot;决定&quot;要调哪个工具、该填什么参数（出主意的那一下）；MCP = 一套&quot;工具怎么接进来&quot;的统一插线板标准（让工具即插即用的那层规矩）。一个是&quot;模型动嘴点菜&quot;，一个是&quot;厨房怎么标准化对接食材供应商&quot;。</strong></p>
+<ul><li><strong>函数调用（Function Calling）</strong>：你事先告诉模型&quot;你有这么几个工具可用（每个工具叫什么、要什么参数）&quot;。模型在回答时，如果觉得该用某个工具，就<strong>输出一个结构化的&quot;调用意图&quot;</strong>——&quot;我要调 <code>查天气</code>，参数 <code>city=北京</code>&quot;。<strong>注意：模型自己并不真的执行</strong>，它只是&quot;点单&quot;，真正去跑这个函数的是你的程序。</li><li><strong>MCP（Model Context Protocol，模型上下文协议）</strong>：一套<strong>开放标准</strong>，规定&quot;一个工具/数据源该怎么把自己暴露出来，好让任何 AI 应用都能统一地发现它、接上它、调用它&quot;。它解决的是&quot;<strong>工具和 AI 之间怎么对接</strong>&quot;的工程问题——像 USB 之于外设。</li></ul>
+<p>一句话点破：<strong>函数调用是&quot;模型决定调什么&quot;（决策层）；MCP 是&quot;工具怎么被接进来供它调&quot;（接入层）。两者不是竞品，是上下楼的邻居。</strong></p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>最容易晕的一点先说清：<strong>&quot;函数调用&quot;和&quot;工具调用&quot;基本是同义词</strong>——不同厂商叫法不同，指的都是&quot;模型输出一个'我要用某工具+参数'的结构化意图&quot;。而 <strong>MCP 是另一个层面的东西</strong>：它不关心&quot;模型想调什么&quot;，只关心&quot;一个工具怎么标准化地接到 AI 面前来&quot;。打个比方：函数调用是你在餐桌上<span class="popover" tabindex="0"><span class="popover-anchor">说出&quot;我要宫保鸡丁&quot;</span><span class="popover-tip" role="tooltip">模型产出的&quot;调用意图&quot;——只是决策，不是执行</span></span>，MCP 是这家餐厅<span class="popover" tabindex="0"><span class="popover-anchor">后厨跟供应商约定好的标准进货接口</span><span class="popover-tip" role="tooltip">让任何食材/工具都能即插即用地接进厨房</span></span>。前者是&quot;点单&quot;，后者是&quot;供货管道怎么修&quot;。🐣</p></div></aside>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：函数调用和 MCP，一个在&quot;上层出主意&quot;，一个在&quot;下层修管道&quot;——到底谁在上、谁在下？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ 函数调用在&quot;决策层&quot;（模型出主意：我要调哪个工具、填什么参数）；MCP 在&quot;接入层&quot;（工程管道：工具怎么被标准化地发现、连接、调用）。模型先靠函数调用&quot;点单&quot;，MCP 负责让被点的那个工具&quot;能被接进来跑&quot;。两者是上下楼邻居，不是二选一。</div></div></div>
+<hr>
+<h2 id="二-为什么会有这两个词-分别解决什么痛">二、为什么会有这两个词？——分别解决什么痛<a class="anchor" href="#二-为什么会有这两个词-分别解决什么痛" aria-label="锚点">#</a></h2>
+<p>它们各自解决一个<strong>完全不同</strong>的痛点，所以才会并存。</p>
+<h3 id="痛点一-函数调用要解的-模型只会说话-怎么让它-触发动作">痛点一（函数调用要解的）：模型只会说话，怎么让它&quot;触发动作&quot;？<a class="anchor" href="#痛点一-函数调用要解的-模型只会说话-怎么让它-触发动作" aria-label="锚点">#</a></h3>
+<p>一个纯语言模型只会吐字。你问&quot;北京今天几度？&quot;，它要么瞎编一个温度（<a href="./[CONCEPT-31]%20什么是幻觉-Hallucination.html">幻觉</a>），要么老实说&quot;我查不了实时天气&quot;。<strong>函数调用给了它一条出路</strong>：让它输出一个规规矩矩的&quot;我想调 <code>查天气(city=北京)</code>&quot;，你的程序接住这个意图、真去调 API、把结果喂回给它，它再据实回答。<strong>函数调用，是把&quot;模型的话&quot;翻译成&quot;可执行的动作意图&quot;的那座桥。</strong></p>
+<h3 id="痛点二-mcp-要解的-每接一个工具都要重写一遍胶水-太累了">痛点二（MCP 要解的）：每接一个工具都要重写一遍胶水，太累了<a class="anchor" href="#痛点二-mcp-要解的-每接一个工具都要重写一遍胶水-太累了" aria-label="锚点">#</a></h3>
+<p>假设你想给 AI 接十个工具（查数据库、读文件、发邮件……）。没有统一标准时，<strong>每个工具你都得手写一套对接代码</strong>，换个 AI 应用又得重写。工具方和应用方两两组合，是个 N×M 的噩梦。<strong>MCP 就是来终结这个噩梦的</strong>：工具方只要按 MCP 标准&quot;暴露&quot;一次，任何支持 MCP 的 AI 应用就能即插即用地接上——<strong>把 N×M 变成 N+M。</strong></p>
+<pre class="mermaid">flowchart TB
+  subgraph L1[&quot;🧠 决策层：函数调用&quot;]
+    M[&quot;模型：我该用哪个工具?&lt;br/&gt;输出「调 X，参数 Y」的意图&quot;]
+  end
+  subgraph L2[&quot;🔌 接入层：MCP&quot;]
+    P[&quot;统一插线板：让各种工具/数据源&lt;br/&gt;按同一标准被发现、连接、调用&quot;]
+  end
+  M --&gt;|&quot;点单：我要调这个工具&quot;| P
+  P --&gt;|&quot;标准化接好的工具真去执行&quot;| T[&quot;🛠️ 真实工具&lt;br/&gt;(查天气/读文件/发邮件…)&quot;]
+  T --&gt;|&quot;结果回传&quot;| M</pre>
+<p><strong>一句话收束：函数调用解决&quot;模型怎么表达它想动手&quot;，MCP 解决&quot;工具怎么被规整地接进来供它动手&quot;。缺了前者模型不会触发动作，缺了后者每接一个工具都要造轮子。</strong></p>
+<hr>
+<h2 id="三-核心比喻-餐厅的-点单-vs-供货管道">三、核心比喻：餐厅的&quot;点单&quot; vs &quot;供货管道&quot;<a class="anchor" href="#三-核心比喻-餐厅的-点单-vs-供货管道" aria-label="锚点">#</a></h2>
+<p>用一家餐厅把两者的关系焊死。</p>
+<h3 id="比喻一-函数调用-顾客点单">比喻一：函数调用 = 顾客点单<a class="anchor" href="#比喻一-函数调用-顾客点单" aria-label="锚点">#</a></h3>
+<p>你坐在餐桌前看菜单（= 模型被告知&quot;有哪些工具可用&quot;），说一句&quot;我要一份宫保鸡丁、少辣&quot;（= 模型输出&quot;调 <code>做菜</code>，参数 <code>菜=宫保鸡丁, 辣度=少</code>&quot;）。<strong>你只是&quot;说出需求&quot;，并没有亲自进厨房炒</strong>。真正炒菜的是后厨——就像真正执行函数的是你的程序，不是模型。</p>
+<h3 id="比喻二-mcp-后厨的标准化进货口">比喻二：MCP = 后厨的标准化进货口<a class="anchor" href="#比喻二-mcp-后厨的标准化进货口" aria-label="锚点">#</a></h3>
+<p>这家餐厅要接很多<strong>供应商</strong>（蔬菜、肉、调料……）。如果每个供应商都用不同的箱子、不同的对接方式，后厨会疯掉。于是餐厅立了一个<strong>标准进货口</strong>：任何供应商只要按这个标准送货，后厨就能无缝接收。<strong>MCP 就是这个&quot;标准进货口&quot;</strong>——让任何工具/数据源都能即插即用地接进 AI。</p>
+<h3 id="比喻三-usb-接口">比喻三：USB 接口<a class="anchor" href="#比喻三-usb-接口" aria-label="锚点">#</a></h3>
+<ul><li><strong>函数调用</strong> = 你在电脑上<strong>决定</strong>&quot;我要打印这份文件&quot;（发出指令的意图）。</li><li><strong>MCP</strong> = <strong>USB 标准</strong>：让打印机、U 盘、键盘……任何设备都能用同一个口插上电脑。你不用为每个设备造一个专属插孔。</li></ul>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 划重点</div><p>把这句记死，两者永不再混：<strong>函数调用管&quot;模型决定调什么&quot;，MCP 管&quot;工具怎么被接进来供它调&quot;。</strong> 一个偏&quot;模型的决策&quot;，一个偏&quot;工程的接线&quot;。它们经常一起出现——模型用函数调用点了一个工具，而那个工具恰好是通过 MCP 接进来的——但它们回答的是两个不同的问题。</p></div></aside>
+<hr>
+<h2 id="四-灵魂-一次完整调用里-两者各在哪一步登场">四、灵魂：一次完整调用里，两者各在哪一步登场<a class="anchor" href="#四-灵魂-一次完整调用里-两者各在哪一步登场" aria-label="锚点">#</a></h2>
+<p>把一次&quot;AI 用工具&quot;从头到尾拆开，你会清楚看到函数调用和 MCP 各自的&quot;出场时刻&quot;：</p>
+<table><thead><tr><th>步骤</th><th>发生了什么</th><th>谁在管</th></tr></thead><tbody><tr><td>① 告知可用工具</td><td>应用把&quot;有哪些工具、各要什么参数&quot;喂给模型</td><td>工具描述（常经 <strong>MCP</strong> 发现并列出）</td></tr><tr><td>② 模型决定调谁</td><td>模型输出&quot;我要调 <code>X</code>，参数 <code>Y</code>&quot;的结构化意图</td><td><strong>函数调用</strong></td></tr><tr><td>③ 应用真去执行</td><td>程序接住意图，真的运行那个工具/函数</td><td>应用运行时（工具或经 <strong>MCP</strong> 接入）</td></tr><tr><td>④ 结果喂回模型</td><td>把工具跑出来的结果塞回对话</td><td>应用运行时</td></tr><tr><td>⑤ 模型据实作答</td><td>模型拿着真实结果，给你最终回答</td><td>模型</td></tr></tbody></table>
+<p>看这张表你就懂了：<strong>函数调用集中在第 ②步（模型出主意）；MCP 主要在第 ①、③步（工具怎么被发现、怎么被接进来执行）。</strong> 它们在同一条流水线上分工，不抢彼此的活。</p>
+<aside class="callout callout-note reveal"><div class="callout-mascot" aria-hidden="true">🐧</div><div class="callout-body"><div class="callout-title">📌 小笔记</div><p>一个关键澄清：<strong>模型&quot;函数调用&quot;时，从不自己真的执行代码。</strong> 它只输出一段&quot;我想调 X(Y)&quot;的意图（通常是一段 JSON）。真正去跑的是你的程序。这一点极其重要——它意味着&quot;模型能调工具&quot;不等于&quot;模型能在你机器上乱跑命令&quot;，中间永远隔着一层&quot;你的程序愿不愿意执行、怎么执行&quot;的关卡。</p></div></aside>
+<hr>
+<h2 id="五-函数调用-vs-mcp-一张表彻底分清">五、函数调用 vs MCP：一张表彻底分清<a class="anchor" href="#五-函数调用-vs-mcp-一张表彻底分清" aria-label="锚点">#</a></h2>
+<p>这是本篇的核心。把两者并排，差异一目了然：</p>
+<table><thead><tr><th></th><th><strong>函数调用（Function Calling）</strong></th><th><strong>MCP（模型上下文协议）</strong></th></tr></thead><tbody><tr><td>它是什么</td><td>模型的一种<strong>能力/输出格式</strong></td><td>一套<strong>开放的接入标准/协议</strong></td></tr><tr><td>解决什么</td><td>模型怎么<strong>表达&quot;我要调某工具+参数&quot;</strong></td><td>工具怎么<strong>被统一地发现、连接、调用</strong></td></tr><tr><td>在哪一层</td><td><strong>决策层</strong>（模型出主意）</td><td><strong>接入层</strong>（工程接线）</td></tr><tr><td>谁在做</td><td><strong>模型</strong>产出调用意图</td><td><strong>工具方 + 应用方</strong>按协议对接</td></tr><tr><td>类比</td><td>顾客点单 / 决定&quot;要打印&quot;</td><td>后厨标准进货口 / USB 标准</td></tr><tr><td>没有它会怎样</td><td>模型只会说话，无法触发动作</td><td>每接一个工具都要手写胶水，N×M 噩梦</td></tr></tbody></table>
+<pre class="mermaid">flowchart LR
+  subgraph 决策[&quot;🧠 决策层&quot;]
+    FC[&quot;函数调用&lt;br/&gt;模型说：我要调 X(Y)&quot;]
+  end
+  subgraph 接入[&quot;🔌 接入层&quot;]
+    MCP[&quot;MCP&lt;br/&gt;工具即插即用地接进来&quot;]
+  end
+  FC -.“调的工具，可能正是&lt;br/&gt;经 MCP 接进来的”.-&gt; MCP</pre>
+<p><strong>一句话总结这张表：它们不是&quot;二选一&quot;，而是&quot;上下配合&quot;。</strong> 你完全可以：用函数调用让模型决定调工具，同时用 MCP 把那些工具规整地接进来。也可以只用函数调用、工具用别的方式接（不走 MCP）。<strong>函数调用是模型能力，MCP 是工程标准，维度不同，不冲突。</strong></p>
+<hr>
+<h2 id="六-感觉一下-一次-查天气-里两者怎么接力">六、感觉一下：一次&quot;查天气&quot;里两者怎么接力<a class="anchor" href="#六-感觉一下-一次-查天气-里两者怎么接力" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 提醒：下面这段你完全不用会写。</strong> 只体会那个<strong>模型点单（函数调用）→ 工具经标准管道执行（MCP）→ 结果回喂</strong>的接力节奏：</p>
+<pre><code class="language-text">🙋 你问：北京今天适合穿短袖吗？
+
+🧠 模型（函数调用登场）：我答不了实时天气，但我有个 `查天气` 工具。
+   → 输出调用意图：{ &quot;tool&quot;: &quot;查天气&quot;, &quot;args&quot;: { &quot;city&quot;: &quot;北京&quot; } }
+   （注意：模型只是&quot;点单&quot;，它自己没去查）
+
+🔌 应用运行时（MCP 登场）：这个 `查天气` 工具是通过 MCP 接进来的，
+   → 按 MCP 标准找到它、把参数传过去、真的执行了一次
+   → 拿到结果：{ &quot;temp&quot;: 26, &quot;desc&quot;: &quot;晴，微风&quot; }
+
+🧠 结果回喂给模型：北京 26℃，晴，微风。
+
+🤖 模型据实作答：北京今天 26℃、晴、微风，挺适合穿短袖的~</code></pre>
+<p>看懂了吗？<strong>同一次调用里，函数调用负责&quot;模型开口点单&quot;，MCP 负责&quot;被点的工具怎么被找到并跑起来&quot;。</strong> 它俩一前一后接力，各司其职——这就是为什么它们经常同时出现，却是两个不同的概念。</p>
+<p>把这场&quot;查天气接力&quot;演成一幕小短剧——重点看谁点单、谁跑腿、执行权到底在谁手里：</p>
+<div class="scene"><div class="scene-title">一次查天气：函数调用点单，MCP 跑腿接力</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>北京今天适合穿短袖吗？</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">模型</b>我答不了实时天气——但我手上有个 <code>查天气</code> 工具。（函数调用登场）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">模型</b>我只输出调用意图：<code>查天气(city=&quot;北京&quot;)</code>。注意，我只是 <span class="popover" tabindex="0"><span class="popover-anchor">点单</span><span class="popover-tip" role="tooltip">模型只是&quot;说想调&quot;，它自己没去查也没权去查——真执行与否，掌握在接住这个意图的程序手里</span></span>，我自己没动手去查。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🔌</span><div class="scene-bubble"><b class="scene-who">应用运行时</b>收到点单。这个 <code>查天气</code> 是通过 MCP 接进来的——我按 MCP 标准找到它、把参数传过去、<strong>真的执行</strong>了一次。（MCP 登场）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🔌</span><div class="scene-bubble"><b class="scene-who">应用运行时</b>拿到结果：<code>{ temp: 26, desc: &quot;晴，微风&quot; }</code>，回喂给模型。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">模型</b>有真数据了：北京今天 26℃、晴、微风，挺适合穿短袖的~</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🙂</span><div class="scene-bubble"><b class="scene-who">旁白</b>函数调用管&quot;模型决定调什么&quot;（决策层），MCP 管&quot;工具怎么被接进来供它调&quot;（接入层）——一个动嘴点单，一个修供货管道。</div></div><div class="scene-caption reveal">缺了前者模型不会触发动作，缺了后者每接一个工具都要造轮子——它俩不打架，是上下楼的好邻居。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<h3 id="误区-1-以为-函数调用-和-mcp-是竞争关系-要二选一">误区 1：以为&quot;函数调用&quot;和&quot;MCP&quot;是竞争关系，要二选一<a class="anchor" href="#误区-1-以为-函数调用-和-mcp-是竞争关系-要二选一" aria-label="锚点">#</a></h3>
+<ul><li>❌ 以为&quot;用了 MCP 就不用函数调用了&quot;&quot;它俩是对手&quot;。</li><li>✅ <strong>它们在不同层、互相配合。</strong> 函数调用是模型决策，MCP 是工具接入。一次调用里两者常常同时在场。</li></ul>
+<h3 id="误区-2-以为模型-函数调用-时会自己执行代码">误区 2：以为模型&quot;函数调用&quot;时会自己执行代码<a class="anchor" href="#误区-2-以为模型-函数调用-时会自己执行代码" aria-label="锚点">#</a></h3>
+<ul><li>❌ 以为模型一&quot;函数调用&quot;，就在你机器上跑起了那个函数。</li><li>✅ <strong>模型只输出&quot;意图&quot;（一段 JSON），真正执行的是你的程序。</strong> 中间永远隔着一层你可控的关卡。</li></ul>
+<h3 id="误区-3-把-函数调用-和-工具调用-当成两个不同东西">误区 3：把&quot;函数调用&quot;和&quot;工具调用&quot;当成两个不同东西<a class="anchor" href="#误区-3-把-函数调用-和-工具调用-当成两个不同东西" aria-label="锚点">#</a></h3>
+<ul><li>❌ 纠结&quot;Function Calling&quot;和&quot;Tool Calling&quot;到底差在哪。</li><li>✅ <strong>基本是同义词。</strong> 只是不同厂商/文档的叫法差异，指的都是&quot;模型输出结构化的工具调用意图&quot;。别在术语上内耗。</li></ul>
+<h3 id="误区-4-以为-mcp-是-某个具体工具">误区 4：以为 MCP 是&quot;某个具体工具&quot;<a class="anchor" href="#误区-4-以为-mcp-是-某个具体工具" aria-label="锚点">#</a></h3>
+<ul><li>❌ 以为 MCP 是一个能帮你查天气/读文件的现成工具。</li><li>✅ <strong>MCP 是&quot;协议/标准&quot;，不是工具本身。</strong> 它规定工具&quot;怎么接进来&quot;，就像 USB 规定设备怎么插，但 USB 本身不是鼠标也不是键盘。</li></ul>
+<aside class="callout callout-warn reveal"><div class="callout-mascot" aria-hidden="true">🦉</div><div class="callout-body"><div class="callout-title">⚠️ 要小心</div><p>最坑的一个混淆：看到&quot;AI 能调工具&quot;就以为&quot;AI 能在我电脑上为所欲为&quot;。<strong>记住第四节那句：模型只产出'调用意图'，执行权始终在你的程序手里。</strong> 你的程序完全可以拒绝执行、限制参数、加审批。这也是为什么 Khy-OS 这类 <span class="popover" tabindex="0"><span class="popover-anchor">harness</span><span class="popover-tip" role="tooltip">把模型的调用意图接住、按权限和纪律决定要不要执行、怎么执行的运行骨架</span></span> 会在&quot;模型想调&quot;和&quot;真的执行&quot;之间，牢牢卡一道权限与验证的关卡。</p></div></aside>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;函数调用与 MCP&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">函数调用是模型输出&quot;我要调某工具+参数&quot;的意图，模型自己并不真的执行</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">MCP 是一套&quot;工具怎么被统一接入&quot;的开放标准，像 USB 之于外设</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">函数调用和 MCP 是竞争关系，用了一个就不用另一个</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">模型一&quot;函数调用&quot;，就会自动在你的机器上执行那段代码</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">E</span><span class="quiz-text">&quot;函数调用&quot;和&quot;工具调用&quot;基本是同义词，只是叫法不同</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。模型只&quot;点单&quot;（产出结构化意图），真正执行的是你的程序——中间隔着一层可控关卡。<br>对。它解决 N×M 的对接噩梦，让工具即插即用，属于&quot;接入层&quot;的工程标准。<br>错。它们在不同层（决策 vs 接入）互相配合，一次调用里常常同时在场。<br>错。模型只产出意图，执行权始终在你的程序手里——这正是安全关卡的所在。<br>对。不同厂商叫法有别，指的都是&quot;模型输出结构化的工具调用意图&quot;，别在术语上内耗。</div></div>
+<p><strong>动手想一想</strong>：假如你给 AI 接了一个&quot;删除文件&quot;的工具。模型某次&quot;函数调用&quot;输出了&quot;调 <code>删除文件(path=/重要资料)</code>&quot;。请问——<strong>这个文件这一刻被删了吗？</strong> 答案是<strong>还没有</strong>。模型只是&quot;说想删&quot;，真正删不删，取决于你的程序接住这个意图后<strong>要不要执行、要不要先问你一句</strong>。想通这一点，你就真正理解了&quot;函数调用只是意图、执行权在程序手里&quot;——这也正是 AI 安全的一块基石。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a></strong>：函数调用就是工具调用的同义表述——本篇是它的&quot;和 MCP 辨析&quot;专题。</li><li><strong><span class="deadlink" title="目标不存在：./[CONCEPT-05]%20什么是MCP-模型上下文协议.html">⑤ MCP</span></strong>：MCP 概念的正篇；本篇专讲&quot;它和函数调用的分层关系&quot;。</li><li><strong><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 工具循环</a></strong>：模型&quot;函数调用 → 执行 → 结果回喂 → 再决定&quot;反复转，就成了工具循环。</li><li><strong><a href="./[CONCEPT-29]%20什么是API与SDK.html">㉙ API 与 SDK</a></strong>：被 MCP 接进来的工具，底下往往就是在调各种 API。</li><li><strong><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></strong>：Agent 之所以&quot;有手有脚&quot;，正是靠函数调用出主意、靠 MCP/工具接入去落地。</li></ul>
+<aside class="callout callout-tip reveal"><div class="callout-mascot" aria-hidden="true">🐣</div><div class="callout-body"><div class="callout-title">💡 一句话收尾</div><p>把这一句刻进脑子，你就彻底分清了：<strong>函数调用 = 模型&quot;决定调什么&quot;（决策层）；MCP = 工具&quot;怎么被接进来供它调&quot;（接入层）。</strong> 一个动嘴点单，一个修供货管道。它们不打架，是上下楼的好邻居——一起把&quot;只会说话的模型&quot;变成&quot;能真正动手办事的 Agent&quot;。</p></div></aside>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-29] 什么是API与SDK.html"><div class="dir">← 上一篇</div><div class="ttl">㉙ 什么是 API 与 SDK</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html"><div class="dir">下一篇 →</div><div class="ttl">㉛ 什么是幻觉（Hallucination）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-088] 还原策略台账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-088] 还原策略台账</div>
+      <header class="hero reveal"><h1>[OPS-MAN-088] 还原策略台账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-088-还原策略台账">[OPS-MAN-088] 还原策略台账</a></li><li class="lvl-2"><a href="#这一层补什么缺口-一个从不从自己过去失败中学习的-agent">这一层补什么缺口：一个从不从自己过去失败中学习的 agent</a></li><li class="lvl-2"><a href="#分类-保守-安全优先">分类（保守，安全优先）</a></li><li class="lvl-2"><a href="#安全优先的核心不变量-绝不误伤">安全优先的核心不变量（绝不误伤）</a></li><li class="lvl-2"><a href="#纯度与落盘边界-继承项目章程">纯度与落盘边界（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-088-还原策略台账">[OPS-MAN-088] 还原策略台账<a class="anchor" href="#ops-man-088-还原策略台账" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-ledger.js --gen-doc</code> 确定性生成，请勿手改；<br>学习判定改在 <code>scripts/lib/restoreStrategyLedger.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层补什么缺口-一个从不从自己过去失败中学习的-agent">这一层补什么缺口：一个从不从自己过去失败中学习的 agent<a class="anchor" href="#这一层补什么缺口-一个从不从自己过去失败中学习的-agent" aria-label="锚点">#</a></h2>
+<p>轨迹日志（OPS-MAN-086）给了<strong>单会话</strong>记忆——一轮自驱里跨进程重建 stallCount、防死循环。<br>可它是<strong>严格 per-session</strong> 的：每个会话一个 <code>&lt;session&gt;.jsonl</code>，彼此不读。后果——</p>
+<ul><li>会话 A 已用 5 步证明某策略对这台机器的某类卡点是死胡同（次次 stalled → escalate）；</li><li>会话 B 起来，对同一类卡点<strong>从零把同一死胡同重走一遍</strong>。</li></ul>
+<p>人类维护者修一台反复出问题的机器，第二次绝不会再试第一次证明无效的手段；agent 却会。<br>本层让 agent 拥有同样的常识：跨这台机器<strong>所有会话</strong>回放策略的终局分布，学出哪些已被<br>反复证明无用，下次直接跳过。</p>
+<pre><code class="language-bash">node scripts/restore-ledger.js --json    # 下次自驱前读它决定跳过哪些策略
+node scripts/restore-ledger.js --skips    # 只吐建议跳过的策略（逗号分隔）</code></pre>
+<h2 id="分类-保守-安全优先">分类（保守，安全优先）<a class="anchor" href="#分类-保守-安全优先" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>分类</th><th>判据</th><th>建议</th></tr></thead><tbody><tr><td><code>productive</code></td><td>该策略在这台机器上<strong>至少一次</strong>真推进（advanced / converged）</td><td>值得再试</td></tr><tr><td><code>dead</code></td><td>跨 <strong>≥ 2 个独立会话</strong>次次卡住、<strong>从未一次</strong>推进</td><td>建议跳过</td></tr><tr><td><code>unproven</code></td><td>样本不足或信号不清</td><td>保守：不建议跳过</td></tr></tbody></table>
+<h2 id="安全优先的核心不变量-绝不误伤">安全优先的核心不变量（绝不误伤）<a class="anchor" href="#安全优先的核心不变量-绝不误伤" aria-label="锚点">#</a></h2>
+<ul><li>只要某策略<strong>哪怕一次</strong>推进，就永远不判 dead——一次成功洗清所有失败。</li><li>dead 门槛是「跨 ≥ 2 个<strong>独立会话</strong>反复失败」，不是「某一会话里连着失败」——</li></ul>
+<p>防止一次运气差就把本可用的策略永久拉黑。</p>
+<ul><li>台账只产 <code>recommendedSkips</code>（建议跳过的死策略），<strong>绝不重排 resolver 的安全恢复链顺序</strong>：</li></ul>
+<p>排序由风险决定（reprobe→reconcile→trust-pessimistic→escalate），学习只做减法、不做重排。<br>  这是诚实边界——优化「别再试已证死的」，不颠覆安全序。</p>
+<h2 id="纯度与落盘边界-继承项目章程">纯度与落盘边界（继承项目章程）<a class="anchor" href="#纯度与落盘边界-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>叶子是纯 reducer：<code>deriveStrategyLedger(sessionStreams)</code> 零 IO、绝不抛；空 / 畸形 →</li></ul>
+<p>空台账，<strong>绝不凭空拉黑任何策略</strong>。</p>
+<ul><li>读盘在 CLI：遍历 <code>~/.khy/.restore-trace/*.jsonl</code> 全会话（dot 前缀目录，授权门 084 已排除）。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-087] 波次执行故障感知.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-089] 还原学习应用器</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

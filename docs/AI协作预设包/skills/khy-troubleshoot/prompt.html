@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 错误自查（先分类，再对症） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-troubleshoot<span class="sep">›</span>Khy-OS 错误自查（先分类，再对症）</div>
+      <header class="hero reveal"><h1>Khy-OS 错误自查（先分类，再对症）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-错误自查-先分类-再对症">Khy-OS 错误自查（先分类，再对症）</a></li><li class="lvl-2"><a href="#先做只读体检-不改任何东西">先做只读体检（不改任何东西）</a></li><li class="lvl-2"><a href="#p-类-流程错误-最常见-也最隐蔽">P 类 · 流程错误（最常见，也最隐蔽）</a></li><li class="lvl-2"><a href="#w-类-小模型专属坑">W 类 · 小模型专属坑</a></li><li class="lvl-2"><a href="#b-类-代码缺陷原型-写新代码时对照预防">B 类 · 代码缺陷原型（写新代码时对照预防）</a></li><li class="lvl-2"><a href="#g-类-网关-模型路由">G 类 · 网关/模型路由</a></li><li class="lvl-2"><a href="#e-类-环境">E 类 · 环境</a></li><li class="lvl-2"><a href="#兜底">兜底</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-错误自查-先分类-再对症">Khy-OS 错误自查（先分类，再对症）<a class="anchor" href="#khy-os-错误自查-先分类-再对症" aria-label="锚点">#</a></h1>
+<p>出错、没生效、或怀疑改坏时，<strong>先判断属于哪一类</strong>，再按该类修法处理。</p>
+<h2 id="先做只读体检-不改任何东西">先做只读体检（不改任何东西）<a class="anchor" href="#先做只读体检-不改任何东西" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness   # 与时俱进体检
+node services/backend/bin/khy.js health                # 顶层自助诊断</code></pre>
+<hr>
+<h2 id="p-类-流程错误-最常见-也最隐蔽">P 类 · 流程错误（最常见，也最隐蔽）<a class="anchor" href="#p-类-流程错误-最常见-也最隐蔽" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>症状</th><th>真因</th><th>修法</th></tr></thead><tbody><tr><td>声称&quot;已实现&quot;但功能没生效</td><td><strong>没接到真实入口</strong>（隔离测试骗了你）</td><td>确认能从 <code>executeTool</code>/<code>toolUseLoop.js</code>/<code>aiManagementServer.js</code> <code>require</code> 到</td></tr><tr><td>逻辑重复、行为不一致</td><td><strong>造了第二份真源</strong></td><td>删掉新的，复用既有唯一权威实现</td></tr><tr><td>关掉 <code>KHY_</code> 开关行为变了</td><td><strong>破坏了逐字节回退</strong></td><td>接线加 <code>try/catch</code>，门关时保留旧值</td></tr><tr><td>只报进度不给结论就停</td><td><strong>未交付收尾</strong></td><td>激活 <code>/khy-honest-closure</code></td></tr><tr><td>守卫红了想绕过</td><td>守卫红=有真问题</td><td><strong>修问题，绝不 <code>--no-verify</code></strong></td></tr><tr><td>引用了不存在的文件/函数</td><td><strong>幻觉</strong></td><td>先 <code>grep</code>/读文件确认存在再引用</td></tr><tr><td>单文件越改越大</td><td>堆成上帝组件</td><td>抽纯叶子，原文件 re-export；单文件 ≤2500 行</td></tr></tbody></table>
+<p><strong>在产自查命令</strong>（确认叶子真被接进来）：</p>
+<pre><code class="language-bash">grep -rl &quot;require(.*/&lt;模块名&gt;&quot; services/backend/src --include=*.js | grep -vE &quot;/&lt;模块名&gt;/|tests/&quot;</code></pre>
+<h2 id="w-类-小模型专属坑">W 类 · 小模型专属坑<a class="anchor" href="#w-类-小模型专属坑" aria-label="锚点">#</a></h2>
+<p>结果过大撑爆上下文 / <code>max_tokens</code> 太低被截断 / <code>role:'tool'</code> 被某些 provider 拒 / JSON 被包在代码块里解析不出。<br>→ <strong>别破坏已有兼容层</strong>；细节激活 <code>/khy-weak-model-guardrails</code>。</p>
+<h2 id="b-类-代码缺陷原型-写新代码时对照预防">B 类 · 代码缺陷原型（写新代码时对照预防）<a class="anchor" href="#b-类-代码缺陷原型-写新代码时对照预防" aria-label="锚点">#</a></h2>
+<p>裸 <code>startsWith</code> 边界未锚定 · 大小写未折叠 · 正则缺锚点 · 越界码点崩溃 · 密钥脱敏漏现代 key · cron step=0 死循环 · <code>slice(-0)</code> 语义反转 · 闭包捕获过期 <code>resolve</code>/监听器泄漏 · 字符集乱码 · SSRF 等价表示形绕过 · 破坏性命令 flag 大小写/顺序敏感 · 数值格式边界错档 · 阈值小窗口下溢为负。</p>
+<p><strong>通用预防自问</strong>（处理外部输入/安全判定时）：</p>
+<blockquote><p>边界锚定了吗？大小写折叠了吗？越界/空/0/负都处理了吗？坏输入是崩溃还是 fail-soft？等价形都覆盖了吗？</p></blockquote>
+<h2 id="g-类-网关-模型路由">G 类 · 网关/模型路由<a class="anchor" href="#g-类-网关-模型路由" aria-label="锚点">#</a></h2>
+<ul><li>G1 模型名泄漏给不认识它的通道 → 404</li><li>G2 默认值散落硬编码</li><li>G3 鉴权形态过时</li><li>G4 请求侧新字段被丢弃</li><li>G5 视觉模型被误判纯文本退回 OCR</li></ul>
+<p>→ 细节激活 <code>/khy-gateway-fix</code>。</p>
+<h2 id="e-类-环境">E 类 · 环境<a class="anchor" href="#e-类-环境" aria-label="锚点">#</a></h2>
+<ul><li>Node ≥ 20。</li><li><strong>改了源码没重打包，pip 用户拿不到</strong>。</li><li>版本号多处不一致（backend <code>package.json</code> 与发布版本对齐）。</li><li><code>node:test</code> 传<strong>文件</strong>别传目录；别与 jest 混跑。</li></ul>
+<hr>
+<h2 id="兜底">兜底<a class="anchor" href="#兜底" aria-label="锚点">#</a></h2>
+<p>慌乱止血 → <code>docs/传承/紧急恢复卡片.md</code>。<br>要回退某文件：<code>git checkout &lt;好的哈希&gt; -- &lt;文件&gt;</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-safe-change/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 加法式改动纪律（改代码前照做）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-weak-model-guardrails/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">弱模型专属护栏（在 Khy-OS 上稳扎稳打）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-troubleshoot/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+{
+  "version": "1.1.7",
+  "nodeTarget": "node20",
+  "modules": [
+    {
+      "id": "khy-ai",
+      "name": "AI 聊天 REPL",
+      "description": "Interactive AI chat REPL with multi-model support and conversation management",
+      "entry": "khy-ai.js",
+      "handlers": [
+        "arena",
+        "assistant",
+        "companion",
+        "learn",
+        "moa",
+        "orchestrate",
+        "persona",
+        "replay",
+        "session",
+        "skill",
+        "thinkback"
+      ],
+      "services": ["aiChatCore", "gatewayAdapters"],
+      "excludeDeps": ["pg", "sequelize", "better-sqlite3", "multer", "node-cron"],
+      "includeDeps": ["ink", "react", "axios", "ws", "chalk", "dotenv", "winston"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    },
+    {
+      "id": "khy-gateway",
+      "name": "AI 网关服务",
+      "description": "AI gateway service with provider routing, key pool management and protocol conversion",
+      "entry": "services/ai-backend/server.js",
+      "handlers": [
+        "gateway",
+        "gatewayConfigEditor",
+        "gatewayManageDaemon",
+        "gatewayModelChoices",
+        "gatewayProviderKeyPool",
+        "gatewayRuntimeProbes",
+        "gatewayStatusView"
+      ],
+      "services": ["aiGateway", "adapters", "protocolConverter"],
+      "excludeDeps": ["ink", "react", "react-devtools-core", "inquirer", "ora", "better-sqlite3"],
+      "includeDeps": ["express", "axios", "ws", "chalk", "dotenv", "winston", "cors"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    },
+    {
+      "id": "khy-quant",
+      "name": "量化交易工具",
+      "description": "Quantitative trading toolkit with backtesting, market data and model training",
+      "entry": "khy-quant.js",
+      "handlers": [
+        "backtest",
+        "data",
+        "insights",
+        "market",
+        "pool",
+        "receipts",
+        "training"
+      ],
+      "services": ["backtestEngine", "akshareDataService", "alternativeDataService", "modelTrainingService"],
+      "excludeDeps": ["ink", "react", "react-devtools-core", "@opentelemetry/*", "node-llama-cpp"],
+      "includeDeps": ["pg", "sequelize", "axios", "chalk", "dotenv", "winston", "moment"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    },
+    {
+      "id": "khy-server",
+      "name": "Web 管理后台",
+      "description": "Web management backend with Express routes, admin panel and database models",
+      "entry": "services/backend/server.js",
+      "handlers": [],
+      "services": ["expressRoutes", "models", "admin"],
+      "excludeDeps": ["ink", "react", "react-devtools-core", "inquirer", "ora", "node-pty"],
+      "includeDeps": ["express", "pg", "sequelize", "cors", "helmet", "jsonwebtoken", "bcryptjs", "prom-client"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    },
+    {
+      "id": "khy-tools",
+      "name": "开发者工具集",
+      "description": "Developer toolset for CI/CD, deployment, proxy management and extension development",
+      "entry": "khy-tools.js",
+      "handlers": [
+        "ci",
+        "convert",
+        "deploy",
+        "deps",
+        "extension",
+        "forge",
+        "heal",
+        "health",
+        "ide",
+        "maintain",
+        "metadata",
+        "plugin-dev",
+        "pr",
+        "proxy",
+        "publish"
+      ],
+      "services": ["cleanupService", "ciStatusService", "extensionMarketplace"],
+      "excludeDeps": ["pg", "sequelize", "better-sqlite3", "@opentelemetry/*", "node-llama-cpp", "@aws/*"],
+      "includeDeps": ["axios", "chalk", "dotenv", "winston", "glob", "cli-table3"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    },
+    {
+      "id": "khy",
+      "name": "完整平台",
+      "description": "Full Khy OS platform with all modules, handlers and services included",
+      "entry": "khy.js",
+      "handlers": ["*"],
+      "services": ["*"],
+      "excludeDeps": [],
+      "includeDeps": ["*"],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
+    }
+  ]
+}

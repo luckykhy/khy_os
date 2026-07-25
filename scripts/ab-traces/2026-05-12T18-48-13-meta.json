@@ -1,0 +1,6 @@
+{
+  "timestamp": "2026-05-12T18:48:56+08:00",
+  "prompt": "写一个 JavaScript 函数，接收一个数组和目标数，返回数组中两个数的索引使它们之和等于目标数。要求时间复杂度 O(n)。",
+  "khy": { "latencyMs": 17311, "mode": "direct", "model": "claude-opus-4-6" },
+  "cc": { "latencyMs": 25533, "model": "claude-opus-4-6" }
+}

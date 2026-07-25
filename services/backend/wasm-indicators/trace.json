@@ -1,0 +1,13 @@
+[
+{"ph":"M","pid":1,"name":"thread_name","tid":0,"args":{"name":"main"}},
+{"ph":"B","pid":1,"ts":37.551,"name":"run_check","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":111},
+{"ph":"B","pid":1,"ts":129.272,"name":"run_check_internal","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":216},
+{"ph":"B","pid":1,"ts":133.062,"name":"run_check_normal_internal","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":386},
+{"ph":"B","pid":1,"ts":134.202,"name":"run_check_normal_internal_rr","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":428},
+{"ph":"B","pid":1,"ts":139.163,"name":"resolve","cat":"moonbuild_rupes_recta::resolve","tid":0,".file":"crates/moonbuild-rupes-recta/src/resolve/mod.rs",".line":333},
+{"ph":"E","pid":1,"ts":234.904,"name":"resolve","cat":"moonbuild_rupes_recta::resolve","tid":0,".file":"crates/moonbuild-rupes-recta/src/resolve/mod.rs",".line":333},
+{"ph":"E","pid":1,"ts":242.334,"name":"run_check_normal_internal_rr","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":428},
+{"ph":"E","pid":1,"ts":243.184,"name":"run_check_normal_internal","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":386},
+{"ph":"E","pid":1,"ts":243.754,"name":"run_check_internal","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":216},
+{"ph":"E","pid":1,"ts":244.574,"name":"run_check","cat":"moon::cli::check","tid":0,".file":"crates/moon/src/cli/check.rs",".line":111}
+]

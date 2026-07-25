@@ -1,0 +1,33 @@
+# Khy OS — pip channel manifest (PyPI package: khy-os).
+# [project] version is the STATIC single source of truth for the pip channel;
+# scripts/release/publish-dual.sh bumps it at release time and
+# scripts/ci/check-version-sync.js enforces that it matches
+# packaging/npm/package.json, services/backend/package.json and
+# packaging/modules/modules.json.
+#
+# platform/khy_platform/__init__.py must NOT hard-code __version__; it resolves
+# the version dynamically from this file / installed metadata.
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "khy-os"
+version = "1.1.7"
+description = "Khy OS - AI platform operating system, distributed via PyPI (khy-os) and npm (@khy-os/khy-os). Python layer is a lightweight launcher that boots the Node.js backend."
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+khy = "khy_platform.cli:main"
+
+[tool.setuptools]
+# Python packages live under platform/ (khy_platform launcher, khy_os bundle).
+package-dir = { khy_platform = "platform/khy_platform", khy_os = "platform/khy_os" }
+packages = ["khy_platform", "khy_os"]
+
+[tool.setuptools.package-data]
+# Mirrors PACKAGE_RESOURCE_INCLUDES in scripts/release/pip_packaging_rules.py.
+khy_os = ["bundled/**/*"]
+khy_platform = ["_resources/dev-constraints.txt", "_resources/tray-icon.png"]

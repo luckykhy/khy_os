@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-143-windows-保留设备名读前防护-第五条卡死向量-跨系统">[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#断桥判据-为什么这是真缺口">断桥判据(为什么这是真缺口)</a></li><li class="lvl-2"><a href="#本次改动-全-additive-门-khy-readfile-win-device-guard-default-on-门关字节回退历史行为">本次改动(全 additive · 门 `KHY_READFILE_WIN_DEVICE_GUARD` default-on · 门关字节回退历史行为)</a></li><li class="lvl-2"><a href="#windows-保留名判定规则-与-win32-语义一致">Windows 保留名判定规则(与 Win32 语义一致)</a></li><li class="lvl-2"><a href="#验收-本次全绿">验收(本次全绿)</a></li><li class="lvl-2"><a href="#双读路径发现-本发关键">双读路径发现(本发关键)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-143-windows-保留设备名读前防护-第五条卡死向量-跨系统">[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)<a class="anchor" href="#ops-man-143-windows-保留设备名读前防护-第五条卡死向量-跨系统" aria-label="锚点">#</a></h1>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>读取工具的读前防护家族此前覆盖三类 <strong>POSIX</strong> 卡死向量(特殊文件 / 伪文件 / <code>/dev/*</code> 名单),<br>但对 <strong>Windows 保留 DOS 设备名</strong>(<code>CON</code> / <code>COM1</code>–<code>COM9</code> / <code>NUL</code> / <code>LPT1</code>–<code>LPT9</code> / <code>\\.\</code> 设备命名空间)<br><strong>零覆盖</strong>。离机继任机是 Windows,读到这些名字会<strong>永久等待设备输入而卡死</strong> ——<br>正是「阅读工具不对不支持,长时间卡死」在跨系统场景的复现。本发补上第五条纯路径守卫。</p>
+<h2 id="断桥判据-为什么这是真缺口">断桥判据(为什么这是真缺口)<a class="anchor" href="#断桥判据-为什么这是真缺口" aria-label="锚点">#</a></h2>
+<ul><li><code>specialFileReadGuard</code>:按 <code>fs.stat</code> 类型拦 FIFO/套接字/字符·块设备 —— <strong>POSIX 语义</strong>。</li><li><code>pseudoFileReadGuard</code>:拦 Linux <code>/proc</code>·<code>/sys</code> —— 显式 <code>platform !== 'linux' → null</code>。</li><li><code>inputValidators.validateNotDevicePath</code> → <code>shellClassifier.isBlockedDevicePath</code>:</li></ul>
+<p>一张 <strong>POSIX <code>/dev/*</code> 精确名单</strong>(exact-match Set:<code>/dev/zero</code>、<code>/dev/tty</code>、<code>/dev/stdin</code>…)。</p>
+<ul><li>三者对 Windows 保留设备名<strong>毫无覆盖</strong>。<code>fs.statSync('COM1')</code> 之后的读取会阻塞等待串口输入。</li></ul>
+<h2 id="本次改动-全-additive-门-khy-readfile-win-device-guard-default-on-门关字节回退历史行为">本次改动(全 additive · 门 <code>KHY_READFILE_WIN_DEVICE_GUARD</code> default-on · 门关字节回退历史行为)<a class="anchor" href="#本次改动-全-additive-门-khy-readfile-win-device-guard-default-on-门关字节回退历史行为" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/tools/winDeviceReadGuard.js</code></td><td><strong>新叶</strong>(纯路径 · 零 IO · 绝不抛)。<code>classifyWindowsDevice(path, platform)</code> → <code>'reserved-name'</code> / <code>'device-namespace'</code> / <code>null</code>;<code>winDeviceGuardEnabled(env)</code>;<code>buildWinDeviceRefusal(info)</code>。</td></tr><tr><td><code>services/backend/src/tools/readFile.js</code></td><td>在 <code>path.resolve</code> 之后、<strong><code>fs.statSync</code> 之前</strong>接线(必须在触碰设备前拦下);fail-soft。</td></tr><tr><td><code>services/backend/src/tools/FileReadTool/index.js</code></td><td><strong>主读工具 <code>Read</code></strong>(面向模型 · <code>file_path</code> 形参 · <code>alwaysLoad</code>)。与 readFile.js 是<strong>并行两条读路径</strong>,模型多按 <code>Read</code> 惯例调用。其自有 <code>execute()</code> 走独立 <code>fs.existsSync</code>/<code>fs.statSync</code>,<code>validateInput</code> 只有 <code>validateNotDevicePath</code>(POSIX /dev/* 精确集)+ <code>validateNotUNCPath</code>(<code>\\</code> 前缀,拦得住 <code>\\.\COM1</code> 但<strong>拦不住裸保留名</strong>)→ win-device 卡死缺口在主路径<strong>仍活着</strong>。在 <code>path.resolve</code> 之后、<code>existsSync</code>/<code>statSync</code> 之前接同一守卫(同门 · fail-soft · 门关字节回退)。</td></tr><tr><td><code>services/backend/tests/tools/winDeviceReadGuard.test.js</code></td><td>16 例:门控 / win32 正例(裸名 · 带扩展名 · 带目录 · 命名空间前缀)/ win32 反例(<code>CONFIG</code>/<code>COM10</code>/<code>foo.con</code>)/ 非 win32 平台门 / null-safe / 拒绝消息 / 源级接线(readFile.js <strong>与</strong> FileReadTool 均 require 守卫且排在 <code>statSync</code> 前)。</td></tr></tbody></table>
+<blockquote><p>注:本守卫家族的门控<strong>不登记进 flagRegistry</strong>(与 <code>KHY_READFILE_SPECIAL_GUARD</code> 等四个兄弟一致);<br>门语义与 HOW-TO-EXTEND 全写在叶子头注释里。</p></blockquote>
+<h2 id="windows-保留名判定规则-与-win32-语义一致">Windows 保留名判定规则(与 Win32 语义一致)<a class="anchor" href="#windows-保留名判定规则-与-win32-语义一致" aria-label="锚点">#</a></h2>
+<ul><li>保留名无关<strong>目录</strong>、无关<strong>扩展名</strong>:<code>C:\tmp\COM1.log</code> 仍解析到 COM1 → 取 basename 去掉首个 <code>.</code> 后的词干判定。</li><li>词干尾部<strong>空格与点被忽略</strong>(<code>CON </code> / <code>CON.</code> 仍是 CON)。</li><li><code>CONFIG</code> / <code>COM10</code> / <code>foo.con</code> <strong>不是</strong>设备(词干为 CONFIG / COM10 / FOO)→ 放行。</li><li><code>\\.\...</code> 与 <code>\\?\GLOBALROOT\...</code> 是显式设备路径 → 拦;<code>\\?\C:\长路径</code> 只是扩展长度前缀的普通路径 → 放行。</li><li><strong>平台门</strong>:仅 <code>platform === 'win32'</code> 生效;POSIX 上 <code>con</code>/<code>nul</code>/<code>com1</code> 是合法文件名,一律 <code>null</code>。</li></ul>
+<h2 id="验收-本次全绿">验收(本次全绿)<a class="anchor" href="#验收-本次全绿" aria-label="锚点">#</a></h2>
+<ul><li>新测 14/14 pass。</li><li>LIVE(Linux 宿主):文件字面名 <code>CON</code> 正常读出(<strong>无 POSIX 误伤</strong>),普通文件正常读;</li></ul>
+<p>谓词 <code>classifyWindowsDevice('…COM1.log','win32')='reserved-name'</code>、<code>(…,'linux')=null</code>。</p>
+<ul><li>回归:兄弟读守卫 <code>special</code>/<code>pseudo</code>/<code>binary</code> 套件 51/51 pass。</li><li>守卫:change-safety / agent-rules / leaf-contract / flag-registry positional 全 exit0。</li><li>god-file:新叶 125 行;<code>readFile.js</code> 235 行;<code>FileReadTool/index.js</code> 274 行(均 &lt; 2500)。</li><li>主读工具 LIVE 冒烟(经 <code>FileReadTool.execute</code>):(a)真文件读出内容不误拦;(b)Linux 上名为 <code>CON</code> 的文件正常读出(平台门 → null);(c)win32 模拟 <code>C:\temp\COM1.log</code> → <code>reserved-name</code> → 中文拒绝。</li></ul>
+<h2 id="双读路径发现-本发关键">双读路径发现(本发关键)<a class="anchor" href="#双读路径发现-本发关键" aria-label="锚点">#</a></h2>
+<p><code>tools/index.js</code> 同时暴露两条读定义给模型:<code>Read</code>(FileReadTool,<code>file_path</code>)与 <code>readFile</code>(readFile.js,<code>path</code>)。此前整个防卡死守卫族(win-device / special / pseudo / binary / format)<strong>只接在 readFile.js</strong>,而模型多按 Claude Code 惯例调用 <code>Read</code>(FileReadTool)→ 主路径其实<strong>裸奔</strong>。本发已将 win-device 守卫补到<strong>两条</strong>路径。</p>
+<blockquote><p><strong>诚实遗留(建议后续 parity 章)</strong>:另外四条族守卫(<code>readBinaryGuard</code> / <code>readFileFormatRouter</code> / <code>specialFileReadGuard</code> / <code>pseudoFileReadGuard</code>)目前仍只在 readFile.js,尚未接入主读工具 FileReadTool。本发按 B3 只做 win-device 一条(纯路径 · 前置 stat · 零副作用,单会话可验证零回归);把 special/pseudo/binary/format 镜像进 FileReadTool 涉及其自有 image/OCR/编码/超限分支的顺序,回归面更大,应另开一章逐条接线 + 真实读路径回归后再上。</p></blockquote>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ul><li>「阅读工具卡死」的下一条正交缺口 = <strong>跨系统</strong>维度:既有守卫全是 POSIX 语义,Windows 保留名是盲区。</li><li>纯路径守卫必须排在 <code>statSync</code>/open <strong>之前</strong>(设备触碰前拦),且带平台门 + 显式 platform 形参(可在任何宿主全测)。</li><li>平台门是灵魂:POSIX 上 <code>con</code>/<code>nul</code> 是合法文件,误伤即回归。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-143] Windows保留设备名读前防护.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

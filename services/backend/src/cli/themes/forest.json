@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "forest",
+    "label": "Forest Green",
+    "description": "Natural forest palette — warm greens and earth tones"
+  },
+  "colors": {
+    "claude": "#8FBC8F",
+    "success": "#4EBA65",
+    "error": "#E07C7C",
+    "warning": "#DAA520",
+    "text": "#E8E8D8",
+    "secondaryText": "#A0A080",
+    "subtle": "#3E4A3E",
+    "bashBorder": "#6B8E6B",
+    "permission": "#DAA520",
+    "link": "#87CEEB",
+    "diffAdded": "#1A3A1A",
+    "diffRemoved": "#5A2020",
+    "diffAddedDimmed": "#2E4A2E",
+    "diffRemovedDimmed": "#4A3030",
+    "diffAddedWord": "#50C878",
+    "diffRemovedWord": "#CD5C5C",
+    "permissionPurple": "#9B8FE2",
+    "userMessageBg": "#1A2A1A"
+  }
+}

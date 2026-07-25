@@ -1,0 +1,37 @@
+{
+  "name": "ieee",
+  "label": "IEEE 会议/期刊风格（英文，单栏近似）",
+  "description": "Times New Roman 正文，标题 Times 加粗分级，紧凑行距。注意：python-docx 不便实现 IEEE 双栏，本基线采用单栏近似；双栏需另行后处理。",
+  "page": {
+    "size": "A4",
+    "margins": { "top": 1.91, "bottom": 2.54, "left": 1.59, "right": 1.59, "unit": "cm" },
+    "header": { "distance": 1.27, "unit": "cm", "text": "" },
+    "footer": { "distance": 1.27, "unit": "cm", "pageNumber": true }
+  },
+  "paragraph": {
+    "lineSpacing": 1.0,
+    "lineSpacingRule": "multiple",
+    "spaceBefore": 0,
+    "spaceAfter": 0,
+    "firstLineIndentChars": 2
+  },
+  "fonts": {
+    "default": { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 10, "sizeLabel": "10pt", "bold": false, "color": "000000" },
+    "title":    { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 24, "sizeLabel": "24pt", "bold": true, "align": "center", "spaceBefore": 0, "spaceAfter": 12 },
+    "heading1": { "ascii": "Times New Roman", "eastAsia": "黑体", "size": 10, "sizeLabel": "10pt", "bold": true, "align": "center", "smallCaps": true, "spaceBefore": 12, "spaceAfter": 6, "pageBreakBefore": false },
+    "heading2": { "ascii": "Times New Roman", "eastAsia": "黑体", "size": 10, "sizeLabel": "10pt", "bold": false, "italic": true, "align": "left", "spaceBefore": 6, "spaceAfter": 3 },
+    "heading3": { "ascii": "Times New Roman", "eastAsia": "黑体", "size": 10, "sizeLabel": "10pt", "bold": false, "italic": true, "align": "left", "spaceBefore": 6, "spaceAfter": 3 },
+    "heading4": { "ascii": "Times New Roman", "eastAsia": "黑体", "size": 10, "sizeLabel": "10pt", "bold": false, "italic": true, "align": "left", "spaceBefore": 6, "spaceAfter": 3 },
+    "quote":    { "ascii": "Times New Roman", "eastAsia": "楷体", "size": 9, "sizeLabel": "9pt", "indentChars": 2, "color": "404040" },
+    "code":     { "ascii": "Courier New", "eastAsia": "宋体", "size": 9, "sizeLabel": "9pt", "color": "1A1A1A" },
+    "caption":  { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 8, "sizeLabel": "8pt", "align": "center" },
+    "reference":{ "ascii": "Times New Roman", "eastAsia": "宋体", "size": 8, "sizeLabel": "8pt", "hangingIndentChars": 1 },
+    "list":     { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 10, "sizeLabel": "10pt" },
+    "tableCell":{ "ascii": "Times New Roman", "eastAsia": "宋体", "size": 8, "sizeLabel": "8pt" }
+  },
+  "pagination": {
+    "pageBreakBeforeHeading1": false
+  },
+  "list": { "indentChars": 2 },
+  "table": { "style": "Table Grid", "headerBold": true }
+}

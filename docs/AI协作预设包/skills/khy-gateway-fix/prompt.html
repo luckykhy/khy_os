@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 网关/模型路由排错 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-gateway-fix<span class="sep">›</span>Khy-OS 网关/模型路由排错</div>
+      <header class="hero reveal"><h1>Khy-OS 网关/模型路由排错</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-网关-模型路由排错">Khy-OS 网关/模型路由排错</a></li><li class="lvl-2"><a href="#g1-404-model-not-found-模型名泄漏给不认识它的通道">G1 · 404 / model_not_found —— 模型名泄漏给不认识它的通道</a></li><li class="lvl-2"><a href="#g2-默认模型硬编码散落">G2 · 默认模型硬编码散落</a></li><li class="lvl-2"><a href="#g3-鉴权形态过时">G3 · 鉴权形态过时</a></li><li class="lvl-2"><a href="#g4-请求侧新字段被丢弃">G4 · 请求侧新字段被丢弃</a></li><li class="lvl-2"><a href="#g5-视觉模型误判纯文本-退回-ocr">G5 · 视觉模型误判纯文本 → 退回 OCR</a></li><li class="lvl-2"><a href="#通用套路">通用套路</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-网关-模型路由排错">Khy-OS 网关/模型路由排错<a class="anchor" href="#khy-os-网关-模型路由排错" aria-label="锚点">#</a></h1>
+<p>网关与模型路由的坑有固定几类。<strong>先对号，再修。</strong> 主战场：<br><code>services/backend/src/services/gateway/aiGateway.js</code> 与 <code>modelRouter.js</code>。</p>
+<h2 id="g1-404-model-not-found-模型名泄漏给不认识它的通道">G1 · 404 / model_not_found —— 模型名泄漏给不认识它的通道<a class="anchor" href="#g1-404-model-not-found-模型名泄漏给不认识它的通道" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：<code>[某通道] 404 ... model=&lt;某模型&gt; | model_not_found</code>，往往在 auto 模式或通道降级后出现。<br><strong>真因</strong>：一个通道把只属于另一个 provider 的模型 id，带给了不认识它的通道（如把 <code>agnes-2.0-flash</code> 带给直连 trae.ai 的 relay）。<br><strong>修法</strong>：在 <code>normalizeModelForAdapter</code> 对该通道做<strong>对称防护</strong>——非本家族模型 → 返 <code>null</code> 用默认，别硬塞。用与该 adapter <code>isLikelyModelId</code> 对齐的家族正则判断。<strong>别对 api 代理通道乱丢</strong>（它要 honor 路由表）。<br><strong>门控</strong>：新增 <code>KHY_*_MODEL_GUARD</code>（默认开），关掉逐字节回退。</p>
+<h2 id="g2-默认模型硬编码散落">G2 · 默认模型硬编码散落<a class="anchor" href="#g2-默认模型硬编码散落" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：改了默认模型只在一处生效，别处还是旧的；或目录里查不到新模型。<br><strong>真因</strong>：同一个默认值在 <code>constants/models.js</code> / <code>providerPresets</code> / <code>builtinProviderConfig</code> 多处各写一份。<br><strong>修法</strong>：新增门控叶子（如 <code>KHY_*_LATEST_MODEL</code> 默认开）在<strong>各消费点</strong>统一收敛；静态 constants 作为门关回退基准别动。</p>
+<h2 id="g3-鉴权形态过时">G3 · 鉴权形态过时<a class="anchor" href="#g3-鉴权形态过时" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：<code>Invalid API key format</code> 或 401，尤其新版单段 key。<br><strong>真因</strong>：还在用旧鉴权方式（如智谱旧版拆 <code>id.secret</code> 签 JWT），新版单段 key 直接抛错。<br><strong>修法</strong>：门控叶子解析鉴权模式——旧形态 → 旧路径（逐字节回退），新形态 → 原始 Bearer。<code>KHY_*_RAW_BEARER</code> 默认开。密钥只进进程内请求头。</p>
+<h2 id="g4-请求侧新字段被丢弃">G4 · 请求侧新字段被丢弃<a class="anchor" href="#g4-请求侧新字段被丢弃" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：模型招牌能力（如 <code>reasoning_effort</code>、<code>thinking</code>）没生效。<br><strong>真因</strong>：<code>_applyOpenAISamplingParams</code> / 协议管线只透传老字段，丢了新字段（响应侧读了、请求侧没发）。<br><strong>修法</strong>：门控透传新字段（<code>KHY_OPENAI_THINKING_PASSTHROUGH</code> 之类），只影响对应协议路径，别波及其它。</p>
+<h2 id="g5-视觉模型误判纯文本-退回-ocr">G5 · 视觉模型误判纯文本 → 退回 OCR<a class="anchor" href="#g5-视觉模型误判纯文本-退回-ocr" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：明明是多模态模型，带图请求却退回本地 OCR。<br><strong>真因</strong>：<code>VISION_NAME_HINTS</code> 名字提示保守，漏了当代原生多模态族（llama-4/gpt-4.1/glm-4.6v/grok-4…）→ <code>isVisionCapableModel</code> 返 false。<br><strong>修法</strong>：门控扩展名字提示片段（<code>KHY_MODERN_VISION_HINTS</code> / <code>KHY_GLM_VISION_MODEL</code> 默认开），精确片段别裸匹配避误伤；<code>KHY_TEXT_ONLY_MODELS</code> 恒最高优先。</p>
+<hr>
+<h2 id="通用套路">通用套路<a class="anchor" href="#通用套路" aria-label="锚点">#</a></h2>
+<ol><li>先定位是哪一类（看报错里的 <code>通道名 / model / 状态码</code>）。</li><li>找到对应消费点，确认旧路径<strong>哪里漏做/做错</strong>。</li><li>写门控纯叶子补正（默认开、严格超集、关掉逐字节回退）。</li><li>接线在网关真实路径；跑网关相关单测 + 守卫。</li><li>激活 <code>/khy-honest-closure</code> 收尾。</li></ol>
+<p><strong>验回退</strong>：<code>KHY_XXX=off</code> 跑同请求，行为应与改动前逐字节相同。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/给AI看/总说明-一次读懂全局.html"><div class="dir">← 上一篇</div><div class="ttl">🧠 一次读懂全局 · 发给 AI 的全局速成</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-honest-closure/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 诚实收尾（说&quot;做完了&quot;之前照做）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-gateway-fix/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

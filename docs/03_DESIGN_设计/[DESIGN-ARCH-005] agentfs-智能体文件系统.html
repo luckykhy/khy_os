@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentFS — 智能体文件系统 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>AgentFS — 智能体文件系统</div>
+      <header class="hero reveal"><h1>AgentFS — 智能体文件系统</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#agentfs-智能体文件系统">AgentFS — 智能体文件系统</a></li><li class="lvl-2"><a href="#是什么">是什么</a></li><li class="lvl-2"><a href="#目录布局">目录布局</a></li><li class="lvl-2"><a href="#分层加载-l0-l1-l2-核心">分层加载 L0 / L1 / L2（核心）</a></li><li class="lvl-2"><a href="#git-版本化">git 版本化</a></li><li class="lvl-2"><a href="#cli">CLI</a></li><li class="lvl-2"><a href="#五类核心资产模型-借鉴分析-2">五类核心资产模型（借鉴分析 #2）</a></li><li class="lvl-2"><a href="#接入系统提示词-phase-2">接入系统提示词（Phase 2）</a></li><li class="lvl-2"><a href="#代码位置">代码位置</a></li><li class="lvl-2"><a href="#非目标-留待后续">非目标（留待后续）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-005 | 阶段: 设计 | 原路径: docs/架构/agentfs-智能体文件系统.md --&gt;</p>
+<h1 id="agentfs-智能体文件系统">AgentFS — 智能体文件系统<a class="anchor" href="#agentfs-智能体文件系统" aria-label="锚点">#</a></h1>
+<blockquote><p>借鉴自 DesireCore AgentFS（见 <a href="../08_MGMT_项目管理/%5BMGMT-RPT-002%5D%20khy-对比-desirecore-借鉴分析.html">KHY 对比 DesireCore 借鉴分析</a> 第 1 点）<br>状态：Phase 1（存储层 + git 版本化 + 分层加载 + <code>khy companion</code> CLI）+ Phase 2（接入系统提示词）+ 五类资产模型（借鉴 #2：<code>assets</code>/<code>receipts</code> 视图 + receipts 关联 companion）均已落地。</p></blockquote>
+<h2 id="是什么">是什么<a class="anchor" href="#是什么" aria-label="锚点">#</a></h2>
+<p>AgentFS 把<strong>一个智能体</strong>收敛成<strong>一个目录</strong>，并让该目录成为<strong>它自己的 git 仓库</strong>。智能体的人格、红线、记忆、技能、工具权限、心跳清单都是这个目录里的文件，可 diff、可回溯、可独立备份/还原。</p>
+<p>Khy-OS 此前已是「文件即真相」（persona/memory/skills/agents 都是文件），但分散且全局：无每-agent 分组、无 git 版本化、无分层加载。AgentFS 补上这三点。数据库里没有任何 agent 表，所以这是纯新增的文件子系统，不涉及 DB 迁移。</p>
+<h2 id="目录布局">目录布局<a class="anchor" href="#目录布局" aria-label="锚点">#</a></h2>
+<p>存储根：<code>&lt;dataHome&gt;/agents/&lt;id&gt;/</code>（默认 <code>~/.khy/agents/&lt;id&gt;/</code>）。</p>
+<pre><code>~/.khy/agents/&lt;id&gt;/
+  agent.json          # 元数据 {id,name,description,model,schema,version,createdAt}
+  persona.md          # 他是谁（复用 personaService 的默认模板作初值）
+  principles.md       # 红线 / 不可逾越（永不被自动学习或自我进化覆写）
+  memory/MEMORY.md    # 记忆索引（沿用 memdir 的 MEMORY.md 约定）
+  skills/             # 每-agent 技能（manifest.json + prompt.md 约定）
+  workflows/          # SOP 占位
+  tools/permissions.json  # 每-agent allow/ask/deny 占位（暂不强制执行）
+  heartbeat/HEARTBEAT.md  # 心跳巡检清单模板
+  .git/               # 每个 agent 独立 git 仓库</code></pre>
+<p><code>id</code> 校验：<code>^[a-z0-9][a-z0-9_-]{0,63}$</code>，并在解析后断言路径未逃出 agents 根（双重防穿越）。非 ASCII（如中文）名称需用 <code>--id</code> 显式指定英文 id。</p>
+<h2 id="分层加载-l0-l1-l2-核心">分层加载 L0 / L1 / L2（核心）<a class="anchor" href="#分层加载-l0-l1-l2-核心" aria-label="锚点">#</a></h2>
+<p>记忆/技能会随时间膨胀，全量塞进上下文很费 token。<code>loadLayered(id, level)</code> 返回<strong>累积式</strong>视图，让调用方按 token 预算选层：</p>
+<table><thead><tr><th>层</th><th>内容</th><th>何时用</th></tr></thead><tbody><tr><td><strong>L0 身份</strong>（永远）</td><td>agent.json 摘要 + persona 首个标题块 + principles 红线</td><td>始终注入，最小</td></tr><tr><td><strong>L1 摘要</strong></td><td>L0 + memory 索引 + 技能目录与描述 + heartbeat 是否启用</td><td>需要概览时</td></tr><tr><td><strong>L2 全量</strong></td><td>L1 + 完整 persona + 全部 memory 文件 + 技能 prompt + workflows</td><td>真正深入时</td></tr></tbody></table>
+<p>返回 <code>{level, text, bytes}</code>。实测：一个新建 agent L0≈400 bytes，加一条记忆后 L2≈1650 bytes —— 层级越低体积越小。</p>
+<h2 id="git-版本化">git 版本化<a class="anchor" href="#git-版本化" aria-label="锚点">#</a></h2>
+<ul><li>每个 agent 目录 <code>createAgent</code> 时 <code>git init</code> 并提交首个快照；之后每次 <code>writeAsset</code> 自动 <code>git add -A &amp;&amp; commit</code> —— 天然 per-agent 可回溯。</li><li>提交身份固定为 <code>khy &lt;khy@local&gt;</code>，不依赖、不污染用户全局 git 配置；关闭 gpgsign。</li><li><code>history(id)</code> 解析 <code>git log</code>；<code>revertTo(id, commit)</code> 用 <code>git restore</code> 回到历史版本再提交。</li><li><strong>优雅降级</strong>：git 不存在时（ENOENT）仍可正常读写文件，只跳过版本化并告警一次。</li></ul>
+<h2 id="cli">CLI<a class="anchor" href="#cli" aria-label="锚点">#</a></h2>
+<p>命令 <code>companion</code>（中文别名 <code>同伴</code> / <code>数字同伴</code> / <code>智能体仓库</code>）。<strong>故意不复用 <code>agent</code></strong> —— 后者已是交易预测统计 + 子代理 runner，语义会打架。</p>
+<pre><code>khy companion create &lt;name&gt; [--id &lt;id&gt;] [--desc &lt;文本&gt;] [--model &lt;id&gt;]
+khy companion list
+khy companion show &lt;id&gt; [--level L0|L1|L2]   # 默认 L0，演示分层
+khy companion history &lt;id&gt; [--limit &lt;n&gt;]
+khy companion path &lt;id&gt;                       # 打印目录，便于手动编辑
+khy companion assets &lt;id&gt;                     # 五类资产视图（见下）
+khy companion receipts &lt;id&gt; [--limit &lt;n&gt;]     # 该同伴的行动回执
+khy companion use &lt;id&gt;                        # 设为当前激活同伴
+khy companion unuse                           # 取消激活
+khy companion active                          # 查看当前激活同伴</code></pre>
+<h2 id="五类核心资产模型-借鉴分析-2">五类核心资产模型（借鉴分析 #2）<a class="anchor" href="#五类核心资产模型-借鉴分析-2" aria-label="锚点">#</a></h2>
+<p>借鉴 DesireCore，把一个同伴拆成五类<strong>可独立治理</strong>的资产。<code>ASSET_MODEL</code>（<code>agentFsService.js</code>）是单一事实源，<code>describeAssets(id)</code> 返回每类的存在性 / 文件数 / 字节数（纯只读，缺文件不抛）。</p>
+<table><thead><tr><th>资产</th><th>AgentFS 落点</th><th>说明</th></tr></thead><tbody><tr><td>Persona（人格）</td><td><code>persona.md</code> + <code>principles.md</code></td><td>他是谁 + 红线</td></tr><tr><td>Playbook（行为手册）</td><td><code>workflows/</code></td><td>SOP / 边界（scaffold 时为空目录）</td></tr><tr><td>Memory（记忆账本）</td><td><code>memory/</code></td><td>记忆索引与明细</td></tr><tr><td>Tool Body（工具身体）</td><td><code>tools/permissions.json</code> + <code>skills/</code></td><td>能做什么 + 权限</td></tr><tr><td>Receipts（行动回执）</td><td>receiptService（按 <code>companionId</code>）</td><td>做过什么——证据链</td></tr></tbody></table>
+<p>Receipts 是<strong>外部资产</strong>：不落在 agent 目录，而是 <code>receiptService</code> 的回执按 <code>companionId</code> 关联。<code>startReceipt(ctx)</code> 默认取当前激活同伴（<code>getActiveAgentId()</code>），<code>listReceipts({companionId})</code> 过滤。<code>companion receipts &lt;id&gt;</code> 即基于此。回执 JSON 顶层新增 <code>companionId</code> 字段，向后兼容（旧回执为 null）。</p>
+<h2 id="接入系统提示词-phase-2">接入系统提示词（Phase 2）<a class="anchor" href="#接入系统提示词-phase-2" aria-label="锚点">#</a></h2>
+<p>「激活态」由一个指针文件 <code>&lt;dataHome&gt;/agents/.active.json</code>（<code>{&quot;id&quot;:&quot;&lt;id&gt;&quot;}</code>）记录。</p>
+<ul><li><code>khy companion use &lt;id&gt;</code> 写指针；<code>unuse</code> 删指针；<code>active</code>/<code>list</code>(● 标记) 查看。</li><li>当有激活同伴时，系统提示词新增一个 <strong><code># Active Companion</code></strong> 段，注入该同伴的 <strong>L1</strong> 分层上下文（身份 + persona 首块 + 红线 + 记忆索引 + 技能目录）。明确声明：项目指令与用户显式请求优先，红线不可逾越。</li><li><strong>无激活时该段为 <code>null</code>，提示词与改动前逐字节一致 —— 零回归。</strong></li><li>缓存失效：段的 cacheKey = <code>activeStamp()</code>，绑定「激活 id + 其身份文件的 mtime/size」，切换同伴或编辑其 persona/红线/记忆时自动刷新。</li><li>代码：<code>agentFsService.companionPromptSection()</code> / <code>activeStamp()</code>；<code>prompts.js</code> 的 <code>getCompanionSection()</code> 与 <code>systemPromptSection('companion', …)</code>（紧随 <code>persona</code> 段之后）。</li></ul>
+<blockquote><p>注：现有全局 <code>persona.md</code> / <code>memory/</code> 段保持不变，与激活同伴段<strong>并存</strong>。这是附加式接入，不改写既有 builder。</p></blockquote>
+<h2 id="代码位置">代码位置<a class="anchor" href="#代码位置" aria-label="锚点">#</a></h2>
+<ul><li>服务：<code>services/backend/src/services/agentFs/agentFsService.js</code></li><li>CLI handler：<code>services/backend/src/cli/handlers/companion.js</code></li><li>接线：<code>router.js</code>（<code>case 'companion'</code>）、<code>commandSchema.js</code>、<code>aliases.js</code></li><li>系统提示词：<code>src/constants/prompts.js</code>（<code>getCompanionSection</code> + <code>companion</code> 段）</li><li>测试：<code>services/backend/tests/agentFsService.test.js</code></li></ul>
+<h2 id="非目标-留待后续">非目标（留待后续）<a class="anchor" href="#非目标-留待后续" aria-label="锚点">#</a></h2>
+<ul><li>不把现有全局 <code>persona.md</code> / <code>memory/</code> / <code>permissions.json</code> 迁入 AgentFS（两者并存）。</li><li><code>tools/permissions.json</code> 仅 scaffold，不做每-agent 权限强制执行。</li><li>激活同伴的 <code>model</code> 字段尚未自动切换实际调用模型（仅作元数据/提示词展示）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-004] _cbssp_progress.html"><div class="dir">← 上一篇</div><div class="ttl">CB-SSP 数学重塑 · 实施进度</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-006] ai-gateway-适配器协议架构.html"><div class="dir">下一篇 →</div><div class="ttl">AI Gateway 适配器协议架构</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-005] agentfs-智能体文件系统.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

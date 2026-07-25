@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-160] 行为特征化并入误报收口裁决接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-160] 行为特征化并入误报收口裁决接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-160] 行为特征化并入误报收口裁决接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-160-行为特征化并入误报收口裁决接线">[OPS-MAN-160] 行为特征化并入误报收口裁决接线</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#断桥-能力存在但没接线">断桥(能力存在但没接线)</a></li><li class="lvl-2"><a href="#接线-全-additive-fail-soft-逐字节回退">接线(全 additive · fail-soft · 逐字节回退)</a></li><li class="lvl-2"><a href="#门控">门控</a></li><li class="lvl-2"><a href="#抑制不变量-保留既有语义">抑制不变量(保留既有语义)</a></li><li class="lvl-2"><a href="#裁决">裁决</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-160-行为特征化并入误报收口裁决接线">[OPS-MAN-160] 行为特征化并入误报收口裁决接线<a class="anchor" href="#ops-man-160-行为特征化并入误报收口裁决接线" aria-label="锚点">#</a></h1>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p><code>characterizationSnapshot</code>(纯零 IO 行为特征化叶)能就地差分出「未覆盖文件上的<strong>静默行为漂移</strong>」,<code>falsePositiveFixGuard.finalize</code> 也早就接受 <code>ctx.silentBehaviorChanges</code>,但生产端从来没有任何代码把 baseline/current 验证快照喂给它 → 纯孤儿能力。本轮接线:<code>finalize</code> 在 <code>ctx.baseline &amp;&amp; ctx.current</code> 存在时就地差分静默漂移并入收口裁决;<code>agenticHarnessService</code> 把回归门(<code>bugfixRegressionGate</code>)已产出的 baseline/current 验证快照透传进 <code>finalize</code>。</p>
+<h2 id="断桥-能力存在但没接线">断桥(能力存在但没接线)<a class="anchor" href="#断桥-能力存在但没接线" aria-label="锚点">#</a></h2>
+<ul><li><strong>生产端</strong>:<code>characterizationSnapshot.diffBehavior(baseline, current, {coveredFiles}, env)</code> 逐步对比两份验证快照的 pass/summary 指纹,把「未被改动测试覆盖、pass 状态没变但输出内容漂移」的步骤归为 <code>silentChanges</code>(静默行为变化)。</li><li><strong>消费槽</strong>:<code>falsePositiveFixGuard.finalize(state, ctx, env)</code> 早就在 step-3 接受 <code>ctx.silentBehaviorChanges</code> 并入 <code>silent-behavior-change</code> 收口原因。</li><li><strong>缺的桥</strong>:没有任何生产代码采集 baseline/current 快照再喂给 finalize。回归门 <code>bugfixRegressionGate</code> 恰恰已经产出 <code>baseline</code>/<code>current</code> 两份快照,却只用于自身的红/绿判定,从未流向误报收口守卫。</li></ul>
+<h2 id="接线-全-additive-fail-soft-逐字节回退">接线(全 additive · fail-soft · 逐字节回退)<a class="anchor" href="#接线-全-additive-fail-soft-逐字节回退" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>falsePositiveFixGuard.finalize</code></strong>:step-3 优先用调用方预算的 <code>ctx.silentBehaviorChanges</code>;若未提供但给了 <code>ctx.baseline &amp;&amp; ctx.current</code>,则惰性 <code>require('./characterizationSnapshot')</code>,门开时就地 <code>captureBaseline</code> × 2 + <code>diffBehavior</code> 差分。<strong>coveredFiles 复用本守卫自己的 <code>_computeUncovered</code>(单一真源,不另造覆盖判定防漂移)</strong>。</li><li><strong><code>agenticHarnessService</code></strong>:在既有 <code>_fpfGuard.finalize(...)</code> 调用点,把 <code>regressionGateReport ? regressionGateReport.baseline/current : null</code> 透传进 ctx。</li></ol>
+<h2 id="门控">门控<a class="anchor" href="#门控" aria-label="锚点">#</a></h2>
+<p><code>KHY_FPF_CHARACTERIZATION</code>(flagRegistry,default-on)。</p>
+<ul><li>门关(env ∈ {0,false,off,no})/ 无 baseline+current 快照 / 差分抛错 → <code>silentBehaviorChanges</code> 恒 <code>[]</code> → 逐字节回退到接线前行为。纯叶 fail-soft,绝不破坏收口裁决。</li></ul>
+<h2 id="抑制不变量-保留既有语义">抑制不变量(保留既有语义)<a class="anchor" href="#抑制不变量-保留既有语义" aria-label="锚点">#</a></h2>
+<ul><li><strong>全覆盖</strong>:改动文件全部被 sibling 测试覆盖(<code>allCovered</code>)→ 归 coveredChanges 不算静默。</li><li><strong>仅测试步漂移</strong>:测试步天然视为已覆盖 → 不算静默。</li><li><strong>reproObserved</strong>(红→绿真复现闭环)→ 静默原因被抑制,verdict pass。</li><li><strong>调用方预算优先</strong>:已提供 <code>ctx.silentBehaviorChanges</code> 时不就地差分。</li></ul>
+<h2 id="裁决">裁决<a class="anchor" href="#裁决" aria-label="锚点">#</a></h2>
+<p><code>silent-behavior-change</code> 原因命中 → low tier <code>block</code> / 高 tier <code>caution</code>(沿用 finalize 既有 tier 分级)。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --test services/backend/tests/services/characterizationFpfWiring.test.js   # 10/10
+node --check services/backend/src/services/falsePositiveFixGuard.js
+node --check services/backend/src/services/agenticHarnessService.js</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-160] 行为特征化并入误报收口裁决接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

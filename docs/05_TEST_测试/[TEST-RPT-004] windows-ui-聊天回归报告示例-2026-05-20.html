@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows UI Chat 回归执行记录（示例） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>Windows UI Chat 回归执行记录（示例）</div>
+      <header class="hero reveal"><h1>Windows UI Chat 回归执行记录（示例）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#windows-ui-chat-回归执行记录-示例">Windows UI Chat 回归执行记录（示例）</a></li><li class="lvl-2"><a href="#1-基本信息">1. 基本信息</a></li><li class="lvl-2"><a href="#2-测试环境">2. 测试环境</a></li><li class="lvl-2"><a href="#3-用例执行结果">3. 用例执行结果</a></li><li class="lvl-2"><a href="#4-总结">4. 总结</a></li><li class="lvl-2"><a href="#5-失败项明细-如有">5. 失败项明细（如有）</a></li><li class="lvl-2"><a href="#6-回归后复测记录-可选">6. 回归后复测记录（可选）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: TEST-RPT-004 | 阶段: 测试 | 原路径: docs/指南/windows-ui-聊天回归报告示例-2026-05-20.md --&gt;</p>
+<h1 id="windows-ui-chat-回归执行记录-示例">Windows UI Chat 回归执行记录（示例）<a class="anchor" href="#windows-ui-chat-回归执行记录-示例" aria-label="锚点">#</a></h1>
+<blockquote><p>说明：本文件为示例，供测试同事参考填写格式。  <br>参考模板：<code>WINDOWS_UI_CHAT_REGRESSION_REPORT_TEMPLATE.md</code></p></blockquote>
+<h2 id="1-基本信息">1. 基本信息<a class="anchor" href="#1-基本信息" aria-label="锚点">#</a></h2>
+<ul><li>执行日期：2026-05-20</li><li>执行人：qa_demo</li><li>版本号（khy-os）：0.1.18</li><li>Git 提交（可选）：<code>&lt;填写实际提交SHA&gt;</code></li><li>备注：本次验证包含“思考窗流式输出 + 停止生成 + ArrowUp 防泄漏”相关改动。</li></ul>
+<h2 id="2-测试环境">2. 测试环境<a class="anchor" href="#2-测试环境" aria-label="锚点">#</a></h2>
+<ul><li>Windows 版本：Windows 11 23H2</li><li>浏览器与版本：Chrome 136.0.x / Edge 136.0.x</li><li>显示缩放：100%、125%、150%</li><li>分辨率：1920x1080</li><li>输入法：微软拼音</li><li>网络环境（本地/内网/外网）：本地 + 内网</li></ul>
+<h2 id="3-用例执行结果">3. 用例执行结果<a class="anchor" href="#3-用例执行结果" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>用例ID</th><th>用例名称</th><th>结果（PASS/FAIL）</th><th>现象摘要</th><th>证据（截图/录屏/日志路径）</th></tr></thead><tbody><tr><td>TC-01</td><td>ArrowUp / ArrowDown 历史泄漏防护</td><td>PASS</td><td>输入框为空时连续按上下键，无历史内容回填</td><td><code>evidence/2026-05-20/tc01-arrow-guard.mp4</code></td></tr><tr><td>TC-02</td><td>输入法回车安全（中文 IME）</td><td>PASS</td><td>组词回车仅上屏；组词结束后回车发送；Shift+Enter 换行正常</td><td><code>evidence/2026-05-20/tc02-ime-enter.mp4</code></td></tr><tr><td>TC-03</td><td>思考窗流式输出</td><td>PASS</td><td>思考窗出现状态/心跳/完成；回答逐步增长</td><td><code>evidence/2026-05-20/tc03-thinking-stream.mp4</code></td></tr><tr><td>TC-04</td><td>停止生成行为</td><td>PASS</td><td>点击“停止生成”后立即停止输出，不再自动回退继续生成</td><td><code>evidence/2026-05-20/tc04-stop-generation.mp4</code></td></tr><tr><td>TC-05</td><td>长文本换行与溢出</td><td>PASS</td><td>长路径/长 URL 自动换行，无横向撑爆</td><td><code>evidence/2026-05-20/tc05-wrap.png</code></td></tr><tr><td>TC-06</td><td>Windows 缩放下头部与导航稳定性</td><td>PASS</td><td>125%/150% 下头部无重叠，导航可用</td><td><code>evidence/2026-05-20/tc06-scale-layout.png</code></td></tr></tbody></table>
+<h2 id="4-总结">4. 总结<a class="anchor" href="#4-总结" aria-label="锚点">#</a></h2>
+<ul><li>通过数量：<code>6/6</code></li><li>阻塞问题数量：0</li><li>输入安全回归数量：0</li><li>是否允许发版（是/否）：是</li><li>结论说明：本次 Windows 回归覆盖项全部通过，可发版。</li></ul>
+<h2 id="5-失败项明细-如有">5. 失败项明细（如有）<a class="anchor" href="#5-失败项明细-如有" aria-label="锚点">#</a></h2>
+<p>本次无失败项。</p>
+<h2 id="6-回归后复测记录-可选">6. 回归后复测记录（可选）<a class="anchor" href="#6-回归后复测记录-可选" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>复测轮次</th><th>时间</th><th>修复版本/提交</th><th>结果</th><th>说明</th></tr></thead><tbody><tr><td>R1</td><td>2026-05-20 19:40</td><td><code>&lt;填写实际提交SHA&gt;</code></td><td>PASS</td><td>首轮已通过，无需二次复测</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-003] windows-ui-聊天回归报告模板.html"><div class="dir">← 上一篇</div><div class="ttl">Windows UI Chat 回归执行记录模板</div></a><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-005] windows-ui-聊天回归清单.html"><div class="dir">下一篇 →</div><div class="ttl">Windows UI Chat 回归检查清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-004] windows-ui-聊天回归报告示例-2026-05-20.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

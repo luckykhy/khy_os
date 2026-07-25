@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-151-缓存前缀击穿归因接线-promptprefixshape-cachewarning-repl">[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）</a></li><li class="lvl-2"><a href="#背景-能力存在但没接线">背景 — 「能力存在但没接线」</a></li><li class="lvl-2"><a href="#修改-全-additive-与既有装饰性-footer-同构">修改（全 additive，与既有装饰性 footer 同构）</a></li><li class="lvl-2"><a href="#不变量">不变量</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-151-缓存前缀击穿归因接线-promptprefixshape-cachewarning-repl">[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）<a class="anchor" href="#ops-man-151-缓存前缀击穿归因接线-promptprefixshape-cachewarning-repl" aria-label="锚点">#</a></h1>
+<h2 id="背景-能力存在但没接线">背景 — 「能力存在但没接线」<a class="anchor" href="#背景-能力存在但没接线" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/constants/promptPrefixShape.js</code> 是一枚<strong>完整实现且带契约测试</strong>的纯叶子<br>（<code>captureShape</code> / <code>compareShape</code> / <code>describeReasons</code> / <code>isPrefixShapeEnabled</code>，门控<br><code>KHY_CACHE_PREFIX_SHAPE</code> 默认开），对标 Reasonix <code>cache_shape.go</code>：把「provider 前缀缓存<br>命中率低」从一个数字变成<strong>可定位</strong>——直接告诉你「这一轮为什么没命中」（系统提示 / 工具集 /<br>工具顺序变了）。</p>
+<p>但它<strong>此前零消费者</strong>（<code>grep -rl promptPrefixShape src</code> 只命中自身与其测试），<code>flagRegistry</code><br>里 <code>KHY_CACHE_PREFIX_SHAPE</code> 亦是登记却无人读的孤儿门。既有 <code>cacheWarning.js</code> 只报一个百分比，<br>命中低时不知道是谁击穿了前缀——正是本叶子要补的洞。本轮把它接线。</p>
+<h2 id="修改-全-additive-与既有装饰性-footer-同构">修改（全 additive，与既有装饰性 footer 同构）<a class="anchor" href="#修改-全-additive-与既有装饰性-footer-同构" aria-label="锚点">#</a></h2>
+<ol><li><strong>capture（发送侧）</strong> — <code>aiGatewayGenerateMethod.js</code> 的 <code>finishResult</code> 终局（成功分支，</li></ol>
+<p><code>result.success === true</code>）对本轮实际发往 wire 的 <code>options.system</code> + <code>options.tools</code> 拍前缀<br>   快照，挂到 <code>result.prefixShape</code>。纯确定性哈希、零 IO、绝不抛；门控关 → <code>captureShape</code> 返<br>   <code>null</code> → 不挂字段（逐字节回退）。display-only，绝不影响生成/重试/内容。</p>
+<ol><li><strong>attribution helper（判定侧）</strong> — <code>cacheWarning.js</code> 新增 <code>prefixAttributionFor(input, env)</code>：</li></ol>
+<p>委派 <code>promptPrefixShape</code> 叶子，给定本轮 <code>curShape</code>（= <code>result.prefixShape</code>）与调用方持有的<br>   <code>prevShape</code>，产出「为什么没命中」的一行归因。首观 / 前缀未变 → <code>text:null</code>；门控关 / 无<br>   <code>curShape</code> / 任何错误 → <code>null</code>（逐字节 no-op）。纯无状态，调用方存 <code>shape</code> 作下轮 <code>prevShape</code>。</p>
+<ol><li><strong>display（消费侧）</strong> — <code>replSession.js</code> 缓存命中率警告块：新增进程作用域基线</li></ol>
+<p><code>_lastPrefixShape</code>；<strong>仅当命中率跌破阈值（已有 <code>cw.text</code> 警告）时</strong>才调<br>   <code>prefixAttributionFor</code> 并追加一行 <code>↳ 缓存前缀被击穿：…变了</code>。无低命中警告时归因属噪音，故<br>   不显示。每轮（无论是否警告）刷新 <code>_lastPrefixShape</code> 以供下轮趋势对比；无 shape → 保持不动。</p>
+<h2 id="不变量">不变量<a class="anchor" href="#不变量" aria-label="锚点">#</a></h2>
+<ol><li><strong>归因只在命中率低时出现</strong>——<code>display-only</code>，attribution 无低命中警告即噪音。</li><li><strong>门控关 = 逐字节回退</strong>：<code>KHY_CACHE_PREFIX_SHAPE=off</code> → 不挂 <code>result.prefixShape</code> →</li></ol>
+<p><code>prefixAttributionFor</code> 返 null → REPL 不打归因行；与本刀之前逐字节等价。</p>
+<ol><li><strong>纯确定性 + fail-soft</strong>：SHA-256 短哈希确定性；任何异常在每一层 catch 成安全空值，绝不</li></ol>
+<p>打断生成返回或回合。</p>
+<ol><li><strong>绝不回灌模型/碰权限/预算</strong>：只是给返回对象加一个诊断字段 + 打一行 dim 提示。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li><code>node --test tests/cli/cacheWarning.test.js tests/constants/promptPrefixShape.test.js</code> → 30/30</li></ul>
+<p>（cacheWarning 13→20：+7 覆盖 <code>prefixAttributionFor</code> 首观/系统提示变/前缀未变/门控关/坏输入</p>
+<ul><li>两条源级接线断言；promptPrefixShape 叶子 10 例既有）。</li></ul>
+<p>（aiGatewayGenerateMethod 3494 / replSession 9832）grandfathered 仅 additive。</p>
+<ul><li>我切片 <code>check-change-safety</code> 显式 positional → exit 0；<code>flag-registry</code> PASS；</li></ul>
+<p><code>leaf-contract</code> PASS；<code>agent-rules</code> 0 error（1 warn = replSession:3652 <code>no-opaque-status</code><br>  pre-existing 非我）；<code>maintainer:check</code> exit 0。</p>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>孤儿叶子（实现+测试俱全但零消费者）= 「能力存在没接线」最直接一类；判据 =</li></ol>
+<p><code>grep -rl &lt;leaf&gt; src</code> 只命中自身。</p>
+<ol><li>归因/诊断类信息只在<strong>触发条件</strong>（命中率低）下呈现，否则是噪音；把「一个数字」升级成</li></ol>
+<p>「可定位」才是叶子的价值。</p>
+<ol><li>capture 落在<strong>发送侧</strong>（system+tools 在 scope 的 <code>finishResult</code> chokepoint），compare/display</li></ol>
+<p>落在<strong>消费侧</strong>（REPL 持跨回合基线），中间靠 <code>result.prefixShape</code> 一个 additive 字段传递——<br>   不威胁 B3 外科手术式改动。</p>
+<p>不 commit（feat/0.1.104 / 1.0.0 里程碑同批）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.html"><div class="dir">下一篇 →</div><div class="ttl">OPS-MAN-152 交付门人类可读报告落盘接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-151] 缓存前缀击穿归因接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>
