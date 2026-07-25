@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-zoom · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-zoom<span class="sep">›</span>cli-anything-zoom</div>
+      <header class="hero reveal"><h1>cli-anything-zoom</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-zoom">cli-anything-zoom</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#auth">Auth</a></li><li class="lvl-3"><a href="#meeting">Meeting</a></li><li class="lvl-3"><a href="#participant">Participant</a></li><li class="lvl-3"><a href="#recording">Recording</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-zoom&quot;<br>description: &gt;-<br>  Command-line interface for Zoom - CLI harness for <strong>Zoom</strong> — manage meetings, participants, and recordings from the command line via t...</p>
+<hr>
+<h1 id="cli-anything-zoom">cli-anything-zoom<a class="anchor" href="#cli-anything-zoom" aria-label="锚点">#</a></h1>
+<p>CLI harness for <strong>Zoom</strong> — manage meetings, participants, and recordings from the command line via the Zoom REST API.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-zoom package:</p>
+<pre><code class="language-bash">pip install cli-anything-zoom</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>zoom must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-zoom --help
+
+# Start interactive REPL mode
+cli-anything-zoom
+
+# Create a new project
+cli-anything-zoom project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-zoom --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-zoom
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="auth">Auth<a class="anchor" href="#auth" aria-label="锚点">#</a></h3>
+<p>Authentication and OAuth2 setup.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>setup</code></td><td>Configure OAuth app credentials</td></tr><tr><td><code>login</code></td><td>Login via OAuth2 browser flow</td></tr><tr><td><code>status</code></td><td>Check authentication status</td></tr><tr><td><code>logout</code></td><td>Remove saved tokens</td></tr></tbody></table>
+<h3 id="meeting">Meeting<a class="anchor" href="#meeting" aria-label="锚点">#</a></h3>
+<p>Meeting management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>create</code></td><td>Create a new Zoom meeting</td></tr><tr><td><code>list</code></td><td>List meetings</td></tr><tr><td><code>info</code></td><td>Get meeting details</td></tr><tr><td><code>update</code></td><td>Update a meeting</td></tr><tr><td><code>delete</code></td><td>Delete a meeting</td></tr><tr><td><code>join</code></td><td>Open meeting join URL in browser</td></tr><tr><td><code>start</code></td><td>Open meeting start URL in browser (host only)</td></tr></tbody></table>
+<h3 id="participant">Participant<a class="anchor" href="#participant" aria-label="锚点">#</a></h3>
+<p>Participant management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add</code></td><td>Register a participant for a meeting</td></tr><tr><td><code>add-batch</code></td><td>Batch register participants from a CSV file</td></tr><tr><td><code>list</code></td><td>List registered participants</td></tr><tr><td><code>remove</code></td><td>Cancel a participant's registration</td></tr><tr><td><code>attended</code></td><td>List participants who attended a past meeting</td></tr></tbody></table>
+<h3 id="recording">Recording<a class="anchor" href="#recording" aria-label="锚点">#</a></h3>
+<p>Cloud recording management.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List cloud recordings</td></tr><tr><td><code>files</code></td><td>List recording files for a specific meeting</td></tr><tr><td><code>download</code></td><td>Download a recording file</td></tr><tr><td><code>delete</code></td><td>Delete all recordings for a meeting</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new zoom project file.</p>
+<pre><code class="language-bash">cli-anything-zoom project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-zoom --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-zoom
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-zoom project info -p project.json
+
+# JSON output for agents
+cli-anything-zoom --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-wiremock/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Overview</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zotero/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-zotero</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-zoom/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

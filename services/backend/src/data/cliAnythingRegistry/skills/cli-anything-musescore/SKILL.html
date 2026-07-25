@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuseScore CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-musescore<span class="sep">›</span>MuseScore CLI Skill</div>
+      <header class="hero reveal"><h1>MuseScore CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#musescore-cli-skill">MuseScore CLI Skill</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#commands">Commands</a></li><li class="lvl-3"><a href="#project-management">Project Management</a></li><li class="lvl-3"><a href="#transposition">Transposition</a></li><li class="lvl-3"><a href="#part-extraction">Part Extraction</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#instrument-management">Instrument Management</a></li><li class="lvl-3"><a href="#score-analysis">Score Analysis</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#supported-input-formats">Supported Input Formats</a></li><li class="lvl-2"><a href="#key-names-for-transposition">Key Names for Transposition</a></li><li class="lvl-2"><a href="#agent-guidance">Agent Guidance</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-musescore&quot;<br>display_name: MuseScore<br>version: 1.0.0<br>description: CLI for music notation — transpose, export PDF/audio/MIDI, extract parts, manage instruments<br>requires: MuseScore 4 (musescore.org)<br>entry_point: cli-anything-musescore<br>category: music</p>
+<hr>
+<h1 id="musescore-cli-skill">MuseScore CLI Skill<a class="anchor" href="#musescore-cli-skill" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Wraps MuseScore 4's <code>mscore</code> backend for music notation tasks: transposition, export to multiple formats (PDF, PNG, MP3, MIDI, MusicXML, Braille), part extraction, instrument management, and score analysis.</p>
+<h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
+<h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json project info -i score.mscz
+cli-anything-musescore --json project open -i score.mscz</code></pre>
+<h3 id="transposition">Transposition<a class="anchor" href="#transposition" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Transpose to a target key
+cli-anything-musescore --json transpose by-key -i score.mscz -o out.mscz --target-key &quot;C major&quot; --direction closest
+
+# Transpose by semitones
+cli-anything-musescore --json transpose by-interval -i score.mscz -o out.mscz --semitones 3
+
+# Diatonic transposition
+cli-anything-musescore --json transpose diatonic -i score.mscz -o out.mscz --steps 2</code></pre>
+<h3 id="part-extraction">Part Extraction<a class="anchor" href="#part-extraction" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json parts list -i score.mscz
+cli-anything-musescore --json parts extract -i score.mscz -o piano.mscz --part &quot;Piano&quot;
+cli-anything-musescore --json parts generate -i score.mscz -d ./parts/</code></pre>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json export pdf -i score.mscz -o score.pdf
+cli-anything-musescore --json export mp3 -i score.mscz -o score.mp3 --bitrate 192
+cli-anything-musescore --json export png -i score.mscz -o score.png --dpi 300
+cli-anything-musescore --json export midi -i score.mscz -o score.mid
+cli-anything-musescore --json export musicxml -i score.mscz -o score.musicxml
+cli-anything-musescore --json export braille -i score.mscz -o score.brf
+cli-anything-musescore --json export batch -i score.mscz -o score.pdf -o score.mid</code></pre>
+<h3 id="instrument-management">Instrument Management<a class="anchor" href="#instrument-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json instruments list -i score.mscz
+cli-anything-musescore --json instruments add -i score.mscz -o out.mscz --id keyboard.piano --name &quot;Piano&quot;
+cli-anything-musescore --json instruments remove -i score.mscz -o out.mscz --name &quot;Violin&quot;</code></pre>
+<h3 id="score-analysis">Score Analysis<a class="anchor" href="#score-analysis" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json media probe -i score.mscz
+cli-anything-musescore --json media stats -i score.mscz
+cli-anything-musescore --json media diff --reference a.mscz --compare b.mscz</code></pre>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-musescore --json session status
+cli-anything-musescore --json session undo
+cli-anything-musescore --json session redo
+cli-anything-musescore --json session history</code></pre>
+<h2 id="supported-input-formats">Supported Input Formats<a class="anchor" href="#supported-input-formats" aria-label="锚点">#</a></h2>
+<ul><li><code>.mscz</code> (MuseScore native)</li><li><code>.mxl</code> (compressed MusicXML)</li><li><code>.musicxml</code> / <code>.xml</code> (MusicXML)</li><li><code>.mid</code> / <code>.midi</code> (MIDI)</li></ul>
+<h2 id="key-names-for-transposition">Key Names for Transposition<a class="anchor" href="#key-names-for-transposition" aria-label="锚点">#</a></h2>
+<p>Major: Cb, Gb, Db, Ab, Eb, Bb, F, C, G, D, A, E, B, F#, C#<br>Minor: Ab, Eb, Bb, F, C, G, D, A, E, B, F#, C#, G#, D#, A#</p>
+<p>Accepted formats: &quot;C&quot;, &quot;C major&quot;, &quot;Am&quot;, &quot;A minor&quot;, &quot;Db major&quot;, &quot;F# minor&quot;</p>
+<h2 id="agent-guidance">Agent Guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
+<ul><li>Always use <code>--json</code> flag for machine-readable output</li><li>Verify exports with <code>export verify</code> after rendering</li><li>Use <code>media probe</code> to inspect an unknown score before operating on it</li><li>Transposition requires both <code>-i</code> (input) and <code>-o</code> (output)</li><li>Part names are case-insensitive for <code>parts extract</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mubu/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-mubu</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-n8n/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-n8n</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-musescore/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>账号池与多租户 — 深度指南（khy pool） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>账号池与多租户 — 深度指南（khy pool）</div>
+      <header class="hero reveal"><h1>账号池与多租户 — 深度指南（khy pool）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#账号池与多租户-深度指南-khy-pool">账号池与多租户 — 深度指南（`khy pool`）</a></li><li class="lvl-2"><a href="#一-两类-池-先分清">一、两类「池」先分清</a></li><li class="lvl-2"><a href="#二-khy-pool-全命令速查">二、`khy pool` 全命令速查</a></li><li class="lvl-2"><a href="#三-可导入的提供商矩阵">三、可导入的提供商矩阵</a></li><li class="lvl-2"><a href="#四-调度模式-三选一">四、调度模式：三选一</a></li><li class="lvl-2"><a href="#五-多租户-把网关分享出去">五、多租户：把网关分享出去</a></li><li class="lvl-2"><a href="#六-自动导入与冷却绕过">六、自动导入与冷却绕过</a></li><li class="lvl-2"><a href="#七-相关文档">七、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-045 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-045] 账号池与多租户-深度指南.md --&gt;</p>
+<h1 id="账号池与多租户-深度指南-khy-pool">账号池与多租户 — 深度指南（<code>khy pool</code>）<a class="anchor" href="#账号池与多租户-深度指南-khy-pool" aria-label="锚点">#</a></h1>
+<blockquote><p>本文讲清楚两件事：①如何把多个「订阅型登录账号」（Kiro / Cursor / Trae / Windsurf / Warp 等）汇成一个<strong>账号池</strong>，让 KHY 在它们之间自动调度；②如何用同一套池子对外<strong>铸造按客户隔离的访问令牌</strong>，把 KHY 网关当成<strong>多租户</strong>服务分享给他人。</p>
+<p>适用对象：想把多个 IDE/CLI 订阅额度集中复用、或想把网关分享给团队/客户的用户。命令入口统一为 <code>khy pool …</code>。</p></blockquote>
+<hr>
+<h2 id="一-两类-池-先分清">一、两类「池」先分清<a class="anchor" href="#一-两类-池-先分清" aria-label="锚点">#</a></h2>
+<p>KHY 网关的来源账号分两大类，账号池命令 <code>khy pool</code> 管理的是<strong>第一类</strong>：</p>
+<table><thead><tr><th>类别</th><th>例子</th><th>怎么进池</th><th>本文是否覆盖</th></tr></thead><tbody><tr><td><strong>登录态账号池</strong></td><td>Kiro、Cursor、Trae、Windsurf、Warp</td><td><code>khy pool import &lt;provider&gt;</code> 复用其本地登录态</td><td>✅ 本文主题</td></tr><tr><td>API-key 账号</td><td>DeepSeek、Qwen、GLM、OpenAI、Agnes 等</td><td><code>khy gateway config</code> 填 API Key</td><td>见 [OPS-MAN-032] 网关自定义 provider 配置</td></tr></tbody></table>
+<blockquote><p>同一个命令 <code>khy pool</code> 也能 <code>add &lt;provider&gt; [token]</code> 手动塞一个登录 token 进池（<code>source: manual</code>），但绝大多数人用 <code>import</code> 即可。</p></blockquote>
+<hr>
+<h2 id="二-khy-pool-全命令速查">二、<code>khy pool</code> 全命令速查<a class="anchor" href="#二-khy-pool-全命令速查" aria-label="锚点">#</a></h2>
+<blockquote><p>提示：<code>pool</code> 是子命令，完整形式是 <code>khy pool &lt;子命令&gt;</code>。无子命令时默认显示 <code>pool status</code>。</p></blockquote>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy pool list [provider]</code></td><td>列出池内账号（ID / 提供商 / 标签 / 状态 / token 预览 / 来源）；带 <code>provider</code> 只看某家</td></tr><tr><td><code>khy pool import &lt;provider&gt; [path]</code></td><td>从某提供商的本地登录态导入账号；不带 <code>path</code> 走交互选择</td></tr><tr><td><code>khy pool add &lt;provider&gt; [token]</code></td><td>手动新增一个登录 token（不带 token 会提示输入，并可顺手设为当前账号）</td></tr><tr><td>`khy pool use &lt;provider&gt; &lt;id\</td><td>label\</td></tr><tr><td>`khy pool delete &lt;id\</td><td>label\</td></tr><tr><td>`khy pool enable &lt;id\</td><td>label\</td></tr><tr><td>`khy pool disable &lt;id\</td><td>label\</td></tr><tr><td><code>khy pool status</code></td><td>账号池概览：总数、调度模式、熔断器、各提供商当前活跃账号</td></tr><tr><td><code>khy pool scheduling [mode]</code></td><td>查看 / 设置调度模式（不带 <code>mode</code> 只查看）</td></tr><tr><td><code>khy pool api [clientLabel]</code></td><td><strong>多租户</strong>：为一个客户铸造独立访问令牌（见第五节）</td></tr><tr><td><code>khy pool auto-import now [provider] [sourcePath]</code></td><td>强制触发一次自动导入（绕过冷却）</td></tr></tbody></table>
+<p>定位实现：<code>services/backend/src/cli/handlers/pool.js</code>（命令清单见文件头 <code>:3-14</code>）。</p>
+<hr>
+<h2 id="三-可导入的提供商矩阵">三、可导入的提供商矩阵<a class="anchor" href="#三-可导入的提供商矩阵" aria-label="锚点">#</a></h2>
+<p><code>import</code> / <code>add</code> 支持的提供商（<code>pool.js:23</code>）：</p>
+<table><thead><tr><th>你输入的 provider</th><th>实际归并到</th><th>说明</th></tr></thead><tbody><tr><td><code>windsurf</code></td><td>windsurf</td><td>Windsurf 登录态</td></tr><tr><td><code>kiro</code></td><td>kiro</td><td>Kiro（AWS CodeWhisperer）登录态</td></tr><tr><td><code>cursor</code></td><td>cursor</td><td>Cursor 登录态</td></tr><tr><td><code>trae</code></td><td>trae</td><td>Trae 登录态</td></tr><tr><td><code>warp</code></td><td>warp</td><td>Warp 登录态</td></tr><tr><td><code>antigravity</code>（别名 <code>ag</code>）</td><td><strong>trae</strong></td><td>归并到 trae（<code>pool.js:30-33</code>）</td></tr><tr><td><code>nirvana</code>（别名 <code>nir</code>/<code>nrv</code>）</td><td><strong>trae</strong></td><td>归并到 trae</td></tr></tbody></table>
+<blockquote><p>即 antigravity / nirvana 与 trae 共用同一条逻辑通道，导入后在 <code>trae</code> 名下统一管理。</p></blockquote>
+<p>示例：</p>
+<pre><code class="language-bash"># 从本地 Kiro 登录态导入（交互选择账号）
+khy pool import kiro
+
+# 指定来源文件导入
+khy pool import trae /path/to/trae-source.zip
+
+# 看池子整体状态
+khy pool status
+
+# 把某账号设为 cursor 的当前活跃账号
+khy pool use cursor my-cursor-label</code></pre>
+<hr>
+<h2 id="四-调度模式-三选一">四、调度模式：三选一<a class="anchor" href="#四-调度模式-三选一" aria-label="锚点">#</a></h2>
+<p>当某提供商池内有多个可用账号时，KHY 按<strong>调度模式</strong>决定先用哪个。合法值仅三种（<code>pool.js:24</code>，默认 <code>Balance</code>）：</p>
+<table><thead><tr><th>模式</th><th>语义</th><th>适合</th></tr></thead><tbody><tr><td><code>PerformanceFirst</code></td><td>性能优先：尽量用响应最快/额度最足的账号</td><td>追求速度、对账号轮换不敏感</td></tr><tr><td><code>Balance</code>（默认）</td><td>均衡：在可用账号间平衡分配，兼顾稳定与轮换</td><td>大多数人</td></tr><tr><td><code>CacheFirst</code></td><td>缓存优先：尽量复用同一账号以提高上下文/缓存命中</td><td>长对话、希望少切号</td></tr></tbody></table>
+<pre><code class="language-bash"># 查看当前模式与最大等待秒数
+khy pool scheduling
+
+# 切换为缓存优先
+khy pool scheduling CacheFirst</code></pre>
+<blockquote><p><code>pool scheduling</code>（不带参数）还会显示「最大等待秒数」——当所有账号都在冷却时，请求最多等待这么久再放弃。</p></blockquote>
+<hr>
+<h2 id="五-多租户-把网关分享出去">五、多租户：把网关分享出去<a class="anchor" href="#五-多租户-把网关分享出去" aria-label="锚点">#</a></h2>
+<p><code>khy pool api [clientLabel]</code> 是把 KHY 网关当成<strong>多租户服务</strong>对外提供的入口：它为一个「客户标签」铸造一枚<strong>独立的访问令牌</strong>，对方用这枚令牌连你的网关，与你自己的使用相互隔离。</p>
+<pre><code class="language-bash"># 为客户 alice 铸造一枚专属令牌
+khy pool api alice
+
+# 不带标签时，自动用「当前活跃账号」派生一个默认客户名
+khy pool api</code></pre>
+<p>机制（<code>pool.js:463-470</code> → <code>handlers/proxy.js handleProxyQuickstart</code>）：</p>
+<ol><li>取客户标签（不传则用 <code>&lt;provider&gt;-&lt;活跃账号&gt;</code> 派生，再不行用 <code>khy-client-&lt;时间戳&gt;</code>）。</li><li>调用代理快速接入，铸造一枚 <strong>per-client managed token</strong>。</li><li>该令牌持久化到多租户客户注册表 <strong><code>proxy_server_auth.json</code></strong>（位于数据主目录；旧版本回退 <code>~/.khy/proxy_server_auth.json</code>，见 <code>customerRegistry.js:7-12</code>）。</li><li>命令会打印对方的接入指引。</li></ol>
+<p>客户端接入时，网关同时接受两种鉴权头：</p>
+<pre><code class="language-http">Authorization: Bearer &lt;令牌&gt;
+# 或
+x-api-key: &lt;令牌&gt;</code></pre>
+<blockquote><p>多租户令牌与你本机的使用相互独立：你可以为不同客户铸造不同令牌、单独吊销，而不影响自己的账号池。</p></blockquote>
+<hr>
+<h2 id="六-自动导入与冷却绕过">六、自动导入与冷却绕过<a class="anchor" href="#六-自动导入与冷却绕过" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 强制立即导入一次（绕过冷却时间）
+khy pool auto-import now
+
+# 指定提供商 / 来源
+khy pool auto-import now trae
+khy pool auto-import now trae /path/to/source.zip</code></pre>
+<p>默认导入源优先级（<code>pool.js:489</code>）：</p>
+<ol><li>环境变量 <code>KHY_POOL_AUTO_IMPORT_SOURCE</code></li><li>其次 <code>~/Downloads/nirvana-source.zip</code></li></ol>
+<p><code>now</code>（等价 <code>run</code> / <code>force</code>）会<strong>绕过冷却时间</strong>强制触发一次导入，适合你刚更新了登录态、想立刻刷进池子的场景。</p>
+<hr>
+<h2 id="七-相关文档">七、相关文档<a class="anchor" href="#七-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-032] 网关-自定义provider配置-agnes —— API-key 类提供商与自定义 preset。</li><li>[OPS-MAN-003] ai-管理-访问与登录 —— 网关访问、登录与适配器总览。</li><li>[OPS-MAN-023] pip安装后-完整功能清单 —— 装完到底能干什么。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-044] 从使用入门到开发精通-开发者成长路线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-044] 从使用入门到开发精通：khy 开发者成长路线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-046] 旗舰特性目录-vault-notify-mesh-insights-forge-image2web.html"><div class="dir">下一篇 →</div><div class="ttl">旗舰特性目录 — vault / notify / mesh / insights / forge / image2web</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-045] 账号池与多租户-深度指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

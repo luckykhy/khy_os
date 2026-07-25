@@ -1,0 +1,107 @@
+{
+  "name": "spring-boot-mybatis",
+  "description": "Spring Boot + MyBatis (SSM) project with Maven",
+  "triggers": ["SSM", "Spring Boot", "MyBatis", "SpringBoot", "spring boot", "spring mybatis"],
+  "variables": {
+    "groupId": { "default": "com.example", "description": "Maven group ID" },
+    "artifactId": { "default": "demo", "description": "Project name / artifact ID" },
+    "javaVersion": { "default": "17", "description": "Java version" },
+    "springBootVersion": { "default": "3.2.5", "description": "Spring Boot version" },
+    "mybatisVersion": { "default": "3.0.3", "description": "MyBatis Spring Boot starter version" },
+    "mysqlVersion": { "default": "8.0.33", "description": "MySQL connector version" }
+  },
+  "directories": [
+    "src/main/java/{groupPath}",
+    "src/main/java/{groupPath}/controller",
+    "src/main/java/{groupPath}/service",
+    "src/main/java/{groupPath}/service/impl",
+    "src/main/java/{groupPath}/mapper",
+    "src/main/java/{groupPath}/entity",
+    "src/main/java/{groupPath}/config",
+    "src/main/resources",
+    "src/main/resources/mapper",
+    "src/main/resources/static",
+    "src/main/resources/templates",
+    "src/test/java/{groupPath}",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "pom.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n    <modelVersion>4.0.0</modelVersion>\n    <parent>\n        <groupId>org.springframework.boot</groupId>\n        <artifactId>spring-boot-starter-parent</artifactId>\n        <version>{springBootVersion}</version>\n        <relativePath/>\n    </parent>\n    <groupId>{groupId}</groupId>\n    <artifactId>{artifactId}</artifactId>\n    <version>0.0.1-SNAPSHOT</version>\n    <name>{artifactId}</name>\n    <description>Spring Boot + MyBatis project</description>\n    <properties>\n        <java.version>{javaVersion}</java.version>\n    </properties>\n    <dependencies>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-web</artifactId>\n        </dependency>\n        <dependency>\n            <groupId>org.mybatis.spring.boot</groupId>\n            <artifactId>mybatis-spring-boot-starter</artifactId>\n            <version>{mybatisVersion}</version>\n        </dependency>\n        <dependency>\n            <groupId>com.mysql</groupId>\n            <artifactId>mysql-connector-j</artifactId>\n            <version>{mysqlVersion}</version>\n            <scope>runtime</scope>\n        </dependency>\n        <dependency>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-test</artifactId>\n            <scope>test</scope>\n        </dependency>\n    </dependencies>\n    <build>\n        <plugins>\n            <plugin>\n                <groupId>org.springframework.boot</groupId>\n                <artifactId>spring-boot-maven-plugin</artifactId>\n            </plugin>\n        </plugins>\n    </build>\n</project>"
+    },
+    {
+      "path": "src/main/resources/application.yml",
+      "content": "server:\n  port: 8080\n\nspring:\n  datasource:\n    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/{artifactId}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true\n    username: root\n    password: root\n    driver-class-name: com.mysql.cj.jdbc.Driver\n\nmybatis:\n  mapper-locations: classpath:mapper/*.xml\n  type-aliases-package: {groupId}.entity\n  configuration:\n    map-underscore-to-camel-case: true\n    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl"
+    },
+    {
+      "path": "src/main/java/{groupPath}/Application.java",
+      "content": "package {groupId};\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\n\n@SpringBootApplication\npublic class Application {\n    public static void main(String[] args) {\n        SpringApplication.run(Application.class, args);\n    }\n}"
+    },
+    {
+      "path": "src/main/java/{groupPath}/config/MyBatisConfig.java",
+      "content": "package {groupId}.config;\n\nimport org.mybatis.spring.annotation.MapperScan;\nimport org.springframework.context.annotation.Configuration;\n\n@Configuration\n@MapperScan(\"{groupId}.mapper\")\npublic class MyBatisConfig {\n}"
+    },
+    {
+      "path": "src/main/java/{groupPath}/entity/User.java",
+      "content": "package {groupId}.entity;\n\npublic class User {\n    private Long id;\n    private String username;\n    private String email;\n\n    public Long getId() { return id; }\n    public void setId(Long id) { this.id = id; }\n    public String getUsername() { return username; }\n    public void setUsername(String username) { this.username = username; }\n    public String getEmail() { return email; }\n    public void setEmail(String email) { this.email = email; }\n}"
+    },
+    {
+      "path": "src/main/java/{groupPath}/mapper/UserMapper.java",
+      "content": "package {groupId}.mapper;\n\nimport {groupId}.entity.User;\nimport org.apache.ibatis.annotations.Mapper;\nimport java.util.List;\n\n@Mapper\npublic interface UserMapper {\n    List<User> findAll();\n    User findById(Long id);\n    int insert(User user);\n    int update(User user);\n    int deleteById(Long id);\n}"
+    },
+    {
+      "path": "src/main/resources/mapper/UserMapper.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE mapper PUBLIC \"-//mybatis.org//DTD Mapper 3.0//EN\"\n        \"http://mybatis.org/dtd/mybatis-3-mapper.dtd\">\n<mapper namespace=\"{groupId}.mapper.UserMapper\">\n    <resultMap id=\"UserResultMap\" type=\"{groupId}.entity.User\">\n        <id property=\"id\" column=\"id\"/>\n        <result property=\"username\" column=\"username\"/>\n        <result property=\"email\" column=\"email\"/>\n    </resultMap>\n\n    <select id=\"findAll\" resultMap=\"UserResultMap\">\n        SELECT id, username, email FROM user\n    </select>\n\n    <select id=\"findById\" resultMap=\"UserResultMap\" parameterType=\"long\">\n        SELECT id, username, email FROM user WHERE id = #{id}\n    </select>\n\n    <insert id=\"insert\" parameterType=\"{groupId}.entity.User\" useGeneratedKeys=\"true\" keyProperty=\"id\">\n        INSERT INTO user (username, email) VALUES (#{username}, #{email})\n    </insert>\n\n    <update id=\"update\" parameterType=\"{groupId}.entity.User\">\n        UPDATE user SET username = #{username}, email = #{email} WHERE id = #{id}\n    </update>\n\n    <delete id=\"deleteById\" parameterType=\"long\">\n        DELETE FROM user WHERE id = #{id}\n    </delete>\n</mapper>"
+    },
+    {
+      "path": "src/main/java/{groupPath}/service/UserService.java",
+      "content": "package {groupId}.service;\n\nimport {groupId}.entity.User;\nimport java.util.List;\n\npublic interface UserService {\n    List<User> findAll();\n    User findById(Long id);\n    User create(User user);\n    User update(User user);\n    boolean deleteById(Long id);\n}"
+    },
+    {
+      "path": "src/main/java/{groupPath}/service/impl/UserServiceImpl.java",
+      "content": "package {groupId}.service.impl;\n\nimport {groupId}.entity.User;\nimport {groupId}.mapper.UserMapper;\nimport {groupId}.service.UserService;\nimport org.springframework.stereotype.Service;\n\nimport java.util.List;\n\n@Service\npublic class UserServiceImpl implements UserService {\n    private final UserMapper userMapper;\n\n    public UserServiceImpl(UserMapper userMapper) {\n        this.userMapper = userMapper;\n    }\n\n    @Override\n    public List<User> findAll() {\n        return userMapper.findAll();\n    }\n\n    @Override\n    public User findById(Long id) {\n        return userMapper.findById(id);\n    }\n\n    @Override\n    public User create(User user) {\n        userMapper.insert(user);\n        return user;\n    }\n\n    @Override\n    public User update(User user) {\n        userMapper.update(user);\n        return user;\n    }\n\n    @Override\n    public boolean deleteById(Long id) {\n        return userMapper.deleteById(id) > 0;\n    }\n}"
+    },
+    {
+      "path": "src/main/java/{groupPath}/controller/UserController.java",
+      "content": "package {groupId}.controller;\n\nimport {groupId}.entity.User;\nimport {groupId}.service.UserService;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport java.util.List;\n\n@RestController\n@RequestMapping(\"/api/users\")\npublic class UserController {\n    private final UserService userService;\n\n    public UserController(UserService userService) {\n        this.userService = userService;\n    }\n\n    @GetMapping\n    public List<User> list() {\n        return userService.findAll();\n    }\n\n    @GetMapping(\"/{id}\")\n    public ResponseEntity<User> getById(@PathVariable Long id) {\n        User user = userService.findById(id);\n        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();\n    }\n\n    @PostMapping\n    public User create(@RequestBody User user) {\n        return userService.create(user);\n    }\n\n    @PutMapping(\"/{id}\")\n    public User update(@PathVariable Long id, @RequestBody User user) {\n        user.setId(id);\n        return userService.update(user);\n    }\n\n    @DeleteMapping(\"/{id}\")\n    public ResponseEntity<Void> delete(@PathVariable Long id) {\n        return userService.deleteById(id) ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();\n    }\n}"
+    },
+    {
+      "path": "src/test/java/{groupPath}/ApplicationTests.java",
+      "content": "package {groupId};\n\nimport org.junit.jupiter.api.Test;\nimport org.springframework.boot.test.context.SpringBootTest;\n\n@SpringBootTest\nclass ApplicationTests {\n    @Test\n    void contextLoads() {\n    }\n}"
+    },
+    {
+      "path": "sql/schema.sql",
+      "content": "CREATE DATABASE IF NOT EXISTS `{artifactId}` DEFAULT CHARACTER SET utf8mb4;\nUSE `{artifactId}`;\n\nCREATE TABLE IF NOT EXISTS `user` (\n    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,\n    `username` VARCHAR(50) NOT NULL,\n    `email` VARCHAR(100),\n    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "FROM maven:3.9-eclipse-temurin-{javaVersion} AS build\nWORKDIR /app\nCOPY pom.xml .\nRUN mvn dependency:go-offline -B\nCOPY src ./src\nRUN mvn package -DskipTests -B\n\nFROM eclipse-temurin:{javaVersion}-jre\nWORKDIR /app\nCOPY --from=build /app/target/*.jar app.jar\nEXPOSE 8080\nENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: '3.8'\nservices:\n  db:\n    image: mysql:8.0\n    environment:\n      MYSQL_ROOT_PASSWORD: root\n      MYSQL_DATABASE: {artifactId}\n    ports:\n      - \"3306:3306\"\n    volumes:\n      - db_data:/var/lib/mysql\n      - ./sql:/docker-entrypoint-initdb.d\n    healthcheck:\n      test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"localhost\"]\n      interval: 10s\n      timeout: 5s\n      retries: 5\n\n  app:\n    build: .\n    ports:\n      - \"8080:8080\"\n    environment:\n      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/{artifactId}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true\n      SPRING_DATASOURCE_USERNAME: root\n      SPRING_DATASOURCE_PASSWORD: root\n    depends_on:\n      db:\n        condition: service_healthy\n\nvolumes:\n  db_data:"
+    },
+    {
+      "path": ".dockerignore",
+      "content": "target/\n.git/\n.env\n*.iml\n.idea/"
+    },
+    {
+      "path": "unit_tests/UserServiceTest.java",
+      "content": "package {groupId}.service;\n\nimport {groupId}.entity.User;\nimport {groupId}.mapper.UserMapper;\nimport {groupId}.service.impl.UserServiceImpl;\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.util.Arrays;\nimport java.util.List;\n\nimport static org.junit.jupiter.api.Assertions.*;\nimport static org.mockito.Mockito.*;\n\n@ExtendWith(MockitoExtension.class)\nclass UserServiceTest {\n    @Mock\n    private UserMapper userMapper;\n\n    @InjectMocks\n    private UserServiceImpl userService;\n\n    private User testUser;\n\n    @BeforeEach\n    void setUp() {\n        testUser = new User();\n        testUser.setId(1L);\n        testUser.setUsername(\"testuser\");\n        testUser.setEmail(\"test@example.com\");\n    }\n\n    @Test\n    void findAll_returnsUserList() {\n        when(userMapper.findAll()).thenReturn(Arrays.asList(testUser));\n        List<User> users = userService.findAll();\n        assertEquals(1, users.size());\n        assertEquals(\"testuser\", users.get(0).getUsername());\n    }\n\n    @Test\n    void findById_returnsUser() {\n        when(userMapper.findById(1L)).thenReturn(testUser);\n        User found = userService.findById(1L);\n        assertNotNull(found);\n        assertEquals(\"testuser\", found.getUsername());\n    }\n\n    @Test\n    void create_insertsAndReturns() {\n        when(userMapper.insert(testUser)).thenReturn(1);\n        User created = userService.create(testUser);\n        assertEquals(\"testuser\", created.getUsername());\n        verify(userMapper).insert(testUser);\n    }\n\n    @Test\n    void deleteById_returnsTrueOnSuccess() {\n        when(userMapper.deleteById(1L)).thenReturn(1);\n        assertTrue(userService.deleteById(1L));\n    }\n\n    @Test\n    void deleteById_returnsFalseOnNotFound() {\n        when(userMapper.deleteById(99L)).thenReturn(0);\n        assertFalse(userService.deleteById(99L));\n    }\n}"
+    },
+    {
+      "path": "API_tests/UserApiTest.java",
+      "content": "package {groupId}.controller;\n\nimport org.junit.jupiter.api.Test;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\nimport org.springframework.boot.test.context.SpringBootTest;\nimport org.springframework.http.MediaType;\nimport org.springframework.test.web.servlet.MockMvc;\n\nimport static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\nimport static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;\n\n@SpringBootTest\n@AutoConfigureMockMvc\nclass UserApiTest {\n    @Autowired\n    private MockMvc mockMvc;\n\n    @Test\n    void createUser_returns200() throws Exception {\n        mockMvc.perform(post(\"/api/users\")\n                .contentType(MediaType.APPLICATION_JSON)\n                .content(\"{\\\"username\\\":\\\"alice\\\",\\\"email\\\":\\\"alice@example.com\\\"}\" ))\n                .andExpect(status().isOk())\n                .andExpect(jsonPath(\"$.username\").value(\"alice\"));\n    }\n\n    @Test\n    void listUsers_returnsArray() throws Exception {\n        mockMvc.perform(get(\"/api/users\"))\n                .andExpect(status().isOk())\n                .andExpect(jsonPath(\"$\").isArray());\n    }\n\n    @Test\n    void getUser_notFound_returns404() throws Exception {\n        mockMvc.perform(get(\"/api/users/99999\"))\n                .andExpect(status().isNotFound());\n    }\n}"
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/bin/bash\nset -e\necho \"=== Running unit tests ===\"\nmvn test -Dtest=\"**/service/*Test\" -pl . -B\necho \"\"\necho \"=== Running API tests ===\"\nmvn test -Dtest=\"**/controller/*Test\" -pl . -B\necho \"\"\necho \"All tests passed!\""
+    },
+    {
+      "path": "README.md",
+      "content": "# {artifactId}\n\nSpring Boot + MyBatis (SSM) REST API project.\n\n## Tech Stack\n- Java {javaVersion}, Spring Boot {springBootVersion}, MyBatis {mybatisVersion}\n- MySQL 8.0, Maven\n\n## Quick Start (Docker)\n```bash\ndocker compose up --build\n```\nApp runs at http://<HOST>:8080. MySQL starts automatically with schema initialized.\n\n## Manual Setup\n1. Install Java {javaVersion}+ and Maven 3.9+\n2. Start MySQL and create database: `source sql/schema.sql`\n3. Run: `mvn spring-boot:run`\n\n## API Endpoints\n| Method | URL | Description |\n|--------|-----|-------------|\n| GET | /api/users | List all users |\n| GET | /api/users/:id | Get user by ID |\n| POST | /api/users | Create user |\n| PUT | /api/users/:id | Update user |\n| DELETE | /api/users/:id | Delete user |\n\n## Testing\n```bash\nchmod +x run_tests.sh && ./run_tests.sh\n```\n\n## Project Structure\n```\nsrc/main/java/{groupPath}/\n  controller/   — REST endpoints\n  service/      — Business logic\n  mapper/       — MyBatis data access\n  entity/       — Data models\n  config/       — Configuration\nsql/            — Database schema\nunit_tests/     — Unit tests\nAPI_tests/      — API integration tests\n```"
+    }
+  ]
+}

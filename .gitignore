@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pnp.*
+.yarn/
+
+# Build outputs
+dist/
+build/
+*.iso
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Local data directories
+.khy/
+.khyquant/
+.khyquant-data/
+.khy-Trajectory/
+khy-Trajectory/
+/cache/
+
+# IDE / OS artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# Logs & temp
+logs/
+*.log
+tmp/
+.tmp/
+*.pid
+*.seed
+
+# Platform packages
+platform/packages/
+
+# Frontend build artifacts
+apps/ai-frontend/dist/
+apps/ai-frontend/.vite/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Git
+.gitignore.orig
+
+# Misc
+*.orig
+*.rej
+.cache/
+
+# Large binary archives (encrypted snapshot & prebuild)
+_source/khy-os-source.tar.gz.enc
+_bs3_prebuild.tar.gz

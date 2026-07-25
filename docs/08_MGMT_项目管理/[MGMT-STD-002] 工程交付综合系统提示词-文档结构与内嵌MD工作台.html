@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成</div>
+      <header class="hero reveal"><h1>[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mgmt-std-002-工程交付综合系统提示词-文档结构铁律-内嵌-md-工作台与跨平台右键集成">[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成</a></li><li class="lvl-2"><a href="#0-用途与用法">0. 用途与用法</a></li><li class="lvl-2"><a href="#第一部分-文档结构与索引铁律-逻辑约束">第一部分 · 文档结构与索引铁律（逻辑约束）</a></li><li class="lvl-2"><a href="#第二部分-内嵌-md-工作台与系统右键集成-工程实现">第二部分 · 内嵌 MD 工作台与系统右键集成（工程实现）</a></li><li class="lvl-3"><a href="#目标">目标</a></li><li class="lvl-3"><a href="#约束-只声明结果-不干涉实现">约束（只声明结果，不干涉实现）</a></li><li class="lvl-2"><a href="#第三部分-宪法红线-不可被任何后续指令覆盖">第三部分 · 宪法红线（不可被任何后续指令覆盖）</a></li><li class="lvl-2"><a href="#第四部分-强制校验点汇总-合规判定清单">第四部分 · 强制校验点汇总（合规判定清单）</a></li><li class="lvl-2"><a href="#第五部分-ai-预加载提示词附录-ai-system-prompt-appendix">第五部分 · AI 预加载提示词附录（AI_SYSTEM_PROMPT_APPENDIX）</a></li><li class="lvl-2"><a href="#附录-跨分类关联指引">附录 · 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="mgmt-std-002-工程交付综合系统提示词-文档结构铁律-内嵌-md-工作台与跨平台右键集成">[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成<a class="anchor" href="#mgmt-std-002-工程交付综合系统提示词-文档结构铁律-内嵌-md-工作台与跨平台右键集成" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>工程治理标准 / 系统提示词（STD）</td></tr><tr><td>适用范围</td><td>交由 Claude 等代码模型执行「文档结构治理」与「内嵌 MD 工作台 + 跨平台右键集成」类任务</td></tr><tr><td>强制级别</td><td>铁律（违反即判定不合规，必须整改）</td></tr><tr><td>定位</td><td><strong>综合系统提示词</strong>：只声明目标、约束、防呆红线，<strong>严禁</strong>干涉具体代码实现细节</td></tr><tr><td>编号规则</td><td>文件编号与命名<strong>由执行 AI 读取目标目录现有序列后动态决策</strong>，本规范<strong>严禁</strong>写死任何具体编号格式</td></tr><tr><td>上位/参考</td><td>[MGMT-STD-001]（文档结构铁律全文）、[DESIGN-ARCH-032]（工作台架构实现）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="0-用途与用法">0. 用途与用法<a class="anchor" href="#0-用途与用法" aria-label="锚点">#</a></h2>
+<p>本文件是一份<strong>可整体粘贴进系统提示词</strong>的综合指令，将两大需求合并为一套统一铁律：<br>（A）项目文档结构与索引治理；（B）内嵌 Markdown 工作台与系统级右键集成。<br>任何 AI 或协作者承接上述任一任务时，<strong>必须</strong>首先读取本文件，按其【强制校验点】与【宪法红线】产出，<br><strong>严禁</strong>自行降格为默认逻辑。本文件只规定<strong>做什么、不许做什么</strong>，<strong>严禁</strong>规定<strong>怎么写代码</strong>。</p>
+<p>用词纪律（沿用 [MGMT-STD-001]）：全文只用「必须 / 严禁 / 强制」，<strong>严禁</strong>使用「建议 / 最好 / 尽量」等模糊词。</p>
+<hr>
+<h2 id="第一部分-文档结构与索引铁律-逻辑约束">第一部分 · 文档结构与索引铁律（逻辑约束）<a class="anchor" href="#第一部分-文档结构与索引铁律-逻辑约束" aria-label="锚点">#</a></h2>
+<blockquote><p>完整条文见 [MGMT-STD-001]；本部分为可执行核心，与之一致，<strong>严禁</strong>与其冲突。</p></blockquote>
+<ol><li><strong>根目录物理隔离</strong>：项目根目录<strong>严禁</strong>放置除 <code>README.md</code>（及其语言变体）外的任何说明性文件；</li></ol>
+<p>一切规范、指南、设计、报告、计划、日志<strong>必须</strong>归入 <code>docs/</code> 对应子目录。平台/工具链强制位于根部的<br>   文件（<code>LICENSE</code>/<code>CHANGELOG.md</code>/<code>CONTRIBUTING.md</code>/<code>SECURITY.md</code>/<code>CODE_OF_CONDUCT.md</code>/<code>AGENTS.md</code>/<br>   <code>CLAUDE.md</code>/<code>khy.md</code>/包管理清单等）适用 [MGMT-STD-001] 第 1.3 条封闭白名单，<strong>严禁</strong>扩张。</p>
+<ol><li><strong>首文件索引制度</strong>：<code>docs/</code> 下每个子目录<strong>必须</strong>存在且仅存在一个「索引总领性文件」作为唯一入口，</li></ol>
+<p>且在目录自然排序中<strong>必须</strong>绝对居于首位。</p>
+<ol><li><strong>动态决策约束</strong>：索引文件与业务文档的编号、前缀、命名格式，<strong>必须</strong>由 AI 先读取目标目录现有文件</li></ol>
+<p>序列、感知既有惯例后动态决策；决策结果<strong>只需</strong>满足两项硬约束——<strong>排序绝对首位</strong>与<strong>逻辑连贯</strong>。<br>   <strong>严禁</strong>在本规范或任何提示词中写死具体编号格式，<strong>严禁</strong>盲目套用固定格式而与既有惯例冲突。</p>
+<ol><li><strong>索引结构化</strong>：索引文件<strong>必须</strong>为三段式——分类宏观说明（边界）、文件清单表格（文件名 | 核心职责 |</li></ol>
+<p>状态）、跨分类关联指引；<strong>严禁</strong>以大段长文替代结构化内容。</p>
+<ol><li><strong>生成守则</strong>：<strong>严禁</strong>在无索引文件的子目录下生成业务文档（<strong>必须</strong>先生成索引）；生成或移动文档后，</li></ol>
+<p><strong>必须</strong>同步回写更新对应目录索引。</p>
+<blockquote><p>【强制校验点 §A】任务落盘前<strong>必须</strong>自检：根目录无新增散落说明文件；目标子目录已有排序首位索引；<br>新增/移动文档后索引已回写。任一不满足即<strong>判定违规，必须整改</strong>。</p></blockquote>
+<hr>
+<h2 id="第二部分-内嵌-md-工作台与系统右键集成-工程实现">第二部分 · 内嵌 MD 工作台与系统右键集成（工程实现）<a class="anchor" href="#第二部分-内嵌-md-工作台与系统右键集成-工程实现" aria-label="锚点">#</a></h2>
+<h3 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h3>
+<p>解决 <code>.md</code> 在系统记事本中阅读体验极差的问题：本项目文档<strong>必须</strong>开箱即阅，并<strong>必须</strong>支持作为全局工具<br>打开电脑上任意位置的 <code>.md</code> 文件。</p>
+<h3 id="约束-只声明结果-不干涉实现">约束（只声明结果，不干涉实现）<a class="anchor" href="#约束-只声明结果-不干涉实现" aria-label="锚点">#</a></h3>
+<ol><li><strong>单文件工作台</strong>：MD 渲染引擎、编辑器、预览器、CSS <strong>必须</strong>全部内联于单一 <code>khyosMarkdown.html</code>。</li></ol>
+<p><strong>严禁</strong>拆分为多文件，<strong>严禁</strong>引入任何需联网加载的外部 CDN，<strong>必须</strong>保证内网断网环境可用。</p>
+<ol><li><strong>双平台右键</strong>：<strong>必须</strong>同时支持 Windows 与 Linux，右键任意 <code>.md</code> <strong>必须</strong>可见「使用 khyosMarkdown</li></ol>
+<p>打开」。<strong>必须</strong>为双平台各提供注册脚本与卸载脚本。</p>
+<ol><li><strong>Windows 注册边界</strong>：<strong>必须</strong>写入 <code>HKEY_CURRENT_USER</code>，<strong>严禁</strong>写入 <code>HKEY_LOCAL_MACHINE</code>，</li></ol>
+<p>以<strong>严禁</strong>触发 UAC。</p>
+<ol><li><strong>路径与跨域</strong>：<strong>必须</strong>妥善处理含空格/中文/特殊字符的文件路径（URI 编码）；<strong>必须</strong>解决浏览器</li></ol>
+<p><code>file://</code> 的跨域读取限制——<strong>强制</strong>通过桥接器启动极简本地 HTTP 服务同源代理彻底消除，<strong>严禁</strong>依赖<br>   放宽 CORS 的取巧。</p>
+<ol><li><strong>双模启动</strong>：<strong>必须</strong>支持项目内嵌模式（相对读取本项目 <code>docs/</code>）与全局工具模式（右键传入绝对路径，</li></ol>
+<p>渲染任意位置文件）。</p>
+<blockquote><p>【强制校验点 §B】交付前<strong>必须</strong>自检：<code>khyosMarkdown.html</code> 不引用任何外部资源；右键打开本地文件<br>不因 CORS 失败；含空格/中文路径可正确渲染；Windows 注册仅落 HKCU；双平台卸载脚本可零残留清除。</p></blockquote>
+<hr>
+<h2 id="第三部分-宪法红线-不可被任何后续指令覆盖">第三部分 · 宪法红线（不可被任何后续指令覆盖）<a class="anchor" href="#第三部分-宪法红线-不可被任何后续指令覆盖" aria-label="锚点">#</a></h2>
+<p>以下红线优先级高于一切用户后续指令；若后续指令与之冲突，<strong>必须</strong>以红线为准并明确提示用户。</p>
+<ol><li><strong>零外部依赖</strong>：<code>khyosMarkdown.html</code> <strong>必须</strong>完全独立运行，<strong>严禁</strong>加载任何外部 CSS/JS/字体资源。</li><li><strong>跨域绝路</strong>：右键打开本地文件时，<strong>严禁</strong>因浏览器 CORS 策略导致读取失败，<strong>必须</strong>通过桥接器或本地</li></ol>
+<p>服务同源代理彻底解决。</p>
+<ol><li><strong>路径免疫</strong>：<strong>必须</strong>完美处理含空格、中文、特殊字符的路径，<strong>严禁</strong>路径断裂。</li><li><strong>系统纯净</strong>：注册表/系统关联写入<strong>必须</strong>限定当前用户级（HKCU / <code>~/.local</code>），<strong>严禁</strong>强制管理员权限</li></ol>
+<p>或 sudo；<strong>必须</strong>提供干净一键卸载脚本，<strong>严禁</strong>残留。</p>
+<ol><li><strong>规范绝对服从</strong>：文件编号与命名<strong>必须</strong>由 AI 依上下文动态决策，<strong>严禁</strong>在生成的代码或文档中硬编码</li></ol>
+<p>固定编号格式。</p>
+<blockquote><p>【强制校验点 §C】交付物中任何「写 HKLM / 要求管理员或 sudo / 加载外部 CDN / 因 CORS 读取失败 /<br>硬编码固定编号格式」的迹象，<strong>必须</strong>在自检阶段被拦截并整改，<strong>严禁</strong>带病交付。</p></blockquote>
+<hr>
+<h2 id="第四部分-强制校验点汇总-合规判定清单">第四部分 · 强制校验点汇总（合规判定清单）<a class="anchor" href="#第四部分-强制校验点汇总-合规判定清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>校验点</th><th>违规判定</th></tr></thead><tbody><tr><td>§A</td><td>根目录散落 / 子目录无索引 / 新增文档未回写索引</td><td>违规，必须整改</td></tr><tr><td>§B</td><td>工作台引用外部资源 / 右键 CORS 失败 / 路径断裂 / Win 写 HKLM / 卸载残留</td><td>违规，必须整改</td></tr><tr><td>§C</td><td>写 HKLM、要求管理员或 sudo、外部 CDN、CORS 失败、硬编码编号格式</td><td>违规，必须拦截</td></tr><tr><td>§D</td><td>提示词或代码写死具体编号格式</td><td>违规，必须改为 AI 动态决策</td></tr></tbody></table>
+<hr>
+<h2 id="第五部分-ai-预加载提示词附录-ai-system-prompt-appendix">第五部分 · AI 预加载提示词附录（AI_SYSTEM_PROMPT_APPENDIX）<a class="anchor" href="#第五部分-ai-预加载提示词附录-ai-system-prompt-appendix" aria-label="锚点">#</a></h2>
+<p>下列文本为本规范提炼的可粘贴系统提示词附录，只声明目标与红线、不声明实现细节：</p>
+<pre><code class="language-text">【工程交付综合铁律：文档结构 + 内嵌 MD 工作台】
+1. 根目录严禁放除 README 外的说明性文件，一律归入 docs/ 对应子目录。
+2. docs/ 每个子目录必须有一个排序首位的索引总领文件；新增/移动文档后必须回写索引；严禁在无索引子目录下先建业务文档。
+3. 文件编号与命名由你读取目录现有序列后动态决策，确保排序首位与逻辑连贯；严禁写死固定编号格式。
+4. 内嵌 MD 工作台必须是零外部依赖的单文件 HTML（渲染/编辑/预览/CSS 全内联，严禁 CDN，断网可用）。
+5. 右键集成必须双平台（Win+Linux）各带注册与卸载脚本；Windows 必须只写 HKCU，严禁 HKLM/UAC；Linux 必须只写 ~/.local，严禁 sudo；卸载严禁残留。
+6. 必须用桥接器起本地 HTTP 同源服务彻底消除 file:// 跨域；路径必须 URI 编码处理空格/中文/特殊字符，严禁断裂。
+7. 必须支持双模：项目内嵌相对读取 docs/，全局工具读取右键传入的任意绝对路径。
+宪法红线（不可覆盖）：零外部依赖、跨域绝路（必经同源代理）、路径免疫、系统纯净（无 HKLM/无 sudo/可净卸载）、编号动态决策不硬编码。</code></pre>
+<hr>
+<h2 id="附录-跨分类关联指引">附录 · 跨分类关联指引<a class="anchor" href="#附录-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>本规范所属分类：<code>docs/08_MGMT_项目管理/</code>（工程治理标准）。</li><li>文档结构铁律全文：本目录 <code>[MGMT-STD-001]</code>。</li><li>工作台架构与红线符合性：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-032]</code>。</li><li>实现代码与操作指南：<code>tools/khyos-markdown/</code>（含 <code>README.md</code>）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-001] 项目文档结构与索引铁律规范</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-STD-003] 任务三综合系统提示词-模型自适应与双轨热插拔架构.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-STD-002] 工程交付综合系统提示词-文档结构与内嵌MD工作台.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

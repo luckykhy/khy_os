@@ -1,0 +1,19 @@
+{
+  "id": "apig",
+  "kind": "concept",
+  "name": "API Gateway",
+  "category": "architecture",
+  "triggers": ["APIG", "API Gateway", "API 网关", "网关"],
+  "summary": "API 网关：所有客户端请求的统一入口，集中处理路由、认证鉴权、限流、熔断、聚合与协议转换，让后端服务专注业务。",
+  "whenToUse": [
+    "微服务架构需统一入口与横切关注点(认证/限流/日志)。",
+    "对外暴露统一 API，隐藏内部服务拓扑。"
+  ],
+  "antiPatterns": [
+    "网关里写业务逻辑，变成单点上帝服务。",
+    "缺限流/熔断，网关成为级联故障放大器。",
+    "把 BFF 的端特化聚合都压进通用网关。"
+  ],
+  "minimalSkeleton": "Gateway: 路由 + 认证 + 限流 + 熔断\n→ 转发到后端服务\n横切关注点集中，业务下沉到服务",
+  "relatedArchetypes": []
+}

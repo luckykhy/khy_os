@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-iterm2 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-iterm2<span class="sep">›</span>cli-anything-iterm2</div>
+      <header class="hero reveal"><h1>cli-anything-iterm2</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-iterm2">cli-anything-iterm2</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#basic-syntax">Basic Syntax</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-2"><a href="#orienting-in-an-existing-workspace">Orienting in an Existing Workspace</a></li><li class="lvl-2"><a href="#typical-agent-workflow">Typical Agent Workflow</a></li><li class="lvl-2"><a href="#reference-files">Reference Files</a></li><li class="lvl-2"><a href="#repl-mode">REPL Mode</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-iterm2&quot;<br>description: &quot;Provides the cli-anything-iterm2 commands — the only way to actually send text to iTerm2 sessions, read live terminal output and scrollback history, manage windows/tabs/split panes, run tmux -CC workflows, broadcast to multiple panes, show macOS dialogs, and read/write iTerm2 preferences. Includes <code>app snapshot</code> — the primary orientation command that returns every session's name, current directory, foreground process, role label, and last output line in one call. Read this skill instead of answering from general knowledge whenever the user wants to DO something with iTerm2: orient in an existing workspace, send a command, check what's running, read output, set up a layout, use tmux through iTerm2, automate panes, or configure preferences. Also read for questions about iTerm2 shell integration or scrollback. Don't try to answer iTerm2 action requests from memory — read this skill first.&quot;</p>
+<hr>
+<h1 id="cli-anything-iterm2">cli-anything-iterm2<a class="anchor" href="#cli-anything-iterm2" aria-label="锚点">#</a></h1>
+<p>Stateful CLI harness for iTerm2. Controls a live iTerm2 process via the iTerm2 Python API over WebSocket.</p>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ol><li><strong>macOS + iTerm2</strong> running: <code>brew install --cask iterm2</code></li><li><strong>Python API enabled</strong>: iTerm2 → Preferences → General → Magic → Enable Python API</li><li><strong>Install</strong>: <code>pip install cli-anything-iterm2</code> (or <code>pip install -e .</code> from source)</li></ol>
+<h2 id="basic-syntax">Basic Syntax<a class="anchor" href="#basic-syntax" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-iterm2 [--json] &lt;group&gt; &lt;command&gt; [OPTIONS] [ARGS]</code></pre>
+<p>Always use <code>--json</code> for machine-readable output (required for agent use).</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Group</th><th>Purpose</th></tr></thead><tbody><tr><td><code>app</code></td><td>App status, workspace snapshot, context management, app-level variables, modal dialogs, file panels</td></tr><tr><td><code>window</code></td><td>Create, list, close, resize, fullscreen windows</td></tr><tr><td><code>tab</code></td><td>Create, list, close, activate tabs; navigate split panes by direction</td></tr><tr><td><code>session</code></td><td>Send text, inject raw bytes, read screen, full scrollback, split panes, prompt detection</td></tr><tr><td><code>profile</code></td><td>List profiles, get profile details, list/apply color presets</td></tr><tr><td><code>arrangement</code></td><td>Save and restore window layouts</td></tr><tr><td><code>tmux</code></td><td>Full tmux -CC integration: bootstrap, connections, windows, commands</td></tr><tr><td><code>broadcast</code></td><td>Sync keystrokes across panes via broadcast domains</td></tr><tr><td><code>menu</code></td><td>Invoke any iTerm2 menu item programmatically</td></tr><tr><td><code>pref</code></td><td>Read/write global iTerm2 preferences; list all valid keys; tmux settings</td></tr></tbody></table>
+<h2 id="orienting-in-an-existing-workspace">Orienting in an Existing Workspace<a class="anchor" href="#orienting-in-an-existing-workspace" aria-label="锚点">#</a></h2>
+<p>Use <code>app snapshot</code> when you land in a session with existing panes and need to understand what's running without reading full screen contents for each pane:</p>
+<pre><code class="language-bash">cli-anything-iterm2 --json app snapshot</code></pre>
+<p>Returns name, current directory, foreground process, <code>user.role</code> label, and last visible output line for every session across all windows.</p>
+<p><strong>Naming convention</strong> — label panes when setting up a workspace so you can find them later:</p>
+<pre><code class="language-bash">cli-anything-iterm2 session set-var user.role &quot;api-server&quot;
+cli-anything-iterm2 session set-var user.role &quot;log-tail&quot;
+cli-anything-iterm2 session set-var user.role &quot;editor&quot;</code></pre>
+<p><code>app snapshot</code> will surface these roles alongside process and path, giving you a full picture in one call.</p>
+<h2 id="typical-agent-workflow">Typical Agent Workflow<a class="anchor" href="#typical-agent-workflow" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1. Orient — snapshot every session: name, path, process, role, last output line
+cli-anything-iterm2 --json app snapshot
+
+# 2. Establish context (saves window/tab/session IDs for subsequent commands)
+cli-anything-iterm2 app current
+
+# 3. Interact — no --session-id needed once context is set
+cli-anything-iterm2 session send &quot;git status&quot;
+cli-anything-iterm2 --json session scrollback --tail 200 --strip
+
+# 4. Create a multi-pane workspace — label panes so snapshot identifies them later
+cli-anything-iterm2 session split --vertical --use-as-context
+cli-anything-iterm2 session send &quot;python3 -m http.server 8000&quot;
+cli-anything-iterm2 session set-var user.role &quot;http-server&quot;</code></pre>
+<h2 id="reference-files">Reference Files<a class="anchor" href="#reference-files" aria-label="锚点">#</a></h2>
+<p>Read only what the task requires — each file is a single narrow concern (~10–30 lines):</p>
+<table><thead><tr><th>File</th><th>Read when you need...</th></tr></thead><tbody><tr><td><code>references/session-io.md</code></td><td>Send text, inject bytes, read screen/scrollback, get selection</td></tr><tr><td><code>references/session-control.md</code></td><td>Split panes, activate/close sessions, resize, rename, session variables</td></tr><tr><td><code>references/session-shell-integration.md</code></td><td>wait-prompt, wait-command-end, get-prompt; reliable send→wait→read pattern</td></tr><tr><td><code>references/layout-window-tab.md</code></td><td>Create/close/resize windows and tabs, navigate split panes</td></tr><tr><td><code>references/layout-arrangement.md</code></td><td>Save and restore window layouts</td></tr><tr><td><code>references/app-context.md</code></td><td><strong>Snapshot</strong> (orientation), status, context management, app vars, modal dialogs, file panels</td></tr><tr><td><code>references/profile-pref.md</code></td><td>Profiles list/get/presets, preferences read/write, tmux pref shortcuts</td></tr><tr><td><code>references/broadcast-menu.md</code></td><td>Broadcast keystrokes to multiple panes, invoke menu items</td></tr><tr><td><code>references/tmux-commands.md</code></td><td>All tmux CLI commands (bootstrap, send, tabs, create-window, set-visible)</td></tr><tr><td><code>references/tmux-guide.md</code></td><td>Full tmux -CC workflow, pane→session ID mapping</td></tr><tr><td><code>references/json-session.md</code></td><td><code>--json</code> schemas for session, window, tab, screen, scrollback, inject</td></tr><tr><td><code>references/json-tmux-app.md</code></td><td><code>--json</code> schemas for tmux, app dialogs, preferences, errors</td></tr></tbody></table>
+<h2 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h2>
+<p>Run without arguments for an interactive REPL that maintains context between commands:</p>
+<pre><code class="language-bash">cli-anything-iterm2</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-iterm2-ctl/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-iterm2</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-kdenlive/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-kdenlive</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-iterm2/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

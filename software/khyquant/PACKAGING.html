@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY-Quant pip 打包说明 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>software<span class="sep">›</span>khyquant<span class="sep">›</span>KHY-Quant pip 打包说明</div>
+      <header class="hero reveal"><h1>KHY-Quant pip 打包说明</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-quant-pip-打包说明">KHY-Quant pip 打包说明</a></li><li class="lvl-2"><a href="#安装方式">安装方式</a></li><li class="lvl-2"><a href="#pip-包中包含的文件">pip 包中包含的文件</a></li><li class="lvl-2"><a href="#pip-打包时排除的文件">pip 打包时排除的文件</a></li><li class="lvl-2"><a href="#首次运行自动初始化">首次运行自动初始化</a></li><li class="lvl-2"><a href="#源码可读性保证">源码可读性保证</a></li><li class="lvl-2"><a href="#与-khy-os-的关系">与 khy-os 的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-quant-pip-打包说明">KHY-Quant pip 打包说明<a class="anchor" href="#khy-quant-pip-打包说明" aria-label="锚点">#</a></h1>
+<h2 id="安装方式">安装方式<a class="anchor" href="#安装方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 独立安装
+pip install khy-quant
+
+# 作为 khy-os 插件安装
+pip install khy-os[quant]
+
+# 带数据分析依赖
+pip install khy-quant[data]
+
+# 带机器学习依赖
+pip install khy-quant[ml]
+
+# 全部可选依赖
+pip install khy-quant[full]</code></pre>
+<h2 id="pip-包中包含的文件">pip 包中包含的文件<a class="anchor" href="#pip-包中包含的文件" aria-label="锚点">#</a></h2>
+<p>安装后源码齐全，用户可直接阅读和学习。</p>
+<table><thead><tr><th>目录</th><th>内容</th><th>说明</th></tr></thead><tbody><tr><td><code>services/</code></td><td>43 个 JS 服务 + 5 个 Python 数据源脚本</td><td>数据源、行情、策略、交易、回测引擎</td></tr><tr><td><code>routes/</code></td><td>20 个 Express 路由</td><td>REST API 端点</td></tr><tr><td><code>models/</code></td><td>11 个 Sequelize 模型</td><td>数据库表定义</td></tr><tr><td><code>controllers/</code></td><td>3 个控制器</td><td>行情、综合数据、合约管理</td></tr><tr><td><code>indicators/</code></td><td>技术指标计算</td><td>benchmark、fastIndicators</td></tr><tr><td><code>handlers/</code></td><td>CLI 数据处理</td><td>data.js 命令处理器</td></tr><tr><td><code>middleware/</code></td><td>认证中间件 shim</td><td>转发到 @khy/shared</td></tr><tr><td><code>config/</code></td><td>配置 shim</td><td>数据库、参考价格</td></tr><tr><td><code>utils/</code></td><td>工具 shim</td><td>日志、Python 路径</td></tr><tr><td><code>tools/</code></td><td>平台工具</td><td>platformUtils</td></tr><tr><td><code>ml/</code></td><td>ML 训练脚本</td><td><em>.py、</em>.yaml 训练管道</td></tr><tr><td><code>frontend/dist/</code></td><td>前端构建产物</td><td>Vue.js 交易界面（可选）</td></tr><tr><td><code>frontend/src/</code></td><td>前端源码</td><td>Vue 组件源码（供学习）</td></tr><tr><td><code>backend/</code></td><td>平台后端</td><td>Express 服务器、CLI、AI 网关</td></tr><tr><td><code>packages/shared/</code></td><td>@khy/shared</td><td>共享模型、中间件、工具</td></tr></tbody></table>
+<h2 id="pip-打包时排除的文件">pip 打包时排除的文件<a class="anchor" href="#pip-打包时排除的文件" aria-label="锚点">#</a></h2>
+<p>以下文件/目录<strong>不会</strong>进入 pip 包，需要在运行时自动生成或按需下载：</p>
+<table><thead><tr><th>排除项</th><th>原因</th></tr></thead><tbody><tr><td><code>node_modules/</code></td><td>npm 依赖，首次运行时 <code>npm install</code> 自动安装</td></tr><tr><td><code>frontend/android/</code></td><td>Android 构建产物（Capacitor），仅移动端开发需要</td></tr><tr><td><code>frontend/android-sdk/</code></td><td>Android SDK，仅移动端开发需要</td></tr><tr><td><code>ml/models/</code></td><td>训练好的模型文件（*.joblib），体积大，按需训练</td></tr><tr><td><code>ml/data/</code></td><td>ML 训练数据集，体积大，按需下载</td></tr><tr><td><code>backend/data/</code></td><td>运行时数据目录，启动后自动创建</td></tr><tr><td><code>backend/logs/</code></td><td>日志文件，运行时生成</td></tr><tr><td><code>backend/temp/</code></td><td>临时文件目录</td></tr><tr><td><code>*.db</code> / <code>*.sqlite*</code></td><td>数据库文件，首次运行 seed 脚本自动创建</td></tr><tr><td><code>*.log</code></td><td>日志文件</td></tr><tr><td><code>*.joblib</code></td><td>序列化模型文件</td></tr><tr><td><code>.env</code> / <code>.env.local</code></td><td>环境配置，首次运行自动生成（含随机 JWT 密钥）</td></tr><tr><td><code>*.iso</code> / <code>*.img</code></td><td>系统镜像文件</td></tr><tr><td><code>*.gguf</code> / <code>*.safetensors</code></td><td>LLM 模型权重文件</td></tr><tr><td><code>*.so</code> / <code>*.dylib</code></td><td>原生共享库，按平台编译</td></tr><tr><td><code>llama-cpp/</code> / <code>ollama-runner/</code></td><td>本地推理引擎二进制，按需下载</td></tr><tr><td><code>__pycache__/</code></td><td>Python 字节码缓存</td></tr><tr><td><code>.git/</code></td><td>版本控制目录</td></tr></tbody></table>
+<h2 id="首次运行自动初始化">首次运行自动初始化<a class="anchor" href="#首次运行自动初始化" aria-label="锚点">#</a></h2>
+<p><code>pip install</code> 后首次运行 <code>khyquant</code>，bootstrap 会自动完成：</p>
+<ol><li><strong>npm install</strong> — 安装 Node.js 依赖（约 2-5 分钟）</li><li><strong>生成 .env</strong> — 自动生成随机 JWT 密钥和默认配置</li><li><strong>初始化数据库</strong> — 运行 seed 脚本创建表和基础数据（SQLite 零配置）</li><li><strong>注册应用</strong> — 写入 <code>~/.khyquant/apps/khyquant.json</code></li></ol>
+<p>后续启动会跳过已完成的步骤。</p>
+<h2 id="源码可读性保证">源码可读性保证<a class="anchor" href="#源码可读性保证" aria-label="锚点">#</a></h2>
+<p>本包固定为<strong>非混淆模式</strong>打包：</p>
+<ul><li>全部 JS 源码保持原始可读格式</li><li>全部 Python 源码保留（.pyc 仅为加速，不删除 .py）</li><li>前端 Vue 组件源码包含（frontend/src/）</li><li>注释和文档字符串完整保留</li></ul>
+<h2 id="与-khy-os-的关系">与 khy-os 的关系<a class="anchor" href="#与-khy-os-的关系" aria-label="锚点">#</a></h2>
+<pre><code>pip install khy-os          # 平台（已内置 khyquant）
+pip install khy-os[quant]   # 平台 + 独立量化包（可升级）
+pip install khy-quant       # 仅量化应用（自带精简后端）</code></pre>
+<p>当 khy-os 和 khy-quant 同时安装时，khy-quant 的 CLI 优先使用 khy-os 的后端，<br>避免重复。</p>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="software/khyquant/PACKAGING.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

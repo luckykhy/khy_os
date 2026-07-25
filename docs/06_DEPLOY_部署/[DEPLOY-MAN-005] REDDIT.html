@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reddit 文案草稿 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>Reddit 文案草稿</div>
+      <header class="hero reveal"><h1>Reddit 文案草稿</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#reddit-文案草稿">Reddit 文案草稿</a></li><li class="lvl-2"><a href="#r-programming">r/programming</a></li><li class="lvl-2"><a href="#r-localllama">r/LocalLLaMA</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="reddit-文案草稿">Reddit 文案草稿<a class="anchor" href="#reddit-文案草稿" aria-label="锚点">#</a></h1>
+<p>发到两个 sub，<strong>错开时间</strong>（不要在同一分钟）。先读每个 sub 的规则——<br>有些要求打 flair，或在特定日子禁止 Show-and-Tell 类帖子。</p>
+<hr>
+<h2 id="r-programming">r/programming<a class="anchor" href="#r-programming" aria-label="锚点">#</a></h2>
+<p><strong>标题：</strong> <code>khy: a one-person AI-native OS — hand-written C kernel + a Claude-Code-class agent + a 16-backend AI gateway, in one pip install</code></p>
+<p><strong>正文：</strong></p>
+<p>我基本是独自在做 khy：一次把 AI 原生计算机的每一层，塞进一个可安装的<br>仓库里的尝试。</p>
+<ul><li><strong>内核（C）：</strong> 抢占式调度器、按需分页、写时复制 <code>fork</code>、POSIX 风格</li></ul>
+<p>信号、管道、每进程 fd 表、ELF + PE 双加载器。能在 QEMU 下启动。<br>  实验性——下一步是真正的键盘 stdin + 块设备持久化。</p>
+<ul><li><strong>智能体 CLI：</strong> 流式 Ink TUI、带结构化结果 + 循环检测的工具调用循环、</li></ul>
+<p>权限门控、子智能体、目标模式。与 Claude Code / Qwen Code / OpenCode 做过基准对比。</p>
+<ul><li><strong>AI 网关：</strong> 一个 API 前置 16 个后端（Claude、Qwen、Cursor、Kiro、</li></ul>
+<p>Ollama、Codex…），级联故障转移 + 熔断。自带 key。</p>
+<p>安装：<code>pip install khy-os</code> 或 <code>npm i -g @khy-os/khy-os</code>（同一套工坊，两个渠道）。</p>
+<p>它是「源码可得」的（可免费运行/研究/非商业使用），不是 OSI 开源。<br>演示 GIF 和 QEMU 已测试的能力表都在 README 里。欢迎狠批——尤其是<br>智能体循环和内核设计。</p>
+<p>Repo: &lt;link&gt;</p>
+<hr>
+<h2 id="r-localllama">r/LocalLLaMA<a class="anchor" href="#r-localllama" aria-label="锚点">#</a></h2>
+<p><strong>标题：</strong> <code>khy: bring-your-own-keys agentic CLI that fronts 16 AI backends (incl. Ollama) behind one API — part of a one-person AI-native OS</code></p>
+<p><strong>正文：</strong></p>
+<p>khy 中这个 sub 会在意的部分：一个本地优先的 AI 网关 + 智能体终端，<br><strong>不会把你锁死在一个供应商上</strong>。</p>
+<ul><li>一个端点前置 <strong>16 个后端</strong>——Claude、Qwen、Cursor、Kiro、</li></ul>
+<p>Windsurf、Warp、Trae、<strong>Ollama</strong>、Codex、……——带级联故障转移、熔断，<br>  以及瞬时错误冷却。</p>
+<ul><li>自带 key；路由到<strong>本地 Ollama</strong> 模型，并在某个渠道挂掉时自动回退到</li></ul>
+<p>托管模型（或反之）。</p>
+<ul><li>在其之上是一个 Claude-Code 风格的智能体循环：流式 TUI、工具调用、权限</li></ul>
+<p>门控、子智能体、目标模式。</p>
+<ul><li>如果你想为团队自托管，还有带按用户隔离的多租户网关。</li></ul>
+<p><code>pip install khy-os</code> / <code>npm i -g @khy-os/khy-os</code>。它是一个更大项目的一个切片——<br>一个人做的 AI 原生 OS，还包含一个手写 C 内核——但网关 + 智能体<br>本身就能独立成立。</p>
+<p>很想知道这里的人希望它支持什么样的本地模型路由配置。</p>
+<p>Repo: &lt;link&gt;</p>
+<hr>
+<p><strong>互动提示：</strong> 头 2 小时快速回复评论；Reddit 排名对早期速度非常敏感。<br>回复要以实质内容开头，而非链接。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-004] README.html"><div class="dir">← 上一篇</div><div class="ttl">khy 发布工具包</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-006] REPO_META.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub 仓库元数据（在 Settings → General + About 侧栏设置）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-005] REDDIT.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

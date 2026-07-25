@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY Trae Bridge · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>khy-trae-bridge<span class="sep">›</span>KHY Trae Bridge</div>
+      <header class="hero reveal"><h1>KHY Trae Bridge</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-trae-bridge">KHY Trae Bridge</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li><li class="lvl-2"><a href="#安装-windows">安装（Windows）</a></li><li class="lvl-3"><a href="#方式一-从预构建-vsix-安装-推荐">方式一：从预构建 VSIX 安装（推荐）</a></li><li class="lvl-3"><a href="#方式二-从源码打包后安装">方式二：从源码打包后安装</a></li><li class="lvl-2"><a href="#使用方法">使用方法</a></li><li class="lvl-3"><a href="#自动模式-零配置">自动模式（零配置）</a></li><li class="lvl-3"><a href="#手动同步">手动同步</a></li><li class="lvl-3"><a href="#查看日志">查看日志</a></li><li class="lvl-2"><a href="#刷新策略">刷新策略</a></li><li class="lvl-2"><a href="#auth-json-格式">auth.json 格式</a></li><li class="lvl-2"><a href="#区域检测">区域检测</a></li><li class="lvl-2"><a href="#故障排查">故障排查</a></li><li class="lvl-3"><a href="#扩展安装后没反应">扩展安装后没反应</a></li><li class="lvl-3"><a href="#khy-cli-没有拾取到-token">KHY CLI 没有拾取到 token</a></li><li class="lvl-3"><a href="#手动验证-token-是否有效">手动验证 token 是否有效</a></li><li class="lvl-2"><a href="#卸载">卸载</a></li><li class="lvl-3"><a href="#从-trae-卸载">从 Trae 卸载</a></li><li class="lvl-3"><a href="#清理残留文件">清理残留文件</a></li><li class="lvl-2"><a href="#开发者信息">开发者信息</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-trae-bridge">KHY Trae Bridge<a class="anchor" href="#khy-trae-bridge" aria-label="锚点">#</a></h1>
+<p>将 Trae IDE 的 <code>icube.marscode</code> 登录态桥接到 KHY OS CLI，实现一次登录、双端共享。</p>
+<hr>
+<h2 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h2>
+<pre><code>Trae Sandbox                              KHY CLI
+┌──────────────────┐                ┌─────────────────────────┐
+│ icube.marscode   │                │ readMarsCodeAuthProvider │
+│ AuthProvider     │──getSession──▶│ Token()                  │
+│ (内存持有 token) │                │                          │
+└──────────────────┘                └───────────┬─────────────┘
+         │                                      │
+    khy-trae-bridge                             │
+    扩展写入                                    读取
+         │                                      │
+         ▼                                      ▼
+   &lt;globalStorage&gt;/khy-trae-bridge/auth.json
+   { accessToken, host, userId, username, region, ts }</code></pre>
+<h2 id="目录结构">目录结构<a class="anchor" href="#目录结构" aria-label="锚点">#</a></h2>
+<pre><code>extensions/khy-trae-bridge/
+├── package.json          — 扩展清单 (onStartupFinished 激活)
+├── extension.js          — 核心逻辑 (~120 行)
+├── .vscodeignore         — 打包过滤
+├── README.md             — 本文档
+└── khy-trae-bridge-0.1.0.vsix  — 预构建安装包</code></pre>
+<hr>
+<h2 id="安装-windows">安装（Windows）<a class="anchor" href="#安装-windows" aria-label="锚点">#</a></h2>
+<h3 id="方式一-从预构建-vsix-安装-推荐">方式一：从预构建 VSIX 安装（推荐）<a class="anchor" href="#方式一-从预构建-vsix-安装-推荐" aria-label="锚点">#</a></h3>
+<p>仓库已包含 <code>khy-trae-bridge-0.1.0.vsix</code>，直接安装即可：</p>
+<ol><li>打开 <strong>Trae</strong></li><li>按 <code>Ctrl+Shift+X</code> 打开扩展面板</li><li>点击面板右上角 <strong><code>···</code></strong> → <strong>从 VSIX 安装...</strong>（Install from VSIX）</li><li>选择文件：<code>extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix</code></li><li>等待安装完成 → 重启 Trae</li></ol>
+<p>或使用命令行：</p>
+<pre><code class="language-powershell"># Trae CLI（如果已配置 PATH）
+trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix
+
+# 也可能是
+code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix</code></pre>
+<h3 id="方式二-从源码打包后安装">方式二：从源码打包后安装<a class="anchor" href="#方式二-从源码打包后安装" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cd extensions\khy-trae-bridge
+
+# 安装打包工具
+npm install --save-dev @vscode/vsce
+
+# 打包
+npx @vscode/vsce package --allow-missing-repository
+
+# 安装
+trae --install-extension khy-trae-bridge-0.1.0.vsix</code></pre>
+<hr>
+<h2 id="使用方法">使用方法<a class="anchor" href="#使用方法" aria-label="锚点">#</a></h2>
+<h3 id="自动模式-零配置">自动模式（零配置）<a class="anchor" href="#自动模式-零配置" aria-label="锚点">#</a></h3>
+<p>安装完成后 <strong>无需任何手动操作</strong>：</p>
+<ol><li>启动 Trae — 扩展自动激活（<code>onStartupFinished</code>）</li><li>扩展调用 <code>vscode.authentication.getSession('icube.marscode', [])</code> 获取登录态</li><li>Token 写入 <code>&lt;globalStorage&gt;/khy-trae-bridge/auth.json</code></li><li>KHY CLI 下次 <code>detect()</code> 自动拾取 → 状态从 <code>encrypted</code> → <code>verified</code></li></ol>
+<h3 id="手动同步">手动同步<a class="anchor" href="#手动同步" aria-label="锚点">#</a></h3>
+<p>如果需要立即刷新登录态：</p>
+<ul><li><strong>命令面板</strong>：<code>Ctrl+Shift+P</code> → 输入 <code>KHY: 同步 Trae 登录态</code></li><li><strong>状态栏</strong>：点击右下角 <code>🔑 KHY Bridge</code> 图标</li></ul>
+<h3 id="查看日志">查看日志<a class="anchor" href="#查看日志" aria-label="锚点">#</a></h3>
+<p><code>Ctrl+Shift+U</code> 打开输出面板 → 下拉选择 <strong>KHY Trae Bridge</strong> 通道</p>
+<hr>
+<h2 id="刷新策略">刷新策略<a class="anchor" href="#刷新策略" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>触发方式</th><th>时机</th><th>说明</th></tr></thead><tbody><tr><td>启动同步</td><td>Trae 启动后立即</td><td><code>onStartupFinished</code></td></tr><tr><td>定时刷新</td><td>每 10 分钟</td><td><code>setInterval</code></td></tr><tr><td>事件驱动</td><td>登录/登出时</td><td><code>onDidChangeSessions</code></td></tr><tr><td>手动命令</td><td>用户触发</td><td>命令面板或状态栏</td></tr></tbody></table>
+<hr>
+<h2 id="auth-json-格式">auth.json 格式<a class="anchor" href="#auth-json-格式" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;accessToken&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;userId&quot;: &quot;user_xxxx&quot;,
+  &quot;username&quot;: &quot;example&quot;,
+  &quot;host&quot;: &quot;grow-normal.trae.ai&quot;,
+  &quot;region&quot;: &quot;cn&quot;,
+  &quot;ts&quot;: 1748150400000
+}</code></pre>
+<p>未登录时：</p>
+<pre><code class="language-json">{
+  &quot;accessToken&quot;: null,
+  &quot;status&quot;: &quot;no_session&quot;,
+  &quot;ts&quot;: 1748150400000
+}</code></pre>
+<hr>
+<h2 id="区域检测">区域检测<a class="anchor" href="#区域检测" aria-label="锚点">#</a></h2>
+<p>扩展自动根据 Trae 版本和系统语言判断区域：</p>
+<table><thead><tr><th>条件</th><th>区域</th><th>API 主机</th></tr></thead><tbody><tr><td>appName 含 &quot;Trae CN&quot; 或 &quot;国内&quot;</td><td><code>cn</code></td><td><code>grow-normal.trae.ai</code></td></tr><tr><td>系统语言 <code>zh-*</code></td><td><code>cn</code></td><td><code>grow-normal.trae.ai</code></td></tr><tr><td>其他（国际版默认）</td><td><code>va</code></td><td><code>growva-normal.trae.ai</code></td></tr></tbody></table>
+<p>完整区域映射：</p>
+<table><thead><tr><th>区域</th><th>主机</th></tr></thead><tbody><tr><td><code>cn</code></td><td><code>grow-normal.trae.ai</code></td></tr><tr><td><code>sg</code></td><td><code>growsg-normal.trae.ai</code></td></tr><tr><td><code>va</code></td><td><code>growva-normal.trae.ai</code></td></tr><tr><td><code>usttp</code></td><td><code>grow-normal.traeapi.us</code></td></tr></tbody></table>
+<hr>
+<h2 id="故障排查">故障排查<a class="anchor" href="#故障排查" aria-label="锚点">#</a></h2>
+<h3 id="扩展安装后没反应">扩展安装后没反应<a class="anchor" href="#扩展安装后没反应" aria-label="锚点">#</a></h3>
+<ol><li>确认 Trae 版本 ≥ 1.80（<code>engines.vscode: ^1.80.0</code>）</li><li>查看输出面板日志是否有错误</li><li>确认 Trae 内已登录 — 如果未登录，auth.json 会写入 <code>&quot;status&quot;: &quot;no_session&quot;</code></li></ol>
+<h3 id="khy-cli-没有拾取到-token">KHY CLI 没有拾取到 token<a class="anchor" href="#khy-cli-没有拾取到-token" aria-label="锚点">#</a></h3>
+<ol><li>检查 auth.json 是否存在：</li></ol>
+<pre><code class="language-powershell"># globalStorage 路径通常在
+# Windows: %APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json
+dir &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;</code></pre>
+<ol><li>确认 <code>accessToken</code> 字段不为 <code>null</code></li><li>确认 <code>ts</code> 是最近的时间戳（不超过 24 小时）</li></ol>
+<h3 id="手动验证-token-是否有效">手动验证 token 是否有效<a class="anchor" href="#手动验证-token-是否有效" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># 在 KHY CLI 中执行
+khy ai status
+# 应显示 adapter: trae, state: verified</code></pre>
+<hr>
+<h2 id="卸载">卸载<a class="anchor" href="#卸载" aria-label="锚点">#</a></h2>
+<h3 id="从-trae-卸载">从 Trae 卸载<a class="anchor" href="#从-trae-卸载" aria-label="锚点">#</a></h3>
+<p><code>Ctrl+Shift+X</code> → 搜索 <code>KHY Trae Bridge</code> → 点击齿轮图标 → <strong>卸载</strong></p>
+<h3 id="清理残留文件">清理残留文件<a class="anchor" href="#清理残留文件" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># 删除桥接数据
+del &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;
+rmdir &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge&quot;</code></pre>
+<hr>
+<h2 id="开发者信息">开发者信息<a class="anchor" href="#开发者信息" aria-label="锚点">#</a></h2>
+<ul><li><strong>激活方式</strong>：<code>onStartupFinished</code>（不阻塞 Trae 启动）</li><li><strong>依赖</strong>：零运行时依赖，仅使用 VS Code API + Node.js 内置模块</li><li><strong>体积</strong>：打包后 ~4 KB</li><li><strong>兼容性</strong>：VS Code / Trae / 任何兼容 VS Code 扩展 API 的 IDE</li></ul>
+      </article>
+      <nav class="pager"><span></span><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="extensions/khy-trae-bridge/README.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

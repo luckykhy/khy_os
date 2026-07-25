@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)</div>
+      <header class="hero reveal"><h1>KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-claude-code-对标第六轮-结构性修复报告-2026-05-26">KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)</a></li><li class="lvl-2"><a href="#1-背景">1. 背景</a></li><li class="lvl-2"><a href="#2-诊断发现">2. 诊断发现</a></li><li class="lvl-3"><a href="#2-1-提示词噪音-每次调用浪费-3000-5000-令牌">2.1 提示词噪音（每次调用浪费 3000-5000 令牌）</a></li><li class="lvl-3"><a href="#2-2-输入破坏">2.2 输入破坏</a></li><li class="lvl-3"><a href="#2-3-上下文管理缺陷">2.3 上下文管理缺陷</a></li><li class="lvl-3"><a href="#2-4-适配器级联效率">2.4 适配器级联效率</a></li><li class="lvl-3"><a href="#2-5-工具执行质量">2.5 工具执行质量</a></li><li class="lvl-2"><a href="#3-已实施的修复-共-19-项">3. 已实施的修复（共 19 项）</a></li><li class="lvl-3"><a href="#3-1-提示词噪音清理">3.1 提示词噪音清理</a></li><li class="lvl-3"><a href="#3-2-输入与上下文">3.2 输入与上下文</a></li><li class="lvl-3"><a href="#3-3-适配器与工具执行">3.3 适配器与工具执行</a></li><li class="lvl-3"><a href="#3-4-超时与杂项">3.4 超时与杂项</a></li><li class="lvl-2"><a href="#4-codex-外部评估的批判性分析">4. Codex 外部评估的批判性分析</a></li><li class="lvl-3"><a href="#评估视角错位">评估视角错位</a></li><li class="lvl-3"><a href="#p0-建议逐条评估">P0 建议逐条评估</a></li><li class="lvl-3"><a href="#codex-完全没诊断到的核心差距">Codex 完全没诊断到的核心差距</a></li><li class="lvl-2"><a href="#5-适配器级联与冷却机制架构">5. 适配器级联与冷却机制架构</a></li><li class="lvl-3"><a href="#四层防护">四层防护</a></li><li class="lvl-3"><a href="#暂态冷却参数-新增">暂态冷却参数（新增）</a></li><li class="lvl-2"><a href="#6-上下文管理架构参考">6. 上下文管理架构参考</a></li><li class="lvl-3"><a href="#五层架构">五层架构</a></li><li class="lvl-3"><a href="#关键设计原则">关键设计原则</a></li><li class="lvl-2"><a href="#7-设计原则总结">7. 设计原则总结</a></li><li class="lvl-3"><a href="#信任模型而非教模型">&quot;信任模型而非教模型&quot;</a></li><li class="lvl-3"><a href="#单一职责原则">单一职责原则</a></li><li class="lvl-2"><a href="#8-剩余待做">8. 剩余待做</a></li><li class="lvl-3"><a href="#p0-直接影响-ai-质量">P0（直接影响 AI 质量）</a></li><li class="lvl-3"><a href="#p1-稳健性">P1（稳健性）</a></li><li class="lvl-3"><a href="#p2-代码质量">P2（代码质量）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-013 | 阶段: 项目管理 | 原路径: docs/指南/cc-对标-第六轮-2026-05-26.md --&gt;</p>
+<h1 id="khy-claude-code-对标第六轮-结构性修复报告-2026-05-26">KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)<a class="anchor" href="#khy-claude-code-对标第六轮-结构性修复报告-2026-05-26" aria-label="锚点">#</a></h1>
+<h2 id="1-背景">1. 背景<a class="anchor" href="#1-背景" aria-label="锚点">#</a></h2>
+<ul><li>用户评分基线：CC=100，KHY 从 10 → 15 → 25 → 30</li><li>核心诉求：&quot;给 KHY 一个编码任务，能像 CC 一样自主完成&quot;</li><li>本轮方法：三路并行诊断（上下文管理 / 工具执行 / 系统提示词）+ 整合 Codex 外部评估</li></ul>
+<hr>
+<h2 id="2-诊断发现">2. 诊断发现<a class="anchor" href="#2-诊断发现" aria-label="锚点">#</a></h2>
+<h3 id="2-1-提示词噪音-每次调用浪费-3000-5000-令牌">2.1 提示词噪音（每次调用浪费 3000-5000 令牌）<a class="anchor" href="#2-1-提示词噪音-每次调用浪费-3000-5000-令牌" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>位置</th><th>浪费量</th><th>详情</th></tr></thead><tbody><tr><td>claudeAdapter 注入 <code>&lt;khy-agentic-guidance&gt;</code></td><td>claudeAdapter.js:368-392</td><td>~300 令牌</td><td>与系统提示词的 doingTasks/outputEfficiency/toneAndStyle 段高度重叠</td></tr><tr><td>intentDirective 双重注入</td><td>ai.js:3190 + claudeAdapter.js:386</td><td>~200 令牌</td><td>同一段 CODING_DIRECTIVE 出现两次</td></tr><tr><td><code>buildNaturalToolGuide</code> + <code>_toolCallingFallbackProfile</code> 双重工具列表</td><td>khyUpgradeRuntime.js:1336 + prompts.js:402</td><td>~500-800 令牌</td><td>hasNativeToolUse=false 时两处都注入</td></tr><tr><td>selfProfile &quot;I am&quot;/&quot;I cannot&quot;/boundaries</td><td>selfProfile.js:364-377</td><td>~200-300 令牌</td><td>CC 不注入自我描述，模型从工具定义中了解自身能力</td></tr><tr><td>每轮 <code>[任务指引]</code> 重复注入</td><td>toolUseLoop.js:2902-2905</td><td>~150 令牌/轮</td><td>10 轮累计 1500 令牌，系统提示词已有足够指导</td></tr><tr><td>snake_case/camelCase 重复工具定义</td><td>toolCalling.js:2954</td><td>~1000 令牌</td><td><code>shell_command</code> 与 <code>shellCommand</code> 等 5 对重复</td></tr><tr><td>不可用工具混入定义</td><td>toolCalling.js:2946</td><td>~1000-2000 令牌</td><td>coordinator-only/no-git/no-PowerShell 工具白白占令牌</td></tr></tbody></table>
+<p><strong>CC 对比</strong>：CC 的系统提示词约 3000-4000 令牌（不含动态段），KHY 约 4000-5500 令牌基础加大量冗余。CC 只有一层系统提示词段，不在适配器层额外注入。</p>
+<h3 id="2-2-输入破坏">2.2 输入破坏<a class="anchor" href="#2-2-输入破坏" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>位置</th><th>具体后果</th></tr></thead><tbody><tr><td><code>inputPurify</code> 填充词剥离正则过于激进</td><td>khyUpgradeRuntime.js:306-313</td><td><code>请</code> 匹配 &quot;请求体&quot;→&quot;求体&quot;；<code>一下</code> 匹配 &quot;这一下午&quot;→&quot;这午&quot;；<code>吧</code> 匹配 &quot;网吧&quot;→&quot;网&quot;；<code>呢</code> 匹配有意义上下文</td></tr></tbody></table>
+<p><strong>CC 对比</strong>：CC 完全不做填充词剥离，信任模型能处理口语化输入。</p>
+<h3 id="2-3-上下文管理缺陷">2.3 上下文管理缺陷<a class="anchor" href="#2-3-上下文管理缺陷" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>位置</th><th>后果</th></tr></thead><tbody><tr><td>摘要输入硬截断 8000 字符</td><td>contextCompressor.js:424</td><td>50K 令牌历史只有约 4% 被送给 AI 摘要，96% 信息丢失</td></tr><tr><td>摘要用 <code>effort: 'low'</code></td><td>contextCompressor.js:435</td><td>低精度摘要遗漏关键细节</td></tr><tr><td>摘要消息标记不明确</td><td>contextCompressor.js:457</td><td>模型可能将压缩摘要误认为用户消息</td></tr><tr><td>HARD_FLOOR_TOKENS=32768 硬编码</td><td>contextRouter.js:28</td><td>8K 上下文小模型永不触发压缩，直到 API 返回 413</td></tr><tr><td>多层压缩参数不协调</td><td>pruneContext → guard → compressor</td><td>各层独立判断保留比例，叠加可能只保留原始的 15%</td></tr><tr><td>反抖动冷却期 30 秒</td><td>contextCompressor.js:35-37</td><td>密集工具循环（每轮 &lt; 30 秒）中上下文持续膨胀</td></tr></tbody></table>
+<p><strong>CC 对比</strong>：CC 使用单一压缩入口，分段摘要（分块合并），硬底线与模型上下文窗口成比例。</p>
+<h3 id="2-4-适配器级联效率">2.4 适配器级联效率<a class="anchor" href="#2-4-适配器级联效率" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>位置</th><th>后果</th></tr></thead><tbody><tr><td>暂态错误不触发快速失败</td><td>aiGateway.js:170-173</td><td>rate_limit/timeout/network 后仍立即重试同一适配器，浪费 3-20 秒</td></tr><tr><td>拦截器只匹配 <code>chunk.tool</code></td><td>ai.js:2102</td><td>relayApiAdapter 用 <code>chunk.name</code>、kiroAdapter 用 <code>tool_use_end</code>，拦截器收不到</td></tr></tbody></table>
+<p><strong>已有机制</strong>：系统已有快速失败 + 断路器 + 自愈探针 + Redis 持久化，但 <code>_shouldUseFastFail</code> 只覆盖 4 种永久性错误（auth/permission/unavailable/process），不覆盖暂态错误。</p>
+<h3 id="2-5-工具执行质量">2.5 工具执行质量<a class="anchor" href="#2-5-工具执行质量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>位置</th><th>后果</th></tr></thead><tbody><tr><td>工具结果丢弃元数据</td><td>toolUseLoop.js:2854</td><td>只取 output/content/result 文本，丢弃 truncated/totalLines/count/size</td></tr><tr><td>cronScheduler shell 硬超时</td><td>cronScheduler.js:328</td><td><code>execSync</code> 180 秒墙钟超时，活跃进程被硬杀</td></tr><tr><td>cronScheduler AI 硬超时</td><td>cronScheduler.js:341</td><td><code>Promise.race</code> 180 秒，无活跃度感知</td></tr></tbody></table>
+<hr>
+<h2 id="3-已实施的修复-共-19-项">3. 已实施的修复（共 19 项）<a class="anchor" href="#3-已实施的修复-共-19-项" aria-label="锚点">#</a></h2>
+<h3 id="3-1-提示词噪音清理">3.1 提示词噪音清理<a class="anchor" href="#3-1-提示词噪音清理" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序号</th><th>修复内容</th><th>文件</th><th>效果</th></tr></thead><tbody><tr><td>1</td><td>移除 <code>&lt;khy-agentic-guidance&gt;</code> 代码块，保留问候检测</td><td>claudeAdapter.js</td><td>节省约 300 令牌 + 消除指令冲突</td></tr><tr><td>2</td><td>移除 <code>buildNaturalToolGuide</code> 重复注入</td><td>khyUpgradeRuntime.js:1336</td><td>节省约 500-800 令牌</td></tr><tr><td>3</td><td>selfProfile 精简到仅保留适配器/模型信息</td><td>selfProfile.js:357-380</td><td>从约 200 令牌降到约 30 令牌</td></tr><tr><td>4</td><td>移除每轮 <code>[任务指引]</code> 注入</td><td>toolUseLoop.js:2902-2905</td><td>节省约 150 令牌/轮</td></tr><tr><td>5</td><td>工具定义用 <code>getEnabledDefinitions()</code> 过滤不可用工具</td><td>toolCalling.js:2946</td><td>节省约 1000-2000 令牌</td></tr><tr><td>6</td><td>snake_case/camelCase 标准化去重</td><td>toolCalling.js:2954</td><td>节省约 1000 令牌</td></tr></tbody></table>
+<h3 id="3-2-输入与上下文">3.2 输入与上下文<a class="anchor" href="#3-2-输入与上下文" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序号</th><th>修复内容</th><th>文件</th><th>效果</th></tr></thead><tbody><tr><td>7</td><td>云端模型跳过填充词剥离</td><td>khyUpgradeRuntime.js:299 + ai.js:3102</td><td>防止&quot;请求&quot;→&quot;求&quot;等破坏</td></tr><tr><td>8</td><td>摘要分段提取（12K×4 块 + 关键点提取）</td><td>contextCompressor.js:421-455</td><td>覆盖率从约 4% 提升到约 50%+</td></tr><tr><td>9</td><td>摘要精度从 low 提升到 medium</td><td>contextCompressor.js:435</td><td>更准确的摘要</td></tr><tr><td>10</td><td>摘要消息用 <code>&lt;compressed_context&gt;</code> 标记</td><td>contextCompressor.js:457</td><td>模型明确知道是压缩上下文</td></tr><tr><td>11</td><td>HARD_FLOOR 动态化 <code>min(32768, budget*0.15)</code></td><td>contextRouter.js:28-32</td><td>小模型正确触发压缩</td></tr></tbody></table>
+<h3 id="3-3-适配器与工具执行">3.3 适配器与工具执行<a class="anchor" href="#3-3-适配器与工具执行" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序号</th><th>修复内容</th><th>文件</th><th>效果</th></tr></thead><tbody><tr><td>12</td><td>暂态错误冷却期（rate_limit 20 秒 / timeout 10 秒 / network 12 秒）</td><td>aiGateway.js:170-185</td><td>减少盲探测延迟</td></tr><tr><td>13</td><td>拦截器兼容 `chunk.tool</td><td></td><td>chunk.name<code> + </code>tool_use_end`</td></tr><tr><td>14</td><td>工具结果附加元数据 <code>[Metadata: truncated, N lines, ...]</code></td><td>toolUseLoop.js:2873-2879</td><td>模型知道搜索是否截断</td></tr></tbody></table>
+<h3 id="3-4-超时与杂项">3.4 超时与杂项<a class="anchor" href="#3-4-超时与杂项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>序号</th><th>修复内容</th><th>文件</th><th>效果</th></tr></thead><tbody><tr><td>15</td><td>cronScheduler shell 改用 spawn + 空闲计时器</td><td>cronScheduler.js:324-349</td><td>活跃进程不再被硬杀</td></tr><tr><td>16</td><td>cronScheduler 默认超时 180 秒 → 300 秒</td><td>cronScheduler.js:23</td><td>AI 原子调用有更多时间</td></tr><tr><td>17</td><td>liteRepl 传递 <code>chatOpts: {}</code> 到 toolUseLoop</td><td>liteRepl.js:3358</td><td>行为与 repl 一致</td></tr><tr><td>18</td><td>清理死代码：<code>_fallbackContextSummary</code> 的 <code>[意图]/[问题]</code> 解析</td><td>khyUpgradeRuntime.js:348-386</td><td>移除不再匹配的正则</td></tr><tr><td>19</td><td>清理死代码：claudeAdapter 的 <code>[意图]/[问题]</code> 剥离</td><td>claudeAdapter.js:321-323</td><td>移除遗留清理逻辑</td></tr></tbody></table>
+<hr>
+<h2 id="4-codex-外部评估的批判性分析">4. Codex 外部评估的批判性分析<a class="anchor" href="#4-codex-外部评估的批判性分析" aria-label="锚点">#</a></h2>
+<p>Codex 以 15/100 评估 KHY，给出 5 项 P0 建议。</p>
+<h3 id="评估视角错位">评估视角错位<a class="anchor" href="#评估视角错位" aria-label="锚点">#</a></h3>
+<p>Codex 把 KHY 当作通用命令行产品评估（命令数量、入口统一、文档版本），而非 AI 编码助手。用户的核心诉求是&quot;AI 编码任务交付质量&quot;，这和&quot;110 个命令认知负担高&quot;完全不是一个维度。CC 本身也有 100+ 功能点。</p>
+<h3 id="p0-建议逐条评估">P0 建议逐条评估<a class="anchor" href="#p0-建议逐条评估" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Codex P0 建议</th><th>对 AI 编码质量的实际影响</th><th>是否采纳</th></tr></thead><tbody><tr><td>模式化命令视图 <code>khy code/quant/ops</code></td><td>接近零 — AI 不通过命令菜单工作</td><td>否</td></tr><tr><td>未闭环能力下线</td><td>低 — 除非工具定义干扰 AI 选择</td><td>部分（已通过 isEnabled 过滤）</td></tr><tr><td>统一入口策略</td><td>零 — 不影响 AI 执行链路</td><td>否</td></tr><tr><td>AI 路由优化/冷却期</td><td><strong>中高</strong> — 减少无效探测等待</td><td><strong>是</strong>（已实施暂态冷却）</td></tr><tr><td>统一超时模型</td><td><strong>中高</strong> — 活跃任务不被硬杀</td><td><strong>是</strong>（已实施活跃度感知）</td></tr></tbody></table>
+<h3 id="codex-完全没诊断到的核心差距">Codex 完全没诊断到的核心差距<a class="anchor" href="#codex-完全没诊断到的核心差距" aria-label="锚点">#</a></h3>
+<ul><li>内容块格式（Anthropic 原生 tool_result 对比纯文本）</li><li>提示词噪音/重复注入（<code>&lt;khy-agentic-guidance&gt;</code> + 双重工具列表 + 双重指令）</li><li><code>inputPurify</code> 破坏用户输入</li><li>摘要 8K 字符截断丢失 96% 信息</li><li>工具结果元数据丢失</li><li>拦截器块收集格式不匹配</li></ul>
+<hr>
+<h2 id="5-适配器级联与冷却机制架构">5. 适配器级联与冷却机制架构<a class="anchor" href="#5-适配器级联与冷却机制架构" aria-label="锚点">#</a></h2>
+<h3 id="四层防护">四层防护<a class="anchor" href="#四层防护" aria-label="锚点">#</a></h3>
+<pre><code>请求进入 → 快速失败检查 → 暂态冷却检查 → 速率限制 → 实际调用
+                ↓                  ↓              ↓           ↓
+         auth/perm/unavail    rate_limit/     分布式限流    adapter.generate()
+         → 30 秒跳过          timeout/network  + 指数退避        ↓
+                              → 10-20 秒跳过                 成功 → 清除错误
+                                                            失败 → 记录 + 可能触发断路器
+                                                                     ↓
+                                                              连续 ≥3 次 → 断路器开
+                                                              → 指数冷却（上限 5 分钟）
+                                                              → 中间点自愈探针</code></pre>
+<h3 id="暂态冷却参数-新增">暂态冷却参数（新增）<a class="anchor" href="#暂态冷却参数-新增" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>错误类型</th><th>冷却时间</th><th>环境变量覆盖</th></tr></thead><tbody><tr><td>rate_limit</td><td>20 秒</td><td><code>GATEWAY_RATE_LIMIT_COOLDOWN_MS</code></td></tr><tr><td>overloaded</td><td>15 秒</td><td><code>GATEWAY_OVERLOADED_COOLDOWN_MS</code></td></tr><tr><td>timeout</td><td>10 秒</td><td><code>GATEWAY_TIMEOUT_COOLDOWN_MS</code></td></tr><tr><td>network</td><td>12 秒</td><td><code>GATEWAY_NETWORK_COOLDOWN_MS</code></td></tr></tbody></table>
+<hr>
+<h2 id="6-上下文管理架构参考">6. 上下文管理架构参考<a class="anchor" href="#6-上下文管理架构参考" aria-label="锚点">#</a></h2>
+<h3 id="五层架构">五层架构<a class="anchor" href="#五层架构" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>文件</th><th>职责</th></tr></thead><tbody><tr><td>路由决策</td><td>contextRouter.js</td><td>4 路由策略选择</td></tr><tr><td>压缩引擎</td><td>contextCompressor.js</td><td>AI 摘要 + 增量更新 + 循环边界</td></tr><tr><td>压缩管线</td><td>compactPipeline.js</td><td>5 阶段渐进压缩</td></tr><tr><td>滑动窗口</td><td>khyUpgradeRuntime.js:buildSlidingWindow</td><td>集成调度</td></tr><tr><td>工具截断</td><td>smartTruncation.js</td><td>按工具类型噪声过滤</td></tr></tbody></table>
+<h3 id="关键设计原则">关键设计原则<a class="anchor" href="#关键设计原则" aria-label="锚点">#</a></h3>
+<ol><li><strong>硬底线必须与模型上下文窗口成比例</strong> — <code>min(默认值, budget * 0.15)</code></li><li><strong>摘要不能暴力截断</strong> — 应分段提取关键点（文件路径、工具调用、错误信息）</li><li><strong>摘要消息必须有明确标记</strong> — <code>&lt;compressed_context&gt;</code> 让模型知道这不是用户输入</li><li><strong>摘要精度不应低于 medium</strong> — low 精度会遗漏关键细节</li></ol>
+<hr>
+<h2 id="7-设计原则总结">7. 设计原则总结<a class="anchor" href="#7-设计原则总结" aria-label="锚点">#</a></h2>
+<h3 id="信任模型而非教模型">&quot;信任模型而非教模型&quot;<a class="anchor" href="#信任模型而非教模型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>CC 做法</th><th>KHY 过去做法</th><th>KHY 现在做法</th></tr></thead><tbody><tr><td>单层系统提示词</td><td>三层（系统 + 适配器 + 指令）</td><td>单层系统提示词</td></tr><tr><td>依赖工具定义自描述</td><td>提示词内教工具格式</td><td>原生时跳过，非原生只在一处教</td></tr><tr><td>不做填充词剥离</td><td>激进正则破坏内容</td><td>云端模型直通</td></tr><tr><td>不注入自我描述</td><td>&quot;I am&quot;/&quot;I cannot&quot;/boundaries</td><td>仅保留适配器/模型信息</td></tr><tr><td>不在每轮注入行为指导</td><td><code>[任务指引]</code> 每轮注入</td><td>移除，依赖系统提示词</td></tr></tbody></table>
+<h3 id="单一职责原则">单一职责原则<a class="anchor" href="#单一职责原则" aria-label="锚点">#</a></h3>
+<ul><li>行为指令只在系统提示词段中出现，不在适配器层重复</li><li>环境信息只在 <code>getEnvironmentSection()</code> 出现，不在 selfProfile 重复</li><li>工具格式教学只在 <code>_toolCallingFallbackProfile</code> 出现，不在 <code>buildNaturalToolGuide</code> 重复</li></ul>
+<hr>
+<h2 id="8-剩余待做">8. 剩余待做<a class="anchor" href="#8-剩余待做" aria-label="锚点">#</a></h2>
+<h3 id="p0-直接影响-ai-质量">P0（直接影响 AI 质量）<a class="anchor" href="#p0-直接影响-ai-质量" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 增量摘要新增内容截断 6000 字符（contextCompressor.js:584）需扩大</li><li>[ ] 循环边界延续预算从 1500 令牌提升到 4000-6000</li><li>[ ] MODEL_CAPABILITIES 表过时（ai.js:259-271），缺少 Claude 3.5 Haiku、GPT-4.1、Gemini 2.5 Pro 等</li></ul>
+<h3 id="p1-稳健性">P1（稳健性）<a class="anchor" href="#p1-稳健性" aria-label="锚点">#</a></h3>
+<ul><li>[ ] 类别 B 外部依赖工具添加 <code>isEnabled()</code> 守卫（strategyList/backtest/pdfToWord/imageOcr 等约 10 个）</li><li>[ ] 多层压缩参数协调 — 避免 pruneContext → guard → compressor 叠加过度压缩</li><li>[ ] smartTruncation 的缩放系数改为非线性（当前线性对小模型过于激进）</li></ul>
+<h3 id="p2-代码质量">P2（代码质量）<a class="anchor" href="#p2-代码质量" aria-label="锚点">#</a></h3>
+<ul><li>[ ] <code>tools/lsp.js</code> 6 个孤立工具定义是死代码，可删除</li><li>[ ] BUILTIN_TOOLS 中已有注册表对应版本的工具应迁移清理</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-012] ai-显示-对标与对齐.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS AI 显示系统 — 四项目对标分析与对齐方案</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-014] khy-qwen-差距修复清单.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 与 qwen-code 差距修复清单（执行版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-013] cc-对标-第六轮-2026-05-26.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

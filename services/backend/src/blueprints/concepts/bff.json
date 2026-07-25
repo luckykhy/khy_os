@@ -1,0 +1,19 @@
+{
+  "id": "bff",
+  "kind": "concept",
+  "name": "BFF",
+  "category": "architecture",
+  "triggers": ["BFF", "Backend for Frontend", "前端专属后端"],
+  "summary": "Backend for Frontend：为每类前端(Web/iOS/Android)各建一个聚合后端，裁剪/聚合下游服务，避免前端直连一堆微服务。",
+  "whenToUse": [
+    "多端各有不同数据形态与聚合需求。",
+    "想把前端特化的编排从通用服务里剥离。"
+  ],
+  "antiPatterns": [
+    "BFF 里堆核心业务逻辑（应留在领域服务）。",
+    "一个 BFF 服务所有端，退化成大杂烩网关。",
+    "BFF 与前端版本不同步，接口漂移。"
+  ],
+  "minimalSkeleton": "Web-BFF / Mobile-BFF: 各自聚合\n聚合下游: 调多个微服务并裁剪响应\n只做编排与适配，不做核心业务",
+  "relatedArchetypes": []
+}

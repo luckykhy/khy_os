@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TUI inquirer 闪退修复 + 默认解禁 (2026-06-05) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)</div>
+      <header class="hero reveal"><h1>TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-inquirer-闪退修复-默认解禁-2026-06-05">TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#一-根因">一、根因</a></li><li class="lvl-2"><a href="#二-修复架构">二、修复架构</a></li><li class="lvl-3"><a href="#关键约束-overlay-必须原地渲染">关键约束：overlay 必须原地渲染</a></li><li class="lvl-2"><a href="#三-文件改动">三、文件改动</a></li><li class="lvl-3"><a href="#新增-backend-src-cli-tui-ink-components-formflow-js">新增 `backend/src/cli/tui/ink-components/FormFlow.js`</a></li><li class="lvl-3"><a href="#backend-src-cli-tui-ink-components-app-js">`backend/src/cli/tui/ink-components/App.js`</a></li><li class="lvl-3"><a href="#backend-src-cli-repl-js">`backend/src/cli/repl.js`</a></li><li class="lvl-2"><a href="#四-命令覆盖">四、命令覆盖</a></li><li class="lvl-3"><a href="#已原生化-tui-内正常工作">已原生化（TUI 内正常工作）</a></li><li class="lvl-3"><a href="#兜底守卫-提示经典模式-不闪退">兜底守卫（提示经典模式，不闪退）</a></li><li class="lvl-3"><a href="#确认不受影响-不在-tui-路径">确认不受影响（不在 TUI 路径）</a></li><li class="lvl-2"><a href="#五-验证">五、验证</a></li><li class="lvl-2"><a href="#六-待完成">六、待完成</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-003 | 阶段: 实现 | 原路径: docs/修复记录/tui-inquirer闪退修复-2026-06-05.md --&gt;</p>
+<h1 id="tui-inquirer-闪退修复-默认解禁-2026-06-05">TUI inquirer 闪退修复 + 默认解禁 (2026-06-05)<a class="anchor" href="#tui-inquirer-闪退修复-默认解禁-2026-06-05" aria-label="锚点">#</a></h1>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>修复了一类导致 <strong>Ink TUI 整个进程闪退回 bash</strong> 的 bug：任何在 TUI 内通过<br><code>route()</code> 触发 <code>inquirer</code> / readline 交互的命令（最初表现为 <code>/model</code>），都会<br>和 Ink 抢占 stdin raw mode，在 inquirer 释放时让 Ink 的 <code>waitUntilExit()</code><br>resolve，从而结束整个 app。</p>
+<p>本次在 <a href="%5BIMPL-RPT-022%5D%20HOTFIX_MODEL_SELECTION.html">HOTFIX_MODEL_SELECTION.md</a> 解决 <code>/model</code><br>单点的基础上，<strong>系统性消除整类闪退</strong>，并把 Ink TUI 从 <code>KHY_FULL_TUI=1</code> 灰度<br><strong>改为默认开启</strong>（<code>KHY_FULL_TUI=0</code> 显式回退经典 REPL）。</p>
+<hr>
+<h2 id="一-根因">一、根因<a class="anchor" href="#一-根因" aria-label="锚点">#</a></h2>
+<ul><li>Ink 在应用挂载时独占 stdin 的 raw mode。</li><li>经典 REPL 的大量交互命令在 <code>router.js</code> 的 <code>route()</code> switch 内（或其 handler 中）</li></ul>
+<p>直接 <code>require('inquirer')</code> 并 <code>inquirer.prompt(...)</code>。</p>
+<ul><li>在 TUI 里，App.js 的 <code>runRouted()</code> 对所有 <code>/</code> 命令调用 <code>route()</code>。一旦命中</li></ul>
+<p>inquirer 分支，inquirer 与 Ink 同时操作同一个 stdin/raw mode，inquirer 退出时<br>  Ink 误判应用结束 → 进程退回 shell。</p>
+<ul><li>个别 handler（如 <code>_askChoice</code>）把 inquirer 包了 <code>try/catch</code>，但闪退发生在</li></ul>
+<p>进程层（Ink 退出），catch 根本来不及生效。</p>
+<p><strong>结论</strong>：在 TUI 内绝不能让 inquirer 进入 <code>route()</code>。每个交互命令要么端口为原生<br>Ink overlay，要么在 <code>runRouted()</code> 入口拦截。</p>
+<hr>
+<h2 id="二-修复架构">二、修复架构<a class="anchor" href="#二-修复架构" aria-label="锚点">#</a></h2>
+<p>三层处理：</p>
+<ol><li><strong>原生 overlay（彻底端口）</strong> — 用自管 <code>useInput</code> 的 Ink 组件替代 inquirer：<ul><li><code>/model</code> → <code>ModelPicker.js</code>（既有）</li><li><code>/login</code> <code>/register</code> <code>/passwd</code> → 新增 <code>FormFlow.js</code></li><li><code>/apikey</code>（<code>gateway config</code>）常用路径 → <code>FormFlow.js</code>（添加厂商 Key + 网络代理）</li></ul></li><li><strong>子命令级兜底守卫（暂未端口）</strong> — <code>tuiUnsupportedReason(parsed)</code> 命中时推送</li></ol>
+<p>提示「该命令暂需经典模式：请用 <code>KHY_FULL_TUI=0 khy</code> 运行」，而不是放行 inquirer。</p>
+<ol><li><strong>默认门控</strong> — <code>repl.js startRepl</code> 默认进 TUI，<code>KHY_FULL_TUI=0</code> 回退。</li></ol>
+<h3 id="关键约束-overlay-必须原地渲染">关键约束：overlay 必须原地渲染<a class="anchor" href="#关键约束-overlay-必须原地渲染" aria-label="锚点">#</a></h3>
+<p><code>/login</code> / <code>/model</code> 等原生 overlay 在 <code>runRouted()</code> 中<strong>早于</strong> <code>setInputActive(false)</code><br>返回，因此 live 区不被卸载，overlay 直接挂在原 UI 里。App 顶层 <code>useInput</code> 在<br><code>modelPicker</code> / <code>formFlow</code> 存在时 <code>return</code> 让出输入，由 overlay 自己的 <code>useInput</code><br>独占，避免双重处理。</p>
+<hr>
+<h2 id="三-文件改动">三、文件改动<a class="anchor" href="#三-文件改动" aria-label="锚点">#</a></h2>
+<h3 id="新增-backend-src-cli-tui-ink-components-formflow-js">新增 <code>backend/src/cli/tui/ink-components/FormFlow.js</code><a class="anchor" href="#新增-backend-src-cli-tui-ink-components-formflow-js" aria-label="锚点">#</a></h3>
+<p>可复用的顺序字段表单 overlay：</p>
+<ul><li>字段类型：<code>input</code> / <code>password</code>（<code>*</code> 掩码）/ <code>select</code>（↑↓ + 数字键）。</li><li>逐字段 <code>validate(value, answersSoFar) =&gt; true | errorMsg</code>，校验失败原地报错不前进。</li><li>已答字段在上方回显（密码掩码、select 显示选项名）。</li><li><code>onResolve(answers | null)</code>：完成回传 <code>{ [name]: value }</code>，Esc 取消回传 <code>null</code>。</li><li>自带 <code>useInput</code>，与 <code>QuestionPrompt</code> / <code>ModelPicker</code> 同款自管输入模式。</li></ul>
+<h3 id="backend-src-cli-tui-ink-components-app-js"><code>backend/src/cli/tui/ink-components/App.js</code><a class="anchor" href="#backend-src-cli-tui-ink-components-app-js" aria-label="锚点">#</a></h3>
+<ul><li>引入 <code>FormFlow</code>，新增 <code>formFlow</code> 状态。</li><li><code>askForm(spec)</code>：返回 Promise，让命令处理器像 <code>await inquirer.prompt</code> 一样</li></ul>
+<p><code>await</code> 表单结果。<code>resolveFormFlow(answers)</code> 触发该 Promise 并卸载 overlay。</p>
+<ul><li><code>runAuthForm(command)</code>：用 FormFlow 收集输入后<strong>直调 <code>cliAuthService</code></strong></li></ul>
+<p>（<code>login</code> / <code>register</code> / <code>changePassword</code>），与经典 REPL 同一服务，仅输入采集层不同。</p>
+<ul><li><code>runRouted()</code>：在释放输入前<ul><li>拦截 <code>login</code> / <code>register</code> / <code>passwd</code> → <code>runAuthForm</code>；</li><li>调用 <code>tuiUnsupportedReason(parsed)</code>，命中则推送经典模式提示并返回。</li></ul></li><li>顶层 <code>useInput</code>：<code>if (formFlow) return;</code> 让出输入给 overlay。</li><li>模块级 <code>tuiUnsupportedReason(parsed)</code> + <code>_learnNeedsClassic()</code> 守卫函数。</li></ul>
+<h3 id="backend-src-cli-repl-js"><code>backend/src/cli/repl.js</code><a class="anchor" href="#backend-src-cli-repl-js" aria-label="锚点">#</a></h3>
+<p>门控由 opt-in 改为 default-on：</p>
+<pre><code class="language-javascript">const tuiOptOut = process.env.KHY_FULL_TUI === '0' || options.fullTui === false;
+const tuiRequested = !tuiOptOut &amp;&amp; (options.fullTui || process.stdout.isTTY);
+if (tuiRequested &amp;&amp; process.stdout.isTTY) { /* startInkApp */ }</code></pre>
+<hr>
+<h2 id="四-命令覆盖">四、命令覆盖<a class="anchor" href="#四-命令覆盖" aria-label="锚点">#</a></h2>
+<h3 id="已原生化-tui-内正常工作">已原生化（TUI 内正常工作）<a class="anchor" href="#已原生化-tui-内正常工作" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>实现</th></tr></thead><tbody><tr><td><code>/model</code>（<code>gateway model</code>）</td><td><code>ModelPicker</code></td></tr><tr><td><code>/login</code></td><td><code>FormFlow</code> + <code>cliAuthService.login</code></td></tr><tr><td><code>/register</code></td><td><code>FormFlow</code> + <code>cliAuthService.register</code></td></tr><tr><td><code>/passwd</code></td><td><code>FormFlow</code> + <code>cliAuthService.changePassword</code></td></tr><tr><td><code>/apikey</code> 添加 Key（<code>gateway config</code> → provider-keys 常用路径）</td><td><code>FormFlow</code> + <code>gateway.getProviderKeyChoices</code> / <code>applyProviderKey</code></td></tr><tr><td><code>/apikey</code> 网络代理（<code>gateway config</code> → proxy 常用路径）</td><td><code>FormFlow</code> + <code>gateway.getProxyConfigInfo</code> / <code>applyProxyAction</code></td></tr></tbody></table>
+<h3 id="兜底守卫-提示经典模式-不闪退">兜底守卫（提示经典模式，不闪退）<a class="anchor" href="#兜底守卫-提示经典模式-不闪退" aria-label="锚点">#</a></h3>
+<p><code>tuiUnsupportedReason</code> 精确到子命令，安全变体（<code>/pool</code> 状态、<code>/publish check</code>、<br><code>/docs maintainer</code> 等）照常运行：</p>
+<table><thead><tr><th>命中条件</th><th>提示标签</th></tr></thead><tbody><tr><td><code>forgot</code></td><td>找回密码</td></tr><tr><td><code>init</code></td><td>项目初始化向导</td></tr><tr><td><code>cloud login</code> / <code>cloud register</code></td><td>云端账号登录/注册</td></tr><tr><td><code>plugin gateway delete</code></td><td>插件网关删除确认</td></tr><tr><td><code>app uninstall</code></td><td>应用卸载确认</td></tr><tr><td><code>docs claude</code></td><td>Claude 文档交互</td></tr><tr><td>`pool import\</td><td>add\</td></tr><tr><td>`publish pypi\</td><td>testpypi\</td></tr><tr><td><code>ai owner</code></td><td>AI Owner 密钥输入</td></tr><tr><td><code>learn</code>（仅 <code>_learnNeedsClassic()</code>，即无可用模型的离线交互）</td><td>离线课程交互</td></tr></tbody></table>
+<h3 id="确认不受影响-不在-tui-路径">确认不受影响（不在 TUI 路径）<a class="anchor" href="#确认不受影响-不在-tui-路径" aria-label="锚点">#</a></h3>
+<p><code>menu.js</code>（numbered 菜单，<code>case 'menu'</code> 仅 <code>return 'menu'</code> 哨兵，TUI 不启动）、<br><code>handlers/settings.js</code>、<code>handlers/cloud.js</code>、<code>riskConfirm.js</code>（<code>src/</code> 内零调用方）、<br><code>router.js</code> <code>default:</code> 模糊匹配（<code>!isTui</code> 守卫）、<code>handlers/review.js</code>（<code>/review</code><br>是 flag 命令走 <code>handleFlag</code>，不进 <code>route()</code>）。</p>
+<hr>
+<h2 id="五-验证">五、验证<a class="anchor" href="#五-验证" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check</code>：<code>FormFlow.js</code> / <code>App.js</code> / <code>repl.js</code> 全过。</li><li>运行期 <code>require</code>：<code>App.js</code>、<code>FormFlow.js</code> 正常加载。</li><li>依赖核对：<code>cliAuthService</code>（checkSession/login/isRegistered/register/changePassword）、</li></ul>
+<p><code>aiGateway.getStatus</code>、gateway 三个 model 函数导出均存在。</p>
+<p>手测路径：</p>
+<ul><li><code>khy</code> 直接进入新 TUI；</li><li><code>/login</code> 弹出原生表单，输入后由 <code>cliAuthService</code> 处理；</li><li><code>/apikey</code> 给出经典模式提示而非闪退；</li><li><code>KHY_FULL_TUI=0 khy</code> 回退经典 readline REPL。</li></ul>
+<hr>
+<h2 id="六-待完成">六、待完成<a class="anchor" href="#六-待完成" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>/apikey</code>（<code>handleGatewayConfig</code>）高级子菜单</strong>：常用路径（添加厂商 Key、网络代理</li></ul>
+<p>检测/HTTP/关闭）已端口为 <code>FormFlow</code> overlay；其余高级配置（ollama / relay-api /<br>  routing-policy / key-strategy / 订阅管理 / 自定义 provider 等多层子树）入口选择<br>  「其他高级配置」时给出经典模式提示，后续按需渐进迁移。</p>
+<ul><li>其余低频命令（<code>/init</code>、<code>/forgot</code>、<code>/pool import</code> 等）可按需用 <code>FormFlow</code> 渐进迁移。</li></ul>
+<p>新增交互命令到 TUI 的规则：简单字段表单复用 <code>FormFlow</code>，选择类复用 <code>ModelPicker</code> /<br><code>QuestionPrompt</code>；无法即时端口的命令<strong>必须</strong>加进 <code>tuiUnsupportedReason</code> 守卫，<br>严禁让 inquirer 进入 <code>route()</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-002] kiro-连接修复-2026-06-05.html"><div class="dir">← 上一篇</div><div class="ttl">Kiro 连接修复（CW SDK 缺失 + 级联 404）</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-004] tui-叙事与选择覆盖层-2026-06-01.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 高级工程师叙事模式 + 交互选择覆盖层</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-003] tui-inquirer闪退修复-2026-06-05.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

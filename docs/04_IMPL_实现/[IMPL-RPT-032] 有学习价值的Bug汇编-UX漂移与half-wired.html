@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-032-有学习价值的-bug-汇编-ux-漂移与-half-wired-一类">[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类</a></li><li class="lvl-2"><a href="#零-为什么单独立一篇">零、为什么单独立一篇</a></li><li class="lvl-2"><a href="#一-askuserquestion-答完即消失-tui-vs-经典-repl-漂移">一、AskUserQuestion 答完即消失（TUI vs 经典 REPL 漂移）</a></li><li class="lvl-3"><a href="#现象">现象</a></li><li class="lvl-3"><a href="#根因-跑通完整代码路径才看清">根因（跑通完整代码路径才看清）</a></li><li class="lvl-3"><a href="#方案">方案</a></li><li class="lvl-3"><a href="#教训">教训</a></li><li class="lvl-2"><a href="#二-网关配置按类别聚合-14-个交错-section-的-el-tabs-改造">二、网关配置按类别聚合：14 个交错 section 的 el-tabs 改造</a></li><li class="lvl-3"><a href="#现象-2">现象</a></li><li class="lvl-3"><a href="#根因-不是-bug-是-结构陷阱">根因（不是 bug 是**结构陷阱**）</a></li><li class="lvl-3"><a href="#方案-2">方案</a></li><li class="lvl-3"><a href="#教训-2">教训</a></li><li class="lvl-2"><a href="#三-共性方法论-遇到同型-bug-先问这几句">三、共性方法论（遇到同型 bug 先问这几句）</a></li><li class="lvl-2"><a href="#四-维护约定">四、维护约定</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-032-有学习价值的-bug-汇编-ux-漂移与-half-wired-一类">[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类<a class="anchor" href="#impl-rpt-032-有学习价值的-bug-汇编-ux-漂移与-half-wired-一类" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 <code>docs/03_DESIGN_设计/</code>，本目录索引见 <code>00_INDEX_实现-分类索引.md</code></p></blockquote>
+<ul><li><strong>日期</strong>：2026-07-02</li><li><strong>范围</strong>：收录<strong>有学习价值</strong>的 bug——不是简单的崩溃/超时事故（那类进 [IMPL-RPT-015] 时间线），</li></ul>
+<p>而是<strong>根因隐蔽、修复方法可迁移</strong>的一类：交互面漂移（TUI vs 经典 REPL）、half-wired（底座算好了却没接上呈现）、<br>  以及「按类别聚合」这类看似简单实则有结构陷阱的前端改造。</p>
+<ul><li><strong>状态</strong>：活文档（随新案例追加）；本轮收录 2 例（分支 <code>feat/0.1.104-multi-subsystem-batch</code>，未提交）。</li></ul>
+<h2 id="零-为什么单独立一篇">零、为什么单独立一篇<a class="anchor" href="#零-为什么单独立一篇" aria-label="锚点">#</a></h2>
+<p>[IMPL-RPT-015] 修复记录时间线收录的是 <strong>P0/P1 硬故障</strong>（宿主终端被破坏、网关断链、认证污染）——<br>「什么坏了、什么时候修」的导航页。但项目里还有另一类 bug，<strong>用户能明显感觉到「不对」，可代码里找不到报错</strong>：</p>
+<ul><li>某个功能<strong>在 TUI 里有、在经典 REPL 里没有</strong>（或反过来）——同一能力两条界面实现，只富化了一条 = <strong>漂移（drift）</strong>。</li><li>底座<strong>已经把数据/计算准备好</strong>，却<strong>没接到呈现侧</strong>——看起来「做了」，实则半截 = <strong>half-wired</strong>。</li><li>呈现的内容<strong>是过时假值或空洞提示</strong>，与真实状态矛盾 = <strong>幽灵显示 / hollow hint</strong>。</li></ul>
+<p>这类 bug 的价值在于<strong>根因定位法</strong>与<strong>修复套路可复用</strong>。本篇按「现象 / 根因 / 方案 / 教训」四段记录，<br>供后续遇到同型问题时对照。</p>
+<pre><code class="language-svg">&lt;svg viewBox=&quot;0 0 700 200&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; font-family=&quot;sans-serif&quot; font-size=&quot;12.5&quot;&gt;
+  &lt;text x=&quot;350&quot; y=&quot;22&quot; text-anchor=&quot;middle&quot; fill=&quot;#1f2328&quot; font-size=&quot;13&quot; font-weight=&quot;800&quot;&gt;同一能力 · 两条界面实现&lt;/text&gt;
+
+  &lt;rect x=&quot;40&quot; y=&quot;44&quot; width=&quot;260&quot; height=&quot;60&quot; rx=&quot;10&quot; fill=&quot;#eff4ff&quot; stroke=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;170&quot; y=&quot;68&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;TUI（ink）&lt;/text&gt;
+  &lt;text x=&quot;170&quot; y=&quot;88&quot; text-anchor=&quot;middle&quot; fill=&quot;#374151&quot; font-size=&quot;11&quot;&gt;已富化：role:qa 持久回显 ✓&lt;/text&gt;
+
+  &lt;rect x=&quot;400&quot; y=&quot;44&quot; width=&quot;260&quot; height=&quot;60&quot; rx=&quot;10&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;530&quot; y=&quot;68&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-weight=&quot;700&quot;&gt;经典 REPL&lt;/text&gt;
+  &lt;text x=&quot;530&quot; y=&quot;88&quot; text-anchor=&quot;middle&quot; fill=&quot;#b91c1c&quot; font-size=&quot;11&quot;&gt;未接：选完即消失 ✗（drift）&lt;/text&gt;
+
+  &lt;rect x=&quot;150&quot; y=&quot;132&quot; width=&quot;400&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#fff7ed&quot; stroke=&quot;#f59e0b&quot;/&gt;
+  &lt;text x=&quot;350&quot; y=&quot;151&quot; text-anchor=&quot;middle&quot; fill=&quot;#92400e&quot; font-size=&quot;11&quot; font-weight=&quot;700&quot;&gt;漂移 = 只富化了一侧&lt;/text&gt;
+  &lt;text x=&quot;350&quot; y=&quot;168&quot; text-anchor=&quot;middle&quot; fill=&quot;#92400e&quot; font-size=&quot;10.5&quot;&gt;修复：给缺席那侧补上（不动已工作的一侧）&lt;/text&gt;
+
+  &lt;line x1=&quot;170&quot; y1=&quot;104&quot; x2=&quot;300&quot; y2=&quot;132&quot; stroke=&quot;#cbd5e1&quot;/&gt;
+  &lt;line x1=&quot;530&quot; y1=&quot;104&quot; x2=&quot;400&quot; y2=&quot;132&quot; stroke=&quot;#cbd5e1&quot;/&gt;
+&lt;/svg&gt;</code></pre>
+<hr>
+<h2 id="一-askuserquestion-答完即消失-tui-vs-经典-repl-漂移">一、AskUserQuestion 答完即消失（TUI vs 经典 REPL 漂移）<a class="anchor" href="#一-askuserquestion-答完即消失-tui-vs-经典-repl-漂移" aria-label="锚点">#</a></h2>
+<h3 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h3>
+<p>用户在 khy 里回答 AskUserQuestion 弹出的问题，<strong>选完选项后问题和答案就一起消失了</strong>；<br>希望像 Claude Code 那样<strong>保留显示「用户给出的答案」</strong>，能在滚动历史里回看「问了什么、选了什么」。</p>
+<h3 id="根因-跑通完整代码路径才看清">根因（跑通完整代码路径才看清）<a class="anchor" href="#根因-跑通完整代码路径才看清" aria-label="锚点">#</a></h3>
+<p>这是一处典型的 <strong>TUI-vs-经典 REPL 漂移</strong>：</p>
+<ul><li><strong>TUI（ink）侧早已有回显</strong>：<code>useQueryBridge.js</code> 的 <code>buildDecisionRecord()</code> 在 AskUserQuestion 结算后</li></ul>
+<p>产出 <code>{ role:'qa', qa:[{question,choice}] }</code> 记录（注释原文「so the question + chosen answer stays<br>  visible in scrollback after the overlay clears」），由 <code>Transcript.js</code> 渲染成 <code>❓ 问题</code> / <code>→ 所选</code>。</p>
+<ul><li><strong>经典 REPL 侧缺席</strong>：<code>repl.js</code> 的 AskUserQuestion 分支用 <code>renderer.askInlineQuestion()</code> 收答案，</li></ul>
+<p>但其 <code>cleanup()</code>（<code>aiRenderer.js</code>）在选中后 <code>moveCursor + clearScreenDown</code> <strong>把整段菜单（含问题）<br>  擦除且不留任何字</strong>，收完直接 <code>return {behavior:'allow'}</code>——<strong>从不打印回显</strong>。→ 选完即消失。</p>
+<p><strong>关键洞察</strong>：问「为什么消失」不能只看 REPL 分支，要<strong>对照 TUI 有没有同款能力</strong>。一旦发现「TUI 有 / 经典 REPL 无」，<br>根因就从「消失了」精确到「经典 REPL 侧从未接回显，且 cleanup 会擦掉菜单不留字」。</p>
+<h3 id="方案">方案<a class="anchor" href="#方案" aria-label="锚点">#</a></h3>
+<p>经典 REPL 侧<strong>补一条持久回显</strong>，对齐 TUI 语义：</p>
+<ul><li>新纯叶子 <code>cli/qaEchoLines.js</code>（零 IO、门控 <code>KHY_QA_ECHO</code> 默认开）：<code>buildQaEchoLines(answers, env) → string[]</code>，</li></ul>
+<p>每题两行 <code>  ❓ {question}</code> / <code>     → {choice}</code>；门控关 / 空 answers / 坏输入 → <code>[]</code>（逐字节回退「选完即消失」）。<br>  叶子返<strong>明文</strong>行，着色留调用方（同 <code>envInfoLines</code> / <code>themePanelLines</code> 惯例）。</p>
+<ul><li><code>repl.js</code> 在 <code>askInlineQuestion</code> 擦除<strong>之后</strong>打印该回显块（落进滚动历史，不再被清），fail-soft <code>try/catch</code></li></ul>
+<p>绝不影响 <code>behavior:'allow'</code>。</p>
+<p><strong>刻意不动</strong>：TUI 侧（已工作，改了反而造新漂移）；<code>cleanup</code> 擦除逻辑（擦交互菜单是对的，持久回显是擦除后<strong>另打印</strong>，两者正交）。</p>
+<h3 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h3>
+<ol><li><strong>判缺口要跑真代码路径 + 对照另一界面</strong>：TUI 有回显 vs 经典 REPL 无，是本仓已知的漂移家族（承刀105/106 中断标记、刀114 缓存警告孪生）。</li><li><strong>「擦除交互菜单」与「持久回显」是正交的两件事</strong>：不要去改擦除逻辑，而是在擦除之后另打印——两者互不干扰。</li><li><strong>纯叶子返明文 + 调用方着色</strong>：可测性（不依赖 chalk）与视觉兼得。</li><li><strong>门控默认开 + 关闭即逐字节回退</strong>：新增可见行为永远可安全关掉。</li></ol>
+<hr>
+<h2 id="二-网关配置按类别聚合-14-个交错-section-的-el-tabs-改造">二、网关配置按类别聚合：14 个交错 section 的 el-tabs 改造<a class="anchor" href="#二-网关配置按类别聚合-14-个交错-section-的-el-tabs-改造" aria-label="锚点">#</a></h2>
+<h3 id="现象-2">现象<a class="anchor" href="#现象-2" aria-label="锚点">#</a></h3>
+<p>用户要求把网关配置里「apikey / 模型 / URL 等<strong>类似功能按类别放在一起</strong>，好查看使用」。<br>目标简单，但两个页面（管理页 <code>AIGateway.vue</code> / 用户页 <code>MyGateway.vue</code>）结构差异巨大，直接搬块风险悬殊。</p>
+<h3 id="根因-不是-bug-是-结构陷阱">根因（不是 bug 是<strong>结构陷阱</strong>）<a class="anchor" href="#根因-不是-bug-是-结构陷阱" aria-label="锚点">#</a></h3>
+<ul><li><strong>用户页 <code>MyGateway.vue</code>（整洁）</strong>：5 张卡片一条到底，可以直接用 <code>&lt;el-tabs&gt;&lt;el-tab-pane&gt;</code> 把卡片搬进对应 pane。</li><li><strong>管理页 <code>AIGateway.vue</code>（重灾区）</strong>：14 个 section <strong>按类别交错</strong>排列（models = §3/§4/§6 中间夹着 §5；</li></ul>
+<p>routing = §8(~420 行)/§10/§11b/§12；accounts = §11a/§13）。<strong>物理搬块 = 重定位 400+ 行</strong>，极易在<br>  重缩进 / 移动 el-dialog 时引入错误。</p>
+<p><strong>关键洞察</strong>：同一个诉求，两个页面<strong>不能用同一招</strong>。整洁页搬卡片；交错重灾页<strong>绝不搬块</strong>。</p>
+<h3 id="方案-2">方案<a class="anchor" href="#方案-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>用户页</strong>：真 <code>&lt;el-tab-pane&gt;</code> 包卡片（4 个 pane）；巨型 catalog 卡（~115 行）<strong>字节不动</strong>，两次 edit 上下包住它，不重排内部。</li><li><strong>管理页</strong>：改用 <strong>v-show-per-section 就地显隐</strong>——插一条<strong>空 pane 的 el-tabs 选择器条</strong>（6 类，label + name 无内容），</li></ul>
+<p>给<strong>每个 section 根</strong>加 <code>v-show=&quot;activeTab === '&lt;cat&gt;'&quot;</code>。section 全部<strong>字节留原位</strong>，4 个 el-dialog 是模态浮层<br>  <strong>无需重定位</strong>，script 逻辑零改。scoped CSS <code>.gateway-tabs :deep(.el-tabs__content){display:none}</code> 隐藏空 pane 内容只留标签头。</p>
+<p><strong>为何 <code>v-show</code> 不用 <code>&lt;template v-if&gt;</code></strong>：<code>v-if</code> 卸载非激活 section → 切 tab 丢响应式状态；el-tab-pane 默认<br><strong>非 lazy</strong> 也是常驻 DOM。两者都保「切页不卸载数据不丢」——<strong>绝不设 <code>lazy</code></strong>。（初版误写 <code>&lt;template v-if&gt;</code>，立即改回 el-card 根加 v-show。）</p>
+<p>一个连带 bug：用户页 <code>scrollToProviderEditor()</code> 原本 <code>getElementById + scrollIntoView</code>，但卡片搬进未激活 pane 后<br><code>display:none</code> <strong>滚不动</strong> → 先 <code>activeTab.value = 'keys'</code> 切页，再 <code>nextTick()</code> 后滚。</p>
+<h3 id="教训-2">教训<a class="anchor" href="#教训-2" aria-label="锚点">#</a></h3>
+<ol><li><strong>同一诉求，两页两手法</strong>：整洁页真 pane 搬卡；交错重灾页 v-show 就地显隐（同样的 tab UX，却零搬块、零重定位弹窗、零脚本改）。</li><li><strong>保状态用 <code>v-show</code> 非 <code>v-if</code></strong>：<code>v-if</code> 卸载丢响应式；el-tab-pane 非 lazy 常驻——绝不设 <code>lazy</code>。</li><li><strong>el-dialog 模态浮层与 tab 无关，永不重定位</strong>。</li><li><strong>巨型卡「上下包住字节不动」</strong>，避免重缩进错误。</li><li><strong>卡搬进未激活 pane 后 <code>scrollIntoView</code> 失效</strong>（<code>display:none</code> 滚不动）：需先切 tab + <code>nextTick</code>。</li><li><strong>前端纯 UX 批次无门控直接落地</strong>（后端 pure-leaf + gate + byte-fallback 模式不适用前端）。</li></ol>
+<hr>
+<h2 id="三-共性方法论-遇到同型-bug-先问这几句">三、共性方法论（遇到同型 bug 先问这几句）<a class="anchor" href="#三-共性方法论-遇到同型-bug-先问这几句" aria-label="锚点">#</a></h2>
+<p>从上面两例（及历史漂移家族）抽出的通用定位法：</p>
+<pre><code class="language-svg">&lt;svg viewBox=&quot;0 0 700 170&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; font-family=&quot;sans-serif&quot; font-size=&quot;12.5&quot;&gt;
+  &lt;text x=&quot;350&quot; y=&quot;22&quot; text-anchor=&quot;middle&quot; fill=&quot;#1f2328&quot; font-size=&quot;13&quot; font-weight=&quot;800&quot;&gt;half-wired：算好了 · 没接上&lt;/text&gt;
+
+  &lt;rect x=&quot;40&quot; y=&quot;46&quot; width=&quot;180&quot; height=&quot;56&quot; rx=&quot;10&quot; fill=&quot;#eff4ff&quot; stroke=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;130&quot; y=&quot;70&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;计算侧（service）&lt;/text&gt;
+  &lt;text x=&quot;130&quot; y=&quot;88&quot; text-anchor=&quot;middle&quot; fill=&quot;#374151&quot; font-size=&quot;11&quot;&gt;数据/结果已 live ✓&lt;/text&gt;
+
+  &lt;rect x=&quot;480&quot; y=&quot;46&quot; width=&quot;180&quot; height=&quot;56&quot; rx=&quot;10&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;570&quot; y=&quot;70&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-weight=&quot;700&quot;&gt;呈现侧（UI）&lt;/text&gt;
+  &lt;text x=&quot;570&quot; y=&quot;88&quot; text-anchor=&quot;middle&quot; fill=&quot;#b91c1c&quot; font-size=&quot;11&quot;&gt;从不消费它 ✗&lt;/text&gt;
+
+  &lt;line x1=&quot;220&quot; y1=&quot;74&quot; x2=&quot;470&quot; y2=&quot;74&quot; stroke=&quot;#cbd5e1&quot; stroke-width=&quot;2&quot; stroke-dasharray=&quot;6 5&quot;/&gt;
+  &lt;text x=&quot;350&quot; y=&quot;66&quot; text-anchor=&quot;middle&quot; fill=&quot;#b91c1c&quot; font-size=&quot;18&quot; font-weight=&quot;700&quot;&gt;✂&lt;/text&gt;
+  &lt;text x=&quot;350&quot; y=&quot;94&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;断点 = 「看起来做了，实则半截」&lt;/text&gt;
+
+  &lt;text x=&quot;350&quot; y=&quot;138&quot; text-anchor=&quot;middle&quot; fill=&quot;#374151&quot; font-size=&quot;11&quot;&gt;定位：看 service 有没有 live 数据 · UI 有没有真的读它&lt;/text&gt;
+  &lt;text x=&quot;350&quot; y=&quot;156&quot; text-anchor=&quot;middle&quot; fill=&quot;#374151&quot; font-size=&quot;11&quot;&gt;修复：补一根接线（薄壳 + fail-soft），不重写计算侧&lt;/text&gt;
+&lt;/svg&gt;</code></pre>
+<table><thead><tr><th>问题</th><th>怎么判</th></tr></thead><tbody><tr><td>这功能是不是「一边有一边没有」？</td><td>grep 特性叶子被谁 <code>require</code>；对照 TUI（<code>useQueryBridge</code>/<code>Transcript</code>）与经典 REPL（<code>repl.js</code>）两侧</td></tr><tr><td>呈现的是不是过时假值？</td><td>找呈现内容的 SSOT，看它是不是硬编码 / 与真实状态矛盾（幽灵显示）</td></tr><tr><td>底座算好了却没接？</td><td>看计算侧（service）有没有 live 数据、呈现侧有没有消费它（half-wired = 算了没接）</td></tr><tr><td>前端「按类别聚合」能不能直接搬？</td><td>先看目标 section 是否<strong>按类别交错</strong>；交错就用 v-show 就地显隐，别搬块</td></tr></tbody></table>
+<p><strong>修复套路（后端类）</strong>：新纯叶子（零 IO + 门控默认开 + 空/关 → 逐字节回退）→ 薄壳接线（fail-soft）→ 叶子单测 + 三守卫 + 端到端。<br><strong>修复套路（前端类）</strong>：复用现有子组件、非侵入（script 不动）、<code>v-show</code> 保状态、模态不重定位、巨型块上下包住。</p>
+<hr>
+<h2 id="四-维护约定">四、维护约定<a class="anchor" href="#四-维护约定" aria-label="锚点">#</a></h2>
+<p>新增本类案例时：</p>
+<ol><li>按「现象 / 根因 / 方案 / 教训」四段写，<strong>根因要写清「怎么定位到的」</strong>（跑了哪条代码路径、对照了哪一侧）。</li><li>若同时是 P0/P1 硬故障，另在 [IMPL-RPT-015] 时间线补一行；本篇专收「根因隐蔽、方法可迁移」的一类。</li><li>关联的纯叶子 / 组件路径写明，便于回溯。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-031] 多视角模型配置-单一图谱八视角-2026-06-20.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-031] 多视角模型配置：单一目录图谱 → 八视角分组</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-040] CC-zip1 命令对齐账本.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-040] CC-zip(1) 命令对齐账本(claude-code-main (1).zip)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-032] 有学习价值的Bug汇编-UX漂移与half-wired.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

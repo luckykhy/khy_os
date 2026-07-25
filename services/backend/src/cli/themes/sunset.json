@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "sunset",
+    "label": "Sunset Warm",
+    "description": "Warm sunset palette — amber, coral, and purple"
+  },
+  "colors": {
+    "claude": "#FF7F50",
+    "success": "#50C878",
+    "error": "#FF4757",
+    "warning": "#FFB347",
+    "text": "#FFF0E0",
+    "secondaryText": "#C4A882",
+    "subtle": "#5C3D2E",
+    "bashBorder": "#FF6B81",
+    "permission": "#FFB347",
+    "link": "#DDA0DD",
+    "diffAdded": "#2E4B32",
+    "diffRemoved": "#6B2D35",
+    "diffAddedDimmed": "#3A5A3E",
+    "diffRemovedDimmed": "#5A3842",
+    "diffAddedWord": "#66CDAA",
+    "diffRemovedWord": "#FF6B6B",
+    "permissionPurple": "#DA70D6",
+    "userMessageBg": "#2E1F1A"
+  }
+}

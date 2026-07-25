@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot Engine CLI · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-godot<span class="sep">›</span>Godot Engine CLI</div>
+      <header class="hero reveal"><h1>Godot Engine CLI</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#godot-engine-cli">Godot Engine CLI</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#requirements">Requirements</a></li><li class="lvl-2"><a href="#commands">Commands</a></li><li class="lvl-3"><a href="#project-management">Project Management</a></li><li class="lvl-3"><a href="#scene-operations">Scene Operations</a></li><li class="lvl-3"><a href="#gdscript-execution">GDScript Execution</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#engine">Engine</a></li><li class="lvl-2"><a href="#json-mode">JSON Mode</a></li><li class="lvl-2"><a href="#interactive-repl">Interactive REPL</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-godot&quot;<br>description: &gt;-<br>  Agent-native CLI for Godot project management, scenes, exports, and script execution.</p>
+<hr>
+<h1 id="godot-engine-cli">Godot Engine CLI<a class="anchor" href="#godot-engine-cli" aria-label="锚点">#</a></h1>
+<p>Agent-native CLI for the Godot game engine. Manage projects, scenes, exports, and GDScript execution from the command line.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=godot/agent-harness</code></pre>
+<h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
+<ul><li>Godot 4.x on PATH (or set GODOT_BIN env var)</li></ul>
+<h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
+<h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create a new Godot project
+cli-anything-godot project create &lt;path&gt; [--name &quot;My Game&quot;]
+
+# Get project info (name, features, main scene)
+cli-anything-godot --json -p &lt;project&gt; project info
+
+# List all scenes
+cli-anything-godot --json -p &lt;project&gt; project scenes
+
+# List all scripts
+cli-anything-godot --json -p &lt;project&gt; project scripts
+
+# List all resources
+cli-anything-godot --json -p &lt;project&gt; project resources
+
+# Re-import project resources
+cli-anything-godot -p &lt;project&gt; project reimport</code></pre>
+<h3 id="scene-operations">Scene Operations<a class="anchor" href="#scene-operations" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create a new scene with root node type
+cli-anything-godot -p &lt;project&gt; scene create scenes/Level1.tscn --root-type Node3D
+
+# Read scene structure (nodes, resources, connections)
+cli-anything-godot --json -p &lt;project&gt; scene read scenes/Level1.tscn
+
+# Add a child node to a scene
+cli-anything-godot -p &lt;project&gt; scene add-node scenes/Level1.tscn --name Player --type CharacterBody3D --parent .</code></pre>
+<h3 id="gdscript-execution">GDScript Execution<a class="anchor" href="#gdscript-execution" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Run a GDScript file (must extend SceneTree)
+cli-anything-godot -p &lt;project&gt; script run tools/build_navmesh.gd
+
+# Run inline GDScript code
+cli-anything-godot -p &lt;project&gt; script inline 'print(ProjectSettings.get_setting(&quot;application/config/name&quot;))'
+
+# Validate GDScript syntax
+cli-anything-godot -p &lt;project&gt; script validate scripts/player.gd</code></pre>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List configured export presets
+cli-anything-godot --json -p &lt;project&gt; export presets
+
+# Export all presets
+cli-anything-godot -p &lt;project&gt; export build
+
+# Export a specific preset
+cli-anything-godot -p &lt;project&gt; export build --preset &quot;Windows Desktop&quot; --output build/game.exe</code></pre>
+<h3 id="engine">Engine<a class="anchor" href="#engine" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Check Godot availability and binary path
+cli-anything-godot --json engine status
+
+# Get engine version
+cli-anything-godot engine version</code></pre>
+<h2 id="json-mode">JSON Mode<a class="anchor" href="#json-mode" aria-label="锚点">#</a></h2>
+<p>Add <code>--json</code> flag to any command for structured JSON output suitable for agent consumption:</p>
+<pre><code class="language-bash">cli-anything-godot --json -p ./my-game project info</code></pre>
+<h2 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-godot -p ./my-game session</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-gimp/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-gimp</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-inkscape/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-inkscape</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-godot/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

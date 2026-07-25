@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSeek-TUI 资源回收与临时文件清理对齐清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>DeepSeek-TUI 资源回收与临时文件清理对齐清单</div>
+      <header class="hero reveal"><h1>DeepSeek-TUI 资源回收与临时文件清理对齐清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#deepseek-tui-资源回收与临时文件清理对齐清单">DeepSeek-TUI 资源回收与临时文件清理对齐清单</a></li><li class="lvl-2"><a href="#学习清单-先列清单">学习清单（先列清单）</a></li><li class="lvl-2"><a href="#逐项对齐-状态追踪">逐项对齐（状态追踪）</a></li><li class="lvl-2"><a href="#本轮已落地变更">本轮已落地变更</a></li><li class="lvl-2"><a href="#本轮新增落地-继续对齐">本轮新增落地（继续对齐）</a></li><li class="lvl-2"><a href="#下一步建议-按优先级">下一步建议（按优先级）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-008 | 阶段: 运维 | 原路径: docs/指南/deepseek-tui-资源清理对齐.md --&gt;</p>
+<h1 id="deepseek-tui-资源回收与临时文件清理对齐清单">DeepSeek-TUI 资源回收与临时文件清理对齐清单<a class="anchor" href="#deepseek-tui-资源回收与临时文件清理对齐清单" aria-label="锚点">#</a></h1>
+<p>更新时间：2026-05-18  <br>参考基线：<code>/home/kodehu03/Downloads/DeepSeek-TUI-main.zip</code>（解压到<code>/tmp/DeepSeek-TUI-main</code>）</p>
+<h2 id="学习清单-先列清单">学习清单（先列清单）<a class="anchor" href="#学习清单-先列清单" aria-label="锚点">#</a></h2>
+<ol><li>启动期残留临时文件清理（如特定前缀、老化判定、只清理托管目标）</li><li>临时文件原子写入（同目录 tmp + rename，避免半写损坏）</li><li>后台任务与子代理生命周期回收（cancel / completed / failed 后释放槽位）</li><li>活动感知超时（idle/sliding timeout），避免“硬超时误杀活跃任务”</li><li>优雅关闭（SIGINT/SIGTERM）与子进程回收（先协作关闭，再兜底 kill）</li><li>快照/缓存保留策略（TTL、大小上限、数量上限）</li><li>清理可观测性（清理了多少、释放多少、是否失败可追踪）</li><li>可测试性（隔离临时目录、启动/清理行为可单测）</li></ol>
+<h2 id="逐项对齐-状态追踪">逐项对齐（状态追踪）<a class="anchor" href="#逐项对齐-状态追踪" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>DeepSeek 证据</th><th>KHY-OS 现状</th><th>对齐动作</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td><code>crates/tui/src/snapshot/repo.rs</code>：<code>cleanup_stale_pack_temps(...)</code> 启动期清理</td><td><code>cleanupService.cleanOsTempFiles()</code>仅清理文件，且前缀覆盖不足</td><td>扩展为“托管前缀白名单 + 文件/目录 + 老化阈值 + 可测临时根目录”</td><td>已完成</td></tr><tr><td>2</td><td><code>crates/cli/src/update.rs</code>：<code>tempfile_in</code> + <code>persist/rename</code></td><td><code>trimTrainingData()</code>直接覆盖写入</td><td>引入原子写 <code>atomicWriteText()</code>，训练数据裁剪改为原子落盘</td><td>已完成</td></tr><tr><td>3</td><td><code>docs/SUBAGENTS.md</code>：父取消联动子会话，完成后不占并发槽位</td><td><code>backend/src/coordinator/workerAgent.js</code> 已有级联 shutdown 与并发/深度控制</td><td>保持现状，补文档映射</td><td>已具备</td></tr><tr><td>4</td><td><code>crates/tui/src/client/chat.rs</code>：SSE idle timeout；<code>engine</code>取消令牌</td><td><code>spawnWithIdleTimeout</code>、<code>toolUseLoop</code>、<code>resourceGuard.startWatchdog</code> 已采用活动感知策略</td><td>保持现状，后续补更细粒度指标</td><td>已具备</td></tr><tr><td>5</td><td><code>engine.rs</code>/<code>lsp</code>：优雅 shutdown + fallback</td><td><code>bootstrap/shutdown.js</code>、<code>ai-manage-daemon.js</code>、<code>processAgent.js</code> 已做信号处理与清理</td><td>保持现状，后续统一 shutdown 诊断输出格式</td><td>已具备</td></tr><tr><td>6</td><td><code>snapshot</code>：按年龄、体积、数量 prune + gc</td><td><code>cleanupService</code>已有快照/日志/训练/遥测清理策略</td><td>后续考虑把“目录级预算”推广到更多运行时缓存目录</td><td>部分具备</td></tr><tr><td>7</td><td>多处日志含清理结果与错误信息</td><td><code>runCleanup().summary</code>已有 freed/actions 汇总</td><td>已增加“目标级耗时/失败计数 + 最近一次清理报告 + CLI 进度展示”</td><td>已完成</td></tr><tr><td>8</td><td><code>tempfile::TempDir</code> 等隔离测试普遍使用</td><td>现有 <code>cleanupService.test.js</code>较轻量</td><td>新增 <code>cleanupService.tempCleanup.test.js</code> 覆盖老化文件/目录清理行为</td><td>已完成</td></tr></tbody></table>
+<h2 id="本轮已落地变更">本轮已落地变更<a class="anchor" href="#本轮已落地变更" aria-label="锚点">#</a></h2>
+<ul><li><code>backend/src/services/cleanupService.js</code><ul><li>新增 OS 临时目录托管前缀白名单（<code>khy_</code>/<code>khy-</code>/<code>khyquant_</code>/<code>khyquant-</code>）</li><li><code>cleanOsTempFiles()</code>从“只删文件”升级为“可删老化目录 + 递归统计释放字节”</li><li>支持 <code>KHY_OS_TEMP_DIR</code>（便于测试和灰度验证）</li><li>新增 <code>atomicWriteText()</code>，并用于 <code>trimTrainingData()</code> 的落盘路径</li></ul></li><li><code>backend/tests/services/cleanupService.tempCleanup.test.js</code><ul><li>覆盖：老化托管文件删除、老化托管目录删除、新鲜托管文件保留、非托管文件保留</li></ul></li></ul>
+<h2 id="本轮新增落地-继续对齐">本轮新增落地（继续对齐）<a class="anchor" href="#本轮新增落地-继续对齐" aria-label="锚点">#</a></h2>
+<ul><li><code>backend/src/services/cleanupService.js</code><ul><li><code>runCleanup()</code>新增 <code>metrics</code>（目标级耗时、失败计数、目标总数）</li><li>新增最近一次清理报告缓存 <code>getLastCleanupReport()</code></li><li><code>startPeriodicCleanup({ skipInitial })</code> 支持跳过首轮，避免启动阶段重复清理</li></ul></li><li><code>backend/src/bootstrap/prefetch.js</code><ul><li>启动延迟任务改为：<code>runCleanup({ trigger: 'startup' })</code> 后 <code>startPeriodicCleanup({ skipInitial: true })</code>，避免重复执行</li></ul></li><li><code>backend/src/cli/router.js</code>、<code>backend/src/cli/handlers/settings.js</code><ul><li><code>cleanup status</code> 新增最近一次清理报告（触发源、耗时、失败数、目标进度）</li><li><code>cleanup</code> 执行时新增“目标+进度”式状态输出，避免模糊文案</li></ul></li><li><code>backend/tests/services/cleanupService.test.js</code><ul><li>增加 <code>metrics</code> 与 <code>getLastCleanupReport()</code> 结构断言</li></ul></li></ul>
+<h2 id="下一步建议-按优先级">下一步建议（按优先级）<a class="anchor" href="#下一步建议-按优先级" aria-label="锚点">#</a></h2>
+<ol><li>把 <code>atomicWriteText()</code>抽到 <code>backend/src/utils/</code> 作为通用能力，替换更多直接覆盖写路径。</li><li>为 <code>cleanup status</code> 增加按目标排序/筛选（按耗时或失败优先）以便快速排障。</li><li>将 <code>cleanup</code> 可观测指标接入统一遥测上报（仅本地匿名统计），用于版本回归对比。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-007] cli-万能接入-集成指南.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS × CLI-Anything 集成指南</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-009] github-分支保护基线.html"><div class="dir">下一篇 →</div><div class="ttl">GitHub Branch Protection Baseline</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-008] deepseek-tui-资源清理对齐.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

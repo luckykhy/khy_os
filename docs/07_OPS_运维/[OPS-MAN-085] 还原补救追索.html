@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-085] 还原补救追索 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-085] 还原补救追索</div>
+      <header class="hero reveal"><h1>[OPS-MAN-085] 还原补救追索</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-085-还原补救追索">[OPS-MAN-085] 还原补救追索</a></li><li class="lvl-2"><a href="#这一层在解决什么">这一层在解决什么</a></li><li class="lvl-2"><a href="#解锁词表-与授权门-blockers-一一对齐">解锁词表（与授权门 blockers 一一对齐）</a></li><li class="lvl-2"><a href="#聚合口径">聚合口径</a></li><li class="lvl-2"><a href="#保证-继承项目章程">保证（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-085-还原补救追索">[OPS-MAN-085] 还原补救追索<a class="anchor" href="#ops-man-085-还原补救追索" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-recourse.js --gen-doc</code> 确定性生成，请勿手改；<br>补救逻辑改在 <code>scripts/lib/restoreRecoursePlan.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层在解决什么">这一层在解决什么<a class="anchor" href="#这一层在解决什么" aria-label="锚点">#</a></h2>
+<p>还原家族已闭合成环，本文件是<strong>第七层，是授权门的逆运算</strong>：</p>
+<ul><li><code>restore-authorize</code>（OPS-MAN-084）答 <strong>should I?</strong>（该不该自动开跑：是 / 否 / 问）；</li><li><code>restore-converge</code>（OPS-MAN-082）答 <strong>did it work?</strong>（跑完一步进展如何）；</li><li><code>restore-recourse</code>（本文件）答 <strong>if no, what is the minimal path to yes?</strong></li></ul>
+<p>（被挡了，把世界改成什么样这个判定就会翻绿）。</p>
+<p>整条链此前有个刺眼缺口：<strong>它只会说「不」，从不说「怎么才能变成是」。</strong> 当授权门判<br><code>forbidden</code>、或 converge 判 <code>escalate-human</code>，落在陌生机器上的开发者 / 使用者 / 维护者<br>只得到一个<strong>死胡同拒绝</strong>。安全 agent 系统里，一个不可操作的拒绝等于把用户推下悬崖——<br>他知道被挡了，却不知道下一步。本层取一个非授权判定，按它的<strong>每个 blocker</strong> 反查<br><strong>最小、有序、安全</strong>的解锁选项，每条标明「谁来做、成本多少、翻到哪一档」。</p>
+<pre><code class="language-bash">node scripts/restore-recourse.js --json   # 撞到拒绝的 agent 读这个找出路
+# needed=false → 已授权，无需补救
+# needed=true  → options 按成本升序，最短解锁路线在最前</code></pre>
+<h2 id="解锁词表-与授权门-blockers-一一对齐">解锁词表（与授权门 blockers 一一对齐）<a class="anchor" href="#解锁词表-与授权门-blockers-一一对齐" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>blocker</th><th>补救（可析取多解）</th><th>agent 能否自愈</th></tr></thead><tbody><tr><td><code>overwrite-risk</code></td><td>→ask-first；→authorized</td><td>否</td></tr><tr><td><code>chain-requires-human</code></td><td>→ask-first；→authorized</td><td>否</td></tr><tr><td><code>dangerous-move</code></td><td>（无解锁保证）</td><td>否</td></tr><tr><td><code>facts-missing</code></td><td>（无解锁保证）</td><td>是</td></tr><tr><td><code>assessment-error</code></td><td>（无解锁保证）</td><td>是</td></tr></tbody></table>
+<blockquote><p><code>dangerous-move</code> 是恒久红线：<strong>无自动解</strong>，只能人工审阅整条链、剔除或确认危险步。<br>拒绝可操作 ≠ 拒绝可被绕过——本层绝不承诺「危险动作可自动解锁」。</p></blockquote>
+<h2 id="聚合口径">聚合口径<a class="anchor" href="#聚合口径" aria-label="锚点">#</a></h2>
+<ul><li><code>cheapest</code>：所有补救里成本最低的一条（最省力的第一步）。</li><li><code>fullyAgentUnblockable</code>：<strong>每个</strong> blocker 都能靠 agent 自愈（无需人）才为真。</li><li><code>bestReachable</code>：走完所有补救最好能翻到的授权档，取各 blocker 的<strong>木桶短板</strong>——</li></ul>
+<p>任一 blocker 最好只能到 <code>ask-first</code>，则整体上限就是 <code>ask-first</code>。</p>
+<h2 id="保证-继承项目章程">保证（继承项目章程）<a class="anchor" href="#保证-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>纯计算、零 IO、绝不抛：畸形判定 / 未知 blocker → 产<strong>空补救</strong>并如实标 unresolved，</li></ul>
+<p><strong>绝不虚构解</strong>（不确定不给假路线，安全优先）。</p>
+<ul><li>只<strong>读判定出路线</strong>，绝不触 IO、绝不执行补救——动手是人 / agent 的事。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-084] 还原自驱授权门.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-084] 还原自驱授权门</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-086] 还原轨迹日志</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

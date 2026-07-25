@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 使用说明（完整版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS 使用说明（完整版）</div>
+      <header class="hero reveal"><h1>KHY OS 使用说明（完整版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-使用说明-完整版">KHY OS 使用说明（完整版）</a></li><li class="lvl-2"><a href="#1-命令入口">1. 命令入口</a></li><li class="lvl-2"><a href="#2-安装与升级">2. 安装与升级</a></li><li class="lvl-3"><a href="#2-1-新安装">2.1 新安装</a></li><li class="lvl-3"><a href="#2-2-升级到最新版本">2.2 升级到最新版本</a></li><li class="lvl-3"><a href="#2-3-可选依赖安装">2.3 可选依赖安装</a></li><li class="lvl-2"><a href="#3-首次启动流程说明">3. 首次启动流程说明</a></li><li class="lvl-2"><a href="#4-常用命令速查">4. 常用命令速查</a></li><li class="lvl-3"><a href="#4-1-健康与环境">4.1 健康与环境</a></li><li class="lvl-3"><a href="#4-2-网关与模型">4.2 网关与模型</a></li><li class="lvl-3"><a href="#4-3-管理页">4.3 管理页</a></li><li class="lvl-3"><a href="#4-4-数据库">4.4 数据库</a></li><li class="lvl-2"><a href="#4-5-指令文件优先级">4.5 指令文件优先级</a></li><li class="lvl-2"><a href="#5-windows-管理页-khyguanli-正确打开方式">5. Windows 管理页（`khyguanli`）正确打开方式</a></li><li class="lvl-2"><a href="#6-首次启动出现-seed-警告怎么处理">6. 首次启动出现 seed 警告怎么处理</a></li><li class="lvl-2"><a href="#7-常见问题排查">7. 常见问题排查</a></li><li class="lvl-3"><a href="#7-1-windows-出现-the-system-cannot-find-the-path-specified">7.1 Windows 出现 `The system cannot find the path specified.`</a></li><li class="lvl-3"><a href="#7-2-khy-gateway-status-显示通道不可用但你确认已登录">7.2 `khy gateway status` 显示通道不可用但你确认已登录</a></li><li class="lvl-3"><a href="#7-3-管理页可开但无法登录">7.3 管理页可开但无法登录</a></li><li class="lvl-2"><a href="#8-关键配置与数据路径">8. 关键配置与数据路径</a></li><li class="lvl-2"><a href="#9-版本确认建议">9. 版本确认建议</a></li><li class="lvl-2"><a href="#10-git-发布-私有仓库">10. Git 发布（私有仓库）</a></li><li class="lvl-2"><a href="#11-相关文档">11. 相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-015 | 阶段: 运维 | 原路径: docs/指南/khy-os-用户指南.md --&gt;</p>
+<h1 id="khy-os-使用说明-完整版">KHY OS 使用说明（完整版）<a class="anchor" href="#khy-os-使用说明-完整版" aria-label="锚点">#</a></h1>
+<p>本文档面向安装与使用 <code>khy-os</code> 的用户，覆盖安装、升级、首次启动、管理页、常见故障排查。</p>
+<p>版本说明：</p>
+<ul><li>本文为完整版（含管理页与网关相关运维说明）。</li><li>对外精简版（仅 CLI/安装/使用）见 <code>docs/07_OPS_运维/[OPS-MAN-014] khy-os-用户指南-仅cli.md</code>。</li></ul>
+<h2 id="1-命令入口">1. 命令入口<a class="anchor" href="#1-命令入口" aria-label="锚点">#</a></h2>
+<ul><li>主命令：<code>khy</code></li><li>兼容命令：<code>khyquant</code>、<code>khy-quant</code>、<code>khy-os</code></li><li>推荐始终使用：<code>khy</code></li></ul>
+<h2 id="2-安装与升级">2. 安装与升级<a class="anchor" href="#2-安装与升级" aria-label="锚点">#</a></h2>
+<h3 id="2-1-新安装">2.1 新安装<a class="anchor" href="#2-1-新安装" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install -U khy-os
+khy --version</code></pre>
+<p>Windows PowerShell 示例：</p>
+<pre><code class="language-powershell">python.exe -m pip install -U khy-os
+khy --version</code></pre>
+<h3 id="2-2-升级到最新版本">2.2 升级到最新版本<a class="anchor" href="#2-2-升级到最新版本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install --upgrade khy-os
+khy --version</code></pre>
+<h3 id="2-3-可选依赖安装">2.3 可选依赖安装<a class="anchor" href="#2-3-可选依赖安装" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install -U &quot;khy-os[data]&quot;
+python -m pip install -U &quot;khy-os[ml]&quot;
+python -m pip install -U &quot;khy-os[doc]&quot;
+python -m pip install -U &quot;khy-os[full]&quot;</code></pre>
+<p>说明：大模型权重/推理二进制（如 <code>.gguf</code>、<code>ollama</code> 运行时）不会打进 pip 包，需要按需另行安装。</p>
+<h2 id="3-首次启动流程说明">3. 首次启动流程说明<a class="anchor" href="#3-首次启动流程说明" aria-label="锚点">#</a></h2>
+<p>第一次执行 <code>khy</code> 会自动触发初始化流程（first-run setup）：</p>
+<ol><li>检查/安装 Node.js 依赖</li><li>生成或复用 <code>.env</code></li><li>初始化数据库并执行 <code>seed</code></li><li>注册默认应用</li><li>可选创建默认 <code>khy.md</code> 项目指令文件</li></ol>
+<p>初始化标记文件位于 backend 根目录：</p>
+<ul><li><code>.khy_quant_bootstrapped</code></li><li><code>.khy_quant_seeded</code></li></ul>
+<p>两者都存在时，后续启动会跳过初始化。</p>
+<h2 id="4-常用命令速查">4. 常用命令速查<a class="anchor" href="#4-常用命令速查" aria-label="锚点">#</a></h2>
+<h3 id="4-1-健康与环境">4.1 健康与环境<a class="anchor" href="#4-1-健康与环境" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy doctor
+khy gateway status
+khy db status</code></pre>
+<h3 id="4-2-网关与模型">4.2 网关与模型<a class="anchor" href="#4-2-网关与模型" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy gateway status
+khy gateway model
+khy models list
+khy models pull qwen2.5:7b</code></pre>
+<h3 id="4-3-管理页">4.3 管理页<a class="anchor" href="#4-3-管理页" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy guanli
+khy gateway manage open
+khy gateway manage status
+khy gateway manage stop</code></pre>
+<h3 id="4-4-数据库">4.4 数据库<a class="anchor" href="#4-4-数据库" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy db init
+khy db seed
+khy db status</code></pre>
+<h2 id="4-5-指令文件优先级">4.5 指令文件优先级<a class="anchor" href="#4-5-指令文件优先级" aria-label="锚点">#</a></h2>
+<p>如果项目中同时存在多种 AI 协作指令文件，KHY 按以下优先级处理冲突：</p>
+<ol><li><code>khy.md</code> / <code>KHY.md</code></li><li><code>CLAUDE.md</code> / <code>.claude/CLAUDE.md</code></li><li><code>AGENTS.md</code></li></ol>
+<p>含义：</p>
+<ol><li>当规则互相矛盾时，<code>khy</code> 指令优先级最高</li><li><code>CLAUDE.md</code> 只在不与 <code>khy</code> 冲突时生效</li><li><code>AGENTS.md</code> 作为兼容层，优先级最低</li></ol>
+<p>查看当前目录生效的 <code>khy</code> 指令文件：</p>
+<pre><code class="language-bash">khy /memory</code></pre>
+<h2 id="5-windows-管理页-khyguanli-正确打开方式">5. Windows 管理页（<code>khyguanli</code>）正确打开方式<a class="anchor" href="#5-windows-管理页-khyguanli-正确打开方式" aria-label="锚点">#</a></h2>
+<p>在 <code>khy</code> 交互终端内，以下输入等价：</p>
+<ul><li><code>khyguanli</code></li><li><code>guanli</code></li><li><code>aiguanli</code></li></ul>
+<p>在系统 Shell 中推荐：</p>
+<pre><code class="language-bash">khy guanli
+# 或
+khy gateway manage open</code></pre>
+<p>打开逻辑：</p>
+<ol><li>先探测主站管理页 <code>/admin/ai-gateway</code></li><li>主站不可用时自动回退到独立守护会话（daemon）</li><li>输出 <code>http://127.0.0.1:9090/admin/ai-gateway</code> 及保活直链</li></ol>
+<p>如果你在 Windows 上输入网址后看到“不完整页面”或旧页面样式，优先执行：</p>
+<pre><code class="language-bash">khy gateway manage stop
+khy gateway manage start --daemon
+khy gateway manage open --daemon</code></pre>
+<p>若仍不稳定，显式指定静态前端目录（推荐）：</p>
+<pre><code class="language-bash">khy gateway manage open --daemon --frontend-dist-dir &lt;apps/ai-frontend/dist 绝对路径&gt;</code></pre>
+<p>登录默认账号：<code>admin / admin123</code>（历史安装兼容 <code>admin123.</code>）。</p>
+<h2 id="6-首次启动出现-seed-警告怎么处理">6. 首次启动出现 seed 警告怎么处理<a class="anchor" href="#6-首次启动出现-seed-警告怎么处理" aria-label="锚点">#</a></h2>
+<p>常见提示：</p>
+<ul><li><code>Database seed did not confirm success</code></li><li><code>Database seed not confirmed; will retry on next startup</code></li></ul>
+<p>含义：启动未被中断，但 seed 没有被确认成功，系统会在下次启动自动重试。</p>
+<p>建议做一次严格检查：</p>
+<ol><li>定位 pip 安装的 backend 目录</li><li>手动执行 strict seed</li></ol>
+<p>定位命令：</p>
+<pre><code class="language-bash">python -c &quot;import pathlib,khy_platform;site=pathlib.Path(khy_platform.__file__).resolve().parent.parent;print(site/'khy_os'/'bundled'/'backend')&quot;</code></pre>
+<p>Windows PowerShell 严格执行示例：</p>
+<pre><code class="language-powershell">cd &lt;上一步输出路径&gt;
+$env:KHY_SEED_STRICT=&quot;true&quot;
+node .\scripts\seed.js
+$LASTEXITCODE
+Remove-Item Env:KHY_SEED_STRICT</code></pre>
+<ul><li><code>0</code>：seed 成功</li><li><code>1</code>：seed 失败，按报错继续修复</li></ul>
+<h2 id="7-常见问题排查">7. 常见问题排查<a class="anchor" href="#7-常见问题排查" aria-label="锚点">#</a></h2>
+<h3 id="7-1-windows-出现-the-system-cannot-find-the-path-specified">7.1 Windows 出现 <code>The system cannot find the path specified.</code><a class="anchor" href="#7-1-windows-出现-the-system-cannot-find-the-path-specified" aria-label="锚点">#</a></h3>
+<p>常见原因：某些 CLI 桥接通道（如 <code>claude</code>/<code>codex</code>）未安装或未在 PATH 中，探测阶段会报该错误。</p>
+<p>先确认当前可用通道：</p>
+<pre><code class="language-bash">khy gateway status</code></pre>
+<p>如果你已选择可用通道（例如 <code>kiro</code>、<code>localLLM</code>）且对话正常，该提示可视为非致命探测噪音。</p>
+<h3 id="7-2-khy-gateway-status-显示通道不可用但你确认已登录">7.2 <code>khy gateway status</code> 显示通道不可用但你确认已登录<a class="anchor" href="#7-2-khy-gateway-status-显示通道不可用但你确认已登录" aria-label="锚点">#</a></h3>
+<p>先做一次重测：</p>
+<pre><code class="language-bash">khy gateway status</code></pre>
+<p>再执行：</p>
+<pre><code class="language-bash">khy gateway manage stop
+khy gateway manage start --daemon
+khy gateway manage status</code></pre>
+<p>若仍异常，查看日志：</p>
+<ul><li><code>~/.khy/logs/ai_manage_daemon.log</code></li><li><code>~/.khy/logs/ai_frontend_dev.log</code></li></ul>
+<h3 id="7-3-管理页可开但无法登录">7.3 管理页可开但无法登录<a class="anchor" href="#7-3-管理页可开但无法登录" aria-label="锚点">#</a></h3>
+<ul><li>先确认 CLI 是否已登录（可在 <code>khy</code> 内执行 <code>/login</code>）</li><li>如需重置管理员账号：</li></ul>
+<pre><code class="language-bash">khy db seed</code></pre>
+<h2 id="8-关键配置与数据路径">8. 关键配置与数据路径<a class="anchor" href="#8-关键配置与数据路径" aria-label="锚点">#</a></h2>
+<p>常见路径（按系统不同可能有差异）：</p>
+<ul><li>新数据目录：<code>~/.khy/</code></li><li>兼容数据目录：<code>~/.khyquant/</code></li><li>API Key 池：<code>~/.khyquant/api_keys.json</code></li><li>代理配置：<code>~/.khyquant/proxy.json</code></li><li>网关环境变量：<code>&lt;backend&gt;/.env</code></li></ul>
+<p>建议先通过 <code>khy gateway status</code> 查看当前实际路径输出，再做修改。</p>
+<h2 id="9-版本确认建议">9. 版本确认建议<a class="anchor" href="#9-版本确认建议" aria-label="锚点">#</a></h2>
+<p>每次升级后建议执行：</p>
+<pre><code class="language-bash">khy --version
+khy doctor
+khy gateway status</code></pre>
+<p>若你是 Windows 用户，建议额外验证一次：</p>
+<pre><code class="language-bash">khy guanli</code></pre>
+<p>确保管理页能正常打开再投入日常使用。</p>
+<h2 id="10-git-发布-私有仓库">10. Git 发布（私有仓库）<a class="anchor" href="#10-git-发布-私有仓库" aria-label="锚点">#</a></h2>
+<p>目标：发布“完整版（内部）”文档与完整代码到私有仓库。</p>
+<p>建议分支命名：</p>
+<ul><li><code>release/private-vX.Y.Z</code></li></ul>
+<p>发布步骤：</p>
+<ol><li>同步主线并创建私有发布分支</li></ol>
+<pre><code class="language-bash">git fetch --all --prune
+git checkout main
+git pull
+git checkout -b release/private-vX.Y.Z</code></pre>
+<ol><li>执行基础检查</li></ol>
+<pre><code class="language-bash">khy --version
+khy doctor
+khy gateway status</code></pre>
+<ol><li>执行发布前检查</li></ol>
+<pre><code class="language-bash">npm run check:version-sync
+npm run check:node-syntax
+npm run check:python-syntax</code></pre>
+<ol><li>提交改动</li></ol>
+<pre><code class="language-bash">git add -- .
+git commit -m &quot;release: private vX.Y.Z&quot;</code></pre>
+<ol><li>配置私有仓库远程（首次）</li></ol>
+<pre><code class="language-bash">git remote add origin-private git@github.com:Program-master-leader/KHY-OS.git</code></pre>
+<p>如果已存在 <code>origin-private</code>，改用：</p>
+<pre><code class="language-bash">git remote set-url origin-private git@github.com:Program-master-leader/KHY-OS.git</code></pre>
+<ol><li>GitHub API（PAT）填写位置（使用 HTTPS 推送时）</li></ol>
+<p>如果你不使用 SSH，而是使用 HTTPS 推送，则“GitHub API”指的是 GitHub Personal Access Token（PAT）。</p>
+<p>先把远程改为 HTTPS：</p>
+<pre><code class="language-bash">git remote set-url origin-private https://github.com/Program-master-leader/KHY-OS.git</code></pre>
+<p>然后执行推送命令时，按提示填写：</p>
+<ul><li><code>Username for 'https://github.com'</code>：你的 GitHub 用户名</li><li><code>Password for 'https://&lt;username&gt;@github.com'</code>：粘贴你的 GitHub PAT</li></ul>
+<p><code>khy publish git-push</code> 也是走本地 Git 凭据，不单独在 <code>khy</code> 命令参数里填写 PAT。</p>
+<ol><li>推送到私有仓库</li></ol>
+<pre><code class="language-bash">git push -u origin-private release/private-vX.Y.Z</code></pre>
+<ol><li>创建私有版本标签并推送</li></ol>
+<pre><code class="language-bash">git tag -a vX.Y.Z-private -m &quot;private release vX.Y.Z&quot;
+git push origin-private vX.Y.Z-private</code></pre>
+<ol><li>可选：使用内置发布命令（等价能力）</li></ol>
+<pre><code class="language-bash">khy publish git-push --platform github --repo Program-master-leader/KHY-OS --remote origin-private --set-upstream</code></pre>
+<ol><li>仓库权限建议</li></ol>
+<ul><li>仅维护组成员可读写私有仓库。</li><li>开启受保护分支（至少保护 <code>main</code> 和 <code>release/*</code>）。</li><li>对发布标签开启受限创建权限。</li></ul>
+<h2 id="11-相关文档">11. 相关文档<a class="anchor" href="#11-相关文档" aria-label="锚点">#</a></h2>
+<ul><li><code>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</code></li><li><code>docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-014] khy-os-用户指南-仅cli.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 使用说明（CLI 精简版）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-016] khy-ux-交付-深度学习指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS UX 体验与产品交付能力 — 三项目深度学习指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

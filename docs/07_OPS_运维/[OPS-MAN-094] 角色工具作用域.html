@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-094-角色工具作用域-按-decompose-的-role-收窄子智能体工具集">[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-role-的-tool-scoping-消费者缺失">为什么需要它（真实缺口 = role 的 tool-scoping 消费者缺失）</a></li><li class="lvl-2"><a href="#单一真源与形状对齐">单一真源与形状对齐</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不误伤需要写的角色">语义与保守降级（绝不误伤需要写的角色）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-094-角色工具作用域-按-decompose-的-role-收窄子智能体工具集">[OPS-MAN-094] 角色工具作用域（按 decompose 的 role 收窄子智能体工具集）<a class="anchor" href="#ops-man-094-角色工具作用域-按-decompose-的-role-收窄子智能体工具集" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第六发（「调工具」维度）。承 [OPS-MAN-083] 依赖感知波次调度、<br>[OPS-MAN-087] 波次执行故障感知、[OPS-MAN-091] 波次前驱结果注入、<br>[OPS-MAN-092] 跳过与失败在最终报告分列、[OPS-MAN-093] 确定性顺序链拆解。<br>前五发覆盖了「拆任务 → 有序并行 → 收结果」的调度/执行/报告链；本条补上用户<br>明确点名却全 arc 未覆盖的第三根支柱——<strong>调工具</strong>：按子任务的 <code>role</code> 收窄它拿到的<br>工具集，让只读角色（探索/验证）拿不到写工具。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p><code>taskDecomposer._inferRole</code> 给每个 decompose 出的子任务打一个 <code>role</code> 字符串<br>（<code>explore</code> / <code>implement</code> / <code>verify</code> / <code>general</code> …）。这个字段贯穿整条 arc，且已有<br>一个消费者——<code>subAgentModelSelect</code> 用它<strong>选模型</strong>。但它一直缺一个 <strong>tool-scoping<br>消费者</strong>：一个 <code>role:'explore'</code> / <code>role:'verify'</code> 的<strong>只读</strong>子智能体，经<br><code>AgentTool._runOrchestrated(..., 'general-purpose', ...)</code> 拉起时拿到的是完整工具集<br>（含 <code>Edit</code> / <code>Write</code> / <code>NotebookEdit</code>）。本条新增纯叶 <code>roleToolScope(role)</code> 把只读<br>角色映射到应被剥离的 <code>disallowedTools</code> 数组，<code>mergeRoleScopeInto</code> 把它 union 进既有<br>denylist——形状与 SSOT <code>AgentTool.buildSubagentDenylist</code> 精确对齐，供后续接线。</p>
+<h2 id="为什么需要它-真实缺口-role-的-tool-scoping-消费者缺失">为什么需要它（真实缺口 = role 的 tool-scoping 消费者缺失）<a class="anchor" href="#为什么需要它-真实缺口-role-的-tool-scoping-消费者缺失" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line，producer / 已存在语义 / 断桥）：</strong></p>
+<ul><li><strong>Producer</strong>：<code>services/backend/src/services/taskDecomposer.js</code> 的 <code>_inferRole</code></li></ul>
+<p>给每个子任务打 <code>role</code>。<code>agenticHarnessService.js:1015</code>（request 路径）与 <code>:1082</code><br>  （decompose 事件）都携带它。</p>
+<ul><li><strong>已存在的只读语义</strong>：<code>services/backend/src/agents/built-in/exploreAgent.js:58-64</code></li></ul>
+<p>与 <code>readingAgent.js:62-68</code> 的 <code>disallowedTools</code> 明确剥离 <code>Edit</code> / <code>Write</code> /<br>  <code>NotebookEdit</code>（+ <code>Agent</code>）——即侦察 / 只读类 agent 本该拿不到写工具。</p>
+<ul><li><strong>断桥</strong>：decompose 路径产的 <code>role:'explore'</code> / <code>role:'verify'</code> 子任务<strong>不映射到</strong></li></ul>
+<p>这些只读 denylist。它走 <code>AgentTool._runOrchestrated(..., 'general-purpose', ...)</code><br>  （<code>agenticHarnessService.js:1090-1093</code>），fork 出的子智能体拿的是 general-purpose<br>  的<strong>完整工具集</strong>。SSOT <code>AgentTool.buildSubagentDenylist</code><br>  （<code>AgentTool/index.js:197-206</code>）只 union <code>agentDef.disallowedTools</code> ∪ spawn-tool<br>  （到达深度上限时），<strong>从不按 decompose 的 role 收窄</strong>。</p>
+<p><strong>后果：</strong> 一个「探索代码库」或「验证结果」的只读子智能体仍然拿到<br><code>Write</code> / <code>Edit</code> / <code>NotebookEdit</code>。三重损失：①<strong>token 浪费</strong>（无关工具 schema 占<br>上下文）；②<strong>语义错误</strong>（侦察 / 验证阶段本该只读，却能改文件）；③<strong>安全风险</strong><br>（无人值守的 verify 步骤能覆盖用户文件——离机还原场景最怕）。</p>
+<p><strong>与前五发的区别（透镜一的多消费者维度）：</strong> 083/087/091 收割同一段死代码<br><code>executeDependencyAware</code>；092 追字段到渲染层；093 追到最上游 producer。本条是透镜一<br>的<strong>多消费者维度</strong>——同一个字段（<code>role</code>）已有一个消费者（model selection）却漏了<br>另一个正交消费者（tool scoping）。找断桥时要枚举「这个字段<strong>应该</strong>驱动几件事」，<br>而非「有没有任何消费者」。</p>
+<h2 id="单一真源与形状对齐">单一真源与形状对齐<a class="anchor" href="#单一真源与形状对齐" aria-label="锚点">#</a></h2>
+<ul><li><code>roleToolScope(role)</code>（<code>services/backend/src/services/orchestrator/roleToolScope.js</code>）</li></ul>
+<p>是唯一的 role→disallowedTools 策略函数，纯、零 IO、绝不抛。</p>
+<ul><li><code>mergeRoleScopeInto(base, role)</code> = <code>Array.from(new Set([...base, ...roleToolScope(role)]))</code></li></ul>
+<p>——与 SSOT <code>AgentTool.buildSubagentDenylist</code>（<code>Array.from(new Set([...base, ...spawn]))</code>，<br>  <code>AgentTool/index.js:203-204</code>）<strong>形状精确对齐</strong>。</p>
+<ul><li><strong>消费 seam（供后续一次 tracked-edit 轮接线）</strong>：在</li></ul>
+<p><code>AgentTool.buildSubagentDenylist</code> 的 union 点，用 <code>mergeRoleScopeInto(base, role)</code><br>  把 role 作用域并进去即闭合断桥。本条<strong>不改 god-file</strong>（<code>AgentTool/index.js</code> 8026 行<br>  已超限；且分支 blast-radius 已达天花板）——只提供 + 测 + 文档化 seam。</p>
+<h2 id="语义与保守降级-绝不误伤需要写的角色">语义与保守降级（绝不误伤需要写的角色）<a class="anchor" href="#语义与保守降级-绝不误伤需要写的角色" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_ROLE_TOOL_SCOPE=0/false/off/no</code> | <code>roleToolScope</code> 返回 <code>[]</code> = 逐字节回退今日「不按 role 收窄」 |</p>
+<p>| 门开 + 只读角色（explore/verify/plan/research/audit/review） | 返回 <code>[Edit, Write, NotebookEdit]</code>（<strong>不含 Bash</strong>） |</p>
+<p>| 门开 + write 角色（implement/coder/general） | 返回 <code>[]</code>（不误伤需要写的角色） |</p>
+<p>| 门开 + 未知角色 | 返回 <code>[]</code>（保守，不凭空收窄） |</p>
+<p>| 非字符串 / 空串 / 畸形输入 | 返回 <code>[]</code>（纯、绝不抛） |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_ROLE_TOOL_SCOPE</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p><code>roleToolScope</code> 返回 <code>[]</code>，行为逐字节退化为今日（无回归）。门直读 env，<strong>不进<br>  flagRegistry</strong>（同 <code>KHY_DEP_WAVE_SCHEDULE</code> / <code>_FAULT_STOP</code> / <code>_CONTEXT_INJECT</code> /<br>  <code>KHY_MERGE_SKIP_DISTINCT</code> / <code>KHY_SEQ_CHAIN_DECOMPOSE</code> 五个 sibling 门先例，各自独立）。</p>
+<ul><li><strong>默认不剥 <code>Bash</code></strong>：探索 / 验证常跑只读 shell（<code>ls</code> / <code>grep</code> / <code>node --test</code>），</li></ul>
+<p>剥 Bash 会误伤合法只读命令。宁可保守少剥——诚实边界。未来可加严格模式，本条不做。</p>
+<ul><li><strong>不碰</strong> god-file / orchestrator 主体 / <code>AgentTool</code> wiring；只加纯叶 + 测 + 登记。</li></ul>
+<p>本条只提供策略叶与消费 seam 文档，实际接线留给后续一次 tracked-edit 轮。</p>
+<ul><li>诚实边界：只把「只读语义」的 role 剥写工具；write / 未知角色不动。dev 机验证止于</li></ul>
+<p>node:test（门开 / 门关 / 边界 / 与 <code>buildSubagentDenylist</code> 形状的 union 联通断言），<br>  不实跑多智能体端到端（需真子任务执行 + god-file 接线）。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:role-tool-scope            # 本条 node:test（只读收窄 + 门关回退 + union 联通 12/12）
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要把一类<strong>新的只读角色</strong>纳入收窄（如 <code>inspect</code>）：把它加进 <code>roleToolScope.js</code></li></ol>
+<p>的 <code>_READ_ONLY_ROLES</code>（小写）。加一条 node:test 覆盖它。</p>
+<ol><li>要改<strong>被剥离的工具集</strong>（如严格模式也剥 <code>Bash</code>）：改 <code>_READ_ONLY_DENY</code> 一处。</li></ol>
+<p>注意默认不剥 Bash 的理由（上文「门与安全边界」）——除非有真实需求别剥。</p>
+<ol><li>要<strong>接线</strong>让 arc 真正生效：在 <code>AgentTool.buildSubagentDenylist</code> 的 union 点</li></ol>
+<p>（<code>AgentTool/index.js:203-204</code>）用 <code>mergeRoleScopeInto(base, role)</code> 替换 base<br>   （形状已对齐、纯加性），并把 decompose 的 role 传到该调用点。这是一次 tracked-edit<br>   轮的工作（碰 god-file），本条刻意不做。</p>
+<ol><li>改完跑 <code>npm run test:role-tool-scope</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive·新叶；门关（<code>KHY_ROLE_TOOL_SCOPE=off</code>）→ <code>roleToolScope</code> 返回 <code>[]</code> =</li></ul>
+<p>逐字节回退今日行为。不碰 god-file / AgentTool wiring。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-093] 确定性顺序链拆解.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-093] 确定性顺序链拆解（让整条波次 arc 在默认离机路径活起来）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-095] 还原解包完整性对账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-095] 还原解包完整性对账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-094] 角色工具作用域.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

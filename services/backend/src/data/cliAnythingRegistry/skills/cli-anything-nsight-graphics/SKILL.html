@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nsight Graphics CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-nsight-graphics<span class="sep">›</span>Nsight Graphics CLI Skill</div>
+      <header class="hero reveal"><h1>Nsight Graphics CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#nsight-graphics-cli-skill">Nsight Graphics CLI Skill</a></li><li class="lvl-2"><a href="#capabilities">Capabilities</a></li><li class="lvl-2"><a href="#commands">Commands</a></li><li class="lvl-3"><a href="#doctor">doctor</a></li><li class="lvl-3"><a href="#launch">launch</a></li><li class="lvl-3"><a href="#frame-capture">frame capture</a></li><li class="lvl-3"><a href="#gpu-trace">GPU Trace</a></li><li class="lvl-3"><a href="#replay-analysis">Replay analysis</a></li><li class="lvl-3"><a href="#generate-c-capture">Generate C++ Capture</a></li><li class="lvl-2"><a href="#agent-notes">Agent Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-nsight-graphics&quot;<br>description: Windows-first CLI harness for Nsight Graphics capture, GPU Trace summary, and ngfx-replay analysis<br>version: 0.2.0<br>command: cli-anything-nsight-graphics<br>install: pip install cli-anything-nsight-graphics<br>requires:</p>
+<ul><li>NVIDIA Nsight Graphics installation</li><li>Windows host recommended</li></ul>
+<p>categories:</p>
+<ul><li>graphics</li><li>debugging</li><li>gpu</li><li>profiling</li></ul>
+<hr>
+<h1 id="nsight-graphics-cli-skill">Nsight Graphics CLI Skill<a class="anchor" href="#nsight-graphics-cli-skill" aria-label="锚点">#</a></h1>
+<p>Command-line orchestration of official NVIDIA Nsight Graphics activities.</p>
+<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="锚点">#</a></h2>
+<ul><li>Probe installed Nsight binaries and compatibility mode</li><li>Launch an application detached under Nsight</li><li>Attach Nsight to a running PID</li><li>Trigger Graphics Capture or OpenGL Frame Debugger capture</li><li>Trigger GPU Trace capture, auto-export, and summarize</li><li>Analyze existing <code>.ngfx-capture</code> files through <code>ngfx-replay</code></li><li>Report clear compatibility diagnostics for <code>.ngfx-gputrace</code> inputs</li><li>Trigger Generate C++ Capture</li></ul>
+<h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
+<h3 id="doctor">doctor<a class="anchor" href="#doctor" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics --json doctor info
+cli-anything-nsight-graphics --json doctor versions
+cli-anything-nsight-graphics --nsight-path &quot;C:\Path\To\Nsight Graphics 2024.2\host\windows-desktop-nomad-x64&quot; --json doctor info</code></pre>
+<h3 id="launch">launch<a class="anchor" href="#launch" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics launch detached --activity &quot;Graphics Capture&quot; --exe &quot;C:\Path\To\App.exe&quot;
+cli-anything-nsight-graphics launch attach --activity &quot;Graphics Capture&quot; --pid 12345</code></pre>
+<h3 id="frame-capture">frame capture<a class="anchor" href="#frame-capture" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\captures frame capture ^
+  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --wait-frames 10</code></pre>
+<h3 id="gpu-trace">GPU Trace<a class="anchor" href="#gpu-trace" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\traces gpu-trace capture ^
+  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --start-after-ms 1000 ^
+  --limit-to-frames 1 ^
+  --auto-export ^
+  --summarize
+
+cli-anything-nsight-graphics gpu-trace summarize ^
+  --input-dir D:\traces</code></pre>
+<h3 id="replay-analysis">Replay analysis<a class="anchor" href="#replay-analysis" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics --json replay analyze ^
+  --capture-file D:\captures\frame.ngfx-capture ^
+  --output-dir D:\analysis</code></pre>
+<h3 id="generate-c-capture">Generate C++ Capture<a class="anchor" href="#generate-c-capture" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\cpp cpp capture ^
+  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --wait-seconds 5</code></pre>
+<h2 id="agent-notes">Agent Notes<a class="anchor" href="#agent-notes" aria-label="锚点">#</a></h2>
+<ul><li>Prefer <code>doctor info</code> first to discover the available compatibility mode.</li><li>Use <code>doctor versions</code> to list detected installs when multiple Nsight Graphics versions exist.</li><li>Use <code>--nsight-path</code> to force a specific install directory or <code>ngfx.exe</code>.</li><li>Use <code>--json</code> for programmatic workflows.</li><li>Prefer <code>gpu-trace capture --auto-export --summarize</code> for one-step performance</li></ul>
+<p>triage. The summary includes exported table inventory, metric inventory,<br>  frame-budget classification, workload classification, throughput ranking,<br>  bottleneck hints, and warnings for empty event/regime tables.</p>
+<ul><li>Use <code>replay analyze</code> when the input is an existing <code>.ngfx-capture</code> file. With</li></ul>
+<p>no analysis switches it exports metadata, logs, captured log errors, and a<br>  replay performance report, then adds structured <code>analysis.highlights</code> /<br>  <code>analysis.warnings</code>.</p>
+<ul><li><code>ngfx-replay</code> documents its input as a Graphics Capture file. <code>.ngfx-gputrace</code></li></ul>
+<p>inputs are accepted for clear diagnostics, but on Nsight Graphics 2026.1.0<br>  they may report <code>Invalid file header</code>; use <code>gpu-trace summarize</code> for exported<br>  GPU Trace table analysis.</p>
+<ul><li><code>replay analyze</code> uses official <code>ngfx-replay</code> metadata/log/screenshot/perf-report</li></ul>
+<p>outputs; it is not a RenderDoc-style shader, pipeline, texture, or resource inspector.</p>
+<ul><li>Frame/GPU/C++ capture commands require a launch target through <code>--exe</code> or a</li></ul>
+<p>preconfigured root-level <code>--project</code>.</p>
+<ul><li>If a global <code>cli-anything-nsight-graphics</code> command points at an old worktree,</li></ul>
+<p>reinstall from <code>nsight-graphics/agent-harness</code> with <code>python -m pip install -e .</code>.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-novita/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-novita</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nslogger/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-nslogger</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nsight-graphics/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

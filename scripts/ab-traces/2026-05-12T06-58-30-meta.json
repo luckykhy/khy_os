@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-05-12T06:59:09.485Z",
+  "prompt": "Read /home/kodehu03/Khy-OS/scripts/ab-dual-dev.js lines 75 to 95 and tell me what onChunk does in two sentences.",
+  "model": "claude-opus-4-6",
+  "adapter": "claude",
+  "directMode": true,
+  "permissionMode": "default",
+  "success": true,
+  "elapsedMs": 38153,
+  "toolCalls": 1,
+  "traceEvents": 12,
+  "contentLength": 431,
+  "error": null
+}

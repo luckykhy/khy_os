@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip 打包对等性发现（2026-05-17） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>Pip 打包对等性发现（2026-05-17）</div>
+      <header class="hero reveal"><h1>Pip 打包对等性发现（2026-05-17）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pip-打包对等性发现-2026-05-17">Pip 打包对等性发现（2026-05-17）</a></li><li class="lvl-2"><a href="#摘要">摘要</a></li><li class="lvl-2"><a href="#影响">影响</a></li><li class="lvl-2"><a href="#根本原因">根本原因</a></li><li class="lvl-2"><a href="#已应用的修复">已应用的修复</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-3"><a href="#修复前">修复前</a></li><li class="lvl-3"><a href="#修复后">修复后</a></li><li class="lvl-2"><a href="#复现-验证命令">复现 / 验证命令</a></li><li class="lvl-2"><a href="#发布说明">发布说明</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-010 | 阶段: 部署 | 原路径: docs/报告/pip-打包对等-发现-2026-05-17.md --&gt;</p>
+<h1 id="pip-打包对等性发现-2026-05-17">Pip 打包对等性发现（2026-05-17）<a class="anchor" href="#pip-打包对等性发现-2026-05-17" aria-label="锚点">#</a></h1>
+<h2 id="摘要">摘要<a class="anchor" href="#摘要" aria-label="锚点">#</a></h2>
+<p>我们发现了一个打包对等性问题：</p>
+<ul><li>直接从仓库构建 wheel 会生成完整包（约 <code>~83MB</code> 的 wheel）。</li><li>从已发布的 sdist 构建 wheel 则生成精简包（修复前约 <code>~3.3MB</code> 的 wheel）。</li></ul>
+<p>这意味着 <code>pip install</code> 的行为取决于安装方是直接使用 wheel，还是从 sdist 重新构建。</p>
+<h2 id="影响">影响<a class="anchor" href="#影响" aria-label="锚点">#</a></h2>
+<p>修复前，从 sdist 重新构建的 wheel 缺失了关键的运行时资源：</p>
+<ul><li><code>khy_os/bundled/frontend/dist/**</code>（缺失）</li><li><code>khy_os/bundled/backend/bin/ollama-runner/**</code>（缺失）</li><li><code>khy_os/bundled/backend/bin/llama-cpp/**</code>（缺失）</li></ul>
+<p>结果：通过 sdist 重新构建进行的安装可能会丢失 Web 运行时资源和本地 LLM 二进制文件。</p>
+<h2 id="根本原因">根本原因<a class="anchor" href="#根本原因" aria-label="锚点">#</a></h2>
+<p>两条规则之间产生了不良的相互作用：</p>
+<ol><li><code>setup.py</code> 在构建 wheel 时总是从顶层 <code>backend/frontend/...</code> 重新生成 <code>khy_os/bundled</code>。</li><li>用于 sdist 的 <code>MANIFEST.in</code> 使用了狭窄的扩展名过滤规则并裁剪掉了 <code>frontend/dist</code>，因此 sdist 内部的顶层源码并不完整。</li></ol>
+<p>因此，从 sdist 重新构建 wheel 时会重新生成一份更小的 bundled 负载。</p>
+<h2 id="已应用的修复">已应用的修复<a class="anchor" href="#已应用的修复" aria-label="锚点">#</a></h2>
+<p>更新了 <a href="/home/kodehu03/Khy-OS/MANIFEST.in"><code>MANIFEST.in</code></a>：</p>
+<ol><li>将顶层源码的包含方式切换为广义的整树包含：<ul><li><code>recursive-include backend *</code></li><li><code>recursive-include frontend *</code></li><li><code>recursive-include packages/shared *</code></li><li><code>recursive-include docs *</code></li></ul></li><li>在 sdist 中保留 <code>frontend/dist</code>（移除了 <code>prune frontend/dist</code>）。</li><li>添加 <code>prune khy_os/bundled</code> 以避免重复打包（顶层源码 + bundled 副本）。</li></ol>
+<p>这样既保留了重新构建所需的输入，又控制了 sdist 的体积。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<h3 id="修复前">修复前<a class="anchor" href="#修复前" aria-label="锚点">#</a></h3>
+<ul><li>直接构建的 wheel：<code>~83MB</code></li><li>sdist：<code>~85MB</code></li><li>从 sdist 重新构建的 wheel：<code>~3.3MB</code></li><li>重新构建的 wheel 检查：<ul><li><code>frontend_dist</code>：<code>0</code></li><li><code>backend_bin_ollama</code>：<code>0</code></li><li><code>backend_bin_llama</code>：<code>0</code></li></ul></li></ul>
+<h3 id="修复后">修复后<a class="anchor" href="#修复后" aria-label="锚点">#</a></h3>
+<ul><li>直接构建的 wheel：<code>~83MB</code></li><li>sdist：<code>~83MB</code></li><li>从 sdist 重新构建的 wheel：<code>~83MB</code></li></ul>
+<p>对等性检查（直接构建的 wheel vs 从 sdist 构建的 wheel）：</p>
+<ul><li>文件数量：<code>1336</code> vs <code>1336</code></li><li>解压后总字节数：<code>175717621</code> vs <code>175717621</code></li><li>存在性检查：<ul><li><code>frontend_dist</code>：存在（<code>76</code> 项）</li><li><code>frontend_src</code>：存在（<code>137</code> 项）</li><li><code>backend_bin_ollama</code>：存在（<code>9</code> 项）</li><li><code>backend_bin_llama</code>：存在（<code>53</code> 项）</li><li><code>backend_ml</code>：不存在（<code>0</code> 项，符合打包策略预期）</li></ul></li></ul>
+<h2 id="复现-验证命令">复现 / 验证命令<a class="anchor" href="#复现-验证命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">python3 -m build --wheel --no-isolation
+python3 -m build --sdist --no-isolation
+
+# Rebuild wheel from sdist in temp dir and inspect:
+tmpdir=$(mktemp -d /tmp/khy_sdist_build_check_XXXXXX)
+tar -xzf dist/khy_os-0.1.9.tar.gz -C &quot;$tmpdir&quot;
+cd &quot;$tmpdir/khy_os-0.1.9&quot;
+python3 -m build --wheel --no-isolation</code></pre>
+<h2 id="发布说明">发布说明<a class="anchor" href="#发布说明" aria-label="锚点">#</a></h2>
+<p>自本版本起及之后的版本，wheel 与 sdist 两种安装路径在 bundled 运行时负载上已保持一致。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-009] pip-打包对等-发布说明-2026-05-17.html"><div class="dir">← 上一篇</div><div class="ttl">发布说明：Pip 打包对等性（2026-05-17）</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.html"><div class="dir">下一篇 →</div><div class="ttl">pip 安装后完整部署与推送指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

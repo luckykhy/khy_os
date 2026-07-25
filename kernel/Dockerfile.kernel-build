@@ -1,0 +1,47 @@
+# Dockerfile.kernel-build — reproducible Linux toolchain image for building the
+# self-written KHY OS kernel ISO from any host (notably native Windows, where the
+# ELF/multiboot2/GRUB toolchain is unavailable). Used by `khy os build` when the
+# Docker backend is selected (KHY_KERNEL_BUILD_BACKEND=docker, or auto when WSL2
+# is absent). The kernel source is bind-mounted at /kernel at run time, e.g.:
+#
+#   docker build -f kernel/Dockerfile.kernel-build -t khyos-kernel-build:latest kernel
+#   docker run --rm -v "<host-kernel-dir>:/kernel" -w /kernel khyos-kernel-build make -C /kernel iso
+#
+# The image is build-only: it carries exactly the toolchain the Makefile needs
+# (nasm, gcc, binutils/ld, grub-mkrescue + xorriso, plus MoonBit), nothing else.
+# QEMU is intentionally NOT installed — running the ISO is a host concern.
+FROM debian:bookworm-slim
+
+# Avoid interactive tzdata prompts during apt.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# GNU/ELF kernel toolchain. Mirrors the apt package set `khy os build` prints:
+#   build-essential → gcc + ld (binutils) + make
+#   nasm           → ELF64 assembler for boot/*.asm
+#   grub-pc-bin grub-common xorriso → grub-mkrescue + ISO packaging
+#   curl ca-certificates → fetch the MoonBit toolchain
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        nasm \
+        binutils \
+        grub-pc-bin \
+        grub-common \
+        xorriso \
+        mtools \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# MoonBit toolchain (provides `moon`, plus ~/.moon/include + ~/.moon/lib/runtime.c
+# that the Makefile's MoonBit objects compile against). Installed for root; the
+# Makefile resolves these via $(HOME)/.moon, so run the container as root (default).
+RUN curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+ENV PATH="/root/.moon/bin:${PATH}"
+
+# Kernel source is provided at run time via a bind mount; no COPY so the image
+# stays source-agnostic and cache-friendly across edits.
+WORKDIR /kernel
+
+# Default to a full ISO build; override the command to target a specific rule.
+CMD ["make", "-C", "/kernel", "iso"]

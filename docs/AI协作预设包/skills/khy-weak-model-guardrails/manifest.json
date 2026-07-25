@@ -1,0 +1,12 @@
+{
+  "name": "khy-weak-model-guardrails",
+  "description": "小模型/弱模型在 Khy-OS 上工作的专属护栏：一次只做一步、工具输出别撑爆上下文、被截断怎么办、JSON 工具调用别包代码块、role:tool 兼容、别一次改多文件。当你是较弱模型、或任务复杂容易出错时激活，把大任务拆小、稳扎稳打。",
+  "user_invocable": true,
+  "trigger": "/khy-weak-model-guardrails",
+  "aliases": ["/khy-guardrails", "/护栏"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "weak-model", "small-model", "guardrails", "context", "truncation"],
+  "platforms": ["khy-os"],
+  "when_to_use": "你是较弱/较小的模型，或任务较复杂、上下文吃紧、容易截断或出错时。",
+  "context": "inline"
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>夜间无人值守 · 代码质量与健壮性完善日志 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>夜间无人值守 · 代码质量与健壮性完善日志</div>
+      <header class="hero reveal"><h1>夜间无人值守 · 代码质量与健壮性完善日志</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#夜间无人值守-代码质量与健壮性完善日志">夜间无人值守 · 代码质量与健壮性完善日志</a></li><li class="lvl-2"><a href="#一-测试基线-改动前">一、测试基线（改动前）</a></li><li class="lvl-2"><a href="#二-本轮修改的文件与优化项">二、本轮修改的文件与优化项</a></li><li class="lvl-3"><a href="#1-services-backend-src-services-queryengine-js-文档与重构">1. `services/backend/src/services/queryEngine.js` — 文档与重构</a></li><li class="lvl-3"><a href="#2-services-backend-src-services-gateway-modelcuration-js-边缘情况防御-含潜在-bug-修复">2. `services/backend/src/services/gateway/modelCuration.js` — 边缘情况防御（含潜在 bug 修复）</a></li><li class="lvl-3"><a href="#3-services-backend-src-services-aimanagementserver-js-网络边缘防御">3. `services/backend/src/services/aiManagementServer.js` — 网络边缘防御</a></li><li class="lvl-2"><a href="#三-上下文-本轮之前已落地的相关修复-非代码质量任务本体">三、上下文：本轮之前已落地的相关修复（非代码质量任务本体）</a></li><li class="lvl-2"><a href="#四-未解决项-留待人工审查的-todo">四、未解决项 / 留待人工审查的 TODO</a></li><li class="lvl-2"><a href="#五-结论">五、结论</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="夜间无人值守-代码质量与健壮性完善日志">夜间无人值守 · 代码质量与健壮性完善日志<a class="anchor" href="#夜间无人值守-代码质量与健壮性完善日志" aria-label="锚点">#</a></h1>
+<ul><li>日期：2026-06-11</li><li>角色：资深开发者（夜间自动任务）</li><li>范围：Agent 项目后端核心模块（<code>services/backend</code>）</li><li>约束遵守：增量/局部优化，禁止大规模重写；每个独立模块单独提交；任何修复 3 次失败即标注</li></ul>
+<p><code># TODO: [Unresolved] 需要人工审查</code> 并跳过——本轮无任何修复触发该上限。</p>
+<hr>
+<h2 id="一-测试基线-改动前">一、测试基线（改动前）<a class="anchor" href="#一-测试基线-改动前" aria-label="锚点">#</a></h2>
+<p>全量 jest（<code>services/backend</code>，393 套件）：</p>
+<table><thead><tr><th>指标</th><th>改动前基线</th><th>改动后</th></tr></thead><tbody><tr><td>套件</td><td>27 failed / 364 passed / 2 skipped</td><td>27 failed / 364 passed / 2 skipped</td></tr><tr><td>用例</td><td>39 failed / 3516 passed / 42 skipped</td><td>39 failed / <strong>3517 passed</strong> / 42 skipped</td></tr></tbody></table>
+<ul><li>27 个失败套件为<strong>改动前既有失败</strong>（沙箱无网络 + 计时类 flake，如 <code>aiGateway.stability</code>、</li></ul>
+<p><code>repl.intentAssuranceDebug</code>、<code>cloudSync</code>、<code>stockAnalysisEngine</code> 等），与本轮改动无关。</p>
+<ul><li>回归门禁：改动后失败套件集合与基线<strong>逐一相同</strong>（<code>comm</code> 比对无新增失败），通过用例数 +1</li></ul>
+<p>即本轮新增的 modelCuration 回归测试。<strong>本轮零回归。</strong></p>
+<hr>
+<h2 id="二-本轮修改的文件与优化项">二、本轮修改的文件与优化项<a class="anchor" href="#二-本轮修改的文件与优化项" aria-label="锚点">#</a></h2>
+<p>按&quot;每模块一次提交&quot;提交，均只暂存本人改动文件，未裹入仓库中其他在途未提交工作。</p>
+<h3 id="1-services-backend-src-services-queryengine-js-文档与重构">1. <code>services/backend/src/services/queryEngine.js</code> — 文档与重构<a class="anchor" href="#1-services-backend-src-services-queryengine-js-文档与重构" aria-label="锚点">#</a></h3>
+<p>提交 <code>0caf6a5</code>（纯文档/注释，零行为变更）</p>
+<ul><li><strong>类型提示与文档</strong>：<code>loadConversation(file)</code> 的 <code>file</code> 参数实际从未被使用（<code>cli/ai.js</code></li></ul>
+<p>仅暴露 <code>loadLastConversation()</code>，无按路径加载的 API）。原 JSDoc 写&quot;Load a conversation<br>  from file&quot;属误导。改为如实说明该限制（参数保留作前向兼容，但当前不生效），而非静默忽略。</p>
+<ul><li><strong>代码审查与重构</strong>：删除 <code>_submitMessageLegacy</code> 前重复出现两次的分隔注释。</li><li>验证：queryEngine 5 套件 13 用例全绿。</li></ul>
+<h3 id="2-services-backend-src-services-gateway-modelcuration-js-边缘情况防御-含潜在-bug-修复">2. <code>services/backend/src/services/gateway/modelCuration.js</code> — 边缘情况防御（含潜在 bug 修复）<a class="anchor" href="#2-services-backend-src-services-gateway-modelcuration-js-边缘情况防御-含潜在-bug-修复" aria-label="锚点">#</a></h3>
+<p>提交 <code>b15489d</code>（含回归测试）</p>
+<ul><li><strong>异常/边缘防御</strong>：<code>applyOverrides</code> 中当用户设置的 <code>defaultModel</code> 指向一个<strong>已隐藏或不存在</strong></li></ul>
+<p>的模型时，原实现第一遍 <code>map</code> 已把所有模型的 <code>isDefault</code> 重置为 <code>false</code>，随后 <code>!matched</code><br>  分支的恒等 <code>map</code>（<code>{ ...m, isDefault: m.isDefault }</code>）只是保留了这个被清零的值——<br>  既是<strong>无效代码</strong>，又与注释&quot;保留原有标记&quot;<strong>自相矛盾</strong>，导致适配器自带的默认模型标记被静默抹掉。</p>
+<ul><li>修复：仅在确有匹配项时才整体重标默认；否则保持各模型原有 <code>isDefault</code> 不动。</li><li>新增回归测试 <code>stale defaultModel (hidden/nonexistent) preserves original markers</code></li></ul>
+<p>锁定该边缘行为（该用例在旧实现下会失败）。</p>
+<ul><li>验证：modelCuration 11 用例全绿（含新增 1 条）。</li></ul>
+<h3 id="3-services-backend-src-services-aimanagementserver-js-网络边缘防御">3. <code>services/backend/src/services/aiManagementServer.js</code> — 网络边缘防御<a class="anchor" href="#3-services-backend-src-services-aimanagementserver-js-网络边缘防御" aria-label="锚点">#</a></h3>
+<p>提交 <code>28db730</code>（零 happy-path 行为变更）</p>
+<ul><li><strong>边缘情况防御（网络/连接）</strong>：<code>handleChatStreamHttp</code>（本会话新增的守护进程 SSE 对话路由）</li></ul>
+<p>原先在客户端中途断开时，15s 心跳定时器与&quot;模拟分块&quot;循环仍会继续向已关闭的 socket 写入。</p>
+<ul><li>修复：新增 <code>req</code> 的 <code>'close'</code> 监听，断开时立即 <code>clearInterval</code> 心跳并令 <code>sendEvent</code> 短路，</li></ul>
+<p>及时收尾、不向死连接写入。</p>
+<ul><li>验证：<code>node --check</code> 语法通过；aiManagementServer 套件 3 用例全绿。</li></ul>
+<hr>
+<h2 id="三-上下文-本轮之前已落地的相关修复-非代码质量任务本体">三、上下文：本轮之前已落地的相关修复（非代码质量任务本体）<a class="anchor" href="#三-上下文-本轮之前已落地的相关修复-非代码质量任务本体" aria-label="锚点">#</a></h2>
+<ul><li><code>69c2357 fix(ai-manage-daemon): 守护进程补 /api/ai/chat/stream 与 /api/ai/persona</code></li></ul>
+<p>——清场提交。修复&quot;终端可用、网页对话不可用&quot;：守护进程缺少前端所需的流式对话与 persona<br>  路由，导致页面流式请求恒 404 后回退到单轮非流式路径而返回空回复。详见记忆<br>  <code>project_web_chat_daemon_routes</code>。</p>
+<hr>
+<h2 id="四-未解决项-留待人工审查的-todo">四、未解决项 / 留待人工审查的 TODO<a class="anchor" href="#四-未解决项-留待人工审查的-todo" aria-label="锚点">#</a></h2>
+<ul><li><strong>无 <code># TODO: [Unresolved]</code> 标记</strong>：本轮每项修复均一次性通过，未触及&quot;3 次失败&quot;上限。</li><li>观察记录（非阻塞，供后续评估，<strong>未自行改动</strong>以恪守&quot;禁止大规模重写&quot;）：<ol><li><code>services/backend/src/routes/ai.js</code> 的 SSE 实现（主 Express 后端）与本轮加固的守护进程</li></ol></li></ul>
+<p>handler 同构，目前同样缺少客户端断开处理，可比照 <code>28db730</code> 增强以保持两处行为一致。</p>
+<ol><li>基线中 27 个既有失败套件多为沙箱无网络/计时类 flake；若需&quot;绿色基线&quot;，建议在 CI 中对</li></ol>
+<p>网络依赖类用例统一打 <code>describe.skip</code> 或注入 mock 网关，与本轮代码质量改动解耦评估。</p>
+<hr>
+<h2 id="五-结论">五、结论<a class="anchor" href="#五-结论" aria-label="锚点">#</a></h2>
+<ul><li>Agent 后端核心模块（<code>queryEngine</code> / <code>agenticHarnessService</code> / <code>modelCuration</code> /</li></ul>
+<p><code>projectMetadataService</code> / metadata handler 等）经审查<strong>整体已达工业级</strong>：JSDoc 完备、<br>  外部调用与易错点普遍 try-catch 且 fail-soft、env 可调、无裸 <code>throw</code>、内存有 TTL/LRU 上限。<br>  因此本轮恪守&quot;增量优化、禁止大规模重写&quot;，只做了少量<strong>确有价值、低风险</strong>的精准改动，<br>  而非为凑工作量制造改写。</p>
+<ul><li>共 3 次独立提交，覆盖代码审查/重构、文档、异常与边缘防御四类目标；零回归，新增 1 条回归测试。</li><li><strong>重要提示：改动守护进程路由/逻辑后需重启 AI 管理守护进程方可在网页端生效。</strong></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-028] 按需加载与零噪音重构日志-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">按需加载与零噪音重构日志（Lazy-Load &amp; Zero-Noise Log）</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-030] Agnes四模型一键置备-文生图图改图视频-2026-06-20.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-030] Agnes 四模型一键置备：对话 + 文生图 + 图改图 + 视频</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-029] 夜间代码质量与健壮性完善日志-2026-06-11.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

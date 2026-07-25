@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code 规则到 KHY 映射表 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>Claude Code 规则到 KHY 映射表</div>
+      <header class="hero reveal"><h1>Claude Code 规则到 KHY 映射表</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#claude-code-规则到-khy-映射表">Claude Code 规则到 KHY 映射表</a></li><li class="lvl-2"><a href="#先说结论">先说结论</a></li><li class="lvl-2"><a href="#映射表">映射表</a></li><li class="lvl-2"><a href="#第-11-节为什么最关键">第 11 节为什么最关键</a></li><li class="lvl-2"><a href="#最关键入口文件">最关键入口文件</a></li><li class="lvl-2"><a href="#一句话总结">一句话总结</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-005 | 阶段: 运维 | 原路径: docs/指南/claude-code-规则到-khy-映射表.md --&gt;</p>
+<h1 id="claude-code-规则到-khy-映射表">Claude Code 规则到 KHY 映射表<a class="anchor" href="#claude-code-规则到-khy-映射表" aria-label="锚点">#</a></h1>
+<h2 id="先说结论">先说结论<a class="anchor" href="#先说结论" aria-label="锚点">#</a></h2>
+<p>这 11 节已经进入 KHY，但不是全部只写在一条 system prompt 里。KHY 的做法是把同一条规则分散落到 5 层:</p>
+<ol><li>主 system prompt</li><li>子代理 prompt</li><li>工具 prompt</li><li>runtime / post-process</li><li>回归测试</li></ol>
+<p>所以更准确的说法不是“已经变成单一系统提示词”，而是“已经变成系统提示词体系”。</p>
+<h2 id="映射表">映射表<a class="anchor" href="#映射表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>节</th><th>规则主题</th><th>Claude Code 风格意图</th><th>KHY 主实现</th><th>下沉实现</th><th>测试 / 保障</th></tr></thead><tbody><tr><td>1</td><td>角色定义与基础约束</td><td>先定义代理身份、默认行为、诚实边界</td><td><code>backend/src/constants/prompts.js</code> 里的 <code>getSimpleIntroSection()</code>、<code>getSimpleSystemSection()</code>、<code>getDoingTasksSection()</code></td><td><code>backend/src/services/khyUpgradeRuntime.js</code> 里的 <code>HARDCORE_SYSTEM_PROMPT</code>；<code>backend/src/agents/built-in/generalPurposeAgent.js</code>；<code>backend/src/services/cliAgentRunner.js</code> 的默认角色</td><td><code>backend/tests/promptLearningRules.test.js</code> 会检查主 section 是否被组装进完整 prompt</td></tr><tr><td>2</td><td>文件系统操作</td><td>改前先读、绝对路径、精确编辑、写完整内容</td><td><code>getFileOperationsSection()</code></td><td><code>backend/src/tools/FileReadTool/index.js</code>、<code>backend/src/tools/FileEditTool/index.js</code>、<code>backend/src/tools/FileWriteTool/index.js</code></td><td>测试覆盖 <code>read-first / exact old_string / complete write / parallel reads</code></td></tr><tr><td>3</td><td>代码执行与命令</td><td>有专用工具优先专用工具；运行命令前先判断风险；失败先诊断再重试</td><td><code>getCommandExecutionSection()</code></td><td><code>backend/src/tools/shellCommand.js</code></td><td>测试覆盖 <code>tool-first / stderr+exit-code / long-running command / Windows shell compatibility</code></td></tr><tr><td>4</td><td>搜索与探索</td><td><code>Glob</code> 找文件、<code>Grep</code> 找内容、陌生仓库先看 README / manifest</td><td><code>getSearchAndExplorationSection()</code></td><td><code>backend/src/tools/GlobTool/index.js</code>、<code>backend/src/tools/GrepTool/index.js</code>、<code>backend/src/agents/built-in/exploreAgent.js</code></td><td>测试覆盖 <code>tool split / unfamiliar repo workflow / narrow-or-broaden strategy</code></td></tr><tr><td>5</td><td>任务与计划管理</td><td>多步骤任务先计划；任务要可追踪；一次只推进一个主要步骤</td><td><code>getPlanningAndRecoverySection()</code>、<code>getPlanningAndVerificationSection()</code>、<code>getTaskAndProgressManagementSection()</code></td><td><code>backend/src/agents/built-in/planAgent.js</code>；<code>backend/src/tools/TaskCreateTool/index.js</code>、<code>TaskUpdateTool/index.js</code>、<code>TaskListTool/index.js</code>、<code>TodoWriteTool/index.js</code></td><td>测试覆盖 <code>plan triggers / single active step / explicit blocker / residual risk reporting</code></td></tr><tr><td>6</td><td>错误处理与回退策略</td><td>最多 2-3 次有意义尝试；报告 root cause 和 fallback；不要盲重试</td><td><code>getErrorHandlingAndFallbackSection()</code></td><td><code>backend/src/tools/shellCommand.js</code>、<code>backend/src/tools/FileEditTool/index.js</code>、<code>backend/src/agents/built-in/generalPurposeAgent.js</code></td><td>测试覆盖 <code>2-3 attempts / 4-part error report / root-cause fix / stop stacking patches</code></td></tr><tr><td>7</td><td>多智能体协作</td><td>只把独立子任务委托出去；read-only 代理不能写；agent 要有 ownership</td><td><code>getMultiAgentCollaborationSection()</code></td><td><code>backend/src/agents/prompt.js</code>；<code>backend/src/agents/built-in/exploreAgent.js</code>、<code>planAgent.js</code>、<code>verificationAgent.js</code>；<code>backend/src/services/cliAgentRunner.js</code></td><td>测试覆盖 <code>use Plan first / explicit ownership / reuse existing agent / no duplicate delegation</code></td></tr><tr><td>8</td><td>会话记忆与上下文管理</td><td>记 durable context，不要 raw transcript；compact 时禁止调工具；handoff 要有 next step</td><td><code>getSessionMemoryAndContextSection()</code>、<code>getMemorySection()</code></td><td><code>backend/src/services/compact/prompt.js</code></td><td>测试覆盖 <code>&lt;analysis&gt; + &lt;summary&gt;</code>、recent-only summary、required heading preservation</td></tr><tr><td>9</td><td>输出格式规范</td><td>简单问题短答，复杂任务结构化；代码改动要说 changed / why / verified；进度不能模糊</td><td><code>getResponseFormattingSection()</code>、<code>getToneAndStyleSection()</code>、<code>getOutputEfficiencySection()</code></td><td><code>backend/src/services/khyUpgradeRuntime.js</code> 的 <code>postProcessOutput()</code></td><td>测试覆盖 <code>short direct answers / fenced code / Sources / no vague progress / no decorative over-formatting</code></td></tr><tr><td>10</td><td>安全与权限边界</td><td>least privilege、敏感信息脱敏、破坏性动作要确认、安全默认编码</td><td><code>getSecurityAndPermissionBoundariesSection()</code>、<code>getSensitiveDataSection()</code>、<code>getActionsSection()</code></td><td><code>backend/src/services/instructionFileService.js</code> 的 prompt injection 扫描；<code>backend/src/tools/shellCommand.js</code> 的 git / destructive guardrails</td><td>测试覆盖 <code>read-only stays read-only / secret redaction / high-blast-radius confirmation / secure defaults</code></td></tr><tr><td>11</td><td>最小落点 / 最小改动 / 最小工作量达成结果</td><td>先定义 done；选 smallest sufficient scope；用最窄验证证明结果；够了就停</td><td><code>getScopeMinimizationSection()</code>、<code>getExecutionDisciplineSection()</code></td><td><code>backend/src/agents/built-in/generalPurposeAgent.js</code>；<code>backend/src/services/cliAgentRunner.js</code> 的 <code>implement</code> 角色；<code>backend/src/tools/FileEditTool/index.js</code>；<code>backend/src/tools/shellCommand.js</code> 的 narrowest-check 约束</td><td>测试覆盖 <code>completion condition / smallest useful context / narrowest convincing check / stop when done</code></td></tr></tbody></table>
+<h2 id="第-11-节为什么最关键">第 11 节为什么最关键<a class="anchor" href="#第-11-节为什么最关键" aria-label="锚点">#</a></h2>
+<p>你前面问的“怎么让 khy 像你一样，凡事最小落点、最小改动、最小工作量达到完成任务效果”，在 KHY 里主要不是靠一句口号，而是靠三层同时收紧:</p>
+<ol><li>主 prompt 明写:<ul><li><code>Define the completion condition</code></li><li><code>Choose the smallest sufficient scope</code></li><li><code>Verify with the narrowest convincing check</code></li><li><code>Stop when the acceptance condition is met</code></li></ul></li><li>agent prompt 再约束:<ul><li><code>generalPurposeAgent</code> 和 <code>implement</code> 角色都强调不要 gold-plate、不要扩 scope</li></ul></li><li>tool prompt 再落地:<ul><li><code>Edit</code> 倾向一次一个 focused edit</li><li><code>shellCommand</code> 倾向 narrowest sufficient command / check</li></ul></li></ol>
+<p>这就是为什么第 11 节不是“加了一段文案”，而是已经变成执行风格。</p>
+<h2 id="最关键入口文件">最关键入口文件<a class="anchor" href="#最关键入口文件" aria-label="锚点">#</a></h2>
+<p>如果只看最有价值的几个入口，优先看这些:</p>
+<ol><li><code>backend/src/constants/prompts.js</code></li><li><code>backend/src/services/khyUpgradeRuntime.js</code></li><li><code>backend/src/services/compact/prompt.js</code></li><li><code>backend/src/services/instructionFileService.js</code></li><li><code>backend/src/agents/prompt.js</code></li><li><code>backend/src/agents/built-in/generalPurposeAgent.js</code></li><li><code>backend/src/tools/FileReadTool/index.js</code></li><li><code>backend/src/tools/FileEditTool/index.js</code></li><li><code>backend/src/tools/shellCommand.js</code></li><li><code>backend/tests/promptLearningRules.test.js</code></li></ol>
+<h2 id="一句话总结">一句话总结<a class="anchor" href="#一句话总结" aria-label="锚点">#</a></h2>
+<p>Claude Code 的规则在 KHY 里，已经从“概念学习”变成了“主 prompt + agent + tool + runtime + test”的组合实现。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-004] claude-code-代理配置.html"><div class="dir">← 上一篇</div><div class="ttl">通过 KHY 代理接入 Claude Code</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-006] cli-万能接入-abu-案例.html"><div class="dir">下一篇 →</div><div class="ttl">CLI-Anything 接入案例：Abu-Cowork (阿布)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-005] claude-code-规则到-khy-映射表.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

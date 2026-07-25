@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-031-网关日志租界隔离-按需可见与净味翻译">[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译</a></li><li class="lvl-2"><a href="#1-问题-适配器日志越界泄漏">1. 问题：适配器日志越界泄漏</a></li><li class="lvl-3"><a href="#自查发现的泄漏点-leak-site-map">自查发现的泄漏点（leak-site map）</a></li><li class="lvl-2"><a href="#2-设计-网关日志租界-gateway-log-lease">2. 设计：网关日志租界（Gateway Log Lease）</a></li><li class="lvl-3"><a href="#2-1-按需可见规则表-四象限">2.1 按需可见规则表（四象限）</a></li><li class="lvl-3"><a href="#2-2-两个正交的-asynclocalstorage-上下文">2.2 两个正交的 AsyncLocalStorage 上下文</a></li><li class="lvl-2"><a href="#3-实现-四件套">3. 实现：四件套</a></li><li class="lvl-3"><a href="#3-1-noisefilter-净味翻译">3.1 NoiseFilter（净味翻译）</a></li><li class="lvl-3"><a href="#3-2-gatewayloglease-决策引擎">3.2 GatewayLogLease（决策引擎）</a></li><li class="lvl-3"><a href="#3-3-adapterlogsandbox-拦截-沙箱-守卫">3.3 AdapterLogSandbox（拦截 + 沙箱 + 守卫）</a></li><li class="lvl-3"><a href="#3-4-devlog-l1-接收端">3.4 devLog（L1 接收端）</a></li><li class="lvl-2"><a href="#4-接入接缝-最小侵入-对齐-arch-025-027-029-先例">4. 接入接缝（最小侵入，对齐 ARCH-025/027/029 先例）</a></li><li class="lvl-2"><a href="#5-防呆铁律-与-goal-原文逐条对应">5. 防呆铁律（与 Goal 原文逐条对应）</a></li><li class="lvl-2"><a href="#6-验收">6. 验收</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-031-网关日志租界隔离-按需可见与净味翻译">[DESIGN-ARCH-031] 网关日志租界隔离 — 按需可见与净味翻译<a class="anchor" href="#design-arch-031-网关日志租界隔离-按需可见与净味翻译" aria-label="锚点">#</a></h1>
+<p>状态：已实现（Goal「Agent 日志隔离架构师」闭环）<br>依赖前序：[DESIGN-ARCH-025] 元规划 · [DESIGN-ARCH-027] 依赖自愈 · [DESIGN-ARCH-028] 通信防御零静默 · [DESIGN-ARCH-029] 有限窗口降级<br>实现位置：<code>services/backend/src/services/gatewayLogLease/</code><br>验收测试：<code>services/backend/tests/services/gatewayLogLease/gatewayLogLease.test.js</code>（22 例全绿）</p>
+<hr>
+<h2 id="1-问题-适配器日志越界泄漏">1. 问题：适配器日志越界泄漏<a class="anchor" href="#1-问题-适配器日志越界泄漏" aria-label="锚点">#</a></h2>
+<p>AI 网关挂着 17 个适配器（kiro / codex / claude / trae / cursor / windsurf / vscode /<br>warp / localllm / ollama / api / relay …）。它们的内部维护动作——Token 刷新、降级、<br>重试、探活、依赖缺失——会在<strong>与该适配器无关的任务执行期间</strong>把机器味日志直接打到主输出流。</p>
+<p>典型坏味：</p>
+<ul><li>用户正用 DeepSeek 写代码，后台 Kiro 的 Token 定时刷新失败，主流里突然冒出</li></ul>
+<p><code>[kiroAdapter] Token refresh failed, falling back to alternate token source</code>。</p>
+<ul><li>未选中的适配器后台异步 reject，冒泡成全局 <code>UnhandledRejection</code>，污染主流甚至崩进程。</li><li>底层 <code>API Error: 400 Invalid Request</code> / <code>requires puppeteer</code> 直接透给用户，暴露内幕、</li></ul>
+<p>状态码、适配器名、Token 串、URL、文件路径。</p>
+<h3 id="自查发现的泄漏点-leak-site-map">自查发现的泄漏点（leak-site map）<a class="anchor" href="#自查发现的泄漏点-leak-site-map" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>位置</th><th>泄漏形态</th></tr></thead><tbody><tr><td>适配器内部</td><td><code>src/services/gateway/adapters/*</code>（17 个）</td><td>Token 刷新 / 降级 / 重试直接 <code>console.*</code> 到主流，带 <code>[xxxAdapter]</code> 前缀</td></tr><tr><td>网关路由</td><td><code>aiGateway.js</code> <code>emitStatus</code>(:3137) / <code>forwardGatewayChunk</code>(:3119)</td><td>模型选举/切换时把适配器名+错误细节并入用户流</td></tr><tr><td>失败归因</td><td><code>aiGateway.js</code> <code>_buildFailureReasonSection</code>(:213) / <code>_sanitizeFailureMessage</code>(:193) / <code>_normalizeAdapterSig</code>(:201)</td><td>失败原因段落含原始适配器签名</td></tr><tr><td>全局处理器</td><td><code>daemonEntry.js</code>(:19/:201/:206) / <code>crashRecovery.js</code>(:234/:274) / <code>failsafe/streamInjector.js</code>(:147/:150)</td><td>未选中适配器的异步报错经全局 handler 落主流</td></tr><tr><td>缺中央 logger</td><td>全后端无统一日志出口（仅 <code>credentialWatcherService.js:284</code> 有环形缓冲先例）</td><td>无处可做集中裁决</td></tr></tbody></table>
+<hr>
+<h2 id="2-设计-网关日志租界-gateway-log-lease">2. 设计：网关日志租界（Gateway Log Lease）<a class="anchor" href="#2-设计-网关日志租界-gateway-log-lease" aria-label="锚点">#</a></h2>
+<p>「租界」= 给每一条执行路径发一张<strong>临时可见性凭照</strong>。日志在落地前反查这张凭照，决定去哪。<br>凭照随 <code>AsyncLocalStorage</code> 调用栈携带，任何深处的适配器日志都能反查到「我现在属于谁、什么模式」。</p>
+<h3 id="2-1-按需可见规则表-四象限">2.1 按需可见规则表（四象限）<a class="anchor" href="#2-1-按需可见规则表-四象限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>触发场景</th><th>可见?</th><th>去向</th><th>示例</th></tr></thead><tbody><tr><td>当前任务<strong>未使用</strong>该适配器</td><td>❌ 绝对不可见</td><td>L1（开发日志）/ DROP</td><td>用 DeepSeek 时 Kiro Token 刷新失败 → 主流无输出</td></tr><tr><td>当前任务<strong>正在使用</strong>该适配器</td><td>✅ 可见（净味后）</td><td>L0 用户流（友好句）/ 纯噪音→DROP</td><td>用 Kiro 时 API 报错 → 「当前模型响应异常，正在自动修复…」</td></tr><tr><td>用户<strong>查网关状态</strong></td><td>✅ 全量可见</td><td>L0（脱敏摘要，保留适配器名）</td><td><code>/gateways</code> → 显示 <code>kiro: Token 过期</code></td></tr><tr><td><strong>静默沙箱</strong>（init/Token 刷新）</td><td>❌ 不可见</td><td>BUFFER（上下文缓冲，可回放）</td><td>Token 刷新内部输出 → 全部进 buffer，主流寂静</td></tr><tr><td>进程崩溃 / 全局异常</td><td>⚠️ 仅结构化摘要</td><td>L1（debug.log / 内存环）</td><td>UnhandledRejection（适配器可归因）→ 写 L1</td></tr></tbody></table>
+<p>通道（channel）取值：<code>L0</code>=用户流（净味后）· <code>L1</code>=开发日志 · <code>BUFFER</code>=沙箱缓冲 · <code>DROP</code>=/dev/null。</p>
+<h3 id="2-2-两个正交的-asynclocalstorage-上下文">2.2 两个正交的 AsyncLocalStorage 上下文<a class="anchor" href="#2-2-两个正交的-asynclocalstorage-上下文" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>上下文</th><th>文件</th><th>携带</th><th>回答</th></tr></thead><tbody><tr><td>租界（lease）</td><td><code>context.js</code> <code>_store</code></td><td><code>{activeAdapter, mode, buffer, seq}</code></td><td>「这条路径属于哪个活跃适配器、什么模式」</td></tr><tr><td>来源（provenance）</td><td><code>sandbox.js</code> <code>_sourceStore</code></td><td><code>adapterId</code></td><td>「这条日志是谁打的」</td></tr></tbody></table>
+<p>二者正交：一次 DeepSeek 请求里，lease.activeAdapter=<code>deepseek</code>；若 Kiro 的后台日志带<br><code>[kiroAdapter]</code> 标记在同一异步树里触发，则它的来源经文本标记判为 <code>kiro</code> ≠ 活跃 <code>deepseek</code> → 落 L1。</p>
+<blockquote><p>关键裁决（<code>sandbox._resolveSource</code>）：<strong>显式带源 &gt; 文本标记嗅探 &gt; provenance 上下文</strong>。<br>文本里显式带 <code>[xxxAdapter]</code> 时，即便它出现在别的适配器的 provenance 块内，也归到被点名者，<br>否则跨适配器后台日志会被误判为当前活跃适配器而错误放行 L0。</p></blockquote>
+<hr>
+<h2 id="3-实现-四件套">3. 实现：四件套<a class="anchor" href="#3-实现-四件套" aria-label="锚点">#</a></h2>
+<pre><code>src/services/gatewayLogLease/
+  context.js      AsyncLocalStorage 租界上下文（地基）
+  noiseFilter.js  净味翻译层（NoiseFilter）：底层错误→友好句 / 脱敏
+  logLease.js     GatewayLogLease：四象限可见性决策引擎
+  sandbox.js      AdapterLogSandbox：拦截底层输出 + 静默沙箱 + 后台守卫 + 全局安全网
+  devLog.js       L1 开发日志接收端（内存环 + 可选 debug.log，永不抢占 stdout）
+  index.js        门面</code></pre>
+<h3 id="3-1-noisefilter-净味翻译">3.1 NoiseFilter（净味翻译）<a class="anchor" href="#3-1-noisefilter-净味翻译" aria-label="锚点">#</a></h3>
+<p><code>translate(raw) → string|null</code>：有序规则匹配，第一条命中即返回。</p>
+<ul><li><code>user:'友好句'</code> → 翻译；<code>user:null</code> → 纯内部噪音，吞掉。</li><li>未命中任何规则<strong>绝不返回机器味原文</strong>，给脱敏兜底句「模型服务处理中…」。</li></ul>
+<table><thead><tr><th>底层</th><th>→ 用户可见</th></tr></thead><tbody><tr><td><code>[kiroAdapter] Token refresh failed, falling back...</code></td><td>模型服务正在切换…</td></tr><tr><td><code>✗ news(...) 本地依赖不完整</code></td><td>正在尝试其他方式获取…</td></tr><tr><td><code>API Error: 400 Invalid Request</code></td><td>当前模型响应异常，正在自动修复…</td></tr><tr><td><code>this action requires puppeteer</code></td><td>正在降级到轻量模式…</td></tr><tr><td><code>[kiro:debug] probe heartbeat ok</code></td><td>（吞掉，null）</td></tr></tbody></table>
+<p><code>sanitize(text)</code>：抹 Bearer/Token/hash/URL/路径/<code>[xxxAdapter]</code>/适配器名 → <code>[token]</code>/<code>[url]</code>/<code>[path]</code>。<br><code>sanitizeForStatus(raw, maxLen)</code>：查询态用，保留可读错误，仅抹 Token/URL/hash，<strong>保留适配器名</strong>（状态查询里它是合法信息）。</p>
+<h3 id="3-2-gatewayloglease-决策引擎">3.2 GatewayLogLease（决策引擎）<a class="anchor" href="#3-2-gatewayloglease-决策引擎" aria-label="锚点">#</a></h3>
+<p><code>decide({sourceAdapter, level, text}) → {visible, channel, output, raw}</code>，规则写死在此不可绕过：</p>
+<ul><li>无上下文 → <code>{false, L1}</code>（游离日志绝不上主流）</li><li><code>status-query</code> → <code>{true, L0}</code>（<code>sanitizeForStatus</code>）</li><li><code>sandbox</code> → <code>{false, BUFFER}</code></li><li><code>task</code> &amp; 源===活跃 → <code>translate</code>（null→DROP，否则 L0）</li><li><code>task</code> &amp; 源≠活跃 → <code>{false, L1}</code></li></ul>
+<h3 id="3-3-adapterlogsandbox-拦截-沙箱-守卫">3.3 AdapterLogSandbox（拦截 + 沙箱 + 守卫）<a class="anchor" href="#3-3-adapterlogsandbox-拦截-沙箱-守卫" aria-label="锚点">#</a></h3>
+<ul><li><code>install({force, userSink})</code>：幂等、env <code>KHY_GATEWAY_LOG_LEASE</code> 门控，补丁</li></ul>
+<p><code>console.{log,info,warn,error,debug}</code> + <code>process.stdout/stderr.write</code>；返回 <code>uninstall()</code>。<br>  <strong>非适配器、非租界内的普通日志原样放行（最小爆破半径，绝不接管全局日志）。</strong></p>
+<ul><li><code>runForAdapter(id, fn)</code>：请求绑定活跃适配器（task 模式）。</li><li><code>runStatusQuery(fn)</code>：查询态全量放行。</li><li><code>runSandboxed(id, fn) → {result, buffer, error}</code>：init/Token 刷新整体静默，内部输出进 buffer，</li></ul>
+<p>抛错不外泄（结构化 error + 摘要下沉 L1）。</p>
+<ul><li><code>guardBackground(id, fnOrPromise)</code>：包裹「发射后不管」后台异步，rejection 就地捕获→L1，</li></ul>
+<p><strong>永不 reject</strong>（失败 resolve(null)），绝不冒泡成全局 UnhandledRejection。</p>
+<ul><li><code>installProcessGuards()</code>：保守全局安全网——只认领<strong>适配器可归因</strong>且<strong>源≠活跃</strong>的</li></ul>
+<p><code>unhandledRejection</code>，写 L1；其余交还既有处理器，绝不越权。</p>
+<ul><li><code>emit(id, level, …args)</code>：适配器显式带源打日志（推荐，不依赖文本嗅探）。</li></ul>
+<h3 id="3-4-devlog-l1-接收端">3.4 devLog（L1 接收端）<a class="anchor" href="#3-4-devlog-l1-接收端" aria-label="锚点">#</a></h3>
+<p>内存环（<code>RING_MAX=500</code>）始终在；env <code>KHY_GATEWAY_LOG_LEASE_FILE</code> 指定时附加结构化 JSON 行。<br><strong>写文件失败绝不抛错、绝不回退 stdout</strong>（回退=又污染主流）。</p>
+<hr>
+<h2 id="4-接入接缝-最小侵入-对齐-arch-025-027-029-先例">4. 接入接缝（最小侵入，对齐 ARCH-025/027/029 先例）<a class="anchor" href="#4-接入接缝-最小侵入-对齐-arch-025-027-029-先例" aria-label="锚点">#</a></h2>
+<p>本子系统自带闭环 + 文档化接缝，不外科改写 6k 行的 <code>aiGateway.js</code>：</p>
+<pre><code class="language-js">const lease = require('.../gatewayLogLease');
+lease.install();                                  // 进程启动一次（env 门控）
+lease.installProcessGuards();                      // 全局安全网
+
+await lease.runForAdapter('kiro', () =&gt; gateway.chat(...));      // 请求路径绑定活跃适配器
+const { result, error } = await lease.runSandboxed('kiro', () =&gt; refreshToken());  // Token 刷新静默
+lease.guardBackground('kiro', () =&gt; probeHealth());             // 后台 rejection 不冒泡
+lease.emit('kiro', 'warn', 'Token refresh failed, falling back'); // 适配器显式打日志
+await lease.runStatusQuery(() =&gt; buildGatewayStatus());          // /gateways 全量可见</code></pre>
+<p>建议落点：网关请求入口包 <code>runForAdapter</code>；适配器 init/refresh 包 <code>runSandboxed</code>；<br>探活/定时刷新包 <code>guardBackground</code>；状态端点 <code>aiManagementServer.js:1545</code> 包 <code>runStatusQuery</code>。</p>
+<hr>
+<h2 id="5-防呆铁律-与-goal-原文逐条对应">5. 防呆铁律（与 Goal 原文逐条对应）<a class="anchor" href="#5-防呆铁律-与-goal-原文逐条对应" aria-label="锚点">#</a></h2>
+<ol><li><strong>绝不允许适配器内部直接原生输出到主流</strong> → 必须经 Sandbox 路由；<code>install</code> 补丁 console/stdout，</li></ol>
+<p><code>runSandboxed</code> 把内部输出重定向 buffer。</p>
+<ol><li><strong>绝不允许底层原始 Error 暴露给用户</strong> → 必须经 NoiseFilter；<code>translate</code> 产物只可能是预置友好句或</li></ol>
+<p>脱敏兜底句，未命中绝不返回机器味原文。</p>
+<ol><li><strong>未被选中的适配器内部异步报错必须被吞掉或重定向到文件</strong> → <code>guardBackground</code> 永不 reject、</li></ol>
+<p><code>installProcessGuards</code> 把适配器可归因的 unhandledRejection 下沉 L1，绝不触发全局未处理异常。</p>
+<ol><li>拦截器自身任何异常都 fail-safe 回退「原样放行」，绝不吞掉真正该见的输出、绝不抛错。</li><li><code>install</code>/<code>installProcessGuards</code> 幂等、env 门控（缺省关，显式开），可完整 <code>uninstall</code> 还原。</li></ol>
+<hr>
+<h2 id="6-验收">6. 验收<a class="anchor" href="#6-验收" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/gatewayLogLease/gatewayLogLease.test.js</code> → 22/22 绿。覆盖：</p>
+<ul><li>净味翻译：底层错误→友好句 / 纯噪音→吞掉 / 脱敏抹 Token·URL·路径·适配器名。</li><li>四象限决策：未用适配器零泄漏 / 在用净味可见 / 查网关全量可见 / 沙箱重定向缓冲 / 游离落 L1。</li><li><strong>核心端到端</strong>：用 DeepSeek 执行任务时 Kiro 后台 <code>console</code> 报错 → 用户流零泄漏（无 <code>kiro</code>/无</li></ul>
+<p><code>token refresh</code> 字样），错误下沉 L1。</p>
+<ul><li>静默沙箱：Token 刷新内部输出绝不上 L0、落 buffer；沙箱内抛错不外泄、摘要脱敏。</li><li>后台守卫：<code>guardBackground</code> 吞 rejection 下沉 L1 永不冒泡；<code>installProcessGuards</code> 幂等可还原。</li><li>emit 显式带源优先于嗅探。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-030] 源端构建-目标机自愈运行.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-030 · 源端构建 + 目标机自愈运行（跨平台 pip 依赖带进度自愈）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-032] 内嵌MD工作台与跨平台右键集成.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-031] 网关日志租界隔离-按需可见与净味翻译.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

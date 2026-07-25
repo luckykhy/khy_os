@@ -1,0 +1,8 @@
+{
+  "name": "khyos/chain",
+  "version": "0.1.0",
+  "readme": "",
+  "license": "Apache-2.0",
+  "keywords": ["wasm", "chain", "agent", "langchain", "prompt"],
+  "description": "Chain execution primitives for KHY OS AI subsystem (prompt templating, memory buffer, tool dispatch protocol)"
+}

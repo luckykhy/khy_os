@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-browser · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-browser<span class="sep">›</span>cli-anything-browser</div>
+      <header class="hero reveal"><h1>cli-anything-browser</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-browser">cli-anything-browser</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-3"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-3"><a href="#install-cli">Install CLI</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#page-page-navigation">`page` — Page Navigation</a></li><li class="lvl-3"><a href="#fs-filesystem-commands-accessibility-tree">`fs` — Filesystem Commands (Accessibility Tree)</a></li><li class="lvl-3"><a href="#act-action-commands">`act` — Action Commands</a></li><li class="lvl-3"><a href="#session-session-management">`session` — Session Management</a></li><li class="lvl-2"><a href="#usage-examples">Usage Examples</a></li><li class="lvl-3"><a href="#basic-navigation">Basic Navigation</a></li><li class="lvl-3"><a href="#search-and-click">Search and Click</a></li><li class="lvl-3"><a href="#form-fill">Form Fill</a></li><li class="lvl-3"><a href="#json-output">JSON Output</a></li><li class="lvl-3"><a href="#daemon-mode-faster-interactive-use">Daemon Mode (Faster Interactive Use)</a></li><li class="lvl-3"><a href="#interactive-repl">Interactive REPL</a></li><li class="lvl-2"><a href="#path-syntax">Path Syntax</a></li><li class="lvl-2"><a href="#agent-specific-guidance">Agent-Specific Guidance</a></li><li class="lvl-3"><a href="#json-output-for-parsing">JSON Output for Parsing</a></li><li class="lvl-3"><a href="#error-handling">Error Handling</a></li><li class="lvl-3"><a href="#daemon-mode-for-efficiency">Daemon Mode for Efficiency</a></li><li class="lvl-2"><a href="#links">Links</a></li><li class="lvl-2"><a href="#security-considerations">Security Considerations</a></li><li class="lvl-3"><a href="#url-restrictions">URL Restrictions</a></li><li class="lvl-3"><a href="#dom-content-risks">DOM Content Risks</a></li><li class="lvl-3"><a href="#private-network-access">Private Network Access</a></li><li class="lvl-3"><a href="#session-isolation">Session Isolation</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-browser&quot;<br>description: &quot;Browser automation CLI using DOMShell MCP server. Maps Chrome's Accessibility Tree to a virtual filesystem for agent-native navigation.&quot;</p>
+<hr>
+<h1 id="cli-anything-browser">cli-anything-browser<a class="anchor" href="#cli-anything-browser" aria-label="锚点">#</a></h1>
+<p>A command-line interface for browser automation using <a href="https://github.com/apireno/DOMShell" target="_blank" rel="noopener">DOMShell</a>'s MCP server. Navigate web pages using filesystem commands: <code>ls</code>, <code>cd</code>, <code>cat</code>, <code>grep</code>, <code>click</code>.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h3>
+<ol><li><strong>Node.js and npx</strong> (for DOMShell MCP server):</li></ol>
+<pre><code class="language-bash">   # Install Node.js from https://nodejs.org/
+   npx --version</code></pre>
+<ol><li><strong>Chrome/Chromium</strong> with <a href="https://chromewebstore.google.com/detail/domshell-browser-filesy/okcliheamhmijccjknkkplploacoidnp" target="_blank" rel="noopener">DOMShell extension</a>:<ul><li>Install extension in Chrome</li><li>Ensure Chrome is running before using CLI</li></ul></li></ol>
+<ol><li><strong>Python 3.10+</strong></li></ol>
+<h3 id="install-cli">Install CLI<a class="anchor" href="#install-cli" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd browser/agent-harness
+pip install -e .</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="page-page-navigation"><code>page</code> — Page Navigation<a class="anchor" href="#page-page-navigation" aria-label="锚点">#</a></h3>
+<ul><li><code>page open &lt;url&gt;</code> — Navigate to URL</li><li><code>page reload</code> — Reload current page</li><li><code>page back</code> — Navigate back in history</li><li><code>page forward</code> — Navigate forward in history</li><li><code>page info</code> — Show current page info</li></ul>
+<h3 id="fs-filesystem-commands-accessibility-tree"><code>fs</code> — Filesystem Commands (Accessibility Tree)<a class="anchor" href="#fs-filesystem-commands-accessibility-tree" aria-label="锚点">#</a></h3>
+<ul><li><code>fs ls [path]</code> — List elements at path</li><li><code>fs cd &lt;path&gt;</code> — Change directory</li><li><code>fs cat [path]</code> — Read element content</li><li><code>fs grep &lt;pattern&gt; [path]</code> — Search for text pattern</li><li><code>fs pwd</code> — Print working directory</li></ul>
+<h3 id="act-action-commands"><code>act</code> — Action Commands<a class="anchor" href="#act-action-commands" aria-label="锚点">#</a></h3>
+<ul><li><code>act click &lt;path&gt;</code> — Click an element</li><li><code>act type &lt;path&gt; &lt;text&gt;</code> — Type text into input</li></ul>
+<h3 id="session-session-management"><code>session</code> — Session Management<a class="anchor" href="#session-session-management" aria-label="锚点">#</a></h3>
+<ul><li><code>session status</code> — Show session state</li><li><code>session daemon-start</code> — Start persistent daemon mode</li><li><code>session daemon-stop</code> — Stop daemon mode</li></ul>
+<h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
+<h3 id="basic-navigation">Basic Navigation<a class="anchor" href="#basic-navigation" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Open a page
+cli-anything-browser page open https://example.com
+
+# Explore structure
+cli-anything-browser fs ls /
+cli-anything-browser fs cd /main
+cli-anything-browser fs ls
+
+# Go back to root
+cli-anything-browser fs cd /</code></pre>
+<h3 id="search-and-click">Search and Click<a class="anchor" href="#search-and-click" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-browser fs grep &quot;Login&quot;
+cli-anything-browser act click /main/button[0]</code></pre>
+<h3 id="form-fill">Form Fill<a class="anchor" href="#form-fill" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-browser act type /main/input[0] &quot;user@example.com&quot;
+cli-anything-browser act click /main/button[0]</code></pre>
+<h3 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-browser --json fs ls /</code></pre>
+<h3 id="daemon-mode-faster-interactive-use">Daemon Mode (Faster Interactive Use)<a class="anchor" href="#daemon-mode-faster-interactive-use" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Start persistent connection
+cli-anything-browser session daemon-start
+
+# Run commands (uses persistent connection)
+cli-anything-browser fs ls /
+cli-anything-browser fs cd /main
+
+# Stop daemon when done
+cli-anything-browser session daemon-stop</code></pre>
+<h3 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-browser</code></pre>
+<h2 id="path-syntax">Path Syntax<a class="anchor" href="#path-syntax" aria-label="锚点">#</a></h2>
+<p>DOMShell uses a filesystem-like path for the Accessibility Tree:</p>
+<pre><code>/                           — Root (document)
+/main                       — Main landmark
+/main/div[0]                — First div in main
+/main/div[0]/button[2]      — Third button in first div</code></pre>
+<ul><li>Array indices are <strong>0-based</strong>: <code>button[0]</code> is the first button</li><li>Use <code>..</code> to go up one level</li><li>Use <code>/</code> for root</li></ul>
+<h2 id="agent-specific-guidance">Agent-Specific Guidance<a class="anchor" href="#agent-specific-guidance" aria-label="锚点">#</a></h2>
+<h3 id="json-output-for-parsing">JSON Output for Parsing<a class="anchor" href="#json-output-for-parsing" aria-label="锚点">#</a></h3>
+<p>All commands support <code>--json</code> flag for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-browser --json fs ls /</code></pre>
+<p>Returns:</p>
+<pre><code class="language-json">{
+  &quot;path&quot;: &quot;/&quot;,
+  &quot;entries&quot;: [
+    {&quot;name&quot;: &quot;main&quot;, &quot;role&quot;: &quot;landmark&quot;, &quot;path&quot;: &quot;/main&quot;}
+  ]
+}</code></pre>
+<h3 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>
+<p>The CLI provides clear error messages for common issues:</p>
+<ul><li><strong>npx not found</strong>: Install Node.js from https://nodejs.org/</li><li><strong>DOMShell not found</strong>: Run <code>npx @apireno/domshell --version</code></li><li><strong>MCP call failed</strong>: Install DOMShell Chrome extension</li></ul>
+<p>Check <code>is_available()</code> return value before running commands.</p>
+<h3 id="daemon-mode-for-efficiency">Daemon Mode for Efficiency<a class="anchor" href="#daemon-mode-for-efficiency" aria-label="锚点">#</a></h3>
+<p>For agent workflows with multiple commands, use daemon mode:</p>
+<ol><li>Start daemon: <code>cli-anything-browser session daemon-start</code></li><li>Run commands: Each command reuses the MCP connection</li><li>Stop daemon: <code>cli-anything-browser session daemon-stop</code></li></ol>
+<p>This avoids the 1-3 second cold start overhead for each command.</p>
+<h2 id="links">Links<a class="anchor" href="#links" aria-label="锚点">#</a></h2>
+<ul><li><a href="https://github.com/apireno/DOMShell" target="_blank" rel="noopener">DOMShell GitHub</a></li><li><a href="https://github.com/HKUDS/CLI-Anything" target="_blank" rel="noopener">CLI-Anything</a></li><li><a href="https://github.com/HKUDS/CLI-Anything/issues/90" target="_blank" rel="noopener">Issue #90</a></li></ul>
+<h2 id="security-considerations">Security Considerations<a class="anchor" href="#security-considerations" aria-label="锚点">#</a></h2>
+<p><strong>IMPORTANT</strong>: When using this CLI with AI agents, be aware of the following security considerations:</p>
+<h3 id="url-restrictions">URL Restrictions<a class="anchor" href="#url-restrictions" aria-label="锚点">#</a></h3>
+<p>The browser harness validates all URLs before navigation:</p>
+<ul><li><strong>Explicit scheme required</strong>: URLs must include <code>http://</code> or <code>https://</code> scheme (scheme-less URLs like <code>example.com</code> are rejected)</li><li><strong>Blocked schemes</strong>: <code>file://</code>, <code>javascript://</code>, <code>data://</code>, <code>vbscript://</code>, <code>about://</code>, <code>chrome://</code>, and browser-internal schemes</li><li><strong>Allowed schemes</strong>: <code>http://</code> and <code>https://</code> only (configurable via <code>CLI_ANYTHING_BROWSER_ALLOWED_SCHEMES</code>)</li><li><strong>Private network blocking</strong>: Optional via <code>CLI_ANYTHING_BROWSER_BLOCK_PRIVATE=true</code> (disabled by default)</li></ul>
+<h3 id="dom-content-risks">DOM Content Risks<a class="anchor" href="#dom-content-risks" aria-label="锚点">#</a></h3>
+<p>The Accessibility Tree includes all visible and hidden elements on a page. Malicious websites could:</p>
+<ul><li>Craft ARIA labels with manipulative text (e.g., &quot;Ignore previous instructions&quot;)</li><li>Use aria-hidden elements to inject content not visible to users</li><li>Create confusing DOM structures that mislead navigation</li></ul>
+<p><strong>Mitigation</strong>: When interacting with untrusted websites, consider:</p>
+<ol><li>Using the <code>--json</code> flag for structured output that's easier to parse safely</li><li>Sanitizing or filtering DOM content before including it in prompts</li><li>Limiting navigation to trusted domains</li></ol>
+<h3 id="private-network-access">Private Network Access<a class="anchor" href="#private-network-access" aria-label="锚点">#</a></h3>
+<p>By default, the browser can access localhost and private networks (192.168.x.x, 10.x.x.x, etc.). To block:</p>
+<pre><code class="language-bash">export CLI_ANYTHING_BROWSER_BLOCK_PRIVATE=true
+cli-anything-browser page open http://localhost:8080  # Will be blocked</code></pre>
+<h3 id="session-isolation">Session Isolation<a class="anchor" href="#session-isolation" aria-label="锚点">#</a></h3>
+<p>Multiple browser sessions share the same Chrome instance. Cookies and authentication state may persist across sessions. For sensitive operations, consider:</p>
+<ol><li>Using Chrome's guest mode or incognito</li><li>Clearing cookies between sessions</li><li>Using separate Chrome profiles for different security contexts</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-blender/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-blender</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-calibre/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-calibre</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-browser/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

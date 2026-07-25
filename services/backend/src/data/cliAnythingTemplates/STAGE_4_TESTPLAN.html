@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 4: Test Planning · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 4: Test Planning</div>
+      <header class="hero reveal"><h1>Stage 4: Test Planning</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-4-test-planning">Stage 4: Test Planning</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-4-test-planning">Stage 4: Test Planning<a class="anchor" href="#stage-4-test-planning" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Write a comprehensive test plan (TEST.md Part 1) covering all commands and edge cases.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li>Source code from Stage 3</li><li><code>architecture.json</code> from Stage 2</li></ul>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li><strong>List all commands</strong> from the CLI entry point</li><li><strong>For each command, define test scenarios</strong>:<ul><li>Happy path: normal input, expected output</li><li>Edge case: empty input, large input, special characters</li><li>Error case: missing dependencies, invalid parameters, timeout</li><li>JSON mode: verify <code>--json</code> output matches schema</li></ul></li></ol>
+<ol><li><strong>Define integration tests</strong>:<ul><li>Full workflow: create → edit → export</li><li>Session: undo → redo → verify state</li><li>Backend: verify software is called with correct arguments</li></ul></li></ol>
+<ol><li><strong>Generate <code>TEST.md</code> (Part 1)</strong>:</li></ol>
+<pre><code class="language-markdown">   # Test Plan: cli-anything-&lt;SOFTWARE&gt;
+
+   ## Unit Tests
+   ### &lt;command_group&gt;.&lt;command&gt;
+   - [ ] Test: &lt;description&gt; — Input: &lt;input&gt; — Expected: &lt;output&gt;
+
+   ## Integration Tests
+   ### Workflow: &lt;workflow_name&gt;
+   - [ ] Step 1: ...
+   - [ ] Step 2: ...
+
+   ## Edge Cases
+   - [ ] Software not installed
+   - [ ] Permission denied
+   - [ ] Timeout on long operations</code></pre>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li><code>TEST.md</code> — test plan document (Part 1)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_3_IMPLEMENT.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 3: Implementation</div></a><a class="next" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_5_TESTCODE.html"><div class="dir">下一篇 →</div><div class="ttl">Stage 5: Test Implementation</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_4_TESTPLAN.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

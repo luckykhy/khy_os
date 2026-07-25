@@ -1,0 +1,22 @@
+# KHY OS Backend Configuration
+# Sourced by OpenRC before starting the service.
+
+# Core
+KHY_OS_MODE=true
+NODE_ENV=production
+PORT=3000
+
+# Database (SQLite by default — no external DB needed)
+DB_TYPE=sqlite
+DB_PATH=/var/lib/khy-os/khy-quant.db
+
+# Security — CHANGE THIS on first boot!
+# Generate with: head -c 48 /dev/urandom | base64
+JWT_SECRET=CHANGE_ME_ON_FIRST_BOOT_generate_with_urandom
+
+# Disable idle shutdown (this IS the OS)
+IDLE_SHUTDOWN=false
+PORT_AUTO_RETRY=0
+
+# Logging
+KHY_OS_LOG=/var/log/khy-os

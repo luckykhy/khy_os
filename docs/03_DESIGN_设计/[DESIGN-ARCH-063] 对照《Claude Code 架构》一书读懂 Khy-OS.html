@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-063-对照-claude-code-架构-一书读懂-khy-os">[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS</a></li><li class="lvl-2"><a href="#0-书目录-khy-阅读路径速查表">0. 书目录 → khy 阅读路径速查表</a></li><li class="lvl-2"><a href="#第1章-架构总览与启动-khy-的入口分流与冷启动">第1章 架构总览与启动 —— khy 的入口分流与冷启动</a></li><li class="lvl-3"><a href="#1-2-系统层次架构与模块">1.2 系统层次架构与模块</a></li><li class="lvl-3"><a href="#1-3-入口分流层与-khy-的启动">1.3 入口分流层与 khy 的启动</a></li><li class="lvl-3"><a href="#1-4-一次-khy-任务的主流程">1.4 一次 khy 任务的主流程</a></li><li class="lvl-3"><a href="#1-5-把复杂度交给工程化系统-khy-的三层生命周期">1.5 把复杂度交给工程化系统:khy 的三层生命周期</a></li><li class="lvl-2"><a href="#第2章-repl-khy-的交互会话层与执行闭环">第2章 REPL —— khy 的交互会话层与执行闭环</a></li><li class="lvl-3"><a href="#2-2-交互会话层的构成-2-3-khy-的-repl">2.2 交互会话层的构成 &amp; 2.3 khy 的 REPL</a></li><li class="lvl-3"><a href="#2-4-1-命令系统-精确执行任务">2.4.1 命令系统:精确执行任务</a></li><li class="lvl-3"><a href="#2-4-2-工具系统-给模型接上手脚">2.4.2 工具系统:给模型接上手脚</a></li><li class="lvl-3"><a href="#2-5-repl-的执行闭环">2.5 REPL 的执行闭环</a></li><li class="lvl-2"><a href="#第3章-上下文-记忆-扩展与治理">第3章 上下文、记忆、扩展与治理</a></li><li class="lvl-3"><a href="#3-2-1-上下文与系统-prompt">3.2.1 上下文与系统 Prompt</a></li><li class="lvl-3"><a href="#3-2-2-基于文件的持久化记忆">3.2.2 基于文件的持久化记忆</a></li><li class="lvl-3"><a href="#3-2-3-上下文窗口管理-压缩">3.2.3 上下文窗口管理(压缩)</a></li><li class="lvl-3"><a href="#3-3-1-3-3-2-扩展通道与插件">3.3.1 &amp; 3.3.2 扩展通道与插件</a></li><li class="lvl-3"><a href="#3-4-扩展的治理">3.4 扩展的治理</a></li><li class="lvl-2"><a href="#第4章-prompt-工程与-agent-行为设计">第4章 Prompt 工程与 Agent 行为设计</a></li><li class="lvl-3"><a href="#4-2-负向指令的艺术-never-比-please-更有力">4.2 负向指令的艺术(&quot;NEVER&quot; 比 &quot;PLEASE&quot; 更有力)</a></li><li class="lvl-3"><a href="#4-4-对抗性自我建模-验证-agent-的-prompt">4.4 对抗性自我建模:验证 Agent 的 Prompt</a></li><li class="lvl-3"><a href="#4-5-工具级-prompt">4.5 工具级 Prompt</a></li><li class="lvl-3"><a href="#4-6-内置-agent-的角色-prompt-两套并存-须分清">4.6 内置 Agent 的角色 Prompt(两套并存,须分清)</a></li><li class="lvl-3"><a href="#4-7-记忆系统的行为指令">4.7 记忆系统的行为指令</a></li><li class="lvl-3"><a href="#4-8-输出风格与人格切换">4.8 输出风格与人格切换</a></li><li class="lvl-3"><a href="#4-9-3-prompt-的装配优先级链">4.9.3 Prompt 的装配优先级链</a></li><li class="lvl-3"><a href="#4-10-设计哲学-prompt-即-coding">4.10 设计哲学:Prompt 即 Coding</a></li><li class="lvl-2"><a href="#第5章-当-agent-从工具进化为操作系统-khy-的-agent-as-os">第5章 当 Agent 从工具进化为操作系统 —— khy 的 Agent-as-OS</a></li><li class="lvl-2"><a href="#6-khy-术语对照-对应书-附录-术语表">6. khy 术语对照(对应书「附录 术语表」)</a></li><li class="lvl-2"><a href="#怎么用这条阅读线">怎么用这条阅读线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-063-对照-claude-code-架构-一书读懂-khy-os">[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS<a class="anchor" href="#design-arch-063-对照-claude-code-架构-一书读懂-khy-os" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>本文是一条「阅读主线」,不是新设计。</strong> 它借用一本讲 Claude Code(下称 CC)架构的书的目录<br>作为骨架,逐章把「书里讲的 CC 概念」对齐到「Khy-OS 里此刻真实的实现(文件:行)」,并如实标注<br><strong>哪里相同、哪里 khy 特有、哪里 khy 没做或做法不同</strong>。</p>
+<p>为什么用书目录当骨架:khy 的 <code>docs/</code> 按<strong>生命周期阶段</strong>(设计/实现/测试/部署/运维/管理)归类,擅长<br>「一个功能怎么落地」;但缺一条<strong>按认知顺序</strong>「从启动到 REPL 到治理到愿景」串起来的解说线。这本书的<br>目录正好是这条认知线。两者互补,不改动既有分类法。</p>
+<p>所有 khy 侧的文件行号均由 <code>node -e fs.readFileSync</code> 直读源码核出(2026-07-08),非猜测、非旧文档转抄。<br>khy 与 CC 是<strong>独立实现</strong>:相同的是「Agent-as-OS」这套工程直觉,不同的是每处的取舍。</p></blockquote>
+<hr>
+<h2 id="0-书目录-khy-阅读路径速查表">0. 书目录 → khy 阅读路径速查表<a class="anchor" href="#0-书目录-khy-阅读路径速查表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>书章节</th><th>讲的是</th><th>khy 对应实现(真源)</th><th>深读文档</th></tr></thead><tbody><tr><td>第1章 架构总览与启动</td><td>分层架构、入口分流、启动主流程</td><td><code>bin/khy.js</code>(身份分流/快速路径)+ <code>src/bootstrap/*</code> + <code>serviceLifecyclePolicy.js</code></td><td>[DESIGN-ARCH-010] 核心架构、[DESIGN-ARCH-012] 工具延迟加载、[DESIGN-ARCH-062] 生命周期边界</td></tr><tr><td>第2章 REPL</td><td>交互会话层、命令系统、工具系统、执行闭环</td><td><code>src/cli/repl.js</code> + <code>src/cli/tui/</code>(官方 Ink)+ <code>src/cli/router.js</code> + <code>src/tools/</code> + <code>src/services/queryEngine.js</code>→<code>toolUseLoop.js</code></td><td>[DESIGN-ARCH-017] 元工具系统、[DESIGN-ARCH-021] 巨型环反转、[DESIGN-ARCH-060] 接线与编排总图</td></tr><tr><td>第3章 上下文/记忆/扩展/治理</td><td>系统 Prompt、文件记忆、上下文压缩、扩展与治理</td><td><code>src/constants/prompts.js</code> + <code>src/services/compact/</code> + <code>MEMORY.md</code>/<code>memdir/</code> + <code>src/services/mcp/</code>+<code>cli/plugins.js</code> + <code>flagRegistry.js</code>+7 守卫</td><td>[DESIGN-ARCH-025] 元规划与约束注入、[DESIGN-ARCH-020] 架构债治理、[DESIGN-ARCH-062]</td></tr><tr><td>第4章 Prompt 工程与 Agent 行为</td><td>负向指令、元 Prompt、验证 Agent、工具级/角色 Prompt、装配优先级</td><td><code>src/constants/prompts.js</code>(各 section 函数)+ <code>src/agents/built-in/</code> + <code>src/services/cliAgentRunner.js</code></td><td>[DESIGN-ARCH-018] Agent 提示词复用、[DESIGN-ARCH-016] 显示规范、[DESIGN-OTHER-003] 提示词结构图</td></tr><tr><td>第5章 Agent 即操作系统</td><td>从工具进化为 OS 的愿景</td><td><code>kernel/</code>(MoonBit 微内核)+ 后台任务 + <code>daemon*</code> + <code>bridge/</code> + 多 Agent 编排</td><td>[DESIGN-ARCH-007/008] 微内核与系统边界、[DESIGN-ARCH-001] 移动智能体协议</td></tr><tr><td>附录 术语表</td><td>术语对照</td><td>见本文 §6 khy 术语对照</td><td>—</td></tr></tbody></table>
+<blockquote><p>⚠️ <strong>本文顺带纠正</strong>若干在旧对比文档([MGMT-RPT-019])里已过期的说法(书写于更早,khy 已迭代):<br>① queryEngine 的 <strong>V2 状态机已删除</strong>,现为 legacy loop + 可选 harness 双路;<br>② 全仓只有 <strong>一个</strong> <code>KHY_DEFER_TOOLS</code> defer 门,不存在复数 defer 门族;<br>③ TUI 已切<strong>官方 <code>ink</code> 包</strong>(经 <code>inkRuntime.js</code> CJS 桥接),旧自研 Flux/VirtualScreen 已移除;<br>④ 守卫是 <strong>7 个</strong> <code>scripts/check-*.js</code>,不止「三守卫」。以本文为准。</p></blockquote>
+<hr>
+<h2 id="第1章-架构总览与启动-khy-的入口分流与冷启动">第1章 架构总览与启动 —— khy 的入口分流与冷启动<a class="anchor" href="#第1章-架构总览与启动-khy-的入口分流与冷启动" aria-label="锚点">#</a></h2>
+<h3 id="1-2-系统层次架构与模块">1.2 系统层次架构与模块<a class="anchor" href="#1-2-系统层次架构与模块" aria-label="锚点">#</a></h3>
+<p>CC 分「入口分流 / 交互会话 / 查询编排 / 工具 / 治理」若干层。khy 同构但落在 <code>services/backend/</code>:</p>
+<ul><li><strong>入口分流层</strong> <code>bin/khy.js</code>(~1600 行):唯一可执行入口,决定「轻身份 <code>khy</code> / 全栈 <code>khyquant</code>」。</li><li><strong>交互会话层</strong> <code>src/cli/</code>(<code>repl.js</code> + <code>tui/</code> + <code>router.js</code> + <code>handlers/</code>)。</li><li><strong>查询编排层</strong> <code>src/services/queryEngine.js</code> → <code>src/services/toolUseLoop.js</code>。</li><li><strong>工具层</strong> <code>src/tools/</code>(约定式自动发现,~90+ 工具)。</li><li><strong>治理层</strong> <code>src/services/flagRegistry.js</code> + <code>serviceLifecyclePolicy.js</code> + <code>scripts/check-*.js</code>。</li></ul>
+<p>深读:[DESIGN-ARCH-010] 核心架构、[DESIGN-ARCH-014] 模式图谱。</p>
+<h3 id="1-3-入口分流层与-khy-的启动">1.3 入口分流层与 khy 的启动<a class="anchor" href="#1-3-入口分流层与-khy-的启动" aria-label="锚点">#</a></h3>
+<ul><li><strong>双身份分流</strong>:身份识别 <code>bin/khy.js:856-868</code> —— 优先 <code>env KHYQUANT_INVOKED_AS</code> → <code>basename(argv[1])</code></li></ul>
+<p>正则 → 默认回退 <code>khyquant</code>。运行时分流在 <code>main()</code>(<code>:298-302</code> <code>isKhyQuantBinary</code> 判定,<code>:328</code> 纯 CLI REPL)。</p>
+<ul><li><strong>快速路径在重型 import 前退出</strong>(与 CC「先响应 <code>--version</code> 再加载」同构):<code>bin/khy.js:969-991</code> ——</li></ul>
+<p><code>--help</code>(<code>:981</code>)、<code>--version/-V/-v/version</code>(<code>:986-991</code>)立即 <code>process.exit(0)</code>,不触发 bootstrap 之后的重模块。</p>
+<ul><li><strong>bootstrap 初始化链</strong>:<code>_bootstrapInit</code>(<code>bin/khy.js:439-440</code> → <code>src/bootstrap/init.js</code>),<code>main</code> 开头异步</li></ul>
+<p>await;目录 <code>src/bootstrap/</code> 含 <code>init.js</code>/<code>setup.js</code>/<code>shutdown.js</code>/<code>prefetch.js</code>/<code>startupProfiler.js</code>/<br>  <code>windowsSpawnHardening.js</code> 等(dotenv/env/CA/proxy/shutdown 钩子)。</p>
+<ul><li><strong>冷启动懒加载</strong>(khy 的一等大事,因 pip 分发 + Windows 进程创建昂贵):重型模块一律分支内 <code>require</code>;</li></ul>
+<p>唯一 defer 门 <code>KHY_DEFER_TOOLS</code>(<code>src/tools/index.js:38</code>,默认开);启动后的预热 <code>deferredPrefetch()</code><br>  (<code>src/bootstrap/prefetch.js:84</code>)在提示符显示后按 <code>serviceLifecyclePolicy</code> 的 <code>cli-startup</code> 条目调度。</p>
+<p>深读:[DESIGN-ARCH-012] 工具延迟加载、[DESIGN-ARCH-030] 源端构建-目标机自愈运行。</p>
+<h3 id="1-4-一次-khy-任务的主流程">1.4 一次 khy 任务的主流程<a class="anchor" href="#1-4-一次-khy-任务的主流程" aria-label="锚点">#</a></h3>
+<p>与 CC 的「启动→装配上下文→进 REPL→查询循环→工具→收尾」一致。khy 的一个对话回合完整时间轴<br>(系统 Prompt 装配 → 工具循环 → 回合收尾蒸馏)见 <strong>[DESIGN-ARCH-060] §二</strong>(逐切点带行号),此处不复述。</p>
+<h3 id="1-5-把复杂度交给工程化系统-khy-的三层生命周期">1.5 把复杂度交给工程化系统:khy 的三层生命周期<a class="anchor" href="#1-5-把复杂度交给工程化系统-khy-的三层生命周期" aria-label="锚点">#</a></h3>
+<p>CC 强调「用工程化系统吸收复杂度」。khy 的具体承载是 <strong><code>serviceLifecyclePolicy.js</code></strong>——把「谁常驻、谁启动跑一次、<br>谁按需惰性载入」显式化为<strong>单一真源</strong>,消除隐式散落:</p>
+<ul><li><code>resident</code>(常驻,需 shutdown 取消)/ <code>startup-oneshot</code>(启动跑一次)/ <code>on-demand</code>(首用惰性,永不进同步冷启动)。</li><li>注册表 <code>serviceLifecyclePolicy.js:14-17</code>(tier 定义)、<code>:55-186</code>(条目);主门 <code>KHY_LIFECYCLE_POLICY</code>(默认开,进 flagRegistry);</li></ul>
+<p>守卫 <code>scripts/check-lifecycle-policy.js</code> 防漂移。</p>
+<p>深读:[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界(本条的专篇)。</p>
+<hr>
+<h2 id="第2章-repl-khy-的交互会话层与执行闭环">第2章 REPL —— khy 的交互会话层与执行闭环<a class="anchor" href="#第2章-repl-khy-的交互会话层与执行闭环" aria-label="锚点">#</a></h2>
+<h3 id="2-2-交互会话层的构成-2-3-khy-的-repl">2.2 交互会话层的构成 &amp; 2.3 khy 的 REPL<a class="anchor" href="#2-2-交互会话层的构成-2-3-khy-的-repl" aria-label="锚点">#</a></h3>
+<ul><li><strong>REPL 主循环</strong> <code>src/cli/repl.js</code>(巨型文件):启动横幅 <code>printBanner</code>(<code>:645</code>)、「欢迎回来」面板(<code>:855-856</code>)、</li></ul>
+<p>工作区自动纳管 <code>workspaceGitInit.ensureWorkspaceRepo</code>(<code>:337</code>,策略拒绝在 HOME 初始化)。</p>
+<ul><li><strong>TUI = 官方 <code>ink</code>(重要更正)</strong>:CC 用 React/Ink 渲染;khy 曾自研 Flux store/VirtualScreen,<strong>现已移除</strong>,</li></ul>
+<p>改用官方 <code>ink</code> 包,经 CJS 桥接层 <code>src/cli/tui/inkRuntime.js:4-6</code>(「single entry point for the official <code>ink</code><br>  package」「<code>ink</code> is ESM-only, while the KHY backend is CommonJS」)。组件在 <code>src/cli/tui/ink-components/</code><br>  (<code>FooterBar.js</code>/<code>WelcomeBanner.js</code>/<code>Transcript.js</code>/<code>ToolLines.js</code>/<code>CompactionProgress.js</code> 等),主题<br>  <code>src/cli/renderTheme.js</code>(中文优先,尊重 <code>KHY_UI_LANG</code>)。</p>
+<h3 id="2-4-1-命令系统-精确执行任务">2.4.1 命令系统:精确执行任务<a class="anchor" href="#2-4-1-命令系统-精确执行任务" aria-label="锚点">#</a></h3>
+<ul><li>分发器 <code>src/cli/router.js</code>(<code>async function route</code> <code>:593</code>),按需 <code>require('./handlers/xxx')</code>。</li><li>handler 模块族 <code>src/cli/handlers/</code>(<strong>115 个</strong>文件);命令名允许集由 <code>constants/commandSchema.js</code> 的</li></ul>
+<p><code>getRouterCommandNames()</code>(195 名)守门。命令类功能的「三处登记」铁律见 [DESIGN-ARCH-060] §一。</p>
+<h3 id="2-4-2-工具系统-给模型接上手脚">2.4.2 工具系统:给模型接上手脚<a class="anchor" href="#2-4-2-工具系统-给模型接上手脚" aria-label="锚点">#</a></h3>
+<ul><li><strong>约定式自动发现</strong> <code>src/tools/index.js:2/:57-67</code>(<code>readdirSync</code> 扫子目录 index.js + 顶层 .js);总量 ~90+</li></ul>
+<p>(子目录工具 73 个:<code>AgentTool</code>/<code>GrepTool</code>/<code>FileEditTool</code>/<code>KhyOsTool</code>/<code>TaskCreateTool</code>… + 顶层单文件)。</p>
+<ul><li><strong>按角色过滤工具面</strong> <code>src/tools/toolProfile.js</code>:<code>PROFILES</code> = <code>minimal</code>(只读探索)/ <code>coding</code>(minimal+编辑/执行/git)/</li></ul>
+<p><code>analysis</code>(minimal+量化金融)/ <code>verification</code>。<strong>注意</strong>:书里的 &quot;Explore Agent&quot; 在 khy 是<strong>角色名</strong>,映射到<br>  <code>minimal</code> profile,不是独立 profile(见 §4.6)。</p>
+<ul><li><strong>延迟揭示</strong> <code>KHY_DEFER_TOOLS</code>(<code>index.js:38</code>):冷启动不急着实例化全部工具面,首用惰性揭示。</li></ul>
+<p>深读:[DESIGN-ARCH-017] 元工具系统设计。</p>
+<h3 id="2-5-repl-的执行闭环">2.5 REPL 的执行闭环<a class="anchor" href="#2-5-repl-的执行闭环" aria-label="锚点">#</a></h3>
+<p>CC 的 REPL 闭环 = 提示 → 模型 → 工具调用 → 结果回灌 → 收敛。khy 的闭环落在 <code>queryEngine.js</code> → <code>toolUseLoop.js</code>:</p>
+<ul><li><strong>更正:V2 状态机已删除</strong>。<code>queryEngine.js:14-21</code> 明写「V2 state machine … have been removed」「Deprecated:</li></ul>
+<p><code>KHY_QUERY_ENGINE_V2</code> — the V2 path no longer exists」。当前是 <strong>legacy loop + 可选 agentic harness</strong> 双路<br>  (<code>:311/:376</code> harness,失败回退 legacy <code>:312/:324</code>),底层统一委托 <code>src/services/toolUseLoop.js</code>(<code>:241/:252</code>)。</p>
+<ul><li><strong>工具环护栏</strong>下沉到 <code>toolUseLoop</code>:循环检测、验证 nudge 由它承载(<code>queryEngine.js:331/:639</code> 注释说明已下沉,</li></ul>
+<p>不再在 queryEngine 内重复)。</p>
+<ul><li><strong>模型降级(529 级联)</strong>:<code>MAX_CONSECUTIVE_529 = 3</code>(<code>queryEngine.js:48</code>),连续过载自动切候选模型。</li></ul>
+<p>深读:[DESIGN-ARCH-021] 巨型环反转设计、[DESIGN-ARCH-029] 有限窗口降级与强制兜底。</p>
+<hr>
+<h2 id="第3章-上下文-记忆-扩展与治理">第3章 上下文、记忆、扩展与治理<a class="anchor" href="#第3章-上下文-记忆-扩展与治理" aria-label="锚点">#</a></h2>
+<h3 id="3-2-1-上下文与系统-prompt">3.2.1 上下文与系统 Prompt<a class="anchor" href="#3-2-1-上下文与系统-prompt" aria-label="锚点">#</a></h3>
+<ul><li>装配总入口 <code>src/constants/prompts.js:assembleSystemPrompt(:2157)</code>,按声明顺序拼接各 section(文件头 <code>:8</code></li></ul>
+<p>「Sections are assembled in order」)。</p>
+<ul><li>动态自我认知段 <code>getKhySpecificSection(:1607)</code> 组装 <code>[selfAwareness, _coreProfile()]</code>(<code>_coreProfile</code> <code>:1640</code>)。</li><li><strong>按需 section</strong>(省 token):<code>getOnDemandPromptSections</code>/<code>getOnDemandPromptSectionDecision</code>(<code>:823/:830</code>),</li></ul>
+<p>非每轮全量注入。</p>
+<p>深读:[DESIGN-ARCH-025] 元规划协议与动态约束注入、[DESIGN-OTHER-003] 系统提示词结构图。</p>
+<h3 id="3-2-2-基于文件的持久化记忆">3.2.2 基于文件的持久化记忆<a class="anchor" href="#3-2-2-基于文件的持久化记忆" aria-label="锚点">#</a></h3>
+<ul><li>与 CC 的 <code>CLAUDE.md</code>/memory 同源理念:khy 用<strong>基于文件的 <code>MEMORY.md</code></strong>(<code>.claude/…/memory/</code>,每条一文件带</li></ul>
+<p>frontmatter),系统 Prompt 侧 <code>getMemorySection</code>(<code>prompts.js:1052</code>)。</p>
+<ul><li>记忆引擎 <code>src/memdir/</code>(<code>memdir.js</code>/<code>paths.js</code>/<code>memorySlug.js</code>/<code>projectMemoryContract.js</code>)+</li></ul>
+<p><code>src/services/memoryEngine/</code>;会话回顾 <code>src/services/sessionRecapService.js</code>。</p>
+<ul><li><strong>编排铁律</strong>:memory 是<strong>外向</strong>摘要,<strong>绝不</strong>自注入本节点上下文(<code>INJECTABLE_SLOTS</code> 刻意不含 memory),详见</li></ul>
+<p>[DESIGN-ARCH-060] §二「三槽不对称」。</p>
+<h3 id="3-2-3-上下文窗口管理-压缩">3.2.3 上下文窗口管理(压缩)<a class="anchor" href="#3-2-3-上下文窗口管理-压缩" aria-label="锚点">#</a></h3>
+<ul><li>统一在 <code>src/services/compact/index.js</code>:<code>sessionMemoryCompact(:75)</code>/<code>microCompact(:124)</code>/<code>shouldCompact(:215)</code>,</li></ul>
+<p>压缩 Prompt 在 <code>compact/prompt.js</code>;裁剪 <code>src/services/contextPruner.js</code>;管道 <code>src/services/query/compactPipeline.js</code>;<br>  UI 端 <code>ink-components/CompactionProgress.js</code>。</p>
+<ul><li>注:<code>docs/03_DESIGN_设计/_archive_已删除孤儿引擎/[DESIGN-ARCH-035] 上下文永续与认知压缩引擎</code> **已归档,不反映</li></ul>
+<p>当前实现**,勿据它理解压缩链。</p>
+<h3 id="3-3-1-3-3-2-扩展通道与插件">3.3.1 &amp; 3.3.2 扩展通道与插件<a class="anchor" href="#3-3-1-3-3-2-扩展通道与插件" aria-label="锚点">#</a></h3>
+<ul><li><strong>MCP 服务器</strong> <code>src/services/mcp/</code>(<code>mcpServer.js</code>/<code>mcpHttpServer.js</code>/<code>mcpStdioServer.js</code>/<code>mcpServerPresets.js</code>),</li></ul>
+<p>系统 Prompt 侧 <code>getMcpInstructionsSection</code>(<code>prompts.js:1039</code>)。</p>
+<ul><li><strong>CLI 插件</strong> <code>src/cli/plugins.js:loadPlugins(:37)</code>——从 <code>~/.khyquant/commands/</code> 加载用户自定义命令,返回 <code>Map</code>。</li><li><strong>handler 扩展</strong>:新命令即 <code>src/cli/handlers/</code> 新模块 + 三处登记。</li></ul>
+<h3 id="3-4-扩展的治理">3.4 扩展的治理<a class="anchor" href="#3-4-扩展的治理" aria-label="锚点">#</a></h3>
+<p>CC 强调「扩展要能被治理:启用可控、执行可控」。khy 的治理三件套:</p>
+<ul><li><strong>启用治理:门控 + 登记</strong> <code>src/services/flagRegistry.js</code>(<code>FLAGS</code> 表 <code>:65</code>;新 <code>KHY_*</code> 门<strong>必须</strong>登记,未登记保守放行 <code>:21</code>)。</li></ul>
+<p>默认开、<code>=0/off/false/no</code> 时<strong>逐字节</strong>回退 legacy。</p>
+<ul><li><strong>执行治理:守卫</strong>(<strong>更正:7 个</strong>,不止三个)<code>scripts/check-*.js</code> = <code>check-leaf-contract</code> / <code>check-agent-rules</code> /</li></ul>
+<p><code>check-change-safety</code> / <code>check-flag-registry</code> / <code>check-lifecycle-policy</code> / <code>check-model-hardcoding</code> / <code>check-tool-contract</code>。</p>
+<ul><li><strong>生命周期治理</strong> <code>serviceLifecyclePolicy.js</code> + <code>check-lifecycle-policy.js</code>(见 §1.5)。</li><li><strong>元数据新鲜度</strong>:<code>.ai/</code>(MAP/CONTEXT/GUARDS)由 <code>khy metadata refresh</code> + git pre-commit 钩子确定性保鲜。</li></ul>
+<p>深读:[DESIGN-ARCH-020] 架构债治理报告、[DESIGN-ARCH-062] 生命周期边界。</p>
+<hr>
+<h2 id="第4章-prompt-工程与-agent-行为设计">第4章 Prompt 工程与 Agent 行为设计<a class="anchor" href="#第4章-prompt-工程与-agent-行为设计" aria-label="锚点">#</a></h2>
+<p>khy 与本章几乎逐节对应,主战场 <code>src/constants/prompts.js</code>:</p>
+<h3 id="4-2-负向指令的艺术-never-比-please-更有力">4.2 负向指令的艺术(&quot;NEVER&quot; 比 &quot;PLEASE&quot; 更有力)<a class="anchor" href="#4-2-负向指令的艺术-never-比-please-更有力" aria-label="锚点">#</a></h3>
+<ul><li>密集 <code>NEVER</code> 风格:URL 猜测禁令(<code>:470</code>)、git 操作段 <code>getGitOperationsSection(:980)</code>(<code>:987-993</code> 一连串</li></ul>
+<p>NEVER:改 git config / 破坏性 git / 跳钩子 / force push / 擅自 commit)。</p>
+<ul><li>分层否定:原则段 → 细节段(<code>doing-tasks:486</code>/<code>execution-discipline:512</code>/<code>scope-minimization:525</code>)。</li></ul>
+<h3 id="4-4-对抗性自我建模-验证-agent-的-prompt">4.4 对抗性自我建模:验证 Agent 的 Prompt<a class="anchor" href="#4-4-对抗性自我建模-验证-agent-的-prompt" aria-label="锚点">#</a></h3>
+<ul><li>验证 Agent <code>src/agents/built-in/verificationAgent.js</code> + Prompt 段 <code>getPlanningAndVerificationSection(:551)</code>;</li></ul>
+<p>「结构化输出要求」由 AgentTool 的 <code>StructuredOutput</code> 约定承载。khy 的验证纪律还外化为「闭环只在<strong>可验证</strong>满足时<br>  才算达成」(见 always-on <code>_coreProfile</code> 的 closure 协议)。</p>
+<h3 id="4-5-工具级-prompt">4.5 工具级 Prompt<a class="anchor" href="#4-5-工具级-prompt" aria-label="锚点">#</a></h3>
+<ul><li><code>getUsingYourToolsSection(enabledTools)</code>(<code>:869</code>)按启用工具面动态生成工具使用偏好;MCP 指令 <code>:1039</code>。</li></ul>
+<h3 id="4-6-内置-agent-的角色-prompt-两套并存-须分清">4.6 内置 Agent 的角色 Prompt(两套并存,须分清)<a class="anchor" href="#4-6-内置-agent-的角色-prompt-两套并存-须分清" aria-label="锚点">#</a></h3>
+<ol><li><strong>声明式内置 agents</strong> <code>src/agents/built-in/</code>:<code>exploreAgent.js</code> / <code>planAgent.js</code> / <code>generalPurposeAgent.js</code></li></ol>
+<p>(正对书里的 Explore/Plan/General Purpose),外加 khy 特有的 <code>auditAgent</code>/<code>fixAgent</code>/<code>mapAgent</code>/<code>readingAgent</code>/<br>   <code>researchAgent</code>/<code>khyGuideAgent</code>/<code>statuslineSetup</code>。装配 <code>agents/builtInAgents.js</code>(<code>GENERAL_PURPOSE_AGENT:11</code>,<br>   <code>enableExplorePlan</code> 开关 <code>:29/:42/:66</code>)。</p>
+<ul><li>4.6.1 Explore = 只读高效 → khy <code>exploreAgent</code> 绑 <code>minimal</code> toolProfile。</li><li>4.6.2 Plan = 架构师思维 → khy <code>planAgent</code>。</li><li>4.6.3 General Purpose = 平衡默认 → khy <code>generalPurposeAgent</code>。</li></ul>
+<p>用户可用 <code>~/.khyquant/agent_roles.json</code> 覆盖(<code>:7-8</code>),<code>resolveRoleKey</code> 默认回退 <code>general</code>(<code>:35</code>)。</p>
+<p>深读:[DESIGN-ARCH-018] Agent 提示词复用机制、[DESIGN-ARCH-043] khy-agent-sdk-Claude 对齐。</p>
+<h3 id="4-7-记忆系统的行为指令">4.7 记忆系统的行为指令<a class="anchor" href="#4-7-记忆系统的行为指令" aria-label="锚点">#</a></h3>
+<ul><li><code>getMemorySection(:1052)</code> + <code>getSessionMemoryAndContextSection(:623)</code>:告诉模型<strong>何时写记忆、写什么、如何用</strong></li></ul>
+<p>(对齐本仓 <code>CLAUDE.md</code> 的记忆纪律:一文件一事实、带 frontmatter、外向摘要不自注入)。</p>
+<h3 id="4-8-输出风格与人格切换">4.8 输出风格与人格切换<a class="anchor" href="#4-8-输出风格与人格切换" aria-label="锚点">#</a></h3>
+<ul><li>语言段 <code>getLanguageSection(languagePreference)</code>(<code>:1021</code>)、输出风格段 <code>getOutputStyleSection</code>(<code>:1034</code>);</li></ul>
+<p><code>KHY_UI_LANG</code> 为语言门控,<strong>中文优先</strong>(khy 相对 CC 的本地化取舍)。</p>
+<h3 id="4-9-3-prompt-的装配优先级链">4.9.3 Prompt 的装配优先级链<a class="anchor" href="#4-9-3-prompt-的装配优先级链" aria-label="锚点">#</a></h3>
+<ul><li><code>assembleSystemPrompt(:2157)</code> 顺序拼接 + flagRegistry 的父→子门优先级声明;冲突以更高优先级段为准。</li></ul>
+<p>khy 特有的「元规划 + 动态约束注入」优先级见 [DESIGN-ARCH-025]。</p>
+<h3 id="4-10-设计哲学-prompt-即-coding">4.10 设计哲学:Prompt 即 Coding<a class="anchor" href="#4-10-设计哲学-prompt-即-coding" aria-label="锚点">#</a></h3>
+<p>khy 把这条落成<strong>工程约束</strong>:提示词改动同样过守卫(<code>check-agent-rules</code>),提示词结构有专图([DESIGN-OTHER-003]),<br>提示词复用有机制([DESIGN-ARCH-018])——即「Prompt 当代码维护」。</p>
+<hr>
+<h2 id="第5章-当-agent-从工具进化为操作系统-khy-的-agent-as-os">第5章 当 Agent 从工具进化为操作系统 —— khy 的 Agent-as-OS<a class="anchor" href="#第5章-当-agent-从工具进化为操作系统-khy-的-agent-as-os" aria-label="锚点">#</a></h2>
+<p>这是 khy 命名里 &quot;OS&quot; 的由来。书讲愿景,khy 已落若干<strong>具体子系统</strong>:</p>
+<ul><li><strong>微内核(C/MoonBit)</strong>:仓库根 <code>kernel/</code>(<code>kernel/moonbit/lib/khy_kernel/main.mbt</code>、<code>Dockerfile.kernel-build</code>),</li></ul>
+<p>插件 SDK <code>platform/packages/moonbit-plugin-sdk/khy_sys.mbt</code>;backend 内 wasm 模块 <code>wasm-context/</code>/<code>wasm-chain/</code>/<br>  <code>wasm-indicators/</code>。深读 [DESIGN-ARCH-007] 微内核-ipc-moonbit、[DESIGN-ARCH-008] moonbit-系统边界。</p>
+<ul><li><strong>后台任务(进程即调度单元)</strong>:<code>src/services/backgroundTaskSpec.js</code>(纯叶子)+ <code>scripts/task-runner.js</code>(分离执行</li></ul>
+<p>进程,<code>khy tasks run</code> 每任务一个 detached 子进程,关掉 REPL 也存活)+ <code>backgroundTaskLauncher.js</code>(launch/stop/<br>  tailLogs)+ 复用持久化 <code>src/tasks/largeTaskRuntimeStore.js</code> 状态机。这是 khy「让 Agent 拥有后台进程」的最新一块。</p>
+<ul><li><strong>守护进程(daemon)</strong>:<code>src/services/daemonEntry.js</code>/<code>daemonManager.js</code>/<code>daemonSpawnLocation.js</code> + <code>cli/handlers/daemon.js</code>。</li><li><strong>移动协作(bridge)</strong>:<code>src/bridge/</code>(<code>bridgeServer.js</code>/<code>mobilePage.js</code>/<code>bridgeAuth.js</code>),让手机接入同一个 Agent OS。</li></ul>
+<p>深读 [DESIGN-ARCH-001] khy-移动智能体协议。</p>
+<ul><li><strong>多 Agent 编排</strong>:<code>src/services/orchestrationFlow.js</code> + <code>agentLauncherRegistry.js</code> + <code>tools/AgentTool/</code></li></ul>
+<p>(<code>claudeDelegation.js</code> 委派)+ <code>cliAgentRunner.js</code>;自治 <code>src/services/autonomy/</code>。</p>
+<blockquote><p>定位说明:khy 把「网关(多供应商路由)+ 工具面 + 记忆 + 治理 + 后台进程 + 内核」当成一台面向 Agent 的操作系统来<br>建;CC 侧更聚焦编码助手体验。二者共享 Agent-as-OS 的工程直觉,落点不同。</p></blockquote>
+<hr>
+<h2 id="6-khy-术语对照-对应书-附录-术语表">6. khy 术语对照(对应书「附录 术语表」)<a class="anchor" href="#6-khy-术语对照-对应书-附录-术语表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>书/CC 术语</th><th>khy 对应</th><th>位置</th></tr></thead><tbody><tr><td>入口分流</td><td>双身份识别(khy/khyquant)</td><td><code>bin/khy.js:856-868</code></td></tr><tr><td>System Prompt 装配</td><td><code>assembleSystemPrompt</code> + 按需 section</td><td><code>prompts.js:2157/:823</code></td></tr><tr><td>文件记忆(CLAUDE.md/memory)</td><td><code>MEMORY.md</code> + <code>memdir/</code></td><td><code>prompts.js:1052</code>、<code>src/memdir/</code></td></tr><tr><td>上下文压缩(compact)</td><td><code>compact/index.js</code> compact 家族</td><td><code>:75/:124/:215</code></td></tr><tr><td>工具注册</td><td>约定式自动发现</td><td><code>src/tools/index.js:57-67</code></td></tr><tr><td>工具面按角色裁剪</td><td><code>toolProfile</code>(minimal/coding/analysis/verification)</td><td><code>src/tools/toolProfile.js</code></td></tr><tr><td>查询循环</td><td><code>queryEngine</code>→<code>toolUseLoop</code>(V2 已移除)</td><td><code>queryEngine.js:14-21/:241</code></td></tr><tr><td>内置 Agent(Explore/Plan/General)</td><td><code>src/agents/built-in/*</code> + <code>cliAgentRunner</code> 角色</td><td><code>agents/built-in/</code>、<code>cliAgentRunner.js</code></td></tr><tr><td>扩展治理</td><td>flagRegistry + 7 守卫 + lifecyclePolicy</td><td><code>flagRegistry.js</code>、<code>scripts/check-*.js</code></td></tr><tr><td>MCP/插件</td><td><code>services/mcp/</code> + <code>cli/plugins.js</code></td><td><code>plugins.js:37</code></td></tr><tr><td>Agent 即 OS</td><td>内核 + 后台任务 + daemon + bridge + 编排</td><td><code>kernel/</code>、<code>backgroundTask*</code>、<code>bridge/</code></td></tr></tbody></table>
+<hr>
+<h2 id="怎么用这条阅读线">怎么用这条阅读线<a class="anchor" href="#怎么用这条阅读线" aria-label="锚点">#</a></h2>
+<ul><li><strong>新人/换 AI 接手</strong>:按第1→5 章顺序读本文,每节点开「深读」链进对应 DESIGN 文档,即可从启动一路读到愿景。</li><li><strong>想改某处</strong>:先在速查表定位子系统与真源文件,再看该处的专篇 DESIGN-ARCH,最后遵 [DESIGN-ARCH-060] 的</li></ul>
+<p>接线五件套落地。</p>
+<ul><li><strong>发现本文与代码不符</strong>:以代码为准并更新本文——本文承诺行号由 node 直读核出,过期即修。</li></ul>
+<p>承 [DESIGN-ARCH-010] 核心架构、[DESIGN-ARCH-060] 接线与编排总图;与 [MGMT-RPT-019] CC-vs-khy 对比互补<br>(那篇逐维度对比优劣,本篇按书目录做认知导览并校正其过期事实)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "id": "ddd",
+  "kind": "concept",
+  "name": "DDD",
+  "category": "architecture",
+  "triggers": ["DDD", "Domain-Driven Design", "领域驱动", "领域驱动设计"],
+  "summary": "领域驱动设计：以业务领域为中心建模，用限界上下文(Bounded Context)、聚合(Aggregate)、实体/值对象、领域事件、通用语言对齐代码与业务。",
+  "whenToUse": [
+    "复杂业务领域、规则多变、需要长期演进的核心系统。",
+    "多团队协作，需用限界上下文划清边界。"
+  ],
+  "antiPatterns": [
+    "贫血模型：实体只有 getter/setter，业务规则全在 service。",
+    "一个聚合跨越多个事务边界，破坏一致性。",
+    "对简单 CRUD 也强上 DDD，过度设计。"
+  ],
+  "minimalSkeleton": "Bounded Context: 一块自治领域\nAggregate Root: 一致性边界，对外唯一入口\nEntity/ValueObject: 领域模型\nDomain Event: 领域内变化的通知\nRepository: 聚合的持久化抽象",
+  "relatedArchetypes": ["ssm"]
+}

@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "lib": ["es2022"],
+    "checkJs": true,
+    "strict": false,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowJs": true,
+    "maxNodeModuleJsDepth": 0,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@khy/shared": ["../packages/shared/src"],
+      "@khy/sdk": ["../packages/sdk/src"],
+      "@khy/plugin-sdk": ["../packages/plugin-sdk/src"]
+    },
+    "typeRoots": ["./node_modules/@types"],
+    "outDir": "./dist"
+  },
+  "include": [
+    "src/**/*.js",
+    "server.js",
+    "setup.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "bin/llama-cpp",
+    "bin/ollama-runner",
+    "wasm-*"
+  ]
+}

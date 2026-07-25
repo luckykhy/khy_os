@@ -1,0 +1,5 @@
+# khyos-markdown: ensure shell scripts keep LF line endings on all platforms
+tools/khyos-markdown/khyosmarkdown         text eol=lf
+tools/khyos-markdown/khyosmarkdown.command  text eol=lf
+tools/khyos-markdown/register-linux.sh      text eol=lf
+tools/khyos-markdown/unregister-linux.sh    text eol=lf

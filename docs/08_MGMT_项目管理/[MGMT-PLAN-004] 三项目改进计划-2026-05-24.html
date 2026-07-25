@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 三项目取长补短深度分析 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY 三项目取长补短深度分析</div>
+      <header class="hero reveal"><h1>KHY 三项目取长补短深度分析</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-三项目取长补短深度分析">KHY 三项目取长补短深度分析</a></li><li class="lvl-2"><a href="#一-三项目核心架构对比">一、三项目核心架构对比</a></li><li class="lvl-2"><a href="#二-各项目独特优势">二、各项目独特优势</a></li><li class="lvl-3"><a href="#hermes-agent-独有">Hermes Agent 独有</a></li><li class="lvl-3"><a href="#claude-code-独有">Claude Code 独有</a></li><li class="lvl-3"><a href="#deepseek-tui-独有">DeepSeek-TUI 独有</a></li><li class="lvl-2"><a href="#三-khy-11-项改进计划">三、KHY 11 项改进计划</a></li><li class="lvl-3"><a href="#p0-管道阻塞与核心可靠性">P0 — 管道阻塞与核心可靠性</a></li><li class="lvl-3"><a href="#p1-性能与可靠性增强">P1 — 性能与可靠性增强</a></li><li class="lvl-3"><a href="#p2-增强功能">P2 — 增强功能</a></li><li class="lvl-3"><a href="#实施路线">实施路线</a></li><li class="lvl-2"><a href="#四-架构设计模式借鉴清单">四、架构设计模式借鉴清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-004 | 阶段: 项目管理 | 原路径: docs/指南/三项目改进计划-2026-05-24.md --&gt;</p>
+<h1 id="khy-三项目取长补短深度分析">KHY 三项目取长补短深度分析<a class="anchor" href="#khy-三项目取长补短深度分析" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-05-24<br>参考项目: Hermes Agent (Python) / Claude Code (TypeScript) / DeepSeek-TUI (Rust)</p></blockquote>
+<h2 id="一-三项目核心架构对比">一、三项目核心架构对比<a class="anchor" href="#一-三项目核心架构对比" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>Hermes Agent</th><th>Claude Code</th><th>DeepSeek-TUI</th><th>KHY 现状</th></tr></thead><tbody><tr><td>语言</td><td>Python ~170万行</td><td>TypeScript/Bun ~1987文件</td><td>Rust 15 crate</td><td>Node.js</td></tr><tr><td>流式管道</td><td>队列桥接 + 同步→异步</td><td>AsyncGenerator 链</td><td>Op/Event 双向 channel</td><td>SSE + onChunk 回调</td></tr><tr><td>背压</td><td>自适应速率 + 洪水控制</td><td>AsyncGenerator 隐式</td><td>8MB 高水位 + 双速</td><td><strong>无</strong></td></tr><tr><td>工具并发</td><td>ThreadPoolExecutor</td><td>StreamingToolExecutor</td><td>FuturesUnordered + RwLock</td><td>串行执行</td></tr><tr><td>循环护栏</td><td>ToolCallGuardrail 分级</td><td>siblingAbortController</td><td>LoopGuard hash 去重</td><td>toolLoopDetector 8检测器</td></tr><tr><td>上下文压缩</td><td>可插拔引擎 + 图像感知</td><td>5层渐进 + ReactiveCompact</td><td>CycleManager + SeamManager</td><td>3层 + taskSnapshot</td></tr><tr><td>错误重试</td><td>分类器+抖动退避+凭证轮换</td><td>withRetry AsyncGen+fallback</td><td>错误分类+Token Bucket</td><td>retryWithBackoff 简单</td></tr><tr><td>凭证管理</td><td>多策略池(4种)+冷却时间</td><td>多层权限+分类器预热</td><td>API Key 直配</td><td>round-robin 仅</td></tr><tr><td>取消机制</td><td>interrupt_requested 标志</td><td>parent→sibling→child 3层</td><td>CancellationToken+原因</td><td>单一 AbortController</td></tr><tr><td>会话持久化</td><td>SQLite WAL + FTS5双索引</td><td>JSONL transcript</td><td>Actor(latest-wins)合并</td><td>sessionPersistence.js</td></tr><tr><td>钩子系统</td><td>3层(网关+插件+Shell)</td><td>完整生命周期20+事件</td><td>无(配置驱动)</td><td>hookSystem.js 基础</td></tr><tr><td>MCP</td><td>动态工具注册+generation</td><td>官方SDK 6种传输</td><td>McpPool 管理多server</td><td>mcpClient.js 基础</td></tr></tbody></table>
+<h2 id="二-各项目独特优势">二、各项目独特优势<a class="anchor" href="#二-各项目独特优势" aria-label="锚点">#</a></h2>
+<h3 id="hermes-agent-独有">Hermes Agent 独有<a class="anchor" href="#hermes-agent-独有" aria-label="锚点">#</a></h3>
+<ol><li><strong>AST 静态分析工具发现</strong> — <code>ast.parse</code> 检查是否包含 <code>registry.register()</code> 再导入</li><li><strong>消息序列自修复</strong> — 每次 API 调用前修复角色交替/孤立工具结果</li><li><strong>双 FTS5 索引</strong> — unicode61 + trigram 覆盖 CJK 子串搜索</li><li><strong>凭证池 4 策略</strong> — fill_first / round_robin / random / least_used</li><li><strong>stale-call 检测器</strong> — 后台线程运行 API 调用，主循环轮询超时终止</li><li><strong>子代理深度控制</strong> — max_spawn_depth + 角色系统 (leaf/orchestrator)</li><li><strong>流式上下文清洗器</strong> — 状态机过滤跨 chunk 的 <code>&lt;memory-context&gt;</code> 标签</li><li><strong>迭代预算退还</strong> — execute_code 不计入预算 + 耗尽后一次 grace call</li></ol>
+<h3 id="claude-code-独有">Claude Code 独有<a class="anchor" href="#claude-code-独有" aria-label="锚点">#</a></h3>
+<ol><li><strong>StreamingToolExecutor</strong> — 边流式边执行，不等 API 完成</li><li><strong>5 层渐进压缩</strong> — toolResultBudget → snip → micro → collapse → auto</li><li><strong>ReactiveCompact</strong> — API 返回 prompt_too_long 紧急压缩重试</li><li><strong>Content Replacement Budget</strong> — 大结果持久化磁盘，API 只看预览</li><li><strong>Tombstone Protocol</strong> — fallback 清理无效 thinking signatures</li><li><strong>Speculative Classifier Pre-warming</strong> — 权限分类器并行预热</li><li><strong>Feature Gate Dead Code Elimination</strong> — bundle-time 功能门控</li><li><strong>Max Output Tokens Recovery</strong> — 从 8k 自动升级 64k 续写</li></ol>
+<h3 id="deepseek-tui-独有">DeepSeek-TUI 独有<a class="anchor" href="#deepseek-tui-独有" aria-label="锚点">#</a></h3>
+<ol><li><strong>Op/Event 双向 channel</strong> — UI 和 Engine 完全解耦</li><li><strong>自适应分块策略</strong> — Smooth/CatchUp 双速 + 滞环切换</li><li><strong>Cycle Manager</strong> — 检查点-重启替代压缩（避免 Frankenstein 上下文）</li><li><strong>Seam Manager</strong> — append-only 分层上下文（不破坏 prefix cache）</li><li><strong>前缀缓存三区域</strong> — 不可变前缀 / 追加历史 / 最新用户消息</li><li><strong>InteractiveTerminalGuard</strong> — RAII 终端状态管理 (future 取消不泄漏)</li><li><strong>Persistence Actor</strong> — 异步持久化 + latest-wins 请求合并</li><li><strong>Fake Tool Wrapper 检测</strong> — 过滤模型文本中伪造的工具调用标记</li></ol>
+<h2 id="三-khy-11-项改进计划">三、KHY 11 项改进计划<a class="anchor" href="#三-khy-11-项改进计划" aria-label="锚点">#</a></h2>
+<h3 id="p0-管道阻塞与核心可靠性">P0 — 管道阻塞与核心可靠性<a class="anchor" href="#p0-管道阻塞与核心可靠性" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>改进项</th><th>借鉴</th><th>核心文件</th><th>行数</th></tr></thead><tbody><tr><td>1</td><td>SSE 流式背压机制</td><td>DeepSeek-TUI</td><td>sseBackpressure.js(新), sseKeepalive.js</td><td>~240</td></tr><tr><td>2</td><td>Stale Call 检测终止</td><td>Hermes Agent</td><td>aiGateway.js, fetchTimeout.js</td><td>~100</td></tr><tr><td>3</td><td>ToolCallGuardrail 防循环</td><td>Hermes Agent</td><td>toolGuards.js, toolUseLoop.js</td><td>~190</td></tr></tbody></table>
+<h3 id="p1-性能与可靠性增强">P1 — 性能与可靠性增强<a class="anchor" href="#p1-性能与可靠性增强" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>改进项</th><th>借鉴</th><th>核心文件</th><th>行数</th></tr></thead><tbody><tr><td>4</td><td>五层渐进压缩管道</td><td>Claude Code</td><td>compactPipeline.js, queryEngine.js</td><td>~200</td></tr><tr><td>5</td><td>凭证池多策略+故障转移</td><td>Hermes Agent</td><td>apiKeyPool.js, keySelector.js</td><td>~170</td></tr><tr><td>6</td><td>双层 AbortController 级联</td><td>Claude Code</td><td>toolUseLoop.js, streamingToolExecutor.js</td><td>~95</td></tr><tr><td>7</td><td>消息序列自修复</td><td>Hermes Agent</td><td>transcriptRepair.js</td><td>~80</td></tr><tr><td>8</td><td>错误分类差异化重试</td><td>Claude+Hermes</td><td>retryWithBackoff.js, aiGateway.js</td><td>~110</td></tr></tbody></table>
+<h3 id="p2-增强功能">P2 — 增强功能<a class="anchor" href="#p2-增强功能" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>改进项</th><th>借鉴</th><th>核心文件</th><th>行数</th></tr></thead><tbody><tr><td>9</td><td>大工具结果磁盘持久化</td><td>Claude Code</td><td>toolUseLoop.js, cleanupService.js</td><td>~75</td></tr><tr><td>10</td><td>流式工具执行前置启动</td><td>Claude Code</td><td>toolUseLoop.js, streamingToolExecutor.js</td><td>~120</td></tr><tr><td>11</td><td>Fake Tool Wrapper 检测</td><td>DeepSeek-TUI</td><td>toolUseLoop.js</td><td>~60</td></tr></tbody></table>
+<p><strong>总计</strong>: ~1470 行改动，新建 1 文件，修改 16 文件</p>
+<h3 id="实施路线">实施路线<a class="anchor" href="#实施路线" aria-label="锚点">#</a></h3>
+<ul><li><strong>Phase 1</strong> (P0): #1-#3 → 消除管道阻塞和工具死循环</li><li><strong>Phase 2</strong> (P1): #4-#8 → 压缩增强+凭证管理+取消机制+自修复+重试</li><li><strong>Phase 3</strong> (P2): #9-#11 → 大结果持久化+流式预执行+伪造检测</li></ul>
+<h2 id="四-架构设计模式借鉴清单">四、架构设计模式借鉴清单<a class="anchor" href="#四-架构设计模式借鉴清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>模式</th><th>来源</th><th>应用点</th></tr></thead><tbody><tr><td>队列桥接(sync→async)</td><td>Hermes</td><td>sseBackpressure.js</td></tr><tr><td>滞环切换(hysteresis)</td><td>DeepSeek</td><td>lineBuffer.js 帧率控制</td></tr><tr><td>幂等/变更区分</td><td>Hermes</td><td>toolGuards.js 循环检测</td></tr><tr><td>分级响应(warn→critical→block)</td><td>Hermes</td><td>toolCallGuardrail</td></tr><tr><td>渐进压缩(多层由轻到重)</td><td>Claude Code</td><td>compactPipeline.js</td></tr><tr><td>fill_first 策略</td><td>Hermes</td><td>keySelector.js</td></tr><tr><td>parent→sibling→child 取消</td><td>Claude Code</td><td>toolUseLoop.js</td></tr><tr><td>角色交替自修复</td><td>Hermes</td><td>transcriptRepair.js</td></tr><tr><td>错误分类→策略映射</td><td>Claude+Hermes</td><td>retryWithBackoff.js</td></tr><tr><td>Content Replacement Budget</td><td>Claude Code</td><td>toolUseLoop.js 大结果</td></tr><tr><td>增量解析+预执行</td><td>Claude Code</td><td>StreamingToolExecutor</td></tr><tr><td>Marker 状态机过滤</td><td>DeepSeek</td><td>_parseToolCalls()</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-003] khy-大任务框架蓝图.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 最小化大任务框架蓝图</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-005] 自主生产计划-r2-2026-05-24.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 自主生产能力提升计划 (Round 2)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-004] 三项目改进计划-2026-05-24.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

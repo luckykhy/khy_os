@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS Kernel · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>kernel<span class="sep">›</span>KHY OS Kernel</div>
+      <header class="hero reveal"><h1>KHY OS Kernel</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-kernel">KHY OS Kernel</a></li><li class="lvl-2"><a href="#能力一览">能力一览</a></li><li class="lvl-2"><a href="#独立启动-无需-khy-os">独立启动（无需 khy-os）</a></li><li class="lvl-3"><a href="#方式一-qemu-最快">方式一：QEMU（最快）</a></li><li class="lvl-3"><a href="#方式二-任意虚拟机-virtualbox-vmware">方式二：任意虚拟机（VirtualBox / VMware）</a></li><li class="lvl-3"><a href="#方式三-真机-u-盘">方式三：真机（U 盘）</a></li><li class="lvl-2"><a href="#从源码构建">从源码构建</a></li><li class="lvl-3"><a href="#工具链">工具链</a></li><li class="lvl-3"><a href="#构建">构建</a></li><li class="lvl-3"><a href="#重新生成-ring-3-用户态程序">重新生成 Ring 3 用户态程序</a></li><li class="lvl-2"><a href="#shell-内建命令">Shell 内建命令</a></li><li class="lvl-2"><a href="#系统调用">系统调用</a></li><li class="lvl-2"><a href="#源码地图">源码地图</a></li><li class="lvl-2"><a href="#定位与边界-实话实说">定位与边界（实话实说）</a></li><li class="lvl-2"><a href="#与-khy-os-平台的关系">与 khy-os 平台的关系</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-kernel">KHY OS Kernel<a class="anchor" href="#khy-os-kernel" aria-label="锚点">#</a></h1>
+<blockquote><p>一个从零实现的裸机 x86_64 混合内核 · <strong>v0.1.0 &quot;Genesis&quot;</strong></p></blockquote>
+<p>KHY OS 是一个自包含、可独立引导的操作系统内核：从 GRUB 引导、进入 64 位长模式、<br>建立分页与中断，运行 Ring 3 用户态程序，提供持久化文件系统与一个交互式 shell。<br><strong>它不依赖任何上层平台即可启动运行</strong>——<code>khy os</code>（TUI / 网页 / pip）只是通过串口<br>连接到它的几个「控制面」，内核本身在任意 x86_64 环境下都能独立跑。</p>
+<p>构建产物是一张可引导 ISO：<code>build/khy-os-kernel.iso</code>（约 12 MB）。</p>
+<hr>
+<h2 id="能力一览">能力一览<a class="anchor" href="#能力一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>子系统</th><th>实现</th><th>源文件</th></tr></thead><tbody><tr><td>引导</td><td>Multiboot2 → 长模式切换</td><td><code>boot/boot.asm</code>, <code>boot/long_mode.asm</code></td></tr><tr><td>内存</td><td>物理页分配器 / 虚拟内存分页 / 内核堆</td><td><code>pmm.c</code>, <code>vmm.c</code>, <code>kheap.c</code></td></tr><tr><td>中断</td><td>GDT / IDT / PIC / ISR / 定时器 / 键盘</td><td><code>gdt.c</code>, <code>idt.c</code>, <code>pic.c</code>, <code>timer.c</code>, <code>keyboard.c</code></td></tr><tr><td>进程</td><td>fork / exec / wait、抢占式调度、Ring 3 用户态</td><td><code>process.c</code>, <code>sched.c</code>, <code>boot/usermode.asm</code></td></tr><tr><td>可执行格式</td><td>ELF64 加载器 · <strong>PE32+/PE64 加载器 + Windows API 兼容层</strong></td><td><code>elf.c</code>, <code>pe.c</code>, <code>wincompat.c</code></td></tr><tr><td>文件系统</td><td>VFS 抽象 · KhyFS 持久化（基于 ATA）· ramfs</td><td><code>vfs.c</code>, <code>diskfs.c</code>, <code>ramfs.c</code>, <code>ata.c</code></td></tr><tr><td>图形 / 终端</td><td>VGA 文本 · framebuffer · 窗口管理器</td><td><code>vga.c</code>, <code>framebuffer.c</code>, <code>wm.c</code></td></tr><tr><td>通信</td><td>串口（16550 UART）· 网络栈雏形 · IPC / 端口</td><td><code>serial.c</code>, <code>net.c</code>, <code>ipc.c</code></td></tr><tr><td>安全</td><td>基于能力（capability）的访问控制</td><td><code>capability.c</code></td></tr><tr><td>扩展</td><td>MoonBit 语言桥接（内核内运行 MoonBit 代码）</td><td><code>moonbit_bridge.c</code>, <code>moonbit_os_api.c</code></td></tr></tbody></table>
+<blockquote><p><strong>亮点</strong>：<code>pe.c</code> 能把 Windows PE 可执行文件加载进用户地址空间，<code>wincompat.c</code><br>在 PE 导入 <code>kernel32.dll</code> 函数时，将其重定向到内核服务并修补 IAT——即一个<br>「内核级的迷你兼容层」。注意它只覆盖 kernel32 的极小子集，属研究/实验性质。</p></blockquote>
+<hr>
+<h2 id="独立启动-无需-khy-os">独立启动（无需 khy-os）<a class="anchor" href="#独立启动-无需-khy-os" aria-label="锚点">#</a></h2>
+<h3 id="方式一-qemu-最快">方式一：QEMU（最快）<a class="anchor" href="#方式一-qemu-最快" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">make run          # 串口输出到当前终端，无图形窗口（推荐，直接看 shell）
+make run-vga      # 同时打开 VGA 图形窗口
+make run-disk     # 挂载一块持久化的 16MB ATA 磁盘（首次自动创建 build/khy-disk.img）</code></pre>
+<p>启动后会看到横幅与提示符 <code>khy&gt; </code>。</p>
+<h3 id="方式二-任意虚拟机-virtualbox-vmware">方式二：任意虚拟机（VirtualBox / VMware）<a class="anchor" href="#方式二-任意虚拟机-virtualbox-vmware" aria-label="锚点">#</a></h3>
+<p>把 <code>build/khy-os-kernel.iso</code> 作为光驱挂载，CPU 选 x86_64 即可引导。</p>
+<h3 id="方式三-真机-u-盘">方式三：真机（U 盘）<a class="anchor" href="#方式三-真机-u-盘" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># ⚠️ 会清空目标设备，请务必确认 /dev/sdX 是你的 U 盘
+sudo dd if=build/khy-os-kernel.iso of=/dev/sdX bs=4M status=progress &amp;&amp; sync</code></pre>
+<p>从该 U 盘引导（BIOS/Legacy 模式）。串口控制台可用 <code>-serial</code> 对应的物理串口或<br>USB-TTL 转接线观察。</p>
+<hr>
+<h2 id="从源码构建">从源码构建<a class="anchor" href="#从源码构建" aria-label="锚点">#</a></h2>
+<h3 id="工具链">工具链<a class="anchor" href="#工具链" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>工具</th><th>用途</th></tr></thead><tbody><tr><td><code>nasm</code></td><td>汇编引导/中断代码</td></tr><tr><td><code>gcc</code> + <code>ld</code></td><td>编译/链接 freestanding 内核</td></tr><tr><td><code>grub-mkrescue</code></td><td>生成可引导 ISO</td></tr><tr><td><code>qemu-system-x86_64</code> / <code>qemu-img</code></td><td>运行与磁盘镜像</td></tr><tr><td><code>moon</code>（MoonBit）</td><td><strong>默认构建需要</strong>：生成并编译 MoonBit 模块</td></tr><tr><td><code>xxd</code></td><td>仅在 <code>make userland</code> 重新生成用户态程序时需要</td></tr></tbody></table>
+<h3 id="构建">构建<a class="anchor" href="#构建" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">make            # 完整构建 → build/khy-os-kernel.iso（含 MoonBit 步骤）
+make iso        # 同上，只产出 ISO
+make clean      # 清理 build/ 与 MoonBit 产物</code></pre>
+<blockquote><p>默认 <code>make</code> 会先跑 MoonBit（<code>moon build --target native</code>）。若你的环境没有<br>MoonBit 工具链，需先安装，或裁剪 Makefile 中的 <code>MOONBIT_OBJ</code> 依赖。</p></blockquote>
+<h3 id="重新生成-ring-3-用户态程序">重新生成 Ring 3 用户态程序<a class="anchor" href="#重新生成-ring-3-用户态程序" aria-label="锚点">#</a></h3>
+<p>用户态测试程序以 ELF blob 形式内嵌进内核（<code>src/user_*_blob.h</code>，已签入仓库）。<br>仅在修改了 <code>userland/*.asm</code> 后才需要：</p>
+<pre><code class="language-bash">make userland   # 重新汇编 init/filetest/argv/badptr/forktest/exectest/forkwait</code></pre>
+<hr>
+<h2 id="shell-内建命令">Shell 内建命令<a class="anchor" href="#shell-内建命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>说明</th></tr></thead><tbody><tr><td><code>help</code></td><td>列出命令</td></tr><tr><td><code>ps</code></td><td>查看进程</td></tr><tr><td><code>mem</code></td><td>内存使用</td></tr><tr><td><code>ls</code> / <code>cat &lt;f&gt;</code></td><td>列目录 / 看文件</td></tr><tr><td><code>write &lt;f&gt; &lt;文本&gt;</code> / <code>append &lt;f&gt; &lt;文本&gt;</code> / <code>rm &lt;f&gt;</code></td><td>写 / 追加 / 删</td></tr><tr><td><code>run &lt;prog&gt;</code></td><td>运行 <code>/bin</code> 下的 Ring 3 程序（fork+exec）</td></tr><tr><td><code>sleep &lt;ms&gt;</code></td><td>睡眠</td></tr><tr><td><code>netstat</code> / <code>netsend</code> / <code>netrecv</code></td><td>网络栈雏形</td></tr><tr><td><code>diskinfo</code> / <code>diskread &lt;blk&gt;</code> / <code>diskwrite &lt;blk&gt; &lt;文本&gt;</code></td><td>直接读写 ATA 磁盘块</td></tr><tr><td><code>syscalltest</code></td><td>系统调用自检</td></tr></tbody></table>
+<p>KhyFS 持久化验证：<code>diskwrite 100 hello</code> → 重启（<code>make run-disk</code> 再次启动）→<br><code>diskread 100</code>，数据跨重启存活。</p>
+<hr>
+<h2 id="系统调用">系统调用<a class="anchor" href="#系统调用" aria-label="锚点">#</a></h2>
+<p>经 <code>int 0x80</code> 进入（约定见 <code>src/syscall.c</code>），目前实现 20 个：</p>
+<pre><code>write  exit  getpid  uptime  open  read  close  write_file
+net_send  net_recv  ipc_send  ipc_recv  ipc_call
+port_register  port_unregister  create_process  exec  wait  yield  mmap</code></pre>
+<hr>
+<h2 id="源码地图">源码地图<a class="anchor" href="#源码地图" aria-label="锚点">#</a></h2>
+<pre><code>kernel/
+├── boot/          引导与底层汇编（长模式切换、ISR、上下文切换、进入用户态）
+├── src/           内核 C 源码（内存/进程/调度/文件系统/驱动/syscall…）
+├── userland/      Ring 3 测试程序（汇编源 + 预构建 ELF）
+├── moonbit/       内核内 MoonBit 模块
+├── iso/           GRUB 配置（grub.cfg）
+├── linker.ld      内核链接脚本
+└── Makefile       构建 / 运行目标</code></pre>
+<hr>
+<h2 id="定位与边界-实话实说">定位与边界（实话实说）<a class="anchor" href="#定位与边界-实话实说" aria-label="锚点">#</a></h2>
+<p>KHY OS 是<strong>教学 / 实验 / 爱好级</strong>内核，不是生产系统：</p>
+<ul><li>单架构 x86_64、BIOS/GRUB 引导；无 SMP 多核。</li><li>驱动仅 ATA（无 USB / NVMe / 现代显卡）；网络与 IPC 为雏形。</li><li>Windows PE 兼容只覆盖 kernel32 的极小子集，跑不了复杂真实 <code>.exe</code>。</li><li>用户态是手写汇编测试程序，无 POSIX 完整性、无软件生态。</li></ul>
+<p>它真正的价值在于：<strong>完整地走通了 引导 → 分页 → 调度 → 系统调用 → fork/exec →<br>文件系统 → 用户态 这条链路</strong>，适合学习 OS 内核、做研究原型（尤其 PE 加载方向），<br>或作为系统编程能力的展示。</p>
+<hr>
+<h2 id="与-khy-os-平台的关系">与 khy-os 平台的关系<a class="anchor" href="#与-khy-os-平台的关系" aria-label="锚点">#</a></h2>
+<p>内核通过 16550 串口（QEMU 暴露为 TCP）对外提供唯一的双向字节流。上层 <code>@khy/shared</code><br>里的 <code>KhyOsRunner</code> 把这条串口包装成统一运行时，再衍生出三个控制面：</p>
+<ul><li><strong>TUI</strong>：<code>khy os</code> → 内核终端浮层</li><li><strong>网页</strong>：前端 <code>/khyos</code> + xterm.js，经 ai-backend <code>/ws</code> 桥接</li><li><strong>pip</strong>：<code>khy os</code> / <code>khy os run &quot;&lt;命令&gt;&quot;</code>，跨 Windows 与 Linux</li></ul>
+<p>这些都是「遥控器」——<strong>内核本身零改动、可独立启动</strong>，平台只是让它不再是孤岛。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../kernel/docs/小白教程-Khyos-agent协同从零精讲.html"><div class="dir">← 上一篇</div><div class="ttl">KHY-OS 小白精讲：从零看懂「一个会跟 AI 协同的操作系统」</div></a><a class="next" href="../kernel/vendor/moonbit/PROVENANCE.html"><div class="dir">下一篇 →</div><div class="ttl">Vendored MoonBit prebuilt artifacts</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="kernel/README.html";</script>
+<script src="../docs/_assets/nav-data.js"></script>
+<script src="../docs/_assets/mermaid.min.js"></script>
+<script src="../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🧠 一次读懂全局 · 发给 AI 的全局速成 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给AI看<span class="sep">›</span>🧠 一次读懂全局 · 发给 AI 的全局速成</div>
+      <header class="hero reveal"><h1>🧠 一次读懂全局 · 发给 AI 的全局速成</h1></header>
+      
+      <article class="doc-body">
+<p>&lt;!-- 受众: AI(直接投喂) | 用途: 一份就让 AI 一次读懂全局，自包含，可整段发送 --&gt;<br>&lt;!-- 这是发给 AI 的&quot;全局速成&quot;。人类一页速览在 ../给人看/总说明-一页速览.md 。 --&gt;</p>
+<h1 id="一次读懂全局-发给-ai-的全局速成">🧠 一次读懂全局 · 发给 AI 的全局速成<a class="anchor" href="#一次读懂全局-发给-ai-的全局速成" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>这整篇都可以直接整段发给 AI</strong>。它是自包含的：读完这一份，AI 就掌握了项目全貌、<br>唯一正确的改代码姿势、红线、常见错误、以及怎么接活。细节再指向本包其它四份分册。<br>（若对方是小模型/上下文小，别发这份，发 <code>项目情况说明-开场白.md</code> 的 C 档即可。）</p></blockquote>
+<hr>
+<pre><code>你现在要协助维护和开发 Khy-OS。这一份让你一次读懂全局，读完即可按规矩开工。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+一、这是什么项目
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Khy-OS = 自研 x86_64 C 内核 + Node.js AI 后端 + host 桥(agent⇄OS) + Python(pip) 启动器。
+- 内核：kernel/（C + 少量 MoonBit + 汇编），QEMU 可启动。
+- AI 后端：services/backend/（业务主体在此，Node.js），命令名 khy，是 CLI/TUI 跨模型助手。
+- 分发：pip 包名 khy-os，pip 启动器是薄壳，真正跑的是 Node 后端。
+
+两条现实约束（决定一切取舍）：
+1. pip 是唯一分发渠道。改动最终要能打成 wheel 发布；pip 包是打包时的源码快照，
+   改了仓库源码必须重新打包才对已安装用户生效。
+2. 项目要能被&quot;一个人、甚至非工程师、没有强 AI&quot;继续维护。
+   所以稳定 &gt; 可回退 &gt; 守卫可拦 &gt; 炫技。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+二、我要改 X 去哪
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- CLI 命令/路由：services/backend/src/cli/router.js（大 switch）→ handlers/
+- AI 网关/模型路由：services/backend/src/services/gateway/aiGateway.js → modelRouter.js
+- 本地离线能力(算/文本/找文件/上下文)：services/backend/src/services/localBrain*.js
+- 工具调用主循环：services/backend/src/services/toolUseLoop.js
+- 唯一工具执行漏斗：services/backend/src/services/toolCalling.js 的 executeTool()
+- 前端：apps/ai-frontend/（AI）/ software/khyquant/frontend/（量化应用）
+- pip 启动：platform/khy_platform/cli.py
+- 先读的地图与红线：.ai/MAP.md、.ai/GUARDS.md、.ai/GUARDS-AI.md、.ai/CONTEXT.yaml
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+三、改代码只有一种正确姿势（务必遵守）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+&quot;加法式改动 + 纯叶子模块 + 默认开的 KHY_* 门控 + 关闭即逐字节回退&quot;：
+R1 加法式：新逻辑只加不改；先 grep 有没有现成实现可复用；绝不为同一概念写第二份真源。
+R2 纯叶子：新逻辑写成一个纯叶子——零 IO、确定性、绝不抛异常(坏输入返安全默认)、可单测、不 require 重依赖。
+R3 门控：用一个 KHY_XXX 环境变量门控，默认开；登记 services/backend/src/services/flagRegistry.js；父门控关→子门控必关。
+R4 逐字节回退：KHY_XXX 关闭时行为和改动前逐字节相同；接线处 try/catch，叶子异常 fail-soft 回退旧行为。
+R5 严格超集：只在旧路径漏做/做错处补正，绝不改变既有正确路径输出；安全向只多封锁/多清理，不放宽。
+R6 真接线：必须能从 executeTool(toolCalling.js)/toolUseLoop.js/aiManagementServer.js 之一被 require 到才算&quot;在产&quot;；隔离单测全绿≠在产。
+R7 守卫绿：改完跑相关单测；提交前守卫 scripts/check-*.js（git 钩子自动触发）必须全绿；绝不用 git --no-verify 跳过。
+R8 不建上帝组件：单文件不超 2500 行；拆分把内聚分节抽成纯叶子，原文件同名别名 re-export 保契约。
+R9 诚实收尾：如实说测了什么/几个绿/跳过了什么/哪些没做；不把&quot;跑了工具但没交付结论&quot;当做完。
+
+纯叶子模板：
+  function isEnabled(env=process.env){try{const v=env&amp;&amp;env.KHY_XXX;
+    if(v==null)return true;return !['0','false','off','no'].includes(String(v).trim().toLowerCase());}catch{return true;}}
+  function decide(input){try{/*纯计算，坏输入返安全默认*/ return {ok:true,value:/*...*/};}catch{return null;}}
+接线模板：
+  let result=legacyValue; try{const leaf=require('./xxxGuard');
+    if(leaf.isEnabled(process.env)){const d=leaf.decide(input); if(d)result=d.value;}}catch{/*保持 legacyValue*/}
+验回退：临时 KHY_XXX=off 跑同输入，输出应与改动前逐字节相同。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+四、绝不能做的事（红线）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- 不绕过 executeTool 另开工具执行旁路（会绕过权限门控与审批）。
+- 不为同一概念建第二份真源（约束格/能力向量/错误分类/破坏性动作模式库等各有唯一权威实现，见 .ai/GUARDS-AI.md §2）。
+- 单文件不超 2500 行。
+- 没接到三真实入口之一，就不许声称&quot;已落地/已接入&quot;。
+- 不用 --no-verify 跳过守卫。
+- 观测模式(observe)里写阻断/改写会被静默忽略；门面类(Coordinator)无 import 是死的，改它不影响线上。
+- fail-open vs fail-closed 别搞反：能力/约束求解异常 fail-open 回旧管线；红线/审批判定必须 fail-closed。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+五、我最容易犯的错（自查摘要，详见错误自查手册）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P 类(流程)：P1 假装做完(没接线)；P2 造第二份真源；P3/P4 忘门控/破坏回退；
+  P5 只报进度不交付结论；P6 想绕守卫；P8 幻觉引用不存在的文件/函数；P9 堆成上帝组件。
+W 类(小模型)：结果过大撑爆上下文、max_tokens 太低截断、role:'tool' 被拒、JSON 包在代码块里解析不出——别破坏已有兼容层。
+B 类(代码缺陷原型，写新代码时对照)：裸 startsWith 边界未锚定、大小写未折叠、正则缺锚点、越界码点崩溃、
+  密钥脱敏漏现代 key、cron step=0 死循环、slice(-0) 语义反转、闭包捕获过期 resolve/监听器泄漏、
+  字符集乱码、SSRF 等价表示形绕过、破坏性命令 flag 大小写/顺序敏感、数值格式边界错档、阈值小窗口下溢为负。
+  通用预防：处理外部输入/安全判定时问——边界锚定?大小写折叠?越界/空/0/负?坏输入崩还是 fail-soft?等价形都覆盖?
+G 类(网关)：G1 模型名泄漏给不认识它的通道致 404；G2 默认值散落硬编码；G3 鉴权形态过时；G4 请求侧新字段被丢；G5 视觉模型误判纯文本退回 OCR。
+E 类(环境)：Node≥20；改源码没重打包 pip 用户拿不到；版本号多处不一致；node:test 传文件别传目录、别与 jest 混跑。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+六、干活前后各做一次自检
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+动手前(只读体检)：node services/backend/bin/khy.js maintain freshness
+接手先确认命脉没退化：守卫全绿? 版本号一致? 上帝组件没恶化(npm --prefix services/backend run arch:god)?
+改完后：相关单测 + 提交前守卫全绿。在产自查：
+  grep -rl &quot;require(.*/&lt;模块名&gt;&quot; services/backend/src --include=*.js | grep -vE &quot;/&lt;模块名&gt;/|tests/&quot;
+诚实收尾模板：
+  改了:&lt;文件&gt;加&lt;KHY_门控&gt;(默认开) | 接线:从&lt;哪个真实入口&gt;可达 |
+  回退:KHY_门控=off 逐字节等价(已验/未验) | 测试:&lt;X/Y绿&gt; 守卫:&lt;全绿/哪个红&gt; | 没做/存疑:&lt;列出&gt;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+七、语言 &amp; 收尾
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+交流与文档用中文；代码标识符/字符串字面量用英文。
+每步开始前先说：要改哪个文件、加哪个 KHY_ 门控、关掉后怎么逐字节回退——我确认后再动手。
+重要治理写一行到 .ai/GOVERNANCE-LEDGER.md；新文档回写 00_INDEX。
+
+现在确认你已读懂以上全局。等我给你具体任务，不要立刻改任何文件。</code></pre>
+<hr>
+<h2 id="读完这份后-按需再要这些分册-都在本包-给ai看">读完这份后，按需再要这些分册（都在本包 <code>给AI看/</code>）<a class="anchor" href="#读完这份后-按需再要这些分册-都在本包-给ai看" aria-label="锚点">#</a></h2>
+<ul><li>开场白分档（强/普通/小模型）+ 场景补丁块：<code>项目情况说明-开场白.md</code></li><li>铁律速查卡 + 代码范式展开：<code>协作铁律.md</code></li><li>错误自查手册全条目（P/W/B/G/E）：<code>错误自查手册.md</code></li><li>可直接当需求的任务卡（T1–T5 / M1–M5 / F1–F4）：<code>任务派发卡.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给AI看/协作铁律.html"><div class="dir">← 上一篇</div><div class="ttl">⚖️ 协作铁律 · 发给 AI，要它照做</div></a><a class="next" href="../../../docs/AI协作预设包/skills/khy-gateway-fix/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 网关/模型路由排错</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给AI看/总说明-一次读懂全局.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

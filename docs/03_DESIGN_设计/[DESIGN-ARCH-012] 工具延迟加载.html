@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>功能：工具延迟加载（deferloading）—— Anthropic API 协议集成 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>功能：工具延迟加载（deferloading）—— Anthropic API 协议集成</div>
+      <header class="hero reveal"><h1>功能：工具延迟加载（deferloading）—— Anthropic API 协议集成</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#功能-工具延迟加载-defer-loading-anthropic-api-协议集成">功能：工具延迟加载（defer_loading）—— Anthropic API 协议集成</a></li><li class="lvl-2"><a href="#背景">背景</a></li><li class="lvl-2"><a href="#本次改动前的差距">本次改动前的差距</a></li><li class="lvl-2"><a href="#实现">实现</a></li><li class="lvl-3"><a href="#1-beta-请求头-辅助函数-claudeadapter-js">1. Beta 请求头 + 辅助函数（`claudeAdapter.js`）</a></li><li class="lvl-3"><a href="#2-builddirecttooldefs-重写-claudeadapter-js">2. buildDirectToolDefs() 重写（`claudeAdapter.js`）</a></li><li class="lvl-3"><a href="#3-sse-解析-server-tool-use-anthropicssestream-js">3. SSE 解析 —— `server_tool_use`（`_anthropicSseStream.js`）</a></li><li class="lvl-3"><a href="#4-json-响应解析-protocolpipeline-js">4. JSON 响应解析（`_protocolPipeline.js`）</a></li><li class="lvl-3"><a href="#5-工具循环跳过-tooluseloop-js">5. 工具循环跳过（`toolUseLoop.js`）</a></li><li class="lvl-2"><a href="#修改的文件">修改的文件</a></li><li class="lvl-2"><a href="#环境变量">环境变量</a></li><li class="lvl-2"><a href="#工作原理-端到端">工作原理（端到端）</a></li><li class="lvl-2"><a href="#向后兼容">向后兼容</a></li><li class="lvl-2"><a href="#复用的现有基础设施">复用的现有基础设施</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#未来考量">未来考量</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-012 | 阶段: 设计 | 原路径: docs/设计模式/工具延迟加载.md --&gt;</p>
+<h1 id="功能-工具延迟加载-defer-loading-anthropic-api-协议集成">功能：工具延迟加载（defer_loading）—— Anthropic API 协议集成<a class="anchor" href="#功能-工具延迟加载-defer-loading-anthropic-api-协议集成" aria-label="锚点">#</a></h1>
+<p><strong>日期</strong>：2026-06-03<br><strong>适用范围</strong>：Claude Direct 模式（<code>GATEWAY_CLAUDE_MODE=direct</code>）<br><strong>收益</strong>：每次 API 请求节省约 65% 的 token（约 13,000 -&gt; 约 4,500 tokens）</p>
+<h2 id="背景">背景<a class="anchor" href="#背景" aria-label="锚点">#</a></h2>
+<p>KHY Direct 模式在每次 API 请求中都会发送全部约 65 个工具定义（约 12,000-15,000 tokens）。Anthropic 提供了一种 <code>defer_loading</code> 协议，允许将不常用的工具标记为&quot;延迟加载&quot;——初始只发送工具名称；当模型需要时，再在服务端按需加载完整的 schema。</p>
+<p>KHY 此前已具备客户端侧的延迟加载基础设施（BaseTool 上的 <code>shouldDefer</code>/<code>alwaysLoad</code>、<code>toolSearch.js</code> 关键字搜索、<code>_revealedDeferred</code> 会话追踪）。缺失的部分是 Anthropic API 层面的协议集成。</p>
+<h2 id="本次改动前的差距">本次改动前的差距<a class="anchor" href="#本次改动前的差距" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>状态</th></tr></thead><tbody><tr><td><code>anthropic-beta: tool-search-tool-2025-10-19</code> 请求头</td><td>未发送</td></tr><tr><td>工具定义上的 <code>defer_loading: true</code></td><td>未包含在 API 请求中</td></tr><tr><td><code>tool_search_tool_regex_20251119</code> 服务端工具</td><td>未注册</td></tr><tr><td><code>server_tool_use</code> SSE 事件解析</td><td>未实现</td></tr><tr><td>工具循环中的 <code>server_tool_use</code> 过滤</td><td>未实现</td></tr><tr><td><code>anthropic-version</code></td><td><code>2024-10-22</code>（保持不变，仍然兼容）</td></tr></tbody></table>
+<h2 id="实现">实现<a class="anchor" href="#实现" aria-label="锚点">#</a></h2>
+<h3 id="1-beta-请求头-辅助函数-claudeadapter-js">1. Beta 请求头 + 辅助函数（<code>claudeAdapter.js</code>）<a class="anchor" href="#1-beta-请求头-辅助函数-claudeadapter-js" aria-label="锚点">#</a></h3>
+<p>两个模块级辅助函数：</p>
+<ul><li><code>_deferralActive()</code> —— 除非 <code>KHY_DEFER_TOOLS=0</code>，否则返回 <code>true</code></li><li><code>_buildBetaHeader()</code> —— 返回 <code>tool-search-tool-2025-10-19</code>，并追加来自 <code>KHY_ANTHROPIC_BETA</code> 环境变量的任何额外项</li></ul>
+<p><code>callAnthropicStream()</code> 有条件地包含 <code>anthropic-beta</code> 请求头：</p>
+<pre><code class="language-js">headers: {
+  'x-api-key': apiKey,
+  'anthropic-version': '2024-10-22',
+  ...(_deferralActive() ? { 'anthropic-beta': _buildBetaHeader() } : {}),
+  'Content-Type': 'application/json',
+}</code></pre>
+<h3 id="2-builddirecttooldefs-重写-claudeadapter-js">2. buildDirectToolDefs() 重写（<code>claudeAdapter.js</code>）<a class="anchor" href="#2-builddirecttooldefs-重写-claudeadapter-js" aria-label="锚点">#</a></h3>
+<p>此前：从 <code>getToolDefinitions()</code> 取硬编码的 13 个工具白名单。</p>
+<p>现在：从 <code>registry.assembleToolPool(undefined, 'coding')</code> 读取，该方法会遵循 profile、deny 规则以及延迟加载状态。</p>
+<pre><code>对工具池中的每个工具：
+  if deferEnabled &amp;&amp; tool.shouldDefer &amp;&amp; !tool.alwaysLoad:
+    emit { name, defer_loading: true }        // 约 5 tokens
+  else:
+    emit { name, description, input_schema }  // 约 200 tokens
+
+if deferEnabled:
+  append { type: 'tool_search_tool_regex_20251119', name: 'tool_search' }</code></pre>
+<p>兜底：如果 registry 加载失败，则返回原始的 6 个工具硬编码列表（不启用延迟加载）。</p>
+<h3 id="3-sse-解析-server-tool-use-anthropicssestream-js">3. SSE 解析 —— <code>server_tool_use</code>（<code>_anthropicSseStream.js</code>）<a class="anchor" href="#3-sse-解析-server-tool-use-anthropicssestream-js" aria-label="锚点">#</a></h3>
+<p>当 Anthropic API 使用其服务端的 tool_search 来查找延迟加载工具的 schema 时，它会在 SSE 流中发出 <code>server_tool_use</code> 内容块。</p>
+<p>三处改动：</p>
+<ul><li><code>content_block_start</code>：新增 <code>server_tool_use</code> 分支 —— 追踪 <code>id</code>、<code>name</code>、<code>inputJson</code></li><li><code>content_block_delta</code>：允许 <code>server_tool_use</code> 块使用 <code>input_json_delta</code>（而不仅限于 <code>tool_use</code>）</li><li><code>content_block_stop</code>：将 <code>server_tool_use</code> 终结并以 <code>type: 'server_tool_use'</code> 写入 <code>toolUseBlocks</code> 数组</li></ul>
+<h3 id="4-json-响应解析-protocolpipeline-js">4. JSON 响应解析（<code>_protocolPipeline.js</code>）<a class="anchor" href="#4-json-响应解析-protocolpipeline-js" aria-label="锚点">#</a></h3>
+<p><code>_createAnthropicHandler().parseJsonResponse()</code> 现在能够识别非流式响应中的 <code>server_tool_use</code> 块，并以 <code>type: 'server_tool_use'</code> 将其推入 <code>toolUseBlocks</code>。</p>
+<h3 id="5-工具循环跳过-tooluseloop-js">5. 工具循环跳过（<code>toolUseLoop.js</code>）<a class="anchor" href="#5-工具循环跳过-tooluseloop-js" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">toolCalls = aiResult.toolUseBlocks
+  .filter(block =&gt; block.type !== 'server_tool_use')  // &lt;-- new
+  .map(block =&gt; { ... });</code></pre>
+<p><code>server_tool_use</code> 块（tool_search）完全由 Anthropic 在服务端处理。它们绝不能进入本地工具执行管线。</p>
+<h2 id="修改的文件">修改的文件<a class="anchor" href="#修改的文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th style="text-align:center">改动行数</th><th>用途</th></tr></thead><tbody><tr><td><code>backend/src/services/gateway/adapters/claudeAdapter.js</code></td><td style="text-align:center">+35 -20</td><td>Beta 请求头、buildDirectToolDefs 重写</td></tr><tr><td><code>backend/src/services/gateway/adapters/_anthropicSseStream.js</code></td><td style="text-align:center">+20</td><td>server_tool_use SSE 解析</td></tr><tr><td><code>backend/src/services/gateway/adapters/_protocolPipeline.js</code></td><td style="text-align:center">+6</td><td>server_tool_use JSON 解析</td></tr><tr><td><code>backend/src/services/toolUseLoop.js</code></td><td style="text-align:center">+3</td><td>server_tool_use 过滤</td></tr></tbody></table>
+<h2 id="环境变量">环境变量<a class="anchor" href="#环境变量" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认值</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_DEFER_TOOLS</code></td><td><code>1</code>（启用）</td><td>设为 <code>0</code> 可完全禁用：不发送 beta 请求头、不发送 <code>defer_loading</code>、不注册 <code>tool_search</code> 服务端工具</td></tr><tr><td><code>KHY_ANTHROPIC_BETA</code></td><td>（空）</td><td>逗号分隔的额外 beta 标志，追加到请求头中</td></tr></tbody></table>
+<h2 id="工作原理-端到端">工作原理（端到端）<a class="anchor" href="#工作原理-端到端" aria-label="锚点">#</a></h2>
+<pre><code>1. KHY 构建工具数组：
+   - 核心工具（Bash、Read、Edit、……）→ 完整 schema
+   - 延迟加载工具（NotebookEdit、CronCreate、……）→ { name, defer_loading: true }
+   - 服务端工具：{ type: 'tool_search_tool_regex_20251119', name: 'tool_search' }
+
+2. 请求发送至 Anthropic API，携带：
+   - anthropic-beta: tool-search-tool-2025-10-19
+   - tools: [完整 schema + 仅含名称的桩 + tool_search]
+
+3. 模型决定调用某个延迟加载工具（例如 NotebookEdit）：
+   - Anthropic 服务端拦截 → 内部运行 tool_search
+   - SSE 发出 server_tool_use 块（tool_search 正在运行）
+   - 服务端根据延迟加载的桩解析出完整 schema
+   - 模型收到完整 schema，生成正确的 tool_use 调用
+
+4. KHY 接收 SSE 流：
+   - server_tool_use → 被解析，但从本地执行中过滤掉
+   - tool_use（NotebookEdit）→ 走正常的本地执行路径
+
+5. token 收益：
+   - 约 45 个延迟加载工具 × 约 200 tokens 节省 = 约 9,000 tokens/请求
+   - tool_search_tool 的开销：约 50 tokens
+   - 净效果：工具定义 token 减少约 65%</code></pre>
+<h2 id="向后兼容">向后兼容<a class="anchor" href="#向后兼容" aria-label="锚点">#</a></h2>
+<ul><li><code>KHY_DEFER_TOOLS=0</code> → 与改动前完全一致的行为（但现在使用 registry 而非硬编码白名单）</li><li>非 Claude 适配器（Ollama、Kiro、Codex 等）→ 不受影响（beta 请求头仅存在于 <code>callAnthropicStream</code>）</li><li>Bridge 模式 → 不受影响（Claude CLI 子进程拥有自己的 ToolSearch）</li><li>代理透传 → 已保留 <code>defer_loading</code> 字段（<code>proxyServer.js:1347-1355</code>）</li></ul>
+<h2 id="复用的现有基础设施">复用的现有基础设施<a class="anchor" href="#复用的现有基础设施" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>组件</th><th>文件</th><th>用途</th></tr></thead><tbody><tr><td><code>shouldDefer</code> / <code>alwaysLoad</code></td><td><code>_baseTool.js</code></td><td>各工具的延迟加载标志</td></tr><tr><td><code>assembleToolPool()</code></td><td><code>tools/index.js</code></td><td>Profile + deny + 延迟加载过滤</td></tr><tr><td><code>toolSearch.js</code></td><td><code>tools/toolSearch.js</code></td><td>客户端兜底（非 Anthropic 适配器）</td></tr><tr><td><code>_revealedDeferred</code></td><td><code>tools/index.js</code></td><td>已揭示工具的会话状态</td></tr><tr><td><code>filterToolsByProfile()</code></td><td><code>tools/toolProfile.js</code></td><td>基于 profile 的过滤（coding profile）</td></tr></tbody></table>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ol><li>模块加载：<code>node -e &quot;require('./backend/src/services/gateway/adapters/claudeAdapter.js')&quot;</code> —— 通过</li><li>现有测试：零回归（通过改动前后的 <code>git stash</code> 对比验证）</li><li>交互式测试（Direct 模式）：延迟加载工具仅发送名称，<code>anthropic-beta</code> 请求头存在</li><li><code>KHY_DEFER_TOOLS=0</code>：已确认完全禁用路径</li></ol>
+<h2 id="未来考量">未来考量<a class="anchor" href="#未来考量" aria-label="锚点">#</a></h2>
+<ul><li>BM25 搜索变体：<code>tool_search_tool_bm25_20251119</code> 在面向自然语言的工具查询时可能表现更好 —— 可通过环境变量切换</li><li><code>tool_reference</code> 内容块：如果 Anthropic 在 assistant 消息中加入内联工具引用，<code>_anthropicSseStream.js</code> 应将其透传</li><li>缓存前缀稳定性：Anthropic 在计算缓存哈希时会跳过 <code>defer_loading</code> 工具 —— 增删延迟加载工具不会使 prompt 缓存失效</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-011] 应用接入标准.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 生态应用接入标准（Ecosystem App Standard）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-013] 弱模型兼容.html"><div class="dir">下一篇 →</div><div class="ttl">弱模型兼容性修复</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-012] 工具延迟加载.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

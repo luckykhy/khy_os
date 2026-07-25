@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>00INDEX 实现分类索引 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>00INDEX 实现分类索引</div>
+      <header class="hero reveal"><h1>00INDEX 实现分类索引</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#00-index-实现分类索引">00_INDEX 实现分类索引</a></li><li class="lvl-2"><a href="#一-分类内容边界">一、分类内容边界</a></li><li class="lvl-2"><a href="#二-文件清单">二、文件清单</a></li><li class="lvl-2"><a href="#三-跨分类关联指引">三、跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="00-index-实现分类索引">00_INDEX 实现分类索引<a class="anchor" href="#00-index-实现分类索引" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>索引总领文件</strong> · 本目录唯一入口 · 排序首位 · 结构遵循 [MGMT-STD-001] 第三章</p></blockquote>
+<h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
+<p>本目录（<code>docs/04_IMPL_实现/</code>）收容<strong>实现与修复过程记录</strong>类文档：功能实现报告、缺陷修复记录、重构日志、白皮书（RPT）。<strong>不收</strong>架构设计（归 <code>03_DESIGN_设计/</code>）、测试报告（归 <code>05_TEST_测试/</code>）。</p>
+<h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>[IMPL-RPT-001] executeCode-进程级真隔离-2026-06-10.md</td><td>进程级真隔离</td><td>定稿</td></tr><tr><td>[IMPL-RPT-002] kiro-连接修复-2026-06-05.md</td><td>Kiro连接修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-003] tui-inquirer闪退修复-2026-06-05.md</td><td>TUI闪退修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-004] tui-叙事与选择覆盖层-2026-06-01.md</td><td>TUI叙事覆盖层</td><td>定稿</td></tr><tr><td>[IMPL-RPT-005] tui-权限授权掉cooked模式修复-2026-06-09.md</td><td>权限cooked修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-006] tui-流式与上下文显示-2026-06-01.md</td><td>TUI流式显示</td><td>定稿</td></tr><tr><td>[IMPL-RPT-007] v0.1.84-修复说明.md</td><td>v0.1.84修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-008] 修复-桥接状态刷屏.md</td><td>桥接刷屏修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.md</td><td>特性访问解耦</td><td>定稿</td></tr><tr><td>[IMPL-RPT-010] 网关适配器可用性严格化-本地安装与登录-2026-06-10.md</td><td>适配器可用性严格化</td><td>定稿</td></tr><tr><td>[IMPL-RPT-011] 航天级重构白皮书-2026-06-10.md</td><td>航天级重构一轮</td><td>定稿</td></tr><tr><td>[IMPL-RPT-012] 航天级重构白皮书-第二轮-2026-06-10.md</td><td>航天级重构二轮</td><td>定稿</td></tr><tr><td>[IMPL-RPT-013] khy-claude-认证冲突修复.md</td><td>认证冲突修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-014] trae-适配器-官方扫描修复-2026-05-25.md</td><td>Trae扫描修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-015] 修复记录时间线.md</td><td>修复记录时间线</td><td>定稿</td></tr><tr><td>[IMPL-RPT-016] 剪贴板粘贴修复.md</td><td>剪贴板粘贴修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-017] 守护进程端口发现修复.md</td><td>守护端口发现修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-018] 管理前端自动可用修复-2026-05-31.md</td><td>管理前端自动可用</td><td>定稿</td></tr><tr><td>[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.md</td><td>提示符泄漏修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md</td><td>网关传输韧性</td><td>定稿</td></tr><tr><td>[IMPL-RPT-021] 网关超时与帧修复.md</td><td>网关超时帧修复</td><td>定稿</td></tr><tr><td>[IMPL-RPT-022] HOTFIX_MODEL_SELECTION.md</td><td>模型选择热修</td><td>定稿</td></tr><tr><td>[IMPL-RPT-023] 文档排版-内容与样式分离-2026-06-12.md</td><td>排版内容样式分离</td><td>定稿</td></tr><tr><td>[IMPL-RPT-024] 元帅双模式任命与约束-2026-06-12.md</td><td>元帅双模式实现</td><td>定稿</td></tr><tr><td>[IMPL-RPT-025] 元规划协议与动态约束注入-2026-06-12.md</td><td>元规划注入实现</td><td>定稿</td></tr><tr><td>[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.md</td><td>生态架构重塑</td><td>定稿</td></tr><tr><td>[IMPL-RPT-027] 前后端对接与交互重构日志-2026-06-12.md</td><td>前后端对接重构</td><td>定稿</td></tr><tr><td>[IMPL-RPT-028] 按需加载与零噪音重构日志-2026-06-12.md</td><td>按需加载零噪音</td><td>定稿</td></tr><tr><td>[IMPL-RPT-029] 夜间代码质量与健壮性完善日志-2026-06-11.md</td><td>代码质量完善</td><td>定稿</td></tr><tr><td>[IMPL-RPT-030] Agnes四模型一键置备-文生图图改图视频-2026-06-20.md</td><td>Agnes四模型接入</td><td>定稿</td></tr><tr><td>[IMPL-RPT-031] 多视角模型配置-单一图谱八视角-2026-06-20.md</td><td>多视角模型透视</td><td>定稿</td></tr><tr><td>[IMPL-RPT-032] 有学习价值的Bug汇编-UX漂移与half-wired.md</td><td>有学习价值Bug汇编</td><td>活文档</td></tr><tr><td>[IMPL-RPT-041] Qoder接入khy网关与开机自启实现记录-2026-07-13.md</td><td>Qoder桥接接入实现</td><td>定稿</td></tr></tbody></table>
+<h2 id="三-跨分类关联指引">三、跨分类关联指引<a class="anchor" href="#三-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li><li>实现对应的设计规范：<code>docs/03_DESIGN_设计/</code>；验证报告：<code>docs/05_TEST_测试/</code>。</li><li>发布与部署：<code>docs/06_DEPLOY_部署/</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-041] Qoder接入khy网关与开机自启实现记录-2026-07-13.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/00_INDEX_实现-分类索引.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

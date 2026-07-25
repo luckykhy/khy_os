@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>01_INIT_立项<span class="sep">›</span>Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」</div>
+      <header class="hero reveal"><h1>Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-定位-愿景-商业价值与-当下即不可或缺">Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」</a></li><li class="lvl-2"><a href="#0-一句话定位">0. 一句话定位</a></li><li class="lvl-2"><a href="#1-愿景-vision">1. 愿景（Vision）</a></li><li class="lvl-3"><a href="#1-1-核心信念">1.1 核心信念</a></li><li class="lvl-3"><a href="#1-2-设计哲学">1.2 设计哲学</a></li><li class="lvl-3"><a href="#1-3-分层叙事">1.3 分层叙事</a></li><li class="lvl-2"><a href="#2-已实现能力-经当前代码核验">2. 已实现能力（经当前代码核验）</a></li><li class="lvl-3"><a href="#2-1-自研内核-kernel">2.1 自研内核 `kernel/`</a></li><li class="lvl-3"><a href="#2-2-node-后端-services-backend-业务核心">2.2 Node 后端 `services/backend/`（业务核心）</a></li><li class="lvl-3"><a href="#2-3-ai-网关-provider-适配器-16-个">2.3 AI 网关 Provider 适配器（16 个）</a></li><li class="lvl-3"><a href="#2-4-host-桥-kernel-bridge-agent-os">2.4 Host 桥 `kernel/bridge/`（agent ⇄ OS）</a></li><li class="lvl-3"><a href="#2-5-生态解耦-2026-06-12-新增-商业价值的架构基础">2.5 生态解耦（2026-06-12 新增，商业价值的架构基础）</a></li><li class="lvl-3"><a href="#2-6-平台启动器与前端">2.6 平台启动器与前端</a></li><li class="lvl-3"><a href="#2-7-发行与可维护性">2.7 发行与可维护性</a></li><li class="lvl-2"><a href="#3-当下即不可或缺-个人视角">3. 当下即不可或缺（个人视角）</a></li><li class="lvl-3"><a href="#3-1-一个统一入口-管住你所有付费的-ai">3.1 一个统一入口，管住你所有付费的 AI</a></li><li class="lvl-3"><a href="#3-2-一个-claude-code-级的终端-agent-且全程透明">3.2 一个 Claude-Code 级的终端 agent，且全程透明</a></li><li class="lvl-3"><a href="#3-3-一个随手可用的-web-管理台">3.3 一个随手可用的 Web 管理台</a></li><li class="lvl-3"><a href="#3-4-一个内置的-学习系统">3.4 一个内置的「学习系统」</a></li><li class="lvl-3"><a href="#3-5-一个真能跑的自研-os-差异化体验">3.5 一个真能跑的自研 OS（差异化体验）</a></li><li class="lvl-2"><a href="#4-真正的商业价值">4. 真正的商业价值</a></li><li class="lvl-3"><a href="#4-1-价值锚点-为什么有人付费">4.1 价值锚点：为什么有人付费</a></li><li class="lvl-3"><a href="#4-2-已存在的商业化要件-不是空想">4.2 已存在的商业化要件（不是空想）</a></li><li class="lvl-3"><a href="#4-3-可落地的商业路径-按成熟度排序">4.3 可落地的商业路径（按成熟度排序）</a></li><li class="lvl-3"><a href="#4-4-护城河">4.4 护城河</a></li><li class="lvl-3"><a href="#4-5-当前差距-务实">4.5 当前差距（务实）</a></li><li class="lvl-2"><a href="#5-对比定位">5. 对比定位</a></li><li class="lvl-2"><a href="#6-路线图">6. 路线图</a></li><li class="lvl-2"><a href="#7-许可与作者">7. 许可与作者</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: INIT-PRD-001 | 阶段: 立项 | 原路径: docs/Khy-OS-定位与已实现能力-2026-06-12.md --&gt;</p>
+<h1 id="khy-os-定位-愿景-商业价值与-当下即不可或缺">Khy-OS — 定位、愿景、商业价值与「当下即不可或缺」<a class="anchor" href="#khy-os-定位-愿景-商业价值与-当下即不可或缺" aria-label="锚点">#</a></h1>
+<blockquote><p>状态: <strong>现状核验 · 商业版 v2</strong>（2026-06-12）<br>在 v1（定位 + 已实现）基础上，进一步回答两个问题：<br>① Khy-OS 凭什么有<strong>真正的商业价值</strong>；② 它如何<strong>对个人当下即不可或缺</strong>。<br>本文基于对源码、文档、测试的实际通读 + 工具核验，路径相对仓库根。</p></blockquote>
+<hr>
+<h2 id="0-一句话定位">0. 一句话定位<a class="anchor" href="#0-一句话定位" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS 是一个由单人开发的「AI 原生操作系统」生态底座</strong>——从自研 x86_64 内核，<br>到 Claude-Code 级的 agentic 终端，到聚合 16 个后端的 AI 网关，再到承载第三方应用的<br>WASM/应用运行时，作为一个<strong>垂直整合的平台</strong>统一交付（<code>pip install khy-os</code> /<br><code>npm i -g @khy-os/khy-os</code>）。</p>
+<p>它有两重身份：</p>
+<ul><li><strong>对外</strong>：一个把 AI 当作系统级能力、无供应商锁定的 AI 原生 OS；</li><li><strong>对内（架构）</strong>：<code>khyos = 生态底座</code>，<code>khyquant（量化交易）= 跑在底座上的首款应用</code>，</li></ul>
+<p>二者绝对解耦——这让 Khy-OS 不是「一个工具」，而是「一个能长出应用的平台」。</p>
+<hr>
+<h2 id="1-愿景-vision">1. 愿景（Vision）<a class="anchor" href="#1-愿景-vision" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心信念">1.1 核心信念<a class="anchor" href="#1-1-核心信念" aria-label="锚点">#</a></h3>
+<ul><li><strong>AI 是系统级能力，不是外挂应用。</strong> 护城河 = 从内核到 agent 的<strong>垂直整合深度</strong>。</li><li><strong>真正的底座，不是学习项目。</strong> 三年愿景：用户开机直接进 Khy-OS。</li><li><strong>AI 能开发并验证跨平台应用的 OS。</strong> 内核须能跑 Linux（ELF）+ Windows（PE）；</li></ul>
+<p>WASM 作为跨平台应用首选交付格式。</p>
+<ul><li><strong>底座 ≠ 应用。</strong> Khy-OS 是生态底座，量化只是首款示范应用、可剥离，不是项目身份。</li></ul>
+<h3 id="1-2-设计哲学">1.2 设计哲学<a class="anchor" href="#1-2-设计哲学" aria-label="锚点">#</a></h3>
+<ul><li>内核极简、服务组件化、应用 WASM 化；MoonBit 作系统语言之一。</li><li><strong>混合内核</strong>：性能路径走宏内核（VFS/NET 直调），可替换服务走微内核（IPC 暴露）。</li><li><strong>可观察 / 可学习的差异化</strong>：若 Claude Code / Codex / OpenCode 是赛车，Khy-OS 是</li></ul>
+<p>「赛车级教练车」——同级体验，但工具调用、模型推理、适配器路由、状态流转<strong>全程透明</strong>，<br>  用户在使用中学习 AI 工程实践。</p>
+<h3 id="1-3-分层叙事">1.3 分层叙事<a class="anchor" href="#1-3-分层叙事" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>层</th><th>含义</th><th>当前角色</th></tr></thead><tbody><tr><td><strong>Khy Kernel</strong></td><td>自研 x86_64 混合内核（AI 原生）</td><td>长期底座</td></tr><tr><td><strong>Khy Shell</strong></td><td>AI 原生终端 + 16 通道网关</td><td><strong>当前核心卖点</strong></td></tr><tr><td><strong>Khy Apps</strong></td><td>WASM 沙箱 / entry_points 应用运行时</td><td>生态入口（已具协议）</td></tr><tr><td><strong>khyquant</strong></td><td>旗舰内置应用（量化交易，可剥离）</td><td>平台价值的示范</td></tr></tbody></table>
+<hr>
+<h2 id="2-已实现能力-经当前代码核验">2. 已实现能力（经当前代码核验）<a class="anchor" href="#2-已实现能力-经当前代码核验" aria-label="锚点">#</a></h2>
+<blockquote><p>详尽的文件级清单见本节；内核各阶段、AgentBus A1–A8、后端 405 测试均已实测。</p></blockquote>
+<h3 id="2-1-自研内核-kernel">2.1 自研内核 <code>kernel/</code><a class="anchor" href="#2-1-自研内核-kernel" aria-label="锚点">#</a></h3>
+<ul><li><strong>引导</strong>：<code>boot/boot.asm</code>（Multiboot2 <code>_start</code>）→ <code>long_mode.asm</code>（64 位）→ <code>kernel_main</code>。</li><li><strong>核心 C 模块</strong>（<code>kernel/src/</code>，约 50+ 个 .c/.h）：</li></ul>
+<table><thead><tr><th>子系统</th><th>文件</th><th>现状</th></tr></thead><tbody><tr><td>进程/调度</td><td><code>process.c</code>、<code>sched.c</code></td><td>fork/exec/wait + 抢占式调度 ✅</td></tr><tr><td>内存/分页</td><td><code>vmm.c</code>(4 级页表/COW/缺页)、<code>pmm.c</code>、<code>kheap.c</code></td><td>按需分页 + COW fork ✅</td></tr><tr><td>系统调用</td><td><code>syscall.c</code>(INT 0x80，最大模块)</td><td>文件/进程/内存/信号/IPC/agentask ✅</td></tr><tr><td>IPC</td><td><code>ipc.c</code></td><td>端口寻址 + 阻塞 + <code>ipc_call</code> ✅</td></tr><tr><td>双格式加载</td><td><code>elf.c</code> + <code>pe.c</code> + <code>wincompat.c</code></td><td>自动检测 ELF/PE，跨平台 ✅</td></tr><tr><td>文件系统</td><td><code>vfs.c</code>、<code>ramfs.c</code>、<code>diskfs.c</code>、<code>ata.c</code>、<code>persist.c</code></td><td>VFS + RAM/磁盘 FS + <code>/disk</code> 持久化 ✅</td></tr><tr><td>信号/管道/fd</td><td>sigaction·sigreturn、per-process fd、fd 0–2、shell `\</td><td>`</td></tr><tr><td>驱动/Shell</td><td><code>keyboard.c</code>、<code>serial.c</code>、<code>framebuffer.c</code>、<code>net.c</code>、<code>wm.c</code>、<code>shell.c</code></td><td>✅</td></tr><tr><td><strong>AgentBus</strong></td><td><code>agentbus.c</code>/<code>agentask.c</code>/<code>agentconf.c</code>/<code>agentctl.c</code>/<code>agentevent.c</code>/<code>agentframe.c</code></td><td>内核态智能体总线（三面，COM2，COBS+CRC16）✅</td></tr><tr><td>MoonBit</td><td><code>moonbit_bridge.c</code>、<code>moonbit_os_api.c</code></td><td>内核内嵌 MoonBit ✅</td></tr></tbody></table>
+<ul><li><strong>构建/产物</strong>：<code>kernel/Makefile</code> + <code>linker.ld</code>；产物 <code>kernel/build/khy-os.bin</code> +</li></ul>
+<p>可启动 ISO <code>khy-os-kernel.iso</code>；<code>qemu-system-x86_64 -cdrom &lt;iso&gt;</code> 运行。</p>
+<ul><li><strong>状态</strong>：阶段 1–9 + AgentBus A1–A8 全 QEMU 实测绿；剩真实键盘 stdin、块设备持久化深化。</li></ul>
+<h3 id="2-2-node-后端-services-backend-业务核心">2.2 Node 后端 <code>services/backend/</code>（业务核心）<a class="anchor" href="#2-2-node-后端-services-backend-业务核心" aria-label="锚点">#</a></h3>
+<ul><li>CLI 入口 <code>bin/khy.js</code>（<code>khy</code>=OS 模式 / <code>khy ai</code>=AI REPL）；路由 <code>src/cli/router.js</code>。</li><li>AI 网关 <code>src/services/gateway/aiGateway.js</code>（级联 + 熔断）+ <code>proxyServer.js</code>（<code>/v1/*</code> OpenAI 兼容）。</li><li>工具集 <code>src/tools/</code>（约 104 个 .js，对标 Claude Code）。</li><li>工作流引擎 <code>src/services/workflow/</code>（可视化拖拽编辑器 + 原生执行器 + SSE 推送 + askUserQuestion 暂停/恢复）。</li><li>服务层约 275 个 .js / 16 子领域；<code>server.js</code>（Express+WS），<code>src/routes/</code> 42 路由。</li></ul>
+<h3 id="2-3-ai-网关-provider-适配器-16-个">2.3 AI 网关 Provider 适配器（16 个）<a class="anchor" href="#2-3-ai-网关-provider-适配器-16-个" aria-label="锚点">#</a></h3>
+<pre><code>apiAdapter · claudeAdapter · codexAdapter · kiroAdapter · traeAdapter · windsurfAdapter ·
+cursorAdapter · cursor2apiAdapter · cliToolAdapter · clipboardRelayAdapter · relayApiAdapter ·
+webRelayAdapter · vscodeAdapter · warpAdapter · ollamaAdapter · localLLMAdapter</code></pre>
+<p>级联失败转移 + 统一断路器 + 瞬态冷却 + 账号 P2C 负载 + 多租户隔离 + 模型能力分级。</p>
+<h3 id="2-4-host-桥-kernel-bridge-agent-os">2.4 Host 桥 <code>kernel/bridge/</code>（agent ⇄ OS）<a class="anchor" href="#2-4-host-桥-kernel-bridge-agent-os" aria-label="锚点">#</a></h3>
+<p>纯 Node 零依赖：<code>khy-frame.js</code>（COBS+CRC16）、<code>khy-protocol.js</code>（三面）、<code>khy-bridge.js</code>、<br><code>khy-tools.js</code>（工具面单一真源）、<code>khy-mcp.js</code>（MCP stdio，已注册进 <code>.mcp.json</code>）、<br><code>khy-brain-gateway.js</code>（内置 brain 接 AI 网关）。</p>
+<h3 id="2-5-生态解耦-2026-06-12-新增-商业价值的架构基础">2.5 生态解耦（2026-06-12 新增，商业价值的架构基础）<a class="anchor" href="#2-5-生态解耦-2026-06-12-新增-商业价值的架构基础" aria-label="锚点">#</a></h3>
+<ul><li><strong>单一真源协议</strong> <code>platform/khy_platform/app_protocol.py</code>（零应用导入）：<code>KhyApp</code> 基类</li></ul>
+<p>（<code>standalone_init</code>/<code>eco_init</code>）、<code>AppManifest</code>/<code>EcoContext</code>、路径主权<br>  <code>~/.khyos</code>（底座）vs <code>~/.&lt;app&gt;</code>（应用，含路径穿越防护）。</p>
+<ul><li><strong>动态发现</strong>：<code>importlib.metadata</code> 的 <code>khyos.apps</code> entry_points 组 + <code>~/.khyos/apps/</code> 注册表；</li></ul>
+<p><code>khy apps [--json]</code> 列出。khyquant 经 <code>[project.entry-points.&quot;khyos.apps&quot;]</code> 注册。</p>
+<ul><li><strong>双模入口</strong>：应用既能 standalone 独立跑，也能 eco 模式挂底座；底座核心零应用硬依赖（已扫描确认）。</li><li><strong>路径主权红线</strong>：底座/应用数据物理隔离，禁跨库直连 SQL，跨域走公共 API。</li><li>验收：协议 9 测试 + 路径 4 测试绿。契约文档 <code>docs/03_DESIGN_设计/[DESIGN-ARCH-011] 应用接入标准.md</code>。</li></ul>
+<h3 id="2-6-平台启动器与前端">2.6 平台启动器与前端<a class="anchor" href="#2-6-平台启动器与前端" aria-label="锚点">#</a></h3>
+<ul><li><code>platform/khy_platform/cli.py</code>：<code>khy</code> 命令 Python 薄壳，检查 Node≥20 → 定位 backend</li></ul>
+<p>（pip/源码双模）→ 首次自愈（npm/.env/DB）→ 移交 Node CLI。</p>
+<ul><li><code>apps/ai-frontend/</code>（Vue3 + @vue-flow + @xterm）：AI 管理 + 可视化工作流 + 内嵌终端。</li><li><code>software/khyquant/frontend/</code>（Vue3 + lightweight-charts + Capacitor 8）：量化交易 Web + Android APK。</li></ul>
+<h3 id="2-7-发行与可维护性">2.7 发行与可维护性<a class="anchor" href="#2-7-发行与可维护性" aria-label="锚点">#</a></h3>
+<ul><li><strong>双渠道孪生</strong>：pip（Python 编排）/ npm（镜像同一 workshop），双阶段自愈 devenv 永不中断。</li><li><strong>包体极轻</strong>：wheel ≈ 11MB，模型权重/构建产物/缓存/第三方库全外置。</li><li><strong><code>.ai/</code> 种子文档</strong>：<code>MAP/CONTEXT/GUARDS</code> 确定性生成「无 AI 也能维护」，pre-commit 自动刷新。</li></ul>
+<hr>
+<h2 id="3-当下即不可或缺-个人视角">3. 当下即不可或缺（个人视角）<a class="anchor" href="#3-当下即不可或缺-个人视角" aria-label="锚点">#</a></h2>
+<blockquote><p>即便不谈三年愿景，<strong>今天</strong>一个开发者 <code>pip install khy-os</code> 后，就能把它当成日常主力工具。<br>以下都是已落地、可立即用的能力。</p></blockquote>
+<h3 id="3-1-一个统一入口-管住你所有付费的-ai">3.1 一个统一入口，管住你所有付费的 AI<a class="anchor" href="#3-1-一个统一入口-管住你所有付费的-ai" aria-label="锚点">#</a></h3>
+<p>你大概同时在用 Claude、Cursor、Kiro、Windsurf、Codex、Ollama…… Khy-OS 用<strong>一个端点 +<br>一套密钥管理</strong>把它们统一在 <code>gateway</code>：</p>
+<pre><code class="language-text">gateway config       # 配置 Provider / Key
+模型发现             # 自动发现各适配器可用模型
+gateway status       # 看 16 个后端谁在线</code></pre>
+<ul><li><strong>无锁定</strong>：哪个通道挂了自动级联转移，断路器 + 冷却兜底，不会卡死你的工作流。</li><li><strong>数据本地</strong>：自带密钥、自托管，对话与代码不进第三方平台。</li><li><strong>省钱</strong>：把已订阅的多家额度复用在一个终端里，而不是为每个工具单独付费。</li></ul>
+<h3 id="3-2-一个-claude-code-级的终端-agent-且全程透明">3.2 一个 Claude-Code 级的终端 agent，且全程透明<a class="anchor" href="#3-2-一个-claude-code-级的终端-agent-且全程透明" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">khy                  # agentic 终端（流式 TUI + 工具循环 + 权限门控）
+khy ai &quot;总结这个仓库&quot; # 一次性问答，不进 REPL
+goal: 重构网关适配器并加测试   # 目标模式，自主多步执行</code></pre>
+<ul><li>思考过程、工具调用、子代理、工作流、上下文压缩<strong>可见可学</strong>——这是「教练车」的意义：</li></ul>
+<p>你在用它干活的同时，看懂了 AI 工程是怎么运转的。</p>
+<ul><li>可视化拖拽<strong>工作流编辑器</strong> + 原生执行器：把重复任务沉淀成可复用的自动化。</li></ul>
+<h3 id="3-3-一个随手可用的-web-管理台">3.3 一个随手可用的 Web 管理台<a class="anchor" href="#3-3-一个随手可用的-web-管理台" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">khychat              # 启动管理后端 + Vue 前端，浏览器开 /admin/ai-gateway</code></pre>
+<p>模型/网关/密钥/工作流图形化管理，外加 <code>/mobile</code> 终端二维码，手机同局域网扫码即用。</p>
+<h3 id="3-4-一个内置的-学习系统">3.4 一个内置的「学习系统」<a class="anchor" href="#3-4-一个内置的-学习系统" aria-label="锚点">#</a></h3>
+<p><code>/learn</code> 三模式（本地无网 / 有网无模型 / 有网有模型 + 向量重排），curriculum 11 层覆盖<br>从内核引导到 AgentBus 协同，全文件实链校验（learn check 94/94）。<strong>用工具的同时把人也练出来。</strong></p>
+<h3 id="3-5-一个真能跑的自研-os-差异化体验">3.5 一个真能跑的自研 OS（差异化体验）<a class="anchor" href="#3-5-一个真能跑的自研-os-差异化体验" aria-label="锚点">#</a></h3>
+<pre><code class="language-text">khyos                # 启动 KHY 内核
+khy os build         # 一键还原/构建自研内核
+khy iso build        # 产可启动 ISO，挂 QEMU/VMware 跑</code></pre>
+<blockquote><p><strong>结论</strong>：哪怕只用 3.1 + 3.2，Khy-OS 今天就足以替代「一堆各自为政的 AI 工具」，<br>成为个人开发者的<strong>统一 AI 工作台</strong>——这就是「当下不可或缺」。</p></blockquote>
+<hr>
+<h2 id="4-真正的商业价值">4. 真正的商业价值<a class="anchor" href="#4-真正的商业价值" aria-label="锚点">#</a></h2>
+<blockquote><p>商业价值不靠愿景，靠「现在就有人愿意付费的东西」+「能规模化的结构」。<br>Khy-OS 的架构已经为下列路径铺好了地基。</p></blockquote>
+<h3 id="4-1-价值锚点-为什么有人付费">4.1 价值锚点：为什么有人付费<a class="anchor" href="#4-1-价值锚点-为什么有人付费" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>痛点</th><th>Khy-OS 的解法</th><th>付费意愿来源</th></tr></thead><tbody><tr><td>AI 工具各自为政、重复付费、易锁定</td><td>16 后端统一网关 + 级联失败转移 + 多租户隔离</td><td>省成本 + 不锁定 + 稳定性</td></tr><tr><td>团队/个人数据合规，不愿上第三方云</td><td>自托管、自带密钥、数据本地</td><td>合规 + 私有化</td></tr><tr><td>AI 工程「黑盒」、新人难上手</td><td>全程可观察 + 内置学习系统</td><td>培训 / 教育市场</td></tr><tr><td>想在一个底座上长出垂直应用</td><td><code>khyos.apps</code> entry_points 生态协议 + WASM 运行时</td><td>平台抽成 / 应用分发</td></tr></tbody></table>
+<h3 id="4-2-已存在的商业化要件-不是空想">4.2 已存在的商业化要件（不是空想）<a class="anchor" href="#4-2-已存在的商业化要件-不是空想" aria-label="锚点">#</a></h3>
+<ul><li><strong>许可即商业模式</strong>：<code>LICENSE</code> 已是<strong>源码可得（Source-Available）</strong>——个人/非商业免费，</li></ul>
+<p><strong>复制/修改/再分发与商业使用需作者书面授权</strong>。这天然支持「开源获客 + 商业授权变现」。</p>
+<ul><li><strong>多租户网关</strong>：admin 三能力已抽离 per-user，数据面隔离（阶段 1–4 全完成）——</li></ul>
+<p>这是 <strong>Gateway-as-a-Service</strong> 的内核（按用户/按量计费的技术前提已具备）。</p>
+<ul><li><strong>生态解耦</strong>：<code>khyos=底座 / khyquant=应用</code> 协议化 + 动态发现——这是</li></ul>
+<p><strong>应用市场 / 平台抽成</strong>模式的架构前提（第三方可按 <code>khyos.apps</code> 协议接入）。</p>
+<ul><li><strong>旗舰应用作样板</strong>：khyquant（量化交易 + Android APK）证明「底座能承载真实垂直应用」，</li></ul>
+<p>既是 demo 也是可独立售卖的产品。</p>
+<h3 id="4-3-可落地的商业路径-按成熟度排序">4.3 可落地的商业路径（按成熟度排序）<a class="anchor" href="#4-3-可落地的商业路径-按成熟度排序" aria-label="锚点">#</a></h3>
+<ol><li><strong>商业授权（现成）</strong>：企业/商用方按 LICENSE 购买书面授权——最直接的变现，<strong>今天即可执行</strong>。</li><li><strong>托管网关 SaaS（地基已铺）</strong>：基于多租户网关提供「统一 AI 网关 + 失败转移 + 用量计费」</li></ol>
+<p>的托管服务，目标客户 = 同时用多家 AI 的团队。</p>
+<ol><li><strong>私有化 / 企业部署</strong>：自托管 + 数据本地 + 合规，卖部署与支持，目标 = 数据敏感行业。</li><li><strong>应用生态抽成（中期）</strong>：开放 <code>khyos.apps</code> 协议，第三方应用上架，平台分发/抽成。</li><li><strong>教育 / 培训（差异化）</strong>：把「可观察 + /learn」打包成 AI 工程教学产品。</li></ol>
+<h3 id="4-4-护城河">4.4 护城河<a class="anchor" href="#4-4-护城河" aria-label="锚点">#</a></h3>
+<ul><li><strong>垂直整合深度</strong>：从内核到 agent 全栈贯通，单点对手（一个 CLI、一个网关）无法复制全貌。</li><li><strong>无锁定的中立性</strong>：不绑单一模型厂商，反而成为各厂商之上的中立聚合层。</li><li><strong>单人全栈的稀缺性</strong>：本身即强叙事资产（获客 / 信任 / 媒体）。</li></ul>
+<h3 id="4-5-当前差距-务实">4.5 当前差距（务实）<a class="anchor" href="#4-5-当前差距-务实" aria-label="锚点">#</a></h3>
+<ul><li>商业模式尚未最终敲定；目标用户「想全覆盖」需聚焦。</li><li>认知风险：需用真实 demo（引导到 agent）证明「不是 CLI 套 OS 名字」。</li><li>托管 SaaS / 应用市场尚是「地基已铺、产品未上线」状态，需要工程化 + 运营投入。</li></ul>
+<hr>
+<h2 id="5-对比定位">5. 对比定位<a class="anchor" href="#5-对比定位" aria-label="锚点">#</a></h2>
+<table><thead><tr><th></th><th style="text-align:center"><strong>Khy-OS</strong></th><th style="text-align:center">Claude Code</th><th style="text-align:center">Ollama</th><th style="text-align:center">Linux 发行版</th></tr></thead><tbody><tr><td>Agentic 编码 CLI</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td></tr><tr><td>多 provider 无锁定</td><td style="text-align:center">✅(16)</td><td style="text-align:center">❌(1)</td><td style="text-align:center">✅(本地)</td><td style="text-align:center">—</td></tr><tr><td>自带密钥/自托管</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">✅</td><td style="text-align:center">—</td></tr><tr><td>内置网关 + 失败转移</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td></tr><tr><td>手写 OS 内核</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td><td style="text-align:center">✅(一个团队)</td></tr><tr><td>应用生态协议</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td><td style="text-align:center">✅</td></tr><tr><td>一键安装</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td></tr></tbody></table>
+<blockquote><p>Khy-OS 不在单一维度上击败谁——它是唯一<strong>同时是所有这些</strong>、从内核到 agent 全栈贯通的项目（且出自单人之手）。</p></blockquote>
+<hr>
+<h2 id="6-路线图">6. 路线图<a class="anchor" href="#6-路线图" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 内核：真实键盘 stdin + 块设备持久化深化</li><li>[ ] 录制「引导到 agent」演示（<code>assets/demo.gif</code>）——降低认知风险、助商业获客</li><li>[ ] 托管网关 SaaS：把多租户网关产品化（计费 / 控制台 / SLA）</li><li>[ ] 开放 <code>khyos.apps</code> 应用市场，沉淀第三方应用</li><li>[ ] 活体数据迁移收敛（<code>[Eco-Arch-Unresolved]</code>，需人工带回滚）</li></ul>
+<hr>
+<h2 id="7-许可与作者">7. 许可与作者<a class="anchor" href="#7-许可与作者" aria-label="锚点">#</a></h2>
+<p><strong>源码可得（Source-Available）</strong>：免费下载、运行、学习、非商业使用；复制/修改/再分发与<br><strong>商业使用需作者（孔浩原 / Kong Haoyuan）书面授权</strong>——商业合作请联系作者。详见 <span class="deadlink" title="目标不存在：../../LICENSE"><code>LICENSE</code></span>。</p>
+<hr>
+<p><em>本文档为现状核验快照。内核 file:line 与模块清单随演进可能变动，断言前请对照当前代码与<br><span class="deadlink" title="目标不存在：../../.ai/MAP.html"><code>.ai/MAP.md</code></span>。早期草案见 <a href="%5BINIT-PRD-002%5D%20项目-定位.html"><code>项目-定位.md</code></a>。</em></p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/01_INIT_立项/[INIT-PRD-002] 项目-定位.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS — 项目定位</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/01_INIT_立项/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

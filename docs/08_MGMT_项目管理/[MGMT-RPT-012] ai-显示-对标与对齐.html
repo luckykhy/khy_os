@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS AI 显示系统 — 四项目对标分析与对齐方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS AI 显示系统 — 四项目对标分析与对齐方案</div>
+      <header class="hero reveal"><h1>KHY OS AI 显示系统 — 四项目对标分析与对齐方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-ai-显示系统-四项目对标分析与对齐方案">KHY OS AI 显示系统 — 四项目对标分析与对齐方案</a></li><li class="lvl-2"><a href="#一-架构对比矩阵">一、架构对比矩阵</a></li><li class="lvl-2"><a href="#二-对齐清单-p0-p2">二、对齐清单（P0-P2）</a></li><li class="lvl-3"><a href="#p0-立即可做-效果显著">P0 — 立即可做，效果显著</a></li><li class="lvl-3"><a href="#p1-中期改进">P1 — 中期改进</a></li><li class="lvl-3"><a href="#p2-长期优化">P2 — 长期优化</a></li><li class="lvl-3"><a href="#p3-ui-编排与交互-2026-05-20-新增">P3 — UI 编排与交互（2026-05-20 新增）</a></li><li class="lvl-2"><a href="#三-各项设计参考">三、各项设计参考</a></li><li class="lvl-3"><a href="#p0-1-流式增量渲染">P0-1: 流式增量渲染</a></li><li class="lvl-3"><a href="#p0-2-thinking-块">P0-2: Thinking 块</a></li><li class="lvl-3"><a href="#p0-3-工具耗时">P0-3: 工具耗时</a></li><li class="lvl-3"><a href="#p0-4-spinner-stall-检测">P0-4: Spinner stall 检测</a></li><li class="lvl-3"><a href="#p1-5-cjk-宽度">P1-5: CJK 宽度</a></li><li class="lvl-3"><a href="#p1-6-工具输出截断">P1-6: 工具输出截断</a></li><li class="lvl-3"><a href="#p1-7-同步输出">P1-7: 同步输出</a></li><li class="lvl-2"><a href="#四-不适用于-khy-的设计">四、不适用于 KHY 的设计</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-012 | 阶段: 项目管理 | 原路径: docs/指南/ai-显示-对标与对齐.md --&gt;</p>
+<h1 id="khy-os-ai-显示系统-四项目对标分析与对齐方案">KHY OS AI 显示系统 — 四项目对标分析与对齐方案<a class="anchor" href="#khy-os-ai-显示系统-四项目对标分析与对齐方案" aria-label="锚点">#</a></h1>
+<blockquote><p>基准日期：2026-05-20<br>对标项目：Claude Code、DeepSeek TUI、Qwen Code、LibreChat</p></blockquote>
+<h2 id="一-架构对比矩阵">一、架构对比矩阵<a class="anchor" href="#一-架构对比矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>Claude Code</th><th>DeepSeek TUI</th><th>Qwen Code</th><th>LibreChat</th><th>KHY 现状</th></tr></thead><tbody><tr><td>框架</td><td>Ink (React CLI)</td><td>ratatui (Rust)</td><td>Ink (React CLI)</td><td>React (Web)</td><td>readline + console.log</td></tr><tr><td>输入区</td><td>FullscreenLayout 固定底部</td><td>5 区域布局固定底部</td><td>Static+动态双缓冲</td><td>ChatForm memo 隔离</td><td>monkey-patch repaint</td></tr><tr><td>流式渲染</td><td>稳定前缀/不稳定后缀增量</td><td>LineBuffer 换行门控 + 双档位自适应</td><td>Static 历史 + pending 动态区</td><td>SSE→Recoil→全量重渲染</td><td>逐 chunk console.log</td></tr><tr><td>Markdown</td><td>marked 词法 + ANSI + Rust 高亮</td><td>自研 parse/render 两阶段 + AST 缓存</td><td>自研逐行正则 + lowlight</td><td>react-markdown + rehype</td><td>markdownLite 正则</td></tr><tr><td>Spinner</td><td>shimmer/stall/token 计数/子代理树</td><td>无定时器渲染时算帧/鲸鱼/脉冲</td><td>三层 spinner + TMUX 降级</td><td>CSS 伪元素光标</td><td>DynamicSpinner + startSparkle</td></tr><tr><td>CJK 换行</td><td>eastAsianWidth + grapheme + 边界安全</td><td>unicode-width + grapheme + 回归测试</td><td>Intl.Segmenter + LRU + string-width</td><td>react-markdown 自动</td><td>_isCJK + displayWidth</td></tr><tr><td>工具显示</td><td>ToolUseLoader 闪烁 + ⎿ 嵌套</td><td>ToolCard 家族图标 + 6 行截断 + pager</td><td>ToolGroup 圆角框 + compact + 耗时</td><td>ToolCallGroup 分组折叠 + shimmer</td><td>printStepLine + printStepDetail</td></tr><tr><td>Thinking</td><td>专用组件 + 最少显示 2s</td><td>独立 block + 旁路换行门控</td><td>无专门处理</td><td>折叠/展开 + 灯泡图标</td><td>无</td></tr><tr><td>代码高亮</td><td>Rust ColorFile 原生模块</td><td>单色 ITALIC + 保留缩进</td><td>lowlight (highlight.js HAST)</td><td>rehype-highlight (lowlight)</td><td>基础 ANSI 着色</td></tr><tr><td>同步输出</td><td>Ink 虚拟 DOM diff</td><td>ratatui 帧率限制 120/30 FPS</td><td>ESC[?2026h/l 协议</td><td>浏览器 DOM batch</td><td>无</td></tr></tbody></table>
+<h2 id="二-对齐清单-p0-p2">二、对齐清单（P0-P2）<a class="anchor" href="#二-对齐清单-p0-p2" aria-label="锚点">#</a></h2>
+<h3 id="p0-立即可做-效果显著">P0 — 立即可做，效果显著<a class="anchor" href="#p0-立即可做-效果显著" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>来源</th><th>当前状态</th><th>目标</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td>流式增量渲染</td><td>Claude Code StreamingMarkdown</td><td>chunk 全量缓存完才输出</td><td>已完成段落即时渲染，尾部 pending 覆写</td><td>DONE</td></tr><tr><td>2</td><td>Thinking 块显示</td><td>Claude Code + LibreChat</td><td><code>&lt;think&gt;</code> 内容丢弃或混入正文</td><td>dim 前缀显示，完成后折叠为摘要</td><td>DONE</td></tr><tr><td>3</td><td>工具执行耗时</td><td>Qwen Code ToolElapsedTime + DeepSeek</td><td>startSparkle 内部计时但不显示</td><td>&gt;2s 显示 <code>(3s)</code>，&gt;8s 变红</td><td>DONE</td></tr><tr><td>4</td><td>Spinner stall 检测</td><td>Claude Code useStalledAnimation</td><td>spinner 只有闪烁，无 stall 反馈</td><td>3s 无新 token 渐变黄→红</td><td>DONE</td></tr></tbody></table>
+<h3 id="p1-中期改进">P1 — 中期改进<a class="anchor" href="#p1-中期改进" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>来源</th><th>目标</th><th>状态</th></tr></thead><tbody><tr><td>5</td><td>CJK 宽度准确计算</td><td>Claude Code + Qwen Code</td><td>引入 string-width，支持 emoji/组合字符</td><td>DONE</td></tr><tr><td>6</td><td>工具输出智能截断</td><td>DeepSeek + Qwen Code</td><td>head 3 + tail 3 + 折叠提示</td><td>DONE</td></tr><tr><td>7</td><td>终端同步输出防撕裂</td><td>Qwen Code synchronizedOutput</td><td>ESC[?2026h/l 批量写入</td><td>DONE</td></tr></tbody></table>
+<h3 id="p2-长期优化">P2 — 长期优化<a class="anchor" href="#p2-长期优化" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>来源</th><th>目标</th><th>状态</th></tr></thead><tbody><tr><td>8</td><td>Markdown AST 缓存</td><td>DeepSeek parse/render 分离</td><td>LRU 缓存 + resize 自动清缓存</td><td>DONE</td></tr><tr><td>9</td><td>代码块语法高亮</td><td>Claude Code + Qwen Code</td><td>轻量正则高亮 (JS/TS/Py/Bash/Go/Rust/SQL/JSON/HTML/CSS)</td><td>DONE</td></tr><tr><td>10</td><td>虚拟滚动</td><td>Claude Code VirtualMessageList</td><td>readline 架构替代：超长输出 head+tail+折叠</td><td>DONE</td></tr></tbody></table>
+<h3 id="p3-ui-编排与交互-2026-05-20-新增">P3 — UI 编排与交互（2026-05-20 新增）<a class="anchor" href="#p3-ui-编排与交互-2026-05-20-新增" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>来源</th><th>目标</th><th>状态</th></tr></thead><tbody><tr><td>11</td><td>统一菜单选择器</td><td>Claude Code FuzzyPicker + DeepSeek CommandPalette</td><td>selectMenu() 统一入口，inkComponents.Select 零依赖渲染，inquirer 降级</td><td>DONE</td></tr><tr><td>12</td><td>帮助页面精致排版</td><td>Claude Code 3-tab help</td><td>带边框 Box 布局 + 分组图标 + 分隔线 + 底部主题提示</td><td>DONE</td></tr><tr><td>13</td><td>持久 Footer 状态栏</td><td>Claude Code StatusBar + DeepSeek 5区域</td><td>hudRenderer.renderStatusBar 接入 prompt 重绘，显示模型/tokens/git/cost</td><td>DONE</td></tr><tr><td>14</td><td>Slash 命令菜单增强</td><td>Claude Code FuzzyPicker</td><td>模糊匹配 + 相关度排序 + 匹配字符高亮 + label 显示</td><td>DONE</td></tr><tr><td>15</td><td>启动页信息增强</td><td>Claude Code + Qwen Code</td><td>动态 System/Status：认证方式/上下文窗口/网关状态/Git 分支</td><td>DONE</td></tr><tr><td>16</td><td>工具家族图标</td><td>DeepSeek ToolCard 图标 + Qwen Code 圆角框</td><td>▶Bash ▷Read ◆Write ◇Update ⌕Search ⊙Web ◐Agent ☐Todo</td><td>DONE</td></tr></tbody></table>
+<h2 id="三-各项设计参考">三、各项设计参考<a class="anchor" href="#三-各项设计参考" aria-label="锚点">#</a></h2>
+<h3 id="p0-1-流式增量渲染">P0-1: 流式增量渲染<a class="anchor" href="#p0-1-流式增量渲染" aria-label="锚点">#</a></h3>
+<p><strong>核心思路</strong>（取自 Claude Code + DeepSeek）：</p>
+<pre><code>SSE chunk 到达
+  → 累积到 buffer
+  → 找最后一个 \n\n（段落边界）
+  → 之前的 = 稳定部分 → renderAiResponse() → console.log
+  → 之后的 = pending → 下次 chunk 来时覆写</code></pre>
+<p>DeepSeek 的 LineBuffer 换行门控补充：代码围栏（<code> </code>`<code> </code>）内不在 <code>\n</code> 处断，必须等到围栏闭合。</p>
+<h3 id="p0-2-thinking-块">P0-2: Thinking 块<a class="anchor" href="#p0-2-thinking-块" aria-label="锚点">#</a></h3>
+<pre><code>流式中：
+  💭 思考中... (dim, 实时显示 thinking 文本)
+
+完成后：
+  💭 思考 (12s) — 已折叠，ctrl+o 查看</code></pre>
+<p>LibreChat 用 <code>&lt;think&gt;</code> 标签解析；Claude Code 用 content type 区分。KHY 需在 SSE chunk 中检测 <code>&lt;think&gt;</code> 标签。</p>
+<h3 id="p0-3-工具耗时">P0-3: 工具耗时<a class="anchor" href="#p0-3-工具耗时" aria-label="锚点">#</a></h3>
+<pre><code>  ● Bash (npm test)                     ← 刚开始
+  ● Bash (npm test) 3s                  ← 超过 2s
+  ● Bash (npm test) 12s                 ← 超过 8s，红色</code></pre>
+<p>Qwen Code 3 秒阈值 + Shell 额外显示 timeout 预算。DeepSeek <code>running (5s)</code> 格式。</p>
+<h3 id="p0-4-spinner-stall-检测">P0-4: Spinner stall 检测<a class="anchor" href="#p0-4-spinner-stall-检测" aria-label="锚点">#</a></h3>
+<p>Claude Code 实现：</p>
+<ul><li>正常：白色闪烁</li><li>3s 无新 token：渐变为红色（<code>useStalledAnimation</code>）</li><li>恢复 token 流：渐变回白色</li></ul>
+<p>KHY DynamicSpinner 已有 <code>_lastTokenAt</code> 跟踪，只需在 <code>_render()</code> 中加 stall 色彩计算。</p>
+<h3 id="p1-5-cjk-宽度">P1-5: CJK 宽度<a class="anchor" href="#p1-5-cjk-宽度" aria-label="锚点">#</a></h3>
+<p>Claude Code 三级策略：</p>
+<ol><li>ASCII 快速路径 <code>charCodeAt &lt; 127</code> → width = 1</li><li><code>eastAsianWidth(codePoint)</code> → CJK = 2</li><li><code>Intl.Segmenter</code> grapheme 分割 → emoji = 2</li></ol>
+<p>Qwen Code 补充：<code>Intl.Segmenter('zh', { granularity: 'word' })</code> 做中文分词，500 条 LRU 缓存。</p>
+<h3 id="p1-6-工具输出截断">P1-6: 工具输出截断<a class="anchor" href="#p1-6-工具输出截断" aria-label="锚点">#</a></h3>
+<p>DeepSeek 方案（最佳）：</p>
+<pre><code>  ⎿ line 1
+    line 2
+    ... (+42 行，Alt+V 查看完整)
+    line N-1
+    line N</code></pre>
+<p>默认 head 2 + tail 2，超出折叠。</p>
+<h3 id="p1-7-同步输出">P1-7: 同步输出<a class="anchor" href="#p1-7-同步输出" aria-label="锚点">#</a></h3>
+<p>Qwen Code 实现：monkey-patch <code>stdout.write</code>，每个 microtask 批次自动包裹 <code>ESC[?2026h</code> / <code>ESC[?2026l</code>。支持 WezTerm/iTerm/Kitty。</p>
+<h2 id="四-不适用于-khy-的设计">四、不适用于 KHY 的设计<a class="anchor" href="#四-不适用于-khy-的设计" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>设计</th><th>项目</th><th>不采用原因</th></tr></thead><tbody><tr><td>Ink 全屏布局</td><td>Claude Code / Qwen Code</td><td>需要完全重写 REPL 架构</td></tr><tr><td>ratatui 帧率限制</td><td>DeepSeek</td><td>Rust 原生，不可移植到 Node</td></tr><tr><td>React Compiler <code>_c()</code></td><td>Claude Code</td><td>Ink 特有优化</td></tr><tr><td>CSS 伪元素光标</td><td>LibreChat</td><td>Web 专用</td></tr><tr><td>Bun.stringWidth / Bun.wrapAnsi</td><td>Claude Code</td><td>运行时特有</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-011] 三项目深度学习-2026-05-21.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 三项目深度学习报告 — UX 体验与产品交付能力</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-013] cc-对标-第六轮-2026-05-26.html"><div class="dir">下一篇 →</div><div class="ttl">KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-012] ai-显示-对标与对齐.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

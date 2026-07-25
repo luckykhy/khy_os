@@ -1,0 +1,10 @@
+{
+  "name": "create-mcp-server",
+  "description": "Scaffold a new MCP (Model Context Protocol) server project with TypeScript, tool definitions, and build configuration",
+  "user_invocable": true,
+  "trigger": "/create-mcp-server",
+  "aliases": ["/mcp"],
+  "category": "devops",
+  "tags": ["mcp", "server", "scaffold", "protocol", "tools"],
+  "platforms": ["khy-os"]
+}

@@ -1,0 +1,159 @@
+# 机器学习训练配置文件
+
+# 数据配置
+data:
+  # 训练数据路径
+  train_data_path: "./data/training_data.csv"
+  # 测试数据路径
+  test_data_path: "./data/test_data.csv"
+  # 历史数据天数（增加到3年）
+  history_days: 1095
+  # 训练集比例
+  train_ratio: 0.8
+  
+# 特征工程配置
+features:
+  # 技术指标
+  technical:
+    - ma5
+    - ma10
+    - ma20
+    - ma60
+    - macd
+    - macd_signal
+    - macd_hist
+    - rsi
+    - kdj_k
+    - kdj_d
+    - kdj_j
+    - boll_upper
+    - boll_middle
+    - boll_lower
+    - volume_ratio
+    - turnover_rate
+  
+  # 基本面指标
+  fundamental:
+    - pe_ratio
+    - pb_ratio
+    - roe
+    - debt_ratio
+    - profit_growth
+    - revenue_growth
+  
+  # 市场指标
+  market:
+    - market_cap
+    - float_cap
+    - industry_index
+    - market_sentiment
+
+# 模型配置
+models:
+  # 市场分析师 - 随机森林（增强版）
+  market_analyst:
+    type: "random_forest"
+    params:
+      n_estimators: 500  # 增加到500棵树
+      max_depth: 20      # 增加深度
+      min_samples_split: 5
+      min_samples_leaf: 2
+      random_state: 42
+      n_jobs: -1  # 使用所有CPU核心
+    
+  # 技术分析师 - XGBoost（增强版）
+  technical_analyst:
+    type: "xgboost"
+    params:
+      n_estimators: 500  # 增加到500
+      max_depth: 10      # 增加深度
+      learning_rate: 0.05  # 降低学习率，训练更慢但更准确
+      subsample: 0.8
+      colsample_bytree: 0.8
+      random_state: 42
+      n_jobs: -1
+  
+  # 基本面分析师 - LightGBM（增强版）
+  fundamental_analyst:
+    type: "lightgbm"
+    params:
+      n_estimators: 500  # 增加到500
+      max_depth: 15      # 增加深度
+      learning_rate: 0.05  # 降低学习率
+      num_leaves: 63     # 增加叶子数
+      random_state: 42
+      n_jobs: -1
+  
+  # 新闻分析师 - 朴素贝叶斯
+  news_analyst:
+    type: "naive_bayes"
+    params:
+      alpha: 1.0
+  
+  # 风险分析师 - 逻辑回归
+  risk_analyst:
+    type: "logistic_regression"
+    params:
+      C: 1.0
+      max_iter: 1000
+      random_state: 42
+      n_jobs: -1
+  
+  # 策略分析师 - 神经网络（深度版）
+  strategy_analyst:
+    type: "mlp"
+    params:
+      hidden_layer_sizes: [256, 128, 64, 32]  # 4层深度网络
+      activation: "relu"
+      solver: "adam"
+      alpha: 0.0001
+      batch_size: 32
+      learning_rate: "adaptive"
+      max_iter: 2000  # 增加到2000轮
+      random_state: 42
+      early_stopping: true
+      validation_fraction: 0.1
+
+# 训练配置
+training:
+  # 批次大小
+  batch_size: 1000
+  # 是否使用交叉验证
+  cross_validation: true
+  # 交叉验证折数
+  cv_folds: 5
+  # 早停轮数
+  early_stopping_rounds: 10
+  # 评估指标
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - auc
+
+# 增量学习配置
+incremental_learning:
+  # 是否启用增量学习
+  enabled: true
+  # 更新频率（天）
+  update_frequency: 7
+  # 保留历史数据天数
+  history_retention: 180
+  # 最小训练样本数
+  min_samples: 1000
+
+# 模型保存配置
+model_save:
+  # 模型保存路径
+  save_path: "./models"
+  # 是否保存训练历史
+  save_history: true
+  # 模型版本控制
+  versioning: true
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "./logs/training.log"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"

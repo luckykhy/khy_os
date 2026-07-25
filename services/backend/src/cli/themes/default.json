@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "name": "default",
+    "label": "Claude Dark",
+    "description": "Default Claude Code dark theme"
+  },
+  "colors": {
+    "claude": "#D77757",
+    "success": "#4EBA65",
+    "error": "#FF6B80",
+    "warning": "#FFC107",
+    "text": "#FFFFFF",
+    "secondaryText": "#A9A9A9",
+    "subtle": "#505050",
+    "bashBorder": "#6B7280",
+    "bashBg": "#2A2A2A",
+    "permission": "#FFC107",
+    "link": "#6495ED",
+    "diffAdded": "#225C2B",
+    "diffRemoved": "#7A2936",
+    "diffAddedDimmed": "#475E4A",
+    "diffRemovedDimmed": "#69484D",
+    "diffAddedWord": "#38A660",
+    "diffRemovedWord": "#B3596B",
+    "permissionPurple": "#B388FF",
+    "userMessageBg": "#262626"
+  },
+  "spinnerChars": {
+    "darwin": ["●", "✢", "✳", "✶", "✻", "✽"],
+    "fallback": ["●", "*", "+", "×", "+", "*"]
+  },
+  "thinkingVerbs": [
+    "Thinking", "Reasoning", "Inferring", "Analyzing", "Considering",
+    "Evaluating", "Reflecting", "Pondering", "Processing", "Pollinating"
+  ],
+  "phaseLabels": {
+    "init": "Initializing",
+    "security": "Security check",
+    "preprocess": "Preprocessing",
+    "request": "Thinking",
+    "thinking": "Thinking",
+    "analyzing": "Analyzing",
+    "generating": "Generating",
+    "tools": "Running tools",
+    "explore": "Searching",
+    "reading": "Reading",
+    "writing": "Writing",
+    "tool": "Running tool",
+    "done": "Done"
+  },
+  "toolDisplayNames": {
+    "bash": "Bash",
+    "shell": "Bash",
+    "shellcommand": "Bash",
+    "command": "Bash",
+    "read": "Read",
+    "readfile": "Read",
+    "write": "Write",
+    "writefile": "Write",
+    "createfile": "Write",
+    "edit": "Update",
+    "editfile": "Update",
+    "multiedit": "Update",
+    "notebookedit": "Update",
+    "glob": "Search",
+    "grep": "Search",
+    "find": "Search",
+    "findfiles": "Search",
+    "search": "Search",
+    "searchcontent": "Search",
+    "websearch": "Search",
+    "webfetch": "Fetch",
+    "todowrite": "Todo",
+    "notebookread": "Read",
+    "agent": "Agent",
+    "task": "Task",
+    "ls": "Search"
+  }
+}

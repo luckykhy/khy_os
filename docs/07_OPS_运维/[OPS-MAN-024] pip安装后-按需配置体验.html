@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip 安装后 — 按需配置体验 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>pip 安装后 — 按需配置体验</div>
+      <header class="hero reveal"><h1>pip 安装后 — 按需配置体验</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pip-安装后-按需配置体验">pip 安装后 — 按需配置体验</a></li><li class="lvl-2"><a href="#三步心法">三步心法</a></li><li class="lvl-2"><a href="#1-装完先验证-30-秒">1. 装完先验证（30 秒）</a></li><li class="lvl-2"><a href="#2-配置写在哪里-一次搞懂-后面都用得上">2. 配置写在哪里（一次搞懂，后面都用得上）</a></li><li class="lvl-2"><a href="#3-我想要-场景导航">3. 我想要……（场景导航）</a></li><li class="lvl-3"><a href="#a-零成本-全本地-ollama">A：零成本、全本地（Ollama）</a></li><li class="lvl-3"><a href="#b-接云端大模型-自定义-provider">B：接云端大模型（自定义 Provider）</a></li><li class="lvl-3"><a href="#c-复用已装的-ide-账号">C：复用已装的 IDE 账号</a></li><li class="lvl-3"><a href="#d-用-claude-code-但走-khy-网关">D：用 Claude Code，但走 KHY 网关</a></li><li class="lvl-3"><a href="#e-国内网络-代理-clash">E：国内网络 / 代理（Clash）</a></li><li class="lvl-3"><a href="#f-顶级模型解锁精简脚手架">F：顶级模型解锁精简脚手架</a></li><li class="lvl-3"><a href="#g-学习-khy-os-知识-learn-三模式">G：学习 KHY-OS 知识（/learn 三模式）</a></li><li class="lvl-3"><a href="#h-手机-局域网访问">H：手机 / 局域网访问</a></li><li class="lvl-3"><a href="#i-界面体验-全-tui-风格-语言">I：界面体验（全 TUI / 风格 / 语言）</a></li><li class="lvl-3"><a href="#j-多租户网关">J：多租户网关</a></li><li class="lvl-2"><a href="#4-组合示例-几种典型用户的最小配置">4. 组合示例（几种典型用户的最小配置）</a></li><li class="lvl-2"><a href="#5-配错了-没生效-怎么自查">5. 配错了 / 没生效？怎么自查</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-024 | 阶段: 运维 | 原路径: docs/指南/pip安装后-按需配置体验.md --&gt;</p>
+<h1 id="pip-安装后-按需配置体验">pip 安装后 — 按需配置体验<a class="anchor" href="#pip-安装后-按需配置体验" aria-label="锚点">#</a></h1>
+<blockquote><p>装完 <code>khy-os</code> 之后，<strong>你不需要把所有功能都配一遍</strong>。本指南按「你想要什么体验」来组织：找到你的场景，照着那一节配，其余跳过即可——这就是「按需所取」。</p></blockquote>
+<blockquote><p>📦 <strong>pip 安装后，先读哪篇？</strong></p>
+<table><thead><tr><th>你的目的</th><th>看这篇</th></tr></thead><tbody><tr><td>第一次装完，想最快跑起来</td><td><a href="%5BOPS-MAN-027%5D%20快速开始.html">快速开始</a></td></tr><tr><td>想按成长阶梯一步步进阶</td><td>[OPS-MAN-043] 从 0 到高手</td></tr><tr><td>想知道装完到底能干什么</td><td><a href="%5BOPS-MAN-023%5D%20pip安装后-完整功能清单.html">完整功能清单</a></td></tr><tr><td><strong>本文</strong></td><td>按场景的渐进式配置（每节自包含，可单独取用）</td></tr><tr><td>安装与运行的软硬件门槛</td><td>[OPS-MAN-028] 环境要求</td></tr><tr><td>还原源码树 / 自研内核全功能</td><td>[OPS-MAN-037] 完整还原与全功能开启</td></tr></tbody></table></blockquote>
+<hr>
+<h2 id="三步心法">三步心法<a class="anchor" href="#三步心法" aria-label="锚点">#</a></h2>
+<pre><code>①  验证        ②  选体验            ③  配一次
+khy preflight  →  从下面挑你要的场景  →  改 .env / 跑一条命令 → 立即生效</code></pre>
+<p>KHY-OS 的设计是<strong>离线即可用</strong>：什么都不配，<code>khy</code> 也能进交互界面、<code>/learn</code> 也能学。配置只是为了<strong>解锁你想要的那一种体验</strong>。不确定要什么？先跳到 <a href="#3-我想要场景导航">§3 我想要……（场景导航）</a> 的导航表。</p>
+<hr>
+<h2 id="1-装完先验证-30-秒">1. 装完先验证（30 秒）<a class="anchor" href="#1-装完先验证-30-秒" aria-label="锚点">#</a></h2>
+<p>四个命令名是<strong>同一个入口</strong>，随便用哪个都行：<code>khy</code> / <code>khy-os</code> / <code>khy-quant</code> / <code>khyquant</code>。</p>
+<pre><code class="language-bash">khy preflight     # 四层依赖体检：khy 在 PATH / Node≥20 / npm / 后端 node_modules / 全局 claude
+khy where         # 打印真实安装位置（Python 启动器 / bundle / backend 目录 / 依赖是否就绪）</code></pre>
+<ul><li><code>preflight</code> 退出码 <code>0</code> = 全过；有 <code>fail</code> 会<strong>打印可直接粘贴的修复命令</strong>。</li><li>首次跑 <code>khy</code>（非 <code>--help</code>/<code>--version</code>）会自动补齐 Node 依赖、生成 <code>.env</code>、初始化数据库——<strong>这一步无需手动</strong>。若想手动重跑自愈：<code>khy postinstall</code>（运行时依赖）/ <code>khy dev-setup</code>（开发工具链）。</li></ul>
+<blockquote><p>卡在依赖？<code>khy preflight</code> 的输出就是你的修复脚本。不用猜。</p></blockquote>
+<hr>
+<h2 id="2-配置写在哪里-一次搞懂-后面都用得上">2. 配置写在哪里（一次搞懂，后面都用得上）<a class="anchor" href="#2-配置写在哪里-一次搞懂-后面都用得上" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你改的东西</th><th>写到哪</th><th>怎么改</th><th>是否需重启</th></tr></thead><tbody><tr><td><strong>网关 / 模型 / Provider / Key</strong></td><td><code>backend/.env</code>（+ 镜像 <code>services/.env</code>）</td><td>优先用 <code>khy gateway config</code>（交互）或 <code>khy gateway add</code>（一条命令）——它们<strong>自动写 .env 并同步当前进程</strong></td><td>否，写入即生效</td></tr><tr><td><strong>路径 / 学习 / 界面类开关</strong></td><td>你自己的 shell（<code>export</code>）或 <code>backend/.env</code></td><td>直接 <code>export KHY_XXX=...</code> 或写进 <code>.env</code></td><td>shell 变量当场生效</td></tr><tr><td><strong>CLI / TUI 用户设置</strong></td><td><code>~/.khy/settings.json</code></td><td>交互界面里改，或编辑该文件</td><td>否</td></tr><tr><td><strong>网关 bearer token</strong></td><td><code>~/.khy/proxy_server_auth.json</code></td><td>自动生成；多租户在此扩展</td><td>—</td></tr><tr><td><strong>API Key 池 / 自定义 Provider 元数据</strong></td><td><code>~/.khyquant/api_keys.json</code>、<code>custom_providers.json</code></td><td>由 <code>khy gateway add</code> 写入</td><td>—</td></tr><tr><td><strong>国内代理 / Clash</strong></td><td><code>~/.khyquant/proxy.json</code></td><td>见 <a href="#e国内网络--代理clash">§3-E</a></td><td>—</td></tr></tbody></table>
+<p>要点：</p>
+<ul><li><strong>数据主目录</strong>优先 <code>~/.khy</code>（旧数据在 <code>~/.khyquant</code>）。想换位置：<code>export KHY_DATA_HOME=/your/path</code>。</li><li><strong>网关相关的 env 不必手改 .env</strong>——<code>khy gateway</code> 系列命令会替你写好并即时生效。手改 .env 适合「路径 / 学习 / 界面」这类开关。</li><li>想换 <code>.env</code> 文件路径：<code>export KHY_ENV_FILE=/path/to/.env</code>。</li></ul>
+<hr>
+<h2 id="3-我想要-场景导航">3. 我想要……（场景导航）<a class="anchor" href="#3-我想要-场景导航" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>我想要的体验</th><th>去这一节</th><th>一句话</th></tr></thead><tbody><tr><td>零成本、全本地、不联网、不花钱</td><td><a href="#a零成本全本地ollama">A</a></td><td>接本地 Ollama</td></tr><tr><td>接云端大模型（自带 API Key / 第三方中转）</td><td><a href="#b接云端大模型自定义-provider">B</a></td><td><code>khy gateway add</code> 一条命令</td></tr><tr><td>复用我电脑上已装的 IDE（Kiro/Cursor/Windsurf/Warp/Trae）</td><td><a href="#c复用已装的-ide-账号">C</a></td><td><code>khy gateway detect</code> 自动发现</td></tr><tr><td>想用 Claude Code，但走 KHY 网关</td><td><a href="#d用-claude-code-但走-khy-网关">D</a></td><td><code>khy claude</code></td></tr><tr><td>我在国内，网络要走代理</td><td><a href="#e国内网络--代理clash">E</a></td><td><code>~/.khyquant/proxy.json</code> 或 <code>HTTPS_PROXY</code></td></tr><tr><td>我用顶级模型（Opus/GPT-5…），想要精简脚手架</td><td><a href="#f顶级模型解锁精简脚手架">F</a></td><td><code>KHY_MODEL_TIER_MAP</code></td></tr><tr><td>我想系统学习 KHY-OS 自己的知识</td><td><a href="#g学习-khy-os-知识learn-三模式">G</a></td><td><code>/learn</code> 三模式</td></tr><tr><td>手机 / 局域网访问 Web 管理</td><td><a href="#h手机--局域网访问">H</a></td><td><code>khy mobile</code></td></tr><tr><td>调界面：全 TUI、输出风格、语言</td><td><a href="#i界面体验全-tui--风格--语言">I</a></td><td>几个 <code>KHY_</code> 开关</td></tr><tr><td>多人共用一套网关（多租户）</td><td><a href="#j多租户网关">J</a></td><td>per-user token + 账号池</td></tr></tbody></table>
+<blockquote><p>大多数人只需要 <strong>A 或 B 之一</strong> + 可能加 <strong>E</strong>（国内）。其余按需。</p></blockquote>
+<hr>
+<h3 id="a-零成本-全本地-ollama">A：零成本、全本地（Ollama）<a class="anchor" href="#a-零成本-全本地-ollama" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：不想花钱、不想联网、隐私优先。</p>
+<ol><li>装好 <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> 并拉一个模型，例如 <code>ollama pull qwen2.5:7b</code>。</li><li>让 KHY 指向它（默认就是本地 11434，多数情况无需配）：</li></ol>
+<pre><code class="language-bash">   export OLLAMA_HOST=http://localhost:11434
+   export OLLAMA_MODEL=qwen2.5:7b        # 不设则用内置默认</code></pre>
+<ol><li>让网关认到本地通道并按机器性能调参：</li></ol>
+<pre><code class="language-bash">   khy gateway detect        # 自动发现本地/已装通道
+   khy gateway tune-local auto apply   # 按本机能力调本地模型参数（可选）
+   khy gateway status        # 确认本地通道可用</code></pre>
+<p>之后 <code>khy</code> 交互、<code>khy -p &quot;...&quot;</code> 一次性问答全部走本地模型，<strong>零外网、零费用</strong>。</p>
+<hr>
+<h3 id="b-接云端大模型-自定义-provider">B：接云端大模型（自定义 Provider）<a class="anchor" href="#b-接云端大模型-自定义-provider" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：想要高质量回答，自带 OpenAI/Anthropic 兼容 Key 或第三方中转。</p>
+<p><strong>最快路径——一条命令</strong>（非交互，可写脚本）：</p>
+<pre><code class="language-bash">khy gateway add \
+  --name &quot;my-provider&quot; \
+  --base-url &quot;https://your-endpoint/v1&quot; \
+  --api-key &quot;sk-xxxx&quot; \
+  --model-id &quot;your-model-id&quot; \
+  --extra-models &quot;model-a,model-b&quot; \
+  --tier T0           # 顶级模型才设；普通模型省略</code></pre>
+<p>这条命令会自动：写入 Key 池（<code>~/.khyquant/api_keys.json</code>）+ Provider 元数据（<code>custom_providers.json</code>）+ 把路由/默认模型合并进 <code>.env</code>——<strong>立即可用，无需重启</strong>。</p>
+<p><strong>想要交互式引导</strong>（在终端里一步步选）：</p>
+<pre><code class="language-bash">khy gateway config        # 交互配置 API / 桥接通道（需要 TTY）
+khy gateway model         # 选当前默认模型
+khy gateway test my-provider   # 实测这条通道能否打通</code></pre>
+<p><strong>内置预设</strong>：自定义 Provider 自带 <strong>Agnes AI</strong> 预设（端点 <code>https://apihub.agnes-ai.com/v1</code>，默认 <code>agnes-2.0-flash</code>），<code>khy gateway config</code> 里可一键选用。详见 <a href="%5BOPS-MAN-032%5D%20网关-自定义provider配置-agnes.html">网关 — 自定义 provider 配置（Agnes）</a>。</p>
+<hr>
+<h3 id="c-复用已装的-ide-账号">C：复用已装的 IDE 账号<a class="anchor" href="#c-复用已装的-ide-账号" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：你电脑已装 Kiro / Cursor / Windsurf / Warp / Trae，想直接复用它们的登录态，不想再配 Key。</p>
+<pre><code class="language-bash">khy gateway detect        # 扫描已装 IDE，自动导入凭据
+khy gateway status        # 看哪些适配器实测通过
+khy gateway model         # 在可用通道里选模型</code></pre>
+<ul><li>多数 IDE 凭据从其安装目录<strong>自动导入</strong>，通常无需设 env。</li><li>若默认不允许复用导入的凭据，显式开启：<code>export KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS=1</code>。</li><li>微调单个适配器（以 Kiro 为例）：<code>KIRO_PROXY_URL</code> / <code>KIRO_AUTO_PROXY</code> / <code>KIRO_INJECT_CLAUDE_MODELS</code> 等；其余适配器同构。</li></ul>
+<hr>
+<h3 id="d-用-claude-code-但走-khy-网关">D：用 Claude Code，但走 KHY 网关<a class="anchor" href="#d-用-claude-code-但走-khy-网关" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：习惯 Claude Code 命令行，但想让它走 KHY 的本地代理 / 模型池。</p>
+<pre><code class="language-bash">khy claude --list           # 列出可选模型
+khy claude --model &lt;id&gt;     # 指定模型启动 Claude Code（自动起代理、注入代理 env）
+khy claude --hybrid         # 混合模式
+khy claude --hybrid-sub     # 混合子代理模式</code></pre>
+<ul><li>KHY <strong>默认不会改写</strong> <code>~/.claude/settings.json</code>，只在内存里注入代理环境变量。</li><li>若你确实想让 KHY 托管 settings.json：<code>export KHY_ALLOW_WRITE_CLAUDE_SETTINGS=1</code>（默认关，保守）。</li><li>四种使用模式与路由细节见 <a href="%5BOPS-MAN-004%5D%20claude-code-代理配置.html">Claude Code 代理配置</a>。</li></ul>
+<hr>
+<h3 id="e-国内网络-代理-clash">E：国内网络 / 代理（Clash）<a class="anchor" href="#e-国内网络-代理-clash" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：直连访问不稳，需要走代理。两种方式任选其一。</p>
+<p><strong>方式一——KHY 托管代理（推荐，搜索/抓取/网关统一走）</strong>：编辑 <code>~/.khyquant/proxy.json</code> 配好你的代理，启用后 KHY 会自动把 <code>HTTP(S)_PROXY</code> / <code>ALL_PROXY</code> / <code>NO_PROXY</code> 注入到所有出站请求（含浏览器搜索）。</p>
+<p><strong>方式二——标准环境变量</strong>：</p>
+<pre><code class="language-bash">export HTTPS_PROXY=http://127.0.0.1:7890   # Clash 默认端口示例
+export HTTP_PROXY=http://127.0.0.1:7890
+export NO_PROXY=localhost,127.0.0.1</code></pre>
+<p><strong>搜索路径开关</strong>（联网搜索体验）：</p>
+<pre><code class="language-bash">export KHY_SEARCH_MODE=auto       # auto=请求优先,空则浏览器 | request=只用请求 | playwright=强制浏览器</code></pre>
+<hr>
+<h3 id="f-顶级模型解锁精简脚手架">F：顶级模型解锁精简脚手架<a class="anchor" href="#f-顶级模型解锁精简脚手架" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：你用的是 frontier 模型（Opus 4.x / GPT-5 / Grok-4 / o3 等），希望少注入「教模型怎么做」的脚手架，让模型自由发挥。</p>
+<p>KHY 会按模型自动分级（T0 frontier → T3 weak），<strong>仅 T0 放松脚手架</strong>。多数知名 frontier 模型已自动识别为 T0。若你的模型 ID 没被自动识别（如自建中转改了名）：</p>
+<pre><code class="language-bash"># 逐模型指定档位（精确匹配模型 ID，大小写不敏感）
+export KHY_MODEL_TIER_MAP='{&quot;your-model-id&quot;:&quot;T0&quot;}'
+
+# 或全局强制一个档位（最高优先级，慎用）
+export KHY_CAPABILITY_TIER=T0</code></pre>
+<p>T0 效果：精简提示词（<code>lean</code>）、关闭「继续干」型 nudge、能力门 <code>warn</code> 而非 <code>hard</code>、放开思维强度。普通模型保持完整脚手架即可，无需配。</p>
+<blockquote><p>用 <code>khy gateway add ... --tier T0</code> 注册时即可一并设好，省去这一步。</p></blockquote>
+<hr>
+<h3 id="g-学习-khy-os-知识-learn-三模式">G：学习 KHY-OS 知识（/learn 三模式）<a class="anchor" href="#g-学习-khy-os-知识-learn-三模式" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：想系统理解 KHY-OS 自研内核、agent⇄OS 协同、网关等自有知识。<code>/learn</code> <strong>三种条件下都能学</strong>，形成知识闭环：</p>
+<table><thead><tr><th>模式</th><th>条件</th><th>你需要配什么</th><th>体验</th></tr></thead><tbody><tr><td><strong>模式 1</strong></td><td>本地、无网、无模型</td><td><strong>什么都不用配</strong></td><td>词法检索 + 离线交互，开箱即学</td></tr><tr><td><strong>模式 2</strong></td><td>有网、无模型</td><td><code>KHY_LEARN_DOCS_BASE_URL</code></td><td>自动补取本地缺失的文档再讲</td></tr><tr><td><strong>模式 3</strong></td><td>有网 + 有模型</td><td>模式2 基础上加 <code>KHY_LEARN_EMBED_URL</code></td><td>词法 + <strong>向量重排</strong>，AI 讲解，召回更准</td></tr></tbody></table>
+<pre><code class="language-bash"># 模式1：直接用，无需配
+learn            # 看课程层级
+learn 11         # 进入某一层（如「内核与 Agent 协同」）
+learn 11.8       # 进入具体知识点
+learn check      # 校验课程文件引用完整性
+
+# 模式2：联网补取缺失文档（远端按需配置，默认不开启 git 推导）
+export KHY_LEARN_DOCS_BASE_URL=&quot;https://your-raw-docs-base/&quot;
+
+# 模式3：开启向量重排，提高 RAG 召回（端点可达才生效，不可达自动降级到词法）
+export KHY_LEARN_EMBED_URL=&quot;http://localhost:11434/api/embeddings&quot;   # ollama 风格
+export KHY_LEARN_EMBED_MODEL=&quot;nomic-embed-text&quot;</code></pre>
+<p>进入 <code>/learn</code> 时顶部会打一行<strong>诚实的模式横幅</strong>（如「📡 模式3 · 有网络有模型 · 检索 N 段」），告诉你当前实际处于哪种模式。其余可调项（<code>KHY_LEARN_RAG</code> 总开关、<code>KHY_LEARN_TOPK</code> 片段数等）默认即合理，按需微调。</p>
+<blockquote><p>向量端点也可不单独配——若你已配好 KHY 网关，模式3 会自动复用网关的 <code>/v1/embeddings</code>。</p></blockquote>
+<hr>
+<h3 id="h-手机-局域网访问">H：手机 / 局域网访问<a class="anchor" href="#h-手机-局域网访问" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：想在手机或同局域网另一台机器上访问 KHY 的 Web 管理 / AI 网关页。</p>
+<pre><code class="language-bash">khy mobile               # 生成终端二维码，手机同局域网扫码即可访问（默认 /admin/ai-gateway）
+khy mobile 9090          # 指定端口
+khy mobile 0.0.0.0:9090  # 指定主机:端口</code></pre>
+<ul><li>默认管理端口 <code>9090</code>（<code>export KHY_DAEMON_PORT=9090</code> 可改）。</li><li><strong>改默认管理口令</strong>（安全起见建议设置）：<code>export KHY_ADMIN_PASSWORD='your-strong-password'</code>。</li><li>远程（公网/域名）部署见 <a href="%5BOPS-MAN-030%5D%20移动端远程指南.html">移动端远程指南</a> 与 <a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-016%5D%20部署指南-域名.html">部署指南</a>。</li></ul>
+<hr>
+<h3 id="i-界面体验-全-tui-风格-语言">I：界面体验（全 TUI / 风格 / 语言）<a class="anchor" href="#i-界面体验-全-tui-风格-语言" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">export KHY_FULL_TUI=1            # 默认开；=0 回退经典模式（某些未移植到 TUI 的高级命令需要经典模式）
+export KHY_OUTPUT_STYLE=senior-engineer   # 输出风格（默认资深工程师风）
+export KHY_LANGUAGE=zh           # 强制回复语言（留空=跟随上下文）</code></pre>
+<ul><li>遇到旧版权限弹窗需求：<code>export KHY_LEGACY_PERMISSION_UI=1</code>。</li><li>这些都是纯界面偏好，不影响模型/网关，随用随调。</li></ul>
+<hr>
+<h3 id="j-多租户网关">J：多租户网关<a class="anchor" href="#j-多租户网关" aria-label="锚点">#</a></h3>
+<p><strong>适合</strong>：一套 KHY 网关给多个用户/客户用，各自隔离 token 与账号。</p>
+<ul><li>每用户的网关凭据存 <code>~/.khy/proxy_server_auth.json</code>，账号配额走账号池（SQLite <code>account_pool_config</code>）。</li><li>管理与隔离能力在 Web 管理页（<code>khy gateway manage open --daemon</code>）操作。</li><li>详细架构见 <a href="%5BOPS-MAN-023%5D%20pip安装后-完整功能清单.html">pip 安装后 — 完整功能清单</a> 的「AI 网关与管理」小节。</li></ul>
+<hr>
+<h2 id="4-组合示例-几种典型用户的最小配置">4. 组合示例（几种典型用户的最小配置）<a class="anchor" href="#4-组合示例-几种典型用户的最小配置" aria-label="锚点">#</a></h2>
+<p><strong>① 极简离线党</strong>（不花钱、不联网）</p>
+<pre><code class="language-bash">export OLLAMA_MODEL=qwen2.5:7b
+khy gateway detect &amp;&amp; khy gateway status</code></pre>
+<p><strong>② 云端高质量党</strong>（自带顶级模型 Key）</p>
+<pre><code class="language-bash">khy gateway add --name pro --base-url https://ep/v1 --api-key sk-xxx --model-id big-model --tier T0
+khy gateway model</code></pre>
+<p><strong>③ 国内省心党</strong></p>
+<pre><code class="language-bash"># 编辑 ~/.khyquant/proxy.json 配好代理，或：
+export HTTPS_PROXY=http://127.0.0.1:7890
+export KHY_SEARCH_MODE=auto
+khy gateway add --name pro --base-url https://ep/v1 --api-key sk-xxx --model-id big-model</code></pre>
+<p><strong>④ Claude Code 党</strong></p>
+<pre><code class="language-bash">khy claude --list
+khy claude --model &lt;id&gt;</code></pre>
+<p><strong>⑤ 探索内核党</strong>（系统学 KHY-OS）</p>
+<pre><code class="language-bash">export KHY_LEARN_EMBED_URL=http://localhost:11434/api/embeddings   # 有 Ollama 时提升召回
+learn 11</code></pre>
+<hr>
+<h2 id="5-配错了-没生效-怎么自查">5. 配错了 / 没生效？怎么自查<a class="anchor" href="#5-配错了-没生效-怎么自查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现象</th><th>自查命令</th><th>说明</th></tr></thead><tbody><tr><td>不确定装在哪、依赖齐不齐</td><td><code>khy where</code> / <code>khy preflight</code></td><td>打印真实路径 + 依赖体检</td></tr><tr><td>模型不回应 / 通道报错</td><td><code>khy gateway status</code></td><td>看每条通道实测结果与失败原因</td></tr><tr><td>想看某次请求为什么偏航</td><td><code>khy gateway status --json</code> / <code>khy gateway trace &lt;requestId&gt;</code></td><td>回查首段与最终答复</td></tr><tr><td>通道实测失败</td><td><code>khy gateway test &lt;adapter&gt;</code></td><td>单独复测一条通道</td></tr><tr><td><code>/learn</code> 不知处于哪种模式</td><td>进 <code>learn</code> 看顶部<strong>模式横幅</strong></td><td>如实显示模式1/2/3 与是否用了向量</td></tr><tr><td>改了 env 没生效</td><td>用 <code>khy gateway</code> 系列命令改（自动同步进程）；shell <code>export</code> 需在同一会话</td><td>网关 env 别只手改 .env</td></tr></tbody></table>
+<p><strong>核心原则</strong>：KHY 的状态都是<strong>如实显示</strong>的——<code>preflight</code>/<code>gateway status</code>/学习模式横幅都不会假装成功。看它们的真实输出，按提示修。</p>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="%5BOPS-MAN-027%5D%20快速开始.html">快速开始 — 安装与使用</a>：第一次装的总流程</li><li><a href="%5BOPS-MAN-023%5D%20pip安装后-完整功能清单.html">pip 安装后 — 完整功能清单</a>：功能逐项参考手册</li><li><a href="%5BOPS-MAN-022%5D%20pip-安装布局参考.html">pip — 安装布局参考</a>：安装目录结构与源码映射</li><li><a href="%5BOPS-MAN-032%5D%20网关-自定义provider配置-agnes.html">网关 — 自定义 provider 配置（Agnes）</a></li><li><a href="%5BOPS-MAN-004%5D%20claude-code-代理配置.html">Claude Code 代理配置</a></li><li><a href="%5BOPS-MAN-030%5D%20移动端远程指南.html">移动端远程指南</a> / <a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-016%5D%20部署指南-域名.html">部署指南 — 域名</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-023] pip安装后-完整功能清单.html"><div class="dir">← 上一篇</div><div class="ttl">pip 安装后：开启完整功能清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-025] windows-vmware-清单.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS Windows 构建 + VMware 交付指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-024] pip安装后-按需配置体验.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

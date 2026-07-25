@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSeek-TUI 对齐 — khy 对齐清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>DeepSeek-TUI 对齐 — khy 对齐清单</div>
+      <header class="hero reveal"><h1>DeepSeek-TUI 对齐 — khy 对齐清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#deepseek-tui-对齐-khy-对齐清单">DeepSeek-TUI 对齐 — khy 对齐清单</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#a1-3-检查点容量流程-p0">A1 — 3 检查点容量流程 [P0]</a></li><li class="lvl-3"><a href="#deepseek-方案">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态">khy 当前状态</a></li><li class="lvl-3"><a href="#差距">差距</a></li><li class="lvl-3"><a href="#实现">实现</a></li><li class="lvl-3"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#b6-接缝管理器-p0-新增">B6 — 接缝管理器 [P0] — 新增</a></li><li class="lvl-3"><a href="#deepseek-方案-2">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-2">khy 当前状态</a></li><li class="lvl-3"><a href="#差距-2">差距</a></li><li class="lvl-3"><a href="#实现-2">实现</a></li><li class="lvl-3"><a href="#验证-2">验证</a></li><li class="lvl-2"><a href="#a2-循环守卫规范化哈希-p1">A2 — 循环守卫规范化哈希 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-3">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-3">khy 当前状态</a></li><li class="lvl-3"><a href="#差距-3">差距</a></li><li class="lvl-3"><a href="#实现-3">实现</a></li><li class="lvl-3"><a href="#验证-3">验证</a></li><li class="lvl-2"><a href="#a3-一致性状态机-p1">A3 — 一致性状态机 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-4">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-4">khy 当前状态</a></li><li class="lvl-3"><a href="#实现-4">实现</a></li><li class="lvl-3"><a href="#验证-4">验证</a></li><li class="lvl-2"><a href="#b7-周期边界-p1">B7 — 周期边界 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-5">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-5">khy 当前状态</a></li><li class="lvl-3"><a href="#实现-5">实现</a></li><li class="lvl-3"><a href="#验证-5">验证</a></li><li class="lvl-2"><a href="#b8-压缩固定策略增强-p1">B8 — 压缩固定策略增强 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-6">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-6">khy 当前状态</a></li><li class="lvl-3"><a href="#实现-6">实现</a></li><li class="lvl-3"><a href="#验证-6">验证</a></li><li class="lvl-2"><a href="#c10-安全解包工具-p1">C10 — 安全解包工具 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-7">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-7">khy 当前状态</a></li><li class="lvl-3"><a href="#实现-7">实现</a></li><li class="lvl-3"><a href="#验证-7">验证</a></li><li class="lvl-2"><a href="#d12-规范化状态快照增强-p1">D12 — 规范化状态快照增强 [P1]</a></li><li class="lvl-3"><a href="#deepseek-方案-8">DeepSeek 方案</a></li><li class="lvl-3"><a href="#khy-当前状态-8">khy 当前状态</a></li><li class="lvl-3"><a href="#实现-8">实现</a></li><li class="lvl-3"><a href="#验证-8">验证</a></li><li class="lvl-2"><a href="#p2-项目-延后">P2 项目（延后）</a></li><li class="lvl-3"><a href="#a4-并行-串行工具批处理">A4 — 并行/串行工具批处理</a></li><li class="lvl-3"><a href="#a5-子代理完成排空">A5 — 子代理完成排空</a></li><li class="lvl-3"><a href="#b9-自动推理力度选择">B9 — 自动推理力度选择</a></li><li class="lvl-3"><a href="#c11-技能安装管线">C11 — 技能安装管线</a></li><li class="lvl-3"><a href="#d13-智能工具截断">D13 — 智能工具截断</a></li><li class="lvl-2"><a href="#变更日志">变更日志</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-001 | 阶段: 项目管理 | 原路径: docs/deepseek-tui-对标.md --&gt;</p>
+<h1 id="deepseek-tui-对齐-khy-对齐清单">DeepSeek-TUI 对齐 — khy 对齐清单<a class="anchor" href="#deepseek-tui-对齐-khy-对齐清单" aria-label="锚点">#</a></h1>
+<blockquote><p>来源: <code>DeepSeek-TUI-main.zip</code> (Rust, ratatui TUI)<br>日期: 2026-05-18<br>状态: <strong>12/13 完成</strong> (C11 延后)</p></blockquote>
+<hr>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>DeepSeek-TUI 是一个 Rust 实现的终端 AI 编程助手，其引擎层在任务完成率、上下文管理和安全解包方面有成熟设计。本文档记录 khy 逐项对齐的 13 个学习项。</p>
+<table><thead><tr><th>优先级</th><th>ID</th><th>项目</th><th>khy 状态</th><th>目标</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>A1</td><td>3 检查点容量流程</td><td><strong>完成</strong></td><td>三点分级</td></tr><tr><td><strong>P0</strong></td><td>B6</td><td>接缝管理器（前缀缓存）</td><td><strong>完成</strong></td><td>4 级仅追加</td></tr><tr><td>P1</td><td>A2</td><td>循环守卫规范化哈希</td><td><strong>完成</strong></td><td>键排序 + 警告/中止</td></tr><tr><td>P1</td><td>A3</td><td>一致性状态机</td><td><strong>完成</strong></td><td>5 状态 UX 阶梯</td></tr><tr><td>P1</td><td>B7</td><td>周期边界</td><td><strong>完成</strong></td><td>Token 触发的周期</td></tr><tr><td>P1</td><td>B8</td><td>压缩固定策略</td><td><strong>完成</strong></td><td>工作集感知</td></tr><tr><td>P1</td><td>C10</td><td>安全解包工具</td><td><strong>完成</strong></td><td>带安全校验的两遍处理</td></tr><tr><td>P1</td><td>D12</td><td>规范化状态快照</td><td><strong>完成</strong></td><td>6 维度 schema</td></tr><tr><td>P2</td><td>A4</td><td>并行/串行批处理</td><td><strong>完成</strong>（已有）</td><td>自动分类批次</td></tr><tr><td>P2</td><td>A5</td><td>子代理完成排空</td><td><strong>完成</strong>（已有）</td><td>父级等待语义</td></tr><tr><td>P2</td><td>B9</td><td>自动推理力度</td><td><strong>完成</strong></td><td>关键词驱动，支持中日韩</td></tr><tr><td>P2</td><td>C11</td><td>技能安装管线</td><td>延后</td><td>URL → 校验 → 安装</td></tr><tr><td>P2</td><td>D13</td><td>智能工具截断</td><td><strong>完成</strong></td><td>按工具的噪声分类</td></tr></tbody></table>
+<hr>
+<h2 id="a1-3-检查点容量流程-p0">A1 — 3 检查点容量流程 [P0]<a class="anchor" href="#a1-3-检查点容量流程-p0" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案">DeepSeek 方案<a class="anchor" href="#deepseek-方案" aria-label="锚点">#</a></h3>
+<p>在轮次循环中设置三个检查点，进行分级干预：</p>
+<table><thead><tr><th>检查点</th><th>时机</th><th>动作</th></tr></thead><tbody><tr><td>Pre-request</td><td>API 调用前</td><td><code>TargetedContextRefresh</code> — 裁剪最旧的消息</td></tr><tr><td>Post-tool</td><td>工具执行后</td><td><code>VerifyWithToolReplay</code> 或 <code>VerifyAndReplan</code></td></tr><tr><td>Error-escalation</td><td>连续失败时</td><td><code>VerifyAndReplan</code> — 重置到规范化状态</td></tr></tbody></table>
+<p>关键点：每个检查点观察上下文压力并返回一个 <code>CapacityDecision</code> 枚举。</p>
+<h3 id="khy-当前状态">khy 当前状态<a class="anchor" href="#khy-当前状态" aria-label="锚点">#</a></h3>
+<ul><li><code>contextWindowGuard.js</code>（164 行）：单点检查，含两级阈值（10%/20%）</li><li>无工具后检查点</li><li>无错误升级检查点</li><li>无分级干预动作</li></ul>
+<h3 id="差距">差距<a class="anchor" href="#差距" aria-label="锚点">#</a></h3>
+<ul><li>缺失 3 个检查点中的 2 个（工具后、错误升级）</li><li>无干预动作系统（仅 prune/warn）</li><li>无驱动状态的容量决策枚举</li></ul>
+<h3 id="实现">实现<a class="anchor" href="#实现" aria-label="锚点">#</a></h3>
+<ul><li><strong>新文件</strong>: <code>backend/src/services/capacityFlow.js</code><ul><li><code>preRequestCheckpoint(ctx)</code> → 观察压力，返回决策</li><li><code>postToolCheckpoint(ctx)</code> → 工具执行后，检测高风险</li><li><code>errorEscalationCheckpoint(ctx)</code> → 连续错误时升级</li><li><code>CapacityDecision</code> 枚举: <code>None | TargetedRefresh | VerifyReplay | VerifyReplan</code></li></ul></li><li><strong>修改</strong>: <code>backend/src/services/toolUseLoop.js</code><ul><li>在主循环的 3 个位置插入检查点调用</li></ul></li></ul>
+<h3 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h3>
+<ul><li>单元测试：在模拟压力下，每个检查点返回正确决策</li><li>集成测试：capacityFlow 在 toolUseLoop 中触发且无回归</li></ul>
+<hr>
+<h2 id="b6-接缝管理器-p0-新增">B6 — 接缝管理器 [P0] — 新增<a class="anchor" href="#b6-接缝管理器-p0-新增" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-2">DeepSeek 方案<a class="anchor" href="#deepseek-方案-2" aria-label="锚点">#</a></h3>
+<p>仅追加的上下文归档，以保护前缀缓存（128-token 粒度，90% 折扣）：</p>
+<table><thead><tr><th>级别</th><th>Token 阈值</th><th>摘要密度</th><th>模型</th></tr></thead><tbody><tr><td>L1</td><td>192K</td><td>~2,500 tokens</td><td>Flash</td></tr><tr><td>L2</td><td>384K</td><td>~1,800 tokens</td><td>Flash</td></tr><tr><td>L3</td><td>576K</td><td>~1,200 tokens</td><td>Flash</td></tr><tr><td>Cycle</td><td>768K</td><td>≤3K（简报）</td><td>Main</td></tr></tbody></table>
+<p>规则：</p>
+<ul><li><strong>绝不重写</strong>已有消息（仅追加 <code>&lt;archived_context&gt;</code> 块）</li><li><strong>逐字窗口</strong>：最近 16 个轮次永不摘要</li><li>更高级别的接缝将先前摘要合并为更密集的块</li></ul>
+<h3 id="khy-当前状态-2">khy 当前状态<a class="anchor" href="#khy-当前状态-2" aria-label="锚点">#</a></h3>
+<ul><li><code>promptCacheService.js</code>（445 行）：用于子代理的共享提示缓存（LRU，基于 TTL）</li><li>无接缝概念，无仅追加归档，无前缀缓存保护</li></ul>
+<h3 id="差距-2">差距<a class="anchor" href="#差距-2" aria-label="锚点">#</a></h3>
+<ul><li>完全缺失接缝级上下文管理</li><li>无前缀缓存粒度意识</li><li>无多级渐进式摘要</li></ul>
+<h3 id="实现-2">实现<a class="anchor" href="#实现-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>新文件</strong>: <code>backend/src/services/seamManager.js</code><ul><li>阈值按 khy 典型模型缩放（48K/96K/144K/192K）</li><li><code>checkSeam(activeTokens)</code> → 返回级别 + 待归档的消息范围</li><li><code>archiveMessages(messages, level, summarizeFn)</code> → 追加 <code>&lt;archived_context&gt;</code> 块</li><li>逐字窗口：保护最近 8 个轮次</li><li>与 <code>promptCacheService.js</code> 的集成钩子</li></ul></li></ul>
+<h3 id="验证-2">验证<a class="anchor" href="#验证-2" aria-label="锚点">#</a></h3>
+<ul><li>单元测试：接缝在正确的阈值处触发</li><li>手动测试：注入消息，验证归档块出现</li></ul>
+<hr>
+<h2 id="a2-循环守卫规范化哈希-p1">A2 — 循环守卫规范化哈希 [P1]<a class="anchor" href="#a2-循环守卫规范化哈希-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-3">DeepSeek 方案<a class="anchor" href="#deepseek-方案-3" aria-label="锚点">#</a></h3>
+<ul><li>规范化 JSON 哈希：哈希前递归排序对象键</li><li>相同调用检测：第 3 次相同调用时阻断</li><li>失败计数器：3 次时警告，8 次时中止</li></ul>
+<h3 id="khy-当前状态-3">khy 当前状态<a class="anchor" href="#khy-当前状态-3" aria-label="锚点">#</a></h3>
+<ul><li><code>toolLoopDetector.js</code>（527 行）：8 检测器系统，FNV-1a 哈希</li><li><code>genericRepeat</code>: warn@5, critical@8</li><li>未记录规范化键排序</li></ul>
+<h3 id="差距-3">差距<a class="anchor" href="#差距-3" aria-label="锚点">#</a></h3>
+<ul><li>哈希可能不是键序无关的（需验证）</li><li>阈值比 DeepSeek 更宽松（5/8 对比 3/8）</li></ul>
+<h3 id="实现-3">实现<a class="anchor" href="#实现-3" aria-label="锚点">#</a></h3>
+<ul><li>添加 <code>_canonicalHash(params)</code>，在 FNV-1a 之前递归排序键</li><li>将 <code>genericRepeat</code> 警告阈值从 5 降至 3（针对相同调用）</li><li>保持 critical 阈值为 8（与 DeepSeek 一致）</li></ul>
+<h3 id="验证-3">验证<a class="anchor" href="#验证-3" aria-label="锚点">#</a></h3>
+<ul><li>单元测试：<code>{a:1,b:2}</code> 与 <code>{b:2,a:1}</code> 产生相同哈希</li></ul>
+<hr>
+<h2 id="a3-一致性状态机-p1">A3 — 一致性状态机 [P1]<a class="anchor" href="#a3-一致性状态机-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-4">DeepSeek 方案<a class="anchor" href="#deepseek-方案-4" aria-label="锚点">#</a></h3>
+<p>反映会话健康度的 5 状态 UX 阶梯：</p>
+<pre><code>Healthy → GettingCrowded → RefreshingContext → VerifyingRecentWork → ResettingPlan</code></pre>
+<p>转换由容量检查点驱动。</p>
+<h3 id="khy-当前状态-4">khy 当前状态<a class="anchor" href="#khy-当前状态-4" aria-label="锚点">#</a></h3>
+<ul><li>无一致性状态概念</li><li>无会话健康度可视化</li></ul>
+<h3 id="实现-4">实现<a class="anchor" href="#实现-4" aria-label="锚点">#</a></h3>
+<ul><li><strong>新文件</strong>: <code>backend/src/services/coherenceState.js</code><ul><li>枚举: <code>HEALTHY | GETTING_CROWDED | REFRESHING | VERIFYING | RESETTING</code></li><li><code>transition(event)</code> — 容量事件驱动状态变更</li><li><code>getState()</code> → 当前状态，供 UI 渲染</li></ul></li><li><strong>修改</strong>: <code>backend/src/cli/aiRenderer.js</code> — 在状态行显示一致性</li></ul>
+<h3 id="验证-4">验证<a class="anchor" href="#验证-4" aria-label="锚点">#</a></h3>
+<ul><li>状态转换与容量流程事件匹配</li></ul>
+<hr>
+<h2 id="b7-周期边界-p1">B7 — 周期边界 [P1]<a class="anchor" href="#b7-周期边界-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-5">DeepSeek 方案<a class="anchor" href="#deepseek-方案-5" aria-label="锚点">#</a></h3>
+<p>在 768K 活跃 token 时 → 周期边界：</p>
+<ol><li>自动保留层：系统提示、工作区、待办、工作集</li><li>模型整理的简报：≤3K tokens 的决策/约束/假设</li><li>归档：上一周期消息保存为 JSONL</li></ol>
+<h3 id="khy-当前状态-5">khy 当前状态<a class="anchor" href="#khy-当前状态-5" aria-label="锚点">#</a></h3>
+<ul><li><code>contextCompressor.js</code>（502 行）：在 70% 使用率时进行 4 阶段压缩</li><li>无显式周期边界概念</li></ul>
+<h3 id="实现-5">实现<a class="anchor" href="#实现-5" aria-label="锚点">#</a></h3>
+<ul><li>在 <code>contextCompressor.js</code> 中添加 <code>triggerCycleBoundary(messages, opts)</code></li><li>Token 阈值：192K（khy 典型）— 可通过 <code>KHY_CYCLE_THRESHOLD_TOKENS</code> 配置</li><li>3 层结转协议</li><li>将上一周期归档到 <code>~/.khyquant/cycles/</code></li></ul>
+<h3 id="验证-5">验证<a class="anchor" href="#验证-5" aria-label="锚点">#</a></h3>
+<ul><li>模拟 token 数超过阈值 → 周期触发</li></ul>
+<hr>
+<h2 id="b8-压缩固定策略增强-p1">B8 — 压缩固定策略增强 [P1]<a class="anchor" href="#b8-压缩固定策略增强-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-6">DeepSeek 方案<a class="anchor" href="#deepseek-方案-6" aria-label="锚点">#</a></h3>
+<p>固定策略：</p>
+<ul><li>最近 N 条消息（默认 4）</li><li>提及工作集路径的消息（src/..., Cargo.toml）</li><li>错误/补丁消息（error:, panic, diff --git）</li><li>强制工具调用配对（不动点循环）</li><li>去重：保留最新的完整结果，将较早的替换为单行摘要</li></ul>
+<h3 id="khy-当前状态-6">khy 当前状态<a class="anchor" href="#khy-当前状态-6" aria-label="锚点">#</a></h3>
+<ul><li>保护最近 2 个工具轮次、系统消息、最近消息</li><li>无工作集感知固定</li><li>无错误消息固定</li><li>无去重</li></ul>
+<h3 id="实现-6">实现<a class="anchor" href="#实现-6" aria-label="锚点">#</a></h3>
+<ul><li>在 <code>findCompressSplitPoint</code> 中添加 <code>_isWorkingSetMention(message, workingSet)</code> 检查</li><li>添加 <code>_isErrorMessage(message)</code> 检查（匹配 error, panic, FAIL, diff --git 模式）</li><li>添加 <code>_deduplicateToolResults(messages)</code> — 保留最新，将先前的替换为摘要</li></ul>
+<h3 id="验证-6">验证<a class="anchor" href="#验证-6" aria-label="锚点">#</a></h3>
+<ul><li>单元测试：含文件路径和错误模式的消息在压缩后保留</li></ul>
+<hr>
+<h2 id="c10-安全解包工具-p1">C10 — 安全解包工具 [P1]<a class="anchor" href="#c10-安全解包工具-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-7">DeepSeek 方案<a class="anchor" href="#deepseek-方案-7" aria-label="锚点">#</a></h3>
+<p><code>skills/install.rs</code> 中的两遍归档解压：</p>
+<ul><li><strong>第 1 遍（扫描）</strong>：校验结构、定位 manifest、检查大小、拒绝符号链接/路径穿越</li><li><strong>第 2 遍（解压）</strong>：安全写入临时目录，原子重命名</li></ul>
+<p>安全：<code>is_safe_path()</code> 拒绝 <code>..</code>、绝对路径、符号链接。5 MiB 限制。</p>
+<h3 id="khy-当前状态-7">khy 当前状态<a class="anchor" href="#khy-当前状态-7" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/tools/unpackTool.js</code> 存在（未跟踪）— 需检查内容</li><li>否则依赖 shell 命令</li></ul>
+<h3 id="实现-7">实现<a class="anchor" href="#实现-7" aria-label="锚点">#</a></h3>
+<ul><li><strong>新建/更新文件</strong>: <code>backend/src/tools/unpackTool.js</code><ul><li><code>scanArchive(buffer, type)</code> → 校验结构，返回 manifest</li><li><code>extractArchive(buffer, destDir, opts)</code> → 安全解压</li><li>路径安全：拒绝 <code>..</code>、绝对路径、符号链接</li><li>大小限制：10 MiB（可配置）</li><li>支持：.zip, .tar.gz, .tar</li><li>分阶段：先解压到临时目录，成功后原子重命名</li></ul></li></ul>
+<h3 id="验证-7">验证<a class="anchor" href="#验证-7" aria-label="锚点">#</a></h3>
+<ul><li>单元测试：阻断路径穿越尝试</li><li>单元测试：拒绝超大归档</li></ul>
+<hr>
+<h2 id="d12-规范化状态快照增强-p1">D12 — 规范化状态快照增强 [P1]<a class="anchor" href="#d12-规范化状态快照增强-p1" aria-label="锚点">#</a></h2>
+<h3 id="deepseek-方案-8">DeepSeek 方案<a class="anchor" href="#deepseek-方案-8" aria-label="锚点">#</a></h3>
+<p>6 维度规范化状态：</p>
+<ol><li><strong>Goal</strong>：最近用户消息摘要</li><li><strong>Constraints</strong>：模型、工作区、笔记</li><li><strong>Confirmed facts</strong>：最近 4 个成功的工具结果</li><li><strong>Open loops</strong>：失败的工具调用（最近 4 个）</li><li><strong>Pending actions</strong>：后续步骤</li><li><strong>Critical refs</strong>：前 8 个文件路径 + 最近工具 ID</li></ol>
+<p>持久化到磁盘，崩溃时可恢复。</p>
+<h3 id="khy-当前状态-8">khy 当前状态<a class="anchor" href="#khy-当前状态-8" aria-label="锚点">#</a></h3>
+<ul><li><code>checkpointService.js</code> 存在 — 需验证 schema</li></ul>
+<h3 id="实现-8">实现<a class="anchor" href="#实现-8" aria-label="锚点">#</a></h3>
+<ul><li>定义含 6 维度的 <code>CanonicalState</code> schema</li><li>在周期边界和崩溃恢复时构建快照</li><li>持久化到 <code>~/.khyquant/canonical_state.json</code></li></ul>
+<h3 id="验证-8">验证<a class="anchor" href="#验证-8" aria-label="锚点">#</a></h3>
+<ul><li>快照捕获全部 6 个维度</li><li>崩溃恢复还原最近一次有效快照</li></ul>
+<hr>
+<h2 id="p2-项目-延后">P2 项目（延后）<a class="anchor" href="#p2-项目-延后" aria-label="锚点">#</a></h2>
+<h3 id="a4-并行-串行工具批处理">A4 — 并行/串行工具批处理<a class="anchor" href="#a4-并行-串行工具批处理" aria-label="锚点">#</a></h3>
+<p>按只读 + 无需审批分类工具 → 自动并行分块。</p>
+<h3 id="a5-子代理完成排空">A5 — 子代理完成排空<a class="anchor" href="#a5-子代理完成排空" aria-label="锚点">#</a></h3>
+<p>父级轮次保持开启，直到所有子级完成。</p>
+<h3 id="b9-自动推理力度选择">B9 — 自动推理力度选择<a class="anchor" href="#b9-自动推理力度选择" aria-label="锚点">#</a></h3>
+<p>关键词驱动的层级（low/high/max），支持中日韩。</p>
+<h3 id="c11-技能安装管线">C11 — 技能安装管线<a class="anchor" href="#c11-技能安装管线" aria-label="锚点">#</a></h3>
+<p>下载 → 扫描 → 解压 → 注册流程。</p>
+<h3 id="d13-智能工具截断">D13 — 智能工具截断<a class="anchor" href="#d13-智能工具截断" aria-label="锚点">#</a></h3>
+<p>按工具的噪声分类，含硬/软双重限制。</p>
+<hr>
+<h2 id="变更日志">变更日志<a class="anchor" href="#变更日志" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>项目</th><th>状态</th></tr></thead><tbody><tr><td>2026-05-18</td><td>文档创建</td><td>完成</td></tr><tr><td>2026-05-18</td><td>A1 capacityFlow.js</td><td>完成</td></tr><tr><td>2026-05-18</td><td>B6 seamManager.js</td><td>完成</td></tr><tr><td>2026-05-18</td><td>A2 toolLoopDetector warn@3</td><td>完成</td></tr><tr><td>2026-05-18</td><td>A3 coherenceState.js</td><td>完成</td></tr><tr><td>2026-05-18</td><td>B7 contextCompressor 中的周期边界</td><td>完成</td></tr><tr><td>2026-05-18</td><td>B8 contextCompressor 中的工作集固定 + 去重</td><td>完成</td></tr><tr><td>2026-05-18</td><td>C10 unpackTool.js 安全守卫</td><td>完成</td></tr><tr><td>2026-05-18</td><td>D12 canonicalState.js</td><td>完成</td></tr><tr><td>2026-05-18</td><td>A4 并行批处理（已在 concurrencyLimiter 中）</td><td>完成（已有）</td></tr><tr><td>2026-05-18</td><td>A5 子代理排空（已在 workerAgent 中）</td><td>完成（已有）</td></tr><tr><td>2026-05-18</td><td>B9 autoReasoning.js</td><td>完成</td></tr><tr><td>2026-05-18</td><td>C11 技能安装管线</td><td>延后</td></tr><tr><td>2026-05-18</td><td>D13 smartTruncation.js + toolUseLoop 集成</td><td>完成</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-007] Khy-OS远景演进路线图-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-002] khy-对比-desirecore-借鉴分析.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-001] deepseek-tui-对标.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

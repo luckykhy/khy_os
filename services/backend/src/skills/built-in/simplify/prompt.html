@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Simplification Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>simplify<span class="sep">›</span>Code Simplification Skill</div>
+      <header class="hero reveal"><h1>Code Simplification Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#code-simplification-skill">Code Simplification Skill</a></li><li class="lvl-2"><a href="#procedure">Procedure</a></li><li class="lvl-2"><a href="#constraints">Constraints</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="code-simplification-skill">Code Simplification Skill<a class="anchor" href="#code-simplification-skill" aria-label="锚点">#</a></h1>
+<p>Review recently changed code for opportunities to improve reuse, quality, and efficiency. Then apply the improvements.</p>
+<h2 id="procedure">Procedure<a class="anchor" href="#procedure" aria-label="锚点">#</a></h2>
+<ol><li><strong>Identify changes</strong>:<ul><li>Run <code>git diff HEAD</code> to see all uncommitted changes.</li><li>If no uncommitted changes, run <code>git diff HEAD~1</code> to review the last commit.</li><li>Read the changed files in full to understand context.</li></ul></li></ol>
+<ol><li><strong>Analyze for improvements</strong>:<ul><li><strong>Duplication</strong>: Look for repeated logic that can be extracted into shared functions or utilities.</li><li><strong>Complexity</strong>: Identify overly nested conditionals, long functions, or convoluted control flow.</li><li><strong>Naming</strong>: Flag unclear variable or function names that obscure intent.</li><li><strong>Dead code</strong>: Find unused imports, unreachable branches, or commented-out code.</li><li><strong>Error handling</strong>: Check for swallowed errors, missing edge cases, or inconsistent error patterns.</li><li><strong>Performance</strong>: Spot unnecessary allocations, redundant computations, or missing early returns.</li><li><strong>Security</strong>: Identify potential injection points, unvalidated inputs, or exposed secrets.</li></ul></li></ol>
+<ol><li><strong>Prioritize</strong>:<ul><li>Fix correctness issues first.</li><li>Then address clarity and maintainability.</li><li>Performance last (unless a clear bottleneck).</li></ul></li></ol>
+<ol><li><strong>Apply fixes</strong>:<ul><li>Make targeted edits using the Edit tool. Do not rewrite entire files.</li><li>Preserve existing code style (indentation, quotes, semicolons).</li><li>Add brief comments only where the &quot;why&quot; is non-obvious.</li></ul></li></ol>
+<ol><li><strong>Report</strong>:<ul><li>Summarize what was changed and why.</li><li>List any issues found but intentionally left unchanged (with reasoning).</li></ul></li></ol>
+<h2 id="constraints">Constraints<a class="anchor" href="#constraints" aria-label="锚点">#</a></h2>
+<ul><li>Do not change public API signatures without explicit approval.</li><li>Do not introduce new dependencies.</li><li>Keep refactoring scope limited to the changed files and their direct callers.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/shipping-and-launch/references/security-checklist.html"><div class="dir">← 上一篇</div><div class="ttl">Security Checklist</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/skillify/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Skillify — Conversation to Skill Converter</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/simplify/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "engine": "@muyajs/core@0.2.0",
+  "totalBytes": 11028959,
+  "files": [
+    {
+      "file": "khyos-muya.js",
+      "bytes": 6439218
+    },
+    {
+      "file": "khyos-muya.css",
+      "bytes": 4589741
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑥ 什么是 LLM（大语言模型） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑥ 什么是 LLM（大语言模型）</div>
+      <header class="hero reveal"><h1>⑥ 什么是 LLM（大语言模型）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑥-什么是-llm-大语言模型">⑥ 什么是 LLM（大语言模型）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-核心机理白话版-它只会-接龙">二、核心机理白话版：它只会&quot;接龙&quot;</a></li><li class="lvl-2"><a href="#三-为什么-只会猜下一个词-却显得很聪明">三、为什么&quot;只会猜下一个词&quot;却显得很聪明？</a></li><li class="lvl-2"><a href="#四-参数-训练-预训练-白话拆解">四、参数、训练、预训练——白话拆解</a></li><li class="lvl-2"><a href="#五-幻觉-hallucination-它会一本正经地胡说">五、幻觉（hallucination）：它会一本正经地胡说</a></li><li class="lvl-2"><a href="#六-温度-随机性-为什么同一个问题答案会变">六、温度 / 随机性：为什么同一个问题答案会变</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为它在-联网实时查">误区 1：以为它在&quot;联网实时查&quot;</a></li><li class="lvl-3"><a href="#误区-2-以为它-记得住-你之前说的话">误区 2：以为它&quot;记得住&quot;你之前说的话</a></li><li class="lvl-3"><a href="#误区-3-以为它算数很准">误区 3：以为它算数很准</a></li><li class="lvl-3"><a href="#误区-4-以为它-懂-了你说的意思">误区 4：以为它&quot;懂&quot;了你说的意思</a></li><li class="lvl-3"><a href="#误区-5-以为它说的都是真的">误区 5：以为它说的都是真的</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-a-观察-每次答案略有不同-5-分钟">实验 A：观察&quot;每次答案略有不同&quot;（5 分钟）</a></li><li class="lvl-3"><a href="#实验-b-思想实验-你自己就是一个-迷你-llm">实验 B：思想实验——你自己就是一个&quot;迷你 LLM&quot;</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑥-什么是-llm-大语言模型">⑥ 什么是 LLM（大语言模型）<a class="anchor" href="#⑥-什么是-llm-大语言模型" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a>。那一篇讲&quot;会自己干活的 AI&quot;是什么样子；而这一篇要拆开它的<strong>脑子</strong>——那个真正在&quot;思考&quot;的核心，就叫 <strong>LLM（大语言模型）</strong>。读完你会明白：这颗&quot;脑子&quot;其实只会做一件事——<strong>猜下一个词</strong>。也正因为它只会猜，我们才需要给它配&quot;手脚&quot;（<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a>）来补足它做不到的事。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>LLM（Large Language Model，大语言模型）= 一个吃了海量文本、专门学会&quot;预测下一个词&quot;的超大概率机器。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>它不是数据库、不是搜索引擎、更不是有意识的人；它是一台&quot;接龙机器&quot;——给它一段话，它猜出最可能的下一个字。</strong></p></blockquote>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白别慌</div><p>&quot;大模型&quot;这个词听着高大上，其实它干的事简单到有点好笑：<strong>猜下一个字</strong>。就像你玩 <span class="popover" tabindex="0"><span class="popover-anchor">成语接龙</span><span class="popover-tip" role="tooltip">你说上句，对方接下句——LLM 就是把这件事练到了极致</span></span>一样。别被&quot;几百亿参数&quot;&quot;预训练&quot;这些词吓退，这篇会把每个词都拆成生活比喻。跟着读，你会发现它没那么神秘～ 🐣</p></div></aside>
+<p>这句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。请先把三个&quot;它不是&quot;钉在脑子里：</p>
+<table><thead><tr><th>你可能以为它是</th><th>其实它不是，因为</th></tr></thead><tbody><tr><td><strong>数据库</strong></td><td>数据库是&quot;精确存了什么就查出什么&quot;；LLM 没存原文，它只记住了&quot;模式&quot;，答案是<strong>当场猜出来的</strong></td></tr><tr><td><strong>搜索引擎</strong></td><td>搜索引擎去互联网找现成网页；LLM <strong>不联网</strong>（除非另配工具），它只凭训练时学到的规律</td></tr><tr><td><strong>有意识的人</strong></td><td>它没有理解、没有意图、不知道自己在说什么，它只是在做<strong>概率计算</strong></td></tr></tbody></table>
+<hr>
+<h2 id="二-核心机理白话版-它只会-接龙">二、核心机理白话版：它只会&quot;接龙&quot;<a class="anchor" href="#二-核心机理白话版-它只会-接龙" aria-label="锚点">#</a></h2>
+<p>LLM 做的事，本质上简单到有点让人失望：<strong>给它一段文字，它算出&quot;下一个最可能出现的字/词&quot;，吐出来；然后把这个新字接到句子后面，再算下一个……一个接一个，直到成句成段。</strong></p>
+<p>这个&quot;算一个、接上去、再算下一个&quot;的过程，有个术语叫<strong>自回归生成</strong>（autoregressive）。但你不用记术语，记这几个生活比喻就够了：</p>
+<ul><li><strong>手机输入法联想</strong>：你打&quot;今天天气真&quot;，输入法弹出&quot;好&quot;。LLM 就是一个<strong>超级加强版的输入法</strong>——它不只联想一个词，而是能一路联想出整段话、整篇文章。</li><li><strong>填空高手</strong>：给它&quot;床前明月光，疑是地上____&quot;，它填&quot;霜&quot;。它读过海量文本，知道这个空最该填什么。</li><li><strong>成语接龙</strong>：你说&quot;一心一意&quot;，它接&quot;意气风发&quot;。它永远在做&quot;下一个接什么最顺&quot;的判断。</li></ul>
+<pre class="mermaid">flowchart LR
+  A[&quot;📥 输入：&lt;br/&gt;'今天天气真'&quot;] --&gt; M[&quot;🧠 LLM&lt;br/&gt;算下一个词的概率&quot;]
+  M --&gt; P[&quot;📊 好 85%&lt;br/&gt;不错 8%&lt;br/&gt;热 5% ...&quot;]
+  P --&gt; O[&quot;📤 吐出：'好'&quot;]
+  O -. &quot;接回句子，再猜下一个&quot; .-&gt; A</pre>
+<p>注意上图那条<strong>虚线回环</strong>：LLM 不是一口气想好整句话，而是<strong>一个词一个词地滚雪球</strong>。它吐出&quot;好&quot;之后，会把&quot;今天天气真好&quot;整个再喂回自己，接着猜下一个字。<strong>它每一步都只看得见&quot;到目前为止的这段话&quot;，然后猜一个字。</strong> 就这么简单，也就这么强大。</p>
+<hr>
+<h2 id="三-为什么-只会猜下一个词-却显得很聪明">三、为什么&quot;只会猜下一个词&quot;却显得很聪明？<a class="anchor" href="#三-为什么-只会猜下一个词-却显得很聪明" aria-label="锚点">#</a></h2>
+<p>这是最反直觉的地方：一个只会&quot;接龙&quot;的机器，怎么能写代码、答问题、讲道理？</p>
+<p>答案是：<strong>因为它是在&quot;海量文本&quot;里学会怎么接龙的。</strong></p>
+<p>想象一个人从小到大读完了<strong>几乎整个互联网</strong>——所有的书、百科、论坛、代码仓库、问答……读了几千亿个字。读到这个量级，他会在不知不觉中掌握大量<strong>模式</strong>：</p>
+<ul><li>语法规律（&quot;的地得&quot;怎么用、句子怎么组织）；</li><li>事实关联（&quot;法国的首都是&quot;后面大概率接&quot;巴黎&quot;）；</li><li>推理套路（看到&quot;因为……所以……&quot;就知道该讲因果）；</li><li>代码规律（写了 <code>for (let i = 0;</code> 后面大概率接 <code>i &lt; ...</code>）。</li></ul>
+<p>于是，当它为了&quot;猜下一个词&quot;而努力时，<strong>副产品就是它显得懂知识、懂逻辑、懂代码</strong>。它不是&quot;理解&quot;了这些，而是<strong>在无数例子里见过太多次，以至于能高度逼真地模仿</strong>。</p>
+<pre class="mermaid">flowchart TB
+  DATA[&quot;📚 海量文本&lt;br/&gt;（书 / 百科 / 代码 / 论坛…几千亿字）&quot;] --&gt; LEARN[&quot;🎓 训练：反复练习'猜下一个词'&quot;]
+  LEARN --&gt; PAT[&quot;🧩 学到大量模式&lt;br/&gt;语法 · 事实 · 推理 · 代码&quot;]
+  PAT --&gt; SMART[&quot;✨ 表现出'聪明'&lt;br/&gt;（其实是高度逼真的模仿）&quot;]</pre>
+<blockquote><p>一句话记住：<strong>它的&quot;聪明&quot;是&quot;见得多&quot;喂出来的，不是&quot;想得通&quot;练出来的。</strong> 这个区别，是理解后面&quot;幻觉&quot;问题的钥匙。</p></blockquote>
+<hr>
+<h2 id="四-参数-训练-预训练-白话拆解">四、参数、训练、预训练——白话拆解<a class="anchor" href="#四-参数-训练-预训练-白话拆解" aria-label="锚点">#</a></h2>
+<p>你会经常听到&quot;这个模型有 700 亿参数&quot;&quot;它是预训练出来的&quot;这类话。别被术语吓住，用一个比喻全部拆开。</p>
+<p><strong>把 LLM 想象成一台有无数个旋钮的巨型收音机。</strong></p>
+<table><thead><tr><th>术语</th><th>白话意思</th><th>收音机比喻</th></tr></thead><tbody><tr><td><strong>参数（parameter）</strong></td><td>模型脑子里的&quot;旋钮&quot;，每个旋钮存一点点&quot;该怎么猜词&quot;的经验。参数越多，能装的模式越多</td><td>收音机上的旋钮数量。旋钮越多，能调出的电台越精细</td></tr><tr><td><strong>训练（training）</strong></td><td>拿海量文本反复练&quot;猜下一个词&quot;，猜错了就<strong>微调旋钮</strong>，一点点拧到能猜准</td><td>一遍遍拧旋钮，直到声音最清楚</td></tr><tr><td><strong>预训练（pre-training）</strong></td><td>最开始那次&quot;读遍整个互联网&quot;的大训练，打下通用语言底子</td><td>出厂前的总调校，把基础电台都先调好</td></tr></tbody></table>
+<p>所以&quot;700 亿参数&quot;的意思就是：<strong>这台机器脑子里有 700 亿个旋钮</strong>，训练的过程就是把这 700 亿个旋钮，一点一点拧到&quot;喂进任何一段话都能猜准下一个词&quot;的状态。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 训练前[&quot;🎛️ 训练前&quot;]
+    K1[&quot;旋钮乱拧&lt;br/&gt;（乱猜下一个词）&quot;]
+  end
+  subgraph 训练中[&quot;🔧 训练中（重复亿万次）&quot;]
+    T1[&quot;喂一段真文本&quot;] --&gt; T2[&quot;模型猜下一个词&quot;]
+    T2 --&gt; T3{&quot;猜对了吗？&quot;}
+    T3 -- &quot;错了&quot; --&gt; T4[&quot;微调旋钮&quot;]
+    T4 --&gt; T1
+  end
+  subgraph 训练后[&quot;✅ 训练后&quot;]
+    K2[&quot;旋钮就位&lt;br/&gt;（能猜准下一个词）&quot;]
+  end
+  训练前 --&gt; 训练中 --&gt; 训练后</pre>
+<p><strong>关键直觉</strong>：训练结束后，这些旋钮就<strong>固定住了</strong>。这意味着——模型的知识<strong>停在了训练那一刻</strong>。训练用的是 2024 年的数据，它就不知道 2025 年发生了什么。这也解释了后面误区里&quot;它不会自动知道最新消息&quot;这一条。</p>
+<hr>
+<h2 id="五-幻觉-hallucination-它会一本正经地胡说">五、幻觉（hallucination）：它会一本正经地胡说<a class="anchor" href="#五-幻觉-hallucination-它会一本正经地胡说" aria-label="锚点">#</a></h2>
+<p>这是 LLM <strong>最重要、也最危险</strong>的特性，必须单独拿出来讲透。</p>
+<p>回到第一节的定义：LLM 是一台&quot;猜下一个词、让句子读起来最顺&quot;的机器。请注意——<strong>它优化的目标是&quot;像真的&quot;，不是&quot;是真的&quot;。</strong></p>
+<p>这两者大部分时候是重合的（顺口的答案往往也对），但<strong>不总是重合</strong>。当它不知道真实答案时，它<strong>不会说&quot;我不知道&quot;</strong>，而是会<strong>猜一个读起来最像那么回事的答案</strong>——哪怕这个答案是编的。这就是<strong>幻觉</strong>。</p>
+<ul><li>你问它一个不存在的函数怎么用，它可能<strong>煞有介事地编出</strong>参数和用法；</li><li>你问它某本书的某一页写了什么，它可能<strong>编一段听起来很像</strong>的内容；</li><li>你让它引用文献，它可能<strong>造出一个格式完美、但根本不存在</strong>的出处。</li></ul>
+<pre class="mermaid">flowchart TB
+  Q[&quot;❓ 用户提问&quot;] --&gt; K{&quot;训练时见过&lt;br/&gt;真实答案吗？&quot;}
+  K -- &quot;见过&quot; --&gt; R1[&quot;✅ 大概率答对&lt;br/&gt;（真的顺口 = 真的对）&quot;]
+  K -- &quot;没见过 / 记不清&quot; --&gt; R2[&quot;⚠️ 仍然硬猜一个'最像的'&lt;br/&gt;= 一本正经地胡说（幻觉）&quot;]
+  R2 --&gt; WHY[&quot;根因：它保证'像真的'&lt;br/&gt;不保证'是真的'&quot;]</pre>
+<blockquote><p>记忆口诀：<strong>它不会脸红。</strong> 编造的答案和正确的答案，从它嘴里说出来时<strong>语气一模一样自信</strong>，你光看它的语气分辨不出真假。</p></blockquote>
+<p><strong>这正是为什么需要工具调用和 RAG。</strong> 既然模型&quot;凭记忆猜&quot;必然会有幻觉，那就别让它凭记忆——</p>
+<ul><li>让它<strong>用<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具</a>真的去读文件、跑命令、查网络</strong>，拿到真相再回答（把&quot;闭卷考试&quot;变成&quot;开卷考试&quot;）；</li><li>让它用 <strong>RAG（检索增强，后面会讲）</strong> 先从可信资料里查到相关内容，再基于查到的内容作答，而不是凭空编。</li></ul>
+<p>一句话：<strong>幻觉不是 bug，是这类模型的天性；对付它的办法不是&quot;骂模型&quot;，而是&quot;给它配上能核实的手脚&quot;。</strong></p>
+<p>翻卡自测，看你有没有真的抓住&quot;幻觉&quot;的根子：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">正面：LLM 为什么会&quot;一本正经地胡说&quot;？它是故意骗人吗？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">反面：<strong>不是故意骗人，是它的训练目标决定的。</strong> 它被训练成&quot;让句子读起来最顺、最像真的&quot;，而不是&quot;保证是真的&quot;。大多数时候顺口的答案恰好也对，但当它不知道真答案时，它<strong>不会说&quot;我不知道&quot;</strong>，而是照样猜一个&quot;最像那么回事&quot;的答案——语气和说真话时一样自信。所以幻觉不是 bug，是天性；解药是给它配上能<strong>核实</strong>的工具（工具调用 / RAG）。</div></div></div>
+<hr>
+<h2 id="六-温度-随机性-为什么同一个问题答案会变">六、温度 / 随机性：为什么同一个问题答案会变<a class="anchor" href="#六-温度-随机性-为什么同一个问题答案会变" aria-label="锚点">#</a></h2>
+<p>你可能注意到：同一个问题问两次，LLM 的回答<strong>措辞会略有不同</strong>。这不是它&quot;记不住&quot;，而是<strong>故意设计成带一点随机的</strong>。</p>
+<p>回到第二节那张概率图：模型每一步算出的不是&quot;唯一答案&quot;，而是一串<strong>候选词的概率</strong>（好 85%、不错 8%、热 5%……）。接下来怎么从这串候选里挑一个，由一个叫 <strong>温度（temperature）</strong> 的旋钮控制：</p>
+<table><thead><tr><th>温度</th><th>挑词方式</th><th>效果</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>低温（接近 0）</strong></td><td>几乎总挑概率最高的那个</td><td>稳定、保守、几乎每次一样</td><td>老实人：怎么稳怎么来</td></tr><tr><td><strong>高温</strong></td><td>偶尔也挑排第二第三的词</td><td>多变、有创意、每次不太一样</td><td>爱发挥的人：换着花样说</td></tr></tbody></table>
+<p>因为通常温度不为零，所以模型每次挑词<strong>掺了一点掷骰子的成分</strong>，于是同一个问题，两次回答的用词、顺序就会有细微差别。<strong>意思往往一样，但不是一字不差。</strong></p>
+<pre class="mermaid">flowchart LR
+  P[&quot;📊 候选：&lt;br/&gt;好85% 不错8% 热5%&quot;] --&gt; D{&quot;🎲 按温度掷骰子挑一个&quot;}
+  D -- &quot;低温&quot; --&gt; L[&quot;几乎总是'好'&lt;br/&gt;→ 每次答案很像&quot;]
+  D -- &quot;高温&quot; --&gt; H[&quot;有时'好'有时'不错'&lt;br/&gt;→ 每次答案有变化&quot;]</pre>
+<blockquote><p>记住这一点，第八节的<strong>动手小实验</strong>就是让你亲眼看见这种&quot;每次略有不同&quot;。</p></blockquote>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对整个系统的理解跑偏。</p>
+<h3 id="误区-1-以为它在-联网实时查">误区 1：以为它在&quot;联网实时查&quot;<a class="anchor" href="#误区-1-以为它在-联网实时查" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我一问它，它就上网搜了一下再回答。</li><li>✅ <strong>正确理解</strong>：光秃秃的 LLM <strong>不联网</strong>。它的回答全凭训练时&quot;背下来&quot;的东西。它能联网，<strong>是因为外面给它配了<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具</a>（比如网页搜索工具）</strong>——那是工具调用的功劳，不是 LLM 本身的能力。</li></ul>
+<h3 id="误区-2-以为它-记得住-你之前说的话">误区 2：以为它&quot;记得住&quot;你之前说的话<a class="anchor" href="#误区-2-以为它-记得住-你之前说的话" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我上周跟它聊过，它应该记得我。</li><li>✅ <strong>正确理解</strong>：LLM 本身<strong>没有记忆</strong>。它每次回答，只能看见&quot;这一次喂给它的那段文字&quot;。之所以在一次对话里它&quot;记得&quot;你前面说的话，是因为<strong>系统每次都把之前的对话历史一起重新喂给它</strong>。关掉对话，这份&quot;记忆&quot;就没了。它更像<strong>每次都失忆、全靠你把笔记重新递给他看</strong>的人。</li></ul>
+<h3 id="误区-3-以为它算数很准">误区 3：以为它算数很准<a class="anchor" href="#误区-3-以为它算数很准" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：它这么聪明，<code>3847 × 2913</code> 肯定算得对。</li><li>✅ <strong>正确理解</strong>：它不是计算器，它是<strong>&quot;猜下一个数字看起来对不对&quot;</strong>。对于没见过的大数运算，它可能猜出一个<strong>很像但错误</strong>的结果。真要算准，得给它配一个<strong>计算工具</strong>——又回到&quot;给脑子配手脚&quot;这件事上。</li></ul>
+<h3 id="误区-4-以为它-懂-了你说的意思">误区 4：以为它&quot;懂&quot;了你说的意思<a class="anchor" href="#误区-4-以为它-懂-了你说的意思" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：它回答得头头是道，它一定是理解了。</li><li>✅ <strong>正确理解</strong>：它在做的是<strong>极其逼真的模式匹配和续写</strong>，不是人类意义上的&quot;理解&quot;。它不知道&quot;苹果&quot;是能吃的、红色的、甜的——它只知道&quot;苹果&quot;这个词常和哪些词一起出现。表现像懂，不等于真懂。</li></ul>
+<h3 id="误区-5-以为它说的都是真的">误区 5：以为它说的都是真的<a class="anchor" href="#误区-5-以为它说的都是真的" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：它说得这么肯定，应该是对的。</li><li>✅ <strong>正确理解</strong>：回看第五节——<strong>它保证&quot;像真的&quot;，不保证&quot;是真的&quot;</strong>。它编造时的语气和说真话时一模一样自信。<strong>凡是重要的事实，都要用工具去核实，别只信它一张嘴。</strong></li></ul>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如亲手（或在脑子里）走一遍。</p>
+<h3 id="实验-a-观察-每次答案略有不同-5-分钟">实验 A：观察&quot;每次答案略有不同&quot;（5 分钟）<a class="anchor" href="#实验-a-观察-每次答案略有不同-5-分钟" aria-label="锚点">#</a></h3>
+<p>打开任何一个能聊天的 AI（Khy-OS 或别的助手），做这件事：</p>
+<ol><li>问它一个<strong>开放性问题</strong>，比如&quot;用一句话形容大海&quot;。记下它的回答。</li><li><strong>开一个新对话</strong>（很重要，别在同一条对话里追问，否则它会看见上一句），<strong>一字不差地再问同一句</strong>。</li><li>对比两次回答。</li></ol>
+<p>你多半会看到：<strong>两次的用词、比喻不完全一样</strong>——这就是第六节说的&quot;温度带来的随机性&quot;在起作用。你亲眼看见了：LLM 不是查表返回固定答案的机器，它每次都是<strong>当场重新&quot;接龙&quot;生成</strong>的。</p>
+<pre class="mermaid">flowchart LR
+  Q1[&quot;问一次：'形容大海'&quot;] --&gt; A1[&quot;🌊 '一片深蓝的温柔'&quot;]
+  Q2[&quot;新对话再问一次&quot;] --&gt; A2[&quot;🌊 '无边的蓝色胸怀'&quot;]
+  A1 &amp; A2 --&gt; C([&quot;✅ 用词不同 = 生成不是查表&quot;])</pre>
+<h3 id="实验-b-思想实验-你自己就是一个-迷你-llm">实验 B：思想实验——你自己就是一个&quot;迷你 LLM&quot;<a class="anchor" href="#实验-b-思想实验-你自己就是一个-迷你-llm" aria-label="锚点">#</a></h3>
+<p>在脑子里做：我给你开头&quot;从前有座山，山里有座____&quot;。</p>
+<p>你几乎不假思索就想到了&quot;庙&quot;。<strong>问你自己：你是&quot;查&quot;到的，还是&quot;猜&quot;到的？</strong> 你没去数据库里查——你是因为<strong>从小听过无数遍这个句式</strong>，所以&quot;山里有座&quot;后面<strong>最顺的接词</strong>就是&quot;庙&quot;。</p>
+<p>这就是 LLM 干的事，只不过它读的不是几遍儿歌，而是<strong>几千亿字</strong>。你刚刚亲身体会了一次&quot;自回归接龙&quot;。</p>
+<blockquote><p>再追问一步：如果我给你&quot;从前有座山，山里住着一位量子物理学家，他每天____&quot;——你会发现你也能编下去，而且编得很顺。<strong>注意：顺，不代表真的有这么个故事。</strong> 这就是&quot;像真的 ≠ 是真的&quot;，也就是幻觉的来源。</p></blockquote>
+<p>把这个&quot;你就是迷你 LLM&quot;的思想实验演成一幕小短剧——你会看到&quot;接龙&quot;这件事，怎么从&quot;顺口又正确&quot;一路滑到&quot;顺口但编造&quot;：</p>
+<div class="scene"><div class="scene-title">你脑子里的&quot;迷你 LLM&quot;是怎么接龙的</div><div class="scene-caption reveal">主持人给你半句话，你不查任何资料，只凭&quot;最顺的接词&quot;脱口而出。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🎤</span><div class="scene-bubble"><b class="scene-who">主持人</b>从前有座山，山里有座……</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>庙！</div></div><div class="scene-caption reveal">你没去数据库查过，是&quot;听过无数遍&quot;让&quot;庙&quot;成了最顺的接词——这就是自回归接龙。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🎤</span><div class="scene-bubble"><b class="scene-who">主持人</b>很好。再接：从前有座山，山里住着一位量子物理学家，他每天……</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>呃……推导公式、观测粒子、顺便下山买菜？</div></div><div class="scene-caption reveal">你照样接得很顺——可这个故事根本不存在，是你当场编的。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">迷你LLM（你）</b>我追求的是&quot;接得顺、像真的&quot;，至于有没有这么个故事，我自己也分不清。</div></div><div class="scene-caption reveal">「顺 ≠ 真」——这正是幻觉的根：模型保证&quot;像真的&quot;，不保证&quot;是真的&quot;。</div></div>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>LLM 不是孤立的。它是整个 Agent 体系的<strong>大脑</strong>，但<strong>只是大脑</strong>——光有大脑，做不了事。</p>
+<pre class="mermaid">flowchart TB
+  LLM[&quot;🧠 LLM 大语言模型&lt;br/&gt;（会思考的大脑）&quot;]
+  AGENT[&quot;🤖 Agent 智能体&lt;br/&gt;（用大脑干活的本体）&quot;]
+  TOOL[&quot;🔧 Tool Calling 工具调用&lt;br/&gt;（补上大脑没有的手脚）&quot;]
+  RAG[&quot;📚 RAG 检索增强&lt;br/&gt;（补上大脑没有的外部记忆）&quot;]
+  LLM -- &quot;装进身体，成为其决策核心&quot; --&gt; AGENT
+  AGENT -- &quot;遇到'脑子做不到'的事&quot; --&gt; TOOL
+  AGENT -- &quot;遇到'脑子记不住'的事&quot; --&gt; RAG</pre>
+<table><thead><tr><th>概念</th><th>和 LLM 的一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>Agent 是&quot;人&quot;，LLM 是这个人的<strong>大脑</strong></td><td>身体 vs 脑子</td></tr><tr><td><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling</a></td><td>LLM 只会想不会动，工具调用给它配上<strong>手脚</strong>（读文件、跑命令、查网络）</td><td>脑子 vs 手</td></tr><tr><td><strong>RAG 检索增强（后面会讲）</strong></td><td>LLM 没有记忆、知识会过时，RAG 给它接上<strong>外部记忆库</strong>，用之前先查一查</td><td>脑子 vs 一本随身查的资料</td></tr></tbody></table>
+<p>一句话串起来：<strong>LLM 是那颗只会&quot;猜下一个词&quot;的大脑；正因为它有幻觉、没手脚、没记忆，我们才要给它配上工具调用（手脚）和 RAG（外部记忆），让它从&quot;闭卷凭记忆&quot;升级成&quot;开卷能核实&quot;。</strong></p>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 下面关于 LLM 的说法，哪一个是对的？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">它本质上是在&quot;猜下一个最可能的词&quot;，一个字一个字地续写</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">它像数据库一样，把训练资料原文存起来、需要时精确查出</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">它每次回答都会实时联网搜索最新信息</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">它能记住上周和你聊过的内容</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 正解是第一个：LLM 是&quot;自回归接龙机器&quot;，答案是当场猜出来的、不是查出来的。它默认不联网（联网要靠工具调用）、本身没有记忆（对话里&quot;记得&quot;是因为系统把历史又喂了一遍）。把这几点分清，你就不会再对它&quot;为什么会胡说/为什么不知道新闻&quot;感到奇怪了。</div></div>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>Khy-OS 本身<strong>不是</strong>某一个 LLM。它是一个<strong>外壳 / 骨架</strong>——把 LLM 这颗&quot;大脑&quot;装进来，再给它配好手脚（工具调用）、节奏（工具循环）、剧本（Skill），让它能真正、安全地帮你干活。</p>
+<p>关于&quot;大脑&quot;这一层，你需要知道两件事：</p>
+<ol><li><strong>Khy-OS 支持多种 LLM 作为底层大脑。</strong> 它不绑死在某一个模型上，而是可以在不同的大脑之间<strong>路由 / 切换</strong>——简单的活用便宜快速的小模型，复杂的活换更强的大模型。这种&quot;按需选大脑&quot;的多模型路由，属于设计层面的能力。</li><li><strong>正因为知道 LLM 会幻觉、会算错、不联网</strong>，Khy-OS 才在它外面包了一整套<strong>护栏和工具</strong>：让模型的重要判断都能被工具<strong>核实</strong>、让危险动作被<strong>拦截</strong>（回看 <a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② 工具调用</a> 里讲的安全护栏）。<strong>Khy-OS 的很多设计，本质上就是在&quot;给一颗会胡说的聪明脑子&quot;上保险。</strong></li></ol>
+<blockquote><p>这些&quot;多模型路由&quot;&quot;怎么给大脑上保险&quot;的具体做法，属于设计与实现细节，你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 目录里进一步了解。本文只讲&quot;LLM 是什么&quot;这一层概念，不涉及具体实现。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>LLM = 一台吃了海量文本、专门&quot;猜下一个词&quot;的超大概率机器</strong>。它不是数据库、不是搜索引擎、不是有意识的人。</li><li>它的本事是<strong>&quot;接龙 / 自回归&quot;</strong>：给一段话，一个字一个字地续写；显得聪明，是因为它在<strong>海量文本里见过太多模式</strong>。</li><li><strong>参数</strong>是它脑子里的旋钮，<strong>训练</strong>是把旋钮拧到能猜准，<strong>预训练</strong>是最初那次&quot;读遍互联网&quot;的总调校；训练结束，知识就<strong>定格</strong>了。</li><li><strong>幻觉</strong>是它的天性：它保证&quot;像真的&quot;，不保证&quot;是真的&quot;——这正是需要<strong>工具调用</strong>和 <strong>RAG</strong> 来核实兜底的根本原因。</li><li><strong>温度</strong>带来随机性，所以同一个问题两次回答会略有不同。</li><li>五大误区：它不联网、没记忆、算数不一定准、&quot;像懂&quot;不等于真懂、说的不一定是真的。</li><li>在整个体系里：<strong>LLM 是大脑，<a href="./[CONCEPT-01]%20什么是Agent-智能体.html">Agent</a> 是本体，<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a> 是手脚，RAG 是外部记忆。</strong></li></ul>
+<p>理解了&quot;这颗大脑只会猜下一个词&quot;之后，你自然会问：<strong>那我该怎么跟它说话，才能让它猜得更准、更合我意？</strong> 这就是下一篇的主题——<strong>Prompt（提示词）</strong>：怎么把话说清楚，把这颗聪明又爱胡说的脑子，用到点子上。</p>
+<p>👉 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ 什么是 Prompt（提示词）</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-05] 什么是Skill-技能.html"><div class="dir">← 上一篇</div><div class="ttl">⑤ 什么是 Skill（技能）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-07] 什么是Prompt-提示词.html"><div class="dir">下一篇 →</div><div class="ttl">⑦ 什么是 Prompt（提示词）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-06] 什么是LLM-大语言模型.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

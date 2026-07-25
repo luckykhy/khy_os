@@ -1,0 +1,21 @@
+{
+  "name": "git-workflow-and-versioning",
+  "description": "Structures git workflow practices. Use when making any code change. Use when committing, branching, resolving conflicts, or when you need to organize work across multiple parallel streams.",
+  "user_invocable": true,
+  "trigger": "/git-workflow-and-versioning",
+  "aliases": [
+    "/git-flow"
+  ],
+  "category": "devops",
+  "tags": [
+    "git",
+    "versioning",
+    "branching"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}
