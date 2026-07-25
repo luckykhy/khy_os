@@ -2285,7 +2285,7 @@ async function addAdapterModel(adapter) {
 async function verifyAdapterModelList(adapter) {
   modelEditBusy.value = true
   try {
-    ElMessage.info('正在验证模型，请稍候…')
+    ElMessage.info(`正在验证 ${adapter} 的模型列表…`)
     await gw.verifyAdapterModels(adapter)
     ElMessage.success('验证完成')
   } catch (e) {

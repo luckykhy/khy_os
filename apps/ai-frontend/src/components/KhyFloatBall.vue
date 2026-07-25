@@ -76,7 +76,7 @@
           <button class="khy-fb__tasks-close" type="button" aria-label="关闭" @click="closeTasks">×</button>
         </div>
 
-        <div v-if="tasksStatus === 'connecting'" class="khy-fb__tasks-hint">正在连接…</div>
+        <div v-if="tasksStatus === 'connecting'" class="khy-fb__tasks-hint">连接后端，同步 TUI 任务记录…</div>
         <div v-else-if="tasksStatus === 'disabled'" class="khy-fb__tasks-hint">本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)</div>
         <div v-else-if="tasksStatus === 'error'" class="khy-fb__tasks-hint is-error" @click="startTaskSync">
           同步失败,点此重试
@@ -108,7 +108,7 @@
         class="khy-fb__ball"
         type="button"
         aria-label="Khy 悬浮球 — 左键菜单 / 右键打开 khy.md"
-        :title="busy ? '处理中…' : 'Khy — 左键菜单 / 右键打开 khy.md'"
+        :title="busy ? '执行 Khy 快捷操作（本机动作）…' : 'Khy — 左键菜单 / 右键打开 khy.md'"
         @pointerdown="onPointerDown"
         @pointerenter="onBallEnter"
         @pointermove="onBallHoverMove"

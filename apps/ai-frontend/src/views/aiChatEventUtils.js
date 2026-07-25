@@ -278,7 +278,7 @@ export function resolveAiChatThinkingEvent(channel, payload = {}) {
       return { type: 'status', text: '步骤 2/3：AI 会话已启动，正在等待模型输出' }
     }
     if (type === 'thinking') {
-      return { type: 'status', text: payload.text || 'AI 正在处理请求' }
+      return { type: 'status', text: payload.text || '步骤 2/3：模型推理中，等待输出' }
     }
     if (type === 'reset') {
       return { type: 'status', text: '检测到无具体原因的拒绝，已丢弃废稿并重试' }

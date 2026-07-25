@@ -1051,7 +1051,7 @@ async function addModelToAdapter(adapter) {
 async function verifyAdapter(adapter) {
   overridesBusy.value = true
   try {
-    ElMessage.info('正在验证模型，请稍候…')
+    ElMessage.info(`正在验证 ${adapter} 的模型列表…`)
     await request.post(`/api/ai-gateway/models/${adapter}/verify`)
     await reloadModels()
     ElMessage.success('验证完成')
@@ -1835,7 +1835,7 @@ async function sendMessage() {
   const attachmentIds = attachments.map(a => a.id)
   if ((!text && !attachmentIds.length) || loading.value) return
   if (uploadingCount.value > 0) {
-    ElMessage.warning('附件仍在上传中，请稍候')
+    ElMessage.warning(`附件上传中（剩余 ${uploadingCount.value} 个），完成后即可发送`)
     return
   }
 
