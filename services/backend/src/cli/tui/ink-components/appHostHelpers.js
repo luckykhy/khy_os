@@ -154,7 +154,7 @@ function _taskActivity() {
 }
 
 function _getStatusLabel(status, activity) {
-  const labels = { thinking: '思考中…', streaming: '生成中…', tool: '执行工具…', compacting: '正在压缩对话…', local: '本地处理中…' };
+  const labels = { thinking: '思考中…', streaming: '生成中…', tool: '执行工具…', compacting: '正在压缩对话…', local: '本地引擎应答中（不调用模型）…' };
   const base = labels[status] || '思考中…';
   const detail = (activity || '').trim();
   return detail ? `${base} · ${detail}` : base;

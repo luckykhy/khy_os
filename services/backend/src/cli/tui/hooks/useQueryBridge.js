@@ -507,6 +507,20 @@ function useQueryBridge(hostHandlers = {}) {
   // (T2/T3). Resolved at turn start, stamped on the streaming state + every
   // committed message so each row renders by the model that produced it.
   const selfRenderRef = useRef(false);
+  // Resolvers waiting for the NEXT committed `messages` frame. _runSubmit pushes
+  // a resolver right after appending the user message; the effect below fires
+  // once React has actually committed that state (Ink writes the frame during
+  // the same commit, modulo its ~33ms render throttle). This is the honest
+  // "已上屏" signal — a bare setImmediate raced AHEAD of React's scheduler
+  // flush, so the old yield returned before the frame existed and the
+  // downstream sync storm starved the paint for seconds.
+  const paintWaitersRef = useRef([]);
+  useEffect(() => {
+    if (paintWaitersRef.current.length === 0) return;
+    const waiters = paintWaitersRef.current;
+    paintWaitersRef.current = [];
+    for (const w of waiters) { try { w(); } catch { /* resolve never throws */ } }
+  }, [messages]);
   // Live agent-tree state for parallel sub-agent fan-outs, keyed by the agent
   // tool's id → Map(childAgentId → state). The native loop hands each agent tool
   // call an onAgentProgress callback (below); orchestrator-forwarded lifecycle
@@ -753,16 +767,25 @@ function useQueryBridge(hostHandlers = {}) {
     const imageCount = Array.isArray(options.images) ? options.images.length : 0;
     setMessages((m) => [...m, { role: 'user', content: text, imageCount, timestamp: startTime }]);
 
-    // 让出事件循环一拍，先把上面刚 push 的「已发送的用户消息 + thinking spinner」刷到屏幕，
+    // 让帧：等 React 真正 commit 了刚 push 的「已发送的用户消息 + thinking spinner」，
     // 再去做下游可能冻住事件循环的同步工作:网关 preflight/getStatus/re-detect 里的
-    // `<cli> --version` spawnSync 探测,以及首次提交对 8786 行 toolUseLoop 的冷 require ——
-    // 它们都跑在本函数 push 之后、首个真正 await 之前的同步窗口里。Ink 6 的 onRender 是
-    // leading-edge 节流(只要事件循环不被占住,首帧立刻刷出),所以症状「回车几秒才显示发送」
-    // 的根因正是同步风暴抢在刷帧前把循环冻住(详见 _commandAvailability.js 头注 +
-    // [[project_enter_freeze_spawn_coalesce]])。让出一个宏任务即可让 React 提交 + Ink 刷帧
-    // 落地;之后即便 spinner 仍被同步探测短暂卡住,用户也已看到「已发送」。kill: KHY_SUBMIT_PAINT_YIELD=0。
+    // `<cli> --version` spawnSync 探测等——它们跑在本函数 push 之后、首个真正 await
+    // 之前的同步窗口里。实测：单个 setImmediate 会抢在 React 调度器 flush 之前返回
+    //（消息根本还没 commit），随后的同步风暴把首帧饿死到数秒。改为：
+    // 1) 等 messages-commit 效应唤醒（250ms fail-open 保护，绝不卡死回合）；
+    // 2) 再等一个 Ink 渲染节流窗口（~33ms trailing），确保帧已写到 stdout。
+    // kill: KHY_SUBMIT_PAINT_YIELD=0。
     if (paintYieldEnabled()) {
-      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => {
+        paintWaitersRef.current.push(resolve);
+        const cap = setTimeout(resolve, 250);
+        if (typeof cap.unref === 'function') cap.unref();
+      });
+      // Ink throttles onRender at ~30fps (leading+trailing): when a frame was
+      // painted <33ms ago (input-box echo), THIS commit's write lands on the
+      // trailing timer — yield one throttle window so it fires before we
+      // resume potentially loop-freezing sync work.
+      await new Promise((resolve) => setTimeout(resolve, 40));
     }
     if (tuiDiagEnabled()) process.stderr.write(`[TUI-DIAG] ${Date.now()} stage=after_paint_yield\n`);
 

@@ -249,6 +249,36 @@ async function startRepl(options = {}) {
     });
   }
 
+  // ── Ink TUI fast path: kick off the ESM import as early as possible ──
+  // The dynamic `import('ink')` (react + react-reconciler + yoga graph) is the
+  // single largest startup cost (~1.4s cold, measured). loadInk() is memoized,
+  // so firing it here lets its module I/O and linking overlap the whole
+  // pre-mount phase (bridge autostart, trust gate, git-init scheduling); the
+  // TUI branch further down awaits the SAME promise and joins it instead of
+  // starting from zero. Errors are swallowed here — the TUI branch surfaces
+  // any real failure on its own await. The `.jsx` require handler is installed
+  // now too (cheap; see inkRuntime.registerJsx) so the App component tree can
+  // be pre-required in the background while the ink import is still in flight;
+  // components only call inkRuntime.get() inside render bodies (verified), so
+  // requiring them before the ink namespace resolves is safe. Gate:
+  // KHY_TUI_PRELOAD (default on; '0' restores the lazy order for debugging).
+  const tuiPlanned = process.stdout.isTTY && !options.oneShot
+    && process.env.KHY_FULL_TUI !== '0' && options.fullTui !== false
+    && process.env.KHY_TUI_PRELOAD !== '0';
+  if (tuiPlanned) {
+    try {
+      const inkRuntimeEarly = require('./tui/inkRuntime');
+      inkRuntimeEarly.loadInk().catch(() => {});
+      inkRuntimeEarly.registerJsx();
+      setImmediate(() => {
+        // Pre-warm the App require graph (babel transpile + component tree) so
+        // the TUI branch's require hits the module cache. Best-effort: the TUI
+        // branch re-requires and reports errors itself.
+        try { require('./tui/ink-components/App'); } catch { /* reported by the TUI branch */ }
+      });
+    } catch { /* TUI branch below retries and reports */ }
+  }
+
   // ── LAN collaboration bridge: auto-start for interactive sessions (default on) ──
   // Surfaces the LAN URL + 6-digit PIN so other devices on the same network can
   // pair (see src/bridge/bridgeServer.js). Opt out with KHY_BRIDGE_AUTOSTART=0
@@ -266,13 +296,22 @@ async function startRepl(options = {}) {
       String(process.env.KHY_BRIDGE_AUTOSTART ?? '').trim().toLowerCase()
     );
     if (!bridgeOptOut && process.stdout.isTTY && !options.oneShot) {
-      const bridge = require('../bridge/bridgeServer');
-      bridge.startBridgeServer()
-        .then(info => {
-          const footerOff = String(process.env.KHY_BRIDGE_FOOTER ?? '').trim().toLowerCase() === '0';
-          if (info && info.port > 0 && footerOff) bridge.printStatus();
-        })
-        .catch(() => {});  // bridge is optional
+      // Deferred off the mount path: the bridgeServer require graph is sync and
+      // ~0.4s cold (jsonwebtoken et al.), which used to run before the Ink
+      // first frame. setImmediate moves it into the ink-import await window so
+      // the LAN bridge still starts within the same startup tick loop — well
+      // before any client could pair — without delaying the first paint.
+      setImmediate(() => {
+        try {
+          const bridge = require('../bridge/bridgeServer');
+          bridge.startBridgeServer()
+            .then(info => {
+              const footerOff = String(process.env.KHY_BRIDGE_FOOTER ?? '').trim().toLowerCase() === '0';
+              if (info && info.port > 0 && footerOff) bridge.printStatus();
+            })
+            .catch(() => {});  // bridge is optional
+        } catch { /* bridge is optional; a failure here must not block the session */ }
+      });
     }
   } catch { /* bridge is optional; a failure here must not block the session */ }
 
