@@ -64,7 +64,15 @@ export function prefetchView(path) {
 // every sidebar destination so switching never stalls on a first-visit download.
 export function prefetchViewsIdle(paths) {
   if (typeof window === 'undefined' || !Array.isArray(paths)) return
-  const run = () => { for (const p of paths) prefetchView(p) }
+  // Warm the heaviest / most visited views first ('/chat', '/gateway'), then
+  // the rest in their original order — idle time may be short, so priority
+  // targets must be requested before the budget runs out.
+  const priority = ['/chat', '/gateway']
+  const ordered = [
+    ...priority.filter((p) => paths.includes(p)),
+    ...paths.filter((p) => !priority.includes(p)),
+  ]
+  const run = () => { for (const p of ordered) prefetchView(p) }
   if (typeof window.requestIdleCallback === 'function') {
     window.requestIdleCallback(run, { timeout: 2000 })
   } else {
