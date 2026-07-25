@@ -42,6 +42,28 @@ function isWritableDir(dir) {
   }
 }
 
+/**
+ * Validate model name to prevent command injection and path traversal.
+ *
+ * Allowed pattern: khy-<version> where version is digits and dots only
+ * (e.g. khy-1.0, khy-2.3.1). Rejects path separators, shell metacharacters,
+ * and any name that doesn't match the expected registry naming scheme.
+ */
+function validateModelName(name) {
+  if (typeof name !== 'string') {
+    throw new Error('Model name must be a string');
+  }
+  // Reject path traversal and shell metacharacters
+  if (/[\\/;|&$`(){}[\]<>!~\n\r]/.test(name)) {
+    throw new Error(`Invalid model name: "${name}" contains forbidden characters`);
+  }
+  // Enforce khy-<version> pattern
+  if (!/^khy-\d+(\.\d+)*$/.test(name)) {
+    throw new Error(`Invalid model name: "${name}". Expected format: khy-<version> (e.g. khy-1.0)`);
+  }
+  return true;
+}
+
 function logWaterQualityDebug(message, details = {}) {
   if (String(process.env.TRAIN_WATER_QUALITY_DEBUG || '').toLowerCase() !== 'true') return;
   const safeDetails = {};
@@ -718,6 +740,7 @@ function verifyExportPassword(_password) {
  * Register a trained model in the local registry.
  */
 function registerModel(name, metadata) {
+  validateModelName(name);
   const registry = loadModelRegistry();
   registry[name] = { ...metadata, registeredAt: new Date().toISOString() };
   ensureDir(TRAINING_DIR);
@@ -750,6 +773,7 @@ function listModels() {
  * @returns {Promise<{ success: boolean, ggufPath: string }>}
  */
 async function exportGGUF(modelName, quantization = 'q4_k_m', password = '') {
+  validateModelName(modelName);
   if (!verifyExportPassword(password)) {
     throw new Error('导出密码错误。模型导出需要输入正确的密码。');
   }
@@ -821,6 +845,7 @@ except Exception as e:
  * The LoRA adapter is already in safetensors format; this merges it with base.
  */
 async function exportSafetensors(modelName, password = '') {
+  validateModelName(modelName);
   if (!verifyExportPassword(password)) {
     throw new Error('导出密码错误。模型导出需要输入正确的密码。');
   }
@@ -884,6 +909,7 @@ print(f"SUCCESS:{output_path}")
  * @param {string} ggufPath
  */
 async function registerWithOllama(modelName, ggufPath) {
+  validateModelName(modelName);
   if (!fs.existsSync(ggufPath)) throw new Error(`GGUF file not found: ${ggufPath}`);
 
   const modelfile = `FROM ${ggufPath}
@@ -925,6 +951,7 @@ PARAMETER num_ctx 4096
  * @returns {Promise<{ success: boolean, url: string, message: string }>}
  */
 async function uploadToHuggingFace(modelName, opts = {}) {
+  validateModelName(modelName);
   const { repoId, password, private: isPrivate = true, onProgress } = opts;
 
   // Verify export password
@@ -1556,6 +1583,7 @@ async function abliterateModel(baseModelId, options = {}) {
 }
 
 module.exports = {
+  validateModelName,
   // Data recording
   recordInteraction,
   recordConversation,
