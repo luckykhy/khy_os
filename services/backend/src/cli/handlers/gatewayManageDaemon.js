@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const http = require('http');
+const net = require('net');
 const { spawn } = require('child_process');
 const chalkModule = require('chalk');
 const chalk = chalkModule.default || chalkModule;
@@ -86,6 +87,46 @@ function _clearAiManageRuntime() {
       // best effort
     }
   }
+}
+
+// Map wildcard bind hosts to loopback for local TCP probing.
+function _probeHostForPort(host) {
+  const h = String(host || '').trim();
+  if (!h || h === '0.0.0.0' || h === '::' || h === '[::]') return '127.0.0.1';
+  return h;
+}
+
+// TCP-probe whether a port still has a live listener (connect success = occupied).
+function _isPortListening(host, port, timeoutMs = 900) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('timeout', () => { socket.destroy(); resolve(false); });
+    socket.once('error', () => resolve(false));
+  });
+}
+
+// Reap a managed frontend (dev server tree) that outlived its daemon. On Windows the
+// daemon may die (crash / force kill) without running its own cleanup, leaving the
+// dev server tree holding the frontend port and causing silent port drift on next open.
+// Guard against OS pid reuse: only tree-kill when the recorded frontend port is still
+// occupied — a recycled pid pointing at an unrelated process must never be killed.
+async function _reapManagedFrontend(runtime) {
+  if (!runtime || !runtime.frontendManaged) return false;
+  const pid = parseInt(runtime.frontendPid, 10);
+  if (!Number.isFinite(pid) || pid <= 0 || !_isPidAlive(pid)) return false;
+  const port = parseInt(runtime.frontendPort, 10);
+  if (!Number.isFinite(port) || port <= 0) return false;
+  const occupied = await _isPortListening(_probeHostForPort(runtime.frontendHost), port);
+  if (!occupied) {
+    printInfo(`检测到前端端口 ${port} 已释放，跳过进程回收 (PID:${pid})，仅清理运行时记录。`);
+    return false;
+  }
+  const { safeKill } = require('../../tools/platformUtils');
+  try { safeKill(pid, 'SIGTERM', 3000); } catch { /* best effort */ }
+  printInfo(`正在回收残留前端进程 (PID:${pid})，释放端口 ${port}...`);
+  return true;
 }
 
 function _resolveAiFrontendDir(options = {}) {
@@ -801,6 +842,9 @@ async function handleGatewayManage(args = [], options = {}) {
       _clearAiManageRuntime();
     }
   } else if (runtime) {
+    // Daemon pid is gone but the runtime file remains: reap any leftover managed
+    // frontend before clearing, otherwise it keeps the port and forces port drift.
+    await _reapManagedFrontend(runtime);
     _clearAiManageRuntime();
     runtime = null;
   }
@@ -825,6 +869,10 @@ async function handleGatewayManage(args = [], options = {}) {
       try { _sigKill(runtime.pid, 'SIGKILL'); } catch { /* ignore */ }
       await _waitPidExit(runtime.pid, 2000);
     }
+    // On Windows a force-killed daemon never runs its own shutdown cleanup, so the
+    // managed frontend (dev server tree) can outlive it and keep the port occupied.
+    // Reap it here via tree kill using the pid recorded in the runtime file.
+    await _reapManagedFrontend(runtime);
     _clearAiManageRuntime();
     printSuccess('AI 管理会话已停止，端口已释放');
     return;

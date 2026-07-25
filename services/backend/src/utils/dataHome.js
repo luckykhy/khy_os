@@ -66,11 +66,70 @@ function _pointerFile() {
   return path.join(os.homedir(), '.khy', '.location.json');
 }
 
+/* ── portable-relative pointer form（便携相对指针）──────────────────────────
+ * 整目录迁移自愈：位于便携根（KHYQUANT_PORTABLE_ROOT 或项目根）之下的指针路径
+ * 写成 `~PORTABLE~/<相对路径>`（正斜杠分隔），读取时基于当前便携根还原为绝对
+ * 路径。旧格式绝对路径保持可读（向后兼容）；当旧绝对路径已不存在时，按「路径
+ * 中与当前便携根同名目录之后的尾部」拼到当前根尝试重定位（拖拽迁移后自动接上）。 */
+const PORTABLE_POINTER_PREFIX = '~PORTABLE~';
+const _POINTER_PATH_KEYS = ['dataHome', 'projectDataHome'];
+
+function _portableRoot() {
+  try {
+    if (process.env.KHYQUANT_PORTABLE_ROOT) {
+      return path.resolve(process.env.KHYQUANT_PORTABLE_ROOT);
+    }
+  } catch { /* fall through */ }
+  return getAppRoot();
+}
+
+/** 写入方向：便携根之下的绝对路径 → `~PORTABLE~/rel`；根外路径原样保留。 */
+function _toPortablePointerValue(value) {
+  try {
+    if (typeof value !== 'string' || !value) return value;
+    if (value.startsWith(PORTABLE_POINTER_PREFIX)) return value;
+    const root = _portableRoot();
+    const rel = path.relative(root, value);
+    if (rel === '') return PORTABLE_POINTER_PREFIX;
+    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) {
+      return PORTABLE_POINTER_PREFIX + '/' + rel.split(path.sep).join('/');
+    }
+  } catch { /* 保留绝对路径 */ }
+  return value;
+}
+
+/** 读取方向：`~PORTABLE~/rel` → 按当前便携根还原；旧绝对路径缺失时按尾部重定位自愈。 */
+function _fromPortablePointerValue(value) {
+  try {
+    if (typeof value !== 'string' || !value) return value;
+    if (value === PORTABLE_POINTER_PREFIX) return _portableRoot();
+    if (value.startsWith(PORTABLE_POINTER_PREFIX + '/') || value.startsWith(PORTABLE_POINTER_PREFIX + '\\')) {
+      return path.join(_portableRoot(), value.slice(PORTABLE_POINTER_PREFIX.length + 1));
+    }
+    if (path.isAbsolute(value) && !_exists(value)) {
+      const root = _portableRoot();
+      const marker = path.basename(root).toLowerCase();
+      const parts = value.split('\\').join('/').split('/').filter(Boolean);
+      const idx = parts.findIndex((p) => p.toLowerCase() === marker);
+      if (idx !== -1 && idx < parts.length - 1) {
+        const candidate = path.join(root, ...parts.slice(idx + 1));
+        if (_exists(candidate)) return candidate;
+      }
+    }
+  } catch { /* 原样返回 */ }
+  return value;
+}
+
 function _readPointer() {
   try {
     const raw = fs.readFileSync(_pointerFile(), 'utf8');
     const obj = JSON.parse(raw);
-    if (obj && typeof obj === 'object') return obj;
+    if (obj && typeof obj === 'object') {
+      for (const key of _POINTER_PATH_KEYS) {
+        if (typeof obj[key] === 'string') obj[key] = _fromPortablePointerValue(obj[key]);
+      }
+      return obj;
+    }
   } catch { /* missing/corrupt → treated as no pointer */ }
   return null;
 }
@@ -87,6 +146,9 @@ function _writePointer(patch) {
       ...patch,
       pinnedAt: new Date().toISOString(),
     };
+    for (const key of _POINTER_PATH_KEYS) {
+      if (typeof next[key] === 'string') next[key] = _toPortablePointerValue(next[key]);
+    }
     const tmp = `${file}.tmp-${process.pid}`;
     fs.writeFileSync(tmp, JSON.stringify(next, null, 2));
     fs.renameSync(tmp, file);
@@ -500,6 +562,9 @@ module.exports = {
   _readPointer,
   _writePointer,
   _pointerFile,
+  _portableRoot,
+  _toPortablePointerValue,
+  _fromPortablePointerValue,
   _isEstablished,
   _resetStorageCaches,
 };

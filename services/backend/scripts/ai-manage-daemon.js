@@ -172,17 +172,14 @@ async function waitForExit(pid, timeoutMs = 5000) {
 
 async function terminatePid(pid) {
   if (!isPidAlive(pid)) return;
-  const useGroupSignal = process.platform !== 'win32';
-  if (useGroupSignal) {
-    try { process.kill(-pid, 'SIGTERM'); } catch { /* ignore */ }
-  }
-  try { process.kill(pid, 'SIGTERM'); } catch { /* ignore */ }
+  // Reuse the shared cross-platform tree-kill primitive (taskkill /T /F on Windows,
+  // process-group signal + SIGKILL escalation on Unix) so this daemon and the CLI
+  // reaper share one behavior; keep the local wait-for-exit semantics on top.
+  const { safeKill } = require('../src/tools/platformUtils');
+  try { safeKill(pid, 'SIGTERM', 3000); } catch { /* best effort */ }
   const exited = await waitForExit(pid, 4000);
   if (!exited) {
-    if (useGroupSignal) {
-      try { process.kill(-pid, 'SIGKILL'); } catch { /* ignore */ }
-    }
-    try { process.kill(pid, 'SIGKILL'); } catch { /* ignore */ }
+    try { safeKill(pid, 'SIGKILL', 0); } catch { /* best effort */ }
     await waitForExit(pid, 1500);
   }
 }
