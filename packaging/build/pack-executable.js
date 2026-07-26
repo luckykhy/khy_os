@@ -97,7 +97,9 @@ function buildPkgConfig(moduleConfig, platform) {
 
   const target = PLATFORM_TARGETS[platform];
   const ext = PLATFORM_EXTENSIONS[platform];
-  const outputPath = path.join(DIST_EXECUTABLES, platform, `${moduleId}${ext}`);
+  // Platform suffix keeps artifact names unique when all platforms are
+  // flattened into a single GitHub release (e.g. khy-win-x64.exe).
+  const outputPath = path.join(DIST_EXECUTABLES, platform, `${moduleId}-${platform}${ext}`);
 
   // Determine assets to include (native modules)
   const assets = [];

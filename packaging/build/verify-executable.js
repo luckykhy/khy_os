@@ -49,7 +49,9 @@ const MAX_SIZE = 200 * 1024 * 1024;     // 200 MB
  */
 function verifyExecutable(moduleDef, platform) {
   const ext = EXTENSIONS[platform] || '';
-  const exePath = path.join(DIST_EXECUTABLES, platform, `${moduleDef.id}${ext}`);
+  // Names carry a platform suffix (see pack-executable.js) so that release
+  // uploads from different platforms never collide.
+  const exePath = path.join(DIST_EXECUTABLES, platform, `${moduleDef.id}-${platform}${ext}`);
   const results = { module: moduleDef.id, platform, checks: [] };
 
   // Check 1: existence
@@ -133,7 +135,7 @@ async function main() {
           // Run test if applicable
           if (check.name === 'run' && check.detail === 'pending') {
             const ext = EXTENSIONS[platform] || '';
-            const exePath = path.join(DIST_EXECUTABLES, platform, `${mod.id}${ext}`);
+            const exePath = path.join(DIST_EXECUTABLES, platform, `${mod.id}-${platform}${ext}`);
             const runResult = await runExecutionTest(exePath);
             if (runResult.pass) {
               console.log(`  ✓ ${label} [run] ${runResult.detail}`);
