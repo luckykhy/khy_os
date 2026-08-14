@@ -1,21 +1,23 @@
 module.exports = {
   root: true,
   env: {
-    node: true,
     browser: true,
-    es2021: true
+    es2022: true,
+    node: true,
   },
-  extends: [
-    'eslint:recommended',
-    'plugin:vue/vue3-recommended'
-  ],
+  extends: ['eslint:recommended', 'plugin:vue/vue3-recommended', 'prettier'],
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
+  plugins: ['vue'],
   rules: {
+    'vue/component-tags-order': ['warn', { order: ['template', 'script', 'style'] }],
+    'vue/attributes-order': ['warn', { alphabetical: true }],
     'vue/multi-word-component-names': 'off',
-    'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-    'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off'
-  }
+    'vue/no-v-html': 'warn',
+    'no-unused-vars': 'warn',
+    'prefer-const': 'warn',
+    'no-var': 'warn',
+  },
 };

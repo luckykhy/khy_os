@@ -1,0 +1,21 @@
+{
+  "import": [
+    { "path": "khyos/chain", "alias": "chain" }
+  ],
+  "is-main": true,
+  "link": {
+    "wasm-gc": {
+      "exports": [
+        "render_template",
+        "count_placeholders",
+        "extract_placeholders",
+        "format_history",
+        "estimate_history_tokens",
+        "max_turns_for_budget",
+        "parse_react_response",
+        "validate_input",
+        "estimate_chain_tokens"
+      ]
+    }
+  }
+}

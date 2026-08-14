@@ -1,33 +1,41 @@
 {
   "name": "khy-ai-frontend",
-  "version": "1.1.9",
+  "version": "1.6.5",
+  "description": "KHY-Quant AI Management Frontend",
   "type": "module",
-  "description": "Khy OS AI Platform Management UI",
-  "author": "孔浩原",
-  "license": "LicenseRef-Source-Available",
   "scripts": {
+    "sync-md-vendor": "node scripts/sync-md-vendor.mjs",
+    "predev": "node scripts/sync-md-vendor.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/sync-md-vendor.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:node": "node --test test/**/*.test.mjs"
   },
   "dependencies": {
-    "vue": "^3.4.21",
-    "vue-router": "^4.3.0",
+    "@vue-flow/background": "^1.3.0",
+    "@vue-flow/controls": "^1.1.2",
+    "@vue-flow/core": "^1.41.0",
+    "@vue-flow/minimap": "^1.5.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "axios": "^1.6.5",
+    "element-plus": "^2.5.0",
     "pinia": "^2.1.7",
-    "element-plus": "^2.7.0",
-    "@element-plus/icons-vue": "^2.3.1",
-    "axios": "^1.6.8",
-    "echarts": "^5.5.0",
-    "dayjs": "^1.11.10"
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.2.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-vue": "^9.23.0",
-    "prettier": "^3.2.5",
-    "sass": "^1.72.0"
+    "@playwright/test": "^1.62.1",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.20.0",
+    "prettier": "^3.2.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^5.0.0",
+    "vitest": "^2.0.0"
   }
 }

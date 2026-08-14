@@ -640,7 +640,11 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
     /* fail-soft: no Auto entry, picker unchanged */
   }
 
-  return { modelChoices, preferredIssueAfterProbe, empty: false };
+    return { modelChoices, preferredIssueAfterProbe, empty: false };
+  } catch (err) {
+    onError(`构建模型列表失败: ${(err && err.message) || 'unknown'}`);
+    return { modelChoices: [], preferredIssueAfterProbe: null, empty: true };
+  }
 }
 
 /**

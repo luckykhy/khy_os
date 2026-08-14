@@ -304,6 +304,27 @@ function _effectiveCmd(tool) {
 }
 
 /**
+ * Windows shim resolution for CLI tools. Node's spawn() cannot exec `.cmd` /
+ * `.bat` shims directly — npm-installed CLIs (claude, codex, aider) land on PATH
+ * as `<name>.cmd`, so a bare spawn('claude') fails with ENOENT even though the
+ * command works in a terminal. Routing through cmd.exe lets PATHEXT resolve the
+ * shim, matching what claudeAdapter's generation path already does. Absolute
+ * paths and names that already carry an extension are passed through untouched.
+ */
+function _spawnTarget(cmd, args) {
+  if (process.platform !== 'win32' || !cmd) {
+    return { cmd, args };
+  }
+  if (/[\\/]/.test(cmd) || /\.[a-z0-9]+$/i.test(cmd)) {
+    return { cmd, args };
+  }
+  return {
+    cmd: process.env.COMSPEC || 'cmd.exe',
+    args: ['/d', '/s', '/c', cmd, ...args],
+  };
+}
+
+/**
  * Whether a tool's optional env gate is open. Tools without a `gate` are always
  * eligible (unchanged behavior for claude/codex/aider); gated tools (opencode)
  * are skipped entirely — not probed, not offered — when their gate reads off.
@@ -389,7 +410,8 @@ function invokeStreamingTool(tool, prompt, onChunk, options = {}) {
       /* best effort */
     }
     const args = tool.buildArgs();
-    const child = spawn(_effectiveCmd(tool), args, {
+    const _st = _spawnTarget(_effectiveCmd(tool), args);
+    const child = spawn(_st.cmd, _st.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env,
     });
@@ -1025,7 +1047,8 @@ function invokeToolAsync(tool, prompt, options = {}) {
       }
     }
 
-    const child = spawn(_effectiveCmd(tool), args, {
+    const _st = _spawnTarget(_effectiveCmd(tool), args);
+    const child = spawn(_st.cmd, _st.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env,
     });

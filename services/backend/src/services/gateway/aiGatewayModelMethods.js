@@ -1267,7 +1267,14 @@ const AIGatewayModelMethods = {
           new Promise((resolve) => {
             let stdout = '',
               stderr = '';
-            const child = spawn('claude', argv, {
+            // Windows: `claude` on PATH is a .cmd shim, which spawn() cannot
+            // exec directly (ENOENT). Route through cmd.exe like claudeAdapter's
+            // generation path does, otherwise the probe always fails and the
+            // adapter gets hidden from /model despite being available.
+            const isWin = process.platform === 'win32';
+            const probeCmd = isWin ? process.env.COMSPEC || 'cmd.exe' : 'claude';
+            const probeArgs = isWin ? ['/d', '/s', '/c', 'claude.cmd', ...argv] : argv;
+            const child = spawn(probeCmd, probeArgs, {
               env: process.env,
               stdio: ['pipe', 'pipe', 'pipe'],
             });

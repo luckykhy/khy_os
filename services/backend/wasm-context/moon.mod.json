@@ -1,0 +1,9 @@
+{
+  "name": "khyos/context_utils",
+  "version": "0.1.0",
+  "readme": "",
+  "repository": "",
+  "license": "Apache-2.0",
+  "keywords": ["wasm", "context", "token-estimation", "hash"],
+  "description": "High-performance context utilities for AI subsystem (token estimation, hashing, truncation)"
+}
