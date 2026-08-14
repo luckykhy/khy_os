@@ -3,26 +3,28 @@
 const express = require('express');
 const request = require('supertest');
 
-const refreshSession = jest.fn();
-const createAuthResponseData = jest.fn();
-const serializeSession = jest.fn();
-const listUserSessions = jest.fn();
-const revokeSessionById = jest.fn();
-const invalidateLegacyTokens = jest.fn();
-const revokeUserSessions = jest.fn();
-const notePasswordChanged = jest.fn();
-const issueSessionForUser = jest.fn();
+// Variable names prefixed with `mock` so Jest's babel plugin hoists them
+// alongside jest.mock(), avoiding TDZ errors in the factory closure.
+const mockRefreshSession = jest.fn();
+const mockCreateAuthResponseData = jest.fn();
+const mockSerializeSession = jest.fn();
+const mockListUserSessions = jest.fn();
+const mockRevokeSessionById = jest.fn();
+const mockInvalidateLegacyTokens = jest.fn();
+const mockRevokeUserSessions = jest.fn();
+const mockNotePasswordChanged = jest.fn();
+const mockIssueSessionForUser = jest.fn();
 
 jest.mock('../../src/services/authSessionService', () => ({
-  refreshSession: (...args) => refreshSession(...args),
-  createAuthResponseData: (...args) => createAuthResponseData(...args),
-  serializeSession: (...args) => serializeSession(...args),
-  listUserSessions: (...args) => listUserSessions(...args),
-  revokeSessionById: (...args) => revokeSessionById(...args),
-  invalidateLegacyTokens: (...args) => invalidateLegacyTokens(...args),
-  revokeUserSessions: (...args) => revokeUserSessions(...args),
-  notePasswordChanged: (...args) => notePasswordChanged(...args),
-  issueSessionForUser: (...args) => issueSessionForUser(...args),
+  refreshSession: (...args) => mockRefreshSession(...args),
+  createAuthResponseData: (...args) => mockCreateAuthResponseData(...args),
+  serializeSession: (...args) => mockSerializeSession(...args),
+  listUserSessions: (...args) => mockListUserSessions(...args),
+  revokeSessionById: (...args) => mockRevokeSessionById(...args),
+  invalidateLegacyTokens: (...args) => mockInvalidateLegacyTokens(...args),
+  revokeUserSessions: (...args) => mockRevokeUserSessions(...args),
+  notePasswordChanged: (...args) => mockNotePasswordChanged(...args),
+  issueSessionForUser: (...args) => mockIssueSessionForUser(...args),
 }));
 
 jest.mock('../../src/models', () => ({
@@ -69,7 +71,7 @@ describe('auth routes session endpoints', () => {
   });
 
   test('POST /api/auth/refresh returns rotated token payload', async () => {
-    refreshSession.mockResolvedValue({
+    mockRefreshSession.mockResolvedValue({
       ok: true,
       user: {
         id: 3,
@@ -80,7 +82,7 @@ describe('auth routes session endpoints', () => {
       },
       session: { id: 'sess_rotated' },
     });
-    createAuthResponseData.mockReturnValue({
+    mockCreateAuthResponseData.mockReturnValue({
       token: 'access-2',
       accessToken: 'access-2',
       refreshToken: 'refresh-2',
@@ -93,13 +95,13 @@ describe('auth routes session endpoints', () => {
       .send({ refreshToken: 'refresh-1' });
 
     expect(res.status).toBe(200);
-    expect(refreshSession).toHaveBeenCalledWith('refresh-1', expect.any(Object));
+    expect(mockRefreshSession).toHaveBeenCalledWith('refresh-1', expect.any(Object));
     expect(res.body.data.token).toBe('access-2');
     expect(res.body.data.session.id).toBe('sess_rotated');
   });
 
   test('GET /api/auth/me returns both flat and nested user payloads', async () => {
-    serializeSession.mockReturnValue({ id: 'sess_current', current: true });
+    mockSerializeSession.mockReturnValue({ id: 'sess_current', current: true });
 
     const res = await request(app).get('/api/auth/me');
 
@@ -110,7 +112,7 @@ describe('auth routes session endpoints', () => {
   });
 
   test('GET /api/auth/sessions returns current session id and session list', async () => {
-    listUserSessions.mockResolvedValue([
+    mockListUserSessions.mockResolvedValue([
       { id: 'sess_current', current: true },
       { id: 'sess_other', current: false },
     ]);
@@ -118,7 +120,7 @@ describe('auth routes session endpoints', () => {
     const res = await request(app).get('/api/auth/sessions');
 
     expect(res.status).toBe(200);
-    expect(listUserSessions).toHaveBeenCalledWith(3, 'sess_current');
+    expect(mockListUserSessions).toHaveBeenCalledWith(3, 'sess_current');
     expect(res.body.data.currentSessionId).toBe('sess_current');
     expect(res.body.data.sessions).toHaveLength(2);
   });

@@ -8,16 +8,25 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
 
 let _runPromise = null;
 
 function compareVersions(a = '0.0.0', b = '0.0.0') {
-  const pa = String(a || '0.0.0').split('.').map(v => parseInt(v, 10) || 0);
-  const pb = String(b || '0.0.0').split('.').map(v => parseInt(v, 10) || 0);
+  const pa = String(a || '0.0.0')
+    .split('.')
+    .map((v) => parseInt(v, 10) || 0);
+  const pb = String(b || '0.0.0')
+    .split('.')
+    .map((v) => parseInt(v, 10) || 0);
   for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
-    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if ((pa[i] || 0) < (pb[i] || 0)) {
+      return -1;
+    }
+    if ((pa[i] || 0) > (pb[i] || 0)) {
+      return 1;
+    }
   }
   return 0;
 }
@@ -36,11 +45,7 @@ function resolveStateFile() {
   if (process.env.KHY_DB_MIGRATION_STATE_FILE) {
     return path.resolve(process.env.KHY_DB_MIGRATION_STATE_FILE);
   }
-  const candidates = [
-    getLegacyDataHome(),
-    getDataHome(),
-    path.join(os.tmpdir(), 'khyquant'),
-  ];
+  const candidates = [getLegacyDataHome(), getDataHome(), path.join(os.tmpdir(), 'khyquant')];
   const writable = candidates.find(isWritableDir) || candidates[candidates.length - 1];
   return path.join(writable, 'db_migration_state.json');
 }
@@ -99,7 +104,8 @@ function warn(message, meta = {}) {
 
 async function _run({ silent = false, force = false, reason = 'startup' } = {}) {
   const autoEnabled = String(process.env.KHY_AUTO_DB_MIGRATE || 'true').toLowerCase() !== 'false';
-  const alwaysRun = String(process.env.KHY_AUTO_DB_MIGRATE_ALWAYS || 'false').toLowerCase() === 'true';
+  const alwaysRun =
+    String(process.env.KHY_AUTO_DB_MIGRATE_ALWAYS || 'false').toLowerCase() === 'true';
   if (!autoEnabled && !force) {
     return { ran: false, skipped: true, reason: 'disabled' };
   }
@@ -165,7 +171,9 @@ async function _run({ silent = false, force = false, reason = 'startup' } = {}) 
 }
 
 async function runAutoDbMigration(options = {}) {
-  if (_runPromise) return _runPromise;
+  if (_runPromise) {
+    return _runPromise;
+  }
   _runPromise = _run(options).finally(() => {
     _runPromise = null;
   });

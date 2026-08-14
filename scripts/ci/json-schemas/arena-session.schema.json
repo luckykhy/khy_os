@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Arena Session",
+  "description": "Arena evaluation sessions (.khy/arena/arena-*.json).",
+  "type": "object",
+  "required": ["arenaId", "entries"],
+  "properties": {
+    "arenaId": {
+      "type": "string",
+      "description": "Unique arena session identifier (matches filename)"
+    },
+    "prompt": {
+      "type": "string",
+      "description": "The evaluation prompt sent to all models"
+    },
+    "entries": {
+      "type": "array",
+      "description": "Model response entries",
+      "items": {
+        "type": "object",
+        "required": ["model", "content"],
+        "properties": {
+          "model": { "type": "string" },
+          "content": { "type": "string" },
+          "latencyMs": { "type": "number" },
+          "totalMs": { "type": "number" },
+          "usage": { "type": ["object", "null"] },
+          "error": { "type": ["string", "null"] },
+          "failed": { "type": "boolean" }
+        }
+      }
+    },
+    "summary": {
+      "type": ["object", "null"],
+      "description": "Aggregated evaluation summary"
+    },
+    "totalMs": {
+      "type": "number",
+      "description": "Total wall-clock time for the arena evaluation"
+    },
+    "savedAt": {
+      "type": "integer",
+      "description": "Unix timestamp (ms) when this arena was saved"
+    }
+  },
+  "additionalProperties": true
+}

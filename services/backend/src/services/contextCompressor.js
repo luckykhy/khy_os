@@ -24,23 +24,23 @@
 
 // ── Constants ───────────────────────────────────────────────────────────
 
-const COMPRESSION_TOKEN_THRESHOLD = 0.70;
-const COMPRESSION_PRESERVE_RATIO  = 0.30;
-const MIN_COMPRESSION_FRACTION    = 0.05;
-const TOOL_ROUND_RETAIN_COUNT     = 2;
-const IMAGE_DATA_ESTIMATE_CHARS   = 6400;
-const MAX_TOOL_RESULT_CHARS       = 5000;
+const COMPRESSION_TOKEN_THRESHOLD = 0.7;
+const COMPRESSION_PRESERVE_RATIO = 0.3;
+const MIN_COMPRESSION_FRACTION = 0.05;
+const TOOL_ROUND_RETAIN_COUNT = 2;
+const IMAGE_DATA_ESTIMATE_CHARS = 6400;
+const MAX_TOOL_RESULT_CHARS = 5000;
 
 // A5: 反抖动常量
-const COMPRESSION_COOLDOWN_MS     = 30000;   // 两次压缩最小间隔 30s
-const LOW_EFFICIENCY_THRESHOLD    = 0.10;    // 压缩效率低于 10% 视为低效
-const MAX_CONSECUTIVE_LOW_EFF     = 2;       // 连续低效 N 次后跳过
+const COMPRESSION_COOLDOWN_MS = 30000; // 两次压缩最小间隔 30s
+const LOW_EFFICIENCY_THRESHOLD = 0.1; // 压缩效率低于 10% 视为低效
+const MAX_CONSECUTIVE_LOW_EFF = 2; // 连续低效 N 次后跳过
 
 // A5: 反抖动状态
-let _lastCompressionTs      = 0;
-let _consecutiveLowEff      = 0;
+let _lastCompressionTs = 0;
+let _consecutiveLowEff = 0;
 // A5: session 恢复标记
-let _sessionJustResumed     = false;
+let _sessionJustResumed = false;
 
 // ── Base64 data URL pattern ──────────────────────────────────────────────
 
@@ -52,13 +52,21 @@ const BASE64_DATA_RE = /data:([^;]+);base64,[A-Za-z0-9+/=]{100,}/g;
  * Check if a message has tool-call content (assistant requesting a tool).
  */
 function _hasToolCall(msg) {
-  if (!msg) return false;
+  if (!msg) {
+    return false;
+  }
   // OpenAI format: tool_calls array
-  if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) return true;
+  if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+    return true;
+  }
   // KHY/Claude format: function_call field
-  if (msg.function_call) return true;
+  if (msg.function_call) {
+    return true;
+  }
   // Embedded in content as <tool_call> tags
-  if (typeof msg.content === 'string' && msg.content.includes('<tool_call>')) return true;
+  if (typeof msg.content === 'string' && msg.content.includes('<tool_call>')) {
+    return true;
+  }
   return false;
 }
 
@@ -66,11 +74,15 @@ function _hasToolCall(msg) {
  * Check if a message is a tool/function result.
  */
 function _isToolResult(msg) {
-  if (!msg) return false;
-  if (msg.role === 'tool' || msg.role === 'function') return true;
+  if (!msg) {
+    return false;
+  }
+  if (msg.role === 'tool' || msg.role === 'function') {
+    return true;
+  }
   // Anthropic format: role='user' with tool_result content blocks
   if (msg.role === 'user' && Array.isArray(msg.content)) {
-    return msg.content.some(b => b && b.type === 'tool_result');
+    return msg.content.some((b) => b && b.type === 'tool_result');
   }
   return false;
 }
@@ -100,17 +112,21 @@ function _isUserMessage(msg) {
  * @returns {number} Split index: messages[0..split-1] = old, messages[split..] = kept
  */
 function findCompressSplitPoint(messages, estimateTokensFn, totalTokens, targetFraction) {
-  const fraction = targetFraction ?? (1 - COMPRESSION_PRESERVE_RATIO);
+  const fraction = targetFraction ?? 1 - COMPRESSION_PRESERVE_RATIO;
   const targetTokens = totalTokens * fraction;
 
-  if (messages.length <= 2) return 0;
+  if (messages.length <= 2) {
+    return 0;
+  }
 
   // Skip system messages at the start
   let firstNonSystem = 0;
   while (firstNonSystem < messages.length && messages[firstNonSystem].role === 'system') {
     firstNonSystem++;
   }
-  if (firstNonSystem >= messages.length - 1) return 0;
+  if (firstNonSystem >= messages.length - 1) {
+    return 0;
+  }
 
   // ── Phase 1: Character estimation to locate target position ────────
   let accum = 0;
@@ -126,7 +142,8 @@ function findCompressSplitPoint(messages, estimateTokensFn, totalTokens, targetF
   }
 
   // Clamp: don't compress everything — keep at least a few messages
-  const maxSplit = messages.length - Math.max(2, Math.ceil(messages.length * COMPRESSION_PRESERVE_RATIO));
+  const maxSplit =
+    messages.length - Math.max(2, Math.ceil(messages.length * COMPRESSION_PRESERVE_RATIO));
   rawTarget = Math.min(rawTarget, maxSplit);
   rawTarget = Math.max(rawTarget, firstNonSystem + 1);
 
@@ -215,7 +232,9 @@ function slimForCompression(messages) {
   let freedChars = 0;
 
   const slimmed = messages.map((msg) => {
-    if (typeof msg.content !== 'string') return msg;
+    if (typeof msg.content !== 'string') {
+      return msg;
+    }
 
     let content = msg.content;
     const originalLen = content.length;
@@ -227,11 +246,15 @@ function slimForCompression(messages) {
     });
 
     // Truncate oversized tool results
-    if (content.length > MAX_TOOL_RESULT_CHARS &&
-        (msg.role === 'tool' || msg.role === 'function' ||
-         content.includes('[Tool execution results]'))) {
-      content = content.slice(0, MAX_TOOL_RESULT_CHARS)
-        + `\n... (truncated from ${originalLen} chars for compression)`;
+    if (
+      content.length > MAX_TOOL_RESULT_CHARS &&
+      (msg.role === 'tool' ||
+        msg.role === 'function' ||
+        content.includes('[Tool execution results]'))
+    ) {
+      content =
+        content.slice(0, MAX_TOOL_RESULT_CHARS) +
+        `\n... (truncated from ${originalLen} chars for compression)`;
     }
 
     if (content.length < originalLen) {
@@ -252,7 +275,9 @@ function slimForCompression(messages) {
  * @returns {{ text: string, strippedCount: number }}
  */
 function stripBase64(text) {
-  if (!text || typeof text !== 'string') return { text: text || '', strippedCount: 0 };
+  if (!text || typeof text !== 'string') {
+    return { text: text || '', strippedCount: 0 };
+  }
   let count = 0;
   const result = text.replace(BASE64_DATA_RE, (match, mime) => {
     count++;
@@ -277,12 +302,16 @@ function stripBase64(text) {
  * @returns {Array} Messages with bridge prepended if needed
  */
 function buildConversationBridge(keptMessages, summaryHint) {
-  if (!keptMessages || keptMessages.length === 0) return keptMessages;
+  if (!keptMessages || keptMessages.length === 0) {
+    return keptMessages;
+  }
 
   const first = keptMessages[0];
 
   // If first message is system or user, no bridge needed
-  if (first.role === 'system' || first.role === 'user') return keptMessages;
+  if (first.role === 'system' || first.role === 'user') {
+    return keptMessages;
+  }
 
   const bridgeText = summaryHint
     ? `[Continuing from compressed context: ${summaryHint}]`
@@ -290,10 +319,7 @@ function buildConversationBridge(keptMessages, summaryHint) {
 
   if (first.role === 'assistant') {
     // Insert a synthetic user message before the assistant
-    return [
-      { role: 'user', content: bridgeText },
-      ...keptMessages,
-    ];
+    return [{ role: 'user', content: bridgeText }, ...keptMessages];
   }
 
   if (_isToolResult(first)) {
@@ -328,16 +354,20 @@ function buildConversationBridge(keptMessages, summaryHint) {
  * }>}
  */
 async function compress(messages, opts) {
+  // 压缩起点,供结果行报告真实耗时(AI 摘要含一次模型往返)。放在最顶端以覆盖所有
+  // 早退路径 —— 各 noOp 分支不发结果行,故只有真正压缩成功时才会用到这个值。
+  const _compressStartedAt = Date.now();
   const {
     estimateTokensFn,
     callModelFn,
     contextWindowTokens,
     logger,
-    preserveRatioOverride,   // Coordination: caller can raise preserve ratio if prior layers already pruned
+    preserveRatioOverride, // Coordination: caller can raise preserve ratio if prior layers already pruned
   } = opts;
-  const effectivePreserveRatio = (typeof preserveRatioOverride === 'number' && preserveRatioOverride > 0)
-    ? Math.min(preserveRatioOverride, 0.70)
-    : COMPRESSION_PRESERVE_RATIO;
+  const effectivePreserveRatio =
+    typeof preserveRatioOverride === 'number' && preserveRatioOverride > 0
+      ? Math.min(preserveRatioOverride, 0.7)
+      : COMPRESSION_PRESERVE_RATIO;
 
   const noOp = {
     compressed: messages,
@@ -347,17 +377,23 @@ async function compress(messages, opts) {
     strippedImages: 0,
   };
 
-  if (!messages || messages.length <= 4) return noOp;
+  if (!messages || messages.length <= 4) {
+    return noOp;
+  }
 
   // ── A5: 反抖动 — 冷却期内跳过 ─────────────────────────────────────
   const now = Date.now();
-  if (_lastCompressionTs && (now - _lastCompressionTs) < COMPRESSION_COOLDOWN_MS) {
-    if (logger) logger.info('[contextCompressor] 冷却期内，跳过压缩');
+  if (_lastCompressionTs && now - _lastCompressionTs < COMPRESSION_COOLDOWN_MS) {
+    if (logger) {
+      logger.info('[contextCompressor] 冷却期内，跳过压缩');
+    }
     return noOp;
   }
   // A5: 连续低效跳过
   if (_consecutiveLowEff >= MAX_CONSECUTIVE_LOW_EFF) {
-    if (logger) logger.info(`[contextCompressor] 连续 ${_consecutiveLowEff} 次低效压缩，跳过`);
+    if (logger) {
+      logger.info(`[contextCompressor] 连续 ${_consecutiveLowEff} 次低效压缩，跳过`);
+    }
     _consecutiveLowEff = 0; // 重置后下次允许尝试
     return noOp;
   }
@@ -365,20 +401,24 @@ async function compress(messages, opts) {
   // ── A5: session 恢复后跳过首次压缩 ────────────────────────────────
   if (_sessionJustResumed) {
     _sessionJustResumed = false;
-    if (logger) logger.info('[contextCompressor] Session 刚恢复，跳过首次压缩');
+    if (logger) {
+      logger.info('[contextCompressor] Session 刚恢复，跳过首次压缩');
+    }
     return noOp;
   }
 
   // ── A4: 双重压缩检测 ─────────────────────────────────────────────
-  const hasExistingSummary = messages.some(m =>
-    typeof m.content === 'string' && (
-      m.content.includes('[Compressed context summary]') ||
-      m.content.includes('[ContextCompact v2')
-    )
+  const hasExistingSummary = messages.some(
+    (m) =>
+      typeof m.content === 'string' &&
+      (m.content.includes('[Compressed context summary]') ||
+        m.content.includes('[ContextCompact v2'))
   );
 
   if (hasExistingSummary) {
-    if (logger) logger.info('[contextCompressor] 检测到已有摘要，使用增量更新');
+    if (logger) {
+      logger.info('[contextCompressor] 检测到已有摘要，使用增量更新');
+    }
     const result = await _incrementalUpdate(messages, opts);
     _lastCompressionTs = Date.now();
     return result;
@@ -391,33 +431,47 @@ async function compress(messages, opts) {
   }
 
   const usageRatio = totalTokens / contextWindowTokens;
-  if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) return noOp;
+  if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) {
+    return noOp;
+  }
 
   if (logger) {
-    logger.info(`[contextCompressor] Usage ${Math.round(usageRatio * 100)}% — triggering compression`);
+    logger.info(
+      `[contextCompressor] Usage ${Math.round(usageRatio * 100)}% — triggering compression`
+    );
   }
 
   // Hook: PreCompact — notify before compression starts
   try {
     const hookSys = require('./hooks/hookSystem');
-    const preHr = await hookSys.trigger('PreCompact', { messageCount: messages.length, totalTokens, usageRatio });
-    if (preHr.blocked) return noOp;
-  } catch { /* hooks optional */ }
+    const preHr = await hookSys.trigger('PreCompact', {
+      messageCount: messages.length,
+      totalTokens,
+      usageRatio,
+    });
+    if (preHr.blocked) {
+      return noOp;
+    }
+  } catch {
+    /* hooks optional */
+  }
 
   // ── Step 2: Find split point ───────────────────────────────────────
   const splitIndex = findCompressSplitPoint(
     messages,
     estimateTokensFn,
     totalTokens,
-    1 - effectivePreserveRatio,  // Coordinated: if prior layers pruned, compress less
+    1 - effectivePreserveRatio // Coordinated: if prior layers pruned, compress less
   );
 
   // Check minimum compression fraction
-  const oldTokens = messages.slice(0, splitIndex).reduce(
-    (sum, m) => sum + estimateTokensFn(m.content || ''), 0
-  );
+  const oldTokens = messages
+    .slice(0, splitIndex)
+    .reduce((sum, m) => sum + estimateTokensFn(m.content || ''), 0);
   if (oldTokens / totalTokens < MIN_COMPRESSION_FRACTION) {
-    if (logger) logger.info('[contextCompressor] Too little to compress, skipping');
+    if (logger) {
+      logger.info('[contextCompressor] Too little to compress, skipping');
+    }
     return noOp;
   }
 
@@ -451,37 +505,81 @@ async function compress(messages, opts) {
     for (const chunk of chunkTexts) {
       // Extract file paths, tool calls, errors, and decisions
       const files = [...new Set((chunk.match(/(?:\/[\w./-]+\.\w+)/g) || []).slice(0, 10))];
-      const errors = (chunk.match(/(?:error|failed|exception|ERROR)[^\n]{0,80}/gi) || []).slice(0, 3);
+      const errors = (chunk.match(/(?:error|failed|exception|ERROR)[^\n]{0,80}/gi) || []).slice(
+        0,
+        3
+      );
       const tools = (chunk.match(/Tool:\s*\w+/g) || []).slice(0, 5);
-      if (files.length) keyPoints.push(`Files: ${files.join(', ')}`);
-      if (tools.length) keyPoints.push(`Tools used: ${[...new Set(tools)].join(', ')}`);
-      if (errors.length) keyPoints.push(`Issues: ${errors.join('; ').slice(0, 200)}`);
+      if (files.length) {
+        keyPoints.push(`Files: ${files.join(', ')}`);
+      }
+      if (tools.length) {
+        keyPoints.push(`Tools used: ${[...new Set(tools)].join(', ')}`);
+      }
+      if (errors.length) {
+        keyPoints.push(`Issues: ${errors.join('; ').slice(0, 200)}`);
+      }
     }
     // Combine: first/last chunks for context + extracted key points
-    const contextWindow = fullOldText.slice(0, CHUNK_CHARS) +
+    const contextWindow =
+      fullOldText.slice(0, CHUNK_CHARS) +
       (fullOldText.length > CHUNK_CHARS * 2
-        ? `\n...[${Math.round((fullOldText.length - CHUNK_CHARS * 2) / 1000)}K chars of intermediate conversation omitted]\n` + fullOldText.slice(-CHUNK_CHARS)
+        ? `\n...[${Math.round((fullOldText.length - CHUNK_CHARS * 2) / 1000)}K chars of intermediate conversation omitted]\n` +
+          fullOldText.slice(-CHUNK_CHARS)
         : '\n' + fullOldText.slice(CHUNK_CHARS));
-    const keyPointsSuffix = keyPoints.length > 0
-      ? '\n\n[Key points from full history]\n' + keyPoints.join('\n')
-      : '';
+    const keyPointsSuffix =
+      keyPoints.length > 0 ? '\n\n[Key points from full history]\n' + keyPoints.join('\n') : '';
     oldText = contextWindow.slice(0, CHUNK_CHARS * 2) + keyPointsSuffix;
   }
 
   // 注入任务快照，确保 AI 摘要包含任务进度
   let taskSnapshot = '';
-  try { const ts = require('../tools/_taskStore'); taskSnapshot = ts.snapshot(); } catch {}
+  try {
+    const ts = require('../tools/_taskStore');
+    taskSnapshot = ts.snapshot();
+  } catch {}
   const oldTextWithTasks = taskSnapshot
     ? oldText + '\n\n[Current tasks]\n' + taskSnapshot
     : oldText;
 
+  // ── Step 4.5: 任务锚点保留 ─────────────────────────────────────────
+  // 压缩会把 messages[0..splitIndex) 全部折叠进摘要。复杂任务最初的用户
+  // 任务语句(第一条非 system 的 user 消息)一旦只剩摘要转述,模型常常
+  // 「失忆」推不动。这里把它原文追加到摘要提示,让 LLM 生成的压缩摘要
+  // 明确包含原始任务目标;同时把任务锚点作为独立消息注入压缩结果,
+  // 保证压缩后模型仍能看到原始需求(而非仅二手转述)。
+  const TASK_ANCHOR_MAX_CHARS = 1500;
+  let taskAnchorText = '';
+  let taskAnchorMessage = null;
+  {
+    const anchorMsg = messages.find(
+      (m) => m && m.role === 'user' && !_isToolResult(m) && typeof m.content === 'string'
+    );
+    if (anchorMsg && String(anchorMsg.content).trim()) {
+      const raw = String(anchorMsg.content).trim();
+      taskAnchorText =
+        raw.length > TASK_ANCHOR_MAX_CHARS ? raw.slice(0, TASK_ANCHOR_MAX_CHARS) + '…' : raw;
+      taskAnchorMessage = {
+        role: 'user',
+        content: `<original_task>\nThis is the ORIGINAL task from the user. Keep working toward it even though earlier context was compressed.\n\n${taskAnchorText}\n</original_task>`,
+      };
+    }
+  }
+
   let summary;
   try {
-    const result = await callModelFn(oldTextWithTasks, { effort: 'medium', _isFollowUp: true });
+    const summaryInput = taskAnchorText
+      ? `[Original task to preserve]\n${taskAnchorText}\n\n---\n\n${oldTextWithTasks}`
+      : oldTextWithTasks;
+    const result = await callModelFn(summaryInput, { effort: 'medium', _isFollowUp: true });
     summary = result?.reply || result?.content || result;
-    if (typeof summary !== 'string') summary = null;
+    if (typeof summary !== 'string') {
+      summary = null;
+    }
   } catch (err) {
-    if (logger) logger.warn('[contextCompressor] AI summary failed:', err?.message);
+    if (logger) {
+      logger.warn('[contextCompressor] AI summary failed:', err?.message);
+    }
     // Fallback: manual extraction of key points
     summary = _manualExtract(slimmed);
   }
@@ -513,6 +611,12 @@ async function compress(messages, opts) {
 
   const compressed = [summaryMessage, ...bridgedKept];
 
+  // 注入任务锚点(原始任务语句原文),确保压缩后模型仍记得任务目标。
+  // 放在摘要之后、对话桥接之前;若锚点与摘要内容重复则由后续压缩自然收敛。
+  if (taskAnchorMessage) {
+    compressed.splice(1, 0, taskAnchorMessage);
+  }
+
   // 注入任务快照为独立消息，确保压缩后 AI 能看到当前任务进度
   if (taskSnapshot) {
     compressed.splice(1, 0, {
@@ -521,14 +625,12 @@ async function compress(messages, opts) {
     });
   }
 
-  const newTokens = compressed.reduce(
-    (sum, m) => sum + estimateTokensFn(m.content || ''), 0
-  );
+  const newTokens = compressed.reduce((sum, m) => sum + estimateTokensFn(m.content || ''), 0);
 
   if (logger) {
     logger.info(
       `[contextCompressor] Compressed ${messages.length} → ${compressed.length} messages, ` +
-      `${totalTokens} → ${newTokens} tokens, ${strippedImageCount} images stripped`
+        `${totalTokens} → ${newTokens} tokens, ${strippedImageCount} images stripped`
     );
   }
 
@@ -539,7 +641,11 @@ async function compress(messages, opts) {
   const efficiency = totalTokens > 0 ? freedTokens / totalTokens : 0;
   if (efficiency < LOW_EFFICIENCY_THRESHOLD) {
     _consecutiveLowEff++;
-    if (logger) logger.info(`[contextCompressor] 低效压缩 (${Math.round(efficiency * 100)}%), 连续 ${_consecutiveLowEff} 次`);
+    if (logger) {
+      logger.info(
+        `[contextCompressor] 低效压缩 (${Math.round(efficiency * 100)}%), 连续 ${_consecutiveLowEff} 次`
+      );
+    }
   } else {
     _consecutiveLowEff = 0;
   }
@@ -547,8 +653,15 @@ async function compress(messages, opts) {
   // Hook: PostCompact — notify after compression completes
   try {
     const hookSys = require('./hooks/hookSystem');
-    await hookSys.trigger('PostCompact', { freedTokens, splitIndex, summaryGenerated: true, strippedImages: strippedImageCount });
-  } catch { /* hooks optional */ }
+    await hookSys.trigger('PostCompact', {
+      freedTokens,
+      splitIndex,
+      summaryGenerated: true,
+      strippedImages: strippedImageCount,
+    });
+  } catch {
+    /* hooks optional */
+  }
 
   // Transparency: print compaction result to terminal via the neutral UI port
   // (no reverse require to cli/aiRenderer; DESIGN-ARCH-021, Batch 2). The CLI
@@ -556,7 +669,9 @@ async function compress(messages, opts) {
   require('./compactionUiPort').emitCompactionResult({
     beforeTokens: totalTokens,
     afterTokens: newTokens,
-    durationMs: 0,
+    // 真实耗时。此前硬编码 0,导致经典 REPL 的压缩结果行永远不显示耗时 ——
+    // 而 AI 摘要是一次模型往返,恰恰是用户最想知道「花了多久」的那一步。
+    durationMs: Math.max(0, Date.now() - _compressStartedAt),
   });
 
   return {
@@ -579,10 +694,12 @@ async function compress(messages, opts) {
  * @returns {Promise<{ compressed, summaryGenerated, freedTokens, splitIndex, strippedImages }>}
  */
 async function _incrementalUpdate(messages, opts) {
-  const { estimateTokensFn, callModelFn, contextWindowTokens, logger, preserveRatioOverride } = opts;
-  const _preserveRatio = (typeof preserveRatioOverride === 'number' && preserveRatioOverride > 0)
-    ? Math.min(preserveRatioOverride, 0.70)
-    : COMPRESSION_PRESERVE_RATIO;
+  const { estimateTokensFn, callModelFn, contextWindowTokens, logger, preserveRatioOverride } =
+    opts;
+  const _preserveRatio =
+    typeof preserveRatioOverride === 'number' && preserveRatioOverride > 0
+      ? Math.min(preserveRatioOverride, 0.7)
+      : COMPRESSION_PRESERVE_RATIO;
 
   const noOp = {
     compressed: messages,
@@ -597,36 +714,47 @@ async function _incrementalUpdate(messages, opts) {
   let existingSummary = '';
   for (let i = 0; i < messages.length; i++) {
     const content = typeof messages[i].content === 'string' ? messages[i].content : '';
-    if (content.includes('[Compressed context summary]') || content.includes('[ContextCompact v2')) {
+    if (
+      content.includes('[Compressed context summary]') ||
+      content.includes('[ContextCompact v2')
+    ) {
       summaryIdx = i;
       existingSummary = content;
       break;
     }
   }
 
-  if (summaryIdx < 0) return noOp;
+  if (summaryIdx < 0) {
+    return noOp;
+  }
 
   // 摘要之后的消息
   const afterSummary = messages.slice(summaryIdx + 1);
-  if (afterSummary.length <= 4) return noOp; // 太少不值得更新
+  if (afterSummary.length <= 4) {
+    return noOp;
+  } // 太少不值得更新
 
   // 计算 token
   const totalTokens = messages.reduce((s, m) => s + estimateTokensFn(m.content || ''), 0);
   const usageRatio = totalTokens / contextWindowTokens;
-  if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) return noOp;
+  if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) {
+    return noOp;
+  }
 
   // 找到新增消息中的压缩分割点（保留最后 30%）
   const newMsgTokens = afterSummary.reduce((s, m) => s + estimateTokensFn(m.content || ''), 0);
   const keepCount = Math.max(4, Math.ceil(afterSummary.length * _preserveRatio));
   const compressCount = afterSummary.length - keepCount;
-  if (compressCount <= 2) return noOp;
+  if (compressCount <= 2) {
+    return noOp;
+  }
 
   const toCompress = afterSummary.slice(0, compressCount);
   const toKeep = afterSummary.slice(compressCount);
 
   // 用 LLM 增量更新摘要
   const newText = toCompress
-    .map(m => `${m.role}: ${typeof m.content === 'string' ? m.content : '[non-text]'}`)
+    .map((m) => `${m.role}: ${typeof m.content === 'string' ? m.content : '[non-text]'}`)
     .join('\n')
     .slice(0, 12000);
 
@@ -640,7 +768,9 @@ async function _incrementalUpdate(messages, opts) {
         updatedSummary = `[Compressed context summary]\n${reply}`;
       }
     } catch (err) {
-      if (logger) logger.warn('[contextCompressor] 增量摘要失败:', err?.message);
+      if (logger) {
+        logger.warn('[contextCompressor] 增量摘要失败:', err?.message);
+      }
     }
   }
 
@@ -655,14 +785,11 @@ async function _incrementalUpdate(messages, opts) {
       ...toKeep,
     ];
   } else if (toKeep.length > 0 && toKeep[0].role !== 'assistant') {
-    bridgedKeep = [
-      { role: 'assistant', content: '[continued]' },
-      ...toKeep,
-    ];
+    bridgedKeep = [{ role: 'assistant', content: '[continued]' }, ...toKeep];
   }
 
   // 保留摘要之前的 system 消息
-  const preSummary = messages.slice(0, summaryIdx).filter(m => m.role === 'system');
+  const preSummary = messages.slice(0, summaryIdx).filter((m) => m.role === 'system');
   const compressed = [...preSummary, summaryMessage, ...bridgedKeep];
 
   const newTokens = compressed.reduce((s, m) => s + estimateTokensFn(m.content || ''), 0);
@@ -671,7 +798,7 @@ async function _incrementalUpdate(messages, opts) {
   if (logger) {
     logger.info(
       `[contextCompressor] 增量更新: ${messages.length} → ${compressed.length} 条, ` +
-      `释放 ${freedTokens} tokens`
+        `释放 ${freedTokens} tokens`
     );
   }
 
@@ -729,9 +856,8 @@ function _manualExtract(messages) {
   }
 
   if (lastUserContent) {
-    const trimmed = lastUserContent.length > 300
-      ? lastUserContent.slice(0, 300) + '...'
-      : lastUserContent;
+    const trimmed =
+      lastUserContent.length > 300 ? lastUserContent.slice(0, 300) + '...' : lastUserContent;
     parts.unshift(`Last user request: ${trimmed}`);
   }
 
@@ -743,7 +869,9 @@ function _manualExtract(messages) {
   try {
     const ts = require('../tools/_taskStore');
     const s = ts.snapshot();
-    if (s) parts.push('[Active tasks]\n' + s);
+    if (s) {
+      parts.push('[Active tasks]\n' + s);
+    }
   } catch {}
 
   return parts.slice(0, 5).join('\n');
@@ -782,7 +910,9 @@ async function triggerCycleBoundary(messages, opts) {
   const { estimateTokensFn, callModelFn, archiveDir } = opts;
 
   const totalTokens = messages.reduce(
-    (sum, m) => sum + estimateTokensFn(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '')),
+    (sum, m) =>
+      sum +
+      estimateTokensFn(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '')),
     0
   );
 
@@ -791,10 +921,10 @@ async function triggerCycleBoundary(messages, opts) {
   }
 
   // Layer 1: Auto-preserved (system messages)
-  const systemMessages = messages.filter(m => m.role === 'system');
+  const systemMessages = messages.filter((m) => m.role === 'system');
 
   // Layer 1b: Last user message (the goal)
-  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
 
   // Layer 2: Model-curated briefing
   let briefing = '';
@@ -802,22 +932,32 @@ async function triggerCycleBoundary(messages, opts) {
   if (typeof callModelFn === 'function') {
     try {
       const transcript = messages
-        .filter(m => m.role !== 'system')
-        .map(m => `[${m.role}] ${typeof m.content === 'string' ? m.content.slice(0, 300) : '[non-text]'}`)
+        .filter((m) => m.role !== 'system')
+        .map(
+          (m) =>
+            `[${m.role}] ${typeof m.content === 'string' ? m.content.slice(0, 300) : '[non-text]'}`
+        )
         .join('\n')
         .slice(0, 12000);
       const briefingPrompt = `Summarize the key decisions, constraints, hypotheses, and open questions from this session in ≤${budgetChars} characters. Focus on what matters for continuing the task.\n\n${transcript}`;
       const result = await callModelFn(briefingPrompt, { effort: 'low', _isFollowUp: true });
       briefing = typeof result?.reply === 'string' ? result.reply.slice(0, budgetChars) : '';
-    } catch { /* fallback to manual */ }
+    } catch {
+      /* fallback to manual */
+    }
   }
   if (!briefing) {
     // Manual extraction: last 3 assistant messages summarized
-    const assistantMsgs = messages.filter(m => m.role === 'assistant');
-    briefing = assistantMsgs.slice(-3).map(m => {
-      const text = typeof m.content === 'string' ? m.content : '';
-      return text.split(/[。.!！?\n]/)[0]?.slice(0, 200) || '';
-    }).filter(Boolean).join('; ').slice(0, budgetChars);
+    const assistantMsgs = messages.filter((m) => m.role === 'assistant');
+    briefing = assistantMsgs
+      .slice(-3)
+      .map((m) => {
+        const text = typeof m.content === 'string' ? m.content : '';
+        return text.split(/[。.!！?\n]/)[0]?.slice(0, 200) || '';
+      })
+      .filter(Boolean)
+      .join('; ')
+      .slice(0, budgetChars);
   }
 
   // Layer 3: Archive to disk
@@ -828,9 +968,11 @@ async function triggerCycleBoundary(messages, opts) {
       const path = require('path');
       fs.mkdirSync(archiveDir, { recursive: true });
       archivePath = path.join(archiveDir, `cycle_${Date.now()}.jsonl`);
-      const lines = messages.map(m => JSON.stringify(m)).join('\n');
+      const lines = messages.map((m) => JSON.stringify(m)).join('\n');
       fs.writeFileSync(archivePath, lines, 'utf-8');
-    } catch { /* archive is best-effort */ }
+    } catch {
+      /* archive is best-effort */
+    }
   }
 
   // Build new message array
@@ -853,7 +995,8 @@ async function triggerCycleBoundary(messages, opts) {
 /**
  * Error patterns that indicate messages worth preserving during compression.
  */
-const ERROR_PIN_PATTERNS = /\b(error|Error|ERROR|panic|PANIC|FAIL|fail|exception|Exception|diff --git|fatal|segfault)\b/;
+const ERROR_PIN_PATTERNS =
+  /\b(error|Error|ERROR|panic|PANIC|FAIL|fail|exception|Exception|diff --git|fatal|segfault)\b/;
 
 /**
  * Check if a message mentions files from the working set.
@@ -863,15 +1006,23 @@ const ERROR_PIN_PATTERNS = /\b(error|Error|ERROR|panic|PANIC|FAIL|fail|exception
  * @returns {boolean}
  */
 function _isWorkingSetMention(msg, workingSet) {
-  if (!workingSet || !msg) return false;
+  if (!workingSet || !msg) {
+    return false;
+  }
   const content = typeof msg.content === 'string' ? msg.content : '';
-  if (!content) return false;
+  if (!content) {
+    return false;
+  }
   const paths = workingSet instanceof Set ? workingSet : new Set(workingSet);
   for (const p of paths) {
-    if (content.includes(p)) return true;
+    if (content.includes(p)) {
+      return true;
+    }
     // Also match basename (split on both separators for cross-platform paths)
     const basename = p.split(/[\\/]/).pop();
-    if (basename && basename.length > 2 && content.includes(basename)) return true;
+    if (basename && basename.length > 2 && content.includes(basename)) {
+      return true;
+    }
   }
   return false;
 }
@@ -880,7 +1031,9 @@ function _isWorkingSetMention(msg, workingSet) {
  * Check if a message contains error/patch content worth preserving.
  */
 function _isErrorMessage(msg) {
-  if (!msg) return false;
+  if (!msg) {
+    return false;
+  }
   const content = typeof msg.content === 'string' ? msg.content : '';
   return ERROR_PIN_PATTERNS.test(content);
 }
@@ -899,13 +1052,15 @@ function deduplicateToolResults(messages) {
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    if (!_isToolResult(msg)) continue;
+    if (!_isToolResult(msg)) {
+      continue;
+    }
     // Extract fingerprint: for structured content, use tool_result block text
     let content;
     if (Array.isArray(msg.content)) {
       content = msg.content
-        .filter(b => b && b.type === 'tool_result')
-        .map(b => typeof b.content === 'string' ? b.content : JSON.stringify(b.content || ''))
+        .filter((b) => b && b.type === 'tool_result')
+        .map((b) => (typeof b.content === 'string' ? b.content : JSON.stringify(b.content || '')))
         .join('\n');
     } else {
       content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
@@ -920,15 +1075,19 @@ function deduplicateToolResults(messages) {
     seen.set(fingerprint, { index: i, summary: content.slice(0, 80) });
   }
 
-  if (toReplace.size === 0) return messages;
+  if (toReplace.size === 0) {
+    return messages;
+  }
 
   return messages.map((msg, i) => {
-    if (!toReplace.has(i)) return msg;
+    if (!toReplace.has(i)) {
+      return msg;
+    }
     const replacementText = toReplace.get(i);
     // For structured content (Array<ContentBlock>), replace each tool_result
     // block's inner content while preserving tool_use_id pairing.
     if (Array.isArray(msg.content)) {
-      const newContent = msg.content.map(block => {
+      const newContent = msg.content.map((block) => {
         if (block && block.type === 'tool_result') {
           return { ...block, content: replacementText };
         }
@@ -979,15 +1138,21 @@ function adjustSplitForPins(messages, splitIdx, workingSet) {
  * @returns {Array} 修复后的消息数组
  */
 function enforceRoleAlternation(messages) {
-  if (!messages || messages.length === 0) return messages;
+  if (!messages || messages.length === 0) {
+    return messages;
+  }
 
   // 分离开头的 system 消息
   let sysEnd = 0;
-  while (sysEnd < messages.length && messages[sysEnd].role === 'system') sysEnd++;
+  while (sysEnd < messages.length && messages[sysEnd].role === 'system') {
+    sysEnd++;
+  }
   const systemMsgs = messages.slice(0, sysEnd);
   const conversation = messages.slice(sysEnd);
 
-  if (conversation.length === 0) return messages;
+  if (conversation.length === 0) {
+    return messages;
+  }
 
   const fixed = [];
 
@@ -996,17 +1161,23 @@ function enforceRoleAlternation(messages) {
     const curRole = String(cur.role || '').toLowerCase();
 
     // 跳过无效消息
-    if (!curRole) continue;
+    if (!curRole) {
+      continue;
+    }
 
     // 将 system/tool 角色归一化
     let effectiveRole = curRole;
-    if (curRole === 'system') effectiveRole = 'user';
-    if (curRole === 'tool') effectiveRole = 'user';
+    if (curRole === 'system') {
+      effectiveRole = 'user';
+    }
+    if (curRole === 'tool') {
+      effectiveRole = 'user';
+    }
 
     const prev = fixed[fixed.length - 1];
     const prevRole = prev ? String(prev.role || '').toLowerCase() : null;
     // tool 也被 _buildStructuredMessages 转为 user，这里用 effective 判断
-    const prevEffective = prevRole === 'system' ? 'user' : (prevRole === 'tool' ? 'user' : prevRole);
+    const prevEffective = prevRole === 'system' ? 'user' : prevRole === 'tool' ? 'user' : prevRole;
 
     if (fixed.length === 0) {
       // 对话必须以 user 开头

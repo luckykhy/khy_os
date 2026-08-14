@@ -41,10 +41,12 @@ const PRUNE_DIRS = new Set(['node_modules', '.git']);
 const DEFAULT_MAX_SWEEP = 50000;
 
 /** 门控:KHY_ORPHAN_SWEEP 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_ORPHAN_SWEEP;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -52,12 +54,16 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
 }
 
 /** 一次深扫的删除数上限。KHY_ORPHAN_SWEEP_MAX 覆盖,非正整数/坏值 → 默认。 */
-function resolveMaxSweep(env = (typeof process !== 'undefined' ? process.env : {})) {
+function resolveMaxSweep(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_ORPHAN_SWEEP_MAX;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_MAX_SWEEP;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return DEFAULT_MAX_SWEEP;
+    }
     const n = Number(String(raw).trim());
-    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return DEFAULT_MAX_SWEEP;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+      return DEFAULT_MAX_SWEEP;
+    }
     return n;
   } catch {
     return DEFAULT_MAX_SWEEP;
@@ -70,8 +76,12 @@ function resolveMaxSweep(env = (typeof process !== 'undefined' ? process.env : {
  */
 function isCorruptOrphanName(name) {
   try {
-    if (typeof name !== 'string' || !name) return false;
-    if (name === '.' || name === '..') return false;
+    if (typeof name !== 'string' || !name) {
+      return false;
+    }
+    if (name === '.' || name === '..') {
+      return false;
+    }
     return name.charCodeAt(0) === 0x7e; // '~'
   } catch {
     return false;
@@ -117,12 +127,15 @@ function sweepBundledOrphans(opts = {}) {
     }
     const fsm = (opts && opts.fs) || nodeFs;
     const apply = !(opts && opts.apply === false);
-    const limit = typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : resolveMaxSweep(env);
+    const limit =
+      typeof opts.limit === 'number' && opts.limit > 0 ? opts.limit : resolveMaxSweep(env);
 
     // 规范化 root(fail-soft:realpath 不可用/不存在 → 原样使用/跳过)。
     let root = rootIn;
     try {
-      if (typeof fsm.realpathSync === 'function') root = fsm.realpathSync(rootIn);
+      if (typeof fsm.realpathSync === 'function') {
+        root = fsm.realpathSync(rootIn);
+      }
     } catch {
       result.skipped = true;
       result.reason = 'no-root';
@@ -149,22 +162,32 @@ function sweepBundledOrphans(opts = {}) {
         let isSymlink = false;
         let isDir = false;
         try {
-          if (typeof ent.isSymbolicLink === 'function') isSymlink = ent.isSymbolicLink();
-          if (typeof ent.isDirectory === 'function') isDir = ent.isDirectory();
+          if (typeof ent.isSymbolicLink === 'function') {
+            isSymlink = ent.isSymbolicLink();
+          }
+          if (typeof ent.isDirectory === 'function') {
+            isDir = ent.isDirectory();
+          }
         } catch {
           continue;
         }
         // 符号链接一律不跟随、不删除(可能指向树外)。
-        if (isSymlink) continue;
+        if (isSymlink) {
+          continue;
+        }
         // 只关心目录;`~` 前缀**文件**不动。
-        if (!isDir) continue;
+        if (!isDir) {
+          continue;
+        }
 
         const name = ent.name;
         const full = path.join(dir, name);
         result.scanned++;
 
         if (isCorruptOrphanName(name)) {
-          if (!_isInside(full, root)) continue; // 越界保护(理论不该发生)
+          if (!_isInside(full, root)) {
+            continue;
+          } // 越界保护(理论不该发生)
           if (apply) {
             try {
               fsm.rmSync(full, { recursive: true, force: true });
@@ -176,7 +199,9 @@ function sweepBundledOrphans(opts = {}) {
           continue; // 整棵乱名副本一次处理,不再下降
         }
 
-        if (PRUNE_DIRS.has(name)) continue; // 剪枝
+        if (PRUNE_DIRS.has(name)) {
+          continue;
+        } // 剪枝
         stack.push(full); // 干净目录 → 下降
       }
     }

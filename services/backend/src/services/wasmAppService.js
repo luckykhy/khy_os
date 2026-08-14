@@ -13,17 +13,22 @@
 const fs = require('fs');
 const path = require('path');
 const { TextEncoder, TextDecoder } = require('util');
+
 const { DEFAULT_ABI } = require('../constants/wasmDefaults');
 
 let _appRegistry;
 function registry() {
-  if (!_appRegistry) _appRegistry = require('./appRegistry');
+  if (!_appRegistry) {
+    _appRegistry = require('./appRegistry');
+  }
   return _appRegistry;
 }
 
 let _wasmSandbox;
 function wasmSandbox() {
-  if (!_wasmSandbox) _wasmSandbox = require('./wasm-sandbox');
+  if (!_wasmSandbox) {
+    _wasmSandbox = require('./wasm-sandbox');
+  }
   return _wasmSandbox;
 }
 
@@ -41,7 +46,9 @@ const _wasmCacheCap = (() => {
 function _evictWasmCacheOverflow() {
   while (_instanceCache.size > _wasmCacheCap) {
     const oldest = _instanceCache.keys().next().value;
-    if (oldest === undefined) break;
+    if (oldest === undefined) {
+      break;
+    }
     _instanceCache.delete(oldest);
   }
 }
@@ -80,47 +87,83 @@ function _runtimeConfigSignature(app) {
 }
 
 function _parseIntLike(value, label) {
-  if (typeof value === 'number' && Number.isInteger(value)) return value;
-  if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+    return Number(value.trim());
+  }
   throw new Error(`${label} must be an integer or integer string`);
 }
 
 function _resolveServiceId(service) {
   const sb = wasmSandbox();
-  if (typeof service === 'number' || typeof service === 'string' && /^\d+$/.test(service.trim())) {
+  if (
+    typeof service === 'number' ||
+    (typeof service === 'string' && /^\d+$/.test(service.trim()))
+  ) {
     const n = _parseIntLike(service, 'service');
-    if (n < 0 || n > 0xffff) throw new Error(`service out of range: ${n}`);
+    if (n < 0 || n > 0xffff) {
+      throw new Error(`service out of range: ${n}`);
+    }
     return n;
   }
-  const key = String(service || '').trim().toLowerCase();
-  if (key === 'fs' || key === 'service_fs') return sb.SERVICE.FS;
-  if (key === 'net' || key === 'service_net') return sb.SERVICE.NET;
-  if (key === 'wm' || key === 'window' || key === 'service_wm') return sb.SERVICE.WM;
+  const key = String(service || '')
+    .trim()
+    .toLowerCase();
+  if (key === 'fs' || key === 'service_fs') {
+    return sb.SERVICE.FS;
+  }
+  if (key === 'net' || key === 'service_net') {
+    return sb.SERVICE.NET;
+  }
+  if (key === 'wm' || key === 'window' || key === 'service_wm') {
+    return sb.SERVICE.WM;
+  }
   throw new Error(`Unknown service: ${service}`);
 }
 
 function _resolveMethodId(serviceId, method) {
   const sb = wasmSandbox();
-  if (typeof method === 'number' || typeof method === 'string' && /^\d+$/.test(method.trim())) {
+  if (typeof method === 'number' || (typeof method === 'string' && /^\d+$/.test(method.trim()))) {
     const n = _parseIntLike(method, 'method');
-    if (n < 0 || n > 0xffff) throw new Error(`method out of range: ${n}`);
+    if (n < 0 || n > 0xffff) {
+      throw new Error(`method out of range: ${n}`);
+    }
     return n;
   }
 
-  const key = String(method || '').trim().toLowerCase().replace(/[-\s]+/g, '_');
-  if (!key) throw new Error('method is required');
+  const key = String(method || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_');
+  if (!key) {
+    throw new Error('method is required');
+  }
 
   if (serviceId === sb.SERVICE.NET) {
-    if (key === 'http_get' || key === 'get') return sb.METHOD.NET.HTTP_GET;
-    if (key === 'dns_resolve' || key === 'dns') return sb.METHOD.NET.DNS_RESOLVE;
+    if (key === 'http_get' || key === 'get') {
+      return sb.METHOD.NET.HTTP_GET;
+    }
+    if (key === 'dns_resolve' || key === 'dns') {
+      return sb.METHOD.NET.DNS_RESOLVE;
+    }
   }
   if (serviceId === sb.SERVICE.FS) {
-    if (key === 'read_file' || key === 'read') return sb.METHOD.FS.READ_FILE;
-    if (key === 'stat') return sb.METHOD.FS.STAT;
+    if (key === 'read_file' || key === 'read') {
+      return sb.METHOD.FS.READ_FILE;
+    }
+    if (key === 'stat') {
+      return sb.METHOD.FS.STAT;
+    }
   }
   if (serviceId === sb.SERVICE.WM) {
-    if (key === 'present_text' || key === 'present') return sb.METHOD.WM.PRESENT_TEXT;
-    if (key === 'blit_rgba' || key === 'blit') return sb.METHOD.WM.BLIT_RGBA;
+    if (key === 'present_text' || key === 'present') {
+      return sb.METHOD.WM.PRESENT_TEXT;
+    }
+    if (key === 'blit_rgba' || key === 'blit') {
+      return sb.METHOD.WM.BLIT_RGBA;
+    }
   }
 
   throw new Error(`Unknown method "${method}" for service_id=${serviceId}`);
@@ -130,9 +173,18 @@ function _capabilityMaskFromApp(app) {
   const sb = wasmSandbox();
   const raw = app?.wasm?.capabilities;
 
-  if (!raw) return sb.CAP.IPC;
-  const caps = Array.isArray(raw) ? raw : String(raw).split(',').map(v => v.trim()).filter(Boolean);
-  if (caps.length === 0) return sb.CAP.IPC;
+  if (!raw) {
+    return sb.CAP.IPC;
+  }
+  const caps = Array.isArray(raw)
+    ? raw
+    : String(raw)
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+  if (caps.length === 0) {
+    return sb.CAP.IPC;
+  }
 
   const map = {
     ipc: sb.CAP.IPC,
@@ -151,7 +203,9 @@ function _capabilityMaskFromApp(app) {
       continue;
     }
     const key = String(cap).trim().toLowerCase();
-    if (!map[key]) throw new Error(`Unknown capability: ${cap}`);
+    if (!map[key]) {
+      throw new Error(`Unknown capability: ${cap}`);
+    }
     mask = mask | map[key];
   }
   return mask;
@@ -280,10 +334,10 @@ async function _loadInstance(app) {
   const importsMeta = WebAssembly.Module.imports(module);
   const expectedKhyMemoryExport = app?.wasm?.khySys?.memoryExport || 'memory';
   const hasKhyIpcImport = importsMeta.some(
-    i => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
+    (i) => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
   );
   const hasExpectedKhyMemoryExport = exportsMeta.some(
-    e => e.kind === 'memory' && e.name === expectedKhyMemoryExport
+    (e) => e.kind === 'memory' && e.name === expectedKhyMemoryExport
   );
   const record = {
     mtimeMs: stat.mtimeMs,
@@ -323,11 +377,17 @@ function _parseNumericArg(token) {
 }
 
 function _normalizeValue(value) {
-  if (typeof value === 'bigint') return `${value.toString()}n`;
-  if (Array.isArray(value)) return value.map(_normalizeValue);
+  if (typeof value === 'bigint') {
+    return `${value.toString()}n`;
+  }
+  if (Array.isArray(value)) {
+    return value.map(_normalizeValue);
+  }
   if (value && typeof value === 'object') {
     const out = {};
-    for (const [k, v] of Object.entries(value)) out[k] = _normalizeValue(v);
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = _normalizeValue(v);
+    }
     return out;
   }
   return value;
@@ -335,7 +395,9 @@ function _normalizeValue(value) {
 
 function _maybeThrowKhySysAbiMismatch(app, loaded, exportName, beforeCallCount) {
   const state = loaded?.khySysHost?.state;
-  if (!state) return;
+  if (!state) {
+    return;
+  }
 
   if (typeof beforeCallCount === 'number' && state.callCount <= beforeCallCount) {
     return;
@@ -343,8 +405,12 @@ function _maybeThrowKhySysAbiMismatch(app, loaded, exportName, beforeCallCount) 
 
   const sb = wasmSandbox();
   const eproto = sb.negErrno(sb.ERRNO.EPROTO);
-  if (state.lastStatus !== eproto) return;
-  if (!/unsupported khy_sys IPC ABI/i.test(String(state.lastError || ''))) return;
+  if (state.lastStatus !== eproto) {
+    return;
+  }
+  if (!/unsupported khy_sys IPC ABI/i.test(String(state.lastError || ''))) {
+    return;
+  }
 
   const expectedMemoryExport = app?.wasm?.khySys?.memoryExport || 'memory';
   throw new Error(
@@ -359,25 +425,31 @@ function _maybeThrowKhySysAbiMismatch(app, loaded, exportName, beforeCallCount) 
 
 function _precheckNumericKhySysAbi(app, loaded, exportName) {
   const abi = app?.wasm?.abi || DEFAULT_ABI;
-  if (abi !== 'numeric-v1') return;
+  if (abi !== 'numeric-v1') {
+    return;
+  }
 
   const info = loaded?.khySysImportInfo;
   const hasKhyIpcImport = info
     ? Boolean(info.hasKhyIpcImport)
     : (loaded?.importsMeta || []).some(
-      i => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
-    );
-  if (!hasKhyIpcImport) return;
+        (i) => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
+      );
+  if (!hasKhyIpcImport) {
+    return;
+  }
 
   const expectedMemoryExport = info
     ? info.expectedKhyMemoryExport
-    : (app?.wasm?.khySys?.memoryExport || 'memory');
+    : app?.wasm?.khySys?.memoryExport || 'memory';
   const hasExpectedMemoryExport = info
     ? Boolean(info.hasExpectedKhyMemoryExport)
     : (loaded?.exportsMeta || []).some(
-      e => e.kind === 'memory' && e.name === expectedMemoryExport
-    );
-  if (hasExpectedMemoryExport) return;
+        (e) => e.kind === 'memory' && e.name === expectedMemoryExport
+      );
+  if (hasExpectedMemoryExport) {
+    return;
+  }
 
   throw new Error(
     [
@@ -392,18 +464,14 @@ function _precheckNumericKhySysAbi(app, loaded, exportName) {
 async function listFunctionExports(appName) {
   const app = _ensureWasmApp(appName);
   const loaded = await _loadInstance(app);
-  return loaded.exportsMeta
-    .filter(e => e.kind === 'function')
-    .map(e => e.name);
+  return loaded.exportsMeta.filter((e) => e.kind === 'function').map((e) => e.name);
 }
 
 function _runNumericV1(app, appName, loaded, expName, rawArgs) {
   const fn = loaded.instance.exports[expName];
 
   if (typeof fn !== 'function') {
-    const available = loaded.exportsMeta
-      .filter(e => e.kind === 'function')
-      .map(e => e.name);
+    const available = loaded.exportsMeta.filter((e) => e.kind === 'function').map((e) => e.name);
     throw new Error(
       `Export "${expName}" not found in module. Available: ${available.length ? available.join(', ') : '(none)'}`
     );
@@ -444,13 +512,19 @@ function _runStringV2(app, appName, loaded, expName, rawArgs) {
   // Buffer can change if memory grows during alloc; always read current buffer after alloc.
   const inView = new Uint8Array(memory.buffer);
   if (inPtr + inputBytes.length > inView.byteLength) {
-    throw new Error(`Input write out of bounds: ptr=${inPtr}, len=${inputBytes.length}, mem=${inView.byteLength}`);
+    throw new Error(
+      `Input write out of bounds: ptr=${inPtr}, len=${inputBytes.length}, mem=${inView.byteLength}`
+    );
   }
   inView.set(inputBytes, inPtr);
 
   const rawRet = runFn(inPtr, inputBytes.length);
   if (freeFn) {
-    try { freeFn(inPtr, inputBytes.length); } catch { /* best effort */ }
+    try {
+      freeFn(inPtr, inputBytes.length);
+    } catch {
+      /* best effort */
+    }
   }
 
   let outPtr;
@@ -466,7 +540,11 @@ function _runStringV2(app, appName, loaded, expName, rawArgs) {
   const outBytes = _sliceMemory(memory, outPtr, outLen);
   const text = _utf8Decoder.decode(outBytes);
   if (freeFn) {
-    try { freeFn(outPtr, outLen); } catch { /* best effort */ }
+    try {
+      freeFn(outPtr, outLen);
+    } catch {
+      /* best effort */
+    }
   }
 
   return {
@@ -529,9 +607,10 @@ async function runIpcCall(appName, service, method, payload = {}, options = {}) 
   const serviceId = _resolveServiceId(service);
   const methodId = _resolveMethodId(serviceId, method);
   const capabilityMask = _capabilityMaskFromApp(app);
-  const timeoutMs = Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
-    ? options.timeoutMs
-    : sb.IPC.DEFAULT_TIMEOUT_MS;
+  const timeoutMs =
+    Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
+      ? options.timeoutMs
+      : sb.IPC.DEFAULT_TIMEOUT_MS;
 
   const transport = options.transport || sb.createLoopbackTransport(app?.wasm?.loopback || {});
   const bridge = sb.createMoonbitHostBridge({

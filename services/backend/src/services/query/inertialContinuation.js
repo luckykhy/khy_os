@@ -72,17 +72,17 @@ function legacyDirective(reason) {
 // a long prefix that merely starts with "让我" carries real content and resumes.
 const PROGRESS_PREFACE_MAX_CHARS = 60;
 const PROGRESS_PREFACE_RE = new RegExp(
-  '^\\s*(?:'
-  + '正在(?:分析|检查|查看|执行|处理|搜索|读取|生成|思考|整理|准备)'
-  + '|让我(?:来|先)?(?:看看|分析|检查|想想|确认)?'
-  + '|我来(?:看看|分析|检查|处理)?'
-  + '|好的[，,。\\.！!]*我?(?:来|先)?'
-  + '|稍等|请稍候|马上'
-  + '|let me\\b|i\'?ll\\b|i am going to\\b|i\'?m going to\\b|let\'?s\\b'
-  + '|okay[,，]?\\s*(?:let|i)\\b|sure[,，]?\\s*(?:let|i)\\b'
-  + '|thinking\\b|analyzing\\b|checking\\b'
-  + ')',
-  'iu',
+  '^\\s*(?:' +
+    '正在(?:分析|检查|查看|执行|处理|搜索|读取|生成|思考|整理|准备)' +
+    '|让我(?:来|先)?(?:看看|分析|检查|想想|确认)?' +
+    '|我来(?:看看|分析|检查|处理)?' +
+    '|好的[，,。\\.！!]*我?(?:来|先)?' +
+    '|稍等|请稍候|马上' +
+    "|let me\\b|i'?ll\\b|i am going to\\b|i'?m going to\\b|let'?s\\b" +
+    '|okay[,，]?\\s*(?:let|i)\\b|sure[,，]?\\s*(?:let|i)\\b' +
+    '|thinking\\b|analyzing\\b|checking\\b' +
+    ')',
+  'iu'
 );
 
 /**
@@ -92,8 +92,12 @@ const PROGRESS_PREFACE_RE = new RegExp(
  */
 function isProgressPreface(text) {
   const t = String(text == null ? '' : text).trim();
-  if (!t) return false;
-  if (t.length > PROGRESS_PREFACE_MAX_CHARS) return false; // long → has real content
+  if (!t) {
+    return false;
+  }
+  if (t.length > PROGRESS_PREFACE_MAX_CHARS) {
+    return false;
+  } // long → has real content
   return PROGRESS_PREFACE_RE.test(t);
 }
 
@@ -111,15 +115,23 @@ function isProgressPreface(text) {
 function isDegeneratePrefix(text) {
   const raw = String(text == null ? '' : text);
   const trimmed = raw.trim();
-  if (!trimmed) return { degenerate: true, kind: 'whitespace' };
-  if (trimmed.length < MIN_CARRYOVER_CHARS) return { degenerate: true, kind: 'too_short' };
+  if (!trimmed) {
+    return { degenerate: true, kind: 'whitespace' };
+  }
+  if (trimmed.length < MIN_CARRYOVER_CHARS) {
+    return { degenerate: true, kind: 'too_short' };
+  }
   // Repetition chant — productive by length yet carries no new information.
   try {
     if (require('./streamRepetitionGuard').findRepetition(raw).tripped) {
       return { degenerate: true, kind: 'repetition' };
     }
-  } catch { /* fail-open: a detector error never blocks a resume */ }
-  if (isProgressPreface(raw)) return { degenerate: true, kind: 'preface' };
+  } catch {
+    /* fail-open: a detector error never blocks a resume */
+  }
+  if (isProgressPreface(raw)) {
+    return { degenerate: true, kind: 'preface' };
+  }
   return { degenerate: false, kind: null };
 }
 
@@ -132,10 +144,14 @@ function isDegeneratePrefix(text) {
  * @returns {{ text: string, meaningful: boolean, kind: (string|null) }}
  */
 function captureCarryover(text) {
-  if (!isEnabled()) return { text: '', meaningful: false, kind: 'disabled' };
+  if (!isEnabled()) {
+    return { text: '', meaningful: false, kind: 'disabled' };
+  }
   const trimmed = String(text == null ? '' : text).replace(/\s+$/u, '');
   const deg = isDegeneratePrefix(trimmed);
-  if (deg.degenerate) return { text: '', meaningful: false, kind: deg.kind };
+  if (deg.degenerate) {
+    return { text: '', meaningful: false, kind: deg.kind };
+  }
   return { text: trimmed, meaningful: true, kind: null };
 }
 
@@ -153,21 +169,20 @@ function captureCarryover(text) {
  */
 function buildContinuationDirective(opts = {}) {
   const reason = opts && opts.reason ? opts.reason : 'empty_reply';
-  const carry = String(opts && opts.carryover != null ? opts.carryover : '')
-    .replace(/\s+$/u, '');
+  const carry = String(opts && opts.carryover != null ? opts.carryover : '').replace(/\s+$/u, '');
   if (!isEnabled() || carry.trim().length < MIN_CARRYOVER_CHARS) {
     return legacyDirective(reason);
   }
   const tail = carry.length > ANCHOR_TAIL_CHARS ? carry.slice(-ANCHOR_TAIL_CHARS) : carry;
   // The transient seam additionally carries TOOL progress; keep that contract.
-  const toolClause = reason === 'transient'
-    ? '已成功的工具调用无需重复（沿用其结果）；'
-    : '';
-  return '\n\n[SYSTEM: 你上一段回答因连接中断/超时被打断，尚未写完。'
-    + `${toolClause}下面方括号内是你**已经输出并已展示给用户**的结尾片段。`
-    + '请从它的断点处**无缝继续**往下写：不要重复这段内容、不要重新打招呼或重写开头、'
-    + '不要输出任何前言或进度说明，直接接着写完剩余部分。\n'
-    + `已输出片段结尾：【…${tail}】]`;
+  const toolClause = reason === 'transient' ? '已成功的工具调用无需重复（沿用其结果）；' : '';
+  return (
+    '\n\n[SYSTEM: 你上一段回答因连接中断/超时被打断，尚未写完。' +
+    `${toolClause}下面方括号内是你**已经输出并已展示给用户**的结尾片段。` +
+    '请从它的断点处**无缝继续**往下写：不要重复这段内容、不要重新打招呼或重写开头、' +
+    '不要输出任何前言或进度说明，直接接着写完剩余部分。\n' +
+    `已输出片段结尾：【…${tail}】]`
+  );
 }
 
 /**
@@ -182,8 +197,12 @@ function buildContinuationDirective(opts = {}) {
 function mergePrefix(prefix, suffix) {
   const p = String(prefix == null ? '' : prefix);
   const s = String(suffix == null ? '' : suffix);
-  if (!p) return s;
-  if (!s) return p;
+  if (!p) {
+    return s;
+  }
+  if (!s) {
+    return p;
+  }
   // Largest k such that the last k chars of p equal the first k chars of s.
   const max = Math.min(p.length, s.length, ANCHOR_TAIL_CHARS);
   let overlap = 0;
@@ -242,15 +261,24 @@ function classify(opts = {}) {
   // R3：错误类型红线（委派 continuation 单源，避免重复定义安全/权限/溢出集合）。
   if (o.errorType) {
     let resumableErr = true;
-    try { resumableErr = require('./continuation').isResumableError(o.errorType); } catch { /* fail-open */ }
+    try {
+      resumableErr = require('./continuation').isResumableError(o.errorType);
+    } catch {
+      /* fail-open */
+    }
     if (!resumableErr) {
-      return { resumable: false, reason: 'non_resumable_error', detail: String(o.errorType), carryover: '' };
+      return {
+        resumable: false,
+        reason: 'non_resumable_error',
+        detail: String(o.errorType),
+        carryover: '',
+      };
     }
   }
   // R4：前缀可锚定 —— 合并跨轮前缀 + 本轮新流出，判退化。
   const merged = mergePrefix(
     String(o.prior == null ? '' : o.prior),
-    String(o.streamed == null ? '' : o.streamed),
+    String(o.streamed == null ? '' : o.streamed)
   );
   const deg = isDegeneratePrefix(merged);
   if (deg.degenerate) {

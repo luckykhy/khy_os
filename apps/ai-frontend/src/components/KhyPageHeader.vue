@@ -25,7 +25,7 @@ defineProps({
   title: { type: String, required: true },
   // 可选副标题:一句话说明本页用途,弱化色。
   subtitle: { type: String, default: '' },
-})
+});
 </script>
 
 <style scoped>

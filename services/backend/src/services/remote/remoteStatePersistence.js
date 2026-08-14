@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataHome } = require('../../utils/dataHome');
 
 const STATE_FILE_VERSION = 1;
@@ -16,12 +17,12 @@ function _defaultStatePath() {
 class RemoteStatePersistence {
   constructor(options = {}) {
     const enabledFromOptions = options.enabled;
-    this._enabled = typeof enabledFromOptions === 'boolean'
-      ? enabledFromOptions
-      : _envFlag('KHY_REMOTE_SSH_PERSIST_STATE', false);
-    this._statePath = options.statePath
-      || process.env.KHY_REMOTE_SSH_STATE_PATH
-      || _defaultStatePath();
+    this._enabled =
+      typeof enabledFromOptions === 'boolean'
+        ? enabledFromOptions
+        : _envFlag('KHY_REMOTE_SSH_PERSIST_STATE', false);
+    this._statePath =
+      options.statePath || process.env.KHY_REMOTE_SSH_STATE_PATH || _defaultStatePath();
   }
 
   isEnabled() {
@@ -33,9 +34,13 @@ class RemoteStatePersistence {
   }
 
   load() {
-    if (!this._enabled) return null;
+    if (!this._enabled) {
+      return null;
+    }
     try {
-      if (!fs.existsSync(this._statePath)) return null;
+      if (!fs.existsSync(this._statePath)) {
+        return null;
+      }
       const raw = fs.readFileSync(this._statePath, 'utf-8');
       const parsed = JSON.parse(raw);
       const approvals = Array.isArray(parsed?.approvals) ? parsed.approvals : [];
@@ -51,7 +56,9 @@ class RemoteStatePersistence {
   }
 
   save({ approvals = [], streams = [] }) {
-    if (!this._enabled) return { saved: false, reason: 'persistence_disabled' };
+    if (!this._enabled) {
+      return { saved: false, reason: 'persistence_disabled' };
+    }
 
     try {
       const dir = path.dirname(this._statePath);
@@ -82,7 +89,9 @@ class RemoteStatePersistence {
   }
 
   clear() {
-    if (!this._enabled) return { cleared: false, reason: 'persistence_disabled' };
+    if (!this._enabled) {
+      return { cleared: false, reason: 'persistence_disabled' };
+    }
     try {
       if (fs.existsSync(this._statePath)) {
         fs.unlinkSync(this._statePath);

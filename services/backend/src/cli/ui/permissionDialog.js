@@ -10,56 +10,60 @@
  *   - "Esc to cancel · ctrl+e to explain"
  */
 const chalk = require('chalk').default || require('chalk');
-const readline = require('readline');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
 const { foldOutput } = require('../toolDisplayPolicy');
 
 // ── Claude Code theme colors ───────────────────────────────────────
 
-const PURPLE = '#B388FF';   // Claude Code permission purple
+const PURPLE = '#B388FF'; // Claude Code permission purple
 const WARN_YELLOW = '#FFC107';
 
 // Map tool names to Claude Code display labels
 const TOOL_TYPE_LABELS = {
   shell_command: 'Bash command',
-  shellCommand:  'Bash command',
-  bash:          'Bash command',
-  command:       'Bash command',
-  write_file:    'Write',
-  writeFile:     'Write',
-  write:         'Write',
-  edit_file:     'Update',
-  editFile:      'Update',
-  edit:          'Update',
-  multiedit:     'Update',
-  read_file:     'Read',
-  readFile:      'Read',
-  read:          'Read',
-  notebookRead:  'Read',
-  notebookread:  'Read',
-  glob:          'Search',
-  grep:          'Search',
-  find:          'Search',
-  ls:            'Search',
-  webFetch:      'Fetch',
-  webfetch:      'Fetch',
-  todoWrite:     'Todo',
-  todowrite:     'Todo',
-  agent:         'Agent',
-  task:          'Agent',
-  notebookEdit:  'Update',
-  notebookedit:  'Update',
+  shellCommand: 'Bash command',
+  bash: 'Bash command',
+  command: 'Bash command',
+  write_file: 'Write',
+  writeFile: 'Write',
+  write: 'Write',
+  edit_file: 'Update',
+  editFile: 'Update',
+  edit: 'Update',
+  multiedit: 'Update',
+  read_file: 'Read',
+  readFile: 'Read',
+  read: 'Read',
+  notebookRead: 'Read',
+  notebookread: 'Read',
+  glob: 'Search',
+  grep: 'Search',
+  find: 'Search',
+  ls: 'Search',
+  webFetch: 'Fetch',
+  webfetch: 'Fetch',
+  todoWrite: 'Todo',
+  todowrite: 'Todo',
+  agent: 'Agent',
+  task: 'Agent',
+  notebookEdit: 'Update',
+  notebookedit: 'Update',
   scaffoldFiles: 'Scaffold',
   scaffoldfiles: 'Scaffold',
-  scaffold_files:'Scaffold',
+  scaffold_files: 'Scaffold',
+  GetLocation: 'Location',
+  getLocation: 'Location',
+  getlocation: 'Location',
 };
 
 // Risk warnings (Claude Code shows these in yellow)
 const RISK_WARNINGS = {
   critical: 'Shell expansion syntax in paths requires manual approval',
-  high:     'File modification requires approval',
-  medium:   'This action requires approval',
+  high: 'File modification requires approval',
+  medium: 'This action requires approval',
 };
 
 // ── ANSI-safe width measurement ─────────────────────────────────────
@@ -72,14 +76,16 @@ function displayWidth(str) {
   let width = 0;
   for (const ch of clean) {
     const code = ch.codePointAt(0);
-    if ((code >= 0x1100 && code <= 0x115F) ||
-        (code >= 0x2E80 && code <= 0xA4CF) ||
-        (code >= 0xAC00 && code <= 0xD7AF) ||
-        (code >= 0xF900 && code <= 0xFAFF) ||
-        (code >= 0xFE10 && code <= 0xFE6F) ||
-        (code >= 0xFF01 && code <= 0xFF60) ||
-        (code >= 0xFFE0 && code <= 0xFFE6) ||
-        (code >= 0x20000 && code <= 0x2FA1F)) {
+    if (
+      (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x2e80 && code <= 0xa4cf) ||
+      (code >= 0xac00 && code <= 0xd7af) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe10 && code <= 0xfe6f) ||
+      (code >= 0xff01 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6) ||
+      (code >= 0x20000 && code <= 0x2fa1f)
+    ) {
       width += 2;
     } else {
       width += 1;
@@ -95,7 +101,9 @@ function padRight(str, targetWidth) {
 }
 
 function normalizeChoiceInput(input) {
-  return String(input || '').trim().toLowerCase();
+  return String(input || '')
+    .trim()
+    .toLowerCase();
 }
 
 function compactChoiceInput(input) {
@@ -104,12 +112,16 @@ function compactChoiceInput(input) {
 
 function resolveChoiceIndex(input, choices, defaultIndex = -1) {
   const normalized = normalizeChoiceInput(input);
-  if (!normalized) return defaultIndex;
+  if (!normalized) {
+    return defaultIndex;
+  }
 
   const numeric = Number.parseInt(normalized, 10);
   if (!Number.isNaN(numeric) && String(numeric) === normalized) {
     const idx = numeric - 1;
-    if (idx >= 0 && idx < choices.length) return idx;
+    if (idx >= 0 && idx < choices.length) {
+      return idx;
+    }
   }
 
   const compact = compactChoiceInput(normalized);
@@ -131,13 +143,17 @@ function resolveChoiceIndex(input, choices, defaultIndex = -1) {
     const { classifyPermissionReply } = require('../permissionReply');
     const decision = classifyPermissionReply(input);
     if (decision) {
-      const want = decision === 'allow-always' ? 'always' : (decision === 'deny' ? 'no' : 'yes');
+      const want = decision === 'allow-always' ? 'always' : decision === 'deny' ? 'no' : 'yes';
       for (let i = 0; i < choices.length; i += 1) {
         const aliases = (choices[i].aliases || []).map(normalizeChoiceInput);
-        if (aliases.includes(want)) return i;
+        if (aliases.includes(want)) {
+          return i;
+        }
       }
     }
-  } catch { /* leaf unavailable → byte-fallback to -1 */ }
+  } catch {
+    /* leaf unavailable → byte-fallback to -1 */
+  }
 
   return -1;
 }
@@ -158,9 +174,7 @@ function getProjectName() {
 async function promptRawInputWithProvider(promptText) {
   const toolCalling = require('../../services/toolCalling');
   const provider = toolCalling.getReadlineProvider();
-  const providedRl = provider
-    ? (typeof provider === 'function' ? provider() : provider)
-    : null;
+  const providedRl = provider ? (typeof provider === 'function' ? provider() : provider) : null;
 
   if (providedRl && typeof providedRl.question === 'function') {
     return new Promise((resolve) => {
@@ -188,8 +202,9 @@ async function promptChoiceMenu(title, choices, options = {}) {
 
   const stdin = process.stdin;
   const stdout = process.stdout;
-  const canUseArrowMenu =
-    Boolean(stdin && stdout && stdin.isTTY && stdout.isTTY && typeof stdin.setRawMode === 'function');
+  const canUseArrowMenu = Boolean(
+    stdin && stdout && stdin.isTTY && stdout.isTTY && typeof stdin.setRawMode === 'function'
+  );
 
   if (!canUseArrowMenu) {
     const answer = await promptRawInputWithProvider(chalk.dim('  > '));
@@ -199,9 +214,7 @@ async function promptChoiceMenu(title, choices, options = {}) {
 
   const toolCalling = require('../../services/toolCalling');
   const provider = toolCalling.getReadlineProvider();
-  const rl = provider
-    ? (typeof provider === 'function' ? provider() : provider)
-    : null;
+  const rl = provider ? (typeof provider === 'function' ? provider() : provider) : null;
 
   return new Promise((resolve) => {
     let selected = Math.min(Math.max(defaultIndex, 0), choices.length - 1);
@@ -214,34 +227,70 @@ async function promptChoiceMenu(title, choices, options = {}) {
       stdin.removeListener('data', onData);
       // Restore raw mode BEFORE resuming readline
       if (typeof stdin.setRawMode === 'function') {
-        try { stdin.setRawMode(false); } catch { /* ignore */ }
+        try {
+          stdin.setRawMode(false);
+        } catch {
+          /* ignore */
+        }
       }
       // Clear the rendered menu
       if (renderedLines > 0) {
-        try { readline.moveCursor(stdout, 0, -renderedLines); } catch { /* ignore */ }
-        try { readline.cursorTo(stdout, 0); } catch { /* ignore */ }
-        try { readline.clearScreenDown(stdout); } catch { /* ignore */ }
+        try {
+          readline.moveCursor(stdout, 0, -renderedLines);
+        } catch {
+          /* ignore */
+        }
+        try {
+          readline.cursorTo(stdout, 0);
+        } catch {
+          /* ignore */
+        }
+        try {
+          readline.clearScreenDown(stdout);
+        } catch {
+          /* ignore */
+        }
       }
       // Print the selected choice so user sees what was picked
       if (resultValue !== cancelValue) {
-        const picked = choices.find(c => c.value === resultValue);
+        const picked = choices.find((c) => c.value === resultValue);
         if (picked) {
           console.log(`  ${chalk.green('✓')} ${picked.label}`);
         }
       }
       // Ensure stdin is flowing for the REPL readline
-      try { stdin.resume(); } catch { /* ignore */ }
+      try {
+        stdin.resume();
+      } catch {
+        /* ignore */
+      }
       if (rl && typeof rl.resume === 'function') {
-        try { rl.resume(); } catch { /* ignore */ }
+        try {
+          rl.resume();
+        } catch {
+          /* ignore */
+        }
       }
       resolve(resultValue);
     };
 
     const render = () => {
       if (renderedLines > 0) {
-        try { readline.moveCursor(stdout, 0, -renderedLines); } catch { /* ignore */ }
-        try { readline.cursorTo(stdout, 0); } catch { /* ignore */ }
-        try { readline.clearScreenDown(stdout); } catch { /* ignore */ }
+        try {
+          readline.moveCursor(stdout, 0, -renderedLines);
+        } catch {
+          /* ignore */
+        }
+        try {
+          readline.cursorTo(stdout, 0);
+        } catch {
+          /* ignore */
+        }
+        try {
+          readline.clearScreenDown(stdout);
+        } catch {
+          /* ignore */
+        }
       }
 
       const lines = [];
@@ -256,7 +305,9 @@ async function promptChoiceMenu(title, choices, options = {}) {
       lines.push('');
       // Claude Code: "Esc to cancel · ctrl+e to explain"
       lines.push(`  ${chalk.dim(footerHint)}`);
-      if (error) lines.push(`  ${chalk.red(error)}`);
+      if (error) {
+        lines.push(`  ${chalk.red(error)}`);
+      }
 
       stdout.write(`${lines.join('\n')}\n`);
       renderedLines = lines.length;
@@ -334,10 +385,10 @@ async function promptChoiceMenu(title, choices, options = {}) {
       try {
         const { permissionReplyEnabled } = require('../permissionReply');
         _printable = permissionReplyEnabled()
-          ? (!!key && !/[\u0000-\u001f\u007f]/.test(key))
-          : (key.length === 1 && key >= ' ' && key <= '~');
+          ? !!key && !/[\u0000-\u001f\u007f]/.test(key)
+          : key.length === 1 && key >= ' ' && key <= '~';
       } catch {
-        _printable = (key.length === 1 && key >= ' ' && key <= '~');
+        _printable = key.length === 1 && key >= ' ' && key <= '~';
       }
       if (_printable) {
         typed += key;
@@ -357,10 +408,22 @@ async function promptChoiceMenu(title, choices, options = {}) {
     };
 
     if (rl && typeof rl.pause === 'function') {
-      try { rl.pause(); } catch { /* ignore */ }
+      try {
+        rl.pause();
+      } catch {
+        /* ignore */
+      }
     }
-    try { stdin.resume(); } catch { /* ignore */ }
-    try { stdin.setRawMode(true); } catch { /* ignore */ }
+    try {
+      stdin.resume();
+    } catch {
+      /* ignore */
+    }
+    try {
+      stdin.setRawMode(true);
+    } catch {
+      /* ignore */
+    }
     stdin.on('data', onData);
     render();
   });
@@ -376,7 +439,9 @@ async function promptChoiceMenu(title, choices, options = {}) {
  *   Read: file path
  */
 function formatToolContent(toolName, params) {
-  const name = String(toolName).toLowerCase().replace(/[\s_-]/g, '');
+  const name = String(toolName)
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
   const lines = [];
 
   if (name === 'shellcommand' || name === 'bash' || name === 'command') {
@@ -394,7 +459,11 @@ function formatToolContent(toolName, params) {
     lines.push(`    ${chalk.white(filePath)}`);
     if (params?.content) {
       const contentLines = params.content.split('\n');
-      const { lines: foldedContent } = foldOutput(contentLines, { maxLines: 5, foldHead: 5, foldTail: 0 });
+      const { lines: foldedContent } = foldOutput(contentLines, {
+        maxLines: 5,
+        foldHead: 5,
+        foldTail: 0,
+      });
       for (const l of foldedContent) {
         lines.push(`    ${chalk.dim(l.slice(0, 80))}`);
       }
@@ -408,8 +477,16 @@ function formatToolContent(toolName, params) {
       lines.push('');
       const rawOldLines = params.old_string.split('\n');
       const rawNewLines = params.new_string.split('\n');
-      const { lines: foldedOld } = foldOutput(rawOldLines, { maxLines: 6, foldHead: 6, foldTail: 0 });
-      const { lines: foldedNew } = foldOutput(rawNewLines, { maxLines: 6, foldHead: 6, foldTail: 0 });
+      const { lines: foldedOld } = foldOutput(rawOldLines, {
+        maxLines: 6,
+        foldHead: 6,
+        foldTail: 0,
+      });
+      const { lines: foldedNew } = foldOutput(rawNewLines, {
+        maxLines: 6,
+        foldHead: 6,
+        foldTail: 0,
+      });
       for (const l of foldedOld) {
         lines.push(`    ${chalk.red('- ' + l.slice(0, 76))}`);
       }
@@ -428,15 +505,24 @@ function formatToolContent(toolName, params) {
     const filePath = params?.file_path || params?.filePath || params?.path || '';
     lines.push('');
     lines.push(`    ${chalk.white(filePath)}`);
+  } else if (name === 'getlocation') {
+    // Privacy hint for the geolocation tool
+    lines.push('');
+    lines.push(`    ${chalk.dim('将访问你的设备位置信息')}`);
   } else {
     // Generic: show key=value pairs
     if (params && typeof params === 'object') {
       lines.push('');
       for (const [k, v] of Object.entries(params).slice(0, 5)) {
-        if (k.startsWith('_')) continue;
-        const val = typeof v === 'string'
-          ? (v.length > 60 ? v.slice(0, 57) + '...' : v)
-          : JSON.stringify(v).slice(0, 60);
+        if (k.startsWith('_')) {
+          continue;
+        }
+        const val =
+          typeof v === 'string'
+            ? v.length > 60
+              ? v.slice(0, 57) + '...'
+              : v
+            : JSON.stringify(v).slice(0, 60);
         lines.push(`    ${chalk.dim(k)}: ${chalk.white(val)}`);
       }
     }
@@ -448,11 +534,11 @@ function formatToolContent(toolName, params) {
 // ── Risk display ────────────────────────────────────────────────────
 
 const RISK_STYLES = {
-  safe:     { color: chalk.green,      badge: chalk.bgGreen.black(' SAFE ') },
-  low:      { color: chalk.cyan,       badge: chalk.bgCyan.black(' LOW ') },
-  medium:   { color: chalk.yellow,     badge: chalk.bgYellow.black(' MEDIUM ') },
-  high:     { color: chalk.red,        badge: chalk.bgRed.white(' HIGH ') },
-  critical: { color: chalk.redBright,  badge: chalk.bgRedBright.white(' CRITICAL ') },
+  safe: { color: chalk.green, badge: chalk.bgGreen.black(' SAFE ') },
+  low: { color: chalk.cyan, badge: chalk.bgCyan.black(' LOW ') },
+  medium: { color: chalk.yellow, badge: chalk.bgYellow.black(' MEDIUM ') },
+  high: { color: chalk.red, badge: chalk.bgRed.white(' HIGH ') },
+  critical: { color: chalk.redBright, badge: chalk.bgRedBright.white(' CRITICAL ') },
 };
 
 // ── Compact diff preview for permission dialogs ────────────────────
@@ -468,14 +554,22 @@ const MAX_DIFF_PREVIEW_LINES = 10;
  */
 function renderCompactDiffPreview(diffInfo) {
   try {
-    if (!diffInfo || typeof diffInfo !== 'object') return [];
+    if (!diffInfo || typeof diffInfo !== 'object') {
+      return [];
+    }
     const { oldContent, newContent } = diffInfo;
-    if (typeof oldContent !== 'string' || typeof newContent !== 'string') return [];
-    if (oldContent === newContent) return [];
+    if (typeof oldContent !== 'string' || typeof newContent !== 'string') {
+      return [];
+    }
+    if (oldContent === newContent) {
+      return [];
+    }
 
     const { computeDiff } = require('./diffViewer');
     const changes = computeDiff(oldContent, newContent);
-    if (!changes || changes.length === 0) return [];
+    if (!changes || changes.length === 0) {
+      return [];
+    }
 
     // Filter to only changed lines (add/remove), keep a few context lines around them
     const changedIndices = new Set();
@@ -488,23 +582,32 @@ function renderCompactDiffPreview(diffInfo) {
       }
     }
 
-    if (changedIndices.size === 0) return [];
+    if (changedIndices.size === 0) {
+      return [];
+    }
 
     const relevantIndices = Array.from(changedIndices).sort((a, b) => a - b);
     const cols = Math.min((process.stdout.columns || 80) - 10, 72);
 
     // Build all relevant diff lines, then fold
-    const allDiffLines = relevantIndices.map(idx => {
+    const allDiffLines = relevantIndices.map((idx) => {
       const entry = changes[idx];
       const text = (entry.content || '').slice(0, cols);
       switch (entry.type) {
-        case 'remove': return chalk.red(`    │ - ${text}`);
-        case 'add':    return chalk.green(`    │ + ${text}`);
-        default:       return chalk.dim(`    │   ${text}`);
+        case 'remove':
+          return chalk.red(`    │ - ${text}`);
+        case 'add':
+          return chalk.green(`    │ + ${text}`);
+        default:
+          return chalk.dim(`    │   ${text}`);
       }
     });
 
-    const { lines: diffLines } = foldOutput(allDiffLines, { maxLines: MAX_DIFF_PREVIEW_LINES, foldHead: 6, foldTail: 4 });
+    const { lines: diffLines } = foldOutput(allDiffLines, {
+      maxLines: MAX_DIFF_PREVIEW_LINES,
+      foldHead: 6,
+      foldTail: 4,
+    });
 
     // Frame with dimmed box borders
     const output = [];
@@ -517,12 +620,19 @@ function renderCompactDiffPreview(diffInfo) {
     let additions = 0;
     let removals = 0;
     for (const c of changes) {
-      if (c.type === 'add') additions++;
-      else if (c.type === 'remove') removals++;
+      if (c.type === 'add') {
+        additions++;
+      } else if (c.type === 'remove') {
+        removals++;
+      }
     }
     const statParts = [];
-    if (additions > 0) statParts.push(chalk.green(`+${additions}`));
-    if (removals > 0) statParts.push(chalk.red(`-${removals}`));
+    if (additions > 0) {
+      statParts.push(chalk.green(`+${additions}`));
+    }
+    if (removals > 0) {
+      statParts.push(chalk.red(`-${removals}`));
+    }
     const stats = statParts.length > 0 ? ` (${statParts.join(', ')})` : '';
     output.push(chalk.dim(`    ╰─${stats}`));
 
@@ -589,7 +699,9 @@ async function formatPermissionDialog(toolName, params, riskInfo, reasoning, dif
         }
         console.log('');
       }
-    } catch { /* graceful degradation — skip diff preview */ }
+    } catch {
+      /* graceful degradation — skip diff preview */
+    }
   }
 
   // Warning line (yellow, only for medium+ risk)
@@ -607,7 +719,7 @@ async function formatPermissionDialog(toolName, params, riskInfo, reasoning, dif
   const _alwaysAllowLabel = buildAlwaysAllowLabelOr(
     toolName,
     'Yes, allow reading from {project} from this project',
-    process.env,
+    process.env
   ).replace('{project}', chalk.bold(projectName));
   const choices = [
     {
@@ -664,7 +776,11 @@ async function formatBatchPermissionDialog(tools) {
     'Do you want to proceed?',
     [
       { label: 'Yes, approve all this time', value: 'approve-all', aliases: ['1', 'y', 'yes'] },
-      { label: `Yes, always trust from ${chalk.bold(projectName)}`, value: 'approve-all-always', aliases: ['2', 'a', 'always'] },
+      {
+        label: `Yes, always trust from ${chalk.bold(projectName)}`,
+        value: 'approve-all-always',
+        aliases: ['2', 'a', 'always'],
+      },
       { label: 'No, deny all', value: 'deny-all', aliases: ['3', 'n', 'no'] },
     ],
     {
@@ -684,7 +800,9 @@ function renderToolBox(toolName, params, riskInfo, reasoning) {
   const lines = [];
   lines.push(`  ${chalk.hex(PURPLE).bold(typeLabel)}`);
   const contentLines = formatToolContent(toolName, params);
-  for (const line of contentLines) lines.push(line);
+  for (const line of contentLines) {
+    lines.push(line);
+  }
   if (reasoning) {
     lines.push('');
     lines.push(`  ${chalk.dim('AI reasoning: ' + reasoning.slice(0, 100))}`);
@@ -716,4 +834,6 @@ try {
     prompt: formatPermissionDialog,
     promptBatch: formatBatchPermissionDialog,
   });
-} catch { /* port unavailable — non-cli context, services degrade to non-interactive */ }
+} catch {
+  /* port unavailable — non-cli context, services degrade to non-interactive */
+}

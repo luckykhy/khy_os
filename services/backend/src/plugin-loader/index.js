@@ -14,11 +14,48 @@
  * package.json#khy manifest field.
  */
 
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { validateManifest } = require('@khy/plugin-sdk');
+const path = require('path');
+
 const { getDataHome } = require('../utils/dataHome');
+
+// Optional SDK load: fall back to a built-in manifest validator when the
+// @khy/plugin-sdk package is missing (fail-soft, warn only once).
+let _sdkLoadWarned = false;
+let validateManifest;
+try {
+  ({ validateManifest } = require('@khy/plugin-sdk'));
+} catch (err) {
+  if (!_sdkLoadWarned) {
+    _sdkLoadWarned = true;
+    console.warn(
+      `plugin-loader 加载 @khy/plugin-sdk 失败，改用内置回退校验器（manifest 必填字段校验）: ${err && err.message ? err.message : err}`
+    );
+  }
+  // Fallback validator: mirrors the SDK return shape { valid, errors }.
+  // Checks the fields actually consumed by init(): name, namespace,
+  // engines.khy, main.
+  validateManifest = function validateManifestFallback(manifest) {
+    const errors = [];
+    if (!manifest || typeof manifest !== 'object') {
+      return { valid: false, errors: ['manifest must be an object'] };
+    }
+    if (!manifest.name || typeof manifest.name !== 'string') {
+      errors.push('missing required field: name');
+    }
+    if (!manifest.namespace || typeof manifest.namespace !== 'string') {
+      errors.push('missing required field: namespace');
+    }
+    if (!manifest.engines || typeof manifest.engines.khy !== 'string') {
+      errors.push('missing required field: engines.khy');
+    }
+    if (!manifest.main || typeof manifest.main !== 'string') {
+      errors.push('missing required field: main');
+    }
+    return { valid: errors.length === 0, errors };
+  };
+}
 
 // Semver comparison — minimal implementation to avoid extra dependency
 const semver = {
@@ -30,26 +67,49 @@ const semver = {
       const parts = range.split(/\s+/);
       for (const part of parts) {
         const match = part.match(/^([><=!]+)?(\d+)\.(\d+)\.(\d+)$/);
-        if (!match) continue;
+        if (!match) {
+          continue;
+        }
         const [, op, rMajor, rMinor, rPatch] = match;
         const rv = [+rMajor, +rMinor, +rPatch];
         const cv = [major, minor, patch];
         const cmp = cv[0] - rv[0] || cv[1] - rv[1] || cv[2] - rv[2];
         switch (op) {
-          case '>=': if (cmp < 0) return false; break;
-          case '>':  if (cmp <= 0) return false; break;
-          case '<=': if (cmp > 0) return false; break;
-          case '<':  if (cmp >= 0) return false; break;
+          case '>=':
+            if (cmp < 0) {
+              return false;
+            }
+            break;
+          case '>':
+            if (cmp <= 0) {
+              return false;
+            }
+            break;
+          case '<=':
+            if (cmp > 0) {
+              return false;
+            }
+            break;
+          case '<':
+            if (cmp >= 0) {
+              return false;
+            }
+            break;
           case '=':
-          case '==': if (cmp !== 0) return false; break;
-          default: break;
+          case '==':
+            if (cmp !== 0) {
+              return false;
+            }
+            break;
+          default:
+            break;
         }
       }
       return true;
     } catch {
       return false;
     }
-  }
+  },
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -108,20 +168,26 @@ async function init({ hostVersion, contextFactory, logger }) {
     // Validate manifest
     const { valid, errors } = validateManifest(manifestData);
     if (!valid) {
-      log.warn(`  ⚠ Plugin ${manifestData.name || pluginPath}: invalid manifest — ${errors.join(', ')}`);
+      log.warn(
+        `  ⚠ Plugin ${manifestData.name || pluginPath}: invalid manifest — ${errors.join(', ')}`
+      );
       continue;
     }
 
     // Check namespace collision
     if (_loadedPlugins.has(manifestData.namespace)) {
       const existing = _loadedPlugins.get(manifestData.namespace);
-      log.warn(`  ⚠ Plugin ${manifestData.name}: namespace "${manifestData.namespace}" conflicts with ${existing.manifest.name}, skipped`);
+      log.warn(
+        `  ⚠ Plugin ${manifestData.name}: namespace "${manifestData.namespace}" conflicts with ${existing.manifest.name}, skipped`
+      );
       continue;
     }
 
     // Check host version compatibility
     if (!semver.satisfies(_hostVersion, manifestData.engines.khy)) {
-      log.warn(`  ⚠ Plugin ${manifestData.name}@${manifestData.version} requires khy ${manifestData.engines.khy}, current ${_hostVersion}. Skipped.`);
+      log.warn(
+        `  ⚠ Plugin ${manifestData.name}@${manifestData.version} requires khy ${manifestData.engines.khy}, current ${_hostVersion}. Skipped.`
+      );
       _loadedPlugins.set(manifestData.namespace, {
         namespace: manifestData.namespace,
         manifest: manifestData,
@@ -146,17 +212,17 @@ async function init({ hostVersion, contextFactory, logger }) {
     });
 
     // Load and activate
-    activationPromises.push(
-      activatePlugin(manifestData, pluginPath, source, contextFactory, log)
-    );
+    activationPromises.push(activatePlugin(manifestData, pluginPath, source, contextFactory, log));
   }
 
   // Parallel activation with allSettled
   await Promise.allSettled(activationPromises);
 
-  const active = [..._loadedPlugins.values()].filter(p => p.state === 'active');
+  const active = [..._loadedPlugins.values()].filter((p) => p.state === 'active');
   if (active.length > 0) {
-    log.info(`  ✓ ${active.length} plugin(s) loaded: ${active.map(p => p.manifest.displayName || p.manifest.name).join(', ')}`);
+    log.info(
+      `  ✓ ${active.length} plugin(s) loaded: ${active.map((p) => p.manifest.displayName || p.manifest.name).join(', ')}`
+    );
   }
 
   return _loadedPlugins;
@@ -170,12 +236,16 @@ async function shutdown() {
   for (const [, plugin] of _loadedPlugins) {
     if (plugin.state === 'active' && plugin.instance && plugin.instance.deactivate) {
       deactivations.push(
-        Promise.resolve().then(() => plugin.instance.deactivate()).catch(() => {})
+        Promise.resolve()
+          .then(() => plugin.instance.deactivate())
+          .catch(() => {})
       );
     }
     // Dispose all registered resources
     for (const d of plugin.disposables) {
-      try { d.dispose(); } catch {}
+      try {
+        d.dispose();
+      } catch {}
     }
   }
   await Promise.allSettled(deactivations);
@@ -279,20 +349,30 @@ function discoverFromConfig(log) {
     const configPaths = [KHY_CONFIG, LEGACY_KHY_CONFIG];
 
     for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      if (!Array.isArray(config.plugins)) continue;
+      if (!Array.isArray(config.plugins)) {
+        continue;
+      }
 
       for (const entry of config.plugins) {
         const pluginPath = typeof entry === 'string' ? entry : entry.path;
-        if (!pluginPath) continue;
+        if (!pluginPath) {
+          continue;
+        }
 
         const resolved = path.isAbsolute(pluginPath) ? pluginPath : path.resolve(pluginPath);
-        if (seenPaths.has(resolved)) continue;
+        if (seenPaths.has(resolved)) {
+          continue;
+        }
         seenPaths.add(resolved);
 
         const manifest = readManifest(resolved);
-        if (manifest) results.push({ manifestData: manifest, pluginPath: resolved });
+        if (manifest) {
+          results.push({ manifestData: manifest, pluginPath: resolved });
+        }
       }
     }
 
@@ -307,8 +387,8 @@ function discoverFromWorkspace(log) {
   const seenPaths = new Set();
   const roots = new Set([
     process.cwd(),
-    path.resolve(__dirname, '../../../'),   // backend/
-    path.resolve(__dirname, '../../../../'),// workspace root
+    path.resolve(__dirname, '../../../'), // backend/
+    path.resolve(__dirname, '../../../../'), // workspace root
   ]);
 
   if (process.env.KHYQUANT_ROOT) {
@@ -317,7 +397,9 @@ function discoverFromWorkspace(log) {
 
   for (const root of roots) {
     const nmDir = path.join(root, 'node_modules');
-    if (!fs.existsSync(nmDir)) continue;
+    if (!fs.existsSync(nmDir)) {
+      continue;
+    }
 
     try {
       // Scan top-level for khy-* packages
@@ -328,7 +410,9 @@ function discoverFromWorkspace(log) {
           if (!seenPaths.has(pluginPath)) {
             seenPaths.add(pluginPath);
             const manifest = readManifest(pluginPath);
-            if (manifest) results.push({ manifestData: manifest, pluginPath });
+            if (manifest) {
+              results.push({ manifestData: manifest, pluginPath });
+            }
           }
         }
         // Scan @scope/khy-* packages
@@ -337,12 +421,18 @@ function discoverFromWorkspace(log) {
           try {
             const scopedEntries = fs.readdirSync(scopeDir);
             for (const scoped of scopedEntries) {
-              if (!scoped.startsWith('khy-')) continue;
+              if (!scoped.startsWith('khy-')) {
+                continue;
+              }
               const pluginPath = path.join(scopeDir, scoped);
-              if (seenPaths.has(pluginPath)) continue;
+              if (seenPaths.has(pluginPath)) {
+                continue;
+              }
               seenPaths.add(pluginPath);
               const manifest = readManifest(pluginPath);
-              if (manifest) results.push({ manifestData: manifest, pluginPath });
+              if (manifest) {
+                results.push({ manifestData: manifest, pluginPath });
+              }
             }
           } catch {}
         }
@@ -359,17 +449,22 @@ function discoverFromGlobal(log) {
     // Get global npm prefix
     const { execSync } = require('child_process');
     const prefix = execSync('npm prefix -g', { encoding: 'utf-8', timeout: 3000 }).trim();
-    const globalNm = process.platform === 'win32'
-      ? path.join(prefix, 'node_modules')
-      : path.join(prefix, 'lib', 'node_modules');
-    if (!fs.existsSync(globalNm)) return results;
+    const globalNm =
+      process.platform === 'win32'
+        ? path.join(prefix, 'node_modules')
+        : path.join(prefix, 'lib', 'node_modules');
+    if (!fs.existsSync(globalNm)) {
+      return results;
+    }
 
     const entries = fs.readdirSync(globalNm);
     for (const entry of entries) {
       if (entry.startsWith('khy-') && entry !== 'khy') {
         const pluginPath = path.join(globalNm, entry);
         const manifest = readManifest(pluginPath);
-        if (manifest) results.push({ manifestData: manifest, pluginPath });
+        if (manifest) {
+          results.push({ manifestData: manifest, pluginPath });
+        }
       }
     }
   } catch {}
@@ -380,15 +475,21 @@ function discoverFromPluginsDir(log) {
   const results = [];
 
   for (const dir of [KHY_PLUGINS_DIR, LEGACY_KHY_PLUGINS_DIR]) {
-    if (!fs.existsSync(dir)) continue;
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
 
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
         const pluginPath = path.join(dir, entry.name);
         const manifest = readManifest(pluginPath);
-        if (manifest) results.push({ manifestData: manifest, pluginPath });
+        if (manifest) {
+          results.push({ manifestData: manifest, pluginPath });
+        }
       }
     } catch {}
   }
@@ -399,16 +500,23 @@ function discoverFromPluginsDir(log) {
 function discoverFromEnv(log) {
   const results = [];
   const envVal = process.env.KHY_PLUGINS;
-  if (!envVal) return results;
+  if (!envVal) {
+    return results;
+  }
 
-  const names = envVal.split(',').map(s => s.trim()).filter(Boolean);
+  const names = envVal
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (const name of names) {
     // Try to find it via require.resolve
     try {
       const pkgJsonPath = require.resolve(`${name}/package.json`);
       const pluginPath = path.dirname(pkgJsonPath);
       const manifest = readManifest(pluginPath);
-      if (manifest) results.push({ manifestData: manifest, pluginPath });
+      if (manifest) {
+        results.push({ manifestData: manifest, pluginPath });
+      }
     } catch {}
   }
   return results;
@@ -423,10 +531,14 @@ function discoverFromEnv(log) {
 function readManifest(pluginPath) {
   try {
     const pkgJsonPath = path.join(pluginPath, 'package.json');
-    if (!fs.existsSync(pkgJsonPath)) return null;
+    if (!fs.existsSync(pkgJsonPath)) {
+      return null;
+    }
 
     const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    if (!pkg.khy) return null;
+    if (!pkg.khy) {
+      return null;
+    }
 
     // Merge top-level fields into manifest
     return {
@@ -446,7 +558,9 @@ function readManifest(pluginPath) {
  */
 async function activatePlugin(manifestData, pluginPath, source, contextFactory, log) {
   const entry = _loadedPlugins.get(manifestData.namespace);
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   try {
     // Resolve entry file
@@ -476,11 +590,15 @@ async function activatePlugin(manifestData, pluginPath, source, contextFactory, 
             () => reject(new Error('Activation timeout (5s)')),
             ACTIVATE_TIMEOUT_MS
           );
-          if (activationTimer.unref) activationTimer.unref();
+          if (activationTimer.unref) {
+            activationTimer.unref();
+          }
         }),
       ]);
     } finally {
-      if (activationTimer) clearTimeout(activationTimer);
+      if (activationTimer) {
+        clearTimeout(activationTimer);
+      }
     }
 
     // Store instance and mark active
@@ -503,6 +621,10 @@ module.exports = {
   getStatus,
   discoverPlugins,
   readManifest,
+  // Manifest validator: @khy/plugin-sdk when installed, else the built-in
+  // fallback — exported so callers/tests validate against the same function
+  // the loader actually uses.
+  validateManifest,
   KHY_HOME,
   KHY_PLUGINS_DIR,
 };

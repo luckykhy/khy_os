@@ -22,7 +22,9 @@
 const { classifyAgentTool } = require('./agentTreeView');
 
 function _enabled(env = process.env) {
-  const flag = String((env && env.KHY_STATUS_BROADCAST) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_STATUS_BROADCAST) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -46,7 +48,15 @@ const CATEGORY_PHRASE = Object.freeze({
   agent: { verb: '运行', noun: '个子任务' },
   other: { verb: '处理', noun: '项' },
 });
-const CATEGORY_ORDER = Object.freeze(['search', 'read', 'listing', 'edit', 'command', 'agent', 'other']);
+const CATEGORY_ORDER = Object.freeze([
+  'search',
+  'read',
+  'listing',
+  'edit',
+  'command',
+  'agent',
+  'other',
+]);
 
 function _toolName(t) {
   return (t && (t.name || t.toolName)) || '';
@@ -72,13 +82,24 @@ let _summaryMemo;
 function summarizeRunningTools(tools, env = process.env) {
   try {
     if (_summaryMemo === undefined) {
-      try { _summaryMemo = require('./tui/ink-components/runningToolsSummaryMemo'); }
-      catch { _summaryMemo = null; }
+      try {
+        _summaryMemo = require('./tui/ink-components/runningToolsSummaryMemo');
+      } catch {
+        _summaryMemo = null;
+      }
     }
     if (_summaryMemo) {
-      return _summaryMemo.summarizeRunningByArrayIdentity(tools, _isRunning, _toolName, classifyAgentTool, env);
+      return _summaryMemo.summarizeRunningByArrayIdentity(
+        tools,
+        _isRunning,
+        _toolName,
+        classifyAgentTool,
+        env
+      );
     }
-  } catch { /* 回退内联历史实现 */ }
+  } catch {
+    /* 回退内联历史实现 */
+  }
   // 历史内联实现(叶子不可用 / 门控关时的逐字节回退)。
   const list = Array.isArray(tools) ? tools.filter(_isRunning) : [];
   const counts = Object.create(null);
@@ -97,16 +118,22 @@ function summarizeRunningTools(tools, env = process.env) {
  */
 function buildLiveStatusBroadcast(tools, options = {}) {
   const env = (options && options.env) || process.env;
-  if (!_enabled(env)) return '';
+  if (!_enabled(env)) {
+    return '';
+  }
   const counts = summarizeRunningTools(tools, env);
   const parts = [];
   for (const cat of CATEGORY_ORDER) {
     const n = counts[cat];
-    if (!n) continue;
+    if (!n) {
+      continue;
+    }
     const phrase = CATEGORY_PHRASE[cat];
     parts.push(`${phrase.verb} ${n} ${phrase.noun}`);
   }
-  if (parts.length === 0) return '';
+  if (parts.length === 0) {
+    return '';
+  }
   return `正在${parts.join('、')}…`;
 }
 

@@ -27,20 +27,56 @@ const HEARTBEAT_MS = 15_000;
 function _mergePayloadPid(taskId, patch) {
   try {
     const current = store.getTask(taskId);
-    const payload = (current && current.payload_json && typeof current.payload_json === 'object')
-      ? current.payload_json
-      : {};
+    const payload =
+      current && current.payload_json && typeof current.payload_json === 'object'
+        ? current.payload_json
+        : {};
     store.updateTaskFields(taskId, { payload_json: { ...payload, ...patch } });
   } catch {
     /* fail-soft: pid tracking is best-effort */
   }
 }
 
-function _markFailed(taskId, type, message) {
+/**
+ * Whether the failed write can be treated as "task already terminal":
+ * either the error itself says so, or the on-disk state (read via a fresh
+ * store instance) is already in a terminal status.
+ */
+function _isAlreadyTerminal(taskId, err) {
+  if (err && /Terminal task is immutable/i.test(String(err.message || ''))) return true;
   try {
-    store.markFailed(taskId, WORKER_ID, { type, message: String(message || type) });
+    const fresh = store.createLargeTaskRuntimeStore({ storePath: store.getStorePath() });
+    const latest = fresh.getTask(taskId);
+    return !!latest && store.TERMINAL_STATUSES.has(latest.status);
   } catch {
-    /* already terminal or store unavailable */
+    return false;
+  }
+}
+
+function _markFailed(taskId, type, message) {
+  const details = { type, message: String(message || type) };
+  try {
+    store.markFailed(taskId, WORKER_ID, details);
+    return;
+  } catch (err) {
+    if (_isAlreadyTerminal(taskId, err)) return;
+    // Retry once with a fresh store instance that reloads from disk (the
+    // in-process singleton may hold stale state, and Windows renames can
+    // transiently fail with EPERM/EBUSY).
+    try {
+      const fresh = store.createLargeTaskRuntimeStore({ storePath: store.getStorePath() });
+      fresh.markFailed(taskId, WORKER_ID, details);
+    } catch (retryErr) {
+      const detail = (retryErr && (retryErr.code || retryErr.message)) || String(retryErr);
+      // Best-effort visibility only; never throw from here.
+      try {
+        process.stderr.write(
+          `[task-runner] 任务 ${taskId} 写入失败状态到磁盘存储失败(${detail})，第 2/2 次重试后放弃\n`
+        );
+      } catch {
+        /* best-effort */
+      }
+    }
   }
 }
 
@@ -70,7 +106,7 @@ function main() {
     }
     store.startTask(taskId, WORKER_ID);
   } catch (err) {
-    _markFailed(taskId, 'start_failed', err && err.message);
+    _markFailed(taskId, 'start_failed', `任务 ${taskId} 启动失败: ${(err && err.message) || err}`);
     process.exit(1);
     return;
   }
@@ -120,13 +156,25 @@ function main() {
   _mergePayloadPid(taskId, { runner_pid: process.pid, child_pid: child.pid });
 
   const heartbeat = setInterval(() => {
-    try { store.heartbeatTask(taskId, WORKER_ID); } catch { /* best-effort */ }
+    try {
+      store.heartbeatTask(taskId, WORKER_ID);
+    } catch {
+      /* best-effort */
+    }
   }, HEARTBEAT_MS);
   if (heartbeat.unref) heartbeat.unref();
 
   // Graceful stop: forward termination to the child before we exit.
   const onSignal = () => {
-    try { if (child && child.pid) child.kill('SIGTERM'); } catch { /* ignore */ }
+    try {
+      if (child && child.pid) {
+        // Windows does not support SIGTERM; omit signal on Windows
+        const sig = process.platform === 'win32' ? undefined : 'SIGTERM';
+        child.kill(sig);
+      }
+    } catch {
+      /* ignore */
+    }
   };
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);
@@ -146,7 +194,9 @@ function main() {
     try {
       const fresh = store.createLargeTaskRuntimeStore({ storePath: store.getStorePath() });
       latest = fresh.getTask(taskId);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (latest && (latest.status === 'cancelled' || latest.status === 'cancelling')) {
       process.exit(0);
       return;
@@ -158,14 +208,42 @@ function main() {
       try {
         const fresh = store.createLargeTaskRuntimeStore({ storePath: store.getStorePath() });
         fresh.cancelTask(taskId, `terminated by signal ${signal}`);
-      } catch { /* already terminal */ }
+      } catch {
+        /* already terminal */
+      }
       process.exit(0);
       return;
     }
     if (code === 0) {
       try {
         store.markSucceeded(taskId, WORKER_ID, { exit_code: 0 }, { progress_pct: 100 });
-      } catch { /* already terminal */ }
+      } catch (err) {
+        if (_isAlreadyTerminal(taskId, err)) {
+          process.exit(0);
+          return;
+        }
+        // Retry once with a fresh store instance that reloads from disk.
+        try {
+          const fresh = store.createLargeTaskRuntimeStore({ storePath: store.getStorePath() });
+          fresh.markSucceeded(taskId, WORKER_ID, { exit_code: 0 }, { progress_pct: 100 });
+        } catch (retryErr) {
+          const detail = (retryErr && (retryErr.code || retryErr.message)) || String(retryErr);
+          const line = `[task-runner] 任务 ${taskId} 已执行完成(exit 0)，但状态写入磁盘存储失败(${detail})，第 2/2 次重试后放弃`;
+          try {
+            process.stderr.write(line + '\n');
+          } catch {
+            /* best-effort */
+          }
+          try {
+            fs.appendFileSync(diskOutput.getTaskOutputPath(taskId), line + '\n');
+          } catch {
+            /* best-effort */
+          }
+          // Never pretend success when the terminal state did not reach disk.
+          process.exit(1);
+          return;
+        }
+      }
       process.exit(0);
       return;
     }

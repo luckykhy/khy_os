@@ -35,18 +35,21 @@ const path = require('path');
 function parseFrontmatter(raw) {
   const text = String(raw == null ? '' : raw);
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
-  if (!m) return { frontmatter: {}, content: text };
+  if (!m) {
+    return { frontmatter: {}, content: text };
+  }
   const frontmatter = {};
   for (const line of m[1].split(/\r?\n/)) {
     const idx = line.indexOf(':');
-    if (idx === -1) continue;
+    if (idx === -1) {
+      continue;
+    }
     const key = line.slice(0, idx).trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     let val = line.slice(idx + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"'))
-      || (val.startsWith("'") && val.endsWith("'"))
-    ) {
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
     }
     frontmatter[key] = val;
@@ -58,7 +61,9 @@ function parseFrontmatter(raw) {
 function _firstHeadingOrLine(content) {
   for (const line of String(content || '').split(/\r?\n/)) {
     const t = line.trim();
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
     return t.replace(/^#+\s*/, '');
   }
   return '';
@@ -73,9 +78,19 @@ function _defaultDirs() {
   const dirs = [];
   try {
     const { getDataDir, getProjectDataDir } = require('../utils/dataHome');
-    try { dirs.push(getProjectDataDir('templates')); } catch { /* optional */ }
-    try { dirs.push(getDataDir('templates')); } catch { /* optional */ }
-  } catch { /* dataHome optional */ }
+    try {
+      dirs.push(getProjectDataDir('templates'));
+    } catch {
+      /* optional */
+    }
+    try {
+      dirs.push(getDataDir('templates'));
+    } catch {
+      /* optional */
+    }
+  } catch {
+    /* dataHome optional */
+  }
   return Array.from(new Set(dirs));
 }
 
@@ -94,20 +109,32 @@ function listTemplates(opts = {}) {
 
   for (const dir of dirs) {
     let files;
-    try { files = fsImpl.readdirSync(dir); } catch { continue; }
+    try {
+      files = fsImpl.readdirSync(dir);
+    } catch {
+      continue;
+    }
     for (const file of files) {
-      if (!String(file).endsWith('.md')) continue;
+      if (!String(file).endsWith('.md')) {
+        continue;
+      }
       const name = String(file).slice(0, -3);
-      if (seen.has(name)) continue;
+      if (seen.has(name)) {
+        continue;
+      }
       seen.add(name);
       const filePath = path.join(dir, file);
       let raw;
-      try { raw = fsImpl.readFileSync(filePath, 'utf8'); } catch { continue; }
+      try {
+        raw = fsImpl.readFileSync(filePath, 'utf8');
+      } catch {
+        continue;
+      }
       const { frontmatter, content } = parseFrontmatter(raw);
       const description =
-        (typeof frontmatter.description === 'string' && frontmatter.description)
-        || _firstHeadingOrLine(content)
-        || 'No description';
+        (typeof frontmatter.description === 'string' && frontmatter.description) ||
+        _firstHeadingOrLine(content) ||
+        'No description';
       out.push({ name, description, filePath, frontmatter, content });
     }
   }

@@ -12,37 +12,68 @@
  * _addCustomProviderInteractive 契约字节不变。叶子对宿主仅两处函数级回依赖，经 DI 注入避免 require 环。
  */
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const os = require('os');
 const path = require('path');
+
 const { printSuccess, printError, printInfo, printTable, ICON_GATEWAY } = require('../formatters');
 
 // ---- 宿主函数级回依赖（DI 注入，避免与 handlers/gateway.js 形成 require 环）----
 let promptWithReplGuard = null;
 let _resolveEnvPathForDiscoverModels = null;
 function setGatewayProviderKeyPoolDeps(deps = {}) {
-  if (typeof deps.promptWithReplGuard === 'function') promptWithReplGuard = deps.promptWithReplGuard;
-  if (typeof deps._resolveEnvPathForDiscoverModels === 'function') _resolveEnvPathForDiscoverModels = deps._resolveEnvPathForDiscoverModels;
+  if (typeof deps.promptWithReplGuard === 'function') {
+    promptWithReplGuard = deps.promptWithReplGuard;
+  }
+  if (typeof deps._resolveEnvPathForDiscoverModels === 'function') {
+    _resolveEnvPathForDiscoverModels = deps._resolveEnvPathForDiscoverModels;
+  }
 }
+
 function _parseGatewayBooleanOption(value, fallback = false) {
-  if (value === undefined || value === null || value === '') return fallback;
-  if (value === true) return true;
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  if (value === true) {
+    return true;
+  }
   const normalized = String(value).trim().toLowerCase();
-  if (!normalized) return fallback;
-  if (['1', 'true', 'yes', 'on', 'y'].includes(normalized)) return true;
-  if (['0', 'false', 'no', 'off', 'n'].includes(normalized)) return false;
+  if (!normalized) {
+    return fallback;
+  }
+  if (['1', 'true', 'yes', 'on', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off', 'n'].includes(normalized)) {
+    return false;
+  }
   return fallback;
 }
 
 function _normalizeGatewayPoolJsonError(action, message = '') {
   const text = String(message || '').trim();
-  if (!text) return 'unknown_error';
-  if (/provider is required/i.test(text)) return 'missing_provider';
-  if (/account not found/i.test(text)) return 'account_not_found';
-  if (/disabled/i.test(text)) return 'account_disabled';
-  if (/status is /i.test(text)) return 'account_unavailable';
-  if (/unsupported provider/i.test(text)) return 'unsupported_provider';
-  if (/invalid account id/i.test(text)) return 'invalid_account_id';
+  if (!text) {
+    return 'unknown_error';
+  }
+  if (/provider is required/i.test(text)) {
+    return 'missing_provider';
+  }
+  if (/account not found/i.test(text)) {
+    return 'account_not_found';
+  }
+  if (/disabled/i.test(text)) {
+    return 'account_disabled';
+  }
+  if (/status is /i.test(text)) {
+    return 'account_unavailable';
+  }
+  if (/unsupported provider/i.test(text)) {
+    return 'unsupported_provider';
+  }
+  if (/invalid account id/i.test(text)) {
+    return 'invalid_account_id';
+  }
   return `${String(action || 'pool').toLowerCase()}_failed`;
 }
 
@@ -77,8 +108,12 @@ function _groupGatewayPoolAccounts(accounts = []) {
       };
     }
     grouped[key].count += 1;
-    if (account.isActive) grouped[key].active += 1;
-    if (account.enabled === false) grouped[key].disabled += 1;
+    if (account.isActive) {
+      grouped[key].active += 1;
+    }
+    if (account.enabled === false) {
+      grouped[key].disabled += 1;
+    }
     grouped[key].accounts.push(account);
   }
   return grouped;
@@ -93,9 +128,8 @@ function _buildGatewayPoolListPayload(accounts = [], provider = '') {
     count: accounts.length,
     accounts,
     providers: _groupGatewayPoolAccounts(accounts),
-    message: accounts.length > 0
-      ? ''
-      : (normalizedProvider ? `${normalizedProvider} 号池为空` : '号池为空'),
+    message:
+      accounts.length > 0 ? '' : normalizedProvider ? `${normalizedProvider} 号池为空` : '号池为空',
   };
 }
 
@@ -115,43 +149,25 @@ function _buildGatewayAddUsagePayload() {
     action: 'add',
     error: 'missing_required_options',
     message: 'Non-interactive gateway add requires name, base URL, API key, and model ID.',
-    usage: 'gateway add --name <display-name> [--pool-key <id>] --base-url <url> --api-key <key> --model-id <model> [--extra-models a,b] [--tier T0|T1|T2|T3] [--json]',
+    usage:
+      'gateway add --name <display-name> [--pool-key <id>] --base-url <url> --api-key <key> --model-id <model> [--extra-models a,b] [--tier T0|T1|T2|T3] [--json]',
   };
 }
 
 function _collectGatewayAddCliInput(options = {}) {
   const displayName = String(
-    options.name
-    || options.displayName
-    || options['display-name']
-    || ''
+    options.name || options.displayName || options['display-name'] || ''
   ).trim();
   const poolKey = String(options.poolKey || options['pool-key'] || '').trim();
-  const endpoint = String(
-    options.baseUrl
-    || options['base-url']
-    || options.endpoint
-    || ''
-  ).trim();
-  const keyInput = String(
-    options.apiKey
-    || options['api-key']
-    || options.key
-    || ''
-  ).trim();
+  const endpoint = String(options.baseUrl || options['base-url'] || options.endpoint || '').trim();
+  const keyInput = String(options.apiKey || options['api-key'] || options.key || '').trim();
   const defaultModel = String(
-    options.modelId
-    || options['model-id']
-    || options.defaultModel
-    || options['default-model']
-    || ''
+    options.modelId || options['model-id'] || options.defaultModel || options['default-model'] || ''
   ).trim();
-  const extraModels = String(
-    options.extraModels
-    || options['extra-models']
-    || ''
-  ).trim();
-  const tier = String(options.tier || '').trim().toUpperCase();
+  const extraModels = String(options.extraModels || options['extra-models'] || '').trim();
+  const tier = String(options.tier || '')
+    .trim()
+    .toUpperCase();
   return {
     displayName,
     poolKey,
@@ -165,13 +181,13 @@ function _collectGatewayAddCliInput(options = {}) {
 
 function _hasGatewayAddCliInput(input = {}) {
   return Boolean(
-    input.displayName
-    || input.poolKey
-    || input.endpoint
-    || input.keyInput
-    || input.defaultModel
-    || input.extraModels
-    || input.tier
+    input.displayName ||
+    input.poolKey ||
+    input.endpoint ||
+    input.keyInput ||
+    input.defaultModel ||
+    input.extraModels ||
+    input.tier
   );
 }
 
@@ -221,7 +237,10 @@ async function _maybeTestGatewayCustomProvider(result, options = {}, asJson = fa
  * Scan local IDE/config files and merge discovered model IDs into RELAY_API_MODELS.
  */
 async function handleGatewayDiscoverModels(options = {}) {
-  const { discoverModels, updateRelayModelsInEnvFile } = require('../../services/gateway/modelDiscovery');
+  const {
+    discoverModels,
+    updateRelayModelsInEnvFile,
+  } = require('../../services/gateway/modelDiscovery');
   const asJson = !!options.json;
   const envPath = _resolveEnvPathForDiscoverModels();
   const result = discoverModels();
@@ -236,16 +255,22 @@ async function handleGatewayDiscoverModels(options = {}) {
   if (discovered.length === 0) {
     const message = '未发现可用模型 ID。可手动设置 RELAY_API_MODELS。';
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: true,
-        action: 'discover-models',
-        count: 0,
-        models: [],
-        evidence: [],
-        envPath,
-        mergedCount: 0,
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            action: 'discover-models',
+            count: 0,
+            models: [],
+            evidence: [],
+            envPath,
+            mergedCount: 0,
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printInfo(message);
       console.log('');
@@ -255,33 +280,45 @@ async function handleGatewayDiscoverModels(options = {}) {
 
   const merged = updateRelayModelsInEnvFile(envPath, discovered);
   let mergedCount = 0;
-  try { mergedCount = String(merged).split(',').filter(Boolean).length; } catch { mergedCount = 0; }
+  try {
+    mergedCount = String(merged).split(',').filter(Boolean).length;
+  } catch {
+    mergedCount = 0;
+  }
 
   const evidence = (result.evidence || []).slice(0, 12).map((e) => ({
-    file: String(e.file || '').replace((os.homedir() || ''), '~'),
+    file: String(e.file || '').replace(os.homedir() || '', '~'),
     count: Number(e.count || 0),
   }));
 
   if (asJson) {
-    console.log(JSON.stringify({
-      ok: true,
-      action: 'discover-models',
-      count: discovered.length,
-      models: discovered,
-      evidence,
-      envPath,
-      mergedCount,
-      message: `已发现 ${discovered.length} 个模型候选，并写入 RELAY_API_MODELS (${mergedCount} 个)`,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          action: 'discover-models',
+          count: discovered.length,
+          models: discovered,
+          evidence,
+          envPath,
+          mergedCount,
+          message: `已发现 ${discovered.length} 个模型候选，并写入 RELAY_API_MODELS (${mergedCount} 个)`,
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
-  printSuccess(`已发现 ${discovered.length} 个模型候选，并写入 RELAY_API_MODELS (${mergedCount} 个)`);
+  printSuccess(
+    `已发现 ${discovered.length} 个模型候选，并写入 RELAY_API_MODELS (${mergedCount} 个)`
+  );
 
   if (result.evidence && result.evidence.length > 0) {
     printInfo('来源文件:');
     for (const e of result.evidence.slice(0, 12)) {
-      const short = e.file.replace((os.homedir() || ''), '~');
+      const short = e.file.replace(os.homedir() || '', '~');
       console.log(`  ${chalk.dim('-')} ${short} ${chalk.dim(`(${e.count})`)}`);
     }
   }
@@ -305,25 +342,29 @@ async function handleGatewayKeyHealth(args = [], options = {}) {
   }
 
   const results = await probe.probeAll();
-  const filtered = filterProvider
-    ? results.filter(r => r.provider === filterProvider)
-    : results;
+  const filtered = filterProvider ? results.filter((r) => r.provider === filterProvider) : results;
 
   if (filtered.length === 0) {
     const message = filterProvider
       ? `No keys found for provider "${filterProvider}".`
       : 'No keys configured in pool.';
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: true,
-        action: 'health',
-        provider: filterProvider,
-        count: 0,
-        healthy: 0,
-        unhealthy: 0,
-        results: [],
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            action: 'health',
+            provider: filterProvider,
+            count: 0,
+            healthy: 0,
+            unhealthy: 0,
+            results: [],
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printInfo(message);
       console.log('');
@@ -339,28 +380,34 @@ async function handleGatewayKeyHealth(args = [], options = {}) {
     statusCode: r.statusCode ?? null,
     error: r.error || null,
   }));
-  const healthy = normalized.filter(r => r.healthy).length;
+  const healthy = normalized.filter((r) => r.healthy).length;
 
   if (asJson) {
-    console.log(JSON.stringify({
-      ok: true,
-      action: 'health',
-      provider: filterProvider,
-      count: normalized.length,
-      healthy,
-      unhealthy: normalized.length - healthy,
-      results: normalized,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          action: 'health',
+          provider: filterProvider,
+          count: normalized.length,
+          healthy,
+          unhealthy: normalized.length - healthy,
+          results: normalized,
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
   for (const r of normalized) {
-    const status = r.healthy
-      ? chalk.green('healthy')
-      : chalk.red('unhealthy');
+    const status = r.healthy ? chalk.green('healthy') : chalk.red('unhealthy');
     const latency = r.latencyMs > 0 ? chalk.dim(`${r.latencyMs}ms`) : '';
     const error = r.error ? chalk.dim(`(${r.error})`) : '';
-    console.log(`  ${chalk.cyan(r.provider.padEnd(12))} ${r.keyId.padEnd(14)} ${status} ${latency} ${error}`);
+    console.log(
+      `  ${chalk.cyan(r.provider.padEnd(12))} ${r.keyId.padEnd(14)} ${status} ${latency} ${error}`
+    );
   }
 
   console.log('');
@@ -376,13 +423,19 @@ async function handleGatewayKeyRotate(args = [], options = {}) {
   if (!provider) {
     const message = 'Usage: gateway key rotate <provider>';
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: false,
-        action: 'rotate',
-        provider: null,
-        error: 'missing_provider',
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            action: 'rotate',
+            provider: null,
+            error: 'missing_provider',
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printError(message);
     }
@@ -395,13 +448,19 @@ async function handleGatewayKeyRotate(args = [], options = {}) {
   if (!keys || keys.length === 0) {
     const message = `No keys configured for "${provider}".`;
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: false,
-        action: 'rotate',
-        provider,
-        error: 'no_keys_configured',
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            action: 'rotate',
+            provider,
+            error: 'no_keys_configured',
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printError(message);
     }
@@ -413,26 +472,38 @@ async function handleGatewayKeyRotate(args = [], options = {}) {
   if (next) {
     const keyId = next.keyId || next.id || null;
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: true,
-        action: 'rotate',
-        provider,
-        keyId,
-        label: next.label || '',
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            action: 'rotate',
+            provider,
+            keyId,
+            label: next.label || '',
+          },
+          null,
+          2
+        )
+      );
     } else {
       printSuccess(`Rotated to key ${keyId} (${provider})`);
     }
   } else {
     const message = `All keys for "${provider}" are in cooldown or disabled.`;
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: false,
-        action: 'rotate',
-        provider,
-        error: 'no_available_keys',
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            action: 'rotate',
+            provider,
+            error: 'no_available_keys',
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printError(message);
     }
@@ -476,9 +547,12 @@ async function _renderCatalogView(view, options = {}) {
   try {
     result = await graph.buildCatalogGraph({ live: !!options.live });
   } catch (e) {
-    const msg = `构建模型目录失败: ${String(e && e.message || e)}`;
-    if (asJson) console.log(JSON.stringify({ ok: false, error: msg }, null, 2));
-    else printError(msg);
+    const msg = `构建模型目录失败: ${String((e && e.message) || e)}`;
+    if (asJson) {
+      console.log(JSON.stringify({ ok: false, error: msg }, null, 2));
+    } else {
+      printError(msg);
+    }
     return;
   }
 
@@ -486,7 +560,13 @@ async function _renderCatalogView(view, options = {}) {
   const groups = pivots.pivot(result.edges, view, { search });
 
   if (asJson) {
-    console.log(JSON.stringify({ ok: true, view, search: search || undefined, groups, sources: result.sources }, null, 2));
+    console.log(
+      JSON.stringify(
+        { ok: true, view, search: search || undefined, groups, sources: result.sources },
+        null,
+        2
+      )
+    );
     return;
   }
 
@@ -496,7 +576,9 @@ async function _renderCatalogView(view, options = {}) {
 
   const totalEdges = groups.reduce((n, g) => n + g.edges.length, 0);
   if (totalEdges === 0) {
-    printInfo(`视角「${view}」下暂无模型${search ? `（搜索: ${search}）` : ''}。先用 gateway add 接入供应商/Key`);
+    printInfo(
+      `视角「${view}」下暂无模型${search ? `（搜索: ${search}）` : ''}。先用 gateway add 接入供应商/Key`
+    );
     return;
   }
   printInfo(`模型目录 · 视角=${view}${search ? ` · 搜索=${search}` : ''} · 共 ${totalEdges} 条`);
@@ -505,17 +587,35 @@ async function _renderCatalogView(view, options = {}) {
     const rows = groups[0].edges;
     printTable(
       ['供应商', '模型', '能力', '档位', '状态', '连接', 'Keys'],
-      rows.map(e => [e.providerLabel || e.provider, e.model, capLabel(e.capability), e.tier, statLabel(e.status), connLabel(e.connectionMode), String(e.keyCount)]),
+      rows.map((e) => [
+        e.providerLabel || e.provider,
+        e.model,
+        capLabel(e.capability),
+        e.tier,
+        statLabel(e.status),
+        connLabel(e.connectionMode),
+        String(e.keyCount),
+      ])
     );
     return;
   }
 
   for (const g of groups) {
     console.log('');
-    printInfo(`▸ ${g.groupLabel}${g.groupKey !== g.groupLabel ? ` (${g.groupKey})` : ''} · ${g.edges.length}`);
+    printInfo(
+      `▸ ${g.groupLabel}${g.groupKey !== g.groupLabel ? ` (${g.groupKey})` : ''} · ${g.edges.length}`
+    );
     printTable(
       ['供应商', '模型', '能力', '档位', '状态', '连接', 'Keys'],
-      g.edges.map(e => [e.providerLabel || e.provider, e.model, capLabel(e.capability), e.tier, statLabel(e.status), connLabel(e.connectionMode), String(e.keyCount)]),
+      g.edges.map((e) => [
+        e.providerLabel || e.provider,
+        e.model,
+        capLabel(e.capability),
+        e.tier,
+        statLabel(e.status),
+        connLabel(e.connectionMode),
+        String(e.keyCount),
+      ])
     );
   }
 }
@@ -527,7 +627,9 @@ async function handleGatewayModels(args = [], options = {}) {
 
   const REMOVE_VERBS = new Set(['remove', 'rm', 'del', 'delete']);
   const KNOWN_VERBS = new Set(['list', 'add', ...REMOVE_VERBS]);
-  const first = String(args[0] || '').trim().toLowerCase();
+  const first = String(args[0] || '')
+    .trim()
+    .toLowerCase();
   // Default to `list` when the first token is an adapter name (or absent).
   const verb = KNOWN_VERBS.has(first) ? first : 'list';
   const rest = KNOWN_VERBS.has(first) ? args.slice(1) : args.slice(0);
@@ -538,18 +640,26 @@ async function handleGatewayModels(args = [], options = {}) {
   // legacy adapter-grouped table below (zero regression).
   if (verb === 'list' && (options.view || options.search)) {
     const pivots = require('../../services/gateway/modelCatalogPivots');
-    const requested = String(options.view === true ? '' : (options.view || '')).trim().toLowerCase();
+    const requested = String(options.view === true ? '' : options.view || '')
+      .trim()
+      .toLowerCase();
     const view = pivots.VIEWS.includes(requested) ? requested : 'flat';
     return _renderCatalogView(view, options);
   }
 
   if (verb === 'add' || REMOVE_VERBS.has(verb)) {
     const adapter = String(rest[0] || '').trim();
-    const idTokens = rest.slice(1).map(s => String(s || '').trim()).filter(Boolean);
+    const idTokens = rest
+      .slice(1)
+      .map((s) => String(s || '').trim())
+      .filter(Boolean);
     if (!adapter || idTokens.length === 0) {
       const usage = `用法: gateway models ${verb === 'add' ? 'add' : 'remove'} <adapter> <model-id> [more-ids...]`;
-      if (asJson) console.log(JSON.stringify({ ok: false, error: usage }, null, 2));
-      else printError(usage);
+      if (asJson) {
+        console.log(JSON.stringify({ ok: false, error: usage }, null, 2));
+      } else {
+        printError(usage);
+      }
       return;
     }
 
@@ -557,14 +667,16 @@ async function handleGatewayModels(args = [], options = {}) {
     const existing = Array.isArray(ov.added) ? ov.added : [];
 
     if (verb === 'add') {
-      const byId = new Map(existing.map(m => [m.id, m]));
+      const byId = new Map(existing.map((m) => [m.id, m]));
       const newlyAdded = [];
       for (const tok of idTokens) {
         // Accept "id", "id:Display Name" or "id=Display Name".
         const m = tok.match(/^([^:=]+)[:=](.+)$/);
         const id = (m ? m[1] : tok).trim();
         const name = (m ? m[2] : id).trim();
-        if (!id || byId.has(id)) continue; // skip blanks / already present
+        if (!id || byId.has(id)) {
+          continue;
+        } // skip blanks / already present
         const entry = { id, name };
         byId.set(id, entry);
         newlyAdded.push(entry);
@@ -572,25 +684,37 @@ async function handleGatewayModels(args = [], options = {}) {
       const merged = Array.from(byId.values());
       modelCuration.setAdapterOverride(adapter, { added: merged });
       if (asJson) {
-        console.log(JSON.stringify({ ok: true, adapter, added: newlyAdded.map(m => m.id), total: merged.length }, null, 2));
+        console.log(
+          JSON.stringify(
+            { ok: true, adapter, added: newlyAdded.map((m) => m.id), total: merged.length },
+            null,
+            2
+          )
+        );
       } else if (newlyAdded.length === 0) {
         printInfo(`没有新增模型（指定的 ID 已存在于 ${adapter}）`);
       } else {
-        printSuccess(`已为 ${adapter} 添加 ${newlyAdded.length} 个模型: ${newlyAdded.map(m => m.id).join(', ')}`);
-        printInfo(`查看完整列表: gateway models ${adapter}（对话中用 /model 选择，Web「可用模型」卡同步可见）`);
+        printSuccess(
+          `已为 ${adapter} 添加 ${newlyAdded.length} 个模型: ${newlyAdded.map((m) => m.id).join(', ')}`
+        );
+        printInfo(
+          `查看完整列表: gateway models ${adapter}（对话中用 /model 选择，Web「可用模型」卡同步可见）`
+        );
       }
       return;
     }
 
     // remove — only manually-added models can be deleted (built-ins use hide).
     const removeSet = new Set(idTokens);
-    const kept = existing.filter(m => !removeSet.has(m.id));
+    const kept = existing.filter((m) => !removeSet.has(m.id));
     const removed = existing.length - kept.length;
     modelCuration.setAdapterOverride(adapter, { added: kept });
     if (asJson) {
       console.log(JSON.stringify({ ok: true, adapter, removed, total: kept.length }, null, 2));
     } else if (removed === 0) {
-      printInfo('未找到可删除的自定义模型（仅能删除手动添加的；内置模型请用 Web「可用模型」卡隐藏）');
+      printInfo(
+        '未找到可删除的自定义模型（仅能删除手动添加的；内置模型请用 Web「可用模型」卡隐藏）'
+      );
     } else {
       printSuccess(`已从 ${adapter} 删除 ${removed} 个自定义模型`);
     }
@@ -599,13 +723,17 @@ async function handleGatewayModels(args = [], options = {}) {
 
   // list — merge each adapter's live raw models with the curation overrides.
   const targetAdapter = String(rest[0] || '').trim();
-  if (!aiGateway._initialized) {
-    try { await aiGateway.init(); } catch { /* best effort — still show curation */ }
+  if (!aiGateway.isInitialized()) {
+    try {
+      await aiGateway.init();
+    } catch {
+      /* best effort — still show curation */
+    }
   }
   const statuses = (typeof aiGateway.getStatus === 'function' ? aiGateway.getStatus() : []) || [];
   let adapters = targetAdapter
-    ? statuses.filter(s => s.type === targetAdapter)
-    : statuses.filter(s => s.enabled);
+    ? statuses.filter((s) => s.type === targetAdapter)
+    : statuses.filter((s) => s.enabled);
   if (targetAdapter && adapters.length === 0) {
     // Adapter not enabled/known to the gateway — still surface its curation.
     adapters = [{ type: targetAdapter, name: targetAdapter, available: false }];
@@ -614,14 +742,20 @@ async function handleGatewayModels(args = [], options = {}) {
   const rows = [];
   for (const s of adapters) {
     let raw = [];
-    try { if (s.available) raw = await aiGateway.listModels(s.type) || []; } catch { /* ignore */ }
+    try {
+      if (s.available) {
+        raw = (await aiGateway.listModels(s.type)) || [];
+      }
+    } catch {
+      /* ignore */
+    }
     const merged = modelCuration.applyOverrides(s.type, raw);
     for (const m of merged) {
       rows.push({
         adapter: s.type,
         id: m.id,
         name: m.name || m.id,
-        source: m.custom ? '自定义' : (s.available ? '内置' : '—'),
+        source: m.custom ? '自定义' : s.available ? '内置' : '—',
         isDefault: !!m.isDefault,
       });
     }
@@ -638,7 +772,7 @@ async function handleGatewayModels(args = [], options = {}) {
   printInfo(`可用模型 (${rows.length})${targetAdapter ? ` · ${targetAdapter}` : ''}:`);
   printTable(
     ['适配器', '模型 ID', '显示名', '来源', '默认'],
-    rows.map(r => [r.adapter, r.id, r.name, r.source, r.isDefault ? '✓' : '']),
+    rows.map((r) => [r.adapter, r.id, r.name, r.source, r.isDefault ? '✓' : ''])
   );
 }
 
@@ -650,22 +784,29 @@ async function handleGatewayKey(subAction = '', args = [], options = {}) {
     return handleGatewayKeyRotate(args, options);
   } else {
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: true,
-        action: 'help',
-        command: 'gateway key',
-        usage: [
-          'gateway key health [provider]',
-          'gateway key rotate <provider>',
-        ],
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            action: 'help',
+            command: 'gateway key',
+            usage: ['gateway key health [provider]', 'gateway key rotate <provider>'],
+          },
+          null,
+          2
+        )
+      );
     } else {
       console.log('');
       console.log(chalk.bold('  Gateway Key Management'));
       console.log('');
       console.log('  Usage:');
-      console.log(chalk.dim('    gateway key health [provider]    Probe all keys (or filter by provider)'));
-      console.log(chalk.dim('    gateway key rotate <provider>    Force rotate to next available key'));
+      console.log(
+        chalk.dim('    gateway key health [provider]    Probe all keys (or filter by provider)')
+      );
+      console.log(
+        chalk.dim('    gateway key rotate <provider>    Force rotate to next available key')
+      );
       console.log('');
     }
   }
@@ -682,16 +823,25 @@ async function handleGatewayKey(subAction = '', args = [], options = {}) {
  * @returns {object|null} provisionAgnes 摘要（仅 image/video 部分），未触发返回 null
  */
 function _maybeProvisionAgnesMedia(result, doMedia, asJson) {
-  if (!doMedia) return null;
-  const isAgnes = result && (result.poolKey === 'agnes'
-    || /(^|\.)apihub\.agnes-ai\.com$/i.test(_safeHost(result.endpoint)));
-  if (!isAgnes) return null;
+  if (!doMedia) {
+    return null;
+  }
+  const isAgnes =
+    result &&
+    (result.poolKey === 'agnes' ||
+      /(^|\.)apihub\.agnes-ai\.com$/i.test(_safeHost(result.endpoint)));
+  if (!isAgnes) {
+    return null;
+  }
   try {
     const provisioner = require('../../services/agnesProvisioner');
     const summary = provisioner.provisionAgnes({ apiKey: result.firstKey, chat: false });
     if (!asJson) {
       if (summary.image.wired) {
-        const active = summary.image.backendActive === 'agnes' ? '已激活' : `当前激活=${summary.image.backendActive || '无'}`;
+        const active =
+          summary.image.backendActive === 'agnes'
+            ? '已激活'
+            : `当前激活=${summary.image.backendActive || '无'}`;
         printSuccess(`图像能力已接通: 文生图 + 图改图 (${active})`);
       } else if (summary.image.error) {
         printError(`图像接通失败: ${summary.image.error}`);
@@ -704,13 +854,19 @@ function _maybeProvisionAgnesMedia(result, doMedia, asJson) {
     }
     return { image: summary.image, video: summary.video };
   } catch (e) {
-    if (!asJson) printError(`图像/视频接通失败: ${e.message}`);
+    if (!asJson) {
+      printError(`图像/视频接通失败: ${e.message}`);
+    }
     return { error: e.message };
   }
 }
 
 function _safeHost(url) {
-  try { return new URL(String(url)).host; } catch { return ''; }
+  try {
+    return new URL(String(url)).host;
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -727,92 +883,126 @@ async function _addCustomProviderInteractive({ pool, customRegistry }) {
   // 0. 预设选择 — 让常见 Provider（如 Agnes）免手敲 base URL / 模型 ID。
   let preset = null;
   if (presets.length > 0) {
-    const { presetId } = await promptWithReplGuard([{
-      type: 'list',
-      name: 'presetId',
-      message: '选择 Provider 预设:',
-      choices: [
-        ...presets.map(p => ({ name: `${p.name} (${p.endpoint})`, value: p.id })),
-        { name: '手动填写 (其它 OpenAI 兼容服务)', value: '__manual__' },
-      ],
-      default: '__manual__',
-    }]);
-    if (presetId !== '__manual__') preset = presets.find(p => p.id === presetId) || null;
+    const { presetId } = await promptWithReplGuard([
+      {
+        type: 'list',
+        name: 'presetId',
+        message: '选择 Provider 预设:',
+        choices: [
+          ...presets.map((p) => ({ name: `${p.name} (${p.endpoint})`, value: p.id })),
+          { name: '手动填写 (其它 OpenAI 兼容服务)', value: '__manual__' },
+        ],
+        default: '__manual__',
+      },
+    ]);
+    if (presetId !== '__manual__') {
+      preset = presets.find((p) => p.id === presetId) || null;
+    }
   }
 
-  const { displayName } = await promptWithReplGuard([{
-    type: 'input',
-    name: 'displayName',
-    message: 'Provider 显示名称 (如 SiliconFlow):',
-    default: preset ? preset.name : undefined,
-    validate: v => v.trim().length > 0 ? true : '请输入名称',
-  }]);
+  const { displayName } = await promptWithReplGuard([
+    {
+      type: 'input',
+      name: 'displayName',
+      message: 'Provider 显示名称 (如 SiliconFlow):',
+      default: preset ? preset.name : undefined,
+      validate: (v) => (v.trim().length > 0 ? true : '请输入名称'),
+    },
+  ]);
 
   const autoPoolKey = preset
     ? preset.id
-    : displayName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const { poolKey } = await promptWithReplGuard([{
-    type: 'input',
-    name: 'poolKey',
-    message: 'Provider ID (内部标识):',
-    default: autoPoolKey,
-    validate: v => {
-      const k = v.trim().toLowerCase();
-      if (!k || !/^[a-z0-9][-a-z0-9]*$/.test(k)) return '只允许小写字母、数字和连字符';
-      if (customRegistry.isBuiltinPoolKey(k)) return `"${k}" 是内置名称，请换一个`;
-      return true;
+    : displayName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+  const { poolKey } = await promptWithReplGuard([
+    {
+      type: 'input',
+      name: 'poolKey',
+      message: 'Provider ID (内部标识):',
+      default: autoPoolKey,
+      validate: (v) => {
+        const k = v.trim().toLowerCase();
+        if (!k || !/^[a-z0-9][-a-z0-9]*$/.test(k)) {
+          return '只允许小写字母、数字和连字符';
+        }
+        if (customRegistry.isBuiltinPoolKey(k)) {
+          return `"${k}" 是内置名称，请换一个`;
+        }
+        return true;
+      },
     },
-  }]);
+  ]);
 
-  const { baseUrl } = await promptWithReplGuard([{
-    type: 'input',
-    name: 'baseUrl',
-    message: 'Base URL (如 https://api.siliconflow.cn/v1):',
-    default: preset ? preset.endpoint : undefined,
-    validate: v => { try { new URL(v); return true; } catch { return '请输入有效 URL'; } },
-  }]);
+  const { baseUrl } = await promptWithReplGuard([
+    {
+      type: 'input',
+      name: 'baseUrl',
+      message: 'Base URL (如 https://api.siliconflow.cn/v1):',
+      default: preset ? preset.endpoint : undefined,
+      validate: (v) => {
+        try {
+          new URL(v);
+          return true;
+        } catch {
+          return '请输入有效 URL';
+        }
+      },
+    },
+  ]);
 
-  const { keyInput } = await promptWithReplGuard([{
-    type: 'password',
-    name: 'keyInput',
-    message: 'API Key:',
-    mask: '*',
-    validate: v => v.length > 0 ? true : '请输入 API Key',
-  }]);
+  const { keyInput } = await promptWithReplGuard([
+    {
+      type: 'password',
+      name: 'keyInput',
+      message: 'API Key:',
+      mask: '*',
+      validate: (v) => (v.length > 0 ? true : '请输入 API Key'),
+    },
+  ]);
 
-  const { defaultModel } = await promptWithReplGuard([{
-    type: 'input',
-    name: 'defaultModel',
-    message: '默认模型 ID (如 deepseek-chat):',
-    default: preset ? preset.defaultModel : undefined,
-    validate: v => v.trim().length > 0 ? true : '请输入模型 ID',
-  }]);
+  const { defaultModel } = await promptWithReplGuard([
+    {
+      type: 'input',
+      name: 'defaultModel',
+      message: '默认模型 ID (如 deepseek-chat):',
+      default: preset ? preset.defaultModel : undefined,
+      validate: (v) => (v.trim().length > 0 ? true : '请输入模型 ID'),
+    },
+  ]);
 
-  const extraDefault = preset && Array.isArray(preset.models)
-    ? preset.models.filter(m => m !== preset.defaultModel).join(', ')
-    : '';
-  const { extraModels } = await promptWithReplGuard([{
-    type: 'input',
-    name: 'extraModels',
-    message: '其他模型 (逗号分隔，可留空):',
-    default: extraDefault,
-  }]);
+  const extraDefault =
+    preset && Array.isArray(preset.models)
+      ? preset.models.filter((m) => m !== preset.defaultModel).join(', ')
+      : '';
+  const { extraModels } = await promptWithReplGuard([
+    {
+      type: 'input',
+      name: 'extraModels',
+      message: '其他模型 (逗号分隔，可留空):',
+      default: extraDefault,
+    },
+  ]);
 
   // 可选能力分级覆盖（缺省＝自动判定）。Agnes 等名字含 "flash" 的模型会被
   // 自动判为 T3，这里允许用户显式声明真实 tier。
-  const { tier } = await promptWithReplGuard([{
-    type: 'list',
-    name: 'tier',
-    message: '能力分级 (tier，缺省自动):',
-    choices: [
-      { name: '自动判定 (推荐)', value: '' },
-      { name: 'T0 前沿', value: 'T0' },
-      { name: 'T1 强', value: 'T1' },
-      { name: 'T2 默认', value: 'T2' },
-      { name: 'T3 弱', value: 'T3' },
-    ],
-    default: preset && preset.tier ? preset.tier : '',
-  }]);
+  const { tier } = await promptWithReplGuard([
+    {
+      type: 'list',
+      name: 'tier',
+      message: '能力分级 (tier，缺省自动):',
+      choices: [
+        { name: '自动判定 (推荐)', value: '' },
+        { name: 'T0 前沿', value: 'T0' },
+        { name: 'T1 强', value: 'T1' },
+        { name: 'T2 默认', value: 'T2' },
+        { name: 'T3 弱', value: 'T3' },
+      ],
+      default: preset && preset.tier ? preset.tier : '',
+    },
+  ]);
 
   // 注册（加 key → 元数据 → env 路由 → 可选 tier），复用共享注册器。
   let result;
@@ -831,17 +1021,23 @@ async function _addCustomProviderInteractive({ pool, customRegistry }) {
     return null;
   }
 
-  printSuccess(`${result.displayName} 已添加 (${result.keyCount} key, ${result.models.length} 模型)`);
+  printSuccess(
+    `${result.displayName} 已添加 (${result.keyCount} key, ${result.models.length} 模型)`
+  );
   printInfo(`模型路由: ${result.models.join(', ')} → api adapter`);
-  if (result.tier) printInfo(`能力分级覆盖: ${result.models.join(', ')} → ${result.tier}`);
+  if (result.tier) {
+    printInfo(`能力分级覆盖: ${result.models.join(', ')} → ${result.tier}`);
+  }
 
   // 可选连接测试
-  const { testNow } = await promptWithReplGuard([{
-    type: 'confirm',
-    name: 'testNow',
-    message: '是否测试连接?',
-    default: true,
-  }]);
+  const { testNow } = await promptWithReplGuard([
+    {
+      type: 'confirm',
+      name: 'testNow',
+      message: '是否测试连接?',
+      default: true,
+    },
+  ]);
   if (testNow) {
     printInfo('测试中...');
     try {
@@ -855,7 +1051,9 @@ async function _addCustomProviderInteractive({ pool, customRegistry }) {
         maxTokens: 10,
       });
       if (testResult.success) {
-        printSuccess(`连接成功! 响应: "${(testResult.content || '').slice(0, 50)}" (${testResult.provider})`);
+        printSuccess(
+          `连接成功! 响应: "${(testResult.content || '').slice(0, 50)}" (${testResult.provider})`
+        );
       } else {
         printError(`连接失败: ${testResult.error}`);
       }
@@ -865,19 +1063,25 @@ async function _addCustomProviderInteractive({ pool, customRegistry }) {
   }
 
   // Agnes：同一把 key 还能开通图像/视频，主动询问是否一并接通。
-  const isAgnes = result.poolKey === 'agnes'
-    || /(^|\.)apihub\.agnes-ai\.com$/i.test(_safeHost(result.endpoint));
+  const isAgnes =
+    result.poolKey === 'agnes' || /(^|\.)apihub\.agnes-ai\.com$/i.test(_safeHost(result.endpoint));
   if (isAgnes) {
-    const { wireMedia } = await promptWithReplGuard([{
-      type: 'confirm',
-      name: 'wireMedia',
-      message: '同一把 Key 还可开通「文生图/图改图」与「文生/图生/关键帧视频」，是否一并接通?',
-      default: true,
-    }]);
+    const { wireMedia } = await promptWithReplGuard([
+      {
+        type: 'confirm',
+        name: 'wireMedia',
+        message: '同一把 Key 还可开通「文生图/图改图」与「文生/图生/关键帧视频」，是否一并接通?',
+        default: true,
+      },
+    ]);
     _maybeProvisionAgnesMedia(result, wireMedia, false);
   }
 
-  return { normalizedPoolKey: result.poolKey, displayName: result.displayName, models: result.models };
+  return {
+    normalizedPoolKey: result.poolKey,
+    displayName: result.displayName,
+    models: result.models,
+  };
 }
 
 async function handleGatewayAdd(options = {}) {
@@ -887,13 +1091,23 @@ async function handleGatewayAdd(options = {}) {
   const { resolveEnvPaths } = require('../../services/gatewayEnvFile');
   pool.init();
   const asJson = !!options.json;
-  const isInteractive = !!(process.stdin && process.stdin.isTTY && process.stdout && process.stdout.isTTY);
+  const isInteractive = !!(
+    process.stdin &&
+    process.stdin.isTTY &&
+    process.stdout &&
+    process.stdout.isTTY
+  );
   const cliInput = _collectGatewayAddCliInput(options);
   const useCliInput = _hasGatewayAddCliInput(cliInput);
 
   if (useCliInput || asJson || !isInteractive) {
     const missingPayload = _buildGatewayAddUsagePayload();
-    if (!cliInput.displayName || !cliInput.endpoint || !cliInput.keyInput || !cliInput.defaultModel) {
+    if (
+      !cliInput.displayName ||
+      !cliInput.endpoint ||
+      !cliInput.keyInput ||
+      !cliInput.defaultModel
+    ) {
       if (asJson) {
         console.log(JSON.stringify(missingPayload, null, 2));
       } else {
@@ -906,7 +1120,12 @@ async function handleGatewayAdd(options = {}) {
     try {
       const result = registrar.registerCustomProvider({
         displayName: cliInput.displayName,
-        poolKey: cliInput.poolKey || cliInput.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        poolKey:
+          cliInput.poolKey ||
+          cliInput.displayName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, ''),
         endpoint: cliInput.endpoint,
         keyInput: cliInput.keyInput,
         defaultModel: cliInput.defaultModel,
@@ -921,29 +1140,41 @@ async function handleGatewayAdd(options = {}) {
       const agnesMedia = _maybeProvisionAgnesMedia(result, wireMedia, asJson);
 
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'add',
-          poolKey: result.poolKey,
-          displayName: result.displayName,
-          endpoint: result.endpoint,
-          defaultModel: result.defaultModel,
-          models: result.models,
-          keyCount: result.keyCount,
-          tier: result.tier || '',
-          envPath,
-          connectionTest,
-          ...(agnesMedia ? { agnesMedia } : {}),
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'add',
+              poolKey: result.poolKey,
+              displayName: result.displayName,
+              endpoint: result.endpoint,
+              defaultModel: result.defaultModel,
+              models: result.models,
+              keyCount: result.keyCount,
+              tier: result.tier || '',
+              envPath,
+              connectionTest,
+              ...(agnesMedia ? { agnesMedia } : {}),
+            },
+            null,
+            2
+          )
+        );
         return;
       }
 
-      printSuccess(`${result.displayName} 已添加 (${result.keyCount} key, ${result.models.length} 模型)`);
+      printSuccess(
+        `${result.displayName} 已添加 (${result.keyCount} key, ${result.models.length} 模型)`
+      );
       printInfo(`模型路由: ${result.models.join(', ')} → api adapter`);
-      if (result.tier) printInfo(`能力分级覆盖: ${result.models.join(', ')} → ${result.tier}`);
+      if (result.tier) {
+        printInfo(`能力分级覆盖: ${result.models.join(', ')} → ${result.tier}`);
+      }
       if (connectionTest.attempted) {
         if (connectionTest.success) {
-          printSuccess(`连接成功! 响应: "${connectionTest.preview || ''}" (${connectionTest.provider || 'openai'})`);
+          printSuccess(
+            `连接成功! 响应: "${connectionTest.preview || ''}" (${connectionTest.provider || 'openai'})`
+          );
         } else {
           printError(`测试错误: ${connectionTest.error || 'unknown_error'}`);
         }
@@ -954,12 +1185,18 @@ async function handleGatewayAdd(options = {}) {
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'add',
-          error: 'register_failed',
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'add',
+              error: 'register_failed',
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(message);
       }
@@ -975,7 +1212,9 @@ async function handleGatewayAdd(options = {}) {
     console.log('');
     await _addCustomProviderInteractive({ pool, customRegistry });
   } finally {
-    if (!hadGuard) global.__KHY_INQUIRER_ACTIVE__ = false;
+    if (!hadGuard) {
+      global.__KHY_INQUIRER_ACTIVE__ = false;
+    }
   }
 }
 
@@ -1006,37 +1245,50 @@ async function handleGatewayPool(args = [], options = {}) {
     const grouped = {};
     for (const a of accounts) {
       const key = a.poolType || a.provider || 'unknown';
-      if (!grouped[key]) grouped[key] = [];
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
       grouped[key].push(a);
     }
     for (const [prov, accts] of Object.entries(grouped)) {
       console.log('');
       console.log(chalk.bold(`  ${ICON_GATEWAY} ${prov.toUpperCase()} (${accts.length})`));
-      const rows = accts.map(a => {
-        const statusIcon = a.isActive ? chalk.green('●')
-          : a.status === 'banned' ? chalk.red('✕')
-          : a.status === 'cooldown' ? chalk.yellow('◌')
-          : a.status === 'disabled' ? chalk.dim('○')
-          : chalk.dim('●');
+      const rows = accts.map((a) => {
+        const statusIcon = a.isActive
+          ? chalk.green('●')
+          : a.status === 'banned'
+            ? chalk.red('✕')
+            : a.status === 'cooldown'
+              ? chalk.yellow('◌')
+              : a.status === 'disabled'
+                ? chalk.dim('○')
+                : chalk.dim('●');
         const email = a.email || chalk.dim('(no email)');
         const token = a.tokenPreview || '';
         const lastUsed = a.lastUsedAt ? new Date(a.lastUsedAt).toLocaleString() : chalk.dim('-');
         return `    ${statusIcon} #${a.id}  ${email}  ${chalk.dim(token)}  ${chalk.dim(lastUsed)}`;
       });
-      rows.forEach(r => console.log(r));
+      rows.forEach((r) => console.log(r));
     }
     console.log('');
-    printInfo('命令: gateway pool use <id>, import <provider>, sync <provider>, remove <id>, unban <id>');
-
+    printInfo(
+      '命令: gateway pool use <id>, import <provider>, sync <provider>, remove <id>, unban <id>'
+    );
   } else if (sub === 'use' || sub === 'switch') {
     if (!arg1) {
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'use',
-          error: 'missing_target',
-          message: '用法: gateway pool use <id|email> [provider]',
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'use',
+              error: 'missing_target',
+              message: '用法: gateway pool use <id|email> [provider]',
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError('用法: gateway pool use <id|email>');
       }
@@ -1046,72 +1298,102 @@ async function handleGatewayPool(args = [], options = {}) {
     try {
       const result = await pool.useAccount(provider, arg1);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'use',
-          provider,
-          target: arg1,
-          account: result || null,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'use',
+              provider,
+              target: arg1,
+              account: result || null,
+            },
+            null,
+            2
+          )
+        );
       } else if (result) {
         printSuccess(`已切换到账号 #${result.id}（${result.email || result.label || '-'}）`);
       }
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'use',
-          provider,
-          target: arg1,
-          error: _normalizeGatewayPoolJsonError('use', message),
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'use',
+              provider,
+              target: arg1,
+              error: _normalizeGatewayPoolJsonError('use', message),
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(message);
       }
     }
-
   } else if (sub === 'import') {
     const provider = arg1 || 'kiro';
     try {
       const result = await pool.importProviderTokens(provider);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'import',
-          provider,
-          ...result,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'import',
+              provider,
+              ...result,
+            },
+            null,
+            2
+          )
+        );
       } else {
-        printSuccess(`${provider} 导入完成: ${result.imported || 0} 新增, ${result.updated || 0} 更新, ${result.skipped || 0} 跳过`);
+        printSuccess(
+          `${provider} 导入完成: ${result.imported || 0} 新增, ${result.updated || 0} 更新, ${result.skipped || 0} 跳过`
+        );
       }
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'import',
-          provider,
-          error: _normalizeGatewayPoolJsonError('import', message),
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'import',
+              provider,
+              error: _normalizeGatewayPoolJsonError('import', message),
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(`导入失败: ${message}`);
       }
     }
-
   } else if (sub === 'sync') {
     const provider = arg1 || 'kiro';
     try {
       const result = await pool.syncActiveAccountToLocal(provider);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'sync',
-          provider,
-          ...result,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'sync',
+              provider,
+              ...result,
+            },
+            null,
+            2
+          )
+        );
       } else if (result.updated > 0) {
         printSuccess(`已同步到本地: ${result.paths.join(', ')}`);
       } else {
@@ -1120,27 +1402,38 @@ async function handleGatewayPool(args = [], options = {}) {
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'sync',
-          provider,
-          error: _normalizeGatewayPoolJsonError('sync', message),
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'sync',
+              provider,
+              error: _normalizeGatewayPoolJsonError('sync', message),
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(`同步失败: ${message}`);
       }
     }
-
   } else if (sub === 'remove' || sub === 'rm' || sub === 'delete') {
     if (!arg1) {
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'remove',
-          error: 'missing_account_id',
-          message: '用法: gateway pool remove <id>',
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'remove',
+              error: 'missing_account_id',
+              message: '用法: gateway pool remove <id>',
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError('用法: gateway pool remove <id>');
       }
@@ -1149,38 +1442,55 @@ async function handleGatewayPool(args = [], options = {}) {
     try {
       await pool.removeAccount(Number(arg1));
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'remove',
-          accountId: Number(arg1),
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'remove',
+              accountId: Number(arg1),
+            },
+            null,
+            2
+          )
+        );
       } else {
         printSuccess(`已删除账号 #${arg1}`);
       }
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'remove',
-          accountId: Number(arg1),
-          error: _normalizeGatewayPoolJsonError('remove', message),
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'remove',
+              accountId: Number(arg1),
+              error: _normalizeGatewayPoolJsonError('remove', message),
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(message);
       }
     }
-
   } else if (sub === 'unban') {
     if (!arg1) {
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'unban',
-          error: 'missing_account_id',
-          message: '用法: gateway pool unban <id>',
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'unban',
+              error: 'missing_account_id',
+              message: '用法: gateway pool unban <id>',
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError('用法: gateway pool unban <id>');
       }
@@ -1189,29 +1499,40 @@ async function handleGatewayPool(args = [], options = {}) {
     try {
       await pool.updateAccount(Number(arg1), { status: 'available' });
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: true,
-          action: 'unban',
-          accountId: Number(arg1),
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              action: 'unban',
+              accountId: Number(arg1),
+            },
+            null,
+            2
+          )
+        );
       } else {
         printSuccess(`已解封账号 #${arg1}`);
       }
     } catch (err) {
       const message = err?.message || String(err);
       if (asJson) {
-        console.log(JSON.stringify({
-          ok: false,
-          action: 'unban',
-          accountId: Number(arg1),
-          error: _normalizeGatewayPoolJsonError('unban', message),
-          message,
-        }, null, 2));
+        console.log(
+          JSON.stringify(
+            {
+              ok: false,
+              action: 'unban',
+              accountId: Number(arg1),
+              error: _normalizeGatewayPoolJsonError('unban', message),
+              message,
+            },
+            null,
+            2
+          )
+        );
       } else {
         printError(message);
       }
     }
-
   } else {
     if (asJson) {
       console.log(JSON.stringify(_buildGatewayPoolUsagePayload(), null, 2));

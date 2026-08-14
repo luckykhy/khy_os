@@ -18,8 +18,8 @@
  * 用法:`/fork [--at <leafUuid>] [<新标题...>]`。门控 KHY_FORK 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 const leaf = require('../../services/session/sessionForkPlan');
+const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 
 function _persistence() {
   return require('../../services/sessionPersistence');
@@ -31,8 +31,12 @@ function _resolveSource() {
   try {
     const ai = require('../ai');
     liveId = ai.getLiveSessionId && ai.getLiveSessionId();
-  } catch { /* fall through */ }
-  if (liveId) return { sessionId: liveId, fromLive: true };
+  } catch {
+    /* fall through */
+  }
+  if (liveId) {
+    return { sessionId: liveId, fromLive: true };
+  }
 
   // 无 live(尚未持久化任何 turn,或非交互态):退最近一条持久会话(当前项目优先)。
   try {
@@ -42,9 +46,13 @@ function _resolveSource() {
       const cwd = process.cwd();
       const scoped = all.filter((s) => s && s.cwd === cwd);
       const pick = (scoped.length > 0 ? scoped : all)[0];
-      if (pick && pick.sessionId) return { sessionId: pick.sessionId, fromLive: false };
+      if (pick && pick.sessionId) {
+        return { sessionId: pick.sessionId, fromLive: false };
+      }
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return null;
 }
 
@@ -76,9 +84,11 @@ async function handleFork(_subCommand, args = [], options = {}) {
   const restoreOpts = parsed.leafUuid ? { leafUuid: parsed.leafUuid } : {};
   const snapshot = sp.restoreSession(source.sessionId, restoreOpts);
   if (!snapshot || !Array.isArray(snapshot.messages) || snapshot.messages.length === 0) {
-    printError(parsed.leafUuid
-      ? '指定的 --at 分支末端无可分叉的消息(uuid 不存在或链为空)。'
-      : '源会话没有可分叉的消息(快照为空或不存在)。');
+    printError(
+      parsed.leafUuid
+        ? '指定的 --at 分支末端无可分叉的消息(uuid 不存在或链为空)。'
+        : '源会话没有可分叉的消息(快照为空或不存在)。'
+    );
     return true;
   }
 
@@ -92,9 +102,13 @@ async function handleFork(_subCommand, args = [], options = {}) {
     slots: (() => {
       try {
         const slots = require('../sessionSlots');
-        if (!slots.slotsEnabled(process.env)) return undefined;
+        if (!slots.slotsEnabled(process.env)) {
+          return undefined;
+        }
         return { enabled: true, policy: 'inherit' };
-      } catch { return undefined; }
+      } catch {
+        return undefined;
+      }
     })(),
   });
   if (!state) {
@@ -112,7 +126,9 @@ async function handleFork(_subCommand, args = [], options = {}) {
 
   const shortNew = String(newId).slice(0, 12);
   const shortSrc = String(source.sessionId).slice(0, 12);
-  printSuccess(`已分叉「${state.title}」(${state.messages.length} 条消息) · ${shortSrc} → ${shortNew}`);
+  printSuccess(
+    `已分叉「${state.title}」(${state.messages.length} 条消息) · ${shortSrc} → ${shortNew}`
+  );
   printInfo(`原会话 ${shortSrc} 原封不动;分叉是一份独立副本。`);
 
   // 切 live REPL 到分叉(仅交互模式真生效;复用 ai.resumePersistedSession 同 `session resume`)。
@@ -122,7 +138,9 @@ async function handleFork(_subCommand, args = [], options = {}) {
     const r = ai.resumePersistedSession(newId);
     switched = !!(r && r.success);
     if (!switched && r && r.error) {
-      printWarn(`切换到分叉失败: ${r.error}(分叉已保存,可用 \`session resume ${shortNew}\` 手动切换)。`);
+      printWarn(
+        `切换到分叉失败: ${r.error}(分叉已保存,可用 \`session resume ${shortNew}\` 手动切换)。`
+      );
     }
   } catch (e) {
     printWarn(`切换到分叉失败: ${e && e.message ? e.message : 'unknown'}(分叉已保存)。`);

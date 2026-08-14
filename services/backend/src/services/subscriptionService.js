@@ -17,10 +17,19 @@
  * - Local mode works 100% offline (no tier restriction)
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const PROFILE_DIR = path.join(os.homedir(), '.khyquant');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const PROFILE_DIR = _appHome();
 const SUBSCRIPTION_CACHE_PATH = path.join(PROFILE_DIR, 'subscription.json');
 
 // Tier definitions
@@ -29,8 +38,8 @@ const TIERS = {
     name: 'Free',
     label: '免费版',
     limits: {
-      cloud_ai_requests: 100,        // per month
-      cloud_ai_tokens: 100000,       // per month
+      cloud_ai_requests: 100, // per month
+      cloud_ai_tokens: 100000, // per month
       cloud_storage_mb: 50,
       realtime_symbols: 5,
       marketplace_purchases: 0,
@@ -46,7 +55,7 @@ const TIERS = {
       cloud_ai_tokens: 5000000,
       cloud_storage_mb: 5120,
       realtime_symbols: 100,
-      marketplace_purchases: -1,     // unlimited
+      marketplace_purchases: -1, // unlimited
       devices: 5,
       org_members: 0,
     },
@@ -55,8 +64,8 @@ const TIERS = {
     name: 'Enterprise',
     label: '企业版',
     limits: {
-      cloud_ai_requests: -1,         // unlimited
-      cloud_ai_tokens: -1,           // unlimited
+      cloud_ai_requests: -1, // unlimited
+      cloud_ai_tokens: -1, // unlimited
       cloud_storage_mb: 102400,
       realtime_symbols: -1,
       marketplace_purchases: -1,
@@ -78,7 +87,9 @@ function getCachedSubscription() {
         return data;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -87,12 +98,24 @@ function getCachedSubscription() {
  */
 function cacheSubscription(info) {
   try {
-    if (!fs.existsSync(PROFILE_DIR)) fs.mkdirSync(PROFILE_DIR, { recursive: true });
-    fs.writeFileSync(SUBSCRIPTION_CACHE_PATH, JSON.stringify({
-      ...info,
-      cachedAt: Date.now(),
-    }, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+    if (!fs.existsSync(PROFILE_DIR)) {
+      fs.mkdirSync(PROFILE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(
+      SUBSCRIPTION_CACHE_PATH,
+      JSON.stringify(
+        {
+          ...info,
+          cachedAt: Date.now(),
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -101,7 +124,9 @@ function cacheSubscription(info) {
  */
 function getCurrentTier() {
   const cached = getCachedSubscription();
-  if (cached?.tier) return cached.tier;
+  if (cached?.tier) {
+    return cached.tier;
+  }
   return 'free';
 }
 
@@ -119,9 +144,15 @@ function getCurrentLimits() {
 function canUseFeature(feature) {
   const limits = getCurrentLimits();
   const limit = limits[feature];
-  if (limit === undefined) return true; // Unknown feature = allow
-  if (limit === -1) return true; // Unlimited
-  if (limit === 0) return false; // Disabled
+  if (limit === undefined) {
+    return true;
+  } // Unknown feature = allow
+  if (limit === -1) {
+    return true;
+  } // Unlimited
+  if (limit === 0) {
+    return false;
+  } // Disabled
   return true; // Has some limit (usage check is separate)
 }
 
@@ -132,8 +163,12 @@ function canUseFeature(feature) {
 function checkQuota(feature) {
   const limits = getCurrentLimits();
   const limit = limits[feature];
-  if (limit === undefined || limit === -1) return { allowed: true, remaining: Infinity, limit: -1 };
-  if (limit === 0) return { allowed: false, remaining: 0, limit: 0 };
+  if (limit === undefined || limit === -1) {
+    return { allowed: true, remaining: Infinity, limit: -1 };
+  }
+  if (limit === 0) {
+    return { allowed: false, remaining: 0, limit: 0 };
+  }
 
   const cached = getCachedSubscription();
   const usage = cached?.usage?.[feature] || 0;
@@ -149,7 +184,9 @@ function checkQuota(feature) {
 async function validateWithServer() {
   try {
     const cloudSync = require('./cloudSync');
-    if (!cloudSync.isLoggedIn()) return null;
+    if (!cloudSync.isLoggedIn()) {
+      return null;
+    }
 
     const endpoint = cloudSync.getEndpoint();
     const config = cloudSync.loadCloudConfig();
@@ -160,34 +197,42 @@ async function validateWithServer() {
     const transport = url.protocol === 'https:' ? https : http;
 
     return new Promise((resolve) => {
-      const req = transport.request({
-        hostname: url.hostname,
-        port: url.port,
-        path: url.pathname,
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${config.token}`,
-          'User-Agent': 'khy-quant-cli',
+      const req = transport.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${config.token}`,
+            'User-Agent': 'khy-quant-cli',
+          },
+          timeout: 8000,
         },
-        timeout: 8000,
-      }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const result = JSON.parse(data);
-            if (result.tier) {
-              cacheSubscription(result);
-              resolve(result);
-            } else {
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => {
+            try {
+              const result = JSON.parse(data);
+              if (result.tier) {
+                cacheSubscription(result);
+                resolve(result);
+              } else {
+                resolve(null);
+              }
+            } catch {
               resolve(null);
             }
-          } catch { resolve(null); }
-        });
-      });
+          });
+        }
+      );
 
       req.on('error', () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
       req.end();
     });
   } catch {

@@ -15,15 +15,31 @@
  * synced to the server when available (same as frontend Register.vue).
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
 const http = require('http');
+const os = require('os');
+const path = require('path');
 
-const KHY_DIR = path.join(os.homedir(), '.khyquant');
-const CREDENTIALS_FILE = path.join(KHY_DIR, 'credentials.json');
-const SESSION_FILE = path.join(KHY_DIR, 'session.json');
+// Lazily resolve the app home (portable-aware); fallback to legacy path.
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _khyDir() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _credentialsFile() {
+  return path.join(_khyDir(), 'credentials.json');
+}
+
+function _sessionFile() {
+  return path.join(_khyDir(), 'session.json');
+}
+
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // Pre-defined security questions (same as frontend Register.vue)
@@ -39,7 +55,9 @@ const SECURITY_QUESTIONS = [
 // ─── Password Hashing (PBKDF2, no external deps) ──────────────────────────
 
 function _hashPassword(password, salt) {
-  if (!salt) salt = crypto.randomBytes(16).toString('hex');
+  if (!salt) {
+    salt = crypto.randomBytes(16).toString('hex');
+  }
   const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
   return { hash, salt };
 }
@@ -52,49 +70,70 @@ function _verifyPassword(password, storedHash, storedSalt) {
 // ─── Credential & Session Storage ──────────────────────────────────────────
 
 function _ensureDir() {
-  if (!fs.existsSync(KHY_DIR)) fs.mkdirSync(KHY_DIR, { recursive: true });
+  const dir = _khyDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
 
 function _loadCredentials() {
   try {
-    if (fs.existsSync(CREDENTIALS_FILE)) {
-      return JSON.parse(fs.readFileSync(CREDENTIALS_FILE, 'utf-8'));
+    if (fs.existsSync(_credentialsFile())) {
+      return JSON.parse(fs.readFileSync(_credentialsFile(), 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
 function _saveCredentials(creds) {
   _ensureDir();
-  fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(creds, null, 2));
-  try { fs.chmodSync(CREDENTIALS_FILE, 0o600); } catch { /* Windows */ }
+  fs.writeFileSync(_credentialsFile(), JSON.stringify(creds, null, 2));
+  try {
+    fs.chmodSync(_credentialsFile(), 0o600);
+  } catch {
+    /* Windows */
+  }
 }
 
 function _loadSession() {
   try {
-    if (fs.existsSync(SESSION_FILE)) {
-      return JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'));
+    if (fs.existsSync(_sessionFile())) {
+      return JSON.parse(fs.readFileSync(_sessionFile(), 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
 function _clearSessionFile() {
   try {
-    if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE);
-  } catch { /* ignore */ }
+    if (fs.existsSync(_sessionFile())) {
+      fs.unlinkSync(_sessionFile());
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 function _isExpiredTimestamp(value) {
-  if (!value) return false;
+  if (!value) {
+    return false;
+  }
   const expiresAtMs = new Date(value).getTime();
-  if (!Number.isFinite(expiresAtMs)) return false;
+  if (!Number.isFinite(expiresAtMs)) {
+    return false;
+  }
   return expiresAtMs <= Date.now();
 }
 
 function _loadActiveSession() {
   const session = _loadSession();
-  if (!session) return null;
+  if (!session) {
+    return null;
+  }
   if (_isExpiredTimestamp(session.expiresAt)) {
     _clearSessionFile();
     return null;
@@ -118,15 +157,31 @@ function _saveSession(username, serverToken, role, options = {}) {
     const authTime = require('./authTimeFormat');
     if (authTime.isEnabled()) {
       const expiresAt = authTime.deriveSessionExpiry(null, loginAt, SESSION_MAX_AGE_MS);
-      if (expiresAt) session.expiresAt = expiresAt;
+      if (expiresAt) {
+        session.expiresAt = expiresAt;
+      }
     }
-  } catch { /* best-effort;派生失败则退化为无 expiresAt */ }
-  if (serverToken) session.serverToken = serverToken;
-  if (options.refreshToken) session.serverRefreshToken = options.refreshToken;
-  if (options.serverTokenExpiresAt) session.serverTokenExpiresAt = options.serverTokenExpiresAt;
-  if (options.serverRefreshExpiresAt) session.serverRefreshExpiresAt = options.serverRefreshExpiresAt;
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2));
-  try { fs.chmodSync(SESSION_FILE, 0o600); } catch { /* Windows */ }
+  } catch {
+    /* best-effort;派生失败则退化为无 expiresAt */
+  }
+  if (serverToken) {
+    session.serverToken = serverToken;
+  }
+  if (options.refreshToken) {
+    session.serverRefreshToken = options.refreshToken;
+  }
+  if (options.serverTokenExpiresAt) {
+    session.serverTokenExpiresAt = options.serverTokenExpiresAt;
+  }
+  if (options.serverRefreshExpiresAt) {
+    session.serverRefreshExpiresAt = options.serverRefreshExpiresAt;
+  }
+  fs.writeFileSync(_sessionFile(), JSON.stringify(session, null, 2));
+  try {
+    fs.chmodSync(_sessionFile(), 0o600);
+  } catch {
+    /* Windows */
+  }
   return session;
 }
 
@@ -142,31 +197,47 @@ function _serverRequest(method, endpoint, data, timeoutMs = 5000, extraHeaders =
 
   return new Promise((resolve) => {
     try {
-      const req = http.request({
-        hostname: '127.0.0.1',
-        port,
-        path: endpoint,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
-          ...extraHeaders,
+      const req = http.request(
+        {
+          hostname: '127.0.0.1',
+          port,
+          path: endpoint,
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
+            ...extraHeaders,
+          },
+          timeout: timeoutMs,
         },
-        timeout: timeoutMs,
-      }, (res) => {
-        let body = '';
-        res.on('data', (chunk) => { body += chunk; });
-        res.on('end', () => {
-          try { resolve(JSON.parse(body)); } catch { resolve(null); }
-        });
-      });
+        (res) => {
+          let body = '';
+          res.on('data', (chunk) => {
+            body += chunk;
+          });
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(body));
+            } catch {
+              resolve(null);
+            }
+          });
+        }
+      );
 
       req.on('error', () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
 
-      if (payload) req.write(payload);
+      if (payload) {
+        req.write(payload);
+      }
       req.end();
-    } catch { resolve(null); }
+    } catch {
+      resolve(null);
+    }
   });
 }
 
@@ -196,7 +267,9 @@ function checkSession() {
  */
 function getSessionAuthToken() {
   const session = _loadActiveSession();
-  if (!session) return '';
+  if (!session) {
+    return '';
+  }
   const token = String(session.serverToken || '').trim();
   return token || '';
 }
@@ -215,7 +288,10 @@ async function register(username, password, email, securityQuestion, securityAns
 
   const existing = _loadCredentials();
   if (existing) {
-    return { success: false, error: '本机已有注册账号。如需重置请删除 ~/.khyquant/credentials.json' };
+    return {
+      success: false,
+      error: '本机已有注册账号。如需重置请删除 ~/.khyquant/credentials.json',
+    };
   }
 
   // Try server registration first (same DB as frontend)
@@ -278,37 +354,59 @@ async function register(username, password, email, securityQuestion, securityAns
  */
 // Built-in fallback accounts — loaded from environment variables only.
 // Set CLI_BUILTIN_ACCOUNTS="user1:pass1:role1,user2:pass2:role2" to override.
-// When the env var is absent, a default local fallback (admin05) is provided
-// so the CLI remains usable offline without a running backend server.
+// When the env var is absent, the offline fallback is the auto-generated
+// default admin persisted at .khy/credentials/default-admin.json (created by
+// the unified credentialGenerator during first seeding). No credentials file
+// → no builtin fallback: login must go through the server or local register.
 function _loadBuiltinAccounts() {
   const raw = String(process.env.CLI_BUILTIN_ACCOUNTS || '').trim();
   if (!raw) {
-    // Default fallback: preserves the original admin05 local account.
-    // Override entirely by setting CLI_BUILTIN_ACCOUNTS env var.
-    return [{ username: 'admin05', password: '012003', role: 'admin' }];
-  }
-  return raw.split(',').map((entry, idx) => {
-    const parts = entry.split(':').map(s => s.trim()).filter(Boolean);
-    if (parts.length < 3) {
-      console.warn(`[cliAuthService] skipping malformed builtin account entry #${idx}: ${entry}`);
-      return null;
+    try {
+      const { readDefaultAdminCredentials } = require('./credentialGenerator');
+      const creds = readDefaultAdminCredentials();
+      if (creds) {
+        return [{ username: creds.username, password: creds.password, role: 'admin' }];
+      }
+    } catch {
+      /* credentials file unavailable — no builtin fallback */
     }
-    return { username: parts[0], password: parts[1], role: parts[2] };
-  }).filter(Boolean);
+    return [];
+  }
+  return raw
+    .split(',')
+    .map((entry, idx) => {
+      const parts = entry
+        .split(':')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (parts.length < 3) {
+        console.warn(`[cliAuthService] skipping malformed builtin account entry #${idx}: ${entry}`);
+        return null;
+      }
+      return { username: parts[0], password: parts[1], role: parts[2] };
+    })
+    .filter(Boolean);
 }
 
-const _BUILTIN_ACCOUNTS = _loadBuiltinAccounts();
-
 async function login(username, password, timeoutMs) {
-  // Built-in admin: bypass server/local, create session directly
-  const builtinMatch = _BUILTIN_ACCOUNTS.find(a => a.username === username && a.password === password);
+  // Built-in admin: bypass server/local, create session directly.
+  // Loaded lazily on each attempt so a credentials file generated after
+  // process start (first seeding) is picked up without a restart.
+  const builtinMatch = _loadBuiltinAccounts().find(
+    (a) => a.username === username && a.password === password
+  );
   if (builtinMatch) {
     _saveSession(username, null, builtinMatch.role);
     return { success: true, username, role: builtinMatch.role, source: 'builtin' };
   }
 
   // Try server login first (accounts shared with frontend)
-  const serverResult = await _serverRequest('POST', '/api/auth/login', { username, password }, timeoutMs);
+  const serverResult = await _serverRequest(
+    'POST',
+    '/api/auth/login',
+    { username, password },
+    timeoutMs
+  );
 
   if (serverResult && serverResult.success && serverResult.data) {
     const serverAuthData = serverResult.data;
@@ -377,16 +475,24 @@ function logout() {
 function getCurrentUser() {
   const session = _loadActiveSession();
   const creds = _loadCredentials();
-  if (!session || !creds) return null;
+  if (!session || !creds) {
+    return null;
+  }
   // 向后兼容:历史 session.json 无 expiresAt(旧 _saveSession 从不写),从 loginAt + 7 天派生,
   // 使 whoami 面板对既有登录也能显示合理到期时间而非缺失。门控关 → 派生返回原 undefined。绝不抛。
   let sessionExpires = session.expiresAt;
   try {
     const authTime = require('./authTimeFormat');
     if (authTime.isEnabled()) {
-      sessionExpires = authTime.deriveSessionExpiry(session.expiresAt, session.loginAt, SESSION_MAX_AGE_MS);
+      sessionExpires = authTime.deriveSessionExpiry(
+        session.expiresAt,
+        session.loginAt,
+        SESSION_MAX_AGE_MS
+      );
     }
-  } catch { /* best-effort;退化为原始 session.expiresAt */ }
+  } catch {
+    /* best-effort;退化为原始 session.expiresAt */
+  }
   return {
     username: creds.username,
     email: creds.email,
@@ -405,7 +511,9 @@ function getCurrentUser() {
  */
 async function changePassword(oldPassword, newPassword) {
   const creds = _loadCredentials();
-  if (!creds) return { success: false, error: '未注册' };
+  if (!creds) {
+    return { success: false, error: '未注册' };
+  }
 
   if (!_verifyPassword(oldPassword, creds.passwordHash, creds.passwordSalt)) {
     return { success: false, error: '旧密码错误' };
@@ -427,21 +535,31 @@ async function changePassword(oldPassword, newPassword) {
           newPassword,
           confirmPassword: newPassword,
         });
-        const req = http.request({
-          hostname: '127.0.0.1', port,
-          path: '/api/auth/change-password', method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(data),
-            'Authorization': `Bearer ${session.serverToken}`,
+        const req = http.request(
+          {
+            hostname: '127.0.0.1',
+            port,
+            path: '/api/auth/change-password',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(data),
+              Authorization: `Bearer ${session.serverToken}`,
+            },
+            timeout: 5000,
           },
-          timeout: 5000,
-        }, () => resolve());
+          () => resolve()
+        );
         req.on('error', () => resolve());
-        req.on('timeout', () => { req.destroy(); resolve(); });
+        req.on('timeout', () => {
+          req.destroy();
+          resolve();
+        });
         req.write(data);
         req.end();
-      } catch { resolve(); }
+      } catch {
+        resolve();
+      }
     });
   }
 
@@ -461,7 +579,9 @@ async function changePassword(oldPassword, newPassword) {
  */
 async function setSecurityQuestion(currentPassword, question, answer) {
   const creds = _loadCredentials();
-  if (!creds) return { success: false, error: '未注册' };
+  if (!creds) {
+    return { success: false, error: '未注册' };
+  }
 
   if (!_verifyPassword(currentPassword, creds.passwordHash, creds.passwordSalt)) {
     return { success: false, error: '密码错误' };
@@ -503,7 +623,9 @@ async function setSecurityQuestion(currentPassword, question, answer) {
  */
 async function getSecurityQuestion(username) {
   // Try server
-  const serverResult = await _serverRequest('POST', '/api/password-reset/get-question', { username });
+  const serverResult = await _serverRequest('POST', '/api/password-reset/get-question', {
+    username,
+  });
   if (serverResult && serverResult.success && serverResult.data) {
     return {
       success: true,
@@ -521,7 +643,10 @@ async function getSecurityQuestion(username) {
     return { success: false, error: '用户名不匹配' };
   }
   if (!creds.securityQuestion) {
-    return { success: false, error: '未设置密保问题。请联系管理员或删除 ~/.khyquant/credentials.json 重新注册' };
+    return {
+      success: false,
+      error: '未设置密保问题。请联系管理员或删除 ~/.khyquant/credentials.json 重新注册',
+    };
   }
 
   return {
@@ -677,14 +802,20 @@ async function resetPasswordWithVerificationCode(channel, target, code, newPassw
  */
 async function updateContactInfo(currentPassword, phone, email) {
   const creds = _loadCredentials();
-  if (!creds) return { success: false, error: '未注册' };
+  if (!creds) {
+    return { success: false, error: '未注册' };
+  }
 
   if (!_verifyPassword(currentPassword, creds.passwordHash, creds.passwordSalt)) {
     return { success: false, error: '密码错误' };
   }
 
-  if (phone) creds.phone = phone.trim();
-  if (email) creds.email = email.trim();
+  if (phone) {
+    creds.phone = phone.trim();
+  }
+  if (email) {
+    creds.email = email.trim();
+  }
   _saveCredentials(creds);
 
   return { success: true };

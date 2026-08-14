@@ -1,22 +1,31 @@
 'use strict';
 
+const {
+  loadTemplates,
+  matchTemplate,
+  renderTemplate,
+  listTemplates,
+} = require('../services/projectTemplateService');
+
 const { defineTool } = require('./_baseTool');
-const { loadTemplates, matchTemplate, renderTemplate, listTemplates } = require('../services/projectTemplateService');
 
 module.exports = defineTool({
   name: 'projectTemplate',
-  description: 'Load and render a project template, producing scaffoldFiles-compatible output for batch project creation.',
+  description:
+    'Load and render a project template, producing scaffoldFiles-compatible output for batch project creation.',
   category: 'filesystem',
   risk: 'low',
   aliases: ['project_template', 'load_template'],
   searchHint: 'project template scaffold SSM Spring Boot Maven React Express',
   alwaysLoad: false,
   isReadOnly: true,
+  // Pure in-memory template render — no writes, safe to run in parallel.
+  isConcurrencySafe: true,
   maxResultSizeChars: 8000,
 
   async prompt() {
     const templates = listTemplates();
-    const names = templates.map(t => `  - ${t.name}: ${t.description}`).join('\n');
+    const names = templates.map((t) => `  - ${t.name}: ${t.description}`).join('\n');
     return [
       'Load a project template and render it with variable values.',
       'The rendered output is scaffoldFiles-compatible — pass it directly to scaffoldFiles to create the project.',
@@ -33,12 +42,14 @@ module.exports = defineTool({
     template: {
       type: 'string',
       required: false,
-      description: 'Template name to render (e.g., "spring-boot-mybatis"). Omit if action is "list".',
+      description:
+        'Template name to render (e.g., "spring-boot-mybatis"). Omit if action is "list".',
     },
     variables: {
       type: 'object',
       required: false,
-      description: 'Variable overrides for the template, e.g. { "groupId": "com.example", "artifactId": "myapp" }.',
+      description:
+        'Variable overrides for the template, e.g. { "groupId": "com.example", "artifactId": "myapp" }.',
     },
     action: {
       type: 'string',
@@ -49,16 +60,23 @@ module.exports = defineTool({
 
   async validateInput(input) {
     const action = String(input?.action || 'render').toLowerCase();
-    if (action === 'list') return { valid: true };
+    if (action === 'list') {
+      return { valid: true };
+    }
     if (!input?.template) {
-      return { valid: false, message: 'Provide a "template" name, or set action to "list" to see available templates.' };
+      return {
+        valid: false,
+        message: 'Provide a "template" name, or set action to "list" to see available templates.',
+      };
     }
     return { valid: true };
   },
 
   getActivityDescription(input) {
     const action = String(input?.action || 'render').toLowerCase();
-    if (action === 'list') return '列出项目模板';
+    if (action === 'list') {
+      return '列出项目模板';
+    }
     return `渲染模板：${input?.template || '?'}`;
   },
 

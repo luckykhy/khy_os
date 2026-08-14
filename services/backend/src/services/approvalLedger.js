@@ -39,7 +39,9 @@ function _load() {
     if (data && typeof data === 'object' && data.entries && typeof data.entries === 'object') {
       return data;
     }
-  } catch { /* missing or corrupt — start fresh */ }
+  } catch {
+    /* missing or corrupt — start fresh */
+  }
   return { version: 1, entries: {} };
 }
 
@@ -58,7 +60,11 @@ function _threshold() {
 }
 
 function _enabled() {
-  return String(process.env.KHY_AUTO_APPROVE || 'off').trim().toLowerCase() === 'on';
+  return (
+    String(process.env.KHY_AUTO_APPROVE || 'off')
+      .trim()
+      .toLowerCase() === 'on'
+  );
 }
 
 function _rankSafeLow(risk) {
@@ -79,12 +85,19 @@ function _rankSafeLow(risk) {
 function record(opts = {}) {
   const key = opts.key;
   const decision = opts.decision;
-  if (!key || (decision !== 'allow' && decision !== 'deny')) return;
+  if (!key || (decision !== 'allow' && decision !== 'deny')) {
+    return;
+  }
 
   const data = _load();
   const now = opts.stamp || new Date().toISOString();
   const entry = data.entries[key] || {
-    allowCount: 0, denyCount: 0, lastDecision: null, lastRisk: null, firstSeen: now, lastSeen: now,
+    allowCount: 0,
+    denyCount: 0,
+    lastDecision: null,
+    lastRisk: null,
+    firstSeen: now,
+    lastSeen: now,
   };
 
   if (decision === 'allow') {
@@ -94,7 +107,9 @@ function record(opts = {}) {
     entry.allowCount = 0; // one denial resets accumulated trust
   }
   entry.lastDecision = decision;
-  if (opts.risk) entry.lastRisk = opts.risk;
+  if (opts.risk) {
+    entry.lastRisk = opts.risk;
+  }
   entry.lastSeen = now;
   data.entries[key] = entry;
   _save(data);
@@ -106,13 +121,23 @@ function record(opts = {}) {
  * @returns {boolean}
  */
 function shouldAutoApprove(opts = {}) {
-  if (!_enabled()) return false;
-  if (opts.isDestructive === true) return false;
-  if (!_rankSafeLow(opts.risk)) return false;
+  if (!_enabled()) {
+    return false;
+  }
+  if (opts.isDestructive === true) {
+    return false;
+  }
+  if (!_rankSafeLow(opts.risk)) {
+    return false;
+  }
 
   const entry = _load().entries[opts.key];
-  if (!entry) return false;
-  if ((entry.denyCount || 0) > 0) return false;
+  if (!entry) {
+    return false;
+  }
+  if ((entry.denyCount || 0) > 0) {
+    return false;
+  }
   return (entry.allowCount || 0) >= _threshold();
 }
 
@@ -126,10 +151,11 @@ function getLedger() {
   const enabled = _enabled();
   const entries = {};
   for (const [key, e] of Object.entries(data.entries)) {
-    const autoEligible = enabled
-      && (e.denyCount || 0) === 0
-      && (e.allowCount || 0) >= threshold
-      && _rankSafeLow(e.lastRisk);
+    const autoEligible =
+      enabled &&
+      (e.denyCount || 0) === 0 &&
+      (e.allowCount || 0) >= threshold &&
+      _rankSafeLow(e.lastRisk);
     entries[key] = { ...e, autoEligible };
   }
   return { enabled, threshold, entries };
@@ -145,5 +171,7 @@ module.exports = {
   shouldAutoApprove,
   getLedger,
   reset,
-  get LEDGER_PATH() { return _ledgerPath(); },
+  get LEDGER_PATH() {
+    return _ledgerPath();
+  },
 };

@@ -9,7 +9,9 @@ const DEFAULT_MAX_EVENTS_PER_STREAM = 600;
 
 function _readPositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
   return parsed;
 }
 
@@ -23,7 +25,9 @@ function _streamNowMs() {
 
 function _normalizeAfterSeq(afterSeq) {
   const parsed = Number.parseInt(afterSeq, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
   return parsed;
 }
 
@@ -77,7 +81,9 @@ class RemoteExecStreamStore {
   }
 
   _notifyMutation(reason, payload = {}) {
-    if (typeof this._onMutate !== 'function') return;
+    if (typeof this._onMutate !== 'function') {
+      return;
+    }
     try {
       this._onMutate({
         source: 'remote_exec_stream_store',
@@ -108,7 +114,9 @@ class RemoteExecStreamStore {
   }
 
   _enforceStreamCap() {
-    if (this._sessions.size <= this._maxStreams) return;
+    if (this._sessions.size <= this._maxStreams) {
+      return;
+    }
 
     const completed = [];
     const running = [];
@@ -128,7 +136,9 @@ class RemoteExecStreamStore {
   }
 
   _cloneSession(session) {
-    if (!session) return null;
+    if (!session) {
+      return null;
+    }
     return {
       stream_id: session.streamId,
       created_at: session.createdAt,
@@ -147,19 +157,12 @@ class RemoteExecStreamStore {
     return {
       seq: record.seq,
       event: record.event,
-      data: record.data && typeof record.data === 'object'
-        ? { ...record.data }
-        : record.data,
+      data: record.data && typeof record.data === 'object' ? { ...record.data } : record.data,
       ts: record.ts,
     };
   }
 
-  _buildSession({
-    streamId,
-    requestFingerprint,
-    requestContext,
-    metadata,
-  }) {
+  _buildSession({ streamId, requestFingerprint, requestContext, metadata }) {
     const nowIso = _streamNowIso();
     const nowMs = _streamNowMs();
     return {
@@ -172,12 +175,9 @@ class RemoteExecStreamStore {
       done: false,
       terminalStatus: 'running',
       requestFingerprint: requestFingerprint || null,
-      requestContext: requestContext && typeof requestContext === 'object'
-        ? { ...requestContext }
-        : null,
-      metadata: metadata && typeof metadata === 'object'
-        ? { ...metadata }
-        : {},
+      requestContext:
+        requestContext && typeof requestContext === 'object' ? { ...requestContext } : null,
+      metadata: metadata && typeof metadata === 'object' ? { ...metadata } : {},
       events: [],
       lastSeq: 0,
       subscribers: new Set(),
@@ -214,9 +214,9 @@ class RemoteExecStreamStore {
     const existing = this._sessions.get(key);
     if (existing) {
       if (
-        requestFingerprint
-        && existing.requestFingerprint
-        && existing.requestFingerprint !== requestFingerprint
+        requestFingerprint &&
+        existing.requestFingerprint &&
+        existing.requestFingerprint !== requestFingerprint
       ) {
         return {
           ok: false,
@@ -300,7 +300,9 @@ class RemoteExecStreamStore {
   setExecutionPromise(streamId, promise) {
     const key = String(streamId || '').trim();
     const session = this._sessions.get(key);
-    if (!session) return false;
+    if (!session) {
+      return false;
+    }
     session.executionPromise = promise || null;
     this._touchSession(session);
     return true;
@@ -316,7 +318,9 @@ class RemoteExecStreamStore {
     this._cleanupExpiredSessions();
     const key = String(streamId || '').trim();
     const session = this._sessions.get(key);
-    if (!session) return null;
+    if (!session) {
+      return null;
+    }
 
     session.lastSeq += 1;
     this._touchSession(session);
@@ -335,13 +339,10 @@ class RemoteExecStreamStore {
 
     if (record.event === 'done') {
       session.done = true;
-      session.terminalStatus = (
-        record.data
-        && typeof record.data === 'object'
-        && record.data.status
-      )
-        ? String(record.data.status)
-        : 'completed';
+      session.terminalStatus =
+        record.data && typeof record.data === 'object' && record.data.status
+          ? String(record.data.status)
+          : 'completed';
     }
 
     this._notifyMutation('append_event', {
@@ -367,14 +368,15 @@ class RemoteExecStreamStore {
     this._cleanupExpiredSessions();
     const key = String(streamId || '').trim();
     const session = this._sessions.get(key);
-    if (!session) return null;
+    if (!session) {
+      return null;
+    }
 
     const normalizedAfterSeq = _normalizeAfterSeq(afterSeq);
-    const firstAvailableSeq = session.events.length > 0
-      ? session.events[0].seq
-      : session.lastSeq + 1;
+    const firstAvailableSeq =
+      session.events.length > 0 ? session.events[0].seq : session.lastSeq + 1;
 
-    const truncated = normalizedAfterSeq < (firstAvailableSeq - 1);
+    const truncated = normalizedAfterSeq < firstAvailableSeq - 1;
     const events = session.events
       .filter((record) => record.seq > normalizedAfterSeq)
       .map((record) => this._cloneRecord(record));
@@ -401,7 +403,9 @@ class RemoteExecStreamStore {
     session.subscribers.add(listener);
     return () => {
       const current = this._sessions.get(key);
-      if (!current) return;
+      if (!current) {
+        return;
+      }
       current.subscribers.delete(listener);
     };
   }
@@ -442,21 +446,28 @@ class RemoteExecStreamStore {
     const nowMs = _streamNowMs();
     const list = Array.isArray(sessions) ? sessions : [];
     for (const rawSession of list) {
-      if (!rawSession || typeof rawSession !== 'object') continue;
+      if (!rawSession || typeof rawSession !== 'object') {
+        continue;
+      }
       const streamId = String(rawSession.stream_id || '').trim();
-      if (!streamId) continue;
+      if (!streamId) {
+        continue;
+      }
 
       const events = Array.isArray(rawSession.events)
         ? rawSession.events
             .map((record) => {
               const seq = Number.parseInt(record?.seq, 10);
-              if (!Number.isFinite(seq) || seq <= 0) return null;
+              if (!Number.isFinite(seq) || seq <= 0) {
+                return null;
+              }
               return {
                 seq,
                 event: String(record?.event || 'message'),
-                data: record?.data && typeof record.data === 'object'
-                  ? { ...record.data }
-                  : (record?.data ?? null),
+                data:
+                  record?.data && typeof record.data === 'object'
+                    ? { ...record.data }
+                    : (record?.data ?? null),
                 ts: record?.ts || new Date().toISOString(),
               };
             })
@@ -467,17 +478,22 @@ class RemoteExecStreamStore {
       const createdAt = rawSession.created_at || new Date().toISOString();
       const updatedAt = rawSession.updated_at || createdAt;
       const createdAtMsRaw = Number.parseInt(rawSession.created_at_ms, 10);
-      const parsedCreatedAtMs = Number.isFinite(createdAtMsRaw) ? createdAtMsRaw : Date.parse(createdAt);
+      const parsedCreatedAtMs = Number.isFinite(createdAtMsRaw)
+        ? createdAtMsRaw
+        : Date.parse(createdAt);
       const createdAtMs = Number.isFinite(parsedCreatedAtMs) ? parsedCreatedAtMs : nowMs;
       const lastActivityMsRaw = Number.parseInt(rawSession.last_activity_ms, 10);
-      const parsedLastActivityMs = Number.isFinite(lastActivityMsRaw) ? lastActivityMsRaw : Date.parse(updatedAt);
+      const parsedLastActivityMs = Number.isFinite(lastActivityMsRaw)
+        ? lastActivityMsRaw
+        : Date.parse(updatedAt);
       const lastActivityMs = Number.isFinite(parsedLastActivityMs) ? parsedLastActivityMs : nowMs;
       const done = Boolean(rawSession.done);
       const lastSeqFromState = Number.parseInt(rawSession.last_seq, 10);
       const lastSeqFromEvents = events.length > 0 ? events[events.length - 1].seq : 0;
-      const lastSeq = Number.isFinite(lastSeqFromState) && lastSeqFromState > 0
-        ? Math.max(lastSeqFromState, lastSeqFromEvents)
-        : lastSeqFromEvents;
+      const lastSeq =
+        Number.isFinite(lastSeqFromState) && lastSeqFromState > 0
+          ? Math.max(lastSeqFromState, lastSeqFromEvents)
+          : lastSeqFromEvents;
 
       this._sessions.set(streamId, {
         streamId,
@@ -489,12 +505,14 @@ class RemoteExecStreamStore {
         done,
         terminalStatus: String(rawSession.terminal_status || (done ? 'completed' : 'running')),
         requestFingerprint: rawSession.request_fingerprint || null,
-        requestContext: rawSession.request_context && typeof rawSession.request_context === 'object'
-          ? { ...rawSession.request_context }
-          : null,
-        metadata: rawSession.metadata && typeof rawSession.metadata === 'object'
-          ? { ...rawSession.metadata }
-          : {},
+        requestContext:
+          rawSession.request_context && typeof rawSession.request_context === 'object'
+            ? { ...rawSession.request_context }
+            : null,
+        metadata:
+          rawSession.metadata && typeof rawSession.metadata === 'object'
+            ? { ...rawSession.metadata }
+            : {},
         events,
         lastSeq,
         subscribers: new Set(),

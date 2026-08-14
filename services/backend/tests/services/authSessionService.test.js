@@ -186,6 +186,7 @@ describe('authSessionService', () => {
     const current = makeSession({ id: 'sess_current' });
     const other = makeSession({ id: 'sess_other' });
     AuthSession.findAll.mockResolvedValue([current, other]);
+    AuthSession.update.mockResolvedValue([1]); // one row bulk-revoked
 
     const result = await authSessionService.revokeUserSessions(7, {
       excludeSessionId: 'sess_current',
@@ -193,10 +194,17 @@ describe('authSessionService', () => {
     });
 
     expect(result.revokedCount).toBe(1);
+    // The implementation revokes in a single bulk update() (TOCTOU-safe) whose
+    // WHERE excludes the preserved current session — no per-session loop.
+    expect(AuthSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'revoked', revokedReason: 'password_change' }),
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 7, revokedAt: null, status: 'active' }),
+      })
+    );
+    const { Op } = require('sequelize');
+    const where = AuthSession.update.mock.calls[0][1].where;
+    expect(where.id).toEqual({ [Op.ne]: 'sess_current' });
     expect(current.update).not.toHaveBeenCalled();
-    expect(other.update).toHaveBeenCalledWith(expect.objectContaining({
-      status: 'revoked',
-      revokedReason: 'password_change',
-    }));
   });
 });

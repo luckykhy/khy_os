@@ -40,10 +40,14 @@ function isEnabled(env = process.env) {
   // flagRegistry 优先(集中真源),失败/不可用再退本地 CANON 解析。绝不抛。
   try {
     return require('../flagRegistry').isFlagEnabled('KHY_AUTO_MODEL_SELECT', env || process.env);
-  } catch { /* fall through to local */ }
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_AUTO_MODEL_SELECT;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -61,11 +65,19 @@ const AUTO_SENTINEL = 'auto';
  */
 function isAutoSelection(sel) {
   try {
-    if (sel == null) return false;
-    if (typeof sel === 'string') return sel.trim().toLowerCase() === AUTO_SENTINEL;
+    if (sel == null) {
+      return false;
+    }
+    if (typeof sel === 'string') {
+      return sel.trim().toLowerCase() === AUTO_SENTINEL;
+    }
     if (typeof sel === 'object') {
-      const a = String(sel.adapter || '').trim().toLowerCase();
-      const m = String(sel.model || '').trim().toLowerCase();
+      const a = String(sel.adapter || '')
+        .trim()
+        .toLowerCase();
+      const m = String(sel.model || '')
+        .trim()
+        .toLowerCase();
       return a === AUTO_SENTINEL || m === AUTO_SENTINEL;
     }
     return false;
@@ -101,12 +113,19 @@ const _SOURCE_RANK = { remote: 0, chat: 0, config: 1, hint: 2 };
 const _UNAVAILABLE_STATUS = new Set(['disabled', 'cooldown']);
 
 function _preferTierForTask(taskType) {
-  const t = String(taskType || '').trim().toLowerCase();
+  const t = String(taskType || '')
+    .trim()
+    .toLowerCase();
   return _TASK_PREFER_TIER[t] || _DEFAULT_PREFER_TIER;
 }
 
 function _sourceRank(src) {
-  const r = _SOURCE_RANK[String(src || '').trim().toLowerCase()];
+  const r =
+    _SOURCE_RANK[
+      String(src || '')
+        .trim()
+        .toLowerCase()
+    ];
   return Number.isFinite(r) ? r : 3;
 }
 
@@ -121,7 +140,9 @@ function _sourceRank(src) {
 function _normalizeCandidates(candidates) {
   const out = [];
   const seen = new Set();
-  if (!Array.isArray(candidates)) return out;
+  if (!Array.isArray(candidates)) {
+    return out;
+  }
   for (const entry of candidates) {
     let model = '';
     let adapter = '';
@@ -140,12 +161,20 @@ function _normalizeCandidates(candidates) {
       source = entry.source || entry.discoverySource || '';
     }
     model = typeof model === 'string' ? model.trim() : '';
-    if (!model) continue;
+    if (!model) {
+      continue;
+    }
     const key = model.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     if (!tier || !_TIER_ORDER.hasOwnProperty(String(tier).toUpperCase())) {
-      try { tier = modelTier.resolveTier(model) || 'T2'; } catch { tier = 'T2'; }
+      try {
+        tier = modelTier.resolveTier(model) || 'T2';
+      } catch {
+        tier = 'T2';
+      }
     }
     out.push({
       model,
@@ -179,15 +208,23 @@ function _normalizeCandidates(candidates) {
  */
 function rankAutoModels(taskType, candidates, opts = {}) {
   try {
-    const list = _normalizeCandidates(candidates).filter(
-      (e) => !_UNAVAILABLE_STATUS.has(e.status)
-    );
-    if (list.length === 0) return [];
+    const list = _normalizeCandidates(candidates).filter((e) => !_UNAVAILABLE_STATUS.has(e.status));
+    if (list.length === 0) {
+      return [];
+    }
 
-    let preferTier = opts && typeof opts.preferTier === 'string' ? opts.preferTier.trim().toUpperCase() : '';
-    if (!_TIER_ORDER.hasOwnProperty(preferTier)) preferTier = _preferTierForTask(taskType);
+    let preferTier =
+      opts && typeof opts.preferTier === 'string' ? opts.preferTier.trim().toUpperCase() : '';
+    if (!_TIER_ORDER.hasOwnProperty(preferTier)) {
+      preferTier = _preferTierForTask(taskType);
+    }
     const preferIdx = _TIER_ORDER[preferTier];
-    const preferCap = _TASK_PREFER_CAPABILITY[String(taskType || '').trim().toLowerCase()] || '';
+    const preferCap =
+      _TASK_PREFER_CAPABILITY[
+        String(taskType || '')
+          .trim()
+          .toLowerCase()
+      ] || '';
 
     const decorated = list.map((e, i) => {
       const tIdx = _TIER_ORDER.hasOwnProperty(e.tier) ? _TIER_ORDER[e.tier] : _TIER_ORDER.T2;
@@ -201,7 +238,7 @@ function rankAutoModels(taskType, candidates, opts = {}) {
       };
     });
     decorated.sort(
-      (a, b) => (a.dist - b.dist) || (a.capMiss - b.capMiss) || (a.src - b.src) || (a.idx - b.idx)
+      (a, b) => a.dist - b.dist || a.capMiss - b.capMiss || a.src - b.src || a.idx - b.idx
     );
 
     const ranked = decorated.map((d) => ({
@@ -210,7 +247,7 @@ function rankAutoModels(taskType, candidates, opts = {}) {
       tier: d.entry.tier,
       status: d.entry.status || 'active',
     }));
-    const max = Number.isFinite(opts && opts.max) && opts.max > 0 ? (opts.max | 0) : ranked.length;
+    const max = Number.isFinite(opts && opts.max) && opts.max > 0 ? opts.max | 0 : ranked.length;
     return ranked.slice(0, max);
   } catch {
     return [];
@@ -267,9 +304,10 @@ function describeAutoModelSelect() {
     gate: 'KHY_AUTO_MODEL_SELECT',
     defaultOn: true,
     sentinel: AUTO_SENTINEL,
-    summary: '模型列表里增设一个用户可选的「Auto」入口:选中后以 adapter 哨兵每请求经既有 '
-      + 'autoSelectModel 按任务/可用性自动选型;本叶子提供 Auto 入口的构造与「最适合任务且可用的'
-      + '模型」纯排序原语(选择器实时预览 + 可复用),门控关则不 unshift Auto 入口(字节回退)。',
+    summary:
+      '模型列表里增设一个用户可选的「Auto」入口:选中后以 adapter 哨兵每请求经既有 ' +
+      'autoSelectModel 按任务/可用性自动选型;本叶子提供 Auto 入口的构造与「最适合任务且可用的' +
+      '模型」纯排序原语(选择器实时预览 + 可复用),门控关则不 unshift Auto 入口(字节回退)。',
   };
 }
 

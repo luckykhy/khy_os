@@ -28,11 +28,17 @@ function streamUsageEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_STREAM_USAGE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_STREAM_USAGE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -50,11 +56,16 @@ function streamUsageEnabled(env) {
  */
 function applyStreamUsage(requestBody, env) {
   try {
-    if (!requestBody || typeof requestBody !== 'object') return requestBody;
-    if (!streamUsageEnabled(env)) return requestBody;
-    const existing = (requestBody.stream_options && typeof requestBody.stream_options === 'object')
-      ? requestBody.stream_options
-      : {};
+    if (!requestBody || typeof requestBody !== 'object') {
+      return requestBody;
+    }
+    if (!streamUsageEnabled(env)) {
+      return requestBody;
+    }
+    const existing =
+      requestBody.stream_options && typeof requestBody.stream_options === 'object'
+        ? requestBody.stream_options
+        : {};
     requestBody.stream_options = { ...existing, include_usage: true };
     return requestBody;
   } catch {

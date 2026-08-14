@@ -24,21 +24,28 @@
  * 不参与主权裁决计算——裁决本身是 (claims) 的纯函数，确定性、与历史无关。
  */
 
-const {
-  TIER, ERR_SOVEREIGNTY_CONFLICT, tierOf, rankOf, isGhostable, labelOf,
-} = require('./sovereigntyTiers');
-const { GhostValueAnnotator } = require('./ghostValueAnnotator');
 const { ConflictQuencher } = require('./conflictQuencher');
+const { GhostValueAnnotator } = require('./ghostValueAnnotator');
+const {
+  TIER,
+  ERR_SOVEREIGNTY_CONFLICT,
+  tierOf,
+  rankOf,
+  isGhostable,
+  labelOf,
+} = require('./sovereigntyTiers');
 
 class SovereigntyConflictError extends Error {
   constructor({ param, tier, conflict_sources, requirement }) {
-    super(`主权冲突：参数 "${param}" 在同阶层 ${tier}(${labelOf(tier)}) 多源异值打架，熔断（${ERR_SOVEREIGNTY_CONFLICT}，防呆③）`);
+    super(
+      `主权冲突：参数 "${param}" 在同阶层 ${tier}(${labelOf(tier)}) 多源异值打架，熔断（${ERR_SOVEREIGNTY_CONFLICT}，防呆③）`
+    );
     this.name = 'SovereigntyConflictError';
     this.code = ERR_SOVEREIGNTY_CONFLICT;
     this.param = param;
     this.tier = tier;
     this.conflict_sources = conflict_sources;
-    this.requirement = requirement;   // 已淬出的 L1 器官新生需求，供门面落账本
+    this.requirement = requirement; // 已淬出的 L1 器官新生需求，供门面落账本
   }
 }
 
@@ -51,7 +58,7 @@ class DataSovereigntyGateway {
   constructor(opts = {}) {
     this.annotator = opts.annotator || new GhostValueAnnotator();
     this.quencher = opts.quencher || new ConflictQuencher();
-    this._history = new Map();   // param → [{source, value, tier}]（震荡侦测，唯一可变态）
+    this._history = new Map(); // param → [{source, value, tier}]（震荡侦测，唯一可变态）
   }
 
   /** 把一条原始声明规整为 { param, source, value, tier }。来源决定阶层（防呆①，调用方不得自报阶层）。 */
@@ -61,7 +68,7 @@ class DataSovereigntyGateway {
       param: String(param),
       source: String(source || 'unknown'),
       value: claim ? claim.value : undefined,
-      tier: tierOf(source),   // 阶层一律由 SOURCE_TIER 真源派生，杜绝僭越
+      tier: tierOf(source), // 阶层一律由 SOURCE_TIER 真源派生，杜绝僭越
     };
   }
 
@@ -78,7 +85,14 @@ class DataSovereigntyGateway {
       .map((c) => this._normalizeClaim(param, c));
 
     if (claims.length === 0) {
-      return { param: String(param), value: undefined, tier: undefined, source: undefined, ghosts: [], defeated: [] };
+      return {
+        param: String(param),
+        value: undefined,
+        tier: undefined,
+        source: undefined,
+        ghosts: [],
+        defeated: [],
+      };
     }
 
     // ① 主权裁决：取最高权威（最小 rank）。
@@ -134,8 +148,10 @@ class DataSovereigntyGateway {
    */
   resolve(claims = []) {
     const byParam = new Map();
-    for (const c of (Array.isArray(claims) ? claims : [])) {
-      if (!c || c.param === undefined) continue;
+    for (const c of Array.isArray(claims) ? claims : []) {
+      if (!c || c.param === undefined) {
+        continue;
+      }
       const k = String(c.param);
       (byParam.get(k) || byParam.set(k, []).get(k)).push(c);
     }
@@ -146,10 +162,14 @@ class DataSovereigntyGateway {
     const decisions = [];
 
     for (const [param, group] of byParam) {
-      const d = this.adjudicate(param, group);   // 冲突在此熔断上抛
+      const d = this.adjudicate(param, group); // 冲突在此熔断上抛
       params[param] = d.value;
-      if (d.ghosts.length) ghosts[param] = d.ghosts;
-      if (d.oscillation) oscillations.push(d.oscillation);
+      if (d.ghosts.length) {
+        ghosts[param] = d.ghosts;
+      }
+      if (d.oscillation) {
+        oscillations.push(d.oscillation);
+      }
       decisions.push({ param, tier: d.tier, source: d.source, defeated: d.defeated });
     }
 
@@ -166,9 +186,13 @@ class DataSovereigntyGateway {
     const seq = [];
     for (const h of hist) {
       const key = _stableKey(h.value);
-      if (!seq.length || seq[seq.length - 1].key !== key) seq.push({ key, source: h.source });
+      if (!seq.length || seq[seq.length - 1].key !== key) {
+        seq.push({ key, source: h.source });
+      }
     }
-    if (seq.length < 3) return null;
+    if (seq.length < 3) {
+      return null;
+    }
 
     const seen = new Map();
     for (let i = 0; i < seq.length; i++) {
@@ -192,8 +216,16 @@ class DataSovereigntyGateway {
 /** 值的稳定可比键（区分 1 与 "1"、对象按 JSON）。 */
 function _stableKey(v) {
   const t = typeof v;
-  if (v === null) return 'null';
-  if (t === 'object') { try { return 'json:' + JSON.stringify(v); } catch { return 'obj:[unserializable]'; } }
+  if (v === null) {
+    return 'null';
+  }
+  if (t === 'object') {
+    try {
+      return 'json:' + JSON.stringify(v);
+    } catch {
+      return 'obj:[unserializable]';
+    }
+  }
   return `${t}:${String(v)}`;
 }
 

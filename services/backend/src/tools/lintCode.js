@@ -3,18 +3,28 @@
  */
 'use strict';
 
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
+
+const { defineTool } = require('./_baseTool');
 const { getShellConfiguration } = require('./platformUtils');
 
 // ─── Linter Detection ──────────────────────────────────────────────────────
 
 function _detectLinter(cwd) {
   // ESLint
-  const eslintConfigs = ['.eslintrc', '.eslintrc.js', '.eslintrc.json', '.eslintrc.yml',
-    '.eslintrc.yaml', 'eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts'];
+  const eslintConfigs = [
+    '.eslintrc',
+    '.eslintrc.js',
+    '.eslintrc.json',
+    '.eslintrc.yml',
+    '.eslintrc.yaml',
+    'eslint.config.js',
+    'eslint.config.mjs',
+    'eslint.config.ts',
+  ];
   for (const cfg of eslintConfigs) {
     if (fs.existsSync(path.join(cwd, cfg))) {
       return { linter: 'eslint', cmd: 'npx eslint --format json .' };
@@ -25,10 +35,16 @@ function _detectLinter(cwd) {
   if (fs.existsSync(pkgPath)) {
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-      if (pkg.eslintConfig) return { linter: 'eslint', cmd: 'npx eslint --format json .' };
+      if (pkg.eslintConfig) {
+        return { linter: 'eslint', cmd: 'npx eslint --format json .' };
+      }
       const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-      if (deps.eslint) return { linter: 'eslint', cmd: 'npx eslint --format json .' };
-    } catch { /* ignore */ }
+      if (deps.eslint) {
+        return { linter: 'eslint', cmd: 'npx eslint --format json .' };
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Cargo clippy
@@ -59,13 +75,16 @@ function _detectLinter(cwd) {
 function _parseEslintJson(output) {
   try {
     const jsonStart = output.indexOf('[');
-    if (jsonStart === -1) return null;
+    if (jsonStart === -1) {
+      return null;
+    }
     const results = JSON.parse(output.slice(jsonStart));
     const issues = [];
-    let errorCount = 0, warningCount = 0;
+    let errorCount = 0,
+      warningCount = 0;
 
     for (const file of results) {
-      for (const msg of (file.messages || [])) {
+      for (const msg of file.messages || []) {
         issues.push({
           file: file.filePath ? path.relative(process.cwd(), file.filePath) : '',
           line: msg.line || null,
@@ -74,18 +93,24 @@ function _parseEslintJson(output) {
           rule: msg.ruleId || '',
           message: msg.message || '',
         });
-        if (msg.severity === 2) errorCount++;
-        else warningCount++;
+        if (msg.severity === 2) {
+          errorCount++;
+        } else {
+          warningCount++;
+        }
       }
     }
 
     return { issues, errorCount, warningCount, fileCount: results.length };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function _parseGenericLint(output) {
   const issues = [];
-  let errorCount = 0, warningCount = 0;
+  let errorCount = 0,
+    warningCount = 0;
 
   for (const line of output.split('\n')) {
     // Generic: file:line:col: severity: message (rule)
@@ -93,10 +118,18 @@ function _parseGenericLint(output) {
     if (match) {
       const severity = match[4].startsWith('E') || match[4] === 'error' ? 'error' : 'warning';
       issues.push({
-        file: match[1], line: parseInt(match[2], 10), col: parseInt(match[3], 10),
-        severity, rule: match[4], message: match[5].trim(),
+        file: match[1],
+        line: parseInt(match[2], 10),
+        col: parseInt(match[3], 10),
+        severity,
+        rule: match[4],
+        message: match[5].trim(),
       });
-      if (severity === 'error') errorCount++; else warningCount++;
+      if (severity === 'error') {
+        errorCount++;
+      } else {
+        warningCount++;
+      }
     }
   }
 
@@ -107,9 +140,11 @@ function _parseGenericLint(output) {
 
 module.exports = defineTool({
   name: 'lint_code',
-  description: 'Detect linter for project and run it, returning structured file:line:message issues. Supports ESLint, Clippy, go vet, Pylint, Flake8.',
+  description:
+    'Detect linter for project and run it, returning structured file:line:message issues. Supports ESLint, Clippy, go vet, Pylint, Flake8.',
   category: 'execution',
   risk: 'low',
+  searchHint: 'eslint clippy pylint style check static analysis 代码检查 静态检查 规范',
   isReadOnly: true,
   isConcurrencySafe: true,
 
@@ -119,7 +154,11 @@ module.exports = defineTool({
     files: { type: 'string', required: false, description: 'Specific files/globs to lint' },
     fix: { type: 'boolean', required: false, description: 'Auto-fix issues (default false)' },
     timeout: { type: 'number', required: false, description: 'Idle timeout in ms (default 60000)' },
-    idleTimeout: { type: 'number', required: false, description: 'Alias of timeout; idle timeout in ms' },
+    idleTimeout: {
+      type: 'number',
+      required: false,
+      description: 'Alias of timeout; idle timeout in ms',
+    },
   },
 
   getActivityDescription(input) {
@@ -131,12 +170,15 @@ module.exports = defineTool({
     const idleTimeoutMs = Math.max(
       50,
       parseInt(
-        String(params.idleTimeout || params.timeout || process.env.KHY_LINT_IDLE_TIMEOUT_MS || '60000'),
+        String(
+          params.idleTimeout || params.timeout || process.env.KHY_LINT_IDLE_TIMEOUT_MS || '60000'
+        ),
         10
       ) || 60000
     );
     const detected = _detectLinter(cwd);
-    const hasCommandOverride = typeof params.command === 'string' && params.command.trim().length > 0;
+    const hasCommandOverride =
+      typeof params.command === 'string' && params.command.trim().length > 0;
 
     if (!detected && !hasCommandOverride) {
       return {
@@ -156,13 +198,20 @@ module.exports = defineTool({
 
     const linter = detected ? detected.linter : 'custom';
     let command = hasCommandOverride ? params.command.trim() : detected.cmd;
-    if (!hasCommandOverride && params.files) command += ` ${params.files}`;
-    if (!hasCommandOverride && params.fix && linter === 'eslint') command += ' --fix';
-    if (!hasCommandOverride && params.fix && linter === 'clippy') command = command.replace('clippy', 'clippy --fix');
+    if (!hasCommandOverride && params.files) {
+      command += ` ${params.files}`;
+    }
+    if (!hasCommandOverride && params.fix && linter === 'eslint') {
+      command += ' --fix';
+    }
+    if (!hasCommandOverride && params.fix && linter === 'clippy') {
+      command = command.replace('clippy', 'clippy --fix');
+    }
 
-    const traceCtx = (context && context.traceContext && typeof context.traceContext === 'object')
-      ? context.traceContext
-      : {};
+    const traceCtx =
+      context && context.traceContext && typeof context.traceContext === 'object'
+        ? context.traceContext
+        : {};
     const spawnEnv = {
       ...process.env,
       ...(traceCtx.env || {}),
@@ -190,19 +239,31 @@ module.exports = defineTool({
         label,
         onActivity: (payload) => {
           if (typeof context?.onActivity === 'function') {
-            try { context.onActivity({ tool: 'lint_code', linter, ...payload }); } catch { /* non-critical */ }
+            try {
+              context.onActivity({ tool: 'lint_code', linter, ...payload });
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onStdoutChunk: (chunk) => {
           totalOutBytes += Buffer.byteLength(String(chunk || ''), 'utf8');
           if (typeof context?.onProgress === 'function') {
-            try { context.onProgress(`lint_code stdout ${Math.round(totalOutBytes / 1024)}KB`); } catch { /* non-critical */ }
+            try {
+              context.onProgress(`lint_code stdout ${Math.round(totalOutBytes / 1024)}KB`);
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onStderrChunk: (chunk) => {
           totalErrBytes += Buffer.byteLength(String(chunk || ''), 'utf8');
           if (typeof context?.onProgress === 'function') {
-            try { context.onProgress(`lint_code stderr ${Math.round(totalErrBytes / 1024)}KB`); } catch { /* non-critical */ }
+            try {
+              context.onProgress(`lint_code stderr ${Math.round(totalErrBytes / 1024)}KB`);
+            } catch {
+              /* non-critical */
+            }
           }
         },
       });
@@ -219,8 +280,12 @@ module.exports = defineTool({
     output = require('./ccOutputTruncate').capOutput(output, maxCaptureBytes, process.env);
 
     let parsed = null;
-    if (linter === 'eslint') parsed = _parseEslintJson(output);
-    if (!parsed) parsed = _parseGenericLint(output);
+    if (linter === 'eslint') {
+      parsed = _parseEslintJson(output);
+    }
+    if (!parsed) {
+      parsed = _parseGenericLint(output);
+    }
 
     return {
       success: exitCode === 0 && parsed.errorCount === 0,

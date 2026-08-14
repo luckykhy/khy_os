@@ -1,7 +1,7 @@
 'use strict';
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const {
   isImageGenFailureSummaryEnabled,
@@ -17,7 +17,10 @@ test('gate: default-on when unset/empty/random, off for falsy tokens (case-folde
   assert.strictEqual(isImageGenFailureSummaryEnabled({ KHY_IMAGE_GEN_FAILURE_SUMMARY: '1' }), true);
   for (const v of ['0', 'false', 'off', 'no', 'OFF', 'False', 'NO']) {
     assert.strictEqual(
-      isImageGenFailureSummaryEnabled({ KHY_IMAGE_GEN_FAILURE_SUMMARY: v }), false, v);
+      isImageGenFailureSummaryEnabled({ KHY_IMAGE_GEN_FAILURE_SUMMARY: v }),
+      false,
+      v
+    );
   }
 });
 
@@ -85,7 +88,9 @@ test('build: rate_limit / timeout / network give category-specific next-step, no
 
 test('build: gate-off → null (byte-revert to old message)', () => {
   const msg = buildImageGenFailureMessage({
-    rawError: 'HTTP 401', backend: 'agnes', env: { KHY_IMAGE_GEN_FAILURE_SUMMARY: 'off' },
+    rawError: 'HTTP 401',
+    backend: 'agnes',
+    env: { KHY_IMAGE_GEN_FAILURE_SUMMARY: 'off' },
   });
   assert.strictEqual(msg, null);
 });

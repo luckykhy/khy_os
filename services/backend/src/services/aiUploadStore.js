@@ -13,9 +13,10 @@
  * Ids are 32-char hex; getUpload() rejects anything else so a crafted id can
  * never escape the upload directory (no path traversal).
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
 const { getDataDir } = require('../utils/dataHome');
 
 const ID_RE = /^[a-f0-9]{32}$/;
@@ -62,11 +63,49 @@ function transcribeTimeoutMs() {
 }
 
 const TEXT_EXTENSIONS = new Set([
-  '.txt', '.md', '.markdown', '.csv', '.tsv', '.json', '.jsonl', '.yaml', '.yml',
-  '.xml', '.html', '.htm', '.log', '.ini', '.conf', '.env', '.toml',
-  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.vue', '.py', '.go', '.rs',
-  '.java', '.c', '.h', '.cpp', '.hpp', '.cc', '.cs', '.rb', '.php', '.sh',
-  '.bash', '.zsh', '.sql', '.css', '.scss', '.less',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.csv',
+  '.tsv',
+  '.json',
+  '.jsonl',
+  '.yaml',
+  '.yml',
+  '.xml',
+  '.html',
+  '.htm',
+  '.log',
+  '.ini',
+  '.conf',
+  '.env',
+  '.toml',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.tsx',
+  '.jsx',
+  '.vue',
+  '.py',
+  '.go',
+  '.rs',
+  '.java',
+  '.c',
+  '.h',
+  '.cpp',
+  '.hpp',
+  '.cc',
+  '.cs',
+  '.rb',
+  '.php',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.sql',
+  '.css',
+  '.scss',
+  '.less',
 ]);
 
 const ARCHIVE_EXTENSIONS = new Set(['.zip', '.tar', '.gz', '.tgz', '.rar', '.7z', '.bz2', '.xz']);
@@ -80,18 +119,42 @@ function classifyKind(mimeType, originalName) {
   const mime = String(mimeType || '').toLowerCase();
   const ext = path.extname(String(originalName || '')).toLowerCase();
 
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith('image/')) {
+    return 'image';
+  }
+  if (mime.startsWith('video/')) {
+    return 'video';
+  }
+  if (mime.startsWith('audio/')) {
+    return 'audio';
+  }
 
-  if (TEXT_EXTENSIONS.has(ext)) return ext.match(/\.(js|mjs|cjs|ts|tsx|jsx|vue|py|go|rs|java|c|h|cpp|hpp|cc|cs|rb|php|sh|bash|zsh|sql|css|scss|less)$/) ? 'code' : 'text';
-  if (mime.startsWith('text/')) return 'text';
-  if (mime === 'application/json' || mime === 'application/xml') return 'text';
-
-  if (ARCHIVE_EXTENSIONS.has(ext) || mime === 'application/zip' || mime === 'application/x-tar' || mime === 'application/gzip') return 'archive';
+  if (TEXT_EXTENSIONS.has(ext)) {
+    return ext.match(
+      /\.(js|mjs|cjs|ts|tsx|jsx|vue|py|go|rs|java|c|h|cpp|hpp|cc|cs|rb|php|sh|bash|zsh|sql|css|scss|less)$/
+    )
+      ? 'code'
+      : 'text';
+  }
+  if (mime.startsWith('text/')) {
+    return 'text';
+  }
+  if (mime === 'application/json' || mime === 'application/xml') {
+    return 'text';
+  }
 
   if (
-    ext === '.pdf' || mime === 'application/pdf' ||
+    ARCHIVE_EXTENSIONS.has(ext) ||
+    mime === 'application/zip' ||
+    mime === 'application/x-tar' ||
+    mime === 'application/gzip'
+  ) {
+    return 'archive';
+  }
+
+  if (
+    ext === '.pdf' ||
+    mime === 'application/pdf' ||
     /word|excel|powerpoint|officedocument|opendocument|msword|ms-excel|ms-powerpoint/.test(mime) ||
     ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.odp'].includes(ext)
   ) {
@@ -131,9 +194,15 @@ function commitUpload({ tempPath, originalName, mimeType, size }) {
 
   fs.renameSync(tempPath, storedPath);
 
-  const realSize = Number.isFinite(size) ? size : (() => {
-    try { return fs.statSync(storedPath).size; } catch { return 0; }
-  })();
+  const realSize = Number.isFinite(size)
+    ? size
+    : (() => {
+        try {
+          return fs.statSync(storedPath).size;
+        } catch {
+          return 0;
+        }
+      })();
 
   const kind = classifyKind(mimeType, originalName);
 
@@ -181,7 +250,9 @@ function commitUpload({ tempPath, originalName, mimeType, size }) {
 function _applyExtractedText(manifest, text, engine) {
   const cap = maxExcerptBytes();
   let t = String(text || '').trim();
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   let truncated = false;
   if (Buffer.byteLength(t, 'utf8') > cap) {
     // Char slice is an over-approximation of the byte cap (multibyte chars),
@@ -209,11 +280,21 @@ async function _extractDocxText(manifest, deps = {}) {
     if (r && r.success) {
       const produced = r.output || outPath;
       const txt = fs.readFileSync(produced, 'utf8');
-      try { fs.unlinkSync(produced); } catch { /* best-effort cleanup */ }
+      try {
+        fs.unlinkSync(produced);
+      } catch {
+        /* best-effort cleanup */
+      }
       return txt;
     }
-  } catch { /* fall through to reference line */ }
-  try { fs.unlinkSync(outPath); } catch { /* may not exist */ }
+  } catch {
+    /* fall through to reference line */
+  }
+  try {
+    fs.unlinkSync(outPath);
+  } catch {
+    /* may not exist */
+  }
   return '';
 }
 
@@ -233,9 +314,13 @@ async function _extractDocxText(manifest, deps = {}) {
  * intentionally left to the reference-line fallback.
  */
 async function enrichManifest(manifest, deps = {}) {
-  if (!manifest || !enrichEnabled()) return manifest;
+  if (!manifest || !enrichEnabled()) {
+    return manifest;
+  }
   // Text-like files already carry their excerpt from commitUpload.
-  if (manifest.textExcerpt) return manifest;
+  if (manifest.textExcerpt) {
+    return manifest;
+  }
 
   const kind = manifest.kind;
   const mime = String(manifest.mimeType || '').toLowerCase();
@@ -247,7 +332,11 @@ async function enrichManifest(manifest, deps = {}) {
       const isPdf = mime === 'application/pdf' || ext === '.pdf';
       if (isPdf) {
         const docSvc = deps.documentSnippetService || require('./documentSnippetService');
-        const r = await docSvc.extractDocumentSnippetAsync(manifest.storedPath, manifest.mimeType, {});
+        const r = await docSvc.extractDocumentSnippetAsync(
+          manifest.storedPath,
+          manifest.mimeType,
+          {}
+        );
         if (r && r.success && r.text) {
           changed = _applyExtractedText(manifest, r.text, `pdf:${r.engine || 'pdf'}`);
         } else if (r && r.error) {
@@ -255,7 +344,9 @@ async function enrichManifest(manifest, deps = {}) {
         }
       } else if (ext === '.docx') {
         const txt = await _extractDocxText(manifest, deps);
-        if (txt) changed = _applyExtractedText(manifest, txt, 'docx');
+        if (txt) {
+          changed = _applyExtractedText(manifest, txt, 'docx');
+        }
       }
       // xls/ppt/odt/legacy .doc: no extractor — reference line.
     } else if (kind === 'audio' || kind === 'video') {
@@ -265,7 +356,9 @@ async function enrichManifest(manifest, deps = {}) {
       });
       if (r && r.success && r.text) {
         changed = _applyExtractedText(manifest, r.text, `transcript:${r.engine || 'whisper'}`);
-        if (changed) manifest.transcript = r.engine || 'whisper';
+        if (changed) {
+          manifest.transcript = r.engine || 'whisper';
+        }
       } else if (r && r.error) {
         manifest.extractError = String(r.error);
       }
@@ -277,7 +370,11 @@ async function enrichManifest(manifest, deps = {}) {
   // Persist whatever we learned (extracted text and/or extractError) so the
   // work is never repeated on later turns.
   if (changed || manifest.extractError) {
-    try { fs.writeFileSync(manifestPath(manifest.id), JSON.stringify(manifest), 'utf8'); } catch { /* ignore */ }
+    try {
+      fs.writeFileSync(manifestPath(manifest.id), JSON.stringify(manifest), 'utf8');
+    } catch {
+      /* ignore */
+    }
   }
   return manifest;
 }
@@ -291,15 +388,22 @@ async function commitAndEnrich(args, deps = {}) {
   await enrichManifest(manifest, deps);
   return manifest;
 }
+
 function getUpload(id) {
-  const clean = String(id || '').trim().toLowerCase();
-  if (!ID_RE.test(clean)) return null;
+  const clean = String(id || '')
+    .trim()
+    .toLowerCase();
+  if (!ID_RE.test(clean)) {
+    return null;
+  }
   try {
     const raw = fs.readFileSync(manifestPath(clean), 'utf8');
     const manifest = JSON.parse(raw);
     // Defence in depth: the stored path must still live inside the upload dir.
     const dir = uploadDir();
-    if (!path.resolve(manifest.storedPath || '').startsWith(path.resolve(dir))) return null;
+    if (!path.resolve(manifest.storedPath || '').startsWith(path.resolve(dir))) {
+      return null;
+    }
     return manifest;
   } catch {
     return null;
@@ -308,7 +412,9 @@ function getUpload(id) {
 
 /** Public descriptor returned to the browser (never leaks the absolute path). */
 function toDescriptor(manifest) {
-  if (!manifest) return null;
+  if (!manifest) {
+    return null;
+  }
   return {
     id: manifest.id,
     name: manifest.originalName,
@@ -330,13 +436,23 @@ function humanSize(bytes, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(Number(bytes) || 0);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   const n = Number(bytes) || 0;
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
+  if (n < 1024 * 1024 * 1024) {
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  }
   return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
@@ -355,9 +471,14 @@ function resolveForChat(ids) {
   const missing = [];
 
   for (const entry of list) {
-    const id = typeof entry === 'string' ? entry : (entry && entry.id);
+    const id = typeof entry === 'string' ? entry : entry && entry.id;
     const manifest = getUpload(id);
-    if (!manifest) { if (id) missing.push(String(id)); continue; }
+    if (!manifest) {
+      if (id) {
+        missing.push(String(id));
+      }
+      continue;
+    }
     descriptors.push(toDescriptor(manifest));
 
     if (manifest.kind === 'image') {
@@ -368,16 +489,22 @@ function resolveForChat(ids) {
           images.push(`data:${manifest.mimeType || 'image/png'};base64,${b64}`);
           inlined = true;
         }
-      } catch { inlined = false; }
+      } catch {
+        inlined = false;
+      }
       if (!inlined) {
-        promptBlocks.push(`【图片附件：${manifest.originalName}（${humanSize(manifest.size)}）— 体积较大，未内联，可在对话中描述需求】`);
+        promptBlocks.push(
+          `【图片附件：${manifest.originalName}（${humanSize(manifest.size)}）— 体积较大，未内联，可在对话中描述需求】`
+        );
       }
       continue;
     }
 
     if (isTextLike(manifest.kind) && manifest.textExcerpt) {
       const tail = manifest.textTruncated ? '\n…（内容已截断）' : '';
-      promptBlocks.push(`【附件：${manifest.originalName}（${manifest.kind}）】\n\`\`\`\n${manifest.textExcerpt}${tail}\n\`\`\``);
+      promptBlocks.push(
+        `【附件：${manifest.originalName}（${manifest.kind}）】\n\`\`\`\n${manifest.textExcerpt}${tail}\n\`\`\``
+      );
       continue;
     }
 
@@ -390,14 +517,25 @@ function resolveForChat(ids) {
     ) {
       const head = manifest.kind === 'document' ? '文档正文' : '音轨转写';
       const tail = manifest.textTruncated ? '\n…（内容已截断）' : '';
-      promptBlocks.push(`【${head}：${manifest.originalName}】\n\`\`\`\n${manifest.textExcerpt}${tail}\n\`\`\``);
+      promptBlocks.push(
+        `【${head}：${manifest.originalName}】\n\`\`\`\n${manifest.textExcerpt}${tail}\n\`\`\``
+      );
       continue;
     }
 
-    const label = {
-      video: '视频', audio: '音频', document: '文档', archive: '压缩包/项目', text: '文本', code: '代码', other: '文件',
-    }[manifest.kind] || '文件';
-    promptBlocks.push(`【${label}附件：${manifest.originalName}，类型 ${manifest.mimeType}，大小 ${humanSize(manifest.size)}（二进制内容无法直接解析，请据文件名与上下文回应）】`);
+    const label =
+      {
+        video: '视频',
+        audio: '音频',
+        document: '文档',
+        archive: '压缩包/项目',
+        text: '文本',
+        code: '代码',
+        other: '文件',
+      }[manifest.kind] || '文件';
+    promptBlocks.push(
+      `【${label}附件：${manifest.originalName}，类型 ${manifest.mimeType}，大小 ${humanSize(manifest.size)}（二进制内容无法直接解析，请据文件名与上下文回应）】`
+    );
   }
 
   return { images, promptBlocks, descriptors, missing };

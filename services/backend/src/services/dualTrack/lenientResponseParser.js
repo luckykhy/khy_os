@@ -18,20 +18,45 @@
 
 // 已知顶层字段的宽松超集；不在此列的顶层键不算错误，仅被捕获记录。
 const KNOWN_TOP_LEVEL = new Set([
-  'actions', 'action', 'text', 'content', 'message', 'reasoning',
-  'thinking', 'usage', 'stop_reason', 'finish_reason', 'model', 'id', 'role',
+  'actions',
+  'action',
+  'text',
+  'content',
+  'message',
+  'reasoning',
+  'thinking',
+  'usage',
+  'stop_reason',
+  'finish_reason',
+  'model',
+  'id',
+  'role',
 ]);
 
 // 单个动作对象的已知键宽松超集；不在此列的键写入 _unknownKeys（红线2）。
 // 提升到模块作用域（Ch2「不要每轮重建可复用结构」）：normalizeAction 对每个动作、
 // 每次解析都跑，旧实现每调用重建这个字面量 Set。仅经 `.has` 只读消费，从不 mutate，
 // 派生出的 unknownKeys 数组才被返回（Set 本身不逃逸），共享单例逐字节等价。
-const KNOWN_ACTION_KEYS = new Set(['type', 'name', 'tool', 'action', 'params', 'input', 'arguments', 'args', 'id']);
+const KNOWN_ACTION_KEYS = new Set([
+  'type',
+  'name',
+  'tool',
+  'action',
+  'params',
+  'input',
+  'arguments',
+  'args',
+  'id',
+]);
 
 function pushWarning(warnings, logger, line) {
   warnings.push(line);
   if (logger && typeof logger.warn === 'function') {
-    try { logger.warn(`[dualTrack:lenientParser] ${line}`); } catch (_) { /* 日志失败绝不影响解析 */ }
+    try {
+      logger.warn(`[dualTrack:lenientParser] ${line}`);
+    } catch (_) {
+      /* 日志失败绝不影响解析 */
+    }
   }
 }
 
@@ -44,13 +69,15 @@ function normalizeAction(rawAction, index, warnings, logger) {
     pushWarning(warnings, logger, `action[${index}] 非对象，已封装为原始值占位`);
     return { type: '__nonobject_action__', params: {}, _raw: rawAction, _unknownKeys: [] };
   }
-  const type = rawAction.type || rawAction.name || rawAction.tool || rawAction.action || '__missing_type__';
+  const type =
+    rawAction.type || rawAction.name || rawAction.tool || rawAction.action || '__missing_type__';
   const params = rawAction.params || rawAction.input || rawAction.arguments || rawAction.args || {};
   const unknownKeys = Object.keys(rawAction).filter((k) => !KNOWN_ACTION_KEYS.has(k));
   if (unknownKeys.length > 0) {
     pushWarning(
-      warnings, logger,
-      `action[${index}] type=${type} 含未知键 ${JSON.stringify(unknownKeys)}，已捕获保留（红线2：不静默吞没）`,
+      warnings,
+      logger,
+      `action[${index}] type=${type} 含未知键 ${JSON.stringify(unknownKeys)}，已捕获保留（红线2：不静默吞没）`
     );
   }
   if (type === '__missing_type__') {
@@ -85,7 +112,11 @@ function parseModelResponse(raw, opts = {}) {
     try {
       obj = JSON.parse(trimmed);
     } catch (_) {
-      pushWarning(warnings, logger, 'JSON.parse 失败，整体作为 text 兜底（红线1：不因解析失败崩溃）');
+      pushWarning(
+        warnings,
+        logger,
+        'JSON.parse 失败，整体作为 text 兜底（红线1：不因解析失败崩溃）'
+      );
       return { ok: false, degraded: true, actions: [], text: raw, unknownFields: {}, warnings };
     }
   }
@@ -93,7 +124,14 @@ function parseModelResponse(raw, opts = {}) {
   // 2) 非对象（null / number / boolean / array-as-root）：尽力兜底。
   if (obj == null || typeof obj !== 'object') {
     pushWarning(warnings, logger, `响应根类型为 ${obj === null ? 'null' : typeof obj}，已降级兜底`);
-    return { ok: false, degraded: true, actions: [], text: obj == null ? '' : String(obj), unknownFields: {}, warnings };
+    return {
+      ok: false,
+      degraded: true,
+      actions: [],
+      text: obj == null ? '' : String(obj),
+      unknownFields: {},
+      warnings,
+    };
   }
 
   // 顶层是数组时，宽松视为「全是动作」。
@@ -102,8 +140,7 @@ function parseModelResponse(raw, opts = {}) {
     actionsSource = obj;
     obj = { actions: obj };
   } else {
-    actionsSource = obj.actions != null ? obj.actions
-      : (obj.action != null ? [obj.action] : []);
+    actionsSource = obj.actions != null ? obj.actions : obj.action != null ? [obj.action] : [];
   }
   if (!Array.isArray(actionsSource)) {
     pushWarning(warnings, logger, 'actions 字段非数组，已宽松包装为单元素数组');
@@ -121,15 +158,17 @@ function parseModelResponse(raw, opts = {}) {
   }
   if (Object.keys(unknownFields).length > 0) {
     pushWarning(
-      warnings, logger,
-      `响应含未知顶层字段 ${JSON.stringify(Object.keys(unknownFields))}，已捕获不丢弃（红线1）`,
+      warnings,
+      logger,
+      `响应含未知顶层字段 ${JSON.stringify(Object.keys(unknownFields))}，已捕获不丢弃（红线1）`
     );
   }
 
-  const text = (typeof obj.text === 'string' && obj.text)
-    || (typeof obj.content === 'string' && obj.content)
-    || (typeof obj.message === 'string' && obj.message)
-    || '';
+  const text =
+    (typeof obj.text === 'string' && obj.text) ||
+    (typeof obj.content === 'string' && obj.content) ||
+    (typeof obj.message === 'string' && obj.message) ||
+    '';
 
   return { ok: true, degraded: false, actions, text, unknownFields, warnings };
 }

@@ -41,23 +41,59 @@ const { PRIMARY: MODELS } = require('../constants/models');
 const ENV_PATH = path.resolve(__dirname, '../../.env');
 
 const GATEWAY_CONFIG_FIELDS = Object.freeze({
-  preferredAdapter: { envKey: 'GATEWAY_PREFERRED_ADAPTER', type: 'string', allowUnset: true, defaultValue: null },
-  preferredModel: { envKey: 'GATEWAY_PREFERRED_MODEL', type: 'string', allowUnset: true, defaultValue: null },
+  preferredAdapter: {
+    envKey: 'GATEWAY_PREFERRED_ADAPTER',
+    type: 'string',
+    allowUnset: true,
+    defaultValue: null,
+  },
+  preferredModel: {
+    envKey: 'GATEWAY_PREFERRED_MODEL',
+    type: 'string',
+    allowUnset: true,
+    defaultValue: null,
+  },
   cliEnabled: { envKey: 'GATEWAY_CLI_ENABLED', type: 'boolean', defaultValue: true },
   relayPort: { envKey: 'GATEWAY_RELAY_PORT', type: 'string', defaultValue: '9099' },
-  ollamaHost: { envKey: 'OLLAMA_HOST', type: 'string', defaultValue: process.env.OLLAMA_HOST || '' },
+  ollamaHost: {
+    envKey: 'OLLAMA_HOST',
+    type: 'string',
+    defaultValue: process.env.OLLAMA_HOST || '',
+  },
   ollamaModel: { envKey: 'OLLAMA_MODEL', type: 'string', defaultValue: MODELS.ollama },
   modelRouteMap: { envKey: 'GATEWAY_MODEL_ROUTE_MAP', type: 'json', defaultValue: {} },
   modelRouteStrict: { envKey: 'GATEWAY_MODEL_ROUTE_STRICT', type: 'boolean', defaultValue: false },
-  keySelectionStrategy: { envKey: 'GATEWAY_KEY_SELECTION_STRATEGY', type: 'string', defaultValue: 'round-robin' },
-  keySelectionStrategyMap: { envKey: 'GATEWAY_KEY_SELECTION_STRATEGY_MAP', type: 'json', defaultValue: {} },
-  apiPoolProvider: { envKey: 'GATEWAY_API_POOL_PROVIDER', type: 'string', allowUnset: true, defaultValue: '' },
-  apiPoolProviderAliasMap: { envKey: 'GATEWAY_API_POOL_PROVIDER_ALIAS_MAP', type: 'json', defaultValue: {} },
+  keySelectionStrategy: {
+    envKey: 'GATEWAY_KEY_SELECTION_STRATEGY',
+    type: 'string',
+    defaultValue: 'round-robin',
+  },
+  keySelectionStrategyMap: {
+    envKey: 'GATEWAY_KEY_SELECTION_STRATEGY_MAP',
+    type: 'json',
+    defaultValue: {},
+  },
+  apiPoolProvider: {
+    envKey: 'GATEWAY_API_POOL_PROVIDER',
+    type: 'string',
+    allowUnset: true,
+    defaultValue: '',
+  },
+  apiPoolProviderAliasMap: {
+    envKey: 'GATEWAY_API_POOL_PROVIDER_ALIAS_MAP',
+    type: 'json',
+    defaultValue: {},
+  },
   apiPoolServiceMap: { envKey: 'GATEWAY_API_POOL_SERVICE_MAP', type: 'json', defaultValue: {} },
-  apiPoolDefaultModelMap: { envKey: 'GATEWAY_API_POOL_DEFAULT_MODEL_MAP', type: 'json', defaultValue: {} },
+  apiPoolDefaultModelMap: {
+    envKey: 'GATEWAY_API_POOL_DEFAULT_MODEL_MAP',
+    type: 'json',
+    defaultValue: {},
+  },
 });
 
-const parseBoolean = (value, fallback = false) => require('../../../backend/src/utils/parseBoolean')(value, fallback, { extended: false });
+const parseBoolean = (value, fallback = false) =>
+  require('../../../backend/src/utils/parseBoolean')(value, fallback, { extended: false });
 
 function parseJsonObject(value, fallback = {}) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -182,7 +218,9 @@ const normalizeCompatibility = require('../../../backend/src/utils/normalizeComp
 // returns '' so callers can fall back to deriving from `compatibility`.
 const RELAY_API_FORMATS = new Set(['openai', 'anthropic', 'openai_responses', 'gemini']);
 function normalizeApiFormat(raw = '') {
-  const value = String(raw || '').trim().toLowerCase();
+  const value = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!value) return '';
   if (value === 'openai_chat' || value === 'openai-chat') return 'openai';
   if (value === 'gemini_native') return 'gemini';
@@ -193,10 +231,13 @@ function normalizeApiFormat(raw = '') {
 // Auth header field (cc-switch-inspired api_key_field).
 const RELAY_KEY_FIELDS = new Set(['authorization_bearer', 'x-api-key', 'x-goog-api-key']);
 function normalizeApiKeyField(raw = '') {
-  const value = String(raw || '').trim().toLowerCase();
+  const value = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!value) return '';
   if (value === 'bearer' || value === 'authorization') return 'authorization_bearer';
-  if (value === 'anthropic_auth_token' || value === 'anthropic_api_key' || value === 'x_api_key') return 'x-api-key';
+  if (value === 'anthropic_auth_token' || value === 'anthropic_api_key' || value === 'x_api_key')
+    return 'x-api-key';
   if (value === 'x_goog_api_key' || value === 'google') return 'x-goog-api-key';
   return RELAY_KEY_FIELDS.has(value) ? value : '';
 }
@@ -250,7 +291,10 @@ function normalizeApiKeyToken(raw = '') {
   token = token.replace(/^Bearer\s+/i, '').trim();
   const kvMatch = token.match(/^(?:api[-_\s]*key|key|token)\s*[:=]\s*(.+)$/i);
   if (kvMatch) token = String(kvMatch[1] || '').trim();
-  if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith('\'') && token.endsWith('\''))) {
+  if (
+    (token.startsWith('"') && token.endsWith('"')) ||
+    (token.startsWith("'") && token.endsWith("'"))
+  ) {
     token = token.slice(1, -1).trim();
   }
   return token;
@@ -261,7 +305,7 @@ function parseApiKeyEntries(input) {
   const pushToken = (rawToken) => {
     const token = normalizeApiKeyToken(rawToken);
     if (!token) return;
-    if (!out.some(entry => entry.key === token)) {
+    if (!out.some((entry) => entry.key === token)) {
       out.push({ key: token });
     }
   };
@@ -283,7 +327,10 @@ function parseApiKeyEntries(input) {
     if (typeof value !== 'string') return;
     const text = value.trim();
     if (!text) return;
-    if ((text.startsWith('[') && text.endsWith(']')) || (text.startsWith('{') && text.endsWith('}'))) {
+    if (
+      (text.startsWith('[') && text.endsWith(']')) ||
+      (text.startsWith('{') && text.endsWith('}'))
+    ) {
       try {
         parseAny(JSON.parse(text));
         return;
@@ -312,14 +359,18 @@ function getModelConfigSnapshot() {
   const modelId = String(process.env.RELAY_API_MODEL || '').trim();
   const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
   const preferredModel = String(process.env.GATEWAY_PREFERRED_MODEL || '').trim();
-  const compatibility = normalizeCompatibility(process.env.RELAY_API_COMPATIBILITY || 'openai') || 'openai';
+  const compatibility =
+    normalizeCompatibility(process.env.RELAY_API_COMPATIBILITY || 'openai') || 'openai';
   const apiKey = extractPrimaryApiKey(process.env.RELAY_API_KEY || '');
-  const apiFormat = normalizeApiFormat(process.env.RELAY_API_FORMAT || '')
-    || deriveApiFormatFromCompat(compatibility);
-  const apiKeyField = normalizeApiKeyField(process.env.RELAY_API_KEY_FIELD || '')
-    || defaultKeyFieldFor(apiFormat);
+  const apiFormat =
+    normalizeApiFormat(process.env.RELAY_API_FORMAT || '') ||
+    deriveApiFormatFromCompat(compatibility);
+  const apiKeyField =
+    normalizeApiKeyField(process.env.RELAY_API_KEY_FIELD || '') || defaultKeyFieldFor(apiFormat);
   const endpoints = String(process.env.RELAY_API_ENDPOINTS || '')
-    .split(/[\n,;]+/g).map((s) => s.trim()).filter(Boolean);
+    .split(/[\n,;]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
   return {
     baseUrl,
     modelId,
@@ -345,7 +396,10 @@ router.get('/status', async (req, res) => {
     if (!gateway._initialized) await gateway.init();
     const statuses = gateway.getStatus();
     const active = gateway.getActiveAdapter();
-    res.json({ adapters: statuses, active: active ? { name: active.name, type: active.type } : null });
+    res.json({
+      adapters: statuses,
+      active: active ? { name: active.name, type: active.type } : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -435,9 +489,8 @@ router.post('/pool/:provider/keys', (req, res) => {
     const skipped = [];
 
     for (const [idx, entry] of entries.entries()) {
-      const itemLabel = entries.length > 1
-        ? (label ? `${label}#${idx + 1}` : `imported#${idx + 1}`)
-        : label;
+      const itemLabel =
+        entries.length > 1 ? (label ? `${label}#${idx + 1}` : `imported#${idx + 1}`) : label;
       try {
         const keyId = pool.addKey(provider, {
           key: entry.key,
@@ -501,7 +554,9 @@ router.put('/pool/:provider/keys/:keyId', (req, res) => {
     if (priority !== undefined) updates.priority = priority;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'No mutable fields provided (endpoint|label|priority)' });
+      return res
+        .status(400)
+        .json({ error: 'No mutable fields provided (endpoint|label|priority)' });
     }
 
     const updated = pool.updateKey(provider, keyId, updates);
@@ -544,7 +599,9 @@ router.put('/model-config', (req, res) => {
     if (req.body?.apiFormat !== undefined && req.body?.apiFormat !== '') {
       apiFormat = normalizeApiFormat(req.body.apiFormat);
       if (!apiFormat) {
-        return res.status(400).json({ error: 'apiFormat must be openai|anthropic|openai_responses|gemini' });
+        return res
+          .status(400)
+          .json({ error: 'apiFormat must be openai|anthropic|openai_responses|gemini' });
       }
     }
 
@@ -552,7 +609,9 @@ router.put('/model-config', (req, res) => {
     if (req.body?.apiKeyField !== undefined && req.body?.apiKeyField !== '') {
       apiKeyField = normalizeApiKeyField(req.body.apiKeyField);
       if (!apiKeyField) {
-        return res.status(400).json({ error: 'apiKeyField must be authorization_bearer|x-api-key|x-goog-api-key' });
+        return res
+          .status(400)
+          .json({ error: 'apiKeyField must be authorization_bearer|x-api-key|x-goog-api-key' });
       }
     }
 
@@ -566,7 +625,11 @@ router.put('/model-config', (req, res) => {
       }
     } else {
       let parsed;
-      try { parsed = new URL(baseUrlRaw); } catch { parsed = null; }
+      try {
+        parsed = new URL(baseUrlRaw);
+      } catch {
+        parsed = null;
+      }
       if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
         return res.status(400).json({ error: 'baseUrl must be a valid http(s) URL' });
       }
@@ -610,13 +673,16 @@ router.put('/model-config', (req, res) => {
     else unsetKeys.push('RELAY_API_ENDPOINTS');
 
     const parsedEntries = parseApiKeyEntries(apiKeyInput);
-    const primary = String(extractPrimaryApiKey(apiKeyInput) || (parsedEntries[0] && parsedEntries[0].key) || '').trim();
+    const primary = String(
+      extractPrimaryApiKey(apiKeyInput) || (parsedEntries[0] && parsedEntries[0].key) || ''
+    ).trim();
 
     if (clearApiKey) {
       unsetKeys.push('RELAY_API_KEY', 'RELAY_API_KEYS');
     } else if (primary) {
       envMap.RELAY_API_KEY = primary;
-      if (parsedEntries.length > 1) envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
+      if (parsedEntries.length > 1)
+        envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
       else unsetKeys.push('RELAY_API_KEYS');
     }
 
@@ -680,13 +746,17 @@ router.get('/monitor/stream', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
   // Send keepalive comment every 25s to prevent proxy/browser timeouts
   const keepalive = setInterval(() => {
-    try { res.write(': keepalive\n\n'); } catch { /* client gone */ }
+    try {
+      res.write(': keepalive\n\n');
+    } catch {
+      /* client gone */
+    }
   }, 25000);
 
   const events = monitor.createEventStream();
@@ -716,7 +786,9 @@ router.get('/monitor/stream', (req, res) => {
 // ── OAuth ──
 
 function normalizeOAuthProvider(raw) {
-  return String(raw || '').trim().toLowerCase();
+  return String(raw || '')
+    .trim()
+    .toLowerCase();
 }
 
 function isValidOAuthProvider(provider) {
@@ -729,10 +801,9 @@ router.get('/oauth/providers', (req, res) => {
     oauth.init();
     const knownProviders = oauth.getKnownProviders ? oauth.getKnownProviders() : {};
     const statusMap = oauth.getAllStatus();
-    const keys = Array.from(new Set([
-      ...Object.keys(knownProviders),
-      ...Object.keys(statusMap),
-    ])).sort();
+    const keys = Array.from(
+      new Set([...Object.keys(knownProviders), ...Object.keys(statusMap)])
+    ).sort();
 
     const providers = keys.map((key) => {
       const known = knownProviders[key] || {};
@@ -740,7 +811,8 @@ router.get('/oauth/providers', (req, res) => {
       return {
         key,
         name: known.name || status.provider || key,
-        supportsRefresh: known.supportsRefresh !== undefined ? !!known.supportsRefresh : !!status.supportsRefresh,
+        supportsRefresh:
+          known.supportsRefresh !== undefined ? !!known.supportsRefresh : !!status.supportsRefresh,
         hasTokenEndpoint: !!known.tokenEndpoint,
         hasRevokeEndpoint: !!known.revokeEndpoint,
         registered: !!status.registered,
@@ -828,7 +900,11 @@ router.post('/oauth/:provider/refresh', async (req, res) => {
     const oauth = require('../services/gateway/oauthManager');
     oauth.init();
     const token = await oauth.refreshToken(provider);
-    res.json({ success: !!token, token: token ? '***' : null, status: oauth.getTokenStatus(provider) });
+    res.json({
+      success: !!token,
+      token: token ? '***' : null,
+      status: oauth.getTokenStatus(provider),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -975,19 +1051,19 @@ router.get('/protocols', (req, res) => {
 // ── Claude Code Model Slots ──
 
 const MODEL_SLOT_DEFS = Object.freeze({
-  default:  'ANTHROPIC_MODEL',
-  opus:     'ANTHROPIC_DEFAULT_OPUS_MODEL',
-  sonnet:   'ANTHROPIC_DEFAULT_SONNET_MODEL',
-  haiku:    'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  default: 'ANTHROPIC_MODEL',
+  opus: 'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  sonnet: 'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  haiku: 'ANTHROPIC_DEFAULT_HAIKU_MODEL',
   subagent: 'CLAUDE_CODE_SUBAGENT_MODEL',
 });
 
 function shouldWriteClaudeSettings() {
   const raw = String(
-    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS
-      || process.env.KHY_MANAGE_CLAUDE_SETTINGS
-      || '',
-  ).trim().toLowerCase();
+    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS || process.env.KHY_MANAGE_CLAUDE_SETTINGS || ''
+  )
+    .trim()
+    .toLowerCase();
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 }
 
@@ -1096,9 +1172,26 @@ router.get('/slots', (req, res) => {
 // ── Account Pool (Antigravity-style) ──
 
 const VALID_PROVIDERS = [
-  'deepseek', 'openai', 'anthropic', 'qwen', 'alibaba', 'dashscope', 'huggingface',
-  'glm', 'doubao', 'wenxin', 'relay',
-  'trae', 'warp', 'cursor', 'kiro', 'windsurf', 'claude', 'codex', 'api', 'ollama',
+  'deepseek',
+  'openai',
+  'anthropic',
+  'qwen',
+  'alibaba',
+  'dashscope',
+  'huggingface',
+  'glm',
+  'doubao',
+  'wenxin',
+  'relay',
+  'trae',
+  'warp',
+  'cursor',
+  'kiro',
+  'windsurf',
+  'claude',
+  'codex',
+  'api',
+  'ollama',
 ];
 const VALID_TIERS = ['FREE', 'PRO', 'ULTRA'];
 
@@ -1110,11 +1203,13 @@ const PROVIDER_ALIAS_MAP = Object.freeze({
   aliyun: 'alibaba',
   hf: 'huggingface',
   'hugging-face': 'huggingface',
-  'hugging_face': 'huggingface',
+  hugging_face: 'huggingface',
 });
 
 function normalizeProviderName(raw) {
-  const provider = String(raw || '').trim().toLowerCase();
+  const provider = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!provider) return '';
   return PROVIDER_ALIAS_MAP[provider] || provider;
 }
@@ -1148,7 +1243,8 @@ router.post('/accounts', async (req, res) => {
     await pool.init();
     const { apiKey, endpoint, tier, label, email, priority } = req.body;
     const provider = normalizeProviderName(req.body?.provider);
-    if (!provider || !apiKey) return res.status(400).json({ error: 'provider and apiKey are required' });
+    if (!provider || !apiKey)
+      return res.status(400).json({ error: 'provider and apiKey are required' });
     if (!isValidProviderName(provider)) {
       return res.status(400).json({
         error: `Invalid provider. Use lowercase letters/numbers/_/.- (2-40 chars), or one of: ${VALID_PROVIDERS.join(', ')}`,
@@ -1158,7 +1254,11 @@ router.post('/accounts', async (req, res) => {
       return res.status(400).json({ error: `Invalid tier. Valid: ${VALID_TIERS.join(', ')}` });
     }
     if (endpoint && typeof endpoint === 'string' && endpoint.length > 0) {
-      try { new URL(endpoint); } catch { return res.status(400).json({ error: 'Invalid endpoint URL' }); }
+      try {
+        new URL(endpoint);
+      } catch {
+        return res.status(400).json({ error: 'Invalid endpoint URL' });
+      }
     }
     if (priority !== undefined) {
       const p = Number(priority);
@@ -1166,7 +1266,15 @@ router.post('/accounts', async (req, res) => {
         return res.status(400).json({ error: 'priority must be a number between 0 and 100' });
       }
     }
-    const account = await pool.addAccount({ provider, apiKey, endpoint, tier, label, email, priority });
+    const account = await pool.addAccount({
+      provider,
+      apiKey,
+      endpoint,
+      tier,
+      label,
+      email,
+      priority,
+    });
     res.status(201).json(account);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1354,7 +1462,12 @@ router.put('/customers/:id', (req, res) => {
     const updated = assetCustomerService.updateCustomer(req.params.id, req.body || {});
     res.json(updated);
   } catch (err) {
-    const status = err.message.includes('not found') || err.message.includes('required') || err.message.includes('empty') ? 400 : 500;
+    const status =
+      err.message.includes('not found') ||
+      err.message.includes('required') ||
+      err.message.includes('empty')
+        ? 400
+        : 500;
     res.status(status).json({ error: err.message });
   }
 });
@@ -1384,20 +1497,27 @@ router.post('/customers/:id/tokens', (req, res) => {
     const token = assetCustomerService.issueToken(req.params.id, req.body || {});
     res.status(201).json(token);
   } catch (err) {
-    const status = err.message.includes('not found')
-      || err.message.includes('already exists')
-      || err.message.includes('only supports count=1')
-      ? 400 : 500;
+    const status =
+      err.message.includes('not found') ||
+      err.message.includes('already exists') ||
+      err.message.includes('only supports count=1')
+        ? 400
+        : 500;
     res.status(status).json({ error: err.message });
   }
 });
 
 router.post('/customers/:id/tokens/:tokenId/rotate', (req, res) => {
   try {
-    const rotated = assetCustomerService.rotateToken(req.params.id, req.params.tokenId, req.body?.token || '');
+    const rotated = assetCustomerService.rotateToken(
+      req.params.id,
+      req.params.tokenId,
+      req.body?.token || ''
+    );
     res.json(rotated);
   } catch (err) {
-    const status = err.message.includes('not found') || err.message.includes('already exists') ? 400 : 500;
+    const status =
+      err.message.includes('not found') || err.message.includes('already exists') ? 400 : 500;
     res.status(status).json({ error: err.message });
   }
 });
@@ -1533,7 +1653,9 @@ router.get('/rate-limits', (req, res) => {
 router.get('/credential-watcher/status', async (req, res) => {
   try {
     const backendPort = process.env.BACKEND_PORT || 3000;
-    const resp = await fetch(`http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/status`);
+    const resp = await fetch(
+      `http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/status`
+    );
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -1544,7 +1666,10 @@ router.get('/credential-watcher/status', async (req, res) => {
 router.post('/credential-watcher/scan', async (req, res) => {
   try {
     const backendPort = process.env.BACKEND_PORT || 3000;
-    const resp = await fetch(`http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/scan`, { method: 'POST' });
+    const resp = await fetch(
+      `http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/scan`,
+      { method: 'POST' }
+    );
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -1555,7 +1680,10 @@ router.post('/credential-watcher/scan', async (req, res) => {
 router.post('/credential-watcher/start', async (req, res) => {
   try {
     const backendPort = process.env.BACKEND_PORT || 3000;
-    const resp = await fetch(`http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/start`, { method: 'POST' });
+    const resp = await fetch(
+      `http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/start`,
+      { method: 'POST' }
+    );
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -1566,7 +1694,10 @@ router.post('/credential-watcher/start', async (req, res) => {
 router.post('/credential-watcher/stop', async (req, res) => {
   try {
     const backendPort = process.env.BACKEND_PORT || 3000;
-    const resp = await fetch(`http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/stop`, { method: 'POST' });
+    const resp = await fetch(
+      `http://127.0.0.1:${backendPort}/api/ai-gateway-admin/credential-watcher/stop`,
+      { method: 'POST' }
+    );
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -1593,7 +1724,9 @@ router.get('/models', async (req, res) => {
             ...(typeof m === 'object' ? m : {}),
           });
         }
-      } catch { /* adapter may not support listModels */ }
+      } catch {
+        /* adapter may not support listModels */
+      }
     }
     res.json({ success: true, data: models });
   } catch (err) {

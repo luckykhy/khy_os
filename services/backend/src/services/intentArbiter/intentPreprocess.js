@@ -26,7 +26,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env) {
   const e = env && typeof env === 'object' ? env : {};
   const raw = e.KHY_INTENT_PREPROCESS;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -39,7 +41,9 @@ function isEnabled(env) {
  */
 function canonicalize(text, env) {
   // 门控关:原样返回入参 —— 调用方传入的(已 trim 的)串逐字节不变。
-  if (!isEnabled(env)) return text;
+  if (!isEnabled(env)) {
+    return text;
+  }
   let s = String(text == null ? '' : text);
   // 1) 全角空格 U+3000 → 半角(复用 fullWidthInput 纯函数)。
   s = fw.normalizeFullWidthSpace(s);

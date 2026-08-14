@@ -2,37 +2,52 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataHome, getLegacyDataHome } = require('./dataHome');
 
 function toPort(raw, fallback = null) {
   const value = parseInt(String(raw ?? ''), 10);
-  if (!Number.isFinite(value) || value <= 0 || value > 65535) return fallback;
+  if (!Number.isFinite(value) || value <= 0 || value > 65535) {
+    return fallback;
+  }
   return value;
 }
 
 function toBool(raw, fallback = false) {
-  if (raw === undefined || raw === null) return fallback;
+  if (raw === undefined || raw === null) {
+    return fallback;
+  }
   const value = String(raw).trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(value)) return true;
-  if (['0', 'false', 'no', 'off'].includes(value)) return false;
+  if (['1', 'true', 'yes', 'on'].includes(value)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(value)) {
+    return false;
+  }
   return fallback;
 }
 
 function normalizeHost(raw) {
   const host = String(raw || '').trim() || '127.0.0.1';
-  if (['0.0.0.0', '::', '[::]', '*'].includes(host)) return '127.0.0.1';
+  if (['0.0.0.0', '::', '[::]', '*'].includes(host)) {
+    return '127.0.0.1';
+  }
   return host;
 }
 
 function isLoopbackBaseUrl(raw) {
   try {
     const parsed = new URL(String(raw || '').trim());
-    const host = String(parsed.hostname || '').trim().toLowerCase();
-    return host === 'localhost'
-      || host === '127.0.0.1'
-      || host === '::1'
-      || host === '0.0.0.0'
-      || host === '[::]';
+    const host = String(parsed.hostname || '')
+      .trim()
+      .toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host === '[::]'
+    );
   } catch {
     return false;
   }
@@ -67,14 +82,18 @@ function readProxyRuntime() {
         httpsEnabled,
         httpsOnly,
       };
-    } catch { /* try next file */ }
+    } catch {
+      /* try next file */
+    }
   }
 
   return null;
 }
 
 function buildBaseFromRuntime(runtime) {
-  if (!runtime) return '';
+  if (!runtime) {
+    return '';
+  }
   const host = runtime.host || '127.0.0.1';
   if (runtime.httpsPort !== null && runtime.httpsPort !== undefined && runtime.httpsEnabled) {
     return `https://${host}:${runtime.httpsPort}`;
@@ -122,9 +141,13 @@ function resolveLocalProxyOpenAiBaseUrl(processEnv = process.env) {
 
 function pickConfiguredBaseUrl(processEnv = process.env, settingsEnv = {}) {
   const processBase = String(processEnv.ANTHROPIC_BASE_URL || '').trim();
-  if (processBase) return processBase;
+  if (processBase) {
+    return processBase;
+  }
   const settingsBase = String(settingsEnv.ANTHROPIC_BASE_URL || '').trim();
-  if (settingsBase) return settingsBase;
+  if (settingsBase) {
+    return settingsBase;
+  }
   return '';
 }
 

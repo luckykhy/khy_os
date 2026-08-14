@@ -54,6 +54,15 @@ const dataSourceState = reactive({
       enabled: true
     },
     {
+      key: 'tushare',
+      name: 'TuShare',
+      status: 'connected',
+      successRate: 90,
+      statusClass: 'source-connected',
+      description: 'TuShare Pro 专业金融数据接口 - 需 token 授权，覆盖A股行情与历史数据',
+      enabled: true
+    },
+    {
       key: 'mock',
       name: '增强模拟数据',
       status: 'connected',
@@ -133,6 +142,9 @@ class DataSourceService {
     this.state.error = null
 
     try {
+      // Capture previous source BEFORE mutating currentSource
+      const prevKey = this.state.currentSource?.key || null
+
       // 更新当前数据源
       this.state.currentSource = {
         key: sourceKey,
@@ -151,7 +163,7 @@ class DataSourceService {
       this.emit('source-changed', {
         source: sourceKey,
         name: source.name,
-        previousSource: this.state.currentSource.key
+        previousSource: prevKey,
       })
 
       return this.state.currentSource
@@ -179,7 +191,9 @@ class DataSourceService {
         'akshare': 'akshare',
         'adata': 'adata',
         'efinance': 'efinance',
-        'EFinance': 'efinance'
+        'EFinance': 'efinance',
+        'tushare': 'tushare',
+        'TuShare': 'tushare'
       }
 
       // 精确匹配优先，否则用前缀匹配（兼容 'AKShare每日数据'、'AKShare缓存数据' 等变体）
@@ -189,6 +203,7 @@ class DataSourceService {
         if (src.startsWith('akshare')) sourceKey = 'akshare'
         else if (src.startsWith('adata')) sourceKey = 'adata'
         else if (src.startsWith('efinance')) sourceKey = 'efinance'
+        else if (src.startsWith('tushare')) sourceKey = 'tushare'
         else sourceKey = 'mock'
       }
       const sourceInfo = this.state.availableSources.find(s => s.key === sourceKey)
@@ -200,6 +215,7 @@ class DataSourceService {
         'adata': 'AData',
         'akshare': 'AKShare',
         'efinance': 'EFinance',
+        'tushare': 'TuShare',
         'futures-tick': '期货Tick数据'
       }
       const displayName = displayNameMap[sourceData.source] || sourceData.source
@@ -252,8 +268,8 @@ class DataSourceService {
 
       const response = await request.get('/comprehensive/sources/status')
       
-      if (response.data.success) {
-        const statusData = response.data.data
+      if (response.success) {
+        const statusData = response.data
 
         // 更新数据源状态
         this.state.availableSources.forEach(source => {
@@ -379,3 +395,4 @@ export function useDataSource() {
     off: dataSourceService.off.bind(dataSourceService)
   }
 }
+

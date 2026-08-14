@@ -31,7 +31,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_QA_ECHO 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function qaEchoEnabled(env = process.env) {
   const raw = env && env.KHY_QA_ECHO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -44,15 +46,21 @@ function qaEchoEnabled(env = process.env) {
  * @returns {string[]}  门控关 / 空 answers / 全空值 → []。
  */
 function buildQaEchoLines(answers, env = process.env) {
-  if (!qaEchoEnabled(env)) return [];
-  if (!answers || typeof answers !== 'object') return [];
+  if (!qaEchoEnabled(env)) {
+    return [];
+  }
+  if (!answers || typeof answers !== 'object') {
+    return [];
+  }
 
   const lines = [];
   for (const [question, choice] of Object.entries(answers)) {
     const q = String(question == null ? '' : question).trim();
     const a = String(choice == null ? '' : choice).trim();
     // 问题为空则整题跳过(无从回显);答案为空仍显示问题行 + 空箭头,如实反映。
-    if (!q) continue;
+    if (!q) {
+      continue;
+    }
     lines.push(`  ❓ ${q}`);
     lines.push(`     → ${a}`);
   }

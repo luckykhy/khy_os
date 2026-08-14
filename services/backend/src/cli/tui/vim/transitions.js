@@ -41,18 +41,30 @@ const {
 
 function transition(state, input, ctx) {
   switch (state.type) {
-    case 'idle': return fromIdle(input, ctx);
-    case 'count': return fromCount(state, input, ctx);
-    case 'operator': return fromOperator(state, input, ctx);
-    case 'operatorCount': return fromOperatorCount(state, input, ctx);
-    case 'operatorFind': return fromOperatorFind(state, input, ctx);
-    case 'operatorTextObj': return fromOperatorTextObj(state, input, ctx);
-    case 'find': return fromFind(state, input, ctx);
-    case 'g': return fromG(state, input, ctx);
-    case 'operatorG': return fromOperatorG(state, input, ctx);
-    case 'replace': return fromReplace(state, input, ctx);
-    case 'indent': return fromIndent(state, input, ctx);
-    default: return {};
+    case 'idle':
+      return fromIdle(input, ctx);
+    case 'count':
+      return fromCount(state, input, ctx);
+    case 'operator':
+      return fromOperator(state, input, ctx);
+    case 'operatorCount':
+      return fromOperatorCount(state, input, ctx);
+    case 'operatorFind':
+      return fromOperatorFind(state, input, ctx);
+    case 'operatorTextObj':
+      return fromOperatorTextObj(state, input, ctx);
+    case 'find':
+      return fromFind(state, input, ctx);
+    case 'g':
+      return fromG(state, input, ctx);
+    case 'operatorG':
+      return fromOperatorG(state, input, ctx);
+    case 'replace':
+      return fromReplace(state, input, ctx);
+    case 'indent':
+      return fromIndent(state, input, ctx);
+    default:
+      return {};
   }
 }
 
@@ -75,14 +87,24 @@ function handleNormalInput(input, count, ctx) {
     return { next: { type: 'find', find: input, count } };
   }
 
-  if (input === 'g') return { next: { type: 'g', count } };
-  if (input === 'r') return { next: { type: 'replace', count } };
+  if (input === 'g') {
+    return { next: { type: 'g', count } };
+  }
+  if (input === 'r') {
+    return { next: { type: 'replace', count } };
+  }
   if (input === '>' || input === '<') {
     return { next: { type: 'indent', dir: input, count } };
   }
-  if (input === '~') return { execute: () => executeToggleCase(count, ctx) };
-  if (input === 'x') return { execute: () => executeX(count, ctx) };
-  if (input === 'J') return { execute: () => executeJoin(count, ctx) };
+  if (input === '~') {
+    return { execute: () => executeToggleCase(count, ctx) };
+  }
+  if (input === 'x') {
+    return { execute: () => executeX(count, ctx) };
+  }
+  if (input === 'J') {
+    return { execute: () => executeJoin(count, ctx) };
+  }
   if (input === 'p' || input === 'P') {
     return { execute: () => executePaste(input === 'p', count, ctx) };
   }
@@ -127,9 +149,7 @@ function handleNormalInput(input, count, ctx) {
   if (input === 'a') {
     return {
       execute: () => {
-        const newOffset = ctx.cursor.isAtEnd()
-          ? ctx.cursor.offset
-          : ctx.cursor.right().offset;
+        const newOffset = ctx.cursor.isAtEnd() ? ctx.cursor.offset : ctx.cursor.right().offset;
         ctx.enterInsert(newOffset);
       },
     };
@@ -137,8 +157,12 @@ function handleNormalInput(input, count, ctx) {
   if (input === 'A') {
     return { execute: () => ctx.enterInsert(ctx.cursor.endOfLogicalLine().offset) };
   }
-  if (input === 'o') return { execute: () => executeOpenLine('below', ctx) };
-  if (input === 'O') return { execute: () => executeOpenLine('above', ctx) };
+  if (input === 'o') {
+    return { execute: () => executeOpenLine('below', ctx) };
+  }
+  if (input === 'O') {
+    return { execute: () => executeOpenLine('above', ctx) };
+  }
 
   return null;
 }
@@ -180,7 +204,9 @@ function fromIdle(input, ctx) {
   }
 
   const result = handleNormalInput(input, 1, ctx);
-  if (result) return result;
+  if (result) {
+    return result;
+  }
 
   return {};
 }
@@ -194,7 +220,9 @@ function fromCount(state, input, ctx) {
 
   const count = parseInt(state.digits, 10);
   const result = handleNormalInput(input, count, ctx);
-  if (result) return result;
+  if (result) {
+    return result;
+  }
 
   return { next: { type: 'idle' } };
 }
@@ -212,7 +240,9 @@ function fromOperator(state, input, ctx) {
   }
 
   const result = handleOperatorInput(state.op, state.count, input, ctx);
-  if (result) return result;
+  if (result) {
+    return result;
+  }
 
   return { next: { type: 'idle' } };
 }
@@ -227,7 +257,9 @@ function fromOperatorCount(state, input, ctx) {
   const motionCount = parseInt(state.digits, 10);
   const effectiveCount = state.count * motionCount;
   const result = handleOperatorInput(state.op, effectiveCount, input, ctx);
-  if (result) return result;
+  if (result) {
+    return result;
+  }
 
   return { next: { type: 'idle' } };
 }
@@ -305,7 +337,9 @@ function fromReplace(state, input, ctx) {
   // Backspace/Delete arrive as empty input in literal-char states. In vim,
   // r<BS> cancels the replace; without this guard executeReplace("") would
   // delete the character under the cursor instead.
-  if (input === '') return { next: { type: 'idle' } };
+  if (input === '') {
+    return { next: { type: 'idle' } };
+  }
   return { execute: () => executeReplace(input, state.count, ctx) };
 }
 
@@ -319,7 +353,9 @@ function fromIndent(state, input, ctx) {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function executeRepeatFind(reverse, count, ctx) {
   const lastFind = ctx.getLastFind();
-  if (!lastFind) return;
+  if (!lastFind) {
+    return;
+  }
 
   let findType = lastFind.type;
   if (reverse) {
@@ -328,7 +364,9 @@ function executeRepeatFind(reverse, count, ctx) {
   }
 
   const result = ctx.cursor.findCharacter(lastFind.char, findType, count);
-  if (result !== null) ctx.setOffset(result);
+  if (result !== null) {
+    ctx.setOffset(result);
+  }
 }
 
 module.exports = { transition };

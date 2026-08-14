@@ -29,8 +29,8 @@
  */
 
 // 复用既有纯叶子真源——绝不重造提交质量评分与路径分级。
-const forgeCore = require('./forge/forgeCore');
 const evolutionPolicy = require('./evolutionPolicy');
+const forgeCore = require('./forge/forgeCore');
 
 const REPO_DISCIPLINE_MARKER = 'KHY_REPO_DISCIPLINE';
 
@@ -50,68 +50,88 @@ function isEnabled(env = process.env) {
 // no-large-binary / conventional-commits),从此提示词与 CLI/工具同源,改一处即同步。
 const DISCIPLINE_RULES = Object.freeze([
   {
-    id: 'no-commit-without-ask', severity: 'high',
-    directive: 'NEVER create a commit unless the user explicitly asks; if intent is unclear, ask first',
+    id: 'no-commit-without-ask',
+    severity: 'high',
+    directive:
+      'NEVER create a commit unless the user explicitly asks; if intent is unclear, ask first',
     rule: '只有用户明确要求时才创建提交;意图不清先问',
     why: '提交是有副作用的动作,代用户决定会污染历史',
   },
   {
-    id: 'no-git-config', severity: 'high',
+    id: 'no-git-config',
+    severity: 'high',
     directive: 'NEVER update the git config',
     rule: '绝不擅自修改 git config',
     why: '改全局/仓库配置会悄悄改变身份与行为,影响后续所有操作',
   },
   {
-    id: 'no-destructive', severity: 'high',
-    directive: 'NEVER run destructive git commands (push --force, reset --hard, checkout ., restore ., clean -f, branch -D) unless the user explicitly requests them',
+    id: 'no-destructive',
+    severity: 'high',
+    directive:
+      'NEVER run destructive git commands (push --force, reset --hard, checkout ., restore ., clean -f, branch -D) unless the user explicitly requests them',
     rule: '未经明确要求绝不跑破坏性命令(push --force / reset --hard / checkout . / clean -f / branch -D)',
     why: '这些命令不可逆,极易丢失未提交工作或他人提交',
   },
   {
-    id: 'no-skip-hooks', severity: 'critical',
-    directive: 'NEVER skip hooks (--no-verify, --no-gpg-sign, etc.) unless the user explicitly requests it',
+    id: 'no-skip-hooks',
+    severity: 'critical',
+    directive:
+      'NEVER skip hooks (--no-verify, --no-gpg-sign, etc.) unless the user explicitly requests it',
     rule: '绝不跳过钩子(--no-verify / --no-gpg-sign 等)',
     why: '钩子是仓库门禁;跳过等于绕过纪律与安全检查',
   },
   {
-    id: 'no-force-push-main', severity: 'critical',
+    id: 'no-force-push-main',
+    severity: 'critical',
     directive: 'NEVER force-push to main/master; warn the user if they request it',
     rule: '绝不对 main/master 强推;用户要求也先警告',
     why: '强推主干会改写他人历史、丢失提交,几乎不可恢复',
   },
   {
-    id: 'new-commit-not-amend', severity: 'high',
-    directive: 'Always create NEW commits rather than amending unless the user explicitly requests --amend; when a pre-commit hook fails the commit did NOT happen, so --amend would modify the PREVIOUS commit and may destroy work',
+    id: 'new-commit-not-amend',
+    severity: 'high',
+    directive:
+      'Always create NEW commits rather than amending unless the user explicitly requests --amend; when a pre-commit hook fails the commit did NOT happen, so --amend would modify the PREVIOUS commit and may destroy work',
     rule: '总是新建提交而非 --amend(除非用户明确要求);钩子失败时本次提交并未发生,--amend 会改到上一条',
     why: '误用 amend 会销毁上一条提交里的工作',
   },
   {
-    id: 'no-blind-add-all', severity: 'medium',
-    directive: "Prefer adding specific files by name over 'git add -A' / 'git add .', which can include secrets (.env, credentials) or large binaries",
+    id: 'no-blind-add-all',
+    severity: 'medium',
+    directive:
+      "Prefer adding specific files by name over 'git add -A' / 'git add .', which can include secrets (.env, credentials) or large binaries",
     rule: '按文件名暂存,避免 git add -A / git add .',
     why: '一把梭暂存可能误纳 .env / 凭据或大二进制',
   },
   {
-    id: 'branch-first', severity: 'high',
-    directive: 'On the default branch (main/master), create a new branch before committing non-trivial work',
+    id: 'branch-first',
+    severity: 'high',
+    directive:
+      'On the default branch (main/master), create a new branch before committing non-trivial work',
     rule: '在默认分支(main/master)上作业前先开新分支',
     why: '直接在主干提交/推送会绕过评审、污染发布线',
   },
   {
-    id: 'no-secrets', severity: 'critical',
-    directive: 'NEVER commit secrets, tokens, or private keys; once in history they are effectively leaked and hard to purge',
+    id: 'no-secrets',
+    severity: 'critical',
+    directive:
+      'NEVER commit secrets, tokens, or private keys; once in history they are effectively leaked and hard to purge',
     rule: '绝不把密钥/令牌/私钥提交进仓库',
     why: '一旦进入历史即视同泄露,难以彻底清除',
   },
   {
-    id: 'no-large-binary', severity: 'medium',
-    directive: 'Do not commit large files or build artifacts; use .gitignore or external storage instead',
+    id: 'no-large-binary',
+    severity: 'medium',
+    directive:
+      'Do not commit large files or build artifacts; use .gitignore or external storage instead',
     rule: '不提交大文件/构建产物,改用 .gitignore 或外部存储',
     why: '撑爆仓库、拖慢 clone、且无法 diff',
   },
   {
-    id: 'conventional-commits', severity: 'medium',
-    directive: 'Write Conventional Commits messages that explain intent; avoid vague subjects (wip / update / fix)',
+    id: 'conventional-commits',
+    severity: 'medium',
+    directive:
+      'Write Conventional Commits messages that explain intent; avoid vague subjects (wip / update / fix)',
     rule: '提交信息遵循 Conventional Commits 并说明意图,避免 wip/update/fix 等笼统主题',
     why: '可读的历史是协作与回溯的基础',
   },
@@ -121,25 +141,37 @@ const DISCIPLINE_RULES = Object.freeze([
 // 高置信度模式:每条都自带强结构(固定前缀 + 长度),误报率极低。绝不在结果里回显完整密钥。
 const SECRET_PATTERNS = Object.freeze([
   { id: 'aws-access-key-id', re: /\bAKIA[0-9A-Z]{16}\b/, label: 'AWS Access Key ID' },
-  { id: 'private-key-block', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/, label: '私钥块 (PEM)' },
+  {
+    id: 'private-key-block',
+    re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----/,
+    label: '私钥块 (PEM)',
+  },
   { id: 'github-token', re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/, label: 'GitHub Token' },
   { id: 'gitlab-pat', re: /\bglpat-[A-Za-z0-9_-]{20,}\b/, label: 'GitLab Personal Access Token' },
   { id: 'openai-key', re: /\bsk-[A-Za-z0-9]{20,}\b/, label: 'OpenAI 风格 API Key (sk-)' },
   { id: 'slack-token', re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/, label: 'Slack Token' },
-  { id: 'slack-webhook', re: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/]{20,}/, label: 'Slack Webhook URL' },
+  {
+    id: 'slack-webhook',
+    re: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/]{20,}/,
+    label: 'Slack Webhook URL',
+  },
   { id: 'google-api-key', re: /\bAIza[0-9A-Za-z_-]{35}\b/, label: 'Google API Key' },
 ]);
 
 // 通用「赋值给敏感变量名的疑似密钥」:须强上下文(变量名是 secret/token/...)+足够长 + 非占位符。
-const GENERIC_SECRET_RE = /\b(?:secret|token|passwd|password|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth[_-]?token)\b['"]?\s*[:=]\s*['"]([^'"\n]{16,})['"]/i;
+const GENERIC_SECRET_RE =
+  /\b(?:secret|token|passwd|password|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth[_-]?token)\b['"]?\s*[:=]\s*['"]([^'"\n]{16,})['"]/i;
 
 // 占位符 / 明显非真值——抑制假阳性(零假阳性导向)。
-const PLACEHOLDER_RE = /^(?:x{3,}|\.{3,}|<.*>|your[_-]|example|changeme|change[_-]?me|placeholder|dummy|sample|fake|none|null|undefined|todo|redacted|\*{3,}|\$\{?[a-z_]+\}?|process\.env|os\.environ)/i;
+const PLACEHOLDER_RE =
+  /^(?:x{3,}|\.{3,}|<.*>|your[_-]|example|changeme|change[_-]?me|placeholder|dummy|sample|fake|none|null|undefined|todo|redacted|\*{3,}|\$\{?[a-z_]+\}?|process\.env|os\.environ)/i;
 
 /** 掩码:只露前 4 字符,其余以 … 代,绝不回显完整密钥。 */
 function _mask(secret) {
   const s = String(secret || '');
-  if (s.length <= 4) return '****';
+  if (s.length <= 4) {
+    return '****';
+  }
   return `${s.slice(0, 4)}…(${s.length} chars)`;
 }
 
@@ -153,7 +185,9 @@ function _mask(secret) {
 function scanSecretLeaks(text) {
   try {
     const raw = String(text || '');
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
     const allLines = raw.split(/\r?\n/);
     const looksLikeDiff = /^diff --git /m.test(raw) || /^\+\+\+ /m.test(raw);
     const out = [];
@@ -161,18 +195,33 @@ function scanSecretLeaks(text) {
     for (let i = 0; i < allLines.length; i += 1) {
       const lineText = allLines[i];
       if (looksLikeDiff) {
-        if (!lineText.startsWith('+') || lineText.startsWith('+++')) continue;
+        if (!lineText.startsWith('+') || lineText.startsWith('+++')) {
+          continue;
+        }
       }
       const scanText = looksLikeDiff ? lineText.slice(1) : lineText;
 
       for (const pat of SECRET_PATTERNS) {
         const m = scanText.match(pat.re);
-        if (!m) continue;
+        if (!m) {
+          continue;
+        }
         const hit = m[0];
         const key = `${pat.id}:${hit}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
         seen.add(key);
-        out.push({ kind: 'secret', category: 'risk', id: pat.id, label: pat.label, severity: 'critical', line: i + 1, masked: _mask(hit), message: `疑似泄露${pat.label}(${_mask(hit)}) —— 绝不可提交进仓库` });
+        out.push({
+          kind: 'secret',
+          category: 'risk',
+          id: pat.id,
+          label: pat.label,
+          severity: 'critical',
+          line: i + 1,
+          masked: _mask(hit),
+          message: `疑似泄露${pat.label}(${_mask(hit)}) —— 绝不可提交进仓库`,
+        });
       }
 
       const gm = scanText.match(GENERIC_SECRET_RE);
@@ -181,7 +230,16 @@ function scanSecretLeaks(text) {
         const key = `generic:${val}`;
         if (!seen.has(key)) {
           seen.add(key);
-          out.push({ kind: 'secret', category: 'risk', id: 'generic-assignment', label: '疑似硬编码密钥(敏感变量名 = 字面量)', severity: 'critical', line: i + 1, masked: _mask(val), message: `疑似硬编码密钥(${_mask(val)}) —— 敏感变量名直接赋了字面量,绝不可提交` });
+          out.push({
+            kind: 'secret',
+            category: 'risk',
+            id: 'generic-assignment',
+            label: '疑似硬编码密钥(敏感变量名 = 字面量)',
+            severity: 'critical',
+            line: i + 1,
+            masked: _mask(val),
+            message: `疑似硬编码密钥(${_mask(val)}) —— 敏感变量名直接赋了字面量,绝不可提交`,
+          });
         }
       }
     }
@@ -192,19 +250,44 @@ function scanSecretLeaks(text) {
 }
 
 // ── 大文件 / 二进制产物风险(填补真缺口)────────────────────────────────────────
-const LARGE_FILE_BYTES = 5 * 1024 * 1024;            // >5MB 单文件 = high
-const WARN_FILE_BYTES = 1 * 1024 * 1024;             // >1MB = medium 提醒
+const LARGE_FILE_BYTES = 5 * 1024 * 1024; // >5MB 单文件 = high
+const WARN_FILE_BYTES = 1 * 1024 * 1024; // >1MB = medium 提醒
 // 构建产物 / 二进制扩展名:这类文件几乎不该进版本库(应忽略或走外部存储)。
 const ARTIFACT_EXTS = new Set([
-  'exe', 'dll', 'so', 'dylib', 'o', 'a', 'class', 'jar', 'war',
-  'zip', 'tar', 'gz', 'tgz', 'bz2', '7z', 'rar',
-  'whl', 'node', 'wasm', 'bin', 'dmg', 'pkg', 'msi', 'iso', 'pdb', 'lib',
+  'exe',
+  'dll',
+  'so',
+  'dylib',
+  'o',
+  'a',
+  'class',
+  'jar',
+  'war',
+  'zip',
+  'tar',
+  'gz',
+  'tgz',
+  'bz2',
+  '7z',
+  'rar',
+  'whl',
+  'node',
+  'wasm',
+  'bin',
+  'dmg',
+  'pkg',
+  'msi',
+  'iso',
+  'pdb',
+  'lib',
 ]);
 
 function _ext(path) {
   const p = _norm(path);
   const i = p.lastIndexOf('.');
-  if (i < 0 || i === p.length - 1) return '';
+  if (i < 0 || i === p.length - 1) {
+    return '';
+  }
   return p.slice(i + 1);
 }
 
@@ -219,17 +302,41 @@ function assessFileRisk(files) {
     const rows = Array.isArray(files) ? files : [];
     const out = [];
     for (const f of rows) {
-      if (!f || typeof f !== 'object') continue;
+      if (!f || typeof f !== 'object') {
+        continue;
+      }
       const path = String(f.path || '').trim();
-      if (!path) continue;
+      if (!path) {
+        continue;
+      }
       const size = Number(f.size);
       const ext = _ext(path);
       if (Number.isFinite(size) && size >= LARGE_FILE_BYTES) {
-        out.push({ kind: 'large-file', category: 'risk', severity: 'high', path, bytes: size, message: `大文件 ${_humanSize(size)} —— 不该直接提交,改用 .gitignore 或外部存储` });
+        out.push({
+          kind: 'large-file',
+          category: 'risk',
+          severity: 'high',
+          path,
+          bytes: size,
+          message: `大文件 ${_humanSize(size)} —— 不该直接提交,改用 .gitignore 或外部存储`,
+        });
       } else if (ARTIFACT_EXTS.has(ext)) {
-        out.push({ kind: 'binary-artifact', category: 'risk', severity: 'medium', path, message: `二进制/构建产物 .${ext} —— 这类文件通常应忽略而非提交` });
+        out.push({
+          kind: 'binary-artifact',
+          category: 'risk',
+          severity: 'medium',
+          path,
+          message: `二进制/构建产物 .${ext} —— 这类文件通常应忽略而非提交`,
+        });
       } else if (Number.isFinite(size) && size >= WARN_FILE_BYTES) {
-        out.push({ kind: 'large-file', category: 'risk', severity: 'medium', path, bytes: size, message: `较大文件 ${_humanSize(size)} —— 确认是否应进版本库` });
+        out.push({
+          kind: 'large-file',
+          category: 'risk',
+          severity: 'medium',
+          path,
+          bytes: size,
+          message: `较大文件 ${_humanSize(size)} —— 确认是否应进版本库`,
+        });
       }
     }
     return out;
@@ -240,9 +347,15 @@ function assessFileRisk(files) {
 
 function _humanSize(bytes) {
   const b = Number(bytes);
-  if (!Number.isFinite(b) || b < 0) return '?';
-  if (b < 1024) return `${b}B`;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)}KB`;
+  if (!Number.isFinite(b) || b < 0) {
+    return '?';
+  }
+  if (b < 1024) {
+    return `${b}B`;
+  }
+  if (b < 1024 * 1024) {
+    return `${(b / 1024).toFixed(1)}KB`;
+  }
   return `${(b / (1024 * 1024)).toFixed(1)}MB`;
 }
 
@@ -255,7 +368,9 @@ function _humanSize(bytes) {
 function assessCommitMessage(message) {
   try {
     const msg = String(message || '').trim();
-    if (!msg) return { empty: true, score: 0, grade: 'N/A', conventional: false, notes: ['提交信息为空'] };
+    if (!msg) {
+      return { empty: true, score: 0, grade: 'N/A', conventional: false, notes: ['提交信息为空'] };
+    }
     const subject = msg.split('\n')[0].trim();
     const q = forgeCore.evaluateCommitQuality([{ subject, message: msg, isMerge: false }]);
     return {
@@ -280,12 +395,22 @@ function assessCommitMessage(message) {
 function classifyPathRisk(path) {
   try {
     const c = evolutionPolicy.classifyPath(path);
-    if (!c) return null;
+    if (!c) {
+      return null;
+    }
     if (c.tier === 'immutable') {
-      return { tier: c.tier, severity: 'high', message: `触碰不可变区域(${c.rule}:${c.reason}) —— 人工改动须格外谨慎并经评审` };
+      return {
+        tier: c.tier,
+        severity: 'high',
+        message: `触碰不可变区域(${c.rule}:${c.reason}) —— 人工改动须格外谨慎并经评审`,
+      };
     }
     if (c.tier === 'guarded') {
-      return { tier: c.tier, severity: 'medium', message: `触碰受护区域(${c.rule}:${c.reason}) —— 改动牵连面广,确认有意为之` };
+      return {
+        tier: c.tier,
+        severity: 'medium',
+        message: `触碰受护区域(${c.rule}:${c.reason}) —— 改动牵连面广,确认有意为之`,
+      };
     }
     return null;
   } catch {
@@ -315,23 +440,42 @@ const _DEFAULT_MAIN = new Set(['main', 'master']);
 function assessRepoRisk(input = {}) {
   const env = (input && input.env) || (typeof process !== 'undefined' ? process.env : {});
   if (!isEnabled(env)) {
-    return { enabled: false, verdict: 'clean', findings: [], commitQuality: null, summary: '仓库纪律与风险评估已关闭(KHY_REPO_DISCIPLINE)' };
+    return {
+      enabled: false,
+      verdict: 'clean',
+      findings: [],
+      commitQuality: null,
+      summary: '仓库纪律与风险评估已关闭(KHY_REPO_DISCIPLINE)',
+    };
   }
 
   const findings = [];
   try {
     // 1) 密钥内容(critical)。
-    for (const s of scanSecretLeaks(input.diffText)) findings.push(s);
+    for (const s of scanSecretLeaks(input.diffText)) {
+      findings.push(s);
+    }
 
     // 2) 大文件 / 二进制产物。
-    for (const f of assessFileRisk(input.files)) findings.push(f);
+    for (const f of assessFileRisk(input.files)) {
+      findings.push(f);
+    }
 
     // 3) 路径分级(不可变/受护)。
     const files = Array.isArray(input.files) ? input.files : [];
     for (const f of files) {
       const path = f && typeof f === 'object' ? String(f.path || '') : String(f || '');
       const pr = path ? classifyPathRisk(path) : null;
-      if (pr) findings.push({ kind: 'path-tier', category: 'discipline', severity: pr.severity, path, tier: pr.tier, message: pr.message });
+      if (pr) {
+        findings.push({
+          kind: 'path-tier',
+          category: 'discipline',
+          severity: pr.severity,
+          path,
+          tier: pr.tier,
+          message: pr.message,
+        });
+      }
     }
 
     // 4) 分支纪律。
@@ -339,32 +483,85 @@ function assessRepoRisk(input = {}) {
     const main = _norm(input.mainBranch);
     const onMain = branch && (branch === main || (!main && _DEFAULT_MAIN.has(branch)));
     if (onMain) {
-      findings.push({ kind: 'branch-first', category: 'discipline', severity: 'high', message: `当前在默认分支(${branch})上 —— 作非琐碎改动前应先开新分支` });
+      findings.push({
+        kind: 'branch-first',
+        category: 'discipline',
+        severity: 'high',
+        message: `当前在默认分支(${branch})上 —— 作非琐碎改动前应先开新分支`,
+      });
       if (input.force) {
-        findings.push({ kind: 'no-force-push-main', category: 'discipline', severity: 'critical', message: `强推默认分支(${branch}) —— 会改写他人历史,绝不允许` });
+        findings.push({
+          kind: 'no-force-push-main',
+          category: 'discipline',
+          severity: 'critical',
+          message: `强推默认分支(${branch}) —— 会改写他人历史,绝不允许`,
+        });
       }
     }
 
     // 5) 跳过钩子 / 暂存方式 / amend。
-    if (input.noVerify) findings.push({ kind: 'no-skip-hooks', category: 'discipline', severity: 'critical', message: '本次跳过了钩子(--no-verify) —— 绕过了仓库门禁' });
-    if (input.addAll) findings.push({ kind: 'no-blind-add-all', category: 'discipline', severity: 'medium', message: '使用了 git add -A/.,可能误纳密钥或大二进制 —— 优先按文件名暂存' });
-    if (input.amend) findings.push({ kind: 'new-commit-not-amend', category: 'discipline', severity: 'high', message: '本次为 --amend —— 若钩子曾失败会改到上一条提交,优先新建提交' });
+    if (input.noVerify) {
+      findings.push({
+        kind: 'no-skip-hooks',
+        category: 'discipline',
+        severity: 'critical',
+        message: '本次跳过了钩子(--no-verify) —— 绕过了仓库门禁',
+      });
+    }
+    if (input.addAll) {
+      findings.push({
+        kind: 'no-blind-add-all',
+        category: 'discipline',
+        severity: 'medium',
+        message: '使用了 git add -A/.,可能误纳密钥或大二进制 —— 优先按文件名暂存',
+      });
+    }
+    if (input.amend) {
+      findings.push({
+        kind: 'new-commit-not-amend',
+        category: 'discipline',
+        severity: 'high',
+        message: '本次为 --amend —— 若钩子曾失败会改到上一条提交,优先新建提交',
+      });
+    }
 
     // 6) 提交信息质量。
     let commitQuality = null;
     if (input.message !== undefined && input.message !== null) {
       commitQuality = assessCommitMessage(input.message);
       if (commitQuality.empty) {
-        findings.push({ kind: 'empty-commit-message', category: 'risk', severity: 'critical', message: '提交信息为空' });
+        findings.push({
+          kind: 'empty-commit-message',
+          category: 'risk',
+          severity: 'critical',
+          message: '提交信息为空',
+        });
       } else if (commitQuality.grade === 'F' || commitQuality.grade === 'D') {
-        findings.push({ kind: 'weak-commit-message', category: 'discipline', severity: 'medium', message: `提交信息质量偏低(${commitQuality.grade}/${commitQuality.score}):${commitQuality.notes.join(';')}` });
+        findings.push({
+          kind: 'weak-commit-message',
+          category: 'discipline',
+          severity: 'medium',
+          message: `提交信息质量偏低(${commitQuality.grade}/${commitQuality.score}):${commitQuality.notes.join(';')}`,
+        });
       }
     }
 
     const verdict = _verdict(findings);
-    return { enabled: true, verdict, findings, commitQuality, summary: _summary(verdict, findings) };
+    return {
+      enabled: true,
+      verdict,
+      findings,
+      commitQuality,
+      summary: _summary(verdict, findings),
+    };
   } catch {
-    return { enabled: true, verdict: 'clean', findings, commitQuality: null, summary: '评估时遇到异常,已安全降级' };
+    return {
+      enabled: true,
+      verdict: 'clean',
+      findings,
+      commitQuality: null,
+      summary: '评估时遇到异常,已安全降级',
+    };
   }
 }
 
@@ -372,19 +569,32 @@ function _verdict(findings) {
   let hasCritical = false;
   let hasCaution = false;
   for (const f of findings) {
-    if (!f) continue;
-    if (f.severity === 'critical') hasCritical = true;
-    else if (f.severity === 'high' || f.severity === 'medium') hasCaution = true;
+    if (!f) {
+      continue;
+    }
+    if (f.severity === 'critical') {
+      hasCritical = true;
+    } else if (f.severity === 'high' || f.severity === 'medium') {
+      hasCaution = true;
+    }
   }
-  if (hasCritical) return 'block';
-  if (hasCaution) return 'caution';
+  if (hasCritical) {
+    return 'block';
+  }
+  if (hasCaution) {
+    return 'caution';
+  }
   return 'clean';
 }
 
 function _summary(verdict, findings) {
   const n = findings.length;
-  if (verdict === 'block') return `发现 ${n} 项问题,含须立即处理的严重风险(block):提交/推送前必须解决`;
-  if (verdict === 'caution') return `发现 ${n} 项纪律/风险提示(caution):建议处理后再提交/推送`;
+  if (verdict === 'block') {
+    return `发现 ${n} 项问题,含须立即处理的严重风险(block):提交/推送前必须解决`;
+  }
+  if (verdict === 'caution') {
+    return `发现 ${n} 项纪律/风险提示(caution):建议处理后再提交/推送`;
+  }
   return '未发现明显的仓库纪律或风险问题(clean)';
 }
 
@@ -405,7 +615,12 @@ function describeDisciplineCharter(env = process.env) {
     enabled: isEnabled(env),
     gate: 'KHY_REPO_DISCIPLINE',
     marker: REPO_DISCIPLINE_MARKER,
-    rules: DISCIPLINE_RULES.map((r) => ({ id: r.id, severity: r.severity, rule: r.rule, why: r.why })),
+    rules: DISCIPLINE_RULES.map((r) => ({
+      id: r.id,
+      severity: r.severity,
+      rule: r.rule,
+      why: r.why,
+    })),
   };
 }
 

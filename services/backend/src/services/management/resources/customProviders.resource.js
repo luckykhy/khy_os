@@ -11,10 +11,11 @@
  * API keys are never returned: list reports only metadata + a keyCount.
  */
 const path = require('path');
+
 const { getDataHome } = require('../../../utils/dataHome');
-const customRegistry = require('../../customProviderRegistry');
-const registrar = require('../../customProviderRegistrar');
 const pool = require('../../apiKeyPool');
+const registrar = require('../../customProviderRegistrar');
+const customRegistry = require('../../customProviderRegistry');
 
 const REGISTRY_FILE = path.join(getDataHome(), 'custom_providers.json');
 
@@ -77,7 +78,9 @@ const contract = {
       return safe;
     },
     async remove(args) {
-      if (!args || !args.poolKey) throw new Error('poolKey is required');
+      if (!args || !args.poolKey) {
+        throw new Error('poolKey is required');
+      }
       return registrar.unregisterCustomProvider(args.poolKey, {
         removeKeys: args.removeKeys === true,
       });

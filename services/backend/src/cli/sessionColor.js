@@ -24,13 +24,17 @@ const RESET_ALIASES = ['default', 'reset', 'none', 'gray', 'grey', '默认', '�
 
 function isEnabled(env) {
   const raw = env && env.KHY_SESSION_COLOR;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 归一输入:小写 trim;空 → ''。 */
 function normalizeColor(input) {
-  return String(input == null ? '' : input).trim().toLowerCase();
+  return String(input == null ? '' : input)
+    .trim()
+    .toLowerCase();
 }
 
 function isReset(input) {
@@ -46,7 +50,9 @@ function parseColorArgs(tokens) {
   const list = Array.isArray(tokens) ? tokens : [tokens];
   for (const t of list) {
     const s = normalizeColor(t);
-    if (s) return s;
+    if (s) {
+      return s;
+    }
   }
   return '';
 }
@@ -58,24 +64,46 @@ function parseColorArgs(tokens) {
  * 门控关 → 完全忽略 sessionColor → 与历史逐字节一致。
  */
 function resolveAccent(p = {}) {
-  if (p.bashMode) return 'magenta';
-  if (p.memoryMode) return 'green';
-  if (!isEnabled(p.env)) return null;
+  if (p.bashMode) {
+    return 'magenta';
+  }
+  if (p.memoryMode) {
+    return 'green';
+  }
+  if (!isEnabled(p.env)) {
+    return null;
+  }
   const c = normalizeColor(p.sessionColor);
-  if (c && isValidColor(c) && !isReset(c)) return c;
+  if (c && isValidColor(c) && !isReset(c)) {
+    return c;
+  }
   return null;
 }
 
 function formatList() {
-  return '请提供颜色。可用颜色:' + AGENT_COLORS.join('、') + '、default(重置)。\n用法:/color <颜色> · /color default(重置)。';
+  return (
+    '请提供颜色。可用颜色:' +
+    AGENT_COLORS.join('、') +
+    '、default(重置)。\n用法:/color <颜色> · /color default(重置)。'
+  );
 }
 
 function formatInvalid(input) {
-  return '无效颜色「' + normalizeColor(input) + '」。可用颜色:' + AGENT_COLORS.join('、') + '、default(重置)。';
+  return (
+    '无效颜色「' +
+    normalizeColor(input) +
+    '」。可用颜色:' +
+    AGENT_COLORS.join('、') +
+    '、default(重置)。'
+  );
 }
 
 function formatSet(color) {
-  return '已将当前会话强调色设为:' + normalizeColor(color) + '(输入框边框与 ❯ 标记即时生效,并随会话持久化)。';
+  return (
+    '已将当前会话强调色设为:' +
+    normalizeColor(color) +
+    '(输入框边框与 ❯ 标记即时生效,并随会话持久化)。'
+  );
 }
 
 function formatReset() {

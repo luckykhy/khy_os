@@ -15,7 +15,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { formatTokenCount, formatUsd, resolveModelCost, formatUsageLine } = require('./usageFormatter');
+
+const {
+  formatTokenCount,
+  formatUsd,
+  resolveModelCost,
+  formatUsageLine,
+} = require('./usageFormatter');
 
 const CACHE_VERSION = 2;
 const MAX_LATENCY_MS = 43_200_000; // 12 hours
@@ -23,15 +29,15 @@ const MAX_LATENCY_MS = 43_200_000; // 12 hours
 // Pricing per 1M tokens (USD) — approximate
 const PRICING = {
   'claude-3.5-sonnet': { input: 3.0, output: 15.0 },
-  'claude-3-haiku':    { input: 0.25, output: 1.25 },
-  'claude-3-opus':     { input: 15.0, output: 75.0 },
-  'gpt-4':             { input: 30.0, output: 60.0 },
-  'gpt-4o':            { input: 5.0, output: 15.0 },
-  'gpt-4o-mini':       { input: 0.15, output: 0.6 },
-  'deepseek-v3':       { input: 0.27, output: 1.1 },
-  'deepseek-r1':       { input: 0.55, output: 2.19 },
-  'qwen-plus':         { input: 0.8, output: 2.0 },
-  'default':           { input: 1.0, output: 3.0 },
+  'claude-3-haiku': { input: 0.25, output: 1.25 },
+  'claude-3-opus': { input: 15.0, output: 75.0 },
+  'gpt-4': { input: 30.0, output: 60.0 },
+  'gpt-4o': { input: 5.0, output: 15.0 },
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  'deepseek-v3': { input: 0.27, output: 1.1 },
+  'deepseek-r1': { input: 0.55, output: 2.19 },
+  'qwen-plus': { input: 0.8, output: 2.0 },
+  default: { input: 1.0, output: 3.0 },
 };
 
 class UsageTracker {
@@ -83,9 +89,9 @@ class UsageTracker {
 
     // Calculate cost
     const pricing = this._getPricing(model);
-    const costUSD = cached ? 0 :
-      (inputTokens / 1_000_000) * pricing.input +
-      (outputTokens / 1_000_000) * pricing.output;
+    const costUSD = cached
+      ? 0
+      : (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
 
     // Update session stats
     if (!this._sessions.has(sessionId)) {
@@ -107,8 +113,12 @@ class UsageTracker {
     session.inputTokens += inputTokens;
     session.outputTokens += outputTokens;
     session.costUSD += costUSD;
-    if (!success) session.errors++;
-    if (cached) session.cacheHits++;
+    if (!success) {
+      session.errors++;
+    }
+    if (cached) {
+      session.cacheHits++;
+    }
 
     // Per-model in session
     if (!session.byModel[model]) {
@@ -160,6 +170,30 @@ class UsageTracker {
       });
     }
 
+    // Observability (末尾埋点): publish the usage record to the in-process event
+    // bus (and append-only event log) so a cost meter / dashboard can subscribe.
+    // Fail-soft — must never affect usage tracking or the return value.
+    try {
+      require('../observability/eventLog').append({
+        type: 'usage.record',
+        source: 'usageTracker',
+        traceId: sessionId,
+        payload: {
+          sessionId,
+          model,
+          provider,
+          inputTokens,
+          outputTokens,
+          durationMs,
+          cached,
+          success,
+          costUSD: Math.round(costUSD * 1_000_000) / 1_000_000,
+        },
+      });
+    } catch {
+      /* fail-soft: observability must never break usage tracking */
+    }
+
     return { costUSD, pricing };
   }
 
@@ -168,7 +202,9 @@ class UsageTracker {
    */
   getSessionSummary(sessionId) {
     const session = this._sessions.get(sessionId);
-    if (!session) return null;
+    if (!session) {
+      return null;
+    }
 
     return {
       ...session,
@@ -201,9 +237,10 @@ class UsageTracker {
       result[model] = {
         ...stats,
         costUSD: Math.round(stats.costUSD * 10000) / 10000,
-        avgTokensPerRequest: stats.requests > 0
-          ? Math.round((stats.inputTokens + stats.outputTokens) / stats.requests)
-          : 0,
+        avgTokensPerRequest:
+          stats.requests > 0
+            ? Math.round((stats.inputTokens + stats.outputTokens) / stats.requests)
+            : 0,
       };
     }
     return result;
@@ -223,14 +260,24 @@ class UsageTracker {
         usage: { input: s.inputTokens, output: s.outputTokens, model: Object.keys(s.byModel)[0] },
         showCost: true,
       });
-      lines.push(`Session: ${s.requests} req, ${sessionLine || formatTokenCount(s.inputTokens + s.outputTokens) + ' tokens'}`);
-      if (s.cacheHits > 0) lines.push(`  Cache hits: ${s.cacheHits}`);
-      if (s.errors > 0) lines.push(`  Errors: ${s.errors}`);
+      lines.push(
+        `Session: ${s.requests} req, ${sessionLine || formatTokenCount(s.inputTokens + s.outputTokens) + ' tokens'}`
+      );
+      if (s.cacheHits > 0) {
+        lines.push(`  Cache hits: ${s.cacheHits}`);
+      }
+      if (s.errors > 0) {
+        lines.push(`  Errors: ${s.errors}`);
+      }
     }
 
     const globalCost = formatUsd(g.costUSD) || `$${g.costUSD}`;
-    lines.push(`Global: ${g.totalRequests} req, ${formatTokenCount(g.totalInputTokens)} in / ${formatTokenCount(g.totalOutputTokens)} out, ${globalCost}`);
-    if (g.latencyP50) lines.push(`  Latency P50/P95/P99: ${g.latencyP50}/${g.latencyP95}/${g.latencyP99}ms`);
+    lines.push(
+      `Global: ${g.totalRequests} req, ${formatTokenCount(g.totalInputTokens)} in / ${formatTokenCount(g.totalOutputTokens)} out, ${globalCost}`
+    );
+    if (g.latencyP50) {
+      lines.push(`  Latency P50/P95/P99: ${g.latencyP50}/${g.latencyP95}/${g.latencyP99}ms`);
+    }
 
     return lines.join('\n');
   }
@@ -256,7 +303,9 @@ class UsageTracker {
     // so it resolved to the 6× pricier gpt-4 tier (gpt-4o-mini-* was 200× off).
     // Choosing the LONGEST matching key resolves each id to its real tier while
     // keeping the same set of matchable models as `includes`.
-    if (PRICING[model]) return PRICING[model];
+    if (PRICING[model]) {
+      return PRICING[model];
+    }
     let best = null;
     let bestLen = -1;
     for (const [key, pricing] of Object.entries(PRICING)) {
@@ -269,7 +318,9 @@ class UsageTracker {
   }
 
   _percentile(p) {
-    if (this._latencies.length === 0) return null;
+    if (this._latencies.length === 0) {
+      return null;
+    }
     const sorted = [...this._latencies].sort((a, b) => a - b);
     const idx = Math.ceil((p / 100) * sorted.length) - 1;
     return sorted[Math.max(0, idx)];
@@ -281,7 +332,9 @@ class UsageTracker {
       const logFile = path.join(this._logDir, `usage-${dateStr}.jsonl`);
       fs.mkdirSync(this._logDir, { recursive: true });
       fs.appendFileSync(logFile, JSON.stringify(entry) + '\n');
-    } catch { /* non-critical, swallow */ }
+    } catch {
+      /* non-critical, swallow */
+    }
   }
 }
 

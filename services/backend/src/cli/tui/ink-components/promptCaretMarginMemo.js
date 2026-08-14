@@ -22,7 +22,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_COMPLETION_MARGIN_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -40,7 +42,9 @@ let _last = null;
  */
 function memoCompletionMargin(value, offset, cols, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env)) return computeFn();
+    if (!isEnabled(env)) {
+      return computeFn();
+    }
     if (_last && _last.value === value && _last.offset === offset && _last.cols === cols) {
       return _last.margin;
     }
@@ -48,11 +52,17 @@ function memoCompletionMargin(value, offset, cols, computeFn, env = process.env)
     _last = { value, offset, cols, margin };
     return margin;
   } catch {
-    try { return computeFn(); } catch { return 0; }
+    try {
+      return computeFn();
+    } catch {
+      return 0;
+    }
   }
 }
 
 // 测试辅助:复位单槽。
-function _reset() { _last = null; }
+function _reset() {
+  _last = null;
+}
 
 module.exports = { isEnabled, memoCompletionMargin, _reset, OFF_VALUES };

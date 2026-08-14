@@ -46,14 +46,19 @@ const _MAX_CALC_DIGITS = 64;
 const _CALC_REGEX_LINEAR_OFF = ['0', 'false', 'off', 'no'];
 function _calcRegexLinearEnabled(env = process.env) {
   return !_CALC_REGEX_LINEAR_OFF.includes(
-    String((env && env.KHY_CALC_REGEX_LINEAR) || '').trim().toLowerCase());
+    String((env && env.KHY_CALC_REGEX_LINEAR) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
+
 // Digit quantifier fragment: bounded when the linear guard is on, legacy
 // unbounded `\d+` when off. Built fresh per call to avoid module-level `/g`
 // regex lastIndex reuse hazards across a gate flip.
 function _digitQuant() {
   return _calcRegexLinearEnabled() ? `\\d{1,${_MAX_CALC_DIGITS}}` : '\\d+';
 }
+
 // Build the Chinese-math rewrite table. Order is load-bearing and preserved
 // byte-for-byte from the original (`平方` before `平方根`, etc.).
 function _buildCnMathMap() {
@@ -76,10 +81,16 @@ const _CN_MATH_MAP = _buildCnMathMap();
 
 function _isCalcIntent(text) {
   const t = text.trim();
-  if (_PURE_MATH_RE.test(t) && /\d/.test(t) && /[+\-*/^%]/.test(t)) return true;
-  if (_CALC_INTENT_RE.test(t) && /\d/.test(t)) return true;
+  if (_PURE_MATH_RE.test(t) && /\d/.test(t) && /[+\-*/^%]/.test(t)) {
+    return true;
+  }
+  if (_CALC_INTENT_RE.test(t) && /\d/.test(t)) {
+    return true;
+  }
   const d = _digitQuant();
-  if (new RegExp(`${d}\\s*的\\s*${d}\\s*次方`).test(t)) return true;
+  if (new RegExp(`${d}\\s*的\\s*${d}\\s*次方`).test(t)) {
+    return true;
+  }
   return false;
 }
 
@@ -87,8 +98,12 @@ function _detectCalc(text) {
   let expr = text.replace(_CALC_INTENT_RE, '').trim();
   // 尝试提取含数字的表达式部分
   if (!_PURE_MATH_RE.test(expr)) {
-    const m = text.match(/([\d\s+\-*/().%^×÷（）]+(?:的\s*\d+\s*次方|的\s*平方根?|的\s*立方|开方)?[\d\s+\-*/().%^×÷（）]*)/);
-    if (m) expr = m[1].trim();
+    const m = text.match(
+      /([\d\s+\-*/().%^×÷（）]+(?:的\s*\d+\s*次方|的\s*平方根?|的\s*立方|开方)?[\d\s+\-*/().%^×÷（）]*)/
+    );
+    if (m) {
+      expr = m[1].trim();
+    }
   }
   // 中文数学转换（gate-aware：默认有界 `\d{1,64}` 防 ReDoS，off 回退旧无界）
   for (const [re, rep] of _buildCnMathMap()) {
@@ -115,15 +130,20 @@ function _detectCalc(text) {
 function _safeEvalArithmetic(input) {
   const src = String(input || '');
   const tokens = [];
-  const re = /\s*(Math\.pow|Math\.sqrt|Math\.PI|\*\*|[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?|[-+*/%(),])/g;
+  const re =
+    /\s*(Math\.pow|Math\.sqrt|Math\.PI|\*\*|[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?|[-+*/%(),])/g;
   let pos = 0;
   let m;
   while ((m = re.exec(src)) !== null) {
-    if (m.index !== pos) throw new Error('unexpected token');
+    if (m.index !== pos) {
+      throw new Error('unexpected token');
+    }
     tokens.push(m[1]);
     pos = re.lastIndex;
   }
-  if (src.slice(pos).trim() !== '') throw new Error('unexpected token');
+  if (src.slice(pos).trim() !== '') {
+    throw new Error('unexpected token');
+  }
 
   let i = 0;
   const peek = () => tokens[i];
@@ -138,17 +158,23 @@ function _safeEvalArithmetic(input) {
     }
     return left;
   }
+
   function parseTerm() {
     let left = parsePower();
     while (peek() === '*' || peek() === '/' || peek() === '%') {
       const op = next();
       const right = parsePower();
-      if (op === '*') left *= right;
-      else if (op === '/') left /= right;
-      else left %= right;
+      if (op === '*') {
+        left *= right;
+      } else if (op === '/') {
+        left /= right;
+      } else {
+        left %= right;
+      }
     }
     return left;
   }
+
   function parsePower() {
     const base = parseUnary();
     if (peek() === '**') {
@@ -157,35 +183,60 @@ function _safeEvalArithmetic(input) {
     }
     return base;
   }
+
   function parseUnary() {
-    if (peek() === '-') { next(); return -parseUnary(); }
-    if (peek() === '+') { next(); return parseUnary(); }
+    if (peek() === '-') {
+      next();
+      return -parseUnary();
+    }
+    if (peek() === '+') {
+      next();
+      return parseUnary();
+    }
     return parsePrimary();
   }
+
   function parsePrimary() {
     const t = peek();
-    if (t === undefined) throw new Error('unexpected end of expression');
+    if (t === undefined) {
+      throw new Error('unexpected end of expression');
+    }
     if (t === '(') {
       next();
       const v = parseExpr();
-      if (next() !== ')') throw new Error('missing )');
+      if (next() !== ')') {
+        throw new Error('missing )');
+      }
       return v;
     }
-    if (t === 'Math.PI') { next(); return Math.PI; }
+    if (t === 'Math.PI') {
+      next();
+      return Math.PI;
+    }
     if (t === 'Math.sqrt') {
       next();
-      if (next() !== '(') throw new Error('missing (');
+      if (next() !== '(') {
+        throw new Error('missing (');
+      }
       const a = parseExpr();
-      if (next() !== ')') throw new Error('missing )');
+      if (next() !== ')') {
+        throw new Error('missing )');
+      }
       return Math.sqrt(a);
     }
     if (t === 'Math.pow') {
       next();
-      if (next() !== '(') throw new Error('missing (');
+      if (next() !== '(') {
+        throw new Error('missing (');
+      }
       const a = parseExpr();
-      if (next() !== ',') throw new Error('missing ,');
+      if (next() !== ',') {
+        throw new Error('missing ,');
+      }
       const b = parseExpr();
-      if (next() !== ')') throw new Error('missing )');
+      if (next() !== ')') {
+        throw new Error('missing )');
+      }
       return Math.pow(a, b);
     }
     if (/^[0-9]*\.?[0-9]+(?:[eE][+-]?[0-9]+)?$/.test(t)) {
@@ -196,7 +247,9 @@ function _safeEvalArithmetic(input) {
   }
 
   const value = parseExpr();
-  if (i !== tokens.length) throw new Error('trailing tokens');
+  if (i !== tokens.length) {
+    throw new Error('trailing tokens');
+  }
   return value;
 }
 
@@ -214,10 +267,14 @@ function _executeCalc(plan) {
 }
 
 function _formatCalc(result) {
-  if (!result.success) return `计算失败: ${result.error}`;
+  if (!result.success) {
+    return `计算失败: ${result.error}`;
+  }
   // 友好格式化大数字
   const val = result.result;
-  const formatted = Number.isInteger(val) ? val.toLocaleString() : val.toLocaleString(undefined, { maximumFractionDigits: 10 });
+  const formatted = Number.isInteger(val)
+    ? val.toLocaleString()
+    : val.toLocaleString(undefined, { maximumFractionDigits: 10 });
   return `${result.expr} = ${formatted}`;
 }
 

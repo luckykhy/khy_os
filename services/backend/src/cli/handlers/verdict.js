@@ -16,6 +16,7 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const { printInfo, printWarn, printError, printSuccess } = require('../formatters');
 
@@ -26,10 +27,14 @@ const { printInfo, printWarn, printError, printSuccess } = require('../formatter
  */
 function formatVerdict(verdict) {
   switch (String(verdict || '').toLowerCase()) {
-    case 'correct': return chalk.green('✅ 改动通过（correct）');
-    case 'incorrect': return chalk.red('❌ 改动不对（incorrect）');
-    case 'uncertain': return chalk.yellow('❓ 无法判断（uncertain）');
-    default: return chalk.gray('— 暂无判定');
+    case 'correct':
+      return chalk.green('✅ 改动通过（correct）');
+    case 'incorrect':
+      return chalk.red('❌ 改动不对（incorrect）');
+    case 'uncertain':
+      return chalk.yellow('❓ 无法判断（uncertain）');
+    default:
+      return chalk.gray('— 暂无判定');
   }
 }
 
@@ -45,9 +50,17 @@ function renderRecord(rec) {
   const lines = [];
   lines.push(formatVerdict(rec.verdict));
   const files = Array.isArray(rec.files) ? rec.files : [];
-  if (files.length) lines.push(`改动文件: ${files.slice(0, 10).join('、')}${files.length > 10 ? ` 等 ${files.length} 个` : ''}`);
-  for (const f of Array.isArray(rec.failures) ? rec.failures.slice(0, 8) : []) lines.push(chalk.red(`  ✗ ${f}`));
-  for (const w of Array.isArray(rec.warnings) ? rec.warnings.slice(0, 6) : []) lines.push(chalk.yellow(`  ⚠ ${w}`));
+  if (files.length) {
+    lines.push(
+      `改动文件: ${files.slice(0, 10).join('、')}${files.length > 10 ? ` 等 ${files.length} 个` : ''}`
+    );
+  }
+  for (const f of Array.isArray(rec.failures) ? rec.failures.slice(0, 8) : []) {
+    lines.push(chalk.red(`  ✗ ${f}`));
+  }
+  for (const w of Array.isArray(rec.warnings) ? rec.warnings.slice(0, 6) : []) {
+    lines.push(chalk.yellow(`  ⚠ ${w}`));
+  }
   if (rec.consumed === false && rec.verdict === 'incorrect') {
     lines.push(chalk.dim('（此判定尚未反馈给 AI；下一轮对话会主动告知。）'));
   }
@@ -60,8 +73,12 @@ function _printHelp() {
   printInfo('  khy verdict check               立刻侦测当前改动并判定一次（无需 daemon 常驻）');
   printInfo('  khy verdict --json              机器可读输出');
   printInfo('  khy verdict emit [--format ...] 取出待反馈供**其它 AI 工具**消费（代码级、零 LLM）');
-  printInfo('      --format text|json|claude-hook   text=指令纯文本(默认)；claude-hook=Claude Code UserPromptSubmit 钩子 JSON');
-  printInfo('      --consumer <id>                  消费者标识（每个工具用各自 ID，各自恰好拿到一次）');
+  printInfo(
+    '      --format text|json|claude-hook   text=指令纯文本(默认)；claude-hook=Claude Code UserPromptSubmit 钩子 JSON'
+  );
+  printInfo(
+    '      --consumer <id>                  消费者标识（每个工具用各自 ID，各自恰好拿到一次）'
+  );
   printInfo('      --peek                           只看不确认（不标记已消费）');
 }
 
@@ -80,17 +97,29 @@ function emitFeedback(options = {}, service) {
   let fb = null;
   try {
     fb = peek ? service.pendingFor(consumer) : service.consumePendingInjection(consumer);
-  } catch { fb = null; }
+  } catch {
+    fb = null;
+  }
 
   if (format === 'json') {
     let source = null;
-    try { source = service.getStorePath ? service.getStorePath() : null; } catch { source = null; }
+    try {
+      source = service.getStorePath ? service.getStorePath() : null;
+    } catch {
+      source = null;
+    }
     const out = fb
       ? {
           schemaVersion: fb.schemaVersion || 'khy-change-watch/1',
-          pending: true, consumer, verdict: fb.verdict, reason: fb.reason,
-          text: fb.text || fb.display, directive: fb.directive,
-          files: fb.files || [], failures: fb.failures || [], warnings: fb.warnings || [],
+          pending: true,
+          consumer,
+          verdict: fb.verdict,
+          reason: fb.reason,
+          text: fb.text || fb.display,
+          directive: fb.directive,
+          files: fb.files || [],
+          failures: fb.failures || [],
+          warnings: fb.warnings || [],
           source,
         }
       : { schemaVersion: 'khy-change-watch/1', pending: false, consumer };
@@ -109,7 +138,9 @@ function emitFeedback(options = {}, service) {
   }
 
   // text(默认):直接打印可注入的指令文本,无待反馈则空输出。
-  if (fb && (fb.directive || fb.text)) process.stdout.write(String(fb.directive || fb.text) + '\n');
+  if (fb && (fb.directive || fb.text)) {
+    process.stdout.write(String(fb.directive || fb.text) + '\n');
+  }
   return 0;
 }
 
@@ -121,7 +152,10 @@ function emitFeedback(options = {}, service) {
  */
 async function handleVerdict(subCommand, args = [], options = {}, deps = {}) {
   const sub = String(subCommand || 'show').toLowerCase();
-  if (sub === 'help' || options.help) { _printHelp(); return 0; }
+  if (sub === 'help' || options.help) {
+    _printHelp();
+    return 0;
+  }
 
   const service = deps.service || require('../../services/changeWatchService');
 
@@ -131,7 +165,9 @@ async function handleVerdict(subCommand, args = [], options = {}, deps = {}) {
 
   if (sub === 'check') {
     let result = null;
-    try { result = await service.checkOnce(); } catch (e) {
+    try {
+      result = await service.checkOnce();
+    } catch (e) {
       printError(`改动校验失败: ${e && e.message ? e.message : e}`);
       return 1;
     }
@@ -143,11 +179,17 @@ async function handleVerdict(subCommand, args = [], options = {}, deps = {}) {
 
   if (sub === 'watch') {
     // 一次性提示：常驻由 daemon 负责，这里仅引导。
-    printInfo('后台常驻 watcher 由守护进程负责（khy daemon start）。如需手动跑一次用：khy verdict check');
+    printInfo(
+      '后台常驻 watcher 由守护进程负责（khy daemon start）。如需手动跑一次用：khy verdict check'
+    );
   }
 
   let rec = null;
-  try { rec = service.getLatestVerdict(); } catch { rec = null; }
+  try {
+    rec = service.getLatestVerdict();
+  } catch {
+    rec = null;
+  }
 
   if (options.json) {
     process.stdout.write(JSON.stringify(rec || { verdict: null }, null, 2) + '\n');
@@ -155,7 +197,9 @@ async function handleVerdict(subCommand, args = [], options = {}, deps = {}) {
   }
 
   const lines = renderRecord(rec);
-  for (const l of lines) printInfo(l);
+  for (const l of lines) {
+    printInfo(l);
+  }
   return 0;
 }
 

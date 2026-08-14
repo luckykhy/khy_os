@@ -30,7 +30,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  * @returns {boolean}
  */
 function blockedBySuffixEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_BLOCKED_BY_FILTER) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_BLOCKED_BY_FILTER) || '')
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(flag);
 }
 
@@ -44,27 +46,34 @@ function blockedBySuffixEnabled(env = process.env) {
  *                   ` [blocked by: 1,3]`(门控关·逐字节回退历史);'' 表示无阻塞后缀
  */
 function buildBlockedBySuffix(blockedBy, completedIds, env = process.env) {
-  if (!Array.isArray(blockedBy) || blockedBy.length === 0) return '';
+  if (!Array.isArray(blockedBy) || blockedBy.length === 0) {
+    return '';
+  }
 
   // 门控关:逐字节回退历史(原始未过滤 join(',')，无 `#`、逗号无空格)。
   if (!blockedBySuffixEnabled(env)) {
     return ` [blocked by: ${blockedBy.join(',')}]`;
   }
 
-  const completed = completedIds instanceof Set
-    ? completedIds
-    : new Set(Array.isArray(completedIds) ? completedIds.map((x) => String(x)) : []);
+  const completed =
+    completedIds instanceof Set
+      ? completedIds
+      : new Set(Array.isArray(completedIds) ? completedIds.map((x) => String(x)) : []);
 
   // 只保留**仍未完成**的依赖(缺失/不存在的 id 保留显示——刻意诚实分歧,见文件头)。
   const open = blockedBy.filter((id) => !completed.has(String(id)));
-  if (open.length === 0) return ''; // 全部依赖已完成 → 后缀整段消失(对齐 CC isBlocked=false)
+  if (open.length === 0) {
+    return '';
+  } // 全部依赖已完成 → 后缀整段消失(对齐 CC isBlocked=false)
 
   // CC openBlockers 数字序 + `#` 前缀(与 khy 自家行内 `#${t.id}` id 约定一致)。
   // 非数字 id(khy 可有 `t-xxx` 形)退化到稳定的字典序,绝不因 NaN 比较乱序。
   const sorted = open.slice().sort((a, b) => {
     const na = parseInt(a, 10);
     const nb = parseInt(b, 10);
-    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) {
+      return na - nb;
+    }
     return String(a).localeCompare(String(b));
   });
 

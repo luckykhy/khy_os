@@ -50,6 +50,21 @@ function closeServer(server) {
 }
 
 describeWithLoopback('gateway adapters stability', () => {
+  let prevCodexStrict;
+
+  beforeAll(() => {
+    // Mocked codex CLIs in this suite have no real credentials — disable the
+    // strict credential detect gate so detect() reflects CLI presence as the
+    // pre-existing expectations assume.
+    prevCodexStrict = process.env.KHY_CODEX_STRICT_DETECT;
+    process.env.KHY_CODEX_STRICT_DETECT = '0';
+  });
+
+  afterAll(() => {
+    if (prevCodexStrict === undefined) delete process.env.KHY_CODEX_STRICT_DETECT;
+    else process.env.KHY_CODEX_STRICT_DETECT = prevCodexStrict;
+  });
+
   afterEach(() => {
     delete process.env.RELAY_API_ENDPOINT;
     delete process.env.RELAY_API_KEY;

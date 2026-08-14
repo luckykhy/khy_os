@@ -30,27 +30,40 @@ function _isNegationGuardEnabled(env) {
   try {
     const v = (env || process.env || {}).KHY_CLAIM_NEGATION_GUARD;
     return !(v !== undefined && _NEG_OFF.has(String(v).trim().toLowerCase()));
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 // 动词紧邻的单字否定(未/没/无/毋/勿/别/不);多字否定词在稍宽窗口内(没有/无需/尚未…);
 // 英文否定在动词前 ~16 字符内(the file was not modified / never / without …)。
 const _NEG_ADJ_RE = /(未|没|无|無|毋|勿|别|不)$/;
 const _NEG_NEAR_RE = /(没有|无需|无须|无法|尚未|从未|并未|毫无|未曾|未能)/;
-const _NEG_EN_RE = /\b(no|not|never|without|nothing|none|isn't|wasn't|weren't|didn't|don't|doesn't|won't|can't|cannot|couldn't|shouldn't)\b/i;
+const _NEG_EN_RE =
+  /\b(no|not|never|without|nothing|none|isn't|wasn't|weren't|didn't|don't|doesn't|won't|can't|cannot|couldn't|shouldn't)\b/i;
 
 /** 该声称匹配处的动词是否被紧邻否定(是 → 非声称,应跳过)。 */
 function _isNegatedClaim(text, idx) {
   try {
-    if (typeof text !== 'string' || !(idx >= 0)) return false;
-    const adj = text.slice(Math.max(0, idx - 1), idx);        // 紧贴动词的 1 个字
-    if (_NEG_ADJ_RE.test(adj)) return true;                   // 未修改 / 没删除 / 不部署
-    const near = text.slice(Math.max(0, idx - 4), idx);       // 稍宽窗口的多字否定
-    if (_NEG_NEAR_RE.test(near)) return true;                 // 没有修改 / 无需修改 / 尚未提交
-    const en = text.slice(Math.max(0, idx - 16), idx);        // 英文否定在动词前若干词
-    if (_NEG_EN_RE.test(en)) return true;
+    if (typeof text !== 'string' || !(idx >= 0)) {
+      return false;
+    }
+    const adj = text.slice(Math.max(0, idx - 1), idx); // 紧贴动词的 1 个字
+    if (_NEG_ADJ_RE.test(adj)) {
+      return true;
+    } // 未修改 / 没删除 / 不部署
+    const near = text.slice(Math.max(0, idx - 4), idx); // 稍宽窗口的多字否定
+    if (_NEG_NEAR_RE.test(near)) {
+      return true;
+    } // 没有修改 / 无需修改 / 尚未提交
+    const en = text.slice(Math.max(0, idx - 16), idx); // 英文否定在动词前若干词
+    if (_NEG_EN_RE.test(en)) {
+      return true;
+    }
     return false;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -58,12 +71,18 @@ function _isNegatedClaim(text, idx) {
  * 用全局克隆迭代,绝不改动 CLAIM_FAMILIES 里被冻结的原正则状态。
  */
 function _firstUnnegatedMatch(re, text, negOn) {
-  if (!negOn) return re.exec(text);
+  if (!negOn) {
+    return re.exec(text);
+  }
   const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
   let m;
   while ((m = g.exec(text)) !== null) {
-    if (m.index === g.lastIndex) g.lastIndex += 1;            // 防零宽匹配死循环
-    if (!_isNegatedClaim(text, m.index)) return m;
+    if (m.index === g.lastIndex) {
+      g.lastIndex += 1;
+    } // 防零宽匹配死循环
+    if (!_isNegatedClaim(text, m.index)) {
+      return m;
+    }
   }
   return null;
 }
@@ -74,42 +93,48 @@ const CLAIM_FAMILIES = Object.freeze([
   {
     family: 'delete',
     expectedTool: 'Delete',
-    claim: /\b(deleted|removed|rm -rf|dropped (the )?(table|database|db))\b|删除了?|删库|移除了?|清空了?/i,
+    claim:
+      /\b(deleted|removed|rm -rf|dropped (the )?(table|database|db))\b|删除了?|删库|移除了?|清空了?/i,
     toolNames: /(delete|remove|rm|unlink|drop)/i,
     shellCmd: /\b(rm|rmdir|unlink|drop\s+(table|database))\b/i,
   },
   {
     family: 'write',
     expectedTool: 'Write',
-    claim: /\b(wrote|created|saved|generated) (the |a )?(file|new file)\b|写入了?|创建了?(文件)?|保存了?(文件)?|新建了?(文件)?/i,
+    claim:
+      /\b(wrote|created|saved|generated) (the |a )?(file|new file)\b|写入了?|创建了?(文件)?|保存了?(文件)?|新建了?(文件)?/i,
     toolNames: /(write|create|save|new_?file|touch)/i,
     shellCmd: /\b(touch|tee|>\s*\S+)\b/i,
   },
   {
     family: 'edit',
     expectedTool: 'Edit',
-    claim: /\b(edited|modified|updated|patched) (the )?(file|code)\b|修改了?(文件|代码)?|编辑了?(文件)?|改好了?|更新了?(文件|代码)?/i,
+    claim:
+      /\b(edited|modified|updated|patched) (the )?(file|code)\b|修改了?(文件|代码)?|编辑了?(文件)?|改好了?|更新了?(文件|代码)?/i,
     toolNames: /(edit|modify|patch|replace|update_?file|multiedit)/i,
     shellCmd: /\b(sed -i|patch)\b/i,
   },
   {
     family: 'test',
     expectedTool: 'test',
-    claim: /\b(tests? (all )?passed?|all tests? pass|ran (the )?tests?|test suite (passed|green))\b|测试(全部|都)?(通过|过了|全过|绿)|跑(完|过)了?测试|单测通过/i,
+    claim:
+      /\b(tests? (all )?passed?|all tests? pass|ran (the )?tests?|test suite (passed|green))\b|测试(全部|都)?(通过|过了|全过|绿)|跑(完|过)了?测试|单测通过/i,
     toolNames: /(test|jest|pytest|mocha|vitest)/i,
     shellCmd: /\b(npm (run )?test|jest|pytest|mocha|vitest|go test|cargo test|node --test)\b/i,
   },
   {
     family: 'commit',
     expectedTool: 'git commit',
-    claim: /\b(committed|made a commit|pushed (the )?(commit|changes))\b|提交了?(代码|改动)?|已提交|推送了?|已推送/i,
+    claim:
+      /\b(committed|made a commit|pushed (the )?(commit|changes))\b|提交了?(代码|改动)?|已提交|推送了?|已推送/i,
     toolNames: /(git|commit)/i,
     shellCmd: /\bgit\s+(commit|push)\b/i,
   },
   {
     family: 'deploy',
     expectedTool: 'deploy',
-    claim: /\b(deployed|shipped (to )?(prod|production)|released (to )?prod)\b|部署了?|已部署|上线了?|已上线|发布了?(到)?(生产|线上)?/i,
+    claim:
+      /\b(deployed|shipped (to )?(prod|production)|released (to )?prod)\b|部署了?|已部署|上线了?|已上线|发布了?(到)?(生产|线上)?/i,
     toolNames: /(deploy|release|ship|publish)/i,
     shellCmd: /\b(deploy|kubectl apply|docker push|npm publish|helm upgrade)\b/i,
   },
@@ -117,18 +142,28 @@ const CLAIM_FAMILIES = Object.freeze([
 
 /** 取一条日志的成功标志（兼容 `entry.success` 与 `entry.result.success` 两种形状）。 */
 function _isSuccess(entry) {
-  if (!entry || typeof entry !== 'object') return false;
-  if (entry.success === true) return true;
-  if (entry.result && entry.result.success === true) return true;
+  if (!entry || typeof entry !== 'object') {
+    return false;
+  }
+  if (entry.success === true) {
+    return true;
+  }
+  if (entry.result && entry.result.success === true) {
+    return true;
+  }
   return false;
 }
 
 /** 取一条日志可能携带的壳命令字符串（用于 test/git/deploy 等经 shell 跑的声称）。 */
 function _shellCommand(entry) {
   const p = entry && entry.params;
-  if (!p || typeof p !== 'object') return '';
+  if (!p || typeof p !== 'object') {
+    return '';
+  }
   for (const k of ['command', 'cmd', 'script', 'code']) {
-    if (typeof p[k] === 'string' && p[k].trim()) return p[k];
+    if (typeof p[k] === 'string' && p[k].trim()) {
+      return p[k];
+    }
   }
   return '';
 }
@@ -139,8 +174,11 @@ function _familiesOf(entry) {
   const name = String((entry && entry.tool) || '');
   const cmd = _shellCommand(entry);
   for (const fam of CLAIM_FAMILIES) {
-    if (fam.toolNames.test(name)) fams.add(fam.family);
-    else if (cmd && fam.shellCmd.test(cmd)) fams.add(fam.family);
+    if (fam.toolNames.test(name)) {
+      fams.add(fam.family);
+    } else if (cmd && fam.shellCmd.test(cmd)) {
+      fams.add(fam.family);
+    }
   }
   return fams;
 }
@@ -155,22 +193,32 @@ function reconcile(proseText, toolCallLog = [], opts = {}) {
   const empty = { contradictions: [], lexiconVersion: LEXICON_VERSION };
   try {
     const text = typeof proseText === 'string' ? proseText : '';
-    if (!text.trim()) return empty;
+    if (!text.trim()) {
+      return empty;
+    }
     const log = Array.isArray(toolCallLog) ? toolCallLog : [];
     const negOn = _isNegationGuardEnabled(opts && opts.env);
 
     // 本地已成功满足的工具族集合（只认 success===true）。
     const satisfied = new Set();
     for (const entry of log) {
-      if (!_isSuccess(entry)) continue;
-      for (const fam of _familiesOf(entry)) satisfied.add(fam);
+      if (!_isSuccess(entry)) {
+        continue;
+      }
+      for (const fam of _familiesOf(entry)) {
+        satisfied.add(fam);
+      }
     }
 
     const contradictions = [];
     for (const fam of CLAIM_FAMILIES) {
       const m = _firstUnnegatedMatch(fam.claim, text, negOn);
-      if (!m) continue;
-      if (satisfied.has(fam.family)) continue; // 声称有对应成功工具 → 不矛盾
+      if (!m) {
+        continue;
+      }
+      if (satisfied.has(fam.family)) {
+        continue;
+      } // 声称有对应成功工具 → 不矛盾
       contradictions.push({
         claim: _snippet(text, m.index),
         expectedTool: fam.expectedTool,
@@ -188,9 +236,13 @@ function reconcile(proseText, toolCallLog = [], opts = {}) {
 function _snippet(text, idx) {
   const start = Math.max(0, text.lastIndexOf('\n', idx) + 1);
   let end = text.indexOf('\n', idx);
-  if (end === -1) end = text.length;
+  if (end === -1) {
+    end = text.length;
+  }
   let s = text.slice(start, end).trim();
-  if (s.length > 80) s = s.slice(0, 79) + '…';
+  if (s.length > 80) {
+    s = s.slice(0, 79) + '…';
+  }
   return s;
 }
 

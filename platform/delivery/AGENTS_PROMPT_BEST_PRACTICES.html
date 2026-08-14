@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>给其他 Agent 写 Prompt 的最佳实践 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>platform<span class="sep">›</span>delivery<span class="sep">›</span>给其他 Agent 写 Prompt 的最佳实践</div>
+      <header class="hero reveal"><h1>给其他 Agent 写 Prompt 的最佳实践</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#给其他-agent-写-prompt-的最佳实践">给其他 Agent 写 Prompt 的最佳实践</a></li><li class="lvl-2"><a href="#一-prompt-的黄金结构">一、Prompt 的黄金结构</a></li><li class="lvl-2"><a href="#二-7-条核心规则">二、7 条核心规则</a></li><li class="lvl-3"><a href="#规则-1-单-agent-单职责">规则 1: 单 Agent 单职责</a></li><li class="lvl-3"><a href="#规则-2-输入必须-schema-化">规则 2: 输入必须 Schema 化</a></li><li class="lvl-3"><a href="#规则-3-输出必须结构化">规则 3: 输出必须结构化</a></li><li class="lvl-3"><a href="#规则-4-规则要分优先级">规则 4: 规则要分优先级</a></li><li class="lvl-3"><a href="#规则-5-提供至少一个完整示例">规则 5: 提供至少一个完整示例</a></li><li class="lvl-3"><a href="#规则-6-异常处理要枚举">规则 6: 异常处理要枚举</a></li><li class="lvl-3"><a href="#规则-7-prompt-要可组合">规则 7: Prompt 要可组合</a></li><li class="lvl-2"><a href="#三-通用模板">三、通用模板</a></li><li class="lvl-2"><a href="#执行流程">执行流程</a></li><li class="lvl-2"><a href="#规则">规则</a></li><li class="lvl-3"><a href="#必须遵守">必须遵守</a></li><li class="lvl-3"><a href="#优先执行">优先执行</a></li><li class="lvl-3"><a href="#可选">可选</a></li><li class="lvl-2"><a href="#输出格式">输出格式</a></li><li class="lvl-2"><a href="#异常处理">异常处理</a></li><li class="lvl-2"><a href="#示例">示例</a></li><li class="lvl-3"><a href="#方案-c-混合方案-本项目采用">方案 C: 混合方案（本项目采用）</a></li><li class="lvl-2"><a href="#五-给-orchestrator-写-prompt-的特殊要点">五、给 Orchestrator 写 Prompt 的特殊要点</a></li><li class="lvl-2"><a href="#六-常见陷阱与避坑">六、常见陷阱与避坑</a></li><li class="lvl-2"><a href="#七-prompt-评审清单">七、Prompt 评审清单</a></li><li class="lvl-2"><a href="#八-快速参考-agent-prompt-检查清单">八、快速参考：Agent Prompt 检查清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="给其他-agent-写-prompt-的最佳实践">给其他 Agent 写 Prompt 的最佳实践<a class="anchor" href="#给其他-agent-写-prompt-的最佳实践" aria-label="锚点">#</a></h1>
+<blockquote><p>这份文档回答了用户的核心问题：&quot;怎么给其他 agent 提示词&quot;</p></blockquote>
+<hr>
+<h2 id="一-prompt-的黄金结构">一、Prompt 的黄金结构<a class="anchor" href="#一-prompt-的黄金结构" aria-label="锚点">#</a></h2>
+<p>所有高质量 Agent Prompt 都遵循以下结构：</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│ 1. 角色 (Role)                               │
+│    → 你是谁，做什么，边界是什么               │
+├─────────────────────────────────────────────┤
+│ 2. 职责 (Responsibilities)                   │
+│    → 3-5 条核心职责，用 bullet list           │
+├─────────────────────────────────────────────┤
+│ 3. 输入格式 (Input Schema)                   │
+│    → JSON Schema，明确字段类型和必填/可选      │
+├─────────────────────────────────────────────┤
+│ 4. 执行流程 (Execution Flow)                 │
+│    → 步骤化的流程图或伪代码                   │
+├─────────────────────────────────────────────┤
+│ 5. 规则 (Rules)                              │
+│    → 分优先级：必须遵守 / 优先执行 / 可选      │
+├─────────────────────────────────────────────┤
+│ 6. 输出格式 (Output Schema)                  │
+│    → 固定的 JSON 返回结构                     │
+├─────────────────────────────────────────────┤
+│ 7. 异常处理 (Error Handling)                 │
+│    → 每个可能出错的地方怎么处理               │
+├─────────────────────────────────────────────┤
+│ 8. 示例 (Examples)                           │
+│    → 输入 → 输出的完整示例                     │
+└─────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2 id="二-7-条核心规则">二、7 条核心规则<a class="anchor" href="#二-7-条核心规则" aria-label="锚点">#</a></h2>
+<h3 id="规则-1-单-agent-单职责">规则 1: 单 Agent 单职责<a class="anchor" href="#规则-1-单-agent-单职责" aria-label="锚点">#</a></h3>
+<pre><code>❌ 错误: &quot;你负责 Slack、Email 和 Notion 的投递&quot;
+✅ 正确: &quot;你是 Slack 投递 Agent，只负责将内容投递到 Slack 平台&quot;</code></pre>
+<p>原因：单一职责让 Prompt 更短、更精确、更容易调试。</p>
+<h3 id="规则-2-输入必须-schema-化">规则 2: 输入必须 Schema 化<a class="anchor" href="#规则-2-输入必须-schema-化" aria-label="锚点">#</a></h3>
+<pre><code>❌ 错误: &quot;用户会给你一些内容，你要发到某个地方&quot;
+✅ 正确:
+   Input:
+   {
+     &quot;channel&quot;: &quot;string (必填) — Slack 频道 ID&quot;,
+     &quot;text&quot;: &quot;string (必填) — 消息正文&quot;,
+     &quot;blocks&quot;: &quot;array (可选) — Block Kit JSON&quot;
+   }</code></pre>
+<h3 id="规则-3-输出必须结构化">规则 3: 输出必须结构化<a class="anchor" href="#规则-3-输出必须结构化" aria-label="锚点">#</a></h3>
+<pre><code>❌ 错误: &quot;返回投递结果&quot;
+✅ 正确:
+   Output:
+   {
+     &quot;success&quot;: &quot;boolean&quot;,
+     &quot;platform&quot;: &quot;string&quot;,
+     &quot;message_ts&quot;: &quot;string | null&quot;,
+     &quot;error&quot;: &quot;string | null&quot;
+   }</code></pre>
+<h3 id="规则-4-规则要分优先级">规则 4: 规则要分优先级<a class="anchor" href="#规则-4-规则要分优先级" aria-label="锚点">#</a></h3>
+<p>用明确的标识词分层：</p>
+<table><thead><tr><th>标识词</th><th>含义</th><th>Agent 行为</th></tr></thead><tbody><tr><td><strong>必须</strong> / <strong>禁止</strong> / <strong>永远不要</strong></td><td>违反则整个任务失败</td><td>严格执行</td></tr><tr><td><strong>优先</strong> / <strong>建议</strong> / <strong>推荐</strong></td><td>有更好的做法</td><td>尽量遵守</td></tr><tr><td><strong>可以</strong> / <strong>可选</strong></td><td>锦上添花</td><td>视情况</td></tr></tbody></table>
+<h3 id="规则-5-提供至少一个完整示例">规则 5: 提供至少一个完整示例<a class="anchor" href="#规则-5-提供至少一个完整示例" aria-label="锚点">#</a></h3>
+<pre><code>输入:  {&quot;channel&quot;: &quot;#general&quot;, &quot;text&quot;: &quot;Hello&quot;}
+输出:  {
+  &quot;success&quot;: true,
+  &quot;platform&quot;: &quot;slack&quot;,
+  &quot;message_ts&quot;: &quot;1234567890.123456&quot;,
+  &quot;url&quot;: &quot;https://...&quot;
+}</code></pre>
+<h3 id="规则-6-异常处理要枚举">规则 6: 异常处理要枚举<a class="anchor" href="#规则-6-异常处理要枚举" aria-label="锚点">#</a></h3>
+<p>列出每个可能的错误：</p>
+<pre><code>- channel_not_found: 频道不存在 → 返回 error 字段，不重试
+- permission_denied: 权限不足 → 返回 error 字段，标记需要人工介入
+- rate_limited: 触发限流 → 指数退避重试（最多 3 次）
+- message_too_long: 消息过长 → 自动分段后重发</code></pre>
+<h3 id="规则-7-prompt-要可组合">规则 7: Prompt 要可组合<a class="anchor" href="#规则-7-prompt-要可组合" aria-label="锚点">#</a></h3>
+<p>将 Prompt 拆分为：</p>
+<ul><li><strong>基础 Prompt</strong> (role + responsibilities + input/output schema) — 不变</li><li><strong>平台特定规则</strong> (rules + error handling) — 按平台替换</li><li><strong>示例</strong> — 按场景替换</li></ul>
+<hr>
+<h2 id="三-通用模板">三、通用模板<a class="anchor" href="#三-通用模板" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown"># {{agent_name}} Prompt
+
+## 角色
+你是 {{agent_name}}，负责 {{responsibility}}。
+
+## 职责
+- {{responsibility_1}}
+- {{responsibility_2}}
+- {{responsibility_3}}
+
+## 输入格式
+```json
+{
+  &quot;{{field_1}}&quot;: &quot;类型 (必填/可选) — 描述&quot;,
+  &quot;{{field_2}}&quot;: &quot;类型 (必填/可选) — 描述&quot;
+}</code></pre>
+<h2 id="执行流程">执行流程<a class="anchor" href="#执行流程" aria-label="锚点">#</a></h2>
+<ol><li>{{step_1}}</li><li>{{step_2}}</li><li>{{step_3}}</li></ol>
+<h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
+<h3 id="必须遵守">必须遵守<a class="anchor" href="#必须遵守" aria-label="锚点">#</a></h3>
+<ul><li>{{rule_1}}</li><li>{{rule_2}}</li></ul>
+<h3 id="优先执行">优先执行<a class="anchor" href="#优先执行" aria-label="锚点">#</a></h3>
+<ul><li>{{rule_3}}</li></ul>
+<h3 id="可选">可选<a class="anchor" href="#可选" aria-label="锚点">#</a></h3>
+<ul><li>{{rule_4}}</li></ul>
+<h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;success&quot;: &quot;boolean&quot;,
+  &quot;{{platform}}_specific_field&quot;: &quot;值&quot;,
+  &quot;error&quot;: &quot;string | null&quot;
+}</code></pre>
+<h2 id="异常处理">异常处理<a class="anchor" href="#异常处理" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>错误</th><th>处理</th></tr></thead><tbody><tr><td>{{error_1}}</td><td>{{action_1}}</td></tr><tr><td>{{error_2}}</td><td>{{action_2}}</td></tr></tbody></table>
+<h2 id="示例">示例<a class="anchor" href="#示例" aria-label="锚点">#</a></h2>
+<p>输入: {{example_input}}<br>输出: {{example_output}}</p>
+<pre><code>
+---
+
+## 四、Prompt 模板存储方案
+
+### 方案 A: 文件系统（推荐用于团队协作）
+</code></pre>
+<p>platform/delivery/adapters/prompts/<br>├── slack.prompt.md<br>├── notion.prompt.md<br>├── markdown.prompt.md<br>├── webhook.prompt.md<br>├── email.prompt.md<br>└── api.prompt.md</p>
+<pre><code>
+优点：
+- 版本控制友好（git diff 清晰）
+- 非技术人员可编辑
+- 支持文件模板语法
+
+### 方案 B: 数据库（推荐用于运行时动态）
+
+```sql
+CREATE TABLE prompt_templates (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL UNIQUE,
+  content     TEXT NOT NULL,
+  version     INTEGER DEFAULT 1,
+  variables   TEXT,           -- JSON: {&quot;key&quot;: &quot;default_value&quot;}
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);</code></pre>
+<p>优点：</p>
+<ul><li>热更新无需重启</li><li>支持版本管理</li><li>支持 A/B 测试不同 Prompt 版本</li></ul>
+<h3 id="方案-c-混合方案-本项目采用">方案 C: 混合方案（本项目采用）<a class="anchor" href="#方案-c-混合方案-本项目采用" aria-label="锚点">#</a></h3>
+<pre><code>文件系统（源码） ←→ 内存缓存 ←→ 运行时动态注册
+     ↓                    ↓              ↓
+  git 管理             5min TTL         API 热更新</code></pre>
+<p>实现见 <code>templates/templateRegistry.js</code>：</p>
+<ul><li>优先读内存缓存</li><li>缓存未命中读文件系统</li><li>文件系统未命中读内置 fallback</li><li>支持变量插值 <code>{{var}}</code></li></ul>
+<hr>
+<h2 id="五-给-orchestrator-写-prompt-的特殊要点">五、给 Orchestrator 写 Prompt 的特殊要点<a class="anchor" href="#五-给-orchestrator-写-prompt-的特殊要点" aria-label="锚点">#</a></h2>
+<p>Orchestrator 是系统的&quot;大脑&quot;，Prompt 需要特别关注：</p>
+<ol><li><strong>明确它是决策者，不是执行者</strong><ul><li>Orchestrator 选择适配器，但不自己投递</li><li>Orchestrator 调用 DiffEngine，但不自己做一致性检查</li></ul></li></ol>
+<ol><li><strong>决策树要清晰</strong><ul><li>什么情况继续？什么情况重试？什么情况中止？</li><li>每个决策点要有明确的触发条件</li></ul></li></ol>
+<ol><li><strong>并发安全</strong><ul><li>Orchestrator 应该处理多个任务同时投递</li><li>在 Prompt 中说明并发策略</li></ul></li></ol>
+<ol><li><strong>可观测性</strong><ul><li>每一步都要记录日志</li><li>返回完整的执行链路</li></ul></li></ol>
+<hr>
+<h2 id="六-常见陷阱与避坑">六、常见陷阱与避坑<a class="anchor" href="#六-常见陷阱与避坑" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>陷阱</th><th>表现</th><th>解决方案</th></tr></thead><tbody><tr><td>Prompt 太长</td><td>Agent 忽略中间规则</td><td>拆分为子 Prompt，用 include 组合</td></tr><tr><td>规则冲突</td><td>Agent 行为不一致</td><td>明确优先级，冲突时高优先级覆盖</td></tr><tr><td>输出格式不固定</td><td>下游解析失败</td><td>强制 JSON schema + 示例</td></tr><tr><td>平台差异未处理</td><td>同一内容不同平台结果不同</td><td>在 DiffEngine 中校验</td></tr><tr><td>超时无处理</td><td>请求挂起</td><td>每个步骤加 timeout</td></tr><tr><td>重试风暴</td><td>大量重试导致限流</td><td>指数退避 + 最大重试次数</td></tr></tbody></table>
+<hr>
+<h2 id="七-prompt-评审清单">七、Prompt 评审清单<a class="anchor" href="#七-prompt-评审清单" aria-label="锚点">#</a></h2>
+<p>在将 Prompt 交给 Agent 之前，问自己：</p>
+<ul><li>[ ] 角色是否清晰唯一？</li><li>[ ] 输入字段是否都有类型和必填/可选标注？</li><li>[ ] 输出格式是否固定为 JSON schema？</li><li>[ ] 是否有至少一个输入→输出示例？</li><li>[ ] 每个错误码都有处理策略？</li><li>[ ] 规则是否分优先级（必须/优先/可选）？</li><li>[ ] 是否避免了模糊词汇（&quot;一些&quot;、&quot;大概&quot;、&quot;有时候&quot;）？</li><li>[ ] 是否包含了超时和重试策略？</li><li>[ ] 是否说明了并发行为？</li><li>[ ] 是否说明了日志要求？</li></ul>
+<hr>
+<h2 id="八-快速参考-agent-prompt-检查清单">八、快速参考：Agent Prompt 检查清单<a class="anchor" href="#八-快速参考-agent-prompt-检查清单" aria-label="锚点">#</a></h2>
+<pre><code>[ ] 角色: &quot;你是 XXX，负责 YYY&quot;
+[ ] 职责: 3-5 条 bullet list
+[ ] 输入: JSON Schema with types + required/optional
+[ ] 流程: 步骤化 (Step 1 → Step 2 → Step 3)
+[ ] 规则: 分 必须/优先/可选 三层
+[ ] 输出: 固定 JSON schema
+[ ] 错误: 每个错误码有处理策略
+[ ] 示例: 至少 1 个完整 input→output
+[ ] 安全: 敏感信息处理规则
+[ ] 超时: 每步超时时间</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../platform/delivery/adapters/prompts/webhook.prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Webhook 平台交付 Prompt 模板</div></a><a class="next" href="../../platform/delivery/demo-output/delivery_1786321542719.html"><div class="dir">下一篇 →</div><div class="ttl">Weekly Status Report</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="platform/delivery/AGENTS_PROMPT_BEST_PRACTICES.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

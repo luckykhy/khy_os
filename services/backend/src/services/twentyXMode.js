@@ -53,7 +53,9 @@ function isTwentyXEnabled(env = process.env) {
     if (reg && typeof reg.isFlagEnabled === 'function') {
       return reg.isFlagEnabled(FLAG, env) === true;
     }
-  } catch { /* flagRegistry 不可用 → 回退自包含判定 */ }
+  } catch {
+    /* flagRegistry 不可用 → 回退自包含判定 */
+  }
   try {
     const raw = env && env[FLAG];
     return raw === 'true' || raw === '1';
@@ -71,7 +73,9 @@ function isTwentyXEnabled(env = process.env) {
  * @returns {string}
  */
 function resolveTwentyXEffort(baseEffort, env = process.env) {
-  if (!isTwentyXEnabled(env)) return baseEffort;
+  if (!isTwentyXEnabled(env)) {
+    return baseEffort;
+  }
   return TWENTYX_EFFORT;
 }
 
@@ -85,7 +89,9 @@ function resolveTwentyXEffort(baseEffort, env = process.env) {
  */
 function scaleIterations(baseMax, env = process.env) {
   const base = Number.isFinite(baseMax) ? baseMax : TWENTYX_ITER_TARGET;
-  if (!isTwentyXEnabled(env)) return base;
+  if (!isTwentyXEnabled(env)) {
+    return base;
+  }
   const boosted = Math.max(base, TWENTYX_ITER_TARGET);
   return Math.min(100, boosted);
 }
@@ -102,8 +108,12 @@ function scaleIterations(baseMax, env = process.env) {
  */
 function scaleFanout(config, explicitOpts = {}, env = process.env) {
   try {
-    if (!config || typeof config !== 'object') return config;
-    if (!isTwentyXEnabled(env)) return config;
+    if (!config || typeof config !== 'object') {
+      return config;
+    }
+    if (!isTwentyXEnabled(env)) {
+      return config;
+    }
     const opts = explicitOpts && typeof explicitOpts === 'object' ? explicitOpts : {};
     const out = { ...config };
     if (opts.maxChildren === undefined && Number.isFinite(out.maxChildren)) {
@@ -128,7 +138,9 @@ function scaleFanout(config, explicitOpts = {}, env = process.env) {
  */
 function resolveThinkingBudget(baseBudget, env = process.env) {
   const base = Number.isFinite(baseBudget) ? baseBudget : 0;
-  if (!isTwentyXEnabled(env)) return base;
+  if (!isTwentyXEnabled(env)) {
+    return base;
+  }
   return Math.max(base, TWENTYX_THINKING_BUDGET);
 }
 

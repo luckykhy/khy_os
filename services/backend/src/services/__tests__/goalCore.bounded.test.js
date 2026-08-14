@@ -8,8 +8,8 @@
  * 零 IO、确定性——不触磁盘、不依赖 env(每个断言显式传 env)。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const core = require('../goalCore');
 
@@ -75,7 +75,10 @@ test('advanceGoalTurn:递增、耗尽标志、纯函数不改入参', () => {
   assert.equal(over.remaining, 0);
 
   // env 覆盖优先于记录 maxTurns
-  const envCap = core.advanceGoalTurn({ text: 'g', maxTurns: 3, turnsSpent: 4 }, { KHY_GOAL_MAX_TURNS: '10' });
+  const envCap = core.advanceGoalTurn(
+    { text: 'g', maxTurns: 3, turnsSpent: 4 },
+    { KHY_GOAL_MAX_TURNS: '10' }
+  );
   assert.equal(envCap.cap, 10);
   assert.equal(envCap.justExhausted, false);
 });
@@ -87,7 +90,10 @@ test('remainingTurns:旧记录(无 turnsSpent)按 0 起算,不抛', () => {
 });
 
 test('buildBoundedDirective:未耗尽含剩余轮次+收敛语义', () => {
-  const d = core.buildBoundedDirective({ text: '修所有 Bug' }, { cap: 25, remaining: 12, justExhausted: false });
+  const d = core.buildBoundedDirective(
+    { text: '修所有 Bug' },
+    { cap: 25, remaining: 12, justExhausted: false }
+  );
   assert.ok(d.includes('还剩 12 轮'));
   assert.ok(d.includes('共 25 轮'));
   assert.ok(d.includes('有界任务'));
@@ -97,7 +103,10 @@ test('buildBoundedDirective:未耗尽含剩余轮次+收敛语义', () => {
 });
 
 test('buildBoundedDirective:耗尽=一次性终止指令', () => {
-  const d = core.buildBoundedDirective({ text: '修所有 Bug' }, { cap: 25, remaining: 0, justExhausted: true });
+  const d = core.buildBoundedDirective(
+    { text: '修所有 Bug' },
+    { cap: 25, remaining: 0, justExhausted: true }
+  );
   assert.ok(d.includes('终止态(exhausted)'));
   assert.ok(d.includes('立即停止'));
   assert.ok(d.includes('完成/现状报告'));

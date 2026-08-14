@@ -23,7 +23,9 @@ const { toStr } = require('./toStr');
 
 function truncateEllipsis(s, n) {
   const str = toStr(s);
-  if (str.length <= n) return str;
+  if (str.length <= n) {
+    return str;
+  }
   return str.slice(0, Math.max(0, n - 1)) + '…';
 }
 

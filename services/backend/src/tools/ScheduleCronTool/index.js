@@ -7,8 +7,8 @@
  * all operate on ONE shared job store (previously this tool kept its own
  * disconnected in-memory store, so created jobs were invisible to list/delete).
  */
-const { BaseTool } = require('../_baseTool');
 const cronScheduler = require('../../jobs/cronScheduler');
+const { BaseTool } = require('../_baseTool');
 
 class ScheduleCronTool extends BaseTool {
   static toolName = 'ScheduleCron';
@@ -29,13 +29,20 @@ class ScheduleCronTool extends BaseTool {
   // still deferred whenever this gate — or the global KHY_DEFER_TOOLS — is off.
   static get alwaysLoad() {
     const v = process.env.KHY_CRON_TRIO_EAGER;
-    if (v === undefined) return true;
-    return !['0', 'false', 'off', 'no', 'disable', 'disabled']
-      .includes(String(v).trim().toLowerCase());
+    if (v === undefined) {
+      return true;
+    }
+    return !['0', 'false', 'off', 'no', 'disable', 'disabled'].includes(
+      String(v).trim().toLowerCase()
+    );
   }
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Schedule a prompt to be enqueued at a future time. Use for both recurring schedules and one-shot reminders.
@@ -76,7 +83,8 @@ job is gone when the process exits. Pass durable: true to persist it to
       properties: {
         cron: {
           type: 'string',
-          description: 'Standard 5-field cron expression (minute hour dom month dow). E.g., "0 9 * * 1-5" for weekdays at 9am.',
+          description:
+            'Standard 5-field cron expression (minute hour dom month dow). E.g., "0 9 * * 1-5" for weekdays at 9am.',
         },
         prompt: {
           type: 'string',
@@ -88,7 +96,8 @@ job is gone when the process exits. Pass durable: true to persist it to
         },
         durable: {
           type: 'boolean',
-          description: 'Persist the job to disk so it survives restarts (default: false = session-only).',
+          description:
+            'Persist the job to disk so it survives restarts (default: false = session-only).',
         },
         description: {
           type: 'string',
@@ -128,8 +137,9 @@ job is gone when the process exits. Pass durable: true to persist it to
         expiresAt: job.expiresAt,
         description: description || prompt.slice(0, 80),
       },
-      message: `已创建定时任务：${job.id}，${recurring ? '循环执行' : '单次执行'}`
-        + `（${cron}）${durable ? '，已持久化' : '，仅本会话'}`,
+      message:
+        `已创建定时任务：${job.id}，${recurring ? '循环执行' : '单次执行'}` +
+        `（${cron}）${durable ? '，已持久化' : '，仅本会话'}`,
     };
   }
 }

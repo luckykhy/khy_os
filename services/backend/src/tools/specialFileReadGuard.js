@@ -35,7 +35,9 @@
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -57,14 +59,26 @@ function specialReadGuardEnabled(env = process.env) {
  */
 function classifySpecialFile(stat) {
   try {
-    if (!stat || typeof stat !== 'object') return null;
+    if (!stat || typeof stat !== 'object') {
+      return null;
+    }
     const _is = (name) => typeof stat[name] === 'function' && stat[name]() === true;
     // 目录不在本叶职责内（readFile 有专门的 isDirectory 特判）。
-    if (_is('isDirectory')) return null;
-    if (_is('isFIFO')) return 'fifo';
-    if (_is('isSocket')) return 'socket';
-    if (_is('isCharacterDevice')) return 'char-device';
-    if (_is('isBlockDevice')) return 'block-device';
+    if (_is('isDirectory')) {
+      return null;
+    }
+    if (_is('isFIFO')) {
+      return 'fifo';
+    }
+    if (_is('isSocket')) {
+      return 'socket';
+    }
+    if (_is('isCharacterDevice')) {
+      return 'char-device';
+    }
+    if (_is('isBlockDevice')) {
+      return 'block-device';
+    }
     return null;
   } catch {
     return null;
@@ -72,19 +86,27 @@ function classifySpecialFile(stat) {
 }
 
 const _KIND_LABEL = Object.freeze({
-  'fifo': '命名管道（FIFO）',
-  'socket': 'UNIX 域套接字',
+  fifo: '命名管道（FIFO）',
+  socket: 'UNIX 域套接字',
   'char-device': '字符设备',
   'block-device': '块设备',
 });
 
 /** 人类可读字节数。Number(null)===0 陷阱：缺失/空串判未知，不当 0 B。 */
 function _humanBytes(size) {
-  if (size == null || size === '') return '未知大小';
+  if (size == null || size === '') {
+    return '未知大小';
+  }
   const n = Number(size);
-  if (!Number.isFinite(n) || n < 0) return '未知大小';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (!Number.isFinite(n) || n < 0) {
+    return '未知大小';
+  }
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -97,13 +119,16 @@ function _humanBytes(size) {
 function buildSpecialFileRefusal(info) {
   let i = info;
   try {
-    if (!i || typeof i !== 'object') i = {};
+    if (!i || typeof i !== 'object') {
+      i = {};
+    }
     const label = _KIND_LABEL[i.kind] || '特殊文件';
     const shown = i.path == null ? '' : String(i.path);
     const tail = shown ? `：${shown}` : '';
-    const sizeNote = i.kind === 'fifo' || i.kind === 'socket' || i.kind === 'char-device'
-      ? '读取它会永久阻塞（等待写端/无尽输入），使进程卡死'
-      : `大小 ${_humanBytes(i.size)}，按文件读取会阻塞或读出海量原始字节`;
+    const sizeNote =
+      i.kind === 'fifo' || i.kind === 'socket' || i.kind === 'char-device'
+        ? '读取它会永久阻塞（等待写端/无尽输入），使进程卡死'
+        : `大小 ${_humanBytes(i.size)}，按文件读取会阻塞或读出海量原始字节`;
     return (
       `拒绝读取：这是${label}${tail}。${sizeNote}，故不作读取。` +
       `\n若你想要的是该路径背后的数据，请改用面向流/设备的专用手段（如带超时的 shell 命令），` +

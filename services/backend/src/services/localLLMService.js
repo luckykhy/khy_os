@@ -11,16 +11,18 @@
  * ollama-runner is the preferred backend because it uses Ollama's patched
  * llama.cpp which supports Qwen 3.5 hybrid SSM+Attention out of the box.
  */
-const path = require('path');
+const { spawn, spawnSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const net = require('net');
 const os = require('os');
-const { spawn, spawnSync, execFileSync } = require('child_process');
+const path = require('path');
+
+const { PRIMARY: MODELS, LOCAL_BRAIN_GGUF_FILES } = require('../constants/models');
+const { OLLAMA_HOST, INFERENCE_SERVER_PORT } = require('../constants/serviceDefaults');
 const { safeKill } = require('../tools/platformUtils');
 // Model-name SSOT: local-brain model id + GGUF artifact names flow from
 // constants/models.js (env OLLAMA_MODEL still overrides the model id first).
-const { PRIMARY: MODELS, LOCAL_BRAIN_GGUF_FILES } = require('../constants/models');
 
 const _RAW_LOCAL_MODEL_PATH = String(process.env.LOCAL_MODEL_PATH || '').trim();
 const LOCAL_MODEL_SCAN_CACHE_MS = Math.max(
@@ -34,12 +36,28 @@ const LOCAL_MODEL_SCAN_MAX_DEPTH = Math.max(
 const GGUF_MAGIC = Buffer.from('GGUF');
 const MIN_LIKELY_GGUF_BLOB_SIZE = Math.max(
   16 * 1024 * 1024,
-  parseInt(process.env.KHY_LOCAL_MIN_GGUF_BLOB_SIZE || String(64 * 1024 * 1024), 10) || (64 * 1024 * 1024)
+  parseInt(process.env.KHY_LOCAL_MIN_GGUF_BLOB_SIZE || String(64 * 1024 * 1024), 10) ||
+    64 * 1024 * 1024
 );
 const MODEL_IMPORTABLE_FILE_EXTENSIONS = new Set(['.safetensors']);
-const MODEL_IMPORTABLE_ARCHIVE_EXTENSIONS = new Set(['.zip', '.tar', '.tgz', '.7z', '.tar.gz', '.rar']);
+const MODEL_IMPORTABLE_ARCHIVE_EXTENSIONS = new Set([
+  '.zip',
+  '.tar',
+  '.tgz',
+  '.7z',
+  '.tar.gz',
+  '.rar',
+]);
 const MODEL_KNOWN_NON_RUNTIME_EXTENSIONS = new Set([
-  '.safetensors', '.bin', '.pt', '.pth', '.ckpt', '.onnx', '.mlx', '.json', '.model',
+  '.safetensors',
+  '.bin',
+  '.pt',
+  '.pth',
+  '.ckpt',
+  '.onnx',
+  '.mlx',
+  '.json',
+  '.model',
 ]);
 const OLLAMA_BLOB_NAME_RE = /^sha256[-:][a-f0-9]{32,}$/i;
 
@@ -81,7 +99,9 @@ function _hasGgufMagic(filePath) {
 }
 
 function _cloneArtifact(artifact) {
-  if (!artifact || typeof artifact !== 'object') return null;
+  if (!artifact || typeof artifact !== 'object') {
+    return null;
+  }
   return {
     path: artifact.path || '',
     kind: artifact.kind || '',
@@ -91,8 +111,12 @@ function _cloneArtifact(artifact) {
 
 function _safeShortPath(filePath, max = 120) {
   const s = String(filePath || '').trim();
-  if (!s) return '';
-  if (s.length <= max) return s;
+  if (!s) {
+    return '';
+  }
+  if (s.length <= max) {
+    return s;
+  }
   return `...${s.slice(-(max - 3))}`;
 }
 
@@ -113,7 +137,9 @@ function _buildImportHintFromArtifact(artifact) {
 
 function _buildModelImportCommand(modelPath) {
   const raw = String(modelPath || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return `khymodel import "${escaped}"`;
 }
@@ -139,21 +165,39 @@ function _setModelAvailabilityState(next) {
 }
 
 function _updateArtifactCandidate(prev, next) {
-  if (!next) return prev;
-  if (!prev) return next;
-  if ((next.size || 0) > (prev.size || 0)) return next;
+  if (!next) {
+    return prev;
+  }
+  if (!prev) {
+    return next;
+  }
+  if ((next.size || 0) > (prev.size || 0)) {
+    return next;
+  }
   return prev;
 }
 
 function _scanModelArtifactsInDir(dirPath, depth, maxDepth, out, visitedDirs) {
-  if (depth > maxDepth) return;
+  if (depth > maxDepth) {
+    return;
+  }
   let realDir = '';
-  try { realDir = fs.realpathSync(dirPath); } catch { realDir = path.resolve(dirPath); }
-  if (visitedDirs.has(realDir)) return;
+  try {
+    realDir = fs.realpathSync(dirPath);
+  } catch {
+    realDir = path.resolve(dirPath);
+  }
+  if (visitedDirs.has(realDir)) {
+    return;
+  }
   visitedDirs.add(realDir);
 
   let entries = [];
-  try { entries = fs.readdirSync(dirPath, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   // Directory-level detection for safetensors export/import directory.
   const names = entries.filter((e) => e.isFile()).map((e) => e.name.toLowerCase());
@@ -173,7 +217,9 @@ function _scanModelArtifactsInDir(dirPath, depth, maxDepth, out, visitedDirs) {
       _scanModelArtifactsInDir(fullPath, depth + 1, maxDepth, out, visitedDirs);
       continue;
     }
-    if (!entry.isFile()) continue;
+    if (!entry.isFile()) {
+      continue;
+    }
 
     const lowerName = entry.name.toLowerCase();
     const ext = path.extname(lowerName);
@@ -182,9 +228,7 @@ function _scanModelArtifactsInDir(dirPath, depth, maxDepth, out, visitedDirs) {
     const hasMagic = size > MIN_LIKELY_GGUF_BLOB_SIZE && _hasGgufMagic(fullPath);
     if (ext === '.gguf' || hasMagic) {
       const isLikelyBlobName = OLLAMA_BLOB_NAME_RE.test(lowerName) || ext === '';
-      const kind = ext === '.gguf'
-        ? 'gguf'
-        : (isLikelyBlobName ? 'gguf_blob' : 'gguf_magic');
+      const kind = ext === '.gguf' ? 'gguf' : isLikelyBlobName ? 'gguf_blob' : 'gguf_magic';
       out.runtime = _updateArtifactCandidate(out.runtime, { path: fullPath, kind, size });
       continue;
     }
@@ -198,9 +242,7 @@ function _scanModelArtifactsInDir(dirPath, depth, maxDepth, out, visitedDirs) {
       continue;
     }
 
-    const archiveExt = lowerName.endsWith('.tar.gz')
-      ? '.tar.gz'
-      : ext;
+    const archiveExt = lowerName.endsWith('.tar.gz') ? '.tar.gz' : ext;
     if (MODEL_IMPORTABLE_ARCHIVE_EXTENSIONS.has(archiveExt)) {
       out.importable = _updateArtifactCandidate(out.importable, {
         path: fullPath,
@@ -222,7 +264,11 @@ function _scanModelArtifactsInDir(dirPath, depth, maxDepth, out, visitedDirs) {
 
 function discoverModelArtifacts(forceRefresh = false) {
   const now = Date.now();
-  if (!forceRefresh && _modelArtifactScanCache.data && (now - _modelArtifactScanCache.at) < LOCAL_MODEL_SCAN_CACHE_MS) {
+  if (
+    !forceRefresh &&
+    _modelArtifactScanCache.data &&
+    now - _modelArtifactScanCache.at < LOCAL_MODEL_SCAN_CACHE_MS
+  ) {
     return _modelArtifactScanCache.data;
   }
 
@@ -234,7 +280,9 @@ function discoverModelArtifacts(forceRefresh = false) {
   const visitedDirs = new Set();
 
   for (const root of dedupRoots) {
-    if (!fs.existsSync(root)) continue;
+    if (!fs.existsSync(root)) {
+      continue;
+    }
     _scanModelArtifactsInDir(root, 0, LOCAL_MODEL_SCAN_MAX_DEPTH, scanOut, visitedDirs);
   }
 
@@ -253,9 +301,13 @@ function _buildModelSearchRoots() {
   const roots = [];
   const seen = new Set();
   const pushRoot = (candidate) => {
-    if (!candidate) return;
+    if (!candidate) {
+      return;
+    }
     const full = path.resolve(candidate);
-    if (seen.has(full)) return;
+    if (seen.has(full)) {
+      return;
+    }
     seen.add(full);
     roots.push(full);
   };
@@ -287,6 +339,14 @@ function _buildModelSearchRoots() {
   if (dataHomeEnv) {
     pushRoot(path.join(path.resolve(dataHomeEnv), 'models'));
   }
+  // Portable-aware homes first (deduped by pushRoot); legacy candidates stay.
+  try {
+    const { getDataHome, getAppHome } = require('../utils/dataHome');
+    pushRoot(path.join(getDataHome(), 'models'));
+    pushRoot(path.join(getAppHome(), 'models'));
+  } catch {
+    /* dataHome unavailable */
+  }
   pushRoot(path.join(os.homedir(), '.khy', 'models'));
   pushRoot(path.join(os.homedir(), '.khyquant', 'models'));
 
@@ -296,7 +356,9 @@ function _buildModelSearchRoots() {
 function _getOllamaBlobRoots() {
   const roots = [];
   const pushRoot = (candidate) => {
-    if (!candidate) return;
+    if (!candidate) {
+      return;
+    }
     roots.push(path.resolve(candidate));
   };
 
@@ -321,15 +383,14 @@ function _getOllamaBlobRoots() {
 function _scanModelPathByName(preferredName = '') {
   const targetName = String(preferredName || '').trim();
   const roots = _buildModelSearchRoots();
-  const preferredNames = [
-    targetName,
-    ...LOCAL_BRAIN_GGUF_FILES,
-  ].filter(Boolean);
+  const preferredNames = [targetName, ...LOCAL_BRAIN_GGUF_FILES].filter(Boolean);
 
   for (const root of roots) {
     for (const filename of preferredNames) {
       const full = path.join(root, filename);
-      if (fs.existsSync(full)) return full;
+      if (fs.existsSync(full)) {
+        return full;
+      }
     }
   }
 
@@ -338,9 +399,15 @@ function _scanModelPathByName(preferredName = '') {
   let largestSize = 0;
   for (const root of roots) {
     let files = [];
-    try { files = fs.readdirSync(root); } catch { files = []; }
+    try {
+      files = fs.readdirSync(root);
+    } catch {
+      files = [];
+    }
     for (const filename of files) {
-      if (!/\.gguf$/i.test(filename)) continue;
+      if (!/\.gguf$/i.test(filename)) {
+        continue;
+      }
       const full = path.join(root, filename);
       try {
         const stat = fs.statSync(full);
@@ -348,7 +415,9 @@ function _scanModelPathByName(preferredName = '') {
           largestSize = stat.size;
           largestPath = full;
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
   }
   return largestPath || '';
@@ -356,15 +425,21 @@ function _scanModelPathByName(preferredName = '') {
 
 function resolveLocalModelPath(rawPath = '') {
   const text = String(rawPath || '').trim();
-  if (!text) return path.join(__dirname, `../../models/${LOCAL_BRAIN_GGUF_FILES[0]}`);
-  if (path.isAbsolute(text)) return text;
+  if (!text) {
+    return path.join(__dirname, `../../models/${LOCAL_BRAIN_GGUF_FILES[0]}`);
+  }
+  if (path.isAbsolute(text)) {
+    return text;
+  }
 
   // Resolve relative paths against multiple stable roots to avoid CWD-dependent false negatives.
   const candidates = [];
   const seen = new Set();
   const pushCandidate = (candidate) => {
     const full = path.resolve(candidate);
-    if (seen.has(full)) return;
+    if (seen.has(full)) {
+      return;
+    }
     seen.add(full);
     candidates.push(full);
   };
@@ -392,12 +467,16 @@ function resolveLocalModelPath(rawPath = '') {
   }
 
   for (const full of candidates) {
-    if (fs.existsSync(full)) return full;
+    if (fs.existsSync(full)) {
+      return full;
+    }
   }
 
   // Scan known model directories by filename if direct relative matches failed.
   const scanned = _scanModelPathByName(path.basename(text));
-  if (scanned) return scanned;
+  if (scanned) {
+    return scanned;
+  }
 
   // Fallback: keep legacy CWD-relative behavior for compatibility.
   return path.resolve(process.cwd(), text);
@@ -407,32 +486,39 @@ const DEFAULT_MODEL_PATH = resolveLocalModelPath(_RAW_LOCAL_MODEL_PATH);
 const OLLAMA_MODEL_PATH = path.join(__dirname, `../../models/${LOCAL_BRAIN_GGUF_FILES[1]}`);
 // Also check the export model
 const EXPORT_MODEL_PATH = path.join(__dirname, `../../models/${LOCAL_BRAIN_GGUF_FILES[2]}`);
-const { OLLAMA_HOST, INFERENCE_SERVER_PORT } = require('../constants/serviceDefaults');
 const INFERENCE_SERVER_URL = `http://127.0.0.1:${INFERENCE_SERVER_PORT}`;
 const OLLAMA_RUNNER_PORT = parseInt(process.env.OLLAMA_RUNNER_PORT || '8767', 10);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || MODELS.localBrain;
 let _autoLocalAiEnv = null;
 function _getAutoLocalAiEnv() {
-  if (_autoLocalAiEnv) return _autoLocalAiEnv;
+  if (_autoLocalAiEnv) {
+    return _autoLocalAiEnv;
+  }
   try {
     const hw = require('./hardwareProfileService');
-    const tuning = hw && typeof hw.recommendLocalAiTuning === 'function'
-      ? hw.recommendLocalAiTuning('auto')
-      : null;
-    _autoLocalAiEnv = (tuning && tuning.env) ? tuning.env : {};
+    const tuning =
+      hw && typeof hw.recommendLocalAiTuning === 'function'
+        ? hw.recommendLocalAiTuning('auto')
+        : null;
+    _autoLocalAiEnv = tuning && tuning.env ? tuning.env : {};
   } catch {
     _autoLocalAiEnv = {};
   }
   return _autoLocalAiEnv;
 }
+
 function _envIntWithAuto(key, hardDefault) {
   const raw = process.env[key];
   if (raw !== undefined && String(raw).trim() !== '') {
     const parsed = parseInt(String(raw).trim(), 10);
-    if (Number.isFinite(parsed)) return parsed;
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
   }
   const auto = parseInt(String(_getAutoLocalAiEnv()[key] || ''), 10);
-  if (Number.isFinite(auto)) return auto;
+  if (Number.isFinite(auto)) {
+    return auto;
+  }
   return hardDefault;
 }
 const RUNNER_HEALTH_TIMEOUT_MS = Math.max(
@@ -454,7 +540,9 @@ const RUNNER_HOT_ATTACH_TIMEOUT_MS = Math.max(
 
 function resolveOllamaBinary() {
   const envBin = String(process.env.OLLAMA_BIN || '').trim();
-  if (envBin) return envBin;
+  if (envBin) {
+    return envBin;
+  }
 
   // Bundled runner inside the project (no system ollama install needed).
   // POSIX archives lay the binary under bin/ollama-runner/bin/ollama; the
@@ -462,16 +550,19 @@ function resolveOllamaBinary() {
   // Provisioning (runtimeProvisioner) preserves the upstream layout, so probe both.
   const runnerRoot = path.join(__dirname, '../../bin/ollama-runner');
   const bundledBase = path.join(runnerRoot, 'bin');
-  const bundledCandidates = process.platform === 'win32'
-    ? [
-        path.join(bundledBase, 'ollama.exe'),
-        path.join(runnerRoot, 'ollama.exe'),
-        path.join(bundledBase, 'ollama'),
-        path.join(runnerRoot, 'ollama'),
-      ]
-    : [path.join(bundledBase, 'ollama'), path.join(runnerRoot, 'ollama')];
+  const bundledCandidates =
+    process.platform === 'win32'
+      ? [
+          path.join(bundledBase, 'ollama.exe'),
+          path.join(runnerRoot, 'ollama.exe'),
+          path.join(bundledBase, 'ollama'),
+          path.join(runnerRoot, 'ollama'),
+        ]
+      : [path.join(bundledBase, 'ollama'), path.join(runnerRoot, 'ollama')];
   for (const candidate of bundledCandidates) {
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
   }
 
   // System-installed fallback
@@ -486,7 +577,9 @@ function resolveOllamaBinary() {
     ];
     for (const p of candidates) {
       if (p.includes('\\') || p.includes('/')) {
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+          return p;
+        }
       } else {
         return p; // PATH command candidate
       }
@@ -500,7 +593,9 @@ function resolveOllamaBinary() {
     ];
     for (const p of candidates) {
       if (p.startsWith('/')) {
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+          return p;
+        }
       } else {
         return p; // PATH command candidate
       }
@@ -513,7 +608,9 @@ function resolveOllamaBinary() {
 function resolvePythonLauncher() {
   const envCmd = String(process.env.KHY_PYTHON_BIN || '').trim();
   const candidates = [];
-  if (envCmd) candidates.push({ cmd: envCmd, preArgs: [] });
+  if (envCmd) {
+    candidates.push({ cmd: envCmd, preArgs: [] });
+  }
   if (process.platform === 'win32') {
     candidates.push({ cmd: 'python', preArgs: [] });
     candidates.push({ cmd: 'py', preArgs: ['-3'] });
@@ -529,8 +626,12 @@ function resolvePythonLauncher() {
         timeout: 3000,
         windowsHide: true,
       });
-      if (!probe.error && probe.status === 0) return candidate;
-    } catch { /* keep probing */ }
+      if (!probe.error && probe.status === 0) {
+        return candidate;
+      }
+    } catch {
+      /* keep probing */
+    }
   }
 
   // Return the first candidate even if not verified, so downstream error is explicit.
@@ -564,22 +665,28 @@ let _loopbackListenProbe = { ok: null, at: 0, error: '' };
 const LOCAL_LLM_VERBOSE = ['1', 'true', 'yes', 'on'].includes(
   String(process.env.KHY_LOCAL_LLM_VERBOSE || '').toLowerCase()
 );
-const NODE_LLAMA_CPP_LOG_SILENT = String(process.env.KHY_NODE_LLAMA_CPP_LOG_SILENT || 'true').toLowerCase() !== 'false';
+const NODE_LLAMA_CPP_LOG_SILENT =
+  String(process.env.KHY_NODE_LLAMA_CPP_LOG_SILENT || 'true').toLowerCase() !== 'false';
 
 function localLLMLog(message) {
-  if (!LOCAL_LLM_VERBOSE) return;
+  if (!LOCAL_LLM_VERBOSE) {
+    return;
+  }
   console.log(message);
 }
 
 function _resolveModelAvailability(forceRefresh = false) {
   const now = Date.now();
   const baseRoots = _buildModelSearchRoots();
-  const directRoots = [...baseRoots, ..._getOllamaBlobRoots()]
-    .map((r) => path.resolve(r));
+  const directRoots = [...baseRoots, ..._getOllamaBlobRoots()].map((r) => path.resolve(r));
 
   try {
     if (_modelPath && fs.existsSync(_modelPath)) {
-      const runtime = { path: _modelPath, kind: 'configured_path', size: _getFileSizeSafe(_modelPath) };
+      const runtime = {
+        path: _modelPath,
+        kind: 'configured_path',
+        size: _getFileSizeSafe(_modelPath),
+      };
       _setModelAvailabilityState({
         available: true,
         reason: 'configured_path',
@@ -597,7 +704,11 @@ function _resolveModelAvailability(forceRefresh = false) {
 
     if (fs.existsSync(OLLAMA_MODEL_PATH)) {
       _modelPath = OLLAMA_MODEL_PATH;
-      const runtime = { path: _modelPath, kind: 'ollama_symlink', size: _getFileSizeSafe(_modelPath) };
+      const runtime = {
+        path: _modelPath,
+        kind: 'ollama_symlink',
+        size: _getFileSizeSafe(_modelPath),
+      };
       _setModelAvailabilityState({
         available: true,
         reason: 'ollama_symlink',
@@ -615,7 +726,11 @@ function _resolveModelAvailability(forceRefresh = false) {
 
     if (fs.existsSync(EXPORT_MODEL_PATH)) {
       _modelPath = EXPORT_MODEL_PATH;
-      const runtime = { path: _modelPath, kind: 'export_model', size: _getFileSizeSafe(_modelPath) };
+      const runtime = {
+        path: _modelPath,
+        kind: 'export_model',
+        size: _getFileSizeSafe(_modelPath),
+      };
       _setModelAvailabilityState({
         available: true,
         reason: 'export_model',
@@ -708,7 +823,8 @@ function _resolveModelAvailability(forceRefresh = false) {
       nonRuntime: null,
       artifactKind: null,
       artifactPath: '',
-      importHint: '未发现可运行 GGUF 模型。可将 GGUF 或 Ollama 导出的模型文件拖入 models 目录，或执行 khymodel import <path|url>。',
+      importHint:
+        '未发现可运行 GGUF 模型。可将 GGUF 或 Ollama 导出的模型文件拖入 models 目录，或执行 khymodel import <path|url>。',
       importCommand: '',
       checkedAt: now,
       roots,
@@ -737,23 +853,38 @@ function _resolveModelAvailability(forceRefresh = false) {
 }
 
 async function _withNodeLlamaCppLogSilenced(task) {
-  if (!NODE_LLAMA_CPP_LOG_SILENT || typeof task !== 'function') return task();
+  if (!NODE_LLAMA_CPP_LOG_SILENT || typeof task !== 'function') {
+    return task();
+  }
   const originalStderrWrite = process.stderr && process.stderr.write;
-  if (typeof originalStderrWrite !== 'function') return task();
+  if (typeof originalStderrWrite !== 'function') {
+    return task();
+  }
 
   const prefix = '[node-llama-cpp]';
   process.stderr.write = function patchedStderrWrite(chunk, encoding, callback) {
-    const text = typeof chunk === 'string'
-      ? chunk
-      : (Buffer.isBuffer(chunk) ? chunk.toString(typeof encoding === 'string' ? encoding : 'utf8') : String(chunk || ''));
+    const text =
+      typeof chunk === 'string'
+        ? chunk
+        : Buffer.isBuffer(chunk)
+          ? chunk.toString(typeof encoding === 'string' ? encoding : 'utf8')
+          : String(chunk || '');
     const isNodeLlamaLog = text.startsWith(prefix);
     if (!isNodeLlamaLog) {
       return originalStderrWrite.call(this, chunk, encoding, callback);
     }
     if (typeof encoding === 'function') {
-      try { encoding(); } catch { /* best effort */ }
+      try {
+        encoding();
+      } catch {
+        /* best effort */
+      }
     } else if (typeof callback === 'function') {
-      try { callback(); } catch { /* best effort */ }
+      try {
+        callback();
+      } catch {
+        /* best effort */
+      }
     }
     return true;
   };
@@ -775,7 +906,11 @@ async function canListenLoopback(forceRefresh = false) {
     parseInt(process.env.KHY_LOCAL_LOOPBACK_PROBE_TIMEOUT_MS || '1200', 10) || 1200
   );
 
-  if (!forceRefresh && _loopbackListenProbe.ok !== null && (Date.now() - _loopbackListenProbe.at) < ttlMs) {
+  if (
+    !forceRefresh &&
+    _loopbackListenProbe.ok !== null &&
+    Date.now() - _loopbackListenProbe.at < ttlMs
+  ) {
     return _loopbackListenProbe.ok;
   }
 
@@ -784,9 +919,15 @@ async function canListenLoopback(forceRefresh = false) {
     let settled = false;
 
     const finish = (ok, errMsg = '') => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { server.close(); } catch { /* ignore */ }
+      try {
+        server.close();
+      } catch {
+        /* ignore */
+      }
       resolve({ ok, error: errMsg });
     };
 
@@ -807,9 +948,7 @@ async function canListenLoopback(forceRefresh = false) {
  * Check if model file exists (checks default, Ollama-format, and export paths).
  */
 function isModelAvailable(forceRefresh = false) {
-  const refresh = typeof forceRefresh === 'object'
-    ? !!forceRefresh.forceRefresh
-    : !!forceRefresh;
+  const refresh = typeof forceRefresh === 'object' ? !!forceRefresh.forceRefresh : !!forceRefresh;
   return _resolveModelAvailability(refresh);
 }
 
@@ -819,12 +958,20 @@ function isModelAvailable(forceRefresh = false) {
  */
 function findRunnerModelPath() {
   // Ollama blob format works directly with ollama-runner (no tensor renaming needed)
-  if (fs.existsSync(OLLAMA_MODEL_PATH)) return OLLAMA_MODEL_PATH;
-  if (_resolveModelAvailability(false) && fs.existsSync(_modelPath)) return _modelPath;
+  if (fs.existsSync(OLLAMA_MODEL_PATH)) {
+    return OLLAMA_MODEL_PATH;
+  }
+  if (_resolveModelAvailability(false) && fs.existsSync(_modelPath)) {
+    return _modelPath;
+  }
 
   // Fallback to export model (may need patches for upstream llama.cpp, but works with ollama-runner)
-  if (fs.existsSync(EXPORT_MODEL_PATH)) return EXPORT_MODEL_PATH;
-  if (fs.existsSync(DEFAULT_MODEL_PATH)) return DEFAULT_MODEL_PATH;
+  if (fs.existsSync(EXPORT_MODEL_PATH)) {
+    return EXPORT_MODEL_PATH;
+  }
+  if (fs.existsSync(DEFAULT_MODEL_PATH)) {
+    return DEFAULT_MODEL_PATH;
+  }
   return _modelPath;
 }
 
@@ -854,7 +1001,9 @@ function isOllamaRunnerAvailable(binPath = OLLAMA_BIN) {
  * Avoid waiting up to 60s on a detached server process that exits immediately.
  */
 function isPythonLlamaCppAvailable(forceRefresh = false) {
-  if (!forceRefresh && _pythonLlamaCppAvailable !== null) return _pythonLlamaCppAvailable;
+  if (!forceRefresh && _pythonLlamaCppAvailable !== null) {
+    return _pythonLlamaCppAvailable;
+  }
   try {
     execFileSync(PYTHON_LAUNCHER.cmd, [...PYTHON_LAUNCHER.preArgs, '-c', 'import llama_cpp'], {
       stdio: 'ignore',
@@ -884,70 +1033,84 @@ function runnerPost(port, urlPath, body, streamOpts = {}) {
     const data = JSON.stringify(body);
     let lastActivity = Date.now();
 
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port,
-      path: urlPath,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: urlPath,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+        },
+        timeout: timeoutMs,
       },
-      timeout: timeoutMs,
-    }, (res) => {
-      const parsed = [];
-      let partialLine = '';
+      (res) => {
+        const parsed = [];
+        let partialLine = '';
 
-      // Idle timer: abort if no data received for 30s during inference
-      const idleLimit = 30_000;
-      const idleCheck = setInterval(() => {
-        if (Date.now() - lastActivity > idleLimit) {
+        // Idle timer: abort if no data received for 30s during inference
+        const idleLimit = 30_000;
+        const idleCheck = setInterval(() => {
+          if (Date.now() - lastActivity > idleLimit) {
+            clearInterval(idleCheck);
+            req.destroy(new Error('Runner inference stalled (no output for 30s)'));
+          }
+        }, 5000);
+        if (idleCheck.unref) {
+          idleCheck.unref();
+        }
+
+        res.on('data', (chunk) => {
+          lastActivity = Date.now();
+          partialLine += chunk.toString('utf-8');
+
+          // Parse complete NDJSON lines as they arrive
+          const lines = partialLine.split('\n');
+          partialLine = lines.pop(); // keep incomplete last line
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              continue;
+            }
+            try {
+              const obj = JSON.parse(trimmed);
+              parsed.push(obj);
+              // Stream text chunks to caller immediately
+              if (streamOpts.onChunk && obj.content) {
+                streamOpts.onChunk({ type: 'text', text: obj.content });
+              }
+            } catch {
+              /* skip malformed */
+            }
+          }
+        });
+
+        res.on('end', () => {
           clearInterval(idleCheck);
-          req.destroy(new Error('Runner inference stalled (no output for 30s)'));
-        }
-      }, 5000);
-      if (idleCheck.unref) idleCheck.unref();
-
-      res.on('data', chunk => {
-        lastActivity = Date.now();
-        partialLine += chunk.toString('utf-8');
-
-        // Parse complete NDJSON lines as they arrive
-        const lines = partialLine.split('\n');
-        partialLine = lines.pop(); // keep incomplete last line
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const obj = JSON.parse(trimmed);
-            parsed.push(obj);
-            // Stream text chunks to caller immediately
-            if (streamOpts.onChunk && obj.content) {
-              streamOpts.onChunk({ type: 'text', text: obj.content });
+          // Parse any remaining partial line
+          if (partialLine.trim()) {
+            try {
+              const obj = JSON.parse(partialLine.trim());
+              parsed.push(obj);
+              if (streamOpts.onChunk && obj.content) {
+                streamOpts.onChunk({ type: 'text', text: obj.content });
+              }
+            } catch {
+              /* skip */
             }
-          } catch { /* skip malformed */ }
-        }
-      });
-
-      res.on('end', () => {
-        clearInterval(idleCheck);
-        // Parse any remaining partial line
-        if (partialLine.trim()) {
-          try {
-            const obj = JSON.parse(partialLine.trim());
-            parsed.push(obj);
-            if (streamOpts.onChunk && obj.content) {
-              streamOpts.onChunk({ type: 'text', text: obj.content });
-            }
-          } catch { /* skip */ }
-        }
-        const raw = parsed.map(p => JSON.stringify(p)).join('\n');
-        resolve({ status: res.statusCode, data: parsed, raw });
-      });
-    });
+          }
+          const raw = parsed.map((p) => JSON.stringify(p)).join('\n');
+          resolve({ status: res.statusCode, data: parsed, raw });
+        });
+      }
+    );
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Runner request timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Runner request timeout'));
+    });
     req.write(data);
     req.end();
   });
@@ -955,56 +1118,83 @@ function runnerPost(port, urlPath, body, streamOpts = {}) {
 
 function runnerGet(port, urlPath, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port,
-      path: urlPath,
-      method: 'GET',
-      timeout: Math.max(200, Number(timeoutMs) || 5000),
-    }, (res) => {
-      const chunks = [];
-      res.on('data', chunk => { chunks.push(chunk); });
-      res.on('end', () => {
-        const raw = Buffer.concat(chunks).toString('utf-8');
-        try { resolve({ status: res.statusCode, data: JSON.parse(raw) }); }
-        catch { resolve({ status: res.statusCode, data: raw }); }
-      });
-    });
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: urlPath,
+        method: 'GET',
+        timeout: Math.max(200, Number(timeoutMs) || 5000),
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => {
+          chunks.push(chunk);
+        });
+        res.on('end', () => {
+          const raw = Buffer.concat(chunks).toString('utf-8');
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(raw) });
+          } catch {
+            resolve({ status: res.statusCode, data: raw });
+          }
+        });
+      }
+    );
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.end();
   });
 }
 
 function _isRunnerHealthReady(data) {
-  if (!data || typeof data !== 'object') return false;
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
   const status = data.status;
   const progress = Number(data.progress);
-  const readyByStatus = status === 0
-    || status === '0'
-    || String(status || '').toLowerCase() === 'ready'
-    || String(status || '').toLowerCase() === 'ok';
-  if (!readyByStatus) return false;
+  const readyByStatus =
+    status === 0 ||
+    status === '0' ||
+    String(status || '').toLowerCase() === 'ready' ||
+    String(status || '').toLowerCase() === 'ok';
+  if (!readyByStatus) {
+    return false;
+  }
   // Some runner builds may omit progress; treat missing progress as ready.
-  if (!Number.isFinite(progress)) return true;
+  if (!Number.isFinite(progress)) {
+    return true;
+  }
   return progress >= 1;
 }
 
 async function tryAdoptHotRunner(options = {}) {
   if (_backend && _backend !== 'ollama-runner') {
-    return { adopted: false, ready: false, listening: false, reason: `backend already loaded: ${_backend}` };
+    return {
+      adopted: false,
+      ready: false,
+      listening: false,
+      reason: `backend already loaded: ${_backend}`,
+    };
   }
   const timeoutMs = Math.max(
     200,
-    parseInt(options.timeoutMs || process.env.KHY_LOCAL_HOT_ATTACH_TIMEOUT_MS || String(RUNNER_HOT_ATTACH_TIMEOUT_MS), 10)
-      || RUNNER_HOT_ATTACH_TIMEOUT_MS
+    parseInt(
+      options.timeoutMs ||
+        process.env.KHY_LOCAL_HOT_ATTACH_TIMEOUT_MS ||
+        String(RUNNER_HOT_ATTACH_TIMEOUT_MS),
+      10
+    ) || RUNNER_HOT_ATTACH_TIMEOUT_MS
   );
   try {
     const res = await runnerGet(OLLAMA_RUNNER_PORT, '/health', timeoutMs);
     if (res.status !== 200) {
       return { adopted: false, ready: false, listening: false, reason: `health ${res.status}` };
     }
-    const health = (res && typeof res.data === 'object' && res.data) ? res.data : {};
+    const health = res && typeof res.data === 'object' && res.data ? res.data : {};
     const ready = _isRunnerHealthReady(health);
     if (!ready) {
       _runnerReady = false;
@@ -1015,7 +1205,12 @@ async function tryAdoptHotRunner(options = {}) {
     _lastError = null;
     return { adopted: true, ready: true, listening: true, health };
   } catch (err) {
-    return { adopted: false, ready: false, listening: false, reason: String(err && err.message ? err.message : err || 'unknown') };
+    return {
+      adopted: false,
+      ready: false,
+      listening: false,
+      reason: String(err && err.message ? err.message : err || 'unknown'),
+    };
   }
 }
 
@@ -1028,9 +1223,14 @@ async function isRunnerReady() {
     const res = await runnerGet(
       OLLAMA_RUNNER_PORT,
       '/health',
-      parseInt(process.env.KHY_LOCAL_RUNNER_HEALTH_TIMEOUT_MS || String(RUNNER_HEALTH_TIMEOUT_MS), 10) || RUNNER_HEALTH_TIMEOUT_MS
+      parseInt(
+        process.env.KHY_LOCAL_RUNNER_HEALTH_TIMEOUT_MS || String(RUNNER_HEALTH_TIMEOUT_MS),
+        10
+      ) || RUNNER_HEALTH_TIMEOUT_MS
     );
-    if (res.status !== 200) return false;
+    if (res.status !== 200) {
+      return false;
+    }
     const data = typeof res.data === 'object' ? res.data : {};
     return _isRunnerHealthReady(data);
   } catch {
@@ -1046,7 +1246,10 @@ async function isRunnerListening() {
     const res = await runnerGet(
       OLLAMA_RUNNER_PORT,
       '/health',
-      parseInt(process.env.KHY_LOCAL_RUNNER_HEALTH_TIMEOUT_MS || String(RUNNER_HEALTH_TIMEOUT_MS), 10) || RUNNER_HEALTH_TIMEOUT_MS
+      parseInt(
+        process.env.KHY_LOCAL_RUNNER_HEALTH_TIMEOUT_MS || String(RUNNER_HEALTH_TIMEOUT_MS),
+        10
+      ) || RUNNER_HEALTH_TIMEOUT_MS
     );
     return res.status === 200;
   } catch {
@@ -1058,10 +1261,11 @@ async function _loadRunnerModel(options = {}) {
   const requireChildAlive = options.requireChildAlive !== false;
   const loadTimeoutMs = Math.max(
     10000,
-    parseInt(process.env.KHY_LOCAL_RUNNER_LOAD_TIMEOUT_MS || String(RUNNER_LOAD_TIMEOUT_MS), 10) || RUNNER_LOAD_TIMEOUT_MS
+    parseInt(process.env.KHY_LOCAL_RUNNER_LOAD_TIMEOUT_MS || String(RUNNER_LOAD_TIMEOUT_MS), 10) ||
+      RUNNER_LOAD_TIMEOUT_MS
   );
 
-    const numCPU = os.cpus().length;
+  const numCPU = os.cpus().length;
   const loadRes = await runnerPost(OLLAMA_RUNNER_PORT, '/load', {
     Operation: 2, // LoadOperationCommit
     KvSize: 8192,
@@ -1080,7 +1284,7 @@ async function _loadRunnerModel(options = {}) {
   // Runner health: status 0 = ready, 2 = launched, 3 = loading
   const loadDeadline = Date.now() + loadTimeoutMs;
   while (Date.now() < loadDeadline) {
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     if (await isRunnerReady()) {
       _runnerReady = true;
       localLLMLog('[LocalLLM] Ollama runner model loaded successfully!');
@@ -1104,17 +1308,18 @@ async function startOllamaRunner(options = {}) {
   const allowSpawn = options.allowSpawn !== false;
 
   const adopted = await tryAdoptHotRunner({
-    timeoutMs: parseInt(
-      process.env.KHY_LOCAL_HOT_ATTACH_TIMEOUT_MS || String(RUNNER_HOT_ATTACH_TIMEOUT_MS),
-      10
-    ) || RUNNER_HOT_ATTACH_TIMEOUT_MS,
+    timeoutMs:
+      parseInt(
+        process.env.KHY_LOCAL_HOT_ATTACH_TIMEOUT_MS || String(RUNNER_HOT_ATTACH_TIMEOUT_MS),
+        10
+      ) || RUNNER_HOT_ATTACH_TIMEOUT_MS,
   });
   if (adopted.adopted) {
     localLLMLog('[LocalLLM] Reusing hot ollama-runner backend');
     return true;
   }
 
-  const runnerListening = adopted.listening || await isRunnerListening();
+  const runnerListening = adopted.listening || (await isRunnerListening());
   if (runnerListening) {
     localLLMLog('[LocalLLM] Existing ollama-runner detected; issuing model load...');
     try {
@@ -1140,7 +1345,9 @@ async function startOllamaRunner(options = {}) {
   // to the system-binary resolution baked into resolveOllamaBinary(). Because
   // OLLAMA_BIN was resolved at module-load time (before any fetch), re-resolve
   // here so a freshly provisioned binary is actually used.
-  await require('./runtimeProvisioner').ensureRuntime('ollama-runner').catch(() => null);
+  await require('./runtimeProvisioner')
+    .ensureRuntime('ollama-runner')
+    .catch(() => null);
   const ollamaBin = resolveOllamaBinary();
 
   if (!isOllamaRunnerAvailable(ollamaBin)) {
@@ -1158,17 +1365,23 @@ async function startOllamaRunner(options = {}) {
     localLLMLog(`[LocalLLM] Starting ollama runner on port ${OLLAMA_RUNNER_PORT}...`);
     localLLMLog(`[LocalLLM] Model: ${runnerModelPath}`);
 
-    _runnerProcess = spawn(ollamaBin, [
-      'runner',
-      '--ollama-engine',  // Use Go-native engine (supports qwen35/qwen3next)
-      '--model', runnerModelPath,
-      '--port', String(OLLAMA_RUNNER_PORT),
-    ], {
-      detached: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, OLLAMA_LOG_LEVEL: 'warn' },
-      windowsHide: true,
-    });
+    _runnerProcess = spawn(
+      ollamaBin,
+      [
+        'runner',
+        '--ollama-engine', // Use Go-native engine (supports qwen35/qwen3next)
+        '--model',
+        runnerModelPath,
+        '--port',
+        String(OLLAMA_RUNNER_PORT),
+      ],
+      {
+        detached: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, OLLAMA_LOG_LEVEL: 'warn' },
+        windowsHide: true,
+      }
+    );
 
     // Collect stderr for debugging — log all output in first 30s for diagnostics
     let stderrBuf = '';
@@ -1176,22 +1389,35 @@ async function startOllamaRunner(options = {}) {
     _runnerProcess.stderr.on('data', (data) => {
       const line = data.toString();
       stderrBuf += line;
-      if (stderrBuf.length > 4096) stderrBuf = stderrBuf.slice(-2048);
+      if (stderrBuf.length > 4096) {
+        stderrBuf = stderrBuf.slice(-2048);
+      }
       // Always log during startup phase (first 30s) or on important keywords
       const isStartup = Date.now() - runnerStartTime < 30000;
-      if (isStartup || line.includes('error') || line.includes('listening') || line.includes('loaded') || line.includes('ASSERT') || line.includes('fail')) {
+      if (
+        isStartup ||
+        line.includes('error') ||
+        line.includes('listening') ||
+        line.includes('loaded') ||
+        line.includes('ASSERT') ||
+        line.includes('fail')
+      ) {
         localLLMLog(`[OllamaRunner] ${line.trim()}`);
       }
     });
 
     _runnerProcess.stdout.on('data', (data) => {
       const line = data.toString().trim();
-      if (line) localLLMLog(`[OllamaRunner:stdout] ${line}`);
+      if (line) {
+        localLLMLog(`[OllamaRunner:stdout] ${line}`);
+      }
     });
 
     _runnerProcess.on('exit', (code) => {
       localLLMLog(`[OllamaRunner] Process exited with code ${code}`);
-      if (code !== 0 && stderrBuf) localLLMLog(`[OllamaRunner] Last stderr: ${stderrBuf.slice(-500)}`);
+      if (code !== 0 && stderrBuf) {
+        localLLMLog(`[OllamaRunner] Last stderr: ${stderrBuf.slice(-500)}`);
+      }
       _runnerProcess = null;
       _runnerReady = false;
     });
@@ -1201,11 +1427,14 @@ async function startOllamaRunner(options = {}) {
     // Wait for server to come online (just listening, not model loaded yet)
     const startTimeoutMs = Math.max(
       3000,
-      parseInt(process.env.KHY_LOCAL_RUNNER_START_TIMEOUT_MS || String(RUNNER_START_TIMEOUT_MS), 10) || RUNNER_START_TIMEOUT_MS
+      parseInt(
+        process.env.KHY_LOCAL_RUNNER_START_TIMEOUT_MS || String(RUNNER_START_TIMEOUT_MS),
+        10
+      ) || RUNNER_START_TIMEOUT_MS
     );
     const deadline = Date.now() + startTimeoutMs;
     while (Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 400));
       if (await isRunnerListening()) {
         localLLMLog('[LocalLLM] Ollama runner is online, loading model...');
         break;
@@ -1214,7 +1443,9 @@ async function startOllamaRunner(options = {}) {
 
     if (!(await isRunnerListening())) {
       localLLMLog('[LocalLLM] Ollama runner failed to start');
-      if (_runnerProcess) terminateChildTree(_runnerProcess);
+      if (_runnerProcess) {
+        terminateChildTree(_runnerProcess);
+      }
       _runnerProcess = null;
       return false;
     }
@@ -1273,18 +1504,23 @@ async function generateRunner(prompt, options) {
   const numPredict = options.maxTokens ?? 1024;
   const inferenceTimeout = options.timeoutMs ?? 60_000;
 
-  const res = await runnerPost(OLLAMA_RUNNER_PORT, '/completion', {
-    Prompt: fullPrompt,
-    Options: {
-      temperature: options.temperature ?? 0.6,
-      top_p: options.top_p ?? 0.85,
-      num_predict: numPredict,
-      stop: ['<|im_end|>', '<|endoftext|>'],
+  const res = await runnerPost(
+    OLLAMA_RUNNER_PORT,
+    '/completion',
+    {
+      Prompt: fullPrompt,
+      Options: {
+        temperature: options.temperature ?? 0.6,
+        top_p: options.top_p ?? 0.85,
+        num_predict: numPredict,
+        stop: ['<|im_end|>', '<|endoftext|>'],
+      },
     },
-  }, {
-    onChunk: options.onChunk,
-    timeoutMs: inferenceTimeout,
-  });
+    {
+      onChunk: options.onChunk,
+      timeoutMs: inferenceTimeout,
+    }
+  );
 
   if (res.status !== 200) {
     throw new Error(`Runner completion failed: ${res.raw?.slice(0, 300)}`);
@@ -1295,9 +1531,15 @@ async function generateRunner(prompt, options) {
   let promptEvalCount = 0;
   let evalCount = 0;
   for (const chunk of res.data) {
-    if (chunk.content) rawContent += chunk.content;
-    if (chunk.prompt_eval_count) promptEvalCount = chunk.prompt_eval_count;
-    if (chunk.eval_count) evalCount = chunk.eval_count;
+    if (chunk.content) {
+      rawContent += chunk.content;
+    }
+    if (chunk.prompt_eval_count) {
+      promptEvalCount = chunk.prompt_eval_count;
+    }
+    if (chunk.eval_count) {
+      evalCount = chunk.eval_count;
+    }
   }
 
   // Parse thinking block from output
@@ -1349,31 +1591,39 @@ function httpPost(urlPath, body) {
     const data = JSON.stringify(body);
     const url = new URL(urlPath, INFERENCE_SERVER_URL);
 
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port: INFERENCE_SERVER_PORT,
-      path: url.pathname,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: INFERENCE_SERVER_PORT,
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+        },
+        timeout: 120_000,
       },
-      timeout: 120_000,
-    }, (res) => {
-      const chunks = [];
-      res.on('data', chunk => { chunks.push(chunk); });
-      res.on('end', () => {
-        const responseData = Buffer.concat(chunks).toString('utf-8');
-        try {
-          resolve({ status: res.statusCode, data: JSON.parse(responseData) });
-        } catch {
-          resolve({ status: res.statusCode, data: responseData });
-        }
-      });
-    });
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => {
+          chunks.push(chunk);
+        });
+        res.on('end', () => {
+          const responseData = Buffer.concat(chunks).toString('utf-8');
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(responseData) });
+          } catch {
+            resolve({ status: res.statusCode, data: responseData });
+          }
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Inference server timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Inference server timeout'));
+    });
     req.write(data);
     req.end();
   });
@@ -1382,23 +1632,34 @@ function httpPost(urlPath, body) {
 function httpGet(urlPath) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlPath, INFERENCE_SERVER_URL);
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port: INFERENCE_SERVER_PORT,
-      path: url.pathname,
-      method: 'GET',
-      timeout: 3000,
-    }, (res) => {
-      const chunks = [];
-      res.on('data', chunk => { chunks.push(chunk); });
-      res.on('end', () => {
-        const data = Buffer.concat(chunks).toString('utf-8');
-        try { resolve({ status: res.statusCode, data: JSON.parse(data) }); }
-        catch { resolve({ status: res.statusCode, data }); }
-      });
-    });
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: INFERENCE_SERVER_PORT,
+        path: url.pathname,
+        method: 'GET',
+        timeout: 3000,
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => {
+          chunks.push(chunk);
+        });
+        res.on('end', () => {
+          const data = Buffer.concat(chunks).toString('utf-8');
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(data) });
+          } catch {
+            resolve({ status: res.statusCode, data });
+          }
+        });
+      }
+    );
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.end();
   });
 }
@@ -1422,28 +1683,39 @@ async function isOllamaAvailable() {
   try {
     const url = new URL('/api/tags', OLLAMA_HOST);
     const res = await new Promise((resolve, reject) => {
-      const req = http.request({
-        hostname: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
-        port: url.port,
-        path: url.pathname,
-        method: 'GET',
-        timeout: 3000,
-      }, (r) => {
-        let data = '';
-        r.on('data', c => { data += c; });
-        r.on('end', () => {
-          try { resolve({ status: r.statusCode, data: JSON.parse(data) }); }
-          catch { resolve({ status: r.statusCode, data }); }
-        });
-      });
+      const req = http.request(
+        {
+          hostname: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: 'GET',
+          timeout: 3000,
+        },
+        (r) => {
+          let data = '';
+          r.on('data', (c) => {
+            data += c;
+          });
+          r.on('end', () => {
+            try {
+              resolve({ status: r.statusCode, data: JSON.parse(data) });
+            } catch {
+              resolve({ status: r.statusCode, data });
+            }
+          });
+        }
+      );
       req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('timeout'));
+      });
       req.end();
     });
 
     if (res.status === 200 && res.data?.models) {
-      const models = res.data.models.map(m => m.name || m.model);
-      return models.some(m => m.startsWith(OLLAMA_MODEL.split(':')[0]));
+      const models = res.data.models.map((m) => m.name || m.model);
+      return models.some((m) => m.startsWith(OLLAMA_MODEL.split(':')[0]));
     }
     return false;
   } catch {
@@ -1472,31 +1744,44 @@ async function generateOllama(prompt, options) {
     options: {
       temperature: options.temperature ?? (enableThinking ? 0.6 : 0.1),
       top_p: options.top_p ?? 0.85,
-      num_predict: enableThinking ? Math.max(options.maxTokens ?? 2048, 4096) : (options.maxTokens ?? 2048),
+      num_predict: enableThinking
+        ? Math.max(options.maxTokens ?? 2048, 4096)
+        : (options.maxTokens ?? 2048),
     },
   });
 
   const res = await new Promise((resolve, reject) => {
-    const req = http.request({
-      hostname: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
-      port: url.port,
-      path: url.pathname,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
+    const req = http.request(
+      {
+        hostname: url.hostname === 'localhost' ? '127.0.0.1' : url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 300_000,
       },
-      timeout: 300_000,
-    }, (r) => {
-      let data = '';
-      r.on('data', c => { data += c; });
-      r.on('end', () => {
-        try { resolve({ status: r.statusCode, data: JSON.parse(data) }); }
-        catch { resolve({ status: r.statusCode, data }); }
-      });
-    });
+      (r) => {
+        let data = '';
+        r.on('data', (c) => {
+          data += c;
+        });
+        r.on('end', () => {
+          try {
+            resolve({ status: r.statusCode, data: JSON.parse(data) });
+          } catch {
+            resolve({ status: r.statusCode, data });
+          }
+        });
+      }
+    );
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Ollama request timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Ollama request timeout'));
+    });
     req.write(body);
     req.end();
   });
@@ -1517,12 +1802,18 @@ async function generateOllama(prompt, options) {
  * Start Python inference server if not running.
  */
 async function startPythonServer() {
-  if (await isPythonServerRunning()) return true;
+  if (await isPythonServerRunning()) {
+    return true;
+  }
 
   const serverScript = path.join(__dirname, '../../inference_server.py');
-  if (!fs.existsSync(serverScript)) return false;
+  if (!fs.existsSync(serverScript)) {
+    return false;
+  }
   if (!isPythonLlamaCppAvailable()) {
-    localLLMLog(`[LocalLLM] llama-cpp-python unavailable, skipping Python server (${_pythonLlamaCppError || 'import failed'})`);
+    localLLMLog(
+      `[LocalLLM] llama-cpp-python unavailable, skipping Python server (${_pythonLlamaCppError || 'import failed'})`
+    );
     return false;
   }
 
@@ -1539,24 +1830,36 @@ async function startPythonServer() {
     let exitCode = null;
     let stderrTail = '';
 
-    _pythonProcess = spawn(PYTHON_LAUNCHER.cmd, [
-      ...PYTHON_LAUNCHER.preArgs,
-      serverScript,
-      '--model', _modelPath,
-      '--port', String(INFERENCE_SERVER_PORT),
-      '--preload',
-    ], {
-      detached: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, LOCAL_MODEL_PATH: _modelPath },
-      windowsHide: true,
+    _pythonProcess = spawn(
+      PYTHON_LAUNCHER.cmd,
+      [
+        ...PYTHON_LAUNCHER.preArgs,
+        serverScript,
+        '--model',
+        _modelPath,
+        '--port',
+        String(INFERENCE_SERVER_PORT),
+        '--preload',
+      ],
+      {
+        detached: false,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, LOCAL_MODEL_PATH: _modelPath },
+        windowsHide: true,
+      }
+    );
+    _pythonProcess.stdout?.on('data', () => {
+      /* drain pipe */
     });
-    _pythonProcess.stdout?.on('data', () => { /* drain pipe */ });
     _pythonProcess.stderr?.on('data', (buf) => {
       const text = String(buf || '');
-      if (!text) return;
+      if (!text) {
+        return;
+      }
       stderrTail += text;
-      if (stderrTail.length > 4096) stderrTail = stderrTail.slice(-2048);
+      if (stderrTail.length > 4096) {
+        stderrTail = stderrTail.slice(-2048);
+      }
     });
     _pythonProcess.on('exit', (code) => {
       exited = true;
@@ -1574,7 +1877,9 @@ async function startPythonServer() {
     const deadline = Date.now() + startupTimeoutMs;
     while (Date.now() < deadline) {
       if (exited) {
-        const msg = String(stderrTail || '').replace(/\s+/g, ' ').trim();
+        const msg = String(stderrTail || '')
+          .replace(/\s+/g, ' ')
+          .trim();
         _lastError = new Error(
           msg
             ? `Python inference server exited early (code=${exitCode}): ${msg.slice(0, 260)}`
@@ -1583,11 +1888,15 @@ async function startPythonServer() {
         _pythonProcess = null;
         return false;
       }
-      if (await isPythonServerRunning()) return true;
-      await new Promise(r => setTimeout(r, startupPollMs));
+      if (await isPythonServerRunning()) {
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, startupPollMs));
     }
 
-    const timeoutMsg = String(stderrTail || '').replace(/\s+/g, ' ').trim();
+    const timeoutMsg = String(stderrTail || '')
+      .replace(/\s+/g, ' ')
+      .trim();
     _lastError = new Error(
       timeoutMsg
         ? `Python inference server startup timed out after ${Math.round(startupTimeoutMs / 1000)}s: ${timeoutMsg.slice(0, 260)}`
@@ -1616,14 +1925,18 @@ async function startPythonServer() {
  */
 function classifyModelLoadError(message) {
   const t = String(message == null ? '' : message);
-  if (!t) return null;
+  if (!t) {
+    return null;
+  }
   // Hyperparameter / architecture mismatch — the model file is structurally
   // incompatible with this llama.cpp build (NOT a crash / connection issue).
-  const INCOMPAT = /dimension_sections|wrong array length|error loading model hyperparameters|unknown\s+model\s+architecture|unsupported\s+model\s+architecture|unknown\s+(?:general\.)?architecture|llama_model_load[^]*?error|failed to load model/i;
+  const INCOMPAT =
+    /dimension_sections|wrong array length|error loading model hyperparameters|unknown\s+model\s+architecture|unsupported\s+model\s+architecture|unknown\s+(?:general\.)?architecture|llama_model_load[^]*?error|failed to load model/i;
   if (INCOMPAT.test(t)) {
     return {
       code: 'LOCAL_MODEL_INCOMPATIBLE',
-      cause: '本地推理引擎（内置 node-llama-cpp / llama.cpp）无法解析该模型格式：GGUF 超参或架构与当前引擎版本不兼容（常见于较新的 Qwen 3.5 等模型，期望的 rope 维度分段数与文件不一致）。',
+      cause:
+        '本地推理引擎（内置 node-llama-cpp / llama.cpp）无法解析该模型格式：GGUF 超参或架构与当前引擎版本不兼容（常见于较新的 Qwen 3.5 等模型，期望的 rope 维度分段数与文件不一致）。',
       solutions: [
         '改用 Ollama 运行该模型（Ollama 自带已打补丁的 llama.cpp，对新模型支持更好）：先运行 `ollama serve`，再 `ollama pull qwen3.5:4b`，Khyos 会自动经 Ollama 后端推理。',
         '换用与当前内置引擎兼容的 GGUF（例如标准 Qwen2.5 系列，或用新版 llama.cpp 重新量化导出）。',
@@ -1653,13 +1966,19 @@ function diagnoseOllamaModel({ online = false, tags = [], configuredModel } = {}
 
   if (!online) {
     return {
-      ok: false, level: 'warn', matchedTag: null, suggestion: null,
+      ok: false,
+      level: 'warn',
+      matchedTag: null,
+      suggestion: null,
       detail: `未检测到 Ollama 服务（${OLLAMA_HOST}）。启动：\`ollama serve\`；拉取模型：\`ollama pull ${model}\`（Ollama 在其它主机时设 OLLAMA_HOST）。`,
     };
   }
   if (list.includes(model)) {
     return {
-      ok: true, level: 'info', matchedTag: model, suggestion: null,
+      ok: true,
+      level: 'info',
+      matchedTag: model,
+      suggestion: null,
       detail: `✓ Ollama 在线，已安装 ${model}，本地推理可用。`,
     };
   }
@@ -1668,13 +1987,19 @@ function diagnoseOllamaModel({ online = false, tags = [], configuredModel } = {}
   const familyMatch = list.find((t) => t.startsWith(family));
   if (familyMatch) {
     return {
-      ok: false, level: 'warn', matchedTag: familyMatch, suggestion: `OLLAMA_MODEL=${familyMatch}`,
+      ok: false,
+      level: 'warn',
+      matchedTag: familyMatch,
+      suggestion: `OLLAMA_MODEL=${familyMatch}`,
       detail: `Ollama 在线，但配置的 ${model} 未安装；检测到同系 ${familyMatch}。设环境变量 OLLAMA_MODEL=${familyMatch}（或 \`ollama pull ${model}\`）即可用。`,
     };
   }
   const shown = list.length ? list.slice(0, 8).join(', ') : '（当前无已安装模型）';
   return {
-    ok: false, level: 'warn', matchedTag: null, suggestion: list.length ? 'OLLAMA_MODEL=<已安装的tag>' : null,
+    ok: false,
+    level: 'warn',
+    matchedTag: null,
+    suggestion: list.length ? 'OLLAMA_MODEL=<已安装的tag>' : null,
     detail: `Ollama 在线，但未安装与 ${model} 匹配的模型。已安装：${shown}。请 \`ollama pull ${model}\`，或设 OLLAMA_MODEL=<上述某个 tag>。`,
   };
 }
@@ -1712,7 +2037,9 @@ async function tryNodeLlamaCpp() {
     const diag = classifyModelLoadError(err && err.message);
     if (diag) {
       _modelLoadDiagnosis = diag;
-      localLLMLog(`[LocalLLM] node-llama-cpp cannot load this model (${diag.code}): ${err.message}`);
+      localLLMLog(
+        `[LocalLLM] node-llama-cpp cannot load this model (${diag.code}): ${err.message}`
+      );
     } else {
       localLLMLog(`[LocalLLM] node-llama-cpp unavailable: ${err.message}`);
     }
@@ -1724,15 +2051,21 @@ async function tryNodeLlamaCpp() {
  * Ensure inference backend is ready.
  */
 async function ensureLoaded() {
-  if (_backend) return _backend;
-  if (_loadingPromise) return _loadingPromise;
+  if (_backend) {
+    return _backend;
+  }
+  if (_loadingPromise) {
+    return _loadingPromise;
+  }
 
   _loadingPromise = (async () => {
     try {
       const modelFileExists = isModelAvailable();
       const loopbackAvailable = await canListenLoopback();
       if (!loopbackAvailable) {
-        localLLMLog(`[LocalLLM] Loopback sockets unavailable (${_loopbackListenProbe.error || 'listen failed'}), spawn-based local backends may be restricted`);
+        localLLMLog(
+          `[LocalLLM] Loopback sockets unavailable (${_loopbackListenProbe.error || 'listen failed'}), spawn-based local backends may be restricted`
+        );
       }
 
       // Strategy 1: ollama-runner (standalone subprocess, best Qwen 3.5 support)
@@ -1748,7 +2081,7 @@ async function ensureLoaded() {
       }
 
       // Strategy 2: try node-llama-cpp (requires model file)
-      if (modelFileExists && await tryNodeLlamaCpp()) {
+      if (modelFileExists && (await tryNodeLlamaCpp())) {
         _lastError = null;
         return _backend;
       }
@@ -1758,7 +2091,7 @@ async function ensureLoaded() {
         localLLMLog('[LocalLLM] No model file, skipping Python server...');
       }
       localLLMLog('[LocalLLM] Falling back to Python inference server...');
-      const started = modelFileExists && loopbackAvailable && await startPythonServer();
+      const started = modelFileExists && loopbackAvailable && (await startPythonServer());
       if (started) {
         _backend = 'python-server';
         _lastError = null;
@@ -1782,8 +2115,8 @@ async function ensureLoaded() {
         const d = _modelLoadDiagnosis;
         const err = new Error(
           `${d.cause}\n` +
-          `Khyos 已自动尝试回退其它本地后端（Python 推理服务 / Ollama HTTP），但当前均不可用。可选解决方案：\n` +
-          d.solutions.map((s, i) => `  ${i + 1}. ${s}`).join('\n')
+            `Khyos 已自动尝试回退其它本地后端（Python 推理服务 / Ollama HTTP），但当前均不可用。可选解决方案：\n` +
+            d.solutions.map((s, i) => `  ${i + 1}. ${s}`).join('\n')
         );
         err.code = d.code;
         err.diagnosis = d;
@@ -1795,7 +2128,9 @@ async function ensureLoaded() {
           `No inference backend available in current runtime: loopback listen is not permitted (${_loopbackListenProbe.error || 'listen failed'}), and no hot local runner/Ollama HTTP backend was reachable.`
         );
       }
-      throw new Error('No inference backend available. Install ollama (for ollama-runner), node-llama-cpp, llama-cpp-python, or run Ollama service.');
+      throw new Error(
+        'No inference backend available. Install ollama (for ollama-runner), node-llama-cpp, llama-cpp-python, or run Ollama service.'
+      );
     } catch (err) {
       _lastError = err;
       _loadingPromise = null;
@@ -1862,12 +2197,16 @@ function _resetBackend(reason) {
  * Check if an error indicates the backend process died or is unreachable.
  */
 function _isBackendCrashError(err) {
-  if (!err) return false;
+  if (!err) {
+    return false;
+  }
   const msg = String(err.message || err).toLowerCase();
-  return /econnrefused|econnreset|epipe|socket hang up|channel closed|stalled|spawn|exited/i.test(msg)
-    || err.code === 'ECONNREFUSED'
-    || err.code === 'ECONNRESET'
-    || err.code === 'EPIPE';
+  return (
+    /econnrefused|econnreset|epipe|socket hang up|channel closed|stalled|spawn|exited/i.test(msg) ||
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ECONNRESET' ||
+    err.code === 'EPIPE'
+  );
 }
 
 /**
@@ -1916,9 +2255,18 @@ async function generate(prompt, options = {}) {
  */
 async function dispose() {
   try {
-    if (_context) { await _context.dispose(); _context = null; }
-    if (_model) { await _model.dispose(); _model = null; }
-    if (_llama) { await _llama.dispose(); _llama = null; }
+    if (_context) {
+      await _context.dispose();
+      _context = null;
+    }
+    if (_model) {
+      await _model.dispose();
+      _model = null;
+    }
+    if (_llama) {
+      await _llama.dispose();
+      _llama = null;
+    }
     if (_pythonProcess) {
       terminateChildTree(_pythonProcess);
       _pythonProcess = null;

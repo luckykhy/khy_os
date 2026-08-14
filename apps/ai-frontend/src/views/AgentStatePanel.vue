@@ -30,7 +30,9 @@
           <div v-for="(line, i) in sec.lines" :key="i" class="persona-sec-line">{{ line }}</div>
         </div>
       </div>
-      <div v-else class="card-empty">未设置 AI 人格档案（可选）—— 配置后可定制小K的语气与回答风格</div>
+      <div v-else class="card-empty">
+        未设置 AI 人格档案（可选）—— 配置后可定制小K的语气与回答风格
+      </div>
     </el-card>
 
     <!-- Memory card -->
@@ -73,7 +75,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = defineProps({
   orbState: { type: String, default: 'idle' },
@@ -81,16 +83,16 @@ const props = defineProps({
   memoryItems: { type: Array, default: () => [] },
   toolCalls: { type: Array, default: () => [] },
   activity: { type: Array, default: () => [] },
-})
+});
 
 const ORB_LABELS = {
   idle: '待命',
   listening: '聆听中',
   thinking: '思考中',
   speaking: '回应中',
-}
+};
 
-const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle)
+const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle);
 </script>
 
 <style scoped>
@@ -116,7 +118,11 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle)
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: background 0.4s ease, box-shadow 0.4s ease, width 0.3s ease, height 0.3s ease;
+  transition:
+    background 0.4s ease,
+    box-shadow 0.4s ease,
+    width 0.3s ease,
+    height 0.3s ease;
 }
 
 .orb-core {
@@ -125,7 +131,9 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle)
   border-radius: 50%;
   background: var(--khy-bg, #fff);
   opacity: 0.85;
-  transition: width 0.3s ease, height 0.3s ease;
+  transition:
+    width 0.3s ease,
+    height 0.3s ease;
 }
 
 /* idle — calm grey, no animation, shrunk to a quiet dot so it does not dominate
@@ -164,8 +172,13 @@ const orbLabel = computed(() => ORB_LABELS[props.orbState] || ORB_LABELS.idle)
 }
 
 @keyframes orb-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 .orb-label {

@@ -23,9 +23,35 @@ const SOCIAL_REFRESH_URL = 'https://prod.us-east-1.auth.desktop.kiro.dev/refresh
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 min pre-refresh buffer
 
 const KIRO_PROFILE_PATHS = [
-  path.join(os.homedir(), 'Library', 'Application Support', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
-  path.join(os.homedir(), '.config', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
-  path.join(os.homedir(), 'AppData', 'Roaming', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Kiro',
+    'User',
+    'globalStorage',
+    'kiro.kiroagent',
+    'profile.json'
+  ),
+  path.join(
+    os.homedir(),
+    '.config',
+    'Kiro',
+    'User',
+    'globalStorage',
+    'kiro.kiroagent',
+    'profile.json'
+  ),
+  path.join(
+    os.homedir(),
+    'AppData',
+    'Roaming',
+    'Kiro',
+    'User',
+    'globalStorage',
+    'kiro.kiroagent',
+    'profile.json'
+  ),
 ];
 
 // ── Region → endpoint ────────────────────────────────────────────────────
@@ -66,15 +92,23 @@ function jsonRequest(url, { method = 'GET', body, headers = {}, timeout = 15000 
 
     const req = mod.request(options, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
-        try { resolve({ status: res.statusCode, data: JSON.parse(data) }); }
-        catch { resolve({ status: res.statusCode, data }); }
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(data) });
+        } catch {
+          resolve({ status: res.statusCode, data });
+        }
       });
     });
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('request timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('request timeout'));
+    });
     if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
     req.end();
   });
@@ -85,8 +119,11 @@ function jsonRequest(url, { method = 'GET', body, headers = {}, timeout = 15000 
 function readKiroToken() {
   const tokenPath = path.join(SSO_CACHE_DIR, KIRO_TOKEN_FILE);
   if (!fs.existsSync(tokenPath)) return null;
-  try { return JSON.parse(fs.readFileSync(tokenPath, 'utf8')); }
-  catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function writeKiroToken(tokenData) {
@@ -94,14 +131,18 @@ function writeKiroToken(tokenData) {
     const tokenPath = path.join(SSO_CACHE_DIR, KIRO_TOKEN_FILE);
     fs.mkdirSync(SSO_CACHE_DIR, { recursive: true });
     fs.writeFileSync(tokenPath, JSON.stringify(tokenData, null, 2));
-  } catch { /* ignore write errors */ }
+  } catch {
+    /* ignore write errors */
+  }
 }
 
 function readKiroProfile() {
   for (const p of KIRO_PROFILE_PATHS) {
     try {
       if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -111,7 +152,9 @@ function readClientRegistration(clientIdHash) {
   const filePath = path.join(SSO_CACHE_DIR, `${clientIdHash}.json`);
   try {
     if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
   return null;
 }
 
@@ -255,7 +298,7 @@ async function fetchModels(tokenData) {
   if (tokenData.profileArn) params.set('profileArn', tokenData.profileArn);
 
   const headers = {
-    'Authorization': `Bearer ${tokenData.accessToken}`,
+    Authorization: `Bearer ${tokenData.accessToken}`,
     'User-Agent': buildUserAgent(),
     'x-amzn-codewhisperer-optout': 'true',
   };
@@ -444,7 +487,7 @@ function detect(forceRefresh = false) {
 async function detectAsync() {
   try {
     const tokenData = await getAccessToken();
-    _available = !!(tokenData?.accessToken);
+    _available = !!tokenData?.accessToken;
     return _available;
   } catch {
     _available = false;
@@ -458,7 +501,7 @@ async function detectAsync() {
 async function listModels() {
   const tokenData = await getAccessToken();
   const { models, defaultModel } = await fetchModels(tokenData);
-  _models = models.map(m => ({
+  _models = models.map((m) => ({
     id: m.modelId,
     name: m.modelName || m.modelId,
     provider: 'kiro',
@@ -499,7 +542,10 @@ async function generate(prompt, options = {}) {
     const sendWithTimeout = Promise.race([
       client.send(command),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Kiro request timeout (${TIMEOUT_MS / 1000}s)`)), TIMEOUT_MS)
+        setTimeout(
+          () => reject(new Error(`Kiro request timeout (${TIMEOUT_MS / 1000}s)`)),
+          TIMEOUT_MS
+        )
       ),
     ]);
 
@@ -531,16 +577,24 @@ async function generate(prompt, options = {}) {
         }
 
         // Metering event (must consume to advance stream)
-        if (event.meteringEvent) { /* consumed */ }
+        if (event.meteringEvent) {
+          /* consumed */
+        }
 
         // Code reference event
-        if (event.codeReferenceEvent) { /* consumed */ }
+        if (event.codeReferenceEvent) {
+          /* consumed */
+        }
 
         // Context usage event
-        if (event.contextUsageEvent) { /* consumed */ }
+        if (event.contextUsageEvent) {
+          /* consumed */
+        }
 
         // Token usage metadata
-        if (event.metadataEvent?.tokenUsage) { /* consumed */ }
+        if (event.metadataEvent?.tokenUsage) {
+          /* consumed */
+        }
 
         // Invalid state (error from Q Developer)
         if (event.invalidStateEvent) {
@@ -550,10 +604,14 @@ async function generate(prompt, options = {}) {
         }
 
         // Supplementary links
-        if (event.supplementaryWebLinksEvent) { /* consumed */ }
+        if (event.supplementaryWebLinksEvent) {
+          /* consumed */
+        }
 
         // Tool use events
-        if (event.toolUseEvent) { /* consumed — tool-use not used in CLI mode */ }
+        if (event.toolUseEvent) {
+          /* consumed — tool-use not used in CLI mode */
+        }
       }
     } catch (streamErr) {
       // If stream interrupted but we have partial content, return what we got
@@ -583,7 +641,11 @@ async function generate(prompt, options = {}) {
     };
   } catch (err) {
     // Invalidate cached client on auth errors
-    if (err.message?.includes('401') || err.message?.includes('403') || err.message?.includes('expired')) {
+    if (
+      err.message?.includes('401') ||
+      err.message?.includes('403') ||
+      err.message?.includes('expired')
+    ) {
       _sdkClient = null;
       _sdkClientToken = null;
       _cachedToken = null;
@@ -624,4 +686,14 @@ function destroy() {
   _sdkClientToken = null;
 }
 
-module.exports = { detect, detectAsync, listModels, generate, getStatus, destroy, getAccessToken, createSDKClient, getCWModule };
+module.exports = {
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  destroy,
+  getAccessToken,
+  createSDKClient,
+  getCWModule,
+};

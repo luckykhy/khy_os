@@ -20,11 +20,13 @@ const EDGE_TYPES = Object.freeze(['seq', 'cond', 'cause']);
 class TaskGraph {
   constructor() {
     this.nodes = new Map(); // uid -> node
-    this.edges = [];        // { from, to, type, condition }
+    this.edges = []; // { from, to, type, condition }
   }
 
   addNode(node) {
-    if (!node || !node.uid) throw new Error('taskGraph.addNode: node.uid required');
+    if (!node || !node.uid) {
+      throw new Error('taskGraph.addNode: node.uid required');
+    }
     this.nodes.set(node.uid, { status: 'PENDING', confidence: 1, params: {}, ...node });
     return node.uid;
   }
@@ -43,14 +45,22 @@ class TaskGraph {
     this.edges.push({ from, to, type: t, ...(condition ? { condition } : {}) });
   }
 
-  nodeCount() { return this.nodes.size; }
-  edgeCount() { return this.edges.length; }
+  nodeCount() {
+    return this.nodes.size;
+  }
+  edgeCount() {
+    return this.edges.length;
+  }
 
   /** 入度表 uid -> indegree。 */
   _indegrees() {
     const deg = new Map();
-    for (const uid of this.nodes.keys()) deg.set(uid, 0);
-    for (const e of this.edges) deg.set(e.to, (deg.get(e.to) || 0) + 1);
+    for (const uid of this.nodes.keys()) {
+      deg.set(uid, 0);
+    }
+    for (const e of this.edges) {
+      deg.set(e.to, (deg.get(e.to) || 0) + 1);
+    }
     return deg;
   }
 
@@ -62,11 +72,19 @@ class TaskGraph {
   topoSort() {
     const deg = this._indegrees();
     const adj = new Map();
-    for (const uid of this.nodes.keys()) adj.set(uid, []);
-    for (const e of this.edges) adj.get(e.from).push(e.to);
+    for (const uid of this.nodes.keys()) {
+      adj.set(uid, []);
+    }
+    for (const e of this.edges) {
+      adj.get(e.from).push(e.to);
+    }
 
     const queue = [];
-    for (const [uid, d] of deg) if (d === 0) queue.push(uid);
+    for (const [uid, d] of deg) {
+      if (d === 0) {
+        queue.push(uid);
+      }
+    }
 
     const order = [];
     while (queue.length) {
@@ -74,13 +92,21 @@ class TaskGraph {
       order.push(u);
       for (const v of adj.get(u)) {
         deg.set(v, deg.get(v) - 1);
-        if (deg.get(v) === 0) queue.push(v);
+        if (deg.get(v) === 0) {
+          queue.push(v);
+        }
       }
     }
 
-    if (order.length === this.nodes.size) return { ok: true, order };
+    if (order.length === this.nodes.size) {
+      return { ok: true, order };
+    }
     const cycle = [];
-    for (const [uid, d] of deg) if (d > 0) cycle.push(uid);
+    for (const [uid, d] of deg) {
+      if (d > 0) {
+        cycle.push(uid);
+      }
+    }
     return { ok: false, cycle };
   }
 

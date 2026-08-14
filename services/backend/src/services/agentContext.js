@@ -20,6 +20,8 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
+const { UNKNOWN_MODEL_CONTEXT_WINDOW } = require('../constants/contextWindowDefaults');
+
 // Symbol-keyed flag to prevent duplicate tool-pool rebuilds within a single context
 const BUILT = Symbol('agentContext.built');
 
@@ -58,7 +60,7 @@ class AgentContext {
       this.config = {
         maxTokens: 8192,
         effort: 'medium',
-        contextWindowTokens: 128000,
+        contextWindowTokens: UNKNOWN_MODEL_CONTEXT_WINDOW,
         ...(opts.config || {}),
       };
     }
@@ -252,7 +254,8 @@ class AgentContext {
       config: childOpts.config,
       sharedFileCache: shareFileCache ? this.fileReadCache : null,
       systemPromptPrefix: sharePromptPrefix ? this.systemPromptPrefix : null,
-      conversationPrefix: childOpts.conversationPrefix || (sharePromptPrefix ? this.conversationPrefix : null),
+      conversationPrefix:
+        childOpts.conversationPrefix || (sharePromptPrefix ? this.conversationPrefix : null),
     });
   }
 

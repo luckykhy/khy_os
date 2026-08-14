@@ -9,16 +9,21 @@
  * 工具编辑去重注册表 TTL、门控关→null。
  */
 
-const { describe, test, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
 const fs = require('fs');
+const assert = require('node:assert/strict');
+const { describe, test, beforeEach } = require('node:test');
 const os = require('os');
 const path = require('path');
 
 const svc = require('./selfEditAdvisoryService');
 
 // ── 搭假 khy monorepo 根 ──────────────────────────────────────────────────
-function mkFakeRoot({ withBundles = true, khyName = true, srcContent = 'module.exports = 1;\n', mirror = 'same' } = {}) {
+function mkFakeRoot({
+  withBundles = true,
+  khyName = true,
+  srcContent = 'module.exports = 1;\n',
+  mirror = 'same',
+} = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-selfedit-'));
   fs.writeFileSync(
     path.join(root, 'pyproject.toml'),
@@ -33,8 +38,11 @@ function mkFakeRoot({ withBundles = true, khyName = true, srcContent = 'module.e
     for (const bundleRoot of ['platform/khy_os/bundled', 'packaging/npm/bundled']) {
       const dstAbs = path.join(root, bundleRoot, srcRel);
       fs.mkdirSync(path.dirname(dstAbs), { recursive: true });
-      if (mirror === 'same') fs.writeFileSync(dstAbs, srcContent);
-      else if (mirror === 'drift') fs.writeFileSync(dstAbs, srcContent + '// drifted\n');
+      if (mirror === 'same') {
+        fs.writeFileSync(dstAbs, srcContent);
+      } else if (mirror === 'drift') {
+        fs.writeFileSync(dstAbs, srcContent + '// drifted\n');
+      }
       // mirror === 'missing' → 不写副本
     }
   }

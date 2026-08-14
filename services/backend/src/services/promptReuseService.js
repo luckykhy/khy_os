@@ -32,7 +32,9 @@ const store = require('./promptReuseStore');
 const DEFAULT_TOPK = 2;
 
 function _enabled() {
-  const v = String(process.env.KHY_PROMPT_REUSE || 'true').trim().toLowerCase();
+  const v = String(process.env.KHY_PROMPT_REUSE || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -55,16 +57,34 @@ function _topK() {
  */
 function classifyCategory(taskText) {
   const t = String(taskText || '').toLowerCase();
-  const has = (...kw) => kw.some(k => t.includes(k));
-  if (has('test', '测试', 'jest', '单测', 'spec')) return 'testing';
-  if (has('refactor', '重构', '优化', 'optimize', 'cleanup')) return 'refactor';
-  if (has('fix', 'bug', '修复', '报错', 'error', '崩溃')) return 'bugfix';
-  if (has('doc', '文档', 'readme', '注释', '说明')) return 'docs';
-  if (has('deploy', '部署', 'ci', 'docker', 'build', '构建', '发布')) return 'devops';
-  if (has('api', '接口', 'route', '路由', 'endpoint', 'http')) return 'api';
-  if (has('ui', '前端', '页面', 'component', '组件', 'css', 'react', 'vue')) return 'frontend';
-  if (has('数据', 'data', 'sql', 'db', 'database', '查询', 'query')) return 'data';
-  if (has('实现', 'implement', '新增', 'feature', '功能', 'add ')) return 'feature';
+  const has = (...kw) => kw.some((k) => t.includes(k));
+  if (has('test', '测试', 'jest', '单测', 'spec')) {
+    return 'testing';
+  }
+  if (has('refactor', '重构', '优化', 'optimize', 'cleanup')) {
+    return 'refactor';
+  }
+  if (has('fix', 'bug', '修复', '报错', 'error', '崩溃')) {
+    return 'bugfix';
+  }
+  if (has('doc', '文档', 'readme', '注释', '说明')) {
+    return 'docs';
+  }
+  if (has('deploy', '部署', 'ci', 'docker', 'build', '构建', '发布')) {
+    return 'devops';
+  }
+  if (has('api', '接口', 'route', '路由', 'endpoint', 'http')) {
+    return 'api';
+  }
+  if (has('ui', '前端', '页面', 'component', '组件', 'css', 'react', 'vue')) {
+    return 'frontend';
+  }
+  if (has('数据', 'data', 'sql', 'db', 'database', '查询', 'query')) {
+    return 'data';
+  }
+  if (has('实现', 'implement', '新增', 'feature', '功能', 'add ')) {
+    return 'feature';
+  }
   return 'general';
 }
 
@@ -79,9 +99,13 @@ function classifyCategory(taskText) {
  *          无可推荐项（或停用）时返回 null。block 为可前置到用户消息的字符串。
  */
 function recommendForTask(taskText, opts = {}) {
-  if (!_enabled()) return null;
+  if (!_enabled()) {
+    return null;
+  }
   const text = String(taskText || '').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
   let candidates = [];
   try {
@@ -95,19 +119,22 @@ function recommendForTask(taskText, opts = {}) {
   }
 
   // 只保留确实带有可复用 promptText 的候选；纯统计无内容的不构成建议。
-  const useful = candidates.filter(c => c.promptText && c.promptText.trim());
-  if (useful.length === 0) return null;
+  const useful = candidates.filter((c) => c.promptText && c.promptText.trim());
+  if (useful.length === 0) {
+    return null;
+  }
 
   const lines = [
     '[SYSTEM: 提示词复用建议（来自历史相似任务的有效打法，仅供参考，可按需采纳或忽略）：',
   ];
   useful.forEach((c, i) => {
-    const sr = c.stats.uses > 0
-      ? Math.round((c.stats.successes / Math.max(1, c.stats.successes + c.stats.failures)) * 100)
-      : 0;
+    const sr =
+      c.stats.uses > 0
+        ? Math.round((c.stats.successes / Math.max(1, c.stats.successes + c.stats.failures)) * 100)
+        : 0;
     lines.push(
       `${i + 1}. 〔${c.category}〕相似度 ${(c.similarity * 100).toFixed(0)}%，` +
-      `历史成功率约 ${sr}%（用 ${c.stats.uses} 次）：${_oneLine(c.promptText)}`,
+        `历史成功率约 ${sr}%（用 ${c.stats.uses} 次）：${_oneLine(c.promptText)}`
     );
   });
   lines.push('以上为历史经验，不是强制指令；若与当前任务不符请直接忽略。]');
@@ -129,9 +156,13 @@ function recommendForTask(taskText, opts = {}) {
  * @returns {string|null} 配方 id；停用或失败返回 null
  */
 function captureOutcome(o = {}) {
-  if (!_enabled()) return null;
+  if (!_enabled()) {
+    return null;
+  }
   const taskText = String(o.taskText || '').trim();
-  if (!taskText) return null;
+  if (!taskText) {
+    return null;
+  }
   try {
     const { id } = store.recordUsage({
       taskText,
@@ -152,7 +183,9 @@ function captureOutcome(o = {}) {
 }
 
 function _oneLine(s) {
-  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  const t = String(s || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t.length > 200 ? `${t.slice(0, 200)}…` : t;
 }
 

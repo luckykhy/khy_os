@@ -21,7 +21,9 @@ const MAX_RESULT_CHARS = 200;
 
 function isEnabled(env) {
   const raw = env && env.KHY_DEBUG_TOOL_CALL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -32,38 +34,69 @@ function isEnabled(env) {
  */
 function menuInlineEnabled(env) {
   const raw = env && env.KHY_DEBUG_MENU_INLINE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 // 把 content(string | 块数组 | 对象)压平为纯文本。
 function _flattenText(content) {
-  if (content == null) return '';
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    return content.map((b) => {
-      if (b == null) return '';
-      if (typeof b === 'string') return b;
-      if (b.type === 'text' && typeof b.text === 'string') return b.text;
-      if (typeof b.content === 'string') return b.content;
-      if (Array.isArray(b.content)) return _flattenText(b.content);
-      return '';
-    }).filter(Boolean).join('\n');
+  if (content == null) {
+    return '';
   }
-  if (typeof content === 'object' && typeof content.text === 'string') return content.text;
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map((b) => {
+        if (b == null) {
+          return '';
+        }
+        if (typeof b === 'string') {
+          return b;
+        }
+        if (b.type === 'text' && typeof b.text === 'string') {
+          return b.text;
+        }
+        if (typeof b.content === 'string') {
+          return b.content;
+        }
+        if (Array.isArray(b.content)) {
+          return _flattenText(b.content);
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (typeof content === 'object' && typeof content.text === 'string') {
+    return content.text;
+  }
   return '';
 }
 
 function _truncate(value, n) {
   const str = String(value == null ? '' : value);
-  if (str.length <= n) return str;
+  if (str.length <= n) {
+    return str;
+  }
   return str.slice(0, n) + '…';
 }
 
 function _stringifyInput(input) {
-  if (input == null) return '';
-  if (typeof input === 'string') return input;
-  try { return JSON.stringify(input); } catch { return String(input); }
+  if (input == null) {
+    return '';
+  }
+  if (typeof input === 'string') {
+    return input;
+  }
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return String(input);
+  }
 }
 
 /**
@@ -73,21 +106,31 @@ function _stringifyInput(input) {
  * @returns {Array<{id,name,input,resultText,isError,hasResult}>}  时间正序的最近 limit 个
  */
 function extractToolCalls(chain, opts = {}) {
-  if (!Array.isArray(chain)) return [];
+  if (!Array.isArray(chain)) {
+    return [];
+  }
   const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : DEFAULT_LIMIT;
-  const calls = [];            // 顺序收集 tool_use
-  const results = new Map();   // tool_use_id -> { resultText, isError }
+  const calls = []; // 顺序收集 tool_use
+  const results = new Map(); // tool_use_id -> { resultText, isError }
   for (const entry of chain) {
-    if (!entry || typeof entry !== 'object') continue;
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
     const content = entry.content;
-    if (!Array.isArray(content)) continue;
+    if (!Array.isArray(content)) {
+      continue;
+    }
     for (const b of content) {
-      if (!b || typeof b !== 'object') continue;
+      if (!b || typeof b !== 'object') {
+        continue;
+      }
       if (b.type === 'tool_use') {
         calls.push({ id: b.id || '', name: b.name || '(unknown)', input: b.input });
       } else if (b.type === 'tool_result') {
         const id = b.tool_use_id || b.id || '';
-        if (id) results.set(id, { resultText: _flattenText(b.content), isError: !!b.is_error });
+        if (id) {
+          results.set(id, { resultText: _flattenText(b.content), isError: !!b.is_error });
+        }
       }
     }
   }
@@ -115,14 +158,18 @@ function formatToolCallDebug(pairs, opts = {}) {
   if (!Array.isArray(pairs) || pairs.length === 0) {
     return 'No tool calls found in the current session transcript.';
   }
-  const maxChars = Number.isInteger(opts.maxResultChars) && opts.maxResultChars > 0
-    ? opts.maxResultChars : MAX_RESULT_CHARS;
+  const maxChars =
+    Number.isInteger(opts.maxResultChars) && opts.maxResultChars > 0
+      ? opts.maxResultChars
+      : MAX_RESULT_CHARS;
   const lines = [`Last ${pairs.length} tool call(s):`];
   pairs.forEach((p, i) => {
     const idShort = p.id ? String(p.id).slice(0, 12) : '—';
     lines.push(`${i + 1}. ${p.name}  [${idShort}]`);
     const inp = _truncate(_stringifyInput(p.input), maxChars);
-    if (inp) lines.push(`   input: ${inp}`);
+    if (inp) {
+      lines.push(`   input: ${inp}`);
+    }
     if (p.hasResult) {
       lines.push(`   ⎿ ${p.isError ? 'error' : 'result'}: ${_truncate(p.resultText, maxChars)}`);
     } else {

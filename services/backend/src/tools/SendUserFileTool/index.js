@@ -1,6 +1,7 @@
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 class SendUserFileTool extends BaseTool {
   static toolName = 'SendUserFile';
@@ -10,12 +11,17 @@ class SendUserFileTool extends BaseTool {
   static searchHint = 'send file to user download share';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Present a file to the user for download or viewing.
-Use when the user needs to receive a generated file.`;
+Use when the user needs to receive a generated file.
+When running on the WeChat (ilink) channel, the file returned by this tool is automatically sent to the user, so once you have located the target file, calling this tool with its file_path is enough to complete the action of "sending the file to the user".`;
   }
 
   get inputSchema() {

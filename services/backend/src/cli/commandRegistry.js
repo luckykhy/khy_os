@@ -23,50 +23,81 @@ const PRIORITY = {
 // ── Category definitions ──────────────────────────────────────────
 
 const CATEGORIES = {
-  model:    'AI \u6a21\u578b',     // AI 模型
-  data:     '\u6570\u636e\u7ba1\u7406', // 数据管理
-  security: '\u5b89\u5168',       // 安全
-  dev:      '\u5f00\u53d1\u5de5\u5177', // 开发工具
-  workflow: '\u5de5\u4f5c\u6d41',   // 工作流
-  system:   '\u7cfb\u7edf',       // 系统
+  model: 'AI \u6a21\u578b', // AI 模型
+  data: '\u6570\u636e\u7ba1\u7406', // 数据管理
+  security: '\u5b89\u5168', // 安全
+  dev: '\u5f00\u53d1\u5de5\u5177', // 开发工具
+  workflow: '\u5de5\u4f5c\u6d41', // 工作流
+  system: '\u7cfb\u7edf', // 系统
 };
 
 // ── Registry state ────────────────────────────────────────────────
 
 const _commands = new Map(); // cmd → { cmd, label, desc, route, flag, category, priority, source }
-let _categoryCache = null;   // invalidated on mutation
+let _categoryCache = null; // invalidated on mutation
 
 const { getStaticSlashCommands } = require('../constants/commandSchema');
 
 // getCompletions 的小写键投影按注册表身份记忆(避免每次调用对全量键 toLowerCase + sort)。
 // 门控关 → 现算(逐字节回退)。惰性 require 避免加载期环依赖。
 let _completionIndexMemo;
-const completionIndexMemo = () => (_completionIndexMemo ??= require('./commandCompletionIndexMemo'));
+const completionIndexMemo = () =>
+  (_completionIndexMemo ??= require('./commandCompletionIndexMemo'));
 
 // ── Category assignment for builtin commands ─────────────────────
 
 const _builtinCategories = {
-  '/model': 'model', '/models': 'model', '/gateway': 'model', '/apikey': 'model',
-  '/max': 'model', '/high': 'model', '/medium': 'model', '/low': 'model',
+  '/model': 'model',
+  '/models': 'model',
+  '/gateway': 'model',
+  '/apikey': 'model',
+  '/max': 'model',
+  '/high': 'model',
+  '/medium': 'model',
+  '/low': 'model',
 
-  '/cost': 'data', '/history': 'data', '/prompt': 'data',
-  '/knowledge': 'data', '/growth': 'data',
+  '/cost': 'data',
+  '/history': 'data',
+  '/prompt': 'data',
+  '/knowledge': 'data',
+  '/growth': 'data',
 
-  '/permissions': 'security', '/security': 'security', '/scan': 'security',
-  '/login': 'security', '/logout': 'security', '/whoami': 'security',
+  '/permissions': 'security',
+  '/security': 'security',
+  '/scan': 'security',
+  '/login': 'security',
+  '/logout': 'security',
+  '/whoami': 'security',
 
-  '/review': 'dev', '/doctor': 'dev', '/hardware': 'dev',
-  '/clipboard': 'dev', '/websearch': 'dev', '/image': 'dev', '/paste': 'dev', '/image2web': 'dev',
+  '/review': 'dev',
+  '/doctor': 'dev',
+  '/hardware': 'dev',
+  '/clipboard': 'dev',
+  '/websearch': 'dev',
+  '/image': 'dev',
+  '/paste': 'dev',
+  '/image2web': 'dev',
   '/publish': 'dev',
 
-  '/agent': 'workflow', '/skill': 'workflow', '/plan': 'workflow',
-  '/ulw-loop': 'workflow', '/cron': 'workflow',
-  '/profile': 'workflow', '/habit': 'workflow', '/resume': 'workflow',
-  '/memory': 'workflow', '/proxy': 'workflow', '/subscribe': 'workflow',
+  '/agent': 'workflow',
+  '/skill': 'workflow',
+  '/plan': 'workflow',
+  '/ulw-loop': 'workflow',
+  '/cron': 'workflow',
+  '/profile': 'workflow',
+  '/habit': 'workflow',
+  '/resume': 'workflow',
+  '/memory': 'workflow',
+  '/proxy': 'workflow',
+  '/subscribe': 'workflow',
 
-  '/linux': 'system', '/skin': 'system',
-  '/help': 'system', '/clear': 'system', '/exit': 'system',
-  '/update': 'system', '/cleanup': 'system',
+  '/linux': 'system',
+  '/skin': 'system',
+  '/help': 'system',
+  '/clear': 'system',
+  '/exit': 'system',
+  '/update': 'system',
+  '/cleanup': 'system',
 };
 
 // ── Public API ────────────────────────────────────────────────────
@@ -79,11 +110,15 @@ const _builtinCategories = {
  * @param {string} [source='user'] - Source identifier (builtin|tool|plugin|mcp|user)
  */
 function register(cmdDef, source = 'user') {
-  if (!cmdDef || !cmdDef.cmd) return;
+  if (!cmdDef || !cmdDef.cmd) {
+    return;
+  }
   const priority = PRIORITY[source] ?? PRIORITY.user;
 
   const existing = _commands.get(cmdDef.cmd);
-  if (existing && existing.priority > priority) return; // higher priority already registered
+  if (existing && existing.priority > priority) {
+    return;
+  } // higher priority already registered
 
   _commands.set(cmdDef.cmd, {
     cmd: cmdDef.cmd,
@@ -117,7 +152,9 @@ function register(cmdDef, source = 'user') {
  * @param {string} [source='builtin'] - Source identifier
  */
 function registerBulk(commands, source = 'builtin') {
-  if (!Array.isArray(commands)) return;
+  if (!Array.isArray(commands)) {
+    return;
+  }
   for (const cmd of commands) {
     register(cmd, source);
   }
@@ -133,7 +170,9 @@ function getAll() {
     const catOrder = Object.keys(CATEGORIES);
     const catA = catOrder.indexOf(a.category);
     const catB = catOrder.indexOf(b.category);
-    if (catA !== catB) return (catA === -1 ? 999 : catA) - (catB === -1 ? 999 : catB);
+    if (catA !== catB) {
+      return (catA === -1 ? 999 : catA) - (catB === -1 ? 999 : catB);
+    }
     return b.priority - a.priority;
   });
   return arr;
@@ -144,7 +183,9 @@ function getAll() {
  * @returns {object} { model: [...], data: [...], ... }
  */
 function getByCategory() {
-  if (_categoryCache) return _categoryCache;
+  if (_categoryCache) {
+    return _categoryCache;
+  }
 
   const grouped = {};
   for (const cat of Object.keys(CATEGORIES)) {
@@ -153,7 +194,9 @@ function getByCategory() {
 
   for (const cmd of _commands.values()) {
     const cat = cmd.category;
-    if (!grouped[cat]) grouped[cat] = [];
+    if (!grouped[cat]) {
+      grouped[cat] = [];
+    }
     grouped[cat].push(cmd);
   }
 
@@ -164,7 +207,9 @@ function getByCategory() {
 
   // Remove empty categories
   for (const cat of Object.keys(grouped)) {
-    if (grouped[cat].length === 0) delete grouped[cat];
+    if (grouped[cat].length === 0) {
+      delete grouped[cat];
+    }
   }
 
   _categoryCache = grouped;
@@ -177,19 +222,29 @@ function getByCategory() {
  * @returns {string[]} - e.g. ['/model', '/models']
  */
 function getCompletions(partial) {
-  if (!partial) return [];
+  if (!partial) {
+    return [];
+  }
   const lower = partial.toLowerCase();
   // 排序小写键投影按注册表 (身份, size) 记忆;门控关/异常 → 现算(逐字节回退)。
   // 投影按 cmd 升序,过滤子序列天然有序 → 免去每次调用的 matches.sort()。
-  const index = completionIndexMemo().getCompletionIndex(_commands, () => {
-    const proj = [];
-    for (const cmd of _commands.keys()) proj.push({ cmd, cmdLower: cmd.toLowerCase() });
-    proj.sort((a, b) => (a.cmd < b.cmd ? -1 : a.cmd > b.cmd ? 1 : 0));
-    return proj;
-  }, process.env);
+  const index = completionIndexMemo().getCompletionIndex(
+    _commands,
+    () => {
+      const proj = [];
+      for (const cmd of _commands.keys()) {
+        proj.push({ cmd, cmdLower: cmd.toLowerCase() });
+      }
+      proj.sort((a, b) => (a.cmd < b.cmd ? -1 : a.cmd > b.cmd ? 1 : 0));
+      return proj;
+    },
+    process.env
+  );
   const matches = [];
   for (let i = 0; i < index.length; i++) {
-    if (index[i].cmdLower.startsWith(lower)) matches.push(index[i].cmd);
+    if (index[i].cmdLower.startsWith(lower)) {
+      matches.push(index[i].cmd);
+    }
   }
   return matches;
 }
@@ -244,8 +299,12 @@ function registerUserSkills(opts = {}) {
   let list = [];
   try {
     list = require('./repl/userSkillCommands').listUserSkillCommands(opts);
-  } catch { return 0; }
-  if (!Array.isArray(list) || list.length === 0) return 0;
+  } catch {
+    return 0;
+  }
+  if (!Array.isArray(list) || list.length === 0) {
+    return 0;
+  }
   // source='user':优先级低于 builtin,内置命令名冲突时不被技能覆盖(register 内部按优先级守卫)。
   registerBulk(list, 'user');
   return list.length;
@@ -266,8 +325,12 @@ function registerCcCommands(opts = {}) {
   let list = [];
   try {
     list = require('./repl/ccUserCommands').listCcCommands(opts);
-  } catch { return 0; }
-  if (!Array.isArray(list) || list.length === 0) return 0;
+  } catch {
+    return 0;
+  }
+  if (!Array.isArray(list) || list.length === 0) {
+    return 0;
+  }
   registerBulk(list, 'user');
   return list.length;
 }
@@ -275,7 +338,9 @@ function registerCcCommands(opts = {}) {
 // Lazy initialization flag
 let _seeded = false;
 function _ensureSeeded() {
-  if (_seeded) return;
+  if (_seeded) {
+    return;
+  }
   _seeded = true;
   _seedBuiltins();
 }

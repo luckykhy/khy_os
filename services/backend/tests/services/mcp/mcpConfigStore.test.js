@@ -112,13 +112,59 @@ test('readConfigFile: corrupt JSON throws rather than eating user config', () =>
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
 
+// ── setServerEnabled: enable/disable without removing ──────────────────────────
+test('setServerEnabled: disable writes disabled:true, enable removes it', () => {
+  const home = _tmp();
+  try {
+    store.addServer('github', { type: 'stdio', command: 'npx' }, { scope: 'user', homedir: home });
+    const off = store.setServerEnabled('github', false, { scope: 'user', homedir: home });
+    assert.strictEqual(off.found, true);
+    assert.strictEqual(off.enabled, false);
+    let j = _readJson(off.path);
+    assert.strictEqual(j.mcpServers.github.disabled, true, 'disable 应写 disabled:true');
+    assert.strictEqual(j.mcpServers.github.command, 'npx', '其余字段保留');
+
+    const on = store.setServerEnabled('github', true, { scope: 'user', homedir: home });
+    assert.strictEqual(on.found, true);
+    assert.strictEqual(on.enabled, true);
+    j = _readJson(on.path);
+    assert.strictEqual(j.mcpServers.github.disabled, undefined, 'enable 应删掉 disabled 字段');
+    assert.strictEqual(j.mcpServers.github.command, 'npx', '其余字段保留');
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});
+
+test('setServerEnabled: absent server / missing file → found:false, no throw', () => {
+  const home = _tmp();
+  try {
+    store.addServer('a', { type: 'stdio', command: 'x' }, { scope: 'user', homedir: home });
+    const absent = store.setServerEnabled('nope', false, { scope: 'user', homedir: home });
+    assert.strictEqual(absent.found, false);
+    const noFile = store.setServerEnabled('x', false, { scope: 'user', homedir: _tmp() });
+    assert.strictEqual(noFile.found, false);
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});
+
+test('setServerEnabled: project scope targets <cwd>/.khy/mcp.json', () => {
+  const proj = _tmp();
+  try {
+    store.addServer('shared', { type: 'stdio', command: 'npx' }, { scope: 'project', cwd: proj });
+    const res = store.setServerEnabled('shared', false, { scope: 'project', cwd: proj });
+    assert.strictEqual(res.found, true);
+    assert.strictEqual(_readJson(res.path).mcpServers.shared.disabled, true);
+  } finally { fs.rmSync(proj, { recursive: true, force: true }); }
+});
+
+
 // ── E2E: leaf → store round-trips through mcp/index.js loadConfig ──────────────
 test('E2E: mcpAddSpec.buildServerConfig → store.addServer → mcp.loadConfig sees it', () => {
   const spec = require('../../../src/services/mcp/mcpAddSpec');
   const home = _tmp();
   const prevHome = os.homedir;
-  // loadConfig 读 os.homedir()/.khy/mcp.json,这里把 os.homedir 指向临时目录。
+  const prevDataHome = process.env.KHY_DATA_HOME;
+  // loadConfig 的 CONFIG_PATHS.user 走 getDataHome();便携部署会把它指到项目根,
+  // 故用 KHY_DATA_HOME 钉死到 <home>/.khy,与 store.scopePath('user') 对齐。
   os.homedir = () => home;
+  process.env.KHY_DATA_HOME = path.join(home, '.khy');
   // 让 CC-bridge 不干扰(它也读 os.homedir()/.claude.json,不存在即跳过)。
   try {
     const built = spec.buildServerConfig({
@@ -130,6 +176,7 @@ test('E2E: mcpAddSpec.buildServerConfig → store.addServer → mcp.loadConfig s
     store.addServer(built.name, built.config, { scope: 'user', homedir: home });
 
     // 清 require 缓存以确保 mcp/index.js 用被替换后的 os.homedir 计算 CONFIG_PATHS。
+    delete require.cache[require.resolve('../../../src/utils/dataHome.js')];
     delete require.cache[require.resolve('../../../src/services/mcp/index.js')];
     const mcp = require('../../../src/services/mcp/index.js');
     const loaded = mcp.loadConfig();
@@ -137,6 +184,45 @@ test('E2E: mcpAddSpec.buildServerConfig → store.addServer → mcp.loadConfig s
     assert.strictEqual(loaded.mcpServers.filesystem.command, 'npx');
   } finally {
     os.homedir = prevHome;
+    if (prevDataHome === undefined) delete process.env.KHY_DATA_HOME;
+    else process.env.KHY_DATA_HOME = prevDataHome;
+    delete require.cache[require.resolve('../../../src/utils/dataHome.js')];
+    delete require.cache[require.resolve('../../../src/services/mcp/index.js')];
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+// ── E2E: setServerEnabled(false) → loadConfig folds disabled → _disabled ────────
+test('E2E: disabled:true in file → loadConfig exposes _disabled for connectAll', () => {
+  const home = _tmp();
+  const prevHome = os.homedir;
+  const prevDataHome = process.env.KHY_DATA_HOME;
+  // loadConfig 的 CONFIG_PATHS.user 走 getDataHome();便携部署会把它指到项目根,
+  // 故用 KHY_DATA_HOME 钉死到 <home>/.khy,与 store.scopePath('user') 对齐。
+  os.homedir = () => home;
+  process.env.KHY_DATA_HOME = path.join(home, '.khy');
+  try {
+    store.addServer('github', { type: 'stdio', command: 'npx', args: ['-y', 'pkg'] },
+      { scope: 'user', homedir: home });
+    store.setServerEnabled('github', false, { scope: 'user', homedir: home });
+
+    delete require.cache[require.resolve('../../../src/utils/dataHome.js')];
+    delete require.cache[require.resolve('../../../src/services/mcp/index.js')];
+    const mcp = require('../../../src/services/mcp/index.js');
+    const loaded = mcp.loadConfig();
+    const gh = loaded.mcpServers.github;
+    assert.ok(gh, 'loadConfig should surface the disabled server');
+    assert.strictEqual(gh._disabled, true, 'disabled:true → _disabled:true');
+    // connectAll 跳过 _disabled:统计里 disabled 数=1,不会真 spawn。
+    const view = require('../../../src/services/mcp/mcpGovernance').buildGovernanceView({
+      mcpServers: loaded.mcpServers, connected: [], tools: [], paths: {},
+    });
+    assert.strictEqual(view.counts.disabled, 1, 'governance 应把该 server 记为已禁用');
+  } finally {
+    os.homedir = prevHome;
+    if (prevDataHome === undefined) delete process.env.KHY_DATA_HOME;
+    else process.env.KHY_DATA_HOME = prevDataHome;
+    delete require.cache[require.resolve('../../../src/utils/dataHome.js')];
     delete require.cache[require.resolve('../../../src/services/mcp/index.js')];
     fs.rmSync(home, { recursive: true, force: true });
   }

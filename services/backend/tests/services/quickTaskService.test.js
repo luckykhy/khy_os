@@ -96,4 +96,30 @@ describe('quickTaskService', () => {
     const plan = quickTaskService.detectQuickTask('请整理桌面并删除所有文件');
     expect(plan).toBeNull();
   });
+
+  test('fast-fires named file creation even without the word 文件/file', () => {
+    // 「创建 <name.ext>」直接命中快速创建,不落到 AI 慢路径。
+    for (const phrase of ['创建 README.md', '创建一个 api.ts 文件', '创建 notes.txt', '创建 test.js 文件']) {
+      const plan = quickTaskService.detectQuickTask(phrase, { cwd: os.tmpdir() });
+      expect(plan).toBeTruthy();
+      expect(plan.type).toBe('create_entries');
+      if (phrase.includes('.md')) expect(plan.fileName).toBe('README.md');
+      if (phrase.includes('api.ts')) expect(plan.fileName).toBe('api.ts');
+      if (phrase.includes('test.js')) expect(plan.fileName).toBe('test.js');
+    }
+  });
+
+  test('keeps genuine coding actions out of the quick-create fast path', () => {
+    // 编码动作绝不能被当成「快速创建文件」劫持;它们应落到 code_fix/AI 等真实编码路径。
+    for (const phrase of [
+      '实现一个排序算法',
+      '重构代码并修复 bug',
+      '创建单元测试文件',
+      '创建整个项目骨架',
+    ]) {
+      const plan = quickTaskService.detectQuickTask(phrase, { cwd: os.tmpdir() });
+      expect(plan && plan.type).not.toBe('create_entries');
+      expect(plan && plan.type).not.toBe('desktop_organize');
+    }
+  });
 });

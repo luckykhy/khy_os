@@ -28,7 +28,11 @@ function reportCliError(err, opts = {}) {
   const desc = describeCliError(err, opts);
   let fmt = opts.formatters;
   if (!fmt) {
-    try { fmt = require('./formatters'); } catch { fmt = null; }
+    try {
+      fmt = require('./formatters');
+    } catch {
+      fmt = null;
+    }
   }
   if (fmt && typeof fmt.printErrorPanel === 'function') {
     fmt.printErrorPanel({

@@ -200,7 +200,7 @@ const FORMATS = [
     family: 'archive',
     recoverability: RECOVERABILITY.ARCHIVE,
     signatures: [
-      { offset: 0, bytes: _hex('526172211a0700') },   // RAR 1.5–4.x: Rar!\x1A\x07\x00
+      { offset: 0, bytes: _hex('526172211a0700') }, // RAR 1.5–4.x: Rar!\x1A\x07\x00
       { offset: 0, bytes: _hex('526172211a070100') }, // RAR 5.0+:   Rar!\x1A\x07\x01\x00
     ],
     ext: ['.rar'],
@@ -282,7 +282,7 @@ const EMBEDDED_MARKERS = [
     contentMarker: Buffer.from('NODE_SEA_BLOB', 'ascii'),
     altMarkers: [
       Buffer.from('PAYLOAD_POSITION', 'ascii'), // vercel/pkg
-      Buffer.from('__NEXE_PATCH__', 'ascii'),    // nexe
+      Buffer.from('__NEXE_PATCH__', 'ascii'), // nexe
     ],
     tools: [],
     note: 'Node 自包含可执行内嵌 JS 源（pkg snapshot/SEA blob），常可取回近原始源码。',
@@ -334,17 +334,15 @@ function listEmbeddedMarkers() {
 
 /** 按 id 取格式（含嵌入标记），未命中返回 null。 */
 function getById(id) {
-  return (
-    FORMATS.find((f) => f.id === id) ||
-    EMBEDDED_MARKERS.find((m) => m.id === id) ||
-    null
-  );
+  return FORMATS.find((f) => f.id === id) || EMBEDDED_MARKERS.find((m) => m.id === id) || null;
 }
 
 /** 该格式 family 的全部候选外部工具（去重）。 */
 function candidateTools(formatId) {
   const f = getById(formatId);
-  if (!f) return [];
+  if (!f) {
+    return [];
+  }
   return Array.from(new Set([...(f.tools || [])]));
 }
 

@@ -29,15 +29,21 @@ router.get('/', (req, res) => {
     const { buildCommandCatalog } = require('../services/commandCatalog/commandCatalog');
     let catalog = buildCommandCatalog({}, process.env);
 
-    const q = String((req.query && req.query.q) || '').trim().toLowerCase();
+    const q = String((req.query && req.query.q) || '')
+      .trim()
+      .toLowerCase();
     if (q) {
       const categories = [];
       for (const cat of catalog.categories) {
-        const commands = cat.commands.filter((c) =>
-          c.cmd.toLowerCase().includes(q)
-          || (c.label && c.label.toLowerCase().includes(q))
-          || (c.desc && c.desc.toLowerCase().includes(q)));
-        if (commands.length) categories.push({ ...cat, commands });
+        const commands = cat.commands.filter(
+          (c) =>
+            c.cmd.toLowerCase().includes(q) ||
+            (c.label && c.label.toLowerCase().includes(q)) ||
+            (c.desc && c.desc.toLowerCase().includes(q))
+        );
+        if (commands.length) {
+          categories.push({ ...cat, commands });
+        }
       }
       const total = categories.reduce((n, c) => n + c.commands.length, 0);
       catalog = { ...catalog, categories, total };

@@ -23,10 +23,12 @@
 const _OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 门控:KHY_GITIGNORE_ADVISOR 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_GITIGNORE_ADVISOR;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -79,45 +81,35 @@ const STACK_TEMPLATES = Object.freeze({
     'htmlcov/',
     '.coverage',
   ]),
-  rust: Object.freeze([
-    'target/',
-    'Cargo.lock',
-    '**/*.rs.bk',
-  ]),
-  go: Object.freeze([
-    'bin/',
-    '*.exe',
-    '*.test',
-    '*.out',
-    'vendor/',
-  ]),
-  java: Object.freeze([
-    'target/',
-    'build/',
-    '*.class',
-    '*.jar',
-    '*.war',
-    '.gradle/',
-    '.mvn/',
-  ]),
-  docker: Object.freeze([
-    '*.pid',
-  ]),
-  static: Object.freeze([
-    'dist/',
-    'build/',
-  ]),
+  rust: Object.freeze(['target/', 'Cargo.lock', '**/*.rs.bk']),
+  go: Object.freeze(['bin/', '*.exe', '*.test', '*.out', 'vendor/']),
+  java: Object.freeze(['target/', 'build/', '*.class', '*.jar', '*.war', '.gradle/', '.mvn/']),
+  docker: Object.freeze(['*.pid']),
+  static: Object.freeze(['dist/', 'build/']),
 });
 
 // stack 标签归一别名:projectDetector 的 type 与常见叫法都映射到 STACK_TEMPLATES 键。
 const _STACK_ALIASES = Object.freeze({
-  node: 'node', nodejs: 'node', javascript: 'node', typescript: 'node', js: 'node', ts: 'node',
-  python: 'python', py: 'python',
-  rust: 'rust', rs: 'rust',
-  go: 'go', golang: 'go',
-  java: 'java', kotlin: 'java', gradle: 'java', maven: 'java',
-  docker: 'docker', dockerfile: 'docker',
-  static: 'static', html: 'static',
+  node: 'node',
+  nodejs: 'node',
+  javascript: 'node',
+  typescript: 'node',
+  js: 'node',
+  ts: 'node',
+  python: 'python',
+  py: 'python',
+  rust: 'rust',
+  rs: 'rust',
+  go: 'go',
+  golang: 'go',
+  java: 'java',
+  kotlin: 'java',
+  gradle: 'java',
+  maven: 'java',
+  docker: 'docker',
+  dockerfile: 'docker',
+  static: 'static',
+  html: 'static',
 });
 
 // 收敛到 utils/toStr 单一真源(逐字节委托,调用点不变)
@@ -126,8 +118,12 @@ const _str = require('../utils/toStr').toStrSafe;
 /** 归一单个 pattern:去前后空白。空/纯注释/纯空白 → null(调用方过滤)。 */
 function _normPattern(line) {
   const t = _str(line).trim();
-  if (!t) return null;
-  if (t.startsWith('#')) return null; // 注释不算 pattern
+  if (!t) {
+    return null;
+  }
+  if (t.startsWith('#')) {
+    return null;
+  } // 注释不算 pattern
   return t;
 }
 
@@ -142,12 +138,18 @@ function _normPattern(line) {
 function parseGitignore(text) {
   const set = new Set();
   try {
-    if (typeof text !== 'string' || !text) return set;
+    if (typeof text !== 'string' || !text) {
+      return set;
+    }
     for (const raw of text.split(/\r?\n/)) {
       const p = _normPattern(raw);
-      if (p) set.add(p);
+      if (p) {
+        set.add(p);
+      }
     }
-  } catch { /* fail-soft → 返回已收集部分 */ }
+  } catch {
+    /* fail-soft → 返回已收集部分 */
+  }
   return set;
 }
 
@@ -156,7 +158,9 @@ function parseGitignore(text) {
  * `foo/` 与 `foo` 视为等价(git 里目录 pattern 常混用带/不带尾斜杠)。
  */
 function _isCovered(pattern, existingSet) {
-  if (existingSet.has(pattern)) return true;
+  if (existingSet.has(pattern)) {
+    return true;
+  }
   const noSlash = pattern.endsWith('/') ? pattern.slice(0, -1) : pattern;
   const withSlash = pattern.endsWith('/') ? pattern : pattern + '/';
   return existingSet.has(noSlash) || existingSet.has(withSlash);
@@ -175,9 +179,13 @@ function _isCovered(pattern, existingSet) {
  */
 function buildGitignoreAdditions(opts = {}) {
   try {
-    if (!opts || typeof opts !== 'object') return [];
+    if (!opts || typeof opts !== 'object') {
+      return [];
+    }
     const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return [];
+    if (!isEnabled(env)) {
+      return [];
+    }
 
     const existing = parseGitignore(opts && opts.existingText);
     const includeCommon = opts && opts.includeCommon === false ? false : true;
@@ -187,23 +195,34 @@ function buildGitignoreAdditions(opts = {}) {
     const candidates = [];
     const pushCand = (p) => {
       const n = _normPattern(p);
-      if (n && !seen.has(n)) { seen.add(n); candidates.push(n); }
+      if (n && !seen.has(n)) {
+        seen.add(n);
+        candidates.push(n);
+      }
     };
 
     if (includeCommon) {
-      for (const p of STACK_TEMPLATES.common) pushCand(p);
+      for (const p of STACK_TEMPLATES.common) {
+        pushCand(p);
+      }
     }
 
     const stacks = Array.isArray(opts && opts.stacks) ? opts.stacks : [];
     for (const raw of stacks) {
       const key = _STACK_ALIASES[_str(raw).trim().toLowerCase()];
       const tmpl = key && STACK_TEMPLATES[key];
-      if (tmpl) for (const p of tmpl) pushCand(p);
+      if (tmpl) {
+        for (const p of tmpl) {
+          pushCand(p);
+        }
+      }
     }
 
     // extraPaths:自检检出的具体路径,原样归一去重(保留其目录/文件形态)。
     const extra = Array.isArray(opts && opts.extraPaths) ? opts.extraPaths : [];
-    for (const p of extra) pushCand(p);
+    for (const p of extra) {
+      pushCand(p);
+    }
 
     // 2) 减去现有已覆盖的。
     return candidates.filter((p) => !_isCovered(p, existing));
@@ -223,11 +242,13 @@ function buildGitignoreAdditions(opts = {}) {
 function renderGitignoreBlock(additions, opts = {}) {
   try {
     const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return '';
-    const lines = Array.isArray(additions)
-      ? additions.map(_normPattern).filter(Boolean)
-      : [];
-    if (lines.length === 0) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
+    const lines = Array.isArray(additions) ? additions.map(_normPattern).filter(Boolean) : [];
+    if (lines.length === 0) {
+      return '';
+    }
     const header = _str(opts && opts.header).trim() || 'khy 建议的忽略项';
     return `\n# ${header}\n${lines.join('\n')}\n`;
   } catch {

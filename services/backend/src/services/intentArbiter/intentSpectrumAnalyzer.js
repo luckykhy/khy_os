@@ -49,8 +49,12 @@ class IntentSpectrumAnalyzer {
 
   /** 置信度 → 光谱段（§3.1）。 */
   bandOf(confidence) {
-    if (confidence >= L.BAND_EDGES.EXECUTION_MIN) return L.BANDS.EXECUTION;
-    if (confidence >= L.BAND_EDGES.CONFIRM_MIN) return L.BANDS.CONFIRM;
+    if (confidence >= L.BAND_EDGES.EXECUTION_MIN) {
+      return L.BANDS.EXECUTION;
+    }
+    if (confidence >= L.BAND_EDGES.CONFIRM_MIN) {
+      return L.BANDS.CONFIRM;
+    }
     return L.BANDS.CHAT;
   }
 
@@ -73,15 +77,30 @@ class IntentSpectrumAnalyzer {
     const targets = L._hits(text, L.TARGET_KEYWORDS);
     for (const re of L.TARGET_PATTERNS) {
       const m = re.exec(text);
-      if (m && !targets.includes(m[0])) targets.push(m[0]);
+      if (m && !targets.includes(m[0])) {
+        targets.push(m[0]);
+      }
     }
 
     const isQuestion = L.QUESTION_MARKERS.some((q) => text.includes(q));
     const lead = L.IMPERATIVE_LEADS.find((w) => text.startsWith(w) || text.includes(w));
     // 祈使：句首即（主动）特权动词，或命中祈使引导词。被否定的句首动词不构成祈使。
-    const isImperative = (!!activeVerbs.length && L.PRIVILEGED_VERBS.some((v) => text.startsWith(v) && !negatedVerbs.includes(v))) || !!lead;
+    const isImperative =
+      (!!activeVerbs.length &&
+        L.PRIVILEGED_VERBS.some((v) => text.startsWith(v) && !negatedVerbs.includes(v))) ||
+      !!lead;
 
-    return { privilegedVerbs, activeVerbs, negatedVerbs, targets, emphasis, weakVerbs, isQuestion, isImperative, _lead: lead };
+    return {
+      privilegedVerbs,
+      activeVerbs,
+      negatedVerbs,
+      targets,
+      emphasis,
+      weakVerbs,
+      isQuestion,
+      isImperative,
+      _lead: lead,
+    };
   }
 
   /** 综合提权计分（§3.2）。返回 [0,1] 置信度 + 可读归因。 */
@@ -93,19 +112,36 @@ class IntentSpectrumAnalyzer {
     // 只有「主动」特权动词才提权；被否定的动词（negatedVerbs）剔除（P0#1）。
     // 门控关时 activeVerbs===privilegedVerbs、negatedVerbs 为空 → 评分逐字节回退。
     const activeVerbs = f.activeVerbs || f.privilegedVerbs;
-    if (activeVerbs.length) { escalation += W.PRIVILEGED_VERB; reasons.push(`特权动词:${activeVerbs.join('/')}`); }
-    else if (f.weakVerbs.length) { escalation += W.WEAK_VERB; reasons.push(`弱动词:${f.weakVerbs.join('/')}（仅入歧义带）`); }
+    if (activeVerbs.length) {
+      escalation += W.PRIVILEGED_VERB;
+      reasons.push(`特权动词:${activeVerbs.join('/')}`);
+    } else if (f.weakVerbs.length) {
+      escalation += W.WEAK_VERB;
+      reasons.push(`弱动词:${f.weakVerbs.join('/')}（仅入歧义带）`);
+    }
 
     if (f.negatedVerbs && f.negatedVerbs.length) {
       reasons.push(`否定语境:${f.negatedVerbs.join('/')}（不计入提权）`);
     }
 
-    if (f.targets.length) { escalation += W.TARGET_OBJECT; reasons.push(`目标宾语:${f.targets.join('/')}`); }
-    if (f.emphasis.length) { escalation += W.EMPHASIS; reasons.push(`强调副词:${f.emphasis.join('/')}`); }
-    if (f.isImperative) { escalation += W.IMPERATIVE_LEAD; reasons.push('祈使句结构'); }
+    if (f.targets.length) {
+      escalation += W.TARGET_OBJECT;
+      reasons.push(`目标宾语:${f.targets.join('/')}`);
+    }
+    if (f.emphasis.length) {
+      escalation += W.EMPHASIS;
+      reasons.push(`强调副词:${f.emphasis.join('/')}`);
+    }
+    if (f.isImperative) {
+      escalation += W.IMPERATIVE_LEAD;
+      reasons.push('祈使句结构');
+    }
 
     // 疑问句整体衰减（祈使 >> 疑问，§3.2）。
-    if (f.isQuestion) { escalation *= W.QUESTION_DAMPEN; reasons.push('疑问句 → 提权衰减'); }
+    if (f.isQuestion) {
+      escalation *= W.QUESTION_DAMPEN;
+      reasons.push('疑问句 → 提权衰减');
+    }
 
     let confidence = W.BASE + escalation;
 

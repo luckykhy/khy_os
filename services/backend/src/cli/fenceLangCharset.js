@@ -32,7 +32,9 @@ const RE_LEGACY = /^(`{3,})([\w+-]*)\s*$/;
  */
 function fenceLangCharsetEnabled(env = process.env) {
   const raw = env && env.KHY_FENCE_LANG_CHARSET;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 

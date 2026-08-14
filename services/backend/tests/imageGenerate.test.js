@@ -16,6 +16,11 @@ function clearImgEnv() {
   for (const k of Object.keys(process.env)) {
     if (k.startsWith('KHY_IMAGE_GEN_') || k.startsWith('GATEWAY_IMAGE_GEN_')) delete process.env[k];
   }
+  // imageGenService falls back to the shared chat-provider keys for SenseNova /
+  // StepFun — a live khy session leaks them into every "nothing configured"
+  // assertion, so clear them here too.
+  delete process.env.SENSENOVA_API_KEY;
+  delete process.env.STEPFUN_API_KEY;
 }
 
 beforeEach(() => {

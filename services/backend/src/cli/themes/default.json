@@ -23,7 +23,12 @@
     "diffAddedWord": "#38A660",
     "diffRemovedWord": "#B3596B",
     "permissionPurple": "#B388FF",
-    "userMessageBg": "#262626"
+    "userMessageBg": "#262626",
+    "mdBold": "#E5C07B",
+    "mdBullet": "#61AFEF",
+    "mdListNumber": "#61AFEF",
+    "mdH3": "#61AFEF",
+    "mdQuote": "#7F9CB3"
   },
   "spinnerChars": {
     "darwin": ["●", "✢", "✳", "✶", "✻", "✽"],

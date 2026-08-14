@@ -1,17 +1,18 @@
-const { SystemSetting } = require('../models');
 const { Op } = require('sequelize');
+
+const { SystemSetting } = require('../models');
 
 class SystemSettingService {
   // 获取所有设置
   static async getAllSettings(options = {}) {
     const { category, isPublic, includePrivate = false } = options;
-    
+
     const where = {};
-    
+
     if (category) {
       where.category = category;
     }
-    
+
     if (!includePrivate) {
       where.isPublic = true;
     } else if (isPublic !== undefined) {
@@ -20,12 +21,16 @@ class SystemSettingService {
 
     const settings = await SystemSetting.findAll({
       where,
-      order: [['category', 'ASC'], ['order', 'ASC'], ['key', 'ASC']]
+      order: [
+        ['category', 'ASC'],
+        ['order', 'ASC'],
+        ['key', 'ASC'],
+      ],
     });
 
     // 按分类分组
     const grouped = {};
-    settings.forEach(setting => {
+    settings.forEach((setting) => {
       if (!grouped[setting.category]) {
         grouped[setting.category] = [];
       }
@@ -35,7 +40,15 @@ class SystemSettingService {
         type: setting.type,
         description: setting.description,
         isEditable: setting.isEditable,
-        validation: setting.validation ? JSON.parse(setting.validation) : null
+        validation: setting.validation
+          ? (() => {
+              try {
+                return JSON.parse(setting.validation);
+              } catch {
+                return null;
+              }
+            })()
+          : null,
       });
     });
 
@@ -51,9 +64,9 @@ class SystemSettingService {
   // 设置值
   static async setSetting(key, value, options = {}) {
     const { type = 'string', category = 'general', description = '', isPublic = false } = options;
-    
+
     let setting = await SystemSetting.findOne({ where: { key } });
-    
+
     if (setting) {
       setting.setValue(value);
       await setting.save();
@@ -64,12 +77,12 @@ class SystemSettingService {
         type,
         category,
         description,
-        isPublic
+        isPublic,
       });
       setting.setValue(value);
       await setting.save();
     }
-    
+
     return setting.getParsedValue();
   }
 
@@ -79,7 +92,9 @@ class SystemSettingService {
 
     // 单次批量加载，避免逐键 findOne 的 N+1 查询（[MGMT-RPT-020] REQ-2026-007）
     const keys = Object.keys(settings);
-    if (keys.length === 0) return results;
+    if (keys.length === 0) {
+      return results;
+    }
     const rows = await SystemSetting.findAll({ where: { key: { [Op.in]: keys } } });
     const byKey = new Map(rows.map((r) => [r.key, r]));
 
@@ -128,7 +143,7 @@ class SystemSettingService {
         description: '系统名称',
         isPublic: true,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'system.version',
@@ -138,7 +153,7 @@ class SystemSettingService {
         description: '系统版本',
         isPublic: true,
         isEditable: false,
-        order: 2
+        order: 2,
       },
       {
         key: 'system.description',
@@ -148,7 +163,7 @@ class SystemSettingService {
         description: '系统描述',
         isPublic: true,
         isEditable: true,
-        order: 3
+        order: 3,
       },
       {
         key: 'system.maintenance_mode',
@@ -158,9 +173,9 @@ class SystemSettingService {
         description: '维护模式',
         isPublic: false,
         isEditable: true,
-        order: 4
+        order: 4,
       },
-      
+
       // 用户设置
       {
         key: 'user.registration_enabled',
@@ -170,7 +185,7 @@ class SystemSettingService {
         description: '允许用户注册',
         isPublic: false,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'user.email_verification_required',
@@ -180,7 +195,7 @@ class SystemSettingService {
         description: '需要邮箱验证',
         isPublic: false,
         isEditable: true,
-        order: 2
+        order: 2,
       },
       {
         key: 'user.default_role',
@@ -190,7 +205,7 @@ class SystemSettingService {
         description: '默认用户角色',
         isPublic: false,
         isEditable: true,
-        order: 3
+        order: 3,
       },
       {
         key: 'user.session_timeout',
@@ -200,9 +215,9 @@ class SystemSettingService {
         description: '会话超时时间（天）',
         isPublic: false,
         isEditable: true,
-        order: 4
+        order: 4,
       },
-      
+
       // 安全设置
       {
         key: 'security.password_min_length',
@@ -212,7 +227,7 @@ class SystemSettingService {
         description: '密码最小长度',
         isPublic: false,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'security.login_attempts_limit',
@@ -222,7 +237,7 @@ class SystemSettingService {
         description: '登录尝试次数限制',
         isPublic: false,
         isEditable: true,
-        order: 2
+        order: 2,
       },
       {
         key: 'security.lockout_duration',
@@ -232,9 +247,9 @@ class SystemSettingService {
         description: '账户锁定时间（分钟）',
         isPublic: false,
         isEditable: true,
-        order: 3
+        order: 3,
       },
-      
+
       // K-line display settings
       {
         key: 'kline.enabled_periods',
@@ -244,7 +259,7 @@ class SystemSettingService {
         description: 'Allowed K-line periods for frontend display',
         isPublic: true,
         isEditable: true,
-        order: 0
+        order: 0,
       },
 
       // 交易设置
@@ -256,7 +271,7 @@ class SystemSettingService {
         description: '默认手续费率',
         isPublic: true,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'trading.max_positions',
@@ -266,7 +281,7 @@ class SystemSettingService {
         description: '最大持仓数量',
         isPublic: true,
         isEditable: true,
-        order: 2
+        order: 2,
       },
       {
         key: 'trading.risk_limit',
@@ -276,9 +291,9 @@ class SystemSettingService {
         description: '单笔交易风险限制',
         isPublic: true,
         isEditable: true,
-        order: 3
+        order: 3,
       },
-      
+
       // 数据设置
       {
         key: 'data.retention_days',
@@ -288,7 +303,7 @@ class SystemSettingService {
         description: '数据保留天数',
         isPublic: false,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'data.backup_enabled',
@@ -298,7 +313,7 @@ class SystemSettingService {
         description: '启用数据备份',
         isPublic: false,
         isEditable: true,
-        order: 2
+        order: 2,
       },
       {
         key: 'data.backup_frequency',
@@ -308,9 +323,9 @@ class SystemSettingService {
         description: '备份频率',
         isPublic: false,
         isEditable: true,
-        order: 3
+        order: 3,
       },
-      
+
       // 通知设置
       {
         key: 'notification.email_enabled',
@@ -320,7 +335,7 @@ class SystemSettingService {
         description: '启用邮件通知',
         isPublic: false,
         isEditable: true,
-        order: 1
+        order: 1,
       },
       {
         key: 'notification.smtp_host',
@@ -330,7 +345,7 @@ class SystemSettingService {
         description: 'SMTP服务器',
         isPublic: false,
         isEditable: true,
-        order: 2
+        order: 2,
       },
       {
         key: 'notification.smtp_port',
@@ -340,8 +355,8 @@ class SystemSettingService {
         description: 'SMTP端口',
         isPublic: false,
         isEditable: true,
-        order: 3
-      }
+        order: 3,
+      },
     ];
 
     // 单次批量加载已有键，仅批量创建缺失项，避免逐键 findOne 的 N+1（[MGMT-RPT-020] REQ-2026-007）
@@ -361,15 +376,15 @@ class SystemSettingService {
   // 获取系统信息
   static async getSystemInfo() {
     const settings = await this.getAllSettings({ includePrivate: true });
-    
+
     // 获取系统统计信息
     const { User, Strategy, Backtest, Trade } = require('../models');
-    
+
     const [userCount, strategyCount, backtestCount, tradeCount] = await Promise.all([
       User.count(),
       Strategy.count(),
       Backtest.count(),
-      Trade.count()
+      Trade.count(),
     ]);
 
     return {
@@ -378,14 +393,14 @@ class SystemSettingService {
         userCount,
         strategyCount,
         backtestCount,
-        tradeCount
+        tradeCount,
       },
       systemInfo: {
         nodeVersion: process.version,
         platform: process.platform,
         uptime: process.uptime(),
-        memoryUsage: process.memoryUsage()
-      }
+        memoryUsage: process.memoryUsage(),
+      },
     };
   }
 }

@@ -38,7 +38,9 @@ const MEMORY_CATEGORY_NAME = 'Memory files';
 /** 门控:默认开;仅 {0,false,off,no} 关闭。 */
 function contextSuggestionsEnabled(env = process.env) {
   const raw = env && env.KHY_CONTEXT_SUGGESTIONS;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -50,7 +52,9 @@ function _num(n) {
 
 function _pct(part, whole) {
   const w = _num(whole);
-  if (w <= 0) return 0;
+  if (w <= 0) {
+    return 0;
+  }
   return (_num(part) / w) * 100;
 }
 
@@ -68,8 +72,12 @@ function _pct(part, whole) {
  * @returns {Array<{severity,title,detail,savingsTokens?}>}
  */
 function analyzeContextSuggestions(input = {}, env = process.env) {
-  if (!contextSuggestionsEnabled(env)) return [];
-  if (!input || typeof input !== 'object') return [];
+  if (!contextSuggestionsEnabled(env)) {
+    return [];
+  }
+  if (!input || typeof input !== 'object') {
+    return [];
+  }
 
   const data = {
     percentage: _num(input.percentage),
@@ -116,14 +124,20 @@ function _checkNearCapacity(data, suggestions) {
 
 // -- 大工具结果(> 15% 且 > 10k token)——依赖可选 toolCallsByType
 function _checkLargeToolResults(data, suggestions) {
-  if (!data.toolCallsByType) return;
+  if (!data.toolCallsByType) {
+    return;
+  }
   for (const tool of data.toolCallsByType) {
-    if (!tool || typeof tool !== 'object') continue;
+    if (!tool || typeof tool !== 'object') {
+      continue;
+    }
     const resultTokens = _num(tool.resultTokens);
     const percent = _pct(resultTokens, data.rawMaxTokens);
     if (percent >= LARGE_TOOL_RESULT_PERCENT && resultTokens >= LARGE_TOOL_RESULT_TOKENS) {
       const s = _getLargeToolSuggestion(String(tool.name || ''), resultTokens, percent);
-      if (s) suggestions.push(s);
+      if (s) {
+        suggestions.push(s);
+      }
     }
   }
 }
@@ -137,14 +151,16 @@ function _getLargeToolSuggestion(toolName, tokens, percent) {
       return {
         severity: 'info',
         title: `Bash results using ${tokenStr} tokens (${p}%)`,
-        detail: 'Large command output is filling context. Redirect verbose output to a file, or filter with head/grep.',
+        detail:
+          'Large command output is filling context. Redirect verbose output to a file, or filter with head/grep.',
         savingsTokens: Math.floor(tokens * 0.5),
       };
     case FILE_READ_TOOL_NAME:
       return {
         severity: 'info',
         title: `Read results using ${tokenStr} tokens (${p}%)`,
-        detail: 'File reads are large. Use offset/limit for big files, or reference earlier reads instead of re-reading.',
+        detail:
+          'File reads are large. Use offset/limit for big files, or reference earlier reads instead of re-reading.',
         savingsTokens: Math.floor(tokens * 0.3),
       };
     case GREP_TOOL_NAME:
@@ -158,7 +174,8 @@ function _getLargeToolSuggestion(toolName, tokens, percent) {
       return {
         severity: 'info',
         title: `WebFetch results using ${tokenStr} tokens (${p}%)`,
-        detail: 'Fetched pages are large. Prefer a targeted prompt so only the needed content is kept.',
+        detail:
+          'Fetched pages are large. Prefer a targeted prompt so only the needed content is kept.',
         savingsTokens: Math.floor(tokens * 0.4),
       };
     default:
@@ -176,9 +193,13 @@ function _getLargeToolSuggestion(toolName, tokens, percent) {
 
 // -- Read 膨胀(≥ 5% 且 ≥ 10k,且未被 15% band 覆盖)——依赖可选 toolCallsByType
 function _checkReadResultBloat(data, suggestions) {
-  if (!data.toolCallsByType) return;
+  if (!data.toolCallsByType) {
+    return;
+  }
   const readTool = data.toolCallsByType.find((t) => t && t.name === FILE_READ_TOOL_NAME);
-  if (!readTool) return;
+  if (!readTool) {
+    return;
+  }
 
   const resultTokens = _num(readTool.resultTokens);
   const totalReadTokens = _num(readTool.callTokens) + resultTokens;
@@ -186,7 +207,10 @@ function _checkReadResultBloat(data, suggestions) {
   const readPercent = _pct(resultTokens, data.rawMaxTokens);
 
   // 已被 checkLargeToolResults 覆盖则跳过(避免重复)
-  if (totalReadPercent >= LARGE_TOOL_RESULT_PERCENT && totalReadTokens >= LARGE_TOOL_RESULT_TOKENS) {
+  if (
+    totalReadPercent >= LARGE_TOOL_RESULT_PERCENT &&
+    totalReadTokens >= LARGE_TOOL_RESULT_TOKENS
+  ) {
     return;
   }
 
@@ -194,7 +218,8 @@ function _checkReadResultBloat(data, suggestions) {
     suggestions.push({
       severity: 'info',
       title: `File reads using ${formatTokens(resultTokens)} tokens (${readPercent.toFixed(0)}%)`,
-      detail: 'If you are re-reading files, consider referencing earlier reads. Use offset/limit for large files.',
+      detail:
+        'If you are re-reading files, consider referencing earlier reads. Use offset/limit for large files.',
       savingsTokens: Math.floor(resultTokens * 0.3),
     });
   }
@@ -205,21 +230,27 @@ function _checkMemoryBloat(data, suggestions) {
   let totalMemoryTokens = data.memoryFiles.reduce((sum, f) => sum + _num(f && f.tokens), 0);
 
   // 无逐文件数据时,从 categories 找 'Memory files' 类别总量(honest 兜底)
-  let haveFiles = data.memoryFiles.length > 0;
+  const haveFiles = data.memoryFiles.length > 0;
   if (!haveFiles) {
     const cat = data.categories.find((c) => c && c.name === MEMORY_CATEGORY_NAME);
-    if (cat) totalMemoryTokens = _num(cat.tokens);
+    if (cat) {
+      totalMemoryTokens = _num(cat.tokens);
+    }
   }
 
   const memoryPercent = _pct(totalMemoryTokens, data.rawMaxTokens);
-  if (memoryPercent < MEMORY_HIGH_PERCENT || totalMemoryTokens < MEMORY_HIGH_TOKENS) return;
+  if (memoryPercent < MEMORY_HIGH_PERCENT || totalMemoryTokens < MEMORY_HIGH_TOKENS) {
+    return;
+  }
 
   let detail;
   if (haveFiles) {
     const largestFiles = [...data.memoryFiles]
       .sort((a, b) => _num(b && b.tokens) - _num(a && a.tokens))
       .slice(0, 3)
-      .map((f) => `${_basename(String((f && f.path) || ''))} (${formatTokens(_num(f && f.tokens))})`)
+      .map(
+        (f) => `${_basename(String((f && f.path) || ''))} (${formatTokens(_num(f && f.tokens))})`
+      )
       .join(', ');
     detail = `Largest: ${largestFiles}. Use /memory to review and prune stale entries.`;
   } else {
@@ -252,7 +283,9 @@ function _checkAutoCompactDisabled(data, suggestions) {
 
 /** 纯字符串 basename(不触碰 path 模块以保持零 IO 叶子纯度)。 */
 function _basename(p) {
-  if (!p) return '';
+  if (!p) {
+    return '';
+  }
   const parts = p.split(/[\\/]/);
   return parts[parts.length - 1] || p;
 }
@@ -267,20 +300,30 @@ function _basename(p) {
  * @returns {string[]}
  */
 function renderContextSuggestionLines(suggestions, opts = {}, env = process.env) {
-  if (!contextSuggestionsEnabled(env)) return [];
-  if (!Array.isArray(suggestions) || suggestions.length === 0) return [];
+  if (!contextSuggestionsEnabled(env)) {
+    return [];
+  }
+  if (!Array.isArray(suggestions) || suggestions.length === 0) {
+    return [];
+  }
 
   const lines = [];
   const heading = opts && typeof opts.title === 'string' ? opts.title : '优化建议';
   lines.push(heading);
   for (const s of suggestions) {
-    if (!s || typeof s !== 'object') continue;
+    if (!s || typeof s !== 'object') {
+      continue;
+    }
     const glyph = s.severity === 'warning' ? '⚠' : 'ℹ';
     let head = `${glyph} ${s.title || ''}`.trim();
     const save = _num(s.savingsTokens);
-    if (save > 0) head += ` — 可省 ~${formatTokens(save)}`;
+    if (save > 0) {
+      head += ` — 可省 ~${formatTokens(save)}`;
+    }
     lines.push(head);
-    if (s.detail) lines.push(`  ${s.detail}`);
+    if (s.detail) {
+      lines.push(`  ${s.detail}`);
+    }
   }
   return lines;
 }

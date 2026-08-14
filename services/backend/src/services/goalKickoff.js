@@ -38,7 +38,9 @@ function _off(v) {
  */
 function isAutoDriveEnabled(env) {
   const e = env || process.env || {};
-  if (_off(e.KHY_GOAL)) return false;            // 父门控关 → 整个持久目标关
+  if (_off(e.KHY_GOAL)) {
+    return false;
+  } // 父门控关 → 整个持久目标关
   return !_off(e.KHY_GOAL_AUTODRIVE);
 }
 
@@ -51,9 +53,13 @@ function isAutoDriveEnabled(env) {
  * @returns {string|null}
  */
 function buildGoalKickoffMessage(goal, { env } = {}) {
-  if (!isAutoDriveEnabled(env)) return null;
+  if (!isAutoDriveEnabled(env)) {
+    return null;
+  }
   const text = String((goal && goal.text) || '').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   return [
     '[SYSTEM: 已设定持久目标 —— 现在立即开始朝它推进(对齐 Claude Code /goal:设定即执行,不要等用户再发消息)。',
     `目标:「${text}」`,
@@ -80,16 +86,28 @@ const _HOUR_PER_DAY = 24;
  */
 function formatGoalElapsed(createdAtIso, nowMs) {
   let startMs = NaN;
-  try { startMs = Date.parse(String(createdAtIso == null ? '' : createdAtIso)); } catch { startMs = NaN; }
+  try {
+    startMs = Date.parse(String(createdAtIso == null ? '' : createdAtIso));
+  } catch {
+    startMs = NaN;
+  }
   const now = Number(nowMs);
-  if (!Number.isFinite(startMs) || !Number.isFinite(now)) return '0m';
+  if (!Number.isFinite(startMs) || !Number.isFinite(now)) {
+    return '0m';
+  }
   let deltaMin = Math.floor((now - startMs) / _MS_PER_MIN);
-  if (!Number.isFinite(deltaMin) || deltaMin < 0) deltaMin = 0;
+  if (!Number.isFinite(deltaMin) || deltaMin < 0) {
+    deltaMin = 0;
+  }
 
-  if (deltaMin < _MIN_PER_HOUR) return `${deltaMin}m`;
+  if (deltaMin < _MIN_PER_HOUR) {
+    return `${deltaMin}m`;
+  }
   const totalHours = Math.floor(deltaMin / _MIN_PER_HOUR);
   const mins = deltaMin % _MIN_PER_HOUR;
-  if (totalHours < _HOUR_PER_DAY) return `${totalHours}h${mins}m`;
+  if (totalHours < _HOUR_PER_DAY) {
+    return `${totalHours}h${mins}m`;
+  }
   const days = Math.floor(totalHours / _HOUR_PER_DAY);
   const hours = totalHours % _HOUR_PER_DAY;
   return `${days}d${hours}h`;

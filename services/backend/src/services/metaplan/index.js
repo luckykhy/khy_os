@@ -26,12 +26,12 @@
  * State (the breaker) is per-coordinator: construct one per session.
  */
 
+const interceptors = require('./codeInterceptors');
+const redLines = require('./constitutionalRedLines');
+const injection = require('./constraintInjection');
 const strategyEnum = require('./constraintStrategy');
 const registry = require('./executorRegistry');
 const schema = require('./metaPlanSchema');
-const interceptors = require('./codeInterceptors');
-const injection = require('./constraintInjection');
-const redLines = require('./constitutionalRedLines');
 const { TrustCircuitBreaker } = require('./trustCircuitBreaker');
 
 class MetaPlanCoordinator {
@@ -96,11 +96,15 @@ class MetaPlanCoordinator {
   ingestMetaPlan(rawOutput, action = {}) {
     // Parse (防呆①: no parsable meta-plan ⇒ refuse to proceed).
     const parsed = schema.parseMetaPlan(rawOutput);
-    if (!parsed.ok) return { ok: false, error: parsed.error };
+    if (!parsed.ok) {
+      return { ok: false, error: parsed.error };
+    }
 
     // Validate + anti-laziness escalation (§2).
     const validated = schema.validateMetaPlan(parsed.plan);
-    if (!validated.valid) return { ok: false, error: validated.error };
+    if (!validated.valid) {
+      return { ok: false, error: validated.error };
+    }
 
     const norm = validated.normalized;
     const taskType = _taskType(action);
@@ -220,9 +224,13 @@ class MetaPlanCoordinator {
 }
 
 function _taskType(action = {}) {
-  if (action.taskType) return String(action.taskType).trim().toLowerCase();
+  if (action.taskType) {
+    return String(action.taskType).trim().toLowerCase();
+  }
   // Derive a coarse type from language so distrust is scoped sensibly.
-  const lang = String(action.language || '').trim().toLowerCase();
+  const lang = String(action.language || '')
+    .trim()
+    .toLowerCase();
   return lang ? `edit:${lang}` : 'edit:default';
 }
 

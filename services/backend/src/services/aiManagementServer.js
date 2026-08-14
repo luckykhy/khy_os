@@ -8,20 +8,44 @@
  * Pattern: raw http.createServer (like proxyServer.js), no Express dependency.
  * Exports: { start, stop, isRunning, getPort }
  */
-const http = require('http');
-const { URL } = require('url');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
 const crypto = require('crypto');
-const { getDataHome } = require('../utils/dataHome');
+const fs = require('fs');
+const http = require('http');
+const os = require('os');
+const path = require('path');
+const { URL } = require('url');
+
 const { hashApiKey } = require('@khy/shared/utils/apiKeyHash');
-const { parseApiKeyEntries } = require('./apiKeyFormat');
-const { OLLAMA_HOST: _OLLAMA_HOST_DEFAULT } = require('../constants/serviceDefaults');
+
 // Model-name SSOT: ollama default model flows from constants/models.js
 // (env OLLAMA_MODEL still overrides first).
 const { PRIMARY: MODELS } = require('../constants/models');
+const { OLLAMA_HOST: _OLLAMA_HOST_DEFAULT } = require('../constants/serviceDefaults');
+const { getDataHome } = require('../utils/dataHome');
 const { resolveAnthropicBaseUrl } = require('../utils/proxyBaseUrl');
+
+// ── Protocol registry (lazy, avoid circular deps) ────────────
+const _PROTOCOL_LABELS = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  responses: 'Responses',
+  codewhisperer: 'CodeWhisperer',
+  codex: 'Codex',
+  'cli-stream-json': 'CLI Stream',
+  'trae-native': 'Trae Native',
+  direct: 'Direct',
+  manual: 'Manual',
+};
+
+function _resolveProtocolLabel(adapterType) {
+  try {
+    const { getProtocolForAdapter } = require('../gateway/adapters/_protocolRegistry');
+    const protocol = getProtocolForAdapter(String(adapterType || '').toLowerCase(), null, {});
+    return _PROTOCOL_LABELS[protocol] || protocol || null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Module state ──────────────────────────────────────────────
 let _server = null;
@@ -30,14 +54,14 @@ const _sessions = new Map();
 let _startTime = 0;
 let _port = 0;
 let _heartbeatTimer = null;
-let _autoImportLastAt = 0;
-let _autoImportSummary = null;
-let _lastGatewayAssetsSnapshot = null;
+const _autoImportLastAt = 0;
+const _autoImportSummary = null;
+const _lastGatewayAssetsSnapshot = null;
 
 const SESSION_IDLE_MS = 30 * 60 * 1000; // 30 min idle timeout
-const AUTH_TIMEOUT_MS = 30 * 1000;       // 30s to authenticate
-const GC_INTERVAL_MS = 30 * 1000;        // 30s heartbeat / GC sweep
-const MAX_BODY_BYTES = 1 * 1024 * 1024;  // 1 MB body limit
+const AUTH_TIMEOUT_MS = 30 * 1000; // 30s to authenticate
+const GC_INTERVAL_MS = 30 * 1000; // 30s heartbeat / GC sweep
+const MAX_BODY_BYTES = 1 * 1024 * 1024; // 1 MB body limit
 const KHY_DIR = getDataHome();
 const CONVO_DIR = path.join(KHY_DIR, 'conversations');
 const ACCOUNT_CB_FILE = path.join(KHY_DIR, 'account_pool_circuit_breaker.json');
@@ -88,6 +112,7 @@ let _pluginChain, _tlsSidecar, _protocolConverter, _concurrencySlots;
 let _proxyServer, _customerRegistry, _modelRouter, _paymentGatewayService;
 let _wfApp;
 let _userGatewayApp;
+let _wxApp;
 let _adminApp;
 let _gatewayBillingApp;
 let _aiUploadApp;
@@ -95,11 +120,18 @@ let _marketplaceApp;
 let _pluginsApp;
 let _proxySubApp;
 let _commandsApp;
+let _guiEvalApp;
+let _webFrontendEvalApp;
 let _frontendStaticDir = '';
 let _frontendEntryPath = '/admin/ai-gateway';
 
-function getGateway() { return (_gateway ??= require('./gateway/aiGateway')); }
-function getAi() { return (_ai ??= require('../cli/ai')); }
+function getGateway() {
+  return (_gateway ??= require('./gateway/aiGateway'));
+}
+
+function getAi() {
+  return (_ai ??= require('../cli/ai'));
+}
 
 // Per-turn correlation id for the chat transport handlers (SSE + WS). Threaded
 // into the chat options so traceAuditService stamps every stage under it, and
@@ -110,24 +142,71 @@ function _genChatRequestId() {
   _chatRequestSeq = (_chatRequestSeq + 1) % 1e6;
   return `req_${Date.now().toString(36)}_${_chatRequestSeq.toString(36)}`;
 }
-function getToolCalling() { return (_toolCalling ??= require('./toolCalling')); }
-function getSecurity() { return (_security ??= require('./securityGuardService')); }
-function getTokenUsage() { return (_tokenUsage ??= require('./tokenUsageService')); }
-function getApiKeyPool() { return (_apiKeyPool ??= require('./apiKeyPool')); }
-function getAccountPool() { return _accountPoolOverrideForTest || (_accountPool ??= require('./accountPool')); }
-function getAiMonitor() { return (_aiMonitor ??= require('./aiMonitor')); }
-function getOauthManager() { return (_oauthManager ??= require('./gateway/oauthManager')); }
-function getPluginChain() { return (_pluginChain ??= require('./gateway/pluginChain')); }
-function getTlsSidecar() { return (_tlsSidecar ??= require('./gateway/tlsSidecar')); }
-function getProtocolConverter() { return (_protocolConverter ??= require('./gateway/protocolConverter')); }
-function getConcurrencySlots() { return (_concurrencySlots ??= require('./concurrencySlots')); }
-function getProxyServer() { return (_proxyServer ??= require('./gateway/proxyServer')); }
-function getCustomerRegistry() { return (_customerRegistry ??= require('./gateway/customerRegistry')); }
-function getModelRouter() { return (_modelRouter ??= require('./gateway/modelRouter')); }
-function getPaymentGatewayService() { return (_paymentGatewayService ??= require('./gateway/paymentGatewayService')); }
+
+function getToolCalling() {
+  return (_toolCalling ??= require('./toolCalling'));
+}
+
+function getSecurity() {
+  return (_security ??= require('./securityGuardService'));
+}
+
+function getTokenUsage() {
+  return (_tokenUsage ??= require('./tokenUsageService'));
+}
+
+function getApiKeyPool() {
+  return (_apiKeyPool ??= require('./apiKeyPool'));
+}
+
+function getAccountPool() {
+  return _accountPoolOverrideForTest || (_accountPool ??= require('./accountPool'));
+}
+
+function getAiMonitor() {
+  return (_aiMonitor ??= require('./aiMonitor'));
+}
+
+function getOauthManager() {
+  return (_oauthManager ??= require('./gateway/oauthManager'));
+}
+
+function getPluginChain() {
+  return (_pluginChain ??= require('./gateway/pluginChain'));
+}
+
+function getTlsSidecar() {
+  return (_tlsSidecar ??= require('./gateway/tlsSidecar'));
+}
+
+function getProtocolConverter() {
+  return (_protocolConverter ??= require('./gateway/protocolConverter'));
+}
+
+function getConcurrencySlots() {
+  return (_concurrencySlots ??= require('./concurrencySlots'));
+}
+
+function getProxyServer() {
+  return (_proxyServer ??= require('./gateway/proxyServer'));
+}
+
+function getCustomerRegistry() {
+  return (_customerRegistry ??= require('./gateway/customerRegistry'));
+}
+
+function getModelRouter() {
+  return (_modelRouter ??= require('./gateway/modelRouter'));
+}
+
+function getPaymentGatewayService() {
+  return (_paymentGatewayService ??= require('./gateway/paymentGatewayService'));
+}
 
 function getWorkflowApp() {
-  if (_wfApp) return _wfApp;
+  if (_wfApp) {
+    return _wfApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_WORKFLOW_BODY_LIMIT || '5mb').trim() || '5mb';
   const a = express();
@@ -145,7 +224,9 @@ function getWorkflowApp() {
 // User-gateway namespace: per-user model config, custom providers, CC tokens.
 // Reuses ai-backend's userGateway router (auth applied at router level: authenticateToken).
 function getUserGatewayApp() {
-  if (_userGatewayApp) return _userGatewayApp;
+  if (_userGatewayApp) {
+    return _userGatewayApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_USER_GATEWAY_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
@@ -160,7 +241,9 @@ function getUserGatewayApp() {
 // 404s — the router was only mounted in ai-backend's standalone server, which does
 // not serve the frontend on this daemon.
 function getMarketplaceApp() {
-  if (_marketplaceApp) return _marketplaceApp;
+  if (_marketplaceApp) {
+    return _marketplaceApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_MARKETPLACE_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
@@ -175,7 +258,9 @@ function getMarketplaceApp() {
 // authenticateToken). Imports of an OpenAPI spec can be larger than a normal body,
 // so allow an env-tunable limit (matches the spirit of the workflow coze limit).
 function getPluginsApp() {
-  if (_pluginsApp) return _pluginsApp;
+  if (_pluginsApp) {
+    return _pluginsApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_PLUGINS_BODY_LIMIT || '8mb').trim() || '8mb';
   const a = express();
@@ -192,7 +277,9 @@ function getPluginsApp() {
 // req.user.id. Without this mount the daemon 404s /api/proxy-subscriptions (the route
 // only ever existed on the monolith, which does not run on this khychat daemon).
 function getProxySubscriptionApp() {
-  if (_proxySubApp) return _proxySubApp;
+  if (_proxySubApp) {
+    return _proxySubApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_PROXY_SUB_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
@@ -202,6 +289,30 @@ function getProxySubscriptionApp() {
   return (_proxySubApp = a);
 }
 
+// WeChat (ilink) binding management namespace: multi-account bind/unbind/active +
+// SSE scan-login stream. Mirrors the CLI `khy wx …` handlers, thin-wrapping the same
+// ilink stores (masked listAccounts only — never plaintext token). Auth is stacked at
+// the mount (authenticateToken [+ requireAdmin if exported]) since the router itself
+// carries none. Lazily built + cached like the sibling sub-apps (_proxySubApp). The
+// SSE /login/stream endpoint owns the raw response (flushHeaders), so this must be
+// dispatched before any parseBody in routeRequest.
+function getWxApp() {
+  if (_wxApp) {
+    return _wxApp;
+  }
+  const express = require('express');
+  const limit = String(process.env.KHY_WX_BODY_LIMIT || '256kb').trim() || '256kb';
+  const a = express();
+  a.use(express.json({ limit }));
+  const auth = require('../../../ai-backend/src/middleware/auth');
+  const guards = [auth.authenticateToken];
+  if (typeof auth.requireAdmin === 'function') {
+    guards.push(auth.requireAdmin);
+  }
+  a.use('/api/wx', ...guards, require('../routes/wx'));
+  return (_wxApp = a);
+}
+
 // Command-catalog namespace: the read-only 「功能索引 / Feature Index」 reference the
 // FeatureCatalog.vue page fetches (GET /api/commands). Data comes from the same SSOT as
 // the TUI `/features` command (commandCatalog.buildCommandCatalog); the router is public,
@@ -209,7 +320,9 @@ function getProxySubscriptionApp() {
 // /api/commands — the route only ever existed on the monolith server.js, which does not
 // run on this khychat daemon — so the page shows "Not found / 功能索引暂时加载不出来".
 function getCommandsApp() {
-  if (_commandsApp) return _commandsApp;
+  if (_commandsApp) {
+    return _commandsApp;
+  }
   const express = require('express');
   const a = express();
   a.use(express.json({ limit: '256kb' }));
@@ -220,7 +333,9 @@ function getCommandsApp() {
 // Admin namespace: agent dashboard and other admin-only operations.
 // Reuses the monolith aiGatewayAdmin router (auth at router level: authenticateToken + requireAdmin).
 function getAdminApp() {
-  if (_adminApp) return _adminApp;
+  if (_adminApp) {
+    return _adminApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_ADMIN_BODY_LIMIT || '5mb').trim() || '5mb';
   const a = express();
@@ -229,12 +344,47 @@ function getAdminApp() {
   return (_adminApp = a);
 }
 
+// GUI Agent evaluation namespace: task CRUD, run execution, auto-evaluation, leaderboard.
+// Auth stacked at mount: authenticateToken + requireAdmin (all routes are admin-only).
+function getGuiEvalApp() {
+  if (_guiEvalApp) {
+    return _guiEvalApp;
+  }
+  const express = require('express');
+  const limit = String(process.env.KHY_GUI_EVAL_BODY_LIMIT || '5mb').trim() || '5mb';
+  const a = express();
+  a.use(express.json({ limit }));
+  const auth = require('../../../ai-backend/src/middleware/auth');
+  const guards = [auth.authenticateToken, auth.requireAdmin];
+  a.use('/api/gui-eval', ...guards, require('../routes/guiEval'));
+  return (_guiEvalApp = a);
+}
+
+// Web Frontend Trajectory Annotation namespace: 2D/3D Web 前端轨迹标注。
+// Task CRUD, run lifecycle, trajectory package assembly, QC validation, zip packaging.
+// Auth stacked at mount: authenticateToken + requireAdmin.
+function getWebFrontendEvalApp() {
+  if (_webFrontendEvalApp) {
+    return _webFrontendEvalApp;
+  }
+  const express = require('express');
+  const limit = String(process.env.KHY_WEB_FRONTEND_EVAL_BODY_LIMIT || '10mb').trim() || '10mb';
+  const a = express();
+  a.use(express.json({ limit }));
+  const auth = require('../../../ai-backend/src/middleware/auth');
+  const guards = [auth.authenticateToken, auth.requireAdmin];
+  a.use('/api/web-frontend-eval', ...guards, require('../routes/webFrontendEval'));
+  return (_webFrontendEvalApp = a);
+}
+
 // AI-gateway billing namespace: usage, pricing, groups, rate-limits.
 // The daemon's handleAiGatewayNamespace owns the operational ai-gateway routes; these
 // billing reports live only in ai-backend's aiGatewayAdmin router, so mount that router
 // under /api/ai-gateway and let Express 404 the paths the daemon already serves natively.
 function getGatewayBillingApp() {
-  if (_gatewayBillingApp) return _gatewayBillingApp;
+  if (_gatewayBillingApp) {
+    return _gatewayBillingApp;
+  }
   const express = require('express');
   const limit = String(process.env.KHY_GATEWAY_BILLING_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
@@ -250,7 +400,9 @@ function getGatewayBillingApp() {
 // the daemon (Bearer / X-API-Key via authenticateRequest). Uploaded files are
 // committed to getDataDir('ai-uploads') and referenced from chat by opaque id.
 function getAiUploadApp() {
-  if (_aiUploadApp) return _aiUploadApp;
+  if (_aiUploadApp) {
+    return _aiUploadApp;
+  }
   const express = require('express');
   const multer = require('multer');
   const uploadStore = require('./aiUploadStore');
@@ -261,7 +413,9 @@ function getAiUploadApp() {
     try {
       const auth = await authenticateRequest(req);
       if (!auth.ok) {
-        return res.status(401).json({ success: false, message: auth.error || 'Authentication required' });
+        return res
+          .status(401)
+          .json({ success: false, message: auth.error || 'Authentication required' });
       }
       req.authUser = auth.user || null;
       next();
@@ -272,7 +426,8 @@ function getAiUploadApp() {
 
   const storage = multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, os.tmpdir()),
-    filename: (_req, _file, cb) => cb(null, `khy-upload-${Date.now()}-${Math.round(Math.random() * 1e9)}`),
+    filename: (_req, _file, cb) =>
+      cb(null, `khy-upload-${Date.now()}-${Math.round(Math.random() * 1e9)}`),
   });
   const upload = multer({ storage, limits: { fileSize: uploadStore.maxFileBytes(), files: 10 } });
 
@@ -305,7 +460,11 @@ function getAiUploadApp() {
           });
           attachments.push(uploadStore.toDescriptor(manifest));
         } catch (e) {
-          try { require('fs').unlinkSync(f.path); } catch { /* ignore */ }
+          try {
+            require('fs').unlinkSync(f.path);
+          } catch {
+            /* ignore */
+          }
           return res.status(500).json({ success: false, message: `保存附件失败：${e.message}` });
         }
       }
@@ -316,11 +475,21 @@ function getAiUploadApp() {
   // Download / preview a committed attachment by id.
   a.get('/api/ai/upload/:id', expressAuth, (req, res) => {
     const manifest = uploadStore.getUpload(req.params.id);
-    if (!manifest) return res.status(404).json({ success: false, message: '附件不存在或已过期' });
+    if (!manifest) {
+      return res.status(404).json({ success: false, message: '附件不存在或已过期' });
+    }
     res.setHeader('Content-Type', manifest.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(manifest.originalName)}`);
-    require('fs').createReadStream(manifest.storedPath)
-      .on('error', () => { if (!res.headersSent) res.status(500).end(); })
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename*=UTF-8''${encodeURIComponent(manifest.originalName)}`
+    );
+    require('fs')
+      .createReadStream(manifest.storedPath)
+      .on('error', () => {
+        if (!res.headersSent) {
+          res.status(500).end();
+        }
+      })
       .pipe(res);
   });
 
@@ -351,7 +520,9 @@ const STATIC_CONTENT_TYPES = Object.freeze({
 
 function normalizeWebPath(pathname = '/admin/ai-gateway') {
   const raw = String(pathname || '').trim();
-  if (!raw) return '/admin/ai-gateway';
+  if (!raw) {
+    return '/admin/ai-gateway';
+  }
   return raw.startsWith('/') ? raw : `/${raw}`;
 }
 
@@ -384,13 +555,18 @@ function _contentTypeFor(filePath) {
 function _isWithinDir(rootDir, targetPath) {
   const normalizedRoot = path.resolve(rootDir);
   const normalizedTarget = path.resolve(targetPath);
-  return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`);
+  return (
+    normalizedTarget === normalizedRoot ||
+    normalizedTarget.startsWith(`${normalizedRoot}${path.sep}`)
+  );
 }
 
 function _sendStaticFile(req, res, absPath) {
   try {
     const stat = fs.statSync(absPath);
-    if (!stat.isFile()) return false;
+    if (!stat.isFile()) {
+      return false;
+    }
     const body = fs.readFileSync(absPath);
     const headers = {
       'Content-Type': _contentTypeFor(absPath),
@@ -418,14 +594,22 @@ function _resolveStaticPath(distDir, relativePath) {
     .replace(/^\/+/, '')
     .replace(/\\/g, '/');
   const resolved = path.resolve(distDir, normalized);
-  if (!_isWithinDir(distDir, resolved)) return null;
+  if (!_isWithinDir(distDir, resolved)) {
+    return null;
+  }
   return resolved;
 }
 
 function tryHandleFrontendStatic(req, res, pathname) {
-  if (!_frontendStaticDir) return false;
-  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
-  if (pathname.startsWith('/api/') || pathname === '/ws') return false;
+  if (!_frontendStaticDir) {
+    return false;
+  }
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return false;
+  }
+  if (pathname.startsWith('/api/') || pathname === '/ws') {
+    return false;
+  }
 
   const entry = _frontendEntryPath || '/admin/ai-gateway';
   if (pathname === '/') {
@@ -437,7 +621,9 @@ function tryHandleFrontendStatic(req, res, pathname) {
   // Vite build assets are usually absolute "/assets/*".
   if (pathname.startsWith('/assets/')) {
     const filePath = _resolveStaticPath(_frontendStaticDir, pathname);
-    if (!filePath) return false;
+    if (!filePath) {
+      return false;
+    }
     return _sendStaticFile(req, res, filePath);
   }
 
@@ -447,7 +633,9 @@ function tryHandleFrontendStatic(req, res, pathname) {
   // Miss → 404 (never fall through, which would surface a misleading 401).
   if (pathname.startsWith('/vendor/')) {
     const filePath = _resolveStaticPath(_frontendStaticDir, pathname);
-    if (filePath && _sendStaticFile(req, res, filePath)) return true;
+    if (filePath && _sendStaticFile(req, res, filePath)) {
+      return true;
+    }
     sendError(res, 404, 'Not found');
     return true;
   }
@@ -463,7 +651,9 @@ function tryHandleFrontendStatic(req, res, pathname) {
 
   if (pathname === entry || pathname === `${entry}/`) {
     const indexPath = path.join(_frontendStaticDir, 'index.html');
-    if (_sendStaticFile(req, res, indexPath)) return true;
+    if (_sendStaticFile(req, res, indexPath)) {
+      return true;
+    }
     sendError(res, 500, 'Frontend static index not found');
     return true;
   }
@@ -471,11 +661,15 @@ function tryHandleFrontendStatic(req, res, pathname) {
   if (pathname.startsWith(`${entry}/`)) {
     const innerPath = pathname.slice(entry.length + 1);
     const candidate = _resolveStaticPath(_frontendStaticDir, innerPath);
-    if (candidate && _sendStaticFile(req, res, candidate)) return true;
+    if (candidate && _sendStaticFile(req, res, candidate)) {
+      return true;
+    }
 
     // SPA fallback
     const indexPath = path.join(_frontendStaticDir, 'index.html');
-    if (_sendStaticFile(req, res, indexPath)) return true;
+    if (_sendStaticFile(req, res, indexPath)) {
+      return true;
+    }
     sendError(res, 500, 'Frontend static index not found');
     return true;
   }
@@ -487,7 +681,7 @@ function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
     let bytes = 0;
-    req.on('data', chunk => {
+    req.on('data', (chunk) => {
       bytes += chunk.length;
       if (bytes > MAX_BODY_BYTES) {
         req.destroy();
@@ -497,20 +691,41 @@ function parseBody(req) {
       data += chunk;
     });
     req.on('end', () => {
-      try { resolve(data ? JSON.parse(data) : {}); }
-      catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
 }
 
-function corsHeaders() {
-  const origins = process.env.AI_MGMT_CORS_ORIGINS || '*';
+function corsHeaders(req) {
+  // Default: only allow same-origin (localhost). Override via AI_MGMT_CORS_ORIGINS.
+  // Wildcard '*' is never used — it would allow any website to interact with the
+  // management API from the user's browser, enabling CSRF attacks.
+  const envOrigins = process.env.AI_MGMT_CORS_ORIGINS;
+  let origin = '*';
+  if (envOrigins) {
+    origin = envOrigins
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(', ');
+  } else if (req && req.headers && req.headers.origin) {
+    // Allow the requesting origin only if it looks like localhost / 127.0.0.1
+    const reqOrigin = String(req.headers.origin);
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(reqOrigin)) {
+      origin = reqOrigin;
+    }
+  }
   return {
-    'Access-Control-Allow-Origin': origins,
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
     'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
   };
 }
 
@@ -535,7 +750,6 @@ function sendError(res, status, message) {
 // On a fresh page load every multi-pivot view requests these, so we serve them
 // from Redis (with an in-process Map fallback when Redis is down — see
 // cacheService) under a short TTL, and invalidate on any gateway mutation.
-const _gatewayCache = require('./cacheService');
 const _GATEWAY_CACHE_PREFIX = 'aigw:';
 
 // Default on. Disable with KHY_GATEWAY_CACHE=0; tune freshness with
@@ -553,44 +767,151 @@ function gatewayCacheTtl() {
 // store its result, and return it. Cache faults never break the request — on
 // any error we fall through to a live produce.
 async function cachedGatewayPayload(key, producer, ttl = gatewayCacheTtl()) {
-  if (!gatewayCacheEnabled()) return producer();
+  if (!gatewayCacheEnabled()) {
+    return producer();
+  }
   try {
     const hit = await _gatewayCache.get(key);
-    if (hit != null) return hit;
-  } catch { /* fall through to live produce */ }
+    if (hit != null) {
+      return hit;
+    }
+  } catch {
+    /* fall through to live produce */
+  }
   const value = await producer();
   // Only cache real payloads, never null/undefined (which would mask misses).
   if (value != null) {
-    try { await _gatewayCache.set(key, value, ttl); } catch { /* best-effort */ }
+    try {
+      await _gatewayCache.set(key, value, ttl);
+    } catch {
+      /* best-effort */
+    }
   }
   return value;
 }
 
 // Overwrite a cache entry (used by ?live=1 catalog refresh to warm the default).
 async function writeGatewayCache(key, value, ttl = gatewayCacheTtl()) {
-  if (!gatewayCacheEnabled() || value == null) return;
-  try { await _gatewayCache.set(key, value, ttl); } catch { /* best-effort */ }
+  if (!gatewayCacheEnabled() || value == null) {
+    return;
+  }
+  try {
+    await _gatewayCache.set(key, value, ttl);
+  } catch {
+    /* best-effort */
+  }
 }
 
 // Drop every gateway read cache. Called after any mutation so the next read
 // recomputes. Over-invalidation is cheap (one recompute) and keeps correctness
 // trivial — no per-key bookkeeping across dozens of mutating handlers.
 async function invalidateGatewayCache() {
-  if (!gatewayCacheEnabled()) return;
-  try { await _gatewayCache.clearByPrefix(_GATEWAY_CACHE_PREFIX); } catch { /* best-effort */ }
+  if (!gatewayCacheEnabled()) {
+    return;
+  }
+  try {
+    await _gatewayCache.clearByPrefix(_GATEWAY_CACHE_PREFIX);
+  } catch {
+    /* best-effort */
+  }
+}
+
+// Known reverse-proxy peers whose X-Forwarded-For we trust.  Configured via
+// AI_MGMT_TRUSTED_PROXIES (comma-separated IPs/CIDRs).  When empty, X-Forwarded-For
+// is IGNORED entirely so a remote attacker cannot spoof 127.0.0.1 / LAN addresses.
+function _getTrustedProxyIps() {
+  const raw = process.env.AI_MGMT_TRUSTED_PROXIES || '';
+  if (!raw.trim()) {
+    return new Set();
+  }
+  return new Set(
+    raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
 }
 
 function getClientIp(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.socket?.remoteAddress
-    || '127.0.0.1';
+  const remote = req.socket?.remoteAddress || '';
+  const trusted = _getTrustedProxyIps();
+  const xff = req.headers['x-forwarded-for'];
+
+  // Only trust X-Forwarded-For when the TCP peer is a known proxy.
+  if (xff && trusted.size > 0 && remote) {
+    const normalizedRemote = normalizeIp(remote);
+    for (const proxy of trusted) {
+      if (normalizedRemote === proxy || _cidrMatch(normalizedRemote, proxy)) {
+        return String(xff).split(',')[0]?.trim() || remote;
+      }
+    }
+  }
+
+  // Fallback: direct socket address (no spoofing possible).
+  return remote || '';
+}
+
+// Simple IPv4 CIDR check.
+function _cidrMatch(ip, cidr) {
+  if (!cidr.includes('/')) {
+    return false;
+  }
+  const [range, bitsStr] = cidr.split('/');
+  const bits = parseInt(bitsStr, 10);
+  if (!Number.isFinite(bits) || bits < 0 || bits > 32) {
+    return false;
+  }
+  const ipNum = _ipToInt(ip);
+  const rangeNum = _ipToInt(range);
+  if (ipNum === null || rangeNum === null) {
+    return false;
+  }
+  const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
+  return (ipNum & mask) === (rangeNum & mask);
+}
+
+function _ipToInt(ip) {
+  const parts = String(ip).split('.');
+  if (parts.length !== 4) {
+    return null;
+  }
+  const nums = parts.map((p) => parseInt(p, 10));
+  if (nums.some((n) => !Number.isFinite(n) || n < 0 || n > 255)) {
+    return null;
+  }
+  return ((nums[0] << 24) | (nums[1] << 16) | (nums[2] << 8) | nums[3]) >>> 0;
 }
 
 // Strip the IPv4-mapped-IPv6 prefix (Node reports `::ffff:10.0.0.5` for IPv4
 // peers on a dual-stack socket) so range checks below see a plain IPv4 string.
+// Also decode the HEX hextet form (::ffff:7f00:1 == 127.0.0.1): the dotted
+// branch only unwraps `x.x.x.x`, so a loopback/LAN peer reported in hex form
+// slipped through as non-local and was denied access. Aligned with the sibling
+// ssrfGuard.js patch. Gated KHY_SSRF_IPV4_MAPPED_HEX (default ON); OFF byte-reverts.
 function normalizeIp(ip) {
   const s = String(ip || '');
-  return s.startsWith('::ffff:') ? s.slice(7) : s;
+  if (!s.startsWith('::ffff:')) {
+    return s;
+  }
+  const v = s.slice(7);
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) {
+    return v;
+  } // dotted-decimal form
+  let hexEnabled = true;
+  try {
+    hexEnabled = require('./flagRegistry').isFlagEnabled('KHY_SSRF_IPV4_MAPPED_HEX', process.env);
+  } catch {
+    hexEnabled = true;
+  }
+  if (hexEnabled) {
+    const h = v.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i); // hex hextet form
+    if (h) {
+      const lo = parseInt(h[1], 16);
+      const hi = parseInt(h[2], 16);
+      return `${(lo >>> 8) & 255}.${lo & 255}.${(hi >>> 8) & 255}.${hi & 255}`;
+    }
+  }
+  return v;
 }
 
 function isLoopbackIp(ip) {
@@ -600,9 +921,13 @@ function isLoopbackIp(ip) {
 
 function isLocalIp(ip) {
   const v = normalizeIp(ip);
-  return v === '127.0.0.1' || v === '::1'
-    || v.startsWith('192.168.') || v.startsWith('10.')
-    || /^172\.(1[6-9]|2\d|3[01])\./.test(v);
+  return (
+    v === '127.0.0.1' ||
+    v === '::1' ||
+    v.startsWith('192.168.') ||
+    v.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(v)
+  );
 }
 
 function safeJsonParse(raw, fallback = {}) {
@@ -615,16 +940,17 @@ function safeJsonParse(raw, fallback = {}) {
 }
 
 function normalizeCircuitBreakerConfig(input = {}) {
-  const src = (input && typeof input === 'object') ? input : {};
+  const src = input && typeof input === 'object' ? input : {};
   const enabled = src.enabled === true;
   const backoffSteps = Array.isArray(src.backoffSteps)
-    ? src.backoffSteps.map(n => parseInt(n, 10)).filter(n => Number.isFinite(n) && n > 0)
+    ? src.backoffSteps.map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n) && n > 0)
     : [];
   return {
     enabled,
-    backoffSteps: backoffSteps.length > 0
-      ? [...new Set(backoffSteps)]
-      : [...DEFAULT_ACCOUNT_CIRCUIT_BREAKER.backoffSteps],
+    backoffSteps:
+      backoffSteps.length > 0
+        ? [...new Set(backoffSteps)]
+        : [...DEFAULT_ACCOUNT_CIRCUIT_BREAKER.backoffSteps],
   };
 }
 
@@ -633,7 +959,10 @@ function readAccountCircuitBreakerConfig() {
     if (!fs.existsSync(ACCOUNT_CB_FILE)) {
       return { ...DEFAULT_ACCOUNT_CIRCUIT_BREAKER };
     }
-    const parsed = safeJsonParse(fs.readFileSync(ACCOUNT_CB_FILE, 'utf-8'), DEFAULT_ACCOUNT_CIRCUIT_BREAKER);
+    const parsed = safeJsonParse(
+      fs.readFileSync(ACCOUNT_CB_FILE, 'utf-8'),
+      DEFAULT_ACCOUNT_CIRCUIT_BREAKER
+    );
     return normalizeCircuitBreakerConfig(parsed);
   } catch {
     return { ...DEFAULT_ACCOUNT_CIRCUIT_BREAKER };
@@ -650,7 +979,9 @@ function saveAccountCircuitBreakerConfig(next = {}) {
 }
 
 function sanitizePluginName(raw) {
-  return String(raw || '').trim().replace(/\.js$/i, '');
+  return String(raw || '')
+    .trim()
+    .replace(/\.js$/i, '');
 }
 
 function getPluginFilePath(pluginName) {
@@ -683,8 +1014,12 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
   // Lightweight mode: simple token comparison
   const envToken = process.env.AI_MGMT_AUTH_TOKEN;
   if (envToken) {
-    if (bearerToken === envToken) return { ok: true, user: { id: 0, role: 'user' }, method: 'token' };
-    if (apiKey === envToken) return { ok: true, user: { id: 0, role: 'user' }, method: 'token' };
+    if (bearerToken === envToken) {
+      return { ok: true, user: { id: 0, role: 'user' }, method: 'token' };
+    }
+    if (apiKey === envToken) {
+      return { ok: true, user: { id: 0, role: 'user' }, method: 'token' };
+    }
     // If env token is set, only accept that token (don't fall through to DB)
     return { ok: false, error: 'Invalid token' };
   }
@@ -721,10 +1056,16 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
           const queryInterface = sequelize.getQueryInterface();
           const schema = await queryInterface.describeTable('api_keys');
           const whereParts = [];
-          if (Object.prototype.hasOwnProperty.call(schema, 'key_hash')) whereParts.push('key_hash = :keyHash');
+          if (Object.prototype.hasOwnProperty.call(schema, 'key_hash')) {
+            whereParts.push('key_hash = :keyHash');
+          }
           // Legacy "key" column no longer queried — seed.js backfills key_hash.
-          if (whereParts.length === 0) return null;
-          const activeClause = Object.prototype.hasOwnProperty.call(schema, 'is_active') ? 'AND is_active = :isActive' : '';
+          if (whereParts.length === 0) {
+            return null;
+          }
+          const activeClause = Object.prototype.hasOwnProperty.call(schema, 'is_active')
+            ? 'AND is_active = :isActive'
+            : '';
           const rows = await sequelize.query(
             `SELECT id, user_id
                FROM api_keys
@@ -741,13 +1082,21 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
             }
           );
           const row = rows[0];
-          if (!row) return null;
+          if (!row) {
+            return null;
+          }
           const userId = Number(row.user_id || row.userId || 0);
-          if (!userId) return null;
+          if (!userId) {
+            return null;
+          }
           const user = await User.findByPk(userId);
-          if (!user) return null;
+          if (!user) {
+            return null;
+          }
           const touch = async () => {
-            if (!Object.prototype.hasOwnProperty.call(schema, 'last_used_at')) return;
+            if (!Object.prototype.hasOwnProperty.call(schema, 'last_used_at')) {
+              return;
+            }
             try {
               await sequelize.query(
                 'UPDATE api_keys SET last_used_at = :lastUsedAt WHERE id = :id',
@@ -770,22 +1119,37 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
       if (bearerToken) {
         try {
           const authSessionService = require('./authSessionService');
-          const authResult = await authSessionService.authenticateAccessToken(bearerToken, { touch: false });
+          const authResult = await authSessionService.authenticateAccessToken(bearerToken, {
+            touch: false,
+          });
           if (!authResult?.ok || !authResult.user) {
-            const errorMessage = authResult?.code === 'token_expired'
-              ? 'Token expired'
-              : (authResult?.code === 'user_inactive' ? 'Account disabled' : 'Invalid token');
+            const errorMessage =
+              authResult?.code === 'token_expired'
+                ? 'Token expired'
+                : authResult?.code === 'user_inactive'
+                  ? 'Account disabled'
+                  : 'Invalid token';
             return { ok: false, error: errorMessage };
           }
-          return { ok: true, user: authResult.user, method: authResult.legacy ? 'jwt-legacy' : 'jwt' };
-        } catch { /* JWT invalid — fall through */ }
+          return {
+            ok: true,
+            user: authResult.user,
+            method: authResult.legacy ? 'jwt-legacy' : 'jwt',
+          };
+        } catch {
+          /* JWT invalid — fall through */
+        }
       }
 
       // Path B: X-API-Key
       if (apiKey) {
         const matched = await findApiKeyUser(apiKey);
-        if (!matched?.user) return { ok: false, error: 'Invalid API key' };
-        if (matched.user.status !== 'active') return { ok: false, error: 'Account disabled' };
+        if (!matched?.user) {
+          return { ok: false, error: 'Invalid API key' };
+        }
+        if (matched.user.status !== 'active') {
+          return { ok: false, error: 'Account disabled' };
+        }
         matched.touch?.();
         return { ok: true, user: matched.user, method: 'apiKey' };
       }
@@ -795,27 +1159,31 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
   }
 
   // No auth mechanism configured (no AI_MGMT_AUTH_TOKEN, no JWT_SECRET).
-  // Allow trusted-network access so the local UI — and a phone scanning the
-  // `mobile` QR on the same LAN — works without first setting up auth.
-  //   - Loopback is always trusted outside production (realizes the previously
-  //     documented-but-unimplemented "dev localhost" behaviour).
-  //   - Private-LAN peers are trusted only when AI_MGMT_ALLOW_LAN is opted in,
-  //     since a phone reaches the server over the LAN, not loopback.
-  // Whenever real auth (token/JWT) IS configured, the paths above already
-  // enforced it and we never reach here — this bypass cannot weaken it.
+  // Trusted-network bypass is opt-in via AI_MGMT_ALLOW_LOOPBACK_ADMIN=true and
+  // is NEVER active in production.  LAN access additionally requires
+  // AI_MGMT_ALLOW_LAN=true and only grants a regular user role.
+  //   - Loopback → admin (local dev UI convenience)
+  //   - Private LAN → user (phone QR-scan access)
+  // Default-off: without the opt-in env var, all requests require auth.
   if (!process.env.AI_MGMT_AUTH_TOKEN && !process.env.JWT_SECRET) {
     const isProd = process.env.NODE_ENV === 'production';
-    if (isLoopbackIp(clientIp) && !isProd) {
+    const allowLoopback = parseBooleanLike(process.env.AI_MGMT_ALLOW_LOOPBACK_ADMIN, false);
+    if (allowLoopback && !isProd && isLoopbackIp(clientIp)) {
       return { ok: true, user: { id: 0, role: 'admin' }, method: 'local-dev' };
     }
-    if (parseBooleanLike(process.env.AI_MGMT_ALLOW_LAN, false) && isLocalIp(clientIp)) {
+    if (
+      allowLoopback &&
+      parseBooleanLike(process.env.AI_MGMT_ALLOW_LAN, false) &&
+      isLocalIp(clientIp)
+    ) {
       return { ok: true, user: { id: 0, role: 'user' }, method: 'lan' };
     }
   }
 
   return {
     ok: false,
-    error: 'Authentication required (set AI_MGMT_AUTH_TOKEN or JWT_SECRET; for trusted-LAN phone access set AI_MGMT_ALLOW_LAN=true)',
+    error:
+      'Authentication required (set AI_MGMT_AUTH_TOKEN or JWT_SECRET; for trusted-LAN phone access set AI_MGMT_ALLOW_LAN=true)',
   };
 }
 
@@ -829,7 +1197,9 @@ async function authenticateRequest(req, clientIp) {
 }
 
 function sanitizeAuthUser(user) {
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   if (typeof user.toJSON === 'function') {
     const data = user.toJSON();
     if (data && typeof data === 'object') {
@@ -849,29 +1219,45 @@ function sanitizeAuthUser(user) {
 }
 
 function isManagerLikeUser(user) {
-  return Number(user?.id || 0) === 0 || String(user?.role || '').trim().toLowerCase() === 'admin';
+  return (
+    Number(user?.id || 0) === 0 ||
+    String(user?.role || '')
+      .trim()
+      .toLowerCase() === 'admin'
+  );
 }
 
 function requireManagerAccess(req, res) {
   const user = req?.authContext?.user || req?.user || null;
-  if (isManagerLikeUser(user)) return user;
+  if (isManagerLikeUser(user)) {
+    return user;
+  }
   sendJson(res, 403, { success: false, message: '需要管理员权限' });
   return null;
 }
 
 async function verifyAuthPassword(user, password) {
-  if (!user || typeof user.comparePassword !== 'function') return false;
+  if (!user || typeof user.comparePassword !== 'function') {
+    return false;
+  }
   let isValid = await user.comparePassword(password);
 
   // Optional legacy bridge: allow a known historical default password if
   // LEGACY_ADMIN_PASSWORD env var is set (operator opt-in only — never hardcoded).
   const legacyPw = String(process.env.LEGACY_ADMIN_PASSWORD || '').trim();
-  if (!isValid && legacyPw && String(user.username || '').toLowerCase() === 'admin' && password === legacyPw) {
+  if (
+    !isValid &&
+    legacyPw &&
+    String(user.username || '').toLowerCase() === 'admin' &&
+    password === legacyPw
+  ) {
     const legacyMatched = await user.comparePassword(legacyPw);
     if (legacyMatched) {
       isValid = true;
       try {
-        await user.update({ password: process.env.DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex') });
+        await user.update({
+          password: process.env.DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex'),
+        });
       } catch {
         // best effort password migration
       }
@@ -882,11 +1268,22 @@ async function verifyAuthPassword(user, password) {
 
 function issueAuthJwt(userId) {
   const jwt = require('jsonwebtoken');
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  });
+}
+
+// Lightweight, unauthenticated: exposes ONLY the default admin username so
+// the login page can prefill it. The password is NEVER returned — it lives in
+// the data home at .khy/credentials/default-admin.json.
+async function handleAuthDefaultAdmin(req, res) {
+  try {
+    const credGen = require('./credentialGenerator');
+    const username = credGen.resolveDefaultAdminUsername();
+    return sendJson(res, 200, { success: true, data: { username } });
+  } catch (err) {
+    return sendJson(res, 500, { success: false, message: '无法获取默认管理员信息' });
+  }
 }
 
 async function handleAuthLogin(req, res) {
@@ -936,11 +1333,18 @@ async function handleAuthLogin(req, res) {
         message: 'Login successful',
         data: {
           token: builtinToken,
-          user: { id: 0, username: builtinResult.username, role: builtinResult.role || 'user', status: 'active' },
+          user: {
+            id: 0,
+            username: builtinResult.username,
+            role: builtinResult.role || 'user',
+            status: 'active',
+          },
         },
       });
     }
-  } catch { /* cliAuthService not available, continue to DB login */ }
+  } catch {
+    /* cliAuthService not available, continue to DB login */
+  }
 
   if (!process.env.JWT_SECRET) {
     return sendJson(res, 500, {
@@ -954,10 +1358,7 @@ async function handleAuthLogin(req, res) {
     const { User } = require('../models');
     const user = await User.findOne({
       where: {
-        [Op.or]: [
-          { username },
-          { email: username },
-        ],
+        [Op.or]: [{ username }, { email: username }],
       },
     });
 
@@ -1001,8 +1402,10 @@ async function handleAuthLogin(req, res) {
 }
 
 async function handleAuthMe(req, res) {
-  const auth = req.authContext || await authenticateRequest(req);
-  if (!auth.ok) return sendJson(res, 401, { success: false, message: auth.error || 'Authentication required' });
+  const auth = req.authContext || (await authenticateRequest(req));
+  if (!auth.ok) {
+    return sendJson(res, 401, { success: false, message: auth.error || 'Authentication required' });
+  }
   return sendJson(res, 200, {
     success: true,
     data: {
@@ -1018,12 +1421,14 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = parseInt(process.env.AI_MGMT_RATE_LIMIT || '120', 10);
 
 function checkRateLimit(ip) {
-  if (isLocalIp(ip)) return { allowed: true, remaining: RATE_LIMIT_MAX };
+  if (isLocalIp(ip)) {
+    return { allowed: true, remaining: RATE_LIMIT_MAX };
+  }
 
   const now = Date.now();
   let entry = _rateLimits.get(ip);
 
-  if (!entry || (now - entry.windowStart) > RATE_LIMIT_WINDOW_MS) {
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
     entry = { count: 0, windowStart: now };
     _rateLimits.set(ip, entry);
   }
@@ -1057,7 +1462,9 @@ async function handleHealth(req, res) {
 
 async function handleStatus(req, res) {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   const adapters = gw.getStatus();
   const active = gw.getActiveAdapter();
@@ -1080,16 +1487,27 @@ async function handleStatus(req, res) {
 // 反向边(_genChatRequestId/authenticateRequest/sendJson/parseBody/getAi/getSecurity)经 setChatHttpDeps 注入。
 // routeRequest 分派的处理器 + WS 处理器复用的 _summarizeToolResultForStream 按**同名 re-import** 接回。
 const {
-  handleChatHttp, handleChatStreamHttp, handlePersonaHttp,
-  _resolveChatAttachments, _isWebInlineImagePathEnabled, _summarizeToolResultForStream,
+  handleChatHttp,
+  handleChatStreamHttp,
+  handlePersonaHttp,
+  _resolveChatAttachments,
+  _isWebInlineImagePathEnabled,
+  _summarizeToolResultForStream,
 } = require('./aiManagementChatHttp');
 require('./aiManagementChatHttp').setChatHttpDeps({
-  _genChatRequestId, authenticateRequest, getAi, getSecurity, parseBody, sendJson,
+  _genChatRequestId,
+  authenticateRequest,
+  getAi,
+  getSecurity,
+  parseBody,
+  sendJson,
 });
 
 async function handleListModels(req, res, adapterKey, searchParams) {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   // Live connectivity probing (testAdapter) costs a real network round-trip per
   // adapter (up to GATEWAY_TEST_TIMEOUT_MS each) and dominates this endpoint's
@@ -1107,6 +1525,7 @@ async function handleListModels(req, res, adapterKey, searchParams) {
         wantProbe ? gw.testAdapter(adapterKey).catch(() => null) : Promise.resolve(null),
       ]);
       const origin = gw.getAdapterOrigin(adapterKey);
+      const protocolLabel = _resolveProtocolLabel(adapterKey);
       const models = curateModelList(adapterKey, rawModels, origin);
       sendJson(res, 200, {
         success: true,
@@ -1114,6 +1533,7 @@ async function handleListModels(req, res, adapterKey, searchParams) {
           adapter: adapterKey,
           kind: origin.kind,
           source: origin.source,
+          protocol: protocolLabel,
           health: test ? test.connectivity : null,
           models,
         },
@@ -1128,9 +1548,8 @@ async function handleListModels(req, res, adapterKey, searchParams) {
   // round-trip per enabled adapter, so serve it read-through from cache. The
   // probe variant reflects live connectivity health and is never cached.
   if (!wantProbe) {
-    const data = await cachedGatewayPayload(
-      `${_GATEWAY_CACHE_PREFIX}models:all`,
-      () => listAllAdapterModels(gw, false),
+    const data = await cachedGatewayPayload(`${_GATEWAY_CACHE_PREFIX}models:all`, () =>
+      listAllAdapterModels(gw, false)
     );
     sendJson(res, 200, { success: true, data });
     return;
@@ -1138,6 +1557,221 @@ async function handleListModels(req, res, adapterKey, searchParams) {
 
   const data = await listAllAdapterModels(gw, wantProbe);
   sendJson(res, 200, { success: true, data });
+}
+
+/**
+ * SSE stream for progressive model loading.
+ * Each adapter emits a `progress` event when its model list finishes,
+ * then a final `done` event with the complete result set.
+ *
+ * Query params:
+ *   ?probe=1  — also run testAdapter for connectivity health
+ */
+async function handleModelsStream(req, res) {
+  const gw = getGateway();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  const sendEvent = (data) => {
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      /* client gone */
+    }
+  };
+
+  let clientGone = false;
+  req.on('close', () => {
+    clientGone = true;
+  });
+
+  try {
+    let wantProbe = false;
+    try {
+      const u = new URL(req.url, 'http://x');
+      wantProbe = u.searchParams.get('probe') === '1';
+    } catch {
+      /* fail-soft */
+    }
+
+    const statuses = gw.getStatus();
+    const enabled = statuses.filter((s) => s.enabled);
+
+    if (enabled.length === 0) {
+      sendEvent({ type: 'done', total: 0, loaded: 0, percent: 100, data: [] });
+      try {
+        res.end();
+      } catch {}
+      return;
+    }
+
+    // Send initial progress
+    sendEvent({ type: 'start', total: enabled.length, loaded: 0, percent: 0 });
+
+    const results = new Map();
+    const promises = enabled.map(async (s) => {
+      const key = s.type;
+      try {
+        const [rawModels, test] = await Promise.all([
+          gw.listModels(key).catch(() => []),
+          wantProbe ? gw.testAdapter(key).catch(() => null) : Promise.resolve(null),
+        ]);
+        const origin = gw.getAdapterOrigin(key);
+        const models = curateModelList(key, rawModels, origin);
+        results.set(key, {
+          adapter: key,
+          kind: origin.kind,
+          source: origin.source,
+          models,
+          health: test ? test.connectivity : null,
+          error: null,
+        });
+      } catch (err) {
+        results.set(key, { adapter: key, models: [], health: null, error: err.message });
+      }
+      if (!clientGone) {
+        sendEvent({
+          type: 'progress',
+          loaded: results.size,
+          total: enabled.length,
+          percent: Math.round((results.size / enabled.length) * 100),
+          adapter: key,
+          count: (results.get(key)?.models || []).length,
+        });
+      }
+    });
+
+    await Promise.all(promises);
+
+    if (!clientGone) {
+      const data = [];
+      for (const s of statuses) {
+        if (!s.enabled) {
+          continue;
+        }
+        const entry = results.get(s.type);
+        if (entry) {
+          data.push(entry);
+        }
+      }
+      sendEvent({ type: 'done', total: enabled.length, loaded: results.size, percent: 100, data });
+    }
+  } catch {
+    if (!clientGone) {
+      sendEvent({ type: 'error', message: '模型加载失败' });
+    }
+  } finally {
+    try {
+      res.end();
+    } catch {}
+  }
+}
+
+/**
+ * SSE stream for model loading progress.  Each adapter emits a `progress` event
+ * when its model list finishes loading, then a final `done` event with the
+ * complete result set.  Frontend uses this for percentage-based loading UI.
+ */
+async function handleModelsStream(req, res) {
+  const gw = getGateway();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  const sendEvent = (data) => {
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      /* client gone */
+    }
+  };
+
+  let clientGone = false;
+  req.on('close', () => {
+    clientGone = true;
+  });
+
+  try {
+    const statuses = gw.getStatus();
+    const enabled = statuses.filter((s) => s.enabled);
+    if (enabled.length === 0) {
+      sendEvent({ type: 'done', total: 0, loaded: 0, data: [] });
+      try {
+        res.end();
+      } catch {}
+      return;
+    }
+
+    sendEvent({ type: 'start', total: enabled.length, loaded: 0 });
+
+    const results = new Map();
+    const promises = enabled.map(async (s) => {
+      const key = s.type;
+      try {
+        const rawModels = await gw.listModels(key).catch(() => []);
+        const origin = gw.getAdapterOrigin(key);
+        const models = curateModelList(key, rawModels, origin);
+        results.set(key, {
+          adapter: key,
+          kind: origin.kind,
+          source: origin.source,
+          models,
+          error: null,
+        });
+      } catch (err) {
+        results.set(key, { adapter: key, models: [], error: err.message });
+      }
+      if (!clientGone) {
+        sendEvent({
+          type: 'progress',
+          loaded: results.size,
+          total: enabled.length,
+          percent: Math.round((results.size / enabled.length) * 100),
+          adapter: key,
+          count: (results.get(key)?.models || []).length,
+        });
+      }
+    });
+
+    await Promise.all(promises);
+
+    if (!clientGone) {
+      const data = [];
+      for (const s of statuses) {
+        if (!s.enabled) {
+          continue;
+        }
+        const entry = results.get(s.type);
+        if (entry) {
+          data.push(entry);
+        }
+      }
+      sendEvent({ type: 'done', total: enabled.length, loaded: results.size, percent: 100, data });
+    }
+  } catch {
+    if (!clientGone) {
+      sendEvent({ type: 'error', message: '模型加载失败' });
+    }
+  } finally {
+    try {
+      res.end();
+    } catch {}
+  }
 }
 
 // Gather the per-adapter model listing (and optional live probe) across every
@@ -1152,32 +1786,45 @@ async function listAllAdapterModels(gw, wantProbe) {
   const statuses = gw.getStatus();
   const work = new Map();
   for (const s of statuses) {
-    if (!s.enabled) continue;
+    if (!s.enabled) {
+      continue;
+    }
     work.set(s.type, {
       models: s.available ? gw.listModels(s.type).catch(() => []) : Promise.resolve([]),
-      test: (wantProbe && s.available) ? gw.testAdapter(s.type).catch(() => null) : Promise.resolve(null),
+      test:
+        wantProbe && s.available ? gw.testAdapter(s.type).catch(() => null) : Promise.resolve(null),
     });
   }
 
   const results = [];
   for (const s of statuses) {
-    if (!s.enabled) continue;
+    if (!s.enabled) {
+      continue;
+    }
     const entry = work.get(s.type);
     const rawModels = (await entry.models) || [];
     const test = await entry.test;
     // With a probe, health reflects the live round-trip; without one it reflects
     // the adapter's own availability flag (green/red) — never faked as verified.
     const health = wantProbe
-      ? (test?.connectivity?.success ? 'green' : (s.available ? 'yellow' : 'red'))
-      : (s.available ? 'green' : 'red');
+      ? test?.connectivity?.success
+        ? 'green'
+        : s.available
+          ? 'yellow'
+          : 'red'
+      : s.available
+        ? 'green'
+        : 'red';
     const latencyMs = test?.connectivity?.latencyMs || null;
 
     const origin = gw.getAdapterOrigin(s.type);
+    const protocolLabel = _resolveProtocolLabel(s.type);
     results.push({
       adapter: s.type,
       name: s.name,
       kind: origin.kind,
       source: origin.source,
+      protocol: protocolLabel,
       priority: s.priority,
       available: s.available,
       health,
@@ -1206,7 +1853,9 @@ function curateModelList(adapterKey, rawModels, origin) {
   const out = [];
   for (const m of curated) {
     const verifyStatus = modelCuration.getVerifyStatus(adapterKey, m.id);
-    if (hideFailed && verifyStatus === 'failed') continue;
+    if (hideFailed && verifyStatus === 'failed') {
+      continue;
+    }
     out.push({
       id: m.id,
       name: m.name || m.id,
@@ -1223,7 +1872,9 @@ function curateModelList(adapterKey, rawModels, origin) {
 
 async function handleTestAdapter(req, res, adapterKey) {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   const result = await gw.testAdapter(adapterKey);
   sendJson(res, 200, { success: true, data: result });
@@ -1234,13 +1885,27 @@ function parseBooleanLike(value, fallback = false) {
   return _parseBoolean(value, fallback, { extended: false });
 }
 
+// NOT delegated to gateway/safeJsonParse (its repair layers change the result
+// set for malformed input) nor to utils/parseJsonObjectMap (no object
+// passthrough, no fallback param, coerces non-strings via String()). This one
+// passes plain objects through by reference and returns fallback by reference
+// — also distinct from cli/handlers/proxy.parseJsonObject which copies
+// fallback. Kept local for byte conservation.
 function parseEnvJsonObject(value, fallback = {}) {
-  if (value === undefined || value === null || value === '') return fallback;
-  if (typeof value === 'object' && !Array.isArray(value)) return value;
-  if (typeof value !== 'string') return fallback;
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return fallback;
+  }
   try {
     const parsed = JSON.parse(value);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
   } catch {
     return fallback;
   }
@@ -1248,13 +1913,21 @@ function parseEnvJsonObject(value, fallback = {}) {
 }
 
 function parseInputJsonObject(fieldName, value) {
-  if (value === undefined) return undefined;
-  if (value === null || value === '') return {};
-  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || value === '') {
+    return {};
+  }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed;
+      }
       throw new Error(`${fieldName} must be a JSON object`);
     } catch {
       throw new Error(`${fieldName} must be a valid JSON object`);
@@ -1283,7 +1956,10 @@ function getGatewayConfigSnapshot() {
     keySelectionStrategy: process.env.GATEWAY_KEY_SELECTION_STRATEGY || 'round-robin',
     keySelectionStrategyMap: parseEnvJsonObject(process.env.GATEWAY_KEY_SELECTION_STRATEGY_MAP, {}),
     apiPoolProvider: process.env.GATEWAY_API_POOL_PROVIDER || '',
-    apiPoolProviderAliasMap: parseEnvJsonObject(process.env.GATEWAY_API_POOL_PROVIDER_ALIAS_MAP, {}),
+    apiPoolProviderAliasMap: parseEnvJsonObject(
+      process.env.GATEWAY_API_POOL_PROVIDER_ALIAS_MAP,
+      {}
+    ),
     apiPoolServiceMap: parseEnvJsonObject(process.env.GATEWAY_API_POOL_SERVICE_MAP, {}),
     apiPoolDefaultModelMap: parseEnvJsonObject(process.env.GATEWAY_API_POOL_DEFAULT_MODEL_MAP, {}),
   };
@@ -1308,7 +1984,11 @@ function applyGatewayConfigPatch(body = {}) {
   };
   const envPath = path.resolve(__dirname, '../../.env');
   let envContent = '';
-  try { envContent = fs.readFileSync(envPath, 'utf-8'); } catch { /* no .env */ }
+  try {
+    envContent = fs.readFileSync(envPath, 'utf-8');
+  } catch {
+    /* no .env */
+  }
 
   const updated = [];
   const JSON_BODY_KEYS = new Set([
@@ -1338,8 +2018,11 @@ function applyGatewayConfigPatch(body = {}) {
         value = String(normalizedValue);
       }
       const regex = new RegExp(`^${envKey}=.*$`, 'm');
-      const shouldUnset = (bodyKey === 'preferredAdapter' || bodyKey === 'preferredModel' || bodyKey === 'apiPoolProvider')
-        && String(normalizedValue).trim() === '';
+      const shouldUnset =
+        (bodyKey === 'preferredAdapter' ||
+          bodyKey === 'preferredModel' ||
+          bodyKey === 'apiPoolProvider') &&
+        String(normalizedValue).trim() === '';
       if (shouldUnset) {
         envContent = envContent.replace(new RegExp(`^${envKey}=.*(?:\\r?\\n)?`, 'm'), '');
         delete process.env[envKey];
@@ -1364,7 +2047,7 @@ function applyGatewayConfigPatch(body = {}) {
   }
 
   // Atomic write: temp + rename
-  if (updated.length > 0 && updated.some(k => k !== 'effort')) {
+  if (updated.length > 0 && updated.some((k) => k !== 'effort')) {
     const tmpPath = envPath + '.tmp.' + Date.now();
     fs.writeFileSync(tmpPath, envContent, 'utf-8');
     fs.renameSync(tmpPath, envPath);
@@ -1380,7 +2063,9 @@ function applyGatewayConfigPatch(body = {}) {
   if (updated.includes('preferredAdapter')) {
     try {
       getGateway().setActiveChannel(process.env.GATEWAY_PREFERRED_ADAPTER || '');
-    } catch { /* lifecycle reconcile is best-effort — must never break config save */ }
+    } catch {
+      /* lifecycle reconcile is best-effort — must never break config save */
+    }
   }
 
   return { updated, config: getGatewayConfigSnapshot() };
@@ -1433,15 +2118,35 @@ async function handleDeleteConversation(req, res, file) {
 // 经 setConversationsPromptsDeps 注入。routeRequest/handleAiGatewayNamespace/聊天处理器
 // (maybeAutoCapturePrompt)按**同名 re-import** 接回,调用点字节不变。
 const {
-  handleListAiConversations, handleCreateAiConversation, handleGetAiConversation,
-  handleUpdateAiConversation, handleDeleteAiConversation, handleAiContextStats,
-  handleListBuiltinPrompts, handleListPrompts, handleCreatePrompt, handleGetPrompt,
-  handleUpdatePrompt, handleDeletePrompt, handleUsePrompt, handleApprovePrompt,
+  handleListAiConversations,
+  handleCreateAiConversation,
+  handleGetAiConversation,
+  handleUpdateAiConversation,
+  handleDeleteAiConversation,
+  handleAiContextStats,
+  handleListBuiltinPrompts,
+  handleListPrompts,
+  handleCreatePrompt,
+  handleGetPrompt,
+  handleUpdatePrompt,
+  handleDeletePrompt,
+  handleUsePrompt,
+  handleApprovePrompt,
   maybeAutoCapturePrompt,
-  handleGetUsage, handleGetUsageHistory, handleListTools, handleExecuteTool, handleSecurityStats,
+  handleGetUsage,
+  handleGetUsageHistory,
+  handleListTools,
+  handleExecuteTool,
+  handleSecurityStats,
 } = require('./aiManagementConversationsPrompts');
 require('./aiManagementConversationsPrompts').setConversationsPromptsDeps({
-  sendJson, sendError, parseBody, authenticateRequest, getSecurity, getTokenUsage, getToolCalling,
+  sendJson,
+  sendError,
+  parseBody,
+  authenticateRequest,
+  getSecurity,
+  getTokenUsage,
+  getToolCalling,
 });
 
 // ── 每用户编码项目工作区(REST 处理器,已抽取为叶子 ./aiManagementProjects.js)──
@@ -1449,11 +2154,18 @@ require('./aiManagementConversationsPrompts').setConversationsPromptsDeps({
 // 经 setProjectsDeps 注入。routeRequest 直接分派的处理器按**同名 re-import** 接回。
 // 对齐 Hermes v0.18.0 桌面 coding projects;对话经 Conversation.project_id 归属某项目。
 const {
-  handleListProjects, handleCreateProject, handleGetProject,
-  handleUpdateProject, handleDeleteProject, handleArchiveProject,
+  handleListProjects,
+  handleCreateProject,
+  handleGetProject,
+  handleUpdateProject,
+  handleDeleteProject,
+  handleArchiveProject,
 } = require('./aiManagementProjects');
 require('./aiManagementProjects').setProjectsDeps({
-  sendJson, sendError, parseBody, authenticateRequest,
+  sendJson,
+  sendError,
+  parseBody,
+  authenticateRequest,
 });
 
 // ── 代理出站桥(REST 处理器,已抽取为叶子 ./aiManagementProxyEgress.js)──
@@ -1461,10 +2173,15 @@ require('./aiManagementProjects').setProjectsDeps({
 // 反向边 sendJson/sendError/parseBody/authenticateRequest 经 setProxyEgressDeps 注入;全走已认证路径。
 // 诚实边界:core-required 节点需本机 mihomo 内核(门 KHY_PROXY_CORE),缺失时透传 guidance 不谎报生效。
 const {
-  handleGetProxyEgressStatus, handleEnableProxyEgress, handleDisableProxyEgress,
+  handleGetProxyEgressStatus,
+  handleEnableProxyEgress,
+  handleDisableProxyEgress,
 } = require('./aiManagementProxyEgress');
 require('./aiManagementProxyEgress').setProxyEgressDeps({
-  sendJson, sendError, parseBody, authenticateRequest,
+  sendJson,
+  sendError,
+  parseBody,
+  authenticateRequest,
 });
 
 // ── AI 网关管理平面(REST 管理面处理器,已抽取为叶子 ./aiManagementGatewayAdmin.js)──
@@ -1473,18 +2190,57 @@ require('./aiManagementProxyEgress').setProxyEgressDeps({
 // routeRequest 直接分派的处理器按**同名 re-import** 接回,调用点字节不变;
 // handleAiGatewayNamespace 子分派器扇出的 ~75 处内部调用留在叶子内部。
 const {
-  handleAiGatewayNamespace, handleAttributionDetail, handlePublicPaymentWebhook,
-  handleDependencyList, handleDependencyInstall,
-  handleManageList, handleManageResource, handleManageInvoke,
+  handleAiGatewayNamespace,
+  handleAttributionDetail,
+  handlePublicPaymentWebhook,
+  handleDependencyList,
+  handleDependencyInstall,
+  handleManageList,
+  handleManageResource,
+  handleManageInvoke,
 } = require('./aiManagementGatewayAdmin');
 require('./aiManagementGatewayAdmin').setGatewayAdminDeps({
-  applyGatewayConfigPatch, authenticateRequest, cachedGatewayPayload, corsHeaders,
-  invalidateGatewayCache, writeGatewayCache, parseBody, sendError, sendJson,
-  requireManagerAccess, parseBooleanLike, getGatewayConfigSnapshot, handleListModels,
-  readAccountCircuitBreakerConfig, saveAccountCircuitBreakerConfig, getPluginFilePath,
-  sanitizePluginName, getAccountPool, getAiMonitor, getApiKeyPool, getConcurrencySlots,
-  getCustomerRegistry, getGateway, getModelRouter, getOauthManager, getPaymentGatewayService,
-  getPluginChain, getProtocolConverter, getProxyServer, getTlsSidecar,
+  applyGatewayConfigPatch,
+  authenticateRequest,
+  cachedGatewayPayload,
+  corsHeaders,
+  invalidateGatewayCache,
+  writeGatewayCache,
+  parseBody,
+  sendError,
+  sendJson,
+  requireManagerAccess,
+  parseBooleanLike,
+  getGatewayConfigSnapshot,
+  handleListModels,
+  readAccountCircuitBreakerConfig,
+  saveAccountCircuitBreakerConfig,
+  getPluginFilePath,
+  sanitizePluginName,
+  getAccountPool,
+  getAiMonitor,
+  getApiKeyPool,
+  getConcurrencySlots,
+  getCustomerRegistry,
+  getGateway,
+  getModelRouter,
+  getOauthManager,
+  getPaymentGatewayService,
+  getPluginChain,
+  getProtocolConverter,
+  getProxyServer,
+  getTlsSidecar,
+});
+
+// ── OpenAI 兼容代理(REST 处理器,已抽取为叶子 ./aiManagementOpenaiCompat.js)──
+// 反向边 authenticateRequest/parseBody/getGateway/sendJson 经 setOpenaiCompatDeps 注入。
+// routeRequest 直接分派的处理器按**同名 re-import** 接回,调用点字节不变。
+const { handleV1ChatCompletions, handleV1ListModels } = require('./aiManagementOpenaiCompat');
+require('./aiManagementOpenaiCompat').setOpenaiCompatDeps({
+  authenticateRequest,
+  parseBody,
+  getGateway,
+  sendJson,
 });
 
 // ── Route Dispatcher ──────────────────────────────────────────
@@ -1492,8 +2248,15 @@ require('./aiManagementGatewayAdmin').setGatewayAdminDeps({
 async function routeRequest(req, res, pathname, searchParams) {
   const method = req.method;
 
-  if (method === 'POST' && pathname === '/api/auth/login') return handleAuthLogin(req, res);
-  if (method === 'GET' && pathname === '/api/auth/me') return handleAuthMe(req, res);
+  if (method === 'POST' && pathname === '/api/auth/login') {
+    return handleAuthLogin(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/auth/default-admin') {
+    return handleAuthDefaultAdmin(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/auth/me') {
+    return handleAuthMe(req, res);
+  }
 
   // Admin namespace must be matched BEFORE the /api/ai-gateway namespace below,
   // otherwise the startsWith('/api/ai-gateway') check would swallow /api/ai-gateway-admin/*.
@@ -1521,6 +2284,12 @@ async function routeRequest(req, res, pathname, searchParams) {
   if (pathname.startsWith('/api/ai-gateway') || pathname.startsWith('/api/gateway')) {
     await handleAiGatewayNamespace(req, res, pathname, searchParams);
     return;
+  }
+
+  // WeChat (ilink) binding management + SSE scan-login stream. Must run before any
+  // parseBody so the SSE handler can own the raw response stream (flushHeaders).
+  if (pathname.startsWith('/api/wx')) {
+    return getWxApp()(req, res);
   }
 
   // Workflow namespace: delegate to ai-backend's Express router via a lazy sub-app.
@@ -1553,6 +2322,52 @@ async function routeRequest(req, res, pathname, searchParams) {
     return getCommandsApp()(req, res);
   }
 
+  // GUI Agent evaluation (task CRUD, run execution, auto-eval, leaderboard).
+  // Auth is stacked at mount (authenticateToken + requireAdmin).
+  if (pathname.startsWith('/api/gui-eval')) {
+    return getGuiEvalApp()(req, res);
+  }
+
+  if (pathname.startsWith('/api/web-frontend-eval')) {
+    return getWebFrontendEvalApp()(req, res);
+  }
+
+  // Static files for GUI eval screenshots (served as-is; path is validated server-side).
+  if (pathname.startsWith('/gui-eval-screenshots/')) {
+    try {
+      const { getDataDir } = require('../utils/dataHome');
+      const rel = decodeURIComponent(pathname.slice('/gui-eval-screenshots/'.length));
+      // Only serve files inside the data directory
+      const base = getDataDir('gui-eval');
+      const abs = path.resolve(base, rel);
+      if (!abs.startsWith(path.resolve(base))) {
+        return sendError(res, 403, 'Forbidden');
+      }
+      if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        return sendError(res, 404, 'Not found');
+      }
+      const body = fs.readFileSync(abs);
+      const ext = path.extname(abs).toLowerCase();
+      const ct =
+        ext === '.png'
+          ? 'image/png'
+          : ext === '.jpg' || ext === '.jpeg'
+            ? 'image/jpeg'
+            : ext === '.webp'
+              ? 'image/webp'
+              : 'application/octet-stream';
+      res.writeHead(200, {
+        'Content-Type': ct,
+        'Content-Length': body.length,
+        'Cache-Control': 'public, max-age=300',
+      });
+      res.end(body);
+      return;
+    } catch (err) {
+      return sendError(res, 500, err.message || 'Screenshot serve error');
+    }
+  }
+
   // AI chat attachment upload/download (multipart). Must run before parseBody so
   // multer can read the raw multipart stream itself.
   if (pathname === '/api/ai/upload' || pathname.startsWith('/api/ai/upload/')) {
@@ -1560,36 +2375,71 @@ async function routeRequest(req, res, pathname, searchParams) {
   }
 
   // Static routes
-  if (method === 'GET' && pathname === '/api/health') return handleHealth(req, res);
-  if (method === 'GET' && pathname === '/api/status') return handleStatus(req, res);
-  if (method === 'POST' && pathname === '/api/chat') return handleChatHttp(req, res);
-  if (method === 'POST' && pathname === '/api/ai/chat/stream') return handleChatStreamHttp(req, res);
-  if (method === 'POST' && pathname === '/api/ai/chat') return handleChatHttp(req, res);
-  if (method === 'GET' && pathname === '/api/ai/persona') return handlePersonaHttp(req, res);
-  if (method === 'GET' && pathname === '/api/models') return handleListModels(req, res, null, searchParams);
-  if (method === 'GET' && pathname === '/api/config') return handleGetConfig(req, res);
-  if (method === 'PUT' && pathname === '/api/config') return handleUpdateConfig(req, res);
-  if (method === 'GET' && pathname === '/api/conversations') return handleListConversations(req, res);
+  if (method === 'GET' && pathname === '/api/health') {
+    return handleHealth(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/status') {
+    return handleStatus(req, res);
+  }
+  if (method === 'POST' && pathname === '/api/chat') {
+    return handleChatHttp(req, res);
+  }
+  if (method === 'POST' && pathname === '/api/ai/chat/stream') {
+    return handleChatStreamHttp(req, res);
+  }
+  if (method === 'POST' && pathname === '/api/ai/chat') {
+    return handleChatHttp(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/ai/persona') {
+    return handlePersonaHttp(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/models') {
+    return handleListModels(req, res, null, searchParams);
+  }
+  if (method === 'GET' && pathname === '/api/models/stream') {
+    return handleModelsStream(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/config') {
+    return handleGetConfig(req, res);
+  }
+  if (method === 'PUT' && pathname === '/api/config') {
+    return handleUpdateConfig(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/conversations') {
+    return handleListConversations(req, res);
+  }
   // Per-user AI chat history (multi-conversation, backend-persisted sidebar).
   if (method === 'GET' && pathname === '/api/ai/conversations') {
     return handleListAiConversations(req, res, {
       projectId: searchParams && searchParams.get('projectId'),
     });
   }
-  if (method === 'POST' && pathname === '/api/ai/conversations') return handleCreateAiConversation(req, res);
+  if (method === 'POST' && pathname === '/api/ai/conversations') {
+    return handleCreateAiConversation(req, res);
+  }
   // Per-user coding projects (named multi-folder workspaces; Hermes-aligned).
   if (method === 'GET' && pathname === '/api/ai/projects') {
     return handleListProjects(req, res, {
       includeArchived: searchParams && searchParams.get('includeArchived'),
     });
   }
-  if (method === 'POST' && pathname === '/api/ai/projects') return handleCreateProject(req, res);
+  if (method === 'POST' && pathname === '/api/ai/projects') {
+    return handleCreateProject(req, res);
+  }
   // 代理出站桥:选节点实际路由 + 启用/停用开关(全走已认证路径)。
-  if (method === 'GET' && pathname === '/api/proxy-egress') return handleGetProxyEgressStatus(req, res);
-  if (method === 'POST' && pathname === '/api/proxy-egress/enable') return handleEnableProxyEgress(req, res);
-  if (method === 'POST' && pathname === '/api/proxy-egress/disable') return handleDisableProxyEgress(req, res);
+  if (method === 'GET' && pathname === '/api/proxy-egress') {
+    return handleGetProxyEgressStatus(req, res);
+  }
+  if (method === 'POST' && pathname === '/api/proxy-egress/enable') {
+    return handleEnableProxyEgress(req, res);
+  }
+  if (method === 'POST' && pathname === '/api/proxy-egress/disable') {
+    return handleDisableProxyEgress(req, res);
+  }
   // Context-usage stats for the web chat indicator (stateless compute on posted transcript).
-  if (method === 'POST' && pathname === '/api/ai/context-stats') return handleAiContextStats(req, res);
+  if (method === 'POST' && pathname === '/api/ai/context-stats') {
+    return handleAiContextStats(req, res);
+  }
   // Per-user prompt library (manual saves + AI-discovered pending-review).
   if (method === 'GET' && pathname === '/api/ai/prompts') {
     return handleListPrompts(req, res, {
@@ -1598,74 +2448,136 @@ async function routeRequest(req, res, pathname, searchParams) {
       q: searchParams && searchParams.get('q'),
     });
   }
-  if (method === 'POST' && pathname === '/api/ai/prompts') return handleCreatePrompt(req, res);
+  if (method === 'POST' && pathname === '/api/ai/prompts') {
+    return handleCreatePrompt(req, res);
+  }
   // NOTE: GET /api/ai/prompts/builtin is a PUBLIC route handled before the auth gate
   // (see the request handler in start()), so it is intentionally not re-dispatched here.
-  if (method === 'GET' && pathname === '/api/usage') return handleGetUsage(req, res);
-  if (method === 'GET' && pathname === '/api/usage/history') return handleGetUsageHistory(req, res, searchParams);
-  if (method === 'GET' && pathname === '/api/tools') return handleListTools(req, res);
-  if (method === 'GET' && pathname === '/api/security/stats') return handleSecurityStats(req, res);
-  if (method === 'GET' && pathname === '/api/dependencies') return handleDependencyList(req, res);
-  if (method === 'GET' && pathname === '/api/manage') return handleManageList(req, res);
+  if (method === 'GET' && pathname === '/api/usage') {
+    return handleGetUsage(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/usage/history') {
+    return handleGetUsageHistory(req, res, searchParams);
+  }
+  if (method === 'GET' && pathname === '/api/tools') {
+    return handleListTools(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/security/stats') {
+    return handleSecurityStats(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/dependencies') {
+    return handleDependencyList(req, res);
+  }
+  if (method === 'GET' && pathname === '/api/manage') {
+    return handleManageList(req, res);
+  }
 
   // Parameterized routes
   let match;
 
   match = pathname.match(/^\/api\/manage\/([a-z0-9-]+)\/([a-z0-9-]+)$/i);
-  if (match && method === 'POST') return handleManageInvoke(req, res, match[1], match[2]);
+  if (match && method === 'POST') {
+    return handleManageInvoke(req, res, match[1], match[2]);
+  }
 
   match = pathname.match(/^\/api\/manage\/([a-z0-9-]+)$/i);
-  if (match && method === 'GET') return handleManageResource(req, res, match[1]);
+  if (match && method === 'GET') {
+    return handleManageResource(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/dependencies\/([a-z0-9_-]+)\/install$/i);
-  if (match && method === 'POST') return handleDependencyInstall(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleDependencyInstall(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/models\/([a-z_]+)$/);
-  if (match && method === 'GET') return handleListModels(req, res, match[1], searchParams);
+  if (match && method === 'GET') {
+    return handleListModels(req, res, match[1], searchParams);
+  }
 
   match = pathname.match(/^\/api\/test\/([a-z_]+)$/);
-  if (match && method === 'POST') return handleTestAdapter(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleTestAdapter(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/ai\/conversations\/(.+)$/);
   if (match) {
-    if (method === 'GET') return handleGetAiConversation(req, res, match[1]);
-    if (method === 'PUT') return handleUpdateAiConversation(req, res, match[1]);
-    if (method === 'DELETE') return handleDeleteAiConversation(req, res, match[1]);
+    if (method === 'GET') {
+      return handleGetAiConversation(req, res, match[1]);
+    }
+    if (method === 'PUT') {
+      return handleUpdateAiConversation(req, res, match[1]);
+    }
+    if (method === 'DELETE') {
+      return handleDeleteAiConversation(req, res, match[1]);
+    }
   }
 
   // Project archive/restore sub-action — matched before the generic id route.
   match = pathname.match(/^\/api\/ai\/projects\/([^/]+)\/archive$/);
-  if (match && method === 'POST') return handleArchiveProject(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleArchiveProject(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/ai\/projects\/([^/]+)$/);
   if (match) {
-    if (method === 'GET') return handleGetProject(req, res, match[1]);
-    if (method === 'PUT') return handleUpdateProject(req, res, match[1]);
-    if (method === 'DELETE') return handleDeleteProject(req, res, match[1]);
+    if (method === 'GET') {
+      return handleGetProject(req, res, match[1]);
+    }
+    if (method === 'PUT') {
+      return handleUpdateProject(req, res, match[1]);
+    }
+    if (method === 'DELETE') {
+      return handleDeleteProject(req, res, match[1]);
+    }
   }
 
   // Prompt sub-actions (use / approve) — matched before the generic id route.
   match = pathname.match(/^\/api\/ai\/prompts\/([^/]+)\/use$/);
-  if (match && method === 'POST') return handleUsePrompt(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleUsePrompt(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/ai\/prompts\/([^/]+)\/approve$/);
-  if (match && method === 'POST') return handleApprovePrompt(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleApprovePrompt(req, res, match[1]);
+  }
 
   match = pathname.match(/^\/api\/ai\/prompts\/([^/]+)$/);
   if (match) {
-    if (method === 'GET') return handleGetPrompt(req, res, match[1]);
-    if (method === 'PUT') return handleUpdatePrompt(req, res, match[1]);
-    if (method === 'DELETE') return handleDeletePrompt(req, res, match[1]);
+    if (method === 'GET') {
+      return handleGetPrompt(req, res, match[1]);
+    }
+    if (method === 'PUT') {
+      return handleUpdatePrompt(req, res, match[1]);
+    }
+    if (method === 'DELETE') {
+      return handleDeletePrompt(req, res, match[1]);
+    }
   }
 
   match = pathname.match(/^\/api\/conversations\/(.+)$/);
   if (match) {
-    if (method === 'GET') return handleGetConversation(req, res, match[1]);
-    if (method === 'DELETE') return handleDeleteConversation(req, res, match[1]);
+    if (method === 'GET') {
+      return handleGetConversation(req, res, match[1]);
+    }
+    if (method === 'DELETE') {
+      return handleDeleteConversation(req, res, match[1]);
+    }
   }
 
   match = pathname.match(/^\/api\/tools\/([a-z_]+)$/);
-  if (match && method === 'POST') return handleExecuteTool(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleExecuteTool(req, res, match[1]);
+  }
+
+  // OpenAI 兼容路由
+  if (method === 'POST' && pathname === '/v1/chat/completions') {
+    return handleV1ChatCompletions(req, res);
+  }
+  if (method === 'GET' && pathname === '/v1/models') {
+    return handleV1ListModels(req, res);
+  }
 
   sendError(res, 404, 'Not found');
 }
@@ -1678,7 +2590,9 @@ function wsSend(session, data) {
     if (session.ws.readyState === WebSocket.OPEN) {
       session.ws.send(JSON.stringify(data));
     }
-  } catch { /* ignore send errors */ }
+  } catch {
+    /* ignore send errors */
+  }
 }
 
 function handleWsConnection(ws, req) {
@@ -1736,7 +2650,10 @@ function handleWsConnection(ws, req) {
           handleWsStop(session);
           break;
         case 'ping':
-          wsSend(session, { type: 'pong' });
+          // Client heartbeat probe: echo the client's ts so it can match the
+          // pong to its pending ping. lastActivity is already refreshed at the
+          // top of the message handler, so a ping counts as connection activity.
+          wsSend(session, { type: 'pong', ts: msg.ts });
           break;
         case 'set_effort':
           handleWsSetEffort(session, msg);
@@ -1815,7 +2732,9 @@ async function handleWsChat(session, msg) {
       if (!check.safe) {
         return wsSend(session, { type: 'error', message: check.refusal, blocked: true });
       }
-    } catch { /* security failure should not block */ }
+    } catch {
+      /* security failure should not block */
+    }
   }
 
   session.isGenerating = true;
@@ -1829,6 +2748,12 @@ async function handleWsChat(session, msg) {
   const wsModel = msg.preferredModel || msg.model || undefined;
   let wsToolRan = false;
 
+  // Consecutive assistant-text dedup: track the last complete assistant reply
+  // so we can break model-level loops (same question asked 2+ times in a row).
+  const _lastReplyHistory = session._lastReplyHistory || (session._lastReplyHistory = []);
+  const _REPLY_DEDUP_MAX = 3; // track last 3 replies
+  const _REPLY_DEDUP_THRESHOLD = 2; // same text ≥2 times → inject forward directive
+
   try {
     const result = await getAi().chat(message, {
       effort,
@@ -1837,7 +2762,9 @@ async function handleWsChat(session, msg) {
       preferredAdapter: msg.preferredAdapter || undefined,
       preferredModel: msg.preferredModel || msg.model || undefined,
       onChunk: (chunk) => {
-        if (!session.isGenerating) return; // stopped
+        if (!session.isGenerating) {
+          return;
+        } // stopped
         if (chunk.type === 'thinking') {
           wsSend(session, { type: 'thinking', text: chunk.text });
         } else if (chunk.type === 'reset') {
@@ -1847,7 +2774,10 @@ async function handleWsChat(session, msg) {
           wsSend(session, { type: 'text', text: chunk.text });
         } else if (chunk.type === 'assistant_message') {
           // 用户可见的中间消息(如视觉路由说明)——转发到前端,由 AIChat 渲染进消息气泡。
-          wsSend(session, { type: 'assistant_message', content: String(chunk.content || chunk.text || '') });
+          wsSend(session, {
+            type: 'assistant_message',
+            content: String(chunk.content || chunk.text || ''),
+          });
         } else if (chunk.type === 'tool_use') {
           wsToolRan = true;
           // Surface tool calls live (previously dropped here, so the UI only
@@ -1861,9 +2791,13 @@ async function handleWsChat(session, msg) {
           });
         } else if (chunk.type === 'tool_result') {
           let success;
-          if (typeof chunk.success === 'boolean') success = chunk.success;
-          else if (typeof chunk.isError === 'boolean') success = !chunk.isError;
-          else if (typeof chunk.is_error === 'boolean') success = !chunk.is_error;
+          if (typeof chunk.success === 'boolean') {
+            success = chunk.success;
+          } else if (typeof chunk.isError === 'boolean') {
+            success = !chunk.isError;
+          } else if (typeof chunk.is_error === 'boolean') {
+            success = !chunk.is_error;
+          }
           wsSend(session, {
             type: 'tool_result',
             tool: String(chunk.tool || chunk.name || 'tool'),
@@ -1876,7 +2810,9 @@ async function handleWsChat(session, msg) {
         }
       },
       onControlRequest: ({ requestId, request } = {}) => {
-        if (!session.isGenerating) return undefined;
+        if (!session.isGenerating) {
+          return undefined;
+        }
         wsSend(session, {
           type: 'control_request',
           requestId: String(requestId || '').trim(),
@@ -1910,14 +2846,36 @@ async function handleWsChat(session, msg) {
     // 输出层软 bug 主动监听(goal 2026-06-25):WS 最终收口,与 SSE done / CLI 对称。
     // 对完整 reply 检测 + 简单修复乱码 / 未闭合围栏;不可修复落错误日志;render:true 永不抛。
     try {
-      wsReply = require('./outputIntegrityMonitor').guardText(wsReply, { source: 'web-ws-complete', render: true }).text.trim();
-    } catch { /* monitor absent/erroring — emit raw reply unchanged */ }
+      wsReply = require('./outputIntegrityMonitor')
+        .guardText(wsReply, { source: 'web-ws-complete', render: true })
+        .text.trim();
+    } catch {
+      /* monitor absent/erroring — emit raw reply unchanged */
+    }
+
+    // Consecutive assistant-text dedup: if the same reply was given _REPLY_DEDUP_THRESHOLD
+    // or more times in a row, inject a directive asking the model to move forward.
+    if (wsReply) {
+      _lastReplyHistory.push(wsReply);
+      while (_lastReplyHistory.length > _REPLY_DEDUP_MAX) {
+        _lastReplyHistory.shift();
+      }
+      const count = _lastReplyHistory.filter((t) => t === wsReply).length;
+      if (count >= _REPLY_DEDUP_THRESHOLD) {
+        wsReply += '\n\n[系统提示: 已连续重复回复，请继续前进，不要再重复之前的建议。]';
+      }
+    }
     if (!wsReply && !wsToolRan) {
-      _wsSendStructuredFailure(session, {
-        errorType: 'empty_reply',
-        model: (result && result.provider) || wsModel,
-        finish_reason: result && (result.finish_reason || result.finishReason),
-      }, { kind: 'llm', model: wsModel }, requestId);
+      _wsSendStructuredFailure(
+        session,
+        {
+          errorType: 'empty_reply',
+          model: (result && result.provider) || wsModel,
+          finish_reason: result && (result.finish_reason || result.finishReason),
+        },
+        { kind: 'llm', model: wsModel },
+        requestId
+      );
     } else {
       wsSend(session, {
         type: 'chat_complete',
@@ -2006,7 +2964,11 @@ function cleanupSession(sessionId) {
     session.isGenerating = false;
     stopKhyosDesktopStream(session);
     if (session.khyosRunner) {
-      try { session.khyosRunner.stop(); } catch { /* ignore */ }
+      try {
+        session.khyosRunner.stop();
+      } catch {
+        /* ignore */
+      }
       session.khyosRunner = null;
     }
     _sessions.delete(sessionId);
@@ -2018,10 +2980,19 @@ function cleanupSession(sessionId) {
 // WS 消息 switch(khyos_*)与 cleanupSession/gcSweep 里的 stopKhyosDesktopStream 按**同名
 // re-import** 接回,调用点字节不变。
 const {
-  handleKhyosStart, handleKhyosInput, handleKhyosStop,
-  handleKhyosDesktopStart, handleKhyosDesktopStop, handleKhyosDesktopInput, stopKhyosDesktopStream,
-  handleKhyosTrayStart, handleKhyosMdOpen, handleKhyosTasksGet,
+  handleKhyosStart,
+  handleKhyosInput,
+  handleKhyosStop,
+  handleKhyosDesktopStart,
+  handleKhyosDesktopStop,
+  handleKhyosDesktopInput,
+  stopKhyosDesktopStream,
+  handleKhyosTrayStart,
+  handleKhyosMdOpen,
+  handleKhyosTasksGet,
 } = require('./aiManagementKhyosWs');
+const { parseApiKeyEntries } = require('./apiKeyFormat');
+const _gatewayCache = require('./cacheService');
 require('./aiManagementKhyosWs').setKhyosDeps({ wsSend });
 
 // ── Heartbeat / GC ────────────────────────────────────────────
@@ -2034,7 +3005,11 @@ function gcSweep() {
     if (now - session.lastActivity > SESSION_IDLE_MS) {
       stopKhyosDesktopStream(session);
       if (session.khyosRunner) {
-        try { session.khyosRunner.stop(); } catch { /* ignore */ }
+        try {
+          session.khyosRunner.stop();
+        } catch {
+          /* ignore */
+        }
         session.khyosRunner = null;
       }
       wsSend(session, { type: 'error', message: 'Session closed: idle timeout' });
@@ -2060,7 +3035,9 @@ function gcSweep() {
  */
 function start(port) {
   return new Promise(async (resolve, reject) => {
-    if (_server) return reject(new Error('AI management server already running'));
+    if (_server) {
+      return reject(new Error('AI management server already running'));
+    }
 
     const listenPort = port || parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
 
@@ -2094,7 +3071,7 @@ function start(port) {
     _server = http.createServer(async (req, res) => {
       // CORS preflight
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, corsHeaders());
+        res.writeHead(204, corsHeaders(req));
         return res.end();
       }
 
@@ -2114,20 +3091,32 @@ function start(port) {
           'Retry-After': String(rateCheck.retryAfter || 60),
           ...corsHeaders(),
         });
-        res.end(JSON.stringify({ success: false, error: 'Rate limit exceeded', retryAfter: rateCheck.retryAfter }));
+        res.end(
+          JSON.stringify({
+            success: false,
+            error: 'Rate limit exceeded',
+            retryAfter: rateCheck.retryAfter,
+          })
+        );
         return;
       }
 
       // Health endpoint — no auth required
       if (pathname === '/api/health') {
-        try { return await handleHealth(req, res); }
-        catch (err) { return sendError(res, 500, err.message); }
+        try {
+          return await handleHealth(req, res);
+        } catch (err) {
+          return sendError(res, 500, err.message);
+        }
       }
 
       // Login endpoint — public route
       if (req.method === 'POST' && pathname === '/api/auth/login') {
-        try { return await handleAuthLogin(req, res); }
-        catch (err) { return sendJson(res, 500, { success: false, message: err.message || 'Login failed' }); }
+        try {
+          return await handleAuthLogin(req, res);
+        } catch (err) {
+          return sendJson(res, 500, { success: false, message: err.message || 'Login failed' });
+        }
       }
 
       // Built-in prompt template catalog — public read-only route. Non-sensitive
@@ -2139,12 +3128,17 @@ function start(port) {
           return await handleListBuiltinPrompts(req, res, {
             category: url.searchParams.get('category'),
           });
-        } catch { return sendJson(res, 200, { success: true, data: { templates: [], categories: [] } }); }
+        } catch {
+          return sendJson(res, 200, { success: true, data: { templates: [], categories: [] } });
+        }
       }
 
       if (req.method === 'POST' && pathname === '/api/payment-webhooks/mock') {
-        try { return await handlePublicPaymentWebhook(req, res, 'mock'); }
-        catch (err) { return sendError(res, 500, err.message || 'Payment webhook failed'); }
+        try {
+          return await handlePublicPaymentWebhook(req, res, 'mock');
+        } catch (err) {
+          return sendError(res, 500, err.message || 'Payment webhook failed');
+        }
       }
 
       // Auth check for all other routes
@@ -2221,38 +3215,99 @@ async function _deferredInit() {
   // Seed the built-in SenseNova channel idempotently.
   try {
     require('./customProviderRegistrar').ensureBuiltinSenseNova();
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Seed the qoder reverse-proxy channels (OpenAI + Anthropic) only when opted in.
   try {
     require('./customProviderRegistrar').ensureBuiltinQoder();
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Fresh-install DB self-heal — 延迟到 listen 后执行，首轮请求可能 500 但重试即恢复。
   try {
     await require('./manageDbBootstrap').ensureManageDbSeeded(process.env);
-  } catch { /* best effort — never block */ }
+  } catch {
+    /* best effort — never block */
+  }
 
   // Init gateway in background — adapter detection 最耗时（每个 adapter 最多 15s）。
   try {
     const gw = getGateway();
-    if (!gw._initialized) gw.init().catch(() => {});
-  } catch { /* best effort */ }
+    if (!gw.isInitialized()) {
+      gw.init().catch(() => {});
+    }
+  } catch {
+    /* best effort */
+  }
 
   // [ARCH-031] Gateway log lease
   try {
     require('./gatewayLogLease').install();
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Hot-reload API key pool watcher
   try {
     require('./apiKeyPoolWatcher').start();
-  } catch { /* best effort — never block */ }
+  } catch {
+    /* best effort — never block */
+  }
+
+  // Background network health monitor: periodically probes AI adapters even when idle,
+  // proactively clearing cooldowns when the network recovers so the next user request
+  // can use recovered channels without waiting through the full resume cycle.
+  try {
+    const gw = getGateway();
+    if (gw && gw.isInitialized()) {
+      const { getNetworkHealthMonitor } = require('./networkHealthMonitor');
+      const monitor = getNetworkHealthMonitor({ gateway: gw });
+      monitor.onRecovery((event) => {
+        if (event.type === 'network_recovered') {
+          console.log(
+            `[networkMonitor] Network recovered: ${event.healthy}/${event.total} adapters healthy`
+          );
+        } else if (event.type === 'adapter_recovered') {
+          console.log(`[networkMonitor] Adapter recovered: ${event.key} (${event.latencyMs}ms)`);
+        }
+      });
+      monitor.start();
+    }
+  } catch {
+    /* best effort — never block */
+  }
+
+  // MCP auto-connect — ensure configured MCP servers (e.g. deepseek-eyes for
+  // image recognition) are connected before the first chat request arrives.
+  // Previously only the CLI tool-loop called ensureMcpConnected; the web chat
+  // server (port 9090) never did, so mcp.callTool silently failed on every
+  // image-without-vision-model request.
+  try {
+    const mcpAutoConnect = require('./mcp/autoConnect');
+    if (mcpAutoConnect.autoConnectEnabled(process.env)) {
+      const mcpResult = await mcpAutoConnect.ensureMcpConnected();
+      if (mcpResult && mcpResult.connected && mcpResult.connected.length) {
+        console.log(`[MCP] auto-connected: ${mcpResult.connected.join(', ')}`);
+      }
+      if (mcpResult && mcpResult.failed && mcpResult.failed.length) {
+        console.warn('[MCP] auto-connect failed:', JSON.stringify(mcpResult.failed));
+      }
+    }
+  } catch {
+    /* best effort — MCP vision may be unconfigured */
+  }
 
   // ── Zero-send optimization ────────────────────────────────────────
   // 预加载 AI 模块（chat 引擎 + 适配器检测），消除首条聊天请求的模块冷启动。
   // 在 listen 后、用户发送第一条消息之前完成，fire-and-forget。
-  try { getAi(); } catch { /* best effort */ }
+  try {
+    getAi();
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -2260,12 +3315,19 @@ async function _deferredInit() {
  */
 function stop() {
   return new Promise((resolve) => {
-    if (!_server) { resolve(); return; }
+    if (!_server) {
+      resolve();
+      return;
+    }
 
     // Notify all sessions
     for (const [id, session] of _sessions) {
       wsSend(session, { type: 'error', message: 'Server shutting down' });
-      try { session.ws.close(1001, 'Server shutting down'); } catch { /* ignore */ }
+      try {
+        session.ws.close(1001, 'Server shutting down');
+      } catch {
+        /* ignore */
+      }
     }
     _sessions.clear();
 
@@ -2275,7 +3337,11 @@ function stop() {
     }
 
     // Tear down the API key pool watcher (closes fs watchers + poll timer).
-    try { require('./apiKeyPoolWatcher').stop(); } catch { /* ignore */ }
+    try {
+      require('./apiKeyPoolWatcher').stop();
+    } catch {
+      /* ignore */
+    }
 
     // Close WebSocket server
     if (_wss) {
@@ -2300,9 +3366,13 @@ function stop() {
   });
 }
 
-function isRunning() { return !!_server; }
+function isRunning() {
+  return !!_server;
+}
 
-function getPort() { return _port || parseInt(process.env.AI_MGMT_PORT, 10) || 9090; }
+function getPort() {
+  return _port || parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
+}
 
 module.exports = {
   start,
@@ -2332,7 +3402,9 @@ module.exports = {
     // batch-delete / use / import / unban calls reach the daemon-native pool
     // instead of falling through to 404.
     handleAiGatewayNamespace,
-    _setAccountPoolForTest(pool) { _accountPoolOverrideForTest = pool; },
+    _setAccountPoolForTest(pool) {
+      _accountPoolOverrideForTest = pool;
+    },
     // Failure-attribution drill-down + structured WS failure (DESIGN-ARCH-028
     // human-readable card + trace). Exposed for unit tests with mocked req/res.
     handleAttributionDetail,

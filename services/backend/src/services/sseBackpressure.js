@@ -68,7 +68,9 @@ class SSEBackpressure {
     this._destroyed = false;
 
     // 监听连接关闭
-    res.on('close', () => { this._destroyed = true; });
+    res.on('close', () => {
+      this._destroyed = true;
+    });
   }
 
   /**
@@ -77,7 +79,9 @@ class SSEBackpressure {
    * @returns {Promise<boolean>} 是否成功写入
    */
   async write(payload) {
-    if (this._destroyed || this._res.writableEnded) return false;
+    if (this._destroyed || this._res.writableEnded) {
+      return false;
+    }
 
     // 帧率限制
     const now = Date.now();
@@ -91,7 +95,9 @@ class SSEBackpressure {
     if (buffered > this._hwm) {
       this._drainWaits++;
       await this._waitForDrain();
-      if (this._destroyed) return false;
+      if (this._destroyed) {
+        return false;
+      }
     }
 
     // 先 flush 队列
@@ -107,11 +113,15 @@ class SSEBackpressure {
    * @returns {boolean}
    */
   writeSync(payload) {
-    if (this._destroyed || this._res.writableEnded) return false;
+    if (this._destroyed || this._res.writableEnded) {
+      return false;
+    }
 
     // 背压过高时跳过非关键写入
     const buffered = this._res.writableLength || 0;
-    if (buffered > this._hwm) return false;
+    if (buffered > this._hwm) {
+      return false;
+    }
 
     if (this._queuedLines.length > 0) {
       this._flushQueue();
@@ -124,10 +134,11 @@ class SSEBackpressure {
    * 批量 flush 已入队的行。按当前模式决定每次 flush 的行数。
    */
   _flushQueue() {
-    if (this._queuedLines.length === 0) return;
+    if (this._queuedLines.length === 0) {
+      return;
+    }
 
-    const maxLines = this._mode === BPMode.CATCHUP
-      ? CATCHUP_MAX_LINES : SMOOTH_MAX_LINES;
+    const maxLines = this._mode === BPMode.CATCHUP ? CATCHUP_MAX_LINES : SMOOTH_MAX_LINES;
 
     // 模式切换（滞环）
     if (this._mode === BPMode.SMOOTH && this._queuedLines.length >= CATCHUP_ENTER_LINES) {

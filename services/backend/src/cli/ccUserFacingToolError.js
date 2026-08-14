@@ -37,7 +37,9 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function userFacingToolErrorEnabled(env = process.env) {
-  const flag = String((env && env.KHY_USER_FACING_TOOL_ERROR) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_USER_FACING_TOOL_ERROR) || '')
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(flag);
 }
 
@@ -61,9 +63,15 @@ const COLLAPSED_VALIDATION_TEXT = 'Invalid tool parameters';
  * @returns {*}  折叠后的串,或原样 `text`。
  */
 function collapseValidationErrorForDisplay(text, opts = {}, env = process.env) {
-  if (!userFacingToolErrorEnabled(env)) return text;
-  if (opts && opts.expanded) return text;
-  if (typeof text !== 'string') return text;
+  if (!userFacingToolErrorEnabled(env)) {
+    return text;
+  }
+  if (opts && opts.expanded) {
+    return text;
+  }
+  if (typeof text !== 'string') {
+    return text;
+  }
   let isValidation = false;
   try {
     isValidation = require('../tools/ccValidationError').isValidationErrorMessage(text);

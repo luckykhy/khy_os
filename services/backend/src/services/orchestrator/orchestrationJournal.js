@@ -18,7 +18,9 @@ const path = require('path');
 
 function journalEnabled(env = process.env) {
   const v = env.KHY_ORCHESTRATE_JOURNAL;
-  if (v === undefined || v === null || v === '') return true; // default ON
+  if (v === undefined || v === null || v === '') {
+    return true;
+  } // default ON
   return !(v === '0' || String(v).toLowerCase() === 'false' || String(v).toLowerCase() === 'off');
 }
 
@@ -41,8 +43,12 @@ function journalPath(runId) {
  * @param {object} [env]
  */
 function appendJournal(runId, record, env = process.env) {
-  if (!journalEnabled(env)) return false;
-  if (!runId || !record || typeof record !== 'object') return false;
+  if (!journalEnabled(env)) {
+    return false;
+  }
+  if (!runId || !record || typeof record !== 'object') {
+    return false;
+  }
   try {
     const dir = _journalDir();
     fs.mkdirSync(dir, { recursive: true });
@@ -60,7 +66,9 @@ function appendJournal(runId, record, env = process.env) {
  * @returns {object[]}
  */
 function readJournal(runId, env = process.env) {
-  if (!runId) return [];
+  if (!runId) {
+    return [];
+  }
   let text;
   try {
     text = fs.readFileSync(journalPath(runId), 'utf-8');
@@ -70,8 +78,14 @@ function readJournal(runId, env = process.env) {
   const out = [];
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
-    try { out.push(JSON.parse(trimmed)); } catch { /* skip malformed line */ }
+    if (!trimmed) {
+      continue;
+    }
+    try {
+      out.push(JSON.parse(trimmed));
+    } catch {
+      /* skip malformed line */
+    }
   }
   return out;
 }

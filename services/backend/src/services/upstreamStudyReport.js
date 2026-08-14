@@ -16,7 +16,7 @@
  * @module services/upstreamStudyReport
  */
 
-const WIDTH = 66;                       // 盒内文本可视宽度(不含左右边框)
+const WIDTH = 66; // 盒内文本可视宽度(不含左右边框)
 
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
@@ -26,16 +26,20 @@ function isReportEnabled(env) {
 
 // 字节 → 人类可读(带空格、到 TB)收敛到单一真源 byteFormat.humanBytes
 // (与 diskAnalyzeReport / diskCleanup/planner 同口径,逐字节等价)。
+const { boxRow: _boxRow, boxRule: _boxRule } = require('./asciiBox');
 const { humanBytes: _humanBytes } = require('./byteFormat');
 
 // 盒式行/分隔线基元收敛到单一真源 asciiBox(宽度参数化;本地 _row/_rule 传 WIDTH)。
-const { boxRow: _boxRow, boxRule: _boxRule } = require('./asciiBox');
 
 function _ellipsize(s, max) {
   const str = String(s == null ? '' : s);
-  if (str.length <= max) return str;
-  if (max <= 1) return str.slice(0, max);
-  return '…' + str.slice(str.length - (max - 1));   // 尾部保留(路径尾更有辨识度)
+  if (str.length <= max) {
+    return str;
+  }
+  if (max <= 1) {
+    return str.slice(0, max);
+  }
+  return '…' + str.slice(str.length - (max - 1)); // 尾部保留(路径尾更有辨识度)
 }
 
 function _row(text) {
@@ -58,15 +62,23 @@ function _legacy(result) {
 }
 
 function _tag(item) {
-  if (item && item.isChanged) return '[改]';
-  if (item && item.isNew) return '[新]';
+  if (item && item.isChanged) {
+    return '[改]';
+  }
+  if (item && item.isNew) {
+    return '[新]';
+  }
   return '';
 }
 
 // 移植安全性标记:caution=谨慎(不能整段覆盖)/ safe=可改(择优移植)。
 function _portTag(p) {
-  if (p === 'caution') return '⚠改';
-  if (p === 'safe') return '可改';
+  if (p === 'caution') {
+    return '⚠改';
+  }
+  if (p === 'safe') {
+    return '可改';
+  }
   return '';
 }
 
@@ -76,15 +88,21 @@ function _portTag(p) {
  */
 function _renderPlan(lines, plan) {
   try {
-    if (!plan || typeof plan !== 'object') return;
+    if (!plan || typeof plan !== 'object') {
+      return;
+    }
     const waves = Array.isArray(plan.waves) ? plan.waves : [];
     const forbidden = Array.isArray(plan.forbidden) ? plan.forbidden : [];
-    if (!waves.length && !forbidden.length) return;
+    if (!waves.length && !forbidden.length) {
+      return;
+    }
 
     lines.push(_rule('移植计划 · 先改→后改'));
     for (const w of waves) {
       const items = Array.isArray(w.items) ? w.items : [];
-      if (!items.length) continue;
+      if (!items.length) {
+        continue;
+      }
       lines.push(_row(`${Number(w.wave)}) ${_ellipsize(String(w.label || ''), WIDTH - 3)}`));
       for (const it of items) {
         const pt = _portTag(it && it.portability);
@@ -101,9 +119,13 @@ function _renderPlan(lines, plan) {
       }
       // 给出典型缘由(取首条 reason,避免逐条刷屏)。
       const why = forbidden[0] && forbidden[0].reason;
-      if (why) lines.push(_row(`    ${_ellipsize(String(why), WIDTH - 4)}`));
+      if (why) {
+        lines.push(_row(`    ${_ellipsize(String(why), WIDTH - 4)}`));
+      }
     }
-  } catch { /* fail-soft: 计划段可省,不影响其余报告 */ }
+  } catch {
+    /* fail-soft: 计划段可省,不影响其余报告 */
+  }
 }
 
 /**
@@ -116,7 +138,9 @@ function _renderPlan(lines, plan) {
  */
 function renderStudyReport(result, env) {
   try {
-    if (!isReportEnabled(env)) return _legacy(result);
+    if (!isReportEnabled(env)) {
+      return _legacy(result);
+    }
     const r = result || {};
     const essence = Array.isArray(r.essence) ? r.essence : [];
     const buckets = (r.dross && r.dross.buckets) || {};
@@ -131,9 +155,13 @@ function renderStudyReport(result, env) {
       lines.push(_row(`识别 这像 ${r.recognized.name}(Khy 学过)`));
       lines.push(_row(`     可对比 ${_ellipsize(String(r.recognized.doc || ''), WIDTH - 9)}`));
     }
-    lines.push(_row(`条目 ${Number(totals.files || 0)} · 精华 ${Number(totals.essence || 0)}`
-      + ` · 糟粕 ${Number(totals.dross || 0)} · 中性 ${Number(totals.neutral || 0)}`
-      + (r.truncated ? ' · 列表已截断' : '')));
+    lines.push(
+      _row(
+        `条目 ${Number(totals.files || 0)} · 精华 ${Number(totals.essence || 0)}` +
+          ` · 糟粕 ${Number(totals.dross || 0)} · 中性 ${Number(totals.neutral || 0)}` +
+          (r.truncated ? ' · 列表已截断' : '')
+      )
+    );
 
     // 精华阅读清单(Top-N)
     lines.push(_rule('精华 · 建议按序读'));
@@ -141,7 +169,7 @@ function renderStudyReport(result, env) {
       for (const f of essence) {
         const size = _humanBytes(Number(f && f.size) || 0);
         const tag = _tag(f);
-        const flag = (f && f.tooLarge) ? '(大)' : '';
+        const flag = f && f.tooLarge ? '(大)' : '';
         const tail = `${tag}${flag} ${size}`.trim();
         const path = _ellipsize(String((f && f.path) || ''), WIDTH - tail.length - 3);
         lines.push(_row(`${path}  ${tail}`));
@@ -152,14 +180,23 @@ function renderStudyReport(result, env) {
 
     // 糟粕拒绝桶
     lines.push(_rule('糟粕 · 已过滤'));
-    const bucketKeys = Object.keys(buckets).filter((k) => Number(buckets[k]) > 0).sort();
+    const bucketKeys = Object.keys(buckets)
+      .filter((k) => Number(buckets[k]) > 0)
+      .sort();
     if (bucketKeys.length) {
       const label = {
-        vendored: '依赖/生成物目录', lockfile: '锁文件', minified: '压缩/生成产物',
-        binary: '二进制/媒体', oversized: '超大 blob', secret: '密钥/机密', 'os-junk': 'OS 垃圾',
+        vendored: '依赖/生成物目录',
+        lockfile: '锁文件',
+        minified: '压缩/生成产物',
+        binary: '二进制/媒体',
+        oversized: '超大 blob',
+        secret: '密钥/机密',
+        'os-junk': 'OS 垃圾',
       };
       for (const k of bucketKeys) {
-        lines.push(_row(`${(label[k] || k).padEnd(16, ' ').slice(0, 16)} ${Number(buckets[k])} 项`));
+        lines.push(
+          _row(`${(label[k] || k).padEnd(16, ' ').slice(0, 16)} ${Number(buckets[k])} 项`)
+        );
       }
     } else {
       lines.push(_row('(无)'));
@@ -168,13 +205,19 @@ function renderStudyReport(result, env) {
     // 相对旧基线的差异(可选)
     if (diff) {
       lines.push(_rule('相对旧基线'));
-      lines.push(_row(`新增 ${Number(diff.newCount || 0)} · 改动 ${Number(diff.changedCount || 0)}`
-        + ` · 删除 ${Number(diff.removedCount || 0)}`));
+      lines.push(
+        _row(
+          `新增 ${Number(diff.newCount || 0)} · 改动 ${Number(diff.changedCount || 0)}` +
+            ` · 删除 ${Number(diff.removedCount || 0)}`
+        )
+      );
       const removed = Array.isArray(diff.removed) ? diff.removed.slice(0, 5) : [];
       for (const p of removed) {
         lines.push(_row(`  − ${_ellipsize(String(p || ''), WIDTH - 4)}`));
       }
-      if (diff.note) lines.push(_row(_ellipsize(String(diff.note), WIDTH)));
+      if (diff.note) {
+        lines.push(_row(_ellipsize(String(diff.note), WIDTH)));
+      }
     }
 
     // 移植计划:能改/不能改 + 先改/后改(可选;门关 plan 叶子时 facade 不产 r.plan)

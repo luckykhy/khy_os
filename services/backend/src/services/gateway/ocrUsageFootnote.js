@@ -41,10 +41,16 @@ function isFootnoteEnabled(env) {
 // 保持无感、不重复披露。判据保守:命中任一常见 OCR 表述(拉丁 OCR 大小写、光学/文字识别)即视为
 // 已披露。非字符串 / 空 → 视为未披露(false),让确定性脚注兜底。
 function answerAlreadyDisclosesOcr(content) {
-  if (typeof content !== 'string' || content.length === 0) return false;
+  if (typeof content !== 'string' || content.length === 0) {
+    return false;
+  }
   // 拉丁「OCR」大小写不敏感;或中文「光学字符识别 / 文字识别 / 光学识别」。
-  if (/ocr/i.test(content)) return true;
-  if (/光学字符识别|光学识别|文字识别/.test(content)) return true;
+  if (/ocr/i.test(content)) {
+    return true;
+  }
+  if (/光学字符识别|光学识别|文字识别/.test(content)) {
+    return true;
+  }
   return false;
 }
 
@@ -52,13 +58,19 @@ function answerAlreadyDisclosesOcr(content) {
 // count = 本次成功读出 OCR 文本的图片数,仅用于措辞;缺失/畸形时退回单数泛称但仍追加
 // (只要 isFootnoteEnabled 且未被上游判为无需)。措辞极简:一行分隔 + 一句说明,做到无感而明显。
 function buildOcrUsageFootnote({ count, env } = {}) {
-  if (!isFootnoteEnabled(env)) return null;
+  if (!isFootnoteEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
   const hasCount = Number.isFinite(n) && n > 0;
-  if (!hasCount) return null;
+  if (!hasCount) {
+    return null;
+  }
   const noun = n === 1 ? '这张图片' : `这 ${n} 张图片`;
-  return `\n\n———\n📄 ${OCR_USAGE_FOOTNOTE_MARKER}当前模型不支持直接看图,以上关于${noun}的内容`
-    + `是通过本地 OCR 文字识别读取的(而非原生看图)。`;
+  return (
+    `\n\n———\n📄 ${OCR_USAGE_FOOTNOTE_MARKER}当前模型不支持直接看图,以上关于${noun}的内容` +
+    `是通过本地 OCR 文字识别读取的(而非原生看图)。`
+  );
 }
 
 module.exports = {

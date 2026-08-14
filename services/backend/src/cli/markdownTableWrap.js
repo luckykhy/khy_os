@@ -24,7 +24,9 @@
  * @returns {boolean}
  */
 function tableCellWrapEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TABLE_CELL_WRAP) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TABLE_CELL_WRAP) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -51,7 +53,9 @@ function _hardSplitToken(token, width, measure) {
       curW += w;
     }
   }
-  if (cur !== '') out.push(cur);
+  if (cur !== '') {
+    out.push(cur);
+  }
   return out.length ? out : [''];
 }
 
@@ -70,8 +74,12 @@ function wrapCellLines(plainText, width, measure) {
     const text = String(plainText == null ? '' : plainText);
     const w = Number.isFinite(width) && width > 0 ? Math.floor(width) : 1;
     const m = typeof measure === 'function' ? measure : (s) => String(s).length;
-    if (text === '') return [''];
-    if (m(text) <= w) return [text];
+    if (text === '') {
+      return [''];
+    }
+    if (m(text) <= w) {
+      return [text];
+    }
 
     const tokens = text.match(/\s+|\S+/g) || [];
     const lines = [];
@@ -79,29 +87,44 @@ function wrapCellLines(plainText, width, measure) {
     let curW = 0;
     // Trim trailing whitespace on flush: a space that fit but whose following
     // word didn't would otherwise leave a dangling space at the line end.
-    const flush = () => { lines.push(cur.replace(/\s+$/, '')); cur = ''; curW = 0; };
+    const flush = () => {
+      lines.push(cur.replace(/\s+$/, ''));
+      cur = '';
+      curW = 0;
+    };
 
     for (const tok of tokens) {
       const tw = m(tok);
       if (/^\s+$/.test(tok)) {
         // Whitespace only matters mid-line; at a line start it is dropped so
         // wrapped continuation lines don't begin with stray spaces.
-        if (cur === '') continue;
-        if (curW + tw > w) { flush(); continue; }
+        if (cur === '') {
+          continue;
+        }
+        if (curW + tw > w) {
+          flush();
+          continue;
+        }
         cur += tok;
         curW += tw;
         continue;
       }
       if (tw > w) {
         // Token wider than the whole column: flush, then hard-split.
-        if (cur !== '') flush();
+        if (cur !== '') {
+          flush();
+        }
         const parts = _hardSplitToken(tok, w, m);
-        for (let i = 0; i < parts.length - 1; i++) lines.push(parts[i]);
+        for (let i = 0; i < parts.length - 1; i++) {
+          lines.push(parts[i]);
+        }
         cur = parts[parts.length - 1];
         curW = m(cur);
         continue;
       }
-      if (curW + tw > w) flush();
+      if (curW + tw > w) {
+        flush();
+      }
       cur += tok;
       curW += tw;
     }

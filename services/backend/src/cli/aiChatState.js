@@ -18,8 +18,13 @@ module.exports = {
   pendingTaskGuard: null,
   lastSubstantivePrompt: '',
   lastSubstantiveAt: 0,
+  // 上一轮工具循环的执行计划快照(仅当本会话拆解过任务)。「继续」时据此恢复
+  // 步骤状态(已完成/失败/下一步),让断网/token 失效/中途中断后能回到任务主线。
+  lastExecutionPlan: null,
   primedSessionId: null,
   lastPrimeTopicTokens: null,
   currentEffort: 'medium',
   thinkingEnabled: true,
+  _scopeSwitching: false, // guard flag: true while scopeSession is switching messages
+  _scopeSwitchStart: 0, // timestamp when _scopeSwitching was set to true
 };

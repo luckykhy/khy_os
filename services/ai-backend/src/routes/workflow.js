@@ -211,8 +211,14 @@ router.get('/runs/:runId/events', async (req, res) => {
   let keepalive = null;
   let poll = null;
   function cleanup() {
-    if (poll) { clearInterval(poll); poll = null; }
-    if (keepalive) { clearInterval(keepalive); keepalive = null; }
+    if (poll) {
+      clearInterval(poll);
+      poll = null;
+    }
+    if (keepalive) {
+      clearInterval(keepalive);
+      keepalive = null;
+    }
   }
   const send = (view) => {
     lastSig = `${view.status}:${(view.log || []).length}`;
@@ -232,7 +238,13 @@ router.get('/runs/:runId/events', async (req, res) => {
   if (SSE_HALT.has(initial.status)) return finish();
 
   keepalive = setInterval(() => {
-    if (!closed) { try { res.write(': keepalive\n\n'); } catch { cleanup(); } }
+    if (!closed) {
+      try {
+        res.write(': keepalive\n\n');
+      } catch {
+        cleanup();
+      }
+    }
   }, 25000);
 
   poll = setInterval(async () => {
@@ -247,7 +259,10 @@ router.get('/runs/:runId/events', async (req, res) => {
     }
   }, SSE_POLL_MS);
 
-  req.on('close', () => { closed = true; cleanup(); });
+  req.on('close', () => {
+    closed = true;
+    cleanup();
+  });
 });
 
 // GET /api/workflow/:id — load one workflow with its full canvas graph

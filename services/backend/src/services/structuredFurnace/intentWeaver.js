@@ -18,9 +18,9 @@
  * 纯词法、零模型。连接词无法判定时退化为 seq（确定性优先，绝不“脑补”因果方向）。
  */
 
+const { reduceClause, strategyForActions, _uid } = require('./dimensionReducer');
 const { EntityRegistry } = require('./entityRegistry');
 const { TaskGraph } = require('./taskGraph');
-const { reduceClause, strategyForActions, _uid } = require('./dimensionReducer');
 
 // 连接词 → 边类型。每条带捕获，用于在切分时同时识别“子句之间是什么关系”。
 const CONNECTORS = [
@@ -56,18 +56,32 @@ function splitClauses(raw) {
   let pendingConnector = null;
   for (const seg of parts) {
     const piece = String(seg).trim();
-    if (!piece) continue;
+    if (!piece) {
+      continue;
+    }
     // 判定：该 piece 本身是否“纯连接词”（整体即一个连接词）。
     const pureConn = _CONNECTOR_MATCHERS.find((m) => m.full.test(piece));
-    if (pureConn) { pendingConnector = pureConn.kind; continue; }
-    if (/^[，,；;。]$/.test(piece)) { pendingConnector = pendingConnector || 'seq'; continue; }
+    if (pureConn) {
+      pendingConnector = pureConn.kind;
+      continue;
+    }
+    if (/^[，,；;。]$/.test(piece)) {
+      pendingConnector = pendingConnector || 'seq';
+      continue;
+    }
     // piece 内嵌前导连接词（如“如果A”未被标点切开）→ 抽出连接词作为本子句的入边类型。
     let connector = pendingConnector;
     let body = piece;
     for (const m of _CONNECTOR_MATCHERS) {
-      if (m.lead.test(body)) { connector = m.kind; body = body.replace(m.lead, '').trim(); break; }
+      if (m.lead.test(body)) {
+        connector = m.kind;
+        body = body.replace(m.lead, '').trim();
+        break;
+      }
     }
-    if (body) clauses.push({ text: body, connector: clauses.length === 0 ? null : (connector || 'seq') });
+    if (body) {
+      clauses.push({ text: body, connector: clauses.length === 0 ? null : connector || 'seq' });
+    }
     pendingConnector = null;
   }
   return clauses;
@@ -118,13 +132,17 @@ function weave(raw, registry = new EntityRegistry()) {
     const prev = nodeUids[i - 1];
     const cur = nodeUids[i];
     const kind = clauses[i].connector || 'seq';
-    if (kind === 'cond-true') lastCondSource = prev;
+    if (kind === 'cond-true') {
+      lastCondSource = prev;
+    }
     const { type, condition } = _edgeFor(kind, prev, lastCondSource);
     graph.addEdge(prev, cur, type, condition);
   }
 
   const entities = {};
-  for (const e of registry.list()) entities[e.uid] = e;
+  for (const e of registry.list()) {
+    entities[e.uid] = e;
+  }
 
   return {
     kind: 'TaskGraph',

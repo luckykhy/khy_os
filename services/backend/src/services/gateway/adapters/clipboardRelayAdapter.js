@@ -16,40 +16,45 @@
  *   - macOS:   pbcopy / pbpaste
  *   - Windows: PowerShell [Clipboard]::SetText / GetText
  */
-const { execSync, execFileSync, exec } = require('child_process');
+const { execSync, execFileSync, execFile, exec } = require('child_process');
 const http = require('http');
 const https = require('https');
 const os = require('os');
+
+const { POWERSHELL_BINS } = require('../../../tools/platformUtils');
 const { requireFeatureAccess } = require('../../authGuard');
 const {
   buildProxyRelayFeatureLabel,
   getFeatureFamilyPrefix,
   joinFeatureKey,
 } = require('../../featureKeyBuilder');
+
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
-const { POWERSHELL_BINS } = require('../../../tools/platformUtils');
 
 const EXEC_OPTS = { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] };
-const MAX_WAIT_MS = 5 * 60 * 1000;  // 5 minutes max wait for response
-const POLL_INTERVAL_MS = 1500;       // poll clipboard every 1.5s
-const RESPONSE_SETTLE_MS = 3000;     // wait 3s after first change for streaming to finish
-const NETWORK_CHECK_TIMEOUT_MS = parseInt(process.env.CLIPBOARD_RELAY_NETWORK_TIMEOUT_MS || '3000', 10);
+const MAX_WAIT_MS = 5 * 60 * 1000; // 5 minutes max wait for response
+const POLL_INTERVAL_MS = 1500; // poll clipboard every 1.5s
+const RESPONSE_SETTLE_MS = 3000; // wait 3s after first change for streaming to finish
+const NETWORK_CHECK_TIMEOUT_MS = parseInt(
+  process.env.CLIPBOARD_RELAY_NETWORK_TIMEOUT_MS || '3000',
+  10
+);
 
 // Known web AI service URLs
 const WEB_AI_SERVICES = {
-  zhipu:      { name: '智谱清言 (GLM)',      url: 'https://chatglm.cn' },
-  deepseek:   { name: 'DeepSeek 网页版',     url: 'https://chat.deepseek.com' },
-  github:     { name: 'GitHub Copilot Chat', url: 'https://github.com/copilot' },
-  trae:       { name: 'Trae',                url: 'https://www.trae.ai' },
-  cursor:     { name: 'Cursor',              url: 'https://www.cursor.com' },
-  warp:       { name: 'Warp',                url: 'https://www.warp.dev' },
-  kiro:       { name: 'Kiro',                url: 'https://kiro.dev' },
-  windsurf:   { name: 'Windsurf',            url: 'https://windsurf.com' },
-  chatgpt:    { name: 'ChatGPT',             url: 'https://chatgpt.com' },
-  kimi:       { name: 'Kimi (月之暗面)',      url: 'https://kimi.moonshot.cn' },
-  tongyi:     { name: '通义千问',             url: 'https://tongyi.aliyun.com/qianwen' },
-  wenxin:     { name: '文心一言',             url: 'https://yiyan.baidu.com' },
-  doubao:     { name: '豆包 (字节)',          url: 'https://www.doubao.com/chat' },
+  zhipu: { name: '智谱清言 (GLM)', url: 'https://chatglm.cn' },
+  deepseek: { name: 'DeepSeek 网页版', url: 'https://chat.deepseek.com' },
+  github: { name: 'GitHub Copilot Chat', url: 'https://github.com/copilot' },
+  trae: { name: 'Trae', url: 'https://www.trae.ai' },
+  cursor: { name: 'Cursor', url: 'https://www.cursor.com' },
+  warp: { name: 'Warp', url: 'https://www.warp.dev' },
+  kiro: { name: 'Kiro', url: 'https://kiro.dev' },
+  windsurf: { name: 'Windsurf', url: 'https://windsurf.com' },
+  chatgpt: { name: 'ChatGPT', url: 'https://chatgpt.com' },
+  kimi: { name: 'Kimi (月之暗面)', url: 'https://kimi.moonshot.cn' },
+  tongyi: { name: '通义千问', url: 'https://tongyi.aliyun.com/qianwen' },
+  wenxin: { name: '文心一言', url: 'https://yiyan.baidu.com' },
+  doubao: { name: '豆包 (字节)', url: 'https://www.doubao.com/chat' },
 };
 
 let _preferredService = process.env.CLIPBOARD_RELAY_SERVICE || 'zhipu';
@@ -57,25 +62,33 @@ let _lastDetectError = '';
 
 function loadExtraServicesFromEnv() {
   const raw = String(process.env.CLIPBOARD_RELAY_EXTRA_SERVICES || '').trim();
-  if (!raw) return {};
+  if (!raw) {
+    return {};
+  }
   // Format:
   //   key1=https://xxx,key2=https://yyy
   //   key1|Display Name|https://xxx,key2|Display Name 2|https://yyy
   const out = {};
   for (const token of raw.split(',')) {
     const part = token.trim();
-    if (!part) continue;
-    const full = part.split('|').map(s => s.trim());
+    if (!part) {
+      continue;
+    }
+    const full = part.split('|').map((s) => s.trim());
     if (full.length >= 3) {
       const [key, name, url] = full;
-      if (key && /^https?:\/\//i.test(url)) out[key.toLowerCase()] = { name: name || key, url };
+      if (key && /^https?:\/\//i.test(url)) {
+        out[key.toLowerCase()] = { name: name || key, url };
+      }
       continue;
     }
     const kv = part.split('=');
     if (kv.length >= 2) {
       const key = kv[0].trim().toLowerCase();
       const url = kv.slice(1).join('=').trim();
-      if (key && /^https?:\/\//i.test(url)) out[key] = { name: key, url };
+      if (key && /^https?:\/\//i.test(url)) {
+        out[key] = { name: key, url };
+      }
     }
   }
   return out;
@@ -109,16 +122,14 @@ function writeClipboard(text) {
   }
 
   // Linux: try xclip → xsel → wl-copy
-  const linuxCmds = [
-    'xclip -selection clipboard',
-    'xsel --clipboard --input',
-    'wl-copy',
-  ];
+  const linuxCmds = ['xclip -selection clipboard', 'xsel --clipboard --input', 'wl-copy'];
   for (const cmd of linuxCmds) {
     try {
       execSync(cmd, { input: text, timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
       return;
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   throw new Error('No clipboard tool found. Install xclip, xsel, or wl-clipboard.');
 }
@@ -143,22 +154,22 @@ function readClipboard() {
           ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'],
           { ...EXEC_OPTS, windowsHide: true }
         ).toString();
-      } catch { /* try next */ }
+      } catch {
+        /* try next */
+      }
     }
     // Fallback for older environments with only legacy command parsing path.
     return execSync('powershell -command "Get-Clipboard"', EXEC_OPTS).toString();
   }
 
   // Linux: try xclip → xsel → wl-paste
-  const linuxCmds = [
-    'xclip -selection clipboard -o',
-    'xsel --clipboard --output',
-    'wl-paste',
-  ];
+  const linuxCmds = ['xclip -selection clipboard -o', 'xsel --clipboard --output', 'wl-paste'];
   for (const cmd of linuxCmds) {
     try {
       return execSync(cmd, EXEC_OPTS).toString();
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   throw new Error('No clipboard tool found.');
 }
@@ -171,7 +182,9 @@ function openBrowser(url) {
   const { openDefault } = require('../../../tools/platformUtils');
   try {
     openDefault(url);
-  } catch { /* browser open is best-effort */ }
+  } catch {
+    /* browser open is best-effort */
+  }
 }
 
 function checkWebReachable(rawUrl, timeoutMs = NETWORK_CHECK_TIMEOUT_MS) {
@@ -184,25 +197,28 @@ function checkWebReachable(rawUrl, timeoutMs = NETWORK_CHECK_TIMEOUT_MS) {
       return;
     }
     const client = parsed.protocol === 'https:' ? https : http;
-    const req = client.request({
-      hostname: parsed.hostname,
-      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
-      path: parsed.pathname || '/',
-      method: 'HEAD',
-      timeout: timeoutMs,
-      headers: {
-        'User-Agent': 'khy-os-ClipboardRelay/1.0',
-        Accept: '*/*',
+    const req = client.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: parsed.pathname || '/',
+        method: 'HEAD',
+        timeout: timeoutMs,
+        headers: {
+          'User-Agent': 'khy-os-ClipboardRelay/1.0',
+          Accept: '*/*',
+        },
       },
-    }, (res) => {
-      // Any HTTP response means network path is reachable.
-      if (typeof res.statusCode === 'number') {
-        resolve(true);
-      } else {
-        reject(new Error('no status code'));
+      (res) => {
+        // Any HTTP response means network path is reachable.
+        if (typeof res.statusCode === 'number') {
+          resolve(true);
+        } else {
+          reject(new Error('no status code'));
+        }
+        res.resume();
       }
-      res.resume();
-    });
+    );
 
     req.on('error', (err) => reject(err));
     req.on('timeout', () => {
@@ -214,23 +230,126 @@ function checkWebReachable(rawUrl, timeoutMs = NETWORK_CHECK_TIMEOUT_MS) {
 
 // ── Core adapter interface ──────────────────────────────────────────
 
+// Clipboard availability probes spawn a subprocess (~0.5-1s on Windows
+// PowerShell). Cache the result so repeated detect()/getStatus() calls on
+// the hot submit path never re-block the event loop within the TTL.
+const DETECT_TTL_MS = 30000;
+let _detectCache = { ok: false, error: '', at: 0 };
+
+function _cacheDetect(ok, error) {
+  _detectCache = { ok, error: error || '', at: Date.now() };
+  _lastDetectError = _detectCache.error;
+  return ok;
+}
+
+/**
+ * Probe clipboard readability without blocking the event loop.
+ * Resolves { ok, error } and never rejects.
+ * @returns {Promise<{ok: boolean, error: string}>}
+ */
+function _probeClipboardAsync() {
+  const platform = os.platform();
+  const tryOne = (bin, args) =>
+    new Promise((resolve) => {
+      try {
+        execFile(bin, args, { timeout: 5000, windowsHide: true }, (err) => {
+          resolve(
+            err
+              ? { ok: false, error: err.message || 'clipboard unavailable' }
+              : { ok: true, error: '' }
+          );
+        });
+      } catch (e) {
+        resolve({ ok: false, error: (e && e.message) || 'clipboard unavailable' });
+      }
+    });
+
+  if (platform === 'darwin') {
+    return tryOne('pbpaste', []);
+  }
+
+  if (platform === 'win32') {
+    return (async () => {
+      let last = { ok: false, error: 'clipboard unavailable' };
+      for (const bin of POWERSHELL_BINS) {
+        last = await tryOne(bin, [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Get-Clipboard -Raw',
+        ]);
+        if (last.ok) {
+          return last;
+        }
+      }
+      return last;
+    })();
+  }
+
+  return (async () => {
+    const linuxProbes = [
+      ['xclip', ['-selection', 'clipboard', '-o']],
+      ['xsel', ['--clipboard', '--output']],
+      ['wl-paste', []],
+    ];
+    let last = { ok: false, error: 'No clipboard tool found.' };
+    for (const [bin, args] of linuxProbes) {
+      last = await tryOne(bin, args);
+      if (last.ok) {
+        return last;
+      }
+    }
+    return last;
+  })();
+}
+
 /**
  * Check if clipboard relay is available (needs clipboard tools).
+ * Cache-first with stale-while-revalidate: an expired entry is served as-is
+ * while an async probe refreshes in the background, so the sync hot path only
+ * blocks on a genuinely cold cache (no probe ever ran).
  */
+let _detectRefreshing = false;
 function detect() {
+  if (Date.now() - _detectCache.at < DETECT_TTL_MS) {
+    _lastDetectError = _detectCache.error;
+    return _detectCache.ok;
+  }
+  if (_detectCache.at > 0) {
+    if (!_detectRefreshing) {
+      _detectRefreshing = true;
+      _probeClipboardAsync()
+        .then((probe) => {
+          _cacheDetect(probe.ok, probe.error);
+        })
+        .catch(() => {})
+        .then(() => {
+          _detectRefreshing = false;
+        });
+    }
+    _lastDetectError = _detectCache.error;
+    return _detectCache.ok;
+  }
   try {
     readClipboard();
-    _lastDetectError = '';
-    return true;
+    return _cacheDetect(true, '');
   } catch (err) {
-    _lastDetectError = err.message || 'clipboard unavailable';
-    return false;
+    return _cacheDetect(false, err.message || 'clipboard unavailable');
   }
 }
 
 async function detectAsync() {
-  const localReady = detect();
-  if (!localReady) return false;
+  let localReady;
+  if (Date.now() - _detectCache.at < DETECT_TTL_MS) {
+    _lastDetectError = _detectCache.error;
+    localReady = _detectCache.ok;
+  } else {
+    const probe = await _probeClipboardAsync();
+    localReady = _cacheDetect(probe.ok, probe.error);
+  }
+  if (!localReady) {
+    return false;
+  }
 
   // Some users only need local clipboard capability; allow opt-out.
   if (String(process.env.CLIPBOARD_RELAY_NETWORK_CHECK || 'true').toLowerCase() === 'false') {
@@ -300,7 +419,10 @@ async function generate(prompt, options = {}) {
     });
   }
 
-  onStatus({ phase: 'clipboard_ready', message: `提示已复制到剪贴板 → 请粘贴到 ${serviceInfo.name}` });
+  onStatus({
+    phase: 'clipboard_ready',
+    message: `提示已复制到剪贴板 → 请粘贴到 ${serviceInfo.name}`,
+  });
 
   // Step 2: Optionally open browser
   if (options.openBrowser) {
@@ -312,13 +434,37 @@ async function generate(prompt, options = {}) {
   const chalk = require('chalk').default || require('chalk');
   console.log('');
   console.log(chalk.cyan('  ┌─────────────────────────────────────────────────┐'));
-  console.log(chalk.cyan('  │') + chalk.bold.white(` 📋 剪贴板 AI 中继 — ${serviceInfo.name}`) + chalk.cyan((' ').repeat(Math.max(0, 48 - 22 - serviceInfo.name.length)) + '│'));
+  console.log(
+    chalk.cyan('  │') +
+      chalk.bold.white(` 📋 剪贴板 AI 中继 — ${serviceInfo.name}`) +
+      chalk.cyan(' '.repeat(Math.max(0, 48 - 22 - serviceInfo.name.length)) + '│')
+  );
   console.log(chalk.cyan('  ├─────────────────────────────────────────────────┤'));
-  console.log(chalk.cyan('  │') + chalk.white(' 1. 提示已复制到剪贴板                           ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(` 2. 切换到浏览器 → 粘贴到 ${serviceInfo.name}`) + chalk.cyan((' ').repeat(Math.max(0, 48 - 26 - serviceInfo.name.length)) + '│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 3. 等待 AI 回复完成                             ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 4. 全选 AI 回复 → 复制                          ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 5. 切换回终端 — 自动检测剪贴板变化              ') + chalk.cyan('│'));
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 1. 提示已复制到剪贴板                           ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(` 2. 切换到浏览器 → 粘贴到 ${serviceInfo.name}`) +
+      chalk.cyan(' '.repeat(Math.max(0, 48 - 26 - serviceInfo.name.length)) + '│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 3. 等待 AI 回复完成                             ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 4. 全选 AI 回复 → 复制                          ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 5. 切换回终端 — 自动检测剪贴板变化              ') +
+      chalk.cyan('│')
+  );
   console.log(chalk.cyan('  └─────────────────────────────────────────────────┘'));
   console.log(chalk.dim(`  等待中... (最长 ${MAX_WAIT_MS / 60000} 分钟)`));
   console.log('');
@@ -335,12 +481,16 @@ async function generate(prompt, options = {}) {
       // Check timeout
       if (Date.now() - startTime > MAX_WAIT_MS) {
         clearInterval(pollTimer);
-        if (settleTimer) clearTimeout(settleTimer);
-        resolve(buildFailure('剪贴板中继超时 — 未在限定时间内检测到回复', {
-          adapter: 'clipboard',
-          provider: `clipboard-relay (${serviceInfo.name})`,
-          attempts: [{ provider: serviceInfo.name, success: false, error: 'timeout' }],
-        }));
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+        }
+        resolve(
+          buildFailure('剪贴板中继超时 — 未在限定时间内检测到回复', {
+            adapter: 'clipboard',
+            provider: `clipboard-relay (${serviceInfo.name})`,
+            attempts: [{ provider: serviceInfo.name, success: false, error: 'timeout' }],
+          })
+        );
         return;
       }
 
@@ -348,17 +498,27 @@ async function generate(prompt, options = {}) {
         const current = readClipboard().trim();
 
         // Skip if empty or still the same as prompt
-        if (!current) return;
-        if (current === prompt.trim()) return;
-        if (current.startsWith(promptFingerprint)) return;
-        if (current.length < 10) return;  // too short to be a real response
+        if (!current) {
+          return;
+        }
+        if (current === prompt.trim()) {
+          return;
+        }
+        if (current.startsWith(promptFingerprint)) {
+          return;
+        }
+        if (current.length < 10) {
+          return;
+        } // too short to be a real response
 
         // Clipboard has changed — potential response
         if (current !== lastContent) {
           lastContent = current;
 
           // Reset settle timer (wait for streaming to finish)
-          if (settleTimer) clearTimeout(settleTimer);
+          if (settleTimer) {
+            clearTimeout(settleTimer);
+          }
           settleTimer = setTimeout(() => {
             clearInterval(pollTimer);
             const elapsed = Date.now() - startTime;
@@ -368,15 +528,19 @@ async function generate(prompt, options = {}) {
 
             onStatus({ phase: 'response_received', message: '回复已接收', elapsed });
 
-            resolve(buildSuccess(lastContent, {
-              adapter: 'clipboard',
-              provider: `clipboard-relay (${serviceInfo.name})`,
-              model: service,
-              attempts: [{ provider: serviceInfo.name, success: true }],
-            }));
+            resolve(
+              buildSuccess(lastContent, {
+                adapter: 'clipboard',
+                provider: `clipboard-relay (${serviceInfo.name})`,
+                model: service,
+                attempts: [{ provider: serviceInfo.name, success: true }],
+              })
+            );
           }, RESPONSE_SETTLE_MS);
         }
-      } catch { /* clipboard read error — skip this poll */ }
+      } catch {
+        /* clipboard read error — skip this poll */
+      }
     }, POLL_INTERVAL_MS);
   });
 }

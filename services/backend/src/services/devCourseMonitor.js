@@ -45,7 +45,8 @@ const DEFAULT_THRASH = 4;
 const DEFAULT_STREAK = 3;
 
 // 编辑类工具(归一化名)：写文件 / 改文件 / 多处编辑 / 打补丁。
-const _EDIT_RE = /^(write|writefile|edit|editfile|createfile|multiedit|applypatch|patch|scaffoldfiles)$/;
+const _EDIT_RE =
+  /^(write|writefile|edit|editfile|createfile|multiedit|applypatch|patch|scaffoldfiles)$/;
 
 // 收敛到 utils/normalizeToolName 单一真源(逐字节委托,调用点不变)
 const _norm = require('../utils/normalizeToolName');
@@ -59,6 +60,7 @@ function _intEnv(env, key, def, min) {
   const v = Number(env && env[key]);
   return Number.isFinite(v) && v >= (min == null ? 1 : min) ? Math.floor(v) : def;
 }
+
 function _thresholds(env = process.env) {
   return {
     churnEdits: _intEnv(env, 'KHY_DEV_COURSE_CHURN_EDITS', DEFAULT_CHURN_EDITS, 2),
@@ -72,21 +74,29 @@ function _thresholds(env = process.env) {
 function createState() {
   return {
     iteration: 0,
-    edits: 0,                  // 累计编辑操作数
-    editsByFile: new Map(),    // file -> 编辑次数
-    editsSinceVerify: 0,       // 距上次「验证(跑测试)」以来的编辑数
+    edits: 0, // 累计编辑操作数
+    editsByFile: new Map(), // file -> 编辑次数
+    editsSinceVerify: 0, // 距上次「验证(跑测试)」以来的编辑数
     filesSinceVerify: new Set(),
-    verifiedCount: 0,          // 任务内验证(测试运行)总次数
-    failureStreak: 0,          // 连续「本轮有工具失败」的轮数
-    testBaseline: new Map(),   // framework -> { everGreen, lastGreen, lastFailed, bestFailedRed }
-    announced: new Set(),      // 已浮出的 signal key(同一 episode 去重;条件解除后重新武装)
-    corrections: [],           // 已浮出过的纠偏(供 summarize)
+    verifiedCount: 0, // 任务内验证(测试运行)总次数
+    failureStreak: 0, // 连续「本轮有工具失败」的轮数
+    testBaseline: new Map(), // framework -> { everGreen, lastGreen, lastFailed, bestFailedRed }
+    announced: new Set(), // 已浮出的 signal key(同一 episode 去重;条件解除后重新武装)
+    corrections: [], // 已浮出过的纠偏(供 summarize)
   };
 }
 
 function _extractPath(params) {
-  if (!params || typeof params !== 'object') return null;
-  const p = params.path || params.file_path || params.filePath || params.filename || params.file || params.target;
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
+  const p =
+    params.path ||
+    params.file_path ||
+    params.filePath ||
+    params.filename ||
+    params.file ||
+    params.target;
   return typeof p === 'string' && p ? p : null;
 }
 
@@ -98,7 +108,9 @@ function _extractPath(params) {
  * @param {Array}  input.testFindings 本轮解析出的测试发现(keyFindings.detectTestOutcome 产物)
  */
 function recordIteration(state, input = {}, env = process.env) {
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   try {
     state.iteration += 1;
     const toolResults = Array.isArray(input.toolResults) ? input.toolResults : [];
@@ -106,9 +118,13 @@ function recordIteration(state, input = {}, env = process.env) {
 
     let hadFailure = false;
     for (const tr of toolResults) {
-      if (!tr) continue;
+      if (!tr) {
+        continue;
+      }
       const name = _norm(tr.tool);
-      if (tr.result && tr.result.success === false) hadFailure = true;
+      if (tr.result && tr.result.success === false) {
+        hadFailure = true;
+      }
       if (_EDIT_RE.test(name)) {
         state.edits += 1;
         state.editsSinceVerify += 1;
@@ -122,25 +138,38 @@ function recordIteration(state, input = {}, env = process.env) {
 
     // 测试运行 = 一次「验证检查点」:重置未验证 churn 计数,并更新回归基线。
     for (const t of testFindings) {
-      if (!t || t.kind !== 'test') continue;
+      if (!t || t.kind !== 'test') {
+        continue;
+      }
       state.verifiedCount += 1;
       state.editsSinceVerify = 0;
       state.filesSinceVerify.clear();
 
       const fw = t.framework || 'test';
-      const failed = Number.isFinite(t.failed) ? t.failed : (t.green ? 0 : 1);
+      const failed = Number.isFinite(t.failed) ? t.failed : t.green ? 0 : 1;
       const green = t.green === true || failed === 0;
       let b = state.testBaseline.get(fw);
-      if (!b) { b = { everGreen: false, lastGreen: null, lastFailed: null, bestFailedRed: null }; state.testBaseline.set(fw, b); }
+      if (!b) {
+        b = { everGreen: false, lastGreen: null, lastFailed: null, bestFailedRed: null };
+        state.testBaseline.set(fw, b);
+      }
       b.lastGreen = green;
       b.lastFailed = failed;
-      if (green) b.everGreen = true;
-      else b.bestFailedRed = b.bestFailedRed == null ? failed : Math.min(b.bestFailedRed, failed);
+      if (green) {
+        b.everGreen = true;
+      } else {
+        b.bestFailedRed = b.bestFailedRed == null ? failed : Math.min(b.bestFailedRed, failed);
+      }
       // 保存最近一次失败用例样本,供提示文本引用。
-      if (!green && Array.isArray(t.failures) && t.failures.length) b._sample = t.failures.slice(0, 2).join(', ');
-      else if (green) b._sample = '';
+      if (!green && Array.isArray(t.failures) && t.failures.length) {
+        b._sample = t.failures.slice(0, 2).join(', ');
+      } else if (green) {
+        b._sample = '';
+      }
     }
-  } catch { /* 监听器纯累积,绝不反噬 loop */ }
+  } catch {
+    /* 监听器纯累积,绝不反噬 loop */
+  }
 }
 
 /**
@@ -149,8 +178,10 @@ function recordIteration(state, input = {}, env = process.env) {
  * @returns {{ drift:boolean, signals:Array, directive:string|null }}
  */
 function assess(state, env = process.env) {
-  if (!state || !isEnabled(env)) return { drift: false, signals: [], directive: null };
-  let candidates = [];
+  if (!state || !isEnabled(env)) {
+    return { drift: false, signals: [], directive: null };
+  }
+  const candidates = [];
   try {
     const T = _thresholds(env);
 
@@ -201,28 +232,45 @@ function assess(state, env = process.env) {
         detail: `连续 ${state.failureStreak} 轮工具调用失败,建议换一种思路或向用户澄清需求,而非继续重试`,
       });
     }
-  } catch { return { drift: false, signals: [], directive: null }; }
+  } catch {
+    return { drift: false, signals: [], directive: null };
+  }
 
   // episode 去重 + 重新武装:解除的条件从 announced 移除,新条件才浮出。
-  const activeKeys = new Set(candidates.map(c => c.key));
+  const activeKeys = new Set(candidates.map((c) => c.key));
   for (const k of [...state.announced]) {
-    if (!activeKeys.has(k)) state.announced.delete(k);
+    if (!activeKeys.has(k)) {
+      state.announced.delete(k);
+    }
   }
-  const fresh = candidates.filter(c => !state.announced.has(c.key));
-  for (const c of fresh) state.announced.add(c.key);
+  const fresh = candidates.filter((c) => !state.announced.has(c.key));
+  for (const c of fresh) {
+    state.announced.add(c.key);
+  }
 
-  if (!fresh.length) return { drift: false, signals: [], directive: null };
+  if (!fresh.length) {
+    return { drift: false, signals: [], directive: null };
+  }
 
   // 强信号优先排序(回归在前)。
   fresh.sort((a, b) => (a.severity === 'high' ? -1 : 1) - (b.severity === 'high' ? -1 : 1));
   const directive = buildCourseCorrectionHint(fresh);
-  for (const c of fresh) state.corrections.push({ type: c.type, severity: c.severity, detail: c.detail, at: state.iteration });
+  for (const c of fresh) {
+    state.corrections.push({
+      type: c.type,
+      severity: c.severity,
+      detail: c.detail,
+      at: state.iteration,
+    });
+  }
   return { drift: true, signals: fresh, directive };
 }
 
 /** 把纠偏信号合成一段「上下文参考」式提示(可采用 / 改写 / 忽略)。 */
 function buildCourseCorrectionHint(signals) {
-  if (!Array.isArray(signals) || !signals.length) return null;
+  if (!Array.isArray(signals) || !signals.length) {
+    return null;
+  }
   const lines = signals.map((s, i) => `${i + 1}. ${s.detail}`);
   return `[SYSTEM: 航向提示(开发过程在途监听 · 仅供参考,可采用/改写/忽略):\n${lines.join('\n')}\n—— 若方向无误可忽略此提示并继续;若确有偏差,建议现在小步纠正,避免任务收尾后大改。]`;
 }
@@ -234,9 +282,13 @@ function hasCorrections(state) {
 
 /** 收尾摘要:挂到 loop 返回契约,供 UI/程序消费。 */
 function summarize(state) {
-  if (!state) return null;
+  if (!state) {
+    return null;
+  }
   const byType = {};
-  for (const c of state.corrections) byType[c.type] = (byType[c.type] || 0) + 1;
+  for (const c of state.corrections) {
+    byType[c.type] = (byType[c.type] || 0) + 1;
+  }
   return {
     iterations: state.iteration,
     edits: state.edits,

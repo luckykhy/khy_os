@@ -12,10 +12,19 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const WHITELIST_FILE = path.join(os.homedir(), '.khy', 'git-track-whitelist.json');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const WHITELIST_FILE = path.join(_dataHome(), 'git-track-whitelist.json');
 
 /**
  * 读取用户白名单（绝对路径数组）。fail-soft：文件不存在/损坏 → 返回 []。
@@ -25,10 +34,12 @@ function loadWhitelist() {
   try {
     const raw = fs.readFileSync(WHITELIST_FILE, 'utf8');
     const list = JSON.parse(raw);
-    if (!Array.isArray(list)) return [];
+    if (!Array.isArray(list)) {
+      return [];
+    }
     // 归一化：去尾部分隔符、去重
     const normalized = list
-      .filter(p => typeof p === 'string' && path.isAbsolute(p))
+      .filter((p) => typeof p === 'string' && path.isAbsolute(p))
       .map(_norm)
       .filter(Boolean);
     return [...new Set(normalized)];
@@ -44,14 +55,18 @@ function loadWhitelist() {
  */
 function saveWhitelist(list) {
   try {
-    if (!Array.isArray(list)) return false;
+    if (!Array.isArray(list)) {
+      return false;
+    }
     const normalized = list
-      .filter(p => typeof p === 'string' && path.isAbsolute(p))
+      .filter((p) => typeof p === 'string' && path.isAbsolute(p))
       .map(_norm)
       .filter(Boolean);
     const unique = [...new Set(normalized)];
     const dir = path.dirname(WHITELIST_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(WHITELIST_FILE, JSON.stringify(unique, null, 2), 'utf8');
     return true;
   } catch {
@@ -77,9 +92,13 @@ function isWhitelisted(dir) {
  */
 function addToWhitelist(dir) {
   const normalized = _norm(dir);
-  if (!normalized || !path.isAbsolute(normalized)) return false;
+  if (!normalized || !path.isAbsolute(normalized)) {
+    return false;
+  }
   const list = loadWhitelist();
-  if (list.includes(normalized)) return true; // 已存在，幂等
+  if (list.includes(normalized)) {
+    return true;
+  } // 已存在，幂等
   list.push(normalized);
   return saveWhitelist(list);
 }
@@ -92,17 +111,23 @@ function addToWhitelist(dir) {
 function removeFromWhitelist(dir) {
   const normalized = _norm(dir);
   const list = loadWhitelist();
-  const filtered = list.filter(p => p !== normalized);
-  if (filtered.length === list.length) return true; // 本来就不在，幂等
+  const filtered = list.filter((p) => p !== normalized);
+  if (filtered.length === list.length) {
+    return true;
+  } // 本来就不在，幂等
   return saveWhitelist(filtered);
 }
 
 /** 归一化路径：去尾部分隔符（保留根），fail-soft 返回 ''。 */
 function _norm(p) {
   try {
-    if (typeof p !== 'string' || !p.trim()) return '';
+    if (typeof p !== 'string' || !p.trim()) {
+      return '';
+    }
     let n = path.normalize(p.trim());
-    while (n.length > 1 && (n.endsWith('/') || n.endsWith('\\'))) n = n.slice(0, -1);
+    while (n.length > 1 && (n.endsWith('/') || n.endsWith('\\'))) {
+      n = n.slice(0, -1);
+    }
     return n;
   } catch {
     return '';

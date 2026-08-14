@@ -18,9 +18,9 @@
  * in the service layer (moaService).
  */
 
-const _MAX_REFERENCES = 8;       // cap fan-in so the aggregator prompt stays bounded
-const _MAX_REF_CHARS = 6000;     // per-reference length cap (mid-truncate marker kept)
-const _DEDUP_THRESHOLD = 0.9;    // jaccard ≥ this ⇒ treat as duplicate, keep the richer one
+const _MAX_REFERENCES = 8; // cap fan-in so the aggregator prompt stays bounded
+const _MAX_REF_CHARS = 6000; // per-reference length cap (mid-truncate marker kept)
+const _DEDUP_THRESHOLD = 0.9; // jaccard ≥ this ⇒ treat as duplicate, keep the richer one
 
 // 收敛到 utils/toStr 单一真源(逐字节委托,调用点不变)
 const _str = require('../utils/toStr').toStr;
@@ -32,17 +32,27 @@ const _str = require('../utils/toStr').toStr;
 function _jaccardSimilarity(a, b) {
   const wa = new Set(_str(a).toLowerCase().split(/\s+/).filter(Boolean));
   const wb = new Set(_str(b).toLowerCase().split(/\s+/).filter(Boolean));
-  if (wa.size === 0 && wb.size === 0) return 1;
-  if (wa.size === 0 || wb.size === 0) return 0;
+  if (wa.size === 0 && wb.size === 0) {
+    return 1;
+  }
+  if (wa.size === 0 || wb.size === 0) {
+    return 0;
+  }
   let inter = 0;
-  for (const w of wa) if (wb.has(w)) inter++;
+  for (const w of wa) {
+    if (wb.has(w)) {
+      inter++;
+    }
+  }
   const union = wa.size + wb.size - inter;
   return union === 0 ? 0 : inter / union;
 }
 
 function _clampContent(text) {
   const s = _str(text).trim();
-  if (s.length <= _MAX_REF_CHARS) return s;
+  if (s.length <= _MAX_REF_CHARS) {
+    return s;
+  }
   const head = Math.ceil(_MAX_REF_CHARS * 0.6);
   const tail = _MAX_REF_CHARS - head;
   return `${s.slice(0, head)}\n…[截断]…\n${s.slice(s.length - tail)}`;
@@ -60,16 +70,23 @@ function normalizeReferences(entries, options = {}) {
     Number.isFinite(options.maxReferences) && options.maxReferences > 0
       ? Math.floor(options.maxReferences)
       : _MAX_REFERENCES;
-  const threshold =
-    Number.isFinite(options.dedupThreshold) ? options.dedupThreshold : _DEDUP_THRESHOLD;
+  const threshold = Number.isFinite(options.dedupThreshold)
+    ? options.dedupThreshold
+    : _DEDUP_THRESHOLD;
 
   // 1) keep only successful entries with non-empty content, preserving input order.
   const cleaned = [];
   for (const e of list) {
-    if (!e || typeof e !== 'object') continue;
-    if (e.failed) continue;
+    if (!e || typeof e !== 'object') {
+      continue;
+    }
+    if (e.failed) {
+      continue;
+    }
     const content = _str(e.content).trim();
-    if (!content) continue;
+    if (!content) {
+      continue;
+    }
     cleaned.push({ model: _str(e.model) || 'unknown', content });
   }
 
@@ -113,7 +130,9 @@ function buildAggregatorPrompt(params = {}) {
   lines.push('下面是若干参考模型对同一个问题各自给出的回答。');
   lines.push('请综合所有参考回答的优点、纠正其中的错误与遗漏,合成一份最准确、完整的最终答案。');
   lines.push('不要只是挑选某一个回答,也不要逐条罗列各模型说了什么;直接输出合成后的最终答案。');
-  if (lang) lines.push(`请用${lang}作答。`);
+  if (lang) {
+    lines.push(`请用${lang}作答。`);
+  }
   lines.push('');
   lines.push('# 原始问题');
   lines.push(question || '(未提供问题)');

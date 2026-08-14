@@ -26,12 +26,22 @@
  * @returns {boolean} true if the name is safe to use
  */
 function validateName(name) {
-  if (!name || typeof name !== 'string') return false;
-  if (name.length > 64) return false;
-  if (!/^[a-zA-Z0-9._/-]+$/.test(name)) return false;
-  if (name === '.' || name === '..') return false;
+  if (!name || typeof name !== 'string') {
+    return false;
+  }
+  if (name.length > 64) {
+    return false;
+  }
+  if (!/^[a-zA-Z0-9._/-]+$/.test(name)) {
+    return false;
+  }
+  if (name === '.' || name === '..') {
+    return false;
+  }
   for (const segment of name.split('/')) {
-    if (segment === '' || segment === '.' || segment === '..') return false;
+    if (segment === '' || segment === '.' || segment === '..') {
+      return false;
+    }
   }
   return true;
 }

@@ -25,8 +25,9 @@
  * network.
  */
 
-const defaultManager = require('./index');
 const defaultRegistry = require('../../tools');
+
+const defaultManager = require('./index');
 
 /**
  * Append an MCP permission annotation to a description (s19 (readOnly) /
@@ -37,8 +38,12 @@ const defaultRegistry = require('../../tools');
  */
 function annotateDescription(description, flags = {}) {
   const base = description || '';
-  if (flags.isReadOnly) return `${base} (readOnly)`.trim();
-  if (flags.isDestructive) return `${base} (destructive)`.trim();
+  if (flags.isReadOnly) {
+    return `${base} (readOnly)`.trim();
+  }
+  if (flags.isDestructive) {
+    return `${base} (destructive)`.trim();
+  }
   return base;
 }
 
@@ -50,9 +55,8 @@ function annotateDescription(description, flags = {}) {
  * @returns {object} a tool definition accepted by registry.register
  */
 function buildCallableTool(serialized, client) {
-  const originalToolName = serialized.originalToolName != null
-    ? serialized.originalToolName
-    : serialized.name;
+  const originalToolName =
+    serialized.originalToolName != null ? serialized.originalToolName : serialized.name;
   return {
     name: serialized.name,
     description: annotateDescription(serialized.description, serialized),
@@ -77,22 +81,33 @@ function buildCallableTool(serialized, client) {
  */
 function syncMcpToolsToRegistry({ manager = defaultManager, registry = defaultRegistry } = {}) {
   // s19 rebuild: drop the stale MCP partition before re-registering live tools.
-  if (typeof registry.clearMcpTools === 'function') registry.clearMcpTools();
+  if (typeof registry.clearMcpTools === 'function') {
+    registry.clearMcpTools();
+  }
 
   const registered = [];
-  const servers = typeof manager.getConnectedServers === 'function'
-    ? manager.getConnectedServers()
-    : [];
+  const servers =
+    typeof manager.getConnectedServers === 'function' ? manager.getConnectedServers() : [];
 
   for (const serverName of servers) {
     const client = typeof manager.getClient === 'function' ? manager.getClient(serverName) : null;
-    if (!client || typeof client.listTools !== 'function' || typeof client.callTool !== 'function') {
+    if (
+      !client ||
+      typeof client.listTools !== 'function' ||
+      typeof client.callTool !== 'function'
+    ) {
       continue;
     }
     let serializedTools;
-    try { serializedTools = client.listTools() || []; } catch { serializedTools = []; }
+    try {
+      serializedTools = client.listTools() || [];
+    } catch {
+      serializedTools = [];
+    }
     for (const serialized of serializedTools) {
-      if (!serialized || !serialized.name) continue;
+      if (!serialized || !serialized.name) {
+        continue;
+      }
       registry.register(buildCallableTool(serialized, client), { isMcp: true });
       registered.push(serialized.name);
     }
@@ -118,17 +133,15 @@ function syncMcpToolsToRegistry({ manager = defaultManager, registry = defaultRe
  */
 function refreshMcpToolPool({ manager = defaultManager, registry = defaultRegistry } = {}) {
   try {
-    const servers = typeof manager.getConnectedServers === 'function'
-      ? manager.getConnectedServers()
-      : [];
+    const servers =
+      typeof manager.getConnectedServers === 'function' ? manager.getConnectedServers() : [];
 
     if (!servers.length) {
       // Nothing connected. Drop any tools left over from a prior connection so a
       // disconnected server's tools cannot linger in the pool, but otherwise do
       // no work (don't churn the registry every idle turn).
-      const stale = typeof registry.getMcpToolNames === 'function'
-        ? registry.getMcpToolNames()
-        : [];
+      const stale =
+        typeof registry.getMcpToolNames === 'function' ? registry.getMcpToolNames() : [];
       if (stale.length && typeof registry.clearMcpTools === 'function') {
         registry.clearMcpTools();
         return { refreshed: true, registered: [], servers: [] };

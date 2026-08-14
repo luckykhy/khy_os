@@ -21,7 +21,9 @@
 
 // ── 门控 ─────────────────────────────────────────────────────────────
 function isEnabled(env) {
-  const raw = String((env || process.env || {}).KHY_FORGE || 'on').trim().toLowerCase();
+  const raw = String((env || process.env || {}).KHY_FORGE || 'on')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -44,7 +46,9 @@ const MAX_LIMIT = 50;
  * @returns {('github'|'gitee'|'gitlab'|null)}
  */
 function normalizePlatform(raw) {
-  const v = String(raw || '').trim().toLowerCase();
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
   return SUPPORTED_PLATFORMS.includes(v) ? v : null;
 }
 
@@ -55,9 +59,15 @@ function normalizePlatform(raw) {
  */
 function inferPlatform(text) {
   const t = String(text || '').toLowerCase();
-  if (t.includes('gitee.com')) return 'gitee';
-  if (t.includes('gitlab.com') || /\bgitlab\b/.test(t)) return 'gitlab';
-  if (t.includes('github.com')) return 'github';
+  if (t.includes('gitee.com')) {
+    return 'gitee';
+  }
+  if (t.includes('gitlab.com') || /\bgitlab\b/.test(t)) {
+    return 'gitlab';
+  }
+  if (t.includes('github.com')) {
+    return 'github';
+  }
   return null;
 }
 
@@ -68,9 +78,7 @@ function inferPlatform(text) {
  * @returns {'github'|'gitee'|'gitlab'}
  */
 function resolvePlatform(rawPlatform, repoInput) {
-  return normalizePlatform(rawPlatform)
-    || inferPlatform(repoInput)
-    || DEFAULT_PLATFORM;
+  return normalizePlatform(rawPlatform) || inferPlatform(repoInput) || DEFAULT_PLATFORM;
 }
 
 // ── slug 解析(镜像 publish.js 的 _normalizeRepoSlug,单一形态真源) ──
@@ -81,7 +89,9 @@ function resolvePlatform(rawPlatform, repoInput) {
  */
 function parseRepoSlug(repoInput) {
   const raw = String(repoInput || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   let slug = raw;
   slug = slug.replace(/^git@[^:]+:/i, '');
   slug = slug.replace(/^ssh:\/\/git@[^/]+\//i, '');
@@ -106,15 +116,25 @@ const SAFE_SLUG_RE = /^[A-Za-z0-9_.][A-Za-z0-9_./-]*\/[A-Za-z0-9_.][A-Za-z0-9_./
  */
 function isSafeRepoArg(repoInput) {
   const raw = String(repoInput || '').trim();
-  if (!raw) return false;
-  if (raw.startsWith('-')) return false;                 // 杜绝选项注入
-  if (/\s/.test(raw)) return false;                      // 含空白一律拒
-  if (/^(ext|fd|file|sso)::?/i.test(raw)) return false;  // 危险/本地 transport
+  if (!raw) {
+    return false;
+  }
+  if (raw.startsWith('-')) {
+    return false;
+  } // 杜绝选项注入
+  if (/\s/.test(raw)) {
+    return false;
+  } // 含空白一律拒
+  if (/^(ext|fd|file|sso)::?/i.test(raw)) {
+    return false;
+  } // 危险/本地 transport
   if (SAFE_URL_SCHEME_RE.test(raw)) {
     // 已是 http(s)/ssh/git URL:再确认不含 shell 元字符
     return !/[\s;'"`$()<>|\\^]/.test(raw);
   }
-  if (SAFE_SCP_RE.test(raw)) return true;
+  if (SAFE_SCP_RE.test(raw)) {
+    return true;
+  }
   return SAFE_SLUG_RE.test(raw);
 }
 
@@ -126,7 +146,9 @@ function isSafeRepoArg(repoInput) {
 function assertSafeRepoArg(repoInput) {
   const raw = String(repoInput || '').trim();
   if (!isSafeRepoArg(raw)) {
-    throw new Error(`不安全或不合法的仓库参数: ${JSON.stringify(repoInput)}（仅支持 owner/repo 或 http(s)/ssh git URL)`);
+    throw new Error(
+      `不安全或不合法的仓库参数: ${JSON.stringify(repoInput)}（仅支持 owner/repo 或 http(s)/ssh git URL)`
+    );
   }
   return raw;
 }
@@ -154,15 +176,15 @@ function buildCloneUrl(repoInput, platform, options = {}) {
   }
   const host = HOST_BY_PLATFORM[platform] || HOST_BY_PLATFORM[DEFAULT_PLATFORM];
   const preferSsh = options.ssh === true || String(options.protocol || '').toLowerCase() === 'ssh';
-  return preferSsh
-    ? `git@${host}:${slug}.git`
-    : `https://${host}/${slug}.git`;
+  return preferSsh ? `git@${host}:${slug}.git` : `https://${host}/${slug}.git`;
 }
 
 // ── 搜索请求描述符(三家 forge 的 REST 端点) ───────────────────────
 function clampLimit(n) {
   const v = Number.parseInt(n, 10);
-  if (!Number.isFinite(v) || v <= 0) return DEFAULT_LIMIT;
+  if (!Number.isFinite(v) || v <= 0) {
+    return DEFAULT_LIMIT;
+  }
   return Math.min(v, MAX_LIMIT);
 }
 
@@ -177,7 +199,9 @@ function clampLimit(n) {
 function buildSearchRequest(platform, query, opts = {}) {
   const p = normalizePlatform(platform);
   const q = String(query || '').trim();
-  if (!p || !q) return null;
+  if (!p || !q) {
+    return null;
+  }
   const limit = clampLimit(opts.limit);
   const token = String(opts.token || '').trim();
 
@@ -186,7 +210,9 @@ function buildSearchRequest(platform, query, opts = {}) {
       Accept: 'application/vnd.github+json',
       'User-Agent': 'khyos-forge',
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     return {
       method: 'GET',
       url: 'https://api.github.com/search/repositories',
@@ -198,7 +224,9 @@ function buildSearchRequest(platform, query, opts = {}) {
   if (p === 'gitee') {
     // Gitee v5 用 access_token 查询参数鉴权。
     const params = { q, per_page: limit, sort: 'stars_count', order: 'desc' };
-    if (token) params.access_token = token;
+    if (token) {
+      params.access_token = token;
+    }
     return {
       method: 'GET',
       url: 'https://gitee.com/api/v5/search/repositories',
@@ -209,7 +237,9 @@ function buildSearchRequest(platform, query, opts = {}) {
 
   // gitlab
   const headers = { 'User-Agent': 'khyos-forge' };
-  if (token) headers['PRIVATE-TOKEN'] = token;
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
   return {
     method: 'GET',
     url: 'https://gitlab.com/api/v4/projects',
@@ -231,17 +261,21 @@ const _num = require('../../utils/finiteNumber').toFiniteOr0;
  */
 function parseSearchResults(platform, body) {
   const p = normalizePlatform(platform);
-  if (!p || body == null) return [];
+  if (!p || body == null) {
+    return [];
+  }
 
   // github: { items: [...] };gitee/gitlab: 顶层就是数组。
-  const rows = Array.isArray(body)
-    ? body
-    : (Array.isArray(body.items) ? body.items : []);
-  if (!Array.isArray(rows)) return [];
+  const rows = Array.isArray(body) ? body : Array.isArray(body.items) ? body.items : [];
+  if (!Array.isArray(rows)) {
+    return [];
+  }
 
   const out = [];
   for (const r of rows) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     let item;
     if (p === 'github') {
       const fullName = String(r.full_name || '');
@@ -262,13 +296,16 @@ function parseSearchResults(platform, body) {
       item = {
         platform: p,
         fullName,
-        owner: r.namespace && r.namespace.path ? String(r.namespace.path) : fullName.split('/')[0] || '',
+        owner:
+          r.namespace && r.namespace.path ? String(r.namespace.path) : fullName.split('/')[0] || '',
         name: String(r.name || r.path || fullName.split('/')[1] || ''),
         description: r.description ? String(r.description) : '',
         stars: _num(r.stargazers_count),
         language: r.language ? String(r.language) : '',
         url: htmlUrl,
-        cloneUrl: String(r.html_url ? `${htmlUrl}.git` : (fullName ? `https://gitee.com/${fullName}.git` : '')),
+        cloneUrl: String(
+          r.html_url ? `${htmlUrl}.git` : fullName ? `https://gitee.com/${fullName}.git` : ''
+        ),
       };
     } else {
       // gitlab
@@ -283,10 +320,14 @@ function parseSearchResults(platform, body) {
         stars: _num(r.star_count),
         language: '',
         url: String(r.web_url || ''),
-        cloneUrl: String(r.http_url_to_repo || (fullName ? `https://gitlab.com/${fullName}.git` : '')),
+        cloneUrl: String(
+          r.http_url_to_repo || (fullName ? `https://gitlab.com/${fullName}.git` : '')
+        ),
       };
     }
-    if (item.fullName || item.cloneUrl) out.push(item);
+    if (item.fullName || item.cloneUrl) {
+      out.push(item);
+    }
   }
   return out;
 }
@@ -304,25 +345,46 @@ function parseSearchResults(platform, body) {
 // 最该精读的文件。大小写不敏感匹配顶层条目;reconRepo 只拉取**实际存在**的(像我:先列目录
 // 再按已知路径取文件,比盲拉快得多)。
 const KEY_RECON_FILES = [
-  'README.md', 'README', 'README.rst',
-  'CLAUDE.md', 'AGENTS.md', '.cursorrules',           // agent / AI 协作指南
+  'README.md',
+  'README',
+  'README.rst',
+  'CLAUDE.md',
+  'AGENTS.md',
+  '.cursorrules', // agent / AI 协作指南
   'CONTRIBUTING.md',
-  'package.json', 'pyproject.toml', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml', 'build.gradle',
-  'Dockerfile', 'docker-compose.yml', 'docker-compose.yaml',
-  'Makefile', '.env.example',
+  'package.json',
+  'pyproject.toml',
+  'requirements.txt',
+  'Cargo.toml',
+  'go.mod',
+  'pom.xml',
+  'build.gradle',
+  'Dockerfile',
+  'docker-compose.yml',
+  'docker-compose.yaml',
+  'Makefile',
+  '.env.example',
 ];
 
-const RECON_FILE_MAX_BYTES = 256 * 1024;             // 单个关键文件拉取上界(防超大文件)
-const RECON_MAX_KEY_FILES = 12;                      // 一次 recon 最多精读多少个关键文件
+const RECON_FILE_MAX_BYTES = 256 * 1024; // 单个关键文件拉取上界(防超大文件)
+const RECON_MAX_KEY_FILES = 12; // 一次 recon 最多精读多少个关键文件
 
 // 路径防护:contents/file 路径会拼进 REST URL。拒绝 `..`、绝对路径与 shell/URL 危险/控制
 // 字符;允许空串(顶层)。白名单收尾顺带排除一切控制字符。纯谓词,绝不抛。
 function isSafeReconPath(p) {
   const s = String(p == null ? '' : p).trim();
-  if (s === '') return true;                          // 顶层
-  if (s.startsWith('/')) return false;                // 绝对路径
-  if (s.includes('..')) return false;                 // 目录穿越
-  if (/[\s;'"`$()<>|\\^?#%]/.test(s)) return false;   // 危险/会破坏 URL 的字符
+  if (s === '') {
+    return true;
+  } // 顶层
+  if (s.startsWith('/')) {
+    return false;
+  } // 绝对路径
+  if (s.includes('..')) {
+    return false;
+  } // 目录穿越
+  if (/[\s;'"`$()<>|\\^?#%]/.test(s)) {
+    return false;
+  } // 危险/会破坏 URL 的字符
   return /^[A-Za-z0-9_.\-/]+$/.test(s);
 }
 
@@ -337,7 +399,10 @@ function _safeSlugForUrl(repoInput) {
 
 function _encPath(p) {
   // 逐段编码,保留 '/' 作为分隔符。
-  return String(p || '').split('/').map((seg) => encodeURIComponent(seg)).join('/');
+  return String(p || '')
+    .split('/')
+    .map((seg) => encodeURIComponent(seg))
+    .join('/');
 }
 
 /**
@@ -349,23 +414,41 @@ function _encPath(p) {
  */
 function buildRepoMetaRequest(platform, repoInput, opts = {}) {
   const p = normalizePlatform(platform);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const slug = _safeSlugForUrl(repoInput);
   const token = String(opts.token || '').trim();
   if (p === 'github') {
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'khyos-forge' };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     return { method: 'GET', url: `https://api.github.com/repos/${slug}`, headers, params: {} };
   }
   if (p === 'gitee') {
     const params = {};
-    if (token) params.access_token = token;
-    return { method: 'GET', url: `https://gitee.com/api/v5/repos/${slug}`, headers: { 'User-Agent': 'khyos-forge' }, params };
+    if (token) {
+      params.access_token = token;
+    }
+    return {
+      method: 'GET',
+      url: `https://gitee.com/api/v5/repos/${slug}`,
+      headers: { 'User-Agent': 'khyos-forge' },
+      params,
+    };
   }
   // gitlab:项目以 URL 编码的 owner/repo 作 id
   const headers = { 'User-Agent': 'khyos-forge' };
-  if (token) headers['PRIVATE-TOKEN'] = token;
-  return { method: 'GET', url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}`, headers, params: {} };
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
+  return {
+    method: 'GET',
+    url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}`,
+    headers,
+    params: {},
+  };
 }
 
 /**
@@ -374,7 +457,9 @@ function buildRepoMetaRequest(platform, repoInput, opts = {}) {
  */
 function parseRepoMeta(platform, body) {
   const p = normalizePlatform(platform);
-  if (!p || !body || typeof body !== 'object') return null;
+  if (!p || !body || typeof body !== 'object') {
+    return null;
+  }
   const r = body;
   if (p === 'github') {
     const fullName = String(r.full_name || '');
@@ -387,7 +472,12 @@ function parseRepoMeta(platform, body) {
       forks: _num(r.forks_count),
       openIssues: _num(r.open_issues_count),
       language: r.language ? String(r.language) : '',
-      license: r.license && r.license.spdx_id ? String(r.license.spdx_id) : (r.license && r.license.name ? String(r.license.name) : ''),
+      license:
+        r.license && r.license.spdx_id
+          ? String(r.license.spdx_id)
+          : r.license && r.license.name
+            ? String(r.license.name)
+            : '',
       topics: Array.isArray(r.topics) ? r.topics.map(String) : [],
       url: String(r.html_url || ''),
       cloneUrl: String(r.clone_url || (fullName ? `https://github.com/${fullName}.git` : '')),
@@ -408,7 +498,9 @@ function parseRepoMeta(platform, body) {
       license: r.license ? String(r.license) : '',
       topics: Array.isArray(r.topics) ? r.topics.map(String) : [],
       url: String(r.html_url || ''),
-      cloneUrl: String(r.html_url ? `${r.html_url}.git` : (fullName ? `https://gitee.com/${fullName}.git` : '')),
+      cloneUrl: String(
+        r.html_url ? `${r.html_url}.git` : fullName ? `https://gitee.com/${fullName}.git` : ''
+      ),
       pushedAt: String(r.pushed_at || r.updated_at || ''),
     };
   }
@@ -424,7 +516,11 @@ function parseRepoMeta(platform, body) {
     openIssues: _num(r.open_issues_count),
     language: '',
     license: r.license && r.license.name ? String(r.license.name) : '',
-    topics: Array.isArray(r.topics) ? r.topics.map(String) : (Array.isArray(r.tag_list) ? r.tag_list.map(String) : []),
+    topics: Array.isArray(r.topics)
+      ? r.topics.map(String)
+      : Array.isArray(r.tag_list)
+        ? r.tag_list.map(String)
+        : [],
     url: String(r.web_url || ''),
     cloneUrl: String(r.http_url_to_repo || (fullName ? `https://gitlab.com/${fullName}.git` : '')),
     pushedAt: String(r.last_activity_at || ''),
@@ -441,32 +537,65 @@ function parseRepoMeta(platform, body) {
  */
 function buildContentsRequest(platform, repoInput, path = '', opts = {}) {
   const p = normalizePlatform(platform);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const safePath = String(path || '').trim();
-  if (!isSafeReconPath(safePath)) throw new Error(`不安全的路径: ${JSON.stringify(path)}`);
+  if (!isSafeReconPath(safePath)) {
+    throw new Error(`不安全的路径: ${JSON.stringify(path)}`);
+  }
   const slug = _safeSlugForUrl(repoInput);
   const token = String(opts.token || '').trim();
   const ref = String(opts.ref || '').trim();
   if (p === 'github') {
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'khyos-forge' };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     const params = {};
-    if (ref) params.ref = ref;
-    return { method: 'GET', url: `https://api.github.com/repos/${slug}/contents/${_encPath(safePath)}`, headers, params };
+    if (ref) {
+      params.ref = ref;
+    }
+    return {
+      method: 'GET',
+      url: `https://api.github.com/repos/${slug}/contents/${_encPath(safePath)}`,
+      headers,
+      params,
+    };
   }
   if (p === 'gitee') {
     const params = {};
-    if (token) params.access_token = token;
-    if (ref) params.ref = ref;
-    return { method: 'GET', url: `https://gitee.com/api/v5/repos/${slug}/contents/${_encPath(safePath)}`, headers: { 'User-Agent': 'khyos-forge' }, params };
+    if (token) {
+      params.access_token = token;
+    }
+    if (ref) {
+      params.ref = ref;
+    }
+    return {
+      method: 'GET',
+      url: `https://gitee.com/api/v5/repos/${slug}/contents/${_encPath(safePath)}`,
+      headers: { 'User-Agent': 'khyos-forge' },
+      params,
+    };
   }
   // gitlab tree:project id(URL 编码 slug)+ path/ref 查询参
   const headers = { 'User-Agent': 'khyos-forge' };
-  if (token) headers['PRIVATE-TOKEN'] = token;
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
   const params = { per_page: 100 };
-  if (safePath) params.path = safePath;
-  if (ref) params.ref = ref;
-  return { method: 'GET', url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/tree`, headers, params };
+  if (safePath) {
+    params.path = safePath;
+  }
+  if (ref) {
+    params.ref = ref;
+  }
+  return {
+    method: 'GET',
+    url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/tree`,
+    headers,
+    params,
+  };
 }
 
 /**
@@ -474,17 +603,28 @@ function buildContentsRequest(platform, repoInput, path = '', opts = {}) {
  */
 function parseContents(platform, body) {
   const p = normalizePlatform(platform);
-  if (!p || body == null) return [];
-  const rows = Array.isArray(body) ? body : (Array.isArray(body.tree) ? body.tree : []);
-  if (!Array.isArray(rows)) return [];
+  if (!p || body == null) {
+    return [];
+  }
+  const rows = Array.isArray(body) ? body : Array.isArray(body.tree) ? body.tree : [];
+  if (!Array.isArray(rows)) {
+    return [];
+  }
   const out = [];
   for (const r of rows) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     let type;
-    if (p === 'gitlab') type = (r.type === 'tree') ? 'dir' : 'file';
-    else type = (r.type === 'dir' || r.type === 'tree') ? 'dir' : 'file';
+    if (p === 'gitlab') {
+      type = r.type === 'tree' ? 'dir' : 'file';
+    } else {
+      type = r.type === 'dir' || r.type === 'tree' ? 'dir' : 'file';
+    }
     const name = String(r.name || '');
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     out.push({ type, name, path: String(r.path || name), size: _num(r.size) });
   }
   return out;
@@ -496,31 +636,62 @@ function parseContents(platform, body) {
  */
 function buildFileRequest(platform, repoInput, path, opts = {}) {
   const p = normalizePlatform(platform);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const safePath = String(path || '').trim();
-  if (!safePath || !isSafeReconPath(safePath)) throw new Error(`不安全的路径: ${JSON.stringify(path)}`);
+  if (!safePath || !isSafeReconPath(safePath)) {
+    throw new Error(`不安全的路径: ${JSON.stringify(path)}`);
+  }
   const slug = _safeSlugForUrl(repoInput);
   const token = String(opts.token || '').trim();
   const ref = String(opts.ref || '').trim();
   if (p === 'github') {
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'khyos-forge' };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     const params = {};
-    if (ref) params.ref = ref;
-    return { method: 'GET', url: `https://api.github.com/repos/${slug}/contents/${_encPath(safePath)}`, headers, params };
+    if (ref) {
+      params.ref = ref;
+    }
+    return {
+      method: 'GET',
+      url: `https://api.github.com/repos/${slug}/contents/${_encPath(safePath)}`,
+      headers,
+      params,
+    };
   }
   if (p === 'gitee') {
     const params = {};
-    if (token) params.access_token = token;
-    if (ref) params.ref = ref;
-    return { method: 'GET', url: `https://gitee.com/api/v5/repos/${slug}/contents/${_encPath(safePath)}`, headers: { 'User-Agent': 'khyos-forge' }, params };
+    if (token) {
+      params.access_token = token;
+    }
+    if (ref) {
+      params.ref = ref;
+    }
+    return {
+      method: 'GET',
+      url: `https://gitee.com/api/v5/repos/${slug}/contents/${_encPath(safePath)}`,
+      headers: { 'User-Agent': 'khyos-forge' },
+      params,
+    };
   }
   // gitlab raw:files/{urlencoded filepath}/raw?ref=
   const headers = { 'User-Agent': 'khyos-forge' };
-  if (token) headers['PRIVATE-TOKEN'] = token;
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
   const params = {};
-  if (ref) params.ref = ref;
-  return { method: 'GET', url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/files/${encodeURIComponent(safePath)}/raw`, headers, params };
+  if (ref) {
+    params.ref = ref;
+  }
+  return {
+    method: 'GET',
+    url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/files/${encodeURIComponent(safePath)}/raw`,
+    headers,
+    params,
+  };
 }
 
 /**
@@ -532,22 +703,30 @@ function buildFileRequest(platform, repoInput, path, opts = {}) {
  */
 function parseFileContent(platform, body, opts = {}) {
   const p = normalizePlatform(platform);
-  const maxBytes = Number.isFinite(opts.maxBytes) && opts.maxBytes > 0 ? opts.maxBytes : RECON_FILE_MAX_BYTES;
+  const maxBytes =
+    Number.isFinite(opts.maxBytes) && opts.maxBytes > 0 ? opts.maxBytes : RECON_FILE_MAX_BYTES;
   try {
     let text = '';
     if (p === 'github' || p === 'gitee') {
-      if (body && typeof body === 'object' && typeof body.content === 'string'
-        && String(body.encoding || '').toLowerCase() === 'base64') {
+      if (
+        body &&
+        typeof body === 'object' &&
+        typeof body.content === 'string' &&
+        String(body.encoding || '').toLowerCase() === 'base64'
+      ) {
         text = Buffer.from(body.content.replace(/\s+/g, ''), 'base64').toString('utf8');
       } else if (typeof body === 'string') {
         text = body;
       }
     } else {
       // gitlab raw:body 即文本(axios 可能给字符串或已解析对象)
-      text = typeof body === 'string' ? body : (body == null ? '' : String(body));
+      text = typeof body === 'string' ? body : body == null ? '' : String(body);
     }
     let truncated = false;
-    if (text.length > maxBytes) { text = text.slice(0, maxBytes); truncated = true; }
+    if (text.length > maxBytes) {
+      text = text.slice(0, maxBytes);
+      truncated = true;
+    }
     return { text, truncated };
   } catch {
     return { text: '', truncated: false };
@@ -563,7 +742,9 @@ function pickKeyFiles(contents) {
   const rows = Array.isArray(contents) ? contents : [];
   const byLower = new Map();
   for (const r of rows) {
-    if (r && r.type === 'file' && r.name) byLower.set(String(r.name).toLowerCase(), r);
+    if (r && r.type === 'file' && r.name) {
+      byLower.set(String(r.name).toLowerCase(), r);
+    }
   }
   const out = [];
   const seen = new Set();
@@ -572,7 +753,9 @@ function pickKeyFiles(contents) {
     if (hit && !seen.has(hit.path)) {
       out.push({ name: hit.name, path: hit.path });
       seen.add(hit.path);
-      if (out.length >= RECON_MAX_KEY_FILES) break;
+      if (out.length >= RECON_MAX_KEY_FILES) {
+        break;
+      }
     }
   }
   return out;
@@ -586,13 +769,20 @@ function pickKeyFiles(contents) {
  */
 function deriveReconHints(input = {}) {
   const tree = Array.isArray(input.tree) ? input.tree : [];
-  const keyFiles = (input.keyFiles && typeof input.keyFiles === 'object') ? input.keyFiles : {};
-  const dirNames = new Set(tree.filter((e) => e && e.type === 'dir').map((e) => String(e.name).toLowerCase()));
-  const fileNames = new Set(tree.filter((e) => e && e.type === 'file').map((e) => String(e.name).toLowerCase()));
+  const keyFiles = input.keyFiles && typeof input.keyFiles === 'object' ? input.keyFiles : {};
+  const dirNames = new Set(
+    tree.filter((e) => e && e.type === 'dir').map((e) => String(e.name).toLowerCase())
+  );
+  const fileNames = new Set(
+    tree.filter((e) => e && e.type === 'file').map((e) => String(e.name).toLowerCase())
+  );
   // keyFiles 的键按原文件名(可能含大小写,如 CLAUDE.md);建小写索引便于大小写不敏感命中。
   const keyByLower = new Map(Object.keys(keyFiles).map((k) => [k.toLowerCase(), keyFiles[k]]));
   const has = (n) => fileNames.has(n) || keyByLower.has(n);
-  const keyText = (n) => { const v = keyByLower.get(n); return v && typeof v.text === 'string' ? v.text : ''; };
+  const keyText = (n) => {
+    const v = keyByLower.get(n);
+    return v && typeof v.text === 'string' ? v.text : '';
+  };
 
   const hints = {
     isMonorepo: dirNames.has('packages') || dirNames.has('apps'),
@@ -610,20 +800,40 @@ function deriveReconHints(input = {}) {
     try {
       const pkg = JSON.parse(pkgRaw);
       hints.packageManager = pkg.packageManager ? String(pkg.packageManager) : 'npm';
-      if (pkg.workspaces) hints.isMonorepo = true;
-      const scripts = (pkg.scripts && typeof pkg.scripts === 'object') ? pkg.scripts : {};
-      for (const k of ['build', 'start', 'dev', 'test', 'deploy', 'serve']) {
-        if (scripts[k]) hints.buildCommands.push(`npm run ${k}`);
+      if (pkg.workspaces) {
+        hints.isMonorepo = true;
       }
-      if (scripts.deploy || scripts.serve) hints.deployHints.push('package.json 含 deploy/serve 脚本');
-    } catch { hints.notes.push('package.json 解析失败(可能含注释或非标准 JSON)'); }
+      const scripts = pkg.scripts && typeof pkg.scripts === 'object' ? pkg.scripts : {};
+      for (const k of ['build', 'start', 'dev', 'test', 'deploy', 'serve']) {
+        if (scripts[k]) {
+          hints.buildCommands.push(`npm run ${k}`);
+        }
+      }
+      if (scripts.deploy || scripts.serve) {
+        hints.deployHints.push('package.json 含 deploy/serve 脚本');
+      }
+    } catch {
+      hints.notes.push('package.json 解析失败(可能含注释或非标准 JSON)');
+    }
   }
-  if (has('pyproject.toml') || has('requirements.txt')) hints.notes.push('Python 项目(pip / pyproject)');
-  if (has('cargo.toml')) hints.notes.push('Rust 项目(cargo build / cargo run)');
-  if (has('go.mod')) hints.notes.push('Go 项目(go build / go run)');
-  if (hints.hasDocker) hints.deployHints.push('可用 Docker 部署(docker build / docker compose up)');
-  if (has('makefile')) hints.notes.push('含 Makefile(make 目标可能封装构建/部署)');
-  if (hints.hasAgentGuide) hints.notes.push('含 agent 协作指南(CLAUDE.md/AGENTS.md)——优先精读其构建/测试/提交规范');
+  if (has('pyproject.toml') || has('requirements.txt')) {
+    hints.notes.push('Python 项目(pip / pyproject)');
+  }
+  if (has('cargo.toml')) {
+    hints.notes.push('Rust 项目(cargo build / cargo run)');
+  }
+  if (has('go.mod')) {
+    hints.notes.push('Go 项目(go build / go run)');
+  }
+  if (hints.hasDocker) {
+    hints.deployHints.push('可用 Docker 部署(docker build / docker compose up)');
+  }
+  if (has('makefile')) {
+    hints.notes.push('含 Makefile(make 目标可能封装构建/部署)');
+  }
+  if (hints.hasAgentGuide) {
+    hints.notes.push('含 agent 协作指南(CLAUDE.md/AGENTS.md)——优先精读其构建/测试/提交规范');
+  }
   return hints;
 }
 
@@ -639,16 +849,31 @@ const COMMITS_DEFAULT_LIMIT = 20;
 const COMMITS_MAX_LIMIT = 100;
 
 // Conventional Commits 类型册(单一真源):feat/fix/… 之外的前缀不计入「规范」。
-const CONVENTIONAL_TYPES = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'];
+const CONVENTIONAL_TYPES = [
+  'feat',
+  'fix',
+  'docs',
+  'style',
+  'refactor',
+  'perf',
+  'test',
+  'build',
+  'ci',
+  'chore',
+  'revert',
+];
 // `type(scope)!: subject` —— scope/`!` 可选,冒号后须有非空描述。
 const CONVENTIONAL_RE = new RegExp(`^(${CONVENTIONAL_TYPES.join('|')})(\\([^)]*\\))?(!)?: .+`, 'i');
 // 笼统/低信息量主题(整行即这些词,或纯标点)——这类提交信息几乎不传达意图。
-const VAGUE_SUBJECT_RE = /^(wip|update|updates|updated|fix|fixes|fixed|misc|minor|changes|change|stuff|temp|tmp|cleanup|test|tests|\.+|-+)$/i;
-const SUBJECT_MAX_LEN = 72;                          // 主题超过此长度按「过长」计(git 惯例)
+const VAGUE_SUBJECT_RE =
+  /^(wip|update|updates|updated|fix|fixes|fixed|misc|minor|changes|change|stuff|temp|tmp|cleanup|test|tests|\.+|-+)$/i;
+const SUBJECT_MAX_LEN = 72; // 主题超过此长度按「过长」计(git 惯例)
 
 function _clampCommitsLimit(n) {
   const v = Number.parseInt(n, 10);
-  if (!Number.isFinite(v) || v <= 0) return COMMITS_DEFAULT_LIMIT;
+  if (!Number.isFinite(v) || v <= 0) {
+    return COMMITS_DEFAULT_LIMIT;
+  }
   return Math.min(v, COMMITS_MAX_LIMIT);
 }
 
@@ -661,35 +886,67 @@ function _clampCommitsLimit(n) {
  */
 function buildCommitsRequest(platform, repoInput, opts = {}) {
   const p = normalizePlatform(platform);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const slug = _safeSlugForUrl(repoInput);
   const limit = _clampCommitsLimit(opts.limit);
   const token = String(opts.token || '').trim();
   const ref = String(opts.ref || '').trim();
   const path = String(opts.path || '').trim();
-  if (path && !isSafeReconPath(path)) throw new Error(`不安全的路径: ${JSON.stringify(opts.path)}`);
+  if (path && !isSafeReconPath(path)) {
+    throw new Error(`不安全的路径: ${JSON.stringify(opts.path)}`);
+  }
   if (p === 'github') {
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'khyos-forge' };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     const params = { per_page: limit };
-    if (ref) params.sha = ref;
-    if (path) params.path = path;
+    if (ref) {
+      params.sha = ref;
+    }
+    if (path) {
+      params.path = path;
+    }
     return { method: 'GET', url: `https://api.github.com/repos/${slug}/commits`, headers, params };
   }
   if (p === 'gitee') {
     const params = { per_page: limit };
-    if (token) params.access_token = token;
-    if (ref) params.sha = ref;
-    if (path) params.path = path;
-    return { method: 'GET', url: `https://gitee.com/api/v5/repos/${slug}/commits`, headers: { 'User-Agent': 'khyos-forge' }, params };
+    if (token) {
+      params.access_token = token;
+    }
+    if (ref) {
+      params.sha = ref;
+    }
+    if (path) {
+      params.path = path;
+    }
+    return {
+      method: 'GET',
+      url: `https://gitee.com/api/v5/repos/${slug}/commits`,
+      headers: { 'User-Agent': 'khyos-forge' },
+      params,
+    };
   }
   // gitlab
   const headers = { 'User-Agent': 'khyos-forge' };
-  if (token) headers['PRIVATE-TOKEN'] = token;
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
   const params = { per_page: limit };
-  if (ref) params.ref_name = ref;
-  if (path) params.path = path;
-  return { method: 'GET', url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/commits`, headers, params };
+  if (ref) {
+    params.ref_name = ref;
+  }
+  if (path) {
+    params.path = path;
+  }
+  return {
+    method: 'GET',
+    url: `https://gitlab.com/api/v4/projects/${encodeURIComponent(slug)}/repository/commits`,
+    headers,
+    params,
+  };
 }
 
 /**
@@ -697,18 +954,30 @@ function buildCommitsRequest(platform, repoInput, opts = {}) {
  */
 function parseCommits(platform, body) {
   const p = normalizePlatform(platform);
-  if (!p || !Array.isArray(body)) return [];
+  if (!p || !Array.isArray(body)) {
+    return [];
+  }
   const out = [];
   for (const r of body) {
-    if (!r || typeof r !== 'object') continue;
-    let sha = '', message = '', author = '', date = '', url = '';
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
+    let sha = '',
+      message = '',
+      author = '',
+      date = '',
+      url = '';
     if (p === 'github' || p === 'gitee') {
       const c = r.commit && typeof r.commit === 'object' ? r.commit : {};
       sha = String(r.sha || '');
       message = String(c.message || '');
-      author = (c.author && c.author.name) ? String(c.author.name)
-        : (r.author && r.author.login ? String(r.author.login) : '');
-      date = (c.author && c.author.date) ? String(c.author.date) : '';
+      author =
+        c.author && c.author.name
+          ? String(c.author.name)
+          : r.author && r.author.login
+            ? String(r.author.login)
+            : '';
+      date = c.author && c.author.date ? String(c.author.date) : '';
       url = String(r.html_url || '');
     } else {
       // gitlab
@@ -718,7 +987,9 @@ function parseCommits(platform, body) {
       date = String(r.created_at || r.committed_date || '');
       url = String(r.web_url || '');
     }
-    if (!sha && !message) continue;
+    if (!sha && !message) {
+      continue;
+    }
     const subject = message.split('\n')[0].trim();
     out.push({ sha, message, subject, author, date, url, isMerge: /^merge[\s:]/i.test(subject) });
   }
@@ -742,35 +1013,81 @@ function evaluateCommitQuality(commits) {
   const scored = scoredRows.length;
 
   const empty = {
-    total, scored, merges: total - scored,
-    conventional: 0, vague: 0, tooLong: 0,
-    conventionalRatio: 0, score: 0, grade: 'N/A', notes: ['没有可评分的提交'],
+    total,
+    scored,
+    merges: total - scored,
+    conventional: 0,
+    vague: 0,
+    tooLong: 0,
+    conventionalRatio: 0,
+    score: 0,
+    grade: 'N/A',
+    notes: ['没有可评分的提交'],
   };
-  if (scored === 0) return empty;
+  if (scored === 0) {
+    return empty;
+  }
 
-  let conventional = 0, vague = 0, tooLong = 0;
+  let conventional = 0,
+    vague = 0,
+    tooLong = 0;
   for (const c of scoredRows) {
-    const subject = String(c.subject != null ? c.subject : String(c.message || '').split('\n')[0]).trim();
-    if (CONVENTIONAL_RE.test(subject)) conventional += 1;
-    if (subject.length < 6 || VAGUE_SUBJECT_RE.test(subject)) vague += 1;
-    if (subject.length > SUBJECT_MAX_LEN) tooLong += 1;
+    const subject = String(
+      c.subject != null ? c.subject : String(c.message || '').split('\n')[0]
+    ).trim();
+    if (CONVENTIONAL_RE.test(subject)) {
+      conventional += 1;
+    }
+    if (subject.length < 6 || VAGUE_SUBJECT_RE.test(subject)) {
+      vague += 1;
+    }
+    if (subject.length > SUBJECT_MAX_LEN) {
+      tooLong += 1;
+    }
   }
   const conventionalRatio = conventional / scored;
   const vagueRatio = vague / scored;
   const longRatio = tooLong / scored;
   let score = Math.round(70 * conventionalRatio + 30 * (1 - vagueRatio) - 10 * longRatio);
-  if (score < 0) score = 0; if (score > 100) score = 100;
+  if (score < 0) {
+    score = 0;
+  }
+  if (score > 100) {
+    score = 100;
+  }
   const grade = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : score >= 40 ? 'D' : 'F';
 
   const notes = [];
-  notes.push(`${conventional}/${scored} 条遵循 Conventional Commits(${Math.round(conventionalRatio * 100)}%)`);
-  if (vague > 0) notes.push(`${vague} 条主题过于笼统(wip/update/fix 等),信息量低`);
-  if (tooLong > 0) notes.push(`${tooLong} 条主题超过 ${SUBJECT_MAX_LEN} 字符`);
-  if (merges > 0) notes.push(`${merges} 条合并提交(不计入评分)`);
-  if (conventionalRatio >= 0.8) notes.push('提交规范优良:可作为提交信息风格的参考');
-  else if (conventionalRatio < 0.2) notes.push('几乎不使用规范化提交前缀');
+  notes.push(
+    `${conventional}/${scored} 条遵循 Conventional Commits(${Math.round(conventionalRatio * 100)}%)`
+  );
+  if (vague > 0) {
+    notes.push(`${vague} 条主题过于笼统(wip/update/fix 等),信息量低`);
+  }
+  if (tooLong > 0) {
+    notes.push(`${tooLong} 条主题超过 ${SUBJECT_MAX_LEN} 字符`);
+  }
+  if (merges > 0) {
+    notes.push(`${merges} 条合并提交(不计入评分)`);
+  }
+  if (conventionalRatio >= 0.8) {
+    notes.push('提交规范优良:可作为提交信息风格的参考');
+  } else if (conventionalRatio < 0.2) {
+    notes.push('几乎不使用规范化提交前缀');
+  }
 
-  return { total, scored, merges: total - scored, conventional, vague, tooLong, conventionalRatio, score, grade, notes };
+  return {
+    total,
+    scored,
+    merges: total - scored,
+    conventional,
+    vague,
+    tooLong,
+    conventionalRatio,
+    score,
+    grade,
+    notes,
+  };
 }
 
 // ── 代码搜索 + 速率限制(目前仅 GitHub 提供干净的公开端点)──────────────
@@ -788,9 +1105,13 @@ function evaluateCommitQuality(commits) {
  */
 function buildCodeSearchRequest(platform, query, opts = {}) {
   const p = normalizePlatform(platform);
-  if (p !== 'github') return null;                   // 仅 github 提供干净的代码搜索端点
+  if (p !== 'github') {
+    return null;
+  } // 仅 github 提供干净的代码搜索端点
   let q = String(query || '').trim();
-  if (!q) return null;
+  if (!q) {
+    return null;
+  }
   const repo = String(opts.repo || '').trim();
   if (repo) {
     // 限定到某仓库:owner/repo 须安全(复用 slug 真源),再拼 `repo:` 限定符。
@@ -802,19 +1123,30 @@ function buildCodeSearchRequest(platform, query, opts = {}) {
   const limit = clampLimit(opts.limit);
   const token = String(opts.token || '').trim();
   const headers = { Accept: 'application/vnd.github.text-match+json', 'User-Agent': 'khyos-forge' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return { method: 'GET', url: 'https://api.github.com/search/code', headers, params: { q, per_page: limit } };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return {
+    method: 'GET',
+    url: 'https://api.github.com/search/code',
+    headers,
+    params: { q, per_page: limit },
+  };
 }
 
 /**
  * 归一代码搜索响应 → [{repo, path, name, url}]。绝不抛,无法解析返回 []。
  */
 function parseCodeSearchResults(platform, body) {
-  if (normalizePlatform(platform) !== 'github' || body == null) return [];
+  if (normalizePlatform(platform) !== 'github' || body == null) {
+    return [];
+  }
   const rows = Array.isArray(body.items) ? body.items : [];
   const out = [];
   for (const r of rows) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     const repo = r.repository && r.repository.full_name ? String(r.repository.full_name) : '';
     out.push({
       repo,
@@ -833,10 +1165,14 @@ function parseCodeSearchResults(platform, body) {
  * @returns {{method,url,headers,params}|null}
  */
 function buildRateLimitRequest(platform, opts = {}) {
-  if (normalizePlatform(platform) !== 'github') return null;
+  if (normalizePlatform(platform) !== 'github') {
+    return null;
+  }
   const token = String(opts.token || '').trim();
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'khyos-forge' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   return { method: 'GET', url: 'https://api.github.com/rate_limit', headers, params: {} };
 }
 
@@ -845,11 +1181,18 @@ function buildRateLimitRequest(platform, opts = {}) {
  * 绝不抛,无法解析返回 null。reset 为 epoch 秒(原样透出,展示层格式化)。
  */
 function parseRateLimit(platform, body) {
-  if (normalizePlatform(platform) !== 'github' || !body || typeof body !== 'object') return null;
+  if (normalizePlatform(platform) !== 'github' || !body || typeof body !== 'object') {
+    return null;
+  }
   const res = body.resources && typeof body.resources === 'object' ? body.resources : {};
   const pick = (g) => {
     const o = g && typeof g === 'object' ? g : {};
-    return { limit: _num(o.limit), remaining: _num(o.remaining), reset: _num(o.reset), used: _num(o.used) };
+    return {
+      limit: _num(o.limit),
+      remaining: _num(o.remaining),
+      reset: _num(o.reset),
+      used: _num(o.used),
+    };
   };
   const core = pick(res.core || body.rate);
   return {

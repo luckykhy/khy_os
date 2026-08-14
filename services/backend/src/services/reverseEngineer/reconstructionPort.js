@@ -59,7 +59,9 @@ function buildEvidencePack(parts = {}) {
       versions: (strings.classified?.version || []).slice(0, 15).map((s) => s.text),
     },
     sampleStrings: (strings.samples || []).slice(0, 30).map((s) => s.text),
-    recoveredMembers: (recover.members || []).slice(0, 80).map((m) => ({ name: m.name, kind: m.kind, size: m.size })),
+    recoveredMembers: (recover.members || [])
+      .slice(0, 80)
+      .map((m) => ({ name: m.name, kind: m.kind, size: m.size })),
     recoveredSourceCount: (recover.members || []).filter((m) => m.kind === 'source').length,
     disasm: disasmSnippets,
   };
@@ -102,10 +104,22 @@ function _inferLanguageDeterministic(pack) {
     ['electron', 'JavaScript/Electron', 'Electron'],
   ];
   for (const [id, lang, tc] of order) {
-    if (fp.has(id)) return { language: lang, toolchain: tc, confidence: 0.5 };
+    if (fp.has(id)) {
+      return { language: lang, toolchain: tc, confidence: 0.5 };
+    }
   }
-  const FAMILY_LANG = { java: ['Java/JVM', 'JVM'], wasm: ['WebAssembly', 'wasm'], dotnet: ['C#/.NET', '.NET'] };
-  if (FAMILY_LANG[pack.family]) return { language: FAMILY_LANG[pack.family][0], toolchain: FAMILY_LANG[pack.family][1], confidence: 0.4 };
+  const FAMILY_LANG = {
+    java: ['Java/JVM', 'JVM'],
+    wasm: ['WebAssembly', 'wasm'],
+    dotnet: ['C#/.NET', '.NET'],
+  };
+  if (FAMILY_LANG[pack.family]) {
+    return {
+      language: FAMILY_LANG[pack.family][0],
+      toolchain: FAMILY_LANG[pack.family][1],
+      confidence: 0.4,
+    };
+  }
   return { language: 'unknown', toolchain: 'unknown', confidence: 0.1 };
 }
 
@@ -119,14 +133,23 @@ const _withTimeout = require('../../utils/withTimeout');
  */
 async function reconstruct(pack, deps = {}) {
   const brain = typeof deps.brain === 'function' ? deps.brain : null;
-  if (!brain) return _deterministicReport(pack);
+  if (!brain) {
+    return _deterministicReport(pack);
+  }
 
   const prompt = `${SYSTEM_PROMPT}\n\nEVIDENCE:\n${JSON.stringify(pack, null, 2)}`;
-  const raw = await _withTimeout(Promise.resolve().then(() => brain(prompt)), deps.timeoutMs || DEFAULT_TIMEOUT_MS);
+  const raw = await _withTimeout(
+    Promise.resolve().then(() => brain(prompt)),
+    deps.timeoutMs || DEFAULT_TIMEOUT_MS
+  );
 
   if (!raw || raw.__timeout || raw.__error) {
     const fallback = _deterministicReport(pack);
-    fallback.caveats.unshift(raw && raw.__timeout ? 'Model timed out; fell back to evidence-only.' : 'Model failed; fell back to evidence-only.');
+    fallback.caveats.unshift(
+      raw && raw.__timeout
+        ? 'Model timed out; fell back to evidence-only.'
+        : 'Model failed; fell back to evidence-only.'
+    );
     return fallback;
   }
 

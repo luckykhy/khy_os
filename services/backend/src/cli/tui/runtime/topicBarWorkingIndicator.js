@@ -21,11 +21,18 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
 function isEnabled(env = process.env) {
   // flagRegistry 优先(集中真源),失败/不可用再退本地 CANON 解析。绝不抛。
   try {
-    return require('../../../services/flagRegistry').isFlagEnabled('KHY_TOPIC_BAR_WORKING_DOT', env || process.env);
-  } catch { /* fall through to local */ }
+    return require('../../../services/flagRegistry').isFlagEnabled(
+      'KHY_TOPIC_BAR_WORKING_DOT',
+      env || process.env
+    );
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_TOPIC_BAR_WORKING_DOT;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -33,19 +40,19 @@ function isEnabled(env = process.env) {
 }
 
 // 静态(空闲)时的「太阳」前缀 —— 与 topicBar 历史逐字节一致(`✱ ${topic}`)。
-const STATIC_GLYPH = '✱';
+const STATIC_GLYPH = '🍀';
 const STATIC_PREFIX = `${STATIC_GLYPH} `;
 
 // 工作动画:一个小点在固定宽度的轨道上「左→右→左」弹跳。
 // 空白格用盲文空格 U+2800(定宽、不会被终端标题裁掉首尾空白),点用中点 U+00B7。
 // 轨道宽 3 → 弹跳一个完整周期共 4 帧(左、中、右、中),读起来就是「左右移动」。
-const _DOT = '·';        // ·  middle dot
-const _GAP = '⠀';        //    braille blank(定宽占位,首字符永不是普通空格 → 不被裁剪)
+const _DOT = '·'; // ·  middle dot
+const _GAP = '⠀'; //    braille blank(定宽占位,首字符永不是普通空格 → 不被裁剪)
 const FRAMES = [
-  `${_DOT}${_GAP}${_GAP}`,    // ···  (点在最左)
-  `${_GAP}${_DOT}${_GAP}`,    //  ··
-  `${_GAP}${_GAP}${_DOT}`,    //   ·  (点在最右)
-  `${_GAP}${_DOT}${_GAP}`,    //  ··  (回弹)
+  `${_DOT}${_GAP}${_GAP}`, // ···  (点在最左)
+  `${_GAP}${_DOT}${_GAP}`, //  ··
+  `${_GAP}${_GAP}${_DOT}`, //   ·  (点在最右)
+  `${_GAP}${_DOT}${_GAP}`, //  ··  (回弹)
 ];
 
 function frameCount() {
@@ -65,8 +72,12 @@ function frameCount() {
  */
 function titlePrefix({ working = false, tick = 0 } = {}, env = process.env) {
   try {
-    if (!isEnabled(env)) return STATIC_PREFIX;
-    if (!working) return STATIC_PREFIX;
+    if (!isEnabled(env)) {
+      return STATIC_PREFIX;
+    }
+    if (!working) {
+      return STATIC_PREFIX;
+    }
     const n = FRAMES.length;
     let i = Number.isFinite(tick) ? Math.floor(tick) : 0;
     i = ((i % n) + n) % n; // 归一到 [0,n) —— 负 tick 也安全
@@ -83,8 +94,9 @@ function describeTopicBarWorkingIndicator() {
     defaultOn: true,
     staticGlyph: STATIC_GLYPH,
     frames: FRAMES.length,
-    summary: '话题标题左侧字符:空闲=静态太阳 ✱,工作中=左右弹跳的小点(topicBar 定时器驱动帧序号);'
-      + '门控关 → 恒静态太阳(逐字节回退)。',
+    summary:
+      '话题标题左侧字符:空闲=静态太阳 ✱,工作中=左右弹跳的小点(topicBar 定时器驱动帧序号);' +
+      '门控关 → 恒静态太阳(逐字节回退)。',
   };
 }
 

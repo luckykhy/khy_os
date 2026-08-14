@@ -25,7 +25,9 @@ function _enabled() {
  * @returns {{ parts: string[], full: string }}
  */
 function parseToolName(name) {
-  if (!name) return { parts: [], full: '' };
+  if (!name) {
+    return { parts: [], full: '' };
+  }
 
   // MCP tools: mcp__server__tool → [server, tool]
   if (name.startsWith('mcp__')) {
@@ -52,7 +54,9 @@ function parseToolName(name) {
  * @returns {number}
  */
 function scoreTool(tool, queryTerms) {
-  if (!tool || !Array.isArray(queryTerms)) return 0;
+  if (!tool || !Array.isArray(queryTerms)) {
+    return 0;
+  }
   let score = 0;
 
   const { parts: nameParts, full: nameFull } = parseToolName(tool.name);
@@ -62,12 +66,30 @@ function scoreTool(tool, queryTerms) {
   const nameLower = (tool.name || '').toLowerCase();
 
   for (const term of queryTerms) {
-    if (nameLower === term) { score += 10; continue; }       // 精确名
-    if (aliases.includes(term)) { score += 8; continue; }    // 别名
-    if (nameParts.includes(term)) { score += 5; continue; }  // 名字词块
-    if (nameFull.includes(term)) { score += 3; continue; }   // 名字子串
-    if (hint.includes(term)) { score += 4; continue; }       // searchHint
-    if (desc.includes(term)) { score += 2; continue; }       // 描述
+    if (nameLower === term) {
+      score += 10;
+      continue;
+    } // 精确名
+    if (aliases.includes(term)) {
+      score += 8;
+      continue;
+    } // 别名
+    if (nameParts.includes(term)) {
+      score += 5;
+      continue;
+    } // 名字词块
+    if (nameFull.includes(term)) {
+      score += 3;
+      continue;
+    } // 名字子串
+    if (hint.includes(term)) {
+      score += 4;
+      continue;
+    } // searchHint
+    if (desc.includes(term)) {
+      score += 2;
+      continue;
+    } // 描述
   }
 
   return score;
@@ -85,32 +107,52 @@ function scoreTool(tool, queryTerms) {
  * @returns {Array<{ name, score, category, description }>} 按分降序;门控关 / 入参非法 → []
  */
 function recommendTools(query, tools, opts = {}) {
-  if (!_enabled()) return [];
+  if (!_enabled()) {
+    return [];
+  }
   const q = typeof query === 'string' ? query.trim() : '';
-  if (!q || !tools) return [];
+  if (!q || !tools) {
+    return [];
+  }
 
   const queryTerms = q.toLowerCase().split(/\s+/).filter(Boolean);
-  if (queryTerms.length === 0) return [];
+  if (queryTerms.length === 0) {
+    return [];
+  }
 
   const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : 5;
   const exclude = new Set(Array.isArray(opts.exclude) ? opts.exclude : []);
 
   // 归一化候选为 tool 对象列表(吃 Map / 数组 / [name,tool] iterable)。
   const list = [];
-  const push = (t) => { if (t && typeof t === 'object' && t.name) list.push(t); };
+  const push = (t) => {
+    if (t && typeof t === 'object' && t.name) {
+      list.push(t);
+    }
+  };
   if (tools instanceof Map) {
-    for (const [, t] of tools) push(t);
+    for (const [, t] of tools) {
+      push(t);
+    }
   } else if (Array.isArray(tools)) {
-    for (const t of tools) push(t);
+    for (const t of tools) {
+      push(t);
+    }
   } else if (typeof tools[Symbol.iterator] === 'function') {
-    for (const entry of tools) push(Array.isArray(entry) ? entry[1] : entry);
+    for (const entry of tools) {
+      push(Array.isArray(entry) ? entry[1] : entry);
+    }
   }
 
   const scored = [];
   for (const tool of list) {
-    if (exclude.has(tool.name)) continue;
+    if (exclude.has(tool.name)) {
+      continue;
+    }
     const score = scoreTool(tool, queryTerms);
-    if (score > 0) scored.push({ tool, score });
+    if (score > 0) {
+      scored.push({ tool, score });
+    }
   }
 
   scored.sort((a, b) => b.score - a.score);

@@ -4,9 +4,10 @@
  * Finds files matching a glob pattern. Results sorted by modification time.
  * Uses pure-JS recursive directory walking with glob-to-regex conversion.
  */
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 // 墙钟预算:超大树 / Windows junction 回环下,防同步 walk 阻塞事件循环假死。
 const walkBudget = require('../_walkBudget');
 
@@ -15,9 +16,22 @@ const MAX_DEPTH = 15;
 
 // Skip directories that are never useful to search
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', '.hg', '.svn', 'dist', 'build', '.cache',
-  '__pycache__', '.tox', '.mypy_cache', '.pytest_cache', 'coverage',
-  '.next', '.nuxt', '.output', 'vendor',
+  'node_modules',
+  '.git',
+  '.hg',
+  '.svn',
+  'dist',
+  'build',
+  '.cache',
+  '__pycache__',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  'coverage',
+  '.next',
+  '.nuxt',
+  '.output',
+  'vendor',
 ]);
 
 /**
@@ -32,7 +46,9 @@ function globToRegex(pattern) {
       if (pattern[i + 1] === '*') {
         re += '.*';
         i += 2;
-        if (pattern[i] === '/') i++;
+        if (pattern[i] === '/') {
+          i++;
+        }
         continue;
       }
       re += '[^/]*';
@@ -41,7 +57,10 @@ function globToRegex(pattern) {
     } else if (c === '{') {
       const end = pattern.indexOf('}', i);
       if (end !== -1) {
-        const alts = pattern.slice(i + 1, end).split(',').map(a => a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const alts = pattern
+          .slice(i + 1, end)
+          .split(',')
+          .map((a) => a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         re += '(?:' + alts.join('|') + ')';
         i = end;
       } else {
@@ -66,25 +85,43 @@ function globToRegex(pattern) {
 }
 
 function walkDir(dir, baseDir, regex, results, depth, deadline) {
-  if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) return;
+  if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) {
+    return;
+  }
   // 墙钟预算耗尽 → 优雅提前返回(deadline 为 null 时表示门控关,永不触发 = 今日行为)。
-  if (deadline && deadline.exceeded()) return;
+  if (deadline && deadline.exceeded()) {
+    return;
+  }
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
-    if (results.length >= MAX_RESULTS) break;
-    if (deadline && deadline.exceeded()) break;
+    if (results.length >= MAX_RESULTS) {
+      break;
+    }
+    if (deadline && deadline.exceeded()) {
+      break;
+    }
     const fullPath = path.join(dir, entry.name);
     const relPath = path.relative(baseDir, fullPath);
 
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) {
+        continue;
+      }
       walkDir(fullPath, baseDir, regex, results, depth + 1, deadline);
     } else if (entry.isFile()) {
       if (regex.test(relPath)) {
         let mtime = 0;
-        try { mtime = fs.statSync(fullPath).mtimeMs; } catch { /* skip */ }
+        try {
+          mtime = fs.statSync(fullPath).mtimeMs;
+        } catch {
+          /* skip */
+        }
         results.push({ path: relPath, mtime });
       }
     }
@@ -95,24 +132,42 @@ function walkDir(dir, baseDir, regex, results, depth, deadline) {
 // 让出。走 libuv 线程池 ⇒ 单个慢系统调用不再冻结事件循环 ⇒ 既有超时/中断恢复生效。结果形状
 // (results[] 的 {path,mtime} 与集合)与同步版一致(execute 之后统一按 mtime 排序)。
 async function walkDirAsync(dir, baseDir, regex, results, depth, deadline) {
-  if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) return;
-  if (deadline && deadline.exceeded()) return;
+  if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) {
+    return;
+  }
+  if (deadline && deadline.exceeded()) {
+    return;
+  }
   let entries;
-  try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
-    if (results.length >= MAX_RESULTS) break;
-    if (deadline && deadline.exceeded()) break;
+    if (results.length >= MAX_RESULTS) {
+      break;
+    }
+    if (deadline && deadline.exceeded()) {
+      break;
+    }
     const fullPath = path.join(dir, entry.name);
     const relPath = path.relative(baseDir, fullPath);
 
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) {
+        continue;
+      }
       await walkDirAsync(fullPath, baseDir, regex, results, depth + 1, deadline);
     } else if (entry.isFile()) {
       if (regex.test(relPath)) {
         let mtime = 0;
-        try { mtime = (await fs.promises.stat(fullPath)).mtimeMs; } catch { /* skip */ }
+        try {
+          mtime = (await fs.promises.stat(fullPath)).mtimeMs;
+        } catch {
+          /* skip */
+        }
         results.push({ path: relPath, mtime });
       }
     }
@@ -127,8 +182,12 @@ class GlobTool extends BaseTool {
   static searchHint = 'find files by name pattern glob';
   static alwaysLoad = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `- Fast file pattern matching tool that works with any codebase size
@@ -140,7 +199,8 @@ class GlobTool extends BaseTool {
 - When a repository is unfamiliar, Glob is useful for mapping the top-level structure after you read README or project manifests
 - If Glob returns too many files, narrow the pattern or path. If it returns zero files, broaden the pattern before giving up
 - When you report results, mention the pattern/path you searched and how many files matched if that count matters to the conclusion
-- When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead`;
+- When you are doing an open ended search that may require multiple rounds of globbing and grepping, use the Agent tool instead
+- For content/semantic lookups, first use this tool (glob) to narrow candidates by file name/extension, then confirm with Grep (content regex) or FileRead (sample the content)`;
   }
 
   get inputSchema() {
@@ -153,7 +213,8 @@ class GlobTool extends BaseTool {
         },
         path: {
           type: 'string',
-          description: 'The directory to search in. If not specified, the current working directory will be used.',
+          description:
+            'The directory to search in. If not specified, the current working directory will be used. An absolute path is allowed, including a Windows drive root such as "C:\\" or "D:\\". To search the entire computer / all disks, call this tool separately for each available drive root.',
         },
       },
       required: ['pattern'],
@@ -189,27 +250,37 @@ class GlobTool extends BaseTool {
       const timedOut = !!(deadline && deadline.exceeded());
       const out = {
         success: true,
-        files: results.map(r => r.path),
+        files: results.map((r) => r.path),
         count: results.length,
         truncated: results.length >= MAX_RESULTS || timedOut,
       };
       // 墙钟预算耗尽:结果可能不完整,诚实标注(不改 files[]/count,加法式)。
-      if (timedOut) out.timedOut = true;
+      if (timedOut) {
+        out.timedOut = true;
+      }
       // 抓重点(加法式,不动 files[]/count/truncated):结果多时附加 salience summary,
       // 让模型一眼看到关键文件+目录/类型分布,而非在长文件名列表里迷失。门控 KHY_GLOB_SALIENCE。
       try {
         const fileSalience = require('../../services/fileSalience');
         const flagRegistry = require('../../services/flagRegistry');
         const minN = flagRegistry.resolveNumeric('KHY_GLOB_SALIENCE_MIN', process.env);
-        if (flagRegistry.isFlagEnabled('KHY_GLOB_SALIENCE', process.env)
-            && fileSalience.isEnabled(process.env)
-            && results.length >= minN) {
+        if (
+          flagRegistry.isFlagEnabled('KHY_GLOB_SALIENCE', process.env) &&
+          fileSalience.isEnabled(process.env) &&
+          results.length >= minN
+        ) {
           const summary = fileSalience.summarizeListing(
-            results.map(r => ({ path: r.path })), { env: process.env, total: results.length });
+            results.map((r) => ({ path: r.path })),
+            { env: process.env, total: results.length }
+          );
           const block = fileSalience.renderSalienceBlock(summary, { env: process.env });
-          if (block) out.summary = block;
+          if (block) {
+            out.summary = block;
+          }
         }
-      } catch { /* salience 附加失败绝不影响 glob 主结果 */ }
+      } catch {
+        /* salience 附加失败绝不影响 glob 主结果 */
+      }
       return out;
     } catch (err) {
       return { success: false, error: err.message };

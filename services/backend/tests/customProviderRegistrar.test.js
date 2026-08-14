@@ -167,6 +167,32 @@ describe('registerCustomProvider', () => {
       keyInput: 'sk-1', defaultModel: 'm', tier: 'T9',
     })).toThrow(/tier/i);
   });
+
+  test('idempotent re-register preserves proxy and defaults from the existing entry', () => {
+    // Simulate a hand-edited custom_providers.json entry carrying a proxy URL
+    // and metadata defaults (the fields saveProvider whitelists but the
+    // registrar must round-trip on re-register).
+    const registry = require('../src/services/customProviderRegistry');
+    registry.saveProvider({
+      name: 'Agnes AI', poolKey: 'agnes',
+      endpoint: 'https://apihub.agnes-ai.com/v1', defaultModel: 'agnes-2.0-flash',
+      models: ['agnes-2.0-flash'],
+      proxy: 'http://127.0.0.1:7890',
+      defaults: { contextWindow: 128000, maxOutputTokens: 8192 },
+    });
+
+    registrar.registerCustomProvider({
+      displayName: 'Agnes AI',
+      poolKey: 'agnes',
+      endpoint: 'https://apihub.agnes-ai.com/v1',
+      keyInput: 'sk-test-agnes-123',
+      defaultModel: 'agnes-2.0-flash',
+    });
+
+    // proxy and defaults must survive the rebuild — not be silently dropped.
+    expect(savedProvider.proxy).toBe('http://127.0.0.1:7890');
+    expect(savedProvider.defaults).toEqual({ contextWindow: 128000, maxOutputTokens: 8192 });
+  });
 });
 
 describe('unregisterCustomProvider', () => {

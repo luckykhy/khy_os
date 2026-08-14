@@ -14,10 +14,24 @@
 // `.has` lookups) instead of allocating an 18-element Set each round-trip.
 // Consumed read-only (`.has`); never mutated, never escapes.
 const READ_SEARCH_TOOLS = new Set([
-  'read_file', 'readFile', 'grep', 'glob', 'search',
-  'find_files', 'findFiles', 'search_content', 'searchContent',
-  'git_status', 'gitStatus', 'git_diff', 'gitDiff', 'git_log',
-  'explore', 'search_codebase', 'find_code', 'codebase_search',
+  'read_file',
+  'readFile',
+  'grep',
+  'glob',
+  'search',
+  'find_files',
+  'findFiles',
+  'search_content',
+  'searchContent',
+  'git_status',
+  'gitStatus',
+  'git_diff',
+  'gitDiff',
+  'git_log',
+  'explore',
+  'search_codebase',
+  'find_code',
+  'codebase_search',
 ]);
 
 /**
@@ -47,9 +61,13 @@ function _formatImageSize(bytes, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('./ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(bytes);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   return `${(bytes / 1024).toFixed(0)}KB`;
 }
 
@@ -62,11 +80,17 @@ function _formatImageSize(bytes, env = process.env) {
 function _tk1(n, env = process.env) {
   return require('./ccFormat').ccFormatTokensOr(n, `${(n / 1000).toFixed(1)}k`, env);
 }
+
 function _tk0(n, env = process.env) {
   return require('./ccFormat').ccFormatTokensOr(n, `${(n / 1000).toFixed(0)}k`, env);
 }
+
 function _tkSpin(n, env = process.env) {
-  return require('./ccFormat').ccFormatTokensOr(n, n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n), env);
+  return require('./ccFormat').ccFormatTokensOr(
+    n,
+    n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n),
+    env
+  );
 }
 
 /**
@@ -83,24 +107,44 @@ function formatShellEscapeContext(records, maxLen = 8000) {
   try {
     const { formatShellEscapeContextExpanded } = require('./shellEscapeContext');
     const expanded = formatShellEscapeContextExpanded(records, maxLen, process.env);
-    if (expanded !== undefined) return expanded;
-  } catch { /* 叶子不可用则用既有逻辑 */ }
+    if (expanded !== undefined) {
+      return expanded;
+    }
+  } catch {
+    /* 叶子不可用则用既有逻辑 */
+  }
 
-  if (!Array.isArray(records) || records.length === 0) return '';
+  if (!Array.isArray(records) || records.length === 0) {
+    return '';
+  }
   const blocks = records
     .filter((r) => r && r.command)
-    .map((r) => `$ ${r.command}\n${r.body != null ? r.body : '(无输出)'}\n(exit ${Number.isFinite(r.code) ? r.code : 0})`);
-  if (!blocks.length) return '';
+    .map(
+      (r) =>
+        `$ ${r.command}\n${r.body != null ? r.body : '(无输出)'}\n(exit ${Number.isFinite(r.code) ? r.code : 0})`
+    );
+  if (!blocks.length) {
+    return '';
+  }
   let joined = blocks.join('\n\n');
-  if (joined.length > maxLen) joined = joined.slice(0, maxLen) + '\n…(shell 输出已截断)';
+  if (joined.length > maxLen) {
+    // Transparent truncation: tell the user how many characters were dropped.
+    const overflow = joined.length - maxLen;
+    joined = joined.slice(0, maxLen) + '\n…(shell 输出已截断，超出 ' + overflow + ' 字符)';
+  }
   return `<shell-escape-output>\n${joined}\n</shell-escape-output>`;
 }
 
 // Isolate the interactive session loop in a sibling (god-file split) and inject the utilities above.
 const _replSession = require('./replSession');
 _replSession.setReplSessionDeps({
-  _formatImageSize, _tk1, _tk0, _tkSpin,
-  formatShellEscapeContext, _resetGatewayBreakerOnSessionClear, READ_SEARCH_TOOLS,
+  _formatImageSize,
+  _tk1,
+  _tk0,
+  _tkSpin,
+  formatShellEscapeContext,
+  _resetGatewayBreakerOnSessionClear,
+  READ_SEARCH_TOOLS,
 });
 const startRepl = _replSession.startRepl;
 

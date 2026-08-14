@@ -14,8 +14,8 @@
 
 /** 触发熔断的事由类别。 */
 const FUSE_CAUSE = Object.freeze({
-  SECURITY_DEGRADE: 'security-degrade',  // 安全降级（越权/泄漏/沙箱逃逸迹象）
-  CRASH: 'crash',                        // 系统/进程崩溃
+  SECURITY_DEGRADE: 'security-degrade', // 安全降级（越权/泄漏/沙箱逃逸迹象）
+  CRASH: 'crash', // 系统/进程崩溃
 });
 
 class SpecialtyBreaker {
@@ -38,7 +38,14 @@ class SpecialtyBreaker {
     const existing = this._fused.get(key);
     if (existing) {
       existing.count += 1;
-      return { newlyFused: false, key, platform, specialty, cause: existing.cause, count: existing.count };
+      return {
+        newlyFused: false,
+        key,
+        platform,
+        specialty,
+        cause: existing.cause,
+        count: existing.count,
+      };
     }
     this._fused.set(key, { platform, specialty, cause: safeCause, count: 1, detail });
     return { newlyFused: true, key, platform, specialty, cause: safeCause, count: 1 };

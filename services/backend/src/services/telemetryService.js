@@ -10,8 +10,8 @@
  * Does NOT replace individual monitoring modules — imports and composes them.
  * Provides a single getUnifiedStats() for dashboards and HUD.
  */
-const os = require('os');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 // ── In-memory counters (reset on process restart) ──────────────────
@@ -25,7 +25,7 @@ const _counters = {
   startTime: Date.now(),
 };
 
-const _recentEvents = [];  // ring buffer of last N events
+const _recentEvents = []; // ring buffer of last N events
 const MAX_RECENT = 100;
 
 const APP_RUN_LATENCY_VERSION = 1;
@@ -67,11 +67,17 @@ const _chatTtftState = {
  * @param {string} [entry.error] - Error message if failed
  */
 function trackToolCall(entry) {
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   _counters.toolCalls++;
-  if (!entry.success) _counters.toolErrors++;
-  if (entry.elapsed) _counters.totalLatencyMs += entry.elapsed;
+  if (!entry.success) {
+    _counters.toolErrors++;
+  }
+  if (entry.elapsed) {
+    _counters.totalLatencyMs += entry.elapsed;
+  }
 
   _pushEvent({
     type: 'tool',
@@ -93,10 +99,14 @@ function trackToolCall(entry) {
  * @param {number} [entry.elapsed]
  */
 function trackAgentRun(entry) {
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   _counters.agentRuns++;
-  if (entry.elapsed) _counters.totalLatencyMs += entry.elapsed;
+  if (entry.elapsed) {
+    _counters.totalLatencyMs += entry.elapsed;
+  }
 
   _pushEvent({
     type: 'agent',
@@ -118,10 +128,14 @@ function trackAgentRun(entry) {
  * @param {number} [entry.elapsed]
  */
 function trackServiceCall(entry) {
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   _counters.serviceCalls++;
-  if (entry.elapsed) _counters.totalLatencyMs += entry.elapsed;
+  if (entry.elapsed) {
+    _counters.totalLatencyMs += entry.elapsed;
+  }
 
   _pushEvent({
     type: 'service',
@@ -140,7 +154,9 @@ function trackServiceCall(entry) {
 // non-fatal to telemetry.
 try {
   require('./gateway/_streamHealthSink').setStreamHealthSink(trackServiceCall);
-} catch { /* sink leaf unavailable — stream-health metrics simply not collected */ }
+} catch {
+  /* sink leaf unavailable — stream-health metrics simply not collected */
+}
 
 /**
  * Record a WASM app run latency sample and return percentile summary.
@@ -244,8 +260,12 @@ function trackChatFirstTokenLatency(entry) {
   }
 
   rec.totalRuns += 1;
-  if (!success) rec.failureRuns += 1;
-  if (!hasFirstToken) rec.noFirstTokenRuns += 1;
+  if (!success) {
+    rec.failureRuns += 1;
+  }
+  if (!hasFirstToken) {
+    rec.noFirstTokenRuns += 1;
+  }
 
   if (hasFirstToken) {
     rec.samplesMs.push(elapsedMs);
@@ -258,9 +278,13 @@ function trackChatFirstTokenLatency(entry) {
   rec.lastAt = new Date().toISOString();
   rec.lastAdapter = adapter;
   rec.lastErrorType = errorType;
-  if (!success) rec.lastStatus = 'fail';
-  else if (!hasFirstToken) rec.lastStatus = 'no_first_token';
-  else rec.lastStatus = 'ok';
+  if (!success) {
+    rec.lastStatus = 'fail';
+  } else if (!hasFirstToken) {
+    rec.lastStatus = 'no_first_token';
+  } else {
+    rec.lastStatus = 'ok';
+  }
 
   _chatTtftState.store.updatedAt = rec.lastAt;
   _chatTtftState.dirty = true;
@@ -393,14 +417,14 @@ function getUnifiedStats() {
     uptimeFormatted: _formatDuration(uptime),
     toolCalls: _counters.toolCalls,
     toolErrors: _counters.toolErrors,
-    toolSuccessRate: _counters.toolCalls > 0
-      ? Math.round((_counters.toolCalls - _counters.toolErrors) / _counters.toolCalls * 100)
-      : 100,
+    toolSuccessRate:
+      _counters.toolCalls > 0
+        ? Math.round(((_counters.toolCalls - _counters.toolErrors) / _counters.toolCalls) * 100)
+        : 100,
     agentRuns: _counters.agentRuns,
     serviceCalls: _counters.serviceCalls,
-    avgLatency: _counters.toolCalls > 0
-      ? Math.round(_counters.totalLatencyMs / _counters.toolCalls)
-      : 0,
+    avgLatency:
+      _counters.toolCalls > 0 ? Math.round(_counters.totalLatencyMs / _counters.toolCalls) : 0,
     system: {
       memoryUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       memoryTotal: Math.round(os.totalmem() / 1024 / 1024),
@@ -420,7 +444,9 @@ function getUnifiedStats() {
         .slice(0, 5)
         .map(([name, count]) => ({ name, count })),
     };
-  } catch { /* audit service not available */ }
+  } catch {
+    /* audit service not available */
+  }
 
   // Merge token usage stats (non-critical)
   try {
@@ -430,7 +456,9 @@ function getUnifiedStats() {
     } else if (typeof tokenUsage.getUsageSummary === 'function') {
       stats.tokens = tokenUsage.getUsageSummary();
     }
-  } catch { /* token usage service not available */ }
+  } catch {
+    /* token usage service not available */
+  }
 
   // Service registry stats (non-critical). Read through the zero-dependency
   // provider sink instead of importing serviceRegistry directly, so telemetry
@@ -438,8 +466,12 @@ function getUnifiedStats() {
   // loaded) leaves the field unset — same outcome as the old unavailable path.
   try {
     const sv = require('./serviceStatsSink').getServiceStats();
-    if (sv) stats.services = sv;
-  } catch { /* registry stats not available */ }
+    if (sv) {
+      stats.services = sv;
+    }
+  } catch {
+    /* registry stats not available */
+  }
 
   return stats;
 }
@@ -525,35 +557,57 @@ function _pushEvent(event) {
   }
 }
 
+// differs from services/timeFormat exports: pure floor (no rounding), no ms
+// tier (0ms→'0s', 999ms→'0s'), forced two-part 'Xm Ys'/'Xh Ym' shapes even when
+// the remainder is 0 (60000ms→'1m 0s' vs Compact '1m'), no day tier — kept
+// local, not delegated (byte conservation over consolidation).
 function _formatDuration(ms) {
   const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+  if (minutes < 60) {
+    return `${minutes}m ${seconds % 60}s`;
+  }
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m`;
 }
 
 function _asPositiveInt(value) {
-  if (!Number.isFinite(value)) return 0;
-  if (value <= 0) return 0;
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value <= 0) {
+    return 0;
+  }
   return Math.floor(value);
 }
 
 function _sanitizeLatencyMs(value) {
-  if (!Number.isFinite(value)) return 0;
-  if (value <= 0) return 0;
-  if (value > 24 * 60 * 60 * 1000) return 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value <= 0) {
+    return 0;
+  }
+  if (value > 24 * 60 * 60 * 1000) {
+    return 24 * 60 * 60 * 1000;
+  }
   return Math.round(value);
 }
 
 function _percentileNearestRank(values, percentile) {
-  if (!Array.isArray(values) || values.length === 0) return 0;
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
   const sorted = values
-    .filter(v => Number.isFinite(v) && v >= 0)
-    .map(v => Math.round(v))
+    .filter((v) => Number.isFinite(v) && v >= 0)
+    .map((v) => Math.round(v))
     .sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
+  if (sorted.length === 0) {
+    return 0;
+  }
 
   const p = Math.max(0, Math.min(100, percentile));
   const idx = Math.max(0, Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1));
@@ -566,7 +620,11 @@ function _appRunStorePath() {
     return path.join(getDataDir('telemetry'), 'app_run_latency.json');
   } catch {
     const fallbackDir = path.join(os.homedir(), '.khyquant', 'telemetry');
-    try { fs.mkdirSync(fallbackDir, { recursive: true }); } catch { /* ignore */ }
+    try {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
     return path.join(fallbackDir, 'app_run_latency.json');
   }
 }
@@ -577,7 +635,11 @@ function _chatTtftStorePath() {
     return path.join(getDataDir('telemetry'), 'chat_ttft.json');
   } catch {
     const fallbackDir = path.join(os.homedir(), '.khyquant', 'telemetry');
-    try { fs.mkdirSync(fallbackDir, { recursive: true }); } catch { /* ignore */ }
+    try {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
     return path.join(fallbackDir, 'chat_ttft.json');
   }
 }
@@ -588,15 +650,21 @@ function _normalizeProfileKey(raw) {
 }
 
 function _ensureAppRunStoreLoaded() {
-  if (_appRunLatencyState.loaded) return;
+  if (_appRunLatencyState.loaded) {
+    return;
+  }
   _appRunLatencyState.loaded = true;
 
   const filePath = _appRunStorePath();
   try {
-    if (!fs.existsSync(filePath)) return;
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
     const raw = fs.readFileSync(filePath, 'utf-8');
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return;
+    if (!parsed || typeof parsed !== 'object') {
+      return;
+    }
     const apps = parsed.apps && typeof parsed.apps === 'object' ? parsed.apps : {};
     _appRunLatencyState.store = {
       version: APP_RUN_LATENCY_VERSION,
@@ -609,15 +677,21 @@ function _ensureAppRunStoreLoaded() {
 }
 
 function _ensureChatTtftStoreLoaded() {
-  if (_chatTtftState.loaded) return;
+  if (_chatTtftState.loaded) {
+    return;
+  }
   _chatTtftState.loaded = true;
 
   const filePath = _chatTtftStorePath();
   try {
-    if (!fs.existsSync(filePath)) return;
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
     const raw = fs.readFileSync(filePath, 'utf-8');
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return;
+    if (!parsed || typeof parsed !== 'object') {
+      return;
+    }
     const profiles = parsed.profiles && typeof parsed.profiles === 'object' ? parsed.profiles : {};
     _chatTtftState.store = {
       version: CHAT_TTFT_VERSION,
@@ -630,9 +704,15 @@ function _ensureChatTtftStoreLoaded() {
 }
 
 async function _flushAppRunStore() {
-  if (!_appRunLatencyState.loaded) return;
-  if (_appRunLatencyState.flushing) return;
-  if (!_appRunLatencyState.dirty) return;
+  if (!_appRunLatencyState.loaded) {
+    return;
+  }
+  if (_appRunLatencyState.flushing) {
+    return;
+  }
+  if (!_appRunLatencyState.dirty) {
+    return;
+  }
 
   _appRunLatencyState.flushing = true;
   _appRunLatencyState.dirty = false;
@@ -646,7 +726,11 @@ async function _flushAppRunStore() {
     await fs.promises.rename(tmpPath, filePath);
   } catch {
     // Non-critical best effort persistence.
-    try { await fs.promises.unlink(tmpPath); } catch { /* ignore */ }
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      /* ignore */
+    }
   } finally {
     _appRunLatencyState.flushing = false;
     if (_appRunLatencyState.dirty) {
@@ -656,9 +740,15 @@ async function _flushAppRunStore() {
 }
 
 function _flushAppRunStoreSync() {
-  if (!_appRunLatencyState.loaded) return;
-  if (!_appRunLatencyState.dirty) return;
-  if (_appRunLatencyState.flushing) return;
+  if (!_appRunLatencyState.loaded) {
+    return;
+  }
+  if (!_appRunLatencyState.dirty) {
+    return;
+  }
+  if (_appRunLatencyState.flushing) {
+    return;
+  }
 
   _appRunLatencyState.flushing = true;
   _appRunLatencyState.dirty = false;
@@ -671,7 +761,11 @@ function _flushAppRunStoreSync() {
     fs.writeFileSync(tmpPath, payload, 'utf-8');
     fs.renameSync(tmpPath, filePath);
   } catch {
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
   } finally {
     _appRunLatencyState.flushing = false;
     if (_appRunLatencyState.dirty) {
@@ -681,9 +775,15 @@ function _flushAppRunStoreSync() {
 }
 
 async function _flushChatTtftStore() {
-  if (!_chatTtftState.loaded) return;
-  if (_chatTtftState.flushing) return;
-  if (!_chatTtftState.dirty) return;
+  if (!_chatTtftState.loaded) {
+    return;
+  }
+  if (_chatTtftState.flushing) {
+    return;
+  }
+  if (!_chatTtftState.dirty) {
+    return;
+  }
 
   _chatTtftState.flushing = true;
   _chatTtftState.dirty = false;
@@ -696,7 +796,11 @@ async function _flushChatTtftStore() {
     await fs.promises.writeFile(tmpPath, payload, 'utf-8');
     await fs.promises.rename(tmpPath, filePath);
   } catch {
-    try { await fs.promises.unlink(tmpPath); } catch { /* ignore */ }
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      /* ignore */
+    }
   } finally {
     _chatTtftState.flushing = false;
     if (_chatTtftState.dirty) {
@@ -706,9 +810,15 @@ async function _flushChatTtftStore() {
 }
 
 function _flushChatTtftStoreSync() {
-  if (!_chatTtftState.loaded) return;
-  if (!_chatTtftState.dirty) return;
-  if (_chatTtftState.flushing) return;
+  if (!_chatTtftState.loaded) {
+    return;
+  }
+  if (!_chatTtftState.dirty) {
+    return;
+  }
+  if (_chatTtftState.flushing) {
+    return;
+  }
 
   _chatTtftState.flushing = true;
   _chatTtftState.dirty = false;
@@ -721,7 +831,11 @@ function _flushChatTtftStoreSync() {
     fs.writeFileSync(tmpPath, payload, 'utf-8');
     fs.renameSync(tmpPath, filePath);
   } catch {
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
   } finally {
     _chatTtftState.flushing = false;
     if (_chatTtftState.dirty) {
@@ -760,14 +874,16 @@ async function _flushChatTtftForTest() {
 function recordAuditEvent(event, details = {}) {
   try {
     const { getDataDir } = require('../utils/dataHome');
-    const auditPath = path.join(getDataDir(), 'audit.log');
+    const auditPath = path.join(getDataDir(), 'audit.jsonl');
     const entry = JSON.stringify({
       ts: new Date().toISOString(),
       event: String(event),
       details,
     });
     fs.appendFileSync(auditPath, entry + '\n');
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**
@@ -778,7 +894,7 @@ function recordAuditEvent(event, details = {}) {
  * @returns {{ tools: object, agents: object, sessions: object, audit: object, period: { since: number, until: number } }}
  */
 function computeRollup(opts = {}) {
-  const since = opts.sinceMs || (Date.now() - 7 * 24 * 60 * 60 * 1000); // 默认 7 天
+  const since = opts.sinceMs || Date.now() - 7 * 24 * 60 * 60 * 1000; // 默认 7 天
   const until = Date.now();
 
   const rollup = {
@@ -806,21 +922,27 @@ function computeRollup(opts = {}) {
   // ── Source 2: 审计日志 (append-only JSONL) ──
   try {
     const { getDataDir } = require('../utils/dataHome');
-    const auditPath = path.join(getDataDir(), 'audit.log');
+    const auditPath = path.join(getDataDir(), 'audit.jsonl');
     if (fs.existsSync(auditPath)) {
       const lines = fs.readFileSync(auditPath, 'utf-8').split(/\r?\n/).filter(Boolean);
       for (const line of lines) {
         try {
           const entry = JSON.parse(line);
           const ts = new Date(entry.ts).getTime();
-          if (ts < since || ts > until) continue;
+          if (ts < since || ts > until) {
+            continue;
+          }
           rollup.audit.events++;
           const type = entry.event || 'unknown';
           rollup.audit.byType[type] = (rollup.audit.byType[type] || 0) + 1;
-        } catch { /* skip corrupt */ }
+        } catch {
+          /* skip corrupt */
+        }
       }
     }
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 
   // ── Source 3: 会话文件 ──
   try {
@@ -829,7 +951,9 @@ function computeRollup(opts = {}) {
     const stats = searchIndex.getStats();
     rollup.sessions.count = stats.totalSessions || 0;
     rollup.sessions.totalMessages = stats.totalMessages || 0;
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 
   return rollup;
 }
@@ -842,7 +966,9 @@ function computeRollup(opts = {}) {
 function formatRollupText(rollup) {
   const lines = [];
   const period = rollup.period || {};
-  lines.push(`=== KHY 指标汇总 (${new Date(period.since).toLocaleDateString()} ~ ${new Date(period.until).toLocaleDateString()}) ===\n`);
+  lines.push(
+    `=== KHY 指标汇总 (${new Date(period.since).toLocaleDateString()} ~ ${new Date(period.until).toLocaleDateString()}) ===\n`
+  );
 
   // Tools
   const toolEntries = Object.entries(rollup.tools || {}).sort((a, b) => b[1].calls - a[1].calls);
@@ -857,14 +983,20 @@ function formatRollupText(rollup) {
   }
 
   // Agents
-  lines.push(`## Agent 统计\n生成: ${rollup.agents.spawned}, 成功: ${rollup.agents.succeeded}, 失败: ${rollup.agents.failed}\n`);
+  lines.push(
+    `## Agent 统计\n生成: ${rollup.agents.spawned}, 成功: ${rollup.agents.succeeded}, 失败: ${rollup.agents.failed}\n`
+  );
 
   // Sessions
-  lines.push(`## 会话统计\n会话数: ${rollup.sessions.count}, 消息数: ${rollup.sessions.totalMessages}\n`);
+  lines.push(
+    `## 会话统计\n会话数: ${rollup.sessions.count}, 消息数: ${rollup.sessions.totalMessages}\n`
+  );
 
   // Audit
   lines.push(`## 审计事件: ${rollup.audit.events} 条`);
-  for (const [type, count] of Object.entries(rollup.audit.byType || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)) {
+  for (const [type, count] of Object.entries(rollup.audit.byType || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)) {
     lines.push(`  - ${type}: ${count}`);
   }
 

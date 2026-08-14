@@ -5,15 +5,16 @@
  * Detection: check if GGUF file exists at LOCAL_MODEL_PATH.
  * Generation: direct inference via node-llama-cpp.
  */
+const { PRIMARY: MODELS } = require('../../../constants/models');
 const localLLMService = require('../../localLLMService');
 // Sampling locks come from the zero-dependency leaf, not the upgrade runtime
 // ([DESIGN-ARCH-051] §6.8 — keeps this adapter out of the giant SCC).
 const runtime = require('../../samplingPolicy');
+
 const { normalizeImages } = require('./_imageCompat');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
 // Model-name SSOT: local-brain default flows from constants/models.js
 // (env LOCAL_LLM_MODEL still overrides first).
-const { PRIMARY: MODELS } = require('../../../constants/models');
 const DEFAULT_MODEL = process.env.LOCAL_LLM_MODEL || MODELS.localBrain;
 
 let _available = null;
@@ -22,7 +23,9 @@ let _available = null;
  * Detect if local model is available.
  */
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   _available = localLLMService.isModelAvailable(forceRefresh);
   return _available;
 }
@@ -106,14 +109,24 @@ async function generate(prompt, options = {}) {
 
     const modelName = DEFAULT_MODEL;
     return buildSuccess(content, {
-      adapter: 'localLLM', provider: `Local (${modelName})`, model: modelName,
-      thinking, tokenUsage,
+      adapter: 'localLLM',
+      provider: `Local (${modelName})`,
+      model: modelName,
+      thinking,
+      tokenUsage,
       attempts: [{ provider: `Local (${modelName})`, success: true }],
     });
   } catch (err) {
     return buildFailure(err, {
-      adapter: 'localLLM', provider: 'Local LLM',
-      attempts: [{ provider: `Local (${DEFAULT_MODEL})`, success: false, error: String(err?.message || err) }],
+      adapter: 'localLLM',
+      provider: 'Local LLM',
+      attempts: [
+        {
+          provider: `Local (${DEFAULT_MODEL})`,
+          success: false,
+          error: String(err?.message || err),
+        },
+      ],
     });
   }
 }
@@ -123,12 +136,13 @@ async function generate(prompt, options = {}) {
  */
 function getStatus() {
   const status = localLLMService.getStatus();
-  const backendLabel = {
-    'ollama-runner': 'ollama-runner 独立引擎',
-    'node-llama-cpp': 'node-llama-cpp',
-    'python-server': 'Python 推理服务器',
-    'ollama': 'Ollama HTTP API',
-  }[status.backend] || '未加载';
+  const backendLabel =
+    {
+      'ollama-runner': 'ollama-runner 独立引擎',
+      'node-llama-cpp': 'node-llama-cpp',
+      'python-server': 'Python 推理服务器',
+      ollama: 'Ollama HTTP API',
+    }[status.backend] || '未加载';
 
   let detail = '';
   if (status.loaded) {
@@ -167,7 +181,9 @@ function getModels() {
 
 async function listModels() {
   const models = getModels();
-  if (models.length === 0) return [];
+  if (models.length === 0) {
+    return [];
+  }
   return models.map((id, idx) => ({
     id,
     name: id,

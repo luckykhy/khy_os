@@ -13,12 +13,12 @@
  * Modules beyond P1 are wired in as their phases land.
  */
 
-const replayLedger = require('./replayLedger');
-const tierRegistry = require('./tierRegistry');
 const artifactHash = require('./artifactHash');
 const envFingerprint = require('./envFingerprint');
 const replayBundle = require('./replayBundle');
 const replayEngine = require('./replayEngine');
+const replayLedger = require('./replayLedger');
+const tierRegistry = require('./tierRegistry');
 
 module.exports = {
   replayLedger,

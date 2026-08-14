@@ -8,8 +8,12 @@ class TerminalCaptureTool extends BaseTool {
   static searchHint = 'terminal capture screenshot output buffer';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Capture the current terminal output buffer.
@@ -20,7 +24,11 @@ Useful for getting context about what the user sees in their terminal.`;
     return {
       type: 'object',
       properties: {
-        lines: { type: 'number', description: 'Number of lines to capture (default 50)', default: 50 },
+        lines: {
+          type: 'number',
+          description: 'Number of lines to capture (default 50)',
+          default: 50,
+        },
       },
     };
   }

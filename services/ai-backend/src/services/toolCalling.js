@@ -51,7 +51,10 @@ const BUILTIN_TOOLS = [
         await handleQuote(params.symbol);
         return { success: true };
       } catch {
-        return { success: false, error: '行情查询功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）' };
+        return {
+          success: false,
+          error: '行情查询功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）',
+        };
       }
     },
   },
@@ -91,7 +94,10 @@ const BUILTIN_TOOLS = [
         await handleDataFetch(params.symbol);
         return { success: true };
       } catch {
-        return { success: false, error: '数据下载功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）' };
+        return {
+          success: false,
+          error: '数据下载功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）',
+        };
       }
     },
   },
@@ -109,7 +115,10 @@ const BUILTIN_TOOLS = [
         const result = await resolveSymbol(params.keyword);
         return { success: true, result };
       } catch {
-        return { success: false, error: '证券搜索功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）' };
+        return {
+          success: false,
+          error: '证券搜索功能仅在主 CLI 中可用（ai-backend 不含 cli 模块）',
+        };
       }
     },
   },
@@ -124,7 +133,14 @@ const BUILTIN_TOOLS = [
     handler: async (params) => {
       // Sandboxed execution via VM with timeout guard
       const vm = require('vm');
-      const sandbox = { result: null, console: { log: (...args) => { sandbox._output = (sandbox._output || '') + args.join(' ') + '\n'; } } };
+      const sandbox = {
+        result: null,
+        console: {
+          log: (...args) => {
+            sandbox._output = (sandbox._output || '') + args.join(' ') + '\n';
+          },
+        },
+      };
       const context = vm.createContext(sandbox);
       await Promise.resolve(vm.runInContext(params.code, context, { timeout: 5000 }));
       return { success: true, output: sandbox._output || '', result: sandbox.result };
@@ -151,26 +167,44 @@ const BUILTIN_TOOLS = [
           if (pathMatch) {
             const target = path.resolve(process.env.KHYQUANT_CWD || process.cwd(), pathMatch[1]);
             if (isProtectedPath(target)) {
-              return { success: false, error: 'Access denied: Cannot read KHY-Quant core source files via shell' };
+              return {
+                success: false,
+                error: 'Access denied: Cannot read KHY-Quant core source files via shell',
+              };
             }
           }
         }
         // Block any command referencing KHY backend/src or frontend/src directly
-        if (cmd.includes(path.join(khyRoot, 'backend', 'src')) || cmd.includes(path.join(khyRoot, 'frontend', 'src'))) {
-          return { success: false, error: 'Access denied: KHY-Quant source directories are protected' };
+        if (
+          cmd.includes(path.join(khyRoot, 'backend', 'src')) ||
+          cmd.includes(path.join(khyRoot, 'frontend', 'src'))
+        ) {
+          return {
+            success: false,
+            error: 'Access denied: KHY-Quant source directories are protected',
+          };
         }
       } catch {}
       const { execSync } = require('child_process');
       const result = (() => {
         try {
-          const stdout = execSync(params.command, { timeout: 30000, encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+          const stdout = execSync(params.command, {
+            timeout: 30000,
+            encoding: 'utf-8',
+            maxBuffer: 1024 * 1024,
+          });
           return { exitCode: 0, stdout, stderr: '' };
         } catch (e) {
           return { exitCode: e.status || 1, stdout: e.stdout || '', stderr: e.stderr || e.message };
         }
       })();
       if (result.exitCode !== 0) {
-        return { success: false, output: result.stdout, error: result.stderr, exitCode: result.exitCode };
+        return {
+          success: false,
+          output: result.stdout,
+          error: result.stderr,
+          exitCode: result.exitCode,
+        };
       }
       return { success: true, output: result.stdout };
     },
@@ -188,7 +222,10 @@ const BUILTIN_TOOLS = [
       try {
         const { isProtectedPath } = require('./selfOptimizer');
         if (isProtectedPath(params.path)) {
-          return { success: false, error: 'Access denied: KHY-Quant core source files are protected' };
+          return {
+            success: false,
+            error: 'Access denied: KHY-Quant core source files are protected',
+          };
         }
       } catch {}
       const content = fs.readFileSync(params.path, 'utf-8');
@@ -206,14 +243,38 @@ const BUILTIN_TOOLS = [
     },
     handler: async (params) => {
       // Block writes to KHY-Quant protected source files
+      let protectedGuardActive = false;
       try {
         const { isProtectedPath } = require('./selfOptimizer');
         if (isProtectedPath(params.path)) {
-          return { success: false, error: 'Access denied: Cannot modify KHY-Quant core source files' };
+          return {
+            success: false,
+            error: 'Access denied: Cannot modify KHY-Quant core source files',
+          };
         }
-      } catch {}
-      fs.writeFileSync(params.path, params.content, 'utf-8');
-      return { success: true };
+        protectedGuardActive = true;
+      } catch (guardErr) {
+        // selfOptimizer 加载失败时记录日志，但继续执行（防御性降级）
+        try {
+          process.stderr.write(
+            `[toolCalling] write_file: selfOptimizer 加载失败 (${guardErr.message}), 路径守卫未生效\n`
+          );
+        } catch (_) {}
+      }
+      // 解析目标路径并确保父目录存在
+      const targetPath = path.resolve(process.env.KHYQUANT_CWD || process.cwd(), params.path);
+      const dir = path.dirname(targetPath);
+      try {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      } catch (mkdirErr) {
+        return { success: false, error: `无法创建目录: ${mkdirErr.message}` };
+      }
+      try {
+        fs.writeFileSync(targetPath, params.content, 'utf-8');
+      } catch (writeErr) {
+        return { success: false, error: `写入失败: ${writeErr.message}` };
+      }
+      return { success: true, path: targetPath };
     },
   },
   {
@@ -297,7 +358,11 @@ const BUILTIN_TOOLS = [
     category: 'git',
     risk: 'low',
     parameters: {
-      files: { type: 'string', required: true, description: 'File paths to stage (space-separated, or "." for all)' },
+      files: {
+        type: 'string',
+        required: true,
+        description: 'File paths to stage (space-separated, or "." for all)',
+      },
     },
     handler: async (params) => {
       const { execSync } = require('child_process');
@@ -337,7 +402,11 @@ const BUILTIN_TOOLS = [
       const cwd = process.env.KHYQUANT_CWD || process.cwd();
       const remote = params.remote || 'origin';
       const branch = params.branch || '';
-      const output = execSync(`git push ${remote} ${branch}`.trim(), { cwd, timeout: 30000, encoding: 'utf-8' });
+      const output = execSync(`git push ${remote} ${branch}`.trim(), {
+        cwd,
+        timeout: 30000,
+        encoding: 'utf-8',
+      });
       return { success: true, output };
     },
   },
@@ -368,18 +437,27 @@ const BUILTIN_TOOLS = [
     handler: async (params) => {
       const { execSync } = require('child_process');
       const cwd = process.env.KHYQUANT_CWD || process.cwd();
-      const output = execSync(`git checkout ${params.target}`, { cwd, timeout: 5000, encoding: 'utf-8' });
+      const output = execSync(`git checkout ${params.target}`, {
+        cwd,
+        timeout: 5000,
+        encoding: 'utf-8',
+      });
       return { success: true, output };
     },
   },
   // ── Self-optimization tools ──
   {
     name: 'optimize_config',
-    description: 'Safely update AI configuration (system prompt, agent roles, prompt library). Hot-update, no restart needed.',
+    description:
+      'Safely update AI configuration (system prompt, agent roles, prompt library). Hot-update, no restart needed.',
     category: 'optimization',
     risk: 'medium',
     parameters: {
-      target: { type: 'string', required: true, description: 'Config target: system_prompt | agent_roles | prompt_library' },
+      target: {
+        type: 'string',
+        required: true,
+        description: 'Config target: system_prompt | agent_roles | prompt_library',
+      },
       content: { type: 'string', required: true, description: 'New content for the config' },
       reason: { type: 'string', required: true, description: 'Why this optimization' },
     },
@@ -390,11 +468,16 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'propose_code_change',
-    description: 'Propose a source code change via git branch (requires user review, does not affect running code)',
+    description:
+      'Propose a source code change via git branch (requires user review, does not affect running code)',
     category: 'optimization',
     risk: 'high',
     parameters: {
-      file_path: { type: 'string', required: true, description: 'Absolute path to the source file' },
+      file_path: {
+        type: 'string',
+        required: true,
+        description: 'Absolute path to the source file',
+      },
       content: { type: 'string', required: true, description: 'Proposed new file content' },
       description: { type: 'string', required: true, description: 'What was changed and why' },
     },
@@ -420,7 +503,9 @@ function loadPermissions() {
     if (fs.existsSync(PERMISSIONS_FILE)) {
       _permissions = JSON.parse(fs.readFileSync(PERMISSIONS_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   _permissions = _permissions || { approved: {}, denied: {}, dangerousAcknowledged: false };
   return _permissions;
 }
@@ -433,7 +518,9 @@ function savePermissions() {
     const dir = path.dirname(PERMISSIONS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(_permissions, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -485,7 +572,7 @@ function approveTool(toolName, persist = false) {
  * Get the risk level info for a tool.
  */
 function getToolRisk(toolName) {
-  const tool = _allTools.find(t => t.name === toolName);
+  const tool = _allTools.find((t) => t.name === toolName);
   if (!tool) return RISK_LEVELS.medium;
   return RISK_LEVELS[tool.risk] || RISK_LEVELS.medium;
 }
@@ -494,7 +581,7 @@ function getToolRisk(toolName) {
  * Format tool call for display to user (for confirmation prompt).
  */
 function formatToolCall(toolName, params) {
-  const tool = _allTools.find(t => t.name === toolName);
+  const tool = _allTools.find((t) => t.name === toolName);
   const risk = getToolRisk(toolName);
   const riskColor = chalk[risk.color] || chalk.yellow;
 
@@ -505,9 +592,10 @@ function formatToolCall(toolName, params) {
   if (params && Object.keys(params).length > 0) {
     display += chalk.dim('  参数:\n');
     for (const [key, value] of Object.entries(params)) {
-      const displayVal = typeof value === 'string' && value.length > 100
-        ? value.slice(0, 100) + '...'
-        : JSON.stringify(value);
+      const displayVal =
+        typeof value === 'string' && value.length > 100
+          ? value.slice(0, 100) + '...'
+          : JSON.stringify(value);
       display += chalk.dim(`    ${key}: `) + displayVal + '\n';
     }
   }
@@ -527,7 +615,7 @@ function formatToolCall(toolName, params) {
  */
 async function requestPermission(toolName, params) {
   // Auto-approve safe tools
-  const tool = _allTools.find(t => t.name === toolName);
+  const tool = _allTools.find((t) => t.name === toolName);
   if (tool && tool.risk === 'safe') return 'allow';
 
   // Dangerous mode = auto-approve everything
@@ -549,10 +637,13 @@ async function requestPermission(toolName, params) {
 
   // Interactive selection (Claude Code style)
   const riskInfo = getToolRisk(toolName);
-  const question = chalk.yellow(`  Do you want to execute `) + chalk.bold(toolName) + chalk.yellow('?');
+  const question =
+    chalk.yellow(`  Do you want to execute `) + chalk.bold(toolName) + chalk.yellow('?');
   console.log(question);
   console.log(`  ${chalk.white('❯ 1.')} ${chalk.green('Yes')}`);
-  console.log(`    ${chalk.white('2.')} ${chalk.cyan('Yes, allow all during this session')} ${chalk.dim('(shift+tab)')}`);
+  console.log(
+    `    ${chalk.white('2.')} ${chalk.cyan('Yes, allow all during this session')} ${chalk.dim('(shift+tab)')}`
+  );
   console.log(`    ${chalk.white('3.')} ${chalk.red('No')}`);
   console.log('');
   console.log(chalk.dim('  Esc to cancel · Tab to amend'));
@@ -599,7 +690,7 @@ async function requestPermission(toolName, params) {
  * Execute a tool call with permission checking.
  */
 async function executeTool(toolName, params = {}) {
-  const tool = _allTools.find(t => t.name === toolName);
+  const tool = _allTools.find((t) => t.name === toolName);
   if (!tool) {
     return { success: false, error: `Unknown tool: ${toolName}` };
   }
@@ -624,7 +715,7 @@ async function executeTool(toolName, params = {}) {
  * Used when sending messages to AI models that support tool use.
  */
 function getToolDefinitions() {
-  return _allTools.map(tool => ({
+  return _allTools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     parameters: {
@@ -678,7 +769,7 @@ function registerTool(tool) {
  * List all registered tools.
  */
 function listTools() {
-  return _allTools.map(t => ({
+  return _allTools.map((t) => ({
     name: t.name,
     description: t.description,
     category: t.category,

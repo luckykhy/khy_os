@@ -18,7 +18,9 @@
  */
 
 const { execFile } = require('child_process');
+
 const platformUtils = require('../tools/platformUtils');
+
 const registry = require('./dependency/registry');
 const resolver = require('./dependency/resolver');
 
@@ -30,49 +32,121 @@ const VERSION_TIMEOUT_MS = parseInt(process.env.KHY_DEP_VERSION_TIMEOUT_MS || '5
  */
 const RUNTIME_TOOLS = [
   {
-    id: 'node', label: 'Node.js', bin: 'node', versionArgs: ['--version'],
-    versionRegex: /v?(\d+\.\d+\.\d+)/, docsUrl: 'https://nodejs.org/',
-    installHint: { win32: 'winget install OpenJS.NodeJS.LTS', darwin: 'brew install node', linux: 'sudo apt install -y nodejs npm' },
+    id: 'node',
+    label: 'Node.js',
+    bin: 'node',
+    versionArgs: ['--version'],
+    versionRegex: /v?(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://nodejs.org/',
+    installHint: {
+      win32: 'winget install OpenJS.NodeJS.LTS',
+      darwin: 'brew install node',
+      linux: 'sudo apt install -y nodejs npm',
+    },
   },
   {
-    id: 'npm', label: 'npm', bin: 'npm', versionArgs: ['--version'],
-    versionRegex: /(\d+\.\d+\.\d+)/, docsUrl: 'https://docs.npmjs.com/',
-    installHint: { win32: '随 Node.js 一并安装', darwin: '随 Node.js 一并安装', linux: 'sudo apt install -y npm' },
+    id: 'npm',
+    label: 'npm',
+    bin: 'npm',
+    versionArgs: ['--version'],
+    versionRegex: /(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://docs.npmjs.com/',
+    installHint: {
+      win32: '随 Node.js 一并安装',
+      darwin: '随 Node.js 一并安装',
+      linux: 'sudo apt install -y npm',
+    },
   },
   {
-    id: 'python', label: 'Python', bin: process.platform === 'win32' ? 'python' : 'python3', versionArgs: ['--version'],
-    versionRegex: /(\d+\.\d+\.\d+)/, docsUrl: 'https://www.python.org/downloads/',
-    installHint: { win32: 'winget install Python.Python.3.12', darwin: 'brew install python', linux: 'sudo apt install -y python3 python3-pip' },
+    id: 'python',
+    label: 'Python',
+    bin: process.platform === 'win32' ? 'python' : 'python3',
+    versionArgs: ['--version'],
+    versionRegex: /(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://www.python.org/downloads/',
+    installHint: {
+      win32: 'winget install Python.Python.3.12',
+      darwin: 'brew install python',
+      linux: 'sudo apt install -y python3 python3-pip',
+    },
   },
   {
-    id: 'pip', label: 'pip', bin: process.platform === 'win32' ? 'pip' : 'pip3', versionArgs: ['--version'],
-    versionRegex: /pip\s+(\d+\.\d+(?:\.\d+)?)/, docsUrl: 'https://pip.pypa.io/',
-    installHint: { win32: 'python -m ensurepip --upgrade', darwin: 'python3 -m ensurepip --upgrade', linux: 'sudo apt install -y python3-pip' },
+    id: 'pip',
+    label: 'pip',
+    bin: process.platform === 'win32' ? 'pip' : 'pip3',
+    versionArgs: ['--version'],
+    versionRegex: /pip\s+(\d+\.\d+(?:\.\d+)?)/,
+    docsUrl: 'https://pip.pypa.io/',
+    installHint: {
+      win32: 'python -m ensurepip --upgrade',
+      darwin: 'python3 -m ensurepip --upgrade',
+      linux: 'sudo apt install -y python3-pip',
+    },
   },
   {
-    id: 'java', label: 'Java (JDK)', bin: 'java', versionArgs: ['-version'],
-    versionRegex: /version\s+"?(\d+(?:\.\d+){0,2})/, docsUrl: 'https://adoptium.net/',
-    installHint: { win32: 'winget install EclipseAdoptium.Temurin.21.JDK', darwin: 'brew install --cask temurin', linux: 'sudo apt install -y default-jdk' },
+    id: 'java',
+    label: 'Java (JDK)',
+    bin: 'java',
+    versionArgs: ['-version'],
+    versionRegex: /version\s+"?(\d+(?:\.\d+){0,2})/,
+    docsUrl: 'https://adoptium.net/',
+    installHint: {
+      win32: 'winget install EclipseAdoptium.Temurin.21.JDK',
+      darwin: 'brew install --cask temurin',
+      linux: 'sudo apt install -y default-jdk',
+    },
   },
   {
-    id: 'powershell', label: 'PowerShell', bin: process.platform === 'win32' ? 'powershell' : 'pwsh', versionArgs: ['-Command', '$PSVersionTable.PSVersion.ToString()'],
-    versionRegex: /(\d+\.\d+\.\d+)/, docsUrl: 'https://learn.microsoft.com/powershell/',
-    installHint: { win32: '随 Windows 内置', darwin: 'brew install --cask powershell', linux: 'sudo apt install -y powershell' },
+    id: 'powershell',
+    label: 'PowerShell',
+    bin: process.platform === 'win32' ? 'powershell' : 'pwsh',
+    versionArgs: ['-Command', '$PSVersionTable.PSVersion.ToString()'],
+    versionRegex: /(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://learn.microsoft.com/powershell/',
+    installHint: {
+      win32: '随 Windows 内置',
+      darwin: 'brew install --cask powershell',
+      linux: 'sudo apt install -y powershell',
+    },
   },
   {
-    id: 'git', label: 'Git', bin: 'git', versionArgs: ['--version'],
-    versionRegex: /git version\s+(\d+\.\d+\.\d+)/, docsUrl: 'https://git-scm.com/downloads',
-    installHint: { win32: 'winget install Git.Git', darwin: 'brew install git', linux: 'sudo apt install -y git' },
+    id: 'git',
+    label: 'Git',
+    bin: 'git',
+    versionArgs: ['--version'],
+    versionRegex: /git version\s+(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://git-scm.com/downloads',
+    installHint: {
+      win32: 'winget install Git.Git',
+      darwin: 'brew install git',
+      linux: 'sudo apt install -y git',
+    },
   },
   {
-    id: 'make', label: 'GNU Make', bin: 'make', versionArgs: ['--version'],
-    versionRegex: /GNU Make\s+(\d+\.\d+(?:\.\d+)?)/, docsUrl: 'https://www.gnu.org/software/make/',
-    installHint: { win32: 'winget install GnuWin32.Make（或经 WSL2）', darwin: 'xcode-select --install', linux: 'sudo apt install -y build-essential' },
+    id: 'make',
+    label: 'GNU Make',
+    bin: 'make',
+    versionArgs: ['--version'],
+    versionRegex: /GNU Make\s+(\d+\.\d+(?:\.\d+)?)/,
+    docsUrl: 'https://www.gnu.org/software/make/',
+    installHint: {
+      win32: 'winget install GnuWin32.Make（或经 WSL2）',
+      darwin: 'xcode-select --install',
+      linux: 'sudo apt install -y build-essential',
+    },
   },
   {
-    id: 'gcc', label: 'GCC', bin: 'gcc', versionArgs: ['--version'],
-    versionRegex: /(\d+\.\d+\.\d+)/, docsUrl: 'https://gcc.gnu.org/',
-    installHint: { win32: 'winget install MSYS2.MSYS2（或经 WSL2）', darwin: 'xcode-select --install', linux: 'sudo apt install -y build-essential' },
+    id: 'gcc',
+    label: 'GCC',
+    bin: 'gcc',
+    versionArgs: ['--version'],
+    versionRegex: /(\d+\.\d+\.\d+)/,
+    docsUrl: 'https://gcc.gnu.org/',
+    installHint: {
+      win32: 'winget install MSYS2.MSYS2（或经 WSL2）',
+      darwin: 'xcode-select --install',
+      linux: 'sudo apt install -y build-essential',
+    },
   },
 ];
 
@@ -82,14 +156,19 @@ const RUNTIME_TOOLS = [
  */
 function _defaultRunner(bin, args) {
   return new Promise((resolve) => {
-    execFile(bin, args, { timeout: VERSION_TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
-      resolve({
-        code: error && typeof error.code === 'number' ? error.code : (error ? 1 : 0),
-        stdout: String(stdout || ''),
-        stderr: String(stderr || ''),
-        error: error || null,
-      });
-    });
+    execFile(
+      bin,
+      args,
+      { timeout: VERSION_TIMEOUT_MS, windowsHide: true },
+      (error, stdout, stderr) => {
+        resolve({
+          code: error && typeof error.code === 'number' ? error.code : error ? 1 : 0,
+          stdout: String(stdout || ''),
+          stderr: String(stderr || ''),
+          error: error || null,
+        });
+      }
+    );
   });
 }
 
@@ -105,12 +184,26 @@ async function detectRuntime(tool, opts = {}) {
   const installHint = tool.installHint[platform] || tool.installHint.linux || null;
 
   let path = null;
-  try { path = search(tool.bin) || null; } catch { path = null; }
+  try {
+    path = search(tool.bin) || null;
+  } catch {
+    path = null;
+  }
 
   const r = await runner(tool.bin, tool.versionArgs);
   // ENOENT（命令不存在）→ 未安装。
   if (r && r.error && r.error.code === 'ENOENT') {
-    return { id: tool.id, label: tool.label, category: 'runtime', present: false, version: null, path: null, docsUrl: tool.docsUrl, installHint, installable: false };
+    return {
+      id: tool.id,
+      label: tool.label,
+      category: 'runtime',
+      present: false,
+      version: null,
+      path: null,
+      docsUrl: tool.docsUrl,
+      installHint,
+      installable: false,
+    };
   }
   const blob = `${r ? r.stdout : ''}\n${r ? r.stderr : ''}`;
   const m = tool.versionRegex.exec(blob);
@@ -118,15 +211,23 @@ async function detectRuntime(tool, opts = {}) {
   // 有路径或解析到版本即视为已安装（部分工具退出码非零仍打印版本）。
   const present = !!(path || version);
   return {
-    id: tool.id, label: tool.label, category: 'runtime',
-    present, version, path, docsUrl: tool.docsUrl, installHint,
+    id: tool.id,
+    label: tool.label,
+    category: 'runtime',
+    present,
+    version,
+    path,
+    docsUrl: tool.docsUrl,
+    installHint,
     installable: false, // 运行时一律不在服务端装，只给命令。
   };
 }
 
 /** 应用依赖是否可由守护进程直接安装（分级单一判定）。 */
 function _isPlanAutoInstallable(plan) {
-  if (!plan) return false;
+  if (!plan) {
+    return false;
+  }
   return !plan.requiresElevation && plan.scope === 'project' && plan.risk !== 'high';
 }
 
@@ -138,7 +239,11 @@ function listPackages(env) {
   const out = [];
   for (const dep of registry.listDependencies()) {
     let present = false;
-    try { present = !!resolver.probe(dep.id, env).present; } catch { present = false; }
+    try {
+      present = !!resolver.probe(dep.id, env).present;
+    } catch {
+      present = false;
+    }
     const plan = resolver.buildInstallPlan(dep.id, env);
     out.push({
       id: dep.id,

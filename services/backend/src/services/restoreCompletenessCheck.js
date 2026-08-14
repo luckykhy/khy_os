@@ -27,14 +27,16 @@
  *   “没测量”谎报成“不完整”，也绝不越过旧行为多喊“完整”。
  */
 
-const STATUS_COMPLETE = 'complete';         // 落地数 === 清单数：真完整（唯一 ok）
-const STATUS_INCOMPLETE = 'incomplete';     // 落地数 < 清单数：断桥核心，少解了文件
+const STATUS_COMPLETE = 'complete'; // 落地数 === 清单数：真完整（唯一 ok）
+const STATUS_INCOMPLETE = 'incomplete'; // 落地数 < 清单数：断桥核心，少解了文件
 const STATUS_OVER_EXTRACTED = 'over-extracted'; // 落地数 > 清单数：目标目录疑有残留
 const STATUS_UNVERIFIABLE = 'unverifiable'; // 证据不足，保持旧行为不多喊
 
 /** 归一为有限整数；缺失(null/undefined/'')或非有限 → null（“没测量”，绝不当 0 用）。 */
 function _int(v) {
-  if (v == null || v === '') return null;   // Number(null)===0 的陷阱：缺失≠0
+  if (v == null || v === '') {
+    return null;
+  } // Number(null)===0 的陷阱：缺失≠0
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
@@ -49,8 +51,8 @@ function _verdict(status, expected, actual, reason) {
     ok: status === STATUS_COMPLETE,
     expected: exp,
     actual: act,
-    missing: (status === STATUS_INCOMPLETE && bothKnown) ? (exp - act) : 0,
-    extra: (status === STATUS_OVER_EXTRACTED && bothKnown) ? (act - exp) : 0,
+    missing: status === STATUS_INCOMPLETE && bothKnown ? exp - act : 0,
+    extra: status === STATUS_OVER_EXTRACTED && bothKnown ? act - exp : 0,
     reason: String(reason == null ? '' : reason),
   };
 }

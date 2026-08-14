@@ -12,8 +12,8 @@
  * the matching paragraph (Word may split a heading across runs).
  */
 const { defineTool } = require('./_baseTool');
-const path = require('path');
 
+const path = require('path');
 
 let _enabled = null;
 const _checkEnabled = require('../utils/docHelperEnabled');
@@ -21,7 +21,7 @@ const _checkEnabled = require('../utils/docHelperEnabled');
 module.exports = defineTool({
   name: 'docTitleStyle',
   description:
-    'Restyle a Word (.docx) document\'s title/heading/caption: set its font SIZE (points) ' +
+    "Restyle a Word (.docx) document's title/heading/caption: set its font SIZE (points) " +
     'and/or COLOR (hex). Target the title by exact text (`match`) or by paragraph style ' +
     '(`style`, e.g. "Title"/"Heading 1"/"标题"; defaults to the built-in title/heading/caption ' +
     'styles). Writes to `output` (defaults to a sibling *.styled.docx, never overwriting the ' +
@@ -31,7 +31,9 @@ module.exports = defineTool({
   isReadOnly: false,
   isConcurrencySafe: true,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
 
@@ -57,7 +59,8 @@ module.exports = defineTool({
     style: {
       type: 'string',
       required: false,
-      description: 'Paragraph style name to target (e.g. "Title", "Heading 1", "标题"). Omit to target all title/heading/caption styles.',
+      description:
+        'Paragraph style name to target (e.g. "Title", "Heading 1", "标题"). Omit to target all title/heading/caption styles.',
     },
     size: {
       type: 'number',
@@ -79,11 +82,15 @@ module.exports = defineTool({
   },
 
   async validateInput(input) {
-    const { validateNotUNCPath, validateNotDevicePath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotUNCPath,
+      validateNotDevicePath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       input.path ? validateNotUNCPath(input.path) : { valid: true },
       input.path ? validateNotDevicePath(input.path) : { valid: true },
-      input.output ? validateNotUNCPath(input.output) : { valid: true },
+      input.output ? validateNotUNCPath(input.output) : { valid: true }
     );
   },
 
@@ -92,12 +99,16 @@ module.exports = defineTool({
     return `重排标题样式：${name}`;
   },
   getToolUseSummary(input) {
-    if (!input?.path) return null;
+    if (!input?.path) {
+      return null;
+    }
     return `重排 Word 标题字号/颜色：${path.basename(input.path)}`;
   },
 
   async execute(params) {
-    if (!params?.path) return { success: false, error: 'Input .docx path is required' };
+    if (!params?.path) {
+      return { success: false, error: 'Input .docx path is required' };
+    }
     if (params.size === undefined && !params.color) {
       return { success: false, error: 'Provide size and/or color to change.' };
     }

@@ -22,7 +22,11 @@ const ON_FALSY = ['0', 'false', 'off', 'no'];
 let _questionQuality = null;
 function _qq() {
   if (_questionQuality === null) {
-    try { _questionQuality = require('./questionQuality'); } catch { _questionQuality = false; }
+    try {
+      _questionQuality = require('./questionQuality');
+    } catch {
+      _questionQuality = false;
+    }
   }
   return _questionQuality || null;
 }
@@ -36,7 +40,9 @@ function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_UNATTENDED_AUTOANSWER_INTENT_GUARD;
     const v = (raw == null ? '' : String(raw)).trim().toLowerCase();
-    if (v === '') return true;
+    if (v === '') {
+      return true;
+    }
     return !ON_FALSY.includes(v);
   } catch {
     return true; // conservative = guard on
@@ -54,16 +60,27 @@ function _tokenize(text) {
   const out = new Set();
   try {
     const s = String(text == null ? '' : text).toLowerCase();
-    if (!s) return out;
+    if (!s) {
+      return out;
+    }
     const latin = s.match(/[a-z0-9]{2,}/g) || [];
-    for (const w of latin) out.add(w);
+    for (const w of latin) {
+      out.add(w);
+    }
     // CJK runs → 2-char shingles (bi-grams). Single-char CJK runs added as-is.
     const cjkRuns = s.match(/[一-鿿]+/g) || [];
     for (const run of cjkRuns) {
-      if (run.length === 1) { out.add(run); continue; }
-      for (let i = 0; i < run.length - 1; i += 1) out.add(run.slice(i, i + 2));
+      if (run.length === 1) {
+        out.add(run);
+        continue;
+      }
+      for (let i = 0; i < run.length - 1; i += 1) {
+        out.add(run.slice(i, i + 2));
+      }
     }
-  } catch { /* fail-soft to whatever accumulated */ }
+  } catch {
+    /* fail-soft to whatever accumulated */
+  }
   return out;
 }
 
@@ -75,24 +92,43 @@ function _tokenize(text) {
 function buildIntentTokens(ctx) {
   const tokens = new Set();
   try {
-    if (!ctx || typeof ctx !== 'object') return tokens;
-    const push = (t) => { for (const x of _tokenize(t)) tokens.add(x); };
-    if (ctx.goalText) push(ctx.goalText);
-    if (ctx.originalMessage) push(ctx.originalMessage);
+    if (!ctx || typeof ctx !== 'object') {
+      return tokens;
+    }
+    const push = (t) => {
+      for (const x of _tokenize(t)) {
+        tokens.add(x);
+      }
+    };
+    if (ctx.goalText) {
+      push(ctx.goalText);
+    }
+    if (ctx.originalMessage) {
+      push(ctx.originalMessage);
+    }
     if (Array.isArray(ctx.intentAnchors)) {
       for (const a of ctx.intentAnchors) {
-        if (typeof a === 'string') push(a);
-        else if (a && (a.text || a.value || a.label)) push(a.text || a.value || a.label);
+        if (typeof a === 'string') {
+          push(a);
+        } else if (a && (a.text || a.value || a.label)) {
+          push(a.text || a.value || a.label);
+        }
       }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return tokens;
 }
 
 /** Readable label of an option (string as-is; object → label/value). */
 function _optLabel(o) {
-  if (typeof o === 'string') return o;
-  if (o && (o.label || o.value)) return String(o.label || o.value);
+  if (typeof o === 'string') {
+    return o;
+  }
+  if (o && (o.label || o.value)) {
+    return String(o.label || o.value);
+  }
   return '';
 }
 
@@ -100,21 +136,33 @@ function _optLabel(o) {
 function _optText(o) {
   try {
     const label = _optLabel(o);
-    const desc = (o && typeof o === 'object' && o.description) ? String(o.description) : '';
+    const desc = o && typeof o === 'object' && o.description ? String(o.description) : '';
     return `${label} ${desc}`.trim();
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** Overlap = count of intent tokens present in the option's token set. */
 function _overlapScore(optText, intentTokens) {
   try {
-    if (!intentTokens || intentTokens.size === 0) return 0;
+    if (!intentTokens || intentTokens.size === 0) {
+      return 0;
+    }
     const optTokens = _tokenize(optText);
-    if (optTokens.size === 0) return 0;
+    if (optTokens.size === 0) {
+      return 0;
+    }
     let n = 0;
-    for (const t of optTokens) if (intentTokens.has(t)) n += 1;
+    for (const t of optTokens) {
+      if (intentTokens.has(t)) {
+        n += 1;
+      }
+    }
     return n;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -136,10 +184,20 @@ function refineChoice(args) {
   const a = args || {};
   const options = Array.isArray(a.options) ? a.options : [];
   const baseline = a.baselineChoice;
-  const base = { choice: baseline, realigned: false, reason: 'disabled', baselineScore: 0, chosenScore: 0 };
+  const base = {
+    choice: baseline,
+    realigned: false,
+    reason: 'disabled',
+    baselineScore: 0,
+    chosenScore: 0,
+  };
   try {
-    if (!isEnabled(a.env)) return base;
-    if (options.length === 0 || baseline == null) return { ...base, reason: 'no-options' };
+    if (!isEnabled(a.env)) {
+      return base;
+    }
+    if (options.length === 0 || baseline == null) {
+      return { ...base, reason: 'no-options' };
+    }
 
     // Honor an explicit recommendation — "使用最推荐方案" is the user's stated preference.
     const qq = _qq();
@@ -148,11 +206,15 @@ function refineChoice(args) {
         if (qq.isRecommendedOption(baseline)) {
           return { ...base, reason: 'explicit-recommendation' };
         }
-      } catch { /* fall through to intent scoring */ }
+      } catch {
+        /* fall through to intent scoring */
+      }
     }
 
     const intentTokens = buildIntentTokens(a.intentContext);
-    if (intentTokens.size === 0) return { ...base, reason: 'no-anchor' };
+    if (intentTokens.size === 0) {
+      return { ...base, reason: 'no-anchor' };
+    }
 
     const baselineScore = _overlapScore(_optText(baseline), intentTokens);
     // Score every option; find the unique max.
@@ -161,8 +223,13 @@ function refineChoice(args) {
     let tie = false;
     for (let i = 0; i < options.length; i += 1) {
       const s = _overlapScore(_optText(options[i]), intentTokens);
-      if (s > bestScore) { bestScore = s; bestIdx = i; tie = false; }
-      else if (s === bestScore) { tie = true; }
+      if (s > bestScore) {
+        bestScore = s;
+        bestIdx = i;
+        tie = false;
+      } else if (s === bestScore) {
+        tie = true;
+      }
     }
 
     // Realign only on a clear, unique, strictly-better intent signal that isn't

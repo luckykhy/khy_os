@@ -28,19 +28,28 @@
 
 // 顺序与 replSession.js 历史 extras[] 逐条对齐(冻结防意外 mutate)。
 const SLASH_EXTRA_COMMANDS = Object.freeze([
-  Object.freeze({ cmd: '/study',    label: '学习模式',   desc: '学习模式开关' }),
-  Object.freeze({ cmd: '/role',     label: '角色扮演',   desc: '让 AI 扮演角色(本次对话生效,--save 可长期保留)' }),
-  Object.freeze({ cmd: '/hud',      label: 'HUD 面板',   desc: '显示 HUD 仪表盘' }),
-  Object.freeze({ cmd: '/mind',     label: '思维导图',   desc: '查看 AI 当前任务节点与下一步', flag: 'mind' }),
-  Object.freeze({ cmd: '/intent',   label: '意图保护',   desc: '查看意图保护提取结果与调试开关' }),
-  Object.freeze({ cmd: '/new',      label: '新会话',     desc: '新建会话（清空当前上下文）' }),
-  Object.freeze({ cmd: '/reset',    label: '重置会话',   desc: '重置会话（同 /new）' }),
-  Object.freeze({ cmd: '/folded',   label: '折叠明细',   desc: '查看本轮折叠状态明细（等同 Ctrl+O）' }),
-  Object.freeze({ cmd: '/think',    label: '思考强度',   desc: '设置思考强度 low|medium|high|max' }),
-  Object.freeze({ cmd: '/trace',    label: '追踪开关',   desc: '调试追踪开关 on|off|status' }),
-  Object.freeze({ cmd: '/pool',     label: 'Key 池',     desc: '查看 API Key 池状态（多账号轮询）' }),
-  Object.freeze({ cmd: '/push',     label: '推送备份',   desc: '推送项目到 GitHub/Gitee 私人仓库备份' }),
-  Object.freeze({ cmd: '/optimize', label: '自优化',     desc: 'AI 自我优化（分析经验并改进）' }),
+  Object.freeze({ cmd: '/study', label: '学习模式', desc: '学习模式开关' }),
+  Object.freeze({
+    cmd: '/role',
+    label: '角色扮演',
+    desc: '让 AI 扮演角色(本次对话生效,--save 可长期保留)',
+  }),
+  Object.freeze({ cmd: '/hud', label: 'HUD 面板', desc: '显示 HUD 仪表盘' }),
+  Object.freeze({
+    cmd: '/mind',
+    label: '思维导图',
+    desc: '查看 AI 当前任务节点与下一步',
+    flag: 'mind',
+  }),
+  Object.freeze({ cmd: '/intent', label: '意图保护', desc: '查看意图保护提取结果与调试开关' }),
+  Object.freeze({ cmd: '/new', label: '新会话', desc: '新建会话（清空当前上下文）' }),
+  Object.freeze({ cmd: '/reset', label: '重置会话', desc: '重置会话（同 /new）' }),
+  Object.freeze({ cmd: '/folded', label: '折叠明细', desc: '查看本轮折叠状态明细（等同 Ctrl+O）' }),
+  Object.freeze({ cmd: '/think', label: '思考强度', desc: '设置思考强度 low|medium|high|max' }),
+  Object.freeze({ cmd: '/trace', label: '追踪开关', desc: '调试追踪开关 on|off|status' }),
+  Object.freeze({ cmd: '/pool', label: 'Key 池', desc: '查看 API Key 池状态（多账号轮询）' }),
+  Object.freeze({ cmd: '/push', label: '推送备份', desc: '推送项目到 GitHub/Gitee 私人仓库备份' }),
+  Object.freeze({ cmd: '/optimize', label: '自优化', desc: 'AI 自我优化（分析经验并改进）' }),
 ]);
 
 /**

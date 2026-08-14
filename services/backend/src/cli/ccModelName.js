@@ -30,7 +30,9 @@
 const CAP = { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' };
 
 function modelDisplayNameEnabled(env = process.env) {
-  const v = String((env && env.KHY_MODEL_DISPLAY_NAME) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_MODEL_DISPLAY_NAME) || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -46,8 +48,12 @@ function modelDisplayNameEnabled(env = process.env) {
  */
 function formatModelLabel(model, env = process.env) {
   const raw = String(model == null ? '' : model).trim();
-  if (!raw) return '';
-  if (!modelDisplayNameEnabled(env)) return raw;
+  if (!raw) {
+    return '';
+  }
+  if (!modelDisplayNameEnabled(env)) {
+    return raw;
+  }
   // New convention: claude-<family>-<major>[-.<minor>][-<suffix…>]
   // The minor group is bounded to 1–2 digits followed by end-or-separator so it
   // can NEVER swallow the 8-digit date suffix of a canonical Anthropic id
@@ -56,13 +62,19 @@ function formatModelLabel(model, env = process.env) {
   // Legacy convention: claude-<major>[-.<minor>]-<family>-<date>
   if (!m) {
     const lg = /^claude-(\d+)(?:[-.](\d+))?-(opus|sonnet|haiku)/i.exec(raw);
-    if (lg) m = [lg[0], lg[3], lg[1], lg[2]];
+    if (lg) {
+      m = [lg[0], lg[3], lg[1], lg[2]];
+    }
   }
-  if (!m) return raw; // CC parity: unknown model → raw id verbatim.
+  if (!m) {
+    return raw;
+  } // CC parity: unknown model → raw id verbatim.
   const family = CAP[String(m[1]).toLowerCase()];
   const major = m[2];
   const minor = m[3];
-  if (!family || major == null) return raw;
+  if (!family || major == null) {
+    return raw;
+  }
   return minor != null ? `${family} ${major}.${minor}` : `${family} ${major}`;
 }
 

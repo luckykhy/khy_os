@@ -20,7 +20,7 @@
 'use strict';
 
 const BEGIN = '\x1b[?2026h';
-const END   = '\x1b[?2026l';
+const END = '\x1b[?2026l';
 
 let _enabled = null; // lazy detect
 
@@ -29,7 +29,9 @@ let _enabled = null; // lazy detect
  * Conservative: only enable for known-good terminals.
  */
 function isSupported() {
-  if (_enabled !== null) return _enabled;
+  if (_enabled !== null) {
+    return _enabled;
+  }
 
   // Non-TTY: no sync needed
   if (!process.stdout.isTTY) {
@@ -53,15 +55,14 @@ function isSupported() {
   const termExtra = String(process.env.TERMINAL_EMULATOR || '').toLowerCase();
   const wt = process.env.WT_SESSION; // Windows Terminal
 
-  _enabled = (
+  _enabled =
     term.includes('wezterm') ||
     term.includes('iterm') ||
     term === 'kitty' ||
     term === 'foot' ||
     term === 'contour' ||
     termExtra.includes('jetbrains') ||
-    !!wt
-  );
+    !!wt;
 
   return _enabled;
 }
@@ -112,14 +113,22 @@ function _beginCoalesce() {
     process.stdout.write = function (chunk, encoding, callback) {
       const cb = typeof encoding === 'function' ? encoding : callback;
       try {
-        _coalesceChunks.push(typeof chunk === 'string' ? chunk : chunk.toString(
-          typeof encoding === 'string' ? encoding : undefined,
-        ));
+        _coalesceChunks.push(
+          typeof chunk === 'string'
+            ? chunk
+            : chunk.toString(typeof encoding === 'string' ? encoding : undefined)
+        );
       } catch {
         // Non-stringifiable chunk: fall back to a direct passthrough write.
         return real.call(process.stdout, chunk, encoding, callback);
       }
-      if (typeof cb === 'function') { try { cb(); } catch { /* ignore */ } }
+      if (typeof cb === 'function') {
+        try {
+          cb();
+        } catch {
+          /* ignore */
+        }
+      }
       return true;
     };
   }
@@ -128,7 +137,9 @@ function _beginCoalesce() {
 
 function _endCoalesce() {
   _coalesceDepth -= 1;
-  if (_coalesceDepth > 0) return;
+  if (_coalesceDepth > 0) {
+    return;
+  }
   // Outermost frame: restore the real write and flush everything at once.
   const restore = _realStdoutWrite;
   const chunks = _coalesceChunks;

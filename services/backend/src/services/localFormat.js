@@ -20,7 +20,9 @@
 
 // 是否启用结构化排版（默认开；设 0/off/false/no 回退到调用方自有的朴素拼装）。
 function isEnabled() {
-  const v = String(process.env.KHY_LOCAL_STRUCTURED || 'on').trim().toLowerCase();
+  const v = String(process.env.KHY_LOCAL_STRUCTURED || 'on')
+    .trim()
+    .toLowerCase();
   return !['0', 'off', 'false', 'no'].includes(v);
 }
 
@@ -32,15 +34,17 @@ function heading(title) {
 // 要点列表：每项「- 文本」→ 终端「• 文本」。自动跳过空项。
 function bullets(items) {
   return (items || [])
-    .map(s => String(s == null ? '' : s).trim())
+    .map((s) => String(s == null ? '' : s).trim())
     .filter(Boolean)
-    .map(s => `- ${s}`);
+    .map((s) => `- ${s}`);
 }
 
 // 「键: 值」对齐列表（系统信息等）。键右侧补空格到统一宽度便于扫读。
 function keyValues(pairs) {
-  const rows = (pairs || []).filter(p => p && p[1] != null && String(p[1]).length > 0);
-  if (!rows.length) return [];
+  const rows = (pairs || []).filter((p) => p && p[1] != null && String(p[1]).length > 0);
+  if (!rows.length) {
+    return [];
+  }
   const keyW = Math.max(...rows.map(([k]) => _displayWidth(String(k))));
   return rows.map(([k, v]) => {
     const key = String(k);
@@ -52,8 +56,13 @@ function keyValues(pairs) {
 // 来源块：标题 + 编号 URL（每个 URL 独占整行、不缩进，避免渲染层硬换行截断）。
 // 返回行数组（含前置空行与标题）；无 URL 返回 []。
 function sourceBlock(urls, { limit = 4, title = '来源（可复制完整链接）' } = {}) {
-  const list = [...new Set((urls || []).map(u => String(u || '').trim()).filter(Boolean))].slice(0, limit);
-  if (!list.length) return [];
+  const list = [...new Set((urls || []).map((u) => String(u || '').trim()).filter(Boolean))].slice(
+    0,
+    limit
+  );
+  if (!list.length) {
+    return [];
+  }
   const out = ['', heading(title)];
   list.forEach((u, i) => out.push(`${i + 1}. ${u}`));
   return out;
@@ -62,8 +71,10 @@ function sourceBlock(urls, { limit = 4, title = '来源（可复制完整链接�
 // 元信息脚注行：把若干片段拼成「（a · b · 本地 · 无模型）」。
 // 始终追加「本地 · 无模型」状态标识（除非调用方已包含）。
 function metaLine(parts) {
-  const segs = (parts || []).map(s => String(s || '').trim()).filter(Boolean);
-  if (!segs.some(s => /无模型/.test(s))) segs.push('本地 · 无模型');
+  const segs = (parts || []).map((s) => String(s || '').trim()).filter(Boolean);
+  if (!segs.some((s) => /无模型/.test(s))) {
+    segs.push('本地 · 无模型');
+  }
   return `（${segs.join(' · ')}）`;
 }
 
@@ -80,21 +91,34 @@ function metaLine(parts) {
  */
 function compose(doc = {}) {
   const lines = [];
-  if (doc.title) lines.push(`# ${String(doc.title).trim()}`, '');
+  if (doc.title) {
+    lines.push(`# ${String(doc.title).trim()}`, '');
+  }
 
-  for (const sec of (doc.sections || [])) {
-    if (!sec) continue;
-    const body = sec.lines && sec.lines.length
-      ? sec.lines
-      : (sec.body != null ? String(sec.body).split('\n') : []);
-    const hasContent = body.some(l => String(l).trim().length > 0);
-    if (!hasContent) continue;
-    if (sec.heading) lines.push(heading(sec.heading));
-    body.forEach(l => lines.push(l));
+  for (const sec of doc.sections || []) {
+    if (!sec) {
+      continue;
+    }
+    const body =
+      sec.lines && sec.lines.length
+        ? sec.lines
+        : sec.body != null
+          ? String(sec.body).split('\n')
+          : [];
+    const hasContent = body.some((l) => String(l).trim().length > 0);
+    if (!hasContent) {
+      continue;
+    }
+    if (sec.heading) {
+      lines.push(heading(sec.heading));
+    }
+    body.forEach((l) => lines.push(l));
     lines.push('');
   }
 
-  for (const l of sourceBlock(doc.sources || [])) lines.push(l);
+  for (const l of sourceBlock(doc.sources || [])) {
+    lines.push(l);
+  }
 
   if (doc.meta && doc.meta.length) {
     lines.push('');
@@ -108,11 +132,17 @@ function compose(doc = {}) {
   // 合并多余空行（最多保留一个），去掉首尾空行。
   const out = [];
   for (const l of lines) {
-    if (l === '' && out[out.length - 1] === '') continue;
+    if (l === '' && out[out.length - 1] === '') {
+      continue;
+    }
     out.push(l);
   }
-  while (out.length && out[0] === '') out.shift();
-  while (out.length && out[out.length - 1] === '') out.pop();
+  while (out.length && out[0] === '') {
+    out.shift();
+  }
+  while (out.length && out[out.length - 1] === '') {
+    out.pop();
+  }
   return out.join('\n');
 }
 
@@ -121,15 +151,17 @@ function _displayWidth(s) {
   let w = 0;
   for (const ch of String(s || '')) {
     const cp = ch.codePointAt(0);
-    w += (cp >= 0x1100 && (
-      cp <= 0x115F ||
-      (cp >= 0x2E80 && cp <= 0xA4CF) ||
-      (cp >= 0xAC00 && cp <= 0xD7A3) ||
-      (cp >= 0xF900 && cp <= 0xFAFF) ||
-      (cp >= 0xFE30 && cp <= 0xFE4F) ||
-      (cp >= 0xFF00 && cp <= 0xFF60) ||
-      (cp >= 0xFFE0 && cp <= 0xFFE6)
-    )) ? 2 : 1;
+    w +=
+      cp >= 0x1100 &&
+      (cp <= 0x115f ||
+        (cp >= 0x2e80 && cp <= 0xa4cf) ||
+        (cp >= 0xac00 && cp <= 0xd7a3) ||
+        (cp >= 0xf900 && cp <= 0xfaff) ||
+        (cp >= 0xfe30 && cp <= 0xfe4f) ||
+        (cp >= 0xff00 && cp <= 0xff60) ||
+        (cp >= 0xffe0 && cp <= 0xffe6))
+        ? 2
+        : 1;
   }
   return w;
 }

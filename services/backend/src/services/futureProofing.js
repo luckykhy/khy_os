@@ -40,10 +40,16 @@ const EOL_WARN_WINDOW_DAYS = 180;
 // 命中 IDENTITY 档（opus/sonnet/haiku）才告警；直连 legacy 档（openaiDirect 等）本就
 // 是兼容旧端点的保留值，不在此表，避免误伤。维护者换模型只改 constants/models.js 一处。
 const RETIRED_MODEL_IDS = new Set([
-  'claude-1', 'claude-2', 'claude-2.1',
-  'claude-instant-1', 'claude-instant-1.2',
-  'gpt-3', 'gpt-3.5', 'text-davinci-003',
-  'gemini-1.0-pro', 'gemini-pro',
+  'claude-1',
+  'claude-2',
+  'claude-2.1',
+  'claude-instant-1',
+  'claude-instant-1.2',
+  'gpt-3',
+  'gpt-3.5',
+  'text-davinci-003',
+  'gemini-1.0-pro',
+  'gemini-pro',
 ]);
 
 // ── 已排定退役日期的模型表（对齐 CC deprecation.ts·随发布手动维护）────────────
@@ -56,21 +62,28 @@ const MODEL_RETIREMENT = {
   'claude-3-opus': {
     name: 'Claude 3 Opus',
     dates: {
-      firstParty: 'January 5, 2026', bedrock: 'January 15, 2026',
-      vertex: 'January 5, 2026', foundry: 'January 5, 2026',
+      firstParty: 'January 5, 2026',
+      bedrock: 'January 15, 2026',
+      vertex: 'January 5, 2026',
+      foundry: 'January 5, 2026',
     },
   },
   'claude-3-7-sonnet': {
     name: 'Claude 3.7 Sonnet',
     dates: {
-      firstParty: 'February 19, 2026', bedrock: 'April 28, 2026',
-      vertex: 'May 11, 2026', foundry: 'February 19, 2026',
+      firstParty: 'February 19, 2026',
+      bedrock: 'April 28, 2026',
+      vertex: 'May 11, 2026',
+      foundry: 'February 19, 2026',
     },
   },
   'claude-3-5-haiku': {
     name: 'Claude 3.5 Haiku',
     dates: {
-      firstParty: 'February 19, 2026', bedrock: null, vertex: null, foundry: null,
+      firstParty: 'February 19, 2026',
+      bedrock: null,
+      vertex: null,
+      foundry: null,
     },
   },
 };
@@ -79,28 +92,43 @@ const STATUS = { GREEN: 'green', YELLOW: 'yellow', RED: 'red' };
 const SEVERITY = { green: 0, yellow: 1, red: 2 };
 
 /** 是否启用（仅影响主动 hint；门控关 → 字节回退）。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_FUTURE_PROOFING) || '').trim().toLowerCase();
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String((env && env.KHY_FUTURE_PROOFING) || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 解析 ISO/Date → epoch ms；fail-soft 返回 NaN（绝不抛）。 */
 function _toMs(d) {
   try {
-    if (d == null) return NaN;
-    if (d instanceof Date) return d.getTime();
+    if (d == null) {
+      return NaN;
+    }
+    if (d instanceof Date) {
+      return d.getTime();
+    }
     const t = Date.parse(String(d));
     return Number.isFinite(t) ? t : NaN;
-  } catch { return NaN; }
+  } catch {
+    return NaN;
+  }
 }
 
 /** 从 'v18.19.0' / '18.19.0' / 18 解析出 major 整数；失败 → NaN。 */
 function _nodeMajor(ver) {
   try {
-    if (typeof ver === 'number' && Number.isFinite(ver)) return Math.trunc(ver);
-    const m = String(ver || '').trim().replace(/^v/i, '').match(/^(\d+)/);
+    if (typeof ver === 'number' && Number.isFinite(ver)) {
+      return Math.trunc(ver);
+    }
+    const m = String(ver || '')
+      .trim()
+      .replace(/^v/i, '')
+      .match(/^(\d+)/);
     return m ? parseInt(m[1], 10) : NaN;
-  } catch { return NaN; }
+  } catch {
+    return NaN;
+  }
 }
 
 const DAY_MS = 86400000;
@@ -115,7 +143,13 @@ function _checkRuntimeEol(nodeVersion, nowMs) {
   const label = '运行时保期 (Node.js)';
   const major = _nodeMajor(nodeVersion);
   if (!Number.isFinite(major)) {
-    return { id, label, status: STATUS.GREEN, detail: '无法识别 Node 版本，跳过（不阻断）', action: null };
+    return {
+      id,
+      label,
+      status: STATUS.GREEN,
+      detail: '无法识别 Node 版本，跳过（不阻断）',
+      action: null,
+    };
   }
   if (major >= NODE_NEWEST_KNOWN) {
     return { id, label, status: STATUS.GREEN, detail: `Node ${major} 足够新`, action: null };
@@ -127,7 +161,9 @@ function _checkRuntimeEol(nodeVersion, nowMs) {
     const oldest = Math.min(...knownMajors);
     if (Number.isFinite(major) && major < oldest) {
       return {
-        id, label, status: STATUS.RED,
+        id,
+        label,
+        status: STATUS.RED,
         detail: `Node ${major} 早已停止支持`,
         action: '升级到当前 LTS：nvm install --lts && nvm use --lts',
       };
@@ -138,7 +174,9 @@ function _checkRuntimeEol(nodeVersion, nowMs) {
   if (nowMs > eolMs) {
     const overDays = Math.floor((nowMs - eolMs) / DAY_MS);
     return {
-      id, label, status: STATUS.RED,
+      id,
+      label,
+      status: STATUS.RED,
       detail: `Node ${major} 已于 ${eol} 停止支持（已过 ${overDays} 天，存安全风险）`,
       action: '升级到当前 LTS：nvm install --lts && nvm use --lts（或用系统包管理器）',
     };
@@ -146,12 +184,20 @@ function _checkRuntimeEol(nodeVersion, nowMs) {
   const daysLeft = Math.ceil((eolMs - nowMs) / DAY_MS);
   if (daysLeft <= EOL_WARN_WINDOW_DAYS) {
     return {
-      id, label, status: STATUS.YELLOW,
+      id,
+      label,
+      status: STATUS.YELLOW,
       detail: `Node ${major} 将于 ${eol} 停止支持（剩 ${daysLeft} 天）`,
       action: '提前规划升级到下一 LTS：nvm install --lts',
     };
   }
-  return { id, label, status: STATUS.GREEN, detail: `Node ${major} 在保期内（至 ${eol}）`, action: null };
+  return {
+    id,
+    label,
+    status: STATUS.GREEN,
+    detail: `Node ${major} 在保期内（至 ${eol}）`,
+    action: null,
+  };
 }
 
 /**
@@ -162,14 +208,14 @@ function _checkRuntimeEol(nodeVersion, nowMs) {
 function _checkModelCurrency(primaryModels) {
   const id = 'model-currency';
   const label = '模型时效 (单一真源)';
-  const p = (primaryModels && typeof primaryModels === 'object') ? primaryModels : {};
+  const p = primaryModels && typeof primaryModels === 'object' ? primaryModels : {};
   const identityKeys = ['opus', 'sonnet', 'haiku'];
-  const identity = identityKeys
-    .map((k) => p[k])
-    .filter((v) => typeof v === 'string' && v.trim());
+  const identity = identityKeys.map((k) => p[k]).filter((v) => typeof v === 'string' && v.trim());
   if (!identity.length) {
     return {
-      id, label, status: STATUS.YELLOW,
+      id,
+      label,
+      status: STATUS.YELLOW,
       detail: '未能读到首选模型（constants/models.js 的 PRIMARY 可能缺失）',
       action: '检查 services/backend/src/constants/models.js 的 PRIMARY 映射',
     };
@@ -177,13 +223,17 @@ function _checkModelCurrency(primaryModels) {
   const retired = identity.filter((m) => RETIRED_MODEL_IDS.has(String(m).toLowerCase()));
   if (retired.length) {
     return {
-      id, label, status: STATUS.YELLOW,
+      id,
+      label,
+      status: STATUS.YELLOW,
       detail: `身份模型疑似已退役：${retired.join('、')}`,
       action: '在 constants/models.js 把对应数组首位换成在售型号（改一处，全仓生效）',
     };
   }
   return {
-    id, label, status: STATUS.GREEN,
+    id,
+    label,
+    status: STATUS.GREEN,
     detail: `首选模型：${identity.join('、')}（换模型只改 constants/models.js 一处）`,
     action: null,
   };
@@ -197,7 +247,7 @@ function _checkModelCurrency(primaryModels) {
 function _checkSelfMaintenance(wiring) {
   const id = 'self-maintenance';
   const label = '自维护设施';
-  const w = (wiring && typeof wiring === 'object') ? wiring : {};
+  const w = wiring && typeof wiring === 'object' ? wiring : {};
   const pillars = [
     ['pipLifeline', 'pip 发布生命线 (setup.py)', 'pip 是唯一发布渠道，缺失即无法分发'],
     ['aiSeedDocs', '.ai/ 种子文档', '运行 khy metadata refresh 重建'],
@@ -211,7 +261,8 @@ function _checkSelfMaintenance(wiring) {
   // pip 生命线缺失 = red（无法分发）；其余 = yellow（可重建）。
   const lifelineGone = missing.some(([k]) => k === 'pipLifeline');
   return {
-    id, label,
+    id,
+    label,
     status: lifelineGone ? STATUS.RED : STATUS.YELLOW,
     detail: `缺失：${missing.map(([, l]) => l).join('、')}`,
     action: (missing.find(([k]) => k === 'pipLifeline') || missing[0])[2],
@@ -226,7 +277,7 @@ function _checkSelfMaintenance(wiring) {
 function _checkGuardCoverage(guards) {
   const id = 'guard-coverage';
   const label = '守卫覆盖 (提交门禁)';
-  const g = (guards && typeof guards === 'object') ? guards : {};
+  const g = guards && typeof guards === 'object' ? guards : {};
   const expected = [
     'check-agent-rules',
     'check-leaf-contract',
@@ -236,7 +287,9 @@ function _checkGuardCoverage(guards) {
   const known = expected.filter((k) => k in g);
   if (!known.length) {
     return {
-      id, label, status: STATUS.YELLOW,
+      id,
+      label,
+      status: STATUS.YELLOW,
       detail: '无法解析守卫接线（package.json 脚本未传入）',
       action: '检查 package.json 的 check:small-model:safety 脚本串',
     };
@@ -244,12 +297,20 @@ function _checkGuardCoverage(guards) {
   const off = expected.filter((k) => g[k] === false);
   if (off.length) {
     return {
-      id, label, status: STATUS.YELLOW,
+      id,
+      label,
+      status: STATUS.YELLOW,
       detail: `未接线的守卫：${off.join('、')}`,
       action: '把缺失守卫串回 package.json 的 check:small-model:safety',
     };
   }
-  return { id, label, status: STATUS.GREEN, detail: `${known.length} 个机器守卫均已接入提交门禁`, action: null };
+  return {
+    id,
+    label,
+    status: STATUS.GREEN,
+    detail: `${known.length} 个机器守卫均已接入提交门禁`,
+    action: null,
+  };
 }
 
 /**
@@ -272,14 +333,20 @@ function buildFreshnessReport(ctx = {}) {
   ];
   let level = STATUS.GREEN;
   for (const c of checks) {
-    if ((SEVERITY[c.status] || 0) > (SEVERITY[level] || 0)) level = c.status;
+    if ((SEVERITY[c.status] || 0) > (SEVERITY[level] || 0)) {
+      level = c.status;
+    }
   }
   const reds = checks.filter((c) => c.status === STATUS.RED).length;
   const yellows = checks.filter((c) => c.status === STATUS.YELLOW).length;
   let summary;
-  if (level === STATUS.GREEN) summary = '项目与时代同步，无需处理。';
-  else if (level === STATUS.RED) summary = `有 ${reds} 项需立即处理${yellows ? `、${yellows} 项待办` : ''}。`;
-  else summary = `有 ${yellows} 项待办（非紧急）。`;
+  if (level === STATUS.GREEN) {
+    summary = '项目与时代同步，无需处理。';
+  } else if (level === STATUS.RED) {
+    summary = `有 ${reds} 项需立即处理${yellows ? `、${yellows} 项待办` : ''}。`;
+  } else {
+    summary = `有 ${yellows} 项待办（非紧急）。`;
+  }
   return { checks, level, summary, ok: level !== STATUS.RED };
 }
 
@@ -290,7 +357,10 @@ function buildFreshnessReport(ctx = {}) {
  * @param {Function} [opts.color] (text, status) => string
  */
 function renderFreshness(report, opts = {}) {
-  const r = (report && Array.isArray(report.checks)) ? report : { checks: [], level: STATUS.GREEN, summary: '' };
+  const r =
+    report && Array.isArray(report.checks)
+      ? report
+      : { checks: [], level: STATUS.GREEN, summary: '' };
   const color = typeof opts.color === 'function' ? opts.color : (t) => t;
   const icon = { green: '✓', yellow: '⚠', red: '✗' };
   const lines = [];
@@ -298,7 +368,9 @@ function renderFreshness(report, opts = {}) {
   for (const c of r.checks) {
     const head = `${icon[c.status] || '·'} ${c.label}：${c.detail || ''}`;
     lines.push(color(head, c.status));
-    if (c.action) lines.push(color(`    → ${c.action}`, 'action'));
+    if (c.action) {
+      lines.push(color(`    → ${c.action}`, 'action'));
+    }
   }
   lines.push(color(`总体：${r.summary || ''}`, r.level));
   return lines;
@@ -306,13 +378,17 @@ function renderFreshness(report, opts = {}) {
 
 /** 一行主动提示（门控 KHY_FUTURE_PROOFING）。 */
 function freshnessHintLine(env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   return '💡 想知道 khyos 是否还跟得上时代？运行 `khy maintain freshness` 做一次与时俱进体检。';
 }
 
 /** 模型退役启动提示是否启用（独立子门控 KHY_MODEL_DEPRECATION_NOTICE，默认开）。 */
-function isModelDeprecationEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_MODEL_DEPRECATION_NOTICE) || '').trim().toLowerCase();
+function isModelDeprecationEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String((env && env.KHY_MODEL_DEPRECATION_NOTICE) || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -325,9 +401,15 @@ function isModelDeprecationEnabled(env = (typeof process !== 'undefined' ? proce
  */
 function _apiProviderBucket(adapterName) {
   const s = String(adapterName || '').toLowerCase();
-  if (s.includes('bedrock')) return 'bedrock';
-  if (s.includes('vertex')) return 'vertex';
-  if (s.includes('foundry') || s.includes('azure')) return 'foundry';
+  if (s.includes('bedrock')) {
+    return 'bedrock';
+  }
+  if (s.includes('vertex')) {
+    return 'vertex';
+  }
+  if (s.includes('foundry') || s.includes('azure')) {
+    return 'foundry';
+  }
   return 'firstParty';
 }
 
@@ -345,14 +427,20 @@ function _apiProviderBucket(adapterName) {
 function getModelRetirementNotice(modelId, opts = {}) {
   try {
     const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isModelDeprecationEnabled(env)) return null;
-    if (typeof modelId !== 'string' || !modelId.trim()) return null;
+    if (!isModelDeprecationEnabled(env)) {
+      return null;
+    }
+    if (typeof modelId !== 'string' || !modelId.trim()) {
+      return null;
+    }
     const lower = modelId.toLowerCase();
     const provider = opts.provider || _apiProviderBucket(opts.adapterName);
     for (const key of Object.keys(MODEL_RETIREMENT)) {
       const entry = MODEL_RETIREMENT[key];
       const date = entry && entry.dates ? entry.dates[provider] : null;
-      if (!lower.includes(key) || !date) continue;
+      if (!lower.includes(key) || !date) {
+        continue;
+      }
       // 时态：过去→已于；未来→将于；now 不可用→中性「计划于」（CC 无时态，恒 "will be retired"）。
       let verb = '计划于';
       const nowMs = opts.nowMs;

@@ -61,9 +61,13 @@ const PRESETS = Object.freeze([
  */
 function selectPreset(modes) {
   const active = Array.isArray(modes) ? modes : [];
-  if (active.length === 0) return null;
+  if (active.length === 0) {
+    return null;
+  }
   for (const preset of PRESETS) {
-    if (preset.whenModes.some((m) => active.includes(m))) return preset;
+    if (preset.whenModes.some((m) => active.includes(m))) {
+      return preset;
+    }
   }
   return null;
 }

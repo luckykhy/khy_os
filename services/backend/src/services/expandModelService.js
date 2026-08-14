@@ -28,7 +28,9 @@ const KHY_EXPAND_VERSION = '1.0';
  * Check if a model name refers to ExpandModel.
  */
 function isExpandModel(modelName) {
-  const n = String(modelName || '').trim().toLowerCase();
+  const n = String(modelName || '')
+    .trim()
+    .toLowerCase();
   return n === 'khy-expand' || n.startsWith('khy-expand-');
 }
 
@@ -44,7 +46,9 @@ function getExpandModelInfo() {
   let capabilities = [];
   try {
     capabilities = require('./localBrainService').listCapabilities();
-  } catch { /* localBrainService not available */ }
+  } catch {
+    /* localBrainService not available */
+  }
 
   let upstreamAdapters = [];
   try {
@@ -52,10 +56,12 @@ function getExpandModelInfo() {
     if (gw.getStatus) {
       const status = gw.getStatus();
       upstreamAdapters = (status.adapters || [])
-        .filter(a => a.available)
-        .map(a => a.key || a.name);
+        .filter((a) => a.available)
+        .map((a) => a.key || a.name);
     }
-  } catch { /* gateway not available */ }
+  } catch {
+    /* gateway not available */
+  }
 
   const hasUpstream = upstreamAdapters.length > 0;
 
@@ -65,7 +71,8 @@ function getExpandModelInfo() {
     created: Math.floor(Date.now() / 1000),
     owned_by: 'khy',
     name: 'KHY ExpandModel',
-    description: `KHY hybrid intelligence model. ${capabilities.length} deterministic local capabilities (zero-token). ` +
+    description:
+      `KHY hybrid intelligence model. ${capabilities.length} deterministic local capabilities (zero-token). ` +
       (hasUpstream
         ? `Upstream models: ${upstreamAdapters.join(', ')}. Complex queries route to best available model.`
         : 'No upstream models configured. Local capabilities only.'),
@@ -84,15 +91,21 @@ function getExpandModelInfo() {
  * Handles both string content and content-block arrays.
  */
 function _extractLastUserText(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return '';
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return '';
+  }
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (msg.role !== 'user') continue;
-    if (typeof msg.content === 'string') return msg.content.trim();
+    if (msg.role !== 'user') {
+      continue;
+    }
+    if (typeof msg.content === 'string') {
+      return msg.content.trim();
+    }
     if (Array.isArray(msg.content)) {
       return msg.content
-        .filter(b => b.type === 'text')
-        .map(b => b.text || '')
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text || '')
         .join('\n')
         .trim();
     }
@@ -106,17 +119,27 @@ function _extractLastUserText(messages) {
 function _hasUpstreamModel() {
   try {
     const gw = require('./gateway/aiGateway');
-    if (!gw._initialized) return false;
-    const adapters = gw._adapters || [];
-    for (const entry of adapters) {
-      if (!entry.enabled) continue;
-      try {
-        const status = typeof entry.adapter.getStatus === 'function'
-          ? entry.adapter.getStatus() : null;
-        if (status && status.available) return true;
-      } catch { /* skip */ }
+    if (!gw.isInitialized()) {
+      return false;
     }
-  } catch { /* gateway not available */ }
+    const adapters = gw.getAdapters() || [];
+    for (const entry of adapters) {
+      if (!entry.enabled) {
+        continue;
+      }
+      try {
+        const status =
+          typeof entry.adapter.getStatus === 'function' ? entry.adapter.getStatus() : null;
+        if (status && status.available) {
+          return true;
+        }
+      } catch {
+        /* skip */
+      }
+    }
+  } catch {
+    /* gateway not available */
+  }
   return false;
 }
 
@@ -124,9 +147,11 @@ function _hasUpstreamModel() {
  * Build an augmented prompt that injects local deterministic data before the original query.
  */
 function _buildAugmentedPrompt(originalPrompt, localFormatted, label) {
-  return `[KHY 本地能力已获取以下实时数据/分析结果，请基于此数据用自然语言回答用户问题，不要重复原始数据格式]\n\n` +
+  return (
+    `[KHY 本地能力已获取以下实时数据/分析结果，请基于此数据用自然语言回答用户问题，不要重复原始数据格式]\n\n` +
     `--- ${label} 数据 ---\n${localFormatted}\n---\n\n` +
-    `用户原始问题: ${originalPrompt}`;
+    `用户原始问题: ${originalPrompt}`
+  );
 }
 
 /**
@@ -134,13 +159,15 @@ function _buildAugmentedPrompt(originalPrompt, localFormatted, label) {
  */
 function _buildCapabilitiesMenu() {
   let caps = [];
-  try { caps = require('./localBrainService').listCapabilities(); } catch {}
+  try {
+    caps = require('./localBrainService').listCapabilities();
+  } catch {}
 
   const lines = [
     'KHY ExpandModel — 当前可用能力',
     '',
     '本地确定性能力（无需 AI 模型，零 token）：',
-    ...caps.map(c => `  • ${c}`),
+    ...caps.map((c) => `  • ${c}`),
     '',
     '如需更复杂的 AI 对话能力，请配置上游模型订阅。',
     '运行 khy gateway config 开始配置。',
@@ -176,7 +203,9 @@ function _makeResponse(content, provider, extra = {}) {
  */
 async function handleExpandModel(userText, options = {}) {
   const text = String(userText || '').trim();
-  if (!text) return _makeResponse(_buildCapabilitiesMenu(), 'khy-local');
+  if (!text) {
+    return _makeResponse(_buildCapabilitiesMenu(), 'khy-local');
+  }
 
   const cwd = options.cwd || process.cwd();
   const localBrain = require('./localBrainService');
@@ -199,10 +228,13 @@ async function handleExpandModel(userText, options = {}) {
     if (plan.cooperative && result && result.success && _hasUpstreamModel()) {
       const label = plan.category || plan.type || 'local-data';
       const augmented = _buildAugmentedPrompt(text, formatted, label);
-      const COOPERATIVE_TIMEOUT_MS = parseInt(String(process.env.KHY_COOPERATIVE_TIMEOUT_MS || '15000'), 10) || 15000;
+      const COOPERATIVE_TIMEOUT_MS =
+        parseInt(String(process.env.KHY_COOPERATIVE_TIMEOUT_MS || '15000'), 10) || 15000;
       try {
         const gw = require('./gateway/aiGateway');
-        if (!gw._initialized) await gw.init();
+        if (!gw.isInitialized()) {
+          await gw.init();
+        }
         let _timedOut = false;
         const gwPromise = gw.generate(augmented, {
           system: options.system,
@@ -211,17 +243,26 @@ async function handleExpandModel(userText, options = {}) {
           maxTokens: options.maxTokens,
         });
         const timeoutPromise = new Promise((resolve) => {
-          setTimeout(() => { _timedOut = true; resolve(null); }, COOPERATIVE_TIMEOUT_MS);
+          setTimeout(() => {
+            _timedOut = true;
+            resolve(null);
+          }, COOPERATIVE_TIMEOUT_MS);
         });
         const gwResult = await Promise.race([gwPromise, timeoutPromise]);
         if (!_timedOut && gwResult && gwResult.success && gwResult.content) {
-          return _makeResponse(gwResult.content, `khy-expand+${gwResult.provider || gwResult.adapter || 'upstream'}`, {
-            tokenUsage: gwResult.tokenUsage,
-            upstreamModel: gwResult.model,
-          });
+          return _makeResponse(
+            gwResult.content,
+            `khy-expand+${gwResult.provider || gwResult.adapter || 'upstream'}`,
+            {
+              tokenUsage: gwResult.tokenUsage,
+              upstreamModel: gwResult.model,
+            }
+          );
         }
         // timeout or failed → fall through to local result
-      } catch { /* upstream failed, fall through to local result */ }
+      } catch {
+        /* upstream failed, fall through to local result */
+      }
     }
 
     // Case B: non-cooperative / no upstream / upstream failed → direct local result
@@ -233,7 +274,9 @@ async function handleExpandModel(userText, options = {}) {
     // Case C: Route to best upstream model
     try {
       const gw = require('./gateway/aiGateway');
-      if (!gw._initialized) await gw.init();
+      if (!gw.isInitialized()) {
+        await gw.init();
+      }
 
       // Build prompt from full messages if available, otherwise use userText
       const prompt = text;
@@ -244,22 +287,26 @@ async function handleExpandModel(userText, options = {}) {
         maxTokens: options.maxTokens,
       });
       if (gwResult && gwResult.success) {
-        return _makeResponse(gwResult.content, `khy-expand+${gwResult.provider || gwResult.adapter || 'upstream'}`, {
-          tokenUsage: gwResult.tokenUsage,
-          upstreamModel: gwResult.model,
-        });
+        return _makeResponse(
+          gwResult.content,
+          `khy-expand+${gwResult.provider || gwResult.adapter || 'upstream'}`,
+          {
+            tokenUsage: gwResult.tokenUsage,
+            upstreamModel: gwResult.model,
+          }
+        );
       }
       // If upstream failed, fall through to capabilities menu
       return _makeResponse(
         `请求处理失败：${gwResult?.error || 'unknown error'}\n\n` + _buildCapabilitiesMenu(),
         'khy-local',
-        { success: false },
+        { success: false }
       );
     } catch (err) {
       return _makeResponse(
         `上游模型调用异常：${err?.message || err}\n\n` + _buildCapabilitiesMenu(),
         'khy-local',
-        { success: false },
+        { success: false }
       );
     }
   }
@@ -303,13 +350,19 @@ async function handleExpandModelStream(userText, options = {}) {
     if (plan.cooperative && result && result.success && _hasUpstreamModel()) {
       const label = plan.category || plan.type || 'local-data';
       const augmented = _buildAugmentedPrompt(text, formatted, label);
-      const COOPERATIVE_TIMEOUT_MS = parseInt(String(process.env.KHY_COOPERATIVE_TIMEOUT_MS || '15000'), 10) || 15000;
+      const COOPERATIVE_TIMEOUT_MS =
+        parseInt(String(process.env.KHY_COOPERATIVE_TIMEOUT_MS || '15000'), 10) || 15000;
       try {
         const gw = require('./gateway/aiGateway');
-        if (!gw._initialized) await gw.init();
+        if (!gw.isInitialized()) {
+          await gw.init();
+        }
         let _timedOut = false;
         let _hasStreamed = false;
-        const wrappedOnChunk = (chunk) => { _hasStreamed = true; onChunk(chunk); };
+        const wrappedOnChunk = (chunk) => {
+          _hasStreamed = true;
+          onChunk(chunk);
+        };
         const gwPromise = gw.generate(augmented, {
           system: options.system,
           messages: options.messages,
@@ -318,18 +371,27 @@ async function handleExpandModelStream(userText, options = {}) {
           onChunk: wrappedOnChunk,
         });
         const timeoutPromise = new Promise((resolve) => {
-          setTimeout(() => { if (!_hasStreamed) { _timedOut = true; resolve(null); } }, COOPERATIVE_TIMEOUT_MS);
+          setTimeout(() => {
+            if (!_hasStreamed) {
+              _timedOut = true;
+              resolve(null);
+            }
+          }, COOPERATIVE_TIMEOUT_MS);
         });
         const gwResult = await Promise.race([gwPromise, timeoutPromise]);
         if (!_timedOut && gwResult && gwResult.success) {
-          if (!gwResult._streamed && !_hasStreamed) onChunk({ type: 'text', text: gwResult.content });
+          if (!gwResult._streamed && !_hasStreamed) {
+            onChunk({ type: 'text', text: gwResult.content });
+          }
           return _makeResponse(gwResult.content, `khy-expand+${gwResult.provider || 'upstream'}`, {
             tokenUsage: gwResult.tokenUsage,
             upstreamModel: gwResult.model,
           });
         }
         // timeout or failed → fall through to local
-      } catch { /* fall through to local */ }
+      } catch {
+        /* fall through to local */
+      }
     }
 
     // Case B: local only — emit as single chunk
@@ -342,7 +404,9 @@ async function handleExpandModelStream(userText, options = {}) {
     // Case C: pure upstream streaming
     try {
       const gw = require('./gateway/aiGateway');
-      if (!gw._initialized) await gw.init();
+      if (!gw.isInitialized()) {
+        await gw.init();
+      }
       const gwResult = await gw.generate(text, {
         system: options.system,
         messages: options.messages,
@@ -351,13 +415,17 @@ async function handleExpandModelStream(userText, options = {}) {
         onChunk,
       });
       if (gwResult && gwResult.success) {
-        if (!gwResult._streamed) onChunk({ type: 'text', text: gwResult.content });
+        if (!gwResult._streamed) {
+          onChunk({ type: 'text', text: gwResult.content });
+        }
         return _makeResponse(gwResult.content, `khy-expand+${gwResult.provider || 'upstream'}`, {
           tokenUsage: gwResult.tokenUsage,
           upstreamModel: gwResult.model,
         });
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
 
   // Case D: capabilities menu

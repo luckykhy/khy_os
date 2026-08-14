@@ -24,7 +24,9 @@ module.exports = function createScheduler(deps) {
   let _gcTimer = null;
 
   function startGC() {
-    if (_gcTimer) clearInterval(_gcTimer);
+    if (_gcTimer) {
+      clearInterval(_gcTimer);
+    }
     _gcTimer = setInterval(() => {
       runGC().catch(() => {});
     }, GC_INTERVAL_MS);
@@ -33,7 +35,9 @@ module.exports = function createScheduler(deps) {
 
   async function runGC() {
     const _db = getDb();
-    if (!_db) return;
+    if (!_db) {
+      return;
+    }
 
     try {
       const timeoutMinutes = Math.max(1, Math.floor(HEARTBEAT_TIMEOUT_MS / 60000));

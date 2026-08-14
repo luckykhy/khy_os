@@ -1,20 +1,22 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { routeStart, routeDone } from '@/composables/useGlobalLoading'
-import { viewLoaders } from '@/composables/useRoutePrefetch'
+import { createRouter, createWebHistory } from 'vue-router';
+import { useUserStore } from '@/stores/user';
+import { routeStart, routeDone } from '@/composables/useGlobalLoading';
+import { viewLoaders } from '@/composables/useRoutePrefetch';
 
 function detectRouterBase() {
-  if (typeof window === 'undefined') return '/'
-  const pathname = String(window.location.pathname || '/')
-  const envBase = String(import.meta.env.VITE_AI_ROUTER_BASE || '').trim().replace(/\/+$/, '')
+  if (typeof window === 'undefined') return '/';
+  const pathname = String(window.location.pathname || '/');
+  const envBase = String(import.meta.env.VITE_AI_ROUTER_BASE || '')
+    .trim()
+    .replace(/\/+$/, '');
   if (envBase && (pathname === envBase || pathname.startsWith(`${envBase}/`))) {
-    return envBase.startsWith('/') ? envBase : `/${envBase}`
+    return envBase.startsWith('/') ? envBase : `/${envBase}`;
   }
-  const adminPrefix = pathname.match(/^\/admin\/[^/]+/i)
+  const adminPrefix = pathname.match(/^\/admin\/[^/]+/i);
   if (adminPrefix && adminPrefix[0]) {
-    return adminPrefix[0]
+    return adminPrefix[0];
   }
-  return '/'
+  return '/';
 }
 
 // Lazy view importers come from a shared registry (useRoutePrefetch) so the
@@ -56,6 +58,12 @@ const routes = [
         meta: { requiresAdmin: true },
       },
       {
+        path: 'wx-binding',
+        name: 'WxBinding',
+        component: viewLoaders['/wx-binding'],
+        meta: { requiresAdmin: true },
+      },
+      {
         path: 'accounts',
         name: 'AccountPool',
         component: viewLoaders['/accounts'],
@@ -65,6 +73,12 @@ const routes = [
         path: 'assets-customers',
         name: 'AIAssetsCustomers',
         component: viewLoaders['/assets-customers'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'payments',
+        name: 'AIPayments',
+        component: viewLoaders['/payments'],
         meta: { requiresAdmin: true },
       },
       {
@@ -158,11 +172,65 @@ const routes = [
         component: viewLoaders['/marketplace'],
       },
       {
-        // Proxy management (代理管理) — paste a subscription URL, import node groups.
-        // Auth only, NO requiresAdmin.
-        path: 'proxies',
-        name: 'ProxyManagement',
-        component: viewLoaders['/proxies'],
+        // GUI Agent 评测平台 (admin only)
+        path: 'gui-eval',
+        name: 'GuiEvalDashboard',
+        component: viewLoaders['/gui-eval'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/tasks',
+        name: 'GuiEvalTasks',
+        component: viewLoaders['/gui-eval/tasks'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/tasks/:id',
+        name: 'GuiEvalTaskEditor',
+        component: viewLoaders['/gui-eval/tasks/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/runs',
+        name: 'GuiEvalRuns',
+        component: viewLoaders['/gui-eval/runs'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/runs/:id',
+        name: 'GuiEvalRunDetail',
+        component: viewLoaders['/gui-eval/runs/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval',
+        name: 'WebFrontendEvalDashboard',
+        component: viewLoaders['/web-frontend-eval'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/tasks',
+        name: 'WebFrontendEvalTasks',
+        component: viewLoaders['/web-frontend-eval/tasks'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/tasks/:id',
+        name: 'WebFrontendEvalTaskEditor',
+        component: viewLoaders['/web-frontend-eval/tasks/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/runs',
+        name: 'WebFrontendEvalRuns',
+        component: viewLoaders['/web-frontend-eval/runs'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/runs/:id',
+        name: 'WebFrontendEvalRunDetail',
+        component: viewLoaders['/web-frontend-eval/runs/:id'],
+        meta: { requiresAdmin: true },
       },
     ],
   },
@@ -175,9 +243,7 @@ const routes = [
     path: '/markdown',
     component: viewLoaders['/'],
     meta: { requiresAuth: false },
-    children: [
-      { path: '', name: 'Markdown', component: viewLoaders['/markdown'] },
-    ],
+    children: [{ path: '', name: 'Markdown', component: viewLoaders['/markdown'] }],
   },
   {
     // Catch-all 404 fallback — declared LAST so it only matches when nothing else
@@ -188,41 +254,45 @@ const routes = [
     component: viewLoaders['/not-found'],
     meta: { requiresAuth: false },
   },
-]
+];
 
 const router = createRouter({
   history: createWebHistory(detectRouterBase()),
   routes,
-})
+});
 
 router.beforeEach(async (to, from, next) => {
   // Show the global progress bar across the guard's async work (ensureSession)
   // and the lazy route chunk download, so navigation never looks frozen.
-  routeStart()
-  const userStore = useUserStore()
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  routeStart();
+  const userStore = useUserStore();
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
   if (requiresAuth) {
-    if (!userStore.isAuthenticated()) return next('/login')
-    const ok = await userStore.ensureSession()
-    if (!ok) return next('/login')
+    if (!userStore.isAuthenticated()) return next('/login');
+    const ok = await userStore.ensureSession();
+    if (!ok) return next('/login');
   }
 
   if (to.path === '/login' && userStore.isAuthenticated()) {
-    return next(userStore.preferredHome)
+    return next(userStore.preferredHome);
   }
 
-  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
   if (requiresAdmin && !userStore.isAdmin) {
-    return next('/home')
+    return next('/home');
   }
 
-  return next()
-})
+  return next();
+});
 
 // Clear the bar once navigation settles (success or error). afterEach fires
 // after the matched component's lazy chunk has resolved, so the bar spans the
 // full download too. routeLoading is a boolean, so redirect chains can't leak it.
-router.afterEach(() => { routeDone() })
-router.onError(() => { routeDone() })
+router.afterEach(() => {
+  routeDone();
+});
+router.onError(() => {
+  routeDone();
+});
 
-export default router
+export default router;

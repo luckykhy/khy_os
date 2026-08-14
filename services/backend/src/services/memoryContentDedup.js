@@ -18,7 +18,9 @@
  */
 
 function _enabled() {
-  const v = String(process.env.KHY_MEMORY_CONTENT_DEDUP || '').trim().toLowerCase();
+  const v = String(process.env.KHY_MEMORY_CONTENT_DEDUP || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -42,7 +44,9 @@ function normalizeBody(text) {
 function bodiesEquivalent(a, b) {
   const na = normalizeBody(a);
   const nb = normalizeBody(b);
-  if (!na || !nb) return false;
+  if (!na || !nb) {
+    return false;
+  }
   return na === nb;
 }
 
@@ -56,15 +60,25 @@ function bodiesEquivalent(a, b) {
  * 关闭门控 / 入参非法 / 候选正文空 → 一律返回 null(不介入)。绝不抛。
  */
 function findContentDuplicate(candidate, existingList) {
-  if (!_enabled()) return null;
+  if (!_enabled()) {
+    return null;
+  }
   try {
-    if (!candidate || !Array.isArray(existingList)) return null;
+    if (!candidate || !Array.isArray(existingList)) {
+      return null;
+    }
     const body = normalizeBody(candidate.body);
-    if (!body) return null;
+    if (!body) {
+      return null;
+    }
     const selfName = candidate.filename || null;
     for (const m of existingList) {
-      if (!m || !m.filename) continue;
-      if (selfName && m.filename === selfName) continue; // 不与自身比
+      if (!m || !m.filename) {
+        continue;
+      }
+      if (selfName && m.filename === selfName) {
+        continue;
+      } // 不与自身比
       if (bodiesEquivalent(candidate.body, m.body)) {
         return { filename: m.filename, name: m.name };
       }

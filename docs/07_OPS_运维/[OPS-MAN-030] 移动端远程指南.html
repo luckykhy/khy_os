@@ -95,7 +95,7 @@ khy mobile</code></pre>
 <ul><li><strong>Chrome</strong>：效果最佳；支持添加到主屏幕</li><li><strong>Samsung Internet</strong>：完全支持</li><li><strong>键盘</strong>：虚拟键盘出现时自动调整布局</li></ul>
 <hr>
 <h2 id="安全说明">安全说明<a class="anchor" href="#安全说明" aria-label="锚点">#</a></h2>
-<blockquote><p>⚠️ <strong>务必先改默认管理员口令。</strong> bridge 首次启动会自动播种一个出厂默认管理员账号 <strong><code>admin05</code> / <code>012003</code></strong>（<code>services/backend/src/services/bridge/bridgeAuth.js</code>，无环境变量开关、非测试专用）。任何能访问到 <code>:9222</code> 的人都可能用它登录。<strong>第一次使用就请注册你自己的账号并停用/修改默认账号</strong>，公网部署尤其如此。</p></blockquote>
+<blockquote><p>⚠️ <strong>务必先改默认管理员口令。</strong> bridge 首次启动会自动播种一个出厂默认管理员账号（用户名与密码由 <code>services/backend/src/services/credentialGenerator.js</code> 动态生成：密码为机器指纹 + 随机熵的强密码，保存于数据目录 <code>.khy/credentials/default-admin.json</code>；用户名默认取 OS 用户名，也可用 <code>KHY_ADMIN_USERNAME</code> / <code>BRIDGE_DEFAULT_ADMIN_PASSWORD</code> 覆盖）。<strong>已移除历史固定的 <code>admin05 / 012003</code> 默认账号</strong>。任何能访问到 <code>:9222</code> 的人都可能用默认凭据登录，<strong>第一次使用就请注册你自己的账号并停用/修改默认账号</strong>，公网部署尤其如此。</p></blockquote>
 <ul><li><strong>密码</strong>使用 bcrypt（10 轮）哈希，并存储在服务器本地</li><li><strong>JWT 会话</strong>在 7 天后过期；token 存储在 <code>sessionStorage</code> 中（浏览器标签页关闭时清除）</li><li><strong>PIN 码 / 临时 token</strong>在 30 分钟后过期，仅用于管理员快速访问</li><li><strong>HTTPS</strong> 强烈建议用于公网部署，以加密流量</li><li>用户数据库位置：<code>backend/data/bridge-users.db</code></li></ul>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-029] 磁盘守卫-防膨胀机制.html"><div class="dir">← 上一篇</div><div class="ttl">磁盘守卫 — 防膨胀机制</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-031] 终端-tui-有框输入区重构方案-2026-05-31.html"><div class="dir">下一篇 →</div><div class="ttl">终端 TUI 有框输入区重构方案</div></a></nav>

@@ -20,7 +20,7 @@ function requestLogger(req, res, next) {
       duration,
       userId: req.user?.id,
       ip: req.ip,
-      requestId
+      requestId,
     });
   });
   next();

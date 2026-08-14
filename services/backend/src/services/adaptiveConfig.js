@@ -61,11 +61,15 @@ class FastModeManager {
   }
 
   /** @returns {boolean} 是否处于 active 状态 */
-  get isActive() { return this.state === FAST_MODE_STATE.ACTIVE; }
+  get isActive() {
+    return this.state === FAST_MODE_STATE.ACTIVE;
+  }
 
   /** @returns {number} 冷却剩余毫秒 (0 = 未在冷却) */
   get cooldownRemainingMs() {
-    if (this._state !== FAST_MODE_STATE.COOLDOWN) return 0;
+    if (this._state !== FAST_MODE_STATE.COOLDOWN) {
+      return 0;
+    }
     return Math.max(0, this._cooldownExpiresAt - Date.now());
   }
 
@@ -78,7 +82,9 @@ class FastModeManager {
    */
   recordError(errorType) {
     // 只关心 rate_limit 和 overloaded
-    if (errorType !== 'rate_limit' && errorType !== 'overloaded') return false;
+    if (errorType !== 'rate_limit' && errorType !== 'overloaded') {
+      return false;
+    }
 
     const now = Date.now();
 
@@ -89,7 +95,10 @@ class FastModeManager {
     this._lastErrorTs = now;
     this._consecutiveErrors++;
 
-    if (this._consecutiveErrors >= this._maxConsecutiveErrors && this._state === FAST_MODE_STATE.ACTIVE) {
+    if (
+      this._consecutiveErrors >= this._maxConsecutiveErrors &&
+      this._state === FAST_MODE_STATE.ACTIVE
+    ) {
       this._enterCooldown();
       return true;
     }
@@ -145,23 +154,33 @@ class FastModeManager {
     this._transitionTo(FAST_MODE_STATE.COOLDOWN);
 
     // 安全定时器: 冷却到期自动恢复 (避免惰性检查未触发)
-    if (this._cooldownTimer) clearTimeout(this._cooldownTimer);
+    if (this._cooldownTimer) {
+      clearTimeout(this._cooldownTimer);
+    }
     this._cooldownTimer = setTimeout(() => {
       this._cooldownTimer = null;
       if (this._state === FAST_MODE_STATE.COOLDOWN) {
         this._transitionTo(FAST_MODE_STATE.ACTIVE);
       }
     }, this._cooldownMs + 100);
-    if (this._cooldownTimer.unref) this._cooldownTimer.unref();
+    if (this._cooldownTimer.unref) {
+      this._cooldownTimer.unref();
+    }
   }
 
   /** @private */
   _transitionTo(newState) {
-    if (this._state === newState) return;
+    if (this._state === newState) {
+      return;
+    }
     const old = this._state;
     this._state = newState;
     for (const cb of this._stateChangeCallbacks) {
-      try { cb(newState, old); } catch { /* non-fatal */ }
+      try {
+        cb(newState, old);
+      } catch {
+        /* non-fatal */
+      }
     }
   }
 }
@@ -192,21 +211,21 @@ function detectTerminal() {
   }
 
   // 能力检测
-  const supportsColor = isTTY && (
-    env.FORCE_COLOR !== '0'
-    && (env.FORCE_COLOR
-      || env.COLORTERM === 'truecolor'
-      || env.COLORTERM === '256color'
-      || env.TERM_PROGRAM === 'iTerm.app'
-      || env.WT_SESSION
-      || /256color|truecolor|xterm|screen|tmux/i.test(env.TERM || ''))
-  );
+  const supportsColor =
+    isTTY &&
+    env.FORCE_COLOR !== '0' &&
+    (env.FORCE_COLOR ||
+      env.COLORTERM === 'truecolor' ||
+      env.COLORTERM === '256color' ||
+      env.TERM_PROGRAM === 'iTerm.app' ||
+      env.WT_SESSION ||
+      /256color|truecolor|xterm|screen|tmux/i.test(env.TERM || ''));
 
-  const supportsUnicode = !isRemote && (
-    process.platform !== 'win32'
-    || !!env.WT_SESSION
-    || /utf-?8/i.test(env.LANG || env.LC_ALL || '')
-  );
+  const supportsUnicode =
+    !isRemote &&
+    (process.platform !== 'win32' ||
+      !!env.WT_SESSION ||
+      /utf-?8/i.test(env.LANG || env.LC_ALL || ''));
 
   return { name, supportsColor: !!supportsColor, supportsUnicode, isRemote, isTTY };
 }
@@ -225,7 +244,7 @@ const DEFAULTS = Object.freeze({
   timeoutMs: 120_000,
   fastMode: true,
   displayUnicode: null, // null = auto-detect
-  displayColor: null,   // null = auto-detect
+  displayColor: null, // null = auto-detect
 });
 
 /**
@@ -244,24 +263,42 @@ function getEffectiveConfig(userConfig = {}, envOverrides = {}) {
 
   // Layer 2: 用户配置
   for (const [key, val] of Object.entries(userConfig)) {
-    if (val !== undefined && val !== null) config[key] = val;
+    if (val !== undefined && val !== null) {
+      config[key] = val;
+    }
   }
 
   // Layer 3: 环境变量 (最高优先级)
-  if (env.KHY_MAX_TOKENS) config.maxTokens = parseInt(env.KHY_MAX_TOKENS, 10) || config.maxTokens;
-  if (env.KHY_TEMPERATURE) config.temperature = parseFloat(env.KHY_TEMPERATURE) || config.temperature;
-  if (env.KHY_TIMEOUT_MS) config.timeoutMs = parseInt(env.KHY_TIMEOUT_MS, 10) || config.timeoutMs;
-  if (env.KHY_FAST_MODE !== undefined) config.fastMode = env.KHY_FAST_MODE !== '0' && env.KHY_FAST_MODE !== 'false';
-  if (env.KHY_STREAM_CHUNK_SIZE) config.streamChunkSize = parseInt(env.KHY_STREAM_CHUNK_SIZE, 10) || config.streamChunkSize;
+  if (env.KHY_MAX_TOKENS) {
+    config.maxTokens = parseInt(env.KHY_MAX_TOKENS, 10) || config.maxTokens;
+  }
+  if (env.KHY_TEMPERATURE) {
+    config.temperature = parseFloat(env.KHY_TEMPERATURE) || config.temperature;
+  }
+  if (env.KHY_TIMEOUT_MS) {
+    config.timeoutMs = parseInt(env.KHY_TIMEOUT_MS, 10) || config.timeoutMs;
+  }
+  if (env.KHY_FAST_MODE !== undefined) {
+    config.fastMode = env.KHY_FAST_MODE !== '0' && env.KHY_FAST_MODE !== 'false';
+  }
+  if (env.KHY_STREAM_CHUNK_SIZE) {
+    config.streamChunkSize = parseInt(env.KHY_STREAM_CHUNK_SIZE, 10) || config.streamChunkSize;
+  }
 
   // 显式环境覆盖
   for (const [key, val] of Object.entries(envOverrides)) {
-    if (val !== undefined && val !== null) config[key] = val;
+    if (val !== undefined && val !== null) {
+      config[key] = val;
+    }
   }
 
   // auto-detect 填充
-  if (config.displayUnicode === null) config.displayUnicode = terminal.supportsUnicode;
-  if (config.displayColor === null) config.displayColor = terminal.supportsColor;
+  if (config.displayUnicode === null) {
+    config.displayUnicode = terminal.supportsUnicode;
+  }
+  if (config.displayColor === null) {
+    config.displayColor = terminal.supportsColor;
+  }
 
   // 附加终端信息
   config._terminal = terminal;
@@ -280,7 +317,9 @@ function getEffectiveConfig(userConfig = {}, envOverrides = {}) {
  * @returns {object} 调整后的参数 (新对象)
  */
 function applyFastModeAdjustments(params, fastModeManager) {
-  if (!fastModeManager || fastModeManager.isActive) return params;
+  if (!fastModeManager || fastModeManager.isActive) {
+    return params;
+  }
 
   // cooldown: 保守参数
   return {
@@ -297,13 +336,17 @@ let _fastMode = null;
 
 /** 获取全局 FastMode 管理器单例 */
 function getFastModeManager() {
-  if (!_fastMode) _fastMode = new FastModeManager();
+  if (!_fastMode) {
+    _fastMode = new FastModeManager();
+  }
   return _fastMode;
 }
 
 /** 重置 (测试用) */
 function _resetForTest() {
-  if (_fastMode) _fastMode.shutdown();
+  if (_fastMode) {
+    _fastMode.shutdown();
+  }
   _fastMode = null;
 }
 

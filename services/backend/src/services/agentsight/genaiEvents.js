@@ -20,12 +20,12 @@ const { EventEmitter } = require('events');
 // ─── Event Types ────────────────────────────────────────────────────────────
 
 const EVENT_TYPES = {
-  LLM_CALL:    'gen_ai.llm.call',
-  TOOL_USE:    'gen_ai.tool.use',
-  AGENT_STEP:  'gen_ai.agent.step',
-  EMBEDDING:   'gen_ai.embedding',
-  RETRIEVAL:   'gen_ai.retrieval',
-  ERROR:       'gen_ai.error',
+  LLM_CALL: 'gen_ai.llm.call',
+  TOOL_USE: 'gen_ai.tool.use',
+  AGENT_STEP: 'gen_ai.agent.step',
+  EMBEDDING: 'gen_ai.embedding',
+  RETRIEVAL: 'gen_ai.retrieval',
+  ERROR: 'gen_ai.error',
 };
 
 // ─── Event Store ────────────────────────────────────────────────────────────
@@ -45,8 +45,8 @@ const _stats = {
   totalCost: 0,
   totalLatencyMs: 0,
   errors: 0,
-  byModel: {},        // model -> { calls, inputTokens, outputTokens, cost }
-  byTool: {},         // tool -> { calls, totalDuration }
+  byModel: {}, // model -> { calls, inputTokens, outputTokens, cost }
+  byTool: {}, // tool -> { calls, totalDuration }
 };
 
 // ─── Event Recording ────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const _stats = {
 /**
  * Record an LLM call event.
  * @param {object} params
- * @param {string} params.model - Model name (e.g., 'claude-sonnet-4-5-20250514')
+ * @param {string} params.model - Model name (e.g., 'claude-sonnet-4-6')
  * @param {string} [params.provider] - Provider (e.g., 'anthropic', 'openai')
  * @param {number} [params.inputTokens] - Prompt tokens
  * @param {number} [params.outputTokens] - Completion tokens
@@ -65,15 +65,19 @@ const _stats = {
  * @returns {object} The recorded event
  */
 function recordLLMCall(params) {
-  const event = _createEvent(EVENT_TYPES.LLM_CALL, {
-    'gen_ai.system': params.provider || 'unknown',
-    'gen_ai.request.model': params.model,
-    'gen_ai.usage.input_tokens': params.inputTokens || 0,
-    'gen_ai.usage.output_tokens': params.outputTokens || 0,
-    'gen_ai.response.latency_ms': params.latencyMs || 0,
-    'gen_ai.cost.usd': params.cost || 0,
-    'gen_ai.request.streaming': params.streaming || false,
-  }, params.traceId);
+  const event = _createEvent(
+    EVENT_TYPES.LLM_CALL,
+    {
+      'gen_ai.system': params.provider || 'unknown',
+      'gen_ai.request.model': params.model,
+      'gen_ai.usage.input_tokens': params.inputTokens || 0,
+      'gen_ai.usage.output_tokens': params.outputTokens || 0,
+      'gen_ai.response.latency_ms': params.latencyMs || 0,
+      'gen_ai.cost.usd': params.cost || 0,
+      'gen_ai.request.streaming': params.streaming || false,
+    },
+    params.traceId
+  );
 
   // Update stats
   _stats.llmCalls++;
@@ -107,13 +111,17 @@ function recordLLMCall(params) {
  * @returns {object} The recorded event
  */
 function recordToolUse(params) {
-  const event = _createEvent(EVENT_TYPES.TOOL_USE, {
-    'gen_ai.tool.name': params.toolName,
-    'gen_ai.tool.input': _truncate(params.input, 500),
-    'gen_ai.tool.output': _truncate(params.output, 500),
-    'gen_ai.tool.duration_ms': params.durationMs || 0,
-    'gen_ai.tool.success': params.success !== false,
-  }, params.traceId);
+  const event = _createEvent(
+    EVENT_TYPES.TOOL_USE,
+    {
+      'gen_ai.tool.name': params.toolName,
+      'gen_ai.tool.input': _truncate(params.input, 500),
+      'gen_ai.tool.output': _truncate(params.output, 500),
+      'gen_ai.tool.duration_ms': params.durationMs || 0,
+      'gen_ai.tool.success': params.success !== false,
+    },
+    params.traceId
+  );
 
   // Update stats
   _stats.toolUses++;
@@ -138,12 +146,16 @@ function recordToolUse(params) {
  * @returns {object} The recorded event
  */
 function recordAgentStep(params) {
-  const event = _createEvent(EVENT_TYPES.AGENT_STEP, {
-    'gen_ai.agent.session_id': params.sessionId,
-    'gen_ai.agent.step_index': params.stepIndex,
-    'gen_ai.agent.action': params.action,
-    'gen_ai.agent.reasoning': _truncate(params.reasoning, 300),
-  }, params.traceId);
+  const event = _createEvent(
+    EVENT_TYPES.AGENT_STEP,
+    {
+      'gen_ai.agent.session_id': params.sessionId,
+      'gen_ai.agent.step_index': params.stepIndex,
+      'gen_ai.agent.action': params.action,
+      'gen_ai.agent.reasoning': _truncate(params.reasoning, 300),
+    },
+    params.traceId
+  );
 
   _stats.agentSteps++;
   return event;
@@ -158,10 +170,14 @@ function recordAgentStep(params) {
  * @returns {object}
  */
 function recordError(params) {
-  const event = _createEvent(EVENT_TYPES.ERROR, {
-    'gen_ai.error.source': params.source,
-    'gen_ai.error.message': _truncate(params.message, 500),
-  }, params.traceId);
+  const event = _createEvent(
+    EVENT_TYPES.ERROR,
+    {
+      'gen_ai.error.source': params.source,
+      'gen_ai.error.message': _truncate(params.message, 500),
+    },
+    params.traceId
+  );
 
   _stats.errors++;
   return event;
@@ -182,13 +198,13 @@ function getEvents(filter = {}) {
   let result = [..._events];
 
   if (filter.type) {
-    result = result.filter(e => e.type === filter.type);
+    result = result.filter((e) => e.type === filter.type);
   }
   if (filter.traceId) {
-    result = result.filter(e => e.traceId === filter.traceId);
+    result = result.filter((e) => e.traceId === filter.traceId);
   }
   if (filter.since) {
-    result = result.filter(e => e.timestamp >= filter.since);
+    result = result.filter((e) => e.timestamp >= filter.since);
   }
 
   const limit = filter.limit || 50;
@@ -221,10 +237,16 @@ function createEventStream() {
 function reset() {
   _events.length = 0;
   Object.assign(_stats, {
-    llmCalls: 0, toolUses: 0, agentSteps: 0,
-    totalInputTokens: 0, totalOutputTokens: 0,
-    totalCost: 0, totalLatencyMs: 0, errors: 0,
-    byModel: {}, byTool: {},
+    llmCalls: 0,
+    toolUses: 0,
+    agentSteps: 0,
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCost: 0,
+    totalLatencyMs: 0,
+    errors: 0,
+    byModel: {},
+    byTool: {},
   });
 }
 
@@ -253,7 +275,9 @@ function _createEvent(type, attributes, traceId) {
 }
 
 function _truncate(str, maxLen) {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
   return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
 }
 

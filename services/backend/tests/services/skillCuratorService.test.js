@@ -1,42 +1,45 @@
-'use strict';
+﻿'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// The curator writes to ~/.khyquant/growth/skill_usage.json.
-// We back up and restore after tests.
-const REAL_USAGE_FILE = path.join(os.homedir(), '.khyquant', 'growth', 'skill_usage.json');
-const BACKUP_FILE = REAL_USAGE_FILE + '.test-backup';
-
 describe('skillCuratorService', () => {
   let curator;
+  // The curator resolves its usage file via getAppHome() (isolated data home
+  // under jest) 鈥?use the exported USAGE_FILE rather than a hardcoded
+  // ~/.khyquant/growth path so tests never touch the real user home.
+  let USAGE_FILE;
+  let BACKUP_FILE;
 
   beforeAll(() => {
-    // Backup existing data if present
-    if (fs.existsSync(REAL_USAGE_FILE)) {
-      fs.copyFileSync(REAL_USAGE_FILE, BACKUP_FILE);
-    }
+    // Not available until the module is required; resolved per-test below.
   });
 
   afterAll(() => {
     // Restore backup
-    if (fs.existsSync(BACKUP_FILE)) {
-      fs.copyFileSync(BACKUP_FILE, REAL_USAGE_FILE);
+    if (BACKUP_FILE && fs.existsSync(BACKUP_FILE)) {
+      fs.copyFileSync(BACKUP_FILE, USAGE_FILE);
       fs.unlinkSync(BACKUP_FILE);
-    } else if (fs.existsSync(REAL_USAGE_FILE)) {
-      fs.unlinkSync(REAL_USAGE_FILE);
+    } else if (USAGE_FILE && fs.existsSync(USAGE_FILE)) {
+      fs.unlinkSync(USAGE_FILE);
     }
   });
 
   beforeEach(() => {
     jest.resetModules();
     curator = require('../../src/services/skillCuratorService');
+    USAGE_FILE = curator.USAGE_FILE;
+    BACKUP_FILE = USAGE_FILE + '.test-backup';
+    // Backup existing data if present
+    if (fs.existsSync(USAGE_FILE)) {
+      fs.copyFileSync(USAGE_FILE, BACKUP_FILE);
+    }
     // Start clean
     curator._resetForTest();
   });
 
-  // ── recordUsage ───────────────────────────────────────────────────
+  // 鈹€鈹€ recordUsage 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
   test('recordUsage creates entry and increments use_count', () => {
     curator.recordUsage('test-skill', 'user');
@@ -55,9 +58,9 @@ describe('skillCuratorService', () => {
     curator.recordUsage('stale-skill', 'user');
 
     // Manually set state to stale
-    const data = JSON.parse(fs.readFileSync(REAL_USAGE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     data.skills['stale-skill'].state = 'stale';
-    fs.writeFileSync(REAL_USAGE_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2));
 
     curator.recordUsage('stale-skill', 'user');
     const usage = curator.getSkillUsage('stale-skill');
@@ -69,7 +72,7 @@ describe('skillCuratorService', () => {
     expect(curator.getSkillUsage('nonexistent')).toBeNull();
   });
 
-  // ── Pin/Unpin ────────────────────────────────────────────────────
+  // 鈹€鈹€ Pin/Unpin 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
   test('pinSkill and unpinSkill', () => {
     curator.recordUsage('pin-test', 'user');
@@ -85,15 +88,15 @@ describe('skillCuratorService', () => {
     expect(curator.pinSkill('nope')).toBe(false);
   });
 
-  // ── runCurator ───────────────────────────────────────────────────
+  // 鈹€鈹€ runCurator 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
-  test('runCurator transitions active→stale after staleAfterDays', () => {
+  test('runCurator transitions active鈫抯tale after staleAfterDays', () => {
     curator.recordUsage('old-skill', 'user');
 
     // Backdate last_activity to 31 days ago
-    const data = JSON.parse(fs.readFileSync(REAL_USAGE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     data.skills['old-skill'].last_activity_at = new Date(Date.now() - 31 * 86_400_000).toISOString();
-    fs.writeFileSync(REAL_USAGE_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2));
 
     const allSkills = [{ name: 'old-skill', source: 'user', dir: '/tmp/fake' }];
     const result = curator.runCurator(allSkills);
@@ -106,9 +109,9 @@ describe('skillCuratorService', () => {
   test('runCurator skips built-in skills', () => {
     curator.recordUsage('builtin-skill', 'built-in');
 
-    const data = JSON.parse(fs.readFileSync(REAL_USAGE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     data.skills['builtin-skill'].last_activity_at = new Date(Date.now() - 90 * 86_400_000).toISOString();
-    fs.writeFileSync(REAL_USAGE_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2));
 
     const allSkills = [{ name: 'builtin-skill', source: 'built-in', dir: '/tmp/fake' }];
     const result = curator.runCurator(allSkills);
@@ -121,9 +124,9 @@ describe('skillCuratorService', () => {
     curator.recordUsage('pinned-skill', 'user');
     curator.pinSkill('pinned-skill');
 
-    const data = JSON.parse(fs.readFileSync(REAL_USAGE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     data.skills['pinned-skill'].last_activity_at = new Date(Date.now() - 90 * 86_400_000).toISOString();
-    fs.writeFileSync(REAL_USAGE_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2));
 
     const allSkills = [{ name: 'pinned-skill', source: 'user', dir: '/tmp/fake' }];
     const result = curator.runCurator(allSkills);
@@ -137,15 +140,15 @@ describe('skillCuratorService', () => {
     expect(result.summary).toContain('No lifecycle transitions');
   });
 
-  // ── getCuratorStatus ──────────────────────────────────────────────
+  // 鈹€鈹€ getCuratorStatus 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
   test('getCuratorStatus counts states correctly', () => {
     curator.recordUsage('a-active', 'user');
     curator.recordUsage('b-stale', 'user');
 
-    const data = JSON.parse(fs.readFileSync(REAL_USAGE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     data.skills['b-stale'].state = 'stale';
-    fs.writeFileSync(REAL_USAGE_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2));
 
     const allSkills = [
       { name: 'a-active', source: 'user' },
@@ -159,7 +162,7 @@ describe('skillCuratorService', () => {
     expect(status.staleList).toContain('b-stale');
   });
 
-  // ── Config ────────────────────────────────────────────────────────
+  // 鈹€鈹€ Config 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
   test('DEFAULT_CONFIG has expected shape', () => {
     expect(curator.DEFAULT_CONFIG.staleAfterDays).toBe(30);

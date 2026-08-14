@@ -20,7 +20,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function fableVoiceEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_FABLE_VOICE;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return true;

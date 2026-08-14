@@ -156,7 +156,7 @@ test('反漂移：每条 CRITICAL_BUNDLE_PATHS 都被 pip 或 npm 权威清单�
 });
 
 test('doc 一致性：OPS-MAN-069 落盘 == 生成器输出(防手改漂移)', () => {
-  const { buildDoc, DOC_PATH } = require('../verify-install');
+  const { buildDoc, DOC_PATH } = require('../install/verify-install');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(
     onDisk,

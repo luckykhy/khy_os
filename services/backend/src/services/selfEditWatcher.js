@@ -42,27 +42,41 @@ let _pollTimer = null;
 const _fileState = new Map();
 
 function _sha256(buf) {
-  try { return crypto.createHash('sha256').update(buf).digest('hex'); } catch { return ''; }
+  try {
+    return crypto.createHash('sha256').update(buf).digest('hex');
+  } catch {
+    return '';
+  }
 }
 
 /** 读文件哈希;失败 → ''(当作变更/无法判定,交编排 fail-soft)。 */
 function _hashFile(abs) {
-  try { return _sha256(fs.readFileSync(abs)); } catch { return ''; }
+  try {
+    return _sha256(fs.readFileSync(abs));
+  } catch {
+    return '';
+  }
 }
 
 /** 处理一次(去抖后)文件变更:去重 → §4 跳过工具写 → 编排 → 投递。永不抛。 */
 function _handleChange(abs) {
   try {
     // §4:khy 工具刚写过 → 工具路径已反馈,跳过(避免双重提示)。
-    if (svc.wasRecentlyToolEdited(abs)) return;
+    if (svc.wasRecentlyToolEdited(abs)) {
+      return;
+    }
     // 内容哈希去重:元数据 touch / 无实质变更 → 静默。
     const st = _fileState.get(abs) || {};
     const h = _hashFile(abs);
-    if (h && st.hash === h) return;
+    if (h && st.hash === h) {
+      return;
+    }
     st.hash = h;
     _fileState.set(abs, st);
     const adv = svc.emitForPath(abs, { cwd: _root });
-    if (adv && typeof _onAdvisory === 'function') _onAdvisory(adv);
+    if (adv && typeof _onAdvisory === 'function') {
+      _onAdvisory(adv);
+    }
   } catch {
     /* fail-open:单次处理错误绝不影响监视 */
   }
@@ -71,7 +85,9 @@ function _handleChange(abs) {
 /** 去抖包装:同一文件 1500ms 内多次事件合并为一次处理。 */
 function _debouncedChange(abs) {
   const st = _fileState.get(abs) || {};
-  if (st.debounce) clearTimeout(st.debounce);
+  if (st.debounce) {
+    clearTimeout(st.debounce);
+  }
   st.debounce = setTimeout(() => {
     const cur = _fileState.get(abs) || {};
     cur.debounce = null;
@@ -79,7 +95,9 @@ function _debouncedChange(abs) {
     _handleChange(abs);
   }, DEBOUNCE_MS);
   // setTimeout 不 ref 住进程退出。
-  if (st.debounce && typeof st.debounce.unref === 'function') st.debounce.unref();
+  if (st.debounce && typeof st.debounce.unref === 'function') {
+    st.debounce.unref();
+  }
   _fileState.set(abs, st);
 }
 
@@ -88,22 +106,40 @@ function _watchDir(absDir) {
   let watcher = null;
   try {
     watcher = fs.watch(absDir, { persistent: false, recursive: true }, (_event, filename) => {
-      if (!filename) return;
+      if (!filename) {
+        return;
+      }
       try {
         const abs = path.resolve(absDir, filename);
         const rel = svc.toRepoRel(abs, _root);
-        if (!rel) return;
+        if (!rel) {
+          return;
+        }
         // 只对镜像源文件反应(排除 bundled/、测试文件等)。
-        if (!leaf.isMirroredSourcePath(rel).mirrored) return;
+        if (!leaf.isMirroredSourcePath(rel).mirrored) {
+          return;
+        }
         _debouncedChange(abs);
-      } catch { /* per-event fail-open */ }
+      } catch {
+        /* per-event fail-open */
+      }
     });
     watcher.on('error', () => {
-      try { watcher && watcher.close(); } catch { /* ignore */ }
+      try {
+        watcher && watcher.close();
+      } catch {
+        /* ignore */
+      }
       _watchers = _watchers.filter((w) => w !== watcher);
       // 5s 后重建(仍在运行时)。
-      const t = setTimeout(() => { if (_started) _addWatcher(absDir); }, 5000);
-      if (typeof t.unref === 'function') t.unref();
+      const t = setTimeout(() => {
+        if (_started) {
+          _addWatcher(absDir);
+        }
+      }, 5000);
+      if (typeof t.unref === 'function') {
+        t.unref();
+      }
     });
     _watchers.push(watcher);
   } catch {
@@ -113,23 +149,35 @@ function _watchDir(absDir) {
 
 function _addWatcher(absDir) {
   try {
-    if (fs.existsSync(absDir)) _watchDir(absDir);
-  } catch { /* ignore */ }
+    if (fs.existsSync(absDir)) {
+      _watchDir(absDir);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 轮询兜底:覆盖 NFS / 容器 / fs.watch 盲区。仅对已知 state 的文件重算哈希。 */
 function _startPoll() {
   _pollTimer = setInterval(() => {
-    if (!_started) return;
+    if (!_started) {
+      return;
+    }
     try {
       for (const abs of [..._fileState.keys()]) {
         const st = _fileState.get(abs) || {};
         const h = _hashFile(abs);
-        if (h && st.hash && st.hash !== h) _debouncedChange(abs);
+        if (h && st.hash && st.hash !== h) {
+          _debouncedChange(abs);
+        }
       }
-    } catch { /* poll fail-open */ }
+    } catch {
+      /* poll fail-open */
+    }
   }, POLL_INTERVAL_MS);
-  if (_pollTimer && typeof _pollTimer.unref === 'function') _pollTimer.unref();
+  if (_pollTimer && typeof _pollTimer.unref === 'function') {
+    _pollTimer.unref();
+  }
 }
 
 /**
@@ -141,15 +189,25 @@ function _startPoll() {
  */
 function start(p = {}) {
   try {
-    if (_started) return true;
-    if (!leaf.selfEditAdvisoryEnabled(process.env)) return false; // 总闸关
-    if (!leaf.selfEditWatchEnabled(process.env)) return false;    // 子闸关
+    if (_started) {
+      return true;
+    }
+    if (!leaf.selfEditAdvisoryEnabled(process.env)) {
+      return false;
+    } // 总闸关
+    if (!leaf.selfEditWatchEnabled(process.env)) {
+      return false;
+    } // 子闸关
     const root = p && p.root;
-    if (!root) return false;
+    if (!root) {
+      return false;
+    }
     _root = root;
     _onAdvisory = typeof p.onAdvisory === 'function' ? p.onAdvisory : null;
     _started = true;
-    for (const rel of WATCH_DIRS) _addWatcher(path.join(root, rel));
+    for (const rel of WATCH_DIRS) {
+      _addWatcher(path.join(root, rel));
+    }
     _startPoll();
     return true;
   } catch {
@@ -162,16 +220,33 @@ function start(p = {}) {
 function stop() {
   try {
     _started = false;
-    for (const w of _watchers) { try { w.close(); } catch { /* ignore */ } }
+    for (const w of _watchers) {
+      try {
+        w.close();
+      } catch {
+        /* ignore */
+      }
+    }
     _watchers = [];
-    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    if (_pollTimer) {
+      clearInterval(_pollTimer);
+      _pollTimer = null;
+    }
     for (const st of _fileState.values()) {
-      if (st && st.debounce) { try { clearTimeout(st.debounce); } catch { /* ignore */ } }
+      if (st && st.debounce) {
+        try {
+          clearTimeout(st.debounce);
+        } catch {
+          /* ignore */
+        }
+      }
     }
     _fileState.clear();
     _root = null;
     _onAdvisory = null;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function isRunning() {

@@ -28,7 +28,9 @@
  */
 
 function normalizeAlnumKey(name) {
-  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
 }
 
 module.exports = normalizeAlnumKey;

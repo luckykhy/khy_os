@@ -15,19 +15,25 @@ const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
 let _cache = null;
 
 function loadTemplates() {
-  if (_cache) return _cache;
+  if (_cache) {
+    return _cache;
+  }
   const templates = [];
   try {
-    const files = fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(TEMPLATES_DIR).filter((f) => f.endsWith('.json'));
     for (const file of files) {
       try {
         const raw = fs.readFileSync(path.join(TEMPLATES_DIR, file), 'utf-8');
         const tmpl = JSON.parse(raw);
         tmpl._filename = file;
         templates.push(tmpl);
-      } catch { /* skip invalid templates */ }
+      } catch {
+        /* skip invalid templates */
+      }
     }
-  } catch { /* templates dir may not exist */ }
+  } catch {
+    /* templates dir may not exist */
+  }
   _cache = templates;
   return templates;
 }
@@ -42,11 +48,15 @@ function clearCache() {
  * @returns {object|null} matched template or null
  */
 function matchTemplate(userText) {
-  if (!userText) return null;
+  if (!userText) {
+    return null;
+  }
   const lower = String(userText).toLowerCase();
   const templates = loadTemplates();
   for (const tmpl of templates) {
-    if (!Array.isArray(tmpl.triggers)) continue;
+    if (!Array.isArray(tmpl.triggers)) {
+      continue;
+    }
     for (const trigger of tmpl.triggers) {
       if (lower.includes(String(trigger).toLowerCase())) {
         return tmpl;
@@ -64,9 +74,11 @@ function matchTemplate(userText) {
  */
 function renderTemplate(templateName, variables = {}) {
   const templates = loadTemplates();
-  const tmpl = templates.find(t => t.name === templateName);
+  const tmpl = templates.find((t) => t.name === templateName);
   if (!tmpl) {
-    throw new Error(`Template not found: ${templateName}. Available: ${templates.map(t => t.name).join(', ')}`);
+    throw new Error(
+      `Template not found: ${templateName}. Available: ${templates.map((t) => t.name).join(', ')}`
+    );
   }
 
   // Merge user variables with defaults
@@ -78,7 +90,9 @@ function renderTemplate(templateName, variables = {}) {
   }
   // Merge any extra user variables not in schema
   for (const [key, val] of Object.entries(variables)) {
-    if (!(key in vars)) vars[key] = val;
+    if (!(key in vars)) {
+      vars[key] = val;
+    }
   }
 
   // Compute derived variables
@@ -96,7 +110,7 @@ function renderTemplate(templateName, variables = {}) {
   };
 
   const directories = (tmpl.directories || []).map(render);
-  const files = (tmpl.files || []).map(f => ({
+  const files = (tmpl.files || []).map((f) => ({
     path: render(f.path),
     content: render(f.content || ''),
   }));
@@ -115,7 +129,7 @@ function renderTemplate(templateName, variables = {}) {
  * @returns {Array<{name: string, description: string, triggers: string[], variables: object}>}
  */
 function listTemplates() {
-  return loadTemplates().map(t => ({
+  return loadTemplates().map((t) => ({
     name: t.name,
     description: t.description,
     triggers: t.triggers || [],

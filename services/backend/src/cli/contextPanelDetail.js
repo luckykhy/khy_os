@@ -45,7 +45,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function contextPanelDetailEnabled(env = process.env) {
   const raw = env && env.KHY_CONTEXT_PANEL_DETAIL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -62,15 +64,21 @@ const _nonNegInt = require('../utils/toNonNegInt');
  * @returns {string[]}
  */
 function buildContextDetailLines(stats, env = process.env) {
-  if (!contextPanelDetailEnabled(env)) return [];
+  if (!contextPanelDetailEnabled(env)) {
+    return [];
+  }
   const s = stats || {};
   const lines = [];
 
   const model = s.model == null ? '' : String(s.model).trim();
-  if (model) lines.push(`Model: ${model}`);
+  if (model) {
+    lines.push(`Model: ${model}`);
+  }
 
   const requests = _nonNegInt(s.requestCount);
-  if (requests > 0) lines.push(`Requests: ${requests}`);
+  if (requests > 0) {
+    lines.push(`Requests: ${requests}`);
+  }
 
   // 诚实标注上限来源:兑现 ctxWindowStats 文档承诺(adapter 真值 / env 回退)。
   // 未知值(既非 adapter 也非 env-fallback)→ 不臆造,省略此行。
@@ -100,12 +108,16 @@ function buildContextDetailLines(stats, env = process.env) {
  * @returns {string[]}
  */
 function buildContextIdentityLines(stats, env = process.env) {
-  if (!contextPanelDetailEnabled(env)) return [];
+  if (!contextPanelDetailEnabled(env)) {
+    return [];
+  }
   const s = stats || {};
   const lines = [];
 
   const model = s.model == null ? '' : String(s.model).trim();
-  if (model) lines.push(`模型: ${model}`);
+  if (model) {
+    lines.push(`模型: ${model}`);
+  }
 
   // 上限来源诚实标注——与 buildContextDetailLines 逐字复用(单一真源),中文面同样兑现
   // ctxWindowStats 文档承诺(adapter 真值 / env 回退)。未知值 → 省略,不臆造。

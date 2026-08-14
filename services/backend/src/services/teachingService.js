@@ -21,8 +21,12 @@ const TARGET_ASSET = Object.freeze({
 /** Render the appended line for a given target. */
 function _formatLine(target, content, stamp) {
   const text = String(content || '').trim();
-  if (target === 'principles') return `- ${text}`;
-  if (target === 'persona') return text;
+  if (target === 'principles') {
+    return `- ${text}`;
+  }
+  if (target === 'persona') {
+    return text;
+  }
   // memory: timestamped pointer line
   return `- [${stamp}] ${text}`;
 }
@@ -44,12 +48,19 @@ function captureTeaching(opts = {}) {
   }
 
   let svc;
-  try { svc = require('./agentFs/agentFsService'); }
-  catch { return { captured: false, reason: 'agentfs-unavailable' }; }
+  try {
+    svc = require('./agentFs/agentFsService');
+  } catch {
+    return { captured: false, reason: 'agentfs-unavailable' };
+  }
 
   const companionId = opts.companionId || svc.getActiveAgentId();
-  if (!companionId) return { captured: false, reason: 'no-active-companion' };
-  if (!svc.getAgent(companionId)) return { captured: false, reason: 'companion-missing' };
+  if (!companionId) {
+    return { captured: false, reason: 'no-active-companion' };
+  }
+  if (!svc.getAgent(companionId)) {
+    return { captured: false, reason: 'companion-missing' };
+  }
 
   const content = detection.content || opts.text || '';
   const stamp = (opts.stamp || new Date().toISOString()).slice(0, 10);
@@ -60,7 +71,9 @@ function captureTeaching(opts = {}) {
   const base = existing.replace(/\s*$/, '');
   const next = `${base}\n${line}\n`;
 
-  svc.writeAsset(companionId, rel, next, { message: `teach(${target}): ${String(content).slice(0, 60)}` });
+  svc.writeAsset(companionId, rel, next, {
+    message: `teach(${target}): ${String(content).slice(0, 60)}`,
+  });
 
   return { captured: true, companionId, target, asset: rel, line };
 }

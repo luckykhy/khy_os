@@ -1,10 +1,10 @@
 'use strict';
 
-const constants = require('./m1Constants');
 const codec = require('./ipcCodec');
-const bridge = require('./moonbitHostBridge');
-const loopback = require('./loopbackTransport');
 const khySysHost = require('./khySysHost');
+const loopback = require('./loopbackTransport');
+const constants = require('./m1Constants');
+const bridge = require('./moonbitHostBridge');
 
 module.exports = {
   ...constants,

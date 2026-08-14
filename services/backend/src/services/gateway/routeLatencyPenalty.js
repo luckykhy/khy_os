@@ -37,11 +37,17 @@ function isRouteLatencyAwareEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_ROUTE_LATENCY_AWARE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e && e.KHY_ROUTE_LATENCY_AWARE;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -52,11 +58,19 @@ function isRouteLatencyAwareEnabled(env = process.env) {
 function _envIntBounded(env, name, fallback, min, max) {
   try {
     const raw = env && env[name];
-    if (raw === undefined || raw === null || String(raw).trim() === '') return fallback;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return fallback;
+    }
     const n = parseInt(String(raw), 10);
-    if (!Number.isFinite(n)) return fallback;
-    if (n < min) return min;
-    if (n > max) return max;
+    if (!Number.isFinite(n)) {
+      return fallback;
+    }
+    if (n < min) {
+      return min;
+    }
+    if (n > max) {
+      return max;
+    }
     return n;
   } catch {
     return fallback;
@@ -66,11 +80,19 @@ function _envIntBounded(env, name, fallback, min, max) {
 function _envFloatBounded(env, name, fallback, min, max) {
   try {
     const raw = env && env[name];
-    if (raw === undefined || raw === null || String(raw).trim() === '') return fallback;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return fallback;
+    }
     const n = Number(raw);
-    if (!Number.isFinite(n)) return fallback;
-    if (n < min) return min;
-    if (n > max) return max;
+    if (!Number.isFinite(n)) {
+      return fallback;
+    }
+    if (n < min) {
+      return min;
+    }
+    if (n > max) {
+      return max;
+    }
     return n;
   } catch {
     return fallback;
@@ -108,16 +130,28 @@ function classifyLatency(stats, env = process.env) {
     const ewmaMs = Number(s.ewmaMs);
     const ageMs = Number(s.ageMs);
     // 样本不足 / 无有效 EWMA / 陈旧 → 不判罚。
-    if (!Number.isFinite(samples) || samples < t.minSamples) return 'insufficient_data';
-    if (!Number.isFinite(ewmaMs) || ewmaMs <= 0) return 'insufficient_data';
-    if (Number.isFinite(ageMs) && ageMs > t.staleMs) return 'insufficient_data';
+    if (!Number.isFinite(samples) || samples < t.minSamples) {
+      return 'insufficient_data';
+    }
+    if (!Number.isFinite(ewmaMs) || ewmaMs <= 0) {
+      return 'insufficient_data';
+    }
+    if (Number.isFinite(ageMs) && ageMs > t.staleMs) {
+      return 'insufficient_data';
+    }
     // 保证阈值单调(坏 env 可能给出乱序)——按升序取有效边界。
     const fast = t.fastMs;
     const slow = Math.max(t.slowMs, fast);
     const verySlow = Math.max(t.verySlowMs, slow);
-    if (ewmaMs < fast) return 'fast';
-    if (ewmaMs < slow) return 'typical';
-    if (ewmaMs < verySlow) return 'slow';
+    if (ewmaMs < fast) {
+      return 'fast';
+    }
+    if (ewmaMs < slow) {
+      return 'typical';
+    }
+    if (ewmaMs < verySlow) {
+      return 'slow';
+    }
     return 'very_slow';
   } catch {
     return 'insufficient_data';
@@ -133,14 +167,21 @@ function classifyLatency(stats, env = process.env) {
  */
 function latencyPenalty(stats, env = process.env) {
   try {
-    if (!isRouteLatencyAwareEnabled(env)) return 0;
+    if (!isRouteLatencyAwareEnabled(env)) {
+      return 0;
+    }
     const s = stats && typeof stats === 'object' ? stats : {};
     const t = _tuning(env);
     const verdict = classifyLatency(s, env);
     let penalty = 0;
-    if (verdict === 'slow') penalty = t.slowPenalty;
-    else if (verdict === 'very_slow') penalty = t.verySlowPenalty;
-    if (penalty <= 0) return 0;
+    if (verdict === 'slow') {
+      penalty = t.slowPenalty;
+    } else if (verdict === 'very_slow') {
+      penalty = t.verySlowPenalty;
+    }
+    if (penalty <= 0) {
+      return 0;
+    }
     // 硬顶:ceiling-1。ceiling 非有限正数 → 不施加额外顶(仅用各档罚分)。
     const ceiling = Number(s.ceiling);
     if (Number.isFinite(ceiling) && ceiling > 0) {
@@ -158,8 +199,12 @@ const _VERDICT_LABEL = Object.freeze({ slow: '较慢', very_slow: '很慢' });
 
 function _formatMs(ms) {
   const n = Number(ms);
-  if (!Number.isFinite(n) || n <= 0) return '未知';
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}s`;
+  if (!Number.isFinite(n) || n <= 0) {
+    return '未知';
+  }
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(1)}s`;
+  }
   return `${Math.round(n)}ms`;
 }
 
@@ -174,9 +219,13 @@ function buildLatencyReason(stats, opts = {}) {
     const env = (opts && opts.env) || process.env;
     const ceiling = opts && opts.ceiling;
     const s = stats && typeof stats === 'object' ? { ...stats } : {};
-    if (ceiling !== undefined) s.ceiling = ceiling;
+    if (ceiling !== undefined) {
+      s.ceiling = ceiling;
+    }
     const penalty = latencyPenalty(s, env);
-    if (penalty <= 0) return null;
+    if (penalty <= 0) {
+      return null;
+    }
     const verdict = classifyLatency(s, env);
     const label = _VERDICT_LABEL[verdict] || '较慢';
     return {

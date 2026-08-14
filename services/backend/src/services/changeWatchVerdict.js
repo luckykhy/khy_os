@@ -32,9 +32,11 @@ const txn = require('./selfRepairTransaction');
 const OFF = ['0', 'false', 'off', 'no'];
 
 /** 是否启用「改动反馈」(门控关 → watcher 不产生任何反馈)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const raw = env && env.KHY_CHANGE_WATCH_VERDICT;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
@@ -135,21 +137,31 @@ function verdictSignature(verdict) {
  */
 function shouldSpeak(lastSpokenSignature, verdict) {
   const sig = verdictSignature(verdict);
-  if (!lastSpokenSignature) return true;
+  if (!lastSpokenSignature) {
+    return true;
+  }
   return sig !== String(lastSpokenSignature);
 }
 
 function _fileList(files, max = 8) {
-  const arr = (Array.isArray(files) ? files : []).map((f) => String(f || '').trim()).filter(Boolean);
-  if (arr.length === 0) return '';
-  if (arr.length <= max) return arr.join('、');
+  const arr = (Array.isArray(files) ? files : [])
+    .map((f) => String(f || '').trim())
+    .filter(Boolean);
+  if (arr.length === 0) {
+    return '';
+  }
+  if (arr.length <= max) {
+    return arr.join('、');
+  }
   return arr.slice(0, max).join('、') + ` 等 ${arr.length} 个文件`;
 }
 
 function _bullets(items, max = 6) {
   const arr = (Array.isArray(items) ? items : []).filter(Boolean);
   const shown = arr.slice(0, max).map((s) => `  - ${String(s)}`);
-  if (arr.length > max) shown.push(`  - …另有 ${arr.length - max} 条`);
+  if (arr.length > max) {
+    shown.push(`  - …另有 ${arr.length - max} 条`);
+  }
   return shown.join('\n');
 }
 

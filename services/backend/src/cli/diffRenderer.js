@@ -4,12 +4,12 @@
  * Renders unified diffs and structured diffs with Claude Code's exact
  * background colors and optional word-level highlighting.
  */
-const { c, THEME } = require('./renderTheme');
 // 整宽色条收敛到单一真源 cli/diffFullWidth.js(对齐 CC formatDiff:add/remove 行
 // 背景补尾随空格铺到终端右缘;门控 KHY_DIFF_FULL_WIDTH 默认开,关→不补=字节回退)。
 // displayWidth 是 CJK 感知的显示宽度 SSOT(cli/formatters.js),用于精确测量已用宽度。
 const { diffFullWidthEnabled, diffRowPadCount } = require('./diffFullWidth');
 const { displayWidth } = require('./formatters');
+const { c, THEME } = require('./renderTheme');
 
 const DIFF_CONTEXT_LINES = 3;
 
@@ -22,7 +22,9 @@ function _terminalWidth() {
 // 给一行「纯文本(无 ANSI)的已用宽度」补足到整宽的尾随空格串;门控关 → 空串。
 // call-site 把返回串接在该行 backgroundColor 跨度内,使色条铺到右缘。
 function _padToFull(usedWidth, env) {
-  if (!diffFullWidthEnabled(env || process.env)) return '';
+  if (!diffFullWidthEnabled(env || process.env)) {
+    return '';
+  }
   return ' '.repeat(diffRowPadCount(usedWidth, _terminalWidth()));
 }
 
@@ -32,13 +34,17 @@ function _padToFull(usedWidth, env) {
 // 逐字节回退历史单区块渲染(把首末改动间的未改行全当 churn 重绘并虚报 ±计数)。
 const _CLASSIC_DIFF_HUNKS_FALSY = new Set(['0', 'false', 'off', 'no']);
 function classicDiffHunksEnabled(env = process.env) {
-  const flag = String((env && env.KHY_CLASSIC_DIFF_HUNKS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_CLASSIC_DIFF_HUNKS) || '')
+    .trim()
+    .toLowerCase();
   return !_CLASSIC_DIFF_HUNKS_FALSY.has(flag);
 }
 
 function splitDiffLines(text) {
   const source = String(text ?? '');
-  if (!source) return [];
+  if (!source) {
+    return [];
+  }
   const lines = source.split('\n');
   if (lines.length > 0 && lines[lines.length - 1] === '') {
     lines.pop();
@@ -52,16 +58,18 @@ function computeStructuredDiffStats(oldContent, newContent) {
 
   const commonPrefixLen = (() => {
     let k = 0;
-    while (k < oldLines.length && k < newLines.length && oldLines[k] === newLines[k]) k++;
+    while (k < oldLines.length && k < newLines.length && oldLines[k] === newLines[k]) {
+      k++;
+    }
     return k;
   })();
 
   const commonSuffixLen = (() => {
     let k = 0;
     while (
-      k < (oldLines.length - commonPrefixLen)
-      && k < (newLines.length - commonPrefixLen)
-      && oldLines[oldLines.length - 1 - k] === newLines[newLines.length - 1 - k]
+      k < oldLines.length - commonPrefixLen &&
+      k < newLines.length - commonPrefixLen &&
+      oldLines[oldLines.length - 1 - k] === newLines[newLines.length - 1 - k]
     ) {
       k++;
     }
@@ -112,15 +120,17 @@ function computeStructuredDiffStats(oldContent, newContent) {
  * }}
  */
 function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
-  const context = Number.isInteger(opts.context) && opts.context >= 0 ? opts.context : DIFF_CONTEXT_LINES;
+  const context =
+    Number.isInteger(opts.context) && opts.context >= 0 ? opts.context : DIFF_CONTEXT_LINES;
   const maxScan = Number.isInteger(opts.maxScan) && opts.maxScan > 0 ? opts.maxScan : 4000;
 
-  const {
-    oldLines, newLines, removeStart, removeEnd, addStart, addEnd, added, removed,
-  } = computeStructuredDiffStats(oldContent, newContent);
+  const { oldLines, newLines, removeStart, removeEnd, addStart, addEnd, added, removed } =
+    computeStructuredDiffStats(oldContent, newContent);
 
   const empty = { oldLines, newLines, added: 0, removed: 0, scanned: true, hunks: [] };
-  if (added === 0 && removed === 0) return empty;
+  if (added === 0 && removed === 0) {
+    return empty;
+  }
 
   const oldMid = oldLines.slice(removeStart, removeEnd);
   const newMid = newLines.slice(addStart, addEnd);
@@ -132,8 +142,12 @@ function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
     // Size guard: skip LCS, emit dels then adds as one block (old behaviour).
     scanned = false;
     ops = [];
-    for (let k = 0; k < oldMid.length; k++) ops.push({ kind: 'del', oi: k });
-    for (let k = 0; k < newMid.length; k++) ops.push({ kind: 'add', ni: k });
+    for (let k = 0; k < oldMid.length; k++) {
+      ops.push({ kind: 'del', oi: k });
+    }
+    for (let k = 0; k < newMid.length; k++) {
+      ops.push({ kind: 'add', ni: k });
+    }
   } else {
     ops = _lineDiffOps(oldMid, newMid);
   }
@@ -141,10 +155,14 @@ function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
   // Real change counts come from the edit script, NOT computeStructuredDiffStats,
   // whose prefix/suffix collapse over-counts every line between the first and
   // last change as both removed and added (the very bug multi-hunk fixes).
-  let realAdded = 0, realRemoved = 0;
+  let realAdded = 0,
+    realRemoved = 0;
   for (const op of ops) {
-    if (op.kind === 'add') realAdded++;
-    else if (op.kind === 'del') realRemoved++;
+    if (op.kind === 'add') {
+      realAdded++;
+    } else if (op.kind === 'del') {
+      realRemoved++;
+    }
   }
 
   // ── Augment with up to `context` unchanged lines from the common prefix/suffix
@@ -156,9 +174,13 @@ function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
     flat.push({ kind: 'ctx', num: k + 1, text: oldLines[k] });
   }
   for (const op of ops) {
-    if (op.kind === 'eq') flat.push({ kind: 'ctx', num: removeStart + op.oi + 1, text: oldLines[removeStart + op.oi] });
-    else if (op.kind === 'del') flat.push({ kind: 'del', num: removeStart + op.oi + 1, text: oldLines[removeStart + op.oi] });
-    else flat.push({ kind: 'add', num: addStart + op.ni + 1, text: newLines[addStart + op.ni] });
+    if (op.kind === 'eq') {
+      flat.push({ kind: 'ctx', num: removeStart + op.oi + 1, text: oldLines[removeStart + op.oi] });
+    } else if (op.kind === 'del') {
+      flat.push({ kind: 'del', num: removeStart + op.oi + 1, text: oldLines[removeStart + op.oi] });
+    } else {
+      flat.push({ kind: 'add', num: addStart + op.ni + 1, text: newLines[addStart + op.ni] });
+    }
   }
   const sufTo = Math.min(oldLines.length, removeEnd + context);
   for (let k = removeEnd; k < sufTo; k++) {
@@ -174,9 +196,15 @@ function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
   let pendingGapTo = -1; // old line number the next hunk resumes at (for gapBefore)
   let i = 0;
   while (i < flat.length) {
-    if (flat[i].kind !== 'ctx') { cur.push(flat[i]); i++; continue; }
+    if (flat[i].kind !== 'ctx') {
+      cur.push(flat[i]);
+      i++;
+      continue;
+    }
     let j = i;
-    while (j < flat.length && flat[j].kind === 'ctx') j++;
+    while (j < flat.length && flat[j].kind === 'ctx') {
+      j++;
+    }
     const runLen = j - i;
     const leading = cur.length === 0;
     const trailing = j === flat.length;
@@ -196,9 +224,13 @@ function computeStructuredDiffHunks(oldContent, newContent, opts = {}) {
     }
     i = j;
   }
-  if (cur.length) hunks.push({ rows: cur, gapBefore: pendingGapTo });
+  if (cur.length) {
+    hunks.push({ rows: cur, gapBefore: pendingGapTo });
+  }
   // The first hunk never has a preceding gap.
-  if (hunks.length) hunks[0].gapBefore = -1;
+  if (hunks.length) {
+    hunks[0].gapBefore = -1;
+  }
 
   return { oldLines, newLines, added: realAdded, removed: realRemoved, scanned, hunks };
 }
@@ -217,20 +249,38 @@ function _lineDiffOps(oldMid, newMid) {
   const dp = Array.from({ length: m + 1 }, () => new Uint32Array(n + 1));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = oldMid[i - 1] === newMid[j - 1]
-        ? dp[i - 1][j - 1] + 1
-        : (dp[i - 1][j] >= dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1]);
+      dp[i][j] =
+        oldMid[i - 1] === newMid[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : dp[i - 1][j] >= dp[i][j - 1]
+            ? dp[i - 1][j]
+            : dp[i][j - 1];
     }
   }
   const ops = [];
-  let i = m, j = n;
+  let i = m,
+    j = n;
   while (i > 0 && j > 0) {
-    if (oldMid[i - 1] === newMid[j - 1]) { ops.push({ kind: 'eq', oi: i - 1, ni: j - 1 }); i--; j--; }
-    else if (dp[i - 1][j] > dp[i][j - 1]) { ops.push({ kind: 'del', oi: i - 1 }); i--; }
-    else { ops.push({ kind: 'add', ni: j - 1 }); j--; }
+    if (oldMid[i - 1] === newMid[j - 1]) {
+      ops.push({ kind: 'eq', oi: i - 1, ni: j - 1 });
+      i--;
+      j--;
+    } else if (dp[i - 1][j] > dp[i][j - 1]) {
+      ops.push({ kind: 'del', oi: i - 1 });
+      i--;
+    } else {
+      ops.push({ kind: 'add', ni: j - 1 });
+      j--;
+    }
   }
-  while (i > 0) { ops.push({ kind: 'del', oi: i - 1 }); i--; }
-  while (j > 0) { ops.push({ kind: 'add', ni: j - 1 }); j--; }
+  while (i > 0) {
+    ops.push({ kind: 'del', oi: i - 1 });
+    i--;
+  }
+  while (j > 0) {
+    ops.push({ kind: 'add', ni: j - 1 });
+    j--;
+  }
   ops.reverse();
   return ops;
 }
@@ -246,7 +296,11 @@ function renderDiff(diffText) {
   const lines = diffText.split('\n');
   const rendered = [];
   let _wordDiff;
-  try { _wordDiff = require('./wordDiff'); } catch { /* fallback to line-level */ }
+  try {
+    _wordDiff = require('./wordDiff');
+  } catch {
+    /* fallback to line-level */
+  }
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx];
@@ -264,20 +318,26 @@ function renderDiff(diffText) {
           const _padR = _padToFull(displayWidth('-') + displayWidth(result.oldRendered));
           const _padA = _padToFull(displayWidth('+') + displayWidth(result.newRendered));
           rendered.push(
-            c().bgHex(THEME.diffRemoved).hex('#FFFFFF')('-') + result.oldRendered +
-            (_padR ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padR) : ''),
+            c().bgHex(THEME.diffRemoved).hex('#FFFFFF')('-') +
+              result.oldRendered +
+              (_padR ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padR) : '')
           );
           rendered.push(
-            c().bgHex(THEME.diffAdded).hex('#FFFFFF')('+') + result.newRendered +
-            (_padA ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padA) : ''),
+            c().bgHex(THEME.diffAdded).hex('#FFFFFF')('+') +
+              result.newRendered +
+              (_padA ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padA) : '')
           );
           idx++; // skip the + line we already consumed
           continue;
         }
       }
-      rendered.push(c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(line + _padToFull(displayWidth(line))));
+      rendered.push(
+        c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(line + _padToFull(displayWidth(line)))
+      );
     } else if (line.startsWith('+')) {
-      rendered.push(c().bgHex(THEME.diffAdded).hex('#FFFFFF')(line + _padToFull(displayWidth(line))));
+      rendered.push(
+        c().bgHex(THEME.diffAdded).hex('#FFFFFF')(line + _padToFull(displayWidth(line)))
+      );
     } else if (line.startsWith('@@')) {
       rendered.push(c().dim(line));
     } else {
@@ -303,7 +363,9 @@ function renderStructuredDiff(oldContent, newContent, filePath = '') {
   // 门控关:逐字节回退历史单区块 churn 渲染。
   if (classicDiffHunksEnabled(process.env)) {
     const hunked = _renderStructuredDiffHunked(oldContent, newContent);
-    if (hunked != null) return hunked;
+    if (hunked != null) {
+      return hunked;
+    }
     // hunk 计算判定无改动(理论不可达,maybeRenderWriteDiff 仅在有 diff 时调用)→
     // 回退 legacy 以保留任何遗留可见行为,绝不静默吞掉。
   }
@@ -329,32 +391,42 @@ function _emitChangeBlock(rendered, dels, adds, pad, _wd) {
         const _padRm = _padToFull(displayWidth(_pfxRm) + displayWidth(result.oldRendered));
         const _padAd = _padToFull(displayWidth(_pfxAd) + displayWidth(result.newRendered));
         rendered.push(
-          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) + result.oldRendered +
-          (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : ''),
+          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) +
+            result.oldRendered +
+            (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : '')
         );
         rendered.push(
-          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) + result.newRendered +
-          (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : ''),
+          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) +
+            result.newRendered +
+            (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : '')
         );
         continue;
       }
     }
     const _bodyRm = `  ${numRm} - ${rm.text}`;
     const _bodyAd = `  ${numAd} + ${ad.text}`;
-    rendered.push(c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm))));
-    rendered.push(c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd))));
+    rendered.push(
+      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm)))
+    );
+    rendered.push(
+      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd)))
+    );
   }
   for (let p = pairCount; p < dels.length; p++) {
     const rm = dels[p];
     const num = String(rm.num).padStart(pad);
     const _body = `  ${num} - ${rm.text}`;
-    rendered.push(c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body))));
+    rendered.push(
+      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
+    );
   }
   for (let p = pairCount; p < adds.length; p++) {
     const ad = adds[p];
     const num = String(ad.num).padStart(pad);
     const _body = `  ${num} + ${ad.text}`;
-    rendered.push(c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body))));
+    rendered.push(
+      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
+    );
   }
 }
 
@@ -369,17 +441,27 @@ function _emitChangeBlock(rendered, dels, adds, pad, _wd) {
  * @returns {string} 渲染结果
  */
 function _renderStructuredDiffHunked(oldContent, newContent) {
-  const { added, removed, hunks } = computeStructuredDiffHunks(
-    oldContent, newContent, { context: DIFF_CONTEXT_LINES },
-  );
-  if ((added === 0 && removed === 0) || !hunks.length) return '';
+  const { added, removed, hunks } = computeStructuredDiffHunks(oldContent, newContent, {
+    context: DIFF_CONTEXT_LINES,
+  });
+  if ((added === 0 && removed === 0) || !hunks.length) {
+    return '';
+  }
 
   let _wd;
-  try { _wd = require('./wordDiff'); } catch { /* fallback to line-level */ }
+  try {
+    _wd = require('./wordDiff');
+  } catch {
+    /* fallback to line-level */
+  }
 
   // gutter 数字位宽:取所有 hunk 行号的最大位数(单一真源 diffGutter,门控关 → 恒 4 位)。
   const allRows = [];
-  for (const h of hunks) for (const r of h.rows) allRows.push(r);
+  for (const h of hunks) {
+    for (const r of h.rows) {
+      allRows.push(r);
+    }
+  }
   const _pad = require('./diffGutter').computeDiffGutterWidth(allRows, process.env);
 
   const rendered = [];
@@ -402,9 +484,15 @@ function _renderStructuredDiffHunked(oldContent, newContent) {
       }
       // 收集一段连续的 del 行 + 紧随的 add 行,交给 _emitChangeBlock 做配对词级高亮。
       const dels = [];
-      while (p < rows.length && rows[p].kind === 'del') { dels.push(rows[p]); p++; }
+      while (p < rows.length && rows[p].kind === 'del') {
+        dels.push(rows[p]);
+        p++;
+      }
       const adds = [];
-      while (p < rows.length && rows[p].kind === 'add') { adds.push(rows[p]); p++; }
+      while (p < rows.length && rows[p].kind === 'add') {
+        adds.push(rows[p]);
+        p++;
+      }
       _emitChangeBlock(rendered, dels, adds, _pad, _wd);
     }
   }
@@ -419,16 +507,8 @@ function _renderStructuredDiffHunked(oldContent, newContent) {
 }
 
 function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
-  const {
-    oldLines,
-    newLines,
-    removeStart,
-    removeEnd,
-    addStart,
-    addEnd,
-    added,
-    removed,
-  } = computeStructuredDiffStats(oldContent, newContent);
+  const { oldLines, newLines, removeStart, removeEnd, addStart, addEnd, added, removed } =
+    computeStructuredDiffStats(oldContent, newContent);
 
   const rendered = [];
 
@@ -436,8 +516,10 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
   const ctxStart = Math.max(0, removeStart - DIFF_CONTEXT_LINES);
   const ctxEnd = Math.min(oldLines.length, removeEnd + DIFF_CONTEXT_LINES);
   // gutter 数字位宽收敛到单一真源 cli/diffGutter.js(对齐 CC 动态位宽,门控关→恒 4 位字节回退)。
-  const _pad = require('./diffGutter')
-    .computeDiffGutterWidthForMax(Math.max(removeEnd, addEnd, ctxEnd), process.env);
+  const _pad = require('./diffGutter').computeDiffGutterWidthForMax(
+    Math.max(removeEnd, addEnd, ctxEnd),
+    process.env
+  );
   for (let k = ctxStart; k < removeStart; k++) {
     const num = String(k + 1).padStart(_pad);
     rendered.push(`  ${c().dim(num)}   ${c().dim(oldLines[k])}`);
@@ -445,12 +527,20 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
 
   // Word-level diff: pair removed/added lines for inline highlighting
   let _wd;
-  try { _wd = require('./wordDiff'); } catch { /* fallback to line-level */ }
+  try {
+    _wd = require('./wordDiff');
+  } catch {
+    /* fallback to line-level */
+  }
 
   const removedLines = [];
-  for (let k = removeStart; k < removeEnd; k++) removedLines.push({ num: k + 1, text: oldLines[k] });
+  for (let k = removeStart; k < removeEnd; k++) {
+    removedLines.push({ num: k + 1, text: oldLines[k] });
+  }
   const addedLines = [];
-  for (let k = addStart; k < addEnd; k++) addedLines.push({ num: k + 1, text: newLines[k] });
+  for (let k = addStart; k < addEnd; k++) {
+    addedLines.push({ num: k + 1, text: newLines[k] });
+  }
 
   // Pair removed/added lines 1:1 for word-level diff, extras go unpaired
   const pairCount = Math.min(removedLines.length, addedLines.length);
@@ -470,12 +560,14 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
         const _padRm = _padToFull(displayWidth(_pfxRm) + displayWidth(result.oldRendered));
         const _padAd = _padToFull(displayWidth(_pfxAd) + displayWidth(result.newRendered));
         rendered.push(
-          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) + result.oldRendered +
-          (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : ''),
+          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) +
+            result.oldRendered +
+            (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : '')
         );
         rendered.push(
-          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) + result.newRendered +
-          (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : ''),
+          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) +
+            result.newRendered +
+            (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : '')
         );
         continue;
       }
@@ -483,8 +575,12 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     // Fallback: line-level
     const _bodyRm = `  ${numRm} - ${rm.text}`;
     const _bodyAd = `  ${numAd} + ${ad.text}`;
-    rendered.push(c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm))));
-    rendered.push(c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd))));
+    rendered.push(
+      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm)))
+    );
+    rendered.push(
+      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd)))
+    );
   }
 
   // Unpaired removed lines (more removals than additions)
@@ -492,7 +588,9 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     const rm = removedLines[p];
     const num = String(rm.num).padStart(_pad);
     const _body = `  ${num} - ${rm.text}`;
-    rendered.push(c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body))));
+    rendered.push(
+      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
+    );
   }
 
   // Unpaired added lines (more additions than removals)
@@ -500,7 +598,9 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     const ad = addedLines[p];
     const num = String(ad.num).padStart(_pad);
     const _body = `  ${num} + ${ad.text}`;
-    rendered.push(c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body))));
+    rendered.push(
+      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
+    );
   }
 
   // Context after (ctxEnd computed once above for gutter-width sizing)

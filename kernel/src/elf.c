@@ -133,6 +133,12 @@ int elf_load_user_image(const uint8_t *image, size_t size, struct vm_space *spac
         uint64_t seg_file_end = seg_base + ph[i].p_filesz;
         if (seg_mem_end <= seg_mem_start)
             return -22;
+        /* Reject any wrapping of the file-backed portion independently. If
+         * seg_file_end wraps to a small value while seg_mem_end does not,
+         * the data-copy logic below would incorrectly calculate copy_end or
+         * silently skip load, leaving zero-fill where file data belongs. */
+        if (seg_file_end <= seg_base)
+            return -22;
         /* [SAFE] Confine the loadable segment to the user address window. A
          * crafted p_vaddr (already in the kernel half, so the +USER_BASE rebase
          * above does not fire) would otherwise map USER-accessible pages over
@@ -142,6 +148,12 @@ int elf_load_user_image(const uint8_t *image, size_t size, struct vm_space *spac
 
         uint64_t page_start = align_down_u64(seg_mem_start, VMM_PAGE_SIZE);
         uint64_t page_end = align_up_u64(seg_mem_end, VMM_PAGE_SIZE);
+
+        /* Enforce W^X: a segment that is both writable and executable is
+         * refused — allowing W+X would let a user process write shellcode and
+         * jump into it, defeating page-level protection. */
+        if ((ph[i].p_flags & (PF_W | PF_X)) == (PF_W | PF_X))
+            return -26;
 
         uint64_t flags = VMM_FLAG_USER;
         if (ph[i].p_flags & PF_W)
@@ -175,7 +187,10 @@ int elf_load_user_image(const uint8_t *image, size_t size, struct vm_space *spac
     }
 
     out->segments = seg_count;
-    out->entry = eh->e_entry < VMM_USER_BASE ? (eh->e_entry + VMM_USER_BASE) : eh->e_entry;
+    uint64_t raw_entry = eh->e_entry;
+    out->entry = raw_entry < VMM_USER_BASE ? (raw_entry + VMM_USER_BASE) : raw_entry;
+    if (out->entry < VMM_USER_BASE || out->entry >= VMM_USER_LIMIT)
+        return -27;
     out->brk = align_up_u64(high_brk, VMM_PAGE_SIZE);
 
     serial_print("[ELF] Loaded segments: ");

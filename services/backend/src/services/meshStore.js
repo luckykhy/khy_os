@@ -14,21 +14,32 @@
  * @module services/meshStore
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
 
 const { getBaseDataDir } = require('../utils/dataHome');
+
 const core = require('./meshCore');
 
-function _dir() { return getBaseDataDir('peers'); }                     // ~/.khyos/peers(已确保存在)
-function _presenceFile(id) { return path.join(_dir(), `${id}.json`); }
-function _inboxFile(id) { return path.join(_dir(), `${id}.inbox.jsonl`); }
+function _dir() {
+  return getBaseDataDir('peers');
+} // ~/.khyos/peers(已确保存在)
+
+function _presenceFile(id) {
+  return path.join(_dir(), `${id}.json`);
+}
+
+function _inboxFile(id) {
+  return path.join(_dir(), `${id}.inbox.jsonl`);
+}
 
 /** 进程是否存活。EPERM(他人进程)按惯例当作不可达 → 不计入(同 daemonManager)。 */
 function _isAlive(pid) {
-  if (!pid || !Number.isFinite(Number(pid))) return false;
+  if (!pid || !Number.isFinite(Number(pid))) {
+    return false;
+  }
   try {
     process.kill(Number(pid), 0);
     return true;
@@ -42,7 +53,9 @@ function _isAlive(pid) {
 function _readPresence(id) {
   try {
     const raw = JSON.parse(fs.readFileSync(_presenceFile(id), 'utf-8'));
-    if (!raw || typeof raw !== 'object' || !core.isValidId(raw.id)) return null;
+    if (!raw || typeof raw !== 'object' || !core.isValidId(raw.id)) {
+      return null;
+    }
     return raw;
   } catch {
     return null;
@@ -67,7 +80,11 @@ function _countInbox(id) {
   try {
     const raw = fs.readFileSync(_inboxFile(id), 'utf-8');
     let n = 0;
-    for (const line of raw.split('\n')) { if (line.trim()) n += 1; }
+    for (const line of raw.split('\n')) {
+      if (line.trim()) {
+        n += 1;
+      }
+    }
     return n;
   } catch {
     return 0;
@@ -77,7 +94,11 @@ function _countInbox(id) {
 /** 删除某实例的 presence + 信箱(死实例剪除 / 主动注销)。绝不抛。 */
 function _purge(id) {
   for (const f of [_presenceFile(id), _inboxFile(id)]) {
-    try { fs.rmSync(f, { force: true }); } catch { /* best-effort */ }
+    try {
+      fs.rmSync(f, { force: true });
+    } catch {
+      /* best-effort */
+    }
   }
 }
 
@@ -107,17 +128,22 @@ function register(opts = {}) {
     startedAt: (existing && existing.startedAt) || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     attachedTo: (existing && existing.attachedTo) || '',
-    meta: (opts.meta && typeof opts.meta === 'object') ? opts.meta : (existing && existing.meta) || {},
+    meta:
+      opts.meta && typeof opts.meta === 'object' ? opts.meta : (existing && existing.meta) || {},
   };
   const w = _writePresence(record);
-  if (!w.ok) return { ok: false, error: w.error || '登记失败' };
+  if (!w.ok) {
+    return { ok: false, error: w.error || '登记失败' };
+  }
   return { ok: true, id, record };
 }
 
 /** 注销当前实例(退出时调用)。 */
 function deregister(id) {
   const key = core.normalizeId(id);
-  if (!key) return { ok: false, error: '非法实例 id' };
+  if (!key) {
+    return { ok: false, error: '非法实例 id' };
+  }
   _purge(key);
   return { ok: true };
 }
@@ -138,13 +164,21 @@ function listPeers(opts = {}) {
   const records = [];
   const inboxCounts = {};
   for (const f of names) {
-    if (!f.endsWith('.json') || f.endsWith('.inbox.jsonl')) continue;
+    if (!f.endsWith('.json') || f.endsWith('.inbox.jsonl')) {
+      continue;
+    }
     const id = f.slice(0, -'.json'.length);
-    if (!core.isValidId(id)) continue;
+    if (!core.isValidId(id)) {
+      continue;
+    }
     const rec = _readPresence(id);
-    if (!rec) continue;
+    if (!rec) {
+      continue;
+    }
     if (!_isAlive(rec.pid)) {
-      if (prune) _purge(id);
+      if (prune) {
+        _purge(id);
+      }
       continue;
     }
     records.push(rec);
@@ -156,9 +190,13 @@ function listPeers(opts = {}) {
 /** 取单份在线 peer presence(死/不存在 → null)。 */
 function getPeer(id) {
   const key = core.normalizeId(id);
-  if (!key) return null;
+  if (!key) {
+    return null;
+  }
   const rec = _readPresence(key);
-  if (!rec || !_isAlive(rec.pid)) return null;
+  if (!rec || !_isAlive(rec.pid)) {
+    return null;
+  }
   return rec;
 }
 
@@ -171,11 +209,22 @@ function getPeer(id) {
  */
 function send(fromId, toId, text) {
   const built = core.buildEnvelope({ from: fromId, to: toId, text, ts: Date.now() });
-  if (!built.ok) return built;
+  if (!built.ok) {
+    return built;
+  }
   const target = getPeer(built.envelope.to);
-  if (!target) return { ok: false, error: `目标实例「${built.envelope.to}」不在线或不存在。先用 \`khy mesh peers\` 查看。` };
+  if (!target) {
+    return {
+      ok: false,
+      error: `目标实例「${built.envelope.to}」不在线或不存在。先用 \`khy mesh peers\` 查看。`,
+    };
+  }
   try {
-    fs.appendFileSync(_inboxFile(built.envelope.to), `${JSON.stringify(built.envelope)}\n`, 'utf-8');
+    fs.appendFileSync(
+      _inboxFile(built.envelope.to),
+      `${JSON.stringify(built.envelope)}\n`,
+      'utf-8'
+    );
     return { ok: true, envelope: built.envelope };
   } catch (e) {
     return { ok: false, error: (e && e.message) || String(e) };
@@ -189,11 +238,15 @@ function send(fromId, toId, text) {
  */
 function drainInbox(id) {
   const key = core.normalizeId(id);
-  if (!key) return { ok: false, error: '非法实例 id' };
+  if (!key) {
+    return { ok: false, error: '非法实例 id' };
+  }
   const inbox = _inboxFile(key);
   let claimed;
   try {
-    if (!fs.existsSync(inbox)) return { ok: true, messages: [] };
+    if (!fs.existsSync(inbox)) {
+      return { ok: true, messages: [] };
+    }
     claimed = path.join(_dir(), `.${key}.drain.${process.pid}.${Date.now()}.jsonl`);
     fs.renameSync(inbox, claimed);
   } catch {
@@ -205,17 +258,27 @@ function drainInbox(id) {
     const raw = fs.readFileSync(claimed, 'utf-8');
     for (const line of raw.split('\n')) {
       const env = core.parseEnvelopeLine(line);
-      if (env) messages.push(env);
+      if (env) {
+        messages.push(env);
+      }
     }
-  } catch { /* fail-soft */ }
-  try { fs.rmSync(claimed, { force: true }); } catch { /* best-effort */ }
+  } catch {
+    /* fail-soft */
+  }
+  try {
+    fs.rmSync(claimed, { force: true });
+  } catch {
+    /* best-effort */
+  }
   return { ok: true, messages };
 }
 
 /** 不取走、只统计某实例信箱待读数。 */
 function peekInbox(id) {
   const key = core.normalizeId(id);
-  if (!key) return 0;
+  if (!key) {
+    return 0;
+  }
   return _countInbox(key);
 }
 
@@ -226,28 +289,44 @@ function peekInbox(id) {
 function attach(fromId, toId) {
   const selfKey = core.normalizeId(fromId);
   const toKey = core.normalizeId(toId);
-  if (!selfKey) return { ok: false, error: '非法实例 id' };
-  if (!toKey) return { ok: false, error: '非法目标 id' };
+  if (!selfKey) {
+    return { ok: false, error: '非法实例 id' };
+  }
+  if (!toKey) {
+    return { ok: false, error: '非法目标 id' };
+  }
   const self = _readPresence(selfKey);
-  if (!self) return { ok: false, error: `本实例「${selfKey}」未登记。先 register。` };
-  if (!getPeer(toKey)) return { ok: false, error: `目标实例「${toKey}」不在线。` };
+  if (!self) {
+    return { ok: false, error: `本实例「${selfKey}」未登记。先 register。` };
+  }
+  if (!getPeer(toKey)) {
+    return { ok: false, error: `目标实例「${toKey}」不在线。` };
+  }
   self.attachedTo = toKey;
   self.updatedAt = new Date().toISOString();
   const w = _writePresence(self);
-  if (!w.ok) return { ok: false, error: w.error };
+  if (!w.ok) {
+    return { ok: false, error: w.error };
+  }
   return { ok: true, record: self };
 }
 
 /** 解除 fromId 的挂接。 */
 function detach(fromId) {
   const selfKey = core.normalizeId(fromId);
-  if (!selfKey) return { ok: false, error: '非法实例 id' };
+  if (!selfKey) {
+    return { ok: false, error: '非法实例 id' };
+  }
   const self = _readPresence(selfKey);
-  if (!self) return { ok: true, record: null };
+  if (!self) {
+    return { ok: true, record: null };
+  }
   self.attachedTo = '';
   self.updatedAt = new Date().toISOString();
   const w = _writePresence(self);
-  if (!w.ok) return { ok: false, error: w.error };
+  if (!w.ok) {
+    return { ok: false, error: w.error };
+  }
   return { ok: true, record: self };
 }
 

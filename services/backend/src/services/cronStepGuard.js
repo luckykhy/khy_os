@@ -33,14 +33,21 @@ function cronStepGuardEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_CRON_STEP_GUARD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_CRON_STEP_GUARD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -55,7 +62,9 @@ function cronStepGuardEnabled(env = process.env) {
  */
 function cronStepUsable(step, env = process.env) {
   try {
-    if (!cronStepGuardEnabled(env)) return null;
+    if (!cronStepGuardEnabled(env)) {
+      return null;
+    }
     return Number.isInteger(step) && step > 0;
   } catch {
     return null;

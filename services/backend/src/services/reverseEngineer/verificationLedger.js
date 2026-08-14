@@ -13,9 +13,9 @@
  * 纯确定性、零模型、零副作用（除显式 writeManifest）。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 /** 构建清单 schema 版本（结构演进时单调升级）。 */
 const MANIFEST_VERSION = 1;
@@ -47,7 +47,13 @@ function buildManifest(spec = {}) {
     return {
       name: path.relative(rootDir, abs).split(path.sep).join('/'),
       sha256: _sha256File(abs),
-      size: (() => { try { return fs.statSync(abs).size; } catch { return null; } })(),
+      size: (() => {
+        try {
+          return fs.statSync(abs).size;
+        } catch {
+          return null;
+        }
+      })(),
     };
   });
   return {
@@ -74,7 +80,9 @@ function writeManifest(manifest, destPath) {
 function loadManifest(srcPath) {
   try {
     const parsed = JSON.parse(fs.readFileSync(srcPath, 'utf8'));
-    if (parsed && parsed.manifestVersion) return parsed;
+    if (parsed && parsed.manifestVersion) {
+      return parsed;
+    }
     return null;
   } catch {
     return null;
@@ -86,8 +94,12 @@ function findManifestFor(artifactPath) {
   try {
     const dir = path.dirname(artifactPath);
     const cand = path.join(dir, MANIFEST_BASENAME);
-    if (fs.existsSync(cand)) return cand;
-  } catch { /* noop */ }
+    if (fs.existsSync(cand)) {
+      return cand;
+    }
+  } catch {
+    /* noop */
+  }
   return null;
 }
 
@@ -108,15 +120,15 @@ function verify(scan, recover, manifest) {
     return {
       hasBaseline: false,
       verdict: 'no-baseline',
-      message: '无构建清单基线：仅产出还原快照，无法做保真度判定。可在 khy 构建时记录清单以启用自验。',
+      message:
+        '无构建清单基线：仅产出还原快照，无法做保真度判定。可在 khy 构建时记录清单以启用自验。',
       fidelity: null,
     };
   }
 
   // 1) 产物哈希核对（最强的「同一性」证据）。
-  const artifactHashMatch = manifest.artifact && manifest.artifact.sha256
-    ? (manifest.artifact.sha256 === scan.sha256)
-    : null;
+  const artifactHashMatch =
+    manifest.artifact && manifest.artifact.sha256 ? manifest.artifact.sha256 === scan.sha256 : null;
 
   // 2) 源文件覆盖：清单里的源文件，有多少在还原成员里按 basename 命中。
   const recoveredKeys = new Set((recover.members || []).map((m) => _basenameKey(m.name)));
@@ -124,8 +136,11 @@ function verify(scan, recover, manifest) {
   const missing = [];
   for (const s of manifest.sources) {
     const key = _basenameKey(s.name);
-    if (recoveredKeys.has(key)) matched.push(s.name);
-    else missing.push(s.name);
+    if (recoveredKeys.has(key)) {
+      matched.push(s.name);
+    } else {
+      missing.push(s.name);
+    }
   }
   const coverage = manifest.sources.length > 0 ? matched.length / manifest.sources.length : 0;
 
@@ -144,9 +159,13 @@ function verify(scan, recover, manifest) {
   }
 
   let verdict;
-  if (artifactHashMatch === true && coverage >= 0.95) verdict = 'verified';
-  else if (coverage >= 0.6 || artifactHashMatch === true) verdict = 'partial';
-  else verdict = 'mismatch';
+  if (artifactHashMatch === true && coverage >= 0.95) {
+    verdict = 'verified';
+  } else if (coverage >= 0.6 || artifactHashMatch === true) {
+    verdict = 'partial';
+  } else {
+    verdict = 'mismatch';
+  }
 
   return {
     hasBaseline: true,

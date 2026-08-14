@@ -24,8 +24,12 @@
  */
 
 function _toMs(value) {
-  if (value === null || value === undefined || value === '') return 0; // never used → least loaded
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  } // never used → least loaded
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
   const t = Date.parse(String(value));
   return Number.isFinite(t) ? t : 0;
 }
@@ -37,7 +41,9 @@ function _toMs(value) {
 function loadKey(account) {
   const a = account || {};
   const used = a.last_used_at !== undefined ? a.last_used_at : a.lastUsedAt;
-  if (used !== undefined && used !== null && used !== '') return _toMs(used);
+  if (used !== undefined && used !== null && used !== '') {
+    return _toMs(used);
+  }
   // fall back to creation time so a brand-new account is preferred over a stale one
   const created = a.created_at !== undefined ? a.created_at : a.createdAt;
   return _toMs(created);
@@ -52,7 +58,9 @@ function _id(account) {
 function _lessLoaded(a, b) {
   const la = loadKey(a);
   const lb = loadKey(b);
-  if (la !== lb) return la < lb ? a : b;
+  if (la !== lb) {
+    return la < lb ? a : b;
+  }
   return _id(a) <= _id(b) ? a : b;
 }
 
@@ -62,7 +70,9 @@ function _lessLoaded(a, b) {
  */
 function selectLru(accounts = []) {
   const list = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
-  if (list.length === 0) return null;
+  if (list.length === 0) {
+    return null;
+  }
   return list.reduce((best, cur) => (best === null ? cur : _lessLoaded(best, cur)), null);
 }
 
@@ -74,10 +84,14 @@ function selectLru(accounts = []) {
  */
 function selectPowerOfTwo(accounts = [], rng = Math.random) {
   const list = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
-  if (list.length <= 1) return list[0] || null;
+  if (list.length <= 1) {
+    return list[0] || null;
+  }
   const i = Math.min(list.length - 1, Math.floor(rng() * list.length));
   let j = Math.min(list.length - 1, Math.floor(rng() * list.length));
-  if (j === i) j = (i + 1) % list.length; // guarantee two DISTINCT choices
+  if (j === i) {
+    j = (i + 1) % list.length;
+  } // guarantee two DISTINCT choices
   return _lessLoaded(list[i], list[j]);
 }
 
@@ -103,16 +117,24 @@ function policyForMode(schedulingMode) {
  */
 function pickBalanced(accounts = [], opts = {}) {
   const list = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
-  if (list.length === 0) return null;
+  if (list.length === 0) {
+    return null;
+  }
   const policy = opts.policy || defaultPolicy();
-  if (policy === 'lru') return selectLru(list);
+  if (policy === 'lru') {
+    return selectLru(list);
+  }
   if (policy === 'mru') {
     // most recently used = the inverse of LRU
     return list.reduce((best, cur) => {
-      if (best === null) return cur;
+      if (best === null) {
+        return cur;
+      }
       const lb = loadKey(best);
       const lc = loadKey(cur);
-      if (lc !== lb) return lc > lb ? cur : best;
+      if (lc !== lb) {
+        return lc > lb ? cur : best;
+      }
       return _id(cur) <= _id(best) ? cur : best;
     }, null);
   }

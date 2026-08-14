@@ -21,6 +21,11 @@ describe('dataHome — getAppHome() legacy-safe convergence', () => {
 
   beforeEach(() => {
     tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-apphome-'));
+    // Point the install root at a dir WITHOUT a `.portable` marker. This repo
+    // root carries `.portable`, which makes isPortableDeployment() true and
+    // short-circuits the legacy ~/.khyquant established-wins branch these tests
+    // exercise — pinning KHY_OS_ROOT to a non-portable dir keeps them host/portable-agnostic.
+    process.env.KHY_OS_ROOT = path.join(tmpHome, 'install-root');
   });
 
   afterEach(() => {

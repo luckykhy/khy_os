@@ -11,8 +11,12 @@ class TaskStopTool extends BaseTool {
   static aliases = ['task_stop', 'stop_task', 'kill_task'];
   static searchHint = 'stop kill terminate task background';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Stops a running background task by its ID.

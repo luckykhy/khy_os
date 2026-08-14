@@ -33,11 +33,18 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
  */
 function isEnabled(env = process.env) {
   try {
-    return require('../flagRegistry').isFlagEnabled('KHY_FAILURE_REASON_RANKING', env || process.env);
-  } catch { /* fall through to local */ }
+    return require('../flagRegistry').isFlagEnabled(
+      'KHY_FAILURE_REASON_RANKING',
+      env || process.env
+    );
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_FAILURE_REASON_RANKING;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -56,11 +63,17 @@ const _CACHED_SKIP_RE = /recent\s+\S+\s+failure\s+cached/i;
  */
 function isCachedSkip(attempt) {
   try {
-    if (!attempt || typeof attempt !== 'object') return false;
-    if (attempt.virtualSkip === true) return true;
+    if (!attempt || typeof attempt !== 'object') {
+      return false;
+    }
+    if (attempt.virtualSkip === true) {
+      return true;
+    }
     // 兜底:未带 virtualSkip 但 statusCode 缺省(0/空)且文本是缓存跳过口吻。
     const status = Number(attempt.statusCode || attempt.status || attempt.code || 0);
-    if (status > 0) return false; // 有真实 HTTP 码 → 一定是 live 失败
+    if (status > 0) {
+      return false;
+    } // 有真实 HTTP 码 → 一定是 live 失败
     const text = String(attempt.error || attempt.message || '');
     return _CACHED_SKIP_RE.test(text);
   } catch {
@@ -80,12 +93,17 @@ function rankFailedAttempts(attempts, env = process.env) {
     if (!Array.isArray(attempts) || attempts.length < 2) {
       return Array.isArray(attempts) ? attempts.slice() : [];
     }
-    if (!isEnabled(env)) return attempts.slice();
+    if (!isEnabled(env)) {
+      return attempts.slice();
+    }
     const live = [];
     const cached = [];
     for (const a of attempts) {
-      if (isCachedSkip(a)) cached.push(a);
-      else live.push(a);
+      if (isCachedSkip(a)) {
+        cached.push(a);
+      } else {
+        live.push(a);
+      }
     }
     // 稳定:两组各自维持原插入序,拼接。同组不重排。
     return live.concat(cached);
@@ -99,10 +117,11 @@ function describeFailureReasonRanking() {
   return {
     gate: 'KHY_FAILURE_REASON_RANKING',
     defaultOn: true,
-    summary: '「真实失败原因」清单排序:本轮新鲜 live 失败(带真实 HTTP 状态码、非 virtualSkip)'
-      + '排在陈旧缓存跳过(virtualSkip / `recent … failure cached (cooldown Ns)`)之前,'
-      + '避免 238s 前缓存的 404 盖过本轮真实的 429;稳定分区,组内保持原序;'
-      + '门控关则逐字节回退今日插入序。',
+    summary:
+      '「真实失败原因」清单排序:本轮新鲜 live 失败(带真实 HTTP 状态码、非 virtualSkip)' +
+      '排在陈旧缓存跳过(virtualSkip / `recent … failure cached (cooldown Ns)`)之前,' +
+      '避免 238s 前缓存的 404 盖过本轮真实的 429;稳定分区,组内保持原序;' +
+      '门控关则逐字节回退今日插入序。',
   };
 }
 

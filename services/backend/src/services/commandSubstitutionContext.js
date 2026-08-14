@@ -41,11 +41,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_SUBST_SHELL_AWARE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_SUBST_SHELL_AWARE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -61,9 +67,13 @@ const _NON_POSIX_SHELLS = new Set(['powershell', 'powershell.exe', 'pwsh', 'pwsh
  * @returns {string} 小写 basename;无法解析 → ''
  */
 function baseExecutable(command) {
-  if (!command || typeof command !== 'string') return '';
+  if (!command || typeof command !== 'string') {
+    return '';
+  }
   const trimmed = command.trim();
-  if (!trimmed) return '';
+  if (!trimmed) {
+    return '';
+  }
   // First token. If the command starts with a quote, the executable path may
   // contain spaces (Windows: "C:\Program Files\...\pwsh.exe") — take up to the
   // matching closing quote. Otherwise split on the first whitespace run.
@@ -108,7 +118,9 @@ function isNonPosixShellInvocation(command) {
  */
 function isPosixCommandSubstitution(command, env) {
   try {
-    if (!isEnabled(env)) return true;
+    if (!isEnabled(env)) {
+      return true;
+    }
     return !isNonPosixShellInvocation(command);
   } catch {
     return true;

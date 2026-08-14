@@ -33,7 +33,11 @@ const MAX_OPEN_LISTED = 20;
  */
 function isTaskRecallEnabled(env = process.env) {
   const raw = env && env.KHY_TASK_MEMORY_RECALL;
-  return !_OFF.includes(String(raw == null ? '' : raw).trim().toLowerCase());
+  return !_OFF.includes(
+    String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -43,14 +47,20 @@ function isTaskRecallEnabled(env = process.env) {
  * @returns {string|null}
  */
 function getTaskMemorySection(env = process.env) {
-  if (!isTaskRecallEnabled(env)) return null;
+  if (!isTaskRecallEnabled(env)) {
+    return null;
+  }
   try {
     const store = require('./_taskStore');
     const all = store.list();
-    if (!Array.isArray(all) || all.length === 0) return null;
+    if (!Array.isArray(all) || all.length === 0) {
+      return null;
+    }
 
     const open = all.filter((t) => t && (t.status === 'pending' || t.status === 'in_progress'));
-    if (open.length === 0) return null;
+    if (open.length === 0) {
+      return null;
+    }
 
     // in_progress 优先,其次 pending;各自按 createdAt 最旧优先(与 snapshot 的确定性排序一致)。
     const byCreated = (a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
@@ -60,7 +70,7 @@ function getTaskMemorySection(env = process.env) {
     const shown = ordered.slice(0, MAX_OPEN_LISTED);
 
     const completedIds = new Set(
-      all.filter((t) => t && t.status === 'completed').map((t) => String(t.id)),
+      all.filter((t) => t && t.status === 'completed').map((t) => String(t.id))
     );
     const completedCount = completedIds.size;
 
@@ -74,14 +84,18 @@ function getTaskMemorySection(env = process.env) {
     const lines = shown.map((t) => {
       const icon = t.status === 'in_progress' ? '→' : '○';
       let blocked = '';
-      try { blocked = buildBlockedBySuffix(t.blockedBy, completedIds, env) || ''; } catch { blocked = ''; }
+      try {
+        blocked = buildBlockedBySuffix(t.blockedBy, completedIds, env) || '';
+      } catch {
+        blocked = '';
+      }
       // in_progress 用现在进行时 activeForm("Fixing auth bug"),否则用 subject。
-      const label = (t.status === 'in_progress' && t.activeForm)
-        ? t.activeForm
-        : (t.subject || '(untitled)');
-      const desc = (t.status !== 'in_progress' && t.description)
-        ? ` — ${String(t.description).slice(0, 80)}`
-        : '';
+      const label =
+        t.status === 'in_progress' && t.activeForm ? t.activeForm : t.subject || '(untitled)';
+      const desc =
+        t.status !== 'in_progress' && t.description
+          ? ` — ${String(t.description).slice(0, 80)}`
+          : '';
       return `${icon} #${t.id} ${label}${blocked}${desc}`;
     });
     if (ordered.length > shown.length) {

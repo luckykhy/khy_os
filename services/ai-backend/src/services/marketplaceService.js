@@ -42,7 +42,13 @@ async function list(q = {}) {
     const like = { [Op.like]: `%${String(q.search).slice(0, 80)}%` };
     where[Op.or] = [{ name: like }, { description: like }, { slug: like }];
   }
-  const rows = await MarketplacePlugin.findAll({ where, order: [['official', 'DESC'], ['name', 'ASC']] });
+  const rows = await MarketplacePlugin.findAll({
+    where,
+    order: [
+      ['official', 'DESC'],
+      ['name', 'ASC'],
+    ],
+  });
   return rows.map(_summary);
 }
 
@@ -63,9 +69,10 @@ async function categories() {
 async function detail(userId, pluginId) {
   const row = await MarketplacePlugin.findByPk(pluginId);
   if (!row) throw httpError(404, 'Plugin not found');
-  const install = userId != null
-    ? await UserInstalledPlugin.findOne({ where: { userId, pluginId: row.id } })
-    : null;
+  const install =
+    userId != null
+      ? await UserInstalledPlugin.findOne({ where: { userId, pluginId: row.id } })
+      : null;
   return {
     ..._summary(row),
     manifest: row.manifestJson,

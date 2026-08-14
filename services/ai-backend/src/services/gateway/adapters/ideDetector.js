@@ -25,10 +25,7 @@ const DEFAULT_PATHS = {
       winAbs('Program Files (x86)', 'Kiro'),
       // User-reported path: D:\Users\25789\AppData\Local\Programs\Kiro
     ],
-    darwin: [
-      '/Applications/Kiro.app',
-      path.join(HOME, 'Applications', 'Kiro.app'),
-    ],
+    darwin: ['/Applications/Kiro.app', path.join(HOME, 'Applications', 'Kiro.app')],
     linux: [
       posixAbs('opt', 'kiro'),
       posixAbs('usr', 'share', 'kiro'),
@@ -43,10 +40,7 @@ const DEFAULT_PATHS = {
       path.join(HOME, 'AppData', 'Local', 'Cursor'),
       winAbs('Program Files', 'Cursor'),
     ],
-    darwin: [
-      '/Applications/Cursor.app',
-      path.join(HOME, 'Applications', 'Cursor.app'),
-    ],
+    darwin: ['/Applications/Cursor.app', path.join(HOME, 'Applications', 'Cursor.app')],
     linux: [
       posixAbs('opt', 'cursor'),
       posixAbs('usr', 'share', 'cursor'),
@@ -70,10 +64,7 @@ const DEFAULT_PATHS = {
       '/Applications/Trae CN.app',
       path.join(HOME, 'Applications', 'Trae.app'),
     ],
-    linux: [
-      posixAbs('opt', 'trae'),
-      path.join(HOME, '.local', 'share', 'trae'),
-    ],
+    linux: [posixAbs('opt', 'trae'), path.join(HOME, '.local', 'share', 'trae')],
   },
 
   warp: {
@@ -82,10 +73,7 @@ const DEFAULT_PATHS = {
       path.join(HOME, 'AppData', 'Local', 'Warp'),
       winAbs('Program Files', 'Warp'),
     ],
-    darwin: [
-      '/Applications/Warp.app',
-      path.join(HOME, 'Applications', 'Warp.app'),
-    ],
+    darwin: ['/Applications/Warp.app', path.join(HOME, 'Applications', 'Warp.app')],
     linux: [
       posixAbs('opt', 'warp'),
       path.join(HOME, '.warp'),
@@ -135,10 +123,28 @@ const DEFAULT_PATHS = {
 const DATA_PATHS = {
   kiro: {
     win32: [
-      path.join(HOME, 'AppData', 'Roaming', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
+      path.join(
+        HOME,
+        'AppData',
+        'Roaming',
+        'Kiro',
+        'User',
+        'globalStorage',
+        'kiro.kiroagent',
+        'profile.json'
+      ),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Kiro',
+        'User',
+        'globalStorage',
+        'kiro.kiroagent',
+        'profile.json'
+      ),
     ],
     linux: [
       path.join(HOME, '.config', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
@@ -150,11 +156,17 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Cursor', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Cursor', 'User', 'globalStorage', 'storage.json')],
   },
 
   trae: {
@@ -163,8 +175,24 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Trae', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
-      path.join(HOME, 'Library', 'Application Support', 'Trae', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Trae CN',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Trae',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
     linux: [
       path.join(HOME, '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
@@ -173,15 +201,9 @@ const DATA_PATHS = {
   },
 
   warp: {
-    win32: [
-      path.join(HOME, 'AppData', 'Local', 'Warp', 'data'),
-    ],
-    darwin: [
-      path.join(HOME, '.warp'),
-    ],
-    linux: [
-      path.join(HOME, '.local', 'share', 'warp-terminal'),
-    ],
+    win32: [path.join(HOME, 'AppData', 'Local', 'Warp', 'data')],
+    darwin: [path.join(HOME, '.warp')],
+    linux: [path.join(HOME, '.local', 'share', 'warp-terminal')],
   },
 
   windsurf: {
@@ -190,23 +212,33 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Codeium', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Windsurf',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json')],
   },
 
   vscode: {
-    win32: [
-      path.join(HOME, 'AppData', 'Roaming', 'Code', 'User', 'globalStorage', 'storage.json'),
-    ],
+    win32: [path.join(HOME, 'AppData', 'Roaming', 'Code', 'User', 'globalStorage', 'storage.json')],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Code',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Code', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Code', 'User', 'globalStorage', 'storage.json')],
   },
 };
 

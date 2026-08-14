@@ -18,7 +18,9 @@
 
 /** 门控:仅当显式置为 0/false/off/no 时关闭,其余(含未设)均开启。 */
 function isEnabled() {
-  const raw = String(process.env.KHY_SHELL_TRANSPARENCY || 'on').trim().toLowerCase();
+  const raw = String(process.env.KHY_SHELL_TRANSPARENCY || 'on')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -55,18 +57,18 @@ const TRANSPARENT_BLOCK = [
 // 约定(TRANSPARENT_BLOCK)一致,且前端会据此把输出渲染成带标题的分节块(对齐 CC 的
 // 结构化展示)。表头形态固定:`===` 空格 label 空格 `===`,单独成行,便于两端稳定解析。
 const TRANSPARENCY_ITEM =
-  'Make your work visible at the shell the way a careful engineer narrates at a shared terminal: '
-  + 'use `echo` to label steps and print short status lines, and pipe noisy output through `head`/`tail`/`wc` '
-  + 'to surface just the relevant lines. When one command runs several related checks, separate the steps with '
-  + '`echo "=== label ==="` header lines — use that exact shape (`===`, a space, a short label, a space, `===`, '
-  + 'alone on its line) so the step is clearly delimited and the frontend can render each section as a titled '
-  + 'block for the user. For a chain of checks that would otherwise succeed silently, append a per-step success '
-  + 'marker with `&&` — e.g. `node -c a.js && echo "a OK" && node -c b.js && echo "b OK"` prints a clean '
-  + '"a OK / b OK" confirmation instead of nothing. This also avoids the "(No output)" trap: a pipeline that '
-  + 'ends in a filter or pager (`... | grep x | head`) can exit 0 with empty stdout, which renders as a bare '
-  + '"no output" the reader cannot interpret — an explicit `&& echo "=== <label> OK ==="` guarantees a visible, '
-  + 'meaningful result for every step. These transparency uses are encouraged — the "prefer dedicated tools" '
-  + 'guidance targets replacing Read/Grep/Glob/Edit with cat/grep/find/sed, not narration or output-shaping.';
+  'Make your work visible at the shell the way a careful engineer narrates at a shared terminal: ' +
+  'use `echo` to label steps and print short status lines, and pipe noisy output through `head`/`tail`/`wc` ' +
+  'to surface just the relevant lines. When one command runs several related checks, separate the steps with ' +
+  '`echo "=== label ==="` header lines — use that exact shape (`===`, a space, a short label, a space, `===`, ' +
+  'alone on its line) so the step is clearly delimited and the frontend can render each section as a titled ' +
+  'block for the user. For a chain of checks that would otherwise succeed silently, append a per-step success ' +
+  'marker with `&&` — e.g. `node -c a.js && echo "a OK" && node -c b.js && echo "b OK"` prints a clean ' +
+  '"a OK / b OK" confirmation instead of nothing. This also avoids the "(No output)" trap: a pipeline that ' +
+  'ends in a filter or pager (`... | grep x | head`) can exit 0 with empty stdout, which renders as a bare ' +
+  '"no output" the reader cannot interpret — an explicit `&& echo "=== <label> OK ==="` guarantees a visible, ' +
+  'meaningful result for every step. These transparency uses are encouraged — the "prefer dedicated tools" ' +
+  'guidance targets replacing Read/Grep/Glob/Edit with cat/grep/find/sed, not narration or output-shaping.';
 
 /**
  * BashTool 描述里的「禁误用 / 许可透明性」块。

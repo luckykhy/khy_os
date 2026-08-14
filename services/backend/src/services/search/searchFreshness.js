@@ -28,19 +28,26 @@ const WINDOW_ORDER = ['day', 'week', 'month', 'year'];
 // ── env 门控 ─────────────────────────────────────────────────────────
 // 收敛到 utils/envOnByName 单一真源(逐字节委托,调用点不变)
 const _envOn = require('../../utils/envOnByName');
-function isEnabled(env) { return _envOn(env, 'KHY_SEARCH_FRESHNESS'); }
-function isRerankEnabled(env) { return _envOn(env, 'KHY_SEARCH_FRESHNESS_RERANK'); }
+function isEnabled(env) {
+  return _envOn(env, 'KHY_SEARCH_FRESHNESS');
+}
+
+function isRerankEnabled(env) {
+  return _envOn(env, 'KHY_SEARCH_FRESHNESS_RERANK');
+}
 
 // ── 1. 意图识别 ──────────────────────────────────────────────────────
 // 从 query 文本判断是否是时效性问题,以及合适的时间窗口。保守:只在出现明确时间/
 // 新闻意图时返回窗口,普通检索一律返回 null(不限定时间,不动既有召回)。
 // 强信号优先(今天/实时 > 本周 > 本月 > 今年),通用「最新/新闻」类落到 week 这个稳妥默认。
-const DAY_RE = /(今天|今日|昨天|刚刚|刚才|此刻|实时|\btoday\b|\byesterday\b|\bbreaking\b|\blive\b|\bright now\b)/i;
+const DAY_RE =
+  /(今天|今日|昨天|刚刚|刚才|此刻|实时|\btoday\b|\byesterday\b|\bbreaking\b|\blive\b|\bright now\b)/i;
 const WEEK_RE = /(本周|这周|这一周|近一周|\bthis week\b|\bpast week\b)/i;
 const MONTH_RE = /(本月|这个月|近一月|近一个月|\bthis month\b|\bpast month\b)/i;
 const YEAR_RE = /(今年|本年|\bthis year\b)/i;
 // 通用时效意图(无明确窗口)→ 默认 week。
-const GENERIC_RE = /(最新|最近|近期|目前|现在|当前|新闻|快讯|动态|进展|消息|行情|股价|报价|天气|\blatest\b|\brecent(ly)?\b|\bnewest\b|\bnews\b|\bcurrent\b|\bnowadays\b|\bup[\s-]?to[\s-]?date\b|\bupdate[ds]?\b)/i;
+const GENERIC_RE =
+  /(最新|最近|近期|目前|现在|当前|新闻|快讯|动态|进展|消息|行情|股价|报价|天气|\blatest\b|\brecent(ly)?\b|\bnewest\b|\bnews\b|\bcurrent\b|\bnowadays\b|\bup[\s-]?to[\s-]?date\b|\bupdate[ds]?\b)/i;
 
 /**
  * @param {string} query
@@ -48,12 +55,24 @@ const GENERIC_RE = /(最新|最近|近期|目前|现在|当前|新闻|快讯|动
  */
 function detectFreshness(query) {
   const q = String(query || '');
-  if (!q.trim()) return null;
-  if (DAY_RE.test(q)) return 'day';
-  if (WEEK_RE.test(q)) return 'week';
-  if (MONTH_RE.test(q)) return 'month';
-  if (YEAR_RE.test(q)) return 'year';
-  if (GENERIC_RE.test(q)) return 'week';
+  if (!q.trim()) {
+    return null;
+  }
+  if (DAY_RE.test(q)) {
+    return 'day';
+  }
+  if (WEEK_RE.test(q)) {
+    return 'week';
+  }
+  if (MONTH_RE.test(q)) {
+    return 'month';
+  }
+  if (YEAR_RE.test(q)) {
+    return 'year';
+  }
+  if (GENERIC_RE.test(q)) {
+    return 'week';
+  }
   return null;
 }
 
@@ -67,21 +86,45 @@ function detectFreshness(query) {
  * @returns {'day'|'week'|'month'|'year'|'auto'|null}
  */
 function normalizeWindow(raw) {
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
-  if (!s) return null;
-  if (s === 'auto') return 'auto';
-  if (s === 'none' || s === 'nolimit' || s === 'no_limit' || s === 'all' || s === 'any') return null;
-  if (WINDOW_DAYS[s]) return s;
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
+  if (!s) {
+    return null;
+  }
+  if (s === 'auto') {
+    return 'auto';
+  }
+  if (s === 'none' || s === 'nolimit' || s === 'no_limit' || s === 'all' || s === 'any') {
+    return null;
+  }
+  if (WINDOW_DAYS[s]) {
+    return s;
+  }
   const single = { d: 'day', w: 'week', m: 'month', y: 'year' };
-  if (single[s]) return single[s];
+  if (single[s]) {
+    return single[s];
+  }
   const bocha = { oneday: 'day', oneweek: 'week', onemonth: 'month', oneyear: 'year' };
-  if (bocha[s]) return bocha[s];
+  if (bocha[s]) {
+    return bocha[s];
+  }
   // "m6" / "past week" 等宽松形态
-  if (/^m\d+$/.test(s)) return 'month';
-  if (/day/.test(s)) return 'day';
-  if (/week/.test(s)) return 'week';
-  if (/month/.test(s)) return 'month';
-  if (/year/.test(s)) return 'year';
+  if (/^m\d+$/.test(s)) {
+    return 'month';
+  }
+  if (/day/.test(s)) {
+    return 'day';
+  }
+  if (/week/.test(s)) {
+    return 'week';
+  }
+  if (/month/.test(s)) {
+    return 'month';
+  }
+  if (/year/.test(s)) {
+    return 'year';
+  }
   return null;
 }
 
@@ -94,9 +137,13 @@ function normalizeWindow(raw) {
  * @returns {'day'|'week'|'month'|'year'|null}
  */
 function resolveWindow(explicit, query, env) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const norm = normalizeWindow(explicit);
-  if (norm && norm !== 'auto') return norm;
+  if (norm && norm !== 'auto') {
+    return norm;
+  }
   // norm === 'auto' 或未提供 → 自动识别
   return detectFreshness(query);
 }
@@ -112,7 +159,9 @@ function resolveWindow(explicit, query, env) {
  * @returns {string}
  */
 function freshnessToEngineParam(window, engine, nowMs) {
-  if (!window || !WINDOW_DAYS[window]) return '';
+  if (!window || !WINDOW_DAYS[window]) {
+    return '';
+  }
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
   const days = WINDOW_DAYS[window];
   switch (engine) {
@@ -157,8 +206,18 @@ function windowToBochaFreshness(window) {
 // ── 3. 结果日期解析 + 按时间重排 ─────────────────────────────────────
 const ZH_MONTH = '01';
 const EN_MONTHS = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
 };
 
 /**
@@ -172,36 +231,61 @@ const EN_MONTHS = {
  */
 function parseResultDate(text, nowMs) {
   const s = String(text || '');
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
 
   // 相对(中文)
   let m = s.match(/(\d+)\s*分钟前/);
-  if (m) return now - parseInt(m[1], 10) * 60 * SEC;
+  if (m) {
+    return now - parseInt(m[1], 10) * 60 * SEC;
+  }
   m = s.match(/(\d+)\s*小时前/);
-  if (m) return now - parseInt(m[1], 10) * 60 * 60 * SEC;
+  if (m) {
+    return now - parseInt(m[1], 10) * 60 * 60 * SEC;
+  }
   m = s.match(/(\d+)\s*天前/);
-  if (m) return now - parseInt(m[1], 10) * DAY_MS;
-  if (/前天/.test(s)) return now - 2 * DAY_MS;
-  if (/昨天/.test(s)) return now - DAY_MS;
-  if (/(今天|今日|刚刚|刚才)/.test(s)) return now;
+  if (m) {
+    return now - parseInt(m[1], 10) * DAY_MS;
+  }
+  if (/前天/.test(s)) {
+    return now - 2 * DAY_MS;
+  }
+  if (/昨天/.test(s)) {
+    return now - DAY_MS;
+  }
+  if (/(今天|今日|刚刚|刚才)/.test(s)) {
+    return now;
+  }
 
   // 相对(英文)e.g. "3 days ago", "an hour ago"
   m = s.match(/(\d+)\s*(minute|hour|day|week|month|year)s?\s+ago/i);
   if (m) {
     const n = parseInt(m[1], 10);
     const unit = m[2].toLowerCase();
-    const mult = { minute: 60 * SEC, hour: 60 * 60 * SEC, day: DAY_MS, week: 7 * DAY_MS, month: 30 * DAY_MS, year: 365 * DAY_MS };
+    const mult = {
+      minute: 60 * SEC,
+      hour: 60 * 60 * SEC,
+      day: DAY_MS,
+      week: 7 * DAY_MS,
+      month: 30 * DAY_MS,
+      year: 365 * DAY_MS,
+    };
     return now - n * (mult[unit] || DAY_MS);
   }
 
   // 绝对:YYYY-MM-DD / YYYY/MM/DD
   m = s.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/);
-  if (m) return _ymd(m[1], m[2], m[3]);
+  if (m) {
+    return _ymd(m[1], m[2], m[3]);
+  }
 
   // 绝对:YYYY年MM月DD日(日可缺省)
   m = s.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})?\s*日?/);
-  if (m) return _ymd(m[1], m[2], m[3] || '1');
+  if (m) {
+    return _ymd(m[1], m[2], m[3] || '1');
+  }
 
   // 绝对:Mon DD, YYYY  e.g. "Jun 20, 2026"
   m = s.match(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(20\d{2})\b/);
@@ -220,7 +304,9 @@ function _ymd(y, mo, d) {
   const yi = parseInt(y, 10);
   const mi = parseInt(mo, 10);
   const di = parseInt(d, 10);
-  if (!yi || !mi || mi < 1 || mi > 12 || di < 1 || di > 31) return null;
+  if (!yi || !mi || mi < 1 || mi > 12 || di < 1 || di > 31) {
+    return null;
+  }
   // 用 UTC 构造,避免时区漂移影响确定性测试。
   const t = Date.UTC(yi, mi - 1, di);
   return Number.isFinite(t) ? t : null;
@@ -228,7 +314,9 @@ function _ymd(y, mo, d) {
 
 /** 时间戳 → YYYY-MM-DD(UTC),用于回填 publishedDate。 */
 function _fmtYmd(ms) {
-  if (!Number.isFinite(ms)) return '';
+  if (!Number.isFinite(ms)) {
+    return '';
+  }
   const d = new Date(ms);
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -249,17 +337,23 @@ function _fmtYmd(ms) {
  * @param {object} [env]
  */
 function applyRecencyRanking(results, window, nowMs, env) {
-  if (!Array.isArray(results) || results.length === 0) return Array.isArray(results) ? results.slice() : [];
+  if (!Array.isArray(results) || results.length === 0) {
+    return Array.isArray(results) ? results.slice() : [];
+  }
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
 
   // 先做日期富化(即便不重排也回填 publishedDate)。
   const enriched = results.map((r, i) => {
     const copy = { ...r };
     let ts = parseResultDate(copy.publishedDate, now);
-    if (ts == null) ts = parseResultDate(`${copy.title || ''} ${copy.snippet || ''}`, now);
+    if (ts == null) {
+      ts = parseResultDate(`${copy.title || ''} ${copy.snippet || ''}`, now);
+    }
     if (ts != null) {
       copy._freshTs = ts;
-      if (!copy.publishedDate) copy.publishedDate = _fmtYmd(ts);
+      if (!copy.publishedDate) {
+        copy.publishedDate = _fmtYmd(ts);
+      }
     } else {
       copy._freshTs = null;
     }
@@ -277,13 +371,17 @@ function applyRecencyRanking(results, window, nowMs, env) {
   const undated = [];
   const stale = [];
   for (const r of enriched) {
-    if (r._freshTs == null) undated.push(r);
-    else if (r._freshTs >= cutoff) inWindow.push(r);
-    else stale.push(r);
+    if (r._freshTs == null) {
+      undated.push(r);
+    } else if (r._freshTs >= cutoff) {
+      inWindow.push(r);
+    } else {
+      stale.push(r);
+    }
   }
   // 稳定排序:同 ts 时按原序(_origIdx)保持确定性。
-  inWindow.sort((a, b) => (b._freshTs - a._freshTs) || (a._origIdx - b._origIdx));
-  stale.sort((a, b) => (b._freshTs - a._freshTs) || (a._origIdx - b._origIdx));
+  inWindow.sort((a, b) => b._freshTs - a._freshTs || a._origIdx - b._origIdx);
+  stale.sort((a, b) => b._freshTs - a._freshTs || a._origIdx - b._origIdx);
   const ordered = [...inWindow, ...undated, ...stale];
   return ordered.map(({ _freshTs, _origIdx, ...rest }) => rest);
 }

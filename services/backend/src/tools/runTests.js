@@ -3,10 +3,12 @@
  */
 'use strict';
 
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
+
+const { defineTool } = require('./_baseTool');
 const { getShellConfiguration } = require('./platformUtils');
 
 // ─── Framework Detection ───────────────────────────────────────────────────
@@ -18,17 +20,33 @@ function _detectTestFramework(cwd) {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       const allDeps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
 
-      if (allDeps.jest || allDeps['@jest/core']) return { framework: 'jest', cmd: 'npx jest --json --no-coverage' };
-      if (allDeps.vitest) return { framework: 'vitest', cmd: 'npx vitest run --reporter=json' };
-      if (allDeps.mocha) return { framework: 'mocha', cmd: 'npx mocha --reporter json' };
-      if (pkg.scripts && pkg.scripts.test && pkg.scripts.test !== 'echo "Error: no test specified" && exit 1') {
+      if (allDeps.jest || allDeps['@jest/core']) {
+        return { framework: 'jest', cmd: 'npx jest --json --no-coverage' };
+      }
+      if (allDeps.vitest) {
+        return { framework: 'vitest', cmd: 'npx vitest run --reporter=json' };
+      }
+      if (allDeps.mocha) {
+        return { framework: 'mocha', cmd: 'npx mocha --reporter json' };
+      }
+      if (
+        pkg.scripts &&
+        pkg.scripts.test &&
+        pkg.scripts.test !== 'echo "Error: no test specified" && exit 1'
+      ) {
         return { framework: 'npm-script', cmd: 'npm test' };
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
-  if (fs.existsSync(path.join(cwd, 'Cargo.toml'))) return { framework: 'cargo', cmd: 'cargo test 2>&1' };
-  if (fs.existsSync(path.join(cwd, 'go.mod'))) return { framework: 'go', cmd: 'go test -v ./... 2>&1' };
+  if (fs.existsSync(path.join(cwd, 'Cargo.toml'))) {
+    return { framework: 'cargo', cmd: 'cargo test 2>&1' };
+  }
+  if (fs.existsSync(path.join(cwd, 'go.mod'))) {
+    return { framework: 'go', cmd: 'go test -v ./... 2>&1' };
+  }
 
   // Python test detection
   for (const f of ['pytest.ini', 'setup.cfg', 'pyproject.toml', 'tox.ini']) {
@@ -49,11 +67,13 @@ function _parseJestJson(output) {
   try {
     // Jest --json outputs a single JSON line (may have preceding text)
     const jsonStart = output.indexOf('{');
-    if (jsonStart === -1) return null;
+    if (jsonStart === -1) {
+      return null;
+    }
     const json = JSON.parse(output.slice(jsonStart));
     const failures = [];
-    for (const suite of (json.testResults || [])) {
-      for (const test of suite.assertionResults.filter(t => t.status === 'failed')) {
+    for (const suite of json.testResults || []) {
+      for (const test of suite.assertionResults.filter((t) => t.status === 'failed')) {
         failures.push({
           testName: test.fullName || test.title,
           file: path.relative(process.cwd(), suite.name),
@@ -68,32 +88,54 @@ function _parseJestJson(output) {
       total: json.numTotalTests || 0,
       failures,
     };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function _parseGenericOutput(output) {
   const lines = output.split('\n');
-  let passed = 0, failed = 0, skipped = 0;
+  let passed = 0,
+    failed = 0,
+    skipped = 0;
   const failures = [];
 
   for (const line of lines) {
     // pytest summary: "X passed, Y failed, Z skipped"
     const pytestMatch = line.match(/(\d+)\s+passed/);
-    if (pytestMatch) passed = parseInt(pytestMatch[1], 10);
+    if (pytestMatch) {
+      passed = parseInt(pytestMatch[1], 10);
+    }
     const pytestFailed = line.match(/(\d+)\s+failed/);
-    if (pytestFailed) failed = parseInt(pytestFailed[1], 10);
+    if (pytestFailed) {
+      failed = parseInt(pytestFailed[1], 10);
+    }
     const pytestSkipped = line.match(/(\d+)\s+skipped/);
-    if (pytestSkipped) skipped = parseInt(pytestSkipped[1], 10);
+    if (pytestSkipped) {
+      skipped = parseInt(pytestSkipped[1], 10);
+    }
 
     // cargo test: "test result: ok. X passed; Y failed; Z ignored"
-    const cargoMatch = line.match(/test result:.*?(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+ignored/);
-    if (cargoMatch) { passed = parseInt(cargoMatch[1], 10); failed = parseInt(cargoMatch[2], 10); skipped = parseInt(cargoMatch[3], 10); }
+    const cargoMatch = line.match(
+      /test result:.*?(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+ignored/
+    );
+    if (cargoMatch) {
+      passed = parseInt(cargoMatch[1], 10);
+      failed = parseInt(cargoMatch[2], 10);
+      skipped = parseInt(cargoMatch[3], 10);
+    }
 
     // go test: "ok"/"FAIL" per package, "--- FAIL: TestName"
     const goFail = line.match(/--- FAIL:\s+(\S+)/);
-    if (goFail) { failures.push({ testName: goFail[1], file: '', message: '' }); }
-    if (line.startsWith('ok ')) passed++;
-    if (line.startsWith('FAIL\t')) failed++;
+    if (goFail) {
+      failures.push({ testName: goFail[1], file: '', message: '' });
+    }
+    if (line.startsWith('ok ')) {
+      passed++;
+    }
+    if (line.startsWith('FAIL\t')) {
+      failed++;
+    }
 
     // Generic FAIL/PASS patterns
     if (line.includes('FAILED') && line.includes('::')) {
@@ -108,9 +150,11 @@ function _parseGenericOutput(output) {
 
 module.exports = defineTool({
   name: 'run_tests',
-  description: 'Detect test framework and run tests, returning structured pass/fail/skip counts and failure details. Supports Jest, Vitest, Mocha, pytest, cargo test, go test.',
+  description:
+    'Detect test framework and run tests, returning structured pass/fail/skip counts and failure details. Supports Jest, Vitest, Mocha, pytest, cargo test, go test.',
   category: 'execution',
   risk: 'medium',
+  searchHint: 'jest pytest cargo unit test suite 跑测试 单元测试 测试用例',
   isReadOnly: false,
   isConcurrencySafe: false,
 
@@ -118,8 +162,16 @@ module.exports = defineTool({
     cwd: { type: 'string', required: false, description: 'Project directory' },
     command: { type: 'string', required: false, description: 'Override test command' },
     filter: { type: 'string', required: false, description: 'Test name/pattern filter' },
-    timeout: { type: 'number', required: false, description: 'Idle timeout in ms (default 120000)' },
-    idleTimeout: { type: 'number', required: false, description: 'Alias of timeout; idle timeout in ms' },
+    timeout: {
+      type: 'number',
+      required: false,
+      description: 'Idle timeout in ms (default 120000)',
+    },
+    idleTimeout: {
+      type: 'number',
+      required: false,
+      description: 'Alias of timeout; idle timeout in ms',
+    },
   },
 
   getActivityDescription(input) {
@@ -131,7 +183,12 @@ module.exports = defineTool({
     const idleTimeoutMs = Math.max(
       50,
       parseInt(
-        String(params.idleTimeout || params.timeout || process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS || '120000'),
+        String(
+          params.idleTimeout ||
+            params.timeout ||
+            process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS ||
+            '120000'
+        ),
         10
       ) || 120000
     );
@@ -147,15 +204,21 @@ module.exports = defineTool({
 
     // Append filter if provided
     if (params.filter && !params.command) {
-      if (framework === 'jest' || framework === 'vitest') command += ` -t "${params.filter}"`;
-      else if (framework === 'pytest') command += ` -k "${params.filter}"`;
-      else if (framework === 'cargo') command += ` ${params.filter}`;
-      else if (framework === 'go') command += ` -run "${params.filter}"`;
+      if (framework === 'jest' || framework === 'vitest') {
+        command += ` -t "${params.filter}"`;
+      } else if (framework === 'pytest') {
+        command += ` -k "${params.filter}"`;
+      } else if (framework === 'cargo') {
+        command += ` ${params.filter}`;
+      } else if (framework === 'go') {
+        command += ` -run "${params.filter}"`;
+      }
     }
 
-    const traceCtx = (context && context.traceContext && typeof context.traceContext === 'object')
-      ? context.traceContext
-      : {};
+    const traceCtx =
+      context && context.traceContext && typeof context.traceContext === 'object'
+        ? context.traceContext
+        : {};
     const spawnEnv = {
       ...process.env,
       ...(traceCtx.env || {}),
@@ -185,19 +248,31 @@ module.exports = defineTool({
         label,
         onActivity: (payload) => {
           if (typeof context?.onActivity === 'function') {
-            try { context.onActivity({ tool: 'run_tests', framework, ...payload }); } catch { /* non-critical */ }
+            try {
+              context.onActivity({ tool: 'run_tests', framework, ...payload });
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onStdoutChunk: (chunk) => {
           totalOutBytes += Buffer.byteLength(String(chunk || ''), 'utf8');
           if (typeof context?.onProgress === 'function') {
-            try { context.onProgress(`run_tests stdout ${Math.round(totalOutBytes / 1024)}KB`); } catch { /* non-critical */ }
+            try {
+              context.onProgress(`run_tests stdout ${Math.round(totalOutBytes / 1024)}KB`);
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onStderrChunk: (chunk) => {
           totalErrBytes += Buffer.byteLength(String(chunk || ''), 'utf8');
           if (typeof context?.onProgress === 'function') {
-            try { context.onProgress(`run_tests stderr ${Math.round(totalErrBytes / 1024)}KB`); } catch { /* non-critical */ }
+            try {
+              context.onProgress(`run_tests stderr ${Math.round(totalErrBytes / 1024)}KB`);
+            } catch {
+              /* non-critical */
+            }
           }
         },
       });

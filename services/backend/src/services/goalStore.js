@@ -16,17 +16,28 @@ const fs = require('fs');
 const path = require('path');
 
 const { getBaseDataDir } = require('../utils/dataHome');
+
 const core = require('./goalCore');
 
-function _dir() { return getBaseDataDir('goals'); }                    // ~/.khyos/goals(已确保存在)
-function _file() { return path.join(_dir(), 'goals.json'); }
-function _bak() { return path.join(_dir(), 'goals.bak'); }
+function _dir() {
+  return getBaseDataDir('goals');
+} // ~/.khyos/goals(已确保存在)
+
+function _file() {
+  return path.join(_dir(), 'goals.json');
+}
+
+function _bak() {
+  return path.join(_dir(), 'goals.bak');
+}
 
 /** 读取存档;缺失/损坏 → 空存档。绝不抛。 */
 function _read() {
   try {
     const file = _file();
-    if (!fs.existsSync(file)) return { version: core.STORE_VERSION, goals: [] };
+    if (!fs.existsSync(file)) {
+      return { version: core.STORE_VERSION, goals: [] };
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.goals)) {
       return { version: core.STORE_VERSION, goals: [] };
@@ -42,7 +53,13 @@ function _write(state) {
   try {
     const dir = _dir();
     const file = _file();
-    try { if (fs.existsSync(file)) fs.copyFileSync(file, _bak()); } catch { /* best-effort */ }
+    try {
+      if (fs.existsSync(file)) {
+        fs.copyFileSync(file, _bak());
+      }
+    } catch {
+      /* best-effort */
+    }
     const payload = {
       version: core.STORE_VERSION,
       goals: Array.isArray(state.goals) ? state.goals : [],
@@ -58,7 +75,9 @@ function _write(state) {
 }
 
 /** 所有目标记录(含历史/非活动)。 */
-function listGoals() { return _read().goals; }
+function listGoals() {
+  return _read().goals;
+}
 
 /**
  * 自愈对账(读取时):把已「闲置超时」的活动目标退役并落盘。门控 KHY_GOAL_RECONCILE(默认开,
@@ -72,7 +91,9 @@ function listGoals() { return _read().goals; }
  */
 function _reconcileState(state, env) {
   try {
-    if (!core.isReconcileEnabled(env)) return false;
+    if (!core.isReconcileEnabled(env)) {
+      return false;
+    }
     const nowMs = Date.now();
     let changed = false;
     for (const g of state.goals) {
@@ -83,17 +104,19 @@ function _reconcileState(state, env) {
         changed = true;
       }
     }
-    if (changed) _write(state);                          // best-effort;失败不影响本次挑选
+    if (changed) {
+      _write(state);
+    } // best-effort;失败不影响本次挑选
     return changed;
   } catch {
-    return false;                                        // fail-soft:对账绝不阻断读取
+    return false; // fail-soft:对账绝不阻断读取
   }
 }
 
 /** 当前 cwd 作用域的活动目标(回退全局),无 → null。读取时先做闲置退役对账(门控 KHY_GOAL_RECONCILE)。 */
 function getActiveGoal(cwd, env) {
   const state = _read();
-  _reconcileState(state, env);                           // 门控关 → no-op,逐字节回退
+  _reconcileState(state, env); // 门控关 → no-op,逐字节回退
   return core.pickActiveGoal(state.goals, cwd == null ? process.cwd() : cwd);
 }
 
@@ -107,21 +130,31 @@ function getActiveGoal(cwd, env) {
  * @returns {{ok:true, goal:object}|{ok:false, error:string}}
  */
 function setGoal(text, opts = {}) {
-  const cwd = opts.global ? '' : (opts.cwd == null ? process.cwd() : opts.cwd);
+  const cwd = opts.global ? '' : opts.cwd == null ? process.cwd() : opts.cwd;
   const id = `${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const built = core.buildGoalRecord({
-    text, cwd, createdAt: new Date().toISOString(), id, maxTurns: opts.maxTurns,
+    text,
+    cwd,
+    createdAt: new Date().toISOString(),
+    id,
+    maxTurns: opts.maxTurns,
   });
-  if (!built.ok) return built;
+  if (!built.ok) {
+    return built;
+  }
   const state = _read();
   const scope = built.goal.scope;
   // 同作用域旧活动目标退役(保留历史)
   for (const g of state.goals) {
-    if (g && g.active && g.scope === scope) g.active = false;
+    if (g && g.active && g.scope === scope) {
+      g.active = false;
+    }
   }
   state.goals.push(built.goal);
   const w = _write(state);
-  if (!w.ok) return { ok: false, error: w.error || '写入失败' };
+  if (!w.ok) {
+    return { ok: false, error: w.error || '写入失败' };
+  }
   return { ok: true, goal: built.goal };
 }
 
@@ -138,25 +171,44 @@ function clearGoal(opts = {}) {
   const state = _read();
   const reason = opts.reason || 'abandoned';
   const at = new Date().toISOString();
-  const retire = (g) => { g.active = false; g.terminalStatus = reason; g.terminatedAt = at; };
+  const retire = (g) => {
+    g.active = false;
+    g.terminalStatus = reason;
+    g.terminatedAt = at;
+  };
   let cleared = 0;
   if (opts.all) {
-    for (const g of state.goals) { if (g && g.active) { retire(g); cleared++; } }
+    for (const g of state.goals) {
+      if (g && g.active) {
+        retire(g);
+        cleared++;
+      }
+    }
   } else {
     const scope = core.scopeKeyFor(opts.cwd == null ? process.cwd() : opts.cwd);
     for (const g of state.goals) {
-      if (g && g.active && g.scope === scope) { retire(g); cleared++; }
+      if (g && g.active && g.scope === scope) {
+        retire(g);
+        cleared++;
+      }
     }
     // 若该项目无活动目标,顺带清掉全局活动目标(用户直觉:clear 应停掉正在生效的那个)
     if (cleared === 0) {
       for (const g of state.goals) {
-        if (g && g.active && g.scope === core.GLOBAL_SCOPE) { retire(g); cleared++; }
+        if (g && g.active && g.scope === core.GLOBAL_SCOPE) {
+          retire(g);
+          cleared++;
+        }
       }
     }
   }
-  if (cleared === 0) return { ok: true, cleared: 0 };
+  if (cleared === 0) {
+    return { ok: true, cleared: 0 };
+  }
   const w = _write(state);
-  if (!w.ok) return { ok: false, error: w.error || '写入失败' };
+  if (!w.ok) {
+    return { ok: false, error: w.error || '写入失败' };
+  }
   return { ok: true, cleared };
 }
 
@@ -169,7 +221,9 @@ function clearGoal(opts = {}) {
  */
 function getActiveGoalDirective({ cwd, env } = {}) {
   try {
-    if (!core.isEnabled(env)) return '';
+    if (!core.isEnabled(env)) {
+      return '';
+    }
     const goal = getActiveGoal(cwd == null ? process.cwd() : cwd, env);
     return core.routeGoal({ goal, env });
   } catch {
@@ -191,11 +245,17 @@ function getActiveGoalDirective({ cwd, env } = {}) {
  */
 function advanceActiveGoalDirective({ cwd, env } = {}) {
   try {
-    if (!core.isEnabled(env)) return '';                       // KHY_GOAL 关 → 无指令
+    if (!core.isEnabled(env)) {
+      return '';
+    } // KHY_GOAL 关 → 无指令
     const c = cwd == null ? process.cwd() : cwd;
     const goal = getActiveGoal(c, env);
-    if (!goal) return '';
-    if (!core.isBounded(env)) return core.routeGoal({ goal, env }); // 有界关 → 旧无界指令,不计数
+    if (!goal) {
+      return '';
+    }
+    if (!core.isBounded(env)) {
+      return core.routeGoal({ goal, env });
+    } // 有界关 → 旧无界指令,不计数
     const tick = core.advanceGoalTurn(goal, env);
     const directive = core.buildBoundedDirective(goal, tick);
     // 持久化本轮推进(best-effort;写失败仍返回指令 = fail-soft)。
@@ -204,7 +264,7 @@ function advanceActiveGoalDirective({ cwd, env } = {}) {
       const rec = state.goals.find((g) => g && g.id === goal.id && g.active);
       if (rec) {
         rec.turnsSpent = tick.spent;
-        rec.lastAdvancedAt = new Date().toISOString();         // 刷新活跃度信号(闲置退役据此不误杀在跑目标)
+        rec.lastAdvancedAt = new Date().toISOString(); // 刷新活跃度信号(闲置退役据此不误杀在跑目标)
         if (tick.justExhausted) {
           rec.active = false;
           rec.terminalStatus = 'exhausted';
@@ -212,7 +272,9 @@ function advanceActiveGoalDirective({ cwd, env } = {}) {
         }
         _write(state);
       }
-    } catch { /* fail-soft: 计数丢失不影响本轮指令 */ }
+    } catch {
+      /* fail-soft: 计数丢失不影响本轮指令 */
+    }
     return directive;
   } catch {
     return '';

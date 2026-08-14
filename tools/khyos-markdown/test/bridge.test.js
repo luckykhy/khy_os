@@ -473,7 +473,10 @@ test('readPseudoFileBounded：无 head 命令(ENOENT) → handled:false（交回
   assert.equal(r.handled, false);
 });
 
-test('/api/read 集成：命中伪文件 → 走注入 spawnSync 的有界读取，超时返回 422 而非卡死', async () => {
+// Linux-only: the pseudo-file guard requires platform==='linux' and a literal '/proc'
+// prefix; on win32 path.resolve('/proc/kmsg') becomes 'D:\proc\kmsg' so the route can
+// never reach the bounded-read branch. The 422 semantics stay covered by the unit tests above.
+test('/api/read 集成：命中伪文件 → 走注入 spawnSync 的有界读取，超时返回 422 而非卡死', { skip: process.platform !== 'linux' }, async () => {
   const h = path.join(tmp, 'khyosMarkdown.html');
   // 伪 fs：把 /proc/kmsg 报成 isFile===true、size===0（真实阻塞伪文件的形状），
   //        且 readFileSync 若被调到就 fail（证明我们**没有**直读它）。
@@ -488,6 +491,8 @@ test('/api/read 集成：命中伪文件 → 走注入 spawnSync 的有界读取
   const spawnSyncImpl = () => ({ error: { code: 'ETIMEDOUT' }, status: null, signal: null, stdout: null });
   const handler = bridge.createHandler({
     token: 'tk', htmlPath: h, projectRoot: tmp, fsImpl, spawnSyncImpl,
+    // Whitelist '/' so /proc/kmsg passes withinAllowed and reaches the pseudo-file guard.
+    allowedRoots: ['/'],
   });
   const s = http.createServer(handler);
   await new Promise((r) => s.listen(0, '127.0.0.1', r));

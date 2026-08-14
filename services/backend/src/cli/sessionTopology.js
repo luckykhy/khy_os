@@ -32,7 +32,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 function topologyEnabled(env) {
   const e = env || {};
   const raw = e.KHY_SESSION_TOPOLOGY;
-  if (raw === undefined || raw === null) return true;
+  if (raw === undefined || raw === null) {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -46,8 +48,10 @@ const _num = require('../utils/finiteNumber').toFiniteOr0;
  * 稳定排序键:updatedAt 降序(新近优先),再 id 升序兜底,保证确定性回放。
  */
 function _byRecency(a, b) {
-  if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
-  return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+  if (b.updatedAt !== a.updatedAt) {
+    return b.updatedAt - a.updatedAt;
+  }
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
 /**
@@ -73,9 +77,13 @@ function buildForest(records, opts) {
   const byId = Object.create(null);
   const nodes = [];
   for (const rec of list) {
-    if (!rec || typeof rec !== 'object') continue;
+    if (!rec || typeof rec !== 'object') {
+      continue;
+    }
     const id = _str(rec.id);
-    if (!id || byId[id]) continue; // 空 id 跳过;重复 id 保留首条
+    if (!id || byId[id]) {
+      continue;
+    } // 空 id 跳过;重复 id 保留首条
     const node = {
       id,
       parentId: rec.parentId == null ? null : _str(rec.parentId),
@@ -95,7 +103,9 @@ function buildForest(records, opts) {
   const roots = [];
   for (const node of nodes) {
     let pid = node.parentId;
-    if (flat) pid = null; // 门控关:扁平
+    if (flat) {
+      pid = null;
+    } // 门控关:扁平
     const parent = pid && pid !== node.id ? byId[pid] : null;
     if (!parent) {
       roots.push(node);
@@ -112,11 +122,16 @@ function buildForest(records, opts) {
 
   // 稳定排序:根与各层 children 一律 updatedAt desc → id。
   roots.sort(_byRecency);
-  for (const node of nodes) node.children.sort(_byRecency);
+  for (const node of nodes) {
+    node.children.sort(_byRecency);
+  }
 
   // 计算 depth / index(DFS 前序,确定性)。
   let counter = 0;
-  const stack = roots.slice().reverse().map((r) => ({ node: r, depth: 0 }));
+  const stack = roots
+    .slice()
+    .reverse()
+    .map((r) => ({ node: r, depth: 0 }));
   while (stack.length) {
     const { node, depth } = stack.pop();
     node.depth = depth;
@@ -135,8 +150,12 @@ function _wouldCycle(byId, start, targetId) {
   let cur = start;
   const seen = new Set();
   while (cur) {
-    if (cur.id === targetId) return true;
-    if (seen.has(cur.id)) return true; // 已存在的旧环,保守判真
+    if (cur.id === targetId) {
+      return true;
+    }
+    if (seen.has(cur.id)) {
+      return true;
+    } // 已存在的旧环,保守判真
     seen.add(cur.id);
     cur = cur.parentId ? byId[cur.parentId] : null;
   }
@@ -161,13 +180,16 @@ const _truncate = require('../utils/truncateEllipsis');
 function buildForestRows(forest, opts) {
   const o = opts || {};
   const currentId = o.currentId == null ? null : _str(o.currentId);
-  const roots = (forest && Array.isArray(forest.roots)) ? forest.roots : [];
+  const roots = forest && Array.isArray(forest.roots) ? forest.roots : [];
   const rows = [];
 
   function walk(node, prefix, isLast, isRoot) {
     let branch;
-    if (isRoot) branch = '';
-    else branch = isLast ? '└─ ' : '├─ ';
+    if (isRoot) {
+      branch = '';
+    } else {
+      branch = isLast ? '└─ ' : '├─ ';
+    }
     rows.push({
       prefix,
       branch,
@@ -197,13 +219,21 @@ function nodeDisplayText(node, opts) {
   const annotate = typeof o.annotate === 'function' ? o.annotate : null;
   const label = _truncate((node && (node.label || node.id)) || '', labelWidth);
   const bits = [];
-  if (node && node.turnCount) bits.push(`${node.turnCount} turns`);
-  if (node && node.status) bits.push(node.status);
+  if (node && node.turnCount) {
+    bits.push(`${node.turnCount} turns`);
+  }
+  if (node && node.status) {
+    bits.push(node.status);
+  }
   const extra = annotate ? _str(annotate(node)) : '';
   const meta = bits.length ? `  (${bits.join(' · ')})` : '';
   let text = `${label}${meta}`;
-  if (extra) text += `  ${extra}`;
-  if (o.markCurrent) text += '  ← you are here';
+  if (extra) {
+    text += `  ${extra}`;
+  }
+  if (o.markCurrent) {
+    text += '  ← you are here';
+  }
   return text;
 }
 
@@ -240,7 +270,9 @@ function buildHereLine(forest, currentId) {
   const id = _str(currentId);
   const byId = (forest && forest.byId) || {};
   const node = id ? byId[id] : null;
-  if (!node) return '';
+  if (!node) {
+    return '';
+  }
 
   // 上溯根 → 当前的路径(带环保护)。
   const path = [];

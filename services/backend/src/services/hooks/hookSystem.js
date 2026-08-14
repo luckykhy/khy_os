@@ -61,10 +61,14 @@ function init(projectDir) {
  * @returns {Promise<{blocked: boolean, reason?: string, context: Object}>}
  */
 async function trigger(event, context = {}) {
-  if (!_initialized) return { blocked: false, context };
+  if (!_initialized) {
+    return { blocked: false, context };
+  }
 
   const hooks = registry.getHooks(event, context);
-  if (hooks.length === 0) return { blocked: false, context };
+  if (hooks.length === 0) {
+    return { blocked: false, context };
+  }
 
   return runHooks(hooks, context);
 }
@@ -83,6 +87,8 @@ function registerFunction(event, handler, opts) {
   registry.registerFunction(event, handler, opts);
 }
 
-function isInitialized() { return _initialized; }
+function isInitialized() {
+  return _initialized;
+}
 
 module.exports = { init, trigger, reload, registerFunction, isInitialized, registry };

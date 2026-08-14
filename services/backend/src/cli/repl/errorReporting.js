@@ -20,12 +20,14 @@
  * require cache holds the same singletons Node already memoizes, so behavior
  * is unchanged.
  */
-const { foldOutput } = require('../toolDisplayPolicy');
 const { compactAiErrorReply } = require('../errorSummary');
+const { foldOutput } = require('../toolDisplayPolicy');
 
 let _chalk, _formatters;
 const chalk = () => {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const chalkModule = require('chalk');
   _chalk = chalkModule.default || chalkModule;
   return _chalk;
@@ -42,15 +44,24 @@ let _lastAiErrorAt = 0;
 let _lastAiErrorRepeat = 0;
 let _mergedErrorHintOpen = false;
 const _MAX_FOLDED_STATUS_RECORDS = (() => {
-  const raw = Number.parseInt(String(process.env.KHY_STATUS_FOLDED_MAX_RECORDS || '200').trim(), 10);
-  if (!Number.isFinite(raw)) return 200;
+  const raw = Number.parseInt(
+    String(process.env.KHY_STATUS_FOLDED_MAX_RECORDS || '200').trim(),
+    10
+  );
+  if (!Number.isFinite(raw)) {
+    return 200;
+  }
   return Math.max(40, Math.min(2000, raw));
 })();
 let _foldedStatusRecords = [];
 
 function _normalizeFoldedStatusKey(reason = '', phase = '', text = '') {
-  const r = String(reason || '').trim().toLowerCase();
-  const p = String(phase || '').trim().toLowerCase();
+  const r = String(reason || '')
+    .trim()
+    .toLowerCase();
+  const p = String(phase || '')
+    .trim()
+    .toLowerCase();
   const t = String(text || '')
     .toLowerCase()
     .replace(/\d+(\.\d+)?s\b/gi, 'Xs')
@@ -61,12 +72,17 @@ function _normalizeFoldedStatusKey(reason = '', phase = '', text = '') {
 }
 
 function _recordFoldedStatus(reason = '', phase = '', text = '') {
-  const msg = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!msg) return;
+  const msg = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!msg) {
+    return;
+  }
   const now = Date.now();
   const key = _normalizeFoldedStatusKey(reason, phase, msg);
-  const tail = _foldedStatusRecords.length > 0 ? _foldedStatusRecords[_foldedStatusRecords.length - 1] : null;
-  if (tail && tail.key === key && (now - Number(tail.lastAt || 0)) < 30_000) {
+  const tail =
+    _foldedStatusRecords.length > 0 ? _foldedStatusRecords[_foldedStatusRecords.length - 1] : null;
+  if (tail && tail.key === key && now - Number(tail.lastAt || 0) < 30_000) {
     tail.count = Number(tail.count || 1) + 1;
     tail.lastAt = now;
     return;
@@ -86,20 +102,40 @@ function _recordFoldedStatus(reason = '', phase = '', text = '') {
 }
 
 function _formatFoldedReasonLabel(reason = '') {
-  const r = String(reason || '').trim().toLowerCase();
-  if (r === 'init-brief') return '初始化噪声';
-  if (r === 'start-window') return '启动静默';
-  if (r === 'low-value-repeat') return '低价值重复';
-  if (r === 'exact-dedup') return '完全重复';
-  if (r === 'tool-progress-brief') return '工具成功节流';
-  if (r === 'brief-metrics') return '指标噪声';
-  if (r === 'brief-adapter') return '通道切换噪声';
-  if (r === 'brief-generic') return '通用状态噪声';
+  const r = String(reason || '')
+    .trim()
+    .toLowerCase();
+  if (r === 'init-brief') {
+    return '初始化噪声';
+  }
+  if (r === 'start-window') {
+    return '启动静默';
+  }
+  if (r === 'low-value-repeat') {
+    return '低价值重复';
+  }
+  if (r === 'exact-dedup') {
+    return '完全重复';
+  }
+  if (r === 'tool-progress-brief') {
+    return '工具成功节流';
+  }
+  if (r === 'brief-metrics') {
+    return '指标噪声';
+  }
+  if (r === 'brief-adapter') {
+    return '通道切换噪声';
+  }
+  if (r === 'brief-generic') {
+    return '通用状态噪声';
+  }
   return reason || '已抑制';
 }
 
 function _buildFoldedStatusDetailText() {
-  if (_foldedStatusRecords.length <= 0) return '';
+  if (_foldedStatusRecords.length <= 0) {
+    return '';
+  }
   const reasonCount = new Map();
   for (const item of _foldedStatusRecords) {
     const key = _formatFoldedReasonLabel(item.reason || '');
@@ -110,7 +146,9 @@ function _buildFoldedStatusDetailText() {
     .map(([k, v]) => `${k}:${v}`);
   const lines = [];
   lines.push(`折叠状态记录: ${_foldedStatusRecords.length}`);
-  if (reasonParts.length > 0) lines.push(`原因汇总: ${reasonParts.join(' · ')}`);
+  if (reasonParts.length > 0) {
+    lines.push(`原因汇总: ${reasonParts.join(' · ')}`);
+  }
   lines.push('---');
   for (const item of _foldedStatusRecords) {
     const t = new Date(item.lastAt || Date.now()).toTimeString().slice(0, 8);
@@ -123,13 +161,23 @@ function _buildFoldedStatusDetailText() {
 }
 
 function _printFoldedStatusDetails() {
-  if (_foldedStatusRecords.length <= 0) return false;
+  if (_foldedStatusRecords.length <= 0) {
+    return false;
+  }
   const detail = _buildFoldedStatusDetailText();
-  if (!detail) return false;
+  if (!detail) {
+    return false;
+  }
   try {
     const renderer = require('../aiRenderer');
-    renderer.pushExpandableOutput({ tool: 'FoldedStatus', detail, paramStr: `records=${_foldedStatusRecords.length}` });
-  } catch { /* non-critical */ }
+    renderer.pushExpandableOutput({
+      tool: 'FoldedStatus',
+      detail,
+      paramStr: `records=${_foldedStatusRecords.length}`,
+    });
+  } catch {
+    /* non-critical */
+  }
   console.log('');
   printInfo(`折叠状态明细（共 ${_foldedStatusRecords.length} 条）`);
   console.log(c.dim('  ─────────────────────────────────────────'));
@@ -141,13 +189,15 @@ function _printFoldedStatusDetails() {
 }
 
 // Toggle 状态：记录上次展开的内容指纹，再按 Ctrl+O 折叠回去
-let _expandToggleState = { expanded: false, fingerprint: null };
+const _expandToggleState = { expanded: false, fingerprint: null };
 
 function _printLastExpandableOutput() {
   try {
     const renderer = require('../aiRenderer');
     const last = renderer.getLastExpandableOutput();
-    if (!last || !last.detail) return false;
+    if (!last || !last.detail) {
+      return false;
+    }
 
     const fingerprint = `${last.tool}|${last.paramStr}|${last.detail.length}`;
 
@@ -185,51 +235,86 @@ function _handleExpandShortcut() {
   if (_expandToggleState.expanded) {
     return _printLastExpandableOutput();
   }
-  if (_printFoldedStatusDetails()) return true;
-  if (_printLastExpandableOutput()) return true;
+  if (_printFoldedStatusDetails()) {
+    return true;
+  }
+  if (_printLastExpandableOutput()) {
+    return true;
+  }
   printInfo('暂无可展开的折叠内容');
   return false;
 }
 
 function _isVerboseErrorEnabled() {
-  const raw = String(process.env.KHY_ERROR_VERBOSE || 'false').trim().toLowerCase();
+  const raw = String(process.env.KHY_ERROR_VERBOSE || 'false')
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes'].includes(raw);
 }
 
 function _getErrorMergeWindowMs() {
   const raw = String(process.env.KHY_ERROR_MERGE_WINDOW_MS || '30000').trim();
   const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed)) return 30000;
+  if (!Number.isFinite(parsed)) {
+    return 30000;
+  }
   return Math.max(3000, Math.min(180000, parsed));
 }
 
 function _buildAiErrorFingerprint(compacted, text = '') {
   const parts = [];
-  const summary = String(compacted?.summary || '').replace(/\s+/g, ' ').trim();
-  if (summary) parts.push(summary);
-  const failurePreview = Array.isArray(compacted?.failurePreview)
-    ? compacted.failurePreview
-    : [];
+  const summary = String(compacted?.summary || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (summary) {
+    parts.push(summary);
+  }
+  const failurePreview = Array.isArray(compacted?.failurePreview) ? compacted.failurePreview : [];
   const suggestionPreview = Array.isArray(compacted?.suggestionPreview)
     ? compacted.suggestionPreview
     : [];
-  if (failurePreview.length > 0) parts.push(String(failurePreview[0] || '').replace(/\s+/g, ' ').trim());
-  if (suggestionPreview.length > 0) parts.push(String(suggestionPreview[0] || '').replace(/\s+/g, ' ').trim());
+  if (failurePreview.length > 0) {
+    parts.push(
+      String(failurePreview[0] || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
+  }
+  if (suggestionPreview.length > 0) {
+    parts.push(
+      String(suggestionPreview[0] || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
+  }
   if (parts.length === 0) {
-    parts.push(String(text || '').replace(/\s+/g, ' ').trim().slice(0, 200));
+    parts.push(
+      String(text || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 200)
+    );
   }
   return parts.filter(Boolean).join(' | ').slice(0, 320);
 }
 
 function _flushMergedErrorHintLine() {
-  if (!_mergedErrorHintOpen) return;
-  try { process.stdout.write('\n'); } catch { /* ignore */ }
+  if (!_mergedErrorHintOpen) {
+    return;
+  }
+  try {
+    process.stdout.write('\n');
+  } catch {
+    /* ignore */
+  }
   _mergedErrorHintOpen = false;
 }
 
 function _renderMergedErrorHintLine(message = '') {
   const text = String(message || '').trim();
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   if (!process.stdout.isTTY) {
     printInfo(text);
     return false;
@@ -296,15 +381,17 @@ function _renderAiErrorCompact(raw = '') {
   const now = Date.now();
   const fingerprint = _buildAiErrorFingerprint(compacted, text);
   if (
-    fingerprint
-    && _lastAiErrorFingerprint
-    && fingerprint === _lastAiErrorFingerprint
-    && (now - _lastAiErrorAt) <= mergeWindowMs
+    fingerprint &&
+    _lastAiErrorFingerprint &&
+    fingerprint === _lastAiErrorFingerprint &&
+    now - _lastAiErrorAt <= mergeWindowMs
   ) {
     _lastAiErrorAt = now;
     _lastAiErrorRepeat += 1;
     _rememberAiError(text, summary);
-    const inline = _renderMergedErrorHintLine(`同类失败在 ${Math.round(mergeWindowMs / 1000)}s 内已重复 ${_lastAiErrorRepeat} 次，已合并显示；输入 /err 查看完整详情`);
+    const inline = _renderMergedErrorHintLine(
+      `同类失败在 ${Math.round(mergeWindowMs / 1000)}s 内已重复 ${_lastAiErrorRepeat} 次，已合并显示；输入 /err 查看完整详情`
+    );
     return { merged: true, inline };
   }
   _flushMergedErrorHintLine();
@@ -313,11 +400,17 @@ function _renderAiErrorCompact(raw = '') {
   _lastAiErrorRepeat = 1;
 
   if (compacted.hasStructuredDetails) {
+    // Fill in fallback suggestions when the compacted reply carries none,
+    // so the panel always offers an actionable next step.
+    const suggestions =
+      Array.isArray(compacted.suggestionItems) && compacted.suggestionItems.length > 0
+        ? compacted.suggestionItems
+        : ['输入 /err 查看完整失败详情', '设置 KHY_ERROR_VERBOSE=1 后重试,可直接看到原始错误输出'];
     printErrorPanel({
       title: 'AI Request Failed',
       message: summary,
       reason: compacted.failurePreview[0] || '',
-      suggestions: compacted.suggestionItems,
+      suggestions,
     });
   } else {
     printError(summary);
@@ -327,7 +420,10 @@ function _renderAiErrorCompact(raw = '') {
   }
   const hiddenFailure = Number(compacted.hiddenFailureCount || 0);
   const hiddenSuggest = Number(compacted.hiddenSuggestionCount || 0);
-  if (!compacted.hasStructuredDetails && (hiddenFailure > 0 || hiddenSuggest > 0 || text.length > 220)) {
+  if (
+    !compacted.hasStructuredDetails &&
+    (hiddenFailure > 0 || hiddenSuggest > 0 || text.length > 220)
+  ) {
     printInfo('详细失败原因已折叠，输入 /err 查看完整详情（或设置 KHY_ERROR_VERBOSE=1）');
   }
   _rememberAiError(text, summary);

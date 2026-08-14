@@ -32,8 +32,12 @@ let _instruments = null;
  * @returns {boolean}
  */
 function _symbolInputGuardEnabled(env = process.env) {
-  const raw = String((env && env.KHY_SYMBOL_INPUT_GUARD) || '').trim().toLowerCase();
-  if (raw === '0' || raw === 'false' || raw === 'off' || raw === 'no') return false;
+  const raw = String((env && env.KHY_SYMBOL_INPUT_GUARD) || '')
+    .trim()
+    .toLowerCase();
+  if (raw === '0' || raw === 'false' || raw === 'off' || raw === 'no') {
+    return false;
+  }
   return true;
 }
 
@@ -42,12 +46,18 @@ function _symbolInputGuardEnabled(env = process.env) {
  * Falsy values pass through unchanged (callers already handle them).
  */
 function _coerceSymbolInput(value) {
-  if (!_symbolInputGuardEnabled()) return value;
+  if (!_symbolInputGuardEnabled()) {
+    return value;
+  }
   // Falsy values pass through unchanged: callers already handle them
   // (resolveSymbol's `!input` early-return), so this stays byte-identical
   // to the legacy path for null/undefined/0/false/'' /NaN.
-  if (!value) return value;
-  if (typeof value === 'string') return value;
+  if (!value) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
   try {
     return String(value);
   } catch {
@@ -57,29 +67,45 @@ function _coerceSymbolInput(value) {
 
 // Simple pinyin-initial mapping for common stocks (extensible)
 const PINYIN_MAP = {
-  gzmt: 'sh600519', maotai: 'sh600519',
-  zgpa: 'sh601318', pingan: 'sh601318',
-  zsyh: 'sh600036', zhaoshang: 'sh600036',
-  glyh: 'sh601398', gonghang: 'sh601398',
-  wly: 'sz000858', wuliangye: 'sz000858',
-  byd: 'sz002594', biyadi: 'sz002594',
-  ndsd: 'sz300750', ningde: 'sz300750',
-  dcfc: 'sz300059', dongfangcaifu: 'sz300059',
-  mdjt: 'sz000333', meidi: 'sz000333',
-  gldq: 'sz000651', geli: 'sz000651',
-  hkws: 'sz002415', haikang: 'sz002415',
+  gzmt: 'sh600519',
+  maotai: 'sh600519',
+  zgpa: 'sh601318',
+  pingan: 'sh601318',
+  zsyh: 'sh600036',
+  zhaoshang: 'sh600036',
+  glyh: 'sh601398',
+  gonghang: 'sh601398',
+  wly: 'sz000858',
+  wuliangye: 'sz000858',
+  byd: 'sz002594',
+  biyadi: 'sz002594',
+  ndsd: 'sz300750',
+  ningde: 'sz300750',
+  dcfc: 'sz300059',
+  dongfangcaifu: 'sz300059',
+  mdjt: 'sz000333',
+  meidi: 'sz000333',
+  gldq: 'sz000651',
+  geli: 'sz000651',
+  hkws: 'sz002415',
+  haikang: 'sz002415',
   szcs: 'sh000001',
-  hs300: 'sh000300', hushen: 'sh000300',
-  cybz: 'sz399006', chuangye: 'sz399006',
+  hs300: 'sh000300',
+  hushen: 'sh000300',
+  cybz: 'sz399006',
+  chuangye: 'sz399006',
   szcz: 'sz399001',
-  lt: 'rb_main', luowen: 'rb_main',
+  lt: 'rb_main',
+  luowen: 'rb_main',
 };
 
 /**
  * Load instruments from database into cache.
  */
 async function loadInstruments() {
-  if (_instruments) return _instruments;
+  if (_instruments) {
+    return _instruments;
+  }
 
   try {
     const { bootstrap } = require('./bootstrap');
@@ -100,7 +126,9 @@ async function loadInstruments() {
  */
 async function resolveSymbol(input) {
   input = _coerceSymbolInput(input);
-  if (!input) return { symbol: input, name: '', matched: false };
+  if (!input) {
+    return { symbol: input, name: '', matched: false };
+  }
 
   const trimmed = input.trim();
 
@@ -108,8 +136,11 @@ async function resolveSymbol(input) {
   if (/^(sh|sz|[0-9])/i.test(trimmed) || /_/.test(trimmed)) {
     // Try to find name in DB for display
     const instruments = await loadInstruments();
-    const found = instruments.find(i =>
-      i.symbol === trimmed || i.symbol === trimmed.toLowerCase() || i.symbol === trimmed.toUpperCase()
+    const found = instruments.find(
+      (i) =>
+        i.symbol === trimmed ||
+        i.symbol === trimmed.toLowerCase() ||
+        i.symbol === trimmed.toUpperCase()
     );
     return {
       symbol: trimmed,
@@ -122,7 +153,7 @@ async function resolveSymbol(input) {
   const pyKey = trimmed.toLowerCase();
   if (PINYIN_MAP[pyKey]) {
     const instruments = await loadInstruments();
-    const found = instruments.find(i => i.symbol === PINYIN_MAP[pyKey]);
+    const found = instruments.find((i) => i.symbol === PINYIN_MAP[pyKey]);
     return {
       symbol: PINYIN_MAP[pyKey],
       name: found ? found.name : '',
@@ -134,13 +165,13 @@ async function resolveSymbol(input) {
   const instruments = await loadInstruments();
 
   // Exact name match first
-  const exact = instruments.find(i => i.name === trimmed);
+  const exact = instruments.find((i) => i.name === trimmed);
   if (exact) {
     return { symbol: exact.symbol, name: exact.name, matched: true };
   }
 
   // Substring match
-  const partial = instruments.filter(i => i.name && i.name.includes(trimmed));
+  const partial = instruments.filter((i) => i.name && i.name.includes(trimmed));
   if (partial.length === 1) {
     return { symbol: partial[0].symbol, name: partial[0].name, matched: true };
   }
@@ -150,7 +181,7 @@ async function resolveSymbol(input) {
       symbol: partial[0].symbol,
       name: partial[0].name,
       matched: true,
-      alternatives: partial.slice(1, 5).map(i => `${i.symbol} ${i.name}`),
+      alternatives: partial.slice(1, 5).map((i) => `${i.symbol} ${i.name}`),
     };
   }
 
@@ -166,16 +197,19 @@ async function resolveSymbol(input) {
 async function searchInstruments(keyword) {
   if (_symbolInputGuardEnabled() && typeof keyword !== 'string') {
     keyword = keyword == null ? '' : _coerceSymbolInput(keyword);
-    if (typeof keyword !== 'string') keyword = '';
+    if (typeof keyword !== 'string') {
+      keyword = '';
+    }
   }
   const instruments = await loadInstruments();
   const kw = keyword.toLowerCase();
 
-  return instruments.filter(i =>
-    (i.symbol && i.symbol.toLowerCase().includes(kw)) ||
-    (i.name && i.name.includes(keyword)) ||
-    (i.market && i.market.toLowerCase().includes(kw)) ||
-    (i.type && i.type.toLowerCase().includes(kw))
+  return instruments.filter(
+    (i) =>
+      (i.symbol && i.symbol.toLowerCase().includes(kw)) ||
+      (i.name && i.name.includes(keyword)) ||
+      (i.market && i.market.toLowerCase().includes(kw)) ||
+      (i.type && i.type.toLowerCase().includes(kw))
   );
 }
 
@@ -186,4 +220,11 @@ function clearCache() {
   _instruments = null;
 }
 
-module.exports = { resolveSymbol, searchInstruments, clearCache, PINYIN_MAP, _symbolInputGuardEnabled, _coerceSymbolInput };
+module.exports = {
+  resolveSymbol,
+  searchInstruments,
+  clearCache,
+  PINYIN_MAP,
+  _symbolInputGuardEnabled,
+  _coerceSymbolInput,
+};

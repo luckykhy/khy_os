@@ -41,15 +41,24 @@ function parseIssueArgs(args) {
     const tok = list[i];
     if (tok === '--label' || tok === '-l') {
       const v = list[i + 1];
-      if (v === undefined || v.startsWith('-')) { parseError = `${tok} 需要一个值`; break; }
+      if (v === undefined || v.startsWith('-')) {
+        parseError = `${tok} 需要一个值`;
+        break;
+      }
       labels.push(v);
       i += 1;
     } else if (tok === '--assignee' || tok === '-a') {
       const v = list[i + 1];
-      if (v === undefined || v.startsWith('-')) { parseError = `${tok} 需要一个值`; break; }
+      if (v === undefined || v.startsWith('-')) {
+        parseError = `${tok} 需要一个值`;
+        break;
+      }
       assignees.push(v);
       i += 1;
-    } else if (tok.startsWith('--') || (tok.startsWith('-') && tok.length > 1 && !/^-\d/.test(tok))) {
+    } else if (
+      tok.startsWith('--') ||
+      (tok.startsWith('-') && tok.length > 1 && !/^-\d/.test(tok))
+    ) {
       // 未知 flag(排除负数那种 -1);标题词不应以 - 开头。
       parseError = `未知参数:${tok}`;
       break;
@@ -60,7 +69,9 @@ function parseIssueArgs(args) {
 
   const title = titleWords.join(' ').trim();
   const valid = !parseError && title.length > 0;
-  if (!parseError && title.length === 0) parseError = '缺少 issue 标题';
+  if (!parseError && title.length === 0) {
+    parseError = '缺少 issue 标题';
+  }
   return { title, labels, assignees, valid, parseError };
 }
 
@@ -71,27 +82,38 @@ function parseIssueArgs(args) {
  */
 function parseRemoteOwnerRepo(remoteUrl) {
   const url = String(remoteUrl == null ? '' : remoteUrl).trim();
-  if (!url) return null;
+  if (!url) {
+    return null;
+  }
 
   // SSH: git@github.com:owner/repo(.git)
   let m = /^[^@]+@([^:]+):([^/]+)\/(.+?)(?:\.git)?\/?$/.exec(url);
-  if (m) return { host: m[1], owner: m[2], repo: m[3] };
+  if (m) {
+    return { host: m[1], owner: m[2], repo: m[3] };
+  }
 
   // ssh://git@host/owner/repo(.git) 或 https://host/owner/repo(.git)
   m = /^(?:ssh|https?):\/\/(?:[^@/]+@)?([^/]+)\/([^/]+)\/(.+?)(?:\.git)?\/?$/.exec(url);
-  if (m) return { host: m[1], owner: m[2], repo: m[3] };
+  if (m) {
+    return { host: m[1], owner: m[2], repo: m[3] };
+  }
 
   return null;
 }
 
 /** 从 transcript 条目的 content(string 或 block 数组)抽取纯文本。 */
 function _extractText(content) {
-  if (typeof content === 'string') return content;
+  if (typeof content === 'string') {
+    return content;
+  }
   if (Array.isArray(content)) {
     const parts = [];
     for (const block of content) {
-      if (typeof block === 'string') parts.push(block);
-      else if (block && typeof block === 'object' && typeof block.text === 'string') parts.push(block.text);
+      if (typeof block === 'string') {
+        parts.push(block);
+      } else if (block && typeof block === 'object' && typeof block.text === 'string') {
+        parts.push(block.text);
+      }
     }
     return parts.join(' ');
   }
@@ -102,22 +124,34 @@ function _extractText(content) {
 function _extractErrors(entry) {
   const out = [];
   const content = entry && entry.content;
-  if (!Array.isArray(content)) return out;
+  if (!Array.isArray(content)) {
+    return out;
+  }
   for (const block of content) {
-    if (!block || typeof block !== 'object') continue;
-    const isErr = block.is_error === true || block.isError === true ||
+    if (!block || typeof block !== 'object') {
+      continue;
+    }
+    const isErr =
+      block.is_error === true ||
+      block.isError === true ||
       (block.type === 'tool_result' && (block.is_error || block.error));
     if (isErr) {
       const txt = _extractText(block.content != null ? block.content : block.text);
-      if (txt) out.push(txt);
+      if (txt) {
+        out.push(txt);
+      }
     }
   }
   return out;
 }
 
 function _truncate(s, max) {
-  const str = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
-  if (str.length <= max) return str;
+  const str = String(s == null ? '' : s)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (str.length <= max) {
+    return str;
+  }
   return `${str.slice(0, max)}…`;
 }
 
@@ -139,19 +173,28 @@ function _stripFrontMatter(tpl) {
  */
 function buildIssueBody(opts = {}) {
   const transcript = Array.isArray(opts.transcript) ? opts.transcript : [];
-  const maxTurns = Number.isFinite(opts.maxTurns) && opts.maxTurns > 0 ? Math.floor(opts.maxTurns) : DEFAULT_MAX_TURNS;
+  const maxTurns =
+    Number.isFinite(opts.maxTurns) && opts.maxTurns > 0
+      ? Math.floor(opts.maxTurns)
+      : DEFAULT_MAX_TURNS;
   const template = opts.template ? _stripFrontMatter(opts.template) : '';
 
   // 收集 user/assistant 回合(跳过 meta),取最近 maxTurns。
   const turns = [];
   const errors = [];
   for (const e of transcript) {
-    if (!e || typeof e !== 'object' || e.isMeta) continue;
+    if (!e || typeof e !== 'object' || e.isMeta) {
+      continue;
+    }
     if (e.role === 'user' || e.role === 'assistant') {
       const text = _truncate(_extractText(e.content), MAX_TURN_CHARS);
-      if (text) turns.push({ role: e.role, text });
+      if (text) {
+        turns.push({ role: e.role, text });
+      }
     }
-    for (const err of _extractErrors(e)) errors.push(err);
+    for (const err of _extractErrors(e)) {
+      errors.push(err);
+    }
   }
   const recentTurns = turns.slice(-maxTurns);
   const recentErrors = errors.slice(-MAX_ERRORS);
@@ -183,7 +226,10 @@ function buildIssueBody(opts = {}) {
   if (!lines.length) {
     lines.push('(无可汇总的会话记录)');
   }
-  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return lines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function _enc(s) {
@@ -200,19 +246,29 @@ function buildIssueUrl(opts = {}) {
   const host = opts.host || 'github.com';
   const owner = opts.owner;
   const repo = opts.repo;
-  if (!owner || !repo) return { url: null, bodyTruncated: false };
+  if (!owner || !repo) {
+    return { url: null, bodyTruncated: false };
+  }
 
-  const maxBodyLen = Number.isFinite(opts.maxBodyLen) && opts.maxBodyLen > 0
-    ? Math.floor(opts.maxBodyLen) : DEFAULT_MAX_URL_BODY;
+  const maxBodyLen =
+    Number.isFinite(opts.maxBodyLen) && opts.maxBodyLen > 0
+      ? Math.floor(opts.maxBodyLen)
+      : DEFAULT_MAX_URL_BODY;
   const fullBody = String(opts.body == null ? '' : opts.body);
   const bodyTruncated = fullBody.length > maxBodyLen;
   const body = bodyTruncated ? fullBody.slice(0, maxBodyLen) : fullBody;
 
   const params = [];
-  if (opts.title) params.push(`title=${_enc(opts.title)}`);
-  if (body) params.push(`body=${_enc(body)}`);
+  if (opts.title) {
+    params.push(`title=${_enc(opts.title)}`);
+  }
+  if (body) {
+    params.push(`body=${_enc(body)}`);
+  }
   const labels = Array.isArray(opts.labels) ? opts.labels.filter(Boolean) : [];
-  if (labels.length) params.push(`labels=${_enc(labels.join(','))}`);
+  if (labels.length) {
+    params.push(`labels=${_enc(labels.join(','))}`);
+  }
 
   const query = params.length ? `?${params.join('&')}` : '';
   const url = `https://${host}/${owner}/${repo}/issues/new${query}`;
@@ -224,7 +280,7 @@ const _falsy = require('../../utils/isOffValue');
 
 /** 门控读取(KHY_ISSUE 默认开;关 → 命令不接管)。注入 env,叶子不读 process.env。 */
 function isEnabled(env = {}) {
-  return !_falsy(env && env.KHY_ISSUE === undefined ? 'true' : (env && env.KHY_ISSUE));
+  return !_falsy(env && env.KHY_ISSUE === undefined ? 'true' : env && env.KHY_ISSUE);
 }
 
 module.exports = {

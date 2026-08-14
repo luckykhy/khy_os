@@ -24,7 +24,9 @@
 function _envInt(name, fallback, { min = -Infinity, max = Infinity } = {}) {
   const raw = process.env[name];
   const n = raw === undefined || raw === '' ? fallback : parseInt(raw, 10);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -61,13 +63,17 @@ function isReversible(assessment) {
  * always allowed here (returns null), so default control flow is unaffected.
  */
 function speculationGuard(assessment, speculative) {
-  if (!speculative) return null;
-  if (classifyAction(assessment) === 'safe') return null;
+  if (!speculative) {
+    return null;
+  }
+  if (classifyAction(assessment) === 'safe') {
+    return null;
+  }
   return {
     blocked: true,
     error:
-      'Speculative lookahead may only execute read-only (A_safe) actions; '
-      + 'irreversible (A_commit) actions are never executed speculatively (§4.A).',
+      'Speculative lookahead may only execute read-only (A_safe) actions; ' +
+      'irreversible (A_commit) actions are never executed speculatively (§4.A).',
   };
 }
 
@@ -85,8 +91,12 @@ function resolveReversibility(permissionKey, params, fallback = {}) {
     const registry = require('../tools');
     const regTool = registry.get(permissionKey);
     if (regTool) {
-      if (typeof regTool.isReadOnly === 'function') isReadOnly = regTool.isReadOnly(params) === true;
-      if (typeof regTool.isDestructive === 'function') isDestructive = regTool.isDestructive(params) === true;
+      if (typeof regTool.isReadOnly === 'function') {
+        isReadOnly = regTool.isReadOnly(params) === true;
+      }
+      if (typeof regTool.isDestructive === 'function') {
+        isDestructive = regTool.isDestructive(params) === true;
+      }
     }
   } catch {
     /* registry optional — keep the conservative fallback */
@@ -106,9 +116,7 @@ function boundedReadOnlyLookahead(candidates = [], opts = {}) {
     ? Math.max(0, Math.min(3, opts.width))
     : lookaheadWidth();
   const list = Array.isArray(candidates) ? candidates : [];
-  return list
-    .filter((c) => isReversible(c && c.assessment ? c.assessment : c))
-    .slice(0, width);
+  return list.filter((c) => isReversible(c && c.assessment ? c.assessment : c)).slice(0, width);
 }
 
 module.exports = {

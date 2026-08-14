@@ -29,7 +29,9 @@
  */
 function buildResumeHintLines({ liveId } = {}) {
   const id = String(liveId || '').trim();
-  if (!id) return [];
+  if (!id) {
+    return [];
+  }
   return [
     [
       { text: '  完整对话已保存，下次启动输入 ', tone: 'dim' },
@@ -55,11 +57,12 @@ function renderResumeHintLines(lines, toneFns = {}) {
   return rows.map((segs) =>
     (Array.isArray(segs) ? segs : [])
       .map((seg) => {
-        const fn = seg && toneFns && typeof toneFns[seg.tone] === 'function' ? toneFns[seg.tone] : null;
+        const fn =
+          seg && toneFns && typeof toneFns[seg.tone] === 'function' ? toneFns[seg.tone] : null;
         const text = (seg && seg.text) || '';
         return fn ? fn(text) : text;
       })
-      .join(''),
+      .join('')
   );
 }
 

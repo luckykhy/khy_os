@@ -82,13 +82,17 @@ const _PARAM_STRIP_FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env) {
   const raw = (env || process.env).KHY_ADAPTIVE_PARAM_STRIP;
-  if (raw == null || raw === '') return true; // default-on
+  if (raw == null || raw === '') {
+    return true;
+  } // default-on
   return !_PARAM_STRIP_FALSY.has(String(raw).trim().toLowerCase());
 }
 
 function _stripSignalPresent(lowerText) {
   for (const sig of _UNSUPPORTED_SIGNALS) {
-    if (lowerText.includes(sig)) return true;
+    if (lowerText.includes(sig)) {
+      return true;
+    }
   }
   return false;
 }
@@ -104,16 +108,26 @@ function _stripSignalPresent(lowerText) {
  * @returns {string[]} param keys to strip (subset of body keys)
  */
 function detectUnsupportedParams(errorText, body) {
-  if (!body || typeof body !== 'object') return [];
+  if (!body || typeof body !== 'object') {
+    return [];
+  }
   const text = String(errorText == null ? '' : errorText);
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
   const lower = text.toLowerCase();
-  if (!_stripSignalPresent(lower)) return [];
+  if (!_stripSignalPresent(lower)) {
+    return [];
+  }
   const out = [];
   for (const key of _STRIPPABLE_PARAMS) {
-    if (!Object.prototype.hasOwnProperty.call(body, key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(body, key)) {
+      continue;
+    }
     // Word-ish boundary: the param name appears in the error (case-insensitive).
-    if (lower.includes(key.toLowerCase())) out.push(key);
+    if (lower.includes(key.toLowerCase())) {
+      out.push(key);
+    }
   }
   return out;
 }
@@ -129,7 +143,9 @@ function detectUnsupportedParams(errorText, body) {
  */
 function planParamStrip(errorText, body, opts = {}) {
   const enabled = isEnabled(opts.env);
-  if (!enabled) return { enabled: false, strip: [] };
+  if (!enabled) {
+    return { enabled: false, strip: [] };
+  }
   const already = opts.alreadyStripped instanceof Set ? opts.alreadyStripped : new Set();
   const detected = detectUnsupportedParams(errorText, body);
   const strip = detected.filter((k) => !already.has(k));

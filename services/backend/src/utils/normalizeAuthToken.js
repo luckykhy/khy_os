@@ -20,7 +20,9 @@
 
 function normalizeAuthToken(raw, { allowEmpty = true } = {}) {
   const token = String(raw || '').trim();
-  if (!token) return allowEmpty ? '' : null;
+  if (!token) {
+    return allowEmpty ? '' : null;
+  }
 
   let suffix = '';
   if (/^khy-/i.test(token)) {
@@ -31,7 +33,9 @@ function normalizeAuthToken(raw, { allowEmpty = true } = {}) {
     suffix = token;
   }
   suffix = String(suffix || '').trim();
-  if (!suffix) return allowEmpty ? '' : null;
+  if (!suffix) {
+    return allowEmpty ? '' : null;
+  }
   return `khy-${suffix}`;
 }
 

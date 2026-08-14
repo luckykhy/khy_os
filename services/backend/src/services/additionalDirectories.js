@@ -27,22 +27,34 @@ let _seeded = false;
 
 function _normalize(abs) {
   // Strip a trailing separator (except for a root like "/") for stable matching.
-  if (abs.length > 1 && abs.endsWith(path.sep)) return abs.slice(0, -1);
+  if (abs.length > 1 && abs.endsWith(path.sep)) {
+    return abs.slice(0, -1);
+  }
   return abs;
 }
 
 function _seedFromEnv() {
-  if (_seeded) return;
+  if (_seeded) {
+    return;
+  }
   _seeded = true;
   const raw = process.env.KHY_ADDITIONAL_DIRS;
-  if (!raw || !String(raw).trim()) return;
+  if (!raw || !String(raw).trim()) {
+    return;
+  }
   for (const part of String(raw).split(path.delimiter)) {
     const dir = part.trim();
-    if (!dir) continue;
+    if (!dir) {
+      continue;
+    }
     try {
       const abs = _normalize(path.resolve(dir));
-      if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) _dirs.add(abs);
-    } catch { /* ignore malformed entry */ }
+      if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) {
+        _dirs.add(abs);
+      }
+    } catch {
+      /* ignore malformed entry */
+    }
   }
 }
 
@@ -56,7 +68,9 @@ function _seedFromEnv() {
 function addDirectory(dir, opts = {}) {
   _seedFromEnv();
   const input = String(dir || '').trim();
-  if (!input) return { success: false, error: '需要提供目录路径' };
+  if (!input) {
+    return { success: false, error: '需要提供目录路径' };
+  }
   let abs;
   try {
     abs = _normalize(path.resolve(opts.cwd || process.cwd(), input));
@@ -64,8 +78,12 @@ function addDirectory(dir, opts = {}) {
     return { success: false, error: `无法解析路径: ${err.message}` };
   }
   try {
-    if (!fs.existsSync(abs)) return { success: false, error: `目录不存在: ${abs}` };
-    if (!fs.statSync(abs).isDirectory()) return { success: false, error: `不是目录: ${abs}` };
+    if (!fs.existsSync(abs)) {
+      return { success: false, error: `目录不存在: ${abs}` };
+    }
+    if (!fs.statSync(abs).isDirectory()) {
+      return { success: false, error: `不是目录: ${abs}` };
+    }
   } catch (err) {
     return { success: false, error: `无法访问: ${err.message}` };
   }
@@ -87,7 +105,9 @@ function getDirectories() {
  */
 function isUnderAdditionalDir(absPath) {
   _seedFromEnv();
-  if (!absPath || _dirs.size === 0) return false;
+  if (!absPath || _dirs.size === 0) {
+    return false;
+  }
   let abs;
   try {
     abs = _normalize(path.resolve(absPath));
@@ -95,9 +115,13 @@ function isUnderAdditionalDir(absPath) {
     return false;
   }
   for (const dir of _dirs) {
-    if (abs === dir) return true;
+    if (abs === dir) {
+      return true;
+    }
     const prefix = dir.endsWith(path.sep) ? dir : dir + path.sep;
-    if (abs.startsWith(prefix)) return true;
+    if (abs.startsWith(prefix)) {
+      return true;
+    }
   }
   return false;
 }

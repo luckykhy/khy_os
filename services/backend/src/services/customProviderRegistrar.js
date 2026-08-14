@@ -19,11 +19,11 @@
  */
 'use strict';
 
+const { parseApiKeyEntries } = require('./apiKeyFormat');
 const pool = require('./apiKeyPool');
 const customRegistry = require('./customProviderRegistry');
-const { parseApiKeyEntries } = require('./apiKeyFormat');
-const { mergeJsonEnvVar, removeJsonEnvVarKey } = require('./gatewayEnvFile');
 const { getProviderPresets } = require('./gateway/providerPresets');
+const { mergeJsonEnvVar, removeJsonEnvVarKey } = require('./gatewayEnvFile');
 
 const VALID_TIERS = ['T0', 'T1', 'T2', 'T3'];
 const POOL_KEY_RE = /^[a-z0-9][-a-z0-9]*$/;
@@ -34,8 +34,17 @@ const POOL_KEY_RE = /^[a-z0-9][-a-z0-9]*$/;
 // Anthropic-compatible /v1/messages line) without a second registration path.
 // Default stays 'openai' → every existing caller is byte-identical.
 const VALID_SERVICES = Object.freeze([
-  'openai', 'anthropic', 'zhipu', 'google', 'groq', 'openrouter',
-  'trae', 'xunfei', 'baidu', 'alibaba', 'huggingface',
+  'openai',
+  'anthropic',
+  'zhipu',
+  'google',
+  'groq',
+  'openrouter',
+  'trae',
+  'xunfei',
+  'baidu',
+  'alibaba',
+  'huggingface',
 ]);
 
 /**
@@ -53,8 +62,8 @@ const VALID_SERVICES = Object.freeze([
  */
 function getPresets() {
   return getProviderPresets()
-    .filter(p => p.apiFormat === 'openai')
-    .map(p => ({
+    .filter((p) => p.apiFormat === 'openai')
+    .map((p) => ({
       id: p.id,
       name: p.label,
       endpoint: p.baseUrl,
@@ -71,7 +80,9 @@ function getPresets() {
  * @throws {Error} on invalid or built-in collision
  */
 function normalizePoolKey(rawPoolKey) {
-  const key = String(rawPoolKey || '').trim().toLowerCase();
+  const key = String(rawPoolKey || '')
+    .trim()
+    .toLowerCase();
   if (!key || !POOL_KEY_RE.test(key)) {
     throw new Error('Provider ID 只允许小写字母、数字和连字符，且需以字母或数字开头');
   }
@@ -82,8 +93,12 @@ function normalizePoolKey(rawPoolKey) {
 }
 
 function normalizeTier(rawTier) {
-  const tier = String(rawTier || '').trim().toUpperCase();
-  if (!tier) return '';
+  const tier = String(rawTier || '')
+    .trim()
+    .toUpperCase();
+  if (!tier) {
+    return '';
+  }
   if (!VALID_TIERS.includes(tier)) {
     throw new Error(`无效的 tier: ${tier}（可选 ${VALID_TIERS.join('/')} 或留空）`);
   }
@@ -92,14 +107,16 @@ function normalizeTier(rawTier) {
 
 function buildModelList(defaultModel, extraModels) {
   const dm = String(defaultModel || '').trim();
-  if (!dm) throw new Error('默认模型 ID 不能为空');
+  if (!dm) {
+    throw new Error('默认模型 ID 不能为空');
+  }
   const models = [dm];
   if (extraModels) {
-    const extras = Array.isArray(extraModels)
-      ? extraModels
-      : String(extraModels).split(',');
-    for (const m of extras.map(s => String(s).trim()).filter(Boolean)) {
-      if (!models.includes(m)) models.push(m);
+    const extras = Array.isArray(extraModels) ? extraModels : String(extraModels).split(',');
+    for (const m of extras.map((s) => String(s).trim()).filter(Boolean)) {
+      if (!models.includes(m)) {
+        models.push(m);
+      }
     }
   }
   return models;
@@ -124,25 +141,41 @@ function buildModelList(defaultModel, extraModels) {
  */
 function registerCustomProvider(input = {}) {
   const displayName = String(input.displayName || '').trim();
-  if (!displayName) throw new Error('Provider 显示名称不能为空');
+  if (!displayName) {
+    throw new Error('Provider 显示名称不能为空');
+  }
 
   const poolKey = normalizePoolKey(input.poolKey);
 
-  const service = String(input.service || 'openai').trim().toLowerCase();
+  const service = String(input.service || 'openai')
+    .trim()
+    .toLowerCase();
   if (!VALID_SERVICES.includes(service)) {
     throw new Error(`无效的 service: ${input.service}（可选 ${VALID_SERVICES.join('/')}）`);
   }
 
-  const endpoint = String(input.endpoint || '').trim().replace(/\/+$/, '');
-  if (!endpoint) throw new Error('Base URL 不能为空');
-  try { new URL(endpoint); } catch { throw new Error(`Base URL 无效: ${input.endpoint}`); }
+  const endpoint = String(input.endpoint || '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (!endpoint) {
+    throw new Error('Base URL 不能为空');
+  }
+  try {
+    new URL(endpoint);
+  } catch {
+    throw new Error(`Base URL 无效: ${input.endpoint}`);
+  }
 
   const defaultModel = String(input.defaultModel || '').trim();
   const models = buildModelList(defaultModel, input.extraModels);
   const tier = normalizeTier(input.tier);
 
   if (input.ensureInit) {
-    try { pool.init(); } catch { /* already initialised */ }
+    try {
+      pool.init();
+    } catch {
+      /* already initialised */
+    }
   }
 
   // 1. add key(s) to the pool
@@ -155,11 +188,18 @@ function registerCustomProvider(input = {}) {
       pool.addKey(poolKey, entry);
     } catch (e) {
       // Duplicate keys are tolerated (idempotent re-register); rethrow others.
-      if (!/already exists/i.test(String(e && e.message))) throw e;
+      if (!/already exists/i.test(String(e && e.message))) {
+        throw e;
+      }
     }
   }
 
   // 2. persist provider metadata
+  // Preserve declared vision fields (capabilities/visionModels) plus the
+  // optional proxy URL and metadata defaults across an idempotent re-register:
+  // they are configured in custom_providers.json and must not be stripped when
+  // the entry is rebuilt here.
+  const existingEntry = customRegistry.getProvider(poolKey);
   customRegistry.saveProvider({
     name: displayName,
     poolKey,
@@ -167,6 +207,14 @@ function registerCustomProvider(input = {}) {
     defaultModel,
     models,
     ...(tier ? { tier } : {}),
+    ...(existingEntry && existingEntry.capabilities
+      ? { capabilities: existingEntry.capabilities }
+      : {}),
+    ...(existingEntry && Array.isArray(existingEntry.visionModels)
+      ? { visionModels: existingEntry.visionModels }
+      : {}),
+    ...(existingEntry && existingEntry.proxy ? { proxy: existingEntry.proxy } : {}),
+    ...(existingEntry && existingEntry.defaults ? { defaults: existingEntry.defaults } : {}),
   });
 
   // 3. env routing maps (process.env + .env)
@@ -182,7 +230,9 @@ function registerCustomProvider(input = {}) {
   // 4. optional per-model tier override
   if (tier) {
     const tierEntries = {};
-    for (const m of models) tierEntries[m] = tier;
+    for (const m of models) {
+      tierEntries[m] = tier;
+    }
     mergeJsonEnvVar('KHY_MODEL_TIER_MAP', tierEntries);
   }
 
@@ -207,8 +257,12 @@ function registerCustomProvider(input = {}) {
  * @returns {{removed:boolean, poolKey:string, keptKeys:boolean}}
  */
 function unregisterCustomProvider(rawPoolKey, options = {}) {
-  const poolKey = String(rawPoolKey || '').trim().toLowerCase();
-  if (!poolKey) throw new Error('poolKey 不能为空');
+  const poolKey = String(rawPoolKey || '')
+    .trim()
+    .toLowerCase();
+  if (!poolKey) {
+    throw new Error('poolKey 不能为空');
+  }
   if (customRegistry.isBuiltinPoolKey(poolKey)) {
     throw new Error(`"${poolKey}" 是内置 provider，不能删除`);
   }
@@ -233,7 +287,9 @@ function unregisterCustomProvider(rawPoolKey, options = {}) {
         pool.removeProvider(poolKey);
         keptKeys = false;
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   return { removed, poolKey, keptKeys };
@@ -271,12 +327,16 @@ const BUILTIN_SENSENOVA = Object.freeze({
  */
 function ensureBuiltinSenseNova(options = {}) {
   const force = !!options.force;
-  try { pool.init(); } catch { /* already initialised */ }
+  try {
+    pool.init();
+  } catch {
+    /* already initialised */
+  }
 
   const hasKey = (pool.getPoolStatus(BUILTIN_SENSENOVA.poolKey) || []).length > 0;
   const provider = customRegistry.getProvider(BUILTIN_SENSENOVA.poolKey);
   const existingModels = provider && Array.isArray(provider.models) ? provider.models : [];
-  const haveAllModels = BUILTIN_SENSENOVA.models.every(m => existingModels.includes(m));
+  const haveAllModels = BUILTIN_SENSENOVA.models.every((m) => existingModels.includes(m));
 
   if (!force && hasKey && haveAllModels) {
     return { seeded: false, poolKey: BUILTIN_SENSENOVA.poolKey };
@@ -327,7 +387,11 @@ function ensureBuiltinQoder(options = {}) {
       return { seeded: false, reason: 'not-opted-in', pools: [] };
     }
 
-    try { pool.init(); } catch { /* already initialised */ }
+    try {
+      pool.init();
+    } catch {
+      /* already initialised */
+    }
 
     const specs = qoder.qoderProxySpecs(env);
     const seededPools = [];
@@ -363,7 +427,9 @@ function ensureBuiltinQoder(options = {}) {
           ensureInit: true,
         });
         seededPools.push(spec.poolKey);
-      } catch { /* one line failing must not block the other */ }
+      } catch {
+        /* one line failing must not block the other */
+      }
     }
 
     return { seeded: seededPools.length > 0, pools: seededPools };
@@ -385,15 +451,27 @@ function ensureBuiltinQoder(options = {}) {
  * @returns {{poolKey:string, keyCount:number}}
  */
 function replaceProviderKeys(rawPoolKey, newKeyInput) {
-  const poolKey = String(rawPoolKey || '').trim().toLowerCase();
-  if (!poolKey) throw new Error('poolKey 不能为空');
+  const poolKey = String(rawPoolKey || '')
+    .trim()
+    .toLowerCase();
+  if (!poolKey) {
+    throw new Error('poolKey 不能为空');
+  }
 
   const provider = customRegistry.getProvider(poolKey);
-  if (!provider) throw new Error(`自定义 provider "${poolKey}" 未注册`);
+  if (!provider) {
+    throw new Error(`自定义 provider "${poolKey}" 未注册`);
+  }
 
-  try { pool.init(); } catch { /* already initialised */ }
+  try {
+    pool.init();
+  } catch {
+    /* already initialised */
+  }
 
-  const endpoint = String(provider.endpoint || '').trim().replace(/\/+$/, '');
+  const endpoint = String(provider.endpoint || '')
+    .trim()
+    .replace(/\/+$/, '');
   const parsedEntries = parseApiKeyEntries(newKeyInput, { endpoint, priority: 10 });
   if (parsedEntries.length === 0) {
     throw new Error('未解析到有效 API Key');
@@ -409,12 +487,18 @@ function replaceProviderKeys(rawPoolKey, newKeyInput) {
       pool.addKey(poolKey, entry);
       added += 1;
     } catch (e) {
-      if (!/already exists/i.test(String(e && e.message))) throw e;
+      if (!/already exists/i.test(String(e && e.message))) {
+        throw e;
+      }
     }
   }
 
   for (const keyId of oldKeyIds) {
-    try { pool.removeKey(poolKey, keyId); } catch { /* best effort */ }
+    try {
+      pool.removeKey(poolKey, keyId);
+    } catch {
+      /* best effort */
+    }
   }
 
   const keyCount = (pool.getPoolStatus(poolKey) || []).length;

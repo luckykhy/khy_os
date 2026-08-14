@@ -32,7 +32,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function isVisionDescribeReturnEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_VISION_DESCRIBE_RETURN;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -64,17 +66,18 @@ function buildDescribePrompt() {
  */
 function buildDescriptionInjection(descriptions, opts = {}) {
   const list = Array.isArray(descriptions) ? descriptions : [descriptions];
-  const cleaned = list
-    .map((d) => (d == null ? '' : String(d).trim()))
-    .filter((d) => d.length > 0);
-  if (cleaned.length === 0) return '';
+  const cleaned = list.map((d) => (d == null ? '' : String(d).trim())).filter((d) => d.length > 0);
+  if (cleaned.length === 0) {
+    return '';
+  }
   const model = opts && opts.model ? String(opts.model).trim() : '';
   const label = model
     ? `[以下为视觉模型「${model}」对图片的识别描述,请据此作答]`
     : '[以下为视觉模型对图片的识别描述,请据此作答]';
-  const body = cleaned.length === 1
-    ? cleaned[0]
-    : cleaned.map((d, i) => `【图片${i + 1} 描述】\n${d}`).join('\n\n');
+  const body =
+    cleaned.length === 1
+      ? cleaned[0]
+      : cleaned.map((d, i) => `【图片${i + 1} 描述】\n${d}`).join('\n\n');
   return `${label}\n${body}`;
 }
 

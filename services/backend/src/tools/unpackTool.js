@@ -3,9 +3,11 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { defineTool } = require('./_baseTool');
 
+const genericExtractor = require('../services/reverseEngineer/genericExtractor');
 const _expandPath = require('../utils/expandEnvPath');
+
+const { defineTool } = require('./_baseTool');
 
 // ── Security: path traversal + symlink + size guard (DeepSeek-TUI aligned) ──
 
@@ -19,7 +21,9 @@ const MAX_UNPACK_BYTES = parseInt(process.env.KHY_UNPACK_MAX_BYTES, 10) || 10 * 
 // 解包器(7z/bsdtar/unar)。这层默认开；门关 → detectGenericFormat 短路，逐字节回退到
 // 旧的「Unsupported archive format」行为。
 function _genericFallbackEnabled() {
-  const v = String(process.env.KHY_UNPACK_GENERIC || '').trim().toLowerCase();
+  const v = String(process.env.KHY_UNPACK_GENERIC || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -27,7 +31,9 @@ function _genericFallbackEnabled() {
 // (opt-in，仅 1/true/on/yes 开)，且额外要求本次调用显式 install:true(模型须先在对话里
 // 征询用户点头才传该参数)。二者同时满足才代为安装并重试；否则只回精确安装命令「指路」。
 function _autoInstallEnabled() {
-  const v = String(process.env.KHY_UNPACK_AUTO_INSTALL || '').trim().toLowerCase();
+  const v = String(process.env.KHY_UNPACK_AUTO_INSTALL || '')
+    .trim()
+    .toLowerCase();
   return v === '1' || v === 'true' || v === 'on' || v === 'yes';
 }
 
@@ -36,14 +42,24 @@ function _autoInstallEnabled() {
  * Rejects: '..', absolute paths, Windows prefix components.
  */
 function _isSafePath(entryPath) {
-  if (!entryPath || typeof entryPath !== 'string') return false;
-  if (path.isAbsolute(entryPath)) return false;
+  if (!entryPath || typeof entryPath !== 'string') {
+    return false;
+  }
+  if (path.isAbsolute(entryPath)) {
+    return false;
+  }
   const segments = entryPath.split(/[/\\]/);
   for (const seg of segments) {
-    if (seg === '..') return false;
-    if (seg === '.') continue; // allow './' prefix
+    if (seg === '..') {
+      return false;
+    }
+    if (seg === '.') {
+      continue;
+    } // allow './' prefix
     // Windows: reject drive letters like C:
-    if (/^[A-Za-z]:/.test(seg)) return false;
+    if (/^[A-Za-z]:/.test(seg)) {
+      return false;
+    }
   }
   return true;
 }
@@ -79,13 +95,15 @@ async function _extractZip(zipPath, outputDir, listOnly) {
       totalUncompressed += e.size || 0;
     }
     if (totalUncompressed > MAX_UNPACK_BYTES) {
-      throw new Error(`Archive too large: ${(totalUncompressed / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`);
+      throw new Error(
+        `Archive too large: ${(totalUncompressed / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`
+      );
     }
 
     if (listOnly) {
       const items = entryList
-        .filter(e => !e.isDirectory)
-        .map(e => ({ name: e.name, size: e.size }))
+        .filter((e) => !e.isDirectory)
+        .map((e) => ({ name: e.name, size: e.size }))
         .sort((a, b) => a.name.localeCompare(b.name));
       return {
         format: 'zip',
@@ -110,7 +128,9 @@ async function _extractZip(zipPath, outputDir, listOnly) {
         if (e.isSymbolicLink()) {
           fs.unlinkSync(full);
         }
-        if (e.isDirectory()) _verifyDir(full);
+        if (e.isDirectory()) {
+          _verifyDir(full);
+        }
       }
     };
     _verifyDir(outputDir);
@@ -128,7 +148,7 @@ async function _extractZip(zipPath, outputDir, listOnly) {
     return {
       format: 'zip',
       outputDir: finalDir,
-      totalFiles: entryList.filter(e => !e.isDirectory).length,
+      totalFiles: entryList.filter((e) => !e.isDirectory).length,
     };
   } finally {
     await zip.close();
@@ -142,19 +162,26 @@ async function _extractTar(tarPath, outputDir, listOnly) {
   const { searchExecutable } = require('./platformUtils');
 
   if (!searchExecutable('tar')) {
-    throw new Error(process.platform === 'win32'
-      ? 'tar 命令未找到。需要 Windows 10 1803+ 或安装 Git for Windows。'
-      : 'tar 命令未找到。请安装: sudo apt install tar');
+    throw new Error(
+      process.platform === 'win32'
+        ? 'tar 命令未找到。需要 Windows 10 1803+ 或安装 Git for Windows。'
+        : 'tar 命令未找到。请安装: sudo apt install tar'
+    );
   }
 
   if (listOnly) {
     const args = ['-tf', tarPath];
     return new Promise((resolve, reject) => {
       execFile('tar', args, { maxBuffer: 2 * 1024 * 1024 }, (err, stdout) => {
-        if (err) return reject(new Error(`tar list failed: ${err.message}`));
-        const items = stdout.trim().split('\n').filter(Boolean)
-          .filter(e => !e.endsWith('/'))
-          .map(name => ({ name, size: 0 }));
+        if (err) {
+          return reject(new Error(`tar list failed: ${err.message}`));
+        }
+        const items = stdout
+          .trim()
+          .split('\n')
+          .filter(Boolean)
+          .filter((e) => !e.endsWith('/'))
+          .map((name) => ({ name, size: 0 }));
         resolve({
           format: 'tar',
           totalFiles: items.length,
@@ -169,17 +196,24 @@ async function _extractTar(tarPath, outputDir, listOnly) {
   const args = ['-xf', tarPath, '-C', outputDir];
   return new Promise((resolve, reject) => {
     execFile('tar', args, { maxBuffer: 2 * 1024 * 1024 }, (err) => {
-      if (err) return reject(new Error(`tar extract failed: ${err.message}`));
+      if (err) {
+        return reject(new Error(`tar extract failed: ${err.message}`));
+      }
       let fileCount = 0;
       try {
         const countFiles = (dir) => {
           for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (e.isDirectory()) countFiles(path.join(dir, e.name));
-            else fileCount++;
+            if (e.isDirectory()) {
+              countFiles(path.join(dir, e.name));
+            } else {
+              fileCount++;
+            }
           }
         };
         countFiles(outputDir);
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
       resolve({ format: 'tar', outputDir, totalFiles: fileCount });
     });
   });
@@ -209,12 +243,14 @@ async function _extractGz(gzPath, outputDir, listOnly) {
 
   return new Promise((resolve, reject) => {
     input.pipe(gunzip).pipe(output);
-    output.on('finish', () => resolve({
-      format: 'gz',
-      outputDir,
-      totalFiles: 1,
-      outputFile: outPath,
-    }));
+    output.on('finish', () =>
+      resolve({
+        format: 'gz',
+        outputDir,
+        totalFiles: 1,
+        outputFile: outPath,
+      })
+    );
     output.on('error', reject);
     gunzip.on('error', reject);
     input.on('error', reject);
@@ -229,35 +265,47 @@ async function _extractGz(gzPath, outputDir, listOnly) {
 // MAX_UNPACK_BYTES 安全护栏。`unpacked:true` 成员不在归档内，存在同级
 // `<archive>.unpacked/`；符号链接（info.link）一律跳过不落盘（不在磁盘造 symlink）。
 async function _extractAsar(asarPath, outputDir, listOnly) {
-  const { parseHeaderSize, parseHeader, flattenEntries } = require('../services/reverseEngineer/asarArchive');
+  const {
+    parseHeaderSize,
+    parseHeader,
+    flattenEntries,
+  } = require('../services/reverseEngineer/asarArchive');
 
   const fd = fs.openSync(asarPath, 'r');
   try {
     const head = Buffer.alloc(8);
-    if (fs.readSync(fd, head, 0, 8, 0) < 8) throw new Error('不是有效的 asar 归档：文件过短');
+    if (fs.readSync(fd, head, 0, 8, 0) < 8) {
+      throw new Error('不是有效的 asar 归档：文件过短');
+    }
     const headerSize = parseHeaderSize(head);
-    if (headerSize == null) throw new Error('不是有效的 asar 归档：头长度字段畸形');
+    if (headerSize == null) {
+      throw new Error('不是有效的 asar 归档：头长度字段畸形');
+    }
 
     const headerBuf = Buffer.alloc(headerSize);
     if (fs.readSync(fd, headerBuf, 0, headerSize, 8) < headerSize) {
       throw new Error('不是有效的 asar 归档：头部读取不完整');
     }
     const parsed = parseHeader(headerBuf, headerSize);
-    if (!parsed) throw new Error('不是有效的 asar 归档：头部 JSON 解析失败');
+    if (!parsed) {
+      throw new Error('不是有效的 asar 归档：头部 JSON 解析失败');
+    }
 
     const allEntries = flattenEntries(parsed.header);
-    const files = allEntries.filter(e => e.type === 'file');
+    const files = allEntries.filter((e) => e.type === 'file');
 
     // Security: validate every path before doing anything on disk.
     for (const e of files) {
-      if (!_isSafePath(e.path)) throw new Error(`Path traversal rejected: ${e.path}`);
+      if (!_isSafePath(e.path)) {
+        throw new Error(`Path traversal rejected: ${e.path}`);
+      }
     }
-    const packed = files.filter(e => !e.unpacked);
+    const packed = files.filter((e) => !e.unpacked);
     const totalSize = packed.reduce((s, e) => s + (e.size || 0), 0);
 
     if (listOnly) {
       const items = files
-        .map(e => ({ name: e.path, size: e.size || 0 }))
+        .map((e) => ({ name: e.path, size: e.size || 0 }))
         .sort((a, b) => a.name.localeCompare(b.name));
       return {
         format: 'asar',
@@ -269,7 +317,9 @@ async function _extractAsar(asarPath, outputDir, listOnly) {
     }
 
     if (totalSize > MAX_UNPACK_BYTES) {
-      throw new Error(`Archive too large: ${(totalSize / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`);
+      throw new Error(
+        `Archive too large: ${(totalSize / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`
+      );
     }
 
     fs.mkdirSync(outputDir, { recursive: true });
@@ -284,12 +334,19 @@ async function _extractAsar(asarPath, outputDir, listOnly) {
       if (e.unpacked) {
         // Lives in the sibling <archive>.unpacked/ tree, not inside the container.
         const src = path.join(unpackedRoot, e.path);
-        if (fs.existsSync(src)) { fs.copyFileSync(src, destPath); written++; }
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, destPath);
+          written++;
+        }
         continue;
       }
-      if (e.offset == null) continue; // fail-closed: skip malformed entry, never fabricate bytes
+      if (e.offset == null) {
+        continue;
+      } // fail-closed: skip malformed entry, never fabricate bytes
       const buf = Buffer.alloc(e.size || 0);
-      if (e.size > 0) fs.readSync(fd, buf, 0, e.size, parsed.dataOffset + e.offset);
+      if (e.size > 0) {
+        fs.readSync(fd, buf, 0, e.size, parsed.dataOffset + e.offset);
+      }
       fs.writeFileSync(destPath, buf);
       written++;
     }
@@ -302,8 +359,6 @@ async function _extractAsar(asarPath, outputDir, listOnly) {
 
 // ── GENERIC fallback (external extractor: 7z / bsdtar / unar — self-remediation) ──
 
-const genericExtractor = require('../services/reverseEngineer/genericExtractor');
-
 /**
  * Post-extraction security walk for the generic path (mirrors _extractZip's inline
  * verify): reject any file that escaped outputDir, strip symlinks created during
@@ -315,8 +370,13 @@ function _verifyNoEscape(dir, outputDir) {
     if (!_isWithinDest(full, outputDir)) {
       throw new Error(`Extracted file escaped destination: ${full}`);
     }
-    if (e.isSymbolicLink()) { fs.unlinkSync(full); continue; }
-    if (e.isDirectory()) _verifyNoEscape(full, outputDir);
+    if (e.isSymbolicLink()) {
+      fs.unlinkSync(full);
+      continue;
+    }
+    if (e.isDirectory()) {
+      _verifyNoEscape(full, outputDir);
+    }
   }
 }
 
@@ -325,8 +385,15 @@ function _sumTreeSize(dir) {
   let total = 0;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, e.name);
-    if (e.isDirectory()) total += _sumTreeSize(full);
-    else if (e.isFile()) { try { total += fs.statSync(full).size; } catch { /* best effort */ } }
+    if (e.isDirectory()) {
+      total += _sumTreeSize(full);
+    } else if (e.isFile()) {
+      try {
+        total += fs.statSync(full).size;
+      } catch {
+        /* best effort */
+      }
+    }
   }
   return total;
 }
@@ -335,8 +402,11 @@ function _sumTreeSize(dir) {
 function _countTreeFiles(dir) {
   let n = 0;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.isDirectory()) n += _countTreeFiles(path.join(dir, e.name));
-    else if (e.isFile()) n++;
+    if (e.isDirectory()) {
+      n += _countTreeFiles(path.join(dir, e.name));
+    } else if (e.isFile()) {
+      n++;
+    }
   }
   return n;
 }
@@ -349,7 +419,9 @@ function _formatInstallGuidance(fmt, inst, autoInstallHint) {
     lines.push('', `安装命令（已探测到 ${inst.manager}）：`, `  ${inst.command}`);
   } else if (inst.options && inst.options.length) {
     lines.push('', '按平台任选其一安装：');
-    for (const opt of inst.options) lines.push(`  ${opt}`);
+    for (const opt of inst.options) {
+      lines.push(`  ${opt}`);
+    }
   }
   if (autoInstallHint) {
     lines.push('', autoInstallHint);
@@ -381,17 +453,25 @@ async function _extractGeneric(archivePath, outputDir, listOnly, params) {
     // Gated + explicitly authorized install, then retry once.
     const installed = await _runInstall(inst.command);
     if (!installed.ok) {
-      return { __unremediable: true, message: `安装失败：${installed.error}\n可手动执行：\n  ${inst.command}` };
+      return {
+        __unremediable: true,
+        message: `安装失败：${installed.error}\n可手动执行：\n  ${inst.command}`,
+      };
     }
     picked = genericExtractor.pickExtractor(fmt);
     if (!picked) {
-      return { __unremediable: true, message: `安装命令已执行但仍未探测到可用解包器。请检查：\n  ${inst.command}` };
+      return {
+        __unremediable: true,
+        message: `安装命令已执行但仍未探测到可用解包器。请检查：\n  ${inst.command}`,
+      };
     }
   }
 
   if (listOnly) {
     const r = await genericExtractor.listWith(picked.kind, picked.bin, archivePath);
-    if (!r.ok) throw new Error(`列举失败 (${picked.bin}): ${r.error}`);
+    if (!r.ok) {
+      throw new Error(`列举失败 (${picked.bin}): ${r.error}`);
+    }
     const items = (r.entries || []).slice().sort((a, b) => a.name.localeCompare(b.name));
     return {
       format: `${fmt.slice(1)} via ${picked.kind}`,
@@ -404,17 +484,29 @@ async function _extractGeneric(archivePath, outputDir, listOnly, params) {
 
   fs.mkdirSync(outputDir, { recursive: true });
   const r = await genericExtractor.extractWith(picked.kind, picked.bin, archivePath, outputDir);
-  if (!r.ok) throw new Error(`解包失败 (${picked.bin}): ${r.error}`);
+  if (!r.ok) {
+    throw new Error(`解包失败 (${picked.bin}): ${r.error}`);
+  }
 
   // Post-extraction security + size guard (external tools bypass our per-entry checks).
   _verifyNoEscape(outputDir, outputDir);
   const total = _sumTreeSize(outputDir);
   if (total > MAX_UNPACK_BYTES) {
-    try { fs.rmSync(outputDir, { recursive: true, force: true }); } catch { /* best effort */ }
-    throw new Error(`Archive too large: ${(total / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`);
+    try {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
+    throw new Error(
+      `Archive too large: ${(total / 1024 / 1024).toFixed(1)} MiB exceeds ${(MAX_UNPACK_BYTES / 1024 / 1024).toFixed(0)} MiB limit`
+    );
   }
 
-  return { format: `${fmt.slice(1)} via ${picked.kind}`, outputDir, totalFiles: _countTreeFiles(outputDir) };
+  return {
+    format: `${fmt.slice(1)} via ${picked.kind}`,
+    outputDir,
+    totalFiles: _countTreeFiles(outputDir),
+  };
 }
 
 /** Run a shell install command (system-modifying; only reached under the auto-install gate + explicit consent). */
@@ -423,7 +515,12 @@ function _runInstall(command) {
   return new Promise((resolve) => {
     try {
       exec(command, { timeout: 300000, maxBuffer: 4 * 1024 * 1024, windowsHide: true }, (err) => {
-        if (err) return resolve({ ok: false, error: (err.stderr || err.message || String(err)).slice(0, 2000) });
+        if (err) {
+          return resolve({
+            ok: false,
+            error: (err.stderr || err.message || String(err)).slice(0, 2000),
+          });
+        }
         resolve({ ok: true });
       });
     } catch (e) {
@@ -438,19 +535,40 @@ function _runInstall(command) {
 // them by central directory regardless of extension, so detecting them as 'zip'
 // lets `unpack` handle them directly instead of failing with "Unsupported format".
 const ZIP_FAMILY_EXT = [
-  '.zip', '.whl', '.egg', '.jar', '.war', '.ear', '.apk', '.nupkg', '.xpi', '.vsix',
+  '.zip',
+  '.whl',
+  '.egg',
+  '.jar',
+  '.war',
+  '.ear',
+  '.apk',
+  '.nupkg',
+  '.xpi',
+  '.vsix',
 ];
 
 function _detectFormat(filePath) {
   const lower = filePath.toLowerCase();
-  if (lower.endsWith('.asar')) return 'asar'; // Electron container — native parser, NOT zip
-  if (ZIP_FAMILY_EXT.some(ext => lower.endsWith(ext))) return 'zip';
-  if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz')) return 'tar';
-  if (lower.endsWith('.tar.bz2') || lower.endsWith('.tar.xz') || lower.endsWith('.tar')) return 'tar';
-  if (lower.endsWith('.gz')) return 'gz';
+  if (lower.endsWith('.asar')) {
+    return 'asar';
+  } // Electron container — native parser, NOT zip
+  if (ZIP_FAMILY_EXT.some((ext) => lower.endsWith(ext))) {
+    return 'zip';
+  }
+  if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz')) {
+    return 'tar';
+  }
+  if (lower.endsWith('.tar.bz2') || lower.endsWith('.tar.xz') || lower.endsWith('.tar')) {
+    return 'tar';
+  }
+  if (lower.endsWith('.gz')) {
+    return 'gz';
+  }
   // Self-remediation fallback: a format the built-in handlers don't cover but a
   // system extractor (7z/bsdtar/unar) can. Gate off → byte-revert to null.
-  if (_genericFallbackEnabled() && genericExtractor.detectGenericFormat(lower)) return 'generic';
+  if (_genericFallbackEnabled() && genericExtractor.detectGenericFormat(lower)) {
+    return 'generic';
+  }
   return null;
 }
 
@@ -458,13 +576,17 @@ function _defaultOutputDir(filePath) {
   const dir = path.dirname(filePath);
   let base = path.basename(filePath);
   // Strip all archive extensions
-  base = base.replace(/\.(tar\.gz|tar\.bz2|tar\.xz|tgz|tar|zip|whl|egg|jar|war|ear|apk|nupkg|xpi|vsix|asar|gz|bz2|xz|7z|rar|zst|lz4|lzma|cab|iso|deb|rpm)$/i, '');
+  base = base.replace(
+    /\.(tar\.gz|tar\.bz2|tar\.xz|tgz|tar|zip|whl|egg|jar|war|ear|apk|nupkg|xpi|vsix|asar|gz|bz2|xz|7z|rar|zst|lz4|lzma|cab|iso|deb|rpm)$/i,
+    ''
+  );
   return path.join(dir, base);
 }
 
 module.exports = defineTool({
   name: 'unpack',
-  description: 'Extract archive files (ZIP, WHL, JAR, EGG, NUPKG and other zip-family packages, Electron ASAR, plus TAR, TAR.GZ, TGZ, GZ). Formats the built-in handlers do not cover (7Z, RAR, BZ2, XZ, ZST, LZ4, CAB, ISO, DEB, RPM) fall back to a system extractor (7z/bsdtar/unar); if none is installed, unpack returns the exact install command. Can list contents or extract to a directory.',
+  description:
+    'Extract archive files (ZIP, WHL, JAR, EGG, NUPKG and other zip-family packages, Electron ASAR, plus TAR, TAR.GZ, TGZ, GZ). Formats the built-in handlers do not cover (7Z, RAR, BZ2, XZ, ZST, LZ4, CAB, ISO, DEB, RPM) fall back to a system extractor (7z/bsdtar/unar); if none is installed, unpack returns the exact install command. Can list contents or extract to a directory.',
   category: 'filesystem',
   risk: 'medium',
   aliases: ['unpack_archive', 'extract', 'unzip', 'decompress'],
@@ -478,12 +600,14 @@ module.exports = defineTool({
     file_path: {
       type: 'string',
       required: true,
-      description: 'Path to the archive file (.zip, .whl, .jar, .egg, .nupkg, .xpi, .vsix, .asar, .tar, .tar.gz, .tgz, .gz)',
+      description:
+        'Path to the archive file (.zip, .whl, .jar, .egg, .nupkg, .xpi, .vsix, .asar, .tar, .tar.gz, .tgz, .gz)',
     },
     output_dir: {
       type: 'string',
       required: false,
-      description: 'Directory to extract files into. Defaults to a folder named after the archive in the same directory.',
+      description:
+        'Directory to extract files into. Defaults to a folder named after the archive in the same directory.',
     },
     list_only: {
       type: 'boolean',
@@ -493,7 +617,8 @@ module.exports = defineTool({
     install: {
       type: 'boolean',
       required: false,
-      description: 'For formats needing an external extractor that is NOT installed: set true to let khy run the platform install command and retry. Requires KHY_UNPACK_AUTO_INSTALL=1 and the user\'s explicit confirmation — installing software modifies the system, so ask the user first. Default false: unpack only returns the exact install command.',
+      description:
+        "For formats needing an external extractor that is NOT installed: set true to let khy run the platform install command and retry. Requires KHY_UNPACK_AUTO_INSTALL=1 and the user's explicit confirmation — installing software modifies the system, so ask the user first. Default false: unpack only returns the exact install command.",
     },
   },
 
@@ -511,7 +636,10 @@ module.exports = defineTool({
     }
     const format = _detectFormat(resolved);
     if (!format) {
-      return { valid: false, message: `Unsupported archive format: ${path.extname(resolved)}. Supported: .zip / .whl / .jar / .egg / .nupkg / .xpi / .vsix (zip-family), .asar (Electron), .tar, .tar.gz, .tgz, .gz; plus .7z / .rar / .bz2 / .xz / .zst / .lz4 / .cab / .iso / .deb / .rpm via a system extractor (7z/bsdtar/unar).` };
+      return {
+        valid: false,
+        message: `Unsupported archive format: ${path.extname(resolved)}. Supported: .zip / .whl / .jar / .egg / .nupkg / .xpi / .vsix (zip-family), .asar (Electron), .tar, .tar.gz, .tgz, .gz; plus .7z / .rar / .bz2 / .xz / .zst / .lz4 / .cab / .iso / .deb / .rpm via a system extractor (7z/bsdtar/unar).`,
+      };
     }
     return { valid: true };
   },
@@ -532,12 +660,18 @@ module.exports = defineTool({
       const stat = fs.statSync(resolved);
       const { classifyPreReadHang } = require('./filePreReadHangGuard');
       const hang = classifyPreReadHang({ absPath: resolved, stat, env: process.env });
-      if (hang && hang.blocked) return { success: false, error: hang.error, blockedRead: hang.kind };
-    } catch { /* stat/判定失败 → 回退历史行为 */ }
+      if (hang && hang.blocked) {
+        return { success: false, error: hang.error, blockedRead: hang.kind };
+      }
+    } catch {
+      /* stat/判定失败 → 回退历史行为 */
+    }
     const format = _detectFormat(resolved);
     const listOnly = !!params.list_only;
     const outputDir = params.output_dir
-      ? (path.isAbsolute(params.output_dir) ? params.output_dir : path.resolve(params.output_dir))
+      ? path.isAbsolute(params.output_dir)
+        ? params.output_dir
+        : path.resolve(params.output_dir)
       : _defaultOutputDir(resolved);
 
     // [SAFE] The per-entry guards (_isSafePath / _isWithinDest) only stop an entry
@@ -551,9 +685,13 @@ module.exports = defineTool({
     if (!listOnly) {
       const { validateNotUNCPath, validateNoPathTraversal } = require('./inputValidators');
       const uncCheck = validateNotUNCPath(params.output_dir);
-      if (!uncCheck.valid) return { success: false, error: uncCheck.message };
+      if (!uncCheck.valid) {
+        return { success: false, error: uncCheck.message };
+      }
       const confineCheck = validateNoPathTraversal(outputDir);
-      if (!confineCheck.valid) return { success: false, error: confineCheck.message };
+      if (!confineCheck.valid) {
+        return { success: false, error: confineCheck.message };
+      }
     }
 
     try {
@@ -578,14 +716,21 @@ module.exports = defineTool({
       }
 
       if (listOnly) {
-        const lines = [`Archive: ${path.basename(resolved)} (${result.format})`, `Files: ${result.totalFiles}`];
-        if (result.totalSize) lines.push(`Total size: ${(result.totalSize / 1024).toFixed(1)} KB`);
+        const lines = [
+          `Archive: ${path.basename(resolved)} (${result.format})`,
+          `Files: ${result.totalFiles}`,
+        ];
+        if (result.totalSize) {
+          lines.push(`Total size: ${(result.totalSize / 1024).toFixed(1)} KB`);
+        }
         lines.push('');
         for (const e of result.entries) {
           const sizeStr = e.size > 0 ? ` (${(e.size / 1024).toFixed(1)} KB)` : '';
           lines.push(`  ${e.name}${sizeStr}`);
         }
-        if (result.truncated) lines.push(`  ... (showing first 200 of ${result.totalFiles})`);
+        if (result.truncated) {
+          lines.push(`  ... (showing first 200 of ${result.totalFiles})`);
+        }
         return { success: true, output: lines.join('\n') };
       }
 

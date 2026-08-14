@@ -8,9 +8,25 @@
  */
 
 const DIR_SKIP = new Set([
-  'node_modules', '.git', 'dist', 'build', '__pycache__', '.next', '.nuxt',
-  '.cache', '.tox', '.venv', 'venv', 'env', '.eggs', '*.egg-info', 'coverage',
-  '.nyc_output', 'bower_components', '.svn', '.hg',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  '__pycache__',
+  '.next',
+  '.nuxt',
+  '.cache',
+  '.tox',
+  '.venv',
+  'venv',
+  'env',
+  '.eggs',
+  '*.egg-info',
+  'coverage',
+  '.nyc_output',
+  'bower_components',
+  '.svn',
+  '.hg',
 ]);
 
 module.exports = { DIR_SKIP };

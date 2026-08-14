@@ -85,9 +85,9 @@ class StockAnalysisEngine {
     };
   }
 
-  // 加载学习数据
+  // 加载学习数据（位于项目数据家 .khy/khyquant/data/）
   loadLearningData() {
-    const dataPath = path.join(__dirname, '../../data/learning_data.json');
+    const dataPath = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'learning_data.json');
     try {
       if (fs.existsSync(dataPath)) {
         return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -104,9 +104,9 @@ class StockAnalysisEngine {
     };
   }
 
-  // 保存学习数据
+  // 保存学习数据（位于项目数据家 .khy/khyquant/data/）
   saveLearningData() {
-    const dataPath = path.join(__dirname, '../../data/learning_data.json');
+    const dataPath = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'learning_data.json');
     try {
       const dir = path.dirname(dataPath);
       if (!fs.existsSync(dir)) {
@@ -208,8 +208,11 @@ class StockAnalysisEngine {
   initAnalysisPatterns() {
     return {
       questionTypes: {
-        recommendation: ['推荐', '建议', '买', '卖', '操作', '怎么办', '如何'],
+        // Specific analysis-domain types first: generic advice words below
+        // (买/卖/如何/操作) appear in many technical questions too ("均线趋势如何"),
+        // so concrete indicator terms must win over the vague recommendation set.
         technical: ['技术', '指标', 'macd', 'kdj', 'rsi', '均线', '趋势', '形态'],
+        recommendation: ['推荐', '建议', '买', '卖', '操作', '怎么办', '如何'],
         fundamental: ['基本面', '财务', '估值', 'pe', 'pb', 'roe', '业绩', '盈利'],
         risk: ['风险', '危险', '安全', '止损', '仓位', '回撤'],
         price: ['价格', '涨', '跌', '多少', '目标价', '成本'],

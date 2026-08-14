@@ -44,7 +44,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function contextBreakdownEnabled(env = process.env) {
   const raw = env && env.KHY_CONTEXT_BREAKDOWN;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -77,8 +79,12 @@ const _nonNegInt = require('../../utils/toNonNegInt');
  */
 function formatTokens(n) {
   const v = _nonNegInt(n);
-  if (v >= 1_000_000) return _trimZero(v / 1_000_000) + 'M';
-  if (v >= 1_000) return _trimZero(v / 1_000) + 'k';
+  if (v >= 1_000_000) {
+    return _trimZero(v / 1_000_000) + 'M';
+  }
+  if (v >= 1_000) {
+    return _trimZero(v / 1_000) + 'k';
+  }
   return String(v);
 }
 
@@ -105,10 +111,14 @@ function _trimZero(x) {
  *   门控关 / 无有效 sections / contextWindow<=0 → null(call-site 回退)。
  */
 function analyzeContextBreakdown(input = {}, env = process.env) {
-  if (!contextBreakdownEnabled(env)) return null;
+  if (!contextBreakdownEnabled(env)) {
+    return null;
+  }
 
   const contextWindow = _nonNegInt(input && input.contextWindow);
-  if (contextWindow <= 0) return null;
+  if (contextWindow <= 0) {
+    return null;
+  }
 
   const rawSections = Array.isArray(input.sections) ? input.sections : [];
   const estimate = typeof input.estimateTokens === 'function' ? input.estimateTokens : null;
@@ -116,7 +126,9 @@ function analyzeContextBreakdown(input = {}, env = process.env) {
   // 归一每段为 { name, tokens, color, isDeferred }。tokens 优先;否则 text→estimate。
   const normalized = [];
   for (const sec of rawSections) {
-    if (!sec || typeof sec.name !== 'string' || !sec.name.trim()) continue;
+    if (!sec || typeof sec.name !== 'string' || !sec.name.trim()) {
+      continue;
+    }
     let tokens = 0;
     if (sec.tokens != null) {
       tokens = _nonNegInt(sec.tokens);
@@ -127,7 +139,9 @@ function analyzeContextBreakdown(input = {}, env = process.env) {
         tokens = 0;
       }
     }
-    if (tokens <= 0) continue; // 0 token 类别不显(对齐 CC:cat.tokens > 0 才 push)
+    if (tokens <= 0) {
+      continue;
+    } // 0 token 类别不显(对齐 CC:cat.tokens > 0 才 push)
     normalized.push({
       name: sec.name.trim(),
       tokens,
@@ -136,7 +150,9 @@ function analyzeContextBreakdown(input = {}, env = process.env) {
     });
   }
 
-  if (normalized.length === 0) return null;
+  if (normalized.length === 0) {
+    return null;
+  }
 
   // 按 CATEGORY_ORDER 排序;未命中者稳定追加在末尾(保留传入序)。
   const orderIndex = (name) => {
@@ -156,13 +172,17 @@ function analyzeContextBreakdown(input = {}, env = process.env) {
 
   // reserved / free 作为特殊类别追加在末尾(对齐 CC 网格末尾放置)。
   if (reservedTokens > 0) {
-    categories.push({ name: RESERVED_NAME, tokens: reservedTokens, color: 'reserved', reserved: true });
+    categories.push({
+      name: RESERVED_NAME,
+      tokens: reservedTokens,
+      color: 'reserved',
+      reserved: true,
+    });
   }
   categories.push({ name: FREE_NAME, tokens: freeTokens, color: 'free', free: true });
 
-  const percentage = contextWindow > 0
-    ? Math.min(100, Math.round((actualUsage / contextWindow) * 100))
-    : 0;
+  const percentage =
+    contextWindow > 0 ? Math.min(100, Math.round((actualUsage / contextWindow) * 100)) : 0;
 
   return {
     categories,
@@ -193,15 +213,21 @@ function buildContextGrid(categories, contextWindow, opts = {}) {
   const total = width * height;
   const cw = _nonNegInt(contextWindow);
   const cats = Array.isArray(categories) ? categories : [];
-  if (total <= 0 || cw <= 0) return [];
+  if (total <= 0 || cw <= 0) {
+    return [];
+  }
 
   // 展开成方块序列。
   const squares = [];
   for (const cat of cats) {
-    if (!cat || cat.isDeferred) continue; // deferred 不占格
+    if (!cat || cat.isDeferred) {
+      continue;
+    } // deferred 不占格
     const exact = (cat.tokens / cw) * total;
     let count = Math.round(exact);
-    if (cat.name !== FREE_NAME) count = Math.max(1, count);
+    if (cat.name !== FREE_NAME) {
+      count = Math.max(1, count);
+    }
     for (let k = 0; k < count && squares.length < total; k++) {
       // 末方块的填充度:最后一格取小数部分(0 视为满 1.0)。
       let fullness = 1.0;
@@ -236,9 +262,15 @@ function buildContextGrid(categories, contextWindow, opts = {}) {
  *   Free space → '⛶'  预留 → '⛝'  满(fullness>=0.7)→ '⛁'  否则 → '⛀'
  */
 function _squareGlyph(sq) {
-  if (!sq) return ' ';
-  if (sq.free) return '⛶';
-  if (sq.reserved) return '⛝';
+  if (!sq) {
+    return ' ';
+  }
+  if (sq.free) {
+    return '⛶';
+  }
+  if (sq.reserved) {
+    return '⛝';
+  }
   return sq.squareFullness >= 0.7 ? '⛁' : '⛀';
 }
 
@@ -255,8 +287,12 @@ function _squareGlyph(sq) {
  * @returns {string[]}  逐行文本(网格行 + 空行 + `按类别估算占用` + 各类别图例行)
  */
 function renderContextBreakdownLines(breakdown, opts = {}, env = process.env) {
-  if (!contextBreakdownEnabled(env)) return [];
-  if (!breakdown || !Array.isArray(breakdown.categories) || breakdown.categories.length === 0) return [];
+  if (!contextBreakdownEnabled(env)) {
+    return [];
+  }
+  if (!breakdown || !Array.isArray(breakdown.categories) || breakdown.categories.length === 0) {
+    return [];
+  }
 
   const width = _nonNegInt(opts.width) || 10;
   const height = _nonNegInt(opts.height) || 10;
@@ -270,9 +306,12 @@ function renderContextBreakdownLines(breakdown, opts = {}, env = process.env) {
   }
 
   // 图例首行:model · used/limit tokens (pct%)。
-  const model = typeof opts.model === 'string' && opts.model.trim() ? opts.model.trim() + ' · ' : '';
+  const model =
+    typeof opts.model === 'string' && opts.model.trim() ? opts.model.trim() + ' · ' : '';
   lines.push('');
-  lines.push(`${model}${formatTokens(breakdown.totalTokens)}/${formatTokens(breakdown.contextWindow)} tokens (${breakdown.percentage}%)`);
+  lines.push(
+    `${model}${formatTokens(breakdown.totalTokens)}/${formatTokens(breakdown.contextWindow)} tokens (${breakdown.percentage}%)`
+  );
   lines.push('按类别估算占用');
 
   const cw = breakdown.contextWindow;

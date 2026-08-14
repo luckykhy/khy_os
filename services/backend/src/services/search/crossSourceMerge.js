@@ -28,22 +28,28 @@
 
 const { tokenizeForSearch } = require('../searchTokenizer');
 
-const SOURCE_PRIORITY = { 'local-file': 0, 'local-history': 1, 'web': 2 };
+const SOURCE_PRIORITY = { 'local-file': 0, 'local-history': 1, web: 2 };
 
 function _int(envName, fallback, min, max) {
   const raw = parseInt(String(process.env[envName] || ''), 10);
-  if (!Number.isFinite(raw)) return fallback;
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, raw));
 }
 
 function _float(envName, fallback, min, max) {
   const raw = parseFloat(String(process.env[envName] || ''));
-  if (!Number.isFinite(raw)) return fallback;
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, raw));
 }
 
 function _str(v) {
-  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  return String(v == null ? '' : v)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -52,7 +58,9 @@ function _str(v) {
  */
 function urlKey(url) {
   const raw = String(url || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   try {
     const u = new URL(raw);
     const host = u.hostname.toLowerCase().replace(/^www\./, '');
@@ -60,7 +68,9 @@ function urlKey(url) {
     // Drop common tracking params so the same page with/without them collapses.
     const params = new URLSearchParams(u.search);
     for (const k of [...params.keys()]) {
-      if (/^(utm_|fbclid$|gclid$|spm$|from$)/i.test(k)) params.delete(k);
+      if (/^(utm_|fbclid$|gclid$|spm$|from$)/i.test(k)) {
+        params.delete(k);
+      }
     }
     const search = params.toString();
     return `${host}${path}${search ? `?${search}` : ''}`;
@@ -83,10 +93,16 @@ function fingerprint(text) {
  * Jaccard similarity between two token Sets (|∩| / |∪|). 0 when either is empty.
  */
 function jaccard(a, b) {
-  if (!a || !b || a.size === 0 || b.size === 0) return 0;
+  if (!a || !b || a.size === 0 || b.size === 0) {
+    return 0;
+  }
   let inter = 0;
   const [small, large] = a.size <= b.size ? [a, b] : [b, a];
-  for (const t of small) if (large.has(t)) inter += 1;
+  for (const t of small) {
+    if (large.has(t)) {
+      inter += 1;
+    }
+  }
   const union = a.size + b.size - inter;
   return union === 0 ? 0 : inter / union;
 }
@@ -100,10 +116,14 @@ function jaccard(a, b) {
 function normalizeWeb(results) {
   const out = [];
   for (const r of Array.isArray(results) ? results : []) {
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     const title = _str(r.title);
     const url = String(r.url || '').trim();
-    if (!title && !url) continue;
+    if (!title && !url) {
+      continue;
+    }
     out.push({
       source: 'web',
       title: title || url,
@@ -113,7 +133,11 @@ function normalizeWeb(results) {
       snippet: _str(r.snippet || r.description || ''),
       domain: _str(r.domain || ''),
       type: _str(r.type || 'other') || 'other',
-      score: Number.isFinite(r.score) ? r.score : (Number.isFinite(r.engineCount) ? r.engineCount : 0),
+      score: Number.isFinite(r.score)
+        ? r.score
+        : Number.isFinite(r.engineCount)
+          ? r.engineCount
+          : 0,
       engines: Array.isArray(r.engines) ? r.engines : undefined,
       engineCount: Number.isFinite(r.engineCount) ? r.engineCount : undefined,
     });
@@ -129,12 +153,18 @@ function normalizeWeb(results) {
 function normalizeLocalFiles(grepResult, opts = {}) {
   const matches = Array.isArray(grepResult)
     ? grepResult
-    : (grepResult && Array.isArray(grepResult.matches) ? grepResult.matches : []);
+    : grepResult && Array.isArray(grepResult.matches)
+      ? grepResult.matches
+      : [];
   const out = [];
   for (const m of matches) {
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     const file = _str(m.file || m.path);
-    if (!file) continue;
+    if (!file) {
+      continue;
+    }
     const line = Number.isFinite(m.line) ? m.line : null;
     const snippet = _str(m.content || m.snippet || '');
     out.push({
@@ -161,10 +191,14 @@ function normalizeLocalFiles(grepResult, opts = {}) {
 function normalizeHistory(messages) {
   const out = [];
   for (const m of Array.isArray(messages) ? messages : []) {
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     const content = _str(m.content);
     const sessionId = _str(m.sessionId);
-    if (!content && !sessionId) continue;
+    if (!content && !sessionId) {
+      continue;
+    }
     out.push({
       source: 'local-history',
       title: _str(m.title) || (sessionId ? `会话 ${sessionId.slice(0, 8)}` : '会话记录'),
@@ -214,16 +248,20 @@ function mergeAndDedupe(unifiedArrays, opts = {}) {
   const threshold = Number.isFinite(opts.jaccard)
     ? opts.jaccard
     : _float('KHY_XSRC_DEDUP_JACCARD', 0.82, 0, 1);
-  const totalCap = Number.isFinite(opts.totalCap) && opts.totalCap > 0
-    ? opts.totalCap
-    : _int('KHY_UNIFIED_TOTAL_CAP', 40, 1, 500);
+  const totalCap =
+    Number.isFinite(opts.totalCap) && opts.totalCap > 0
+      ? opts.totalCap
+      : _int('KHY_UNIFIED_TOTAL_CAP', 40, 1, 500);
 
   // Flatten, tolerating either [[...],[...]] or a single flat array.
   const flat = [];
   const src = Array.isArray(unifiedArrays) ? unifiedArrays : [];
   for (const arr of src) {
-    if (Array.isArray(arr)) flat.push(...arr.filter(Boolean));
-    else if (arr && typeof arr === 'object') flat.push(arr);
+    if (Array.isArray(arr)) {
+      flat.push(...arr.filter(Boolean));
+    } else if (arr && typeof arr === 'object') {
+      flat.push(arr);
+    }
   }
 
   // Local sources are claimed first so they win any cross-source collision.
@@ -235,12 +273,17 @@ function mergeAndDedupe(unifiedArrays, opts = {}) {
   let droppedCrossSource = 0;
 
   for (const raw of flat) {
-    if (!raw || typeof raw !== 'object') continue;
+    if (!raw || typeof raw !== 'object') {
+      continue;
+    }
     const item = { ...raw };
 
     // Tier 1: within-source exact dedup.
     const ek = _exactKey(item);
-    if (exactSeen.has(ek)) { droppedWithinSource += 1; continue; }
+    if (exactSeen.has(ek)) {
+      droppedWithinSource += 1;
+      continue;
+    }
 
     // Tier 2: cross-source near dedup. Only a web item can be absorbed by an
     // already-kept LOCAL item (local-first); local items always survive.
@@ -248,8 +291,12 @@ function mergeAndDedupe(unifiedArrays, opts = {}) {
       const fp = fingerprint(`${item.title} ${item.snippet}`);
       let absorbed = false;
       for (const survivor of kept) {
-        if (survivor.source === 'web') continue;        // local survivors only
-        if (!survivor._fp) survivor._fp = fingerprint(`${survivor.title} ${survivor.snippet}`);
+        if (survivor.source === 'web') {
+          continue;
+        } // local survivors only
+        if (!survivor._fp) {
+          survivor._fp = fingerprint(`${survivor.title} ${survivor.snippet}`);
+        }
         if (jaccard(fp, survivor._fp) >= threshold) {
           survivor.alsoFoundIn = Array.from(new Set([...(survivor.alsoFoundIn || []), 'web']));
           if (item.url) {
@@ -261,13 +308,18 @@ function mergeAndDedupe(unifiedArrays, opts = {}) {
           break;
         }
       }
-      if (absorbed) { droppedCrossSource += 1; continue; }
+      if (absorbed) {
+        droppedCrossSource += 1;
+        continue;
+      }
       item._fp = fp;
     }
 
     exactSeen.add(ek);
     kept.push(item);
-    if (kept.length >= totalCap) break;
+    if (kept.length >= totalCap) {
+      break;
+    }
   }
 
   // Strip the internal fingerprint cache before returning.

@@ -36,8 +36,11 @@
  */
 function runRole(opts = {}, deps = {}) {
   let roleService;
-  try { roleService = require('../../services/roleService'); }
-  catch (err) { return { success: false, error: `角色服务不可用：${err.message}` }; }
+  try {
+    roleService = require('../../services/roleService');
+  } catch (err) {
+    return { success: false, error: `角色服务不可用：${err.message}` };
+  }
 
   const action = opts.action || (opts.clear ? 'clear' : opts.show ? 'show' : 'set');
   const cwd = opts.cwd || process.env.KHYQUANT_CWD || process.cwd();
@@ -47,16 +50,18 @@ function runRole(opts = {}, deps = {}) {
     const had = roleService.clearActiveRole();
     let unpersisted = false;
     if (opts.scope === 'save') {
-      try { unpersisted = !!(roleService.unpersistRole(cwd, deps) || {}).changed; } catch { /* best-effort */ }
+      try {
+        unpersisted = !!(roleService.unpersistRole(cwd, deps) || {}).changed;
+      } catch {
+        /* best-effort */
+      }
     }
     return {
       success: true,
       action: 'clear',
       cleared: had,
       unpersisted,
-      notice: had
-        ? '已退出角色，恢复默认身份。'
-        : '当前没有正在扮演的角色。',
+      notice: had ? '已退出角色，恢复默认身份。' : '当前没有正在扮演的角色。',
     };
   }
 
@@ -76,7 +81,9 @@ function runRole(opts = {}, deps = {}) {
 
   // ── set ─────────────────────────────────────────────────────────────────
   const syn = roleService.synthesizeRole(opts.role, { preset: opts.preset });
-  if (!syn.ok) return { success: false, action: 'set', error: syn.error };
+  if (!syn.ok) {
+    return { success: false, action: 'set', error: syn.error };
+  }
 
   const active = roleService.setActiveRole(syn.role);
   const result = {
@@ -101,7 +108,9 @@ function runRole(opts = {}, deps = {}) {
   result.notice = result.persisted
     ? `已扮演「${syn.role.title}」并保存到长期人格（${require('path').basename(result.dest || 'persona.md')}）。说「退出角色」可恢复。`
     : `已临时扮演「${syn.role.title}」（本次对话有效）。说「保存角色」可长期保留，说「退出角色」可恢复默认。`;
-  if (result.saveError) result.notice += `（保存失败：${result.saveError}）`;
+  if (result.saveError) {
+    result.notice += `（保存失败：${result.saveError}）`;
+  }
   return result;
 }
 
@@ -119,7 +128,9 @@ async function handleRole(parsed = {}) {
   // Collect the positional description (parser may place the first token in
   // subCommand or args[0]); flags like --save/--clear/--show are NOT it.
   const positional = [];
-  if (parsed.subCommand) positional.push(parsed.subCommand);
+  if (parsed.subCommand) {
+    positional.push(parsed.subCommand);
+  }
   positional.push(...args);
   const description = options.role || positional.join(' ').trim();
 
@@ -133,7 +144,9 @@ async function handleRole(parsed = {}) {
     try {
       const { PRESETS } = require('../../services/roleService');
       printInfo(`内置预设: ${Object.keys(PRESETS).join('、')}`);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return true;
   }
 

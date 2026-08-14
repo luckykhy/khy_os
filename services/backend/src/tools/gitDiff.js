@@ -1,17 +1,27 @@
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 module.exports = defineTool({
   name: 'gitDiff',
-  description: 'Show changes in the working directory (git diff)',
+  description:
+    'Show unstaged changes in the working directory (git diff), optionally limited to one file. ' +
+    'Read-only; use it to review edits before committing. Use gitStatus for a file-level overview and gitLog for history.',
   category: 'git',
   risk: 'safe',
+  searchHint: 'changes working tree compare unstaged 差异 变更 对比',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: isGitRepo,
   inputSchema: {
-    file: { type: 'string', required: false, description: 'Specific file to diff' },
+    file: {
+      type: 'string',
+      required: false,
+      description:
+        'Optional path of a single file to diff, e.g. "src/app.js" (default: all changed files).',
+      example: 'src/app.js',
+    },
   },
   async execute(params, context) {
     try {

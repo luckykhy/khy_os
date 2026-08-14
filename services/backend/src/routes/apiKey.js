@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { QueryTypes } = require('sequelize');
+
 const { authMiddleware } = require('../middleware/auth');
 const { sequelize } = require('../models');
+
 const { hashApiKey, generateKey } = require('@khy/shared/utils/apiKeyHash');
 
 let _apiKeySchemaCache = null;
@@ -15,7 +17,7 @@ function hasColumn(schema, name) {
 
 async function getApiKeySchema() {
   const now = Date.now();
-  if (_apiKeySchemaCache && (now - _apiKeySchemaCachedAt) < API_KEY_SCHEMA_CACHE_MS) {
+  if (_apiKeySchemaCache && now - _apiKeySchemaCachedAt < API_KEY_SCHEMA_CACHE_MS) {
     return _apiKeySchemaCache;
   }
   const queryInterface = sequelize.getQueryInterface();
@@ -26,12 +28,19 @@ async function getApiKeySchema() {
 }
 
 function mapApiKeyRow(row = {}) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     id: row.id,
     keyPrefix: row.key_prefix || row.keyPrefix || '',
     label: row.label || 'default',
-    isActive: typeof row.is_active === 'boolean' ? row.is_active : (typeof row.isActive === 'boolean' ? row.isActive : true),
+    isActive:
+      typeof row.is_active === 'boolean'
+        ? row.is_active
+        : typeof row.isActive === 'boolean'
+          ? row.isActive
+          : true,
     lastUsedAt: row.last_used_at || row.lastUsedAt || null,
     createdAt: row.created_at || row.createdAt || null,
   };
@@ -57,7 +66,9 @@ async function findActiveApiKeyByUserId(userId) {
 
 async function deactivateApiKeyById(id) {
   const schema = await getApiKeySchema();
-  if (!hasColumn(schema, 'is_active')) return;
+  if (!hasColumn(schema, 'is_active')) {
+    return;
+  }
   const hasUpdatedAt = hasColumn(schema, 'updated_at');
   await sequelize.query(
     `UPDATE api_keys
@@ -76,7 +87,9 @@ async function deactivateApiKeyById(id) {
 
 async function deactivateAllApiKeysByUserId(userId) {
   const schema = await getApiKeySchema();
-  if (!hasColumn(schema, 'is_active')) return;
+  if (!hasColumn(schema, 'is_active')) {
+    return;
+  }
   const hasUpdatedAt = hasColumn(schema, 'updated_at');
   await sequelize.query(
     `UPDATE api_keys
@@ -159,7 +172,9 @@ async function createApiKeyRecord(userId, rawKey, label) {
     }
   );
   const created = mapApiKeyRow(insertedRows[0] || null);
-  if (!created) throw new Error('Failed to fetch newly created API key record');
+  if (!created) {
+    throw new Error('Failed to fetch newly created API key record');
+  }
   return { record: created, key: rawKey };
 }
 
@@ -184,8 +199,8 @@ router.post('/generate', authMiddleware, async (req, res) => {
         keyPrefix: created.record.keyPrefix,
         label: created.record.label,
         isActive: created.record.isActive,
-        createdAt: created.record.createdAt
-      }
+        createdAt: created.record.createdAt,
+      },
     });
   } catch (error) {
     console.error('API key generation error:', error);
@@ -203,7 +218,7 @@ router.post('/refresh', authMiddleware, async (req, res) => {
     if (!current) {
       return res.status(404).json({
         success: false,
-        message: 'No active API key to refresh — generate one first'
+        message: 'No active API key to refresh — generate one first',
       });
     }
 
@@ -223,8 +238,8 @@ router.post('/refresh', authMiddleware, async (req, res) => {
         label: created.record.label,
         isActive: created.record.isActive,
         createdAt: created.record.createdAt,
-        previousKeyPrefix: current.keyPrefix
-      }
+        previousKeyPrefix: current.keyPrefix,
+      },
     });
   } catch (error) {
     console.error('API key refresh error:', error);
@@ -242,7 +257,7 @@ router.post('/revoke', authMiddleware, async (req, res) => {
     if (!current) {
       return res.status(404).json({
         success: false,
-        message: 'No active API key to revoke'
+        message: 'No active API key to revoke',
       });
     }
 
@@ -250,7 +265,7 @@ router.post('/revoke', authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      message: `API key ${current.keyPrefix}... revoked`
+      message: `API key ${current.keyPrefix}... revoked`,
     });
   } catch (error) {
     console.error('API key revocation error:', error);
@@ -267,7 +282,7 @@ router.get('/current', authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      data: current   // null if no active key
+      data: current, // null if no active key
     });
   } catch (error) {
     console.error('API key lookup error:', error);

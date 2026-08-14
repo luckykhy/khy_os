@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const envInt = require('../utils/envInt');
 
 const MAX_OUTPUT_BYTES = 200 * 1024; // 200KB
@@ -32,9 +33,10 @@ function outputSizeGuard(ctx) {
       const headSize = Math.min(2048, Math.floor(MAX_OUTPUT_BYTES * 0.15));
       const tailSize = MAX_OUTPUT_BYTES - headSize - 120;
       const omitted = output.length - headSize - tailSize;
-      const truncated = output.slice(0, headSize)
-        + `\n\n... [${omitted} chars omitted — head+tail preserved by OutputSizeGuard] ...\n\n`
-        + output.slice(output.length - tailSize);
+      const truncated =
+        output.slice(0, headSize) +
+        `\n\n... [${omitted} chars omitted — head+tail preserved by OutputSizeGuard] ...\n\n` +
+        output.slice(output.length - tailSize);
       return {
         action: 'modify',
         result: {
@@ -54,7 +56,9 @@ function outputSizeGuard(ctx) {
  */
 function editBoundaryGuard(ctx) {
   const filePath = ctx.params?.file_path || ctx.params?.filePath || ctx.params?.path;
-  if (!filePath) return { action: 'allow' };
+  if (!filePath) {
+    return { action: 'allow' };
+  }
 
   const root = process.env.KHYQUANT_CWD || process.cwd();
   let abs;
@@ -80,7 +84,9 @@ function editBoundaryGuard(ctx) {
         source: 'EditBoundaryGuard',
       };
     }
-  } catch { /* validator unavailable — fall through */ }
+  } catch {
+    /* validator unavailable — fall through */
+  }
 
   const normalizedRoot = root.endsWith(path.sep) ? root : root + path.sep;
   if (abs !== root && !abs.startsWith(normalizedRoot)) {
@@ -92,7 +98,9 @@ function editBoundaryGuard(ctx) {
       if (require('./additionalDirectories').isUnderAdditionalDir(abs)) {
         return { action: 'allow' };
       }
-    } catch { /* module unavailable — fall through */ }
+    } catch {
+      /* module unavailable — fall through */
+    }
 
     // Allow the user's own data folders (home / Desktop / Documents / Downloads),
     // including drive-relocated ones, without an approval prompt. System paths
@@ -103,7 +111,9 @@ function editBoundaryGuard(ctx) {
         if (require('../tools/_userDirs').isUnderTrustedRoot(abs)) {
           return { action: 'allow' };
         }
-      } catch { /* fall through to block */ }
+      } catch {
+        /* fall through to block */
+      }
     }
     return {
       action: 'block',
@@ -131,7 +141,9 @@ function editBoundaryGuard(ctx) {
  */
 function readBoundaryGuard(ctx) {
   const filePath = ctx.params?.file_path || ctx.params?.filePath || ctx.params?.path;
-  if (!filePath) return { action: 'allow' };
+  if (!filePath) {
+    return { action: 'allow' };
+  }
 
   const root = process.env.KHYQUANT_CWD || process.cwd();
   let abs;
@@ -148,7 +160,9 @@ function readBoundaryGuard(ctx) {
       if (require('./additionalDirectories').isUnderAdditionalDir(abs)) {
         return { action: 'allow' };
       }
-    } catch { /* module unavailable — fall through */ }
+    } catch {
+      /* module unavailable — fall through */
+    }
 
     // The user's own data folders read silently unless strict reads are on.
     const strict = String(process.env.KHY_STRICT_READ_BOUNDARY || '').trim() === '1';
@@ -157,7 +171,9 @@ function readBoundaryGuard(ctx) {
         if (require('../tools/_userDirs').isUnderTrustedRoot(abs)) {
           return { action: 'allow' };
         }
-      } catch { /* fall through to block */ }
+      } catch {
+        /* fall through to block */
+      }
     }
     return {
       action: 'block',
@@ -200,10 +216,12 @@ const RATE_LIMIT_MAX = 50;
  */
 function rateLimitGuard(ctx) {
   const tool = ctx.toolName || ctx.params?._toolName;
-  if (!tool) return { action: 'allow' };
+  if (!tool) {
+    return { action: 'allow' };
+  }
   const now = Date.now();
   const history = _toolCallCounts.get(tool) || [];
-  const recent = history.filter(ts => now - ts < RATE_LIMIT_WINDOW_MS);
+  const recent = history.filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS);
   recent.push(now);
   _toolCallCounts.set(tool, recent);
   if (recent.length > RATE_LIMIT_MAX) {
@@ -222,27 +240,40 @@ function rateLimitGuard(ctx) {
  */
 function pathTraversalGuard(ctx) {
   const fp = ctx.params?.file_path || ctx.params?.path || ctx.params?.filePath || '';
-  if (!fp || !fp.includes('..')) return { action: 'allow' };
-  if (!/\.\.[/\\]/.test(fp)) return { action: 'allow' };
+  if (!fp || !fp.includes('..')) {
+    return { action: 'allow' };
+  }
+  if (!/\.\.[/\\]/.test(fp)) {
+    return { action: 'allow' };
+  }
 
   const root = process.env.KHYQUANT_CWD || process.cwd();
   try {
     const resolved = path.resolve(root, fp);
-    const normalizedRoot = root.endsWith(path.sep) ? root : root + path.sep;
-    if (resolved !== root && !resolved.startsWith(normalizedRoot)) {
+    // Normalize the root the same way `resolved` is drive-resolved: on Windows a
+    // POSIX-style root (`/home/u/project`) is a current-drive path, and comparing
+    // `C:\...\resolved` against the RAW string would falsely flag benign `..`
+    // (`src/../lib/index.js`) as an escape.
+    const resolvedRoot = path.resolve(root);
+    const normalizedRoot = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
+    if (resolved !== resolvedRoot && !resolved.startsWith(normalizedRoot)) {
       // A `..` path that lands inside an explicitly granted /add-dir directory is
       // a legitimate cross-root access, not an escape — allow it (CC parity).
       try {
         if (require('./additionalDirectories').isUnderAdditionalDir(resolved)) {
           return { action: 'allow' };
         }
-      } catch { /* module unavailable — fall through to block */ }
+      } catch {
+        /* module unavailable — fall through to block */
+      }
       return {
         action: 'block',
         reason: `Path traversal detected: ${fp} resolves outside project root`,
       };
     }
-  } catch { /* can't resolve — let the tool handle it */ }
+  } catch {
+    /* can't resolve — let the tool handle it */
+  }
   return { action: 'allow' };
 }
 
@@ -253,7 +284,9 @@ function pathTraversalGuard(ctx) {
  */
 function errorRecoveryGuard(ctx) {
   const result = ctx.result;
-  if (!result || result.success !== false) return { action: 'allow' };
+  if (!result || result.success !== false) {
+    return { action: 'allow' };
+  }
 
   const error = result.error || result.output || '';
   let hint = null;
@@ -281,16 +314,22 @@ const EDIT_TOOL_PATTERN = /^(editFile|edit_file|edit|write_file|writeFile|apply_
 let _normalizePath;
 try {
   _normalizePath = require('../tools/_readTracker').normalizePath;
-} catch { /* fall back below */ }
+} catch {
+  /* fall back below */
+}
 if (typeof _normalizePath !== 'function') {
   _normalizePath = (fp) => path.resolve(fp);
 }
 
 function _resolveFilePath(fp) {
-  if (!fp) return null;
+  if (!fp) {
+    return null;
+  }
   try {
     return _normalizePath(path.resolve(process.env.KHYQUANT_CWD || process.cwd(), fp));
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -303,23 +342,43 @@ function _resolveFilePath(fp) {
  */
 function priorReadGuard(ctx) {
   const fp = ctx.params?.file_path || ctx.params?.path || ctx.params?.filePath;
-  if (!fp) return { action: 'allow' };
+  if (!fp) {
+    return { action: 'allow' };
+  }
   // apply_patch operates on multiple files — skip per-file check here
-  if (/^apply_patch$/i.test(ctx.toolName)) return { action: 'allow' };
+  if (/^apply_patch$/i.test(ctx.toolName)) {
+    return { action: 'allow' };
+  }
   const abs = _resolveFilePath(fp);
-  if (!abs) return { action: 'allow' };
+  if (!abs) {
+    return { action: 'allow' };
+  }
   // New-file creation: the target does not exist on disk → nothing to read.
-  try { if (!fs.existsSync(abs)) return { action: 'allow' }; } catch { return { action: 'allow' }; }
+  try {
+    if (!fs.existsSync(abs)) {
+      return { action: 'allow' };
+    }
+  } catch {
+    return { action: 'allow' };
+  }
   // Existing file: honor a prior read recorded in either the read tracker
   // (Windows-aware key) or the hash map; both are populated on a successful read.
   let readByTracker = false;
   try {
     const rt = require('../tools/_readTracker');
-    if (rt && typeof rt.hasRead === 'function') readByTracker = rt.hasRead(abs);
-  } catch { /* ignore */ }
+    if (rt && typeof rt.hasRead === 'function') {
+      readByTracker = rt.hasRead(abs);
+    }
+  } catch {
+    /* ignore */
+  }
   const readMap = ctx._fileReadHashes;
-  if (readByTracker) return { action: 'allow' };
-  if (!readMap) return { action: 'allow' }; // no tracking available = allow (backward compat)
+  if (readByTracker) {
+    return { action: 'allow' };
+  }
+  if (!readMap) {
+    return { action: 'allow' };
+  } // no tracking available = allow (backward compat)
   if (!readMap.has(abs)) {
     return {
       action: 'block',
@@ -337,13 +396,21 @@ function priorReadGuard(ctx) {
  */
 function fileStaleGuard(ctx) {
   const fp = ctx.params?.file_path || ctx.params?.path || ctx.params?.filePath;
-  if (!fp) return { action: 'allow' };
-  if (/^apply_patch$/i.test(ctx.toolName)) return { action: 'allow' };
+  if (!fp) {
+    return { action: 'allow' };
+  }
+  if (/^apply_patch$/i.test(ctx.toolName)) {
+    return { action: 'allow' };
+  }
   const abs = _resolveFilePath(fp);
-  if (!abs) return { action: 'allow' };
+  if (!abs) {
+    return { action: 'allow' };
+  }
   const readMap = ctx._fileReadHashes;
   const entry = readMap?.get(abs);
-  if (!entry || entry.mtime == null) return { action: 'allow' };
+  if (!entry || entry.mtime == null) {
+    return { action: 'allow' };
+  }
   try {
     const st = fs.statSync(abs);
     if (st.mtimeMs !== entry.mtime || st.size !== entry.size) {
@@ -354,7 +421,9 @@ function fileStaleGuard(ctx) {
         source: 'FileStaleGuard',
       };
     }
-  } catch { /* file gone — let the tool handle it */ }
+  } catch {
+    /* file gone — let the tool handle it */
+  }
   return { action: 'allow' };
 }
 
@@ -378,7 +447,11 @@ function fileStaleGuard(ctx) {
 function projectHygieneGuard(ctx) {
   try {
     let hygiene;
-    try { hygiene = require('./projectHygiene'); } catch { return { action: 'allow' }; }
+    try {
+      hygiene = require('./projectHygiene');
+    } catch {
+      return { action: 'allow' };
+    }
 
     // ── Batch scaffold shape (project generation) ──
     if (Array.isArray(ctx.params?.files)) {
@@ -389,7 +462,9 @@ function projectHygieneGuard(ctx) {
     // ── Single-write shape ──
     const fp = ctx.params?.file_path || ctx.params?.path || ctx.params?.filePath;
     const content = ctx.params?.content;
-    if (!fp || typeof content !== 'string') return { action: 'allow' };
+    if (!fp || typeof content !== 'string') {
+      return { action: 'allow' };
+    }
     const abs = _resolveFilePath(fp);
     const verdict = hygiene.assessWrite({ path: abs || fp, content });
     return _hygieneVerdictToAction(verdict);
@@ -423,18 +498,32 @@ const LSP_DIAG_WAIT_MS = parseInt(process.env.KHY_LSP_DIAG_WAIT_MS, 10) || 200;
  * and attach them to the result so the AI can self-correct.
  */
 async function lspDiagnosticsGuard(ctx) {
-  if (!ctx.result?.success) return { action: 'allow' };
+  if (!ctx.result?.success) {
+    return { action: 'allow' };
+  }
   const fp = ctx.params?.file_path || ctx.params?.path || ctx.params?.filePath;
-  if (!fp) return { action: 'allow' };
+  if (!fp) {
+    return { action: 'allow' };
+  }
 
   try {
     let lspClient;
-    try { lspClient = require('./lspClient'); } catch { return { action: 'allow' }; }
-    if (!lspClient || typeof lspClient.getDiagnostics !== 'function') return { action: 'allow' };
-    if (typeof lspClient.isInitialized === 'function' && !lspClient.isInitialized()) return { action: 'allow' };
+    try {
+      lspClient = require('./lspClient');
+    } catch {
+      return { action: 'allow' };
+    }
+    if (!lspClient || typeof lspClient.getDiagnostics !== 'function') {
+      return { action: 'allow' };
+    }
+    if (typeof lspClient.isInitialized === 'function' && !lspClient.isInitialized()) {
+      return { action: 'allow' };
+    }
 
     const abs = _resolveFilePath(fp);
-    if (!abs) return { action: 'allow' };
+    if (!abs) {
+      return { action: 'allow' };
+    }
 
     // Notify LSP server of file change
     if (typeof lspClient.didSave === 'function') {
@@ -444,17 +533,21 @@ async function lspDiagnosticsGuard(ctx) {
     }
 
     // Wait briefly for diagnostics push from LSP server
-    await new Promise(r => setTimeout(r, LSP_DIAG_WAIT_MS));
+    await new Promise((r) => setTimeout(r, LSP_DIAG_WAIT_MS));
 
     const diags = lspClient.getDiagnostics(abs) || [];
-    if (diags.length === 0) return { action: 'allow' };
+    if (diags.length === 0) {
+      return { action: 'allow' };
+    }
 
-    const formatted = diags.map(d => {
-      const line = (d.range?.start?.line || 0) + 1;
-      const sev = d.severity === 1 ? 'Error' : d.severity === 2 ? 'Warning' : 'Info';
-      const code = d.code ? ` (${d.code})` : '';
-      return `  Line ${line}: [${sev}] ${d.message}${code}`;
-    }).join('\n');
+    const formatted = diags
+      .map((d) => {
+        const line = (d.range?.start?.line || 0) + 1;
+        const sev = d.severity === 1 ? 'Error' : d.severity === 2 ? 'Warning' : 'Info';
+        const code = d.code ? ` (${d.code})` : '';
+        return `  Line ${line}: [${sev}] ${d.message}${code}`;
+      })
+      .join('\n');
 
     return {
       action: 'modify',
@@ -463,7 +556,9 @@ async function lspDiagnosticsGuard(ctx) {
         _lspDiagnostics: `<diagnostics file="${fp}">\n${formatted}\n</diagnostics>`,
       },
     };
-  } catch { return { action: 'allow' }; }
+  } catch {
+    return { action: 'allow' };
+  }
 }
 
 /**
@@ -472,8 +567,12 @@ async function lspDiagnosticsGuard(ctx) {
  * @returns {number} Number of guards registered
  */
 function registerBuiltinGuards(hookSystem) {
-  if (process.env.KHY_TOOL_GUARDS === 'false') return 0;
-  if (!hookSystem || typeof hookSystem.registerFunction !== 'function') return 0;
+  if (process.env.KHY_TOOL_GUARDS === 'false') {
+    return 0;
+  }
+  if (!hookSystem || typeof hookSystem.registerFunction !== 'function') {
+    return 0;
+  }
 
   let count = 0;
 
@@ -555,7 +654,8 @@ function registerBuiltinGuards(hookSystem) {
     priority: 7,
     // single write + batch project scaffolding (the agent's project-generation
     // path) — both must be checked or "no god component" is bypassable.
-    pattern: 'write_file|writeFile|scaffoldFiles|scaffold_files|create_project_structure|project_scaffold|batch_create_files',
+    pattern:
+      'write_file|writeFile|scaffoldFiles|scaffold_files|create_project_structure|project_scaffold|batch_create_files',
   });
   count++;
 
@@ -568,18 +668,39 @@ function registerBuiltinGuards(hookSystem) {
  * 幂等工具集合（读操作，可安全重复调用）
  */
 const IDEMPOTENT_TOOLS = new Set([
-  'read_file', 'readFile', 'glob', 'grep', 'git_status', 'gitStatus',
-  'list_files', 'listFiles', 'search', 'web_search', 'webSearch',
-  'lsp_diagnostics', 'lspDiagnostics', 'get_config', 'getConfig',
+  'read_file',
+  'readFile',
+  'glob',
+  'grep',
+  'git_status',
+  'gitStatus',
+  'list_files',
+  'listFiles',
+  'search',
+  'web_search',
+  'webSearch',
+  'lsp_diagnostics',
+  'lspDiagnostics',
+  'get_config',
+  'getConfig',
 ]);
 
 /**
  * 变更工具集合（写操作，重复调用可能造成副作用）
  */
 const MUTATING_TOOLS = new Set([
-  'write_file', 'writeFile', 'edit_file', 'editFile', 'edit',
-  'shell_command', 'shellCommand', 'bash', 'apply_patch', 'applyPatch',
-  'delete_file', 'deleteFile',
+  'write_file',
+  'writeFile',
+  'edit_file',
+  'editFile',
+  'edit',
+  'shell_command',
+  'shellCommand',
+  'bash',
+  'apply_patch',
+  'applyPatch',
+  'delete_file',
+  'deleteFile',
 ]);
 
 /**
@@ -614,11 +735,15 @@ const GUARDRAIL_TTL_MS = envInt('KHY_GUARDRAIL_TTL_MS', 30 * 60 * 1000, { min: 1
 function _evictGuardrailState() {
   const now = Date.now();
   for (const [key, st] of _guardrailState) {
-    if (now - (st.ts || 0) > GUARDRAIL_TTL_MS) _guardrailState.delete(key);
+    if (now - (st.ts || 0) > GUARDRAIL_TTL_MS) {
+      _guardrailState.delete(key);
+    }
   }
   while (_guardrailState.size > GUARDRAIL_MAX_ENTRIES) {
     const oldest = _guardrailState.keys().next().value;
-    if (oldest === undefined) break;
+    if (oldest === undefined) {
+      break;
+    }
     _guardrailState.delete(oldest);
   }
 }
@@ -628,7 +753,9 @@ function _evictGuardrailState() {
  */
 function _recordGuardrailState(fingerprint, state) {
   state.ts = Date.now();
-  if (_guardrailState.has(fingerprint)) _guardrailState.delete(fingerprint);
+  if (_guardrailState.has(fingerprint)) {
+    _guardrailState.delete(fingerprint);
+  }
   _guardrailState.set(fingerprint, state);
   _evictGuardrailState();
 }
@@ -671,7 +798,11 @@ function _toolCallFingerprint(toolName, params) {
  */
 function toolCallGuardrail(toolName, params, resultHash = null) {
   const fingerprint = _toolCallFingerprint(toolName, params);
-  const state = _guardrailState.get(fingerprint) || { count: 0, lastResultHash: null, level: 'allow' };
+  const state = _guardrailState.get(fingerprint) || {
+    count: 0,
+    lastResultHash: null,
+    level: 'allow',
+  };
   state.count += 1;
   _recordGuardrailState(fingerprint, state);
 
@@ -727,7 +858,9 @@ function toolCallGuardrail(toolName, params, resultHash = null) {
 function toolCallGuardrailRecordResult(toolName, params, result) {
   const fingerprint = _toolCallFingerprint(toolName, params);
   const state = _guardrailState.get(fingerprint);
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   const resultStr = typeof result === 'string' ? result : JSON.stringify(result || '');
   state.lastResultHash = _simpleHash(resultStr);
 }
@@ -787,9 +920,9 @@ class ToolCallGuardrailV2 {
    *   Keys are tool names; values are partial threshold objects merged over global defaults.
    */
   constructor(opts = {}) {
-    this._exactFailures = new Map();   // argsHash → count
-    this._toolFailures = new Map();    // toolName → count
-    this._noProgress = new Map();      // argsHash → { count, hash }
+    this._exactFailures = new Map(); // argsHash → count
+    this._toolFailures = new Map(); // toolName → count
+    this._noProgress = new Map(); // argsHash → { count, hash }
     this._globalThresholds = {
       exactWarn: opts.exactWarn || 2,
       exactBlock: opts.exactBlock || 5,
@@ -819,7 +952,9 @@ class ToolCallGuardrailV2 {
    */
   _resolveThresholds(toolName) {
     const override = this._toolThresholds.get(toolName);
-    if (!override) return this._globalThresholds;
+    if (!override) {
+      return this._globalThresholds;
+    }
     return { ...this._globalThresholds, ...override };
   }
 
@@ -840,35 +975,53 @@ class ToolCallGuardrailV2 {
     // Strategy 1: exact_failure
     const ef = this._exactFailures.get(key) || 0;
     if (ef >= t.exactBlock) {
-      return { decision: 'block', strategy: 'exact_failure',
-        reason: _guardMsg('guard.exact_fail_block', toolName, ef) };
+      return {
+        decision: 'block',
+        strategy: 'exact_failure',
+        reason: _guardMsg('guard.exact_fail_block', toolName, ef),
+      };
     }
     if (ef >= t.exactWarn) {
-      return { decision: 'warn', strategy: 'exact_failure',
-        reason: _guardMsg('guard.exact_fail_warn', toolName, ef) };
+      return {
+        decision: 'warn',
+        strategy: 'exact_failure',
+        reason: _guardMsg('guard.exact_fail_warn', toolName, ef),
+      };
     }
 
     // Strategy 2: same_tool_failure
     const tf = this._toolFailures.get(toolName) || 0;
     if (tf >= t.toolHalt) {
-      return { decision: 'halt', strategy: 'same_tool_failure',
-        reason: _guardMsg('guard.tool_fail_halt', toolName, tf) };
+      return {
+        decision: 'halt',
+        strategy: 'same_tool_failure',
+        reason: _guardMsg('guard.tool_fail_halt', toolName, tf),
+      };
     }
     if (tf >= t.toolWarn) {
-      return { decision: 'warn', strategy: 'same_tool_failure',
-        reason: _guardMsg('guard.tool_fail_warn', toolName, tf) };
+      return {
+        decision: 'warn',
+        strategy: 'same_tool_failure',
+        reason: _guardMsg('guard.tool_fail_warn', toolName, tf),
+      };
     }
 
     // Strategy 3: no_progress
     const np = this._noProgress.get(key);
     if (np) {
       if (np.count >= t.noProgressBlock) {
-        return { decision: 'block', strategy: 'no_progress',
-          reason: _guardMsg('guard.no_progress_block', toolName, np.count) };
+        return {
+          decision: 'block',
+          strategy: 'no_progress',
+          reason: _guardMsg('guard.no_progress_block', toolName, np.count),
+        };
       }
       if (np.count >= t.noProgressWarn) {
-        return { decision: 'warn', strategy: 'no_progress',
-          reason: _guardMsg('guard.no_progress_warn', toolName, np.count) };
+        return {
+          decision: 'warn',
+          strategy: 'no_progress',
+          reason: _guardMsg('guard.no_progress_warn', toolName, np.count),
+        };
       }
     }
 

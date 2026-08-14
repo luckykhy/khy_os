@@ -32,12 +32,19 @@ const _TOOL_CALL_MARKERS = ['<tool_call>', '【调用'];
 // last N chars of every flush (and the final N until finalize), needlessly
 // holding generated tokens in the pipe ("憋大招").
 function _partialToolMarkerTailLen(s) {
-  if (!s) return 0;
+  if (!s) {
+    return 0;
+  }
   let retain = 0;
   for (const m of _TOOL_CALL_MARKERS) {
     const maxK = Math.min(s.length, m.length - 1);
     for (let k = maxK; k >= 1; k--) {
-      if (s.endsWith(m.slice(0, k))) { if (k > retain) retain = k; break; }
+      if (s.endsWith(m.slice(0, k))) {
+        if (k > retain) {
+          retain = k;
+        }
+        break;
+      }
     }
   }
   return retain;
@@ -63,7 +70,9 @@ function _partialToolMarkerTailLen(s) {
  */
 const _STREAM_TOOL_RAWINPUT_OFF = ['0', 'false', 'off', 'no'];
 function _streamToolRawInputEnabled(env = process.env) {
-  const v = String((env && env.KHY_STREAM_TOOL_RAW_INPUT) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_STREAM_TOOL_RAW_INPUT) || '')
+    .trim()
+    .toLowerCase();
   return !_STREAM_TOOL_RAWINPUT_OFF.includes(v);
 }
 
@@ -78,17 +87,25 @@ function _streamToolRawInputEnabled(env = process.env) {
  */
 function _resolveToolBlockInput(chunk, env = process.env) {
   const inp = (chunk && chunk.input) || {};
-  if (!_streamToolRawInputEnabled(env)) return inp; // byte-revert
+  if (!_streamToolRawInputEnabled(env)) {
+    return inp;
+  } // byte-revert
   const raw = chunk && chunk.rawInput;
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && Object.keys(raw).length > 0) {
     return raw;
   }
-  if (inp && typeof inp === 'object' && !Array.isArray(inp)) return inp;
+  if (inp && typeof inp === 'object' && !Array.isArray(inp)) {
+    return inp;
+  }
   if (typeof inp === 'string' && inp.trim()) {
     try {
       const p = JSON.parse(inp);
-      if (p && typeof p === 'object' && !Array.isArray(p)) return p;
-    } catch { /* summary string is not JSON — no reliable structured args */ }
+      if (p && typeof p === 'object' && !Array.isArray(p)) {
+        return p;
+      }
+    } catch {
+      /* summary string is not JSON — no reliable structured args */
+    }
   }
   return {};
 }
@@ -107,32 +124,65 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
   let pending = '';
   let toolCallDetected = false;
   const collectedToolUseBlocks = []; // Collect structured tool_use from API
+  const preExecutedToolIds = new Set(); // Phase 7: blockIds already submitted to the streaming executor
+  const fallbackSubmitted = new Set(); // Phase 7: weak-protocol (no blockId) dedup fingerprints already submitted
 
   const safeEmit = (chunk) => {
-    if (typeof onChunk === 'function') onChunk(chunk);
+    if (typeof onChunk === 'function') {
+      onChunk(chunk);
+    }
+  };
+
+  /**
+   * Strip XML-like tool tags from AI response text.  Some model outputs
+   * embed self-repair / self-edit instructions as raw XML (e.g. <repair>,
+   * <args>, <file_path>, <old_string>, <new_string>) that the interceptor
+   * does not recognise as tool-call markers (only 【调用 and <tool_call> are).
+   * These tags are internal artefacts and must not reach the user's screen.
+   * We remove complete tag pairs only; partial markers (e.g. trailing
+   * "<tool_" or "【调") are left intact so the probe window still works.
+   */
+  const _stripXmlToolTags = (text) => {
+    const s = String(text || '');
+    // Pass 1: standard tag pairs (opening == closing name).
+    let out = s.replace(/<(?!\?|!|\/)(\S+?)>[\s\S]*?<\/\1>/g, '');
+    // Pass 2: non-standard pairs where the AI uses mismatched names, e.g.
+    // <web_search>...</end> or <memory: FILE.md>...</memory>.
+    // Restrict to lowercase internal-style names to avoid stripping HTML.
+    out = out.replace(/<(?!\?|!|\/)[a-z][\w:_-]*(?:\s[^>]*)?>[\s\S]*?<\/[a-z][\w:_-]*>/gi, '');
+    return out;
   };
 
   const summarizeToolChunkInput = (input) => {
-    if (!input) return '';
-    if (typeof input === 'string') return input.slice(0, 120);
-    if (typeof input !== 'object') return String(input).slice(0, 120);
+    if (!input) {
+      return '';
+    }
+    if (typeof input === 'string') {
+      return input.slice(0, 120);
+    }
+    if (typeof input !== 'object') {
+      return String(input).slice(0, 120);
+    }
 
-    const preferred = input.file_path
-      || input.filePath
-      || input.path
-      || input.command
-      || input.pattern
-      || input.query
-      || input.q
-      || input.url
-      || input.name;
+    const preferred =
+      input.file_path ||
+      input.filePath ||
+      input.path ||
+      input.command ||
+      input.pattern ||
+      input.query ||
+      input.q ||
+      input.url ||
+      input.name;
     if (typeof preferred === 'string' && preferred.trim()) {
       return preferred.trim().slice(0, 120);
     }
 
     try {
       return Object.entries(input)
-        .map(([k, v]) => `${k}=${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 40)}`)
+        .map(
+          ([k, v]) => `${k}=${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 40)}`
+        )
         .join(', ')
         .slice(0, 120);
     } catch {
@@ -145,27 +195,35 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
       .replace(/\r/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
-    if (!cleaned) return;
-    safeEmit({ type: 'assistant_preface', text: cleaned });
+    if (!cleaned) {
+      return;
+    }
+    safeEmit({ type: 'assistant_preface', text: _stripXmlToolTags(cleaned) });
   };
 
   const pushText = (text) => {
     pending += String(text || '');
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
 
-    if (toolCallDetected) return;
+    if (toolCallDetected) {
+      return;
+    }
 
     // Check for both tool call formats
     const cnIdx = pending.indexOf('【调用');
     const xmlIdx = pending.indexOf('<tool_call>');
-    const hitIdx = cnIdx >= 0 && xmlIdx >= 0
-      ? Math.min(cnIdx, xmlIdx)
-      : cnIdx >= 0 ? cnIdx : xmlIdx;
+    const hitIdx =
+      cnIdx >= 0 && xmlIdx >= 0 ? Math.min(cnIdx, xmlIdx) : cnIdx >= 0 ? cnIdx : xmlIdx;
 
     if (hitIdx >= 0) {
       if (hitIdx > 0 && !suppressPrefixOnToolCall) {
-        if (routeToolPrefaceToNarration) emitToolPreface(pending.slice(0, hitIdx));
-        else safeEmit({ type: 'text', text: pending.slice(0, hitIdx) });
+        if (routeToolPrefaceToNarration) {
+          emitToolPreface(pending.slice(0, hitIdx));
+        } else {
+          safeEmit({ type: 'text', text: _stripXmlToolTags(pending.slice(0, hitIdx)) });
+        }
       }
       pending = '';
       toolCallDetected = true;
@@ -177,7 +235,9 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
     // can still drop it if a marker/tool_use arrives next. This path is off by
     // default (KHY_TOOL_LOOP_SUPPRESS_TOOL_PREFACE) and is the only case that
     // deliberately holds visible text.
-    if (suppressPrefixOnToolCall && pending.length <= prefixProbeChars) return;
+    if (suppressPrefixOnToolCall && pending.length <= prefixProbeChars) {
+      return;
+    }
 
     // Default + narration paths: stream every byte immediately, withholding ONLY
     // a trailing partial-marker candidate (usually 0 chars). No fixed tail lag,
@@ -188,15 +248,20 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
     if (pending.length > retain) {
       const out = pending.slice(0, pending.length - retain);
       if (out) {
-        if (routeToolPrefaceToNarration) emitToolPreface(out);
-        else safeEmit({ type: 'text', text: out });
+        if (routeToolPrefaceToNarration) {
+          emitToolPreface(out);
+        } else {
+          safeEmit({ type: 'text', text: _stripXmlToolTags(out) });
+        }
       }
       pending = retain ? pending.slice(pending.length - retain) : '';
     }
   };
 
   const onInterceptChunk = (chunk) => {
-    if (!chunk || typeof chunk !== 'object') return;
+    if (!chunk || typeof chunk !== 'object') {
+      return;
+    }
 
     // 流式重置帧（响应防抖抗拼接）：上游判定本轮已流出的文本是废稿（套话拒绝重试）。
     // 丢弃本拦截器仍扣留的尾巴 pending，并把 reset 原样透传给下游消费端，让其丢弃
@@ -222,8 +287,11 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
       if (!toolCallDetected && pending) {
         const isArtifact = /^[【<]/.test(pending) || /^<\/?tool/.test(pending);
         if (!suppressPrefixOnToolCall && !isArtifact) {
-          if (routeToolPrefaceToNarration) emitToolPreface(pending);
-          else safeEmit({ type: 'text', text: pending });
+          if (routeToolPrefaceToNarration) {
+            emitToolPreface(pending);
+          } else {
+            safeEmit({ type: 'text', text: _stripXmlToolTags(pending) });
+          }
         }
         pending = '';
       }
@@ -236,12 +304,17 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
       const resolvedInput = _resolveToolBlockInput(chunk);
       const blockId = chunk.id || chunk.toolUseId || null;
       let toolBlock;
-      const existingBlock = (_streamToolRawInputEnabled() && blockId)
-        ? collectedToolUseBlocks.find((b) => b && b.id === blockId)
-        : null;
+      const existingBlock =
+        _streamToolRawInputEnabled() && blockId
+          ? collectedToolUseBlocks.find((b) => b && b.id === blockId)
+          : null;
       if (existingBlock) {
-        const newKeys = Object.keys((resolvedInput && typeof resolvedInput === 'object') ? resolvedInput : {}).length;
-        const oldKeys = Object.keys((existingBlock.input && typeof existingBlock.input === 'object') ? existingBlock.input : {}).length;
+        const newKeys = Object.keys(
+          resolvedInput && typeof resolvedInput === 'object' ? resolvedInput : {}
+        ).length;
+        const oldKeys = Object.keys(
+          existingBlock.input && typeof existingBlock.input === 'object' ? existingBlock.input : {}
+        ).length;
         if (newKeys > oldKeys) {
           existingBlock.input = resolvedInput;
           existingBlock.name = toolName;
@@ -265,15 +338,65 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
         id: toolBlock.id || '',
       };
 
-      // Phase 7: Pre-execute concurrency-safe tools during streaming
+      // Phase 7: Pre-execute concurrency-safe tools during streaming.
+      // Two submission paths with dedup:
+      // (1) BlockId path (stream-json protocol): the stream-json protocol
+      //     emits a tool call twice — content_block_start (empty `{}` input)
+      //     then content_block_stop (full accumulated args). Submit only once
+      //     the input is complete (full object or explicit tool_use_end) and
+      //     dedup by blockId via preExecutedToolIds, so the empty start frame
+      //     is not executed before args arrive.
+      // (2) Weak text-protocol path (no blockId): submit on the first
+      //     occurrence of a unique (name + original input) fingerprint,
+      //     provided the input is valid (a non-empty object or a non-empty
+      //     string). Also submit on explicit end or full object input. The
+      //     fingerprint prevents the same logical call from being re-submitted
+      //     across repeated chunks, while still allowing the model to issue
+      //     two distinct calls to the same tool name. This restores
+      //     pre-Phase-7 submission behavior for weak protocols (which
+      //     previously submitted on any chunk) while keeping dedup, instead
+      //     of silently never submitting when a string input cannot be parsed
+      //     into a non-empty object.
       if (streamingExecutor) {
-        try {
-          streamingExecutor.addTool({
-            name: toolBlock.name,
-            params: toolBlock.input,
-            id: toolBlock.id,
-          });
-        } catch { /* pre-execution failure is non-critical */ }
+        const submitInput = toolBlock.input;
+        const hasFullInput =
+          submitInput && typeof submitInput === 'object' && Object.keys(submitInput).length > 0;
+        const isExplicitEnd = chunk.type === 'tool_use_end';
+        const hasBlockId = !!toolBlock.id;
+        const alreadySubmitted = hasBlockId ? preExecutedToolIds.has(toolBlock.id) : false;
+        let shouldSubmit;
+        let fingerprint = null;
+        if (hasBlockId) {
+          shouldSubmit = (hasFullInput || isExplicitEnd) && !alreadySubmitted;
+        } else {
+          const rawChunkInput = chunk.input;
+          const hasValidInput =
+            (rawChunkInput &&
+              typeof rawChunkInput === 'object' &&
+              !Array.isArray(rawChunkInput) &&
+              Object.keys(rawChunkInput).length > 0) ||
+            (typeof rawChunkInput === 'string' && rawChunkInput.trim().length > 0);
+          fingerprint =
+            toolBlock.name + '\0' + JSON.stringify(rawChunkInput == null ? '' : rawChunkInput);
+          const alreadyFallback = fallbackSubmitted.has(fingerprint);
+          shouldSubmit = !alreadyFallback && (hasFullInput || isExplicitEnd || hasValidInput);
+        }
+        if (shouldSubmit) {
+          try {
+            streamingExecutor.addTool({
+              name: toolBlock.name,
+              params: toolBlock.input,
+              id: toolBlock.id,
+            });
+            if (hasBlockId) {
+              preExecutedToolIds.add(toolBlock.id);
+            } else if (fingerprint) {
+              fallbackSubmitted.add(fingerprint);
+            }
+          } catch {
+            /* pre-execution failure is non-critical */
+          }
+        }
       }
     }
 
@@ -313,10 +436,9 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
       // real response text.  Only suppress it when it looks like a partial
       // artifact marker (e.g. "【调", "<tool_").  Otherwise flush it so the
       // user sees the complete reply.
-      const isArtifact = toolCallDetected &&
-        (/^[【<]/.test(pending) || /^<\/?tool/.test(pending));
+      const isArtifact = toolCallDetected && (/^[【<]/.test(pending) || /^<\/?tool/.test(pending));
       if (!isArtifact) {
-        safeEmit({ type: 'text', text: pending });
+        safeEmit({ type: 'text', text: _stripXmlToolTags(pending) });
       }
     }
     pending = '';
@@ -326,6 +448,8 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
     pending = '';
     toolCallDetected = false;
     collectedToolUseBlocks.length = 0;
+    preExecutedToolIds.clear();
+    fallbackSubmitted.clear();
   };
 
   return {
@@ -340,20 +464,45 @@ function _createStreamToolInterceptor(onChunk, options = {}) {
 
 function _classifyGatewayThrownError(err) {
   const msg = String(err && err.message ? err.message : err || '').toLowerCase();
-  if (/aborted|cancelled|canceled/.test(msg)) return 'cancelled';
-  if (/timeout|timed out|stream stalled|unresponsive/.test(msg)) return 'timeout';
-  if (/network|econn|enotfound|socket|fetch failed|getaddrinfo|proxy/.test(msg)) return 'network';
-  if (/unauthorized|forbidden|invalid api key|auth|login/.test(msg)) return 'auth';
-  if (/reconnecting|channel closed|process|exited with code|adapter .* timeout/.test(msg)) return 'process';
+  if (/aborted|cancelled|canceled/.test(msg)) {
+    return 'cancelled';
+  }
+  if (/timeout|timed out|stream stalled|unresponsive/.test(msg)) {
+    return 'timeout';
+  }
+  if (/network|econn|enotfound|socket|fetch failed|getaddrinfo|proxy/.test(msg)) {
+    return 'network';
+  }
+  if (/unauthorized|forbidden|invalid api key|auth|login/.test(msg)) {
+    return 'auth';
+  }
+  if (/reconnecting|channel closed|process|exited with code|adapter .* timeout/.test(msg)) {
+    return 'process';
+  }
   return 'unknown';
 }
 
 function _isFirstTokenSignalChunk(chunk) {
-  if (!chunk || typeof chunk !== 'object') return false;
-  const kind = String(chunk.type || '').trim().toLowerCase();
-  if (!kind) return false;
-  if (kind === 'status' || kind === 'cost') return false;
-  if (kind === 'text' || kind === 'thinking' || kind === 'tool_use' || kind === 'tool_result' || kind === 'tool_call' || kind === 'control_request') {
+  if (!chunk || typeof chunk !== 'object') {
+    return false;
+  }
+  const kind = String(chunk.type || '')
+    .trim()
+    .toLowerCase();
+  if (!kind) {
+    return false;
+  }
+  if (kind === 'status' || kind === 'cost') {
+    return false;
+  }
+  if (
+    kind === 'text' ||
+    kind === 'thinking' ||
+    kind === 'tool_use' ||
+    kind === 'tool_result' ||
+    kind === 'tool_call' ||
+    kind === 'control_request'
+  ) {
     return true;
   }
   const text = String(chunk.text || chunk.content || '').trim();
@@ -362,7 +511,9 @@ function _isFirstTokenSignalChunk(chunk) {
 
 function _isTransientGatewayErrorType(type = '') {
   const t = String(type || '').toLowerCase();
-  return t === 'timeout' || t === 'cancelled' || t === 'network' || t === 'process' || t === 'unknown';
+  return (
+    t === 'timeout' || t === 'cancelled' || t === 'network' || t === 'process' || t === 'unknown'
+  );
 }
 
 /** @type {(msg: string, opts?: object) => 'small'|'normal'|'large'} */
@@ -379,14 +530,19 @@ const FILEREF_MAX_TOKEN = 256;
 
 /** ReDoS guard gate for _extractFileReferences. Default on; disable tokens fall back byte-identically. */
 function _fileRefRedosGuardEnabled(env = process.env) {
-  const raw = String((env && env.KHY_FILEREF_REDOS_GUARD) || '').trim().toLowerCase();
-  if (raw === '0' || raw === 'false' || raw === 'off' || raw === 'no') return false;
+  const raw = String((env && env.KHY_FILEREF_REDOS_GUARD) || '')
+    .trim()
+    .toLowerCase();
+  if (raw === '0' || raw === 'false' || raw === 'off' || raw === 'no') {
+    return false;
+  }
   return true;
 }
 
 /** Extract file references from user message for execution brief. */
 function _extractFileReferences(text) {
-  const pattern = /(?:[\w./\\-]+\.(?:js|ts|jsx|tsx|py|go|java|rs|vue|css|html|json|yaml|yml|md|rb|php|c|cpp|h|sh|sql))\b/gi;
+  const pattern =
+    /(?:[\w./\\-]+\.(?:js|ts|jsx|tsx|py|go|java|rs|vue|css|html|json|yaml|yml|md|rb|php|c|cpp|h|sh|sql))\b/gi;
   const raw = String(text == null ? '' : text);
 
   // ReDoS guard (KHY_FILEREF_REDOS_GUARD, default on). The char class
@@ -400,14 +556,22 @@ function _extractFileReferences(text) {
   if (_fileRefRedosGuardEnabled(process.env)) {
     const files = [];
     for (const token of raw.split(/\s+/)) {
-      if (!token || token.length > FILEREF_MAX_TOKEN) continue;
+      if (!token || token.length > FILEREF_MAX_TOKEN) {
+        continue;
+      }
       const re = new RegExp(pattern.source, pattern.flags);
       let mm;
       while ((mm = re.exec(token)) !== null) {
-        if (!files.includes(mm[0])) files.push(mm[0]);
-        if (files.length >= 64) break;
+        if (!files.includes(mm[0])) {
+          files.push(mm[0]);
+        }
+        if (files.length >= 64) {
+          break;
+        }
       }
-      if (files.length >= 64) break;
+      if (files.length >= 64) {
+        break;
+      }
     }
     return files.slice(0, 10);
   }
@@ -416,7 +580,9 @@ function _extractFileReferences(text) {
   const files = [];
   let m;
   while ((m = pattern.exec(raw)) !== null) {
-    if (!files.includes(m[0])) files.push(m[0]);
+    if (!files.includes(m[0])) {
+      files.push(m[0]);
+    }
   }
   return files.slice(0, 10);
 }
@@ -428,22 +594,48 @@ function _isLightweightConversationInput(userMessage = '', options = {}) {
     .replace(/\n\n\[System [^\]]*\][\s\S]*$/i, '')
     .replace(/^\[SYSTEM:[\s\S]*?\]\n\n/i, '')
     .trim();
-  if (!text) return false;
-  if (text.length > 140) return false;
-  if (/\n/.test(text)) return false;
+  if (!text) {
+    return false;
+  }
+  if (text.length > 140) {
+    return false;
+  }
+  if (/\n/.test(text)) {
+    return false;
+  }
 
-  const scale = String(options.scale || '').trim().toLowerCase();
-  if (scale && scale !== 'small') return false;
+  const scale = String(options.scale || '')
+    .trim()
+    .toLowerCase();
+  if (scale && scale !== 'small') {
+    return false;
+  }
 
   // Avoid misclassifying executable/coding tasks as casual chat.
-  if (/`|\/|\\|\.([cm]?[jt]sx?|py|go|java|rs|cpp|vue|json|yaml|yml|md)\b/i.test(text)) return false;
-  if (/(修复|修改|实现|重构|创建|删除|运行|执行|命令|shell|bash|grep|glob|read|write|edit|test|build|debug)/i.test(text)) return false;
+  if (/`|\/|\\|\.([cm]?[jt]sx?|py|go|java|rs|cpp|vue|json|yaml|yml|md)\b/i.test(text)) {
+    return false;
+  }
+  if (
+    /(修复|修改|实现|重构|创建|删除|运行|执行|命令|shell|bash|grep|glob|read|write|edit|test|build|debug)/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
 
-  if (runtime.isGreeting(text)) return true;
+  if (runtime.isGreeting(text)) {
+    return true;
+  }
   // Jokes, stories, self-intro, simple factual Q&A — no structured analysis needed
-  if (/^(讲|说|来).{0,6}(笑话|段子|故事|joke|story)/i.test(text)) return true;
-  if (/^(tell|give)\s+me\s+a\s+(joke|riddle|story)/i.test(text)) return true;
-  return /^(你是谁|你能做什么|介绍一下你自己|who are you|what can you do)\s*[\?？!！。]*$/i.test(text);
+  if (/^(讲|说|来).{0,6}(笑话|段子|故事|joke|story)/i.test(text)) {
+    return true;
+  }
+  if (/^(tell|give)\s+me\s+a\s+(joke|riddle|story)/i.test(text)) {
+    return true;
+  }
+  return /^(你是谁|你能做什么|介绍一下你自己|who are you|what can you do)\s*[\?？!！。]*$/i.test(
+    text
+  );
 }
 
 function _buildGreetingQuickReply(userMessage = '') {
@@ -458,33 +650,59 @@ function _buildGreetingQuickReply(userMessage = '') {
 
 function _extractRequestedLanguage(userMessage = '') {
   const text = String(userMessage || '').trim();
-  if (!text) return '';
-  if (/(请|麻烦|能否|可以|改为|切换到|use|switch to).{0,12}(英文|英语|english|en-us|en)\b/i.test(text)) return 'en';
-  if (/(请|麻烦|能否|可以|改为|切换到|use|switch to).{0,12}(中文|汉语|chinese|zh-cn|zh)\b/i.test(text)) return 'zh';
-  if (/(跟随用户语言|和用户同语言|follow.*user.*language|same language as user)/i.test(text)) return 'auto';
+  if (!text) {
+    return '';
+  }
+  if (
+    /(请|麻烦|能否|可以|改为|切换到|use|switch to).{0,12}(英文|英语|english|en-us|en)\b/i.test(text)
+  ) {
+    return 'en';
+  }
+  if (
+    /(请|麻烦|能否|可以|改为|切换到|use|switch to).{0,12}(中文|汉语|chinese|zh-cn|zh)\b/i.test(text)
+  ) {
+    return 'zh';
+  }
+  if (/(跟随用户语言|和用户同语言|follow.*user.*language|same language as user)/i.test(text)) {
+    return 'auto';
+  }
   return '';
 }
 
 function _detectUserInputLanguage(userMessage = '') {
   const text = String(userMessage || '').trim();
-  if (!text) return 'zh';
+  if (!text) {
+    return 'zh';
+  }
   const zhCount = (text.match(/[\u3400-\u9fff]/g) || []).length;
   const enCount = (text.match(/[A-Za-z]/g) || []).length;
-  if (zhCount === 0 && enCount > 0) return 'en';
-  if (zhCount > 0) return 'zh';
+  if (zhCount === 0 && enCount > 0) {
+    return 'en';
+  }
+  if (zhCount > 0) {
+    return 'zh';
+  }
   return 'zh';
 }
 
 function _hasLanguageRuleInPrompt(prompt = '') {
   const text = String(prompt || '');
-  if (!text) return false;
-  return /#\s*Language\b|LANGUAGE LOCK|Always respond in|默认使用中文|跟随用户语言|Respond in the same language/i.test(text);
+  if (!text) {
+    return false;
+  }
+  return /#\s*Language\b|LANGUAGE LOCK|Always respond in|默认使用中文|跟随用户语言|Respond in the same language/i.test(
+    text
+  );
 }
 
 function _buildLanguageFallbackDirective(userMessage = '', systemPrompt = '') {
   const forcedLang = String(process.env.KHY_LANGUAGE || '').trim();
-  if (forcedLang) return '';
-  if (_hasLanguageRuleInPrompt(systemPrompt)) return '';
+  if (forcedLang) {
+    return '';
+  }
+  if (_hasLanguageRuleInPrompt(systemPrompt)) {
+    return '';
+  }
 
   const requested = _extractRequestedLanguage(userMessage);
   if (requested === 'en') {
@@ -503,7 +721,6 @@ function _buildLanguageFallbackDirective(userMessage = '', systemPrompt = '') {
   }
   return '# Language\n默认使用中文回复；如果用户明确要求其它语言，或用户持续使用其它语言交流，则跟随用户语言。';
 }
-
 
 module.exports = {
   _TOOL_CALL_MARKERS,

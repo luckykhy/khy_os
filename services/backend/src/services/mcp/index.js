@@ -24,11 +24,12 @@
  *   }
  */
 const { spawn } = require('child_process');
-const path = require('path');
+const EventEmitter = require('events');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 const readline = require('readline');
-const EventEmitter = require('events');
+
 const {
   Transport,
   ConnectionState,
@@ -46,8 +47,17 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 2_000;
 
 // Config file locations (priority: project > user > legacy)
+// `user` is a lazy getter: resolves the portable-aware data home at access
+// time; falls back to the legacy ~/.khy location when the resolver fails.
 const CONFIG_PATHS = {
-  user: path.join(os.homedir(), '.khy', 'mcp.json'),
+  get user() {
+    try {
+      const { getDataHome } = require('../../utils/dataHome');
+      return path.join(getDataHome(), 'mcp.json');
+    } catch {
+      return path.join(os.homedir(), '.khy', 'mcp.json');
+    }
+  },
   legacy: path.join(os.homedir(), '.khyquant', 'mcp.json'),
 };
 
@@ -85,9 +95,9 @@ class MCPClient extends EventEmitter {
     this._lastError = null;
 
     // Remote-transport state (http / sse). For stdio these stay null.
-    this._sessionId = null;     // Mcp-Session-Id echoed back on streamable HTTP
-    this._postUrl = null;       // POST endpoint (sse: discovered; http: the url)
-    this._sseAbort = null;      // AbortController for an open SSE GET stream
+    this._sessionId = null; // Mcp-Session-Id echoed back on streamable HTTP
+    this._postUrl = null; // POST endpoint (sse: discovered; http: the url)
+    this._sseAbort = null; // AbortController for an open SSE GET stream
   }
 
   // ── Connection Lifecycle ────────────────────────────────────────────────
@@ -98,7 +108,9 @@ class MCPClient extends EventEmitter {
    * @returns {Promise<void>}
    */
   async connect() {
-    if (this.state === ConnectionState.CONNECTED) return;
+    if (this.state === ConnectionState.CONNECTED) {
+      return;
+    }
     if (this.state === ConnectionState.DISABLED) {
       throw new Error(`MCP server "${this.name}" is disabled`);
     }
@@ -163,7 +175,11 @@ class MCPClient extends EventEmitter {
     // Tear down any open SSE GET stream and best-effort notify the server that
     // the streamable-HTTP session is over (DELETE is advisory; ignore failures).
     if (this._sseAbort) {
-      try { this._sseAbort.abort(); } catch { /* already aborted */ }
+      try {
+        this._sseAbort.abort();
+      } catch {
+        /* already aborted */
+      }
       this._sseAbort = null;
     }
     if (this.transportType === Transport.HTTP && this._sessionId && this._postUrl) {
@@ -196,7 +212,7 @@ class MCPClient extends EventEmitter {
     this._reconnectAttempt++;
     const delay = RECONNECT_DELAY_MS * Math.pow(2, this._reconnectAttempt - 1);
 
-    await new Promise(r => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delay));
 
     try {
       await this.disconnect();
@@ -214,7 +230,7 @@ class MCPClient extends EventEmitter {
    * @returns {object[]} Array of tool definitions
    */
   listTools() {
-    return this._tools.map(t => serializeTool(this.name, t));
+    return this._tools.map((t) => serializeTool(this.name, t));
   }
 
   /**
@@ -321,7 +337,9 @@ class MCPClient extends EventEmitter {
   async _connectStdio() {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`MCP server "${this.name}" connection timed out after ${this.connectTimeout}ms`));
+        reject(
+          new Error(`MCP server "${this.name}" connection timed out after ${this.connectTimeout}ms`)
+        );
       }, this.connectTimeout);
 
       try {
@@ -344,7 +362,9 @@ class MCPClient extends EventEmitter {
           this._process.stdout?.unref?.();
           this._process.stderr?.unref?.();
           this._process.stdin?.unref?.();
-        } catch { /* unref is best-effort; never let it break connect */ }
+        } catch {
+          /* unref is best-effort; never let it break connect */
+        }
 
         // JSON-RPC line-delimited protocol on stdout
         this._readline = readline.createInterface({ input: this._process.stdout });
@@ -352,12 +372,16 @@ class MCPClient extends EventEmitter {
           try {
             const msg = JSON.parse(line);
             this._handleMessage(msg);
-          } catch { /* ignore non-JSON lines */ }
+          } catch {
+            /* ignore non-JSON lines */
+          }
         });
 
         this._process.stderr.on('data', (data) => {
           const text = data.toString().trim();
-          if (text) this._lastError = text;
+          if (text) {
+            this._lastError = text;
+          }
         });
 
         // Fail-soft on a dead write sink. If the child exits during startup
@@ -402,25 +426,27 @@ class MCPClient extends EventEmitter {
             name: 'khy-os',
             version: _getVersion(),
           },
-        }).then(async (result) => {
-          clearTimeout(timer);
+        })
+          .then(async (result) => {
+            clearTimeout(timer);
 
-          // Extract server metadata
-          this.capabilities = result.capabilities || {};
-          this.serverInfo = result.serverInfo || null;
-          this.instructions = result.instructions || null;
+            // Extract server metadata
+            this.capabilities = result.capabilities || {};
+            this.serverInfo = result.serverInfo || null;
+            this.instructions = result.instructions || null;
 
-          // Send initialized notification
-          this._sendNotification('notifications/initialized', {});
+            // Send initialized notification
+            this._sendNotification('notifications/initialized', {});
 
-          // Fetch tools, resources, prompts in parallel (best-effort).
-          await this._loadServerInventory();
+            // Fetch tools, resources, prompts in parallel (best-effort).
+            await this._loadServerInventory();
 
-          resolve();
-        }).catch((err) => {
-          clearTimeout(timer);
-          reject(err);
-        });
+            resolve();
+          })
+          .catch((err) => {
+            clearTimeout(timer);
+            reject(err);
+          });
       } catch (err) {
         clearTimeout(timer);
         reject(err);
@@ -469,7 +495,9 @@ class MCPClient extends EventEmitter {
       ...(this.config.headers || {}),
     };
     const bearer = await this._resolveBearer();
-    if (bearer && !headers.Authorization) headers.Authorization = `Bearer ${bearer}`;
+    if (bearer && !headers.Authorization) {
+      headers.Authorization = `Bearer ${bearer}`;
+    }
 
     this._sseAbort = new AbortController();
     const endpointReady = _deferred();
@@ -497,7 +525,7 @@ class MCPClient extends EventEmitter {
     // Wait for the endpoint event (bounded by the connect timeout).
     const epTimer = setTimeout(
       () => endpointReady.reject(new Error(`MCP SSE "${this.name}" endpoint event timed out`)),
-      this.connectTimeout,
+      this.connectTimeout
     );
     try {
       await endpointReady.promise;
@@ -529,25 +557,36 @@ class MCPClient extends EventEmitter {
     let buffer = '';
     for (;;) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
       let nl;
       while ((nl = buffer.indexOf('\n\n')) !== -1) {
         const rawEvent = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 2);
         const { event, data } = _parseSseEvent(rawEvent);
-        if (data == null) continue;
+        if (data == null) {
+          continue;
+        }
 
         if (event === 'endpoint') {
           // data is the (possibly relative) POST URL.
-          try { this._postUrl = new URL(data, this.config.url).toString(); }
-          catch { this._postUrl = data; }
+          try {
+            this._postUrl = new URL(data, this.config.url).toString();
+          } catch {
+            this._postUrl = data;
+          }
           endpointReady.resolve();
           continue;
         }
         // Default event type is "message".
         let msg;
-        try { msg = JSON.parse(data); } catch { continue; }
+        try {
+          msg = JSON.parse(data);
+        } catch {
+          continue;
+        }
         this._handleMessage(msg);
       }
     }
@@ -566,9 +605,10 @@ class MCPClient extends EventEmitter {
       this._sendRequest('resources/list', {}),
       this._sendRequest('prompts/list', {}),
     ]);
-    this._tools = toolsResult.status === 'fulfilled' ? (toolsResult.value?.tools || []) : [];
-    this._resources = resourcesResult.status === 'fulfilled' ? (resourcesResult.value?.resources || []) : [];
-    this._prompts = promptsResult.status === 'fulfilled' ? (promptsResult.value?.prompts || []) : [];
+    this._tools = toolsResult.status === 'fulfilled' ? toolsResult.value?.tools || [] : [];
+    this._resources =
+      resourcesResult.status === 'fulfilled' ? resourcesResult.value?.resources || [] : [];
+    this._prompts = promptsResult.status === 'fulfilled' ? promptsResult.value?.prompts || [] : [];
   }
 
   // ── Internal: JSON-RPC ──────────────────────────────────────────────────
@@ -606,7 +646,9 @@ class MCPClient extends EventEmitter {
         }
       }, this.requestTimeout);
       const entry = this._pendingRequests.get(id);
-      if (entry) entry._timer = timer;
+      if (entry) {
+        entry._timer = timer;
+      }
 
       Promise.resolve(this._writeRaw(msg)).catch((err) => {
         if (this._pendingRequests.has(id)) {
@@ -643,7 +685,9 @@ class MCPClient extends EventEmitter {
     }
 
     const sid = res.headers.get('mcp-session-id');
-    if (sid) this._sessionId = sid;
+    if (sid) {
+      this._sessionId = sid;
+    }
 
     if (!res.ok) {
       clearTimeout(timer);
@@ -657,7 +701,9 @@ class MCPClient extends EventEmitter {
         return await this._readSseResponse(res, id);
       }
       // 202 Accepted with empty body (e.g. server queued work) → no result.
-      if (res.status === 204 || res.headers.get('content-length') === '0') return {};
+      if (res.status === 204 || res.headers.get('content-length') === '0') {
+        return {};
+      }
       const json = await res.json();
       return this._unwrapRpc(json, id);
     } finally {
@@ -678,16 +724,24 @@ class MCPClient extends EventEmitter {
     try {
       for (;;) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
         buffer += decoder.decode(value, { stream: true });
         let nl;
         while ((nl = buffer.indexOf('\n\n')) !== -1) {
           const rawEvent = buffer.slice(0, nl);
           buffer = buffer.slice(nl + 2);
           const data = _parseSseData(rawEvent);
-          if (data == null) continue;
+          if (data == null) {
+            continue;
+          }
           let msg;
-          try { msg = JSON.parse(data); } catch { continue; }
+          try {
+            msg = JSON.parse(data);
+          } catch {
+            continue;
+          }
           if (msg.id === id) {
             return this._unwrapRpc(msg, id);
           }
@@ -696,7 +750,11 @@ class MCPClient extends EventEmitter {
         }
       }
     } finally {
-      try { reader.cancel(); } catch { /* stream already closed */ }
+      try {
+        reader.cancel();
+      } catch {
+        /* stream already closed */
+      }
     }
     throw new Error(`MCP HTTP stream closed before response to request ${id}`);
   }
@@ -706,7 +764,9 @@ class MCPClient extends EventEmitter {
     if (msg && msg.error) {
       throw new Error(msg.error.message || `MCP error: code ${msg.error.code}`);
     }
-    if (msg && msg.id === id) return msg.result;
+    if (msg && msg.id === id) {
+      return msg.result;
+    }
     return msg && msg.result;
   }
 
@@ -717,7 +777,9 @@ class MCPClient extends EventEmitter {
       Accept: 'application/json, text/event-stream',
       ...(this.config.headers || {}),
     };
-    if (this._sessionId) headers['Mcp-Session-Id'] = this._sessionId;
+    if (this._sessionId) {
+      headers['Mcp-Session-Id'] = this._sessionId;
+    }
     const bearer = await this._resolveBearer();
     if (bearer && !headers.Authorization && !headers.authorization) {
       headers.Authorization = `Bearer ${bearer}`;
@@ -731,7 +793,9 @@ class MCPClient extends EventEmitter {
    * @private
    */
   async _resolveBearer() {
-    if (this.config.token) return this.config.token;
+    if (this.config.token) {
+      return this.config.token;
+    }
     try {
       const { getTokenStore } = require('./oauthTokenStore');
       const store = getTokenStore();
@@ -771,8 +835,12 @@ class MCPClient extends EventEmitter {
     const msg = JSON.stringify({ jsonrpc: '2.0', method, params });
     try {
       const r = this._writeRaw(msg);
-      if (r && typeof r.catch === 'function') r.catch(() => {});
-    } catch { /* notifications are best-effort */ }
+      if (r && typeof r.catch === 'function') {
+        r.catch(() => {});
+      }
+    } catch {
+      /* notifications are best-effort */
+    }
   }
 
   /** @private */
@@ -781,7 +849,9 @@ class MCPClient extends EventEmitter {
     if (msg.id != null && this._pendingRequests.has(msg.id)) {
       const entry = this._pendingRequests.get(msg.id);
       this._pendingRequests.delete(msg.id);
-      if (entry._timer) clearTimeout(entry._timer);
+      if (entry._timer) {
+        clearTimeout(entry._timer);
+      }
 
       if (msg.error) {
         entry.reject(new Error(msg.error.message || `MCP error: code ${msg.error.code}`));
@@ -805,7 +875,9 @@ class MCPClient extends EventEmitter {
       const result = await this._sendRequest('tools/list', {});
       this._tools = result.tools || [];
       this.emit('toolsChanged', this._tools);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   /** @private */
@@ -814,7 +886,9 @@ class MCPClient extends EventEmitter {
       const result = await this._sendRequest('resources/list', {});
       this._resources = result.resources || [];
       this.emit('resourcesChanged', this._resources);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   /** @private */
@@ -849,17 +923,65 @@ function loadConfig(projectDir) {
     if (ccBridge.isCcMcpBridgeEnabled()) {
       for (const src of ccBridge.ccMcpConfigSources({ homedir: os.homedir(), projectDir })) {
         try {
-          if (!fs.existsSync(src.path)) continue;
+          if (!fs.existsSync(src.path)) {
+            continue;
+          }
           // Parse each source file, extract the mcpServers map per its shape.
           const raw = JSON.parse(fs.readFileSync(src.path, 'utf-8'));
           const servers = ccBridge.extractMcpServers(raw, src.kind, projectDir);
           for (const [name, cfg] of Object.entries(servers)) {
-            merged.mcpServers[name] = { ...cfg, _scope: ConfigScope.USER, _configPath: src.path, _ccBridged: true };
+            merged.mcpServers[name] = {
+              ...cfg,
+              _scope: ConfigScope.USER,
+              _configPath: src.path,
+              _ccBridged: true,
+            };
           }
-        } catch { /* skip malformed CC config */ }
+        } catch {
+          /* skip malformed CC config */
+        }
       }
     }
-  } catch { /* bridge unavailable → khy-only MCP discovery */ }
+  } catch {
+    /* bridge unavailable → khy-only MCP discovery */
+  }
+
+  // OpenClaw tool-marketplace bridge (gated KHY_OPENCLAW_MCP_BRIDGE, default ON):
+  // also reuse MCP servers OpenClaw has configured in <~/.openclaw>/openclaw.json
+  // (JSON5; servers under `mcp.servers`; KHY_OPENCLAW_DATA_HOME/OPENCLAW_STATE_DIR
+  // override the root). The server schema is byte-identical to khy's. Merged at
+  // LOWEST priority: each server is inserted ONLY when its name is not already
+  // present, so it never overrides a CC-bridged server above nor a khy-configured
+  // one below. Missing/malformed file is silently skipped. OFF is a no-op.
+  try {
+    const ocBridge = require('./ocMcpBridge');
+    if (ocBridge.isOcMcpBridgeEnabled()) {
+      for (const src of ocBridge.ocMcpConfigSources({ homedir: os.homedir() })) {
+        try {
+          if (!fs.existsSync(src.path)) {
+            continue;
+          }
+          const parsed = ocBridge.parseConfig(fs.readFileSync(src.path, 'utf-8'));
+          const servers = ocBridge.extractMcpServers(parsed);
+          for (const [name, cfg] of Object.entries(servers)) {
+            if (Object.prototype.hasOwnProperty.call(merged.mcpServers, name)) {
+              continue;
+            }
+            merged.mcpServers[name] = {
+              ...cfg,
+              _scope: ConfigScope.USER,
+              _configPath: src.path,
+              _ocBridged: true,
+            };
+          }
+        } catch {
+          /* skip malformed OpenClaw config */
+        }
+      }
+    }
+  } catch {
+    /* bridge unavailable: OpenClaw MCP not merged */
+  }
 
   // Load order: user < project (project overrides user)
   const paths = [
@@ -881,18 +1003,30 @@ function loadConfig(projectDir) {
 
   for (const { path: configPath, scope } of paths) {
     try {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
       const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
       // Support both new format { mcpServers: {...} } and legacy { servers: [...] }
       if (raw.mcpServers && typeof raw.mcpServers === 'object') {
         for (const [name, config] of Object.entries(raw.mcpServers)) {
-          merged.mcpServers[name] = { ...config, _scope: scope, _configPath: configPath };
+          // New format may carry an explicit `disabled` field (khy mcp enable/disable writes it).
+          // Fold it into the internal _disabled marker so connectAll / governance treat it uniformly.
+          const disabled = !!(config && config.disabled === true);
+          merged.mcpServers[name] = {
+            ...config,
+            _scope: scope,
+            _configPath: configPath,
+            _disabled: disabled,
+          };
         }
       } else if (Array.isArray(raw.servers)) {
         // Legacy format: convert array to named map
         for (const serverConfig of raw.servers) {
-          if (!serverConfig.name) continue;
+          if (!serverConfig.name) {
+            continue;
+          }
           const { name, enabled, ...rest } = serverConfig;
           if (enabled === false) {
             merged.mcpServers[name] = { ...rest, _scope: scope, _disabled: true };
@@ -901,7 +1035,9 @@ function loadConfig(projectDir) {
           }
         }
       }
-    } catch { /* skip malformed config files */ }
+    } catch {
+      /* skip malformed config files */
+    }
   }
 
   return merged;
@@ -913,7 +1049,9 @@ function loadConfig(projectDir) {
  */
 function saveConfig(config) {
   const dir = path.dirname(CONFIG_PATHS.user);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   // Strip internal fields before saving
   const clean = { mcpServers: {} };
@@ -961,7 +1099,9 @@ async function connectMCPServer(name, config, options = {}) {
  */
 async function disconnectMCPServer(name) {
   const client = _connections.get(name);
-  if (!client) return;
+  if (!client) {
+    return;
+  }
 
   await client.disconnect();
   _connections.delete(name);
@@ -978,7 +1118,9 @@ async function connectAll(projectDir) {
   const failed = [];
 
   const entries = Object.entries(config.mcpServers);
-  if (entries.length === 0) return { connected, failed };
+  if (entries.length === 0) {
+    return { connected, failed };
+  }
 
   // Connect in parallel
   const results = await Promise.allSettled(
@@ -1040,7 +1182,9 @@ function listMCPTools() {
 async function callMCPTool(qualifiedName, args = {}) {
   const parts = qualifiedName.split('__');
   if (parts.length < 3 || parts[0] !== 'mcp') {
-    throw new Error(`Invalid MCP tool name: ${qualifiedName}. Expected format: mcp__serverName__toolName`);
+    throw new Error(
+      `Invalid MCP tool name: ${qualifiedName}. Expected format: mcp__serverName__toolName`
+    );
   }
 
   const serverName = parts[1];
@@ -1055,7 +1199,10 @@ async function callMCPTool(qualifiedName, args = {}) {
     // the resolved client's serialized tools so a normalized tool segment still
     // dispatches with the raw name the server expects.
     for (const [key, c] of _connections) {
-      if (normalizeMcpName(key) === serverName) { client = c; break; }
+      if (normalizeMcpName(key) === serverName) {
+        client = c;
+        break;
+      }
     }
   }
   if (!client) {
@@ -1066,7 +1213,9 @@ async function callMCPTool(qualifiedName, args = {}) {
   let originalToolName = toolName;
   if (typeof client.listTools === 'function') {
     const match = client.listTools().find((t) => t.name === qualifiedName);
-    if (match && match.originalToolName != null) originalToolName = match.originalToolName;
+    if (match && match.originalToolName != null) {
+      originalToolName = match.originalToolName;
+    }
   }
 
   return client.callTool(originalToolName, args);
@@ -1078,10 +1227,14 @@ async function callMCPTool(qualifiedName, args = {}) {
  * @returns {MCPClient|undefined}
  */
 function _resolveClient(serverName) {
-  let client = _connections.get(serverName);
-  if (client) return client;
+  const client = _connections.get(serverName);
+  if (client) {
+    return client;
+  }
   for (const [key, c] of _connections) {
-    if (normalizeMcpName(key) === serverName) return c;
+    if (normalizeMcpName(key) === serverName) {
+      return c;
+    }
   }
   return undefined;
 }
@@ -1097,14 +1250,18 @@ function _resolveClient(serverName) {
  */
 async function callTool(serverName, toolName, args = {}) {
   const client = _resolveClient(serverName);
-  if (!client) throw new Error(`MCP server "${serverName}" not found`);
+  if (!client) {
+    throw new Error(`MCP server "${serverName}" not found`);
+  }
   // Accept either the raw tool name or a serialized qualified name.
   let originalToolName = toolName;
   if (typeof client.listTools === 'function') {
-    const match = client.listTools().find(
-      (t) => t.name === toolName || t.originalToolName === toolName,
-    );
-    if (match && match.originalToolName != null) originalToolName = match.originalToolName;
+    const match = client
+      .listTools()
+      .find((t) => t.name === toolName || t.originalToolName === toolName);
+    if (match && match.originalToolName != null) {
+      originalToolName = match.originalToolName;
+    }
   }
   return client.callTool(originalToolName, args);
 }
@@ -1121,7 +1278,9 @@ function listResources(serverName) {
     ? [_resolveClient(serverName)].filter(Boolean)
     : [..._connections.values()];
   for (const client of clients) {
-    if (client.state !== ConnectionState.CONNECTED) continue;
+    if (client.state !== ConnectionState.CONNECTED) {
+      continue;
+    }
     for (const r of client.listResources()) {
       out.push({ ...r, server: client.name });
     }
@@ -1137,7 +1296,9 @@ function listResources(serverName) {
  */
 async function readResource(serverName, uri) {
   const client = _resolveClient(serverName);
-  if (!client) throw new Error(`MCP server "${serverName}" not found`);
+  if (!client) {
+    throw new Error(`MCP server "${serverName}" not found`);
+  }
   return client.readResource(uri);
 }
 
@@ -1152,7 +1313,9 @@ function listPrompts(serverName) {
     ? [_resolveClient(serverName)].filter(Boolean)
     : [..._connections.values()];
   for (const client of clients) {
-    if (client.state !== ConnectionState.CONNECTED) continue;
+    if (client.state !== ConnectionState.CONNECTED) {
+      continue;
+    }
     for (const p of client.listPrompts()) {
       out.push({ ...p, server: client.name });
     }
@@ -1169,7 +1332,9 @@ function listPrompts(serverName) {
  */
 async function getPrompt(serverName, name, args = {}) {
   const client = _resolveClient(serverName);
-  if (!client) throw new Error(`MCP server "${serverName}" not found`);
+  if (!client) {
+    throw new Error(`MCP server "${serverName}" not found`);
+  }
   return client.getPrompt(name, args);
 }
 
@@ -1192,7 +1357,9 @@ async function authenticate(serverName, opts = {}) {
 
   if (method === 'api_key' || method === 'token') {
     const accessToken = creds.token || creds.api_key || creds.apiKey;
-    if (!accessToken) throw new Error(`authenticate(${serverName}): a token/api_key credential is required`);
+    if (!accessToken) {
+      throw new Error(`authenticate(${serverName}): a token/api_key credential is required`);
+    }
     await store.store(serverName, {
       accessToken,
       tokenType: creds.tokenType || 'Bearer',
@@ -1267,7 +1434,10 @@ function _getVersion() {
 /** A promise plus its resolve/reject handles, for cross-callback signalling. */
 function _deferred() {
   let resolve, reject;
-  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
   return { promise, resolve, reject };
 }
 

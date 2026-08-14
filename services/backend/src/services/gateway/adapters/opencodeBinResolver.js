@@ -46,7 +46,11 @@ function _binName() {
 }
 
 function _existsFile(p) {
-  try { return fs.statSync(p).isFile(); } catch { return false; }
+  try {
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -55,7 +59,11 @@ function _existsFile(p) {
  */
 function _candidateBases(env, cwd) {
   const bases = [];
-  const push = (dir) => { if (dir && !bases.includes(dir)) bases.push(dir); };
+  const push = (dir) => {
+    if (dir && !bases.includes(dir)) {
+      bases.push(dir);
+    }
+  };
   const toolsDir = env && env.KHY_TOOLS_DIR;
   if (typeof toolsDir === 'string' && toolsDir.trim()) {
     // KHY_TOOLS_DIR 指向 tools/ 本身 → 其父目录才是 _PORTABLE_TAIL 的拼接根。
@@ -67,14 +75,20 @@ function _candidateBases(env, cwd) {
   try {
     const { getDataHome } = require('../../../utils/dataHome');
     const home = getDataHome();
-    if (typeof home === 'string' && home.trim()) push(path.resolve(home.trim()));
-  } catch { /* best effort — 数据家不可用时退回 cwd 上溯 */ }
+    if (typeof home === 'string' && home.trim()) {
+      push(path.resolve(home.trim()));
+    }
+  } catch {
+    /* best effort — 数据家不可用时退回 cwd 上溯 */
+  }
   let dir = path.resolve(cwd || '.');
   // 逐级上溯(含自身),上限 12 级,避免退化到根目录的无限循环。
   for (let i = 0; i < 12; i += 1) {
     push(dir);
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+    if (parent === dir) {
+      break;
+    }
     dir = parent;
   }
   return bases;
@@ -88,18 +102,24 @@ function _candidateBases(env, cwd) {
  */
 function resolveOpencodeBin(env = process.env, cwd = process.cwd()) {
   try {
-    if (!isDiscoveryEnabled(env)) return BARE;
+    if (!isDiscoveryEnabled(env)) {
+      return BARE;
+    }
     const explicit = env && env.KHY_OPENCODE_BIN;
     if (typeof explicit === 'string' && explicit.trim()) {
       const abs = path.resolve(explicit.trim());
-      if (_existsFile(abs)) return abs;
+      if (_existsFile(abs)) {
+        return abs;
+      }
       // 显式指定但不存在 → 仍尊重用户意图,原样返回(让上游报出清晰的「找不到」)。
       return explicit.trim();
     }
     const bin = _binName();
     for (const base of _candidateBases(env, cwd)) {
       const candidate = path.join(base, ..._PORTABLE_TAIL, bin);
-      if (_existsFile(candidate)) return candidate;
+      if (_existsFile(candidate)) {
+        return candidate;
+      }
     }
     return BARE;
   } catch {

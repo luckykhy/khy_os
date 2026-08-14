@@ -23,10 +23,29 @@
 // 名字含这些片段的模型默认视为支持视觉。关键词刻意保守、精确，避免误伤——
 // 例如不能用裸 '-v'(会把 deepseek-v4 误判)，也不用裸 '4o' 之类过宽片段。
 const VISION_NAME_HINTS = Object.freeze([
-  'vision', 'multimodal', 'omni',
-  '-vl', 'vl-', 'qwen-vl', 'qwen2-vl', 'qwen2.5-vl', 'internvl', 'cogvlm', 'glm-4v',
-  'minicpm-v', 'llava', 'pixtral', 'step-1v', 'yi-vision', 'gpt-4o', 'gemini',
-  'claude-3', 'claude-opus', 'claude-sonnet', 'claude-haiku',
+  'vision',
+  'multimodal',
+  'omni',
+  '-vl',
+  'vl-',
+  'qwen-vl',
+  'qwen2-vl',
+  'qwen2.5-vl',
+  'internvl',
+  'cogvlm',
+  'glm-4v',
+  'minicpm-v',
+  'llava',
+  'pixtral',
+  'step-1v',
+  'step-3.',
+  'yi-vision',
+  'gpt-4o',
+  'gemini',
+  'claude-3',
+  'claude-opus',
+  'claude-sonnet',
+  'claude-haiku',
   // 名字明确带 image 的型号通常是视觉/图像模型；若某型号名带 image 却**不收图像输入**
   // (如图像生成专用模型)，用 BUILTIN_TEXT_ONLY_MODELS(代码内)或 KHY_TEXT_ONLY_MODELS
   // (env)把它纠正回纯文本。
@@ -53,9 +72,14 @@ const BUILTIN_VISION_MODELS = Object.freeze([]);
 const BUILTIN_TEXT_ONLY_MODELS = Object.freeze([
   'sensenova-6.7-flash-image',
   'sensenova-u1-fast',
+  'step-3.7-flash',
+  'stepfun/step-3.7-flash',
+  'api:stepfun:step-3.7-flash',
+  'api/stepfun/step-3.7-flash',
 ]);
 
 // 收敛到 utils/trimLowerNullish 单一真源(逐字节委托,调用点不变)
+const parseModelListEnv = require('../../utils/parseListToSet');
 const _normModel = require('../../utils/trimLowerNullish');
 
 /**
@@ -63,11 +87,12 @@ const _normModel = require('../../utils/trimLowerNullish');
  * @param {string} raw
  * @returns {Set<string>}
  */
-const parseModelListEnv = require('../../utils/parseListToSet');
 
 function _matchesNameHint(modelLower) {
   for (const hint of VISION_NAME_HINTS) {
-    if (modelLower.includes(hint)) return true;
+    if (modelLower.includes(hint)) {
+      return true;
+    }
   }
   return false;
 }
@@ -80,34 +105,66 @@ function _matchesNameHint(modelLower) {
  */
 function isVisionCapableModel(model, opts = {}) {
   const modelLower = _normModel(model);
-  if (!modelLower) return false;
+  if (!modelLower) {
+    return false;
+  }
 
   const env = opts.env || process.env;
   const textOnly = parseModelListEnv(env.KHY_TEXT_ONLY_MODELS);
-  if (textOnly.has(modelLower)) return false; // 强制纯文本，优先级最高
+  if (textOnly.has(modelLower)) {
+    return false;
+  } // 强制纯文本，优先级最高
 
   const visionEnv = parseModelListEnv(env.KHY_VISION_MODELS);
-  if (visionEnv.has(modelLower)) return true;
-  if (BUILTIN_VISION_MODELS.includes(modelLower)) return true;
+  if (visionEnv.has(modelLower)) {
+    return true;
+  }
+  if (BUILTIN_VISION_MODELS.includes(modelLower)) {
+    return true;
+  }
+
+  // Custom provider declared capability (custom_providers.json):
+  // `capabilities: { vision: true }` (provider-level) or `visionModels: [...]`
+  // (model-level). Priority: below explicit env/builtin vision sets (above),
+  // above builtin text-only set and name heuristics (below); KHY_TEXT_ONLY_MODELS
+  // still forces text. fail-soft: config missing/unreadable → unchanged behavior.
+  try {
+    const cpv = require('./customProviderVision');
+    if (cpv.isDeclaredVisionModel(modelLower)) {
+      return true;
+    }
+  } catch {
+    /* fail-soft: leaf unavailable keeps existing behavior */
+  }
 
   // GLM 视觉模型(glm-4.6v-flash)门控内子串判定——名字提示词 'glm-4v' 匹配不到 'glm-4.6v'
   // (`4` 后跟 `.6` 非 `v`),故收口到 glmVisionModel 叶子。门关(KHY_GLM_VISION_MODEL=0)→
   // isGlmVisionModel 恒 false → 与历史逐字节等价。fail-soft:叶子异常绝不冒泡。
   try {
     const glmv = require('./glmVisionModel');
-    if (glmv.isGlmVisionModel(modelLower, env)) return true;
-  } catch { /* fail-soft: 叶子不可用不影响既有判定 */ }
+    if (glmv.isGlmVisionModel(modelLower, env)) {
+      return true;
+    }
+  } catch {
+    /* fail-soft: 叶子不可用不影响既有判定 */
+  }
 
   // 当代原生多模态模型族(llama-4 / gpt-4.1 / glm-4.5v / grok-4 / nova-* / gemma-3 …)——名字
   // 不含任何 VISION_NAME_HINTS 片段,漏判会被无谓退回 OCR。收口到 modernVisionHints 叶子,
   // 门控内子串判定。门关(KHY_MODERN_VISION_HINTS=0)→ 恒 false → 逐字节回退。fail-soft。
   try {
     const mvh = require('./modernVisionHints');
-    if (mvh.isModernVisionModel(modelLower, env)) return true;
-  } catch { /* fail-soft: 叶子不可用不影响既有判定 */ }
+    if (mvh.isModernVisionModel(modelLower, env)) {
+      return true;
+    }
+  } catch {
+    /* fail-soft: 叶子不可用不影响既有判定 */
+  }
 
   // 在名字启发式之前纠正「名字带 image 但只生成图、不收图」的型号(否则 'image' 片段误判)。
-  if (BUILTIN_TEXT_ONLY_MODELS.includes(modelLower)) return false;
+  if (BUILTIN_TEXT_ONLY_MODELS.includes(modelLower)) {
+    return false;
+  }
 
   // 精确 id 名单(上一行)无法枚举每个自定义 provider 的 *-image-* / 视频生成型号,故把该纠正
   // 模式化:命中「媒体生成」命名规律(如 agnes-image-2.1-flash)→ 强制纯文本,不被 'image' 片段
@@ -115,8 +172,12 @@ function isVisionCapableModel(model, opts = {}) {
   // → 逐字节回退('image' 片段照旧命中)。优先级低于上方 env KHY_VISION_MODELS/内置视觉集。
   try {
     const gx = require('./visionGenerationExclusion');
-    if (gx.isGenerationOnlyModel(modelLower, env)) return false;
-  } catch { /* fail-soft: 叶子不可用不影响既有判定 */ }
+    if (gx.isGenerationOnlyModel(modelLower, env)) {
+      return false;
+    }
+  } catch {
+    /* fail-soft: 叶子不可用不影响既有判定 */
+  }
 
   return _matchesNameHint(modelLower);
 }
@@ -132,9 +193,15 @@ function hasVisionCapableCandidate(candidates, opts = {}) {
 }
 
 function _candidateModelId(item) {
-  if (!item) return '';
-  if (typeof item === 'string') return item;
-  if (typeof item === 'object') return item.id || item.model || item.name || '';
+  if (!item) {
+    return '';
+  }
+  if (typeof item === 'string') {
+    return item;
+  }
+  if (typeof item === 'object') {
+    return item.id || item.model || item.name || '';
+  }
   return '';
 }
 
@@ -145,10 +212,14 @@ function _candidateModelId(item) {
  * @returns {string|object|null} 命中的原始候选项(便于调用方拿回 adapter 等附带字段)，无则 null
  */
 function pickVisionCandidate(candidates, opts = {}) {
-  if (!Array.isArray(candidates)) return null;
+  if (!Array.isArray(candidates)) {
+    return null;
+  }
   for (const item of candidates) {
     const id = _candidateModelId(item);
-    if (id && isVisionCapableModel(id, opts)) return item;
+    if (id && isVisionCapableModel(id, opts)) {
+      return item;
+    }
   }
   return null;
 }

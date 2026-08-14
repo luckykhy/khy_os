@@ -73,10 +73,7 @@ const DOC_AGENT = {
     '文档专家：用于生成和维护文档——API 文档、README、变更日志、JSDoc/docstring、架构描述。传入需要文档化的模块/文件/变更，它会阅读代码后生成准确的文档。可编辑 .md/.html 文档文件和行内文档注释，但不修改源代码逻辑。',
   color: 'blue',
   background: true,
-  disallowedTools: [
-    AGENT_TOOL_NAME,
-    EXIT_PLAN_MODE_TOOL_NAME,
-  ],
+  disallowedTools: [AGENT_TOOL_NAME, EXIT_PLAN_MODE_TOOL_NAME],
   source: 'built-in',
   baseDir: 'built-in',
   model: 'inherit',

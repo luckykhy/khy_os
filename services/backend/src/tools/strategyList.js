@@ -1,6 +1,7 @@
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 
 const _backtestHandler = path.join(__dirname, '../cli/handlers/backtest.js');
 let _enabled = null;
@@ -10,10 +11,13 @@ module.exports = defineTool({
   description: 'List all available trading strategies',
   category: 'data',
   risk: 'safe',
+  searchHint: 'trading strategies available catalog 策略列表 交易策略 可用策略',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled() {
-    if (_enabled === null) _enabled = fs.existsSync(_backtestHandler);
+    if (_enabled === null) {
+      _enabled = fs.existsSync(_backtestHandler);
+    }
     return _enabled;
   },
   inputSchema: {},

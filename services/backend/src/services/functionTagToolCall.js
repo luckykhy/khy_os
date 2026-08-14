@@ -31,7 +31,11 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_FUNCTION_TAG_TOOLCALL;
-  return !OFF_VALUES.includes(String(raw == null ? '' : raw).trim().toLowerCase());
+  return !OFF_VALUES.includes(
+    String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // `<function=NAME>BODY</function>`:NAME = `[^>\s]+`(不含 '>' 与空白);BODY 非贪婪跨行;
@@ -48,14 +52,22 @@ function _matchAll(text) {
  *          门控关 / 空或非字符串输入 / 无匹配 → [];argsText 已 trim。
  */
 function extractFunctionTags(text, env) {
-  if (!isEnabled(env)) return [];
-  if (!text || typeof text !== 'string') return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
   // Fast-path bail (case-insensitive — the dialect tag may be upper/mixed case).
-  if (!/<function/i.test(text)) return [];
+  if (!/<function/i.test(text)) {
+    return [];
+  }
   const out = [];
   for (const m of _matchAll(text)) {
     const name = String(m[1] == null ? '' : m[1]).trim();
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     out.push({
       name,
       argsText: String(m[2] == null ? '' : m[2]).trim(),
@@ -84,13 +96,19 @@ function _matchParameterTags(argsText) {
  *          (返回 null 而非 {} 让 call-site 明确落回既有 _parseFunctionArgs,不吞掉其它方言)
  */
 function parseParameterTags(argsText) {
-  if (!argsText || typeof argsText !== 'string') return null;
-  if (!/<parameter/i.test(argsText)) return null;
+  if (!argsText || typeof argsText !== 'string') {
+    return null;
+  }
+  if (!/<parameter/i.test(argsText)) {
+    return null;
+  }
   const params = {};
   let found = false;
   for (const m of _matchParameterTags(argsText)) {
     const key = String(m[1] == null ? '' : m[1]).trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     // VALUE 保持原样字符串(只 trim 外围空白)—— 参数类型强制留给 call-site 的
     // normalizeToolCall / 工具 schema,与其它方言一致,叶子不擅自 coerce。
     params[key] = String(m[2] == null ? '' : m[2]).trim();

@@ -42,7 +42,9 @@ function _clip(v, max) {
  * yields { iso: '', ts: null } and the entry sorts to the end.
  */
 function _normalizeDate(value) {
-  if (value == null || value === '') return { iso: '', ts: null };
+  if (value == null || value === '') {
+    return { iso: '', ts: null };
+  }
   let ms = null;
   if (typeof value === 'number' && Number.isFinite(value)) {
     ms = value;
@@ -53,15 +55,21 @@ function _normalizeDate(value) {
     const t = Date.parse(_str(value));
     ms = Number.isFinite(t) ? t : null;
   }
-  if (ms == null) return { iso: '', ts: null };
+  if (ms == null) {
+    return { iso: '', ts: null };
+  }
   return { iso: new Date(ms).toISOString(), ts: ms };
 }
 
 function _normalizeSkill(skill, index) {
-  if (!skill || typeof skill !== 'object') return null;
+  if (!skill || typeof skill !== 'object') {
+    return null;
+  }
   const { iso, ts } = _normalizeDate(skill.learnedAt);
   const title = _clip(skill.name || skill.id, _MAX_TITLE);
-  if (!title) return null;
+  if (!title) {
+    return null;
+  }
   return {
     kind: 'skill',
     id: _str(skill.id) || title,
@@ -76,13 +84,18 @@ function _normalizeSkill(skill, index) {
 }
 
 function _normalizeMemory(memory, index) {
-  if (!memory || typeof memory !== 'object') return null;
-  const fm = memory.frontmatter && typeof memory.frontmatter === 'object' ? memory.frontmatter : null;
+  if (!memory || typeof memory !== 'object') {
+    return null;
+  }
+  const fm =
+    memory.frontmatter && typeof memory.frontmatter === 'object' ? memory.frontmatter : null;
   const name = memory.name || (fm && fm.name);
   const description = memory.description || (fm && fm.description);
   const type = memory.type || (fm && fm.metadata && fm.metadata.type);
   const title = _clip(name || memory.filename, _MAX_TITLE);
-  if (!title) return null;
+  if (!title) {
+    return null;
+  }
   const { iso, ts } = _normalizeDate(memory.modifiedAt);
   return {
     kind: 'memory',
@@ -104,10 +117,18 @@ function _normalizeMemory(memory, index) {
 function _byChrono(a, b) {
   const at = a.ts;
   const bt = b.ts;
-  if (at == null && bt == null) return a._order - b._order;
-  if (at == null) return 1;
-  if (bt == null) return -1;
-  if (at !== bt) return at - bt;
+  if (at == null && bt == null) {
+    return a._order - b._order;
+  }
+  if (at == null) {
+    return 1;
+  }
+  if (bt == null) {
+    return -1;
+  }
+  if (at !== bt) {
+    return at - bt;
+  }
   return a._order - b._order;
 }
 
@@ -121,8 +142,12 @@ function _buildSummary(entries) {
     const cat = e.category || 'other';
     byCategory[cat] = (byCategory[cat] || 0) + 1;
     if (e.date) {
-      if (!earliest || e.date < earliest) earliest = e.date;
-      if (!latest || e.date > latest) latest = e.date;
+      if (!earliest || e.date < earliest) {
+        earliest = e.date;
+      }
+      if (!latest || e.date > latest) {
+        latest = e.date;
+      }
     }
   }
   return {
@@ -148,11 +173,15 @@ function buildJourneyTimeline(input) {
   let order = 0;
   for (const s of skills) {
     const n = _normalizeSkill(s, order++);
-    if (n) entries.push(n);
+    if (n) {
+      entries.push(n);
+    }
   }
   for (const m of memories) {
     const n = _normalizeMemory(m, order++);
-    if (n) entries.push(n);
+    if (n) {
+      entries.push(n);
+    }
   }
 
   entries.sort(_byChrono);
@@ -177,7 +206,9 @@ function formatJourneyTimeline(result) {
     const day = e.date ? e.date.slice(0, 10) : '——————';
     const label = kindLabel[e.kind] || e.kind;
     lines.push(`${day}  [${label}] ${e.title}`);
-    if (e.description) lines.push(`            ${e.description}`);
+    if (e.description) {
+      lines.push(`            ${e.description}`);
+    }
   }
   lines.push('');
   lines.push(

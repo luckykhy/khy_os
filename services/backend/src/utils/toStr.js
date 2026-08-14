@@ -23,7 +23,11 @@ function toStr(v) {
 }
 
 function toStrSafe(v) {
-  try { return v == null ? '' : String(v); } catch { return ''; }
+  try {
+    return v == null ? '' : String(v);
+  } catch {
+    return '';
+  }
 }
 
 module.exports = { toStr, toStrSafe };

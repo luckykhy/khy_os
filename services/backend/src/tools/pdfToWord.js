@@ -1,17 +1,18 @@
 const { defineTool } = require('./_baseTool');
+
 const { spawn, execFileSync } = require('child_process');
-const { safeKill } = require('./platformUtils');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 const DOC_HELPER = path.join(__dirname, '../services/docHelper.py');
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
 
 let _enabled = null;
 const _checkEnabled = require('../utils/docHelperEnabled');
-
 const resolvePath = require('../utils/resolveToolPath');
+
+const { safeKill } = require('./platformUtils');
 
 function runPython(pythonPath, args) {
   return new Promise((resolve, reject) => {
@@ -25,7 +26,9 @@ function runPython(pythonPath, args) {
     let _idleTimer = null;
     const IDLE_MS = 120000;
     const _resetIdle = () => {
-      if (_idleTimer) clearTimeout(_idleTimer);
+      if (_idleTimer) {
+        clearTimeout(_idleTimer);
+      }
       _idleTimer = setTimeout(() => {
         safeKill(child);
         reject(new Error(`Python PDF conversion idle timeout (${IDLE_MS / 1000}s without output)`));
@@ -35,16 +38,26 @@ function runPython(pythonPath, args) {
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', d => { stdout += d; _resetIdle(); });
-    child.stderr.on('data', d => { stderr += d; _resetIdle(); });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      _resetIdle();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      _resetIdle();
+    });
 
-    child.on('error', err => {
-      if (_idleTimer) clearTimeout(_idleTimer);
+    child.on('error', (err) => {
+      if (_idleTimer) {
+        clearTimeout(_idleTimer);
+      }
       reject(new Error(`Python process error: ${err.message}`));
     });
 
-    child.on('close', code => {
-      if (_idleTimer) clearTimeout(_idleTimer);
+    child.on('close', (code) => {
+      if (_idleTimer) {
+        clearTimeout(_idleTimer);
+      }
       if (code !== 0) {
         reject(new Error(`Python exit code ${code}: ${stderr}`));
         return;
@@ -65,7 +78,9 @@ module.exports = defineTool({
   risk: 'medium',
   isReadOnly: false,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
   isConcurrencySafe: true,
@@ -75,15 +90,23 @@ module.exports = defineTool({
 
   inputSchema: {
     inputPath: { type: 'string', required: true, description: 'Path to the source PDF file' },
-    outputPath: { type: 'string', required: false, description: 'Path for the output .docx file (default: same name with .docx extension)' },
+    outputPath: {
+      type: 'string',
+      required: false,
+      description: 'Path for the output .docx file (default: same name with .docx extension)',
+    },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       validateNotDevicePath(input.inputPath),
       validateNotUNCPath(input.inputPath),
-      input.outputPath ? validateNotUNCPath(input.outputPath) : { valid: true },
+      input.outputPath ? validateNotUNCPath(input.outputPath) : { valid: true }
     );
   },
 
@@ -93,7 +116,9 @@ module.exports = defineTool({
   },
 
   getToolUseSummary(input) {
-    if (!input?.inputPath) return null;
+    if (!input?.inputPath) {
+      return null;
+    }
     return `PDF 转 Word：${input.inputPath}`;
   },
 
@@ -115,7 +140,9 @@ module.exports = defineTool({
     {
       const { validateNoPathTraversal } = require('./inputValidators');
       const outCheck = validateNoPathTraversal(outputPath);
-      if (!outCheck.valid) return { success: false, error: outCheck.message };
+      if (!outCheck.valid) {
+        return { success: false, error: outCheck.message };
+      }
     }
 
     if (!fs.existsSync(inputPath)) {
@@ -124,7 +151,10 @@ module.exports = defineTool({
 
     const stat = fs.statSync(inputPath);
     if (stat.size > MAX_PDF_SIZE) {
-      return { success: false, error: `PDF too large: ${(stat.size / 1024 / 1024).toFixed(1)}MB (max 50MB)` };
+      return {
+        success: false,
+        error: `PDF too large: ${(stat.size / 1024 / 1024).toFixed(1)}MB (max 50MB)`,
+      };
     }
 
     const { findPython } = require('../utils/pythonPath');

@@ -16,12 +16,12 @@
 // [AI-弱模型·照抄] 高危写工具:先 Read 再 Edit,old_string 逐字照抄读到的原文(别猜,否则死循环撞
 // "no match")。prompt() 末尾的 this.weakModelToolNote() 注入别删。改本工具照 weakModelGuidance 的
 // 'tool-description' 位点(参数严格按 schema、一次一步),示范见 GrepTool。
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
 
 // ── LSP diagnostics auto-inject ────────────────────────────────────
 const _collectLspDiagnostics = require('../../utils/collectLspDiagnostics');
+const { BaseTool } = require('../_baseTool');
 
 // ── Fuzzy matching helpers ───────────────────────────────────────────
 
@@ -34,7 +34,7 @@ function _normalize(s) {
   return String(s)
     .replace(/\r\n/g, '\n')
     .split('\n')
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .join('\n')
     .replace(/[ \t]+/g, ' ')
     .replace(/[;,]+\s*$/gm, '')
@@ -44,21 +44,39 @@ function _normalize(s) {
 /**
  * Simple Levenshtein distance (character-level). Only used on short
  * normalized strings (<2000 chars) so O(n*m) is acceptable.
+ *
+ * NOTE (Batch B1 — Levenshtein convergence): one of three Levenshtein
+ * implementations in services/backend. NOT merged into a shared leaf; the
+ * three are byte-divergent variants of the same algorithm:
+ *   - cli/router.js `_levenshtein`: single rolling-row DP, no `a === b` fast
+ *     path and no length cap.
+ *   - tools/ccValidationError.js `levenshteinDistance`: string-coercing,
+ *     two-row swap DP.
+ * The `> 2000` length-cap short-circuit below is intentionally local to this
+ * variant and must NOT be propagated to the others.
  */
 function _levenshtein(a, b) {
-  if (a === b) return 0;
-  const la = a.length, lb = b.length;
-  if (la === 0) return lb;
-  if (lb === 0) return la;
+  if (a === b) {
+    return 0;
+  }
+  const la = a.length,
+    lb = b.length;
+  if (la === 0) {
+    return lb;
+  }
+  if (lb === 0) {
+    return la;
+  }
   // Limit to avoid expensive computation on large strings
-  if (la > 2000 || lb > 2000) return Math.abs(la - lb);
+  if (la > 2000 || lb > 2000) {
+    return Math.abs(la - lb);
+  }
   let prev = Array.from({ length: lb + 1 }, (_, i) => i);
   for (let i = 1; i <= la; i++) {
     const curr = [i];
     for (let j = 1; j <= lb; j++) {
-      curr[j] = a[i - 1] === b[j - 1]
-        ? prev[j - 1]
-        : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+      curr[j] =
+        a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
     }
     prev = curr;
   }
@@ -76,35 +94,72 @@ function _fuzzyFind(haystack, needle) {
   const hLines = haystack.split('\n');
   const nLines = needle.split('\n');
   const nNorm = _normalize(needle);
-  if (!nNorm) return null;
+  if (!nNorm) {
+    return null;
+  }
 
   const windowMin = Math.max(1, Math.floor(nLines.length * 0.8));
   const windowMax = Math.ceil(nLines.length * 1.2);
+  const AMBIGUITY_THRESHOLD = 0.7; // Y-code pattern: flag multi-candidate ambiguity
 
   let best = null;
-  for (let winSize = nLines.length; winSize >= windowMin && winSize <= windowMax; winSize += (winSize <= nLines.length ? -1 : 1)) {
-    // Alternate: try exact line count first, then ±1, ±2, ...
+  const candidates = []; // Track all high-similarity candidates for ambiguity detection
+
+  for (
+    let winSize = nLines.length;
+    winSize >= windowMin && winSize <= windowMax;
+    winSize += winSize <= nLines.length ? -1 : 1
+  ) {
     for (let i = 0; i <= hLines.length - winSize; i++) {
       const candidate = hLines.slice(i, i + winSize).join('\n');
       const cNorm = _normalize(candidate);
-      if (!cNorm) continue;
+      if (!cNorm) {
+        continue;
+      }
 
       const dist = _levenshtein(nNorm, cNorm);
       const maxLen = Math.max(nNorm.length, cNorm.length);
       const sim = maxLen > 0 ? 1 - dist / maxLen : 1;
 
-      if (sim >= 0.80 && (!best || sim > best.similarity)) {
-        // Compute actual byte offsets in original haystack
+      if (sim >= AMBIGUITY_THRESHOLD) {
         const startLine = i;
         const endLine = i + winSize;
         const before = hLines.slice(0, startLine).join('\n');
-        const start = startLine === 0 ? 0 : before.length + 1; // +1 for the \n
+        const start = startLine === 0 ? 0 : before.length + 1;
         const matchStr = hLines.slice(startLine, endLine).join('\n');
-        best = { match: matchStr, start, end: start + matchStr.length, similarity: sim };
+        const entry = {
+          match: matchStr,
+          start,
+          end: start + matchStr.length,
+          similarity: sim,
+          startLine: startLine + 1,
+          endLine: endLine,
+        };
+        candidates.push(entry);
+        if (!best || sim > best.similarity) {
+          best = entry;
+        }
       }
     }
-    // If we already have a very good match, stop searching wider windows
-    if (best && best.similarity >= 0.95) break;
+    if (best && best.similarity >= 0.95) {
+      break;
+    }
+  }
+
+  // Y-code multi-candidate ambiguity check: refuse replacement if multiple
+  // high-similarity candidates exist, forcing the LLM to provide more context.
+  if (candidates.length >= 2) {
+    const highScore = candidates.filter((c) => c.similarity >= AMBIGUITY_THRESHOLD);
+    if (highScore.length >= 2) {
+      return {
+        ambiguous: true,
+        candidates: highScore.slice(0, 5).map((c) => ({
+          lines: `${c.startLine}-${c.endLine}`,
+          similarity: Math.round(c.similarity * 100),
+          preview: c.match.length > 120 ? c.match.slice(0, 120) + '...' : c.match,
+        })),
+      };
+    }
   }
 
   return best;
@@ -120,11 +175,16 @@ class FileEditTool extends BaseTool {
   static searchHint = 'edit modify replace text in file';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
-    return `Performs exact string replacements in files.
+    return (
+      `Performs exact string replacements in files.
 
 Usage:
 - You must use the Read tool at least once before editing a file. This tool will error if you attempt an edit without reading the file.
@@ -138,7 +198,9 @@ Usage:
 - Use replace_all for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.
 - Only add comments where the logic isn't self-evident. Don't add docstrings, comments, or type annotations to code you didn't change.
 - Don't add features, refactor code, or make "improvements" beyond what was asked.
-- Do not combine a requested fix with unrelated cleanup or cosmetic rewrites unless the task cannot be completed safely without them.` + this.weakModelToolNote();
+- Do not combine a requested fix with unrelated cleanup or cosmetic rewrites unless the task cannot be completed safely without them.` +
+      this.weakModelToolNote()
+    );
   }
 
   get inputSchema() {
@@ -151,7 +213,8 @@ Usage:
         },
         old_string: {
           type: 'string',
-          description: 'The text to replace (must be unique in the file unless replace_all is true)',
+          description:
+            'The text to replace (must be unique in the file unless replace_all is true)',
         },
         new_string: {
           type: 'string',
@@ -176,10 +239,10 @@ Usage:
   }
 
   getToolUseSummary(input) {
-    if (!input.file_path) return null;
-    const short = input.old_string
-      ? input.old_string.slice(0, 40).replace(/\n/g, '\\n')
-      : '';
+    if (!input.file_path) {
+      return null;
+    }
+    const short = input.old_string ? input.old_string.slice(0, 40).replace(/\n/g, '\\n') : '';
     return `编辑 ${path.basename(input.file_path)}：\"${short}\"`;
   }
 
@@ -187,7 +250,10 @@ Usage:
     const { file_path, old_string, new_string, replace_all, dry_run } = params;
 
     if (old_string === new_string) {
-      return { success: false, error: 'old_string and new_string are identical — nothing to change.' };
+      return {
+        success: false,
+        error: 'old_string and new_string are identical — nothing to change.',
+      };
     }
 
     try {
@@ -207,7 +273,8 @@ Usage:
       if (!tracker.hasRead(absPath)) {
         return {
           success: false,
-          error: 'You must Read this file before editing it. Use the Read tool first to see the current content.',
+          error:
+            'You must Read this file before editing it. Use the Read tool first to see the current content.',
         };
       }
       const staleCheck = tracker.isStale(absPath);
@@ -221,13 +288,17 @@ Usage:
       try {
         const fh = require('../../services/fileHistoryService');
         fh.takeSnapshot(absPath, { reason: 'FileEditTool', content: original });
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
 
       // Pre-edit diagnostics baseline (CC beforeFileEdited 口径,门控 KHY_POST_EDIT_DIAGNOSTICS)。
       // 在写盘前(此刻磁盘仍是编辑前内容)给文件的语法诊断打基线,编辑后由 toolUseLoop 求「新增」。
       try {
         require('../../services/postEditDiagnostics').captureBaseline(absPath, cwd);
-      } catch { /* diagnostics baseline is best-effort; never blocks the edit */ }
+      } catch {
+        /* diagnostics baseline is best-effort; never blocks the edit */
+      }
 
       // Count NON-OVERLAPPING occurrences — this must match the split().join()
       // replace below, which is non-overlapping. Stepping the cursor by 1 counted
@@ -239,7 +310,9 @@ Usage:
       let idx = original.indexOf(old_string);
       while (idx !== -1) {
         count++;
-        if (old_string.length === 0) break; // guard against empty-string infinite loop
+        if (old_string.length === 0) {
+          break;
+        } // guard against empty-string infinite loop
         idx = original.indexOf(old_string, idx + old_string.length);
       }
 
@@ -281,7 +354,9 @@ Usage:
           message: `Replaced ${replacements} occurrence${replacements > 1 ? 's' : ''} in ${path.basename(absPath)}`,
         };
         const diags = _collectLspDiagnostics(absPath);
-        if (diags) result._lspDiagnostics = diags;
+        if (diags) {
+          result._lspDiagnostics = diags;
+        }
         return result;
       }
 
@@ -289,10 +364,22 @@ Usage:
       // Only attempt fuzzy match when:
       //  - old_string is multi-line OR long enough to be meaningful (>20 chars)
       //  - replace_all is not set (fuzzy + replace_all is too risky)
-      const isFuzzyCandidate = !replace_all && (old_string.includes('\n') || old_string.length > 20);
+      const isFuzzyCandidate =
+        !replace_all && (old_string.includes('\n') || old_string.length > 20);
       if (isFuzzyCandidate) {
         const fuzzy = _fuzzyFind(original, old_string);
-        if (fuzzy && fuzzy.similarity >= 0.80) {
+        // Multi-candidate ambiguity check (Y-code pattern): refuse replacement
+        // when multiple high-similarity blocks exist, forcing LLM to disambiguate.
+        if (fuzzy && fuzzy.ambiguous && fuzzy.candidates && fuzzy.candidates.length >= 2) {
+          const locations = fuzzy.candidates
+            .map((c) => `  第 ${c.lines} 行（相似度 ${c.similarity}%）：${c.preview}`)
+            .join('\n');
+          return {
+            success: false,
+            error: `在 ${path.basename(absPath)} 中找到 ${fuzzy.candidates.length} 个高相似度代码段，无法确定唯一替换位置：\n${locations}\n请使用 Read 工具查看完整内容后提供更精确的 old_string（包含更多上下文或唯一标识），或使用 start_line/end_line 精确定位。`,
+          };
+        }
+        if (fuzzy && fuzzy.similarity >= 0.8) {
           const updated = original.slice(0, fuzzy.start) + new_string + original.slice(fuzzy.end);
           const pct = Math.round(fuzzy.similarity * 100);
           if (dry_run) {
@@ -303,7 +390,8 @@ Usage:
               dryRun: true,
               fuzzyMatch: true,
               similarity: pct,
-              matchedText: fuzzy.match.length > 200 ? fuzzy.match.slice(0, 200) + '...' : fuzzy.match,
+              matchedText:
+                fuzzy.match.length > 200 ? fuzzy.match.slice(0, 200) + '...' : fuzzy.match,
               message: `[dry-run] Would fuzzy-replace in ${path.basename(absPath)} (${pct}% similarity)`,
             };
           }
@@ -315,13 +403,13 @@ Usage:
             replacements: 1,
             fuzzyMatch: true,
             similarity: pct,
-            matchedText: fuzzy.match.length > 200
-              ? fuzzy.match.slice(0, 200) + '...'
-              : fuzzy.match,
+            matchedText: fuzzy.match.length > 200 ? fuzzy.match.slice(0, 200) + '...' : fuzzy.match,
             message: `Fuzzy-matched and replaced in ${path.basename(absPath)} (${pct}% similarity). Matched text: "${fuzzy.match.length > 80 ? fuzzy.match.slice(0, 80) + '...' : fuzzy.match}"`,
           };
           const diags = _collectLspDiagnostics(absPath);
-          if (diags) fuzzyResult._lspDiagnostics = diags;
+          if (diags) {
+            fuzzyResult._lspDiagnostics = diags;
+          }
           return fuzzyResult;
         }
       }

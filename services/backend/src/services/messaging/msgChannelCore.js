@@ -33,7 +33,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_MSG;
-  const v = String(raw == null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw == null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -58,11 +60,21 @@ const PLATFORMS = {
 
 /** 平台别名归一(lark→feishu,wechat/qywx/weixin→wecom,dingding→dingtalk)。 */
 function normalizePlatform(platform) {
-  const p = String(platform == null ? '' : platform).trim().toLowerCase();
-  if (!p) return null;
-  if (p === 'dingtalk' || p === 'dingding' || p === 'ding') return 'dingtalk';
-  if (p === 'feishu' || p === 'lark') return 'feishu';
-  if (p === 'wecom' || p === 'wechat' || p === 'weixin' || p === 'qywx' || p === 'qywechat') return 'wecom';
+  const p = String(platform == null ? '' : platform)
+    .trim()
+    .toLowerCase();
+  if (!p) {
+    return null;
+  }
+  if (p === 'dingtalk' || p === 'dingding' || p === 'ding') {
+    return 'dingtalk';
+  }
+  if (p === 'feishu' || p === 'lark') {
+    return 'feishu';
+  }
+  if (p === 'wecom' || p === 'wechat' || p === 'weixin' || p === 'qywx' || p === 'qywechat') {
+    return 'wecom';
+  }
   return Object.prototype.hasOwnProperty.call(PLATFORMS, p) ? p : null;
 }
 
@@ -77,7 +89,9 @@ function isValidPlatform(platform) {
  */
 function maskWebhook(url) {
   const raw = String(url == null ? '' : url).trim();
-  if (!raw) return '(未配置)';
+  if (!raw) {
+    return '(未配置)';
+  }
   let u;
   try {
     u = new URL(raw);
@@ -135,7 +149,9 @@ function buildSendRequest(input = {}) {
   if (platform === 'dingtalk') {
     let url = webhook;
     if (secret) {
-      if (tsMs == null) return { ok: false, error: '钉钉加签需要提供 timestampMs。' };
+      if (tsMs == null) {
+        return { ok: false, error: '钉钉加签需要提供 timestampMs。' };
+      }
       const sign = _dingtalkSign(secret, tsMs);
       url += `${url.includes('?') ? '&' : '?'}timestamp=${tsMs}&sign=${sign}`;
     }
@@ -146,12 +162,18 @@ function buildSendRequest(input = {}) {
   if (platform === 'feishu') {
     const payload = { msg_type: 'text', content: { text } };
     if (secret) {
-      if (tsMs == null) return { ok: false, error: '飞书签名校验需要提供 timestampMs。' };
+      if (tsMs == null) {
+        return { ok: false, error: '飞书签名校验需要提供 timestampMs。' };
+      }
       const tsSec = Math.floor(tsMs / 1000);
       payload.timestamp = String(tsSec);
       payload.sign = _feishuSign(secret, tsSec);
     }
-    return { ok: true, platform, request: { url: webhook, method: 'POST', headers, body: JSON.stringify(payload) } };
+    return {
+      ok: true,
+      platform,
+      request: { url: webhook, method: 'POST', headers, body: JSON.stringify(payload) },
+    };
   }
 
   // wecom：群机器人无签名

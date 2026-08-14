@@ -34,18 +34,29 @@
  * it can never overflow the viewport and displace itself.
  */
 const React = require('react');
+
+const { effectiveCols } = require('../effectiveCols');
 const inkRuntime = require('../inkRuntime');
+// 有效列宽单一真源:右栏(railLayout)激活时 ink 只能画到 cols - 栏宽,整行边框若仍按
+// 全宽拉就会伸进槽位。门控关 → 返回真实列宽 → 逐字节 legacy。
 
 // Lazy CJK-aware width (string-width under the hood). Lazy + cached so the ink
 // subtree doesn't pull formatters at module-load; falls back to code-unit length.
 let _displayWidth = null;
 function dwidth(s) {
   if (_displayWidth === null) {
-    try { _displayWidth = require('../../formatters').displayWidth || false; }
-    catch { _displayWidth = false; }
+    try {
+      _displayWidth = require('../../formatters').displayWidth || false;
+    } catch {
+      _displayWidth = false;
+    }
   }
   if (_displayWidth) {
-    try { return _displayWidth(s); } catch { /* fall through */ }
+    try {
+      return _displayWidth(s);
+    } catch {
+      /* fall through */
+    }
   }
   return String(s == null ? '' : s).length;
 }
@@ -65,11 +76,13 @@ const MARKER_W = 2; // "❯ " (line 0) / "  " (continuation) — both 2 columns.
  */
 function wrapByWidth(line, avail) {
   const cap = Math.max(1, avail | 0);
-  if (line === '') return [{ text: '', start: 0, end: 0 }];
+  if (line === '') {
+    return [{ text: '', start: 0, end: 0 }];
+  }
   const segs = [];
   let segStart = 0; // utf16 offset of current segment start
-  let segW = 0;     // display width accumulated in current segment
-  let idx = 0;      // running utf16 offset
+  let segW = 0; // display width accumulated in current segment
+  let idx = 0; // running utf16 offset
   for (const ch of line) {
     const w = dwidth(ch);
     if (segW + w > cap && idx > segStart) {
@@ -99,10 +112,14 @@ function wrapByWidth(line, avail) {
 function windowRows(lineRows, budget) {
   const total = lineRows.length;
   const cap = Math.max(1, budget | 0);
-  if (total <= cap) return { rows: lineRows, truncatedAbove: false, truncatedBelow: false };
+  if (total <= cap) {
+    return { rows: lineRows, truncatedAbove: false, truncatedBelow: false };
+  }
 
   let caretIdx = lineRows.findIndex((r) => r.caretCol != null);
-  if (caretIdx < 0) caretIdx = total - 1; // no caret (e.g. busy) → anchor on the tail
+  if (caretIdx < 0) {
+    caretIdx = total - 1;
+  } // no caret (e.g. busy) → anchor on the tail
 
   // Shrink the content window until it + its markers fit the budget. Two passes
   // converge: try `cap` content rows (likely both sides hidden → 2 markers →
@@ -116,8 +133,13 @@ function windowRows(lineRows, budget) {
     start = Math.max(0, Math.min(start, total - content));
     let end = start + content;
     // Guarantee the caret row is inside [start, end).
-    if (caretIdx < start) { start = caretIdx; end = start + content; }
-    else if (caretIdx >= end) { start = caretIdx - content + 1; end = start + content; }
+    if (caretIdx < start) {
+      start = caretIdx;
+      end = start + content;
+    } else if (caretIdx >= end) {
+      start = caretIdx - content + 1;
+      end = start + content;
+    }
     start = Math.max(0, start);
     end = Math.min(total, start + content);
     let above = start > 0;
@@ -131,18 +153,32 @@ function windowRows(lineRows, budget) {
     // content is at the floor (1) — if markers still don't fit, drop them (below
     // first). The caret row is non-negotiable; the truncation hint is not.
     while (content + markers > cap && markers > 0) {
-      if (below) below = false; else if (above) above = false;
+      if (below) {
+        below = false;
+      } else if (above) {
+        above = false;
+      }
       markers = (above ? 1 : 0) + (below ? 1 : 0);
     }
     const out = [];
-    if (above) out.push({ kind: 'ellipsis', side: 'above', hidden: start });
-    for (let i = start; i < end; i++) out.push(lineRows[i]);
-    if (below) out.push({ kind: 'ellipsis', side: 'below', hidden: total - end });
+    if (above) {
+      out.push({ kind: 'ellipsis', side: 'above', hidden: start });
+    }
+    for (let i = start; i < end; i++) {
+      out.push(lineRows[i]);
+    }
+    if (below) {
+      out.push({ kind: 'ellipsis', side: 'below', hidden: total - end });
+    }
     // truncated* reflect REAL hidden content, even when a marker was dropped.
     return { rows: out, truncatedAbove: start > 0, truncatedBelow: end < total };
   }
   // Defensive fallback (should be unreachable): the caret row alone.
-  return { rows: [lineRows[caretIdx]], truncatedAbove: caretIdx > 0, truncatedBelow: caretIdx < total - 1 };
+  return {
+    rows: [lineRows[caretIdx]],
+    truncatedAbove: caretIdx > 0,
+    truncatedBelow: caretIdx < total - 1,
+  };
 }
 
 /**
@@ -162,8 +198,14 @@ function windowRows(lineRows, budget) {
  *   lineRowCount: number of 'line' rows produced BEFORE windowing (the
  *     anti-spill invariant: equals total wrapped segments).
  */
-function layoutPromptRows({ value = '', offset = 0, cols = 80, placeholder = '', maxRows = 0 } = {}) {
-  const width = (Number(cols) > 0 ? Number(cols) : 80);
+function layoutPromptRows({
+  value = '',
+  offset = 0,
+  cols = 80,
+  placeholder = '',
+  maxRows = 0,
+} = {}) {
+  const width = Number(cols) > 0 ? Number(cols) : 80;
   // Reserve marker (2) + 1 caret cell + 1 margin slack so a row — even with the
   // trailing caret block on a full segment — never reaches the terminal's
   // pending-wrap cell (the same hazard the border avoids with cols-1).
@@ -178,7 +220,11 @@ function layoutPromptRows({ value = '', offset = 0, cols = 80, placeholder = '',
   {
     let remaining = Math.max(0, offset | 0);
     for (let i = 0; i < lines.length; i++) {
-      if (remaining <= lines[i].length) { caretLine = i; caretCol = remaining; break; }
+      if (remaining <= lines[i].length) {
+        caretLine = i;
+        caretCol = remaining;
+        break;
+      }
       remaining -= lines[i].length + 1; // +1 for the "\n"
       caretLine = i; // clamp: if offset overshoots, stay on the last line
       caretCol = lines[i].length;
@@ -198,14 +244,25 @@ function layoutPromptRows({ value = '', offset = 0, cols = 80, placeholder = '',
       caretSeg = segs.length - 1;
       for (let s = 0; s < segs.length; s++) {
         const isLast = s === segs.length - 1;
-        if (caretCol < segs[s].end || (caretCol === segs[s].end && isLast)) { caretSeg = s; break; }
+        if (caretCol < segs[s].end || (caretCol === segs[s].end && isLast)) {
+          caretSeg = s;
+          break;
+        }
       }
     }
 
     for (let s = 0; s < segs.length; s++) {
       const isFirstOfValue = li === 0 && s === 0;
       if (showPlaceholder && isFirstOfValue) {
-        rows.push({ kind: 'line', lineIndex: li, isFirstOfValue: true, text: '', caretCol: null, isPlaceholder: true, placeholder });
+        rows.push({
+          kind: 'line',
+          lineIndex: li,
+          isFirstOfValue: true,
+          text: '',
+          caretCol: null,
+          isPlaceholder: true,
+          placeholder,
+        });
         continue;
       }
       rows.push({
@@ -213,7 +270,7 @@ function layoutPromptRows({ value = '', offset = 0, cols = 80, placeholder = '',
         lineIndex: li,
         isFirstOfValue,
         text: segs[s].text,
-        caretCol: s === caretSeg ? (caretCol - segs[s].start) : null,
+        caretCol: s === caretSeg ? caretCol - segs[s].start : null,
       });
     }
   }
@@ -224,15 +281,33 @@ function layoutPromptRows({ value = '', offset = 0, cols = 80, placeholder = '',
   const budget = Number(maxRows) > 0 ? Math.floor(Number(maxRows)) : 0;
   if (budget && lineRowCount > budget) {
     const win = windowRows(rows, budget);
-    return { rows: win.rows, lineRowCount, avail, truncatedAbove: win.truncatedAbove, truncatedBelow: win.truncatedBelow };
+    return {
+      rows: win.rows,
+      lineRowCount,
+      avail,
+      truncatedAbove: win.truncatedAbove,
+      truncatedBelow: win.truncatedBelow,
+    };
   }
   return { rows, lineRowCount, avail, truncatedAbove: false, truncatedBelow: false };
 }
 
-function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = null, vimMode = null }) {
+function PromptFrame({
+  value = '',
+  offset = 0,
+  busy,
+  placeholder = '',
+  accent = null,
+  vimMode = null,
+  mic = null,
+}) {
   const rt = inkRuntime.get();
   const { Box, Text } = rt;
   const h = React.createElement;
+  // Mic button hover state (mouse layer fires onMouseOver/onMouseOut; no mouse
+  // events → stays false, harmless). Idle state survives App re-renders because
+  // React keeps this component instance mounted across them.
+  const [micHover, setMicHover] = React.useState(false);
   // Fix 1a — 系统 IME 真实光标跟随。ink 6.8.0 `useCursor().setCursorPosition({x,y})`
   // 让被藏起来的硬件光标锚到 caret 处,系统拼音候选窗便贴着输入位置弹出(截图诉求)。
   // hooks 规则要求无条件调用;`rt.useCursor` 进程内稳定(ink 只加载一次),旧版无此导出时
@@ -240,8 +315,8 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const cursorApi = typeof rt.useCursor === 'function' ? rt.useCursor() : null;
   const caretRowRef = React.useRef(null);
-  const cols = (process.stdout.columns || 80);
-  const borderColor = busy ? undefined : (accent || 'cyan');
+  const cols = effectiveCols(80);
+  const borderColor = busy ? undefined : accent || 'cyan';
   // Leave one cell of slack: a separator that is EXACTLY the terminal width sits
   // on the auto-wrap margin, where many emulators hold the cursor in a "pending
   // wrap" state, making the terminal's row count disagree with ink's logical-line
@@ -249,17 +324,53 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
   // full-width without tripping it. The input rows below use the same principle
   // via layoutPromptRows (marker + caret + slack reserved).
   const border = '─'.repeat(Math.max(1, cols - 1));
+
+  // Mic voice button embedded at the box's top-border LEFT end (输入框左端)。
+  // Rendered as a clickable 4-col Box (` 🎤 `) replacing the first 4 border
+  // columns, so the total top-row width stays `cols - 1` — the anti-spill slack
+  // is untouched and the input rows / caret math below never shift. State:
+  //   idle  → cyan mic;  hover (mouse onMouseOver) → white bg;  active (听写中)
+  //   → magenta bg + white text (opencode 同款 backgroundColor 激活标记)。
+  // 高亮放在 **Text** 的 backgroundColor 上,而不是 Box 的:ink 的 Box 背景填充
+  // 会被文本单元格整体覆盖(render-background.js 先画、文本后覆盖),只有文本自身的
+  // backgroundColor 能保住实心色块。onClick / onMouseOver / onMouseOut 经 ink Box
+  // 的未知 props→style 桥接落到 node.style.*,由 tui/mouseButtons.js 命中测试拾取。
+  // mic 为空 → 顶边框原样。
+  const micButton = mic
+    ? h(
+        Box,
+        {
+          onClick: mic.onClick,
+          onMouseOver: () => setMicHover(true),
+          onMouseOut: () => setMicHover(false),
+        },
+        h(
+          Text,
+          {
+            color: mic.active ? 'white' : micHover ? 'black' : accent || 'cyan',
+            backgroundColor: mic.active ? 'magenta' : micHover ? 'white' : undefined,
+          },
+          ' 🎤 '
+        )
+      )
+    : null;
+  const topBorder = mic
+    ? h(
+        Box,
+        { flexDirection: 'row' },
+        micButton,
+        h(Text, { color: borderColor, dimColor: busy }, '─'.repeat(Math.max(1, cols - 1 - 4)))
+      )
+    : h(Text, { color: borderColor, dimColor: busy }, border);
   // In vim NORMAL the caret is a solid green block (vs. the default inverse
   // block); INSERT and non-vim keep the plain inverse caret.
-  const caretProps = vimMode === 'NORMAL'
-    ? { inverse: true, color: 'green' }
-    : { inverse: true };
+  const caretProps = vimMode === 'NORMAL' ? { inverse: true, color: 'green' } : { inverse: true };
 
   // Cap the input box height so a huge paste can't grow the box past the
   // viewport and displace itself (the same anti-staircase rule StreamingBlock
   // applies). Leave headroom for the streaming preview above and the footer /
   // completion menu below; never below 4 so short input is always fully shown.
-  const vrows = (process.stdout.rows && process.stdout.rows > 0) ? process.stdout.rows : 24;
+  const vrows = process.stdout.rows && process.stdout.rows > 0 ? process.stdout.rows : 24;
   const maxRows = Math.max(4, vrows - 10);
 
   // layoutPromptRows re-wraps the WHOLE buffer (O(len) string-width) — pure in
@@ -273,7 +384,7 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
   const _layoutMemoOn = require('./promptLayoutMemo').isPromptLayoutMemoEnabled(process.env);
   const _layoutMemoized = React.useMemo(
     () => layoutPromptRows({ value, offset, cols, placeholder, maxRows }),
-    [value, offset, cols, placeholder, maxRows],
+    [value, offset, cols, placeholder, maxRows]
   );
   const { rows } = _layoutMemoOn
     ? _layoutMemoized
@@ -287,8 +398,11 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
     try {
       const caretGeometry = require('./caretGeometry');
       const placeholderActive = value.length === 0 && !!placeholder;
-      const enabled = caretGeometry.imeCursorEnabled(process.env)
-        && !!process.stdout.isTTY && !busy && !placeholderActive;
+      const enabled =
+        caretGeometry.imeCursorEnabled(process.env) &&
+        !!process.stdout.isTTY &&
+        !busy &&
+        !placeholderActive;
       const caretRow = enabled ? rows.find((r) => r.kind === 'line' && r.caretCol != null) : null;
       const node = caretRowRef.current;
       if (caretRow && node && node.yogaNode) {
@@ -306,15 +420,20 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
         cursorApi.setCursorPosition(undefined);
       }
     } catch {
-      try { cursorApi.setCursorPosition(undefined); } catch { /* noop */ }
+      try {
+        cursorApi.setCursorPosition(undefined);
+      } catch {
+        /* noop */
+      }
     }
   }
 
   const renderRow = (row, idx) => {
     if (row.kind === 'ellipsis') {
-      const label = row.side === 'above'
-        ? `  ⋯ 上方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`
-        : `  ⋯ 下方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`;
+      const label =
+        row.side === 'above'
+          ? `  ⋯ 上方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`
+          : `  ⋯ 下方还有 ${row.hidden} 行（输入已折叠，内容未丢失）`;
       return h(Box, { key: `r${idx}` }, h(Text, { dimColor: true }, label));
     }
 
@@ -323,7 +442,10 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
       : h(Text, { dimColor: true }, '  ');
 
     if (row.isPlaceholder) {
-      return h(Box, { key: `r${idx}` }, marker,
+      return h(
+        Box,
+        { key: `r${idx}` },
+        marker,
         h(Text, { inverse: true }, ' '),
         h(Text, { dimColor: true }, row.placeholder)
       );
@@ -337,15 +459,20 @@ function PromptFrame({ value = '', offset = 0, busy, placeholder = '', accent = 
     const before = row.text.slice(0, col);
     const cursorChar = col < row.text.length ? row.text[col] : ' ';
     const after = col < row.text.length ? row.text.slice(col + 1) : '';
-    return h(Box, { key: `r${idx}`, ref: caretRowRef }, marker,
+    return h(
+      Box,
+      { key: `r${idx}`, ref: caretRowRef },
+      marker,
       h(Text, null, before),
       h(Text, caretProps, cursorChar),
       h(Text, null, after)
     );
   };
 
-  return h(Box, { flexDirection: 'column' },
-    h(Text, { color: borderColor, dimColor: busy }, border),
+  return h(
+    Box,
+    { flexDirection: 'column' },
+    topBorder,
     ...rows.map(renderRow),
     h(Text, { color: borderColor, dimColor: busy }, border)
   );

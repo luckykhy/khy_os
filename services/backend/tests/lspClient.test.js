@@ -83,7 +83,8 @@ describe('lspClient', () => {
   describe('LspClient constructor', () => {
     test('sets rootPath from options', () => {
       const client = new LspClient({ rootPath: '/some/project' });
-      expect(client._rootPath).toBe('/some/project');
+      // Constructor resolves the rootPath (platform-normalized absolute path).
+      expect(client._rootPath).toBe(path.resolve('/some/project'));
     });
 
     test('defaults rootPath to cwd if not provided', () => {

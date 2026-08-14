@@ -27,17 +27,21 @@
  * 集中声明，供 protectedGuard 做「防御纵深」的第二道否决。
  */
 
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 let _platformUtils = null;
 function platformUtils() {
-  if (!_platformUtils) _platformUtils = require('../../tools/platformUtils');
+  if (!_platformUtils) {
+    _platformUtils = require('../../tools/platformUtils');
+  }
   return _platformUtils;
 }
 let _dataHome = null;
 function dataHome() {
-  if (!_dataHome) _dataHome = require('../../utils/dataHome');
+  if (!_dataHome) {
+    _dataHome = require('../../utils/dataHome');
+  }
   return _dataHome;
 }
 
@@ -77,14 +81,22 @@ const REVIEW = 'review';
 // ── 辅助：环境变量目录解析（缺失即空，绝不抛） ──────────────────────────
 function _envDir(env, name, ...sub) {
   const base = env[name];
-  if (!base || typeof base !== 'string') return [];
+  if (!base || typeof base !== 'string') {
+    return [];
+  }
   return [path.join(base, ...sub)];
 }
+
 function _home(deps, ...sub) {
   return [path.join(deps.homedir, ...sub)];
 }
+
 function _exists(deps, p) {
-  try { return deps.fsImpl.existsSync(p); } catch { return false; }
+  try {
+    return deps.fsImpl.existsSync(p);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -101,7 +113,11 @@ const ENTRIES = [
     safety: SAFE,
     reversible: true,
     resolve: () => {
-      try { return [dataHome().getBaseDataDir('cache')]; } catch { return []; }
+      try {
+        return [dataHome().getBaseDataDir('cache')];
+      } catch {
+        return [];
+      }
     },
     note: 'khyos 自身缓存，删后自动重建',
   },
@@ -113,7 +129,11 @@ const ENTRIES = [
     safety: SAFE,
     reversible: true,
     resolve: () => {
-      try { return [dataHome().getDataDir('cache')]; } catch { return []; }
+      try {
+        return [dataHome().getDataDir('cache')];
+      } catch {
+        return [];
+      }
     },
     note: 'khy 运行缓存，可安全重建',
   },
@@ -202,8 +222,11 @@ const ENTRIES = [
     reversible: false,
     perDrive: true, // 每个盘符一个
     resolve: (deps, driveRoot) => {
-      const root = driveRoot || deps.env.SystemDrive ? (driveRoot || (deps.env.SystemDrive + '\\')) : null;
-      if (!root) return [];
+      const root =
+        driveRoot || deps.env.SystemDrive ? driveRoot || deps.env.SystemDrive + '\\' : null;
+      if (!root) {
+        return [];
+      }
       return [path.join(root, '$Recycle.Bin')];
     },
     note: '清空回收站不可逆——用户删错的文件将无法找回，默认不清',
@@ -229,7 +252,9 @@ const ENTRIES = [
     reversible: true,
     resolve: (deps) => {
       const cands = [];
-      if (deps.platform === 'windows') cands.push(..._home(deps, 'AppData', 'Roaming', 'npm-cache'));
+      if (deps.platform === 'windows') {
+        cands.push(..._home(deps, 'AppData', 'Roaming', 'npm-cache'));
+      }
       cands.push(..._home(deps, '.npm', '_cacache'));
       return _dedupe(cands);
     },
@@ -243,8 +268,12 @@ const ENTRIES = [
     safety: SAFE,
     reversible: true,
     resolve: (deps) => {
-      if (deps.platform === 'windows') return _home(deps, 'AppData', 'Local', 'pip', 'Cache');
-      if (deps.platform === 'macos') return _home(deps, 'Library', 'Caches', 'pip');
+      if (deps.platform === 'windows') {
+        return _home(deps, 'AppData', 'Local', 'pip', 'Cache');
+      }
+      if (deps.platform === 'macos') {
+        return _home(deps, 'Library', 'Caches', 'pip');
+      }
       return _home(deps, '.cache', 'pip');
     },
     note: 'pip 下载/wheel 缓存，可重建',
@@ -257,7 +286,9 @@ const ENTRIES = [
     safety: SAFE,
     reversible: true,
     resolve: (deps) => {
-      if (deps.platform === 'windows') return _home(deps, 'AppData', 'Local', 'Yarn', 'Cache');
+      if (deps.platform === 'windows') {
+        return _home(deps, 'AppData', 'Local', 'Yarn', 'Cache');
+      }
       return _home(deps, '.cache', 'yarn');
     },
     note: 'yarn 包缓存，可重建',
@@ -270,9 +301,7 @@ const ENTRIES = [
     safety: SAFE,
     reversible: true,
     // 仅 registry/cache 与 git/db，绝不删 registry/src（离线编译可能需要）。
-    resolve: (deps) => [
-      ..._home(deps, '.cargo', 'registry', 'cache'),
-    ],
+    resolve: (deps) => [..._home(deps, '.cargo', 'registry', 'cache')],
     note: 'cargo 下载缓存；不动已检出源码',
   },
 
@@ -345,10 +374,26 @@ const PROTECTED_EXACT_RESOLVERS = [
   // 本项目数据家本身（established-wins，根不可删；但 data home/cache 等子目录可清）
   (deps) => {
     const out = [];
-    try { out.push(dataHome().getDataHome()); } catch { /* ignore */ }
-    try { out.push(dataHome().getProjectDataHome()); } catch { /* ignore */ }
-    try { out.push(dataHome().getBaseHome()); } catch { /* ignore */ }
-    try { out.push(dataHome().getLegacyDataHome()); } catch { /* ignore */ }
+    try {
+      out.push(dataHome().getDataHome());
+    } catch {
+      /* ignore */
+    }
+    try {
+      out.push(dataHome().getProjectDataHome());
+    } catch {
+      /* ignore */
+    }
+    try {
+      out.push(dataHome().getBaseHome());
+    } catch {
+      /* ignore */
+    }
+    try {
+      out.push(dataHome().getLegacyDataHome());
+    } catch {
+      /* ignore */
+    }
     return out;
   },
 ];
@@ -359,23 +404,37 @@ const PROTECTED_EXACT_RESOLVERS = [
  */
 const PROTECTED_CONTAINMENT_RESOLVERS = [
   // Windows 标准库目录
-  (deps) => deps.platform === 'windows' ? [
-    ..._home(deps, 'Documents'), ..._home(deps, 'Desktop'), ..._home(deps, 'Downloads'),
-    ..._home(deps, 'Pictures'), ..._home(deps, 'Videos'), ..._home(deps, 'Music'),
-    ..._envDir(deps.env, 'USERPROFILE', 'Documents'),
-    ..._envDir(deps.env, 'OneDrive'),
-    ..._envDir(deps.env, 'OneDriveConsumer'),
-    ..._envDir(deps.env, 'OneDriveCommercial'),
-    // 程序本体目录绝不碰
-    ..._envDir(deps.env, 'ProgramFiles'),
-    ..._envDir(deps.env, 'ProgramFiles(x86)'),
-    ..._envDir(deps.env, 'ProgramData'),
-  ] : [],
+  (deps) =>
+    deps.platform === 'windows'
+      ? [
+          ..._home(deps, 'Documents'),
+          ..._home(deps, 'Desktop'),
+          ..._home(deps, 'Downloads'),
+          ..._home(deps, 'Pictures'),
+          ..._home(deps, 'Videos'),
+          ..._home(deps, 'Music'),
+          ..._envDir(deps.env, 'USERPROFILE', 'Documents'),
+          ..._envDir(deps.env, 'OneDrive'),
+          ..._envDir(deps.env, 'OneDriveConsumer'),
+          ..._envDir(deps.env, 'OneDriveCommercial'),
+          // 程序本体目录绝不碰
+          ..._envDir(deps.env, 'ProgramFiles'),
+          ..._envDir(deps.env, 'ProgramFiles(x86)'),
+          ..._envDir(deps.env, 'ProgramData'),
+        ]
+      : [],
   // POSIX 标准库目录
-  (deps) => deps.platform !== 'windows' ? [
-    ..._home(deps, 'Documents'), ..._home(deps, 'Desktop'), ..._home(deps, 'Downloads'),
-    ..._home(deps, 'Pictures'), ..._home(deps, 'Movies'), ..._home(deps, 'Music'),
-  ] : [],
+  (deps) =>
+    deps.platform !== 'windows'
+      ? [
+          ..._home(deps, 'Documents'),
+          ..._home(deps, 'Desktop'),
+          ..._home(deps, 'Downloads'),
+          ..._home(deps, 'Pictures'),
+          ..._home(deps, 'Movies'),
+          ..._home(deps, 'Music'),
+        ]
+      : [],
 ];
 
 // 向后兼容别名：旧调用把「受保护根」理解为包含式。
@@ -389,8 +448,23 @@ const USER_DATA_SIGNALS = {
   // 版本库 / 源码工程标记
   markers: ['.git', '.svn', '.hg', 'package.json', 'Cargo.toml', 'go.mod', 'pom.xml', '.project'],
   // 用户文档类扩展名
-  docExtensions: ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.pdf', '.psd',
-    '.ai', '.sketch', '.key', '.numbers', '.pages', '.odt', '.ods'],
+  docExtensions: [
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.pdf',
+    '.psd',
+    '.ai',
+    '.sketch',
+    '.key',
+    '.numbers',
+    '.pages',
+    '.odt',
+    '.ods',
+  ],
   // 媒体/个人创作（出现即高度可疑）
   mediaExtensions: ['.raw', '.cr2', '.nef', '.arw', '.dng', '.mov', '.mp4', '.heic'],
 };
@@ -407,7 +481,9 @@ module.exports = {
   USER_DATA_SIGNALS,
   // 供测试/外部按平台筛选
   entriesForPlatform(platform) {
-    return ENTRIES.filter((e) => !e.platforms || e.platforms.length === 0 || e.platforms.includes(platform));
+    return ENTRIES.filter(
+      (e) => !e.platforms || e.platforms.length === 0 || e.platforms.includes(platform)
+    );
   },
   // 默认 deps（生产用真实 os/fs），DI 可覆盖
   defaultDeps() {

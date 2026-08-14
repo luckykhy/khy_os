@@ -26,7 +26,8 @@ const _FALSY = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
 
 /** 门控:仅显式关闭词关闭,其余(含未设)均开启。 */
 function structuredErrorEnabled(env) {
-  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {}).KHY_CONFIGURE_STRUCTURED_ERROR;
+  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {})
+    .KHY_CONFIGURE_STRUCTURED_ERROR;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
@@ -42,9 +43,15 @@ function _contextualMessage(ctx) {
   const action = c.action ? String(c.action) : '';
   const cap = c.capability ? String(c.capability) : '';
   // 优先描述「写入哪个键」——这是 Configure 唯一的副作用,最有诊断价值。
-  if (envKey && action) return `写入配置 ${envKey}(${action})时失败,且底层未给出具体原因`;
-  if (envKey) return `写入配置 ${envKey} 时失败,且底层未给出具体原因`;
-  if (cap) return `处理能力「${cap}」时失败,且底层未给出具体原因`;
+  if (envKey && action) {
+    return `写入配置 ${envKey}(${action})时失败,且底层未给出具体原因`;
+  }
+  if (envKey) {
+    return `写入配置 ${envKey} 时失败,且底层未给出具体原因`;
+  }
+  if (cap) {
+    return `处理能力「${cap}」时失败,且底层未给出具体原因`;
+  }
   return 'Configure 执行失败,且底层未给出具体原因';
 }
 
@@ -62,44 +69,69 @@ function _contextualMessage(ctx) {
  */
 function buildConfigureError(err, ctx = {}, opts = {}) {
   try {
-    if (!structuredErrorEnabled(opts.env)) return null;
+    if (!structuredErrorEnabled(opts.env)) {
+      return null;
+    }
 
     let ToolError = null;
-    try { ({ ToolError } = require('../services/toolError')); } catch { ToolError = null; }
+    try {
+      ({ ToolError } = require('../services/toolError'));
+    } catch {
+      ToolError = null;
+    }
 
     // 解析一个**保证非空、非裸 Unknown error** 的人类可读 message。
     let rawMsg = '';
-    if (err && typeof err === 'object' && typeof err.message === 'string') rawMsg = err.message.trim();
-    else if (typeof err === 'string') rawMsg = err.trim();
+    if (err && typeof err === 'object' && typeof err.message === 'string') {
+      rawMsg = err.message.trim();
+    } else if (typeof err === 'string') {
+      rawMsg = err.trim();
+    }
     const isUseless = !rawMsg || /^unknown error$/i.test(rawMsg);
     const message = isUseless ? _contextualMessage(ctx) : rawMsg;
 
     // 机器可读上下文:调用点字段 + 原始错误的结构化字段(code/errno/syscall/path)。
     const details = { tool: 'Configure' };
-    if (ctx && ctx.envKey) details.envKey = String(ctx.envKey);
-    if (ctx && ctx.action) details.action = String(ctx.action);
-    if (ctx && ctx.target) details.target = String(ctx.target);
+    if (ctx && ctx.envKey) {
+      details.envKey = String(ctx.envKey);
+    }
+    if (ctx && ctx.action) {
+      details.action = String(ctx.action);
+    }
+    if (ctx && ctx.target) {
+      details.target = String(ctx.target);
+    }
     if (err && typeof err === 'object') {
       for (const k of ['code', 'errno', 'syscall', 'path']) {
-        if (err[k] !== undefined && err[k] !== null) details[k] = err[k];
+        if (err[k] !== undefined && err[k] !== null) {
+          details[k] = err[k];
+        }
       }
     }
 
     if (ToolError && typeof ToolError.fromGenericError === 'function') {
       // 复用 SSOT:code 推断 + 默认 hint。传入一个 message 非空的载体,避免 SSOT 内部
       // 回落到字面 "Unknown error"。保留原始 err 的 code/errno 供其分类。
-      const carrier = (err && typeof err === 'object') ? err : new Error(message);
+      const carrier = err && typeof err === 'object' ? err : new Error(message);
       // 若原 err 无可用 message,换用合成 message 但保留其分类字段。
-      const carrierMsg = (carrier.message && String(carrier.message).trim() && !/^unknown error$/i.test(String(carrier.message).trim()))
-        ? carrier.message
-        : message;
+      const carrierMsg =
+        carrier.message &&
+        String(carrier.message).trim() &&
+        !/^unknown error$/i.test(String(carrier.message).trim())
+          ? carrier.message
+          : message;
       const te = ToolError.fromGenericError(
-        Object.assign(Object.create(Object.getPrototypeOf(carrier) || Error.prototype), carrier, { message: carrierMsg }),
-        { details },
+        Object.assign(Object.create(Object.getPrototypeOf(carrier) || Error.prototype), carrier, {
+          message: carrierMsg,
+        }),
+        { details }
       );
       const structured = te.toStructuredResult();
       // 确保 message 用我们保证过的版本(SSOT 会原样透传 carrierMsg,这里再兜一层)。
-      if (!structured.error.message || /^unknown error$/i.test(String(structured.error.message).trim())) {
+      if (
+        !structured.error.message ||
+        /^unknown error$/i.test(String(structured.error.message).trim())
+      ) {
         structured.error.message = message;
       }
       // 前缀化,保留 Configure 语境(与旧 `Configure 执行失败:` 呼应但结构化)。

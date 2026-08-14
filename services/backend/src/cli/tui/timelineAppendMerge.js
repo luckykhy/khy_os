@@ -34,7 +34,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TIMELINE_APPEND_SINGLE_ALLOC;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -65,7 +67,9 @@ function _legacyAppend(arr, text, type) {
  * @returns {Array} 新时间线(或空 chunk 时的原引用)
  */
 function appendMergingLast(timeline, text, type, env = process.env) {
-  if (!text) return timeline;
+  if (!text) {
+    return timeline;
+  }
   try {
     const arr = Array.isArray(timeline) ? timeline : [];
     const last = arr[arr.length - 1];
@@ -84,8 +88,11 @@ function appendMergingLast(timeline, text, type, env = process.env) {
     return [...arr, { type, text }];
   } catch {
     // 极端异常兜底:仍尽量不抛,回退历史写法;再异常 → 原引用。
-    try { return _legacyAppend(Array.isArray(timeline) ? timeline : [], text, type); }
-    catch { return timeline; }
+    try {
+      return _legacyAppend(Array.isArray(timeline) ? timeline : [], text, type);
+    } catch {
+      return timeline;
+    }
   }
 }
 

@@ -25,7 +25,9 @@
 function _envNum(envName, fallback, { min = -Infinity, max = Infinity } = {}) {
   const raw = process.env[envName];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -49,7 +51,9 @@ function progressEpsilon() {
 
 function _clamp01(value, fallback) {
   const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(1, Math.max(0, n));
 }
 
@@ -78,12 +82,14 @@ function computeHeuristic(deliveryGateReport, options = {}) {
   const results = Array.isArray(deliveryGateReport && deliveryGateReport.results)
     ? deliveryGateReport.results
     : [];
-  const cpc = options.costPerCriterion !== undefined
-    ? _clamp01(options.costPerCriterion, costPerCriterion())
-    : costPerCriterion();
-  const ow = options.optionalWeight !== undefined
-    ? _clamp01(options.optionalWeight, optionalWeight())
-    : optionalWeight();
+  const cpc =
+    options.costPerCriterion !== undefined
+      ? _clamp01(options.costPerCriterion, costPerCriterion())
+      : costPerCriterion();
+  const ow =
+    options.optionalWeight !== undefined
+      ? _clamp01(options.optionalWeight, optionalWeight())
+      : optionalWeight();
 
   let unsatisfiedRequired = 0;
   let unsatisfiedOptional = 0;
@@ -93,10 +99,14 @@ function computeHeuristic(deliveryGateReport, options = {}) {
   for (const r of results) {
     if (r && r.required) {
       totalRequired++;
-      if (!_isSatisfied(r)) unsatisfiedRequired++;
+      if (!_isSatisfied(r)) {
+        unsatisfiedRequired++;
+      }
     } else {
       totalOptional++;
-      if (!_isSatisfied(r)) unsatisfiedOptional++;
+      if (!_isSatisfied(r)) {
+        unsatisfiedOptional++;
+      }
     }
   }
 
@@ -126,8 +136,12 @@ function computeHeuristic(deliveryGateReport, options = {}) {
  * drifting run at the cheapest moment rather than at the terminal gate.
  */
 function shouldCalibrate(prevH, currH) {
-  if (!Number.isFinite(prevH) || !Number.isFinite(currH)) return false;
-  if (currH <= 0) return false; // already at goal — nothing to calibrate
+  if (!Number.isFinite(prevH) || !Number.isFinite(currH)) {
+    return false;
+  }
+  if (currH <= 0) {
+    return false;
+  } // already at goal — nothing to calibrate
   const eps = progressEpsilon();
   return currH >= prevH - eps;
 }

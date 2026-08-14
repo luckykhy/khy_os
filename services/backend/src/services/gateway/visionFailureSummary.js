@@ -36,11 +36,17 @@ function isVisionFailureSummaryEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_FAILURE_SUMMARY', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_VISION_FAILURE_SUMMARY;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -64,11 +70,17 @@ function isFailureSummaryOcrSuppressEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -86,11 +98,17 @@ function isFailureCauseDedupEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_FAILURE_CAUSE_DEDUP', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_VISION_FAILURE_CAUSE_DEDUP;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -111,34 +129,50 @@ const _SECRET_PATTERNS = [
  */
 function sanitizeCause(raw, maxLen = 200) {
   let s = raw == null ? '' : String(raw);
-  if (!s) return '';
-  for (const re of _SECRET_PATTERNS) s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  if (!s) {
+    return '';
+  }
+  for (const re of _SECRET_PATTERNS) {
+    s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  }
   // 追加一趟「现代密钥」脱敏(sk-proj-/sk-svcacct-/sk-admin-…),复用 honestFailureReason 同款叶子,
   // 门控 KHY_MODERN_KEY_REDACTION;严格超集,只多抹密钥。gateway/ 子目录 → require 上一层。
   try {
     const r = require('../modernKeyRedaction').redactModernKeys(
-      s, (typeof process !== 'undefined' ? process.env : {}));
-    if (r != null) s = r;
-  } catch { /* fail-soft → legacy s(仅 legacy 脱敏) */ }
+      s,
+      typeof process !== 'undefined' ? process.env : {}
+    );
+    if (r != null) {
+      s = r;
+    }
+  } catch {
+    /* fail-soft → legacy s(仅 legacy 脱敏) */
+  }
   s = s.replace(/\s+/g, ' ').trim();
-  if (s.length > maxLen) s = `${s.slice(0, maxLen)}…`;
+  if (s.length > maxLen) {
+    s = `${s.slice(0, maxLen)}…`;
+  }
   return s;
 }
 
 // 归类信号(顺序敏感:auth/no_key 先于更泛的 network,401/403 命中即认证)。
-const _NO_KEY_RE = /(no\s+api\s*key|api\s*key\s+(not\s+)?(configured|missing|found|set)|缺少\s*(api\s*)?key|未配置.*key|no\s+available\s+key|无可用(密钥|api\s*key)|key\s+pool\s+empty|没有可用的?\s*(密钥|key))/i;
+const _NO_KEY_RE =
+  /(no\s+api\s*key|api\s*key\s+(not\s+)?(configured|missing|found|set)|缺少\s*(api\s*)?key|未配置.*key|no\s+available\s+key|无可用(密钥|api\s*key)|key\s+pool\s+empty|没有可用的?\s*(密钥|key))/i;
 // 智谱 GLM 结构化鉴权错误码(单一真源见 callZhipu 抛出的 `智谱AI: … code <n> …`):
 // 1000 缺鉴权头、1001/1002 token 无效/鉴权失败、1003/1004 鉴权校验失败——这些都是「key 不对」,
 // 应归 auth(邀约粘贴真 key),而非被下方 `\b404\b` 误判成 model_not_found(智谱对无效 key 亦回 404)。
 const _GLM_AUTH_CODE_RE = /\bcode\s+100[0-4]\b/i;
-const _AUTH_RE = /(\b401\b|\b403\b|unauthorized|forbidden|invalid\s+api\s*key|invalid\s+token|authentication\s+failed|auth(entication)?\s+error|认证失败|鉴权失败|api\s*key.*(invalid|expired|错误|无效|过期)|\[auth\])/i;
+const _AUTH_RE =
+  /(\b401\b|\b403\b|unauthorized|forbidden|invalid\s+api\s*key|invalid\s+token|authentication\s+failed|auth(entication)?\s+error|认证失败|鉴权失败|api\s*key.*(invalid|expired|错误|无效|过期)|\[auth\])/i;
 // 模型不存在 / 端点不匹配:404 model_not_found 是「当前 provider 没有这个视觉模型」的典型信号
 // (如识图裸模型名落到自定义 api 池,那里没有 glm-4.6v-flash)。放在 auth 之后、更泛的 network 之前,
 // 且 _NETWORK_RE 只认 50[234] 不吞 404,故不与网络类冲突。
-const _MODEL_NOT_FOUND_RE = /(model_not_found|no\s+such\s+model|\b404\b|\bmodel\b[^.\n]{0,40}\bnot\s*(found|exist)|模型.*不存在|不存在.*模型|未找到.*模型|该模型不存在)/i;
+const _MODEL_NOT_FOUND_RE =
+  /(model_not_found|no\s+such\s+model|\b404\b|\bmodel\b[^.\n]{0,40}\bnot\s*(found|exist)|模型.*不存在|不存在.*模型|未找到.*模型|该模型不存在)/i;
 const _RATE_RE = /(\b429\b|rate\s*limit|too\s+many\s+requests|quota|限流|配额|频率)/i;
 const _TIMEOUT_RE = /(timeout|timed\s*out|ETIMEDOUT|ESOCKETTIMEDOUT|超时)/i;
-const _NETWORK_RE = /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|socket\s+hang\s*up|network\s+error|dns|proxy|代理|连接被拒|无法连接|\b50[234]\b|bad\s+gateway|service\s+unavailable)/i;
+const _NETWORK_RE =
+  /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|socket\s+hang\s*up|network\s+error|dns|proxy|代理|连接被拒|无法连接|\b50[234]\b|bad\s+gateway|service\s+unavailable)/i;
 
 /**
  * 归类一次图像识别失败。仅读文本特征,绝不抛。
@@ -148,15 +182,29 @@ const _NETWORK_RE = /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|E
 function classifyVisionFailure(rawError) {
   try {
     const s = rawError == null ? '' : String(rawError);
-    if (!s) return 'unknown';
-    if (_NO_KEY_RE.test(s)) return 'no_key';
+    if (!s) {
+      return 'unknown';
+    }
+    if (_NO_KEY_RE.test(s)) {
+      return 'no_key';
+    }
     // 智谱结构化鉴权码(1000–1004)先于泛 404 判定:GLM 对无效 key 也回 404,若不先认这批码,
     // 无效 key 会被误判成 model_not_found,把用户引向「模型未开通」而非「换 key」的正确出路。
-    if (_GLM_AUTH_CODE_RE.test(s) || _AUTH_RE.test(s)) return 'auth';
-    if (_MODEL_NOT_FOUND_RE.test(s)) return 'model_not_found';
-    if (_RATE_RE.test(s)) return 'rate_limit';
-    if (_TIMEOUT_RE.test(s)) return 'timeout';
-    if (_NETWORK_RE.test(s)) return 'network';
+    if (_GLM_AUTH_CODE_RE.test(s) || _AUTH_RE.test(s)) {
+      return 'auth';
+    }
+    if (_MODEL_NOT_FOUND_RE.test(s)) {
+      return 'model_not_found';
+    }
+    if (_RATE_RE.test(s)) {
+      return 'rate_limit';
+    }
+    if (_TIMEOUT_RE.test(s)) {
+      return 'timeout';
+    }
+    if (_NETWORK_RE.test(s)) {
+      return 'network';
+    }
     return 'unknown';
   } catch {
     return 'unknown';
@@ -189,7 +237,9 @@ const _NEEDS_KEY_OFFER = new Set(['auth', 'no_key']);
 function buildVisionFailureMessage({ rawError, model, env } = {}) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isVisionFailureSummaryEnabled(e)) return null;
+    if (!isVisionFailureSummaryEnabled(e)) {
+      return null;
+    }
 
     const category = classifyVisionFailure(rawError);
     const headline = _CATEGORY_HEADLINE[category] || _CATEGORY_HEADLINE.unknown;
@@ -205,8 +255,11 @@ function buildVisionFailureMessage({ rawError, model, env } = {}) {
       // 供内部 poolHint 路由,只在**显示边界**归一。复用 OPS-150 纯叶 + 门 KHY_VISION_MODEL_DISPLAY_NAME
       // (default-on);门关 / 叶不可用 → 返原样带前缀 → 逐字节回退 `本次尝试的视觉模型:<raw>。`。
       let _dispModel = modelId;
-      try { _dispModel = require('./visionModelDisplayName').toDisplayModelName(modelId, e); }
-      catch { /* 叶不可用 → 原样,逐字节回退 */ }
+      try {
+        _dispModel = require('./visionModelDisplayName').toDisplayModelName(modelId, e);
+      } catch {
+        /* 叶不可用 → 原样,逐字节回退 */
+      }
       lines.push(`本次尝试的视觉模型:${_dispModel || modelId}。`);
     }
     if (cause) {
@@ -218,24 +271,39 @@ function buildVisionFailureMessage({ rawError, model, env } = {}) {
       // 则剥掉自带标签只保留一次;门关 / 异常 → 逐字节回退到历史重复行为。
       let _cause = cause;
       try {
-        if (isFailureCauseDedupEnabled(e)) _cause = _cause.replace(/^\s*真实失败原因\s*[:：]/, '').replace(/^\s+/, '');
-      } catch { /* fail-soft → 原样,逐字节回退 */ }
+        if (isFailureCauseDedupEnabled(e)) {
+          _cause = _cause.replace(/^\s*真实失败原因\s*[:：]/, '').replace(/^\s+/, '');
+        }
+      } catch {
+        /* fail-soft → 原样,逐字节回退 */
+      }
       lines.push(`真实失败原因:${_cause}`);
     }
 
     // ② 针对类别的下一步询问 / 配置邀约。
     // auth/no_key/model_not_found 三类的共同真因是「key 不对或缺失」——邀约用户**直接粘贴真 key**,
     // khy 侧的 NL key 检测会即时把它写进对应池(真 key priority 10 恒盖过内置占位 key)并重试识图。
-    const PASTE_TO_REPLACE = '你也可以直接把真实的 GLM(智谱)API Key 粘贴发给我,khy 会立即用它替换当前的 key 并重新识别这张图片。';
+    const PASTE_TO_REPLACE =
+      '你也可以直接把真实的 GLM(智谱)API Key 粘贴发给我,khy 会立即用它替换当前的 key 并重新识别这张图片。';
     if (_NEEDS_KEY_OFFER.has(category)) {
-      lines.push(`需要我帮你配置 GLM(智谱)或其他合适的图像识别模型的 API Key 吗?${PASTE_TO_REPLACE}`);
+      lines.push(
+        `需要我帮你配置 GLM(智谱)或其他合适的图像识别模型的 API Key 吗?${PASTE_TO_REPLACE}`
+      );
     } else if (category === 'model_not_found') {
-      lines.push('这通常不是模型真的不存在,而多半是两种原因之一:① 当前用的是内置占位 key 或无效的 API Key(GLM 对无效 key 也会回 404 model_not_found);② 或你的账号尚未开通该视觉模型。');
-      lines.push(`最直接的修复:${PASTE_TO_REPLACE}需要的话我也可以帮你把识图固定到已开通的 GLM 视觉端点。`);
+      lines.push(
+        '这通常不是模型真的不存在,而多半是两种原因之一:① 当前用的是内置占位 key 或无效的 API Key(GLM 对无效 key 也会回 404 model_not_found);② 或你的账号尚未开通该视觉模型。'
+      );
+      lines.push(
+        `最直接的修复:${PASTE_TO_REPLACE}需要的话我也可以帮你把识图固定到已开通的 GLM 视觉端点。`
+      );
     } else if (category === 'rate_limit') {
-      lines.push('可以稍后重试;若经常触发,需要我帮你配置另一个图像识别模型(GLM 或其他)的 API Key 以分担额度吗?');
+      lines.push(
+        '可以稍后重试;若经常触发,需要我帮你配置另一个图像识别模型(GLM 或其他)的 API Key 以分担额度吗?'
+      );
     } else if (category === 'timeout' || category === 'network') {
-      lines.push('请确认网络/代理可达该模型端点;需要我帮你换用或配置另一个图像识别模型(GLM 或其他)的 API Key 吗?');
+      lines.push(
+        '请确认网络/代理可达该模型端点;需要我帮你换用或配置另一个图像识别模型(GLM 或其他)的 API Key 吗?'
+      );
     } else {
       lines.push('需要我帮你配置 GLM(智谱)或其他合适的图像识别模型的 API Key,再重试识别吗?');
     }

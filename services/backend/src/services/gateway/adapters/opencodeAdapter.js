@@ -21,9 +21,9 @@
  * gateway skips this adapter entirely (byte-fallback to "opencode not wired").
  */
 
+const { buildFailure } = require('./_responseBuilder');
 const cliToolAdapter = require('./cliToolAdapter');
 const invocation = require('./opencodeInvocation');
-const { buildFailure } = require('./_responseBuilder');
 
 const _HEAL_OFF = new Set(['0', 'false', 'off', 'no']);
 
@@ -43,17 +43,25 @@ function _isAutoHealEnabled(env) {
 /** Best-effort pre-invocation heal of opencode's own config. Never throws. */
 function _autoHeal(env) {
   try {
-    if (!_isAutoHealEnabled(env)) return;
+    if (!_isAutoHealEnabled(env)) {
+      return;
+    }
     require('../../externalApps/opencodeAdapter').repair(env);
-  } catch { /* fail-soft: healing must never block the invocation */ }
+  } catch {
+    /* fail-soft: healing must never block the invocation */
+  }
 }
 
 function _available(force) {
-  if (!invocation.isEnabled(process.env)) return false;
+  if (!invocation.isEnabled(process.env)) {
+    return false;
+  }
   try {
     const bin = require('./opencodeBinResolver').resolveOpencodeBin(process.env);
     return require('./_commandAvailability').isAvailable(bin, { force });
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /** Sync detection (mirrors sibling adapters' detect signature). */
@@ -63,11 +71,15 @@ function detect(forceRefresh = false) {
 
 /** Async detection — probes without freezing the event loop. */
 async function detectAsync(forceRefresh = false) {
-  if (!invocation.isEnabled(process.env)) return false;
+  if (!invocation.isEnabled(process.env)) {
+    return false;
+  }
   try {
     const bin = require('./opencodeBinResolver').resolveOpencodeBin(process.env);
     return await require('./_commandAvailability').isAvailableAsync(bin, { force: forceRefresh });
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -77,12 +89,15 @@ async function detectAsync(forceRefresh = false) {
 async function generate(prompt, options = {}) {
   if (!invocation.isEnabled(options.env || process.env)) {
     return buildFailure('opencode adapter disabled (KHY_OPENCODE=off)', {
-      adapter: 'opencode', errorType: 'unavailable',
+      adapter: 'opencode',
+      errorType: 'unavailable',
     });
   }
   _autoHeal(options.env || process.env); // 指挥前自动自愈 opencode.json,避免其因损坏配置拒启动
   const res = await cliToolAdapter.generate(prompt, { ...options, cliTool: 'opencode' });
-  if (res && typeof res === 'object') return { ...res, adapter: 'opencode' };
+  if (res && typeof res === 'object') {
+    return { ...res, adapter: 'opencode' };
+  }
   return res;
 }
 
@@ -96,7 +111,9 @@ function getStatus() {
   };
 }
 
-function destroy() { /* no persistent state; detection cache lives in cliToolAdapter */ }
+function destroy() {
+  /* no persistent state; detection cache lives in cliToolAdapter */
+}
 
 module.exports = {
   detect,

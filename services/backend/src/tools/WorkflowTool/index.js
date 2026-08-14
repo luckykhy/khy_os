@@ -8,7 +8,9 @@ class WorkflowTool extends BaseTool {
   static searchHint = 'workflow automation sequence pipeline';
   static shouldDefer = true;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Execute a predefined workflow.
@@ -28,7 +30,11 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
       properties: {
         name: { type: 'string', description: 'Workflow name or path' },
         inputs: { type: 'object', description: 'Input parameters for the workflow' },
-        dry_run: { type: 'boolean', description: 'Preview steps without executing', default: false },
+        dry_run: {
+          type: 'boolean',
+          description: 'Preview steps without executing',
+          default: false,
+        },
       },
       required: ['name'],
     };
@@ -47,7 +53,9 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
     try {
       const { getAppDataDir } = require('../../utils/dataHome');
       searchPaths.push(path.join(getAppDataDir('workflows'), `${params.name}.json`));
-    } catch { /* dataHome unavailable — fall back to .khy paths only */ }
+    } catch {
+      /* dataHome unavailable — fall back to .khy paths only */
+    }
 
     let workflowDef = null;
     let loadedFrom = null;
@@ -57,7 +65,9 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
           workflowDef = JSON.parse(fs.readFileSync(p, 'utf-8'));
           loadedFrom = p;
           break;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -75,8 +85,12 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
       if (params.dry_run) {
         const summary = core.summarizeGraph(workflowDef);
         return {
-          success: true, dry_run: true, name: params.name, kind: 'graph',
-          source: loadedFrom, ...summary,
+          success: true,
+          dry_run: true,
+          name: params.name,
+          kind: 'graph',
+          source: loadedFrom,
+          ...summary,
         };
       }
       const executor = require('../../services/workflow/workflowExecutor');
@@ -87,16 +101,22 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
           {
             primitives: executor.defaultPrimitives({ userId }),
             vars: params.inputs || {},
-          },
+          }
         );
         return {
           success: outcome.status === 'completed',
-          name: params.name, kind: 'graph', status: outcome.status,
-          vars: outcome.vars, log: outcome.log, source: loadedFrom,
+          name: params.name,
+          kind: 'graph',
+          status: outcome.status,
+          vars: outcome.vars,
+          log: outcome.log,
+          source: loadedFrom,
         };
       } catch (err) {
         return {
-          success: false, name: params.name, kind: 'graph',
+          success: false,
+          name: params.name,
+          kind: 'graph',
           error: (err && err.message) || String(err),
           vars: (err && err.vars) || undefined,
         };
@@ -123,7 +143,9 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
     };
   }
 
-  getActivityDescription(input) { return `执行工作流：${input.name}`; }
+  getActivityDescription(input) {
+    return `执行工作流：${input.name}`;
+  }
 }
 
 module.exports = WorkflowTool;

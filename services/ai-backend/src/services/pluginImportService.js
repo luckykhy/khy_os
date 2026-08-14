@@ -96,12 +96,14 @@ async function _fetchDoc(url, label) {
 // ── Normalization ───────────────────────────────────────────────────────────
 
 function _slugify(s) {
-  return String(s || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100) || 'plugin';
+  return (
+    String(s || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 100) || 'plugin'
+  );
 }
 
 /**
@@ -200,18 +202,24 @@ async function preview(body = {}) {
   } else if (manifest && manifest.api && manifest.api.url) {
     openapi = await _fetchDoc(manifest.api.url, 'openapi');
   } else {
-    throw httpError(400, 'Provide an OpenAPI document via openapi, openapiUrl/url, or a manifest with api.url');
+    throw httpError(
+      400,
+      'Provide an OpenAPI document via openapi, openapiUrl/url, or a manifest with api.url'
+    );
   }
 
   const operations = _assertOpenapi(openapi);
   const normManifest = _normalizeManifest(manifest, openapi);
 
   const info = openapi.info || {};
-  const name = String(body.name || normManifest.name_for_human || info.title || 'Imported plugin').slice(0, 120);
+  const name = String(
+    body.name || normManifest.name_for_human || info.title || 'Imported plugin'
+  ).slice(0, 120);
   const slug = _slugify(body.slug || name);
-  const description = String(
-    normManifest.description_for_human || info.description || '',
-  ).slice(0, 1000);
+  const description = String(normManifest.description_for_human || info.description || '').slice(
+    0,
+    1000
+  );
   const version = String(info.version || normManifest.schema_version || '1.0.0').slice(0, 32);
 
   return {
@@ -250,7 +258,7 @@ async function importPlugin(userId, body = {}) {
     author: norm.author,
     official: !!body.official,
     version: norm.version,
-    publisherId: body.official ? null : (userId != null ? userId : null),
+    publisherId: body.official ? null : userId != null ? userId : null,
     manifestJson: norm.manifest,
     openapiJson: norm.openapi,
   });

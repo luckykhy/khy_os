@@ -18,11 +18,14 @@
  */
 
 const learningRetrieval = require('../learningRetrieval');
+
 const mapStore = require('./mapStore');
 
 /** Recover a map id from a retrieval chunk source like `fetched:<id>.map.json`. */
 function _mapIdFromSource(source) {
-  if (typeof source !== 'string') return null;
+  if (typeof source !== 'string') {
+    return null;
+  }
   const base = source.replace(/^fetched:/, '');
   const m = base.match(/^(.*)\.map\.json$/);
   return m ? m[1] : null;
@@ -37,27 +40,40 @@ function _mapIdFromSource(source) {
  * @returns {Promise<{map:object, score:number, retrievalScore:number}|null>}
  */
 async function findGuide(query, opts = {}) {
-  if (!learningRetrieval.RAG_ENABLED) return null;
+  if (!learningRetrieval.RAG_ENABLED) {
+    return null;
+  }
   const maps = mapStore.listMaps();
-  if (!maps.length) return null;
+  if (!maps.length) {
+    return null;
+  }
 
   // Index maps by their sanitized file basename id for O(1) lookback.
   const byId = new Map();
   const extraPaths = [];
   for (const m of maps) {
-    if (!m || !m.id) continue;
+    if (!m || !m.id) {
+      continue;
+    }
     byId.set(m.id, m);
     extraPaths.push(mapStore.pathFor(m.id));
   }
-  if (!extraPaths.length) return null;
+  if (!extraPaths.length) {
+    return null;
+  }
 
   let ctx;
   try {
-    ctx = await learningRetrieval.buildContext(query, { extraPaths, allowVector: !!opts.allowVector });
+    ctx = await learningRetrieval.buildContext(query, {
+      extraPaths,
+      allowVector: !!opts.allowVector,
+    });
   } catch {
     return null; // retrieval failure is non-fatal — no guidance this turn
   }
-  if (!ctx || !Array.isArray(ctx.chunks) || ctx.chunks.length === 0) return null;
+  if (!ctx || !Array.isArray(ctx.chunks) || ctx.chunks.length === 0) {
+    return null;
+  }
 
   // Blend retrieval score with the map's stored qualityScore (deterministic):
   // quality acts as a multiplicative prior in [0.5, 1.0] so a strong-quality map
@@ -65,9 +81,13 @@ async function findGuide(query, opts = {}) {
   let best = null;
   for (const c of ctx.chunks) {
     const id = _mapIdFromSource(c.source);
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     const map = byId.get(id);
-    if (!map) continue;
+    if (!map) {
+      continue;
+    }
     const quality = typeof map.qualityScore === 'number' ? map.qualityScore : 0;
     const retrievalScore = typeof c.score === 'number' ? c.score : 0;
     const blended = retrievalScore * (0.5 + 0.5 * quality);

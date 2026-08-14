@@ -13,9 +13,9 @@
  * 用法:`/btw <提示内容>`。门控 KHY_BTW 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo } = require('../formatters');
 const leaf = require('../../services/conversation/btwNote');
 const queue = require('../../services/conversation/btwNoteQueue');
+const { printInfo } = require('../formatters');
 
 /**
  * @param {string} _subCommand 预留(无子命令)

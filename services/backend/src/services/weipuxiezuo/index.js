@@ -14,10 +14,10 @@
  * detector 不携带 text 的缺口），下游纯函数保持无副作用。
  */
 
-const detector = require('./detector');
-const scorer = require('./scorer');
 const constraints = require('./constraints');
+const detector = require('./detector');
 const rules = require('./rules');
+const scorer = require('./scorer');
 
 const VALID_MODES = new Set(['fragment', 'chapter', 'full']);
 
@@ -51,7 +51,7 @@ function buildRewriteBrief(detection, scores, gate) {
   const order = { [rules.PRIORITY.HIGH]: 0, [rules.PRIORITY.MID]: 1, [rules.PRIORITY.LOW]: 2 };
   const tasks = detection.findings
     .slice()
-    .sort((a, b) => (order[a.priority] - order[b.priority]) || (a.id - b.id))
+    .sort((a, b) => order[a.priority] - order[b.priority] || a.id - b.id)
     .map((f) => ({
       priority: f.priority,
       patternId: f.id,
@@ -88,11 +88,15 @@ function buildRewriteBrief(detection, scores, gate) {
 }
 
 function _replacementsFor(finding) {
-  if (finding.id !== 11) return undefined; // 仅 AI 高频词给换词表
+  if (finding.id !== 11) {
+    return undefined;
+  } // 仅 AI 高频词给换词表
   const out = {};
   for (const m of finding.matches) {
     const r = rules.REPLACEMENTS[m.text];
-    if (r !== undefined) out[m.text] = r;
+    if (r !== undefined) {
+      out[m.text] = r;
+    }
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -111,20 +115,34 @@ function renderScoreReport({ mode, detection, scores, gate }) {
 
   const lines = [];
   lines.push('┌─ 维普写作 · 三维检测报告 ──────────────────────────┐');
-  lines.push(`│ 模式: ${_pad(mode, 10)}  段落: ${_pad(detection.stats.paragraphCount, 4)}  句子: ${_pad(detection.stats.sentenceCount, 4)}        │`);
+  lines.push(
+    `│ 模式: ${_pad(mode, 10)}  段落: ${_pad(detection.stats.paragraphCount, 4)}  句子: ${_pad(detection.stats.sentenceCount, 4)}        │`
+  );
   lines.push('├────────────────────────────────────────────────────┤');
-  lines.push(`│ AIGC痕迹  ${_pad(aigc.score, 3)}/100  [${bar(aigc.score, 100, aigc.pass)}] ${ok(aigc.pass)} │`);
-  lines.push(`│ 学术质量  ${_pad(academic.score, 3)}/100  [${bar(academic.score, 100, academic.pass)}] ${ok(academic.pass)} │`);
+  lines.push(
+    `│ AIGC痕迹  ${_pad(aigc.score, 3)}/100  [${bar(aigc.score, 100, aigc.pass)}] ${ok(aigc.pass)} │`
+  );
+  lines.push(
+    `│ 学术质量  ${_pad(academic.score, 3)}/100  [${bar(academic.score, 100, academic.pass)}] ${ok(academic.pass)} │`
+  );
   lines.push(`│ 句长突发性 CV=${cv.toFixed(3)}  (人类≈0.50 / AI≈0.28)            │`);
-  lines.push(`│ 引用: 显式 ${_pad(citation.explicit, 3)}  化用 ${_pad(citation.huayongMarkers, 3)}  化用密度 ${_pad((citation.huayongPct * 100).toFixed(0) + '%', 5)}     │`);
+  lines.push(
+    `│ 引用: 显式 ${_pad(citation.explicit, 3)}  化用 ${_pad(citation.huayongMarkers, 3)}  化用密度 ${_pad((citation.huayongPct * 100).toFixed(0) + '%', 5)}     │`
+  );
   lines.push('├─ 硬约束闸 ──────────────────────────────────────────┤');
   for (const it of gate.items) {
-    const mark = it.advisory ? '·' : (it.pass ? '✓' : '✗');
-    lines.push(`│ ${mark} ${_pad(it.label, 18)} 限 ${_pad(it.limit, 8)} 实 ${_pad(String(it.actual), 6)}${it.advisory ? ' (参考)' : ''}`.padEnd(53) + '│');
+    const mark = it.advisory ? '·' : it.pass ? '✓' : '✗';
+    lines.push(
+      `│ ${mark} ${_pad(it.label, 18)} 限 ${_pad(it.limit, 8)} 实 ${_pad(String(it.actual), 6)}${it.advisory ? ' (参考)' : ''}`.padEnd(
+        53
+      ) + '│'
+    );
   }
   lines.push('├────────────────────────────────────────────────────┤');
   const overall = aigc.pass && academic.pass && gate.pass;
-  lines.push(`│ 总判定: ${overall ? '✓ 通过（可交付）' : '✗ 未通过（需按简报重写）'}`.padEnd(53) + '│');
+  lines.push(
+    `│ 总判定: ${overall ? '✓ 通过（可交付）' : '✗ 未通过（需按简报重写）'}`.padEnd(53) + '│'
+  );
   lines.push('└────────────────────────────────────────────────────┘');
   return lines.join('\n');
 }

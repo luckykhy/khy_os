@@ -16,13 +16,13 @@
  * 关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/advisor/advisorPlan');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
 // async try/catch combinator 单一真源 utils/tryOrAsync:await fn,任何异常 → dflt。
 const _safeAsync = require('../../utils/tryOrAsync');
+const { printInfo, printError } = require('../formatters');
 
 /** 探测可执行候选(委托既有 gateway SSOT,与 /model 同源)。返回 { candidates, empty }。 */
 async function _probeCandidates() {
@@ -32,7 +32,7 @@ async function _probeCandidates() {
   }
   const built = await _safeAsync(
     () => gw.buildGatewayModelChoices({ onNotice: printInfo, onError: printError }),
-    null,
+    null
   );
   if (!built || built.empty || !Array.isArray(built.modelChoices)) {
     return { candidates: [], empty: true };
@@ -51,13 +51,20 @@ async function _probeCandidates() {
 /** 取候选 adapter 的 UCB 排名(委托既有 ucbRouter SSOT,纯读不 mutate)。 */
 function _rankAdapters(candidates) {
   const router = _safe(() => require('../../services/gateway/ucbRouter'), null);
-  if (!router || typeof router.rank !== 'function') return [];
+  if (!router || typeof router.rank !== 'function') {
+    return [];
+  }
   // 去重 adapter key(候选可能同 adapter 多模型,老虎机按 adapter 学习)。
   const seen = new Set();
   const adapterKeys = [];
   for (const c of candidates) {
-    const k = String(c.adapter || '').trim().toLowerCase();
-    if (k && !seen.has(k)) { seen.add(k); adapterKeys.push(c.adapter); }
+    const k = String(c.adapter || '')
+      .trim()
+      .toLowerCase();
+    if (k && !seen.has(k)) {
+      seen.add(k);
+      adapterKeys.push(c.adapter);
+    }
   }
   return _safe(() => router.rank(adapterKeys), []) || [];
 }

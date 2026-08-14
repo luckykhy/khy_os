@@ -27,7 +27,11 @@ let _seq = 0;
 
 /** 默认开,仅显式 0/false/off/no 关。 */
 function isEnabled() {
-  return !OFF.has(String(process.env[FLAG] == null ? '' : process.env[FLAG]).trim().toLowerCase());
+  return !OFF.has(
+    String(process.env[FLAG] == null ? '' : process.env[FLAG])
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // 收敛到 utils/collapseWhitespace 单一真源(逐字节委托,调用点不变)
@@ -41,17 +45,25 @@ const _norm = require('../../utils/collapseWhitespace');
  * @returns {{ success:boolean, action?:'insert'|'supersede'|'skip', entry?:object, error?:string }}
  */
 function remember(entry = {}) {
-  if (!isEnabled()) return { success: false, error: 'session memory disabled' };
+  if (!isEnabled()) {
+    return { success: false, error: 'session memory disabled' };
+  }
   const name = _norm(entry.name);
   const content = String(entry.content == null ? '' : entry.content).trim();
-  if (!name) return { success: false, error: '缺少记忆标题(name)' };
-  if (!content) return { success: false, error: '缺少记忆内容(content)' };
+  if (!name) {
+    return { success: false, error: '缺少记忆标题(name)' };
+  }
+  if (!content) {
+    return { success: false, error: '缺少记忆内容(content)' };
+  }
   const description = _norm(entry.description) || name;
 
   const existing = _store.find((m) => _norm(m.name) === name) || null;
   const decision = memoryTier.decideUpdate(
-    existing ? { name: existing.name, body: existing.content, tier: memoryTier.TIERS.SHORT_TERM } : null,
-    { name, body: content, tier: memoryTier.TIERS.SHORT_TERM },
+    existing
+      ? { name: existing.name, body: existing.content, tier: memoryTier.TIERS.SHORT_TERM }
+      : null,
+    { name, body: content, tier: memoryTier.TIERS.SHORT_TERM }
   );
 
   if (decision.action === 'skip') {
@@ -69,7 +81,10 @@ function remember(entry = {}) {
 }
 
 function _limit(opts) {
-  const v = parseInt((opts && opts.limit) != null ? opts.limit : process.env.KHY_SESSION_MEMORY_LIMIT, 10);
+  const v = parseInt(
+    (opts && opts.limit) != null ? opts.limit : process.env.KHY_SESSION_MEMORY_LIMIT,
+    10
+  );
   return Number.isFinite(v) && v > 0 ? v : 3;
 }
 
@@ -82,7 +97,9 @@ function _limit(opts) {
  * @returns {Array<{name,content,description,seq,score}>}
  */
 function recall(query, opts = {}) {
-  if (!isEnabled() || _store.length === 0) return [];
+  if (!isEnabled() || _store.length === 0) {
+    return [];
+  }
   const limit = _limit(opts);
   const minScore = Number.isFinite(opts.minScore) ? opts.minScore : 1;
   const q = _norm(query);
@@ -93,15 +110,22 @@ function recall(query, opts = {}) {
     scored = _store.map((m) => ({ ...m, score: 0 }));
   } else {
     let qTokens;
-    try { qTokens = memdir._tokenizeForRecall(q); } catch { qTokens = new Set(); }
+    try {
+      qTokens = memdir._tokenizeForRecall(q);
+    } catch {
+      qTokens = new Set();
+    }
     scored = _store
       .map((m) => {
         let score = 0;
         try {
-          score = memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.name)) * 3
-            + memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.description)) * 2
-            + memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.content)) * 1;
-        } catch { score = 0; }
+          score =
+            memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.name)) * 3 +
+            memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.description)) * 2 +
+            memdir._overlapCount(qTokens, memdir._tokenizeForRecall(m.content)) * 1;
+        } catch {
+          score = 0;
+        }
         return { ...m, score };
       })
       .filter((m) => m.score >= minScore);
@@ -120,26 +144,40 @@ function recall(query, opts = {}) {
  */
 function buildSection(query, opts = {}) {
   let hits;
-  try { hits = recall(query, opts); } catch { return null; }
-  if (!hits || hits.length === 0) return null;
+  try {
+    hits = recall(query, opts);
+  } catch {
+    return null;
+  }
+  if (!hits || hits.length === 0) {
+    return null;
+  }
   const header = [
     '[SESSION_MEMORY] 以下是你在**本次会话内**记下的短期记忆(会话结束即遗忘、不落盘)。',
     '如与当前请求相关,请据此保持上下文连贯;无关则忽略。',
   ].join('\n');
   const lines = hits.map((m) => {
-    const snippet = (m.description && m.description !== m.name)
-      ? m.description
-      : String(m.content || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    const snippet =
+      m.description && m.description !== m.name
+        ? m.description
+        : String(m.content || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 160);
     return `- ${m.name}：${snippet}`;
   });
   return `${header}\n${lines.join('\n')}`;
 }
 
 /** 当前短期记忆条数。 */
-function size() { return _store.length; }
+function size() {
+  return _store.length;
+}
 
 /** 当前短期记忆快照(浅拷贝,防外部改内部表)。 */
-function list() { return _store.map((m) => ({ ...m })); }
+function list() {
+  return _store.map((m) => ({ ...m }));
+}
 
 /**
  * 遗忘全部短期记忆(会话结束 / 显式 /clear)。返回被清除的条数。这是「短期层」

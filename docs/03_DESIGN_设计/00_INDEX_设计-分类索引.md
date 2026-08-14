@@ -68,6 +68,7 @@
 | [DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS.md | 书序架构阅读主线（书目录→khy 真源映射+术语对照） | 定稿 |
 | [DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图.md | 后端纵向逻辑关系图（一条消息下行路径·汇流点/单一出口/IoC 缝三骨架点） | 定稿 |
 | [DESIGN-ARCH-065] Hermes Agent v0.18.0 参考学习-判断验证自我进化.md | Hermes v0.18.0 三支柱研究+gap 分析；落地 /goal 证据门（evidence-based completion） | 定稿 |
+| [DESIGN-ARCH-067] opencode高含金量功能教学与khy-os差距补齐路线.md | opencode 12 项功能对照教学；References/LSP 诊断/权限 auto 三项差距分阶段补齐 | 定稿 |
 | [DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md | 数学重塑提示词链 | 定稿 |
 | [DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md | 分阶段防闪退提示 | 草稿 |
 | [DESIGN-OTHER-003] khy-系统提示词结构图.md | 系统提示词结构图 | 定稿 |

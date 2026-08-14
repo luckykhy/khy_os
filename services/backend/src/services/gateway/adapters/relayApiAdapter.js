@@ -10,28 +10,37 @@
  * Config via environment variables:
  *   RELAY_API_ENDPOINT=https://your-relay.com/v1
  *   RELAY_API_KEY=sk-xxx
- *   RELAY_API_MODEL=claude-sonnet-4-20250514
+ *   RELAY_API_MODEL=claude-sonnet-4-6
  */
-const https = require('https');
 const http = require('http');
+const https = require('https');
 const { URL } = require('url');
+
+const { PRIMARY: MODELS } = require('../../../constants/models');
 const { extractPrimaryApiKey } = require('../../apiKeyFormat');
-const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
-const { normalizeAbortReason, createAbortError, isAbortLikeError } = require('./_abortHelpers');
-const { parseOpenAISseStream } = require('./_openaiSseStream');
-const { isTransientError: _sharedIsTransient, sleepAbortable: _sharedSleep } = require('./_retryWithBackoff');
-const { classifyAdapterError: _sharedClassify } = require('./_errorClassifiers');
-const { connectThroughProxy: _sharedConnectProxy } = require('./_proxyTunnel');
-const { createProtocolHandler } = require('./_protocolPipeline');
-const _adaptiveParamStrip = require('./adaptiveParamStrip');
-const { buildSuccess, buildFailure } = require('./_responseBuilder');
-const { normalizeCacheUsage } = require('./_cacheUsage');
+const _parseMs = require('../_envParse')._parseMs;
+const {
+  downscaleGlmVisionImages,
+  downscaleImageBlocksInMessages,
+} = require('../glmVisionImageDownscale');
 const { clampMaxTokensForGlmVision } = require('../glmVisionMaxTokens');
-const { downscaleGlmVisionImages, downscaleImageBlocksInMessages } = require('../glmVisionImageDownscale');
 const { clampTextBudgetInMessages } = require('../glmVisionTextBudget');
+const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
+
+const { createAbortError, isAbortLikeError } = require('./_abortHelpers');
+const { normalizeCacheUsage } = require('./_cacheUsage');
+const { classifyAdapterError: _sharedClassify } = require('./_errorClassifiers');
+const { parseOpenAISseStream } = require('./_openaiSseStream');
+const { createProtocolHandler } = require('./_protocolPipeline');
+const { connectThroughProxy: _sharedConnectProxy } = require('./_proxyTunnel');
+const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const {
+  isTransientError: _sharedIsTransient,
+  sleepAbortable: _sharedSleep,
+} = require('./_retryWithBackoff');
+const _adaptiveParamStrip = require('./adaptiveParamStrip');
 // Model-name SSOT: relay default flows from constants/models.js
 // (env RELAY_API_MODEL still overrides at call sites).
-const { PRIMARY: MODELS } = require('../../../constants/models');
 
 const DEFAULT_MODEL = MODELS.relay;
 const TIMEOUT_MS = 120_000;
@@ -40,9 +49,8 @@ const TIMEOUT_MS = 120_000;
 // is not a valid Anthropic version date and risks rejection by strict relays;
 // '2023-06-01' is the published stable version. Overridable for relays that
 // pin a newer dated version.
-const ANTHROPIC_VERSION = process.env.RELAY_ANTHROPIC_VERSION
-  || process.env.ANTHROPIC_VERSION
-  || '2023-06-01';
+const ANTHROPIC_VERSION =
+  process.env.RELAY_ANTHROPIC_VERSION || process.env.ANTHROPIC_VERSION || '2023-06-01';
 const MODELS_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_RETRY_TOTAL_ATTEMPTS = 3;
 const DEFAULT_RETRY_BASE_DELAY_MS = 350;
@@ -50,8 +58,14 @@ const DEFAULT_RETRY_MAX_DELAY_MS = 1800;
 const _runtimeDiagnosticsStore = createAdapterRuntimeDiagnosticsStore('relay_api');
 let _runtimeDiagnostics = _runtimeDiagnosticsStore.createEmptyDiagnostic();
 const _openaiHandler = createProtocolHandler({ protocol: 'openai', adapterName: 'relay_api' });
-const _anthropicHandler = createProtocolHandler({ protocol: 'anthropic', adapterName: 'relay_api' });
-const _responsesHandler = createProtocolHandler({ protocol: 'responses', adapterName: 'relay_api' });
+const _anthropicHandler = createProtocolHandler({
+  protocol: 'anthropic',
+  adapterName: 'relay_api',
+});
+const _responsesHandler = createProtocolHandler({
+  protocol: 'responses',
+  adapterName: 'relay_api',
+});
 
 // ── Tool Calling 转换 (Anthropic ↔ OpenAI) ──
 // convertToolsToOpenAI + convertMessagesWithTools eliminated — now handled by
@@ -71,15 +85,57 @@ function getRequestId(options = {}) {
   return String(options.requestId || options.traceId || '').trim();
 }
 
+/**
+ * 判定 relay 请求是否应剥离 tools 声明(小模型不支持 function calling)。
+ * 必须在 buildRequestBody 之前判定:剥离 tools 时消息转换须以 useToolRole=false
+ * 降级(工具块内联为纯文本),否则 messages 残留 role:'tool'/'tool_calls' 而顶层无
+ * tools 声明 → 严格 OpenAI 兼容端点(stepfun step_plan 等)返回 HTTP 400
+ * "Unrecognized chat message"(实测 step-3.7-flash 工具回合反复 400)。
+ * 与 multiFreeService 同源(单一真源 modelToolingCapability),门控关 → 名字正则。
+ * @param {string} model
+ * @param {object} options
+ * @returns {boolean}
+ */
+function _shouldStripToolsForRelay(model, options = {}) {
+  try {
+    if (options._toolCapProbe) {
+      return false;
+    } // 探测必须保留 tools
+    const _toolCap = require('../modelToolingCapability');
+    if (_toolCap.isEnabled()) {
+      let _measured = null;
+      try {
+        _measured = require('../toolCapabilityStore').getVerdict(model);
+      } catch {
+        /* best effort */
+      }
+      return _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
+    }
+  } catch {
+    /* capability store 不可用 → 名字启发 */
+  }
+  return (
+    /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i.test(String(model || '')) &&
+    !/deepseek-v[3-9]/i.test(String(model || '')) &&
+    !/sensenova-\d/i.test(String(model || ''))
+  );
+}
+
 function mapRuntimeCategory(errorType = '', errorText = '') {
-  const normalizedType = String(errorType || '').trim().toLowerCase();
-  const normalizedText = String(errorText || '').trim().toLowerCase();
-  if (normalizedType === 'timeout' || normalizedText.includes('timeout')) return 'stall';
+  const normalizedType = String(errorType || '')
+    .trim()
+    .toLowerCase();
+  const normalizedText = String(errorText || '')
+    .trim()
+    .toLowerCase();
+  if (normalizedType === 'timeout' || normalizedText.includes('timeout')) {
+    return 'stall';
+  }
   if (
-    normalizedType === 'network'
-    || normalizedType === 'process'
-    || normalizedType === 'cancelled'
-    || /econn|socket|network|transport|aborted|cancelled|canceled/.test(normalizedText)
+    normalizedType === 'network' ||
+    normalizedType === 'process' ||
+    normalizedType === 'cancelled' ||
+    /econn|socket|network|transport|aborted|cancelled|canceled/.test(normalizedText)
   ) {
     return 'transport';
   }
@@ -87,41 +143,54 @@ function mapRuntimeCategory(errorType = '', errorText = '') {
 }
 
 function recordRuntimeFailure(options = {}, payload = {}) {
-  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(_runtimeDiagnostics, {
-    requestId: getRequestId(options),
-    ...payload,
-  }, {
-    fallbackTrigger: 'request_failed',
-  });
+  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(
+    _runtimeDiagnostics,
+    {
+      requestId: getRequestId(options),
+      ...payload,
+    },
+    {
+      fallbackTrigger: 'request_failed',
+    }
+  );
 }
 
 function recordRuntimeRecovery(options = {}, summary = '', diagnosis = '') {
-  if (Number(_runtimeDiagnostics.at || 0) <= 0 || _runtimeDiagnostics.healed) return;
-  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(_runtimeDiagnostics, {
-    requestId: getRequestId(options),
-    healed: true,
-    trigger: 'request_recovered',
-    category: 'recovery',
-    phase: 'response',
-    summary,
-    diagnosis,
-    lastError: '',
-  }, {
-    fallbackTrigger: 'request_recovered',
-  });
+  if (Number(_runtimeDiagnostics.at || 0) <= 0 || _runtimeDiagnostics.healed) {
+    return;
+  }
+  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(
+    _runtimeDiagnostics,
+    {
+      requestId: getRequestId(options),
+      healed: true,
+      trigger: 'request_recovered',
+      category: 'recovery',
+      phase: 'response',
+      summary,
+      diagnosis,
+      lastError: '',
+    },
+    {
+      fallbackTrigger: 'request_recovered',
+    }
+  );
 }
-
 
 /**
  * Extract text from an OpenAI Responses API JSON body (output[].content[].text).
  * Returns empty string if the shape doesn't match — fail-soft fallback.
  */
 function _extractResponsesApiText(data) {
-  if (!data || typeof data !== 'object') return '';
+  if (!data || typeof data !== 'object') {
+    return '';
+  }
   const output = Array.isArray(data.output) ? data.output : [];
   let text = '';
   for (const item of output) {
-    if (!item || typeof item !== 'object') continue;
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
     if (item.type === 'message' && Array.isArray(item.content)) {
       for (const part of item.content) {
         if (part && part.type === 'output_text' && typeof part.text === 'string') {
@@ -135,35 +204,49 @@ function _extractResponsesApiText(data) {
 
 function normalizeRelayHostname(hostname) {
   const raw = String(hostname || '').trim();
-  if (!raw) return '127.0.0.1';
-  if (raw === 'localhost') return '127.0.0.1';
+  if (!raw) {
+    return '127.0.0.1';
+  }
+  if (raw === 'localhost') {
+    return '127.0.0.1';
+  }
   // URL.hostname for IPv6 literals is bracketed (e.g. "[::1]"), but
   // node http/https request expects plain host without brackets.
   return raw.replace(/^\[([^\]]+)\]$/, '$1');
 }
 
+// NOTE: Byte-identical body to _adapterUtils.parsePositiveInt, but the `max`
+// default diverges (local: 8, leaf: Infinity). Kept local (not merged) to
+// preserve strict logic conservation: swapping in the leaf would change this
+// function's default clamp behavior. All call sites below pass an explicit max.
 function _parsePositiveInt(raw, fallback, min = 1, max = 8) {
   const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed < min) return fallback;
+  if (!Number.isFinite(parsed) || parsed < min) {
+    return fallback;
+  }
   return Math.min(max, parsed);
 }
 
-function _parseMs(raw, fallback, min = 0) {
-  const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return Math.max(min, parsed);
-}
-
+// _parseMs 已收敛至 gateway/_envParse.js(Batch 2 纯函数原子层);保留本地
+// 常量名,调用点逐字节不变。
 
 // Delegates to shared _retryWithBackoff.isTransientError (Phase 2B)
 function _isTransientRelayError(err, statusCode = 0, errorText = '') {
   // Build a synthetic error object the shared classifier can inspect
   const msg = String(errorText || err?.message || '');
   const synth = { message: msg, statusCode: Number(statusCode || 0) };
-  if (_sharedIsTransient(synth)) return true;
+  if (_sharedIsTransient(synth)) {
+    return true;
+  }
   // Relay-specific extras not in shared module
   const lower = msg.toLowerCase();
-  if (/deadline exceeded|client network socket disconnected.*tls|eai_again|ehostunreach|enetunreach|broken pipe/i.test(lower)) return true;
+  if (
+    /deadline exceeded|client network socket disconnected.*tls|eai_again|ehostunreach|enetunreach|broken pipe/i.test(
+      lower
+    )
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -195,11 +278,18 @@ function getConfig() {
 // The first candidate that succeeds is remembered (sticky) so later calls start from
 // the known-good endpoint. With NO fallbacks configured, the candidate list collapses
 // to the single primary and behavior is byte-for-byte identical to before.
-const _RELAY_FAILOVER_ERROR_TYPES = new Set(['unavailable', 'network', 'server_error', 'bad_request']);
+const _RELAY_FAILOVER_ERROR_TYPES = new Set([
+  'unavailable',
+  'network',
+  'server_error',
+  'bad_request',
+]);
 let _stickyEndpoint = null; // last endpoint (normalized) that produced a success
 
 function _normalizeEndpoint(e) {
-  return String(e || '').trim().replace(/\/+$/, '');
+  return String(e || '')
+    .trim()
+    .replace(/\/+$/, '');
 }
 
 function _resolveEndpointCandidates(primary) {
@@ -207,12 +297,19 @@ function _resolveEndpointCandidates(primary) {
   const seen = new Set();
   const push = (e) => {
     const v = _normalizeEndpoint(e);
-    if (v && !seen.has(v)) { seen.add(v); out.push(v); }
+    if (v && !seen.has(v)) {
+      seen.add(v);
+      out.push(v);
+    }
   };
   // Sticky known-good endpoint first (fast path once we've found one).
-  if (_stickyEndpoint) push(_stickyEndpoint);
+  if (_stickyEndpoint) {
+    push(_stickyEndpoint);
+  }
   push(primary);
-  for (const f of String(process.env.RELAY_API_ENDPOINT_FALLBACKS || '').split(',')) push(f);
+  for (const f of String(process.env.RELAY_API_ENDPOINT_FALLBACKS || '').split(',')) {
+    push(f);
+  }
   return out;
 }
 
@@ -226,12 +323,16 @@ function _isEndpointStructuralFailure(errorType) {
 const _impl = { generateOnce: (...a) => _generateOnce(...a) };
 
 // Test-only: reset the sticky known-good endpoint between cases.
-function _resetEndpointState() { _stickyEndpoint = null; }
-
+function _resetEndpointState() {
+  _stickyEndpoint = null;
+}
 
 // ── HTTP request with optional proxy support ──
 
-function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEOUT_MS, signal = null } = {}) {
+function makeRequest(
+  url,
+  { method = 'POST', headers = {}, body, timeout = TIMEOUT_MS, signal = null } = {}
+) {
   return new Promise((resolve, reject) => {
     if (signal && signal.aborted) {
       reject(createAbortError(signal.reason));
@@ -239,14 +340,20 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     }
 
     let settled = false;
-    let connectReq = null;
+    const connectReq = null;
     let activeReq = null;
 
     const finish = (fn, value) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       if (signal && onAbort) {
-        try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+        try {
+          signal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
       }
       fn(value);
     };
@@ -254,8 +361,20 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     const finishReject = (err) => finish(reject, err);
     const onAbort = () => {
       const abortErr = createAbortError(signal ? signal.reason : null);
-      try { if (connectReq && !connectReq.destroyed) connectReq.destroy(abortErr); } catch { /* ignore */ }
-      try { if (activeReq && !activeReq.destroyed) activeReq.destroy(abortErr); } catch { /* ignore */ }
+      try {
+        if (connectReq && !connectReq.destroyed) {
+          connectReq.destroy(abortErr);
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (activeReq && !activeReq.destroyed) {
+          activeReq.destroy(abortErr);
+        }
+      } catch {
+        /* ignore */
+      }
       finishReject(abortErr);
     };
     if (signal) {
@@ -266,15 +385,22 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     const mod = parsed.protocol === 'https:' ? https : http;
 
     // Resolve proxy: env vars + TLS Sidecar (shared _proxyTunnel, Phase 2B)
-    const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY ||
-                     process.env.http_proxy || process.env.HTTP_PROXY;
+    const proxyUrl =
+      process.env.https_proxy ||
+      process.env.HTTPS_PROXY ||
+      process.env.http_proxy ||
+      process.env.HTTP_PROXY;
     let effectiveProxy = proxyUrl;
     try {
       const sidecar = require('../tlsSidecar');
-      if (sidecar.shouldProxy(parsed.hostname)) effectiveProxy = sidecar.getProxyUrl();
-    } catch { /* sidecar not available */ }
+      if (sidecar.shouldProxy(parsed.hostname)) {
+        effectiveProxy = sidecar.getProxyUrl();
+      }
+    } catch {
+      /* sidecar not available */
+    }
 
-    let options = {
+    const options = {
       hostname: normalizeRelayHostname(parsed.hostname),
       port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
       path: parsed.pathname + parsed.search,
@@ -286,8 +412,13 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     const sendDirect = () => {
       activeReq = mod.request(options, handleResponse(finishResolve, finishReject));
       activeReq.on('error', finishReject);
-      activeReq.on('timeout', () => { activeReq.destroy(); finishReject(new Error('request timeout')); });
-      if (body) activeReq.write(typeof body === 'string' ? body : JSON.stringify(body));
+      activeReq.on('timeout', () => {
+        activeReq.destroy();
+        finishReject(new Error('request timeout'));
+      });
+      if (body) {
+        activeReq.write(typeof body === 'string' ? body : JSON.stringify(body));
+      }
       activeReq.end();
     };
 
@@ -295,13 +426,32 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     if (effectiveProxy && parsed.protocol === 'https:') {
       _sharedConnectProxy(effectiveProxy, parsed.hostname, parsed.port || 443, timeout)
         .then((socket) => {
-          activeReq = https.request({ ...options, socket, agent: false }, handleResponse(finishResolve, finishReject));
+          activeReq = https.request(
+            { ...options, socket, agent: false },
+            handleResponse(finishResolve, finishReject)
+          );
           activeReq.on('error', finishReject);
-          activeReq.on('timeout', () => { activeReq.destroy(); finishReject(new Error('request timeout')); });
-          if (body) activeReq.write(typeof body === 'string' ? body : JSON.stringify(body));
+          activeReq.on('timeout', () => {
+            activeReq.destroy();
+            finishReject(new Error('request timeout'));
+          });
+          if (body) {
+            activeReq.write(typeof body === 'string' ? body : JSON.stringify(body));
+          }
           activeReq.end();
         })
-        .catch(() => { sendDirect(); }); // proxy failed, fall through to direct
+        .catch((err) => {
+          process.stderr.write(
+            '[RELAY-PROXY-FALLBACK] proxy=' +
+              effectiveProxy +
+              ' target=' +
+              parsed.hostname +
+              ' err=' +
+              (err && err.message ? err.message : String(err)) +
+              ' → falling back to direct\n'
+          );
+          sendDirect();
+        }); // proxy failed, fall through to direct
       return;
     }
 
@@ -318,9 +468,13 @@ function handleResponse(resolve, reject) {
     // 非 2xx 一律排干响应体读出真错误码。
     const _diagOn = (() => {
       try {
-        const v = String(process.env.KHY_RELAY_ERROR_BODY_DIAG ?? 'true').trim().toLowerCase();
+        const v = String(process.env.KHY_RELAY_ERROR_BODY_DIAG ?? 'true')
+          .trim()
+          .toLowerCase();
         return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
-      } catch { return true; }
+      } catch {
+        return true;
+      }
     })();
     // 诊断根治:仅当**成功**(2xx)的 event-stream 才当作正常流直接返回。
     // GLM / 智谱等 SSE 端点在 4xx/5xx 时也会回 `text/event-stream`,把错误原因
@@ -333,13 +487,18 @@ function handleResponse(resolve, reject) {
       return;
     }
     let data = '';
-    res.on('data', chunk => { data += chunk; });
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
     res.on('end', () => {
       // 始终保留原始响应体文本(rawBody),即便 JSON.parse 失败或体为空 —— 诊断分支据此
       // 打印真实错误体,不再吞成空 detail。
       const rawBody = data;
-      try { resolve({ status, data: JSON.parse(data), rawBody, headers: res.headers }); }
-      catch { resolve({ status, data, rawBody, headers: res.headers }); }
+      try {
+        resolve({ status, data: JSON.parse(data), rawBody, headers: res.headers });
+      } catch {
+        resolve({ status, data, rawBody, headers: res.headers });
+      }
     });
     res.on('error', reject);
   };
@@ -353,14 +512,24 @@ async function parseSSEStream(stream, onChunk, signal = null, staleOptions = nul
     enableToolCalls: true,
     enableThinking: true,
     enableStaleDetection: staleOptions !== false,
-    staleOptions: staleOptions !== false ? {
-      provider: (staleOptions && staleOptions.provider) || 'default',
-      onStale: (elapsed) => {
-        if (onChunk) {
-          try { onChunk({ type: 'status', text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s` }); } catch { /* ignore */ }
-        }
-      },
-    } : null,
+    staleOptions:
+      staleOptions !== false
+        ? {
+            provider: (staleOptions && staleOptions.provider) || 'default',
+            onStale: (elapsed) => {
+              if (onChunk) {
+                try {
+                  onChunk({
+                    type: 'status',
+                    text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s`,
+                  });
+                } catch {
+                  /* ignore */
+                }
+              }
+            },
+          }
+        : null,
   });
 
   // Preserve original return shape: toolUseBlocks is null when empty (not [])
@@ -390,21 +559,27 @@ async function parseSSEStream(stream, onChunk, signal = null, staleOptions = nul
 // ── Adapter interface ──
 
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   const cfg = getConfig();
   _available = !!(cfg.endpoint && cfg.key);
-  if (forceRefresh) _modelsCache = { at: 0, list: null };
+  if (forceRefresh) {
+    _modelsCache = { at: 0, list: null };
+  }
   return _available;
 }
 
 function parseRelayModelHints() {
   const raw = String(process.env.RELAY_API_MODELS || '').trim();
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
   return raw
     .split(',')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean)
-    .map(id => ({
+    .map((id) => ({
       id,
       name: id,
       isDefault: false,
@@ -431,7 +606,9 @@ async function listModels() {
     ...parseRelayModelHints(),
   ];
 
-  if (!endpoint || !key) return fallback;
+  if (!endpoint || !key) {
+    return fallback;
+  }
 
   const now = Date.now();
   if (_modelsCache.list && now - _modelsCache.at < MODELS_CACHE_TTL_MS) {
@@ -442,8 +619,8 @@ async function listModels() {
     const res = await makeRequest(`${endpoint}/models`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${key}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${key}`,
+        Accept: 'application/json',
       },
       body: null,
       timeout: 15000,
@@ -451,7 +628,7 @@ async function listModels() {
     if (res.status === 200 && res.data) {
       const rows = Array.isArray(res.data.data) ? res.data.data : [];
       const models = rows
-        .map(m => ({
+        .map((m) => ({
           id: String(m.id || '').trim(),
           name: String(m.id || '').trim(),
           isDefault: String(m.id || '').trim() === (cfg.model || DEFAULT_MODEL),
@@ -459,7 +636,7 @@ async function listModels() {
           description: '',
           discoverySource: 'remote',
         }))
-        .filter(m => !!m.id);
+        .filter((m) => !!m.id);
 
       if (models.length > 0) {
         _modelsCache = { at: now, list: models };
@@ -475,6 +652,11 @@ async function listModels() {
 }
 
 async function generate(prompt, options = {}) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    console.error(
+      `[DEBUG-ADAPTER] relayApiAdapter.generate model=${options.model} tools=${Array.isArray(options.tools) ? options.tools.length : 0}`
+    );
+  }
   const cfg = getConfig();
   const primary = options.apiEndpoint || cfg.endpoint;
   const candidates = _resolveEndpointCandidates(primary);
@@ -482,7 +664,9 @@ async function generate(prompt, options = {}) {
   // No alternates configured → single candidate → identical to legacy behavior.
   if (candidates.length <= 1) {
     const r = await _impl.generateOnce(prompt, options);
-    if (r && r.success) _stickyEndpoint = candidates[0] || _stickyEndpoint;
+    if (r && r.success) {
+      _stickyEndpoint = candidates[0] || _stickyEndpoint;
+    }
     return r;
   }
 
@@ -497,15 +681,21 @@ async function generate(prompt, options = {}) {
     }
     last = r;
     // Stop unless this is a structural endpoint failure with somewhere to go next.
-    if (!hasMore || !_isEndpointStructuralFailure(r && r.errorType)) return r;
-    if (ep === _stickyEndpoint) _stickyEndpoint = null; // drop a now-dead sticky pick
+    if (!hasMore || !_isEndpointStructuralFailure(r && r.errorType)) {
+      return r;
+    }
+    if (ep === _stickyEndpoint) {
+      _stickyEndpoint = null;
+    } // drop a now-dead sticky pick
     if (typeof options.onChunk === 'function') {
       try {
         options.onChunk({
           type: 'status',
-          text: `Relay API 端点不可用（${r && r.errorType || 'unavailable'}），切换到备用端点 ${i + 2}/${candidates.length} 重试`,
+          text: `Relay API 端点不可用（${(r && r.errorType) || 'unavailable'}），切换到备用端点 ${i + 2}/${candidates.length} 重试`,
         });
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
   }
   return last;
@@ -522,11 +712,13 @@ async function _generateOnce(prompt, options = {}) {
       trigger: 'not_configured',
       phase: 'preflight',
       summary: 'Relay API request blocked before start',
-      diagnosis: 'relay_api adapter cannot send the request because RELAY_API_ENDPOINT or RELAY_API_KEY is missing',
+      diagnosis:
+        'relay_api adapter cannot send the request because RELAY_API_ENDPOINT or RELAY_API_KEY is missing',
       lastError: 'RELAY_API_ENDPOINT and RELAY_API_KEY not configured',
     });
     return buildFailure('RELAY_API_ENDPOINT and RELAY_API_KEY not configured', {
-      adapter: 'relay_api', provider: 'Relay API',
+      adapter: 'relay_api',
+      provider: 'Relay API',
       attempts: [{ provider: 'Relay API', success: false, error: 'not_configured' }],
     });
   }
@@ -543,9 +735,14 @@ async function _generateOnce(prompt, options = {}) {
   const isAnthropicNative = endpoint.endsWith('/anthropic') || endpoint.includes('/anthropic/');
   // 检测是否为 OpenAI Responses API 端点（/v1/responses）。
   // serviceType 显式声明优先，其次 URL 后缀 /responses。
-  const serviceType = String(options.serviceType || cfg.serviceType || process.env.RELAY_API_SERVICE_TYPE || '').toLowerCase();
-  const isResponses = !isAnthropicNative
-    && (serviceType === 'responses' || endpoint.endsWith('/responses') || endpoint.includes('/responses/'));
+  const serviceType = String(
+    options.serviceType || cfg.serviceType || process.env.RELAY_API_SERVICE_TYPE || ''
+  ).toLowerCase();
+  const isResponses =
+    !isAnthropicNative &&
+    (serviceType === 'responses' ||
+      endpoint.endsWith('/responses') ||
+      endpoint.includes('/responses/'));
   // OpenAI 兼容端点：如果路径不含 /v1，自动补全（防止 https://your-relay/chat/completions 404）
   if (!isAnthropicNative && !isResponses && !endpoint.match(/\/v\d+$/)) {
     endpoint = `${endpoint}/v1`;
@@ -556,7 +753,9 @@ async function _generateOnce(prompt, options = {}) {
   }
   const url = isAnthropicNative
     ? `${endpoint}/v1/messages`
-    : (isResponses ? endpoint : `${endpoint}/chat/completions`);
+    : isResponses
+      ? endpoint
+      : `${endpoint}/chat/completions`;
 
   // ── 跨厂商错配守卫(relayVendorMismatchGuard,门控 KHY_RELAY_VENDOR_GUARD 默认开)──
   // relay_api 用自有 RELAY_API_ENDPOINT + 透传 model,不经 `api` 通道的池解析(wildcardPoolGuard
@@ -571,13 +770,16 @@ async function _generateOnce(prompt, options = {}) {
         const presets = require('../providerPresets').getProviderPresets();
         const verdict = vguard.evaluateRelayRequest({ endpoint, model, presets });
         if (verdict && verdict.mismatch) {
-          const hint = vguard.buildMismatchHint({
-            endpoint,
-            model,
-            endpointVendor: verdict.endpointVendor,
-            modelVendor: verdict.modelVendor,
-            presets,
-          }, process.env);
+          const hint = vguard.buildMismatchHint(
+            {
+              endpoint,
+              model,
+              endpointVendor: verdict.endpointVendor,
+              modelVendor: verdict.modelVendor,
+              presets,
+            },
+            process.env
+          );
           recordRuntimeFailure(options, {
             trigger: 'vendor_mismatch',
             phase: 'preflight',
@@ -586,16 +788,19 @@ async function _generateOnce(prompt, options = {}) {
             lastError: hint,
           });
           return buildFailure(hint || 'relay endpoint/model vendor mismatch', {
-            adapter: 'relay_api', provider: 'Relay API',
+            adapter: 'relay_api',
+            provider: 'Relay API',
             errorType: 'model_not_found',
             attempts: [{ provider: 'Relay API', success: false, error: 'vendor_mismatch' }],
           });
         }
       }
-    } catch { /* 守卫不可用 → 原样发送(今日行为) */ }
+    } catch {
+      /* 守卫不可用 → 原样发送(今日行为) */
+    }
   }
 
-  const useStream = !!(options.onChunk);
+  const useStream = !!options.onChunk;
   const signal = options.abortSignal || options.signal || null;
   const timeoutMs = Number.isFinite(Number(options.timeoutMs))
     ? Math.max(1000, Number(options.timeoutMs))
@@ -616,18 +821,27 @@ async function _generateOnce(prompt, options = {}) {
     return DEFAULT_RETRY_TOTAL_ATTEMPTS;
   })();
   const retryBaseDelayMs = _parseMs(
-    options.retryBaseDelayMs ?? process.env.RELAY_API_RETRY_BASE_DELAY_MS ?? String(DEFAULT_RETRY_BASE_DELAY_MS),
+    options.retryBaseDelayMs ??
+      process.env.RELAY_API_RETRY_BASE_DELAY_MS ??
+      String(DEFAULT_RETRY_BASE_DELAY_MS),
     DEFAULT_RETRY_BASE_DELAY_MS,
     50
   );
   const retryMaxDelayMs = _parseMs(
-    options.retryMaxDelayMs ?? process.env.RELAY_API_RETRY_MAX_DELAY_MS ?? String(DEFAULT_RETRY_MAX_DELAY_MS),
+    options.retryMaxDelayMs ??
+      process.env.RELAY_API_RETRY_MAX_DELAY_MS ??
+      String(DEFAULT_RETRY_MAX_DELAY_MS),
     DEFAULT_RETRY_MAX_DELAY_MS,
     retryBaseDelayMs
   );
 
   // Build request body via protocol pipeline (messages + tools + images handled internally)
   const hasTools = Array.isArray(options.tools) && options.tools.length > 0;
+  // 判定是否将剥离 tools 声明(小模型不支持 function calling)。必须在构建 body
+  // 之前判定:剥离 tools 时消息转换须以 useToolRole=false 降级(工具块内联为文本),
+  // 否则 messages 残留 role:'tool'/'tool_calls' 而顶层无 tools 声明 → 严格 OpenAI
+  // 兼容端点(stepfun step_plan 等)返回 HTTP 400 "Unrecognized chat message"。
+  const _willStripTools = hasTools && _shouldStripToolsForRelay(model, options);
 
   let _toolsStripped = false;
   const _strippedParams = new Set();
@@ -665,39 +879,27 @@ async function _generateOnce(prompt, options = {}) {
       stream: useStream,
       max_tokens: clampMaxTokensForGlmVision(model, options.maxTokens ?? 8192),
       temperature: options.temperature ?? 0.3,
+      // 剥离 tools 时以 useToolRole=false 降级:消息中的 tool_use/tool_result 块
+      // 内联为纯文本,绝不产出 role:'tool'/'tool_calls'(否则上游 400)。
+      useToolRole: _willStripTools ? false : options.useToolRole,
     });
     body = pipelineResult.body;
 
-    // 小模型（flash-lite/mini/7b 等）通常不支持 function calling，发送 tools 会导致 400。
-    // 该判定单一真源在 modelToolingCapability(与系统提示词教学门同源,strip⟺teach 同步)。
-    // 实测为准:measured 来自 toolCapabilityStore(live probe / 被动学习),胜过名字启发。
-    // _toolCapProbe:能力探测自身必须真发 tools 才能测出结果,绝不剥离。
-    // 门控 KHY_MODEL_TOOLING_CAPABILITY 关 → 字节回退到下方旧内联正则。
-    if (hasTools) {
-      const _toolCap = require('../modelToolingCapability');
-      let _isSmallModel;
-      if (options._toolCapProbe) {
-        _isSmallModel = false; // 探测必须保留 tools
-      } else if (_toolCap.isEnabled()) {
-        let _measured = null;
-        try { _measured = require('../toolCapabilityStore').getVerdict(model); } catch { /* best effort */ }
-        _isSmallModel = _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
-      } else {
-        _isSmallModel = (/(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i.test(model)
-          && !/deepseek-v[3-9]/i.test(model)
-          && !/sensenova-\d/i.test(model));
-      }
-      if (_isSmallModel) {
-        _toolsStripped = true;
-        delete body.tools;
-        delete body.tool_choice;
-        if (typeof options.onChunk === 'function') {
-          try {
-            options.onChunk({
-              type: 'notice',
-              text: `模型 ${model} 不支持工具调用 (function calling)，将以纯文本模式回答。如需使用工具，请切换到支持 function calling 的模型。`,
-            });
-          } catch { /* best effort */ }
+    // 小模型（flash-lite/mini/7b 等）不支持 function calling → 剥离 tools 声明。
+    // 判定已提前到 _willStripTools(构建 body 之前),且消息已按 useToolRole=false
+    // 内联为文本,不会残留 role:'tool'/'tool_calls' 导致 400 "Unrecognized chat message"。
+    if (_willStripTools) {
+      _toolsStripped = true;
+      delete body.tools;
+      delete body.tool_choice;
+      if (typeof options.onChunk === 'function') {
+        try {
+          options.onChunk({
+            type: 'notice',
+            text: `模型 ${model} 不支持工具调用 (function calling)，将以纯文本模式回答。如需使用工具，请切换到支持 function calling 的模型。`,
+          });
+        } catch {
+          /* best effort */
         }
       }
     }
@@ -715,7 +917,9 @@ async function _generateOnce(prompt, options = {}) {
     if (body && Array.isArray(body.input)) {
       downscaleImageBlocksInMessages(model, body.input, process.env);
     }
-  } catch { /* fail-soft:降采样失败不影响原请求 */ }
+  } catch {
+    /* fail-soft:降采样失败不影响原请求 */
+  }
 
   // GLM 视觉超大文本预算截断(glmVisionTextBudget;排障「为什么会出现剪贴板中转模式」):
   // 无图的大文本工具结果(如磁盘扫描 25304 token)会撞 GLM 视觉端 16384 合并预算 → 400 code 1210
@@ -730,7 +934,9 @@ async function _generateOnce(prompt, options = {}) {
     if (body && Array.isArray(body.input)) {
       clampTextBudgetInMessages(model, body.input, { maxTokens: outReserve }, process.env);
     }
-  } catch { /* fail-soft:文本截断失败不影响原请求 */ }
+  } catch {
+    /* fail-soft:文本截断失败不影响原请求 */
+  }
 
   let streamedChars = 0;
   const trackedOnChunk = (chunk) => {
@@ -738,7 +944,11 @@ async function _generateOnce(prompt, options = {}) {
       streamedChars += String(chunk.text).length;
     }
     if (typeof options.onChunk === 'function') {
-      try { options.onChunk(chunk); } catch { /* best effort */ }
+      try {
+        options.onChunk(chunk);
+      } catch {
+        /* best effort */
+      }
     }
   };
 
@@ -751,9 +961,13 @@ async function _generateOnce(prompt, options = {}) {
             type: 'status',
             text: `Relay API 网络重试 ${attemptNo}/${totalAttempts}（目标: ${model}）`,
           });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
-      process.stderr.write('[RELAY-REQ] url=' + url + ' model=' + model + ' streaming=' + useStream + '\n');
+      process.stderr.write(
+        '[RELAY-REQ] url=' + url + ' model=' + model + ' streaming=' + useStream + '\n'
+      );
       const res = await makeRequest(url, {
         method: 'POST',
         headers: isAnthropicNative
@@ -761,33 +975,41 @@ async function _generateOnce(prompt, options = {}) {
               'Content-Type': 'application/json',
               'x-api-key': activeKey,
               'anthropic-version': ANTHROPIC_VERSION,
-              'Accept': useStream ? 'text/event-stream' : 'application/json',
+              Accept: useStream ? 'text/event-stream' : 'application/json',
             }
           : {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${activeKey}`,
-              'Accept': useStream ? 'text/event-stream' : 'application/json',
+              Authorization: `Bearer ${activeKey}`,
+              Accept: useStream ? 'text/event-stream' : 'application/json',
             },
         body,
         timeout: timeoutMs,
         signal,
       });
-      process.stderr.write('[RELAY-RES] status=' + (res.status||'stream') + ' hasStream=' + !!res.stream + ' contentLen=' + (res.stream ? 'SSE' : String(res.rawBody||'').length) + '\n');
+      process.stderr.write(
+        '[RELAY-RES] status=' +
+          (res.status || 'stream') +
+          ' hasStream=' +
+          !!res.stream +
+          ' contentLen=' +
+          (res.stream ? 'SSE' : String(res.rawBody || '').length) +
+          '\n'
+      );
 
       if (res.status !== 200 && !res.stream) {
         // 诊断根治:GLM/智谱把真错误码藏在结构化体里(`{ error: { code, message } }` 或顶层
         // `{ code, message }`)。errMsg 从解析后的 data 里逐层取;若 data 解析为空/非对象,回退到
         // rawBody 原始文本 —— 绝不再吞成空 detail。
         const _rawBody = typeof res.rawBody === 'string' ? res.rawBody : '';
-        const _upstream = res.data && typeof res.data === 'object'
-          ? (res.data.error || res.data)
-          : null;
+        const _upstream =
+          res.data && typeof res.data === 'object' ? res.data.error || res.data : null;
         const _upstreamCode = _upstream && (_upstream.code != null ? String(_upstream.code) : '');
         const _upstreamMsg = _upstream && (_upstream.message || _upstream.msg || '');
-        const errMsg = _upstreamMsg
-          || res.data?.error?.message
-          || res.data?.message
-          || (_rawBody ? _rawBody.slice(0, 300) : `HTTP ${res.status}`);
+        const errMsg =
+          _upstreamMsg ||
+          res.data?.error?.message ||
+          res.data?.message ||
+          (_rawBody ? _rawBody.slice(0, 300) : `HTTP ${res.status}`);
         const errorType = _classifyRelayFailure(errMsg, res.status);
         // 记录 4xx 错误详情，帮助排查请求格式问题。
         // 连通性探测（options._probe）时静默：探测结果已通过 testAdapter 返回，
@@ -796,11 +1018,17 @@ async function _generateOnce(prompt, options = {}) {
         if (res.status >= 400 && res.status < 500 && !options._probe) {
           // detail 优先原始体(含真错误码),其次结构化 JSON，最后回退状态码 —— 三级兜底不留空。
           let errDetail = '';
-          if (_rawBody) errDetail = _rawBody.slice(0, 500);
-          else if (res.data && typeof res.data === 'object') errDetail = JSON.stringify(res.data).slice(0, 500);
-          else if (typeof res.data === 'string') errDetail = res.data.slice(0, 500);
+          if (_rawBody) {
+            errDetail = _rawBody.slice(0, 500);
+          } else if (res.data && typeof res.data === 'object') {
+            errDetail = JSON.stringify(res.data).slice(0, 500);
+          } else if (typeof res.data === 'string') {
+            errDetail = res.data.slice(0, 500);
+          }
           const codeTag = _upstreamCode ? ` | code=${_upstreamCode}` : '';
-          console.warn(`[relay_api] HTTP ${res.status} from ${url} | model=${model}${codeTag} | detail: ${errDetail || '(empty body)'}`);
+          console.warn(
+            `[relay_api] HTTP ${res.status} from ${url} | model=${model}${codeTag} | detail: ${errDetail || '(empty body)'}`
+          );
         }
         // 400 + tools present → likely tool payload rejected; strip tools and retry immediately
         if (res.status === 400 && body.tools && !_toolsStripped) {
@@ -813,7 +1041,9 @@ async function _generateOnce(prompt, options = {}) {
                 type: 'notice',
                 text: `模型 ${model} 拒绝了工具调用请求 (HTTP 400)，已自动去除工具定义重试`,
               });
-            } catch { /* best effort */ }
+            } catch {
+              /* best effort */
+            }
           }
           continue; // retry this attempt with tools stripped
         }
@@ -836,12 +1066,15 @@ async function _generateOnce(prompt, options = {}) {
                   type: 'notice',
                   text: `模型 ${model} 不支持参数 ${_stripPlan.strip.join(', ')} (HTTP 400)，已自动去除并重试`,
                 });
-              } catch { /* best effort */ }
+              } catch {
+                /* best effort */
+              }
             }
             continue; // retry this attempt with the offending param(s) stripped
           }
         }
-        const canRetry = attemptNo < totalAttempts && _isTransientRelayError(null, res.status, errMsg);
+        const canRetry =
+          attemptNo < totalAttempts && _isTransientRelayError(null, res.status, errMsg);
         if (canRetry) {
           const delayMs = Math.min(
             retryMaxDelayMs,
@@ -853,16 +1086,26 @@ async function _generateOnce(prompt, options = {}) {
                 type: 'status',
                 text: `Relay API 请求失败（HTTP ${res.status}），等待 ${delayMs}ms 后继续重试 ${attemptNo + 1}/${totalAttempts}`,
               });
-            } catch { /* best effort */ }
+            } catch {
+              /* best effort */
+            }
           }
           try {
             await _sleepAbortable(delayMs, signal);
           } catch (sleepErr) {
             if (isAbortLikeError(sleepErr)) {
               return buildFailure(sleepErr.message, {
-                adapter: 'relay_api', provider: 'Relay API',
+                adapter: 'relay_api',
+                provider: 'Relay API',
                 errorType: 'cancelled',
-                attempts: [{ provider: `Relay API (${model})`, success: false, error: sleepErr.message, errorType: 'cancelled' }],
+                attempts: [
+                  {
+                    provider: `Relay API (${model})`,
+                    success: false,
+                    error: sleepErr.message,
+                    errorType: 'cancelled',
+                  },
+                ],
               });
             }
             throw sleepErr;
@@ -878,10 +1121,20 @@ async function _generateOnce(prompt, options = {}) {
           lastError: errMsg,
         });
         return buildFailure(errMsg, {
-          adapter: 'relay_api', provider: 'Relay API',
-          errorType, statusCode: res.status,
+          adapter: 'relay_api',
+          provider: 'Relay API',
+          errorType,
+          statusCode: res.status,
           errorDetail: typeof res.data === 'object' ? res.data : undefined,
-          attempts: [{ provider: `Relay API (${model})`, success: false, error: errMsg, statusCode: res.status, errorType }],
+          attempts: [
+            {
+              provider: `Relay API (${model})`,
+              success: false,
+              error: errMsg,
+              statusCode: res.status,
+              errorType,
+            },
+          ],
         });
       }
 
@@ -893,7 +1146,7 @@ async function _generateOnce(prompt, options = {}) {
         // until the 120s socket timeout. With a provider-aware detector + the
         // streamStallPolicy teardown (gate KHY_STREAM_STALL_ABORT default on), a
         // stalled stream is torn down at the 45–90s threshold → retry/failover.
-        const _staleProvider = isAnthropicNative ? 'anthropic' : (isResponses ? 'openai' : 'default');
+        const _staleProvider = isAnthropicNative ? 'anthropic' : isResponses ? 'openai' : 'default';
         const streamOpts = {
           signal,
           enableToolCalls: true,
@@ -903,20 +1156,42 @@ async function _generateOnce(prompt, options = {}) {
             provider: _staleProvider,
             onStale: (elapsed) => {
               try {
-                if (trackedOnChunk) trackedOnChunk({ type: 'status', text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s` });
-              } catch { /* ignore */ }
+                if (trackedOnChunk) {
+                  trackedOnChunk({
+                    type: 'status',
+                    text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s`,
+                  });
+                }
+              } catch {
+                /* ignore */
+              }
             },
           },
         };
         let parseResult;
         if (isAnthropicNative) {
-          parseResult = await _anthropicHandler.parseStreamResponse(res.stream, trackedOnChunk, streamOpts);
+          parseResult = await _anthropicHandler.parseStreamResponse(
+            res.stream,
+            trackedOnChunk,
+            streamOpts
+          );
         } else if (isResponses) {
-          parseResult = await _responsesHandler.parseStreamResponse(res.stream, trackedOnChunk, streamOpts);
+          parseResult = await _responsesHandler.parseStreamResponse(
+            res.stream,
+            trackedOnChunk,
+            streamOpts
+          );
         } else {
           parseResult = await parseSSEStream(res.stream, trackedOnChunk, signal);
         }
-        const { content, thinking, model: usedModel, toolUseBlocks, finishReason, usage } = parseResult;
+        const {
+          content,
+          thinking,
+          model: usedModel,
+          toolUseBlocks,
+          finishReason,
+          usage,
+        } = parseResult;
         const displayModel = usedModel || model;
         const hasTools = !!(toolUseBlocks && toolUseBlocks.length > 0);
         // Reasoning-only turn: the model streamed reasoning_content but produced
@@ -925,14 +1200,15 @@ async function _generateOnce(prompt, options = {}) {
         // the user-facing "未返回有效回复". Instead surface it as length so the
         // tool-use loop's continuation/empty-reply recovery asks the model to
         // write the answer from its reasoning, rather than dead-ending.
-        const reasoningOnly = !hasTools
-          && !String(content || '').trim()
-          && !!String(thinking || '').trim();
+        const reasoningOnly =
+          !hasTools && !String(content || '').trim() && !!String(thinking || '').trim();
         const effectiveStopReason = hasTools
           ? 'tool_use'
-          : (reasoningOnly
+          : reasoningOnly
             ? 'length'
-            : (finishReason === 'stop' ? 'end_turn' : (finishReason || 'end_turn')));
+            : finishReason === 'stop'
+              ? 'end_turn'
+              : finishReason || 'end_turn';
         recordRuntimeRecovery(
           options,
           `Relay API streaming request succeeded (${displayModel})`,
@@ -946,12 +1222,14 @@ async function _generateOnce(prompt, options = {}) {
           stopReason: effectiveStopReason,
           // Streaming usage was previously dropped — surface it (含缓存计费字段) so the
           // cache-economy probe can see streamed Anthropic/relay responses too.
-          tokenUsage: usage ? {
-            inputTokens: usage.input_tokens || 0,
-            outputTokens: usage.output_tokens || 0,
-            totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
-            ...normalizeCacheUsage(usage),
-          } : null,
+          tokenUsage: usage
+            ? {
+                inputTokens: usage.input_tokens || 0,
+                outputTokens: usage.output_tokens || 0,
+                totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
+                ...normalizeCacheUsage(usage),
+              }
+            : null,
           attempts: [{ provider: `Relay API (${displayModel})`, success: true }],
         });
       }
@@ -966,11 +1244,19 @@ async function _generateOnce(prompt, options = {}) {
         const textContent = parsed.content || '';
         const nativeToolUseBlocks = parsed.toolUseBlocks;
         if (textContent && typeof options.onChunk === 'function') {
-          try { options.onChunk({ type: 'text', text: textContent }); } catch { /* best effort */ }
+          try {
+            options.onChunk({ type: 'text', text: textContent });
+          } catch {
+            /* best effort */
+          }
         }
         for (const tb of nativeToolUseBlocks) {
           if (typeof options.onChunk === 'function') {
-            try { options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input }); } catch { /* best effort */ }
+            try {
+              options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input });
+            } catch {
+              /* best effort */
+            }
           }
         }
         const result = buildSuccess(textContent.trim(), {
@@ -978,12 +1264,14 @@ async function _generateOnce(prompt, options = {}) {
           provider: `Relay (${usedModel})`,
           model: usedModel,
           stopReason: parsed.stopReason || 'end_turn',
-          tokenUsage: parsed.usage ? {
-            inputTokens: parsed.usage.input_tokens,
-            outputTokens: parsed.usage.output_tokens,
-            totalTokens: (parsed.usage.input_tokens || 0) + (parsed.usage.output_tokens || 0),
-            ...normalizeCacheUsage(parsed.usage),
-          } : null,
+          tokenUsage: parsed.usage
+            ? {
+                inputTokens: parsed.usage.input_tokens,
+                outputTokens: parsed.usage.output_tokens,
+                totalTokens: (parsed.usage.input_tokens || 0) + (parsed.usage.output_tokens || 0),
+                ...normalizeCacheUsage(parsed.usage),
+              }
+            : null,
           toolUseBlocks: nativeToolUseBlocks,
           attempts: [{ provider: `Relay API (${usedModel})`, success: true }],
         });
@@ -1002,15 +1290,24 @@ async function _generateOnce(prompt, options = {}) {
         const textContent = parsed.content || '';
         const respToolUseBlocks = parsed.toolUseBlocks || [];
         if (textContent && typeof options.onChunk === 'function') {
-          try { options.onChunk({ type: 'text', text: textContent }); } catch { /* best effort */ }
+          try {
+            options.onChunk({ type: 'text', text: textContent });
+          } catch {
+            /* best effort */
+          }
         }
         for (const tb of respToolUseBlocks) {
           if (typeof options.onChunk === 'function') {
-            try { options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input }); } catch { /* best effort */ }
+            try {
+              options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input });
+            } catch {
+              /* best effort */
+            }
           }
         }
         if (!textContent && respToolUseBlocks.length === 0) {
-          const rawSnippet = typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
+          const rawSnippet =
+            typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
           recordRuntimeFailure(options, {
             trigger: 'empty_response',
             phase: 'response',
@@ -1025,9 +1322,17 @@ async function _generateOnce(prompt, options = {}) {
           // 'unknown' carries, so the user's re-ask is never fast-failed. Empty
           // recovery is owned by the tool loop (forced-summary + salvage).
           return buildFailure(`Empty response (HTTP ${res.status}, body: ${rawSnippet})`, {
-            adapter: 'relay_api', provider: 'Relay API',
+            adapter: 'relay_api',
+            provider: 'Relay API',
             errorType: 'empty',
-            attempts: [{ provider: `Relay API (${usedModel})`, success: false, error: 'empty_response', errorType: 'empty' }],
+            attempts: [
+              {
+                provider: `Relay API (${usedModel})`,
+                success: false,
+                error: 'empty_response',
+                errorType: 'empty',
+              },
+            ],
           });
         }
         const result = buildSuccess(textContent.trim(), {
@@ -1035,13 +1340,16 @@ async function _generateOnce(prompt, options = {}) {
           provider: `Relay (${usedModel})`,
           model: usedModel,
           stopReason: parsed.stopReason || (respToolUseBlocks.length > 0 ? 'tool_use' : 'end_turn'),
-          tokenUsage: parsed.usage ? {
-            inputTokens: parsed.usage.input_tokens,
-            outputTokens: parsed.usage.output_tokens,
-            totalTokens: parsed.usage.total_tokens
-              || ((parsed.usage.input_tokens || 0) + (parsed.usage.output_tokens || 0)),
-            ...normalizeCacheUsage(parsed.usage),
-          } : null,
+          tokenUsage: parsed.usage
+            ? {
+                inputTokens: parsed.usage.input_tokens,
+                outputTokens: parsed.usage.output_tokens,
+                totalTokens:
+                  parsed.usage.total_tokens ||
+                  (parsed.usage.input_tokens || 0) + (parsed.usage.output_tokens || 0),
+                ...normalizeCacheUsage(parsed.usage),
+              }
+            : null,
           toolUseBlocks: respToolUseBlocks,
           attempts: [{ provider: `Relay API (${usedModel})`, success: true }],
         });
@@ -1058,20 +1366,29 @@ async function _generateOnce(prompt, options = {}) {
       const usedModel = parsed.model || model;
       const toolUseBlocks = parsed.toolUseBlocks;
       // Pipeline content, with fallback for non-standard providers
-      const content = parsed.content
-        || data?.content?.[0]?.text       // some relays return Anthropic-like shape
-        || data?.output?.text             // some providers use output.text
-        || _extractResponsesApiText(data) // Responses API JSON shape (output[].content[].text)
-        || '';
+      const content =
+        parsed.content ||
+        data?.content?.[0]?.text || // some relays return Anthropic-like shape
+        data?.output?.text || // some providers use output.text
+        _extractResponsesApiText(data) || // Responses API JSON shape (output[].content[].text)
+        '';
 
       if (toolUseBlocks && toolUseBlocks.length > 0) {
         // 通知 onChunk
         if (content && typeof options.onChunk === 'function') {
-          try { options.onChunk({ type: 'text', text: content }); } catch { /* best effort */ }
+          try {
+            options.onChunk({ type: 'text', text: content });
+          } catch {
+            /* best effort */
+          }
         }
         for (const tb of toolUseBlocks) {
           if (typeof options.onChunk === 'function') {
-            try { options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input }); } catch { /* best effort */ }
+            try {
+              options.onChunk({ type: 'tool_use', id: tb.id, name: tb.name, input: tb.input });
+            } catch {
+              /* best effort */
+            }
           }
         }
         recordRuntimeRecovery(
@@ -1085,18 +1402,21 @@ async function _generateOnce(prompt, options = {}) {
           model: usedModel,
           toolUseBlocks,
           stopReason: 'tool_use',
-          tokenUsage: parsed.usage ? {
-            inputTokens: parsed.usage.prompt_tokens,
-            outputTokens: parsed.usage.completion_tokens,
-            totalTokens: parsed.usage.total_tokens,
-          } : null,
+          tokenUsage: parsed.usage
+            ? {
+                inputTokens: parsed.usage.prompt_tokens,
+                outputTokens: parsed.usage.completion_tokens,
+                totalTokens: parsed.usage.total_tokens,
+              }
+            : null,
           attempts: [{ provider: `Relay API (${usedModel})`, success: true }],
         });
       }
 
       if (!content) {
         // Build a diagnostic snippet so the user can see what the API actually returned
-        const rawSnippet = typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
+        const rawSnippet =
+          typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
         recordRuntimeFailure(options, {
           trigger: 'empty_response',
           phase: 'response',
@@ -1109,9 +1429,17 @@ async function _generateOnce(prompt, options = {}) {
         // cross-request cooldown so the user's re-ask is never fast-failed; empty
         // recovery is owned by the tool loop (forced-summary + salvage).
         return buildFailure(`Empty response (HTTP ${res.status}, body: ${rawSnippet})`, {
-          adapter: 'relay_api', provider: 'Relay API',
+          adapter: 'relay_api',
+          provider: 'Relay API',
           errorType: 'empty',
-          attempts: [{ provider: `Relay API (${usedModel})`, success: false, error: 'empty_response', errorType: 'empty' }],
+          attempts: [
+            {
+              provider: `Relay API (${usedModel})`,
+              success: false,
+              error: 'empty_response',
+              errorType: 'empty',
+            },
+          ],
         });
       }
 
@@ -1124,12 +1452,14 @@ async function _generateOnce(prompt, options = {}) {
         adapter: 'relay_api',
         provider: `Relay (${usedModel})`,
         model: usedModel,
-        tokenUsage: parsed.usage ? {
-          inputTokens: parsed.usage.prompt_tokens,
-          outputTokens: parsed.usage.completion_tokens,
-          totalTokens: parsed.usage.total_tokens,
-          ...normalizeCacheUsage(parsed.usage),
-        } : null,
+        tokenUsage: parsed.usage
+          ? {
+              inputTokens: parsed.usage.prompt_tokens,
+              outputTokens: parsed.usage.completion_tokens,
+              totalTokens: parsed.usage.total_tokens,
+              ...normalizeCacheUsage(parsed.usage),
+            }
+          : null,
         attempts: [{ provider: `Relay API (${usedModel})`, success: true }],
       });
     } catch (err) {
@@ -1143,16 +1473,25 @@ async function _generateOnce(prompt, options = {}) {
           lastError: err.message,
         });
         return buildFailure(err.message, {
-          adapter: 'relay_api', provider: 'Relay API',
+          adapter: 'relay_api',
+          provider: 'Relay API',
           errorType: 'cancelled',
-          attempts: [{ provider: `Relay API (${model})`, success: false, error: err.message, errorType: 'cancelled' }],
+          attempts: [
+            {
+              provider: `Relay API (${model})`,
+              success: false,
+              error: err.message,
+              errorType: 'cancelled',
+            },
+          ],
         });
       }
       const errMsg = String(err?.message || 'unknown error');
       const errorType = _classifyRelayFailure(errMsg, err?.status || err?.statusCode || 0);
-      const canRetry = attemptNo < totalAttempts
-        && _isTransientRelayError(err, err?.status || err?.statusCode || 0, errMsg)
-        && !(useStream && streamedChars > 0);
+      const canRetry =
+        attemptNo < totalAttempts &&
+        _isTransientRelayError(err, err?.status || err?.statusCode || 0, errMsg) &&
+        !(useStream && streamedChars > 0);
       if (canRetry) {
         const delayMs = Math.min(
           retryMaxDelayMs,
@@ -1164,16 +1503,26 @@ async function _generateOnce(prompt, options = {}) {
               type: 'status',
               text: `Relay API 网络抖动（${errMsg.slice(0, 80)}），等待 ${delayMs}ms 后继续重试 ${attemptNo + 1}/${totalAttempts}`,
             });
-          } catch { /* best effort */ }
+          } catch {
+            /* best effort */
+          }
         }
         try {
           await _sleepAbortable(delayMs, signal);
         } catch (sleepErr) {
           if (isAbortLikeError(sleepErr)) {
             return buildFailure(sleepErr.message, {
-              adapter: 'relay_api', provider: 'Relay API',
+              adapter: 'relay_api',
+              provider: 'Relay API',
               errorType: 'cancelled',
-              attempts: [{ provider: `Relay API (${model})`, success: false, error: sleepErr.message, errorType: 'cancelled' }],
+              attempts: [
+                {
+                  provider: `Relay API (${model})`,
+                  success: false,
+                  error: sleepErr.message,
+                  errorType: 'cancelled',
+                },
+              ],
             });
           }
           throw sleepErr;
@@ -1189,7 +1538,8 @@ async function _generateOnce(prompt, options = {}) {
         lastError: errMsg,
       });
       return buildFailure(errMsg, {
-        adapter: 'relay_api', provider: 'Relay API',
+        adapter: 'relay_api',
+        provider: 'Relay API',
         errorType,
         attempts: [{ provider: `Relay API (${model})`, success: false, error: errMsg, errorType }],
       });
@@ -1205,9 +1555,17 @@ async function _generateOnce(prompt, options = {}) {
     lastError: 'Relay API retries exhausted',
   });
   return buildFailure('Relay API retries exhausted', {
-    adapter: 'relay_api', provider: 'Relay API',
+    adapter: 'relay_api',
+    provider: 'Relay API',
     errorType: 'network',
-    attempts: [{ provider: `Relay API (${model})`, success: false, error: 'retries exhausted', errorType: 'network' }],
+    attempts: [
+      {
+        provider: `Relay API (${model})`,
+        success: false,
+        error: 'retries exhausted',
+        errorType: 'network',
+      },
+    ],
   });
 }
 
@@ -1217,7 +1575,13 @@ function getStatus() {
   let detail;
   if (_available) {
     const endpoint = cfg.endpoint.replace(/\/+$/, '');
-    const host = (() => { try { return new URL(endpoint).hostname; } catch { return endpoint; } })();
+    const host = (() => {
+      try {
+        return new URL(endpoint).hostname;
+      } catch {
+        return endpoint;
+      }
+    })();
     detail = `已配置 → ${host} (${cfg.model})`;
   } else {
     detail = '未配置 — 运行 khy gateway config 设置中转地址和密钥';
@@ -1232,9 +1596,17 @@ function destroy() {
 }
 
 module.exports = {
-  detect, listModels, generate, getStatus, destroy, getRuntimeDiagnostics,
+  detect,
+  listModels,
+  generate,
+  getStatus,
+  destroy,
+  getRuntimeDiagnostics,
   // Test seam + pure helpers for the P1 endpoint-failover logic.
-  _resolveEndpointCandidates, _isEndpointStructuralFailure, _resetEndpointState, _impl,
+  _resolveEndpointCandidates,
+  _isEndpointStructuralFailure,
+  _resetEndpointState,
+  _impl,
   // Test seam: response-body diagnostic (empty-detail root-cause fix).
   _handleResponse: handleResponse,
 };

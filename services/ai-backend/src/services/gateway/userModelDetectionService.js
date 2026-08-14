@@ -28,7 +28,9 @@
 const svc = require('../userGatewayConfigService');
 // Single-source upstream probe + capability classifier, imported from the
 // backend package (pure, dependency-free) — not duplicated.
-const { fetchUpstreamModels } = require('../../../../backend/src/services/gateway/upstreamModelProbe');
+const {
+  fetchUpstreamModels,
+} = require('../../../../backend/src/services/gateway/upstreamModelProbe');
 const modelCapability = require('../../../../backend/src/services/gateway/modelCapability');
 
 const RELAY_PROVIDER = 'relay';
@@ -48,7 +50,9 @@ function toItems(models) {
  * @returns {Promise<{provider:string, probed:boolean, added:number, total:number, error:(string|null)}>}
  */
 async function detectForProvider(userId, provider) {
-  const p = String(provider || '').trim().toLowerCase();
+  const p = String(provider || '')
+    .trim()
+    .toLowerCase();
   if (!p) return { provider: '', probed: false, added: 0, total: 0, error: 'provider is required' };
 
   try {
@@ -89,14 +93,30 @@ async function detectForProvider(userId, provider) {
       // outcome, not a real failure: many providers simply don't advertise a
       // catalog. Flag it `benign` so the UI can stay quiet instead of flashing a
       // scary "not found" / probe-failed error on every detect.
-      return { provider: p, probed: true, added: 0, total: 0, error: 'upstream /models probe failed', benign: true };
+      return {
+        provider: p,
+        probed: true,
+        added: 0,
+        total: 0,
+        error: 'upstream /models probe failed',
+        benign: true,
+      };
     }
 
-    const { added, total } = await svc.upsertModels(userId, p, toItems(models), { source: 'detected' });
+    const { added, total } = await svc.upsertModels(userId, p, toItems(models), {
+      source: 'detected',
+    });
     return { provider: p, probed: true, added, total, error: null, benign: false };
   } catch (err) {
     // A thrown error (DNS, TLS, server fault) is a REAL problem worth surfacing.
-    return { provider: p, probed: true, added: 0, total: 0, error: (err && err.message) || 'detection failed', benign: false };
+    return {
+      provider: p,
+      probed: true,
+      added: 0,
+      total: 0,
+      error: (err && err.message) || 'detection failed',
+      benign: false,
+    };
   }
 }
 
@@ -131,7 +151,8 @@ async function detectUpstreams(userId) {
     if (res.probed) probed += 1;
     added += res.added || 0;
     total += res.total || 0;
-    if (res.error) errors.push({ source: 'upstream', provider: name, error: res.error, benign: !!res.benign });
+    if (res.error)
+      errors.push({ source: 'upstream', provider: name, error: res.error, benign: !!res.benign });
   }
 
   return { providers, added, total, probed, errors };
@@ -151,14 +172,25 @@ async function probeConfig(args = {}) {
   const endpoint = String(args.endpoint || '').trim();
   const apiKey = String(args.apiKey || args.key || '').trim();
   if (!apiKey) return { ok: false, count: 0, models: [], error: 'API Key 不能为空' };
-  if (!baseUrl && !endpoint) return { ok: false, count: 0, models: [], error: '缺少 Base URL / Endpoint，无法探测' };
+  if (!baseUrl && !endpoint)
+    return { ok: false, count: 0, models: [], error: '缺少 Base URL / Endpoint，无法探测' };
 
   try {
-    const models = await fetchUpstreamModels({ baseUrl, endpoint, apiKey, apiFormat: args.apiFormat });
+    const models = await fetchUpstreamModels({
+      baseUrl,
+      endpoint,
+      apiKey,
+      apiFormat: args.apiFormat,
+    });
     if (models == null) {
       // No /models endpoint or a 4xx — expected for some providers; report it
       // as a soft "could not list" rather than a hard error so the UI stays calm.
-      return { ok: false, count: 0, models: [], error: '该上游未返回模型列表（可能无 /models 接口或鉴权失败），可手动填写模型' };
+      return {
+        ok: false,
+        count: 0,
+        models: [],
+        error: '该上游未返回模型列表（可能无 /models 接口或鉴权失败），可手动填写模型',
+      };
     }
     const items = toItems(models).map((m) => ({ id: m.model, capability: m.capability }));
     return { ok: true, count: items.length, models: items, error: null };

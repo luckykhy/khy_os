@@ -24,8 +24,11 @@ const { isFlagEnabled } = require('./flagRegistry');
 
 /** 是否启用「优先取末轮用户消息」。默认开;仅 0/false/off/no 关。异常 → 保守放行(true)。 */
 function isEnabled(env = process.env) {
-  try { return isFlagEnabled('KHY_TRUTH_FOOTER_LATEST_USER_TEXT', env); }
-  catch { return true; }
+  try {
+    return isFlagEnabled('KHY_TRUTH_FOOTER_LATEST_USER_TEXT', env);
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -38,16 +41,24 @@ function fromMessages(options) {
     const msgs = options && Array.isArray(options.messages) ? options.messages : [];
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i];
-      if (!m || m.role !== 'user') continue;
-      if (typeof m.content === 'string') return m.content.trim();
+      if (!m || m.role !== 'user') {
+        continue;
+      }
+      if (typeof m.content === 'string') {
+        return m.content.trim();
+      }
       if (Array.isArray(m.content)) {
         const parts = m.content
-          .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content) || '')))
+          .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content)) || ''))
           .filter(Boolean);
-        if (parts.length) return parts.join(' ').trim();
+        if (parts.length) {
+          return parts.join(' ').trim();
+        }
       }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return '';
 }
 
@@ -59,7 +70,9 @@ function fromMessages(options) {
  */
 function legacyPick(prompt, options) {
   const direct = String(prompt == null ? '' : prompt).trim();
-  if (direct) return direct;
+  if (direct) {
+    return direct;
+  }
   return fromMessages(options);
 }
 
@@ -72,9 +85,13 @@ function legacyPick(prompt, options) {
  */
 function pickUserText(prompt, options, env = process.env) {
   try {
-    if (!isEnabled(env)) return legacyPick(prompt, options);
+    if (!isEnabled(env)) {
+      return legacyPick(prompt, options);
+    }
     const fromMsg = fromMessages(options);
-    if (fromMsg) return fromMsg;
+    if (fromMsg) {
+      return fromMsg;
+    }
     return String(prompt == null ? '' : prompt).trim();
   } catch {
     return legacyPick(prompt, options);

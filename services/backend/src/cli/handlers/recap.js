@@ -22,7 +22,9 @@ const { printInfo, printError } = require('../formatters');
 
 function _recapEnabled(env) {
   const raw = env && env.KHY_RECAP;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -35,7 +37,9 @@ async function handleRecap(_subCommand, _args = [], _options = {}) {
   let sessionId = null;
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   if (!sessionId) {
     printInfo('暂无活动会话 —— 先开始一段对话,再用 /recap 回顾本次会话。');
     return true;
@@ -65,10 +69,16 @@ async function handleRecap(_subCommand, _args = [], _options = {}) {
   }
 
   let chalk = null;
-  try { chalk = require('chalk'); } catch { /* 无 chalk → formatRecap 用恒等回退 */ }
+  try {
+    chalk = require('chalk');
+  } catch {
+    /* 无 chalk → formatRecap 用恒等回退 */
+  }
 
   try {
-    console.log(require('../../services/sessionRecapService').formatRecap(recap, chalk ? { chalk } : {}));
+    console.log(
+      require('../../services/sessionRecapService').formatRecap(recap, chalk ? { chalk } : {})
+    );
   } catch (e) {
     printError('渲染会话回顾失败:' + (e && e.message ? e.message : String(e)));
     return true;

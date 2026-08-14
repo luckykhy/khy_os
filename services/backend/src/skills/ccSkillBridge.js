@@ -35,7 +35,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** KHY_CC_SKILL_BRIDGE gate: default ON, {0,false,off,no} (case/space-insensitive) → OFF. */
 function isCcSkillBridgeEnabled(env = process.env) {
   const raw = env && env.KHY_CC_SKILL_BRIDGE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -56,10 +58,16 @@ const _join = require('../utils/pathJoinSafe');
 function ccSkillSearchPaths({ homedir, projectDir } = {}) {
   try {
     const out = [];
-    const push = (dir, source) => { if (dir) out.push({ dir, source }); };
+    const push = (dir, source) => {
+      if (dir) {
+        out.push({ dir, source });
+      }
+    };
 
     // Project-scoped CC skills win first (closest to the work).
-    if (projectDir) push(_join(projectDir, '.claude', 'skills'), 'cc-project');
+    if (projectDir) {
+      push(_join(projectDir, '.claude', 'skills'), 'cc-project');
+    }
 
     if (homedir) {
       // User-installed CC skills.

@@ -23,21 +23,28 @@ const { SIGNALS } = evoRequirement;
 
 let _ErrorDiagnostician = null;
 function _defaultDiagnostician() {
-  if (_ErrorDiagnostician === undefined) return null;
-  if (_ErrorDiagnostician) return _ErrorDiagnostician;
+  if (_ErrorDiagnostician === undefined) {
+    return null;
+  }
+  if (_ErrorDiagnostician) {
+    return _ErrorDiagnostician;
+  }
   try {
     const { ErrorDiagnostician } = require('../selfHeal/errorDiagnostician');
     _ErrorDiagnostician = new ErrorDiagnostician();
-  } catch { _ErrorDiagnostician = undefined; return null; }
+  } catch {
+    _ErrorDiagnostician = undefined;
+    return null;
+  }
   return _ErrorDiagnostician;
 }
 
 // 把诊断/信号翻译成「Why」三类根因（§3.1：缺工具 / 规则误杀 / 阈值僵化）。
 const WHY_KIND = Object.freeze({
-  MISSING_TOOL: 'missing-tool',       // 能力空洞：缺工具/解析器
-  RULE_MISFIRE: 'rule-misfire',       // 规则误杀：拦截器/守卫错误阻断
+  MISSING_TOOL: 'missing-tool', // 能力空洞：缺工具/解析器
+  RULE_MISFIRE: 'rule-misfire', // 规则误杀：拦截器/守卫错误阻断
   THRESHOLD_RIGID: 'threshold-rigid', // 阈值僵化：压缩/上下文阈值不适应
-  LOGIC_GAP: 'logic-gap',             // 逻辑死角：核心流转缺陷
+  LOGIC_GAP: 'logic-gap', // 逻辑死角：核心流转缺陷
 });
 
 /**
@@ -101,14 +108,23 @@ class PainPointScanner {
     const signal = friction.signal || SIGNALS.TOOL_FAILURE;
     let dx = null;
     if (this.diagnostician && friction.error != null) {
-      try { dx = this.diagnostician.diagnose(friction.error, friction.context || {}); } catch { dx = null; }
+      try {
+        dx = this.diagnostician.diagnose(friction.error, friction.context || {});
+      } catch {
+        dx = null;
+      }
     }
 
     const attribution = _attributeWhy(signal, dx);
-    attribution.surface = String(friction.surface || (friction.context && friction.context.tool) || '').slice(0, 300);
+    attribution.surface = String(
+      friction.surface || (friction.context && friction.context.tool) || ''
+    ).slice(0, 300);
 
-    const painPoint = friction.painPoint
-      || (dx && dx.cause ? `${attribution.surface || '运行态'}：${dx.cause}` : `${attribution.surface || '运行态'} 遭遇阻力`);
+    const painPoint =
+      friction.painPoint ||
+      (dx && dx.cause
+        ? `${attribution.surface || '运行态'}：${dx.cause}`
+        : `${attribution.surface || '运行态'} 遭遇阻力`);
 
     // 影响面：有诊断风险级时据其粗评；否则按信号给保守评估。
     const impact = friction.impact || this._estimateImpact(signal, dx);
@@ -125,7 +141,9 @@ class PainPointScanner {
   }
 
   _estimateImpact(signal, dx) {
-    if (dx && dx.risk === 'L2') return '高：触及不可本地修复的系统性风险，可能波及核心流转。';
+    if (dx && dx.risk === 'L2') {
+      return '高：触及不可本地修复的系统性风险，可能波及核心流转。';
+    }
     if (signal === SIGNALS.CONTEXT_MELTDOWN || signal === SIGNALS.COMPRESSION_LOSS) {
       return '中：影响长链路任务的记忆完整性与续航，跨任务复现。';
     }

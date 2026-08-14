@@ -23,7 +23,11 @@
 const fs = require('fs');
 
 function readFileSyncSafe(p) {
-  try { return fs.readFileSync(p, 'utf8'); } catch { return ''; }
+  try {
+    return fs.readFileSync(p, 'utf8');
+  } catch {
+    return '';
+  }
 }
 
 module.exports = readFileSyncSafe;

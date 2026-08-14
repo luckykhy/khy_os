@@ -160,6 +160,15 @@ int ipc_send(uint16_t dest_port, const struct ipc_message *msg) {
             return IPC_ERR_FULL;
         }
 
+        /* [SAFE] Self-send deadlock: if the destination port is owned by the
+         * current task, blocking here would leave no one to drain the queue
+         * (only the owner may receive on a registered port). The task would
+         * sleep forever. Reject with a recoverable error instead. */
+        if (p->owner_task_id == sched_current_id()) {
+            ipc_crit_leave(flags);
+            return IPC_ERR_FULL;
+        }
+
         /* The port has a single blocked-sender slot. If another task is already
          * parked here, overwriting it would orphan that task forever (its later
          * wakeup would target only the most recent id). Refuse the second sender
@@ -300,6 +309,27 @@ int ipc_call(uint16_t dest_port, const struct ipc_message *request,
     ipc_port_unregister(reply_port);
 
     return rc;
+}
+
+void ipc_cleanup_task(int task_id) {
+    if (task_id < 0 || task_id >= (int)IPC_MAX_PORTS)
+        return;
+    for (uint16_t i = 0; i < IPC_MAX_PORTS; i++) {
+        if (ports[i].registered && ports[i].owner_task_id == task_id) {
+            /* Unblock any waiters before zeroing the port. */
+            if (ports[i].blocked_sender >= 0) {
+                sched_unblock(ports[i].blocked_sender);
+                ports[i].blocked_sender = -1;
+            }
+            if (ports[i].blocked_receiver >= 0) {
+                sched_unblock(ports[i].blocked_receiver);
+                ports[i].blocked_receiver = -1;
+            }
+            memset(&ports[i], 0, sizeof(struct ipc_port));
+            ports[i].blocked_sender   = -1;
+            ports[i].blocked_receiver = -1;
+        }
+    }
 }
 
 int ipc_port_owner(uint16_t port) {

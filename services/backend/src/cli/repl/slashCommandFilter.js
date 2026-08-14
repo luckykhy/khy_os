@@ -36,7 +36,9 @@ function _buildRankIndex(list) {
  */
 function rankSlashCommands(cmds, filter) {
   const list = Array.isArray(cmds) ? cmds : [];
-  if (!filter || filter === '/') return list.slice();
+  if (!filter || filter === '/') {
+    return list.slice();
+  }
 
   const lower = String(filter).toLowerCase();
   const needle = lower.slice(1); // 去掉前导 '/'
@@ -48,17 +50,27 @@ function rankSlashCommands(cmds, filter) {
   for (let i = 0; i < index.length; i++) {
     const it = index[i];
     let score = 0;
-    if (it.cmdLower.startsWith(lower)) score = 3;        // /mo → /model
-    else if (it.cmdLower.includes(needle)) score = 2;    // sub → /subscribe
-    else if (it.labelLower.includes(needle)) score = 1;  // 模型 → label match
-    else if (it.descLower.includes(needle)) score = 1;   // desc match
+    if (it.cmdLower.startsWith(lower)) {
+      score = 3;
+    } // /mo → /model
+    else if (it.cmdLower.includes(needle)) {
+      score = 2;
+    } // sub → /subscribe
+    else if (it.labelLower.includes(needle)) {
+      score = 1;
+    } // 模型 → label match
+    else if (it.descLower.includes(needle)) {
+      score = 1;
+    } // desc match
 
-    if (score > 0) scored.push({ sc: it.sc, score, idx: i });
+    if (score > 0) {
+      scored.push({ sc: it.sc, score, idx: i });
+    }
   }
 
   // 稳定排序：先按分数降序，同分按原始下标升序，保持原序观感
-  scored.sort((a, b) => (b.score - a.score) || (a.idx - b.idx));
-  return scored.map(s => s.sc);
+  scored.sort((a, b) => b.score - a.score || a.idx - b.idx);
+  return scored.map((s) => s.sc);
 }
 
 module.exports = { rankSlashCommands };

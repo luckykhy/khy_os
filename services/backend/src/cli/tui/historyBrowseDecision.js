@@ -32,7 +32,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
  * @returns {boolean} true unless KHY_HISTORY_BROWSE_EDITING is a falsy token.
  */
 function historyBrowseWhileEditingEnabled(env = process.env) {
-  const flag = String((env && env.KHY_HISTORY_BROWSE_EDITING) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_HISTORY_BROWSE_EDITING) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -50,7 +52,9 @@ function historyBrowseWhileEditingEnabled(env = process.env) {
  * @returns {boolean} true = forward to text input; false = swallow.
  */
 function shouldBrowseHistoryWhileEditing({ hasNewline, env = process.env } = {}) {
-  if (hasNewline) return true; // multiline: forward for interior cursor moves
+  if (hasNewline) {
+    return true;
+  } // multiline: forward for interior cursor moves
   return historyBrowseWhileEditingEnabled(env);
 }
 

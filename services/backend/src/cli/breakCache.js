@@ -26,7 +26,9 @@
 
 function isEnabled(env) {
   const raw = env && env.KHY_BREAK_CACHE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -36,14 +38,27 @@ function isEnabled(env) {
  */
 function parseScope(args) {
   let raw = '';
-  if (Array.isArray(args)) raw = args.filter((a) => a != null && a !== '').join(' ');
-  else if (args != null) raw = String(args);
+  if (Array.isArray(args)) {
+    raw = args.filter((a) => a != null && a !== '').join(' ');
+  } else if (args != null) {
+    raw = String(args);
+  }
   const s = raw.trim().toLowerCase();
-  if (s === 'status') return 'status';
-  if (s === 'off') return 'off';
-  if (s === '--clear' || s === 'clear') return 'clear';
-  if (s === 'always' || s === 'always-on' || s === 'on') return 'always';
-  if (s === '' || s === 'once') return 'once';
+  if (s === 'status') {
+    return 'status';
+  }
+  if (s === 'off') {
+    return 'off';
+  }
+  if (s === '--clear' || s === 'clear') {
+    return 'clear';
+  }
+  if (s === 'always' || s === 'always-on' || s === 'on') {
+    return 'always';
+  }
+  if (s === '' || s === 'once') {
+    return 'once';
+  }
   return 'unknown';
 }
 
@@ -54,7 +69,10 @@ function parseScope(args) {
 function buildNonceComment(now, rand) {
   const n = Number(now);
   const ts = Number.isFinite(n) && n >= 0 ? n : 0;
-  const r = String(rand == null ? '' : rand).replace(/[^A-Za-z0-9]/g, '').slice(0, 16) || '0';
+  const r =
+    String(rand == null ? '' : rand)
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(0, 16) || '0';
   return `<!-- khy-break-cache ${ts}-${r} -->\n`;
 }
 
@@ -64,14 +82,24 @@ function buildNonceComment(now, rand) {
  */
 function aggregateStats(rawLog) {
   const out = { totalBreaks: 0, lastBreakAt: null, alwaysModeEnabled: false };
-  if (!rawLog) return out;
+  if (!rawLog) {
+    return out;
+  }
   const events = String(rawLog)
     .trim()
     .split('\n')
     .filter(Boolean)
-    .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
     .filter((e) => e && typeof e === 'object');
-  if (events.length === 0) return out;
+  if (events.length === 0) {
+    return out;
+  }
   out.totalBreaks = events.filter((e) => e.kind === 'once').length;
   out.lastBreakAt = events[events.length - 1].at || null;
   const always = events.filter((e) => e.kind === 'always_on' || e.kind === 'always_off');

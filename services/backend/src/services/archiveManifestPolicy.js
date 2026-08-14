@@ -27,7 +27,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_ARCHIVE_INSPECT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -36,10 +38,22 @@ function _intEnv(env, key, dflt, min) {
   const n = parseInt(String((env && env[key]) || ''), 10);
   return Math.max(min, Number.isFinite(n) && n > 0 ? n : dflt);
 }
-function manifestMaxEntries(env = process.env) { return _intEnv(env, 'KHY_ARCHIVE_MANIFEST_MAX_ENTRIES', 40, 1); }
-function peekMaxFiles(env = process.env) { return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_FILES', 3, 0); }
-function peekMaxBytes(env = process.env) { return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_BYTES', 8192, 256); }
-function peekMaxChars(env = process.env) { return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_CHARS', 1500, 64); }
+
+function manifestMaxEntries(env = process.env) {
+  return _intEnv(env, 'KHY_ARCHIVE_MANIFEST_MAX_ENTRIES', 40, 1);
+}
+
+function peekMaxFiles(env = process.env) {
+  return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_FILES', 3, 0);
+}
+
+function peekMaxBytes(env = process.env) {
+  return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_BYTES', 8192, 256);
+}
+
+function peekMaxChars(env = process.env) {
+  return _intEnv(env, 'KHY_ARCHIVE_PEEK_MAX_CHARS', 1500, 64);
+}
 
 // ── 扩展名 → 列表策略 ────────────────────────────────────────────────────────
 // 'zip'        : node-stream-zip 列中央目录 + 内存窥探(零落盘)
@@ -48,17 +62,34 @@ function peekMaxChars(env = process.env) { return _intEnv(env, 'KHY_ARCHIVE_PEEK
 // ''           : 非压缩包
 function archiveStrategyForPath(filePath, env = process.env) {
   try {
-    if (!isEnabled(env)) return '';
-    const lower = String(filePath || '').toLowerCase().trim();
-    if (!lower) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
+    const lower = String(filePath || '')
+      .toLowerCase()
+      .trim();
+    if (!lower) {
+      return '';
+    }
     // 复合扩展名优先(.tar.gz 必须先于 .gz 判定)。
-    if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz') || lower.endsWith('.tar')) return 'tar';
-    if (lower.endsWith('.zip')) return 'zip';
+    if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz') || lower.endsWith('.tar')) {
+      return 'tar';
+    }
+    if (lower.endsWith('.zip')) {
+      return 'zip';
+    }
     if (
-      lower.endsWith('.tar.bz2') || lower.endsWith('.tbz2') || lower.endsWith('.tar.xz')
-      || lower.endsWith('.7z') || lower.endsWith('.rar') || lower.endsWith('.bz2')
-      || lower.endsWith('.gz') || lower.endsWith('.xz')
-    ) return 'unsupported';
+      lower.endsWith('.tar.bz2') ||
+      lower.endsWith('.tbz2') ||
+      lower.endsWith('.tar.xz') ||
+      lower.endsWith('.7z') ||
+      lower.endsWith('.rar') ||
+      lower.endsWith('.bz2') ||
+      lower.endsWith('.gz') ||
+      lower.endsWith('.xz')
+    ) {
+      return 'unsupported';
+    }
     return '';
   } catch {
     return '';
@@ -72,16 +103,36 @@ function isArchivePath(filePath, env = process.env) {
 // ── mime 归一 ────────────────────────────────────────────────────────────────
 function mimeForArchive(filePath, env = process.env) {
   try {
-    if (!isEnabled(env)) return '';
-    const lower = String(filePath || '').toLowerCase().trim();
-    if (!lower) return '';
-    if (lower.endsWith('.zip')) return 'application/zip';
-    if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz') || lower.endsWith('.gz')) return 'application/gzip';
-    if (lower.endsWith('.tar.bz2') || lower.endsWith('.tbz2') || lower.endsWith('.bz2')) return 'application/x-bzip2';
-    if (lower.endsWith('.tar.xz') || lower.endsWith('.xz')) return 'application/x-xz';
-    if (lower.endsWith('.tar')) return 'application/x-tar';
-    if (lower.endsWith('.7z')) return 'application/x-7z-compressed';
-    if (lower.endsWith('.rar')) return 'application/vnd.rar';
+    if (!isEnabled(env)) {
+      return '';
+    }
+    const lower = String(filePath || '')
+      .toLowerCase()
+      .trim();
+    if (!lower) {
+      return '';
+    }
+    if (lower.endsWith('.zip')) {
+      return 'application/zip';
+    }
+    if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz') || lower.endsWith('.gz')) {
+      return 'application/gzip';
+    }
+    if (lower.endsWith('.tar.bz2') || lower.endsWith('.tbz2') || lower.endsWith('.bz2')) {
+      return 'application/x-bzip2';
+    }
+    if (lower.endsWith('.tar.xz') || lower.endsWith('.xz')) {
+      return 'application/x-xz';
+    }
+    if (lower.endsWith('.tar')) {
+      return 'application/x-tar';
+    }
+    if (lower.endsWith('.7z')) {
+      return 'application/x-7z-compressed';
+    }
+    if (lower.endsWith('.rar')) {
+      return 'application/vnd.rar';
+    }
     return '';
   } catch {
     return '';
@@ -90,16 +141,30 @@ function mimeForArchive(filePath, env = process.env) {
 
 // 已知压缩包 mime(供显式附件按 mimeType 分类时识别;门控关恒 false)。
 const _ARCHIVE_MIMES = new Set([
-  'application/zip', 'application/x-zip-compressed', 'application/zip-compressed',
-  'application/x-tar', 'application/gzip', 'application/x-gzip',
-  'application/x-7z-compressed', 'application/vnd.rar', 'application/x-rar-compressed',
-  'application/x-bzip2', 'application/x-bzip', 'application/x-xz',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/zip-compressed',
+  'application/x-tar',
+  'application/gzip',
+  'application/x-gzip',
+  'application/x-7z-compressed',
+  'application/vnd.rar',
+  'application/x-rar-compressed',
+  'application/x-bzip2',
+  'application/x-bzip',
+  'application/x-xz',
 ]);
 
 function isArchiveMime(mimeType, env = process.env) {
   try {
-    if (!isEnabled(env)) return false;
-    return _ARCHIVE_MIMES.has(String(mimeType || '').trim().toLowerCase());
+    if (!isEnabled(env)) {
+      return false;
+    }
+    return _ARCHIVE_MIMES.has(
+      String(mimeType || '')
+        .trim()
+        .toLowerCase()
+    );
   } catch {
     return false;
   }
@@ -107,11 +172,51 @@ function isArchiveMime(mimeType, env = process.env) {
 
 // ── 条目窥探选择(确定性) ────────────────────────────────────────────────────
 const _TEXT_LIKE_ENTRY_EXT = new Set([
-  '.txt', '.md', '.markdown', '.csv', '.tsv', '.json', '.yaml', '.yml', '.xml',
-  '.log', '.ini', '.cfg', '.conf', '.toml', '.env', '.properties',
-  '.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx', '.py', '.java', '.go', '.rs',
-  '.c', '.h', '.cc', '.cpp', '.hpp', '.cs', '.rb', '.php', '.sh', '.bash',
-  '.html', '.htm', '.css', '.scss', '.sql', '.gradle', '.kt', '.swift', '.r',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.csv',
+  '.tsv',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.xml',
+  '.log',
+  '.ini',
+  '.cfg',
+  '.conf',
+  '.toml',
+  '.env',
+  '.properties',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.jsx',
+  '.tsx',
+  '.py',
+  '.java',
+  '.go',
+  '.rs',
+  '.c',
+  '.h',
+  '.cc',
+  '.cpp',
+  '.hpp',
+  '.cs',
+  '.rb',
+  '.php',
+  '.sh',
+  '.bash',
+  '.html',
+  '.htm',
+  '.css',
+  '.scss',
+  '.sql',
+  '.gradle',
+  '.kt',
+  '.swift',
+  '.r',
 ]);
 
 function _entryExt(name) {
@@ -139,15 +244,27 @@ function selectPeekEntries(entries, opts = {}) {
   try {
     const env = opts.env || process.env;
     const maxPeek = Number.isFinite(opts.maxPeek) ? Math.max(0, opts.maxPeek) : peekMaxFiles(env);
-    const maxBytes = Number.isFinite(opts.maxBytes) ? Math.max(1, opts.maxBytes) : peekMaxBytes(env);
-    if (maxPeek <= 0 || !Array.isArray(entries)) return [];
+    const maxBytes = Number.isFinite(opts.maxBytes)
+      ? Math.max(1, opts.maxBytes)
+      : peekMaxBytes(env);
+    if (maxPeek <= 0 || !Array.isArray(entries)) {
+      return [];
+    }
     const out = [];
     for (const e of entries) {
-      if (out.length >= maxPeek) break;
-      if (!e || e.isDirectory) continue;
+      if (out.length >= maxPeek) {
+        break;
+      }
+      if (!e || e.isDirectory) {
+        continue;
+      }
       const size = Number(e.size || 0) || 0;
-      if (size <= 0 || size > maxBytes) continue;
-      if (!isTextLikeEntry(e.name)) continue;
+      if (size <= 0 || size > maxBytes) {
+        continue;
+      }
+      if (!isTextLikeEntry(e.name)) {
+        continue;
+      }
       out.push({ name: String(e.name), size });
     }
     return out;
@@ -165,19 +282,33 @@ function _formatBytes(n, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(Number(n || 0) || 0);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   const bytes = Number(n || 0) || 0;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 function _clipText(text, maxChars) {
-  const s = String(text || '').replace(/\r\n/g, '\n').trim();
-  if (!s) return '';
+  const s = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
+  if (!s) {
+    return '';
+  }
   return s.length > maxChars ? `${s.slice(0, maxChars)}\n...[truncated]` : s;
 }
 
@@ -195,10 +326,13 @@ function _clipText(text, maxChars) {
 function buildArchiveManifest(a = {}) {
   try {
     const env = a.env || process.env;
-    if (!isEnabled(env)) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
     const name = String(a.name || 'archive').trim() || 'archive';
-    const mimeType = String(a.mimeType || 'application/octet-stream').trim() || 'application/octet-stream';
-    const entries = Array.isArray(a.entries) ? a.entries.filter(e => e && !e.isDirectory) : [];
+    const mimeType =
+      String(a.mimeType || 'application/octet-stream').trim() || 'application/octet-stream';
+    const entries = Array.isArray(a.entries) ? a.entries.filter((e) => e && !e.isDirectory) : [];
     const total = Number.isFinite(a.totalEntries) ? a.totalEntries : entries.length;
     const maxEntries = manifestMaxEntries(env);
     const maxChars = peekMaxChars(env);
@@ -208,11 +342,15 @@ function buildArchiveManifest(a = {}) {
       // 识别为压缩包,但无法列出内容 —— 诚实说明,绝不静默丢弃,也绝不臆测内容。
       lines.push(`[Archive Contents] ${name} (${mimeType})`);
       lines.push(`khy 已识别这是一个压缩包,但无法直接列出它的内容(${a.error})。`);
-      lines.push('请勿臆测压缩包里有什么。可让用户:① 改用 .zip / .tar / .tar.gz 重新打包后发送;② 解压后把需要的文件直接发给我;③ 告知里面的关键文件清单。');
+      lines.push(
+        '请勿臆测压缩包里有什么。可让用户:① 改用 .zip / .tar / .tar.gz 重新打包后发送;② 解压后把需要的文件直接发给我;③ 告知里面的关键文件清单。'
+      );
       return lines.join('\n');
     }
 
-    lines.push(`[Archive Contents] ${name} (${mimeType}, ${total} ${total === 1 ? 'entry' : 'entries'})`);
+    lines.push(
+      `[Archive Contents] ${name} (${mimeType}, ${total} ${total === 1 ? 'entry' : 'entries'})`
+    );
     lines.push('以下是该压缩包的目录清单(仅列目录,**未解压**):');
 
     // 抓重点层:门控 KHY_FILE_SALIENCE 开 → 先按内在重要性重排+分组摘要(压缩包常含大量文件,
@@ -221,10 +359,16 @@ function buildArchiveManifest(a = {}) {
     try {
       const fileSalience = require('./fileSalience'); // 叶子→叶子相对 require 合规
       if (fileSalience.isEnabled(env)) {
-        const summary = fileSalience.summarizeListing(entries, { env, total, fallbackShown: maxEntries });
+        const summary = fileSalience.summarizeListing(entries, {
+          env,
+          total,
+          fallbackShown: maxEntries,
+        });
         salienceBlock = fileSalience.renderSalienceBlock(summary, { env });
       }
-    } catch { salienceBlock = ''; }
+    } catch {
+      salienceBlock = '';
+    }
 
     if (salienceBlock) {
       lines.push(salienceBlock);
@@ -239,10 +383,12 @@ function buildArchiveManifest(a = {}) {
       }
     }
 
-    const peeks = Array.isArray(a.peeks) ? a.peeks.filter(p => p && p.text) : [];
+    const peeks = Array.isArray(a.peeks) ? a.peeks.filter((p) => p && p.text) : [];
     for (const p of peeks) {
       const body = _clipText(p.text, maxChars);
-      if (!body) continue;
+      if (!body) {
+        continue;
+      }
       lines.push('');
       lines.push(`[Archive Entry] ${String(p.name)}`);
       lines.push('```text');
@@ -251,7 +397,9 @@ function buildArchiveManifest(a = {}) {
     }
 
     lines.push('');
-    lines.push('上面是压缩包内容的清单与少量文本预览。如需深入分析某个未预览的文件,请让用户指明该文件,或说明你需要其完整内容;**绝不**凭文件名臆测其内容。');
+    lines.push(
+      '上面是压缩包内容的清单与少量文本预览。如需深入分析某个未预览的文件,请让用户指明该文件,或说明你需要其完整内容;**绝不**凭文件名臆测其内容。'
+    );
     return lines.join('\n');
   } catch {
     return '';

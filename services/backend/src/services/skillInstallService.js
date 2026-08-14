@@ -15,12 +15,13 @@
  * 门控关(KHY_SKILL_ADD off)→ addFromSource 抛「未启用」,不触碰任何既有 skill 子命令。
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const spec = require('../skills/skillSourceSpec');
+
 const skillPackageService = require('./skillPackageService');
 
 const CLONE_TIMEOUT_MS = 120000;
@@ -33,7 +34,9 @@ const CLONE_TIMEOUT_MS = 120000;
  */
 function _defaultClone(url, dest, ref) {
   const args = ['clone', '--depth', '1', '--no-tags'];
-  if (ref) { args.push('--branch', ref); }
+  if (ref) {
+    args.push('--branch', ref);
+  }
   args.push('--', url, dest);
   try {
     execFileSync('git', args, { stdio: ['ignore', 'ignore', 'pipe'], timeout: CLONE_TIMEOUT_MS });
@@ -42,13 +45,19 @@ function _defaultClone(url, dest, ref) {
     // 某些 ref 是 commit sha,--branch 不认 → 回退全量克隆 + checkout。
     if (ref) {
       try {
-        execFileSync('git', ['clone', '--no-tags', '--', url, dest],
-          { stdio: ['ignore', 'ignore', 'pipe'], timeout: CLONE_TIMEOUT_MS });
-        execFileSync('git', ['-C', dest, 'checkout', ref],
-          { stdio: ['ignore', 'ignore', 'pipe'], timeout: CLONE_TIMEOUT_MS });
+        execFileSync('git', ['clone', '--no-tags', '--', url, dest], {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          timeout: CLONE_TIMEOUT_MS,
+        });
+        execFileSync('git', ['-C', dest, 'checkout', ref], {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          timeout: CLONE_TIMEOUT_MS,
+        });
         return;
       } catch (err2) {
-        throw new Error(`git clone 失败(${url}${ref ? ` @ ${ref}` : ''}):${_gitErr(err2) || _gitErr(err)}`);
+        throw new Error(
+          `git clone 失败(${url}${ref ? ` @ ${ref}` : ''}):${_gitErr(err2) || _gitErr(err)}`
+        );
       }
     }
     throw new Error(`git clone 失败(${url}):${_gitErr(err)}`);
@@ -56,7 +65,9 @@ function _defaultClone(url, dest, ref) {
 }
 
 function _gitErr(err) {
-  if (!err) return '未知错误';
+  if (!err) {
+    return '未知错误';
+  }
   const stderr = err.stderr && err.stderr.toString ? err.stderr.toString().trim() : '';
   return stderr || err.message || String(err);
 }
@@ -64,7 +75,9 @@ function _gitErr(err) {
 /** 一个目录是否直接是「skill 目录」(含 SKILL.md 或 manifest.json)。 */
 function _isSkillDir(dir) {
   try {
-    return fs.existsSync(path.join(dir, 'SKILL.md')) || fs.existsSync(path.join(dir, 'manifest.json'));
+    return (
+      fs.existsSync(path.join(dir, 'SKILL.md')) || fs.existsSync(path.join(dir, 'manifest.json'))
+    );
   } catch {
     return false;
   }
@@ -95,40 +108,65 @@ function _locateSkillDir(cloneRoot, s) {
   }
 
   // 根即 skill(单-skill 仓库)。
-  if (_isSkillDir(cloneRoot)) return cloneRoot;
+  if (_isSkillDir(cloneRoot)) {
+    return cloneRoot;
+  }
 
   // 容器目录下的第一个命名 skill 子目录(稳定字典序)。
   const containers = spec.candidateSkillDirs(s).filter(Boolean);
   const found = [];
   for (const c of containers) {
     const cdir = path.resolve(cloneRoot, c);
-    if (cdir !== cloneRoot && !cdir.startsWith(cloneRoot + path.sep)) continue;
+    if (cdir !== cloneRoot && !cdir.startsWith(cloneRoot + path.sep)) {
+      continue;
+    }
     let entries;
     try {
-      if (!fs.existsSync(cdir) || !fs.statSync(cdir).isDirectory()) continue;
+      if (!fs.existsSync(cdir) || !fs.statSync(cdir).isDirectory()) {
+        continue;
+      }
       entries = fs.readdirSync(cdir, { withFileTypes: true });
-    } catch { continue; }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      const child = path.join(cdir, e.name);
-      if (_isSkillDir(child)) found.push({ name: e.name, dir: child });
+    } catch {
+      continue;
     }
-    if (found.length) break;
+    for (const e of entries) {
+      if (!e.isDirectory()) {
+        continue;
+      }
+      const child = path.join(cdir, e.name);
+      if (_isSkillDir(child)) {
+        found.push({ name: e.name, dir: child });
+      }
+    }
+    if (found.length) {
+      break;
+    }
   }
-  if (found.length === 1) return found[0].dir;
+  if (found.length === 1) {
+    return found[0].dir;
+  }
   if (found.length > 1) {
-    const names = found.map((f) => f.name).sort().join(', ');
+    const names = found
+      .map((f) => f.name)
+      .sort()
+      .join(', ');
     throw new Error(`仓库含多个 skill(${names})。请用 --skill <名称> 指定要安装哪一个。`);
   }
-  throw new Error('在仓库里没找到 SKILL.md 或 manifest.json。若 skill 在子目录,请用 --skill <路径> 指定。');
+  throw new Error(
+    '在仓库里没找到 SKILL.md 或 manifest.json。若 skill 在子目录,请用 --skill <路径> 指定。'
+  );
 }
 
 /** 递归删除临时目录(fail-soft;清理失败不影响主结果)。 */
 function _rmrf(dir) {
-  if (!dir) return;
+  if (!dir) {
+    return;
+  }
   try {
     fs.rmSync(dir, { recursive: true, force: true });
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**
@@ -144,14 +182,18 @@ function _rmrf(dir) {
 async function addFromSource(source, opts = {}) {
   const env = opts.env || process.env;
   if (!spec.isSkillAddEnabled(env)) {
-    throw new Error('`khy skill add` 未启用(KHY_SKILL_ADD 已关闭)。开启后可从 GitHub 等仓库安装 skill。');
+    throw new Error(
+      '`khy skill add` 未启用(KHY_SKILL_ADD 已关闭)。开启后可从 GitHub 等仓库安装 skill。'
+    );
   }
 
   const parsed = spec.parseSource(source, { skill: opts.skill });
-  if (!parsed.ok) throw new Error(parsed.error);
+  if (!parsed.ok) {
+    throw new Error(parsed.error);
+  }
   const s = parsed.spec;
 
-  const clone = (typeof opts._clone === 'function') ? opts._clone : _defaultClone;
+  const clone = typeof opts._clone === 'function' ? opts._clone : _defaultClone;
   const tmpRoot = opts._tmpRoot || os.tmpdir();
   const cloneRoot = fs.mkdtempSync(path.join(tmpRoot, 'khy-skill-'));
 
@@ -173,7 +215,7 @@ async function addFromSource(source, opts = {}) {
 
 module.exports = {
   addFromSource,
-  _defaultClone,     // exposed for tests
-  _locateSkillDir,   // exposed for tests
-  _isSkillDir,       // exposed for tests
+  _defaultClone, // exposed for tests
+  _locateSkillDir, // exposed for tests
+  _isSkillDir, // exposed for tests
 };

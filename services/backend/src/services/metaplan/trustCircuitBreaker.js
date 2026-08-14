@@ -35,7 +35,9 @@ class TrustCircuitBreaker {
     const envThresh = parseInt(process.env.KHY_METAPLAN_SESSION_TRIP || '', 10);
     this.sessionTripThreshold = Number.isFinite(opts.sessionTripThreshold)
       ? opts.sessionTripThreshold
-      : (Number.isFinite(envThresh) && envThresh > 0 ? envThresh : DEFAULT_SESSION_TRIP_THRESHOLD);
+      : Number.isFinite(envThresh) && envThresh > 0
+        ? envThresh
+        : DEFAULT_SESSION_TRIP_THRESHOLD;
 
     /** task types that have earned a forced Code_Hard floor. */
     this._distrustedTypes = new Set();
@@ -54,8 +56,12 @@ class TrustCircuitBreaker {
    * @returns {(string|null)}
    */
   flooredStrategyFor(taskType) {
-    if (this._sessionLocked) return strategy.STRATEGIES.CODE_HARD;
-    if (this._distrustedTypes.has(_normType(taskType))) return strategy.STRATEGIES.CODE_HARD;
+    if (this._sessionLocked) {
+      return strategy.STRATEGIES.CODE_HARD;
+    }
+    if (this._distrustedTypes.has(_normType(taskType))) {
+      return strategy.STRATEGIES.CODE_HARD;
+    }
     return null;
   }
 
@@ -68,16 +74,18 @@ class TrustCircuitBreaker {
    */
   effectiveStrategy(declaredStrategy, taskType) {
     const floor = this.flooredStrategyFor(taskType);
-    if (!floor) return { strategy: declaredStrategy, floored: false, reason: null };
+    if (!floor) {
+      return { strategy: declaredStrategy, floored: false, reason: null };
+    }
     const eff = strategy.escalate(declaredStrategy, floor);
     const floored = eff !== declaredStrategy;
     return {
       strategy: eff,
       floored,
       reason: floored
-        ? (this._sessionLocked
-            ? '本会话已触发连续误判熔断，全部操作强制 Code_Hard。'
-            : `任务类型「${_normType(taskType)}」此前在 Prompt_Soft 下翻车，已强制 Code_Hard。`)
+        ? this._sessionLocked
+          ? '本会话已触发连续误判熔断，全部操作强制 Code_Hard。'
+          : `任务类型「${_normType(taskType)}」此前在 Prompt_Soft 下翻车，已强制 Code_Hard。`
         : null,
     };
   }
@@ -104,7 +112,9 @@ class TrustCircuitBreaker {
 
     if (ok) {
       // A clean success on a Soft bet restores the consecutive-failure streak.
-      if (wasSoftBet) this._consecutiveSoftFailures = 0;
+      if (wasSoftBet) {
+        this._consecutiveSoftFailures = 0;
+      }
       return this._snapshot();
     }
 
@@ -115,7 +125,9 @@ class TrustCircuitBreaker {
     }
 
     // --- Soft bet that failed: this is the mis-judgment the breaker punishes. ---
-    if (taskType) this._distrustedTypes.add(taskType);
+    if (taskType) {
+      this._distrustedTypes.add(taskType);
+    }
     this._consecutiveSoftFailures += 1;
     this._events.push({
       type: 'soft_misjudgment',
@@ -157,8 +169,13 @@ class TrustCircuitBreaker {
 }
 
 function _normType(t) {
-  return String(t == null ? 'default' : t).trim().toLowerCase() || 'default';
+  return (
+    String(t == null ? 'default' : t)
+      .trim()
+      .toLowerCase() || 'default'
+  );
 }
+
 function _short(e) {
   return e == null ? '' : String(e).split('\n')[0].slice(0, 200);
 }

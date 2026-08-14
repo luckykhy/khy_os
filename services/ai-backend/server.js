@@ -25,22 +25,37 @@ const { authenticateToken, requireAdmin } = require('./src/middleware/auth');
 
 const app = express();
 
+// ── Database readiness flag (M4 graceful degradation) ──
+// When the shared database is unreachable, the server keeps serving but marks
+// itself as degraded so the health check can report 503 and load balancers /
+// orchestrators can react. A background timer retries the connection.
+let _dbReady = false;
+
 // ── Middleware ──
-app.use(cors({
-  origin: process.env.AI_MGMT_CORS_ORIGINS || '*',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.AI_MGMT_CORS_ORIGINS || '*',
+    credentials: true,
+  })
+);
 // Coze collection uploads (a 200+ workflow zip, base64-encoded) far exceed the
 // default body limit. Parse the import paths with a larger, env-tunable limit
 // BEFORE the global parser; once parsed, express.json below is a no-op for them.
-app.use('/api/workflow/import/coze', express.json({ limit: process.env.KHY_COZE_UPLOAD_LIMIT || '64mb' }));
+app.use(
+  '/api/workflow/import/coze',
+  express.json({ limit: process.env.KHY_COZE_UPLOAD_LIMIT || '64mb' })
+);
 app.use(express.json({ limit: '2mb' }));
 
 // ── Health Check (no auth) ──
+// Reflects DB readiness: 200/ok when the database is connected, 503/degraded
+// otherwise so upstream health probes see the degraded state.
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  const healthy = _dbReady === true;
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
     service: 'khy-ai-backend',
+    database: healthy ? 'connected' : 'disconnected',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
@@ -80,12 +95,34 @@ app.use('/api/news', require('./src/routes/news'));
 async function start() {
   const PORT = parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
 
+  const { sequelize } = require('./src/config/database');
+  let _dbRetryTimer = null;
+
+  // Retry the DB connection every 30s until it succeeds; once connected the
+  // service leaves the degraded state. unref() so the timer never blocks exit.
+  function scheduleDbReconnect() {
+    if (_dbRetryTimer) return;
+    _dbRetryTimer = setInterval(async () => {
+      try {
+        await sequelize.authenticate();
+        _dbReady = true;
+        clearInterval(_dbRetryTimer);
+        _dbRetryTimer = null;
+        console.log(`  [OK] Database reconnected`);
+      } catch (err) {
+        console.warn(`  [WARN] Database retry: ${err.message}`);
+      }
+    }, 30000);
+    _dbRetryTimer.unref();
+  }
+
   try {
-    const { sequelize } = require('./src/config/database');
     await sequelize.authenticate();
+    _dbReady = true;
     console.log(`  [OK] Database connected`);
   } catch (err) {
     console.warn(`  [WARN] Database: ${err.message}`);
+    scheduleDbReconnect();
   }
 
   const server = app.listen(PORT, () => {
@@ -112,10 +149,22 @@ async function start() {
     console.warn('  [WARN] WebSocket:', err.message);
   }
 
+  // ── Graceful shutdown ──
+  // Stop accepting new connections and let in-flight requests drain before exit.
+  function shutdown(signal) {
+    console.log(`\n  [INFO] Received ${signal}, shutting down gracefully...`);
+    server.close(() => {
+      console.log('  [OK] HTTP server closed');
+      process.exit(0);
+    });
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
   return server;
 }
 
-start().catch(err => {
+start().catch((err) => {
   console.error('AI Backend failed to start:', err);
   process.exit(1);
 });

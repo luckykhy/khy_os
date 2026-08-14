@@ -28,11 +28,17 @@ function plainProcessTableEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_PLAIN_PROCESS_TABLE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_PLAIN_PROCESS_TABLE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -52,30 +58,40 @@ function plainProcessTableEnabled(env) {
  */
 function renderPlainTable(data, helpers = {}) {
   try {
-    if (!data || typeof data !== 'object') return null;
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
     const rows = Array.isArray(data.rows) ? data.rows : null;
-    if (!rows || rows.length === 0) return null;
-    const colCount = Number.isInteger(data.colCount) && data.colCount > 0
-      ? data.colCount
-      : Math.max(...rows.map((r) => (Array.isArray(r) ? r.length : 0)), 0);
-    if (colCount <= 0) return null;
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+    const colCount =
+      Number.isInteger(data.colCount) && data.colCount > 0
+        ? data.colCount
+        : Math.max(...rows.map((r) => (Array.isArray(r) ? r.length : 0)), 0);
+    if (colCount <= 0) {
+      return null;
+    }
 
     const h = helpers || {};
-    const measure = typeof h.measure === 'function' ? h.measure : (s) => String(s == null ? '' : s).length;
+    const measure =
+      typeof h.measure === 'function' ? h.measure : (s) => String(s == null ? '' : s).length;
     const stripMd = typeof h.stripMd === 'function' ? h.stripMd : (s) => String(s == null ? '' : s);
     const format = typeof h.format === 'function' ? h.format : (s) => String(s == null ? '' : s);
     const header = typeof h.header === 'function' ? h.header : (s) => s;
     const dim = typeof h.dim === 'function' ? h.dim : (s) => s;
     const indent = typeof h.indent === 'string' ? h.indent : '  ';
 
-    const cellText = (row, col) => String((row && row[col] != null) ? row[col] : '');
+    const cellText = (row, col) => String(row && row[col] != null ? row[col] : '');
 
     // Column widths from stripped (plain) content — left-align, no truncation.
     const widths = new Array(colCount).fill(0);
     for (const row of rows) {
       for (let col = 0; col < colCount; col++) {
         const w = measure(stripMd(cellText(row, col)));
-        if (w > widths[col]) widths[col] = w;
+        if (w > widths[col]) {
+          widths[col] = w;
+        }
       }
     }
 
@@ -103,7 +119,9 @@ function renderPlainTable(data, helpers = {}) {
       // Header underline: dashes sized to each column, joined by two spaces.
       const dashes = widths.map((w) => '-'.repeat(Math.max(3, w)));
       out.push((indent + dim(dashes.join('  '))).replace(/\s+$/, ''));
-      for (let r = 1; r < rows.length; r++) out.push(buildLine(rows[r], false));
+      for (let r = 1; r < rows.length; r++) {
+        out.push(buildLine(rows[r], false));
+      }
     }
     return out;
   } catch {

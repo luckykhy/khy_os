@@ -119,7 +119,9 @@ function loadCache() {
         return _cache;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -131,11 +133,17 @@ function saveCache(skills) {
   _cacheTime = Date.now();
   try {
     ensureSkillsDir();
-    fs.writeFileSync(SKILLS_CACHE_PATH, JSON.stringify({
-      timestamp: _cacheTime,
-      skills,
-    }), 'utf-8');
-  } catch { /* ignore */ }
+    fs.writeFileSync(
+      SKILLS_CACHE_PATH,
+      JSON.stringify({
+        timestamp: _cacheTime,
+        skills,
+      }),
+      'utf-8'
+    );
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -147,26 +155,34 @@ async function fetchRemoteSkills() {
     const url = new URL(`${endpoint}/v1/skills`);
     const transport = url.protocol === 'https:' ? https : http;
 
-    const req = transport.request({
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname + url.search,
-      method: 'GET',
-      headers: { 'User-Agent': 'khy-quant-cli' },
-      timeout: 8000,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json.skills || []);
-        } catch { resolve([]); }
-      });
-    });
+    const req = transport.request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname + url.search,
+        method: 'GET',
+        headers: { 'User-Agent': 'khy-quant-cli' },
+        timeout: 8000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json.skills || []);
+          } catch {
+            resolve([]);
+          }
+        });
+      }
+    );
 
     req.on('error', () => resolve([]));
-    req.on('timeout', () => { req.destroy(); resolve([]); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve([]);
+    });
     req.end();
   });
 }
@@ -180,30 +196,38 @@ async function downloadSkill(skillId) {
     const url = new URL(`${endpoint}/v1/skills/${skillId}`);
     const transport = url.protocol === 'https:' ? https : http;
 
-    const req = transport.request({
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname,
-      method: 'GET',
-      headers: { 'User-Agent': 'khy-quant-cli' },
-      timeout: 15000,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode}`));
-          return;
-        }
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch (e) { reject(e); }
-      });
-    });
+    const req = transport.request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'GET',
+        headers: { 'User-Agent': 'khy-quant-cli' },
+        timeout: 15000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          try {
+            const json = JSON.parse(data);
+            resolve(json);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.end();
   });
 }
@@ -223,16 +247,24 @@ async function installSkill(skillId) {
 
   // Save metadata
   const metaPath = path.join(SKILLS_DIR, `${skillId}.meta.json`);
-  fs.writeFileSync(metaPath, JSON.stringify({
-    id: skill.id,
-    name: skill.name,
-    description: skill.description,
-    version: skill.version,
-    author: skill.author,
-    trigger: skill.trigger,
-    aliases: skill.aliases || [],
-    installedAt: new Date().toISOString(),
-  }, null, 2), 'utf-8');
+  fs.writeFileSync(
+    metaPath,
+    JSON.stringify(
+      {
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        version: skill.version,
+        author: skill.author,
+        trigger: skill.trigger,
+        aliases: skill.aliases || [],
+        installedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    ),
+    'utf-8'
+  );
 
   return skill;
 }
@@ -254,14 +286,18 @@ function getInstalledSkills() {
   ensureSkillsDir();
   const skills = [];
   try {
-    const files = fs.readdirSync(SKILLS_DIR).filter(f => f.endsWith('.meta.json'));
+    const files = fs.readdirSync(SKILLS_DIR).filter((f) => f.endsWith('.meta.json'));
     for (const file of files) {
       try {
         const meta = JSON.parse(fs.readFileSync(path.join(SKILLS_DIR, file), 'utf-8'));
         skills.push(meta);
-      } catch { /* skip broken meta */ }
+      } catch {
+        /* skip broken meta */
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return skills;
 }
 
@@ -281,13 +317,15 @@ async function listSkills({ refresh = false } = {}) {
   }
 
   // Merge: builtin first, then installed, then remote (not yet installed)
-  const installedIds = new Set(installed.map(s => s.id));
-  const builtinIds = new Set(BUILTIN_SKILLS.map(s => s.id));
+  const installedIds = new Set(installed.map((s) => s.id));
+  const builtinIds = new Set(BUILTIN_SKILLS.map((s) => s.id));
 
   const all = [
-    ...BUILTIN_SKILLS.map(s => ({ ...s, source: 'builtin' })),
-    ...installed.filter(s => !builtinIds.has(s.id)).map(s => ({ ...s, source: 'installed' })),
-    ...remote.filter(s => !installedIds.has(s.id) && !builtinIds.has(s.id)).map(s => ({ ...s, source: 'remote' })),
+    ...BUILTIN_SKILLS.map((s) => ({ ...s, source: 'builtin' })),
+    ...installed.filter((s) => !builtinIds.has(s.id)).map((s) => ({ ...s, source: 'installed' })),
+    ...remote
+      .filter((s) => !installedIds.has(s.id) && !builtinIds.has(s.id))
+      .map((s) => ({ ...s, source: 'remote' })),
   ];
 
   return all;
@@ -320,7 +358,7 @@ function findSkillByTrigger(trigger) {
  */
 async function executeSkill(skillId, args, context = {}) {
   // Builtin skills generate AI prompts
-  const builtin = BUILTIN_SKILLS.find(s => s.id === skillId);
+  const builtin = BUILTIN_SKILLS.find((s) => s.id === skillId);
   if (builtin) {
     return { type: 'ai-prompt', prompt: buildBuiltinPrompt(skillId, args) };
   }
@@ -332,7 +370,11 @@ async function executeSkill(skillId, args, context = {}) {
   }
 
   // Clear require cache to support hot-reload
-  try { delete require.cache[require.resolve(skillPath)]; } catch { /* ignore */ }
+  try {
+    delete require.cache[require.resolve(skillPath)];
+  } catch {
+    /* ignore */
+  }
 
   const skill = require(skillPath);
   if (typeof skill.handler !== 'function') {

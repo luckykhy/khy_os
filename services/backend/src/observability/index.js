@@ -14,4 +14,3 @@ module.exports = {
   shutdownOpenTelemetry,
   getOpenTelemetryStatus,
 };
-

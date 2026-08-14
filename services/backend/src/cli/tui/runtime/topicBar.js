@@ -24,8 +24,8 @@
  */
 
 // ── ANSI sequences ──────────────────────────────────────────────────────────
-const OSC = '\x1b]';   // Operating System Command introducer
-const BEL = '\x07';    // string terminator (most compatible across emulators)
+const OSC = '\x1b]'; // Operating System Command introducer
+const BEL = '\x07'; // string terminator (most compatible across emulators)
 
 // Working indicator: the glyph LEFT of the topic. Idle → static ✱ ("太阳"); while
 // khy is busy → a left-right bouncing dot. Pure-leaf decides the prefix per frame;
@@ -43,17 +43,33 @@ let _state = {
 
 // setInterval handle for the bouncing-dot animation (null when idle/off).
 let _animTimer = null;
-// Animation cadence (ms). ~180ms reads as a smooth left-right motion without
-// flooding the terminal with title writes.
-const _ANIM_MS = 180;
+// Animation cadence (ms). Routed through the perfTunables leaf (single
+// source: default 320ms, env KHY_TOPIC_BAR_ANIM_MS / KHY_TUI_LOW_POWER
+// override) — the dot still reads as a smooth left-right motion without
+// flooding the terminal with title writes. Fail-soft: leaf unavailable →
+// legacy hard-coded 180ms.
+let _ANIM_MS = 180;
+try {
+  _ANIM_MS = require('../perfTunables').topicBarAnimMs(process.env);
+} catch {
+  _ANIM_MS = 180;
+}
 
 // Process-level safety net: clear our title on hard exit / signal so a lingering
 // "✱ topic" does not outlive the session before the shell repaints its prompt.
 let _exitHooked = false;
 function _installExitHook() {
-  if (_exitHooked) return;
+  if (_exitHooked) {
+    return;
+  }
   _exitHooked = true;
-  const off = () => { try { disable(); } catch { /* terminal already gone */ } };
+  const off = () => {
+    try {
+      disable();
+    } catch {
+      /* terminal already gone */
+    }
+  };
   process.once('exit', off);
   process.once('SIGINT', off);
   process.once('SIGTERM', off);
@@ -72,22 +88,37 @@ function _clamp(text) {
 
 // Write the OSC 0 title. Empty topic clears the title (used on disable).
 function _paint() {
-  if (!_state.enabled || !_state.stdout) return;
+  if (!_state.enabled || !_state.stdout) {
+    return;
+  }
   const t = _clamp(_state.title);
   // Leaf decides the left glyph: static ✱ when idle/off, bouncing dot when working.
   // Any leaf failure falls back to the historical `✱ ` prefix (byte-identical).
-  let prefix = '✱ ';
+  let prefix = '🍀 ';
   try {
-    prefix = _workingIndicator.titlePrefix({ working: _state.working, tick: _state.tick }, process.env);
-  } catch { /* keep static ✱ fallback */ }
+    prefix = _workingIndicator.titlePrefix(
+      { working: _state.working, tick: _state.tick },
+      process.env
+    );
+  } catch {
+    /* keep static ✱ fallback */
+  }
   const title = t ? `${prefix}${t}` : '';
-  try { _state.stdout.write(`${OSC}0;${title}${BEL}`); } catch { /* terminal gone */ }
+  try {
+    _state.stdout.write(`${OSC}0;${title}${BEL}`);
+  } catch {
+    /* terminal gone */
+  }
 }
 
 // Stop the bouncing-dot animation (if running) and reset the frame counter.
 function _stopAnim() {
   if (_animTimer) {
-    try { clearInterval(_animTimer); } catch { /* already cleared */ }
+    try {
+      clearInterval(_animTimer);
+    } catch {
+      /* already cleared */
+    }
     _animTimer = null;
   }
   _state.tick = 0;
@@ -99,15 +130,25 @@ function _stopAnim() {
  * the in-tree FooterBar display. Idempotent.
  */
 function enable(stdout) {
-  if (_state.enabled) return true;
-  if (process.env.KHY_NO_TOPIC_BAR) return false;
+  if (_state.enabled) {
+    return true;
+  }
+  if (process.env.KHY_NO_TOPIC_BAR) {
+    return false;
+  }
   const out = _resolveStdout(stdout);
   // A non-TTY stdout (pipe/redirect) has no title bar to set.
   let isTTY = !!(out && out.isTTY);
   if (!isTTY) {
-    try { isTTY = !!require('./terminalCapabilities').detectCapabilities(out).isTTY; } catch { /* keep */ }
+    try {
+      isTTY = !!require('./terminalCapabilities').detectCapabilities(out).isTTY;
+    } catch {
+      /* keep */
+    }
   }
-  if (!isTTY) return false;
+  if (!isTTY) {
+    return false;
+  }
   _state = { enabled: true, title: _state.title, stdout: out, working: _state.working, tick: 0 };
   _installExitHook();
   _paint();
@@ -121,9 +162,13 @@ function isEnabled() {
 /** Update the displayed topic (no-op when disabled or unchanged). */
 function setTitle(text) {
   const next = String(text || '');
-  if (_state.title === next && _state.enabled) return;
+  if (_state.title === next && _state.enabled) {
+    return;
+  }
   _state.title = next;
-  if (_state.enabled) _paint();
+  if (_state.enabled) {
+    _paint();
+  }
 }
 
 /**
@@ -138,11 +183,19 @@ function setTitle(text) {
  */
 function setWorking(working) {
   const next = !!working;
-  if (_state.working === next) return;
+  if (_state.working === next) {
+    return;
+  }
   _state.working = next;
-  if (!_state.enabled) return;
+  if (!_state.enabled) {
+    return;
+  }
   let gateOn = true;
-  try { gateOn = _workingIndicator.isEnabled(process.env); } catch { gateOn = true; }
+  try {
+    gateOn = _workingIndicator.isEnabled(process.env);
+  } catch {
+    gateOn = true;
+  }
   if (next && gateOn) {
     // Start the bounce animation: advance the frame each tick and repaint. unref()
     // so a lingering timer never keeps the process alive on exit.
@@ -154,8 +207,12 @@ function setWorking(working) {
         _state.tick += 1;
         _paint();
       }, _ANIM_MS);
-      if (_animTimer && typeof _animTimer.unref === 'function') _animTimer.unref();
-    } catch { _animTimer = null; }
+      if (_animTimer && typeof _animTimer.unref === 'function') {
+        _animTimer.unref();
+      }
+    } catch {
+      _animTimer = null;
+    }
   } else {
     // Stopped working (or gated off) → drop back to the static ✱ glyph.
     _stopAnim();
@@ -169,7 +226,9 @@ function setWorking(working) {
  * case the emulator dropped the title across a reflow.
  */
 function onResize() {
-  if (_state.enabled) _paint();
+  if (_state.enabled) {
+    _paint();
+  }
 }
 
 /**
@@ -184,7 +243,10 @@ function suspend() {
 
 /** Resume — counterpart to suspend(); repaint in case anything cleared the title. */
 function resume() {
-  if (_state.enabled) { _paint(); return true; }
+  if (_state.enabled) {
+    _paint();
+    return true;
+  }
   return false;
 }
 
@@ -195,10 +257,17 @@ function resume() {
 function disable() {
   _stopAnim();
   _state.working = false;
-  if (!_state.stdout) { _state.enabled = false; return; }
+  if (!_state.stdout) {
+    _state.enabled = false;
+    return;
+  }
   const out = _state.stdout;
   _state.enabled = false;
-  try { out.write(`${OSC}0;${BEL}`); } catch { /* terminal already gone */ }
+  try {
+    out.write(`${OSC}0;${BEL}`);
+  } catch {
+    /* terminal already gone */
+  }
 }
 
 module.exports = { enable, isEnabled, setTitle, setWorking, onResize, suspend, resume, disable };

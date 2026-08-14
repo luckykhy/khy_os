@@ -30,15 +30,24 @@ class PrescriptionDeadLoopDetector {
    * @returns {string}
    */
   signature(diagnosis) {
-    if (!diagnosis || !diagnosis.fixKind) return 'none:none';
+    if (!diagnosis || !diagnosis.fixKind) {
+      return 'none:none';
+    }
     const cap = diagnosis.capture || {};
     // 只取决定"命令身份"的受控字段，保证同一处方稳定同签名。
-    const key = cap.dep
-      || (cap.candidates && cap.candidates.length ? `${cap.command || ''}->${cap.candidates[0]}` : '')
-      || (cap.command || '')
-      || (cap.hostPort && cap.hostPort.port ? `${cap.hostPort.host || ''}:${cap.hostPort.port}` : '')
-      || (cap.path || '')
-      || '∅';
+    const key =
+      cap.dep ||
+      (cap.candidates && cap.candidates.length
+        ? `${cap.command || ''}->${cap.candidates[0]}`
+        : '') ||
+      cap.command ||
+      '' ||
+      (cap.hostPort && cap.hostPort.port
+        ? `${cap.hostPort.host || ''}:${cap.hostPort.port}`
+        : '') ||
+      cap.path ||
+      '' ||
+      '∅';
     return `${diagnosis.fixKind}:${key}`;
   }
 

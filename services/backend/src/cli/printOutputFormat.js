@@ -47,6 +47,8 @@ const DEFAULT_FORMAT = 'text';
  *   --resume <id>, -r <id>       (resume a specific persisted session by id)
  *   --output-schema <json|@file> (caller JSON Schema for StructuredOutput; bin layer
  *                                 resolves `@file` → exports KHY_OUTPUT_SCHEMA)
+ *   --include-timeline           (boolean; opt-in `timeline` field on the json /
+ *                                 stream-json result object)
  *
  * Tool lists accept comma- and/or space-separated names, matching the Claude
  * Code SDK (e.g. `--allowedTools "Read,Write Bash"`). All flags (and their
@@ -60,7 +62,7 @@ const DEFAULT_FORMAT = 'text';
  * bare `--continue` (most-recent) when both are present.
  *
  * @param {string[]} argv
- * @returns {{format:string, maxTurns:(number|null), systemPrompt:(string|null), appendSystemPrompt:(string|null), allowedTools:(string[]|null), disallowedTools:(string[]|null), continueSession:boolean, resumeSessionId:(string|null), outputSchema:(string|null), args:string[], error:(string|null)}}
+ * @returns {{format:string, maxTurns:(number|null), systemPrompt:(string|null), appendSystemPrompt:(string|null), allowedTools:(string[]|null), disallowedTools:(string[]|null), continueSession:boolean, resumeSessionId:(string|null), outputSchema:(string|null), includeTimeline:boolean, args:string[], error:(string|null)}}
  */
 function parsePrintFlags(argv) {
   const args = Array.isArray(argv) ? argv.slice() : [];
@@ -73,10 +75,15 @@ function parsePrintFlags(argv) {
   let continueSession = false;
   let resumeSessionId = null;
   let outputSchema = null;
+  let includeTimeline = false;
   let error = null;
 
   // Split a tool-list flag value on commas and/or whitespace, dropping empties.
-  const parseToolList = (val) => String(val).split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+  const parseToolList = (val) =>
+    String(val)
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
   const out = [];
   for (let i = 0; i < args.length; i++) {
@@ -125,7 +132,10 @@ function parsePrintFlags(argv) {
       continue;
     }
     if (tok === '--system-prompt') {
-      if (args[i + 1] === undefined) { error = 'flag --system-prompt requires a value'; break; }
+      if (args[i + 1] === undefined) {
+        error = 'flag --system-prompt requires a value';
+        break;
+      }
       systemPrompt = args[++i];
       continue;
     }
@@ -134,7 +144,10 @@ function parsePrintFlags(argv) {
       continue;
     }
     if (tok === '--append-system-prompt') {
-      if (args[i + 1] === undefined) { error = 'flag --append-system-prompt requires a value'; break; }
+      if (args[i + 1] === undefined) {
+        error = 'flag --append-system-prompt requires a value';
+        break;
+      }
       appendSystemPrompt = args[++i];
       continue;
     }
@@ -143,7 +156,10 @@ function parsePrintFlags(argv) {
       continue;
     }
     if (tok === '--allowedTools' || tok === '--allowed-tools') {
-      if (args[i + 1] === undefined) { error = 'flag --allowedTools requires a value'; break; }
+      if (args[i + 1] === undefined) {
+        error = 'flag --allowedTools requires a value';
+        break;
+      }
       allowedTools = parseToolList(args[++i]);
       continue;
     }
@@ -152,7 +168,10 @@ function parsePrintFlags(argv) {
       continue;
     }
     if (tok === '--disallowedTools' || tok === '--disallowed-tools') {
-      if (args[i + 1] === undefined) { error = 'flag --disallowedTools requires a value'; break; }
+      if (args[i + 1] === undefined) {
+        error = 'flag --disallowedTools requires a value';
+        break;
+      }
       disallowedTools = parseToolList(args[++i]);
       continue;
     }
@@ -166,14 +185,20 @@ function parsePrintFlags(argv) {
     }
     if (tok === '--resume' || tok === '-r') {
       const val = args[i + 1];
-      if (val === undefined) { error = 'flag --resume requires a session id'; break; }
+      if (val === undefined) {
+        error = 'flag --resume requires a session id';
+        break;
+      }
       resumeSessionId = String(val);
       i++; // consume value
       continue;
     }
     if (tok && tok.startsWith('--resume=')) {
       const val = tok.slice('--resume='.length);
-      if (!val) { error = 'flag --resume requires a session id'; break; }
+      if (!val) {
+        error = 'flag --resume requires a session id';
+        break;
+      }
       resumeSessionId = val;
       continue;
     }
@@ -181,7 +206,10 @@ function parsePrintFlags(argv) {
     // Leaf stays IO-free — the raw value (inline JSON or `@path`) is returned verbatim;
     // the bin layer resolves `@file` and exports it as KHY_OUTPUT_SCHEMA for the tool.
     if (tok === '--output-schema') {
-      if (args[i + 1] === undefined) { error = 'flag --output-schema requires a value (inline JSON or @file)'; break; }
+      if (args[i + 1] === undefined) {
+        error = 'flag --output-schema requires a value (inline JSON or @file)';
+        break;
+      }
       outputSchema = String(args[++i]);
       continue;
     }
@@ -189,10 +217,43 @@ function parsePrintFlags(argv) {
       outputSchema = tok.slice('--output-schema='.length);
       continue;
     }
+    // --include-timeline: boolean opt-in for the `timeline` field on the json /
+    // stream-json result. Bare flag → true; `=` form accepts true|false only and
+    // reports unknown values in the same style as --output-format.
+    if (tok === '--include-timeline') {
+      includeTimeline = true;
+      continue;
+    }
+    if (tok && tok.startsWith('--include-timeline=')) {
+      const val = tok.slice('--include-timeline='.length);
+      if (val === 'true' || val === '1') {
+        includeTimeline = true;
+        continue;
+      }
+      if (val === 'false' || val === '0') {
+        includeTimeline = false;
+        continue;
+      }
+      error = `invalid --include-timeline "${val}" (expected true|false)`;
+      break;
+    }
     out.push(tok);
   }
 
-  return { format, maxTurns, systemPrompt, appendSystemPrompt, allowedTools, disallowedTools, continueSession, resumeSessionId, outputSchema, args: out, error };
+  return {
+    format,
+    maxTurns,
+    systemPrompt,
+    appendSystemPrompt,
+    allowedTools,
+    disallowedTools,
+    continueSession,
+    resumeSessionId,
+    outputSchema,
+    includeTimeline,
+    args: out,
+    error,
+  };
 }
 
 /**
@@ -203,11 +264,20 @@ function parsePrintFlags(argv) {
  * @returns {number}
  */
 function extractCostUsd(tokenUsage) {
-  if (!tokenUsage || typeof tokenUsage !== 'object') return 0;
-  const candidates = [tokenUsage.costUsd, tokenUsage.totalCostUsd, tokenUsage.total_cost_usd, tokenUsage.cost];
+  if (!tokenUsage || typeof tokenUsage !== 'object') {
+    return 0;
+  }
+  const candidates = [
+    tokenUsage.costUsd,
+    tokenUsage.totalCostUsd,
+    tokenUsage.total_cost_usd,
+    tokenUsage.cost,
+  ];
   for (const c of candidates) {
     const n = Number(c);
-    if (Number.isFinite(n) && n >= 0) return n;
+    if (Number.isFinite(n) && n >= 0) {
+      return n;
+    }
   }
   return 0;
 }
@@ -218,8 +288,12 @@ function extractCostUsd(tokenUsage) {
  * @returns {'success'|'error_max_turns'|'error_during_execution'}
  */
 function deriveSubtype({ errorType, maxTurnsHit }) {
-  if (maxTurnsHit) return 'error_max_turns';
-  if (errorType) return 'error_during_execution';
+  if (maxTurnsHit) {
+    return 'error_max_turns';
+  }
+  if (errorType) {
+    return 'error_during_execution';
+  }
   return 'success';
 }
 
@@ -235,10 +309,16 @@ function detectMaxTurnsHit(chatResult, maxTurns) {
   // short-circuit below would miss it and report "success". The bin layer sets an explicit
   // `maxTurnsHit` on the result (only when KHY_HEADLESS_EXIT_ON_LIMIT is on) so this surface can
   // honour it independently of ctx.maxTurns. Field absent → byte-identical to prior behaviour.
-  if (chatResult && chatResult.maxTurnsHit === true) return true;
-  if (!maxTurns) return false;
+  if (chatResult && chatResult.maxTurnsHit === true) {
+    return true;
+  }
+  if (!maxTurns) {
+    return false;
+  }
   const stop = String((chatResult && chatResult.stopReason) || '').toLowerCase();
-  if (/max[_-]?(iter|turn)/.test(stop)) return true;
+  if (/max[_-]?(iter|turn)/.test(stop)) {
+    return true;
+  }
   const turns = countTurns(chatResult);
   return turns >= maxTurns;
 }
@@ -259,9 +339,13 @@ function detectMaxTurnsHit(chatResult, maxTurns) {
  */
 function resolveExitCode(chatResult, opts = {}) {
   const r = chatResult || {};
-  if (r.errorType) return 2;
+  if (r.errorType) {
+    return 2;
+  }
   if (opts && opts.limitExitEnabled) {
-    if (r.maxIterationsReached === true || r.maxTurnsHit === true || r.stoppedByLimit === true) return 3;
+    if (r.maxIterationsReached === true || r.maxTurnsHit === true || r.stoppedByLimit === true) {
+      return 3;
+    }
   }
   return 0;
 }
@@ -278,17 +362,92 @@ function countTurns(chatResult) {
 }
 
 /**
+ * Lazy, fail-soft access to the shared pure projection leaf that already owns
+ * the _toolCalls/_timeline/_turnStats shapes (single source — no duplicate
+ * distillation logic here). Unavailable → the incremental fields below are
+ * simply omitted; the legacy contract keys are never affected.
+ * @returns {object|null}
+ */
+function _turnArtifactsLeaf() {
+  try {
+    const m = require('./tui/hooks/queryBridgeTimeline');
+    return typeof m.buildTurnArtifacts === 'function' ? m : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Best-effort total-token extraction from a gateway tokenUsage object.
+ * Returns null (never 0) when no real number is available — honesty rule.
+ * @param {object|null} tokenUsage
+ * @returns {number|null}
+ */
+function extractTotalTokens(tokenUsage) {
+  if (!tokenUsage || typeof tokenUsage !== 'object') {
+    return null;
+  }
+  for (const c of [tokenUsage.totalTokens, tokenUsage.total_tokens]) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) {
+      return n;
+    }
+  }
+  const inp = Number(
+    tokenUsage.inputTokens != null
+      ? tokenUsage.inputTokens
+      : tokenUsage.input_tokens != null
+        ? tokenUsage.input_tokens
+        : tokenUsage.prompt_tokens
+  );
+  const out = Number(
+    tokenUsage.outputTokens != null
+      ? tokenUsage.outputTokens
+      : tokenUsage.output_tokens != null
+        ? tokenUsage.output_tokens
+        : tokenUsage.completion_tokens
+  );
+  const sum = (Number.isFinite(inp) ? inp : 0) + (Number.isFinite(out) ? out : 0);
+  return sum > 0 ? sum : null;
+}
+
+/**
+ * Clean the raw reply for user-facing output: strip leaked text-protocol tool
+ * noise (bare `{"name":…,"params":…}` JSON, `<function=…>` tags) and
+ * `<execution_plan>` blocks via the delivery-layer SSOT, so headless `-p`
+ * output goes through the same funnel as the interactive renderer.
+ * fail-soft: any failure → raw reply unchanged (printing must never crash
+ * over cosmetics).
+ */
+function _cleanReply(reply) {
+  const raw = String(reply == null ? '' : reply);
+  try {
+    const df = require('../services/deliveryFormatter');
+    return df.stripToolCalls(df.stripExecutionPlan(raw));
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * Build the terminal `result` message.
+ * Legacy keys (type…session_id) keep their exact order; the incremental
+ * machine-readable fields (tool_calls / turn_stats / timeline) are APPENDED so
+ * existing consumers are untouched.
  * @param {object} chatResult  return value of ai.chat()
- * @param {object} [ctx]       { sessionId, maxTurns, apiMs }
+ * @param {object} [ctx]       { sessionId, maxTurns, apiMs, includeTimeline }
  * @returns {object}
  */
 function buildResultMessage(chatResult, ctx = {}) {
   const r = chatResult || {};
   const errorType = r.errorType ? String(r.errorType) : '';
   const maxTurnsHit = detectMaxTurnsHit(r, ctx.maxTurns);
-  const durationMs = Number.isFinite(r.elapsed) ? r.elapsed : (Number.isFinite(ctx.durationMs) ? ctx.durationMs : 0);
-  return {
+  const durationMs = Number.isFinite(r.elapsed)
+    ? r.elapsed
+    : Number.isFinite(ctx.durationMs)
+      ? ctx.durationMs
+      : 0;
+  const msg = {
     type: 'result',
     subtype: deriveSubtype({ errorType, maxTurnsHit }),
     total_cost_usd: extractCostUsd(r.tokenUsage),
@@ -296,9 +455,42 @@ function buildResultMessage(chatResult, ctx = {}) {
     duration_ms: durationMs,
     duration_api_ms: Number.isFinite(ctx.apiMs) ? ctx.apiMs : durationMs,
     num_turns: countTurns(r),
-    result: String(r.reply == null ? '' : r.reply),
+    result: _cleanReply(r.reply),
     session_id: String(ctx.sessionId || ''),
   };
+  // 截断交付标识(append 式增量字段,不破坏既有消费者):模型输出被 max_tokens
+  // 截断且正文已附错误原因提示时,机器消费者可据此识别「内容不完整但已诚实标注」。
+  if (r.truncated === true) {
+    msg.truncated = true;
+  }
+  const leaf = _turnArtifactsLeaf();
+  if (leaf) {
+    const arts = leaf.buildTurnArtifacts({
+      toolCallLog: Array.isArray(r.toolCallLog) ? r.toolCallLog : undefined,
+      timeline: Array.isArray(r.timeline) ? r.timeline : undefined,
+      elapsedMs: durationMs,
+      tokens: extractTotalTokens(r.tokenUsage),
+    });
+    // tool_calls: OMITTED when the run carries no toolCallLog array at all
+    // (degraded/legacy results); an empty array is the honest fact "zero tools
+    // ran", so a real (even empty) log always yields an array.
+    if (Array.isArray(r.toolCallLog)) {
+      msg.tool_calls = arts._toolCalls || [];
+    }
+    // turn_stats: present-only quantities (elapsedMs/tokens/toolCount) — the
+    // whole field is omitted when nothing is truly available (no zero-filling).
+    if (arts._turnStats) {
+      msg.turn_stats = arts._turnStats;
+    }
+    // timeline: opt-in via --include-timeline; [] when the flag is on but the
+    // run produced no timeline data, so gated consumers always see the key.
+    if (ctx.includeTimeline) {
+      msg.timeline = arts._timeline || [];
+    }
+  } else if (ctx.includeTimeline) {
+    msg.timeline = [];
+  }
+  return msg;
 }
 
 /**
@@ -344,7 +536,7 @@ function render(format, chatResult, ctx = {}) {
       }),
       JSON.stringify({
         type: 'assistant',
-        message: { role: 'assistant', content: String(r.reply == null ? '' : r.reply) },
+        message: { role: 'assistant', content: _cleanReply(r.reply) },
         session_id: String(ctx.sessionId || ''),
       }),
       JSON.stringify(buildResultMessage(r, ctx)),
@@ -352,7 +544,7 @@ function render(format, chatResult, ctx = {}) {
     return lines.join('\n');
   }
   // default: text
-  return String(r.reply == null ? '' : r.reply);
+  return _cleanReply(r.reply);
 }
 
 module.exports = {
@@ -360,6 +552,7 @@ module.exports = {
   DEFAULT_FORMAT,
   parsePrintFlags,
   extractCostUsd,
+  extractTotalTokens,
   deriveSubtype,
   detectMaxTurnsHit,
   resolveExitCode,

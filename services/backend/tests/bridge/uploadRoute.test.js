@@ -37,7 +37,12 @@ let wsToken = '';
 
 before(async () => {
   if (!depsOk) return;
-  const login = auth.loginUser('admin05', '012003');
+  // Seed credentials come from the unified generator (persisted under the
+  // throwaway KHY_DATA_HOME set above) — no hardcoded username/password.
+  const credGen = require('../../src/services/credentialGenerator');
+  const creds = credGen.loadOrCreateDefaultAdminCredentials();
+  auth.initUserDb();
+  const login = auth.loginUser(creds.username, creds.password);
   assert.ok(login.ok && login.token, 'seeded admin login issues a JWT');
   jwt = login.token;
 

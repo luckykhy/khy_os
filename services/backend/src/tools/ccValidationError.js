@@ -23,8 +23,101 @@
  */
 
 function ccValidationErrorEnabled(env = process.env) {
-  const flag = String((env && env.KHY_CC_VALIDATION_ERROR) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_CC_VALIDATION_ERROR) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
+}
+
+/**
+ * Gate for appending `Suggestion: …` fix-hint lines to the grouped validation
+ * message. Default ON; KHY_TOOL_FIX_HINT=0/false/off/no turns it off, in which
+ * case the output is byte-identical to the pre-hint behavior.
+ * @param {object} [env]
+ * @returns {boolean}
+ */
+function fixHintEnabled(env = process.env) {
+  const flag = String((env && env.KHY_TOOL_FIX_HINT) || '')
+    .trim()
+    .toLowerCase();
+  return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
+}
+
+/**
+ * Pure Levenshtein edit distance between two strings.
+ * Zero IO, deterministic, never throws (non-string inputs are coerced).
+ * Used by validateParams' enum fuzzy matching to power `Did you mean "x"?`
+ * suggestions. Iterative two-row DP — O(a.length * b.length) time, O(b) space.
+ *
+ * NOTE (Batch B1 — Levenshtein convergence): one of three Levenshtein
+ * implementations in services/backend. NOT merged into a shared leaf; the
+ * three are byte-divergent variants of the same algorithm:
+ *   - cli/router.js `_levenshtein` and tools/FileEditTool/index.js
+ *     `_levenshtein` both use a single rolling-row DP without input coercion;
+ *     FileEditTool additionally short-circuits on length > 2000.
+ * This variant coerces non-string inputs (never throws) and is exported +
+ * consumed by tools/_baseTool.js, so its signature and behavior stay stable.
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+function levenshteinDistance(a, b) {
+  const s = typeof a === 'string' ? a : String(a == null ? '' : a);
+  const t = typeof b === 'string' ? b : String(b == null ? '' : b);
+  if (s === t) {
+    return 0;
+  }
+  if (s.length === 0) {
+    return t.length;
+  }
+  if (t.length === 0) {
+    return s.length;
+  }
+  let prev = new Array(t.length + 1);
+  let curr = new Array(t.length + 1);
+  for (let j = 0; j <= t.length; j++) {
+    prev[j] = j;
+  }
+  for (let i = 1; i <= s.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= t.length; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[t.length];
+}
+
+/**
+ * Render `Suggestion: …` lines (one per entry) from validateParams'
+ * optional `suggestions` array. Returns '' when the gate is off or the
+ * array is empty — callers append the result verbatim, so gate-off output
+ * stays byte-identical. Never throws.
+ * @param {object|Array} validation
+ * @param {object} [env]
+ * @returns {string} '' or '\n' + joined suggestion lines
+ */
+function _suggestionLines(validation, env) {
+  if (!fixHintEnabled(env)) {
+    return '';
+  }
+  const suggestions =
+    validation && !Array.isArray(validation) && Array.isArray(validation.suggestions)
+      ? validation.suggestions
+      : null;
+  if (!suggestions || !suggestions.length) {
+    return '';
+  }
+  const lines = suggestions
+    .filter((s) => typeof s === 'string' && s)
+    .map((s) => `Suggestion: ${s}`);
+  if (!lines.length) {
+    return '';
+  }
+  return '\n' + lines.join('\n');
 }
 
 /**
@@ -35,7 +128,9 @@ function ccValidationErrorEnabled(env = process.env) {
  * @returns {string}
  */
 function formatValidationPath(path) {
-  if (!Array.isArray(path) || path.length === 0) return '';
+  if (!Array.isArray(path) || path.length === 0) {
+    return '';
+  }
   return path.reduce((acc, segment, index) => {
     const segmentStr = String(segment);
     if (typeof segment === 'number') {
@@ -46,7 +141,9 @@ function formatValidationPath(path) {
 }
 
 function _paramOf(issue) {
-  if (issue && Array.isArray(issue.path)) return formatValidationPath(issue.path);
+  if (issue && Array.isArray(issue.path)) {
+    return formatValidationPath(issue.path);
+  }
   return String(issue && issue.param != null ? issue.param : '');
 }
 
@@ -61,15 +158,20 @@ function _paramOf(issue) {
 function formatValidationError(toolName, validation, env) {
   const errors = Array.isArray(validation)
     ? validation
-    : (validation && Array.isArray(validation.errors) ? validation.errors : []);
+    : validation && Array.isArray(validation.errors)
+      ? validation.errors
+      : [];
   // 历史串(门控关 / 兜底逐字节回退所用,与三 call-site 旧行为完全一致)。
   const legacy = `Validation failed: ${errors.join('; ')}`;
-  if (!ccValidationErrorEnabled(env)) return legacy;
+  if (!ccValidationErrorEnabled(env)) {
+    return legacy;
+  }
 
-  const name = (typeof toolName === 'string' && toolName.trim()) ? toolName.trim() : 'The tool call';
-  const issues = (validation && !Array.isArray(validation) && Array.isArray(validation.issues))
-    ? validation.issues
-    : null;
+  const name = typeof toolName === 'string' && toolName.trim() ? toolName.trim() : 'The tool call';
+  const issues =
+    validation && !Array.isArray(validation) && Array.isArray(validation.issues)
+      ? validation.issues
+      : null;
 
   // 有结构化 issues(builtin / 默认 registry validate 经 validateParams)→ CC 分组 + 措辞 + 路径。
   if (issues && issues.length) {
@@ -78,7 +180,9 @@ function formatValidationError(toolName, validation, env) {
     const typeMismatch = [];
     const other = [];
     for (const issue of issues) {
-      if (!issue || typeof issue !== 'object') continue;
+      if (!issue || typeof issue !== 'object') {
+        continue;
+      }
       const p = _paramOf(issue);
       if (issue.kind === 'missing') {
         missing.push(`The required parameter \`${p}\` is missing`);
@@ -94,16 +198,23 @@ function formatValidationError(toolName, validation, env) {
       }
     }
     const parts = [...missing, ...unexpected, ...typeMismatch, ...other].filter(Boolean);
-    if (parts.length === 0) return legacy; // 防呆:issues 全空 → 退历史串
+    if (parts.length === 0) {
+      return legacy;
+    } // 防呆:issues 全空 → 退历史串
     const noun = parts.length > 1 ? 'issues' : 'issue';
-    return `${name} failed due to the following ${noun}:\n${parts.join('\n')}`;
+    // Fix-hint lines (KHY_TOOL_FIX_HINT, default on) — appended AFTER the CC
+    // grouped body so the existing message stays byte-identical when gate off
+    // or no suggestions exist. Never touches the legacy path above.
+    return `${name} failed due to the following ${noun}:\n${parts.join('\n')}${_suggestionLines(validation, env)}`;
   }
 
   // 无结构化 issues(如 registry 工具自带的定制 validate 只返 {valid,errors})→ 仅对齐 CC 的
   // 「标题 + 逐条换行」信封,逐条沿用原 error 串(不臆造分类/措辞)。
-  if (!errors.length) return legacy;
+  if (!errors.length) {
+    return legacy;
+  }
   const noun = errors.length > 1 ? 'issues' : 'issue';
-  return `${name} failed due to the following ${noun}:\n${errors.join('\n')}`;
+  return `${name} failed due to the following ${noun}:\n${errors.join('\n')}${_suggestionLines(validation, env)}`;
 }
 
 /**
@@ -119,13 +230,19 @@ function formatValidationError(toolName, validation, env) {
  * @returns {boolean}
  */
 function isValidationErrorMessage(text) {
-  if (typeof text !== 'string' || !text) return false;
-  if (/^Validation failed: /.test(text)) return true;
+  if (typeof text !== 'string' || !text) {
+    return false;
+  }
+  if (/^Validation failed: /.test(text)) {
+    return true;
+  }
   return / failed due to the following (?:issue|issues):/.test(text);
 }
 
 module.exports = {
   ccValidationErrorEnabled,
+  fixHintEnabled,
+  levenshteinDistance,
   formatValidationPath,
   formatValidationError,
   isValidationErrorMessage,

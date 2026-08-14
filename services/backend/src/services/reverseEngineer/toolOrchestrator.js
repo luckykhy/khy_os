@@ -18,6 +18,7 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
 const { searchExecutable } = require('../../tools/platformUtils');
 const { jdkToolFlags } = require('../../utils/javaEncoding');
 
@@ -33,64 +34,210 @@ const TOOL_MAX_BUFFER = parseInt(process.env.KHY_RE_TOOL_MAX_BUFFER, 10) || 512 
  */
 const PLANS = {
   elf: [
-    { bin: 'objdump', priority: 1, argv: (f) => ['-d', '-C', f], kind: 'disasm', install: 'binutils (apt install binutils)' },
+    {
+      bin: 'objdump',
+      priority: 1,
+      argv: (f) => ['-d', '-C', f],
+      kind: 'disasm',
+      install: 'binutils (apt install binutils)',
+    },
     { bin: 'nm', priority: 2, argv: (f) => ['-C', f], kind: 'symbols', install: 'binutils' },
-    { bin: 'readelf', priority: 3, argv: (f) => ['-h', '-d', f], kind: 'headers', install: 'binutils' },
-    { bin: 'radare2', priority: 4, argv: (f) => ['-q', '-c', 'aaa;afl', f], kind: 'functions', install: 'radare2' },
-    { bin: 'analyzeHeadless', priority: 5, kind: 'decompile', needsTempProject: true, install: 'Ghidra (analyzeHeadless on PATH)' },
+    {
+      bin: 'readelf',
+      priority: 3,
+      argv: (f) => ['-h', '-d', f],
+      kind: 'headers',
+      install: 'binutils',
+    },
+    {
+      bin: 'radare2',
+      priority: 4,
+      argv: (f) => ['-q', '-c', 'aaa;afl', f],
+      kind: 'functions',
+      install: 'radare2',
+    },
+    {
+      bin: 'analyzeHeadless',
+      priority: 5,
+      kind: 'decompile',
+      needsTempProject: true,
+      install: 'Ghidra (analyzeHeadless on PATH)',
+    },
   ],
   pe: [
-    { bin: 'objdump', priority: 1, argv: (f) => ['-d', '-C', f], kind: 'disasm', install: 'binutils / llvm-objdump' },
-    { bin: 'radare2', priority: 2, argv: (f) => ['-q', '-c', 'aaa;afl', f], kind: 'functions', install: 'radare2' },
-    { bin: 'analyzeHeadless', priority: 3, kind: 'decompile', needsTempProject: true, install: 'Ghidra (analyzeHeadless on PATH)' },
+    {
+      bin: 'objdump',
+      priority: 1,
+      argv: (f) => ['-d', '-C', f],
+      kind: 'disasm',
+      install: 'binutils / llvm-objdump',
+    },
+    {
+      bin: 'radare2',
+      priority: 2,
+      argv: (f) => ['-q', '-c', 'aaa;afl', f],
+      kind: 'functions',
+      install: 'radare2',
+    },
+    {
+      bin: 'analyzeHeadless',
+      priority: 3,
+      kind: 'decompile',
+      needsTempProject: true,
+      install: 'Ghidra (analyzeHeadless on PATH)',
+    },
   ],
   macho: [
     { bin: 'otool', priority: 1, argv: (f) => ['-tV', f], kind: 'disasm', install: 'Xcode CLT' },
     { bin: 'nm', priority: 2, argv: (f) => ['-C', f], kind: 'symbols', install: 'Xcode CLT' },
-    { bin: 'objdump', priority: 3, argv: (f) => ['-d', '-C', f], kind: 'disasm', install: 'binutils/llvm' },
-    { bin: 'analyzeHeadless', priority: 4, kind: 'decompile', needsTempProject: true, install: 'Ghidra (analyzeHeadless on PATH)' },
+    {
+      bin: 'objdump',
+      priority: 3,
+      argv: (f) => ['-d', '-C', f],
+      kind: 'disasm',
+      install: 'binutils/llvm',
+    },
+    {
+      bin: 'analyzeHeadless',
+      priority: 4,
+      kind: 'decompile',
+      needsTempProject: true,
+      install: 'Ghidra (analyzeHeadless on PATH)',
+    },
   ],
   dotnet: [
-    { bin: 'ilspycmd', priority: 1, argv: (f) => [f], kind: 'decompile', install: 'dotnet tool install -g ilspycmd' },
+    {
+      bin: 'ilspycmd',
+      priority: 1,
+      argv: (f) => [f],
+      kind: 'decompile',
+      install: 'dotnet tool install -g ilspycmd',
+    },
     { bin: 'monodis', priority: 2, argv: (f) => [f], kind: 'disasm', install: 'mono-devel' },
   ],
   java: [
-    { bin: 'jadx', priority: 1, argv: (f) => ['--no-res', '-d', '-', f], kind: 'decompile', install: 'jadx' },
-    { bin: 'javap', priority: 2, argv: (f) => ['-c', '-p', ...jdkToolFlags(), f], kind: 'disasm', install: 'JDK' },
+    {
+      bin: 'jadx',
+      priority: 1,
+      argv: (f) => ['--no-res', '-d', '-', f],
+      kind: 'decompile',
+      install: 'jadx',
+    },
+    {
+      bin: 'javap',
+      priority: 2,
+      argv: (f) => ['-c', '-p', ...jdkToolFlags(), f],
+      kind: 'disasm',
+      install: 'JDK',
+    },
   ],
   // family=dalvik: Android .dex / .apk → Java 源（jadx 主路径）/ smali / jar。
   // jadx 直接吃 .dex 与 .apk；baksmali 出 smali；dex2jar 转 .jar 后可再走 java 反编译。
   dalvik: [
-    { bin: 'jadx', priority: 1, argv: (f) => ['--no-res', '-d', '-', f], kind: 'decompile', install: 'jadx (handles .dex and .apk)' },
-    { bin: 'baksmali', priority: 2, argv: (f) => ['d', f], kind: 'disasm', install: 'baksmali (smali/baksmali)' },
-    { bin: 'd2j-dex2jar', priority: 3, argv: (f) => [f], kind: 'transcode', install: 'dex2jar (d2j-dex2jar)' },
+    {
+      bin: 'jadx',
+      priority: 1,
+      argv: (f) => ['--no-res', '-d', '-', f],
+      kind: 'decompile',
+      install: 'jadx (handles .dex and .apk)',
+    },
+    {
+      bin: 'baksmali',
+      priority: 2,
+      argv: (f) => ['d', f],
+      kind: 'disasm',
+      install: 'baksmali (smali/baksmali)',
+    },
+    {
+      bin: 'd2j-dex2jar',
+      priority: 3,
+      argv: (f) => [f],
+      kind: 'transcode',
+      install: 'dex2jar (d2j-dex2jar)',
+    },
   ],
   wasm: [
-    { bin: 'wasm2wat', priority: 1, argv: (f) => [f], kind: 'decompile', install: 'wabt (apt install wabt)' },
+    {
+      bin: 'wasm2wat',
+      priority: 1,
+      argv: (f) => [f],
+      kind: 'decompile',
+      install: 'wabt (apt install wabt)',
+    },
     { bin: 'wasm-decompile', priority: 2, argv: (f) => [f], kind: 'decompile', install: 'wabt' },
   ],
   python: [
-    { bin: 'decompyle3', priority: 1, argv: (f) => [f], kind: 'decompile', install: 'pip install decompyle3' },
-    { bin: 'uncompyle6', priority: 2, argv: (f) => [f], kind: 'decompile', install: 'pip install uncompyle6' },
-    { bin: 'pycdc', priority: 3, argv: (f) => [f], kind: 'decompile', install: 'build zrax/pycdc (handles modern CPython)' },
+    {
+      bin: 'decompyle3',
+      priority: 1,
+      argv: (f) => [f],
+      kind: 'decompile',
+      install: 'pip install decompyle3',
+    },
+    {
+      bin: 'uncompyle6',
+      priority: 2,
+      argv: (f) => [f],
+      kind: 'decompile',
+      install: 'pip install uncompyle6',
+    },
+    {
+      bin: 'pycdc',
+      priority: 3,
+      argv: (f) => [f],
+      kind: 'decompile',
+      install: 'build zrax/pycdc (handles modern CPython)',
+    },
   ],
   // family=go: formatRegistry 已声明候选工具却无运行计划——补齐编排，避免「识别得了却驱动不了」。
   go: [
-    { bin: 'go', priority: 1, argv: (f) => ['version', '-m', f], kind: 'buildinfo', install: 'golang toolchain' },
-    { bin: 'objdump', priority: 2, argv: (f) => ['-d', '-C', f], kind: 'disasm', install: 'binutils / llvm-objdump' },
-    { bin: 'radare2', priority: 3, argv: (f) => ['-q', '-c', 'aaa;afl', f], kind: 'functions', install: 'radare2' },
+    {
+      bin: 'go',
+      priority: 1,
+      argv: (f) => ['version', '-m', f],
+      kind: 'buildinfo',
+      install: 'golang toolchain',
+    },
+    {
+      bin: 'objdump',
+      priority: 2,
+      argv: (f) => ['-d', '-C', f],
+      kind: 'disasm',
+      install: 'binutils / llvm-objdump',
+    },
+    {
+      bin: 'radare2',
+      priority: 3,
+      argv: (f) => ['-q', '-c', 'aaa;afl', f],
+      kind: 'functions',
+      install: 'radare2',
+    },
   ],
   // family=rust: 同上缺口。rust 二进制无专用反编译器，走原生反汇编 + 符号还原 crate 线索。
   rust: [
-    { bin: 'objdump', priority: 1, argv: (f) => ['-d', '-C', f], kind: 'disasm', install: 'binutils / llvm-objdump' },
+    {
+      bin: 'objdump',
+      priority: 1,
+      argv: (f) => ['-d', '-C', f],
+      kind: 'disasm',
+      install: 'binutils / llvm-objdump',
+    },
     { bin: 'nm', priority: 2, argv: (f) => ['-C', f], kind: 'symbols', install: 'binutils' },
-    { bin: 'radare2', priority: 3, argv: (f) => ['-q', '-c', 'aaa;afl', f], kind: 'functions', install: 'radare2' },
+    {
+      bin: 'radare2',
+      priority: 3,
+      argv: (f) => ['-q', '-c', 'aaa;afl', f],
+      kind: 'functions',
+      install: 'radare2',
+    },
   ],
 };
 
 const _whichCache = new Map();
 function _which(bin) {
-  if (_whichCache.has(bin)) return _whichCache.get(bin);
+  if (_whichCache.has(bin)) {
+    return _whichCache.get(bin);
+  }
   const resolved = searchExecutable(bin);
   _whichCache.set(bin, resolved);
   return resolved;
@@ -120,21 +267,40 @@ function probe(family) {
 function _run(bin, argv) {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const finish = (v) => {
+      if (!done) {
+        done = true;
+        resolve(v);
+      }
+    };
     try {
-      execFile(bin, argv, {
-        timeout: TOOL_TIMEOUT_MS,
-        maxBuffer: TOOL_MAX_BUFFER,
-        windowsHide: true,
-        // 不继承可能触发 shell 行为的环境；保持最小、确定。
-        env: { ...process.env, LC_ALL: 'C' },
-      }, (err, stdout, stderr) => {
-        if (err && !stdout) {
-          finish({ ok: false, reason: err.killed ? 'timeout' : (err.code != null ? `exit ${err.code}` : err.message), stderr: String(stderr || '').slice(0, 2000) });
-          return;
+      execFile(
+        bin,
+        argv,
+        {
+          timeout: TOOL_TIMEOUT_MS,
+          maxBuffer: TOOL_MAX_BUFFER,
+          windowsHide: true,
+          // 不继承可能触发 shell 行为的环境；保持最小、确定。
+          env: { ...process.env, LC_ALL: 'C' },
+        },
+        (err, stdout, stderr) => {
+          if (err && !stdout) {
+            finish({
+              ok: false,
+              reason: err.killed ? 'timeout' : err.code != null ? `exit ${err.code}` : err.message,
+              stderr: String(stderr || '').slice(0, 2000),
+            });
+            return;
+          }
+          finish({
+            ok: true,
+            output: String(stdout || ''),
+            stderr: String(stderr || '').slice(0, 2000),
+            truncated: Buffer.byteLength(String(stdout || '')) >= TOOL_MAX_BUFFER,
+          });
         }
-        finish({ ok: true, output: String(stdout || ''), stderr: String(stderr || '').slice(0, 2000), truncated: Buffer.byteLength(String(stdout || '')) >= TOOL_MAX_BUFFER });
-      });
+      );
     } catch (e) {
       finish({ ok: false, reason: e.message });
     }
@@ -166,13 +332,23 @@ function _buildGhidraInvocation(filePath) {
   fs.writeFileSync(scriptPath, scriptBody, 'utf8');
 
   const argv = [
-    projDir, projName,
-    '-import', filePath,
-    '-scriptPath', projDir,
-    '-postScript', 'khy_decompile_dump.py',
+    projDir,
+    projName,
+    '-import',
+    filePath,
+    '-scriptPath',
+    projDir,
+    '-postScript',
+    'khy_decompile_dump.py',
     '-deleteProject',
   ];
-  const cleanup = () => { try { fs.rmSync(projDir, { recursive: true, force: true }); } catch { /* noop */ } };
+  const cleanup = () => {
+    try {
+      fs.rmSync(projDir, { recursive: true, force: true });
+    } catch {
+      /* noop */
+    }
+  };
   return { argv, cleanup };
 }
 
@@ -205,13 +381,22 @@ async function orchestrate(filePath, family, opts = {}) {
   }
 
   if (!run) {
-    return { family, attempted: false, evidence: [], availability: tools, degraded: false, hint: 'probe-only' };
+    return {
+      family,
+      attempted: false,
+      evidence: [],
+      availability: tools,
+      degraded: false,
+      hint: 'probe-only',
+    };
   }
 
   const evidence = [];
   for (const tool of available.slice(0, maxTools)) {
     const planEntry = plan.find((p) => p.bin === tool.bin);
-    if (!planEntry) continue;
+    if (!planEntry) {
+      continue;
+    }
 
     // Ghidra 等需要一次性工程目录 + postScript 的工具走专用构造路径。
     let argv;
@@ -228,7 +413,9 @@ async function orchestrate(filePath, family, opts = {}) {
     try {
       res = await _run(tool.bin, argv);
     } finally {
-      if (cleanup) cleanup();
+      if (cleanup) {
+        cleanup();
+      }
     }
     evidence.push({
       tool: tool.bin,
@@ -238,7 +425,7 @@ async function orchestrate(filePath, family, opts = {}) {
       reason: res.reason || null,
       // 输出在证据包里裁剪，避免巨量 disasm 撑爆下游上下文。
       output: res.ok ? res.output.slice(0, 64 * 1024) : null,
-      outputTruncated: res.ok ? (res.output.length > 64 * 1024 || res.truncated) : false,
+      outputTruncated: res.ok ? res.output.length > 64 * 1024 || res.truncated : false,
       stderr: res.stderr || null,
     });
   }
@@ -261,13 +448,16 @@ async function orchestrate(filePath, family, opts = {}) {
  * 由其各自工具链报错触发既有自愈条目。
  */
 const BIN_TO_DEP_ID = {
-  objdump: 'binutils', nm: 'binutils', readelf: 'binutils',
+  objdump: 'binutils',
+  nm: 'binutils',
+  readelf: 'binutils',
   radare2: 'radare2',
   analyzeHeadless: 'ghidra',
   jadx: 'jadx',
   baksmali: 'baksmali',
   'd2j-dex2jar': 'dex2jar',
-  wasm2wat: 'wabt', 'wasm-decompile': 'wabt',
+  wasm2wat: 'wabt',
+  'wasm-decompile': 'wabt',
   ilspycmd: 'ilspycmd',
   decompyle3: 'decompyle3',
   uncompyle6: 'uncompyle6',
@@ -285,7 +475,9 @@ function recommendInstall(family) {
   const sorted = plan.slice().sort((a, b) => a.priority - b.priority);
   for (const p of sorted) {
     const depId = BIN_TO_DEP_ID[p.bin];
-    if (depId) return { depId, bin: p.bin, install: p.install };
+    if (depId) {
+      return { depId, bin: p.bin, install: p.install };
+    }
   }
   return null;
 }

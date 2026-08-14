@@ -15,62 +15,82 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 
 // ════════════════════════════════════════════════════════════════
 // Imports — Project Modules
 // ════════════════════════════════════════════════════════════════
 
 const { createKeyedRateLimiter } = require('../rateLimiter');
-// Model-name SSOT: codex probe-model fallback flows from constants/models.js.
-const { PRIMARY: MODELS } = require('../../constants/models');
-const { retryWithBackoff, isRetryableError, parseRetryAfter } = require('../retryWithBackoff');
-const { diagnostics, generateTraceId: genDiagTraceId } = require('../diagnosticEvents');
-const { usageTracker } = require('../usageTracker');
-const { evaluateGuard, formatWarning: formatGuardWarning } = require('../contextWindowGuard');
-let _adaptiveConfig = null;
-try {
-  _adaptiveConfig = require('../adaptiveConfig');
-} catch { _adaptiveConfig = null; }
-let _traceAudit = null;
-try {
-  _traceAudit = require('../traceAuditService');
+
+// Error classification + adapter labels extracted to dedicated modules.
+// (Batch 5 清理:generate() 收敛到 aiGatewayGenerateMethod.js 后,本文件对 constants/models、
+// retryWithBackoff、diagnosticEvents、usageTracker、contextWindowGuard 的引用已全部迁走;
+// 这些模块由本文件顶层无条件 require 的 aiGatewayGenerateMethod 继续加载,加载集合不变。)
+const { createSequentialQueue } = require('../sequentialQueue');
+
+const apiAdapter = require('./adapters/apiAdapter');
+const claudeAdapter = require('./adapters/claudeAdapter');
+const clipboardRelayAdapter = require('./adapters/clipboardRelayAdapter');
+const cliToolAdapter = require('./adapters/cliToolAdapter');
+const codexAdapter = require('./adapters/codexAdapter');
+const cursorAdapter = require('./adapters/cursorAdapter');
+const kiroAdapter = require('./adapters/kiroAdapter');
+const localLLMAdapter = require('./adapters/localLLMAdapter');
+const adapterLabels = require('./gatewayAdapterLabels');
+const errorClassifier = require('./gatewayErrorClassifier');
+const gatewayConstants = require('./gatewayConstants');
+
+// ── Optional module loaders ────────────────────────────────────
+// Several subsystems are loaded conditionally so the gateway degrades
+// gracefully when a optional dependency is absent (e.g. a service not
+// deployed in a particular environment).  The two helpers below replace
+// the repetitive try/catch blocks that previously littered the import
+// section.
+
+/** require() with null fallback. */
+function safeRequire(modId) {
+  try {
+    return require(modId);
+  } catch {
+    return null;
+  }
+}
+
+/** require() + call getInstance(), null fallback. */
+function safeRequireSingleton(modId) {
+  try {
+    const mod = require(modId);
+    if (mod && typeof mod.getInstance === 'function') {
+      return mod.getInstance();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const _adaptiveConfig = safeRequire('../adaptiveConfig');
+let _traceAudit = safeRequire('../traceAuditService');
+if (_traceAudit && typeof _traceAudit.ensureDiagnosticsBridge === 'function') {
   _traceAudit.ensureDiagnosticsBridge();
-} catch {
+} else {
   _traceAudit = null;
 }
-const keySelector = require('./keySelector');
-const localLLMAdapter = require('./adapters/localLLMAdapter');
-let localLLMService = null;
-try {
-  localLLMService = require('../localLLMService');
-} catch {
-  localLLMService = null;
-}
-const cliToolAdapter = require('./adapters/cliToolAdapter');
+const localLLMService = safeRequire('../localLLMService');
 const opencodeAdapter = require('./adapters/opencodeAdapter');
-const kiroAdapter = require('./adapters/kiroAdapter');
-const cursorAdapter = require('./adapters/cursorAdapter');
+const openclawAdapter = require('./adapters/openclawAdapter');
 const traeAdapter = require('./adapters/traeAdapter');
-const claudeAdapter = require('./adapters/claudeAdapter');
-const codexAdapter = require('./adapters/codexAdapter');
 const windsurfAdapter = require('./adapters/windsurfAdapter');
 const vscodeAdapter = require('./adapters/vscodeAdapter');
 const warpAdapter = require('./adapters/warpAdapter');
 const ollamaAdapter = require('./adapters/ollamaAdapter');
 const cursor2apiAdapter = require('./adapters/cursor2apiAdapter');
 const relayApiAdapter = require('./adapters/relayApiAdapter');
-const apiAdapter = require('./adapters/apiAdapter');
 const webRelayAdapter = require('./adapters/webRelayAdapter');
-const clipboardRelayAdapter = require('./adapters/clipboardRelayAdapter');
-const { createSequentialQueue } = require('../sequentialQueue');
 const { RedisHealthStore } = require('./redisHealthStore');
 const { createRedisRateLimiter } = require('./redisRateLimiter');
 const { createRequestDedup } = require('./requestDedup');
 const { ChannelHealthBroadcaster } = require('./channelHealthBroadcaster');
-const modelCuration = require('./modelCuration');
-const failureExplainer = require('./failureExplainer');
-
 
 // ════════════════════════════════════════════════════════════════
 // Helpers — Process & Platform
@@ -78,57 +98,54 @@ const failureExplainer = require('./failureExplainer');
 
 let _cachedSafeKill = (child) => {
   try {
-    if (child && typeof child.kill === 'function') child.kill('SIGTERM');
-  } catch { /* best effort */ }
-};
-try {
-  const platformUtils = require('../../tools/platformUtils');
-  if (platformUtils && typeof platformUtils.safeKill === 'function') {
-    _cachedSafeKill = platformUtils.safeKill;
+    if (child && typeof child.kill === 'function') {
+      child.kill('SIGTERM');
+    }
+  } catch {
+    /* best effort */
   }
-} catch { /* keep fallback */ }
+};
+const _platformUtils = safeRequire('../../tools/platformUtils');
+if (_platformUtils && typeof _platformUtils.safeKill === 'function') {
+  _cachedSafeKill = _platformUtils.safeKill;
+}
 
 function safeKillChildProc(child) {
   if (typeof _cachedSafeKill === 'function') {
     try {
       _cachedSafeKill(child);
       return;
-    } catch { /* fallback below */ }
+    } catch {
+      /* fallback below */
+    }
   }
   try {
-    if (child && typeof child.kill === 'function') child.kill('SIGTERM');
-  } catch { /* best effort */ }
+    if (child && typeof child.kill === 'function') {
+      child.kill('SIGTERM');
+    }
+  } catch {
+    /* best effort */
+  }
 }
 
 // ── Live model switching ────────────
-let _modelSwitch;
-try {
-  const { getInstance: getModelSwitch } = require('../liveModelSwitch');
-  _modelSwitch = getModelSwitch();
-} catch { _modelSwitch = null; }
+const _modelSwitch = safeRequireSingleton('../liveModelSwitch');
 
 // ── Advanced diagnostics ────────────
-let _advDiag;
-try {
-  const { getInstance: getAdvDiag } = require('../advancedDiagnostics');
-  _advDiag = getAdvDiag();
-} catch { _advDiag = null; }
+const _advDiag = safeRequireSingleton('../advancedDiagnostics');
 
 // ════════════════════════════════════════════════════════════════
 // Error Classification & Diagnostics
 // ════════════════════════════════════════════════════════════════
 
 // ── Error classification (enhanced with errorClassifier) ────────────
-const { detectErrorKindDeep, formatErrorMessage: fmtError, isRetryable: _ecIsRetryable } = require('../errorClassifier');
-
-function _isReconnectOrChannelClosedMessage(message = '') {
-  const lower = String(message || '').toLowerCase();
-  return /reconnecting|channel closed|failed to record rollout items|transport issue during rollout recording/.test(lower);
-}
+// _isReconnectOrChannelClosedMessage imported from gatewayErrorClassifier.
 
 function _isTransientGatewayTransportMessage(message = '') {
   const lower = String(message || '').toLowerCase();
-  if (_isReconnectOrChannelClosedMessage(lower)) return true;
+  if (_isReconnectOrChannelClosedMessage(lower)) {
+    return true;
+  }
   return /stream idle timeout|socket hang up/.test(lower);
 }
 
@@ -141,144 +158,74 @@ function _isTransientGatewayTransportMessage(message = '') {
 // endpoint so the UI can show whether a model is local or cloud, and where a
 // cloud model comes from. Override/extend at runtime via KHY_ADAPTER_SOURCE_LABELS
 // (a JSON object: { "<adapterKey>": "<label>" }).
-const _DEFAULT_ADAPTER_SOURCE_LABELS = {
-  // ── Local model runtimes ──
-  ollama: '本地 · Ollama',
-  localLLM: '本地 · llama.cpp',
-  // ── Cloud structured adapters ──
-  kiro: '云端 · Kiro (AWS CodeWhisperer)',
-  cursor: '云端 · Cursor',
-  cursor2api: '云端 · Cursor (cursor2api)',
-  trae: '云端 · Trae',
-  claude: '云端 · Anthropic Claude',
-  codex: '云端 · OpenAI Codex',
-  api: '云端 · 自定义 API',
-  // ── IDE bridges ──
-  windsurf: '云端 · Windsurf',
-  vscode: '云端 · VS Code',
-  warp: '云端 · Warp',
-  relay_api: '云端 · 中转 API',
-  // ── Relay / assist channels ──
-  cli: '本地 · CLI 工具',
-  relay: '中继 · 浏览器手动转发',
-  clipboard: '中继 · 剪贴板转发',
-};
+// Adapter source labels: imported from gatewayAdapterLabels (extracted module).
+const _ADAPTER_SOURCE_LABELS = adapterLabels.resolveAdapterSourceLabels(process.env);
 
-function _resolveAdapterSourceLabels() {
-  const labels = { ..._DEFAULT_ADAPTER_SOURCE_LABELS };
-  const raw = String(process.env.KHY_ADAPTER_SOURCE_LABELS || '').trim();
-  if (raw) {
-    try {
-      const override = JSON.parse(raw);
-      if (override && typeof override === 'object') {
-        for (const [k, v] of Object.entries(override)) {
-          if (v != null) labels[String(k)] = String(v);
-        }
-      }
-    } catch { /* malformed env → keep defaults */ }
-  }
-  return labels;
-}
-
-const _ADAPTER_SOURCE_LABELS = _resolveAdapterSourceLabels();
-
-// Recover an HTTP status code that an upstream/transport library embedded in the
-// error *message* but never surfaced as a numeric field — most notably axios's
-// "Request failed with status code 504", where the returned result keeps
-// statusCode:0 and the only evidence of the 504 is the text. Only matches when an
-// explicit status/HTTP context word precedes the code, and only accepts 4xx/5xx,
-// so a stray 3-digit number (a port, an id, "exited with code 1", a model name)
-// can never be misread as a status.
-function _httpStatusFromMessage(message = '') {
-  const m = String(message || '').match(/(?:status(?:\s*code)?|http(?:\s*status)?)\D{0,4}(\d{3})\b/i);
-  if (!m) return 0;
-  const code = parseInt(m[1], 10);
-  return code >= 400 && code <= 599 ? code : 0;
-}
-
-function classifyError(status, message = '') {
-  const rawMessage = String(message || '');
-  const lower = rawMessage.toLowerCase();
-  if (/adapter\s+\S+\s+idle timeout|stream idle timeout|\bidle timeout\b/.test(lower)) return 'timeout';
-
-  // Distinguish explicit user/abort-controller cancellation from generic "canceled":
-  // many upstream CLIs use plain "canceled" for process/channel interruption.
-  // We only classify as "cancelled" when message clearly indicates an abort signal.
-  if (/aborterror|abort_err|\baborted\b|\brequest aborted\b|\babort(ed)? by\b|signal aborted|user[-\s]?cancel/.test(lower)) {
-    return 'cancelled';
-  }
-  if (/\bcancelled\b|\bcanceled\b/.test(lower)) return 'process';
-  if (_isReconnectOrChannelClosedMessage(lower)) return 'network';
-  if (/adapter\s+\S+\s+queue timeout|queue task timeout/.test(lower)) return 'timeout';
-  if (/\b(?:econnreset|econnrefused|enotfound|ehostunreach|enetunreach|eai_again)\b|fetch failed|socket hang up|getaddrinfo|network error/.test(lower)) {
-    return 'network';
-  }
-
-  // Unified structured detection (errorClassifier now covers all 13 kinds)
-  if (status || rawMessage) {
-    const errObj = { code: status, message: rawMessage };
-    const kind = detectErrorKindDeep(errObj);
-    if (kind) return kind;
-  }
-
-  // Minimal residual fallback for patterns errorClassifier may miss
-  if (/did not respond within|stream stalled|unresponsive/.test(lower)) return 'timeout';
-  if (/adapter .* unavailable|not installed|command .* not found/.test(lower)) return 'unavailable';
-
-  // Status-code fallback (for bare numeric status without message)
-  if (status === 400) return 'bad_request';
-  if (status === 408 || status === 504) return 'timeout';
-
-  // Root-cause fix for "一次失败处处失败 / api 链接不稳定": axios & several adapters
-  // return {success:false, error:"Request failed with status code 504/404", statusCode:0}
-  // — the HTTP code lives ONLY in the message, so every check above misses it and we
-  // fall to 'unknown'. 'unknown' then gets a long "broken channel" cooldown (20s base)
-  // that the circuit breaker escalates toward 300s, and EVERY distinct upstream fault
-  // (transient 504, permanent 404) collapses into the same undifferentiated bucket and
-  // is cached/blocked identically — exactly the reported "one failure → everything
-  // fails". When no numeric status was supplied, recover the embedded code and
-  // re-classify it so a 504 reads as transient `timeout` (short 10s window) and a 404
-  // as `model_not_found` (honest diagnostic). Guarded by `!status` → byte-identical
-  // when a status was already provided; the recursive call passes a truthy status, so
-  // it can never recurse a second time.
-  if (!status) {
-    const embedded = _httpStatusFromMessage(rawMessage);
-    if (embedded) return classifyError(embedded, '');
-  }
-
-  return 'unknown';
-}
+// Error classification: imported from gatewayErrorClassifier (extracted module).
+// Re-export selected helpers under the names used throughout this file.
+const {
+  classifyError,
+  isReconnectOrChannelClosedMessage,
+  formatErrorMessage: fmtError,
+  isRetryable: _ecIsRetryable,
+} = errorClassifier;
+// Alias for dependency injection into generated methods (underscore prefix convention).
+const _isReconnectOrChannelClosedMessage = isReconnectOrChannelClosedMessage;
 
 function _sanitizeFailureMessage(message, maxLen = 220) {
   const text = String(fmtError(message || '') || message || '')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!text) return 'unknown error';
+  if (!text) {
+    return 'unknown error';
+  }
   return text.length > maxLen ? `${text.slice(0, maxLen - 1)}…` : text;
 }
 
 function _normalizeAdapterSig(raw) {
-  const s = String(raw || '').trim().toLowerCase();
-  if (!s) return 'adapter';
-  if (s === 'localllm' || s === 'local llm' || s.includes('local (') || s.includes('本地模型')) return 'localllm';
-  if (s === 'codex' || s.includes('openai codex')) return 'codex';
-  if (s === 'claude' || s.includes('anthropic')) return 'claude';
-  if (s === 'ollama' || s.includes('ollama')) return 'ollama';
-  if (s === 'api' || s.includes('multifree')) return 'api';
-  if (s === 'relay' || s.includes('relay')) return 'relay';
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!s) {
+    return 'adapter';
+  }
+  if (s === 'localllm' || s === 'local llm' || s.includes('local (') || s.includes('本地模型')) {
+    return 'localllm';
+  }
+  if (s === 'codex' || s.includes('openai codex')) {
+    return 'codex';
+  }
+  if (s === 'claude' || s.includes('anthropic')) {
+    return 'claude';
+  }
+  if (s === 'ollama' || s.includes('ollama')) {
+    return 'ollama';
+  }
+  if (s === 'api' || s.includes('multifree')) {
+    return 'api';
+  }
+  if (s === 'relay' || s.includes('relay')) {
+    return 'relay';
+  }
   return s;
 }
 
 function _buildFailureReasonSection(attempts = [], maxLines = 8) {
-  if (!Array.isArray(attempts) || attempts.length === 0) return '';
-  const failedRaw = attempts.filter(a => a && a.success === false);
-  if (failedRaw.length === 0) return '';
+  if (!Array.isArray(attempts) || attempts.length === 0) {
+    return '';
+  }
+  const failedRaw = attempts.filter((a) => a && a.success === false);
+  if (failedRaw.length === 0) {
+    return '';
+  }
   // 让本轮新鲜 live 失败(真实 statusCode、非 virtualSkip)排在陈旧缓存跳过之前,避免
   // 238s 前缓存的 404 盖过本轮真实的 429(门控 KHY_FAILURE_REASON_RANKING,关则原序回退)。
   let failed = failedRaw;
   try {
     failed = require('./failureReasonRanking').rankFailedAttempts(failedRaw);
-  } catch { /* fail-soft:排序不可用则用原插入序 */ }
+  } catch {
+    /* fail-soft:排序不可用则用原插入序 */
+  }
 
   const lines = [];
   const seen = new Set();
@@ -289,16 +236,25 @@ function _buildFailureReasonSection(attempts = [], maxLines = 8) {
     const statusCode = attempt.statusCode || attempt.status || attempt.code;
     const statusNum = Number(statusCode);
     const status = Number.isFinite(statusNum) && statusNum > 0 ? ` (${statusNum})` : '';
-    const errType = String(attempt.errorType || classifyError(statusCode, attempt.error || '') || '').trim();
+    const errType = String(
+      attempt.errorType || classifyError(statusCode, attempt.error || '') || ''
+    ).trim();
     const errTypeSig = errType.toLowerCase();
     const kind = errType ? ` [${errType}]` : '';
     const err = _sanitizeFailureMessage(attempt.error || attempt.message || 'unknown error');
     const sig = `${adapterSig}|${Number.isFinite(statusNum) ? statusNum : 0}|${errTypeSig}|${err}`;
-    if (seen.has(sig)) continue;
+    if (seen.has(sig)) {
+      continue;
+    }
     seen.add(sig);
     uniqueFailedCount += 1;
     if (lines.length < Math.max(1, maxLines)) {
       let line = `- ${adapter}${status}${kind}: ${err}`;
+      // Append finish_reason when present for precise diagnostics (e.g. content_filter,
+      // length, tool_calls) so the user knows *why* the model produced no text.
+      if (attempt.meta?.finishReason) {
+        line += ` (finish_reason=${attempt.meta.finishReason})`;
+      }
       // model_not_found 显示纠偏(modelExistenceEvidence):有证据表明模型已送达上游(参数/token 类
       // 报错、或送出串为复合 id)时追加注解,消解「刚嫌 token 太大、转头又说找不到模型」的矛盾。
       // 只改显示不改分类;门关 / 无证据 → 逐字节回退原行。绝不抛。
@@ -312,13 +268,17 @@ function _buildFailureReasonSection(attempts = [], maxLines = 8) {
             attempts: failed,
             env: process.env,
           });
-        } catch { /* 叶子不可用 → 今日行 */ }
+        } catch {
+          /* 叶子不可用 → 今日行 */
+        }
       }
       lines.push(line);
     }
   }
 
-  if (lines.length === 0) return '';
+  if (lines.length === 0) {
+    return '';
+  }
   if (uniqueFailedCount > lines.length) {
     lines.push(`- ... 还有 ${uniqueFailedCount - lines.length} 条失败记录`);
   }
@@ -328,8 +288,12 @@ function _buildFailureReasonSection(attempts = [], maxLines = 8) {
 function _prependFailureReason(baseContent, attempts, maxLines = 8) {
   const reason = _buildFailureReasonSection(attempts, maxLines);
   const body = String(baseContent || '').trim();
-  if (!reason) return body;
-  if (/真实失败原因/.test(body)) return body;
+  if (!reason) {
+    return body;
+  }
+  if (/真实失败原因/.test(body)) {
+    return body;
+  }
   return body ? `${reason}\n\n${body}` : reason;
 }
 
@@ -361,33 +325,44 @@ function _shouldUseFastFail(errorType = '') {
 // 5-6 re-asks. With no cooldown, the re-ask goes straight back to the same healthy
 // channel. Bounded same-request retry / forced-summary / salvage of already-fetched
 // tool data is owned by the tool loop, so a one-off empty never reaches the user.
+// _parseMs 已收敛至 gateway/_envParse.js(Batch 2 纯函数原子层);保留本地
+// 常量名,调用点逐字节不变。注意:原 function 声明有提升,_TRANSIENT_COOLDOWN_MS
+// 在定义前调用它,故 require 绑定必须位于该常量表初始化之前。
+const _parseMs = require('./_envParse')._parseMs;
+
 const _TRANSIENT_COOLDOWN_MS = {
   rate_limit: _parseMs(process.env.GATEWAY_RATE_LIMIT_COOLDOWN_MS, 20000, 5000),
   overloaded: _parseMs(process.env.GATEWAY_OVERLOADED_COOLDOWN_MS, 15000, 5000),
-  timeout:    _parseMs(process.env.GATEWAY_TIMEOUT_COOLDOWN_MS, 10000, 3000),
-  network:    _parseMs(process.env.GATEWAY_NETWORK_COOLDOWN_MS, 12000, 3000),
-  unknown:    _parseMs(process.env.GATEWAY_UNKNOWN_COOLDOWN_MS, 20000, 5000),
+  timeout: _parseMs(process.env.GATEWAY_TIMEOUT_COOLDOWN_MS, 10000, 3000),
+  network: _parseMs(process.env.GATEWAY_NETWORK_COOLDOWN_MS, 12000, 3000),
+  // server_error(5xx:502/503/504 等):上游/代理瞬时故障,不该在同一请求内被无限重试
+  // (曾造成「卡死 1 小时」:agnes 经代理持续 502,errorType=server_error 不在本表 →
+  // _getRecentFastFail 恒 null → 网关每轮重新尝试同一把 key,无熔断)。给 15s 短冷却,
+  // 让 cascade 立即转向健康通道,冷却自愈 ticker 会提前放行已恢复的上游。
+  server_error: _parseMs(process.env.GATEWAY_SERVER_ERROR_COOLDOWN_MS, 15000, 5000),
+  // unknown 默认 8s(原 20s):长空闲后的死 keep-alive 连接错误(socket hang up 等)
+  // 历史上被误归为 unknown,20s 冷却会让用户的下一条消息被短路直接落本地兜底。
+  // 保留冷却本身(避免偶发失败被无限重试),仅缩短窗口;可用 env 覆盖。
+  unknown: _parseMs(process.env.GATEWAY_UNKNOWN_COOLDOWN_MS, 8000, 5000),
   model_not_found: _parseMs(process.env.GATEWAY_MODEL_NOT_FOUND_COOLDOWN_MS, 30000, 5000),
 };
 function _transientCooldownMs(errorType = '') {
   return _TRANSIENT_COOLDOWN_MS[String(errorType || '').toLowerCase()] || 0;
 }
 
-function _parseMs(raw, fallback, min = 0) {
-  const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return Math.max(min, parsed);
-}
-
 function _parsePositiveInt(raw, fallback, min = 1, max = 16) {
   const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed < min) return fallback;
+  if (!Number.isFinite(parsed) || parsed < min) {
+    return fallback;
+  }
   return Math.min(max, parsed);
 }
 
 function _parseNonNegativeInt(raw, fallback, max = 16) {
   const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback;
+  }
   return Math.min(max, parsed);
 }
 
@@ -396,12 +371,18 @@ function _parseNonNegativeInt(raw, fallback, max = 16) {
 // bad env value can never disable the circuit breaker silently.
 function _parseFloat01(raw, fallback, min = 0, max = 1) {
   const parsed = parseFloat(String(raw ?? fallback));
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return fallback;
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return fallback;
+  }
   return parsed;
 }
 
 function _isRetryableResultErrorType(errorType = '') {
-  return _ecIsRetryable(String(errorType || '').trim().toLowerCase());
+  return _ecIsRetryable(
+    String(errorType || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 const KHY_PROTOCOL_PRIORITY_BLOCK = [
@@ -414,8 +395,12 @@ const CODEX_GENERATION_PROBE_PROMPT = '只用一句中文回复：已收到，�
 
 function _injectKhyProtocolSystem(system = '') {
   const inherited = String(system || '').trim();
-  if (!inherited) return KHY_PROTOCOL_PRIORITY_BLOCK;
-  if (inherited.includes('# KHY Protocol Priority')) return inherited;
+  if (!inherited) {
+    return KHY_PROTOCOL_PRIORITY_BLOCK;
+  }
+  if (inherited.includes('# KHY Protocol Priority')) {
+    return inherited;
+  }
   return `${KHY_PROTOCOL_PRIORITY_BLOCK}\n\n${inherited}`;
 }
 
@@ -427,23 +412,46 @@ const KHY_EXPECTED_CHINESE_LANGUAGE_BLOCK = [
   'Do not begin with English.',
 ].join('\n');
 
-function _injectKhyExpectedLanguageSystem(system = '', promptText = '', requestOptions = {}, entryKey = '') {
+function _injectKhyExpectedLanguageSystem(
+  system = '',
+  promptText = '',
+  requestOptions = {},
+  entryKey = ''
+) {
   const inherited = String(system || '').trim();
-  const normalizedEntryKey = String(entryKey || '').trim().toLowerCase();
-  if (normalizedEntryKey !== 'codex') return inherited;
-  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) return inherited;
-  if (!_requestsChineseOutput(promptText, requestOptions)) return inherited;
-  if (_resolveExpectedKhyLanguage(promptText, requestOptions) !== 'zh') return inherited;
-  if (inherited.includes('KHY expected output: Simplified Chinese.')) return inherited;
-  if (!inherited) return KHY_EXPECTED_CHINESE_LANGUAGE_BLOCK;
+  const normalizedEntryKey = String(entryKey || '')
+    .trim()
+    .toLowerCase();
+  if (normalizedEntryKey !== 'codex') {
+    return inherited;
+  }
+  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) {
+    return inherited;
+  }
+  if (!_requestsChineseOutput(promptText, requestOptions)) {
+    return inherited;
+  }
+  if (_resolveExpectedKhyLanguage(promptText, requestOptions) !== 'zh') {
+    return inherited;
+  }
+  if (inherited.includes('KHY expected output: Simplified Chinese.')) {
+    return inherited;
+  }
+  if (!inherited) {
+    return KHY_EXPECTED_CHINESE_LANGUAGE_BLOCK;
+  }
   return `${KHY_EXPECTED_CHINESE_LANGUAGE_BLOCK}\n\n${inherited}`;
 }
 
 function _injectKhyProtocolPrompt(prompt = '', options = {}) {
   const raw = String(prompt || '');
   const system = String(options.system || '').trim();
-  if (!system) return raw;
-  if (/^\[KHY PRIORITY DIRECTIVE\]/.test(raw)) return raw;
+  if (!system) {
+    return raw;
+  }
+  if (/^\[KHY PRIORITY DIRECTIVE\]/.test(raw)) {
+    return raw;
+  }
 
   const prefix = [
     '[KHY PRIORITY DIRECTIVE]',
@@ -464,7 +472,7 @@ function _buildKhyProtocolDebugSummary(prompt = '', options = {}) {
   try {
     const { getOnDemandPromptSectionDecision } = require('../../constants/prompts');
     const enabledTools = Array.isArray(options.tools)
-      ? options.tools.map(tool => String(tool?.name || '')).filter(Boolean)
+      ? options.tools.map((tool) => String(tool?.name || '')).filter(Boolean)
       : [];
     const decision = getOnDemandPromptSectionDecision({
       userMessage: options.userMessage,
@@ -476,7 +484,9 @@ function _buildKhyProtocolDebugSummary(prompt = '', options = {}) {
     promptCapsules = Array.isArray(decision?.ids) ? decision.ids : [];
     capsuleMode = String(decision?.mode || 'unknown');
     capsuleReasons = Array.isArray(decision?.reasons) ? decision.reasons : [];
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
   return {
     hasSystem: !!system,
     systemLength: system.length,
@@ -490,23 +500,39 @@ function _buildKhyProtocolDebugSummary(prompt = '', options = {}) {
 }
 
 function _extractTextFromMessageContent(content) {
-  if (!content) return '';
-  if (typeof content === 'string') return content;
+  if (!content) {
+    return '';
+  }
+  if (typeof content === 'string') {
+    return content;
+  }
   if (Array.isArray(content)) {
     return content
       .map((item) => {
-        if (!item) return '';
-        if (typeof item === 'string') return item;
-        if (typeof item.text === 'string') return item.text;
-        if (typeof item.content === 'string') return item.content;
+        if (!item) {
+          return '';
+        }
+        if (typeof item === 'string') {
+          return item;
+        }
+        if (typeof item.text === 'string') {
+          return item.text;
+        }
+        if (typeof item.content === 'string') {
+          return item.content;
+        }
         return '';
       })
       .filter(Boolean)
       .join('\n');
   }
   if (typeof content === 'object') {
-    if (typeof content.text === 'string') return content.text;
-    if (typeof content.content === 'string') return content.content;
+    if (typeof content.text === 'string') {
+      return content.text;
+    }
+    if (typeof content.content === 'string') {
+      return content.content;
+    }
   }
   return '';
 }
@@ -518,11 +544,21 @@ function _collectLanguageDirectiveTexts(promptText = '', requestOptions = {}) {
   }
   if (Array.isArray(requestOptions.messages)) {
     for (const message of requestOptions.messages) {
-      if (!message) continue;
-      const role = String(message.role || '').trim().toLowerCase();
-      if (role && role !== 'user') continue;
-      const text = _extractTextFromMessageContent(message.content ?? message.text ?? message.message ?? '');
-      if (text) parts.push(text);
+      if (!message) {
+        continue;
+      }
+      const role = String(message.role || '')
+        .trim()
+        .toLowerCase();
+      if (role && role !== 'user') {
+        continue;
+      }
+      const text = _extractTextFromMessageContent(
+        message.content ?? message.text ?? message.message ?? ''
+      );
+      if (text) {
+        parts.push(text);
+      }
     }
   }
   if (typeof promptText === 'string' && promptText.trim()) {
@@ -533,35 +569,67 @@ function _collectLanguageDirectiveTexts(promptText = '', requestOptions = {}) {
 
 function _requestsExplicitEnglishOutput(promptText = '', requestOptions = {}) {
   const texts = _collectLanguageDirectiveTexts(promptText, requestOptions);
-  if (texts.length === 0) return false;
+  if (texts.length === 0) {
+    return false;
+  }
   const combined = texts.join('\n').toLowerCase();
-  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '').trim().toLowerCase();
-  if (['english', 'en'].includes(envLang)) return true;
-  return /(?:reply|respond|answer|write|speak|continue|communicate)(?:\s+only|\s+entirely)?\s+in english\b|english only|use english|please use english|in english please|请用英文|请用英语|用英文回复|用英语回复|英文回答|英语回答|请讲英文|请讲英语/.test(combined);
+  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '')
+    .trim()
+    .toLowerCase();
+  if (['english', 'en'].includes(envLang)) {
+    return true;
+  }
+  return /(?:reply|respond|answer|write|speak|continue|communicate)(?:\s+only|\s+entirely)?\s+in english\b|english only|use english|please use english|in english please|请用英文|请用英语|用英文回复|用英语回复|英文回答|英语回答|请讲英文|请讲英语/.test(
+    combined
+  );
 }
 
 function _requestsChineseOutput(promptText = '', requestOptions = {}) {
   const texts = _collectLanguageDirectiveTexts(promptText, requestOptions);
-  if (texts.length === 0) return false;
+  if (texts.length === 0) {
+    return false;
+  }
   const combined = texts.join('\n');
   const lowered = combined.toLowerCase();
-  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '').trim().toLowerCase();
-  if (['chinese', 'zh', 'zh-cn', 'zh_cn', 'cn'].includes(envLang)) return true;
-  if (/请用中文|请用简体中文|用中文回复|用中文回答|中文回复|中文回答|中文输出|请讲中文|请继续用中文/.test(combined)) {
+  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '')
+    .trim()
+    .toLowerCase();
+  if (['chinese', 'zh', 'zh-cn', 'zh_cn', 'cn'].includes(envLang)) {
     return true;
   }
-  if (/(?:reply|respond|answer|write|speak|continue|communicate)(?:\s+only|\s+entirely)?\s+in (?:simplified\s+)?chinese\b|chinese only|use chinese|please use chinese|in chinese please/.test(lowered)) {
+  if (
+    /请用中文|请用简体中文|用中文回复|用中文回答|中文回复|中文回答|中文输出|请讲中文|请继续用中文/.test(
+      combined
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:reply|respond|answer|write|speak|continue|communicate)(?:\s+only|\s+entirely)?\s+in (?:simplified\s+)?chinese\b|chinese only|use chinese|please use chinese|in chinese please/.test(
+      lowered
+    )
+  ) {
     return true;
   }
   return _looksLikeChineseScript(combined);
 }
 
 function _resolveExpectedKhyLanguage(promptText = '', requestOptions = {}) {
-  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '').trim().toLowerCase();
-  if (['english', 'en'].includes(envLang)) return 'en';
-  if (['chinese', 'zh', 'zh-cn', 'zh_cn', 'cn'].includes(envLang)) return 'zh';
-  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) return 'en';
-  if (_requestsChineseOutput(promptText, requestOptions)) return 'zh';
+  const envLang = String(requestOptions.khyLanguage || process.env.KHY_LANGUAGE || '')
+    .trim()
+    .toLowerCase();
+  if (['english', 'en'].includes(envLang)) {
+    return 'en';
+  }
+  if (['chinese', 'zh', 'zh-cn', 'zh_cn', 'cn'].includes(envLang)) {
+    return 'zh';
+  }
+  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) {
+    return 'en';
+  }
+  if (_requestsChineseOutput(promptText, requestOptions)) {
+    return 'zh';
+  }
   return 'zh';
 }
 
@@ -575,14 +643,20 @@ function _injectKhyChineseRecoverySystem(system = '') {
     'English is only allowed inside code, file paths, logs, or quoted identifiers.',
   ].join('\n');
   const inherited = String(system || '').trim();
-  if (!inherited) return recoveryBlock;
-  if (inherited.includes('# KHY Language Recovery')) return inherited;
+  if (!inherited) {
+    return recoveryBlock;
+  }
+  if (inherited.includes('# KHY Language Recovery')) {
+    return inherited;
+  }
   return `${recoveryBlock}\n\n${inherited}`;
 }
 
 function _injectKhyChineseRecoveryPrompt(prompt = '') {
   const raw = String(prompt || '');
-  if (/^\[KHY LANGUAGE RECOVERY\]/.test(raw)) return raw;
+  if (/^\[KHY LANGUAGE RECOVERY\]/.test(raw)) {
+    return raw;
+  }
   const prefix = [
     '[KHY LANGUAGE RECOVERY]',
     '- The previous attempt started in English and violated the Chinese reply requirement.',
@@ -604,36 +678,108 @@ function _buildLanguageMismatchFailureMessage(languageConsistency = null) {
     : `首段语言偏航（检测=${detected}，期望=${expected}）`;
 }
 
-function _shouldAutoRecoverCodexChineseMismatch(entryKey = '', languageConsistency = null, promptText = '', requestOptions = {}, recoveryState = {}) {
-  if (String(entryKey || '').trim().toLowerCase() !== 'codex') return false;
-  if (!languageConsistency || languageConsistency.matchesExpectation !== false) return false;
-  if (String(languageConsistency.expectedLanguage || 'zh').trim().toLowerCase() !== 'zh') return false;
-  if (String(languageConsistency.detectedLanguage || '').trim().toLowerCase() !== 'en') return false;
-  if (String(languageConsistency.source || '').trim().toLowerCase() === 'first_chunk' && !requestOptions._khyVisibleUserStream) {
+function _shouldAutoRecoverCodexChineseMismatch(
+  entryKey = '',
+  languageConsistency = null,
+  promptText = '',
+  requestOptions = {},
+  recoveryState = {}
+) {
+  if (
+    String(entryKey || '')
+      .trim()
+      .toLowerCase() !== 'codex'
+  ) {
     return false;
   }
-  if ((Number(recoveryState?.retriesUsed || 0) >= Number(recoveryState?.maxRetries || 0))) return false;
-  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) return false;
-  if (!_requestsChineseOutput(promptText, requestOptions)) return false;
+  if (!languageConsistency || languageConsistency.matchesExpectation !== false) {
+    return false;
+  }
+  if (
+    String(languageConsistency.expectedLanguage || 'zh')
+      .trim()
+      .toLowerCase() !== 'zh'
+  ) {
+    return false;
+  }
+  if (
+    String(languageConsistency.detectedLanguage || '')
+      .trim()
+      .toLowerCase() !== 'en'
+  ) {
+    return false;
+  }
+  if (
+    String(languageConsistency.source || '')
+      .trim()
+      .toLowerCase() === 'first_chunk' &&
+    !requestOptions._khyVisibleUserStream
+  ) {
+    return false;
+  }
+  if (Number(recoveryState?.retriesUsed || 0) >= Number(recoveryState?.maxRetries || 0)) {
+    return false;
+  }
+  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) {
+    return false;
+  }
+  if (!_requestsChineseOutput(promptText, requestOptions)) {
+    return false;
+  }
   return true;
 }
 
-function _resolveCodexChineseRecoveryRetryBudget(entryKey = '', promptText = '', requestOptions = {}) {
-  if (String(entryKey || '').trim().toLowerCase() !== 'codex') return 0;
-  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) return 0;
-  if (!_requestsChineseOutput(promptText, requestOptions)) return 0;
-  if (_resolveExpectedKhyLanguage(promptText, requestOptions) !== 'zh') return 0;
+function _resolveCodexChineseRecoveryRetryBudget(
+  entryKey = '',
+  promptText = '',
+  requestOptions = {}
+) {
+  if (
+    String(entryKey || '')
+      .trim()
+      .toLowerCase() !== 'codex'
+  ) {
+    return 0;
+  }
+  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) {
+    return 0;
+  }
+  if (!_requestsChineseOutput(promptText, requestOptions)) {
+    return 0;
+  }
+  if (_resolveExpectedKhyLanguage(promptText, requestOptions) !== 'zh') {
+    return 0;
+  }
   return _parseNonNegativeInt(
-    requestOptions.codexLanguageRecoveryRetries ?? process.env.KHY_CODEX_LANGUAGE_RECOVERY_RETRIES ?? 1,
+    requestOptions.codexLanguageRecoveryRetries ??
+      process.env.KHY_CODEX_LANGUAGE_RECOVERY_RETRIES ??
+      1,
     1,
     2
   );
 }
 
-function _createCodexChineseChunkGate(entryKey = '', adapterDisplayName = '', promptText = '', requestOptions = {}, attemptAbort = null, emitStatus = () => {}) {
-  if (String(entryKey || '').trim().toLowerCase() !== 'codex') return null;
-  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) return null;
-  if (!_requestsChineseOutput(promptText, requestOptions)) return null;
+function _createCodexChineseChunkGate(
+  entryKey = '',
+  adapterDisplayName = '',
+  promptText = '',
+  requestOptions = {},
+  attemptAbort = null,
+  emitStatus = () => {}
+) {
+  if (
+    String(entryKey || '')
+      .trim()
+      .toLowerCase() !== 'codex'
+  ) {
+    return null;
+  }
+  if (_requestsExplicitEnglishOutput(promptText, requestOptions)) {
+    return null;
+  }
+  if (!_requestsChineseOutput(promptText, requestOptions)) {
+    return null;
+  }
 
   const expectedLanguage = _resolveExpectedKhyLanguage(promptText, requestOptions);
   let firstDecisiveVisibleChecked = false;
@@ -645,8 +791,12 @@ function _createCodexChineseChunkGate(entryKey = '', adapterDisplayName = '', pr
     },
     handleChunk(chunk) {
       const normalized = _normalizeVisibleChunkText(chunk);
-      if (!normalized) return { forward: true };
-      if (firstDecisiveVisibleChecked) return { forward: true };
+      if (!normalized) {
+        return { forward: true };
+      }
+      if (firstDecisiveVisibleChecked) {
+        return { forward: true };
+      }
 
       const assessment = _classifyKhyLanguageExpectation(normalized, expectedLanguage);
       if (assessment.language === 'unknown') {
@@ -668,33 +818,54 @@ function _createCodexChineseChunkGate(entryKey = '', adapterDisplayName = '', pr
         expectedLanguage: assessment.expectedLanguage,
         matchesExpectation: false,
       };
-      emitStatus(`${adapterDisplayName || 'codex'} 首段语言纠偏：检测=${assessment.language}，期望=${assessment.expectedLanguage}，正在中断当前输出并准备重试`);
+      emitStatus(
+        `${adapterDisplayName || 'codex'} 首段语言纠偏：检测=${assessment.language}，期望=${assessment.expectedLanguage}，正在中断当前输出并准备重试`
+      );
       try {
-        attemptAbort?.abort(`language mismatch first_chunk (${assessment.language}->${assessment.expectedLanguage})`);
-      } catch { /* best effort */ }
+        attemptAbort?.abort(
+          `language mismatch first_chunk (${assessment.language}->${assessment.expectedLanguage})`
+        );
+      } catch {
+        /* best effort */
+      }
       return { forward: false };
     },
   };
 }
 
 const KHY_LANGUAGE_RISKY_ADAPTERS = new Set(
-  String(process.env.KHY_LANGUAGE_RISKY_ADAPTERS || 'codex,claude,cursor,cursor2api,trae,windsurf,vscode,warp,relay_api,relay,cli,kiro')
+  String(
+    process.env.KHY_LANGUAGE_RISKY_ADAPTERS ||
+      'codex,claude,cursor,cursor2api,trae,windsurf,vscode,warp,relay_api,relay,cli,kiro'
+  )
     .split(',')
-    .map((value) => String(value || '').trim().toLowerCase())
+    .map((value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+    )
     .filter(Boolean)
 );
 
 function _normalizeLanguageAdapterKey(adapterLike = null) {
-  if (!adapterLike) return '';
-  if (typeof adapterLike === 'string') return String(adapterLike).trim().toLowerCase();
-  return String(adapterLike.key || adapterLike.type || adapterLike.adapter || adapterLike.name || '')
+  if (!adapterLike) {
+    return '';
+  }
+  if (typeof adapterLike === 'string') {
+    return String(adapterLike).trim().toLowerCase();
+  }
+  return String(
+    adapterLike.key || adapterLike.type || adapterLike.adapter || adapterLike.name || ''
+  )
     .trim()
     .toLowerCase();
 }
 
 function _isKhyLanguageRiskyAdapter(adapterLike = null) {
   const key = _normalizeLanguageAdapterKey(adapterLike);
-  if (!key) return false;
+  if (!key) {
+    return false;
+  }
   return KHY_LANGUAGE_RISKY_ADAPTERS.has(key);
 }
 
@@ -708,23 +879,42 @@ function _looksLikeEnglishScript(text = '') {
     .split(/\s+/)
     .map((token) => token.trim())
     .filter(Boolean);
-  if (tokens.length === 0) return false;
+  if (tokens.length === 0) {
+    return false;
+  }
   const asciiWordCount = tokens.filter((token) => /^[A-Za-z][A-Za-z'-]*$/.test(token)).length;
   return asciiWordCount >= 3 || (asciiWordCount >= 1 && tokens.length === asciiWordCount);
 }
 
 function _normalizeVisibleChunkText(chunk = null) {
-  if (!chunk) return '';
-  const type = String(chunk.type || '').trim().toLowerCase();
-  if (type && type !== 'text' && type !== 'message' && type !== 'content' && type !== 'delta') return '';
-  const text = String(chunk.text || chunk.content || chunk.delta || '').replace(/\s+/g, ' ').trim();
-  if (!text) return '';
+  if (!chunk) {
+    return '';
+  }
+  const type = String(chunk.type || '')
+    .trim()
+    .toLowerCase();
+  if (type && type !== 'text' && type !== 'message' && type !== 'content' && type !== 'delta') {
+    return '';
+  }
+  const text = String(chunk.text || chunk.content || chunk.delta || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) {
+    return '';
+  }
   return text;
 }
 
 function _classifyKhyLanguageExpectation(text = '', expectedLanguage = 'zh') {
-  const normalizedExpectedLanguage = String(expectedLanguage || 'zh').trim().toLowerCase() === 'en' ? 'en' : 'zh';
-  const sample = String(text || '').replace(/\s+/g, ' ').trim();
+  const normalizedExpectedLanguage =
+    String(expectedLanguage || 'zh')
+      .trim()
+      .toLowerCase() === 'en'
+      ? 'en'
+      : 'zh';
+  const sample = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!sample) {
     return {
       language: 'unknown',
@@ -738,18 +928,25 @@ function _classifyKhyLanguageExpectation(text = '', expectedLanguage = 'zh') {
   const hasChinese = _looksLikeChineseScript(sample);
   const looksEnglish = _looksLikeEnglishScript(sample);
   let language = 'unknown';
-  if (hasChinese) language = 'zh';
-  else if (looksEnglish) language = 'en';
+  if (hasChinese) {
+    language = 'zh';
+  } else if (looksEnglish) {
+    language = 'en';
+  }
 
   const expectsEnglish = normalizedExpectedLanguage === 'en';
   const matchesExpectation = expectsEnglish ? language !== 'zh' : language !== 'en';
   const summary = expectsEnglish
-    ? (matchesExpectation
-      ? (language === 'en' ? '首段正文符合 KHY 英文预期' : '首段正文未判定为中文，暂不视为偏航')
-      : '首段正文疑似中文，偏离 KHY 英文预期')
-    : (matchesExpectation
-      ? (language === 'zh' ? '首段正文符合 KHY 中文预期' : '首段正文未判定为英文，暂不视为偏航')
-      : '首段正文疑似英文，偏离 KHY 中文预期');
+    ? matchesExpectation
+      ? language === 'en'
+        ? '首段正文符合 KHY 英文预期'
+        : '首段正文未判定为中文，暂不视为偏航'
+      : '首段正文疑似中文，偏离 KHY 英文预期'
+    : matchesExpectation
+      ? language === 'zh'
+        ? '首段正文符合 KHY 中文预期'
+        : '首段正文未判定为英文，暂不视为偏航'
+      : '首段正文疑似英文，偏离 KHY 中文预期';
   return {
     language,
     matchesExpectation,
@@ -780,38 +977,55 @@ function _createKhyLanguageConsistencyTracker(entry, requestOptions = {}, prompt
   let finalVisibleLogged = false;
 
   const _logLanguageEvent = (phase, visibleText = '', assessmentOverride = null) => {
-    const normalized = String(visibleText || '').replace(/\s+/g, ' ').trim();
-    if (!normalized || !_traceAudit || !riskyAdapter) return;
-    const assessment = assessmentOverride || _classifyKhyLanguageExpectation(normalized, expectedLanguage);
+    const normalized = String(visibleText || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized || !_traceAudit || !riskyAdapter) {
+      return;
+    }
+    const assessment =
+      assessmentOverride || _classifyKhyLanguageExpectation(normalized, expectedLanguage);
     try {
-      _traceAudit.logEvent(`agent.language.${phase}`, {
-        requestId,
-        adapter: adapterKey,
-        adapterName,
-        expectedLanguage: assessment.expectedLanguage,
-        detectedLanguage: assessment.language,
-        matchesExpectation: assessment.matchesExpectation,
-        riskyAdapter,
-        promptPreview: _sanitizeFailureMessage(promptText, 120),
-        textSample: assessment.sample,
-        summary: assessment.summary,
-      }, {
-        sessionId,
-        traceId: traceId || null,
-        requestId: requestId || null,
-        source: 'ai-gateway',
-        visibility: 'internal',
-      });
-    } catch { /* best effort */ }
+      _traceAudit.logEvent(
+        `agent.language.${phase}`,
+        {
+          requestId,
+          adapter: adapterKey,
+          adapterName,
+          expectedLanguage: assessment.expectedLanguage,
+          detectedLanguage: assessment.language,
+          matchesExpectation: assessment.matchesExpectation,
+          riskyAdapter,
+          promptPreview: _sanitizeFailureMessage(promptText, 120),
+          textSample: assessment.sample,
+          summary: assessment.summary,
+        },
+        {
+          sessionId,
+          traceId: traceId || null,
+          requestId: requestId || null,
+          source: 'ai-gateway',
+          visibility: 'internal',
+        }
+      );
+    } catch {
+      /* best effort */
+    }
   };
 
   return {
     captureChunk(chunk) {
       const normalized = _normalizeVisibleChunkText(chunk);
-      if (!normalized) return;
-      if (!firstVisibleText) firstVisibleText = normalized;
+      if (!normalized) {
+        return;
+      }
+      if (!firstVisibleText) {
+        firstVisibleText = normalized;
+      }
       const assessment = _classifyKhyLanguageExpectation(normalized, expectedLanguage);
-      if (assessment.language === 'unknown') return;
+      if (assessment.language === 'unknown') {
+        return;
+      }
       if (!firstDecisiveText) {
         firstDecisiveText = normalized;
         firstDecisiveAssessment = assessment;
@@ -822,21 +1036,26 @@ function _createKhyLanguageConsistencyTracker(entry, requestOptions = {}, prompt
       }
     },
     finalize(result = null) {
-      const finalText = String(result?.content || '').replace(/\s+/g, ' ').trim();
+      const finalText = String(result?.content || '')
+        .replace(/\s+/g, ' ')
+        .trim();
       const visibleText = firstDecisiveText || finalText || firstVisibleText;
-      if (!visibleText) return null;
+      if (!visibleText) {
+        return null;
+      }
       if (!finalVisibleLogged) {
         finalVisibleLogged = true;
         _logLanguageEvent('final_response', visibleText);
       }
-      const assessment = firstDecisiveText && visibleText === firstDecisiveText && firstDecisiveAssessment
-        ? firstDecisiveAssessment
-        : _classifyKhyLanguageExpectation(visibleText, expectedLanguage);
+      const assessment =
+        firstDecisiveText && visibleText === firstDecisiveText && firstDecisiveAssessment
+          ? firstDecisiveAssessment
+          : _classifyKhyLanguageExpectation(visibleText, expectedLanguage);
       return {
         adapter: adapterKey,
         adapterName,
         riskyAdapter,
-        source: firstDecisiveText ? 'first_chunk' : (finalText ? 'final_response' : 'first_chunk'),
+        source: firstDecisiveText ? 'first_chunk' : finalText ? 'final_response' : 'first_chunk',
         textSample: assessment.sample,
         summary: assessment.summary,
         expectedLanguage: assessment.expectedLanguage,
@@ -849,18 +1068,23 @@ function _createKhyLanguageConsistencyTracker(entry, requestOptions = {}, prompt
 
 function _appendKhyProtocolDebugLog(entry, prompt = '', options = {}, summary = null) {
   const targetFile = String(process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE || '').trim();
-  if (!targetFile) return;
+  if (!targetFile) {
+    return;
+  }
 
   const info = summary || _buildKhyProtocolDebugSummary(prompt, options);
   const adapterKey = String(entry?.key || '').trim() || 'unknown';
   let providerName = adapterKey;
   try {
     providerName = entry?.adapter?.getStatus?.().name || adapterKey;
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
-  const normalizedProvider = String(providerName || adapterKey)
-    .replace(/\r?\n+/g, ' ')
-    .trim() || adapterKey;
+  const normalizedProvider =
+    String(providerName || adapterKey)
+      .replace(/\r?\n+/g, ' ')
+      .trim() || adapterKey;
   const lines = [
     `[${new Date().toISOString()}] adapter=${adapterKey} provider="${normalizedProvider}"`,
     `has_system=${info.hasSystem ? '1' : '0'} system_length=${info.systemLength} prompt_length=${info.promptLength}`,
@@ -873,7 +1097,9 @@ function _appendKhyProtocolDebugLog(entry, prompt = '', options = {}, summary = 
   try {
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
     fs.appendFileSync(targetFile, `${lines.join('\n')}\n`, 'utf8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 // Adapters that may override the system prompt downstream (their own upstream
@@ -897,7 +1123,9 @@ const _PROMPT_OVERRIDE_ADAPTERS = new Set([
 ]);
 
 function _adapterMayOverridePromptDownstream(adapterKey = '') {
-  const key = String(adapterKey || '').trim().toLowerCase();
+  const key = String(adapterKey || '')
+    .trim()
+    .toLowerCase();
   return _PROMPT_OVERRIDE_ADAPTERS.has(key);
 }
 
@@ -905,12 +1133,19 @@ function _getKhyProtocolPriorityRisk(adapterLike = null) {
   const adapterKey = String(
     typeof adapterLike === 'string'
       ? adapterLike
-      : (adapterLike?.type || adapterLike?.adapter || adapterLike?.key || '')
-  ).trim().toLowerCase();
+      : adapterLike?.type || adapterLike?.adapter || adapterLike?.key || ''
+  )
+    .trim()
+    .toLowerCase();
   const adapterName = String(
     typeof adapterLike === 'string'
       ? adapterLike
-      : (adapterLike?.name || adapterLike?.adapterName || adapterLike?.provider || adapterLike?.type || adapterLike?.key || '')
+      : adapterLike?.name ||
+          adapterLike?.adapterName ||
+          adapterLike?.provider ||
+          adapterLike?.type ||
+          adapterLike?.key ||
+          ''
   ).trim();
 
   if (!adapterKey && !adapterName) {
@@ -949,7 +1184,8 @@ function _getKhyProtocolPriorityRisk(adapterLike = null) {
     reason: 'upstream_hidden_system_prompt',
     summary: `${displayName} 可能在 KHY 之后仍追加上游隐藏 system prompt`,
     detail: `${displayName} 可能在 KHY 之后仍追加上游隐藏 system prompt；如出现语言不一致，建议开启 KHY_GATEWAY_DEBUG_PROMPT=1，必要时设置 KHY_GATEWAY_DEBUG_PROMPT_FILE，并优先切换到 api / relay_api / ollama / localLLM 复核`,
-    recommendation: '开启 KHY_GATEWAY_DEBUG_PROMPT=1；如需落盘，设置 KHY_GATEWAY_DEBUG_PROMPT_FILE；必要时切换到 api / relay_api / ollama / localLLM 复核',
+    recommendation:
+      '开启 KHY_GATEWAY_DEBUG_PROMPT=1；如需落盘，设置 KHY_GATEWAY_DEBUG_PROMPT_FILE；必要时切换到 api / relay_api / ollama / localLLM 复核',
   };
 }
 
@@ -966,7 +1202,13 @@ const PROCESS_SENSITIVE_ADAPTER_KEYS = new Set([
   'cursor2api',
 ]);
 
-const DEFAULT_PROCESS_FAILOVER_CANDIDATES = ['relay_api', 'api', 'relay', 'ollama'];
+// Routing constants imported from gatewayConstants (extracted module).
+const {
+  DEFAULT_PROCESS_FAILOVER_CANDIDATES,
+  DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS,
+  HTTP_RELAY_ADAPTER_KEYS,
+  RELAY_BARE_ALIAS_FALSY,
+} = gatewayConstants;
 const DEFAULT_API_POOL_PROVIDER_ALIASES = Object.freeze({
   openai: 'openai',
   gpt: 'openai',
@@ -1004,6 +1246,9 @@ const DEFAULT_API_POOL_DEFAULT_MODEL_MAP = Object.freeze({
   anthropic: 'claude-sonnet-4-6',
   openai: 'gpt-4o-mini',
   trae: 'gpt-4o',
+  sensenova: 'deepseek-v4-flash',
+  agnes: 'agnes-2.0-flash',
+  stepfun: 'step-3.7-flash',
   relay: 'gpt-4o-mini',
 });
 
@@ -1026,35 +1271,70 @@ const DEFAULT_ROUTE_BASE_PRIORITY = Object.freeze({
   clipboard: 15,
 });
 
-const DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS = new Set(['relay', 'clipboard']);
+// DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS already destructured from gatewayConstants above.
 
 function _formatRouteAgeMs(ageMs = 0) {
   const safeAgeMs = Math.max(0, Number(ageMs || 0));
   const totalSeconds = Math.max(1, Math.round(safeAgeMs / 1000));
-  if (totalSeconds >= 3600) return `${Math.round(totalSeconds / 3600)}h`;
-  if (totalSeconds >= 60) return `${Math.round(totalSeconds / 60)}m`;
+  if (totalSeconds >= 3600) {
+    return `${Math.round(totalSeconds / 3600)}h`;
+  }
+  if (totalSeconds >= 60) {
+    return `${Math.round(totalSeconds / 60)}m`;
+  }
   return `${totalSeconds}s`;
 }
 
 function _resolveDefaultRouteTuning() {
   return {
     codexCliPenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_CODEX_CLI_PENALTY || '45', 45, 5),
-    recentFailurePenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_RECENT_FAILURE_PENALTY || '70', 70, 10),
+    recentFailurePenalty: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_RECENT_FAILURE_PENALTY || '70',
+      70,
+      10
+    ),
     stallPenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_STALL_PENALTY || '120', 120, 20),
     transportPenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_TRANSPORT_PENALTY || '70', 70, 10),
     recoveryPenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_RECOVERY_PENALTY || '20', 20, 5),
-    protocolRiskPenalty: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_PROTOCOL_RISK_PENALTY || '15', 15, 0),
+    protocolRiskPenalty: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_PROTOCOL_RISK_PENALTY || '15',
+      15,
+      0
+    ),
     // Honors an explicit 0 (disable) — unlike _parseMs which coerces 0 to the
     // default. Any non-negative integer is accepted; invalid input → default 30.
     cacheGougingPenalty: (() => {
-      const v = parseInt(String(process.env.GATEWAY_DEFAULT_ROUTE_CACHE_GOUGING_PENALTY ?? '30'), 10);
+      const v = parseInt(
+        String(process.env.GATEWAY_DEFAULT_ROUTE_CACHE_GOUGING_PENALTY ?? '30'),
+        10
+      );
       return Number.isFinite(v) && v >= 0 ? v : 30;
     })(),
-    stallWindowMs: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_STALL_WINDOW_MS || '1800000', 1800000, 60000),
-    transportWindowMs: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_TRANSPORT_WINDOW_MS || '900000', 900000, 30000),
-    recoveryQuietMs: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_RECOVERY_QUIET_MS || '300000', 300000, 30000),
-    healthyPenaltyCeiling: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_HEALTHY_PENALTY_CEILING || '40', 40, 0),
-    summaryPenaltyFloor: _parseMs(process.env.GATEWAY_DEFAULT_ROUTE_SUMMARY_PENALTY_FLOOR || '25', 25, 0),
+    stallWindowMs: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_STALL_WINDOW_MS || '1800000',
+      1800000,
+      60000
+    ),
+    transportWindowMs: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_TRANSPORT_WINDOW_MS || '900000',
+      900000,
+      30000
+    ),
+    recoveryQuietMs: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_RECOVERY_QUIET_MS || '300000',
+      300000,
+      30000
+    ),
+    healthyPenaltyCeiling: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_HEALTHY_PENALTY_CEILING || '40',
+      40,
+      0
+    ),
+    summaryPenaltyFloor: _parseMs(
+      process.env.GATEWAY_DEFAULT_ROUTE_SUMMARY_PENALTY_FLOOR || '25',
+      25,
+      0
+    ),
   };
 }
 
@@ -1064,9 +1344,15 @@ function _getApiPoolAliasMap() {
   const extra = _parseJsonMap(process.env.GATEWAY_API_POOL_PROVIDER_ALIAS_MAP || '');
   const merged = { ...DEFAULT_API_POOL_PROVIDER_ALIASES };
   for (const [k, v] of Object.entries(extra)) {
-    const key = String(k || '').trim().toLowerCase();
-    const value = String(v || '').trim().toLowerCase();
-    if (!key || !value) continue;
+    const key = String(k || '')
+      .trim()
+      .toLowerCase();
+    const value = String(v || '')
+      .trim()
+      .toLowerCase();
+    if (!key || !value) {
+      continue;
+    }
     merged[key] = value;
   }
   return merged;
@@ -1076,9 +1362,15 @@ function _getApiPoolToServiceMap() {
   const extra = _parseJsonMap(process.env.GATEWAY_API_POOL_SERVICE_MAP || '');
   const merged = { ...DEFAULT_API_POOL_TO_SERVICE_PROVIDER };
   for (const [k, v] of Object.entries(extra)) {
-    const key = String(k || '').trim().toLowerCase();
-    const value = String(v || '').trim().toLowerCase();
-    if (!key || !value) continue;
+    const key = String(k || '')
+      .trim()
+      .toLowerCase();
+    const value = String(v || '')
+      .trim()
+      .toLowerCase();
+    if (!key || !value) {
+      continue;
+    }
     merged[key] = value;
   }
   return merged;
@@ -1087,34 +1379,104 @@ function _getApiPoolToServiceMap() {
 function _getApiPoolDefaultModelMap() {
   const extra = _parseJsonMap(process.env.GATEWAY_API_POOL_DEFAULT_MODEL_MAP || '');
   const merged = { ...DEFAULT_API_POOL_DEFAULT_MODEL_MAP };
+  // 零硬编码：已登记 provider（custom_providers.json）声明的 defaultModel 优先于静态表，
+  // env GATEWAY_API_POOL_DEFAULT_MODEL_MAP 仍为最高优先级。fail-soft：registry 不可用 → 仅用静态表。
+  try {
+    const registry = require('../customProviderRegistry');
+    for (const p of registry.listProviders()) {
+      const key = String(p?.poolKey || '')
+        .trim()
+        .toLowerCase();
+      const model = String(p?.defaultModel || '').trim();
+      if (key && model) {
+        merged[key] = model;
+      }
+    }
+  } catch {
+    /* registry unavailable → static fallback */
+  }
   for (const [k, v] of Object.entries(extra)) {
-    const key = String(k || '').trim().toLowerCase();
+    const key = String(k || '')
+      .trim()
+      .toLowerCase();
     const value = String(v || '').trim();
-    if (!key || !value) continue;
+    if (!key || !value) {
+      continue;
+    }
     merged[key] = value;
   }
   return merged;
 }
 
 function _normalizeApiPoolProvider(raw) {
-  const normalized = String(raw || '').trim().toLowerCase();
-  if (!normalized) return null;
+  const normalized = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    return null;
+  }
   const aliases = _getApiPoolAliasMap();
   return aliases[normalized] || normalized;
 }
 
 function _resolveApiPoolProviderForRequest(options = {}) {
   const explicitPool = _normalizeApiPoolProvider(options.apiPoolProvider);
-  if (explicitPool) return explicitPool;
+  if (explicitPool) {
+    return explicitPool;
+  }
 
   const explicitProvider = _normalizeApiPoolProvider(options.provider);
-  if (explicitProvider) return explicitProvider;
+  if (explicitProvider) {
+    return explicitProvider;
+  }
 
   const model = String(options.model || '').trim();
+  // 三段式 api:<pool>:<model>（与 adapters/apiAdapter.parseProviderModel 同源约定）：首段
+  // `api` 是适配器前缀而非 pool 名，必须先剥离取第二段当 pool。否则下方两段式
+  // 正则会把 `api` 当 pool 去查 apiKeyPool（必无 key）→ pool key 注入循环被整体
+  // 跳过，请求落到无 key 直连路径。
+  const composite = model.match(/^api[:/]([a-z0-9_-]+)[:/].+$/i);
+  if (composite) {
+    const fromComposite = _normalizeApiPoolProvider(composite[1]);
+    if (fromComposite) {
+      return fromComposite;
+    }
+  }
   const scoped = model.match(/^([a-z0-9_-]+)[:/](.+)$/i);
   if (scoped) {
     const fromModel = _normalizeApiPoolProvider(scoped[1]);
-    if (fromModel) return fromModel;
+    if (fromModel) {
+      return fromModel;
+    }
+  }
+
+  // 裸模型名动态归池：显式/三段式/两段式全落空时（如习惯偏好只记了裸模型名），
+  // 按已登记 provider 的模型清单（custom_providers.json）+ apiKeyPool 可用 key 反查
+  // 归属 pool，避免裸模型无 pool 可用 → 无 key 直连 → 「All providers failed」污染
+  // fast-fail 冷却缓存。零硬编码：全部来自池注册数据；fail-soft：反查异常 → 继续原通配逻辑。
+  if (model && !model.includes(':') && !model.includes('/')) {
+    try {
+      const registry = require('../customProviderRegistry');
+      const pool = require('../apiKeyPool');
+      pool.init();
+      const bare = model.toLowerCase();
+      for (const cp of registry.listProviders()) {
+        const models = Array.isArray(cp && cp.models) ? cp.models : [];
+        if (
+          models.some(
+            (mid) =>
+              String(mid || '')
+                .trim()
+                .toLowerCase() === bare
+          ) &&
+          pool.hasAvailableKeys(cp.poolKey)
+        ) {
+          return _normalizeApiPoolProvider(cp.poolKey) || cp.poolKey;
+        }
+      }
+    } catch {
+      /* 反查不可用 → 保持原通配兑底 */
+    }
   }
 
   // ── 通配兜底守卫(wildcardPoolGuard,门控 KHY_WILDCARD_POOL_GUARD 默认开)──
@@ -1129,13 +1491,28 @@ function _resolveApiPoolProviderForRequest(options = {}) {
       const guard = require('./wildcardPoolGuard');
       if (guard.isEnabled(process.env)) {
         const presets = require('./providerPresets').getProviderPresets();
-        const knownPresetIds = Array.isArray(presets) ? presets.map(p => p && p.id).filter(Boolean) : [];
+        const knownPresetIds = Array.isArray(presets)
+          ? presets.map((p) => p && p.id).filter(Boolean)
+          : [];
         let registeredPools = [];
-        try { registeredPools = require('../apiKeyPool').getProviders(); } catch { /* pool 不可用 → 空 */ }
-        const verdict = guard.evaluateWildcardModel({ model, wildcardPool: wildcard, knownPresetIds, registeredPools });
-        if (verdict && verdict.mismatch) return null;
+        try {
+          registeredPools = require('../apiKeyPool').getProviders();
+        } catch {
+          /* pool 不可用 → 空 */
+        }
+        const verdict = guard.evaluateWildcardModel({
+          model,
+          wildcardPool: wildcard,
+          knownPresetIds,
+          registeredPools,
+        });
+        if (verdict && verdict.mismatch) {
+          return null;
+        }
       }
-    } catch { /* 守卫不可用 → 保持原样盲落 */ }
+    } catch {
+      /* 守卫不可用 → 保持原样盲落 */
+    }
   }
 
   return wildcard;
@@ -1148,32 +1525,58 @@ function _mapApiPoolProviderToServiceProvider(poolProvider) {
 
 function _defaultModelForApiPoolProvider(poolProvider) {
   const normalized = String(poolProvider || '').toLowerCase();
-  if (normalized === 'deepseek') return process.env.DEEPSEEK_MODEL || _getApiPoolDefaultModelMap().deepseek;
-  if (normalized === 'doubao') return process.env.DOUBAO_MODEL || _getApiPoolDefaultModelMap().doubao;
-  if (normalized === 'qwen') return process.env.QWEN_MODEL || _getApiPoolDefaultModelMap().qwen;
-  if (normalized === 'glm') return process.env.GLM_MODEL || process.env.ZHIPU_MODEL || _getApiPoolDefaultModelMap().glm;
-  if (normalized === 'wenxin') return process.env.WENXIN_MODEL || _getApiPoolDefaultModelMap().wenxin;
-  if (normalized === 'anthropic') return process.env.ANTHROPIC_MODEL || _getApiPoolDefaultModelMap().anthropic;
-  if (normalized === 'openai') return process.env.OPENAI_MODEL || _getApiPoolDefaultModelMap().openai;
-  if (normalized === 'trae') return process.env.TRAE_MODEL || _getApiPoolDefaultModelMap().trae;
-  if (normalized === 'relay') return process.env.RELAY_API_MODEL || process.env.OPENAI_MODEL || _getApiPoolDefaultModelMap().relay;
+  if (normalized === 'deepseek') {
+    return process.env.DEEPSEEK_MODEL || _getApiPoolDefaultModelMap().deepseek;
+  }
+  if (normalized === 'doubao') {
+    return process.env.DOUBAO_MODEL || _getApiPoolDefaultModelMap().doubao;
+  }
+  if (normalized === 'qwen') {
+    return process.env.QWEN_MODEL || _getApiPoolDefaultModelMap().qwen;
+  }
+  if (normalized === 'glm') {
+    return process.env.GLM_MODEL || process.env.ZHIPU_MODEL || _getApiPoolDefaultModelMap().glm;
+  }
+  if (normalized === 'wenxin') {
+    return process.env.WENXIN_MODEL || _getApiPoolDefaultModelMap().wenxin;
+  }
+  if (normalized === 'anthropic') {
+    return process.env.ANTHROPIC_MODEL || _getApiPoolDefaultModelMap().anthropic;
+  }
+  if (normalized === 'openai') {
+    return process.env.OPENAI_MODEL || _getApiPoolDefaultModelMap().openai;
+  }
+  if (normalized === 'trae') {
+    return process.env.TRAE_MODEL || _getApiPoolDefaultModelMap().trae;
+  }
+  if (normalized === 'relay') {
+    return (
+      process.env.RELAY_API_MODEL || process.env.OPENAI_MODEL || _getApiPoolDefaultModelMap().relay
+    );
+  }
   const mapped = _getApiPoolDefaultModelMap()[normalized];
-  if (mapped) return mapped;
+  if (mapped) {
+    return mapped;
+  }
   return null;
 }
 
 function _isProcessSensitiveAdapter(adapterKey) {
-  const key = String(adapterKey || '').trim().toLowerCase();
+  const key = String(adapterKey || '')
+    .trim()
+    .toLowerCase();
   return PROCESS_SENSITIVE_ADAPTER_KEYS.has(key);
 }
 
 // HTTP OpenAI-compatible relay adapters whose endpoint is user-configurable
 // (RELAY_API_ENDPOINT etc.). A dead endpoint here must be allowed to relax
 // strict preferred routing so a healthy native channel can take over.
-const HTTP_RELAY_ADAPTER_KEYS = new Set(['relay_api', 'api', 'relay']);
+// HTTP_RELAY_ADAPTER_KEYS already destructured from gatewayConstants above.
 
 function _isHttpRelayAdapter(adapterKey) {
-  const key = String(adapterKey || '').trim().toLowerCase();
+  const key = String(adapterKey || '')
+    .trim()
+    .toLowerCase();
   return HTTP_RELAY_ADAPTER_KEYS.has(key);
 }
 
@@ -1183,57 +1586,48 @@ function _isHttpRelayAdapter(adapterKey) {
 // the dead-relay case users hit. auth/rate_limit/unsupported are deliberately
 // excluded so a throttled endpoint (e.g. GLM 1302) is retried in place / key-
 // rotated rather than cascaded away.
-const DEAD_ENDPOINT_ERROR_TYPES = new Set([
-  'model_not_found',
-  'unavailable',
-  'bad_request',
-  'server_error',
-]);
-
-function _isDeadEndpointErrorType(errorType) {
-  const type = String(errorType || '').trim().toLowerCase();
-  return DEAD_ENDPOINT_ERROR_TYPES.has(type);
-}
+// isDeadEndpointErrorType: imported from gatewayErrorClassifier (extracted module).
+const { isDeadEndpointErrorType: _isDeadEndpointErrorType } = errorClassifier;
 
 function _parseProcessFailoverCandidates(raw) {
-  const list = String(raw || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
-  return list.length > 0 ? list : DEFAULT_PROCESS_FAILOVER_CANDIDATES;
+  return gatewayConstants.parseProcessFailoverCandidates(raw, DEFAULT_PROCESS_FAILOVER_CANDIDATES);
 }
 
 function _resolveResultErrorType(statusCode, message, explicitType) {
-  const rawType = String(explicitType || '').trim();
-  if (!rawType || rawType.toLowerCase() === 'unknown') {
-    return classifyError(statusCode, message);
-  }
-  return rawType;
+  return errorClassifier.resolveResultErrorType(statusCode, message, explicitType);
 }
 
 function _extractResultErrorMessage(result) {
   const direct = _sanitizeFailureMessage(result?.error || result?.message || '');
-  if (direct && direct !== 'unknown error') return direct;
+  if (direct && direct !== 'unknown error') {
+    return direct;
+  }
   if (Array.isArray(result?.attempts)) {
     for (const attempt of result.attempts) {
-      if (!attempt || attempt.success !== false) continue;
+      if (!attempt || attempt.success !== false) {
+        continue;
+      }
       const attemptMsg = _sanitizeFailureMessage(attempt.error || attempt.message || '');
-      if (attemptMsg && attemptMsg !== 'unknown error') return attemptMsg;
+      if (attemptMsg && attemptMsg !== 'unknown error') {
+        return attemptMsg;
+      }
     }
   }
   const content = _sanitizeFailureMessage(result?.content || '');
-  if (content && content !== 'unknown error') return content;
+  if (content && content !== 'unknown error') {
+    return content;
+  }
   return 'unknown error';
 }
 
 // relay_api / api 模型名别名 → 完整 Anthropic model ID
 const _RELAY_MODEL_ALIASES = {
-  'claude-sonnet-4.5': 'claude-sonnet-4-5-20250514',
-  'claude-sonnet-4': 'claude-sonnet-4-20250514',
+  'claude-sonnet-4.5': 'claude-sonnet-4-6',
+  'claude-sonnet-4': 'claude-sonnet-4-6',
   'claude-opus-4': 'claude-opus-4-20250514',
-  'claude-haiku-3.5': 'claude-3-5-haiku-20241022',
-  'claude sonnet 4.5': 'claude-sonnet-4-5-20250514',
-  'claude sonnet 4': 'claude-sonnet-4-20250514',
+  'claude-haiku-3.5': 'claude-haiku-4-5-latest',
+  'claude sonnet 4.5': 'claude-sonnet-4-6',
+  'claude sonnet 4': 'claude-sonnet-4-6',
   'claude opus 4': 'claude-opus-4-20250514',
 };
 
@@ -1244,16 +1638,18 @@ const _RELAY_MODEL_ALIASES = {
 // 兜底解析为「现有别名目录中已用的同一 dated id」(目录补全,非新模型选择)。
 // 门控 KHY_RELAY_BARE_ALIAS 默认开;关 → 裸别名原样透传(今日字节行为)。
 const _RELAY_BARE_TIER_ALIASES = {
-  haiku: 'claude-3-5-haiku-20241022', // 与 'claude-haiku-3.5' 同目标
-  sonnet: 'claude-sonnet-4-20250514', // 与 'claude-sonnet-4' / RELAY_DEFAULT_MODELS 同
+  haiku: 'claude-haiku-4-5-latest', // 与 'claude-haiku-3.5' 同目标
+  sonnet: 'claude-sonnet-4-6', // 与 'claude-sonnet-4' / RELAY_DEFAULT_MODELS 同
   opus: 'claude-opus-4-20250514', // 与 'claude-opus-4' 同
 };
-const _RELAY_BARE_ALIAS_FALSY = new Set(['0', 'false', 'off', 'no']);
+// RELAY_BARE_ALIAS_FALSY already destructured from gatewayConstants above (as RELAY_BARE_ALIAS_FALSY).
 function _bareAliasEnabled() {
   try {
     const raw = process.env.KHY_RELAY_BARE_ALIAS;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
-    return !_RELAY_BARE_ALIAS_FALSY.has(v);
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
+    return !RELAY_BARE_ALIAS_FALSY.has(v);
   } catch {
     return true;
   }
@@ -1265,21 +1661,32 @@ function _bareAliasEnabled() {
 function _relayCompositeStripEnabled() {
   try {
     const raw = process.env.KHY_RELAY_COMPOSITE_MODEL_STRIP;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
-    return !_RELAY_BARE_ALIAS_FALSY.has(v);
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
+    return !RELAY_BARE_ALIAS_FALSY.has(v);
   } catch {
     return true;
   }
 }
 
 function normalizeModelForAdapter(adapterKey, model) {
-  if (!model || typeof model !== 'string') return model;
+  if (!model || typeof model !== 'string') {
+    return model;
+  }
   const m = model.trim();
-  if (!m) return model;
+  if (!m) {
+    return model;
+  }
 
   if (adapterKey === 'codex') {
     // Codex 不认识 Claude 模型名 — 重映射为 codex 自有模型（级联兼容）
-    if (/^claude[-_]/i.test(m) || m.includes('sonnet') || m.includes('opus') || m.includes('haiku')) {
+    if (
+      /^claude[-_]/i.test(m) ||
+      m.includes('sonnet') ||
+      m.includes('opus') ||
+      m.includes('haiku')
+    ) {
       return 'gpt-5.3-codex';
     }
   }
@@ -1300,14 +1707,20 @@ function normalizeModelForAdapter(adapterKey, model) {
     // relay_api 需在发线前剥成裸模型。门控 KHY_RELAY_COMPOSITE_MODEL_STRIP 默认开,关 → 原样透传。
     if (adapterKey === 'relay_api' && _relayCompositeStripEnabled()) {
       const m3 = m.match(/^api[:/][a-z0-9_-]+[:/](.+)$/i);
-      if (m3 && m3[1]) return m3[1].trim();
+      if (m3 && m3[1]) {
+        return m3[1].trim();
+      }
     }
     const aliased = _RELAY_MODEL_ALIASES[m.toLowerCase()];
-    if (aliased) return aliased;
+    if (aliased) {
+      return aliased;
+    }
     // 安全网:裸 tier 别名(haiku/sonnet/opus)兜底解析为 dated id(门控可关回退原透传)。
     if (_bareAliasEnabled()) {
       const bare = _RELAY_BARE_TIER_ALIASES[m.toLowerCase()];
-      if (bare) return bare;
+      if (bare) {
+        return bare;
+      }
     }
     // relay_api 直连 api.trae.ai,不认自定义 provider 模型。auto/级联误带进来的外来模型
     // (如 agnes-2.0-flash,归 api 代理 + apihub.agnes-ai.com 路由)会必然 404 model_not_found
@@ -1317,8 +1730,12 @@ function normalizeModelForAdapter(adapterKey, model) {
     if (adapterKey === 'relay_api') {
       try {
         const guard = require('./relayModelGuard');
-        if (guard.isEnabled(process.env) && !guard.isRelayServableModel(m)) return null;
-      } catch { /* 叶子不可用 → 保持原样透传 */ }
+        if (guard.isEnabled(process.env) && !guard.isRelayServableModel(m)) {
+          return null;
+        }
+      } catch {
+        /* 叶子不可用 → 保持原样透传 */
+      }
     }
   }
 
@@ -1327,7 +1744,9 @@ function normalizeModelForAdapter(adapterKey, model) {
 
 function resolvePreferredModelForAdapter(adapterKey, model) {
   const normalized = normalizeModelForAdapter(adapterKey, model);
-  if (!normalized || typeof normalized !== 'string') return null;
+  if (!normalized || typeof normalized !== 'string') {
+    return null;
+  }
   const trimmed = normalized.trim();
   return trimmed || null;
 }
@@ -1339,7 +1758,9 @@ function resolvePreferredModelForAdapter(adapterKey, model) {
 // 文本追加诚实告诫(见 ocrConfidenceCaveat 纯叶子);此前这两个质量信号一路被丢弃。
 function extractImageOcrDetails(images, { maxImages = 3, maxChars = 1200 } = {}) {
   const details = [];
-  if (!Array.isArray(images) || images.length === 0) return details;
+  if (!Array.isArray(images) || images.length === 0) {
+    return details;
+  }
   let ocrSnippet;
   let imageService;
   try {
@@ -1351,12 +1772,23 @@ function extractImageOcrDetails(images, { maxImages = 3, maxChars = 1200 } = {})
   for (const img of images.slice(0, maxImages)) {
     let ocrResult = null;
     if (img && img._filePath) {
-      ocrResult = ocrSnippet.extractImageOcrSnippet(img._filePath, img.mimeType || 'image/png', { maxChars });
+      ocrResult = ocrSnippet.extractImageOcrSnippet(img._filePath, img.mimeType || 'image/png', {
+        maxChars,
+      });
     } else if (img && (img.base64 || img.dataUrl)) {
-      const tmpPath = imageService.saveBase64ToTemp(img.base64 || img.dataUrl, img.mimeType || 'image/png');
+      const tmpPath = imageService.saveBase64ToTemp(
+        img.base64 || img.dataUrl,
+        img.mimeType || 'image/png'
+      );
       if (tmpPath) {
-        ocrResult = ocrSnippet.extractImageOcrSnippet(tmpPath, img.mimeType || 'image/png', { maxChars });
-        try { require('fs').unlinkSync(tmpPath); } catch { /* ignore */ }
+        ocrResult = ocrSnippet.extractImageOcrSnippet(tmpPath, img.mimeType || 'image/png', {
+          maxChars,
+        });
+        try {
+          require('fs').unlinkSync(tmpPath);
+        } catch {
+          /* ignore */
+        }
       }
     }
     if (ocrResult && ocrResult.success && ocrResult.text) {
@@ -1387,14 +1819,20 @@ function extractImageOcrTexts(images, opts) {
 // 仅当 glmVisionOn && !glmKeyReady 时才尝试;门控关/叶子不可用/无缺失 → 原样返回 prompt,
 // 逐字节回退。fail-soft:绝不抛。
 function _appendVisionKeyOffer(prompt, glmVisionOn, glmKeyReady) {
-  if (!glmVisionOn || glmKeyReady) return prompt;
+  if (!glmVisionOn || glmKeyReady) {
+    return prompt;
+  }
   try {
     const offer = require('./visionOcrFallback').buildVisionKeyConfigOffer({
       glmKeyMissing: true,
       env: process.env,
     });
-    if (offer) return `${prompt || ''}\n\n${offer}`;
-  } catch { /* 叶子不可用 → 保持原 prompt */ }
+    if (offer) {
+      return `${prompt || ''}\n\n${offer}`;
+    }
+  } catch {
+    /* 叶子不可用 → 保持原 prompt */
+  }
   return prompt;
 }
 
@@ -1406,35 +1844,60 @@ function _appendVisionKeyOffer(prompt, glmVisionOn, glmKeyReady) {
 // 失败;绝不中途抢图:调用点只在两条终局路径(见 4580 缓存短路 / 5736 级联穷尽)。
 //
 // @returns {object|null} 成功兜底 → finishResult 的返回值;不满足/无文本 → null(调用方按原路径继续)。
-function tryRateLimitOcrRescue({ images, prompt, errorType, finishResult, allAttempts, emitStatus, env }) {
+function tryRateLimitOcrRescue({
+  images,
+  prompt,
+  errorType,
+  finishResult,
+  allAttempts,
+  emitStatus,
+  env,
+}) {
   try {
     const fb = require('./visionOcrFallback');
-    if (!fb.shouldRateLimitOcrRescue({ errorType, hasImage: Array.isArray(images) && images.length > 0, env })) {
+    if (
+      !fb.shouldRateLimitOcrRescue({
+        errorType,
+        hasImage: Array.isArray(images) && images.length > 0,
+        env,
+      })
+    ) {
       return null;
     }
     const ocrTexts = extractImageOcrTexts(images, { maxImages: 3, maxChars: 1200 });
-    if (!ocrTexts.length) return null; // 无文本(照片/场景/缺字库):诚实落回原限流失败,不谎报。
+    if (!ocrTexts.length) {
+      return null;
+    } // 无文本(照片/场景/缺字库):诚实落回原限流失败,不谎报。
     const note = fb.buildRateLimitOcrNote({ count: ocrTexts.length, env });
-    if (!note) return null; // 门控关(理论上 shouldRateLimitOcrRescue 已挡,双保险)。
+    if (!note) {
+      return null;
+    } // 门控关(理论上 shouldRateLimitOcrRescue 已挡,双保险)。
     const ocrBlock = ocrTexts.map((t, i) => `【图片${i + 1} OCR 文本】\n${t}`).join('\n\n');
-    const content = `${prompt ? `${prompt}
+    const content = `${
+      prompt
+        ? `${prompt}
 
-` : ''}${note}
+`
+        : ''
+    }${note}
 
 ${ocrBlock}`;
     if (typeof emitStatus === 'function') {
       emitStatus(`视觉通道被限流,已用本地 OCR 兜底识别图片文字(${ocrTexts.length} 张)`);
     }
-    return finishResult({
-      success: true,
-      content,
-      provider: 'ocr-local',
-      adapter: 'ocr-fallback',
-      errorType: null,
-      attempts: Array.isArray(allAttempts) ? allAttempts : [],
-      degraded: true,
-      degradedReason: 'rate_limit_ocr_fallback',
-    }, { response: { content, provider: 'ocr-local', adapter: 'ocr-fallback' } });
+    return finishResult(
+      {
+        success: true,
+        content,
+        provider: 'ocr-local',
+        adapter: 'ocr-fallback',
+        errorType: null,
+        attempts: Array.isArray(allAttempts) ? allAttempts : [],
+        degraded: true,
+        degradedReason: 'rate_limit_ocr_fallback',
+      },
+      { response: { content, provider: 'ocr-local', adapter: 'ocr-fallback' } }
+    );
   } catch {
     return null; // 兜底自身异常绝不打断原失败返回路径。
   }
@@ -1445,24 +1908,40 @@ ${ocrBlock}`;
 // provider 换 model。best-effort：解析失败/无 provider 时返回空数组(决策会退回 OCR)。
 function collectProviderSiblingModels(model) {
   const bare = String(model || '').trim();
-  if (!bare) return [];
+  if (!bare) {
+    return [];
+  }
   try {
     const apiAdapter = require('./adapters/apiAdapter');
-    const parsed = typeof apiAdapter.parseProviderModel === 'function'
-      ? apiAdapter.parseProviderModel(bare)
-      : { provider: null, model: bare, poolProvider: null };
-    const bareModel = String(parsed.model || bare).trim().toLowerCase();
-    const poolKey = String(parsed.poolProvider || parsed.provider || '').trim().toLowerCase();
+    const parsed =
+      typeof apiAdapter.parseProviderModel === 'function'
+        ? apiAdapter.parseProviderModel(bare)
+        : { provider: null, model: bare, poolProvider: null };
+    const bareModel = String(parsed.model || bare)
+      .trim()
+      .toLowerCase();
+    const poolKey = String(parsed.poolProvider || parsed.provider || '')
+      .trim()
+      .toLowerCase();
 
     const registry = require('../customProviderRegistry');
     const providers = registry.listProviders();
     let owner = null;
     if (poolKey) {
-      owner = providers.find(p => String(p.poolKey || '').toLowerCase() === poolKey) || null;
+      owner = providers.find((p) => String(p.poolKey || '').toLowerCase() === poolKey) || null;
     }
     if (!owner) {
-      owner = providers.find(p => Array.isArray(p.models)
-        && p.models.some(m => String(m || '').trim().toLowerCase() === bareModel)) || null;
+      owner =
+        providers.find(
+          (p) =>
+            Array.isArray(p.models) &&
+            p.models.some(
+              (m) =>
+                String(m || '')
+                  .trim()
+                  .toLowerCase() === bareModel
+            )
+        ) || null;
     }
     return owner && Array.isArray(owner.models) ? owner.models.slice() : [];
   } catch {
@@ -1473,23 +1952,27 @@ function collectProviderSiblingModels(model) {
 function buildPreferredAdapterRecoveryHint(preferredAdapter, error, errorType, model, hasImage) {
   const adapter = String(preferredAdapter || '').trim() || 'unknown';
   const adapterKey = adapter.toLowerCase();
-  const adapterDisplay = ({
-    cli: 'CLI 工具桥接',
-    codex: 'Codex',
-    claude: 'Claude',
-    kiro: 'Kiro',
-    cursor: 'Cursor',
-    trae: 'Trae',
-    windsurf: 'Windsurf',
-    vscode: 'VSCode',
-    warp: 'Warp',
-    localllm: '本地模型',
-    ollama: 'Ollama',
-    api: 'API',
-    relay: 'Web Relay',
-  })[adapterKey] || adapter;
+  const adapterDisplay =
+    {
+      cli: 'CLI 工具桥接',
+      codex: 'Codex',
+      claude: 'Claude',
+      kiro: 'Kiro',
+      cursor: 'Cursor',
+      trae: 'Trae',
+      windsurf: 'Windsurf',
+      vscode: 'VSCode',
+      warp: 'Warp',
+      localllm: '本地模型',
+      ollama: 'Ollama',
+      api: 'API',
+      relay: 'Web Relay',
+    }[adapterKey] || adapter;
   const lower = String(error || '').toLowerCase();
-  const abortLike = /aborterror|abort_err|\baborted\b|\brequest aborted\b|\babort(ed)? by\b|signal aborted|user[-\s]?cancel/.test(lower);
+  const abortLike =
+    /aborterror|abort_err|\baborted\b|\brequest aborted\b|\babort(ed)? by\b|signal aborted|user[-\s]?cancel/.test(
+      lower
+    );
   const processCanceledLike = !abortLike && /\bcancelled\b|\bcanceled\b/.test(lower);
   // model_not_found(永久配置错误)专用恢复行 —— 门控 KHY_MODEL_NOT_FOUND_RECOVERY(默认开);
   // 关或非 model_not_found → null → 逐字节回退到今日通用/其它分支。errorType 由 strict 硬失败点透传
@@ -1503,7 +1986,9 @@ function buildPreferredAdapterRecoveryHint(preferredAdapter, error, errorType, m
       model,
       hasImage,
     });
-  } catch { modelNotFoundLines = null; }
+  } catch {
+    modelNotFoundLines = null;
+  }
   const lines = [
     processCanceledLike
       ? `已选择模型通道请求失败（进程中断/非用户取消）: ${error || 'canceled'}`
@@ -1515,21 +2000,36 @@ function buildPreferredAdapterRecoveryHint(preferredAdapter, error, errorType, m
   ];
   if (processCanceledLike) {
     lines.push(`  3) 运行 \`khy gateway reconnect ${adapter}\` 强制重连后重试`);
-    lines.push('  4) 默认会自动放宽 strict 并尝试兜底通道；如被手动关闭可设置 GATEWAY_STRICT_AUTO_RELAX_ON_PROCESS=true');
+    lines.push(
+      '  4) 默认会自动放宽 strict 并尝试兜底通道；如被手动关闭可设置 GATEWAY_STRICT_AUTO_RELAX_ON_PROCESS=true'
+    );
   } else if (modelNotFoundLines) {
-    for (const l of modelNotFoundLines) lines.push(l);
-  } else if (lower.includes('apikeysource') || lower.includes('auth') || lower.includes('unauthorized') || lower.includes('login')) {
+    for (const l of modelNotFoundLines) {
+      lines.push(l);
+    }
+  } else if (
+    lower.includes('apikeysource') ||
+    lower.includes('auth') ||
+    lower.includes('unauthorized') ||
+    lower.includes('login')
+  ) {
     if (adapterKey === 'cli') {
-      const cliTarget = lower.includes('claude') ? 'Claude Code'
-        : (lower.includes('codex') ? 'Codex' : 'Codex/Claude');
+      const cliTarget = lower.includes('claude')
+        ? 'Claude Code'
+        : lower.includes('codex')
+          ? 'Codex'
+          : 'Codex/Claude';
       lines.push(`  3) 重新登录 ${cliTarget} 后再试`);
     } else {
       lines.push(`  3) 重新登录 ${adapterDisplay} 后再试`);
     }
   } else if (_isReconnectOrChannelClosedMessage(lower)) {
     if (adapterKey === 'cli') {
-      const cliTarget = lower.includes('claude') ? 'Claude Code'
-        : (lower.includes('codex') ? 'Codex' : 'Codex/Claude');
+      const cliTarget = lower.includes('claude')
+        ? 'Claude Code'
+        : lower.includes('codex')
+          ? 'Codex'
+          : 'Codex/Claude';
       lines.push(`  3) 重启 ${cliTarget} CLI 会话并重试`);
     } else {
       lines.push(`  3) 重启 ${adapterDisplay} CLI 会话并重试`);
@@ -1539,7 +2039,11 @@ function buildPreferredAdapterRecoveryHint(preferredAdapter, error, errorType, m
     lines.push('  4) 若处于沙箱/受限环境，请切换到 API/桥接通道（khy gateway model）');
   } else if (lower.includes('timeout')) {
     lines.push('  3) 检查网络/代理后重试');
-  } else if (lower.includes('bridge canceled') || lower.includes('handshake timeout') || lower.includes('without emitting stream-json')) {
+  } else if (
+    lower.includes('bridge canceled') ||
+    lower.includes('handshake timeout') ||
+    lower.includes('without emitting stream-json')
+  ) {
     lines.push(`  3) Claude CLI 桥接模式异常 — 尝试设置 GATEWAY_CLAUDE_MODE=direct 直连 API`);
     lines.push('  4) 或配置 RELAY_API_ENDPOINT + RELAY_API_KEY 启用中继兜底');
     lines.push('  5) 运行 `khy doctor` 检查 Claude CLI 版本兼容性');
@@ -1548,10 +2052,20 @@ function buildPreferredAdapterRecoveryHint(preferredAdapter, error, errorType, m
 }
 
 function normalizeAbortReason(reason) {
-  if (!reason) return 'aborted';
-  if (typeof reason === 'string') return reason;
-  if (reason && typeof reason.message === 'string') return reason.message;
-  try { return JSON.stringify(reason); } catch { return String(reason); }
+  if (!reason) {
+    return 'aborted';
+  }
+  if (typeof reason === 'string') {
+    return reason;
+  }
+  if (reason && typeof reason.message === 'string') {
+    return reason.message;
+  }
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return String(reason);
+  }
 }
 
 function createAbortError(reason) {
@@ -1576,11 +2090,19 @@ function createLinkedAbortController(parentSignal) {
       controller.abort(parentSignal.reason);
     } else if (typeof parentSignal.addEventListener === 'function') {
       const onAbort = () => {
-        try { controller.abort(parentSignal.reason); } catch { /* ignore */ }
+        try {
+          controller.abort(parentSignal.reason);
+        } catch {
+          /* ignore */
+        }
       };
       parentSignal.addEventListener('abort', onAbort, { once: true });
       detach = () => {
-        try { parentSignal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+        try {
+          parentSignal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
       };
     }
   }
@@ -1590,7 +2112,11 @@ function createLinkedAbortController(parentSignal) {
     signal: controller.signal,
     abort: (reason) => {
       if (!controller.signal.aborted) {
-        try { controller.abort(reason); } catch { /* ignore */ }
+        try {
+          controller.abort(reason);
+        } catch {
+          /* ignore */
+        }
       }
     },
     cleanup: detach,
@@ -1629,18 +2155,33 @@ class AIGateway {
       // 最低自动优先级;显式 preferredAdapter:'opencode' / subagent_type:'opencode'
       // 走定向路由不受此顺序影响。
       { key: 'opencode', adapter: opencodeAdapter, priority: 16, enabled: true },
+      // OpenClaw 便携 CLI 后端引擎:同 opencode 属定向指挥类,不抢占自动 LLM 回退,故置于
+      // 更低自动优先级。门控 KHY_OPENCLAW 默认关(见 openclawInvocation.js),关闭时
+      // detect() 恒不可用,网关整体跳过,适配器探活结果与接入前字节级一致。
+      { key: 'openclaw', adapter: openclawAdapter, priority: 17, enabled: true },
     ];
     this._initialized = false;
     this._initPromise = null;
 
+    // Lightweight per-adapter activity timestamps (lastSuccessAt/lastFailureAt),
+    // written by the cooldown methods and read only by health(). Additive state:
+    // it never influences routing, retry, or cooldown decisions.
+    this._adapterActivity = {};
+
     // Per-model context window cache (populated from adapter listModels/generate responses)
     this._contextWindowCache = new Map();
+
+    // Per-model output token limit cache (populated alongside _contextWindowCache
+    // from adapter listModels metadata; consumed by the maxTokens preflight policy)
+    this._modelOutputLimitCache = new Map();
 
     // Capability registry for capability-aware model selection
     try {
       const { CapabilityRegistry } = require('./capabilityRegistry');
       this._capabilityRegistry = new CapabilityRegistry(this);
-    } catch { this._capabilityRegistry = null; }
+    } catch {
+      this._capabilityRegistry = null;
+    }
 
     // ── 适配器检测缓存（避免每次 generate() 都重新检测 16 个适配器）──
     this._detectCache = new Map(); // key → { available: bool, timestamp: number }
@@ -1650,16 +2191,20 @@ class AIGateway {
       entry.adapter.detect = (forceRefresh) => {
         const cacheKey = entry.key;
         const cached = this._detectCache.get(cacheKey);
-        if (!forceRefresh && cached && (Date.now() - cached.timestamp) < DETECT_CACHE_TTL_MS) {
-          return cached.available;
+        if (!forceRefresh && cached && Date.now() - cached.timestamp < DETECT_CACHE_TTL_MS) {
+          // Keep the return type consistent with the original detect: async
+          // adapters get a Promise on cache hits, sync adapters get a boolean.
+          return entry._detectIsAsync ? Promise.resolve(cached.available) : cached.available;
         }
         const result = originalDetect(forceRefresh);
         if (result && typeof result.then === 'function') {
-          return result.then(available => {
+          entry._detectIsAsync = true; // remember the original detect is async
+          return result.then((available) => {
             this._detectCache.set(cacheKey, { available, timestamp: Date.now() });
             return available;
           });
         }
+        entry._detectIsAsync = false;
         this._detectCache.set(cacheKey, { available: !!result, timestamp: Date.now() });
         return !!result;
       };
@@ -1670,15 +2215,19 @@ class AIGateway {
       try {
         const { getRedisClient } = require('@khy/shared/services/cacheService');
         return getRedisClient();
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     };
-    const redisHealthEnabled = String(process.env.GATEWAY_REDIS_HEALTH_ENABLED || 'true').toLowerCase() !== 'false';
+    const redisHealthEnabled =
+      String(process.env.GATEWAY_REDIS_HEALTH_ENABLED || 'true').toLowerCase() !== 'false';
     this._healthStore = redisHealthEnabled
       ? new RedisHealthStore({ getRedisClient: _getRedisClient })
       : new RedisHealthStore({ getRedisClient: () => null }); // pure memory mode
 
     // Distributed rate limiter (Redis ZSET sliding window, fallback to memory)
-    const redisRlEnabled = String(process.env.GATEWAY_REDIS_RATELIMIT_ENABLED || 'true').toLowerCase() !== 'false';
+    const redisRlEnabled =
+      String(process.env.GATEWAY_REDIS_RATELIMIT_ENABLED || 'true').toLowerCase() !== 'false';
     this._distributedLimiter = createRedisRateLimiter({
       getRedisClient: redisRlEnabled ? _getRedisClient : () => null,
       maxRequests: 10,
@@ -1695,27 +2244,36 @@ class AIGateway {
       if (ns && typeof ns.broadcastToAll === 'function') {
         notifyAll = ns.broadcastToAll.bind(ns);
       }
-    } catch { /* notificationService not available */ }
+    } catch {
+      /* notificationService not available */
+    }
     this._healthBroadcaster = new ChannelHealthBroadcaster({
       healthStore: this._healthStore,
       broadcast: (type, data) => {
         try {
-          if (notifyAll) notifyAll({ type, ...data });
-        } catch { /* notificationService not available */ }
+          if (notifyAll) {
+            notifyAll({ type, ...data });
+          }
+        } catch {
+          /* notificationService not available */
+        }
       },
     });
 
     // Anti-ban: token bucket rate limiter (per adapter) — kept as fast in-memory fallback
-    this._requestLog = {};          // key → timestamps of recent requests
-    this._adapterFailures = {};     // key → consecutive failure count (synced with healthStore)
-    this._lastRefreshTime = 0;      // last adapter re-detection time
+    this._requestLog = {}; // key → timestamps of recent requests
+    this._adapterFailures = {}; // key → consecutive failure count (synced with healthStore)
+    this._lastRefreshTime = 0; // last adapter re-detection time
     // Local adapters that don't need rate limiting (also the authoritative
     // local-vs-cloud classifier — see getAdapterOrigin). Extend via
     // KHY_LOCAL_ADAPTERS (comma-separated adapter keys).
     this._localAdapters = new Set(['localLLM', 'ollama']);
     const extraLocal = String(process.env.KHY_LOCAL_ADAPTERS || '').trim();
     if (extraLocal) {
-      for (const k of extraLocal.split(',').map(s => s.trim()).filter(Boolean)) {
+      for (const k of extraLocal
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)) {
         this._localAdapters.add(k);
       }
     }
@@ -1736,26 +2294,19 @@ class AIGateway {
       parseInt(process.env.GATEWAY_ADAPTER_QUEUE_TIMEOUT_MS || '300000', 10) || 300000
     );
     this._adapterQueue = createSequentialQueue({ taskTimeoutMs: queueTimeoutMs });
-    const defaultSerializedAdapters = [
-      'localLLM',
-      'ollama',
-      'codex',
-      'claude',
-      'cli',
-      'clipboard',
-    ];
+    const defaultSerializedAdapters = ['localLLM', 'ollama', 'codex', 'claude', 'cli', 'clipboard'];
     const serializedEnvList = String(process.env.GATEWAY_SERIAL_ADAPTERS || '')
       .split(',')
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
     const parallelEnvSet = new Set(
       String(process.env.GATEWAY_PARALLEL_ADAPTERS || '')
         .split(',')
-        .map(s => s.trim().toLowerCase())
+        .map((s) => s.trim().toLowerCase())
         .filter(Boolean)
     );
     this._serializedAdapterKeys = new Set(
-      (serializedEnvList.length > 0 ? serializedEnvList : defaultSerializedAdapters)
+      serializedEnvList.length > 0 ? serializedEnvList : defaultSerializedAdapters
     );
     if (parallelEnvSet.size > 0) {
       for (const key of Array.from(this._serializedAdapterKeys)) {
@@ -1766,33 +2317,163 @@ class AIGateway {
     }
   }
 
+  /**
+   * Public read-only accessor for the private `_initialized` flag.
+   *
+   * Identity-return contract: returns `this._initialized` as-is (no boolean
+   * coercion, no defaulting), so external callers observe exactly the same
+   * value a direct `gateway._initialized` read would have produced (including
+   * the raw falsy value before init completes).
+   *
+   * @returns {*} The raw `_initialized` value
+   */
+  isInitialized() {
+    return this._initialized;
+  }
 
+  /**
+   * Public read-only accessor for the private `_adapters` registry.
+   *
+   * Identity-return contract: returns the SAME array reference as
+   * `this._adapters` (no copy, no freeze), so external callers observe
+   * exactly what a direct `gateway._adapters` read would have produced.
+   *
+   * @returns {Array<object>} The live adapter entry list (same reference)
+   */
+  getAdapters() {
+    return this._adapters;
+  }
 
+  /**
+   * Read-only health snapshot for diagnostics endpoints.
+   *
+   * Reports only already-known state: cached detect results, the synchronous
+   * fast-fail/cooldown mirror, and lightweight activity timestamps. It NEVER
+   * triggers a real AI provider network request (no active probing) and never
+   * mutates gateway state, so it is safe to call at any frequency.
+   *
+   * @returns {object} JSON-serializable health report
+   */
+  health() {
+    const now = Date.now();
+    const adapters = this._adapters.map((entry) => {
+      const key = entry.key;
+      let name = key;
+      let configured = null;
+      try {
+        // Adapter getStatus() is a synchronous, in-memory read by contract.
+        const status = entry.adapter.getStatus();
+        if (status && status.name) {
+          name = String(status.name);
+        }
+        if (status && typeof status.available === 'boolean') {
+          configured = status.available;
+        }
+      } catch {
+        /* adapter status is best-effort */
+      }
 
+      // Availability from the detect cache only — never call detect() here,
+      // since a cold detect may spawn processes or hit the network.
+      const detectCached = this._detectCache.get(key) || null;
+      const available = detectCached ? !!detectCached.available : null;
+
+      // Cooldown state from the synchronous fast-fail mirror (read-only).
+      const recent = this._getRecentFastFail(key);
+      // Half-open recovery progress lives on the raw mirror entry (its at:0
+      // relaxation makes _getRecentFastFail return null by design), so read it
+      // directly for reporting.
+      const mirror = this._adapterLastError[key] || null;
+      const halfOpen = !!(mirror && mirror.halfOpen);
+      const cooldown = recent
+        ? {
+            active: true,
+            errorType: String(recent.errorType || 'unknown'),
+            reason: String(recent.error || ''),
+            circuitOpen: !!recent.circuitOpen,
+            remainingMs: Math.max(0, Number(recent.remainingMs || 0)),
+            cooldownMs: Math.max(0, Number(recent.cooldownMs || 0)),
+            halfOpen,
+            consecutiveSuccesses: Math.max(0, Number(mirror?.consecutiveSuccesses || 0)),
+          }
+        : {
+            active: false,
+            halfOpen,
+            consecutiveSuccesses: Math.max(0, Number(mirror?.consecutiveSuccesses || 0)),
+          };
+
+      const activity = (this._adapterActivity && this._adapterActivity[key]) || {};
+      return {
+        key,
+        name,
+        enabled: entry.enabled !== false,
+        configured,
+        available,
+        detectCheckedAt: detectCached ? Number(detectCached.timestamp) || null : null,
+        cooldown,
+        consecutiveFailures: Number(this._adapterFailures[key] || 0),
+        lastSuccessAt: Number(activity.lastSuccessAt) || null,
+        lastFailureAt: Number(activity.lastFailureAt) || null,
+      };
+    });
+
+    return {
+      timestamp: now,
+      initialized: !!this._initialized,
+      totalAdapters: adapters.length,
+      availableAdapters: adapters.filter((a) => a.available === true && !a.cooldown.active).length,
+      coolingAdapters: adapters.filter((a) => a.cooldown.active).length,
+      adapters,
+    };
+  }
 }
-
 
 // Cooldown / adapter-failure methods live in a sibling module and are mixed onto the prototype here
 // (bodies byte-identical; `this` binds at call time). Wire the mixin + inject the module-scope helper
 // deps BEFORE constructing the singleton, since the constructor path may touch these methods.
-const { AIGatewayCooldownMethods, setAiGatewayCooldownMethodsDeps } = require('./aiGatewayCooldownMethods');
+const {
+  AIGatewayCooldownMethods,
+  setAiGatewayCooldownMethodsDeps,
+} = require('./aiGatewayCooldownMethods');
 Object.assign(AIGateway.prototype, AIGatewayCooldownMethods);
 setAiGatewayCooldownMethodsDeps({
-  _adaptiveConfig, _isProcessSensitiveAdapter, _isReconnectOrChannelClosedMessage, _parseFloat01,
-  _parseMs, _parsePositiveInt, _resolveApiPoolProviderForRequest, _sanitizeFailureMessage,
-  _shouldUseFastFail, _transientCooldownMs,
+  _adaptiveConfig,
+  _isProcessSensitiveAdapter,
+  _isReconnectOrChannelClosedMessage,
+  _parseFloat01,
+  _parseMs,
+  _parsePositiveInt,
+  _resolveApiPoolProviderForRequest,
+  _sanitizeFailureMessage,
+  _shouldUseFastFail,
+  _transientCooldownMs,
 });
 
 // Routing / timeout / lifecycle methods live in a sibling module and are mixed onto the prototype here
 // (bodies byte-identical; `this` binds at call time). Wire + inject the module-scope deps BEFORE
 // constructing the singleton, since the constructor path may touch these methods.
-const { AIGatewayRoutingMethods, setAiGatewayRoutingMethodsDeps } = require('./aiGatewayRoutingMethods');
+const {
+  AIGatewayRoutingMethods,
+  setAiGatewayRoutingMethodsDeps,
+} = require('./aiGatewayRoutingMethods');
 Object.assign(AIGateway.prototype, AIGatewayRoutingMethods);
 setAiGatewayRoutingMethodsDeps({
-  _appendKhyProtocolDebugLog, _buildKhyProtocolDebugSummary, _formatRouteAgeMs, _getKhyProtocolPriorityRisk,
-  _injectKhyExpectedLanguageSystem, _injectKhyProtocolPrompt, _injectKhyProtocolSystem, _isProcessSensitiveAdapter,
-  _parseMs, _parseProcessFailoverCandidates, _resolveDefaultRouteTuning,
-  DEFAULT_ROUTE_BASE_PRIORITY, DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS, kiroAdapter, ollamaAdapter, localLLMService,
+  _appendKhyProtocolDebugLog,
+  _buildKhyProtocolDebugSummary,
+  _formatRouteAgeMs,
+  _getKhyProtocolPriorityRisk,
+  _injectKhyExpectedLanguageSystem,
+  _injectKhyProtocolPrompt,
+  _injectKhyProtocolSystem,
+  _isProcessSensitiveAdapter,
+  _parseMs,
+  _parseProcessFailoverCandidates,
+  _resolveDefaultRouteTuning,
+  DEFAULT_ROUTE_BASE_PRIORITY,
+  DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS,
+  kiroAdapter,
+  ollamaAdapter,
+  localLLMService,
 });
 
 // Model / adapter-accessor / verification methods live in a sibling module and are mixed onto the
@@ -1801,28 +2482,65 @@ setAiGatewayRoutingMethodsDeps({
 const { AIGatewayModelMethods, setAiGatewayModelMethodsDeps } = require('./aiGatewayModelMethods');
 Object.assign(AIGateway.prototype, AIGatewayModelMethods);
 setAiGatewayModelMethodsDeps({
-  safeKillChildProc, _shouldUseFastFail, _parseMs, _getKhyProtocolPriorityRisk,
-  _extractResultErrorMessage, resolvePreferredModelForAdapter,
-  _ADAPTER_SOURCE_LABELS, CODEX_GENERATION_PROBE_PROMPT,
+  safeKillChildProc,
+  _shouldUseFastFail,
+  _parseMs,
+  _getKhyProtocolPriorityRisk,
+  _extractResultErrorMessage,
+  resolvePreferredModelForAdapter,
+  _ADAPTER_SOURCE_LABELS,
+  CODEX_GENERATION_PROBE_PROMPT,
 });
 
 // The core generate() method lives in a sibling module and is mixed onto the prototype here (body
 // byte-identical; `this` binds at call time). Wire + inject the host-internal helpers BEFORE
 // constructing the singleton. The three module lets are captured at their load-time final values.
-const { AIGatewayGenerateMethod, setAiGatewayGenerateMethodDeps } = require('./aiGatewayGenerateMethod');
+// 注入项按职责分五组(分组契约单一真源 = 叶子侧 DEP_GROUPS):validation / failover /
+// languageRecovery / ocrRescue / diagnostics。setter 内部摊平后逐项绑定,与旧扁平形态等价;
+// 必选项缺失时 setter 在此处立即点名抛错(fail-fast),不再留到运行期静默崩坏。
+const {
+  AIGatewayGenerateMethod,
+  setAiGatewayGenerateMethodDeps,
+} = require('./aiGatewayGenerateMethod');
 Object.assign(AIGateway.prototype, AIGatewayGenerateMethod);
 setAiGatewayGenerateMethodDeps({
-  _advDiag, _modelSwitch, _traceAudit,
-  _appendVisionKeyOffer, _buildLanguageMismatchFailureMessage, _createCodexChineseChunkGate,
-  _createKhyLanguageConsistencyTracker, _defaultModelForApiPoolProvider, _extractResultErrorMessage,
-  _injectKhyChineseRecoveryPrompt, _injectKhyChineseRecoverySystem, _isDeadEndpointErrorType,
-  _isHttpRelayAdapter, _isProcessSensitiveAdapter, _isRetryableResultErrorType,
-  _isTransientGatewayTransportMessage, _mapApiPoolProviderToServiceProvider, _normalizeApiPoolProvider,
-  _parseMs, _parsePositiveInt, _prependFailureReason, _resolveApiPoolProviderForRequest,
-  _resolveCodexChineseRecoveryRetryBudget, _resolveResultErrorType, _shouldAutoRecoverCodexChineseMismatch,
-  buildPreferredAdapterRecoveryHint, classifyError, collectProviderSiblingModels,
-  createLinkedAbortController, extractImageOcrTexts, extractImageOcrDetails, normalizeAbortReason, normalizeModelForAdapter,
-  resolvePreferredModelForAdapter, throwIfAborted, tryRateLimitOcrRescue,
+  validation: {
+    _extractResultErrorMessage,
+    _isDeadEndpointErrorType,
+    _isHttpRelayAdapter,
+    _isProcessSensitiveAdapter,
+    _isRetryableResultErrorType,
+    _isTransientGatewayTransportMessage,
+    _parseMs,
+    _parsePositiveInt,
+    _resolveResultErrorType,
+    classifyError,
+  },
+  failover: {
+    _defaultModelForApiPoolProvider,
+    _mapApiPoolProviderToServiceProvider,
+    _normalizeApiPoolProvider,
+    _prependFailureReason,
+    _resolveApiPoolProviderForRequest,
+    buildPreferredAdapterRecoveryHint,
+    collectProviderSiblingModels,
+    createLinkedAbortController,
+    normalizeAbortReason,
+    normalizeModelForAdapter,
+    resolvePreferredModelForAdapter,
+    throwIfAborted,
+  },
+  languageRecovery: {
+    _buildLanguageMismatchFailureMessage,
+    _createCodexChineseChunkGate,
+    _createKhyLanguageConsistencyTracker,
+    _injectKhyChineseRecoveryPrompt,
+    _injectKhyChineseRecoverySystem,
+    _resolveCodexChineseRecoveryRetryBudget,
+    _shouldAutoRecoverCodexChineseMismatch,
+  },
+  ocrRescue: { _appendVisionKeyOffer, extractImageOcrDetails, tryRateLimitOcrRescue },
+  diagnostics: { _advDiag, _modelSwitch, _traceAudit },
 });
 const gateway = new AIGateway();
 gateway.classifyError = classifyError;
@@ -1835,8 +2553,14 @@ gateway.classifyError = classifyError;
 gateway.syncModelSwitch = function syncModelSwitch(model) {
   if (_modelSwitch && model) {
     try {
-      _modelSwitch.switchModel(model, { reason: 'gateway_preference', persist: false, force: true });
-    } catch { /* best effort */ }
+      _modelSwitch.switchModel(model, {
+        reason: 'gateway_preference',
+        persist: false,
+        force: true,
+      });
+    } catch {
+      /* best effort */
+    }
   }
 };
 
@@ -1854,7 +2578,9 @@ module.exports.collectProviderSiblingModels = collectProviderSiblingModels;
 // callers (e.g. opt-in session-trace LLM compression) can reach it without
 // importing this 6000-line gateway and getting pulled into the giant SCC
 // ([DESIGN-ARCH-051] §6.9). A closure preserves the AIGateway `this` binding.
-require('../llmGenerateSink').setLlmGenerateProvider((prompt, options) => gateway.generate(prompt, options));
+require('../llmGenerateSink').setLlmGenerateProvider((prompt, options) =>
+  gateway.generate(prompt, options)
+);
 
 module.exports.__test__ = {
   _adapterMayOverridePromptDownstream,

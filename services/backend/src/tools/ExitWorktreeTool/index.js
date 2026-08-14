@@ -22,8 +22,12 @@ class ExitWorktreeTool extends BaseTool {
   static aliases = ['exit_worktree', 'worktree_exit', 'worktree_remove'];
   static searchHint = 'git worktree leave exit remove';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Exit the current worktree session. Use "keep" to leave worktree on disk, "remove" to delete it.
@@ -42,7 +46,8 @@ If the worktree has uncommitted changes, removal will be refused unless discard_
         },
         discard_changes: {
           type: 'boolean',
-          description: 'Required true when action is "remove" and the worktree has uncommitted changes.',
+          description:
+            'Required true when action is "remove" and the worktree has uncommitted changes.',
           default: false,
         },
       },
@@ -68,12 +73,15 @@ If the worktree has uncommitted changes, removal will be refused unless discard_
           const commonDir = execSync('git rev-parse --git-common-dir', {
             cwd: currentPath,
             encoding: 'utf-8',
+            timeout: 15000,
           }).trim();
           const mainRoot = require('path').resolve(currentPath, commonDir, '..');
           _restoreCwd(mainRoot);
         } catch {
           // Fallback: go up until not in worktree
-          if (gitRoot) _restoreCwd(gitRoot);
+          if (gitRoot) {
+            _restoreCwd(gitRoot);
+          }
         }
       }
 
@@ -93,9 +101,12 @@ If the worktree has uncommitted changes, removal will be refused unless discard_
         const commonDir = execSync('git rev-parse --git-common-dir', {
           cwd: currentPath,
           encoding: 'utf-8',
+          timeout: 15000,
         }).trim();
         mainRoot = require('path').resolve(currentPath, commonDir, '..');
-      } catch { /* use gitRoot fallback */ }
+      } catch {
+        /* use gitRoot fallback */
+      }
 
       try {
         const result = worktreeManager.removeWorktree(currentPath, {
@@ -110,7 +121,9 @@ If the worktree has uncommitted changes, removal will be refused unless discard_
         }
 
         // Switch to main repo
-        if (mainRoot) _restoreCwd(mainRoot);
+        if (mainRoot) {
+          _restoreCwd(mainRoot);
+        }
 
         return {
           success: true,

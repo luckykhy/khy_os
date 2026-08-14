@@ -28,9 +28,9 @@
  *   既有非空数据家一律 established-wins 原地钉死；把活体数据搬到非系统盘是
  *   `khy storage migrate` 的显式、可回滚职责，绝不在解析器里自动发生。
  */
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
 const MIN_FREE_BYTES = 1024 * 1024 * 1024; // 1 GB minimum (mirrors storageRoots.js)
 const STORAGE_POINTER_VERSION = 1;
@@ -38,6 +38,7 @@ const STORAGE_POINTER_VERSION = 1;
 let _cached = null;
 let _cachedBaseHome = null;
 let _cachedAppHome = null;
+let _cachedPortable = null;
 
 function getLegacyDataHome() {
   return path.join(os.homedir(), '.khyquant');
@@ -62,7 +63,9 @@ function getLegacyDataHome() {
  * enumeration changes never flip-flop the home, and a relocated home is never
  * "forgotten". */
 function _pointerFile() {
-  if (process.env.KHY_LOCATION_FILE) return path.resolve(process.env.KHY_LOCATION_FILE);
+  if (process.env.KHY_LOCATION_FILE) {
+    return path.resolve(process.env.KHY_LOCATION_FILE);
+  }
   return path.join(os.homedir(), '.khy', '.location.json');
 }
 
@@ -79,31 +82,48 @@ function _portableRoot() {
     if (process.env.KHYQUANT_PORTABLE_ROOT) {
       return path.resolve(process.env.KHYQUANT_PORTABLE_ROOT);
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return getAppRoot();
 }
 
 /** 写入方向：便携根之下的绝对路径 → `~PORTABLE~/rel`；根外路径原样保留。 */
 function _toPortablePointerValue(value) {
   try {
-    if (typeof value !== 'string' || !value) return value;
-    if (value.startsWith(PORTABLE_POINTER_PREFIX)) return value;
+    if (typeof value !== 'string' || !value) {
+      return value;
+    }
+    if (value.startsWith(PORTABLE_POINTER_PREFIX)) {
+      return value;
+    }
     const root = _portableRoot();
     const rel = path.relative(root, value);
-    if (rel === '') return PORTABLE_POINTER_PREFIX;
+    if (rel === '') {
+      return PORTABLE_POINTER_PREFIX;
+    }
     if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) {
       return PORTABLE_POINTER_PREFIX + '/' + rel.split(path.sep).join('/');
     }
-  } catch { /* 保留绝对路径 */ }
+  } catch {
+    /* 保留绝对路径 */
+  }
   return value;
 }
 
 /** 读取方向：`~PORTABLE~/rel` → 按当前便携根还原；旧绝对路径缺失时按尾部重定位自愈。 */
 function _fromPortablePointerValue(value) {
   try {
-    if (typeof value !== 'string' || !value) return value;
-    if (value === PORTABLE_POINTER_PREFIX) return _portableRoot();
-    if (value.startsWith(PORTABLE_POINTER_PREFIX + '/') || value.startsWith(PORTABLE_POINTER_PREFIX + '\\')) {
+    if (typeof value !== 'string' || !value) {
+      return value;
+    }
+    if (value === PORTABLE_POINTER_PREFIX) {
+      return _portableRoot();
+    }
+    if (
+      value.startsWith(PORTABLE_POINTER_PREFIX + '/') ||
+      value.startsWith(PORTABLE_POINTER_PREFIX + '\\')
+    ) {
       return path.join(_portableRoot(), value.slice(PORTABLE_POINTER_PREFIX.length + 1));
     }
     if (path.isAbsolute(value) && !_exists(value)) {
@@ -113,10 +133,14 @@ function _fromPortablePointerValue(value) {
       const idx = parts.findIndex((p) => p.toLowerCase() === marker);
       if (idx !== -1 && idx < parts.length - 1) {
         const candidate = path.join(root, ...parts.slice(idx + 1));
-        if (_exists(candidate)) return candidate;
+        if (_exists(candidate)) {
+          return candidate;
+        }
       }
     }
-  } catch { /* 原样返回 */ }
+  } catch {
+    /* 原样返回 */
+  }
   return value;
 }
 
@@ -126,16 +150,28 @@ function _readPointer() {
     const obj = JSON.parse(raw);
     if (obj && typeof obj === 'object') {
       for (const key of _POINTER_PATH_KEYS) {
-        if (typeof obj[key] === 'string') obj[key] = _fromPortablePointerValue(obj[key]);
+        if (typeof obj[key] === 'string') {
+          obj[key] = _fromPortablePointerValue(obj[key]);
+        }
       }
       return obj;
     }
-  } catch { /* missing/corrupt → treated as no pointer */ }
+  } catch {
+    /* missing/corrupt → treated as no pointer */
+  }
   return null;
 }
 
 /** Merge `patch` into the pointer and write atomically (temp + rename). */
 function _writePointer(patch) {
+  // Portable deployment: never write the system-drive breadcrumb. The data
+  // home is always <portable root>/.khy — self-describing and moving with the
+  // package — so a pointer under ~/.khy would only recreate files on the
+  // system drive, violating the "portable leaves nothing on C:" contract.
+  // (Pointer READS are unchanged; the portable branches never consult it.)
+  if (isPortableDeployment()) {
+    return null;
+  }
   try {
     const file = _pointerFile();
     _ensureDir(path.dirname(file));
@@ -147,26 +183,38 @@ function _writePointer(patch) {
       pinnedAt: new Date().toISOString(),
     };
     for (const key of _POINTER_PATH_KEYS) {
-      if (typeof next[key] === 'string') next[key] = _toPortablePointerValue(next[key]);
+      if (typeof next[key] === 'string') {
+        next[key] = _toPortablePointerValue(next[key]);
+      }
     }
     const tmp = `${file}.tmp-${process.pid}`;
     fs.writeFileSync(tmp, JSON.stringify(next, null, 2));
     fs.renameSync(tmp, file);
     return next;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function _exists(p) {
-  try { return fs.existsSync(p); } catch { return false; }
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
 }
 
 /** A data home is "established" if it exists and holds real content. */
 function _isEstablished(dir) {
   try {
-    if (!fs.existsSync(dir)) return false;
+    if (!fs.existsSync(dir)) {
+      return false;
+    }
     const ignore = new Set(['.location.json', '.location-note-shown']);
     return fs.readdirSync(dir).some((n) => !ignore.has(n));
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -179,13 +227,21 @@ function _warnLine(msg) {
   try {
     const chalk = require('chalk');
     console.warn(chalk.yellow('  ⚠ ') + msg);
-  } catch { try { console.warn('  ⚠ ' + msg); } catch { /* ignore */ } }
+  } catch {
+    try {
+      console.warn('  ⚠ ' + msg);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /** Loud, truthful warning when a pinned target is currently unreachable. */
 function _warnPointerTargetMissing(missingPath, fallback) {
   _warnLine(`khy 数据家位置 ${missingPath} 当前不可访问（可能是可移动盘未挂载）。`);
-  _warnLine(`本次临时使用 ${fallback}；重新挂载该盘即恢复（不会迁移或新建数据，运行 \`khy storage status\` 查看）。`);
+  _warnLine(
+    `本次临时使用 ${fallback}；重新挂载该盘即恢复（不会迁移或新建数据，运行 \`khy storage status\` 查看）。`
+  );
 }
 
 /**
@@ -193,12 +249,24 @@ function _warnPointerTargetMissing(missingPath, fallback) {
  * @returns {string} Absolute path to data directory (created if necessary)
  */
 function getDataHome() {
-  if (_cached) return _cached;
+  if (_cached) {
+    return _cached;
+  }
 
   // 1. Explicit override
   if (process.env.KHY_DATA_HOME) {
     _cached = process.env.KHY_DATA_HOME;
     _ensureDir(_cached);
+    return _cached;
+  }
+
+  // 1.5 Portable deployment: all khy data lives under the project-scoped data
+  // home (<install root>/.khy) so nothing is written to the system drive. The
+  // pointer is intentionally neither consulted nor written here; the env var
+  // is exported so child processes inherit the same resolution.
+  if (isPortableDeployment()) {
+    _cached = getProjectDataHome();
+    process.env.KHY_DATA_HOME = _cached;
     return _cached;
   }
 
@@ -235,10 +303,16 @@ function getDataHome() {
     if (best) {
       const dir = path.join(best.root, '.khy');
       const result = _pinDataHome(dir, 'fresh-auto-pick', 'non-system-drive');
-      try { sr.noteIfOutsideSystemDrive({ dir, source: 'non-system-drive' }); } catch { /* best-effort */ }
+      try {
+        sr.noteIfOutsideSystemDrive({ dir, source: 'non-system-drive' });
+      } catch {
+        /* best-effort */
+      }
       return result;
     }
-  } catch { /* storageRoots unavailable → system default */ }
+  } catch {
+    /* storageRoots unavailable → system default */
+  }
 
   // 5. System-drive default.
   return _pinDataHome(systemDefault, 'system-default', 'system');
@@ -276,7 +350,9 @@ let _cachedProjectDataHome = null;
  * @returns {string} Absolute path to the KHY-OS project root
  */
 function getAppRoot() {
-  if (_cachedAppRoot) return _cachedAppRoot;
+  if (_cachedAppRoot) {
+    return _cachedAppRoot;
+  }
   if (process.env.KHY_OS_ROOT) {
     _cachedAppRoot = path.resolve(process.env.KHY_OS_ROOT);
     return _cachedAppRoot;
@@ -297,7 +373,9 @@ function getAppRoot() {
  * @returns {string} Absolute path (created if necessary)
  */
 function getProjectDataHome() {
-  if (_cachedProjectDataHome) return _cachedProjectDataHome;
+  if (_cachedProjectDataHome) {
+    return _cachedProjectDataHome;
+  }
 
   // 1. Explicit override
   if (process.env.KHY_PROJECT_DATA_HOME) {
@@ -337,10 +415,16 @@ function getProjectDataHome() {
     if (best) {
       const dir = path.join(best.root, '.khy-project');
       const result = _pinProjectDataHome(dir, 'fresh-auto-pick', 'non-system-drive');
-      try { sr.noteIfOutsideSystemDrive({ dir, source: 'non-system-drive' }); } catch { /* best-effort */ }
+      try {
+        sr.noteIfOutsideSystemDrive({ dir, source: 'non-system-drive' });
+      } catch {
+        /* best-effort */
+      }
       return result;
     }
-  } catch { /* storageRoots unavailable → default */ }
+  } catch {
+    /* storageRoots unavailable → default */
+  }
 
   // 5. Default <appRoot>/.khy
   return _pinProjectDataHome(appDefault, 'system-default', 'system');
@@ -370,7 +454,9 @@ function _ensureVisibleAlias(targetDir, aliasDir) {
   try {
     const base = aliasDir || path.dirname(targetDir);
     const aliasPath = path.join(base, 'khy-Trajectory');
-    if (path.resolve(aliasPath) === path.resolve(targetDir)) return; // never alias onto itself
+    if (path.resolve(aliasPath) === path.resolve(targetDir)) {
+      return;
+    } // never alias onto itself
     const stat = fs.lstatSync(aliasPath, { throwIfNoEntry: false });
     if (stat) {
       // Already a symlink/junction → assume correct, leave it.
@@ -384,7 +470,9 @@ function _ensureVisibleAlias(targetDir, aliasDir) {
       // dangle once the real home is on a different drive).
       fs.symlinkSync(targetDir, aliasPath);
     }
-  } catch { /* alias is best-effort; never block startup */ }
+  } catch {
+    /* alias is best-effort; never block startup */
+  }
 }
 
 /**
@@ -398,8 +486,21 @@ function getProjectDataDir(...segments) {
   return dir;
 }
 
+// Memo of directories already ensured this process: getDataDir()-style
+// helpers run on hot request paths, and a redundant mkdirSync is still a
+// synchronous syscall (~1-15ms each on Windows) that adds up per request.
+const _ensuredDirs = new Set();
+
 function _ensureDir(dir) {
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+  if (_ensuredDirs.has(dir)) {
+    return;
+  }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    _ensuredDirs.add(dir);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -410,7 +511,9 @@ function _ensureDir(dir) {
  */
 function _appHomeLiveResolveEnabled() {
   const raw = process.env.KHY_APP_HOME_LIVE_RESOLVE;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -433,10 +536,20 @@ function _appHomeLiveResolveEnabled() {
  * @returns {string} Absolute path to the application data home (created)
  */
 function getAppHome() {
-  if (_cachedAppHome) return _cachedAppHome;
+  if (_cachedAppHome) {
+    return _cachedAppHome;
+  }
   if (process.env.KHY_APP_HOME) {
     _cachedAppHome = path.resolve(process.env.KHY_APP_HOME);
     _ensureDir(_cachedAppHome);
+    return _cachedAppHome;
+  }
+  // Portable deployment: skip the legacy ~/.khyquant established-wins probe
+  // and converge directly onto the unified resolver (which resolves to the
+  // project-scoped data home in portable mode). The portable decision is
+  // stable within a process, so caching here is safe.
+  if (isPortableDeployment()) {
+    _cachedAppHome = getDataHome();
     return _cachedAppHome;
   }
   const legacy = getLegacyDataHome();
@@ -479,20 +592,33 @@ function getAppDataDir(...segments) {
 }
 
 /**
- * Get the ECOSYSTEM BASE (khyos) data home: ~/.khyos
+ * Get the ECOSYSTEM BASE (khyos) data home.
  *
- * This is the base platform's own data territory, kept physically separate from
- * any application's home (e.g. khyquant's ~/.khyquant). Override via KHYOS_HOME.
+ * Non-portable: ~/.khyos (historical, unchanged). Portable deployments resolve
+ * to <portable root>/.khyos instead, so base-owned data travels with the install
+ * directory instead of being pinned to the system drive (~/.khyos). Override via
+ * KHYOS_HOME (wins unconditionally, mirroring KHY_DATA_HOME semantics).
  *
  * Additive by design: nothing is migrated here automatically — it establishes
- * the standard location for genuinely base-owned data going forward.
+ * the standard location for genuinely base-owned data going forward. Legacy
+ * ~/.khyos data on portable installs is migrated once by `khy storage migrate`
+ * (server-driven, rollbackable); the resolver only selects the location.
  *
- * @returns {string} Absolute path to ~/.khyos (created if necessary)
+ * @returns {string} Absolute path to the base data home (created if necessary)
  */
 function getBaseHome() {
-  if (_cachedBaseHome) return _cachedBaseHome;
+  if (_cachedBaseHome) {
+    return _cachedBaseHome;
+  }
+  // KHYOS_HOME override wins unconditionally (matches KHY_DATA_HOME behavior).
   if (process.env.KHYOS_HOME) {
     _cachedBaseHome = path.resolve(process.env.KHYOS_HOME);
+  } else if (isPortableDeployment()) {
+    // Portable: keep base data inside the install tree so the whole directory
+    // can be moved across machines/drives without leaving data on the system
+    // drive. Resolved lazily (never at require time) so the portable decision
+    // is always final by the time any base store reads it.
+    _cachedBaseHome = path.join(getAppRoot(), '.khyos');
   } else {
     _cachedBaseHome = path.join(os.homedir(), '.khyos');
   }
@@ -518,9 +644,16 @@ function getBaseDataDir(...segments) {
  */
 function getStorageReport() {
   let sr = null;
-  try { sr = require('./storageRoots'); } catch { /* optional */ }
-  const systemRoot = sr ? sr.getSystemDriveRoot()
-    : (process.platform === 'win32' ? `${process.env.SystemDrive || 'C:'}\\` : '/');
+  try {
+    sr = require('./storageRoots');
+  } catch {
+    /* optional */
+  }
+  const systemRoot = sr
+    ? sr.getSystemDriveRoot()
+    : process.platform === 'win32'
+      ? `${process.env.SystemDrive || 'C:'}\\`
+      : '/';
   return {
     homes: {
       dataHome: getDataHome(),
@@ -536,6 +669,95 @@ function getStorageReport() {
   };
 }
 
+/**
+ * Detect a portable deployment: KHYQUANT_PORTABLE_ROOT is set explicitly, or
+ * the install root carries a `.portable` marker file. Portable installs keep
+ * per-install data (e.g. memory) under the project-scoped data home so the
+ * whole directory can be moved across machines/drives without leaving data
+ * behind on the system drive.
+ * @returns {boolean}
+ */
+function isPortableDeployment() {
+  if (_cachedPortable !== null) {
+    return _cachedPortable;
+  }
+  try {
+    if (process.env.KHYQUANT_PORTABLE_ROOT) {
+      _cachedPortable = true;
+      return _cachedPortable;
+    }
+    _cachedPortable = fs.existsSync(path.join(_portableRoot(), '.portable'));
+  } catch {
+    _cachedPortable = false;
+  }
+  return _cachedPortable;
+}
+
+/**
+ * Get the canonical MEMORY data directory (created), shared by the dreaming/
+ * consolidation side. Portable deployments (.portable marker or
+ * KHYQUANT_PORTABLE_ROOT) resolve to getProjectDataHome()/memory — the same
+ * root memdir/paths.js resolves to — so memory travels with the install
+ * directory instead of being pinned to the system-drive data home by the
+ * pointer. Regular installs keep the historical getDataDir('memory') behavior
+ * unchanged.
+ *
+ * @param {...string} segments Extra path segments under the memory dir
+ * @returns {string} Absolute path (directory created)
+ */
+function getMemoryDataDir(...segments) {
+  if (isPortableDeployment()) {
+    return getProjectDataDir('memory', ...segments);
+  }
+  return getDataDir('memory', ...segments);
+}
+
+/**
+ * Resolve the user's Desktop folder path.
+ *
+ * Resolution order:
+ *   1. KHY_DESKTOP_PATH env var (explicit override)
+ *   2. Windows: read from registry key HKCU\...\User Shell Folders\Desktop
+ *      (handles users who moved Desktop to a non-default location)
+ *   3. Fallback: os.homedir()/Desktop
+ *
+ * Fail-soft: any error → fallback to homedir/Desktop.
+ * @returns {string} Absolute path to the Desktop folder
+ */
+function getDesktopPath() {
+  // 1. Explicit override
+  const override = process.env.KHY_DESKTOP_PATH;
+  if (override && String(override).trim()) {
+    return path.resolve(String(override).trim());
+  }
+
+  // 2. Windows: query the registry for the real Desktop location
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      const out = execSync(
+        'reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders" /v Desktop 2>nul',
+        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+      );
+      const match = out.match(/REG_EXPAND_SZ\s+([^\r\n]+)/);
+      if (match && match[1]) {
+        let desktop = match[1].trim();
+        // Expand environment variables like %USERPROFILE%
+        desktop = desktop.replace(/%([^%]+)%/g, (_, key) => process.env[key] || '');
+        const resolved = path.resolve(desktop);
+        if (fs.existsSync(resolved)) {
+          return resolved;
+        }
+      }
+    } catch {
+      /* fall through to fallback */
+    }
+  }
+
+  // 3. Fallback
+  return path.join(os.homedir(), 'Desktop');
+}
+
 /** Test helper: clear all resolution caches so policy re-runs from scratch. */
 function _resetStorageCaches() {
   _cached = null;
@@ -543,6 +765,7 @@ function _resetStorageCaches() {
   _cachedAppHome = null;
   _cachedAppRoot = null;
   _cachedProjectDataHome = null;
+  _cachedPortable = null;
 }
 
 module.exports = {
@@ -555,6 +778,8 @@ module.exports = {
   getAppRoot,
   getProjectDataHome,
   getProjectDataDir,
+  getMemoryDataDir,
+  isPortableDeployment,
   getBaseHome,
   getBaseDataDir,
   getStorageReport,
@@ -567,4 +792,5 @@ module.exports = {
   _fromPortablePointerValue,
   _isEstablished,
   _resetStorageCaches,
+  getDesktopPath,
 };

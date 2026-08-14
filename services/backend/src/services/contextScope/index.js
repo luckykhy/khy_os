@@ -24,19 +24,23 @@
  *   ⑤ Model planner failure/timeout → deterministic floor; never blocks/throws.
  */
 
-const { extractSignals } = require('./taskSignalExtractor');
 const aiMapIndex = require('./aiMapIndex');
-const { rankCandidates } = require('./scopeRanker');
 const { applyBudget, enforceBudget } = require('./budgetController');
+const { rankCandidates } = require('./scopeRanker');
 const { buildSearchPlan } = require('./searchPlanBuilder');
+const { extractSignals } = require('./taskSignalExtractor');
 
 const MODEL_TIMEOUT_MS = 4000;
 
 const _withTimeout = require('../../utils/withTimeout');
 
 function _normaliseChosen(result) {
-  if (Array.isArray(result)) return result.filter((x) => typeof x === 'string');
-  if (result && Array.isArray(result.chosenPaths)) return result.chosenPaths.filter((x) => typeof x === 'string');
+  if (Array.isArray(result)) {
+    return result.filter((x) => typeof x === 'string');
+  }
+  if (result && Array.isArray(result.chosenPaths)) {
+    return result.chosenPaths.filter((x) => typeof x === 'string');
+  }
   return null;
 }
 
@@ -66,14 +70,21 @@ async function planScope(input = {}) {
   // Optional model refinement — strictly within the candidate universe & budget.
   if (typeof input.modelPlanner === 'function' && ranked.length > 0) {
     const universe = ranked.slice(0, Math.max(selected.length + deferred.length, selected.length));
-    const candidatesForModel = universe.map((c) => ({ path: c.path, score: c.score, reasons: c.reasons }));
+    const candidatesForModel = universe.map((c) => ({
+      path: c.path,
+      score: c.score,
+      reasons: c.reasons,
+    }));
     const res = await _withTimeout(
       input.modelPlanner({ task, candidates: candidatesForModel, budget: budget }),
-      Number(input.modelTimeoutMs) || MODEL_TIMEOUT_MS,
+      Number(input.modelTimeoutMs) || MODEL_TIMEOUT_MS
     );
     const chosen = res && !res.__timeout && !res.__error ? _normaliseChosen(res) : null;
     if (chosen && chosen.length) {
-      const clamped = enforceBudget(universe, chosen, { ...applyBudget([], budget).budget, ...budget });
+      const clamped = enforceBudget(universe, chosen, {
+        ...applyBudget([], budget).budget,
+        ...budget,
+      });
       if (clamped.length) {
         const chosenSet = new Set(clamped.map((c) => c.path));
         selected = clamped;

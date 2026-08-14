@@ -34,7 +34,9 @@ class RemoteApprovalBridge {
   }
 
   _notifyMutation(reason, payload = {}) {
-    if (typeof this._onMutate !== 'function') return;
+    if (typeof this._onMutate !== 'function') {
+      return;
+    }
     try {
       this._onMutate({
         source: 'remote_approval_bridge',
@@ -47,9 +49,13 @@ class RemoteApprovalBridge {
   }
 
   _sanitizeTicket(ticket) {
-    if (!ticket || typeof ticket !== 'object') return null;
+    if (!ticket || typeof ticket !== 'object') {
+      return null;
+    }
     const ticketId = String(ticket.ticket_id || '').trim();
-    if (!ticketId) return null;
+    if (!ticketId) {
+      return null;
+    }
     return {
       ticket_id: ticketId,
       trace_id: ticket.trace_id || null,
@@ -59,14 +65,17 @@ class RemoteApprovalBridge {
       risk_level: String(ticket.risk_level || 'safe'),
       reason: String(ticket.reason || ''),
       idempotency_key: ticket.idempotency_key || null,
-      commands: Array.isArray(ticket.commands) ? ticket.commands.map((item) => ({
-        command: String(item?.command || ''),
-        risk: String(item?.risk || 'safe'),
-        reason: String(item?.reason || ''),
-      })) : [],
-      risk_context: ticket.risk_context && typeof ticket.risk_context === 'object'
-        ? { ...ticket.risk_context }
-        : null,
+      commands: Array.isArray(ticket.commands)
+        ? ticket.commands.map((item) => ({
+            command: String(item?.command || ''),
+            risk: String(item?.risk || 'safe'),
+            reason: String(item?.reason || ''),
+          }))
+        : [],
+      risk_context:
+        ticket.risk_context && typeof ticket.risk_context === 'object'
+          ? { ...ticket.risk_context }
+          : null,
       created_at: ticket.created_at || new Date().toISOString(),
       expires_at: ticket.expires_at || null,
       approved_by: ticket.approved_by || null,
@@ -111,7 +120,9 @@ class RemoteApprovalBridge {
     const perCommand = list.map((item) => this.classifyCommand(item));
 
     const highest = perCommand.reduce((current, next) => {
-      if (!current) return next;
+      if (!current) {
+        return next;
+      }
       return RISK_WEIGHT[next.risk] > RISK_WEIGHT[current.risk] ? next : current;
     }, null) || { risk: 'safe', reason: 'No commands provided.', command: '' };
 
@@ -153,9 +164,13 @@ class RemoteApprovalBridge {
 
   approveTicket(ticketId, approvedBy = null) {
     const key = String(ticketId || '').trim();
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const ticket = this._tickets.get(key);
-    if (!ticket) return null;
+    if (!ticket) {
+      return null;
+    }
 
     ticket.status = 'approved';
     ticket.approved_by = approvedBy || null;
@@ -166,9 +181,13 @@ class RemoteApprovalBridge {
 
   rejectTicket(ticketId, rejectedBy = null, reason = 'rejected_by_reviewer') {
     const key = String(ticketId || '').trim();
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const ticket = this._tickets.get(key);
-    if (!ticket) return null;
+    if (!ticket) {
+      return null;
+    }
 
     ticket.status = 'rejected';
     ticket.rejected_by = rejectedBy || null;
@@ -188,13 +207,25 @@ class RemoteApprovalBridge {
       return { ok: false, code: 'ticket_not_found', message: 'approval ticket not found.' };
     }
     if (ticket.status !== 'approved') {
-      return { ok: false, code: 'ticket_not_approved', message: `approval ticket status is ${ticket.status}.` };
+      return {
+        ok: false,
+        code: 'ticket_not_approved',
+        message: `approval ticket status is ${ticket.status}.`,
+      };
     }
     if (ticket.consumed_at) {
-      return { ok: false, code: 'ticket_already_consumed', message: 'approval ticket has already been consumed.' };
+      return {
+        ok: false,
+        code: 'ticket_already_consumed',
+        message: 'approval ticket has already been consumed.',
+      };
     }
     if (ticket.idempotency_key && idempotencyKey && ticket.idempotency_key !== idempotencyKey) {
-      return { ok: false, code: 'idempotency_key_mismatch', message: 'idempotency_key does not match approval ticket.' };
+      return {
+        ok: false,
+        code: 'idempotency_key_mismatch',
+        message: 'idempotency_key does not match approval ticket.',
+      };
     }
 
     ticket.consumed_at = new Date().toISOString();
@@ -205,7 +236,9 @@ class RemoteApprovalBridge {
 
   getTicket(ticketId) {
     const key = String(ticketId || '').trim();
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const ticket = this._tickets.get(key);
     return ticket ? { ...ticket } : null;
   }
@@ -230,7 +263,9 @@ class RemoteApprovalBridge {
     const list = Array.isArray(tickets) ? tickets : [];
     for (const rawTicket of list) {
       const ticket = this._sanitizeTicket(rawTicket);
-      if (!ticket) continue;
+      if (!ticket) {
+        continue;
+      }
 
       const expiresMs = ticket.expires_at ? Date.parse(ticket.expires_at) : NaN;
       if (Number.isFinite(expiresMs) && expiresMs < nowMs && ticket.status === 'pending') {

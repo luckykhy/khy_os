@@ -62,8 +62,22 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = (await User.create({ username: 'plug-a', email: 'a@plug.local', password: 'pw-a-12345', status: 'active' })).id;
-  userB = (await User.create({ username: 'plug-b', email: 'b@plug.local', password: 'pw-b-12345', status: 'active' })).id;
+  userA = (
+    await User.create({
+      username: 'plug-a',
+      email: 'a@plug.local',
+      password: 'pw-a-12345',
+      status: 'active',
+    })
+  ).id;
+  userB = (
+    await User.create({
+      username: 'plug-b',
+      email: 'b@plug.local',
+      password: 'pw-b-12345',
+      status: 'active',
+    })
+  ).id;
 });
 
 afterAll(async () => {
@@ -97,8 +111,10 @@ describe('pluginImportService.preview', () => {
     const norm = await importSvc.preview({
       openapi: openapiDoc(),
       manifest: {
-        name_for_model: 'wx', name_for_human: 'WX',
-        description_for_model: 'd', description_for_human: 'd',
+        name_for_model: 'wx',
+        name_for_human: 'WX',
+        description_for_model: 'd',
+        description_for_human: 'd',
         auth: { type: 'service_http', authorization_type: 'custom', in: 'header', name: 'X-Key' },
       },
     });
@@ -109,7 +125,14 @@ describe('pluginImportService.preview', () => {
   test('maps a Coze oauth manifest into an oauth descriptor with grant inference', async () => {
     const norm = await importSvc.preview({
       openapi: openapiDoc(),
-      manifest: { auth: { type: 'oauth', authorization_url: 'https://id.example.com/auth', token_url: 'https://id.example.com/token', scope: 'read' } },
+      manifest: {
+        auth: {
+          type: 'oauth',
+          authorization_url: 'https://id.example.com/auth',
+          token_url: 'https://id.example.com/token',
+          scope: 'read',
+        },
+      },
     });
     expect(norm.manifest.auth.type).toBe('oauth');
     expect(norm.manifest.auth.grant).toBe('authorization_code');
@@ -125,14 +148,16 @@ describe('pluginImportService.preview', () => {
 
   test('SSRF: a spec URL resolving to a private address is blocked (no fetch)', async () => {
     urlSafety.__setDnsLookupForTests(async () => [{ address: '169.254.169.254', family: 4 }]);
-    await expect(importSvc.preview({ openapiUrl: 'https://metadata.evil.test/openapi.json' }))
-      .rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      importSvc.preview({ openapiUrl: 'https://metadata.evil.test/openapi.json' })
+    ).rejects.toMatchObject({ statusCode: 400 });
     expect(axios).not.toHaveBeenCalled();
   });
 
   test('rejects a non-OpenAPI-3 document', async () => {
-    await expect(importSvc.preview({ openapi: { swagger: '2.0', paths: {} } }))
-      .rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      importSvc.preview({ openapi: { swagger: '2.0', paths: {} } })
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });
 
@@ -142,8 +167,9 @@ describe('pluginImportService.importPlugin', () => {
     expect(row.id).toBeTruthy();
     expect(row.slug).toBe('dup-spec');
     expect(row.official).toBe(false);
-    await expect(importSvc.importPlugin(userA, { openapi: openapiDoc(), slug: 'dup-spec' }))
-      .rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      importSvc.importPlugin(userA, { openapi: openapiDoc(), slug: 'dup-spec' })
+    ).rejects.toMatchObject({ statusCode: 409 });
   });
 });
 
@@ -154,8 +180,12 @@ describe('marketplaceService', () => {
 
   beforeAll(async () => {
     const row = await MarketplacePlugin.create({
-      slug: 'mkt-weather', name: 'Market Weather', description: 'sunny forecasts',
-      category: 'utility', official: true, version: '1.0.0',
+      slug: 'mkt-weather',
+      name: 'Market Weather',
+      description: 'sunny forecasts',
+      category: 'utility',
+      official: true,
+      version: '1.0.0',
       manifestJson: { auth: { type: 'apiKey', in: 'header', name: 'X-Key' } },
       openapiJson: openapiDoc(),
     });
@@ -180,13 +210,17 @@ describe('marketplaceService', () => {
   });
 
   test('install is idempotent: re-install re-enables and updates auth', async () => {
-    const first = await marketplaceSvc.install(userA, pluginId, { authConfig: { type: 'apiKey', in: 'header', name: 'X-Key', value: 'k1' } });
+    const first = await marketplaceSvc.install(userA, pluginId, {
+      authConfig: { type: 'apiKey', in: 'header', name: 'X-Key', value: 'k1' },
+    });
     expect(first.installed).toBe(true);
     const installId = first.id;
 
     // disable, then re-install → re-enabled, same row, new auth.
     await pluginSvc.setEnabled(userA, installId, false);
-    const second = await marketplaceSvc.install(userA, pluginId, { authConfig: { type: 'apiKey', in: 'header', name: 'X-Key', value: 'k2' } });
+    const second = await marketplaceSvc.install(userA, pluginId, {
+      authConfig: { type: 'apiKey', in: 'header', name: 'X-Key', value: 'k2' },
+    });
     expect(second.id).toBe(installId);
     expect(second.enabled).toBe(true);
 
@@ -204,12 +238,18 @@ describe('marketplaceService', () => {
   test('uninstall removes the link; a second uninstall is 404', async () => {
     await marketplaceSvc.install(userB, pluginId, {});
     expect((await marketplaceSvc.uninstall(userB, pluginId)).uninstalled).toBe(true);
-    await expect(marketplaceSvc.uninstall(userB, pluginId)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(marketplaceSvc.uninstall(userB, pluginId)).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 
   test('install guards: unknown plugin → 404, missing user → 401', async () => {
-    await expect(marketplaceSvc.install(userA, 999999, {})).rejects.toMatchObject({ statusCode: 404 });
-    await expect(marketplaceSvc.install(null, pluginId, {})).rejects.toMatchObject({ statusCode: 401 });
+    await expect(marketplaceSvc.install(userA, 999999, {})).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    await expect(marketplaceSvc.install(null, pluginId, {})).rejects.toMatchObject({
+      statusCode: 401,
+    });
   });
 });
 
@@ -217,18 +257,28 @@ describe('marketplaceService', () => {
 
 describe('pluginService', () => {
   test('_maskAuth never returns secret material', () => {
-    expect(pluginSvc._maskAuth({ type: 'apiKey', in: 'header', name: 'X', value: 'SECRET' }))
-      .toEqual({ type: 'apiKey', in: 'header', name: 'X', configured: true });
-    expect(pluginSvc._maskAuth({ type: 'bearer', token: 'SECRET' }))
-      .toEqual({ type: 'bearer', configured: true });
-    const oauth = pluginSvc._maskAuth({ type: 'oauth', grant: 'client_credentials', tokenUrl: 'https://t', clientId: 'id', clientSecret: 'SECRET' });
+    expect(
+      pluginSvc._maskAuth({ type: 'apiKey', in: 'header', name: 'X', value: 'SECRET' })
+    ).toEqual({ type: 'apiKey', in: 'header', name: 'X', configured: true });
+    expect(pluginSvc._maskAuth({ type: 'bearer', token: 'SECRET' })).toEqual({
+      type: 'bearer',
+      configured: true,
+    });
+    const oauth = pluginSvc._maskAuth({
+      type: 'oauth',
+      grant: 'client_credentials',
+      tokenUrl: 'https://t',
+      clientId: 'id',
+      clientSecret: 'SECRET',
+    });
     expect(oauth.configured).toBe(true);
     expect(JSON.stringify(oauth)).not.toContain('SECRET');
   });
 
   test('importAndInstall publishes + auto-installs; listInstalled masks the auth', async () => {
     const view = await pluginSvc.importAndInstall(userA, {
-      openapi: openapiDoc(), slug: 'svc-weather',
+      openapi: openapiDoc(),
+      slug: 'svc-weather',
       authConfig: { type: 'apiKey', in: 'header', name: 'X-Key', value: 'TOPSECRET' },
     });
     expect(view.enabled).toBe(true);
@@ -241,7 +291,10 @@ describe('pluginService', () => {
   });
 
   test('setEnabled / setAuth mutate an owned install', async () => {
-    const view = await pluginSvc.importAndInstall(userA, { openapi: openapiDoc(), slug: 'svc-mutate' });
+    const view = await pluginSvc.importAndInstall(userA, {
+      openapi: openapiDoc(),
+      slug: 'svc-mutate',
+    });
     const off = await pluginSvc.setEnabled(userA, view.id, false);
     expect(off.enabled).toBe(false);
     const authed = await pluginSvc.setAuth(userA, view.id, { type: 'bearer', token: 'TKN' });
@@ -250,27 +303,50 @@ describe('pluginService', () => {
     expect(row.authConfigJson.token).toBe('TKN'); // stored, but never surfaced
   });
 
-  test('越权 (cross-user) access to another user\'s install is rejected with 404', async () => {
-    const view = await pluginSvc.importAndInstall(userA, { openapi: openapiDoc(), slug: 'svc-private' });
-    await expect(pluginSvc.setEnabled(userB, view.id, false)).rejects.toMatchObject({ statusCode: 404 });
-    await expect(pluginSvc.setAuth(userB, view.id, { type: 'none' })).rejects.toMatchObject({ statusCode: 404 });
+  test("越权 (cross-user) access to another user's install is rejected with 404", async () => {
+    const view = await pluginSvc.importAndInstall(userA, {
+      openapi: openapiDoc(),
+      slug: 'svc-private',
+    });
+    await expect(pluginSvc.setEnabled(userB, view.id, false)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    await expect(pluginSvc.setAuth(userB, view.id, { type: 'none' })).rejects.toMatchObject({
+      statusCode: 404,
+    });
     await expect(pluginSvc.remove(userB, view.id)).rejects.toMatchObject({ statusCode: 404 });
-    await expect(pluginSvc.test(userB, view.id, { operationId: 'getForecast' })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      pluginSvc.test(userB, view.id, { operationId: 'getForecast' })
+    ).rejects.toMatchObject({ statusCode: 404 });
     // owner still has it
     expect((await pluginSvc.listInstalled(userA)).find((p) => p.id === view.id)).toBeTruthy();
   });
 
   test('test() invokes the operation with the stored auth (runtime invoker stubbed)', async () => {
-    const invoker = require(path.resolve(__dirname, '../../backend/src/services/plugins/pluginInvoker'));
+    const invoker = require(
+      path.resolve(__dirname, '../../backend/src/services/plugins/pluginInvoker')
+    );
     const orig = invoker.invoke;
     let seen = null;
-    invoker.invoke = async (opts) => { seen = opts; return { ok: true, status: 200, contentType: 'application/json', data: { city: opts.args.city } }; };
+    invoker.invoke = async (opts) => {
+      seen = opts;
+      return {
+        ok: true,
+        status: 200,
+        contentType: 'application/json',
+        data: { city: opts.args.city },
+      };
+    };
     try {
       const view = await pluginSvc.importAndInstall(userA, {
-        openapi: openapiDoc(), slug: 'svc-test',
+        openapi: openapiDoc(),
+        slug: 'svc-test',
         authConfig: { type: 'bearer', token: 'BTK' },
       });
-      const res = await pluginSvc.test(userA, view.id, { operationId: 'getForecast', args: { city: 'paris' } });
+      const res = await pluginSvc.test(userA, view.id, {
+        operationId: 'getForecast',
+        args: { city: 'paris' },
+      });
       expect(res.ok).toBe(true);
       expect(res.data).toEqual({ city: 'paris' });
       expect(seen.operationId).toBe('getForecast');
@@ -281,7 +357,10 @@ describe('pluginService', () => {
   });
 
   test('test() requires operationId', async () => {
-    const view = await pluginSvc.importAndInstall(userA, { openapi: openapiDoc(), slug: 'svc-noop' });
+    const view = await pluginSvc.importAndInstall(userA, {
+      openapi: openapiDoc(),
+      slug: 'svc-noop',
+    });
     await expect(pluginSvc.test(userA, view.id, {})).rejects.toMatchObject({ statusCode: 400 });
   });
 });

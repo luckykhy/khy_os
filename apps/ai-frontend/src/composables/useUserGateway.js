@@ -1,6 +1,6 @@
-import { ref } from 'vue'
-import request from '@/api/request'
-import { unwrap } from '@/api/unwrap'
+import { ref } from 'vue';
+import request from '@/api/request';
+import { unwrap } from '@/api/unwrap';
 
 /**
  * Per-user (multi-tenant) gateway state.
@@ -13,41 +13,50 @@ import { unwrap } from '@/api/unwrap'
  */
 
 export function useUserGateway() {
-  const relayConfig = ref(null)
-  const providers = ref([])
-  const ccEndpoint = ref(null)
-  const ccTokens = ref([])
-  const catalogEdges = ref([])
-  const catalogSources = ref(null)
-  const detectionSummary = ref(null)
-  const detecting = ref(false)
-  const providerPresets = ref([])
-  const models = ref([])
-  const imageConfig = ref(null)
-  const loading = ref(false)
-  const saving = ref(false)
+  const relayConfig = ref(null);
+  const providers = ref([]);
+  const ccEndpoint = ref(null);
+  const ccTokens = ref([]);
+  const catalogEdges = ref([]);
+  const catalogSources = ref(null);
+  const detectionSummary = ref(null);
+  const detecting = ref(false);
+  const providerPresets = ref([]);
+  const models = ref([]);
+  const imageConfig = ref(null);
+  const loading = ref(false);
+  const saving = ref(false);
 
   // ── Relay config (per-user upstream) ──
   async function fetchRelayConfig() {
     try {
-      const res = await request.get('/api/user-gateway/model-config')
-      relayConfig.value = unwrap(res)
-    } catch { /* ignore */ }
+      const res = await request.get('/api/user-gateway/model-config');
+      relayConfig.value = unwrap(res);
+    } catch {
+      /* ignore */
+    }
   }
 
   async function saveRelayConfig(payload) {
-    saving.value = true
+    saving.value = true;
     try {
-      const res = await request.put('/api/user-gateway/model-config', payload)
-      relayConfig.value = unwrap(res)
+      const res = await request.put('/api/user-gateway/model-config', payload);
+      relayConfig.value = unwrap(res);
       // The save auto-probes the relay; surface its outcome + refresh the catalog
       // so newly detected models appear without a separate click.
-      const detection = res?.data?.detection
-      if (detection) detectionSummary.value = { upstream: { ...detection }, errors: (detection.error && !detection.benign) ? [{ source: 'upstream', provider: detection.provider, error: detection.error }] : [] }
-      await fetchCatalog()
-      return relayConfig.value
+      const detection = res?.data?.detection;
+      if (detection)
+        detectionSummary.value = {
+          upstream: { ...detection },
+          errors:
+            detection.error && !detection.benign
+              ? [{ source: 'upstream', provider: detection.provider, error: detection.error }]
+              : [],
+        };
+      await fetchCatalog();
+      return relayConfig.value;
     } finally {
-      saving.value = false
+      saving.value = false;
     }
   }
 
@@ -58,57 +67,62 @@ export function useUserGateway() {
   // indistinguishable from an empty config. Merges into any existing errors
   // rather than clobbering them, and de-duplicates by source.
   function surfaceError(source, err) {
-    const message = err?.response?.data?.message || err?.message || '请求失败'
-    const prev = (detectionSummary.value && Array.isArray(detectionSummary.value.errors))
-      ? detectionSummary.value.errors
-      : []
+    const message = err?.response?.data?.message || err?.message || '请求失败';
+    const prev =
+      detectionSummary.value && Array.isArray(detectionSummary.value.errors)
+        ? detectionSummary.value.errors
+        : [];
     detectionSummary.value = {
       ...(detectionSummary.value || {}),
-      errors: [...prev.filter(e => e.source !== source), { source, error: message }],
-    }
+      errors: [...prev.filter((e) => e.source !== source), { source, error: message }],
+    };
   }
 
   // ── Custom providers + key pool (per-user) ──
   async function fetchProviders() {
     try {
-      const res = await request.get('/api/user-gateway/custom-providers')
-      providers.value = unwrap(res) || []
-    } catch (err) { providers.value = []; surfaceError('providers', err) }
+      const res = await request.get('/api/user-gateway/custom-providers');
+      providers.value = unwrap(res) || [];
+    } catch (err) {
+      providers.value = [];
+      surfaceError('providers', err);
+    }
   }
 
   async function addProvider(payload) {
-    const res = await request.post('/api/user-gateway/custom-providers', payload)
-    await fetchProviders()
+    const res = await request.post('/api/user-gateway/custom-providers', payload);
+    await fetchProviders();
     // The add auto-probes the new provider; surface its outcome + refresh catalog.
-    applyDetection(res?.data?.detection)
-    await fetchCatalog()
-    return unwrap(res)
+    applyDetection(res?.data?.detection);
+    await fetchCatalog();
+    return unwrap(res);
   }
 
   async function removeProviderEntry(id) {
-    await request.delete(`/api/user-gateway/custom-providers/${id}`)
-    await fetchProviders()
+    await request.delete(`/api/user-gateway/custom-providers/${id}`);
+    await fetchProviders();
   }
 
   // Surface a post-save detection probe into detectionSummary. A benign outcome
   // (upstream simply has no /models endpoint) is NOT shown as an error so the UI
   // stays quiet instead of flashing a scary "not found" on every save.
   function applyDetection(detection) {
-    if (!detection) return
+    if (!detection) return;
     detectionSummary.value = {
       upstream: { ...detection },
-      errors: (detection.error && !detection.benign)
-        ? [{ source: 'upstream', provider: detection.provider, error: detection.error }]
-        : [],
-    }
+      errors:
+        detection.error && !detection.benign
+          ? [{ source: 'upstream', provider: detection.provider, error: detection.error }]
+          : [],
+    };
   }
 
   async function replaceProviderKey(id, key) {
-    const res = await request.put(`/api/user-gateway/custom-providers/${id}`, { key })
-    await fetchProviders()
-    applyDetection(res?.data?.detection)
-    await fetchCatalog()
-    return unwrap(res)
+    const res = await request.put(`/api/user-gateway/custom-providers/${id}`, { key });
+    await fetchProviders();
+    applyDetection(res?.data?.detection);
+    await fetchCatalog();
+    return unwrap(res);
   }
 
   // Edit a provider entry in place — a richer patch than replaceProviderKey. May
@@ -117,11 +131,11 @@ export function useUserGateway() {
   // migrates that provider's models to the new name). Refreshes providers +
   // catalog and surfaces the post-save re-probe like addProvider does.
   async function updateProvider(id, patch) {
-    const res = await request.put(`/api/user-gateway/custom-providers/${id}`, patch || {})
-    await fetchProviders()
-    applyDetection(res?.data?.detection)
-    await fetchCatalog()
-    return unwrap(res)
+    const res = await request.put(`/api/user-gateway/custom-providers/${id}`, patch || {});
+    await fetchProviders();
+    applyDetection(res?.data?.detection);
+    await fetchCatalog();
+    return unwrap(res);
   }
 
   // DRY-RUN "测试连接": probe an upstream config (baseUrl/endpoint + key +
@@ -129,70 +143,80 @@ export function useUserGateway() {
   // offer one-click model import before the user commits. Returns
   // { ok, count, models:[{id,capability}], error }.
   async function testProviderConfig(payload) {
-    const res = await request.post('/api/user-gateway/providers/test', payload || {})
-    return unwrap(res) || { ok: false, count: 0, models: [], error: '测试失败' }
+    const res = await request.post('/api/user-gateway/providers/test', payload || {});
+    return unwrap(res) || { ok: false, count: 0, models: [], error: '测试失败' };
   }
 
   async function removeProvider(provider) {
-    await request.delete(`/api/user-gateway/providers/by-name/${encodeURIComponent(provider)}`)
-    await fetchProviders()
+    await request.delete(`/api/user-gateway/providers/by-name/${encodeURIComponent(provider)}`);
+    await fetchProviders();
   }
 
   // ── Unified multi-pivot catalog (per-user) ──
   async function fetchCatalog() {
     try {
-      const res = await request.get('/api/user-gateway/catalog')
-      const payload = unwrap(res) || {}
-      catalogEdges.value = Array.isArray(payload.edges) ? payload.edges : []
-      catalogSources.value = payload.sources || null
-    } catch (err) { catalogEdges.value = []; catalogSources.value = null; surfaceError('catalog', err) }
+      const res = await request.get('/api/user-gateway/catalog');
+      const payload = unwrap(res) || {};
+      catalogEdges.value = Array.isArray(payload.edges) ? payload.edges : [];
+      catalogSources.value = payload.sources || null;
+    } catch (err) {
+      catalogEdges.value = [];
+      catalogSources.value = null;
+      surfaceError('catalog', err);
+    }
   }
 
   // Manual "检测/刷新": run a fresh upstream probe + persist sweep, then refresh
   // the catalog from the enriched result. `detectionSummary` exposes the
   // per-source counts + any probe errors for transparent display.
   async function detectModels() {
-    detecting.value = true
+    detecting.value = true;
     try {
-      const res = await request.post('/api/user-gateway/detect', {})
-      const payload = unwrap(res) || {}
-      catalogEdges.value = Array.isArray(payload.edges) ? payload.edges : []
-      catalogSources.value = payload.sources || null
-      detectionSummary.value = payload.sources || null
-      return payload
+      const res = await request.post('/api/user-gateway/detect', {});
+      const payload = unwrap(res) || {};
+      catalogEdges.value = Array.isArray(payload.edges) ? payload.edges : [];
+      catalogSources.value = payload.sources || null;
+      detectionSummary.value = payload.sources || null;
+      return payload;
     } catch (err) {
-      detectionSummary.value = { errors: [{ source: 'request', error: err?.message || 'detect failed' }] }
-      throw err
+      detectionSummary.value = {
+        errors: [{ source: 'request', error: err?.message || 'detect failed' }],
+      };
+      throw err;
     } finally {
-      detecting.value = false
+      detecting.value = false;
     }
   }
 
   // ── CC access (unified proxy endpoint + channel tokens) ──
   async function fetchCcEndpoint() {
     try {
-      const res = await request.get('/api/user-gateway/cc/endpoint')
-      ccEndpoint.value = unwrap(res)
-    } catch { /* ignore */ }
+      const res = await request.get('/api/user-gateway/cc/endpoint');
+      ccEndpoint.value = unwrap(res);
+    } catch {
+      /* ignore */
+    }
   }
 
   async function fetchCcTokens() {
     try {
-      const res = await request.get('/api/user-gateway/cc/tokens')
-      ccTokens.value = unwrap(res) || []
-    } catch { ccTokens.value = [] }
+      const res = await request.get('/api/user-gateway/cc/tokens');
+      ccTokens.value = unwrap(res) || [];
+    } catch {
+      ccTokens.value = [];
+    }
   }
 
   // Returns the freshly issued token row, including the one-time plaintext `key`.
   async function issueCcToken(label) {
-    const res = await request.post('/api/user-gateway/cc/tokens', { label })
-    await fetchCcTokens()
-    return unwrap(res)
+    const res = await request.post('/api/user-gateway/cc/tokens', { label });
+    await fetchCcTokens();
+    return unwrap(res);
   }
 
   async function revokeCcToken(id) {
-    await request.delete(`/api/user-gateway/cc/tokens/${id}`)
-    await fetchCcTokens()
+    await request.delete(`/api/user-gateway/cc/tokens/${id}`);
+    await fetchCcTokens();
   }
 
   // ── My model list (per-user persisted models — full CRUD) ──
@@ -204,54 +228,60 @@ export function useUserGateway() {
     try {
       const url = provider
         ? `/api/user-gateway/models?provider=${encodeURIComponent(provider)}`
-        : '/api/user-gateway/models'
-      const res = await request.get(url)
-      models.value = unwrap(res) || []
-    } catch { models.value = [] }
-    return models.value
+        : '/api/user-gateway/models';
+      const res = await request.get(url);
+      models.value = unwrap(res) || [];
+    } catch {
+      models.value = [];
+    }
+    return models.value;
   }
 
   async function addModel(payload) {
-    const res = await request.post('/api/user-gateway/models', payload)
-    await Promise.all([fetchModels(), fetchCatalog()])
-    return unwrap(res)
+    const res = await request.post('/api/user-gateway/models', payload);
+    await Promise.all([fetchModels(), fetchCatalog()]);
+    return unwrap(res);
   }
 
   async function updateModel(id, patch) {
-    const res = await request.patch(`/api/user-gateway/models/${id}`, patch)
-    await Promise.all([fetchModels(), fetchCatalog()])
-    return unwrap(res)
+    const res = await request.patch(`/api/user-gateway/models/${id}`, patch);
+    await Promise.all([fetchModels(), fetchCatalog()]);
+    return unwrap(res);
   }
 
   async function removeModel(id) {
-    await request.delete(`/api/user-gateway/models/${id}`)
-    await Promise.all([fetchModels(), fetchCatalog()])
+    await request.delete(`/api/user-gateway/models/${id}`);
+    await Promise.all([fetchModels(), fetchCatalog()]);
   }
 
   // ── Built-in provider presets (relay + custom-provider dropdowns) ──
   async function fetchProviderPresets() {
     try {
-      const res = await request.get('/api/user-gateway/provider-presets')
-      providerPresets.value = unwrap(res) || []
-    } catch { providerPresets.value = [] }
+      const res = await request.get('/api/user-gateway/provider-presets');
+      providerPresets.value = unwrap(res) || [];
+    } catch {
+      providerPresets.value = [];
+    }
   }
 
   // ── Image-generation model preference (per-user) ──
   async function fetchImageConfig() {
     try {
-      const res = await request.get('/api/user-gateway/image-config')
-      imageConfig.value = unwrap(res)
-    } catch { /* ignore */ }
+      const res = await request.get('/api/user-gateway/image-config');
+      imageConfig.value = unwrap(res);
+    } catch {
+      /* ignore */
+    }
   }
 
   async function updateImageConfig(payload) {
-    const res = await request.put('/api/user-gateway/image-config', payload)
-    await fetchImageConfig()
-    return unwrap(res)
+    const res = await request.put('/api/user-gateway/image-config', payload);
+    await fetchImageConfig();
+    return unwrap(res);
   }
 
   async function fetchAll() {
-    loading.value = true
+    loading.value = true;
     try {
       await Promise.all([
         fetchRelayConfig(),
@@ -262,22 +292,48 @@ export function useUserGateway() {
         fetchProviderPresets(),
         fetchModels(),
         fetchImageConfig(),
-      ])
+      ]);
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
   return {
-    relayConfig, providers, ccEndpoint, ccTokens, catalogEdges, catalogSources,
-    detectionSummary, detecting, providerPresets, models, imageConfig, loading, saving,
-    fetchRelayConfig, saveRelayConfig,
-    fetchProviders, addProvider, removeProviderEntry, removeProvider, replaceProviderKey,
-    updateProvider, testProviderConfig,
-    fetchCatalog, detectModels, fetchProviderPresets,
-    fetchModels, addModel, updateModel, removeModel,
-    fetchImageConfig, updateImageConfig,
-    fetchCcEndpoint, fetchCcTokens, issueCcToken, revokeCcToken,
+    relayConfig,
+    providers,
+    ccEndpoint,
+    ccTokens,
+    catalogEdges,
+    catalogSources,
+    detectionSummary,
+    detecting,
+    providerPresets,
+    models,
+    imageConfig,
+    loading,
+    saving,
+    fetchRelayConfig,
+    saveRelayConfig,
+    fetchProviders,
+    addProvider,
+    removeProviderEntry,
+    removeProvider,
+    replaceProviderKey,
+    updateProvider,
+    testProviderConfig,
+    fetchCatalog,
+    detectModels,
+    fetchProviderPresets,
+    fetchModels,
+    addModel,
+    updateModel,
+    removeModel,
+    fetchImageConfig,
+    updateImageConfig,
+    fetchCcEndpoint,
+    fetchCcTokens,
+    issueCcToken,
+    revokeCcToken,
     fetchAll,
-  }
+  };
 }

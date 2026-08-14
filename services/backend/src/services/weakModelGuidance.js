@@ -50,7 +50,9 @@ function isEnabled(env) {
     if (flagRegistry.isRegistryEnabled(e)) {
       return flagRegistry.isFlagEnabled('KHY_WEAK_MODEL_GUIDANCE', e);
     }
-  } catch { /* 注册表异常 → 回退手写判定 */ }
+  } catch {
+    /* 注册表异常 → 回退手写判定 */
+  }
   return !_off(e.KHY_WEAK_MODEL_GUIDANCE);
 }
 
@@ -76,56 +78,64 @@ const GUARD_SITES = Object.freeze({
     title: '唯一工具执行漏斗',
     where: 'services/backend/src/services/toolCalling.js 的 executeTool()',
     danger: '在权限链中间早 return、加旁路、或另起一个绕过 executeTool 的执行入口',
-    directive: '这里是所有工具调用的唯一漏斗,权限判定是有序 fail-closed 链。绝不早 return 跳过后续闸;'
-      + '绝不另开旁路执行工具。要加能力→加在链末尾且默认 fail-closed。',
+    directive:
+      '这里是所有工具调用的唯一漏斗,权限判定是有序 fail-closed 链。绝不早 return 跳过后续闸;' +
+      '绝不另开旁路执行工具。要加能力→加在链末尾且默认 fail-closed。',
     exemplar: '既有闸的写法见同文件 3063-3481 的各 _check* 块',
   }),
   'pretooluse-hardfloor': Object.freeze({
     title: 'PreToolUse 硬底(绕不过)',
     where: 'toolCalling.js executeTool 内 PreToolUse hooks 块',
-    danger: '在硬底前早 return、改 alreadyHooked 戳使钩子不触发、或放宽 KHY_PRETOOL_HOOKS kill-switch',
-    directive: '钩子在所有权限闸之前、无条件运行(即便 bypass/危险模式也绕不过)——这是 CC 对齐的不变量。'
-      + '勿在此块前 return,勿改 alreadyHooked 戳逻辑,勿放宽其 kill-switch。',
+    danger:
+      '在硬底前早 return、改 alreadyHooked 戳使钩子不触发、或放宽 KHY_PRETOOL_HOOKS kill-switch',
+    directive:
+      '钩子在所有权限闸之前、无条件运行(即便 bypass/危险模式也绕不过)——这是 CC 对齐的不变量。' +
+      '勿在此块前 return,勿改 alreadyHooked 戳逻辑,勿放宽其 kill-switch。',
     exemplar: '本块自带的中文注释即权威说明,勿删勿改其语义',
   }),
   'exec-approved-stamp': Object.freeze({
     title: 'EXEC_APPROVED 审批戳',
     where: 'toolCalling.js 的 syscall 审批网关',
     danger: '在别处伪造/预置 EXEC_APPROVED 戳,使调用跳过 requestPermission',
-    directive: '此戳是「已通过中央审批」的不可伪造凭据,只应由审批网关盖。'
-      + '绝不在别处设此戳来跳过 requestPermission。',
+    directive:
+      '此戳是「已通过中央审批」的不可伪造凭据,只应由审批网关盖。' +
+      '绝不在别处设此戳来跳过 requestPermission。',
     exemplar: '盖戳处见网关内 stamp 写入行;消费处见 requestPermission 前的戳检查',
   }),
   'flag-registry': Object.freeze({
     title: 'KHY_* 门控注册表',
     where: 'services/backend/src/services/flagRegistry.js 的 FLAGS 对象',
     danger: '新门控不登记、方言不一致、忘了 parent 父子优先级',
-    directive: '新增 KHY_* 门控作为 FLAGS 的一个新键,形状 '
-      + '`{ mode:\'default-on\', off:\'CANON\', default:true[, parent:\'KHY_父\'] }`。'
-      + '父门控关→子门控必关,用 parent 声明。',
+    directive:
+      '新增 KHY_* 门控作为 FLAGS 的一个新键,形状 ' +
+      "`{ mode:'default-on', off:'CANON', default:true[, parent:'KHY_父'] }`。" +
+      '父门控关→子门控必关,用 parent 声明。',
     exemplar: '照抄 KHY_GOAL / KHY_GOAL_STOP_GATE(带 parent)那几行',
   }),
   'leaf-authoring': Object.freeze({
     title: '纯叶子写法',
     where: '新增业务判定逻辑时',
     danger: '把逻辑直接塞进大文件、抛异常、做 IO、忘门控',
-    directive: '新逻辑写成纯叶子:零 IO、确定性、绝不抛(坏输入返安全默认)、可单测、经 KHY_* 门控(默认开)。',
+    directive:
+      '新逻辑写成纯叶子:零 IO、确定性、绝不抛(坏输入返安全默认)、可单测、经 KHY_* 门控(默认开)。',
     exemplar: '照抄 services/backend/src/services/goalStopGate.js 的 isEnabled + decide 形状',
   }),
-  'wiring': Object.freeze({
+  wiring: Object.freeze({
     title: '叶子接线(判定在叶子,这里只做 IO)',
     where: '在真实入口消费纯叶子时',
     danger: '把判定逻辑写进接线处、不加 try/catch、叶子异常冒泡阻断主流程',
-    directive: '接线处只做 IO:require 叶子→isEnabled 门控检查→取叶子裁决→落地。'
-      + '整块 try/catch,叶子异常 fail-soft 回退旧行为,绝不因叶子出错阻断交付。',
+    directive:
+      '接线处只做 IO:require 叶子→isEnabled 门控检查→取叶子裁决→落地。' +
+      '整块 try/catch,叶子异常 fail-soft 回退旧行为,绝不因叶子出错阻断交付。',
     exemplar: '照抄 services/backend/src/services/toolUseLoop.js 的 4276-4311 接线块',
   }),
   'tool-description': Object.freeze({
     title: '工具对模型的自述(prompt)',
     where: 'services/backend/src/tools/<Tool>/index.js 的 prompt() 与 inputSchema.description',
     danger: '描述含糊致弱模型误用:参数拼错、包代码块、一次调太多',
-    directive: 'prompt() 用简明祈使句说清用途/参数/边界;参数 description 逐个写清。'
-      + '弱模型调工具要点:参数照 schema、别把 JSON 包在代码块里、一次一步。',
+    directive:
+      'prompt() 用简明祈使句说清用途/参数/边界;参数 description 逐个写清。' +
+      '弱模型调工具要点:参数照 schema、别把 JSON 包在代码块里、一次一步。',
     exemplar: '照抄 services/backend/src/tools/GrepTool/index.js 的 prompt() 与 inputSchema',
   }),
 });
@@ -167,7 +177,7 @@ const WEAK_MODEL_EXEMPLARS = Object.freeze([
     id: 'unregistered-gate',
     topic: 'Adding a new KHY_* feature flag',
     bad: 'Add `if (process.env.KHY_MY_FEATURE) { ... }` and ship it.',
-    good: 'Register KHY_MY_FEATURE in flagRegistry.js FLAGS first — `{ mode:\'default-on\', off:\'CANON\', default:true[, parent:\'KHY_PARENT\'] }` — then gate via flagRegistry.isFlagEnabled.',
+    good: "Register KHY_MY_FEATURE in flagRegistry.js FLAGS first — `{ mode:'default-on', off:'CANON', default:true[, parent:'KHY_PARENT'] }` — then gate via flagRegistry.isFlagEnabled.",
     why: 'Unregistered flags are conservatively treated as ON, so your off-switch silently does nothing and the byte-revert guarantee is lost.',
   }),
   Object.freeze({
@@ -198,44 +208,59 @@ const WEAK_MODEL_EXEMPLARS = Object.freeze([
 const INTENTIONAL_DESIGNS = Object.freeze([
   Object.freeze({
     id: 'export-not-password-gated',
-    looksLikeBug: 'verifyExportPassword(_password) just `return true` — the password check is broken / a backdoor.',
-    actualDesign: 'Model export is deliberately no longer password-gated. The function is kept only so existing call sites and the public export stay stable; it ignores its argument and never rejects, by design.',
-    where: 'services/backend/src/services/modelTrainingService.js :: verifyExportPassword (see its doc comment)',
+    looksLikeBug:
+      'verifyExportPassword(_password) just `return true` — the password check is broken / a backdoor.',
+    actualDesign:
+      'Model export is deliberately no longer password-gated. The function is kept only so existing call sites and the public export stay stable; it ignores its argument and never rejects, by design.',
+    where:
+      'services/backend/src/services/modelTrainingService.js :: verifyExportPassword (see its doc comment)',
     why: 'Deleting the function or "fixing" it to reject would break every call site and the export contract; the always-true is the intended behavior, documented in place.',
   }),
   Object.freeze({
     id: 'default-source-secret',
     looksLikeBug: "DEFAULT_SOURCE_SECRET = 'khy2026' is a hardcoded secret / leaked password.",
-    actualDesign: 'It is an intentional public default passphrase, not a real secret. Source snapshot publish/restore is no longer password-gated: the build embeds the snapshot under this fixed key so `khy restore` decrypts automatically. An explicit KHY_SOURCE_PUBLISH_SECRET / --secret still overrides it.',
-    where: 'services/backend/src/services/sourceSnapshotCrypto.js :: DEFAULT_SOURCE_SECRET (see the block comment above it)',
+    actualDesign:
+      'It is an intentional public default passphrase, not a real secret. Source snapshot publish/restore is no longer password-gated: the build embeds the snapshot under this fixed key so `khy restore` decrypts automatically. An explicit KHY_SOURCE_PUBLISH_SECRET / --secret still overrides it.',
+    where:
+      'services/backend/src/services/sourceSnapshotCrypto.js :: DEFAULT_SOURCE_SECRET (see the block comment above it)',
     why: 'This is anti-mis-propagation packaging, not cryptographic protection. Removing it or treating it as a leaked credential would break automatic restore of already-published snapshots.',
   }),
   Object.freeze({
     id: 'dynamic-version',
-    looksLikeBug: 'platform/khy_platform/__init__.py has no literal `__version__ = "x.y.z"` — the version looks missing / unset.',
-    actualDesign: '__version__ is resolved at runtime via _detect_version() from the authoritative pyproject.toml. Hardcoding a literal is deliberately avoided.',
+    looksLikeBug:
+      'platform/khy_platform/__init__.py has no literal `__version__ = "x.y.z"` — the version looks missing / unset.',
+    actualDesign:
+      '__version__ is resolved at runtime via _detect_version() from the authoritative pyproject.toml. Hardcoding a literal is deliberately avoided.',
     where: 'platform/khy_platform/__init__.py :: _detect_version() / __version__',
     why: 'scripts/ci/check-version-sync.js ENFORCES the no-hardcode rule: pinning a literal here makes the CI version-sync gate fail on purpose. The three authoritative sources are pyproject.toml / packaging/npm/package.json / services/backend/package.json.',
   }),
   Object.freeze({
     id: 'snapshot-sha256-blank',
-    looksLikeBug: 'Proxy-core ASSETS all have `sha256: null` — the integrity check is missing / unfinished.',
-    actualDesign: 'The blank fingerprint is intentional. A pre-baked WRONG sha256 would make auto-install fail permanently and silently; leaving it null degrades to HTTPS transport-level integrity from the official pinned GitHub release URL.',
-    where: 'services/backend/src/services/proxy/proxyCoreInstaller.js :: ASSETS (see the `sha256:null` comment above the table)',
+    looksLikeBug:
+      'Proxy-core ASSETS all have `sha256: null` — the integrity check is missing / unfinished.',
+    actualDesign:
+      'The blank fingerprint is intentional. A pre-baked WRONG sha256 would make auto-install fail permanently and silently; leaving it null degrades to HTTPS transport-level integrity from the official pinned GitHub release URL.',
+    where:
+      'services/backend/src/services/proxy/proxyCoreInstaller.js :: ASSETS (see the `sha256:null` comment above the table)',
     why: 'Filling in a guessed/placeholder hash is worse than none — it turns a working download into a permanent silent failure. Integrity comes from the pinned HTTPS release path.',
   }),
   Object.freeze({
     id: 'cron-default-enqueue',
-    looksLikeBug: '_defaultEnqueue just forwards the prompt text — the scheduled job has "no real closed loop" (e.g. a backtest never actually runs).',
-    actualDesign: 'It routes the fired prompt INTO the agent as a follow-up turn. Executing the work (tool calls, backtests, etc.) is the agent\'s job, not something the scheduler hardcodes.',
+    looksLikeBug:
+      '_defaultEnqueue just forwards the prompt text — the scheduled job has "no real closed loop" (e.g. a backtest never actually runs).',
+    actualDesign:
+      "It routes the fired prompt INTO the agent as a follow-up turn. Executing the work (tool calls, backtests, etc.) is the agent's job, not something the scheduler hardcodes.",
     where: 'services/backend/src/jobs/cronScheduler.js :: _defaultEnqueue (see its doc comment)',
     why: 'This is agent-architecture by design. "Fixing" it to hardcode a specific pipeline in the scheduler would duplicate and freeze what the agent is supposed to decide dynamically.',
   }),
   Object.freeze({
     id: 'env-path-forest',
-    looksLikeBug: "resolveGatewayEnvPaths uses `../../.env` and `../../../.env` — the relative depths look off / like a path bug.",
-    actualDesign: 'The depths are correct for the forest layout: from src/utils, `../../.env` resolves to services/backend/.env (canonical) and `../../../.env` to services/.env (repo mirror). Consumers keep their local binding so call sites stay byte-identical.',
-    where: 'services/backend/src/utils/resolveGatewayEnvPaths.js (see the file-head block + inline comments)',
+    looksLikeBug:
+      'resolveGatewayEnvPaths uses `../../.env` and `../../../.env` — the relative depths look off / like a path bug.',
+    actualDesign:
+      'The depths are correct for the forest layout: from src/utils, `../../.env` resolves to services/backend/.env (canonical) and `../../../.env` to services/.env (repo mirror). Consumers keep their local binding so call sites stay byte-identical.',
+    where:
+      'services/backend/src/utils/resolveGatewayEnvPaths.js (see the file-head block + inline comments)',
     why: 'The compensation is deliberate depth-matching across the forest, not an error. Changing either path silently writes .env to the wrong place.',
   }),
 ]);
@@ -248,9 +273,12 @@ const INTENTIONAL_DESIGNS = Object.freeze([
  */
 function bannerFor(siteKey) {
   const site = GUARD_SITES[String(siteKey || '')];
-  if (!site) return '';
+  if (!site) {
+    return '';
+  }
   return `[AI-弱模型] ${site.title}:${site.directive}(示范:${site.exemplar})`;
 }
+
 /**
  * 构建注入「编码 profile」的弱模型引导指令(确定性,英文寄存器,与 buildCommentGuidanceDirective 同风格)。
  * @returns {string}
@@ -285,7 +313,9 @@ function toolCallHint() {
  */
 function buildWeakModelExemplars(env) {
   try {
-    if (!isEnabled(env)) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
     const lines = ['## Common weak-model mistakes in Khy-OS (BAD → GOOD)'];
     WEAK_MODEL_EXEMPLARS.forEach((ex, i) => {
       lines.push(`${i + 1}. ${ex.topic}`);
@@ -315,7 +345,9 @@ function listGuardSites() {
  */
 function buildIntentionalDesigns(env) {
   try {
-    if (!isEnabled(env)) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
     const lines = ['## Looks-like-a-bug but INTENTIONAL in Khy-OS (do NOT "fix" these)'];
     INTENTIONAL_DESIGNS.forEach((d, i) => {
       lines.push(`${i + 1}. ${d.id}`);
@@ -335,7 +367,7 @@ function buildIntentionalDesigns(env) {
  * @returns {Array<object>}
  */
 function listIntentionalDesigns() {
-  return INTENTIONAL_DESIGNS.map(d => ({ ...d }));
+  return INTENTIONAL_DESIGNS.map((d) => ({ ...d }));
 }
 
 module.exports = {

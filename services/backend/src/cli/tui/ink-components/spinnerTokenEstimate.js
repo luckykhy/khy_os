@@ -26,16 +26,28 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_SPINNER_TOKEN_INCREMENTAL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // 与 estimateTokens **完全一致**的 CJK 字符类(逐字符匹配,拼接可加)。
 const CJK_RE = /[一-鿿㐀-䶿]/g;
-function _countCjk(s) { const m = s.match(CJK_RE); return m ? m.length : 0; }
+function _countCjk(s) {
+  const m = s.match(CJK_RE);
+  return m ? m.length : 0;
+}
 
 // 与 estimateTokens **完全一致**的最终折算(单次 Math.ceil)。
-function _estimate(cjk, len) { const nonCjk = len - cjk; return Math.ceil(cjk / 1.5 + nonCjk / 4); }
+// NOTE(batch-3): intentionally NOT delegated to utils/simpleTokenEstimate — this must
+// stay byte-identical to the CJK-aware single-ceil formula ceil(cjk/1.5 + nonCjk/4)
+// (tokenPricing.estimateTokens), which the chars/4 atom cannot express (ceil of a sum
+// is not the sum of ceils).
+function _estimate(cjk, len) {
+  const nonCjk = len - cjk;
+  return Math.ceil(cjk / 1.5 + nonCjk / 4);
+}
 
 // 单槽:{ key, len, cjk }。key = 本 turn 的 resetKey(通常 turnStartedAt)。
 let _last = null;
@@ -50,8 +62,14 @@ let _last = null;
  */
 function estimateIncremental(text, fullFn, resetKey, env = process.env) {
   try {
-    if (typeof text !== 'string' || !text) { _last = { key: resetKey, len: 0, cjk: 0 }; return 0; }
-    if (!isEnabled(env)) { _last = null; return typeof fullFn === 'function' ? fullFn(text) : _estimate(_countCjk(text), text.length); }
+    if (typeof text !== 'string' || !text) {
+      _last = { key: resetKey, len: 0, cjk: 0 };
+      return 0;
+    }
+    if (!isEnabled(env)) {
+      _last = null;
+      return typeof fullFn === 'function' ? fullFn(text) : _estimate(_countCjk(text), text.length);
+    }
     const len = text.length;
     let cjk;
     if (_last && _last.key === resetKey && len >= _last.len) {
@@ -65,11 +83,17 @@ function estimateIncremental(text, fullFn, resetKey, env = process.env) {
     _last = { key: resetKey, len, cjk };
     return _estimate(cjk, len);
   } catch {
-    try { return typeof fullFn === 'function' ? fullFn(text) : 0; } catch { return 0; }
+    try {
+      return typeof fullFn === 'function' ? fullFn(text) : 0;
+    } catch {
+      return 0;
+    }
   }
 }
 
 // 测试辅助:复位单槽。
-function _reset() { _last = null; }
+function _reset() {
+  _last = null;
+}
 
 module.exports = { isEnabled, estimateIncremental, _countCjk, _estimate, _reset, OFF_VALUES };

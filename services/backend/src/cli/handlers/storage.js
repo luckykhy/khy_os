@@ -17,9 +17,9 @@ const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
 
-const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 const dh = require('../../utils/dataHome');
 const sr = require('../../utils/storageRoots');
+const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 
 // ── Helpers ──
 
@@ -32,14 +32,23 @@ function _fmtBytes(n, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(n);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
-  if (!n || n < 0) return '0 B';
+  } catch {
+    /* fall through to legacy */
+  }
+  if (!n || n < 0) {
+    return '0 B';
+  }
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 }
 
@@ -51,12 +60,27 @@ function _dirStats(dir, fsImpl = fs) {
   while (stack.length) {
     const cur = stack.pop();
     let entries;
-    try { entries = fsImpl.readdirSync(cur, { withFileTypes: true }); } catch { continue; }
+    try {
+      entries = fsImpl.readdirSync(cur, { withFileTypes: true });
+    } catch {
+      continue;
+    }
     for (const e of entries) {
       const full = path.join(cur, e.name);
-      if (e.isSymbolicLink()) { files++; continue; } // count but never follow/recurse
-      if (e.isDirectory()) { stack.push(full); continue; }
-      try { bytes += fsImpl.statSync(full).size; files++; } catch { /* skip */ }
+      if (e.isSymbolicLink()) {
+        files++;
+        continue;
+      } // count but never follow/recurse
+      if (e.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      try {
+        bytes += fsImpl.statSync(full).size;
+        files++;
+      } catch {
+        /* skip */
+      }
     }
   }
   return { bytes, files };
@@ -76,11 +100,15 @@ function _volumeKey(p, deps = {}) {
     let cur = path.resolve(p);
     while (cur && !fsImpl.existsSync(cur)) {
       const parent = path.dirname(cur);
-      if (parent === cur) break;
+      if (parent === cur) {
+        break;
+      }
       cur = parent;
     }
     return String(fsImpl.statSync(cur).dev);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Map a home kind to its directory name under a target root. */
@@ -91,10 +119,14 @@ function _targetDirName(kind) {
 /** True if `dir` exists and holds real content (fail-soft, DI-friendly). */
 function _isNonEmptyDir(dir, fsImpl = fs) {
   try {
-    if (!fsImpl.existsSync(dir)) return false;
+    if (!fsImpl.existsSync(dir)) {
+      return false;
+    }
     const ignore = new Set(['.location.json', '.location-note-shown']);
     return fsImpl.readdirSync(dir).some((n) => !ignore.has(n));
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /* ── pure planner (no writes — safe for --dry-run and tests) ──────────────── */
@@ -127,15 +159,25 @@ function buildMigrationPlan(opts = {}) {
   if (!targetRoot) {
     const best = sr.pickBestNonSystemDrive(deps);
     if (!best) {
-      return { ok: false, reason: 'NO_TARGET', items: [], warnings,
-        message: '未发现可用的非系统盘（≥1GB 且可写）。可插入移动盘或用 --to <路径> 指定目标。' };
+      return {
+        ok: false,
+        reason: 'NO_TARGET',
+        items: [],
+        warnings,
+        message: '未发现可用的非系统盘（≥1GB 且可写）。可插入移动盘或用 --to <路径> 指定目标。',
+      };
     }
     targetRoot = best.root;
   }
 
   if (!sr.isWritable(targetRoot, deps)) {
-    return { ok: false, reason: 'TARGET_NOT_WRITABLE', items: [], warnings,
-      message: `目标盘不可写：${targetRoot}` };
+    return {
+      ok: false,
+      reason: 'TARGET_NOT_WRITABLE',
+      items: [],
+      warnings,
+      message: `目标盘不可写：${targetRoot}`,
+    };
   }
   const targetFree = sr.freeBytesFor(targetRoot, deps);
   const targetVol = _volumeKey(targetRoot, deps);
@@ -149,10 +191,12 @@ function buildMigrationPlan(opts = {}) {
     const item = { kind: h.kind, source: h.source, target, bytes, files, ok: true, reason: null };
 
     if (srcVol && targetVol && srcVol === targetVol) {
-      item.ok = false; item.reason = 'SAME_DRIVE';
+      item.ok = false;
+      item.reason = 'SAME_DRIVE';
       warnings.push(`${h.kind}: 源与目标在同一物理盘，跳过（${h.source}）`);
     } else if (_isNonEmptyDir(target, fsImpl)) {
-      item.ok = false; item.reason = 'TARGET_EXISTS';
+      item.ok = false;
+      item.reason = 'TARGET_EXISTS';
       warnings.push(`${h.kind}: 目标已存在且非空，跳过避免覆盖（${target}）`);
     } else {
       totalNeeded += bytes;
@@ -162,12 +206,24 @@ function buildMigrationPlan(opts = {}) {
 
   const migratable = items.filter((i) => i.ok);
   if (migratable.length === 0) {
-    return { ok: false, reason: 'NOTHING_TO_MIGRATE', items, warnings, targetRoot,
-      message: '没有可迁移的数据家（全部被跳过，详见上方原因）。' };
+    return {
+      ok: false,
+      reason: 'NOTHING_TO_MIGRATE',
+      items,
+      warnings,
+      targetRoot,
+      message: '没有可迁移的数据家（全部被跳过，详见上方原因）。',
+    };
   }
   if (targetFree < totalNeeded * 1.1) {
-    return { ok: false, reason: 'INSUFFICIENT_SPACE', items, warnings, targetRoot,
-      message: `目标盘空间不足：需要约 ${_fmtBytes(Math.ceil(totalNeeded * 1.1))}，可用 ${_fmtBytes(targetFree)}。` };
+    return {
+      ok: false,
+      reason: 'INSUFFICIENT_SPACE',
+      items,
+      warnings,
+      targetRoot,
+      message: `目标盘空间不足：需要约 ${_fmtBytes(Math.ceil(totalNeeded * 1.1))}，可用 ${_fmtBytes(targetFree)}。`,
+    };
   }
 
   return { ok: true, targetRoot, items, warnings, totalBytes: totalNeeded, targetFree };
@@ -183,23 +239,29 @@ function handleStorageStatus(options = {}) {
 
   printInfo('khy 存储位置');
   console.log(chalk.dim('  系统盘（写满会拖垮整机）'));
-  console.log(`    ${report.systemRoot}  可用 ${_fmtBytes(report.systemFree)} / 共 ${_fmtBytes(report.systemTotal)}`);
+  console.log(
+    `    ${report.systemRoot}  可用 ${_fmtBytes(report.systemFree)} / 共 ${_fmtBytes(report.systemTotal)}`
+  );
 
   console.log(chalk.dim('  非系统盘（优先落于此处）'));
   if (report.nonSystemDrives.length === 0) {
     console.log('    （未发现可用非系统盘）');
   } else {
     for (const d of report.nonSystemDrives) {
-      console.log(`    ${d.root}  可用 ${_fmtBytes(d.freeBytes)} / 共 ${_fmtBytes(d.totalBytes)}  ${d.writable ? '可写' : chalk.red('只读')}`);
+      console.log(
+        `    ${d.root}  可用 ${_fmtBytes(d.freeBytes)} / 共 ${_fmtBytes(d.totalBytes)}  ${d.writable ? '可写' : chalk.red('只读')}`
+      );
     }
   }
 
   console.log(chalk.dim('  数据家当前解析'));
   const ptr = report.pointer || {};
   const homeLine = (label, dir, source) => {
-    let tag = source ? chalk.dim(` [${source}]`) : '';
+    const tag = source ? chalk.dim(` [${source}]`) : '';
     let risk = '';
-    if (dir && !fs.existsSync(dir)) risk = chalk.red('  ⚠ 目标缺失（数据搁浅风险）');
+    if (dir && !fs.existsSync(dir)) {
+      risk = chalk.red('  ⚠ 目标缺失（数据搁浅风险）');
+    }
     console.log(`    ${label}: ${dir}${tag}${risk}`);
   };
   homeLine('数据家   dataHome', report.homes.dataHome, ptr.source);
@@ -209,7 +271,11 @@ function handleStorageStatus(options = {}) {
   console.log(chalk.dim('  钉位指针'));
   console.log(`    ${report.pointerFile}`);
   if (ptr.pinnedReason || ptr.projectPinnedReason) {
-    console.log(chalk.dim(`    原因: data=${ptr.pinnedReason || '-'} project=${ptr.projectPinnedReason || '-'}`));
+    console.log(
+      chalk.dim(
+        `    原因: data=${ptr.pinnedReason || '-'} project=${ptr.projectPinnedReason || '-'}`
+      )
+    );
   }
 
   console.log('');
@@ -235,13 +301,15 @@ async function handleStorageMigrate(args = [], options = {}) {
   const plan = buildMigrationPlan({ what, toRoot });
 
   // Always print what we found.
-  printInfo(`迁移计划（目标盘：${plan.targetRoot || (toRoot || '自动选择')}）`);
+  printInfo(`迁移计划（目标盘：${plan.targetRoot || toRoot || '自动选择'}）`);
   for (const it of plan.items) {
     const status = it.ok ? chalk.green('将迁移') : chalk.yellow(`跳过(${it.reason})`);
     console.log(`  ${it.kind}: ${it.source}`);
     console.log(`    → ${it.target}  ${_fmtBytes(it.bytes)} / ${it.files} 文件  ${status}`);
   }
-  for (const w of plan.warnings) console.log(chalk.dim(`  · ${w}`));
+  for (const w of plan.warnings) {
+    console.log(chalk.dim(`  · ${w}`));
+  }
 
   if (!plan.ok) {
     printWarn(plan.message || '无法迁移');
@@ -265,13 +333,22 @@ async function handleStorageMigrate(args = [], options = {}) {
     let ok = false;
     try {
       const { promptCompat } = require('../uiPrompt');
-      const ans = await promptCompat([{
-        type: 'confirm', name: 'ok', default: false,
-        message: `确认复制上述数据家到 ${plan.targetRoot} 并切换指针？（源保留为备份）`,
-      }]);
+      const ans = await promptCompat([
+        {
+          type: 'confirm',
+          name: 'ok',
+          default: false,
+          message: `确认复制上述数据家到 ${plan.targetRoot} 并切换指针？（源保留为备份）`,
+        },
+      ]);
       ok = !!ans.ok;
-    } catch { ok = false; }
-    if (!ok) { printInfo('已取消，未做任何更改。'); return; }
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      printInfo('已取消，未做任何更改。');
+      return;
+    }
   }
 
   // Execute: copy → verify → flip pointer (source kept as backup).
@@ -303,30 +380,53 @@ function executeMigration(plan, deps = {}) {
 
   for (const it of plan.items.filter((i) => i.ok)) {
     try {
-      fsImpl.cpSync(it.source, it.target, { recursive: true, errorOnExist: false, force: true, dereference: false });
+      fsImpl.cpSync(it.source, it.target, {
+        recursive: true,
+        errorOnExist: false,
+        force: true,
+        dereference: false,
+      });
     } catch (e) {
       return { ok: false, message: `复制失败 (${it.kind}): ${e.message}`, migrated };
     }
     // Verify by re-counting the copied tree.
     const after = _dirStats(it.target, fsImpl);
     if (after.files < it.files || after.bytes < it.bytes) {
-      return { ok: false,
+      return {
+        ok: false,
         message: `校验失败 (${it.kind}): 目标 ${after.files} 文件/${after.bytes}B < 源 ${it.files}/${it.bytes}B`,
-        migrated };
+        migrated,
+      };
     }
-    if (it.kind === 'data') { pointerPatch.dataHome = it.target; pointerPatch.source = 'migrated'; pointerPatch.pinnedReason = 'migrate'; previous.dataHome = it.source; }
-    if (it.kind === 'project') { pointerPatch.projectDataHome = it.target; pointerPatch.projectSource = 'migrated'; pointerPatch.projectPinnedReason = 'migrate'; previous.projectDataHome = it.source; }
+    if (it.kind === 'data') {
+      pointerPatch.dataHome = it.target;
+      pointerPatch.source = 'migrated';
+      pointerPatch.pinnedReason = 'migrate';
+      previous.dataHome = it.source;
+    }
+    if (it.kind === 'project') {
+      pointerPatch.projectDataHome = it.target;
+      pointerPatch.projectSource = 'migrated';
+      pointerPatch.projectPinnedReason = 'migrate';
+      previous.projectDataHome = it.source;
+    }
     migrated.push({ kind: it.kind, target: it.target, bytes: after.bytes, files: after.files });
   }
 
-  if (migrated.length === 0) return { ok: false, message: '没有完成任何迁移', migrated };
+  if (migrated.length === 0) {
+    return { ok: false, message: '没有完成任何迁移', migrated };
+  }
 
   // Atomic pointer flip, stashing prior values for rollback.
   const existing = dh._readPointer() || {};
   pointerPatch.previous = { ...(existing.previous || {}), ...previous };
   dh._writePointer(pointerPatch);
   // Reset resolver caches so a follow-up resolution in this process sees the new home.
-  try { dh._resetStorageCaches(); } catch { /* ignore */ }
+  try {
+    dh._resetStorageCaches();
+  } catch {
+    /* ignore */
+  }
 
   return { ok: true, migrated };
 }
@@ -339,14 +439,30 @@ function _handleRollback(options = {}) {
   }
   const prev = ptr.previous;
   const patch = {};
-  if (prev.dataHome) { patch.dataHome = prev.dataHome; patch.source = 'rollback'; patch.pinnedReason = 'rollback'; }
-  if (prev.projectDataHome) { patch.projectDataHome = prev.projectDataHome; patch.projectSource = 'rollback'; patch.projectPinnedReason = 'rollback'; }
+  if (prev.dataHome) {
+    patch.dataHome = prev.dataHome;
+    patch.source = 'rollback';
+    patch.pinnedReason = 'rollback';
+  }
+  if (prev.projectDataHome) {
+    patch.projectDataHome = prev.projectDataHome;
+    patch.projectSource = 'rollback';
+    patch.projectPinnedReason = 'rollback';
+  }
   patch.previous = {}; // clear after rollback
   dh._writePointer(patch);
-  try { dh._resetStorageCaches(); } catch { /* ignore */ }
+  try {
+    dh._resetStorageCaches();
+  } catch {
+    /* ignore */
+  }
   printSuccess('已回滚指针到迁移前位置：');
-  if (prev.dataHome) console.log(`  dataHome: ${prev.dataHome}`);
-  if (prev.projectDataHome) console.log(`  projectDataHome: ${prev.projectDataHome}`);
+  if (prev.dataHome) {
+    console.log(`  dataHome: ${prev.dataHome}`);
+  }
+  if (prev.projectDataHome) {
+    console.log(`  projectDataHome: ${prev.projectDataHome}`);
+  }
   printInfo('迁移时复制到非系统盘的副本仍保留，可手动删除。重启 khy 生效。');
 }
 
@@ -358,7 +474,9 @@ function _printHelp() {
   console.log('    --dry-run                         仅预览，不做更改');
   console.log('    --yes                             跳过交互确认');
   console.log('    --rollback                        回滚到上一次迁移前位置');
-  console.log(chalk.dim('  净增大体量文件已自动优先非系统盘；迁移既有数据为显式、校验、可回滚操作。'));
+  console.log(
+    chalk.dim('  净增大体量文件已自动优先非系统盘；迁移既有数据为显式、校验、可回滚操作。')
+  );
 }
 
 async function handleStorageCommand(subCommand, args = [], options = {}) {

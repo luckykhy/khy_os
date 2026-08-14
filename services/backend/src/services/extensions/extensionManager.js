@@ -20,14 +20,23 @@
  *
  * Storage: ~/.khyquant/extensions/<name>/
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { execSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const EXTENSIONS_DIR = path.join(os.homedir(), '.khyquant', 'extensions');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const EXTENSIONS_DIR = path.join(_appHome(), 'extensions');
 const MANIFEST_FILE = 'openclaw.plugin.json';
-const STATE_FILE = path.join(os.homedir(), '.khyquant', 'extensions_state.json');
+const STATE_FILE = path.join(_appHome(), 'extensions_state.json');
 
 /**
  * List all installed extensions.
@@ -40,9 +49,13 @@ function listExtensions() {
   try {
     const dirs = fs.readdirSync(EXTENSIONS_DIR, { withFileTypes: true });
     for (const dir of dirs) {
-      if (!dir.isDirectory()) continue;
+      if (!dir.isDirectory()) {
+        continue;
+      }
       const manifestPath = path.join(EXTENSIONS_DIR, dir.name, MANIFEST_FILE);
-      if (!fs.existsSync(manifestPath)) continue;
+      if (!fs.existsSync(manifestPath)) {
+        continue;
+      }
 
       try {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
@@ -54,9 +67,13 @@ function listExtensions() {
           enabled: state[dir.name]?.enabled !== false,
           path: path.join(EXTENSIONS_DIR, dir.name),
         });
-      } catch { /* skip corrupt manifest */ }
+      } catch {
+        /* skip corrupt manifest */
+      }
     }
-  } catch { /* dir doesn't exist */ }
+  } catch {
+    /* dir doesn't exist */
+  }
 
   return extensions;
 }
@@ -153,10 +170,14 @@ function loadExtension(name) {
   const extPath = path.join(EXTENSIONS_DIR, name);
   const manifest = _readManifest(extPath);
 
-  if (!manifest.entry) return null;
+  if (!manifest.entry) {
+    return null;
+  }
 
   const entryPath = path.join(extPath, manifest.entry);
-  if (!fs.existsSync(entryPath)) return null;
+  if (!fs.existsSync(entryPath)) {
+    return null;
+  }
 
   return require(entryPath);
 }
@@ -168,7 +189,9 @@ function _loadState() {
     if (fs.existsSync(STATE_FILE)) {
       return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return {};
 }
 
@@ -191,7 +214,9 @@ function _removeState(name) {
 
 function _readManifest(dir) {
   const manifestPath = path.join(dir, MANIFEST_FILE);
-  if (!fs.existsSync(manifestPath)) return {};
+  if (!fs.existsSync(manifestPath)) {
+    return {};
+  }
   return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
 }
 

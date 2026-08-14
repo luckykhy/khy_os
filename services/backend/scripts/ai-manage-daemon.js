@@ -18,14 +18,22 @@
 // aiManagementServer require, whose tree captures child_process). Reuses the
 // central patch installed at bin/khy.js — win32-only, gated KHY_WINDOWS_SPAWN_HIDE
 // (default-on), idempotent, fail-soft.
-try { require('../src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening(); } catch { /* best effort */ }
+try {
+  require('../src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening();
+} catch {
+  /* best effort */
+}
 
 // Make the sibling ai-backend tree resolve its bare npm deps (+ @khy/shared) in
 // a bundled pip install by adding services/backend/node_modules as a NODE_PATH
 // fallback. Must run BEFORE the aiManagementServer / workflowRunWorker requires
 // below (their subtrees cross-require ../../../ai-backend/src/...). Fallback-only
 // + idempotent + fail-soft — a no-op in dev where hoisting already resolves.
-try { require('../src/bootstrap/aiBackendModuleResolve').ensureAiBackendResolvable(); } catch { /* best effort */ }
+try {
+  require('../src/bootstrap/aiBackendModuleResolve').ensureAiBackendResolvable();
+} catch {
+  /* best effort */
+}
 
 const fs = require('fs');
 const path = require('path');
@@ -47,9 +55,17 @@ const { getDataHome, getLegacyDataHome } = require('../src/utils/dataHome');
 // (otherwise username/password login fails with "JWT_SECRET is not configured").
 try {
   require('../src/bootstrap/ensureAuthSecret').ensureJwtSecret({
-    log: (m) => { try { process.stdout.write(`[daemon] ${m}\n`); } catch { /* ignore */ } },
+    log: (m) => {
+      try {
+        process.stdout.write(`[daemon] ${m}\n`);
+      } catch {
+        /* ignore */
+      }
+    },
   });
-} catch { /* helper unavailable — login will surface a clear error itself */ }
+} catch {
+  /* helper unavailable — login will surface a clear error itself */
+}
 
 const KHY_DIR = getDataHome();
 const RUNTIME_FILE = path.join(KHY_DIR, 'ai_manage_runtime.json');
@@ -156,16 +172,23 @@ function isPidAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
+  } catch (e) {
+    // On Windows, process.kill(pid, 0) throws EPERM when the caller has a
+    // different integrity level (e.g. elevated vs non-elevated). Treat EPERM
+    // as "alive" to avoid false negatives.
+    if (e && e.code === 'EPERM') return true;
     return false;
   }
 }
 
 async function waitForExit(pid, timeoutMs = 5000) {
   const started = Date.now();
-  while ((Date.now() - started) < timeoutMs) {
+  let attempts = 0;
+  const maxAttempts = 20;
+  while (Date.now() - started < timeoutMs && attempts < maxAttempts) {
     if (!isPidAlive(pid)) return true;
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 250));
+    attempts++;
   }
   return !isPidAlive(pid);
 }
@@ -176,10 +199,18 @@ async function terminatePid(pid) {
   // process-group signal + SIGKILL escalation on Unix) so this daemon and the CLI
   // reaper share one behavior; keep the local wait-for-exit semantics on top.
   const { safeKill } = require('../src/tools/platformUtils');
-  try { safeKill(pid, 'SIGTERM', 3000); } catch { /* best effort */ }
+  try {
+    safeKill(pid, 'SIGTERM', 3000);
+  } catch {
+    /* best effort */
+  }
   const exited = await waitForExit(pid, 4000);
   if (!exited) {
-    try { safeKill(pid, 'SIGKILL', 0); } catch { /* best effort */ }
+    try {
+      safeKill(pid, 'SIGKILL', 0);
+    } catch {
+      /* best effort */
+    }
     await waitForExit(pid, 1500);
   }
 }
@@ -221,11 +252,11 @@ async function findAvailablePort(host, startPort, maxScan = 60) {
 
 async function waitPortOpen(host, port, timeoutMs = DEFAULT_FRONTEND_WAIT_MS) {
   const started = Date.now();
-  while ((Date.now() - started) < timeoutMs) {
+  while (Date.now() - started < timeoutMs) {
     // eslint-disable-next-line no-await-in-loop
     if (await isPortOpen(host, port)) return true;
     // eslint-disable-next-line no-await-in-loop
-    await new Promise(r => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 250));
   }
   return false;
 }
@@ -253,7 +284,9 @@ function sendJson(res, code, payload) {
 function readBody(req) {
   return new Promise((resolve) => {
     let raw = '';
-    req.on('data', chunk => { raw += chunk.toString(); });
+    req.on('data', (chunk) => {
+      raw += chunk.toString();
+    });
     req.on('end', () => resolve(raw));
     req.on('error', () => resolve(''));
   });
@@ -287,7 +320,17 @@ async function startFrontendProcess({ host, basePort, frontendDir, apiPort: back
 
   const isWin = process.platform === 'win32';
   const npmCmd = isWin ? 'npm.cmd' : 'npm';
-  const args = ['--prefix', frontendDir, 'run', 'dev', '--', '--host', host, '--port', String(port)];
+  const args = [
+    '--prefix',
+    frontendDir,
+    'run',
+    'dev',
+    '--',
+    '--host',
+    host,
+    '--port',
+    String(port),
+  ];
 
   ensureDir(LOG_DIR);
   const logFile = path.join(LOG_DIR, 'ai_frontend_dev.log');
@@ -319,16 +362,22 @@ async function startFrontendProcess({ host, basePort, frontendDir, apiPort: back
     });
   } catch (err) {
     // A dev-server spawn failure must never crash the daemon — degrade to static dist upstream.
-    try { fs.closeSync(fd); } catch { /* ignore */ }
+    try {
+      fs.closeSync(fd);
+    } catch {
+      /* ignore */
+    }
     return {
       ok: false,
-      reason: `前端 dev server 启动失败: ${err && err.message ? err.message : String(err)}`,
+      reason: `启动前端 dev server (端口 ${port}) 失败: ${describeSystemError(err)}`,
       logFile,
     };
   }
   // Async spawn errors are emitted, not thrown; absorb them so they don't become an
   // uncaughtException. The port-wait below turns a dead child into a clean fallback.
-  child.on('error', () => { /* surfaced via port-wait timeout + ai_frontend_dev.log */ });
+  child.on('error', () => {
+    /* surfaced via port-wait timeout + ai_frontend_dev.log */
+  });
   fs.closeSync(fd);
 
   const ready = await waitPortOpen(host, port);
@@ -340,7 +389,14 @@ async function startFrontendProcess({ host, basePort, frontendDir, apiPort: back
   return { ok: true, child, port, logFile };
 }
 
-async function resolveFrontend({ host, requestedPort, autoFrontend, noFrontend, frontendDir, apiPort: backendPort }) {
+async function resolveFrontend({
+  host,
+  requestedPort,
+  autoFrontend,
+  noFrontend,
+  frontendDir,
+  apiPort: backendPort,
+}) {
   if (noFrontend) {
     return { available: false, managed: false, port: requestedPort, reason: 'disabled' };
   }
@@ -422,7 +478,7 @@ async function shutdown(reason = 'unknown') {
 
   try {
     if (controlServer) {
-      await new Promise(resolve => controlServer.close(() => resolve()));
+      await new Promise((resolve) => controlServer.close(() => resolve()));
       controlServer = null;
     }
   } catch {
@@ -457,7 +513,7 @@ function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs }) {
     const now = Date.now();
 
     for (const [sid, lastSeen] of sessions) {
-      if ((now - lastSeen) > sessionTtlMs) sessions.delete(sid);
+      if (now - lastSeen > sessionTtlMs) sessions.delete(sid);
     }
 
     writeRuntime({ sessions: sessions.size });
@@ -468,8 +524,17 @@ function startGcLoop({ idleMs, sessionTtlMs, startupGraceMs }) {
     }
 
     const limit = seenAnySession ? idleMs : startupGraceMs;
-    if ((now - lastActiveAt) >= limit) {
-      shutdown(seenAnySession ? 'idle' : 'startup-timeout').catch(() => process.exit(1));
+    const inactiveMs = now - lastActiveAt;
+    if (inactiveMs >= limit) {
+      const reason = seenAnySession ? 'idle' : 'startup-timeout';
+      // Diagnostic context for restart analysis: which watchdog fired
+      // (idle vs startup grace), how long we were inactive vs the threshold,
+      // and whether any session was ever seen during this daemon lifetime.
+      // eslint-disable-next-line no-console
+      console.log(
+        `[ai-manage-daemon] 正在关闭守护进程: 原因=${reason} 无活动=${inactiveMs}ms 阈值=${limit}ms 曾见会话=${seenAnySession}`
+      );
+      shutdown(reason).catch(() => process.exit(1));
     }
   }, 5000);
   gcTimer.unref();
@@ -498,7 +563,10 @@ function createControlServer() {
       return;
     }
 
-    if (req.method === 'POST' && (pathname === '/open' || pathname === '/ping' || pathname === '/close')) {
+    if (
+      req.method === 'POST' &&
+      (pathname === '/open' || pathname === '/ping' || pathname === '/close')
+    ) {
       const bodyRaw = await readBody(req);
       const body = safeJsonParse(bodyRaw || '{}');
       const sid = String(body.sid || '').trim();
@@ -532,8 +600,14 @@ async function main() {
   const requestedApiPort = parsePortArg(argv, '--api-port', DEFAULT_API_PORT);
   const requestedFrontendPort = parsePortArg(argv, '--frontend-port', DEFAULT_FRONTEND_PORT);
   const idleMs = Math.max(10_000, parseIntArg(argv, '--idle-ms', DEFAULT_IDLE_MS));
-  const sessionTtlMs = Math.max(10_000, parseIntArg(argv, '--session-ttl-ms', DEFAULT_SESSION_TTL_MS));
-  const startupGraceMs = Math.max(20_000, parseIntArg(argv, '--startup-grace-ms', DEFAULT_STARTUP_GRACE_MS));
+  const sessionTtlMs = Math.max(
+    10_000,
+    parseIntArg(argv, '--session-ttl-ms', DEFAULT_SESSION_TTL_MS)
+  );
+  const startupGraceMs = Math.max(
+    20_000,
+    parseIntArg(argv, '--startup-grace-ms', DEFAULT_STARTUP_GRACE_MS)
+  );
   const autoFrontend = !hasFlag(argv, '--no-auto-frontend');
   const noFrontend = hasFlag(argv, '--no-frontend');
   const frontendDir = parseStringArg(argv, '--frontend-dir', '');
@@ -548,7 +622,10 @@ async function main() {
   } catch (err) {
     // A worker failure must never prevent the management stack from serving.
     // eslint-disable-next-line no-console
-    console.error('[ai-manage-daemon] workflow worker start failed:', err && err.message ? err.message : String(err));
+    console.error(
+      '[ai-manage-daemon] workflow worker start failed:',
+      err && err.message ? err.message : String(err)
+    );
   }
 
   const frontend = await resolveFrontend({
@@ -605,22 +682,52 @@ async function main() {
   startGcLoop({ idleMs, sessionTtlMs, startupGraceMs });
 }
 
-process.on('SIGTERM', () => { shutdown('sigterm').catch(() => process.exit(1)); });
-process.on('SIGINT', () => { shutdown('sigint').catch(() => process.exit(1)); });
+// Map common OS-level failure codes to actionable Chinese advice so a resource
+// crash (e.g. spawn ENOMEM in a constrained environment) never surfaces as a
+// vague message. Returns "message [CODE] — advice" or the plain message.
+function describeSystemError(err) {
+  const code = err && err.code ? String(err.code) : '';
+  const advice = {
+    ENOMEM: '系统内存不足，请关闭占用内存较多的程序后重试',
+    EACCES: '权限不足，请检查当前用户对相关文件/端口的访问权限',
+    EPERM: '操作被系统拒绝，请检查权限或安全软件拦截',
+    EMFILE: '进程可打开的文件句柄已耗尽，请关闭部分程序后重试',
+    ENFILE: '系统文件句柄已耗尽，请关闭部分程序后重试',
+    EAGAIN: '系统资源暂时不足（无法创建进程），请稍后重试',
+  }[code];
+  const msg = err && err.message ? err.message : String(err);
+  return advice ? `${msg} [${code}] — ${advice}` : msg;
+}
+
+process.on('SIGTERM', () => {
+  shutdown('sigterm').catch(() => process.exit(1));
+});
+process.on('SIGINT', () => {
+  shutdown('sigint').catch(() => process.exit(1));
+});
 process.on('uncaughtException', (err) => {
   // eslint-disable-next-line no-console
-  console.error('[ai-manage-daemon] uncaughtException:', err && err.message ? err.message : String(err));
+  console.error(
+    '[ai-manage-daemon] uncaughtException: 守护进程发生未捕获异常，即将关闭 AI 管理会话:',
+    describeSystemError(err)
+  );
   shutdown('uncaught-exception').catch(() => process.exit(1));
 });
 process.on('unhandledRejection', (err) => {
   // eslint-disable-next-line no-console
-  console.error('[ai-manage-daemon] unhandledRejection:', err && err.message ? err.message : String(err));
+  console.error(
+    '[ai-manage-daemon] unhandledRejection: 守护进程发生未处理的 Promise 拒绝，即将关闭 AI 管理会话:',
+    describeSystemError(err)
+  );
   shutdown('unhandled-rejection').catch(() => process.exit(1));
 });
 
 main().catch((err) => {
   // eslint-disable-next-line no-console
-  console.error('[ai-manage-daemon] start failed:', err && err.message ? err.message : String(err));
+  console.error(
+    '[ai-manage-daemon] start failed: 启动 AI 管理守护进程失败:',
+    describeSystemError(err)
+  );
   clearRuntime();
   process.exit(1);
 });

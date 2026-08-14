@@ -36,8 +36,11 @@ const _memo = new WeakMap();
  * @returns {boolean}
  */
 function isMsgTokenMemoEnabled(env = process.env) {
-  try { return isFlagEnabled('KHY_MSG_TOKEN_MEMO', env); }
-  catch { return true; }
+  try {
+    return isFlagEnabled('KHY_MSG_TOKEN_MEMO', env);
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -51,7 +54,9 @@ function isMsgTokenMemoEnabled(env = process.env) {
  */
 function sumMessageTokens(messages, estimateFn, env = process.env) {
   // 防御:真实路径 messages 恒为数组、estimateFn 恒为函数(此分支为死路),返回 0 不改主路径。
-  if (!Array.isArray(messages) || typeof estimateFn !== 'function') return 0;
+  if (!Array.isArray(messages) || typeof estimateFn !== 'function') {
+    return 0;
+  }
 
   const memo = isMsgTokenMemoEnabled(env);
   let sum = 0;
@@ -61,18 +66,27 @@ function sumMessageTokens(messages, estimateFn, env = process.env) {
     const canMemo = memo && m !== null && typeof m === 'object';
     if (canMemo) {
       const hit = _memo.get(m);
-      if (hit !== undefined && hit.fn === estimateFn) { sum += hit.tokens; continue; }
+      if (hit !== undefined && hit.fn === estimateFn) {
+        sum += hit.tokens;
+        continue;
+      }
     }
     // 直算:与原 reduce 每元素表达式一字不差。
-    const tokens = estimateFn(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || ''));
-    if (canMemo) _memo.set(m, { fn: estimateFn, tokens });
+    const tokens = estimateFn(
+      typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '')
+    );
+    if (canMemo) {
+      _memo.set(m, { fn: estimateFn, tokens });
+    }
     sum += tokens;
   }
   return sum;
 }
 
 /** 清空记忆(测试/显式复位用;WeakMap 无法遍历,这里换新实例)。 */
-function _clearMemo() { /* WeakMap 不可清空,测试用新对象即天然隔离;保留占位以对齐叶子约定 */ }
+function _clearMemo() {
+  /* WeakMap 不可清空,测试用新对象即天然隔离;保留占位以对齐叶子约定 */
+}
 
 module.exports = {
   isMsgTokenMemoEnabled,

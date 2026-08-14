@@ -16,10 +16,11 @@
  */
 
 const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const { safeKill, searchExecutable } = require('../tools/platformUtils');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+const { safeKill, searchExecutable } = require('../tools/platformUtils');
 const log = require('../utils/logger');
 
 // ── Language Server Registry ──
@@ -127,9 +128,15 @@ class LspClient {
     this._diagnostics = new Map(); // uri → diagnostics[]
   }
 
-  get initialized() { return this._initialized; }
-  get language() { return this._language; }
-  get capabilities() { return this._capabilities; }
+  get initialized() {
+    return this._initialized;
+  }
+  get language() {
+    return this._language;
+  }
+  get capabilities() {
+    return this._capabilities;
+  }
 
   /**
    * Auto-detect and start the appropriate language server.
@@ -138,12 +145,16 @@ class LspClient {
   async start() {
     const lang = this._forcedLanguage || this._detectLanguage();
     if (!lang) {
-      throw new Error(`No language server detected for ${this._rootPath}. Supported: ${Object.keys(SERVER_REGISTRY).join(', ')}`);
+      throw new Error(
+        `No language server detected for ${this._rootPath}. Supported: ${Object.keys(SERVER_REGISTRY).join(', ')}`
+      );
     }
 
     this._language = lang;
     const config = SERVER_REGISTRY[lang];
-    if (!config) throw new Error(`Unknown language: ${lang}`);
+    if (!config) {
+      throw new Error(`Unknown language: ${lang}`);
+    }
 
     // Check if command exists
     if (!searchExecutable(config.command)) {
@@ -267,7 +278,9 @@ class LspClient {
       position: { line, character },
     });
 
-    if (!result) return null;
+    if (!result) {
+      return null;
+    }
 
     let contents = '';
     if (typeof result.contents === 'string') {
@@ -329,9 +342,11 @@ class LspClient {
       context: context || { triggerKind: 1 },
     });
 
-    if (!result) return [];
-    const items = Array.isArray(result) ? result : (result.items || []);
-    return items.map(item => ({
+    if (!result) {
+      return [];
+    }
+    const items = Array.isArray(result) ? result : result.items || [];
+    return items.map((item) => ({
       label: item.label,
       kind: item.kind,
       detail: item.detail || '',
@@ -358,7 +373,9 @@ class LspClient {
       newName,
     });
 
-    if (!result) return { changes: {} };
+    if (!result) {
+      return { changes: {} };
+    }
 
     // Normalize WorkspaceEdit
     const changes = {};
@@ -420,8 +437,10 @@ class LspClient {
       },
     });
 
-    if (!result) return [];
-    return result.map(action => ({
+    if (!result) {
+      return [];
+    }
+    return result.map((action) => ({
       title: action.title,
       kind: action.kind,
       edit: action.edit || null,
@@ -446,14 +465,17 @@ class LspClient {
       position: { line, character },
     });
 
-    if (!result) return null;
+    if (!result) {
+      return null;
+    }
     return {
-      signatures: (result.signatures || []).map(sig => ({
+      signatures: (result.signatures || []).map((sig) => ({
         label: sig.label,
         parameters: sig.parameters || [],
-        documentation: typeof sig.documentation === 'string'
-          ? sig.documentation
-          : sig.documentation?.value || '',
+        documentation:
+          typeof sig.documentation === 'string'
+            ? sig.documentation
+            : sig.documentation?.value || '',
       })),
       activeSignature: result.activeSignature ?? 0,
       activeParameter: result.activeParameter ?? 0,
@@ -470,8 +492,10 @@ class LspClient {
 
     const result = await this._request('workspace/symbol', { query: query || '' });
 
-    if (!result) return [];
-    return result.map(sym => ({
+    if (!result) {
+      return [];
+    }
+    return result.map((sym) => ({
       name: sym.name,
       kind: sym.kind,
       location: {
@@ -488,18 +512,30 @@ class LspClient {
    * @returns {Promise<void>}
    */
   async stop() {
-    if (!this._process) return;
+    if (!this._process) {
+      return;
+    }
 
     try {
       await this._request('shutdown', null);
       this._notify('exit', null);
-    } catch { /* server may already be dead */ }
+    } catch {
+      /* server may already be dead */
+    }
 
-    // Force kill after 3s
+    // Force kill after 3s only if the server has not exited on its own
     const p = this._process;
-    setTimeout(() => {
-      try { safeKill(p, 'SIGKILL', 0); } catch { /* ignore */ }
+    const killTimer = setTimeout(() => {
+      if (!p.killed) {
+        try {
+          safeKill(p, 'SIGKILL', 0);
+        } catch {
+          /* ignore */
+        }
+      }
     }, 3000);
+    killTimer.unref();
+    p.once('exit', () => clearTimeout(killTimer));
 
     this._process = null;
     this._initialized = false;
@@ -509,7 +545,9 @@ class LspClient {
   // ── Internal Methods ──
 
   _ensureInitialized() {
-    if (!this._initialized) throw new Error('LSP client not initialized. Call start() first.');
+    if (!this._initialized) {
+      throw new Error('LSP client not initialized. Call start() first.');
+    }
   }
 
   /**
@@ -540,20 +578,28 @@ class LspClient {
 
   _extToLanguageId(ext) {
     const map = {
-      '.js': 'javascript', '.jsx': 'javascriptreact', '.mjs': 'javascript',
-      '.ts': 'typescript', '.tsx': 'typescriptreact',
+      '.js': 'javascript',
+      '.jsx': 'javascriptreact',
+      '.mjs': 'javascript',
+      '.ts': 'typescript',
+      '.tsx': 'typescriptreact',
       '.py': 'python',
       '.rs': 'rust',
       '.go': 'go',
       '.java': 'java',
-      '.c': 'c', '.h': 'c', '.cpp': 'cpp', '.hpp': 'cpp',
+      '.c': 'c',
+      '.h': 'c',
+      '.cpp': 'cpp',
+      '.hpp': 'cpp',
       '.vue': 'vue',
     };
     return map[ext] || 'plaintext';
   }
 
   _normalizeLocations(result) {
-    if (!result) return [];
+    if (!result) {
+      return [];
+    }
     if (Array.isArray(result)) {
       return result.map((loc) => ({
         uri: loc.uri || loc.targetUri,
@@ -562,11 +608,13 @@ class LspClient {
       }));
     }
     if (result.uri) {
-      return [{
-        uri: result.uri,
-        range: result.range,
-        filePath: result.uri.replace('file://', ''),
-      }];
+      return [
+        {
+          uri: result.uri,
+          range: result.range,
+          filePath: result.uri.replace('file://', ''),
+        },
+      ];
     }
     return [];
   }
@@ -616,7 +664,9 @@ class LspClient {
    * @private
    */
   _notify(method, params) {
-    if (!this._process || !this._process.stdin.writable) return;
+    if (!this._process || !this._process.stdin.writable) {
+      return;
+    }
     this._process.stdin.write(_createNotification(method, params));
   }
 
@@ -630,7 +680,9 @@ class LspClient {
     // Parse Content-Length delimited messages
     while (true) {
       const headerEnd = this._buffer.indexOf('\r\n\r\n');
-      if (headerEnd < 0) break;
+      if (headerEnd < 0) {
+        break;
+      }
 
       const header = this._buffer.substring(0, headerEnd);
       const match = header.match(/Content-Length:\s*(\d+)/i);
@@ -641,7 +693,9 @@ class LspClient {
 
       const contentLength = parseInt(match[1], 10);
       const bodyStart = headerEnd + 4;
-      if (this._buffer.length < bodyStart + contentLength) break; // Wait for more data
+      if (this._buffer.length < bodyStart + contentLength) {
+        break;
+      } // Wait for more data
 
       const body = this._buffer.substring(bodyStart, bodyStart + contentLength);
       this._buffer = this._buffer.substring(bodyStart + contentLength);
@@ -677,7 +731,9 @@ class LspClient {
     // Notification from server
     if (msg.method === 'textDocument/publishDiagnostics') {
       const { uri, diagnostics } = msg.params || {};
-      if (uri) this._diagnostics.set(uri, diagnostics || []);
+      if (uri) {
+        this._diagnostics.set(uri, diagnostics || []);
+      }
       return;
     }
 
@@ -699,7 +755,9 @@ function detectLanguageServers(rootPath) {
 
   for (const [lang, config] of Object.entries(SERVER_REGISTRY)) {
     const hasMarker = config.detect.some((m) => fs.existsSync(path.join(rootPath, m)));
-    if (!hasMarker) continue;
+    if (!hasMarker) {
+      continue;
+    }
 
     const available = !!searchExecutable(config.command);
 

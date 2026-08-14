@@ -40,7 +40,9 @@ function _confirmYesDefault(rl, question) {
   return new Promise((resolve) => {
     try {
       rl.question(question, (answer) => {
-        const a = String(answer || '').trim().toLowerCase();
+        const a = String(answer || '')
+          .trim()
+          .toLowerCase();
         resolve(a === '' || a === 'y' || a === 'yes');
       });
     } catch {
@@ -59,10 +61,21 @@ function _confirmYesDefault(rl, question) {
  */
 async function maybeAutoInstallPortable(ideName, adapter, context = {}) {
   const io = (context && context.io) || {};
-  const say = typeof io.info === 'function' ? io.info : (m) => { try { console.log(m); } catch { /* noop */ } };
+  const say =
+    typeof io.info === 'function'
+      ? io.info
+      : (m) => {
+          try {
+            console.log(m);
+          } catch {
+            /* noop */
+          }
+        };
   const warn = typeof io.warn === 'function' ? io.warn : say;
 
-  if (!isAutoInstallEnabled()) return { available: false, attempted: false, gated: true };
+  if (!isAutoInstallEnabled()) {
+    return { available: false, attempted: false, gated: true };
+  }
 
   let registry;
   try {
@@ -70,18 +83,24 @@ async function maybeAutoInstallPortable(ideName, adapter, context = {}) {
   } catch {
     return { available: false, attempted: false };
   }
-  if (!registry.isKnownTool(ideName)) return { available: false, attempted: false };
+  if (!registry.isKnownTool(ideName)) {
+    return { available: false, attempted: false };
+  }
 
   const rl = context && context.rl;
   const isTty = !!(process.stdin && process.stdin.isTTY);
-  if (!rl || !isTty) return { available: false, attempted: false };
+  if (!rl || !isTty) {
+    return { available: false, attempted: false };
+  }
 
   const tool = registry.getTool(ideName);
   const ok = await _confirmYesDefault(
     rl,
     `${tool.key} 未安装,是否现在安装便携版(${tool.pkg}@latest → ~/.khy/tools)?[Y/n] `
   );
-  if (!ok) return { available: false, attempted: false };
+  if (!ok) {
+    return { available: false, attempted: false };
+  }
 
   say(`正在安装 ${tool.key} 便携版(${tool.pkg}@latest)…`);
   let result;
@@ -89,7 +108,16 @@ async function maybeAutoInstallPortable(ideName, adapter, context = {}) {
     const installer = require('../../services/gateway/adapters/portableCliInstaller');
     result = await installer.install(tool.key, {
       toolsRoot: _toolsRoot(),
-      onProgress: (text) => { const s = String(text).trim(); if (s) { try { process.stdout.write(`  ${s}\n`); } catch { /* noop */ } } },
+      onProgress: (text) => {
+        const s = String(text).trim();
+        if (s) {
+          try {
+            process.stdout.write(`  ${s}\n`);
+          } catch {
+            /* noop */
+          }
+        }
+      },
     });
   } catch (err) {
     warn(`安装失败: ${(err && err.message) || String(err)}`);
@@ -97,7 +125,10 @@ async function maybeAutoInstallPortable(ideName, adapter, context = {}) {
   }
 
   if (!result || !result.ok) {
-    if (result && result.gated) { warn(result.error || '便携安装已被关闭'); return { available: false, attempted: true, gated: true }; }
+    if (result && result.gated) {
+      warn(result.error || '便携安装已被关闭');
+      return { available: false, attempted: true, gated: true };
+    }
     warn(`安装失败: ${(result && result.error) || '未知错误'}`);
     return { available: false, attempted: true };
   }
@@ -107,7 +138,9 @@ async function maybeAutoInstallPortable(ideName, adapter, context = {}) {
   // 复检:强制刷新 detect(若适配器支持),再读 getStatus。
   let available = false;
   try {
-    if (typeof adapter.detect === 'function') adapter.detect(true);
+    if (typeof adapter.detect === 'function') {
+      adapter.detect(true);
+    }
     available = !!(adapter.getStatus && adapter.getStatus().available);
   } catch {
     available = false;

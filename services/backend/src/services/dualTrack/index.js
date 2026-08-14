@@ -19,13 +19,14 @@
  */
 
 const nodePath = require('path');
+
 const { ActionRegistry } = require('./actionRegistry');
-const { parseModelResponse } = require('./lenientResponseParser');
+const { CORE_ACTIONS, CORE_ENTRY_POINTS } = require('./core/coreActions');
 const { decideFlow, STATES } = require('./degradeStateMachine');
 const { loadUserTrack, USER_TRACK_PROTECTED_NAMES } = require('./extensionLoader');
 const { writeUserExtension } = require('./extensionWriter');
+const { parseModelResponse } = require('./lenientResponseParser');
 const { planOfficialUpdate, detectBreakingChange, applyOfficialUpdate } = require('./updateGuard');
-const { CORE_ACTIONS, CORE_ENTRY_POINTS } = require('./core/coreActions');
 
 class DualTrackRuntime {
   /**
@@ -39,8 +40,8 @@ class DualTrackRuntime {
     this.pathImpl = opts.pathImpl || nodePath;
     // 官方核心轨 = 本子系统目录（受保护源码）；用户扩展轨默认仓库根 user_patch/。
     this.coreRoot = opts.coreRoot || __dirname;
-    this.userTrackRoot = opts.userTrackRoot
-      || this.pathImpl.resolve(__dirname, '../../../../../user_patch');
+    this.userTrackRoot =
+      opts.userTrackRoot || this.pathImpl.resolve(__dirname, '../../../../../user_patch');
     this.coreActions = opts.coreActions || CORE_ACTIONS;
     this.entryPoints = CORE_ENTRY_POINTS;
     this.logger = opts.logger;
@@ -58,7 +59,7 @@ class DualTrackRuntime {
     for (const [type, handler] of Object.entries(this.coreActions)) {
       this.registry.registerCore(type, handler);
     }
-    this.registry.seal();                       // 核心密封：此后不可改写官方核心
+    this.registry.seal(); // 核心密封：此后不可改写官方核心
     this._coreSnapshot = this.registry.coreSnapshot();
     this.loadReport = loadUserTrack({
       userTrackRoot: this.userTrackRoot,
@@ -123,8 +124,11 @@ class DualTrackRuntime {
   authorizedModelWrite({ relPath, content, authorized }) {
     return writeUserExtension({
       userTrackRoot: this.userTrackRoot,
-      relPath, content, authorized,
-      fs: this.fs, pathImpl: this.pathImpl,
+      relPath,
+      content,
+      authorized,
+      fs: this.fs,
+      pathImpl: this.pathImpl,
     });
   }
 
@@ -150,8 +154,11 @@ class DualTrackRuntime {
 
   /** 实证官方核心轨自覆写以来未被污染（红线5）。 */
   coreIntact() {
-    try { return this.registry.assertCoreIntact(this._coreSnapshot); }
-    catch (_) { return false; }
+    try {
+      return this.registry.assertCoreIntact(this._coreSnapshot);
+    } catch (_) {
+      return false;
+    }
   }
 }
 

@@ -21,11 +21,12 @@
  */
 
 const fs = require('fs');
+
 const scanner = require('./artifactScanner');
-const stringHarvester = require('./stringHarvester');
-const sourceRecoverer = require('./sourceRecoverer');
-const toolOrchestrator = require('./toolOrchestrator');
 const reconstructionPort = require('./reconstructionPort');
+const sourceRecoverer = require('./sourceRecoverer');
+const stringHarvester = require('./stringHarvester');
+const toolOrchestrator = require('./toolOrchestrator');
 const ledger = require('./verificationLedger');
 
 /** 字符串收割读取窗口（默认 8 MiB；大文件只看头部，足够采指纹）。 */
@@ -88,7 +89,12 @@ class ReverseEngineer {
     report.scan = scan;
     if (!scan.exists) {
       report.warnings.push('Artifact not found or not a regular file.');
-      report.verification = { hasBaseline: false, verdict: 'no-artifact', message: '产物不存在。', fidelity: null };
+      report.verification = {
+        hasBaseline: false,
+        verdict: 'no-artifact',
+        message: '产物不存在。',
+        fidelity: null,
+      };
       return report;
     }
 
@@ -105,20 +111,22 @@ class ReverseEngineer {
 
     if (!authorized) {
       report.warnings.push(
-        '未授权模式：仅做只读分诊与字符串归纳。逆向定位为自验自有/受权软件——'
-        + '请提供 khy 构建清单，或在确认拥有/受权该产物后以 authorized:true 调用以启用源码还原、'
-        + '外部反编译与深度重建。',
+        '未授权模式：仅做只读分诊与字符串归纳。逆向定位为自验自有/受权软件——' +
+          '请提供 khy 构建清单，或在确认拥有/受权该产物后以 authorized:true 调用以启用源码还原、' +
+          '外部反编译与深度重建。'
       );
       report.ok = true;
       report.reconstruction = reconstructionPort._deterministicReport(
-        reconstructionPort.buildEvidencePack({ scan, strings: report.strings }),
+        reconstructionPort.buildEvidencePack({ scan, strings: report.strings })
       );
       report.verification = ledger.verify(scan, { members: [] }, manifest);
       return report;
     }
 
     // ③ 源码/字节码还原（SOURCE 档主路径）。
-    report.recovery = await sourceRecoverer.recover(artifactPath, scan, { outDir: opts.outDir || null });
+    report.recovery = await sourceRecoverer.recover(artifactPath, scan, {
+      outDir: opts.outDir || null,
+    });
 
     // ④ 外部反编译/反汇编编排（NATIVE/BYTECODE）。默认仅探活；runTools 才执行。
     report.orchestration = await toolOrchestrator.orchestrate(artifactPath, scan.family, {
@@ -129,10 +137,17 @@ class ReverseEngineer {
     // runTools 模式下本机无任何可用反编译器 → 收敛成一个 curated depId，供工具层把缺口
     // 交给依赖自愈层向用户「主动申请批准安装」（install/discuss/skip）。绝不静默静默降级、
     // 也绝不自行安装：仅把 depId 标注出来，由上层（reverseEngineer 工具）发起审批。
-    if (opts.runTools === true && report.orchestration && report.orchestration.attempted === false
-        && Array.isArray(report.orchestration.availability) && report.orchestration.availability.length > 0) {
+    if (
+      opts.runTools === true &&
+      report.orchestration &&
+      report.orchestration.attempted === false &&
+      Array.isArray(report.orchestration.availability) &&
+      report.orchestration.availability.length > 0
+    ) {
       const rec = toolOrchestrator.recommendInstall(scan.family);
-      if (rec) report.orchestration.missingDependency = rec;
+      if (rec) {
+        report.orchestration.missingDependency = rec;
+      }
     }
 
     // ⑤ 模型结构化重建（无模型 → 证据报告）。

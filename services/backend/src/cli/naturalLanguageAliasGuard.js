@@ -25,7 +25,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_NL_ALIAS_GUARD 默认开,仅 {0,false,off,no} 关。env 由调用方注入以便测试。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_NL_ALIAS_GUARD;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -45,10 +47,16 @@ const _RESERVED_SET = new Set(RESERVED_NL_ALIAS_PHRASES.map((p) => p.toLowerCase
  */
 function isReservedNaturalLanguagePhrase(input, env = process.env) {
   try {
-    if (!isEnabled(env)) return false;
-    if (typeof input !== 'string') return false;
+    if (!isEnabled(env)) {
+      return false;
+    }
+    if (typeof input !== 'string') {
+      return false;
+    }
     const key = input.trim().toLowerCase();
-    if (!key) return false;
+    if (!key) {
+      return false;
+    }
     return _RESERVED_SET.has(key);
   } catch {
     return false;

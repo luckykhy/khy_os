@@ -31,7 +31,9 @@
  */
 
 function _enabled() {
-  const v = String(process.env.KHY_TOOL_PARAM_NAMING || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_PARAM_NAMING || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -56,16 +58,27 @@ function toCamelCase(key) {
  * @returns {Array<object>}     门控关 / 无改动 → 原数组(同引用)
  */
 function canonicalizeDefs(defs) {
-  if (!_enabled()) return defs;
+  if (!_enabled()) {
+    return defs;
+  }
   try {
-    if (!Array.isArray(defs)) return defs;
+    if (!Array.isArray(defs)) {
+      return defs;
+    }
     let anyChange = false;
     const out = defs.map((def) => {
-      if (!def || typeof def !== 'object' || !def.parameters || typeof def.parameters !== 'object') {
+      if (
+        !def ||
+        typeof def !== 'object' ||
+        !def.parameters ||
+        typeof def.parameters !== 'object'
+      ) {
         return def;
       }
       const props = def.parameters.properties;
-      if (!props || typeof props !== 'object') return def;
+      if (!props || typeof props !== 'object') {
+        return def;
+      }
 
       const origKeys = new Set(Object.keys(props));
       const newProps = {};
@@ -80,14 +93,20 @@ function canonicalizeDefs(defs) {
           continue;
         }
         renameMap[key] = snake;
-        if (snake !== key) changed = true;
+        if (snake !== key) {
+          changed = true;
+        }
         newProps[snake] = props[key];
       }
-      if (!changed) return def;
+      if (!changed) {
+        return def;
+      }
       anyChange = true;
 
       const required = Array.isArray(def.parameters.required)
-        ? def.parameters.required.map((k) => (Object.prototype.hasOwnProperty.call(renameMap, k) ? renameMap[k] : toSnakeCase(k)))
+        ? def.parameters.required.map((k) =>
+            Object.prototype.hasOwnProperty.call(renameMap, k) ? renameMap[k] : toSnakeCase(k)
+          )
         : def.parameters.required;
 
       return {
@@ -109,18 +128,32 @@ function canonicalizeDefs(defs) {
  * @returns {object}  门控关 / 无新增 → 原对象(同引用)
  */
 function expandParamAliases(params) {
-  if (!_enabled()) return params;
+  if (!_enabled()) {
+    return params;
+  }
   try {
-    if (!params || typeof params !== 'object' || Array.isArray(params)) return params;
+    if (!params || typeof params !== 'object' || Array.isArray(params)) {
+      return params;
+    }
     let out = null; // 惰性克隆:有新增才克隆
     for (const key of Object.keys(params)) {
-      if (key.startsWith('_')) continue; // 内部标记键(_autoRepairedFrom 等)
+      if (key.startsWith('_')) {
+        continue;
+      } // 内部标记键(_autoRepairedFrom 等)
       const variants = [toSnakeCase(key), toCamelCase(key)];
       for (const variant of variants) {
-        if (variant === key) continue;
-        if (variant in params) continue; // 既有(含原对象里另一个真实键)→ 不动
-        if (out && variant in out) continue;
-        if (!out) out = { ...params };
+        if (variant === key) {
+          continue;
+        }
+        if (variant in params) {
+          continue;
+        } // 既有(含原对象里另一个真实键)→ 不动
+        if (out && variant in out) {
+          continue;
+        }
+        if (!out) {
+          out = { ...params };
+        }
         out[variant] = params[key];
       }
     }

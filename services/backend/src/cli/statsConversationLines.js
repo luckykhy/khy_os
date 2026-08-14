@@ -42,7 +42,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function statsConversationEnabled(env = process.env) {
   const raw = env && env.KHY_STATS_CONVERSATION;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -60,11 +62,15 @@ const _count = require('../utils/toNonNegInt');
  * @returns {string[]}
  */
 function buildConversationCompositionLines(stats, env = process.env) {
-  if (!statsConversationEnabled(env)) return [];
+  if (!statsConversationEnabled(env)) {
+    return [];
+  }
   const s = stats || {};
 
   const total = _count(s.totalMessages);
-  if (total <= 0) return [];
+  if (total <= 0) {
+    return [];
+  }
 
   const user = _count(s.userMessages);
   const assistant = _count(s.assistantMessages);

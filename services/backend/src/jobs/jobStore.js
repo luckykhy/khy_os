@@ -18,7 +18,9 @@ const fs = require('fs');
 const path = require('path');
 
 function _jobsBase(opts = {}) {
-  if (opts.baseDir) return opts.baseDir;
+  if (opts.baseDir) {
+    return opts.baseDir;
+  }
   const { getDataDir } = require('../utils/dataHome');
   return getDataDir('jobs');
 }
@@ -59,8 +61,12 @@ function readJobState(jobId, opts = {}) {
   try {
     const raw = fsImpl.readFileSync(path.join(getJobDir(jobId, opts), 'state.json'), 'utf8');
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (typeof parsed.jobId !== 'string' || typeof parsed.status !== 'string') return null;
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    if (typeof parsed.jobId !== 'string' || typeof parsed.status !== 'string') {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -71,7 +77,9 @@ function readJobState(jobId, opts = {}) {
 function appendJobReply(jobId, text, opts = {}) {
   const fsImpl = opts.fs || fs;
   const state = readJobState(jobId, opts);
-  if (!state) return false;
+  if (!state) {
+    return false;
+  }
 
   const dir = getJobDir(jobId, opts);
   const now = opts.now || new Date().toISOString();
@@ -79,16 +87,21 @@ function appendJobReply(jobId, text, opts = {}) {
   try {
     fsImpl.appendFileSync(path.join(dir, 'replies.jsonl'), entry + '\n', 'utf8');
   } catch {
-    try { fsImpl.writeFileSync(path.join(dir, 'replies.jsonl'), entry + '\n', 'utf8'); }
-    catch { return false; }
+    try {
+      fsImpl.writeFileSync(path.join(dir, 'replies.jsonl'), entry + '\n', 'utf8');
+    } catch {
+      return false;
+    }
   }
   try {
     fsImpl.writeFileSync(
       path.join(dir, 'state.json'),
       JSON.stringify({ ...state, updatedAt: now }, null, 2),
-      'utf8',
+      'utf8'
     );
-  } catch { /* reply is durable even if the timestamp bump fails */ }
+  } catch {
+    /* reply is durable even if the timestamp bump fails */
+  }
   return true;
 }
 
@@ -96,11 +109,17 @@ function appendJobReply(jobId, text, opts = {}) {
 function listJobs(opts = {}) {
   const fsImpl = opts.fs || fs;
   let ids;
-  try { ids = fsImpl.readdirSync(_jobsBase(opts)); } catch { return []; }
+  try {
+    ids = fsImpl.readdirSync(_jobsBase(opts));
+  } catch {
+    return [];
+  }
   const jobs = [];
   for (const id of ids) {
     const st = readJobState(id, opts);
-    if (st) jobs.push(st);
+    if (st) {
+      jobs.push(st);
+    }
   }
   jobs.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   return jobs;

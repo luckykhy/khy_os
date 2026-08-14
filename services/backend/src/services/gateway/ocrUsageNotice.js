@@ -31,15 +31,21 @@ function isEnabled(env) {
 // 渲染面向模型的「用 OCR 透明告知」指令。门关 / 无有效图片计数(count 非正整数)/ 畸形 → null
 // (不注入,逐字节回退)。count = 本次成功提取到 OCR 文本的图片数,仅用于措辞,缺失时用泛称。
 function buildUsageDisclosure({ count, env } = {}) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
   const hasCount = Number.isFinite(n) && n > 0;
-  if (!hasCount) return null;
+  if (!hasCount) {
+    return null;
+  }
   const noun = n === 1 ? '这张图片' : `这 ${n} 张图片`;
-  return `[系统提示:上述${noun}的内容并非由多模态视觉模型直接「看」到,而是通过 OCR 文字识别`
-    + `从图像中提取所得。请在正常回答用户问题的同时,用一句自然、简短的话向用户明确说明「本次`
-    + `图片内容是通过 OCR 文字识别读取的」——不要长篇解释、不要影响正文回答,但务必让用户清楚`
-    + `知道这次用的是 OCR 而非原生看图。]`;
+  return (
+    `[系统提示:上述${noun}的内容并非由多模态视觉模型直接「看」到,而是通过 OCR 文字识别` +
+    `从图像中提取所得。请在正常回答用户问题的同时,用一句自然、简短的话向用户明确说明「本次` +
+    `图片内容是通过 OCR 文字识别读取的」——不要长篇解释、不要影响正文回答,但务必让用户清楚` +
+    `知道这次用的是 OCR 而非原生看图。]`
+  );
 }
 
 module.exports = { isEnabled, buildUsageDisclosure, FLAG };

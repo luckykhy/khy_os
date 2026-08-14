@@ -37,7 +37,9 @@ const MAX_GAP = 8;
 function replyDedupEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_REPLY_DEDUP;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return true;
@@ -54,25 +56,37 @@ function replyDedupEnabled(env = process.env) {
  */
 function collapseDuplicatedReply(text, env = process.env) {
   try {
-    if (typeof text !== 'string' || text.length === 0) return text;
-    if (!replyDedupEnabled(env)) return text;
+    if (typeof text !== 'string' || text.length === 0) {
+      return text;
+    }
+    if (!replyDedupEnabled(env)) {
+      return text;
+    }
 
     const trimmed = text.trim();
     const len = trimmed.length;
     // 两份各需 ≥ MIN_HALF_NONSPACE 个非空白字符 → 总长必然 ≥ 2*阈值,否则不可能达标。
-    if (len < 2 * MIN_HALF_NONSPACE) return text;
+    if (len < 2 * MIN_HALF_NONSPACE) {
+      return text;
+    }
 
     // gap = 两份之间的纯空白间隔长度。逐一试 0..MAX_GAP,取首个精确等半且中间纯空白的切分。
     for (let gap = 0; gap <= MAX_GAP; gap++) {
-      if ((len - gap) % 2 !== 0) continue;         // 剩余长度须能被平分为两份
+      if ((len - gap) % 2 !== 0) {
+        continue;
+      } // 剩余长度须能被平分为两份
       const half = (len - gap) / 2;
-      if (half < MIN_HALF_NONSPACE) continue;      // 每份长度下限(含空白)的快速剪枝
+      if (half < MIN_HALF_NONSPACE) {
+        continue;
+      } // 每份长度下限(含空白)的快速剪枝
       const a = trimmed.slice(0, half);
       const mid = trimmed.slice(half, half + gap);
       const b = trimmed.slice(half + gap);
       if (a === b && /^\s*$/.test(mid)) {
         // 精确等半且中缝纯空白 → 再确认每份实质字符达阈值,才折叠(挡短巧合)。
-        if (a.replace(/\s/g, '').length >= MIN_HALF_NONSPACE) return a;
+        if (a.replace(/\s/g, '').length >= MIN_HALF_NONSPACE) {
+          return a;
+        }
       }
     }
     return text;

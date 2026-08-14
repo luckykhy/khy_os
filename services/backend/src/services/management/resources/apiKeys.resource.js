@@ -6,9 +6,10 @@
  * Web management page invoke these ops through managementRegistry, so the two
  * surfaces can never diverge.
  */
-const apiKeyPool = require('../../apiKeyPool');
-const { getDataHome } = require('../../../utils/dataHome');
 const path = require('path');
+
+const { getDataHome } = require('../../../utils/dataHome');
+const apiKeyPool = require('../../apiKeyPool');
 
 const POOL_FILE = path.join(getDataHome(), 'api_keys.json');
 
@@ -45,8 +46,12 @@ const contract = {
       return { providers: apiKeyPool.getAllStatus() };
     },
     async add(args) {
-      if (!args || !args.provider) throw new Error('provider is required');
-      if (!args.key) throw new Error('key is required');
+      if (!args || !args.provider) {
+        throw new Error('provider is required');
+      }
+      if (!args.key) {
+        throw new Error('key is required');
+      }
       const keyId = apiKeyPool.addKey(args.provider, {
         key: args.key,
         endpoint: args.endpoint,

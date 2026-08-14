@@ -26,7 +26,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env) {
   const raw = env && env.KHY_FS_ERROR_HUMANIZE;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -52,7 +54,9 @@ const _ERRNO_TEXT = Object.freeze({
  */
 function directoryReadMessage(p, env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const shown = p == null ? '' : String(p);
     return `这是一个目录,不能当作文件读取:${shown}。若想查看里面有什么,请用 ListDir 工具或 \`ls\` 列目录。(EISDIR)`;
   } catch {
@@ -71,15 +75,23 @@ function directoryReadMessage(p, env) {
 function humanizeReadError(err, p, env) {
   try {
     const raw = err && err.message ? String(err.message) : String(err);
-    if (!isEnabled(env)) return raw;
+    if (!isEnabled(env)) {
+      return raw;
+    }
     const code = err && err.code ? String(err.code) : '';
     const text = _ERRNO_TEXT[code];
-    if (!text) return raw;
+    if (!text) {
+      return raw;
+    }
     const shown = p == null ? '' : String(p);
     const tail = shown ? `:${shown}` : '';
     return `${text}${tail}。(${code})`;
   } catch {
-    try { return err && err.message ? String(err.message) : String(err); } catch { return 'read failed'; }
+    try {
+      return err && err.message ? String(err.message) : String(err);
+    } catch {
+      return 'read failed';
+    }
   }
 }
 

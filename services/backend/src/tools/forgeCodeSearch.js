@@ -1,6 +1,7 @@
-const { defineTool } = require('./_baseTool');
-const forgeCore = require('../services/forge/forgeCore');
 const forgeClient = require('../services/forge/forgeClient');
+const forgeCore = require('../services/forge/forgeCore');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * forgeCodeSearch — search code across GitHub (the way you'd grep the whole forge
@@ -19,17 +20,39 @@ const forgeClient = require('../services/forge/forgeClient');
  */
 module.exports = defineTool({
   name: 'forgeCodeSearch',
-  description: 'Search code across GitHub by keyword/qualifiers (language:, filename:, path:) to find real usage examples. Optionally scope to one "owner/repo". Returns {repo, path, url} matches. GitHub-only (Gitee/GitLab have no clean public code-search API); usually needs GITHUB_TOKEN.',
+  description:
+    'Search code across GitHub by keyword/qualifiers (language:, filename:, path:) to find real usage examples. Optionally scope to one "owner/repo". Returns {repo, path, url} matches. GitHub-only (Gitee/GitLab have no clean public code-search API); usually needs GITHUB_TOKEN.',
   category: 'git',
   risk: 'safe',
+  searchHint: 'github usage example snippet qualifier 代码搜索 用法 示例 找代码',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: () => forgeCore.isEnabled(),
   inputSchema: {
-    query: { type: 'string', required: true, description: 'Code search expression. May include GitHub qualifiers, e.g. "createServer language:js".' },
-    repo: { type: 'string', required: false, description: 'Narrow to one repository: "owner/repo".' },
-    platform: { type: 'string', required: false, enum: ['github'], description: 'Only github is supported for code search.' },
-    limit: { type: 'number', required: false, min: 1, max: 50, description: 'Max results (default 10, max 50).' },
+    query: {
+      type: 'string',
+      required: true,
+      description:
+        'Code search expression. May include GitHub qualifiers, e.g. "createServer language:js".',
+    },
+    repo: {
+      type: 'string',
+      required: false,
+      description: 'Narrow to one repository: "owner/repo".',
+    },
+    platform: {
+      type: 'string',
+      required: false,
+      enum: ['github'],
+      description: 'Only github is supported for code search.',
+    },
+    limit: {
+      type: 'number',
+      required: false,
+      min: 1,
+      max: 50,
+      description: 'Max results (default 10, max 50).',
+    },
   },
   async execute(params, _context) {
     const res = await forgeClient.searchCode({
@@ -38,7 +61,9 @@ module.exports = defineTool({
       platform: params.platform,
       limit: params.limit,
     });
-    if (!res.ok) return { success: false, error: res.error };
+    if (!res.ok) {
+      return { success: false, error: res.error };
+    }
     return {
       success: true,
       platform: res.platform,

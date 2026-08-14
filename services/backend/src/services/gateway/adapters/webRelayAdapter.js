@@ -5,16 +5,19 @@
  *
  * Always available as a last-resort adapter.
  */
-const http = require('http');
 const crypto = require('crypto');
+const http = require('http');
+
 const WebSocket = require('ws');
-const { buildRelayHTML } = require('../relayPage');
+
 const { requireFeatureAccess } = require('../../authGuard');
 const {
   buildProxyRelayFeatureLabel,
   getFeatureFamilyPrefix,
   joinFeatureKey,
 } = require('../../featureKeyBuilder');
+const { buildRelayHTML } = require('../relayPage');
+
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
 
 const DEFAULT_PORT = 9099;
@@ -25,20 +28,24 @@ let _server = null;
 let _wss = null;
 let _port = null;
 let _pending = null; // { id, text, resolve, reject, timer }
-let _token = null;   // per-session auth token
+let _token = null; // per-session auth token
 
 /**
  * Ensure the relay server is running.
  * Lazy-starts on first call; subsequent calls are no-ops.
  */
 function ensureServer() {
-  if (_server) return Promise.resolve(_port);
+  if (_server) {
+    return Promise.resolve(_port);
+  }
 
   const rawPort = parseInt(process.env.GATEWAY_RELAY_PORT, 10) || DEFAULT_PORT;
-  const port = (rawPort > 0 && rawPort <= 65535) ? rawPort : DEFAULT_PORT;
+  const port = rawPort > 0 && rawPort <= 65535 ? rawPort : DEFAULT_PORT;
 
   // Generate a per-session token for WS auth
-  if (!_token) _token = crypto.randomBytes(16).toString('hex');
+  if (!_token) {
+    _token = crypto.randomBytes(16).toString('hex');
+  }
 
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
@@ -64,9 +71,17 @@ function ensureServer() {
       server: srv,
       maxPayload: 1024 * 1024, // 1 MB limit
       verifyClient: ({ req }) => {
-        // Require token via query param: ws://localhost:PORT/?token=XXX
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        return url.searchParams.get('token') === _token;
+        // Require token via WebSocket subprotocol (Sec-WebSocket-Protocol header).
+        // 不再使用 URL 查询参数，防止 token 被代理/负载均衡记录到访问日志。
+        const protocol = req.headers['sec-websocket-protocol'];
+        // 该头可能是逗号分隔的协议列表，逐一检查
+        if (!protocol) {
+          return false;
+        }
+        const protocols = String(protocol)
+          .split(',')
+          .map((s) => s.trim());
+        return protocols.includes(_token);
       },
     });
 
@@ -74,7 +89,9 @@ function ensureServer() {
     // ReferenceError if wss emits 'error' synchronously during construction.
     let settled = false;
     const settleResolve = (resolvedPort) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       _port = resolvedPort;
       _server = srv;
@@ -82,9 +99,15 @@ function ensureServer() {
       resolve(resolvedPort);
     };
     const settleReject = (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { wss.close(); } catch { /* ignore */ }
+      try {
+        wss.close();
+      } catch {
+        /* ignore */
+      }
       try {
         srv.close(() => reject(err));
       } catch {
@@ -100,12 +123,14 @@ function ensureServer() {
     wss.on('connection', (ws) => {
       // If there's a pending prompt, send it immediately to the new client
       if (_pending) {
-        ws.send(JSON.stringify({
-          type: 'prompt',
-          id: _pending.id,
-          text: _pending.text,
-          timestamp: new Date().toISOString(),
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'prompt',
+            id: _pending.id,
+            text: _pending.text,
+            timestamp: new Date().toISOString(),
+          })
+        );
       }
 
       ws.on('message', (raw) => {
@@ -127,7 +152,9 @@ function ensureServer() {
           if (msg.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
           }
-        } catch { /* ignore malformed messages */ }
+        } catch {
+          /* ignore malformed messages */
+        }
       });
     });
 
@@ -179,6 +206,11 @@ function detect() {
  * Starts the server if needed, broadcasts the prompt, waits for human response.
  */
 async function generate(prompt, _options = {}) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    console.error(
+      `[DEBUG-ADAPTER] webRelayAdapter.generate tools=${Array.isArray(_options.tools) ? _options.tools.length : 0}`
+    );
+  }
   const auth = requireFeatureAccess(
     joinFeatureKey(getFeatureFamilyPrefix('proxy', 'relay'), 'web'),
     buildProxyRelayFeatureLabel('web')
@@ -204,7 +236,8 @@ async function generate(prompt, _options = {}) {
     });
   }
   const timeoutMs = parseInt(process.env.GATEWAY_RELAY_TIMEOUT, 10) || DEFAULT_TIMEOUT_MS;
-  const clientWaitMs = parseInt(process.env.GATEWAY_RELAY_CLIENT_WAIT, 10) || DEFAULT_CLIENT_WAIT_MS;
+  const clientWaitMs =
+    parseInt(process.env.GATEWAY_RELAY_CLIENT_WAIT, 10) || DEFAULT_CLIENT_WAIT_MS;
 
   // Cancel any existing pending request
   if (_pending) {
@@ -219,31 +252,41 @@ async function generate(prompt, _options = {}) {
     let clientTimer = null;
     const timer = setTimeout(() => {
       _pending = null;
-      resolve(buildFailure('中转超时 — 未在限定时间内收到回复', {
-        adapter: 'web_relay',
-        provider: 'web-relay',
-        attempts: [{ provider: `web-relay (port ${port})`, success: false, error: 'timeout' }],
-      }));
+      resolve(
+        buildFailure('中转超时 — 未在限定时间内收到回复', {
+          adapter: 'web_relay',
+          provider: 'web-relay',
+          attempts: [{ provider: `web-relay (port ${port})`, success: false, error: 'timeout' }],
+        })
+      );
     }, timeoutMs);
 
     _pending = { id, text: prompt, resolve: onResponse, reject: onError, timer };
 
     function onResponse(text) {
-      if (clientTimer) clearTimeout(clientTimer);
-      resolve(buildSuccess(text, {
-        adapter: 'web_relay',
-        provider: 'web-relay',
-        attempts: [{ provider: `web-relay (port ${port})`, success: true }],
-      }));
+      if (clientTimer) {
+        clearTimeout(clientTimer);
+      }
+      resolve(
+        buildSuccess(text, {
+          adapter: 'web_relay',
+          provider: 'web-relay',
+          attempts: [{ provider: `web-relay (port ${port})`, success: true }],
+        })
+      );
     }
 
     function onError(err) {
-      if (clientTimer) clearTimeout(clientTimer);
-      resolve(buildFailure(err.message || '中转出错', {
-        adapter: 'web_relay',
-        provider: 'web-relay',
-        attempts: [{ provider: `web-relay (port ${port})`, success: false, error: err.message }],
-      }));
+      if (clientTimer) {
+        clearTimeout(clientTimer);
+      }
+      resolve(
+        buildFailure(err.message || '中转出错', {
+          adapter: 'web_relay',
+          provider: 'web-relay',
+          attempts: [{ provider: `web-relay (port ${port})`, success: false, error: err.message }],
+        })
+      );
     }
 
     // Broadcast prompt to all connected browsers
@@ -258,17 +301,30 @@ async function generate(prompt, _options = {}) {
 
     // UX guard: if no browser is connected, fail fast instead of looking frozen.
     if (!_wss || _wss.clients.size === 0) {
-      clientTimer = setTimeout(() => {
-        if (!_pending || _pending.id !== id) return;
-        clearTimeout(timer);
-        _pending = null;
-        resolve(buildFailure('no_browser_client', {
-          adapter: 'web_relay',
-          provider: 'web-relay',
-          errorType: 'network',
-          attempts: [{ provider: `web-relay (port ${port})`, success: false, error: 'no_browser_client' }],
-        }));
-      }, Math.max(3000, clientWaitMs));
+      clientTimer = setTimeout(
+        () => {
+          if (!_pending || _pending.id !== id) {
+            return;
+          }
+          clearTimeout(timer);
+          _pending = null;
+          resolve(
+            buildFailure('no_browser_client', {
+              adapter: 'web_relay',
+              provider: 'web-relay',
+              errorType: 'network',
+              attempts: [
+                {
+                  provider: `web-relay (port ${port})`,
+                  success: false,
+                  error: 'no_browser_client',
+                },
+              ],
+            })
+          );
+        },
+        Math.max(3000, clientWaitMs)
+      );
     }
   });
 }
@@ -316,12 +372,24 @@ function getClientCount() {
  * @returns {boolean} true if a pending request was cancelled
  */
 function cancelPending(reason = 'Cancelled by user') {
-  if (!_pending) return false;
+  if (!_pending) {
+    return false;
+  }
   clearTimeout(_pending.timer);
   const rej = _pending.reject;
   _pending = null;
-  try { rej(new Error(reason)); } catch { /* ignore */ }
-  try { if (_wss) broadcast(_wss, { type: 'status', message: '请求已取消' }); } catch { /* ignore */ }
+  try {
+    rej(new Error(reason));
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (_wss) {
+      broadcast(_wss, { type: 'status', message: '请求已取消' });
+    }
+  } catch {
+    /* ignore */
+  }
   return true;
 }
 
@@ -333,7 +401,9 @@ async function start() {
     joinFeatureKey(getFeatureFamilyPrefix('proxy', 'relay'), 'web'),
     buildProxyRelayFeatureLabel('web')
   );
-  if (!auth.ok) throw new Error(auth.error);
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   return ensureServer();
 }
 

@@ -4,14 +4,23 @@
  * Every tool execution is logged with parameters, result, permission
  * decision, and elapsed time. Supports querying and rotation.
  *
- * Log file: ~/.khyquant/audit.log (JSONL format)
+ * Log file: ~/.khyquant/audit.jsonl (JSONL format)
  * Rotation: 10MB max, keeps 3 backups
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const AUDIT_FILE = path.join(os.homedir(), '.khyquant', 'audit.log');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const AUDIT_FILE = path.join(_appHome(), 'audit.jsonl');
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_BACKUPS = 3;
 
@@ -30,7 +39,9 @@ const MAX_BACKUPS = 3;
  * @param {string} [entry.sessionId] - Session identifier
  */
 function logToolExecution(entry) {
-  if (!entry || !entry.tool) return;
+  if (!entry || !entry.tool) {
+    return;
+  }
 
   const record = {
     timestamp: new Date().toISOString(),
@@ -47,7 +58,9 @@ function logToolExecution(entry) {
     _ensureDir();
     _rotateIfNeeded();
     fs.appendFileSync(AUDIT_FILE, JSON.stringify(record) + '\n');
-  } catch { /* audit logging failure is non-critical */ }
+  } catch {
+    /* audit logging failure is non-critical */
+  }
 }
 
 // ── Read / Query ────────────────────────────────────────────────────
@@ -67,7 +80,9 @@ function queryAuditLog(filter = {}) {
   const limit = filter.limit || 50;
 
   try {
-    if (!fs.existsSync(AUDIT_FILE)) return [];
+    if (!fs.existsSync(AUDIT_FILE)) {
+      return [];
+    }
 
     const content = fs.readFileSync(AUDIT_FILE, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);
@@ -78,27 +93,27 @@ function queryAuditLog(filter = {}) {
       try {
         const entry = JSON.parse(lines[i]);
         entries.push(entry);
-      } catch { /* skip malformed lines */ }
+      } catch {
+        /* skip malformed lines */
+      }
     }
 
     // Apply filters
     let filtered = entries;
 
     if (filter.tool) {
-      filtered = filtered.filter(e => e.tool === filter.tool);
+      filtered = filtered.filter((e) => e.tool === filter.tool);
     }
     if (filter.since) {
       const since = new Date(filter.since).getTime();
-      filtered = filtered.filter(e => new Date(e.timestamp).getTime() >= since);
+      filtered = filtered.filter((e) => new Date(e.timestamp).getTime() >= since);
     }
     if (filter.until) {
       const until = new Date(filter.until).getTime();
-      filtered = filtered.filter(e => new Date(e.timestamp).getTime() <= until);
+      filtered = filtered.filter((e) => new Date(e.timestamp).getTime() <= until);
     }
     if (filter.success !== undefined) {
-      filtered = filtered.filter(e =>
-        filter.success ? e.result?.success : !e.result?.success
-      );
+      filtered = filtered.filter((e) => (filter.success ? e.result?.success : !e.result?.success));
     }
 
     return filtered.slice(0, limit);
@@ -124,7 +139,9 @@ function getAuditStats() {
     byTool[entry.tool] = (byTool[entry.tool] || 0) + 1;
     byPermission[entry.permission] = (byPermission[entry.permission] || 0) + 1;
     totalElapsed += entry.elapsed || 0;
-    if (entry.result && !entry.result.success) errorCount++;
+    if (entry.result && !entry.result.success) {
+      errorCount++;
+    }
   }
 
   return {
@@ -134,7 +151,7 @@ function getAuditStats() {
     errorCount,
     deniedCount: byPermission.deny || 0,
     avgElapsed: entries.length > 0 ? Math.round(totalElapsed / entries.length) : 0,
-    recentErrors: entries.filter(e => e.result && !e.result.success).slice(0, 5),
+    recentErrors: entries.filter((e) => e.result && !e.result.success).slice(0, 5),
   };
 }
 
@@ -149,7 +166,9 @@ function clearAuditLog() {
       const backupPath = AUDIT_FILE + '.cleared.' + Date.now();
       fs.renameSync(AUDIT_FILE, backupPath);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -176,9 +195,13 @@ function _ensureDir() {
  */
 function _rotateIfNeeded() {
   try {
-    if (!fs.existsSync(AUDIT_FILE)) return;
+    if (!fs.existsSync(AUDIT_FILE)) {
+      return;
+    }
     const stat = fs.statSync(AUDIT_FILE);
-    if (stat.size < MAX_SIZE) return;
+    if (stat.size < MAX_SIZE) {
+      return;
+    }
 
     // Shift existing backups
     for (let i = MAX_BACKUPS - 1; i >= 1; i--) {
@@ -195,20 +218,26 @@ function _rotateIfNeeded() {
 
     // Move current to .1
     fs.renameSync(AUDIT_FILE, `${AUDIT_FILE}.1`);
-  } catch { /* rotation failure is non-critical */ }
+  } catch {
+    /* rotation failure is non-critical */
+  }
 }
 
 /**
  * Sanitize parameters before logging (mask sensitive values).
  */
 function _sanitizeParams(params) {
-  if (!params || typeof params !== 'object') return {};
+  if (!params || typeof params !== 'object') {
+    return {};
+  }
   const sanitized = {};
   const SENSITIVE_KEYS = ['password', 'apiKey', 'token', 'secret', 'key', 'credential'];
 
   for (const [k, v] of Object.entries(params)) {
-    if (k.startsWith('_')) continue; // Skip internal fields
-    if (SENSITIVE_KEYS.some(s => k.toLowerCase().includes(s.toLowerCase()))) {
+    if (k.startsWith('_')) {
+      continue;
+    } // Skip internal fields
+    if (SENSITIVE_KEYS.some((s) => k.toLowerCase().includes(s.toLowerCase()))) {
       sanitized[k] = '***';
     } else if (typeof v === 'string' && v.length > 200) {
       sanitized[k] = v.slice(0, 200) + `... (${v.length} chars)`;
@@ -223,10 +252,15 @@ function _sanitizeParams(params) {
  * Summarize result for logging (avoid storing large outputs).
  */
 function _summarizeResult(result) {
-  if (!result || typeof result !== 'object') return { success: false };
+  if (!result || typeof result !== 'object') {
+    return { success: false };
+  }
+  // Serialize Error/object errors via message first: String() on a plain
+  // object yields the useless "[object Object]" in the audit trail.
+  const err = result.error;
   return {
     success: !!result.success,
-    error: result.error ? String(result.error).slice(0, 200) : undefined,
+    error: err ? String(err?.message || err).slice(0, 200) : undefined,
   };
 }
 

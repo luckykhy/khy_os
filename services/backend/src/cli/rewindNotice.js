@@ -35,14 +35,18 @@ const NOTICE_NO_CODE = '已回溯对话（代码检查点不可用），可编�
  */
 function rewindDiffStatEnabled(env) {
   const raw = env && env.KHY_REWIND_DIFFSTAT;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
 // Non-finite / negative → 0; otherwise floor. Counts are never negative.
 function _nonNegInt(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) return 0;
+  if (!Number.isFinite(n) || n < 0) {
+    return 0;
+  }
   return Math.floor(n);
 }
 
@@ -55,15 +59,21 @@ function _nonNegInt(v) {
 function buildRewindNotice(arg, env) {
   const a = arg || {};
   // No code was restored (no checkpoint / restore failed) → conversation-only notice.
-  if (!a.codeRestored) return NOTICE_NO_CODE;
+  if (!a.codeRestored) {
+    return NOTICE_NO_CODE;
+  }
   // Code was restored. Surface the diff-stat only when enabled AND meaningful.
-  if (!rewindDiffStatEnabled(env)) return NOTICE_CODE;
+  if (!rewindDiffStatEnabled(env)) {
+    return NOTICE_CODE;
+  }
   const s = a.stats || {};
   const add = _nonNegInt(s.additions);
   const del = _nonNegInt(s.deletions);
   // tar-full / no-diff checkpoints report {0,0}: there is no honest line-level stat
   // to show, so fall back to the plain notice rather than a misleading "+0/-0".
-  if (add === 0 && del === 0) return NOTICE_CODE;
+  if (add === 0 && del === 0) {
+    return NOTICE_CODE;
+  }
   return `已回溯对话与代码（+${add}/-${del} 行），可编辑后重发`;
 }
 

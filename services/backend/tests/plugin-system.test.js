@@ -21,10 +21,18 @@ describe('plugin system integration', () => {
   let createContextFactory;
   let commandRegistry;
   let tmpDataHome;
+  let tmpRoot;
 
   beforeAll(() => {
     tmpDataHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-plugin-test-'));
+    // Workspace that carries the khy-hello fixture as <root>/node_modules/khy-hello,
+    // so discoverPlugins() finds it without touching the real repo node_modules.
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-plugin-root-'));
+    const nm = path.join(tmpRoot, 'node_modules');
+    fs.mkdirSync(nm, { recursive: true });
+    fs.cpSync(path.join(__dirname, 'fixtures', 'khy-hello'), path.join(nm, 'khy-hello'), { recursive: true });
     process.env.KHY_DATA_HOME = tmpDataHome;
+    process.env.KHYQUANT_ROOT = tmpRoot;
     jest.resetModules();
 
     pluginLoader = require('../src/plugin-loader/index.js');
@@ -39,8 +47,12 @@ describe('plugin system integration', () => {
       // ignore cleanup errors in tests
     }
     delete process.env.KHY_DATA_HOME;
+    delete process.env.KHYQUANT_ROOT;
     if (tmpDataHome) {
       fs.rmSync(tmpDataHome, { recursive: true, force: true });
+    }
+    if (tmpRoot) {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
     }
   });
 
@@ -54,7 +66,9 @@ describe('plugin system integration', () => {
     assert(helloCandidate, 'khy-hello should be discovered from workspace');
 
     // ── Test 2: Manifest validation ────────────────────────────────
-    const { validateManifest } = require('@khy/plugin-sdk');
+    // Validate with the loader's own validator (SDK when installed, built-in
+    // fallback otherwise) — the SDK package is optional and not always present.
+    const { validateManifest } = pluginLoader;
     const { valid, errors } = validateManifest(helloCandidate.manifestData);
     assert(valid, `Manifest should be valid, got errors: ${errors.join(', ')}`);
 

@@ -23,9 +23,9 @@
  * 同目录共址；调用方（sessionPersistence）用同一套 `_resolvePath` 解析路径。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const CHAIN_VERSION = 1;
 const GENESIS_PREV = '0'.repeat(64);
@@ -35,14 +35,25 @@ const CHAIN_EXT = '.trace-chain.json';
 const SEAL_SALT = crypto.randomBytes(16).toString('hex');
 
 function _sha256Hex(s) {
-  return crypto.createHash('sha256').update(String(s == null ? '' : s)).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(String(s == null ? '' : s))
+    .digest('hex');
 }
 
 /** 内容哈希：把消息内容绑定进链而不拷贝正文。 */
 function contentHash(content) {
-  if (content == null) return _sha256Hex('');
-  if (typeof content === 'string') return _sha256Hex(content);
-  try { return _sha256Hex(JSON.stringify(content)); } catch { return _sha256Hex(String(content)); }
+  if (content == null) {
+    return _sha256Hex('');
+  }
+  if (typeof content === 'string') {
+    return _sha256Hex(content);
+  }
+  try {
+    return _sha256Hex(JSON.stringify(content));
+  } catch {
+    return _sha256Hex(String(content));
+  }
 }
 
 /** 一条链记录的确定性内容哈希（不含 hash/seal 字段自身），跨进程稳定。 */
@@ -64,7 +75,13 @@ function _seal(entry) {
   return crypto.createHmac('sha256', SEAL_SALT).update(entry.hash).digest('hex');
 }
 
-function _stamp() { try { return Date.now(); } catch { return 0; } }
+function _stamp() {
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
+}
 
 /** 由会话 JSONL 路径派生并列的链文件路径（同目录、同 basename、换扩展名）。 */
 function chainPathFor(jsonlPath) {
@@ -75,7 +92,9 @@ function chainPathFor(jsonlPath) {
 
 function _readRaw(chainFile) {
   try {
-    if (!fs.existsSync(chainFile)) return [];
+    if (!fs.existsSync(chainFile)) {
+      return [];
+    }
     const arr = JSON.parse(fs.readFileSync(chainFile, 'utf-8'));
     return Array.isArray(arr) ? arr : [];
   } catch {
@@ -85,8 +104,13 @@ function _readRaw(chainFile) {
 
 function _writeAtomic(chainFile, chain) {
   const dir = path.dirname(chainFile);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const tmp = path.join(dir, `.${path.basename(chainFile)}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const tmp = path.join(
+    dir,
+    `.${path.basename(chainFile)}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`
+  );
   const fd = fs.openSync(tmp, 'w', 0o600);
   try {
     fs.writeFileSync(fd, JSON.stringify(chain, null, 2));
@@ -114,9 +138,8 @@ function append(chainFile, record = {}) {
       prevHash: prev ? prev.hash : GENESIS_PREV,
       producer: record.producer == null ? null : String(record.producer),
       trust: record.trust == null ? null : String(record.trust),
-      contentHash: record.contentHash != null
-        ? String(record.contentHash)
-        : contentHash(record.content),
+      contentHash:
+        record.contentHash != null ? String(record.contentHash) : contentHash(record.content),
       at: record.at != null ? record.at : _stamp(),
     };
     entry.hash = _hashEntry(entry);
@@ -148,13 +171,31 @@ function verify(chainFile) {
   for (let i = 0; i < chain.length; i++) {
     const e = chain[i];
     if (e.seq !== i) {
-      return { ok: false, available: true, length: chain.length, brokenAt: i, reason: `seq 不连续：期望 ${i} 实为 ${e.seq}` };
+      return {
+        ok: false,
+        available: true,
+        length: chain.length,
+        brokenAt: i,
+        reason: `seq 不连续：期望 ${i} 实为 ${e.seq}`,
+      };
     }
     if (e.prevHash !== prevHash) {
-      return { ok: false, available: true, length: chain.length, brokenAt: i, reason: `prevHash 断链于 #${i}` };
+      return {
+        ok: false,
+        available: true,
+        length: chain.length,
+        brokenAt: i,
+        reason: `prevHash 断链于 #${i}`,
+      };
     }
     if (_hashEntry(e) !== e.hash) {
-      return { ok: false, available: true, length: chain.length, brokenAt: i, reason: `内容哈希不匹配于 #${i}（疑似篡改）` };
+      return {
+        ok: false,
+        available: true,
+        length: chain.length,
+        brokenAt: i,
+        reason: `内容哈希不匹配于 #${i}（疑似篡改）`,
+      };
     }
     prevHash = e.hash;
   }
@@ -168,19 +209,39 @@ function verify(chainFile) {
  */
 function verifyAgainstEntries(chainFile, entries = []) {
   const base = verify(chainFile);
-  if (!base.ok) return base;
+  if (!base.ok) {
+    return base;
+  }
   const chain = _readRaw(chainFile);
   const byUuid = new Map();
-  for (const e of entries) if (e && e.uuid != null) byUuid.set(String(e.uuid), e);
+  for (const e of entries) {
+    if (e && e.uuid != null) {
+      byUuid.set(String(e.uuid), e);
+    }
+  }
   for (let i = 0; i < chain.length; i++) {
     const link = chain[i];
-    if (link.uuid == null) continue;
+    if (link.uuid == null) {
+      continue;
+    }
     const msg = byUuid.get(String(link.uuid));
     if (!msg) {
-      return { ok: false, available: true, length: chain.length, brokenAt: i, reason: `链记录 #${i} 在 transcript 中缺失（uuid=${link.uuid}，疑似删行）` };
+      return {
+        ok: false,
+        available: true,
+        length: chain.length,
+        brokenAt: i,
+        reason: `链记录 #${i} 在 transcript 中缺失（uuid=${link.uuid}，疑似删行）`,
+      };
     }
     if (contentHash(msg.content) !== link.contentHash) {
-      return { ok: false, available: true, length: chain.length, brokenAt: i, reason: `transcript 正文哈希不匹配于 #${i}（uuid=${link.uuid}，疑似改正文）` };
+      return {
+        ok: false,
+        available: true,
+        length: chain.length,
+        brokenAt: i,
+        reason: `transcript 正文哈希不匹配于 #${i}（uuid=${link.uuid}，疑似改正文）`,
+      };
     }
   }
   return { ok: true, available: true, length: chain.length, brokenAt: null, reason: null };

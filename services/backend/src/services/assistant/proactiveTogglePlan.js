@@ -35,14 +35,31 @@ const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
  */
 function parseProactiveArgs(args) {
   const list = Array.isArray(args) ? args : [];
-  const first = list.length > 0 ? String(list[0] == null ? '' : list[0]).trim().toLowerCase() : '';
+  const first =
+    list.length > 0
+      ? String(list[0] == null ? '' : list[0])
+          .trim()
+          .toLowerCase()
+      : '';
 
-  if (first === '') return { action: 'toggle', valid: true, parseError: null };
-  if (_HELP_WORDS.has(first)) return { action: 'help', valid: true, parseError: null };
-  if (_ON_WORDS.has(first)) return { action: 'on', valid: true, parseError: null };
-  if (_OFF_WORDS.has(first)) return { action: 'off', valid: true, parseError: null };
-  if (_TOGGLE_WORDS.has(first)) return { action: 'toggle', valid: true, parseError: null };
-  if (_STATUS_WORDS.has(first)) return { action: 'status', valid: true, parseError: null };
+  if (first === '') {
+    return { action: 'toggle', valid: true, parseError: null };
+  }
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', valid: true, parseError: null };
+  }
+  if (_ON_WORDS.has(first)) {
+    return { action: 'on', valid: true, parseError: null };
+  }
+  if (_OFF_WORDS.has(first)) {
+    return { action: 'off', valid: true, parseError: null };
+  }
+  if (_TOGGLE_WORDS.has(first)) {
+    return { action: 'toggle', valid: true, parseError: null };
+  }
+  if (_STATUS_WORDS.has(first)) {
+    return { action: 'status', valid: true, parseError: null };
+  }
 
   return { action: 'status', valid: false, parseError: 'unknown_action' };
 }
@@ -56,11 +73,17 @@ function parseProactiveArgs(args) {
  */
 function resolveToggle(currentActive, action) {
   const cur = currentActive === true;
-  if (action === 'status' || action === 'help') return { desired: null, changes: false };
+  if (action === 'status' || action === 'help') {
+    return { desired: null, changes: false };
+  }
   let desired;
-  if (action === 'on') desired = true;
-  else if (action === 'off') desired = false;
-  else desired = !cur; // toggle
+  if (action === 'on') {
+    desired = true;
+  } else if (action === 'off') {
+    desired = false;
+  } else {
+    desired = !cur;
+  } // toggle
   return { desired, changes: desired !== cur };
 }
 
@@ -80,7 +103,9 @@ function buildStatusText(snapshot) {
   }
   // khy 的 tick 消费者 = 记忆 dream 整理(诚实描述真实机制)。
   if (typeof s.dreamNeeded === 'boolean') {
-    lines.push(`  记忆整理(dream): ${s.dreamNeeded ? '待触发' : '暂不需要'}${s.dreamReason ? `(${s.dreamReason})` : ''}`);
+    lines.push(
+      `  记忆整理(dream): ${s.dreamNeeded ? '待触发' : '暂不需要'}${s.dreamReason ? `(${s.dreamReason})` : ''}`
+    );
   }
   if (s.lastDream) {
     lines.push(`  上次整理: ${s.lastDream}`);
@@ -127,7 +152,9 @@ function buildHelpText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_PROACTIVE_COMMAND === undefined ? 'true' : e.KHY_PROACTIVE_COMMAND;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

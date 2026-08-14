@@ -47,6 +47,14 @@ jobs:
         working-directory: services/backend
         run: npm ci
 
+      - name: Lint
+        working-directory: services/backend
+        run: npm run lint
+
+      - name: Test
+        working-directory: services/backend
+        run: npm run test:node
+
       # esbuild is required by packaging/build/esbuild-modules.js and
       # @yao-pkg/pkg by packaging/build/pack-executable.js (pkg@5 is
       # unmaintained and has no node20 base binaries). Versions are pinned
@@ -62,6 +70,9 @@ jobs:
 
       - name: Verify executables
         run: node packaging/build/verify-executable.js --platform ${{ matrix.platform }}
+
+      - name: Audit executables purity
+        run: node packaging/npm/scripts/audit-purity.js --platform ${{ matrix.platform }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

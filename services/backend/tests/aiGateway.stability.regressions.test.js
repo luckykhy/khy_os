@@ -618,8 +618,10 @@ describe('aiGateway stability regressions', () => {
     }));
     gateway._adapters = [bad1, bad2];
 
+    // 503/500 全瞬态失败会触发瞬态整轮自愈重试(默认 3 轮 + 退避),拖慢且与本用例目标
+    // (trace 收尾 / generating 状态清理)无关 → 显式关闭自愈轮次,保持用例聚焦与快速。
     const endTraceSpy = jest.spyOn(aiMonitor, 'endTrace');
-    const result = await gateway.generate('hello');
+    const result = await gateway.generate('hello', { cascadeJitterRounds: 0 });
 
     expect(result.success).toBe(false);
     expect(result.attempts.length).toBeGreaterThan(0);
@@ -801,7 +803,9 @@ describe('aiGateway stability regressions', () => {
 
     gateway._enforceRateLimit = async () => {};
     const refreshSpy = jest.spyOn(gateway, 'refreshAdapters').mockResolvedValue();
-    const result = await gateway.generate('hello');
+    // 503/500 全瞬态失败会触发瞬态整轮自愈重试(默认 3 轮 + 退避),拖慢且与本用例目标
+    // (后台刷新触发)无关 → 显式关闭自愈轮次,保持用例聚焦与快速。
+    const result = await gateway.generate('hello', { cascadeJitterRounds: 0 });
 
     expect(result.success).toBe(false);
     expect(refreshSpy).toHaveBeenCalled();

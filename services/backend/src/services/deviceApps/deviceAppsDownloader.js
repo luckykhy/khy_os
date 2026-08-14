@@ -18,6 +18,7 @@
  */
 
 const MAX_REDIRECTS = 5;
+const _formatBytesAtom = require('../../utils/formatBytes');
 
 /**
  * 把已下载/总字节折算为进度快照(纯函数)。
@@ -29,7 +30,9 @@ const MAX_REDIRECTS = 5;
 function computeProgress(downloaded, total) {
   const d = Number.isFinite(downloaded) && downloaded > 0 ? Math.floor(downloaded) : 0;
   const t = Number.isFinite(total) && total > 0 ? Math.floor(total) : 0;
-  if (t <= 0) return { downloaded: d, total: 0, percent: 0, known: false };
+  if (t <= 0) {
+    return { downloaded: d, total: 0, percent: 0, known: false };
+  }
   const capped = d > t ? t : d; // 防越界(chunk 可能因编码略超)
   const percent = Math.max(0, Math.min(100, Math.round((capped / t) * 100)));
   return { downloaded: capped, total: t, percent, known: true };
@@ -40,14 +43,12 @@ function computeProgress(downloaded, total) {
  * @param {number} n
  * @returns {string}
  */
+// Thin delegate to the canonical formatter (utils/formatBytes). sanitize:true
+// reproduces the old input coercion (non-finite or <= 0 → 0); maxUnit 'TB'
+// matches the old dynamic unit ladder. The old cascaded /1024 divisions are
+// exact powers of two (lossless in IEEE-754), so output is byte-identical.
 function formatBytes(n) {
-  const v = Number.isFinite(n) && n > 0 ? n : 0;
-  if (v < 1024) return `${v} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let x = v / 1024;
-  let i = 0;
-  while (x >= 1024 && i < units.length - 1) { x /= 1024; i++; }
-  return `${x.toFixed(1)} ${units[i]}`;
+  return _formatBytesAtom(n, { maxUnit: 'TB', sanitize: true });
 }
 
 /**
@@ -96,9 +97,15 @@ async function downloadWithProgress(url, destPath, onProgress, opts = {}) {
     const ws = fs.createWriteStream(destPath);
     let settled = false;
     const fail = (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { ws.destroy(); } catch (_) { /* ignore */ }
+      try {
+        ws.destroy();
+      } catch (_) {
+        /* ignore */
+      }
       reject(err);
     };
     response.data.on('data', (chunk) => {
@@ -106,15 +113,25 @@ async function downloadWithProgress(url, destPath, onProgress, opts = {}) {
       const now = _now();
       if (now - lastEmit >= throttleMs) {
         lastEmit = now;
-        try { emit(computeProgress(downloaded, total)); } catch (_) { /* onProgress 不得中断下载 */ }
+        try {
+          emit(computeProgress(downloaded, total));
+        } catch (_) {
+          /* onProgress 不得中断下载 */
+        }
       }
     });
     response.data.on('error', fail);
     ws.on('error', fail);
     ws.on('finish', () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { emit(computeProgress(downloaded, total)); } catch (_) { /* ignore */ }
+      try {
+        emit(computeProgress(downloaded, total));
+      } catch (_) {
+        /* ignore */
+      }
       resolve();
     });
     response.data.pipe(ws);

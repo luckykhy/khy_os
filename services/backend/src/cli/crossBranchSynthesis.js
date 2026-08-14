@@ -33,7 +33,9 @@ const NODE_MARKER_RE = /^\[\[NODE\s+([^\]]+)\]\]\s*$/;
 function synthesisEnabled(env) {
   const e = env || {};
   const raw = e.KHY_CROSS_BRANCH_SYNTHESIS;
-  if (raw === undefined || raw === null) return true;
+  if (raw === undefined || raw === null) {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -57,20 +59,26 @@ function planSynthesis(digests) {
   const targetIds = [];
   const blocks = [];
   for (const d of list) {
-    if (!d || typeof d !== 'object') continue;
+    if (!d || typeof d !== 'object') {
+      continue;
+    }
     const id = _str(d.id);
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     targetIds.push(id);
     const label = _truncate(d.label, 60);
     const status = _str(d.status);
     const memory = _truncate(d.memory, 600);
     const insight = _truncate(d.insight, 400);
-    blocks.push([
-      `[[NODE ${id}]]`,
-      `标签:${label}${status ? `(${status})` : ''}`,
-      memory ? `memory(外向摘要):${memory}` : 'memory:(空)',
-      insight ? `insight(待读):${insight}` : 'insight:(空)',
-    ].join('\n'));
+    blocks.push(
+      [
+        `[[NODE ${id}]]`,
+        `标签:${label}${status ? `(${status})` : ''}`,
+        memory ? `memory(外向摘要):${memory}` : 'memory:(空)',
+        insight ? `insight(待读):${insight}` : 'insight:(空)',
+      ].join('\n')
+    );
   }
 
   const prompt = [
@@ -119,14 +127,16 @@ function applySynthesis(rawText, digests) {
   }
   const text = rawText;
   const known = new Set();
-  for (const d of (Array.isArray(digests) ? digests : [])) {
-    if (d && d.id != null) known.add(_str(d.id));
+  for (const d of Array.isArray(digests) ? digests : []) {
+    if (d && d.id != null) {
+      known.add(_str(d.id));
+    }
   }
 
   let rootSynthesis = '';
 
   const lines = text.split('\n');
-  let mode = null;   // 'root' | 'node'
+  let mode = null; // 'root' | 'node'
   let curNodeId = null;
   let buf = [];
   let sawMarker = false;

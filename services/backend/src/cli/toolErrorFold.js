@@ -30,7 +30,9 @@ const ERR_RENDERED_LINES = 10;
 const LEGACY_ERR_LINES = 3;
 
 function toolErrorFoldEnabled(env = process.env) {
-  const v = String((env && env.KHY_TOOL_ERROR_FOLD) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_TOOL_ERROR_FOLD) || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 

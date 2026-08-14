@@ -14,9 +14,10 @@
  * 绝不注入 nonce),命令侧也不接管。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
 const leaf = require('../../cli/breakCache');
 
 function _dir() {
@@ -42,7 +43,11 @@ const _existsSafe = require('../../utils/existsSyncSafe');
 function readStats() {
   const { stats } = getPaths();
   let raw = '';
-  try { raw = fs.readFileSync(stats, 'utf8'); } catch { raw = ''; }
+  try {
+    raw = fs.readFileSync(stats, 'utf8');
+  } catch {
+    raw = '';
+  }
   return leaf.aggregateStats(raw);
 }
 
@@ -50,19 +55,29 @@ function appendEvent(kind) {
   const { stats } = getPaths();
   try {
     fs.appendFileSync(stats, leaf.buildEvent(Date.now(), kind), 'utf8');
-  } catch { /* best-effort: stats are diagnostic, never block the command */ }
+  } catch {
+    /* best-effort: stats are diagnostic, never block the command */
+  }
 }
 
 function scheduleOnce() {
   const { marker } = getPaths();
-  try { fs.writeFileSync(marker, new Date(Date.now()).toISOString(), 'utf8'); } catch { /* ignore */ }
+  try {
+    fs.writeFileSync(marker, new Date(Date.now()).toISOString(), 'utf8');
+  } catch {
+    /* ignore */
+  }
   appendEvent('once');
   return { marker, stats: readStats() };
 }
 
 function enableAlways() {
   const { always } = getPaths();
-  try { fs.writeFileSync(always, new Date(Date.now()).toISOString(), 'utf8'); } catch { /* ignore */ }
+  try {
+    fs.writeFileSync(always, new Date(Date.now()).toISOString(), 'utf8');
+  } catch {
+    /* ignore */
+  }
   appendEvent('always_on');
   return { always };
 }
@@ -70,8 +85,22 @@ function enableAlways() {
 function disable() {
   const { marker, always } = getPaths();
   let cleared = false;
-  if (_existsSafe(marker)) { try { fs.unlinkSync(marker); cleared = true; } catch { /* ignore */ } }
-  if (_existsSafe(always)) { try { fs.unlinkSync(always); cleared = true; } catch { /* ignore */ } }
+  if (_existsSafe(marker)) {
+    try {
+      fs.unlinkSync(marker);
+      cleared = true;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (_existsSafe(always)) {
+    try {
+      fs.unlinkSync(always);
+      cleared = true;
+    } catch {
+      /* ignore */
+    }
+  }
   appendEvent('always_off');
   return cleared;
 }
@@ -79,7 +108,12 @@ function disable() {
 function clearOnce() {
   const { marker } = getPaths();
   if (_existsSafe(marker)) {
-    try { fs.unlinkSync(marker); return { hadMarker: true, marker }; } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(marker);
+      return { hadMarker: true, marker };
+    } catch {
+      /* ignore */
+    }
   }
   return { hadMarker: false, marker };
 }
@@ -102,15 +136,23 @@ function status() {
  * 返回要前置到系统提示最前面的字符串(空串=不改任何东西)。
  */
 function consumeCacheBreakNonce(env) {
-  if (!leaf.isEnabled(env || process.env)) return '';
+  if (!leaf.isEnabled(env || process.env)) {
+    return '';
+  }
   const { marker, always } = getPaths();
   const onceActive = _existsSafe(marker);
   const alwaysActive = !onceActive && _existsSafe(always);
-  if (!onceActive && !alwaysActive) return '';
+  if (!onceActive && !alwaysActive) {
+    return '';
+  }
   const rand = crypto.randomBytes(8).toString('hex');
   const nonce = leaf.buildNonceComment(Date.now(), rand);
   if (onceActive) {
-    try { fs.unlinkSync(marker); } catch { /* already gone */ }
+    try {
+      fs.unlinkSync(marker);
+    } catch {
+      /* already gone */
+    }
   }
   return nonce;
 }

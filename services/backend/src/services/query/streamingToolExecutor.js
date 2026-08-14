@@ -10,6 +10,8 @@
  * incrementally and execution overlaps with continued streaming.
  */
 
+const crypto = require('crypto');
+
 const MAX_PARALLEL = 5;
 
 /**
@@ -75,7 +77,9 @@ class StreamingToolExecutor {
    * @returns {string} Call ID
    */
   addTool(call) {
-    if (this._aborted) return null;
+    if (this._aborted) {
+      return null;
+    }
 
     const id = call.id || this._uuid();
     const enriched = { ...call, id };
@@ -191,8 +195,25 @@ class StreamingToolExecutor {
   _abortSiblings(exceptId) {
     for (const [id, ac] of this._toolAbortControllers) {
       if (id !== exceptId) {
-        try { ac.abort(); } catch { /* ignore */ }
+        try {
+          ac.abort();
+        } catch {
+          /* ignore */
+        }
       }
+    }
+    // Backfill honest placeholders for queued tools before dropping them,
+    // so the model knows which tools were skipped in the next turn.
+    for (const call of this._serialQueue) {
+      this._completed.push({
+        name: call.name,
+        params: call.params,
+        id: call.id,
+        status: 'error',
+        output: 'Skipped: sibling bash tool failed',
+        elapsed: 0,
+        siblingAborted: true,
+      });
     }
     // Also clear serial queue — no point executing queued tools after bash failure
     this._serialQueue.length = 0;
@@ -294,8 +315,13 @@ class StreamingToolExecutor {
 // ── Helpers ────────────────────────────────────────────────────────
 
 const BASH_LIKE_TOOLS = new Set([
-  'bash', 'shell', 'shellcommand', 'shell_command',
-  'run_shell_command', 'shelltool', 'terminal',
+  'bash',
+  'shell',
+  'shellcommand',
+  'shell_command',
+  'run_shell_command',
+  'shelltool',
+  'terminal',
 ]);
 
 function _isBashLikeTool(name) {
@@ -303,17 +329,32 @@ function _isBashLikeTool(name) {
 }
 
 /**
+ * 稳定序列化：递归对对象键排序，避免键顺序不同导致同一逻辑调用缓存未命中。
+ * Stable JSON serialization with recursively sorted object keys.
+ */
+function _stableStringify(value) {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(_stableStringify).join(',')}]`;
+  }
+  const keys = Object.keys(value).sort();
+  const entries = keys.map((k) => `${JSON.stringify(k)}:${_stableStringify(value[k])}`);
+  return `{${entries.join(',')}}`;
+}
+
+/**
  * 生成工具调用的指纹 hash（用于结果缓存去重）
+ * Use a SHA-1 digest over the normalized name and stably-serialized params
+ * to avoid collisions from a weak 32-bit char hash.
  */
 function _toolCallHash(toolName, params) {
-  const normalized = String(toolName || '').toLowerCase().replace(/[-_]/g, '');
-  const paramStr = JSON.stringify(params || {});
-  let h = 0;
-  const s = `${normalized}:${paramStr}`;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  }
-  return h.toString(36);
+  const normalized = String(toolName || '')
+    .toLowerCase()
+    .replace(/[-_]/g, '');
+  const s = `${normalized}:${_stableStringify(params || {})}`;
+  return crypto.createHash('sha1').update(s).digest('hex');
 }
 
 module.exports = { StreamingToolExecutor };

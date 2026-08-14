@@ -28,7 +28,9 @@ const LEGACY_DEFAULTS = Object.freeze({ small: 0, normal: 1, large: 3 });
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_SEAMLESS_RESUME;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -38,8 +40,12 @@ function isEnabled(env = process.env) {
  * @returns {'small'|'normal'|'large'}
  */
 function _normScale(scale) {
-  const s = String(scale == null ? '' : scale).trim().toLowerCase();
-  if (s === 'small' || s === 'large') return s;
+  const s = String(scale == null ? '' : scale)
+    .trim()
+    .toLowerCase();
+  if (s === 'small' || s === 'large') {
+    return s;
+  }
   return 'normal';
 }
 

@@ -41,14 +41,21 @@ function colonKvAnchorEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_TOOLCALL_COLON_KV_ANCHOR', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_TOOLCALL_COLON_KV_ANCHOR;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -66,7 +73,9 @@ function colonKvAnchorEnabled(env = process.env) {
  */
 function anchoredColonKvRegex(env = process.env) {
   try {
-    if (!colonKvAnchorEnabled(env)) return null;
+    if (!colonKvAnchorEnabled(env)) {
+      return null;
+    }
     return /(?:^|,)\s*(\w+)\s*:\s*(?:"([^"]*?)"|'([^']*?)'|([^,)]+))/g;
   } catch {
     return null;

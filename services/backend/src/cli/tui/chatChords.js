@@ -41,7 +41,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_CHAT_CHORDS;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -55,11 +57,15 @@ function isEnabled(env = process.env) {
  *   命中返回动作名,否则 null(含门控关、缺参、带 ctrl/shift 干扰位的 meta 组合)。
  */
 function resolveChatChord(ev = {}, env = process.env) {
-  if (!isEnabled(env)) return null;
-  const e = (ev && typeof ev === 'object') ? ev : {};
-  const key = (e.key && typeof e.key === 'object') ? e.key : {};
+  if (!isEnabled(env)) {
+    return null;
+  }
+  const e = ev && typeof ev === 'object' ? ev : {};
+  const key = e.key && typeof e.key === 'object' ? e.key : {};
   const input = typeof e.input === 'string' ? e.input.toLowerCase() : '';
-  if (!input) return null;
+  if (!input) {
+    return null;
+  }
 
   const meta = !!key.meta;
   const ctrl = !!key.ctrl;
@@ -68,14 +74,22 @@ function resolveChatChord(ev = {}, env = process.env) {
   // Meta(Alt/Option)+ 字母 —— 必须是「纯 meta」(不带 ctrl,避免与其他组合冲突)。
   // shift 不计较(部分终端 Alt 组合带 shift 位),但 ctrl 同时按下则不是这组 chord。
   if (meta && !ctrl) {
-    if (input === 'p') return 'modelPicker';     // CC chat:modelPicker
-    if (input === 'o') return 'fastMode';        // CC chat:fastMode
-    if (input === 't') return 'thinkingToggle';  // CC chat:thinkingToggle
+    if (input === 'p') {
+      return 'modelPicker';
+    } // CC chat:modelPicker
+    if (input === 'o') {
+      return 'fastMode';
+    } // CC chat:fastMode
+    if (input === 't') {
+      return 'thinkingToggle';
+    } // CC chat:thinkingToggle
     return null;
   }
 
   // Ctrl+T —— 纯 ctrl(不带 meta/shift),显隐任务清单面板。CC app:toggleTodos。
-  if (ctrl && !meta && !shift && input === 't') return 'toggleTasks';
+  if (ctrl && !meta && !shift && input === 't') {
+    return 'toggleTasks';
+  }
 
   return null;
 }

@@ -25,25 +25,29 @@
 
 const path = require('path');
 
+// Canonical chars/4 estimate atom (zero-dep utils leaf; fallback path only).
+const _parseBoolean = require('../utils/parseBoolean');
+const _simpleTokenEstimate = require('../utils/simpleTokenEstimate');
+
 // ── 默认配置（全部可经 env / JSON 覆盖）──────────────────────────────────────
 const DEFAULTS = Object.freeze({
   enabled: true,
-  stripControlChars: true,     // 删除控制字符（保留 \n \t）
-  stripZeroWidth: true,        // 删除零宽字符
-  stripReplacementChar: true,  // 删除 U+FFFD 乱码替换符
-  collapseWhitespace: true,    // 行内多空格/制表符 → 单空格
-  maxBlankLines: 1,            // 连续空行上限（≥2 个空行折叠为该数）
-  collapsePunctRun: true,      // 折叠刷屏标点
-  maxPunctRun: 4,              // 同一标点连续 ≥ 此数才折叠
-  punctRunKeep: 3,             // 折叠后保留个数
-  collapseLetterRuns: false,   // 字母长串折叠（默认关，保守；数字永不折叠）
+  stripControlChars: true, // 删除控制字符（保留 \n \t）
+  stripZeroWidth: true, // 删除零宽字符
+  stripReplacementChar: true, // 删除 U+FFFD 乱码替换符
+  collapseWhitespace: true, // 行内多空格/制表符 → 单空格
+  maxBlankLines: 1, // 连续空行上限（≥2 个空行折叠为该数）
+  collapsePunctRun: true, // 折叠刷屏标点
+  maxPunctRun: 4, // 同一标点连续 ≥ 此数才折叠
+  punctRunKeep: 3, // 折叠后保留个数
+  collapseLetterRuns: false, // 字母长串折叠（默认关，保守；数字永不折叠）
   maxLetterRun: 8,
   letterRunKeep: 3,
-  dedupLines: true,            // 连续重复行去重
-  maxLineRepeat: 3,            // 同一行连续重复 ≥ 此数才折叠
-  lineRepeatKeep: 3,           // 折叠后保留行数
-  trimTrailingWs: true,        // 行尾空白清除
-  maxInputChars: 200000,       // 超长输入跳过（防呆，避免极端正则开销）
+  dedupLines: true, // 连续重复行去重
+  maxLineRepeat: 3, // 同一行连续重复 ≥ 此数才折叠
+  lineRepeatKeep: 3, // 折叠后保留行数
+  trimTrailingWs: true, // 行尾空白清除
+  maxInputChars: 200000, // 超长输入跳过（防呆，避免极端正则开销）
 });
 
 // ── 噪声字符类（全部 new RegExp + \u 转义，纯 ASCII 源）────────────────────────
@@ -61,17 +65,17 @@ const RE_ESSENTIAL = new RegExp('[A-Za-z0-9\\u4E00-\\u9FFF\\u3040-\\u30FF\\uAC00
 const RE_LETTER_RUN = new RegExp('([A-Za-z\\u4E00-\\u9FFF])\\1+', 'g');
 // 代码占位符：用私有区(PUA, Unicode 类别 Co)字符包裹——不属控制/零宽/空白/标点/符号
 // /字母，故清洗管线任一规则都不会触碰它，保证占位符在清洗后仍可被原样还原。
-const PH_HEAD = String.fromCharCode(0xE000) + 'KHYCODE';
-const PH_TAIL = String.fromCharCode(0xE001);
+const PH_HEAD = String.fromCharCode(0xe000) + 'KHYCODE';
+const PH_TAIL = String.fromCharCode(0xe001);
 const RE_PLACEHOLDER = new RegExp('\\uE000KHYCODE(\\d+)\\uE001', 'g');
 
 function _int(v, def) {
   const n = parseInt(String(v), 10);
   return Number.isInteger(n) && n >= 0 ? n : def;
 }
+
 // 布尔解析统一走 parseBoolean 单一真源（base tier：1/true/yes/on ↔ 0/false/no/off，
 // 不含 y/n 简写）。此前此处内联同一套 token 集，与其他模块各自维护易漂移。
-const _parseBoolean = require('../utils/parseBoolean');
 function _bool(v, def) {
   return _parseBoolean(v, def, { extended: false });
 }
@@ -91,9 +95,13 @@ function loadConfig(env = process.env) {
     const fs = require('fs');
     if (fs.existsSync(file)) {
       const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (json && typeof json === 'object') cfg = { ...cfg, ...json };
+      if (json && typeof json === 'object') {
+        cfg = { ...cfg, ...json };
+      }
     }
-  } catch { /* 文件缺失/损坏 → 用默认 */ }
+  } catch {
+    /* 文件缺失/损坏 → 用默认 */
+  }
 
   // ② env 覆盖（KHY_INPUT_SANITIZE* ）
   cfg.enabled = _bool(env.KHY_INPUT_SANITIZE, cfg.enabled);
@@ -112,7 +120,10 @@ const INLINE_RE = /`[^`\n]+`/g;
 
 function _protectCode(text) {
   const store = [];
-  const sub = (m) => { store.push(m); return `${PH_HEAD}${store.length - 1}${PH_TAIL}`; };
+  const sub = (m) => {
+    store.push(m);
+    return `${PH_HEAD}${store.length - 1}${PH_TAIL}`;
+  };
   let out = text.replace(FENCE_RE, sub);
   out = out.replace(INLINE_RE, sub);
   return { out, store };
@@ -132,39 +143,57 @@ let RE_PUNCT_RUN = null;
 try {
   // u 标志 + \p 属性需 Node ≥ 10；用 try 兜底极旧环境。
   RE_PUNCT_RUN = new RegExp('([\\p{P}\\p{S}])\\1+', 'gu');
-} catch { RE_PUNCT_RUN = null; }
+} catch {
+  RE_PUNCT_RUN = null;
+}
 
 function _collapsePunctRuns(text, cfg) {
-  if (!cfg.collapsePunctRun || !RE_PUNCT_RUN) return text;
+  if (!cfg.collapsePunctRun || !RE_PUNCT_RUN) {
+    return text;
+  }
   return text.replace(RE_PUNCT_RUN, (m, ch) => {
-    if (m.length >= cfg.maxPunctRun) return ch.repeat(Math.min(cfg.punctRunKeep, m.length));
+    if (m.length >= cfg.maxPunctRun) {
+      return ch.repeat(Math.min(cfg.punctRunKeep, m.length));
+    }
     return m;
   });
 }
 
 // 可选：字母长串折叠（默认关）。**永不**作用于数字（RE_LETTER_RUN 不含 \d）。
 function _collapseLetterRuns(text, cfg) {
-  if (!cfg.collapseLetterRuns) return text;
+  if (!cfg.collapseLetterRuns) {
+    return text;
+  }
   return text.replace(RE_LETTER_RUN, (m, ch) => {
-    if (m.length >= cfg.maxLetterRun) return ch.repeat(Math.min(cfg.letterRunKeep, m.length));
+    if (m.length >= cfg.maxLetterRun) {
+      return ch.repeat(Math.min(cfg.letterRunKeep, m.length));
+    }
     return m;
   });
 }
 
 // ── 连续重复行去重 ──────────────────────────────────────────────────────────
 function _dedupLines(text, cfg) {
-  if (!cfg.dedupLines) return text;
+  if (!cfg.dedupLines) {
+    return text;
+  }
   const lines = text.split('\n');
   const out = [];
   let i = 0;
   while (i < lines.length) {
     const cur = lines[i];
     let run = 1;
-    while (i + run < lines.length && lines[i + run] === cur) run++;
+    while (i + run < lines.length && lines[i + run] === cur) {
+      run++;
+    }
     if (cur.trim() !== '' && run >= cfg.maxLineRepeat) {
-      for (let k = 0; k < Math.min(cfg.lineRepeatKeep, run); k++) out.push(cur);
+      for (let k = 0; k < Math.min(cfg.lineRepeatKeep, run); k++) {
+        out.push(cur);
+      }
     } else {
-      for (let k = 0; k < run; k++) out.push(cur);
+      for (let k = 0; k < run; k++) {
+        out.push(cur);
+      }
     }
     i += run;
   }
@@ -180,7 +209,8 @@ function _estimateTokens(s) {
   try {
     return require('./textHeuristics').estimateTokens(String(s || ''));
   } catch {
-    return Math.ceil(String(s || '').length / 4);
+    // Thin delegate; byte-identical to Math.ceil(String(s || '').length / 4).
+    return _simpleTokenEstimate(String(s || ''));
   }
 }
 
@@ -196,9 +226,15 @@ function _runPipeline(text, cfg) {
   let s = out;
 
   // ── 清洗：删除纯噪声字符 ──
-  if (cfg.stripControlChars) s = s.replace(RE_CONTROL, '');
-  if (cfg.stripZeroWidth) s = s.replace(RE_ZERO_WIDTH, '');
-  if (cfg.stripReplacementChar) s = s.replace(RE_REPLACEMENT, '');
+  if (cfg.stripControlChars) {
+    s = s.replace(RE_CONTROL, '');
+  }
+  if (cfg.stripZeroWidth) {
+    s = s.replace(RE_ZERO_WIDTH, '');
+  }
+  if (cfg.stripReplacementChar) {
+    s = s.replace(RE_REPLACEMENT, '');
+  }
   s = s.replace(RE_WEIRD_SPACE, ' ');
 
   // ── 矫正：刷屏标点 / 可选字母长串 ──
@@ -206,8 +242,12 @@ function _runPipeline(text, cfg) {
   s = _collapseLetterRuns(s, cfg);
 
   // ── 结构化：行内空白、行尾空白、空行、重复行 ──
-  if (cfg.collapseWhitespace) s = s.replace(/[ \t]{2,}/g, ' ');
-  if (cfg.trimTrailingWs) s = s.replace(/[ \t]+$/gm, '');
+  if (cfg.collapseWhitespace) {
+    s = s.replace(/[ \t]{2,}/g, ' ');
+  }
+  if (cfg.trimTrailingWs) {
+    s = s.replace(/[ \t]+$/gm, '');
+  }
   if (cfg.maxBlankLines >= 0) {
     const max = cfg.maxBlankLines;
     // 连续 (max+2) 个以上换行（= max+1 个以上空行）折叠为 max+1 个换行（保留 max 个空行）
@@ -239,7 +279,7 @@ function _runPipeline(text, cfg) {
  *            reason:string, stats:object }}
  */
 function sanitize(input, opts = {}) {
-  const original = typeof input === 'string' ? input : (input == null ? '' : String(input));
+  const original = typeof input === 'string' ? input : input == null ? '' : String(input);
   const cfg = opts.config || loadConfig();
   const base = {
     original,
@@ -251,9 +291,15 @@ function sanitize(input, opts = {}) {
   };
 
   // 关闭 / 空白 / 超长 → 原样返回
-  if (!cfg.enabled) return { ...base, reason: 'disabled' };
-  if (!original || original.trim() === '') return { ...base, reason: 'empty' };
-  if (original.length > cfg.maxInputChars) return { ...base, reason: 'too-large' };
+  if (!cfg.enabled) {
+    return { ...base, reason: 'disabled' };
+  }
+  if (!original || original.trim() === '') {
+    return { ...base, reason: 'empty' };
+  }
+  if (original.length > cfg.maxInputChars) {
+    return { ...base, reason: 'too-large' };
+  }
 
   let sanitized;
   try {
@@ -263,7 +309,9 @@ function sanitize(input, opts = {}) {
   }
 
   // ── 回退判定（防呆）──
-  if (sanitized === original) return { ...base, reason: 'unchanged' };
+  if (sanitized === original) {
+    return { ...base, reason: 'unchanged' };
+  }
   if (!sanitized || sanitized.trim() === '') {
     return { ...base, fellBack: true, reason: 'degenerate-empty' };
   }
@@ -308,10 +356,14 @@ function sanitizeForModel(input, opts = {}) {
   try {
     res = sanitize(input, opts);
   } catch {
-    return typeof input === 'string' ? input : (input == null ? '' : String(input));
+    return typeof input === 'string' ? input : input == null ? '' : String(input);
   }
   if (typeof opts.onStats === 'function') {
-    try { opts.onStats(res); } catch { /* 观测回调失败不影响主流程 */ }
+    try {
+      opts.onStats(res);
+    } catch {
+      /* 观测回调失败不影响主流程 */
+    }
   }
   return res.fellBack ? res.original : res.sanitized;
 }

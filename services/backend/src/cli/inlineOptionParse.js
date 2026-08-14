@@ -23,7 +23,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_INLINE_OPTION_PARSE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -38,10 +40,14 @@ function isEnabled(env = process.env) {
 function parseInlineOption(rawKey, env = process.env) {
   try {
     const key = String(rawKey == null ? '' : rawKey);
-    if (!isEnabled(env)) return { inline: false, key };
+    if (!isEnabled(env)) {
+      return { inline: false, key };
+    }
     const eq = key.indexOf('=');
     // 等号必须在位置 >0(`--=x`、`--` 之类畸形交回历史分支处理)。
-    if (eq <= 0) return { inline: false, key };
+    if (eq <= 0) {
+      return { inline: false, key };
+    }
     return { inline: true, key: key.slice(0, eq), value: key.slice(eq + 1) };
   } catch {
     return { inline: false, key: String(rawKey == null ? '' : rawKey) };

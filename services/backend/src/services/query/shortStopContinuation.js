@@ -52,7 +52,9 @@ function isEnabled(env) {
 }
 
 function _isNaturalStop(stopReason) {
-  if (!stopReason) return false;
+  if (!stopReason) {
+    return false;
+  }
   return NATURAL_STOP_REASONS.has(String(stopReason).trim().toLowerCase());
 }
 
@@ -68,20 +70,34 @@ function _isNaturalStop(stopReason) {
  */
 function shouldContinue(ctx, env) {
   try {
-    if (!isEnabled(env)) return false;
-    if (!ctx || typeof ctx !== 'object') return false;
-    if (ctx.alreadyUsed === true) return false;
-    if (!_isNaturalStop(ctx.stopReason)) return false;
+    if (!isEnabled(env)) {
+      return false;
+    }
+    if (!ctx || typeof ctx !== 'object') {
+      return false;
+    }
+    if (ctx.alreadyUsed === true) {
+      return false;
+    }
+    if (!_isNaturalStop(ctx.stopReason)) {
+      return false;
+    }
 
     const reply = typeof ctx.reply === 'string' ? ctx.reply : '';
     const trimmed = reply.replace(/[\s　]+$/g, ''); // 只剥尾部空白以判末字符
     const compact = reply.replace(/[\s　]+/g, '');
-    if (compact.length === 0) return false; // 空回复交给别的路径,不在本叶子范围
+    if (compact.length === 0) {
+      return false;
+    } // 空回复交给别的路径,不在本叶子范围
 
     const maxChars = ctx && Number.isFinite(ctx.maxChars) ? ctx.maxChars : DEFAULT_MAX_CHARS;
-    if (compact.length >= maxChars) return false; // 足够长 → 不是早停
+    if (compact.length >= maxChars) {
+      return false;
+    } // 足够长 → 不是早停
 
-    if (TERMINAL_PUNCT_RE.test(trimmed)) return false; // 有终止标点 → 已说完
+    if (TERMINAL_PUNCT_RE.test(trimmed)) {
+      return false;
+    } // 有终止标点 → 已说完
     return true; // 短 + 中途断句 + 自然 stop → 值得续写一次
   } catch {
     return false; // fail-soft
@@ -93,8 +109,10 @@ function shouldContinue(ctx, env) {
  * @returns {string}
  */
 function buildContinuationMessage() {
-  return '[SYSTEM: 续写] 你上一条回复似乎在中途断句、没有把话说完。请**直接接着上文继续**把它说完，'
-    + '不要重复已经说过的内容、不要重新开头、不要道歉，只补上后续部分。';
+  return (
+    '[SYSTEM: 续写] 你上一条回复似乎在中途断句、没有把话说完。请**直接接着上文继续**把它说完，' +
+    '不要重复已经说过的内容、不要重新开头、不要道歉，只补上后续部分。'
+  );
 }
 
 module.exports = {

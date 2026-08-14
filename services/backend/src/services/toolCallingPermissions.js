@@ -19,11 +19,12 @@
  * toolCalling.js 的**同目录兄弟**以保迁移的相对 require 路径字节不变。宿主 module.exports 与
  * executeTool 按**同名 re-import** 接回,调用点字节不变。
  */
-const readline = require('readline');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
 let _chalk;
-const chalk = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const chalk = () => (_chalk ??= require('chalk').default || require('chalk'));
 const { PERMISSIONS_FILE, RISK_LEVELS } = require('./toolCallingBuiltins');
 
 // 宿主描述符解析器,加载时由 setPermissionResolvers 注入一次(打破两条 leaf→host 反向边,
@@ -31,10 +32,13 @@ const { PERMISSIONS_FILE, RISK_LEVELS } = require('./toolCallingBuiltins');
 let _resolveToolDescriptor = null;
 let _findBuiltinTool = null;
 function setPermissionResolvers(resolvers = {}) {
-  if (typeof resolvers.resolveToolDescriptor === 'function') _resolveToolDescriptor = resolvers.resolveToolDescriptor;
-  if (typeof resolvers.findBuiltinTool === 'function') _findBuiltinTool = resolvers.findBuiltinTool;
+  if (typeof resolvers.resolveToolDescriptor === 'function') {
+    _resolveToolDescriptor = resolvers.resolveToolDescriptor;
+  }
+  if (typeof resolvers.findBuiltinTool === 'function') {
+    _findBuiltinTool = resolvers.findBuiltinTool;
+  }
 }
-
 
 // ── Permission mode (CC alignment) ──────────────────────────────────
 // Mirrors Claude Code's four permission modes as a single source of truth:
@@ -55,15 +59,30 @@ function setPermissionResolvers(resolvers = {}) {
 // Cycle order mirrors CC: default → acceptEdits → plan → auto → bypass in the
 // Shift+Tab cycle (see appHostHelpers/replSession); dontAsk is startup/settings
 // only (KHY_PERMISSION_MODE=dontAsk), never cycled — matching CC exactly.
-const PERMISSION_MODES = Object.freeze(['default', 'plan', 'acceptEdits', 'auto', 'dontAsk', 'bypass']);
+const PERMISSION_MODES = Object.freeze([
+  'default',
+  'plan',
+  'acceptEdits',
+  'auto',
+  'dontAsk',
+  'bypass',
+]);
 function _normalizePermissionMode(m) {
   const v = String(m || '').trim();
   // Tolerate CC's spelling 'bypassPermissions' / 'acceptedits' / 'dontask'.
-  if (v === 'bypassPermissions' || v === 'yolo') return 'bypass';
-  if (v.toLowerCase() === 'acceptedits') return 'acceptEdits';
+  if (v === 'bypassPermissions' || v === 'yolo') {
+    return 'bypass';
+  }
+  if (v.toLowerCase() === 'acceptedits') {
+    return 'acceptEdits';
+  }
   const lc = v.toLowerCase();
-  if (lc === 'dontask' || lc === 'dont-ask' || lc === "don'task") return 'dontAsk';
-  if (lc === 'auto') return 'auto';
+  if (lc === 'dontask' || lc === 'dont-ask' || lc === "don'task") {
+    return 'dontAsk';
+  }
+  if (lc === 'auto') {
+    return 'auto';
+  }
   return PERMISSION_MODES.includes(v) ? v : 'default';
 }
 let _permissionMode = _normalizePermissionMode(process.env.KHY_PERMISSION_MODE);
@@ -105,16 +124,25 @@ function permissionModeToProfile(mode) {
  * store touch, and best-effort (store optional).
  */
 function _syncPermissionProfile(mode) {
-  if (process.env.KHY_PERMISSION_STORE === 'false') return;
+  if (process.env.KHY_PERMISSION_STORE === 'false') {
+    return;
+  }
   try {
     require('./permissionStore').setProfile(permissionModeToProfile(mode), { persist: false });
-  } catch { /* permissionStore optional — coherence is best-effort */ }
+  } catch {
+    /* permissionStore optional — coherence is best-effort */
+  }
 }
 
 // Edit-class tools auto-approved under acceptEdits mode (normalized names).
 const _ACCEPT_EDITS_TOOLS = new Set([
-  'write', 'writefile', 'createfile',
-  'edit', 'editfile', 'multiedit', 'applypatch',
+  'write',
+  'writefile',
+  'createfile',
+  'edit',
+  'editfile',
+  'multiedit',
+  'applypatch',
   'notebookedit',
 ]);
 
@@ -124,12 +152,16 @@ let _permissions = null;
  * Load saved tool permissions.
  */
 function loadPermissions() {
-  if (_permissions) return _permissions;
+  if (_permissions) {
+    return _permissions;
+  }
   try {
     if (fs.existsSync(PERMISSIONS_FILE)) {
       _permissions = JSON.parse(fs.readFileSync(PERMISSIONS_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   _permissions = _permissions || { approved: {}, denied: {}, dangerousAcknowledged: false };
   return _permissions;
 }
@@ -140,9 +172,13 @@ function loadPermissions() {
 function savePermissions() {
   try {
     const dir = path.dirname(PERMISSIONS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(_permissions, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -210,7 +246,9 @@ function isApproved(toolName) {
 function approveTool(toolName, persist = false) {
   const perms = loadPermissions();
   perms.approved[toolName] = true;
-  if (persist) savePermissions();
+  if (persist) {
+    savePermissions();
+  }
 }
 
 /**
@@ -218,7 +256,9 @@ function approveTool(toolName, persist = false) {
  */
 function getToolRisk(toolName) {
   const descriptor = _resolveToolDescriptor(toolName);
-  if (!descriptor || !descriptor.tool) return RISK_LEVELS.medium;
+  if (!descriptor || !descriptor.tool) {
+    return RISK_LEVELS.medium;
+  }
   return RISK_LEVELS[descriptor.tool.risk] || RISK_LEVELS.medium;
 }
 
@@ -238,9 +278,10 @@ function formatToolCall(toolName, params) {
   if (params && Object.keys(params).length > 0) {
     display += chalk().dim('  参数:\n');
     for (const [key, value] of Object.entries(params)) {
-      const displayVal = typeof value === 'string' && value.length > 100
-        ? value.slice(0, 100) + '...'
-        : JSON.stringify(value);
+      const displayVal =
+        typeof value === 'string' && value.length > 100
+          ? value.slice(0, 100) + '...'
+          : JSON.stringify(value);
       display += chalk().dim(`    ${key}: `) + displayVal + '\n';
     }
   }
@@ -260,16 +301,26 @@ function formatToolCall(toolName, params) {
  * @returns {'allow'|'allow-always'|'deny'}
  */
 function _decisionFromControl(resp) {
-  if (resp === true) return 'allow';
-  if (resp === 'always' || resp === 'allow-always') return 'allow-always';
+  if (resp === true) {
+    return 'allow';
+  }
+  if (resp === 'always' || resp === 'allow-always') {
+    return 'allow-always';
+  }
   if (resp && typeof resp === 'object') {
     // Tolerate the REPL/SDK object shape: { behavior } or nested { response }.
     let node = resp;
-    if (node.type === 'control_response' && node.response) node = node.response;
-    const inner = (node.response && typeof node.response === 'object') ? node.response : node;
+    if (node.type === 'control_response' && node.response) {
+      node = node.response;
+    }
+    const inner = node.response && typeof node.response === 'object' ? node.response : node;
     const behavior = inner.behavior || node.behavior;
-    if (behavior === 'allow') return 'allow';
-    if (behavior === 'allow-always') return 'allow-always';
+    if (behavior === 'allow') {
+      return 'allow';
+    }
+    if (behavior === 'allow-always') {
+      return 'allow-always';
+    }
   }
   return 'deny';
 }
@@ -300,17 +351,23 @@ function _decisionFromControl(resp) {
  * default for plan mode: only explicitly read-only tools run).
  */
 function _resolveToolBehavior(permissionKey, params) {
-  let isReadOnly = false, isDestructive = false, category, risk;
+  let isReadOnly = false,
+    isDestructive = false,
+    category,
+    risk;
   try {
     const registry = require('../tools');
     const regTool = registry.get(permissionKey);
     if (regTool) {
       isReadOnly = typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly(params) : false;
-      isDestructive = typeof regTool.isDestructive === 'function' ? regTool.isDestructive(params) : false;
+      isDestructive =
+        typeof regTool.isDestructive === 'function' ? regTool.isDestructive(params) : false;
       category = regTool.category;
       risk = regTool.risk;
     }
-  } catch { /* registry not available — conservative defaults */ }
+  } catch {
+    /* registry not available — conservative defaults */
+  }
   return { isReadOnly, isDestructive, category, risk };
 }
 
@@ -320,8 +377,12 @@ async function requestPermission(toolName, params, onControlRequest = null) {
   // A Symbol key cannot be forged by the model through JSON params.
   try {
     const { EXEC_APPROVED } = require('./execApproval');
-    if (EXEC_APPROVED && params && params[EXEC_APPROVED] === true) return 'allow';
-  } catch { /* execApproval optional */ }
+    if (EXEC_APPROVED && params && params[EXEC_APPROVED] === true) {
+      return 'allow';
+    }
+  } catch {
+    /* execApproval optional */
+  }
 
   const descriptor = _resolveToolDescriptor(toolName);
   const permissionKey = descriptor?.resolvedName || toolName;
@@ -342,7 +403,9 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       const riskGate = require('./riskGate');
       const assessment = riskGate.assess(permissionKey, params, descriptor);
       criticalGate = riskGate.isUnbypassableGate(assessment);
-    } catch { /* riskGate optional */ }
+    } catch {
+      /* riskGate optional */
+    }
   }
 
   // ── Permission mode: plan (read-only) — authoritative deny ──────────
@@ -353,11 +416,18 @@ async function requestPermission(toolName, params, onControlRequest = null) {
   // same calls earlier (prompt-free, before the gateway).
   if (_permissionMode === 'plan') {
     const beh = _resolveToolBehavior(permissionKey, params);
-    if (beh.isReadOnly === false) return 'deny';
+    if (beh.isReadOnly === false) {
+      return 'deny';
+    }
   }
 
   // Preflight batch approval — if tool was already approved in a batch, skip prompt
-  if (_preflightContext && (_preflightContext.has(toolName) || _preflightContext.has(permissionKey))) return 'allow';
+  if (
+    _preflightContext &&
+    (_preflightContext.has(toolName) || _preflightContext.has(permissionKey))
+  ) {
+    return 'allow';
+  }
 
   // ── Fine-grained policy middleware (config-driven, opt-in) ──────────
   // Evaluates the call against <dataHome>/permissions.json. A strict no-op when
@@ -380,11 +450,18 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       isDestructive: _beh.isDestructive,
     });
     if (verdict) {
-      if (verdict.decision === 'deny') return 'deny';
-      if (verdict.decision === 'confirm') policyConfirm = true;
-      else if (verdict.decision === 'auto') policyAutoAllow = true;
+      if (verdict.decision === 'deny') {
+        return 'deny';
+      }
+      if (verdict.decision === 'confirm') {
+        policyConfirm = true;
+      } else if (verdict.decision === 'auto') {
+        policyAutoAllow = true;
+      }
     }
-  } catch { /* policy middleware optional — fall through unchanged */ }
+  } catch {
+    /* policy middleware optional — fall through unchanged */
+  }
 
   // New permission store check (if enabled)
   if (process.env.KHY_PERMISSION_STORE !== 'false') {
@@ -399,11 +476,15 @@ async function requestPermission(toolName, params, onControlRequest = null) {
         const registry = require('../tools');
         const regTool = registry.get(permissionKey);
         if (regTool) {
-          isReadOnly = typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly(params) : false;
-          isDestructive = typeof regTool.isDestructive === 'function' ? regTool.isDestructive(params) : false;
+          isReadOnly =
+            typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly(params) : false;
+          isDestructive =
+            typeof regTool.isDestructive === 'function' ? regTool.isDestructive(params) : false;
           category = regTool.category;
         }
-      } catch { /* registry not available */ }
+      } catch {
+        /* registry not available */
+      }
       const decision = permStore.check(permissionKey, params, {
         risk: tool?.risk || 'medium',
         isReadOnly,
@@ -411,21 +492,31 @@ async function requestPermission(toolName, params, onControlRequest = null) {
         category,
       });
       // A persisted 'allow' rule cannot override the critical red line.
-      if (decision === 'allow' && !criticalGate) return 'allow';
-      if (decision === 'deny') return 'deny';
+      if (decision === 'allow' && !criticalGate) {
+        return 'allow';
+      }
+      if (decision === 'deny') {
+        return 'deny';
+      }
       // decision === 'ask' → fall through to interactive prompt
-    } catch { /* permissionStore not available — fall through */ }
+    } catch {
+      /* permissionStore not available — fall through */
+    }
   }
 
   // Policy whitelist auto-allow (auto mode, target in-whitelist). Placed AFTER
   // the persisted-deny check so an explicit store 'deny' still wins, and gated
   // by the critical red line which no whitelist can relax.
-  if (policyAutoAllow && !criticalGate) return 'allow';
+  if (policyAutoAllow && !criticalGate) {
+    return 'allow';
+  }
 
   // Auto-approve safe and low-risk read-only tools. A policy 'confirm' verdict
   // suppresses these blanket auto-grants so the user's prompt is honored.
   const tool = descriptor?.tool || _findBuiltinTool(permissionKey);
-  if (tool && tool.risk === 'safe' && !policyConfirm) return 'allow';
+  if (tool && tool.risk === 'safe' && !policyConfirm) {
+    return 'allow';
+  }
   if (tool && tool.risk === 'low' && !policyConfirm) {
     // Low-risk tools (read_file, glob, grep, etc.) are auto-approved
     // unless they are dynamically destructive based on params
@@ -436,8 +527,12 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       if (regTool && typeof regTool.isDestructive === 'function') {
         isDestructive = regTool.isDestructive(params);
       }
-    } catch { /* registry not available */ }
-    if (!isDestructive) return 'allow';
+    } catch {
+      /* registry not available */
+    }
+    if (!isDestructive) {
+      return 'allow';
+    }
   }
 
   // ── Read-only default-approve (只读默认批准) ─────────────────────────
@@ -459,7 +554,9 @@ async function requestPermission(toolName, params, onControlRequest = null) {
   // KHY_AUTO_APPROVE_READONLY=off.
   if (!criticalGate && !policyConfirm && process.env.KHY_AUTO_APPROVE_READONLY !== 'off') {
     const beh = _resolveToolBehavior(permissionKey, params);
-    if (beh.isReadOnly === true && beh.isDestructive !== true) return 'allow';
+    if (beh.isReadOnly === true && beh.isDestructive !== true) {
+      return 'allow';
+    }
   }
 
   // ── Permission mode auto-approve (CC alignment) ─────────────────────
@@ -469,18 +566,26 @@ async function requestPermission(toolName, params, onControlRequest = null) {
   // auto-approve everything EXCEPT the critical red line, which is unbypassable
   // even under bypass/yolo (DesireCore 不可覆盖红线).
   if (_permissionMode === 'acceptEdits' && !criticalGate && !policyConfirm) {
-    const _norm = String(permissionKey).toLowerCase().replace(/[\s_-]/g, '');
+    const _norm = String(permissionKey)
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
     if (_ACCEPT_EDITS_TOOLS.has(_norm)) {
       const beh = _resolveToolBehavior(permissionKey, params);
-      if (!beh.isDestructive) return 'allow';
+      if (!beh.isDestructive) {
+        return 'allow';
+      }
     }
   }
-  if (_permissionMode === 'bypass' && !criticalGate && !policyConfirm) return 'allow';
+  if (_permissionMode === 'bypass' && !criticalGate && !policyConfirm) {
+    return 'allow';
+  }
 
   // Previously approved (persisted or session). A prior "remember" does not
   // carry over to a critical-risk call — informed consent must be per-instance.
   // A policy 'confirm' verdict likewise overrides a prior session grant.
-  if (!criticalGate && !policyConfirm && (isApproved(toolName) || isApproved(permissionKey))) return 'allow';
+  if (!criticalGate && !policyConfirm && (isApproved(toolName) || isApproved(permissionKey))) {
+    return 'allow';
+  }
 
   // Ink host channel — when the TUI (or any host) provides an interactive
   // approval channel, route through it instead of the classic raw-mode dialog.
@@ -496,18 +601,32 @@ async function requestPermission(toolName, params, onControlRequest = null) {
     try {
       const beh = _resolveToolBehavior(permissionKey, params);
       const { buildIntent } = require('./syscallGateway/intentSchema');
-      const intent = buildIntent({ tool: toolName, params, isReadOnly: beh.isReadOnly, isDestructive: beh.isDestructive, risk: beh.risk });
+      const intent = buildIntent({
+        tool: toolName,
+        params,
+        isReadOnly: beh.isReadOnly,
+        isDestructive: beh.isDestructive,
+        risk: beh.risk,
+      });
       const explanation = require('./syscallGateway/preExecutionExplainer').explain(intent, {});
-      if (explanation) _ctrlInput = { ...params, explanation };
-    } catch { _ctrlInput = params; }
+      if (explanation) {
+        _ctrlInput = { ...params, explanation };
+      }
+    } catch {
+      _ctrlInput = params;
+    }
     // 写入前 diff 预览(editDiffPreview,「TUI 真 code 生产能力」):默认 UI 的 Ink 审批框
     // 此前只收到原始 params → 用户在 default 模式盲批文件编辑。这里在批准前把 before/after
     // 纯计算出来随 input 下发,PermissionsPrompt 复用 ToolLines 的红/绿 diff 渲染,让编辑
     // 在写入前被看清。决不触盘、fail-soft——门控关或任何异常 → 不附带预览,与今日字节等价。
     try {
       const _dp = require('./editDiffPreview').computeEditDiffPreview(toolName, params, {});
-      if (_dp) _ctrlInput = { ..._ctrlInput, diffPreview: _dp };
-    } catch { /* fail-soft:无预览,绝不阻断审批 */ }
+      if (_dp) {
+        _ctrlInput = { ..._ctrlInput, diffPreview: _dp };
+      }
+    } catch {
+      /* fail-soft:无预览,绝不阻断审批 */
+    }
     let ctrlResp = null;
     try {
       ctrlResp = await onControlRequest({
@@ -518,17 +637,31 @@ async function requestPermission(toolName, params, onControlRequest = null) {
           input: _ctrlInput,
         },
       });
-    } catch { ctrlResp = null; }
+    } catch {
+      ctrlResp = null;
+    }
     const decision = _decisionFromControl(ctrlResp);
     // Mirror the classic dialog's persistence so subsequent calls short-circuit.
     const _permMeta = { risk: tool?.risk };
     if (decision === 'allow-always') {
       approveTool(permissionKey, true);
-      try { require('./permissionStore').approve(permissionKey, 'forever', _permMeta); } catch { /* best effort */ }
+      try {
+        require('./permissionStore').approve(permissionKey, 'forever', _permMeta);
+      } catch {
+        /* best effort */
+      }
     } else if (decision === 'allow') {
-      try { require('./permissionStore').approve(permissionKey, 'once', _permMeta); } catch { /* best effort */ }
+      try {
+        require('./permissionStore').approve(permissionKey, 'once', _permMeta);
+      } catch {
+        /* best effort */
+      }
     } else {
-      try { require('./permissionStore').deny(permissionKey, 'session', _permMeta); } catch { /* best effort */ }
+      try {
+        require('./permissionStore').deny(permissionKey, 'session', _permMeta);
+      } catch {
+        /* best effort */
+      }
     }
     return decision;
   }
@@ -542,37 +675,54 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       // through to the legacy text path below.
       const _prompter = require('./permissionPromptPort').getPermissionPrompter();
       const formatPermissionDialog = _prompter && _prompter.prompt;
-      if (!formatPermissionDialog) throw new Error('no interactive prompter registered');
+      if (!formatPermissionDialog) {
+        throw new Error('no interactive prompter registered');
+      }
       const riskInfo = getToolRisk(toolName);
       const reasoning = params._reasoning || '';
 
       // Build diff info for write/edit operations
       let diffInfo;
       try {
-        const _name = String(toolName).toLowerCase().replace(/[\s_-]/g, '');
+        const _name = String(toolName)
+          .toLowerCase()
+          .replace(/[\s_-]/g, '');
         const _filePath = params?.file_path || params?.filePath || params?.path || '';
         if (_filePath && (_name === 'write' || _name === 'writefile' || _name === 'createfile')) {
           // Write: oldContent is existing file (or empty for new files), newContent is params.content
           let oldContent = '';
-          try { oldContent = require('fs').readFileSync(_filePath, 'utf8'); } catch { /* new file */ }
+          try {
+            oldContent = require('fs').readFileSync(_filePath, 'utf8');
+          } catch {
+            /* new file */
+          }
           const newContent = params?.content || '';
           if (newContent) {
             diffInfo = { oldContent, newContent, filePath: _filePath };
           }
-        } else if (_filePath && (_name === 'edit' || _name === 'editfile' || _name === 'multiedit')) {
+        } else if (
+          _filePath &&
+          (_name === 'edit' || _name === 'editfile' || _name === 'multiedit')
+        ) {
           // Edit: apply old_string→new_string to the file content
           const oldStr = params?.old_string || params?.oldString || '';
           const newStr = params?.new_string || params?.newString || '';
           if (oldStr && _filePath) {
             let fileContent = '';
-            try { fileContent = require('fs').readFileSync(_filePath, 'utf8'); } catch { /* skip */ }
+            try {
+              fileContent = require('fs').readFileSync(_filePath, 'utf8');
+            } catch {
+              /* skip */
+            }
             if (fileContent && fileContent.includes(oldStr)) {
               const newContent = fileContent.replace(oldStr, newStr);
               diffInfo = { oldContent: fileContent, newContent, filePath: _filePath };
             }
           }
         }
-      } catch { /* graceful degradation — skip diff */ }
+      } catch {
+        /* graceful degradation — skip diff */
+      }
 
       const result = await formatPermissionDialog(toolName, params, riskInfo, reasoning, diffInfo);
 
@@ -583,20 +733,28 @@ async function requestPermission(toolName, params, onControlRequest = null) {
         try {
           const permStore = require('./permissionStore');
           permStore.approve(permissionKey, 'forever', _dlgMeta);
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       } else if (result === 'allow') {
         try {
           const permStore = require('./permissionStore');
           permStore.approve(permissionKey, 'once', _dlgMeta);
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       } else if (result === 'deny') {
         try {
           const permStore = require('./permissionStore');
           permStore.deny(permissionKey, 'session', _dlgMeta);
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
       return result;
-    } catch { /* dialog not available — fall through to legacy */ }
+    } catch {
+      /* dialog not available — fall through to legacy */
+    }
   }
 
   // Legacy text-based approval (original code)
@@ -612,7 +770,8 @@ async function requestPermission(toolName, params, onControlRequest = null) {
 
   // Interactive selection (Claude Code style)
   const riskInfo = getToolRisk(toolName);
-  const question = chalk().yellow(`  Do you want to execute `) + chalk().bold(toolName) + chalk().yellow('?');
+  const question =
+    chalk().yellow(`  Do you want to execute `) + chalk().bold(toolName) + chalk().yellow('?');
   console.log(question);
   console.log(`  ${chalk().white('❯ 1.')} ${chalk().green('Yes')}`);
   console.log(`    ${chalk().white('2.')} ${chalk().blue('Yes always')}`);
@@ -660,9 +819,13 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       try {
         const { classifyPermissionReply } = require('../cli/permissionReply');
         _nlDecision = classifyPermissionReply(normalized);
-      } catch { _nlDecision = null; }
+      } catch {
+        _nlDecision = null;
+      }
 
-      if (_nlDecision === 'allow') return 'allow';
+      if (_nlDecision === 'allow') {
+        return 'allow';
+      }
       if (_nlDecision === 'allow-always') {
         approveTool(toolName, true); // Persist to disk
         console.log(chalk().green(`  ✓ Permanently trusted "${toolName}"`));
@@ -689,8 +852,13 @@ let _rlProvider = null;
 // Preflight context — set of tool names pre-approved in batch
 let _preflightContext = null;
 
-function setPreflightContext(approvedSet) { _preflightContext = approvedSet; }
-function clearPreflightContext() { _preflightContext = null; }
+function setPreflightContext(approvedSet) {
+  _preflightContext = approvedSet;
+}
+
+function clearPreflightContext() {
+  _preflightContext = null;
+}
 
 function setReadlineProvider(rlOrFn) {
   _rlProvider = rlOrFn;
@@ -722,7 +890,6 @@ function askUser(prompt) {
     });
   });
 }
-
 
 module.exports = {
   // Permission modes & profile

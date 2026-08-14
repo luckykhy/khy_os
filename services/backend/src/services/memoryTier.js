@@ -57,13 +57,19 @@ const OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 分层带来的行为变更(如永久免遗忘)是否启用。默认开,KHY_MEMORY_TIERS∈{0,false,off,no} 关。 */
 function isEnabled() {
-  return !OFF.has(String(process.env.KHY_MEMORY_TIERS || '').trim().toLowerCase());
+  return !OFF.has(
+    String(process.env.KHY_MEMORY_TIERS || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // ── 分类 ─────────────────────────────────────────────────────────────
 
 function _normTier(v) {
-  const t = String(v == null ? '' : v).trim().toLowerCase();
+  const t = String(v == null ? '' : v)
+    .trim()
+    .toLowerCase();
   return TIER_ORDER.includes(t) ? t : null;
 }
 
@@ -80,13 +86,25 @@ function classifyTier(fmOrTier) {
   }
   const fm = fmOrTier && typeof fmOrTier === 'object' ? fmOrTier : {};
   const explicit = _normTier(fm.tier);
-  if (explicit) return explicit;
-  const byType = TYPE_TO_TIER[String(fm.type || '').trim().toLowerCase()];
+  if (explicit) {
+    return explicit;
+  }
+  const byType =
+    TYPE_TO_TIER[
+      String(fm.type || '')
+        .trim()
+        .toLowerCase()
+    ];
   return byType || DEFAULT_TIER;
 }
 
-function isPermanent(fmOrTier) { return classifyTier(fmOrTier) === TIERS.PERMANENT; }
-function isShortTerm(fmOrTier) { return classifyTier(fmOrTier) === TIERS.SHORT_TERM; }
+function isPermanent(fmOrTier) {
+  return classifyTier(fmOrTier) === TIERS.PERMANENT;
+}
+
+function isShortTerm(fmOrTier) {
+  return classifyTier(fmOrTier) === TIERS.SHORT_TERM;
+}
 
 // ── 遗忘策略 ─────────────────────────────────────────────────────────
 
@@ -114,7 +132,9 @@ function forgetPolicy(tier) {
  * @returns {boolean}
  */
 function isForgetEligible(fmOrTier) {
-  if (!isEnabled()) return true;
+  if (!isEnabled()) {
+    return true;
+  }
   return forgetPolicy(classifyTier(fmOrTier)).autoForget;
 }
 

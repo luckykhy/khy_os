@@ -360,8 +360,9 @@ describe('kiro adapter stale profileArn → 403 fallback', () => {
     expect(tokenData.profileArn).toBe('arn:aws:iam::444444:profile/stale-persist');
     expect(tokenData._profileArnSource).toBe('profile_cache');
 
-    // Wait for async persistObservedToken to execute
-    await new Promise(r => setTimeout(r, 50));
+    // getAccessToken triggers assignCachedToken → defers pool persistence until
+    // a successful generate() verifies the token. Flush it explicitly here.
+    await adapter._flushPendingPersist();
 
     // The profileArn saved to pool should be null (not the stale one)
     expect(saveObservedToken).toHaveBeenCalled();

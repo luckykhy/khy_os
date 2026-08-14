@@ -27,7 +27,9 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_REWIND_PERSIST;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -38,17 +40,28 @@ function isEnabled(env = process.env) {
 const REWIND_PERSIST_FIELDS = Object.freeze(['checkpointId']);
 
 function _present(obj, k) {
-  return obj && typeof obj === 'object'
-    && Object.prototype.hasOwnProperty.call(obj, k)
-    && obj[k] !== undefined && obj[k] !== null && obj[k] !== '';
+  return (
+    obj &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, k) &&
+    obj[k] !== undefined &&
+    obj[k] !== null &&
+    obj[k] !== ''
+  );
 }
 
 /** 从消息里取出回溯字段(仅含存在者)。纯读、绝不抛。 */
 function pickRewindFields(msg) {
   const out = {};
   try {
-    for (const k of REWIND_PERSIST_FIELDS) if (_present(msg, k)) out[k] = msg[k];
-  } catch { /* fail-soft */ }
+    for (const k of REWIND_PERSIST_FIELDS) {
+      if (_present(msg, k)) {
+        out[k] = msg[k];
+      }
+    }
+  } catch {
+    /* fail-soft */
+  }
   return out;
 }
 
@@ -62,10 +75,20 @@ function pickRewindFields(msg) {
  */
 function carryRewindFields(src, dst, env = process.env) {
   try {
-    if (!dst || typeof dst !== 'object') return dst;
-    if (!isEnabled(env)) return dst;
-    for (const k of REWIND_PERSIST_FIELDS) if (_present(src, k)) dst[k] = src[k];
-  } catch { /* fail-soft */ }
+    if (!dst || typeof dst !== 'object') {
+      return dst;
+    }
+    if (!isEnabled(env)) {
+      return dst;
+    }
+    for (const k of REWIND_PERSIST_FIELDS) {
+      if (_present(src, k)) {
+        dst[k] = src[k];
+      }
+    }
+  } catch {
+    /* fail-soft */
+  }
   return dst;
 }
 
@@ -108,9 +131,10 @@ function describeRewindResume() {
   return {
     gate: 'KHY_REWIND_PERSIST',
     fields: REWIND_PERSIST_FIELDS.slice(),
-    summary: '让逐回合回溯(rewind)跨会话恢复存活:把「user 消息 ↔ 回合检查点 id」随 JSONL transcript '
-      + '往返(append/restore/resume 三端共用本契约),readline `khy rewind <n>` 据此逐回合精确恢复代码;'
-      + '缺 id 时诚实退回最近检查点。',
+    summary:
+      '让逐回合回溯(rewind)跨会话恢复存活:把「user 消息 ↔ 回合检查点 id」随 JSONL transcript ' +
+      '往返(append/restore/resume 三端共用本契约),readline `khy rewind <n>` 据此逐回合精确恢复代码;' +
+      '缺 id 时诚实退回最近检查点。',
   };
 }
 

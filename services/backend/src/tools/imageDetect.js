@@ -17,15 +17,22 @@
  */
 
 const { defineTool } = require('./_baseTool');
+
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { guardedReadFileSync } = require('./guardedReadFileSync');
+const path = require('path');
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 const SUPPORTED_FORMATS = new Set([
-  '.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp', '.gif',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.bmp',
+  '.tiff',
+  '.tif',
+  '.webp',
+  '.gif',
 ]);
 
 const MIME_MAP = {
@@ -43,21 +50,21 @@ const MIME_MAP = {
 
 const DETECTION_PROMPTS = {
   objects:
-    'Detect and list all distinct objects in this image. For each object provide: '
-    + 'a label, an approximate count, and its rough position (e.g. top-left, center, bottom-right). '
-    + 'Return a compact Markdown table with columns: Object | Count | Position | Notes. '
-    + 'After the table, add a one-sentence scene summary. Be precise; do not invent objects.',
+    'Detect and list all distinct objects in this image. For each object provide: ' +
+    'a label, an approximate count, and its rough position (e.g. top-left, center, bottom-right). ' +
+    'Return a compact Markdown table with columns: Object | Count | Position | Notes. ' +
+    'After the table, add a one-sentence scene summary. Be precise; do not invent objects.',
   scene:
-    'Describe this image: the overall scene, setting, main subjects, notable activities, '
-    + 'colors, and mood. Then list the 5 most prominent objects. Keep it factual and concise.',
+    'Describe this image: the overall scene, setting, main subjects, notable activities, ' +
+    'colors, and mood. Then list the 5 most prominent objects. Keep it factual and concise.',
   faces:
-    'Analyze people in this image. Report: number of people, their approximate positions, '
-    + 'visible attributes (posture, apparent activity, clothing colors). '
-    + 'Do NOT guess identity, age, gender, ethnicity, or emotion as fact — describe only what is visibly present.',
+    'Analyze people in this image. Report: number of people, their approximate positions, ' +
+    'visible attributes (posture, apparent activity, clothing colors). ' +
+    'Do NOT guess identity, age, gender, ethnicity, or emotion as fact — describe only what is visibly present.',
   text:
-    'Detect any text visible in this image (signs, labels, UI, documents). '
-    + 'For each text region report the text content and its position. '
-    + 'Preserve layout. If there is no text, say so.',
+    'Detect any text visible in this image (signs, labels, UI, documents). ' +
+    'For each text region report the text content and its position. ' +
+    'Preserve layout. If there is no text, say so.',
 };
 
 /**
@@ -69,29 +76,41 @@ const DETECTION_PROMPTS = {
 function _buildPrompt(mode, query) {
   const base = DETECTION_PROMPTS[mode] || DETECTION_PROMPTS.objects;
   if (query && query.trim()) {
-    return `${base}\n\nAdditionally, focus on this specific request: "${query.trim()}". `
-      + 'Answer it directly using only what is visible in the image.';
+    return (
+      `${base}\n\nAdditionally, focus on this specific request: "${query.trim()}". ` +
+      'Answer it directly using only what is visible in the image.'
+    );
   }
   return base;
 }
 
 const _resolvePath = require('../utils/resolveToolPath');
 
+const { guardedReadFileSync } = require('./guardedReadFileSync');
+
 // ─── Tool Definition ─────────────────────────────────────────────────────────
 
 module.exports = defineTool({
   name: 'image_detect',
   description:
-    'Detect objects and analyze the content of an image using a vision-capable model. '
-    + 'Modes: objects (list objects with counts and positions), scene (describe the whole image), '
-    + 'faces (analyze people without guessing identity), text (detect visible text). '
-    + 'Optionally pass a query to focus on a specific question about the image.',
+    'Detect objects and analyze the content of an image using a vision-capable model. ' +
+    'Modes: objects (list objects with counts and positions), scene (describe the whole image), ' +
+    'faces (analyze people without guessing identity), text (detect visible text). ' +
+    'Optionally pass a query to focus on a specific question about the image.',
   category: 'analysis',
   risk: 'low',
   isReadOnly: true,
   isConcurrencySafe: true,
   searchHint: 'image object detection vision recognize analyze picture',
-  aliases: ['imageDetect', 'detect_objects', 'image_recognition', 'analyze_image', '图像识别', '物体检测', '识别图片'],
+  aliases: [
+    'imageDetect',
+    'detect_objects',
+    'image_recognition',
+    'analyze_image',
+    '图像识别',
+    '物体检测',
+    '识别图片',
+  ],
 
   inputSchema: {
     imagePath: {
@@ -109,15 +128,20 @@ module.exports = defineTool({
     query: {
       type: 'string',
       maxLength: 500,
-      description: 'Optional specific question to focus the analysis (e.g. "how many cars are red?").',
+      description:
+        'Optional specific question to focus the analysis (e.g. "how many cars are red?").',
     },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       validateNotDevicePath(input.imagePath),
-      validateNotUNCPath(input.imagePath),
+      validateNotUNCPath(input.imagePath)
     );
   },
 

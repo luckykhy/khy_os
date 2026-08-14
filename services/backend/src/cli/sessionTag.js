@@ -15,13 +15,17 @@
 
 function isEnabled(env) {
   const raw = env && env.KHY_TAG;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 规范化单个标签:转串、trim、内部空白折叠为单空格。空 → null。 */
 function normalizeTag(tag) {
-  if (tag == null) return null;
+  if (tag == null) {
+    return null;
+  }
   const t = String(tag).trim().replace(/\s+/g, ' ');
   return t === '' ? null : t;
 }
@@ -35,10 +39,15 @@ function parseTagArgs(tokens) {
   const out = [];
   const seen = new Set();
   for (const raw of list) {
-    if (raw == null) continue;
+    if (raw == null) {
+      continue;
+    }
     for (const piece of String(raw).split(',')) {
       const t = normalizeTag(piece);
-      if (t && !seen.has(t)) { seen.add(t); out.push(t); }
+      if (t && !seen.has(t)) {
+        seen.add(t);
+        out.push(t);
+      }
     }
   }
   return out;
@@ -56,7 +65,10 @@ function applyTags(existing, requested) {
   const curSet = new Set();
   for (const e of Array.isArray(existing) ? existing : []) {
     const t = normalizeTag(e);
-    if (t && !curSet.has(t)) { curSet.add(t); cur.push(t); }
+    if (t && !curSet.has(t)) {
+      curSet.add(t);
+      cur.push(t);
+    }
   }
   const req = parseTagArgs(requested);
   const added = [];

@@ -26,87 +26,102 @@
         @blur="inputFocused = false"
       ></canvas>
       <div v-if="status !== 'streaming' || !firstFrame" class="khyos-overlay">
-        <el-icon class="is-loading" v-if="connecting || status === 'booting' || status === 'capturing'"><Loading /></el-icon>
+        <el-icon
+          class="is-loading"
+          v-if="connecting || status === 'booting' || status === 'capturing'"
+          ><Loading
+        /></el-icon>
         <div class="khyos-overlay-text">{{ overlayText }}</div>
       </div>
     </div>
     <div class="khyos-hint">
       桌面画面由内核 VGA 帧缓冲经 QEMU <code>screendump</code> 截取，实时推送至浏览器。
-      <strong>点击画面后</strong>可用<strong>键盘 / 鼠标</strong>交互（实验特性，经 QEMU 注入内核）。
+      <strong>点击画面后</strong>可用<strong>键盘 / 鼠标</strong>交互（实验特性，经 QEMU
+      注入内核）。
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
-import request from '@/api/request'
-import { useUserStore } from '@/stores/user'
-import { Monitor, Loading } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import request from '@/api/request';
+import { useUserStore } from '@/stores/user';
+import { Monitor, Loading } from '@element-plus/icons-vue';
 
-const router = useRouter()
-const userStore = useUserStore()
+const router = useRouter();
+const userStore = useUserStore();
 
-const stageEl = ref(null)
-const canvasEl = ref(null)
-const status = ref('idle') // idle|booting|streaming|capturing|error|stopped
-const connecting = ref(false)
-const firstFrame = ref(false)
-const errorText = ref('')
-const inputFocused = ref(false)
+const stageEl = ref(null);
+const canvasEl = ref(null);
+const status = ref('idle'); // idle|booting|streaming|capturing|error|stopped
+const connecting = ref(false);
+const firstFrame = ref(false);
+const errorText = ref('');
+const inputFocused = ref(false);
 
-let ws = null
-let authed = false
-let manualClose = false
-let ctx = null
+let ws = null;
+let authed = false;
+let manualClose = false;
+let ctx = null;
 
 const statusTag = computed(() => {
   switch (status.value) {
-    case 'booting': return { type: 'warning', label: '启动中' }
-    case 'streaming': return { type: 'success', label: '实时' }
-    case 'capturing': return { type: 'warning', label: '采集中' }
-    case 'error': return { type: 'danger', label: '错误' }
-    case 'stopped': return { type: 'info', label: '已停止' }
-    default: return { type: 'info', label: '未连接' }
+    case 'booting':
+      return { type: 'warning', label: '启动中' };
+    case 'streaming':
+      return { type: 'success', label: '实时' };
+    case 'capturing':
+      return { type: 'warning', label: '采集中' };
+    case 'error':
+      return { type: 'danger', label: '错误' };
+    case 'stopped':
+      return { type: 'info', label: '已停止' };
+    default:
+      return { type: 'info', label: '未连接' };
   }
-})
+});
 
 const overlayText = computed(() => {
-  if (errorText.value) return errorText.value
-  if (status.value === 'capturing') return '正在采集桌面画面…'
-  if (status.value === 'booting' || connecting.value) return '正在连接内核桌面…'
-  if (status.value === 'stopped') return '桌面已停止'
-  return '等待画面…'
-})
+  if (errorText.value) return errorText.value;
+  if (status.value === 'capturing') return '正在采集桌面画面…';
+  if (status.value === 'booting' || connecting.value) return '正在连接内核桌面…';
+  if (status.value === 'stopped') return '桌面已停止';
+  return '等待画面…';
+});
 
 // Mirror KhyOsTerminal.vue's resolveWsUrl so both views share the /ws endpoint.
 function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`
-  if (typeof window === 'undefined') return normalizedPath
-  const origin = String(window.location.origin || '').trim()
-  const base = String(request.defaults.baseURL || '').trim()
-  const url = base ? new URL(base, origin) : new URL(origin)
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  url.pathname = normalizedPath
-  url.search = ''
-  url.hash = ''
-  return url.toString()
+  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
+  if (typeof window === 'undefined') return normalizedPath;
+  const origin = String(window.location.origin || '').trim();
+  const base = String(request.defaults.baseURL || '').trim();
+  const url = base ? new URL(base, origin) : new URL(origin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = normalizedPath;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
 }
 
 function drawFrame(b64, width, height) {
-  const canvas = canvasEl.value
-  if (!canvas) return
+  const canvas = canvasEl.value;
+  if (!canvas) return;
   if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width
-    canvas.height = height
+    canvas.width = width;
+    canvas.height = height;
   }
-  if (!ctx) ctx = canvas.getContext('2d')
-  const img = new Image()
+  if (!ctx) ctx = canvas.getContext('2d');
+  const img = new Image();
   img.onload = () => {
-    try { ctx.drawImage(img, 0, 0, width, height) } catch { /* ignore */ }
-    firstFrame.value = true
-  }
-  img.src = `data:image/png;base64,${b64}`
+    try {
+      ctx.drawImage(img, 0, 0, width, height);
+    } catch {
+      /* ignore */
+    }
+    firstFrame.value = true;
+  };
+  img.src = `data:image/png;base64,${b64}`;
 }
 
 // ── Desktop input (browser → /ws → QEMU HMP → kernel) ──────────────────────
@@ -118,146 +133,164 @@ function drawFrame(b64, width, height) {
 // QEMU's mouse_button state order directly. All sends are best-effort and no-op
 // unless authed — a dropped input must never break the view.
 function sendInput(payload) {
-  if (!ws || !authed) return
+  if (!ws || !authed) return;
   try {
-    ws.send(JSON.stringify({ type: 'khyos_desktop_input', ...payload }))
-  } catch { /* best-effort — dropped input is non-fatal */ }
+    ws.send(JSON.stringify({ type: 'khyos_desktop_input', ...payload }));
+  } catch {
+    /* best-effort — dropped input is non-fatal */
+  }
 }
 
 function onCanvasKeydown(ev) {
-  if (!inputFocused.value) return
+  if (!inputFocused.value) return;
   // Keep the guest from losing keys to browser defaults (Backspace navigation,
   // Tab focus change, arrow scrolling) while the canvas is focused.
-  ev.preventDefault()
-  sendInput({ kind: 'key', key: ev.key, ctrlKey: ev.ctrlKey, altKey: ev.altKey })
+  ev.preventDefault();
+  sendInput({ kind: 'key', key: ev.key, ctrlKey: ev.ctrlKey, altKey: ev.altKey });
 }
 
 function onCanvasMouseMove(ev) {
-  if (!inputFocused.value) return
+  if (!inputFocused.value) return;
   // Relative deltas straight from the browser; the guest kernel clamps and draws
   // its own cursor. Skip zero-motion frames to avoid flooding the HMP channel.
-  const dx = ev.movementX | 0
-  const dy = ev.movementY | 0
-  if (dx === 0 && dy === 0) return
-  sendInput({ kind: 'mouse', dx, dy })
+  const dx = ev.movementX | 0;
+  const dy = ev.movementY | 0;
+  if (dx === 0 && dy === 0) return;
+  sendInput({ kind: 'mouse', dx, dy });
 }
 
 function onCanvasMouseButton(ev) {
   // mousedown implicitly focuses the canvas (tabindex); forward the button state.
-  const buttons = ev.buttons | 0
-  sendInput({ kind: 'mouse', buttons })
+  const buttons = ev.buttons | 0;
+  sendInput({ kind: 'mouse', buttons });
 }
 
 function closeSocket() {
   if (ws) {
-    manualClose = true
+    manualClose = true;
     try {
-      if (authed) ws.send(JSON.stringify({ type: 'khyos_desktop_stop' }))
-    } catch { /* ignore */ }
-    try { ws.close() } catch { /* ignore */ }
-    ws = null
+      if (authed) ws.send(JSON.stringify({ type: 'khyos_desktop_stop' }));
+    } catch {
+      /* ignore */
+    }
+    try {
+      ws.close();
+    } catch {
+      /* ignore */
+    }
+    ws = null;
   }
-  authed = false
+  authed = false;
 }
 
 function connect() {
-  if (connecting.value) return
-  connecting.value = true
-  manualClose = false
-  authed = false
-  errorText.value = ''
-  status.value = 'booting'
+  if (connecting.value) return;
+  connecting.value = true;
+  manualClose = false;
+  authed = false;
+  errorText.value = '';
+  status.value = 'booting';
 
-  ws = new WebSocket(resolveWsUrl('/ws'))
+  ws = new WebSocket(resolveWsUrl('/ws'));
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'auth', token: userStore.token || '' }))
-  }
+    ws.send(JSON.stringify({ type: 'auth', token: userStore.token || '' }));
+  };
 
   ws.onmessage = (event) => {
-    let msg = null
-    try { msg = JSON.parse(String(event.data || '{}')) } catch { return }
-    const type = String(msg?.type || '')
+    let msg = null;
+    try {
+      msg = JSON.parse(String(event.data || '{}'));
+    } catch {
+      return;
+    }
+    const type = String(msg?.type || '');
 
     if (type === 'auth_ok') {
-      authed = true
-      connecting.value = false
+      authed = true;
+      connecting.value = false;
       // Boot the kernel (idempotent if a terminal session already started it),
       // then begin the desktop frame stream.
-      ws.send(JSON.stringify({ type: 'khyos_start' }))
-      ws.send(JSON.stringify({ type: 'khyos_desktop_start' }))
-      return
+      ws.send(JSON.stringify({ type: 'khyos_start' }));
+      ws.send(JSON.stringify({ type: 'khyos_desktop_start' }));
+      return;
     }
     if (type === 'auth_error') {
-      connecting.value = false
-      status.value = 'error'
-      errorText.value = `认证失败: ${msg.message || ''}`
-      return
+      connecting.value = false;
+      status.value = 'error';
+      errorText.value = `认证失败: ${msg.message || ''}`;
+      return;
     }
-    if (!authed) return
+    if (!authed) return;
 
     if (type === 'khyos_frame') {
-      status.value = 'streaming'
-      drawFrame(msg.data || '', msg.width || 1024, msg.height || 768)
-      return
+      status.value = 'streaming';
+      drawFrame(msg.data || '', msg.width || 1024, msg.height || 768);
+      return;
     }
     if (type === 'khyos_desktop_status') {
       if (msg.status === 'error' || msg.status === 'unavailable') {
-        status.value = 'error'
-        errorText.value = msg.message || '桌面查看不可用'
+        status.value = 'error';
+        errorText.value = msg.message || '桌面查看不可用';
       } else if (msg.status === 'capturing') {
         // Transient — keep whatever frames we have; show a soft state pre-first-frame.
-        if (!firstFrame.value) status.value = 'capturing'
+        if (!firstFrame.value) status.value = 'capturing';
       } else if (msg.status === 'streaming') {
-        if (!firstFrame.value) status.value = 'booting'
+        if (!firstFrame.value) status.value = 'booting';
       } else if (msg.status === 'stopped') {
-        status.value = 'stopped'
+        status.value = 'stopped';
       }
-      return
+      return;
     }
     if (type === 'khyos_status') {
-      if (msg.status === 'error') { status.value = 'error'; errorText.value = msg.message || '内核启动失败' }
-      if (msg.status === 'exited') { status.value = 'stopped'; errorText.value = 'QEMU 已退出' }
-      return
+      if (msg.status === 'error') {
+        status.value = 'error';
+        errorText.value = msg.message || '内核启动失败';
+      }
+      if (msg.status === 'exited') {
+        status.value = 'stopped';
+        errorText.value = 'QEMU 已退出';
+      }
+      return;
     }
     if (type === 'error') {
-      errorText.value = msg.message || ''
+      errorText.value = msg.message || '';
     }
-  }
+  };
 
   ws.onerror = () => {
-    connecting.value = false
-    status.value = 'error'
-    errorText.value = 'WebSocket 连接失败'
-  }
+    connecting.value = false;
+    status.value = 'error';
+    errorText.value = 'WebSocket 连接失败';
+  };
 
   ws.onclose = () => {
-    connecting.value = false
-    authed = false
+    connecting.value = false;
+    authed = false;
     if (!manualClose && status.value === 'streaming') {
-      status.value = 'stopped'
-      errorText.value = '连接已断开。点击「重新连接」继续。'
+      status.value = 'stopped';
+      errorText.value = '连接已断开。点击「重新连接」继续。';
     }
-  }
+  };
 }
 
 function reconnect() {
-  closeSocket()
-  firstFrame.value = false
-  connect()
+  closeSocket();
+  firstFrame.value = false;
+  connect();
 }
 
 function goTerminal() {
-  router.push('/khyos')
+  router.push('/khyos');
 }
 
 onMounted(() => {
-  connect()
-})
+  connect();
+});
 
 onBeforeUnmount(() => {
-  closeSocket()
-})
+  closeSocket();
+});
 </script>
 
 <style scoped>

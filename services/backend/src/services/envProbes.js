@@ -35,8 +35,8 @@
  * env_optimize report omits the health-probe section (byte-identical fallback).
  */
 
-const os = require('os');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 function _probesOn() {
@@ -50,17 +50,35 @@ function _probesOn() {
 /** Disk fullness on the root/system drive — a "situation you may not notice". */
 function _probeDiskPressure() {
   let hw;
-  try { hw = require('./hardwareProfileService'); } catch { return null; }
+  try {
+    hw = require('./hardwareProfileService');
+  } catch {
+    return null;
+  }
   let d;
-  try { d = hw.detectDisk(); } catch { return null; }
-  if (!d || !d.totalMB) return null;
+  try {
+    d = hw.detectDisk();
+  } catch {
+    return null;
+  }
+  if (!d || !d.totalMB) {
+    return null;
+  }
   const pct = d.usePercent || 0;
   const availGB = (d.availMB || 0) / 1024;
   if (pct >= 95) {
-    return { severity: 'critical', detail: `系统盘已用 ${pct}%，剩余仅 ${availGB.toFixed(1)} GB`, hint: '清理垃圾或迁移大文件，磁盘将满会导致写入失败' };
+    return {
+      severity: 'critical',
+      detail: `系统盘已用 ${pct}%，剩余仅 ${availGB.toFixed(1)} GB`,
+      hint: '清理垃圾或迁移大文件，磁盘将满会导致写入失败',
+    };
   }
   if (pct >= 85) {
-    return { severity: 'warning', detail: `系统盘已用 ${pct}%，剩余 ${availGB.toFixed(1)} GB`, hint: '建议运行「磁盘清理」回收空间' };
+    return {
+      severity: 'warning',
+      detail: `系统盘已用 ${pct}%，剩余 ${availGB.toFixed(1)} GB`,
+      hint: '建议运行「磁盘清理」回收空间',
+    };
   }
   return null;
 }
@@ -68,15 +86,30 @@ function _probeDiskPressure() {
 /** Memory pressure — sustained high usage degrades every subsequent action. */
 function _probeMemoryPressure() {
   let total, free;
-  try { total = os.totalmem(); free = os.freemem(); } catch { return null; }
-  if (!total) return null;
+  try {
+    total = os.totalmem();
+    free = os.freemem();
+  } catch {
+    return null;
+  }
+  if (!total) {
+    return null;
+  }
   const usedPct = Math.round((1 - free / total) * 100);
   const freeMB = Math.round(free / 1048576);
   if (usedPct >= 95) {
-    return { severity: 'high', detail: `内存已用 ${usedPct}%，可用仅 ${freeMB} MB`, hint: '关闭占用内存的进程，或减小本地模型并发' };
+    return {
+      severity: 'high',
+      detail: `内存已用 ${usedPct}%，可用仅 ${freeMB} MB`,
+      hint: '关闭占用内存的进程，或减小本地模型并发',
+    };
   }
   if (usedPct >= 90) {
-    return { severity: 'warning', detail: `内存已用 ${usedPct}%，可用 ${freeMB} MB`, hint: '内存偏紧，重负载任务可能变慢' };
+    return {
+      severity: 'warning',
+      detail: `内存已用 ${usedPct}%，可用 ${freeMB} MB`,
+      hint: '内存偏紧，重负载任务可能变慢',
+    };
   }
   return null;
 }
@@ -88,15 +121,27 @@ function _probeLoadAverage() {
     const la = os.loadavg();
     load = Array.isArray(la) ? la[0] : 0;
     cores = os.cpus().length || 1;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
   // loadavg is 0 on Windows (unsupported) — skip rather than misreport.
-  if (!load || load <= 0) return null;
+  if (!load || load <= 0) {
+    return null;
+  }
   const ratio = load / cores;
   if (ratio >= 4) {
-    return { severity: 'high', detail: `1 分钟负载 ${load.toFixed(2)}（${cores} 核，约 ${ratio.toFixed(1)}×）`, hint: '系统严重过载，任务会明显变慢' };
+    return {
+      severity: 'high',
+      detail: `1 分钟负载 ${load.toFixed(2)}（${cores} 核，约 ${ratio.toFixed(1)}×）`,
+      hint: '系统严重过载，任务会明显变慢',
+    };
   }
   if (ratio >= 2) {
-    return { severity: 'warning', detail: `1 分钟负载 ${load.toFixed(2)}（${cores} 核，约 ${ratio.toFixed(1)}×）`, hint: '负载偏高，可能有失控进程' };
+    return {
+      severity: 'warning',
+      detail: `1 分钟负载 ${load.toFixed(2)}（${cores} 核，约 ${ratio.toFixed(1)}×）`,
+      hint: '负载偏高，可能有失控进程',
+    };
   }
   return null;
 }
@@ -104,15 +149,25 @@ function _probeLoadAverage() {
 /** Temp directory writability — a broken/read-only tmp breaks many operations. */
 function _probeTempWritable() {
   let dir;
-  try { dir = os.tmpdir(); } catch { return null; }
-  if (!dir) return null;
+  try {
+    dir = os.tmpdir();
+  } catch {
+    return null;
+  }
+  if (!dir) {
+    return null;
+  }
   const probe = path.join(dir, `.khy-envprobe-${process.pid}`);
   try {
     fs.writeFileSync(probe, 'ok');
     fs.unlinkSync(probe);
     return null; // writable → healthy
   } catch (err) {
-    return { severity: 'critical', detail: `临时目录不可写: ${dir}`, hint: `修复权限或磁盘(${err && err.code || 'IO error'})，否则大量操作会失败` };
+    return {
+      severity: 'critical',
+      detail: `临时目录不可写: ${dir}`,
+      hint: `修复权限或磁盘(${(err && err.code) || 'IO error'})，否则大量操作会失败`,
+    };
   }
 }
 
@@ -125,18 +180,38 @@ function _probeTempWritable() {
  */
 function _probeConfigHomeWritable() {
   let home;
-  try { home = path.join(os.homedir(), '.khy'); } catch { return null; }
-  if (!home) return null;
+  try {
+    home = require('../utils/dataHome').getDataHome();
+  } catch {
+    try {
+      home = path.join(os.homedir(), '.khy');
+    } catch {
+      return null;
+    }
+  }
+  if (!home) {
+    return null;
+  }
   let exists = false;
-  try { exists = fs.existsSync(home) && fs.statSync(home).isDirectory(); } catch { return null; }
-  if (!exists) return null; // not initialized yet — not a defect
+  try {
+    exists = fs.existsSync(home) && fs.statSync(home).isDirectory();
+  } catch {
+    return null;
+  }
+  if (!exists) {
+    return null;
+  } // not initialized yet — not a defect
   const probe = path.join(home, `.envprobe-${process.pid}`);
   try {
     fs.writeFileSync(probe, 'ok');
     fs.unlinkSync(probe);
     return null; // writable → healthy
   } catch (err) {
-    return { severity: 'critical', detail: `配置目录不可写: ${home}`, hint: `修复权限(${err && err.code || 'IO error'})，否则配置/会话/模型缓存无法持久化` };
+    return {
+      severity: 'critical',
+      detail: `配置目录不可写: ${home}`,
+      hint: `修复权限(${(err && err.code) || 'IO error'})，否则配置/会话/模型缓存无法持久化`,
+    };
   }
 }
 
@@ -152,18 +227,34 @@ function _probeNodeRuntime() {
     const pkg = require('../../package.json');
     const spec = pkg && pkg.engines && pkg.engines.node;
     const m = typeof spec === 'string' ? spec.match(/(\d+)/) : null;
-    if (m) floor = parseInt(m[1], 10);
-  } catch { return null; }
-  if (!floor) return null; // no declared floor → nothing to compare against
+    if (m) {
+      floor = parseInt(m[1], 10);
+    }
+  } catch {
+    return null;
+  }
+  if (!floor) {
+    return null;
+  } // no declared floor → nothing to compare against
   let major = 0;
   try {
-    const cur = String(process.versions && process.versions.node || '');
+    const cur = String((process.versions && process.versions.node) || '');
     const m = cur.match(/^(\d+)/);
-    if (m) major = parseInt(m[1], 10);
-  } catch { return null; }
-  if (!major) return null;
+    if (m) {
+      major = parseInt(m[1], 10);
+    }
+  } catch {
+    return null;
+  }
+  if (!major) {
+    return null;
+  }
   if (major < floor) {
-    return { severity: 'high', detail: `Node.js ${process.versions.node} 低于要求的 ≥${floor}`, hint: `升级 Node.js 到 ${floor} 或更高，否则部分功能会静默失效` };
+    return {
+      severity: 'high',
+      detail: `Node.js ${process.versions.node} 低于要求的 ≥${floor}`,
+      hint: `升级 Node.js 到 ${floor} 或更高，否则部分功能会静默失效`,
+    };
   }
   return null;
 }
@@ -178,19 +269,36 @@ function _probeNodeRuntime() {
  */
 function _probePathIntegrity() {
   let raw;
-  try { raw = String(process.env.PATH || ''); } catch { return null; }
-  if (!raw) return null;
+  try {
+    raw = String(process.env.PATH || '');
+  } catch {
+    return null;
+  }
+  if (!raw) {
+    return null;
+  }
   const sep = process.platform === 'win32' ? ';' : ':';
-  const entries = raw.split(sep).map((e) => e.trim()).filter(Boolean);
-  if (entries.length === 0) return null;
+  const entries = raw
+    .split(sep)
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (entries.length === 0) {
+    return null;
+  }
   let missing = 0;
   const sample = [];
   for (const e of entries) {
     let ok = false;
-    try { ok = fs.existsSync(e); } catch { ok = false; }
+    try {
+      ok = fs.existsSync(e);
+    } catch {
+      ok = false;
+    }
     if (!ok) {
       missing++;
-      if (sample.length < 3) sample.push(e);
+      if (sample.length < 3) {
+        sample.push(e);
+      }
     }
   }
   // A couple of phantom entries is normal noise; only flag a meaningfully broken
@@ -224,7 +332,12 @@ const _PROBES = [
   { key: 'disk-pressure', label: '磁盘空间', run: _probeDiskPressure },
   { key: 'memory-pressure', label: '内存压力', run: _probeMemoryPressure },
   // load average is meaningless on Windows (always 0) — scope to POSIX-y OSes.
-  { key: 'cpu-load', label: 'CPU 负载', run: _probeLoadAverage, platforms: ['linux', 'macos', 'android', 'harmonyos'] },
+  {
+    key: 'cpu-load',
+    label: 'CPU 负载',
+    run: _probeLoadAverage,
+    platforms: ['linux', 'macos', 'android', 'harmonyos'],
+  },
   { key: 'temp-writable', label: '临时目录', run: _probeTempWritable },
   { key: 'config-home-writable', label: '配置目录', run: _probeConfigHomeWritable },
   { key: 'node-runtime', label: 'Node 运行时', run: _probeNodeRuntime },
@@ -249,15 +362,29 @@ const _platformCtx = require('../utils/platformCtx');
  * @returns {Array<{key:string, label:string, severity:string, detail:string, hint?:string}>}
  */
 function runProbes() {
-  if (!_probesOn()) return [];
+  if (!_probesOn()) {
+    return [];
+  }
   const ctx = _platformCtx();
   const findings = [];
   for (const p of _PROBES) {
-    if (!ctx.appliesTo(p, ctx.id)) continue; // platform-scoped out
+    if (!ctx.appliesTo(p, ctx.id)) {
+      continue;
+    } // platform-scoped out
     let f = null;
-    try { f = p.run(); } catch { f = null; }
+    try {
+      f = p.run();
+    } catch {
+      f = null;
+    }
     if (f && f.detail) {
-      findings.push({ key: p.key, label: p.label, severity: f.severity || 'warning', detail: f.detail, hint: f.hint || '' });
+      findings.push({
+        key: p.key,
+        label: p.label,
+        severity: f.severity || 'warning',
+        detail: f.detail,
+        hint: f.hint || '',
+      });
     }
   }
   return findings;

@@ -11,27 +11,53 @@
  *   - ~ and $HOME expansion, %USERPROFILE% on Windows
  *   - Auto-generates filename if only a directory is given
  */
-const { defineTool } = require('./_baseTool');
 const { spawn } = require('child_process');
-const { safeKill } = require('./platformUtils');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
+
+const { defineTool } = require('./_baseTool');
+const { safeKill } = require('./platformUtils');
 
 const DOC_HELPER = path.join(__dirname, '../services/docHelper.py');
 const MAX_TEXT_SIZE = 2 * 1024 * 1024; // 2 MB text limit
+// Default IDLE window (no stdout/stderr progress) before aborting a stalled
+// helper. This is a sliding timeout, not a hard wall-clock deadline, and is
+// env-overridable per the project's zero-hardcode / sliding-timeout rule.
+const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
+
+/**
+ * Resolve the idle (no-progress) timeout in ms. Honors
+ * KHY_CREATEDOC_IDLE_TIMEOUT_MS when it is a positive finite number,
+ * otherwise falls back to DEFAULT_IDLE_TIMEOUT_MS.
+ * @returns {number}
+ */
+function _resolveIdleTimeoutMs() {
+  const raw = Number(process.env.KHY_CREATEDOC_IDLE_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_IDLE_TIMEOUT_MS;
+}
 
 let _enabled = null;
 function _checkEnabled() {
-  if (!fs.existsSync(DOC_HELPER)) return false;
+  if (!fs.existsSync(DOC_HELPER)) {
+    return false;
+  }
   try {
-    require('child_process').execFileSync('python3', ['--version'], { stdio: 'ignore', timeout: 3000 });
+    require('child_process').execFileSync('python3', ['--version'], {
+      stdio: 'ignore',
+      timeout: 3000,
+    });
     return true;
   } catch {
     try {
-      require('child_process').execFileSync('python', ['--version'], { stdio: 'ignore', timeout: 3000 });
+      require('child_process').execFileSync('python', ['--version'], {
+        stdio: 'ignore',
+        timeout: 3000,
+      });
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -46,7 +72,11 @@ function _resolvePath(rawPath, cwd) {
     p = path.join(os.homedir(), p.slice(1));
   }
   // Map a desktop-alias folder to the OS-canonical desktop (best-effort no-op).
-  try { p = require('./_userDirs').normalizeDesktopPath(path.resolve(cwd, p)); } catch { /* ignore */ }
+  try {
+    p = require('./_userDirs').normalizeDesktopPath(path.resolve(cwd, p));
+  } catch {
+    /* ignore */
+  }
   return path.resolve(cwd, p);
 }
 
@@ -60,23 +90,75 @@ function _runText2Docx(pythonPath, text, outputPath) {
 
     let stdout = '';
     let stderr = '';
-    let _timer = setTimeout(() => {
+    let settled = false;
+
+    // Idle-aware (sliding) timeout: the child is only killed after it produces
+    // NO stdout/stderr progress for the idle window. Every output chunk resets
+    // the countdown, so a slow-but-alive conversion is never killed mid-flight.
+    const idleTimeoutMs = _resolveIdleTimeoutMs();
+    let _timer = null;
+    const clearIdleTimer = () => {
+      if (_timer) {
+        clearTimeout(_timer);
+        _timer = null;
+      }
+    };
+    const onIdleTimeout = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearIdleTimer();
       safeKill(child);
-      reject(new Error('Document creation timed out (60s)'));
-    }, 60000);
+      // Report honestly what was done and what remains — never pretend success.
+      const idleSec = Math.round(idleTimeoutMs / 1000);
+      const tail = (stderr.trim() || stdout.trim()).slice(-200);
+      reject(
+        new Error(
+          `Document creation aborted after ${idleSec}s of no output from the ` +
+            `Python helper (idle timeout). The Python process was terminated; the ` +
+            `.docx at "${outputPath}" was NOT confirmed written.` +
+            (tail ? ` Last output: ${tail}` : '')
+        )
+      );
+    };
+    const armIdleTimer = () => {
+      clearIdleTimer();
+      _timer = setTimeout(onIdleTimeout, idleTimeoutMs);
+      // unref() so a pending idle timer never holds the event loop open.
+      if (_timer.unref) {
+        _timer.unref();
+      }
+    };
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', d => { stdout += d; });
-    child.stderr.on('data', d => { stderr += d; });
+    // Any progress (stdout/stderr chunk) counts as activity and resets the idle
+    // countdown — this is the sliding behavior that replaces the hard 60s kill.
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      armIdleTimer();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      armIdleTimer();
+    });
 
-    child.on('error', err => {
-      clearTimeout(_timer);
+    child.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearIdleTimer();
       reject(new Error(`Python process error: ${err.message}`));
     });
 
-    child.on('close', code => {
-      clearTimeout(_timer);
+    child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearIdleTimer();
       if (code !== 0) {
         reject(new Error(`Python exit code ${code}: ${stderr}`));
         return;
@@ -87,17 +169,23 @@ function _runText2Docx(pythonPath, text, outputPath) {
         reject(new Error(`Failed to parse output: ${e.message}`));
       }
     });
+
+    // Start the initial idle countdown (covers a child that never emits output).
+    armIdleTimer();
   });
 }
 
 module.exports = defineTool({
   name: 'createDocument',
-  description: 'Create a Word (.docx) document from text content and save to the specified path. Supports Chinese and English text. Use this to create reports, articles, or any formatted document.',
+  description:
+    'Create a Word (.docx) document from text content and save to the specified path. Supports Chinese and English text. Use this to create reports, articles, or any formatted document.',
   category: 'filesystem',
   risk: 'medium',
   isReadOnly: false,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
   isConcurrencySafe: true,
@@ -124,10 +212,14 @@ module.exports = defineTool({
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       input.outputPath ? validateNotUNCPath(input.outputPath) : { valid: true },
-      input.outputPath ? validateNotDevicePath(input.outputPath) : { valid: true },
+      input.outputPath ? validateNotDevicePath(input.outputPath) : { valid: true }
     );
   },
 
@@ -137,7 +229,9 @@ module.exports = defineTool({
   },
 
   getToolUseSummary(input) {
-    if (!input?.outputPath) return null;
+    if (!input?.outputPath) {
+      return null;
+    }
     return `创建 Word 文档：${input.outputPath}`;
   },
 
@@ -174,7 +268,9 @@ module.exports = defineTool({
     {
       const { validateNoPathTraversal } = require('./inputValidators');
       const confineCheck = validateNoPathTraversal(outputPath);
-      if (!confineCheck.valid) return { success: false, error: confineCheck.message };
+      if (!confineCheck.valid) {
+        return { success: false, error: confineCheck.message };
+      }
     }
 
     // Build final text: optional title + content

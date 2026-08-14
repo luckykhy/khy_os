@@ -27,7 +27,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env) {
   const raw = env && env.KHY_CONTROL_REQUEST_GUARD;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -65,10 +67,14 @@ function resolveTimeoutMs(env, opts) {
 function guardControlRequest(promise, opts = {}) {
   const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
   // 门控关 → 逐字节回退:await 原 promise,零行为差异。
-  if (!isEnabled(env)) return promise;
+  if (!isEnabled(env)) {
+    return promise;
+  }
 
   // 非 thenable 的意外输入:直接透传,绝不抛。
-  if (!promise || typeof promise.then !== 'function') return promise;
+  if (!promise || typeof promise.then !== 'function') {
+    return promise;
+  }
 
   const signal = opts.signal || null;
   const timeoutMs = resolveTimeoutMs(env, opts);
@@ -76,9 +82,13 @@ function guardControlRequest(promise, opts = {}) {
   const _clearTimeout = opts.clearTimeout || clearTimeout;
 
   // 已中断:立刻 fail-closed,连 race 都不必起。
-  if (signal && signal.aborted) return Promise.resolve(null);
+  if (signal && signal.aborted) {
+    return Promise.resolve(null);
+  }
   // 无中断信号且无超时 → 无可赛跑者,行为等价于 await 原 promise。
-  if (!signal && !(timeoutMs > 0)) return promise;
+  if (!signal && !(timeoutMs > 0)) {
+    return promise;
+  }
 
   return new Promise((resolve) => {
     let settled = false;
@@ -86,11 +96,26 @@ function guardControlRequest(promise, opts = {}) {
     let onAbort = null;
 
     const cleanup = () => {
-      if (timer !== null) { try { _clearTimeout(timer); } catch { /* ignore */ } timer = null; }
-      if (signal && onAbort) { try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ } }
+      if (timer !== null) {
+        try {
+          _clearTimeout(timer);
+        } catch {
+          /* ignore */
+        }
+        timer = null;
+      }
+      if (signal && onAbort) {
+        try {
+          signal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
+      }
     };
     const settle = (fn, val) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       cleanup();
       fn(val);
@@ -101,16 +126,22 @@ function guardControlRequest(promise, opts = {}) {
     // reject 归一为 null,与调用点 catch 的结果一致,避免未处理拒绝)。
     promise.then(
       (v) => settle(resolve, v),
-      () => settle(resolve, null),
+      () => settle(resolve, null)
     );
 
     if (signal) {
       onAbort = () => settle(resolve, null);
-      try { signal.addEventListener('abort', onAbort, { once: true }); } catch { /* ignore */ }
+      try {
+        signal.addEventListener('abort', onAbort, { once: true });
+      } catch {
+        /* ignore */
+      }
     }
     if (timeoutMs > 0) {
       timer = _setTimeout(() => settle(resolve, null), timeoutMs);
-      if (timer && typeof timer.unref === 'function') timer.unref();
+      if (timer && typeof timer.unref === 'function') {
+        timer.unref();
+      }
     }
   });
 }

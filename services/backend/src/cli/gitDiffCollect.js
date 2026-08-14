@@ -29,15 +29,19 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function includeUntrackedEnabled(env = process.env) {
-  const flag = String((env && env.KHY_DIFF_INCLUDE_UNTRACKED) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_DIFF_INCLUDE_UNTRACKED) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
 function _stdout(result) {
   // runGit 约定返回 { stdout }；防呆:非对象 / stdout 缺失 → ''。
-  if (!result || typeof result !== 'object') return '';
+  if (!result || typeof result !== 'object') {
+    return '';
+  }
   const out = result.stdout;
-  return typeof out === 'string' ? out : (out == null ? '' : String(out));
+  return typeof out === 'string' ? out : out == null ? '' : String(out);
 }
 
 const DEFAULT_MAX_UNTRACKED = 50;
@@ -52,28 +56,43 @@ const DEFAULT_MAX_UNTRACKED = 50;
  * @returns {string} 合并后的 unified diff 文本(已 trim 各段;调用方可再 .trim())。
  */
 function collectWorkingTreeDiff(runGit, env = process.env, opts = {}) {
-  const run = typeof runGit === 'function'
-    ? (args) => { try { return runGit(args); } catch (_e) { return { stdout: '' }; } }
-    : () => ({ stdout: '' });
+  const run =
+    typeof runGit === 'function'
+      ? (args) => {
+          try {
+            return runGit(args);
+          } catch (_e) {
+            return { stdout: '' };
+          }
+        }
+      : () => ({ stdout: '' });
 
   const tracked = _stdout(run(['diff'])).trim();
 
   // 门控关 → 逐字节回退历史(只裸 git diff)。
-  if (!includeUntrackedEnabled(env)) return tracked;
+  if (!includeUntrackedEnabled(env)) {
+    return tracked;
+  }
 
   const listRaw = _stdout(run(['ls-files', '--others', '--exclude-standard', '-z']));
   const untracked = listRaw.split('\0').filter(Boolean);
 
   let max = Number(opts && opts.maxUntracked);
-  if (!Number.isFinite(max) || max < 0) max = DEFAULT_MAX_UNTRACKED;
+  if (!Number.isFinite(max) || max < 0) {
+    max = DEFAULT_MAX_UNTRACKED;
+  }
 
   const parts = [];
-  if (tracked) parts.push(tracked);
+  if (tracked) {
+    parts.push(tracked);
+  }
 
   const shown = untracked.slice(0, max);
   for (const f of shown) {
     const synth = _stdout(run(['diff', '--no-index', '--', '/dev/null', f])).trim();
-    if (synth) parts.push(synth);
+    if (synth) {
+      parts.push(synth);
+    }
   }
 
   const omitted = untracked.length - shown.length;

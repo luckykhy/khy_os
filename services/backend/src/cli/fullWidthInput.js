@@ -18,15 +18,16 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function fullWidthInputEnabled(env = process.env) {
-  const flag = String((env && env.KHY_FULLWIDTH_INPUT) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_FULLWIDTH_INPUT) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
 // CC 逐字节移植:全角数字 ０-９(U+FF10..U+FF19)→ 半角 0-9,偏移恒 0xFEE0。
 function normalizeFullWidthDigits(input) {
-  return String(input == null ? '' : input).replace(
-    /[０-９]/g,
-    (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0),
+  return String(input == null ? '' : input).replace(/[０-９]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
   );
 }
 
@@ -37,12 +38,16 @@ function normalizeFullWidthSpace(input) {
 
 // 门控感知封装(call-site 直接调):门控关 → 原样返回(逐字节回退);门控开 → 折半角。
 function foldDigits(input, env = process.env) {
-  if (!fullWidthInputEnabled(env)) return input;
+  if (!fullWidthInputEnabled(env)) {
+    return input;
+  }
   return normalizeFullWidthDigits(input);
 }
 
 function foldSpace(input, env = process.env) {
-  if (!fullWidthInputEnabled(env)) return input;
+  if (!fullWidthInputEnabled(env)) {
+    return input;
+  }
   return normalizeFullWidthSpace(input);
 }
 

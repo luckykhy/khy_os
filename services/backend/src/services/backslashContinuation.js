@@ -25,7 +25,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_BACKSLASH_NEWLINE;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return true;
@@ -42,16 +44,27 @@ function isEnabled(env = process.env) {
  */
 function shouldContinue(text, offset, env = process.env) {
   try {
-    if (!isEnabled(env)) return false;
-    if (typeof text !== 'string') return false;
+    if (!isEnabled(env)) {
+      return false;
+    }
+    if (typeof text !== 'string') {
+      return false;
+    }
     const n = typeof offset === 'number' ? offset : text.length;
-    if (!(n > 0) || n > text.length) return false;
-    if (text.charAt(n - 1) !== '\\') return false;
+    if (!(n > 0) || n > text.length) {
+      return false;
+    }
+    if (text.charAt(n - 1) !== '\\') {
+      return false;
+    }
     // 数光标前连续反斜杠个数:奇数 → 最后一个未被转义 = 续行。
     let count = 0;
     let i = n - 1;
-    while (i >= 0 && text.charAt(i) === '\\') { count += 1; i -= 1; }
-    return (count % 2) === 1;
+    while (i >= 0 && text.charAt(i) === '\\') {
+      count += 1;
+      i -= 1;
+    }
+    return count % 2 === 1;
   } catch {
     return false;
   }

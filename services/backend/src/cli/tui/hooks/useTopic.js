@@ -24,7 +24,11 @@ const React = require('react');
 let _titleSvc = null;
 function _services() {
   if (_titleSvc === null) {
-    try { _titleSvc = require('../../../services/sessionTitleService'); } catch { _titleSvc = false; }
+    try {
+      _titleSvc = require('../../../services/sessionTitleService');
+    } catch {
+      _titleSvc = false;
+    }
   }
   return { titleSvc: _titleSvc };
 }
@@ -39,31 +43,51 @@ const SIMILARITY_THRESHOLD = 0.5;
 const _CJK = /[㐀-䶿一-鿿豈-﫿]/;
 
 function _tokenSet(text) {
-  const s = String(text || '').trim().slice(0, 200).toLowerCase();
+  const s = String(text || '')
+    .trim()
+    .slice(0, 200)
+    .toLowerCase();
   const tokens = new Set();
   // Latin / alnum words.
   for (const w of s.split(/[^a-z0-9_㐀-鿿]+/)) {
-    if (w && !_CJK.test(w)) tokens.add(w);
+    if (w && !_CJK.test(w)) {
+      tokens.add(w);
+    }
   }
   // CJK character bigrams (and singletons for length-1 runs).
   const cjkRuns = s.match(/[㐀-䶿一-鿿豈-﫿]+/g) || [];
   for (const run of cjkRuns) {
-    if (run.length === 1) { tokens.add(run); continue; }
-    for (let i = 0; i < run.length - 1; i++) tokens.add(run.slice(i, i + 2));
+    if (run.length === 1) {
+      tokens.add(run);
+      continue;
+    }
+    for (let i = 0; i < run.length - 1; i++) {
+      tokens.add(run.slice(i, i + 2));
+    }
   }
   return tokens;
 }
 
 function _isSameTopic(a, b) {
-  if (!a || !b) return false;
-  if (String(a).trim() === String(b).trim()) return true;
+  if (!a || !b) {
+    return false;
+  }
+  if (String(a).trim() === String(b).trim()) {
+    return true;
+  }
   const wa = _tokenSet(a);
   const wb = _tokenSet(b);
-  if (wa.size === 0 || wb.size === 0) return false;
+  if (wa.size === 0 || wb.size === 0) {
+    return false;
+  }
   let overlap = 0;
-  for (const t of wa) { if (wb.has(t)) overlap++; }
+  for (const t of wa) {
+    if (wb.has(t)) {
+      overlap++;
+    }
+  }
   const unionSize = new Set([...wa, ...wb]).size;
-  return (overlap / unionSize) > SIMILARITY_THRESHOLD;
+  return overlap / unionSize > SIMILARITY_THRESHOLD;
 }
 
 // A one-shot completion shim exposing the `query(prompt, opts)` shape that
@@ -78,25 +102,37 @@ function _titleGateway() {
         taskScale: 'small',
         maxTokens: opts.maxTokens || 20,
         temperature: opts.temperature != null ? opts.temperature : 0.3,
+        // Minimal passthrough so callers' requestSource reaches generate();
+        // titling is fire-and-forget background work by default (fast-fail
+        // on overload instead of retrying, see KHY_BG_FAST_FAIL).
+        requestSource: opts.requestSource || 'background',
       });
-      return res && (res.content || res.text) || '';
+      return (res && (res.content || res.text)) || '';
     },
   };
 }
 
 function _lastUserMessage(messages) {
-  if (!Array.isArray(messages)) return null;
+  if (!Array.isArray(messages)) {
+    return null;
+  }
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i] && messages[i].role === 'user') return messages[i];
+    if (messages[i] && messages[i].role === 'user') {
+      return messages[i];
+    }
   }
   return null;
 }
 
 function _lastAssistantText(messages) {
-  if (!Array.isArray(messages)) return '';
+  if (!Array.isArray(messages)) {
+    return '';
+  }
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (m && m.role === 'assistant') return m.content || '';
+    if (m && m.role === 'assistant') {
+      return m.content || '';
+    }
   }
   return '';
 }
@@ -112,25 +148,39 @@ function useTopic(messages) {
 
   React.useEffect(() => {
     const lastUser = _lastUserMessage(messages);
-    if (!lastUser || !lastUser.content) return;
+    if (!lastUser || !lastUser.content) {
+      return;
+    }
     // Skip if this is the same message object we already processed.
-    if (seedRef.current === lastUser) return;
+    if (seedRef.current === lastUser) {
+      return;
+    }
 
     const { titleSvc } = _services();
-    if (!titleSvc) { return; }
+    if (!titleSvc) {
+      return;
+    }
 
     const prevSeed = seedRef.current;
     const isSwitch = !prevSeed || !_isSameTopic(lastUser.content, prevSeed.content);
 
-    if (!isSwitch) return; // same subject — keep the existing topic
+    if (!isSwitch) {
+      return;
+    } // same subject — keep the existing topic
 
     // Mark this message as the new seed regardless of refine outcome.
     seedRef.current = lastUser;
 
     // (2) Coarse, instant title.
     let coarse = '';
-    try { coarse = titleSvc.generateTitle(lastUser.content); } catch { coarse = ''; }
-    if (coarse) setTopic(coarse);
+    try {
+      coarse = titleSvc.generateTitle(lastUser.content);
+    } catch {
+      coarse = '';
+    }
+    if (coarse) {
+      setTopic(coarse);
+    }
 
     // (3) Background AI refine; replace in place when it resolves.
     const token = ++refineTokenRef.current;
@@ -140,12 +190,16 @@ function useTopic(messages) {
         .then(() => titleSvc.generateTitleAI(lastUser.content, reply, _titleGateway()))
         .then((refined) => {
           // Stale guard: a newer switch happened while we were refining.
-          if (token !== refineTokenRef.current) return;
+          if (token !== refineTokenRef.current) {
+            return;
+          }
           if (refined && typeof refined === 'string' && refined.trim()) {
             setTopic(refined.trim());
           }
         })
-        .catch(() => { /* generateTitleAI already falls back internally */ });
+        .catch(() => {
+          /* generateTitleAI already falls back internally */
+        });
     }
   }, [messages]);
 

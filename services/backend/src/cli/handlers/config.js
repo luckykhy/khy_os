@@ -15,7 +15,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
 const { parseApiKeyEntries, extractPrimaryApiKey } = require('../../services/apiKeyFormat');
 
 // ── Constants ──
@@ -80,22 +79,36 @@ const PROVIDER_TO_ADAPTER = Object.freeze({
 });
 
 function _adapterToProvider(adapter) {
-  const key = String(adapter || '').trim().toLowerCase();
-  if (!key) return '';
-  if (key === 'relay_api') return 'custom';
+  const key = String(adapter || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return '';
+  }
+  if (key === 'relay_api') {
+    return 'custom';
+  }
   return key;
 }
 
 function _normalizeKey(rawKey = '') {
-  const raw = String(rawKey || '').trim().toLowerCase();
-  if (!raw) return '';
+  const raw = String(rawKey || '')
+    .trim()
+    .toLowerCase();
+  if (!raw) {
+    return '';
+  }
   const compact = raw.replace(/[\s-]+/g, '_');
   return KEY_ALIASES[raw] || KEY_ALIASES[compact] || '';
 }
 
 function _resolveAdapterFromProvider(rawProvider = '') {
-  const provider = String(rawProvider || '').trim().toLowerCase();
-  if (!provider) return '';
+  const provider = String(rawProvider || '')
+    .trim()
+    .toLowerCase();
+  if (!provider) {
+    return '';
+  }
   const compact = provider.replace(/\s+/g, '').replace(/-/g, '_');
   return PROVIDER_TO_ADAPTER[provider] || PROVIDER_TO_ADAPTER[compact] || '';
 }
@@ -111,9 +124,13 @@ function _normalizeLanguagePreference(raw = '') {
 
 function _pickFirstNonEmpty(...candidates) {
   for (const item of candidates) {
-    if (item === undefined || item === null) continue;
+    if (item === undefined || item === null) {
+      continue;
+    }
     const text = String(item).trim();
-    if (!text || text === 'true') continue;
+    if (!text || text === 'true') {
+      continue;
+    }
     return text;
   }
   return '';
@@ -169,7 +186,7 @@ function _resolveOpenCodeProfileFromConfig(doc, opts = {}) {
   if (!doc || typeof doc !== 'object') {
     return { ok: false, error: 'invalid-doc' };
   }
-  const providerMap = (doc.provider && typeof doc.provider === 'object') ? doc.provider : {};
+  const providerMap = doc.provider && typeof doc.provider === 'object' ? doc.provider : {};
   const providerKeys = Object.keys(providerMap);
   if (providerKeys.length === 0) {
     return { ok: false, error: 'provider-empty' };
@@ -182,8 +199,9 @@ function _resolveOpenCodeProfileFromConfig(doc, opts = {}) {
     return { ok: false, error: `provider-missing:${providerId}` };
   }
 
-  const providerOptions = (provider.options && typeof provider.options === 'object') ? provider.options : {};
-  const modelMap = (provider.models && typeof provider.models === 'object') ? provider.models : {};
+  const providerOptions =
+    provider.options && typeof provider.options === 'object' ? provider.options : {};
+  const modelMap = provider.models && typeof provider.models === 'object' ? provider.models : {};
   const modelKeys = Object.keys(modelMap);
   const requestedModel = String(opts.modelId || '').trim();
   const modelId = requestedModel || modelKeys[0] || '';
@@ -195,13 +213,12 @@ function _resolveOpenCodeProfileFromConfig(doc, opts = {}) {
     providerOptions.baseURL,
     providerOptions.baseUrl,
     providerOptions.url,
-    providerOptions.endpoint,
+    providerOptions.endpoint
   );
-  const apiKeyInput = _pickFirstNonEmpty(
-    providerOptions.apiKey,
-    providerOptions.apikey,
-  );
-  const npmProvider = String(provider.npm || '').trim().toLowerCase();
+  const apiKeyInput = _pickFirstNonEmpty(providerOptions.apiKey, providerOptions.apikey);
+  const npmProvider = String(provider.npm || '')
+    .trim()
+    .toLowerCase();
   const compatibility = npmProvider.includes('anthropic') ? 'anthropic' : 'openai';
 
   return {
@@ -214,9 +231,8 @@ function _resolveOpenCodeProfileFromConfig(doc, opts = {}) {
   };
 }
 
-const _resolveEnvPaths = require('../../utils/resolveGatewayEnvPaths');
-
 const _patchEnvContent = require('../../utils/patchEnvContent');
+const _resolveEnvPaths = require('../../utils/resolveGatewayEnvPaths');
 
 function _writeEnvPatch(envMap = {}, unsetKeys = [], options = {}) {
   const { canonicalPath, targets: defaultTargets } = _resolveEnvPaths();
@@ -225,7 +241,11 @@ function _writeEnvPatch(envMap = {}, unsetKeys = [], options = {}) {
 
   for (const file of targets) {
     let content = '';
-    try { content = fs.readFileSync(file, 'utf-8'); } catch { /* no .env yet */ }
+    try {
+      content = fs.readFileSync(file, 'utf-8');
+    } catch {
+      /* no .env yet */
+    }
     const patched = _patchEnvContent(content, envMap, unsetKeys);
     fs.writeFileSync(file, patched);
   }
@@ -248,11 +268,17 @@ function _readEnvMap(envPath) {
     return out;
   }
   for (const line of String(content || '').split(/\r?\n/)) {
-    if (!line || /^\s*#/.test(line)) continue;
+    if (!line || /^\s*#/.test(line)) {
+      continue;
+    }
     const idx = line.indexOf('=');
-    if (idx <= 0) continue;
+    if (idx <= 0) {
+      continue;
+    }
     const key = line.slice(0, idx).trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     const rawValue = line.slice(idx + 1).trim();
     out[key] = rawValue.replace(/^['"]|['"]$/g, '');
   }
@@ -261,15 +287,22 @@ function _readEnvMap(envPath) {
 
 // 收敛到 utils/maskSecret 单一真源(逐字节委托,调用点不变)
 const _maskSecret = require('../../utils/maskSecret');
+const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
 
 function _parseModelDefault(value = '') {
   const raw = String(value || '').trim();
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const idx = raw.indexOf('/');
-  if (idx <= 0 || idx >= raw.length - 1) return null;
+  if (idx <= 0 || idx >= raw.length - 1) {
+    return null;
+  }
   const provider = raw.slice(0, idx).trim();
   const model = raw.slice(idx + 1).trim();
-  if (!provider || !model) return null;
+  if (!provider || !model) {
+    return null;
+  }
   return { provider, model };
 }
 
@@ -278,7 +311,9 @@ function _readCurrentModelConfig() {
   const envMap = _readEnvMap(canonicalPath);
   const read = (key) => {
     const runtime = process.env[key];
-    if (runtime !== undefined && String(runtime).trim() !== '') return String(runtime).trim();
+    if (runtime !== undefined && String(runtime).trim() !== '') {
+      return String(runtime).trim();
+    }
     return String(envMap[key] || '').trim();
   };
 
@@ -290,10 +325,15 @@ function _readCurrentModelConfig() {
   const relayCompatibility = read('RELAY_API_COMPATIBILITY');
   const languagePreference = read('KHY_LANGUAGE');
 
-  const provider = _adapterToProvider(preferredAdapter || (relayEndpoint || relayApiKey || relayModel ? 'relay_api' : ''));
-  const defaultModel = preferredModel || (String(preferredAdapter).toLowerCase() === 'relay_api' ? relayModel : '');
-  const modelDefault = (provider && defaultModel) ? `${provider}/${defaultModel}` : '';
-  const compatibility = relayCompatibility || (String(preferredAdapter).toLowerCase() === 'relay_api' ? 'openai' : '(not set)');
+  const provider = _adapterToProvider(
+    preferredAdapter || (relayEndpoint || relayApiKey || relayModel ? 'relay_api' : '')
+  );
+  const defaultModel =
+    preferredModel || (String(preferredAdapter).toLowerCase() === 'relay_api' ? relayModel : '');
+  const modelDefault = provider && defaultModel ? `${provider}/${defaultModel}` : '';
+  const compatibility =
+    relayCompatibility ||
+    (String(preferredAdapter).toLowerCase() === 'relay_api' ? 'openai' : '(not set)');
 
   return {
     envPath: canonicalPath,
@@ -330,9 +370,15 @@ function _printUsage() {
   printInfo('  khy config set model.name your-model-id');
   printInfo('  khy config set model.default custom/your-model-id');
   printInfo('  khy config set language zh|en|auto');
-  printInfo('  khy config openclaw --custom-base-url https://your-provider.com/v1 --custom-model-id <your-model-id> --custom-api-key sk-xxxxx');
-  printInfo('  khy config opencode --base-url https://your-provider.com/v1 --model-id <your-model-id> --api-key sk-xxxxx');
-  printInfo('  khy config opencode --config ~/.config/opencode/opencode.json --provider <provider-name>');
+  printInfo(
+    '  khy config openclaw --custom-base-url https://your-provider.com/v1 --custom-model-id <your-model-id> --custom-api-key sk-xxxxx'
+  );
+  printInfo(
+    '  khy config opencode --base-url https://your-provider.com/v1 --model-id <your-model-id> --api-key sk-xxxxx'
+  );
+  printInfo(
+    '  khy config opencode --config ~/.config/opencode/opencode.json --provider <provider-name>'
+  );
   printInfo('  khy config get model.default');
   printInfo('  khy config get language');
   printInfo('  khy config show');
@@ -342,7 +388,9 @@ function _printUsage() {
 }
 
 function _printSupportedProviders() {
-  printInfo('Supported providers: custom, auto, ollama, localllm, claude, codex, kiro, cursor, trae, windsurf, api, relay');
+  printInfo(
+    'Supported providers: custom, auto, ollama, localllm, claude, codex, kiro, cursor, trae, windsurf, api, relay'
+  );
 }
 
 // ── GLM 视觉池自动镜像 ──────────────────────────────────────────────────────
@@ -363,7 +411,9 @@ function _printSupportedProviders() {
 function _glmVisionPoolMirrorEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_GLM_VISION_POOL_MIRROR;
-    if (raw == null || String(raw).trim() === '') return true; // 缺省 → 默认开
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    } // 缺省 → 默认开
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {
@@ -373,8 +423,12 @@ function _glmVisionPoolMirrorEnabled(env = process.env) {
 
 // 端点是否为智谱 bigmodel(GLM 视觉模型确实存在处)。
 function _isBigmodelEndpoint(endpoint) {
-  const e = String(endpoint || '').trim().toLowerCase();
-  if (!e) return false;
+  const e = String(endpoint || '')
+    .trim()
+    .toLowerCase();
+  if (!e) {
+    return false;
+  }
   return e.includes('bigmodel.cn');
 }
 
@@ -383,15 +437,21 @@ function _isBigmodelEndpoint(endpoint) {
 // 还是先设 api_key,只要二者齐备且端点为 bigmodel 即镜像。绝不抛。
 function _maybeMirrorGlmVisionPool(envMap, env = process.env) {
   try {
-    if (!_glmVisionPoolMirrorEnabled(env)) return;
+    if (!_glmVisionPoolMirrorEnabled(env)) {
+      return;
+    }
     const endpoint = String(
-      envMap.RELAY_API_ENDPOINT != null ? envMap.RELAY_API_ENDPOINT : (env.RELAY_API_ENDPOINT || '')
+      envMap.RELAY_API_ENDPOINT != null ? envMap.RELAY_API_ENDPOINT : env.RELAY_API_ENDPOINT || ''
     ).trim();
-    if (!_isBigmodelEndpoint(endpoint)) return;
+    if (!_isBigmodelEndpoint(endpoint)) {
+      return;
+    }
     const key = String(
-      envMap.RELAY_API_KEY != null ? envMap.RELAY_API_KEY : (env.RELAY_API_KEY || '')
+      envMap.RELAY_API_KEY != null ? envMap.RELAY_API_KEY : env.RELAY_API_KEY || ''
     ).trim();
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     const existingGlmKey = String(env.GLM_API_KEY || '').trim();
     const priorRelayKey = String(env.RELAY_API_KEY || '').trim();
     // 空 → 填补;或「我方先前镜像的值」(等于旧 relay key)→ 随轮换更新;
@@ -401,7 +461,9 @@ function _maybeMirrorGlmVisionPool(envMap, env = process.env) {
       envMap.GLM_API_KEY = key;
       envMap.GLM_API_ENDPOINT = endpoint;
     }
-  } catch { /* fail-soft: 不镜像 */ }
+  } catch {
+    /* fail-soft: 不镜像 */
+  }
 }
 
 function _applyConfigSet(key, value, options = {}) {
@@ -462,7 +524,9 @@ function _applyConfigSet(key, value, options = {}) {
     }
     envMap.GATEWAY_PREFERRED_ADAPTER = adapter;
     envMap.GATEWAY_PREFERRED_STRICT = 'true';
-    if (adapter === 'auto') unsetKeys.push('GATEWAY_PREFERRED_MODEL');
+    if (adapter === 'auto') {
+      unsetKeys.push('GATEWAY_PREFERRED_MODEL');
+    }
     successMessage = `Set model.provider=${_adapterToProvider(adapter)}`;
   } else if (canonicalKey === 'model.base_url') {
     const endpoint = String(value || '').trim();
@@ -507,11 +571,15 @@ function _applyConfigSet(key, value, options = {}) {
     envMap.GATEWAY_PREFERRED_ADAPTER = 'relay_api';
     // 不硬钉 strict：relay 优先但可回退（见 aiGateway 死端点放宽）。
     envMap.GATEWAY_PREFERRED_STRICT = 'false';
-    if (parsedEntries.length > 1) envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
-    else unsetKeys.push('RELAY_API_KEYS');
-    successMessage = parsedEntries.length > 1
-      ? `Set model.api_key (parsed ${parsedEntries.length} keys, primary=${_maskSecret(primary)})`
-      : 'Set model.api_key';
+    if (parsedEntries.length > 1) {
+      envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
+    } else {
+      unsetKeys.push('RELAY_API_KEYS');
+    }
+    successMessage =
+      parsedEntries.length > 1
+        ? `Set model.api_key (parsed ${parsedEntries.length} keys, primary=${_maskSecret(primary)})`
+        : 'Set model.api_key';
   } else if (canonicalKey === 'model.name') {
     const modelName = String(value || '').trim();
     envMap.RELAY_API_MODEL = modelName;
@@ -542,7 +610,9 @@ function _applyConfigSet(key, value, options = {}) {
     envMap.GATEWAY_PREFERRED_STRICT = 'false';
     envMap.RELAY_API_COMPATIBILITY = compatibility;
     if (compatibility === 'anthropic') {
-      warnings.push('Current relay adapter sends OpenAI-style /chat/completions payloads. Anthropic-only endpoints may fail.');
+      warnings.push(
+        'Current relay adapter sends OpenAI-style /chat/completions payloads. Anthropic-only endpoints may fail.'
+      );
     }
     successMessage = `Set model.endpoint_compatibility=${compatibility}`;
   } else if (canonicalKey === 'model.default') {
@@ -580,7 +650,9 @@ function _applyConfigSet(key, value, options = {}) {
     envMap.GATEWAY_PREFERRED_ADAPTER = adapter;
     envMap.GATEWAY_PREFERRED_MODEL = parsed.model;
     envMap.GATEWAY_PREFERRED_STRICT = 'true';
-    if (adapter === 'relay_api') envMap.RELAY_API_MODEL = parsed.model;
+    if (adapter === 'relay_api') {
+      envMap.RELAY_API_MODEL = parsed.model;
+    }
     successMessage = `Set model.default=${_adapterToProvider(adapter)}/${parsed.model}`;
   } else if (canonicalKey === 'language.preference') {
     const language = _normalizeLanguagePreference(value);
@@ -625,7 +697,9 @@ function _applyConfigSet(key, value, options = {}) {
       warnings,
     });
   } else {
-    for (const warning of warnings) printWarn(warning);
+    for (const warning of warnings) {
+      printWarn(warning);
+    }
     printSuccess(successMessage);
     printInfo(`Saved to: ${envPath}`);
   }
@@ -639,7 +713,7 @@ function _handleConfigOpenClaw(args = [], options = {}) {
     options.customBaseUrl,
     options['base-url'],
     options.base_url,
-    args[0],
+    args[0]
   );
   const modelId = _pickFirstNonEmpty(
     options['custom-model-id'],
@@ -647,7 +721,7 @@ function _handleConfigOpenClaw(args = [], options = {}) {
     options['model-id'],
     options.modelId,
     options.model,
-    args[1],
+    args[1]
   );
   const apiKeyInput = _pickFirstNonEmpty(
     options['custom-api-key'],
@@ -656,7 +730,7 @@ function _handleConfigOpenClaw(args = [], options = {}) {
     options.apiKey,
     options.key,
     args[2],
-    process.env.CUSTOM_API_KEY,
+    process.env.CUSTOM_API_KEY
   );
   const compatibilityRaw = _pickFirstNonEmpty(
     options['custom-compatibility'],
@@ -665,7 +739,7 @@ function _handleConfigOpenClaw(args = [], options = {}) {
     options.compat,
     options['endpoint-compatibility'],
     options.endpointCompatibility,
-    'openai',
+    'openai'
   );
   const compatibility = _normalizeCompatibility(compatibilityRaw);
   const warnings = [];
@@ -680,7 +754,9 @@ function _handleConfigOpenClaw(args = [], options = {}) {
       });
     } else {
       printError('OpenClaw-compatible setup requires base URL and model ID.');
-      printInfo('Usage: khy config openclaw --custom-base-url <url> --custom-model-id <model> [--custom-api-key <key>] [--custom-compatibility openai|anthropic]');
+      printInfo(
+        'Usage: khy config openclaw --custom-base-url <url> --custom-model-id <model> [--custom-api-key <key>] [--custom-compatibility openai|anthropic]'
+      );
     }
     return false;
   }
@@ -732,16 +808,23 @@ function _handleConfigOpenClaw(args = [], options = {}) {
   const unsetKeys = [];
   if (primary) {
     envMap.RELAY_API_KEY = primary;
-    if (parsedEntries.length > 1) envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
-    else unsetKeys.push('RELAY_API_KEYS');
+    if (parsedEntries.length > 1) {
+      envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
+    } else {
+      unsetKeys.push('RELAY_API_KEYS');
+    }
   } else {
-    warnings.push('No API key provided. This mirrors OpenClaw optional custom API key mode; runtime may require credentials.');
+    warnings.push(
+      'No API key provided. This mirrors OpenClaw optional custom API key mode; runtime may require credentials.'
+    );
     unsetKeys.push('RELAY_API_KEY', 'RELAY_API_KEYS');
   }
 
   const envPath = _writeEnvPatch(envMap, unsetKeys);
   if (compatibility === 'anthropic') {
-    warnings.push('Current relay adapter uses OpenAI-style requests; anthropic-only endpoints may fail without a compatible bridge.');
+    warnings.push(
+      'Current relay adapter uses OpenAI-style requests; anthropic-only endpoints may fail without a compatible bridge.'
+    );
   }
   if (asJson) {
     _emitConfigJson({
@@ -755,7 +838,9 @@ function _handleConfigOpenClaw(args = [], options = {}) {
       warnings,
     });
   } else {
-    for (const warning of warnings) printWarn(warning);
+    for (const warning of warnings) {
+      printWarn(warning);
+    }
     printSuccess(`Applied OpenClaw-compatible custom provider profile: custom/${modelId}`);
     printInfo(`Endpoint compatibility: ${compatibility}`);
     printInfo(`Saved to: ${envPath}`);
@@ -769,7 +854,7 @@ function _handleConfigOpenCode(args = [], options = {}) {
     options.config,
     options.file,
     options['config-file'],
-    options.opencodeConfig,
+    options.opencodeConfig
   );
   const resolvedConfigPath = configPathRaw
     ? path.resolve(String(configPathRaw))
@@ -777,32 +862,27 @@ function _handleConfigOpenCode(args = [], options = {}) {
   const providerIdFlag = _pickFirstNonEmpty(
     options.provider,
     options['provider-id'],
-    options.providerId,
+    options.providerId
   );
   const modelIdFlag = _pickFirstNonEmpty(
     options['model-id'],
     options.modelId,
     options.model,
-    args[0],
+    args[0]
   );
   const baseUrlFlag = _pickFirstNonEmpty(
     options['base-url'],
     options.baseUrl,
     options.baseURL,
     options.url,
-    args[1],
+    args[1]
   );
-  const apiKeyFlag = _pickFirstNonEmpty(
-    options['api-key'],
-    options.apiKey,
-    options.key,
-    args[2],
-  );
+  const apiKeyFlag = _pickFirstNonEmpty(options['api-key'], options.apiKey, options.key, args[2]);
   const compatibilityRaw = _pickFirstNonEmpty(
     options.compatibility,
     options.compat,
     options['endpoint-compatibility'],
-    'openai',
+    'openai'
   );
   const compatibilityFlag = _normalizeCompatibility(compatibilityRaw);
   const warnings = [];
@@ -865,10 +945,12 @@ function _handleConfigOpenCode(args = [], options = {}) {
   const providerId = providerIdFlag || (profile && profile.providerId) || 'custom';
   const modelId = modelIdFlag || (profile && profile.modelId) || '';
   const baseUrlRaw = baseUrlFlag || (profile && profile.baseUrl) || '';
-  const apiKeyInput = apiKeyFlag || (profile && profile.apiKeyInput) || process.env.CUSTOM_API_KEY || '';
-  const compatibility = compatibilityFlag === 'openai' && profile && profile.compatibility
-    ? profile.compatibility
-    : compatibilityFlag;
+  const apiKeyInput =
+    apiKeyFlag || (profile && profile.apiKeyInput) || process.env.CUSTOM_API_KEY || '';
+  const compatibility =
+    compatibilityFlag === 'openai' && profile && profile.compatibility
+      ? profile.compatibility
+      : compatibilityFlag;
 
   if (!baseUrlRaw || !modelId) {
     if (asJson) {
@@ -880,7 +962,9 @@ function _handleConfigOpenCode(args = [], options = {}) {
       });
     } else {
       printError('OpenCode-compatible setup requires base URL and model ID.');
-      printInfo('Usage: khy config opencode --base-url <url> --model-id <model> [--api-key <key>] [--compatibility openai|anthropic]');
+      printInfo(
+        'Usage: khy config opencode --base-url <url> --model-id <model> [--api-key <key>] [--compatibility openai|anthropic]'
+      );
       printInfo('Or provide --config <opencode.json> and optional --provider/--model-id.');
     }
     return false;
@@ -902,7 +986,9 @@ function _handleConfigOpenCode(args = [], options = {}) {
     return false;
   }
   if (baseUrlNormalized.appendedV1) {
-    warnings.push(`OpenCode baseURL did not end with /v1. Auto-normalized to: ${baseUrlNormalized.url}`);
+    warnings.push(
+      `OpenCode baseURL did not end with /v1. Auto-normalized to: ${baseUrlNormalized.url}`
+    );
   }
 
   const parsedEntries = parseApiKeyEntries(apiKeyInput);
@@ -919,16 +1005,23 @@ function _handleConfigOpenCode(args = [], options = {}) {
   const unsetKeys = [];
   if (primary) {
     envMap.RELAY_API_KEY = primary;
-    if (parsedEntries.length > 1) envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
-    else unsetKeys.push('RELAY_API_KEYS');
+    if (parsedEntries.length > 1) {
+      envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
+    } else {
+      unsetKeys.push('RELAY_API_KEYS');
+    }
   } else {
-    warnings.push('No API key provided from OpenCode config/flags. Runtime may require credentials.');
+    warnings.push(
+      'No API key provided from OpenCode config/flags. Runtime may require credentials.'
+    );
     unsetKeys.push('RELAY_API_KEY', 'RELAY_API_KEYS');
   }
 
   const envPath = _writeEnvPatch(envMap, unsetKeys);
   if (compatibility === 'anthropic') {
-    warnings.push('Current relay adapter uses OpenAI-style requests; anthropic-only endpoints may fail without a compatible bridge.');
+    warnings.push(
+      'Current relay adapter uses OpenAI-style requests; anthropic-only endpoints may fail without a compatible bridge.'
+    );
   }
   if (asJson) {
     _emitConfigJson({
@@ -939,11 +1032,14 @@ function _handleConfigOpenCode(args = [], options = {}) {
       endpoint: baseUrlNormalized.url,
       compatibility: compatibility || 'openai',
       envPath,
-      sourceConfigPath: (configPathRaw || fs.existsSync(resolvedConfigPath)) ? resolvedConfigPath : null,
+      sourceConfigPath:
+        configPathRaw || fs.existsSync(resolvedConfigPath) ? resolvedConfigPath : null,
       warnings,
     });
   } else {
-    for (const warning of warnings) printWarn(warning);
+    for (const warning of warnings) {
+      printWarn(warning);
+    }
     printSuccess(`Applied OpenCode-compatible profile: ${providerId}/${modelId}`);
     printInfo(`Endpoint compatibility: ${compatibility || 'openai'}`);
     if (configPathRaw || fs.existsSync(resolvedConfigPath)) {
@@ -958,7 +1054,9 @@ function _handleConfigGet(args = [], options = {}) {
   const key = _normalizeKey(args[0] || '');
   if (!key) {
     printError('Usage: khy config get <key>');
-    printInfo('Supported keys: model.provider, model.base_url, model.api_key, model.name, model.default, model.endpoint_compatibility, language.preference');
+    printInfo(
+      'Supported keys: model.provider, model.base_url, model.api_key, model.name, model.default, model.endpoint_compatibility, language.preference'
+    );
     return false;
   }
   const snapshot = _readCurrentModelConfig();
@@ -1020,13 +1118,18 @@ function _handleConfigLayers(options = {}) {
     typeof val === 'object' ? JSON.stringify(val) : String(val),
     sources[key] || '?',
   ]);
-  if (rows.length > 0) printTable(['Key', 'Value', 'Source'], rows);
-  else printInfo('（层文件存在但无有效键）');
+  if (rows.length > 0) {
+    printTable(['Key', 'Value', 'Source'], rows);
+  } else {
+    printInfo('（层文件存在但无有效键）');
+  }
   return true;
 }
 
 async function handleConfig(subCommand, args = [], options = {}) {
-  const action = String(subCommand || args[0] || 'list').trim().toLowerCase();
+  const action = String(subCommand || args[0] || 'list')
+    .trim()
+    .toLowerCase();
   const rest = subCommand ? args : args.slice(1);
 
   if (action === 'set') {

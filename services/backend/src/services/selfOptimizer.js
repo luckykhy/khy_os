@@ -22,15 +22,24 @@
  *   Writes extracted wisdom to learned_patterns.json
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const CONFIG_DIR = path.join(os.homedir(), '.khyquant');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const CONFIG_DIR = _appHome();
 const PATTERNS_FILE = path.join(CONFIG_DIR, 'learned_patterns.json');
 const PROMPT_FILE = path.join(CONFIG_DIR, 'system_prompt.txt');
 const ROLES_FILE = path.join(CONFIG_DIR, 'agent_roles.json');
 const PROMPT_LIB_FILE = path.join(CONFIG_DIR, 'prompt_library.json');
-const OPTIMIZATION_LOG = path.join(CONFIG_DIR, 'optimization_log.json');
+const OPTIMIZATION_LOG = path.join(CONFIG_DIR, 'optimization_log.jsonl');
 
 // ── Source code protection ───────────────────────────────────────────
 // khy OS core source directories that AI tools must NOT read/modify.
@@ -95,7 +104,9 @@ const MAX_OPTIMIZATION_LOG = 100;
  * Ensure config directory exists.
  */
 function ensureConfigDir() {
-  if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
 }
 
 // ── Safe config write ────────────────────────────────────────────────
@@ -127,11 +138,15 @@ function safeWriteConfig(filename, content) {
       backup = filePath + '.bak';
       fs.copyFileSync(filePath, backup);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Validate JSON if applicable
   if (filename.endsWith('.json') && typeof content === 'string') {
-    try { JSON.parse(content); } catch (e) {
+    try {
+      JSON.parse(content);
+    } catch (e) {
       return { success: false, error: `Invalid JSON: ${e.message}` };
     }
   }
@@ -143,7 +158,9 @@ function safeWriteConfig(filename, content) {
   } catch (e) {
     // Attempt restore from backup
     if (backup && fs.existsSync(backup)) {
-      try { fs.copyFileSync(backup, filePath); } catch {}
+      try {
+        fs.copyFileSync(backup, filePath);
+      } catch {}
     }
     return { success: false, error: e.message };
   }
@@ -157,7 +174,9 @@ function safeWriteConfig(filename, content) {
 function readConfig(filename) {
   const filePath = path.join(CONFIG_DIR, filename);
   try {
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, 'utf-8');
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, 'utf-8');
+    }
   } catch {}
   return null;
 }
@@ -193,7 +212,10 @@ function rollbackConfig(filename) {
 function proposeCodeChange(filePath, newContent, description) {
   // Block changes to khy OS protected source
   if (isProtectedPath(filePath)) {
-    return { success: false, error: 'Cannot modify khy OS core source code. Only user project files can be changed.' };
+    return {
+      success: false,
+      error: 'Cannot modify khy OS core source code. Only user project files can be changed.',
+    };
   }
 
   const { execSync } = require('child_process');
@@ -210,17 +232,24 @@ function proposeCodeChange(filePath, newContent, description) {
   try {
     // Get current branch
     const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
-      cwd, timeout: 3000, encoding: 'utf-8',
+      cwd,
+      timeout: 3000,
+      encoding: 'utf-8',
     }).trim();
 
     // Stash any uncommitted changes
-    const hasChanges = execSync('git status --porcelain', {
-      cwd, timeout: 3000, encoding: 'utf-8',
-    }).trim().length > 0;
+    const hasChanges =
+      execSync('git status --porcelain', {
+        cwd,
+        timeout: 3000,
+        encoding: 'utf-8',
+      }).trim().length > 0;
 
     if (hasChanges) {
       execSync('git stash push -m "auto-stash before AI optimization"', {
-        cwd, timeout: 5000, stdio: 'pipe',
+        cwd,
+        timeout: 5000,
+        stdio: 'pipe',
       });
     }
 
@@ -234,7 +263,9 @@ function proposeCodeChange(filePath, newContent, description) {
     const relPath = path.relative(cwd, filePath);
     execSync(`git add "${relPath}"`, { cwd, timeout: 3000, stdio: 'pipe' });
     execSync(`git commit -m "ai-optimize: ${description.slice(0, 60)}"`, {
-      cwd, timeout: 5000, stdio: 'pipe',
+      cwd,
+      timeout: 5000,
+      stdio: 'pipe',
     });
 
     // Return to original branch
@@ -242,7 +273,9 @@ function proposeCodeChange(filePath, newContent, description) {
 
     // Restore stash if we stashed
     if (hasChanges) {
-      try { execSync('git stash pop', { cwd, timeout: 5000, stdio: 'pipe' }); } catch {}
+      try {
+        execSync('git stash pop', { cwd, timeout: 5000, stdio: 'pipe' });
+      } catch {}
     }
 
     logOptimization('code_proposal', relPath, { branch: branchName, description });
@@ -258,13 +291,17 @@ function proposeCodeChange(filePath, newContent, description) {
     // Try to recover to original state
     try {
       const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
-        cwd, timeout: 3000, encoding: 'utf-8',
+        cwd,
+        timeout: 3000,
+        encoding: 'utf-8',
       }).trim();
       if (currentBranch === branchName) {
         execSync('git checkout -', { cwd, timeout: 3000, stdio: 'pipe' });
         execSync(`git branch -D ${branchName}`, { cwd, timeout: 3000, stdio: 'pipe' });
       }
-    } catch { /* give up */ }
+    } catch {
+      /* give up */
+    }
     return { success: false, error: e.message };
   }
 }
@@ -277,10 +314,12 @@ function proposeCodeChange(filePath, newContent, description) {
  * @returns {{ patterns: object[], stats: object }}
  */
 function parseTranscript(filePath) {
-  if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
 
   const raw = fs.readFileSync(filePath, 'utf-8');
-  const lines = raw.split('\n').filter(l => l.trim());
+  const lines = raw.split('\n').filter((l) => l.trim());
 
   const stats = {
     totalMessages: 0,
@@ -299,14 +338,21 @@ function parseTranscript(filePath) {
 
   for (const line of lines) {
     let entry;
-    try { entry = JSON.parse(line); } catch { continue; }
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
     stats.totalMessages++;
 
     const role = entry.role || entry.type || '';
     const content = entry.content || entry.message || entry.text || '';
-    const contentStr = typeof content === 'string' ? content
-      : Array.isArray(content) ? content.map(c => c.text || '').join(' ')
-      : JSON.stringify(content);
+    const contentStr =
+      typeof content === 'string'
+        ? content
+        : Array.isArray(content)
+          ? content.map((c) => c.text || '').join(' ')
+          : JSON.stringify(content);
 
     // Count message types
     if (role === 'human' || role === 'user') {
@@ -324,7 +370,10 @@ function parseTranscript(filePath) {
       }
 
       // Detect confirmations
-      if (/好的|对|是的|yes|exactly|perfect|正确|没错|继续/.test(contentStr) && contentStr.length < 50) {
+      if (
+        /好的|对|是的|yes|exactly|perfect|正确|没错|继续/.test(contentStr) &&
+        contentStr.length < 50
+      ) {
         stats.confirmations++;
         if (lastAssistantMsg) {
           patterns.push({
@@ -353,8 +402,10 @@ function parseTranscript(filePath) {
             stats.toolCalls++;
             currentToolSeq.push({
               tool: block.name,
-              input: typeof block.input === 'string' ? block.input.slice(0, 100)
-                : JSON.stringify(block.input || {}).slice(0, 100),
+              input:
+                typeof block.input === 'string'
+                  ? block.input.slice(0, 100)
+                  : JSON.stringify(block.input || {}).slice(0, 100),
             });
           }
         }
@@ -366,15 +417,17 @@ function parseTranscript(filePath) {
         stats.toolCalls += toolCallMatches.length;
         for (const tc of toolCallMatches) {
           const match = tc.match(/<tool_call>([\w]+)\((.*?)\)<\/tool_call>/);
-          if (match) currentToolSeq.push({ tool: match[1], input: match[2].slice(0, 100) });
+          if (match) {
+            currentToolSeq.push({ tool: match[1], input: match[2].slice(0, 100) });
+          }
         }
       }
     }
 
     // Detect errors in tool results
     if (role === 'tool' || role === 'tool_result') {
-      const isError = entry.is_error === true ||
-        /error|failed|exception|traceback/i.test(contentStr);
+      const isError =
+        entry.is_error === true || /error|failed|exception|traceback/i.test(contentStr);
       if (isError) {
         stats.errors++;
         patterns.push({
@@ -392,7 +445,7 @@ function parseTranscript(filePath) {
     // Find repeated sequences (simplified: just record all sequences of length >= 2)
     const seqMap = {};
     for (const seq of toolSequences) {
-      const key = seq.map(s => s.tool).join(' → ');
+      const key = seq.map((s) => s.tool).join(' → ');
       seqMap[key] = (seqMap[key] || 0) + 1;
     }
     for (const [seq, count] of Object.entries(seqMap)) {
@@ -427,7 +480,7 @@ function learnFromTranscript(filePath) {
   } catch {}
 
   // Merge new patterns (avoid exact duplicates)
-  const existingLessons = new Set(existing.map(p => p.lesson));
+  const existingLessons = new Set(existing.map((p) => p.lesson));
   let added = 0;
   for (const p of patterns) {
     if (!existingLessons.has(p.lesson)) {
@@ -438,7 +491,9 @@ function learnFromTranscript(filePath) {
   }
 
   // Cap total patterns
-  while (existing.length > MAX_PATTERNS) existing.shift();
+  while (existing.length > MAX_PATTERNS) {
+    existing.shift();
+  }
 
   // Save
   const result = safeWriteConfig('learned_patterns.json', existing);
@@ -469,9 +524,9 @@ function getLearnedContext() {
         context += '\n\n[从历史对话中学到的经验]\n';
 
         // Group by type
-        const corrections = patterns.filter(p => p.type === 'correction').slice(-5);
-        const workflows = patterns.filter(p => p.type === 'tool_sequence').slice(-5);
-        const confirmations = patterns.filter(p => p.type === 'confirmation').slice(-3);
+        const corrections = patterns.filter((p) => p.type === 'correction').slice(-5);
+        const workflows = patterns.filter((p) => p.type === 'tool_sequence').slice(-5);
+        const confirmations = patterns.filter((p) => p.type === 'confirmation').slice(-3);
 
         if (corrections.length > 0) {
           context += '避免的错误:\n';
@@ -493,7 +548,9 @@ function getLearnedContext() {
         }
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Load prompt library
   try {
@@ -506,7 +563,9 @@ function getLearnedContext() {
         }
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return context;
 }
@@ -529,7 +588,10 @@ function applyOptimization(target, content, reason) {
 
   const filename = fileMap[target];
   if (!filename) {
-    return { success: false, error: `Unknown target: ${target}. Allowed: ${Object.keys(fileMap).join(', ')}` };
+    return {
+      success: false,
+      error: `Unknown target: ${target}. Allowed: ${Object.keys(fileMap).join(', ')}`,
+    };
   }
 
   const result = safeWriteConfig(filename, content);
@@ -546,25 +608,14 @@ function applyOptimization(target, content, reason) {
  */
 function logOptimization(action, target, details = {}) {
   ensureConfigDir();
-  let log = [];
-  try {
-    if (fs.existsSync(OPTIMIZATION_LOG)) {
-      log = JSON.parse(fs.readFileSync(OPTIMIZATION_LOG, 'utf-8'));
-    }
-  } catch {}
-
-  log.push({
+  const entry = {
     timestamp: new Date().toISOString(),
     action,
     target,
     ...details,
-  });
-
-  // Cap log size
-  while (log.length > MAX_OPTIMIZATION_LOG) log.shift();
-
+  };
   try {
-    fs.writeFileSync(OPTIMIZATION_LOG, JSON.stringify(log, null, 2), 'utf-8');
+    fs.appendFileSync(OPTIMIZATION_LOG, JSON.stringify(entry) + '\n', 'utf-8');
   } catch {}
 }
 
@@ -575,10 +626,21 @@ function logOptimization(action, target, details = {}) {
  */
 function getOptimizationHistory(limit = 20) {
   try {
-    if (fs.existsSync(OPTIMIZATION_LOG)) {
-      const log = JSON.parse(fs.readFileSync(OPTIMIZATION_LOG, 'utf-8'));
-      return log.slice(-limit);
+    if (!fs.existsSync(OPTIMIZATION_LOG)) {
+      return [];
     }
+    const content = fs.readFileSync(OPTIMIZATION_LOG, 'utf-8');
+    const lines = content.trim().split('\n').filter(Boolean);
+    return lines
+      .slice(-limit)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
   } catch {}
   return [];
 }
@@ -604,17 +666,19 @@ function getLearningSummary() {
     if (fs.existsSync(PATTERNS_FILE)) {
       const patterns = JSON.parse(fs.readFileSync(PATTERNS_FILE, 'utf-8'));
       summary.patterns = patterns.length;
-      summary.corrections = patterns.filter(p => p.type === 'correction').length;
-      summary.workflows = patterns.filter(p => p.type === 'tool_sequence').length;
-      summary.confirmations = patterns.filter(p => p.type === 'confirmation').length;
-      summary.errors = patterns.filter(p => p.type === 'error_recovery').length;
+      summary.corrections = patterns.filter((p) => p.type === 'correction').length;
+      summary.workflows = patterns.filter((p) => p.type === 'tool_sequence').length;
+      summary.confirmations = patterns.filter((p) => p.type === 'confirmation').length;
+      summary.errors = patterns.filter((p) => p.type === 'error_recovery').length;
     }
   } catch {}
 
   try {
     if (fs.existsSync(OPTIMIZATION_LOG)) {
       const log = JSON.parse(fs.readFileSync(OPTIMIZATION_LOG, 'utf-8'));
-      if (log.length > 0) summary.lastOptimized = log[log.length - 1].timestamp;
+      if (log.length > 0) {
+        summary.lastOptimized = log[log.length - 1].timestamp;
+      }
     }
   } catch {}
 

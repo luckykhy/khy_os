@@ -34,14 +34,21 @@ function sensitiveHomeCaseFoldEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_SENSITIVE_HOME_CASEFOLD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_SENSITIVE_HOME_CASEFOLD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -58,8 +65,12 @@ function sensitiveHomeCaseFoldEnabled(env = process.env) {
  */
 function foldSensitiveRel(rel, env = process.env) {
   try {
-    if (!sensitiveHomeCaseFoldEnabled(env)) return null;
-    if (typeof rel !== 'string') return null;
+    if (!sensitiveHomeCaseFoldEnabled(env)) {
+      return null;
+    }
+    if (typeof rel !== 'string') {
+      return null;
+    }
     return rel.toLowerCase();
   } catch {
     return null;

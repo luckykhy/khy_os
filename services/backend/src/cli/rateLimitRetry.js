@@ -24,23 +24,35 @@ const FLAG = 'KHY_RATE_LIMIT_AUTORETRY'; // 主闸:限流自动重试,默认开
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 /** 限流 / 过载类 errorType(值得等冷却后原样重发)。 */
-const _RATE_LIMIT_TYPES = new Set(['rate_limit', 'ratelimit', 'overloaded', 'too_many_requests', '429']);
+const _RATE_LIMIT_TYPES = new Set([
+  'rate_limit',
+  'ratelimit',
+  'overloaded',
+  'too_many_requests',
+  '429',
+]);
 
-const DEFAULT_MAX_ROUNDS = 10;   // 对齐 CC 观感
-const _HARD_CAP_ROUNDS = 20;     // 防误配无界烧 token
+const DEFAULT_MAX_ROUNDS = 10; // 对齐 CC 观感
+const _HARD_CAP_ROUNDS = 20; // 防误配无界烧 token
 const DEFAULT_COOLDOWN_MS = 6000; // 结果里解析不到 cooldown 时的兜底退避
 const _MIN_WAIT_MS = 1000;
-const _MAX_WAIT_MS = 30000;      // 单轮等待上限,防某次 cooldown 异常大把用户锁死
+const _MAX_WAIT_MS = 30000; // 单轮等待上限,防某次 cooldown 异常大把用户锁死
 
 /** env 门控惯例(同 retryCountdown):默认开,仅显式 0/false/off/no 关。 */
 function isRateLimitAutoRetryEnabled(env = process.env) {
   const raw = env && env[FLAG];
-  return !_FALSY.has(String(raw == null ? '' : raw).trim().toLowerCase());
+  return !_FALSY.has(
+    String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** 该 errorType 是否属限流/过载类。 */
 function isRateLimitErrorType(errorType) {
-  if (!errorType) return false;
+  if (!errorType) {
+    return false;
+  }
   return _RATE_LIMIT_TYPES.has(String(errorType).trim().toLowerCase());
 }
 
@@ -52,11 +64,17 @@ function isRateLimitErrorType(errorType) {
  * - 钳到 _HARD_CAP_ROUNDS
  */
 function maxRounds(env = process.env) {
-  if (!isRateLimitAutoRetryEnabled(env)) return 0;
+  if (!isRateLimitAutoRetryEnabled(env)) {
+    return 0;
+  }
   const raw = env && env.KHY_RATE_LIMIT_MAX_ROUNDS;
-  if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_MAX_ROUNDS;
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return DEFAULT_MAX_ROUNDS;
+  }
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return DEFAULT_MAX_ROUNDS;
+  if (!Number.isFinite(n) || n < 0) {
+    return DEFAULT_MAX_ROUNDS;
+  }
   return Math.min(Math.floor(n), _HARD_CAP_ROUNDS);
 }
 
@@ -76,7 +94,9 @@ function resolveCooldownMs(result, roundIndex = 0) {
     const text = String((result && (result.content || result.error)) || '');
     // 匹配 "(cooldown 11s)" / "cooldown 11 s" / "cooldown 11秒"。
     const m = text.match(/cooldown\s*(\d+(?:\.\d+)?)\s*(?:s|秒)/i);
-    if (m) ms = Math.round(parseFloat(m[1]) * 1000);
+    if (m) {
+      ms = Math.round(parseFloat(m[1]) * 1000);
+    }
   }
   if (!Number.isFinite(ms) || ms <= 0) {
     // 兜底:指数退避 base * 1.6^round,base=DEFAULT_COOLDOWN_MS。
@@ -93,8 +113,12 @@ function resolveCooldownMs(result, roundIndex = 0) {
  * @returns {boolean}
  */
 function shouldAutoRetry({ errorType, round, maxRounds: cap, env } = {}) {
-  if (!isRateLimitAutoRetryEnabled(env)) return false;
-  if (!isRateLimitErrorType(errorType)) return false;
+  if (!isRateLimitAutoRetryEnabled(env)) {
+    return false;
+  }
+  if (!isRateLimitErrorType(errorType)) {
+    return false;
+  }
   const limit = Number.isFinite(cap) ? cap : maxRounds(env);
   const r = Number(round);
   return limit > 0 && Number.isFinite(r) && r >= 1 && r <= limit;

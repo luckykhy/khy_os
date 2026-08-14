@@ -24,7 +24,11 @@
 const fs = require('fs');
 
 function existsSyncSafe(p) {
-  try { return fs.existsSync(p); } catch { return false; }
+  try {
+    return fs.existsSync(p);
+  } catch {
+    return false;
+  }
 }
 
 module.exports = existsSyncSafe;

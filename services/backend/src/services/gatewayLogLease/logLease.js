@@ -61,7 +61,9 @@ function decide(entry = {}) {
   if (active && source && source === active) {
     // 在用适配器：净味翻译后给用户(L0)；纯噪音(translate→null)直接丢弃。
     const friendly = noiseFilter.translate(rawText);
-    if (friendly == null) return _mk(false, CHANNELS.DROP, null, rawText);
+    if (friendly == null) {
+      return _mk(false, CHANNELS.DROP, null, rawText);
+    }
     return _mk(true, CHANNELS.L0, friendly, rawText);
   }
 
@@ -74,10 +76,20 @@ function _mk(visible, channel, output, raw) {
 }
 
 function _text(t) {
-  if (t == null) return '';
-  if (typeof t === 'string') return t;
-  if (t instanceof Error) return t.message || String(t);
-  try { return String(t); } catch { return ''; }
+  if (t == null) {
+    return '';
+  }
+  if (typeof t === 'string') {
+    return t;
+  }
+  if (t instanceof Error) {
+    return t.message || String(t);
+  }
+  try {
+    return String(t);
+  } catch {
+    return '';
+  }
 }
 
 module.exports = { decide, CHANNELS };

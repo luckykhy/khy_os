@@ -27,10 +27,10 @@
  */
 
 // 行级匹配器(锚定行首;`##` 后须紧跟空白 → 天然排除 `###`)。
-const _VERSION_RE = /^##\s+(\S.*?)\s*$/;   // `## 0.1.136`
-const _SECTION_RE = /^###\s+(\S.*?)\s*$/;  // `### Highlights`
+const _VERSION_RE = /^##\s+(\S.*?)\s*$/; // `## 0.1.136`
+const _SECTION_RE = /^###\s+(\S.*?)\s*$/; // `### Highlights`
 const _BULLET_RE = /^\s*[-*]\s+(.*\S)\s*$/; // `- foo` / `* foo`
-const _HR_RE = /^\s*-{3,}\s*$/;            // `---`(条目分隔,非列表项)
+const _HR_RE = /^\s*-{3,}\s*$/; // `---`(条目分隔,非列表项)
 const _BOLD_TITLE_RE = /^\*\*(.+?)\*\*\s*[:：]?\s*(.*)$/; // `**标题**: 详情`
 
 function _emptyEntry(version) {
@@ -44,7 +44,9 @@ function _emptyEntry(version) {
  */
 function splitHighlight(raw) {
   const text = String(raw == null ? '' : raw).trim();
-  if (!text) return { title: '', detail: '' };
+  if (!text) {
+    return { title: '', detail: '' };
+  }
   const m = _BOLD_TITLE_RE.exec(text);
   if (m) {
     return { title: m[1].trim(), detail: m[2].trim() };
@@ -59,27 +61,33 @@ function splitHighlight(raw) {
  */
 function parseChangelog(raw) {
   const text = typeof raw === 'string' ? raw : '';
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
 
   const lines = text.split(/\r?\n/);
   const entries = [];
-  let cur = null;          // 当前版本条目
-  let section = null;      // 当前 ### 小节名(null = 摘要区)
-  let summaryLines = [];   // 累积摘要散文
-  let bulletBuf = null;    // 当前 highlight bullet 累积(支持多行续接)
+  let cur = null; // 当前版本条目
+  let section = null; // 当前 ### 小节名(null = 摘要区)
+  let summaryLines = []; // 累积摘要散文
+  let bulletBuf = null; // 当前 highlight bullet 累积(支持多行续接)
 
   const flushSummary = () => {
     // 仅在确有累积时赋值,避免空的收尾 flush 覆盖已写入的 summary。
     if (cur && summaryLines.length) {
       const joined = summaryLines.join(' ').replace(/\s+/g, ' ').trim();
-      if (joined) cur.summary = joined;
+      if (joined) {
+        cur.summary = joined;
+      }
     }
     summaryLines = [];
   };
   const flushBullet = () => {
     if (cur && bulletBuf != null && section === 'Highlights') {
       const joined = bulletBuf.replace(/\s+/g, ' ').trim();
-      if (joined) cur.highlights.push(splitHighlight(joined));
+      if (joined) {
+        cur.highlights.push(splitHighlight(joined));
+      }
     }
     bulletBuf = null;
   };
@@ -90,19 +98,25 @@ function parseChangelog(raw) {
       // 收束上一条目。
       flushBullet();
       flushSummary();
-      if (cur) entries.push(cur);
+      if (cur) {
+        entries.push(cur);
+      }
       cur = _emptyEntry(vm[1].trim());
       section = null;
       continue;
     }
-    if (!cur) continue; // 版本头之前的前言(标题/安装指引)整体忽略。
+    if (!cur) {
+      continue;
+    } // 版本头之前的前言(标题/安装指引)整体忽略。
 
     const sm = _SECTION_RE.exec(line);
     if (sm) {
       flushBullet();
       flushSummary();
       section = sm[1].trim();
-      if (section !== 'Highlights') cur.sections.push(section);
+      if (section !== 'Highlights') {
+        cur.sections.push(section);
+      }
       continue;
     }
 
@@ -115,7 +129,9 @@ function parseChangelog(raw) {
     const bm = _BULLET_RE.exec(line);
     if (bm) {
       flushBullet();
-      if (section === 'Highlights') bulletBuf = bm[1];
+      if (section === 'Highlights') {
+        bulletBuf = bm[1];
+      }
       continue;
     }
 
@@ -133,7 +149,9 @@ function parseChangelog(raw) {
 
   flushBullet();
   flushSummary();
-  if (cur) entries.push(cur);
+  if (cur) {
+    entries.push(cur);
+  }
   return entries;
 }
 
@@ -145,13 +163,16 @@ function parseChangelog(raw) {
  */
 function selectReleaseNotes(entries, opts = {}) {
   const list = Array.isArray(entries) ? entries : [];
-  const wantVersion = opts && opts.version != null ? String(opts.version).trim().replace(/^v/i, '') : '';
+  const wantVersion =
+    opts && opts.version != null ? String(opts.version).trim().replace(/^v/i, '') : '';
   if (wantVersion) {
     const hit = list.filter((e) => String(e.version).replace(/^v/i, '') === wantVersion);
     return hit;
   }
   let limit = Number(opts && opts.limit);
-  if (!Number.isFinite(limit) || limit < 1) limit = 1;
+  if (!Number.isFinite(limit) || limit < 1) {
+    limit = 1;
+  }
   return list.slice(0, Math.floor(limit));
 }
 

@@ -23,7 +23,9 @@ const TRUNC_MARK = '\n…(shell 输出已截断)';
 
 function shellEscapeExpandRecentEnabled(env = process.env) {
   const raw = env && env.KHY_SHELL_ESCAPE_EXPAND_RECENT;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -52,11 +54,16 @@ function _omitMarker(k) {
  *   门控关 → undefined(调用方回退);无有效记录 → '';否则 `<shell-escape-output>` 块。
  */
 function formatShellEscapeContextExpanded(records, maxLen = 8000, env = process.env) {
-  if (!shellEscapeExpandRecentEnabled(env)) return undefined;
+  if (!shellEscapeExpandRecentEnabled(env)) {
+    return undefined;
+  }
 
-  const cap = Number.isFinite(Number(maxLen)) && Number(maxLen) > 0 ? Math.floor(Number(maxLen)) : 8000;
+  const cap =
+    Number.isFinite(Number(maxLen)) && Number(maxLen) > 0 ? Math.floor(Number(maxLen)) : 8000;
   const valid = (Array.isArray(records) ? records : []).filter((r) => r && r.command);
-  if (valid.length === 0) return '';
+  if (valid.length === 0) {
+    return '';
+  }
 
   const blocks = valid.map(_renderBlock); // 时间顺序
   const n = blocks.length;
@@ -66,7 +73,9 @@ function formatShellEscapeContextExpanded(records, maxLen = 8000, env = process.
   if (newest.length > cap) {
     const truncated = newest.slice(0, Math.max(0, cap)) + TRUNC_MARK;
     const parts = [];
-    if (n > 1) parts.push(_omitMarker(n - 1));
+    if (n > 1) {
+      parts.push(_omitMarker(n - 1));
+    }
     parts.push(truncated);
     return _wrap(parts.join(SEP));
   }
@@ -84,12 +93,16 @@ function formatShellEscapeContextExpanded(records, maxLen = 8000, env = process.
     }
   }
 
-  const omitted = (n - 1) - keptOlder.length;
+  const omitted = n - 1 - keptOlder.length;
   keptOlder.sort((a, b) => a - b); // 恢复时间顺序
 
   const parts = [];
-  if (omitted > 0) parts.push(_omitMarker(omitted));
-  for (const i of keptOlder) parts.push(blocks[i]);
+  if (omitted > 0) {
+    parts.push(_omitMarker(omitted));
+  }
+  for (const i of keptOlder) {
+    parts.push(blocks[i]);
+  }
   parts.push(newest);
   return _wrap(parts.join(SEP));
 }

@@ -90,7 +90,8 @@ const PATTERNS = [
     name: '三元并列对称',
     priority: PRIORITY.MID,
     triggers: ['三重考量', '三方面', '三个维度', '三重'],
-    regex: '(三(重|方面|个(维度|层面)|大)[^。\\n]{0,6}[:：])|((从[^，。；\\n]{1,8}(看|来看)[，,])[^。\\n]{0,40}(从[^，。；\\n]{1,8}(看|来看)[，,])[^。\\n]{0,40}(从[^，。；\\n]{1,8}(看|来看)))',
+    regex:
+      '(三(重|方面|个(维度|层面)|大)[^。\\n]{0,6}[:：])|((从[^，。；\\n]{1,8}(看|来看)[，,])[^。\\n]{0,40}(从[^，。；\\n]{1,8}(看|来看)[，,])[^。\\n]{0,40}(从[^，。；\\n]{1,8}(看|来看)))',
     atEnd: false,
     fix: '打破三元对称，各项长度与实际分量匹配，加入限定语',
   },
@@ -128,7 +129,8 @@ const PATTERNS = [
     name: '泛化结尾',
     priority: PRIORITY.HIGH,
     triggers: ['未来可期', '前景广阔', '具有重要意义', '意义深远', '提供了新思路'],
-    regex: '(未来可期|前景(广阔|可观)|具有重要(的)?(理论|现实|学术)?(意义|价值)|意义深远|激动人心|为[^。\\n]{0,12}提供了(新的?)?(思路|借鉴|参考))',
+    regex:
+      '(未来可期|前景(广阔|可观)|具有重要(的)?(理论|现实|学术)?(意义|价值)|意义深远|激动人心|为[^。\\n]{0,12}提供了(新的?)?(思路|借鉴|参考))',
     atEnd: false,
     fix: '改为可检验的推论或具体后续方向',
   },
@@ -147,7 +149,8 @@ const PATTERNS = [
     name: '回避「是」',
     priority: PRIORITY.LOW,
     triggers: ['作为...载体', '扮演...角色', '发挥...功能'],
-    regex: '(作为[^，。；\\n]{0,12}(载体|桥梁|纽带|角色|媒介)|扮演[^，。；\\n]{0,8}(角色|作用)|发挥[^，。；\\n]{0,10}(功能|作用))',
+    regex:
+      '(作为[^，。；\\n]{0,12}(载体|桥梁|纽带|角色|媒介)|扮演[^，。；\\n]{0,8}(角色|作用)|发挥[^，。；\\n]{0,10}(功能|作用))',
     atEnd: false,
     fix: '直接用「是」',
   },
@@ -157,7 +160,8 @@ const PATTERNS = [
     priority: PRIORITY.LOW,
     triggers: ['突破了...填补了...创新了'],
     // 四个及以上「动词+了」并列（突破了/填补了/创新了/丰富了）。
-    regex: '([\\u4e00-\\u9fa5]{2}了[，,])[^。\\n]{0,20}([\\u4e00-\\u9fa5]{2}了[，,])[^。\\n]{0,20}([\\u4e00-\\u9fa5]{2}了[，,])',
+    regex:
+      '([\\u4e00-\\u9fa5]{2}了[，,])[^。\\n]{0,20}([\\u4e00-\\u9fa5]{2}了[，,])[^。\\n]{0,20}([\\u4e00-\\u9fa5]{2}了[，,])',
     atEnd: false,
     fix: '最核心的展开说，其余缩减',
   },
@@ -197,10 +201,29 @@ const PATTERNS = [
  * 保持高精度，避免误伤普通学术用词。
  */
 const HIGH_FREQ_WORDS = [
-  '深刻揭示', '综合运用', '不可或缺', '深入探讨', '系统梳理', '深入分析',
-  '具有重要意义', '至关重要', '值得注意的是', '综上所述', '总而言之',
-  '不言而喻', '一系列', '极大地', '进一步', '深层次', '全方位', '多维度',
-  '行之有效', '日益', '愈发', '层面', '维度',
+  '深刻揭示',
+  '综合运用',
+  '不可或缺',
+  '深入探讨',
+  '系统梳理',
+  '深入分析',
+  '具有重要意义',
+  '至关重要',
+  '值得注意的是',
+  '综上所述',
+  '总而言之',
+  '不言而喻',
+  '一系列',
+  '极大地',
+  '进一步',
+  '深层次',
+  '全方位',
+  '多维度',
+  '行之有效',
+  '日益',
+  '愈发',
+  '层面',
+  '维度',
 ];
 
 /**
@@ -226,9 +249,26 @@ const REPLACEMENTS = {
  * 注意：这是「禁止」清单；中性语气词（把/让/就/换言之…）不在此列，按文档属允许。
  */
 const COLLOQUIAL_BLOCKLIST = [
-  '说白了就是', '说白了', '搞了个', '搞定', '挂了', '卡死了', '这玩意儿',
-  '吃进去的数据', '玩意儿', '牛逼', '666', '坑爹', '给力', '吐槽', '秒杀',
-  '简单粗暴', '一波', '666', 'yyds', '绝绝子',
+  '说白了就是',
+  '说白了',
+  '搞了个',
+  '搞定',
+  '挂了',
+  '卡死了',
+  '这玩意儿',
+  '吃进去的数据',
+  '玩意儿',
+  '牛逼',
+  '666',
+  '坑爹',
+  '给力',
+  '吐槽',
+  '秒杀',
+  '简单粗暴',
+  '一波',
+  '666',
+  'yyds',
+  '绝绝子',
 ];
 
 /**
@@ -236,8 +276,18 @@ const COLLOQUIAL_BLOCKLIST = [
  * 不参与扣分。
  */
 const NEUTRAL_TONE_MARKERS = [
-  '换句话说', '换言之', '坦率地说', '回头想想', '罢了', '而已', '倒是',
-  '笔者认为', '出乎意料', '事后来看', '说来', '问题的关键',
+  '换句话说',
+  '换言之',
+  '坦率地说',
+  '回头想想',
+  '罢了',
+  '而已',
+  '倒是',
+  '笔者认为',
+  '出乎意料',
+  '事后来看',
+  '说来',
+  '问题的关键',
 ];
 
 function _envInt(name, fallback) {
@@ -254,21 +304,21 @@ function _envFloat(name, fallback) {
  * 强制硬约束阈值 + 三维评分合格线。集中声明，环境变量可覆盖（便于按学校/期刊调档）。
  */
 const thresholds = {
-  highFreqPerParagraph: _envInt('KHY_WEIPU_HIFREQ_PER_PARA', 2),   // AI高频词/段 ≤
-  endClicheTotal: _envInt('KHY_WEIPU_END_CLICHE_TOTAL', 1),         // 段末套句 全文≤
-  tripletPerParagraph: _envInt('KHY_WEIPU_TRIPLET_PER_PARA', 1),    // 三元并列/段 ≤
-  theoryOpenerRatio: _envFloat('KHY_WEIPU_THEORY_OPENER_RATIO', 0.20), // 理论起笔段落比例 ≤
-  boldTotal: _envInt('KHY_WEIPU_BOLD_TOTAL', 5),                    // 正文加粗 ≤
-  generalEndingTotal: 0,                                            // 泛化结尾 = 0
-  vagueAttributionTotal: 0,                                         // 模糊归因 = 0
-  explicitCitationFull: _envInt('KHY_WEIPU_CITATION_FULL', 15),     // 全文显式引用 = 15
-  huayongMin: _envFloat('KHY_WEIPU_HUAYONG_MIN', 0.20),            // 化用密度 ≥
-  huayongMax: _envFloat('KHY_WEIPU_HUAYONG_MAX', 0.40),            // 化用密度 ≤
-  colonPerParagraph: _envInt('KHY_WEIPU_COLON_PER_PARA', 3),       // 冒号/段 ≥ 触发失衡
-  dashPerParagraph: _envInt('KHY_WEIPU_DASH_PER_PARA', 4),         // 破折号/段 ≥ 触发失衡
+  highFreqPerParagraph: _envInt('KHY_WEIPU_HIFREQ_PER_PARA', 2), // AI高频词/段 ≤
+  endClicheTotal: _envInt('KHY_WEIPU_END_CLICHE_TOTAL', 1), // 段末套句 全文≤
+  tripletPerParagraph: _envInt('KHY_WEIPU_TRIPLET_PER_PARA', 1), // 三元并列/段 ≤
+  theoryOpenerRatio: _envFloat('KHY_WEIPU_THEORY_OPENER_RATIO', 0.2), // 理论起笔段落比例 ≤
+  boldTotal: _envInt('KHY_WEIPU_BOLD_TOTAL', 5), // 正文加粗 ≤
+  generalEndingTotal: 0, // 泛化结尾 = 0
+  vagueAttributionTotal: 0, // 模糊归因 = 0
+  explicitCitationFull: _envInt('KHY_WEIPU_CITATION_FULL', 15), // 全文显式引用 = 15
+  huayongMin: _envFloat('KHY_WEIPU_HUAYONG_MIN', 0.2), // 化用密度 ≥
+  huayongMax: _envFloat('KHY_WEIPU_HUAYONG_MAX', 0.4), // 化用密度 ≤
+  colonPerParagraph: _envInt('KHY_WEIPU_COLON_PER_PARA', 3), // 冒号/段 ≥ 触发失衡
+  dashPerParagraph: _envInt('KHY_WEIPU_DASH_PER_PARA', 4), // 破折号/段 ≥ 触发失衡
   // 三维评分合格线
-  aigcPass: _envInt('KHY_WEIPU_AIGC_PASS', 40),                    // AIGC ≤ 合格
-  academicPass: _envInt('KHY_WEIPU_ACADEMIC_PASS', 55),           // 学术质量 ≥ 合格
+  aigcPass: _envInt('KHY_WEIPU_AIGC_PASS', 40), // AIGC ≤ 合格
+  academicPass: _envInt('KHY_WEIPU_ACADEMIC_PASS', 55), // 学术质量 ≥ 合格
 };
 
 // ── 惰性编译的匹配器缓存 ──────────────────────────────────────────────
@@ -279,7 +329,9 @@ let _compiled = null;
  * @returns {Array<{id,name,priority,atEnd,requiresNoCitation,fix,triggers,re:RegExp|null}>}
  */
 function compiledPatterns() {
-  if (_compiled) return _compiled;
+  if (_compiled) {
+    return _compiled;
+  }
   _compiled = PATTERNS.map((p) => ({
     id: p.id,
     name: p.name,

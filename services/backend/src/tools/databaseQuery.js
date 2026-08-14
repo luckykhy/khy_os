@@ -1,7 +1,8 @@
 'use strict';
 
-const { defineTool } = require('./_baseTool');
 const toolErrorCodes = require('../services/toolErrorCodes');
+
+const { defineTool } = require('./_baseTool');
 const _dbTimeout = require('./_dbTimeout');
 
 /**
@@ -31,10 +32,13 @@ const DRIVERS = {
   sqlite: { mod: 'better-sqlite3', install: 'npm i better-sqlite3' },
 };
 
-const READONLY_PREFIX = /^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*\s*(select|with|pragma|explain|show)\b/i;
+const READONLY_PREFIX =
+  /^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*\s*(select|with|pragma|explain|show)\b/i;
 
 function _resolveConfig(params) {
-  const dialect = String((params && params.dialect) || process.env.KHY_DB_DIALECT || '').trim().toLowerCase();
+  const dialect = String((params && params.dialect) || process.env.KHY_DB_DIALECT || '')
+    .trim()
+    .toLowerCase();
   const connection = (params && params.connection) || process.env.KHY_DB_URL || null;
   return { dialect, connection };
 }
@@ -45,7 +49,11 @@ function _isReadonlyQuery(sql) {
 
 async function _runPostgres(connection, sql, bind, overrideStatementMs) {
   let pg;
-  try { pg = require('pg'); } catch { return { _missing: true }; }
+  try {
+    pg = require('pg');
+  } catch {
+    return { _missing: true };
+  }
   // 超时选项 delta(门控关 → {},与今日逐字节一致)。connectionString 形式先归一成对象,
   // 让 connectionTimeoutMillis/query_timeout/statement_timeout 能真正附加上去。
   const _tmo = _dbTimeout.buildPostgresTimeoutOptions(process.env, overrideStatementMs);
@@ -55,16 +63,28 @@ async function _runPostgres(connection, sql, bind, overrideStatementMs) {
   try {
     await client.connect();
   } catch (err) {
-    try { await client.end(); } catch { /* ignore */ }
+    try {
+      await client.end();
+    } catch {
+      /* ignore */
+    }
     return { _conn: err.message };
   }
   try {
     const res = await client.query(sql, Array.isArray(bind) ? bind : undefined);
-    return { rows: res.rows, rowCount: res.rowCount, fields: (res.fields || []).map((f) => f.name) };
+    return {
+      rows: res.rows,
+      rowCount: res.rowCount,
+      fields: (res.fields || []).map((f) => f.name),
+    };
   } catch (err) {
     return { _query: err.message };
   } finally {
-    try { await client.end(); } catch { /* ignore */ }
+    try {
+      await client.end();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -80,31 +100,62 @@ function _raceStatementDeadline(promise, ms, conn) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { if (conn && typeof conn.destroy === 'function') conn.destroy(); } catch { /* ignore */ }
+      try {
+        if (conn && typeof conn.destroy === 'function') {
+          conn.destroy();
+        }
+      } catch {
+        /* ignore */
+      }
       const e = new Error(`语句执行超时(${ms}ms),已强制中止连接。`);
       e.code = 'ETIMEDOUT';
       reject(e);
     }, ms);
-    if (timer && typeof timer.unref === 'function') timer.unref();
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
     Promise.resolve(promise).then(
-      (v) => { if (settled) return; settled = true; clearTimeout(timer); resolve(v); },
-      (e) => { if (settled) return; settled = true; clearTimeout(timer); reject(e); },
+      (v) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        reject(e);
+      }
     );
   });
 }
 
 async function _runMysql(connection, sql, bind, overrideStatementMs) {
   let mysql;
-  try { mysql = require('mysql2/promise'); } catch { return { _missing: true }; }
+  try {
+    mysql = require('mysql2/promise');
+  } catch {
+    return { _missing: true };
+  }
   const _tmoOn = _dbTimeout.isDbTimeoutEnabled(process.env);
   // 对象连接并入 connectTimeout(native);字符串连接保持原样(mysql2 自带 10s connect 默认已兜连接相)。
   const _connDelta = _dbTimeout.buildMysqlConnectOptions(process.env);
-  const _connectArg = (_tmoOn && connection && typeof connection !== 'string' && Object.keys(_connDelta).length)
-    ? { ...connection, ..._connDelta }
-    : connection;
-  const _stmtMs = _tmoOn ? _dbTimeout.resolveStatementTimeoutMs(process.env, overrideStatementMs) : 0;
+  const _connectArg =
+    _tmoOn && connection && typeof connection !== 'string' && Object.keys(_connDelta).length
+      ? { ...connection, ..._connDelta }
+      : connection;
+  const _stmtMs = _tmoOn
+    ? _dbTimeout.resolveStatementTimeoutMs(process.env, overrideStatementMs)
+    : 0;
   let conn;
   try {
     conn = await mysql.createConnection(_connectArg);
@@ -115,7 +166,8 @@ async function _runMysql(connection, sql, bind, overrideStatementMs) {
     // mysql2 无客户端 query 超时选项:用墙钟 Promise.race 兜住失控慢查询/挂死(超时强制 destroy),
     // 否则 conn.execute 可能永挂,只靠调度层 120s race 兜且泄漏连接。门控关 → 直接 await(今日行为)。
     const _execP = conn.execute(sql, Array.isArray(bind) ? bind : undefined);
-    const [rows, fields] = _stmtMs > 0 ? await _raceStatementDeadline(_execP, _stmtMs, conn) : await _execP;
+    const [rows, fields] =
+      _stmtMs > 0 ? await _raceStatementDeadline(_execP, _stmtMs, conn) : await _execP;
     return {
       rows: Array.isArray(rows) ? rows : [],
       rowCount: Array.isArray(rows) ? rows.length : (rows && rows.affectedRows) || 0,
@@ -124,13 +176,21 @@ async function _runMysql(connection, sql, bind, overrideStatementMs) {
   } catch (err) {
     return { _query: err.message };
   } finally {
-    try { await conn.end(); } catch { /* ignore */ }
+    try {
+      await conn.end();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
 function _runSqlite(connection, sql, bind) {
   let Database;
-  try { Database = require('../config/sqlite-adapter'); } catch { return { _missing: true }; }
+  try {
+    Database = require('../config/sqlite-adapter');
+  } catch {
+    return { _missing: true };
+  }
   // connection is a file path (or ':memory:'); strip an optional sqlite:// prefix.
   const file = String(connection).replace(/^sqlite:(\/\/)?/i, '') || ':memory:';
   let db;
@@ -151,17 +211,22 @@ function _runSqlite(connection, sql, bind) {
   } catch (err) {
     return { _query: err.message };
   } finally {
-    try { db.close(); } catch { /* ignore */ }
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
 module.exports = defineTool({
   name: 'databaseQuery',
   description:
-    'Run a parameterized SQL query against a configured database (postgres / mysql / sqlite). '
-    + 'Read-only by default (SELECT/WITH/PRAGMA/EXPLAIN/SHOW); pass readonly:false to allow writes. '
-    + 'Connection comes from params or env (KHY_DB_DIALECT + KHY_DB_URL). If unconfigured or the driver '
-    + 'is not installed, returns a structured error with setup instructions instead of failing.',
+    'READ-ONLY by default SQL runner: only SELECT/WITH/PRAGMA/EXPLAIN/SHOW are executed unless readonly:false is passed explicitly; ' +
+    'the connection comes from params (dialect + connection) or env KHY_DB_DIALECT + KHY_DB_URL. ' +
+    'Supports postgres / mysql / sqlite with parameterized bind values ($1.. for postgres, ? for mysql/sqlite). ' +
+    'Use for structured queries against a configured database; do NOT use for plain files (use readFile) or shelling out to a DB CLI. ' +
+    'If unconfigured or the driver is missing, it returns a structured error with setup instructions instead of throwing.',
   category: 'data',
   risk: 'high',
   isReadOnly: false,
@@ -169,12 +234,48 @@ module.exports = defineTool({
   aliases: ['database_query', 'sql_query', 'db_query'],
   searchHint: 'database sql query select postgres mysql sqlite db',
   inputSchema: {
-    query: { type: 'string', required: true, description: 'SQL statement. Use placeholders ($1.. for postgres, ? for mysql/sqlite) with the params array.' },
-    params: { type: 'array', required: false, description: 'Bind parameters for placeholders, in order.', items: { type: ['string', 'number', 'boolean', 'null'], description: 'A scalar bind value.' } },
-    dialect: { type: 'string', required: false, enum: SUPPORTED_DIALECTS, description: 'postgres | mysql | sqlite. Defaults to env KHY_DB_DIALECT.' },
-    connection: { type: 'string', required: false, description: 'Connection string / sqlite file path. Defaults to env KHY_DB_URL.' },
-    readonly: { type: 'boolean', required: false, description: 'Default true; only read queries allowed. Set false to permit writes.' },
-    timeoutMs: { type: 'number', required: false, description: 'Optional per-query statement timeout in milliseconds (range 1000–600000). Overrides the env default. Set a lower value to avoid waiting on a slow/hung query.' },
+    query: {
+      type: 'string',
+      required: true,
+      description:
+        'SQL statement to run, e.g. "SELECT id, name FROM users WHERE id = $1". Use placeholders ($1.. for postgres, ? for mysql/sqlite) with the params array — never inline values.',
+      example: 'SELECT id, name FROM users WHERE id = $1',
+    },
+    params: {
+      type: 'array',
+      required: false,
+      description:
+        'Bind parameters for the placeholders, in order, e.g. [42, "active"] (default: none).',
+      items: { type: ['string', 'number', 'boolean', 'null'], description: 'A scalar bind value.' },
+    },
+    dialect: {
+      type: 'string',
+      required: false,
+      enum: SUPPORTED_DIALECTS,
+      description: 'Database dialect: postgres | mysql | sqlite (default: env KHY_DB_DIALECT).',
+      example: 'sqlite',
+    },
+    connection: {
+      type: 'string',
+      required: false,
+      description:
+        'Connection string (postgres/mysql) or sqlite file path, e.g. "postgres://user:pass@host:5432/db" or "./data/app.db" (default: env KHY_DB_URL).',
+      example: './data/app.db',
+    },
+    readonly: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Default true: only read queries (SELECT/WITH/PRAGMA/EXPLAIN/SHOW) are allowed. Set false explicitly to permit writes/DDL.',
+      example: false,
+    },
+    timeoutMs: {
+      type: 'number',
+      required: false,
+      description:
+        'Per-query statement timeout in milliseconds, range 1000–600000 (default: env-configured). Set a lower value to avoid waiting on a slow/hung query.',
+      example: 10000,
+    },
   },
 
   async validateInput(input) {
@@ -192,45 +293,85 @@ module.exports = defineTool({
     // ── Config gate ──────────────────────────────────────────────────────────
     if (!dialect || !SUPPORTED_DIALECTS.includes(dialect)) {
       const msg = `未配置数据库方言。请传 dialect(${SUPPORTED_DIALECTS.join('/')})或设置环境变量 KHY_DB_DIALECT。`;
-      return toolErrorCodes.enrich({ success: false, code: 'CONFIG_MISSING', error: msg, content: msg });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'CONFIG_MISSING',
+        error: msg,
+        content: msg,
+      });
     }
     if (!connection) {
       const msg = `未配置数据库连接。请传 connection(连接串或 sqlite 文件路径)或设置环境变量 KHY_DB_URL。`;
-      return toolErrorCodes.enrich({ success: false, code: 'CONFIG_MISSING', error: msg, content: msg });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'CONFIG_MISSING',
+        error: msg,
+        content: msg,
+      });
     }
 
     // ── Readonly guard ───────────────────────────────────────────────────────
     const readonly = !(params && params.readonly === false);
     if (readonly && !_isReadonlyQuery(sql)) {
-      const msg = '只读模式拒绝执行非查询语句(仅允许 SELECT/WITH/PRAGMA/EXPLAIN/SHOW)。如确需写入，请传 readonly:false。';
+      const msg =
+        '只读模式拒绝执行非查询语句(仅允许 SELECT/WITH/PRAGMA/EXPLAIN/SHOW)。如确需写入，请传 readonly:false。';
       return toolErrorCodes.enrich({ success: false, code: 'BAD_PARAM', error: msg, content: msg });
     }
 
     // ── Dispatch ─────────────────────────────────────────────────────────────
     // 模型可设的每次查询语句超时(优先于 env);sqlite 本地文件不涉网,不受影响。
-    const _overrideStmtMs = Number((params && (params.timeoutMs || params.statementTimeoutMs)) || 0) || undefined;
+    const _overrideStmtMs =
+      Number((params && (params.timeoutMs || params.statementTimeoutMs)) || 0) || undefined;
     let r;
     try {
-      if (dialect === 'postgres') r = await _runPostgres(connection, sql, bind, _overrideStmtMs);
-      else if (dialect === 'mysql') r = await _runMysql(connection, sql, bind, _overrideStmtMs);
-      else r = _runSqlite(connection, sql, bind);
+      if (dialect === 'postgres') {
+        r = await _runPostgres(connection, sql, bind, _overrideStmtMs);
+      } else if (dialect === 'mysql') {
+        r = await _runMysql(connection, sql, bind, _overrideStmtMs);
+      } else {
+        r = _runSqlite(connection, sql, bind);
+      }
     } catch (err) {
       // Unexpected: treat as service-side failure (retryable).
-      return toolErrorCodes.enrich({ success: false, code: 'SERVICE_UNAVAILABLE', error: err.message, content: err.message, meta: { dialect } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'SERVICE_UNAVAILABLE',
+        error: err.message,
+        content: err.message,
+        meta: { dialect },
+      });
     }
 
     if (r._missing) {
       const hint = DRIVERS[dialect].install;
       const msg = `数据库驱动未安装(${dialect})。请先安装:${hint}`;
-      return toolErrorCodes.enrich({ success: false, code: 'MISSING_DEPENDENCY', error: msg, content: msg, meta: { dialect, install: hint } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'MISSING_DEPENDENCY',
+        error: msg,
+        content: msg,
+        meta: { dialect, install: hint },
+      });
     }
     if (r._conn) {
       const msg = `数据库连接失败(${dialect}):${r._conn}`;
-      return toolErrorCodes.enrich({ success: false, code: 'SERVICE_UNAVAILABLE', error: msg, content: msg, meta: { dialect } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'SERVICE_UNAVAILABLE',
+        error: msg,
+        content: msg,
+        meta: { dialect },
+      });
     }
     if (r._query) {
       const msg = `SQL 执行失败:${r._query}`;
-      return toolErrorCodes.enrich({ success: false, code: 'BAD_PARAM', error: msg, content: msg, meta: { dialect } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'BAD_PARAM',
+        error: msg,
+        content: msg,
+        meta: { dialect },
+      });
     }
 
     const preview = JSON.stringify(r.rows && r.rows.slice ? r.rows.slice(0, 50) : r.rows, null, 2);

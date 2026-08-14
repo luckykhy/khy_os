@@ -17,7 +17,7 @@
  * Zero dependencies — a true leaf, so it can never participate in a cycle.
  */
 
-let _doctor = null;   // async (pluginDir, options) => report   from cli/handlers/plugin-dev
+let _doctor = null; // async (pluginDir, options) => report   from cli/handlers/plugin-dev
 
 /** Register the plugin-doctor runner. Called by cli/handlers/plugin-dev on load. */
 function registerPluginDoctor(fn) {

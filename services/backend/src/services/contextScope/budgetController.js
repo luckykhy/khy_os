@@ -20,12 +20,12 @@
  */
 
 const DEFAULTS = Object.freeze({
-  maxFiles: 8,           // hard ceiling on files to read
-  minFiles: 1,           // always try to select at least this many when available
-  maxBytes: 256 * 1024,  // optional ceiling when candidate.size is known
+  maxFiles: 8, // hard ceiling on files to read
+  minFiles: 1, // always try to select at least this many when available
+  maxBytes: 256 * 1024, // optional ceiling when candidate.size is known
   marginalFloorRatio: 0.18, // stop once score < ratio * topScore (after minFiles)
   satisfiedConfidence: 0.85, // stop once confidence crosses this (after minFiles)
-  confidenceScale: 18,   // larger = needs more accumulated score to feel confident
+  confidenceScale: 18, // larger = needs more accumulated score to feel confident
 });
 
 function _clampPositive(n, fallback) {
@@ -35,7 +35,9 @@ function _clampPositive(n, fallback) {
 
 function _confidence(sumScore, scale) {
   // 1 - e^(-sum/scale): 0 at sum=0, saturates toward 1.
-  if (sumScore <= 0) return 0;
+  if (sumScore <= 0) {
+    return 0;
+  }
   return Number((1 - Math.exp(-sumScore / scale)).toFixed(4));
 }
 
@@ -53,7 +55,9 @@ function applyBudget(ranked, budget = {}) {
     satisfiedConfidence: _clampPositive(budget.satisfiedConfidence, DEFAULTS.satisfiedConfidence),
     confidenceScale: _clampPositive(budget.confidenceScale, DEFAULTS.confidenceScale),
   };
-  if (cfg.minFiles > cfg.maxFiles) cfg.minFiles = cfg.maxFiles;
+  if (cfg.minFiles > cfg.maxFiles) {
+    cfg.minFiles = cfg.maxFiles;
+  }
 
   const list = Array.isArray(ranked) ? ranked.filter((c) => c && c.path) : [];
   if (list.length === 0) {
@@ -73,15 +77,24 @@ function applyBudget(ranked, budget = {}) {
     const haveMin = selected.length >= cfg.minFiles;
 
     // (1) hard ceiling — files
-    if (selected.length >= cfg.maxFiles) { stopReason = 'budget_full'; break; }
+    if (selected.length >= cfg.maxFiles) {
+      stopReason = 'budget_full';
+      break;
+    }
 
     // (1b) hard ceiling — bytes (only enforced once minimum met and size known)
     const size = Number(cand.size) || 0;
-    if (haveMin && size > 0 && usedBytes + size > cfg.maxBytes) { stopReason = 'budget_full'; break; }
+    if (haveMin && size > 0 && usedBytes + size > cfg.maxBytes) {
+      stopReason = 'budget_full';
+      break;
+    }
 
     // (2) diminishing returns — only after the floor of minFiles is met
     const score = Number(cand.score) || 0;
-    if (haveMin && score < marginalFloor) { stopReason = 'diminishing_returns'; break; }
+    if (haveMin && score < marginalFloor) {
+      stopReason = 'diminishing_returns';
+      break;
+    }
 
     // accept
     selected.push(cand);
@@ -89,7 +102,10 @@ function applyBudget(ranked, budget = {}) {
     usedBytes += size;
 
     // (3) confidence satisfied — only after minFiles
-    if (selected.length >= cfg.minFiles && _confidence(sumScore, cfg.confidenceScale) >= cfg.satisfiedConfidence) {
+    if (
+      selected.length >= cfg.minFiles &&
+      _confidence(sumScore, cfg.confidenceScale) >= cfg.satisfiedConfidence
+    ) {
       stopReason = 'confidence_satisfied';
       break;
     }
@@ -121,8 +137,13 @@ function enforceBudget(candidates, chosenPaths, budget = {}) {
   const seen = new Set();
   for (const p of chosenPaths || []) {
     const cand = byPath.get(p);
-    if (cand && !seen.has(p)) { out.push(cand); seen.add(p); }
-    if (out.length >= maxFiles) break;
+    if (cand && !seen.has(p)) {
+      out.push(cand);
+      seen.add(p);
+    }
+    if (out.length >= maxFiles) {
+      break;
+    }
   }
   return out;
 }

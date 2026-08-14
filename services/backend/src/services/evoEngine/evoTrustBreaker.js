@@ -20,37 +20,44 @@
 
 // 受宪法保护、绝不允许被自举热载触碰的不变量模块（防呆③）。路径片段匹配即否决。
 const PROTECTED_INVARIANTS = Object.freeze([
-  'evoTrustBreaker',        // 熔断机制自身
-  'evoLedger',              // 不可变日志
-  'organogenesisSandbox',   // 沙箱判决/凭证签发
-  'constraints',            // 全局禁令单一真源
+  'evoTrustBreaker', // 熔断机制自身
+  'evoLedger', // 不可变日志
+  'organogenesisSandbox', // 沙箱判决/凭证签发
+  'constraints', // 全局禁令单一真源
   'constitutionalRedLines', // 宪法红线
   'metaplan/trustCircuitBreaker',
 ]);
 
-const DEFAULT_BRANCH_FUSE = 2;     // 同一痛点连续沙箱失败次数 → 分支熔断（§3.4）
-const DEFAULT_ENGINE_FUSE = 2;     // 跨痛点连续沙箱失败次数 → 引擎只读（防呆④）
+const DEFAULT_BRANCH_FUSE = 2; // 同一痛点连续沙箱失败次数 → 分支熔断（§3.4）
+const DEFAULT_ENGINE_FUSE = 2; // 跨痛点连续沙箱失败次数 → 引擎只读（防呆④）
 const DEFAULT_ROLLBACK_ANOMALIES = 3; // 已载补丁引发新异常次数 → 回滚（§3.4）
 
 class EvoTrustBreaker {
   constructor(opts = {}) {
     this.branchFuseThreshold = _posInt(opts.branchFuseThreshold, DEFAULT_BRANCH_FUSE);
     this.engineFuseThreshold = _posInt(opts.engineFuseThreshold, DEFAULT_ENGINE_FUSE);
-    this.rollbackAnomalyThreshold = _posInt(opts.rollbackAnomalyThreshold, DEFAULT_ROLLBACK_ANOMALIES);
+    this.rollbackAnomalyThreshold = _posInt(
+      opts.rollbackAnomalyThreshold,
+      DEFAULT_ROLLBACK_ANOMALIES
+    );
 
-    this._consecutiveSandboxFailures = 0;       // 跨痛点连续失败（引擎只读判据）
-    this._branchFailures = new Map();           // painpointId → 连续失败计数
-    this._fusedBranches = new Set();            // 已熔断的痛点分支
-    this._engineReadOnly = false;               // 引擎只读锁
-    this._patchAnomalies = new Map();           // patchId → 后续异常计数
+    this._consecutiveSandboxFailures = 0; // 跨痛点连续失败（引擎只读判据）
+    this._branchFailures = new Map(); // painpointId → 连续失败计数
+    this._fusedBranches = new Set(); // 已熔断的痛点分支
+    this._engineReadOnly = false; // 引擎只读锁
+    this._patchAnomalies = new Map(); // patchId → 后续异常计数
     this._events = [];
   }
 
   /** 引擎是否被锁为只读（防呆④）。HostPatcher 据此拒绝一切热载。 */
-  isEngineReadOnly() { return this._engineReadOnly; }
+  isEngineReadOnly() {
+    return this._engineReadOnly;
+  }
 
   /** 某痛点分支是否已熔断（不再为其自举）。 */
-  isBranchFused(painpointId) { return this._fusedBranches.has(String(painpointId)); }
+  isBranchFused(painpointId) {
+    return this._fusedBranches.has(String(painpointId));
+  }
 
   /** 受保护不变量检查（防呆③）：目标是否触碰锁具/红线模块。 */
   static isProtectedTarget(target) {
@@ -79,7 +86,12 @@ class EvoTrustBreaker {
     const branchCount = (this._branchFailures.get(id) || 0) + 1;
     this._branchFailures.set(id, branchCount);
     this._consecutiveSandboxFailures += 1;
-    this._events.push({ type: 'sandbox_fail', painpointId: id, branchCount, consecutive: this._consecutiveSandboxFailures });
+    this._events.push({
+      type: 'sandbox_fail',
+      painpointId: id,
+      branchCount,
+      consecutive: this._consecutiveSandboxFailures,
+    });
 
     // 分支熔断（§3.4）：同一痛点连续 N 次失败 → 熔断分支 + 架构级告警。
     if (branchCount >= this.branchFuseThreshold && !this._fusedBranches.has(id)) {
@@ -98,7 +110,11 @@ class EvoTrustBreaker {
       this._events.push({ type: 'engine_readonly', consecutive: this._consecutiveSandboxFailures });
     }
 
-    return { branchFused: this._fusedBranches.has(id), engineReadOnly: this._engineReadOnly, alert };
+    return {
+      branchFused: this._fusedBranches.has(id),
+      engineReadOnly: this._engineReadOnly,
+      alert,
+    };
   }
 
   /**
@@ -118,11 +134,15 @@ class EvoTrustBreaker {
     this._patchAnomalies.set(id, count);
     this._events.push({ type: 'patch_anomaly', patchId: id, count });
     const rollback = count >= this.rollbackAnomalyThreshold;
-    if (rollback) this._events.push({ type: 'rollback_triggered', patchId: id, anomalies: count });
+    if (rollback) {
+      this._events.push({ type: 'rollback_triggered', patchId: id, anomalies: count });
+    }
     return { rollback, anomalies: count };
   }
 
-  events() { return this._events.map((e) => ({ ...e })); }
+  events() {
+    return this._events.map((e) => ({ ...e }));
+  }
 
   _snapshot() {
     return {

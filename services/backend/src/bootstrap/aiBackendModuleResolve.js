@@ -42,8 +42,8 @@
  *     with the sibling ungated `ensureAuthSecret` bootstrap.
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 /**
  * Resolve backend's node_modules directory relative to this file.
@@ -67,13 +67,19 @@ function ensureAiBackendResolvable(options = {}) {
     // Skip silently if the store does not exist yet (e.g. deps not installed):
     // adding a non-existent path would be inert anyway, but avoid churn.
     try {
-      if (!fs.existsSync(dir)) return false;
-    } catch { /* fs probe failed — fall through and attempt the append */ }
+      if (!fs.existsSync(dir)) {
+        return false;
+      }
+    } catch {
+      /* fs probe failed — fall through and attempt the append */
+    }
 
     const sep = path.delimiter;
     const current = process.env.NODE_PATH ? process.env.NODE_PATH.split(sep) : [];
     // Idempotent: already present → nothing to do.
-    if (current.includes(dir)) return false;
+    if (current.includes(dir)) {
+      return false;
+    }
 
     current.push(dir);
     process.env.NODE_PATH = current.filter(Boolean).join(sep);

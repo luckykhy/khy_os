@@ -17,7 +17,8 @@ const _FALSY = ['0', 'false', 'off', 'no'];
 /** 门控:仅当显式置为 0/false/off/no 时关闭,其余(含未设)均开启。 */
 function isEnabled(env) {
   const raw = String((env || process.env).KHY_GIT_COAUTHOR_TRAILER || 'on')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !_FALSY.includes(raw);
 }
 
@@ -33,8 +34,12 @@ const HAS_TRAILER_RE = /^Co-Authored-By:/im;
 function resolveTrailerLine(env) {
   try {
     const override = String((env || process.env).KHY_GIT_COAUTHOR_TRAILER_LINE || '').trim();
-    if (override && TRAILER_LINE_RE.test(override)) return override;
-  } catch { /* 回默认 */ }
+    if (override && TRAILER_LINE_RE.test(override)) {
+      return override;
+    }
+  } catch {
+    /* 回默认 */
+  }
   return DEFAULT_TRAILER;
 }
 
@@ -51,13 +56,21 @@ function resolveTrailerLine(env) {
  */
 function appendCoAuthorTrailer(message, env) {
   try {
-    if (typeof message !== 'string') return message;
-    if (!isEnabled(env)) return message;
-    if (HAS_TRAILER_RE.test(message)) return message;
+    if (typeof message !== 'string') {
+      return message;
+    }
+    if (!isEnabled(env)) {
+      return message;
+    }
+    if (HAS_TRAILER_RE.test(message)) {
+      return message;
+    }
     const trailer = resolveTrailerLine(env);
     // 去掉正文尾部空白,再以「空行 + 尾注」拼接,保证正文与尾注块间恰一空行。
     const body = message.replace(/\s+$/, '');
-    if (!body) return message; // 空正文不塑形,交由上层处理
+    if (!body) {
+      return message;
+    } // 空正文不塑形,交由上层处理
     return `${body}\n\n${trailer}`;
   } catch {
     return message;

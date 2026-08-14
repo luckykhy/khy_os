@@ -9,9 +9,12 @@
 
 function extractInlineImageIntent(input = '', sceneHint = '') {
   const text = String(input || '').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
-  const pathAtom = '(?:file:\\/\\/[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:[A-Za-z]:[\\\\/])[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:\\/|\\.\\/|\\.\\.\\/)[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp))';
+  const pathAtom =
+    '(?:file:\\/\\/[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:[A-Za-z]:[\\\\/])[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:\\/|\\.\\/|\\.\\.\\/)[^"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp))';
   const quotedPattern = new RegExp(`(["'\`])(${pathAtom})\\1`, 'i');
   const unquotedPattern = new RegExp(
     '(file:\\/\\/[^\\s"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:[A-Za-z]:[\\\\/])[^\\s"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp)|(?:\\/|\\.\\/|\\.\\.\\/)[^\\s"\'`<>]+?\\.(?:png|jpg|jpeg|gif|webp))',
@@ -29,12 +32,16 @@ function extractInlineImageIntent(input = '', sceneHint = '') {
     idx = quotedMatch.index;
   } else {
     const unquotedMatch = unquotedPattern.exec(text);
-    if (!unquotedMatch || !unquotedMatch[1]) return null;
+    if (!unquotedMatch || !unquotedMatch[1]) {
+      return null;
+    }
     pathText = unquotedMatch[1];
     matchedSpan = unquotedMatch[0];
     idx = unquotedMatch.index;
   }
-  if (!pathText || idx < 0) return null;
+  if (!pathText || idx < 0) {
+    return null;
+  }
 
   const promptText = `${text.slice(0, idx)} ${text.slice(idx + matchedSpan.length)}`
     .replace(/\s+/g, ' ')
@@ -48,14 +55,18 @@ function extractInlineImageIntent(input = '', sceneHint = '') {
 
 function buildImageSceneHint(sceneHint = '', history = []) {
   const base = String(sceneHint || '').trim();
-  if (!Array.isArray(history) || history.length === 0) return base;
+  if (!Array.isArray(history) || history.length === 0) {
+    return base;
+  }
 
   const recentHints = history
     .slice(-10)
-    .map(line => String(line || '').trim())
+    .map((line) => String(line || '').trim())
     .filter(Boolean)
-    .filter(line => !/^\/(?:status|help|trace|usage|new|clear|exit|model|think|plan|menu)\b/i.test(line))
-    .filter(line => !/^(?:paste|粘贴|clipboard|剪贴板|image|图片|img)\b/i.test(line))
+    .filter(
+      (line) => !/^\/(?:status|help|trace|usage|new|clear|exit|model|think|plan|menu)\b/i.test(line)
+    )
+    .filter((line) => !/^(?:paste|粘贴|clipboard|剪贴板|image|图片|img)\b/i.test(line))
     .slice(-4);
 
   return [base, ...recentHints].filter(Boolean).join(' ');
@@ -63,19 +74,25 @@ function buildImageSceneHint(sceneHint = '', history = []) {
 
 function isWebRebuildIntent(text = '') {
   const s = String(text || '').toLowerCase();
-  if (!s) return false;
+  if (!s) {
+    return false;
+  }
 
   const zhRebuild = /(还原|复刻|重建|仿写|临摹|转成|生成|做成|转换).*(网页|页面|网站|html|web)/;
   const zhWebFirst = /(网页|页面|网站).*(还原|复刻|重建|仿写|临摹|转成|生成|做成|转换)/;
-  const enRebuild = /(rebuild|recreate|replicate|clone|convert|generate).*(web|website|webpage|html|css)/;
+  const enRebuild =
+    /(rebuild|recreate|replicate|clone|convert|generate).*(web|website|webpage|html|css)/;
   const screenshotToCode = /(screenshot|image|ui).*(to|into).*(html|web|website|webpage|css)/;
-  const explicitTech = /(网页截图|页面截图|website screenshot|webpage screenshot|figma).*(html|css|web|网页|页面)/;
+  const explicitTech =
+    /(网页截图|页面截图|website screenshot|webpage screenshot|figma).*(html|css|web|网页|页面)/;
 
-  return zhRebuild.test(s)
-    || zhWebFirst.test(s)
-    || enRebuild.test(s)
-    || screenshotToCode.test(s)
-    || explicitTech.test(s);
+  return (
+    zhRebuild.test(s) ||
+    zhWebFirst.test(s) ||
+    enRebuild.test(s) ||
+    screenshotToCode.test(s) ||
+    explicitTech.test(s)
+  );
 }
 
 function buildWebRebuildPrompt(rawPrompt = '') {
@@ -116,11 +133,14 @@ function buildContextualImagePrompt(rawPrompt = '', sceneHint = '') {
     /^what(?:'s| is) this(?: image| picture| photo| screenshot)?$/,
     /^(?:look at|check)(?: this)? (?:image|picture|photo|screenshot)$/,
   ];
-  const isGeneric = !prompt
-    || /^(?:image|picture|photo|screenshot|图片|截图|这张图|这个图)$/.test(normalizedPrompt)
-    || genericPatterns.some(pattern => pattern.test(normalizedPrompt));
+  const isGeneric =
+    !prompt ||
+    /^(?:image|picture|photo|screenshot|图片|截图|这张图|这个图)$/.test(normalizedPrompt) ||
+    genericPatterns.some((pattern) => pattern.test(normalizedPrompt));
 
-  if (!isGeneric) return prompt;
+  if (!isGeneric) {
+    return prompt;
+  }
 
   if (/(报错|错误|异常|堆栈|traceback|stack|error|exception|failed)/i.test(context)) {
     return '请先提取图片中的报错/堆栈信息，再定位可能原因，并给出可执行的修复步骤。';

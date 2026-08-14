@@ -29,13 +29,14 @@
  *     sensitive, category, fields, attribution_complete }
  */
 
-const { getErrorCode, isKnownCode, FALLBACK_CODE } = require('./errorCodes');
 const {
   detectErrorKindDeep,
   extractErrorCode,
   formatErrorMessage,
   redactSensitiveText,
 } = require('../errorClassifier');
+
+const { getErrorCode, isKnownCode, FALLBACK_CODE } = require('./errorCodes');
 
 const MAX_DETAIL = 400;
 const MAX_STACK = 1200;
@@ -63,7 +64,9 @@ function classify(input, context = {}) {
     // 分类器自身绝不放大故障：任何异常 → 兜底码。
     code = FALLBACK_CODE;
   }
-  if (!isKnownCode(code)) code = FALLBACK_CODE;
+  if (!isKnownCode(code)) {
+    code = FALLBACK_CODE;
+  }
   return _buildAttribution(code, input, ctx);
 }
 
@@ -85,41 +88,61 @@ function classifyCode(input, context = {}) {
 function _classifyToCode(input, ctx) {
   // 0) 已归因（幂等）：上游已经给了 E0x，原样沿用。
   const explicit = _readExplicitCode(input) || _readExplicitCode(ctx);
-  if (explicit) return explicit;
+  if (explicit) {
+    return explicit;
+  }
 
   // 1) 显式空响应信号（最常见的"未返回有效回复"根因）。
   const errorType = (input && input.errorType) || ctx.errorType || ctx.kind;
-  if (errorType === 'empty_reply' || errorType === 'empty_response' || errorType === 'empty') return 'E01';
-  if (errorType === 'schema' || errorType === 'schema_validation') return 'E08';
+  if (errorType === 'empty_reply' || errorType === 'empty_response' || errorType === 'empty') {
+    return 'E01';
+  }
+  if (errorType === 'schema' || errorType === 'schema_validation') {
+    return 'E08';
+  }
   // 伪成功拒绝：工具已取回数据，模型却回套话拒绝（toolUseLoop 检出）→ 归内容管控 E02。
-  if (errorType === 'pseudo_refusal' || errorType === 'refusal') return 'E02';
+  if (errorType === 'pseudo_refusal' || errorType === 'refusal') {
+    return 'E02';
+  }
 
   // 2) 审批网关裁决（deny）→ E07，权限拦截优先于通用归类。
-  if (_looksLikeDenyVerdict(input) || _looksLikeDenyVerdict(ctx.syscallVerdict)) return 'E07';
+  if (_looksLikeDenyVerdict(input) || _looksLikeDenyVerdict(ctx.syscallVerdict)) {
+    return 'E07';
+  }
 
   // 3) 依赖缺失 → E05（早于通用 ToolError 分流，语义更精确）。
-  if (_looksLikeMissingDependency(input)) return 'E05';
+  if (_looksLikeMissingDependency(input)) {
+    return 'E05';
+  }
 
   // 4) finish_reason 内容安全停止 → E02。
   const finish = String(
     (input && input.finish_reason) || (input && input.finishReason) || ctx.finishReason || ''
   ).toLowerCase();
-  if (finish && _isSafetyFinish(finish)) return 'E02';
+  if (finish && _isSafetyFinish(finish)) {
+    return 'E02';
+  }
 
   // 5) ToolError / 结构化结果错误码 → 映射。
   const toolCode = _readToolErrorCode(input);
   if (toolCode) {
     const mapped = _mapToolErrorCode(toolCode);
-    if (mapped) return mapped;
+    if (mapped) {
+      return mapped;
+    }
   }
 
   // 6) schema 线索（expected_schema 在场而无更强信号）→ E08。
-  if (ctx.expectedSchema || (input && input.expected_schema)) return 'E08';
+  if (ctx.expectedSchema || (input && input.expected_schema)) {
+    return 'E08';
+  }
 
   // 7) 通用错误分类（errorClassifier 深链探测 + HTTP 状态）。
   const kind = _detectKind(input, ctx);
   const byKind = _mapKind(kind);
-  if (byKind) return byKind;
+  if (byKind) {
+    return byKind;
+  }
 
   // 8) 兜底：无法精确归类，落兜底码（绝不返回空）。
   return FALLBACK_CODE;
@@ -147,9 +170,7 @@ function _buildAttribution(code, input, ctx) {
     }
   }
 
-  const detail = sensitive
-    ? _sensitiveDetail(code, fields)
-    : _detail(code, input, ctx, bag);
+  const detail = sensitive ? _sensitiveDetail(code, fields) : _detail(code, input, ctx, bag);
 
   return {
     status: 'failed',
@@ -161,7 +182,7 @@ function _buildAttribution(code, input, ctx) {
     // 续接策略（单一真源 errorCodes）：resumable=能否说「继续」推进，
     // continueHint=如何继续的一句话。安全/权限/上下文溢出码 resumable=false。
     resumable: !!def.resumable,
-    continueHint: def.resumable ? (def.continueHint || null) : null,
+    continueHint: def.resumable ? def.continueHint || null : null,
     sensitive,
     category: def.category,
     fields,
@@ -179,8 +200,11 @@ function _collectFields(code, input, ctx) {
 
   const model = pick(input && input.model, ctx.model);
   const toolName = pick(
-    input && input.tool_name, input && input.toolName, ctx.toolName,
-    input && input.tool, ctx.tool
+    input && input.tool_name,
+    input && input.toolName,
+    ctx.toolName,
+    input && input.tool,
+    ctx.tool
   );
 
   switch (code) {
@@ -190,15 +214,17 @@ function _collectFields(code, input, ctx) {
       break;
     case 'E02': // 脱敏：只取 model + finish_reason（粗类别，不含命中策略）
       bag.model = model;
-      bag.finish_reason = pick(
-        input && input.finish_reason, input && input.finishReason, ctx.finishReason
-      ) || 'content_filter';
+      bag.finish_reason =
+        pick(input && input.finish_reason, input && input.finishReason, ctx.finishReason) ||
+        'content_filter';
       break;
     case 'E03':
       bag.model = model;
       bag.ctx_limit = pick(input && input.ctx_limit, ctx.ctxLimit, ctx.ctx_limit);
       bag.required_tokens = pick(
-        input && input.required_tokens, ctx.requiredTokens, ctx.required_tokens
+        input && input.required_tokens,
+        ctx.requiredTokens,
+        ctx.required_tokens
       );
       break;
     case 'E04':
@@ -214,21 +240,20 @@ function _collectFields(code, input, ctx) {
       bag.timeout_ms = pick(input && input.timeout_ms, ctx.timeoutMs, ctx.timeout_ms);
       bag.retry_count = pick(input && input.retry_count, ctx.retryCount, ctx.retry_count);
       break;
-    case 'E07': { // 脱敏：tool_name + approval_level（粗级别）+ 归一化的 deny_reason 类别
+    case 'E07': {
+      // 脱敏：tool_name + approval_level（粗级别）+ 归一化的 deny_reason 类别
       bag.tool_name = toolName;
       const verdict = _readDenyVerdict(input) || _readDenyVerdict(ctx.syscallVerdict) || {};
-      bag.approval_level = pick(
-        verdict.level, input && input.approval_level, ctx.approvalLevel
-      );
+      bag.approval_level = pick(verdict.level, input && input.approval_level, ctx.approvalLevel);
       // 不落原始 reasons：归一化为"[某类管控]"，绝不泄露内部审批逻辑。
       bag.deny_reason = '[已触发系统管控策略]';
       break;
     }
     case 'E08':
       bag.expected_schema = pick(input && input.expected_schema, ctx.expectedSchema);
-      bag.raw_output_snippet = _snippet(pick(
-        input && input.raw_output_snippet, input && input.raw_output, ctx.rawOutput
-      ));
+      bag.raw_output_snippet = _snippet(
+        pick(input && input.raw_output_snippet, input && input.raw_output, ctx.rawOutput)
+      );
       break;
     default:
       break;
@@ -272,9 +297,12 @@ function _sensitiveDetail(code, fields) {
     return '本次请求触发了内容安全管控，模型响应已被强制终止。请调整请求内容后重试。';
   }
   if (code === 'E07') {
-    const tool = fields.tool_name && fields.tool_name !== 'unknown' ? `【${fields.tool_name}】` : '该操作';
-    const lvl = fields.approval_level && fields.approval_level !== 'unknown'
-      ? `（需 L${fields.approval_level} 授权）` : '';
+    const tool =
+      fields.tool_name && fields.tool_name !== 'unknown' ? `【${fields.tool_name}】` : '该操作';
+    const lvl =
+      fields.approval_level && fields.approval_level !== 'unknown'
+        ? `（需 L${fields.approval_level} 授权）`
+        : '';
     return `${tool}${lvl}触发了系统管控策略，已被审批网关拦截。请在审批中确认或调整操作。`;
   }
   return getErrorCode(code).reason;
@@ -283,12 +311,18 @@ function _sensitiveDetail(code, fields) {
 // ── 信号识别助手 ─────────────────────────────────────────────────────
 
 function _readExplicitCode(o) {
-  if (!o || typeof o !== 'object') return null;
+  if (!o || typeof o !== 'object') {
+    return null;
+  }
   const c = o.error_code || o.errorCode;
-  if (typeof c === 'string' && isKnownCode(c)) return c;
+  if (typeof c === 'string' && isKnownCode(c)) {
+    return c;
+  }
   if (o.error && typeof o.error === 'object') {
     const ec = o.error.error_code || o.error.errorCode;
-    if (typeof ec === 'string' && isKnownCode(ec)) return ec;
+    if (typeof ec === 'string' && isKnownCode(ec)) {
+      return ec;
+    }
   }
   return null;
 }
@@ -299,64 +333,101 @@ function _looksLikeDenyVerdict(o) {
 }
 
 function _readDenyVerdict(o) {
-  if (!o || typeof o !== 'object') return null;
-  const denied = o.allow === false
-    || o.decision === 'deny' || o.decision === 'denied' || o.decision === 'block'
-    || o.tripped === true;
-  if (!denied) return null;
+  if (!o || typeof o !== 'object') {
+    return null;
+  }
+  const denied =
+    o.allow === false ||
+    o.decision === 'deny' ||
+    o.decision === 'denied' ||
+    o.decision === 'block' ||
+    o.tripped === true;
+  if (!denied) {
+    return null;
+  }
   // 至少要有审批语境特征，避免误吞普通 {allow:false}。
-  const hasCtx = ('decision' in o) || ('level' in o) || ('reasons' in o) || ('tripped' in o)
-    || ('approval_level' in o) || ('deny_reason' in o);
+  const hasCtx =
+    'decision' in o ||
+    'level' in o ||
+    'reasons' in o ||
+    'tripped' in o ||
+    'approval_level' in o ||
+    'deny_reason' in o;
   return hasCtx ? o : null;
 }
 
 function _looksLikeMissingDependency(o) {
-  if (!o || typeof o !== 'object') return false;
-  if (o.name === 'MissingDependencyError' || o.depId) return true;
+  if (!o || typeof o !== 'object') {
+    return false;
+  }
+  if (o.name === 'MissingDependencyError' || o.depId) {
+    return true;
+  }
   const code = _readToolErrorCode(o);
   return code === 'MISSING_DEPENDENCY';
 }
 
 function _readMissingDep(input, ctx) {
   if (input && typeof input === 'object') {
-    if (input.depId) return input.depId;
-    if (input.missing_dep) return input.missing_dep;
-    if (input.error && input.error.depId) return input.error.depId;
+    if (input.depId) {
+      return input.depId;
+    }
+    if (input.missing_dep) {
+      return input.missing_dep;
+    }
+    if (input.error && input.error.depId) {
+      return input.error.depId;
+    }
   }
   return ctx.missingDep || ctx.depId || undefined;
 }
 
 function _readToolErrorCode(o) {
-  if (!o || typeof o !== 'object') return null;
-  if (typeof o.code === 'string' && /^[A-Z_]+$/.test(o.code)) return o.code;
-  if (o.error && typeof o.error === 'object' && typeof o.error.code === 'string') return o.error.code;
+  if (!o || typeof o !== 'object') {
+    return null;
+  }
+  if (typeof o.code === 'string' && /^[A-Z_]+$/.test(o.code)) {
+    return o.code;
+  }
+  if (o.error && typeof o.error === 'object' && typeof o.error.code === 'string') {
+    return o.error.code;
+  }
   return null;
 }
 
 function _mapToolErrorCode(code) {
   switch (code) {
-    case 'MISSING_DEPENDENCY': return 'E05';
-    case 'PERMISSION_DENIED': return 'E07';
+    case 'MISSING_DEPENDENCY':
+      return 'E05';
+    case 'PERMISSION_DENIED':
+      return 'E07';
     case 'TIMEOUT':
-    case 'NETWORK_ERROR': return 'E06';
+    case 'NETWORK_ERROR':
+      return 'E06';
     case 'EXECUTION_ERROR':
     case 'TOOL_UNAVAILABLE':
     case 'INVALID_ARGS':
-    case 'RESOURCE_NOT_FOUND': return 'E04';
-    default: return null;
+    case 'RESOURCE_NOT_FOUND':
+      return 'E04';
+    default:
+      return null;
   }
 }
 
 function _isSafetyFinish(finish) {
-  return finish === 'content_filter' || finish === 'refusal' || finish === 'safety'
-    || finish === 'stop_violation' || finish.includes('filter') || finish.includes('refus');
+  return (
+    finish === 'content_filter' ||
+    finish === 'refusal' ||
+    finish === 'safety' ||
+    finish === 'stop_violation' ||
+    finish.includes('filter') ||
+    finish.includes('refus')
+  );
 }
 
 function _detectKind(input, ctx) {
   const status = ctx.httpStatus || (input && (input.status || input.statusCode));
-  const probe = (input && typeof input === 'object')
-    ? input
-    : { message: String(input || '') };
+  const probe = input && typeof input === 'object' ? input : { message: String(input || '') };
   if (status && typeof probe.code === 'undefined' && typeof probe.status === 'undefined') {
     probe.code = status;
   }
@@ -365,15 +436,20 @@ function _detectKind(input, ctx) {
 
 function _mapKind(kind) {
   switch (kind) {
-    case 'refusal': return 'E02';
-    case 'context_length': return 'E03';
-    case 'permission': return 'E07';
+    case 'refusal':
+      return 'E02';
+    case 'context_length':
+      return 'E03';
+    case 'permission':
+      return 'E07';
     case 'timeout':
     case 'network':
     case 'rate_limit':
     case 'overloaded':
-    case 'server_error': return 'E06';
-    default: return null;
+    case 'server_error':
+      return 'E06';
+    default:
+      return null;
   }
 }
 
@@ -381,13 +457,19 @@ function _mapKind(kind) {
 
 function _redactedMessage(input, ctx) {
   let raw = '';
-  if (input instanceof Error) raw = formatErrorMessage(input);
-  else if (typeof input === 'string') raw = input;
-  else if (input && typeof input === 'object') {
-    raw = input.message
-      || (input.error && (input.error.message || input.error)) // 结构化结果
-      || ctx.message || '';
-    if (typeof raw === 'object') raw = formatErrorMessage(raw);
+  if (input instanceof Error) {
+    raw = formatErrorMessage(input);
+  } else if (typeof input === 'string') {
+    raw = input;
+  } else if (input && typeof input === 'object') {
+    raw =
+      input.message ||
+      (input.error && (input.error.message || input.error)) || // 结构化结果
+      ctx.message ||
+      '';
+    if (typeof raw === 'object') {
+      raw = formatErrorMessage(raw);
+    }
   } else {
     raw = String(input || '');
   }
@@ -396,21 +478,39 @@ function _redactedMessage(input, ctx) {
 
 function _safeStack(input, ctx) {
   let stack = '';
-  if (input instanceof Error && input.stack) stack = input.stack;
-  else if (input && typeof input === 'object' && input.stack) stack = input.stack;
-  else if (ctx.stack) stack = ctx.stack;
-  else stack = _redactedMessage(input, ctx);
+  if (input instanceof Error && input.stack) {
+    stack = input.stack;
+  } else if (input && typeof input === 'object' && input.stack) {
+    stack = input.stack;
+  } else if (ctx.stack) {
+    stack = ctx.stack;
+  } else {
+    stack = _redactedMessage(input, ctx);
+  }
   return _clip(redactSensitiveText(String(stack || '')), MAX_STACK);
 }
 
 function _snippet(v) {
-  if (v === undefined || v === null) return undefined;
-  let s = typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })();
+  if (v === undefined || v === null) {
+    return undefined;
+  }
+  const s =
+    typeof v === 'string'
+      ? v
+      : (() => {
+          try {
+            return JSON.stringify(v);
+          } catch {
+            return String(v);
+          }
+        })();
   return _clip(redactSensitiveText(s), MAX_SNIPPET);
 }
 
 function _clip(s, max) {
-  if (typeof s !== 'string') return s;
+  if (typeof s !== 'string') {
+    return s;
+  }
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
 

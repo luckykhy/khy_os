@@ -8,7 +8,7 @@ jest.mock('chalk', () => {
 });
 
 const path = require('path');
-const os = require('os');
+const { getAppHome } = require('../../src/utils/dataHome');
 
 const plugins = require('../../src/cli/plugins');
 
@@ -32,19 +32,17 @@ describe('plugins', () => {
 
     test('exports PLUGINS_DIR constant', () => {
       expect(typeof plugins.PLUGINS_DIR).toBe('string');
-      expect(plugins.PLUGINS_DIR).toContain('.khyquant');
       expect(plugins.PLUGINS_DIR).toContain('commands');
     });
   });
 
   describe('PLUGINS_DIR', () => {
-    test('is under user home directory', () => {
-      expect(plugins.PLUGINS_DIR.startsWith(os.homedir())).toBe(true);
-    });
-
-    test('path contains expected segments', () => {
-      const expected = path.join(os.homedir(), '.khyquant', 'commands');
-      expect(plugins.PLUGINS_DIR).toBe(expected);
+    test('resolves under the application data home (getAppHome source of truth)', () => {
+      // plugins._appHome() delegates to dataHome.getAppHome() (legacy
+      // ~/.khyquant established-wins, else the unified data home). Asserting
+      // against the same resolver keeps the test correct under jest's data-home
+      // isolation (KHY_DATA_HOME → tmp dir) and on any platform.
+      expect(plugins.PLUGINS_DIR).toBe(path.join(getAppHome(), 'commands'));
     });
   });
 

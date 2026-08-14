@@ -20,9 +20,9 @@
  * (保留修复、不回滚)。绝不因校验机器故障而丢弃一个可能正确的修复。门控关时直接跑 runFix。
  */
 
-const leaf = require('../selfRepairTransaction');
 const evo = require('../evolutionPolicy');
 const safety = require('../evolutionSafety');
+const leaf = require('../selfRepairTransaction');
 
 /**
  * 包裹一次 fix 派发为可校验、可回滚的事务。
@@ -36,14 +36,22 @@ async function runRepairTransaction(opts = {}) {
     restore = async () => true,
     validateFiles = async () => ({}),
     onEvent = null,
-    env = (typeof process !== 'undefined' ? process.env : {}),
+    env = typeof process !== 'undefined' ? process.env : {},
   } = opts;
 
   if (typeof runFix !== 'function') {
     return { text: '', filesModified: [], success: false, error: 'no runFix injected' };
   }
 
-  const _emit = (evt) => { if (onEvent) { try { onEvent(evt); } catch { /* best-effort */ } } };
+  const _emit = (evt) => {
+    if (onEvent) {
+      try {
+        onEvent(evt);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
 
   const plan = leaf.planTransaction({}, env);
 
@@ -64,14 +72,17 @@ async function runRepairTransaction(opts = {}) {
       snap = null;
       _emit({ type: 'repair_snapshot_error', error: e && e.message });
     }
-    if (!snap) snapshotMissing = true;
+    if (!snap) {
+      snapshotMissing = true;
+    }
     _emit({ type: 'repair_snapshot_done', snapshot: !snapshotMissing });
 
     // ② 跑既有 fix agent(全程在稳定的旧内存代码上)。
     fixResult = await runFix();
-    fixResult = fixResult && typeof fixResult === 'object'
-      ? fixResult
-      : { text: '', filesModified: [], success: false };
+    fixResult =
+      fixResult && typeof fixResult === 'object'
+        ? fixResult
+        : { text: '', filesModified: [], success: false };
 
     // ③ 归一改动集 + 进化策略评估(对**全量** filesModified 分级,不可变文件可能落在 skipped,
     //    所以策略评估不能只看 validatable)。门控关 → assessEvolution 返回 enabled:false 的安全空。
@@ -104,7 +115,10 @@ async function runRepairTransaction(opts = {}) {
       coverage: validation.coverage,
       env,
     });
-    const decision = leaf.decideOutcome({ ...validation, evolution, safety: safetyAssessment }, env);
+    const decision = leaf.decideOutcome(
+      { ...validation, evolution, safety: safetyAssessment },
+      env
+    );
     // 安全报告(AI 可读 [SYSTEM:] 指令)随事件透传给 onEvent 消费方(toolUseLoop 可据此反馈);
     // 门控关 → buildSafetyReport 返 '' → 字段为空。
     _emit({
@@ -127,7 +141,12 @@ async function runRepairTransaction(opts = {}) {
       _emit({ type: 'repair_rollback_done', rolledBack });
     }
 
-    const annotation = leaf.summarizeTransaction({ decision, changeSet, rolledBack, snapshotMissing });
+    const annotation = leaf.summarizeTransaction({
+      decision,
+      changeSet,
+      rolledBack,
+      snapshotMissing,
+    });
     return {
       ...fixResult,
       // 回滚后这些文件已还原,不应再算作会话改动 —— 交由调用方按 transaction.rolledBack 处理。
@@ -136,8 +155,15 @@ async function runRepairTransaction(opts = {}) {
   } catch (err) {
     // 事务机器自身故障:fail-soft,返回 fix 结果(若已得)或安全空壳,绝不抛进调用方。
     _emit({ type: 'repair_error', error: err && err.message });
-    if (fixResult && typeof fixResult === 'object') return fixResult;
-    return { text: '', filesModified: [], success: false, error: err && err.message ? err.message : String(err) };
+    if (fixResult && typeof fixResult === 'object') {
+      return fixResult;
+    }
+    return {
+      text: '',
+      filesModified: [],
+      success: false,
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 

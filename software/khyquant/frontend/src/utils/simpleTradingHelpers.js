@@ -42,10 +42,12 @@ export function getLanguageName(language) {
 }
 
 export function disabledStartDate(time) {
+  if (!time || !(time instanceof Date)) return true
   return time.getTime() > Date.now()
 }
 
 export function disabledEndDate(time, startDate) {
+  if (!time || !(time instanceof Date)) return true
   const startAt = startDate?.getTime?.()
   return time.getTime() > Date.now() || (typeof startAt === 'number' && !Number.isNaN(startAt) && time.getTime() < startAt)
 }

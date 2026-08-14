@@ -24,7 +24,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_DISPLAY_WIDTH_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -47,8 +49,12 @@ function getDisplayWidth(str, computeFn, env = process.env) {
       return computeFn(str);
     }
     // 空串 / 超长串:直接算,不入缓存。
-    if (str.length === 0) return computeFn(str);
-    if (str.length > MAX_KEY_LEN) return computeFn(str);
+    if (str.length === 0) {
+      return computeFn(str);
+    }
+    if (str.length > MAX_KEY_LEN) {
+      return computeFn(str);
+    }
 
     const hit = _cache.get(str);
     if (hit !== undefined) {
@@ -68,13 +74,22 @@ function getDisplayWidth(str, computeFn, env = process.env) {
     }
     return w;
   } catch {
-    try { return computeFn(str); } catch { return 0; }
+    try {
+      return computeFn(str);
+    } catch {
+      return 0;
+    }
   }
 }
 
 // 测试/生命周期钩子:清空缓存(进程内)。
-function _clearCache() { _cache.clear(); }
-function _size() { return _cache.size; }
+function _clearCache() {
+  _cache.clear();
+}
+
+function _size() {
+  return _cache.size;
+}
 
 module.exports = {
   isEnabled,

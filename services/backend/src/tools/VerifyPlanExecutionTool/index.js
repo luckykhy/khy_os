@@ -1,5 +1,6 @@
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
+
+const { BaseTool } = require('../_baseTool');
 
 class VerifyPlanExecutionTool extends BaseTool {
   static toolName = 'VerifyPlanExecution';
@@ -9,8 +10,12 @@ class VerifyPlanExecutionTool extends BaseTool {
   static searchHint = 'verify plan execution check completed';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Verify that a plan has been executed correctly.
@@ -22,7 +27,11 @@ Checks the current state against a plan file to determine completion status.`;
       type: 'object',
       properties: {
         plan_path: { type: 'string', description: 'Path to the plan file' },
-        checks: { type: 'array', description: 'Specific items to verify', items: { type: 'string' } },
+        checks: {
+          type: 'array',
+          description: 'Specific items to verify',
+          items: { type: 'string' },
+        },
       },
       required: ['plan_path'],
     };

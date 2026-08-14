@@ -5,13 +5,16 @@
  * Logs write operations (POST/PUT/DELETE) to the audit_logs table
  * for security traceability. See thesis Chapter 4.2, Table 12.
  */
-const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
+
+const { sequelize } = require('../config/database');
 const logger = require('../utils/logger');
 
 // Ensure audit_logs table exists
 async function ensureAuditTable() {
-  if (tableReady) return;
+  if (tableReady) {
+    return;
+  }
   try {
     const dialect = sequelize.getDialect?.() || 'sqlite';
     const isSQLite = dialect === 'sqlite';
@@ -27,11 +30,13 @@ async function ensureAuditTable() {
         `ip VARCHAR(45),` +
         `user_agent TEXT,` +
         `created_at ${isSQLite ? 'DATETIME DEFAULT CURRENT_TIMESTAMP' : 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()'}` +
-      `)`
+        `)`
     );
     tableReady = true;
   } catch (err) {
-    logger.warn('Could not create audit_logs table (may already exist or DB not ready)', { error: err.message });
+    logger.warn('Could not create audit_logs table (may already exist or DB not ready)', {
+      error: err.message,
+    });
   }
 }
 
@@ -63,10 +68,10 @@ function auditLog(req, res, next) {
       body: sanitizeBody(req.body),
       statusCode: res.statusCode,
       ip: req.ip,
-      userAgent: req.get('user-agent')
+      userAgent: req.get('user-agent'),
     };
 
-    insertAuditLog(record).catch(err => {
+    insertAuditLog(record).catch((err) => {
       logger.warn('Audit log insert failed', { error: err.message });
     });
   };
@@ -86,20 +91,24 @@ async function insertAuditLog(record) {
     {
       replacements: {
         ...record,
-        body: record.body ? JSON.stringify(record.body) : null
+        body: record.body ? JSON.stringify(record.body) : null,
       },
-      type: QueryTypes.INSERT
+      type: QueryTypes.INSERT,
     }
   );
 }
 
 // Remove sensitive fields from logged body
 function sanitizeBody(body) {
-  if (!body || typeof body !== 'object') return null;
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
   const sanitized = { ...body };
   const sensitive = ['password', 'token', 'secret', 'authorization', 'apiKey', 'api_key'];
   for (const key of sensitive) {
-    if (sanitized[key]) sanitized[key] = '[REDACTED]';
+    if (sanitized[key]) {
+      sanitized[key] = '[REDACTED]';
+    }
   }
   return sanitized;
 }

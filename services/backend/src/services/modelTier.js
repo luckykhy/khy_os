@@ -51,7 +51,8 @@ const FRONTIER_RE = /(opus-?4|gpt-?5|grok-?4|o3-?pro)/i;
 
 // Strong (non-frontier) models. Deliberately does NOT include bare o3-mini etc.
 // (those fall through to the weak demotion).
-const STRONG_RE = /(sonnet-?4|claude-3[.-]7|gpt-4o|gpt-4\.1|\bo1\b|\bo3\b|deepseek|qwen.*(max|plus|3|2\.5)|gemini.*pro|llama.*405|mistral-large|grok-?[23])/i;
+const STRONG_RE =
+  /(sonnet-?4|claude-3[.-]7|gpt-4o|gpt-4\.1|\bo1\b|\bo3\b|deepseek|qwen.*(max|plus|3|2\.5)|gemini.*pro|llama.*405|mistral-large|grok-?[23])/i;
 
 // Weak token regex — same token set the loop uses for `_isLowTierModel`, but
 // with a letter-boundary guard so a token does not match inside a larger word
@@ -66,11 +67,19 @@ const WEAK_RE = /(?<![a-z])(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny
  * @returns {boolean|undefined}
  */
 function _envBool(raw) {
-  if (raw === undefined || raw === null) return undefined;
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
   const v = String(raw).trim().toLowerCase();
-  if (v === '') return undefined;
-  if (['1', 'true', 'yes', 'on'].includes(v)) return true;
-  if (['0', 'false', 'no', 'off'].includes(v)) return false;
+  if (v === '') {
+    return undefined;
+  }
+  if (['1', 'true', 'yes', 'on'].includes(v)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(v)) {
+    return false;
+  }
   return undefined;
 }
 
@@ -83,25 +92,36 @@ function _envBool(raw) {
 function resolveTier(modelId, opts = {}) {
   // 1. Explicit global force (option then env) — wins over everything.
   const forced = String(opts.forceTier || process.env.KHY_CAPABILITY_TIER || '')
-    .trim().toUpperCase();
-  if (VALID_TIERS.includes(forced)) return forced;
+    .trim()
+    .toUpperCase();
+  if (VALID_TIERS.includes(forced)) {
+    return forced;
+  }
 
   const id = String(modelId || '').toLowerCase();
-  if (!id) return 'T2';
+  if (!id) {
+    return 'T2';
+  }
 
   // 2. Per-model override (KHY_MODEL_TIER_MAP). Case-insensitive exact match on
   //    the model id; lets a user pin a tier that the regex would misjudge.
   const mapped = _resolveModelTierMap(id);
-  if (mapped) return mapped;
+  if (mapped) {
+    return mapped;
+  }
 
   // 3. Frontier — not subject to weak demotion.
-  if (FRONTIER_RE.test(id)) return 'T0';
+  if (FRONTIER_RE.test(id)) {
+    return 'T0';
+  }
 
   // 4. Strong, else default mid.
   let tier = STRONG_RE.test(id) ? 'T1' : 'T2';
 
   // 5. Weak demotion (non-frontier only). gpt-4o-mini → T3, haiku → T3.
-  if (WEAK_RE.test(id)) tier = 'T3';
+  if (WEAK_RE.test(id)) {
+    tier = 'T3';
+  }
 
   return tier;
 }
@@ -118,7 +138,11 @@ let _tierMapCache = null;
  */
 function _resolveModelTierMap(lowerId) {
   const raw = process.env.KHY_MODEL_TIER_MAP;
-  if (!raw || !String(raw).trim()) { _tierMapCacheRaw = null; _tierMapCache = null; return null; }
+  if (!raw || !String(raw).trim()) {
+    _tierMapCacheRaw = null;
+    _tierMapCache = null;
+    return null;
+  }
   if (raw !== _tierMapCacheRaw) {
     _tierMapCacheRaw = raw;
     _tierMapCache = {};
@@ -126,8 +150,12 @@ function _resolveModelTierMap(lowerId) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         for (const [k, v] of Object.entries(parsed)) {
-          const tier = String(v || '').trim().toUpperCase();
-          if (VALID_TIERS.includes(tier)) _tierMapCache[String(k).toLowerCase()] = tier;
+          const tier = String(v || '')
+            .trim()
+            .toUpperCase();
+          if (VALID_TIERS.includes(tier)) {
+            _tierMapCache[String(k).toLowerCase()] = tier;
+          }
         }
       }
     } catch {
@@ -190,59 +218,82 @@ function harnessProfile(tier, opts = {}) {
     if (Number.isFinite(cw) && cw > 0) {
       shortContext = require('./contextProfile').isShortContext(cw);
     }
-  } catch { /* contextProfile optional — default to not-short */ }
+  } catch {
+    /* contextProfile optional — default to not-short */
+  }
 
   const profile = {
     tier: t,
-    nudges: !relaxed,                          // T0: off; others: on (current)
-    syntheticTools: !relaxed,                  // T0: off; others: on (current)
-    capabilityGate: 'warn',                    // all tiers: warn (never hard-refuse a weak model at iter 0); restore old behavior via KHY_HARNESS_CAPABILITY_GATE=hard
-    promptVerbosity: relaxed ? 'lean' : 'full',// T0: skip injected scaffolding text
-    decompose: !relaxed,                       // T0: trust native planning
-    maxIterationsBoost: relaxed ? 20 : 0,      // T0: longer agentic chains
-    thinkingFloor: relaxed ? 'high' : null,    // T0: never think below 'high'
-    toolCallProtocol: 'native',                // all tiers: native; text is dispatch-driven (local adapters), never tier-derived
-    shortContext,                              // window ≤ 32k: shrink the STATIC prompt only (runtime scaffolding unchanged)
+    nudges: !relaxed, // T0: off; others: on (current)
+    syntheticTools: !relaxed, // T0: off; others: on (current)
+    capabilityGate: 'warn', // all tiers: warn (never hard-refuse a weak model at iter 0); restore old behavior via KHY_HARNESS_CAPABILITY_GATE=hard
+    promptVerbosity: relaxed ? 'lean' : 'full', // T0: skip injected scaffolding text
+    decompose: !relaxed, // T0: trust native planning
+    maxIterationsBoost: relaxed ? 20 : 0, // T0: longer agentic chains
+    thinkingFloor: relaxed ? 'high' : null, // T0: never think below 'high'
+    toolCallProtocol: 'native', // all tiers: native; text is dispatch-driven (local adapters), never tier-derived
+    shortContext, // window ≤ 32k: shrink the STATIC prompt only (runtime scaffolding unchanged)
   };
 
   // Short-context override (escape hatch): force on/off regardless of window.
   const shortOverride = _envBool(process.env.KHY_HARNESS_SHORT_CONTEXT);
-  if (shortOverride !== undefined) profile.shortContext = shortOverride;
+  if (shortOverride !== undefined) {
+    profile.shortContext = shortOverride;
+  }
 
   // Per-dial env overrides.
   const nudgesOverride = _envBool(process.env.KHY_HARNESS_NUDGES);
-  if (nudgesOverride !== undefined) profile.nudges = nudgesOverride;
+  if (nudgesOverride !== undefined) {
+    profile.nudges = nudgesOverride;
+  }
 
   const synOverride = _envBool(process.env.KHY_HARNESS_SYNTHETIC_TOOLS);
-  if (synOverride !== undefined) profile.syntheticTools = synOverride;
+  if (synOverride !== undefined) {
+    profile.syntheticTools = synOverride;
+  }
 
   const gateOverride = String(process.env.KHY_HARNESS_CAPABILITY_GATE || '')
-    .trim().toLowerCase();
-  if (['hard', 'warn', 'off'].includes(gateOverride)) profile.capabilityGate = gateOverride;
+    .trim()
+    .toLowerCase();
+  if (['hard', 'warn', 'off'].includes(gateOverride)) {
+    profile.capabilityGate = gateOverride;
+  }
 
   const verbosityOverride = String(process.env.KHY_HARNESS_PROMPT_VERBOSITY || '')
-    .trim().toLowerCase();
-  if (['lean', 'full'].includes(verbosityOverride)) profile.promptVerbosity = verbosityOverride;
+    .trim()
+    .toLowerCase();
+  if (['lean', 'full'].includes(verbosityOverride)) {
+    profile.promptVerbosity = verbosityOverride;
+  }
 
   const decomposeOverride = _envBool(process.env.KHY_HARNESS_DECOMPOSE);
-  if (decomposeOverride !== undefined) profile.decompose = decomposeOverride;
+  if (decomposeOverride !== undefined) {
+    profile.decompose = decomposeOverride;
+  }
 
   const boostRaw = process.env.KHY_HARNESS_MAX_ITER_BOOST;
   if (boostRaw !== undefined && boostRaw !== '') {
     const n = Number.parseInt(boostRaw, 10);
-    if (Number.isFinite(n)) profile.maxIterationsBoost = n;
+    if (Number.isFinite(n)) {
+      profile.maxIterationsBoost = n;
+    }
   }
 
   const floorOverride = String(process.env.KHY_HARNESS_THINKING_FLOOR || '')
-    .trim().toLowerCase();
-  if (floorOverride === 'none') profile.thinkingFloor = null;
-  else if (_EFFORT_TIERS.includes(floorOverride)) profile.thinkingFloor = floorOverride;
+    .trim()
+    .toLowerCase();
+  if (floorOverride === 'none') {
+    profile.thinkingFloor = null;
+  } else if (_EFFORT_TIERS.includes(floorOverride)) {
+    profile.thinkingFloor = floorOverride;
+  }
 
   // Global escape hatch only — the live "use text" decision is dispatch-driven
   // (options.toolCallProtocol), never tier-derived. This flag exists so an
   // operator can force one protocol fleet-wide for debugging.
   const protocolOverride = String(process.env.KHY_HARNESS_TOOL_PROTOCOL || '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   if (protocolOverride === 'native' || protocolOverride === 'text') {
     profile.toolCallProtocol = protocolOverride;
   }
@@ -269,8 +320,12 @@ function harnessProfile(tier, opts = {}) {
  */
 function shouldSelfRender(modelId, opts = {}) {
   const forced = _envBool(process.env.KHY_SELF_RENDER);
-  if (forced !== undefined) return forced;
-  if (_envBool(process.env.KHY_FORCE_NORMALIZE)) return false;
+  if (forced !== undefined) {
+    return forced;
+  }
+  if (_envBool(process.env.KHY_FORCE_NORMALIZE)) {
+    return false;
+  }
   const tier = resolveTier(modelId, opts);
   return tier === 'T0' || tier === 'T1';
 }

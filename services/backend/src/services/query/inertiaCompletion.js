@@ -23,7 +23,9 @@
 /** env 闸:默认开;'0'/'false'/'off' 关闭 → 调用方按原盲目行为处理。 */
 function isEnabled(env = process.env) {
   const v = env && env.KHY_INERTIA_COMPLETION;
-  if (v === '0' || v === 'false' || v === 'off') return false;
+  if (v === '0' || v === 'false' || v === 'off') {
+    return false;
+  }
   return true;
 }
 
@@ -35,8 +37,12 @@ function isEnabled(env = process.env) {
  * 但 **没有** interrupted)不是断线,绝不能被误判进惯性路径(那条由 _maxTokensRecovery 管)。
  */
 function isInertiaTurn(aiResult, env = process.env) {
-  if (!isEnabled(env)) return false;
-  if (!aiResult || aiResult.interrupted !== true) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
+  if (!aiResult || aiResult.interrupted !== true) {
+    return false;
+  }
   const blocks = aiResult.toolUseBlocks;
   return Array.isArray(blocks) && blocks.length > 0;
 }
@@ -54,16 +60,35 @@ function _blockName(block) {
  *   - input 为字符串 → 必须能 JSON.parse 才可执行(残缺 JSON → 跳过)。
  */
 function _isExecutableBlock(block) {
-  if (!block) return false;
-  if (block.type === 'server_tool_use') return false;
-  if (!_blockName(block)) return false;
+  if (!block) {
+    return false;
+  }
+  if (block.type === 'server_tool_use') {
+    return false;
+  }
+  if (!_blockName(block)) {
+    return false;
+  }
   let input = block.input;
-  if (input == null) input = block.params;
-  if (input == null && block.function) input = block.function.arguments;
-  if (input == null || input === '') return true;
-  if (typeof input === 'object') return true;
+  if (input == null) {
+    input = block.params;
+  }
+  if (input == null && block.function) {
+    input = block.function.arguments;
+  }
+  if (input == null || input === '') {
+    return true;
+  }
+  if (typeof input === 'object') {
+    return true;
+  }
   if (typeof input === 'string') {
-    try { JSON.parse(input); return true; } catch { return false; }
+    try {
+      JSON.parse(input);
+      return true;
+    } catch {
+      return false;
+    }
   }
   return false;
 }
@@ -77,8 +102,11 @@ function filterExecutableBlocks(blocks) {
   const executable = [];
   const dropped = [];
   for (const b of list) {
-    if (_isExecutableBlock(b)) executable.push(b);
-    else dropped.push(b);
+    if (_isExecutableBlock(b)) {
+      executable.push(b);
+    } else {
+      dropped.push(b);
+    }
   }
   return { executable, dropped };
 }
@@ -89,15 +117,21 @@ function filterExecutableBlocks(blocks) {
  */
 function buildModelReconnectHint({ executedTools = [], droppedCount = 0 } = {}) {
   const names = (executedTools || []).filter(Boolean);
-  if (!names.length && !droppedCount) return '';
+  if (!names.length && !droppedCount) {
+    return '';
+  }
   const did = names.length
     ? `通道中断期间已由惯性自动完成以下已下达的操作(无需模型):${names.join('、')}。`
     : '通道在你下达工具调用后中途断开。';
   const dropNote = droppedCount
     ? `另有 ${droppedCount} 个调用因中断被截断、参数残缺已跳过,如仍需请重新发起。`
     : '';
-  return '[SYSTEM: 上一回合模型通道中途断开;' + did + dropNote
-    + '通道现已恢复,请直接基于上方工具结果继续推进,切勿重复已完成的调用。]';
+  return (
+    '[SYSTEM: 上一回合模型通道中途断开;' +
+    did +
+    dropNote +
+    '通道现已恢复,请直接基于上方工具结果继续推进,切勿重复已完成的调用。]'
+  );
 }
 
 /**
@@ -107,7 +141,9 @@ function buildModelReconnectHint({ executedTools = [], droppedCount = 0 } = {}) 
  * 无内容时返回 ''。
  */
 function buildUserInertiaNotice({ executedCount = 0, droppedCount = 0, reconnected = true } = {}) {
-  if (!executedCount && !droppedCount) return '';
+  if (!executedCount && !droppedCount) {
+    return '';
+  }
   const head = reconnected
     ? `⟳ 通道曾瞬断,已用惯性完成 ${executedCount} 个已下达的步骤并自动续接`
     : `⟳ 通道中途断开,已用惯性完成 ${executedCount} 个已下达的步骤(通道未恢复,以上为已完成结果)`;
@@ -118,7 +154,9 @@ function buildUserInertiaNotice({ executedCount = 0, droppedCount = 0, reconnect
 /** 汇总惯性事件给 loop 返回对象(数据契约,供程序/UI 消费)。 */
 function summarizeInertia(events) {
   const list = Array.isArray(events) ? events : [];
-  if (!list.length) return null;
+  if (!list.length) {
+    return null;
+  }
   let executed = 0;
   let dropped = 0;
   for (const e of list) {

@@ -1,26 +1,35 @@
-const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
+const express = require('express');
+
 const router = express.Router();
 
-const DIST_DIR = path.resolve(__dirname, '../../..', 'dist');
+const DIST_DIR = path.resolve(__dirname, '../../../../dist');
 
 const ARTIFACT_PATTERNS = {
   windows: [/\.exe$/i, /setup/i],
-  android: [/\.apk$/i]
+  android: [/\.apk$/i],
 };
 
 function listArtifacts(platform) {
-  if (!fs.existsSync(DIST_DIR)) return [];
+  if (!fs.existsSync(DIST_DIR)) {
+    return [];
+  }
   const patterns = ARTIFACT_PATTERNS[platform];
-  if (!patterns) return [];
+  if (!patterns) {
+    return [];
+  }
 
   const fileNames = fs.readdirSync(DIST_DIR);
   return fileNames
     .filter((fileName) => {
-      if (fileName.startsWith('.')) return false;
-      if (fileName.endsWith('.blockmap')) return false;
+      if (fileName.startsWith('.')) {
+        return false;
+      }
+      if (fileName.endsWith('.blockmap')) {
+        return false;
+      }
       return patterns.every((pattern) => pattern.test(fileName));
     })
     .map((fileName) => {
@@ -30,7 +39,7 @@ function listArtifacts(platform) {
         fileName,
         fullPath,
         size: stat.size,
-        mtimeMs: stat.mtimeMs
+        mtimeMs: stat.mtimeMs,
       };
     })
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
@@ -68,7 +77,7 @@ router.get('/list', (req, res) => {
             fileName: windows.fileName,
             size: windows.size,
             updatedAt: new Date(windows.mtimeMs).toISOString(),
-            url: '/api/downloads/windows'
+            url: '/api/downloads/windows',
           }
         : null,
       android: android
@@ -76,10 +85,10 @@ router.get('/list', (req, res) => {
             fileName: android.fileName,
             size: android.size,
             updatedAt: new Date(android.mtimeMs).toISOString(),
-            url: '/api/downloads/android'
+            url: '/api/downloads/android',
           }
-        : null
-    }
+        : null,
+    },
   });
 });
 

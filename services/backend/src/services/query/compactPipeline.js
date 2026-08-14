@@ -17,8 +17,11 @@
  */
 
 const DEFAULT_MAX_RESULT_CHARS = 5000;
+// @deprecated 显示侧不要再用这个比例。它是「占 maxTokens 预算」的比例,且唯一使用者
+// runCompactPipeline 已无调用点(死码)。底栏倒计时的真实真源是
+// services/contextRouter.autoCompactTriggerTokens(budget)(routeContextStrategy 的代数逆)。
 const AUTOCOMPACT_THRESHOLD = 0.8; // 80% of budget triggers autocompact
-const KEEP_RECENT_TURNS = 6;       // Preserve this many recent turn pairs (raised from 4 to retain more task context)
+const KEEP_RECENT_TURNS = 6; // Preserve this many recent turn pairs (raised from 4 to retain more task context)
 
 // ── Autocompact circuit breaker ────────────────────────────────────
 // Stop retrying after N consecutive failures to prevent API spam.
@@ -28,8 +31,8 @@ let _consecutiveAutocompactFailures = 0;
 // ── Tool result persistence ────────────────────────────────────────
 // Large tool results are saved to disk with a short preview in-message.
 // This prevents context window blowup from verbose tool outputs.
-const PERSIST_THRESHOLD_CHARS = 50_000;  // Results > 50K chars → disk
-const PERSIST_PREVIEW_CHARS = 2_000;     // Keep 2K preview inline
+const PERSIST_THRESHOLD_CHARS = 50_000; // Results > 50K chars → disk
+const PERSIST_PREVIEW_CHARS = 2_000; // Keep 2K preview inline
 
 // ── Per-message aggregation budget ─────────────────────────────────
 // Total chars of tool results allowed per single message before persistence.
@@ -49,13 +52,19 @@ const path = require('path');
  */
 function _persistToolResult(content, toolName) {
   const dir = path.join(os.tmpdir(), 'khy-tool-results');
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
 
   const id = `${toolName}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const filePath = path.join(dir, `${id}.txt`);
   try {
     fs.writeFileSync(filePath, content, 'utf8');
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 
   const preview = content.slice(0, PERSIST_PREVIEW_CHARS);
   return { preview, filePath };
@@ -76,14 +85,17 @@ function applyToolResultBudget(messages, maxChars = DEFAULT_MAX_RESULT_CHARS) {
   let perMessageAccum = 0;
 
   const result = messages.map((msg) => {
-    if (msg.role !== 'user' && msg.role !== 'assistant') return msg;
+    if (msg.role !== 'user' && msg.role !== 'assistant') {
+      return msg;
+    }
 
     const content = msg.content;
-    if (typeof content !== 'string') return msg;
+    if (typeof content !== 'string') {
+      return msg;
+    }
 
     // Detect tool result patterns
-    if (!content.includes('[Tool execution results]') &&
-        !content.startsWith('Result:')) {
+    if (!content.includes('[Tool execution results]') && !content.startsWith('Result:')) {
       return msg;
     }
 
@@ -91,7 +103,10 @@ function applyToolResultBudget(messages, maxChars = DEFAULT_MAX_RESULT_CHARS) {
 
     // Per-message aggregation budget: if total tool results in one message
     // exceed 200K chars, persist the excess to disk
-    if (perMessageAccum > MAX_TOOL_RESULTS_PER_MESSAGE_CHARS && content.length > PERSIST_THRESHOLD_CHARS) {
+    if (
+      perMessageAccum > MAX_TOOL_RESULTS_PER_MESSAGE_CHARS &&
+      content.length > PERSIST_THRESHOLD_CHARS
+    ) {
       const persisted = _persistToolResult(content, 'aggregate');
       if (persisted) {
         persistedCount++;
@@ -113,10 +128,11 @@ function applyToolResultBudget(messages, maxChars = DEFAULT_MAX_RESULT_CHARS) {
     }
 
     // Standard truncation
-    if (content.length <= maxChars) return msg;
+    if (content.length <= maxChars) {
+      return msg;
+    }
 
-    const truncated = content.slice(0, maxChars) +
-      `\n... (truncated from ${content.length} chars)`;
+    const truncated = content.slice(0, maxChars) + `\n... (truncated from ${content.length} chars)`;
     freedChars += content.length - truncated.length;
     return { ...msg, content: truncated };
   });
@@ -148,7 +164,9 @@ function applyToolResultBudget(messages, maxChars = DEFAULT_MAX_RESULT_CHARS) {
  * @returns {{ messages: Array, persistedCount: number, freedChars: number }}
  */
 function persistOversizedToolResults(messages) {
-  if (!Array.isArray(messages)) return { messages, persistedCount: 0, freedChars: 0 };
+  if (!Array.isArray(messages)) {
+    return { messages, persistedCount: 0, freedChars: 0 };
+  }
 
   let persistedCount = 0;
   let freedChars = 0;
@@ -157,16 +175,20 @@ function persistOversizedToolResults(messages) {
     `${persisted.preview}\n\n<persisted-output path="${persisted.filePath}" original-length="${originalLength}" />\n(Full output saved to disk. Use ReadFile to access if needed.)`;
 
   for (const msg of messages) {
-    if (!msg) continue;
+    if (!msg) {
+      continue;
+    }
     const content = msg.content;
 
     // Form A: string content carrying a tool-execution-results block.
     if (typeof content === 'string') {
       const looksLikeToolResult =
         content.includes('[Tool execution results]') || content.startsWith('Result:');
-      if (looksLikeToolResult &&
-          content.length > PERSIST_THRESHOLD_CHARS &&
-          !content.includes('<persisted-output ')) {
+      if (
+        looksLikeToolResult &&
+        content.length > PERSIST_THRESHOLD_CHARS &&
+        !content.includes('<persisted-output ')
+      ) {
         const persisted = _persistToolResult(content, 'tool');
         if (persisted) {
           const marker = buildMarker(persisted, content.length);
@@ -181,10 +203,13 @@ function persistOversizedToolResults(messages) {
     // Form B: structured tool_result blocks (role:'user', content: array).
     if (Array.isArray(content)) {
       for (const block of content) {
-        if (block && block.type === 'tool_result' &&
-            typeof block.content === 'string' &&
-            block.content.length > PERSIST_THRESHOLD_CHARS &&
-            !block.content.includes('<persisted-output ')) {
+        if (
+          block &&
+          block.type === 'tool_result' &&
+          typeof block.content === 'string' &&
+          block.content.length > PERSIST_THRESHOLD_CHARS &&
+          !block.content.includes('<persisted-output ')
+        ) {
           const persisted = _persistToolResult(block.content, 'tool');
           if (persisted) {
             const marker = buildMarker(persisted, block.content.length);
@@ -201,7 +226,7 @@ function persistOversizedToolResults(messages) {
 }
 
 const SNIP_THRESHOLD_CHARS = 2000; // assistant 文本超过此长度时截断
-const SNIP_KEEP_CHARS = 500;       // 截断后保留的前缀字符数
+const SNIP_KEEP_CHARS = 500; // 截断后保留的前缀字符数
 
 /**
  * 截断非最近轮次中过长的 assistant 文本。
@@ -219,13 +244,22 @@ function snipCompact(messages) {
   const recentBoundary = messages.length - KEEP_RECENT_TURNS * 2;
 
   const result = messages.map((msg, i) => {
-    if (i >= recentBoundary) return msg;
-    if (msg.role !== 'assistant') return msg;
-    if (typeof msg.content !== 'string') return msg;
-    if (msg.content.length <= SNIP_THRESHOLD_CHARS) return msg;
+    if (i >= recentBoundary) {
+      return msg;
+    }
+    if (msg.role !== 'assistant') {
+      return msg;
+    }
+    if (typeof msg.content !== 'string') {
+      return msg;
+    }
+    if (msg.content.length <= SNIP_THRESHOLD_CHARS) {
+      return msg;
+    }
 
-    const snipped = msg.content.slice(0, SNIP_KEEP_CHARS)
-      + `\n\n[...snipped ${msg.content.length - SNIP_KEEP_CHARS} chars — old assistant response truncated for context budget]`;
+    const snipped =
+      msg.content.slice(0, SNIP_KEEP_CHARS) +
+      `\n\n[...snipped ${msg.content.length - SNIP_KEEP_CHARS} chars — old assistant response truncated for context budget]`;
     freedChars += msg.content.length - snipped.length;
     return { ...msg, content: snipped };
   });
@@ -270,9 +304,10 @@ function microcompact(messages) {
           toolNames.push(match[1]);
         }
 
-        const summary = toolNames.length > 0
-          ? `[Tools executed: ${toolNames.join(', ')} — results omitted for brevity]`
-          : '[Tool results omitted for brevity]';
+        const summary =
+          toolNames.length > 0
+            ? `[Tools executed: ${toolNames.join(', ')} — results omitted for brevity]`
+            : '[Tool results omitted for brevity]';
 
         freedChars += msg.content.length - summary.length;
         result.push({ ...msg, content: summary });
@@ -283,7 +318,7 @@ function microcompact(messages) {
     // Deduplicate consecutive identical messages
     const hash = msg.role + ':' + (typeof msg.content === 'string' ? msg.content : '');
     if (hash === prevHash) {
-      freedChars += (typeof msg.content === 'string' ? msg.content.length : 0);
+      freedChars += typeof msg.content === 'string' ? msg.content.length : 0;
       continue;
     }
     prevHash = hash;
@@ -319,10 +354,14 @@ function contextCollapse(messages) {
   let chainTools = [];
 
   function isToolInteraction(msg) {
-    if (typeof msg.content !== 'string') return false;
-    return msg.content.includes('[Tool execution results]') ||
-           msg.content.includes('Tool:') ||
-           /^\s*\{.*"tool_use"/.test(msg.content);
+    if (typeof msg.content !== 'string') {
+      return false;
+    }
+    return (
+      msg.content.includes('[Tool execution results]') ||
+      msg.content.includes('Tool:') ||
+      /^\s*\{.*"tool_use"/.test(msg.content)
+    );
   }
 
   for (let i = 0; i < messages.length; i++) {
@@ -333,9 +372,13 @@ function contextCollapse(messages) {
       if (chainStart >= 0 && chainTools.length >= COLLAPSE_MIN_CHAIN_LENGTH) {
         const chainMsgs = messages.slice(chainStart, i);
         const lastMsg = chainMsgs[chainMsgs.length - 1];
-        const summary = `[Tool interaction chain: ${chainTools.join(' → ')} — ${chainMsgs.length} messages collapsed]\n` +
+        const summary =
+          `[Tool interaction chain: ${chainTools.join(' → ')} — ${chainMsgs.length} messages collapsed]\n` +
           `Final result: ${(typeof lastMsg.content === 'string' ? lastMsg.content : '').slice(0, 300)}`;
-        const chainChars = chainMsgs.reduce((s, m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0);
+        const chainChars = chainMsgs.reduce(
+          (s, m) => s + (typeof m.content === 'string' ? m.content.length : 0),
+          0
+        );
         freedChars += chainChars - summary.length;
         collapsedChains++;
         result.push({ role: 'user', content: summary });
@@ -349,7 +392,9 @@ function contextCollapse(messages) {
     }
 
     if (isToolInteraction(msg)) {
-      if (chainStart < 0) chainStart = i;
+      if (chainStart < 0) {
+        chainStart = i;
+      }
       // 提取工具名
       const toolMatch = msg.content.match(/Tool:\s*(\w+)/);
       if (toolMatch && !chainTools.includes(toolMatch[1])) {
@@ -360,9 +405,13 @@ function contextCollapse(messages) {
       if (chainStart >= 0 && chainTools.length >= COLLAPSE_MIN_CHAIN_LENGTH) {
         const chainMsgs = messages.slice(chainStart, i);
         const lastMsg = chainMsgs[chainMsgs.length - 1];
-        const summary = `[Tool interaction chain: ${chainTools.join(' → ')} — ${chainMsgs.length} messages collapsed]\n` +
+        const summary =
+          `[Tool interaction chain: ${chainTools.join(' → ')} — ${chainMsgs.length} messages collapsed]\n` +
           `Final result: ${(typeof lastMsg.content === 'string' ? lastMsg.content : '').slice(0, 300)}`;
-        const chainChars = chainMsgs.reduce((s, m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0);
+        const chainChars = chainMsgs.reduce(
+          (s, m) => s + (typeof m.content === 'string' ? m.content.length : 0),
+          0
+        );
         freedChars += chainChars - summary.length;
         collapsedChains++;
         result.push({ role: 'user', content: summary });
@@ -398,9 +447,9 @@ Output only the summary, no explanation.`;
  */
 async function autocompact(messages, deps, config, options = {}) {
   // Estimate current token usage
-  const totalText = messages.map((m) =>
-    typeof m.content === 'string' ? m.content : ''
-  ).join('\n');
+  const totalText = messages
+    .map((m) => (typeof m.content === 'string' ? m.content : ''))
+    .join('\n');
   const estimatedTokens = deps.estimateTokens
     ? deps.estimateTokens(totalText)
     : Math.ceil(totalText.length / 3);
@@ -414,7 +463,13 @@ async function autocompact(messages, deps, config, options = {}) {
   // Circuit breaker: prefer per-session counter, fallback to global
   const sessionFailures = options._sessionAutocompactFailures || _consecutiveAutocompactFailures;
   if (sessionFailures >= MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES) {
-    return { messages, freedChars: 0, summaryGenerated: false, circuitBroken: true, _sessionAutocompactFailures: sessionFailures };
+    return {
+      messages,
+      freedChars: 0,
+      summaryGenerated: false,
+      circuitBroken: true,
+      _sessionAutocompactFailures: sessionFailures,
+    };
   }
 
   if (messages.length <= KEEP_RECENT_TURNS * 2) {
@@ -424,9 +479,15 @@ async function autocompact(messages, deps, config, options = {}) {
   // Smart split: use contextCompressor's split-point algorithm if available
   let oldMessages, recentMessages;
   try {
-    const { findCompressSplitPoint, slimForCompression, buildConversationBridge } = require('../contextCompressor');
+    const {
+      findCompressSplitPoint,
+      slimForCompression,
+      buildConversationBridge,
+    } = require('../contextCompressor');
     const estFn = deps.estimateTokens || ((text) => Math.ceil((text || '').length / 3));
-    const totalText = messages.map(m => typeof m.content === 'string' ? m.content : '').join('\n');
+    const totalText = messages
+      .map((m) => (typeof m.content === 'string' ? m.content : ''))
+      .join('\n');
     const totalTokens = estFn(totalText);
     const splitIdx = findCompressSplitPoint(messages, (text) => estFn(text || ''), totalTokens);
     if (splitIdx > 0 && splitIdx < messages.length) {
@@ -452,28 +513,39 @@ async function autocompact(messages, deps, config, options = {}) {
 
   // 注入任务快照到摘要输入
   let taskSnapshot = '';
-  try { const ts = require('../../tools/_taskStore'); taskSnapshot = ts.snapshot(); } catch {}
-  const textForSummary = taskSnapshot
-    ? oldText + '\n\n[Current tasks]\n' + taskSnapshot
-    : oldText;
+  try {
+    const ts = require('../../tools/_taskStore');
+    taskSnapshot = ts.snapshot();
+  } catch {}
+  const textForSummary = taskSnapshot ? oldText + '\n\n[Current tasks]\n' + taskSnapshot : oldText;
 
   // Call AI for summary (use low effort to minimize cost)
   let summary;
   try {
-    const result = await deps.callModel(
-      `${COMPACT_PROMPT}\n\n---\n${textForSummary}`,
-      { effort: 'low', _isFollowUp: true }
-    );
+    const result = await deps.callModel(`${COMPACT_PROMPT}\n\n---\n${textForSummary}`, {
+      effort: 'low',
+      _isFollowUp: true,
+    });
     summary = result?.reply || result?.content;
   } catch {
     // AI summary failed — increment both counters
     _consecutiveAutocompactFailures++;
-    return { messages, freedChars: 0, summaryGenerated: false, _sessionAutocompactFailures: (options._sessionAutocompactFailures || 0) + 1 };
+    return {
+      messages,
+      freedChars: 0,
+      summaryGenerated: false,
+      _sessionAutocompactFailures: (options._sessionAutocompactFailures || 0) + 1,
+    };
   }
 
   if (!summary || summary.length < 20) {
     _consecutiveAutocompactFailures++;
-    return { messages, freedChars: 0, summaryGenerated: false, _sessionAutocompactFailures: (options._sessionAutocompactFailures || 0) + 1 };
+    return {
+      messages,
+      freedChars: 0,
+      summaryGenerated: false,
+      _sessionAutocompactFailures: (options._sessionAutocompactFailures || 0) + 1,
+    };
   }
 
   // Success — reset both counters
@@ -487,7 +559,11 @@ async function autocompact(messages, deps, config, options = {}) {
 
   // 注入任务快照为独立消息
   const compactedMessages = taskSnapshot
-    ? [summaryMessage, { role: 'assistant', content: '[Active tasks — resume from here]\n' + taskSnapshot }, ...recentMessages]
+    ? [
+        summaryMessage,
+        { role: 'assistant', content: '[Active tasks — resume from here]\n' + taskSnapshot },
+        ...recentMessages,
+      ]
     : [summaryMessage, ...recentMessages];
 
   const freedChars = oldText.length - summary.length;
@@ -520,7 +596,9 @@ async function runCompactPipeline(messages, deps, config, options = {}) {
   // Signal HUD that compaction is starting — via the neutral UI port, no reverse
   // require to cli/hudRenderer (DESIGN-ARCH-021, Batch 2). Silent no-op headless.
   const estimatedTokensBefore = deps.estimateTokens
-    ? deps.estimateTokens(messages.map(m => typeof m.content === 'string' ? m.content : '').join('\n'))
+    ? deps.estimateTokens(
+        messages.map((m) => (typeof m.content === 'string' ? m.content : '')).join('\n')
+      )
     : 0;
   require('../compactionUiPort').signalCompactingStart(estimatedTokensBefore);
 
@@ -528,25 +606,33 @@ async function runCompactPipeline(messages, deps, config, options = {}) {
   const s1 = applyToolResultBudget(current);
   current = s1.messages;
   totalFreedChars += s1.freedChars;
-  if (s1.freedChars > 0) stagesRun.push('toolResultBudget');
+  if (s1.freedChars > 0) {
+    stagesRun.push('toolResultBudget');
+  }
 
   // Stage 1.5: SnipCompact — 截断非最近轮次的长 assistant 文本
   const s15 = snipCompact(current);
   current = s15.messages;
   totalFreedChars += s15.freedChars;
-  if (s15.freedChars > 0) stagesRun.push('snipCompact');
+  if (s15.freedChars > 0) {
+    stagesRun.push('snipCompact');
+  }
 
   // Stage 2: Microcompact
   const s2 = microcompact(current);
   current = s2.messages;
   totalFreedChars += s2.freedChars;
-  if (s2.freedChars > 0) stagesRun.push('microcompact');
+  if (s2.freedChars > 0) {
+    stagesRun.push('microcompact');
+  }
 
   // Stage 2.5: Context Collapse — 折叠连续工具交互链
   const s25 = contextCollapse(current);
   current = s25.messages;
   totalFreedChars += s25.freedChars;
-  if (s25.collapsedChains > 0) stagesRun.push('contextCollapse');
+  if (s25.collapsedChains > 0) {
+    stagesRun.push('contextCollapse');
+  }
 
   // Stage 3: Autocompact (only if needed or forced)
   const s3 = await autocompact(current, deps, config, {
@@ -555,13 +641,17 @@ async function runCompactPipeline(messages, deps, config, options = {}) {
   });
   current = s3.messages;
   totalFreedChars += s3.freedChars;
-  if (s3.summaryGenerated) stagesRun.push('autocompact');
+  if (s3.summaryGenerated) {
+    stagesRun.push('autocompact');
+  }
 
   // Signal HUD that compaction is finished — via the neutral UI port (B2).
   require('../compactionUiPort').signalCompactingDone();
 
   return {
-    messages: current, totalFreedChars, stagesRun,
+    messages: current,
+    totalFreedChars,
+    stagesRun,
     _sessionAutocompactFailures: s3._sessionAutocompactFailures,
   };
 }

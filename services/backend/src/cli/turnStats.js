@@ -27,7 +27,9 @@
 const { ccFormatEnabled, ccFormatDuration, ccFormatTokens } = require('./ccFormat');
 
 function turnStatsEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TURN_STATS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TURN_STATS) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -46,15 +48,23 @@ function turnStatsMinMs(env = process.env) {
  */
 function humanizeElapsed(ms, env = process.env) {
   const n = Number(ms);
-  if (!Number.isFinite(n) || n <= 0) return '';
+  if (!Number.isFinite(n) || n <= 0) {
+    return '';
+  }
   if (ccFormatEnabled(env)) {
-    if (n < 1000) return ''; // 亚秒回合:省略时长段(与 thinking 同口径,不显 CC 的 "0s")
+    if (n < 1000) {
+      return '';
+    } // 亚秒回合:省略时长段(与 thinking 同口径,不显 CC 的 "0s")
     return ccFormatDuration(n);
   }
   // legacy 字节回退(本刀之前口径)
   const totalSec = Math.round(n / 1000);
-  if (totalSec < 1) return '';
-  if (totalSec < 60) return `${totalSec}s`;
+  if (totalSec < 1) {
+    return '';
+  }
+  if (totalSec < 60) {
+    return `${totalSec}s`;
+  }
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return s ? `${m}m${s}s` : `${m}m`;
@@ -69,14 +79,19 @@ function humanizeElapsed(ms, env = process.env) {
  */
 function fmtTokens(n, env = process.env) {
   const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return '';
+  if (!Number.isFinite(v) || v <= 0) {
+    return '';
+  }
   if (ccFormatEnabled(env)) {
     return `${ccFormatTokens(v)} tokens`;
   }
   // legacy 字节回退
-  if (v < 1000) return `${Math.round(v)} tokens`;
+  if (v < 1000) {
+    return `${Math.round(v)} tokens`;
+  }
   const k = v / 1000;
-  const s = k >= 100 ? String(Math.round(k)) : (Math.round(k * 10) / 10).toFixed(1).replace(/\.0$/, '');
+  const s =
+    k >= 100 ? String(Math.round(k)) : (Math.round(k * 10) / 10).toFixed(1).replace(/\.0$/, '');
   return `${s}k tokens`;
 }
 
@@ -87,17 +102,29 @@ function fmtTokens(n, env = process.env) {
  * @returns {string|null}
  */
 function buildTurnStatsLine({ elapsedMs = 0, tokens = 0, toolCount = 0, env = process.env } = {}) {
-  if (!turnStatsEnabled(env)) return null;
+  if (!turnStatsEnabled(env)) {
+    return null;
+  }
   const tc = Number(toolCount) > 0 ? Math.floor(Number(toolCount)) : 0;
   // 抑噪:无工具且耗时低于阈值的 trivial 回合不显(短闲聊保持干净)。
-  if (tc < 1 && Number(elapsedMs) < turnStatsMinMs(env)) return null;
+  if (tc < 1 && Number(elapsedMs) < turnStatsMinMs(env)) {
+    return null;
+  }
   const parts = [];
   const elapsed = humanizeElapsed(elapsedMs, env);
-  if (elapsed) parts.push(elapsed);
-  if (tc >= 1) parts.push(`${tc} 工具`);
+  if (elapsed) {
+    parts.push(elapsed);
+  }
+  if (tc >= 1) {
+    parts.push(`${tc} 工具`);
+  }
   const tok = fmtTokens(tokens, env);
-  if (tok) parts.push(tok);
-  if (parts.length === 0) return null;
+  if (tok) {
+    parts.push(tok);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
   return `✓ ${parts.join(' · ')}`;
 }
 

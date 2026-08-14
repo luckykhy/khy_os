@@ -114,10 +114,12 @@ describe('featureKeyBuilder', () => {
   });
 
   test('exports IDE family keys and builds IDE prefix regex', () => {
-    expect(IDE_FAMILY_KEYS).toEqual(['claude', 'codex', 'cursor', 'kiro', 'trae']);
+    expect(IDE_FAMILY_KEYS).toEqual(['claude', 'codex', 'cursor', 'kiro', 'trae', 'opencode', 'warp', 'vscode', 'windsurf']);
     const regex = buildIdeFeaturePrefixRegex();
     expect(regex.test('claude.launch')).toBe(true);
     expect(regex.test('kiro.launch')).toBe(true);
+    expect(regex.test('opencode.launch')).toBe(true);
+    expect(regex.test('windsurf.launch')).toBe(true);
     expect(regex.test('unknown.launch')).toBe(false);
   });
 

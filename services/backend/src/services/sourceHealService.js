@@ -24,14 +24,14 @@
  *   哈希走 crypto.sha256,门控/计划走 sourceHealPolicy 叶子。
  */
 
+const { spawnSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
-const { spawnSync } = require('child_process');
 
-const policy = require('./sourceHealPolicy');
 const { sweepBundledOrphans } = require('./orphanSweep/orphanSweep');
+const policy = require('./sourceHealPolicy');
 const {
   SNAPSHOT_ENC_NAME,
   SNAPSHOT_META_NAME,
@@ -78,19 +78,27 @@ function _isInside(child, parent) {
  */
 function _findBundledRoot(installSrcDir) {
   try {
-    if (!installSrcDir || typeof installSrcDir !== 'string') return null;
+    if (!installSrcDir || typeof installSrcDir !== 'string') {
+      return null;
+    }
     // 首选:剥掉尾部 MANAGED_REL,若剩余目录本身叫 bundled 即命中。
     if (installSrcDir.endsWith(MANAGED_REL)) {
       const stripped = installSrcDir.slice(0, installSrcDir.length - MANAGED_REL.length);
       const cand = path.resolve(stripped);
-      if (path.basename(cand) === 'bundled') return cand;
+      if (path.basename(cand) === 'bundled') {
+        return cand;
+      }
     }
     // 兜底:逐级向上找 `bundled`(硬上限防无限循环)。
     let cur = path.resolve(installSrcDir);
     for (let i = 0; i < 12; i++) {
-      if (path.basename(cur) === 'bundled') return cur;
+      if (path.basename(cur) === 'bundled') {
+        return cur;
+      }
       const parent = path.dirname(cur);
-      if (parent === cur) break;
+      if (parent === cur) {
+        break;
+      }
       cur = parent;
     }
     return null;
@@ -122,7 +130,9 @@ function _collectRelFiles(dir) {
       const childAbs = path.join(abs, name);
       const childRel = rel ? `${rel}/${name}` : name;
       if (ent.isDirectory()) {
-        if (_SKIP_DIRS.has(name)) continue;
+        if (_SKIP_DIRS.has(name)) {
+          continue;
+        }
         walk(childAbs, childRel);
       } else if (ent.isFile()) {
         out.push(childRel);
@@ -139,7 +149,9 @@ function _buildManifest(pristineSrcDir) {
   const manifest = {};
   for (const rel of _collectRelFiles(pristineSrcDir)) {
     const h = _hashFileSafe(path.join(pristineSrcDir, rel));
-    if (h) manifest[rel] = h;
+    if (h) {
+      manifest[rel] = h;
+    }
   }
   return manifest;
 }
@@ -157,7 +169,9 @@ function _hashActual(relPaths, installSrcDir, scanExtra) {
   }
   if (scanExtra) {
     for (const rel of _collectRelFiles(installSrcDir)) {
-      if (!(rel in actual)) actual[rel] = _hashFileSafe(path.join(installSrcDir, rel));
+      if (!(rel in actual)) {
+        actual[rel] = _hashFileSafe(path.join(installSrcDir, rel));
+      }
     }
   }
   return actual;
@@ -167,9 +181,11 @@ function _hashActual(relPaths, installSrcDir, scanExtra) {
 
 /** 判定 dir 是否是一个含快照的 _source 目录。 */
 function _snapshotDirHasFiles(dir) {
-  return !!dir
-    && fs.existsSync(path.join(dir, SNAPSHOT_META_NAME))
-    && fs.existsSync(path.join(dir, SNAPSHOT_ENC_NAME));
+  return (
+    !!dir &&
+    fs.existsSync(path.join(dir, SNAPSHOT_META_NAME)) &&
+    fs.existsSync(path.join(dir, SNAPSHOT_ENC_NAME))
+  );
 }
 
 /**
@@ -180,19 +196,25 @@ function _snapshotDirHasFiles(dir) {
 function _findSnapshotSourceDir(opts = {}) {
   const explicit = opts && (opts.sourceDir || opts.snapshotDir);
   const candidates = [];
-  if (explicit) candidates.push(path.resolve(explicit));
+  if (explicit) {
+    candidates.push(path.resolve(explicit));
+  }
 
   const backendRoot = path.resolve(__dirname, '../..'); // services/backend
   candidates.push(
-    path.join(backendRoot, '_source'),               // npm package + standalone backend
-    path.join(backendRoot, '..', '..', '_source'),   // pip: bundled/services/backend → bundled/_source
-    path.join(backendRoot, '..', '_source'),          // defensive
+    path.join(backendRoot, '_source'), // npm package + standalone backend
+    path.join(backendRoot, '..', '..', '_source'), // pip: bundled/services/backend → bundled/_source
+    path.join(backendRoot, '..', '_source') // defensive
   );
 
   for (const c of candidates) {
     try {
-      if (_snapshotDirHasFiles(c)) return c;
-    } catch { /* ignore */ }
+      if (_snapshotDirHasFiles(c)) {
+        return c;
+      }
+    } catch {
+      /* ignore */
+    }
   }
   return null;
 }
@@ -222,9 +244,13 @@ const DEFAULT_AUTO_MAX = 25;
 function _resolveAutoMax(env) {
   try {
     const raw = env && env.KHY_SOURCE_HEAL_AUTO_MAX;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_AUTO_MAX;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return DEFAULT_AUTO_MAX;
+    }
     const n = Number(String(raw).trim());
-    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return DEFAULT_AUTO_MAX;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+      return DEFAULT_AUTO_MAX;
+    }
     return n;
   } catch {
     return DEFAULT_AUTO_MAX;
@@ -233,9 +259,7 @@ function _resolveAutoMax(env) {
 
 function _resolveSecret(opts) {
   const env = _env(opts);
-  const explicit = (opts && opts.secret)
-    || (env && env.KHY_SOURCE_PUBLISH_SECRET)
-    || '';
+  const explicit = (opts && opts.secret) || (env && env.KHY_SOURCE_PUBLISH_SECRET) || '';
   const s = String(explicit).trim();
   return s || DEFAULT_SOURCE_SECRET;
 }
@@ -250,10 +274,16 @@ function _extractTarGz(tarGzBuffer, destDir) {
       throw new Error('tar command not found');
     }
     if (result.status !== 0) {
-      throw new Error(`tar extract failed: ${String(result.stderr || result.stdout || '').trim() || `exit ${result.status}`}`);
+      throw new Error(
+        `tar extract failed: ${String(result.stderr || result.stdout || '').trim() || `exit ${result.status}`}`
+      );
     }
   } finally {
-    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -263,10 +293,14 @@ function _extractTarGz(tarGzBuffer, destDir) {
  */
 function _extractPristine(opts = {}) {
   const srcDir = _findSnapshotSourceDir(opts);
-  if (!srcDir) return null;
+  if (!srcDir) {
+    return null;
+  }
 
   const header = _readJsonSafe(path.join(srcDir, SNAPSHOT_META_NAME));
-  if (!header || !header.crypto) return null;
+  if (!header || !header.crypto) {
+    return null;
+  }
 
   let plaintext;
   try {
@@ -275,14 +309,22 @@ function _extractPristine(opts = {}) {
   } catch {
     return null; // 自定义密钥/损坏 → 交给 khy restore,自愈不冒进
   }
-  if (header.sha256 && sha256Hex(plaintext) !== header.sha256) return null;
+  if (header.sha256 && sha256Hex(plaintext) !== header.sha256) {
+    return null;
+  }
 
   let tmpRoot;
   try {
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-heal-src-'));
     _extractTarGz(plaintext, tmpRoot);
   } catch {
-    if (tmpRoot) { try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* ignore */ } }
+    if (tmpRoot) {
+      try {
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    }
     return null;
   }
 
@@ -291,7 +333,11 @@ function _extractPristine(opts = {}) {
     header,
     srcDir,
     cleanup() {
-      try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     },
   };
 }
@@ -304,8 +350,12 @@ function _extractPristine(opts = {}) {
  */
 function _resolveDataHome(opts) {
   try {
-    if (opts && opts.dataHome) return path.resolve(opts.dataHome);
-  } catch { /* ignore */ }
+    if (opts && opts.dataHome) {
+      return path.resolve(opts.dataHome);
+    }
+  } catch {
+    /* ignore */
+  }
   try {
     const { getAppHome } = require('../utils/dataHome');
     return getAppHome();
@@ -322,24 +372,39 @@ function _manifestCachePath(opts) {
 
 /** 读缓存清单;版本(fingerprint)不匹配或坏 → null。 */
 function _loadCachedManifest(fingerprint, opts) {
-  if (!fingerprint) return null;
+  if (!fingerprint) {
+    return null;
+  }
   const cp = _manifestCachePath(opts);
-  if (!cp) return null;
+  if (!cp) {
+    return null;
+  }
   const cached = _readJsonSafe(cp);
-  if (cached && cached.fingerprint === fingerprint && cached.files && typeof cached.files === 'object') {
+  if (
+    cached &&
+    cached.fingerprint === fingerprint &&
+    cached.files &&
+    typeof cached.files === 'object'
+  ) {
     return cached.files;
   }
   return null;
 }
 
 function _saveCachedManifest(fingerprint, files, opts) {
-  if (!fingerprint) return;
+  if (!fingerprint) {
+    return;
+  }
   const cp = _manifestCachePath(opts);
-  if (!cp) return;
+  if (!cp) {
+    return;
+  }
   try {
     fs.mkdirSync(path.dirname(cp), { recursive: true });
     fs.writeFileSync(cp, JSON.stringify({ fingerprint, files }), 'utf-8');
-  } catch { /* ignore — 缓存是优化非必需 */ }
+  } catch {
+    /* ignore — 缓存是优化非必需 */
+  }
 }
 
 // ── 核心:给定纯净 src 目录 + 安装 src 目录,执行自愈(可单测,不碰快照) ──────────
@@ -369,7 +434,11 @@ function healFromPristineDir(pristineSrcDir, installSrcDir, opts = {}) {
     if (Array.isArray(opts.subset) && opts.subset.length) {
       const keep = new Set(opts.subset);
       const filtered = {};
-      for (const k of Object.keys(expected)) if (keep.has(k)) filtered[k] = expected[k];
+      for (const k of Object.keys(expected)) {
+        if (keep.has(k)) {
+          filtered[k] = expected[k];
+        }
+      }
       expected = filtered;
     }
 
@@ -397,7 +466,11 @@ function healFromPristineDir(pristineSrcDir, installSrcDir, opts = {}) {
           }
           // 损坏文件先备份原件(取证/可回滚),缺失文件无原件可备份。
           if (item.reason === 'corrupt' && fs.existsSync(dst)) {
-            try { fs.renameSync(dst, `${dst}.broken-${Date.now()}`); } catch { /* best-effort */ }
+            try {
+              fs.renameSync(dst, `${dst}.broken-${Date.now()}`);
+            } catch {
+              /* best-effort */
+            }
           }
           fs.mkdirSync(path.dirname(dst), { recursive: true });
           fs.copyFileSync(src, dst);
@@ -409,7 +482,11 @@ function healFromPristineDir(pristineSrcDir, installSrcDir, opts = {}) {
             failed.push({ relPath: rel, reason: item.reason, error: 'verify-mismatch' });
           }
         } catch (err) {
-          failed.push({ relPath: rel, reason: item.reason, error: String((err && err.message) || err) });
+          failed.push({
+            relPath: rel,
+            reason: item.reason,
+            error: String((err && err.message) || err),
+          });
         }
       }
     }
@@ -459,10 +536,21 @@ function healSource(opts = {}) {
 
     // 1) 定位快照(dev 树无快照 → 无参照可比,自愈无从谈起,交给 git)。
     const srcDir = _findSnapshotSourceDir(opts);
-    if (!srcDir) return { ok: true, reason: 'no-snapshot', healed: 0, applied: [], failed: [], plan: [] };
+    if (!srcDir) {
+      return { ok: true, reason: 'no-snapshot', healed: 0, applied: [], failed: [], plan: [] };
+    }
 
     const header = _readJsonSafe(path.join(srcDir, SNAPSHOT_META_NAME));
-    if (!header) return { ok: true, reason: 'no-snapshot-header', healed: 0, applied: [], failed: [], plan: [] };
+    if (!header) {
+      return {
+        ok: true,
+        reason: 'no-snapshot-header',
+        healed: 0,
+        applied: [],
+        failed: [],
+        plan: [],
+      };
+    }
     const fingerprint = header.sha256 || header.version || null;
 
     // 版本一致性红线:快照是「本release 应有源码」的权威参照——仅当快照版本 == 运行版本时,
@@ -481,7 +569,14 @@ function healSource(opts = {}) {
       if (!expected) {
         pristine = _extractPristine({ ...opts, srcDir });
         if (!pristine) {
-          return { ok: true, reason: 'snapshot-unreadable', healed: 0, applied: [], failed: [], plan: [] };
+          return {
+            ok: true,
+            reason: 'snapshot-unreadable',
+            healed: 0,
+            applied: [],
+            failed: [],
+            plan: [],
+          };
         }
         expected = _buildManifest(_pristineSrcDir(pristine.pristineRoot));
         _saveCachedManifest(fingerprint, expected, opts);
@@ -491,7 +586,11 @@ function healSource(opts = {}) {
       if (Array.isArray(opts.subset) && opts.subset.length) {
         const keep = new Set(opts.subset);
         const filtered = {};
-        for (const k of Object.keys(expected)) if (keep.has(k)) filtered[k] = expected[k];
+        for (const k of Object.keys(expected)) {
+          if (keep.has(k)) {
+            filtered[k] = expected[k];
+          }
+        }
         expected = filtered;
       }
 
@@ -509,9 +608,13 @@ function healSource(opts = {}) {
       // 4) 若无需修复或不写回(dry-run / 版本不一致 / 变更过多降级),直接返回。
       if (!doApply || plan.plan.length === 0) {
         let reason = 'dry-run';
-        if (plan.plan.length === 0) reason = 'healthy';
-        else if (wantApply && !effectiveApply) reason = 'version-mismatch';
-        else if (wantApply && effectiveApply && tooMany && !opts.force) reason = 'too-many-changes';
+        if (plan.plan.length === 0) {
+          reason = 'healthy';
+        } else if (wantApply && !effectiveApply) {
+          reason = 'version-mismatch';
+        } else if (wantApply && effectiveApply && tooMany && !opts.force) {
+          reason = 'too-many-changes';
+        }
         return {
           ok: true,
           reason,
@@ -529,7 +632,7 @@ function healSource(opts = {}) {
             runningVersion: runVersion,
             tooMany,
             autoMax,
-            recommend: (tooMany && !opts.force) ? 'khy restore' : undefined,
+            recommend: tooMany && !opts.force ? 'khy restore' : undefined,
           },
         };
       }
@@ -538,7 +641,14 @@ function healSource(opts = {}) {
       if (!pristine) {
         pristine = _extractPristine({ ...opts, srcDir });
         if (!pristine) {
-          return { ok: true, reason: 'snapshot-unreadable', healed: 0, applied: [], failed: [], plan: plan.plan };
+          return {
+            ok: true,
+            reason: 'snapshot-unreadable',
+            healed: 0,
+            applied: [],
+            failed: [],
+            plan: plan.plan,
+          };
         }
       }
 
@@ -557,11 +667,21 @@ function healSource(opts = {}) {
         report: res.report,
       };
     } finally {
-      if (pristine) pristine.cleanup();
+      if (pristine) {
+        pristine.cleanup();
+      }
     }
   } catch (err) {
     // 自愈绝不能拖垮宿主流程。
-    return { ok: false, reason: 'error', healed: 0, applied: [], failed: [], plan: [], report: { error: String((err && err.message) || err) } };
+    return {
+      ok: false,
+      reason: 'error',
+      healed: 0,
+      applied: [],
+      failed: [],
+      plan: [],
+      report: { error: String((err && err.message) || err) },
+    };
   }
 }
 
@@ -584,8 +704,12 @@ function _resolveIntervalMs(env) {
     }
     const n = Number(String(raw).trim());
     // 0 或负数 → 不节流(每次都查);坏值 → 默认。
-    if (!Number.isFinite(n)) return DEFAULT_HEAL_INTERVAL_HOURS * 3600 * 1000;
-    if (n <= 0) return 0;
+    if (!Number.isFinite(n)) {
+      return DEFAULT_HEAL_INTERVAL_HOURS * 3600 * 1000;
+    }
+    if (n <= 0) {
+      return 0;
+    }
     return Math.round(n * 3600 * 1000);
   } catch {
     return DEFAULT_HEAL_INTERVAL_HOURS * 3600 * 1000;
@@ -600,26 +724,36 @@ function _healStatePath(opts) {
 
 function _readHealState(opts) {
   const sp = _healStatePath(opts);
-  if (!sp) return null;
+  if (!sp) {
+    return null;
+  }
   return _readJsonSafe(sp);
 }
 
 function _writeHealState(state, opts) {
   const sp = _healStatePath(opts);
-  if (!sp) return;
+  if (!sp) {
+    return;
+  }
   try {
     fs.mkdirSync(path.dirname(sp), { recursive: true });
     fs.writeFileSync(sp, JSON.stringify(state), 'utf-8');
-  } catch { /* ignore — 节流状态是优化非必需 */ }
+  } catch {
+    /* ignore — 节流状态是优化非必需 */
+  }
 }
 
 /** 廉价读取当前随包快照指纹(不解密):无快照 → null。 */
 function _readSnapshotFingerprint(opts = {}) {
   try {
     const srcDir = _findSnapshotSourceDir(opts);
-    if (!srcDir) return null;
+    if (!srcDir) {
+      return null;
+    }
     const header = _readJsonSafe(path.join(srcDir, SNAPSHOT_META_NAME));
-    if (!header) return null;
+    if (!header) {
+      return null;
+    }
     return header.sha256 || header.version || null;
   } catch {
     return null;
@@ -683,18 +817,33 @@ function runStartupHeal(opts = {}) {
     });
 
     // 记录本次体检(无论结果):指纹 + 时间戳,供下次节流判定。
-    _writeHealState({
-      fingerprint,
-      lastCheckAt: now,
-      reason: res && res.reason,
-      healed: (res && res.healed) || 0,
-      at: (() => { try { return new Date(now).toISOString(); } catch { return null; } })(),
-    }, opts);
+    _writeHealState(
+      {
+        fingerprint,
+        lastCheckAt: now,
+        reason: res && res.reason,
+        healed: (res && res.healed) || 0,
+        at: (() => {
+          try {
+            return new Date(now).toISOString();
+          } catch {
+            return null;
+          }
+        })(),
+      },
+      opts
+    );
 
     // 有修复且非静默 → 提示一行。
     if (res && res.healed > 0 && !opts.silent) {
-      const line = `  源码自愈: 修复 ${res.healed} 个文件 (${(res.reason) || 'healed'})`;
-      if (typeof opts.log === 'function') { try { opts.log(line); } catch { /* ignore */ } }
+      const line = `  源码自愈: 修复 ${res.healed} 个文件 (${res.reason || 'healed'})`;
+      if (typeof opts.log === 'function') {
+        try {
+          opts.log(line);
+        } catch {
+          /* ignore */
+        }
+      }
     }
 
     // 通过节流、已真正体检 → 顺带递归清除 pip 升级残留的 `~` 前缀孤儿目录(Windows stranded stash)。
@@ -705,15 +854,31 @@ function runStartupHeal(opts = {}) {
         const sweep = sweepBundledOrphans({ root: bundledRoot, apply: true, env });
         if (sweep && sweep.removed && sweep.removed.length > 0 && !opts.silent) {
           const line = `  清理残留: 移除 ${sweep.removed.length} 个损坏孤儿目录 (pip 升级残留)`;
-          if (typeof opts.log === 'function') { try { opts.log(line); } catch { /* ignore */ } }
+          if (typeof opts.log === 'function') {
+            try {
+              opts.log(line);
+            } catch {
+              /* ignore */
+            }
+          }
         }
-        res.orphanSweep = sweep ? { removed: sweep.removed.length, scanned: sweep.scanned, reason: sweep.reason } : null;
+        res.orphanSweep = sweep
+          ? { removed: sweep.removed.length, scanned: sweep.scanned, reason: sweep.reason }
+          : null;
       }
-    } catch { /* fail-soft:清理错误绝不阻断 */ }
+    } catch {
+      /* fail-soft:清理错误绝不阻断 */
+    }
 
     return { ...res, skipped: false };
   } catch (err) {
-    return { ok: false, reason: 'error', skipped: true, healed: 0, error: String((err && err.message) || err) };
+    return {
+      ok: false,
+      reason: 'error',
+      skipped: true,
+      healed: 0,
+      error: String((err && err.message) || err),
+    };
   }
 }
 

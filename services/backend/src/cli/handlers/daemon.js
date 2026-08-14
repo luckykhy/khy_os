@@ -26,7 +26,9 @@ const { foldOutput } = require('../toolDisplayPolicy');
 async function handleDaemon(input, deps) {
   const { chalk: c } = deps;
   const options = deps.options || {};
-  const args = String(input || '').trim().split(/\s+/);
+  const args = String(input || '')
+    .trim()
+    .split(/\s+/);
   const sub = (args[0] || 'status').toLowerCase();
 
   switch (sub) {
@@ -69,7 +71,9 @@ async function _resolveStartedDaemon(result, options = {}) {
           return latest;
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     if (attempt < attempts) {
       await _sleep(delayMs);

@@ -28,12 +28,18 @@ function _filePath() {
 
 // 将任意输入规范化为去重、去空白的字符串数组。
 function _normalizeList(list) {
-  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
   const seen = new Set();
   const out = [];
   for (const item of list) {
-    const key = String(item == null ? '' : item).trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
+    const key = String(item == null ? '' : item)
+      .trim()
+      .toLowerCase();
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(key);
   }
@@ -43,7 +49,9 @@ function _normalizeList(list) {
 // 解析 GATEWAY_FAILOVER_ORDER 环境变量（逗号分隔）。返回规范化数组（可能为空）。
 function _parseEnvOrder() {
   const raw = process.env.GATEWAY_FAILOVER_ORDER;
-  if (raw == null || String(raw).trim() === '') return [];
+  if (raw == null || String(raw).trim() === '') {
+    return [];
+  }
   return _normalizeList(String(raw).split(','));
 }
 
@@ -68,7 +76,9 @@ function getFailoverOrder() {
       const enabled = !!(parsed && parsed.enabled) && order.length > 0;
       return { enabled, order, source: 'file' };
     }
-  } catch { /* 坏文件 / 读失败 → 静默回退默认 */ }
+  } catch {
+    /* 坏文件 / 读失败 → 静默回退默认 */
+  }
 
   // 3) 默认：未启用。
   return { enabled: false, order: [], source: 'default' };
@@ -97,8 +107,12 @@ function setFailoverOrder(list) {
 function clearFailoverOrder() {
   try {
     const fp = _filePath();
-    if (fs.existsSync(fp)) fs.unlinkSync(fp);
-  } catch { /* 删除失败不致命：getFailoverOrder 仍会按内容判定 */ }
+    if (fs.existsSync(fp)) {
+      fs.unlinkSync(fp);
+    }
+  } catch {
+    /* 删除失败不致命：getFailoverOrder 仍会按内容判定 */
+  }
   return { enabled: false, order: [] };
 }
 

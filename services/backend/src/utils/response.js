@@ -6,13 +6,15 @@ function ok(res, data = null, message = 'Success') {
   return res.json({
     success: true,
     message,
-    data
+    data,
   });
 }
 
 function fail(res, message = 'Request failed', status = 400, errors = null) {
   const body = { success: false, message };
-  if (errors) body.errors = errors;
+  if (errors) {
+    body.errors = errors;
+  }
   return res.status(status).json(body);
 }
 
@@ -23,8 +25,8 @@ function page(res, rows, total, pageNum, pageSize) {
       list: rows,
       total,
       page: parseInt(pageNum),
-      pageSize: parseInt(pageSize)
-    }
+      pageSize: parseInt(pageSize),
+    },
   });
 }
 

@@ -38,11 +38,17 @@ function isEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_FIRST_RESPONSE_ACK', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_FIRST_RESPONSE_ACK;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -55,14 +61,22 @@ function isEnabled(env) {
  */
 function isSelectionEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
-  if (!isEnabled(e)) return false; // 父门关 → 整体关
+  if (!isEnabled(e)) {
+    return false;
+  } // 父门关 → 整体关
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_FIRST_RESPONSE_ACK_SELECTION', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_FIRST_RESPONSE_ACK_SELECTION;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -77,14 +91,22 @@ function isSelectionEnabled(env) {
  */
 function isResumeEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
-  if (!isEnabled(e)) return false; // 父门关 → 整体关
+  if (!isEnabled(e)) {
+    return false;
+  } // 父门关 → 整体关
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_FIRST_RESPONSE_ACK_RESUME', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_FIRST_RESPONSE_ACK_RESUME;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -100,14 +122,22 @@ function isResumeEnabled(env) {
  */
 function isImageEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
-  if (!isEnabled(e)) return false; // 父门关 → 整体关
+  if (!isEnabled(e)) {
+    return false;
+  } // 父门关 → 整体关
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_FIRST_RESPONSE_ACK_IMAGE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_FIRST_RESPONSE_ACK_IMAGE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -121,17 +151,31 @@ function firstResponseAckDelayMs(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.resolveNumeric === 'function'
-      && reg.FLAGS && reg.FLAGS.KHY_FIRST_RESPONSE_ACK_MS) {
+    if (
+      reg &&
+      typeof reg.resolveNumeric === 'function' &&
+      reg.FLAGS &&
+      reg.FLAGS.KHY_FIRST_RESPONSE_ACK_MS
+    ) {
       const n = reg.resolveNumeric('KHY_FIRST_RESPONSE_ACK_MS', e);
-      if (Number.isFinite(n)) return n; // spec 已 clamp [200,60000]、default 1200
+      if (Number.isFinite(n)) {
+        return n;
+      } // spec 已 clamp [200,60000]、default 1200
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const raw = e.KHY_FIRST_RESPONSE_ACK_MS;
   const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (!Number.isFinite(n)) return _DEFAULT_DELAY_MS;
-  if (n < _MIN_DELAY_MS) return _MIN_DELAY_MS;
-  if (n > _MAX_DELAY_MS) return _MAX_DELAY_MS;
+  if (!Number.isFinite(n)) {
+    return _DEFAULT_DELAY_MS;
+  }
+  if (n < _MIN_DELAY_MS) {
+    return _MIN_DELAY_MS;
+  }
+  if (n > _MAX_DELAY_MS) {
+    return _MAX_DELAY_MS;
+  }
   return n;
 }
 
@@ -193,19 +237,30 @@ const _IMAGE_ACK_LINES = [
 function computeFirstResponseAck(opts) {
   try {
     const { turnIndex, elapsedMs, env, variant } = opts || {};
-    const v = (variant === 'selection' || variant === 'resume' || variant === 'image') ? variant : 'submit';
-    const enabled = v === 'selection' ? isSelectionEnabled(env)
-      : v === 'resume' ? isResumeEnabled(env)
-        : v === 'image' ? isImageEnabled(env)
-          : isEnabled(env);
-    if (!enabled) return '';
-    const lines = v === 'selection' ? _SELECTION_ACK_LINES
-      : v === 'resume' ? _RESUME_ACK_LINES
-        : v === 'image' ? _IMAGE_ACK_LINES
-          : _ACK_LINES;
-    const n = (Number.isInteger(turnIndex) && turnIndex >= 0) ? turnIndex : 0;
+    const v =
+      variant === 'selection' || variant === 'resume' || variant === 'image' ? variant : 'submit';
+    const enabled =
+      v === 'selection'
+        ? isSelectionEnabled(env)
+        : v === 'resume'
+          ? isResumeEnabled(env)
+          : v === 'image'
+            ? isImageEnabled(env)
+            : isEnabled(env);
+    if (!enabled) {
+      return '';
+    }
+    const lines =
+      v === 'selection'
+        ? _SELECTION_ACK_LINES
+        : v === 'resume'
+          ? _RESUME_ACK_LINES
+          : v === 'image'
+            ? _IMAGE_ACK_LINES
+            : _ACK_LINES;
+    const n = Number.isInteger(turnIndex) && turnIndex >= 0 ? turnIndex : 0;
     let line = lines[n % lines.length];
-    const ms = (Number.isFinite(elapsedMs) && elapsedMs >= 0) ? elapsedMs : 0;
+    const ms = Number.isFinite(elapsedMs) && elapsedMs >= 0 ? elapsedMs : 0;
     if (ms >= 1000) {
       const secs = Math.round(ms / 1000);
       line += `（已等待约 ${secs}s）`;
@@ -241,18 +296,34 @@ function createFirstResponseAckScheduler(opts) {
   const o = opts || {};
   const env = o.env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   const deps = o.deps || {};
-  const _setTimeout = typeof deps.setTimeout === 'function'
-    ? deps.setTimeout
-    : (typeof setTimeout !== 'undefined' ? setTimeout : null);
-  const _clearTimeout = typeof deps.clearTimeout === 'function'
-    ? deps.clearTimeout
-    : (typeof clearTimeout !== 'undefined' ? clearTimeout : null);
+  const _setTimeout =
+    typeof deps.setTimeout === 'function'
+      ? deps.setTimeout
+      : typeof setTimeout !== 'undefined'
+        ? setTimeout
+        : null;
+  const _clearTimeout =
+    typeof deps.clearTimeout === 'function'
+      ? deps.clearTimeout
+      : typeof clearTimeout !== 'undefined'
+        ? clearTimeout
+        : null;
   const _emit = typeof deps.emit === 'function' ? deps.emit : null;
-  const _now = typeof deps.now === 'function'
-    ? deps.now
-    : (() => { try { return Date.now(); } catch { return 0; } });
-  const turnIndex = (Number.isInteger(o.turnIndex) && o.turnIndex >= 0) ? o.turnIndex : 0;
-  const variant = (o.variant === 'selection' || o.variant === 'resume' || o.variant === 'image') ? o.variant : 'submit';
+  const _now =
+    typeof deps.now === 'function'
+      ? deps.now
+      : () => {
+          try {
+            return Date.now();
+          } catch {
+            return 0;
+          }
+        };
+  const turnIndex = Number.isInteger(o.turnIndex) && o.turnIndex >= 0 ? o.turnIndex : 0;
+  const variant =
+    o.variant === 'selection' || o.variant === 'resume' || o.variant === 'image'
+      ? o.variant
+      : 'submit';
 
   let _timer = null;
   let _armed = false;
@@ -262,7 +333,11 @@ function createFirstResponseAckScheduler(opts) {
 
   function _cancelTimer() {
     if (_timer != null && _clearTimeout) {
-      try { _clearTimeout(_timer); } catch { /* ignore */ }
+      try {
+        _clearTimeout(_timer);
+      } catch {
+        /* ignore */
+      }
     }
     _timer = null;
   }
@@ -270,27 +345,47 @@ function createFirstResponseAckScheduler(opts) {
   return {
     arm() {
       try {
-        if (_armed || _done) return false;
-        const _gateOk = variant === 'selection' ? isSelectionEnabled(env)
-          : variant === 'resume' ? isResumeEnabled(env)
-            : variant === 'image' ? isImageEnabled(env)
-              : isEnabled(env);
-        if (!_gateOk) return false;
-        if (!_setTimeout || !_emit) return false;
+        if (_armed || _done) {
+          return false;
+        }
+        const _gateOk =
+          variant === 'selection'
+            ? isSelectionEnabled(env)
+            : variant === 'resume'
+              ? isResumeEnabled(env)
+              : variant === 'image'
+                ? isImageEnabled(env)
+                : isEnabled(env);
+        if (!_gateOk) {
+          return false;
+        }
+        if (!_setTimeout || !_emit) {
+          return false;
+        }
         _armed = true;
         _startAt = _now();
         const delay = firstResponseAckDelayMs(env);
         _timer = _setTimeout(() => {
           _timer = null;
-          if (_done || _fired) return;
+          if (_done || _fired) {
+            return;
+          }
           let line = '';
           try {
             const elapsed = Math.max(0, _now() - _startAt);
             line = computeFirstResponseAck({ turnIndex, elapsedMs: elapsed, env, variant });
-          } catch { line = ''; }
-          if (!line) return;
+          } catch {
+            line = '';
+          }
+          if (!line) {
+            return;
+          }
           _fired = true;
-          try { _emit(line); } catch { /* emit 失败不影响主流程 */ }
+          try {
+            _emit(line);
+          } catch {
+            /* emit 失败不影响主流程 */
+          }
         }, delay);
         return true;
       } catch {
@@ -299,19 +394,29 @@ function createFirstResponseAckScheduler(opts) {
     },
     markChunk() {
       try {
-        if (_done) return;
+        if (_done) {
+          return;
+        }
         _done = true;
         _cancelTimer();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     },
     disarm() {
       try {
         _done = true;
         _cancelTimer();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     },
-    get fired() { return _fired; },
-    get armed() { return _armed; },
+    get fired() {
+      return _fired;
+    },
+    get armed() {
+      return _armed;
+    },
   };
 }
 

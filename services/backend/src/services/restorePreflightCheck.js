@@ -42,22 +42,30 @@ const DEFAULT_SUPPORTED_FORMAT = 'khy-source-snapshot';
 const DEFAULT_MIN_FORMAT_VERSION = 1;
 const DEFAULT_MAX_FORMAT_VERSION = 1;
 
-const STATUS_SUPPORTED = 'supported';                     // 可安心进解密（none）
-const STATUS_UNSUPPORTED_ALGO = 'unsupported-algo';       // 对称算法本机做不了（block）
-const STATUS_UNSUPPORTED_KDF = 'unsupported-kdf';         // KDF 本机做不了：decrypt 会盲跑 scrypt 误派生（block）
+const STATUS_SUPPORTED = 'supported'; // 可安心进解密（none）
+const STATUS_UNSUPPORTED_ALGO = 'unsupported-algo'; // 对称算法本机做不了（block）
+const STATUS_UNSUPPORTED_KDF = 'unsupported-kdf'; // KDF 本机做不了：decrypt 会盲跑 scrypt 误派生（block）
 const STATUS_INCOMPLETE_MATERIAL = 'incomplete-material'; // 缺 algo / salt / iv / authTag：快照残缺，非口令错（block）
-const STATUS_ALIEN_FORMAT = 'alien-format';               // format 不是 khy 源码快照（warn）
-const STATUS_TOO_NEW_FORMAT = 'too-new-format';           // formatVersion 比本机能理解的更新（warn）
-const STATUS_TOO_OLD_FORMAT = 'too-old-format';           // formatVersion 早于本机能理解的最早（warn）
-const STATUS_UNVERIFIABLE = 'unverifiable';               // 证据不足：保守放行（none）
+const STATUS_ALIEN_FORMAT = 'alien-format'; // format 不是 khy 源码快照（warn）
+const STATUS_TOO_NEW_FORMAT = 'too-new-format'; // formatVersion 比本机能理解的更新（warn）
+const STATUS_TOO_OLD_FORMAT = 'too-old-format'; // formatVersion 早于本机能理解的最早（warn）
+const STATUS_UNVERIFIABLE = 'unverifiable'; // 证据不足：保守放行（none）
 
 const SEVERITY_BLOCK = 'block';
 const SEVERITY_WARN = 'warn';
 const SEVERITY_NONE = 'none';
 
-function _isNonEmptyStr(x) { return typeof x === 'string' && x.length > 0; }
-function _isFiniteNum(x) { return typeof x === 'number' && Number.isFinite(x); }
-function _inList(list, x) { return Array.isArray(list) && list.indexOf(x) !== -1; }
+function _isNonEmptyStr(x) {
+  return typeof x === 'string' && x.length > 0;
+}
+
+function _isFiniteNum(x) {
+  return typeof x === 'number' && Number.isFinite(x);
+}
+
+function _inList(list, x) {
+  return Array.isArray(list) && list.indexOf(x) !== -1;
+}
 
 const _SEVERITY_BY_STATUS = {
   [STATUS_SUPPORTED]: SEVERITY_NONE,
@@ -101,9 +109,13 @@ function _verdict(status, fields, message) {
 function assessRestorePreflight(header, opts) {
   try {
     const o = opts && typeof opts === 'object' ? opts : {};
-    const supportedAlgos = Array.isArray(o.supportedAlgos) ? o.supportedAlgos : DEFAULT_SUPPORTED_ALGOS;
+    const supportedAlgos = Array.isArray(o.supportedAlgos)
+      ? o.supportedAlgos
+      : DEFAULT_SUPPORTED_ALGOS;
     const supportedKdfs = Array.isArray(o.supportedKdfs) ? o.supportedKdfs : DEFAULT_SUPPORTED_KDFS;
-    const supportedFormat = _isNonEmptyStr(o.supportedFormat) ? o.supportedFormat : DEFAULT_SUPPORTED_FORMAT;
+    const supportedFormat = _isNonEmptyStr(o.supportedFormat)
+      ? o.supportedFormat
+      : DEFAULT_SUPPORTED_FORMAT;
     const minV = _isFiniteNum(o.minFormatVersion) ? o.minFormatVersion : DEFAULT_MIN_FORMAT_VERSION;
     const maxV = _isFiniteNum(o.maxFormatVersion) ? o.maxFormatVersion : DEFAULT_MAX_FORMAT_VERSION;
 
@@ -119,51 +131,81 @@ function assessRestorePreflight(header, opts) {
     // ── 1) 加密套件：block 级（证明性不可解优先，绝不误伤）──────────────────
     if (!c || typeof c !== 'object' || Array.isArray(c)) {
       // 运行时 _restoreFromSnapshot 已在更上游对「缺 crypto」抛过（此处仅防御）。
-      return _verdict(STATUS_UNVERIFIABLE, baseFields,
-        '快照头缺 crypto 段：无从判断套件，保守放行由上游/解密裁决');
+      return _verdict(
+        STATUS_UNVERIFIABLE,
+        baseFields,
+        '快照头缺 crypto 段：无从判断套件，保守放行由上游/解密裁决'
+      );
     }
     const algo = c.algo;
     const kdf = c.kdf;
     const fields = { algo, kdf, format, formatVersion };
 
     if (!_isNonEmptyStr(algo)) {
-      return _verdict(STATUS_INCOMPLETE_MATERIAL, { ...fields, missingMaterial: ['algo'] },
-        '快照头缺 crypto.algo：快照残缺（不是口令/密钥错），无法确定解密算法');
+      return _verdict(
+        STATUS_INCOMPLETE_MATERIAL,
+        { ...fields, missingMaterial: ['algo'] },
+        '快照头缺 crypto.algo：快照残缺（不是口令/密钥错），无法确定解密算法'
+      );
     }
     if (!_inList(supportedAlgos, algo)) {
-      return _verdict(STATUS_UNSUPPORTED_ALGO, fields,
-        `本机 khy 不支持该快照的加密算法（algo='${algo}'，本机仅支持 [${supportedAlgos.join(', ')}]）：`
-        + '这通常意味着快照由更新版本的 khy 生成——请先升级 khy 再还原；这不是密钥/口令问题。');
+      return _verdict(
+        STATUS_UNSUPPORTED_ALGO,
+        fields,
+        `本机 khy 不支持该快照的加密算法（algo='${algo}'，本机仅支持 [${supportedAlgos.join(', ')}]）：` +
+          '这通常意味着快照由更新版本的 khy 生成——请先升级 khy 再还原；这不是密钥/口令问题。'
+      );
     }
     if (_isNonEmptyStr(kdf) && !_inList(supportedKdfs, kdf)) {
-      return _verdict(STATUS_UNSUPPORTED_KDF, fields,
-        `本机 khy 不支持该快照的密钥派生函数（kdf='${kdf}'，本机仅支持 [${supportedKdfs.join(', ')}]）：`
-        + '若强行还原会误用 scrypt 派生出错误密钥、报成「口令错误」——请先升级 khy 再还原；这不是密钥/口令问题。');
+      return _verdict(
+        STATUS_UNSUPPORTED_KDF,
+        fields,
+        `本机 khy 不支持该快照的密钥派生函数（kdf='${kdf}'，本机仅支持 [${supportedKdfs.join(', ')}]）：` +
+          '若强行还原会误用 scrypt 派生出错误密钥、报成「口令错误」——请先升级 khy 再还原；这不是密钥/口令问题。'
+      );
     }
     // 材料完整性：salt/iv/authTag 缺任一 → decrypt 会因 Buffer.from(undefined) 抛天书。
     const missing = [];
-    if (!_isNonEmptyStr(c.salt)) missing.push('salt');
-    if (!_isNonEmptyStr(c.iv)) missing.push('iv');
-    if (!_isNonEmptyStr(c.authTag)) missing.push('authTag');
+    if (!_isNonEmptyStr(c.salt)) {
+      missing.push('salt');
+    }
+    if (!_isNonEmptyStr(c.iv)) {
+      missing.push('iv');
+    }
+    if (!_isNonEmptyStr(c.authTag)) {
+      missing.push('authTag');
+    }
     if (missing.length > 0) {
-      return _verdict(STATUS_INCOMPLETE_MATERIAL, { ...fields, missingMaterial: missing },
-        `快照加密材料残缺（缺 ${missing.join(' / ')}）：这是快照损坏/不完整，不是口令/密钥错——请重新获取完整快照。`);
+      return _verdict(
+        STATUS_INCOMPLETE_MATERIAL,
+        { ...fields, missingMaterial: missing },
+        `快照加密材料残缺（缺 ${missing.join(' / ')}）：这是快照损坏/不完整，不是口令/密钥错——请重新获取完整快照。`
+      );
     }
 
     // ── 2) 格式：warn 级（未必阻止解密，只提示，仍尝试，绝不 false-block）──────
     if (_isNonEmptyStr(format) && format !== supportedFormat) {
-      return _verdict(STATUS_ALIEN_FORMAT, fields,
-        `⚠️ 快照 format='${format}' 不是 khy 源码快照（应为 '${supportedFormat}'）：仍将尝试还原，若失败请核对来源。`);
+      return _verdict(
+        STATUS_ALIEN_FORMAT,
+        fields,
+        `⚠️ 快照 format='${format}' 不是 khy 源码快照（应为 '${supportedFormat}'）：仍将尝试还原，若失败请核对来源。`
+      );
     }
     if (_isFiniteNum(formatVersion) && formatVersion > maxV) {
-      return _verdict(STATUS_TOO_NEW_FORMAT, fields,
-        `⚠️ 快照 formatVersion=${formatVersion} 高于本机 khy 能理解的最新版本（${maxV}）：仍将尝试还原，`
-        + '若结果异常请升级 khy 后重试。');
+      return _verdict(
+        STATUS_TOO_NEW_FORMAT,
+        fields,
+        `⚠️ 快照 formatVersion=${formatVersion} 高于本机 khy 能理解的最新版本（${maxV}）：仍将尝试还原，` +
+          '若结果异常请升级 khy 后重试。'
+      );
     }
     if (_isFiniteNum(formatVersion) && formatVersion < minV) {
-      return _verdict(STATUS_TOO_OLD_FORMAT, fields,
-        `⚠️ 快照 formatVersion=${formatVersion} 早于本机 khy 能理解的最早版本（${minV}）：仍将尝试还原，`
-        + '若结果异常请核对快照来源。');
+      return _verdict(
+        STATUS_TOO_OLD_FORMAT,
+        fields,
+        `⚠️ 快照 formatVersion=${formatVersion} 早于本机 khy 能理解的最早版本（${minV}）：仍将尝试还原，` +
+          '若结果异常请核对快照来源。'
+      );
     }
 
     // ── 3) 一切受支持 ────────────────────────────────────────────────────

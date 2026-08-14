@@ -21,6 +21,7 @@
  */
 
 const fs = require('fs');
+
 const { DIR_SKIP } = require('./dirSkip');
 
 const _defaultReaddir = (dir) => fs.readdirSync(dir, { withFileTypes: true });
@@ -34,19 +35,27 @@ const _defaultReaddir = (dir) => fs.readdirSync(dir, { withFileTypes: true });
  */
 function buildAtProjection(dir, readdirFn = _defaultReaddir) {
   let entries;
-  try { entries = readdirFn(dir); } catch { return []; }
+  try {
+    entries = readdirFn(dir);
+  } catch {
+    return [];
+  }
 
   const filtered = entries
-    .filter(e => !DIR_SKIP.has(e.name))
+    .filter((e) => !DIR_SKIP.has(e.name))
     // 隐藏文件默认跳过，但保留 .env.example / .claude 两个常被引用的入口
-    .filter(e => !e.name.startsWith('.') || e.name === '.env.example' || e.name === '.claude')
+    .filter((e) => !e.name.startsWith('.') || e.name === '.env.example' || e.name === '.claude')
     .sort((a, b) => {
-      if (a.isDirectory() && !b.isDirectory()) return -1;
-      if (!a.isDirectory() && b.isDirectory()) return 1;
+      if (a.isDirectory() && !b.isDirectory()) {
+        return -1;
+      }
+      if (!a.isDirectory() && b.isDirectory()) {
+        return 1;
+      }
       return a.name.localeCompare(b.name);
     });
 
-  return filtered.map(e => {
+  return filtered.map((e) => {
     const isDir = e.isDirectory();
     return {
       name: e.name,

@@ -22,9 +22,9 @@
  * through heavy validation).
  */
 
+const interceptors = require('./codeInterceptors');
 const strategy = require('./constraintStrategy');
 const registry = require('./executorRegistry');
-const interceptors = require('./codeInterceptors');
 
 // A minimal, fixed format hint for the Soft fast-path — kept tiny on purpose so
 // the prompt tax is near-zero (the goal's "仅注入极少量的格式提示").
@@ -58,7 +58,7 @@ function resolveInjection(normalized) {
   if (strat === strategy.STRATEGIES.PROMPT_SOFT) {
     return {
       strategy: strat,
-      mountInterceptors: false,         // 绝不提前加锁：Soft 跳过一切重校验
+      mountInterceptors: false, // 绝不提前加锁：Soft 跳过一切重校验
       requireSnapshot: false,
       requireConfirmation: false,
       promptHint: SOFT_FORMAT_HINT,
@@ -70,9 +70,9 @@ function resolveInjection(normalized) {
   if (strat === strategy.STRATEGIES.SYSTEM_BLOCK) {
     return {
       strategy: strat,
-      mountInterceptors: true,          // Block 同时保留代码校验，双保险
-      requireSnapshot: true,            // 必须先备份快照
-      requireConfirmation: true,        // 必须系统级确认
+      mountInterceptors: true, // Block 同时保留代码校验，双保险
+      requireSnapshot: true, // 必须先备份快照
+      requireConfirmation: true, // 必须系统级确认
       promptHint: '',
       validators,
       note: 'System_Block：系统级挂起，须先备份快照 + 确认才放行；并仍挂载代码校验。',
@@ -128,7 +128,9 @@ function runHardValidation(normalized, content, ctx = {}) {
   for (const v of injection.validators) {
     const r = interceptors.runInterceptor(v.validator, content, ctx);
     results.push({ executor: v.executor, validator: r.validator, ok: r.ok, error: r.error });
-    if (!r.ok) violations.push({ executor: v.executor, error: r.error || '校验失败。' });
+    if (!r.ok) {
+      violations.push({ executor: v.executor, error: r.error || '校验失败。' });
+    }
   }
 
   return {

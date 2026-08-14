@@ -46,13 +46,19 @@ function isEnabled(env) {
 function resolveInlineImageSubmit(text, opts = {}) {
   const original = String(text == null ? '' : text);
   try {
-    if (!isEnabled(opts.env)) return { text: original, images: [] };
+    if (!isEnabled(opts.env)) {
+      return { text: original, images: [] };
+    }
     const { extractInlineImageIntent } = require('../repl/imageIntent');
     const intent = extractInlineImageIntent(original);
-    if (!intent || !intent.filePath) return { text: original, images: [] };
+    if (!intent || !intent.filePath) {
+      return { text: original, images: [] };
+    }
     const { readImageFromFile } = require('../../services/imageService');
     const image = readImageFromFile(intent.filePath);
-    if (!image || !image.base64) return { text: original, images: [] };
+    if (!image || !image.base64) {
+      return { text: original, images: [] };
+    }
     return {
       text: intent.prompt || '请描述这张图片',
       images: [{ base64: image.base64, mimeType: image.mimeType }],

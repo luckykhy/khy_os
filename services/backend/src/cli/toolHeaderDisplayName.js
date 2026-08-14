@@ -38,11 +38,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_TUI_TOOL_DISPLAY_NAME', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_TUI_TOOL_DISPLAY_NAME;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -58,8 +64,12 @@ function isEnabled(env) {
 function resolveToolHeaderName(rawName, env, resolver) {
   const raw = String(rawName == null ? '' : rawName);
   // 门控关 / 无注入映射 → 逐字节回退原始名。
-  if (!isEnabled(env)) return raw;
-  if (typeof resolver !== 'function') return raw;
+  if (!isEnabled(env)) {
+    return raw;
+  }
+  if (typeof resolver !== 'function') {
+    return raw;
+  }
   try {
     const mapped = resolver(raw);
     const s = mapped == null ? '' : String(mapped);

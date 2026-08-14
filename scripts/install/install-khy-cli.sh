@@ -92,18 +92,18 @@ install_npm_link() {
   command -v "$NPM_BIN" >/dev/null 2>&1 || fail "npm not found: $NPM_BIN"
   command -v node >/dev/null 2>&1 || fail "node not found"
   info "Installing backend dependencies and linking CLI..."
-  (cd "$ROOT_DIR/backend" && "$NPM_BIN" install --no-audit --no-fund && "$NPM_BIN" link)
+  (cd "$ROOT_DIR/services/backend" && "$NPM_BIN" install --no-audit --no-fund && "$NPM_BIN" link)
   ok "npm link completed"
 }
 
 install_script_slim() {
   command -v "$NPM_BIN" >/dev/null 2>&1 || fail "npm not found: $NPM_BIN"
   command -v node >/dev/null 2>&1 || fail "node not found"
-  [[ -f "$ROOT_DIR/backend/package.json" ]] || fail "backend/package.json not found under: $ROOT_DIR"
+  [[ -f "$ROOT_DIR/services/backend/package.json" ]] || fail "services/backend/package.json not found under: $ROOT_DIR"
 
   info "Running slim script mode (CLI-only, no frontend install)..."
-  (cd "$ROOT_DIR/backend" && "$NPM_BIN" install --no-audit --no-fund)
-  (cd "$ROOT_DIR/backend" && "$NPM_BIN" link)
+  (cd "$ROOT_DIR/services/backend" && "$NPM_BIN" install --no-audit --no-fund)
+  (cd "$ROOT_DIR/services/backend" && "$NPM_BIN" link)
 
   if [[ -f "$ROOT_DIR/pyproject.toml" ]]; then
     (cd "$ROOT_DIR" && "$PYTHON_BIN" -m pip install --user -e .)
@@ -111,18 +111,24 @@ install_script_slim() {
     "$PYTHON_BIN" -m pip install --user --upgrade khy-os || "$PYTHON_BIN" -m pip install --user --upgrade khy-quant
   fi
 
-  if [[ -f "$ROOT_DIR/backend/scripts/seed.js" ]]; then
+  if [[ -f "$ROOT_DIR/services/backend/scripts/seed.js" ]]; then
     info "Initializing local database..."
-    (cd "$ROOT_DIR/backend" && node scripts/seed.js >/dev/null 2>&1 || true)
+    (cd "$ROOT_DIR/services/backend" && node scripts/seed.js >/dev/null 2>&1 || true)
   fi
   ok "Slim script mode completed"
 }
 
 install_script_mode() {
   if [[ "$PROFILE" == 'full' ]]; then
-    [[ -x "$ROOT_DIR/install.sh" || -f "$ROOT_DIR/install.sh" ]] || fail "install.sh not found under: $ROOT_DIR"
-    info "Running full installer (install.sh --cli)..."
-    (cd "$ROOT_DIR" && bash install.sh --cli)
+    if [[ -x "$ROOT_DIR/scripts/install.sh" || -f "$ROOT_DIR/scripts/install.sh" ]]; then
+      info "Running full installer (scripts/install.sh --cli)..."
+      (cd "$ROOT_DIR" && bash scripts/install.sh --cli)
+    elif [[ -x "$ROOT_DIR/install.sh" || -f "$ROOT_DIR/install.sh" ]]; then
+      info "Running full installer (install.sh --cli)..."
+      (cd "$ROOT_DIR" && bash install.sh --cli)
+    else
+      fail "install.sh not found under: $ROOT_DIR (checked root and scripts/)"
+    fi
     ok "install.sh --cli completed"
     return
   fi

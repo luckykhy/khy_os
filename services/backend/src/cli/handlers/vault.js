@@ -20,12 +20,15 @@
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
-function _store() { return require('../../services/vaultStore'); }
+function _store() {
+  return require('../../services/vaultStore');
+}
 
 function _persist(value, deps) {
-  const writeEnvPatch = (deps && typeof deps.writeEnvPatch === 'function')
-    ? deps.writeEnvPatch
-    : require('./config')._writeEnvPatch;
+  const writeEnvPatch =
+    deps && typeof deps.writeEnvPatch === 'function'
+      ? deps.writeEnvPatch
+      : require('./config')._writeEnvPatch;
   return writeEnvPatch({ KHY_VAULT: value });
 }
 
@@ -35,7 +38,12 @@ function _handleList() {
     printInfo('保险库是空的。存入:khy vault set <名称> <值>');
     return 0;
   }
-  const rows = secrets.map((s) => [s.name, s.preview, String(s.length), s.updatedAt || s.createdAt || '-']);
+  const rows = secrets.map((s) => [
+    s.name,
+    s.preview,
+    String(s.length),
+    s.updatedAt || s.createdAt || '-',
+  ]);
   printTable(['名称', '预览(掩码)', '长度', '更新于'], rows);
   printInfo('在请求里用 {{vault:名称}} 引用;真值由 VaultHttpFetch 服务端注入,绝不进入模型上下文。');
   return 0;
@@ -60,9 +68,13 @@ function _handleSet(args) {
     return 1;
   }
   let value = list.join(' ');
-  if (!value) value = _readStdinValue();
   if (!value) {
-    printError('密钥值不能为空。可:khy vault set <名称> <值>,或 `echo -n <值> | khy vault set <名称>`。');
+    value = _readStdinValue();
+  }
+  if (!value) {
+    printError(
+      '密钥值不能为空。可:khy vault set <名称> <值>,或 `echo -n <值> | khy vault set <名称>`。'
+    );
     return 1;
   }
   const res = _store().setSecret(name, value);
@@ -71,7 +83,9 @@ function _handleSet(args) {
     return 1;
   }
   printSuccess(`✅ 已存入密钥「${res.name}」(${res.preview})。`);
-  printInfo(`在请求里这样引用:{{vault:${res.name}}}（例如 Authorization: "Bearer {{vault:${res.name}}}"）。`);
+  printInfo(
+    `在请求里这样引用:{{vault:${res.name}}}（例如 Authorization: "Bearer {{vault:${res.name}}}"）。`
+  );
   return 0;
 }
 
@@ -88,13 +102,17 @@ function _handleGet(args, options) {
   }
   const reveal = Boolean(options && (options.reveal || options.r));
   if (!reveal) {
-    const found = store.listSecrets().find((s) => s.name === require('../../services/vaultCore').normalizeName(name));
+    const found = store
+      .listSecrets()
+      .find((s) => s.name === require('../../services/vaultCore').normalizeName(name));
     printInfo(`密钥「${name}」:${found ? found.preview : '(存在)'}`);
     printInfo('如确需查看明文(注意可能进入终端记录),加 --reveal。');
     return 0;
   }
   printInfo('⚠️ 正在显示明文密钥,请确保终端/录屏环境安全。');
-  printInfo(`${require('../../services/vaultCore').normalizeName(name)} = ${store.getSecret(name)}`);
+  printInfo(
+    `${require('../../services/vaultCore').normalizeName(name)} = ${store.getSecret(name)}`
+  );
   return 0;
 }
 
@@ -121,7 +139,9 @@ function _handleToggle(turnOn, deps) {
   const value = turnOn ? 'true' : 'off';
   try {
     const p = _persist(value, deps);
-    printSuccess(`✅ 密钥保险库能力${turnOn ? '已开启' : '已关闭'}（KHY_VAULT=${value}）。已即时生效并持久化。`);
+    printSuccess(
+      `✅ 密钥保险库能力${turnOn ? '已开启' : '已关闭'}（KHY_VAULT=${value}）。已即时生效并持久化。`
+    );
     printInfo(`已写入:${p}`);
     return 0;
   } catch (e) {
@@ -140,16 +160,32 @@ function _handleToggle(turnOn, deps) {
 function handleVault(subCommand, args = [], options = {}, deps = {}) {
   const sub = String(subCommand || 'list').toLowerCase();
   if (sub === 'help' || options.help) {
-    printInfo('用法: vault [list] | vault set <名称> [值] | vault get <名称> [--reveal] | vault rm <名称> | vault on | vault off');
-    printInfo('引用密钥:在 VaultHttpFetch 的 url/headers/body 里写 {{vault:名称}};真值服务端注入,绝不进入模型上下文。');
+    printInfo(
+      '用法: vault [list] | vault set <名称> [值] | vault get <名称> [--reveal] | vault rm <名称> | vault on | vault off'
+    );
+    printInfo(
+      '引用密钥:在 VaultHttpFetch 的 url/headers/body 里写 {{vault:名称}};真值服务端注入,绝不进入模型上下文。'
+    );
     return 0;
   }
-  if (!sub || sub === 'list' || sub === 'ls') return _handleList();
-  if (sub === 'set' || sub === 'add' || sub === 'put') return _handleSet(args, options);
-  if (sub === 'get' || sub === 'show') return _handleGet(args, options);
-  if (sub === 'rm' || sub === 'remove' || sub === 'del' || sub === 'delete' || sub === 'unset') return _handleRemove(args);
-  if (sub === 'on') return _handleToggle(true, deps);
-  if (sub === 'off') return _handleToggle(false, deps);
+  if (!sub || sub === 'list' || sub === 'ls') {
+    return _handleList();
+  }
+  if (sub === 'set' || sub === 'add' || sub === 'put') {
+    return _handleSet(args, options);
+  }
+  if (sub === 'get' || sub === 'show') {
+    return _handleGet(args, options);
+  }
+  if (sub === 'rm' || sub === 'remove' || sub === 'del' || sub === 'delete' || sub === 'unset') {
+    return _handleRemove(args);
+  }
+  if (sub === 'on') {
+    return _handleToggle(true, deps);
+  }
+  if (sub === 'off') {
+    return _handleToggle(false, deps);
+  }
   printError(`未知子命令:${subCommand}。可用:list / set / get / rm / on / off。`);
   return 1;
 }

@@ -5,6 +5,12 @@
 // through stripAnsi() and are unaffected.
 process.env.FORCE_COLOR = '3';
 
+// Simulate a modern terminal (Windows Terminal) BEFORE any rendering happens:
+// platformUtils.isLegacyWinTerminal() caches its verdict on first call, and on a
+// bare Windows shell (no WT_SESSION) tree branches degrade to ASCII ('|---'),
+// breaking box-drawing assertions. Deterministic across dev machines and CI.
+process.env.WT_SESSION = process.env.WT_SESSION || '1';
+
 const { renderMarkdownLite, renderAiResponse, printToolCallStart } = require('../src/cli/aiRenderer');
 
 function stripAnsi(text = '') {
@@ -243,6 +249,21 @@ describe('aiRenderer CJK typography (中文排版不硬断句)', () => {
 });
 
 describe('aiRenderer table rendering', () => {
+  // KHY_PLAIN_PROCESS_TABLE defaults ON (border-less copy-friendly tables).
+  // These cases assert the legacy box-drawn branch, so turn the flag off per
+  // test and restore the original value afterwards. Cache note: the markdown
+  // render cache keys on width+text only, so table texts here must not be
+  // reused by plain-mode cases (see the default-mode contract test below).
+  let prevPlainTable;
+  beforeEach(() => {
+    prevPlainTable = process.env.KHY_PLAIN_PROCESS_TABLE;
+    process.env.KHY_PLAIN_PROCESS_TABLE = '0';
+  });
+  afterEach(() => {
+    if (prevPlainTable === undefined) delete process.env.KHY_PLAIN_PROCESS_TABLE;
+    else process.env.KHY_PLAIN_PROCESS_TABLE = prevPlainTable;
+  });
+
   test('renders single table with box-drawing borders', () => {
     const plain = stripAnsi(renderAiResponse('| A | B |\n|---|---|\n| 1 | 2 |'));
     expect(plain).toContain('╭');
@@ -299,6 +320,31 @@ describe('aiRenderer table rendering', () => {
   });
 });
 
+describe('aiRenderer plain process table (default mode)', () => {
+  // Dual-mode contract: with KHY_PLAIN_PROCESS_TABLE at its default (on),
+  // tables render border-less — no box-drawing glyphs may leak into output.
+  // Uses a table text unique to this test so the width+text render cache
+  // cannot serve a box-drawn result cached by the flag-off cases above.
+  test('default plain mode renders tables without box-drawing characters', () => {
+    const prev = process.env.KHY_PLAIN_PROCESS_TABLE;
+    delete process.env.KHY_PLAIN_PROCESS_TABLE;
+    try {
+      const plain = stripAnsi(renderAiResponse('| P | Q |\n|---|---|\n| 9 | 8 |'));
+      expect(plain).toContain('P');
+      expect(plain).toContain('Q');
+      expect(plain).toContain('9');
+      expect(plain).toContain('8');
+      expect(plain).not.toContain('╭');
+      expect(plain).not.toContain('│');
+      expect(plain).not.toContain('├');
+      expect(plain).not.toContain('╰');
+    } finally {
+      if (prev === undefined) delete process.env.KHY_PLAIN_PROCESS_TABLE;
+      else process.env.KHY_PLAIN_PROCESS_TABLE = prev;
+    }
+  });
+});
+
 describe('aiRenderer mermaid mindmap rendering', () => {
   test('renders mermaid mindmap as ASCII tree', () => {
     const input = '```mermaid\nmindmap\n  Root\n    Child1\n      Grandchild\n    Child2\n```';
@@ -331,16 +377,23 @@ describe('aiRenderer mermaid mindmap rendering', () => {
 
   test('unsupported mermaid type falls back to code block', () => {
     const input = '```mermaid\nerDiagram\n  USER ||--o{ ORDER : places\n```';
-    const plain = stripAnsi(renderAiResponse(input));
-    expect(plain).toContain('╭─');
-    expect(plain).toContain('╰');
+    const rendered = renderAiResponse(input);
+    const plain = stripAnsi(rendered);
+    // Code blocks now render as a shaded panel (ANSI background color) with NO
+    // box-drawing borders. The `[48;` background introducer proves it fell back
+    // to a code block (256-color or truecolor depending on level).
+    expect(rendered).toContain('[48;');
+    expect(plain).not.toContain('╭');
+    expect(plain).not.toContain('│');
     expect(plain).toContain('erDiagram');
   });
 
   test('empty mermaid mindmap falls back to code block', () => {
     const input = '```mermaid\nmindmap\n```';
-    const plain = stripAnsi(renderAiResponse(input));
-    expect(plain).toContain('╭─');
+    const rendered = renderAiResponse(input);
+    const plain = stripAnsi(rendered);
+    expect(rendered).toContain('[48;');
+    expect(plain).not.toContain('╭');
     expect(plain).toContain('mindmap');
   });
 });
@@ -509,16 +562,25 @@ describe('aiRenderer CC-aligned markdown coverage', () => {
   });
 
   test('honors per-column alignment markers in tables', () => {
-    const input = [
-      '| Name | Score |',
-      '| :--- | ----: |',
-      '| Al | 5 |',
-      '| Bo | 100 |',
-    ].join('\n');
-    const plain = stripAnsi(renderMarkdownLite(input));
-    const scoreRow = plain.split('\n').find(l => l.includes('Al'));
-    expect(scoreRow).toBeTruthy();
-    // Right-aligned "5" must carry left padding before it inside its cell.
-    expect(scoreRow).toMatch(/\s5\s*│/);
+    // Alignment markers only affect the box-drawn branch; disable the
+    // default plain-table mode for this case and restore afterwards.
+    const prev = process.env.KHY_PLAIN_PROCESS_TABLE;
+    process.env.KHY_PLAIN_PROCESS_TABLE = '0';
+    try {
+      const input = [
+        '| Name | Score |',
+        '| :--- | ----: |',
+        '| Al | 5 |',
+        '| Bo | 100 |',
+      ].join('\n');
+      const plain = stripAnsi(renderMarkdownLite(input));
+      const scoreRow = plain.split('\n').find(l => l.includes('Al'));
+      expect(scoreRow).toBeTruthy();
+      // Right-aligned "5" must carry left padding before it inside its cell.
+      expect(scoreRow).toMatch(/\s5\s*│/);
+    } finally {
+      if (prev === undefined) delete process.env.KHY_PLAIN_PROCESS_TABLE;
+      else process.env.KHY_PLAIN_PROCESS_TABLE = prev;
+    }
   });
 });

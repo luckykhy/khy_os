@@ -12,6 +12,15 @@
 # QEMU is intentionally NOT installed — running the ISO is a host concern.
 FROM debian:bookworm-slim
 
+# Optional apt mirror host (e.g. mirrors.tuna.tsinghua.edu.cn). Passed by
+# `khy os build` from KHY_APT_MIRROR / KHY_KHYOS_PREFER_CN when deb.debian.org
+# is unreachable or flaky (its Fastly edges intermittently 502/500 on some
+# networks). Empty (default) keeps the official source untouched.
+ARG APT_MIRROR=""
+RUN if [ -n "$APT_MIRROR" ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+    fi
+
 # Avoid interactive tzdata prompts during apt.
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -20,8 +29,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 #   nasm           → ELF64 assembler for boot/*.asm
 #   grub-pc-bin grub-common xorriso → grub-mkrescue + ISO packaging
 #   curl ca-certificates → fetch the MoonBit toolchain
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+# Acquire::Retries makes apt survive transient CDN 5xx errors on flaky networks
+# (deb.debian.org edges intermittently return 502/500), instead of failing the
+# whole layer on a single bad fetch.
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
         build-essential \
         nasm \
         binutils \

@@ -30,7 +30,7 @@ const { RISK_ORDER } = require('../constants/riskOrder');
 const SEVERITY_TO_RISK = { info: 'safe', warning: 'high', critical: 'critical' };
 
 function maxRisk(a, b) {
-  return (RISK_ORDER[a] || 0) >= (RISK_ORDER[b] || 0) ? (a || 'safe') : (b || 'safe');
+  return (RISK_ORDER[a] || 0) >= (RISK_ORDER[b] || 0) ? a || 'safe' : b || 'safe';
 }
 
 /**
@@ -74,28 +74,36 @@ function classifyCommandRisk(command) {
   try {
     const { mapCommandToVirtualTools } = require('./shellToToolMapper');
     mapping = mapCommandToVirtualTools(trimmed) || mapping;
-  } catch { /* mapper unavailable — fall back to defaults */ }
+  } catch {
+    /* mapper unavailable — fall back to defaults */
+  }
 
   // Source B: syntax/AST safety validator (severity + substitution detection).
   let report = { maxSeverity: 'info', hasCommandSubstitution: false, risks: [] };
   try {
     const { analyzeCommand } = require('./shellSafetyValidator');
     report = analyzeCommand(trimmed) || report;
-  } catch { /* validator unavailable — fall back to defaults */ }
+  } catch {
+    /* validator unavailable — fall back to defaults */
+  }
 
   const validatorRisk = SEVERITY_TO_RISK[report.maxSeverity] || 'low';
   const risk = maxRisk(mapping.overallRisk, validatorRisk);
 
-  const hasCommandSubstitution = !!(mapping.hasCommandSubstitution || report.hasCommandSubstitution);
+  const hasCommandSubstitution = !!(
+    mapping.hasCommandSubstitution || report.hasCommandSubstitution
+  );
 
   // Build a human-readable reason from the strictest contributing source.
   const reasons = [];
   if (RISK_ORDER[validatorRisk] >= RISK_ORDER[mapping.overallRisk] && Array.isArray(report.risks)) {
-    const top = report.risks.find(r => SEVERITY_TO_RISK[r.severity] === validatorRisk);
-    if (top && top.detail) reasons.push(top.detail);
+    const top = report.risks.find((r) => SEVERITY_TO_RISK[r.severity] === validatorRisk);
+    if (top && top.detail) {
+      reasons.push(top.detail);
+    }
   }
   if (mapping.virtualTools && mapping.virtualTools.length) {
-    reasons.push(`virtual tools: ${mapping.virtualTools.map(v => v.tool).join(', ')}`);
+    reasons.push(`virtual tools: ${mapping.virtualTools.map((v) => v.tool).join(', ')}`);
   }
 
   return {

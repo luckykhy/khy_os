@@ -16,7 +16,6 @@
  * 门控 KHY_SUBSCRIBE_PR 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/subscribePr/subscribePrPlan');
 const store = require('../../services/subscribePr/subscribePrStore');
 
@@ -24,27 +23,36 @@ const store = require('../../services/subscribePr/subscribePrStore');
 const _safe = require('../../utils/tryOr');
 // async try/catch combinator 单一真源 utils/tryOrAsync:await fn,任何异常 → dflt。
 const _safeAsync = require('../../utils/tryOrAsync');
+const { printInfo, printError } = require('../formatters');
 
 /** 轮询单条订阅的 CI(委托 ciStatusService;按分支线索查询)。 */
 function _checkCi(subscription) {
   const ci = _safe(() => require('../../services/ciStatusService'), null);
-  if (!ci || typeof ci.checkCIStatus !== 'function') return { error: 'CI 服务不可用' };
+  if (!ci || typeof ci.checkCIStatus !== 'function') {
+    return { error: 'CI 服务不可用' };
+  }
   const options = {};
-  if (subscription && subscription.branch) options.branch = subscription.branch;
+  if (subscription && subscription.branch) {
+    options.branch = subscription.branch;
+  }
   return _safe(() => ci.checkCIStatus(options), { error: 'CI 查询失败' });
 }
 
 /** 推送是否已配置(委托 pushConfigStore)。 */
 function _pushConfigured() {
   const cfgStore = _safe(() => require('../../services/pushConfigStore'), null);
-  if (!cfgStore || typeof cfgStore.isConfigured !== 'function') return false;
+  if (!cfgStore || typeof cfgStore.isConfigured !== 'function') {
+    return false;
+  }
   return _safe(() => cfgStore.isConfigured(), false) === true;
 }
 
 /** 发推送(委托既有 PushNotify 工具,与模型调用同源)。 */
 async function _sendPush(title, body) {
   const tool = _safe(() => require('../../tools/PushNotify'), null);
-  if (!tool || typeof tool.execute !== 'function') return { success: false, error: '推送工具不可用' };
+  if (!tool || typeof tool.execute !== 'function') {
+    return { success: false, error: '推送工具不可用' };
+  }
   return _safeAsync(() => tool.execute({ title, body }), { success: false, error: '推送执行失败' });
 }
 
@@ -63,7 +71,9 @@ async function _runCheck() {
         const { title, body } = leaf.buildNotification(sub, decision);
         const res = await _sendPush(title, body);
         notified = !!(res && res.success);
-        if (!notified) pushError = (res && res.error) || '未知错误';
+        if (!notified) {
+          pushError = (res && res.error) || '未知错误';
+        }
       } else {
         pushError = '未配置推送';
       }

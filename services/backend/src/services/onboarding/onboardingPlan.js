@@ -17,13 +17,33 @@
 
 // step 规范名 ⇄ 别名(含中文)。空参 → full(对齐 CC 裸 /onboarding 重跑完整引导)。
 const STEP_ALIASES = {
-  full: 'full', all: 'full', wizard: 'full', '全部': 'full', '完整': 'full', '引导': 'full',
-  theme: 'theme', skin: 'theme', color: 'theme', '主题': 'theme', '皮肤': 'theme',
-  trust: 'trust', '信任': 'trust',
-  model: 'model', models: 'model', provider: 'model', '模型': 'model', '供应商': 'model',
-  mcp: 'mcp', '工具服务': 'mcp',
-  status: 'status', state: 'status', '状态': 'status',
-  help: 'help', '-h': 'help', '--help': 'help', '帮助': 'help',
+  full: 'full',
+  all: 'full',
+  wizard: 'full',
+  全部: 'full',
+  完整: 'full',
+  引导: 'full',
+  theme: 'theme',
+  skin: 'theme',
+  color: 'theme',
+  主题: 'theme',
+  皮肤: 'theme',
+  trust: 'trust',
+  信任: 'trust',
+  model: 'model',
+  models: 'model',
+  provider: 'model',
+  模型: 'model',
+  供应商: 'model',
+  mcp: 'mcp',
+  工具服务: 'mcp',
+  status: 'status',
+  state: 'status',
+  状态: 'status',
+  help: 'help',
+  '-h': 'help',
+  '--help': 'help',
+  帮助: 'help',
 };
 
 // 步骤元数据:available=khy 是否有真实 SSOT 可委托;runnable=是否会触发副作用(交互/重跑)。
@@ -59,7 +79,9 @@ function parseOnboardingArgs(args) {
 /** 取某步骤元数据;未知步骤返回安全占位(available:false)。 */
 function describeStep(step) {
   const m = STEP_META[step];
-  if (!m) return { step, available: false, runnable: false, title: String(step || '') };
+  if (!m) {
+    return { step, available: false, runnable: false, title: String(step || '') };
+  }
   return { step, available: m.available, runnable: m.runnable, title: m.title };
 }
 
@@ -83,7 +105,7 @@ function buildUnavailableText(step) {
  * @param {object} snapshot {gateEnabled, cwd, trusted, reason, isHomeDir, persistedCount}
  */
 function buildTrustStatusText(snapshot) {
-  const s = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+  const s = snapshot && typeof snapshot === 'object' ? snapshot : {};
   const yn = (v) => (v === true ? '是' : v === false ? '否' : '未知');
   const reasonText = {
     session: '本会话已信任(home 目录仅本会话,不落盘)',
@@ -91,10 +113,9 @@ function buildTrustStatusText(snapshot) {
     untrusted: '尚未信任',
     error: '未知(判定异常,已放行)',
   };
-  const gate = s.gateEnabled === true
-    ? '开'
-    : (s.gateEnabled === false ? '关(不弹窗,一律视为已信任)' : '未知');
-  const reasonSuffix = (s.reason && reasonText[s.reason]) ? `（${reasonText[s.reason]}）` : '';
+  const gate =
+    s.gateEnabled === true ? '开' : s.gateEnabled === false ? '关(不弹窗,一律视为已信任)' : '未知';
+  const reasonSuffix = s.reason && reasonText[s.reason] ? `（${reasonText[s.reason]}）` : '';
   const n = Number(s.persistedCount);
   const lines = [];
   lines.push('  文件夹信任(folder trust)—— 快速安全检查:');
@@ -117,7 +138,7 @@ function buildTrustStatusText(snapshot) {
  *   {onboardingDone, configured, activeTheme, gettingStartedPending, mcpServerCount}
  */
 function buildStatusText(snapshot) {
-  const s = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+  const s = snapshot && typeof snapshot === 'object' ? snapshot : {};
   const yn = (v) => (v === true ? '是' : v === false ? '否' : '未知');
   const lines = [];
   lines.push('  引导状态(只读):');
@@ -171,7 +192,9 @@ function buildUnknownStepText(raw) {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_ONBOARDING_COMMAND === undefined ? 'true' : e.KHY_ONBOARDING_COMMAND;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

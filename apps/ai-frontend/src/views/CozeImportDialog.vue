@@ -9,8 +9,12 @@
   >
     <div class="coze-import">
       <div class="import-toolbar">
-        <el-button :icon="Upload" :loading="enumerating" @click="triggerUpload">上传集合 zip</el-button>
-        <el-button :icon="Refresh" :loading="catalogLoading" @click="loadCatalog">刷新内置画廊</el-button>
+        <el-button :icon="Upload" :loading="enumerating" @click="triggerUpload"
+          >上传集合 zip</el-button
+        >
+        <el-button :icon="Refresh" :loading="catalogLoading" @click="loadCatalog"
+          >刷新内置画廊</el-button
+        >
         <input
           ref="fileInput"
           type="file"
@@ -34,14 +38,13 @@
           class="search-box"
         />
         <span v-if="entries.length" class="count-hint">
-          共 {{ entries.length }} 个工作流<template v-if="skipped"> · 跳过 {{ skipped }} 个无法解析</template>
+          共 {{ entries.length }} 个工作流<template v-if="skipped">
+            · 跳过 {{ skipped }} 个无法解析</template
+          >
         </span>
       </div>
 
-      <el-empty
-        v-if="!busy && !entries.length"
-        :description="emptyText"
-      />
+      <el-empty v-if="!busy && !entries.length" :description="emptyText" />
 
       <div v-loading="busy" :class="{ 'grid-loading': busy }">
         <div v-if="pagedEntries.length" class="entry-grid">
@@ -58,7 +61,8 @@
                 size="small"
                 effect="plain"
                 class="type-chip"
-              >{{ chip }}</el-tag>
+                >{{ chip }}</el-tag
+              >
             </div>
 
             <div v-if="warnings(entry.report).length" class="entry-card__warnings">
@@ -68,7 +72,8 @@
                 size="small"
                 :type="w.type"
                 effect="light"
-              >{{ w.text }}</el-tag>
+                >{{ w.text }}</el-tag
+              >
             </div>
             <div v-else class="entry-card__clean">
               <el-tag size="small" type="success" effect="plain">原生可执行</el-tag>
@@ -77,7 +82,12 @@
             <div class="entry-card__actions">
               <template v-if="installedMap[entry.index]">
                 <el-tag type="success" size="small" effect="dark">已安装</el-tag>
-                <el-button text type="primary" :icon="EditPen" @click="openEditor(installedMap[entry.index])">
+                <el-button
+                  text
+                  type="primary"
+                  :icon="EditPen"
+                  @click="openEditor(installedMap[entry.index])"
+                >
                   打开编辑器
                 </el-button>
               </template>
@@ -89,7 +99,8 @@
                 :loading="installing === entry.index"
                 :disabled="installing !== -1"
                 @click="install(entry)"
-              >安装</el-button>
+                >安装</el-button
+              >
             </div>
           </div>
         </div>
@@ -113,188 +124,198 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Upload, Refresh, Download, EditPen, Search as SearchIcon } from '@element-plus/icons-vue'
-import { useWorkflow } from '@/composables/useWorkflow'
+import { ref, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { Upload, Refresh, Download, EditPen, Search as SearchIcon } from '@element-plus/icons-vue';
+import { useWorkflow } from '@/composables/useWorkflow';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-})
-const emit = defineEmits(['update:modelValue', 'installed'])
+});
+const emit = defineEmits(['update:modelValue', 'installed']);
 
-const router = useRouter()
-const { enumerateCoze, cozeCatalog, installCozeEntry } = useWorkflow()
+const router = useRouter();
+const { enumerateCoze, cozeCatalog, installCozeEntry } = useWorkflow();
 
-const activeTab = ref('builtin')
-const fileInput = ref(null)
+const activeTab = ref('builtin');
+const fileInput = ref(null);
 
-const sessionId = ref(null)
-const entries = ref([])
-const total = ref(0)
-const skipped = ref(0)
-const installedMap = ref({}) // entry.index -> created workflow id
+const sessionId = ref(null);
+const entries = ref([]);
+const total = ref(0);
+const skipped = ref(0);
+const installedMap = ref({}); // entry.index -> created workflow id
 
-const catalogLoading = ref(false)
-const enumerating = ref(false)
-const installing = ref(-1)
-const search = ref('')
-const page = ref(1)
-const pageSize = 12
+const catalogLoading = ref(false);
+const enumerating = ref(false);
+const installing = ref(-1);
+const search = ref('');
+const page = ref(1);
+const pageSize = 12;
 
-const busy = computed(() => catalogLoading.value || enumerating.value)
+const busy = computed(() => catalogLoading.value || enumerating.value);
 
 const emptyText = computed(() => {
   if (activeTab.value === 'builtin') {
-    return '内置画廊为空（在 KHY_COZE_CATALOG_DIR 放入 Coze 集合 zip 后刷新）'
+    return '内置画廊为空（在 KHY_COZE_CATALOG_DIR 放入 Coze 集合 zip 后刷新）';
   }
-  return '点击上方「上传集合 zip」选择一个 Coze 导出的 .zip'
-})
+  return '点击上方「上传集合 zip」选择一个 Coze 导出的 .zip';
+});
 
 const filteredEntries = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q) return entries.value
-  return entries.value.filter((e) => String(e.name || '').toLowerCase().includes(q))
-})
+  const q = search.value.trim().toLowerCase();
+  if (!q) return entries.value;
+  return entries.value.filter((e) =>
+    String(e.name || '')
+      .toLowerCase()
+      .includes(q)
+  );
+});
 
 const pagedEntries = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredEntries.value.slice(start, start + pageSize)
-})
+  const start = (page.value - 1) * pageSize;
+  return filteredEntries.value.slice(start, start + pageSize);
+});
 
-watch([search, entries], () => { page.value = 1 })
+watch([search, entries], () => {
+  page.value = 1;
+});
 
 function resetCatalog() {
-  sessionId.value = null
-  entries.value = []
-  total.value = 0
-  skipped.value = 0
-  installedMap.value = {}
-  search.value = ''
-  page.value = 1
+  sessionId.value = null;
+  entries.value = [];
+  total.value = 0;
+  skipped.value = 0;
+  installedMap.value = {};
+  search.value = '';
+  page.value = 1;
 }
 
 function applyResult(res) {
-  sessionId.value = res?.sessionId || null
-  entries.value = Array.isArray(res?.entries) ? res.entries : []
-  total.value = res?.total || entries.value.length
-  skipped.value = res?.skipped || 0
-  installedMap.value = {}
-  page.value = 1
+  sessionId.value = res?.sessionId || null;
+  entries.value = Array.isArray(res?.entries) ? res.entries : [];
+  total.value = res?.total || entries.value.length;
+  skipped.value = res?.skipped || 0;
+  installedMap.value = {};
+  page.value = 1;
 }
 
 async function loadCatalog() {
-  catalogLoading.value = true
+  catalogLoading.value = true;
   try {
-    const res = await cozeCatalog()
-    applyResult(res)
+    const res = await cozeCatalog();
+    applyResult(res);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载内置画廊失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '加载内置画廊失败');
   } finally {
-    catalogLoading.value = false
+    catalogLoading.value = false;
   }
 }
 
 function onTabChange(name) {
-  resetCatalog()
-  if (name === 'builtin') loadCatalog()
+  resetCatalog();
+  if (name === 'builtin') loadCatalog();
 }
 
 // Reset to a clean built-in view each time the dialog opens.
 function onOpen() {
-  activeTab.value = 'builtin'
-  resetCatalog()
-  loadCatalog()
+  activeTab.value = 'builtin';
+  resetCatalog();
+  loadCatalog();
 }
 
 function triggerUpload() {
-  activeTab.value = 'upload'
+  activeTab.value = 'upload';
   if (fileInput.value) {
-    fileInput.value.value = '' // allow re-selecting the same file
-    fileInput.value.click()
+    fileInput.value.value = ''; // allow re-selecting the same file
+    fileInput.value.click();
   }
 }
 
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = () => {
-      const result = String(reader.result || '')
-      const comma = result.indexOf(',')
-      resolve(comma >= 0 ? result.slice(comma + 1) : result)
-    }
-    reader.onerror = () => reject(reader.error || new Error('读取文件失败'))
-    reader.readAsDataURL(file)
-  })
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('读取文件失败'));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function onFileChange(evt) {
-  const file = evt.target.files && evt.target.files[0]
-  if (!file) return
-  enumerating.value = true
-  resetCatalog()
+  const file = evt.target.files && evt.target.files[0];
+  if (!file) return;
+  enumerating.value = true;
+  resetCatalog();
   try {
-    const contentBase64 = await readFileAsBase64(file)
-    const res = await enumerateCoze({ contentBase64 })
-    applyResult(res)
-    ElMessage.success(`已解析 ${entries.value.length} 个工作流`)
+    const contentBase64 = await readFileAsBase64(file);
+    const res = await enumerateCoze({ contentBase64 });
+    applyResult(res);
+    ElMessage.success(`已解析 ${entries.value.length} 个工作流`);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '解析失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '解析失败');
   } finally {
-    enumerating.value = false
+    enumerating.value = false;
   }
 }
 
 function typeChips(report) {
-  const counts = report?.typeCounts
-  if (!counts || typeof counts !== 'object') return []
+  const counts = report?.typeCounts;
+  if (!counts || typeof counts !== 'object') return [];
   return Object.keys(counts)
     .sort((a, b) => counts[b] - counts[a])
     .slice(0, 6)
-    .map((t) => `${t}×${counts[t]}`)
+    .map((t) => `${t}×${counts[t]}`);
 }
 
 function warnings(report) {
-  const out = []
-  if (!report) return out
-  const codeCount = report.typeCounts && report.typeCounts.code
+  const out = [];
+  if (!report) return out;
+  const codeCount = report.typeCounts && report.typeCounts.code;
   if (codeCount) {
-    out.push({ type: 'danger', text: `含 ${codeCount} 个 code 节点（Python，原生执行会失败）` })
+    out.push({ type: 'danger', text: `含 ${codeCount} 个 code 节点（Python，原生执行会失败）` });
   }
   if (report.unsupported && report.unsupported.length) {
-    out.push({ type: 'warning', text: `${report.unsupported.length} 个节点降级为工具调用` })
+    out.push({ type: 'warning', text: `${report.unsupported.length} 个节点降级为工具调用` });
   }
   if (report.warnings && report.warnings.length) {
-    out.push({ type: 'info', text: `${report.warnings.length} 项近似转换` })
+    out.push({ type: 'info', text: `${report.warnings.length} 项近似转换` });
   }
   if (report.droppedComments) {
-    out.push({ type: 'info', text: `忽略 ${report.droppedComments} 个注释` })
+    out.push({ type: 'info', text: `忽略 ${report.droppedComments} 个注释` });
   }
-  return out
+  return out;
 }
 
 async function install(entry) {
   if (!sessionId.value) {
-    ElMessage.warning('会话已过期，请重新加载画廊')
-    return
+    ElMessage.warning('会话已过期，请重新加载画廊');
+    return;
   }
-  installing.value = entry.index
+  installing.value = entry.index;
   try {
-    const wf = await installCozeEntry({ sessionId: sessionId.value, index: entry.index, name: entry.name })
-    installedMap.value = { ...installedMap.value, [entry.index]: wf.id }
-    emit('installed', wf)
-    ElMessage.success(`已安装：${wf.name}`)
+    const wf = await installCozeEntry({
+      sessionId: sessionId.value,
+      index: entry.index,
+      name: entry.name,
+    });
+    installedMap.value = { ...installedMap.value, [entry.index]: wf.id };
+    emit('installed', wf);
+    ElMessage.success(`已安装：${wf.name}`);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '安装失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '安装失败');
   } finally {
-    installing.value = -1
+    installing.value = -1;
   }
 }
 
 function openEditor(id) {
-  emit('update:modelValue', false)
-  router.push({ name: 'WorkflowEditor', params: { id } })
+  emit('update:modelValue', false);
+  router.push({ name: 'WorkflowEditor', params: { id } });
 }
 </script>
 
@@ -338,7 +359,9 @@ function openEditor(id) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .entry-card:hover {
   border-color: var(--el-color-primary-light-5);

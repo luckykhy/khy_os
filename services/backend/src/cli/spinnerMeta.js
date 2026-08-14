@@ -26,7 +26,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_SPINNER_META_GATE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -37,9 +39,15 @@ const _num = require('../utils/finiteNumber').toNonNegOr0;
 // byte-fallback: timer + tokens shown from the first frame).
 function shouldShowTimerAndTokens(opts) {
   const o = opts || {};
-  if (o.gateEnabled === false) return true;
-  if (o.verbose) return true;
-  if (o.hasTeammates) return true;
+  if (o.gateEnabled === false) {
+    return true;
+  }
+  if (o.verbose) {
+    return true;
+  }
+  if (o.hasTeammates) {
+    return true;
+  }
   return _num(o.elapsedMs) > SHOW_TOKENS_AFTER_MS;
 }
 
@@ -54,11 +62,19 @@ function buildStatusParts(opts) {
   const showMeta = shouldShowTimerAndTokens(o);
   const parts = [];
   if (showMeta) {
-    if (o.timerText) parts.push(o.timerText);
-    if (o.inputTokensText) parts.push(o.inputTokensText);
-    if (o.outputTokensText) parts.push(o.outputTokensText);
+    if (o.timerText) {
+      parts.push(o.timerText);
+    }
+    if (o.inputTokensText) {
+      parts.push(o.inputTokensText);
+    }
+    if (o.outputTokensText) {
+      parts.push(o.outputTokensText);
+    }
   }
-  if (o.effortText) parts.push(o.effortText);
+  if (o.effortText) {
+    parts.push(o.effortText);
+  }
   return parts.filter(Boolean);
 }
 

@@ -16,7 +16,8 @@ const crypto = require('crypto');
 // (避免全新 HOME 上 .khy / .khyquant 双写)。见 ../utils/dataHome。
 const { getAppHome, getAppDataDir } = require('../utils/dataHome');
 const KHY_DIR = getAppHome();
-const CUSTOMERS_FILE = process.env.AI_GATEWAY_CUSTOMERS_FILE || getAppDataDir('ai_gateway_customers.json');
+const CUSTOMERS_FILE =
+  process.env.AI_GATEWAY_CUSTOMERS_FILE || getAppDataDir('ai_gateway_customers.json');
 const PROXY_AUTH_FILE = process.env.PROXY_AUTH_FILE || getAppDataDir('proxy_server_auth.json');
 
 const LEGACY_CUSTOMER_ID = 'cus_proxy_legacy';
@@ -50,17 +51,13 @@ function safeWriteJson(filePath, data) {
 }
 
 function sanitizeText(input, maxLen = 120) {
-  return String(input || '').trim().slice(0, maxLen);
+  return String(input || '')
+    .trim()
+    .slice(0, maxLen);
 }
 
-function normalizeStringList(input, {
-  maxItems = 50,
-  maxItemLen = 120,
-  lowerCase = false,
-} = {}) {
-  const list = Array.isArray(input)
-    ? input
-    : (typeof input === 'string' ? input.split(',') : []);
+function normalizeStringList(input, { maxItems = 50, maxItemLen = 120, lowerCase = false } = {}) {
+  const list = Array.isArray(input) ? input : typeof input === 'string' ? input.split(',') : [];
   const out = [];
   const seen = new Set();
   for (const row of list) {
@@ -105,7 +102,10 @@ function normalizeLimits(input) {
 }
 
 function normalizeGroupId(raw) {
-  const cleaned = String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const cleaned = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
   return cleaned || 'default';
 }
 
@@ -181,8 +181,16 @@ function normalizeCustomerRow(raw, usedIds = new Set()) {
     enabled: raw?.enabled !== false,
     group: normalizeGroupId(raw?.group),
     limits: normalizeLimits(raw?.limits),
-    allowedProviders: normalizeStringList(raw?.allowedProviders, { maxItems: 20, maxItemLen: 40, lowerCase: true }),
-    allowedModels: normalizeStringList(raw?.allowedModels, { maxItems: 100, maxItemLen: 160, lowerCase: true }),
+    allowedProviders: normalizeStringList(raw?.allowedProviders, {
+      maxItems: 20,
+      maxItemLen: 40,
+      lowerCase: true,
+    }),
+    allowedModels: normalizeStringList(raw?.allowedModels, {
+      maxItems: 100,
+      maxItemLen: 160,
+      lowerCase: true,
+    }),
     quota: normalizeQuota(raw?.quota),
     tags: normalizeStringList(raw?.tags, { maxItems: 20, maxItemLen: 40 }),
     tokens,
@@ -218,18 +226,21 @@ function loadProxyAuthConfig() {
 }
 
 function getOrCreateLegacyCustomer(state) {
-  let legacy = state.customers.find(c => c.id === LEGACY_CUSTOMER_ID);
+  let legacy = state.customers.find((c) => c.id === LEGACY_CUSTOMER_ID);
   if (!legacy) {
-    legacy = normalizeCustomerRow({
-      id: LEGACY_CUSTOMER_ID,
-      name: LEGACY_CUSTOMER_NAME,
-      note: 'Imported from proxy_server_auth.json',
-      enabled: true,
-      allowedProviders: [],
-      allowedModels: [],
-      quota: {},
-      tokens: [],
-    }, new Set(state.customers.map(c => c.id)));
+    legacy = normalizeCustomerRow(
+      {
+        id: LEGACY_CUSTOMER_ID,
+        name: LEGACY_CUSTOMER_NAME,
+        note: 'Imported from proxy_server_auth.json',
+        enabled: true,
+        allowedProviders: [],
+        allowedModels: [],
+        quota: {},
+        tokens: [],
+      },
+      new Set(state.customers.map((c) => c.id))
+    );
     legacy.id = LEGACY_CUSTOMER_ID;
     legacy.name = LEGACY_CUSTOMER_NAME;
     legacy.createdAt = legacy.createdAt || nowIso();
@@ -265,10 +276,10 @@ function importProxyTokensIntoState(state, proxyCfg) {
     }
 
     const targetId = row.customerId || '';
-    let customer = targetId ? state.customers.find(c => c.id === targetId) : null;
+    let customer = targetId ? state.customers.find((c) => c.id === targetId) : null;
     if (!customer) customer = getOrCreateLegacyCustomer(state);
 
-    const used = new Set(customer.tokens.map(t => t.id));
+    const used = new Set(customer.tokens.map((t) => t.id));
     const normalized = normalizeTokenRow(row, used);
     if (!normalized) continue;
     if (!normalized.label) {
@@ -323,7 +334,7 @@ function ensureLoaded() {
   const raw = safeReadJson(CUSTOMERS_FILE, { version: 1, customers: [] });
   const rows = Array.isArray(raw.customers) ? raw.customers : [];
   const usedIds = new Set();
-  const customers = rows.map(row => normalizeCustomerRow(row, usedIds));
+  const customers = rows.map((row) => normalizeCustomerRow(row, usedIds));
 
   _state = {
     version: 1,
@@ -339,8 +350,12 @@ function ensureLoaded() {
 }
 
 function modelPatternMatch(rule, modelId) {
-  const normalizedRule = String(rule || '').trim().toLowerCase();
-  const normalizedModel = String(modelId || '').trim().toLowerCase();
+  const normalizedRule = String(rule || '')
+    .trim()
+    .toLowerCase();
+  const normalizedModel = String(modelId || '')
+    .trim()
+    .toLowerCase();
   if (!normalizedRule) return false;
   if (normalizedRule === '*') return true;
   if (!normalizedRule.includes('*')) return normalizedRule === normalizedModel;
@@ -351,7 +366,9 @@ function modelPatternMatch(rule, modelId) {
 }
 
 function hasModelAccess(customer, modelId) {
-  const normalizedModel = String(modelId || '').trim().toLowerCase();
+  const normalizedModel = String(modelId || '')
+    .trim()
+    .toLowerCase();
   if (!normalizedModel) return true;
 
   const slash = normalizedModel.indexOf('/');
@@ -362,7 +379,7 @@ function hasModelAccess(customer, modelId) {
   }
 
   if (Array.isArray(customer.allowedModels) && customer.allowedModels.length > 0) {
-    return customer.allowedModels.some(rule => modelPatternMatch(rule, normalizedModel));
+    return customer.allowedModels.some((rule) => modelPatternMatch(rule, normalizedModel));
   }
 
   return true;
@@ -393,10 +410,16 @@ function resolveCustomerByToken(rawBearer) {
   if (!_tokenIndex) _tokenIndex = buildTokenIndex();
   const hit = _tokenIndex.get(normalized);
   if (!hit) return null;
-  const customer = _state.customers.find(c => c.id === hit.customerId);
-  if (!customer) { _tokenIndex = null; return null; }
-  const token = customer.tokens.find(t => t.id === hit.tokenId);
-  if (!token) { _tokenIndex = null; return null; }
+  const customer = _state.customers.find((c) => c.id === hit.customerId);
+  if (!customer) {
+    _tokenIndex = null;
+    return null;
+  }
+  const token = customer.tokens.find((t) => t.id === hit.tokenId);
+  if (!token) {
+    _tokenIndex = null;
+    return null;
+  }
   return {
     customer,
     token,
@@ -417,12 +440,14 @@ function hasManagedTokens() {
 function touchTokenLastUsed(customerId, tokenId) {
   try {
     ensureLoaded();
-    const customer = _state.customers.find(c => c.id === customerId);
+    const customer = _state.customers.find((c) => c.id === customerId);
     if (!customer) return;
-    const token = customer.tokens.find(t => t.id === tokenId);
+    const token = customer.tokens.find((t) => t.id === tokenId);
     if (!token) return;
     token.lastUsedAt = nowIso();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function toTokenView(token, { includeSecrets = false } = {}) {
@@ -441,7 +466,7 @@ function toTokenView(token, { includeSecrets = false } = {}) {
 
 function toCustomerView(customer, { includeSecrets = false, model = '' } = {}) {
   const modelAccess = model ? hasModelAccess(customer, model) : true;
-  const tokenViews = customer.tokens.map(t => toTokenView(t, { includeSecrets }));
+  const tokenViews = customer.tokens.map((t) => toTokenView(t, { includeSecrets }));
   return {
     id: customer.id,
     name: customer.name,
@@ -455,7 +480,7 @@ function toCustomerView(customer, { includeSecrets = false, model = '' } = {}) {
     tags: customer.tags || [],
     modelAccess,
     tokenCount: tokenViews.length,
-    enabledTokenCount: tokenViews.filter(t => t.enabled).length,
+    enabledTokenCount: tokenViews.filter((t) => t.enabled).length,
     tokens: tokenViews,
     createdAt: customer.createdAt || null,
     updatedAt: customer.updatedAt || null,
@@ -464,13 +489,13 @@ function toCustomerView(customer, { includeSecrets = false, model = '' } = {}) {
 
 function listCustomers({ includeSecrets = false, model = '' } = {}) {
   ensureLoaded();
-  return _state.customers.map(c => toCustomerView(c, { includeSecrets, model }));
+  return _state.customers.map((c) => toCustomerView(c, { includeSecrets, model }));
 }
 
 function getCustomerById(customerId) {
   ensureLoaded();
   const id = normalizeId(customerId, 'cus');
-  const customer = _state.customers.find(c => c.id === id);
+  const customer = _state.customers.find((c) => c.id === id);
   if (!customer) throw new Error(`Customer not found: ${customerId}`);
   return customer;
 }
@@ -493,20 +518,23 @@ function createCustomer(payload = {}) {
   const name = sanitizeText(payload.name, 120);
   if (!name) throw new Error('Customer name is required');
 
-  const usedIds = new Set(_state.customers.map(c => c.id));
-  const customer = normalizeCustomerRow({
-    id: generateId('cus', usedIds),
-    name,
-    note: payload.note,
-    enabled: payload.enabled !== false,
-    group: payload.group,
-    limits: payload.limits,
-    allowedProviders: payload.allowedProviders,
-    allowedModels: payload.allowedModels,
-    quota: payload.quota,
-    tags: payload.tags,
-    tokens: [],
-  }, usedIds);
+  const usedIds = new Set(_state.customers.map((c) => c.id));
+  const customer = normalizeCustomerRow(
+    {
+      id: generateId('cus', usedIds),
+      name,
+      note: payload.note,
+      enabled: payload.enabled !== false,
+      group: payload.group,
+      limits: payload.limits,
+      allowedProviders: payload.allowedProviders,
+      allowedModels: payload.allowedModels,
+      quota: payload.quota,
+      tags: payload.tags,
+      tokens: [],
+    },
+    usedIds
+  );
 
   _state.customers.push(customer);
   persistState();
@@ -528,10 +556,18 @@ function updateCustomer(customerId, payload = {}) {
   if (payload.group !== undefined) customer.group = normalizeGroupId(payload.group);
   if (payload.limits !== undefined) customer.limits = normalizeLimits(payload.limits);
   if (payload.allowedProviders !== undefined) {
-    customer.allowedProviders = normalizeStringList(payload.allowedProviders, { maxItems: 20, maxItemLen: 40, lowerCase: true });
+    customer.allowedProviders = normalizeStringList(payload.allowedProviders, {
+      maxItems: 20,
+      maxItemLen: 40,
+      lowerCase: true,
+    });
   }
   if (payload.allowedModels !== undefined) {
-    customer.allowedModels = normalizeStringList(payload.allowedModels, { maxItems: 100, maxItemLen: 160, lowerCase: true });
+    customer.allowedModels = normalizeStringList(payload.allowedModels, {
+      maxItems: 100,
+      maxItemLen: 160,
+      lowerCase: true,
+    });
   }
   if (payload.quota !== undefined) customer.quota = normalizeQuota(payload.quota);
   if (payload.tags !== undefined) {
@@ -587,7 +623,7 @@ function issueToken(customerId, payload = {}) {
   }
   customer.updatedAt = nowIso();
   persistState();
-  const views = created.map(token => toTokenView(token, { includeSecrets: true }));
+  const views = created.map((token) => toTokenView(token, { includeSecrets: true }));
   if (views.length === 1) return views[0];
   return {
     customerId: customer.id,
@@ -600,7 +636,7 @@ function rotateToken(customerId, tokenId, nextToken = '') {
   ensureLoaded();
   const customer = getCustomerById(customerId);
   const normalizedTokenId = normalizeId(tokenId, 'tk');
-  const token = customer.tokens.find(t => t.id === normalizedTokenId);
+  const token = customer.tokens.find((t) => t.id === normalizedTokenId);
   if (!token) throw new Error(`Token not found: ${tokenId}`);
 
   const tokenValue = normalizeAuthToken(nextToken, { allowEmpty: true }) || generateAuthToken();
@@ -617,7 +653,7 @@ function setTokenEnabled(customerId, tokenId, enabled) {
   ensureLoaded();
   const customer = getCustomerById(customerId);
   const normalizedTokenId = normalizeId(tokenId, 'tk');
-  const token = customer.tokens.find(t => t.id === normalizedTokenId);
+  const token = customer.tokens.find((t) => t.id === normalizedTokenId);
   if (!token) throw new Error(`Token not found: ${tokenId}`);
 
   token.enabled = enabled !== false;
@@ -631,7 +667,7 @@ function deleteToken(customerId, tokenId) {
   ensureLoaded();
   const customer = getCustomerById(customerId);
   const normalizedTokenId = normalizeId(tokenId, 'tk');
-  const idx = customer.tokens.findIndex(t => t.id === normalizedTokenId);
+  const idx = customer.tokens.findIndex((t) => t.id === normalizedTokenId);
   if (idx < 0) throw new Error(`Token not found: ${tokenId}`);
 
   const removed = customer.tokens[idx];
@@ -719,14 +755,18 @@ async function summarizeGatewayModels() {
       modelError: '',
     };
 
-    if (entry.enabled !== false && entry.adapter && typeof entry.adapter.listModels === 'function') {
+    if (
+      entry.enabled !== false &&
+      entry.adapter &&
+      typeof entry.adapter.listModels === 'function'
+    ) {
       try {
         const models = await gateway.listModels(key);
         const normalized = Array.isArray(models) ? models : [];
         adapterInfo.modelCount = normalized.length;
         byAdapter[key] = {
           count: normalized.length,
-          models: normalized.slice(0, 50).map(m => ({
+          models: normalized.slice(0, 50).map((m) => ({
             id: String(m.id || ''),
             name: m.name || m.id || '',
             isDefault: !!m.isDefault,
@@ -759,8 +799,8 @@ async function summarizeGatewayModels() {
     byAdapter,
     list,
     totalModels: list.length,
-    enabledAdapters: adapters.filter(a => a.enabled).length,
-    availableAdapters: adapters.filter(a => a.available).length,
+    enabledAdapters: adapters.filter((a) => a.enabled).length,
+    availableAdapters: adapters.filter((a) => a.available).length,
   };
 }
 
@@ -768,16 +808,16 @@ function summarizeProxyAuth(customers) {
   const cfg = loadProxyAuthConfig();
   const envToken = normalizeAuthToken(process.env.PROXY_AUTH_TOKEN, { allowEmpty: true });
   const authToken = envToken || cfg.authToken || '';
-  const source = envToken ? 'env' : (cfg.authToken ? 'persisted' : 'none');
+  const source = envToken ? 'env' : cfg.authToken ? 'persisted' : 'none';
 
   const managedTokens = normalizeProxyManagedTokens(cfg.managedTokens);
-  const enabledManagedTokens = managedTokens.filter(t => t.enabled !== false).length;
+  const enabledManagedTokens = managedTokens.filter((t) => t.enabled !== false).length;
 
   const customerTokenIds = new Set();
   for (const c of customers) {
     for (const t of c.tokens) customerTokenIds.add(t.id);
   }
-  const externalManagedTokens = managedTokens.filter(t => !customerTokenIds.has(t.id)).length;
+  const externalManagedTokens = managedTokens.filter((t) => !customerTokenIds.has(t.id)).length;
 
   return {
     authTokenMasked: maskToken(authToken),
@@ -796,11 +836,12 @@ async function getAssetOverview() {
 
   const customersSummary = {
     total: customers.length,
-    enabled: customers.filter(c => c.enabled !== false).length,
+    enabled: customers.filter((c) => c.enabled !== false).length,
     tokens: customers.reduce((sum, c) => sum + c.tokens.length, 0),
-    enabledTokens: customers.reduce((sum, c) => (
-      sum + c.tokens.filter(t => c.enabled !== false && t.enabled !== false).length
-    ), 0),
+    enabledTokens: customers.reduce(
+      (sum, c) => sum + c.tokens.filter((t) => c.enabled !== false && t.enabled !== false).length,
+      0
+    ),
   };
 
   const [gatewaySummary, accountPoolSummary] = await Promise.all([

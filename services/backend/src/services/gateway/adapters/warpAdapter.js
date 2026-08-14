@@ -9,8 +9,8 @@
  * tool (xclip/pbcopy) is merely the transport mechanism — it does NOT mean Warp
  * is installed or logged in, and must never gate availability.
  */
-const clipboardRelayAdapter = require('./clipboardRelayAdapter');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const clipboardRelayAdapter = require('./clipboardRelayAdapter');
 
 let _available = null;
 let _loginState = { installed: false, hasLogin: false, email: null };
@@ -32,12 +32,16 @@ function detectWarpLogin() {
         email: r.email || null,
       };
     }
-  } catch { /* fall through to "not detected" */ }
+  } catch {
+    /* fall through to "not detected" */
+  }
   return { installed: false, hasLogin: false, email: null };
 }
 
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   _loginState = detectWarpLogin();
   // Strict: installed AND logged in. Clipboard relay is transport, not a gate.
   _available = !!(_loginState.installed && _loginState.hasLogin);
@@ -61,7 +65,9 @@ async function generate(prompt, options = {}) {
       adapter: 'warp',
       provider: 'Warp',
       errorType: result?.errorType || 'unknown',
-      attempts: result?.attempts || [{ provider: 'Warp', success: false, error: result?.error || 'relay_failed' }],
+      attempts: result?.attempts || [
+        { provider: 'Warp', success: false, error: result?.error || 'relay_failed' },
+      ],
     });
   }
 

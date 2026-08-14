@@ -5,18 +5,20 @@
   "main": "khyos-md-bridge.js",
   "bin": {
     "khyos-markdown": "./khyos-md-bridge.js",
-    "khyosmd": "./khyos-md-bridge.js"
+    "khyosmd": "./khyos-md-bridge.js",
+    "khyos-md-mcp": "./khyos-md-mcp.js"
   },
   "scripts": {
     "start": "node khyos-md-bridge.js",
     "dev": "node khyos-md-bridge.js --no-open",
+    "mcp": "node khyos-md-mcp.js",
     "test": "node --test test/",
     "register:win": "powershell -ExecutionPolicy Bypass -File register-windows.ps1",
     "register:linux": "bash register-linux.sh",
     "unregister:win": "powershell -ExecutionPolicy Bypass -File unregister-windows.ps1",
     "unregister:linux": "bash unregister-linux.sh"
   },
-  "keywords": ["markdown", "editor", "wysiwyg", "mermaid", "zero-dependency"],
+  "keywords": ["markdown", "editor", "wysiwyg", "mermaid", "zero-dependency", "mcp", "model-context-protocol"],
   "author": "khy-os",
   "license": "MIT",
   "engines": {
@@ -25,6 +27,7 @@
   "os": ["win32", "linux", "darwin"],
   "files": [
     "khyos-md-bridge.js",
+    "khyos-md-mcp.js",
     "khyosMarkdown.html",
     "khyosmarkdown",
     "khyosmarkdown.command",

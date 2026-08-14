@@ -8,14 +8,14 @@
  * fs.watch 有平台时延,用轮询等待 + 宽松超时,避免偶发。
  */
 
-const { describe, test, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
 const fs = require('fs');
+const assert = require('node:assert/strict');
+const { describe, test, beforeEach, afterEach } = require('node:test');
 const os = require('os');
 const path = require('path');
 
-const watcher = require('./selfEditWatcher');
 const svc = require('./selfEditAdvisoryService');
+const watcher = require('./selfEditWatcher');
 
 function mkFakeRoot() {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'khy-watch-')));
@@ -31,8 +31,12 @@ function waitFor(pred, timeoutMs = 4000, stepMs = 50) {
   return new Promise((resolve) => {
     const t0 = Date.now();
     const tick = () => {
-      if (pred()) return resolve(true);
-      if (Date.now() - t0 > timeoutMs) return resolve(false);
+      if (pred()) {
+        return resolve(true);
+      }
+      if (Date.now() - t0 > timeoutMs) {
+        return resolve(false);
+      }
       setTimeout(tick, stepMs);
     };
     tick();

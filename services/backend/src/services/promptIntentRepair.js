@@ -27,18 +27,16 @@
  *  - multimodalIntentRouter 讲「>=2 路异构输入 → 分路不混淆」;与本件正交。
  */
 
-const { assessPromptClarity } = require('./multimodalIntentRouter');
 const { CLEAR_MODES } = require('./clarificationCards');
+const { assessPromptClarity } = require('./multimodalIntentRouter');
 
 // 拟声 / 情绪性叠字:这类同字重复是用户**有意**的(哈哈哈 / 谢谢谢 / 嗯嗯),不是笔误,
 // 不应被「字符异常重复」信号误伤。
-const REPEAT_OK_CHARS = new Set(
-  Array.from('哈呵嘿嘻啦哇喔噢唉嗯哦嗷咦哼呜喵汪嘛呢啊哎谢么了的'),
-);
+const REPEAT_OK_CHARS = new Set(Array.from('哈呵嘿嘻啦哇喔噢唉嗯哦嗷咦哼呜喵汪嘛呢啊哎谢么了的'));
 
 // 结构性乱码:这些字符在正常提示词里几乎不可能出现,命中即为「强信号」(零假阳性)。
-const REPLACEMENT_CHAR_RE = /\uFFFD/;                       // U+FFFD 替换符(编码损坏)
-const ZERO_WIDTH_RE = /[\u200B-\u200D\u2060\uFEFF]/;       // 零宽字符
+const REPLACEMENT_CHAR_RE = /\uFFFD/; // U+FFFD 替换符(编码损坏)
+const ZERO_WIDTH_RE = /[\u200B-\u200D\u2060\uFEFF]/; // 零宽字符
 // C0/C1 控制字符与 DEL,但放行常见排版用的 TAB/LF/CR(U+0009/000A/000D)。
 const CONTROL_CHAR_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/;
 // 同一非空白字符连续出现 3 次及以上(用于「字符异常重复」的弱信号探测)。
@@ -55,7 +53,9 @@ function _enabled(options = {}) {
       String(options.promptIntentRepair).trim().toLowerCase()
     );
   }
-  const raw = String(process.env.KHY_PROMPT_INTENT_REPAIR || 'true').trim().toLowerCase();
+  const raw = String(process.env.KHY_PROMPT_INTENT_REPAIR || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -71,11 +71,19 @@ function detectGarbleSignals(text) {
   const t = String(text || '');
   const strong = [];
   const medium = [];
-  if (!t) return { strong, medium, signals: [] };
+  if (!t) {
+    return { strong, medium, signals: [] };
+  }
 
-  if (REPLACEMENT_CHAR_RE.test(t)) strong.push('乱码字符(U+FFFD)');
-  if (ZERO_WIDTH_RE.test(t)) strong.push('零宽字符');
-  if (CONTROL_CHAR_RE.test(t)) strong.push('控制字符');
+  if (REPLACEMENT_CHAR_RE.test(t)) {
+    strong.push('乱码字符(U+FFFD)');
+  }
+  if (ZERO_WIDTH_RE.test(t)) {
+    strong.push('零宽字符');
+  }
+  if (CONTROL_CHAR_RE.test(t)) {
+    strong.push('控制字符');
+  }
 
   // 同字连续 >=3 次,且重复字不在拟声/情绪叠字白名单里 → 可能是抖动/误触。
   let hasAbnormalRun = false;
@@ -83,16 +91,26 @@ function detectGarbleSignals(text) {
   RUN_RE.lastIndex = 0;
   while ((mm = RUN_RE.exec(t)) !== null) {
     const ch = mm[1];
-    if (/\s/.test(ch)) continue;       // 空白单独处理
-    if (REPEAT_OK_CHARS.has(ch)) continue;
-    if (/[0-9]/.test(ch)) continue;    // 数字本就可连续(如年份/编号)
+    if (/\s/.test(ch)) {
+      continue;
+    } // 空白单独处理
+    if (REPEAT_OK_CHARS.has(ch)) {
+      continue;
+    }
+    if (/[0-9]/.test(ch)) {
+      continue;
+    } // 数字本就可连续(如年份/编号)
     hasAbnormalRun = true;
     break;
   }
-  if (hasAbnormalRun) medium.push('字符异常重复');
+  if (hasAbnormalRun) {
+    medium.push('字符异常重复');
+  }
 
   // 句中出现 >=3 连续空白(不含换行)→ 可能漏字/误删。
-  if (INLINE_WS3_RE.test(t)) medium.push('多余空白');
+  if (INLINE_WS3_RE.test(t)) {
+    medium.push('多余空白');
+  }
 
   return { strong, medium, signals: strong.concat(medium) };
 }
@@ -105,12 +123,14 @@ function detectGarbleSignals(text) {
  */
 function lightNormalize(text) {
   const original = String(text || '');
-  if (!original || CODEISH_RE.test(original)) return { text: original, changed: false };
+  if (!original || CODEISH_RE.test(original)) {
+    return { text: original, changed: false };
+  }
   const out = original
-    .replace(new RegExp(ZERO_WIDTH_RE.source, 'g'), '')   // 去零宽
+    .replace(new RegExp(ZERO_WIDTH_RE.source, 'g'), '') // 去零宽
     .replace(new RegExp(CONTROL_CHAR_RE.source, 'g'), '') // 去控制符
-    .replace(INLINE_WS_RE, ' ')                           // 行内多余空白并拢
-    .replace(/[^\S\r\n]+\n/g, '\n')                       // 行尾空白
+    .replace(INLINE_WS_RE, ' ') // 行内多余空白并拢
+    .replace(/[^\S\r\n]+\n/g, '\n') // 行尾空白
     .trim();
   return { text: out, changed: out !== original };
 }
@@ -144,23 +164,33 @@ function assessRepairNeed(input = {}) {
   const text = String(input.text || '');
   const hasMedia = !!input.hasMedia;
   const modes = (Array.isArray(input.modes) ? input.modes : [])
-    .map(m => String(m || '').trim().toLowerCase())
+    .map((m) =>
+      String(m || '')
+        .trim()
+        .toLowerCase()
+    )
     .filter(Boolean);
 
   const clarity = assessPromptClarity(text, { hasMedia });
   const garble = detectGarbleSignals(text);
-  const modeActive = modes.some(m => CLEAR_MODES.includes(m));
+  const modeActive = modes.some((m) => CLEAR_MODES.includes(m));
 
   const strongGarble = garble.strong.length > 0;
   const unclearDriven = !clarity.clear && !modeActive;
   const need = enabled && (strongGarble || unclearDriven);
 
   let reason;
-  if (!enabled) reason = 'disabled';
-  else if (strongGarble) reason = 'garble';
-  else if (unclearDriven) reason = clarity.reason;
-  else if (modeActive) reason = 'mode-active';
-  else reason = 'prompt-clear';
+  if (!enabled) {
+    reason = 'disabled';
+  } else if (strongGarble) {
+    reason = 'garble';
+  } else if (unclearDriven) {
+    reason = clarity.reason;
+  } else if (modeActive) {
+    reason = 'mode-active';
+  } else {
+    reason = 'prompt-clear';
+  }
 
   return { enabled, clarity, garble, modeActive, need, reason };
 }
@@ -178,11 +208,19 @@ function buildRepairDirective(ctx = {}) {
 
   const lines = [];
   lines.push('## 体察用户惰性 —— 先理解「乱」提示词,奔赴真实意图');
-  lines.push('用户这次的提示词可能比较「乱」:可能有**错别字、漏字、语序颠倒**,或混入多余/乱码字符。请**先自己做一次善意理解**,不要因为小笔误就停下来反复追问:');
-  lines.push('1. **结合前后文语境**,在心里纠正明显的错别字 / 补全漏掉的字 / 理顺语序,推断用户的**真实意图**;');
-  lines.push('2. 用**一句话**简短复述你理解到的意图(例如「你的意思应该是……,我按这个来」),给用户一个纠偏机会即可,不要长篇分析;');
+  lines.push(
+    '用户这次的提示词可能比较「乱」:可能有**错别字、漏字、语序颠倒**,或混入多余/乱码字符。请**先自己做一次善意理解**,不要因为小笔误就停下来反复追问:'
+  );
+  lines.push(
+    '1. **结合前后文语境**,在心里纠正明显的错别字 / 补全漏掉的字 / 理顺语序,推断用户的**真实意图**;'
+  );
+  lines.push(
+    '2. 用**一句话**简短复述你理解到的意图(例如「你的意思应该是……,我按这个来」),给用户一个纠偏机会即可,不要长篇分析;'
+  );
   lines.push('3. 若意图已基本可判,直接**奔赴真实意图**推进,别被表面笔误带偏;');
-  lines.push('4. 仅当**关键信息**(对象 / 范围 / 目标)经语境推断后仍无法确定时,才就那一两个点用选项卡向用户澄清;能自己判断的不要反问。');
+  lines.push(
+    '4. 仅当**关键信息**(对象 / 范围 / 目标)经语境推断后仍无法确定时,才就那一两个点用选项卡向用户澄清;能自己判断的不要反问。'
+  );
   lines.push('5. 不要臆造用户并未表达的诉求,也不要把善意纠错变成擅自改需求。');
 
   if (signals.length) {
@@ -190,7 +228,9 @@ function buildRepairDirective(ctx = {}) {
     lines.push(`(已检测到可能的干扰信号:${signals.join('、')};仅供参考,请以语境判断为准。)`);
   }
   if (cleanedHint) {
-    lines.push(`(去除乱码/多余空白后的参考版本:「${cleanedHint}」;这只是结构清理,语义仍以你的语境理解为准,且不要据此擅改用户原意。)`);
+    lines.push(
+      `(去除乱码/多余空白后的参考版本:「${cleanedHint}」;这只是结构清理,语义仍以你的语境理解为准,且不要据此擅改用户原意。)`
+    );
   }
   return lines.join('\n');
 }

@@ -17,34 +17,34 @@ const { diagnostics } = require('./diagnosticEvents');
 // ── Event categories ──
 
 const CATEGORY = {
-  AI:          'ai',          // model interactions
-  TOOL:        'tool',        // tool execution
-  SESSION:     'session',     // session lifecycle
-  SECURITY:    'security',    // auth, permission, ssrf
+  AI: 'ai', // model interactions
+  TOOL: 'tool', // tool execution
+  SESSION: 'session', // session lifecycle
+  SECURITY: 'security', // auth, permission, ssrf
   PERFORMANCE: 'performance', // latency, throughput
-  RESOURCE:    'resource',    // memory, cpu, disk
-  ERROR:       'error',       // errors and crashes
-  NETWORK:     'network',     // connectivity events
-  USER:        'user',        // user actions
-  SYSTEM:      'system',      // system events
+  RESOURCE: 'resource', // memory, cpu, disk
+  ERROR: 'error', // errors and crashes
+  NETWORK: 'network', // connectivity events
+  USER: 'user', // user actions
+  SYSTEM: 'system', // system events
 };
 
 // ── Anomaly detection thresholds ──
 
 const ANOMALY_THRESHOLDS = {
   latencySpike: {
-    windowMs: 60_000,      // 1 minute window
-    multiplier: 3,          // 3x above moving average
-    minSamples: 5,          // need at least 5 samples
+    windowMs: 60_000, // 1 minute window
+    multiplier: 3, // 3x above moving average
+    minSamples: 5, // need at least 5 samples
   },
   errorRateSurge: {
-    windowMs: 300_000,     // 5 minute window
-    threshold: 0.3,         // 30% error rate
-    minEvents: 10,          // minimum events to evaluate
+    windowMs: 300_000, // 5 minute window
+    threshold: 0.3, // 30% error rate
+    minEvents: 10, // minimum events to evaluate
   },
   tokenBudgetOverrun: {
-    warningRatio: 0.8,      // warn at 80% of budget
-    criticalRatio: 0.95,    // critical at 95%
+    warningRatio: 0.8, // warn at 80% of budget
+    criticalRatio: 0.95, // critical at 95%
   },
 };
 
@@ -69,15 +69,19 @@ class SlidingWindowMetric {
 
   getAverage() {
     this._evict(Date.now());
-    if (this._samples.length === 0) return 0;
+    if (this._samples.length === 0) {
+      return 0;
+    }
     const sum = this._samples.reduce((s, e) => s + e.value, 0);
     return sum / this._samples.length;
   }
 
   getP95() {
     this._evict(Date.now());
-    if (this._samples.length === 0) return 0;
-    const sorted = this._samples.map(s => s.value).sort((a, b) => a - b);
+    if (this._samples.length === 0) {
+      return 0;
+    }
+    const sorted = this._samples.map((s) => s.value).sort((a, b) => a - b);
     // Nearest-rank P95 (0-based index ceil(0.95·n)−1), matching the codebase's
     // other percentile helper usageTracker._percentile. The old floor(0.95·n)
     // overshot by one whenever 0.95·n was an integer (n a multiple of 20) — e.g.
@@ -90,8 +94,10 @@ class SlidingWindowMetric {
 
   getMax() {
     this._evict(Date.now());
-    if (this._samples.length === 0) return 0;
-    return Math.max(...this._samples.map(s => s.value));
+    if (this._samples.length === 0) {
+      return 0;
+    }
+    return Math.max(...this._samples.map((s) => s.value));
   }
 
   getCount() {
@@ -101,7 +107,9 @@ class SlidingWindowMetric {
 
   getRate(intervalMs) {
     this._evict(Date.now());
-    if (this._samples.length === 0) return 0;
+    if (this._samples.length === 0) {
+      return 0;
+    }
     return (this._samples.length / this._windowMs) * intervalMs;
   }
 
@@ -149,14 +157,20 @@ class BackpressureQueue {
       const dropped = this._queue.shift();
       this._dropped++;
       if (this._onDrop) {
-        try { this._onDrop(dropped); } catch { /* swallow */ }
+        try {
+          this._onDrop(dropped);
+        } catch {
+          /* swallow */
+        }
       }
     }
     this._queue.push(event);
   }
 
   async flush() {
-    if (this._processing || this._queue.length === 0) return;
+    if (this._processing || this._queue.length === 0) {
+      return;
+    }
     this._processing = true;
 
     try {
@@ -182,9 +196,13 @@ class BackpressureQueue {
   }
 
   _startTimer() {
-    if (this._timer) return;
+    if (this._timer) {
+      return;
+    }
     this._timer = setInterval(() => this.flush(), this._flushIntervalMs);
-    if (this._timer.unref) this._timer.unref();
+    if (this._timer.unref) {
+      this._timer.unref();
+    }
   }
 
   shutdown() {
@@ -213,15 +231,9 @@ class AdvancedDiagnostics {
     this._onAnomaly = opts.onAnomaly || null;
 
     // Sliding window metrics
-    this._latencyMetric = new SlidingWindowMetric(
-      this._thresholds.latencySpike.windowMs
-    );
-    this._errorMetric = new SlidingWindowMetric(
-      this._thresholds.errorRateSurge.windowMs
-    );
-    this._successMetric = new SlidingWindowMetric(
-      this._thresholds.errorRateSurge.windowMs
-    );
+    this._latencyMetric = new SlidingWindowMetric(this._thresholds.latencySpike.windowMs);
+    this._errorMetric = new SlidingWindowMetric(this._thresholds.errorRateSurge.windowMs);
+    this._successMetric = new SlidingWindowMetric(this._thresholds.errorRateSurge.windowMs);
 
     // Token tracking
     this._tokenBudget = 0;
@@ -350,7 +362,9 @@ class AdvancedDiagnostics {
    * Shutdown diagnostics.
    */
   shutdown() {
-    if (this._unsub) this._unsub();
+    if (this._unsub) {
+      this._unsub();
+    }
     this._queue.shutdown();
   }
 
@@ -385,7 +399,9 @@ class AdvancedDiagnostics {
   _checkLatencySpike(operation, durationMs) {
     const { multiplier, minSamples } = this._thresholds.latencySpike;
     const count = this._latencyMetric.getCount();
-    if (count < minSamples) return;
+    if (count < minSamples) {
+      return;
+    }
 
     const avg = this._latencyMetric.getAverage();
     if (durationMs > avg * multiplier) {
@@ -393,7 +409,7 @@ class AdvancedDiagnostics {
         operation,
         durationMs,
         average: Math.round(avg),
-        multiplier: Math.round(durationMs / avg * 10) / 10,
+        multiplier: Math.round((durationMs / avg) * 10) / 10,
       });
     }
   }
@@ -413,7 +429,9 @@ class AdvancedDiagnostics {
   }
 
   _checkTokenBudget() {
-    if (this._tokenBudget <= 0) return;
+    if (this._tokenBudget <= 0) {
+      return;
+    }
 
     const ratio = this._tokensUsed / this._tokenBudget;
     const { warningRatio, criticalRatio } = this._thresholds.tokenBudgetOverrun;
@@ -454,7 +472,11 @@ class AdvancedDiagnostics {
     diagnostics.emit('anomaly', anomaly);
 
     if (this._onAnomaly) {
-      try { this._onAnomaly(anomaly); } catch { /* swallow */ }
+      try {
+        this._onAnomaly(anomaly);
+      } catch {
+        /* swallow */
+      }
     }
   }
 

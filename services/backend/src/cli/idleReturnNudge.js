@@ -27,7 +27,9 @@ const DEFAULT_TOKEN_THRESHOLD = 100000;
 
 function idleReturnEnabled(env) {
   const raw = env && env[GATE];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -41,8 +43,12 @@ function _threshold(env, key, def) {
 // 整点→「N 小时」，否则「N 小时 M 分钟」。
 function formatIdleDuration(minutes) {
   const m = Number(minutes);
-  if (!Number.isFinite(m) || m < 1) return '不到 1 分钟';
-  if (m < 60) return `${Math.floor(m)} 分钟`;
+  if (!Number.isFinite(m) || m < 1) {
+    return '不到 1 分钟';
+  }
+  if (m < 60) {
+    return `${Math.floor(m)} 分钟`;
+  }
   const hours = Math.floor(m / 60);
   const rem = Math.floor(m % 60);
   return rem === 0 ? `${hours} 小时` : `${hours} 小时 ${rem} 分钟`;
@@ -56,22 +62,36 @@ function formatIdleDuration(minutes) {
  */
 function shouldNudgeOnReturn(state, env) {
   try {
-    if (!idleReturnEnabled(env)) return null;
-    if (!state || typeof state !== 'object') return null;
+    if (!idleReturnEnabled(env)) {
+      return null;
+    }
+    if (!state || typeof state !== 'object') {
+      return null;
+    }
     const input = typeof state.input === 'string' ? state.input : '';
     const trimmed = input.trim();
     // 空输入 / 斜杠命令 不提示（对齐 CC !input.trim().startsWith('/')）。
-    if (!trimmed || trimmed.startsWith('/')) return null;
+    if (!trimmed || trimmed.startsWith('/')) {
+      return null;
+    }
     const lastCompletionMs = Number(state.lastCompletionMs);
-    if (!Number.isFinite(lastCompletionMs) || lastCompletionMs <= 0) return null;
+    if (!Number.isFinite(lastCompletionMs) || lastCompletionMs <= 0) {
+      return null;
+    }
     const nowMs = Number(state.nowMs);
-    if (!Number.isFinite(nowMs) || nowMs <= 0) return null;
+    if (!Number.isFinite(nowMs) || nowMs <= 0) {
+      return null;
+    }
     const tokens = Number(state.totalInputTokens);
     const tokenThreshold = _threshold(env, 'KHY_IDLE_TOKEN_THRESHOLD', DEFAULT_TOKEN_THRESHOLD);
-    if (!Number.isFinite(tokens) || tokens < tokenThreshold) return null;
+    if (!Number.isFinite(tokens) || tokens < tokenThreshold) {
+      return null;
+    }
     const idleMinutes = (nowMs - lastCompletionMs) / 60000;
     const minThreshold = _threshold(env, 'KHY_IDLE_THRESHOLD_MINUTES', DEFAULT_IDLE_MIN);
-    if (!(idleMinutes >= minThreshold)) return null;
+    if (!(idleMinutes >= minThreshold)) {
+      return null;
+    }
     return { idleMinutes, tokens };
   } catch {
     return null;
@@ -83,10 +103,14 @@ function shouldNudgeOnReturn(state, env) {
  */
 function buildIdleReturnHint(decision, env) {
   try {
-    if (!decision || typeof decision !== 'object') return null;
+    if (!decision || typeof decision !== 'object') {
+      return null;
+    }
     const idleMinutes = Number(decision.idleMinutes);
     const tokens = Number(decision.tokens);
-    if (!Number.isFinite(idleMinutes) || !Number.isFinite(tokens)) return null;
+    if (!Number.isFinite(idleMinutes) || !Number.isFinite(tokens)) {
+      return null;
+    }
     let tokStr = `${tokens}`;
     try {
       // eslint-disable-next-line global-require
@@ -108,7 +132,9 @@ function buildIdleReturnHint(decision, env) {
  */
 function idleReturnHintFor(state, env) {
   const decision = shouldNudgeOnReturn(state, env);
-  if (!decision) return null;
+  if (!decision) {
+    return null;
+  }
   return buildIdleReturnHint(decision, env);
 }
 

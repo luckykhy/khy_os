@@ -24,10 +24,10 @@ const path = require('path');
 // ── Roles ──
 
 const ROLE = {
-  OWNER:    'owner',
-  ADMIN:    'admin',
+  OWNER: 'owner',
+  ADMIN: 'admin',
   OPERATOR: 'operator',
-  VIEWER:   'viewer',
+  VIEWER: 'viewer',
 };
 
 const ROLE_HIERARCHY = [ROLE.OWNER, ROLE.ADMIN, ROLE.OPERATOR, ROLE.VIEWER];
@@ -35,28 +35,28 @@ const ROLE_HIERARCHY = [ROLE.OWNER, ROLE.ADMIN, ROLE.OPERATOR, ROLE.VIEWER];
 // ── Token scopes ──
 
 const SCOPE = {
-  READ:       'read',
-  WRITE:      'write',
-  EXECUTE:    'execute',
-  ADMIN:      'admin',
-  PAIR:       'pair',
+  READ: 'read',
+  WRITE: 'write',
+  EXECUTE: 'execute',
+  ADMIN: 'admin',
+  PAIR: 'pair',
 };
 
 const ROLE_SCOPES = {
-  [ROLE.OWNER]:    [SCOPE.READ, SCOPE.WRITE, SCOPE.EXECUTE, SCOPE.ADMIN, SCOPE.PAIR],
-  [ROLE.ADMIN]:    [SCOPE.READ, SCOPE.WRITE, SCOPE.EXECUTE, SCOPE.ADMIN],
+  [ROLE.OWNER]: [SCOPE.READ, SCOPE.WRITE, SCOPE.EXECUTE, SCOPE.ADMIN, SCOPE.PAIR],
+  [ROLE.ADMIN]: [SCOPE.READ, SCOPE.WRITE, SCOPE.EXECUTE, SCOPE.ADMIN],
   [ROLE.OPERATOR]: [SCOPE.READ, SCOPE.WRITE, SCOPE.EXECUTE],
-  [ROLE.VIEWER]:   [SCOPE.READ],
+  [ROLE.VIEWER]: [SCOPE.READ],
 };
 
 // ── Pairing states ──
 
 const PAIRING_STATE = {
-  PENDING:   'pending',
-  ACTIVE:    'active',
-  REJECTED:  'rejected',
-  REVOKED:   'revoked',
-  EXPIRED:   'expired',
+  PENDING: 'pending',
+  ACTIVE: 'active',
+  REJECTED: 'rejected',
+  REVOKED: 'revoked',
+  EXPIRED: 'expired',
 };
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -75,7 +75,7 @@ class AsyncMutex {
       this._locked = true;
       return;
     }
-    await new Promise(resolve => this._queue.push(resolve));
+    await new Promise((resolve) => this._queue.push(resolve));
   }
 
   release() {
@@ -156,7 +156,9 @@ class DevicePairingManager {
    */
   async getLocalIdentity(deviceName) {
     return this._mutex.withLock(async () => {
-      if (this._localIdentity) return this._publicIdentity(this._localIdentity);
+      if (this._localIdentity) {
+        return this._publicIdentity(this._localIdentity);
+      }
 
       // Generate Ed25519 keypair
       const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
@@ -233,7 +235,9 @@ class DevicePairingManager {
   async approvePairing(deviceId) {
     return this._mutex.withLock(async () => {
       const device = this._devices.get(deviceId);
-      if (!device) throw new Error('Device not found');
+      if (!device) {
+        throw new Error('Device not found');
+      }
       if (device.state !== PAIRING_STATE.PENDING) {
         throw new Error(`Cannot approve device in state: ${device.state}`);
       }
@@ -259,7 +263,9 @@ class DevicePairingManager {
   async rejectPairing(deviceId) {
     return this._mutex.withLock(async () => {
       const device = this._devices.get(deviceId);
-      if (!device) throw new Error('Device not found');
+      if (!device) {
+        throw new Error('Device not found');
+      }
       device.state = PAIRING_STATE.REJECTED;
     });
   }
@@ -270,7 +276,9 @@ class DevicePairingManager {
   async revokePairing(deviceId) {
     return this._mutex.withLock(async () => {
       const device = this._devices.get(deviceId);
-      if (!device) throw new Error('Device not found');
+      if (!device) {
+        throw new Error('Device not found');
+      }
 
       if (device.token) {
         this._tokenIndex.delete(device.token);
@@ -289,10 +297,14 @@ class DevicePairingManager {
    * @returns {{ valid: boolean, device?: PairedDevice, scopes?: string[] }}
    */
   validateToken(token) {
-    if (!token) return { valid: false };
+    if (!token) {
+      return { valid: false };
+    }
 
     const deviceId = this._tokenIndex.get(token);
-    if (!deviceId) return { valid: false };
+    if (!deviceId) {
+      return { valid: false };
+    }
 
     const device = this._devices.get(deviceId);
     if (!device) {
@@ -370,8 +382,12 @@ class DevicePairingManager {
   listDevices(filter) {
     const result = [];
     for (const device of this._devices.values()) {
-      if (filter?.state && device.state !== filter.state) continue;
-      if (filter?.role && device.role !== filter.role) continue;
+      if (filter?.state && device.state !== filter.state) {
+        continue;
+      }
+      if (filter?.role && device.role !== filter.role) {
+        continue;
+      }
       result.push({ ...device, token: undefined }); // don't leak tokens
     }
     return result;
@@ -444,7 +460,9 @@ class DevicePairingManager {
   }
 
   _loadIdentity() {
-    if (!this._identityPath) return;
+    if (!this._identityPath) {
+      return;
+    }
     try {
       const raw = fs.readFileSync(this._identityPath, 'utf8');
       const data = JSON.parse(raw);
@@ -461,17 +479,27 @@ class DevicePairingManager {
   }
 
   _saveIdentity() {
-    if (!this._identityPath || !this._localIdentity) return;
+    if (!this._identityPath || !this._localIdentity) {
+      return;
+    }
     try {
       const dir = path.dirname(this._identityPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(this._identityPath, JSON.stringify({
-        ...this._localIdentity,
-        publicKey: Buffer.from(this._localIdentity.publicKey).toString('hex'),
-        privateKey: Buffer.from(this._localIdentity.privateKey).toString('hex'),
-      }, null, 2), 'utf8');
+      fs.writeFileSync(
+        this._identityPath,
+        JSON.stringify(
+          {
+            ...this._localIdentity,
+            publicKey: Buffer.from(this._localIdentity.publicKey).toString('hex'),
+            privateKey: Buffer.from(this._localIdentity.privateKey).toString('hex'),
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
     } catch {
       // Save failure is non-fatal
     }

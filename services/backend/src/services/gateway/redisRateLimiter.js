@@ -50,8 +50,14 @@ let _scriptSha = null;
  */
 function createRedisRateLimiter(opts = {}) {
   const getClient = opts.getRedisClient || (() => null);
-  const maxRequests = parseInt(process.env.GATEWAY_RATELIMIT_MAX_REQUESTS || String(opts.maxRequests || 10), 10);
-  const windowMs = parseInt(process.env.GATEWAY_RATELIMIT_WINDOW_MS || String(opts.windowMs || 60000), 10);
+  const maxRequests = parseInt(
+    process.env.GATEWAY_RATELIMIT_MAX_REQUESTS || String(opts.maxRequests || 10),
+    10
+  );
+  const windowMs = parseInt(
+    process.env.GATEWAY_RATELIMIT_WINDOW_MS || String(opts.windowMs || 60000),
+    10
+  );
   const prefix = (opts.keyPrefix || REDIS_KEY_PREFIX) + 'rl:';
 
   // In-memory fallback (same as existing createKeyedRateLimiter)
@@ -59,7 +65,9 @@ function createRedisRateLimiter(opts = {}) {
 
   function memoryConsume(key) {
     const now = Date.now();
-    if (!memoryStore[key]) memoryStore[key] = [];
+    if (!memoryStore[key]) {
+      memoryStore[key] = [];
+    }
     const timestamps = memoryStore[key];
 
     // Remove expired entries
@@ -78,7 +86,9 @@ function createRedisRateLimiter(opts = {}) {
 
   async function consume(adapterKey) {
     const client = getClient();
-    if (!client || !client.isReady) return memoryConsume(adapterKey);
+    if (!client || !client.isReady) {
+      return memoryConsume(adapterKey);
+    }
 
     try {
       const redisKey = `${prefix}${adapterKey}`;
@@ -126,7 +136,9 @@ function createRedisRateLimiter(opts = {}) {
     if (client && client.isReady) {
       try {
         await client.del(`${prefix}${adapterKey}`);
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
   }
 

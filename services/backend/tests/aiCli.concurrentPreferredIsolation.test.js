@@ -57,6 +57,7 @@ describe('ai cli concurrent preferred adapter isolation', () => {
     const callLog = [];
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => [
         { type: 'localLLM', enabled: true, available: true, name: '本地模型' },

@@ -27,23 +27,34 @@
  *     「弱化未开始项」设计,非明显更差,本刀不动(改之即删既有刻意选择,违诚实红线)。
  */
 
+// 图标→状态判定的单一真源(taskPanelLines.taskLineStatus),本叶子不再自写图标字面量。
+const { taskLineStatus } = require('./taskPanelLines');
+
 function taskStrikethroughEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_STRIKETHROUGH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_STRIKETHROUGH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
-// 行首非空白首字符 → Ink 文本样式。与历史 _iconStyle 同源;唯一新增:门控开时
+// 行状态(taskLineStatus SSOT) → Ink 文本样式。与历史 _iconStyle 同源;唯一新增:门控开时
 // completed(✓)行附加 strikethrough:true。门控关 → 与历史返回对象逐字节一致。
 function taskLineStyle(line, env = process.env) {
-  const ch = String(line).trimStart()[0];
-  if (ch === '→') return { color: 'cyan', bold: true };
-  if (ch === '✓') {
+  const status = taskLineStatus(line);
+  if (status === 'in_progress') {
+    return { color: 'cyan', bold: true };
+  }
+  if (status === 'completed') {
     return taskStrikethroughEnabled(env)
       ? { color: 'green', dimColor: true, strikethrough: true }
       : { color: 'green', dimColor: true };
   }
-  if (ch === '✗') return { color: 'red' };
-  if (ch === '○') return { dimColor: true };
+  if (status === 'error') {
+    return { color: 'red' };
+  }
+  if (status === 'pending') {
+    return { dimColor: true };
+  }
   return {};
 }
 

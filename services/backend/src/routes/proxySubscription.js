@@ -21,11 +21,11 @@
 const express = require('express');
 const router = express.Router();
 
-const ssrfGuard = require('../services/ssrfGuard');
 const proxyConfigService = require('../services/proxyConfigService');
 const { parseProxyNodes } = require('../services/proxyNodeParse');
-const { parseSubscriptionUserinfo } = require('../services/subscriptionUserinfo');
 const store = require('../services/proxySubscriptionStore');
+const ssrfGuard = require('../services/ssrfGuard');
+const { parseSubscriptionUserinfo } = require('../services/subscriptionUserinfo');
 
 const FETCH_TIMEOUT_MS = 15000;
 
@@ -43,7 +43,9 @@ function _parseText(text) {
     const b64 = _tryDecodeBase64(text);
     if (b64) {
       const retry = parseProxyNodes(b64);
-      if (retry.nodes.length > 0) result = retry;
+      if (retry.nodes.length > 0) {
+        result = retry;
+      }
     }
   }
   return result;
@@ -62,19 +64,31 @@ async function _fetchAndParse(url) {
   const result = _parseText(text);
 
   // 4) 流量/到期元信息(subscription-userinfo 头;Node 已把头名小写)。纯叶子 fail-soft → null。
-  const userinfo = parseSubscriptionUserinfo(headers && headers['subscription-userinfo'], process.env, { nowMs: Date.now() });
+  const userinfo = parseSubscriptionUserinfo(
+    headers && headers['subscription-userinfo'],
+    process.env,
+    { nowMs: Date.now() }
+  );
 
   return { result, userinfo };
 }
 
 function _tryDecodeBase64(raw) {
-  const text = String(raw || '').trim().replace(/\s+/g, '');
-  if (!text || text.length < 24) return '';
-  if (!/^[A-Za-z0-9+/_=-]+$/.test(text)) return '';
+  const text = String(raw || '')
+    .trim()
+    .replace(/\s+/g, '');
+  if (!text || text.length < 24) {
+    return '';
+  }
+  if (!/^[A-Za-z0-9+/_=-]+$/.test(text)) {
+    return '';
+  }
   try {
     let std = text.replace(/-/g, '+').replace(/_/g, '/');
     const mod = std.length % 4;
-    if (mod !== 0) std += '='.repeat(4 - mod);
+    if (mod !== 0) {
+      std += '='.repeat(4 - mod);
+    }
     const out = Buffer.from(std, 'base64').toString('utf8');
     return out && out.trim() ? out : '';
   } catch {
@@ -88,7 +102,9 @@ router.get('/', (req, res) => {
     const groups = store.listGroups(_ownerId(req));
     return res.json({ success: true, data: { total: groups.length, subscriptions: groups } });
   } catch (error) {
-    return res.status(500).json({ success: false, message: `查询订阅组失败: ${error.message}`, data: null });
+    return res
+      .status(500)
+      .json({ success: false, message: `查询订阅组失败: ${error.message}`, data: null });
   }
 });
 
@@ -101,7 +117,9 @@ router.get('/:id', (req, res) => {
     }
     return res.json({ success: true, data: group });
   } catch (error) {
-    return res.status(500).json({ success: false, message: `查询订阅组失败: ${error.message}`, data: null });
+    return res
+      .status(500)
+      .json({ success: false, message: `查询订阅组失败: ${error.message}`, data: null });
   }
 });
 
@@ -111,7 +129,9 @@ router.post('/', async (req, res) => {
   const content = _trim(req.body?.content);
   const name = _trim(req.body?.name);
   if (!url && !content) {
-    return res.status(400).json({ success: false, message: '订阅地址或订阅内容不能为空', data: null });
+    return res
+      .status(400)
+      .json({ success: false, message: '订阅地址或订阅内容不能为空', data: null });
   }
   try {
     let result;
@@ -145,9 +165,13 @@ router.post('/', async (req, res) => {
     return res.json({ success: true, data: group });
   } catch (error) {
     if (error && error.name === 'SsrfBlockedError') {
-      return res.status(400).json({ success: false, message: `订阅地址被安全策略拒绝: ${error.message}`, data: null });
+      return res
+        .status(400)
+        .json({ success: false, message: `订阅地址被安全策略拒绝: ${error.message}`, data: null });
     }
-    return res.status(502).json({ success: false, message: `添加订阅组失败: ${error.message}`, data: null });
+    return res
+      .status(502)
+      .json({ success: false, message: `添加订阅组失败: ${error.message}`, data: null });
   }
 });
 
@@ -162,7 +186,9 @@ router.post('/:id/refresh', async (req, res) => {
     const { result, userinfo } = await _fetchAndParse(group.url);
     if (result.nodes.length === 0) {
       const updated = store.updateGroup(ownerId, group.id, { lastError: '刷新时未解析出节点' });
-      return res.status(422).json({ success: false, message: '刷新时未解析出任何节点', data: updated });
+      return res
+        .status(422)
+        .json({ success: false, message: '刷新时未解析出任何节点', data: updated });
     }
     const updated = store.updateGroup(ownerId, group.id, {
       nodes: result.nodes,
@@ -175,9 +201,15 @@ router.post('/:id/refresh', async (req, res) => {
   } catch (error) {
     const updated = store.updateGroup(ownerId, group.id, { lastError: error.message });
     if (error && error.name === 'SsrfBlockedError') {
-      return res.status(400).json({ success: false, message: `订阅地址被安全策略拒绝: ${error.message}`, data: updated });
+      return res.status(400).json({
+        success: false,
+        message: `订阅地址被安全策略拒绝: ${error.message}`,
+        data: updated,
+      });
     }
-    return res.status(502).json({ success: false, message: `刷新订阅组失败: ${error.message}`, data: updated });
+    return res
+      .status(502)
+      .json({ success: false, message: `刷新订阅组失败: ${error.message}`, data: updated });
   }
 });
 
@@ -190,7 +222,9 @@ router.delete('/:id', (req, res) => {
     }
     return res.json({ success: true, data: { removed: true } });
   } catch (error) {
-    return res.status(500).json({ success: false, message: `删除订阅组失败: ${error.message}`, data: null });
+    return res
+      .status(500)
+      .json({ success: false, message: `删除订阅组失败: ${error.message}`, data: null });
   }
 });
 

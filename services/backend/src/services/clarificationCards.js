@@ -35,7 +35,9 @@ function _enabled(options = {}) {
       String(options.clarificationCards).trim().toLowerCase()
     );
   }
-  const raw = String(process.env.KHY_CLARIFICATION_CARDS || 'true').trim().toLowerCase();
+  const raw = String(process.env.KHY_CLARIFICATION_CARDS || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -62,11 +64,15 @@ function assessClarificationNeed(input = {}) {
   const text = String(input.text || '');
   const hasMedia = !!input.hasMedia;
   const modes = (Array.isArray(input.modes) ? input.modes : [])
-    .map(m => String(m || '').trim().toLowerCase())
+    .map((m) =>
+      String(m || '')
+        .trim()
+        .toLowerCase()
+    )
     .filter(Boolean);
 
   const clarity = assessPromptClarity(text, { hasMedia });
-  const modeActive = modes.some(m => CLEAR_MODES.includes(m));
+  const modeActive = modes.some((m) => CLEAR_MODES.includes(m));
 
   const need = enabled && !clarity.clear && !modeActive;
   return {
@@ -74,7 +80,13 @@ function assessClarificationNeed(input = {}) {
     clarity,
     modeActive,
     need,
-    reason: need ? clarity.reason : (modeActive ? 'mode-active' : (clarity.clear ? 'prompt-clear' : 'disabled')),
+    reason: need
+      ? clarity.reason
+      : modeActive
+        ? 'mode-active'
+        : clarity.clear
+          ? 'prompt-clear'
+          : 'disabled',
   };
 }
 
@@ -86,15 +98,27 @@ function assessClarificationNeed(input = {}) {
 function buildClarificationDirective() {
   const lines = [];
   lines.push('## 体察用户惰性 —— 提示词不清晰,用「选项卡」澄清真实需求');
-  lines.push('用户这次的提示词不够清晰(可能只给了引用对象,或用了「看看 / 搞一下 / 你看着办」这类模糊说法)。请**体察其惰性**:既不要假装已经完全理解、贸然臆测,也不要简单拒绝,而是先用结构化「选项卡」帮用户把需求**选**出来。');
+  lines.push(
+    '用户这次的提示词不够清晰(可能只给了引用对象,或用了「看看 / 搞一下 / 你看着办」这类模糊说法)。请**体察其惰性**:既不要假装已经完全理解、贸然臆测,也不要简单拒绝,而是先用结构化「选项卡」帮用户把需求**选**出来。'
+  );
   lines.push('');
   lines.push('做法(调用 AskUserQuestion 工具):');
-  lines.push('1. 给出 1~4 张选项卡(questions 数组),用户可**左右切换**逐张确认;每张聚焦一个待澄清维度(如:目标产物 / 范围 / 风格或格式 / 优先级)。');
+  lines.push(
+    '1. 给出 1~4 张选项卡(questions 数组),用户可**左右切换**逐张确认;每张聚焦一个待澄清维度(如:目标产物 / 范围 / 风格或格式 / 优先级)。'
+  );
   lines.push('2. 每张卡尽量设 `multiSelect: true`,让用户**上下多选**(真实诉求常常不止一个)。');
-  lines.push('3. 每张卡给 2~4 个**具体、互斥、贴合上下文**的选项即可;系统会**自动**为每张卡补上「可讨论」(这一点想再聊聊 / 由你来定)与「自由输入」两项,你**无需**自己再加这两项。');
-  lines.push('4. 选项要**一眼可分**:每个 label 用 1~5 字的短标签,description 说清「选它会怎样」的具体后果,不要含糊或彼此重叠。');
-  lines.push('5. 若你确有倾向,就把**推荐项放在第一个**并在 label 末尾标「(推荐)」,在其 description 里说明**为什么**它更稳妥/更快;若确无倾向,就不要硬凑推荐。');
-  lines.push('6. 拿到用户选择后,把多张卡的选择**综合成一个方向**(而非逐条孤立处理),据此调整计划再推进;在澄清之前**不要**盲目假设,也**不要**只追问而完全不给方向。');
+  lines.push(
+    '3. 每张卡给 2~4 个**具体、互斥、贴合上下文**的选项即可;系统会**自动**为每张卡补上「可讨论」(这一点想再聊聊 / 由你来定)与「自由输入」两项,你**无需**自己再加这两项。'
+  );
+  lines.push(
+    '4. 选项要**一眼可分**:每个 label 用 1~5 字的短标签,description 说清「选它会怎样」的具体后果,不要含糊或彼此重叠。'
+  );
+  lines.push(
+    '5. 若你确有倾向,就把**推荐项放在第一个**并在 label 末尾标「(推荐)」,在其 description 里说明**为什么**它更稳妥/更快;若确无倾向,就不要硬凑推荐。'
+  );
+  lines.push(
+    '6. 拿到用户选择后,把多张卡的选择**综合成一个方向**(而非逐条孤立处理),据此调整计划再推进;在澄清之前**不要**盲目假设,也**不要**只追问而完全不给方向。'
+  );
   return lines.join('\n');
 }
 

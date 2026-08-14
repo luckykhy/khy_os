@@ -48,7 +48,9 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
     if (require('./constraintLattice').isRedLineSource(source)) {
       return { allowed: false, params: safeParams };
     }
-  } catch { /* lattice optional — fall through to the legacy path */ }
+  } catch {
+    /* lattice optional — fall through to the legacy path */
+  }
 
   // No interactive channel → cannot obtain informed consent → keep the block.
   if (typeof onControlRequest !== 'function') {
@@ -82,10 +84,15 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
       decision = 'allow';
     } else if (ctrlResp && typeof ctrlResp === 'object') {
       let node = ctrlResp;
-      if (node.type === 'control_response' && node.response) node = node.response;
-      const inner = (node.response && typeof node.response === 'object') ? node.response : node;
-      decision = (inner.behavior || node.behavior) === 'allow'
-        || (inner.behavior || node.behavior) === 'allow-always' ? 'allow' : 'deny';
+      if (node.type === 'control_response' && node.response) {
+        node = node.response;
+      }
+      const inner = node.response && typeof node.response === 'object' ? node.response : node;
+      decision =
+        (inner.behavior || node.behavior) === 'allow' ||
+        (inner.behavior || node.behavior) === 'allow-always'
+          ? 'allow'
+          : 'deny';
     }
   }
 
@@ -100,7 +107,9 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
     try {
       const descriptor = _resolvePermissionKey(toolName);
       require('./permissionStore').approve(descriptor, 'forever');
-    } catch { /* permissionStore optional */ }
+    } catch {
+      /* permissionStore optional */
+    }
 
     // "授权后可以访问" — when the user authorizes accessing a directory OUTSIDE the
     // project root (an EditBoundaryGuard / ReadBoundaryGuard soft block), choosing
@@ -112,7 +121,9 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
     // best-effort, opt-out via KHY_REMEMBER_APPROVED_DIR=0.
     try {
       _rememberApprovedDirectory(source, safeParams);
-    } catch { /* directory memory is best-effort — never block the approval */ }
+    } catch {
+      /* directory memory is best-effort — never block the approval */
+    }
   }
 
   // Stamp the unforgeable EXEC_APPROVED Symbol so requestPermission (Stage 7)
@@ -123,7 +134,9 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
     if (EXEC_APPROVED) {
       stamped = { ...safeParams, [EXEC_APPROVED]: true };
     }
-  } catch { /* execApproval optional — proceed without the stamp */ }
+  } catch {
+    /* execApproval optional — proceed without the stamp */
+  }
 
   return { allowed: true, params: stamped };
 }
@@ -137,8 +150,12 @@ function _resolvePermissionKey(toolName) {
   try {
     const registry = require('../tools');
     const regTool = registry.get(toolName);
-    if (regTool && regTool.name) return regTool.name;
-  } catch { /* registry optional */ }
+    if (regTool && regTool.name) {
+      return regTool.name;
+    }
+  } catch {
+    /* registry optional */
+  }
   return toolName;
 }
 
@@ -162,18 +179,26 @@ const _BOUNDARY_GUARD_SOURCES = new Set(['editboundaryguard', 'readboundaryguard
  * @private
  */
 function _rememberApprovedDirectory(source, safeParams) {
-  if (process.env.KHY_REMEMBER_APPROVED_DIR === '0') return;
+  if (process.env.KHY_REMEMBER_APPROVED_DIR === '0') {
+    return;
+  }
   const src = String(source || '').toLowerCase();
-  if (!_BOUNDARY_GUARD_SOURCES.has(src)) return;
+  if (!_BOUNDARY_GUARD_SOURCES.has(src)) {
+    return;
+  }
 
   const rawPath = safeParams.file_path || safeParams.filePath || safeParams.path;
-  if (!rawPath || typeof rawPath !== 'string') return;
+  if (!rawPath || typeof rawPath !== 'string') {
+    return;
+  }
 
   const path = require('path');
   const root = process.env.KHYQUANT_CWD || process.cwd();
   const abs = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
   const dir = path.dirname(abs);
-  if (!dir || dir === '.') return;
+  if (!dir || dir === '.') {
+    return;
+  }
 
   require('./additionalDirectories').addDirectory(dir, { source: 'guard-approval' });
 }

@@ -20,6 +20,10 @@
  * driver exercise the same underlying loop.
  */
 
+// Per-test timeout: each case re-initialises hookSystem via resetModules +
+// dynamic require, costing 5–11s. Default 5000ms is too tight for this suite.
+jest.setTimeout(15000);
+
 // ── Shared tool executor (both engines call toolCalling.executeTool) ──────────
 // Declared with a `mock`-prefixed name so jest.mock's hoisted factory may close
 // over it (jest forbids non-`mock` out-of-scope refs in mock factories).

@@ -8,8 +8,15 @@
  *   Phase 2: Keep 64K but inject a continuation prompt asking the model to resume.
  */
 
+// Last-resort static fallbacks, used ONLY when the caller supplies no dynamic
+// model metadata (context window / output limit unknown). Named constants, not
+// policy: when dynamic bounds are available they always take precedence.
+// CAPPED_DEFAULT_MAX_TOKENS — the "small cap" threshold below which Phase 1
+// escalation is worthwhile; ESCALATED_MAX_TOKENS — the static escalation target.
 const CAPPED_DEFAULT_MAX_TOKENS = 8_000;
 const ESCALATED_MAX_TOKENS = 64_000;
+// Static attempts fallback; the effective budget is flag-driven via
+// KHY_LENGTH_RECOVERY_MAX_ATTEMPTS (flagRegistry, default 3).
 const MAX_OUTPUT_RECOVERY_ATTEMPTS = 3;
 
 // Diminishing-returns guard (s11). A continuation that adds almost no new text
@@ -44,7 +51,46 @@ const TRUNCATION_STOP_REASONS = new Set([
  * @returns {boolean}
  */
 function isTruncationStop(reason) {
-  return TRUNCATION_STOP_REASONS.has(String(reason || '').trim().toLowerCase());
+  return TRUNCATION_STOP_REASONS.has(
+    String(reason || '')
+      .trim()
+      .toLowerCase()
+  );
+}
+
+/**
+ * Resolve the recovery attempt budget from the flag registry
+ * (KHY_LENGTH_RECOVERY_MAX_ATTEMPTS, numeric, default 3). Fail-soft: registry
+ * unavailable → the static MAX_OUTPUT_RECOVERY_ATTEMPTS fallback.
+ * @returns {number}
+ */
+function resolveMaxRecoveryAttempts() {
+  try {
+    const n = require('../flagRegistry').resolveNumeric(
+      'KHY_LENGTH_RECOVERY_MAX_ATTEMPTS',
+      process.env
+    );
+    return Number.isFinite(n) && n > 0 ? n : MAX_OUTPUT_RECOVERY_ATTEMPTS;
+  } catch {
+    return MAX_OUTPUT_RECOVERY_ATTEMPTS;
+  }
+}
+
+/**
+ * Resolve the context safety buffer (shared with the gateway overflow logic,
+ * KHY_CONTEXT_SAFETY_BUFFER_TOKENS, default 512). Fail-soft → 512.
+ * @returns {number}
+ */
+function _resolveSafetyBuffer() {
+  try {
+    const n = require('../flagRegistry').resolveNumeric(
+      'KHY_CONTEXT_SAFETY_BUFFER_TOKENS',
+      process.env
+    );
+    return Number.isFinite(n) && n >= 0 ? n : 512;
+  } catch {
+    return 512;
+  }
 }
 
 /**
@@ -53,28 +99,88 @@ function isTruncationStop(reason) {
  * @param {string} stopReason - Model's stop reason (e.g., 'max_tokens', 'length')
  * @param {number} recoveryCount - How many recovery attempts have been made so far
  * @param {number} currentMax - Current max output tokens setting
+ * @param {object} [dynamic] - Optional dynamic model bounds (all fields optional):
+ *   {number} [dynamic.contextWindow]   Model context window (0/absent = unknown)
+ *   {number} [dynamic.maxOutputTokens] Model output token limit (0/absent = unknown)
+ *   {number} [dynamic.promptEstimate]  Estimated prompt tokens (0/absent = unknown)
  * @returns {object|null} Recovery descriptor, or null if no recovery needed
  */
-function shouldRecover(stopReason, recoveryCount, currentMax) {
-  if (!isTruncationStop(stopReason)) return null;
-  if (recoveryCount >= MAX_OUTPUT_RECOVERY_ATTEMPTS) return null;
+function shouldRecover(stopReason, recoveryCount, currentMax, dynamic = {}) {
+  if (!isTruncationStop(stopReason)) {
+    return null;
+  }
+  if (recoveryCount >= resolveMaxRecoveryAttempts()) {
+    return null;
+  }
 
   const effectiveMax = currentMax || CAPPED_DEFAULT_MAX_TOKENS;
-  const shouldEscalate = effectiveMax <= CAPPED_DEFAULT_MAX_TOKENS;
+
+  // Dynamic escalation ceiling: min(maxOutputTokens || static ceiling,
+  // contextWindow - promptEstimate - buffer). Unknown fields fall back to the
+  // static ESCALATED_MAX_TOKENS constant (legacy behavior, byte-identical when
+  // no dynamic metadata is supplied).
+  const dynOut = Number(dynamic && dynamic.maxOutputTokens) || 0;
+  const dynWindow = Number(dynamic && dynamic.contextWindow) || 0;
+  const dynPrompt = Number(dynamic && dynamic.promptEstimate) || 0;
+  let ceiling = dynOut > 0 ? dynOut : ESCALATED_MAX_TOKENS;
+  if (dynWindow > 0) {
+    const available = dynWindow - dynPrompt - _resolveSafetyBuffer();
+    if (available > 0) {
+      ceiling = Math.min(ceiling, available);
+    }
+  }
+
+  // Escalate whenever the ceiling is genuinely larger than the current cap —
+  // NOT only when the cap is at/below CAPPED_DEFAULT_MAX_TOKENS (8000). The old
+  // `effectiveMax <= CAPPED_DEFAULT_MAX_TOKENS` guard made a cap of 8192 (the
+  // adapter fallback that preflight abstention leaves in place) non-escalating:
+  // a truncation at 8192 kept resuming at 8192 and truncated again. As long as
+  // the dynamic ceiling raises the budget, a continuation round is worth a shot
+  // with more headroom (opencode philosophy: give the model its full legal
+  // output budget so truncation simply does not happen).
+  const shouldEscalate = ceiling > effectiveMax;
 
   return {
     shouldEscalate,
-    nextMax: shouldEscalate ? ESCALATED_MAX_TOKENS : effectiveMax,
+    nextMax: shouldEscalate ? ceiling : effectiveMax,
     recoveryCount: recoveryCount + 1,
   };
 }
 
+// How much of the already-produced text tail we echo back as the resume anchor.
+// We do NOT feed the whole partial back (that invites the model to re-emit it and
+// bloats the prompt) — only the tail the model needs to pick up mid-thought.
+// Aligned with inertialContinuation.ANCHOR_TAIL_CHARS so both seams behave alike.
+const CONTINUATION_ANCHOR_TAIL_CHARS = 320;
+
 /**
  * Build the continuation prompt for truncated output.
+ *
+ * When the accumulated partial text is provided, only its TAIL is echoed back as
+ * a resume anchor and the model is explicitly told to continue from the break
+ * point without repeating it — so the continuation picks up mid-thought instead
+ * of restarting the answer. Without partial text (or for a too-short fragment)
+ * this returns the EXACT legacy from-scratch directive, so behavior is unchanged.
+ *
+ * @param {string} [partialText] - text already produced before truncation
  * @returns {string}
  */
-function buildContinuationPrompt() {
-  return '[System: Your previous response was truncated. Resume directly from where you left off without repeating any content.]';
+function buildContinuationPrompt(partialText) {
+  const partial = String(partialText == null ? '' : partialText).trim();
+  if (!partial || partial.length < MIN_CONTINUATION_CHARS) {
+    return '[System: Your previous response was truncated. Resume directly from where you left off without repeating any content.]';
+  }
+  const tail =
+    partial.length > CONTINUATION_ANCHOR_TAIL_CHARS
+      ? partial.slice(-CONTINUATION_ANCHOR_TAIL_CHARS)
+      : partial;
+  return (
+    '[System: 你上一段回答因输出长度上限被截断，尚未写完。' +
+    '下面方括号内是你**已经输出并已展示给用户**的结尾片段。' +
+    '请从它的断点处**无缝继续**往下写：不要重复这段内容、不要重新打招呼或重写开头、' +
+    '不要输出任何前言或进度说明，直接接着写完剩余部分。\n' +
+    `已输出片段结尾：【…${tail}】]`
+  );
 }
 
 /**
@@ -131,6 +237,7 @@ function isRepetitiveContinuation(text) {
 module.exports = {
   isTruncationStop,
   shouldRecover,
+  resolveMaxRecoveryAttempts,
   buildContinuationPrompt,
   buildTruncationNotice,
   isNegligibleContinuation,
@@ -140,4 +247,5 @@ module.exports = {
   MAX_OUTPUT_RECOVERY_ATTEMPTS,
   MIN_CONTINUATION_CHARS,
   MAX_NEGLIGIBLE_CONTINUATIONS,
+  CONTINUATION_ANCHOR_TAIL_CHARS,
 };

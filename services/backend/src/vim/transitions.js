@@ -3,10 +3,10 @@
  * through the CommandState phases, producing executable actions.
  */
 
-const { Mode, CommandState, Operator, createCommandContext } = require('./types');
 const { resolveMotion, firstNonBlank } = require('./motions');
-const { resolveTextObject } = require('./textObjects');
 const { executeOperator, executeStandalone } = require('./operators');
+const { resolveTextObject } = require('./textObjects');
+const { Mode, CommandState, Operator, createCommandContext } = require('./types');
 
 // ── Operator keys ──────────────────────────────────────────────────
 const OPERATOR_KEYS = new Set(['d', 'c', 'y']);
@@ -14,7 +14,23 @@ const MOTION_KEYS = new Set(['h', 'l', 'w', 'b', 'e', 'W', 'B', 'E', '0', '^', '
 const FIND_KEYS = new Set(['f', 'F', 't', 'T']);
 const REPEAT_FIND_KEYS = new Set([';', ',']);
 const TEXT_OBJ_MODS = new Set(['i', 'a']);
-const TEXT_OBJ_TYPES = new Set(['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', '<', '>', 'b', 'B']);
+const TEXT_OBJ_TYPES = new Set([
+  'w',
+  'W',
+  '"',
+  "'",
+  '`',
+  '(',
+  ')',
+  '[',
+  ']',
+  '{',
+  '}',
+  '<',
+  '>',
+  'b',
+  'B',
+]);
 
 // ── Count clamp (freeze guard) ─────────────────────────────────────
 // A typed numeric prefix (e.g. "999999999w") flows into O(count) motion
@@ -27,12 +43,19 @@ const MAX_VIM_COUNT = 10000;
 
 function _vimCountClampEnabled() {
   return !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_VIM_COUNT_CLAMP || '').trim().toLowerCase());
+    String(process.env.KHY_VIM_COUNT_CLAMP || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function _clampCount(n) {
-  if (!_vimCountClampEnabled()) return n;
-  if (typeof n !== 'number' || !Number.isFinite(n) || n <= MAX_VIM_COUNT) return n;
+  if (!_vimCountClampEnabled()) {
+    return n;
+  }
+  if (typeof n !== 'number' || !Number.isFinite(n) || n <= MAX_VIM_COUNT) {
+    return n;
+  }
   return MAX_VIM_COUNT;
 }
 
@@ -104,7 +127,11 @@ function transition(state, key, ctx) {
           cmd.phase = CommandState.idle;
           return {
             state,
-            result: { line, cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))), switchToInsert: false },
+            result: {
+              line,
+              cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))),
+              switchToInsert: false,
+            },
             modeSwitch: null,
             bell: false,
           };
@@ -121,13 +148,19 @@ function transition(state, key, ctx) {
 
       // Repeat find
       if (REPEAT_FIND_KEYS.has(key)) {
-        if (!persistent.lastFind) return { ...noResult, bell: true };
+        if (!persistent.lastFind) {
+          return { ...noResult, bell: true };
+        }
         const motion = resolveMotion(key, line, cursor, 1, null, null, persistent.lastFind);
         if (motion) {
           const newCursor = motion.start <= cursor ? motion.start : motion.end;
           return {
             state,
-            result: { line, cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))), switchToInsert: false },
+            result: {
+              line,
+              cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))),
+              switchToInsert: false,
+            },
             modeSwitch: null,
             bell: false,
           };
@@ -213,14 +246,27 @@ function transition(state, key, ctx) {
         if (persistent.lastChange) {
           // Re-execute last change — simplified: just replay the command
           const lc = persistent.lastChange;
-          if (lc.cmd === 'dd' || lc.cmd === 'cc' || lc.cmd === 'yy' || lc.cmd === '>>' || lc.cmd === '<<') {
+          if (
+            lc.cmd === 'dd' ||
+            lc.cmd === 'cc' ||
+            lc.cmd === 'yy' ||
+            lc.cmd === '>>' ||
+            lc.cmd === '<<'
+          ) {
             const result = executeStandalone(lc.cmd, line, cursor, lc.count || 1, persistent);
             if (result) {
               const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
               return { state, result, modeSwitch, bell: false };
             }
           } else if (typeof lc.cmd === 'string' && lc.cmd.length === 1) {
-            const result = executeStandalone(lc.cmd, line, cursor, lc.count || 1, persistent, lc.replaceChar);
+            const result = executeStandalone(
+              lc.cmd,
+              line,
+              cursor,
+              lc.count || 1,
+              persistent,
+              lc.replaceChar
+            );
             if (result) {
               const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
               return { state, result, modeSwitch, bell: false };
@@ -257,7 +303,13 @@ function transition(state, key, ctx) {
       // Double operator = line operation (dd, cc, yy)
       if (key === cmd.operator) {
         const doubleCmd = cmd.operator + cmd.operator;
-        const result = executeStandalone(doubleCmd, line, cursor, getEffectiveCount(cmd), persistent);
+        const result = executeStandalone(
+          doubleCmd,
+          line,
+          cursor,
+          getEffectiveCount(cmd),
+          persistent
+        );
         if (result) {
           persistent.lastChange = { cmd: doubleCmd, count: getEffectiveCount(cmd) };
           const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
@@ -329,11 +381,24 @@ function transition(state, key, ctx) {
     // ── OPERATOR FIND — operator + f/F/t/T pending char ──────────
     case CommandState.operatorFind: {
       const count = getEffectiveCount(cmd);
-      const motion = resolveMotion(cmd.findDirection, line, cursor, count, key, cmd.findDirection, null);
+      const motion = resolveMotion(
+        cmd.findDirection,
+        line,
+        cursor,
+        count,
+        key,
+        cmd.findDirection,
+        null
+      );
       persistent.lastFind = { direction: cmd.findDirection, char: key };
       if (motion) {
         const result = executeOperator(cmd.operator, motion, line, cursor, persistent);
-        persistent.lastChange = { cmd: cmd.operator, motion: cmd.findDirection, findChar: key, count };
+        persistent.lastChange = {
+          cmd: cmd.operator,
+          motion: cmd.findDirection,
+          findChar: key,
+          count,
+        };
         const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
         Object.assign(cmd, createCommandContext());
         return { state, result, modeSwitch, bell: false };
@@ -348,7 +413,13 @@ function transition(state, key, ctx) {
         const range = resolveTextObject(key, cmd.textObjMod, line, cursor);
         if (range) {
           const count = getEffectiveCount(cmd);
-          const result = executeOperator(cmd.operator, { ...range, inclusive: true }, line, cursor, persistent);
+          const result = executeOperator(
+            cmd.operator,
+            { ...range, inclusive: true },
+            line,
+            cursor,
+            persistent
+          );
           persistent.lastChange = { cmd: cmd.operator, textObj: cmd.textObjMod + key, count };
           const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
           Object.assign(cmd, createCommandContext());
@@ -362,14 +433,26 @@ function transition(state, key, ctx) {
     // ── FIND — standalone f/F/t/T pending char ───────────────────
     case CommandState.find: {
       const count = cmd.count || 1;
-      const motion = resolveMotion(cmd.findDirection, line, cursor, count, key, cmd.findDirection, null);
+      const motion = resolveMotion(
+        cmd.findDirection,
+        line,
+        cursor,
+        count,
+        key,
+        cmd.findDirection,
+        null
+      );
       persistent.lastFind = { direction: cmd.findDirection, char: key };
       Object.assign(cmd, createCommandContext());
       if (motion) {
         const newCursor = motion.start <= cursor ? motion.start : motion.end;
         return {
           state,
-          result: { line, cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))), switchToInsert: false },
+          result: {
+            line,
+            cursor: Math.max(0, Math.min(newCursor, Math.max(0, line.length - 1))),
+            switchToInsert: false,
+          },
           modeSwitch: null,
           bell: false,
         };
@@ -422,7 +505,13 @@ function transition(state, key, ctx) {
         // dge — delete backward word end
         const motion = resolveMotion('b', line, cursor, cmd.count || 1, null, null, null);
         if (motion) {
-          const result = executeOperator(cmd.operator, { start: motion.start, end: cursor, inclusive: false }, line, cursor, persistent);
+          const result = executeOperator(
+            cmd.operator,
+            { start: motion.start, end: cursor, inclusive: false },
+            line,
+            cursor,
+            persistent
+          );
           const modeSwitch = result.switchToInsert ? Mode.INSERT : null;
           Object.assign(cmd, createCommandContext());
           return { state, result, modeSwitch, bell: false };
@@ -447,7 +536,13 @@ function transition(state, key, ctx) {
     case CommandState.indent: {
       if (key === cmd.operator) {
         const doubleCmd = cmd.operator + cmd.operator;
-        const result = executeStandalone(doubleCmd, line, cursor, getEffectiveCount(cmd), persistent);
+        const result = executeStandalone(
+          doubleCmd,
+          line,
+          cursor,
+          getEffectiveCount(cmd),
+          persistent
+        );
         persistent.lastChange = { cmd: doubleCmd, count: getEffectiveCount(cmd) };
         Object.assign(cmd, createCommandContext());
         if (result) {
@@ -466,4 +561,10 @@ function transition(state, key, ctx) {
   }
 }
 
-module.exports = { transition, MAX_VIM_COUNT, _vimCountClampEnabled, _clampCount, getEffectiveCount };
+module.exports = {
+  transition,
+  MAX_VIM_COUNT,
+  _vimCountClampEnabled,
+  _clampCount,
+  getEffectiveCount,
+};

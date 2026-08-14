@@ -37,7 +37,9 @@ function decide(input = {}) {
   if (rounds >= maxRounds) {
     return { shouldGate: false, blocking: [], reason: 'rounds_exhausted' };
   }
-  const blocking = gaps.filter((g) => g.severity === SEV_HIGH || (blockOnMedium && g.severity === 'medium'));
+  const blocking = gaps.filter(
+    (g) => g.severity === SEV_HIGH || (blockOnMedium && g.severity === 'medium')
+  );
   if (blocking.length === 0) {
     return { shouldGate: false, blocking: [], reason: 'no_blocking_gaps' };
   }
@@ -58,14 +60,16 @@ function buildGateMessage(blocking, round, maxRounds, allGaps) {
     .slice(0, 6)
     .map((g) => `  - ${g.detail}`);
 
-  let msg = '[项目整体一致性门 — 单个文件看似没问题，但把它们装配成一个项目后存在以下断裂，'
-    + '直接交付会导致项目跑不起来。请用工具（写文件/改文件/补文件）逐一修复后再收尾：]\n'
-    + lines.join('\n');
+  let msg =
+    '[项目整体一致性门 — 单个文件看似没问题，但把它们装配成一个项目后存在以下断裂，' +
+    '直接交付会导致项目跑不起来。请用工具（写文件/改文件/补文件）逐一修复后再收尾：]\n' +
+    lines.join('\n');
   if (mediums.length) {
     msg += '\n\n[以下为疑似问题（置信度较低，请自行判断是否需要处理）：]\n' + mediums.join('\n');
   }
-  msg += `\n\n[一致性轮次 ${round}/${maxRounds}。修复断裂后再给最终结论；`
-    + '若判断某条是误报（如该模块由外部依赖提供），请简要说明理由再收尾。]';
+  msg +=
+    `\n\n[一致性轮次 ${round}/${maxRounds}。修复断裂后再给最终结论；` +
+    '若判断某条是误报（如该模块由外部依赖提供），请简要说明理由再收尾。]';
   return msg;
 }
 

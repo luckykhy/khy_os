@@ -43,10 +43,12 @@ async function handleTestKey(args = [], options = {}) {
       t.poolKey || '-',
       t.service || '-',
       t.testable ? '可测' : '跳过',
-      t.testable ? (t.endpoint || '(需 --endpoint)') : (t.skipReason || '-'),
+      t.testable ? t.endpoint || '(需 --endpoint)' : t.skipReason || '-',
     ]);
     printTable(['厂商', 'poolKey', '协议', '连通测试', '端点 / 说明'], rows);
-    printInfo('用法: khy test-key <厂商> [--key K] [--model M] [--endpoint E]  |  khy test-key --all');
+    printInfo(
+      '用法: khy test-key <厂商> [--key K] [--model M] [--endpoint E]  |  khy test-key --all'
+    );
     return;
   }
 
@@ -70,14 +72,25 @@ async function handleTestKey(args = [], options = {}) {
       return;
     }
     let key = String(options.key || (target.envKey && env[target.envKey]) || '').trim();
-    if (!key) key = await _promptKey(target);
-    if (!key) { printInfo('未提供 key,已取消。'); return; }
+    if (!key) {
+      key = await _promptKey(target);
+    }
+    if (!key) {
+      printInfo('未提供 key,已取消。');
+      return;
+    }
     const model = options.model || target.testModel;
     printInfo(`测试 ${target.name}(${target.service} 协议,模型 ${model})…`);
-    const res = await tester.testConnectivity({
-      poolKey: target.poolKey, key,
-      model: options.model, endpoint: options.endpoint, timeoutMs,
-    }, env);
+    const res = await tester.testConnectivity(
+      {
+        poolKey: target.poolKey,
+        key,
+        model: options.model,
+        endpoint: options.endpoint,
+        timeoutMs,
+      },
+      env
+    );
     _printResults([res]);
     return;
   }
@@ -94,25 +107,39 @@ async function handleTestKey(args = [], options = {}) {
   for (const t of targets) {
     // eslint-disable-next-line no-await-in-loop
     const key = await _promptKey(t);
-    if (!key) { printInfo(`跳过 ${t.name}。`); continue; }
+    if (!key) {
+      printInfo(`跳过 ${t.name}。`);
+      continue;
+    }
     // eslint-disable-next-line no-await-in-loop
     results.push(await tester.testConnectivity({ poolKey: t.poolKey, key, timeoutMs }, env));
   }
-  if (results.length) _printResults(results);
-  else printInfo('未输入任何 key。');
+  if (results.length) {
+    _printResults(results);
+  } else {
+    printInfo('未输入任何 key。');
+  }
 }
 
 /** 交互密文输入一把 key(非 TTY / 失败 → '')。 */
 async function _promptKey(target) {
-  if (!process.stdin || !process.stdin.isTTY) return '';
+  if (!process.stdin || !process.stdin.isTTY) {
+    return '';
+  }
   try {
     const { promptCompat } = require('../uiPrompt');
-    const ans = await promptCompat([{
-      type: 'password', name: 'key', mask: '*',
-      message: `输入 ${target.name} 的 API Key(直接回车跳过):`,
-    }]);
+    const ans = await promptCompat([
+      {
+        type: 'password',
+        name: 'key',
+        mask: '*',
+        message: `输入 ${target.name} 的 API Key(直接回车跳过):`,
+      },
+    ]);
     return String((ans && ans.key) || '').trim();
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** 把 --timeout(秒)转成毫秒;缺省 → undefined(交给 tester 默认 15s)。 */
@@ -125,7 +152,7 @@ function _timeoutMs(options) {
 /** 渲染结果表格 + 汇总。 */
 function _printResults(results) {
   const rows = results.map((r) => {
-    const glyph = r.verdict === 'ok' ? '✓' : (r.verdict === 'skipped' ? '·' : '✗');
+    const glyph = r.verdict === 'ok' ? '✓' : r.verdict === 'skipped' ? '·' : '✗';
     const detail = r.label || r.reason || r.error || '-';
     const lat = r.latencyMs != null ? `${r.latencyMs}ms` : '-';
     return [`${glyph} ${r.name || r.poolKey || '-'}`, r.status || '-', lat, detail];

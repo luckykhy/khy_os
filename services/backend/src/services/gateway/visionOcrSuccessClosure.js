@@ -49,9 +49,13 @@ function isVisionOcrSuccessClosureEnabled(env) {
  * @returns {string|null}
  */
 function buildOcrSuccessClosure({ count, env } = {}) {
-  if (!isVisionOcrSuccessClosureEnabled(env)) return null;
+  if (!isVisionOcrSuccessClosureEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
   const noun = n === 1 ? '图片' : `${n} 张图片`;
   return `${OCR_SUCCESS_CLOSURE_MARKER}，已改用本地 OCR 成功识别${noun}，正在据此作答。`;
 }

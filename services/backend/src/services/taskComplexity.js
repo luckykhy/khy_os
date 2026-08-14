@@ -8,7 +8,10 @@
  * Extracted from toolUseLoop.js (lines 5152-5365) as part of the
  * industrial-grade modularization (Phase 1D).
  *
- * Dependencies: none.
+ * Dependencies: none at load time. injectPlanningPrompt lazily requires
+ * services/smallModelPromptTemplates only for the T3 (weak model) branch;
+ * on any failure it falls back to the built-in instruction text, so the
+ * module stays leaf-safe (no hard dependency, never throws).
  */
 
 // ── Complexity scoring ───────────────────────────────────────────────
@@ -27,43 +30,79 @@
  * @returns {{ isComplex: boolean, score: number }}
  */
 function isComplexTask(message) {
-  if (!message) return { isComplex: false, score: 0 };
+  if (!message) {
+    return { isComplex: false, score: 0 };
+  }
 
   let score = 0;
 
   // Dimension 1: Length (graduated scoring)
-  if (message.length > 500) score += 3;
-  else if (message.length > 300) score += 2;
-  else if (message.length > 150) score += 1;
+  if (message.length > 500) {
+    score += 3;
+  } else if (message.length > 300) {
+    score += 2;
+  } else if (message.length > 150) {
+    score += 1;
+  }
 
   // Dimension 2: Structure indicators
-  const lines = message.split('\n').filter(l => l.trim());
-  if (lines.length >= 4) score += 2;
+  const lines = message.split('\n').filter((l) => l.trim());
+  if (lines.length >= 4) {
+    score += 2;
+  }
   // Numbered lists or bullet points
-  const listItems = lines.filter(l => /^\s*(\d+[.、)）]|[-*·•►▶])\s/.test(l));
-  if (listItems.length >= 2) score += 2;
+  const listItems = lines.filter((l) => /^\s*(\d+[.、)）]|[-*·•►▶])\s/.test(l));
+  if (listItems.length >= 2) {
+    score += 2;
+  }
   // Multiple sentences (Chinese or English)
   const sentenceCount = (message.match(/[。！？.!?]/g) || []).length;
-  if (sentenceCount >= 3) score += 1;
+  if (sentenceCount >= 3) {
+    score += 1;
+  }
 
   // Dimension 3: Scope — mentions of multiple targets
   const filePatterns = (message.match(/\.\w{1,5}\b/g) || []).length; // .js, .py, .vue etc.
-  if (filePatterns >= 2) score += 1;
+  if (filePatterns >= 2) {
+    score += 1;
+  }
   const pathPatterns = (message.match(/[/\\]\w+/g) || []).length;
-  if (pathPatterns >= 3) score += 1;
+  if (pathPatterns >= 3) {
+    score += 1;
+  }
   // Multiple action verbs
-  const actionVerbs = (message.match(/(修改|创建|删除|添加|修复|重构|实现|fix|add|create|update|remove|refactor|implement)/gi) || []).length;
-  if (actionVerbs >= 3) score += 2;
-  else if (actionVerbs >= 2) score += 1;
+  const actionVerbs = (
+    message.match(
+      /(修改|创建|删除|添加|修复|重构|实现|fix|add|create|update|remove|refactor|implement)/gi
+    ) || []
+  ).length;
+  if (actionVerbs >= 3) {
+    score += 2;
+  } else if (actionVerbs >= 2) {
+    score += 1;
+  }
 
   // Dimension 4: Sequential/parallel connectives (lighter weight than before)
-  const connectives = (message.match(/(然后|接着|之后|首先|最后|同时|分别|再|还需要|还要|then|first|next|finally|after that|also)/gi) || []).length;
-  if (connectives >= 2) score += 2;
-  else if (connectives >= 1) score += 1;
+  const connectives = (
+    message.match(
+      /(然后|接着|之后|首先|最后|同时|分别|再|还需要|还要|then|first|next|finally|after that|also)/gi
+    ) || []
+  ).length;
+  if (connectives >= 2) {
+    score += 2;
+  } else if (connectives >= 1) {
+    score += 1;
+  }
 
   // Dimension 5: English compound connectives linking independent clauses
-  const compoundConnectives = (message.match(/\b(and also|as well as|in addition|additionally|plus|moreover|furthermore)\b/gi) || []).length;
-  if (compoundConnectives >= 1) score += 1;
+  const compoundConnectives = (
+    message.match(
+      /\b(and also|as well as|in addition|additionally|plus|moreover|furthermore)\b/gi
+    ) || []
+  ).length;
+  if (compoundConnectives >= 1) {
+    score += 1;
+  }
 
   // Dimension 6: Multi-domain references (distinct system domains)
   const domainKeywords = {
@@ -74,9 +113,12 @@ function isComplexTask(message) {
     ui: /\b(ui|frontend|component|render|css|style|layout|button|form|dialog)\b/i,
     testing: /\b(test|spec|assert|mock|fixture|coverage|e2e|integration)\b/i,
   };
-  const domainCount = Object.values(domainKeywords).filter(re => re.test(message)).length;
-  if (domainCount >= 3) score += 2;
-  else if (domainCount >= 2) score += 1;
+  const domainCount = Object.values(domainKeywords).filter((re) => re.test(message)).length;
+  if (domainCount >= 3) {
+    score += 2;
+  } else if (domainCount >= 2) {
+    score += 1;
+  }
 
   // Threshold: score >= 4 is considered complex
   return { isComplex: score >= 4, score };
@@ -90,9 +132,14 @@ function isComplexTask(message) {
  * @returns {boolean}
  */
 function shouldAutoDecompose(message, score) {
-  if (score < 6) return false;
+  if (score < 6) {
+    return false;
+  }
   // Detect explicit parallel structure: multiple independent items, numbered lists, "and...and"
-  const hasParallelStructure = /(\band\b.*\band\b)|(同时.*同时)|(\d+\.\s.*\n\s*\d+\.\s)|(分别|各自|并行|parallel)/i.test(message);
+  const hasParallelStructure =
+    /(\band\b.*\band\b)|(同时.*同时)|(\d+\.\s.*\n\s*\d+\.\s)|(分别|各自|并行|parallel)/i.test(
+      message
+    );
   // Multiple independent action targets (3+ distinct file types or modules)
   const targets = (message.match(/\.\w{1,5}\b/g) || []).length;
   return hasParallelStructure || targets >= 3;
@@ -106,9 +153,36 @@ function shouldAutoDecompose(message, score) {
  * @param {string} message
  * @param {object} [opts]
  * @param {boolean} [opts.autoDecompose]
+ * @param {string} [opts.modelTier] - 'T0'..'T3' (services/modelTier.js); 'T3'
+ *   selects a compact planning instruction tailored for weak models. Any
+ *   other value (or omission) keeps the legacy behavior byte-for-byte.
  * @returns {string}
  */
 function injectPlanningPrompt(message, opts = {}) {
+  // T3 weak-model path: use the compact planning instruction (shorter text +
+  // concrete <execution_plan> example) from smallModelPromptTemplates.
+  // Lazy require keeps this module dependency-free at load time; any failure
+  // falls back to the standard instruction below.
+  if (opts.modelTier === 'T3') {
+    try {
+      const templates = require('./smallModelPromptTemplates');
+      const compactInst = templates.buildPhasePrompt('PHASE_PLANNING', {
+        tier: opts.modelTier,
+        taskType: opts.taskType,
+      });
+      if (compactInst) {
+        if (opts.autoDecompose) {
+          const decomposeHint =
+            '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
+          return `${compactInst}${decomposeHint}\n\n${message}`;
+        }
+        return `${compactInst}\n\n${message}`;
+      }
+    } catch {
+      /* fall through to the standard instruction */
+    }
+  }
+
   const planInst = [
     '[System: This task has multiple steps.',
     'Before starting, briefly outline your approach (2-5 numbered steps with specific file/function names).',
@@ -117,10 +191,29 @@ function injectPlanningPrompt(message, opts = {}) {
     'Between steps, provide a brief status update. Do NOT just silently chain tool calls.]',
   ].join(' ');
 
+  // Multi-option planning (goal 2026-08-07「计划前提供多方案」): when enabled, the
+  // model first presents 2-3 execution approaches for the user to pick from (via
+  // the AskUserQuestion tool), then drills into the chosen one as the plan —
+  // instead of silently committing to a single approach. Fallbacks keep legacy
+  // behavior when the gate is off or the tool is unavailable.
+  if (opts.multiOption) {
+    const multiHint =
+      '\n[System: Before finalizing your approach, present 2-3 distinct execution strategies for this task and let the user choose. Use the AskUserQuestion tool with a single question (header "执行方案" / "Approach") listing the strategies as options — each option\'s description states its trade-off (speed vs thoroughness vs risk). After the user picks, build the detailed plan around the chosen strategy. Only skip asking when one approach is clearly superior and conventional.]';
+    return `${planInst}${multiHint}\n\n${message}`;
+  }
+
   // When auto-decompose is triggered, encourage Agent subtasks for parallel work
+  // AND instruct the model to deliver very long output in segments rather than
+  // trying to emit everything in one turn (which risks hitting the output cap
+  // and truncating). Segmented delivery = naturally split across the tool loop's
+  // multiple rounds, so truncation is avoided from the start instead of patched
+  // after the fact.
   if (opts.autoDecompose) {
-    const decomposeHint = '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
-    return `${planInst}${decomposeHint}\n\n${message}`;
+    const decomposeHint =
+      '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
+    const segmentHint =
+      '\n[System: If your final answer is expected to be long (multiple sections, code over ~300 lines, or a full document), deliver it in clearly separated segments across multiple turns — complete and present one section per turn, then continue with the next in a follow-up turn. Never try to dump the entire long output in a single response; that risks being cut off by the output limit.]';
+    return `${planInst}${decomposeHint}${segmentHint}\n\n${message}`;
   }
 
   return `${planInst}\n\n${message}`;
@@ -134,12 +227,16 @@ function injectPlanningPrompt(message, opts = {}) {
  * @returns {{steps: Array<{id: number, description: string, toolHint: string, status: string, parallelGroup: string|null}>} | null}
  */
 function parseExecutionPlan(text) {
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   const match = text.match(/<execution_plan>([\s\S]*?)<\/execution_plan>/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
   const planText = match[1].trim();
-  const lines = planText.split('\n').filter(l => l.trim());
+  const lines = planText.split('\n').filter((l) => l.trim());
   const steps = [];
 
   for (const line of lines) {
@@ -157,18 +254,24 @@ function parseExecutionPlan(text) {
       const prMatch = rest.match(/\[\s*(P\d)\s*\]/i);
       if (prMatch) {
         priority = prMatch[1].toUpperCase();
-        rest = (rest.slice(0, prMatch.index) + rest.slice(prMatch.index + prMatch[0].length)).trim();
+        rest = (
+          rest.slice(0, prMatch.index) + rest.slice(prMatch.index + prMatch[0].length)
+        ).trim();
       }
 
       // Optional leading toolHint bracket, e.g. "[shell_command]".
       let toolHint = '';
       const thMatch = rest.match(/^\[([^\]]*)\]\s*/);
-      if (thMatch) { toolHint = thMatch[1]; rest = rest.slice(thMatch[0].length).trim(); }
+      if (thMatch) {
+        toolHint = thMatch[1];
+        rest = rest.slice(thMatch[0].length).trim();
+      }
       let description = rest;
 
       // Extract parallel_group marker
-      const pgMatch = description.match(/[←←]\s*parallel_group:\s*(\w+)\s*$/i)
-        || description.match(/\(parallel_group:\s*(\w+)\)\s*$/i);
+      const pgMatch =
+        description.match(/[←←]\s*parallel_group:\s*(\w+)\s*$/i) ||
+        description.match(/\(parallel_group:\s*(\w+)\)\s*$/i);
       if (pgMatch) {
         parallelGroup = pgMatch[1].toUpperCase();
         description = description.slice(0, description.indexOf(pgMatch[0])).trim();
@@ -198,11 +301,15 @@ function parseExecutionPlan(text) {
  * @returns {number} Matched step index, or -1 if no match
  */
 function matchToolCallToStep(toolName, params, plan, currentStep) {
-  if (!plan || !plan.steps || plan.steps.length === 0) return -1;
+  if (!plan || !plan.steps || plan.steps.length === 0) {
+    return -1;
+  }
 
   // Helper: check if a step matches the tool call
   const _stepMatchesTool = (step) => {
-    if (step.toolHint && toolName.includes(step.toolHint.replace(/_/g, ''))) return true;
+    if (step.toolHint && toolName.includes(step.toolHint.replace(/_/g, ''))) {
+      return true;
+    }
     const desc = step.description.toLowerCase();
     const normalizedTool = toolName.replace(/_/g, ' ').toLowerCase();
     return desc.includes(normalizedTool) || desc.includes(toolName);
@@ -212,34 +319,44 @@ function matchToolCallToStep(toolName, params, plan, currentStep) {
   if (currentStep < plan.steps.length) {
     const step = plan.steps[currentStep];
     if (step.status !== 'completed') {
-      if (_stepMatchesTool(step)) return currentStep;
+      if (_stepMatchesTool(step)) {
+        return currentStep;
+      }
       // Default: advance sequentially
       return currentStep;
     }
   }
 
   // If current step is in a parallel group, search within the same group first
-  const currentGroup = (currentStep < plan.steps.length)
-    ? plan.steps[currentStep].parallelGroup : null;
+  const currentGroup =
+    currentStep < plan.steps.length ? plan.steps[currentStep].parallelGroup : null;
   if (currentGroup) {
     for (let i = 0; i < plan.steps.length; i++) {
       const step = plan.steps[i];
       if (step.parallelGroup === currentGroup && step.status !== 'completed') {
-        if (_stepMatchesTool(step)) return i;
+        if (_stepMatchesTool(step)) {
+          return i;
+        }
       }
     }
     // Any pending step in the same group
     for (let i = 0; i < plan.steps.length; i++) {
       const step = plan.steps[i];
-      if (step.parallelGroup === currentGroup && step.status !== 'completed') return i;
+      if (step.parallelGroup === currentGroup && step.status !== 'completed') {
+        return i;
+      }
     }
   }
 
   // Look ahead for a matching step (any group)
   for (let i = currentStep + 1; i < plan.steps.length; i++) {
     const step = plan.steps[i];
-    if (step.status === 'completed') continue;
-    if (_stepMatchesTool(step)) return i;
+    if (step.status === 'completed') {
+      continue;
+    }
+    if (_stepMatchesTool(step)) {
+      return i;
+    }
   }
 
   return -1;

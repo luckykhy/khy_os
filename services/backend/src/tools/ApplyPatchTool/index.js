@@ -15,9 +15,10 @@
 
 // [AI-弱模型·照抄] 高危写工具:unified diff 原子应用(全成或全回滚);先 Read 目标文件再打补丁,
 // context 行要对得上。prompt() 末尾的 this.weakModelToolNote() 注入别删;改本工具照 'tool-description' 位点。
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 // ── Diff Parser ─────────────────────────────────────────────────────
 
@@ -32,10 +33,10 @@ function parsePatch(patch) {
   const fileSections = patch.split(/^(?=--- )/m).filter(Boolean);
 
   for (const section of fileSections) {
-    const headerMatch = section.match(
-      /^--- (?:a\/)?(.+)\n\+\+\+ (?:b\/)?(.+)\n/m
-    );
-    if (!headerMatch) continue;
+    const headerMatch = section.match(/^--- (?:a\/)?(.+)\n\+\+\+ (?:b\/)?(.+)\n/m);
+    if (!headerMatch) {
+      continue;
+    }
 
     const srcPath = headerMatch[1].trim();
     const dstPath = headerMatch[2].trim();
@@ -53,7 +54,8 @@ function parsePatch(patch) {
     // body capture stopped after the FIRST body line — truncating every
     // multi-line hunk to one line. `\n@@ ` / `\n--- ` still bound the body at
     // the next hunk / file; `(?![\s\S])` bounds the final hunk at true EOF.
-    const bodyHunkRegex = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)\n?([\s\S]*?)(?=\n@@ |\n--- |(?![\s\S]))/gm;
+    const bodyHunkRegex =
+      /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)\n?([\s\S]*?)(?=\n@@ |\n--- |(?![\s\S]))/gm;
     while ((m = bodyHunkRegex.exec(body)) !== null) {
       const srcStart = parseInt(m[1], 10);
       const srcLen = m[2] != null ? parseInt(m[2], 10) : 1;
@@ -64,7 +66,9 @@ function parsePatch(patch) {
 
       const lines = hunkBody.split('\n');
       // Remove trailing empty line from split
-      if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+      if (lines.length > 0 && lines[lines.length - 1] === '') {
+        lines.pop();
+      }
 
       const context = [];
       const removed = [];
@@ -81,7 +85,17 @@ function parsePatch(patch) {
         // Skip "\ No newline at end of file"
       }
 
-      hunks.push({ srcStart, srcLen, dstStart, dstLen, hunkHeader, context, removed, added, rawLines: lines });
+      hunks.push({
+        srcStart,
+        srcLen,
+        dstStart,
+        dstLen,
+        hunkHeader,
+        context,
+        removed,
+        added,
+        rawLines: lines,
+      });
     }
 
     if (hunks.length > 0 || isNew || isDelete) {
@@ -101,12 +115,19 @@ const SIMILARITY_THRESHOLD = 0.85;
  * Compute line similarity (Levenshtein-based, 0..1).
  */
 function lineSimilarity(a, b) {
-  if (a === b) return 1;
-  const la = a.length, lb = b.length;
-  if (la === 0 || lb === 0) return 0;
+  if (a === b) {
+    return 1;
+  }
+  const la = a.length,
+    lb = b.length;
+  if (la === 0 || lb === 0) {
+    return 0;
+  }
   const max = Math.max(la, lb);
   // Fast path for very different lengths
-  if (Math.abs(la - lb) / max > 0.5) return 0;
+  if (Math.abs(la - lb) / max > 0.5) {
+    return 0;
+  }
   // Levenshtein distance
   const dp = Array.from({ length: la + 1 }, (_, i) => i);
   for (let j = 1; j <= lb; j++) {
@@ -126,7 +147,9 @@ function lineSimilarity(a, b) {
  * @returns {number} similarity score (0..1)
  */
 function blockSimilarity(sourceLines, startIdx, expected) {
-  if (startIdx < 0 || startIdx + expected.length > sourceLines.length) return 0;
+  if (startIdx < 0 || startIdx + expected.length > sourceLines.length) {
+    return 0;
+  }
   let total = 0;
   for (let i = 0; i < expected.length; i++) {
     total += lineSimilarity(sourceLines[startIdx + i], expected[i]);
@@ -166,7 +189,9 @@ function applyHunk(sourceLines, hunk) {
   for (let drift = 0; drift <= MAX_DRIFT; drift++) {
     for (const offset of drift === 0 ? [0] : [-drift, drift]) {
       const tryIdx = anchor + offset;
-      if (tryIdx < 0 || tryIdx + expected.length > sourceLines.length) continue;
+      if (tryIdx < 0 || tryIdx + expected.length > sourceLines.length) {
+        continue;
+      }
 
       const sim = blockSimilarity(sourceLines, tryIdx, expected);
       if (sim >= SIMILARITY_THRESHOLD) {
@@ -203,11 +228,16 @@ class ApplyPatchTool extends BaseTool {
   static searchHint = 'apply unified diff patch multi-file atomic';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
-    return `Apply a unified diff patch to one or more files atomically.
+    return (
+      `Apply a unified diff patch to one or more files atomically.
 
 All hunks across all files must succeed or the entire operation is rolled back.
 Use standard unified diff format (as produced by "git diff" or "diff -u").
@@ -225,7 +255,8 @@ Example patch format:
 -const y = 2;
 +const y = 3;
 +const z = 4;
- module.exports = { x, y };` + this.weakModelToolNote();
+ module.exports = { x, y };` + this.weakModelToolNote()
+    );
   }
 
   get inputSchema() {
@@ -287,7 +318,9 @@ Example patch format:
           fh.takeSnapshot(abs, { reason: 'ApplyPatchTool', content });
         }
       }
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
 
     // ── Phase 2: Apply hunks per file ────────────────────────────────
     const modified = new Map(); // absPath → new content
@@ -304,9 +337,14 @@ Example patch format:
 
       if (file.isNew) {
         // Construct new file from added lines
-        const content = file.hunks.flatMap(h => h.added).join('\n') + '\n';
+        const content = file.hunks.flatMap((h) => h.added).join('\n') + '\n';
         modified.set(abs, content);
-        results.push({ path: filePath, action: 'create', hunksApplied: file.hunks.length, fuzzLevel: 0 });
+        results.push({
+          path: filePath,
+          action: 'create',
+          hunksApplied: file.hunks.length,
+          fuzzLevel: 0,
+        });
         continue;
       }
 
@@ -355,11 +393,15 @@ Example patch format:
       for (const [abs, content] of modified) {
         if (content === null) {
           // Delete file
-          if (fs.existsSync(abs)) fs.unlinkSync(abs);
+          if (fs.existsSync(abs)) {
+            fs.unlinkSync(abs);
+          }
         } else {
           // Ensure directory exists for new files
           const dir = path.dirname(abs);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
           fs.writeFileSync(abs, content, 'utf-8');
         }
         written.push(abs);
@@ -371,11 +413,15 @@ Example patch format:
           const backup = backups.get(abs);
           if (backup === null || backup === undefined) {
             // File was new — remove it
-            if (fs.existsSync(abs)) fs.unlinkSync(abs);
+            if (fs.existsSync(abs)) {
+              fs.unlinkSync(abs);
+            }
           } else {
             fs.writeFileSync(abs, backup, 'utf-8');
           }
-        } catch { /* best-effort rollback */ }
+        } catch {
+          /* best-effort rollback */
+        }
       }
       return {
         success: false,
@@ -386,7 +432,7 @@ Example patch format:
 
     return {
       success: true,
-      message: `Patch applied: ${results.filter(r => r.action !== 'error').length} file(s) modified`,
+      message: `Patch applied: ${results.filter((r) => r.action !== 'error').length} file(s) modified`,
       files: results,
     };
   }

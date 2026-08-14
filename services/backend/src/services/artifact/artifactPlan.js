@@ -33,7 +33,9 @@ const _MAX_NAME = 128;
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_ARTIFACT_TOOL === undefined ? 'true' : e.KHY_ARTIFACT_TOOL;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 
@@ -44,7 +46,8 @@ function isEnabled(env) {
  */
 function validateInput(params) {
   const p = params && typeof params === 'object' ? params : {};
-  const action = typeof p.action === 'string' && p.action.trim() ? p.action.trim().toLowerCase() : 'create';
+  const action =
+    typeof p.action === 'string' && p.action.trim() ? p.action.trim().toLowerCase() : 'create';
   if (!_ACTIONS.has(action)) {
     return { ok: false, action, error: `未知 action「${p.action}」(支持 create | list | read)` };
   }
@@ -74,16 +77,19 @@ function deriveSafeName(input) {
   raw = raw.replace(/\\/g, '/');
   const lastSeg = raw.includes('/') ? raw.slice(raw.lastIndexOf('/') + 1) : raw;
   let cleaned = lastSeg
-    .replace(/[^A-Za-z0-9._-]/g, '_')   // 非白名单字符 → 下划线
-    .replace(/\.{2,}/g, '.')             // 连续点(含 ..)压成单点
-    .replace(/^\.+/, '')                 // 去首部点
-    .replace(/\.+$/, '');                // 去尾部点
-  if (cleaned.length > _MAX_NAME) cleaned = cleaned.slice(0, _MAX_NAME);
+    .replace(/[^A-Za-z0-9._-]/g, '_') // 非白名单字符 → 下划线
+    .replace(/\.{2,}/g, '.') // 连续点(含 ..)压成单点
+    .replace(/^\.+/, '') // 去首部点
+    .replace(/\.+$/, ''); // 去尾部点
+  if (cleaned.length > _MAX_NAME) {
+    cleaned = cleaned.slice(0, _MAX_NAME);
+  }
 
   if (!cleaned) {
-    const stem = typeof src.fallbackStem === 'string' && src.fallbackStem.trim()
-      ? src.fallbackStem.trim().replace(/[^A-Za-z0-9._-]/g, '_')
-      : 'artifact';
+    const stem =
+      typeof src.fallbackStem === 'string' && src.fallbackStem.trim()
+        ? src.fallbackStem.trim().replace(/[^A-Za-z0-9._-]/g, '_')
+        : 'artifact';
     const ext = _extForKind(src.kind);
     cleaned = `${stem}${ext}`;
   } else if (!/\.[A-Za-z0-9]+$/.test(cleaned)) {
@@ -97,17 +103,36 @@ function deriveSafeName(input) {
 function _extForKind(kind) {
   const k = typeof kind === 'string' ? kind.trim().toLowerCase() : '';
   switch (k) {
-    case 'js': case 'javascript': return '.js';
-    case 'ts': case 'typescript': return '.ts';
-    case 'py': case 'python': return '.py';
-    case 'json': return '.json';
-    case 'html': return '.html';
-    case 'css': return '.css';
-    case 'md': case 'markdown': return '.md';
-    case 'sh': case 'bash': return '.sh';
-    case 'yaml': case 'yml': return '.yaml';
-    case '': case 'text': case 'txt': return '.txt';
-    default: return '.txt';
+    case 'js':
+    case 'javascript':
+      return '.js';
+    case 'ts':
+    case 'typescript':
+      return '.ts';
+    case 'py':
+    case 'python':
+      return '.py';
+    case 'json':
+      return '.json';
+    case 'html':
+      return '.html';
+    case 'css':
+      return '.css';
+    case 'md':
+    case 'markdown':
+      return '.md';
+    case 'sh':
+    case 'bash':
+      return '.sh';
+    case 'yaml':
+    case 'yml':
+      return '.yaml';
+    case '':
+    case 'text':
+    case 'txt':
+      return '.txt';
+    default:
+      return '.txt';
   }
 }
 
@@ -133,7 +158,10 @@ function buildListResult(entries) {
     success: true,
     action: 'list',
     count: list.length,
-    artifacts: list.map((e) => ({ name: String(e.name), bytes: Number.isFinite(e.bytes) ? e.bytes : 0 })),
+    artifacts: list.map((e) => ({
+      name: String(e.name),
+      bytes: Number.isFinite(e.bytes) ? e.bytes : 0,
+    })),
   };
 }
 
@@ -157,8 +185,12 @@ function buildErrorResult(error) {
 function describeActivity(params) {
   const p = params && typeof params === 'object' ? params : {};
   const action = typeof p.action === 'string' ? p.action.toLowerCase() : 'create';
-  if (action === 'list') return '列出本地工件';
-  if (action === 'read') return `读取工件:${p.name || '?'}`;
+  if (action === 'list') {
+    return '列出本地工件';
+  }
+  if (action === 'read') {
+    return `读取工件:${p.name || '?'}`;
+  }
   return `保存本地工件${p.name ? `:${p.name}` : ''}`;
 }
 

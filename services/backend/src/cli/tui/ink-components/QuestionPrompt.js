@@ -31,9 +31,11 @@
  * single source (unit-tested without rendering ink); this file stays thin.
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
-const model = require('./questionCardModel');
 const { Cursor } = require('../utils/Cursor');
+
+const model = require('./questionCardModel');
 
 const {
   DISCUSS_LABEL,
@@ -79,11 +81,19 @@ function QuestionPrompt({ request, onResolve }) {
   const [promotedMulti, setPromotedMulti] = React.useState(() => questions.map(() => false));
 
   const q = questions[qIdx] || null;
-  const qText = q ? (String(q.question || '').trim() || 'Please choose an option') : '';
-  const qHeader = q ? (String(q.header || '').trim().slice(0, 12) || '') : '';
+  const qText = q ? String(q.question || '').trim() || 'Please choose an option' : '';
+  const qHeader = q
+    ? String(q.header || '')
+        .trim()
+        .slice(0, 12) || ''
+    : '';
   const options = q && Array.isArray(q.options) ? q.options : [];
   const rawMulti = !!(q && q.multiSelect);
-  const multi = effectiveMulti({ multiSelect: rawMulti, promoted: !!promotedMulti[qIdx], env: process.env });
+  const multi = effectiveMulti({
+    multiSelect: rawMulti,
+    promoted: !!promotedMulti[qIdx],
+    env: process.env,
+  });
   const hasPreview = options.some((opt) => optPreview(opt));
   const { discussRow, otherRow, rowCount } = rowLayout(options.length);
 
@@ -94,85 +104,189 @@ function QuestionPrompt({ request, onResolve }) {
 
   // Guard: nothing to ask → decline so the loop/gateway is not left hanging.
   React.useEffect(() => {
-    if (!q) onResolve({ behavior: 'deny', message: 'User declined to answer questions' });
+    if (!q) {
+      onResolve({ behavior: 'deny', message: 'User declined to answer questions' });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  const setCursorAt = (i, v) => setCursors((prev) => { const n = prev.slice(); n[i] = v; return n; });
-  const setOtherAt = (i, v) => setOtherVals((prev) => { const n = prev.slice(); n[i] = v; return n; });
-  const setDiscussAt = (i, v) => setDiscussChecked((prev) => { const n = prev.slice(); n[i] = v; return n; });
-  const setPromotedAt = (i, v) => setPromotedMulti((prev) => { const n = prev.slice(); n[i] = v; return n; });
-  const toggleCheckedAt = (i, idx) => setCheckedSets((prev) => {
-    const n = prev.slice();
-    const s = new Set(n[i] instanceof Set ? n[i] : []);
-    if (s.has(idx)) s.delete(idx); else s.add(idx);
-    n[i] = s;
-    return n;
-  });
+  const setCursorAt = (i, v) =>
+    setCursors((prev) => {
+      const n = prev.slice();
+      n[i] = v;
+      return n;
+    });
+  const setOtherAt = (i, v) =>
+    setOtherVals((prev) => {
+      const n = prev.slice();
+      n[i] = v;
+      return n;
+    });
+  const setDiscussAt = (i, v) =>
+    setDiscussChecked((prev) => {
+      const n = prev.slice();
+      n[i] = v;
+      return n;
+    });
+  const setPromotedAt = (i, v) =>
+    setPromotedMulti((prev) => {
+      const n = prev.slice();
+      n[i] = v;
+      return n;
+    });
+  const toggleCheckedAt = (i, idx) =>
+    setCheckedSets((prev) => {
+      const n = prev.slice();
+      const s = new Set(n[i] instanceof Set ? n[i] : []);
+      if (s.has(idx)) {
+        s.delete(idx);
+      } else {
+        s.add(idx);
+      }
+      n[i] = s;
+      return n;
+    });
 
-  const cancel = () => onResolve({ behavior: 'deny', message: 'User declined to answer questions' });
+  const cancel = () =>
+    onResolve({ behavior: 'deny', message: 'User declined to answer questions' });
 
   // Resolve with every card's answer. `collectAllAnswers` reads each card's
   // persistent state; we overlay the just-committed active card to dodge the
   // setState-not-yet-applied staleness of the triggering keypress's closure.
   const submitWith = (overrideAnswer) => {
-    const base = collectAllAnswers(questions, { cursors, checkedSets, discussChecked, otherVals, promotedMulti }, process.env);
-    if (overrideAnswer != null && qText) base[qText] = overrideAnswer;
+    const base = collectAllAnswers(
+      questions,
+      { cursors, checkedSets, discussChecked, otherVals, promotedMulti },
+      process.env
+    );
+    if (overrideAnswer != null && qText) {
+      base[qText] = overrideAnswer;
+    }
     onResolve({ behavior: 'allow', updatedInput: { ...input, answers: base } });
   };
 
   // Commit the active card's answer, then advance to the next card or submit.
   const commitCardAnswer = (answerString) => {
-    if (qIdx + 1 < cardCount) setQIdx(qIdx + 1);
-    else submitWith(answerString);
+    if (qIdx + 1 < cardCount) {
+      setQIdx(qIdx + 1);
+    } else {
+      submitWith(answerString);
+    }
   };
 
   const commitOther = () => {
     const value = typedCursor.text.trim();
     setTyping(false);
     setTypedCursor(new Cursor('', 0));
-    if (!value) return;
+    if (!value) {
+      return;
+    }
     setOtherAt(qIdx, value);
     if (multi) {
-      commitCardAnswer(multiSelection({ options, checked, discussChecked: discussOn, otherValue: value }).join(', '));
+      commitCardAnswer(
+        multiSelection({ options, checked, discussChecked: discussOn, otherValue: value }).join(
+          ', '
+        )
+      );
     } else {
       commitCardAnswer(value);
     }
   };
 
   useInput((ch, key) => {
-    if (!q) return;
+    if (!q) {
+      return;
+    }
+    // Mouse-button layer: consume SGR mouse sequences (dispatched by App's top
+    // useInput) so they are never inserted into the typed-cursor buffer.
+    try {
+      const _mouse = require('../mouseButtons');
+      if (_mouse && typeof _mouse.isMouseSequence === 'function' && _mouse.isMouseSequence(ch)) {
+        return;
+      }
+    } catch {
+      /* mouseButtons unavailable — skip guard */
+    }
 
     // Free-text "Other" capture mode.
     if (typing) {
-      if (key.escape) { setTyping(false); setTypedCursor(new Cursor('', 0)); return; }
-      if (key.return) { commitOther(); return; }
+      if (key.escape) {
+        setTyping(false);
+        setTypedCursor(new Cursor('', 0));
+        return;
+      }
+      if (key.return) {
+        commitOther();
+        return;
+      }
       // Fix 2 — 门控开:全套光标移动/插入/删除;关:逐字节 legacy(行尾追加/退格,方向键吞掉)。
       if (questionTextCursorEnabled(process.env)) {
-        if (key.leftArrow) { setTypedCursor((c) => c.left()); return; }
-        if (key.rightArrow) { setTypedCursor((c) => c.right()); return; }
-        if (key.upArrow || (key.ctrl && ch === 'a')) { setTypedCursor((c) => c.startOfLine()); return; }
-        if (key.downArrow || (key.ctrl && ch === 'e')) { setTypedCursor((c) => c.endOfLine()); return; }
-        if (key.backspace) { setTypedCursor((c) => c.backspace()); return; }
-        if (key.delete) { setTypedCursor((c) => c.del()); return; }
-        if (ch && !key.ctrl && !key.meta) { setTypedCursor((c) => c.insert(ch)); return; }
+        if (key.leftArrow) {
+          setTypedCursor((c) => c.left());
+          return;
+        }
+        if (key.rightArrow) {
+          setTypedCursor((c) => c.right());
+          return;
+        }
+        if (key.upArrow || (key.ctrl && ch === 'a')) {
+          setTypedCursor((c) => c.startOfLine());
+          return;
+        }
+        if (key.downArrow || (key.ctrl && ch === 'e')) {
+          setTypedCursor((c) => c.endOfLine());
+          return;
+        }
+        if (key.backspace) {
+          setTypedCursor((c) => c.backspace());
+          return;
+        }
+        if (key.delete) {
+          setTypedCursor((c) => c.del());
+          return;
+        }
+        if (ch && !key.ctrl && !key.meta) {
+          setTypedCursor((c) => c.insert(ch));
+          return;
+        }
         return;
       }
       // Legacy(门控关):追加到尾 / 尾部退格,方向键无 ch → no-op(与今日逐字节一致)。
-      if (key.backspace || key.delete) { setTypedCursor((c) => new Cursor(c.text.slice(0, -1), Math.max(0, c.text.length - 1))); return; }
-      if (ch && !key.ctrl && !key.meta) { setTypedCursor((c) => new Cursor(c.text + ch, c.text.length + ch.length)); return; }
+      if (key.backspace || key.delete) {
+        setTypedCursor((c) => new Cursor(c.text.slice(0, -1), Math.max(0, c.text.length - 1)));
+        return;
+      }
+      if (ch && !key.ctrl && !key.meta) {
+        setTypedCursor((c) => new Cursor(c.text + ch, c.text.length + ch.length));
+        return;
+      }
       return;
     }
 
-    if (key.escape) { cancel(); return; }
+    if (key.escape) {
+      cancel();
+      return;
+    }
 
     // 多张选项卡:←/→ 自由切换,不强制顺序提交;每张卡状态独立持久。
-    if (cardCount > 1 && key.leftArrow) { setQIdx(prevCard(qIdx, cardCount)); return; }
-    if (cardCount > 1 && key.rightArrow) { setQIdx(nextCard(qIdx, cardCount)); return; }
+    if (cardCount > 1 && key.leftArrow) {
+      setQIdx(prevCard(qIdx, cardCount));
+      return;
+    }
+    if (cardCount > 1 && key.rightArrow) {
+      setQIdx(nextCard(qIdx, cardCount));
+      return;
+    }
 
     // 卡内上下选择(环绕)。
-    if (key.upArrow) { setCursorAt(qIdx, moveCursor(cursor, -1, rowCount)); return; }
-    if (key.downArrow || key.tab) { setCursorAt(qIdx, moveCursor(cursor, +1, rowCount)); return; }
+    if (key.upArrow) {
+      setCursorAt(qIdx, moveCursor(cursor, -1, rowCount));
+      return;
+    }
+    if (key.downArrow || key.tab) {
+      setCursorAt(qIdx, moveCursor(cursor, +1, rowCount));
+      return;
+    }
 
     // Number keys jump to a row; single-select commits, multi toggles.
     // 全角(CJK IME)数字折半角后判定(单一真源 cli/fullWidthInput.js,门控关→原样字节回退)。
@@ -183,10 +297,17 @@ function QuestionPrompt({ request, onResolve }) {
       if (idx >= 0 && idx < rowCount) {
         setCursorAt(qIdx, idx);
         const kind = rowKind(idx, options.length);
-        if (kind === 'other') { setTyping(true); setTypedCursor(new Cursor(otherValue, otherValue.length)); return; }
+        if (kind === 'other') {
+          setTyping(true);
+          setTypedCursor(new Cursor(otherValue, otherValue.length));
+          return;
+        }
         if (multi) {
-          if (kind === 'discuss') setDiscussAt(qIdx, !discussOn);
-          else toggleCheckedAt(qIdx, idx);
+          if (kind === 'discuss') {
+            setDiscussAt(qIdx, !discussOn);
+          } else {
+            toggleCheckedAt(qIdx, idx);
+          }
           return;
         }
         commitCardAnswer(kind === 'discuss' ? DISCUSS_LABEL : optLabel(options[idx]));
@@ -198,17 +319,27 @@ function QuestionPrompt({ request, onResolve }) {
     // 门控关且非多选 → no-op(=legacy 单选 Space 无效,逐字节一致)。全角空格折半角后判定。
     if (_fw.foldSpace(ch, process.env) === ' ') {
       const kind = rowKind(cursor, options.length);
-      if (kind === 'other') { setTyping(true); setTypedCursor(new Cursor(otherValue, otherValue.length)); return; }
+      if (kind === 'other') {
+        setTyping(true);
+        setTypedCursor(new Cursor(otherValue, otherValue.length));
+        return;
+      }
       if (multi) {
-        if (kind === 'discuss') setDiscussAt(qIdx, !discussOn);
-        else toggleCheckedAt(qIdx, cursor);
+        if (kind === 'discuss') {
+          setDiscussAt(qIdx, !discussOn);
+        } else {
+          toggleCheckedAt(qIdx, cursor);
+        }
         return;
       }
       // 单选卡首次 Space:提升为多选(用户显式动作;不静默改变单选语义),并勾当前行。
       if (questionMultipickEnabled(process.env) && !rawMulti && !promotedMulti[qIdx]) {
         setPromotedAt(qIdx, true);
-        if (kind === 'discuss') setDiscussAt(qIdx, !discussOn);
-        else toggleCheckedAt(qIdx, cursor);
+        if (kind === 'discuss') {
+          setDiscussAt(qIdx, !discussOn);
+        } else {
+          toggleCheckedAt(qIdx, cursor);
+        }
         return;
       }
       return; // 门控关 → no-op(legacy)
@@ -216,17 +347,25 @@ function QuestionPrompt({ request, onResolve }) {
 
     if (key.return) {
       const kind = rowKind(cursor, options.length);
-      if (kind === 'other') { setTyping(true); setTypedCursor(new Cursor(otherValue, otherValue.length)); return; }
+      if (kind === 'other') {
+        setTyping(true);
+        setTypedCursor(new Cursor(otherValue, otherValue.length));
+        return;
+      }
       if (multi) {
         // 惰性回退:一项未选时,multiSelection 自动落「可讨论」,不强求用户必须选。
-        commitCardAnswer(multiSelection({ options, checked, discussChecked: discussOn, otherValue }).join(', '));
+        commitCardAnswer(
+          multiSelection({ options, checked, discussChecked: discussOn, otherValue }).join(', ')
+        );
       } else {
         commitCardAnswer(singleSelection({ options, cursor, otherValue }));
       }
     }
   });
 
-  if (!q) return null;
+  if (!q) {
+    return null;
+  }
 
   // Build rows: real options → 「可讨论」 → 「Other」.
   const rows = [];
@@ -236,27 +375,42 @@ function QuestionPrompt({ request, onResolve }) {
     const box = multi ? (checked.has(i) ? '[x] ' : '[ ] ') : '';
     const desc = optDesc(options[i]);
     rows.push(
-      h(Text, { key: `opt-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${i + 1}. ${box}${optLabel(options[i])}${desc ? `  — ${desc}` : ''}`)
+      h(
+        Text,
+        { key: `opt-${i}`, color: active ? 'cyan' : undefined, bold: active },
+        `   ${marker} ${i + 1}. ${box}${optLabel(options[i])}${desc ? `  — ${desc}` : ''}`
+      )
     );
   }
   // 「可讨论」row — always present; a deliberate "let's discuss / you decide" escape.
   const discussActive = cursor === discussRow;
   const discussBox = multi ? (discussOn ? '[x] ' : '[ ] ') : '';
   rows.push(
-    h(Text, { key: 'opt-discuss', color: discussActive ? 'cyan' : 'magenta', bold: discussActive },
-      `   ${discussActive ? MARKER : ' '} ${discussRow + 1}. ${discussBox}${DISCUSS_LABEL}  — ${DISCUSS_HINT}`)
+    h(
+      Text,
+      { key: 'opt-discuss', color: discussActive ? 'cyan' : 'magenta', bold: discussActive },
+      `   ${discussActive ? MARKER : ' '} ${discussRow + 1}. ${discussBox}${DISCUSS_LABEL}  — ${DISCUSS_HINT}`
+    )
   );
   // "Other (free input)" row.
   const otherActive = cursor === otherRow;
   rows.push(
-    h(Text, { key: 'opt-other', color: otherActive ? 'cyan' : undefined, bold: otherActive, dimColor: !otherActive },
-      `   ${otherActive ? MARKER : ' '} ${otherRow + 1}. ${OTHER_LABEL}${otherValue ? `: ${otherValue}` : ''}`)
+    h(
+      Text,
+      {
+        key: 'opt-other',
+        color: otherActive ? 'cyan' : undefined,
+        bold: otherActive,
+        dimColor: !otherActive,
+      },
+      `   ${otherActive ? MARKER : ' '} ${otherRow + 1}. ${OTHER_LABEL}${otherValue ? `: ${otherValue}` : ''}`
+    )
   );
 
   const navHint = cardCount > 1 ? '←/→ 切换卡片 · ' : '';
   // Fix 3 — 单选卡(未提升、门控开)提示可按 Space 转多选。
-  const multipickHint = (!multi && !rawMulti && questionMultipickEnabled(process.env)) ? 'Space 可多选 · ' : '';
+  const multipickHint =
+    !multi && !rawMulti && questionMultipickEnabled(process.env) ? 'Space 可多选 · ' : '';
   const footer = multi
     ? `Enter 确认本卡 · Space 多选 · ↑/↓ 导航 · ${navHint}数字键选择 · Esc 取消`
     : `Enter 选择 · ${multipickHint}↑/↓ 导航 · ${navHint}数字键选择 · Esc 取消`;
@@ -264,7 +418,9 @@ function QuestionPrompt({ request, onResolve }) {
   // Fix 2 — 自由输入行渲染:门控开显示内部反色 caret(before + 反色当前字 + after),
   // 门控关逐字节 legacy `✎ <text>█`(offset 恒在尾,与今日一致)。
   const renderTyping = () => {
-    if (!typing) return null;
+    if (!typing) {
+      return null;
+    }
     const t = typedCursor.text;
     if (!questionTextCursorEnabled(process.env)) {
       return h(Text, { color: 'cyan' }, `  ✎ ${t}█`);
@@ -273,29 +429,38 @@ function QuestionPrompt({ request, onResolve }) {
     const before = t.slice(0, off);
     const cursorChar = off < t.length ? t[off] : ' ';
     const after = off < t.length ? t.slice(off + 1) : '';
-    return h(Text, { color: 'cyan' }, '  ✎ ',
+    return h(
+      Text,
+      { color: 'cyan' },
+      '  ✎ ',
       h(Text, null, before),
       h(Text, { inverse: true }, cursorChar),
-      h(Text, null, after));
+      h(Text, null, after)
+    );
   };
 
   // Build question header with chip/tag if present.
   const headerLine = qHeader
-    ? h(Text, null,
+    ? h(
+        Text,
+        null,
         h(Text, { color: 'cyan', bold: true, inverse: true }, ` ${qHeader} `),
         ' ',
         h(Text, { color: 'yellow', bold: true }, qText)
       )
     : h(Text, { color: 'yellow', bold: true }, `? ${qText}`);
 
-  const progressLine = cardCount > 1
-    ? h(Text, { dimColor: true }, `选项卡 ${qIdx + 1}/${cardCount}（←/→ 可左右切换）`)
-    : null;
+  const progressLine =
+    cardCount > 1
+      ? h(Text, { dimColor: true }, `选项卡 ${qIdx + 1}/${cardCount}（←/→ 可左右切换）`)
+      : null;
 
   // Side-by-side layout when any option has preview (single-select only).
   if (hasPreview && !multi && cursor < options.length) {
     const preview = optPreview(options[cursor]);
-    const leftPanel = h(Box, { flexDirection: 'column', width: '50%', marginRight: 2 },
+    const leftPanel = h(
+      Box,
+      { flexDirection: 'column', width: '50%', marginRight: 2 },
       progressLine,
       headerLine,
       h(Box, { flexDirection: 'column' }, rows),
@@ -303,19 +468,31 @@ function QuestionPrompt({ request, onResolve }) {
       h(Text, { dimColor: true }, `  ${footer}`)
     );
     const rightPanel = preview
-      ? h(Box, { flexDirection: 'column', width: '50%', borderStyle: 'single', borderColor: 'gray', paddingX: 1 },
+      ? h(
+          Box,
+          {
+            flexDirection: 'column',
+            width: '50%',
+            borderStyle: 'single',
+            borderColor: 'gray',
+            paddingX: 1,
+          },
           h(Text, { dimColor: true }, 'Preview:'),
           h(Text, null, preview)
         )
       : null;
-    return h(Box, { flexDirection: 'row', borderStyle: 'round', borderColor: 'yellow', paddingX: 1 },
+    return h(
+      Box,
+      { flexDirection: 'row', borderStyle: 'round', borderColor: 'yellow', paddingX: 1 },
       leftPanel,
       rightPanel
     );
   }
 
   // Standard vertical layout (no preview or multi-select).
-  return h(Box, { flexDirection: 'column', borderStyle: 'round', borderColor: 'yellow', paddingX: 1 },
+  return h(
+    Box,
+    { flexDirection: 'column', borderStyle: 'round', borderColor: 'yellow', paddingX: 1 },
     progressLine,
     headerLine,
     h(Box, { flexDirection: 'column' }, rows),

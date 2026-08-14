@@ -23,13 +23,21 @@ const log = require('../utils/logger');
 // CJK 抽取补充(纯叶子·门 KHY_RECAP_CJK default-on)。门关或异常 → 各 helper 返回 []
 // → 下方 union 空 → 抽取结果逐字节回退到原英文行为。防御式 require:缺失也不致命。
 let _cjk = null;
-try { _cjk = require('./sessionRecapCjk'); } catch { _cjk = null; }
+try {
+  _cjk = require('./sessionRecapCjk');
+} catch {
+  _cjk = null;
+}
 function _mergeUnique(base, extra) {
-  if (!Array.isArray(extra) || extra.length === 0) return base;
+  if (!Array.isArray(extra) || extra.length === 0) {
+    return base;
+  }
   const seen = new Set(base);
   const out = base.slice();
   for (const item of extra) {
-    if (item == null || seen.has(item)) continue;
+    if (item == null || seen.has(item)) {
+      continue;
+    }
     seen.add(item);
     out.push(item);
   }
@@ -83,14 +91,16 @@ function generateRecap(messages, context) {
   if (_cjk) {
     recap.sections.decisions = _mergeUnique(
       recap.sections.decisions,
-      _cjk.extractCjkDecisions(assistantMessages),
+      _cjk.extractCjkDecisions(assistantMessages)
     ).slice(0, 10);
   }
 
   // Extract file changes mentioned in conversation (English + CJK-punctuation union)
   if (recap.sections.filesChanged.length === 0) {
     let files = _extractFileReferences(messages);
-    if (_cjk) files = _mergeUnique(files, _cjk.extractCjkFileReferences(messages));
+    if (_cjk) {
+      files = _mergeUnique(files, _cjk.extractCjkFileReferences(messages));
+    }
     recap.sections.filesChanged = files;
   }
 
@@ -104,7 +114,7 @@ function generateRecap(messages, context) {
   if (_cjk) {
     recap.sections.openQuestions = _mergeUnique(
       recap.sections.openQuestions,
-      _cjk.extractCjkQuestions(messages),
+      _cjk.extractCjkQuestions(messages)
     ).slice(0, 5);
   }
 
@@ -113,7 +123,7 @@ function generateRecap(messages, context) {
   if (_cjk) {
     recap.sections.keyInsights = _mergeUnique(
       recap.sections.keyInsights,
-      _cjk.extractCjkInsights(assistantMessages),
+      _cjk.extractCjkInsights(assistantMessages)
     ).slice(0, 5);
   }
 
@@ -132,8 +142,12 @@ function generateRecap(messages, context) {
  */
 function formatRecap(recap, options) {
   const c = (options && options.chalk) || {
-    bold: (t) => t, dim: (t) => t, cyan: (t) => t,
-    green: (t) => t, yellow: (t) => t, white: (t) => t,
+    bold: (t) => t,
+    dim: (t) => t,
+    cyan: (t) => t,
+    green: (t) => t,
+    yellow: (t) => t,
+    white: (t) => t,
   };
 
   const lines = [];
@@ -213,16 +227,27 @@ function _extractTopics(userMessages) {
     const text = msg.content || '';
     // First meaningful line
     const firstLine = text.split('\n')[0].trim();
-    if (firstLine.length < 5 || firstLine.length > 100) continue;
+    if (firstLine.length < 5 || firstLine.length > 100) {
+      continue;
+    }
 
-    const normalized = firstLine.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff\s]/g, '').trim();
-    if (normalized.length < 3) continue;
+    const normalized = firstLine
+      .toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fff\s]/g, '')
+      .trim();
+    if (normalized.length < 3) {
+      continue;
+    }
     const key = normalized.substring(0, 30);
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
 
     topics.push(firstLine.length > 60 ? firstLine.substring(0, 57) + '...' : firstLine);
-    if (topics.length >= 8) break;
+    if (topics.length >= 8) {
+      break;
+    }
   }
 
   return topics;
@@ -243,9 +268,13 @@ function _extractDecisions(assistantMessages) {
       const matches = [...text.matchAll(pattern)];
       for (const m of matches) {
         const decision = m[0].trim();
-        if (decision.length > 80) continue;
+        if (decision.length > 80) {
+          continue;
+        }
         decisions.push(decision.substring(0, 80));
-        if (decisions.length >= 10) return decisions;
+        if (decisions.length >= 10) {
+          return decisions;
+        }
       }
     }
   }
@@ -255,19 +284,28 @@ function _extractDecisions(assistantMessages) {
 
 function _extractFileReferences(messages) {
   const files = new Set();
-  const fileRegex = /(?:^|\s|[`"'])([a-zA-Z0-9_/.][a-zA-Z0-9_/.-]*\.[a-zA-Z]{1,6})(?:\s|[`"']|$|:)/gm;
+  const fileRegex =
+    /(?:^|\s|[`"'])([a-zA-Z0-9_/.][a-zA-Z0-9_/.-]*\.[a-zA-Z]{1,6})(?:\s|[`"']|$|:)/gm;
 
   for (const msg of messages) {
     const text = msg.content || '';
     for (const m of text.matchAll(fileRegex)) {
       const f = m[1];
       // Filter out common false positives
-      if (f.includes('http') || f.includes('www.') || f.startsWith('.')) continue;
-      if (/\.(com|org|net|io|dev)$/i.test(f)) continue;
+      if (f.includes('http') || f.includes('www.') || f.startsWith('.')) {
+        continue;
+      }
+      if (/\.(com|org|net|io|dev)$/i.test(f)) {
+        continue;
+      }
       files.add(f);
-      if (files.size >= 30) break;
+      if (files.size >= 30) {
+        break;
+      }
     }
-    if (files.size >= 30) break;
+    if (files.size >= 30) {
+      break;
+    }
   }
 
   return [...files];
@@ -278,15 +316,20 @@ function _extractCommands(messages) {
   const cmdRegex = /```(?:bash|sh|shell|console|terminal)?\s*\n([\s\S]*?)```/g;
 
   for (const msg of messages) {
-    if (msg.role !== 'assistant') continue;
+    if (msg.role !== 'assistant') {
+      continue;
+    }
     const text = msg.content || '';
     for (const m of text.matchAll(cmdRegex)) {
       const block = m[1].trim();
-      const lines = block.split('\n')
+      const lines = block
+        .split('\n')
         .map((l) => l.replace(/^\$\s*/, '').trim())
         .filter((l) => l && !l.startsWith('#') && l.length < 120);
       for (const line of lines) {
-        if (commands.length >= 20) break;
+        if (commands.length >= 20) {
+          break;
+        }
         commands.push(line);
       }
     }
@@ -308,9 +351,13 @@ function _extractOpenQuestions(messages) {
         const clean = q.trim();
         if (clean.length >= 10 && clean.length <= 100) {
           // Skip rhetorical/common patterns
-          if (/would you like|shall I|do you want|is that ok/i.test(clean)) continue;
+          if (/would you like|shall I|do you want|is that ok/i.test(clean)) {
+            continue;
+          }
           questions.push(clean);
-          if (questions.length >= 5) return questions;
+          if (questions.length >= 5) {
+            return questions;
+          }
         }
       }
     }
@@ -334,7 +381,9 @@ function _extractInsights(assistantMessages) {
       const matches = [...text.matchAll(pattern)];
       for (const m of matches) {
         insights.push(m[0].trim().substring(0, 80));
-        if (insights.length >= 5) return insights;
+        if (insights.length >= 5) {
+          return insights;
+        }
       }
     }
   }
@@ -359,7 +408,9 @@ function _buildSummary(recap) {
     parts.push(`ran ${s.commandsRun.length} command(s)`);
   }
 
-  if (parts.length === 0) return `${recap.turns}-turn conversation.`;
+  if (parts.length === 0) {
+    return `${recap.turns}-turn conversation.`;
+  }
   return `${recap.turns}-turn conversation: ${parts.join(', ')}.`;
 }
 
@@ -376,9 +427,15 @@ function _buildSummary(recap) {
  */
 function shouldAutoExtract(params) {
   const { estimatedTokens, maxTokens, turnCount } = params;
-  if (!estimatedTokens || !maxTokens) return false;
-  if (turnCount < AUTO_EXTRACT_MIN_TURNS) return false;
-  if (turnCount - _lastAutoExtractTurn < AUTO_EXTRACT_MIN_TURNS) return false;
+  if (!estimatedTokens || !maxTokens) {
+    return false;
+  }
+  if (turnCount < AUTO_EXTRACT_MIN_TURNS) {
+    return false;
+  }
+  if (turnCount - _lastAutoExtractTurn < AUTO_EXTRACT_MIN_TURNS) {
+    return false;
+  }
 
   const ratio = estimatedTokens / maxTokens;
   return ratio >= AUTO_EXTRACT_THRESHOLD;
@@ -396,7 +453,7 @@ function shouldAutoExtract(params) {
  * @returns {Promise<{ saved: boolean, recap: object|null }>}
  */
 async function autoExtractMemory(messages, options = {}) {
-  const turnCount = options.turnCount || messages.filter(m => m.role === 'user').length;
+  const turnCount = options.turnCount || messages.filter((m) => m.role === 'user').length;
   _lastAutoExtractTurn = turnCount;
 
   // Generate recap

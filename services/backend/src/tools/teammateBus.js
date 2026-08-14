@@ -82,8 +82,12 @@ function _genId() {
  * @returns {object|{error:string}} the teammate record, or an error descriptor.
  */
 function createTeammate({ name, task, tools } = {}) {
-  if (!name || !String(name).trim()) return { error: 'teammate name is required' };
-  if (!task || !String(task).trim()) return { error: 'teammate task is required' };
+  if (!name || !String(name).trim()) {
+    return { error: 'teammate name is required' };
+  }
+  if (!task || !String(task).trim()) {
+    return { error: 'teammate task is required' };
+  }
   if (_teammates.size >= maxTeammates()) {
     return { error: `teammate limit reached (${maxTeammates()})` };
   }
@@ -105,15 +109,20 @@ function createTeammate({ name, task, tools } = {}) {
     .then(() => run(teammate))
     .then((result) => {
       const e = _teammates.get(teammate.id);
-      if (!e || e.status === 'deleted') return;
+      if (!e || e.status === 'deleted') {
+        return;
+      }
       e.status = 'completed';
       e.result = result;
-      const text = typeof result === 'string' ? result : (result && result.summary) || '(completed)';
+      const text =
+        typeof result === 'string' ? result : (result && result.summary) || '(completed)';
       sendToLead(teammate.id, teammate.name, text, 'completion');
     })
     .catch((err) => {
       const e = _teammates.get(teammate.id);
-      if (!e || e.status === 'deleted') return;
+      if (!e || e.status === 'deleted') {
+        return;
+      }
       e.status = 'failed';
       e.error = err && err.message ? err.message : String(err);
       sendToLead(teammate.id, teammate.name, `task failed: ${e.error}`, 'error');
@@ -145,7 +154,9 @@ function listTeammates() {
  */
 function deleteTeammate(id) {
   const t = _teammates.get(id);
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   t.status = 'deleted';
   _teammates.delete(id);
   _inboxes.delete(id);
@@ -162,9 +173,18 @@ function deleteTeammate(id) {
  * @param {object} [metadata=null]       s16 correlation payload, e.g. { requestId }
  * @returns {boolean} true if the teammate exists and the message was queued.
  */
-function sendToTeammate(id, message, from = LEAD_ID, fromName = 'lead', type = 'message', metadata = null) {
+function sendToTeammate(
+  id,
+  message,
+  from = LEAD_ID,
+  fromName = 'lead',
+  type = 'message',
+  metadata = null
+) {
   const inbox = _inboxes.get(id);
-  if (!inbox) return false;
+  if (!inbox) {
+    return false;
+  }
   inbox.push({
     from,
     fromName,
@@ -179,7 +199,9 @@ function sendToTeammate(id, message, from = LEAD_ID, fromName = 'lead', type = '
 /** Drain (read + clear) a teammate's inbox. @returns {Array<object>} */
 function drainTeammateInbox(id) {
   const inbox = _inboxes.get(id);
-  if (!inbox || inbox.length === 0) return [];
+  if (!inbox || inbox.length === 0) {
+    return [];
+  }
   return inbox.splice(0, inbox.length);
 }
 
@@ -200,12 +222,16 @@ function sendToLead(from, fromName, message, type = 'message', metadata = null) 
     metadata: metadata || null,
     ts: Date.now(),
   });
-  while (_leadInbox.length > maxLeadInbox()) _leadInbox.shift();
+  while (_leadInbox.length > maxLeadInbox()) {
+    _leadInbox.shift();
+  }
 }
 
 /** Drain (read + clear) the lead inbox. @returns {Array<object>} */
 function drainLeadInbox() {
-  if (_leadInbox.length === 0) return [];
+  if (_leadInbox.length === 0) {
+    return [];
+  }
   return _leadInbox.splice(0, _leadInbox.length);
 }
 
@@ -249,7 +275,9 @@ function listPendingRequests() {
  */
 function requestShutdown(teammateId, reason = '') {
   const t = _teammates.get(teammateId);
-  if (!t) return { error: `Teammate ${teammateId} not found` };
+  if (!t) {
+    return { error: `Teammate ${teammateId} not found` };
+  }
 
   const requestId = _genRequestId();
   const state = {
@@ -271,15 +299,18 @@ function requestShutdown(teammateId, reason = '') {
   }
 
   t.status = 'stopping';
-  sendToTeammate(teammateId, reason || 'Please shut down.', LEAD_ID, 'lead',
-    'shutdown_request', { requestId });
+  sendToTeammate(teammateId, reason || 'Please shut down.', LEAD_ID, 'lead', 'shutdown_request', {
+    requestId,
+  });
   return { requestId, status: 'pending' };
 }
 
 /** Remove a teammate after a shutdown was approved (or forced). */
 function _finalizeShutdown(teammateId) {
   const t = _teammates.get(teammateId);
-  if (t) t.status = 'deleted';
+  if (t) {
+    t.status = 'deleted';
+  }
   _teammates.delete(teammateId);
   _inboxes.delete(teammateId);
 }
@@ -292,8 +323,12 @@ function _finalizeShutdown(teammateId) {
  */
 function requestPlanApproval(teammateId, plan) {
   const t = _teammates.get(teammateId);
-  if (!t) return { error: `Teammate ${teammateId} not found` };
-  if (!plan || !String(plan).trim()) return { error: 'plan is required' };
+  if (!t) {
+    return { error: `Teammate ${teammateId} not found` };
+  }
+  if (!plan || !String(plan).trim()) {
+    return { error: 'plan is required' };
+  }
 
   const requestId = _genRequestId();
   _pendingRequests.set(requestId, {
@@ -318,15 +353,26 @@ function requestPlanApproval(teammateId, plan) {
  */
 function reviewPlan(requestId, approve, feedback = '') {
   const state = _pendingRequests.get(requestId);
-  if (!state) return { error: `Unknown request ${requestId}` };
-  if (state.type !== 'plan_approval') return { error: `Request ${requestId} is not a plan_approval` };
-  if (state.status !== 'pending') return { error: `Request ${requestId} already ${state.status}` };
+  if (!state) {
+    return { error: `Unknown request ${requestId}` };
+  }
+  if (state.type !== 'plan_approval') {
+    return { error: `Request ${requestId} is not a plan_approval` };
+  }
+  if (state.status !== 'pending') {
+    return { error: `Request ${requestId} already ${state.status}` };
+  }
 
   state.status = approve ? 'approved' : 'rejected';
   // The decision is delivered to the teammate; its own inbox dispatch matches it.
-  sendToTeammate(state.sender,
+  sendToTeammate(
+    state.sender,
     approve ? '[Plan approved]' : `[Plan rejected]${feedback ? ` ${feedback}` : ''}`,
-    LEAD_ID, 'lead', 'plan_approval_response', { requestId, approve: !!approve, feedback: String(feedback || '') });
+    LEAD_ID,
+    'lead',
+    'plan_approval_response',
+    { requestId, approve: !!approve, feedback: String(feedback || '') }
+  );
   return { ok: true, target: state.sender };
 }
 
@@ -342,10 +388,18 @@ function reviewPlan(requestId, approve, feedback = '') {
  */
 function matchResponse(responseType, requestId, approve) {
   const state = _pendingRequests.get(requestId);
-  if (!state) return false;
-  if (state.type === 'shutdown' && responseType !== 'shutdown_response') return false;
-  if (state.type === 'plan_approval' && responseType !== 'plan_approval_response') return false;
-  if (state.status !== 'pending') return false; // already resolved — skip duplicate
+  if (!state) {
+    return false;
+  }
+  if (state.type === 'shutdown' && responseType !== 'shutdown_response') {
+    return false;
+  }
+  if (state.type === 'plan_approval' && responseType !== 'plan_approval_response') {
+    return false;
+  }
+  if (state.status !== 'pending') {
+    return false;
+  } // already resolved — skip duplicate
 
   state.status = approve ? 'approved' : 'rejected';
   if (state.type === 'shutdown' && approve) {
@@ -375,13 +429,17 @@ function dispatchTeammateInbox(teammateId) {
     const reqId = msg.metadata && msg.metadata.requestId;
     if (msg.type === 'shutdown_request') {
       shutdown = true;
-      sendToLead(teammateId, t ? t.name : teammateId, 'Shutting down.',
-        'shutdown_response', { requestId: reqId, approve: true });
+      sendToLead(teammateId, t ? t.name : teammateId, 'Shutting down.', 'shutdown_response', {
+        requestId: reqId,
+        approve: true,
+      });
       continue;
     }
     if (msg.type === 'plan_approval_response') {
       const approve = !!(msg.metadata && msg.metadata.approve);
-      if (reqId) matchResponse('plan_approval_response', reqId, approve);
+      if (reqId) {
+        matchResponse('plan_approval_response', reqId, approve);
+      }
       planDecision = approve ? 'approved' : 'rejected';
       continue;
     }
@@ -419,7 +477,9 @@ function consumeLeadInbox() {
  */
 function collectTeammateMessagesAsText() {
   const msgs = consumeLeadInbox();
-  if (msgs.length === 0) return null;
+  if (msgs.length === 0) {
+    return null;
+  }
   const blocks = msgs.map((m) => {
     const tag = m.type && m.type !== 'message' ? ` type="${m.type}"` : '';
     return `<teammate-message from="${m.fromName}"${tag}>\n${m.message}\n</teammate-message>`;
@@ -447,12 +507,18 @@ function collectTeammateMessagesAsText() {
  */
 function autonomousPoll(teammateId, owner) {
   const disp = dispatchTeammateInbox(teammateId);
-  if (disp.shutdown) return { action: 'shutdown' };
+  if (disp.shutdown) {
+    return { action: 'shutdown' };
+  }
   if (disp.messages.length || disp.planDecision) {
     return { action: 'message', messages: disp.messages, planDecision: disp.planDecision };
   }
   let store;
-  try { store = require('./_taskStore'); } catch { return { action: 'idle' }; }
+  try {
+    store = require('./_taskStore');
+  } catch {
+    return { action: 'idle' };
+  }
   const res = store.claimNext(owner || teammateId);
   if (res && res.ok) {
     const result = { action: 'claimed', task: res.task };
@@ -462,8 +528,12 @@ function autonomousPoll(teammateId, owner) {
     if (res.task && res.task.worktree) {
       try {
         const wp = require('../services/worktreeManager').worktreePathFor(res.task.worktree);
-        if (wp) result.worktreePath = wp;
-      } catch { /* worktree path resolution is best-effort */ }
+        if (wp) {
+          result.worktreePath = wp;
+        }
+      } catch {
+        /* worktree path resolution is best-effort */
+      }
     }
     return result;
   }

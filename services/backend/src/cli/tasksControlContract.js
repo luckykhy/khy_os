@@ -6,14 +6,16 @@ const _normalizeToken = require('../utils/trimLowerCase');
 function runTasksControlContract(rawArgs = '', deps = {}) {
   const taskControlService = deps.taskControlService;
   const actionAliases = deps.actionAliases || {};
-  const taskStatusLabel = typeof deps.taskStatusLabel === 'function'
-    ? deps.taskStatusLabel
-    : (status) => String(status || 'unknown');
-  const defaultCancelReason = String(
-    deps.defaultCancelReason || 'Cancelled by /tasks command'
-  );
+  const taskStatusLabel =
+    typeof deps.taskStatusLabel === 'function'
+      ? deps.taskStatusLabel
+      : (status) => String(status || 'unknown');
+  const defaultCancelReason = String(deps.defaultCancelReason || 'Cancelled by /tasks command');
 
-  const tokens = String(rawArgs || '').trim().split(/\s+/).filter(Boolean);
+  const tokens = String(rawArgs || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   const primary = _normalizeToken(tokens[0] || '');
   const action = actionAliases[primary] || null;
   if (!action) {
@@ -30,9 +32,8 @@ function runTasksControlContract(rawArgs = '', deps = {}) {
     return { handled: true, events };
   }
 
-  const controlOptions = action === 'cancel'
-    ? { reason: tokens.slice(2).join(' ').trim() || defaultCancelReason }
-    : {};
+  const controlOptions =
+    action === 'cancel' ? { reason: tokens.slice(2).join(' ').trim() || defaultCancelReason } : {};
   const result = taskControlService.controlTask(taskId, action, controlOptions);
 
   if (!result.ok) {

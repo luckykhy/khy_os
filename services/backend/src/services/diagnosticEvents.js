@@ -103,7 +103,11 @@ class DiagnosticEventEmitter {
     const listeners = this._listeners.get(type);
     if (listeners) {
       for (const cb of listeners) {
-        try { cb(event); } catch { /* swallow listener errors */ }
+        try {
+          cb(event);
+        } catch {
+          /* swallow listener errors */
+        }
       }
     }
 
@@ -111,7 +115,11 @@ class DiagnosticEventEmitter {
     const wildcardListeners = this._listeners.get('*');
     if (wildcardListeners) {
       for (const cb of wildcardListeners) {
-        try { cb(event); } catch { /* swallow */ }
+        try {
+          cb(event);
+        } catch {
+          /* swallow */
+        }
       }
     }
 
@@ -130,11 +138,15 @@ class DiagnosticEventEmitter {
    * Returns spanId for correlation with result.
    */
   emitToolCall(toolName, params, ctx = {}) {
-    const event = this.emit('tool_call', {
-      toolName,
-      paramsSize: JSON.stringify(params || {}).length,
-      paramKeys: Object.keys(params || {}),
-    }, ctx);
+    const event = this.emit(
+      'tool_call',
+      {
+        toolName,
+        paramsSize: JSON.stringify(params || {}).length,
+        paramKeys: Object.keys(params || {}),
+      },
+      ctx
+    );
 
     // Track as active span
     this._activeSpans.set(event.spanId, {
@@ -154,16 +166,20 @@ class DiagnosticEventEmitter {
     const activeSpan = this._activeSpans.get(spanId);
     const durationMs = activeSpan ? Date.now() - activeSpan.startTime : 0;
 
-    const event = this.emit('tool_result', {
-      toolName: activeSpan?.toolName || 'unknown',
-      success: !error,
-      durationMs,
-      resultSize: result ? JSON.stringify(result).length : 0,
-      error: error ? String(error).slice(0, 500) : null,
-    }, {
-      traceId: ctx.traceId || activeSpan?.traceId,
-      parentSpanId: spanId,
-    });
+    const event = this.emit(
+      'tool_result',
+      {
+        toolName: activeSpan?.toolName || 'unknown',
+        success: !error,
+        durationMs,
+        resultSize: result ? JSON.stringify(result).length : 0,
+        error: error ? String(error).slice(0, 500) : null,
+      },
+      {
+        traceId: ctx.traceId || activeSpan?.traceId,
+        parentSpanId: spanId,
+      }
+    );
 
     // Classify attention
     if (durationMs > ATTENTION_STALLED_MS) {
@@ -180,28 +196,35 @@ class DiagnosticEventEmitter {
    * Emit a model request event.
    */
   emitModelRequest(model, provider, tokenEstimate, ctx = {}) {
-    return this.emit('model_request', {
-      model,
-      provider,
-      tokenEstimate,
-    }, ctx);
+    return this.emit(
+      'model_request',
+      {
+        model,
+        provider,
+        tokenEstimate,
+      },
+      ctx
+    );
   }
 
   /**
    * Emit a model response event.
    */
   emitModelResponse(model, provider, tokenUsage, durationMs, ctx = {}) {
-    const event = this.emit('model_response', {
-      model,
-      provider,
-      inputTokens: tokenUsage?.inputTokens || 0,
-      outputTokens: tokenUsage?.outputTokens || 0,
-      totalTokens: (tokenUsage?.inputTokens || 0) + (tokenUsage?.outputTokens || 0),
-      durationMs,
-      tokensPerSecond: durationMs > 0
-        ? Math.round((tokenUsage?.outputTokens || 0) / (durationMs / 1000))
-        : 0,
-    }, ctx);
+    const event = this.emit(
+      'model_response',
+      {
+        model,
+        provider,
+        inputTokens: tokenUsage?.inputTokens || 0,
+        outputTokens: tokenUsage?.outputTokens || 0,
+        totalTokens: (tokenUsage?.inputTokens || 0) + (tokenUsage?.outputTokens || 0),
+        durationMs,
+        tokensPerSecond:
+          durationMs > 0 ? Math.round((tokenUsage?.outputTokens || 0) / (durationMs / 1000)) : 0,
+      },
+      ctx
+    );
 
     if (durationMs > ATTENTION_STALLED_MS) {
       event.attention = 'stalled';
@@ -223,12 +246,46 @@ class DiagnosticEventEmitter {
    * Emit an error event.
    */
   emitError(category, error, ctx = {}) {
-    return this.emit('error', {
-      category,
-      message: error?.message || String(error),
-      code: error?.code || error?.status || null,
-      stack: error?.stack?.split('\n').slice(0, 5).join('\n') || null,
-    }, ctx);
+    return this.emit(
+      'error',
+      {
+        category,
+        message: error?.message || String(error),
+        code: error?.code || error?.status || null,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n') || null,
+      },
+      ctx
+    );
+  }
+
+  // ── Small-model normalization pipeline events (stage 5, task #7) ──
+
+  /**
+   * Emit a 'small_model_param_coerce' event — a parameter-correction trail
+   * was applied at the executeTool funnel (stage 3.4 ladder).
+   * @param {object} data - { message, toolName, attempts, correctionCount, tier, success }
+   */
+  emitSmallModelParamCoerce(data, ctx = {}) {
+    return this.emit('small_model_param_coerce', data || {}, ctx);
+  }
+
+  /**
+   * Emit a 'small_model_escalation' event — the auto-escalation policy fired
+   * and the session was handed over to a stronger model (stage 4/task #6;
+   * payload is the modelSwitchManager 'model_escalation' event object).
+   * @param {object} data - { fromModel, toModel, targetTier, signal, reason, ... }
+   */
+  emitSmallModelEscalation(data, ctx = {}) {
+    return this.emit('small_model_escalation', data || {}, ctx);
+  }
+
+  /**
+   * Emit a 'pipeline_phase_complete' event — a small-model pipeline checkpoint
+   * passed. Emitted via toolExecutionMetrics.emitPipelinePhaseComplete().
+   * @param {object} data - { message, phase, index, total, tier, model }
+   */
+  emitPipelinePhaseComplete(data, ctx = {}) {
+    return this.emit('pipeline_phase_complete', data || {}, ctx);
   }
 
   // ── Listener management ──
@@ -264,12 +321,16 @@ class DiagnosticEventEmitter {
     }
 
     for (const { spanId, span, attention, elapsed } of stale) {
-      this.emit('attention', {
-        spanId,
-        toolName: span.toolName,
-        attention,
-        elapsedMs: elapsed,
-      }, { traceId: span.traceId });
+      this.emit(
+        'attention',
+        {
+          spanId,
+          toolName: span.toolName,
+          attention,
+          elapsedMs: elapsed,
+        },
+        { traceId: span.traceId }
+      );
     }
 
     return stale;
@@ -281,11 +342,17 @@ class DiagnosticEventEmitter {
    * Flush buffered events.
    */
   flush() {
-    if (this._buffer.length === 0) return;
+    if (this._buffer.length === 0) {
+      return;
+    }
 
     const events = this._buffer.splice(0);
     if (this._onFlush) {
-      try { this._onFlush(events); } catch { /* swallow */ }
+      try {
+        this._onFlush(events);
+      } catch {
+        /* swallow */
+      }
     }
     return events;
   }
@@ -311,7 +378,9 @@ class DiagnosticEventEmitter {
       if (event.type === 'tool_result') {
         totalDuration += event.data.durationMs || 0;
         toolCalls++;
-        if (event.data.error) errors++;
+        if (event.data.error) {
+          errors++;
+        }
       }
     }
 
@@ -319,9 +388,8 @@ class DiagnosticEventEmitter {
     let avgToolDurationFormatted;
     try {
       const { formatDurationPrecise } = require('./timeFormat');
-      avgToolDurationFormatted = toolCalls > 0
-        ? formatDurationPrecise(Math.round(totalDuration / toolCalls))
-        : '0ms';
+      avgToolDurationFormatted =
+        toolCalls > 0 ? formatDurationPrecise(Math.round(totalDuration / toolCalls)) : '0ms';
     } catch {
       avgToolDurationFormatted = undefined;
     }
@@ -338,9 +406,13 @@ class DiagnosticEventEmitter {
   }
 
   _startFlushTimer() {
-    if (this._flushTimer) return;
+    if (this._flushTimer) {
+      return;
+    }
     this._flushTimer = setInterval(() => this.flush(), this._flushIntervalMs);
-    if (this._flushTimer.unref) this._flushTimer.unref();
+    if (this._flushTimer.unref) {
+      this._flushTimer.unref();
+    }
   }
 
   /**

@@ -24,7 +24,10 @@ const _OFF = ['0', 'false', 'off', 'no'];
 
 function safeArrayMinMaxEnabled(env = process.env) {
   return !_OFF.includes(
-    String((env && env.KHY_SAFE_ARRAY_MINMAX) || '').trim().toLowerCase());
+    String((env && env.KHY_SAFE_ARRAY_MINMAX) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -36,16 +39,26 @@ function safeArrayMinMaxEnabled(env = process.env) {
  * @param {...number} floors  extra baseline values (e.g. Math.max(20, ...arr))
  */
 function maxOf(values, ...floors) {
-  if (!safeArrayMinMaxEnabled()) return Math.max(...floors, ...values);
+  if (!safeArrayMinMaxEnabled()) {
+    return Math.max(...floors, ...values);
+  }
   let m = -Infinity;
   for (let i = 0; i < floors.length; i++) {
     const v = floors[i];
-    if (Number.isNaN(v)) return NaN;
-    if (v > m) m = v;
+    if (Number.isNaN(v)) {
+      return NaN;
+    }
+    if (v > m) {
+      m = v;
+    }
   }
   for (const v of values) {
-    if (Number.isNaN(v)) return NaN;
-    if (v > m) m = v;
+    if (Number.isNaN(v)) {
+      return NaN;
+    }
+    if (v > m) {
+      m = v;
+    }
   }
   return m;
 }
@@ -58,16 +71,26 @@ function maxOf(values, ...floors) {
  * @param {...number} ceils
  */
 function minOf(values, ...ceils) {
-  if (!safeArrayMinMaxEnabled()) return Math.min(...ceils, ...values);
+  if (!safeArrayMinMaxEnabled()) {
+    return Math.min(...ceils, ...values);
+  }
   let m = Infinity;
   for (let i = 0; i < ceils.length; i++) {
     const v = ceils[i];
-    if (Number.isNaN(v)) return NaN;
-    if (v < m) m = v;
+    if (Number.isNaN(v)) {
+      return NaN;
+    }
+    if (v < m) {
+      m = v;
+    }
   }
   for (const v of values) {
-    if (Number.isNaN(v)) return NaN;
-    if (v < m) m = v;
+    if (Number.isNaN(v)) {
+      return NaN;
+    }
+    if (v < m) {
+      m = v;
+    }
   }
   return m;
 }

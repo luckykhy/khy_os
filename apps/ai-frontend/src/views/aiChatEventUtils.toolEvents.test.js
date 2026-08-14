@@ -22,14 +22,24 @@ test('describeToolEvent maps a tool_use to a 工具调用 status log', () => {
 });
 
 test('describeToolEvent maps a successful tool_result to a status log with detail', () => {
-  const ev = describeToolEvent({ type: 'tool_result', tool: 'read_file', success: true, text: 'ok 12 lines' });
+  const ev = describeToolEvent({
+    type: 'tool_result',
+    tool: 'read_file',
+    success: true,
+    text: 'ok 12 lines',
+  });
   assert.equal(ev.type, 'status');
   assert.match(ev.text, /工具结果：read_file 完成/);
   assert.match(ev.text, /ok 12 lines/);
 });
 
 test('describeToolEvent maps a failed tool_result to an error log', () => {
-  const ev = describeToolEvent({ type: 'tool_result', tool: 'run_cmd', success: false, text: 'denied' });
+  const ev = describeToolEvent({
+    type: 'tool_result',
+    tool: 'run_cmd',
+    success: false,
+    text: 'denied',
+  });
   assert.equal(ev.type, 'error');
   assert.match(ev.text, /工具结果：run_cmd 失败/);
 });
@@ -43,27 +53,32 @@ test('describeToolEvent renders the _system_retry pseudo-tool as a clean status 
     tool: '_system_retry',
     success: true,
     text: '回复为空，疑似网络波动，正在重试（1/2）…',
-  })
-  assert.equal(ev.type, 'status')
-  assert.match(ev.text, /正在重试（1\/2）/)
-  assert.doesNotMatch(ev.text, /_system_retry/)
-  assert.doesNotMatch(ev.text, /工具结果/)
-})
+  });
+  assert.equal(ev.type, 'status');
+  assert.match(ev.text, /正在重试（1\/2）/);
+  assert.doesNotMatch(ev.text, /_system_retry/);
+  assert.doesNotMatch(ev.text, /工具结果/);
+});
 
 test('describeToolEvent falls back to a label for an internal pseudo-tool with no detail', () => {
-  const ev = describeToolEvent({ type: 'tool_result', tool: '_system_summarize', success: true })
-  assert.equal(ev.type, 'status')
-  assert.equal(ev.text, '正在生成总结…')
-  assert.doesNotMatch(ev.text, /_system/)
-})
+  const ev = describeToolEvent({ type: 'tool_result', tool: '_system_summarize', success: true });
+  assert.equal(ev.type, 'status');
+  assert.equal(ev.text, '正在生成总结…');
+  assert.doesNotMatch(ev.text, /_system/);
+});
 
 test('describeToolEvent never marks an internal pseudo-tool as 失败 even when success=false', () => {
   // A pseudo-tool is a status carrier, not a tool that can "fail".
-  const ev = describeToolEvent({ type: 'tool_result', tool: '_task_notification', success: false, text: '后台任务已完成' })
-  assert.equal(ev.type, 'status')
-  assert.match(ev.text, /后台任务已完成/)
-  assert.doesNotMatch(ev.text, /失败/)
-})
+  const ev = describeToolEvent({
+    type: 'tool_result',
+    tool: '_task_notification',
+    success: false,
+    text: '后台任务已完成',
+  });
+  assert.equal(ev.type, 'status');
+  assert.match(ev.text, /后台任务已完成/);
+  assert.doesNotMatch(ev.text, /失败/);
+});
 
 test('describeToolEvent returns null for non-tool events', () => {
   assert.equal(describeToolEvent({ type: 'text' }), null);
@@ -76,14 +91,30 @@ test('describeToolEvent falls back to a generic tool name', () => {
 });
 
 test('resolveAiChatThinkingEvent stream surfaces tool_use / tool_result / thinking', () => {
-  assert.match(resolveAiChatThinkingEvent('stream', { type: 'tool_use', tool: 'grep' }).text, /工具调用：grep/);
-  assert.equal(resolveAiChatThinkingEvent('stream', { type: 'tool_result', tool: 'grep', success: false }).type, 'error');
-  assert.match(resolveAiChatThinkingEvent('stream', { type: 'thinking', text: '推理中' }).text, /推理中/);
+  assert.match(
+    resolveAiChatThinkingEvent('stream', { type: 'tool_use', tool: 'grep' }).text,
+    /工具调用：grep/
+  );
+  assert.equal(
+    resolveAiChatThinkingEvent('stream', { type: 'tool_result', tool: 'grep', success: false })
+      .type,
+    'error'
+  );
+  assert.match(
+    resolveAiChatThinkingEvent('stream', { type: 'thinking', text: '推理中' }).text,
+    /推理中/
+  );
 });
 
 test('resolveAiChatThinkingEvent ws surfaces tool_use / tool_result', () => {
-  assert.match(resolveAiChatThinkingEvent('ws', { type: 'tool_use', tool: 'ls' }).text, /工具调用：ls/);
-  assert.equal(resolveAiChatThinkingEvent('ws', { type: 'tool_result', tool: 'ls', success: true }).type, 'status');
+  assert.match(
+    resolveAiChatThinkingEvent('ws', { type: 'tool_use', tool: 'ls' }).text,
+    /工具调用：ls/
+  );
+  assert.equal(
+    resolveAiChatThinkingEvent('ws', { type: 'tool_result', tool: 'ls', success: true }).type,
+    'status'
+  );
 });
 
 test('mapEventToOrbState puts tool events into the thinking state on both transports', () => {
@@ -97,7 +128,10 @@ test('reset event maps to thinking orb state and a status log on both transports
   // 响应防抖抗拼接：丢弃废稿后回到 thinking 态，并给一条状态日志。
   assert.equal(mapEventToOrbState('stream', { type: 'reset' }), 'thinking');
   assert.equal(mapEventToOrbState('ws', { type: 'reset' }), 'thinking');
-  const sLog = resolveAiChatThinkingEvent('stream', { type: 'reset', reason: 'bare-refusal-retry' });
+  const sLog = resolveAiChatThinkingEvent('stream', {
+    type: 'reset',
+    reason: 'bare-refusal-retry',
+  });
   assert.equal(sLog.type, 'status');
   assert.match(sLog.text, /丢弃废稿并重试/);
   const wLog = resolveAiChatThinkingEvent('ws', { type: 'reset', reason: 'bare-refusal-retry' });
@@ -144,7 +178,11 @@ test('formatToolParams caps output at maxChars with a truncation note', () => {
 });
 
 test('formatToolParams masks credential-looking values (never leaks a full key)', () => {
-  const out = formatToolParams({ provider: 'openai', apiKey: 'sk-abcdefghijklmnop1234', model: 'gpt' });
+  const out = formatToolParams({
+    provider: 'openai',
+    apiKey: 'sk-abcdefghijklmnop1234',
+    model: 'gpt',
+  });
   assert.doesNotMatch(out, /abcdefghijklmnop/);
   assert.match(out, /\*\*\*/);
   // Non-secret fields survive intact.
@@ -182,11 +220,7 @@ test('summarizeToolProgress returns null when there are no steps', () => {
 });
 
 test('summarizeToolProgress counts a run in progress (done/total + running)', () => {
-  const p = summarizeToolProgress([
-    { status: 'ok' },
-    { status: 'ok' },
-    { status: 'running' },
-  ]);
+  const p = summarizeToolProgress([{ status: 'ok' }, { status: 'ok' }, { status: 'running' }]);
   assert.equal(p.total, 3);
   assert.equal(p.done, 2);
   assert.equal(p.running, 1);

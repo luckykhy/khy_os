@@ -31,7 +31,9 @@ const _queue = [];
  */
 function enqueue(raw) {
   const note = _btwLeaf.normalizeNote(raw);
-  if (!note) return false;
+  if (!note) {
+    return false;
+  }
   _queue.push(note);
   return true;
 }

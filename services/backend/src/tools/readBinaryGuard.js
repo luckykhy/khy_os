@@ -27,7 +27,9 @@
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -53,22 +55,38 @@ function isBinaryForRead(fmt) {
 /** 人类可读的字节数（B / KB / MB），用于拒绝消息。 */
 function _humanBytes(size) {
   // Number(null) === 0 陷阱:缺失/空串须显式判为未知,不能当 0 B。
-  if (size == null || size === '') return '未知大小';
+  if (size == null || size === '') {
+    return '未知大小';
+  }
   const n = Number(size);
-  if (!Number.isFinite(n) || n < 0) return '未知大小';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (!Number.isFinite(n) || n < 0) {
+    return '未知大小';
+  }
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** detectFile 结果里最可读的类型标签（优先 magic 识别的格式）。 */
 function _typeLabel(fmt) {
-  if (!fmt || typeof fmt !== 'object') return '二进制文件';
+  if (!fmt || typeof fmt !== 'object') {
+    return '二进制文件';
+  }
   const f = fmt.magicFormat || (fmt.format && fmt.format !== 'unknown' ? fmt.format : null);
   const cat = fmt.category && fmt.category !== 'unknown' ? fmt.category : null;
-  if (f && cat) return `${f}（${cat}）`;
-  if (f) return String(f);
-  if (cat) return `二进制文件（${cat}）`;
+  if (f && cat) {
+    return `${f}（${cat}）`;
+  }
+  if (f) {
+    return String(f);
+  }
+  if (cat) {
+    return `二进制文件（${cat}）`;
+  }
   return '二进制文件';
 }
 
@@ -81,7 +99,9 @@ function _typeLabel(fmt) {
 function buildBinaryReadRefusal(info) {
   let fmt = info;
   try {
-    if (!fmt || typeof fmt !== 'object') fmt = {};
+    if (!fmt || typeof fmt !== 'object') {
+      fmt = {};
+    }
     const type = _typeLabel(fmt);
     const size = _humanBytes(fmt.size);
     return (

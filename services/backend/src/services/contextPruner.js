@@ -37,13 +37,14 @@ const DEFAULT_SETTINGS = {
     placeholder: '[Old tool result content cleared]',
   },
   tools: {
-    allow: [],  // glob patterns for prunable tools (empty = all)
-    deny: [],   // glob patterns for non-prunable tools
+    allow: [], // glob patterns for prunable tools (empty = all)
+    deny: [], // glob patterns for non-prunable tools
   },
 };
 
 // CJK Unicode ranges
-const CJK_RE = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u2E80-\u2EFF\u3000-\u303F\u31F0-\u31FF\uFF00-\uFFEF\uAC00-\uD7AF\u3040-\u309F\u30A0-\u30FF]/;
+const CJK_RE =
+  /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u2E80-\u2EFF\u3000-\u303F\u31F0-\u31FF\uFF00-\uFFEF\uAC00-\uD7AF\u3040-\u309F\u30A0-\u30FF]/;
 
 /**
  * Estimate chars weighted by CJK density.
@@ -53,7 +54,9 @@ const CJK_RE = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u2E80-\u2EFF\u3000-\u30
  * @returns {number} Weighted char count
  */
 function estimateWeightedChars(text) {
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
   let count = 0;
   for (let i = 0; i < text.length; i++) {
     count += CJK_RE.test(text[i]) ? CJK_CHARS_PER_TOKEN : 1;
@@ -76,12 +79,20 @@ function estimateTokensFromChars(weightedChars) {
  * @returns {string}
  */
 function takeHead(parts, maxChars) {
-  if (maxChars <= 0 || parts.length === 0) return '';
+  if (maxChars <= 0 || parts.length === 0) {
+    return '';
+  }
   let remaining = maxChars;
   let out = '';
 
   for (let i = 0; i < parts.length && remaining > 0; i++) {
-    if (i > 0) { out += '\n'; remaining--; if (remaining <= 0) break; }
+    if (i > 0) {
+      out += '\n';
+      remaining--;
+      if (remaining <= 0) {
+        break;
+      }
+    }
     const p = parts[i];
     if (p.length <= remaining) {
       out += p;
@@ -102,7 +113,9 @@ function takeHead(parts, maxChars) {
  * @returns {string}
  */
 function takeTail(parts, maxChars) {
-  if (maxChars <= 0 || parts.length === 0) return '';
+  if (maxChars <= 0 || parts.length === 0) {
+    return '';
+  }
   let remaining = maxChars;
   const out = [];
 
@@ -116,7 +129,10 @@ function takeTail(parts, maxChars) {
       remaining = 0;
       break;
     }
-    if (remaining > 0 && i > 0) { out.push('\n'); remaining--; }
+    if (remaining > 0 && i > 0) {
+      out.push('\n');
+      remaining--;
+    }
   }
 
   out.reverse();
@@ -178,51 +194,67 @@ function softTrimToolResult(content, opts = {}) {
 function pruneContext(messages, opts) {
   const { contextWindowTokens } = opts;
   const settings = { ...DEFAULT_SETTINGS, ...opts.settings };
-  if (!contextWindowTokens || contextWindowTokens <= 0) return messages;
+  if (!contextWindowTokens || contextWindowTokens <= 0) {
+    return messages;
+  }
 
   const charWindow = contextWindowTokens * CHARS_PER_TOKEN;
-  if (charWindow <= 0) return messages;
+  if (charWindow <= 0) {
+    return messages;
+  }
 
   // Pre-pass: strip base64 data URLs before measuring chars
   let preStripped = null;
   try {
     const { stripBase64 } = require('./contextCompressor');
     for (let i = 0; i < messages.length; i++) {
-      if (typeof messages[i].content !== 'string') continue;
+      if (typeof messages[i].content !== 'string') {
+        continue;
+      }
       const { text, strippedCount } = stripBase64(messages[i].content);
       if (strippedCount > 0) {
-        if (!preStripped) preStripped = messages.slice();
+        if (!preStripped) {
+          preStripped = messages.slice();
+        }
         preStripped[i] = { ...messages[i], content: text };
       }
     }
-  } catch { /* contextCompressor not available */ }
+  } catch {
+    /* contextCompressor not available */
+  }
   const workingMessages = preStripped || messages;
 
   // Find pruning boundaries
   const cutoffIndex = _findAssistantCutoff(workingMessages, settings.keepLastAssistants);
-  if (cutoffIndex === null) return workingMessages;
+  if (cutoffIndex === null) {
+    return workingMessages;
+  }
 
-  const firstUserIndex = workingMessages.findIndex(m => m.role === 'user');
+  const firstUserIndex = workingMessages.findIndex((m) => m.role === 'user');
   const pruneStart = firstUserIndex >= 0 ? firstUserIndex : workingMessages.length;
 
   const isToolPrunable = opts.isToolPrunable || (() => true);
 
   // Estimate total chars
   let totalChars = 0;
-  const charCounts = workingMessages.map(m => {
+  const charCounts = workingMessages.map((m) => {
     const c = estimateWeightedChars(m.content || '');
     totalChars += c;
     return c;
   });
 
   let ratio = totalChars / charWindow;
-  if (ratio < settings.softTrimRatio) return workingMessages;
+  if (ratio < settings.softTrimRatio) {
+    return workingMessages;
+  }
 
   // Identify prunable tool result indexes
   const prunableIndexes = [];
   for (let i = pruneStart; i < cutoffIndex; i++) {
     const msg = workingMessages[i];
-    if (msg.role !== 'tool' || !isToolPrunable(msg.toolName || '')) continue;
+    if (msg.role !== 'tool' || !isToolPrunable(msg.toolName || '')) {
+      continue;
+    }
     prunableIndexes.push(i);
   }
 
@@ -231,9 +263,13 @@ function pruneContext(messages, opts) {
   for (const i of prunableIndexes) {
     const msg = (result || workingMessages)[i];
     const { trimmed, wasTrimmed } = softTrimToolResult(msg.content, settings.softTrim);
-    if (!wasTrimmed) continue;
+    if (!wasTrimmed) {
+      continue;
+    }
 
-    if (!result) result = workingMessages.slice();
+    if (!result) {
+      result = workingMessages.slice();
+    }
     const beforeChars = charCounts[i];
     const afterChars = estimateWeightedChars(trimmed);
     result[i] = { ...msg, content: trimmed };
@@ -257,9 +293,13 @@ function pruneContext(messages, opts) {
 
   // Phase 2: Hard clear
   for (const i of prunableIndexes) {
-    if (ratio < settings.hardClearRatio) break;
+    if (ratio < settings.hardClearRatio) {
+      break;
+    }
     const msg = (result || workingMessages)[i];
-    if (!result) result = workingMessages.slice();
+    if (!result) {
+      result = workingMessages.slice();
+    }
 
     const beforeChars = charCounts[i];
     result[i] = { ...msg, content: settings.hardClear.placeholder };
@@ -273,12 +313,18 @@ function pruneContext(messages, opts) {
 }
 
 function _findAssistantCutoff(messages, keepLast) {
-  if (keepLast <= 0) return messages.length;
+  if (keepLast <= 0) {
+    return messages.length;
+  }
   let remaining = keepLast;
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role !== 'assistant') continue;
+    if (messages[i].role !== 'assistant') {
+      continue;
+    }
     remaining--;
-    if (remaining === 0) return i;
+    if (remaining === 0) {
+      return i;
+    }
   }
   return null;
 }

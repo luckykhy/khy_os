@@ -17,6 +17,7 @@
  */
 
 const { execFile } = require('child_process');
+
 const detector = require('./backendDetector');
 const registry = require('./backendRegistry');
 
@@ -30,8 +31,15 @@ function _run(cmd, args, deps, timeoutMs = 10000) {
   const runner = deps.execFile || execFile;
   return new Promise((resolve) => {
     runner(cmd, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
-      if (err) resolve({ ok: false, error: (err && err.message) || String(err), stderr: String(stderr || '') });
-      else resolve({ ok: true, stdout: String(stdout || '') });
+      if (err) {
+        resolve({
+          ok: false,
+          error: (err && err.message) || String(err),
+          stderr: String(stderr || ''),
+        });
+      } else {
+        resolve({ ok: true, stdout: String(stdout || '') });
+      }
     });
   });
 }
@@ -43,14 +51,18 @@ function _availableWindowBackends(deps) {
   const backends = registry.backendsFor(platform, 'window') || [];
   const out = [];
   for (const b of backends) {
-    if (which(b.probe)) out.push(b);
+    if (which(b.probe)) {
+      out.push(b);
+    }
   }
   return { platform, backends: out, declared: backends };
 }
 
 let _searchExecutable = null;
 function _which(name) {
-  if (!_searchExecutable) _searchExecutable = require('../../tools/platformUtils').searchExecutable;
+  if (!_searchExecutable) {
+    _searchExecutable = require('../../tools/platformUtils').searchExecutable;
+  }
   return _searchExecutable(name);
 }
 
@@ -64,17 +76,37 @@ async function _actuate(opName, buildArg, deps) {
     return { success: false, error: `平台 ${platform} 未登记任何窗口管理后端。` };
   }
   if (backends.length === 0) {
-    const hints = declared.filter((b) => b.optionalDep).map((b) => ({ backend: b.id, ...b.optionalDep }));
-    return { success: false, error: '本机没有可用的窗口管理后端（窗口操控未就绪）。', installHints: hints };
+    const hints = declared
+      .filter((b) => b.optionalDep)
+      .map((b) => ({ backend: b.id, ...b.optionalDep }));
+    return {
+      success: false,
+      error: '本机没有可用的窗口管理后端（窗口操控未就绪）。',
+      installHints: hints,
+    };
   }
   let lastUnsupported = null;
   for (const b of backends) {
     const op = b.ops && b.ops[opName];
-    if (typeof op !== 'function') { lastUnsupported = b.id; continue; }
+    if (typeof op !== 'function') {
+      lastUnsupported = b.id;
+      continue;
+    }
     const built = op(buildArg);
-    if (!built) { lastUnsupported = b.id; continue; } // 该后端不支持此动作 → 下一个
+    if (!built) {
+      lastUnsupported = b.id;
+      continue;
+    } // 该后端不支持此动作 → 下一个
     const res = await _run(built.cmd, built.args, deps);
-    if (!res.ok) return { success: false, action: opName, backend: b.id, error: res.error, stderr: res.stderr };
+    if (!res.ok) {
+      return {
+        success: false,
+        action: opName,
+        backend: b.id,
+        error: res.error,
+        stderr: res.stderr,
+      };
+    }
     return { success: true, action: opName, backend: b.id, stdout: res.stdout };
   }
   return {
@@ -85,24 +117,36 @@ async function _actuate(opName, buildArg, deps) {
 }
 
 async function activate(name, deps = {}) {
-  if (!_isName(name)) return { success: false, error: `应用/窗口名非法（须 1..${MAX_NAME} 字符）。` };
+  if (!_isName(name)) {
+    return { success: false, error: `应用/窗口名非法（须 1..${MAX_NAME} 字符）。` };
+  }
   return _actuate('activate', name, deps);
 }
+
 async function closeWindow(name, deps = {}) {
   // name 可空：关闭前台窗口（mac/Win 支持；Linux 后端按名匹配，空名无意义 → 要求显式名）。
-  if (name != null && name !== '' && !_isName(name)) return { success: false, error: '窗口名非法。' };
+  if (name != null && name !== '' && !_isName(name)) {
+    return { success: false, error: '窗口名非法。' };
+  }
   return _actuate('closeWindow', name || '', deps);
 }
+
 async function minimizeWindow(name, deps = {}) {
-  if (name != null && name !== '' && !_isName(name)) return { success: false, error: '窗口名非法。' };
+  if (name != null && name !== '' && !_isName(name)) {
+    return { success: false, error: '窗口名非法。' };
+  }
   return _actuate('minimizeWindow', name || '', deps);
 }
+
 async function listWindows(deps = {}) {
   return _actuate('listWindows', '', deps);
 }
 
 module.exports = {
-  activate, closeWindow, minimizeWindow, listWindows,
+  activate,
+  closeWindow,
+  minimizeWindow,
+  listWindows,
   MAX_NAME,
   _internals: { _isName, _availableWindowBackends, _actuate },
 };

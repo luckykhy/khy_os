@@ -38,7 +38,9 @@ const VERTEX_BODY_FORMAT = 'gemini'; // 请求体沿用 Gemini 线格式(单一�
 function vertexShapingEnabled(env = process.env) {
   try {
     const raw = env && env[KHY_VERTEX_REQUEST_SHAPING];
-    if (raw == null || String(raw).trim() === '') return true; // 缺省 → 默认开
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    } // 缺省 → 默认开
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {
@@ -57,7 +59,9 @@ function _str(v) {
  */
 function buildVertexHost(location) {
   const loc = _str(location);
-  if (!loc || loc.toLowerCase() === 'global') return 'aiplatform.googleapis.com';
+  if (!loc || loc.toLowerCase() === 'global') {
+    return 'aiplatform.googleapis.com';
+  }
   return `${loc}-aiplatform.googleapis.com`;
 }
 
@@ -70,7 +74,9 @@ function buildVertexHost(location) {
 function buildVertexBaseUrl(spec = {}) {
   const project = _str(spec.project);
   const location = _str(spec.location);
-  if (!project || !location) return '';
+  if (!project || !location) {
+    return '';
+  }
   const apiVersion = _str(spec.apiVersion) || DEFAULT_API_VERSION;
   const host = buildVertexHost(location);
   return `https://${host}/${apiVersion}/projects/${project}/locations/${location}/publishers/google`;
@@ -84,7 +90,9 @@ function buildVertexBaseUrl(spec = {}) {
 function buildVertexEndpoint(spec = {}) {
   const base = buildVertexBaseUrl(spec);
   const model = _str(spec.model);
-  if (!base || !model) return '';
+  if (!base || !model) {
+    return '';
+  }
   const method = spec.streaming ? 'streamGenerateContent' : 'generateContent';
   return `${base}/models/${model}:${method}`;
 }
@@ -97,17 +105,31 @@ function buildVertexEndpoint(spec = {}) {
  */
 function describeVertexRequest(spec = {}, env = process.env) {
   try {
-    if (!vertexShapingEnabled(env)) return { ok: false, reason: 'disabled' };
+    if (!vertexShapingEnabled(env)) {
+      return { ok: false, reason: 'disabled' };
+    }
     const project = _str(spec && spec.project);
     const location = _str(spec && spec.location);
     const model = _str(spec && spec.model);
-    if (!project) return { ok: false, reason: 'missing-project' };
-    if (!location) return { ok: false, reason: 'missing-location' };
-    if (!model) return { ok: false, reason: 'missing-model' };
+    if (!project) {
+      return { ok: false, reason: 'missing-project' };
+    }
+    if (!location) {
+      return { ok: false, reason: 'missing-location' };
+    }
+    if (!model) {
+      return { ok: false, reason: 'missing-model' };
+    }
     const apiVersion = _str(spec && spec.apiVersion) || DEFAULT_API_VERSION;
     const host = buildVertexHost(location);
     const baseUrl = buildVertexBaseUrl({ project, location, apiVersion });
-    const url = buildVertexEndpoint({ project, location, model, streaming: !!(spec && spec.streaming), apiVersion });
+    const url = buildVertexEndpoint({
+      project,
+      location,
+      model,
+      streaming: !!(spec && spec.streaming),
+      apiVersion,
+    });
     const method = spec && spec.streaming ? 'streamGenerateContent' : 'generateContent';
     return {
       ok: true,

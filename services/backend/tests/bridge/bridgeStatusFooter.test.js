@@ -49,6 +49,36 @@ describe('getStatusSnapshot — safe default', () => {
   });
 });
 
+// ── Reconnect replay ring buffer ─────────────────────────────────────────────
+// A reconnecting device replays the recent broadcast ring. Mid-turn tool-call
+// fragments must NOT be in it: their tool_result never follows on replay, and
+// the client renders the scattered block as raw JSON in front of the user.
+describe('reconnect replay — mid-turn tool fragments excluded', () => {
+  test('chunk_tool_use is skipped from replay history', () => {
+    assert.equal(bridgeServer._shouldSkipHistory('chunk_tool_use'), true);
+  });
+
+  test('every streaming chunk_* fragment is skipped', () => {
+    for (const t of ['chunk_text', 'chunk_thinking', 'chunk_tool_result', 'chunk_status', 'chunk_tool_use']) {
+      assert.equal(bridgeServer._shouldSkipHistory(t), true, `${t} must not be replayed`);
+    }
+  });
+
+  test('settled turn skeleton events are still replayed', () => {
+    for (const t of ['turn_start', 'turn_complete', 'approval_request', 'output']) {
+      assert.equal(bridgeServer._shouldSkipHistory(t), false, `${t} must stay replayable`);
+    }
+  });
+
+  test('replay snapshot never carries chunk_tool_use entries', () => {
+    bridgeServer.broadcastOutput({ type: 'turn_start' });
+    bridgeServer.broadcastOutput({ type: 'chunk_tool_use', tool: 'Read', toolId: 't1' });
+    bridgeServer.broadcastOutput({ type: 'turn_complete' });
+    const replayed = bridgeServer._getReplayHistory();
+    assert.equal(replayed.filter(m => m.type === 'chunk_tool_use').length, 0);
+  });
+});
+
 describe('FooterBar — persistent bridge line', () => {
   const RUNNING = {
     running: true,

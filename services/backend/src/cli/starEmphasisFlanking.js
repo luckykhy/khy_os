@@ -41,7 +41,9 @@ const RE_LEGACY = /(?<!\*)\*([^*\n]+)\*(?!\*)/g;
  */
 function starEmphasisEnabled(env = process.env) {
   const raw = env && env.KHY_STAR_EMPHASIS_FLANKING;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 

@@ -45,7 +45,9 @@ const _PLATFORM_LABELS = Object.freeze({
 const _ADAPTIVE_FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function _normalizeKey(raw) {
-  return String(raw == null ? '' : raw).trim().toLowerCase();
+  return String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -57,8 +59,12 @@ function _normalizeKey(raw) {
  */
 function nodePlatformLabel(raw) {
   const key = _normalizeKey(raw);
-  if (!key) return 'Unknown';
-  if (_PLATFORM_LABELS[key]) return _PLATFORM_LABELS[key];
+  if (!key) {
+    return 'Unknown';
+  }
+  if (_PLATFORM_LABELS[key]) {
+    return _PLATFORM_LABELS[key];
+  }
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
@@ -70,14 +76,20 @@ function nodePlatformLabel(raw) {
  */
 function legacyPlatformLabel(raw) {
   const key = _normalizeKey(raw);
-  if (key === 'darwin') return 'macOS';
-  if (key === 'win32') return 'Windows';
+  if (key === 'darwin') {
+    return 'macOS';
+  }
+  if (key === 'win32') {
+    return 'Windows';
+  }
   return 'Linux';
 }
 
 function _adaptiveEnabled(env) {
   const raw = (env || process.env).KHY_PLATFORM_LABEL_ADAPTIVE;
-  if (raw == null || raw === '') return true; // default-on
+  if (raw == null || raw === '') {
+    return true;
+  } // default-on
   return !_ADAPTIVE_FALSY.has(String(raw).trim().toLowerCase());
 }
 

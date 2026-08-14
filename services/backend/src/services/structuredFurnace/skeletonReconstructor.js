@@ -15,16 +15,17 @@
  * 纯词法、零模型。
  */
 
+const { reduceClause, strategyForActions, _uid } = require('./dimensionReducer');
 const { EntityRegistry } = require('./entityRegistry');
 const { StateMachine } = require('./stateMachine');
-const { reduceClause, strategyForActions, _uid } = require('./dimensionReducer');
 
 // 句子切片：句末标点 + 序列连接词 + 逗号。L2 面向混乱长文，切得细才能把
 // 反悔/否定对分到相邻片，从而被矛盾检测捕获（粗切会把自相矛盾埋进同一片里漏掉）。
 const SENTENCE_SPLIT_RE = /[。！？!?\n；;，,]+|然后|接着|之后|随后|再(?=[^，。])/;
 
 // 转折/反悔标记：出现即表示其所在片与前文可能冲突。
-const REVERSAL_RE = /(但是|可是|不过|然而|算了|改主意|改了主意|又不|还是不|推翻|取消|撤销|反悔|however|but|actually|never\s?mind|cancel|undo|scratch that)/i;
+const REVERSAL_RE =
+  /(但是|可是|不过|然而|算了|改主意|改了主意|又不|还是不|推翻|取消|撤销|反悔|however|but|actually|never\s?mind|cancel|undo|scratch that)/i;
 
 // 否定标记：用于检测“做 X”与“不做 X”的反向动作对。
 const NEGATION_RE = /(不要|不用|别|无需|不需要|don't|do not|no need|without)/i;
@@ -76,12 +77,16 @@ function reconstruct(raw, registry = new EntityRegistry()) {
     if (prior && prior.action === reduced.action && prior.negated !== negated) {
       sm.markContradiction(prior.stateUid, stateUid, 'contradictory-directive-on-entity');
       const cur = sm.states.get(stateUid);
-      if (cur) cur.status = 'CONFLICT';
+      if (cur) {
+        cur.status = 'CONFLICT';
+      }
     }
     seenOnTarget.set(tgt, { action: reduced.action, negated, stateUid });
   });
 
-  if (stateUids.length) sm.setInitial(stateUids[0]);
+  if (stateUids.length) {
+    sm.setInitial(stateUids[0]);
+  }
   for (let i = 1; i < stateUids.length; i++) {
     sm.addTransition(stateUids[i - 1], stateUids[i], 'next', {
       confidence: sm.states.get(stateUids[i]).confidence,
@@ -89,7 +94,9 @@ function reconstruct(raw, registry = new EntityRegistry()) {
   }
 
   const entities = {};
-  for (const e of registry.list()) entities[e.uid] = e;
+  for (const e of registry.list()) {
+    entities[e.uid] = e;
+  }
 
   // 含矛盾或含高风险动作 → 锁级在 L0 基线上由 chaosInterceptor/anomalyHandler 进一步 escalate；
   // 这里给出 L2 自身的基线建议。

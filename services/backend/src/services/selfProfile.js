@@ -11,28 +11,36 @@
  *   formatForAPI()           → JSON，供前端/外部系统消费
  */
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
 // ─── Lazy requires (avoid circular deps at startup) ──────────────────────────
 
 let _skillsModule = null;
 function getSkillsModule() {
-  if (!_skillsModule) _skillsModule = require('../skills/index');
+  if (!_skillsModule) {
+    _skillsModule = require('../skills/index');
+  }
   return _skillsModule;
 }
 
 let _commandSchema = null;
 function getCommandSchema() {
-  if (!_commandSchema) _commandSchema = require('../constants/commandSchema');
+  if (!_commandSchema) {
+    _commandSchema = require('../constants/commandSchema');
+  }
   return _commandSchema;
 }
 
 let _gateway = null;
 function getGateway() {
   if (!_gateway) {
-    try { _gateway = require('./gateway/aiGateway'); } catch { _gateway = null; }
+    try {
+      _gateway = require('./gateway/aiGateway');
+    } catch {
+      _gateway = null;
+    }
   }
   return _gateway;
 }
@@ -40,7 +48,11 @@ function getGateway() {
 let _localLLM = null;
 function getLocalLLM() {
   if (!_localLLM) {
-    try { _localLLM = require('./localLLMService'); } catch { _localLLM = null; }
+    try {
+      _localLLM = require('./localLLMService');
+    } catch {
+      _localLLM = null;
+    }
   }
   return _localLLM;
 }
@@ -48,7 +60,11 @@ function getLocalLLM() {
 let _knowledgeService = null;
 function getKnowledgeService() {
   if (!_knowledgeService) {
-    try { _knowledgeService = require('./knowledgeTeachingService'); } catch { _knowledgeService = null; }
+    try {
+      _knowledgeService = require('./knowledgeTeachingService');
+    } catch {
+      _knowledgeService = null;
+    }
   }
   return _knowledgeService;
 }
@@ -56,7 +72,11 @@ function getKnowledgeService() {
 let _toolsModule = null;
 function getToolsModule() {
   if (!_toolsModule) {
-    try { _toolsModule = require('../tools/index'); } catch { _toolsModule = null; }
+    try {
+      _toolsModule = require('../tools/index');
+    } catch {
+      _toolsModule = null;
+    }
   }
   return _toolsModule;
 }
@@ -68,7 +88,11 @@ function getWasmDefaults() {
 let _dataHome = null;
 function getDataHome() {
   if (!_dataHome) {
-    try { _dataHome = require('../utils/dataHome'); } catch { _dataHome = null; }
+    try {
+      _dataHome = require('../utils/dataHome');
+    } catch {
+      _dataHome = null;
+    }
   }
   return _dataHome;
 }
@@ -76,7 +100,11 @@ function getDataHome() {
 let _selfLocation = null;
 function getSelfLocation() {
   if (!_selfLocation) {
-    try { _selfLocation = require('./selfLocation'); } catch { _selfLocation = null; }
+    try {
+      _selfLocation = require('./selfLocation');
+    } catch {
+      _selfLocation = null;
+    }
   }
   return _selfLocation;
 }
@@ -84,7 +112,11 @@ function getSelfLocation() {
 let _commandCatalog = null;
 function getCommandCatalog() {
   if (!_commandCatalog) {
-    try { _commandCatalog = require('./commandCatalog/commandCatalog'); } catch { _commandCatalog = null; }
+    try {
+      _commandCatalog = require('./commandCatalog/commandCatalog');
+    } catch {
+      _commandCatalog = null;
+    }
   }
   return _commandCatalog;
 }
@@ -108,11 +140,13 @@ let _staticCache = null;
  */
 function _deriveAdapterInfo() {
   const gw = getGateway();
-  if (!gw) return { count: 0, names: [] };
+  if (!gw) {
+    return { count: 0, names: [] };
+  }
   try {
     const status = typeof gw.getStatus === 'function' ? gw.getStatus() : [];
     const all = Array.isArray(status) ? status : [];
-    return { count: all.length, names: all.map(a => a.name || a.key || '').filter(Boolean) };
+    return { count: all.length, names: all.map((a) => a.name || a.key || '').filter(Boolean) };
   } catch {
     return { count: 0, names: [] };
   }
@@ -123,13 +157,15 @@ function _deriveAdapterInfo() {
  */
 function _deriveToolInfo() {
   const tm = getToolsModule();
-  if (!tm) return { count: 0, categories: {} };
+  if (!tm) {
+    return { count: 0, categories: {} };
+  }
   try {
     const total = typeof tm.count === 'function' ? tm.count() : 0;
     const grouped = typeof tm.getByCategory === 'function' ? tm.getByCategory() : {};
     const categories = {};
     for (const [cat, tools] of Object.entries(grouped)) {
-      categories[cat] = tools.map(t => t.name || '').filter(Boolean);
+      categories[cat] = tools.map((t) => t.name || '').filter(Boolean);
     }
     return { count: total, categories };
   } catch {
@@ -138,25 +174,27 @@ function _deriveToolInfo() {
 }
 
 function buildStaticProfile() {
-  if (_staticCache) return _staticCache;
+  if (_staticCache) {
+    return _staticCache;
+  }
 
   const { SUPPORTED_ABIS } = getWasmDefaults();
   const adapterInfo = _deriveAdapterInfo();
   const toolInfo = _deriveToolInfo();
 
-  const adapterDesc = adapterInfo.count > 0
-    ? `${adapterInfo.count} 适配器 (${adapterInfo.names.join(', ')})，自动检测与故障转移`
-    : '多模型适配器，自动检测与故障转移';
+  const adapterDesc =
+    adapterInfo.count > 0
+      ? `${adapterInfo.count} 适配器 (${adapterInfo.names.join(', ')})，自动检测与故障转移`
+      : '多模型适配器，自动检测与故障转移';
 
-  const toolDesc = toolInfo.count > 0
-    ? `${toolInfo.count} 工具`
-    : '工具集';
+  const toolDesc = toolInfo.count > 0 ? `${toolInfo.count} 工具` : '工具集';
 
   // Build human-readable tool category descriptions from actual registry
   const toolCategories = {};
   if (Object.keys(toolInfo.categories).length > 0) {
     for (const [cat, names] of Object.entries(toolInfo.categories)) {
-      toolCategories[cat] = `${names.length} tools (${names.slice(0, 5).join(', ')}${names.length > 5 ? ', ...' : ''})`;
+      toolCategories[cat] =
+        `${names.length} tools (${names.slice(0, 5).join(', ')}${names.length > 5 ? ', ...' : ''})`;
     }
   } else {
     // Fallback: broad category labels when tools not yet loaded
@@ -188,7 +226,8 @@ function buildStaticProfile() {
       },
       local_inference: {
         summary: '本地 LLM 推理',
-        description: '4 级 fallback: ollama-runner → node-llama-cpp → llama-cpp-python → Ollama HTTP',
+        description:
+          '4 级 fallback: ollama-runner → node-llama-cpp → llama-cpp-python → Ollama HTTP',
       },
       tools: {
         summary: toolDesc,
@@ -216,16 +255,28 @@ function buildStaticProfile() {
       os_operations: {
         summary: '系统操作',
         description: 'Alpine ISO 构建、服务管理、安全包管理、环境诊断',
-        features: ['Alpine ISO build', 'service management', 'package management', 'khy doctor diagnostics'],
+        features: [
+          'Alpine ISO build',
+          'service management',
+          'package management',
+          'khy doctor diagnostics',
+        ],
       },
       app_runtime: {
         summary: '应用运行时',
-        description: 'khy OS 是平台，上层应用通过 app register/install/run 接入。默认内置应用: khyquant (量化交易)',
-        features: ['app register/install/uninstall/start/stop/run', 'app IPC', 'plugin system', 'extension marketplace'],
+        description:
+          'khy OS 是平台，上层应用通过 app register/install/run 接入。默认内置应用: khyquant (量化交易)',
+        features: [
+          'app register/install/uninstall/start/stop/run',
+          'app IPC',
+          'plugin system',
+          'extension marketplace',
+        ],
       },
       learning: {
         summary: '学习引导系统',
-        description: '平台级学习框架：XP 等级制、知识库管理、上下文知识推送、知识提炼与同步，上层应用可注册领域知识',
+        description:
+          '平台级学习框架：XP 等级制、知识库管理、上下文知识推送、知识提炼与同步，上层应用可注册领域知识',
       },
       security: {
         summary: '安全体系',
@@ -239,7 +290,10 @@ function buildStaticProfile() {
       { short: '本地推理受硬件限制', detail: '模型精度和速度取决于本机 GPU/CPU 和模型大小' },
       { short: '上下文有限', detail: '超长对话会自动压缩历史，早期信息可能被裁剪' },
       { short: '不伪装确定性', detail: '信息不足时标注「已知/假设/未知」，不编造事实' },
-      { short: '平台不等于应用', detail: 'khy OS 提供基础设施，具体业务能力由上层应用 (如 khyquant) 提供' },
+      {
+        short: '平台不等于应用',
+        detail: 'khy OS 提供基础设施，具体业务能力由上层应用 (如 khyquant) 提供',
+      },
     ],
   };
 
@@ -267,11 +321,14 @@ function detectRuntimeCapabilities(opts = {}) {
       gatewayState.currentAdapter = status.adapter || null;
       gatewayState.currentModel = status.model || opts.model || null;
       if (typeof gw.listAdapters === 'function') {
-        gatewayState.adapters = gw.listAdapters()
-          .filter(a => a.available)
-          .map(a => a.name || a.key);
+        gatewayState.adapters = gw
+          .listAdapters()
+          .filter((a) => a.available)
+          .map((a) => a.name || a.key);
       }
-    } catch { /* gateway not initialized */ }
+    } catch {
+      /* gateway not initialized */
+    }
   }
   if (!gatewayState.currentModel && opts.model) {
     gatewayState.currentModel = opts.model;
@@ -284,15 +341,21 @@ function detectRuntimeCapabilities(opts = {}) {
     try {
       const st = typeof llm.getStatus === 'function' ? llm.getStatus() : {};
       llmState.backend = st.backend || null;
-      llmState.status = st.loaded ? 'loaded' : (st.available ? 'available' : 'unavailable');
-      if (st.backend) llmState.backends.push(st.backend);
-    } catch { /* not loaded */ }
+      llmState.status = st.loaded ? 'loaded' : st.available ? 'available' : 'unavailable';
+      if (st.backend) {
+        llmState.backends.push(st.backend);
+      }
+    } catch {
+      /* not loaded */
+    }
   }
 
   // Tools
   const toolState = {
     enabled: (opts.enabledTools || []).length,
-    list: (opts.enabledTools || []).map(t => (typeof t === 'string' ? t : (t.name || t.tool || ''))),
+    list: (opts.enabledTools || []).map((t) =>
+      typeof t === 'string' ? t : t.name || t.tool || ''
+    ),
   };
 
   // Skills
@@ -301,8 +364,10 @@ function detectRuntimeCapabilities(opts = {}) {
     const sm = getSkillsModule();
     const cmds = typeof sm.getSkillCommands === 'function' ? sm.getSkillCommands() : [];
     skillState.count = cmds.length;
-    skillState.loaded = cmds.map(s => s.name);
-  } catch { /* skills not available */ }
+    skillState.loaded = cmds.map((s) => s.name);
+  } catch {
+    /* skills not available */
+  }
 
   // Commands
   const cmdState = { routerCount: 0, slashCount: 0 };
@@ -314,7 +379,9 @@ function detectRuntimeCapabilities(opts = {}) {
     if (typeof cs.getBuiltinSlashCommands === 'function') {
       cmdState.slashCount = cs.getBuiltinSlashCommands().length;
     }
-  } catch { /* schema not available */ }
+  } catch {
+    /* schema not available */
+  }
 
   // Self-location: where khy itself is installed + its own source dir. Derived from
   // the real dataHome resolvers so the agent knows the ABSOLUTE path to grep its own
@@ -327,16 +394,22 @@ function detectRuntimeCapabilities(opts = {}) {
   // dir (install.selfSrcDir === services/backend/src) instead.
   const appsState = { installed: [] };
   try {
-    const svcDir = install && install.selfSrcDir
-      ? path.join(install.selfSrcDir, 'services')
-      : null;
+    const svcDir = install && install.selfSrcDir ? path.join(install.selfSrcDir, 'services') : null;
     if (svcDir && fs.existsSync(path.join(svcDir, 'comprehensiveDataService.js'))) {
       appsState.installed.push('khyquant');
     }
-  } catch { /* detection failure is fine */ }
+  } catch {
+    /* detection failure is fine */
+  }
 
   // Learning system (OS-level capability, knowledge content provided by apps)
-  const learningState = { level: 'unknown', xp: 0, builtinCount: 0, learnedCount: 0, completionRate: 0 };
+  const learningState = {
+    level: 'unknown',
+    xp: 0,
+    builtinCount: 0,
+    learnedCount: 0,
+    completionRate: 0,
+  };
   const ks = getKnowledgeService();
   if (ks) {
     try {
@@ -352,10 +425,22 @@ function detectRuntimeCapabilities(opts = {}) {
         learningState.builtinCount = stats.builtinCount || 0;
         learningState.learnedCount = stats.learnedCount || 0;
       }
-    } catch { /* knowledge service not ready */ }
+    } catch {
+      /* knowledge service not ready */
+    }
   }
 
-  return { runtime, gateway: gatewayState, localLLM: llmState, tools: toolState, skills: skillState, commands: cmdState, apps: appsState, learning: learningState, install };
+  return {
+    runtime,
+    gateway: gatewayState,
+    localLLM: llmState,
+    tools: toolState,
+    skills: skillState,
+    commands: cmdState,
+    apps: appsState,
+    learning: learningState,
+    install,
+  };
 }
 
 /**
@@ -373,7 +458,13 @@ function _resolveInstall() {
   let baseHome = '';
   const dh = getDataHome();
   if (dh) {
-    try { if (typeof dh.getAppRoot === 'function') appRoot = dh.getAppRoot(); } catch { /* ignore */ }
+    try {
+      if (typeof dh.getAppRoot === 'function') {
+        appRoot = dh.getAppRoot();
+      }
+    } catch {
+      /* ignore */
+    }
     try {
       if (typeof dh.getStorageReport === 'function') {
         const sr = dh.getStorageReport();
@@ -382,29 +473,63 @@ function _resolveInstall() {
         projectDataHome = homes.projectDataHome || '';
         baseHome = homes.baseHome || '';
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   if (sl && typeof sl.resolveSelfLocation === 'function') {
     try {
       return sl.resolveSelfLocation({ appRoot, selfSrcDir, dataHome, projectDataHome, baseHome });
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
-  return { appRoot, selfSrcDir, dataHome, projectDataHome, baseHome, installKind: 'dev', enabled: true };
+  return {
+    appRoot,
+    selfSrcDir,
+    dataHome,
+    projectDataHome,
+    baseHome,
+    installKind: 'dev',
+    enabled: true,
+  };
 }
 
+// Python version probe result cache. detectRuntimeCapabilities() runs per
+// request, and each cold call pays a synchronous `python --version` subprocess
+// (~100-300ms on Windows); the interpreter version cannot change mid-session.
+let _pythonCache = { value: null, at: 0 };
+const _PYTHON_TTL_MS = 300000;
+
 function _detectPython() {
+  const now = Date.now();
+  if (_pythonCache.value !== null && now - _pythonCache.at < _PYTHON_TTL_MS) {
+    return _pythonCache.value;
+  }
+  const value = _detectPythonUncached();
+  _pythonCache = { value, at: Date.now() };
+  return value;
+}
+
+function _detectPythonUncached() {
   try {
     const { execFileSync } = require('child_process');
     const { isWin, searchExecutable } = require('../tools/platformUtils');
     const candidates = isWin ? ['python', 'python3'] : ['python3', 'python'];
     for (const cmd of candidates) {
-      if (!searchExecutable(cmd)) continue;
+      if (!searchExecutable(cmd)) {
+        continue;
+      }
       try {
         const ver = execFileSync(cmd, ['--version'], {
-          encoding: 'utf8', timeout: 3000, stdio: ['pipe', 'pipe', 'ignore'],
+          encoding: 'utf8',
+          timeout: 3000,
+          stdio: ['pipe', 'pipe', 'ignore'],
         }).trim();
         return ver.replace(/^Python\s*/i, '');
-      } catch { /* try next */ }
+      } catch {
+        /* try next */
+      }
     }
     return 'not found';
   } catch {
@@ -423,7 +548,9 @@ function getFullProfile(opts = {}) {
 // ─── Output: System Prompt (token-efficient, 仅注入行为相关信息) ────────────────────
 
 function formatForSystemPrompt(profile) {
-  if (!profile) profile = getFullProfile();
+  if (!profile) {
+    profile = getFullProfile();
+  }
   const rt = profile.runtime || {};
   const gw = rt.gateway || {};
   const llm = rt.localLLM || {};
@@ -443,48 +570,85 @@ function formatForSystemPrompt(profile) {
   // 关 → formatIdentityDirective 返 '',不注入(字节回退)。fail-soft:绝不因此打断系统提示。
   try {
     const mit = require('./modelIdentityTruth');
-    const directive = typeof mit.formatIdentityDirective === 'function'
-      ? mit.formatIdentityDirective(
-          { channel: gw.currentAdapter, model: gw.currentModel },
-          { env: process.env },
-        )
-      : '';
-    if (directive) { lines.push(''); lines.push(directive); }
-  } catch { /* identity directive is best-effort; never break the system prompt */ }
+    const directive =
+      typeof mit.formatIdentityDirective === 'function'
+        ? mit.formatIdentityDirective(
+            { channel: gw.currentAdapter, model: gw.currentModel },
+            { env: process.env }
+          )
+        : '';
+    if (directive) {
+      lines.push('');
+      lines.push(directive);
+    }
+  } catch {
+    /* identity directive is best-effort; never break the system prompt */
+  }
 
   // 缓存命中率如实上报(A 层, goal 2026-07-04, 截图):模型常谎称「没有访问实时监控数据的工具」,
   // 但 khy 网关确有缓存遥测。注入指令告诉模型缓存命中率可观测、被问须据实答或指向缓存透明报告。
   // 门控 KHY_CACHE_METRICS_TRUTH 关 → formatMetricsDirective 返 '',不注入(字节回退)。fail-soft。
   try {
     const cmt = require('./cacheMetricsTruth');
-    const mdir = typeof cmt.formatMetricsDirective === 'function'
-      ? cmt.formatMetricsDirective({ env: process.env })
-      : '';
-    if (mdir) { lines.push(''); lines.push(mdir); }
-  } catch { /* cache-metrics directive is best-effort; never break the system prompt */ }
+    const mdir =
+      typeof cmt.formatMetricsDirective === 'function'
+        ? cmt.formatMetricsDirective({ env: process.env })
+        : '';
+    if (mdir) {
+      lines.push('');
+      lines.push(mdir);
+    }
+  } catch {
+    /* cache-metrics directive is best-effort; never break the system prompt */
+  }
 
   // 视觉能力路由透明(A 层, 自审 #6):主模型可能纯文本、视觉靠网关改选视觉模型或本地 OCR 兜底。
   // 注入指令告知模型「视觉是路由而非原生」、被问须据实答并回显实际模型。门控 KHY_VISION_ROUTING_TRUTH
   // 关 → formatVisionDirective 返 '',不注入(字节回退)。fail-soft:绝不因此打断系统提示。
   try {
     const vrt = require('./visionRoutingTruth');
-    const vdir = typeof vrt.formatVisionDirective === 'function'
-      ? vrt.formatVisionDirective({ env: process.env })
-      : '';
-    if (vdir) { lines.push(''); lines.push(vdir); }
-  } catch { /* vision directive is best-effort; never break the system prompt */ }
+    const vdir =
+      typeof vrt.formatVisionDirective === 'function'
+        ? vrt.formatVisionDirective({ env: process.env })
+        : '';
+    if (vdir) {
+      lines.push('');
+      lines.push(vdir);
+    }
+  } catch {
+    /* vision directive is best-effort; never break the system prompt */
+  }
 
   // 自我认知/自审知识(A 层, goal 2026-07-04「khy 对自己的情况做到自知」):把 khyos 自审报告
   // (#1..#7,此前只散落在代码注释里,模型读不到)变成机器可读 SSOT 并推入系统提示,让模型被问
   // 「khyos 最大的问题有哪些 / 你的局限」时据实快答、不凭空猜、不夸大。门控 KHY_SELF_AUDIT_AWARENESS
   // 关 → formatForSystemPrompt 返 '',不注入(字节回退)。fail-soft:绝不因此打断系统提示。
+  // 另接 selfAuditVerifier 动态核验(门控 KHY_AUDIT_DYNAMIC_VERIFY):把证据锚点核验结果注入
+  // 徽标(·已核验/·核验失败)——verifier 不可用或返 null 时行为与无核验时完全一致。
   try {
     const sar = require('./selfAuditRegistry');
-    const adir = typeof sar.formatForSystemPrompt === 'function'
-      ? sar.formatForSystemPrompt({ env: process.env })
-      : '';
-    if (adir) { lines.push(''); lines.push(adir); }
-  } catch { /* self-audit awareness is best-effort; never break the system prompt */ }
+    // Dynamic evidence verification is best-effort: null/unavailable → legacy output.
+    let verification;
+    try {
+      const verifier = require('./selfAuditVerifier');
+      const vres = typeof verifier.verifyAll === 'function' ? verifier.verifyAll() : null;
+      if (vres && vres.results) {
+        verification = vres.results;
+      }
+    } catch {
+      /* verifier is best-effort; fall back to the static audit block */
+    }
+    const adir =
+      typeof sar.formatForSystemPrompt === 'function'
+        ? sar.formatForSystemPrompt({ env: process.env, verification })
+        : '';
+    if (adir) {
+      lines.push('');
+      lines.push(adir);
+    }
+  } catch {
+    /* self-audit awareness is best-effort; never break the system prompt */
+  }
 
   // 20 倍模式(twentyXMode, goal 2026-07-04「cc 有 20 倍模式,khy 没有需要补充」):开启时在系统
   // 提示注入当前满负荷状态,让模型被问「是否在 20x 模式」时如实回答。opt-in 默认关 → describe
@@ -495,9 +659,13 @@ function formatForSystemPrompt(profile) {
     if (tx && tx.enabled) {
       lines.push('');
       lines.push(`## 20 倍模式（当前：开）`);
-      lines.push(`当前运行在满负荷档：effort=${tx.effort}（含扩展思考）· 工具循环迭代上限 ${tx.maxIterations} · 并行子代理扇出 ${tx.maxChildren}/${tx.maxTotalAgents}。被问到「是否开启 20x / 满负荷模式」时如实确认已开启；用 \`/20x off\` 可关闭回到常规档。`);
+      lines.push(
+        `当前运行在满负荷档：effort=${tx.effort}（含扩展思考）· 工具循环迭代上限 ${tx.maxIterations} · 并行子代理扇出 ${tx.maxChildren}/${tx.maxTotalAgents}。被问到「是否开启 20x / 满负荷模式」时如实确认已开启；用 \`/20x off\` 可关闭回到常规档。`
+      );
     }
-  } catch { /* 20x directive is best-effort; never break the system prompt */ }
+  } catch {
+    /* 20x directive is best-effort; never break the system prompt */
+  }
 
   // Capability boundaries — single source of truth (profile.boundaries). Injected
   // so the agent has REAL self-knowledge of its limits and does not overclaim.
@@ -507,7 +675,9 @@ function formatForSystemPrompt(profile) {
     lines.push('');
     lines.push('## Capability boundaries (know these about yourself)');
     for (const b of boundaries) {
-      if (!b || !b.short) continue;
+      if (!b || !b.short) {
+        continue;
+      }
       lines.push(`- ${b.short}${b.detail ? ` — ${b.detail}` : ''}`);
     }
     // Runtime honesty signals: surface CURRENT availability so the agent does not
@@ -531,20 +701,37 @@ function formatForSystemPrompt(profile) {
   try {
     const sl = getSelfLocation();
     if (sl) {
-      const locBlock = typeof sl.formatLocationForSystemPrompt === 'function'
-        ? sl.formatLocationForSystemPrompt((profile.runtime || {}).install)
-        : '';
-      if (locBlock) { lines.push(''); lines.push(locBlock); }
+      const locBlock =
+        typeof sl.formatLocationForSystemPrompt === 'function'
+          ? sl.formatLocationForSystemPrompt((profile.runtime || {}).install)
+          : '';
+      if (locBlock) {
+        lines.push('');
+        lines.push(locBlock);
+      }
 
       const cc = getCommandCatalog();
-      if (cc && typeof cc.buildCommandCatalog === 'function' && typeof sl.formatCommandOverviewForSystemPrompt === 'function') {
+      if (
+        cc &&
+        typeof cc.buildCommandCatalog === 'function' &&
+        typeof sl.formatCommandOverviewForSystemPrompt === 'function'
+      ) {
         let catalog = null;
-        try { catalog = cc.buildCommandCatalog(); } catch { catalog = null; }
+        try {
+          catalog = cc.buildCommandCatalog();
+        } catch {
+          catalog = null;
+        }
         const cmdBlock = catalog ? sl.formatCommandOverviewForSystemPrompt(catalog) : '';
-        if (cmdBlock) { lines.push(''); lines.push(cmdBlock); }
+        if (cmdBlock) {
+          lines.push('');
+          lines.push(cmdBlock);
+        }
       }
     }
-  } catch { /* self-location is best-effort; never break the system prompt */ }
+  } catch {
+    /* self-location is best-effort; never break the system prompt */
+  }
 
   // Skill protocol self-knowledge (goal 2026-07-11「工具使用和 skill 格式对 khy
   // 自身还需现场调查是不对的…自己的协议格式都是清楚的，直接使用」). khy's OWN
@@ -554,12 +741,18 @@ function formatForSystemPrompt(profile) {
   // parsing. Authoritative format single-sourced from skills/skillLoader.js (the
   // sole loader). Gated by KHY_SKILL_FORMAT_AWARENESS (default on); off → block
   // omitted (byte-identical fallback). Token-cheap: three short lines.
-  const _skillAwareRaw = String(process.env.KHY_SKILL_FORMAT_AWARENESS || 'true').trim().toLowerCase();
+  const _skillAwareRaw = String(process.env.KHY_SKILL_FORMAT_AWARENESS || 'true')
+    .trim()
+    .toLowerCase();
   if (!['0', 'false', 'off', 'no'].includes(_skillAwareRaw)) {
     lines.push('');
     lines.push('## Skill format (khy-native — use directly, do not field-investigate)');
-    lines.push('A khy skill is a directory containing `SKILL.md` (fixed filename) with YAML frontmatter (`name`/`version`/`description`/`layer`/`lifecycle`/`tags`/`platforms`/`dependencies`) followed by a Markdown body (instructions for the AI). There is NO `*.skill.json` / `manifest.json` shape — to author a skill, write `SKILL.md` directly; do not search for or reverse-engineer the format.');
-    lines.push('Discovery (nearest wins): project `./.khy/skills/` → user `~/.khy/skills/` → built-in `backend/src/skills/`. Placing `<name>/SKILL.md` under `~/.khy/skills/` loads it natively. Manage: `khy skill list`.');
+    lines.push(
+      'A khy skill is a directory containing `SKILL.md` (fixed filename) with YAML frontmatter (`name`/`version`/`description`/`layer`/`lifecycle`/`tags`/`platforms`/`dependencies`) followed by a Markdown body (instructions for the AI). There is NO `*.skill.json` / `manifest.json` shape — to author a skill, write `SKILL.md` directly; do not search for or reverse-engineer the format.'
+    );
+    lines.push(
+      'Discovery (nearest wins): project `./.khy/skills/` → user `~/.khy/skills/` → built-in `backend/src/skills/`. Placing `<name>/SKILL.md` under `~/.khy/skills/` loads it natively. Manage: `khy skill list`.'
+    );
   }
 
   return lines.join('\n');
@@ -568,7 +761,9 @@ function formatForSystemPrompt(profile) {
 // ─── Output: Human-readable (khy self, 中文 Markdown) ────────────────────────
 
 function formatForHuman(profile) {
-  if (!profile) profile = getFullProfile();
+  if (!profile) {
+    profile = getFullProfile();
+  }
   const rt = profile.runtime || {};
   const gw = rt.gateway || {};
   const llm = rt.localLLM || {};
@@ -581,8 +776,12 @@ function formatForHuman(profile) {
   const domains = profile.capabilityDomains || {};
 
   const statusIcon = (status) => {
-    if (status === 'loaded' || status === 'available') return '\u2713';
-    if (status === 'degraded') return '~';
+    if (status === 'loaded' || status === 'available') {
+      return '\u2713';
+    }
+    if (status === 'degraded') {
+      return '~';
+    }
     return '\u2717';
   };
 
@@ -612,7 +811,9 @@ function formatForHuman(profile) {
   sections.push('');
 
   sections.push(`### 本地推理`);
-  sections.push(`${statusIcon(llm.status)} 状态: ${llm.status}${llm.backend ? ` (${llm.backend})` : ''}`);
+  sections.push(
+    `${statusIcon(llm.status)} 状态: ${llm.status}${llm.backend ? ` (${llm.backend})` : ''}`
+  );
   sections.push(`${domains.local_inference?.description || ''}`);
   sections.push(`安装 Ollama: https://ollama.com/download`);
   sections.push('');
@@ -689,14 +890,22 @@ function formatForHuman(profile) {
     const { describeTwentyXState } = require('./twentyXMode');
     const tx = describeTwentyXState(process.env);
     if (tx && tx.enabled) {
-      sections.push(`- 20 倍模式: 开（满负荷）— effort=${tx.effort} · 工具迭代上限 ${tx.maxIterations} · 并行子代理 ${tx.maxChildren}/${tx.maxTotalAgents}；被问到时如实说明已开启`);
+      sections.push(
+        `- 20 倍模式: 开（满负荷）— effort=${tx.effort} · 工具迭代上限 ${tx.maxIterations} · 并行子代理 ${tx.maxChildren}/${tx.maxTotalAgents}；被问到时如实说明已开启`
+      );
     }
-  } catch { /* twentyXMode 不可用 → 不追加 */ }
+  } catch {
+    /* twentyXMode 不可用 → 不追加 */
+  }
   const inst = rt.install || {};
   if (inst.selfSrcDir || inst.appRoot) {
     sections.push(`- 自身源码: ${inst.selfSrcDir || '?'}（可用 Grep/Read 直接搜索此绝对路径）`);
-    sections.push(`- 安装根: ${inst.appRoot || '?'}${inst.installKind ? ` (${inst.installKind})` : ''}`);
-    if (inst.dataHome) sections.push(`- 数据主目录: ${inst.dataHome}`);
+    sections.push(
+      `- 安装根: ${inst.appRoot || '?'}${inst.installKind ? ` (${inst.installKind})` : ''}`
+    );
+    if (inst.dataHome) {
+      sections.push(`- 数据主目录: ${inst.dataHome}`);
+    }
   }
   sections.push(`- 已安装应用: ${(apps.installed || []).join(', ') || '无'}`);
 
@@ -706,14 +915,18 @@ function formatForHuman(profile) {
 // ─── Output: API JSON ────────────────────────────────────────────────────────
 
 function formatForAPI(profile) {
-  if (!profile) profile = getFullProfile();
+  if (!profile) {
+    profile = getFullProfile();
+  }
   return JSON.parse(JSON.stringify(profile));
 }
 
 // ─── Brief one-liner ─────────────────────────────────────────────────────────
 
 function formatBrief(profile) {
-  if (!profile) profile = getFullProfile();
+  if (!profile) {
+    profile = getFullProfile();
+  }
   const id = profile.identity || {};
   const rt = profile.runtime || {};
   const gw = rt.gateway || {};
@@ -722,10 +935,12 @@ function formatBrief(profile) {
   const llm = rt.localLLM || {};
   const apps = rt.apps || {};
 
-  return `${id.name} v${id.version} | ` +
+  return (
+    `${id.name} v${id.version} | ` +
     `Gateway: ${gw.currentAdapter || 'auto'}/${gw.currentModel || 'auto'} | ` +
     `Tools: ${tools.enabled} | Skills: ${skills.count} | ` +
-    `LLM: ${llm.status} | Apps: ${(apps.installed || []).join(', ') || 'none'}`;
+    `LLM: ${llm.status} | Apps: ${(apps.installed || []).join(', ') || 'none'}`
+  );
 }
 
 // ─── Cache invalidation ──────────────────────────────────────────────────────

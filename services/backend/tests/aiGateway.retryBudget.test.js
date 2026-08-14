@@ -22,6 +22,44 @@ function createAdapterEntry(key, generateImpl, options = {}) {
   };
 }
 
+// Keep these tests hermetic: at request time the gateway's default-model
+// fallback reads the user's real .khy/model_overrides.json via
+// modelCuration.getAdapterOverride('api'); when the user has configured an
+// api defaultModel (e.g. 'api:sensenova:...'), the 'api' adapter is routed
+// into the pool-based multi-key branch instead of the standard single-key
+// flow, changing the retry semantics under test. Stub the curation lookup on
+// the CURRENT module instance (must be re-applied after jest.resetModules()).
+function neutralizeCuratedDefaultModel() {
+  const modelCuration = require('../src/services/gateway/modelCuration');
+  modelCuration.getAdapterOverride = () => null;
+}
+
+// Keep default-route ranking hermetic: _assessDefaultRouteCandidate consults
+// require('./cacheEconomyStore').getVerdict(adapterKey), which is backed by the
+// user's real .khy/gateway/cache_economy.json. Earlier test runs left entries
+// there (e.g. adapter 'b' flagged as cache-opaque), adding a route penalty that
+// demotes 'b' below 'c' and breaks the a -> b -> c cascade order these tests
+// assume. Also stub record() so test adapters never pollute the real store
+// again. Must be re-applied after jest.resetModules().
+function neutralizeCacheEconomyStore() {
+  const cacheEconomyStore = require('../src/services/gateway/cacheEconomyStore');
+  cacheEconomyStore.getVerdict = () => 'insufficient_data';
+  cacheEconomyStore.record = () => {};
+}
+
+// Keep the 'api' adapter on the standard single-key flow: the gateway's pool
+// integration (`const pool = require('../apiKeyPool'); pool.init();`) reads the
+// user's real .khy/api_keys.json; with live keys (plus a wildcard
+// GATEWAY_API_POOL_PROVIDER) the 'api' adapter is hijacked into the pool-based
+// multi-key branch, whose per-key failure semantics bypass the retry-delay
+// budget under test. Throwing from init() lands in the branch's own fail-soft
+// catch ("pool not available, fall through to normal flow"), i.e. the exact
+// pre-pool standard flow. Must be re-applied after jest.resetModules().
+function neutralizeApiKeyPool() {
+  const apiKeyPool = require('../src/services/apiKeyPool');
+  apiKeyPool.init = () => { throw new Error('apiKeyPool disabled for hermetic retry-budget tests'); };
+}
+
 describe('aiGateway retry budget guard', () => {
   let gateway;
   let oldMaxAttempts;
@@ -39,6 +77,9 @@ describe('aiGateway retry budget guard', () => {
     gateway._lastRefreshTime = Date.now();
     gateway.refreshAdapters = async () => {};
     gateway._enforceRateLimit = async () => {};
+    neutralizeCuratedDefaultModel();
+    neutralizeCacheEconomyStore();
+    neutralizeApiKeyPool();
 
     oldMaxAttempts = process.env.GATEWAY_MAX_TOTAL_ATTEMPTS;
     oldRetryDelayBudgetMs = process.env.GATEWAY_MAX_RETRY_DELAY_BUDGET_MS;

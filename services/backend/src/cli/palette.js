@@ -17,22 +17,34 @@
  */
 function detectColorDepth() {
   // Respect NO_COLOR (https://no-color.org/)
-  if (process.env.NO_COLOR != null) return 'ansi16';
+  if (process.env.NO_COLOR != null) {
+    return 'ansi16';
+  }
 
   const ct = (process.env.COLORTERM || '').toLowerCase();
-  if (ct.includes('truecolor') || ct.includes('24bit')) return 'truecolor';
+  if (ct.includes('truecolor') || ct.includes('24bit')) {
+    return 'truecolor';
+  }
 
   // Windows Terminal 支持 TrueColor
-  if (process.env.WT_SESSION) return 'truecolor';
+  if (process.env.WT_SESSION) {
+    return 'truecolor';
+  }
 
   // 已知支持 TrueColor 的终端
   const tp = (process.env.TERM_PROGRAM || '').toLowerCase();
-  if (/iterm|wezterm|vscode|warp|ghostty|kitty|alacritty|hyper/.test(tp)) return 'truecolor';
+  if (/iterm|wezterm|vscode|warp|ghostty|kitty|alacritty|hyper/.test(tp)) {
+    return 'truecolor';
+  }
 
   // TERM 环境变量
   const term = (process.env.TERM || '').toLowerCase();
-  if (term.includes('256') || term.includes('xterm-256color')) return 'ansi256';
-  if (!term || term === 'dumb') return 'ansi16';
+  if (term.includes('256') || term.includes('xterm-256color')) {
+    return 'ansi256';
+  }
+  if (!term || term === 'dumb') {
+    return 'ansi16';
+  }
 
   // 默认 256 色
   return 'ansi256';
@@ -46,17 +58,9 @@ function detectColorDepth() {
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
   if (h.length === 3) {
-    return [
-      parseInt(h[0] + h[0], 16),
-      parseInt(h[1] + h[1], 16),
-      parseInt(h[2] + h[2], 16),
-    ];
+    return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)];
   }
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
 /**
@@ -65,14 +69,18 @@ function hexToRgb(hex) {
 function rgbToAnsi256(r, g, b) {
   // 灰度
   if (r === g && g === b) {
-    if (r < 8) return 16;
-    if (r > 248) return 231;
-    return Math.round((r - 8) / 247 * 24) + 232;
+    if (r < 8) {
+      return 16;
+    }
+    if (r > 248) {
+      return 231;
+    }
+    return Math.round(((r - 8) / 247) * 24) + 232;
   }
   // 6x6x6 色彩立方
-  const ri = Math.round(r / 255 * 5);
-  const gi = Math.round(g / 255 * 5);
-  const bi = Math.round(b / 255 * 5);
+  const ri = Math.round((r / 255) * 5);
+  const gi = Math.round((g / 255) * 5);
+  const bi = Math.round((b / 255) * 5);
   return 16 + 36 * ri + 6 * gi + bi;
 }
 
@@ -86,13 +94,15 @@ function rgbToAnsi16(r, g, b) {
 
   // 对每个通道判断是否 "on"
   const threshold = value ? 170 : 85;
-  const red   = r > threshold ? 1 : 0;
+  const red = r > threshold ? 1 : 0;
   const green = g > threshold ? 1 : 0;
-  const blue  = b > threshold ? 1 : 0;
+  const blue = b > threshold ? 1 : 0;
 
   // ANSI 基础色: 30 + red*1 + green*2 + blue*4，亮色 +60
   let code = 30 + red + green * 2 + blue * 4;
-  if (value) code += 60;
+  if (value) {
+    code += 60;
+  }
   return code;
 }
 
@@ -103,7 +113,9 @@ function rgbToAnsi16(r, g, b) {
  * @returns {{ type: 'hex'|'ansi256'|'ansi16', value: string|number }}
  */
 function adaptColor(hex, depth) {
-  if (!depth) depth = detectColorDepth();
+  if (!depth) {
+    depth = detectColorDepth();
+  }
 
   if (depth === 'truecolor') {
     return { type: 'hex', value: hex };
@@ -125,7 +137,9 @@ let _cachedDepth = null;
  * 获取缓存的色深
  */
 function getColorDepth() {
-  if (!_cachedDepth) _cachedDepth = detectColorDepth();
+  if (!_cachedDepth) {
+    _cachedDepth = detectColorDepth();
+  }
   return _cachedDepth;
 }
 
@@ -143,10 +157,14 @@ function detectBackgroundMode() {
   if (colorfgbg) {
     const parts = colorfgbg.split(';');
     const bg = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(bg)) return bg >= 7 ? 'light' : 'dark';
+    if (!isNaN(bg)) {
+      return bg >= 7 ? 'light' : 'dark';
+    }
   }
   const tp = (process.env.TERM_PROGRAM || '').toLowerCase();
-  if (tp === 'apple_terminal') return 'light';
+  if (tp === 'apple_terminal') {
+    return 'light';
+  }
   return 'dark';
 }
 

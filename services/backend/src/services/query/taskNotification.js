@@ -14,6 +14,10 @@
  * A completion is an independent event, so it rides in as its own text block.
  */
 
+// Registered TUI notification port (leaf, never throws). Emitting here is a
+// pure additive side effect: unregistered renderer → silent no-op.
+const notificationPort = require('../notificationPort');
+
 const SUMMARY_MAX = 200;
 
 /**
@@ -22,7 +26,9 @@ const SUMMARY_MAX = 200;
  * @returns {string}
  */
 function summarize(entry) {
-  if (!entry) return '';
+  if (!entry) {
+    return '';
+  }
   if (entry.status === 'failed') {
     return String(entry.error || 'failed').slice(0, SUMMARY_MAX);
   }
@@ -33,7 +39,11 @@ function summarize(entry) {
   } else if (r && typeof r === 'object') {
     text = r.summary || r.reply || r.output || r.text || '';
     if (!text) {
-      try { text = JSON.stringify(r); } catch { text = String(r); }
+      try {
+        text = JSON.stringify(r);
+      } catch {
+        text = String(r);
+      }
     }
   }
   return String(text || '').slice(0, SUMMARY_MAX);
@@ -51,20 +61,40 @@ function summarize(entry) {
  * @returns {Array<{ taskId: string, status: string, command: string, summary: string }>}
  */
 function drainCompletedBackgroundAgents(registry) {
-  if (!registry || typeof registry.forEach !== 'function') return [];
+  if (!registry || typeof registry.forEach !== 'function') {
+    return [];
+  }
   const drained = [];
   registry.forEach((entry, id) => {
-    if (!entry) return;
+    if (!entry) {
+      return;
+    }
     const terminal = entry.status === 'completed' || entry.status === 'failed';
-    if (!terminal || entry.notified) return;
+    if (!terminal || entry.notified) {
+      return;
+    }
     entry.notified = true;
-    drained.push({
+    const item = {
       taskId: id,
       status: entry.status,
       command: entry.command
         ? String(entry.command)
-        : (entry.subagentType ? `agent:${entry.subagentType}` : 'agent'),
+        : entry.subagentType
+          ? `agent:${entry.subagentType}`
+          : 'agent',
       summary: summarize(entry),
+    };
+    drained.push(item);
+    // Push the completion to the TUI notification port as well (additive side
+    // effect only — the drained return contract stays byte-identical).
+    notificationPort.emitNotification({
+      type: 'background_task',
+      level: item.status === 'failed' ? 'error' : 'info',
+      title:
+        item.status === 'failed'
+          ? `后台任务失败：${item.command}`
+          : `后台任务完成：${item.command}`,
+      detail: item.summary,
     });
   });
   return drained;
@@ -103,7 +133,9 @@ function formatTaskNotification(n) {
  * @returns {string} '' when there is nothing to inject
  */
 function buildTaskNotifications(items) {
-  if (!Array.isArray(items) || items.length === 0) return '';
+  if (!Array.isArray(items) || items.length === 0) {
+    return '';
+  }
   return items.map(formatTaskNotification).join('\n');
 }
 

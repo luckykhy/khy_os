@@ -24,7 +24,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function autoCaptureEnabled(env = process.env) {
   const raw = env && env.KHY_PROMPT_AUTOCAPTURE;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -63,15 +65,25 @@ function _isString(v) {
  */
 function shouldCapture(text, env = process.env) {
   try {
-    if (!autoCaptureEnabled(env)) return false;
-    if (!_isString(text)) return false;
+    if (!autoCaptureEnabled(env)) {
+      return false;
+    }
+    if (!_isString(text)) {
+      return false;
+    }
     const t = text.trim();
-    if (t.length < MIN_LEN || t.length > MAX_LEN) return false;
+    if (t.length < MIN_LEN || t.length > MAX_LEN) {
+      return false;
+    }
     for (const re of _EXCLUDE_SIGNALS) {
-      if (re.test(t)) return false;
+      if (re.test(t)) {
+        return false;
+      }
     }
     for (const re of _INSTRUCTION_SIGNALS) {
-      if (re.test(t)) return true;
+      if (re.test(t)) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -87,9 +99,13 @@ function shouldCapture(text, env = process.env) {
  */
 function deriveTitle(text) {
   try {
-    if (!_isString(text)) return 'AI 发现的提示词';
+    if (!_isString(text)) {
+      return 'AI 发现的提示词';
+    }
     const firstLine = text.trim().split(/\r?\n/)[0].trim().replace(/\s+/g, ' ');
-    if (!firstLine) return 'AI 发现的提示词';
+    if (!firstLine) {
+      return 'AI 发现的提示词';
+    }
     return firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
   } catch {
     return 'AI 发现的提示词';

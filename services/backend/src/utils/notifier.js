@@ -21,7 +21,9 @@ const SERVERCHAN_BASE = 'https://sctapi.ftqq.com';
  * @returns {Promise<boolean>} true on success, false on failure
  */
 async function sendWeChatNotification(sendKey, signal) {
-  if (!sendKey) return false;
+  if (!sendKey) {
+    return false;
+  }
 
   const directionMap = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
   const direction = directionMap[signal.signal] || signal.signal;

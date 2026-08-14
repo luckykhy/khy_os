@@ -36,10 +36,14 @@ function isEnabled(env) {
  * 非空、两侧都有内容的 `provider/model` 才注入;否则让 opencode 用它自己配置的默认模型。
  */
 function looksLikeProviderModel(model) {
-  if (typeof model !== 'string') return false;
+  if (typeof model !== 'string') {
+    return false;
+  }
   const s = model.trim();
   const slash = s.indexOf('/');
-  if (slash <= 0 || slash >= s.length - 1) return false;
+  if (slash <= 0 || slash >= s.length - 1) {
+    return false;
+  }
   // 只允许单个斜杠(provider/model),排除路径式 a/b/c 以免误判。
   return s.indexOf('/', slash + 1) === -1;
 }
@@ -60,11 +64,21 @@ function looksLikeProviderModel(model) {
 function buildRunArgs(opts = {}) {
   const o = opts && typeof opts === 'object' ? opts : {};
   const args = ['run', '__PROMPT__'];
-  if (o.format === 'json') args.push('--format', 'json');
-  if (o.continueSession) args.push('--continue');
-  if (typeof o.sessionId === 'string' && o.sessionId.trim()) args.push('--session', o.sessionId.trim());
-  if (typeof o.agent === 'string' && o.agent.trim()) args.push('--agent', o.agent.trim());
-  if (looksLikeProviderModel(o.model)) args.push('--model', o.model.trim());
+  if (o.format === 'json') {
+    args.push('--format', 'json');
+  }
+  if (o.continueSession) {
+    args.push('--continue');
+  }
+  if (typeof o.sessionId === 'string' && o.sessionId.trim()) {
+    args.push('--session', o.sessionId.trim());
+  }
+  if (typeof o.agent === 'string' && o.agent.trim()) {
+    args.push('--agent', o.agent.trim());
+  }
+  if (looksLikeProviderModel(o.model)) {
+    args.push('--model', o.model.trim());
+  }
   return args;
 }
 
@@ -74,7 +88,9 @@ function buildRunArgs(opts = {}) {
  */
 function applyModelArg(args, model) {
   const base = Array.isArray(args) ? args.slice() : [];
-  if (looksLikeProviderModel(model)) base.push('--model', model.trim());
+  if (looksLikeProviderModel(model)) {
+    base.push('--model', model.trim());
+  }
   return base;
 }
 

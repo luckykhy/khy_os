@@ -16,7 +16,9 @@ class SessionManager {
     return SessionManager._instance;
   }
 
-  get state() { return this._state; }
+  get state() {
+    return this._state;
+  }
 
   snapshot() {
     this._undoStack.push(structuredClone(this._state));

@@ -17,8 +17,8 @@
  * 纯隔离层：不写盘、不碰宿主注册表。判决交由 engine 编排，热载交由 HostPatcher。
  */
 
-const vm = require('vm');
 const crypto = require('crypto');
+const vm = require('vm');
 
 // 默认影子执行超时（ms）；死循环器官会被 vm 超时打断（毒性之一）。
 const DEFAULT_TIMEOUT_MS = 200;
@@ -28,7 +28,10 @@ const TOXIC_PATTERNS = Object.freeze([
   { re: /\brequire\s*\(/, label: 'require（禁止越狱取模块）' },
   { re: /\bprocess\b/, label: 'process（禁止访问进程）' },
   { re: /\bglobal(This)?\b/, label: 'global/globalThis（禁止触全局）' },
-  { re: /\b(child_process|fs|net|http|https|dgram|cluster|worker_threads|vm)\b/, label: '宿主敏感模块名' },
+  {
+    re: /\b(child_process|fs|net|http|https|dgram|cluster|worker_threads|vm)\b/,
+    label: '宿主敏感模块名',
+  },
   { re: /\beval\s*\(/, label: 'eval（禁止动态求值）' },
   { re: /\bFunction\s*\(/, label: 'Function 构造器（禁止动态构造）' },
   { re: /\bimport\s*[(\s]/, label: 'import（禁止动态导入）' },
@@ -40,12 +43,17 @@ const TOXIC_PATTERNS = Object.freeze([
 // 每进程沙箱密钥：用于签发/校验 passToken。仅存活于内存，不落盘、不外泄。
 let _SECRET = null;
 function _secret() {
-  if (!_SECRET) _SECRET = crypto.randomBytes(32);
+  if (!_SECRET) {
+    _SECRET = crypto.randomBytes(32);
+  }
   return _SECRET;
 }
 
 function _codeHash(code) {
-  return crypto.createHash('sha256').update(String(code || '')).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(String(code || ''))
+    .digest('hex');
 }
 
 /** 静态毒性扫描——返回命中的毒性项（空数组 = 通过）。 */
@@ -53,14 +61,17 @@ function scanToxicity(code) {
   const src = String(code || '');
   const hits = [];
   for (const p of TOXIC_PATTERNS) {
-    if (p.re.test(src)) hits.push(p.label);
+    if (p.re.test(src)) {
+      hits.push(p.label);
+    }
   }
   return hits;
 }
 
 /** 签发热载凭证（仅 passed 时调用）。绑定 codeHash + 判决摘要，HMAC 防伪。 */
 function _issueToken(codeHash, verdictDigest) {
-  return crypto.createHmac('sha256', _secret())
+  return crypto
+    .createHmac('sha256', _secret())
     .update(`${codeHash}|${verdictDigest}`)
     .digest('hex');
 }
@@ -70,7 +81,9 @@ function _issueToken(codeHash, verdictDigest) {
  * @returns {boolean}
  */
 function verifyToken(token, code, verdictDigest) {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
   const expected = _issueToken(_codeHash(code), verdictDigest);
   const a = Buffer.from(String(token));
   const b = Buffer.from(expected);
@@ -79,8 +92,16 @@ function verifyToken(token, code, verdictDigest) {
 
 /** 判决摘要：被签进 token，使凭证与具体判决绑定。 */
 function _digestVerdict(v) {
-  return crypto.createHash('sha256')
-    .update(JSON.stringify({ solved: v.solved, regressed: v.regressed, toxic: v.toxic, probes: v.probeCount }))
+  return crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        solved: v.solved,
+        regressed: v.regressed,
+        toxic: v.toxic,
+        probes: v.probeCount,
+      })
+    )
     .digest('hex')
     .slice(0, 16);
 }
@@ -100,8 +121,13 @@ class OrganogenesisSandbox {
     try {
       // 包裹：让源码定义 entry 后回吐该函数引用。
       const wrapped = `(function(){ "use strict";\n${code}\n; return typeof ${entry} === 'function' ? ${entry} : null; })()`;
-      const fn = vm.runInContext(wrapped, context, { timeout: this.timeoutMs, displayErrors: false });
-      if (typeof fn !== 'function') return { ok: false, error: `未定义入口函数 ${entry}` };
+      const fn = vm.runInContext(wrapped, context, {
+        timeout: this.timeoutMs,
+        displayErrors: false,
+      });
+      if (typeof fn !== 'function') {
+        return { ok: false, error: `未定义入口函数 ${entry}` };
+      }
       return { ok: true, fn };
     } catch (e) {
       return { ok: false, error: e && e.message ? e.message : String(e) };
@@ -132,9 +158,15 @@ class OrganogenesisSandbox {
     const toxicity = scanToxicity(code);
     if (toxicity.length) {
       const v = {
-        passed: false, solved: false, regressed: false, toxic: true,
-        toxicity, probeCount: probes.length, results: [],
-        error: `静态毒性命中：${toxicity.join('；')}`, codeHash,
+        passed: false,
+        solved: false,
+        regressed: false,
+        toxic: true,
+        toxicity,
+        probeCount: probes.length,
+        results: [],
+        error: `静态毒性命中：${toxicity.join('；')}`,
+        codeHash,
       };
       v.verdictDigest = _digestVerdict(v);
       v.passToken = null;
@@ -145,9 +177,15 @@ class OrganogenesisSandbox {
     const mat = this._materialize(code, entry);
     if (!mat.ok) {
       const v = {
-        passed: false, solved: false, regressed: false, toxic: false,
-        toxicity: [], probeCount: probes.length, results: [],
-        error: `器官编译失败：${mat.error}`, codeHash,
+        passed: false,
+        solved: false,
+        regressed: false,
+        toxic: false,
+        toxicity: [],
+        probeCount: probes.length,
+        results: [],
+        error: `器官编译失败：${mat.error}`,
+        codeHash,
       };
       v.verdictDigest = _digestVerdict(v);
       v.passToken = null;
@@ -162,26 +200,42 @@ class OrganogenesisSandbox {
 
     for (let i = 0; i < probes.length; i++) {
       const probe = probes[i];
-      let actual; let threw = null;
+      let actual;
+      let threw = null;
       try {
         actual = this._runIsolated(mat.fn, probe.input);
       } catch (e) {
         threw = e && e.message ? e.message : String(e);
       }
-      const ok = !threw && ('expected' in probe ? equals(actual, probe.expected) : actual !== undefined);
-      if (!ok) solved = false;
-      if (threw) runtimeError = runtimeError || threw;
+      const ok =
+        !threw && ('expected' in probe ? equals(actual, probe.expected) : actual !== undefined);
+      if (!ok) {
+        solved = false;
+      }
+      if (threw) {
+        runtimeError = runtimeError || threw;
+      }
 
       // 差异校验：有基线则对比是否退化（基线能解而新器官解不了 = 退化）。
       if (args.baseline != null) {
-        let baseOut; let baseThrew = false;
+        let baseOut;
+        let baseThrew = false;
         try {
-          baseOut = typeof args.baseline === 'function'
-            ? args.baseline(probe.input)
-            : (Array.isArray(args.baseline) ? args.baseline[i] : undefined);
-        } catch { baseThrew = true; }
-        const baseOk = !baseThrew && ('expected' in probe ? equals(baseOut, probe.expected) : baseOut !== undefined);
-        if (baseOk && !ok) regressed = true; // 基线行、新器官不行 → 退化
+          baseOut =
+            typeof args.baseline === 'function'
+              ? args.baseline(probe.input)
+              : Array.isArray(args.baseline)
+                ? args.baseline[i]
+                : undefined;
+        } catch {
+          baseThrew = true;
+        }
+        const baseOk =
+          !baseThrew &&
+          ('expected' in probe ? equals(baseOut, probe.expected) : baseOut !== undefined);
+        if (baseOk && !ok) {
+          regressed = true;
+        } // 基线行、新器官不行 → 退化
       }
 
       results.push({ index: i, ok, threw, actual: _slim(actual) });
@@ -190,9 +244,15 @@ class OrganogenesisSandbox {
     const toxic = false;
     const passed = solved && !regressed && !toxic && !runtimeError;
     const v = {
-      passed, solved, regressed, toxic,
-      toxicity: [], probeCount: probes.length, results,
-      error: runtimeError, codeHash,
+      passed,
+      solved,
+      regressed,
+      toxic,
+      toxicity: [],
+      probeCount: probes.length,
+      results,
+      error: runtimeError,
+      codeHash,
     };
     v.verdictDigest = _digestVerdict(v);
     // 4) 仅 passed 才签发热载凭证（防呆①的密码学闸门）。
@@ -206,19 +266,28 @@ class OrganogenesisSandbox {
     sandbox.__organ = fn;
     sandbox.__input = input;
     const context = vm.createContext(sandbox);
-    return vm.runInContext('__organ(__input)', context, { timeout: this.timeoutMs, displayErrors: false });
+    return vm.runInContext('__organ(__input)', context, {
+      timeout: this.timeoutMs,
+      displayErrors: false,
+    });
   }
 }
 
 function _deepEqual(a, b) {
-  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return a === b; }
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return a === b;
+  }
 }
 
 function _slim(v) {
   try {
     const s = typeof v === 'string' ? v : JSON.stringify(v);
     return s && s.length > 200 ? s.slice(0, 200) + '…' : v;
-  } catch { return String(v); }
+  } catch {
+    return String(v);
+  }
 }
 
 module.exports = {

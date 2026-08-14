@@ -19,12 +19,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
 const flagRegistry = require('./flagRegistry');
-const {
-  buildComposerSeed,
-  stripComposerSentinels,
-  isBlankPrompt,
-} = require('./promptComposer');
+const { buildComposerSeed, stripComposerSentinels, isBlankPrompt } = require('./promptComposer');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _off(v) {
@@ -42,7 +39,9 @@ function isPromptComposeEnabled(env) {
     if (flagRegistry.isRegistryEnabled(e)) {
       return flagRegistry.isFlagEnabled('KHY_PROMPT_COMPOSE', e);
     }
-  } catch { /* 注册表异常 → 回退手写判定 */ }
+  } catch {
+    /* 注册表异常 → 回退手写判定 */
+  }
   return !_off(e.KHY_PROMPT_COMPOSE);
 }
 
@@ -50,16 +49,23 @@ function isPromptComposeEnabled(env) {
 function _resolveEditor(env, platform) {
   const e = env || {};
   const v = String(e.VISUAL || '').trim();
-  if (v) return v;
+  if (v) {
+    return v;
+  }
   const ed = String(e.EDITOR || '').trim();
-  if (ed) return ed;
+  if (ed) {
+    return ed;
+  }
   return (platform || process.platform) === 'win32' ? 'notepad' : 'nano';
 }
 
 /** 默认编辑器执行器:阻塞式 spawnSync,继承 stdio 让用户直接交互。返回 { status, error? }。 */
 function _defaultRunEditor(editorCmd, file) {
   const { spawnSync } = require('child_process');
-  const parts = String(editorCmd || '').trim().split(/\s+/).filter(Boolean);
+  const parts = String(editorCmd || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   const bin = parts[0] || 'nano';
   const preArgs = parts.slice(1);
   const r = spawnSync(bin, [...preArgs, file], { stdio: 'inherit' });
@@ -101,7 +107,14 @@ function composeInEditor(options = {}) {
 
     const run = runEditor(editorCmd, tmpFile, env) || {};
     if (run.error) {
-      return { ok: false, empty: true, text: '', reason: 'editor-failed', detail: String(run.error), editor: editorCmd };
+      return {
+        ok: false,
+        empty: true,
+        text: '',
+        reason: 'editor-failed',
+        detail: String(run.error),
+        editor: editorCmd,
+      };
     }
 
     const raw = fsImpl.readFileSync(tmpFile, 'utf8');
@@ -111,11 +124,29 @@ function composeInEditor(options = {}) {
     }
     return { ok: true, empty: false, text, reason: 'composed', editor: editorCmd };
   } catch (e) {
-    return { ok: false, empty: true, text: '', reason: 'error', detail: String((e && e.message) || e) };
+    return {
+      ok: false,
+      empty: true,
+      text: '',
+      reason: 'error',
+      detail: String((e && e.message) || e),
+    };
   } finally {
     // 用后即删:先删文件再删临时目录。清理失败绝不影响返回(双 try/catch)。
-    try { if (tmpFile) fsImpl.unlinkSync(tmpFile); } catch { /* ignore */ }
-    try { if (tmpDir) fsImpl.rmdirSync(tmpDir); } catch { /* ignore */ }
+    try {
+      if (tmpFile) {
+        fsImpl.unlinkSync(tmpFile);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (tmpDir) {
+        fsImpl.rmdirSync(tmpDir);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 

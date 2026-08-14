@@ -26,7 +26,9 @@ const IMAGE_PLACEHOLDER = '[image]';
  * @returns {boolean}
  */
 function isImageBlock(block) {
-  if (!block || typeof block !== 'object') return false;
+  if (!block || typeof block !== 'object') {
+    return false;
+  }
   return block.type === 'image' || block.type === 'image_url';
 }
 
@@ -37,19 +39,28 @@ function isImageBlock(block) {
  * @returns {string}
  */
 function extractImageMime(block) {
-  if (!block || typeof block !== 'object') return '';
+  if (!block || typeof block !== 'object') {
+    return '';
+  }
   // Anthropic: { type:'image', source:{ type:'base64', media_type:'image/png', data } }
   if (block.source && typeof block.source === 'object') {
     const mt = block.source.media_type || block.source.mediaType;
-    if (mt && typeof mt === 'string') return mt.trim().toLowerCase();
+    if (mt && typeof mt === 'string') {
+      return mt.trim().toLowerCase();
+    }
   }
   // OpenAI: { type:'image_url', image_url:{ url:'data:image/png;base64,...' } }
-  const url = block.image_url && typeof block.image_url === 'object'
-    ? block.image_url.url
-    : (typeof block.image_url === 'string' ? block.image_url : block.url);
+  const url =
+    block.image_url && typeof block.image_url === 'object'
+      ? block.image_url.url
+      : typeof block.image_url === 'string'
+        ? block.image_url
+        : block.url;
   if (url && typeof url === 'string') {
     const m = url.match(/^data:([^;,]+)?;base64,/i);
-    if (m && m[1]) return m[1].trim().toLowerCase();
+    if (m && m[1]) {
+      return m[1].trim().toLowerCase();
+    }
   }
   return '';
 }
@@ -70,10 +81,14 @@ function describeImagePlaceholder(block) {
  * @returns {number}
  */
 function countImageBlocks(content) {
-  if (!Array.isArray(content)) return 0;
+  if (!Array.isArray(content)) {
+    return 0;
+  }
   let n = 0;
   for (const block of content) {
-    if (isImageBlock(block)) n += 1;
+    if (isImageBlock(block)) {
+      n += 1;
+    }
   }
   return n;
 }
@@ -84,10 +99,14 @@ function countImageBlocks(content) {
  * @returns {number}
  */
 function countImagesInMessages(messages) {
-  if (!Array.isArray(messages)) return 0;
+  if (!Array.isArray(messages)) {
+    return 0;
+  }
   let n = 0;
   for (const msg of messages) {
-    if (msg && typeof msg === 'object') n += countImageBlocks(msg.content);
+    if (msg && typeof msg === 'object') {
+      n += countImageBlocks(msg.content);
+    }
   }
   return n;
 }
@@ -101,7 +120,9 @@ function countImagesInMessages(messages) {
  */
 function buildTextModelImageNotice(imageCount) {
   const n = Number.isFinite(imageCount) ? Math.max(0, Math.floor(imageCount)) : 0;
-  if (n <= 0) return '';
+  if (n <= 0) {
+    return '';
+  }
   return `\n\n[注意：用户附带 ${n} 张图片，当前模型不支持视觉，请仅依据文本内容作答。]`;
 }
 

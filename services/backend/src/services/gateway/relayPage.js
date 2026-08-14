@@ -109,7 +109,9 @@ footer{text-align:center;padding:12px;color:var(--dim);font-size:12px;border-top
   const promptCount = $('promptCount');
 
   function connect() {
-    ws = new WebSocket('ws://localhost:' + PORT + '/?token=' + encodeURIComponent(TOKEN));
+    // 通过 WebSocket 子协议（subprotocol）传递 token，而非 URL 查询参数。
+    // URL 查询参数会被代理/负载均衡器记录到访问日志中，造成 token 泄露（红线：安全）。
+    ws = new WebSocket('ws://localhost:' + PORT, TOKEN);
 
     ws.onopen = function() {
       dot.className = 'status-dot online';

@@ -20,7 +20,7 @@ export function canvasToGraph(vfNodes = [], vfEdges = [], meta = {}) {
     name: n.label || (n.data && n.data.name) || n.type,
     position: { x: Math.round(n.position?.x ?? 0), y: Math.round(n.position?.y ?? 0) },
     data: stripInternal(n.data),
-  }))
+  }));
 
   const connections = vfEdges.map((e) => ({
     id: e.id,
@@ -29,7 +29,7 @@ export function canvasToGraph(vfNodes = [], vfEdges = [], meta = {}) {
     to: e.target,
     toPort: e.targetHandle || 'input',
     condition: e.label != null && e.label !== '' ? String(e.label) : null,
-  }))
+  }));
 
   return {
     ...(meta.id ? { id: meta.id } : {}),
@@ -37,13 +37,13 @@ export function canvasToGraph(vfNodes = [], vfEdges = [], meta = {}) {
     ...(meta.description != null ? { description: meta.description } : {}),
     nodes,
     connections,
-  }
+  };
 }
 
 // Canonical graph -> Vue Flow nodes/edges.
 export function graphToCanvas(graph = {}) {
-  const gNodes = Array.isArray(graph.nodes) ? graph.nodes : []
-  const gConns = Array.isArray(graph.connections) ? graph.connections : []
+  const gNodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+  const gConns = Array.isArray(graph.connections) ? graph.connections : [];
 
   const nodes = gNodes.map((n) => ({
     id: n.id,
@@ -51,7 +51,7 @@ export function graphToCanvas(graph = {}) {
     position: { x: n.position?.x ?? 0, y: n.position?.y ?? 0 },
     label: n.name || n.type,
     data: { ...(n.data || {}), name: n.name || n.type },
-  }))
+  }));
 
   const edges = gConns.map((c) => ({
     id: c.id,
@@ -60,15 +60,15 @@ export function graphToCanvas(graph = {}) {
     target: c.to,
     targetHandle: c.toPort || 'input',
     ...(c.condition ? { label: c.condition } : {}),
-  }))
+  }));
 
-  return { nodes, edges }
+  return { nodes, edges };
 }
 
 // Drop the editor-only `name` mirror before persisting node.data.
 function stripInternal(data) {
-  if (!data || typeof data !== 'object') return {}
-  const out = { ...data }
-  delete out.name
-  return out
+  if (!data || typeof data !== 'object') return {};
+  const out = { ...data };
+  delete out.name;
+  return out;
 }

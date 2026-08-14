@@ -35,7 +35,9 @@ function isEvalTimeoutEnabled(env) {
     return flagRegistry.isFlagEnabled('KHY_BROWSER_EVAL_TIMEOUT', e);
   } catch {
     const raw = e && e.KHY_BROWSER_EVAL_TIMEOUT;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
@@ -46,10 +48,16 @@ function resolveEvalTimeoutMs(env) {
   try {
     const flagRegistry = require('../flagRegistry');
     const v = flagRegistry.resolveNumeric('KHY_BROWSER_EVAL_TIMEOUT_MS', e);
-    if (Number.isFinite(v) && v > 0) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v > 0) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const raw = Number.parseInt((e && e.KHY_BROWSER_EVAL_TIMEOUT_MS) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return Math.min(300000, Math.max(1000, raw));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.min(300000, Math.max(1000, raw));
+  }
   return 15000;
 }
 

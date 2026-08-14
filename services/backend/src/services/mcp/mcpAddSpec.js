@@ -30,11 +30,17 @@ function isMcpAddEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_MCP_ADD', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_MCP_ADD;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -47,16 +53,26 @@ function isValidServerName(name) {
 
 /** 归一 scope:user(默认)/ project(local 别名)。未知 → 'user'。 */
 function normalizeScope(s) {
-  const v = String(s == null ? '' : s).trim().toLowerCase();
-  if (v === 'project' || v === 'local' || v === 'proj') return 'project';
+  const v = String(s == null ? '' : s)
+    .trim()
+    .toLowerCase();
+  if (v === 'project' || v === 'local' || v === 'proj') {
+    return 'project';
+  }
   return 'user';
 }
 
 /** 归一 transport:stdio(默认)/ sse / http。未知 → null(交调用方报错)。 */
 function normalizeTransport(t) {
-  const v = String(t == null ? '' : t).trim().toLowerCase();
-  if (!v) return 'stdio';
-  if (v === 'stdio' || v === 'sse' || v === 'http') return v;
+  const v = String(t == null ? '' : t)
+    .trim()
+    .toLowerCase();
+  if (!v) {
+    return 'stdio';
+  }
+  if (v === 'stdio' || v === 'sse' || v === 'http') {
+    return v;
+  }
   return null;
 }
 
@@ -68,9 +84,13 @@ function normalizeTransport(t) {
 function parseEnvPair(pair) {
   const s = String(pair == null ? '' : pair).trim();
   const eq = s.indexOf('=');
-  if (eq <= 0) return null;
+  if (eq <= 0) {
+    return null;
+  }
   const key = s.slice(0, eq).trim();
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) return null;
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    return null;
+  }
   return [key, s.slice(eq + 1)];
 }
 
@@ -83,21 +103,30 @@ function parseEnvPair(pair) {
 function parseEnvString(str) {
   const out = {};
   const s = String(str == null ? '' : str);
-  if (!s) return out;
+  if (!s) {
+    return out;
+  }
   for (const part of s.split(',')) {
     const kv = parseEnvPair(part);
-    if (kv) out[kv[0]] = kv[1];
+    if (kv) {
+      out[kv[0]] = kv[1];
+    }
   }
   return out;
 }
 
 // 前导 flag 别名 → 规范键(用于扫描 rest 头部,兼容拷贝 claude 的 -s/-e 写法)。
 const _FLAG_ALIASES = {
-  '-s': 'scope', '--scope': 'scope',
-  '-e': 'env', '--env': 'env',
-  '-t': 'transport', '--transport': 'transport',
-  '-u': 'url', '--url': 'url',
-  '-H': 'header', '--header': 'header',
+  '-s': 'scope',
+  '--scope': 'scope',
+  '-e': 'env',
+  '--env': 'env',
+  '-t': 'transport',
+  '--transport': 'transport',
+  '-u': 'url',
+  '--url': 'url',
+  '-H': 'header',
+  '--header': 'header',
 };
 
 /**
@@ -113,15 +142,26 @@ function _consumePreamble(rest) {
   while (i < arr.length) {
     const tok = arr[i];
     const key = _FLAG_ALIASES[tok];
-    if (!key) break; // 命令开始
+    if (!key) {
+      break;
+    } // 命令开始
     const val = arr[i + 1];
-    if (val === undefined) { i += 1; break; } // 悬空 flag → 忽略
+    if (val === undefined) {
+      i += 1;
+      break;
+    } // 悬空 flag → 忽略
     if (key === 'env') {
       const kv = parseEnvPair(val);
-      if (kv) flags.env[kv[0]] = kv[1];
+      if (kv) {
+        flags.env[kv[0]] = kv[1];
+      }
     } else if (key === 'header') {
       const idx = String(val).indexOf(':');
-      if (idx > 0) flags.headers[String(val).slice(0, idx).trim()] = String(val).slice(idx + 1).trim();
+      if (idx > 0) {
+        flags.headers[String(val).slice(0, idx).trim()] = String(val)
+          .slice(idx + 1)
+          .trim();
+      }
     } else {
       flags[key] = val;
     }
@@ -142,10 +182,17 @@ function _consumePreamble(rest) {
 function buildServerConfig(input = {}) {
   const name = input.name;
   if (!name) {
-    return { ok: false, error: '缺少 server 名。用法:khy mcp add <名> [--scope user|project] [--env K=V] -- <命令> [参数…]' };
+    return {
+      ok: false,
+      error:
+        '缺少 server 名。用法:khy mcp add <名> [--scope user|project] [--env K=V] -- <命令> [参数…]',
+    };
   }
   if (!isValidServerName(name)) {
-    return { ok: false, error: `非法 server 名「${name}」:只能包含字母、数字、下划线、连字符,长度 1–64(对齐 MCP 工具名规则)。` };
+    return {
+      ok: false,
+      error: `非法 server 名「${name}」:只能包含字母、数字、下划线、连字符,长度 1–64(对齐 MCP 工具名规则)。`,
+    };
   }
 
   const options = input.options || {};
@@ -153,13 +200,21 @@ function buildServerConfig(input = {}) {
 
   // scope / transport / url:前导 flag 优先,其次 khy options。
   const scope = normalizeScope(pre.scope !== undefined ? pre.scope : options.scope);
-  const transport = normalizeTransport(pre.transport !== undefined ? pre.transport
-    : (options.transport !== undefined ? options.transport : undefined));
+  const transport = normalizeTransport(
+    pre.transport !== undefined
+      ? pre.transport
+      : options.transport !== undefined
+        ? options.transport
+        : undefined
+  );
   if (transport === null) {
-    return { ok: false, error: `未知传输类型「${pre.transport || options.transport}」(支持 stdio|sse|http)。` };
+    return {
+      ok: false,
+      error: `未知传输类型「${pre.transport || options.transport}」(支持 stdio|sse|http)。`,
+    };
   }
-  const url = pre.url !== undefined ? pre.url
-    : (typeof options.url === 'string' ? options.url : undefined);
+  const url =
+    pre.url !== undefined ? pre.url : typeof options.url === 'string' ? options.url : undefined;
 
   // env:khy options.--env 串 + 前导 -e 对(前导覆盖同名)。
   const env = { ...parseEnvString(typeof options.env === 'string' ? options.env : ''), ...pre.env };
@@ -171,27 +226,60 @@ function buildServerConfig(input = {}) {
   // 开源预设、传输为默认 stdio、且用户没有显式给出 launcher 命令时,展开成标准 stdio 配置,
   // 命令后的位置参数(如 filesystem 的目录)作为 extraArgs 追加。显式 `-- npx …`(首 token 是
   // 已知 launcher)则视为覆盖,跳过预设走原有手打命令路径。门控关 → hasPreset 恒 false → 回退。
-  const _LAUNCHERS = new Set(['npx', 'npm', 'pnpm', 'yarn', 'bunx', 'uvx', 'uv',
-    'node', 'python', 'python3', 'deno', 'docker', 'sh', 'bash', 'cmd']);
+  const _LAUNCHERS = new Set([
+    'npx',
+    'npm',
+    'pnpm',
+    'yarn',
+    'bunx',
+    'uvx',
+    'uv',
+    'node',
+    'python',
+    'python3',
+    'deno',
+    'docker',
+    'sh',
+    'bash',
+    'cmd',
+  ]);
   if (transport === 'stdio') {
     let presets = null;
-    try { presets = require('./mcpServerPresets'); } catch { presets = null; }
+    try {
+      presets = require('./mcpServerPresets');
+    } catch {
+      presets = null;
+    }
     if (presets && presets.hasPreset(name, process.env)) {
       const first = pre.command.length ? String(pre.command[0]).trim().toLowerCase() : '';
       const explicitCommand = first && _LAUNCHERS.has(first);
       if (!explicitCommand) {
         let resolved;
         try {
-          resolved = presets.resolvePreset(name, { extraArgs: pre.command, env, gateEnv: process.env });
-        } catch { resolved = { ok: false }; }
+          resolved = presets.resolvePreset(name, {
+            extraArgs: pre.command,
+            env,
+            gateEnv: process.env,
+          });
+        } catch {
+          resolved = { ok: false };
+        }
         if (resolved && resolved.ok) {
           try {
             const v = mcpTypes.validateServerConfig(resolved.config);
             if (v && v.valid === false) {
               return { ok: false, error: `预设配置校验失败:${(v.errors || []).join('; ')}` };
             }
-          } catch { /* fail-soft */ }
-          return { ok: true, name: resolved.name, config: resolved.config, scope, preset: resolved.meta };
+          } catch {
+            /* fail-soft */
+          }
+          return {
+            ok: true,
+            name: resolved.name,
+            config: resolved.config,
+            scope,
+            preset: resolved.meta,
+          };
         }
       }
     }
@@ -201,11 +289,19 @@ function buildServerConfig(input = {}) {
   if (transport === 'stdio') {
     const cmd = pre.command;
     if (!cmd.length || !String(cmd[0]).trim()) {
-      return { ok: false, error: '缺少要启动的命令。用法:khy mcp add <名> -- <命令> [参数…](例:-- npx -y @modelcontextprotocol/server-filesystem ~/Documents)。' };
+      return {
+        ok: false,
+        error:
+          '缺少要启动的命令。用法:khy mcp add <名> -- <命令> [参数…](例:-- npx -y @modelcontextprotocol/server-filesystem ~/Documents)。',
+      };
     }
     config = { type: 'stdio', command: String(cmd[0]) };
-    if (cmd.length > 1) config.args = cmd.slice(1).map(String);
-    if (hasEnv) config.env = env;
+    if (cmd.length > 1) {
+      config.args = cmd.slice(1).map(String);
+    }
+    if (hasEnv) {
+      config.env = env;
+    }
   } else {
     // sse / http:需要 url。
     const u = url || (pre.command.length ? pre.command[0] : undefined);
@@ -213,8 +309,12 @@ function buildServerConfig(input = {}) {
       return { ok: false, error: `${transport} 传输需要一个 http(s) URL(--url <地址>)。` };
     }
     config = { type: transport, url: String(u) };
-    if (hasHeaders) config.headers = pre.headers;
-    if (hasEnv) config.env = env;
+    if (hasHeaders) {
+      config.headers = pre.headers;
+    }
+    if (hasEnv) {
+      config.env = env;
+    }
   }
 
   // 复用既有校验器(单一真源:与 client 连接时同一份 validateServerConfig)。
@@ -223,7 +323,9 @@ function buildServerConfig(input = {}) {
     if (v && v.valid === false) {
       return { ok: false, error: `配置校验失败:${(v.errors || []).join('; ')}` };
     }
-  } catch { /* 校验器异常 → 不阻断(fail-soft) */ }
+  } catch {
+    /* 校验器异常 → 不阻断(fail-soft) */
+  }
 
   return { ok: true, name, config, scope };
 }

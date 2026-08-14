@@ -15,16 +15,26 @@
 
 const contextWindowGuard = require('./contextWindowGuard');
 let _contextDiagnostics;
-try { _contextDiagnostics = require('./contextDiagnostics'); } catch { _contextDiagnostics = null; }
+try {
+  _contextDiagnostics = require('./contextDiagnostics');
+} catch {
+  _contextDiagnostics = null;
+}
 
 // 诊断驱动的补判模式（环境变量单一真源）：
 //   off     — 完全关闭，不计算，行为与历史一致
 //   observe — 计算并把 details.diagnostics 挂出（可观测），但绝不改变决策
 //   on(默认) — 计算 + 挂出 + 在比例闸门放行时，对高置信「非溢出」病态升级
 function _diagnosticsMode() {
-  const v = String(process.env.KHY_CONTEXT_DIAGNOSTICS || 'on').trim().toLowerCase();
-  if (v === 'off' || v === '0' || v === 'false') return 'off';
-  if (v === 'observe' || v === 'shadow') return 'observe';
+  const v = String(process.env.KHY_CONTEXT_DIAGNOSTICS || 'on')
+    .trim()
+    .toLowerCase();
+  if (v === 'off' || v === '0' || v === 'false') {
+    return 'off';
+  }
+  if (v === 'observe' || v === 'shadow') {
+    return 'observe';
+  }
   return 'on';
 }
 
@@ -62,12 +72,12 @@ const RiskLevel = CapacityRiskLevel;
 
 // ── Thresholds ────────────────────────────────────────────────────────
 
-const MEDIUM_USAGE_RATIO = 0.60;
-const HIGH_USAGE_RATIO   = 0.80;
-const CRITICAL_USAGE_RATIO = 0.90;
+const MEDIUM_USAGE_RATIO = 0.6;
+const HIGH_USAGE_RATIO = 0.8;
+const CRITICAL_USAGE_RATIO = 0.9;
 
 // Error escalation: how many consecutive errors trigger replan
-const ERROR_ESCALATION_WARN  = 2;
+const ERROR_ESCALATION_WARN = 2;
 const ERROR_ESCALATION_REPLAN = 4;
 
 // Post-tool: how many high-risk tool results trigger verification
@@ -164,7 +174,12 @@ function _ratioDecision(ctx) {
  */
 function _overlayDiagnostics(base, ctx) {
   const mode = _diagnosticsMode();
-  if (mode === 'off' || !_contextDiagnostics || !Array.isArray(ctx && ctx.messages) || ctx.messages.length === 0) {
+  if (
+    mode === 'off' ||
+    !_contextDiagnostics ||
+    !Array.isArray(ctx && ctx.messages) ||
+    ctx.messages.length === 0
+  ) {
     return base;
   }
   let diag;
@@ -176,7 +191,9 @@ function _overlayDiagnostics(base, ctx) {
   } catch {
     return base; // 诊断永不阻断主流程
   }
-  if (!diag) return base;
+  if (!diag) {
+    return base;
+  }
 
   // 始终挂出摘要（即便不改决策）。
   const details = Object.assign({}, base.details, {
@@ -224,7 +241,13 @@ function _overlayDiagnostics(base, ctx) {
  * @returns {{ decision: string, risk: string, details: object }}
  */
 function postToolCheckpoint(ctx) {
-  const { toolResults = [], usedTokens = 0, contextWindow = 0, iterationErrors = 0, totalIterations = 0 } = ctx;
+  const {
+    toolResults = [],
+    usedTokens = 0,
+    contextWindow = 0,
+    iterationErrors = 0,
+    totalIterations = 0,
+  } = ctx;
 
   if (!contextWindow || contextWindow <= 0) {
     return { decision: CapacityDecision.None, risk: RiskLevel.Low, details: {} };
@@ -245,7 +268,7 @@ function postToolCheckpoint(ctx) {
   }
 
   // High risk: many tool errors in this iteration suggest state drift
-  const failedCount = toolResults.filter(tr => tr.result && !tr.result.success).length;
+  const failedCount = toolResults.filter((tr) => tr.result && !tr.result.success).length;
   if (failedCount >= POST_TOOL_HIGH_RISK_THRESHOLD) {
     return {
       decision: CapacityDecision.VerifyReplay,
@@ -291,9 +314,11 @@ function errorEscalationCheckpoint(ctx) {
 
   // Skip escalation for transient errors (network, timeout, rate-limit)
   const transientPatterns = /\b(timeout|econnrefused|enotfound|rate.?limit|429|503|502)\b/i;
-  const allTransient = recentErrors.length > 0 && recentErrors.every(e =>
-    transientPatterns.test(typeof e === 'string' ? e : String(e?.message || e?.error || e))
-  );
+  const allTransient =
+    recentErrors.length > 0 &&
+    recentErrors.every((e) =>
+      transientPatterns.test(typeof e === 'string' ? e : String(e?.message || e?.error || e))
+    );
   if (allTransient) {
     return {
       decision: CapacityDecision.None,
@@ -357,26 +382,34 @@ function errorEscalationCheckpoint(ctx) {
  * @returns {Array} Modified messages
  */
 function applyDecision(decision, messages, opts = {}) {
-  if (decision === CapacityDecision.None) return messages;
+  if (decision === CapacityDecision.None) {
+    return messages;
+  }
 
   const { estimateTokens, contextWindow, onRefresh, onReplan } = opts;
 
   if (decision === CapacityDecision.TargetedRefresh) {
-    if (!estimateTokens || !contextWindow) return messages;
-    const targetTokens = Math.floor(contextWindow * 0.70);
-    const { pruned, removedCount, removedTokens } = contextWindowGuard.pruneMessages(
-      messages,
-      { targetTokens, estimateTokens }
-    );
-    if (onRefresh) onRefresh({ removedCount, removedTokens });
+    if (!estimateTokens || !contextWindow) {
+      return messages;
+    }
+    const targetTokens = Math.floor(contextWindow * 0.7);
+    const { pruned, removedCount, removedTokens } = contextWindowGuard.pruneMessages(messages, {
+      targetTokens,
+      estimateTokens,
+    });
+    if (onRefresh) {
+      onRefresh({ removedCount, removedTokens });
+    }
     return pruned;
   }
 
   if (decision === CapacityDecision.VerifyReplan) {
-    if (onReplan) onReplan({ messageCount: messages.length });
+    if (onReplan) {
+      onReplan({ messageCount: messages.length });
+    }
     // Replan: keep system + last user message only
-    const system = messages.filter(m => m.role === 'system');
-    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    const system = messages.filter((m) => m.role === 'system');
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
     return lastUser ? [...system, lastUser] : system;
   }
 

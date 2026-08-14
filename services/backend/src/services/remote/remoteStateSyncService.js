@@ -4,9 +4,8 @@ class RemoteStateSyncService {
   constructor({ connectionManager, approvalBridge, getPersistenceStatus = null }) {
     this._connectionManager = connectionManager;
     this._approvalBridge = approvalBridge;
-    this._getPersistenceStatus = typeof getPersistenceStatus === 'function'
-      ? getPersistenceStatus
-      : null;
+    this._getPersistenceStatus =
+      typeof getPersistenceStatus === 'function' ? getPersistenceStatus : null;
   }
 
   getSnapshot() {

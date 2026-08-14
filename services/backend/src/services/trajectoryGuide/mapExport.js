@@ -18,9 +18,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const mapStore = require('./mapStore');
-const mapAuthor = require('./mapAuthor');
 const skillPackageService = require('../skillPackageService');
+
+const mapAuthor = require('./mapAuthor');
+const mapStore = require('./mapStore');
 
 /**
  * Export a stored map as a skill.
@@ -60,7 +61,11 @@ async function exportAsSkill(mapId, opts = {}) {
     const res = await skillPackageService.importSkill(srcPath, {});
     return { ...res, format, mapId: map.id };
   } finally {
-    try { fs.rmSync(stage, { recursive: true, force: true }); } catch { /* best-effort cleanup */ }
+    try {
+      fs.rmSync(stage, { recursive: true, force: true });
+    } catch {
+      /* best-effort cleanup */
+    }
   }
 }
 

@@ -43,7 +43,9 @@ function defaultDeps() {
  * @returns {boolean}
  */
 function isWritableDir(dir, deps = defaultDeps()) {
-  if (!dir) return false;
+  if (!dir) {
+    return false;
+  }
   try {
     deps.accessSync(dir, deps.WOK);
     return true;
@@ -52,7 +54,12 @@ function isWritableDir(dir, deps = defaultDeps()) {
     if (e && e.code === 'ENOENT') {
       const parent = path.dirname(dir);
       if (parent && parent !== dir) {
-        try { deps.accessSync(parent, deps.WOK); return true; } catch { return false; }
+        try {
+          deps.accessSync(parent, deps.WOK);
+          return true;
+        } catch {
+          return false;
+        }
       }
     }
     return false; // EACCES / EROFS / 其它 → 不可写
@@ -84,7 +91,9 @@ function resolveInstallRoot(backendRoot, deps = defaultDeps()) {
 
 /** 重定位根下用于解析的 node_modules 路径。 */
 function modulePathsFor(installRoot) {
-  if (!installRoot) return [];
+  if (!installRoot) {
+    return [];
+  }
   return [path.join(installRoot, 'node_modules')];
 }
 
@@ -99,7 +108,9 @@ const _registered = new Set();
  */
 function registerModulePath(installRoot) {
   const nm = path.join(installRoot || '', 'node_modules');
-  if (!installRoot || _registered.has(nm)) return;
+  if (!installRoot || _registered.has(nm)) {
+    return;
+  }
   try {
     const Module = require('module');
     // ① 进程级 NODE_PATH（供子进程与 _initPaths 消费）。
@@ -108,7 +119,9 @@ function registerModulePath(installRoot) {
     if (!cur.includes(nm)) {
       cur.unshift(nm);
       process.env.NODE_PATH = cur.join(sep);
-      if (typeof Module._initPaths === 'function') Module._initPaths();
+      if (typeof Module._initPaths === 'function') {
+        Module._initPaths();
+      }
     }
     // ② globalPaths（部分解析路径直接查这里）。
     if (Array.isArray(Module.globalPaths) && !Module.globalPaths.includes(nm)) {
@@ -121,7 +134,9 @@ function registerModulePath(installRoot) {
 }
 
 /** 测试辅助：清空注册去重表。 */
-function _resetRegistered() { _registered.clear(); }
+function _resetRegistered() {
+  _registered.clear();
+}
 
 module.exports = {
   isWritableDir,

@@ -39,8 +39,8 @@ const MODEL_CAPABILITY_FACTS = Object.freeze({
     kind: 'infographic-gen',
     chatAlternative: 'sensenova-6.7-flash-lite',
     reason:
-      'sensenova-u1-fast 是「信息图生成」模型，走独立端点 /v1/images/generations，'
-      + '既不能用于通用对话、也不接受图像输入',
+      'sensenova-u1-fast 是「信息图生成」模型，走独立端点 /v1/images/generations，' +
+      '既不能用于通用对话、也不接受图像输入',
   },
   'sensenova-6.7-flash-image': {
     kind: 'nonexistent',
@@ -50,7 +50,9 @@ const MODEL_CAPABILITY_FACTS = Object.freeze({
 });
 
 function _enabled(env) {
-  const v = String((env && env.KHY_FAILURE_EXPLAINER) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_FAILURE_EXPLAINER) || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -60,14 +62,26 @@ function _enabled(env) {
  */
 function _collectHaystack(model, attempts) {
   const parts = [];
-  if (model) parts.push(String(model));
+  if (model) {
+    parts.push(String(model));
+  }
   if (Array.isArray(attempts)) {
     for (const a of attempts) {
-      if (!a) continue;
-      if (a.adapterKey) parts.push(String(a.adapterKey));
-      if (a.provider) parts.push(String(a.provider));
-      if (a.error) parts.push(String(a.error));
-      if (a.message) parts.push(String(a.message));
+      if (!a) {
+        continue;
+      }
+      if (a.adapterKey) {
+        parts.push(String(a.adapterKey));
+      }
+      if (a.provider) {
+        parts.push(String(a.provider));
+      }
+      if (a.error) {
+        parts.push(String(a.error));
+      }
+      if (a.message) {
+        parts.push(String(a.message));
+      }
     }
   }
   return parts.join(' \n ').toLowerCase();
@@ -82,9 +96,13 @@ function _collectHaystack(model, attempts) {
  * @returns {boolean}
  */
 function isModelRejection(attemptLike) {
-  if (!attemptLike || attemptLike.success !== false) return false;
+  if (!attemptLike || attemptLike.success !== false) {
+    return false;
+  }
   const code = Number(attemptLike.statusCode || attemptLike.status || attemptLike.code);
-  if (code === 404 || code === 400) return true;
+  if (code === 404 || code === 400) {
+    return true;
+  }
   const t = String(attemptLike.errorType || '').toLowerCase();
   return t === 'model_not_found' || t === 'bad_request';
 }
@@ -96,17 +114,22 @@ function isModelRejection(attemptLike) {
 function _hasModelRejectionSignal(attempts, haystack) {
   if (Array.isArray(attempts)) {
     for (const a of attempts) {
-      if (isModelRejection(a)) return true;
+      if (isModelRejection(a)) {
+        return true;
+      }
     }
   }
   // 文本兜底：适配器把 404 揉进消息却无结构化 code 时。
-  return /\b404\b|model_not_found|no such model|model does not exist|unknown model|model not found/
-    .test(String(haystack || ''));
+  return /\b404\b|model_not_found|no such model|model does not exist|unknown model|model not found/.test(
+    String(haystack || '')
+  );
 }
 
 function _concreteModelName(model) {
   const m = String(model == null ? '' : model).trim();
-  if (!m || m.toLowerCase() === 'auto') return '';
+  if (!m || m.toLowerCase() === 'auto') {
+    return '';
+  }
   return m;
 }
 
@@ -131,10 +154,16 @@ function diagnoseFailure(input = {}) {
   // 1) 命中策展能力事实——最确定。能力错配只在「被拒类」失败或带图时下结论，
   //    避免把网络/超时误归因到模型能力上。
   for (const key of Object.keys(MODEL_CAPABILITY_FACTS)) {
-    if (!haystack.includes(key)) continue;
+    if (!haystack.includes(key)) {
+      continue;
+    }
     const fact = MODEL_CAPABILITY_FACTS[key];
-    if (fact.kind === 'text-only' && !hasImage) continue; // 纯文本仅带图时才是主因
-    if (!rejection && !hasImage) continue; // 无失败信号且未带图→不臆测能力错配
+    if (fact.kind === 'text-only' && !hasImage) {
+      continue;
+    } // 纯文本仅带图时才是主因
+    if (!rejection && !hasImage) {
+      continue;
+    } // 无失败信号且未带图→不臆测能力错配
     return {
       matched: true,
       kind: fact.kind,
@@ -172,30 +201,42 @@ function diagnoseFailure(input = {}) {
  */
 function buildFailureExplanation(input = {}) {
   const env = (input && input.env) || process.env;
-  if (!_enabled(env)) return null;
+  if (!_enabled(env)) {
+    return null;
+  }
 
   const d = diagnoseFailure({ ...input, env });
-  if (!d || !d.matched) return null;
+  if (!d || !d.matched) {
+    return null;
+  }
 
   const lines = ['诊断（确定性）:', `  原因: ${d.reason}`];
   if (d.alternative) {
     const altIsVision = isVisionCapableModel(d.alternative, { env });
     if (d.hasImage && altIsVision) {
       lines.push(`  纠正: 图像识别请改用 ${d.alternative}`);
-      lines.push('         运行 `khy gateway model` 选择该模型；或设 GATEWAY_PREFERRED_MODEL 固定它');
+      lines.push(
+        '         运行 `khy gateway model` 选择该模型；或设 GATEWAY_PREFERRED_MODEL 固定它'
+      );
     } else if (d.hasImage) {
       // 带图,但已知备选并非视觉模型——绝不谎称它能识图。给诚实的图像指引,
       // 备选仅作纯文本对话回退提及。khy 会自动退回本地 OCR 提取图中文字。
       lines.push('  纠正: 当前通道没有可直接识图的模型；khy 会自动退回本地 OCR 提取图中文字,');
-      lines.push('         若需真正的视觉理解请改用支持图像输入的模型(运行 `khy gateway model` 选择);');
+      lines.push(
+        '         若需真正的视觉理解请改用支持图像输入的模型(运行 `khy gateway model` 选择);'
+      );
       lines.push(`         纯文本对话可改用 ${d.alternative}`);
     } else {
       lines.push(`  纠正: 改用 ${d.alternative}`);
-      lines.push('         运行 `khy gateway model` 选择该模型；或设 GATEWAY_PREFERRED_MODEL 固定它');
+      lines.push(
+        '         运行 `khy gateway model` 选择该模型；或设 GATEWAY_PREFERRED_MODEL 固定它'
+      );
     }
   } else {
     lines.push('  纠正: 运行 `khy gateway model` 选择「可执行」的模型');
-    if (d.hasImage) lines.push('         图像识别需选择支持图像输入的模型');
+    if (d.hasImage) {
+      lines.push('         图像识别需选择支持图像输入的模型');
+    }
   }
   return lines.join('\n');
 }

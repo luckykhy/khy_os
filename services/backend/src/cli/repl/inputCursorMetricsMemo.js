@@ -29,7 +29,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_INPUT_CURSOR_METRICS_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -45,8 +47,11 @@ let _promptLenCached = 0;
  * @returns {number}
  */
 function getPromptLen(promptRaw) {
-  const raw = typeof promptRaw === 'string' ? promptRaw : String(promptRaw == null ? '' : promptRaw);
-  if (raw === _promptRawCached) return _promptLenCached;
+  const raw =
+    typeof promptRaw === 'string' ? promptRaw : String(promptRaw == null ? '' : promptRaw);
+  if (raw === _promptRawCached) {
+    return _promptLenCached;
+  }
   const len = raw.replace(_ANSI_RE, '').length;
   _promptRawCached = raw;
   _promptLenCached = len;
@@ -85,7 +90,11 @@ function getMetrics(key, computeFn, env = process.env) {
     }
     return metrics;
   } catch {
-    try { return computeFn(); } catch { return null; }
+    try {
+      return computeFn();
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -95,7 +104,10 @@ function _clear() {
   _promptRawCached = null;
   _promptLenCached = 0;
 }
-function _hasSlot() { return _slot != null; }
+
+function _hasSlot() {
+  return _slot != null;
+}
 
 module.exports = {
   isEnabled,

@@ -22,7 +22,9 @@ function ensureRegistered() {
   // Re-runnable after a registry._reset() (used by tests), since the guard is
   // the per-contract presence check rather than a one-shot boolean.
   for (const contract of RESOURCES) {
-    if (!registry.get(contract.id)) registry.register(contract);
+    if (!registry.get(contract.id)) {
+      registry.register(contract);
+    }
   }
   return registry;
 }

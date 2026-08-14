@@ -44,16 +44,19 @@ const TESTS_DIR = 'services/backend/tests';
 const SCOPE_SEGMENT = 'services/backend/src/';
 
 /** 主门控:是否启用进化安全裁决(关 → 字节回退到既有「不评估、不强制验证」)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_EVOLUTION_SAFETY) != null ? env.KHY_EVOLUTION_SAFETY : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !OFF.includes(v);
 }
 
 /** 子门控:未验证(无测试覆盖)是否升级为阻断。默认关 → 仅告警(绝不误杀未测的好修复)。 */
-function isEnforce(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnforce(env = typeof process !== 'undefined' ? process.env : {}) {
   const raw = env && env.KHY_EVOLUTION_SAFETY_ENFORCE;
-  if (raw == null || String(raw).trim() === '') return false;
+  if (raw == null || String(raw).trim() === '') {
+    return false;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
@@ -63,7 +66,9 @@ function _ext(file) {
   const slash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
   const base = slash >= 0 ? s.slice(slash + 1) : s;
   const dot = base.lastIndexOf('.');
-  if (dot <= 0) return '';
+  if (dot <= 0) {
+    return '';
+  }
   return base.slice(dot).toLowerCase();
 }
 
@@ -93,10 +98,19 @@ function isTestFile(file) {
  * 等约定不同的目录都不算(改它们不在本层的 node:test 验证承诺内)。
  */
 function isBehavioralSource(file) {
-  const f = String(file || '').trim().split('\\').join('/');
-  if (!f) return false;
-  if (!f.includes(SCOPE_SEGMENT)) return false;
-  if (isTestFile(f)) return false;
+  const f = String(file || '')
+    .trim()
+    .split('\\')
+    .join('/');
+  if (!f) {
+    return false;
+  }
+  if (!f.includes(SCOPE_SEGMENT)) {
+    return false;
+  }
+  if (isTestFile(f)) {
+    return false;
+  }
   return CODE_EXTS.has(_ext(f));
 }
 
@@ -107,7 +121,9 @@ function isBehavioralSource(file) {
  * @returns {string|null}  e.g. 'services/backend/tests/webSearchService.test.js'
  */
 function candidateTestFor(file) {
-  if (!isBehavioralSource(file)) return null;
+  if (!isBehavioralSource(file)) {
+    return null;
+  }
   return `${TESTS_DIR}/${_stem(file)}.test.js`;
 }
 
@@ -120,7 +136,9 @@ function candidateTestFor(file) {
  */
 function isNodeTestSource(source) {
   const s = String(source || '');
-  if (!s) return false;
+  if (!s) {
+    return false;
+  }
   // require('node:test') / require("node:test") / from 'node:test' / from "node:test"
   return /(?:require\(\s*|from\s+)['"]node:test['"]/.test(s);
 }
@@ -136,7 +154,9 @@ function selectAffectedTests(changedFiles) {
   const seen = new Set();
   for (const raw of Array.isArray(changedFiles) ? changedFiles : []) {
     const f = String(raw || '').trim();
-    if (!f || seen.has(f) || !isBehavioralSource(f)) continue;
+    if (!f || seen.has(f) || !isBehavioralSource(f)) {
+      continue;
+    }
     seen.add(f);
     out.push({ file: f, candidate: candidateTestFor(f) });
   }
@@ -155,7 +175,9 @@ function assessCoverage(input = {}) {
   const runnable = new Set();
   for (const t of input && input.runnableTests ? input.runnableTests : []) {
     const s = String(t || '').trim();
-    if (s) runnable.add(s);
+    if (s) {
+      runnable.add(s);
+    }
   }
   const behavioral = [];
   const covered = [];
@@ -163,12 +185,17 @@ function assessCoverage(input = {}) {
   const seen = new Set();
   for (const raw of changedFiles) {
     const f = String(raw || '').trim();
-    if (!f || seen.has(f) || !isBehavioralSource(f)) continue;
+    if (!f || seen.has(f) || !isBehavioralSource(f)) {
+      continue;
+    }
     seen.add(f);
     behavioral.push(f);
     const cand = candidateTestFor(f);
-    if (cand && runnable.has(cand)) covered.push(f);
-    else uncovered.push(f);
+    if (cand && runnable.has(cand)) {
+      covered.push(f);
+    } else {
+      uncovered.push(f);
+    }
   }
   return { behavioral, covered, uncovered };
 }
@@ -190,7 +217,9 @@ function classifyTests(tests) {
  */
 function requiresVerification(input = {}) {
   const env = input && input.env;
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   const files = input && Array.isArray(input.changedFiles) ? input.changedFiles : [];
   return files.some((f) => isBehavioralSource(f));
 }
@@ -207,13 +236,22 @@ function requiresVerification(input = {}) {
 function assessSafety(input = {}) {
   const env = input && input.env;
   if (!isEnabled(env)) {
-    return { enabled: false, enforce: false, verified: false, blockers: [], unverified: [], warnings: [], summary: '' };
+    return {
+      enabled: false,
+      enforce: false,
+      verified: false,
+      blockers: [],
+      unverified: [],
+      warnings: [],
+      summary: '',
+    };
   }
   const enforce = isEnforce(env);
   const changedFiles = input && Array.isArray(input.changedFiles) ? input.changedFiles : [];
-  const cov = (input && input.coverage && typeof input.coverage === 'object')
-    ? input.coverage
-    : assessCoverage({ changedFiles, runnableTests: [] });
+  const cov =
+    input && input.coverage && typeof input.coverage === 'object'
+      ? input.coverage
+      : assessCoverage({ changedFiles, runnableTests: [] });
   const behavioral = Array.isArray(cov.behavioral) ? cov.behavioral : [];
   const uncovered = Array.isArray(cov.uncovered) ? cov.uncovered : [];
   const tv = classifyTests(input && input.tests);
@@ -229,20 +267,36 @@ function assessSafety(input = {}) {
   // ③ 未验证:行为源改动但无可运行测试覆盖。
   for (const u of uncovered) {
     const msg = `行为源改动但无可运行测试覆盖,行为未经验证: ${u}`;
-    if (enforce) blockers.push(msg);
-    else warnings.push(msg);
+    if (enforce) {
+      blockers.push(msg);
+    } else {
+      warnings.push(msg);
+    }
   }
 
-  const verified = blockers.length === 0
-    && (behavioral.length === 0 || (uncovered.length === 0 && tv.passed));
+  const verified =
+    blockers.length === 0 && (behavioral.length === 0 || (uncovered.length === 0 && tv.passed));
 
   let summary;
-  if (behavioral.length === 0) summary = '无行为源改动,无需行为验证';
-  else if (verified) summary = `${behavioral.length} 处行为改动均经测试验证通过`;
-  else if (blockers.length) summary = `存在阻断:${blockers.length} 项`;
-  else summary = `${uncovered.length}/${behavioral.length} 处行为改动未经测试覆盖(已告警)`;
+  if (behavioral.length === 0) {
+    summary = '无行为源改动,无需行为验证';
+  } else if (verified) {
+    summary = `${behavioral.length} 处行为改动均经测试验证通过`;
+  } else if (blockers.length) {
+    summary = `存在阻断:${blockers.length} 项`;
+  } else {
+    summary = `${uncovered.length}/${behavioral.length} 处行为改动未经测试覆盖(已告警)`;
+  }
 
-  return { enabled: true, enforce, verified, blockers, unverified: uncovered.slice(), warnings, summary };
+  return {
+    enabled: true,
+    enforce,
+    verified,
+    blockers,
+    unverified: uncovered.slice(),
+    warnings,
+    summary,
+  };
 }
 
 /**
@@ -251,8 +305,10 @@ function assessSafety(input = {}) {
  * @param {Object} [env]
  * @returns {string}
  */
-function buildSafetyChecklist(env = (typeof process !== 'undefined' ? process.env : {})) {
-  if (!isEnabled(env)) return '';
+function buildSafetyChecklist(env = typeof process !== 'undefined' ? process.env : {}) {
+  if (!isEnabled(env)) {
+    return '';
+  }
   return [
     '[SYSTEM:进化安全] 自动进化必须「不引入 bug」。改 khyos 自身代码时按此清单:',
     '  1) 为新增 / 改动的行为写或扩一个对应测试(services/backend/tests/<源名>.test.js,node:test)。',
@@ -269,15 +325,21 @@ function buildSafetyChecklist(env = (typeof process !== 'undefined' ? process.en
  */
 function buildSafetyReport(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : null;
-  if (!a || !a.enabled) return '';
+  if (!a || !a.enabled) {
+    return '';
+  }
   const lines = [];
   if (Array.isArray(a.blockers) && a.blockers.length) {
     lines.push('[SYSTEM:进化安全] 阻断(改动未经行为验证 / 出现回归,应回滚或修正):');
-    for (const b of a.blockers.slice(0, 6)) lines.push(`  ⛔ ${b}`);
+    for (const b of a.blockers.slice(0, 6)) {
+      lines.push(`  ⛔ ${b}`);
+    }
   }
   if (Array.isArray(a.unverified) && a.unverified.length && !a.enforce) {
     lines.push('[SYSTEM:进化安全] 未验证(行为改动缺可运行测试,请补测试以闭合安全网):');
-    for (const u of a.unverified.slice(0, 6)) lines.push(`  ⚠️ ${u}`);
+    for (const u of a.unverified.slice(0, 6)) {
+      lines.push(`  ⚠️ ${u}`);
+    }
   }
   return lines.join('\n');
 }
@@ -301,8 +363,10 @@ function describeSafety() {
       '行为验证:行为源改动须有可运行(node:test)测试;跑了且失败 = 回归 → 回滚;无测试覆盖 = 未验证 → 告警(enforce 则阻断)。',
       '主动清单:改动产生前要求先写 / 跑测试、保持改动最小可逆(预防优于检测)。',
     ],
-    nonGuarantee: '不承诺数学意义上的零 bug;承诺的是「每个进化改动要么经测试验证、要么被显式标为未验证并提示补测试,绝不被悄悄当成安全」。',
-    landmine: '后端混用 node:test 与 jest;只用 node --test 跑 node:test 文件,jest 文件视为不可自动验证(防误判回滚)。',
+    nonGuarantee:
+      '不承诺数学意义上的零 bug;承诺的是「每个进化改动要么经测试验证、要么被显式标为未验证并提示补测试,绝不被悄悄当成安全」。',
+    landmine:
+      '后端混用 node:test 与 jest;只用 node --test 跑 node:test 文件,jest 文件视为不可自动验证(防误判回滚)。',
   };
 }
 

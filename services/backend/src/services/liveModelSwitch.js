@@ -42,10 +42,10 @@ class LiveModelSwitch {
     this._validateModel = opts.validateModel || (() => true);
     this._maxHistory = opts.maxHistory || 20;
 
-    this._currentModel = null;     // in-memory override
-    this._pendingSwitch = null;    // deferred switch target
-    this._generating = false;      // generation lock
-    this._history = [];            // ModelSwitchEvent[]
+    this._currentModel = null; // in-memory override
+    this._pendingSwitch = null; // deferred switch target
+    this._generating = false; // generation lock
+    this._history = []; // ModelSwitchEvent[]
 
     // Load persistent preference
     this._loadPersistent();
@@ -161,14 +161,20 @@ class LiveModelSwitch {
       this._recordEvent(from, this._defaultModel, 'reset', false);
     }
     if (this._persistPath) {
-      try { fs.unlinkSync(this._persistPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(this._persistPath);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   // ── Internal ──
 
   _applyPending() {
-    if (!this._pendingSwitch) return;
+    if (!this._pendingSwitch) {
+      return;
+    }
     const { modelId, reason, persist } = this._pendingSwitch;
     const from = this._currentModel || this._defaultModel;
     this._currentModel = modelId;
@@ -197,7 +203,9 @@ class LiveModelSwitch {
   }
 
   _loadPersistent() {
-    if (!this._persistPath) return;
+    if (!this._persistPath) {
+      return;
+    }
     try {
       const raw = fs.readFileSync(this._persistPath, 'utf8');
       const data = JSON.parse(raw);
@@ -210,7 +218,9 @@ class LiveModelSwitch {
   }
 
   _savePersistent(modelId) {
-    if (!this._persistPath) return;
+    if (!this._persistPath) {
+      return;
+    }
     try {
       const dir = path.dirname(this._persistPath);
       if (!fs.existsSync(dir)) {
@@ -219,7 +229,7 @@ class LiveModelSwitch {
       fs.writeFileSync(
         this._persistPath,
         JSON.stringify({ model: modelId, updatedAt: new Date().toISOString() }, null, 2),
-        'utf8',
+        'utf8'
       );
     } catch {
       // Persist failure is non-fatal

@@ -21,7 +21,9 @@ function _parsePrNumber(subCommand, args) {
   for (const t of tokens) {
     const s = String(t == null ? '' : t).trim();
     const m = /^#?(\d+)$/.exec(s);
-    if (m) return parseInt(m[1], 10);
+    if (m) {
+      return parseInt(m[1], 10);
+    }
   }
   return null;
 }

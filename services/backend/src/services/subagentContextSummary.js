@@ -18,27 +18,38 @@
  */
 
 const DEFAULTS = Object.freeze({
-  maxChars: 1500,       // 摘要块总字符上界(防喧宾夺主)
-  recentUserTurns: 2,   // 取最近几条用户消息作「意图」
-  maxFilePaths: 12,     // 文件路径最多列几条
-  intentClip: 400,      // 单条用户意图裁剪长度
+  maxChars: 1500, // 摘要块总字符上界(防喧宾夺主)
+  recentUserTurns: 2, // 取最近几条用户消息作「意图」
+  maxFilePaths: 12, // 文件路径最多列几条
+  intentClip: 400, // 单条用户意图裁剪长度
 });
 
 /** 是否启用父上下文摘要(门控关 → 返回空串,不注入)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_SUBAGENT_PARENT_SUMMARY) != null ? env.KHY_SUBAGENT_PARENT_SUMMARY : '')
-    .trim().toLowerCase();
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String(
+    (env && env.KHY_SUBAGENT_PARENT_SUMMARY) != null ? env.KHY_SUBAGENT_PARENT_SUMMARY : ''
+  )
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 function _envInt(env, key, fallback, lo, hi) {
   const raw = env && env[key];
-  if (raw == null || String(raw).trim() === '') return fallback;
+  if (raw == null || String(raw).trim() === '') {
+    return fallback;
+  }
   let n = Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   n = Math.round(n);
-  if (n < lo) n = lo;
-  if (n > hi) n = hi;
+  if (n < lo) {
+    n = lo;
+  }
+  if (n > hi) {
+    n = hi;
+  }
   return n;
 }
 
@@ -49,15 +60,24 @@ function _envInt(env, key, fallback, lo, hi) {
  * @returns {string}
  */
 function extractText(message) {
-  if (message == null) return '';
-  if (typeof message === 'string') return message;
+  if (message == null) {
+    return '';
+  }
+  if (typeof message === 'string') {
+    return message;
+  }
   const c = message.content != null ? message.content : message.text;
-  if (typeof c === 'string') return c;
+  if (typeof c === 'string') {
+    return c;
+  }
   if (Array.isArray(c)) {
     const parts = [];
     for (const block of c) {
-      if (typeof block === 'string') parts.push(block);
-      else if (block && typeof block.text === 'string') parts.push(block.text);
+      if (typeof block === 'string') {
+        parts.push(block);
+      } else if (block && typeof block.text === 'string') {
+        parts.push(block.text);
+      }
     }
     return parts.join('\n');
   }
@@ -65,7 +85,9 @@ function extractText(message) {
 }
 
 function _role(message) {
-  if (message && typeof message.role === 'string') return message.role.toLowerCase();
+  if (message && typeof message.role === 'string') {
+    return message.role.toLowerCase();
+  }
   return '';
 }
 
@@ -92,14 +114,21 @@ function extractFilePaths(text, pathRedosGuard = true) {
   let m;
   while ((m = re.exec(s)) !== null) {
     const p = m[0];
-    if (!seen[p]) { seen[p] = true; out.push(p); }
+    if (!seen[p]) {
+      seen[p] = true;
+      out.push(p);
+    }
   }
   return out;
 }
 
 function _clip(text, n) {
-  const s = String(text == null ? '' : text).trim().replace(/\s+/g, ' ');
-  if (s.length <= n) return s;
+  const s = String(text == null ? '' : text)
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (s.length <= n) {
+    return s;
+  }
   return s.slice(0, Math.max(0, n - 1)).trimEnd() + '…';
 }
 
@@ -111,26 +140,47 @@ function _clip(text, n) {
  * @param {Object} [env]
  * @returns {string}  可直接拼进子代理 prompt 的块,或 ''
  */
-function buildContextSummary(parentConversation, opts = {}, env = (typeof process !== 'undefined' ? process.env : {})) {
-  if (!isEnabled(env)) return '';
-  if (!Array.isArray(parentConversation) || parentConversation.length === 0) return '';
+function buildContextSummary(
+  parentConversation,
+  opts = {},
+  env = typeof process !== 'undefined' ? process.env : {}
+) {
+  if (!isEnabled(env)) {
+    return '';
+  }
+  if (!Array.isArray(parentConversation) || parentConversation.length === 0) {
+    return '';
+  }
 
   const o = opts && typeof opts === 'object' ? opts : {};
-  const maxChars = _envInt(env, 'KHY_SUBAGENT_SUMMARY_MAX_CHARS',
-    Number.isFinite(o.maxChars) ? o.maxChars : DEFAULTS.maxChars, 200, 8000);
-  const recentUserTurns = Number.isFinite(o.recentUserTurns) ? o.recentUserTurns : DEFAULTS.recentUserTurns;
+  const maxChars = _envInt(
+    env,
+    'KHY_SUBAGENT_SUMMARY_MAX_CHARS',
+    Number.isFinite(o.maxChars) ? o.maxChars : DEFAULTS.maxChars,
+    200,
+    8000
+  );
+  const recentUserTurns = Number.isFinite(o.recentUserTurns)
+    ? o.recentUserTurns
+    : DEFAULTS.recentUserTurns;
   const maxFilePaths = Number.isFinite(o.maxFilePaths) ? o.maxFilePaths : DEFAULTS.maxFilePaths;
   // 有界路径正则(防 ReDoS)默认开;仅 {0,false,off,no} 关闭走无界字节回退。
   const pathRedosGuard = !['0', 'false', 'off', 'no'].includes(
-    String((env && env.KHY_SUBAGENT_PATH_REDOS_GUARD) || '').trim().toLowerCase(),
+    String((env && env.KHY_SUBAGENT_PATH_REDOS_GUARD) || '')
+      .trim()
+      .toLowerCase()
   );
 
   // 最近的用户意图(倒序取最近 N 条非空用户消息,再正序展示)。
   const userTexts = [];
   for (let i = parentConversation.length - 1; i >= 0 && userTexts.length < recentUserTurns; i--) {
-    if (_role(parentConversation[i]) !== 'user') continue;
+    if (_role(parentConversation[i]) !== 'user') {
+      continue;
+    }
     const t = extractText(parentConversation[i]).trim();
-    if (t) userTexts.push(t);
+    if (t) {
+      userTexts.push(t);
+    }
   }
   userTexts.reverse();
 
@@ -140,25 +190,38 @@ function buildContextSummary(parentConversation, opts = {}, env = (typeof proces
   const scanFrom = Math.max(0, parentConversation.length - 8);
   for (let i = scanFrom; i < parentConversation.length; i++) {
     for (const p of extractFilePaths(extractText(parentConversation[i]), pathRedosGuard)) {
-      if (!pathSet[p] && paths.length < maxFilePaths) { pathSet[p] = true; paths.push(p); }
+      if (!pathSet[p] && paths.length < maxFilePaths) {
+        pathSet[p] = true;
+        paths.push(p);
+      }
     }
   }
 
-  if (userTexts.length === 0 && paths.length === 0) return '';
+  if (userTexts.length === 0 && paths.length === 0) {
+    return '';
+  }
 
-  const lines = ['[Parent Context Summary — 连续性参考;父代理仍拥有总体策略,这只是快照而非完整对话]'];
+  const lines = [
+    '[Parent Context Summary — 连续性参考;父代理仍拥有总体策略,这只是快照而非完整对话]',
+  ];
   if (userTexts.length) {
     lines.push('最近用户意图:');
-    for (const t of userTexts) lines.push(`- ${_clip(t, DEFAULTS.intentClip)}`);
+    for (const t of userTexts) {
+      lines.push(`- ${_clip(t, DEFAULTS.intentClip)}`);
+    }
   }
   if (paths.length) {
     lines.push('最近涉及的文件:');
-    for (const p of paths) lines.push(`- ${p}`);
+    for (const p of paths) {
+      lines.push(`- ${p}`);
+    }
   }
   lines.push('(如需更多上下文请在你被交付的任务范围内自行探查;不要据此越权重做整体规划。)');
 
   let block = lines.join('\n');
-  if (block.length > maxChars) block = block.slice(0, maxChars - 1).trimEnd() + '…';
+  if (block.length > maxChars) {
+    block = block.slice(0, maxChars - 1).trimEnd() + '…';
+  }
   return block;
 }
 
@@ -170,12 +233,20 @@ function buildContextSummary(parentConversation, opts = {}, env = (typeof proces
  * @param {Object} [env]
  * @returns {string}
  */
-function resolveSummary(explicitSummary, parentConversation, opts = {}, env = (typeof process !== 'undefined' ? process.env : {})) {
-  if (!isEnabled(env)) return '';
+function resolveSummary(
+  explicitSummary,
+  parentConversation,
+  opts = {},
+  env = typeof process !== 'undefined' ? process.env : {}
+) {
+  if (!isEnabled(env)) {
+    return '';
+  }
   const explicit = typeof explicitSummary === 'string' ? explicitSummary.trim() : '';
   if (explicit) {
     const maxChars = _envInt(env, 'KHY_SUBAGENT_SUMMARY_MAX_CHARS', DEFAULTS.maxChars, 200, 8000);
-    const body = explicit.length > maxChars ? explicit.slice(0, maxChars - 1).trimEnd() + '…' : explicit;
+    const body =
+      explicit.length > maxChars ? explicit.slice(0, maxChars - 1).trimEnd() + '…' : explicit;
     return `[Parent Context Summary — 父代理提供]\n${body}`;
   }
   return buildContextSummary(parentConversation, opts, env);

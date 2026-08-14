@@ -11,6 +11,7 @@ Backend resolution order:
   3. khy_os/bundled/backend/      (pip install khy-os)
   4. ../../services/backend/      (source development mode)
 """
+import json
 import os
 import subprocess
 import sys
@@ -57,7 +58,7 @@ def get_bundle_dir() -> Path:
 
 
 def check_node() -> str:
-    """Check Node.js is installed and >= 18."""
+    """Check Node.js is installed and >= 20."""
     for cmd in ("node", "node.exe"):
         try:
             result = subprocess.run(
@@ -68,16 +69,46 @@ def check_node() -> str:
             if result.returncode == 0:
                 version = result.stdout.strip().lstrip("v")
                 major = int(version.split(".")[0])
-                if major >= 18:
+                if major >= 20:
                     return cmd
-                print(f"Error: Node.js v{version} found but >= 18 required.", file=sys.stderr)
+                print(f"Error: Node.js v{version} found but >= 20 required.", file=sys.stderr)
                 sys.exit(1)
         except (FileNotFoundError, subprocess.TimeoutExpired):
             continue
 
-    print("Error: Node.js >= 18 not found.", file=sys.stderr)
+    print("Error: Node.js >= 20 not found.", file=sys.stderr)
     print("  Install from: https://nodejs.org/", file=sys.stderr)
     sys.exit(1)
+
+
+def _print_sqlite_driver_diag(node: str, backend_dir: Path) -> None:
+    """Print the active SQLite driver type (best-effort, never blocks startup)."""
+    try:
+        root = backend_dir.parent.parent
+        candidates = (
+            root / "platform" / "packages" / "shared" / "src" / "config" / "sqlite-adapter.js",
+            backend_dir / "node_modules" / "@khy" / "shared" / "src" / "config" / "sqlite-adapter.js",
+            backend_dir / "vendor" / "shared" / "src" / "config" / "sqlite-adapter.js",
+            backend_dir / "src" / "config" / "sqlite-adapter.js",
+        )
+        adapter = next((p for p in candidates if p.exists()), None)
+        if adapter is None:
+            return
+        adapter_path = str(adapter.resolve()).replace("\\", "/")
+        script = (
+            "try{const a=require(" + json.dumps(adapter_path) + ");"
+            "console.log(a.__driverInfo.type)}catch(e){console.log('unavailable')}"
+        )
+        result = subprocess.run(
+            [node, "-e", script],
+            capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=5,
+        )
+        driver = (result.stdout or "").strip()
+        if result.returncode == 0 and driver:
+            print(f"SQLite driver: {driver}")
+    except Exception:
+        pass  # diagnostics only -- never block startup
 
 
 def _detect_mode() -> str:
@@ -131,6 +162,7 @@ def main():
     """Console entry point (pyproject.toml console_scripts)."""
     node = check_node()
     backend_dir = get_bundle_dir()
+    _print_sqlite_driver_diag(node, backend_dir)
 
     # 鍙屾ā鑷€傚簲锛氬厛鎰熺煡妯″紡锛屽啀鎹鍒濆鍖栧悇鑷殑杩愯鐜銆?    mode = _detect_mode()
     app_home_dir = _ensure_app_home()  # 鐙珛/鐢熸€侀兘闇€淇濊瘉搴旂敤鏁版嵁涓绘潈鐩綍灏变綅

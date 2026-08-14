@@ -25,7 +25,9 @@
  * @returns {string} e.g., "1.5s", "45 seconds"
  */
 function formatDurationSeconds(ms, opts = {}) {
-  if (!Number.isFinite(ms)) return 'unknown';
+  if (!Number.isFinite(ms)) {
+    return 'unknown';
+  }
   const decimals = opts.decimals ?? 1;
   const unit = opts.unit || 's';
 
@@ -46,8 +48,12 @@ function formatDurationSeconds(ms, opts = {}) {
  * @returns {string}
  */
 function formatDurationPrecise(ms) {
-  if (!Number.isFinite(ms)) return 'unknown';
-  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (!Number.isFinite(ms)) {
+    return 'unknown';
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
   return formatDurationSeconds(ms, { decimals: 2 });
 }
 
@@ -61,8 +67,12 @@ function formatDurationPrecise(ms) {
  * @returns {string|undefined} undefined if input is null/non-finite
  */
 function formatDurationCompact(ms, opts = {}) {
-  if (ms == null || !Number.isFinite(ms) || ms <= 0) return undefined;
-  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms == null || !Number.isFinite(ms) || ms <= 0) {
+    return undefined;
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
 
   const sep = opts.spaced ? ' ' : '';
   const totalSeconds = Math.round(ms / 1000);
@@ -99,17 +109,27 @@ function formatDurationCompact(ms, opts = {}) {
  * @returns {string}
  */
 function formatDurationHuman(ms, fallback = 'n/a') {
-  if (ms == null || !Number.isFinite(ms) || ms < 0) return fallback;
-  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms == null || !Number.isFinite(ms) || ms < 0) {
+    return fallback;
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
 
   const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
 
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
 
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) {
+    return `${hours}h`;
+  }
 
   const days = Math.round(hours / 24);
   return `${days}d`;
@@ -131,7 +151,9 @@ function formatTimeAgo(durationMs, opts = {}) {
   const fallback = opts.fallback ?? 'unknown';
   const suffix = opts.suffix !== false;
 
-  if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) return fallback;
+  if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) {
+    return fallback;
+  }
 
   const seconds = Math.round(durationMs / 1000);
 
@@ -166,7 +188,9 @@ function formatTimeAgo(durationMs, opts = {}) {
  */
 function formatRelativeTimestamp(timestampMs, opts = {}) {
   const fallback = opts.fallback ?? 'n/a';
-  if (timestampMs == null || !Number.isFinite(timestampMs)) return fallback;
+  if (timestampMs == null || !Number.isFinite(timestampMs)) {
+    return fallback;
+  }
 
   const diff = Date.now() - timestampMs;
   const absDiff = Math.abs(diff);

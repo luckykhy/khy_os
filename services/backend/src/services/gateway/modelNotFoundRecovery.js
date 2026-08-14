@@ -35,11 +35,18 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
  */
 function isEnabled(env = process.env) {
   try {
-    return require('../flagRegistry').isFlagEnabled('KHY_MODEL_NOT_FOUND_RECOVERY', env || process.env);
-  } catch { /* fall through to local */ }
+    return require('../flagRegistry').isFlagEnabled(
+      'KHY_MODEL_NOT_FOUND_RECOVERY',
+      env || process.env
+    );
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_MODEL_NOT_FOUND_RECOVERY;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -48,7 +55,8 @@ function isEnabled(env = process.env) {
 
 // 404 model_not_found 的识别:errorType 优先(gateway errorClassifier 分类结果,最可靠),
 // 否则退回消息文本正则。裸 `Request failed with status code 404` 不含类型词,故消费方须透传 errorType。
-const _MNF_MSG_RE = /model[_\s-]?not[_\s-]?found|no\s+such\s+model|the\s+model\s+.{0,40}does\s+not\s+exist|model.{0,20}(unknown|unavailable)/i;
+const _MNF_MSG_RE =
+  /model[_\s-]?not[_\s-]?found|no\s+such\s+model|the\s+model\s+.{0,40}does\s+not\s+exist|model.{0,20}(unknown|unavailable)/i;
 
 /**
  * 判定一次失败是否属于 model_not_found。errorType==='model_not_found' 直判;否则查消息文本。
@@ -59,7 +67,13 @@ const _MNF_MSG_RE = /model[_\s-]?not[_\s-]?found|no\s+such\s+model|the\s+model\s
  */
 function isModelNotFound(errorType, message) {
   try {
-    if (String(errorType || '').trim().toLowerCase() === 'model_not_found') return true;
+    if (
+      String(errorType || '')
+        .trim()
+        .toLowerCase() === 'model_not_found'
+    ) {
+      return true;
+    }
     return _MNF_MSG_RE.test(String(message || ''));
   } catch {
     return false;
@@ -78,11 +92,15 @@ const _MODEL_IN_MSG_RES = [
 function _extractModelName(model, message) {
   try {
     const explicit = String(model == null ? '' : model).trim();
-    if (explicit) return explicit;
+    if (explicit) {
+      return explicit;
+    }
     const msg = String(message == null ? '' : message);
     for (const re of _MODEL_IN_MSG_RES) {
       const m = msg.match(re);
-      if (m && m[1]) return m[1].trim();
+      if (m && m[1]) {
+        return m[1].trim();
+      }
     }
     return '';
   } catch {
@@ -104,9 +122,15 @@ const _COMPOSITE_ROUTE_RE = /^[a-z0-9_-]+[:/][a-z0-9_-]+[:/].+$/i;
 function classifyModelNameShape(name) {
   try {
     const s = String(name == null ? '' : name).trim();
-    if (!s) return 'empty';
-    if (_COMPOSITE_ROUTE_RE.test(s)) return 'composite';
-    if (/[:/]/.test(s)) return 'prefixed';
+    if (!s) {
+      return 'empty';
+    }
+    if (_COMPOSITE_ROUTE_RE.test(s)) {
+      return 'composite';
+    }
+    if (/[:/]/.test(s)) {
+      return 'prefixed';
+    }
     return 'bare';
   } catch {
     return 'empty';
@@ -116,8 +140,9 @@ function classifyModelNameShape(name) {
 // 形状 → 追加到「点名行」末尾的诊断短句。composite / prefixed 是真正需要区分的两类(送错字符串);
 // bare / empty 无追加(既有文案已点明「模型名或端点配置问题」)。
 const _SHAPE_HINT = {
-  composite: '——注意:送出的是 khy 内部三段式路由 id(api:<pool>:<model>),上游只认裸模型名,'
-    + '应剥成裸模型名后再发(门控 KHY_RELAY_COMPOSITE_MODEL_STRIP 默认已做此剥离,若仍漏出请核对该门是否被关)',
+  composite:
+    '——注意:送出的是 khy 内部三段式路由 id(api:<pool>:<model>),上游只认裸模型名,' +
+    '应剥成裸模型名后再发(门控 KHY_RELAY_COMPOSITE_MODEL_STRIP 默认已做此剥离,若仍漏出请核对该门是否被关)',
   prefixed: '——注意:送出的模型名带前缀,请确认上游端点是接受该前缀、还是只认裸模型名',
   bare: '',
   empty: '',
@@ -138,8 +163,12 @@ const _SHAPE_HINT = {
 function buildModelNotFoundRecoveryLines(opts = {}) {
   try {
     const { adapterDisplay, errorType, message, model, hasImage, env } = opts || {};
-    if (!isEnabled(env)) return null;
-    if (!isModelNotFound(errorType, message)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
+    if (!isModelNotFound(errorType, message)) {
+      return null;
+    }
     const where = String(adapterDisplay || '').trim() || '该';
     const name = _extractModelName(model, message);
     // 图片请求专属(dogfood:发送图片后直接 404)——本次请求携带图片却撞 model_not_found,
@@ -148,10 +177,10 @@ function buildModelNotFoundRecoveryLines(opts = {}) {
     if (hasImage === true) {
       const target = name ? `模型「${name}」` : '当前模型';
       return [
-        `  3) 本次请求包含图片,但「${where}」端点上${target}不具备识图(视觉)能力`
-          + '(model_not_found / 404）——这才是失败的直接原因,反复重试同一模型不会成功',
-        '  4) 配置 GLM 视觉 key(把 key 直接发我即可写入,绝不外泄),'
-          + '或运行 `khy gateway model` 改选一个具备视觉能力的模型/端点',
+        `  3) 本次请求包含图片,但「${where}」端点上${target}不具备识图(视觉)能力` +
+          '(model_not_found / 404）——这才是失败的直接原因,反复重试同一模型不会成功',
+        '  4) 配置 GLM 视觉 key(把 key 直接发我即可写入,绝不外泄),' +
+          '或运行 `khy gateway model` 改选一个具备视觉能力的模型/端点',
       ];
     }
     if (name) {
@@ -159,22 +188,23 @@ function buildModelNotFoundRecoveryLines(opts = {}) {
       // 「送错字符串」;裸名 → 「模型确实不存在」(shapeHint 为空串时不改变既有文案)。
       const shapeHint = _SHAPE_HINT[classifyModelNameShape(name)] || '';
       return [
-        `  3) 模型「${name}」在「${where}」端点上不存在(model_not_found / 404）——`
-          + '属模型名或端点配置问题，非临时故障，反复重试同一模型不会成功' + shapeHint,
-        `  4) 运行 \`khy gateway model\` 改选一个该端点确实提供的模型来替换「${name}」，`
-          + '或核对该自定义 provider 的模型名与 base URL 是否与上游一致',
-        '  5) 若确认是该 provider 缺 key / key 失效导致落到了无凭据的模型，'
-          + '把新 key 直接发我(绝不外泄），我就地帮你写入更新',
+        `  3) 模型「${name}」在「${where}」端点上不存在(model_not_found / 404）——` +
+          '属模型名或端点配置问题，非临时故障，反复重试同一模型不会成功' +
+          shapeHint,
+        `  4) 运行 \`khy gateway model\` 改选一个该端点确实提供的模型来替换「${name}」，` +
+          '或核对该自定义 provider 的模型名与 base URL 是否与上游一致',
+        '  5) 若确认是该 provider 缺 key / key 失效导致落到了无凭据的模型，' +
+          '把新 key 直接发我(绝不外泄），我就地帮你写入更新',
       ];
     }
     // 拿不到具体模型名时退回通用文案(仍点明性质与下一步)。
     return [
-      `  3) 该模型在「${where}」端点上不存在(model_not_found / 404）——属模型名或端点配置问题，`
-        + '非临时故障，反复重试同一模型不会成功',
-      '  4) 运行 `khy gateway model` 改选一个该端点确实提供的模型，'
-        + '或核对该自定义 provider 的模型名与 base URL 是否与上游一致',
-      '  5) 若确认是该 provider 缺 key / key 失效导致落到了无凭据的模型，'
-        + '把新 key 直接发我(绝不外泄），我就地帮你写入更新',
+      `  3) 该模型在「${where}」端点上不存在(model_not_found / 404）——属模型名或端点配置问题，` +
+        '非临时故障，反复重试同一模型不会成功',
+      '  4) 运行 `khy gateway model` 改选一个该端点确实提供的模型，' +
+        '或核对该自定义 provider 的模型名与 base URL 是否与上游一致',
+      '  5) 若确认是该 provider 缺 key / key 失效导致落到了无凭据的模型，' +
+        '把新 key 直接发我(绝不外泄），我就地帮你写入更新',
     ];
   } catch {
     return null;
@@ -186,11 +216,12 @@ function describeModelNotFoundRecovery() {
   return {
     gate: 'KHY_MODEL_NOT_FOUND_RECOVERY',
     defaultOn: true,
-    summary: 'strict/钉选通道遇 404 model_not_found 时，为 recovery hint 追加「模型名/端点配错、'
-      + '非临时故障、改选该端点确有的模型」的可执行指引，并补一句「若是缺 key/key 失效导致，把新 key 发我写入更新」；'
-      + '点名模型时按送出串的形状追加诊断(三段式路由 id / 带前缀 → 送错字符串;裸名 → 模型确实不存在)；'
-      + '请求携带图片时改给视觉专属指引(配 GLM 视觉 key / 改选视觉模型)；'
-      + '门控关或非 model_not_found 则逐字节回退今日通用提示。',
+    summary:
+      'strict/钉选通道遇 404 model_not_found 时，为 recovery hint 追加「模型名/端点配错、' +
+      '非临时故障、改选该端点确有的模型」的可执行指引，并补一句「若是缺 key/key 失效导致，把新 key 发我写入更新」；' +
+      '点名模型时按送出串的形状追加诊断(三段式路由 id / 带前缀 → 送错字符串;裸名 → 模型确实不存在)；' +
+      '请求携带图片时改给视觉专属指引(配 GLM 视觉 key / 改选视觉模型)；' +
+      '门控关或非 model_not_found 则逐字节回退今日通用提示。',
   };
 }
 

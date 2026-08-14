@@ -1,9 +1,18 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const OWNER_CONTROL_FILE = path.join(os.homedir(), '.khyquant', 'owner-control.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const OWNER_CONTROL_FILE = path.join(_appHome(), 'owner-control.json');
 const ITERATIONS = 120000;
 const KEY_LENGTH = 64;
 const DIGEST = 'sha512';
@@ -13,7 +22,11 @@ const MIN_SECRET_LENGTH = 8;
 // This ensures study mode cannot be self-provisioned after a bare pip install.
 // Keep both forms for backward compatibility.
 const _extraSecret = process.env.KHY_STUDY_SECRET || '';
-const BUILTIN_STUDY_SECRETS = new Set(['khy2026', 'khy-2026', ...(_extraSecret ? [_extraSecret] : [])]);
+const BUILTIN_STUDY_SECRETS = new Set([
+  'khy2026',
+  'khy-2026',
+  ...(_extraSecret ? [_extraSecret] : []),
+]);
 
 function _ensureDir() {
   const dir = path.dirname(OWNER_CONTROL_FILE);
@@ -24,7 +37,9 @@ function _ensureDir() {
 
 function _readConfig() {
   try {
-    if (!fs.existsSync(OWNER_CONTROL_FILE)) return null;
+    if (!fs.existsSync(OWNER_CONTROL_FILE)) {
+      return null;
+    }
     const raw = fs.readFileSync(OWNER_CONTROL_FILE, 'utf-8');
     return JSON.parse(raw);
   } catch {
@@ -35,7 +50,11 @@ function _readConfig() {
 function _writeConfig(data) {
   _ensureDir();
   fs.writeFileSync(OWNER_CONTROL_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  try { fs.chmodSync(OWNER_CONTROL_FILE, 0o600); } catch { /* Windows/no-op */ }
+  try {
+    fs.chmodSync(OWNER_CONTROL_FILE, 0o600);
+  } catch {
+    /* Windows/no-op */
+  }
 }
 
 function _hashSecret(secret, salt) {
@@ -72,7 +91,9 @@ function getOwnerControlStatus() {
 
 function initializeOwnerControl(secret) {
   const check = _validateSecret(secret);
-  if (!check.ok) return check;
+  if (!check.ok) {
+    return check;
+  }
 
   if (isOwnerControlConfigured()) {
     return {
@@ -121,10 +142,14 @@ function verifyOwnerSecret(secret) {
 
 function rotateOwnerSecret(currentSecret, nextSecret) {
   const current = verifyOwnerSecret(currentSecret);
-  if (!current.ok) return current;
+  if (!current.ok) {
+    return current;
+  }
 
   const next = _validateSecret(nextSecret);
-  if (!next.ok) return next;
+  if (!next.ok) {
+    return next;
+  }
 
   const { hash, salt } = _hashSecret(next.value);
   _writeConfig({

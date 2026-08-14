@@ -27,11 +27,18 @@ function grepFlagsToFindstr(flagStr) {
   const opts = [];
   let regex = false;
   for (const ch of String(flagStr || '').replace(/[\s-]/g, '')) {
-    if (ch === 'E' || ch === 'e' || ch === 'G') { regex = true; continue; }
+    if (ch === 'E' || ch === 'e' || ch === 'G') {
+      regex = true;
+      continue;
+    }
     const mapped = GREP_FLAG_TO_FINDSTR[ch];
-    if (mapped && !opts.includes(mapped)) opts.push(mapped);
+    if (mapped && !opts.includes(mapped)) {
+      opts.push(mapped);
+    }
   }
-  if (regex && !opts.includes('/R')) opts.push('/R');
+  if (regex && !opts.includes('/R')) {
+    opts.push('/R');
+  }
   return opts.length ? `findstr ${opts.join(' ')}` : 'findstr';
 }
 
@@ -42,7 +49,9 @@ function grepFlagsToFindstr(flagStr) {
  * @returns {string}
  */
 function patchWinCommand(cmd) {
-  if (!cmd) return cmd;
+  if (!cmd) {
+    return cmd;
+  }
   let patched = cmd;
 
   // ── 路径与重定向 ──
@@ -64,14 +73,26 @@ function patchWinCommand(cmd) {
   // head/tail（带文件参数）→ powershell Get-Content。file 限定为单 token（不跨管道/分隔符），
   // 避免贪婪 `.+` 把后续 `| cmd` 误当文件名（旧实现的隐患），也让纯管道形式落到下方 stdin 规则。
   // head -n N file → Get-Content file -TotalCount N
-  patched = patched.replace(/\bhead\s+-n?\s*(\d+)\s+([^\s|&;<>]+)/g, 'powershell -NoProfile -c "Get-Content $2 -TotalCount $1"');
+  patched = patched.replace(
+    /\bhead\s+-n?\s*(\d+)\s+([^\s|&;<>]+)/g,
+    'powershell -NoProfile -c "Get-Content $2 -TotalCount $1"'
+  );
   // tail -n N file → Get-Content file -Tail N
-  patched = patched.replace(/\btail\s+-n?\s*(\d+)\s+([^\s|&;<>]+)/g, 'powershell -NoProfile -c "Get-Content $2 -Tail $1"');
+  patched = patched.replace(
+    /\btail\s+-n?\s*(\d+)\s+([^\s|&;<>]+)/g,
+    'powershell -NoProfile -c "Get-Content $2 -Tail $1"'
+  );
   // head/tail 读管道（无文件参数，作为管道末段消费 stdin）→ PowerShell $input。
   // 形如 `... | head -30` / `... | tail -n 5`。cmd.exe 无原生等价命令，故借道 powershell
   // 的自动变量 $input 消费上游管道。前瞻锚定其后紧跟管道/分隔/重定向/行尾，避免误吞文件参数。
-  patched = patched.replace(/\bhead\s+-n?\s*(\d+)(?=\s*(?:\||&|;|>|$))/g, 'powershell -NoProfile -c "$input | Select-Object -First $1"');
-  patched = patched.replace(/\btail\s+-n?\s*(\d+)(?=\s*(?:\||&|;|>|$))/g, 'powershell -NoProfile -c "$input | Select-Object -Last $1"');
+  patched = patched.replace(
+    /\bhead\s+-n?\s*(\d+)(?=\s*(?:\||&|;|>|$))/g,
+    'powershell -NoProfile -c "$input | Select-Object -First $1"'
+  );
+  patched = patched.replace(
+    /\btail\s+-n?\s*(\d+)(?=\s*(?:\||&|;|>|$))/g,
+    'powershell -NoProfile -c "$input | Select-Object -Last $1"'
+  );
   // wc -l file → find /c /v "" file
   // R3 治理(KHY_WIN_TRANSLATE_FLAG_NORMALIZE,default-on):历史单条 `/\bwc\s+-l\s+(.+)/` 有两处缝:
   //   ① 贪婪 `.+` 把后续 `| sort` 一并吞进文件参数(与上方 head/tail 已修的隐患同型);
@@ -80,7 +101,14 @@ function patchWinCommand(cmd) {
   // 开 → 先按「单 token 文件」翻译(前瞻停在管道/分隔符前),再把无文件的管道末段 `wc -l`
   // 翻成读 stdin 的 `find /c /v ""`;关 → 逐字节回退历史单条贪婪规则。
   let _winFlagNorm = true;
-  try { _winFlagNorm = require('../services/flagRegistry').isFlagEnabled('KHY_WIN_TRANSLATE_FLAG_NORMALIZE', process.env); } catch { _winFlagNorm = true; }
+  try {
+    _winFlagNorm = require('../services/flagRegistry').isFlagEnabled(
+      'KHY_WIN_TRANSLATE_FLAG_NORMALIZE',
+      process.env
+    );
+  } catch {
+    _winFlagNorm = true;
+  }
   if (_winFlagNorm) {
     patched = patched.replace(/\bwc\s+-l\s+([^\s|&;<>]+)/g, 'find /c /v "" $1');
     patched = patched.replace(/\bwc\s+-l(?=\s*(?:[|&;>]|$))/g, 'find /c /v ""');
@@ -102,7 +130,14 @@ function patchWinCommand(cmd) {
   // 报错)。开 → 单条 case-insensitive、含任一 r/f 的 flag 簇一律翻成 rmdir(原两条的严格超集);
   // 关 → 逐字节回退历史两条。
   let _winRmFlags = true;
-  try { _winRmFlags = require('../services/flagRegistry').isFlagEnabled('KHY_WIN_RM_TRANSLATE_FLAGS', process.env); } catch { _winRmFlags = true; }
+  try {
+    _winRmFlags = require('../services/flagRegistry').isFlagEnabled(
+      'KHY_WIN_RM_TRANSLATE_FLAGS',
+      process.env
+    );
+  } catch {
+    _winRmFlags = true;
+  }
   if (_winRmFlags) {
     patched = patched.replace(/\brm\s+-[a-zA-Z]*[rf][a-zA-Z]*\s+/g, 'rmdir /s /q ');
   } else {
@@ -172,7 +207,10 @@ function patchWinCommand(cmd) {
   patched = patched.replace(/\bkill\s+-9\s+(\d+)/g, 'taskkill /F /PID $1');
   patched = patched.replace(/\bkill\s+(\d+)/g, 'taskkill /PID $1');
   // df -h → PowerShell CIM (wmic is removed in Windows 11 24H2+)
-  patched = patched.replace(/\bdf\s+-h\b/g, 'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,Size,FreeSpace"');
+  patched = patched.replace(
+    /\bdf\s+-h\b/g,
+    'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,Size,FreeSpace"'
+  );
   // uname -a → ver
   patched = patched.replace(/\buname\s+-[a-z]+/g, 'ver');
   // whoami → whoami（Windows 也有）
@@ -197,7 +235,9 @@ function patchWinCommand(cmd) {
  * @returns {string}
  */
 function patchGitBashCommand(cmd) {
-  if (!cmd) return cmd;
+  if (!cmd) {
+    return cmd;
+  }
   let patched = cmd;
 
   // 盘符绝对路径 `X:\a\b\c` → MSYS `/x/a/b/c`。只匹配像路径的片段：盘符 + 冒号 +
@@ -228,12 +268,16 @@ function patchGitBashCommand(cmd) {
  * @returns {boolean}
  */
 function pipesNonAsciiFindFilter(cmd) {
-  if (!cmd) return false;
+  if (!cmd) {
+    return false;
+  }
   // 抓出每个 `| find`/`| findstr` 段(到下一个管道或行尾),逐段查非 ASCII。
   const re = /\|\s*(find|findstr)\b([^|]*)/gi;
   let m;
   while ((m = re.exec(cmd)) !== null) {
-    if (/[^\x00-\x7F]/.test(m[2])) return true;
+    if (/[^\x00-\x7F]/.test(m[2])) {
+      return true;
+    }
   }
   return false;
 }
@@ -260,9 +304,15 @@ function pipesNonAsciiFindFilter(cmd) {
  * @returns {{ command: string, outputEncoding: string|null }}
  */
 function forceWindowsUtf8(shellCfg, command, env = process.env) {
-  if (process.platform !== 'win32') return { command, outputEncoding: null };
-  if (!command) return { command, outputEncoding: null };
-  const flag = String((env && env.KHY_WIN_FORCE_UTF8) || '').trim().toLowerCase();
+  if (process.platform !== 'win32') {
+    return { command, outputEncoding: null };
+  }
+  if (!command) {
+    return { command, outputEncoding: null };
+  }
+  const flag = String((env && env.KHY_WIN_FORCE_UTF8) || '')
+    .trim()
+    .toLowerCase();
   if (flag === '0' || flag === 'false' || flag === 'off' || flag === 'no') {
     return { command, outputEncoding: null };
   }
@@ -302,17 +352,27 @@ function forceWindowsUtf8(shellCfg, command, env = process.env) {
  * @returns {{ command: string, patched: boolean }}
  */
 function patchPowerShellRecurse(cmd, env = process.env) {
-  if (!cmd) return { command: cmd, patched: false };
-  const flag = String((env && env.KHY_WIN_RECURSE_GUARD) || '').trim().toLowerCase();
+  if (!cmd) {
+    return { command: cmd, patched: false };
+  }
+  const flag = String((env && env.KHY_WIN_RECURSE_GUARD) || '')
+    .trim()
+    .toLowerCase();
   if (flag === '0' || flag === 'false' || flag === 'off' || flag === 'no') {
     return { command: cmd, patched: false };
   }
   // 必须看起来像 PowerShell 的 Get-ChildItem 调用(gci/ls/dir 是其 alias)。dir/ls 在 cmd/bash
   // 也存在,但只有当同一命令里出现 `-Recurse`(PS 专属拼写)时才命中,故不会误伤 cmd dir。
-  if (!/-Recurse\b/i.test(cmd)) return { command: cmd, patched: false };
-  if (!/\b(Get-ChildItem|gci|ls|dir)\b/i.test(cmd)) return { command: cmd, patched: false };
+  if (!/-Recurse\b/i.test(cmd)) {
+    return { command: cmd, patched: false };
+  }
+  if (!/\b(Get-ChildItem|gci|ls|dir)\b/i.test(cmd)) {
+    return { command: cmd, patched: false };
+  }
   // 已显式声明 -ErrorAction → 尊重用户选择,不动(幂等的一半)。
-  if (/-ErrorAction\b/i.test(cmd)) return { command: cmd, patched: false };
+  if (/-ErrorAction\b/i.test(cmd)) {
+    return { command: cmd, patched: false };
+  }
 
   // 仅在 -Force 缺失时补它(PowerShell 对重复同名参数会报错)。-ErrorAction 此处必缺(上面已 return)。
   const injection = /-Force\b/i.test(cmd)

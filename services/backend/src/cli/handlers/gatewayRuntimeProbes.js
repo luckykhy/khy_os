@@ -16,22 +16,19 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const {
-  printSuccess,
-  printError,
-  printInfo,
-  printTable,
-  stripAnsi,
-} = require('../formatters');
+
 const {
   buildGatewayRelayFeatureLabel,
   getFeatureFamilyPrefix,
 } = require('../../services/featureKeyBuilder');
+const { printSuccess, printError, printInfo, printTable, stripAnsi } = require('../formatters');
+
 const { _parseIntWithMin } = require('./gatewayManageDaemon');
 
 // ── Host callbacks injected via DI (avoid a require cycle back into gateway.js) ──
@@ -41,10 +38,18 @@ let _getGatewayHomeRiskSnapshot = null;
 let _writeEnvMap = null;
 
 function setGatewayRuntimeProbesDeps(deps = {}) {
-  if (typeof deps.promptWithReplGuard === 'function') promptWithReplGuard = deps.promptWithReplGuard;
-  if (typeof deps._compactReasonText === 'function') _compactReasonText = deps._compactReasonText;
-  if (typeof deps._getGatewayHomeRiskSnapshot === 'function') _getGatewayHomeRiskSnapshot = deps._getGatewayHomeRiskSnapshot;
-  if (typeof deps._writeEnvMap === 'function') _writeEnvMap = deps._writeEnvMap;
+  if (typeof deps.promptWithReplGuard === 'function') {
+    promptWithReplGuard = deps.promptWithReplGuard;
+  }
+  if (typeof deps._compactReasonText === 'function') {
+    _compactReasonText = deps._compactReasonText;
+  }
+  if (typeof deps._getGatewayHomeRiskSnapshot === 'function') {
+    _getGatewayHomeRiskSnapshot = deps._getGatewayHomeRiskSnapshot;
+  }
+  if (typeof deps._writeEnvMap === 'function') {
+    _writeEnvMap = deps._writeEnvMap;
+  }
 }
 
 const KHY_GATEWAY_SAMPLE_DEFAULT_PROMPT = '只用一句中文回复：已收到，不要调用工具。';
@@ -103,98 +108,129 @@ async function handleGatewayRelay() {
  */
 async function handleGatewayDetect(options = {}) {
   const asJson = !!options.json;
-  const isInteractive = !!(process.stdin && process.stdin.isTTY && process.stdout && process.stdout.isTTY);
+  const isInteractive = !!(
+    process.stdin &&
+    process.stdin.isTTY &&
+    process.stdout &&
+    process.stdout.isTTY
+  );
   const hadGuard = global.__KHY_INQUIRER_ACTIVE__ === true;
   global.__KHY_INQUIRER_ACTIVE__ = true;
   try {
-  const { detectAll, setCustomPath, findInstallation, findDataPath } = require('../../services/gateway/adapters/ideDetector');
+    const {
+      detectAll,
+      setCustomPath,
+      findInstallation,
+      findDataPath,
+    } = require('../../services/gateway/adapters/ideDetector');
 
-  const results = detectAll();
-  const normalized = results.map((r) => ({
-    name: r.name,
-    installPath: r.installPath || '',
-    dataPath: r.dataPath || '',
-    available: !!r.available,
-  }));
-  const missing = normalized.filter(r => !r.available);
+    const results = detectAll();
+    const normalized = results.map((r) => ({
+      name: r.name,
+      installPath: r.installPath || '',
+      dataPath: r.dataPath || '',
+      available: !!r.available,
+    }));
+    const missing = normalized.filter((r) => !r.available);
 
-  if (asJson) {
-    console.log(JSON.stringify({
-      ok: true,
-      action: 'detect',
-      interactive: false,
-      requiresTTY: missing.length > 0,
-      count: normalized.length,
-      missingCount: missing.length,
-      ides: normalized,
-      missing: missing.map(r => ({
-        name: r.name,
-        envKey: `${String(r.name || '').toUpperCase()}_INSTALL_PATH`,
-      })),
-      message: missing.length > 0
-        ? '未检测到的 IDE 可在交互终端手动设置安装路径。'
-        : '所有已知 IDE 均已检测完成。',
-    }, null, 2));
-    return;
-  }
-
-  console.log('');
-  console.log(`  ${chalk.cyan.bold('IDE 安装检测')}`);
-  console.log('');
-
-  printTable(
-    ['IDE', '安装路径', '数据路径', '状态'],
-    results.map(r => [
-      r.name.charAt(0).toUpperCase() + r.name.slice(1),
-      r.installPath || chalk.dim('未找到'),
-      r.dataPath ? chalk.dim('✓') : chalk.dim('—'),
-      r.available ? chalk.green('✓ 已检测') : chalk.yellow('⚠ 未检测到'),
-    ])
-  );
-  console.log('');
-
-  // Offer to set custom paths for missing IDEs
-  if (missing.length > 0) {
-    if (!isInteractive) {
-      printError('gateway detect 需要交互终端才能设置缺失 IDE 的安装路径。可使用 --json 获取检测结果。');
+    if (asJson) {
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            action: 'detect',
+            interactive: false,
+            requiresTTY: missing.length > 0,
+            count: normalized.length,
+            missingCount: missing.length,
+            ides: normalized,
+            missing: missing.map((r) => ({
+              name: r.name,
+              envKey: `${String(r.name || '').toUpperCase()}_INSTALL_PATH`,
+            })),
+            message:
+              missing.length > 0
+                ? '未检测到的 IDE 可在交互终端手动设置安装路径。'
+                : '所有已知 IDE 均已检测完成。',
+          },
+          null,
+          2
+        )
+      );
       return;
     }
-    printInfo('未检测到的 IDE 可手动设置安装路径');
 
-    const { action } = await promptWithReplGuard([{
-      type: 'list',
-      name: 'action',
-      message: '操作:',
-      choices: [
-        ...missing.map(r => ({
-          name: `设置 ${r.name} 安装路径`,
-          value: r.name,
-        })),
-        { name: '↩️  返回', value: 'back' },
-      ],
-    }]);
+    console.log('');
+    console.log(`  ${chalk.cyan.bold('IDE 安装检测')}`);
+    console.log('');
 
-    if (action !== 'back') {
-      const { customPath } = await promptWithReplGuard([{
-        type: 'input',
-        name: 'customPath',
-        message: `输入 ${action} 安装路径:`,
-        validate: (v) => {
-          if (!v.trim()) return '路径不能为空';
-          return true;
+    printTable(
+      ['IDE', '安装路径', '数据路径', '状态'],
+      results.map((r) => [
+        r.name.charAt(0).toUpperCase() + r.name.slice(1),
+        r.installPath || chalk.dim('未找到'),
+        r.dataPath ? chalk.dim('✓') : chalk.dim('—'),
+        r.available ? chalk.green('✓ 已检测') : chalk.yellow('⚠ 未检测到'),
+      ])
+    );
+    console.log('');
+
+    // Offer to set custom paths for missing IDEs
+    if (missing.length > 0) {
+      if (!isInteractive) {
+        printError(
+          'gateway detect 需要交互终端才能设置缺失 IDE 的安装路径。可使用 --json 获取检测结果。'
+        );
+        return;
+      }
+      printInfo('未检测到的 IDE 可手动设置安装路径');
+
+      const { action } = await promptWithReplGuard([
+        {
+          type: 'list',
+          name: 'action',
+          message: '操作:',
+          choices: [
+            ...missing.map((r) => ({
+              name: `设置 ${r.name} 安装路径`,
+              value: r.name,
+            })),
+            { name: '↩️  返回', value: 'back' },
+          ],
         },
-      }]);
+      ]);
 
-      const envKey = `${action.toUpperCase()}_INSTALL_PATH`;
-      _writeEnvMap({ [envKey]: customPath.trim() });
-      setCustomPath(action, customPath.trim());
+      if (action !== 'back') {
+        const { customPath } = await promptWithReplGuard([
+          {
+            type: 'input',
+            name: 'customPath',
+            message: `输入 ${action} 安装路径:`,
+            validate: (v) => {
+              if (!v.trim()) {
+                return '路径不能为空';
+              }
+              return true;
+            },
+          },
+        ]);
 
-      printSuccess(`${action} 安装路径已设为: ${customPath.trim()}`);
+        const envKey = `${action.toUpperCase()}_INSTALL_PATH`;
+        _writeEnvMap({ [envKey]: customPath.trim() });
+        setCustomPath(action, customPath.trim());
+
+        printSuccess(`${action} 安装路径已设为: ${customPath.trim()}`);
+      }
     }
-  }
   } finally {
-    if (!hadGuard) global.__KHY_INQUIRER_ACTIVE__ = false;
-    try { process.stdin.resume(); } catch { /* ignore */ }
+    if (!hadGuard) {
+      global.__KHY_INQUIRER_ACTIVE__ = false;
+    }
+    try {
+      process.stdin.resume();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -205,25 +241,36 @@ async function handleGatewayDetect(options = {}) {
 async function handleGatewayTest(targetAdapter, options = {}) {
   const gateway = require('../../services/gateway/aiGateway');
   const asJson = !!options.json;
-  if (!gateway._initialized) await gateway.init();
+  if (!gateway.isInitialized()) {
+    await gateway.init();
+  }
 
   const statuses = gateway.getStatus();
   const toTest = targetAdapter
-    ? statuses.filter(s => s.type === targetAdapter || s.name.toLowerCase().includes(targetAdapter.toLowerCase()))
-    : statuses.filter(s => s.enabled);
+    ? statuses.filter(
+        (s) =>
+          s.type === targetAdapter || s.name.toLowerCase().includes(targetAdapter.toLowerCase())
+      )
+    : statuses.filter((s) => s.enabled);
 
   if (toTest.length === 0) {
     const message = targetAdapter ? `未找到适配器: ${targetAdapter}` : '无已启用的适配器';
     if (asJson) {
-      console.log(JSON.stringify({
-        ok: false,
-        action: 'test',
-        target: targetAdapter || null,
-        count: 0,
-        adapters: [],
-        error: targetAdapter ? 'adapter_not_found' : 'no_enabled_adapters',
-        message,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: false,
+            action: 'test',
+            target: targetAdapter || null,
+            count: 0,
+            adapters: [],
+            error: targetAdapter ? 'adapter_not_found' : 'no_enabled_adapters',
+            message,
+          },
+          null,
+          2
+        )
+      );
     } else {
       printError(message);
     }
@@ -262,7 +309,9 @@ async function handleGatewayTest(targetAdapter, options = {}) {
       };
       jsonResults.push(item);
       if (!asJson) {
-        console.log(`    ${chalk.dim('① 检测')}  ${chalk.red('● 不可用')} ${chalk.dim(s.detail || '')}`);
+        console.log(
+          `    ${chalk.dim('① 检测')}  ${chalk.red('● 不可用')} ${chalk.dim(s.detail || '')}`
+        );
         console.log('');
       }
       continue;
@@ -283,11 +332,15 @@ async function handleGatewayTest(targetAdapter, options = {}) {
     // Step 1: Connectivity
     if (result.connectivity?.success) {
       if (!asJson) {
-        console.log(`    ${chalk.dim('① 连接')}  ${chalk.green('● 已连接')} ${chalk.dim(`(${result.connectivity.latencyMs}ms)`)}`);
+        console.log(
+          `    ${chalk.dim('① 连接')}  ${chalk.green('● 已连接')} ${chalk.dim(`(${result.connectivity.latencyMs}ms)`)}`
+        );
       }
     } else {
       if (!asJson) {
-        console.log(`    ${chalk.dim('① 连接')}  ${chalk.red('● 失败:')} ${chalk.red(result.connectivity?.error || 'unknown')}`);
+        console.log(
+          `    ${chalk.dim('① 连接')}  ${chalk.red('● 失败:')} ${chalk.red(result.connectivity?.error || 'unknown')}`
+        );
         console.log('');
       }
       continue;
@@ -296,14 +349,22 @@ async function handleGatewayTest(targetAdapter, options = {}) {
     // Step 2: Models (if tested)
     if (result.models) {
       if (result.models.success) {
-        const modelNames = result.models.list?.slice(0, 3).map(m => m.name || m.id).join(', ') || '';
+        const modelNames =
+          result.models.list
+            ?.slice(0, 3)
+            .map((m) => m.name || m.id)
+            .join(', ') || '';
         const more = result.models.count > 3 ? ` +${result.models.count - 3}` : '';
         if (!asJson) {
-          console.log(`    ${chalk.dim('② 模型')}  ${chalk.green('● 可用')} ${chalk.dim(`(${result.models.latencyMs}ms · ${result.models.count} models)`)}${modelNames ? chalk.dim(` ${modelNames}${more}`) : ''}`);
+          console.log(
+            `    ${chalk.dim('② 模型')}  ${chalk.green('● 可用')} ${chalk.dim(`(${result.models.latencyMs}ms · ${result.models.count} models)`)}${modelNames ? chalk.dim(` ${modelNames}${more}`) : ''}`
+          );
         }
       } else {
         if (!asJson) {
-          console.log(`    ${chalk.dim('② 模型')}  ${chalk.red('● 失败:')} ${chalk.red(result.models.error || 'unknown')} ${chalk.dim(`(${result.models.latencyMs}ms)`)}`);
+          console.log(
+            `    ${chalk.dim('② 模型')}  ${chalk.red('● 失败:')} ${chalk.red(result.models.error || 'unknown')} ${chalk.dim(`(${result.models.latencyMs}ms)`)}`
+          );
         }
       }
     }
@@ -311,11 +372,15 @@ async function handleGatewayTest(targetAdapter, options = {}) {
     if (result.generation) {
       if (result.generation.success) {
         if (!asJson) {
-          console.log(`    ${chalk.dim('③ 实测')}  ${chalk.green('● 可用')} ${chalk.dim(`(${result.generation.latencyMs}ms)`)}`);
+          console.log(
+            `    ${chalk.dim('③ 实测')}  ${chalk.green('● 可用')} ${chalk.dim(`(${result.generation.latencyMs}ms)`)}`
+          );
         }
       } else {
         if (!asJson) {
-          console.log(`    ${chalk.dim('③ 实测')}  ${chalk.red('● 失败:')} ${chalk.red(result.generation.error || 'unknown')} ${chalk.dim(`(${result.generation.latencyMs}ms)`)}`);
+          console.log(
+            `    ${chalk.dim('③ 实测')}  ${chalk.red('● 失败:')} ${chalk.red(result.generation.error || 'unknown')} ${chalk.dim(`(${result.generation.latencyMs}ms)`)}`
+          );
         }
       }
     }
@@ -326,20 +391,28 @@ async function handleGatewayTest(targetAdapter, options = {}) {
   }
 
   if (asJson) {
-    console.log(JSON.stringify({
-      ok: true,
-      action: 'test',
-      target: targetAdapter || null,
-      count: jsonResults.length,
-      adapters: jsonResults,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          action: 'test',
+          target: targetAdapter || null,
+          count: jsonResults.length,
+          adapters: jsonResults,
+        },
+        null,
+        2
+      )
+    );
   }
 }
 
 function _isGatewaySamplePromptInjected(content = '') {
   const text = String(content || '');
-  return text.includes('# Language KHY expected output: Simplified Chinese')
-    && text.includes('[KHY PRIORITY DIRECTIVE]');
+  return (
+    text.includes('# Language KHY expected output: Simplified Chinese') &&
+    text.includes('[KHY PRIORITY DIRECTIVE]')
+  );
 }
 
 function _readGatewaySampleRunSummary(runDir) {
@@ -364,37 +437,69 @@ function _readGatewaySampleRunSummary(runDir) {
     if (fs.existsSync(promptFile)) {
       summary.promptInjected = _isGatewaySamplePromptInjected(fs.readFileSync(promptFile, 'utf8'));
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   try {
     if (fs.existsSync(traceFile)) {
-      const lines = String(fs.readFileSync(traceFile, 'utf8') || '').split(/\r?\n/).filter(Boolean);
+      const lines = String(fs.readFileSync(traceFile, 'utf8') || '')
+        .split(/\r?\n/)
+        .filter(Boolean);
       for (const line of lines) {
         let event = null;
-        try { event = JSON.parse(line); } catch { /* ignore malformed lines */ }
-        if (!event || typeof event !== 'object') continue;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          /* ignore malformed lines */
+        }
+        if (!event || typeof event !== 'object') {
+          continue;
+        }
         const type = String(event.type || '').trim();
-        if (!type) continue;
+        if (!type) {
+          continue;
+        }
         summary.typeCounts[type] = (summary.typeCounts[type] || 0) + 1;
-        if (!summary.requestId && event.requestId) summary.requestId = String(event.requestId);
-        if (type === 'agent.language.first_chunk' && !summary.firstChunk) summary.firstChunk = event.data || {};
-        if (type === 'agent.language.final_response' && !summary.finalResponse) summary.finalResponse = event.data || {};
-        if (type === 'llm.response' && !summary.llmResponse) summary.llmResponse = event.data || {};
+        if (!summary.requestId && event.requestId) {
+          summary.requestId = String(event.requestId);
+        }
+        if (type === 'agent.language.first_chunk' && !summary.firstChunk) {
+          summary.firstChunk = event.data || {};
+        }
+        if (type === 'agent.language.final_response' && !summary.finalResponse) {
+          summary.finalResponse = event.data || {};
+        }
+        if (type === 'llm.response' && !summary.llmResponse) {
+          summary.llmResponse = event.data || {};
+        }
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   try {
     if (fs.existsSync(stdoutFile)) {
-      summary.stdoutPreview = _compactReasonText(stripAnsi(fs.readFileSync(stdoutFile, 'utf8')), 220);
+      summary.stdoutPreview = _compactReasonText(
+        stripAnsi(fs.readFileSync(stdoutFile, 'utf8')),
+        220
+      );
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   try {
     if (fs.existsSync(stderrFile)) {
-      summary.stderrPreview = _compactReasonText(stripAnsi(fs.readFileSync(stderrFile, 'utf8')), 220);
+      summary.stderrPreview = _compactReasonText(
+        stripAnsi(fs.readFileSync(stderrFile, 'utf8')),
+        220
+      );
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return summary;
 }
@@ -413,19 +518,37 @@ function _summarizeGatewaySampleCounts(runs = []) {
   };
 
   for (const run of Array.isArray(runs) ? runs : []) {
-    if (run?.promptInjected) summary.promptInjectedCount += 1;
+    if (run?.promptInjected) {
+      summary.promptInjectedCount += 1;
+    }
     const firstChunk = run?.firstChunk || null;
     if (firstChunk) {
       summary.firstChunkCount += 1;
-      const detected = String(firstChunk.detectedLanguage || '').trim().toLowerCase();
-      if (detected === 'zh') summary.firstChunkZhCount += 1;
-      if (detected === 'en') summary.firstChunkEnCount += 1;
-      if (firstChunk.matchesExpectation === true) summary.firstChunkAlignedCount += 1;
+      const detected = String(firstChunk.detectedLanguage || '')
+        .trim()
+        .toLowerCase();
+      if (detected === 'zh') {
+        summary.firstChunkZhCount += 1;
+      }
+      if (detected === 'en') {
+        summary.firstChunkEnCount += 1;
+      }
+      if (firstChunk.matchesExpectation === true) {
+        summary.firstChunkAlignedCount += 1;
+      }
     }
     const llmResponse = run?.llmResponse || null;
-    if (llmResponse && llmResponse.success === true) summary.successCount += 1;
-    if (llmResponse && llmResponse.success === false) summary.failureCount += 1;
-    if (String(llmResponse?.errorType || '').trim().toLowerCase() === 'timeout') {
+    if (llmResponse && llmResponse.success === true) {
+      summary.successCount += 1;
+    }
+    if (llmResponse && llmResponse.success === false) {
+      summary.failureCount += 1;
+    }
+    if (
+      String(llmResponse?.errorType || '')
+        .trim()
+        .toLowerCase() === 'timeout'
+    ) {
       summary.timeoutCount += 1;
     }
   }
@@ -447,30 +570,45 @@ async function handleGatewayProbeTools(args = [], options = {}) {
   const store = require('../../services/gateway/toolCapabilityStore');
   const probe = require('../../services/gateway/toolCallingProbe');
   const asJson = !!options.json;
-  if (!gateway._initialized) await gateway.init();
+  if (!gateway.isInitialized()) {
+    await gateway.init();
+  }
 
   // list 模式:只打印「判断通过的纳入数组」(确证 native)+ 全部新鲜记录,不发探测。
-  if (String(args[0] || '').trim().toLowerCase() === 'list' || options.list) {
+  if (
+    String(args[0] || '')
+      .trim()
+      .toLowerCase() === 'list' ||
+    options.list
+  ) {
     const passing = store.listPassing();
     const fresh = store.listFresh();
     if (asJson) {
-      console.log(JSON.stringify({ ok: true, action: 'probe-tools-list', passing, fresh }, null, 2));
+      console.log(
+        JSON.stringify({ ok: true, action: 'probe-tools-list', passing, fresh }, null, 2)
+      );
       return;
     }
     console.log('');
     console.log(`  ${chalk.cyan.bold('已实测「通过」工具调用的模型(纳入数组·sticky 常驻)')}`);
     if (passing.length === 0) {
-      console.log(`  ${chalk.dim('(空)—— 尚无确证通过的模型。用 khy gateway probe-tools <model> 探测')}`);
+      console.log(
+        `  ${chalk.dim('(空)—— 尚无确证通过的模型。用 khy gateway probe-tools <model> 探测')}`
+      );
     } else {
       for (const e of passing) {
-        console.log(`  ${chalk.green('✓')} ${e.model} ${chalk.dim(`(${e.source || 'probe'}${e.latencyMs != null ? ` · ${e.latencyMs}ms` : ''})`)}`);
+        console.log(
+          `  ${chalk.green('✓')} ${e.model} ${chalk.dim(`(${e.source || 'probe'}${e.latencyMs != null ? ` · ${e.latencyMs}ms` : ''})`)}`
+        );
       }
     }
-    const negatives = fresh.filter(e => e.verdict === 'text');
+    const negatives = fresh.filter((e) => e.verdict === 'text');
     if (negatives.length > 0) {
       console.log('');
       console.log(`  ${chalk.dim('暂走文本协议(未确证·有界 TTL 后可重测):')}`);
-      for (const e of negatives) console.log(`  ${chalk.dim(`· ${e.model}`)}`);
+      for (const e of negatives) {
+        console.log(`  ${chalk.dim(`· ${e.model}`)}`);
+      }
     }
     console.log('');
     return;
@@ -481,60 +619,90 @@ async function handleGatewayProbeTools(args = [], options = {}) {
   ).trim();
   if (!model) {
     const message = '请指定模型: khy gateway probe-tools <model>（或设置 GATEWAY_PREFERRED_MODEL）';
-    if (asJson) console.log(JSON.stringify({ ok: false, action: 'probe-tools', error: 'no_model', message }, null, 2));
-    else printError(message);
+    if (asJson) {
+      console.log(
+        JSON.stringify({ ok: false, action: 'probe-tools', error: 'no_model', message }, null, 2)
+      );
+    } else {
+      printError(message);
+    }
     return;
   }
 
   // 解析 adapter key:显式 --adapter 优先,否则取最高优先级且 enabled 的适配器。
-  let adapterKey = String(options.adapter || '').trim().toLowerCase();
-  const adapters = Array.isArray(gateway._adapters) ? gateway._adapters : [];
+  let adapterKey = String(options.adapter || '')
+    .trim()
+    .toLowerCase();
+  const adapters = Array.isArray(gateway.getAdapters()) ? gateway.getAdapters() : [];
   if (!adapterKey) {
     const enabled = adapters
-      .filter(a => a && a.enabled)
+      .filter((a) => a && a.enabled)
       .sort((a, b) => (a.priority || 0) - (b.priority || 0));
     adapterKey = (enabled[0] && enabled[0].key) || '';
   }
   if (!adapterKey) {
     const message = '无可用适配器进行探测';
-    if (asJson) console.log(JSON.stringify({ ok: false, action: 'probe-tools', error: 'no_adapter', message }, null, 2));
-    else printError(message);
+    if (asJson) {
+      console.log(
+        JSON.stringify({ ok: false, action: 'probe-tools', error: 'no_adapter', message }, null, 2)
+      );
+    } else {
+      printError(message);
+    }
     return;
   }
 
   if (!probe.isEnabled()) {
     const message = '工具能力探测已禁用 (KHY_TOOL_CAP_PROBE)。仍可继续本次手动探测。';
-    if (!asJson) printInfo(message);
+    if (!asJson) {
+      printInfo(message);
+    }
   }
 
   if (!asJson) {
     console.log('');
-    console.log(`  ${chalk.cyan.bold('实测工具调用能力')}  ${chalk.dim(`${adapterKey} · ${model}`)}`);
+    console.log(
+      `  ${chalk.cyan.bold('实测工具调用能力')}  ${chalk.dim(`${adapterKey} · ${model}`)}`
+    );
   }
 
-  const result = await gateway.verifyToolCalling(adapterKey, model);
+  // force:这是用户主动发起的重测,允许把已确证的 'native' 降级为 'text'(后台自动探测
+  // 不允许 —— 见 toolCapabilityStore.recordVerdict 的不降级不变量)。
+  const result = await gateway.verifyToolCalling(adapterKey, model, { force: true });
   const record = store.getRecord(model);
 
   if (asJson) {
-    console.log(JSON.stringify({
-      ok: true,
-      action: 'probe-tools',
-      adapter: adapterKey,
-      model,
-      verdict: result.verdict,
-      latencyMs: result.latencyMs ?? null,
-      error: result.error || null,
-      recorded: record ? { verdict: record.verdict, source: record.source, measuredAt: record.measuredAt } : null,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          action: 'probe-tools',
+          adapter: adapterKey,
+          model,
+          verdict: result.verdict,
+          latencyMs: result.latencyMs ?? null,
+          error: result.error || null,
+          recorded: record
+            ? { verdict: record.verdict, source: record.source, measuredAt: record.measuredAt }
+            : null,
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
   if (result.verdict === 'native') {
     printSuccess(`原生工具调用 ✓ (native) · ${result.latencyMs ?? '?'}ms — 此后将原生发送 tools`);
   } else if (result.verdict === 'text') {
-    printInfo(`无原生工具调用 (text) · ${result.latencyMs ?? '?'}ms — 此后剥离 tools、教学 <tool_call> 文本协议`);
+    printInfo(
+      `无原生工具调用 (text) · ${result.latencyMs ?? '?'}ms — 此后剥离 tools、教学 <tool_call> 文本协议`
+    );
   } else {
-    printError(`探测未能判定 (unknown)${result.error ? ` · ${result.error}` : ''} — 未写入缓存,留待重测`);
+    printError(
+      `探测未能判定 (unknown)${result.error ? ` · ${result.error}` : ''} — 未写入缓存,留待重测`
+    );
   }
   if (record) {
     console.log(`  ${chalk.dim(`已缓存: ${record.verdict} (${record.source})`)}`);
@@ -543,19 +711,26 @@ async function handleGatewayProbeTools(args = [], options = {}) {
 }
 
 async function handleGatewaySample(args = [], options = {}) {
-  const adapter = String(args[0] || options.adapter || 'codex').trim().toLowerCase() || 'codex';
+  const adapter =
+    String(args[0] || options.adapter || 'codex')
+      .trim()
+      .toLowerCase() || 'codex';
   const asJson = !!options.json;
   if (adapter !== 'codex') {
     printError(`gateway sample 当前只支持 codex，收到: ${adapter}`);
-    printInfo('用法: gateway sample [codex] [--attempts 4] [--timeout-ms 20000] [--prompt "只用一句中文回复"] [--dir /tmp/khy-gateway-sample] [--json]');
+    printInfo(
+      '用法: gateway sample [codex] [--attempts 4] [--timeout-ms 20000] [--prompt "只用一句中文回复"] [--dir /tmp/khy-gateway-sample] [--json]'
+    );
     return;
   }
 
   const attemptsRaw = options.attempts ?? options.count ?? options.n;
   const timeoutRaw = options['timeout-ms'] ?? options.timeoutMs ?? options.timeout_ms;
-  const hardTimeoutRaw = options['hard-timeout-ms'] ?? options.hardTimeoutMs ?? options.hard_timeout_ms;
-  const prompt = String(options.prompt || args.slice(1).join(' ') || KHY_GATEWAY_SAMPLE_DEFAULT_PROMPT).trim()
-    || KHY_GATEWAY_SAMPLE_DEFAULT_PROMPT;
+  const hardTimeoutRaw =
+    options['hard-timeout-ms'] ?? options.hardTimeoutMs ?? options.hard_timeout_ms;
+  const prompt =
+    String(options.prompt || args.slice(1).join(' ') || KHY_GATEWAY_SAMPLE_DEFAULT_PROMPT).trim() ||
+    KHY_GATEWAY_SAMPLE_DEFAULT_PROMPT;
   const attempts = Math.min(
     KHY_GATEWAY_SAMPLE_MAX_ATTEMPTS,
     _parseIntWithMin(attemptsRaw, KHY_GATEWAY_SAMPLE_DEFAULT_ATTEMPTS, 1)
@@ -579,7 +754,9 @@ async function handleGatewaySample(args = [], options = {}) {
   fs.mkdirSync(baseDir, { recursive: true });
 
   if (!asJson) {
-    printInfo(`开始 Codex strict 采样（目标=${adapter}，次数=${attempts}，首响超时=${firstResponseTimeoutMs}ms）`);
+    printInfo(
+      `开始 Codex strict 采样（目标=${adapter}，次数=${attempts}，首响超时=${firstResponseTimeoutMs}ms）`
+    );
     printInfo(`采样目录: ${baseDir}`);
     if (homeContext.isTempHome) {
       printInfo(`提示: ${homeContext.hint} ${homeContext.recommendation}`.trim());
@@ -596,7 +773,9 @@ async function handleGatewaySample(args = [], options = {}) {
     fs.mkdirSync(runDir, { recursive: true });
 
     if (!asJson) {
-      printInfo(`执行 Codex strict 采样（第 ${runNumber}/${attempts} 次），目标=首块语言证据，超时=${firstResponseTimeoutMs}ms`);
+      printInfo(
+        `执行 Codex strict 采样（第 ${runNumber}/${attempts} 次），目标=首块语言证据，超时=${firstResponseTimeoutMs}ms`
+      );
     }
 
     const env = {
@@ -630,14 +809,15 @@ async function handleGatewaySample(args = [], options = {}) {
     runSummary.signal = childResult.signal || null;
     runSummary.hardTimeout = !!(childResult.error && childResult.error.code === 'ETIMEDOUT');
     const hasUsableRunEvidence = !!(
-      runSummary.requestId
-      || runSummary.firstChunk
-      || runSummary.finalResponse
-      || runSummary.llmResponse
+      runSummary.requestId ||
+      runSummary.firstChunk ||
+      runSummary.finalResponse ||
+      runSummary.llmResponse
     );
-    runSummary.spawnError = (childResult.error && !hasUsableRunEvidence)
-      ? _compactReasonText(childResult.error.message || String(childResult.error), 220)
-      : '';
+    runSummary.spawnError =
+      childResult.error && !hasUsableRunEvidence
+        ? _compactReasonText(childResult.error.message || String(childResult.error), 220)
+        : '';
     runs.push(runSummary);
 
     if (!asJson) {
@@ -646,8 +826,12 @@ async function handleGatewaySample(args = [], options = {}) {
         : 'none';
       const llmState = runSummary.llmResponse
         ? `${runSummary.llmResponse.success ? 'success' : `fail:${runSummary.llmResponse.errorType || 'unknown'}`}`
-        : (runSummary.hardTimeout ? 'fail:hard-timeout' : 'missing');
-      printInfo(`Codex strict 采样结果（第 ${runNumber}/${attempts} 次）：requestId=${runSummary.requestId || '-'}，firstChunk=${firstChunkState}，llm=${llmState}`);
+        : runSummary.hardTimeout
+          ? 'fail:hard-timeout'
+          : 'missing';
+      printInfo(
+        `Codex strict 采样结果（第 ${runNumber}/${attempts} 次）：requestId=${runSummary.requestId || '-'}，firstChunk=${firstChunkState}，llm=${llmState}`
+      );
     }
   }
 
@@ -679,11 +863,17 @@ async function handleGatewaySample(args = [], options = {}) {
     return;
   }
 
-  printSuccess(`Codex strict 采样完成：总计 ${summary.attempts} 次，promptInjected=${summary.promptInjectedCount}，firstChunk=${summary.firstChunkCount}，timeout=${summary.timeoutCount}`);
+  printSuccess(
+    `Codex strict 采样完成：总计 ${summary.attempts} 次，promptInjected=${summary.promptInjectedCount}，firstChunk=${summary.firstChunkCount}，timeout=${summary.timeoutCount}`
+  );
   if (summary.firstChunkCount > 0) {
-    printInfo(`首块语言统计: zh=${summary.firstChunkZhCount}，en=${summary.firstChunkEnCount}，aligned=${summary.firstChunkAlignedCount}`);
+    printInfo(
+      `首块语言统计: zh=${summary.firstChunkZhCount}，en=${summary.firstChunkEnCount}，aligned=${summary.firstChunkAlignedCount}`
+    );
   } else {
-    printInfo('首块语言统计: 当前窗口未拿到任何可见 first_chunk；当前主要结论仍是“注入稳定、响应前超时占主导”');
+    printInfo(
+      '首块语言统计: 当前窗口未拿到任何可见 first_chunk；当前主要结论仍是“注入稳定、响应前超时占主导”'
+    );
   }
   printInfo(`采样目录已保留: ${baseDir}`);
 }

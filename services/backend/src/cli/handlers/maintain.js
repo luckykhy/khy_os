@@ -22,18 +22,28 @@ function fmt() {
 
 /** 按状态选 formatter（formatter 自带 ✓/⚠/✗/ℹ 前缀，避免重复图标）。 */
 function _printByStatus(status, line, f) {
-  if (status === 'green') return f.printSuccess(line);
-  if (status === 'yellow') return f.printWarn(line);
-  if (status === 'red') return f.printError(line);
+  if (status === 'green') {
+    return f.printSuccess(line);
+  }
+  if (status === 'yellow') {
+    return f.printWarn(line);
+  }
+  if (status === 'red') {
+    return f.printError(line);
+  }
   return f.printInfo(line);
 }
 
 function _levelLabel(level) {
   switch (level) {
-    case 'green': return '健康';
-    case 'yellow': return '有待办';
-    case 'red': return '需处理';
-    default: return '未知';
+    case 'green':
+      return '健康';
+    case 'yellow':
+      return '有待办';
+    case 'red':
+      return '需处理';
+    default:
+      return '未知';
   }
 }
 
@@ -72,7 +82,9 @@ async function handleMaintain(parsed = {}) {
   }
 
   // red → 非零退出（提交前/升级前 CI 自检门禁）。
-  if (report.level === 'red') process.exitCode = 1;
+  if (report.level === 'red') {
+    process.exitCode = 1;
+  }
   return true;
 }
 
@@ -80,7 +92,11 @@ async function handleMaintain(parsed = {}) {
 function _renderAudit(cockpit, { printInfo, printSuccess, printWarn }) {
   const root = cockpit._findRepoRoot();
   let changed = [];
-  try { changed = cockpit._gitChangedJsFiles(root); } catch { changed = []; }
+  try {
+    changed = cockpit._gitChangedJsFiles(root);
+  } catch {
+    changed = [];
+  }
   if (!changed.length) {
     printSuccess('无改动的后端 JS 文件，无需审计。');
     return true;
@@ -89,10 +105,14 @@ function _renderAudit(cockpit, { printInfo, printSuccess, printWarn }) {
   const { SelfSustainingInfra } = require('../../services/selfSustainingInfra');
   const fileMap = {};
   for (const rel of changed) {
-    try { fileMap[rel] = fs.readFileSync(path.join(root, rel), 'utf8'); } catch { /* skip */ }
+    try {
+      fileMap[rel] = fs.readFileSync(path.join(root, rel), 'utf8');
+    } catch {
+      /* skip */
+    }
   }
   const { gaps, byKind } = new SelfSustainingInfra().audit(fileMap);
-  const focus = (gaps || []).filter(g => g && g.kind !== 'missing-test');
+  const focus = (gaps || []).filter((g) => g && g.kind !== 'missing-test');
   printInfo(`基建裸奔审计 · ${Object.keys(fileMap).length} 个改动文件`);
   printInfo('─'.repeat(48));
   if (!focus.length) {
@@ -102,8 +122,13 @@ function _renderAudit(cockpit, { printInfo, printSuccess, printWarn }) {
       printWarn(`  ⚠ [${g.kind}] ${g.file}${g.symbol ? ` · ${g.symbol}` : ''} — ${g.detail || ''}`);
     }
     printInfo('─'.repeat(48));
-    const summary = Object.entries(byKind || {}).filter(([k]) => k !== 'missing-test').map(([k, v]) => `${k} ${v}`).join('、');
-    printInfo(`合计：${focus.length} 处（${summary}）。这些仅为建议——补齐契约/类型/依赖声明可让简单模型更安全地维护。`);
+    const summary = Object.entries(byKind || {})
+      .filter(([k]) => k !== 'missing-test')
+      .map(([k, v]) => `${k} ${v}`)
+      .join('、');
+    printInfo(
+      `合计：${focus.length} 处（${summary}）。这些仅为建议——补齐契约/类型/依赖声明可让简单模型更安全地维护。`
+    );
   }
   return true;
 }
@@ -124,10 +149,20 @@ function _renderFreshness(cockpit, parsed, f) {
 
   // 当前钉选的首选模型（单一真源）。
   let primaryModels = {};
-  try { primaryModels = require('../../constants/models').PRIMARY || {}; } catch { primaryModels = {}; }
+  try {
+    primaryModels = require('../../constants/models').PRIMARY || {};
+  } catch {
+    primaryModels = {};
+  }
 
   // 自维护设施支柱：探测文件/目录存在性。
-  const _exists = (rel) => { try { return fs.existsSync(path.join(root, rel)); } catch { return false; } };
+  const _exists = (rel) => {
+    try {
+      return fs.existsSync(path.join(root, rel));
+    } catch {
+      return false;
+    }
+  };
   const wiring = {
     pipLifeline: _exists('setup.py'),
     aiSeedDocs: _exists('.ai/GUARDS.md') || _exists('.ai/MAP.md'),
@@ -143,7 +178,9 @@ function _renderFreshness(cockpit, parsed, f) {
 
   if (parsed && (parsed.json || parsed.options?.json)) {
     printInfo(JSON.stringify({ generatedAt: now.toISOString(), ...report }, null, 2));
-    if (report.level === 'red') process.exitCode = 1;
+    if (report.level === 'red') {
+      process.exitCode = 1;
+    }
     return true;
   }
 
@@ -151,24 +188,35 @@ function _renderFreshness(cockpit, parsed, f) {
   printInfo('─'.repeat(48));
   for (const c of report.checks) {
     _printByStatus(c.status, `${c.label}：${c.detail}`, f);
-    if (c.action) printInfo(`    → ${c.action}`);
+    if (c.action) {
+      printInfo(`    → ${c.action}`);
+    }
   }
   printInfo('─'.repeat(48));
   _printByStatus(report.level, `总体：${report.summary}`, f);
 
-  if (report.level === 'red') process.exitCode = 1;
+  if (report.level === 'red') {
+    process.exitCode = 1;
+  }
   return true;
 }
 
 /** 从 package.json 解析哪些机器守卫已串入提交门禁链。fail-soft 返回 {}。 */
 function _detectGuards(fs, pathMod, root) {
-  const expected = ['check-agent-rules', 'check-leaf-contract', 'check-model-hardcoding', 'check-change-safety'];
+  const expected = [
+    'check-agent-rules',
+    'check-leaf-contract',
+    'check-model-hardcoding',
+    'check-change-safety',
+  ];
   const out = {};
   try {
     const pkg = JSON.parse(fs.readFileSync(pathMod.join(root, 'package.json'), 'utf8'));
     const scripts = (pkg && pkg.scripts) || {};
     const blob = Object.values(scripts).join('\n');
-    for (const g of expected) out[g] = blob.includes(g);
+    for (const g of expected) {
+      out[g] = blob.includes(g);
+    }
   } catch {
     return {};
   }

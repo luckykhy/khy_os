@@ -8,6 +8,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../utils/dataHome');
 
 function _arenaDir() {
@@ -67,7 +68,7 @@ function listResults(filter = {}) {
   const dir = _arenaDir();
   let files;
   try {
-    files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
   } catch {
     return [];
   }
@@ -76,31 +77,43 @@ function listResults(filter = {}) {
   const limit = filter.limit || 50;
 
   for (const file of files) {
-    if (results.length >= limit) break;
+    if (results.length >= limit) {
+      break;
+    }
     try {
       const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
       const data = JSON.parse(raw);
 
       // Apply filters
-      if (filter.since && (data.savedAt || 0) < filter.since) continue;
-      if (filter.until && (data.savedAt || 0) > filter.until) continue;
+      if (filter.since && (data.savedAt || 0) < filter.since) {
+        continue;
+      }
+      if (filter.until && (data.savedAt || 0) > filter.until) {
+        continue;
+      }
       if (filter.model) {
-        const models = (data.entries || []).map(e => e.model);
-        if (!models.some(m => m.includes(filter.model))) continue;
+        const models = (data.entries || []).map((e) => e.model);
+        if (!models.some((m) => m.includes(filter.model))) {
+          continue;
+        }
       }
       if (filter.promptContains) {
-        if (!(data.prompt || '').includes(filter.promptContains)) continue;
+        if (!(data.prompt || '').includes(filter.promptContains)) {
+          continue;
+        }
       }
 
       results.push({
         arenaId: data.arenaId,
         prompt: (data.prompt || '').slice(0, 80),
-        models: (data.entries || []).map(e => e.model),
+        models: (data.entries || []).map((e) => e.model),
         totalMs: data.totalMs,
         savedAt: data.savedAt,
         recommendation: data.summary?.recommendation || null,
       });
-    } catch { /* skip corrupt files */ }
+    } catch {
+      /* skip corrupt files */
+    }
   }
 
   // Sort by savedAt descending (newest first)
@@ -134,7 +147,7 @@ function getLeaderboard(opts = {}) {
   const dir = _arenaDir();
   let files;
   try {
-    files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
   } catch {
     return [];
   }
@@ -147,7 +160,9 @@ function getLeaderboard(opts = {}) {
       const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
       const data = JSON.parse(raw);
 
-      if (opts.since && (data.savedAt || 0) < opts.since) continue;
+      if (opts.since && (data.savedAt || 0) < opts.since) {
+        continue;
+      }
 
       const entries = data.entries || [];
       const recommendation = data.summary?.recommendation || '';
@@ -169,7 +184,7 @@ function getLeaderboard(opts = {}) {
           s.totalLatency += entry.totalMs || 0;
 
           // Find score from metrics
-          const metric = metrics.find(m => m.model === model);
+          const metric = metrics.find((m) => m.model === model);
           if (metric && typeof metric.score === 'number') {
             s.totalScore += metric.score;
           } else {
@@ -182,7 +197,9 @@ function getLeaderboard(opts = {}) {
           }
         }
       }
-    } catch { /* skip corrupt */ }
+    } catch {
+      /* skip corrupt */
+    }
   }
 
   const minGames = opts.minGames || 1;
@@ -190,14 +207,10 @@ function getLeaderboard(opts = {}) {
     .filter(([, s]) => s.games >= minGames)
     .map(([model, s]) => ({
       model,
-      avgScore: s.games > s.failures
-        ? Math.round(s.totalScore / (s.games - s.failures))
-        : 0,
+      avgScore: s.games > s.failures ? Math.round(s.totalScore / (s.games - s.failures)) : 0,
       wins: s.wins,
       games: s.games,
-      avgLatencyMs: s.games > s.failures
-        ? Math.round(s.totalLatency / (s.games - s.failures))
-        : 0,
+      avgLatencyMs: s.games > s.failures ? Math.round(s.totalLatency / (s.games - s.failures)) : 0,
       failRate: Math.round((s.failures / s.games) * 100),
     }));
 

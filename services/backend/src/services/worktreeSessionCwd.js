@@ -29,11 +29,17 @@ function worktreeToolCwdEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_WORKTREE_TOOL_CWD', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_WORKTREE_TOOL_CWD;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -50,19 +56,31 @@ function worktreeToolCwdEnabled(env) {
  */
 function switchToolCwd(target, opts = {}) {
   const env = (opts && opts.env) || process.env;
-  const chdir = (opts && typeof opts.chdir === 'function') ? opts.chdir : ((d) => process.chdir(d));
+  const chdir = opts && typeof opts.chdir === 'function' ? opts.chdir : (d) => process.chdir(d);
   const dir = typeof target === 'string' ? target : '';
-  if (!dir) return { switched: false, cwd: null, chdirOk: false, syncedEnv: false };
+  if (!dir) {
+    return { switched: false, cwd: null, chdirOk: false, syncedEnv: false };
+  }
 
   const gateOn = worktreeToolCwdEnabled(env);
   let syncedEnv = false;
   if (gateOn) {
     // KHYQUANT_CWD 是文件/git 工具的权威 cwd 源 —— 必须同步,否则 worktree 切换对工具无效。
-    try { env.KHYQUANT_CWD = dir; syncedEnv = true; } catch { syncedEnv = false; }
+    try {
+      env.KHYQUANT_CWD = dir;
+      syncedEnv = true;
+    } catch {
+      syncedEnv = false;
+    }
   }
   // chdir 两个分支都做(旧行为即只 chdir);best-effort,失败不抛。
   let chdirOk = false;
-  try { chdir(dir); chdirOk = true; } catch { chdirOk = false; }
+  try {
+    chdir(dir);
+    chdirOk = true;
+  } catch {
+    chdirOk = false;
+  }
 
   return { switched: true, cwd: dir, chdirOk, syncedEnv };
 }

@@ -29,10 +29,10 @@
  * 0/false/off/no → 关)。关门 / 异常 → 原样透传(逐字节回退今日行为)。
  */
 
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
 const { execFileSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // GLM 视觉端合并预算上限(inputs + max_new_tokens)。留出输出与安全余量后,把图片
 // 目标 token 压到 TARGET_IMAGE_TOKENS 以内。16384 - 1024(输出) - 保守余量 ≈ 12000。
@@ -82,7 +82,9 @@ function normalizeAllEnabled(env = process.env) {
 function getMaxEdge(env = process.env) {
   try {
     const parsed = parseInt(String((env && env.KHY_GLM_VISION_MAX_EDGE) ?? ''), 10);
-    if (!Number.isFinite(parsed)) return DEFAULT_MAX_EDGE;
+    if (!Number.isFinite(parsed)) {
+      return DEFAULT_MAX_EDGE;
+    }
     return Math.max(MIN_MAX_EDGE, Math.min(MAX_MAX_EDGE, parsed));
   } catch {
     return DEFAULT_MAX_EDGE;
@@ -99,9 +101,13 @@ function _diag(msg) {
   try {
     const raw = process.env.KHY_GLM_VISION_DOWNSCALE_DIAG;
     const v = raw == null || String(raw).trim() === '' ? '' : String(raw).trim().toLowerCase();
-    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return;
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+      return;
+    }
     process.stderr.write(`[glm_vision_downscale] ${msg}\n`);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -112,7 +118,9 @@ function _diag(msg) {
 function downscaleEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_GLM_VISION_IMAGE_DOWNSCALE;
-    if (raw == null || String(raw).trim() === '') return true; // 缺省 → 默认开
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    } // 缺省 → 默认开
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {
@@ -129,7 +137,9 @@ function downscaleEnabled(env = process.env) {
 function estimateVisionTokens(width, height) {
   const w = Number(width);
   const h = Number(height);
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return 0;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+    return 0;
+  }
   return Math.ceil((w * h) / PIXELS_PER_TOKEN);
 }
 
@@ -147,7 +157,9 @@ function estimateVisionTokens(width, height) {
 function computeScaleFactor(width, height, env = process.env) {
   const w = Number(width);
   const h = Number(height);
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return 1;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+    return 1;
+  }
 
   // ① 预算约束。
   let budgetScale = 1;
@@ -161,7 +173,9 @@ function computeScaleFactor(width, height, env = process.env) {
   if (normalizeAllEnabled(env)) {
     const maxEdge = getMaxEdge(env);
     const longEdge = Math.max(w, h);
-    if (longEdge > maxEdge) edgeScale = maxEdge / longEdge;
+    if (longEdge > maxEdge) {
+      edgeScale = maxEdge / longEdge;
+    }
   }
 
   const scale = Math.min(budgetScale, edgeScale);
@@ -189,15 +203,31 @@ function _downscaleBufferViaPlatform(buf, targetW, targetH) {
     fs.writeFileSync(inFile, buf);
 
     const ran = _runPlatformResize(inFile, outFile, targetW, targetH);
-    if (!ran) return null;
-    if (!fs.existsSync(outFile)) return null;
+    if (!ran) {
+      return null;
+    }
+    if (!fs.existsSync(outFile)) {
+      return null;
+    }
     const out = fs.readFileSync(outFile);
     return out && out.length > 0 ? out : null;
   } catch {
     return null;
   } finally {
-    try { if (inFile) fs.unlinkSync(inFile); } catch { /* ignore */ }
-    try { if (outFile) fs.unlinkSync(outFile); } catch { /* ignore */ }
+    try {
+      if (inFile) {
+        fs.unlinkSync(inFile);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (outFile) {
+        fs.unlinkSync(outFile);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -232,14 +262,18 @@ function _runPlatformResize(inFile, outFile, w, h) {
     for (const shell of shells) {
       try {
         execFileSync(shell, ['-NoProfile', '-NonInteractive', '-Command', ps], opts);
-        if (fs.existsSync(outFile)) return true;
+        if (fs.existsSync(outFile)) {
+          return true;
+        }
       } catch (e) {
         lastErr = (e && (e.stderr ? String(e.stderr) : e.message)) || String(e);
       }
     }
     _diag(`windows resize failed (all shells): ${lastErr.slice(0, 300)}`);
     // System.Drawing 失败(如 Nano Server / .NET 缺 GDI+)→ 退 Python+Pillow(khy 自带 Python)。
-    if (_resizeViaPython(inFile, outFile, w, h)) return true;
+    if (_resizeViaPython(inFile, outFile, w, h)) {
+      return true;
+    }
     return false;
   }
 
@@ -247,11 +281,15 @@ function _runPlatformResize(inFile, outFile, w, h) {
     // macOS 自带 sips:按最大边等比缩放(-Z 保持宽高比,给较大边)。
     try {
       execFileSync('sips', ['-Z', String(Math.max(w, h)), inFile, '--out', outFile], opts);
-      if (fs.existsSync(outFile)) return true;
+      if (fs.existsSync(outFile)) {
+        return true;
+      }
     } catch (e) {
       _diag(`macOS sips resize failed: ${(e && e.message) || e}`);
     }
-    if (_resizeViaPython(inFile, outFile, w, h)) return true;
+    if (_resizeViaPython(inFile, outFile, w, h)) {
+      return true;
+    }
     return false;
   }
 
@@ -264,10 +302,16 @@ function _runPlatformResize(inFile, outFile, w, h) {
   for (const [cmd, args] of attempts) {
     try {
       execFileSync(cmd, args, opts);
-      if (fs.existsSync(outFile)) return true;
-    } catch { /* try next tool */ }
+      if (fs.existsSync(outFile)) {
+        return true;
+      }
+    } catch {
+      /* try next tool */
+    }
   }
-  if (_resizeViaPython(inFile, outFile, w, h)) return true;
+  if (_resizeViaPython(inFile, outFile, w, h)) {
+    return true;
+  }
   return false;
 }
 
@@ -284,20 +328,23 @@ function _resizeViaPython(inFile, outFile, w, h) {
     'im = im.resize((int(sys.argv[3]), int(sys.argv[4])), Image.LANCZOS)',
     'im.save(sys.argv[2], "PNG")',
   ].join('; ');
-  const pythons = process.platform === 'win32'
-    ? ['python', 'py', 'python3']
-    : ['python3', 'python'];
+  const pythons =
+    process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
   const opts = { timeout: DOWNSCALE_TIMEOUT_MS, stdio: 'pipe' };
   let lastErr = '';
   for (const py of pythons) {
     try {
       execFileSync(py, ['-c', code, inFile, outFile, String(w), String(h)], opts);
-      if (fs.existsSync(outFile)) return true;
+      if (fs.existsSync(outFile)) {
+        return true;
+      }
     } catch (e) {
       lastErr = (e && (e.stderr ? String(e.stderr) : e.message)) || String(e);
     }
   }
-  if (lastErr) _diag(`python+Pillow resize failed: ${lastErr.slice(0, 200)}`);
+  if (lastErr) {
+    _diag(`python+Pillow resize failed: ${lastErr.slice(0, 200)}`);
+  }
   return false;
 }
 
@@ -320,20 +367,35 @@ function _psQuote(s) {
  */
 function downscaleGlmVisionImages(model, images, env = process.env) {
   try {
-    if (!downscaleEnabled(env)) return images;
-    if (!Array.isArray(images) || images.length === 0) return images;
+    if (!downscaleEnabled(env)) {
+      return images;
+    }
+    if (!Array.isArray(images) || images.length === 0) {
+      return images;
+    }
     const { isGlmVisionModelName } = require('./glmVisionApiPin');
-    if (!isGlmVisionModelName(model)) return images;
+    if (!isGlmVisionModelName(model)) {
+      return images;
+    }
 
     let changed = false;
     const out = images.map((img) => {
       try {
         const base64 = img && img.base64;
-        if (!base64 || typeof base64 !== 'string') return img;
+        if (!base64 || typeof base64 !== 'string') {
+          return img;
+        }
         const res = _downscaleOneBase64(base64, env);
-        if (!res) return img; // 预算内/探针失败/缩放失败 → 原图
+        if (!res) {
+          return img;
+        } // 预算内/探针失败/缩放失败 → 原图
         changed = true;
-        return { ...img, base64: res.base64, mimeType: res.mimeType, dataUrl: `data:${res.mimeType};base64,${res.base64}` };
+        return {
+          ...img,
+          base64: res.base64,
+          mimeType: res.mimeType,
+          dataUrl: `data:${res.mimeType};base64,${res.base64}`,
+        };
       } catch (e) {
         _diag(`per-image downscale threw: ${(e && e.message) || e}; passing through original`);
         return img; // 单图失败不影响其它
@@ -356,20 +418,26 @@ function downscaleGlmVisionImages(model, images, env = process.env) {
 function _downscaleOneBase64(base64, env = process.env) {
   const { probeImageMetadata } = require('../imageMetadataProbe');
   const buf = Buffer.from(base64, 'base64');
-  if (buf.length < 64) return null;
+  if (buf.length < 64) {
+    return null;
+  }
 
   const meta = probeImageMetadata(buf);
   const w = meta && Number(meta.width);
   const h = meta && Number(meta.height);
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
-    _diag(`probe failed to read dimensions (bytes=${buf.length}, format=${meta && meta.format}); passing through original`);
+    _diag(
+      `probe failed to read dimensions (bytes=${buf.length}, format=${meta && meta.format}); passing through original`
+    );
     return null;
   }
 
   const est = estimateVisionTokens(w, h);
   const scale = computeScaleFactor(w, h, env);
   if (scale >= 1) {
-    _diag(`image ${w}x${h} est=${est}tok within budget (target=${TARGET_IMAGE_TOKENS}, maxEdge=${getMaxEdge(env)}); no downscale`);
+    _diag(
+      `image ${w}x${h} est=${est}tok within budget (target=${TARGET_IMAGE_TOKENS}, maxEdge=${getMaxEdge(env)}); no downscale`
+    );
     return null; // 预算内且未超最大边,不缩
   }
 
@@ -377,12 +445,16 @@ function _downscaleOneBase64(base64, env = process.env) {
   const targetH = Math.max(16, Math.round(h * scale));
   const shrunk = _downscaleBufferViaPlatform(buf, targetW, targetH);
   if (!shrunk) {
-    _diag(`WANTED to downscale ${w}x${h} (est=${est}tok) -> ${targetW}x${targetH} but platform resize FAILED on ${process.platform}; shipping ORIGINAL (will still 400)`);
+    _diag(
+      `WANTED to downscale ${w}x${h} (est=${est}tok) -> ${targetW}x${targetH} but platform resize FAILED on ${process.platform}; shipping ORIGINAL (will still 400)`
+    );
     return null; // fail-soft:平台工具缺失/失败 → 原图
   }
 
   const newBase64 = shrunk.toString('base64');
-  _diag(`downscaled ${w}x${h} (est=${est}tok) -> ${targetW}x${targetH} (~${estimateVisionTokens(targetW, targetH)}tok), bytes ${buf.length}->${shrunk.length}`);
+  _diag(
+    `downscaled ${w}x${h} (est=${est}tok) -> ${targetW}x${targetH} (~${estimateVisionTokens(targetW, targetH)}tok), bytes ${buf.length}->${shrunk.length}`
+  );
   return { base64: newBase64, mimeType: 'image/png' }; // 平台缩放统一存回 PNG
 }
 
@@ -393,9 +465,13 @@ function _downscaleOneBase64(base64, env = process.env) {
  * @returns {{ mimeType: string|null, base64: string }|null}
  */
 function _extractBase64FromUrl(url) {
-  if (typeof url !== 'string' || !url) return null;
+  if (typeof url !== 'string' || !url) {
+    return null;
+  }
   const m = /^data:([^;,]*);base64,([\s\S]+)$/i.exec(url);
-  if (m) return { mimeType: m[1] || null, base64: m[2].replace(/\s+/g, '') };
+  if (m) {
+    return { mimeType: m[1] || null, base64: m[2].replace(/\s+/g, '') };
+  }
   // 裸 base64(无前缀)——保守判定:仅 base64 字符集且足够长。
   if (/^[A-Za-z0-9+/=\r\n]+$/.test(url) && url.replace(/\s+/g, '').length > 128) {
     return { mimeType: null, base64: url.replace(/\s+/g, '') };
@@ -421,39 +497,65 @@ function _extractBase64FromUrl(url) {
  */
 function downscaleImageBlocksInMessages(model, messages, env = process.env) {
   try {
-    if (!downscaleEnabled(env)) return 0;
-    if (!Array.isArray(messages) || messages.length === 0) return 0;
+    if (!downscaleEnabled(env)) {
+      return 0;
+    }
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return 0;
+    }
     const { isGlmVisionModelName } = require('./glmVisionApiPin');
-    if (!isGlmVisionModelName(model)) return 0;
+    if (!isGlmVisionModelName(model)) {
+      return 0;
+    }
 
     let shrunkCount = 0;
     for (const msg of messages) {
       const content = msg && msg.content;
-      if (!Array.isArray(content)) continue;
+      if (!Array.isArray(content)) {
+        continue;
+      }
       for (const block of content) {
         try {
-          if (!block || typeof block !== 'object') continue;
+          if (!block || typeof block !== 'object') {
+            continue;
+          }
 
           // ── OpenAI/ChatML image_url 块 + Responses API input_image 块 ──
-          if ((block.type === 'image_url' || block.type === 'input_image') && block.image_url != null) {
+          if (
+            (block.type === 'image_url' || block.type === 'input_image') &&
+            block.image_url != null
+          ) {
             const iu = block.image_url;
-            const url = typeof iu === 'string' ? iu : (iu && iu.url);
+            const url = typeof iu === 'string' ? iu : iu && iu.url;
             const parsed = _extractBase64FromUrl(url);
-            if (!parsed) continue;
+            if (!parsed) {
+              continue;
+            }
             const res = _downscaleOneBase64(parsed.base64, env);
-            if (!res) continue;
+            if (!res) {
+              continue;
+            }
             const newUrl = `data:${res.mimeType};base64,${res.base64}`;
-            if (typeof iu === 'string') block.image_url = newUrl;
-            else block.image_url.url = newUrl;
+            if (typeof iu === 'string') {
+              block.image_url = newUrl;
+            } else {
+              block.image_url.url = newUrl;
+            }
             shrunkCount += 1;
             continue;
           }
 
           // ── Anthropic 内联 image 块 ──
-          if (block.type === 'image' && block.source && block.source.type === 'base64'
-              && typeof block.source.data === 'string') {
+          if (
+            block.type === 'image' &&
+            block.source &&
+            block.source.type === 'base64' &&
+            typeof block.source.data === 'string'
+          ) {
             const res = _downscaleOneBase64(block.source.data, env);
-            if (!res) continue;
+            if (!res) {
+              continue;
+            }
             block.source.media_type = res.mimeType;
             block.source.data = res.base64;
             shrunkCount += 1;
@@ -464,7 +566,9 @@ function downscaleImageBlocksInMessages(model, messages, env = process.env) {
         }
       }
     }
-    if (shrunkCount > 0) _diag(`downscaled ${shrunkCount} image block(s) in messages`);
+    if (shrunkCount > 0) {
+      _diag(`downscaled ${shrunkCount} image block(s) in messages`);
+    }
     return shrunkCount;
   } catch {
     return 0;

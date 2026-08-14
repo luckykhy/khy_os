@@ -32,7 +32,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_DOCS_MARKER_SYNC 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function docMarkerSyncEnabled(env = process.env) {
   const raw = env && env.KHY_DOCS_MARKER_SYNC;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -52,7 +54,10 @@ const NOTICE = '(此区块由 khy docs check --fix 依据 SSOT 自动生成,请�
 function syncManagedRegions(docText, valueMap) {
   const result = { text: '', changed: false, changedRegions: [], unknownKeys: [], skipped: [] };
   try {
-    if (typeof docText !== 'string') { result.text = ''; return result; }
+    if (typeof docText !== 'string') {
+      result.text = '';
+      return result;
+    }
     const get = _mapGetter(valueMap);
     const lines = docText.split('\n');
     const out = [];
@@ -60,7 +65,11 @@ function syncManagedRegions(docText, valueMap) {
     while (i < lines.length) {
       const line = lines[i];
       const bm = line.match(BEGIN_RE);
-      if (!bm) { out.push(line); i += 1; continue; }
+      if (!bm) {
+        out.push(line);
+        i += 1;
+        continue;
+      }
 
       const key = bm[1];
       // 找配对 end(必须 key 一致,且中间不得再出现 begin → 防嵌套)。
@@ -68,10 +77,15 @@ function syncManagedRegions(docText, valueMap) {
       let nested = false;
       let endIdx = -1;
       for (; j < lines.length; j += 1) {
-        if (BEGIN_RE.test(lines[j])) { nested = true; break; }
+        if (BEGIN_RE.test(lines[j])) {
+          nested = true;
+          break;
+        }
         const em = lines[j].match(END_RE);
         if (em) {
-          if (em[1] === key) { endIdx = j; }
+          if (em[1] === key) {
+            endIdx = j;
+          }
           break;
         }
       }
@@ -90,7 +104,9 @@ function syncManagedRegions(docText, valueMap) {
       if (!get.has(key)) {
         // 未知 key:整块原样保留(begin..end),不动内部。
         result.unknownKeys.push(key);
-        for (let k = i; k <= endIdx; k += 1) out.push(lines[k]);
+        for (let k = i; k <= endIdx; k += 1) {
+          out.push(lines[k]);
+        }
         i = endIdx + 1;
         continue;
       }
@@ -110,15 +126,25 @@ function syncManagedRegions(docText, valueMap) {
     return result;
   } catch {
     // fail-soft:出错则返回原文不变。
-    return { text: typeof docText === 'string' ? docText : '', changed: false, changedRegions: [], unknownKeys: [], skipped: [] };
+    return {
+      text: typeof docText === 'string' ? docText : '',
+      changed: false,
+      changedRegions: [],
+      unknownKeys: [],
+      skipped: [],
+    };
   }
 }
 
 function _mapGetter(valueMap) {
-  if (valueMap instanceof Map) return valueMap;
+  if (valueMap instanceof Map) {
+    return valueMap;
+  }
   const m = new Map();
   if (valueMap && typeof valueMap === 'object') {
-    for (const k of Object.keys(valueMap)) m.set(k, valueMap[k]);
+    for (const k of Object.keys(valueMap)) {
+      m.set(k, valueMap[k]);
+    }
   }
   return m;
 }
@@ -139,12 +165,16 @@ function buildValueMap(deps = {}) {
       const lines = deps.slashCommands
         .map((c) => {
           const cmd = c && (c.cmd || c.command || c.name);
-          if (!cmd) return null;
+          if (!cmd) {
+            return null;
+          }
           const desc = c && (c.desc || c.description || c.label);
           return desc ? `- \`${cmd}\` — ${desc}` : `- \`${cmd}\``;
         })
         .filter(Boolean);
-      if (lines.length) m.set('slash-commands', lines.join('\n'));
+      if (lines.length) {
+        m.set('slash-commands', lines.join('\n'));
+      }
     }
     if (deps.aiBackendPort != null && String(deps.aiBackendPort).trim() !== '') {
       m.set('ai-backend-port', String(deps.aiBackendPort).trim());

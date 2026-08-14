@@ -71,13 +71,21 @@ async function fromZip(buf, opts) {
       let data;
       try {
         data = await zip.entryData(name);
-      } catch (err) { lastErr = err; continue; }
+      } catch (err) {
+        lastErr = err;
+        continue;
+      }
       try {
         if (looksLikeZip(data)) return await fromZip(data, opts); // nested archive
         return convertCozeWorkflow(data, opts);
-      } catch (err) { lastErr = err; }
+      } catch (err) {
+        lastErr = err;
+      }
     }
-    throw httpError(400, `No importable Coze workflow found in archive${lastErr ? `: ${lastErr.message}` : ''}`);
+    throw httpError(
+      400,
+      `No importable Coze workflow found in archive${lastErr ? `: ${lastErr.message}` : ''}`
+    );
   } finally {
     await zip.close().catch(() => {});
     fs.unlink(tmp, () => {});
@@ -116,8 +124,8 @@ async function importToGraph(body, opts = {}) {
 
 const SESSION_TTL_MS = Number(process.env.KHY_COZE_SESSION_TTL_MS || 30 * 60_000);
 const SESSION_MAX = Number(process.env.KHY_COZE_SESSION_MAX || 50);
-const CATALOG_DIR = process.env.KHY_COZE_CATALOG_DIR
-  || path.join(os.homedir(), '.khyquant', 'coze-catalog');
+const CATALOG_DIR =
+  process.env.KHY_COZE_CATALOG_DIR || path.join(os.homedir(), '.khyquant', 'coze-catalog');
 
 const _sessions = new Map(); // sessionId -> { filePath, userId, createdAt, count }
 let _sweepTimer = null;
@@ -148,7 +156,10 @@ function _evictIfNeeded() {
     let oldestId = null;
     let oldestAt = Infinity;
     for (const [id, meta] of _sessions) {
-      if (meta.createdAt < oldestAt) { oldestAt = meta.createdAt; oldestId = id; }
+      if (meta.createdAt < oldestAt) {
+        oldestAt = meta.createdAt;
+        oldestId = id;
+      }
     }
     if (oldestId == null) break;
     _removeSession(oldestId);
@@ -167,7 +178,11 @@ async function walkZip(buf, prefix, out) {
     for (const name of names) {
       let data;
       // eslint-disable-next-line no-await-in-loop
-      try { data = await zip.entryData(name); } catch { continue; }
+      try {
+        data = await zip.entryData(name);
+      } catch {
+        continue;
+      }
       const entryPath = prefix ? `${prefix}/${name}` : name;
       if (looksLikeZip(data)) {
         // eslint-disable-next-line no-await-in-loop
@@ -195,7 +210,10 @@ async function enumerateBuffer(buf, opts = {}) {
         const { graph, report } = convertCozeWorkflow(leaf.data, opts);
         entries.push({ entryPath: leaf.entryPath, graph, report });
       } catch (err) {
-        skipped.push({ entryPath: leaf.entryPath, error: err && err.message ? err.message : String(err) });
+        skipped.push({
+          entryPath: leaf.entryPath,
+          error: err && err.message ? err.message : String(err),
+        });
       }
     }
   } else {
@@ -227,7 +245,7 @@ function _toCatalog(entries) {
     index,
     name: (e.report && e.report.name) || e.entryPath,
     entryPath: e.entryPath,
-    nodeCount: e.report ? e.report.nodeCount : (e.graph && e.graph.nodes ? e.graph.nodes.length : 0),
+    nodeCount: e.report ? e.report.nodeCount : e.graph && e.graph.nodes ? e.graph.nodes.length : 0,
     report: e.report,
   }));
 }
@@ -243,7 +261,10 @@ async function enumerateToSession(body, { userId } = {}) {
     result = await enumerateBuffer(buf, {});
   } catch (err) {
     if (err && err.statusCode) throw err;
-    throw httpError(400, `Coze enumerate failed: ${err && err.message ? err.message : String(err)}`);
+    throw httpError(
+      400,
+      `Coze enumerate failed: ${err && err.message ? err.message : String(err)}`
+    );
   }
   if (!result.entries.length) throw httpError(400, 'No importable Coze workflow found in upload');
   const sessionId = _persistSession(userId, result.entries);
@@ -292,7 +313,8 @@ function getSessionGraph(sessionId, userId, index) {
 async function enumerateBuiltin({ userId } = {}) {
   let files = [];
   try {
-    files = fs.readdirSync(CATALOG_DIR)
+    files = fs
+      .readdirSync(CATALOG_DIR)
       .filter((f) => f.toLowerCase().endsWith('.zip'))
       .sort()
       .map((f) => path.join(CATALOG_DIR, f));
@@ -316,7 +338,14 @@ async function enumerateBuiltin({ userId } = {}) {
     }
   }
   if (!all.length) {
-    return { sessionId: null, total: 0, entries: [], builtin: true, catalogDir: CATALOG_DIR, skipped };
+    return {
+      sessionId: null,
+      total: 0,
+      entries: [],
+      builtin: true,
+      catalogDir: CATALOG_DIR,
+      skipped,
+    };
   }
   const sessionId = _persistSession(userId, all);
   return {

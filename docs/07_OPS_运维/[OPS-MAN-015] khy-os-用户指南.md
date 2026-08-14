@@ -157,7 +157,7 @@ khy gateway manage open --daemon
 khy gateway manage open --daemon --frontend-dist-dir <apps/ai-frontend/dist 绝对路径>
 ```
 
-登录默认账号：`admin / admin123`（历史安装兼容 `admin123.`）。
+登录默认账号：后端首次启动自动初始化（幂等，已存在则跳过）。**默认密码没有固定值**——由机器指纹 + 随机熵生成，保存于数据目录 `.khy/credentials/default-admin.json`（请打开该文件查看初始密码）；用户名默认取 OS 用户名，也可用 `KHY_ADMIN_USERNAME` / `KHY_ADMIN_PASSWORD` 覆盖。历史固定的 `admin / admin123` 等默认口令已被该动态机制取代。
 
 ## 6. 首次启动出现 seed 警告怎么处理
 

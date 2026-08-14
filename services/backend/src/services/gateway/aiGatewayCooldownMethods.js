@@ -30,16 +30,36 @@ let _sanitizeFailureMessage = null;
 let _shouldUseFastFail = null;
 let _transientCooldownMs = null;
 function setAiGatewayCooldownMethodsDeps(deps = {}) {
-  if (deps._adaptiveConfig !== undefined) _adaptiveConfig = deps._adaptiveConfig;
-  if (typeof deps._isProcessSensitiveAdapter === 'function') _isProcessSensitiveAdapter = deps._isProcessSensitiveAdapter;
-  if (typeof deps._isReconnectOrChannelClosedMessage === 'function') _isReconnectOrChannelClosedMessage = deps._isReconnectOrChannelClosedMessage;
-  if (typeof deps._parseFloat01 === 'function') _parseFloat01 = deps._parseFloat01;
-  if (typeof deps._parseMs === 'function') _parseMs = deps._parseMs;
-  if (typeof deps._parsePositiveInt === 'function') _parsePositiveInt = deps._parsePositiveInt;
-  if (typeof deps._resolveApiPoolProviderForRequest === 'function') _resolveApiPoolProviderForRequest = deps._resolveApiPoolProviderForRequest;
-  if (typeof deps._sanitizeFailureMessage === 'function') _sanitizeFailureMessage = deps._sanitizeFailureMessage;
-  if (typeof deps._shouldUseFastFail === 'function') _shouldUseFastFail = deps._shouldUseFastFail;
-  if (typeof deps._transientCooldownMs === 'function') _transientCooldownMs = deps._transientCooldownMs;
+  if (deps._adaptiveConfig !== undefined) {
+    _adaptiveConfig = deps._adaptiveConfig;
+  }
+  if (typeof deps._isProcessSensitiveAdapter === 'function') {
+    _isProcessSensitiveAdapter = deps._isProcessSensitiveAdapter;
+  }
+  if (typeof deps._isReconnectOrChannelClosedMessage === 'function') {
+    _isReconnectOrChannelClosedMessage = deps._isReconnectOrChannelClosedMessage;
+  }
+  if (typeof deps._parseFloat01 === 'function') {
+    _parseFloat01 = deps._parseFloat01;
+  }
+  if (typeof deps._parseMs === 'function') {
+    _parseMs = deps._parseMs;
+  }
+  if (typeof deps._parsePositiveInt === 'function') {
+    _parsePositiveInt = deps._parsePositiveInt;
+  }
+  if (typeof deps._resolveApiPoolProviderForRequest === 'function') {
+    _resolveApiPoolProviderForRequest = deps._resolveApiPoolProviderForRequest;
+  }
+  if (typeof deps._sanitizeFailureMessage === 'function') {
+    _sanitizeFailureMessage = deps._sanitizeFailureMessage;
+  }
+  if (typeof deps._shouldUseFastFail === 'function') {
+    _shouldUseFastFail = deps._shouldUseFastFail;
+  }
+  if (typeof deps._transientCooldownMs === 'function') {
+    _transientCooldownMs = deps._transientCooldownMs;
+  }
 }
 
 // Prototype mixin — Object.assign'd onto AIGateway.prototype by the host (see module doc).
@@ -48,28 +68,40 @@ const AIGatewayCooldownMethods = {
    * Periodic cleanup of stale adapter data to prevent memory leaks.
    */
   _cleanupStaleData() {
-    const validKeys = new Set(this._adapters.map(a => a.key));
+    const validKeys = new Set(this._adapters.map((a) => a.key));
     for (const key of Object.keys(this._requestLog)) {
-      if (!validKeys.has(key)) delete this._requestLog[key];
-      else if (this._requestLog[key].length > 100) {
+      if (!validKeys.has(key)) {
+        delete this._requestLog[key];
+      } else if (this._requestLog[key].length > 100) {
         this._requestLog[key] = this._requestLog[key].slice(-100);
       }
     }
     for (const key of Object.keys(this._adapterFailures)) {
-      if (!validKeys.has(key)) delete this._adapterFailures[key];
-      else if (this._adapterFailures[key] > 20) this._adapterFailures[key] = 20;
+      if (!validKeys.has(key)) {
+        delete this._adapterFailures[key];
+      } else if (this._adapterFailures[key] > 20) {
+        this._adapterFailures[key] = 20;
+      }
     }
     for (const key of Object.keys(this._adapterLastError)) {
-      if (!validKeys.has(key)) delete this._adapterLastError[key];
+      if (!validKeys.has(key)) {
+        delete this._adapterLastError[key];
+      }
     }
     for (const key of Object.keys(this._cooldownSelfHealMeta)) {
-      if (!validKeys.has(key)) delete this._cooldownSelfHealMeta[key];
+      if (!validKeys.has(key)) {
+        delete this._cooldownSelfHealMeta[key];
+      }
     }
     for (const key of Array.from(this._cooldownSelfHealInFlight.keys())) {
-      if (!validKeys.has(key)) this._cooldownSelfHealInFlight.delete(key);
+      if (!validKeys.has(key)) {
+        this._cooldownSelfHealInFlight.delete(key);
+      }
     }
     for (const key of Array.from(this._cooldownSelfHealMidpointTimers.keys())) {
-      if (!validKeys.has(key)) this._clearCooldownSelfHealMidpointTimer(key);
+      if (!validKeys.has(key)) {
+        this._clearCooldownSelfHealMidpointTimer(key);
+      }
     }
   },
 
@@ -89,24 +121,36 @@ const AIGatewayCooldownMethods = {
 
   _scheduleCooldownSelfHealMidpointTimer(adapterKey, failureAt, midpointAt) {
     const cfg = this._resolveCooldownSelfHealConfig();
-    if (!cfg.enabled) return false;
+    if (!cfg.enabled) {
+      return false;
+    }
     const failureTs = Number(failureAt || 0);
     const midpointTs = Number(midpointAt || 0);
-    if (!Number.isFinite(failureTs) || failureTs <= 0) return false;
-    if (!Number.isFinite(midpointTs) || midpointTs <= 0) return false;
+    if (!Number.isFinite(failureTs) || failureTs <= 0) {
+      return false;
+    }
+    if (!Number.isFinite(midpointTs) || midpointTs <= 0) {
+      return false;
+    }
 
     this._clearCooldownSelfHealMidpointTimer(adapterKey);
     const delayMs = Math.max(0, midpointTs - Date.now());
     const timer = setTimeout(() => {
       this._cooldownSelfHealMidpointTimers.delete(adapterKey);
       const recent = this._getRecentFastFail(adapterKey);
-      if (!recent) return;
-      if (Number(recent.at || 0) !== failureTs) return;
+      if (!recent) {
+        return;
+      }
+      if (Number(recent.at || 0) !== failureTs) {
+        return;
+      }
       this._triggerMidpointSelfHealProbe(adapterKey, recent, {
         source: 'timer_midpoint_exact',
       });
     }, delayMs);
-    if (timer.unref) timer.unref();
+    if (timer.unref) {
+      timer.unref();
+    }
 
     this._cooldownSelfHealMidpointTimers.set(adapterKey, {
       timer,
@@ -125,27 +169,42 @@ const AIGatewayCooldownMethods = {
 
   _triggerMidpointSelfHealProbe(adapterKey, recentFail = null, options = {}) {
     const recent = recentFail || this._getRecentFastFail(adapterKey);
-    if (!recent) return false;
+    if (!recent) {
+      return false;
+    }
     const now = Date.now();
     const meta = this._cooldownSelfHealMeta[adapterKey] || {};
     const failureAt = Number(recent.at || 0);
-    const midpointAt = Number(meta.midpointAt || 0) > 0
-      ? Number(meta.midpointAt)
-      : (failureAt + Math.max(1000, Math.floor(Number(recent.cooldownMs || 0) / 2)));
-    if (!Number.isFinite(midpointAt) || now < midpointAt) return false;
-    if (meta.midpointProbeForFailureAt && Number(meta.midpointProbeForFailureAt) === failureAt) return false;
+    const midpointAt =
+      Number(meta.midpointAt || 0) > 0
+        ? Number(meta.midpointAt)
+        : failureAt + Math.max(1000, Math.floor(Number(recent.cooldownMs || 0) / 2));
+    if (!Number.isFinite(midpointAt) || now < midpointAt) {
+      return false;
+    }
+    if (meta.midpointProbeForFailureAt && Number(meta.midpointProbeForFailureAt) === failureAt) {
+      return false;
+    }
 
     const statusName = (() => {
-      const entry = this._adapters.find(a => a.key === adapterKey);
-      if (!entry) return adapterKey;
-      try { return entry.adapter.getStatus().name || adapterKey; } catch { return adapterKey; }
+      const entry = this._adapters.find((a) => a.key === adapterKey);
+      if (!entry) {
+        return adapterKey;
+      }
+      try {
+        return entry.adapter.getStatus().name || adapterKey;
+      } catch {
+        return adapterKey;
+      }
     })();
 
     const scheduled = this._maybeScheduleCooldownSelfHealProbe(adapterKey, recent, {
       source: String(options.source || 'timer_midpoint'),
       adapterDisplayName: statusName,
     });
-    if (!scheduled) return false;
+    if (!scheduled) {
+      return false;
+    }
 
     this._cooldownSelfHealMeta[adapterKey] = {
       ...this._cooldownSelfHealMeta[adapterKey],
@@ -173,19 +232,23 @@ const AIGatewayCooldownMethods = {
           errorType: normalizedType,
           error,
         });
-      } catch { /* 叶子不可用则按原熔断路径 */ }
+      } catch {
+        /* 叶子不可用则按原熔断路径 */
+      }
     }
     this._recordAdapterOutcome(adapterKey, { success: false, at: Date.now() });
-    const stallFingerprint = (meta && typeof meta === 'object')
-      ? String(meta.stallFingerprint || '')
-      : '';
+    const stallFingerprint =
+      meta && typeof meta === 'object' ? String(meta.stallFingerprint || '') : '';
     // 记录造成本次失败的模型串,让 model_not_found 冷却能按模型放行(modelNotFoundCooldownScope):
     // 复合 id 撞 404 后剥成裸名的修正请求(不同模型串)不该被同一通道的冷却连坐。additive 字段,
     // 缺失时下游按今日「按通道」冷却逐字节回退。
-    const failedModel = (meta && typeof meta === 'object')
-      ? String(meta.model || '').trim()
-      : '';
-    const cooldownMs = this._resolveFastFailCooldownMs(adapterKey, normalizedType, error, stallFingerprint);
+    const failedModel = meta && typeof meta === 'object' ? String(meta.model || '').trim() : '';
+    const cooldownMs = this._resolveFastFailCooldownMs(
+      adapterKey,
+      normalizedType,
+      error,
+      stallFingerprint
+    );
     const now = Date.now();
     const sanitizedError = _sanitizeFailureMessage(error || 'unknown error');
     const previousLocalFailures = Number(this._adapterFailures[adapterKey] || 0);
@@ -201,6 +264,11 @@ const AIGatewayCooldownMethods = {
       ...(failedModel ? { model: failedModel } : {}),
     };
     this._adapterFailures[adapterKey] = previousLocalFailures + 1;
+    // Lightweight activity timestamp for health() reporting only (no behavior impact).
+    if (this._adapterActivity) {
+      (this._adapterActivity[adapterKey] = this._adapterActivity[adapterKey] || {}).lastFailureAt =
+        now;
+    }
 
     const consecutiveFailures = await this._healthStore.getFailureCount(adapterKey);
     const failureCountAfterRecord = consecutiveFailures + 1;
@@ -208,10 +276,15 @@ const AIGatewayCooldownMethods = {
     // Circuit breaker: if adapter fails 5+ times consecutively, extend cooldown
     // to 60s regardless of error type (prevents hammering a dead adapter)
     const CIRCUIT_BREAKER_THRESHOLD = _parsePositiveInt(
-      process.env.GATEWAY_CIRCUIT_BREAKER_THRESHOLD, 3, 2, 20
+      process.env.GATEWAY_CIRCUIT_BREAKER_THRESHOLD,
+      3,
+      2,
+      20
     );
     const CIRCUIT_BREAKER_COOLDOWN_MS = _parseMs(
-      process.env.GATEWAY_CIRCUIT_BREAKER_COOLDOWN_MS || '30000', 30000, 10000
+      process.env.GATEWAY_CIRCUIT_BREAKER_COOLDOWN_MS || '30000',
+      30000,
+      10000
     );
     // 'empty' is excluded for the same reason it is kept out of the transient
     // cooldown map: an empty HTTP-200 reply is a model-behavior blip, not a
@@ -219,8 +292,11 @@ const AIGatewayCooldownMethods = {
     // the ONLY available channel for 30s+ and re-create the reported incoherence
     // (re-asks blocked after a few empties). Same-request empty recovery is owned
     // by the tool loop; the channel must stay available for the next re-ask.
-    const circuitEligible = !_payloadScopedFailure
-      && !['network', 'timeout', 'rate_limit', 'overloaded', 'cancelled', 'empty'].includes(normalizedTypeLower);
+    const circuitEligible =
+      !_payloadScopedFailure &&
+      !['network', 'timeout', 'rate_limit', 'overloaded', 'cancelled', 'empty'].includes(
+        normalizedTypeLower
+      );
 
     // Error-rate circuit breaking (借鉴 cc-switch error_rate_threshold/min_requests):
     // record this failure into the sliding window, then open the circuit when the
@@ -230,19 +306,28 @@ const AIGatewayCooldownMethods = {
     // streak. Conservative defaults (10 reqs / 0.6 rate) mean small samples
     // degrade to the legacy consecutive-failure logic — behavior unchanged.
     const ERR_RATE_THRESHOLD = _parseFloat01(
-      process.env.GATEWAY_CIRCUIT_ERROR_RATE_THRESHOLD, 0.6, 0, 1
+      process.env.GATEWAY_CIRCUIT_ERROR_RATE_THRESHOLD,
+      0.6,
+      0,
+      1
     );
     const ERR_RATE_MIN_REQUESTS = _parsePositiveInt(
-      process.env.GATEWAY_CIRCUIT_MIN_REQUESTS, 10, 1, 1000
+      process.env.GATEWAY_CIRCUIT_MIN_REQUESTS,
+      10,
+      1,
+      1000
     );
     let windowStats = { total: 0, failed: 0, rate: 0 };
     try {
       await this._healthStore.recordWindowOutcome(adapterKey, false);
       windowStats = await this._healthStore.getWindowStats(adapterKey);
-    } catch { /* window counters are best-effort; never block failure recording */ }
-    const rateOpen = circuitEligible
-      && windowStats.total >= ERR_RATE_MIN_REQUESTS
-      && windowStats.rate >= ERR_RATE_THRESHOLD;
+    } catch {
+      /* window counters are best-effort; never block failure recording */
+    }
+    const rateOpen =
+      circuitEligible &&
+      windowStats.total >= ERR_RATE_MIN_REQUESTS &&
+      windowStats.rate >= ERR_RATE_THRESHOLD;
 
     // Exponential cooldown escalation. The backoff math lives in circuitBreaker.js
     // (single source — C-4): baseCooldown · 2^min(over, maxSteps), capped. The cap
@@ -252,24 +337,33 @@ const AIGatewayCooldownMethods = {
     const consecutiveOpen = circuitEligible && failureCountAfterRecord >= CIRCUIT_BREAKER_THRESHOLD;
     const circuitOpen = consecutiveOpen || rateOpen;
     const CIRCUIT_BREAKER_MAX_COOLDOWN_MS = _parseMs(
-      process.env.GATEWAY_CIRCUIT_BREAKER_MAX_COOLDOWN_MS || '300000', 300000, CIRCUIT_BREAKER_COOLDOWN_MS
+      process.env.GATEWAY_CIRCUIT_BREAKER_MAX_COOLDOWN_MS || '300000',
+      300000,
+      CIRCUIT_BREAKER_COOLDOWN_MS
     );
     const CIRCUIT_BREAKER_MAX_BACKOFF_STEPS = _parsePositiveInt(
-      process.env.GATEWAY_CIRCUIT_BREAKER_MAX_BACKOFF_STEPS, 4, 1, 16
+      process.env.GATEWAY_CIRCUIT_BREAKER_MAX_BACKOFF_STEPS,
+      4,
+      1,
+      16
     );
     const effectiveCooldownMs = circuitOpen
       ? require('../circuitBreaker').computeBackoffMs({
-        baseMs: Math.max(cooldownMs, CIRCUIT_BREAKER_COOLDOWN_MS),
-        attempt: overThreshold,
-        maxSteps: CIRCUIT_BREAKER_MAX_BACKOFF_STEPS,
-        maxMs: CIRCUIT_BREAKER_MAX_COOLDOWN_MS,
-      })
+          baseMs: Math.max(cooldownMs, CIRCUIT_BREAKER_COOLDOWN_MS),
+          attempt: overThreshold,
+          maxSteps: CIRCUIT_BREAKER_MAX_BACKOFF_STEPS,
+          maxMs: CIRCUIT_BREAKER_MAX_COOLDOWN_MS,
+        })
       : cooldownMs;
 
     // Trigger reason mirrors cc-switch's distinct circuit events so the health
     // snapshot/CLI can explain WHY a channel opened (rate vs consecutive streak).
     const circuitReason = circuitOpen
-      ? (consecutiveOpen ? (rateOpen ? 'consecutive+error_rate' : 'consecutive') : 'error_rate')
+      ? consecutiveOpen
+        ? rateOpen
+          ? 'consecutive+error_rate'
+          : 'consecutive'
+        : 'error_rate'
       : null;
 
     const record = {
@@ -290,6 +384,15 @@ const AIGatewayCooldownMethods = {
     if (circuitOpen) {
       await this._healthStore.setCooldown(adapterKey, effectiveCooldownMs);
       await this._healthStore.resetHalfOpen(adapterKey);
+      // Persist HALF_OPEN bootstrap state (0 successes) so a process restart
+      // can restore the recovery progress. TTL outlives the cooldown by 60s so
+      // the state is still there when the cooldown ends and probing begins.
+      // Fail-soft: persistence errors never block failure recording.
+      try {
+        await this._healthStore.setHalfOpenState(adapterKey, 0, effectiveCooldownMs + 60000);
+      } catch {
+        /* best effort — hostate persistence is advisory */
+      }
     }
 
     // Keep legacy in-memory copy for sync reads that haven't been migrated
@@ -315,7 +418,11 @@ const AIGatewayCooldownMethods = {
 
     // FastMode 自适应降级: rate_limit/overloaded → 可能触发全局冷却
     if (_adaptiveConfig) {
-      try { _adaptiveConfig.getFastModeManager().recordError(normalizedType); } catch { /* non-fatal */ }
+      try {
+        _adaptiveConfig.getFastModeManager().recordError(normalizedType);
+      } catch {
+        /* non-fatal */
+      }
     }
   },
 
@@ -323,6 +430,18 @@ const AIGatewayCooldownMethods = {
     // UCB bandit: a recovery/success outcome (no latency sample here → neutral
     // speed credit). No-op while UCB routing is disabled.
     this._recordAdapterOutcome(adapterKey, { success: true, at: Date.now() });
+
+    // Lightweight activity timestamp for health() reporting only (no behavior impact).
+    if (this._adapterActivity) {
+      (this._adapterActivity[adapterKey] = this._adapterActivity[adapterKey] || {}).lastSuccessAt =
+        Date.now();
+    }
+
+    // unknown/network 一次放行的探测节流 meta(见 inspectCachedFastFail):通道
+    // 成功即清,保持状态干净,下次失败的首个请求可重新获得探测机会。
+    if (this._fastFailProbeMeta) {
+      delete this._fastFailProbeMeta[adapterKey];
+    }
 
     // success_threshold recovery gating (借鉴 cc-switch HALF_OPEN_TO_CLOSED):
     // only when the circuit was OPEN / half-open do we require N consecutive
@@ -347,15 +466,33 @@ const AIGatewayCooldownMethods = {
 
     // Record this success into the error-rate window (success counts toward the
     // denominator) before any reset, so the windowed rate reflects real traffic.
-    try { await this._healthStore.recordWindowOutcome(adapterKey, true); } catch { /* best effort */ }
+    try {
+      await this._healthStore.recordWindowOutcome(adapterKey, true);
+    } catch {
+      /* best effort */
+    }
 
     if (inRecovery) {
       const SUCCESS_THRESHOLD = _parsePositiveInt(
-        process.env.GATEWAY_CIRCUIT_SUCCESS_THRESHOLD, 2, 1, 10
+        process.env.GATEWAY_CIRCUIT_SUCCESS_THRESHOLD,
+        2,
+        1,
+        10
       );
       let consecutive = 1;
-      try { consecutive = await this._healthStore.recordSuccess(adapterKey); } catch { /* best effort */ }
+      try {
+        consecutive = await this._healthStore.recordSuccess(adapterKey);
+      } catch {
+        /* best effort */
+      }
       if (consecutive < SUCCESS_THRESHOLD) {
+        // Sync the persisted HALF_OPEN state with the atomic success counter so
+        // a restart resumes the streak instead of starting over. Fail-soft.
+        try {
+          await this._healthStore.setHalfOpenState(adapterKey, consecutive, 0);
+        } catch {
+          /* best effort — hostate persistence is advisory */
+        }
         // Half-open observation: keep the failure history in the store but relax
         // the LOCAL fast-fail mirror (at:0 → elapsed always exceeds cooldown, so
         // _getRecentFastFail returns null) so subsequent requests can probe and
@@ -374,12 +511,25 @@ const AIGatewayCooldownMethods = {
         delete this._cooldownSelfHealMeta[adapterKey];
         this._cooldownSelfHealInFlight.delete(adapterKey);
         this._healthBroadcaster.recordRequestActivity(
-          adapterKey, 'success', `half-open ${consecutive}/${SUCCESS_THRESHOLD}`
+          adapterKey,
+          'success',
+          `half-open ${consecutive}/${SUCCESS_THRESHOLD}`
         );
         return;
       }
       // Threshold met → drop the half-open counter and fall through to full clear.
-      try { await this._healthStore.resetHalfOpen(adapterKey); } catch { /* best effort */ }
+      try {
+        await this._healthStore.resetHalfOpen(adapterKey);
+      } catch {
+        /* best effort */
+      }
+      // Fully recovered → the persisted HALF_OPEN state is obsolete; drop it.
+      // (clearFailure below also removes it, this is just explicit + fail-soft.)
+      try {
+        await this._healthStore.clearHalfOpenState(adapterKey);
+      } catch {
+        /* best effort */
+      }
     }
 
     this._clearCooldownSelfHealMidpointTimer(adapterKey);
@@ -392,8 +542,63 @@ const AIGatewayCooldownMethods = {
 
     // FastMode: 成功恢复 → 重置错误计数
     if (_adaptiveConfig) {
-      try { _adaptiveConfig.getFastModeManager().recordSuccess(); } catch { /* non-fatal */ }
+      try {
+        _adaptiveConfig.getFastModeManager().recordSuccess();
+      } catch {
+        /* non-fatal */
+      }
     }
+  },
+
+  /**
+   * Manually reset adapter failure state (in-memory mirrors + health store).
+   * Public entry used by gateway init cleanup and the CLI reset command.
+   * Without adapterKey it resets every registered adapter; with adapterKey only
+   * that one. Per-adapter store clears are fail-soft: one failing clear never
+   * aborts the rest (its key is reported in `failed` instead).
+   *
+   * When `includeRedis` is false only the local in-memory mirrors are cleared
+   * and the health-store clearFailure call is skipped. This protects the
+   * distributed circuit-breaker semantics when the store is Redis shared by
+   * multiple instances: a restarting process must not wipe breaker/cooldown
+   * state that other healthy instances legitimately hold (thundering-herd risk).
+   *
+   * @param {string|null} adapterKey  optional single adapter to reset
+   * @param {{includeRedis?: boolean}} [options]  includeRedis=false skips the health store
+   * @returns {Promise<{cleared: string[], failed: Array<{key: string, error: string}>, unknown?: string}>}
+   */
+  async resetAdapterFailures(adapterKey = null, { includeRedis = true } = {}) {
+    const requested = String(adapterKey || '').trim();
+    const knownKeys = this._adapters.map((a) => a.key);
+    if (requested && !knownKeys.includes(requested)) {
+      return { cleared: [], failed: [], unknown: requested };
+    }
+    const targets = requested ? [requested] : knownKeys;
+    const cleared = [];
+    const failed = [];
+    for (const key of targets) {
+      // In-memory state first so fast-fail mirrors go cold immediately.
+      this._clearCooldownSelfHealMidpointTimer(key);
+      delete this._adapterLastError[key];
+      this._adapterFailures[key] = 0;
+      delete this._cooldownSelfHealMeta[key];
+      this._cooldownSelfHealInFlight.delete(key);
+      if (this._fastFailProbeMeta) {
+        delete this._fastFailProbeMeta[key];
+      }
+      if (!includeRedis) {
+        // Local-only reset: skip the store call but still count the key as cleared.
+        cleared.push(key);
+        continue;
+      }
+      try {
+        await this._healthStore.clearFailure(key);
+        cleared.push(key);
+      } catch (err) {
+        failed.push({ key, error: err?.message || 'unknown' });
+      }
+    }
+    return { cleared, failed };
   },
 
   /**
@@ -402,10 +607,15 @@ const AIGatewayCooldownMethods = {
    */
   async _handleAccountPoolAuthError(adapterKey, errorType, errorMessage, emitStatus) {
     const ACCOUNT_POOL_ADAPTERS = ['kiro', 'cursor', 'trae', 'windsurf'];
-    if (!ACCOUNT_POOL_ADAPTERS.includes(adapterKey)) return;
+    if (!ACCOUNT_POOL_ADAPTERS.includes(adapterKey)) {
+      return;
+    }
 
-    const isPermanent = errorType === 'auth_permanent'
-      || /suspended|banned|locked|deactivated|revoked|invalid.?key|terminated/i.test(errorMessage || '');
+    const isPermanent =
+      errorType === 'auth_permanent' ||
+      /suspended|banned|locked|deactivated|revoked|invalid.?key|terminated/i.test(
+        errorMessage || ''
+      );
 
     try {
       const accountPool = require('../accountPool');
@@ -413,7 +623,9 @@ const AIGatewayCooldownMethods = {
       if (isPermanent) {
         const banResult = await accountPool.banActiveAccount(adapterKey);
         if (banResult?.switched) {
-          emitStatus(`已封禁 ${adapterKey} 账号 #${banResult.bannedId}，自动切换到 #${banResult.nextId} (${banResult.label})`);
+          emitStatus(
+            `已封禁 ${adapterKey} 账号 #${banResult.bannedId}，自动切换到 #${banResult.nextId} (${banResult.label})`
+          );
         } else if (banResult) {
           emitStatus(`已封禁 ${adapterKey} 账号 #${banResult.bannedId}，无其他可用账号`);
         }
@@ -421,12 +633,18 @@ const AIGatewayCooldownMethods = {
         const cooldownMs = adapterKey === 'kiro' ? 60000 : 120000;
         const cooldownResult = await accountPool.cooldownAccount(adapterKey, cooldownMs);
         if (cooldownResult?.switched) {
-          emitStatus(`${adapterKey} 账号 #${cooldownResult.cooldownId} 冷却 ${cooldownMs / 1000}s，切换到 #${cooldownResult.nextId} (${cooldownResult.label})`);
+          emitStatus(
+            `${adapterKey} 账号 #${cooldownResult.cooldownId} 冷却 ${cooldownMs / 1000}s，切换到 #${cooldownResult.nextId} (${cooldownResult.label})`
+          );
         } else if (cooldownResult) {
-          emitStatus(`${adapterKey} 账号 #${cooldownResult.cooldownId} 冷却 ${cooldownMs / 1000}s，无其他可用账号`);
+          emitStatus(
+            `${adapterKey} 账号 #${cooldownResult.cooldownId} 冷却 ${cooldownMs / 1000}s，无其他可用账号`
+          );
         }
       }
-    } catch { /* account pool not available */ }
+    } catch {
+      /* account pool not available */
+    }
   },
 
   /**
@@ -445,8 +663,12 @@ const AIGatewayCooldownMethods = {
    */
   _shouldBypassCooldownForVisionDescribe(options, cached) {
     try {
-      if (!options || !options._visionDescribePass) return false;
-      if (!cached) return false;
+      if (!options || !options._visionDescribePass) {
+        return false;
+      }
+      if (!cached) {
+        return false;
+      }
       return String(cached.errorType || '').toLowerCase() === 'model_not_found';
     } catch {
       return false;
@@ -478,20 +700,29 @@ const AIGatewayCooldownMethods = {
   },
 
   _getRecentFastFail(adapterKey) {
-
     // Fast path: synchronous in-memory mirror.
     const item = this._adapterLastError[adapterKey] || null;
-    if (!item) return null;
-    const fallbackCooldownMs = _parseMs(process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000', 30000, 5000);
+    if (!item) {
+      return null;
+    }
+    const fallbackCooldownMs = _parseMs(
+      process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000',
+      30000,
+      5000
+    );
     const cooldownMs = _parseMs(item.cooldownMs, fallbackCooldownMs, 5000);
     const elapsedMs = Date.now() - Number(item.at || 0);
-    if (elapsedMs > cooldownMs) return null;
+    if (elapsedMs > cooldownMs) {
+      return null;
+    }
     // Circuit breaker: always fast-fail when circuit is open, regardless of error type
     if (!item.circuitOpen && !_shouldUseFastFail(item.errorType)) {
       // Transient errors (rate_limit, timeout, network, overloaded) get a shorter
       // cooldown window — skip the adapter briefly instead of retrying immediately.
       const transientMs = _transientCooldownMs(item.errorType);
-      if (!transientMs || elapsedMs > transientMs) return null;
+      if (!transientMs || elapsedMs > transientMs) {
+        return null;
+      }
       return {
         ...item,
         cooldownMs: transientMs,
@@ -508,7 +739,8 @@ const AIGatewayCooldownMethods = {
 
   _resolveCooldownSelfHealConfig() {
     return {
-      enabled: String(process.env.GATEWAY_COOLDOWN_SELF_HEAL_ENABLED || 'true').toLowerCase() !== 'false',
+      enabled:
+        String(process.env.GATEWAY_COOLDOWN_SELF_HEAL_ENABLED || 'true').toLowerCase() !== 'false',
       minRemainingMs: _parseMs(
         process.env.GATEWAY_COOLDOWN_SELF_HEAL_MIN_REMAINING_MS || '2500',
         2500,
@@ -539,21 +771,21 @@ const AIGatewayCooldownMethods = {
         7000,
         2000
       ),
-      tickMs: _parseMs(
-        process.env.GATEWAY_COOLDOWN_SELF_HEAL_TICK_MS || '3000',
-        3000,
-        1000
-      ),
+      tickMs: _parseMs(process.env.GATEWAY_COOLDOWN_SELF_HEAL_TICK_MS || '3000', 3000, 1000),
     };
   },
 
   async _runCooldownSelfHealTick() {
     const cfg = this._resolveCooldownSelfHealConfig();
-    if (!cfg.enabled) return;
+    if (!cfg.enabled) {
+      return;
+    }
     const keys = Object.keys(this._adapterLastError || {});
     for (const adapterKey of keys) {
       const recent = this._getRecentFastFail(adapterKey);
-      if (!recent) continue;
+      if (!recent) {
+        continue;
+      }
       this._triggerMidpointSelfHealProbe(adapterKey, recent, { source: 'timer_midpoint_tick' });
     }
   },
@@ -561,17 +793,25 @@ const AIGatewayCooldownMethods = {
   _startCooldownSelfHealTicker() {
     this._stopCooldownSelfHealTicker();
     const cfg = this._resolveCooldownSelfHealConfig();
-    if (!cfg.enabled) return;
+    if (!cfg.enabled) {
+      return;
+    }
     const tick = () => {
       this._runCooldownSelfHealTick().catch(() => {});
     };
     this._cooldownSelfHealTimer = setInterval(tick, cfg.tickMs);
-    if (this._cooldownSelfHealTimer.unref) this._cooldownSelfHealTimer.unref();
+    if (this._cooldownSelfHealTimer.unref) {
+      this._cooldownSelfHealTimer.unref();
+    }
     for (const [adapterKey, recent] of Object.entries(this._adapterLastError || {})) {
-      if (!recent) continue;
+      if (!recent) {
+        continue;
+      }
       const failureAt = Number(recent.at || 0);
       const cooldownMs = Number(recent.cooldownMs || 0);
-      if (!Number.isFinite(failureAt) || failureAt <= 0) continue;
+      if (!Number.isFinite(failureAt) || failureAt <= 0) {
+        continue;
+      }
       const midpointAt = failureAt + Math.max(1000, Math.floor(cooldownMs / 2));
       this._scheduleCooldownSelfHealMidpointTimer(adapterKey, failureAt, midpointAt);
     }
@@ -587,9 +827,13 @@ const AIGatewayCooldownMethods = {
   },
 
   _isHealthyProbeResult(probeResult) {
-    if (!probeResult || typeof probeResult !== 'object') return false;
+    if (!probeResult || typeof probeResult !== 'object') {
+      return false;
+    }
     const connectivityOk = !!probeResult.connectivity?.success;
-    if (!connectivityOk) return false;
+    if (!connectivityOk) {
+      return false;
+    }
     if (Object.prototype.hasOwnProperty.call(probeResult, 'generation')) {
       return !!probeResult.generation?.success;
     }
@@ -601,27 +845,49 @@ const AIGatewayCooldownMethods = {
 
   _maybeScheduleCooldownSelfHealProbe(adapterKey, recentFail = null, options = {}) {
     const cfg = this._resolveCooldownSelfHealConfig();
-    if (!cfg.enabled) return false;
-    const entry = this._adapters.find(a => a.key === adapterKey && a.enabled);
-    if (!entry) return false;
+    if (!cfg.enabled) {
+      return false;
+    }
+    const entry = this._adapters.find((a) => a.key === adapterKey && a.enabled);
+    if (!entry) {
+      return false;
+    }
     const cached = recentFail || this._getRecentFastFail(adapterKey);
-    if (!cached) return false;
-    if ((cached.remainingMs || 0) < cfg.minRemainingMs) return false;
+    if (!cached) {
+      return false;
+    }
+    if ((cached.remainingMs || 0) < cfg.minRemainingMs) {
+      return false;
+    }
     const now = Date.now();
     const meta = this._cooldownSelfHealMeta[adapterKey] || {};
-    if (this._cooldownSelfHealInFlight.has(adapterKey)) return false;
-    if (meta.nextAllowedAt && now < meta.nextAllowedAt) return false;
-    if (meta.lastAttemptAt && (now - meta.lastAttemptAt) < cfg.minIntervalMs) return false;
+    if (this._cooldownSelfHealInFlight.has(adapterKey)) {
+      return false;
+    }
+    if (meta.nextAllowedAt && now < meta.nextAllowedAt) {
+      return false;
+    }
+    if (meta.lastAttemptAt && now - meta.lastAttemptAt < cfg.minIntervalMs) {
+      return false;
+    }
 
     const emitStatus = typeof options.emitStatus === 'function' ? options.emitStatus : () => {};
-    const adapterDisplayName = String(options.adapterDisplayName || (() => {
-      try { return entry.adapter.getStatus().name || adapterKey; } catch { return adapterKey; }
-    })());
+    const adapterDisplayName = String(
+      options.adapterDisplayName ||
+        (() => {
+          try {
+            return entry.adapter.getStatus().name || adapterKey;
+          } catch {
+            return adapterKey;
+          }
+        })()
+    );
     const sourceLabel = String(options.source || 'generate').trim() || 'generate';
-    const shouldDeepProbe = _isProcessSensitiveAdapter(adapterKey)
-      || adapterKey === 'relay_api'
-      || adapterKey === 'api'
-      || adapterKey === 'relay';
+    const shouldDeepProbe =
+      _isProcessSensitiveAdapter(adapterKey) ||
+      adapterKey === 'relay_api' ||
+      adapterKey === 'api' ||
+      adapterKey === 'relay';
 
     this._cooldownSelfHealMeta[adapterKey] = {
       ...meta,
@@ -694,8 +960,14 @@ const AIGatewayCooldownMethods = {
   },
 
   _resolveFastFailCooldownMs(adapterKey, errorType, error, stallFingerprint = '') {
-    const baseCooldownMs = _parseMs(process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000', 30000, 5000);
-    if (String(adapterKey || '').toLowerCase() !== 'codex') return baseCooldownMs;
+    const baseCooldownMs = _parseMs(
+      process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000',
+      30000,
+      5000
+    );
+    if (String(adapterKey || '').toLowerCase() !== 'codex') {
+      return baseCooldownMs;
+    }
 
     // Active bypass: a known-bad pre-response stall fingerprint escalates the
     // codex fast-fail cooldown so the next request virtual-skips codex (via
@@ -734,13 +1006,20 @@ const AIGatewayCooldownMethods = {
     );
 
     if (errorKind === 'process') {
-      if (_isReconnectOrChannelClosedMessage(message) || /without emitting stream-json/.test(message)) {
+      if (
+        _isReconnectOrChannelClosedMessage(message) ||
+        /without emitting stream-json/.test(message)
+      ) {
         return applyStall(reconnectCooldownMs);
       }
       return applyStall(processCooldownMs);
     }
-    if (errorKind === 'network') return applyStall(networkCooldownMs);
-    if (errorKind === 'timeout') return applyStall(timeoutCooldownMs);
+    if (errorKind === 'network') {
+      return applyStall(networkCooldownMs);
+    }
+    if (errorKind === 'timeout') {
+      return applyStall(timeoutCooldownMs);
+    }
     return applyStall(baseCooldownMs);
   },
 };

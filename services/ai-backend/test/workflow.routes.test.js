@@ -36,8 +36,18 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'wf-alice', email: 'wf-alice@test.local', password: 'pw-alice-123', status: 'active' });
-  userB = await User.create({ username: 'wf-bob', email: 'wf-bob@test.local', password: 'pw-bob-123', status: 'active' });
+  userA = await User.create({
+    username: 'wf-alice',
+    email: 'wf-alice@test.local',
+    password: 'pw-alice-123',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'wf-bob',
+    email: 'wf-bob@test.local',
+    password: 'pw-bob-123',
+    status: 'active',
+  });
 
   app = express();
   app.use(express.json());
@@ -46,7 +56,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
@@ -54,21 +68,48 @@ const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
 const SAMPLE_GRAPH = {
   nodes: [
     { id: 'n_start', type: 'start', name: 'Start', position: { x: 0, y: 0 }, data: { inputs: [] } },
-    { id: 'n_prompt', type: 'prompt', name: 'Ask', position: { x: 200, y: 0 }, data: { prompt: 'hi', outputVar: 'r' } },
+    {
+      id: 'n_prompt',
+      type: 'prompt',
+      name: 'Ask',
+      position: { x: 200, y: 0 },
+      data: { prompt: 'hi', outputVar: 'r' },
+    },
     { id: 'n_end', type: 'end', name: 'End', position: { x: 400, y: 0 }, data: { outputs: [] } },
   ],
   connections: [
-    { id: 'e1', from: 'n_start', fromPort: 'default', to: 'n_prompt', toPort: 'input', condition: null },
-    { id: 'e2', from: 'n_prompt', fromPort: 'default', to: 'n_end', toPort: 'input', condition: null },
+    {
+      id: 'e1',
+      from: 'n_start',
+      fromPort: 'default',
+      to: 'n_prompt',
+      toPort: 'input',
+      condition: null,
+    },
+    {
+      id: 'e2',
+      from: 'n_prompt',
+      fromPort: 'default',
+      to: 'n_end',
+      toPort: 'input',
+      condition: null,
+    },
   ],
 };
 
 describe('workflow routes — node-type catalog', () => {
   test('GET /node-types returns the shared catalog (4 categories, 11 nodes)', async () => {
-    const res = await request(app).get('/api/workflow/node-types').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/workflow/node-types')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.categories.map((c) => c.id).sort()).toEqual(['agent', 'control', 'data', 'human']);
+    expect(res.body.data.categories.map((c) => c.id).sort()).toEqual([
+      'agent',
+      'control',
+      'data',
+      'human',
+    ]);
     expect(res.body.data.nodes.length).toBe(11);
   });
 
@@ -112,22 +153,30 @@ describe('workflow routes — CRUD + graph round-trip', () => {
   });
 
   test('reload round-trips the exact graph', async () => {
-    const res = await request(app).get(`/api/workflow/${id}`).set(...auth(userA));
+    const res = await request(app)
+      .get(`/api/workflow/${id}`)
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data.graph).toEqual(SAMPLE_GRAPH);
   });
 
   test('list shows the workflow as a summary (no graph payload)', async () => {
-    const res = await request(app).get('/api/workflow').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/workflow')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0]).not.toHaveProperty('graph');
   });
 
   test('delete removes it', async () => {
-    const del = await request(app).delete(`/api/workflow/${id}`).set(...auth(userA));
+    const del = await request(app)
+      .delete(`/api/workflow/${id}`)
+      .set(...auth(userA));
     expect(del.status).toBe(200);
-    const after = await request(app).get(`/api/workflow/${id}`).set(...auth(userA));
+    const after = await request(app)
+      .get(`/api/workflow/${id}`)
+      .set(...auth(userA));
     expect(after.status).toBe(404);
   });
 });
@@ -136,7 +185,10 @@ describe('workflow routes — graph validation', () => {
   let id;
 
   beforeAll(async () => {
-    const res = await request(app).post('/api/workflow').set(...auth(userA)).send({ name: 'Validate Me' });
+    const res = await request(app)
+      .post('/api/workflow')
+      .set(...auth(userA))
+      .send({ name: 'Validate Me' });
     id = res.body.data.id;
   });
 
@@ -145,7 +197,10 @@ describe('workflow routes — graph validation', () => {
       nodes: [{ id: 'n1', type: 'start', name: 'S', position: { x: 0, y: 0 }, data: {} }],
       connections: [{ id: 'e1', from: 'n1', fromPort: 'default', to: 'ghost', toPort: 'input' }],
     };
-    const res = await request(app).put(`/api/workflow/${id}`).set(...auth(userA)).send({ graph: bad });
+    const res = await request(app)
+      .put(`/api/workflow/${id}`)
+      .set(...auth(userA))
+      .send({ graph: bad });
     expect(res.status).toBe(400);
   });
 
@@ -157,7 +212,10 @@ describe('workflow routes — graph validation', () => {
       ],
       connections: [{ id: 'e1', from: 'n1', fromPort: 'branch-true', to: 'n2', toPort: 'input' }],
     };
-    const res = await request(app).put(`/api/workflow/${id}`).set(...auth(userA)).send({ graph: bad });
+    const res = await request(app)
+      .put(`/api/workflow/${id}`)
+      .set(...auth(userA))
+      .send({ graph: bad });
     expect(res.status).toBe(400);
   });
 
@@ -169,7 +227,10 @@ describe('workflow routes — graph validation', () => {
       ],
       connections: [],
     };
-    const res = await request(app).put(`/api/workflow/${id}`).set(...auth(userA)).send({ graph: bad });
+    const res = await request(app)
+      .put(`/api/workflow/${id}`)
+      .set(...auth(userA))
+      .send({ graph: bad });
     expect(res.status).toBe(400);
   });
 
@@ -178,16 +239,24 @@ describe('workflow routes — graph validation', () => {
       nodes: [{ id: 'n1', type: 'bogus', name: 'X', position: { x: 0, y: 0 }, data: {} }],
       connections: [],
     };
-    const res = await request(app).put(`/api/workflow/${id}`).set(...auth(userA)).send({ graph: bad });
+    const res = await request(app)
+      .put(`/api/workflow/${id}`)
+      .set(...auth(userA))
+      .send({ graph: bad });
     expect(res.status).toBe(400);
   });
 
   test('accepts a partial work-in-progress graph (no start/end required to save)', async () => {
     const partial = {
-      nodes: [{ id: 'n1', type: 'prompt', name: 'P', position: { x: 0, y: 0 }, data: { prompt: 'hi' } }],
+      nodes: [
+        { id: 'n1', type: 'prompt', name: 'P', position: { x: 0, y: 0 }, data: { prompt: 'hi' } },
+      ],
       connections: [],
     };
-    const res = await request(app).put(`/api/workflow/${id}`).set(...auth(userA)).send({ graph: partial });
+    const res = await request(app)
+      .put(`/api/workflow/${id}`)
+      .set(...auth(userA))
+      .send({ graph: partial });
     expect(res.status).toBe(200);
   });
 });
@@ -200,12 +269,18 @@ describe('validateGraph — strict completeness (export gate)', () => {
   });
 
   test('strict requires exactly one start', () => {
-    const noStart = { nodes: [{ id: 'e', type: 'end', name: 'E', position: { x: 0, y: 0 }, data: {} }], connections: [] };
+    const noStart = {
+      nodes: [{ id: 'e', type: 'end', name: 'E', position: { x: 0, y: 0 }, data: {} }],
+      connections: [],
+    };
     expect(() => validateGraph(noStart, { strict: true })).toThrow(/start/);
   });
 
   test('strict requires at least one end', () => {
-    const noEnd = { nodes: [{ id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, data: {} }], connections: [] };
+    const noEnd = {
+      nodes: [{ id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, data: {} }],
+      connections: [],
+    };
     expect(() => validateGraph(noEnd, { strict: true })).toThrow(/end/);
   });
 
@@ -234,7 +309,9 @@ describe('workflow routes — tenant isolation', () => {
   });
 
   test('user B cannot read user A workflow', async () => {
-    const res = await request(app).get(`/api/workflow/${aId}`).set(...auth(userB));
+    const res = await request(app)
+      .get(`/api/workflow/${aId}`)
+      .set(...auth(userB));
     expect(res.status).toBe(404);
   });
 
@@ -247,7 +324,9 @@ describe('workflow routes — tenant isolation', () => {
   });
 
   test("user B's list does not include user A workflow", async () => {
-    const res = await request(app).get('/api/workflow').set(...auth(userB));
+    const res = await request(app)
+      .get('/api/workflow')
+      .set(...auth(userB));
     expect(res.status).toBe(200);
     expect(res.body.data.find((w) => w.id === aId)).toBeUndefined();
   });
@@ -257,7 +336,10 @@ describe('workflow routes — optimistic lock (expectedVersion)', () => {
   let id;
 
   beforeAll(async () => {
-    const res = await request(app).post('/api/workflow').set(...auth(userA)).send({ name: 'Locked Flow' });
+    const res = await request(app)
+      .post('/api/workflow')
+      .set(...auth(userA))
+      .send({ name: 'Locked Flow' });
     id = res.body.data.id; // version 1
   });
 
@@ -308,7 +390,9 @@ describe('workflow routes — built-in templates', () => {
   });
 
   test('GET /templates lists summaries (id/name/description/nodeCount, no graph)', async () => {
-    const res = await request(app).get('/api/workflow/templates').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/workflow/templates')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBeGreaterThan(0);
     const t = res.body.data[0];
@@ -326,14 +410,19 @@ describe('workflow routes — built-in templates', () => {
 
   test('POST /templates/:id instantiates a new workflow at version 1 with the template graph', async () => {
     const [tpl] = getTemplates();
-    const res = await request(app).post(`/api/workflow/templates/${tpl.id}`).set(...auth(userA)).send({});
+    const res = await request(app)
+      .post(`/api/workflow/templates/${tpl.id}`)
+      .set(...auth(userA))
+      .send({});
     expect(res.status).toBe(201);
     expect(res.body.data.version).toBe(1);
     expect(res.body.data.name).toBe(tpl.name);
     expect(res.body.data.graph.nodes.length).toBe(tpl.graph.nodes.length);
 
     // The instantiated copy round-trips and is owned by the creator.
-    const reload = await request(app).get(`/api/workflow/${res.body.data.id}`).set(...auth(userA));
+    const reload = await request(app)
+      .get(`/api/workflow/${res.body.data.id}`)
+      .set(...auth(userA));
     expect(reload.status).toBe(200);
     expect(reload.body.data.graph.nodes.length).toBe(tpl.graph.nodes.length);
   });
@@ -349,7 +438,10 @@ describe('workflow routes — built-in templates', () => {
   });
 
   test('POST /templates/:id with an unknown id returns 404', async () => {
-    const res = await request(app).post('/api/workflow/templates/does-not-exist').set(...auth(userA)).send({});
+    const res = await request(app)
+      .post('/api/workflow/templates/does-not-exist')
+      .set(...auth(userA))
+      .send({});
     expect(res.status).toBe(404);
   });
 });

@@ -34,10 +34,10 @@
  * @module services/proxy/proxyCoreInstaller
  */
 
-const path = require('path');
-const os = require('os');
-const zlib = require('zlib');
 const crypto = require('crypto');
+const os = require('os');
+const path = require('path');
+const zlib = require('zlib');
 
 const { isFlagEnabled } = require('../flagRegistry');
 
@@ -52,7 +52,11 @@ const RELEASE_BASE = `https://github.com/MetaCubeX/mihomo/releases/download/${PI
 // kind:'gz' 走 zlib.gunzip 原生解压(零新依赖);win 的 .zip 需外部解压 → 当前给手动指引(不静默失败)。
 // sha256:null = 未预置指纹(见文件头「完整性」诚实边界),下载退化为 HTTPS 传输级完整性。
 const ASSETS = {
-  'linux:x64': { file: `mihomo-linux-amd64-compatible-${PINNED_VERSION}.gz`, kind: 'gz', sha256: null },
+  'linux:x64': {
+    file: `mihomo-linux-amd64-compatible-${PINNED_VERSION}.gz`,
+    kind: 'gz',
+    sha256: null,
+  },
   'linux:arm64': { file: `mihomo-linux-arm64-${PINNED_VERSION}.gz`, kind: 'gz', sha256: null },
   'darwin:x64': { file: `mihomo-darwin-amd64-${PINNED_VERSION}.gz`, kind: 'gz', sha256: null },
   'darwin:arm64': { file: `mihomo-darwin-arm64-${PINNED_VERSION}.gz`, kind: 'gz', sha256: null },
@@ -85,7 +89,9 @@ function _setDeps(overrides = {}) {
     _deps[k] = overrides[k];
   }
   return function restore() {
-    for (const k of Object.keys(prev)) _deps[k] = prev[k];
+    for (const k of Object.keys(prev)) {
+      _deps[k] = prev[k];
+    }
   };
 }
 
@@ -101,7 +107,13 @@ function isEnabled(env) {
 /** 内核落地路径(与 proxyCoreManager.BINARY_PATH 同一处;由 _binaryPath ⟷ manager 的一致性测护住)。 */
 function _binaryPath() {
   const name = _deps.platform() === 'win32' ? 'mihomo.exe' : 'mihomo';
-  return path.join(_deps.homedir(), '.khyquant', 'bin', name);
+  // Portable-aware app home; fallback to the injectable legacy resolution.
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return path.join(getAppHome(), 'bin', name);
+  } catch {
+    return path.join(_deps.homedir(), '.khyquant', 'bin', name);
+  }
 }
 
 /** 目标是否已装(可执行)。 */
@@ -118,7 +130,9 @@ function isInstalled() {
 function resolveAsset(platform, arch) {
   const key = `${platform}:${arch}`;
   const a = ASSETS[key];
-  if (!a) return null;
+  if (!a) {
+    return null;
+  }
   return { file: a.file, kind: a.kind, sha256: a.sha256, url: `${RELEASE_BASE}/${a.file}`, key };
 }
 
@@ -186,7 +200,9 @@ function _whichCore() {
           .split(/\r?\n/)
           .map((s) => s.trim())
           .filter(Boolean)[0];
-        if (first) return first;
+        if (first) {
+          return first;
+        }
       }
     } catch {
       /* 单个候选查失败不影响其余 */
@@ -201,7 +217,9 @@ function _whichCore() {
  */
 function adoptFromPath() {
   const src = _whichCore();
-  if (!src) return { success: false, reason: 'not-on-path' };
+  if (!src) {
+    return { success: false, reason: 'not-on-path' };
+  }
   try {
     const dest = _binaryPath();
     _deps.fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -214,7 +232,11 @@ function adoptFromPath() {
     }
     return { success: true, method: 'adopted', path: dest, source: src };
   } catch (err) {
-    return { success: false, reason: 'adopt-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'adopt-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 
@@ -225,11 +247,18 @@ function adoptFromPath() {
  */
 async function downloadCore(opts = {}) {
   const env = opts.env || _deps.env();
-  if (!isEnabled(env)) return { success: false, reason: 'disabled' };
+  if (!isEnabled(env)) {
+    return { success: false, reason: 'disabled' };
+  }
 
   const asset = resolveAsset(_deps.platform(), _deps.arch());
   if (!asset) {
-    return { success: false, reason: 'unsupported-platform', platform: _deps.platform(), arch: _deps.arch() };
+    return {
+      success: false,
+      reason: 'unsupported-platform',
+      platform: _deps.platform(),
+      arch: _deps.arch(),
+    };
   }
   const dest = _binaryPath();
   if (asset.kind !== 'gz') {
@@ -246,7 +275,11 @@ async function downloadCore(opts = {}) {
   try {
     _deps.fs.mkdirSync(path.dirname(dest), { recursive: true });
   } catch (err) {
-    return { success: false, reason: 'mkdir-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'mkdir-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
   _safeUnlink(tmp); // 清理可能的上次残留
 
@@ -255,7 +288,12 @@ async function downloadCore(opts = {}) {
     await _deps.download(asset.url, tmp, opts.onProgress, { timeoutMs: opts.timeoutMs });
   } catch (err) {
     _safeUnlink(tmp);
-    return { success: false, reason: 'download-failed', error: err && err.message ? err.message : String(err), url: asset.url };
+    return {
+      success: false,
+      reason: 'download-failed',
+      error: err && err.message ? err.message : String(err),
+      url: asset.url,
+    };
   }
 
   // 2) 读回压缩字节。
@@ -264,7 +302,11 @@ async function downloadCore(opts = {}) {
     comp = _deps.fs.readFileSync(tmp);
   } catch (err) {
     _safeUnlink(tmp);
-    return { success: false, reason: 'read-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'read-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 
   // 3) 可选 SHA256 纵深防御(校验压缩包本身 = GitHub 分发的工件)。不符 → fail-closed。
@@ -274,11 +316,21 @@ async function downloadCore(opts = {}) {
       digest = _deps.sha256(comp);
     } catch (err) {
       _safeUnlink(tmp);
-      return { success: false, reason: 'hash-failed', error: err && err.message ? err.message : String(err) };
+      return {
+        success: false,
+        reason: 'hash-failed',
+        error: err && err.message ? err.message : String(err),
+      };
     }
     if (String(digest).toLowerCase() !== String(asset.sha256).toLowerCase()) {
       _safeUnlink(tmp);
-      return { success: false, reason: 'sha256-mismatch', expected: asset.sha256, actual: digest, url: asset.url };
+      return {
+        success: false,
+        reason: 'sha256-mismatch',
+        expected: asset.sha256,
+        actual: digest,
+        url: asset.url,
+      };
     }
   }
 
@@ -288,7 +340,11 @@ async function downloadCore(opts = {}) {
     bin = _deps.gunzip(comp);
   } catch (err) {
     _safeUnlink(tmp);
-    return { success: false, reason: 'unpack-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'unpack-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 
   // 5) 落地 + 赋可执行权限。
@@ -301,7 +357,11 @@ async function downloadCore(opts = {}) {
     }
   } catch (err) {
     _safeUnlink(tmp);
-    return { success: false, reason: 'write-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'write-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
   _safeUnlink(tmp);
   return {
@@ -321,11 +381,15 @@ async function downloadCore(opts = {}) {
  */
 async function install(opts = {}) {
   try {
-    if (isInstalled()) return { success: true, method: 'existing', path: _binaryPath() };
+    if (isInstalled()) {
+      return { success: true, method: 'existing', path: _binaryPath() };
+    }
 
     // 采纳本机现成内核(零联网,永远尝试)。
     const adopted = adoptFromPath();
-    if (adopted.success) return adopted;
+    if (adopted.success) {
+      return adopted;
+    }
 
     // 联网下载(门控)。
     const env = opts.env || _deps.env();
@@ -333,14 +397,19 @@ async function install(opts = {}) {
       return {
         success: false,
         reason: 'disabled',
-        guidance: `自动下载内核未启用(${FLAG}=0)。请手动下载 mihomo 放到 ${_binaryPath()},`
-          + `或设 ${FLAG}=1 后重试。`,
+        guidance:
+          `自动下载内核未启用(${FLAG}=0)。请手动下载 mihomo 放到 ${_binaryPath()},` +
+          `或设 ${FLAG}=1 后重试。`,
       };
     }
     return await downloadCore(opts);
   } catch (err) {
     // 兜底 fail-soft:绝不让自动安装阻断上层流程。
-    return { success: false, reason: 'error', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'error',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 

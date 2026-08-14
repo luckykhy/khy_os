@@ -7,18 +7,23 @@
  *
  * Modelled after Claude Code's Edit tool.
  */
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 let _fileHistory;
-try { _fileHistory = require('../services/fileHistoryService'); } catch { _fileHistory = null; }
+try {
+  _fileHistory = require('../services/fileHistoryService');
+} catch {
+  _fileHistory = null;
+}
 
 module.exports = defineTool({
   name: 'editFile',
   description:
-    'Replace an exact substring in a file.  Provide old_string (the text to find) ' +
-    'and new_string (the replacement).  old_string must be unique unless replace_all is true.  ' +
-    'Prefer this over writeFile for modifying existing files — it only changes the targeted text.',
+    'Replace an exact substring in an existing file (precise in-place edit). ' +
+    'Use it to modify existing files without touching unrelated content; use writeFile only for new files or full rewrites. ' +
+    'Constraints: old_string must match the file text EXACTLY (including whitespace) and be unique unless replace_all is true; the call fails otherwise — add more surrounding context to disambiguate.',
   category: 'filesystem',
   risk: 'medium',
   isReadOnly: false,
@@ -31,22 +36,27 @@ module.exports = defineTool({
     file_path: {
       type: 'string',
       required: true,
-      description: 'Absolute or relative path to the file to edit',
+      description:
+        'Path to the file to edit, relative to CWD or absolute, e.g. "src/app.js". The file must already exist.',
+      example: 'src/app.js',
     },
     old_string: {
       type: 'string',
       required: true,
-      description: 'The exact text to find and replace (must be unique in the file unless replace_all)',
+      description:
+        'The exact text to find, matched byte-for-byte including whitespace/indentation. Must be unique in the file unless replace_all is true.',
     },
     new_string: {
       type: 'string',
       required: true,
-      description: 'The replacement text',
+      description: 'The replacement text. Must differ from old_string.',
     },
     replace_all: {
       type: 'boolean',
       required: false,
-      description: 'Replace ALL occurrences of old_string (default false)',
+      description:
+        'Replace ALL occurrences of old_string instead of requiring uniqueness (default: false).',
+      example: true,
     },
   },
 
@@ -56,10 +66,10 @@ module.exports = defineTool({
   },
 
   getToolUseSummary(input) {
-    if (!input.file_path) return null;
-    const short = input.old_string
-      ? input.old_string.slice(0, 40).replace(/\n/g, '\\n')
-      : '';
+    if (!input.file_path) {
+      return null;
+    }
+    const short = input.old_string ? input.old_string.slice(0, 40).replace(/\n/g, '\\n') : '';
     return `编辑 ${path.basename(input.file_path)}：\"${short}\"`;
   },
 
@@ -67,7 +77,10 @@ module.exports = defineTool({
     const { file_path, old_string, new_string, replace_all } = params;
 
     if (old_string === new_string) {
-      return { success: false, error: 'old_string and new_string are identical — nothing to change.' };
+      return {
+        success: false,
+        error: 'old_string and new_string are identical — nothing to change.',
+      };
     }
 
     try {
@@ -76,7 +89,11 @@ module.exports = defineTool({
       if (rawPath.startsWith('~')) {
         rawPath = path.join(require('os').homedir(), rawPath.slice(1));
       }
-      try { rawPath = require('./_userDirs').normalizeDesktopPath(rawPath); } catch { /* ignore */ }
+      try {
+        rawPath = require('./_userDirs').normalizeDesktopPath(rawPath);
+      } catch {
+        /* ignore */
+      }
 
       // [SAFE] editFile had NO path-confinement check at all: an Agent-supplied
       // absolute path ("/etc/passwd"), `..` traversal ("../../../../etc/shadow"),
@@ -89,9 +106,13 @@ module.exports = defineTool({
       {
         const { validateNotUNCPath, validateNoPathTraversal } = require('./inputValidators');
         const uncCheck = validateNotUNCPath(rawPath);
-        if (!uncCheck.valid) return { success: false, error: uncCheck.message };
+        if (!uncCheck.valid) {
+          return { success: false, error: uncCheck.message };
+        }
         const confineCheck = validateNoPathTraversal(rawPath);
-        if (!confineCheck.valid) return { success: false, error: confineCheck.message };
+        if (!confineCheck.valid) {
+          return { success: false, error: confineCheck.message };
+        }
       }
 
       const absPath = path.resolve(cwd, rawPath);
@@ -105,14 +126,22 @@ module.exports = defineTool({
         const stat = fs.statSync(absPath);
         const { classifyPreReadHang } = require('./filePreReadHangGuard');
         const hang = classifyPreReadHang({ absPath, stat, env: process.env });
-        if (hang && hang.blocked) return { success: false, error: hang.error, blockedRead: hang.kind };
-      } catch { /* stat/判定失败 → 回退历史行为 */ }
+        if (hang && hang.blocked) {
+          return { success: false, error: hang.error, blockedRead: hang.kind };
+        }
+      } catch {
+        /* stat/判定失败 → 回退历史行为 */
+      }
 
       const original = fs.readFileSync(absPath, 'utf-8');
 
       // Take snapshot before modification
       if (_fileHistory) {
-        try { _fileHistory.takeSnapshot(absPath, { reason: 'editFile', content: original }); } catch { /* non-critical */ }
+        try {
+          _fileHistory.takeSnapshot(absPath, { reason: 'editFile', content: original });
+        } catch {
+          /* non-critical */
+        }
       }
 
       // Count occurrences

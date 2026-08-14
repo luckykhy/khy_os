@@ -37,18 +37,20 @@ const BACKEND_PKG_CANDIDATES = [
 // and services/backend/package.json); a version bump that skips it makes
 // check:version-sync fail. Resolved via the same candidate-list pattern for
 // layout-compat, though today only the forest path exists.
-const NPM_PKG_CANDIDATES = [
-  path.join('packaging', 'npm', 'package.json'),
-];
+const NPM_PKG_CANDIDATES = [path.join('packaging', 'npm', 'package.json')];
 
 function _findProjectRoot(startDir = process.cwd()) {
   let current = path.resolve(startDir);
   while (true) {
     const hasPyproject = fs.existsSync(path.join(current, PYPROJECT_PATH));
     const hasSetup = fs.existsSync(path.join(current, 'setup.py'));
-    if (hasPyproject || hasSetup) return current;
+    if (hasPyproject || hasSetup) {
+      return current;
+    }
     const parent = path.dirname(current);
-    if (parent === current) return path.resolve(startDir);
+    if (parent === current) {
+      return path.resolve(startDir);
+    }
     current = parent;
   }
 }
@@ -59,7 +61,9 @@ function _findProjectRoot(startDir = process.cwd()) {
 // layout. Returns a path relative to projectRoot.
 function _resolveExisting(projectRoot, candidates) {
   for (const rel of candidates) {
-    if (fs.existsSync(path.join(projectRoot, rel))) return rel;
+    if (fs.existsSync(path.join(projectRoot, rel))) {
+      return rel;
+    }
   }
   return candidates[0];
 }
@@ -79,7 +83,9 @@ function _extractProjectBlock(pyprojectContent = '') {
 
 function _extractProjectField(pyprojectContent, key) {
   const block = _extractProjectBlock(pyprojectContent);
-  if (!block) return '';
+  if (!block) {
+    return '';
+  }
   const re = new RegExp(`^\\s*${key}\\s*=\\s*["']([^"']+)["']\\s*$`, 'm');
   const m = block.match(re);
   return m ? String(m[1] || '').trim() : '';
@@ -96,15 +102,20 @@ function _readState(projectRoot) {
   const pyInitVersionMatch = pyInit.match(/^\s*__version__\s*=\s*["']([^"']+)["']\s*$/m);
   const pyInitVersion = pyInitVersionMatch ? String(pyInitVersionMatch[1]).trim() : '';
 
-  const backendPkgFile = path.join(projectRoot, _resolveExisting(projectRoot, BACKEND_PKG_CANDIDATES));
+  const backendPkgFile = path.join(
+    projectRoot,
+    _resolveExisting(projectRoot, BACKEND_PKG_CANDIDATES)
+  );
   let backendVersion = '';
   try {
     const parsed = JSON.parse(_readFileSafe(backendPkgFile) || '{}');
     backendVersion = String(parsed.version || '').trim();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   const versions = [pyVersion, pyInitVersion, backendVersion].filter(Boolean);
-  const versionAligned = versions.length > 0 && versions.every(v => v === versions[0]);
+  const versionAligned = versions.length > 0 && versions.every((v) => v === versions[0]);
 
   return {
     projectRoot,
@@ -121,7 +132,9 @@ function _readState(projectRoot) {
 function _isLikelyVersion(version) {
   // Practical release format for this CLI (simple + predictable):
   // 0.1.0 / 1.2.3 / 1.2.3rc1 / 1.2.3.post1 / 1.2.3.dev1
-  return /^\d+(?:\.\d+){1,3}(?:[abrc]\d+)?(?:\.post\d+)?(?:\.dev\d+)?$/i.test(String(version || '').trim());
+  return /^\d+(?:\.\d+){1,3}(?:[abrc]\d+)?(?:\.post\d+)?(?:\.dev\d+)?$/i.test(
+    String(version || '').trim()
+  );
 }
 
 module.exports = {

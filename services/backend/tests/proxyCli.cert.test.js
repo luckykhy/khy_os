@@ -9,6 +9,10 @@ describe('proxy CLI cert helpers', () => {
   let tempHome = null;
 
   function mockOsHome(homeDir) {
+    // The proxy handler resolves certs under getAppHome() (dataHome.js), NOT
+    // os.homedir() — pin the app home to the per-test temp dir so certs never
+    // leak into the shared jest-isolated data home across tests in a worker.
+    process.env.KHY_APP_HOME = path.join(homeDir, '.khyquant');
     jest.doMock('os', () => {
       const actual = jest.requireActual('os');
       return { ...actual, homedir: () => homeDir };

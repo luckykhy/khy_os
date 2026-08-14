@@ -31,24 +31,60 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function _cjkEnabled(env) {
   const raw = env && env.KHY_RECAP_CJK;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 // ── 中文触发词(冻结·SSOT)────────────────────────────────────────────
 // 决策类:表达「做了什么/决定怎么做」的动作/断言前缀。
 const _CJK_DECISION_MARKERS = Object.freeze([
-  '我将', '我会', '我已', '我打算', '我准备',
-  '决定', '采用', '选择', '选用', '改用',
-  '创建', '新增', '新建', '写了', '写好', '添加',
-  '更新', '修复', '修正', '修改', '删除', '移除', '重构', '回滚', '拆分',
+  '我将',
+  '我会',
+  '我已',
+  '我打算',
+  '我准备',
+  '决定',
+  '采用',
+  '选择',
+  '选用',
+  '改用',
+  '创建',
+  '新增',
+  '新建',
+  '写了',
+  '写好',
+  '添加',
+  '更新',
+  '修复',
+  '修正',
+  '修改',
+  '删除',
+  '移除',
+  '重构',
+  '回滚',
+  '拆分',
 ]);
 
 // 洞见类:表达「关键事实/根因/原因」的前缀。
 const _CJK_INSIGHT_MARKERS = Object.freeze([
-  '重要', '注意', '关键', '要点', '值得注意', '切记',
-  '根本原因', '根因', '问题在于', '问题是', '原因是', '原因在于',
-  '因为', '之所以', '本质上', '实际上',
+  '重要',
+  '注意',
+  '关键',
+  '要点',
+  '值得注意',
+  '切记',
+  '根本原因',
+  '根因',
+  '问题在于',
+  '问题是',
+  '原因是',
+  '原因在于',
+  '因为',
+  '之所以',
+  '本质上',
+  '实际上',
 ]);
 
 // CJK 句子终结符(全角标点)。既作问句切分,也作文件名右边界。
@@ -66,8 +102,13 @@ const _MAX_FILES = 30;
 // 片段则替换之(取最长)。保证同一断言只出现一次。
 function _pushContainmentUnique(out, frag) {
   for (let i = 0; i < out.length; i += 1) {
-    if (out[i].includes(frag)) return; // 已有更完整的
-    if (frag.includes(out[i])) { out[i] = frag; return; } // 候选更完整
+    if (out[i].includes(frag)) {
+      return;
+    } // 已有更完整的
+    if (frag.includes(out[i])) {
+      out[i] = frag;
+      return;
+    } // 候选更完整
   }
   out.push(frag);
 }
@@ -81,13 +122,17 @@ function _terminatorClass() {
 
 function _sliceFromMarker(text, marker) {
   const idx = text.indexOf(marker);
-  if (idx < 0) return null;
+  if (idx < 0) {
+    return null;
+  }
   const rest = text.slice(idx);
   // 到下一个终结符为止。
   let end = rest.length;
   for (const t of _CJK_TERMINATORS) {
     const p = rest.indexOf(t, marker.length);
-    if (p >= 0 && p < end) end = p;
+    if (p >= 0 && p < end) {
+      end = p;
+    }
   }
   const frag = rest.slice(0, end).trim();
   return frag;
@@ -101,34 +146,52 @@ function _sliceFromMarker(text, marker) {
  */
 function extractCjkDecisions(assistantMessages, env) {
   try {
-    if (!_cjkEnabled(env || process.env)) return [];
-    if (!Array.isArray(assistantMessages)) return [];
+    if (!_cjkEnabled(env || process.env)) {
+      return [];
+    }
+    if (!Array.isArray(assistantMessages)) {
+      return [];
+    }
     const out = [];
     const seen = new Set();
     for (const msg of assistantMessages) {
       const text = (msg && msg.content) || '';
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
       for (const marker of _CJK_DECISION_MARKERS) {
         // 一条消息里同一词干可能出现多次;用 while 扫。
         let from = 0;
         for (;;) {
           const idx = text.indexOf(marker, from);
-          if (idx < 0) break;
+          if (idx < 0) {
+            break;
+          }
           from = idx + marker.length;
           const frag = _sliceFromMarker(text.slice(idx), marker);
-          if (!frag) continue;
+          if (!frag) {
+            continue;
+          }
           // 片段须至少含词干 + 若干实义字符。
-          if (frag.length < marker.length + 3 || frag.length > 60) continue;
+          if (frag.length < marker.length + 3 || frag.length > 60) {
+            continue;
+          }
           const key = frag.slice(0, 30);
-          if (seen.has(key)) continue;
+          if (seen.has(key)) {
+            continue;
+          }
           seen.add(key);
           _pushContainmentUnique(out, frag);
-          if (out.length >= _MAX_DECISIONS) return out;
+          if (out.length >= _MAX_DECISIONS) {
+            return out;
+          }
         }
       }
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -139,28 +202,44 @@ function extractCjkDecisions(assistantMessages, env) {
  */
 function extractCjkInsights(assistantMessages, env) {
   try {
-    if (!_cjkEnabled(env || process.env)) return [];
-    if (!Array.isArray(assistantMessages)) return [];
+    if (!_cjkEnabled(env || process.env)) {
+      return [];
+    }
+    if (!Array.isArray(assistantMessages)) {
+      return [];
+    }
     const out = [];
     const seen = new Set();
     // 与英文侧一致:只看最近若干条 assistant 消息。
     const recent = assistantMessages.slice(-5);
     for (const msg of recent) {
       const text = (msg && msg.content) || '';
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
       for (const marker of _CJK_INSIGHT_MARKERS) {
         const frag = _sliceFromMarker(text, marker);
-        if (!frag) continue;
-        if (frag.length < marker.length + 3 || frag.length > 80) continue;
+        if (!frag) {
+          continue;
+        }
+        if (frag.length < marker.length + 3 || frag.length > 80) {
+          continue;
+        }
         const key = frag.slice(0, 30);
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
         seen.add(key);
         _pushContainmentUnique(out, frag);
-        if (out.length >= _MAX_INSIGHTS) return out;
+        if (out.length >= _MAX_INSIGHTS) {
+          return out;
+        }
       }
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -171,8 +250,12 @@ function extractCjkInsights(assistantMessages, env) {
  */
 function extractCjkQuestions(messages, env) {
   try {
-    if (!_cjkEnabled(env || process.env)) return [];
-    if (!Array.isArray(messages)) return [];
+    if (!_cjkEnabled(env || process.env)) {
+      return [];
+    }
+    if (!Array.isArray(messages)) {
+      return [];
+    }
     const out = [];
     const seen = new Set();
     const recent = messages.slice(-6);
@@ -181,7 +264,9 @@ function extractCjkQuestions(messages, env) {
     const splitter = new RegExp('[' + termClass + ']');
     for (const msg of recent) {
       const text = (msg && msg.content) || '';
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
       // 把全角/半角问号统一为切句锚:先按终结符+？切。
       const chunks = text.split(splitter);
       // split 丢了分隔符,故用正则重新扫「……？」
@@ -189,17 +274,25 @@ function extractCjkQuestions(messages, env) {
       let m;
       while ((m = qRe.exec(text)) !== null) {
         const clean = (m[1] + '？').trim();
-        if (clean.length < 5 || clean.length > 62) continue;
+        if (clean.length < 5 || clean.length > 62) {
+          continue;
+        }
         const key = clean.slice(0, 30);
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
         seen.add(key);
         out.push(clean);
-        if (out.length >= _MAX_QUESTIONS) return out;
+        if (out.length >= _MAX_QUESTIONS) {
+          return out;
+        }
       }
       void chunks; // 保留切句变量的语义说明(上方 qRe 才是真抽取)
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -211,29 +304,46 @@ function extractCjkQuestions(messages, env) {
  */
 function extractCjkFileReferences(messages, env) {
   try {
-    if (!_cjkEnabled(env || process.env)) return [];
-    if (!Array.isArray(messages)) return [];
+    if (!_cjkEnabled(env || process.env)) {
+      return [];
+    }
+    if (!Array.isArray(messages)) {
+      return [];
+    }
     const files = [];
     const seen = new Set();
     // 左边界:行首/空白/反引号/引号/CJK 标点;右边界:同上 + CJK 终结符 + 行尾。
     // 文件名本体:与英文侧一致的保守集合。
-    const fileRe = /(?:^|[\s`"'。，；！？、（）「」【】：])([a-zA-Z0-9_][a-zA-Z0-9_/.-]*\.[a-zA-Z]{1,6})(?=$|[\s`"'。，；！？、（）「」【】：])/gm;
+    const fileRe =
+      /(?:^|[\s`"'。，；！？、（）「」【】：])([a-zA-Z0-9_][a-zA-Z0-9_/.-]*\.[a-zA-Z]{1,6})(?=$|[\s`"'。，；！？、（）「」【】：])/gm;
     for (const msg of messages) {
       const text = (msg && msg.content) || '';
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
       let m;
       while ((m = fileRe.exec(text)) !== null) {
         const f = m[1];
-        if (f.includes('http') || f.includes('www.') || f.startsWith('.')) continue;
-        if (/\.(com|org|net|io|dev)$/i.test(f)) continue;
-        if (seen.has(f)) continue;
+        if (f.includes('http') || f.includes('www.') || f.startsWith('.')) {
+          continue;
+        }
+        if (/\.(com|org|net|io|dev)$/i.test(f)) {
+          continue;
+        }
+        if (seen.has(f)) {
+          continue;
+        }
         seen.add(f);
         files.push(f);
-        if (files.length >= _MAX_FILES) return files;
+        if (files.length >= _MAX_FILES) {
+          return files;
+        }
       }
     }
     return files;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 module.exports = {

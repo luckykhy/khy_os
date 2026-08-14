@@ -22,7 +22,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_PROCESS_GROUP_CLASSIFY_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -40,13 +42,21 @@ const _cache = new WeakMap();
  */
 function memoClassify(toolObj, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') return computeFn();
-    if (_cache.has(toolObj)) return _cache.get(toolObj);
+    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') {
+      return computeFn();
+    }
+    if (_cache.has(toolObj)) {
+      return _cache.get(toolObj);
+    }
     const cat = computeFn();
     _cache.set(toolObj, cat);
     return cat;
   } catch {
-    try { return computeFn(); } catch { return null; }
+    try {
+      return computeFn();
+    } catch {
+      return null;
+    }
   }
 }
 

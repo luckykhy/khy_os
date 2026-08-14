@@ -20,7 +20,9 @@ const { printInfo, printError, printSuccess } = require('../formatters');
 
 function _renameEnabled(env) {
   const raw = env && env.KHY_RENAME;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -31,7 +33,9 @@ async function handleRename(subCommand, args = [], _options = {}) {
   }
 
   // 新标题 = subCommand + args 全部拼接(允许空格)。
-  const parts = [subCommand].concat(Array.isArray(args) ? args : []).filter((t) => t != null && t !== '');
+  const parts = [subCommand]
+    .concat(Array.isArray(args) ? args : [])
+    .filter((t) => t != null && t !== '');
   const newTitle = parts.join(' ').trim();
   if (!newTitle) {
     printInfo('用法:/rename <新标题>。khy 不在此命令里调用模型生成名字 —— 请显式给出标题。');
@@ -41,7 +45,9 @@ async function handleRename(subCommand, args = [], _options = {}) {
   let sessionId = null;
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   if (!sessionId) {
     printInfo('暂无活动会话 —— 先开始一段对话,再用 /rename 重命名。');
     return true;

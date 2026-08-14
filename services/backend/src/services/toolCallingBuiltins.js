@@ -13,18 +13,43 @@
  * toolCalling.js 的**同目录兄弟**以保迁移的 require 相对路径字节不变。宿主 _allTools 展开、
  * loadPermissions/savePermissions、module.exports 按**同名 re-import** 接回,调用点字节不变。
  */
-const path = require('path');
 const os = require('os');
+const path = require('path');
+
 // open_app handler 复用 app-launch 兄弟叶子(byte-identical 相对路径)。
 const {
-  _hasGraphicalSession, _resolveOpenDefaultTarget, _buildAppCandidates, _getInstalledApps,
-  _matchInstalledApp, _commandExists, _inferWindowsImageName, _getWindowsProcessPids,
-  _spawnDetached, _verifyWindowsLaunch, _formatLaunchOutput, _splitExecLine, _launchLinuxDesktopEntry,
+  _hasGraphicalSession,
+  _resolveOpenDefaultTarget,
+  _buildAppCandidates,
+  _getInstalledApps,
+  _matchInstalledApp,
+  _commandExists,
+  _inferWindowsImageName,
+  _getWindowsProcessPids,
+  _spawnDetached,
+  _verifyWindowsLaunch,
+  _formatLaunchOutput,
+  _splitExecLine,
+  _launchLinuxDesktopEntry,
 } = require('./toolCallingAppLaunch');
 // launchOutcome leaf (fail-soft): honest "已启动" wording on a clean spawn.
-let _launchOutcome; try { _launchOutcome = require('./launchOutcome'); } catch { _launchOutcome = null; }
+let _launchOutcome;
+try {
+  _launchOutcome = require('./launchOutcome');
+} catch {
+  _launchOutcome = null;
+}
 
-const PERMISSIONS_FILE = path.join(os.homedir(), '.khyquant', 'tool_permissions.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const PERMISSIONS_FILE = path.join(_appHome(), 'tool_permissions.json');
 
 // Tool categories and risk levels.
 // The KEYS of this map are the canonical five risk tiers — identical to the
@@ -47,20 +72,28 @@ const RISK_LEVELS = {
 const BUILTIN_TOOLS = [
   {
     name: 'open_app',
-    description: 'Open an application installed on this computer, OR open a URL / an existing file with the system default program. Accepts: an app name in any language (e.g. "docker", "apifox", "火狐", "文件管理器"); a URL (http/https/file://) — opened in the default browser; or a path to an existing file (e.g. a .html / .pdf / image / document) — opened with its default handler. Automatically finds and launches the correct binary for app names.',
+    description:
+      'Open an application installed on this computer, OR open a URL / an existing file with the system default program. Accepts: an app name in any language (e.g. "docker", "apifox", "火狐", "文件管理器"); a URL (http/https/file://) — opened in the default browser; or a path to an existing file (e.g. a .html / .pdf / image / document) — opened with its default handler. Automatically finds and launches the correct binary for app names.',
     category: 'system',
     risk: 'medium',
     parameters: {
-      name: { type: 'string', required: true, description: 'Application name (fuzzy match), a URL, or a path to an existing file' },
+      name: {
+        type: 'string',
+        required: true,
+        description: 'Application name (fuzzy match), a URL, or a path to an existing file',
+      },
     },
     handler: async (params) => {
       const rawName = String(params.name || '').trim();
       const appName = rawName.toLowerCase();
-      if (!appName) return { success: false, error: 'Application name is required' };
+      if (!appName) {
+        return { success: false, error: 'Application name is required' };
+      }
       if (process.platform === 'linux' && !_hasGraphicalSession()) {
         return {
           success: false,
-          error: 'No graphical session detected (DISPLAY/WAYLAND_DISPLAY is not set). Unable to open GUI applications from this terminal session.',
+          error:
+            'No graphical session detected (DISPLAY/WAYLAND_DISPLAY is not set). Unable to open GUI applications from this terminal session.',
         };
       }
       // Triage: a URL or an existing file goes to the OS default handler instead
@@ -86,23 +119,25 @@ const BUILTIN_TOOLS = [
       const apps = _getInstalledApps();
 
       // Fuzzy match installed apps (single source of truth: _matchInstalledApp).
-      let match = _matchInstalledApp(rawName);
+      const match = _matchInstalledApp(rawName);
 
       if (!match) {
         // Fallback: if binary exists in PATH, launch directly.
-        const runnable = (candidates.length > 0 ? candidates : [appName]).find(c => _commandExists(c));
+        const runnable = (candidates.length > 0 ? candidates : [appName]).find((c) =>
+          _commandExists(c)
+        );
         if (runnable) {
           try {
             const imageName = _inferWindowsImageName(runnable);
-            const beforePids = process.platform === 'win32'
-              ? _getWindowsProcessPids(imageName)
-              : new Set();
+            const beforePids =
+              process.platform === 'win32' ? _getWindowsProcessPids(imageName) : new Set();
             await _spawnDetached(runnable, [], {
               env: { ...process.env },
             });
-            const verification = process.platform === 'win32'
-              ? await _verifyWindowsLaunch(runnable, beforePids, 2000, { imageName })
-              : { verified: true, mode: 'spawn' };
+            const verification =
+              process.platform === 'win32'
+                ? await _verifyWindowsLaunch(runnable, beforePids, 2000, { imageName })
+                : { verified: true, mode: 'spawn' };
             const output = _launchOutcome
               ? _launchOutcome.formatLaunchOutput(rawName, runnable, verification, process.env)
               : _formatLaunchOutput(rawName, runnable, verification);
@@ -119,15 +154,16 @@ const BUILTIN_TOOLS = [
 
         // List similar apps as suggestions
         const suggestions = apps
-          .filter(a => a.searchText.includes(appName.charAt(0)))
+          .filter((a) => a.searchText.includes(appName.charAt(0)))
           .slice(0, 5)
-          .map(a => a.name);
+          .map((a) => a.name);
         return {
           success: false,
           error: `Application "${params.name}" not found on this system.`,
-          hint: suggestions.length > 0
-            ? `Similar apps: ${suggestions.join(', ')}`
-            : 'No similar apps found. The user may need to install it first.',
+          hint:
+            suggestions.length > 0
+              ? `Similar apps: ${suggestions.join(', ')}`
+              : 'No similar apps found. The user may need to install it first.',
         };
       }
 
@@ -140,7 +176,10 @@ const BUILTIN_TOOLS = [
 
         const normalizedExec = execLine.replace(/^"+|"+$/g, '');
         if (process.platform !== 'win32' && /^[A-Za-z]:\\/.test(normalizedExec)) {
-          return { success: false, error: `Failed to launch ${match.name}: Windows path detected on non-Windows runtime` };
+          return {
+            success: false,
+            error: `Failed to launch ${match.name}: Windows path detected on non-Windows runtime`,
+          };
         }
 
         let launchCommand = normalizedExec;
@@ -151,7 +190,10 @@ const BUILTIN_TOOLS = [
           if (!(isPathLike && isDirectFile)) {
             const execParts = _splitExecLine(normalizedExec);
             if (execParts.length === 0) {
-              return { success: false, error: `Failed to launch ${match.name}: invalid launch command` };
+              return {
+                success: false,
+                error: `Failed to launch ${match.name}: invalid launch command`,
+              };
             }
             launchCommand = execParts[0];
             launchArgs = execParts.slice(1);
@@ -159,22 +201,25 @@ const BUILTIN_TOOLS = [
         } else {
           const execParts = _splitExecLine(normalizedExec);
           if (execParts.length === 0) {
-            return { success: false, error: `Failed to launch ${match.name}: invalid launch command` };
+            return {
+              success: false,
+              error: `Failed to launch ${match.name}: invalid launch command`,
+            };
           }
           launchCommand = execParts[0];
           launchArgs = execParts.slice(1);
         }
 
         const imageName = _inferWindowsImageName(launchCommand);
-        const beforePids = process.platform === 'win32'
-          ? _getWindowsProcessPids(imageName)
-          : new Set();
+        const beforePids =
+          process.platform === 'win32' ? _getWindowsProcessPids(imageName) : new Set();
         await _spawnDetached(launchCommand, launchArgs, {
           env: { ...process.env },
         });
-        const verification = process.platform === 'win32'
-          ? await _verifyWindowsLaunch(launchCommand, beforePids, 2000, { imageName })
-          : { verified: true, mode: 'spawn' };
+        const verification =
+          process.platform === 'win32'
+            ? await _verifyWindowsLaunch(launchCommand, beforePids, 2000, { imageName })
+            : { verified: true, mode: 'spawn' };
         const output = _launchOutcome
           ? _launchOutcome.formatLaunchOutput(match.name, match.bin, verification, process.env)
           : _formatLaunchOutput(match.name, match.bin, verification);
@@ -196,8 +241,12 @@ const BUILTIN_TOOLS = [
               output: `已通过桌面入口启动: ${match.name} (${fallback.hint})`,
             };
           }
-          const reason = fallback.error?.message || fallback.reason || 'desktop-entry-launch-failed';
-          return { success: false, error: `Failed to launch ${match.name}: ${err.message}; fallback failed: ${reason}` };
+          const reason =
+            fallback.error?.message || fallback.reason || 'desktop-entry-launch-failed';
+          return {
+            success: false,
+            error: `Failed to launch ${match.name}: ${err.message}; fallback failed: ${reason}`,
+          };
         }
         return { success: false, error: `Failed to launch ${match.name}: ${err.message}` };
       }
@@ -205,18 +254,29 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'import_model',
-    description: 'Import a local model file/directory or download from URL. Supports: .gguf, .safetensors, .zip archives, model directories. Auto-detects format, extracts archives, patches for llama.cpp compatibility, validates, and registers with Ollama.',
+    description:
+      'Import a local model file/directory or download from URL. Supports: .gguf, .safetensors, .zip archives, model directories. Auto-detects format, extracts archives, patches for llama.cpp compatibility, validates, and registers with Ollama.',
     category: 'ai',
     risk: 'medium',
     parameters: {
-      source: { type: 'string', required: true, description: 'Local file/directory path or download URL' },
-      name: { type: 'string', required: false, description: 'Target model name (auto-derived if omitted)' },
+      source: {
+        type: 'string',
+        required: true,
+        description: 'Local file/directory path or download URL',
+      },
+      name: {
+        type: 'string',
+        required: false,
+        description: 'Target model name (auto-derived if omitted)',
+      },
       base: { type: 'string', required: false, description: 'Base model for adapter imports' },
     },
     handler: async (params) => {
       const modelImport = require('./modelImportService');
       const source = String(params.source || '').trim();
-      if (!source) return { success: false, error: 'No source path or URL provided' };
+      if (!source) {
+        return { success: false, error: 'No source path or URL provided' };
+      }
       const result = await modelImport.importModel(source, {
         name: params.name,
         base: params.base,
@@ -233,17 +293,24 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'download_model',
-    description: 'Download a model from a URL (HuggingFace, ModelScope, GitHub, direct links). Auto-detects format and imports after download.',
+    description:
+      'Download a model from a URL (HuggingFace, ModelScope, GitHub, direct links). Auto-detects format and imports after download.',
     category: 'ai',
     risk: 'medium',
     parameters: {
       url: { type: 'string', required: true, description: 'Model download URL' },
-      name: { type: 'string', required: false, description: 'Target model name (auto-derived if omitted)' },
+      name: {
+        type: 'string',
+        required: false,
+        description: 'Target model name (auto-derived if omitted)',
+      },
     },
     handler: async (params) => {
       const modelImport = require('./modelImportService');
       const url = String(params.url || '').trim();
-      if (!url) return { success: false, error: 'No URL provided' };
+      if (!url) {
+        return { success: false, error: 'No URL provided' };
+      }
       const result = await modelImport.importFromUrl(url, { name: params.name });
       if (result.success) {
         return {
@@ -257,7 +324,8 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'list_models',
-    description: 'List all models on this computer: imported KHY/Ollama models and local model files found on disk. Shows model name, size, format, location, and import status.',
+    description:
+      'List all models on this computer: imported KHY/Ollama models and local model files found on disk. Shows model name, size, format, location, and import status.',
     category: 'ai',
     risk: 'low',
     parameters: {},
@@ -293,7 +361,9 @@ const BUILTIN_TOOLS = [
           lines.push(`  ${m.source}/${m.name}  (路由: ${m.route})`);
         }
         const { resolveLocalProxyOpenAiBaseUrl } = require('../utils/proxyBaseUrl');
-        lines.push(`提示: 通过 gateway proxy (${resolveLocalProxyOpenAiBaseUrl()}) 可作为 OpenAI API 使用`);
+        lines.push(
+          `提示: 通过 gateway proxy (${resolveLocalProxyOpenAiBaseUrl()}) 可作为 OpenAI API 使用`
+        );
       }
 
       return {
@@ -307,20 +377,30 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'export_ollama_model',
-    description: 'Export a model from Ollama to a local GGUF file for KHY use. Creates a symlink or copy in the KHY models directory.',
+    description:
+      'Export a model from Ollama to a local GGUF file for KHY use. Creates a symlink or copy in the KHY models directory.',
     category: 'ai',
     risk: 'medium',
     parameters: {
       model: { type: 'string', required: true, description: 'Ollama model name (e.g. qwen3.5:4b)' },
-      dest: { type: 'string', required: false, description: 'Destination directory (default: KHY models/)' },
+      dest: {
+        type: 'string',
+        required: false,
+        description: 'Destination directory (default: KHY models/)',
+      },
     },
     handler: async (params) => {
       const modelImport = require('./modelImportService');
       const model = String(params.model || '').trim();
-      if (!model) return { success: false, error: 'No model name provided' };
+      if (!model) {
+        return { success: false, error: 'No model name provided' };
+      }
       const result = await modelImport.exportFromOllama(model, params.dest);
       if (result.success) {
-        return { success: true, output: `Exported: ${result.model} → ${result.path} (${result.sizeMB} MB)` };
+        return {
+          success: true,
+          output: `Exported: ${result.model} → ${result.path} (${result.sizeMB} MB)`,
+        };
       }
       return { success: false, error: result.error };
     },
@@ -332,11 +412,16 @@ const BUILTIN_TOOLS = [
   // (isEnabled, inputSchema, aliases, validateInput, etc.)
   {
     name: 'optimize_config',
-    description: 'Safely update AI configuration (system prompt, agent roles, prompt library). Hot-update, no restart needed.',
+    description:
+      'Safely update AI configuration (system prompt, agent roles, prompt library). Hot-update, no restart needed.',
     category: 'optimization',
     risk: 'medium',
     parameters: {
-      target: { type: 'string', required: true, description: 'Config target: system_prompt | agent_roles | prompt_library' },
+      target: {
+        type: 'string',
+        required: true,
+        description: 'Config target: system_prompt | agent_roles | prompt_library',
+      },
       content: { type: 'string', required: true, description: 'New content for the config' },
       reason: { type: 'string', required: true, description: 'Why this optimization' },
     },
@@ -347,11 +432,16 @@ const BUILTIN_TOOLS = [
   },
   {
     name: 'propose_code_change',
-    description: 'Propose a source code change via git branch (requires user review, does not affect running code)',
+    description:
+      'Propose a source code change via git branch (requires user review, does not affect running code)',
     category: 'optimization',
     risk: 'high',
     parameters: {
-      file_path: { type: 'string', required: true, description: 'Absolute path to the source file' },
+      file_path: {
+        type: 'string',
+        required: true,
+        description: 'Absolute path to the source file',
+      },
       content: { type: 'string', required: true, description: 'Proposed new file content' },
       description: { type: 'string', required: true, description: 'What was changed and why' },
     },

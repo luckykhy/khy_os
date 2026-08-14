@@ -129,7 +129,9 @@ function validateTranscript(messages) {
   for (let i = 0; i < messages.length; i++) {
     const { role, content } = messages[i];
 
-    if (role === 'system') continue;
+    if (role === 'system') {
+      continue;
+    }
 
     if (role === 'tool') {
       if (pendingCalls <= 0) {
@@ -148,7 +150,9 @@ function validateTranscript(messages) {
       issues.push(`[${i}] consecutive user messages`);
     }
 
-    if (role !== 'system') lastRole = role;
+    if (role !== 'system') {
+      lastRole = role;
+    }
   }
 
   if (pendingCalls > 0) {
@@ -168,22 +172,29 @@ function validateTranscript(messages) {
  * @returns {Array<{role: string, content: string}>}
  */
 function ensureCompletePairs(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return messages || [];
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return messages || [];
+  }
 
   const result = [...messages];
 
   // Walk backwards to find the last assistant with tool calls
   for (let i = result.length - 1; i >= 0; i--) {
     const msg = result[i];
-    if (msg.role === 'user') break; // stop at last user message
+    if (msg.role === 'user') {
+      break;
+    } // stop at last user message
     if (msg.role === 'assistant') {
       const calls = extractToolCalls(msg.content);
       if (calls.length > 0) {
         // Count how many tool results follow
         let resultsAfter = 0;
         for (let j = i + 1; j < result.length; j++) {
-          if (result[j].role === 'tool') resultsAfter++;
-          else break;
+          if (result[j].role === 'tool') {
+            resultsAfter++;
+          } else {
+            break;
+          }
         }
         // Append missing results
         const missing = calls.length - resultsAfter;
@@ -215,7 +226,9 @@ function ensureCompletePairs(messages) {
  * @returns {Array<{role: string, content: string}>}
  */
 function repairRoleAlternation(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return messages || [];
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return messages || [];
+  }
 
   const result = [];
 
@@ -269,7 +282,9 @@ function repairRoleAlternation(messages) {
 
 function _lastNonSystem(arr) {
   for (let i = arr.length - 1; i >= 0; i--) {
-    if (arr[i].role !== 'system') return arr[i];
+    if (arr[i].role !== 'system') {
+      return arr[i];
+    }
   }
   return null;
 }

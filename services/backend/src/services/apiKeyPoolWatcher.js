@@ -26,6 +26,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const nearestExistingDir = require('../utils/nearestExistingDir');
+
 const apiKeyPool = require('./apiKeyPool');
 const { resolveEnvPaths } = require('./gatewayEnvFile');
 
@@ -51,7 +53,7 @@ let _pollTimer = null;
 const _watchers = new Map();
 /** @type {Array<{ts:string, path:string, action:string, detail:string}>} */
 const _events = [];
-let _stats = { reloads: 0, added: 0, removed: 0, updated: 0, errors: 0, lastReloadAt: null };
+const _stats = { reloads: 0, added: 0, removed: 0, updated: 0, errors: 0, lastReloadAt: null };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,15 +63,24 @@ function sha256(buf) {
 }
 
 function logEvent(filePath, action, detail = '') {
-  const entry = { ts: new Date().toISOString(), path: filePath, action, detail: String(detail).slice(0, 300) };
+  const entry = {
+    ts: new Date().toISOString(),
+    path: filePath,
+    action,
+    detail: String(detail).slice(0, 300),
+  };
   _events.push(entry);
-  if (_events.length > EVENT_RING_SIZE) _events.shift();
+  if (_events.length > EVENT_RING_SIZE) {
+    _events.shift();
+  }
   return entry;
 }
 
 function safeRead(filePath) {
   try {
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     return fs.readFileSync(filePath);
   } catch {
     return null;
@@ -77,27 +88,54 @@ function safeRead(filePath) {
 }
 
 /** Nearest existing ancestor dir — lets us watch for a file that doesn't exist yet. */
-const nearestExistingDir = require('../utils/nearestExistingDir');
 
 /**
  * Overlay API-key-shaped vars from a parsed .env into process.env (overlay-only,
  * NEVER delete): a key removed from .env should not clobber a key the operator
  * exported in the shell. Genuine pooled-key removals are handled by reload diffing
  * api_keys.json — env keys are a fallback overlay, not an authoritative set.
+ *
+ * `{env:VAR}` cross-references MUST be expanded before overlaying. Without that,
+ * this hot-reload path silently UNDOES what bootstrap/init did at startup: any
+ * .env edit re-applies the raw `RELAY_API_KEY={env:STEPFUN_API_KEY}` on top of the
+ * already-resolved value, and from then on every relay request goes out as
+ * `Authorization: Bearer {env:STEPFUN_API_KEY}` → HTTP 401 invalid_api_key. The
+ * failure outlives the edit and nothing in the log connects the two, so it reads
+ * as "my API key stopped working" rather than "the watcher clobbered it".
  */
 function overlayEnvFile(filePath) {
   const buf = safeRead(filePath);
-  if (!buf) return 0;
+  if (!buf) {
+    return 0;
+  }
   let parsed;
   try {
     parsed = require('dotenv').parse(buf); // parse only — does NOT mutate process.env
   } catch {
     return 0;
   }
+  // Resolve against a MERGED view, not `parsed` alone: a placeholder may point at
+  // a var that lives only in process.env (shell export or the ~/.khy/.env overlay)
+  // and never appears in this file.
+  const merged = { ...process.env, ...parsed };
+  try {
+    require('../bootstrap/expandEnvPlaceholders').expandEnvPlaceholders(merged);
+  } catch {
+    /* best effort — fall back to the raw values, as before */
+  }
   let applied = 0;
-  for (const [k, v] of Object.entries(parsed)) {
-    if (!KEY_VAR_RE.test(k) && !ENDPOINT_VAR_RE.test(k)) continue;
-    if (process.env[k] !== v) { process.env[k] = v; applied += 1; }
+  for (const k of Object.keys(parsed)) {
+    if (!KEY_VAR_RE.test(k) && !ENDPOINT_VAR_RE.test(k)) {
+      continue;
+    }
+    const v = merged[k];
+    if (typeof v !== 'string') {
+      continue;
+    }
+    if (process.env[k] !== v) {
+      process.env[k] = v;
+      applied += 1;
+    }
   }
   return applied;
 }
@@ -111,13 +149,19 @@ function reloadFrom(filePath) {
   // Content-hash dedup: fs.watch fires on metadata-only touches and SQLite WAL
   // churn; only react when bytes actually changed.
   const hash = buf ? sha256(buf) : '';
-  if (entry && entry.hash === hash) return false;
-  if (entry) entry.hash = hash;
+  if (entry && entry.hash === hash) {
+    return false;
+  }
+  if (entry) {
+    entry.hash = hash;
+  }
 
   try {
     // If it's an .env file, overlay its key vars into process.env first so
     // reload() sees the edit (dotenv only reads at startup).
-    if (entry && entry.kind === 'env') overlayEnvFile(filePath);
+    if (entry && entry.kind === 'env') {
+      overlayEnvFile(filePath);
+    }
 
     const result = apiKeyPool.reload();
     _stats.reloads += 1;
@@ -126,7 +170,11 @@ function reloadFrom(filePath) {
     _stats.updated += result.updated;
     _stats.lastReloadAt = new Date().toISOString();
     if (result.added || result.removed || result.updated) {
-      logEvent(filePath, 'reloaded', `+${result.added} -${result.removed} ~${result.updated} (total ${result.total})`);
+      logEvent(
+        filePath,
+        'reloaded',
+        `+${result.added} -${result.removed} ~${result.updated} (total ${result.total})`
+      );
     } else {
       logEvent(filePath, 'reload_no_change', `total ${result.total}`);
     }
@@ -142,7 +190,9 @@ function reloadFrom(filePath) {
 // Watcher setup
 // ---------------------------------------------------------------------------
 function setupWatcher(filePath, kind) {
-  if (_watchers.has(filePath)) return;
+  if (_watchers.has(filePath)) {
+    return;
+  }
 
   const entry = { watcher: null, debounce: null, hash: '', kind };
   // Seed the hash with current content so the initial state isn't treated as a
@@ -152,7 +202,9 @@ function setupWatcher(filePath, kind) {
   _watchers.set(filePath, entry);
 
   const onChange = () => {
-    if (entry.debounce) clearTimeout(entry.debounce);
+    if (entry.debounce) {
+      clearTimeout(entry.debounce);
+    }
     entry.debounce = setTimeout(() => {
       entry.debounce = null;
       reloadFrom(filePath);
@@ -172,7 +224,9 @@ function setupWatcher(filePath, kind) {
     const watcher = fs.watch(watchTarget, { persistent: false }, (_eventType, filename) => {
       if (watchTarget !== filePath) {
         const target = path.basename(filePath);
-        if (filename && filename !== target) return;
+        if (filename && filename !== target) {
+          return;
+        }
       }
       onChange();
     });
@@ -200,9 +254,15 @@ function setupWatcher(filePath, kind) {
 // Poll fallback — covers NFS / containers / fs.watch blind spots
 // ---------------------------------------------------------------------------
 function pollAll() {
-  if (!_started) return;
+  if (!_started) {
+    return;
+  }
   for (const filePath of _watchers.keys()) {
-    try { reloadFrom(filePath); } catch { /* logged inside */ }
+    try {
+      reloadFrom(filePath);
+    } catch {
+      /* logged inside */
+    }
   }
 }
 
@@ -210,11 +270,17 @@ function pollAll() {
 function watchTargets() {
   const targets = [];
   try {
-    for (const p of resolveEnvPaths().targets) targets.push({ path: p, kind: 'env' });
-  } catch { /* env paths unresolvable — pool JSON still watched */ }
+    for (const p of resolveEnvPaths().targets) {
+      targets.push({ path: p, kind: 'env' });
+    }
+  } catch {
+    /* env paths unresolvable — pool JSON still watched */
+  }
   try {
     targets.push({ path: apiKeyPool.getPoolFilePath(), kind: 'pool' });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return targets;
 }
 
@@ -222,15 +288,23 @@ function watchTargets() {
 // Public API
 // ---------------------------------------------------------------------------
 function start() {
-  if (_started) return;
-  if (String(process.env.KHY_DISABLE_KEYPOOL_WATCH || '').toLowerCase() === '1'
-    || String(process.env.KHY_DISABLE_KEYPOOL_WATCH || '').toLowerCase() === 'true') {
+  if (_started) {
+    return;
+  }
+  if (
+    String(process.env.KHY_DISABLE_KEYPOOL_WATCH || '').toLowerCase() === '1' ||
+    String(process.env.KHY_DISABLE_KEYPOOL_WATCH || '').toLowerCase() === 'true'
+  ) {
     return;
   }
   _started = true;
 
   // Ensure the pool is initialized before we start reconciling against it.
-  try { apiKeyPool.init(); } catch { /* init is best-effort; reload re-inits */ }
+  try {
+    apiKeyPool.init();
+  } catch {
+    /* init is best-effort; reload re-inits */
+  }
 
   for (const { path: filePath, kind } of watchTargets()) {
     setupWatcher(filePath, kind);
@@ -238,13 +312,17 @@ function start() {
 
   _pollTimer = setInterval(() => pollAll(), POLL_INTERVAL_MS);
   // Standby polling must not pin the event loop — exits with the daemon.
-  if (_pollTimer.unref) _pollTimer.unref();
+  if (_pollTimer.unref) {
+    _pollTimer.unref();
+  }
 
   logEvent('system', 'started', `watching ${_watchers.size} files`);
 }
 
 function stop() {
-  if (!_started) return;
+  if (!_started) {
+    return;
+  }
   _started = false;
 
   if (_pollTimer) {
@@ -252,9 +330,15 @@ function stop() {
     _pollTimer = null;
   }
   for (const [, entry] of _watchers) {
-    if (entry.debounce) clearTimeout(entry.debounce);
+    if (entry.debounce) {
+      clearTimeout(entry.debounce);
+    }
     if (entry.watcher) {
-      try { entry.watcher.close(); } catch { /* ignore */ }
+      try {
+        entry.watcher.close();
+      } catch {
+        /* ignore */
+      }
     }
   }
   _watchers.clear();
@@ -263,7 +347,9 @@ function stop() {
 
 /** Force an immediate reload (ignores content-hash dedup). For tests / manual refresh. */
 function triggerReloadNow() {
-  for (const [, entry] of _watchers) entry.hash = '__force__';
+  for (const [, entry] of _watchers) {
+    entry.hash = '__force__';
+  }
   const result = apiKeyPool.reload();
   _stats.reloads += 1;
   _stats.lastReloadAt = new Date().toISOString();
@@ -289,4 +375,10 @@ function getStatus() {
   };
 }
 
-module.exports = { start, stop, triggerReloadNow, getStatus, __testHooks: { overlayEnvFile, reloadFrom, watchTargets } };
+module.exports = {
+  start,
+  stop,
+  triggerReloadNow,
+  getStatus,
+  __testHooks: { overlayEnvFile, reloadFrom, watchTargets },
+};

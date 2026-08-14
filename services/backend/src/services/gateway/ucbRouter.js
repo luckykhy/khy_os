@@ -42,7 +42,9 @@
 function _envNum(name, fallback, { min = -Infinity, max = Infinity } = {}) {
   const raw = process.env[name];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -52,16 +54,19 @@ function _envNum(name, fallback, { min = -Infinity, max = Infinity } = {}) {
 function explorationConstant() {
   return _envNum('KHY_UCB_EXPLORATION', 1, { min: 0 });
 }
+
 // Reference latency: the speed reward is refLatency / max(latency, refLatency),
 // so a call at or under the reference earns full speed credit (1.0) and slower
 // calls decay toward 0. Defaults to 8s — a generous "fast enough" bar.
 function refLatencyMs() {
   return _envNum('KHY_UCB_REF_LATENCY_MS', 8000, { min: 1 });
 }
+
 // Neutral speed credit used when a successful outcome reports no latency.
 function neutralSpeed() {
   return _envNum('KHY_UCB_NEUTRAL_SPEED', 0.5, { min: 0, max: 1 });
 }
+
 // Prior pseudo-count: how much the failover-order prior is "worth" in pulls.
 // Larger → the user's pinned order sticks longer before evidence overrides it.
 function priorWeight() {
@@ -77,7 +82,9 @@ function priorWeight() {
 function speedReward(latencyMs) {
   const ref = refLatencyMs();
   const l = Number(latencyMs);
-  if (!Number.isFinite(l) || l <= 0) return neutralSpeed();
+  if (!Number.isFinite(l) || l <= 0) {
+    return neutralSpeed();
+  }
   return ref / Math.max(l, ref);
 }
 
@@ -87,7 +94,9 @@ function speedReward(latencyMs) {
  * over pulls, μ̂ = P(success) · E[speed | success].
  */
 function outcomeReward(outcome = {}) {
-  if (!outcome || outcome.success !== true) return 0;
+  if (!outcome || outcome.success !== true) {
+    return 0;
+  }
   return speedReward(outcome.latencyMs);
 }
 
@@ -115,7 +124,9 @@ function _getArm(key) {
  */
 function recordOutcome(adapter, outcome = {}) {
   const key = _armKey(adapter);
-  if (!key) return;
+  if (!key) {
+    return;
+  }
   const arm = _getArm(key);
   arm.pulls += 1;
   arm.rewardSum += outcomeReward(outcome);
@@ -131,15 +142,23 @@ function recordOutcome(adapter, outcome = {}) {
  */
 function seedPrior(orderList) {
   const order = Array.isArray(orderList) ? orderList.filter(Boolean) : [];
-  if (order.length === 0) return;
+  if (order.length === 0) {
+    return;
+  }
   const w = priorWeight();
-  if (w <= 0) return;
+  if (w <= 0) {
+    return;
+  }
   const n = order.length;
   order.forEach((adapter, index) => {
     const key = _armKey(adapter);
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     const arm = _getArm(key);
-    if (arm.pulls >= w) return; // already has real evidence — leave it
+    if (arm.pulls >= w) {
+      return;
+    } // already has real evidence — leave it
     const priorMean = n === 1 ? 1 : 1 - index / n; // head=1 … tail→1/n
     arm.pulls = w;
     arm.rewardSum = priorMean * w;
@@ -155,7 +174,9 @@ function seedPrior(orderList) {
  */
 function cooldownDamp(remainingCooldownMs, maxCooldownMs) {
   const rem = Math.max(0, Number(remainingCooldownMs) || 0);
-  if (rem <= 0) return 0;
+  if (rem <= 0) {
+    return 0;
+  }
   const max = Math.max(1, Number(maxCooldownMs) || rem);
   return Math.min(1, rem / max);
 }
@@ -167,7 +188,9 @@ function cooldownDamp(remainingCooldownMs, maxCooldownMs) {
 function ucbValue(arm, totalPulls, opts = {}) {
   const pulls = arm && arm.pulls > 0 ? arm.pulls : 0;
   const mean = pulls > 0 ? arm.rewardSum / pulls : 0;
-  if (pulls <= 0) return Number.POSITIVE_INFINITY;
+  if (pulls <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
   const N = Math.max(1, Number(totalPulls) || 0);
   const explore = explorationConstant() * Math.sqrt((2 * Math.log(N)) / pulls);
   const damp = cooldownDamp(opts.cooldownRemainingMs, opts.cooldownMaxMs);
@@ -183,10 +206,14 @@ function ucbValue(arm, totalPulls, opts = {}) {
  */
 function rank(adapterKeys = [], opts = {}) {
   const keys = (Array.isArray(adapterKeys) ? adapterKeys : []).map(_armKey).filter(Boolean);
-  if (keys.length === 0) return [];
+  if (keys.length === 0) {
+    return [];
+  }
 
   const priorOrder = opts.priorOrder !== undefined ? opts.priorOrder : _loadFailoverOrder();
-  if (priorOrder && priorOrder.length) seedPrior(priorOrder);
+  if (priorOrder && priorOrder.length) {
+    seedPrior(priorOrder);
+  }
 
   const totalPulls = keys.reduce((sum, k) => sum + (_arms.get(k)?.pulls || 0), 0);
   const cooldownByKey = opts.cooldownByKey || {};
@@ -209,7 +236,9 @@ function rank(adapterKeys = [], opts = {}) {
   });
 
   scored.sort((a, b) => {
-    if (a.value !== b.value) return b.value - a.value; // higher UCB first
+    if (a.value !== b.value) {
+      return b.value - a.value;
+    } // higher UCB first
     return a.index - b.index; // stable: keep incoming order on ties
   });
   return scored;
@@ -228,7 +257,9 @@ function _loadFailoverOrder() {
   try {
     const store = require('./failoverOrderStore');
     const { enabled, order } = store.getFailoverOrder();
-    if (enabled && Array.isArray(order) && order.length > 0) return order;
+    if (enabled && Array.isArray(order) && order.length > 0) {
+      return order;
+    }
   } catch {
     /* store optional */
   }
@@ -240,6 +271,7 @@ function _getArmStats(adapter) {
   const arm = _arms.get(_armKey(adapter));
   return arm ? { ...arm } : { pulls: 0, rewardSum: 0, lastOutcomeAt: 0 };
 }
+
 function _reset() {
   _arms.clear();
 }

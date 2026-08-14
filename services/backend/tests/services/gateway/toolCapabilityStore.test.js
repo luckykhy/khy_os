@@ -144,3 +144,69 @@ describe('robustness — never throws', () => {
     }
   });
 });
+
+describe('键规范化 — 路由 id 与裸名是同一条记录', () => {
+  test('按 api:<pool>:<model> 写入,可用裸名读出(反之亦然)', () => {
+    assert.equal(store.recordVerdict('api:agnes:agnes-2.5-flash', 'native'), true);
+    assert.equal(store.getVerdict('agnes-2.5-flash'), 'native', '剥离门用裸名必须读到');
+    store._resetCache();
+    assert.equal(store.getVerdict('api:agnes:agnes-2.5-flash'), 'native', '教学门用路由 id 也必须读到');
+  });
+
+  test('两种写法只产生一条记录,不再分裂', () => {
+    store.recordVerdict('api:agnes:agnes-2.5-flash', 'native');
+    store.recordVerdict('agnes-2.5-flash', 'native', { source: 'passive' });
+    const models = store.listFresh().map(e => e.model);
+    assert.deepEqual(models, ['agnes-2.5-flash']);
+  });
+});
+
+describe('不静默降级 — 正面证据压过证据缺席', () => {
+  test('已确证 native 时,一次 text 观测不覆盖', () => {
+    store.recordVerdict('m1', 'native', { source: 'passive' });
+    assert.equal(store.recordVerdict('m1', 'text', { source: 'probe' }), false, '应拒绝写入');
+    assert.equal(store.getVerdict('m1'), 'native');
+  });
+
+  test('force:true(用户主动重测)可以降级', () => {
+    store.recordVerdict('m2', 'native', { source: 'passive' });
+    assert.equal(store.recordVerdict('m2', 'text', { source: 'probe', force: true }), true);
+    assert.equal(store.getVerdict('m2'), 'text');
+  });
+
+  test('native → native 与 text → native 仍照常写入(只挡降级)', () => {
+    store.recordVerdict('m3', 'text', { source: 'probe' });
+    assert.equal(store.recordVerdict('m3', 'native', { source: 'passive' }), true, '晋升不受阻');
+    assert.equal(store.getVerdict('m3'), 'native');
+    assert.equal(store.recordVerdict('m3', 'native', { source: 'probe' }), true, '同档刷新时间戳');
+  });
+});
+
+describe('旧文件自愈 — 带前缀的历史键就地迁移', () => {
+  test('同一模型的两条相反记录合并,native 胜 text', () => {
+    // 用户机器上的真实形状:探测按路由 id 记了 text,被动学习按裸名记了 native。
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      version: 1,
+      entries: {
+        'api:agnes:agnes-2.5-flash': { verdict: 'text', source: 'probe', measuredAt: Date.now(), latencyMs: 2022 },
+        'agnes-2.5-flash': { verdict: 'native', source: 'passive', measuredAt: Date.now(), latencyMs: null },
+      },
+    }, null, 2));
+    store._resetCache();
+    assert.equal(store.getVerdict('agnes-2.5-flash'), 'native');
+    assert.equal(store.getVerdict('api:agnes:agnes-2.5-flash'), 'native', '两道闸现在一致');
+    const models = store.listFresh().map(e => e.model);
+    assert.deepEqual(models, ['agnes-2.5-flash'], '孤儿键已合并,不留副本');
+  });
+
+  test('迁移结果落盘,下次启动无需重算', () => {
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      version: 1,
+      entries: { 'api:glm:glm-4.7-flash': { verdict: 'native', source: 'probe', measuredAt: Date.now(), latencyMs: 10 } },
+    }, null, 2));
+    store._resetCache();
+    store.getVerdict('glm-4.7-flash'); // 触发加载 + 迁移
+    const onDisk = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
+    assert.deepEqual(Object.keys(onDisk.entries), ['glm-4.7-flash']);
+  });
+});

@@ -27,7 +27,9 @@ const _MAX_HEADINGS = 30;
 // Marketing words banned by the Hermes description standard.
 const _MARKETING_RE = /\b(powerful|comprehensive|seamless|advanced|robust)\b/gi;
 
-function _str(s) { return String(s == null ? '' : s); }
+function _str(s) {
+  return String(s == null ? '' : s);
+}
 
 /**
  * Derive a lowercase-hyphenated skill name (<=64 chars) from the source reference.
@@ -43,16 +45,24 @@ function deriveSkillName(sourceRef, sourceType) {
       const last = parts.length > 1 ? parts[parts.length - 1] : '';
       base = [host, last].filter(Boolean).join('-');
     } else {
-      base = base.replace(/[\\/]+$/, '').split(/[\\/]/).filter(Boolean).pop() || base;
+      base =
+        base
+          .replace(/[\\/]+$/, '')
+          .split(/[\\/]/)
+          .filter(Boolean)
+          .pop() || base;
     }
-    let name = base.toLowerCase()
-      .replace(/\.[a-z0-9]+$/i, '')     // drop a file extension
+    const name = base
+      .toLowerCase()
+      .replace(/\.[a-z0-9]+$/i, '') // drop a file extension
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, _MAX_NAME)
       .replace(/-+$/g, '');
     return name || 'learned-skill';
-  } catch { return 'learned-skill'; }
+  } catch {
+    return 'learned-skill';
+  }
 }
 
 /**
@@ -63,14 +73,22 @@ function clampDescription(text) {
   try {
     let s = _str(text).replace(/\s+/g, ' ').trim();
     s = s.replace(_MARKETING_RE, '').replace(/\s+/g, ' ').trim();
-    if (!s) return 'Learned skill from source.';
+    if (!s) {
+      return 'Learned skill from source.';
+    }
     // Keep only the first sentence.
     const firstSentence = s.split(/(?<=[.!?])\s/)[0] || s;
     let body = firstSentence.trim().replace(/[.!?]+$/, '');
-    if (body.length > _MAX_DESC - 1) body = body.slice(0, _MAX_DESC - 1).trim();
-    if (!body) return 'Learned skill from source.';
+    if (body.length > _MAX_DESC - 1) {
+      body = body.slice(0, _MAX_DESC - 1).trim();
+    }
+    if (!body) {
+      return 'Learned skill from source.';
+    }
     return body + '.';
-  } catch { return 'Learned skill from source.'; }
+  } catch {
+    return 'Learned skill from source.';
+  }
 }
 
 /**
@@ -82,10 +100,16 @@ function extractCommands(text) {
   const seen = new Set();
   const add = (raw) => {
     const line = _str(raw).trim();
-    if (!line || line.length > 200) return;
-    if (seen.has(line)) return;
+    if (!line || line.length > 200) {
+      return;
+    }
+    if (seen.has(line)) {
+      return;
+    }
     seen.add(line);
-    if (out.length < _MAX_COMMANDS) out.push(line);
+    if (out.length < _MAX_COMMANDS) {
+      out.push(line);
+    }
   };
   try {
     const src = _str(text);
@@ -95,16 +119,22 @@ function extractCommands(text) {
     while ((m = fenceRe.exec(src)) !== null) {
       for (const raw of _str(m[1]).split('\n')) {
         const line = raw.trim();
-        if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+        if (!line || line.startsWith('#') || line.startsWith('//')) {
+          continue;
+        }
         add(line.replace(/^\$\s+/, ''));
       }
     }
     // Inline shell-prompt lines outside fences.
     for (const raw of src.split('\n')) {
       const line = raw.trim();
-      if (/^\$\s+\S/.test(line)) add(line.replace(/^\$\s+/, ''));
+      if (/^\$\s+\S/.test(line)) {
+        add(line.replace(/^\$\s+/, ''));
+      }
     }
-  } catch { /* never throws */ }
+  } catch {
+    /* never throws */
+  }
   return out;
 }
 
@@ -120,13 +150,21 @@ function extractHeadings(text) {
     const src = _str(text).replace(/```[\s\S]*?```/g, '');
     for (const raw of src.split('\n')) {
       const m = /^#{1,6}\s+(.+?)\s*#*\s*$/.exec(raw);
-      if (!m) continue;
+      if (!m) {
+        continue;
+      }
       const h = m[1].trim();
-      if (!h || seen.has(h)) continue;
+      if (!h || seen.has(h)) {
+        continue;
+      }
       seen.add(h);
-      if (out.length < _MAX_HEADINGS) out.push(h);
+      if (out.length < _MAX_HEADINGS) {
+        out.push(h);
+      }
     }
-  } catch { /* never throws */ }
+  } catch {
+    /* never throws */
+  }
   return out;
 }
 
@@ -136,26 +174,39 @@ function extractHeadings(text) {
  */
 function buildSkillBody({ name, description, sourceType, sourceRef, headings, commands, sources }) {
   const lines = [];
-  const title = _str(name).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Learned Skill';
+  const title =
+    _str(name)
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase()) || 'Learned Skill';
   lines.push(`# ${title}`);
   lines.push('');
-  lines.push(`${_str(description)} Distilled from ${_str(sourceType) || 'source'}: \`${_str(sourceRef)}\`.`);
-  lines.push('This skill is distilled from source material; it invents nothing beyond what the source states.');
+  lines.push(
+    `${_str(description)} Distilled from ${_str(sourceType) || 'source'}: \`${_str(sourceRef)}\`.`
+  );
+  lines.push(
+    'This skill is distilled from source material; it invents nothing beyond what the source states.'
+  );
   lines.push('');
   if (Array.isArray(sources) && sources.length) {
     lines.push('## Sources');
-    for (const s of sources.slice(0, _MAX_HEADINGS)) lines.push(`- \`${_str(s)}\``);
+    for (const s of sources.slice(0, _MAX_HEADINGS)) {
+      lines.push(`- \`${_str(s)}\``);
+    }
     lines.push('');
   }
   if (Array.isArray(headings) && headings.length) {
     lines.push('## When to Use');
-    for (const h of headings) lines.push(`- ${h}`);
+    for (const h of headings) {
+      lines.push(`- ${h}`);
+    }
     lines.push('');
   }
   if (Array.isArray(commands) && commands.length) {
     lines.push('## Quick Reference');
     lines.push('```');
-    for (const c of commands) lines.push(c);
+    for (const c of commands) {
+      lines.push(c);
+    }
     lines.push('```');
     lines.push('');
   }
@@ -188,13 +239,27 @@ function distillSkillFromSources(input) {
     const commands = extractCommands(combined);
     const name = deriveSkillName(sourceRef, sourceType);
     // Description source: first heading if present, else first non-empty line.
-    const descSeed = headings[0] || (combined.split('\n').map((l) => l.trim()).find(Boolean) || name);
+    const descSeed =
+      headings[0] ||
+      combined
+        .split('\n')
+        .map((l) => l.trim())
+        .find(Boolean) ||
+      name;
     const description = clampDescription(descSeed);
     const warnings = [];
     if (!headings.length && !commands.length) {
       warnings.push('source had no headings or commands; body is minimal');
     }
-    const body = buildSkillBody({ name, description, sourceType, sourceRef, headings, commands, sources });
+    const body = buildSkillBody({
+      name,
+      description,
+      sourceType,
+      sourceRef,
+      headings,
+      commands,
+      sources,
+    });
     return {
       ok: true,
       name,

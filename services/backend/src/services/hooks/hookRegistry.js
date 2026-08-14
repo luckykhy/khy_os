@@ -13,8 +13,8 @@
  * Config: ~/.khyquant/hooks.json or project .khyquant/hooks.json
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const HOOK_EVENTS = [
   'PreToolUse',
@@ -28,13 +28,23 @@ const HOOK_EVENTS = [
   'SubAgentEnd',
 ];
 
-const GLOBAL_HOOKS_PATH = path.join(os.homedir(), '.khyquant', 'hooks.json');
+// Lazily resolve the global hooks file (portable-aware); fallback to legacy.
+function _globalHooksPath() {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return path.join(getAppHome(), 'hooks.json');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'hooks.json');
+  }
+}
 
 class HookRegistry {
   constructor() {
     this._hooks = new Map(); // event → Hook[]
     this._disabledHooks = new Set(); // hookId strings disabled via config
-    for (const ev of HOOK_EVENTS) this._hooks.set(ev, []);
+    for (const ev of HOOK_EVENTS) {
+      this._hooks.set(ev, []);
+    }
   }
 
   /**
@@ -44,8 +54,8 @@ class HookRegistry {
     this._clearAll();
 
     const configs = [];
-    if (fs.existsSync(GLOBAL_HOOKS_PATH)) {
-      configs.push({ source: 'global', path: GLOBAL_HOOKS_PATH });
+    if (fs.existsSync(_globalHooksPath())) {
+      configs.push({ source: 'global', path: _globalHooksPath() });
     }
     if (projectDir) {
       const projectHooks = path.join(projectDir, '.khyquant', 'hooks.json');
@@ -57,10 +67,12 @@ class HookRegistry {
     for (const cfg of configs) {
       try {
         const raw = JSON.parse(fs.readFileSync(cfg.path, 'utf-8'));
-        const hooks = Array.isArray(raw) ? raw : (raw.hooks || []);
+        const hooks = Array.isArray(raw) ? raw : raw.hooks || [];
         // Populate disabled hooks list from config
         const disabled = Array.isArray(raw.disabled) ? raw.disabled : [];
-        for (const id of disabled) this._disabledHooks.add(String(id));
+        for (const id of disabled) {
+          this._disabledHooks.add(String(id));
+        }
         for (const h of hooks) {
           this._register(h, cfg.source);
         }
@@ -71,8 +83,18 @@ class HookRegistry {
   }
 
   _register(hookDef, source) {
-    const { event, command, handler, pattern, timeout = 10000, enabled = true, priority = 100 } = hookDef;
-    if (!enabled) return;
+    const {
+      event,
+      command,
+      handler,
+      pattern,
+      timeout = 10000,
+      enabled = true,
+      priority = 100,
+    } = hookDef;
+    if (!enabled) {
+      return;
+    }
     if (!HOOK_EVENTS.includes(event)) {
       console.warn(`[HookRegistry] Unknown event "${event}", skipping`);
       return;
@@ -113,7 +135,9 @@ class HookRegistry {
     }
     // Config-gating: skip if this hook source is disabled
     const hookId = opts.source || '';
-    if (hookId && !this.isHookEnabled(hookId)) return;
+    if (hookId && !this.isHookEnabled(hookId)) {
+      return;
+    }
 
     this._hooks.get(event).push({
       event,
@@ -132,15 +156,21 @@ class HookRegistry {
    */
   getHooks(event, context = {}) {
     const hooks = this._hooks.get(event) || [];
-    return hooks.filter(h => {
-      if (!h.pattern) return true;
-      const target = context.toolName || context.prompt || '';
-      return h.pattern.test(target);
-    }).sort((a, b) => (a.priority || 100) - (b.priority || 100));
+    return hooks
+      .filter((h) => {
+        if (!h.pattern) {
+          return true;
+        }
+        const target = context.toolName || context.prompt || '';
+        return h.pattern.test(target);
+      })
+      .sort((a, b) => (a.priority || 100) - (b.priority || 100));
   }
 
   _clearAll() {
-    for (const ev of HOOK_EVENTS) this._hooks.set(ev, []);
+    for (const ev of HOOK_EVENTS) {
+      this._hooks.set(ev, []);
+    }
     this._disabledHooks.clear();
   }
 
@@ -153,10 +183,14 @@ class HookRegistry {
     return !this._disabledHooks.has(hookId);
   }
 
-  get events() { return [...HOOK_EVENTS]; }
+  get events() {
+    return [...HOOK_EVENTS];
+  }
   get count() {
     let n = 0;
-    for (const hooks of this._hooks.values()) n += hooks.length;
+    for (const hooks of this._hooks.values()) {
+      n += hooks.length;
+    }
     return n;
   }
 }

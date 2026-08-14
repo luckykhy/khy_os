@@ -26,7 +26,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TOOL_DIFF_ROWS_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -44,16 +46,27 @@ const _cache = new WeakMap(); // keyObj -> Map<expandedKey(0|1), rows>
  */
 function memoDiffRows(keyObj, expanded, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !keyObj || typeof keyObj !== 'object') return computeFn();
+    if (!isEnabled(env) || !keyObj || typeof keyObj !== 'object') {
+      return computeFn();
+    }
     const k = expanded ? 1 : 0;
     let byExpanded = _cache.get(keyObj);
-    if (byExpanded && byExpanded.has(k)) return byExpanded.get(k);
+    if (byExpanded && byExpanded.has(k)) {
+      return byExpanded.get(k);
+    }
     const rows = computeFn();
-    if (!byExpanded) { byExpanded = new Map(); _cache.set(keyObj, byExpanded); }
+    if (!byExpanded) {
+      byExpanded = new Map();
+      _cache.set(keyObj, byExpanded);
+    }
     byExpanded.set(k, rows);
     return rows;
   } catch {
-    try { return computeFn(); } catch { return null; }
+    try {
+      return computeFn();
+    } catch {
+      return null;
+    }
   }
 }
 

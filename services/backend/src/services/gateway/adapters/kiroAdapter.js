@@ -7,18 +7,24 @@
  *
  * Token logic ported from kiro-proxy (token-reader.js + q-client.js).
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
+
 // Model-name SSOT: the "which baseline model is default" comparison flows from
 // constants/models.js so switching the default tier model edits one place.
 const { PRIMARY: MODELS } = require('../../../constants/models');
+
+const { extractAnthropicImages } = require('./_anthropicFormat');
 const {
-  extractAnthropicImages,
-} = require('./_anthropicFormat');
-const { toAnthropicImageBlocks } = require('./_imageCompat');
+  getCWModule,
+  resetCWModuleCache,
+  repairToolUsePairing: _repairToolUsePairing,
+  parseCWStreamEvents,
+} = require('./_cwStreamParser');
 const {
   buildKiroUserAgent,
   buildKiroHeaders,
@@ -28,24 +34,23 @@ const {
   resetForAccount: resetFingerprintForAccount,
 } = require('./_fingerprint');
 const {
-  normalizeToken, isLikelyCredentialToken,
+  normalizeToken,
+  isLikelyCredentialToken,
   countsTowardAvailability,
 } = require('./_ideTokenMixin');
-const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { toAnthropicImageBlocks } = require('./_imageCompat');
 const { createProtocolHandler } = require('./_protocolPipeline');
-const {
-  getCWModule,
-  resetCWModuleCache,
-  repairToolUsePairing: _repairToolUsePairing,
-  parseCWStreamEvents,
-} = require('./_cwStreamParser');
 
 const _cwHandler = createProtocolHandler({ protocol: 'codewhisperer', adapterName: 'kiro' });
 
 // Proxy change listener registered at module bottom (after state variables are declared)
 
 const KIRO_DEBUG = String(process.env.KIRO_DEBUG || '').toLowerCase() === 'true';
-function debugLog(...args) { if (KIRO_DEBUG) console.log('[kiro:debug]', ...args); }
+function debugLog(...args) {
+  if (KIRO_DEBUG) {
+    console.log('[kiro:debug]', ...args);
+  }
+}
 
 /**
  * Emit a user-visible status message.
@@ -55,19 +60,34 @@ function debugLog(...args) { if (KIRO_DEBUG) console.log('[kiro:debug]', ...args
  */
 function _emitStatus(text) {
   console.warn(text); // fallback for non-REPL consumers (logs, tests, proxy)
-  try { process.emit('khy:adapter:status', text); } catch { /* best effort */ }
+  try {
+    process.emit('khy:adapter:status', text);
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
  * Emit the current active account email so the HUD can display it.
  */
 function _emitAccountEmail(email) {
-  if (!email) return;
-  try { process.emit('khy:adapter:account-email', email); } catch { /* best effort */ }
+  if (!email) {
+    return;
+  }
+  try {
+    process.emit('khy:adapter:account-email', email);
+  } catch {
+    /* best effort */
+  }
 }
 const KIRO_LOGIN_URL = process.env.KIRO_LOGIN_URL || 'https://kiro.dev';
-const KIRO_AUTO_OPEN_LOGIN = !/^(0|false|off)$/i.test(String(process.env.KIRO_AUTO_OPEN_LOGIN || '1').trim());
-const KIRO_LOGIN_COOLDOWN_MS = Math.max(5_000, Number(process.env.KIRO_LOGIN_COOLDOWN_MS || 60_000) || 60_000);
+const KIRO_AUTO_OPEN_LOGIN = !/^(0|false|off)$/i.test(
+  String(process.env.KIRO_AUTO_OPEN_LOGIN || '1').trim()
+);
+const KIRO_LOGIN_COOLDOWN_MS = Math.max(
+  5_000,
+  Number(process.env.KIRO_LOGIN_COOLDOWN_MS || 60_000) || 60_000
+);
 
 // ── Token paths — multi-path scanning ───────────────────────────────────
 const KIRO_TOKEN_FILE = 'kiro-auth-token.json';
@@ -90,14 +110,26 @@ const KIRO_WARM_CHECK_INTERVAL_MS = Math.max(
 function _getSsoCacheDirs() {
   const seen = new Set();
   const dirs = [];
-  const add = (d) => { const n = path.normalize(d); if (!seen.has(n)) { seen.add(n); dirs.push(n); } };
+  const add = (d) => {
+    const n = path.normalize(d);
+    if (!seen.has(n)) {
+      seen.add(n);
+      dirs.push(n);
+    }
+  };
   add(path.join(os.homedir(), '.aws', 'sso', 'cache'));
   if (process.platform === 'win32') {
     const up = process.env.USERPROFILE || '';
-    const hp = process.env.HOMEDRIVE && process.env.HOMEPATH
-      ? path.join(process.env.HOMEDRIVE, process.env.HOMEPATH) : '';
-    if (up) add(path.join(up, '.aws', 'sso', 'cache'));
-    if (hp) add(path.join(hp, '.aws', 'sso', 'cache'));
+    const hp =
+      process.env.HOMEDRIVE && process.env.HOMEPATH
+        ? path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)
+        : '';
+    if (up) {
+      add(path.join(up, '.aws', 'sso', 'cache'));
+    }
+    if (hp) {
+      add(path.join(hp, '.aws', 'sso', 'cache'));
+    }
   }
   return dirs;
 }
@@ -108,8 +140,15 @@ function _getSsoCacheDirs() {
 function _getKiroProfilePaths() {
   const seen = new Set();
   const paths = [];
-  const add = (p) => { const n = path.normalize(p); if (!seen.has(n)) { seen.add(n); paths.push(n); } };
-  const gs = (...segs) => path.join(...segs, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json');
+  const add = (p) => {
+    const n = path.normalize(p);
+    if (!seen.has(n)) {
+      seen.add(n);
+      paths.push(n);
+    }
+  };
+  const gs = (...segs) =>
+    path.join(...segs, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json');
 
   if (process.platform === 'darwin') {
     add(gs(os.homedir(), 'Library', 'Application Support'));
@@ -121,8 +160,12 @@ function _getKiroProfilePaths() {
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || '';
     const localAppData = process.env.LOCALAPPDATA || '';
-    if (appData) add(gs(appData));
-    if (localAppData) add(gs(localAppData));
+    if (appData) {
+      add(gs(appData));
+    }
+    if (localAppData) {
+      add(gs(localAppData));
+    }
     // Fallback: os.homedir()\AppData\Roaming (in case %APPDATA% is unset)
     add(gs(os.homedir(), 'AppData', 'Roaming'));
   }
@@ -140,11 +183,16 @@ function getKiroTokenCandidatePaths() {
   const paths = [];
   const add = (p) => {
     const norm = path.normalize(p);
-    if (!seen.has(norm)) { seen.add(norm); paths.push(norm); }
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      paths.push(norm);
+    }
   };
 
   // 1. Explicit env override (highest priority)
-  if (process.env.KIRO_TOKEN_PATH) add(process.env.KIRO_TOKEN_PATH);
+  if (process.env.KIRO_TOKEN_PATH) {
+    add(process.env.KIRO_TOKEN_PATH);
+  }
 
   // 2. All SSO cache dirs (handles os.homedir() vs %USERPROFILE% mismatch)
   for (const dir of _getSsoCacheDirs()) {
@@ -155,11 +203,19 @@ function getKiroTokenCandidatePaths() {
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || '';
     const localAppData = process.env.LOCALAPPDATA || '';
-    if (appData) add(path.join(appData, 'aws', 'sso', 'cache', KIRO_TOKEN_FILE));
-    if (localAppData) add(path.join(localAppData, 'aws', 'sso', 'cache', KIRO_TOKEN_FILE));
+    if (appData) {
+      add(path.join(appData, 'aws', 'sso', 'cache', KIRO_TOKEN_FILE));
+    }
+    if (localAppData) {
+      add(path.join(localAppData, 'aws', 'sso', 'cache', KIRO_TOKEN_FILE));
+    }
     // Kiro IDE auth storage on Windows
-    if (appData) add(path.join(appData, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'auth.json'));
-    if (localAppData) add(path.join(localAppData, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'auth.json'));
+    if (appData) {
+      add(path.join(appData, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'auth.json'));
+    }
+    if (localAppData) {
+      add(path.join(localAppData, 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'auth.json'));
+    }
   }
 
   // 4. XDG config on Linux
@@ -170,7 +226,18 @@ function getKiroTokenCandidatePaths() {
 
   // 5. macOS Application Support
   if (process.platform === 'darwin') {
-    add(path.join(os.homedir(), 'Library', 'Application Support', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'auth.json'));
+    add(
+      path.join(
+        os.homedir(),
+        'Library',
+        'Application Support',
+        'Kiro',
+        'User',
+        'globalStorage',
+        'kiro.kiroagent',
+        'auth.json'
+      )
+    );
   }
 
   return paths;
@@ -203,7 +270,9 @@ function _isKiroAbortEnabled() {
     return require('../../flagRegistry').isFlagEnabled('KHY_KIRO_ABORT', process.env);
   } catch {
     const raw = process.env && process.env.KHY_KIRO_ABORT;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     const v = String(raw).trim().toLowerCase();
     return !(v === 'off' || v === 'false' || v === '0' || v === 'no');
   }
@@ -214,17 +283,83 @@ function _isKiroAbortEnabled() {
 // when ListAvailableModels API is unreachable (GFW, token expired, etc.).
 // This ensures the adapter always shows models even without network.
 const KIRO_BASELINE_MODELS = [
-  { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', tier: 'ultra', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', tier: 'ultra', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', tier: 'high', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-sonnet-4.6', name: 'Claude Sonnet 4.6', tier: 'high', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-opus-4.6', name: 'Claude Opus 4.6', tier: 'ultra', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-haiku-4.5', name: 'Claude Haiku 4.5', tier: 'medium', credit: '0.4x', region: 'overseas' },
-  { id: 'claude-haiku-4-5-latest', name: 'Claude Haiku 4.5', tier: 'medium', credit: '0.4x', region: 'overseas' },
-  { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5', tier: 'high', credit: '1.3x', region: 'overseas' },
-  { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', tier: 'high', credit: '1.3x', region: 'overseas' },
-  { id: 'amazon-nova-pro', name: 'Amazon Nova Pro', tier: 'high', credit: '1.0x', region: 'overseas' },
-  { id: 'amazon-nova-micro', name: 'Amazon Nova Micro', tier: 'low', credit: '0.2x', region: 'overseas' },
+  {
+    id: 'claude-opus-4-8',
+    name: 'Claude Opus 4.8',
+    tier: 'ultra',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-opus-4-7',
+    name: 'Claude Opus 4.7',
+    tier: 'ultra',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    tier: 'high',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-sonnet-4.6',
+    name: 'Claude Sonnet 4.6',
+    tier: 'high',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-opus-4.6',
+    name: 'Claude Opus 4.6',
+    tier: 'ultra',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-haiku-4.5',
+    name: 'Claude Haiku 4.5',
+    tier: 'medium',
+    credit: '0.4x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-haiku-4-5-latest',
+    name: 'Claude Haiku 4.5',
+    tier: 'medium',
+    credit: '0.4x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-sonnet-4.5',
+    name: 'Claude Sonnet 4.5',
+    tier: 'high',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'claude-sonnet-4',
+    name: 'Claude Sonnet 4',
+    tier: 'high',
+    credit: '1.3x',
+    region: 'overseas',
+  },
+  {
+    id: 'amazon-nova-pro',
+    name: 'Amazon Nova Pro',
+    tier: 'high',
+    credit: '1.0x',
+    region: 'overseas',
+  },
+  {
+    id: 'amazon-nova-micro',
+    name: 'Amazon Nova Micro',
+    tier: 'low',
+    credit: '0.2x',
+    region: 'overseas',
+  },
 ];
 // Claude models visible in Kiro IDE's model picker but often missing from
 // the ListAvailableModels API response. Kiro IDE hardcodes these; we inject
@@ -233,7 +368,7 @@ const KIRO_BASELINE_MODELS = [
 // Model IDs use dot notation (e.g. "claude-sonnet-4.6") matching Q Developer
 // format — different from Anthropic's "claude-sonnet-4-6" dash format.
 // Source: kiro-proxy q-client.js + Kiro IDE v0.11 model picker
-const KIRO_INJECTED_CLAUDE_MODELS = KIRO_BASELINE_MODELS.filter(m => m.id.startsWith('claude-'));
+const KIRO_INJECTED_CLAUDE_MODELS = KIRO_BASELINE_MODELS.filter((m) => m.id.startsWith('claude-'));
 const KIRO_INJECT_CLAUDE = !/^(0|false|off)$/i.test(
   String(process.env.KIRO_INJECT_CLAUDE_MODELS || '1').trim()
 );
@@ -263,7 +398,7 @@ let _pendingPersist = null; // deferred persist: only save to pool after a succe
 let _tokenWatchers = []; // fs.watch handles for instant token change detection
 let _tokenWatchDebounce = null;
 let _warmTimer = null; // proactive pre-expiry token refresh interval (P2)
-let _lastWarmAt = 0;   // last successful proactive warm (for getStatus health hint)
+let _lastWarmAt = 0; // last successful proactive warm (for getStatus health hint)
 let _lastActiveUseMs = 0; // last real generate() through kiro — gates user-visible noise & IDE auto-open
 // Channel lifecycle flag, driven by the gateway (activate/deactivate). When the
 // user switches to another channel, the gateway deprecates this one: background
@@ -279,14 +414,21 @@ let _channelActive = true;
 // watcher when another provider is selected. Otherwise an idle, merely-installed
 // Kiro floods the HUD and even pops the IDE open. Token caches still update
 // silently in the idle case — only the noise is suppressed.
-const KIRO_ACTIVE_WINDOW_MS = Math.max(60_000, Number(process.env.KIRO_ACTIVE_WINDOW_MS || 300_000) || 300_000);
+const KIRO_ACTIVE_WINDOW_MS = Math.max(
+  60_000,
+  Number(process.env.KIRO_ACTIVE_WINDOW_MS || 300_000) || 300_000
+);
 function _kiroRecentlyActive() {
-  return _lastActiveUseMs > 0 && (Date.now() - _lastActiveUseMs) < KIRO_ACTIVE_WINDOW_MS;
+  return _lastActiveUseMs > 0 && Date.now() - _lastActiveUseMs < KIRO_ACTIVE_WINDOW_MS;
 }
+
 // Emit a status line only when Kiro was recently used; otherwise demote to debug log.
 function _emitActiveStatus(text) {
-  if (_kiroRecentlyActive()) _emitStatus(text);
-  else debugLog(`(suppressed — kiro idle) ${text}`);
+  if (_kiroRecentlyActive()) {
+    _emitStatus(text);
+  } else {
+    debugLog(`(suppressed — kiro idle) ${text}`);
+  }
 }
 
 // Has the user EXPLICITLY switched away from Kiro (so it is a deprecated channel)?
@@ -302,9 +444,15 @@ function _emitActiveStatus(text) {
 // request there must still open the IDE, matching long-standing behavior. Conflating
 // "idle" with "deprecated" would wrongly mute auto-mode anomalies (regression).
 function _isDeprecatedChannel() {
-  if (_channelActive === false) return true;
-  const pref = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase();
-  if (pref && pref !== 'auto' && pref !== 'kiro') return true;
+  if (_channelActive === false) {
+    return true;
+  }
+  const pref = String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+    .trim()
+    .toLowerCase();
+  if (pref && pref !== 'auto' && pref !== 'kiro') {
+    return true;
+  }
   return false;
 }
 
@@ -314,8 +462,11 @@ function _isDeprecatedChannel() {
 // active channel and auto mode keep their original ERROR/WARN visibility (the hard
 // constraint: never mute the active channel's critical logs).
 function _emitChannelWarn(text) {
-  if (_isDeprecatedChannel()) debugLog(`(suppressed — kiro deprecated channel) ${text}`);
-  else console.warn(text);
+  if (_isDeprecatedChannel()) {
+    debugLog(`(suppressed — kiro deprecated channel) ${text}`);
+  } else {
+    console.warn(text);
+  }
 }
 
 // ── Pip-install upgrade: force token refresh ──────────────────────────────
@@ -333,22 +484,27 @@ try {
     _sdkClient = null;
     _sdkClientToken = null;
     _forcePoolNext = false;
-    try { fs.unlinkSync(_refreshMarker); } catch { /* best effort */ }
+    try {
+      fs.unlinkSync(_refreshMarker);
+    } catch {
+      /* best effort */
+    }
     debugLog('Force token refresh marker consumed (pip upgrade detected)');
   }
-} catch { /* best effort — non-critical */ }
+} catch {
+  /* best effort — non-critical */
+}
 
 // ── HTTP proxy support (delegated to _proxyTunnel.js) ───────────────────
 // Supports HTTPS_PROXY / HTTP_PROXY / ALL_PROXY / KIRO_HTTP_PROXY for
 // users behind Clash, V2Ray, or corporate proxies (common in China).
 
 const { requestJson: _tunnelRequestJson, collectProxyCandidates } = require('./_proxyTunnel');
+const { buildSuccess, buildFailure } = require('./_responseBuilder');
 
 const KIRO_DISCOVERY_REQUIRE_PROXY = /^(1|true|yes|on)$/i.test(
   String(
-    process.env.KIRO_DISCOVERY_REQUIRE_PROXY
-    || process.env.KIRO_REQUIRE_PROXY_FOR_DISCOVERY
-    || '0'
+    process.env.KIRO_DISCOVERY_REQUIRE_PROXY || process.env.KIRO_REQUIRE_PROXY_FOR_DISCOVERY || '0'
   ).trim()
 );
 
@@ -357,19 +513,32 @@ const _kiroProxyOptions = {
   envKeys: ['KIRO_HTTP_PROXY', 'kiro_http_proxy'],
   autoEnabled: !/^(0|false|off)$/i.test(String(process.env.KIRO_AUTO_PROXY || '1').trim()),
   retryMs: Math.max(1000, Number(process.env.KIRO_PROXY_RETRY_MS || 60_000) || 60_000),
-  routeMode: String(process.env.KIRO_PROXY_ROUTE_MODE || process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto').trim().toLowerCase(),
+  routeMode: String(
+    process.env.KIRO_PROXY_ROUTE_MODE || process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto'
+  )
+    .trim()
+    .toLowerCase(),
 };
 
 /**
  * Thin wrapper over _proxyTunnel.requestJson that auto-injects Kiro headers.
  * Drop-in replacement for the old self-contained jsonRequest.
  */
-function jsonRequest(url, { method = 'GET', body, headers = {}, timeout = 15000, requireProxy = false } = {}) {
-  const reqHeaders = sanitizeOutgoingHeaders(buildKiroHeaders({ 'Content-Type': 'application/json', ...headers }));
-  return _tunnelRequestJson(url, { method, body, headers: reqHeaders, timeout }, {
-    ..._kiroProxyOptions,
-    requireProxy,
-  });
+function jsonRequest(
+  url,
+  { method = 'GET', body, headers = {}, timeout = 15000, requireProxy = false } = {}
+) {
+  const reqHeaders = sanitizeOutgoingHeaders(
+    buildKiroHeaders({ 'Content-Type': 'application/json', ...headers })
+  );
+  return _tunnelRequestJson(
+    url,
+    { method, body, headers: reqHeaders, timeout },
+    {
+      ..._kiroProxyOptions,
+      requireProxy,
+    }
+  );
 }
 
 /**
@@ -386,8 +555,13 @@ function resolveHttpProxyCandidates(targetUrl, options = {}) {
 // True if KIRO_PROXY_URL is set, or HTTPS_PROXY/Clash is available.
 let _hasOverseasRoute = null; // cached; reset on refresh()
 function hasOverseasRoute() {
-  if (_hasOverseasRoute !== null) return _hasOverseasRoute;
-  if (KIRO_PROXY_URL) { _hasOverseasRoute = true; return true; }
+  if (_hasOverseasRoute !== null) {
+    return _hasOverseasRoute;
+  }
+  if (KIRO_PROXY_URL) {
+    _hasOverseasRoute = true;
+    return true;
+  }
   const candidates = resolveHttpProxyCandidates('https://q.us-east-1.amazonaws.com');
   _hasOverseasRoute = candidates.length > 0;
   return _hasOverseasRoute;
@@ -399,7 +573,9 @@ function hasOverseasRoute() {
 const hasTokenShape = isLikelyCredentialToken;
 
 function buildTokenSignature(tokenData = null) {
-  if (!tokenData || !hasTokenShape(tokenData.accessToken)) return '';
+  if (!tokenData || !hasTokenShape(tokenData.accessToken)) {
+    return '';
+  }
   const payload = [
     normalizeToken(tokenData.accessToken),
     normalizeToken(tokenData.refreshToken),
@@ -418,7 +594,9 @@ function buildTokenSignature(tokenData = null) {
  * NOT when the same account's token is refreshed/renewed.
  */
 function buildAccountIdentity(tokenData = null) {
-  if (!tokenData) return '';
+  if (!tokenData) {
+    return '';
+  }
   const parts = [
     String(tokenData.email || ''),
     String(tokenData.profileArn || ''),
@@ -429,19 +607,21 @@ function buildAccountIdentity(tokenData = null) {
 }
 
 function assignCachedToken(tokenData = null) {
-  if (!tokenData || !hasTokenShape(tokenData.accessToken)) return null;
+  if (!tokenData || !hasTokenShape(tokenData.accessToken)) {
+    return null;
+  }
   const enriched = enrichWithProfile(tokenData);
   const nextSignature = buildTokenSignature(enriched);
   const nextIdentity = buildAccountIdentity(enriched);
   const tokenChanged = !!(
-    _cachedTokenSignature
-    && nextSignature
-    && _cachedTokenSignature !== nextSignature
+    _cachedTokenSignature &&
+    nextSignature &&
+    _cachedTokenSignature !== nextSignature
   );
   const accountChanged = !!(
-    _cachedAccountIdentity
-    && nextIdentity
-    && _cachedAccountIdentity !== nextIdentity
+    _cachedAccountIdentity &&
+    nextIdentity &&
+    _cachedAccountIdentity !== nextIdentity
   );
   _cachedToken = enriched;
   _cachedTokenSignature = nextSignature;
@@ -472,7 +652,9 @@ function assignCachedToken(tokenData = null) {
 function firstNonEmpty(values = []) {
   for (const value of values) {
     const text = String(value ?? '').trim();
-    if (text) return text;
+    if (text) {
+      return text;
+    }
   }
   return '';
 }
@@ -484,23 +666,24 @@ function firstNonEmpty(values = []) {
 function decodeJwtPayload(token) {
   try {
     const parts = String(token || '').split('.');
-    if (parts.length < 2) return null;
+    if (parts.length < 2) {
+      return null;
+    }
     const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
     return JSON.parse(payload);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function extractKiroTokenPayload(raw = {}, sourcePath = '') {
-  if (!raw || typeof raw !== 'object') return null;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
 
-  const nested = [
-    raw,
-    raw.auth,
-    raw.session,
-    raw.credentials,
-    raw.kiroAuth,
-    raw.tokenData,
-  ].filter(v => v && typeof v === 'object');
+  const nested = [raw, raw.auth, raw.session, raw.credentials, raw.kiroAuth, raw.tokenData].filter(
+    (v) => v && typeof v === 'object'
+  );
 
   for (const node of nested) {
     const accessToken = firstNonEmpty([
@@ -511,25 +694,38 @@ function extractKiroTokenPayload(raw = {}, sourcePath = '') {
       node.token,
       node.userJwt,
     ]);
-    if (!hasTokenShape(accessToken)) continue;
+    if (!hasTokenShape(accessToken)) {
+      continue;
+    }
 
     // Extract email from token file fields or JWT payload
     const jwtClaims = decodeJwtPayload(accessToken);
-    const email = firstNonEmpty([
-      node.email, raw.email,
-      node._email, raw._email,       // nirvana writes _email
-      node.userEmail, raw.userEmail,
-      jwtClaims?.email,
-      jwtClaims?.unique_name,
-      jwtClaims?.preferred_username,
-    ]) || null;
+    const email =
+      firstNonEmpty([
+        node.email,
+        raw.email,
+        node._email,
+        raw._email, // nirvana writes _email
+        node.userEmail,
+        raw.userEmail,
+        jwtClaims?.email,
+        jwtClaims?.unique_name,
+        jwtClaims?.preferred_username,
+      ]) || null;
 
     return {
       ...raw,
       ...node,
       accessToken: normalizeToken(accessToken),
-      refreshToken: firstNonEmpty([node.refreshToken, node.refresh_token, raw.refreshToken, raw.refresh_token]) || null,
-      expiresAt: firstNonEmpty([node.expiresAt, node.expireAt, raw.expiresAt, raw.expireAt]) || null,
+      refreshToken:
+        firstNonEmpty([
+          node.refreshToken,
+          node.refresh_token,
+          raw.refreshToken,
+          raw.refresh_token,
+        ]) || null,
+      expiresAt:
+        firstNonEmpty([node.expiresAt, node.expireAt, raw.expiresAt, raw.expireAt]) || null,
       authMethod: firstNonEmpty([node.authMethod, raw.authMethod]) || null,
       provider: firstNonEmpty([node.provider, raw.provider]) || null,
       profileArn: firstNonEmpty([node.profileArn, raw.profileArn]) || null,
@@ -578,40 +774,56 @@ function writeKiroToken(tokenData) {
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, KIRO_TOKEN_FILE), JSON.stringify(tokenData, null, 2));
       return;
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
 }
 
 function readKiroProfile() {
   for (const p of _getKiroProfilePaths()) {
     try {
-      if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
-    } catch { /* skip */ }
+      if (fs.existsSync(p)) {
+        return JSON.parse(fs.readFileSync(p, 'utf8'));
+      }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
 
 function readClientRegistration(clientIdHash) {
-  if (!clientIdHash) return null;
+  if (!clientIdHash) {
+    return null;
+  }
   // Scan all SSO cache dirs (handles os.homedir vs %USERPROFILE% mismatch)
   for (const dir of _getSsoCacheDirs()) {
     const filePath = path.join(dir, `${clientIdHash}.json`);
     try {
-      if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch { /* skip */ }
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
 
 function isTokenExpired(tokenData) {
-  if (!tokenData?.expiresAt) return true;
+  if (!tokenData?.expiresAt) {
+    return true;
+  }
   return new Date(tokenData.expiresAt).getTime() < Date.now() + REFRESH_BUFFER_MS;
 }
 
 function enrichWithProfile(tokenData) {
   // If token already has profileArn from its own payload, mark as trusted
   if (tokenData.profileArn) {
-    if (!tokenData._profileArnSource) tokenData._profileArnSource = 'token';
+    if (!tokenData._profileArnSource) {
+      tokenData._profileArnSource = 'token';
+    }
     return tokenData;
   }
   // Inject from profile.json cache — mark as untrusted (may be stale)
@@ -625,7 +837,9 @@ function enrichWithProfile(tokenData) {
 }
 
 function toPoolTokenShape(poolToken = null) {
-  if (!poolToken || !hasTokenShape(poolToken.accessToken)) return null;
+  if (!poolToken || !hasTokenShape(poolToken.accessToken)) {
+    return null;
+  }
   const authData = poolToken.authData || {};
   return {
     accessToken: normalizeToken(poolToken.accessToken),
@@ -652,31 +866,36 @@ async function getPoolActiveToken() {
 }
 
 function persistObservedToken(tokenData = null, { activate = false } = {}) {
-  if (!tokenData || !tokenData.accessToken) return;
+  if (!tokenData || !tokenData.accessToken) {
+    return;
+  }
   Promise.resolve().then(async () => {
     try {
       const pool = require('../../accountPool');
       await pool.init();
       // Only persist profileArn to pool if it came from the token itself,
       // not from profile.json cache (which may be stale and cause 403).
-      const trustedProfileArn = tokenData._profileArnSource === 'profile_cache'
-        ? null
-        : (tokenData.profileArn || null);
-      const upserted = await pool.saveObservedToken(ACCOUNT_POOL_TYPE, {
-        accessToken: tokenData.accessToken,
-        refreshToken: tokenData.refreshToken || null,
-        email: tokenData.email || null,
-        sourcePath: tokenData._sourcePath || path.join(_getSsoCacheDirs()[0], KIRO_TOKEN_FILE),
-        label: trustedProfileArn ? `kiro:${trustedProfileArn}` : (tokenData.email || 'kiro'),
-        authData: {
-          authMethod: tokenData.authMethod || null,
-          provider: tokenData.provider || null,
-          profileArn: trustedProfileArn,
-          region: tokenData.region || null,
-          clientIdHash: tokenData.clientIdHash || null,
-          expiresAt: tokenData.expiresAt || null,
+      const trustedProfileArn =
+        tokenData._profileArnSource === 'profile_cache' ? null : tokenData.profileArn || null;
+      const upserted = await pool.saveObservedToken(
+        ACCOUNT_POOL_TYPE,
+        {
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken || null,
+          email: tokenData.email || null,
+          sourcePath: tokenData._sourcePath || path.join(_getSsoCacheDirs()[0], KIRO_TOKEN_FILE),
+          label: trustedProfileArn ? `kiro:${trustedProfileArn}` : tokenData.email || 'kiro',
+          authData: {
+            authMethod: tokenData.authMethod || null,
+            provider: tokenData.provider || null,
+            profileArn: trustedProfileArn,
+            region: tokenData.region || null,
+            clientIdHash: tokenData.clientIdHash || null,
+            expiresAt: tokenData.expiresAt || null,
+          },
         },
-      }, { activateIfNone: true });
+        { activateIfNone: true }
+      );
       // If caller flagged activate (e.g. user re-logged in Kiro IDE with a new account),
       // set this record as the active account so pool stays in sync with disk.
       if (activate && upserted?.id) {
@@ -684,7 +903,9 @@ function persistObservedToken(tokenData = null, { activate = false } = {}) {
         debugLog(`persistObservedToken: activated account #${upserted.id} in pool`);
       }
       await pool.autoImportObservedCredentials(ACCOUNT_POOL_TYPE);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   });
 }
 
@@ -696,29 +917,40 @@ function resolveKiroLaunchCandidate() {
   } catch {
     installPath = null;
   }
-  if (!installPath) return null;
+  if (!installPath) {
+    return null;
+  }
   try {
     if (fs.existsSync(installPath) && fs.statSync(installPath).isFile()) {
       return installPath;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   if (process.platform === 'win32') {
-    const candidates = [
-      path.join(installPath, 'Kiro.exe'),
-      path.join(installPath, 'kiro.exe'),
-    ];
+    const candidates = [path.join(installPath, 'Kiro.exe'), path.join(installPath, 'kiro.exe')];
     for (const candidate of candidates) {
       try {
-        if (fs.existsSync(candidate)) return candidate;
-      } catch { /* ignore */ }
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      } catch {
+        /* ignore */
+      }
     }
   } else if (process.platform === 'darwin') {
-    if (installPath.endsWith('.app')) return installPath;
+    if (installPath.endsWith('.app')) {
+      return installPath;
+    }
     const appCandidate = `${installPath}.app`;
     try {
-      if (fs.existsSync(appCandidate)) return appCandidate;
-    } catch { /* ignore */ }
+      if (fs.existsSync(appCandidate)) {
+        return appCandidate;
+      }
+    } catch {
+      /* ignore */
+    }
   } else {
     const candidates = [
       path.join(installPath, 'kiro'),
@@ -728,8 +960,12 @@ function resolveKiroLaunchCandidate() {
     ];
     for (const candidate of candidates) {
       try {
-        if (fs.existsSync(candidate)) return candidate;
-      } catch { /* ignore */ }
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      } catch {
+        /* ignore */
+      }
     }
   }
   return installPath;
@@ -744,7 +980,9 @@ function maybeOpenKiroLogin(reason = '', options = {}) {
   // (which would wrongly block a deliberate "login to Kiro" request). The #2
   // noise fix lives in _emitActiveStatus, which suppresses the chatty STATUS
   // emits when Kiro has not been used recently.
-  if (!autoOpenLogin || !KIRO_AUTO_OPEN_LOGIN) return false;
+  if (!autoOpenLogin || !KIRO_AUTO_OPEN_LOGIN) {
+    return false;
+  }
 
   // A deprecated/inactive channel must never spawn the IDE or prompt for login:
   // the user has switched away, so any "login required" is the old channel's
@@ -757,20 +995,29 @@ function maybeOpenKiroLogin(reason = '', options = {}) {
   }
 
   const now = Date.now();
-  if (now - _lastLoginPromptAt < KIRO_LOGIN_COOLDOWN_MS) return false;
+  if (now - _lastLoginPromptAt < KIRO_LOGIN_COOLDOWN_MS) {
+    return false;
+  }
   _lastLoginPromptAt = now;
 
   try {
     const { openDefault, spawnGuiApp } = require('../../../tools/platformUtils');
     const candidate = resolveKiroLaunchCandidate();
     if (candidate) {
-      if (process.platform === 'darwin' && candidate.endsWith('.app')) openDefault(candidate);
-      else spawnGuiApp(candidate);
-      _emitChannelWarn(`[kiroAdapter] Kiro login required (${reason || 'no token'}), opened Kiro IDE for login`);
+      if (process.platform === 'darwin' && candidate.endsWith('.app')) {
+        openDefault(candidate);
+      } else {
+        spawnGuiApp(candidate);
+      }
+      _emitChannelWarn(
+        `[kiroAdapter] Kiro login required (${reason || 'no token'}), opened Kiro IDE for login`
+      );
       return true;
     }
     openDefault(KIRO_LOGIN_URL);
-    _emitChannelWarn(`[kiroAdapter] Kiro login required (${reason || 'no token'}), opened ${KIRO_LOGIN_URL}`);
+    _emitChannelWarn(
+      `[kiroAdapter] Kiro login required (${reason || 'no token'}), opened ${KIRO_LOGIN_URL}`
+    );
     return true;
   } catch (err) {
     debugLog(`failed to open Kiro login entry: ${err.message}`);
@@ -786,7 +1033,9 @@ async function refreshSocialToken(tokenData) {
     body: { refreshToken: tokenData.refreshToken },
     timeout: 15000,
   });
-  if (res.status !== 200) throw new Error(`Social token refresh failed (${res.status})`);
+  if (res.status !== 200) {
+    throw new Error(`Social token refresh failed (${res.status})`);
+  }
   const data = res.data;
   const expiresAt = new Date(Date.now() + (data.expiresIn || 3600) * 1000).toISOString();
   return {
@@ -824,27 +1073,43 @@ async function refreshIdCToken(tokenData) {
   });
   if (res.status !== 200) {
     const detail = (() => {
-      if (res.data == null) return '';
-      if (typeof res.data === 'string') return res.data.slice(0, 300);
-      try { return JSON.stringify(res.data).slice(0, 300); } catch { return ''; }
+      if (res.data == null) {
+        return '';
+      }
+      if (typeof res.data === 'string') {
+        return res.data.slice(0, 300);
+      }
+      try {
+        return JSON.stringify(res.data).slice(0, 300);
+      } catch {
+        return '';
+      }
     })();
     debugLog(`IdC refresh failed (${res.status}): ${detail}`);
     throw new Error(`IdC token refresh failed (${res.status})${detail ? `: ${detail}` : ''}`);
   }
   const data = res.data;
-  const expiresAt = new Date(Date.now() + (data.expiresIn || data.expires_in || 3600) * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + (data.expiresIn || data.expires_in || 3600) * 1000
+  ).toISOString();
   return {
     ...tokenData,
     accessToken: data.accessToken || data.access_token,
-    ...(data.refreshToken || data.refresh_token ? { refreshToken: data.refreshToken || data.refresh_token } : {}),
+    ...(data.refreshToken || data.refresh_token
+      ? { refreshToken: data.refreshToken || data.refresh_token }
+      : {}),
     expiresAt,
   };
 }
 
 async function refreshToken(tokenData) {
   const method = tokenData.authMethod;
-  if (method === 'social' || method === 'Social') return refreshSocialToken(tokenData);
-  if (method === 'IdC' || method === 'idc') return refreshIdCToken(tokenData);
+  if (method === 'social' || method === 'Social') {
+    return refreshSocialToken(tokenData);
+  }
+  if (method === 'IdC' || method === 'idc') {
+    return refreshIdCToken(tokenData);
+  }
   throw new Error(`Unknown auth method: ${method}`);
 }
 
@@ -857,7 +1122,7 @@ async function getAccessToken(options = {}) {
   const now = Date.now();
   const PROBE_INTERVAL_MS = 30000;
   let localToken;
-  if (!_cachedToken || !_lastTokenProbeMs || (now - _lastTokenProbeMs) >= PROBE_INTERVAL_MS) {
+  if (!_cachedToken || !_lastTokenProbeMs || now - _lastTokenProbeMs >= PROBE_INTERVAL_MS) {
     localToken = readKiroToken();
     _lastTokenProbeMs = now;
   }
@@ -867,9 +1132,12 @@ async function getAccessToken(options = {}) {
     // Detect local disk token change (Kiro IDE re-login)
     if (localTokenSignature && localTokenSignature !== _cachedTokenSignature) {
       const localIdentity = buildAccountIdentity(localToken);
-      const isAccountSwitch = _cachedAccountIdentity && localIdentity && _cachedAccountIdentity !== localIdentity;
+      const isAccountSwitch =
+        _cachedAccountIdentity && localIdentity && _cachedAccountIdentity !== localIdentity;
       if (isAccountSwitch) {
-        _emitActiveStatus(`[kiroAdapter] 检测到已切换账号${localToken.email ? `（${localToken.email}）` : ''}，token 自动刷新。`);
+        _emitActiveStatus(
+          `[kiroAdapter] 检测到已切换账号${localToken.email ? `（${localToken.email}）` : ''}，token 自动刷新。`
+        );
       } else {
         debugLog('Detected Kiro token refresh on disk (same account) — updating cache');
       }
@@ -877,14 +1145,19 @@ async function getAccessToken(options = {}) {
     }
     // Detect pool active-account change (manual switch via UI/nirvana).
     // Only check during probe windows (every 30s) to avoid excessive DB queries.
-    if (localToken) { // localToken is non-null only during probe windows
+    if (localToken) {
+      // localToken is non-null only during probe windows
       const poolToken = await getPoolActiveToken();
       if (poolToken?.accessToken && hasTokenShape(poolToken.accessToken)) {
         const cachedNorm = normalizeToken(_cachedToken.accessToken);
         const poolNorm = normalizeToken(poolToken.accessToken);
         if (cachedNorm !== poolNorm) {
-          _emitActiveStatus(`[kiroAdapter] 检测到账号池切换（手动/nirvana），已切换到账号 #${poolToken.accountId || ''}（${poolToken.email || poolToken.label || 'kiro'}），token 已刷新。`);
-          debugLog('Detected pool active-account switch (manual/nirvana) — switching to pool token');
+          _emitActiveStatus(
+            `[kiroAdapter] 检测到账号池切换（手动/nirvana），已切换到账号 #${poolToken.accountId || ''}（${poolToken.email || poolToken.label || 'kiro'}），token 已刷新。`
+          );
+          debugLog(
+            'Detected pool active-account switch (manual/nirvana) — switching to pool token'
+          );
           return assignCachedToken(poolToken);
         }
       }
@@ -903,18 +1176,24 @@ async function getAccessToken(options = {}) {
   //    prefer pool even if expired — local is the old/banned account.
   //  - Same account: prefer local (fresher disk copy, avoids stale pool authData).
   let tokenData = null;
-  const sameAccount = poolValid && localValid
-    && normalizeToken(poolToken.accessToken) === normalizeToken(localToken.accessToken);
+  const sameAccount =
+    poolValid &&
+    localValid &&
+    normalizeToken(poolToken.accessToken) === normalizeToken(localToken.accessToken);
 
   if (_forcePoolNext && poolValid) {
     // Force pool after ban/cooldown switch — allow expired tokens through to refresh
     tokenData = poolToken;
     _forcePoolNext = false;
-    debugLog(`getAccessToken: using pool token (forced after ban/cooldown switch, expired=${isTokenExpired(poolToken)})`);
+    debugLog(
+      `getAccessToken: using pool token (forced after ban/cooldown switch, expired=${isTokenExpired(poolToken)})`
+    );
   } else if (poolValid && localValid && !sameAccount) {
     // Pool was switched to a different account → trust pool even if expired
     tokenData = poolToken;
-    debugLog(`getAccessToken: using pool token (different account — pool was switched, expired=${isTokenExpired(poolToken)})`);
+    debugLog(
+      `getAccessToken: using pool token (different account — pool was switched, expired=${isTokenExpired(poolToken)})`
+    );
   } else if (localValid && !isTokenExpired(localToken)) {
     tokenData = localToken;
     debugLog('getAccessToken: using local token (same account, fresher disk copy)');
@@ -941,7 +1220,8 @@ async function getAccessToken(options = {}) {
 
   // If token is only in the pre-refresh buffer (not truly expired), and we're
   // in a refresh backoff period, just use the existing token.
-  const isTrulyExpired = !tokenData.expiresAt || new Date(tokenData.expiresAt).getTime() < Date.now();
+  const isTrulyExpired =
+    !tokenData.expiresAt || new Date(tokenData.expiresAt).getTime() < Date.now();
   if (!isTrulyExpired && Date.now() < _refreshBackoffUntil) {
     debugLog('Token near expiry but in refresh backoff period — using existing token');
     return assignCachedToken(tokenData);
@@ -953,7 +1233,9 @@ async function getAccessToken(options = {}) {
   }
 
   // Deduplicate concurrent refreshes
-  if (_refreshPromise) return _refreshPromise;
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
 
   _refreshPromise = (async () => {
     try {
@@ -966,11 +1248,19 @@ async function getAccessToken(options = {}) {
       _refreshBackoffUntil = Date.now() + 60_000;
       // If old token not fully expired (just within buffer), use it
       if (tokenData.expiresAt && new Date(tokenData.expiresAt) > new Date()) {
-        _emitChannelWarn(`[kiroAdapter] Token refresh failed (${err.message}), using existing token until ${tokenData.expiresAt}`);
+        _emitChannelWarn(
+          `[kiroAdapter] Token refresh failed (${err.message}), using existing token until ${tokenData.expiresAt}`
+        );
         return assignCachedToken(tokenData);
       }
-      if (fallbackToken?.accessToken && hasTokenShape(fallbackToken.accessToken) && !isTokenExpired(fallbackToken)) {
-        _emitChannelWarn('[kiroAdapter] Token refresh failed, falling back to alternate token source');
+      if (
+        fallbackToken?.accessToken &&
+        hasTokenShape(fallbackToken.accessToken) &&
+        !isTokenExpired(fallbackToken)
+      ) {
+        _emitChannelWarn(
+          '[kiroAdapter] Token refresh failed, falling back to alternate token source'
+        );
         return assignCachedToken(fallbackToken);
       }
       maybeOpenKiroLogin('token_refresh_failed', options);
@@ -986,15 +1276,23 @@ async function getAccessToken(options = {}) {
 // ── Region helpers ───────────────────────────────────────────────────────
 
 function regionFromArn(arn) {
-  if (!arn) return null;
+  if (!arn) {
+    return null;
+  }
   const parts = arn.split(':');
   return parts.length >= 4 ? parts[3] : null;
 }
 
 function endpointForRegion(region) {
-  if (REGION_ENDPOINTS[region]) return REGION_ENDPOINTS[region];
-  if (REGION_ENDPOINTS_CN[region]) return REGION_ENDPOINTS_CN[region];
-  if (/^cn-/i.test(String(region || ''))) return `https://q.${region}.amazonaws.com.cn`;
+  if (REGION_ENDPOINTS[region]) {
+    return REGION_ENDPOINTS[region];
+  }
+  if (REGION_ENDPOINTS_CN[region]) {
+    return REGION_ENDPOINTS_CN[region];
+  }
+  if (/^cn-/i.test(String(region || ''))) {
+    return `https://q.${region}.amazonaws.com.cn`;
+  }
   return `https://q.${region}.amazonaws.com`;
 }
 
@@ -1008,20 +1306,34 @@ function endpointForRegion(region) {
  * Returns same shape as fetchModelsDirect: { models, defaultModel }.
  */
 async function fetchModelsViaProxy() {
-  if (!KIRO_PROXY_URL) return null;
+  if (!KIRO_PROXY_URL) {
+    return null;
+  }
   try {
     const url = `${KIRO_PROXY_URL}/v1/models`;
     const res = await jsonRequest(url, { timeout: 12000 });
-    if (res.status !== 200 || !res.data) return null;
+    if (res.status !== 200 || !res.data) {
+      return null;
+    }
     const data = res.data;
-    const rawModels = Array.isArray(data.data) ? data.data : Array.isArray(data.models) ? data.models : [];
-    if (rawModels.length === 0) return null;
-    const models = rawModels.map(m => ({
-      modelId: m.id || m.modelId || '',
-      modelName: m.name || m.modelName || m.id || '',
-      description: m.description || '',
-    })).filter(m => m.modelId);
-    const defaultModel = rawModels.find(m => m.is_default) ? { modelId: rawModels.find(m => m.is_default).id } : null;
+    const rawModels = Array.isArray(data.data)
+      ? data.data
+      : Array.isArray(data.models)
+        ? data.models
+        : [];
+    if (rawModels.length === 0) {
+      return null;
+    }
+    const models = rawModels
+      .map((m) => ({
+        modelId: m.id || m.modelId || '',
+        modelName: m.name || m.modelName || m.id || '',
+        description: m.description || '',
+      }))
+      .filter((m) => m.modelId);
+    const defaultModel = rawModels.find((m) => m.is_default)
+      ? { modelId: rawModels.find((m) => m.is_default).id }
+      : null;
     return { models, defaultModel };
   } catch {
     return null;
@@ -1037,37 +1349,49 @@ async function fetchModelsViaProxy() {
  */
 async function fetchModelsDirect(tokenData, options = {}) {
   await applyJitter(); // anti-fingerprint timing jitter
-  const effectiveArn = options.omitProfileArn ? null : (tokenData.profileArn || null);
+  const effectiveArn = options.omitProfileArn ? null : tokenData.profileArn || null;
   const arnRegion = regionFromArn(effectiveArn);
   const region = arnRegion || DEFAULT_REGION;
   const endpoint = endpointForRegion(region);
 
   const params = new URLSearchParams({ origin: 'AI_EDITOR' });
-  if (effectiveArn) params.set('profileArn', effectiveArn);
+  if (effectiveArn) {
+    params.set('profileArn', effectiveArn);
+  }
 
   const headers = {
-    'Authorization': `Bearer ${tokenData.accessToken}`,
+    Authorization: `Bearer ${tokenData.accessToken}`,
     'User-Agent': buildKiroUserAgent(),
     'x-amzn-codewhisperer-optout': 'true',
   };
-  if (tokenData.authMethod === 'external_idp') headers['TokenType'] = 'EXTERNAL_IDP';
-  if (tokenData.provider === 'Internal') headers['redirect-for-internal'] = 'true';
+  if (tokenData.authMethod === 'external_idp') {
+    headers['TokenType'] = 'EXTERNAL_IDP';
+  }
+  if (tokenData.provider === 'Internal') {
+    headers['redirect-for-internal'] = 'true';
+  }
 
   const allModels = [];
   let defaultModel = null;
   let nextToken;
 
   do {
-    if (nextToken) params.set('nextToken', nextToken);
+    if (nextToken) {
+      params.set('nextToken', nextToken);
+    }
     const url = `${endpoint}/ListAvailableModels?${params}`;
     const res = await jsonRequest(url, {
       headers,
       timeout: 15000,
       requireProxy: KIRO_DISCOVERY_REQUIRE_PROXY,
     });
-    if (res.status !== 200) throw new Error(`ListAvailableModels failed (${res.status})`);
+    if (res.status !== 200) {
+      throw new Error(`ListAvailableModels failed (${res.status})`);
+    }
     allModels.push(...(res.data.models || []));
-    if (res.data.defaultModel && !defaultModel) defaultModel = res.data.defaultModel;
+    if (res.data.defaultModel && !defaultModel) {
+      defaultModel = res.data.defaultModel;
+    }
     nextToken = res.data.nextToken;
   } while (nextToken);
 
@@ -1082,7 +1406,9 @@ async function fetchModelsDirect(tokenData, options = {}) {
 async function fetchModels(tokenData, options = {}) {
   // Try kiro-proxy first (works even without local token on Windows)
   const proxyResult = await fetchModelsViaProxy();
-  if (proxyResult && proxyResult.models.length > 0) return proxyResult;
+  if (proxyResult && proxyResult.models.length > 0) {
+    return proxyResult;
+  }
 
   // Fall back to direct AWS API call
   return fetchModelsDirect(tokenData, options);
@@ -1099,7 +1425,9 @@ async function fetchModels(tokenData, options = {}) {
 function buildProxyHttpsAgent() {
   const candidates = resolveHttpProxyCandidates('https://q.amazonaws.com');
   const proxyUrl = candidates[0] || '';
-  if (!proxyUrl) return undefined;
+  if (!proxyUrl) {
+    return undefined;
+  }
   try {
     // Try to use https-proxy-agent if available (most reliable)
     const { HttpsProxyAgent } = require('https-proxy-agent');
@@ -1112,7 +1440,9 @@ function buildProxyHttpsAgent() {
 
 async function createSDKClient(tokenData) {
   // Reuse cached client if token hasn't changed
-  if (_sdkClient && _sdkClientToken === tokenData.accessToken) return _sdkClient;
+  if (_sdkClient && _sdkClientToken === tokenData.accessToken) {
+    return _sdkClient;
+  }
 
   const { CodeWhispererStreaming } = await getCWModule();
   const arnRegion = regionFromArn(tokenData.profileArn);
@@ -1143,10 +1473,12 @@ async function createSDKClient(tokenData) {
   // (matches kiro-proxy: separate middleware per header for proper stacking)
   client.middlewareStack.add(
     (next) => async (args) => {
-      args.request.headers = sanitizeOutgoingHeaders(buildKiroHeaders({
-        ...args.request.headers,
-        'x-amzn-codewhisperer-optout': 'true',
-      }));
+      args.request.headers = sanitizeOutgoingHeaders(
+        buildKiroHeaders({
+          ...args.request.headers,
+          'x-amzn-codewhisperer-optout': 'true',
+        })
+      );
       return next(args);
     },
     { step: 'build', name: 'optOutHeader' }
@@ -1192,7 +1524,9 @@ async function createSDKClient(tokenData) {
  * Also checks for Kiro installation via ideDetector and kiro-proxy availability.
  */
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   _installDetected = false;
 
   // Kiro-proxy configured — optimistic available
@@ -1227,17 +1561,23 @@ function detect(forceRefresh = false) {
   // KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS. The token is still cached for
   // routing/generate regardless.
   if (!_available) {
-    getPoolActiveToken().then(poolToken => {
-      if (poolToken?.accessToken && hasTokenShape(poolToken.accessToken)) {
-        _cachedToken = poolToken;
-        if (_installDetected && countsTowardAvailability(poolToken)) {
-          debugLog('Pool token found in background check — marking available (imported-creds flag on + Kiro installed)');
-          _available = true;
-        } else {
-          debugLog('Pool token cached for routing, but not counted toward availability (strict mode)');
+    getPoolActiveToken()
+      .then((poolToken) => {
+        if (poolToken?.accessToken && hasTokenShape(poolToken.accessToken)) {
+          _cachedToken = poolToken;
+          if (_installDetected && countsTowardAvailability(poolToken)) {
+            debugLog(
+              'Pool token found in background check — marking available (imported-creds flag on + Kiro installed)'
+            );
+            _available = true;
+          } else {
+            debugLog(
+              'Pool token cached for routing, but not counted toward availability (strict mode)'
+            );
+          }
         }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }
 
   return _available;
@@ -1261,7 +1601,7 @@ async function detectAsync() {
   }
   try {
     const tokenData = await getAccessToken({ autoOpenLogin: false });
-    _available = !!(tokenData?.accessToken);
+    _available = !!tokenData?.accessToken;
     return _available;
   } catch (err) {
     debugLog(`detectAsync getAccessToken failed: ${err.message}, falling back to file check`);
@@ -1272,7 +1612,7 @@ async function detectAsync() {
     try {
       const localToken = readKiroToken();
       if (localToken?.accessToken && hasTokenShape(localToken.accessToken)) {
-        const hasRefresh = !!(localToken.refreshToken);
+        const hasRefresh = !!localToken.refreshToken;
         const reallyExpired = localToken.expiresAt
           ? new Date(localToken.expiresAt) < new Date()
           : false;
@@ -1283,7 +1623,9 @@ async function detectAsync() {
         }
         debugLog('detectAsync: disk token expired and no refreshToken');
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 最终 fallback：Kiro 已安装 → 仅标记 _installDetected 供 listModels()
     // 但不标记 _available — 没有有效 token 无法发送请求
@@ -1294,7 +1636,9 @@ async function detectAsync() {
         debugLog('detectAsync: Kiro installed but no valid token — not marking available');
         _installDetected = true;
       }
-    } catch { /* ideDetector not available */ }
+    } catch {
+      /* ideDetector not available */
+    }
 
     _available = false;
     return false;
@@ -1307,7 +1651,7 @@ async function detectAsync() {
  */
 async function listModels() {
   // Return cache if fresh
-  if (_models.length > 0 && (Date.now() - _modelsFetchedAt) < MODEL_CACHE_TTL) {
+  if (_models.length > 0 && Date.now() - _modelsFetchedAt < MODEL_CACHE_TTL) {
     return _models;
   }
 
@@ -1319,7 +1663,7 @@ async function listModels() {
     if (!KIRO_PROXY_URL) {
       if (_installDetected) {
         const proxyAvailable = hasOverseasRoute();
-        _models = KIRO_BASELINE_MODELS.map(m => {
+        _models = KIRO_BASELINE_MODELS.map((m) => {
           const needsProxy = m.region === 'overseas';
           const reachable = !needsProxy || proxyAvailable;
           return {
@@ -1345,12 +1689,16 @@ async function listModels() {
   if (tokenData && !tokenData.profileArn) {
     tokenData = enrichWithProfile(tokenData);
     if (!tokenData.profileArn) {
-      debugLog('listModels: WARNING — profileArn is missing, ListAvailableModels may return empty/limited results');
+      debugLog(
+        'listModels: WARNING — profileArn is missing, ListAvailableModels may return empty/limited results'
+      );
     }
   }
 
   const profileArnSource = tokenData?._profileArnSource || 'unknown';
-  debugLog(`listModels: token source=${tokenData?._sourcePath ? 'local' : 'pool'}, profileArn source=${profileArnSource}, arn=${tokenData?.profileArn || 'none'}`);
+  debugLog(
+    `listModels: token source=${tokenData?._sourcePath ? 'local' : 'pool'}, profileArn source=${profileArnSource}, arn=${tokenData?.profileArn || 'none'}`
+  );
 
   let fetched;
   try {
@@ -1358,7 +1706,9 @@ async function listModels() {
     debugLog(`listModels: fetched ${fetched?.models?.length || 0} models from API`);
   } catch (err) {
     const is403 = /403|401|forbidden|AccessDeniedException/i.test(err.message || '');
-    const isSuspended = /suspended|banned|locked|deactivated|revoked|terminated/i.test(err.message || '');
+    const isSuspended = /suspended|banned|locked|deactivated|revoked|terminated/i.test(
+      err.message || ''
+    );
 
     // If the account is permanently suspended/banned, ban it and retry with fresh token
     if (isSuspended && tokenData) {
@@ -1372,7 +1722,9 @@ async function listModels() {
         const result = await pool.banActiveAccount(ACCOUNT_POOL_TYPE);
         if (result?.switched) {
           _forcePoolNext = true;
-          _emitStatus(`[kiroAdapter] 账号已封禁 (#${result.bannedId})，已切换到账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在刷新模型列表...`);
+          _emitStatus(
+            `[kiroAdapter] 账号已封禁 (#${result.bannedId})，已切换到账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在刷新模型列表...`
+          );
           _emitAccountEmail(result.nextEmail);
         } else if (result) {
           _emitStatus(`[kiroAdapter] 账号已封禁 (#${result.bannedId})，尝试重新读取本地凭证...`);
@@ -1387,7 +1739,9 @@ async function listModels() {
           const enriched = enrichWithProfile(newToken);
           fetched = await fetchModels(enriched);
           if (fetched?.models?.length) {
-            _emitStatus(`[kiroAdapter] token 已刷新${newToken.email ? `（${newToken.email}）` : ''}，已获取 ${fetched.models.length} 个模型。`);
+            _emitStatus(
+              `[kiroAdapter] token 已刷新${newToken.email ? `（${newToken.email}）` : ''}，已获取 ${fetched.models.length} 个模型。`
+            );
           }
           debugLog(`listModels: post-ban retry fetched ${fetched?.models?.length || 0} models`);
         }
@@ -1407,7 +1761,9 @@ async function listModels() {
         debugLog('listModels: 403 with profile_cache profileArn — retrying WITHOUT profileArn');
         try {
           fetched = await fetchModels(tokenData, { omitProfileArn: true });
-          debugLog(`listModels: no-profileArn fallback fetched ${fetched?.models?.length || 0} models`);
+          debugLog(
+            `listModels: no-profileArn fallback fetched ${fetched?.models?.length || 0} models`
+          );
         } catch (noArnErr) {
           debugLog(`listModels: no-profileArn fallback also failed: ${noArnErr.message}`);
           fetched = null;
@@ -1422,16 +1778,22 @@ async function listModels() {
         if (refreshResult.success) {
           try {
             tokenData = refreshResult.tokenData;
-            if (tokenData && !tokenData.profileArn) tokenData = enrichWithProfile(tokenData);
+            if (tokenData && !tokenData.profileArn) {
+              tokenData = enrichWithProfile(tokenData);
+            }
             fetched = await fetchModels(tokenData || {});
-            debugLog(`listModels: forceRefresh retry fetched ${fetched?.models?.length || 0} models`);
+            debugLog(
+              `listModels: forceRefresh retry fetched ${fetched?.models?.length || 0} models`
+            );
           } catch (retryErr) {
             debugLog(`listModels: forceRefresh retry failed: ${retryErr.message}`);
             // Last resort: if the refreshed profileArn is also from cache, try without it
             if (tokenData?._profileArnSource === 'profile_cache' && tokenData.profileArn) {
               try {
                 fetched = await fetchModels(tokenData, { omitProfileArn: true });
-                debugLog(`listModels: forceRefresh no-arn fallback fetched ${fetched?.models?.length || 0}`);
+                debugLog(
+                  `listModels: forceRefresh no-arn fallback fetched ${fetched?.models?.length || 0}`
+                );
               } catch {
                 fetched = null;
               }
@@ -1458,8 +1820,10 @@ async function listModels() {
   // Fallback to baseline models if API failed
   if (!fetched || !fetched.models || fetched.models.length === 0) {
     const proxyAvailable = hasOverseasRoute();
-    debugLog(`listModels: API unavailable, falling back to baseline models (proxy=${proxyAvailable})`);
-    _models = KIRO_BASELINE_MODELS.map(m => {
+    debugLog(
+      `listModels: API unavailable, falling back to baseline models (proxy=${proxyAvailable})`
+    );
+    _models = KIRO_BASELINE_MODELS.map((m) => {
       const needsProxy = m.region === 'overseas';
       const reachable = !needsProxy || proxyAvailable;
       return {
@@ -1479,7 +1843,7 @@ async function listModels() {
   }
 
   const { models, defaultModel } = fetched;
-  _models = models.map(m => ({
+  _models = models.map((m) => ({
     id: m.modelId,
     name: m.modelName || m.modelId,
     provider: 'kiro',
@@ -1490,10 +1854,12 @@ async function listModels() {
 
   // Inject Claude models that Kiro IDE shows but ListAvailableModels omits.
   if (KIRO_INJECT_CLAUDE) {
-    const existingIds = new Set(_models.map(m => m.id.toLowerCase().replace(/[.-]/g, '')));
+    const existingIds = new Set(_models.map((m) => m.id.toLowerCase().replace(/[.-]/g, '')));
     for (const cm of KIRO_INJECTED_CLAUDE_MODELS) {
       const normalizedId = cm.id.toLowerCase().replace(/[.-]/g, '');
-      if (existingIds.has(normalizedId)) continue;
+      if (existingIds.has(normalizedId)) {
+        continue;
+      }
       _models.push({
         id: cm.id,
         name: `${cm.name} (${cm.credit})`,
@@ -1508,9 +1874,11 @@ async function listModels() {
 
   // Deduplicate: normalize dot/dash variants (claude-sonnet-4.6 vs claude-sonnet-4-6)
   const seen = new Set();
-  _models = _models.filter(m => {
+  _models = _models.filter((m) => {
     const key = m.id.toLowerCase().replace(/[.-]/g, '');
-    if (seen.has(key)) return false;
+    if (seen.has(key)) {
+      return false;
+    }
     seen.add(key);
     return true;
   });
@@ -1522,17 +1890,22 @@ async function listModels() {
  * Generate via kiro-proxy (Anthropic-compatible /v1/messages endpoint).
  */
 async function generateViaProxy(prompt, options = {}) {
-  if (!KIRO_PROXY_URL) return null;
-  let messages = (options.messages && options.messages.length > 0)
-    ? options.messages
-    : [{ role: 'user', content: prompt }];
+  if (!KIRO_PROXY_URL) {
+    return null;
+  }
+  let messages =
+    options.messages && options.messages.length > 0
+      ? options.messages
+      : [{ role: 'user', content: prompt }];
 
   // Attach images to messages (OpenAI vision format)
   if (Array.isArray(options.images) && options.images.length > 0) {
     try {
       const { attachImagesToOpenAIMessages } = require('./_imageCompat');
       messages = attachImagesToOpenAIMessages(messages, options.images);
-    } catch { /* _imageCompat not available */ }
+    } catch {
+      /* _imageCompat not available */
+    }
   }
 
   const hasTools = Array.isArray(options.tools) && options.tools.length > 0;
@@ -1547,7 +1920,9 @@ async function generateViaProxy(prompt, options = {}) {
       max_tokens: options.maxTokens || 8192,
       stream: false,
     };
-    if (options.system) body.system = options.system;
+    if (options.system) {
+      body.system = options.system;
+    }
     try {
       const res = await jsonRequest(url, {
         method: 'POST',
@@ -1555,10 +1930,12 @@ async function generateViaProxy(prompt, options = {}) {
         headers: { 'Content-Type': 'application/json' },
         timeout: TIMEOUT_MS,
       });
-      if (res.status !== 200 || !res.data) return null;
+      if (res.status !== 200 || !res.data) {
+        return null;
+      }
       const data = res.data;
-      const textParts = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
-      const toolBlocks = (data.content || []).filter(b => b.type === 'tool_use');
+      const textParts = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text);
+      const toolBlocks = (data.content || []).filter((b) => b.type === 'tool_use');
       const model = data.model || options.model || 'kiro-proxy';
       return buildSuccess(textParts.join('').trim(), {
         adapter: 'kiro',
@@ -1587,9 +1964,13 @@ async function generateViaProxy(prompt, options = {}) {
       headers: { 'Content-Type': 'application/json' },
       timeout: TIMEOUT_MS,
     });
-    if (res.status !== 200 || !res.data) return null;
+    if (res.status !== 200 || !res.data) {
+      return null;
+    }
     const text = res.data?.choices?.[0]?.message?.content || '';
-    if (!text) return null;
+    if (!text) {
+      return null;
+    }
     const model = res.data?.model || options.model || 'kiro-proxy';
     return buildSuccess(text.trim(), {
       adapter: 'kiro',
@@ -1616,7 +1997,9 @@ async function generate(prompt, options = {}) {
   // Try kiro-proxy first when configured (proxy supports images via OpenAI vision format)
   if (KIRO_PROXY_URL) {
     const proxyResult = await generateViaProxy(prompt, options);
-    if (proxyResult) return proxyResult;
+    if (proxyResult) {
+      return proxyResult;
+    }
   }
 
   let tokenData = null;
@@ -1624,9 +2007,13 @@ async function generate(prompt, options = {}) {
     // applyJitter removed here — already called in fetchModelsDirect()
     tokenData = await getAccessToken({ autoOpenLogin: true });
     if (!tokenData?.profileArn) {
-      throw new Error('Kiro profileArn 缺失 — 请先在 Kiro IDE 中完成登录并授权 Q Developer profile');
+      throw new Error(
+        'Kiro profileArn 缺失 — 请先在 Kiro IDE 中完成登录并授权 Q Developer profile'
+      );
     }
-    debugLog(`generate: profileArn source=${tokenData._profileArnSource || 'token'}, arn=${tokenData.profileArn}`);
+    debugLog(
+      `generate: profileArn source=${tokenData._profileArnSource || 'token'}, arn=${tokenData.profileArn}`
+    );
     const client = await createSDKClient(tokenData);
     const { GenerateAssistantResponseCommand } = await getCWModule();
 
@@ -1651,11 +2038,20 @@ async function generate(prompt, options = {}) {
       }
     }
 
-    debugLog('generate() rawMessages:', options.rawMessages?.length || 0,
-      'tools:', options.tools?.length || 0,
-      'cwTools in currentMessage:', conversationState.currentMessage?.userInputMessage?.userInputMessageContext?.tools?.length || 0,
-      'toolResults in currentMessage:', conversationState.currentMessage?.userInputMessage?.userInputMessageContext?.toolResults?.length || 0,
-      'historyLen:', conversationState.history?.length || 0);
+    debugLog(
+      'generate() rawMessages:',
+      options.rawMessages?.length || 0,
+      'tools:',
+      options.tools?.length || 0,
+      'cwTools in currentMessage:',
+      conversationState.currentMessage?.userInputMessage?.userInputMessageContext?.tools?.length ||
+        0,
+      'toolResults in currentMessage:',
+      conversationState.currentMessage?.userInputMessage?.userInputMessageContext?.toolResults
+        ?.length || 0,
+      'historyLen:',
+      conversationState.history?.length || 0
+    );
 
     const command = new GenerateAssistantResponseCommand({
       conversationState,
@@ -1666,7 +2062,7 @@ async function generate(prompt, options = {}) {
     // HTTP 请求、释放 socket),并给内部 120s race 补一条「signal abort 时立即 reject」的臂,
     // 让 UI 的 Esc/Ctrl-C 不必死等 TIMEOUT_MS。门关 → sendConfig 为空、无 abort 臂,逐字节回退。
     const _kiroAbortOn = _isKiroAbortEnabled();
-    const _kiroSignal = _kiroAbortOn ? (options.abortSignal || undefined) : undefined;
+    const _kiroSignal = _kiroAbortOn ? options.abortSignal || undefined : undefined;
     const sendConfig = _kiroSignal ? { abortSignal: _kiroSignal } : undefined;
 
     // Wrap in timeout to prevent indefinite hangs
@@ -1674,7 +2070,10 @@ async function generate(prompt, options = {}) {
     const _raceArms = [
       client.send(command, sendConfig),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Kiro request timeout (${TIMEOUT_MS / 1000}s)`)), TIMEOUT_MS)
+        setTimeout(
+          () => reject(new Error(`Kiro request timeout (${TIMEOUT_MS / 1000}s)`)),
+          TIMEOUT_MS
+        )
       ),
     ];
     if (_kiroSignal) {
@@ -1682,7 +2081,9 @@ async function generate(prompt, options = {}) {
         const { createAbortRejectionArm } = require('../abortRaceArm');
         _abortArm = createAbortRejectionArm(_kiroSignal, 'kiro request aborted');
         _raceArms.push(_abortArm.promise);
-      } catch { _abortArm = null; }
+      } catch {
+        _abortArm = null;
+      }
     }
     const sendWithTimeout = Promise.race(_raceArms);
 
@@ -1690,7 +2091,13 @@ async function generate(prompt, options = {}) {
     try {
       response = await sendWithTimeout;
     } finally {
-      if (_abortArm) { try { _abortArm.cleanup(); } catch { /* ignore */ } }
+      if (_abortArm) {
+        try {
+          _abortArm.cleanup();
+        } catch {
+          /* ignore */
+        }
+      }
     }
     if (!response.generateAssistantResponseResponse) {
       throw new Error('Empty response from Q Developer');
@@ -1714,10 +2121,17 @@ async function generate(prompt, options = {}) {
           staleOptions: {
             provider: 'claude',
             onStale: (elapsed) => {
-              try { onChunk({ type: 'status', text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s` }); } catch { /* ignore */ }
+              try {
+                onChunk({
+                  type: 'status',
+                  text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s`,
+                });
+              } catch {
+                /* ignore */
+              }
             },
           },
-        },
+        }
       );
       content = streamResult.content;
       modelId = streamResult.modelId;
@@ -1725,7 +2139,7 @@ async function generate(prompt, options = {}) {
       toolUseBlocks = streamResult.toolUseBlocks;
     } catch (streamErr) {
       // If stream interrupted but we have partial content, return what we got
-      if (content && content.trim() || (toolUseBlocks && toolUseBlocks.length > 0)) {
+      if ((content && content.trim()) || (toolUseBlocks && toolUseBlocks.length > 0)) {
         // Partial success still verifies the token is valid
         if (_pendingPersist) {
           persistObservedToken(_pendingPersist.token, { activate: _pendingPersist.activate });
@@ -1765,13 +2179,18 @@ async function generate(prompt, options = {}) {
     });
   } catch (err) {
     // Classify auth errors
-    const isAuthErr = err.message?.includes('401') || err.message?.includes('403')
-      || err.message?.includes('expired') || err.message?.includes('suspended')
-      || err.message?.includes('AccessDeniedException');
+    const isAuthErr =
+      err.message?.includes('401') ||
+      err.message?.includes('403') ||
+      err.message?.includes('expired') ||
+      err.message?.includes('suspended') ||
+      err.message?.includes('AccessDeniedException');
 
     if (isAuthErr) {
-      const isPermanent = /suspended|banned|locked|deactivated|revoked|invalid.?key|terminated/i
-        .test(err.message || '');
+      const isPermanent =
+        /suspended|banned|locked|deactivated|revoked|invalid.?key|terminated/i.test(
+          err.message || ''
+        );
 
       if (isPermanent) {
         // Permanent: ban immediately, then always retry once.
@@ -1787,10 +2206,14 @@ async function generate(prompt, options = {}) {
           const result = await pool.banActiveAccount(ACCOUNT_POOL_TYPE);
           if (result?.switched) {
             _forcePoolNext = true;
-            _emitStatus(`[kiroAdapter] 账号已封禁 (#${result.bannedId})，已自动切换到池中账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在重试...`);
+            _emitStatus(
+              `[kiroAdapter] 账号已封禁 (#${result.bannedId})，已自动切换到池中账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在重试...`
+            );
             _emitAccountEmail(result.nextEmail);
           } else if (result) {
-            _emitStatus(`[kiroAdapter] 账号已封禁 (#${result.bannedId})，池中无其他可用账号，尝试重新读取本地凭证...`);
+            _emitStatus(
+              `[kiroAdapter] 账号已封禁 (#${result.bannedId})，池中无其他可用账号，尝试重新读取本地凭证...`
+            );
           }
         } catch (poolErr) {
           debugLog(`Failed to ban account: ${poolErr.message}`);
@@ -1829,10 +2252,14 @@ async function generate(prompt, options = {}) {
           const result = await pool.cooldownAccount(ACCOUNT_POOL_TYPE, 60000);
           if (result?.switched) {
             _forcePoolNext = true;
-            _emitStatus(`[kiroAdapter] 账号 #${result.cooldownId} 认证失败，已自动切换到账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在重试...`);
+            _emitStatus(
+              `[kiroAdapter] 账号 #${result.cooldownId} 认证失败，已自动切换到账号 #${result.nextId}（${result.nextEmail || result.label || 'kiro'}），正在重试...`
+            );
             _emitAccountEmail(result.nextEmail);
           } else if (result) {
-            _emitStatus(`[kiroAdapter] 账号 #${result.cooldownId} 认证失败，尝试重新读取本地凭证...`);
+            _emitStatus(
+              `[kiroAdapter] 账号 #${result.cooldownId} 认证失败，尝试重新读取本地凭证...`
+            );
           }
         } catch (poolErr) {
           debugLog(`Failed to cooldown account: ${poolErr.message}`);
@@ -1851,11 +2278,14 @@ async function generate(prompt, options = {}) {
 
     // Enhance error message with actionable context
     let errorMsg = err.message;
-    const is403orTimeout = /403|401|forbidden|AccessDeniedException|timeout|ECONNREFUSED|ENOTFOUND/i.test(errorMsg);
+    const is403orTimeout =
+      /403|401|forbidden|AccessDeniedException|timeout|ECONNREFUSED|ENOTFOUND/i.test(errorMsg);
     if (is403orTimeout && tokenData?._profileArnSource === 'profile_cache') {
-      errorMsg += ' — profileArn 来自本地缓存(profile.json)，可能已过期。请在 Kiro IDE 重新登录以刷新 profile。';
+      errorMsg +=
+        ' — profileArn 来自本地缓存(profile.json)，可能已过期。请在 Kiro IDE 重新登录以刷新 profile。';
     } else if (is403orTimeout && !hasOverseasRoute()) {
-      errorMsg += ' — 未检测到代理，AWS 端点在国内网络不可达。请配置 HTTPS_PROXY 或 KIRO_PROXY_URL 后重试。';
+      errorMsg +=
+        ' — 未检测到代理，AWS 端点在国内网络不可达。请配置 HTTPS_PROXY 或 KIRO_PROXY_URL 后重试。';
     }
 
     return buildFailure(errorMsg, {
@@ -1877,12 +2307,15 @@ function getStatus() {
   let detail = '';
   if (_available) {
     const proxyAvailable = hasOverseasRoute();
-    detail = (KIRO_PROXY_URL ? `Proxy: ${KIRO_PROXY_URL}` : 'Token 有效') + (_models.length ? ` (${_models.length} 个模型)` : '');
+    detail =
+      (KIRO_PROXY_URL ? `Proxy: ${KIRO_PROXY_URL}` : 'Token 有效') +
+      (_models.length ? ` (${_models.length} 个模型)` : '');
     if (!proxyAvailable) {
-      const baselineCount = _models.filter(m => m.discoverySource === 'baseline').length;
-      detail += baselineCount > 0
-        ? `（无代理，${baselineCount} 个基线模型，海外模型需配置 HTTPS_PROXY）`
-        : '（无代理，海外模型不可用 — 请配置 HTTPS_PROXY 或 KIRO_PROXY_URL）';
+      const baselineCount = _models.filter((m) => m.discoverySource === 'baseline').length;
+      detail +=
+        baselineCount > 0
+          ? `（无代理，${baselineCount} 个基线模型，海外模型需配置 HTTPS_PROXY）`
+          : '（无代理，海外模型不可用 — 请配置 HTTPS_PROXY 或 KIRO_PROXY_URL）';
     }
   } else if (_installDetected) {
     detail = '检测到 Kiro 已安装，但未检测到登录 token — 请先在 Kiro IDE 登录';
@@ -1968,14 +2401,22 @@ function startTokenFileWatch() {
     try {
       const dir = path.dirname(tokenPath);
       const base = path.basename(tokenPath);
-      if (watchedDirs.has(dir)) continue;
-      if (!fs.existsSync(dir)) continue;
+      if (watchedDirs.has(dir)) {
+        continue;
+      }
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
       watchedDirs.add(dir);
 
       const watcher = fs.watch(dir, { persistent: false }, (eventType, filename) => {
-        if (filename && filename !== base) return;
+        if (filename && filename !== base) {
+          return;
+        }
         // Debounce: nirvana writes multiple files in quick succession
-        if (_tokenWatchDebounce) clearTimeout(_tokenWatchDebounce);
+        if (_tokenWatchDebounce) {
+          clearTimeout(_tokenWatchDebounce);
+        }
         _tokenWatchDebounce = setTimeout(() => {
           _tokenWatchDebounce = null;
           _lastTokenProbeMs = 0; // force immediate probe on next getAccessToken()
@@ -1985,24 +2426,37 @@ function startTokenFileWatch() {
             if (fresh) {
               const freshSig = buildTokenSignature(fresh);
               if (_cachedTokenSignature && freshSig !== _cachedTokenSignature) {
-                _emitActiveStatus(`[kiroAdapter] 检测到磁盘 token 变化${fresh.email ? `（${fresh.email}）` : ''}，即时刷新。`);
+                _emitActiveStatus(
+                  `[kiroAdapter] 检测到磁盘 token 变化${fresh.email ? `（${fresh.email}）` : ''}，即时刷新。`
+                );
                 assignCachedToken(fresh);
               }
             }
-          } catch { /* best effort */ }
+          } catch {
+            /* best effort */
+          }
         }, 300);
       });
       watcher.unref?.();
       watcher.on('error', () => {}); // ignore watch errors
       _tokenWatchers.push(watcher);
-    } catch { /* dir doesn't exist or no permission, skip */ }
+    } catch {
+      /* dir doesn't exist or no permission, skip */
+    }
   }
 }
 
 function stopTokenFileWatch() {
-  for (const w of _tokenWatchers) try { w.close(); } catch {}
+  for (const w of _tokenWatchers) {
+    try {
+      w.close();
+    } catch {}
+  }
   _tokenWatchers = [];
-  if (_tokenWatchDebounce) { clearTimeout(_tokenWatchDebounce); _tokenWatchDebounce = null; }
+  if (_tokenWatchDebounce) {
+    clearTimeout(_tokenWatchDebounce);
+    _tokenWatchDebounce = null;
+  }
 }
 
 // ── Proactive token warming (P2 IDE-channel stability) ──
@@ -2015,10 +2469,18 @@ function stopTokenFileWatch() {
 // Pure gating predicate (extracted for deterministic testing). Returns true only
 // when a proactive refresh is both safe and useful.
 function _shouldWarmToken(tok, ctx = {}) {
-  if (ctx.channelActive === false) return false;        // never warm a deprecated channel
-  if (!ctx.recentlyActive) return false;                // only warm a channel in active use
-  if (ctx.refreshing || ctx.now < ctx.backoffUntil) return false; // in flight / backing off
-  if (!tok || !tok.refreshToken || !tok.expiresAt) return false;  // nothing to pre-refresh
+  if (ctx.channelActive === false) {
+    return false;
+  } // never warm a deprecated channel
+  if (!ctx.recentlyActive) {
+    return false;
+  } // only warm a channel in active use
+  if (ctx.refreshing || ctx.now < ctx.backoffUntil) {
+    return false;
+  } // in flight / backing off
+  if (!tok || !tok.refreshToken || !tok.expiresAt) {
+    return false;
+  } // nothing to pre-refresh
   // Inside the pre-expiry buffer? (mirrors isTokenExpired's buffer semantics)
   return new Date(tok.expiresAt).getTime() < ctx.now + REFRESH_BUFFER_MS;
 }
@@ -2031,9 +2493,11 @@ async function _warmTokenTick() {
     backoffUntil: _refreshBackoffUntil,
     now: Date.now(),
   });
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   try {
-    await getAccessToken();                             // dedup'd refresh; no autoOpenLogin → no IDE pop
+    await getAccessToken(); // dedup'd refresh; no autoOpenLogin → no IDE pop
     _lastWarmAt = Date.now();
     debugLog('proactive token warm: refreshed Kiro token ahead of expiry');
   } catch (err) {
@@ -2042,21 +2506,36 @@ async function _warmTokenTick() {
 }
 
 function startTokenWarmer() {
-  if (_warmTimer) return;
-  _warmTimer = setInterval(() => { _warmTokenTick().catch(() => {}); }, KIRO_WARM_CHECK_INTERVAL_MS);
+  if (_warmTimer) {
+    return;
+  }
+  _warmTimer = setInterval(() => {
+    _warmTokenTick().catch(() => {});
+  }, KIRO_WARM_CHECK_INTERVAL_MS);
   _warmTimer.unref?.(); // never keep the event loop alive for warming alone
 }
 
 function stopTokenWarmer() {
-  if (_warmTimer) { clearInterval(_warmTimer); _warmTimer = null; }
+  if (_warmTimer) {
+    clearInterval(_warmTimer);
+    _warmTimer = null;
+  }
 }
 
 // Start watching on module load (best effort)
-try { startTokenFileWatch(); } catch { /* ignore */ }
+try {
+  startTokenFileWatch();
+} catch {
+  /* ignore */
+}
 // Start the proactive token warmer on module load (best effort). It no-ops while
 // Kiro is idle (gated on recent active use) and is unref'd, so it is harmless until
 // the channel is actually used.
-try { startTokenWarmer(); } catch { /* ignore */ }
+try {
+  startTokenWarmer();
+} catch {
+  /* ignore */
+}
 
 /**
  * Channel lifecycle hook — called by the gateway when this adapter is selected
@@ -2078,17 +2557,35 @@ try { startTokenWarmer(); } catch { /* ignore */ }
  */
 function setChannelActive(active) {
   const next = active !== false;
-  if (next === _channelActive) return;
+  if (next === _channelActive) {
+    return;
+  }
   _channelActive = next;
   if (next) {
-    try { startTokenFileWatch(); } catch { /* best effort */ }
-    try { startTokenWarmer(); } catch { /* best effort */ }
+    try {
+      startTokenFileWatch();
+    } catch {
+      /* best effort */
+    }
+    try {
+      startTokenWarmer();
+    } catch {
+      /* best effort */
+    }
     debugLog('channel reactivated — token file watch resumed');
   } else {
     // Deprecated channel: stop the disk watcher so a background file change can
     // no longer trigger token re-reads / refresh attempts for an unused channel.
-    try { stopTokenFileWatch(); } catch { /* best effort */ }
-    try { stopTokenWarmer(); } catch { /* best effort */ }
+    try {
+      stopTokenFileWatch();
+    } catch {
+      /* best effort */
+    }
+    try {
+      stopTokenWarmer();
+    } catch {
+      /* best effort */
+    }
     debugLog('channel deprecated — token file watch released, anomalies demoted to debug log');
   }
 }
@@ -2123,13 +2620,40 @@ try {
     _modelsFetchedAt = 0;
     _refreshBackoffUntil = 0;
   });
-} catch { /* proxyConfigService may not be loaded yet */ }
+} catch {
+  /* proxyConfigService may not be loaded yet */
+}
 
 module.exports = {
-  detect, detectAsync, listModels, generate, getStatus, destroy,
-  getAccessToken, createSDKClient, getCWModule,
-  manualRefresh, forceRefresh, getKiroTokenCandidatePaths,
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  destroy,
+  getAccessToken,
+  createSDKClient,
+  getCWModule,
+  manualRefresh,
+  forceRefresh,
+  getKiroTokenCandidatePaths,
   setChannelActive,
   // P2 proactive token warming — pure gating predicate + lifecycle controls (tested).
-  _shouldWarmToken, startTokenWarmer, stopTokenWarmer,
+  _shouldWarmToken,
+  startTokenWarmer,
+  stopTokenWarmer,
+  // Test-only: flush the deferred account-pool persistence (normally fired
+  // after a successful generate() verifies the token).
+  _flushPendingPersist,
 };
+
+/** Test-only hook: fire the deferred pool persistence immediately. */
+async function _flushPendingPersist() {
+  if (!_pendingPersist) {
+    return false;
+  }
+  const { token, activate } = _pendingPersist;
+  _pendingPersist = null;
+  await persistObservedToken(token, { activate });
+  return true;
+}

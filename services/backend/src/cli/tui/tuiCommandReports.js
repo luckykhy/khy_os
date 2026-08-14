@@ -42,11 +42,19 @@ function buildHardwareReport() {
     const hw = require('../../services/hardwareProfileService');
     const { lines, profile } = hw.getHardwareSummary();
     const out = ['硬件配置:'];
-    for (const line of lines || []) out.push(`  ${line}`);
+    for (const line of lines || []) {
+      out.push(`  ${line}`);
+    }
     if (profile && profile.os) {
       const osp = profile.os;
-      out.push('', '操作系统:', `  系统: ${osp.os} (${osp.kernel})${osp.source === 'pinned' ? ' (KHY_OS_PROFILE 锁定)' : ''}`);
-      if (osp.isWSL) out.push('  环境: WSL (跨 /mnt IO 较慢，已放宽超时)');
+      out.push(
+        '',
+        '操作系统:',
+        `  系统: ${osp.os} (${osp.kernel})${osp.source === 'pinned' ? ' (KHY_OS_PROFILE 锁定)' : ''}`
+      );
+      if (osp.isWSL) {
+        out.push('  环境: WSL (跨 /mnt IO 较慢，已放宽超时)');
+      }
       if (osp.container && osp.container.detected) {
         const eff = profile.effective || {};
         const memTxt = eff.ramMB ? `${Math.round(eff.ramMB / 1024)}GB` : '未限';
@@ -57,18 +65,30 @@ function buildHardwareReport() {
     if (profile && Array.isArray(profile.localModels) && profile.localModels.length > 0) {
       out.push('', '推荐本地模型:');
       for (const m of profile.localModels) {
-        if (m.recommendation === 'api-only') { out.push(`  ${m.reason}`); }
-        else { out.push(`  ${m.name} (${m.sizeGB}GB)${m.recommended ? ' ★ 推荐' : ''}`, `    ${m.reason}`); }
+        if (m.recommendation === 'api-only') {
+          out.push(`  ${m.reason}`);
+        } else {
+          out.push(
+            `  ${m.name} (${m.sizeGB}GB)${m.recommended ? ' ★ 推荐' : ''}`,
+            `    ${m.reason}`
+          );
+        }
       }
     }
     try {
       const applied = hw.getAppliedLimits();
-      out.push('', '生效运行参数:', `  档位: ${applied.profile}${applied.pinned ? ' (KHY_HW_PROFILE 锁定)' : ''}`);
+      out.push(
+        '',
+        '生效运行参数:',
+        `  档位: ${applied.profile}${applied.pinned ? ' (KHY_HW_PROFILE 锁定)' : ''}`
+      );
       for (const [key, val] of Object.entries(applied.env || {})) {
         const overridden = applied.source && applied.source[key] === 'user-override';
         out.push(`  ${key}=${val}${overridden ? ' ← 用户覆盖' : ' (硬件派生)'}`);
       }
-    } catch { /* transparency block is best-effort */ }
+    } catch {
+      /* transparency block is best-effort */
+    }
     return out;
   } catch (e) {
     return [`硬件检测失败: ${e && e.message ? e.message : String(e)}`];
@@ -86,12 +106,18 @@ function buildScanReport() {
     }
     const result = av.scanProject();
     if (result.clean) {
-      const _elapsed = (result.elapsed || 0);
-      const _dur = require('../ccFormat').ccFormatDurationOr(_elapsed, `${(_elapsed / 1000).toFixed(1)}s`, process.env);
+      const _elapsed = result.elapsed || 0;
+      const _dur = require('../ccFormat').ccFormatDurationOr(
+        _elapsed,
+        `${(_elapsed / 1000).toFixed(1)}s`,
+        process.env
+      );
       return [`扫描完成: 未发现威胁 (${_dur})`];
     }
     const out = [`发现 ${result.infected} 个威胁!`];
-    for (const t of result.threats || []) out.push(`  ${t.virus} → ${t.file}`);
+    for (const t of result.threats || []) {
+      out.push(`  ${t.virus} → ${t.file}`);
+    }
     out.push('已隔离到 ~/.khyquant/quarantine/');
     return out;
   } catch (e) {
@@ -127,17 +153,25 @@ function buildIntentReport(args, env) {
       let persisted = false;
       try {
         persisted = require('../repl/khySettings')._persistBooleanKhySetting(SETTING_KEY, on);
-      } catch { persisted = false; }
+      } catch {
+        persisted = false;
+      }
       const line = on ? '已开启意图保护调试显示' : '已关闭意图保护调试显示';
       return persisted ? [line] : [line, '(注意：设置未能持久化，仅本会话生效)'];
     }
     // show / status
     let on;
-    const raw = String(e[ENV_KEY] || '').trim().toLowerCase();
-    if (raw) on = ['1', 'true', 'yes', 'on'].includes(raw);
-    else {
-      try { on = require('../repl/khySettings')._loadBooleanKhySetting(SETTING_KEY, false); }
-      catch { on = false; }
+    const raw = String(e[ENV_KEY] || '')
+      .trim()
+      .toLowerCase();
+    if (raw) {
+      on = ['1', 'true', 'yes', 'on'].includes(raw);
+    } else {
+      try {
+        on = require('../repl/khySettings')._loadBooleanKhySetting(SETTING_KEY, false);
+      } catch {
+        on = false;
+      }
     }
     return [`意图保护调试: ${on ? '开启' : '关闭'}`, '用法: /intent on | off | show'];
   } catch (e) {
@@ -155,13 +189,25 @@ function buildStudyReport(args) {
     const aiMod = require('../ai');
     const isOn = aiMod.isStudyMode ? !!aiMod.isStudyMode() : false;
     if (action === 'on') {
-      if (isOn) return ['学习模式已处于开启状态'];
-      if (aiMod.enableStudyMode) aiMod.enableStudyMode();
-      return ['学习模式已开启！', '现在你可以向 AI 提问关于本项目的一切', '建议先运行 knowledge self 查看当前能力边界与学习路径'];
+      if (isOn) {
+        return ['学习模式已处于开启状态'];
+      }
+      if (aiMod.enableStudyMode) {
+        aiMod.enableStudyMode();
+      }
+      return [
+        '学习模式已开启！',
+        '现在你可以向 AI 提问关于本项目的一切',
+        '建议先运行 knowledge self 查看当前能力边界与学习路径',
+      ];
     }
     if (action === 'off') {
-      if (!isOn) return ['学习模式已处于关闭状态'];
-      if (aiMod.disableStudyMode) aiMod.disableStudyMode();
+      if (!isOn) {
+        return ['学习模式已处于关闭状态'];
+      }
+      if (aiMod.disableStudyMode) {
+        aiMod.disableStudyMode();
+      }
       return ['学习模式已关闭'];
     }
     return [`学习模式当前状态: ${isOn ? '开启' : '关闭'}`, '用法: /study on | off | status'];
@@ -184,18 +230,30 @@ function buildMindReport(args, env) {
       e.KHY_TASK_MINDMAP_AUTO_SHOW = action === 'on' ? 'true' : 'false';
       return [`认知双图自动展示: ${action === 'on' ? '开启' : '关闭'}`];
     }
-    if (action === 'reset') return ['认知双图已重置到起点'];
+    if (action === 'reset') {
+      return ['认知双图已重置到起点'];
+    }
     // show
     const out = ['认知双图:'];
     try {
       const { FeatureCapabilityMap } = require('../featureCapabilityMap');
-      for (const line of (new FeatureCapabilityMap().renderLines() || [])) out.push(`  ${line}`);
-    } catch { /* best-effort */ }
+      for (const line of new FeatureCapabilityMap().renderLines() || []) {
+        out.push(`  ${line}`);
+      }
+    } catch {
+      /* best-effort */
+    }
     try {
       const { createIdleTaskMindMap } = require('../taskMindMap');
-      for (const line of (createIdleTaskMindMap().renderLines() || [])) out.push(`  ${line}`);
-    } catch { /* best-effort */ }
-    out.push('提示: 任务图随 AI 回合实时构建，此处为静态结构视图。用法: /mind show | on | off | reset');
+      for (const line of createIdleTaskMindMap().renderLines() || []) {
+        out.push(`  ${line}`);
+      }
+    } catch {
+      /* best-effort */
+    }
+    out.push(
+      '提示: 任务图随 AI 回合实时构建，此处为静态结构视图。用法: /mind show | on | off | reset'
+    );
     return out.length > 1 ? out : ['认知双图不可用'];
   } catch (e) {
     return [`认知双图渲染失败: ${e && e.message ? e.message : String(e)}`];
@@ -216,7 +274,7 @@ async function runWorktreeNative(argStr, opts = {}) {
     const { runWorktreeCommand } = require('../repl/worktreeCommand');
     await runWorktreeCommand(String(argStr || ''), {
       out: { info: collect, success: collect, warn: collect, error: collect },
-      onCwdChange: typeof opts.onCwdChange === 'function' ? opts.onCwdChange : (() => {}),
+      onCwdChange: typeof opts.onCwdChange === 'function' ? opts.onCwdChange : () => {},
     });
   } catch (e) {
     lines.push(`/worktree 执行失败: ${e && e.message ? e.message : String(e)}`);
@@ -233,18 +291,29 @@ async function runWorktreeNative(argStr, opts = {}) {
  */
 function dispatchNativeCommand(parsed, opts = {}) {
   try {
-    if (!isEnabled(opts.env)) return { handled: false };
-    if (!parsed) return { handled: false };
+    if (!isEnabled(opts.env)) {
+      return { handled: false };
+    }
+    if (!parsed) {
+      return { handled: false };
+    }
     const key = parsed.flag || parsed.command;
     const args = Array.isArray(parsed.args) ? parsed.args : [];
     switch (key) {
-      case 'hardware':   return { handled: true, lines: buildHardwareReport() };
-      case 'scan':       return { handled: true, lines: buildScanReport() };
-      case 'checkpoint': return { handled: true, lines: saveCheckpointReport(opts.cwd) };
-      case 'intent':     return { handled: true, lines: buildIntentReport(args, opts.env) };
-      case 'study':      return { handled: true, lines: buildStudyReport(args) };
-      case 'mind':       return { handled: true, lines: buildMindReport(args, opts.env) };
-      default: return { handled: false };
+      case 'hardware':
+        return { handled: true, lines: buildHardwareReport() };
+      case 'scan':
+        return { handled: true, lines: buildScanReport() };
+      case 'checkpoint':
+        return { handled: true, lines: saveCheckpointReport(opts.cwd) };
+      case 'intent':
+        return { handled: true, lines: buildIntentReport(args, opts.env) };
+      case 'study':
+        return { handled: true, lines: buildStudyReport(args) };
+      case 'mind':
+        return { handled: true, lines: buildMindReport(args, opts.env) };
+      default:
+        return { handled: false };
     }
   } catch {
     return { handled: false };

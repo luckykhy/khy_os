@@ -8,7 +8,9 @@ class RemoteTriggerTool extends BaseTool {
   static searchHint = 'remote trigger webhook notify signal';
   static shouldDefer = true;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Trigger a remote action via webhook or API call.
@@ -20,7 +22,12 @@ Used for CI/CD triggers, notifications, or remote agent coordination.`;
       type: 'object',
       properties: {
         url: { type: 'string', description: 'Webhook URL to trigger' },
-        method: { type: 'string', enum: ['GET', 'POST', 'PUT'], default: 'POST', description: 'HTTP method for the trigger request (default POST). GET sends no body.' },
+        method: {
+          type: 'string',
+          enum: ['GET', 'POST', 'PUT'],
+          default: 'POST',
+          description: 'HTTP method for the trigger request (default POST). GET sends no body.',
+        },
         payload: { type: 'object', description: 'JSON payload to send' },
         headers: { type: 'object', description: 'Custom headers' },
       },

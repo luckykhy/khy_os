@@ -55,7 +55,7 @@ class DeployOrchestrator {
 
   _resolveHost(hostAlias) {
     const listed = this._sshConfigService.listHosts();
-    const hosts = (listed && Array.isArray(listed.hosts)) ? listed.hosts : [];
+    const hosts = listed && Array.isArray(listed.hosts) ? listed.hosts : [];
     const hostEntry = hosts.find((h) => h && h.alias === hostAlias) || null;
     return { hostEntry, configPath: listed && listed.configPath };
   }
@@ -82,10 +82,19 @@ class DeployOrchestrator {
   async deploy(params = {}) {
     const hostAlias = String(params.hostAlias || '').trim();
     if (!hostAlias) {
-      return { success: false, mode: params.confirm ? 'apply' : 'dry-run', status: 'host_alias_required', error: 'A target host alias is required.' };
+      return {
+        success: false,
+        mode: params.confirm ? 'apply' : 'dry-run',
+        status: 'host_alias_required',
+        error: 'A target host alias is required.',
+      };
     }
     if (params.confirm === true) {
-      return this._apply({ approvalTicketId: params.approvalTicketId, traceId: params.traceId, onEvent: params.onEvent });
+      return this._apply({
+        approvalTicketId: params.approvalTicketId,
+        traceId: params.traceId,
+        onEvent: params.onEvent,
+      });
     }
     return this._dryRun({
       hostAlias,
@@ -129,7 +138,10 @@ class DeployOrchestrator {
     // 3. Resolve remote deploy dir (workspace allowlist enforced).
     let deployDir;
     try {
-      deployDir = this._workspaceResolver.resolveWorkspace({ requestedWorkspace: remoteWorkspace, hostEntry });
+      deployDir = this._workspaceResolver.resolveWorkspace({
+        requestedWorkspace: remoteWorkspace,
+        hostEntry,
+      });
     } catch (err) {
       return {
         success: false,
@@ -200,7 +212,11 @@ class DeployOrchestrator {
     });
 
     if (typeof onEvent === 'function') {
-      try { onEvent({ kind: 'deploy_planned', host_alias: hostAlias, ticket_id: ticket.ticket_id }); } catch { /* ignore */ }
+      try {
+        onEvent({ kind: 'deploy_planned', host_alias: hostAlias, ticket_id: ticket.ticket_id });
+      } catch {
+        /* ignore */
+      }
     }
 
     return {
@@ -217,8 +233,9 @@ class DeployOrchestrator {
       ticketId: ticket.ticket_id,
       connectionId: session.connectionId,
       execEnabled,
-      hint: `Approve ticket ${ticket.ticket_id} (POST /api/remote/ssh/approvals/decision), then call deploy again with confirm:true and approvalTicketId=${ticket.ticket_id}.`
-        + (execEnabled ? '' : ' NOTE: set KHY_REMOTE_SSH_ENABLE_EXEC=true to allow the real apply.'),
+      hint:
+        `Approve ticket ${ticket.ticket_id} (POST /api/remote/ssh/approvals/decision), then call deploy again with confirm:true and approvalTicketId=${ticket.ticket_id}.` +
+        (execEnabled ? '' : ' NOTE: set KHY_REMOTE_SSH_ENABLE_EXEC=true to allow the real apply.'),
     };
   }
 
@@ -226,20 +243,45 @@ class DeployOrchestrator {
     const execEnabled = _envFlag('KHY_REMOTE_SSH_ENABLE_EXEC', false);
     const ticketId = String(approvalTicketId || '').trim();
     if (!ticketId) {
-      return { success: false, mode: 'apply', status: 'approval_ticket_required', error: 'confirm:true requires an approvalTicketId from a prior dry-run.', execEnabled };
+      return {
+        success: false,
+        mode: 'apply',
+        status: 'approval_ticket_required',
+        error: 'confirm:true requires an approvalTicketId from a prior dry-run.',
+        execEnabled,
+      };
     }
 
     const ctx = this._pendingDeploys.get(ticketId);
     if (!ctx) {
-      return { success: false, mode: 'apply', status: 'unknown_deploy_ticket', error: 'No pending deploy for this ticket; run a dry-run first (deploy without confirm).', execEnabled };
+      return {
+        success: false,
+        mode: 'apply',
+        status: 'unknown_deploy_ticket',
+        error: 'No pending deploy for this ticket; run a dry-run first (deploy without confirm).',
+        execEnabled,
+      };
     }
 
     const ticket = this._approvalBridge.getTicket(ticketId);
     if (!ticket) {
-      return { success: false, mode: 'apply', status: 'ticket_not_found', error: 'Approval ticket not found or expired.', execEnabled };
+      return {
+        success: false,
+        mode: 'apply',
+        status: 'ticket_not_found',
+        error: 'Approval ticket not found or expired.',
+        execEnabled,
+      };
     }
     if (ticket.status !== 'approved') {
-      return { success: false, mode: 'apply', status: 'ticket_not_approved', error: `Approval ticket status is "${ticket.status}"; it must be approved before applying.`, ticketId, execEnabled };
+      return {
+        success: false,
+        mode: 'apply',
+        status: 'ticket_not_approved',
+        error: `Approval ticket status is "${ticket.status}"; it must be approved before applying.`,
+        ticketId,
+        execEnabled,
+      };
     }
 
     // Gate early so we do not consume the ticket when execution is disabled.
@@ -260,7 +302,15 @@ class DeployOrchestrator {
     // consume the ticket itself).
     const consume = this._approvalBridge.consumeApprovedTicket(ticketId, ctx.idempotencyKey);
     if (!consume.ok) {
-      return { success: false, mode: 'apply', status: 'approval_consume_failed', error: consume.message, code: consume.code, ticketId, execEnabled };
+      return {
+        success: false,
+        mode: 'apply',
+        status: 'approval_consume_failed',
+        error: consume.message,
+        code: consume.code,
+        ticketId,
+        execEnabled,
+      };
     }
 
     // 1. Ship the bundle.

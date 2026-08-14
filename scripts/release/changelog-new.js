@@ -36,7 +36,13 @@ const VERSION_RE = /^##\s+(\S.*?)\s*$/;
 /** 读 pyproject.toml 的 [project].version(与 check-version-sync 同一真源)。 */
 function readPyprojectVersion() {
   const raw = fs.readFileSync(PYPROJECT, 'utf-8');
-  const block = (raw.match(/\[project\]([\s\S]*?)(?:\n\[[^\n]+\]|$)/) || [])[1] || '';
+  // Normalize line endings to handle both Unix (\n) and Windows (\r\n) files.
+  const text = raw.replace(/\r\n/g, '\n');
+  // Match [project] only at start of line (avoid comment false positives like
+  // "# [project] version is...").  Use \z (end-of-string) not $ (end-of-line)
+  // because the m flag makes $ match after every line, which would produce an
+  // empty capture right after "[project]".
+  const block = (text.match(/^\[project\]([\s\S]*?)(?:\n\[[^\n]+\]|\z)/m) || [])[1] || '';
   const m = block.match(/^\s*version\s*=\s*["']([^"']+)["']\s*$/m);
   return m ? m[1].trim() : '';
 }

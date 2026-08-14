@@ -6,23 +6,16 @@
       <span class="wf-meta">v{{ store.meta.version }}</span>
       <el-tag v-if="store.dirty" type="warning" size="small" effect="plain">未保存</el-tag>
       <div class="toolbar-spacer" />
-      <el-button
-        :icon="VideoPlay"
-        :loading="running"
-        @click="doRun"
-      >运行</el-button>
-      <el-button
-        :icon="Upload"
-        :loading="exporting"
-        @click="doExport"
-      >导出</el-button>
+      <el-button :icon="VideoPlay" :loading="running" @click="doRun">运行</el-button>
+      <el-button :icon="Upload" :loading="exporting" @click="doExport">导出</el-button>
       <el-button
         type="primary"
         :icon="Check"
         :loading="saving"
         :disabled="!store.dirty"
         @click="save"
-      >保存</el-button>
+        >保存</el-button
+      >
     </div>
 
     <el-dialog v-model="exportDialog" title="导出结果" width="560px">
@@ -79,12 +72,9 @@
           <div class="run-ask__question">{{ run.pending.question || '请输入回答' }}</div>
           <template v-if="run.pending.options && run.pending.options.length">
             <el-radio-group v-model="answerValue" class="run-ask__options">
-              <el-radio
-                v-for="opt in run.pending.options"
-                :key="opt"
-                :value="opt"
-                border
-              >{{ opt }}</el-radio>
+              <el-radio v-for="opt in run.pending.options" :key="opt" :value="opt" border>{{
+                opt
+              }}</el-radio>
             </el-radio-group>
           </template>
           <el-input
@@ -92,24 +82,22 @@
             v-model="answerValue"
             type="textarea"
             :rows="2"
-            placeholder="输入回答"
+            placeholder="输入回答（Enter 提交，Shift+Enter 换行）"
+            @keydown.enter.prevent="submitAnswer"
           />
           <el-button
             type="primary"
             size="small"
             :loading="answering"
-            :disabled="answerValue === '' || answerValue == null"
+            :disabled="!answerValue || answerValue === '' || answerValue == null"
             class="run-ask__submit"
             @click="submitAnswer"
-          >提交回答</el-button>
+            >提交回答</el-button
+          >
         </div>
 
         <div class="run-log">
-          <div
-            v-for="(entry, i) in run.log"
-            :key="`${entry.nodeId}-${i}`"
-            class="run-log__row"
-          >
+          <div v-for="(entry, i) in run.log" :key="`${entry.nodeId}-${i}`" class="run-log__row">
             <el-tag size="small" :type="NODE_STATUS_TYPE[entry.status] || 'info'" effect="plain">
               {{ NODE_STATUS_LABEL[entry.status] || entry.status }}
             </el-tag>
@@ -118,7 +106,11 @@
             <div v-if="entry.summary" class="run-log__summary">{{ entry.summary }}</div>
             <div v-if="entry.error" class="run-log__error">{{ entry.error }}</div>
           </div>
-          <el-empty v-if="!run.log || !run.log.length" description="尚无执行记录" :image-size="60" />
+          <el-empty
+            v-if="!run.log || !run.log.length"
+            description="尚无执行记录"
+            :image-size="60"
+          />
         </div>
 
         <div v-if="run.vars && Object.keys(run.vars).length" class="run-vars">
@@ -131,62 +123,102 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft, Check, Upload, VideoPlay, Loading } from '@element-plus/icons-vue'
-import { useWorkflow } from '@/composables/useWorkflow'
-import { useWorkflowEditorStore } from '@/stores/workflowEditor'
-import WorkflowCanvas from '@/components/workflow/WorkflowCanvas.vue'
-import NodePalette from '@/components/workflow/NodePalette.vue'
-import NodePropertiesPanel from '@/components/workflow/NodePropertiesPanel.vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { ArrowLeft, Check, Upload, VideoPlay, Loading } from '@element-plus/icons-vue';
+import { useWorkflow } from '@/composables/useWorkflow';
+import { useWorkflowEditorStore } from '@/stores/workflowEditor';
+import WorkflowCanvas from '@/components/workflow/WorkflowCanvas.vue';
+import NodePalette from '@/components/workflow/NodePalette.vue';
+import NodePropertiesPanel from '@/components/workflow/NodePropertiesPanel.vue';
 
-const route = useRoute()
-const router = useRouter()
-const store = useWorkflowEditorStore()
-const { getWorkflow, saveWorkflow, exportWorkflow, runWorkflow, getRun, answerRun, streamRun, fetchNodeTypes, saving } = useWorkflow()
+const route = useRoute();
+const router = useRouter();
+const store = useWorkflowEditorStore();
+const {
+  getWorkflow,
+  saveWorkflow,
+  exportWorkflow,
+  runWorkflow,
+  getRun,
+  answerRun,
+  streamRun,
+  fetchNodeTypes,
+  saving,
+} = useWorkflow();
 
-const loading = ref(false)
-const catalog = ref({ categories: [], nodes: [] })
-const exporting = ref(false)
-const exportDialog = ref(false)
-const exportResult = ref(null)
+const loading = ref(false);
+const catalog = ref({ categories: [], nodes: [] });
+const exporting = ref(false);
+const exportDialog = ref(false);
+const exportResult = ref(null);
 
 // ── Run state ────────────────────────────────────────────────────────────────
-const running = ref(false)
-const runDrawer = ref(false)
-const run = ref(null)
-const runPolling = ref(false)
-const answering = ref(false)
-const answerValue = ref('')
-let runTimer = null
-let stopStream = null
+const running = ref(false);
+const runDrawer = ref(false);
+const run = ref(null);
+const runPolling = ref(false);
+const answering = ref(false);
+const answerValue = ref('');
+let runTimer = null;
+let stopStream = null;
 
-const RUN_STATUS_LABEL = { queued: '排队中', running: '运行中', awaiting_input: '等待回答', succeeded: '成功', failed: '失败' }
-const RUN_STATUS_TYPE = { queued: 'info', running: 'warning', awaiting_input: 'primary', succeeded: 'success', failed: 'danger' }
-const NODE_STATUS_LABEL = { running: '运行中', awaiting_input: '等待回答', succeeded: '成功', failed: '失败', skipped: '跳过' }
-const NODE_STATUS_TYPE = { running: 'warning', awaiting_input: 'primary', succeeded: 'success', failed: 'danger', skipped: 'info' }
-const TERMINAL = new Set(['succeeded', 'failed'])
+const RUN_STATUS_LABEL = {
+  queued: '排队中',
+  running: '运行中',
+  awaiting_input: '等待回答',
+  succeeded: '成功',
+  failed: '失败',
+};
+const RUN_STATUS_TYPE = {
+  queued: 'info',
+  running: 'warning',
+  awaiting_input: 'primary',
+  succeeded: 'success',
+  failed: 'danger',
+};
+const NODE_STATUS_LABEL = {
+  running: '运行中',
+  awaiting_input: '等待回答',
+  succeeded: '成功',
+  failed: '失败',
+  skipped: '跳过',
+};
+const NODE_STATUS_TYPE = {
+  running: 'warning',
+  awaiting_input: 'primary',
+  succeeded: 'success',
+  failed: 'danger',
+  skipped: 'info',
+};
+const TERMINAL = new Set(['succeeded', 'failed']);
 // Parked: execution stopped pending user input — polling rests until an answer.
-const PARKED = new Set(['awaiting_input'])
+const PARKED = new Set(['awaiting_input']);
 
 // Live per-node status overlaid on the canvas during a run. Derived from the
 // run log (newest entry per node wins, so a looped node shows its latest pass);
 // empty once the drawer is closed so the canvas returns to its neutral editing
 // look. Keyed by the canonical node id, which round-trips through the adapter.
 const runNodeStatus = computed(() => {
-  const map = {}
-  if (!runDrawer.value || !run.value || !Array.isArray(run.value.log)) return map
+  const map = {};
+  if (!runDrawer.value || !run.value || !Array.isArray(run.value.log)) return map;
   for (const entry of run.value.log) {
-    if (entry && entry.nodeId) map[entry.nodeId] = entry.status
+    if (entry && entry.nodeId) map[entry.nodeId] = entry.status;
   }
-  return map
-})
+  return map;
+});
 
 function stopWatch() {
-  if (runTimer) { clearTimeout(runTimer); runTimer = null }
-  if (stopStream) { stopStream(); stopStream = null }
-  runPolling.value = false
+  if (runTimer) {
+    clearTimeout(runTimer);
+    runTimer = null;
+  }
+  if (stopStream) {
+    stopStream();
+    stopStream = null;
+  }
+  runPolling.value = false;
 }
 
 // Track a run to completion. Prefer the SSE stream (one connection, server-side
@@ -194,64 +226,70 @@ function stopWatch() {
 // updating. Both stop at a terminal (succeeded/failed) or parked (awaiting_input)
 // state.
 function track(runId) {
-  stopWatch()
-  if (TERMINAL.has(run.value?.status)) return
-  runPolling.value = true
+  stopWatch();
+  if (TERMINAL.has(run.value?.status)) return;
+  runPolling.value = true;
   stopStream = streamRun(runId, {
-    onUpdate: (view) => { run.value = view },
-    onDone: () => { runPolling.value = false },
+    onUpdate: (view) => {
+      run.value = view;
+    },
+    onDone: () => {
+      runPolling.value = false;
+    },
     onError: () => {
       // Stream unavailable (proxy, old backend, network) — degrade to polling.
-      stopStream = null
-      runTimer = setTimeout(() => pollRun(runId), 800)
+      stopStream = null;
+      runTimer = setTimeout(() => pollRun(runId), 800);
     },
-  })
+  });
 }
 
 async function pollRun(runId) {
   try {
-    const latest = await getRun(runId)
-    run.value = latest
+    const latest = await getRun(runId);
+    run.value = latest;
     if (TERMINAL.has(latest.status) || PARKED.has(latest.status)) {
-      stopWatch()
-      return
+      stopWatch();
+      return;
     }
   } catch (err) {
     // Transient read failure — keep polling; surface only if it persists.
   }
-  runTimer = setTimeout(() => pollRun(runId), 1500)
+  runTimer = setTimeout(() => pollRun(runId), 1500);
 }
 
 async function submitAnswer() {
-  if (!run.value) return
-  answering.value = true
+  if (!run.value || !answerValue.value) return;
+  answering.value = true;
+  const answer = answerValue.value;
+  answerValue.value = '';
   try {
-    const updated = await answerRun(run.value.id, answerValue.value)
-    run.value = updated
-    answerValue.value = ''
+    const updated = await answerRun(run.value.id, answer);
+    run.value = updated;
     // Re-enqueued (queued) — resume watching until the next pause or terminal.
     if (!TERMINAL.has(updated.status) && !PARKED.has(updated.status)) {
-      track(updated.id)
+      track(updated.id);
     }
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '提交回答失败')
+    answerValue.value = answer;
+    ElMessage.error(err?.response?.data?.message || err?.message || '提交回答失败，请重试');
   } finally {
-    answering.value = false
+    answering.value = false;
   }
 }
 
 function goBack() {
-  router.push({ name: 'Workflows' })
+  router.push({ name: 'Workflows' });
 }
 
 async function save() {
   try {
-    const payload = store.exportPayload()
-    const record = await saveWorkflow(store.meta.id, payload)
-    store.markSaved(record)
-    ElMessage.success('已保存')
+    const payload = store.exportPayload();
+    const record = await saveWorkflow(store.meta.id, payload);
+    store.markSaved(record);
+    ElMessage.success('已保存');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
   }
 }
 
@@ -259,21 +297,25 @@ async function doExport() {
   // Export reads the persisted graph — save any pending edits first.
   if (store.dirty) {
     try {
-      const record = await saveWorkflow(store.meta.id, store.exportPayload())
-      store.markSaved(record)
+      const record = await saveWorkflow(store.meta.id, store.exportPayload());
+      store.markSaved(record);
     } catch (err) {
-      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
-      return
+      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
+      return;
     }
   }
-  exporting.value = true
+  exporting.value = true;
   try {
-    exportResult.value = await exportWorkflow(store.meta.id)
-    exportDialog.value = true
+    exportResult.value = await exportWorkflow(store.meta.id);
+    exportDialog.value = true;
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '导出失败（请确认工作流含 1 个开始与 ≥1 个结束节点）')
+    ElMessage.error(
+      err?.response?.data?.message ||
+        err?.message ||
+        '导出失败（请确认工作流含 1 个开始与 ≥1 个结束节点）'
+    );
   } finally {
-    exporting.value = false
+    exporting.value = false;
   }
 }
 
@@ -281,42 +323,46 @@ async function doRun() {
   // The run executes the persisted snapshot — save any pending edits first.
   if (store.dirty) {
     try {
-      const record = await saveWorkflow(store.meta.id, store.exportPayload())
-      store.markSaved(record)
+      const record = await saveWorkflow(store.meta.id, store.exportPayload());
+      store.markSaved(record);
     } catch (err) {
-      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败')
-      return
+      ElMessage.error(err?.response?.data?.message || err?.message || '保存失败');
+      return;
     }
   }
-  running.value = true
-  stopWatch()
+  running.value = true;
+  stopWatch();
   try {
-    const enqueued = await runWorkflow(store.meta.id, {})
-    run.value = enqueued
-    runDrawer.value = true
-    if (!TERMINAL.has(enqueued.status)) track(enqueued.id)
+    const enqueued = await runWorkflow(store.meta.id, {});
+    run.value = enqueued;
+    runDrawer.value = true;
+    if (!TERMINAL.has(enqueued.status)) track(enqueued.id);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '运行失败（请确认工作流含 1 个开始与 ≥1 个结束节点）')
+    ElMessage.error(
+      err?.response?.data?.message ||
+        err?.message ||
+        '运行失败（请确认工作流含 1 个开始与 ≥1 个结束节点）'
+    );
   } finally {
-    running.value = false
+    running.value = false;
   }
 }
 
 onMounted(async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    catalog.value = await fetchNodeTypes()
-    const record = await getWorkflow(route.params.id)
-    store.loadWorkflow(record)
+    catalog.value = await fetchNodeTypes();
+    const record = await getWorkflow(route.params.id);
+    store.loadWorkflow(record);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载失败')
-    goBack()
+    ElMessage.error(err?.response?.data?.message || err?.message || '加载失败');
+    goBack();
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 
-onBeforeUnmount(stopWatch)
+onBeforeUnmount(stopWatch);
 </script>
 
 <style scoped>
@@ -423,17 +469,25 @@ onBeforeUnmount(stopWatch)
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-areas:
-    "tag name type"
-    "summary summary summary"
-    "error error error";
+    'tag name type'
+    'summary summary summary'
+    'error error error';
   align-items: center;
   gap: 4px 8px;
   padding: 8px 10px;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 6px;
 }
-.run-log__name { grid-area: name; font-weight: 600; font-size: 13px; }
-.run-log__type { grid-area: type; font-size: 11px; color: var(--el-text-color-secondary); }
+.run-log__name {
+  grid-area: name;
+  font-weight: 600;
+  font-size: 13px;
+}
+.run-log__type {
+  grid-area: type;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
 .run-log__summary {
   grid-area: summary;
   font-size: 12px;

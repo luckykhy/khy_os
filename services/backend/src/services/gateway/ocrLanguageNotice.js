@@ -40,12 +40,18 @@ function isEnabled(env) {
 
 /** 把 'a+b+c' 语言谱切成去重、去空、排除 osd 的数组;非字符串 → []。 */
 function _parts(spec) {
-  if (typeof spec !== 'string') return [];
+  if (typeof spec !== 'string') {
+    return [];
+  }
   const out = [];
   for (const raw of spec.split('+')) {
     const p = raw.trim();
-    if (!p || p.toLowerCase() === 'osd') continue;
-    if (!out.includes(p)) out.push(p);
+    if (!p || p.toLowerCase() === 'osd') {
+      continue;
+    }
+    if (!out.includes(p)) {
+      out.push(p);
+    }
   }
   return out;
 }
@@ -58,15 +64,23 @@ function _parts(spec) {
  * @returns {string[]}
  */
 function computeDroppedLangs(details) {
-  if (!Array.isArray(details)) return [];
+  if (!Array.isArray(details)) {
+    return [];
+  }
   const dropped = new Set();
   for (const d of details) {
-    if (!d || typeof d !== 'object') continue;
+    if (!d || typeof d !== 'object') {
+      continue;
+    }
     const requested = _parts(d.requestedLang);
-    if (requested.length === 0) continue;
+    if (requested.length === 0) {
+      continue;
+    }
     const effective = new Set(_parts(d.lang));
     for (const lang of requested) {
-      if (!effective.has(lang)) dropped.add(lang);
+      if (!effective.has(lang)) {
+        dropped.add(lang);
+      }
     }
   }
   return Array.from(dropped).sort();
@@ -79,12 +93,18 @@ function computeDroppedLangs(details) {
  * @returns {string|null}
  */
 function buildLanguageNotice({ dropped, env } = {}) {
-  if (!isEnabled(env)) return null;
-  if (!Array.isArray(dropped) || dropped.length === 0) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
+  if (!Array.isArray(dropped) || dropped.length === 0) {
+    return null;
+  }
   const list = dropped.join('、');
-  return `[提示：本机未安装以下 OCR 语言包：${list}；若图片中包含这些语言的文字，它们可能未被识别`
-    + `或被错误转写，上述 OCR 文本对这些语言并不可靠。请勿据此断定这些文字的内容；可安装对应语言包`
-    + `（如 apt install tesseract-ocr-${dropped[0]}）后重试，或改用支持看图的多模态模型复核。]`;
+  return (
+    `[提示：本机未安装以下 OCR 语言包：${list}；若图片中包含这些语言的文字，它们可能未被识别` +
+    `或被错误转写，上述 OCR 文本对这些语言并不可靠。请勿据此断定这些文字的内容；可安装对应语言包` +
+    `（如 apt install tesseract-ocr-${dropped[0]}）后重试，或改用支持看图的多模态模型复核。]`
+  );
 }
 
 module.exports = {

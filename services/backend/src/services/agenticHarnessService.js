@@ -16,21 +16,24 @@
 
 const crypto = require('crypto');
 const path = require('path');
-const { AgentContext } = require('./agentContext');
-const { routeContextStrategy, truncateToolResults } = require('./contextRouter');
-const { compress } = require('./contextCompressor');
-const { estimateTokens } = require('./contextWasm');
-const { runToolUseLoop } = require('./toolUseLoop');
-const { retryWithBackoff, isRetryableError } = require('./retryWithBackoff');
-const backgroundTaskManager = require('./backgroundTaskManager');
-const projectMemoryService = require('./projectMemoryService');
-const projectMetadataService = require('./projectMetadataService');
-const contextScopePlanner = require('./contextScope');
+
+const { UNKNOWN_MODEL_CONTEXT_WINDOW } = require('../constants/contextWindowDefaults');
 const memdir = require('../memdir');
 const skills = require('../skills');
 
+const { AgentContext } = require('./agentContext');
+const backgroundTaskManager = require('./backgroundTaskManager');
+const { compress } = require('./contextCompressor');
+const { routeContextStrategy, truncateToolResults } = require('./contextRouter');
+const contextScopePlanner = require('./contextScope');
+const { estimateTokens } = require('./contextWasm');
+const projectMemoryService = require('./projectMemoryService');
+const projectMetadataService = require('./projectMetadataService');
+const { retryWithBackoff, isRetryableError } = require('./retryWithBackoff');
+const { runToolUseLoop } = require('./toolUseLoop');
+
 const DEFAULTS = Object.freeze({
-  contextBudget: 128000,
+  contextBudget: UNKNOWN_MODEL_CONTEXT_WINDOW,
   retryAttempts: 2,
   retryMinDelayMs: 700,
   retryMaxDelayMs: 5000,
@@ -55,7 +58,10 @@ function createAgenticHarness(options = {}) {
   async function buildContextPacket(input = {}) {
     const userMessage = String(input.userMessage || '').trim();
     const systemPrompt = String(input.systemPrompt || '');
-    const contextBudget = Math.max(2048, Number(input.contextBudget || cfg.contextBudget) || cfg.contextBudget);
+    const contextBudget = Math.max(
+      2048,
+      Number(input.contextBudget || cfg.contextBudget) || cfg.contextBudget
+    );
     const messages = _cloneMessages(input.messages);
     const recentFiles = _safeArray(input.recentFiles);
     const cwd = input.cwd || process.cwd();
@@ -63,13 +69,18 @@ function createAgenticHarness(options = {}) {
     const contextRoute = routeContextStrategy(messages, systemPrompt, userMessage, contextBudget);
     let workingMessages = _cloneMessages(messages);
 
-    if (contextRoute.route === 'truncate_tool_results_only' || contextRoute.route === 'compact_then_truncate') {
+    if (
+      contextRoute.route === 'truncate_tool_results_only' ||
+      contextRoute.route === 'compact_then_truncate'
+    ) {
       truncateToolResults(workingMessages, Math.max(0, contextRoute.overflow));
     }
 
-    if ((contextRoute.route === 'compact_only' || contextRoute.route === 'compact_then_truncate')
-      && typeof input.callModelForCompression === 'function'
-      && workingMessages.length > 0) {
+    if (
+      (contextRoute.route === 'compact_only' || contextRoute.route === 'compact_then_truncate') &&
+      typeof input.callModelForCompression === 'function' &&
+      workingMessages.length > 0
+    ) {
       try {
         const compactResult = await compress(workingMessages, {
           estimateTokensFn: estimateTokens,
@@ -84,35 +95,44 @@ function createAgenticHarness(options = {}) {
       }
     }
 
-    const cacheKey = _hashInput(JSON.stringify({
-      userMessage,
-      cwd,
-      recentFiles,
-      memoryHintLimit: input.memoryHintLimit || cfg.memoryHintLimit,
-      skillHintLimit: input.skillHintLimit || cfg.skillHintLimit,
-    }));
+    const cacheKey = _hashInput(
+      JSON.stringify({
+        userMessage,
+        cwd,
+        recentFiles,
+        memoryHintLimit: input.memoryHintLimit || cfg.memoryHintLimit,
+        skillHintLimit: input.skillHintLimit || cfg.skillHintLimit,
+      })
+    );
 
     let hints = hintCache.get(cacheKey);
     if (!hints) {
       const memoryHints = await _collectMemoryHints({
         userMessage,
-        maxItems: Math.max(1, Number(input.memoryHintLimit || cfg.memoryHintLimit) || cfg.memoryHintLimit),
+        maxItems: Math.max(
+          1,
+          Number(input.memoryHintLimit || cfg.memoryHintLimit) || cfg.memoryHintLimit
+        ),
         vectorRetriever,
       });
       const skillHints = _collectSkillHints({
         userMessage,
         cwd,
         recentFiles,
-        maxItems: Math.max(1, Number(input.skillHintLimit || cfg.skillHintLimit) || cfg.skillHintLimit),
+        maxItems: Math.max(
+          1,
+          Number(input.skillHintLimit || cfg.skillHintLimit) || cfg.skillHintLimit
+        ),
       });
       const templateHint = _collectTemplateHint({ userMessage });
       hints = { memoryHints, skillHints, templateHint };
       hintCache.set(cacheKey, hints);
     }
 
-    const tokenEstimate = workingMessages.reduce((sum, msg) => sum + estimateTokens(msg.content || ''), 0)
-      + estimateTokens(systemPrompt)
-      + estimateTokens(userMessage);
+    const tokenEstimate =
+      workingMessages.reduce((sum, msg) => sum + estimateTokens(msg.content || ''), 0) +
+      estimateTokens(systemPrompt) +
+      estimateTokens(userMessage);
 
     // Task-driven read/search scope planning (opt-in, zero-intrusion). Decides
     // WHAT to read and search from the task + the project's own `.ai/` map,
@@ -125,7 +145,8 @@ function createAgenticHarness(options = {}) {
           cwd,
           recentFiles,
           budget: input.scopeBudget || {},
-          modelPlanner: typeof input.scopeModelPlanner === 'function' ? input.scopeModelPlanner : undefined,
+          modelPlanner:
+            typeof input.scopeModelPlanner === 'function' ? input.scopeModelPlanner : undefined,
         });
       } catch {
         scopePlan = null; // fail-soft: planning never blocks the run
@@ -150,8 +171,12 @@ function createAgenticHarness(options = {}) {
   async function run(request = {}) {
     const userMessage = String(request.userMessage || '').trim();
     const chat = request.chat;
-    if (!userMessage) throw new Error('agenticHarnessService: userMessage is required');
-    if (typeof chat !== 'function') throw new Error('agenticHarnessService: chat function is required');
+    if (!userMessage) {
+      throw new Error('agenticHarnessService: userMessage is required');
+    }
+    if (typeof chat !== 'function') {
+      throw new Error('agenticHarnessService: chat function is required');
+    }
 
     const cwd = request.cwd || process.cwd();
     const chatOpts = request.chatOpts || {};
@@ -162,13 +187,23 @@ function createAgenticHarness(options = {}) {
 
     // ── Boulder State: resume from cross-session checkpoint ──
     const boulderResumeEnabled = !['0', 'false', 'off', 'no'].includes(
-      String(process.env.KHY_BOULDER_RESUME || 'true').trim().toLowerCase(),
+      String(process.env.KHY_BOULDER_RESUME || 'true')
+        .trim()
+        .toLowerCase()
     );
     if (boulderResumeEnabled) {
       try {
-        const { loadBoulderState, isSimilarMessage, diffFilesystemSnapshot } = require('./boulderState');
+        const {
+          loadBoulderState,
+          isSimilarMessage,
+          diffFilesystemSnapshot,
+        } = require('./boulderState');
         const saved = loadBoulderState(cwd);
-        if (saved && saved.status === 'in_progress' && isSimilarMessage(userMessage, saved.userMessage)) {
+        if (
+          saved &&
+          saved.status === 'in_progress' &&
+          isSimilarMessage(userMessage, saved.userMessage)
+        ) {
           boulderResumeUsed = true;
           // Build resume context with full conversation snapshot if available
           const contextParts = [
@@ -181,32 +216,61 @@ function createAgenticHarness(options = {}) {
               if (drift.summary) {
                 contextParts.push(drift.summary);
                 if (drift.changed.length > 0) {
-                  contextParts.push(`Changed files: ${drift.changed.slice(0, 10).map(f => path.basename(f)).join(', ')}`);
+                  contextParts.push(
+                    `Changed files: ${drift.changed
+                      .slice(0, 10)
+                      .map((f) => path.basename(f))
+                      .join(', ')}`
+                  );
                 }
                 if (drift.deleted.length > 0) {
-                  contextParts.push(`Deleted files: ${drift.deleted.slice(0, 5).map(f => path.basename(f)).join(', ')}`);
+                  contextParts.push(
+                    `Deleted files: ${drift.deleted
+                      .slice(0, 5)
+                      .map((f) => path.basename(f))
+                      .join(', ')}`
+                  );
                 }
                 if (drift.newCommits) {
-                  contextParts.push('New git commits detected since checkpoint — re-read affected files before editing.');
+                  contextParts.push(
+                    'New git commits detected since checkpoint — re-read affected files before editing.'
+                  );
                 }
               }
-            } catch { /* drift detection is best-effort */ }
+            } catch {
+              /* drift detection is best-effort */
+            }
           }
           if (saved.contextSummary) {
             contextParts.push(`Context summary: ${saved.contextSummary}`);
           }
           if (saved.conversationMessages && saved.conversationMessages.length > 0) {
-            const recentMsgs = saved.conversationMessages.slice(-5).map(m => {
-              const content = typeof m.content === 'string' ? m.content.slice(0, 300) : '(structured)';
-              return `[${m.role}]: ${content}`;
-            }).join('\n');
+            const recentMsgs = saved.conversationMessages
+              .slice(-5)
+              .map((m) => {
+                const content =
+                  typeof m.content === 'string' ? m.content.slice(0, 300) : '(structured)';
+                return `[${m.role}]: ${content}`;
+              })
+              .join('\n');
             contextParts.push(`Recent conversation:\n${recentMsgs}`);
           }
           contextParts.push('Continue where you left off.]');
           effectiveUserMessage = `${contextParts.join(' ')}\n\n${userMessage}`;
-          if (onEvent) onEvent({ type: 'boulder_resume', previousIterations: saved.iterations, previousRound: saved.continuationRound, hasFullContext: !!(saved.conversationMessages && saved.conversationMessages.length > 0) });
+          if (onEvent) {
+            onEvent({
+              type: 'boulder_resume',
+              previousIterations: saved.iterations,
+              previousRound: saved.continuationRound,
+              hasFullContext: !!(
+                saved.conversationMessages && saved.conversationMessages.length > 0
+              ),
+            });
+          }
         }
-      } catch { /* boulderState not available — skip */ }
+      } catch {
+        /* boulderState not available — skip */
+      }
     }
 
     // ── Prompt Reuse: 检索历史相似任务的有效提示词并前置为复用建议 ──
@@ -220,12 +284,27 @@ function createAgenticHarness(options = {}) {
         promptReuseUsed = true;
         // 保持「<prefix>\n\n<userMessage>」单一分隔不变性：boulder 已变形时用单换行
         // 并入既有 prefix 段，避免引入第二个 \n\n 破坏下游 resumePrefix 切片逻辑。
-        effectiveUserMessage = effectiveUserMessage === userMessage
-          ? `${rec.block}\n\n${userMessage}`
-          : `${rec.block}\n${effectiveUserMessage}`;
-        if (onEvent) onEvent({ type: 'prompt_reuse', count: rec.candidates.length, top: rec.candidates[0] ? { category: rec.candidates[0].category, similarity: rec.candidates[0].similarity, effectiveness: rec.candidates[0].effectiveness } : null });
+        effectiveUserMessage =
+          effectiveUserMessage === userMessage
+            ? `${rec.block}\n\n${userMessage}`
+            : `${rec.block}\n${effectiveUserMessage}`;
+        if (onEvent) {
+          onEvent({
+            type: 'prompt_reuse',
+            count: rec.candidates.length,
+            top: rec.candidates[0]
+              ? {
+                  category: rec.candidates[0].category,
+                  similarity: rec.candidates[0].similarity,
+                  effectiveness: rec.candidates[0].effectiveness,
+                }
+              : null,
+          });
+        }
       }
-    } catch { /* promptReuse not available — skip */ }
+    } catch {
+      /* promptReuse not available — skip */
+    }
 
     const startedAt = Date.now();
     const defaultLabel = `agentic:${path.basename(cwd)}`;
@@ -238,13 +317,14 @@ function createAgenticHarness(options = {}) {
       },
     });
 
-    const runtimeCtx = request.agentContext instanceof AgentContext
-      ? request.agentContext
-      : new AgentContext({
-          role: request.role || 'general',
-          toolFilter: request.toolFilter || null,
-          config: request.agentConfig || {},
-        });
+    const runtimeCtx =
+      request.agentContext instanceof AgentContext
+        ? request.agentContext
+        : new AgentContext({
+            role: request.role || 'general',
+            toolFilter: request.toolFilter || null,
+            config: request.agentConfig || {},
+          });
 
     try {
       const contextPacket = await buildContextPacket({
@@ -256,11 +336,12 @@ function createAgenticHarness(options = {}) {
         recentFiles: request.recentFiles,
         memoryHintLimit: request.memoryHintLimit,
         skillHintLimit: request.skillHintLimit,
-        callModelForCompression: async (text, opts) => chat(text, {
-          ...chatOpts,
-          ...opts,
-          _isFollowUp: true,
-        }),
+        callModelForCompression: async (text, opts) =>
+          chat(text, {
+            ...chatOpts,
+            ...opts,
+            _isFollowUp: true,
+          }),
       });
 
       try {
@@ -304,31 +385,35 @@ function createAgenticHarness(options = {}) {
       const loopOptions = request.loopOptions || {};
 
       // Boulder State: checkpoint callback for toolUseLoop
-      const _boulderCheckpoint = boulderResumeEnabled ? (info) => {
-        try {
-          const { saveBoulderState } = require('./boulderState');
-          const { detectModes } = require('./intentGate');
-          saveBoulderState(cwd, {
-            taskId: taskHandle?.id,
-            userMessage,
-            toolCallLog: info.toolCallLog,
-            iterations: info.iteration + (info._totalPreviousIterations || 0),
-            continuationRound: info._continuationRound || 0,
-            activatedModes: detectModes(userMessage).modes,
-            status: 'in_progress',
-            // v2: full conversation context
-            conversationMessages: info.messages || info.conversationMessages || [],
-            contextSummary: info.contextSummary || '',
-            sessionMeta: {
-              model: chatOpts.model || chatOpts.preferredModel || '',
-              adapter: chatOpts.adapter || chatOpts.preferredAdapter || '',
-              sessionId: chatOpts.sessionId || '',
-            },
-            // v4: filesystem snapshot from tool loop's fileReadHashes
-            fileReadHashes: info.fileReadHashes || null,
-          });
-        } catch { /* best-effort */ }
-      } : undefined;
+      const _boulderCheckpoint = boulderResumeEnabled
+        ? (info) => {
+            try {
+              const { saveBoulderState } = require('./boulderState');
+              const { detectModes } = require('./intentGate');
+              saveBoulderState(cwd, {
+                taskId: taskHandle?.id,
+                userMessage,
+                toolCallLog: info.toolCallLog,
+                iterations: info.iteration + (info._totalPreviousIterations || 0),
+                continuationRound: info._continuationRound || 0,
+                activatedModes: detectModes(userMessage).modes,
+                status: 'in_progress',
+                // v2: full conversation context
+                conversationMessages: info.messages || info.conversationMessages || [],
+                contextSummary: info.contextSummary || '',
+                sessionMeta: {
+                  model: chatOpts.model || chatOpts.preferredModel || '',
+                  adapter: chatOpts.adapter || chatOpts.preferredAdapter || '',
+                  sessionId: chatOpts.sessionId || '',
+                },
+                // v4: filesystem snapshot from tool loop's fileReadHashes
+                fileReadHashes: info.fileReadHashes || null,
+              });
+            } catch {
+              /* best-effort */
+            }
+          }
+        : undefined;
 
       const runLoopOnce = async () => {
         const result = await runToolUseLoop(loopInput, {
@@ -362,15 +447,28 @@ function createAgenticHarness(options = {}) {
       } else {
         try {
           loopResult = await retryWithBackoff(runLoopOnce, {
-            attempts: Math.max(1, Number(request.retryAttempts || cfg.retryAttempts) || cfg.retryAttempts),
-            minDelayMs: Math.max(100, Number(request.retryMinDelayMs || cfg.retryMinDelayMs) || cfg.retryMinDelayMs),
-            maxDelayMs: Math.max(500, Number(request.retryMaxDelayMs || cfg.retryMaxDelayMs) || cfg.retryMaxDelayMs),
+            attempts: Math.max(
+              1,
+              Number(request.retryAttempts || cfg.retryAttempts) || cfg.retryAttempts
+            ),
+            minDelayMs: Math.max(
+              100,
+              Number(request.retryMinDelayMs || cfg.retryMinDelayMs) || cfg.retryMinDelayMs
+            ),
+            maxDelayMs: Math.max(
+              500,
+              Number(request.retryMaxDelayMs || cfg.retryMaxDelayMs) || cfg.retryMaxDelayMs
+            ),
             shouldRetry: (err) => {
-              if (err && err.loopResult) return true;
+              if (err && err.loopResult) {
+                return true;
+              }
               return isRetryableError(err);
             },
             onRetry: (retryInfo) => {
-              if (!onEvent) return;
+              if (!onEvent) {
+                return;
+              }
               onEvent({
                 type: 'retry',
                 attempt: retryInfo.attempt,
@@ -394,31 +492,45 @@ function createAgenticHarness(options = {}) {
       try {
         const { detectModes } = require('./intentGate');
         activatedModes = detectModes(userMessage).modes || [];
-      } catch { /* intentGate unavailable — keep default */ }
+      } catch {
+        /* intentGate unavailable — keep default */
+      }
       const complexityFactor = _assessTaskComplexity(userMessage, activatedModes, loopResult);
       const adaptiveMaxRounds = Math.min(Math.ceil(3 * complexityFactor), 8);
-      const maxContinuationRounds = Math.max(0, Math.min(adaptiveMaxRounds,
-        Number(request.maxContinuationRounds ?? cfg.maxContinuationRounds) || adaptiveMaxRounds));
+      const maxContinuationRounds = Math.max(
+        0,
+        Math.min(
+          adaptiveMaxRounds,
+          Number(request.maxContinuationRounds ?? cfg.maxContinuationRounds) || adaptiveMaxRounds
+        )
+      );
       let continuationRound = 0;
-      let allToolCallLogs = [...(loopResult?.toolCallLog || [])];
+      const allToolCallLogs = [...(loopResult?.toolCallLog || [])];
       let totalIterations = loopResult?.iterations || 0;
 
       while (
-        loopResult?.maxIterationsReached
-        && continuationRound < maxContinuationRounds
-        && _shouldAutoContinue(userMessage)
+        loopResult?.maxIterationsReached &&
+        continuationRound < maxContinuationRounds &&
+        _shouldAutoContinue(userMessage)
       ) {
         continuationRound++;
         if (onEvent) {
-          onEvent({ type: 'continuation', round: continuationRound, maxRounds: maxContinuationRounds });
+          onEvent({
+            type: 'continuation',
+            round: continuationRound,
+            maxRounds: maxContinuationRounds,
+          });
         }
 
         // Brief cooldown between rounds
-        await new Promise(r => setTimeout(r, cfg.continuationCooldownMs));
+        await new Promise((r) => setTimeout(r, cfg.continuationCooldownMs));
 
         const summary = _buildContinuationSummary(loopResult);
         const continuationMessage = _buildContinuationInput(
-          userMessage, summary, continuationRound, maxContinuationRounds,
+          userMessage,
+          summary,
+          continuationRound,
+          maxContinuationRounds
         );
 
         try {
@@ -434,9 +546,13 @@ function createAgenticHarness(options = {}) {
             },
             onCheckpoint: _boulderCheckpoint,
             initialMessages: priorMessages,
+            // Cross-turn dedup: inherit executed call keys from the prior round
+            // so the new round knows what was already executed and won't re-run
+            // identical tool calls.
+            inheritedDedupKeys: loopResult?.executedCallKeys || new Map(),
           });
           allToolCallLogs.push(...(loopResult?.toolCallLog || []));
-          totalIterations += (loopResult?.iterations || 0);
+          totalIterations += loopResult?.iterations || 0;
 
           // Boulder State: checkpoint after each continuation round
           try {
@@ -459,10 +575,18 @@ function createAgenticHarness(options = {}) {
                 sessionId: chatOpts.sessionId || '',
               },
             });
-          } catch { /* best-effort */ }
+          } catch {
+            /* best-effort */
+          }
         } catch (contErr) {
           // Continuation failure is non-fatal; keep previous result
-          if (onEvent) onEvent({ type: 'continuation_error', round: continuationRound, error: contErr?.message });
+          if (onEvent) {
+            onEvent({
+              type: 'continuation_error',
+              round: continuationRound,
+              error: contErr?.message,
+            });
+          }
           break;
         }
       }
@@ -480,39 +604,52 @@ function createAgenticHarness(options = {}) {
       // ── Delivery Gate: post-loop deliverable verification ──────────
       let deliveryGateReport = null;
       let acceptancePack = null;
-      const deliveryGateEnabled = String(process.env.KHY_DELIVERY_GATE || 'true').trim().toLowerCase();
-      const maxRemediationRounds = Math.max(0, Math.min(3,
-        Number(process.env.KHY_DELIVERY_MAX_REMEDIATION ?? cfg.maxRemediationRounds) || cfg.maxRemediationRounds));
+      const deliveryGateEnabled = String(process.env.KHY_DELIVERY_GATE || 'true')
+        .trim()
+        .toLowerCase();
+      const maxRemediationRounds = Math.max(
+        0,
+        Math.min(
+          3,
+          Number(process.env.KHY_DELIVERY_MAX_REMEDIATION ?? cfg.maxRemediationRounds) ||
+            cfg.maxRemediationRounds
+        )
+      );
 
       if (
-        !['0', 'false', 'off', 'no'].includes(deliveryGateEnabled)
-        && !loopResult?.stopped
-        && !loopResult?.errorType
-        && maxRemediationRounds > 0
+        !['0', 'false', 'off', 'no'].includes(deliveryGateEnabled) &&
+        !loopResult?.stopped &&
+        !loopResult?.errorType &&
+        maxRemediationRounds > 0
       ) {
         try {
           const { detectModes } = require('./intentGate');
           const { buildAcceptancePack } = require('./acceptanceCriteria');
           const modes = detectModes(userMessage);
-          const { evaluateDelivery, buildRemediationPrompt, inferProjectRoot } = require('./deliveryGate');
+          const {
+            evaluateDelivery,
+            buildRemediationPrompt,
+            inferProjectRoot,
+          } = require('./deliveryGate');
           const projectRoot = inferProjectRoot(
-            allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []),
-            cwd,
+            allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [],
+            cwd
           );
           acceptancePack = buildAcceptancePack({
             modes: modes.modes,
             userMessage,
             finalResponse: String(loopResult?.finalResponse || ''),
-            toolCallLog: allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []),
+            toolCallLog:
+              allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [],
             projectRoot,
           });
           const criteria = acceptancePack.criteria;
 
           if (criteria.length > 0) {
-
             deliveryGateReport = evaluateDelivery(projectRoot, criteria, {
               finalResponse: String(loopResult?.finalResponse || ''),
-              toolCallLog: allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []),
+              toolCallLog:
+                allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [],
               acceptancePack,
             });
 
@@ -529,16 +666,21 @@ function createAgenticHarness(options = {}) {
             // convergent learning restart. Monotone non-increasing across rounds.
             let learnedH = _seedLearnedHeuristic(cwd);
             learnedH = _backfillTrial(
-              cwd, taskHandle?.id, learnedH, prevHeuristic,
-              loopResult?.iterations || 0, onEvent, 0,
+              cwd,
+              taskHandle?.id,
+              learnedH,
+              prevHeuristic,
+              loopResult?.iterations || 0,
+              onEvent,
+              0
             );
 
             let remediationRound = 0;
 
             while (
-              !deliveryGateReport.passed
-              && deliveryGateReport.missing.length > 0
-              && remediationRound < maxRemediationRounds
+              !deliveryGateReport.passed &&
+              deliveryGateReport.missing.length > 0 &&
+              remediationRound < maxRemediationRounds
             ) {
               remediationRound++;
               if (onEvent) {
@@ -546,18 +688,18 @@ function createAgenticHarness(options = {}) {
                   type: 'delivery_remediation',
                   round: remediationRound,
                   maxRounds: maxRemediationRounds,
-                  missing: deliveryGateReport.missing.map(m => m.label),
+                  missing: deliveryGateReport.missing.map((m) => m.label),
                 });
               }
 
-              await new Promise(r => setTimeout(r, cfg.continuationCooldownMs));
+              await new Promise((r) => setTimeout(r, cfg.continuationCooldownMs));
 
               const remediationPrompt = buildRemediationPrompt(
                 userMessage,
                 deliveryGateReport.missing,
                 deliveryGateReport.warnings,
                 remediationRound,
-                maxRemediationRounds,
+                maxRemediationRounds
               );
 
               const itersBeforeRound = totalIterations;
@@ -571,7 +713,7 @@ function createAgenticHarness(options = {}) {
                   },
                 });
                 allToolCallLogs.push(...(remediationResult?.toolCallLog || []));
-                totalIterations += (remediationResult?.iterations || 0);
+                totalIterations += remediationResult?.iterations || 0;
 
                 loopResult = {
                   ...loopResult,
@@ -580,7 +722,13 @@ function createAgenticHarness(options = {}) {
                   iterations: totalIterations,
                 };
               } catch (remErr) {
-                if (onEvent) onEvent({ type: 'delivery_remediation_error', round: remediationRound, error: remErr?.message });
+                if (onEvent) {
+                  onEvent({
+                    type: 'delivery_remediation_error',
+                    round: remediationRound,
+                    error: remErr?.message,
+                  });
+                }
                 break;
               }
 
@@ -593,13 +741,23 @@ function createAgenticHarness(options = {}) {
 
               // §4.B re-measure h(s); prevHeuristic carries the prior round so
               // stagnation (no strict decrease) is observable across trials.
-              prevHeuristic = _attachHeuristic(deliveryGateReport, prevHeuristic, onEvent, remediationRound);
+              prevHeuristic = _attachHeuristic(
+                deliveryGateReport,
+                prevHeuristic,
+                onEvent,
+                remediationRound
+              );
 
               // §4.A backfill the learned estimate with this trial's cost g_k
               // (iterations spent this round) and the new admissible remainder.
               learnedH = _backfillTrial(
-                cwd, taskHandle?.id, learnedH, prevHeuristic,
-                totalIterations - itersBeforeRound, onEvent, remediationRound,
+                cwd,
+                taskHandle?.id,
+                learnedH,
+                prevHeuristic,
+                totalIterations - itersBeforeRound,
+                onEvent,
+                remediationRound
               );
             }
 
@@ -609,22 +767,29 @@ function createAgenticHarness(options = {}) {
           }
         } catch (gateErr) {
           // Delivery gate is best-effort — never block the main flow
-          if (onEvent) onEvent({ type: 'delivery_gate_error', error: gateErr?.message });
+          if (onEvent) {
+            onEvent({ type: 'delivery_gate_error', error: gateErr?.message });
+          }
         }
       }
 
       // ── Verification Agent: dynamic quality check (syntax/lint/test/build) ──
       let verificationReport = null;
       const verifyEnabled = !['0', 'false', 'off', 'no'].includes(
-        String(process.env.KHY_VERIFICATION_GATE || 'true').trim().toLowerCase()
+        String(process.env.KHY_VERIFICATION_GATE || 'true')
+          .trim()
+          .toLowerCase()
       );
       if (verifyEnabled && !loopResult?.stopped && !loopResult?.errorType) {
         try {
           const { verify } = require('./verificationAgent');
-          const editToolPattern = /^(editFile|edit_file|edit|write_file|writeFile|scaffoldFiles|apply_patch)$/i;
-          const modifiedFiles = (allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []))
-            .filter(entry => editToolPattern.test(entry.tool || entry.name || ''))
-            .map(entry => entry.params?.file_path || entry.params?.path || entry.params?.filePath)
+          const editToolPattern =
+            /^(editFile|edit_file|edit|write_file|writeFile|scaffoldFiles|apply_patch)$/i;
+          const modifiedFiles = (
+            allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || []
+          )
+            .filter((entry) => editToolPattern.test(entry.tool || entry.name || ''))
+            .map((entry) => entry.params?.file_path || entry.params?.path || entry.params?.filePath)
             .filter(Boolean);
           // Deduplicate
           const uniqueFiles = [...new Set(modifiedFiles)];
@@ -637,13 +802,13 @@ function createAgenticHarness(options = {}) {
                 type: 'verification_gate',
                 passed: verificationReport.passed,
                 summary: verificationReport.summary,
-                steps: verificationReport.steps.map(s => ({ name: s.name, pass: s.pass })),
+                steps: verificationReport.steps.map((s) => ({ name: s.name, pass: s.pass })),
               });
             }
 
             // If verification failed, run one remediation loop to fix issues
             if (!verificationReport.passed) {
-              const failedSteps = verificationReport.steps.filter(s => !s.pass);
+              const failedSteps = verificationReport.steps.filter((s) => !s.pass);
               const verifyRemediationPrompt = [
                 '[SYSTEM: Verification Gate — quality check FAILED after your changes]',
                 '',
@@ -651,7 +816,7 @@ function createAgenticHarness(options = {}) {
                 ...failedSteps.map((s, i) => `  ${i + 1}. ${s.name}: ${s.output.slice(0, 500)}`),
                 '',
                 '[Modified files]:',
-                ...uniqueFiles.map(f => `  - ${f}`),
+                ...uniqueFiles.map((f) => `  - ${f}`),
                 '',
                 '[Instructions]',
                 'Fix ALL the errors reported above.',
@@ -660,15 +825,17 @@ function createAgenticHarness(options = {}) {
               ].join('\n');
 
               try {
-                if (onEvent) onEvent({ type: 'verification_remediation', round: 1 });
-                await new Promise(r => setTimeout(r, cfg.continuationCooldownMs));
+                if (onEvent) {
+                  onEvent({ type: 'verification_remediation', round: 1 });
+                }
+                await new Promise((r) => setTimeout(r, cfg.continuationCooldownMs));
                 const verifyFixResult = await runToolUseLoop(verifyRemediationPrompt, {
                   ...loopOptions,
                   chat,
                   chatOpts: { ...chatOpts, _agentContext: runtimeCtx },
                 });
                 allToolCallLogs.push(...(verifyFixResult?.toolCallLog || []));
-                totalIterations += (verifyFixResult?.iterations || 0);
+                totalIterations += verifyFixResult?.iterations || 0;
                 loopResult = {
                   ...loopResult,
                   ...verifyFixResult,
@@ -687,12 +854,16 @@ function createAgenticHarness(options = {}) {
                   });
                 }
               } catch (verifyFixErr) {
-                if (onEvent) onEvent({ type: 'verification_remediation_error', error: verifyFixErr?.message });
+                if (onEvent) {
+                  onEvent({ type: 'verification_remediation_error', error: verifyFixErr?.message });
+                }
               }
             }
           }
         } catch (verifyErr) {
-          if (onEvent) onEvent({ type: 'verification_gate_error', error: verifyErr?.message });
+          if (onEvent) {
+            onEvent({ type: 'verification_gate_error', error: verifyErr?.message });
+          }
         }
       }
 
@@ -708,7 +879,8 @@ function createAgenticHarness(options = {}) {
           regressionGateReport = evaluateGate({
             context: changeGateContext,
             cwd,
-            toolCallLog: allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []),
+            toolCallLog:
+              allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [],
           });
           if (onEvent) {
             _emitRegressionGateEvent(onEvent, {
@@ -723,7 +895,10 @@ function createAgenticHarness(options = {}) {
             loopResult = {
               ...loopResult,
               errorType: loopResult?.errorType || 'regression_gate',
-              finalResponse: _appendRegressionGateSummary(loopResult?.finalResponse, regressionGateReport),
+              finalResponse: _appendRegressionGateSummary(
+                loopResult?.finalResponse,
+                regressionGateReport
+              ),
             };
           }
         }
@@ -743,7 +918,11 @@ function createAgenticHarness(options = {}) {
       try {
         const _fpfState = loopResult && loopResult._fpfState;
         let _fpfGuard = null;
-        try { _fpfGuard = require('./falsePositiveFixGuard'); } catch { _fpfGuard = null; }
+        try {
+          _fpfGuard = require('./falsePositiveFixGuard');
+        } catch {
+          _fpfGuard = null;
+        }
         if (_fpfGuard && _fpfState && _fpfGuard.isEnabled() && _fpfState.bugfixIntent) {
           // 档位:复用回归门的模型档位解析(单源);无法解析时按强档(不硬拦)。
           let tier = 'high';
@@ -756,20 +935,27 @@ function createAgenticHarness(options = {}) {
                 tier = isLowTierModel(_resolveModelMeta(chatOpts)) ? 'low' : 'high';
               }
             }
-          } catch { tier = 'high'; }
+          } catch {
+            tier = 'high';
+          }
 
-          const _fpfToolLog = allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []);
+          const _fpfToolLog =
+            allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [];
           let _fpfChangedFiles = [];
           try {
             const { collectChangedFiles } = require('./changeRegressionGate');
             _fpfChangedFiles = collectChangedFiles(_fpfToolLog, cwd);
-          } catch { _fpfChangedFiles = []; }
+          } catch {
+            _fpfChangedFiles = [];
+          }
           const _fpfKnownFiles = _listKnownFiles(cwd);
 
           const fpfVerdict = _fpfGuard.finalize(
             _fpfState,
             {
-              tier, changedFiles: _fpfChangedFiles, knownFiles: _fpfKnownFiles,
+              tier,
+              changedFiles: _fpfChangedFiles,
+              knownFiles: _fpfKnownFiles,
               // 行为特征化(characterizationSnapshot)接线:把回归门已产出的 baseline/current
               // 验证快照透传给 finalize,使其就地差分出「未覆盖文件上的静默行为漂移」并入裁决。
               // 门 KHY_FPF_CHANGE_REGRESSION_GATE 未跑 / KHY_FPF_CHARACTERIZATION 关 → 无快照或
@@ -777,7 +963,7 @@ function createAgenticHarness(options = {}) {
               baseline: regressionGateReport ? regressionGateReport.baseline : null,
               current: regressionGateReport ? regressionGateReport.current : null,
             },
-            process.env,
+            process.env
           );
 
           if (onEvent) {
@@ -788,7 +974,7 @@ function createAgenticHarness(options = {}) {
               phantomSuspected: fpfVerdict.phantomSuspected,
               reproObserved: fpfVerdict.reproObserved,
               uncoveredFiles: fpfVerdict.uncoveredFiles,
-              reasons: (fpfVerdict.reasons || []).map(r => r.code),
+              reasons: (fpfVerdict.reasons || []).map((r) => r.code),
               summary: fpfVerdict.summary,
             });
           }
@@ -807,7 +993,8 @@ function createAgenticHarness(options = {}) {
               };
             } else {
               regressionGateReport.passed = false;
-              regressionGateReport.summary = `${regressionGateReport.summary || ''}\n${fpfVerdict.summary}`.trim();
+              regressionGateReport.summary =
+                `${regressionGateReport.summary || ''}\n${fpfVerdict.summary}`.trim();
               regressionGateReport.falsePositiveFix = fpfVerdict;
             }
             loopResult = {
@@ -830,7 +1017,12 @@ function createAgenticHarness(options = {}) {
           }
         }
       } catch (fpfErr) {
-        if (onEvent) onEvent({ type: 'false_positive_fix_gate_error', error: String(fpfErr?.message || 'unknown error') });
+        if (onEvent) {
+          onEvent({
+            type: 'false_positive_fix_gate_error',
+            error: String(fpfErr?.message || 'unknown error'),
+          });
+        }
       }
       // 内部守卫状态不外泄给调用方:消费完即从 loopResult 摘除(含 Set/Map,非数据契约)。
       try {
@@ -838,18 +1030,22 @@ function createAgenticHarness(options = {}) {
           loopResult = { ...loopResult };
           delete loopResult._fpfState;
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
 
       // ── Boulder State: clear checkpoint on completion ──
       try {
         const { clearBoulderState } = require('./boulderState');
         clearBoulderState(cwd);
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
 
       // ── Sub-agent result aggregation ──
       // Extract structured results from Agent tool calls in the tool log
       const subAgentSummaries = _extractSubAgentSummaries(
-        allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || [])
+        allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || []
       );
       const { buildHarnessDeliveryVerdict } = require('./deliveryGate');
       const deliveryVerdict = buildHarnessDeliveryVerdict({
@@ -857,7 +1053,7 @@ function createAgenticHarness(options = {}) {
         deliveryGateReport,
         verificationReport,
         regressionGateReport,
-        toolCallLog: allToolCallLogs.length > 0 ? allToolCallLogs : (loopResult?.toolCallLog || []),
+        toolCallLog: allToolCallLogs.length > 0 ? allToolCallLogs : loopResult?.toolCallLog || [],
         acceptancePack,
       });
 
@@ -870,6 +1066,20 @@ function createAgenticHarness(options = {}) {
         });
       }
 
+      // 交付判定 fail → 把「缺了什么证据」如实附到返回文本,绝不假装成功收尾。
+      // 这闭合「verdict 只算不用」:即便调用方不看事件,用户看到的最终回复里也有
+      // 明确的未达成清单 + 下一步建议(与 regression gate 的追加摘要同款契约)。
+      if (deliveryVerdict.verdict === 'fail' && loopResult && !loopResult.errorType) {
+        loopResult = {
+          ...loopResult,
+          finalResponse: _appendDeliveryVerdictSummary(
+            loopResult.finalResponse,
+            deliveryVerdict,
+            deliveryGateReport
+          ),
+        };
+      }
+
       // 交付门人类可读报告落盘(承 deliveryGateReporter 叶——此前零生产消费者):
       // deliveryGate 只把结构化摘要挂到 harnessReport.deliveryGate,从不产出带逐条
       // 判定 + 改进建议的 markdown。这里在最终 verdict 定案处,把完整报告经
@@ -880,7 +1090,9 @@ function createAgenticHarness(options = {}) {
       // 绝不打断主流程(同 delivery_gate best-effort 约定)。
       if (deliveryGateReport) {
         const _reportEnabled = !['0', 'false', 'off', 'no'].includes(
-          String(process.env.KHY_DELIVERY_GATE_REPORT || 'true').trim().toLowerCase()
+          String(process.env.KHY_DELIVERY_GATE_REPORT || 'true')
+            .trim()
+            .toLowerCase()
         );
         if (_reportEnabled) {
           try {
@@ -895,7 +1107,9 @@ function createAgenticHarness(options = {}) {
                 verdict: deliveryGateReport.verdict,
               });
             }
-          } catch { /* fail-soft:交付报告是装饰性,绝不打断返回 */ }
+          } catch {
+            /* fail-soft:交付报告是装饰性,绝不打断返回 */
+          }
         }
       }
 
@@ -907,7 +1121,10 @@ function createAgenticHarness(options = {}) {
         memoryHints: contextPacket.memoryHints,
         skillHints: contextPacket.skillHints,
         templateHint: contextPacket.templateHint
-          ? { templateId: contextPacket.templateHint.templateId, templateName: contextPacket.templateHint.templateName }
+          ? {
+              templateId: contextPacket.templateHint.templateId,
+              templateName: contextPacket.templateHint.templateName,
+            }
           : null,
         iterations: Number(loopResult?.iterations || 0),
         toolCalls: Array.isArray(loopResult?.toolCallLog) ? loopResult.toolCallLog.length : 0,
@@ -915,42 +1132,52 @@ function createAgenticHarness(options = {}) {
         continuationRounds: continuationRound,
         subAgentSummaries: subAgentSummaries.length > 0 ? subAgentSummaries : null,
         deliveryVerdict,
-        deliveryGate: deliveryGateReport ? {
-          verdict: deliveryGateReport.verdict,
-          passed: deliveryGateReport.passed,
-          summary: deliveryGateReport.summary,
-          projectRoot: deliveryGateReport.projectRoot,
-          criteriaCount: deliveryGateReport.criteriaCount,
-          profileIds: deliveryGateReport.profileIds,
-          modes: deliveryGateReport.modes,
-          missing: deliveryGateReport.missing.map(m => m.label),
-          warnings: deliveryGateReport.warnings.map(w => w.label),
-          remediationRounds: deliveryGateReport.remediationRounds || 0,
-        } : null,
-        regressionGate: regressionGateReport ? {
-          skipped: !!regressionGateReport.skipped,
-          passed: !!regressionGateReport.passed,
-          reason: regressionGateReport.reason || '',
-          summary: regressionGateReport.summary || '',
-          regressedSteps: regressionGateReport.regressedSteps || [],
-          changedFiles: regressionGateReport.changedFiles || [],
-          requiredSteps: regressionGateReport.requiredSteps || [],
-          recommendations: regressionGateReport.recommendations || [],
-        } : null,
-        verificationGate: verificationReport ? {
-          passed: verificationReport.passed,
-          summary: verificationReport.summary,
-          projectType: verificationReport.projectType,
-          steps: (verificationReport.steps || []).map(s => ({
-            name: s.name, pass: s.pass, durationMs: s.durationMs,
-          })),
-        } : null,
+        deliveryGate: deliveryGateReport
+          ? {
+              verdict: deliveryGateReport.verdict,
+              passed: deliveryGateReport.passed,
+              summary: deliveryGateReport.summary,
+              projectRoot: deliveryGateReport.projectRoot,
+              criteriaCount: deliveryGateReport.criteriaCount,
+              profileIds: deliveryGateReport.profileIds,
+              modes: deliveryGateReport.modes,
+              missing: deliveryGateReport.missing.map((m) => m.label),
+              warnings: deliveryGateReport.warnings.map((w) => w.label),
+              remediationRounds: deliveryGateReport.remediationRounds || 0,
+            }
+          : null,
+        regressionGate: regressionGateReport
+          ? {
+              skipped: !!regressionGateReport.skipped,
+              passed: !!regressionGateReport.passed,
+              reason: regressionGateReport.reason || '',
+              summary: regressionGateReport.summary || '',
+              regressedSteps: regressionGateReport.regressedSteps || [],
+              changedFiles: regressionGateReport.changedFiles || [],
+              requiredSteps: regressionGateReport.requiredSteps || [],
+              recommendations: regressionGateReport.recommendations || [],
+            }
+          : null,
+        verificationGate: verificationReport
+          ? {
+              passed: verificationReport.passed,
+              summary: verificationReport.summary,
+              projectType: verificationReport.projectType,
+              steps: (verificationReport.steps || []).map((s) => ({
+                name: s.name,
+                pass: s.pass,
+                durationMs: s.durationMs,
+              })),
+            }
+          : null,
         analytics: {
           adaptiveRounds: maxContinuationRounds,
           roundsUsed: continuationRound,
-          roundEfficiency: continuationRound > 0
-            ? (allToolCallLogs.filter(tc => tc?.result?.success !== false).length / Math.max(1, allToolCallLogs.length))
-            : null,
+          roundEfficiency:
+            continuationRound > 0
+              ? allToolCallLogs.filter((tc) => tc?.result?.success !== false).length /
+                Math.max(1, allToolCallLogs.length)
+              : null,
           boulderResumed: !!boulderResumeUsed,
           complexityFactor: typeof complexityFactor !== 'undefined' ? complexityFactor : null,
         },
@@ -963,8 +1190,8 @@ function createAgenticHarness(options = {}) {
           contextRoute: harnessReport.contextRoute,
           iterations: harnessReport.iterations,
           toolCalls: harnessReport.toolCalls,
-          memoryHints: harnessReport.memoryHints.map(item => item.filename),
-          skillHints: harnessReport.skillHints.map(item => item.trigger || item.name),
+          memoryHints: harnessReport.memoryHints.map((item) => item.filename),
+          skillHints: harnessReport.skillHints.map((item) => item.trigger || item.name),
           durationMs: harnessReport.durationMs,
           success: deliveryVerdict.verdict !== 'fail',
           deliveryVerdict,
@@ -995,11 +1222,16 @@ function createAgenticHarness(options = {}) {
       // 仅当本次运行确实生成了项目（脚手架/模板或 >= KHY_META_MIN_FILES 个新文件）
       // 且项目根尚无 .ai/MAP.md 时触发。fail-soft，绝不阻断任务完成。
       try {
-        const metaLog = (allToolCallLogs && allToolCallLogs.length)
-          ? allToolCallLogs
-          : (loopResult?.toolCallLog || []);
+        const metaLog =
+          allToolCallLogs && allToolCallLogs.length
+            ? allToolCallLogs
+            : loopResult?.toolCallLog || [];
         const metaResult = await projectMetadataService.maybeGenerateAfterRun(cwd, metaLog, {
-          log: (msg) => { if (onEvent) onEvent({ type: 'metadata', message: String(msg) }); },
+          log: (msg) => {
+            if (onEvent) {
+              onEvent({ type: 'metadata', message: String(msg) });
+            }
+          },
         });
         if (metaResult && metaResult.generated) {
           harnessReport.maintainabilityMetadata = {
@@ -1019,7 +1251,9 @@ function createAgenticHarness(options = {}) {
       }
 
       backgroundTaskManager.complete(taskHandle.task.id, harnessReport);
-      if (onEvent) onEvent({ type: 'completed', report: harnessReport });
+      if (onEvent) {
+        onEvent({ type: 'completed', report: harnessReport });
+      }
 
       return {
         ...loopResult,
@@ -1027,7 +1261,9 @@ function createAgenticHarness(options = {}) {
       };
     } catch (err) {
       backgroundTaskManager.fail(taskHandle.task.id, err?.message || 'agentic harness failed');
-      if (onEvent) onEvent({ type: 'failed', error: err?.message || 'agentic harness failed' });
+      if (onEvent) {
+        onEvent({ type: 'failed', error: err?.message || 'agentic harness failed' });
+      }
       throw err;
     }
   }
@@ -1045,13 +1281,19 @@ function createAgenticHarness(options = {}) {
  * Each Agent tool result may contain subtaskResults, filesModified, etc.
  */
 function _extractSubAgentSummaries(toolCallLog) {
-  if (!Array.isArray(toolCallLog)) return [];
+  if (!Array.isArray(toolCallLog)) {
+    return [];
+  }
   const summaries = [];
   for (const entry of toolCallLog) {
     const toolName = String(entry?.tool || entry?.name || '').toLowerCase();
-    if (toolName !== 'agent' && toolName !== 'sub_agent' && toolName !== 'delegate') continue;
+    if (toolName !== 'agent' && toolName !== 'sub_agent' && toolName !== 'delegate') {
+      continue;
+    }
     const result = entry?.result;
-    if (!result) continue;
+    if (!result) {
+      continue;
+    }
     summaries.push({
       subagentType: result.subagent_type || result.subagentType || 'unknown',
       role: result.role || 'general',
@@ -1085,10 +1327,14 @@ async function _tryAutoDecompose(userMessage, ctx) {
     const { decompose, mergeResults } = require('./taskDecomposer');
 
     const complexResult = _isComplexTask(userMessage);
-    if (!complexResult.isComplex) return null;
+    if (!complexResult.isComplex) {
+      return null;
+    }
 
     const plan = decompose(userMessage, complexResult);
-    if (!plan.shouldDecompose || plan.subtasks.length < 2) return null;
+    if (!plan.shouldDecompose || plan.subtasks.length < 2) {
+      return null;
+    }
 
     // Dependency-aware wave scheduling (farewell-gift leaf). The decomposer may emit
     // subtasks carrying `dependencies` (see _llmDecomposer) that were previously
@@ -1102,17 +1348,17 @@ async function _tryAutoDecompose(userMessage, ctx) {
     } catch {
       wavePlan = null;
     }
-    const waves = wavePlan && Array.isArray(wavePlan.waves) && wavePlan.waves.length
-      ? wavePlan.waves
-      : [plan.subtasks];
+    const waves =
+      wavePlan && Array.isArray(wavePlan.waves) && wavePlan.waves.length
+        ? wavePlan.waves
+        : [plan.subtasks];
     // Resolved dependency edges + per-wave source positions (from the same leaf).
     // These drive fault-aware wave execution below; both degrade to empty/flat when
     // the plan collapsed to a single wave, so the fault-stop path is a guaranteed
     // no-op unless there are real resolved edges across multiple waves.
     const waveEdges = wavePlan && Array.isArray(wavePlan.edges) ? wavePlan.edges : [];
-    const waveGlobalIndex = wavePlan && Array.isArray(wavePlan.waveGlobalIndex)
-      ? wavePlan.waveGlobalIndex
-      : null;
+    const waveGlobalIndex =
+      wavePlan && Array.isArray(wavePlan.waveGlobalIndex) ? wavePlan.waveGlobalIndex : null;
 
     // Notify: auto-decomposition triggered
     if (ctx.onEvent) {
@@ -1121,7 +1367,7 @@ async function _tryAutoDecompose(userMessage, ctx) {
         subtaskCount: plan.subtasks.length,
         waveCount: waves.length,
         reason: plan.reason,
-        subtasks: plan.subtasks.map(s => ({ role: s.role, preview: s.prompt.slice(0, 80) })),
+        subtasks: plan.subtasks.map((s) => ({ role: s.role, preview: s.prompt.slice(0, 80) })),
       });
     }
 
@@ -1129,20 +1375,21 @@ async function _tryAutoDecompose(userMessage, ctx) {
     // wave is ONE call to the EXISTING parallel primitive; multiple waves are awaited
     // in order. A single wave collapses to the original single call (byte-equivalent).
     const agentTool = require('../tools/AgentTool');
-    const _runOneWave = (waveSubtasks) => agentTool._runOrchestrated(
-      { prompt: userMessage, subtasks: waveSubtasks },
-      'general',          // parentRole
-      'general-purpose',  // subagentType
-      300_000,            // timeoutMs
-      ctx.parentContext || null,
-      {
-        preferredAdapter: ctx.chatOpts?.preferredAdapter || '',
-        preferredModel: ctx.chatOpts?.preferredModel || '',
-        progressCallback: ctx.onEvent
-          ? (evt) => ctx.onEvent({ type: 'decompose_progress', ...evt })
-          : null,
-      },
-    );
+    const _runOneWave = (waveSubtasks) =>
+      agentTool._runOrchestrated(
+        { prompt: userMessage, subtasks: waveSubtasks },
+        'general', // parentRole
+        'general-purpose', // subagentType
+        300_000, // timeoutMs
+        ctx.parentContext || null,
+        {
+          preferredAdapter: ctx.chatOpts?.preferredAdapter || '',
+          preferredModel: ctx.chatOpts?.preferredModel || '',
+          progressCallback: ctx.onEvent
+            ? (evt) => ctx.onEvent({ type: 'decompose_progress', ...evt })
+            : null,
+        }
+      );
 
     let result;
     if (waves.length <= 1) {
@@ -1170,7 +1417,9 @@ async function _tryAutoDecompose(userMessage, ctx) {
       const _FAULT_FALSY = new Set(['0', 'false', 'off', 'no']);
       const _faultStopEnabled = (() => {
         const v = process.env.KHY_DEP_WAVE_FAULT_STOP;
-        if (v === undefined || v === null) return true;
+        if (v === undefined || v === null) {
+          return true;
+        }
         return !_FAULT_FALSY.has(String(v).trim().toLowerCase());
       })();
       // Predecessor-result CONTEXT INJECTION (gate KHY_DEP_WAVE_CONTEXT_INJECT,
@@ -1183,17 +1432,23 @@ async function _tryAutoDecompose(userMessage, ctx) {
       const _CTX_FALSY = new Set(['0', 'false', 'off', 'no']);
       const _contextInjectEnabled = (() => {
         const v = process.env.KHY_DEP_WAVE_CONTEXT_INJECT;
-        if (v === undefined || v === null) return true;
+        if (v === undefined || v === null) {
+          return true;
+        }
         return !_CTX_FALSY.has(String(v).trim().toLowerCase());
       })();
-      const contextInject = _contextInjectEnabled && Array.isArray(waveGlobalIndex)
-        && waveGlobalIndex.length === waves.length;
+      const contextInject =
+        _contextInjectEnabled &&
+        Array.isArray(waveGlobalIndex) &&
+        waveGlobalIndex.length === waves.length;
       // globalIdx → the inner result object of a member that actually RAN (skipped
       // members have no result text, so they are never recorded here).
       const priorResultsByGlobalIdx = new Map();
       // Only meaningful when we have positional global indices to key on.
-      const faultStop = _faultStopEnabled && Array.isArray(waveGlobalIndex)
-        && waveGlobalIndex.length === waves.length;
+      const faultStop =
+        _faultStopEnabled &&
+        Array.isArray(waveGlobalIndex) &&
+        waveGlobalIndex.length === waves.length;
 
       const mergedSubtaskResults = [];
       let successCount = 0;
@@ -1202,7 +1457,9 @@ async function _tryAutoDecompose(userMessage, ctx) {
 
       for (let w = 0; w < waves.length; w += 1) {
         const wave = waves[w];
-        const globalIdx = faultStop ? waveGlobalIndex[w] : wave.map((st) => plan.subtasks.indexOf(st));
+        const globalIdx = faultStop
+          ? waveGlobalIndex[w]
+          : wave.map((st) => plan.subtasks.indexOf(st));
 
         // Split this wave into members still safe to run vs. those whose dependency
         // collapsed upstream. When fault-stop is off (or we lack positional indices)
@@ -1221,7 +1478,9 @@ async function _tryAutoDecompose(userMessage, ctx) {
           failedGlobalIdx.add(g); // skip propagates transitively to this node's downstream
         }
 
-        if (toRun.length === 0) continue; // whole wave skipped — nothing to fan out
+        if (toRun.length === 0) {
+          continue;
+        } // whole wave skipped — nothing to fan out
 
         // Build the sublist to actually run, preserving order, and remember each
         // run member's global index positionally (no indexOf → duplicate-object safe).
@@ -1235,7 +1494,9 @@ async function _tryAutoDecompose(userMessage, ctx) {
         for (const g of toRun) {
           // Map a global index back to its position within THIS wave.
           const posInWave = globalIdx.indexOf(g);
-          if (posInWave < 0) continue;
+          if (posInWave < 0) {
+            continue;
+          }
           const st = wave[posInWave];
           if (contextInject) {
             const block = buildPredecessorContext(st, waveEdges, g, priorResultsByGlobalIdx);
@@ -1251,17 +1512,23 @@ async function _tryAutoDecompose(userMessage, ctx) {
         const waveResult = await _runOneWave(runSubtasks);
         successCount += waveResult.successCount || 0;
         failCount += waveResult.failCount || 0;
-        const aggregated = Array.isArray(waveResult.subtaskResults) ? waveResult.subtaskResults : [];
+        const aggregated = Array.isArray(waveResult.subtaskResults)
+          ? waveResult.subtaskResults
+          : [];
         runGlobalIdx.forEach((g, j) => {
-          const agItem = aggregated.find(a => a && a.name === `subtask-${j + 1}`);
+          const agItem = aggregated.find((a) => a && a.name === `subtask-${j + 1}`);
           if (agItem) {
             mergedSubtaskResults.push({ ...agItem, name: `subtask-${g + 1}` });
             // A genuinely-failed subtask's index also feeds the transitive skip set.
-            if (agItem.result && agItem.result.success === false) failedGlobalIdx.add(g);
+            if (agItem.result && agItem.result.success === false) {
+              failedGlobalIdx.add(g);
+            }
             // Record this ran member's result so later waves can inject it as
             // predecessor context (only members that actually ran are recorded;
             // skipped members carry no result text).
-            if (contextInject && agItem.result) priorResultsByGlobalIdx.set(g, agItem.result);
+            if (contextInject && agItem.result) {
+              priorResultsByGlobalIdx.set(g, agItem.result);
+            }
           }
         });
       }
@@ -1313,30 +1580,40 @@ function _buildLoopInput(packet) {
   const sections = [packet.userMessage];
 
   if (packet.memoryHints.length > 0) {
-    sections.push([
-      '[System Memory Hints]',
-      ...packet.memoryHints.map((item, idx) => `${idx + 1}. ${item.title} (${item.filename}) - ${item.snippet}`),
-    ].join('\n'));
+    sections.push(
+      [
+        '[System Memory Hints]',
+        ...packet.memoryHints.map(
+          (item, idx) => `${idx + 1}. ${item.title} (${item.filename}) - ${item.snippet}`
+        ),
+      ].join('\n')
+    );
   }
 
   if (packet.skillHints.length > 0) {
-    sections.push([
-      '[System Skill Hints]',
-      ...packet.skillHints.map((item, idx) => `${idx + 1}. ${item.trigger || item.name}: ${item.description}`),
-    ].join('\n'));
+    sections.push(
+      [
+        '[System Skill Hints]',
+        ...packet.skillHints.map(
+          (item, idx) => `${idx + 1}. ${item.trigger || item.name}: ${item.description}`
+        ),
+      ].join('\n')
+    );
   }
 
   if (packet.templateHint && packet.templateHint.instructions) {
-    sections.push([
-      `[Task Playbook: ${packet.templateHint.templateName || packet.templateHint.templateId}]`,
-      packet.templateHint.instructions,
-    ].join('\n'));
+    sections.push(
+      [
+        `[Task Playbook: ${packet.templateHint.templateName || packet.templateHint.templateId}]`,
+        packet.templateHint.instructions,
+      ].join('\n')
+    );
   }
 
   if (packet.contextRoute.route !== 'fits') {
     sections.push(
-      `[System Context Route] route=${packet.contextRoute.route}; overflow=${packet.contextRoute.overflow}; `
-      + `toolResultTokens=${packet.contextRoute.toolResultTokens}.`,
+      `[System Context Route] route=${packet.contextRoute.route}; overflow=${packet.contextRoute.overflow}; ` +
+        `toolResultTokens=${packet.contextRoute.toolResultTokens}.`
     );
   }
 
@@ -1349,10 +1626,7 @@ function _appendRegressionGateSummary(finalResponse, gateReport) {
   const recommendations = Array.isArray(gateReport?.recommendations)
     ? gateReport.recommendations.filter(Boolean)
     : [];
-  const lines = [
-    '[Regression Gate]',
-    summary,
-  ];
+  const lines = ['[Regression Gate]', summary];
   if (recommendations.length > 0) {
     lines.push('Next steps:');
     for (let i = 0; i < recommendations.length; i++) {
@@ -1362,8 +1636,48 @@ function _appendRegressionGateSummary(finalResponse, gateReport) {
   return [base, lines.join('\n')].filter(Boolean).join('\n\n');
 }
 
+/**
+ * [delivery] 交付判定 fail 时,把「缺了什么证据 + 建议下一步」如实追加到最终回复。
+ * 与 _appendRegressionGateSummary 同款契约:不改写模型正文,只做诚实收尾注释,
+ * 让用户一眼看到目标未达成的原因,而不是被干净的回答掩盖。
+ *
+ * @param {string} finalResponse 模型最终回复
+ * @param {object} verdict buildHarnessDeliveryVerdict 的返回
+ * @param {object|null} deliveryGateReport deliveryGate 报告(含 missing 明细)
+ * @returns {string} 追加后的回复
+ */
+function _appendDeliveryVerdictSummary(finalResponse, verdict, deliveryGateReport) {
+  const base = String(finalResponse || '').trim();
+  const missing = Array.isArray(deliveryGateReport?.missing)
+    ? deliveryGateReport.missing
+        .map((m) => (m && m.label ? m.label : String(m || '')))
+        .filter(Boolean)
+    : [];
+  const blockedBy = Array.isArray(verdict?.blockedBy) ? verdict.blockedBy : [];
+  const lines = ['[Delivery]', '交付判定:FAIL — 目标达成的证据不充分,不能宣布完成。'];
+  if (missing.length > 0) {
+    lines.push('未满足的交付条件:');
+    for (let i = 0; i < missing.length; i++) {
+      lines.push(`  - ${missing[i]}`);
+    }
+  }
+  if (blockedBy.length > 0) {
+    lines.push(`阻塞来源: ${blockedBy.join('、')}`);
+  }
+  const summary = String(verdict?.summary || '').trim();
+  if (summary && !summary.includes('no blocking gates')) {
+    lines.push(`判定摘要: ${summary}`);
+  }
+  lines.push(
+    '建议: 根据上述未满足条件补充实现或修正,然后重新验证;可查看交付报告(delivery-gate-report.md)获取逐条判定。'
+  );
+  return [base, lines.join('\n')].filter(Boolean).join('\n\n');
+}
+
 function _emitRegressionGateEvent(onEvent, payload = {}) {
-  if (typeof onEvent !== 'function') return;
+  if (typeof onEvent !== 'function') {
+    return;
+  }
   const body = { ...(payload || {}) };
   onEvent({ type: 'change_regression_gate', ...body });
   onEvent({ type: 'bugfix_regression_gate', ...body });
@@ -1375,7 +1689,9 @@ function _emitRegressionGateEvent(onEvent, payload = {}) {
  */
 function _appendFalsePositiveFixSummary(finalResponse, fpfVerdict) {
   const base = String(finalResponse || '').trim();
-  const summary = String(fpfVerdict?.summary || 'False-positive-fix guard blocked delivery.').trim();
+  const summary = String(
+    fpfVerdict?.summary || 'False-positive-fix guard blocked delivery.'
+  ).trim();
   const recommendations = Array.isArray(fpfVerdict?.recommendations)
     ? fpfVerdict.recommendations.filter(Boolean)
     : [];
@@ -1403,7 +1719,10 @@ function _listKnownFiles(cwd) {
       maxBuffer: 8 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'ignore'],
     });
-    const files = String(out || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const files = String(out || '')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
     // 上限保护:超大仓库只取前 20000 条(覆盖判定为名字启发式,样本足够)。
     return files.length > 20000 ? files.slice(0, 20000) : files;
   } catch {
@@ -1424,22 +1743,34 @@ function _depositReproTest(cwd, deposit, env = process.env, targetDir = null) {
     const fs = require('fs');
     const testsDir = targetDir || path.resolve(__dirname, '..', '..', 'tests', 'services');
     // 仅当目录已存在(开发 / editable 安装)才沉淀;打包只读安装下静默跳过。
-    if (!fs.existsSync(testsDir)) return { created: false, file: null };
+    if (!fs.existsSync(testsDir)) {
+      return { created: false, file: null };
+    }
 
     const sig = String(deposit.signature || '');
     const sha8 = crypto.createHash('sha256').update(sig).digest('hex').slice(0, 8);
-    const firstFail = (Array.isArray(deposit.redFailures) && deposit.redFailures[0]) || deposit.framework || 'repro';
-    const slug = String(firstFail).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'repro';
+    const firstFail =
+      (Array.isArray(deposit.redFailures) && deposit.redFailures[0]) ||
+      deposit.framework ||
+      'repro';
+    const slug =
+      String(firstFail)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 32) || 'repro';
     const fileName = `repro.autodeposit.${slug}.${sha8}.test.js`;
     const filePath = path.join(testsDir, fileName);
 
     // 幂等:同复现 → 同名 → 已存在则不重写(防测试目录被撞 / 重试累积)。
-    if (fs.existsSync(filePath)) return { created: false, file: filePath };
+    if (fs.existsSync(filePath)) {
+      return { created: false, file: filePath };
+    }
 
     const command = String(deposit.command || '').replace(/[`$\\]/g, '');
     const failures = (Array.isArray(deposit.redFailures) ? deposit.redFailures : []).slice(0, 8);
     const failuresBlock = failures.length
-      ? failures.map(f => ` *   - ${String(f).replace(/\*\//g, '* /')}`).join('\n')
+      ? failures.map((f) => ` *   - ${String(f).replace(/\*\//g, '* /')}`).join('\n')
       : ' *   (未记录具体失败用例名)';
 
     const content = `'use strict';
@@ -1471,7 +1802,9 @@ test('AUTO-DEPOSIT 复现占位(${sha8}) — 待维护者落实断言', () => {
 
     // 闸:KHY_FPF_AUTO_DEPOSIT_REPRO 默认开,仅 off/0/false 关闭。
     const flag = env && env.KHY_FPF_AUTO_DEPOSIT_REPRO;
-    if (flag === 'off' || flag === '0' || flag === 'false') return { created: false, file: null };
+    if (flag === 'off' || flag === '0' || flag === 'false') {
+      return { created: false, file: null };
+    }
 
     fs.writeFileSync(filePath, content, { encoding: 'utf8', flag: 'wx' }); // wx:仅当不存在时创建
     return { created: true, file: filePath };
@@ -1490,13 +1823,17 @@ test('AUTO-DEPOSIT 复现占位(${sha8}) — 待维护者落实断言', () => {
  */
 function _attachHeuristic(deliveryGateReport, prevHeuristic, onEvent, round) {
   const enabled = !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_HEURISTIC_ENABLED || 'true').trim().toLowerCase()
+    String(process.env.KHY_HEURISTIC_ENABLED || 'true')
+      .trim()
+      .toLowerCase()
   );
-  if (!enabled || !deliveryGateReport) return prevHeuristic;
+  if (!enabled || !deliveryGateReport) {
+    return prevHeuristic;
+  }
   try {
     const { computeHeuristic, shouldCalibrate } = require('./heuristic');
     const metrics = computeHeuristic(deliveryGateReport);
-    const prevH = (prevHeuristic && Number.isFinite(prevHeuristic.h)) ? prevHeuristic.h : null;
+    const prevH = prevHeuristic && Number.isFinite(prevHeuristic.h) ? prevHeuristic.h : null;
     const stagnant = prevH === null ? false : shouldCalibrate(prevH, metrics.h);
     deliveryGateReport.heuristic = { ...metrics, round, prevH, stagnant };
     if (typeof onEvent === 'function') {
@@ -1521,7 +1858,9 @@ function _attachHeuristic(deliveryGateReport, prevHeuristic, onEvent, round) {
 
 function _lrtaEnabled() {
   return !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_LRTA_ENABLED || 'true').trim().toLowerCase()
+    String(process.env.KHY_LRTA_ENABLED || 'true')
+      .trim()
+      .toLowerCase()
   );
 }
 
@@ -1532,7 +1871,9 @@ function _lrtaEnabled() {
  * backfill simply adopts that round's estimate. Best-effort.
  */
 function _seedLearnedHeuristic(cwd) {
-  if (!_lrtaEnabled()) return Infinity;
+  if (!_lrtaEnabled()) {
+    return Infinity;
+  }
   try {
     const { loadLearnedHeuristic } = require('./lrtaBackfill');
     const rec = loadLearnedHeuristic(cwd);
@@ -1551,7 +1892,9 @@ function _seedLearnedHeuristic(cwd) {
  * env-gated; on any error returns `prevStoredH` unchanged (zero regression).
  */
 function _backfillTrial(cwd, taskId, prevStoredH, heuristic, roundIterations, onEvent, round) {
-  if (!_lrtaEnabled() || !heuristic || !Number.isFinite(heuristic.h)) return prevStoredH;
+  if (!_lrtaEnabled() || !heuristic || !Number.isFinite(heuristic.h)) {
+    return prevStoredH;
+  }
   try {
     const { backfill, roundCost, saveLearnedHeuristic } = require('./lrtaBackfill');
     const stepCost = roundCost({ iterations: roundIterations });
@@ -1574,7 +1917,9 @@ function _backfillTrial(cwd, taskId, prevStoredH, heuristic, roundIterations, on
 }
 
 function _emitRegressionGateErrorEvent(onEvent, payload = {}) {
-  if (typeof onEvent !== 'function') return;
+  if (typeof onEvent !== 'function') {
+    return;
+  }
   const body = { ...(payload || {}) };
   onEvent({ type: 'change_regression_gate_error', ...body });
   onEvent({ type: 'bugfix_regression_gate_error', ...body });
@@ -1584,35 +1929,55 @@ function _emitRegressionGateErrorEvent(onEvent, payload = {}) {
 // 重试判定时都重建这个字面量 Set 与两个正则。集合/正则均与输入无关,提升到模块作用域一次构造。
 // 两个正则仅用 `.test()` 且**无 `/g` 标志**(无 lastIndex 跨调用泄漏),Set 仅经 `.has` 只读消费,
 // 三者都不 mutate、不逃逸(函数只返回布尔),逐字节等价。
-const _RETRYABLE_LOOP_ERROR_TYPES = new Set(['timeout', 'network', 'process', 'unknown', 'cancelled']);
+const _RETRYABLE_LOOP_ERROR_TYPES = new Set([
+  'timeout',
+  'network',
+  'process',
+  'unknown',
+  'cancelled',
+]);
 const _COOLDOWN_RE = /\bcooldown\b/i;
 const _RECENT_FAILURE_CACHED_RE = /recent.*failure.*cached/i;
 
 function _isRetryableLoopOutcome(loopResult) {
-  const errorType = String(loopResult?.errorType || '').trim().toLowerCase();
-  if (!errorType || !_RETRYABLE_LOOP_ERROR_TYPES.has(errorType)) return false;
+  const errorType = String(loopResult?.errorType || '')
+    .trim()
+    .toLowerCase();
+  if (!errorType || !_RETRYABLE_LOOP_ERROR_TYPES.has(errorType)) {
+    return false;
+  }
   // Cooldown failures are deterministic — the adapter cached a recent failure
   // and won't retry until the cooldown expires.  Retrying immediately is futile.
   const content = String(loopResult?.finalResponse || loopResult?.content || '');
-  if (_COOLDOWN_RE.test(content) || _RECENT_FAILURE_CACHED_RE.test(content)) return false;
+  if (_COOLDOWN_RE.test(content) || _RECENT_FAILURE_CACHED_RE.test(content)) {
+    return false;
+  }
   const calls = Array.isArray(loopResult?.toolCallLog) ? loopResult.toolCallLog.length : 0;
   return calls === 0;
 }
 
 async function _collectMemoryHints({ userMessage, maxItems, vectorRetriever }) {
-  if (!userMessage) return [];
+  if (!userMessage) {
+    return [];
+  }
   const queryTokens = _tokenize(userMessage);
-  if (queryTokens.size === 0) return [];
+  if (queryTokens.size === 0) {
+    return [];
+  }
 
   const candidates = [];
   const seen = new Set();
 
   const pushHit = (hit, source) => {
     const filename = String(hit?.filename || '').trim();
-    if (!filename || seen.has(filename)) return;
+    if (!filename || seen.has(filename)) {
+      return;
+    }
     seen.add(filename);
     const frontmatter = hit.frontmatter || {};
-    const joined = [frontmatter.name, frontmatter.description, ...(hit.matches || [])].filter(Boolean).join(' ');
+    const joined = [frontmatter.name, frontmatter.description, ...(hit.matches || [])]
+      .filter(Boolean)
+      .join(' ');
     const textTokens = _tokenize(joined);
     const score = _overlapScore(queryTokens, textTokens);
     candidates.push({
@@ -1626,21 +1991,27 @@ async function _collectMemoryHints({ userMessage, maxItems, vectorRetriever }) {
 
   try {
     const direct = memdir.searchMemories(userMessage);
-    for (const hit of direct) pushHit(hit, 'text');
+    for (const hit of direct) {
+      pushHit(hit, 'text');
+    }
   } catch {
     // ignore
   }
 
   if (candidates.length < maxItems) {
-    const tokenQueries = [...queryTokens].filter(t => t.length >= 2).slice(0, 4);
+    const tokenQueries = [...queryTokens].filter((t) => t.length >= 2).slice(0, 4);
     for (const token of tokenQueries) {
       try {
         const tokenHits = memdir.searchMemories(token);
-        for (const hit of tokenHits) pushHit(hit, 'token');
+        for (const hit of tokenHits) {
+          pushHit(hit, 'token');
+        }
       } catch {
         // ignore
       }
-      if (candidates.length >= maxItems * 3) break;
+      if (candidates.length >= maxItems * 3) {
+        break;
+      }
     }
   }
 
@@ -1652,14 +2023,17 @@ async function _collectMemoryHints({ userMessage, maxItems, vectorRetriever }) {
       });
       if (Array.isArray(vectorHits)) {
         for (const hit of vectorHits) {
-          pushHit({
-            filename: hit.filename || hit.id || `vector-${candidates.length + 1}`,
-            frontmatter: {
-              name: hit.title || hit.name || hit.filename || 'vector-memory',
-              description: hit.description || '',
+          pushHit(
+            {
+              filename: hit.filename || hit.id || `vector-${candidates.length + 1}`,
+              frontmatter: {
+                name: hit.title || hit.name || hit.filename || 'vector-memory',
+                description: hit.description || '',
+              },
+              matches: [hit.snippet || hit.content || ''],
             },
-            matches: [hit.snippet || hit.content || ''],
-          }, 'vector');
+            'vector'
+          );
         }
       }
     } catch {
@@ -1677,16 +2051,15 @@ function _collectSkillHints({ userMessage, cwd, recentFiles, maxItems }) {
   try {
     skills.discoverAllSkills(cwd);
     const activeSkills = skills.getActiveSkills({ cwd, recentFiles });
-    if (!Array.isArray(activeSkills) || activeSkills.length === 0) return [];
+    if (!Array.isArray(activeSkills) || activeSkills.length === 0) {
+      return [];
+    }
 
     const queryTokens = _tokenize(userMessage);
     const scored = activeSkills.map((skill) => {
-      const baseText = [
-        skill.name,
-        skill.description,
-        skill.trigger,
-        ...(skill.tags || []),
-      ].filter(Boolean).join(' ');
+      const baseText = [skill.name, skill.description, skill.trigger, ...(skill.tags || [])]
+        .filter(Boolean)
+        .join(' ');
       const skillTokens = _tokenize(baseText);
       return {
         name: skill.name,
@@ -1696,11 +2069,8 @@ function _collectSkillHints({ userMessage, cwd, recentFiles, maxItems }) {
       };
     });
 
-    const hasSignal = scored.some(item => item.score > 0);
-    const picked = (hasSignal
-      ? scored.filter(item => item.score > 0)
-      : scored
-    )
+    const hasSignal = scored.some((item) => item.score > 0);
+    const picked = (hasSignal ? scored.filter((item) => item.score > 0) : scored)
       .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
       .slice(0, maxItems)
       .map(({ name, trigger, description }) => ({ name, trigger, description }));
@@ -1726,13 +2096,19 @@ function _collectSkillHints({ userMessage, cwd, recentFiles, maxItems }) {
  */
 function _collectTemplateHint({ userMessage }) {
   const enabled = !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_TASK_TEMPLATE_HINT || 'true').trim().toLowerCase()
+    String(process.env.KHY_TASK_TEMPLATE_HINT || 'true')
+      .trim()
+      .toLowerCase()
   );
-  if (!enabled) return null;
+  if (!enabled) {
+    return null;
+  }
   try {
     const { generateTaskInstructions } = require('./taskTemplates');
     const matched = generateTaskInstructions(String(userMessage || ''));
-    if (!matched || !matched.instructions) return null;
+    if (!matched || !matched.instructions) {
+      return null;
+    }
     return {
       templateId: matched.templateId,
       templateName: matched.templateName,
@@ -1749,7 +2125,9 @@ function _tokenize(text) {
   const words = raw.match(/[a-z0-9_./-]+/g) || [];
   for (const word of words) {
     const normalized = word.trim();
-    if (normalized.length >= 2) out.add(normalized);
+    if (normalized.length >= 2) {
+      out.add(normalized);
+    }
   }
 
   // Keep CJK bigrams to support Chinese query matching.
@@ -1766,19 +2144,27 @@ function _overlapScore(left, right) {
   }
   let hit = 0;
   for (const token of left) {
-    if (right.has(token)) hit++;
+    if (right.has(token)) {
+      hit++;
+    }
   }
   return hit / left.size;
 }
 
 function _safeSnippet(text, maxLen = 180) {
-  const oneLine = String(text || '').replace(/\s+/g, ' ').trim();
-  if (oneLine.length <= maxLen) return oneLine;
+  const oneLine = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (oneLine.length <= maxLen) {
+    return oneLine;
+  }
   return `${oneLine.slice(0, maxLen - 1)}…`;
 }
 
 function _cloneMessages(messages) {
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   return messages.map((msg) => ({
     role: String(msg?.role || 'assistant'),
     content: String(msg?.content || ''),
@@ -1790,7 +2176,10 @@ function _safeArray(value) {
 }
 
 function _hashInput(input) {
-  return crypto.createHash('sha1').update(String(input || '')).digest('hex');
+  return crypto
+    .createHash('sha1')
+    .update(String(input || ''))
+    .digest('hex');
 }
 
 function _createTtlCache(ttlMs, maxEntries) {
@@ -1800,7 +2189,9 @@ function _createTtlCache(ttlMs, maxEntries) {
 
   function get(key) {
     const entry = map.get(key);
-    if (!entry) return null;
+    if (!entry) {
+      return null;
+    }
     if (Date.now() > entry.expiresAt) {
       map.delete(key);
       return null;
@@ -1811,7 +2202,9 @@ function _createTtlCache(ttlMs, maxEntries) {
   function set(key, value) {
     if (map.size >= cap) {
       const firstKey = map.keys().next().value;
-      if (firstKey !== undefined) map.delete(firstKey);
+      if (firstKey !== undefined) {
+        map.delete(firstKey);
+      }
     }
     map.set(key, {
       value,
@@ -1837,32 +2230,51 @@ function _createTtlCache(ttlMs, maxEntries) {
  */
 function _assessTaskComplexity(userMessage, activatedModes, firstLoopResult) {
   let factor = 1.0;
-  if ((userMessage || '').length > 2000) factor += 0.5;
+  if ((userMessage || '').length > 2000) {
+    factor += 0.5;
+  }
   const modes = activatedModes || [];
-  if (modes.includes('ultrawork') || modes.includes('coding')) factor += 0.5;
+  if (modes.includes('ultrawork') || modes.includes('coding')) {
+    factor += 0.5;
+  }
   const toolCount = firstLoopResult?.toolCallLog?.length || 0;
-  if (toolCount > 10) factor += 0.5;
+  if (toolCount > 10) {
+    factor += 0.5;
+  }
   return factor;
 }
 
 function _shouldAutoContinue(userMessage) {
-  const envFlag = String(process.env.KHY_RALPH_LOOP || '').trim().toLowerCase();
-  if (['0', 'false', 'off', 'no'].includes(envFlag)) return false;
+  const envFlag = String(process.env.KHY_RALPH_LOOP || '')
+    .trim()
+    .toLowerCase();
+  if (['0', 'false', 'off', 'no'].includes(envFlag)) {
+    return false;
+  }
 
   try {
     const { detectModes } = require('./intentGate');
     const modes = detectModes(userMessage);
     // 明确的 ultrawork/coding 模式直接触发
-    if (modes.ultrawork || modes.coding) return true;
+    if (modes.ultrawork || modes.coding) {
+      return true;
+    }
     // analyze 模式也可续接
-    if (modes.analyze) return true;
-  } catch { /* intentGate 失败不阻断 */ }
+    if (modes.analyze) {
+      return true;
+    }
+  } catch {
+    /* intentGate 失败不阻断 */
+  }
 
   // 复杂任务启发式: 消息较长(>200字)且包含动作性关键词也触发续接
   const msg = String(userMessage || '');
   if (msg.length > 200) {
-    const actionPatterns = /\b(create|implement|build|refactor|migrate|add|write|develop|设计|实现|创建|重构|编写|开发|搭建|迁移)\b/i;
-    if (actionPatterns.test(msg)) return true;
+    const actionPatterns =
+      /\b(create|implement|build|refactor|migrate|add|write|develop|设计|实现|创建|重构|编写|开发|搭建|迁移)\b/i;
+    if (actionPatterns.test(msg)) {
+      return true;
+    }
   }
 
   return false;
@@ -1873,33 +2285,73 @@ function _buildContinuationSummary(loopResult) {
   const writes = [];
   const shells = [];
   const reads = [];
+  const failedTools = []; // { tool, reason } — help the model avoid repeating failures
   let successes = 0;
   let failures = 0;
 
   for (const entry of log) {
     const tool = String(entry.tool || '');
     const ok = entry.result?.success !== false;
-    if (ok) successes++; else failures++;
+    if (ok) {
+      successes++;
+    } else {
+      failures++;
+    }
+
+    if (!ok) {
+      const reason = String(
+        entry.result?.error?.message || entry.result?.error || entry.result?._dedupNote || 'unknown'
+      ).slice(0, 120);
+      failedTools.push({ tool, reason });
+    }
 
     if (/write|scaffold|edit/i.test(tool)) {
       const p = entry.params?.path || entry.params?.file_path || entry.params?.root || '';
-      if (p) writes.push(p);
+      if (p) {
+        writes.push(p);
+      }
     } else if (/shell/i.test(tool)) {
       const cmd = String(entry.params?.command || '').slice(0, 80);
-      if (cmd) shells.push(cmd);
+      if (cmd) {
+        shells.push(cmd);
+      }
     } else if (/read/i.test(tool)) {
       const p = entry.params?.path || entry.params?.file_path || '';
-      if (p) reads.push(p);
+      if (p) {
+        reads.push(p);
+      }
     }
   }
 
   const parts = [`Tool calls: ${log.length} (${successes} ok, ${failures} failed)`];
-  if (writes.length > 0) parts.push(`Files written/edited: ${writes.slice(0, 15).join(', ')}${writes.length > 15 ? ` (+${writes.length - 15} more)` : ''}`);
-  if (shells.length > 0) parts.push(`Shell commands: ${shells.slice(0, 5).join('; ')}${shells.length > 5 ? ` (+${shells.length - 5} more)` : ''}`);
-  if (reads.length > 0) parts.push(`Files read: ${reads.slice(0, 10).join(', ')}${reads.length > 10 ? ` (+${reads.length - 10} more)` : ''}`);
+  if (writes.length > 0) {
+    parts.push(
+      `Files written/edited: ${writes.slice(0, 15).join(', ')}${writes.length > 15 ? ` (+${writes.length - 15} more)` : ''}`
+    );
+  }
+  if (shells.length > 0) {
+    parts.push(
+      `Shell commands: ${shells.slice(0, 5).join('; ')}${shells.length > 5 ? ` (+${shells.length - 5} more)` : ''}`
+    );
+  }
+  if (reads.length > 0) {
+    parts.push(
+      `Files read: ${reads.slice(0, 10).join(', ')}${reads.length > 10 ? ` (+${reads.length - 10} more)` : ''}`
+    );
+  }
+
+  // Surface failed tool calls so the model can avoid repeating the same failures
+  if (failedTools.length > 0) {
+    const failedLines = failedTools.slice(0, 10).map((f) => `  - ${f.tool}: ${f.reason}`);
+    parts.push(
+      `Failed tool calls (do NOT repeat these):\n${failedLines.join('\n')}${failedTools.length > 10 ? `\n  ... (+${failedTools.length - 10} more)` : ''}`
+    );
+  }
 
   const lastReply = String(loopResult?.finalResponse || '').trim();
-  if (lastReply) parts.push(`Last AI response: ${lastReply.slice(0, 300)}`);
+  if (lastReply) {
+    parts.push(`Last AI response: ${lastReply.slice(0, 300)}`);
+  }
 
   return parts.join('\n');
 }

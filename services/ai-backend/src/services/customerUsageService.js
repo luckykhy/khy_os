@@ -9,6 +9,13 @@
  * and a flush on process exit. This avoids the read-modify-write race that a
  * per-request JSON rewrite would introduce.
  *
+ * Single-writer contract: this service is the ONLY writer of
+ * ai_gateway_customer_usage.json. The main backend gateway
+ * (services/backend .../customerQuotaEnforcer.js) treats this file as a
+ * READ-ONLY peer source and writes its own metering to the sibling file
+ * ai_gateway_customer_usage.gateway.json, merging both at verdict time.
+ * Never add another writer to this file from a different process.
+ *
  * Persisted to ~/.khyquant/ai_gateway_customer_usage.json.
  */
 const fs = require('fs');
@@ -19,12 +26,12 @@ const os = require('os');
 // (避免全新 HOME 上 .khy / .khyquant 双写)。见 ../utils/dataHome。
 const { getAppHome, getAppDataDir } = require('../utils/dataHome');
 const KHY_DIR = getAppHome();
-const USAGE_FILE = process.env.AI_GATEWAY_CUSTOMER_USAGE_FILE
-  || getAppDataDir('ai_gateway_customer_usage.json');
+const USAGE_FILE =
+  process.env.AI_GATEWAY_CUSTOMER_USAGE_FILE || getAppDataDir('ai_gateway_customer_usage.json');
 
 const SAVE_DEBOUNCE_MS = 1000;
 
-let _state = null;       // { [customerId]: { [YYYY-MM]: bucket } }
+let _state = null; // { [customerId]: { [YYYY-MM]: bucket } }
 let _loaded = false;
 let _saveTimer = null;
 let _exitHooked = false;
@@ -52,9 +59,10 @@ function ensureLoaded() {
   try {
     if (fs.existsSync(USAGE_FILE)) {
       const raw = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf-8'));
-      _state = raw && typeof raw === 'object' && raw.customers && typeof raw.customers === 'object'
-        ? raw.customers
-        : {};
+      _state =
+        raw && typeof raw === 'object' && raw.customers && typeof raw.customers === 'object'
+          ? raw.customers
+          : {};
     } else {
       _state = {};
     }
@@ -68,15 +76,30 @@ function ensureLoaded() {
 function hookExitFlush() {
   if (_exitHooked) return;
   _exitHooked = true;
-  const flush = () => { try { saveNow(); } catch { /* ignore */ } };
+  const flush = () => {
+    try {
+      saveNow();
+    } catch {
+      /* ignore */
+    }
+  };
   process.on('exit', flush);
-  process.on('SIGINT', () => { flush(); process.exit(0); });
-  process.on('SIGTERM', () => { flush(); process.exit(0); });
+  process.on('SIGINT', () => {
+    flush();
+    process.exit(0);
+  });
+  process.on('SIGTERM', () => {
+    flush();
+    process.exit(0);
+  });
 }
 
 function saveNow() {
   if (!_state) return;
-  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
   ensureDir(path.dirname(USAGE_FILE));
   const payload = { version: 1, updatedAt: new Date().toISOString(), customers: _state };
   fs.writeFileSync(USAGE_FILE, JSON.stringify(payload, null, 2), 'utf-8');
@@ -86,7 +109,11 @@ function saveDebounced() {
   if (_saveTimer) return;
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
-    try { saveNow(); } catch { /* ignore */ }
+    try {
+      saveNow();
+    } catch {
+      /* ignore */
+    }
   }, SAVE_DEBOUNCE_MS);
   // Don't keep the event loop alive solely for this timer.
   if (_saveTimer.unref) _saveTimer.unref();
@@ -102,14 +129,10 @@ function getMonthUsage(customerId, date = new Date()) {
 }
 
 /** Add usage to the current-month bucket. */
-function addUsage(customerId, {
-  requests = 0,
-  inputTokens = 0,
-  outputTokens = 0,
-  tokens = 0,
-  costCny = 0,
-  billedCny = 0,
-} = {}) {
+function addUsage(
+  customerId,
+  { requests = 0, inputTokens = 0, outputTokens = 0, tokens = 0, costCny = 0, billedCny = 0 } = {}
+) {
   ensureLoaded();
   const cid = String(customerId || '');
   if (!cid) return;
@@ -117,7 +140,7 @@ function addUsage(customerId, {
   if (!_state[cid]) _state[cid] = {};
   if (!_state[cid][mk]) _state[cid][mk] = emptyBucket();
   const b = _state[cid][mk];
-  const total = tokens || (inputTokens + outputTokens);
+  const total = tokens || inputTokens + outputTokens;
   b.requests += requests;
   b.inputTokens += inputTokens;
   b.outputTokens += outputTokens;

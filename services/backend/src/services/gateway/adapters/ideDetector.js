@@ -5,17 +5,20 @@
  * Falls back to manual path configuration if auto-detection fails.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const HOME = os.homedir();
 const PLATFORM = process.platform;
 // On Windows, USERPROFILE/HOMEDRIVE+HOMEPATH may differ from os.homedir()
-const WIN_HOME = PLATFORM === 'win32'
-  ? (process.env.USERPROFILE
-    || (process.env.HOMEDRIVE && process.env.HOMEPATH ? path.join(process.env.HOMEDRIVE, process.env.HOMEPATH) : '')
-    || HOME)
-  : HOME;
+const WIN_HOME =
+  PLATFORM === 'win32'
+    ? process.env.USERPROFILE ||
+      (process.env.HOMEDRIVE && process.env.HOMEPATH
+        ? path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)
+        : '') ||
+      HOME
+    : HOME;
 
 // ── Default installation paths ───────────────────────────────────────────
 
@@ -24,21 +27,22 @@ const DEFAULT_PATHS = {
     win32: [
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Kiro'),
       path.join(HOME, 'AppData', 'Local', 'Kiro'),
-      ...(WIN_HOME !== HOME ? [
-        path.join(WIN_HOME, 'AppData', 'Local', 'Programs', 'Kiro'),
-        path.join(WIN_HOME, 'AppData', 'Local', 'Kiro'),
-      ] : []),
-      ...(process.env.LOCALAPPDATA ? [
-        path.join(process.env.LOCALAPPDATA, 'Programs', 'Kiro'),
-        path.join(process.env.LOCALAPPDATA, 'Kiro'),
-      ] : []),
+      ...(WIN_HOME !== HOME
+        ? [
+            path.join(WIN_HOME, 'AppData', 'Local', 'Programs', 'Kiro'),
+            path.join(WIN_HOME, 'AppData', 'Local', 'Kiro'),
+          ]
+        : []),
+      ...(process.env.LOCALAPPDATA
+        ? [
+            path.join(process.env.LOCALAPPDATA, 'Programs', 'Kiro'),
+            path.join(process.env.LOCALAPPDATA, 'Kiro'),
+          ]
+        : []),
       'C:\\Program Files\\Kiro',
       'C:\\Program Files (x86)\\Kiro',
     ],
-    darwin: [
-      '/Applications/Kiro.app',
-      path.join(HOME, 'Applications', 'Kiro.app'),
-    ],
+    darwin: ['/Applications/Kiro.app', path.join(HOME, 'Applications', 'Kiro.app')],
     linux: [
       '/opt/kiro',
       '/usr/share/kiro',
@@ -53,10 +57,7 @@ const DEFAULT_PATHS = {
       path.join(HOME, 'AppData', 'Local', 'Cursor'),
       'C:\\Program Files\\Cursor',
     ],
-    darwin: [
-      '/Applications/Cursor.app',
-      path.join(HOME, 'Applications', 'Cursor.app'),
-    ],
+    darwin: ['/Applications/Cursor.app', path.join(HOME, 'Applications', 'Cursor.app')],
     linux: [
       '/opt/cursor',
       '/usr/share/cursor',
@@ -80,10 +81,7 @@ const DEFAULT_PATHS = {
       '/Applications/Trae CN.app',
       path.join(HOME, 'Applications', 'Trae.app'),
     ],
-    linux: [
-      '/opt/trae',
-      path.join(HOME, '.local', 'share', 'trae'),
-    ],
+    linux: ['/opt/trae', path.join(HOME, '.local', 'share', 'trae')],
   },
 
   warp: {
@@ -92,10 +90,7 @@ const DEFAULT_PATHS = {
       path.join(HOME, 'AppData', 'Local', 'Warp'),
       'C:\\Program Files\\Warp',
     ],
-    darwin: [
-      '/Applications/Warp.app',
-      path.join(HOME, 'Applications', 'Warp.app'),
-    ],
+    darwin: ['/Applications/Warp.app', path.join(HOME, 'Applications', 'Warp.app')],
     linux: [
       '/opt/warp',
       path.join(HOME, '.warp'),
@@ -132,11 +127,7 @@ const DEFAULT_PATHS = {
       '/Applications/Visual Studio Code.app',
       path.join(HOME, 'Applications', 'Visual Studio Code.app'),
     ],
-    linux: [
-      '/usr/share/code',
-      '/snap/code/current',
-      path.join(HOME, '.local', 'share', 'code'),
-    ],
+    linux: ['/usr/share/code', '/snap/code/current', path.join(HOME, '.local', 'share', 'code')],
   },
 };
 
@@ -145,10 +136,28 @@ const DEFAULT_PATHS = {
 const DATA_PATHS = {
   kiro: {
     win32: [
-      path.join(HOME, 'AppData', 'Roaming', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
+      path.join(
+        HOME,
+        'AppData',
+        'Roaming',
+        'Kiro',
+        'User',
+        'globalStorage',
+        'kiro.kiroagent',
+        'profile.json'
+      ),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Kiro',
+        'User',
+        'globalStorage',
+        'kiro.kiroagent',
+        'profile.json'
+      ),
     ],
     linux: [
       path.join(HOME, '.config', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent', 'profile.json'),
@@ -160,11 +169,17 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Cursor', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Cursor', 'User', 'globalStorage', 'storage.json')],
   },
 
   trae: {
@@ -173,8 +188,24 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Trae', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
-      path.join(HOME, 'Library', 'Application Support', 'Trae', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Trae CN',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Trae',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
     linux: [
       path.join(HOME, '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
@@ -183,15 +214,9 @@ const DATA_PATHS = {
   },
 
   warp: {
-    win32: [
-      path.join(HOME, 'AppData', 'Local', 'Warp', 'data'),
-    ],
-    darwin: [
-      path.join(HOME, '.warp'),
-    ],
-    linux: [
-      path.join(HOME, '.local', 'share', 'warp-terminal'),
-    ],
+    win32: [path.join(HOME, 'AppData', 'Local', 'Warp', 'data')],
+    darwin: [path.join(HOME, '.warp')],
+    linux: [path.join(HOME, '.local', 'share', 'warp-terminal')],
   },
 
   windsurf: {
@@ -200,23 +225,33 @@ const DATA_PATHS = {
       path.join(HOME, 'AppData', 'Roaming', 'Codeium', 'User', 'globalStorage', 'storage.json'),
     ],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Windsurf',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json')],
   },
 
   vscode: {
-    win32: [
-      path.join(HOME, 'AppData', 'Roaming', 'Code', 'User', 'globalStorage', 'storage.json'),
-    ],
+    win32: [path.join(HOME, 'AppData', 'Roaming', 'Code', 'User', 'globalStorage', 'storage.json')],
     darwin: [
-      path.join(HOME, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'storage.json'),
+      path.join(
+        HOME,
+        'Library',
+        'Application Support',
+        'Code',
+        'User',
+        'globalStorage',
+        'storage.json'
+      ),
     ],
-    linux: [
-      path.join(HOME, '.config', 'Code', 'User', 'globalStorage', 'storage.json'),
-    ],
+    linux: [path.join(HOME, '.config', 'Code', 'User', 'globalStorage', 'storage.json')],
   },
 };
 
@@ -247,12 +282,16 @@ function findInstallation(ideName) {
 
   // Check custom path first
   const custom = getCustomPath(name);
-  if (custom && fs.existsSync(custom)) return custom;
+  if (custom && fs.existsSync(custom)) {
+    return custom;
+  }
 
   // Search default paths for current platform
   const platformPaths = DEFAULT_PATHS[name]?.[PLATFORM] || [];
   for (const p of platformPaths) {
-    if (fs.existsSync(p)) return p;
+    if (fs.existsSync(p)) {
+      return p;
+    }
   }
 
   // Also check all platform paths (for cross-drive installations)
@@ -265,7 +304,9 @@ function findInstallation(ideName) {
         `${drive}:\\Program Files\\${ideName}`,
       ];
       for (const p of variants) {
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+          return p;
+        }
       }
     }
   }
@@ -280,7 +321,9 @@ function findDataPath(ideName) {
   const name = ideName.toLowerCase();
   const platformPaths = DATA_PATHS[name]?.[PLATFORM] || [];
   for (const p of platformPaths) {
-    if (fs.existsSync(p)) return p;
+    if (fs.existsSync(p)) {
+      return p;
+    }
   }
   return null;
 }
@@ -307,17 +350,22 @@ function detectAll() {
   //   NAME1_DATA_PATH=/abs/path
   const extras = String(process.env.GATEWAY_EXTRA_IDES || '')
     .split(',')
-    .map(s => s.trim().toLowerCase())
+    .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
   for (const name of extras) {
-    if (results.find(r => r.name === name)) continue;
+    if (results.find((r) => r.name === name)) {
+      continue;
+    }
     const installPath = process.env[`${name.toUpperCase()}_INSTALL_PATH`] || null;
     const dataPath = process.env[`${name.toUpperCase()}_DATA_PATH`] || null;
     results.push({
       name,
       installPath: installPath && fs.existsSync(installPath) ? installPath : null,
       dataPath: dataPath && fs.existsSync(dataPath) ? dataPath : null,
-      available: !!((installPath && fs.existsSync(installPath)) || (dataPath && fs.existsSync(dataPath))),
+      available: !!(
+        (installPath && fs.existsSync(installPath)) ||
+        (dataPath && fs.existsSync(dataPath))
+      ),
     });
   }
   return results;

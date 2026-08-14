@@ -57,28 +57,30 @@ CLI 登录桥接规则：
 
 ### 3.1 用户名/密码模式（JWT）
 
-- 默认管理员账号：`admin`
-- 默认密码：`admin123`
-- 历史安装可能是 `admin123.`，系统兼容迁移后会统一为 `admin123`
+- 默认管理员账号：由后端自动初始化（幂等，已存在则跳过）
+- 用户名解析顺序：`KHY_ADMIN_USERNAME` 环境变量 → 已存在的凭据文件 → 当前 OS 用户名（小写化 + 过滤非法字符）→ 兜底 `admin`
+- **默认密码没有固定值**：由机器指纹 + 随机熵生成（约 16 位混合字符强密码），首次启动时保存于数据目录 `.khy/credentials/default-admin.json`（`KHY_DATA_HOME` 覆盖时在其下）。请打开该文件查看初始密码。
+- 若设置 `KHY_ADMIN_PASSWORD` / `DEFAULT_ADMIN_PASSWORD`：使用该密码，不写凭据文件，也不打印到日志。
 
-若忘记密码，执行：
+若忘记密码，执行（**密码必须显式提供，脚本无内置默认**）：
 
 ```bash
 # 在源码目录直接重置（推荐）
-node services/ai-backend/scripts/reset-admin-password.js --password admin123
-
-# 或 npm 脚本
-npm --prefix services/ai-backend run reset-admin
+node services/ai-backend/scripts/reset-admin-password.js --password <你的新密码>
+# 或 npm 脚本（需提供密码）
+npm --prefix services/ai-backend run reset-admin -- --password <你的新密码>
 ```
 
 如果你是 Docker 部署，执行：
 
 ```bash
-docker compose exec ai-backend node scripts/reset-admin-password.js --password admin123
+docker compose exec ai-backend node scripts/reset-admin-password.js --password <你的新密码>
 
 # 若使用自定义 compose project 名称（例如 khy-os）
-docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --password admin123
+docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --password <你的新密码>
 ```
+
+> 历史安装的 `admin123` / `admin123.` / `admin05 / 012003` 等固定默认账号均已被动态凭据机制取代，不再作为默认口令。
 
 ### 3.2 Token 模式（AI_MGMT_AUTH_TOKEN）
 
@@ -139,13 +141,14 @@ khy gateway manage open --daemon --frontend-dist-dir /absolute/path/to/dist
 ### 5.1 用户名或密码错误（401）
 
 - 确认是否在 JWT 模式（未设置 `AI_MGMT_AUTH_TOKEN`）
-- 优先尝试 `admin / admin123`
-- 不行就执行 `node services/ai-backend/scripts/reset-admin-password.js --password admin123` 重置
+- 使用动态默认账号：用户名在数据目录 `.khy/credentials/default-admin.json` 中，密码同文件
+- 或设置 `KHY_ADMIN_PASSWORD` / `DEFAULT_ADMIN_PASSWORD` 后重启后端
+- 仍无法登录就执行 `node services/ai-backend/scripts/reset-admin-password.js --password <新密码>` 重置
 
 ### 5.1.1 页面是旧版独立栈（8090/9090）时
 
 - `GET /api/health` 返回 `service: khy-ai-backend` 说明当前是旧版独立栈
-- 该栈现在也兼容历史 `admin123.` 登录并会自动迁移到 `admin123`
+- 该栈已移除历史 `admin123` / `admin123.` 兼容登录，改用动态凭据或显式 `--password` 重置
 - 若历史密码是随机值，必须跑重置脚本后再登录
 
 ### 5.2 页面能打开但点击登录无响应/提示网络错误

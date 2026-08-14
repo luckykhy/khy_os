@@ -35,12 +35,24 @@ let getSecurity = null;
 let parseBody = null;
 let sendJson = null;
 function setChatHttpDeps(deps = {}) {
-  if (typeof deps._genChatRequestId === 'function') _genChatRequestId = deps._genChatRequestId;
-  if (typeof deps.authenticateRequest === 'function') authenticateRequest = deps.authenticateRequest;
-  if (typeof deps.getAi === 'function') getAi = deps.getAi;
-  if (typeof deps.getSecurity === 'function') getSecurity = deps.getSecurity;
-  if (typeof deps.parseBody === 'function') parseBody = deps.parseBody;
-  if (typeof deps.sendJson === 'function') sendJson = deps.sendJson;
+  if (typeof deps._genChatRequestId === 'function') {
+    _genChatRequestId = deps._genChatRequestId;
+  }
+  if (typeof deps.authenticateRequest === 'function') {
+    authenticateRequest = deps.authenticateRequest;
+  }
+  if (typeof deps.getAi === 'function') {
+    getAi = deps.getAi;
+  }
+  if (typeof deps.getSecurity === 'function') {
+    getSecurity = deps.getSecurity;
+  }
+  if (typeof deps.parseBody === 'function') {
+    parseBody = deps.parseBody;
+  }
+  if (typeof deps.sendJson === 'function') {
+    sendJson = deps.sendJson;
+  }
 }
 
 // Resolve body.attachments (an array of { id } or id strings the chat page sent
@@ -90,7 +102,9 @@ function _resolveChatAttachments(body, baseMessage) {
         images.push({ base64: img.base64, mimeType: img.mimeType });
         message = intent.prompt || '请分析这张图片的内容';
       }
-    } catch { /* leave message as text on any failure (parity with repl.js:5020) */ }
+    } catch {
+      /* leave message as text on any failure (parity with repl.js:5020) */
+    }
   }
 
   return { message, images };
@@ -121,7 +135,11 @@ async function handleChatHttp(req, res) {
       const security = getSecurity();
       const check = security.analyzeInput(rawMessage);
       if (!check.safe) {
-        return sendJson(res, 400, { success: false, message: check.refusal || 'Blocked by security policy', blocked: true });
+        return sendJson(res, 400, {
+          success: false,
+          message: check.refusal || 'Blocked by security policy',
+          blocked: true,
+        });
       }
     } catch {
       // best effort security check
@@ -153,13 +171,22 @@ async function handleChatHttp(req, res) {
 // `tool_result` event. Keeps the conversation transparent (the user sees the
 // outcome of each tool call) without flooding the stream with raw payloads.
 function _summarizeToolResultForStream(chunk) {
-  if (!chunk || typeof chunk !== 'object') return '';
+  if (!chunk || typeof chunk !== 'object') {
+    return '';
+  }
   // Prefer the backend-computed summary (the SSOT one-liner) when present.
-  const raw = chunk.text != null ? chunk.text
-    : chunk.summary != null ? chunk.summary
-    : chunk.content != null ? chunk.content
-    : chunk.output != null ? chunk.output
-    : chunk.result != null ? chunk.result : '';
+  const raw =
+    chunk.text != null
+      ? chunk.text
+      : chunk.summary != null
+        ? chunk.summary
+        : chunk.content != null
+          ? chunk.content
+          : chunk.output != null
+            ? chunk.output
+            : chunk.result != null
+              ? chunk.result
+              : '';
   let s;
   if (typeof raw === 'string') {
     s = raw;
@@ -170,10 +197,14 @@ function _summarizeToolResultForStream(chunk) {
     // readable field rendering, never braces.
     try {
       const { summarizeToolResult } = require('../cli/toolResultSummary');
-      const resultObj = (chunk.result && typeof chunk.result === 'object') ? chunk.result : chunk;
+      const resultObj = chunk.result && typeof chunk.result === 'object' ? chunk.result : chunk;
       s = summarizeToolResult(chunk.tool || chunk.name || '', resultObj, chunk.input || {});
     } catch {
-      try { s = JSON.stringify(raw); } catch { s = String(raw); }
+      try {
+        s = JSON.stringify(raw);
+      } catch {
+        s = String(raw);
+      }
     }
   }
   s = String(s).replace(/\s+/g, ' ').trim();
@@ -215,7 +246,11 @@ async function handleChatStreamHttp(req, res) {
       const security = getSecurity();
       const check = security.analyzeInput(rawMessage);
       if (!check.safe) {
-        return sendJson(res, 400, { success: false, message: check.refusal || 'Blocked by security policy', blocked: true });
+        return sendJson(res, 400, {
+          success: false,
+          message: check.refusal || 'Blocked by security policy',
+          blocked: true,
+        });
       }
     } catch {
       // best effort security check
@@ -225,20 +260,33 @@ async function handleChatStreamHttp(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
   const sendEvent = (data) => {
-    if (clientGone) return;
-    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { /* connection closed */ }
+    if (clientGone) {
+      return;
+    }
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      /* connection closed */
+    }
   };
 
   // When the client navigates away mid-stream the socket closes. Stop writing
   // and tear down the heartbeat immediately so neither the 15s timer nor the
   // simulated-chunk loop keep pushing into a dead connection.
   let clientGone = false;
-  sendEvent({ type: 'start', model: body.preferredModel || body.model || 'auto', timestamp: Date.now() });
-  const heartbeatTimer = setInterval(() => sendEvent({ type: 'heartbeat', timestamp: Date.now() }), 15000);
+  sendEvent({
+    type: 'start',
+    model: body.preferredModel || body.model || 'auto',
+    timestamp: Date.now(),
+  });
+  const heartbeatTimer = setInterval(
+    () => sendEvent({ type: 'heartbeat', timestamp: Date.now() }),
+    15000
+  );
   req.on('close', () => {
     clientGone = true;
     clearInterval(heartbeatTimer);
@@ -266,7 +314,9 @@ async function handleChatStreamHttp(req, res) {
         requestId,
       },
     });
-  } catch { failsafe = null; }
+  } catch {
+    failsafe = null;
+  }
 
   // Tracks how much visible text we streamed and whether any tool ran, so the
   // terminal `done` event and the empty-reply failsafe can reason about whether
@@ -281,23 +331,36 @@ async function handleChatStreamHttp(req, res) {
       preferredAdapter: body.preferredAdapter || undefined,
       preferredModel: body.preferredModel || body.model || undefined,
       onChunk: (chunk) => {
-        if (!chunk || clientGone) return;
+        if (!chunk || clientGone) {
+          return;
+        }
         const t = String(chunk.type || '');
         if (t === 'text') {
           const piece = String(chunk.text || '');
-          if (!piece) return;
+          if (!piece) {
+            return;
+          }
           streamedChars += piece.length;
-          if (failsafe) failsafe.emit({ type: 'chunk', content: piece });
-          else sendEvent({ type: 'chunk', content: piece });
+          if (failsafe) {
+            failsafe.emit({ type: 'chunk', content: piece });
+          } else {
+            sendEvent({ type: 'chunk', content: piece });
+          }
         } else if (t === 'reset') {
           // 响应防抖抗拼接：上游判定本轮已流出的文本为废稿（套话拒绝重试），
           // 通知前端丢弃已累积的气泡内容、等待修正内容替换。已流出的字符不再计数，
           // 这样末尾「reply 已流式过」判定不会误把废稿算作已交付。
           streamedChars = 0;
-          sendEvent({ type: 'reset', reason: String(chunk.reason || 'retry'), timestamp: Date.now() });
+          sendEvent({
+            type: 'reset',
+            reason: String(chunk.reason || 'retry'),
+            timestamp: Date.now(),
+          });
         } else if (t === 'thinking') {
           const text = String(chunk.text || '');
-          if (text) sendEvent({ type: 'thinking', text, timestamp: Date.now() });
+          if (text) {
+            sendEvent({ type: 'thinking', text, timestamp: Date.now() });
+          }
         } else if (t === 'tool_use') {
           toolRan = true;
           sendEvent({
@@ -309,9 +372,13 @@ async function handleChatStreamHttp(req, res) {
           });
         } else if (t === 'tool_result') {
           let success;
-          if (typeof chunk.success === 'boolean') success = chunk.success;
-          else if (typeof chunk.isError === 'boolean') success = !chunk.isError;
-          else if (typeof chunk.is_error === 'boolean') success = !chunk.is_error;
+          if (typeof chunk.success === 'boolean') {
+            success = chunk.success;
+          } else if (typeof chunk.isError === 'boolean') {
+            success = !chunk.isError;
+          } else if (typeof chunk.is_error === 'boolean') {
+            success = !chunk.is_error;
+          }
           sendEvent({
             type: 'tool_result',
             tool: String(chunk.tool || chunk.name || 'tool'),
@@ -334,7 +401,9 @@ async function handleChatStreamHttp(req, res) {
         }
       },
       onControlRequest: ({ requestId, request } = {}) => {
-        if (clientGone) return undefined;
+        if (clientGone) {
+          return undefined;
+        }
         sendEvent({
           type: 'control_request',
           requestId: String(requestId || '').trim(),
@@ -361,8 +430,12 @@ async function handleChatStreamHttp(req, res) {
     // 整条 SSE 回复弄没)。fail-soft:监听器缺失/异常用原 reply 继续。下方模拟分片与 done
     // 信封都消费这个已守护的 reply,使 Web 客户端收到的最终文本干净一致。
     try {
-      reply = require('./outputIntegrityMonitor').guardText(reply, { source: 'web-sse-done', render: true }).text.trim();
-    } catch { /* monitor absent/erroring — emit raw reply unchanged */ }
+      reply = require('./outputIntegrityMonitor')
+        .guardText(reply, { source: 'web-sse-done', render: true })
+        .text.trim();
+    } catch {
+      /* monitor absent/erroring — emit raw reply unchanged */
+    }
     // If the final reply text was not already delivered as token-level `text`
     // chunks (some adapters return the whole answer only in the result), emit it
     // now in simulated chunks so the bubble is never left empty.
@@ -370,8 +443,11 @@ async function handleChatStreamHttp(req, res) {
       const CHUNK_SIZE = 24;
       for (let i = 0; i < reply.length; i += CHUNK_SIZE) {
         const piece = reply.slice(i, i + CHUNK_SIZE);
-        if (failsafe) failsafe.emit({ type: 'chunk', content: piece });
-        else sendEvent({ type: 'chunk', content: piece });
+        if (failsafe) {
+          failsafe.emit({ type: 'chunk', content: piece });
+        } else {
+          sendEvent({ type: 'chunk', content: piece });
+        }
       }
     }
 
@@ -380,11 +456,17 @@ async function handleChatStreamHttp(req, res) {
       // purely from the chat result's structured fields (toolCallLog/error_code), not
       // from the prose. Additive — `content` stays the human-facing text.
       let structured = null;
-      if (process.env.KHY_STRUCTURED_OUTPUT !== '0' && process.env.KHY_STRUCTURED_OUTPUT !== 'false') {
+      if (
+        process.env.KHY_STRUCTURED_OUTPUT !== '0' &&
+        process.env.KHY_STRUCTURED_OUTPUT !== 'false'
+      ) {
         try {
-          structured = require('./structuredResults/turnEnvelope')
-            .buildTurnEnvelope(result || {}, { summary: reply });
-        } catch { /* best-effort; never block the stream */ }
+          structured = require('./structuredResults/turnEnvelope').buildTurnEnvelope(result || {}, {
+            summary: reply,
+          });
+        } catch {
+          /* best-effort; never block the stream */
+        }
       }
       sendEvent({
         type: 'done',
@@ -394,7 +476,9 @@ async function handleChatStreamHttp(req, res) {
         usage: (result && result.tokenUsage) || null,
         ...(structured ? { structured } : {}),
       });
-      if (failsafe) failsafe.markDone();
+      if (failsafe) {
+        failsafe.markDone();
+      }
       // Auto-capture: after a genuine reply, judge whether the user's raw prompt
       // is worth saving and, if so, enqueue it for review. Fire-and-forget and
       // fully fail-soft — must never disturb the stream we just completed.
@@ -403,8 +487,12 @@ async function handleChatStreamHttp(req, res) {
       // Empty reply with no tool activity → precise E01 (or E02 if the model
       // stopped on a safety policy). Replaces the vague "未返回有效回复".
       failsafe.fail(
-        { errorType: 'empty_reply', model: (result && result.provider) || undefined, finish_reason: result && (result.finish_reason || result.finishReason) },
-        { kind: 'llm' },
+        {
+          errorType: 'empty_reply',
+          model: (result && result.provider) || undefined,
+          finish_reason: result && (result.finish_reason || result.finishReason),
+        },
+        { kind: 'llm' }
       );
     } else {
       sendEvent({ type: 'error', message: 'AI 未返回有效回复 — 请重试或检查连接' });
@@ -412,15 +500,24 @@ async function handleChatStreamHttp(req, res) {
   } catch (err) {
     // Classify the thrown error to E0x (timeout/network→E06, refusal→E02,
     // context→E03, permission→E07, else E04) instead of leaking a raw message.
-    if (failsafe) failsafe.fail(err);
-    else sendEvent({ type: 'error', message: (err && err.message) ? err.message : 'Internal error' });
+    if (failsafe) {
+      failsafe.fail(err);
+    } else {
+      sendEvent({ type: 'error', message: err && err.message ? err.message : 'Internal error' });
+    }
   } finally {
     clearInterval(heartbeatTimer);
     // Last-resort: if no terminal event was emitted (unexpected escape), inject
     // the forced fallback so the stream never ends silently. no-op if already
     // finalized via done/fail above.
-    if (failsafe) failsafe.finalize();
-    try { res.end(); } catch { /* already ended */ }
+    if (failsafe) {
+      failsafe.finalize();
+    }
+    try {
+      res.end();
+    } catch {
+      /* already ended */
+    }
   }
 }
 

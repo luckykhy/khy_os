@@ -54,6 +54,21 @@ test('strips arguments/input key variants too', () => {
   assert.strictEqual(tcn.stripInlineToolCallNoise('{"name": "Read", "input": {"path": "/x"}}', ON), '');
 });
 
+test('strips bare JSON with trailing tag fragment after closing brace (stream truncation)', () => {
+  assert.strictEqual(
+    tcn.stripInlineToolCallNoise('{"name": "Read", "params": {"path": "x"}} =Read>', ON),
+    ''
+  );
+  assert.strictEqual(
+    tcn.stripInlineToolCallNoise('"name": "Read", "params": {"path": "x"}} =Read>', ON),
+    ''
+  );
+  assert.strictEqual(
+    tcn.stripInlineToolCallNoise('{"name": "Read", "params": {"path": "C:/Users/25789/README.md"}} =Read>', ON),
+    ''
+  );
+});
+
 test('strips paired <function=NAME> … </function> block incl. inner lines', () => {
   const input = [
     '前言。',
@@ -139,11 +154,123 @@ test('partial (unclosed) bare JSON is NOT stripped (waits for completion)', () =
 });
 
 // ---------------------------------------------------------------------------
+// Truncated / malformed tag fragments (real leak from stepfun step-3.5-flash
+// screenshot: '<' swallowed at a chunk boundary + non-standard `}}` ending).
+// ---------------------------------------------------------------------------
+
+test('strips real leak sample: prefix-less function line + malformed <arguments={…}} line', () => {
+  const input = [
+    'function=webSearch>',
+    '<arguments={"query":"GitHub Vue.js repository languages .vue files JavaScript TypeScript statistics","freshness":"year"}}',
+    '正常文本',
+  ].join('\n');
+  const out = tcn.stripInlineToolCallNoise(input, ON);
+  assert.strictEqual(out.trim(), '正常文本');
+});
+
+test('strips function fragment line variants (missing < / missing > / both)', () => {
+  for (const frag of ['function=webSearch>', '<function=webSearch', 'function=webSearch', '</function=web.Search>']) {
+    const out = tcn.stripInlineToolCallNoise(`前文\n${frag}\n后文`, ON);
+    assert.strictEqual(out, '前文\n后文', `fragment: ${frag}`);
+  }
+});
+
+test('strips <arguments={…} single-line variants regardless of ending', () => {
+  for (const line of [
+    '<arguments={"q":"x"}>',
+    '<arguments={"q":"x"}}',
+    '<arguments={"q":"x"}',
+    'arguments={"q":"x"}}',
+  ]) {
+    const out = tcn.stripInlineToolCallNoise(`a\n${line}\nb`, ON);
+    assert.strictEqual(out, 'a\nb', `line: ${line}`);
+  }
+});
+
+test('swallows a multi-line <arguments={ JSON body until its closing brace', () => {
+  const input = [
+    '前文',
+    '<arguments={',
+    '"query": "x",',
+    '"freshness": "year"',
+    '}}',
+    '后文',
+  ].join('\n');
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), '前文\n后文');
+});
+
+test('multi-line arguments swallow stops at an obvious prose line (guard)', () => {
+  const input = '<arguments={"q": "x",\n这是普通正文行';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), '这是普通正文行');
+});
+
+test('strips orphan </arguments> / <parameter=…> / </parameter> fragment lines', () => {
+  const input = 'a\n</arguments>\n<parameter=path>\n</parameter>\nb';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), 'a\nb');
+});
+
+test('does NOT strip prose merely containing function= mid-sentence', () => {
+  const input = '这是一个 function=add 的示例';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);
+});
+
+test('fragment forms inside a fenced block are preserved', () => {
+  const input = '```\nfunction=webSearch>\n<arguments={"q":1}}\n```';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);
+});
+
+// ---------------------------------------------------------------------------
+// splitPendingToolTag — streaming cross-chunk suspension pure helper.
+// ---------------------------------------------------------------------------
+
+test('splitPendingToolTag: holds a chunk cut at <fun', () => {
+  const r = tcn.splitPendingToolTag('答案前文 <fun');
+  assert.strictEqual(r.emit, '答案前文 ');
+  assert.strictEqual(r.pending, '<fun');
+});
+
+test('splitPendingToolTag: holds a chunk cut inside <arguments={"q', () => {
+  const r = tcn.splitPendingToolTag('正文<arguments={"q');
+  assert.strictEqual(r.emit, '正文');
+  assert.strictEqual(r.pending, '<arguments={"q');
+});
+
+test('splitPendingToolTag: closing-tag and tool_call prefixes are held too', () => {
+  assert.strictEqual(tcn.splitPendingToolTag('x</functi').pending, '</functi');
+  assert.strictEqual(tcn.splitPendingToolTag('x<tool_ca').pending, '<tool_ca');
+  assert.strictEqual(tcn.splitPendingToolTag('x<').pending, '<');
+});
+
+test('splitPendingToolTag: plain prose with < is NOT held (a < b)', () => {
+  const r = tcn.splitPendingToolTag('a < b');
+  assert.strictEqual(r.emit, 'a < b');
+  assert.strictEqual(r.pending, '');
+});
+
+test('splitPendingToolTag: completed tag (has >) is NOT held', () => {
+  const r = tcn.splitPendingToolTag('x<function=web>');
+  assert.strictEqual(r.emit, 'x<function=web>');
+  assert.strictEqual(r.pending, '');
+});
+
+test('splitPendingToolTag: over-long suspect tail is released (release valve)', () => {
+  const long = '<arguments={"q":"' + 'y'.repeat(3000);
+  const r = tcn.splitPendingToolTag('前文' + long);
+  assert.strictEqual(r.emit, '前文' + long);
+  assert.strictEqual(r.pending, '');
+});
+
+test('splitPendingToolTag: empty / non-string → emit-all no pending', () => {
+  assert.deepStrictEqual(tcn.splitPendingToolTag(''), { emit: '', pending: '' });
+  assert.deepStrictEqual(tcn.splitPendingToolTag(null), { emit: '', pending: '' });
+});
+
+// ---------------------------------------------------------------------------
 // Gate OFF — byte-identical passthrough.
 // ---------------------------------------------------------------------------
 
 test('gate off: passthrough byte-identical for leaked forms', () => {
-  const leak = '{"name": "open_app", "params": {"name": "夸克"}}\n<function=x>\n</function>';
+  const leak = '{"name": "open_app", "params": {"name": "夸克"}}\n<function=x>\n</function>\nfunction=webSearch>\n<arguments={"q":1}}';
   assert.strictEqual(tcn.stripInlineToolCallNoise(leak, OFF), leak);
 });
 

@@ -35,8 +35,12 @@ const SOFT_BAD_FINGERPRINTS = new Set([
 
 function classifyStallSeverity(fingerprint) {
   const code = String(fingerprint || '').trim();
-  if (HARD_BAD_FINGERPRINTS.has(code)) return 'hard';
-  if (SOFT_BAD_FINGERPRINTS.has(code)) return 'soft';
+  if (HARD_BAD_FINGERPRINTS.has(code)) {
+    return 'hard';
+  }
+  if (SOFT_BAD_FINGERPRINTS.has(code)) {
+    return 'soft';
+  }
   return 'none';
 }
 
@@ -64,14 +68,18 @@ function resolveStallCooldownMultiplier(fingerprint) {
 // startup reconnect hiccup must NOT bail (it is normal startup noise), so the
 // threshold is strictly greater than 1.
 function shouldEarlyBailOnReconnectLoop(snapshot, opts = {}) {
-  if (!snapshot || typeof snapshot !== 'object') return false;
+  if (!snapshot || typeof snapshot !== 'object') {
+    return false;
+  }
   const rawThreshold = Number(opts.threshold);
   const threshold = Number.isFinite(rawThreshold) && rawThreshold >= 2 ? rawThreshold : 3;
   const reconnectWarnings = Number(snapshot.reconnectWarnings || 0);
   const meaningfulEvents = Number(snapshot.meaningfulEvents || 0);
   const lastMeaningfulAt = Number(snapshot.lastMeaningfulAt || 0);
   // Model produced real progress → never bail; let it finish.
-  if (meaningfulEvents > 0 || lastMeaningfulAt > 0) return false;
+  if (meaningfulEvents > 0 || lastMeaningfulAt > 0) {
+    return false;
+  }
   return reconnectWarnings >= threshold;
 }
 

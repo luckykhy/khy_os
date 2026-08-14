@@ -65,7 +65,7 @@ for (const [name, parse] of PARSERS) {
 }
 
 // ── gate ON: partial progress is salvaged, not discarded ────────────────────
-test('gate on: openai parser salvages partial content on stall (interrupted=length)', async () => {
+test('gate on: openai parser salvages partial content on stall (interrupted=interrupted)', async () => {
   setGate(undefined);
   const s = new PassThrough();
   const p = parseOpenAISseStream(s, null, {
@@ -77,6 +77,6 @@ test('gate on: openai parser salvages partial content on stall (interrupted=leng
   const r = await p;
   assert.match(r.content, /hello/);
   assert.strictEqual(r.interrupted, true);
-  assert.strictEqual(r.finishReason, 'length', 'partial stall should be treated as truncation for continuation');
+  assert.strictEqual(r.finishReason, 'interrupted', 'partial stall should be tagged interrupted to suppress auto-continue');
   assert.strictEqual(s.destroyed, true);
 });

@@ -18,12 +18,16 @@
  * - Configurable endpoint for domain migration
  */
 const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const https = require('https');
 const http = require('http');
+const https = require('https');
+const os = require('os');
+const path = require('path');
+
+const {
+  CLOUD_DEFAULT_ENDPOINT,
+  CLOUD_FALLBACK_ENDPOINTS,
+} = require('../constants/serviceDefaults');
 const { getAppHome, _appHomeLiveResolveEnabled } = require('../utils/dataHome');
-const { CLOUD_DEFAULT_ENDPOINT, CLOUD_FALLBACK_ENDPOINTS } = require('../constants/serviceDefaults');
 
 // Application data home — single source of truth (legacy ~/.khyquant is kept in
 // place for existing installs; see utils/dataHome.getAppHome).
@@ -37,13 +41,19 @@ const { CLOUD_DEFAULT_ENDPOINT, CLOUD_FALLBACK_ENDPOINTS } = require('../constan
 // access, byte-identical to the historical module-load freeze.
 let _frozenProfileDir = null;
 function _profileDir() {
-  if (_appHomeLiveResolveEnabled()) return getAppHome();
-  if (!_frozenProfileDir) _frozenProfileDir = getAppHome();
+  if (_appHomeLiveResolveEnabled()) {
+    return getAppHome();
+  }
+  if (!_frozenProfileDir) {
+    _frozenProfileDir = getAppHome();
+  }
   return _frozenProfileDir;
 }
+
 function _cloudConfigPath() {
   return path.join(_profileDir(), 'cloud.json');
 }
+
 function _telemetryQueuePath() {
   return path.join(_profileDir(), 'telemetry_queue.json');
 }
@@ -61,28 +71,34 @@ function loadCloudConfig() {
     if (fs.existsSync(_cloudConfigPath())) {
       return JSON.parse(fs.readFileSync(_cloudConfigPath(), 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return {
-    enabled: false,          // master switch: user must opt-in
+    enabled: false, // master switch: user must opt-in
     telemetryEnabled: false, // anonymous usage stats
-    syncEnabled: false,      // profile cloud backup
+    syncEnabled: false, // profile cloud backup
     endpoint: DEFAULT_ENDPOINT,
-    userId: null,            // anonymous UUID (generated on opt-in)
-    username: null,          // registered username
-    token: null,             // auth token from login
+    userId: null, // anonymous UUID (generated on opt-in)
+    username: null, // registered username
+    token: null, // auth token from login
     lastSync: null,
     lastTelemetryFlush: null,
-    announcements: [],       // remote announcements
-    remoteConfig: {},        // feature flags from server
+    announcements: [], // remote announcements
+    remoteConfig: {}, // feature flags from server
   };
 }
 
 function saveCloudConfig(config) {
   try {
-    if (!fs.existsSync(_profileDir())) fs.mkdirSync(_profileDir(), { recursive: true });
+    if (!fs.existsSync(_profileDir())) {
+      fs.mkdirSync(_profileDir(), { recursive: true });
+    }
     fs.writeFileSync(_cloudConfigPath(), JSON.stringify(config, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // ── Opt-in/Opt-out ──────────────────────────────────────────────────────
@@ -133,7 +149,7 @@ function generateAnonymousId() {
   require('crypto').getRandomValues(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x40; // UUID v4
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -145,7 +161,9 @@ function generateAnonymousId() {
  */
 function trackEvent(event, data = {}) {
   const config = loadCloudConfig();
-  if (!config.enabled || !config.telemetryEnabled) return;
+  if (!config.enabled || !config.telemetryEnabled) {
+    return;
+  }
 
   const entry = {
     event,
@@ -163,16 +181,22 @@ function trackEvent(event, data = {}) {
     if (fs.existsSync(_telemetryQueuePath())) {
       queue = JSON.parse(fs.readFileSync(_telemetryQueuePath(), 'utf-8'));
     }
-  } catch { queue = []; }
+  } catch {
+    queue = [];
+  }
 
   queue.push(entry);
 
   // Cap queue size (prevent unbounded growth if offline)
-  if (queue.length > 500) queue = queue.slice(-500);
+  if (queue.length > 500) {
+    queue = queue.slice(-500);
+  }
 
   try {
     fs.writeFileSync(_telemetryQueuePath(), JSON.stringify(queue), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Auto-flush if queue is large enough
   if (queue.length >= 20) {
@@ -204,14 +228,22 @@ function sanitizeData(data) {
  */
 async function flushTelemetry() {
   const config = loadCloudConfig();
-  if (!config.enabled || !config.telemetryEnabled) return;
+  if (!config.enabled || !config.telemetryEnabled) {
+    return;
+  }
 
   let queue;
   try {
-    if (!fs.existsSync(_telemetryQueuePath())) return;
+    if (!fs.existsSync(_telemetryQueuePath())) {
+      return;
+    }
     queue = JSON.parse(fs.readFileSync(_telemetryQueuePath(), 'utf-8'));
-    if (!queue || queue.length === 0) return;
-  } catch { return; }
+    if (!queue || queue.length === 0) {
+      return;
+    }
+  } catch {
+    return;
+  }
 
   const payload = {
     userId: config.userId,
@@ -236,7 +268,9 @@ async function flushTelemetry() {
  */
 async function syncUpload() {
   const config = loadCloudConfig();
-  if (!config.enabled || !config.syncEnabled) return { success: false, reason: 'disabled' };
+  if (!config.enabled || !config.syncEnabled) {
+    return { success: false, reason: 'disabled' };
+  }
 
   const userProfile = require('./userProfile');
   const profileData = userProfile.exportProfile();
@@ -259,7 +293,9 @@ async function syncUpload() {
  */
 async function syncDownload() {
   const config = loadCloudConfig();
-  if (!config.enabled || !config.syncEnabled) return { success: false, reason: 'disabled' };
+  if (!config.enabled || !config.syncEnabled) {
+    return { success: false, reason: 'disabled' };
+  }
 
   try {
     const result = await getJSON(`${getEndpoint()}/v1/profile/sync?userId=${config.userId}`);
@@ -284,7 +320,9 @@ async function syncDownload() {
  */
 async function fetchRemoteConfig() {
   const config = loadCloudConfig();
-  if (!config.enabled) return null;
+  if (!config.enabled) {
+    return null;
+  }
 
   try {
     const result = await getJSON(`${getEndpoint()}/v1/config`);
@@ -320,33 +358,42 @@ function postJSON(url, data) {
     const transport = parsed.protocol === 'https:' ? https : http;
     const authHeaders = getAuthHeaders();
 
-    const req = transport.request({
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname + parsed.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-        'User-Agent': `khy-quant-cli/${require('../../package.json').version}`,
-        ...authHeaders,
+    const req = transport.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port,
+        path: parsed.pathname + parsed.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'User-Agent': `khy-quant-cli/${require('../../package.json').version}`,
+          ...authHeaders,
+        },
+        timeout: 10000,
       },
-      timeout: 10000,
-    }, (res) => {
-      let responseData = '';
-      res.on('data', chunk => responseData += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(responseData)); }
-          catch { resolve({}); }
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}`));
-        }
-      });
-    });
+      (res) => {
+        let responseData = '';
+        res.on('data', (chunk) => (responseData += chunk));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(responseData));
+            } catch {
+              resolve({});
+            }
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          }
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.write(body);
     req.end();
   });
@@ -358,31 +405,40 @@ function getJSON(url) {
     const transport = parsed.protocol === 'https:' ? https : http;
     const authHeaders = getAuthHeaders();
 
-    const req = transport.request({
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname + parsed.search,
-      method: 'GET',
-      headers: {
-        'User-Agent': `khy-quant-cli/${require('../../package.json').version}`,
-        ...authHeaders,
+    const req = transport.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port,
+        path: parsed.pathname + parsed.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': `khy-quant-cli/${require('../../package.json').version}`,
+          ...authHeaders,
+        },
+        timeout: 10000,
       },
-      timeout: 10000,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(data)); }
-          catch { resolve(null); }
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}`));
-        }
-      });
-    });
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(data));
+            } catch {
+              resolve(null);
+            }
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          }
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.end();
   });
 }
@@ -467,8 +523,10 @@ function getUsername() {
  */
 function getAuthHeaders() {
   const config = loadCloudConfig();
-  if (!config.token) return {};
-  return { 'Authorization': `Bearer ${config.token}` };
+  if (!config.token) {
+    return {};
+  }
+  return { Authorization: `Bearer ${config.token}` };
 }
 
 // ── Public API ──────────────────────────────────────────────────────────

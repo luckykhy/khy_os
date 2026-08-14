@@ -29,7 +29,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function rewindScopeEnabled(env) {
   const e = env || {};
-  const raw = String(e.KHY_REWIND_SCOPE == null ? '' : e.KHY_REWIND_SCOPE).trim().toLowerCase();
+  const raw = String(e.KHY_REWIND_SCOPE == null ? '' : e.KHY_REWIND_SCOPE)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
@@ -43,7 +45,9 @@ function rewindScopeEnabled(env) {
 const SUMMARIZE_OFF_VALUES = ['0', 'false', 'off', 'no', 'disable', 'disabled'];
 function rewindSummarizeEnabled(env) {
   const e = env || {};
-  const raw = String(e.KHY_REWIND_SUMMARIZE == null ? '' : e.KHY_REWIND_SUMMARIZE).trim().toLowerCase();
+  const raw = String(e.KHY_REWIND_SUMMARIZE == null ? '' : e.KHY_REWIND_SUMMARIZE)
+    .trim()
+    .toLowerCase();
   return !SUMMARIZE_OFF_VALUES.includes(raw);
 }
 
@@ -62,7 +66,9 @@ function _hasCheckpoint(target) {
  * @returns {Array<{value:string,label:string,hint:string}>|null}
  */
 function buildRewindScopeChoices(target, env) {
-  if (!rewindScopeEnabled(env)) return null;
+  if (!rewindScopeEnabled(env)) {
+    return null;
+  }
   const hasCp = _hasCheckpoint(target);
   const summarize = rewindSummarizeEnabled(env);
   const choices = [];
@@ -72,7 +78,11 @@ function buildRewindScopeChoices(target, env) {
     choices.push({ value: 'code', label: '仅代码', hint: '只恢复文件,保留当前对话' });
   } else if (summarize) {
     // 无代码检查点:仍给出「普通回溯」入口,让 summarize 纯附加而非替换今日能力。
-    choices.push({ value: 'conversation', label: '回溯对话', hint: '回溯到此处并可编辑重发(今日行为)' });
+    choices.push({
+      value: 'conversation',
+      label: '回溯对话',
+      hint: '回溯到此处并可编辑重发(今日行为)',
+    });
   }
   if (summarize) {
     choices.push({
@@ -94,13 +104,30 @@ function buildRewindScopeChoices(target, env) {
  * @returns {{restoreConversation:boolean, restoreCode:boolean, summarize?:boolean}}
  */
 function resolveRewindScope(scope, target, env) {
-  if (!rewindScopeEnabled(env)) return { restoreConversation: true, restoreCode: true };
-  const s = String(scope == null ? '' : scope).trim().toLowerCase();
-  if (s === 'summarize') return { summarize: true, restoreConversation: false, restoreCode: false };
-  if (!_hasCheckpoint(target)) return { restoreConversation: true, restoreCode: false };
-  if (s === 'conversation') return { restoreConversation: true, restoreCode: false };
-  if (s === 'code') return { restoreConversation: false, restoreCode: true };
+  if (!rewindScopeEnabled(env)) {
+    return { restoreConversation: true, restoreCode: true };
+  }
+  const s = String(scope == null ? '' : scope)
+    .trim()
+    .toLowerCase();
+  if (s === 'summarize') {
+    return { summarize: true, restoreConversation: false, restoreCode: false };
+  }
+  if (!_hasCheckpoint(target)) {
+    return { restoreConversation: true, restoreCode: false };
+  }
+  if (s === 'conversation') {
+    return { restoreConversation: true, restoreCode: false };
+  }
+  if (s === 'code') {
+    return { restoreConversation: false, restoreCode: true };
+  }
   return { restoreConversation: true, restoreCode: true };
 }
 
-module.exports = { rewindScopeEnabled, rewindSummarizeEnabled, buildRewindScopeChoices, resolveRewindScope };
+module.exports = {
+  rewindScopeEnabled,
+  rewindSummarizeEnabled,
+  buildRewindScopeChoices,
+  resolveRewindScope,
+};

@@ -65,10 +65,112 @@ describe('s11 — maxTokensRecovery primitives', () => {
       assert.strictEqual(rec.recoveryCount, 2);
     });
 
+    test('escalates a cap above 8K when the ceiling is genuinely larger (s11-043)', () => {
+      // The legacy `effectiveMax <= CAPPED_DEFAULT_MAX_TOKENS (8000)` guard froze
+      // an 8192 adapter-fallback cap in place — a truncation at 8192 resumed at
+      // 8192 and truncated again. As long as the dynamic ceiling raises the cap,
+      // the continuation round should get more headroom.
+      const rec = R.shouldRecover('length', 0, 8192, { maxOutputTokens: 65536 });
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, 65536);
+    });
+
+    test('escalates a mid-range cap toward the model output limit', () => {
+      const rec = R.shouldRecover('length', 0, 16384, { maxOutputTokens: 65536 });
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, 65536);
+    });
+
+    test('does not escalate when the cap already equals the ceiling', () => {
+      const rec = R.shouldRecover('length', 0, 8192, { maxOutputTokens: 8192 });
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, false);
+      assert.strictEqual(rec.nextMax, 8192);
+    });
+
+    test('escalates an unknown-metadata cap to the static ceiling', () => {
+      const rec = R.shouldRecover('length', 0, 8192, {});
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, R.ESCALATED_MAX_TOKENS);
+    });
+
     test('treats a missing cap as the capped default (escalates)', () => {
       const rec = R.shouldRecover('max_tokens', 0, undefined);
       assert.ok(rec);
       assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, R.ESCALATED_MAX_TOKENS);
+    });
+  });
+
+  describe('resolveMaxRecoveryAttempts (KHY_LENGTH_RECOVERY_MAX_ATTEMPTS flag)', () => {
+    // flagRegistry.resolveNumeric reads process.env on every call (no caching),
+    // so setting/deleting the var per test is sufficient — no module reset needed.
+    const ENV_KEY = 'KHY_LENGTH_RECOVERY_MAX_ATTEMPTS';
+    let savedEnv;
+
+    beforeEach(() => { savedEnv = process.env[ENV_KEY]; });
+    afterEach(() => {
+      if (savedEnv === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = savedEnv;
+    });
+
+    test('a legal numeric value takes effect', () => {
+      process.env[ENV_KEY] = '5';
+      assert.strictEqual(R.resolveMaxRecoveryAttempts(), 5);
+    });
+
+    test('an illegal value falls back to the default (3)', () => {
+      process.env[ENV_KEY] = 'not-a-number';
+      assert.strictEqual(R.resolveMaxRecoveryAttempts(), 3);
+    });
+
+    test('values above the registry max are clamped to 10', () => {
+      process.env[ENV_KEY] = '99';
+      assert.strictEqual(R.resolveMaxRecoveryAttempts(), 10);
+    });
+
+    test('shouldRecover returns null once the flag-driven budget is reached', () => {
+      process.env[ENV_KEY] = '2';
+      assert.strictEqual(R.shouldRecover('length', 2, 8000), null);
+      // One attempt below the budget still recovers.
+      assert.ok(R.shouldRecover('length', 1, 8000));
+    });
+  });
+
+  describe('shouldRecover dynamic bounds', () => {
+    const BUFFER_KEY = 'KHY_CONTEXT_SAFETY_BUFFER_TOKENS';
+    let savedBuffer;
+
+    beforeEach(() => { savedBuffer = process.env[BUFFER_KEY]; delete process.env[BUFFER_KEY]; });
+    afterEach(() => {
+      if (savedBuffer === undefined) delete process.env[BUFFER_KEY];
+      else process.env[BUFFER_KEY] = savedBuffer;
+    });
+
+    test('contextWindow + promptEstimate tighten the escalation ceiling', () => {
+      // available = 20000 - 10000 - 512 (default safety buffer) = 9488,
+      // below the static 64000 ceiling → the window wins.
+      const rec = R.shouldRecover('length', 0, 4000, {
+        contextWindow: 20000, promptEstimate: 10000,
+      });
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, 20000 - 10000 - 512);
+    });
+
+    test('dynamic maxOutputTokens caps nextMax instead of the static 64K', () => {
+      const rec = R.shouldRecover('length', 0, 4000, { maxOutputTokens: 16000 });
+      assert.ok(rec);
+      assert.strictEqual(rec.shouldEscalate, true);
+      assert.strictEqual(rec.nextMax, 16000);
+    });
+
+    test('no dynamic metadata → legacy static escalation target', () => {
+      const rec = R.shouldRecover('length', 0, 4000, {});
+      assert.ok(rec);
       assert.strictEqual(rec.nextMax, R.ESCALATED_MAX_TOKENS);
     });
   });
@@ -132,6 +234,38 @@ describe('s11 — maxTokensRecovery primitives', () => {
       assert.ok(/resume/i.test(p) && /truncat/i.test(p),
         'prompt should tell the model to resume after truncation');
     });
+
+    test('without partial text stays byte-identical to the legacy directive', () => {
+      assert.strictEqual(
+        R.buildContinuationPrompt(),
+        '[System: Your previous response was truncated. Resume directly from where you left off without repeating any content.]',
+      );
+      assert.strictEqual(R.buildContinuationPrompt(''), R.buildContinuationPrompt());
+      assert.strictEqual(R.buildContinuationPrompt('   '), R.buildContinuationPrompt());
+      assert.strictEqual(R.buildContinuationPrompt(null), R.buildContinuationPrompt());
+    });
+
+    test('a too-short partial stays on the legacy directive (no useful anchor)', () => {
+      const short = 'y'.repeat(R.MIN_CONTINUATION_CHARS - 1);
+      assert.strictEqual(R.buildContinuationPrompt(short), R.buildContinuationPrompt());
+    });
+
+    test('echoes the partial TAIL as a resume anchor and forbids repetition', () => {
+      const partial = '这里是要续写的长文。'.repeat(20); // comfortably > MIN_CONTINUATION_CHARS
+      const p = R.buildContinuationPrompt(partial);
+      assert.ok(p.includes('无缝继续'), 'should instruct seamless continuation');
+      assert.ok(p.includes('已输出片段结尾'), 'should anchor on the produced text');
+      assert.ok(p.includes(partial.slice(-40)), 'should contain the tail of the produced text');
+      assert.ok(!/resume directly/i.test(p), 'anchor path must not use the legacy English directive');
+    });
+
+    test('truncates a very long partial to only the anchor tail', () => {
+      const partial = 'a'.repeat(R.CONTINUATION_ANCHOR_TAIL_CHARS * 3);
+      const p = R.buildContinuationPrompt(partial);
+      // The anchor must be limited to the tail window — never the whole partial.
+      assert.ok(!p.includes('a'.repeat(R.CONTINUATION_ANCHOR_TAIL_CHARS + 1)));
+      assert.ok(p.includes('a'.repeat(R.CONTINUATION_ANCHOR_TAIL_CHARS)));
+    });
   });
 
   describe('module surface', () => {
@@ -141,6 +275,7 @@ describe('s11 — maxTokensRecovery primitives', () => {
       assert.strictEqual(R.ESCALATED_MAX_TOKENS, 64000);
       assert.ok(R.MIN_CONTINUATION_CHARS > 0);
       assert.ok(R.MAX_NEGLIGIBLE_CONTINUATIONS > 0);
+      assert.ok(R.CONTINUATION_ANCHOR_TAIL_CHARS > 0);
     });
   });
 });

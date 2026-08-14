@@ -77,7 +77,7 @@ Communicate the map directly as your final message — do NOT create or write an
 const MAP_AGENT = {
   agentType: 'map',
   whenToUse:
-    'Read-only codebase cartographer. Use this to get a structural map of a project — tech stack, entry points, build/run/test commands, top-level directory responsibilities, a pruned directory tree, the module dependency graph, and key symbols — so you can orient in an unfamiliar codebase quickly. Its output is aligned with this repo\'s .ai/MAP.md skeleton and it reads existing .ai/ seed docs as ground truth when present. It is READ-ONLY: it reports the map and never edits, writes, or runs state-changing commands (it is not `khy metadata refresh`). For a fast keyword/file search, use Explore; for deep reading of specific files, use reading.',
+    "Read-only codebase cartographer. Use this to get a structural map of a project — tech stack, entry points, build/run/test commands, top-level directory responsibilities, a pruned directory tree, the module dependency graph, and key symbols — so you can orient in an unfamiliar codebase quickly. Its output is aligned with this repo's .ai/MAP.md skeleton and it reads existing .ai/ seed docs as ground truth when present. It is READ-ONLY: it reports the map and never edits, writes, or runs state-changing commands (it is not `khy metadata refresh`). For a fast keyword/file search, use Explore; for deep reading of specific files, use reading.",
   color: 'blue',
   disallowedTools: [
     AGENT_TOOL_NAME,

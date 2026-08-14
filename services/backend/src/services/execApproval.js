@@ -34,70 +34,70 @@ const crypto = require('crypto');
 // The drift-guard test tests/services/riskVocabulary.test.js pins these values
 // to the shared vocabulary and asserts the intentional absence of `safe`.
 const RISK = {
-  LOW:      'low',
-  MEDIUM:   'medium',
-  HIGH:     'high',
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
   CRITICAL: 'critical',
 };
 
 // ── Permission levels ──
 
 const PERMISSION = {
-  DENY:      'deny',
+  DENY: 'deny',
   ALLOWLIST: 'allowlist',
-  ASK:       'ask',
-  FULL:      'full',
+  ASK: 'ask',
+  FULL: 'full',
 };
 
 // ── Default risk classification patterns ──
 
 const DEFAULT_RISK_PATTERNS = [
   // Critical — destructive, irreversible
-  { pattern: 'rm -rf *',      risk: RISK.CRITICAL },
-  { pattern: 'rm -r /',       risk: RISK.CRITICAL },
-  { pattern: 'dd if=*',       risk: RISK.CRITICAL },
-  { pattern: 'mkfs*',         risk: RISK.CRITICAL },
-  { pattern: 'format *',      risk: RISK.CRITICAL },
-  { pattern: ':(){ :|:& };:', risk: RISK.CRITICAL },  // fork bomb
-  { pattern: 'shutdown*',     risk: RISK.CRITICAL },
-  { pattern: 'reboot*',       risk: RISK.CRITICAL },
+  { pattern: 'rm -rf *', risk: RISK.CRITICAL },
+  { pattern: 'rm -r /', risk: RISK.CRITICAL },
+  { pattern: 'dd if=*', risk: RISK.CRITICAL },
+  { pattern: 'mkfs*', risk: RISK.CRITICAL },
+  { pattern: 'format *', risk: RISK.CRITICAL },
+  { pattern: ':(){ :|:& };:', risk: RISK.CRITICAL }, // fork bomb
+  { pattern: 'shutdown*', risk: RISK.CRITICAL },
+  { pattern: 'reboot*', risk: RISK.CRITICAL },
   { pattern: 'git push --force*', risk: RISK.CRITICAL },
   { pattern: 'git reset --hard*', risk: RISK.CRITICAL },
-  { pattern: 'DROP TABLE*',   risk: RISK.CRITICAL },
+  { pattern: 'DROP TABLE*', risk: RISK.CRITICAL },
   { pattern: 'DROP DATABASE*', risk: RISK.CRITICAL },
 
   // High — system modification, network access
-  { pattern: 'curl * | sh',   risk: RISK.HIGH },
+  { pattern: 'curl * | sh', risk: RISK.HIGH },
   { pattern: 'curl * | bash', risk: RISK.HIGH },
-  { pattern: 'wget * | sh',   risk: RISK.HIGH },
-  { pattern: 'sudo *',        risk: RISK.HIGH },
-  { pattern: 'chmod 777 *',   risk: RISK.HIGH },
-  { pattern: 'chown *',       risk: RISK.HIGH },
-  { pattern: 'npm publish*',  risk: RISK.HIGH },
-  { pattern: 'docker rm *',   risk: RISK.HIGH },
+  { pattern: 'wget * | sh', risk: RISK.HIGH },
+  { pattern: 'sudo *', risk: RISK.HIGH },
+  { pattern: 'chmod 777 *', risk: RISK.HIGH },
+  { pattern: 'chown *', risk: RISK.HIGH },
+  { pattern: 'npm publish*', risk: RISK.HIGH },
+  { pattern: 'docker rm *', risk: RISK.HIGH },
   { pattern: 'kubectl delete*', risk: RISK.HIGH },
 
   // Medium — writes, installs
-  { pattern: 'npm install*',  risk: RISK.MEDIUM },
-  { pattern: 'pip install*',  risk: RISK.MEDIUM },
-  { pattern: 'apt install*',  risk: RISK.MEDIUM },
-  { pattern: 'git push*',     risk: RISK.MEDIUM },
-  { pattern: 'git commit*',   risk: RISK.MEDIUM },
-  { pattern: 'mv *',          risk: RISK.MEDIUM },
-  { pattern: 'cp *',          risk: RISK.MEDIUM },
+  { pattern: 'npm install*', risk: RISK.MEDIUM },
+  { pattern: 'pip install*', risk: RISK.MEDIUM },
+  { pattern: 'apt install*', risk: RISK.MEDIUM },
+  { pattern: 'git push*', risk: RISK.MEDIUM },
+  { pattern: 'git commit*', risk: RISK.MEDIUM },
+  { pattern: 'mv *', risk: RISK.MEDIUM },
+  { pattern: 'cp *', risk: RISK.MEDIUM },
 
   // Low — read-only, informational
-  { pattern: 'ls *',          risk: RISK.LOW },
-  { pattern: 'cat *',         risk: RISK.LOW },
-  { pattern: 'grep *',        risk: RISK.LOW },
-  { pattern: 'find *',        risk: RISK.LOW },
-  { pattern: 'git status',    risk: RISK.LOW },
-  { pattern: 'git log*',      risk: RISK.LOW },
-  { pattern: 'git diff*',     risk: RISK.LOW },
-  { pattern: 'echo *',        risk: RISK.LOW },
-  { pattern: 'pwd',           risk: RISK.LOW },
-  { pattern: 'whoami',        risk: RISK.LOW },
-  { pattern: 'node -e *',     risk: RISK.LOW },
+  { pattern: 'ls *', risk: RISK.LOW },
+  { pattern: 'cat *', risk: RISK.LOW },
+  { pattern: 'grep *', risk: RISK.LOW },
+  { pattern: 'find *', risk: RISK.LOW },
+  { pattern: 'git status', risk: RISK.LOW },
+  { pattern: 'git log*', risk: RISK.LOW },
+  { pattern: 'git diff*', risk: RISK.LOW },
+  { pattern: 'echo *', risk: RISK.LOW },
+  { pattern: 'pwd', risk: RISK.LOW },
+  { pattern: 'whoami', risk: RISK.LOW },
+  { pattern: 'node -e *', risk: RISK.LOW },
 ];
 
 // ── Approval request TTL ──
@@ -113,12 +113,12 @@ const REQUEST_TTL_MS = 30 * 60 * 1000; // 30 minutes
  * @returns {boolean}
  */
 function matchCommandPattern(command, pattern) {
-  if (!command || !pattern) return false;
+  if (!command || !pattern) {
+    return false;
+  }
 
   // Escape regex special chars except *
-  const regexStr = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*');
+  const regexStr = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 
   try {
     return new RegExp(`^${regexStr}$`, 'i').test(command.trim());
@@ -233,10 +233,16 @@ class ExecApprovalManager {
         try {
           const { isPosixCommandSubstitution } = require('./commandSubstitutionContext');
           denySubstitution = isPosixCommandSubstitution(trimmed, process.env);
-        } catch { denySubstitution = true; }
+        } catch {
+          denySubstitution = true;
+        }
         if (denySubstitution) {
           this._audit(trimmed, 'denied', risk, 'command_substitution');
-          return { allowed: false, reason: 'Command substitution ($() or ``) detected — potential injection risk', risk };
+          return {
+            allowed: false,
+            reason: 'Command substitution ($() or ``) detected — potential injection risk',
+            risk,
+          };
         }
         // else: non-POSIX shell ($()/`` are native) — fall through to approval.
       }
@@ -294,15 +300,21 @@ class ExecApprovalManager {
         const permStore = require('./permissionStore');
         // Check if the primary virtual tool is auto-approved
         const primaryTool = toolMapping.virtualTools[0]?.tool || 'shell_command';
-        const decision = permStore.check(primaryTool, {}, {
-          risk: toolMapping.overallRisk,
-          isReadOnly: true,
-        });
+        const decision = permStore.check(
+          primaryTool,
+          {},
+          {
+            risk: toolMapping.overallRisk,
+            isReadOnly: true,
+          }
+        );
         if (decision === 'allow') {
           this._audit(trimmed, 'approved', risk, 'read_only_auto');
           return { allowed: true, reason: `Read-only command (virtual: ${primaryTool})`, risk };
         }
-      } catch { /* permissionStore not available */ }
+      } catch {
+        /* permissionStore not available */
+      }
     }
 
     // 6. Ask mode — create approval request
@@ -344,7 +356,9 @@ class ExecApprovalManager {
    */
   decide(requestId, decision, opts = {}) {
     const req = this._pendingRequests.get(requestId);
-    if (!req) return { success: false, error: 'Request not found or expired' };
+    if (!req) {
+      return { success: false, error: 'Request not found or expired' };
+    }
     if (req.expiresAt < Date.now()) {
       this._pendingRequests.delete(requestId);
       return { success: false, error: 'Request expired' };
@@ -370,7 +384,9 @@ class ExecApprovalManager {
    */
   getRequest(requestId) {
     const req = this._pendingRequests.get(requestId);
-    if (!req || req.expiresAt < Date.now()) return null;
+    if (!req || req.expiresAt < Date.now()) {
+      return null;
+    }
     return { ...req };
   }
 
@@ -381,7 +397,9 @@ class ExecApprovalManager {
     this._cleanExpired();
     const pending = [];
     for (const req of this._pendingRequests.values()) {
-      if (!req.decision) pending.push({ ...req });
+      if (!req.decision) {
+        pending.push({ ...req });
+      }
     }
     return pending;
   }

@@ -48,7 +48,9 @@ const GLM_VISION_SUBSTR = 'glm-4.6v';
 function glmVisionEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_GLM_VISION_MODEL;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -86,7 +88,9 @@ function glmVisionFallbackPin(env = process.env) {
  */
 function glmVisionCandidatePins(env = process.env) {
   try {
-    if (!glmVisionEnabled(env)) return [];
+    if (!glmVisionEnabled(env)) {
+      return [];
+    }
     return GLM_VISION_FALLBACK_IDS.map((id) => ({ model: id, poolHint: 'glm' }));
   } catch {
     return [];
@@ -102,9 +106,15 @@ function glmVisionCandidatePins(env = process.env) {
  */
 function isGlmVisionModel(model, env = process.env) {
   try {
-    if (!glmVisionEnabled(env)) return false;
-    const m = String(model == null ? '' : model).trim().toLowerCase();
-    if (!m) return false;
+    if (!glmVisionEnabled(env)) {
+      return false;
+    }
+    const m = String(model == null ? '' : model)
+      .trim()
+      .toLowerCase();
+    if (!m) {
+      return false;
+    }
     return m.includes(GLM_VISION_SUBSTR);
   } catch {
     return false;

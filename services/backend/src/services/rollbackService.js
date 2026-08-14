@@ -36,11 +36,21 @@ const GRANULARITY = Object.freeze({
 // Advisory SLA targets (ms) — surfaced in results for observability, not enforced.
 const SLA_MS = Object.freeze({ patch: 100, turn: 500, session: 2000, version: Infinity });
 
-function _fileHistory() { return require('./fileHistoryService'); }
-function _canonicalState() { return require('./canonicalState'); }
-function _checkpoints() { return require('./workspace/checkpointService'); }
+function _fileHistory() {
+  return require('./fileHistoryService');
+}
 
-function _fail(error) { return { success: false, error: String(error) }; }
+function _canonicalState() {
+  return require('./canonicalState');
+}
+
+function _checkpoints() {
+  return require('./workspace/checkpointService');
+}
+
+function _fail(error) {
+  return { success: false, error: String(error) };
+}
 
 // ── Snapshot (capture a restore point) ───────────────────────────────
 
@@ -63,9 +73,12 @@ function snapshot(opts = {}) {
   try {
     switch (g) {
       case GRANULARITY.PATCH: {
-        if (!opts.filePath) return _fail('patch snapshot requires filePath');
+        if (!opts.filePath) {
+          return _fail('patch snapshot requires filePath');
+        }
         const r = _fileHistory().takeSnapshot(opts.filePath, {
-          reason: opts.reason, content: opts.content,
+          reason: opts.reason,
+          content: opts.content,
         });
         return { ...r, granularity: g, slaMs: SLA_MS.patch };
       }
@@ -77,10 +90,13 @@ function snapshot(opts = {}) {
       }
       case GRANULARITY.SESSION:
       case GRANULARITY.VERSION: {
-        if (!opts.projectDir) return _fail(`${g} snapshot requires projectDir`);
+        if (!opts.projectDir) {
+          return _fail(`${g} snapshot requires projectDir`);
+        }
         const mode = g === GRANULARITY.VERSION ? 'tar-full' : 'git-diff';
         const entry = _checkpoints().saveCheckpoint(opts.projectDir, {
-          message: opts.message || `${g} snapshot`, mode,
+          message: opts.message || `${g} snapshot`,
+          mode,
         });
         return { success: true, granularity: g, slaMs: SLA_MS[g], checkpoint: entry };
       }
@@ -112,18 +128,23 @@ function rollback(opts = {}) {
   try {
     switch (g) {
       case GRANULARITY.PATCH: {
-        if (!opts.filePath) return _fail('patch rollback requires filePath');
+        if (!opts.filePath) {
+          return _fail('patch rollback requires filePath');
+        }
         const fh = _fileHistory();
-        const r = (opts.snapshotIndex != null)
-          ? fh.rewindTo(opts.filePath, opts.snapshotIndex)
-          : fh.undoLast(opts.filePath);
+        const r =
+          opts.snapshotIndex != null
+            ? fh.rewindTo(opts.filePath, opts.snapshotIndex)
+            : fh.undoLast(opts.filePath);
         return { ...r, restored: !!r.success, granularity: g };
       }
       case GRANULARITY.TURN: {
         // canonicalState exposes no in-place restore — return the data so the
         // caller can re-inject it into the next turn's carry-forward prompt.
         const state = _canonicalState().load(opts.sessionId || 'default');
-        if (!state) return { success: false, restored: false, granularity: g, error: 'no turn snapshot' };
+        if (!state) {
+          return { success: false, restored: false, granularity: g, error: 'no turn snapshot' };
+        }
         return {
           success: true,
           restored: false,
@@ -163,7 +184,9 @@ function undo(opts = {}) {
     let filePath = opts.filePath;
     if (!filePath) {
       const tracked = _fileHistory().listTrackedFiles();
-      if (!tracked || tracked.length === 0) return _fail('no tracked files to undo');
+      if (!tracked || tracked.length === 0) {
+        return _fail('no tracked files to undo');
+      }
       filePath = tracked[0].filePath; // newest first
     }
     return rollback({ granularity: GRANULARITY.PATCH, filePath });
@@ -192,9 +215,13 @@ function list(opts = {}) {
         const fh = _fileHistory();
         if (opts.filePath) {
           const h = fh.getHistory(opts.filePath);
-          const items = h ? h.snapshots.map((s, i) => ({
-            index: i, timestamp: s.timestamp, reason: s.reason,
-          })) : [];
+          const items = h
+            ? h.snapshots.map((s, i) => ({
+                index: i,
+                timestamp: s.timestamp,
+                reason: s.reason,
+              }))
+            : [];
           return { success: true, granularity: g, items };
         }
         return { success: true, granularity: g, items: fh.listTrackedFiles() };
@@ -205,10 +232,12 @@ function list(opts = {}) {
       }
       case GRANULARITY.SESSION:
       case GRANULARITY.VERSION: {
-        if (!opts.projectDir) return _fail(`${g} list requires projectDir`);
+        if (!opts.projectDir) {
+          return _fail(`${g} list requires projectDir`);
+        }
         const all = _checkpoints().listCheckpoints(opts.projectDir);
         const want = g === GRANULARITY.VERSION ? 'tar-full' : null;
-        const items = want ? all.filter(c => c.mode === want) : all;
+        const items = want ? all.filter((c) => c.mode === want) : all;
         return { success: true, granularity: g, items };
       }
       default:

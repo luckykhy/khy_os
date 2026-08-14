@@ -16,11 +16,12 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
-const { printInfo, printWarn, printError, printSuccess } = require('../formatters');
-const retrieval = require('../../services/learningRetrieval');
 const dynamic = require('../../services/learningCurriculumDynamic');
 const profile = require('../../services/learningProfile');
+const retrieval = require('../../services/learningRetrieval');
+const { printInfo, printWarn, printError, printSuccess } = require('../formatters');
 
 /**
  * 检测当前 AI 模型能力档位。
@@ -30,7 +31,9 @@ function _getModelTier() {
   try {
     const aiMod = require('../ai');
     const ai = typeof aiMod === 'function' ? aiMod() : aiMod;
-    if (!ai || typeof ai.chat !== 'function') return 'none';
+    if (!ai || typeof ai.chat !== 'function') {
+      return 'none';
+    }
 
     // 当前活跃 provider 探测。早期实现调用 ai.getGateway()，但该函数从未出现在
     // ai.js 的 exports（恒为 undefined）→ 适配器列表恒空 → 永远判为 'none'，
@@ -38,15 +41,25 @@ function _getModelTier() {
     // 返回 "适配器名 · 模型" 或 null），缺失时再退回 getAiStatus().provider。全 fail-soft。
     let provider = null;
     try {
-      if (typeof ai.getActiveProvider === 'function') provider = ai.getActiveProvider();
-    } catch { /* best effort */ }
+      if (typeof ai.getActiveProvider === 'function') {
+        provider = ai.getActiveProvider();
+      }
+    } catch {
+      /* best effort */
+    }
     if (!provider) {
       try {
         const st = typeof ai.getAiStatus === 'function' ? ai.getAiStatus() : null;
-        if (st && st.available) provider = st.provider;
-      } catch { /* best effort */ }
+        if (st && st.available) {
+          provider = st.provider;
+        }
+      } catch {
+        /* best effort */
+      }
     }
-    if (!provider) return 'none';
+    if (!provider) {
+      return 'none';
+    }
 
     // 适配器名在 " · 模型" 之前。本地小模型 → small；其余任何可用云端/API
     // provider 一律按高能力 smart（面谈式模式 3，面试备战首选）。
@@ -67,7 +80,9 @@ async function _directCallModel(prompt) {
   try {
     const aiMod = require('../ai');
     const ai = typeof aiMod === 'function' ? aiMod() : aiMod;
-    if (!ai || typeof ai.chat !== 'function') return '';
+    if (!ai || typeof ai.chat !== 'function') {
+      return '';
+    }
     const res = await ai.chat(prompt, { effort: 'low', stream: false });
     return (res && (res.reply || res.content)) || '';
   } catch {
@@ -87,23 +102,51 @@ const _MODE_TTL_MS = 60000;
 
 async function _resolveLearnMode() {
   const now = Date.now();
-  if (_modeCache && (now - _modeCacheAt) < _MODE_TTL_MS) return _modeCache;
+  if (_modeCache && now - _modeCacheAt < _MODE_TTL_MS) {
+    return _modeCache;
+  }
   const tier = _getModelTier();
   const model = tier !== 'none';
   let out;
   if (model) {
     let vector = false;
-    try { vector = await retrieval.isEmbeddingReachable(); } catch { vector = false; }
+    try {
+      vector = await retrieval.isEmbeddingReachable();
+    } catch {
+      vector = false;
+    }
     out = {
-      mode: 3, tier, model: true, vector, remote: vector,
+      mode: 3,
+      tier,
+      model: true,
+      vector,
+      remote: vector,
       label: `📡 模式3 · 有模型 + ${vector ? '混合RAG(词法+向量)' : '词法RAG'}`,
     };
   } else {
     let remote = false;
-    try { remote = await retrieval.isDocsRemoteReachable(); } catch { remote = false; }
+    try {
+      remote = await retrieval.isDocsRemoteReachable();
+    } catch {
+      remote = false;
+    }
     out = remote
-      ? { mode: 2, tier, model: false, vector: false, remote: true, label: '📡 模式2 · 有网络无模型 · 离线教学 + 远端补取' }
-      : { mode: 1, tier, model: false, vector: false, remote: false, label: '📡 模式1 · 本地无网络无模型 · 纯本地检索' };
+      ? {
+          mode: 2,
+          tier,
+          model: false,
+          vector: false,
+          remote: true,
+          label: '📡 模式2 · 有网络无模型 · 离线教学 + 远端补取',
+        }
+      : {
+          mode: 1,
+          tier,
+          model: false,
+          vector: false,
+          remote: false,
+          label: '📡 模式1 · 本地无网络无模型 · 纯本地检索',
+        };
   }
   _modeCache = out;
   _modeCacheAt = now;
@@ -112,25 +155,45 @@ async function _resolveLearnMode() {
 
 /** 诚实的模式横幅：如实显示当前学习方式、是否补取、检索到多少段、动态覆盖层规模。 */
 function _printModeBanner(mode, extra = {}) {
-  if (!retrieval.RAG_ENABLED) return;
+  if (!retrieval.RAG_ENABLED) {
+    return;
+  }
   let line = mode.label;
-  if (extra.fetched && extra.fetched.length) line += ` · 已补取 ${extra.fetched.length} 个文件`;
-  if (typeof extra.found === 'number') line += ` · 检索 ${extra.found} 段`;
+  if (extra.fetched && extra.fetched.length) {
+    line += ` · 已补取 ${extra.fetched.length} 个文件`;
+  }
+  if (typeof extra.found === 'number') {
+    line += ` · 检索 ${extra.found} 段`;
+  }
   try {
     if (dynamic.isDynamicEnabled()) {
       const s = dynamic.overlaySummary();
-      if (s.topics > 0) line += ` · +${s.topics} 动态知识点`;
-      if (s.remaps > 0) line += ` · 自愈 ${s.remaps} 引用`;
+      if (s.topics > 0) {
+        line += ` · +${s.topics} 动态知识点`;
+      }
+      if (s.remaps > 0) {
+        line += ` · 自愈 ${s.remaps} 引用`;
+      }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   // 学习者讲解档位 + 改进清单规模（fail-soft，normal/空清单不显，避免噪音）
   try {
-    if (profile.getLevel() === 'beginner') line += ' · 档位 零基础';
-  } catch { /* fail-soft */ }
+    if (profile.getLevel() === 'beginner') {
+      line += ' · 档位 零基础';
+    }
+  } catch {
+    /* fail-soft */
+  }
   try {
     const n = require('../../services/learningImprove').listFindings().length;
-    if (n > 0) line += ` · 改进清单 ${n}`;
-  } catch { /* fail-soft */ }
+    if (n > 0) {
+      line += ` · 改进清单 ${n}`;
+    }
+  } catch {
+    /* fail-soft */
+  }
   console.log('  ' + chalk.gray(line));
 }
 
@@ -140,14 +203,18 @@ function _printModeBanner(mode, extra = {}) {
  */
 async function _maybeRefreshDynamic(mode) {
   try {
-    if (!dynamic.isDynamicEnabled()) return;
+    if (!dynamic.isDynamicEnabled()) {
+      return;
+    }
     await dynamic.maybeRefreshDynamic({
       useNetwork: mode.remote || mode.vector,
       useModel: mode.model,
       model: mode.tier,
       callModel: mode.model ? _directCallModel : undefined,
     });
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
 }
 
 /**
@@ -159,21 +226,28 @@ async function _layerOverview(layer, curriculum) {
   await _maybeRefreshDynamic(mode);
   const query = `${layer.title} ${layer.summary || ''}`.trim();
   let ctx = { chunks: [], text: '', usedVector: false };
-  try { ctx = await retrieval.buildContext(query, { allowVector: mode.vector }); } catch { /* 降级 */ }
+  try {
+    ctx = await retrieval.buildContext(query, { allowVector: mode.vector });
+  } catch {
+    /* 降级 */
+  }
 
   _printModeBanner(mode, { found: ctx.chunks.length });
   console.log(curriculum.formatLayerOverviewRich(layer));
 
   if (!mode.model) {
-    if (ctx && ctx.text) console.log(retrieval.formatSection(ctx));
+    if (ctx && ctx.text) {
+      console.log(retrieval.formatSection(ctx));
+    }
     await _offlineLayerInteract(layer, curriculum);
     return true;
   }
   const ragContext = ctx && ctx.text ? ctx.text : '';
   const level = profile.getLevel();
-  const prompt = mode.tier === 'smart'
-    ? curriculum.buildLayerOverviewPrompt(layer, { ragContext, level })
-    : curriculum.buildSimpleLayerPrompt(layer, { ragContext, level });
+  const prompt =
+    mode.tier === 'smart'
+      ? curriculum.buildLayerOverviewPrompt(layer, { ragContext, level })
+      : curriculum.buildSimpleLayerPrompt(layer, { ragContext, level });
   return { aiForward: prompt };
 }
 
@@ -190,7 +264,11 @@ async function _topicDetail(layer, topic, curriculum) {
   // 模式2：先从配置的远端补取本地缺失的 topic 源码/文档
   let fetched = [];
   if (mode.mode === 2) {
-    try { fetched = await retrieval.fetchMissingForTopic(topic); } catch { fetched = []; }
+    try {
+      fetched = await retrieval.fetchMissingForTopic(topic);
+    } catch {
+      fetched = [];
+    }
   }
 
   // 统一检索 KHY-OS 知识库（三模式共用的闭环核心）
@@ -200,9 +278,11 @@ async function _topicDetail(layer, topic, curriculum) {
     ctx = await retrieval.buildContext(query, {
       topic,
       allowVector: mode.vector,
-      extraPaths: fetched.map(f => f.abs),
+      extraPaths: fetched.map((f) => f.abs),
     });
-  } catch { /* 检索失败静默降级，不阻断学习 */ }
+  } catch {
+    /* 检索失败静默降级，不阻断学习 */
+  }
 
   _printModeBanner(mode, { fetched, found: ctx.chunks.length });
   // 有模型时本地源码只是辅助：读不到不刷 "(无法读取)" 噪音，交给 AI 讲解。
@@ -210,33 +290,42 @@ async function _topicDetail(layer, topic, curriculum) {
 
   if (!mode.model) {
     // 模式1/2：离线静态渲染 + 追加检索到的相关材料，再进入既有离线交互
-    if (ctx && ctx.text) console.log(retrieval.formatSection(ctx));
+    if (ctx && ctx.text) {
+      console.log(retrieval.formatSection(ctx));
+    }
     await _offlineTopicInteract(layer, topic, curriculum);
     return true;
   }
   // 模式3：把检索到的真实 chunk 注入 prompt
   const ragContext = ctx && ctx.text ? ctx.text : '';
   const level = profile.getLevel();
-  const prompt = mode.tier === 'smart'
-    ? curriculum.buildLearningPrompt(layer, topic, { ragContext, level })
-    : curriculum.buildSimpleTopicPrompt(layer, topic, { ragContext, level });
+  const prompt =
+    mode.tier === 'smart'
+      ? curriculum.buildLearningPrompt(layer, topic, { ragContext, level })
+      : curriculum.buildSimpleTopicPrompt(layer, topic, { ragContext, level });
   return { aiForward: prompt };
 }
 
 /** 完成知识点后检查是否达成层级里程碑 */
 function _checkMilestone(layerId, curriculum) {
   const layer = curriculum.getLayer(layerId);
-  if (!layer) return;
+  if (!layer) {
+    return;
+  }
   const p = curriculum.getProgress();
   const total = layer.topics.length;
-  const done = layer.topics.filter(t => p.completedTopics.includes(`${layerId}:${t.id}`)).length;
+  const done = layer.topics.filter((t) => p.completedTopics.includes(`${layerId}:${t.id}`)).length;
 
   if (done === total && total > 0) {
     console.log('');
-    console.log(`  ${chalk.bold.green('🎉 恭喜！')} ${chalk.bold.white(`第 ${layerId} 层 · ${layer.title}`)} ${chalk.bold.green('全部完成！ +50 XP')}`);
+    console.log(
+      `  ${chalk.bold.green('🎉 恭喜！')} ${chalk.bold.white(`第 ${layerId} 层 · ${layer.title}`)} ${chalk.bold.green('全部完成！ +50 XP')}`
+    );
     const nextLayer = curriculum.getLayer(layerId + 1);
     if (nextLayer) {
-      console.log(`  ${chalk.dim('下一站:')} ${chalk.bold.cyan(`第 ${nextLayer.id} 层 · ${nextLayer.title}`)} ${chalk.dim('→')} ${chalk.magenta(`learn ${nextLayer.id}`)}`);
+      console.log(
+        `  ${chalk.dim('下一站:')} ${chalk.bold.cyan(`第 ${nextLayer.id} 层 · ${nextLayer.title}`)} ${chalk.dim('→')} ${chalk.magenta(`learn ${nextLayer.id}`)}`
+      );
     }
     console.log('');
   } else if (total > 0) {
@@ -267,13 +356,15 @@ function _showNudge(curriculum) {
 async function _askChoice(message, options) {
   try {
     const inquirer = require('inquirer');
-    const { choice } = await inquirer.prompt([{
-      type: 'list',
-      name: 'choice',
-      message,
-      choices: options.map(o => ({ name: o.label, value: o.value })),
-      pageSize: 15,
-    }]);
+    const { choice } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'choice',
+        message,
+        choices: options.map((o) => ({ name: o.label, value: o.value })),
+        pageSize: 15,
+      },
+    ]);
     return choice;
   } catch {
     return null;
@@ -286,13 +377,19 @@ async function _offlineLayerListInteract(curriculum) {
   let firstLoop = true;
   while (true) {
     console.log(curriculum.formatLayerList());
-    if (firstLoop) { _showNudge(curriculum); firstLoop = false; }
+    if (firstLoop) {
+      _showNudge(curriculum);
+      firstLoop = false;
+    }
 
     const progress = curriculum.getProgress();
-    const options = layers.map(l => {
+    const options = layers.map((l) => {
       const total = l.topics.length;
-      const done = l.topics.filter(t => progress.completedTopics.includes(`${l.id}:${t.id}`)).length;
-      const mark = done === total ? chalk.green('✓') : (done > 0 ? chalk.yellow('▸') : chalk.gray('○'));
+      const done = l.topics.filter((t) =>
+        progress.completedTopics.includes(`${l.id}:${t.id}`)
+      ).length;
+      const mark =
+        done === total ? chalk.green('✓') : done > 0 ? chalk.yellow('▸') : chalk.gray('○');
       return {
         label: `${mark} 第 ${l.id} 层: ${l.title}  ${chalk.dim(`(${done}/${total})`)}`,
         value: { action: 'layer', layer: l },
@@ -302,7 +399,9 @@ async function _offlineLayerListInteract(curriculum) {
     options.push({ label: chalk.dim('✕ 退出'), value: { action: 'exit' } });
 
     const choice = await _askChoice('选择层级:', options);
-    if (!choice || choice.action === 'exit') return true;
+    if (!choice || choice.action === 'exit') {
+      return true;
+    }
 
     if (choice.action === 'progress') {
       console.log('\n' + curriculum.formatProgressTable(curriculum.getProgress()) + '\n');
@@ -335,7 +434,9 @@ async function _offlineLayerInteract(layer, curriculum) {
     options.push({ label: chalk.dim('↩ 返回课程列表'), value: { action: 'back' } });
 
     const choice = await _askChoice(`第 ${layer.id} 层 · ${layer.title}:`, options);
-    if (!choice || choice.action === 'back') return;
+    if (!choice || choice.action === 'back') {
+      return;
+    }
 
     if (choice.action === 'topic') {
       await _offlineTopicInteract(layer, layer.topics[choice.index], curriculum);
@@ -373,7 +474,9 @@ async function _offlineTopicInteract(layer, startTopic, curriculum) {
     options.push({ label: chalk.dim('↩ 返回层级'), value: 'back' });
 
     const choice = await _askChoice('操作:', options);
-    if (!choice || choice === 'back') return;
+    if (!choice || choice === 'back') {
+      return;
+    }
 
     if (choice === 'next') {
       topic = layer.topics[idx + 1];
@@ -409,7 +512,9 @@ async function _offlineBugListInteract(curriculum) {
     options.push({ label: chalk.dim('↩ 返回'), value: { action: 'back' } });
 
     const choice = await _askChoice('选择案例:', options);
-    if (!choice || choice.action === 'back') return;
+    if (!choice || choice.action === 'back') {
+      return;
+    }
 
     if (choice.action === 'bug') {
       await _offlineBugCaseInteract(choice.bugCase, curriculum);
@@ -429,8 +534,12 @@ async function _offlineBugCaseInteract(bugCase, curriculum) {
   console.log('');
   console.log(`  ${chalk.bold.cyan('🔍 Bug 案例:')} ${chalk.bold.white(bugCase.title)}`);
   console.log(`  ${chalk.dim('─'.repeat(Math.max(8, (process.stdout.columns || 80) - 6)))}`);
-  console.log(`  ${chalk.dim('严重等级:')} ${bugCase.severity}  ${chalk.dim('标签:')} ${bugCase.tags.map(t => chalk.cyan(t)).join(chalk.dim(', '))}`);
-  console.log(`  ${chalk.dim('文件:')} ${bugCase.files.map(f => chalk.italic.cyan(f)).join(chalk.dim(', '))}`);
+  console.log(
+    `  ${chalk.dim('严重等级:')} ${bugCase.severity}  ${chalk.dim('标签:')} ${bugCase.tags.map((t) => chalk.cyan(t)).join(chalk.dim(', '))}`
+  );
+  console.log(
+    `  ${chalk.dim('文件:')} ${bugCase.files.map((f) => chalk.italic.cyan(f)).join(chalk.dim(', '))}`
+  );
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
@@ -449,7 +558,9 @@ async function _offlineBugCaseInteract(bugCase, curriculum) {
         { label: `→ 继续: ${steps[i + 1].title}`, value: 'next' },
         { label: chalk.dim('↩ 返回案例列表'), value: 'back' },
       ]);
-      if (!choice || choice === 'back') return;
+      if (!choice || choice === 'back') {
+        return;
+      }
     }
   }
 
@@ -474,18 +585,23 @@ async function _offlineBugCaseInteract(bugCase, curriculum) {
 
 /** 从课程元数据自动生成知识点选择题 */
 function _generateTopicQuiz(layer, topic, curriculum) {
-  const allLayers = curriculum.getAllLayers().filter(l => l.id !== 10);
-  const allTopics = allLayers.flatMap(l => l.topics.map(t => ({ ...t, _layerId: l.id, _layerTitle: l.title })));
+  const allLayers = curriculum.getAllLayers().filter((l) => l.id !== 10);
+  const allTopics = allLayers.flatMap((l) =>
+    l.topics.map((t) => ({ ...t, _layerId: l.id, _layerTitle: l.title }))
+  );
   const questions = [];
 
   // Q1: 层级归属
-  const wrongLayers = allLayers.filter(l => l.id !== layer.id).sort(() => Math.random() - 0.5).slice(0, 2);
+  const wrongLayers = allLayers
+    .filter((l) => l.id !== layer.id)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 2);
   if (wrongLayers.length >= 2) {
     questions.push({
       question: `"${topic.title}" 属于哪个层级？`,
       options: [
         { label: `第 ${layer.id} 层 — ${layer.title}`, correct: true },
-        ...wrongLayers.map(l => ({ label: `第 ${l.id} 层 — ${l.title}`, correct: false })),
+        ...wrongLayers.map((l) => ({ label: `第 ${l.id} 层 — ${l.title}`, correct: false })),
       ].sort(() => Math.random() - 0.5),
     });
   }
@@ -493,9 +609,9 @@ function _generateTopicQuiz(layer, topic, curriculum) {
   // Q2: 文件关联
   if (topic.files && topic.files.length > 0) {
     const wrongFiles = allTopics
-      .filter(t => t.id !== topic.id)
-      .flatMap(t => t.files || [])
-      .filter(f => !topic.files.includes(f))
+      .filter((t) => t.id !== topic.id)
+      .flatMap((t) => t.files || [])
+      .filter((f) => !topic.files.includes(f))
       .sort(() => Math.random() - 0.5)
       .slice(0, 2);
     if (wrongFiles.length >= 2) {
@@ -503,20 +619,23 @@ function _generateTopicQuiz(layer, topic, curriculum) {
         question: `以下哪个文件与 "${topic.title}" 直接相关？`,
         options: [
           { label: topic.files[0], correct: true },
-          ...wrongFiles.map(f => ({ label: f, correct: false })),
+          ...wrongFiles.map((f) => ({ label: f, correct: false })),
         ].sort(() => Math.random() - 0.5),
       });
     }
   }
 
   // Q3: 描述配对
-  const wrongDescs = allTopics.filter(t => t.id !== topic.id && t.desc).sort(() => Math.random() - 0.5).slice(0, 2);
+  const wrongDescs = allTopics
+    .filter((t) => t.id !== topic.id && t.desc)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 2);
   if (wrongDescs.length >= 2) {
     questions.push({
       question: `以下哪个描述对应 "${topic.title}"？`,
       options: [
         { label: topic.desc, correct: true },
-        ...wrongDescs.map(t => ({ label: t.desc, correct: false })),
+        ...wrongDescs.map((t) => ({ label: t.desc, correct: false })),
       ].sort(() => Math.random() - 0.5),
     });
   }
@@ -544,23 +663,27 @@ async function _runTopicQuiz(layer, topic, curriculum) {
 
     const choice = await _askChoice(
       `(${i + 1}/${questions.length})`,
-      q.options.map(o => ({ label: o.label, value: o.correct })),
+      q.options.map((o) => ({ label: o.label, value: o.correct }))
     );
-    if (choice === null) return;
+    if (choice === null) {
+      return;
+    }
     if (choice) {
       correct++;
       printSuccess('  ✓ 正确');
     } else {
-      const ans = q.options.find(o => o.correct);
+      const ans = q.options.find((o) => o.correct);
       printWarn(`  ✗ 答案: ${ans.label}`);
     }
   }
 
   console.log('');
   const pct = Math.round((correct / questions.length) * 100);
-  const color = pct === 100 ? chalk.bold.green : (pct >= 50 ? chalk.yellow : chalk.red);
+  const color = pct === 100 ? chalk.bold.green : pct >= 50 ? chalk.yellow : chalk.red;
   console.log(`  ${chalk.bold('结果:')} ${color(`${correct}/${questions.length} (${pct}%)`)}`);
-  if (pct === 100) printSuccess('  全部正确！');
+  if (pct === 100) {
+    printSuccess('  全部正确！');
+  }
   console.log('');
 }
 
@@ -571,20 +694,22 @@ async function _runLayerQuiz(layer, curriculum) {
   let correct = 0;
 
   console.log('');
-  console.log(`  ${chalk.bold.cyan('📝 概念自测:')} ${chalk.white(`第 ${layer.id} 层 — ${layer.title}`)}`);
+  console.log(
+    `  ${chalk.bold.cyan('📝 概念自测:')} ${chalk.white(`第 ${layer.id} 层 — ${layer.title}`)}`
+  );
   console.log(`  ${chalk.dim('─'.repeat(Math.max(8, (process.stdout.columns || 80) - 6)))}`);
   console.log(`  ${chalk.dim('根据描述，选择对应的知识点')}`);
 
   for (let i = 0; i < count; i++) {
     const target = shuffled[i];
     const wrongs = layer.topics
-      .filter(t => t.id !== target.id)
+      .filter((t) => t.id !== target.id)
       .sort(() => Math.random() - 0.5)
       .slice(0, 2);
 
     const options = [
       { label: target.title, value: true },
-      ...wrongs.map(t => ({ label: t.title, value: false })),
+      ...wrongs.map((t) => ({ label: t.title, value: false })),
     ].sort(() => Math.random() - 0.5);
 
     console.log('');
@@ -592,9 +717,11 @@ async function _runLayerQuiz(layer, curriculum) {
 
     const choice = await _askChoice(
       `(${i + 1}/${count})`,
-      options.map(o => ({ label: o.label, value: o.value })),
+      options.map((o) => ({ label: o.label, value: o.value }))
     );
-    if (choice === null) return;
+    if (choice === null) {
+      return;
+    }
     if (choice) {
       correct++;
       printSuccess('  ✓ 正确');
@@ -605,9 +732,11 @@ async function _runLayerQuiz(layer, curriculum) {
 
   console.log('');
   const pct = Math.round((correct / count) * 100);
-  const color = pct === 100 ? chalk.bold.green : (pct >= 50 ? chalk.yellow : chalk.red);
+  const color = pct === 100 ? chalk.bold.green : pct >= 50 ? chalk.yellow : chalk.red;
   console.log(`  ${chalk.bold('结果:')} ${color(`${correct}/${count} (${pct}%)`)}`);
-  if (pct === 100) printSuccess('  全部正确！');
+  if (pct === 100) {
+    printSuccess('  全部正确！');
+  }
   console.log('');
 }
 
@@ -634,7 +763,9 @@ async function handleLearn(subCommand, args) {
     const res = curriculum.exportProgress(args[0]);
     if (res.ok) {
       printInfo(`学习进度已导出: ${res.path}`);
-      printInfo(`包含 ${res.completed} 个已完成知识点，${res.totalXP} XP。在新设备上用 "learn import <文件>" 恢复。`);
+      printInfo(
+        `包含 ${res.completed} 个已完成知识点，${res.totalXP} XP。在新设备上用 "learn import <文件>" 恢复。`
+      );
     } else {
       printError(`导出失败 (${res.error}): ${res.message}`);
     }
@@ -643,7 +774,7 @@ async function handleLearn(subCommand, args) {
 
   // ── learn import <路径> [--replace] — 导入进度（默认合并）──
   if (subCommand === 'import') {
-    const file = args.find(a => !a.startsWith('--'));
+    const file = args.find((a) => !a.startsWith('--'));
     if (!file) {
       printError('用法: learn import <文件路径> [--replace]');
       return true;
@@ -652,7 +783,9 @@ async function handleLearn(subCommand, args) {
     const res = curriculum.importProgress(file, { merge });
     if (res.ok) {
       printInfo(`进度已${res.mode === 'merge' ? '合并' : '覆盖'}导入: ${res.path}`);
-      printInfo(`已完成知识点 ${res.completedBefore} → ${res.completedAfter}，当前 ${res.totalXP} XP。`);
+      printInfo(
+        `已完成知识点 ${res.completedBefore} → ${res.completedAfter}，当前 ${res.totalXP} XP。`
+      );
     } else {
       printError(`导入失败 (${res.error}): ${res.message}`);
     }
@@ -675,7 +808,9 @@ async function handleLearn(subCommand, args) {
     }
     if (next.layer.id === 10 && next.topic._bugCase) {
       const bugCase = curriculum.getBugCase(next.topic.id);
-      if (bugCase) return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+      if (bugCase) {
+        return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+      }
     }
     return await _topicDetail(next.layer, next.topic, curriculum);
   }
@@ -778,10 +913,16 @@ async function handleLearn(subCommand, args) {
       return true;
     }
     if (res.reason === 'unchanged') {
-      printInfo(`课程已是最新：动态知识点 ${res.discovered + res.aiAdded} 个、自愈引用 ${res.healed} 处（无变化）。`);
+      printInfo(
+        `课程已是最新：动态知识点 ${res.discovered + res.aiAdded} 个、自愈引用 ${res.healed} 处（无变化）。`
+      );
     } else {
-      printSuccess(`课程已刷新：发现 ${res.discovered} 个新模块、自愈 ${res.healed} 处失效引用、AI 新增 ${res.aiAdded} 个知识点。`);
-      printInfo('动态内容已即时并入（标「动态/AI」徽标）。"learn refresh clear" 可一键回到纯地板。');
+      printSuccess(
+        `课程已刷新：发现 ${res.discovered} 个新模块、自愈 ${res.healed} 处失效引用、AI 新增 ${res.aiAdded} 个知识点。`
+      );
+      printInfo(
+        '动态内容已即时并入（标「动态/AI」徽标）。"learn refresh clear" 可一键回到纯地板。'
+      );
     }
     return true;
   }
@@ -830,7 +971,9 @@ async function handleLearn(subCommand, args) {
     if (!args[0]) {
       const lv = profile.getLevel();
       printInfo(`当前讲解档位：${lv === 'beginner' ? '零基础（beginner）' : '常规（normal）'}`);
-      printInfo(`切换：learn level beginner | learn level normal（可选项：${profile.LEVELS.join(' | ')}）`);
+      printInfo(
+        `切换：learn level beginner | learn level normal（可选项：${profile.LEVELS.join(' | ')}）`
+      );
       return true;
     }
     const res = profile.setLevel(args[0]);
@@ -839,7 +982,9 @@ async function handleLearn(subCommand, args) {
       return true;
     }
     if (res.level === 'beginner') {
-      printSuccess('已切到「零基础」档位：讲解会先给生活比喻，再逐行点关键语法 + 这门语言为什么这样写，并主动邀你一起发现不足。');
+      printSuccess(
+        '已切到「零基础」档位：讲解会先给生活比喻，再逐行点关键语法 + 这门语言为什么这样写，并主动邀你一起发现不足。'
+      );
     } else {
       printSuccess('已切到「常规」档位：恢复标准讲解深度。');
     }
@@ -858,48 +1003,79 @@ async function handleLearn(subCommand, args) {
     }
 
     const route = args.includes('--route');
-    const note = args.filter(a => a !== '--route').join(' ').trim();
+    const note = args
+      .filter((a) => a !== '--route')
+      .join(' ')
+      .trim();
     if (!note) {
-      printWarn('用法：learn improve <你发现的不足>（例：learn improve 这里的错误处理我没看懂为什么要吞异常）');
+      printWarn(
+        '用法：learn improve <你发现的不足>（例：learn improve 这里的错误处理我没看懂为什么要吞异常）'
+      );
       printInfo('复盘已记内容：learn improve list');
       return true;
     }
 
     // 绑定「最近学习的知识点」作为上下文（由 markTopicViewed 维护的 lastVisit，零新增跟踪）
-    let layerId = null; let topicId = null; let topicTitle = ''; let files = [];
+    let layerId = null;
+    let topicId = null;
+    let topicTitle = '';
+    let files = [];
     try {
       const lv = curriculum.getProgress().lastVisit;
       if (lv && lv.layerId != null) {
-        layerId = lv.layerId; topicId = lv.topicId;
+        layerId = lv.layerId;
+        topicId = lv.topicId;
         const layer = curriculum.getLayer(lv.layerId);
-        const topic = layer && layer.topics.find(t => t.id === lv.topicId);
-        if (topic) { topicTitle = topic.title; files = Array.isArray(topic.files) ? topic.files : []; }
+        const topic = layer && layer.topics.find((t) => t.id === lv.topicId);
+        if (topic) {
+          topicTitle = topic.title;
+          files = Array.isArray(topic.files) ? topic.files : [];
+        }
       }
-    } catch { /* fail-soft：无最近知识点也照样记 */ }
+    } catch {
+      /* fail-soft：无最近知识点也照样记 */
+    }
 
     // 有模型时让 AI 现场给修复提议（直连 callModel，因 aiForward 是 fire-and-forget 拿不回回复）；
     // 无模型则 callModel=null 跳过，清单照样落库（确定性地板）。
     const mode = await _resolveLearnMode();
     const callModel = mode.model ? _directCallModel : null;
-    if (mode.model) printInfo('正在请 AI 给一份修复提议（仅展示，不会自动改代码）…');
+    if (mode.model) {
+      printInfo('正在请 AI 给一份修复提议（仅展示，不会自动改代码）…');
+    }
 
     const { ok, finding } = await improve.appendFinding(
       { layerId, topicId, topicTitle, files, note },
-      { callModel, route },
+      { callModel, route }
     );
-    const where = finding.layerId != null
-      ? `第 ${finding.layerId} 层${finding.topicTitle ? ` · ${finding.topicTitle}` : ''}`
-      : '（未绑定知识点）';
-    if (ok) printSuccess(`已记入改进清单：[${finding.kind}] ${where}`);
-    else printWarn(`已生成改进记录但落盘失败（[${finding.kind}] ${where}），本次提议如下仍可参考。`);
-    if (finding.evoRouted) printInfo('已同时投递到 evo 改进管线（--route 触发，KHY_EVO_ENGINE 默认开；设 =off 可关闭）。');
+    const where =
+      finding.layerId != null
+        ? `第 ${finding.layerId} 层${finding.topicTitle ? ` · ${finding.topicTitle}` : ''}`
+        : '（未绑定知识点）';
+    if (ok) {
+      printSuccess(`已记入改进清单：[${finding.kind}] ${where}`);
+    } else {
+      printWarn(`已生成改进记录但落盘失败（[${finding.kind}] ${where}），本次提议如下仍可参考。`);
+    }
+    if (finding.evoRouted) {
+      printInfo(
+        '已同时投递到 evo 改进管线（--route 触发，KHY_EVO_ENGINE 默认开；设 =off 可关闭）。'
+      );
+    }
     if (finding.proposalSource === 'model' && finding.proposal) {
       console.log('');
       console.log('  ' + chalk.bold.cyan('AI 修复提议（仅展示，未自动应用）：'));
-      console.log(finding.proposal.split('\n').map(l => '  ' + l).join('\n'));
+      console.log(
+        finding.proposal
+          .split('\n')
+          .map((l) => '  ' + l)
+          .join('\n')
+      );
       console.log('');
     } else if (mode.model) {
-      printInfo('AI 这次没给出提议（超时/空回复），但你的发现已记入清单，可稍后 learn improve list 复盘。');
+      printInfo(
+        'AI 这次没给出提议（超时/空回复），但你的发现已记入清单，可稍后 learn improve list 复盘。'
+      );
     } else {
       printInfo('当前无模型：已记入清单（无 AI 提议）。接入云端网关后可让 AI 给修复建议。');
     }
@@ -926,7 +1102,10 @@ async function handleLearn(subCommand, args) {
     const layerId = parseInt(dotMatch[1], 10);
     const topicIdx = parseInt(dotMatch[2], 10) - 1;
     const layer = curriculum.getLayer(layerId);
-    if (!layer) { printError(`没有第 ${layerId} 层课程`); return true; }
+    if (!layer) {
+      printError(`没有第 ${layerId} 层课程`);
+      return true;
+    }
     if (topicIdx < 0 || topicIdx >= layer.topics.length) {
       printError(`第 ${layerId} 层只有 ${layer.topics.length} 个知识点`);
       return true;
@@ -934,7 +1113,9 @@ async function handleLearn(subCommand, args) {
     const topic = layer.topics[topicIdx];
     if (layerId === 10 && topic._bugCase) {
       const bugCase = curriculum.getBugCase(topic.id);
-      if (bugCase) return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+      if (bugCase) {
+        return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+      }
     }
     return await _topicDetail(layer, topic, curriculum);
   }
@@ -943,7 +1124,10 @@ async function handleLearn(subCommand, args) {
   const num = parseInt(query, 10);
   if (!isNaN(num) && String(num) === query.trim()) {
     const layer = curriculum.getLayer(num);
-    if (!layer) { printError(`没有第 ${num} 层课程`); return true; }
+    if (!layer) {
+      printError(`没有第 ${num} 层课程`);
+      return true;
+    }
     if (num === 10) {
       if (_getModelTier() === 'none') {
         await _offlineBugListInteract(curriculum);
@@ -961,7 +1145,9 @@ async function handleLearn(subCommand, args) {
     if (found.topic) {
       if (found.topic._bugCase) {
         const bugCase = curriculum.getBugCase(found.topic.id);
-        if (bugCase) return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+        if (bugCase) {
+          return { aiForward: curriculum.buildBugCasePrompt(bugCase) };
+        }
       }
       return await _topicDetail(found.layer, found.topic, curriculum);
     }
@@ -1007,7 +1193,10 @@ function _handleEdit(args, curriculum) {
   if (action === 'list') {
     const layers = curriculum.getAllLayers();
     for (const l of layers) {
-      if (l.id === 10) { console.log(`  [${l.id}] ${l.title} (动态生成, 编辑 bugCases.js)`); continue; }
+      if (l.id === 10) {
+        console.log(`  [${l.id}] ${l.title} (动态生成, 编辑 bugCases.js)`);
+        continue;
+      }
       console.log(`  [${l.id}] ${l.title} — ${l.topics.length} 知识点`);
       for (const t of l.topics) {
         console.log(`    ├─ ${t.id}: ${t.title}  files=[${t.files.join(', ')}]`);
@@ -1020,7 +1209,10 @@ function _handleEdit(args, curriculum) {
   if (action === 'add-layer') {
     const title = args[1];
     const summary = args.slice(2).join(' ');
-    if (!title) { printError('用法: learn edit add-layer <标题> <概要>'); return true; }
+    if (!title) {
+      printError('用法: learn edit add-layer <标题> <概要>');
+      return true;
+    }
     const layer = curriculum.addLayer(title, summary || '');
     printInfo(`新增第 ${layer.id} 层: ${layer.title}`);
     return true;
@@ -1028,19 +1220,31 @@ function _handleEdit(args, curriculum) {
 
   if (action === 'rm-layer') {
     const id = parseInt(args[1], 10);
-    if (isNaN(id)) { printError('用法: learn edit rm-layer <层号>'); return true; }
+    if (isNaN(id)) {
+      printError('用法: learn edit rm-layer <层号>');
+      return true;
+    }
     const removed = curriculum.removeLayer(id);
-    if (!removed) { printError(`第 ${id} 层不存在`); return true; }
+    if (!removed) {
+      printError(`第 ${id} 层不存在`);
+      return true;
+    }
     printWarn(`已删除第 ${id} 层: ${removed.title} (含 ${removed.topics.length} 个知识点)`);
     return true;
   }
 
   if (action === 'update-layer') {
     const id = parseInt(args[1], 10);
-    if (isNaN(id)) { printError('用法: learn edit update-layer <层号> --title X --summary X'); return true; }
+    if (isNaN(id)) {
+      printError('用法: learn edit update-layer <层号> --title X --summary X');
+      return true;
+    }
     const updates = _parseFlags(args.slice(2));
     const layer = curriculum.updateLayer(id, updates);
-    if (!layer) { printError(`第 ${id} 层不存在`); return true; }
+    if (!layer) {
+      printError(`第 ${id} 层不存在`);
+      return true;
+    }
     printInfo(`已更新第 ${id} 层: ${layer.title}`);
     return true;
   }
@@ -1051,15 +1255,21 @@ function _handleEdit(args, curriculum) {
     const title = args[3];
     const rest = args.slice(4);
     const flags = _parseFlags(rest);
-    const desc = flags.desc || rest.filter(a => !a.startsWith('--')).join(' ');
-    const files = flags.files ? flags.files.split(',').map(f => f.trim()) : [];
+    const desc = flags.desc || rest.filter((a) => !a.startsWith('--')).join(' ');
+    const files = flags.files ? flags.files.split(',').map((f) => f.trim()) : [];
     if (isNaN(layerId) || !topicId || !title) {
       printError('用法: learn edit add-topic <层号> <知识点ID> <标题> <描述> [--files f1,f2]');
       return true;
     }
     const result = curriculum.addTopic(layerId, topicId, title, desc, files);
-    if (!result) { printError(`第 ${layerId} 层不存在`); return true; }
-    if (result.error === 'duplicate') { printError(`知识点 ${topicId} 已存在于第 ${layerId} 层`); return true; }
+    if (!result) {
+      printError(`第 ${layerId} 层不存在`);
+      return true;
+    }
+    if (result.error === 'duplicate') {
+      printError(`知识点 ${topicId} 已存在于第 ${layerId} 层`);
+      return true;
+    }
     printInfo(`新增: 第 ${layerId} 层 / ${topicId} — ${title}`);
     return true;
   }
@@ -1067,9 +1277,15 @@ function _handleEdit(args, curriculum) {
   if (action === 'rm-topic') {
     const layerId = parseInt(args[1], 10);
     const topicId = args[2];
-    if (isNaN(layerId) || !topicId) { printError('用法: learn edit rm-topic <层号> <知识点ID>'); return true; }
+    if (isNaN(layerId) || !topicId) {
+      printError('用法: learn edit rm-topic <层号> <知识点ID>');
+      return true;
+    }
     const removed = curriculum.removeTopic(layerId, topicId);
-    if (!removed) { printError(`未找到 第 ${layerId} 层 / ${topicId}`); return true; }
+    if (!removed) {
+      printError(`未找到 第 ${layerId} 层 / ${topicId}`);
+      return true;
+    }
     printWarn(`已删除: 第 ${layerId} 层 / ${topicId} — ${removed.title}`);
     return true;
   }
@@ -1077,11 +1293,21 @@ function _handleEdit(args, curriculum) {
   if (action === 'update-topic') {
     const layerId = parseInt(args[1], 10);
     const topicId = args[2];
-    if (isNaN(layerId) || !topicId) { printError('用法: learn edit update-topic <层号> <知识点ID> [--title X] [--desc X] [--files f1,f2]'); return true; }
+    if (isNaN(layerId) || !topicId) {
+      printError(
+        '用法: learn edit update-topic <层号> <知识点ID> [--title X] [--desc X] [--files f1,f2]'
+      );
+      return true;
+    }
     const updates = _parseFlags(args.slice(3));
-    if (updates.files) updates.files = updates.files.split(',').map(f => f.trim());
+    if (updates.files) {
+      updates.files = updates.files.split(',').map((f) => f.trim());
+    }
     const topic = curriculum.updateTopic(layerId, topicId, updates);
-    if (!topic) { printError(`未找到 第 ${layerId} 层 / ${topicId}`); return true; }
+    if (!topic) {
+      printError(`未找到 第 ${layerId} 层 / ${topicId}`);
+      return true;
+    }
     printInfo(`已更新: 第 ${layerId} 层 / ${topicId} — ${topic.title}`);
     return true;
   }
@@ -1096,7 +1322,10 @@ function _handleEdit(args, curriculum) {
       return true;
     }
     const topic = curriculum.moveTopic(fromLayer, topicId, toLayer, pos);
-    if (!topic) { printError('移动失败: 层或知识点不存在'); return true; }
+    if (!topic) {
+      printError('移动失败: 层或知识点不存在');
+      return true;
+    }
     printInfo(`已移动 ${topicId}: 第 ${fromLayer} 层 → 第 ${toLayer} 层`);
     return true;
   }
@@ -1108,19 +1337,28 @@ function _handleEdit(args, curriculum) {
 /** 渲染改进清单（最新在前），fail-soft 纯展示。 */
 function _formatFindings(items) {
   if (!Array.isArray(items) || items.length === 0) {
-    return '\n  ' + chalk.gray('改进清单为空。学习中发现不足时用 learn improve <描述> 记下，和 AI 一起完善 KHY。') + '\n';
+    return (
+      '\n  ' +
+      chalk.gray(
+        '改进清单为空。学习中发现不足时用 learn improve <描述> 记下，和 AI 一起完善 KHY。'
+      ) +
+      '\n'
+    );
   }
   const lines = ['', '  ' + chalk.bold.white(`📋 改进清单（共 ${items.length} 条，最新在前）`), ''];
   for (const f of items) {
-    const where = f.layerId != null
-      ? `第${f.layerId}层${f.topicTitle ? `·${f.topicTitle}` : ''}`
-      : '未绑定';
+    const where =
+      f.layerId != null ? `第${f.layerId}层${f.topicTitle ? `·${f.topicTitle}` : ''}` : '未绑定';
     const at = (f.at || '').slice(0, 16).replace('T', ' ');
     lines.push(`  ${chalk.cyan(`[${f.kind}]`)} ${chalk.gray(at)} ${chalk.dim(where)}`);
     lines.push(`    ${f.note}`);
     if (f.proposalSource === 'model' && f.proposal) {
       const head = f.proposal.split('\n').filter(Boolean)[0] || '';
-      lines.push('    ' + chalk.green('↳ AI 提议: ') + chalk.gray(head.slice(0, 80) + (head.length > 80 ? '…' : '')));
+      lines.push(
+        '    ' +
+          chalk.green('↳ AI 提议: ') +
+          chalk.gray(head.slice(0, 80) + (head.length > 80 ? '…' : ''))
+      );
     }
     lines.push('');
   }

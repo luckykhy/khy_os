@@ -3,10 +3,19 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const SETTINGS_DIR = path.join(os.homedir(), '.khy');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const SETTINGS_DIR = _dataHome();
 const SETTINGS_FILE = path.join(SETTINGS_DIR, 'settings.json');
 
 function readSettings() {
@@ -14,7 +23,9 @@ function readSettings() {
     if (fs.existsSync(SETTINGS_FILE)) {
       return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return {};
 }
 
@@ -24,7 +35,9 @@ function writeSettings(settings) {
       fs.mkdirSync(SETTINGS_DIR, { recursive: true });
     }
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**

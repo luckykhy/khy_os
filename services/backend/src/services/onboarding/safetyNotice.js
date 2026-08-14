@@ -47,7 +47,9 @@ const SECURITY_URL = 'https://code.claude.com/docs/en/security';
  */
 function safetyNoticeEnabled(env = process.env) {
   const raw = env && env.KHY_ONBOARDING_SAFETY_NOTICE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -58,7 +60,9 @@ function safetyNoticeEnabled(env = process.env) {
  * @returns {string[]}
  */
 function buildSafetyNoticeLines(env = process.env) {
-  if (!safetyNoticeEnabled(env)) return [];
+  if (!safetyNoticeEnabled(env)) {
+    return [];
+  }
   return [
     '开始之前,请记住:',
     '',

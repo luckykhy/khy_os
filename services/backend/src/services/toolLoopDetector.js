@@ -14,7 +14,8 @@
  *   5. circuitBreaker    — Global call count hard limit
  *   6. contentChanting   — AI output text loops (same fragment repeated)
  *   7. readFileLoop      — Excessive read-like tool calls (with cold-start gate)
- *   8. actionStagnation  — Same tool name repeatedly (regardless of params)
+ *   8. actionStagnation  — Same tool name repeatedly, with param-diversity
+ *      suppression: high distinct-param ratio (legit batch ops) never blocks
  *   9. shellIntentRepeat — Same shell command intent with different syntax
  *  10. pathIntentRepeat  — Same filesystem path accessed across different tools/syntax
  *  11. webRetrievalFailureStreak — Consecutive FAILED web fetches across different
@@ -35,12 +36,39 @@ const { fnv1aHash } = require('./contextWasm');
 // low: a normal codebase sweep easily makes 20–40 distinct read/glob/grep
 // calls and would trip it mid-task. Env-overridable for unusually large tasks.
 const _envCircuitBreaker = Number.parseInt(
-  process.env.KHY_TOOL_CIRCUIT_BREAKER_THRESHOLD || '', 10,
+  process.env.KHY_TOOL_CIRCUIT_BREAKER_THRESHOLD || '',
+  10
 );
 const CIRCUIT_BREAKER_THRESHOLD =
-  Number.isFinite(_envCircuitBreaker) && _envCircuitBreaker > 0
-    ? _envCircuitBreaker
-    : 50;
+  Number.isFinite(_envCircuitBreaker) && _envCircuitBreaker > 0 ? _envCircuitBreaker : 50;
+
+// Detector 8 (action stagnation) thresholds. Env-overridable so long batch
+// tasks (e.g. a disk sweep issuing many distinct shell commands in a row) can
+// tune sensitivity without a code change. Defaults live here — this file is
+// the single source of truth, same pattern as the circuit breaker above.
+const _envStagnationWarning = Number.parseInt(process.env.KHY_TOOL_STAGNATION_THRESHOLD || '', 10);
+const STAGNATION_THRESHOLD =
+  Number.isFinite(_envStagnationWarning) && _envStagnationWarning > 0 ? _envStagnationWarning : 5;
+const _envStagnationCritical = Number.parseInt(
+  process.env.KHY_TOOL_STAGNATION_CRITICAL_THRESHOLD || '',
+  10
+);
+const STAGNATION_CRITICAL_THRESHOLD =
+  Number.isFinite(_envStagnationCritical) && _envStagnationCritical > 0
+    ? _envStagnationCritical
+    : 8;
+// Ratio of DISTINCT call hashes within a same-name streak at or above which
+// the streak is treated as a legitimate batch operation (high param
+// diversity, e.g. scanning N different paths) rather than stagnation.
+const _envStagnationDistinctRatio = Number.parseFloat(
+  process.env.KHY_TOOL_STAGNATION_DISTINCT_RATIO || ''
+);
+const STAGNATION_DISTINCT_RATIO =
+  Number.isFinite(_envStagnationDistinctRatio) &&
+  _envStagnationDistinctRatio > 0 &&
+  _envStagnationDistinctRatio <= 1
+    ? _envStagnationDistinctRatio
+    : 0.75;
 
 const DEFAULT_CONFIG = {
   historySize: 30,
@@ -59,8 +87,9 @@ const DEFAULT_CONFIG = {
   readFileWindow: 15,
   readFileThreshold: 8,
   // Detector 8: action stagnation
-  stagnationThreshold: 5,
-  stagnationCriticalThreshold: 8,
+  stagnationThreshold: STAGNATION_THRESHOLD,
+  stagnationCriticalThreshold: STAGNATION_CRITICAL_THRESHOLD,
+  stagnationDistinctRatio: STAGNATION_DISTINCT_RATIO,
   // Detector 9: shell intent repeat
   shellIntentWarning: 2,
   shellIntentCritical: 3,
@@ -75,13 +104,20 @@ const DEFAULT_CONFIG = {
 // ── Read-like tool classification ───────────────────────────────────
 
 const READ_LIKE_EXACT = new Set([
-  'read_file', 'readfile', 'read_many_files', 'readmanyfiles',
-  'list_directory', 'listdirectory', 'listdir',
+  'read_file',
+  'readfile',
+  'read_many_files',
+  'readmanyfiles',
+  'list_directory',
+  'listdirectory',
+  'listdir',
 ]);
 
 function _isReadLikeTool(name) {
   const norm = _normalizeName(name);
-  if (READ_LIKE_EXACT.has(norm)) return true;
+  if (READ_LIKE_EXACT.has(norm)) {
+    return true;
+  }
   // Prefix match: read_*, list_* (but not "review", "listener", etc.)
   const lower = String(name).toLowerCase();
   return lower.startsWith('read_') || lower.startsWith('list_');
@@ -90,7 +126,12 @@ function _isReadLikeTool(name) {
 // ── Shell tool classification & intent extraction ───────────────────
 
 const SHELL_TOOLS = new Set([
-  'shellcommand', 'bash', 'executecommand', 'runcommand', 'terminal', 'exec',
+  'shellcommand',
+  'bash',
+  'executecommand',
+  'runcommand',
+  'terminal',
+  'exec',
 ]);
 
 function _isShellTool(name) {
@@ -100,9 +141,19 @@ function _isShellTool(name) {
 // ── Filesystem tool classification & path intent extraction ─────────
 
 const FS_TOOLS = new Set([
-  'ls', 'listdirectory', 'listdir', 'readfile', 'readmanyfiles',
-  'glob', 'searchfiles', 'searchfile', 'findfile', 'findfiles',
-  'writefile', 'editfile', 'createfile',
+  'ls',
+  'listdirectory',
+  'listdir',
+  'readfile',
+  'readmanyfiles',
+  'glob',
+  'searchfiles',
+  'searchfile',
+  'findfile',
+  'findfiles',
+  'writefile',
+  'editfile',
+  'createfile',
 ]);
 
 function _isFsTool(name) {
@@ -115,14 +166,25 @@ function _isFsTool(name) {
 // genericRepeat / actionStagnation / shellIntent / pathIntent 全部既有探测器。
 // 「死缠烂打」正是在它们之间反复横跳（WebFetch→curl→WebSearch→browser）。
 const WEB_TOOLS = new Set([
-  'webfetch', 'webfetchtool', 'fetchurl', 'curl',
-  'websearch', 'websearchtool', 'searchweb',
-  'webbrowser', 'webbrowsertool', 'browser',
-  'datafetch', 'httprequest', 'wget',
+  'webfetch',
+  'webfetchtool',
+  'fetchurl',
+  'curl',
+  'websearch',
+  'websearchtool',
+  'searchweb',
+  'webbrowser',
+  'webbrowsertool',
+  'browser',
+  'datafetch',
+  'httprequest',
+  'wget',
 ]);
 
 function _isWebTool(name) {
-  if (WEB_TOOLS.has(_normalizeName(name))) return true;
+  if (WEB_TOOLS.has(_normalizeName(name))) {
+    return true;
+  }
   // shell 工具携带 curl/wget 命令时也算网络获取（在 recordCall 里按 command 判定）
   return false;
 }
@@ -131,7 +193,11 @@ function _isWebTool(name) {
 // 自然语言查询串而非 URL，所以去重要按「关键词集合」而非路径/URL 归一。
 // 故意收窄：只认明确的网络搜索工具名，不收 bare "search"（可能是代码检索 grep/glob）。
 const SEARCH_TOOLS = new Set([
-  'websearch', 'websearchtool', 'searchweb', 'webquery', 'searchengine',
+  'websearch',
+  'websearchtool',
+  'searchweb',
+  'webquery',
+  'searchengine',
 ]);
 
 function _isSearchTool(name) {
@@ -140,8 +206,12 @@ function _isSearchTool(name) {
 
 /** shell 命令是否本质上是一次网络获取（curl/wget/Invoke-WebRequest 等）。*/
 function _shellCommandIsWebFetch(command) {
-  if (!command || typeof command !== 'string') return false;
-  return /\b(curl|wget|iwr|invoke-webrequest|invoke-restmethod|http\s+(get|post)|lynx|links|w3m)\b/i.test(command);
+  if (!command || typeof command !== 'string') {
+    return false;
+  }
+  return /\b(curl|wget|iwr|invoke-webrequest|invoke-restmethod|http\s+(get|post)|lynx|links|w3m)\b/i.test(
+    command
+  );
 }
 
 /**
@@ -153,15 +223,25 @@ function _shellCommandIsWebFetch(command) {
  * @returns {string|null} normalized path or null
  */
 function extractPathIntent(toolName, params) {
-  if (!params || typeof params !== 'object') return null;
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
 
   // Extract raw path from various param field names
-  const rawPath = params.path || params.file_path || params.filePath
-    || params.dir || params.directory || params.folder
-    || params.pattern || params.glob_pattern
-    || null;
+  const rawPath =
+    params.path ||
+    params.file_path ||
+    params.filePath ||
+    params.dir ||
+    params.directory ||
+    params.folder ||
+    params.pattern ||
+    params.glob_pattern ||
+    null;
 
-  if (!rawPath || typeof rawPath !== 'string') return null;
+  if (!rawPath || typeof rawPath !== 'string') {
+    return null;
+  }
 
   return _normalizePath(rawPath);
 }
@@ -175,14 +255,14 @@ function extractPathIntent(toolName, params) {
  */
 function _normalizePath(rawPath) {
   return rawPath
-    .replace(/^['"`]+|['"`]+$/g, '')                 // strip quotes
-    .replace(/^~[/\\]?/i, '')                        // ~ → empty
-    .replace(/^\/c\/Users\/[^/]+\/?/i, '')           // /c/Users/xxx/ → empty (Git Bash)
-    .replace(/^[A-Z]:\\Users\\[^\\]+\\?/i, '')       // C:\Users\xxx\ → empty (Windows)
-    .replace(/^%USERPROFILE%[/\\]?/i, '')            // %USERPROFILE% → empty
-    .replace(/^\/home\/[^/]+\/?/i, '')               // /home/xxx/ → empty (Linux)
-    .replace(/[/\\]+/g, '/')                         // normalize slashes
-    .replace(/\/+$/, '')                             // strip trailing slash
+    .replace(/^['"`]+|['"`]+$/g, '') // strip quotes
+    .replace(/^~[/\\]?/i, '') // ~ → empty
+    .replace(/^\/c\/Users\/[^/]+\/?/i, '') // /c/Users/xxx/ → empty (Git Bash)
+    .replace(/^[A-Z]:\\Users\\[^\\]+\\?/i, '') // C:\Users\xxx\ → empty (Windows)
+    .replace(/^%USERPROFILE%[/\\]?/i, '') // %USERPROFILE% → empty
+    .replace(/^\/home\/[^/]+\/?/i, '') // /home/xxx/ → empty (Linux)
+    .replace(/[/\\]+/g, '/') // normalize slashes
+    .replace(/\/+$/, '') // strip trailing slash
     .trim()
     .toLowerCase();
 }
@@ -201,29 +281,38 @@ function _normalizePath(rawPath) {
  * @returns {string|null}
  */
 function extractShellIntent(command) {
-  if (!command || typeof command !== 'string') return null;
+  if (!command || typeof command !== 'string') {
+    return null;
+  }
   const cmd = command.trim();
-  if (!cmd) return null;
+  if (!cmd) {
+    return null;
+  }
 
   // 1. Extract base command (first word, strip path prefix)
-  const baseCmd = cmd.split(/[\s|;&]/)[0].replace(/^.*[/\\]/, '').toLowerCase();
-  if (!baseCmd) return null;
+  const baseCmd = cmd
+    .split(/[\s|;&]/)[0]
+    .replace(/^.*[/\\]/, '')
+    .toLowerCase();
+  if (!baseCmd) {
+    return null;
+  }
 
   // 2. Extract target path, normalize away platform differences
   const target = cmd
-    .replace(/^[^\s]+\s*/, '')                      // strip command itself
-    .replace(/\s*2>\s*[^\s]*/g, '')                  // strip redirections (2>/dev/null, 2>NUL)
-    .replace(/\s*\|\|.*$/g, '')                      // strip || fallback chains
-    .replace(/\s*&&.*$/g, '')                        // strip && chains
-    .replace(/\s*\|.*$/g, '')                        // strip pipe chains
-    .replace(/^['"`]+|['"`]+$/g, '')                 // strip surrounding quotes
-    .replace(/^~[/\\]?/i, '')                        // ~ → empty
-    .replace(/^\/c\/Users\/[^/]+\/?/i, '')           // /c/Users/xxx/ → empty (Git Bash style)
-    .replace(/^[A-Z]:\\Users\\[^\\]+\\?/i, '')       // C:\Users\xxx\ → empty (Windows native)
-    .replace(/^%USERPROFILE%[/\\]?/i, '')            // %USERPROFILE%\ → empty
-    .replace(/^\/home\/[^/]+\/?/i, '')               // /home/xxx/ → empty (Linux)
-    .replace(/[/\\]+/g, '/')                         // normalize all slashes
-    .replace(/\/+$/, '')                             // strip trailing slash
+    .replace(/^[^\s]+\s*/, '') // strip command itself
+    .replace(/\s*2>\s*[^\s]*/g, '') // strip redirections (2>/dev/null, 2>NUL)
+    .replace(/\s*\|\|.*$/g, '') // strip || fallback chains
+    .replace(/\s*&&.*$/g, '') // strip && chains
+    .replace(/\s*\|.*$/g, '') // strip pipe chains
+    .replace(/^['"`]+|['"`]+$/g, '') // strip surrounding quotes
+    .replace(/^~[/\\]?/i, '') // ~ → empty
+    .replace(/^\/c\/Users\/[^/]+\/?/i, '') // /c/Users/xxx/ → empty (Git Bash style)
+    .replace(/^[A-Z]:\\Users\\[^\\]+\\?/i, '') // C:\Users\xxx\ → empty (Windows native)
+    .replace(/^%USERPROFILE%[/\\]?/i, '') // %USERPROFILE%\ → empty
+    .replace(/^\/home\/[^/]+\/?/i, '') // /home/xxx/ → empty (Linux)
+    .replace(/[/\\]+/g, '/') // normalize all slashes
+    .replace(/\/+$/, '') // strip trailing slash
     .trim()
     .toLowerCase();
 
@@ -235,12 +324,180 @@ function extractShellIntent(command) {
 // collapse to the same keyword set while genuinely different searches do not.
 // Kept deliberately small/generic — only words that carry no search selectivity.
 const SEARCH_STOPWORDS = new Set([
-  'the', 'a', 'an', 'of', 'to', 'in', 'on', 'for', 'and', 'or', 'is', 'are',
-  'was', 'were', 'be', 'as', 'by', 'at', 'with', 'that', 'this', 'it', 'from',
-  'how', 'what', 'when', 'where', 'why', 'who', 'which', 'do', 'does', 'did',
-  'can', 'could', 'i', 'me', 'my', 'please', 'find', 'search', 'about',
-  'latest', 'current', 'now', 'today', 's',
+  'the',
+  'a',
+  'an',
+  'of',
+  'to',
+  'in',
+  'on',
+  'for',
+  'and',
+  'or',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'as',
+  'by',
+  'at',
+  'with',
+  'that',
+  'this',
+  'it',
+  'from',
+  'how',
+  'what',
+  'when',
+  'where',
+  'why',
+  'who',
+  'which',
+  'do',
+  'does',
+  'did',
+  'can',
+  'could',
+  'i',
+  'me',
+  'my',
+  'please',
+  'find',
+  'search',
+  'about',
+  'latest',
+  'current',
+  'now',
+  'today',
+  's',
 ]);
+
+// CJK function/question words that carry no search selectivity. Chinese text has
+// no word delimiters, so a whitespace tokenizer treats a whole phrase as ONE
+// token; any minor reformulation (adding a particle, reordering, prefixing
+// recency words) mutates that single token and defeats intent dedup. We strip
+// these fillers and segment CJK runs into bigrams (see extractSearchIntent) so
+// surface rewrites of the same Chinese question collapse to the same keyword
+// set. Single-char entries are removed at the character level; multi-char
+// entries are matched against generated bigrams. Kept generic: only true
+// fillers/question words, never domain nouns.
+const CJK_STOPWORDS = new Set([
+  // single-char particles / pronouns / prepositions / date units
+  '的',
+  '了',
+  '着',
+  '过',
+  '在',
+  '是',
+  '和',
+  '与',
+  '或',
+  '也',
+  '都',
+  '就',
+  '而',
+  '这',
+  '那',
+  '有',
+  '个',
+  '我',
+  '你',
+  '他',
+  '她',
+  '它',
+  '们',
+  '吗',
+  '呢',
+  '啊',
+  '把',
+  '被',
+  '给',
+  '对',
+  '向',
+  '从',
+  '到',
+  '以',
+  '及',
+  '并',
+  '很',
+  '请',
+  '要',
+  '年',
+  '月',
+  '日',
+  '号',
+  // multi-char recency / question fillers (matched against bigrams)
+  '今天',
+  '明天',
+  '昨天',
+  '最新',
+  '实时',
+  '以及',
+  '关于',
+  '怎么',
+  '怎样',
+  '多少',
+  '什么',
+  '如何',
+  '为什么',
+  '有没有',
+]);
+
+// Pagination / cursor parameter names across common search & data-fetch APIs.
+// When any of these is present, the search-intent signature is salted with its
+// value so legitimate paging / drill-down (same query text, next page/cursor)
+// is NOT collapsed into a repeat of page 1. Matched case-insensitively so camel
+// and snake variants (pageToken / page_token) are both covered. Purely a
+// protocol vocabulary constant — no hardcoded endpoints/hosts.
+const PAGINATION_PARAM_KEYS = new Set([
+  'page',
+  'offset',
+  'cursor',
+  'start',
+  'from',
+  'pagetoken',
+  'page_token',
+  'pageindex',
+  'page_index',
+  'pagenumber',
+  'page_number',
+  'skip',
+  'after',
+]);
+
+// Build a normalized, order-independent signature of any pagination/cursor
+// params present on a search call. Returns null when none are present (so a
+// plain query keeps its bare keyword signature and existing dedup behavior).
+function _paginationSignature(params) {
+  const parts = [];
+  for (const key of Object.keys(params)) {
+    if (!PAGINATION_PARAM_KEYS.has(key.toLowerCase())) {
+      continue;
+    }
+    const v = params[key];
+    if (v === null || v === undefined || v === '') {
+      continue;
+    }
+    parts.push(`${key.toLowerCase()}=${String(v).trim().toLowerCase()}`);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return parts.sort().join('&');
+}
+
+// True when a single character falls in a CJK ideograph / kana range (covers
+// Chinese + Japanese). Used to switch tokenization strategy per character run.
+function _isCjkChar(ch) {
+  const c = ch.codePointAt(0);
+  return (
+    (c >= 0x4e00 && c <= 0x9fff) || // CJK Unified Ideographs
+    (c >= 0x3400 && c <= 0x4dbf) || // CJK Ext A
+    (c >= 0x3040 && c <= 0x30ff) || // Hiragana + Katakana
+    (c >= 0xf900 && c <= 0xfaff) // CJK Compatibility Ideographs
+  );
+}
 
 /**
  * Extract a normalized, order-independent "search intent" signature from a
@@ -256,33 +513,123 @@ const SEARCH_STOPWORDS = new Set([
  * @returns {string|null} space-joined sorted keyword set, or null
  */
 function extractSearchIntent(params) {
-  if (!params || typeof params !== 'object') return null;
-  const raw = params.query || params.q || params.search
-    || params.keyword || params.keywords || params.text || null;
-  if (!raw || typeof raw !== 'string') return null;
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
+  const raw =
+    params.query ||
+    params.q ||
+    params.search ||
+    params.keyword ||
+    params.keywords ||
+    params.text ||
+    null;
+  if (!raw || typeof raw !== 'string') {
+    return null;
+  }
 
-  const tokens = raw
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')   // strip punctuation, keep unicode letters/digits
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((t) => !SEARCH_STOPWORDS.has(t));
+  const cleaned = raw.toLowerCase().replace(/[^\p{L}\p{N}\s]+/gu, ' '); // strip punctuation, keep unicode letters/digits
 
-  if (tokens.length === 0) return null;
+  const keywords = new Set();
+  let cjkRun = '';
+  let latinTok = '';
+
+  // Longest multi-char entry length in CJK_STOPWORDS (今天 / 为什么 / 有没有 …).
+  const MAX_STOPWORD_LEN = 3;
+
+  // Segment a maximal CJK run into keyword bigrams (order-independent set).
+  // Greedy longest-match stopword peeling drops known multi-/single-char
+  // stopwords and KEEPS the remaining real-content chars as one contiguous
+  // stream. A run made entirely of stopwords (e.g. "今天最新") leaves nothing, so
+  // it emits no keyword — never a cross-boundary pseudo-bigram like "天最".
+  // Bridging the leftover real chars keeps particle-only rewrites collapsing to
+  // the same set (e.g. "曲靖天气" ≡ "曲靖的天气"); real words after stopwords
+  // (e.g. the "新闻" in "今天最新新闻") still survive.
+  const flushCjk = () => {
+    if (!cjkRun) {
+      return;
+    }
+    const arr = Array.from(cjkRun);
+    cjkRun = '';
+    let kept = '';
+    let i = 0;
+    while (i < arr.length) {
+      let matched = 0;
+      for (let len = Math.min(MAX_STOPWORD_LEN, arr.length - i); len >= 1; len--) {
+        if (CJK_STOPWORDS.has(arr.slice(i, i + len).join(''))) {
+          matched = len;
+          break;
+        }
+      }
+      if (matched > 0) {
+        i += matched;
+      } else {
+        kept += arr[i];
+        i += 1;
+      }
+    }
+    const keptChars = Array.from(kept);
+    if (keptChars.length === 1) {
+      keywords.add(keptChars[0]);
+    } else if (keptChars.length >= 2) {
+      for (let k = 0; k < keptChars.length - 1; k++) {
+        keywords.add(keptChars[k] + keptChars[k + 1]);
+      }
+    }
+  };
+
+  // Flush a latin/digit token using the original English-stopword rule.
+  const flushLatin = () => {
+    if (!latinTok) {
+      return;
+    }
+    if (!SEARCH_STOPWORDS.has(latinTok)) {
+      keywords.add(latinTok);
+    }
+    latinTok = '';
+  };
+
+  for (const ch of cleaned) {
+    if (/\s/.test(ch)) {
+      flushCjk();
+      flushLatin();
+      continue;
+    }
+    if (_isCjkChar(ch)) {
+      flushLatin();
+      cjkRun += ch;
+    } else {
+      flushCjk();
+      latinTok += ch;
+    }
+  }
+  flushCjk();
+  flushLatin();
+
+  if (keywords.size === 0) {
+    return null;
+  }
 
   // Order-independent: unique keyword set, sorted, joined.
-  return Array.from(new Set(tokens)).sort().join(' ');
+  const base = Array.from(keywords).sort().join(' ');
+
+  // Pagination awareness: salt the signature with any pagination/cursor params
+  // so page 2+ (or a distinct cursor) of the same query is a DISTINCT intent and
+  // is NOT deduped as a repeat of page 1. Plain queries (no paging param) keep
+  // their bare signature, preserving the original same-query dedup behavior.
+  const pageSig = _paginationSignature(params);
+  return pageSig ? `${base}\u0001${pageSig}` : base;
 }
 
 // ── Structural content filters (for chanting false-positive prevention) ──
 
 const STRUCTURAL_PATTERNS = [
-  /```/,                           // code fence
-  /(^|\n)\s*(\|.*\||[|+-]{3,})/,  // table
-  /(^|\n)\s*[*\-+]\s/,            // unordered list
-  /(^|\n)\s*\d+\.\s/,             // ordered list
-  /(^|\n)#+\s/,                   // heading
-  /(^|\n)>\s/,                    // blockquote
+  /```/, // code fence
+  /(^|\n)\s*(\|.*\||[|+-]{3,})/, // table
+  /(^|\n)\s*[*\-+]\s/, // unordered list
+  /(^|\n)\s*\d+\.\s/, // ordered list
+  /(^|\n)#+\s/, // heading
+  /(^|\n)>\s/, // blockquote
 ];
 
 // ── Name normalization (consistent with repl.js _formatToolResult) ───
@@ -291,17 +638,25 @@ function _normalizeName(name) {
   // Normalize aggressively so variants like:
   //   shell_command / shell-command / shellCommand / shell_command(...)
   // map to the same token and avoid false "unknown tool" loops.
-  return String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+  return String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 // ── Stable hash helper ──────────────────────────────────────────────
 
 function stableStringify(obj) {
-  if (obj === null || obj === undefined) return '';
-  if (typeof obj !== 'object') return String(obj);
-  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']';
+  if (obj === null || obj === undefined) {
+    return '';
+  }
+  if (typeof obj !== 'object') {
+    return String(obj);
+  }
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(stableStringify).join(',') + ']';
+  }
   const keys = Object.keys(obj).sort();
-  return '{' + keys.map(k => `${k}:${stableStringify(obj[k])}`).join(',') + '}';
+  return '{' + keys.map((k) => `${k}:${stableStringify(obj[k])}`).join(',') + '}';
 }
 
 function hashCall(toolName, params) {
@@ -318,10 +673,12 @@ function toolCallSignature(toolName, params) {
 }
 
 function hashResult(result) {
-  if (!result) return '0';
+  if (!result) {
+    return '0';
+  }
   const key = result.success
-    ? (result.output || result.content || result.result || 'ok')
-    : (result.error || 'fail');
+    ? result.output || result.content || result.result || 'ok'
+    : result.error || 'fail';
   return fnv1aHash(typeof key === 'string' ? key : stableStringify(key));
 }
 
@@ -330,7 +687,7 @@ function hashResult(result) {
 class ToolLoopDetector {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.history = [];       // ToolCallRecord[]
+    this.history = []; // ToolCallRecord[]
     this.totalCalls = 0;
     this.unknownToolCount = 0;
 
@@ -339,7 +696,7 @@ class ToolLoopDetector {
 
     // Detector 6: content chanting
     this._contentBuffer = '';
-    this._contentHashes = new Map();  // hash → position[]
+    this._contentHashes = new Map(); // hash → position[]
     this._contentLastIdx = 0;
     this._inCodeBlock = false;
 
@@ -348,6 +705,10 @@ class ToolLoopDetector {
     this._hasSeenNonReadTool = false;
 
     // Detector 8: action stagnation
+    // Streak counts consecutive calls of the SAME tool name regardless of
+    // params; param diversity is evaluated in _checkActionStagnation() via the
+    // callHash records in history, so legitimate batch operations (same tool,
+    // mostly distinct params) are never blocked.
     this._lastToolName = null;
     this._sameNameStreak = 0;
   }
@@ -370,27 +731,34 @@ class ToolLoopDetector {
    */
   recordCall(toolName, params) {
     const callHash = hashCall(toolName, params);
-    const isUnknown = this._knownTools.size > 0
-      && !this._knownTools.has(toolName)
-      && !this._knownTools.has(_normalizeName(toolName));
+    const isUnknown =
+      this._knownTools.size > 0 &&
+      !this._knownTools.has(toolName) &&
+      !this._knownTools.has(_normalizeName(toolName));
 
     this.history.push({
       toolName,
       callHash,
       resultHash: null,
       isUnknown,
-      _shellIntent: _isShellTool(toolName) ? extractShellIntent((params || {}).command || (params || {}).cmd) : null,
+      _shellIntent: _isShellTool(toolName)
+        ? extractShellIntent((params || {}).command || (params || {}).cmd)
+        : null,
       _pathIntent: _isFsTool(toolName) ? extractPathIntent(toolName, params) : null,
       // Detector 11: web-retrieval thrash — flag any call that fetches the web,
       // whether a dedicated web tool or a shell command wrapping curl/wget/iwr.
-      _isWeb: _isWebTool(toolName)
-        || (_isShellTool(toolName) && _shellCommandIsWebFetch((params || {}).command || (params || {}).cmd)),
-      _failed: null,  // set in recordOutcome once execution result is known
+      _isWeb:
+        _isWebTool(toolName) ||
+        (_isShellTool(toolName) &&
+          _shellCommandIsWebFetch((params || {}).command || (params || {}).cmd)),
+      _failed: null, // set in recordOutcome once execution result is known
       timestamp: Date.now(),
     });
 
     this.totalCalls++;
-    if (isUnknown) this.unknownToolCount++;
+    if (isUnknown) {
+      this.unknownToolCount++;
+    }
 
     // Update detector 7 (read-file loop) state
     this._recentToolNames.push(toolName);
@@ -401,9 +769,12 @@ class ToolLoopDetector {
       this._hasSeenNonReadTool = true;
     }
 
-    // Update detector 8 (action stagnation) state
-    const normName = _normalizeName(toolName);
-    if (normName === _normalizeName(this._lastToolName || '')) {
+    // Update detector 8 (action stagnation) state.
+    // Streak counts consecutive calls of the same tool NAME; whether the calls
+    // are genuinely stagnant (identical/near-identical params) is decided in
+    // _checkActionStagnation() by inspecting the callHash diversity of the
+    // streak's history records.
+    if (_normalizeName(toolName) === _normalizeName(this._lastToolName || '')) {
       this._sameNameStreak++;
     } else {
       this._lastToolName = toolName;
@@ -418,7 +789,9 @@ class ToolLoopDetector {
     // Keep history bounded
     while (this.history.length > this.config.historySize) {
       const removed = this.history.shift();
-      if (removed.isUnknown) this.unknownToolCount--;
+      if (removed.isUnknown) {
+        this.unknownToolCount--;
+      }
     }
   }
 
@@ -516,7 +889,9 @@ class ToolLoopDetector {
     const callHash = hashCall(toolName, params);
     let count = 0;
     for (const rec of this.history) {
-      if (rec.callHash === callHash) count++;
+      if (rec.callHash === callHash) {
+        count++;
+      }
     }
 
     if (count >= this.config.criticalThreshold) {
@@ -569,8 +944,12 @@ class ToolLoopDetector {
     let lastResultHash = null;
     for (let i = this.history.length - 1; i >= 0; i--) {
       const rec = this.history[i];
-      if (rec.callHash !== callHash) break;
-      if (rec.resultHash === null) continue; // not yet resolved
+      if (rec.callHash !== callHash) {
+        break;
+      }
+      if (rec.resultHash === null) {
+        continue;
+      } // not yet resolved
 
       if (lastResultHash === null) {
         lastResultHash = rec.resultHash;
@@ -647,16 +1026,24 @@ class ToolLoopDetector {
    * @param {string} text
    */
   feedContent(text) {
-    if (!text || typeof text !== 'string') return;
+    if (!text || typeof text !== 'string') {
+      return;
+    }
 
     // Check for code fence toggle
     const fenceCount = (text.match(/```/g) || []).length;
-    if (fenceCount % 2 !== 0) this._inCodeBlock = !this._inCodeBlock;
+    if (fenceCount % 2 !== 0) {
+      this._inCodeBlock = !this._inCodeBlock;
+    }
 
     // Skip structural content that would cause false positives
-    if (this._inCodeBlock) return;
+    if (this._inCodeBlock) {
+      return;
+    }
     for (const pat of STRUCTURAL_PATTERNS) {
-      if (pat.test(text)) return;
+      if (pat.test(text)) {
+        return;
+      }
     }
 
     // Accumulate buffer
@@ -669,7 +1056,7 @@ class ToolLoopDetector {
       this._contentBuffer = this._contentBuffer.slice(excess);
       // Adjust all stored positions
       for (const [hash, positions] of this._contentHashes) {
-        const adjusted = positions.map(p => p - excess).filter(p => p >= 0);
+        const adjusted = positions.map((p) => p - excess).filter((p) => p >= 0);
         if (adjusted.length === 0) {
           this._contentHashes.delete(hash);
         } else {
@@ -702,7 +1089,9 @@ class ToolLoopDetector {
     const maxAvgDist = chunkSize * 1.5;
 
     for (const [, positions] of this._contentHashes) {
-      if (positions.length < threshold) continue;
+      if (positions.length < threshold) {
+        continue;
+      }
 
       // Check average distance of last N positions
       const recent = positions.slice(-threshold);
@@ -735,7 +1124,7 @@ class ToolLoopDetector {
       return { stuck: false, level: 'ok', detector: 'readFileLoop', message: '' };
     }
 
-    const readCount = window.filter(n => _isReadLikeTool(n)).length;
+    const readCount = window.filter((n) => _isReadLikeTool(n)).length;
     if (readCount >= this.config.readFileThreshold) {
       return {
         stuck: true,
@@ -751,23 +1140,55 @@ class ToolLoopDetector {
 
   _checkActionStagnation() {
     const critThreshold = this.config.stagnationCriticalThreshold || 8;
+    const warnThreshold = this.config.stagnationThreshold || 5;
+    if (this._sameNameStreak < warnThreshold) {
+      return { stuck: false, level: 'ok', detector: 'actionStagnation', message: '' };
+    }
+
+    // Measure param diversity of the streak (callHash dedup ratio over the
+    // tail of history) — used both for suppression and for quantified messages.
+    const tailLen = Math.min(this._sameNameStreak, this.history.length);
+    let distinct = 0;
+    if (tailLen > 0) {
+      const hashes = new Set();
+      for (let i = this.history.length - tailLen; i < this.history.length; i++) {
+        hashes.add(this.history[i].callHash);
+      }
+      distinct = hashes.size;
+    }
+
+    // Param-diversity suppression: a streak of same-name calls whose params
+    // are mostly DISTINCT is a legitimate batch operation (e.g. shell scans of
+    // N different targets), not stagnation. Restricted to scan-class tools
+    // (fs / shell / web-search) which have intent-level detectors as backstop
+    // (shellIntentRepeat, pathIntentRepeat, search-intent dedup) — noise params
+    // cannot fool those fingerprints. Generic tools get NO exemption: otherwise
+    // a model could bypass genericRepeat/noProgress/actionStagnation all at
+    // once by appending a throwaway nonce field to identical calls.
+    const lastName = this._lastToolName || '';
+    const hasIntentBackstop =
+      _isFsTool(lastName) || _isShellTool(lastName) || _isSearchTool(lastName);
+    if (hasIntentBackstop && tailLen > 0) {
+      const minRatio = this.config.stagnationDistinctRatio || 0.75;
+      if (distinct / tailLen >= minRatio) {
+        return { stuck: false, level: 'ok', detector: 'actionStagnation', message: '' };
+      }
+    }
+
     if (this._sameNameStreak >= critThreshold) {
       return {
         stuck: true,
         level: 'critical',
         detector: 'actionStagnation',
-        message: `Action stagnation: tool "${this._lastToolName}" called ${this._sameNameStreak} times consecutively (critical threshold: ${critThreshold}). Execution blocked.`,
+        message: `Action stagnation: tool "${this._lastToolName}" called ${this._sameNameStreak} times consecutively with only ${distinct} distinct param set(s) (critical threshold: ${critThreshold}). Execution blocked.`,
       };
     }
-    if (this._sameNameStreak >= this.config.stagnationThreshold) {
-      return {
-        stuck: true,
-        level: 'warning',
-        detector: 'actionStagnation',
-        message: `Action stagnation: tool "${this._lastToolName}" called ${this._sameNameStreak} times consecutively. Try a different tool.`,
-      };
-    }
-    return { stuck: false, level: 'ok', detector: 'actionStagnation', message: '' };
+    return {
+      stuck: true,
+      level: 'warning',
+      detector: 'actionStagnation',
+      message: `Action stagnation: tool "${this._lastToolName}" called ${this._sameNameStreak} times consecutively with only ${distinct} distinct param set(s) (warning threshold: ${warnThreshold}). Try a different tool.`,
+    };
   }
 
   // ── Detector 9: Shell Intent Repeat ─────────────────────────────────
@@ -884,8 +1305,10 @@ class ToolLoopDetector {
   // FAILED web retrievals, so a legitimate search→fetch progression that makes
   // progress never trips it.
   _checkWebRetrievalFailureStreak(toolName, params) {
-    const isWeb = _isWebTool(toolName)
-      || (_isShellTool(toolName) && _shellCommandIsWebFetch((params || {}).command || (params || {}).cmd));
+    const isWeb =
+      _isWebTool(toolName) ||
+      (_isShellTool(toolName) &&
+        _shellCommandIsWebFetch((params || {}).command || (params || {}).cmd));
     if (!isWeb) {
       return { stuck: false, level: 'ok', detector: 'webRetrievalFailureStreak', message: '' };
     }
@@ -898,11 +1321,13 @@ class ToolLoopDetector {
     let streak = 0;
     for (let i = this.history.length - 1; i >= 0; i--) {
       const rec = this.history[i];
-      if (!rec._isWeb) continue;
+      if (!rec._isWeb) {
+        continue;
+      }
       if (rec._failed === true) {
         streak++;
       } else if (rec._failed === false) {
-        break;  // a web fetch succeeded — not thrashing
+        break; // a web fetch succeeded — not thrashing
       }
       // _failed === null (pending): skip without breaking
     }
@@ -930,4 +1355,17 @@ class ToolLoopDetector {
   }
 }
 
-module.exports = { ToolLoopDetector, DEFAULT_CONFIG, toolCallSignature, extractShellIntent, extractPathIntent, extractSearchIntent, _isShellTool, _isFsTool, _isWebTool, _isSearchTool, _shellCommandIsWebFetch, _normalizePath };
+module.exports = {
+  ToolLoopDetector,
+  DEFAULT_CONFIG,
+  toolCallSignature,
+  extractShellIntent,
+  extractPathIntent,
+  extractSearchIntent,
+  _isShellTool,
+  _isFsTool,
+  _isWebTool,
+  _isSearchTool,
+  _shellCommandIsWebFetch,
+  _normalizePath,
+};

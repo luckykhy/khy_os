@@ -6,9 +6,18 @@
  */
 const chalk = require('chalk').default || require('chalk');
 const { execSync } = require('child_process');
-const path = require('path');
 const fs = require('fs');
-const { printSuccess, printError, printInfo, printWarn, printTable, printDivider, withSpinner } = require('../formatters');
+const path = require('path');
+
+const {
+  printSuccess,
+  printError,
+  printInfo,
+  printWarn,
+  printTable,
+  printDivider,
+  withSpinner,
+} = require('../formatters');
 
 const MAX_ROUNDS = 5;
 const MAX_DIFF_CHARS = 30000;
@@ -37,14 +46,18 @@ function gatherDiff() {
   try {
     stats = execSync('git diff --stat', opts).trim();
     diff = execSync('git diff', opts).trim();
-  } catch { /* not a git repo or no changes */ }
+  } catch {
+    /* not a git repo or no changes */
+  }
 
   // If no unstaged changes, try staged
   if (!diff) {
     try {
       stats = execSync('git diff --cached --stat', opts).trim();
       diff = execSync('git diff --cached', opts).trim();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Extract changed file list from stats
@@ -52,7 +65,9 @@ function gatherDiff() {
   if (stats) {
     for (const line of stats.split('\n')) {
       const match = line.match(/^\s*(.+?)\s*\|/);
-      if (match) files.push(match[1].trim());
+      if (match) {
+        files.push(match[1].trim());
+      }
     }
   }
 
@@ -62,9 +77,10 @@ function gatherDiff() {
 // ── AI Prompt Templates ─────────────────────────────────────────────
 
 function buildReviewPrompt(diff, stats) {
-  const truncated = diff.length > MAX_DIFF_CHARS
-    ? diff.slice(0, MAX_DIFF_CHARS) + `\n... (truncated, ${diff.length} chars total)`
-    : diff;
+  const truncated =
+    diff.length > MAX_DIFF_CHARS
+      ? diff.slice(0, MAX_DIFF_CHARS) + `\n... (truncated, ${diff.length} chars total)`
+      : diff;
 
   return `你是一位资深代码审查专家。请严格审查以下 Git diff，找出所有问题。
 
@@ -121,13 +137,14 @@ ${fileContent}
 }
 
 function buildVerifyPrompt(fixedIssues, diff) {
-  const truncated = diff.length > MAX_DIFF_CHARS
-    ? diff.slice(0, MAX_DIFF_CHARS) + `\n... (truncated, ${diff.length} chars total)`
-    : diff;
+  const truncated =
+    diff.length > MAX_DIFF_CHARS
+      ? diff.slice(0, MAX_DIFF_CHARS) + `\n... (truncated, ${diff.length} chars total)`
+      : diff;
 
-  const issuesSummary = fixedIssues.map(i =>
-    `- ${i.id} [${i.severity}] ${i.file}:${i.line} — ${i.description}`
-  ).join('\n');
+  const issuesSummary = fixedIssues
+    .map((i) => `- ${i.id} [${i.severity}] ${i.file}:${i.line} — ${i.description}`)
+    .join('\n');
 
   return `你是一位代码审查验证专家。请验证以下修复是否正确，并检查是否引入了新问题。
 
@@ -169,15 +186,21 @@ ${truncated}
  * 3. Regex extraction of P0:/P1: patterns
  */
 function parseIssueList(aiReply) {
-  if (!aiReply) return [];
+  if (!aiReply) {
+    return [];
+  }
 
   // Tier 1: fenced json block
   const fenceMatch = aiReply.match(/```json\s*([\s\S]*?)```/);
   if (fenceMatch) {
     try {
       const parsed = JSON.parse(fenceMatch[1].trim());
-      if (Array.isArray(parsed)) return _validateIssues(parsed);
-    } catch { /* fall through */ }
+      if (Array.isArray(parsed)) {
+        return _validateIssues(parsed);
+      }
+    } catch {
+      /* fall through */
+    }
   }
 
   // Tier 2: bare JSON array
@@ -185,8 +208,12 @@ function parseIssueList(aiReply) {
   if (bareMatch) {
     try {
       const parsed = JSON.parse(bareMatch[0]);
-      if (Array.isArray(parsed)) return _validateIssues(parsed);
-    } catch { /* fall through */ }
+      if (Array.isArray(parsed)) {
+        return _validateIssues(parsed);
+      }
+    } catch {
+      /* fall through */
+    }
   }
 
   // Tier 3: regex extraction
@@ -211,8 +238,8 @@ function parseIssueList(aiReply) {
 
 function _validateIssues(arr) {
   return arr
-    .filter(i => i && (i.description || i.desc))
-    .map(i => ({
+    .filter((i) => i && (i.description || i.desc))
+    .map((i) => ({
       id: i.id || `P2-${String(Math.random()).slice(2, 6)}`,
       severity: ['P0', 'P1', 'P2', 'P3'].includes(i.severity) ? i.severity : 'P2',
       file: i.file || '',
@@ -227,7 +254,9 @@ function _validateIssues(arr) {
  * Parse AI verify response into { verified: string[], newIssues: Issue[] }.
  */
 function parseVerifyResult(aiReply) {
-  if (!aiReply) return { verified: [], newIssues: [] };
+  if (!aiReply) {
+    return { verified: [], newIssues: [] };
+  }
 
   const fenceMatch = aiReply.match(/```json\s*([\s\S]*?)```/);
   if (fenceMatch) {
@@ -237,7 +266,9 @@ function parseVerifyResult(aiReply) {
         verified: Array.isArray(parsed.verified) ? parsed.verified : [],
         newIssues: Array.isArray(parsed.newIssues) ? _validateIssues(parsed.newIssues) : [],
       };
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
 
   // Fallback: try bare JSON object
@@ -249,7 +280,9 @@ function parseVerifyResult(aiReply) {
         verified: Array.isArray(parsed.verified) ? parsed.verified : [],
         newIssues: Array.isArray(parsed.newIssues) ? _validateIssues(parsed.newIssues) : [],
       };
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
 
   return { verified: [], newIssues: [] };
@@ -261,20 +294,28 @@ function parseVerifyResult(aiReply) {
  * Extract code content from AI response (fenced code block).
  */
 function extractCode(aiReply, ext) {
-  if (!aiReply) return null;
+  if (!aiReply) {
+    return null;
+  }
 
   // Check for CANNOT_FIX
-  if (/^CANNOT_FIX:/m.test(aiReply)) return null;
+  if (/^CANNOT_FIX:/m.test(aiReply)) {
+    return null;
+  }
 
   // Try language-specific fence
   const langRe = new RegExp('```' + ext + '\\s*\\n([\\s\\S]*?)```');
   const langMatch = aiReply.match(langRe);
-  if (langMatch) return langMatch[1];
+  if (langMatch) {
+    return langMatch[1];
+  }
 
   // Try generic fence (first code block that is >10 lines)
   const allFences = [...aiReply.matchAll(/```\w*\s*\n([\s\S]*?)```/g)];
   for (const fence of allFences) {
-    if (fence[1].split('\n').length > 5) return fence[1];
+    if (fence[1].split('\n').length > 5) {
+      return fence[1];
+    }
   }
 
   return null;
@@ -291,9 +332,15 @@ function extractCode(aiReply, ext) {
 //   'prompt'   — interactive classic REPL: ask via inquirer.confirm
 // `env` is injected so tests can vary the flags without touching process.env.
 function decideAutoFixApproval({ autoApprove, stdinTTY, stdoutTTY, inkActive } = {}) {
-  if (autoApprove) return 'auto';
-  if (inkActive) return 'tui';
-  if (!stdinTTY || !stdoutTTY) return 'non-tty';
+  if (autoApprove) {
+    return 'auto';
+  }
+  if (inkActive) {
+    return 'tui';
+  }
+  if (!stdinTTY || !stdoutTTY) {
+    return 'non-tty';
+  }
   return 'prompt';
 }
 
@@ -397,12 +444,14 @@ async function runVerifyRound(ai, fixedIssues, diff) {
 // ── Output Formatting ───────────────────────────────────────────────
 
 function printIssueTable(issues) {
-  if (issues.length === 0) return;
+  if (issues.length === 0) {
+    return;
+  }
 
   console.log('');
   printTable(
     ['ID', '等级', '文件', '描述'],
-    issues.map(i => [
+    issues.map((i) => [
       i.id,
       (SEVERITY_COLORS[i.severity] || chalk.dim)(i.severity),
       chalk.cyan(i.file ? `${i.file}${i.line ? ':' + i.line : ''}` : '-'),
@@ -414,12 +463,24 @@ function printIssueTable(issues) {
 
 function printRoundSummary(round, stats) {
   const parts = [];
-  if (stats.found !== undefined) parts.push(`发现 ${stats.found}`);
-  if (stats.fixed !== undefined) parts.push(`修复 ${chalk.green(stats.fixed)}`);
-  if (stats.failed > 0) parts.push(`失败 ${chalk.red(stats.failed)}`);
-  if (stats.verified !== undefined) parts.push(`验证通过 ${chalk.green(stats.verified)}`);
-  if (stats.newIssues > 0) parts.push(`新问题 ${chalk.yellow(stats.newIssues)}`);
-  if (stats.remaining > 0) parts.push(`剩余 ${chalk.yellow(stats.remaining)}`);
+  if (stats.found !== undefined) {
+    parts.push(`发现 ${stats.found}`);
+  }
+  if (stats.fixed !== undefined) {
+    parts.push(`修复 ${chalk.green(stats.fixed)}`);
+  }
+  if (stats.failed > 0) {
+    parts.push(`失败 ${chalk.red(stats.failed)}`);
+  }
+  if (stats.verified !== undefined) {
+    parts.push(`验证通过 ${chalk.green(stats.verified)}`);
+  }
+  if (stats.newIssues > 0) {
+    parts.push(`新问题 ${chalk.yellow(stats.newIssues)}`);
+  }
+  if (stats.remaining > 0) {
+    parts.push(`剩余 ${chalk.yellow(stats.remaining)}`);
+  }
 
   printSuccess(`第 ${round} 轮: ${parts.join(' · ')}`);
 }
@@ -432,7 +493,7 @@ function printFinalSummary(roundHistory, issueMap) {
   if (roundHistory.length > 0) {
     printTable(
       ['轮次', '发现', '修复', '失败', '剩余'],
-      roundHistory.map(r => [
+      roundHistory.map((r) => [
         String(r.round),
         String(r.found),
         r.fixed >= 0 ? chalk.green(String(r.fixed)) : '-',
@@ -443,7 +504,9 @@ function printFinalSummary(roundHistory, issueMap) {
     console.log('');
   }
 
-  const remaining = [...issueMap.values()].filter(i => i.status === 'open' || i.status === 'failed');
+  const remaining = [...issueMap.values()].filter(
+    (i) => i.status === 'open' || i.status === 'failed'
+  );
   if (remaining.length === 0) {
     printSuccess('所有问题已修复！');
   } else {
@@ -468,10 +531,11 @@ async function handleReview(options = {}) {
   const ai = require('../ai');
   const maxRounds = options.maxRounds || MAX_ROUNDS;
   const autoFix = options.autoFix !== false;
-  const autoApprove = options.autoApprove === true
-    || options.yes === true
-    || String(options.autoApprove || '').toLowerCase() === 'true'
-    || String(options.yes || '').toLowerCase() === 'true';
+  const autoApprove =
+    options.autoApprove === true ||
+    options.yes === true ||
+    String(options.autoApprove || '').toLowerCase() === 'true' ||
+    String(options.yes || '').toLowerCase() === 'true';
 
   const issueMap = new Map(); // id → Issue
   const roundHistory = [];
@@ -515,10 +579,11 @@ async function handleReview(options = {}) {
         break;
       }
 
-      for (const i of issues) issueMap.set(i.id, i);
+      for (const i of issues) {
+        issueMap.set(i.id, i);
+      }
       printIssueTable(issues);
       openIssues = issues;
-
     } else {
       // Subsequent rounds: verify previous fixes + detect regressions
       const verifyResult = await withSpinner('AI 验证修复', async () =>
@@ -528,7 +593,9 @@ async function handleReview(options = {}) {
       // Mark verified issues
       for (const id of verifyResult.verified) {
         const iss = issueMap.get(id);
-        if (iss) iss.status = 'verified';
+        if (iss) {
+          iss.status = 'verified';
+        }
       }
 
       // Add new issues
@@ -536,7 +603,7 @@ async function handleReview(options = {}) {
         issueMap.set(newIss.id, newIss);
       }
 
-      openIssues = [...issueMap.values()].filter(i => i.status === 'open');
+      openIssues = [...issueMap.values()].filter((i) => i.status === 'open');
 
       const roundStats = {
         verified: verifyResult.verified.length,
@@ -550,7 +617,13 @@ async function handleReview(options = {}) {
 
       if (openIssues.length === 0) {
         printRoundSummary(round, roundStats);
-        roundHistory.push({ round, found: verifyResult.newIssues.length, fixed: -1, failed: 0, remaining: 0 });
+        roundHistory.push({
+          round,
+          found: verifyResult.newIssues.length,
+          fixed: -1,
+          failed: 0,
+          remaining: 0,
+        });
         break;
       }
 
@@ -559,15 +632,23 @@ async function handleReview(options = {}) {
 
     // C. Fix phase
     if (!autoFix) {
-      roundHistory.push({ round, found: openIssues.length, fixed: -1, failed: 0, remaining: openIssues.length });
+      roundHistory.push({
+        round,
+        found: openIssues.length,
+        fixed: -1,
+        failed: 0,
+        remaining: openIssues.length,
+      });
       printInfo('审查完成 (自动修复已禁用)');
       break;
     }
 
     // Confirm with user before fixing
     if (round === 1) {
-      const fileSet = new Set(openIssues.filter(i => i.file).map(i => i.file));
-      console.log(`  ${chalk.cyan('?')} AI 将修复 ${openIssues.length} 个问题，涉及 ${fileSet.size} 个文件`);
+      const fileSet = new Set(openIssues.filter((i) => i.file).map((i) => i.file));
+      console.log(
+        `  ${chalk.cyan('?')} AI 将修复 ${openIssues.length} 个问题，涉及 ${fileSet.size} 个文件`
+      );
 
       let proceed = true;
       const approvalMode = decideAutoFixApproval({
@@ -586,12 +667,14 @@ async function handleReview(options = {}) {
         // stopgap, so the user actually decides. promptCompat falls back to real
         // inquirer automatically if the bridge is somehow unregistered.
         const { promptCompat } = require('../uiPrompt');
-        const answer = await promptCompat([{
-          type: 'confirm',
-          name: 'proceed',
-          message: '是否允许 AI 自动修复？',
-          default: true,
-        }]);
+        const answer = await promptCompat([
+          {
+            type: 'confirm',
+            name: 'proceed',
+            message: '是否允许 AI 自动修复？',
+            default: true,
+          },
+        ]);
         // A native Esc/cancel yields {} → treat as "no decision" = decline, the
         // safe default for a mutating action the user did not actively approve.
         proceed = answer && 'proceed' in answer ? !!answer.proceed : false;
@@ -599,17 +682,25 @@ async function handleReview(options = {}) {
         printWarn('非交互环境，默认允许 AI 自动修复（可用 autoApprove=false 关闭）');
       } else {
         const { promptCompat } = require('../uiPrompt');
-        const answer = await promptCompat([{
-          type: 'confirm',
-          name: 'proceed',
-          message: '是否允许 AI 自动修复？',
-          default: true,
-        }]);
+        const answer = await promptCompat([
+          {
+            type: 'confirm',
+            name: 'proceed',
+            message: '是否允许 AI 自动修复？',
+            default: true,
+          },
+        ]);
         proceed = !!answer.proceed;
       }
 
       if (!proceed) {
-        roundHistory.push({ round, found: openIssues.length, fixed: 0, failed: 0, remaining: openIssues.length });
+        roundHistory.push({
+          round,
+          found: openIssues.length,
+          fixed: 0,
+          failed: 0,
+          remaining: openIssues.length,
+        });
         printInfo('已取消自动修复');
         break;
       }
@@ -619,7 +710,7 @@ async function handleReview(options = {}) {
     const fixResult = await runFixRound(ai, openIssues);
     previousFixed = fixResult.fixed;
 
-    const remaining = [...issueMap.values()].filter(i => i.status === 'open');
+    const remaining = [...issueMap.values()].filter((i) => i.status === 'open');
     const roundStats = {
       found: openIssues.length,
       fixed: fixResult.fixed.length,

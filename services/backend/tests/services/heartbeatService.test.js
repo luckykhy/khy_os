@@ -52,6 +52,7 @@ describe('heartbeatService — declarative companion patrol (#9)', () => {
   afterEach(() => {
     delete process.env.KHY_DATA_HOME;
     delete process.env.KHY_HEARTBEAT;
+    delete process.env.KHY_HEARTBEAT_COOLDOWN;
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
   });
 
@@ -152,6 +153,36 @@ describe('heartbeatService — declarative companion patrol (#9)', () => {
     expect(Object.keys(hb.getEvents().events)).toContain('k');
     hb.reset();
     expect(Object.keys(hb.getEvents().events)).toEqual([]);
+  });
+
+  // ── 巡逻节流(heartbeatCooldown 接线)────────────────────────────────────────
+
+  test('patrol within min-spacing → throttled (KHY_HEARTBEAT_COOLDOWN default on)', () => {
+    makeActiveCompanion('throttle-a', SEED_ONE_ACTIVE);
+    const first = hb.patrol({ companionId: 'throttle-a', findings: [{ key: 'x', message: 'm' }] });
+    expect(['notify', 'silent']).toContain(first.status); // 首次不节流
+    // 紧接再次触发(无 stamp → 走真实时钟)→ 30s min-spacing 内 → throttled
+    const second = hb.patrol({ companionId: 'throttle-a', findings: [{ key: 'y', message: 'n' }] });
+    expect(second.status).toBe('throttled');
+  });
+
+  test('KHY_HEARTBEAT_COOLDOWN=off → never throttled', () => {
+    process.env.KHY_HEARTBEAT_COOLDOWN = 'off';
+    makeActiveCompanion('throttle-b', SEED_ONE_ACTIVE);
+    hb.patrol({ companionId: 'throttle-b', findings: [{ key: 'a' }] });
+    const second = hb.patrol({ companionId: 'throttle-b', findings: [{ key: 'b' }] });
+    expect(second.status).not.toBe('throttled');
+    expect(['notify', 'silent']).toContain(second.status);
+    delete process.env.KHY_HEARTBEAT_COOLDOWN;
+  });
+
+  test('stamp-injected patrol bypasses throttle (deterministic dedup tests unaffected)', () => {
+    makeActiveCompanion('throttle-c', SEED_ONE_ACTIVE);
+    const t = '2026-06-09T00:00:00.000Z';
+    const first = hb.patrol({ companionId: 'throttle-c', findings: [{ key: 'a' }], stamp: t });
+    const second = hb.patrol({ companionId: 'throttle-c', findings: [{ key: 'b' }], stamp: t });
+    expect(first.status).not.toBe('throttled');
+    expect(second.status).not.toBe('throttled'); // stamp → 不过节流,仍走 dedup
   });
 
   // ── safety invariant: never executes anything ───────────────────────────────

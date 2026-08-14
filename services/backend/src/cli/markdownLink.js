@@ -27,7 +27,9 @@
 //   - 着色/下划线/dim 归 call-site 样式层;mailto 裸邮箱按 CC 走纯文本(不着色)。
 
 function markdownLinkDisplayEnabled(env = process.env) {
-  const flag = String((env && env.KHY_MARKDOWN_LINK_DISPLAY) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_MARKDOWN_LINK_DISPLAY) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 

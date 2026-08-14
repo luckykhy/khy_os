@@ -17,11 +17,20 @@
  * 6. Error recovery — how user handles errors (for proactive help)
  */
 
-const path = require('path');
-const os = require('os');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const HABITS_FILE = path.join(os.homedir(), '.khyquant', 'growth', 'habits.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const HABITS_FILE = path.join(_appHome(), 'growth', 'habits.json');
 
 // ─── Default Structure ──────────────────────────────────────────────────────
 
@@ -32,9 +41,9 @@ function _defaultHabits() {
 
     // Time usage profile
     timeProfile: {
-      hourlyActivity: new Array(24).fill(0),  // 0-23 hour counts
-      weekdayActivity: new Array(7).fill(0),  // 0=Sun, 6=Sat
-      peakHours: [],                           // derived: top 3 active hours
+      hourlyActivity: new Array(24).fill(0), // 0-23 hour counts
+      weekdayActivity: new Array(7).fill(0), // 0=Sun, 6=Sat
+      peakHours: [], // derived: top 3 active hours
       averageSessionMinutes: 0,
       totalSessions: 0,
     },
@@ -57,12 +66,12 @@ function _defaultHabits() {
 
     // Response style preferences (learned from user behavior)
     responsePreferences: {
-      preferredLength: 'medium',    // short, medium, long
-      detailLevel: 'balanced',      // brief, balanced, detailed
-      codeInResponse: true,         // user likes seeing code snippets
-      planBeforeAction: null,       // null=unknown, true=user likes plans, false=prefers direct action
-      showCost: true,               // show token cost info
-      showTips: true,               // show knowledge tips
+      preferredLength: 'medium', // short, medium, long
+      detailLevel: 'balanced', // brief, balanced, detailed
+      codeInResponse: true, // user likes seeing code snippets
+      planBeforeAction: null, // null=unknown, true=user likes plans, false=prefers direct action
+      showCost: true, // show token cost info
+      showTips: true, // show knowledge tips
     },
 
     // Topic evolution (what user cares about over time)
@@ -72,17 +81,17 @@ function _defaultHabits() {
 
     // Error recovery patterns
     errorPatterns: {
-      commonErrors: {},             // error type → count
-      recoveryActions: {},          // error type → typical next command
-      selfResolvingRate: 0,         // % of errors user resolves without help
+      commonErrors: {}, // error type → count
+      recoveryActions: {}, // error type → typical next command
+      selfResolvingRate: 0, // % of errors user resolves without help
     },
 
     // Cross-IDE/model collaboration stats
     collaboration: {
-      modelsUsed: {},               // model → { count, lastUsed, avgResponseQuality }
-      idesUsed: {},                 // ide → { count, lastUsed, sessionsCount }
-      switchPatterns: [],           // when user switches model/IDE and why (context)
-      bestCombinations: [],         // model+taskType combos with highest satisfaction
+      modelsUsed: {}, // model → { count, lastUsed, avgResponseQuality }
+      idesUsed: {}, // ide → { count, lastUsed, sessionsCount }
+      switchPatterns: [], // when user switches model/IDE and why (context)
+      bestCombinations: [], // model+taskType combos with highest satisfaction
     },
   };
 }
@@ -106,7 +115,12 @@ function recordInteraction(command, context = {}) {
   const topic = _classifyTopic(command);
   if (topic) {
     if (!habits.topicFocus[topic]) {
-      habits.topicFocus[topic] = { count: 0, firstSeen: now.toISOString(), lastSeen: null, trend: 'rising' };
+      habits.topicFocus[topic] = {
+        count: 0,
+        firstSeen: now.toISOString(),
+        lastSeen: null,
+        trend: 'rising',
+      };
     }
     habits.topicFocus[topic].count++;
     habits.topicFocus[topic].lastSeen = now.toISOString();
@@ -120,7 +134,9 @@ function recordInteraction(command, context = {}) {
  * Record a workflow chain (sequence of commands in one session).
  */
 function recordWorkflowStep(commandSequence) {
-  if (!commandSequence || commandSequence.length < 2) return;
+  if (!commandSequence || commandSequence.length < 2) {
+    return;
+  }
 
   const habits = _load();
   const key = commandSequence.join('→');
@@ -170,7 +186,9 @@ function recordModelUsage(adapter, model, taskType, satisfaction = 1) {
   }
 
   // Recalculate preferred model for this task type
-  habits.modelPreferences[type].preferred = _calculatePreferred(habits.modelPreferences[type].history);
+  habits.modelPreferences[type].preferred = _calculatePreferred(
+    habits.modelPreferences[type].history
+  );
 
   // Collaboration stats
   const modelKey = model || adapter;
@@ -277,7 +295,9 @@ function recordSession(durationMinutes) {
 function getPreferredModel(taskType) {
   const habits = _load();
   const type = habits.modelPreferences[taskType] || habits.modelPreferences.conversation;
-  if (!type || !type.preferred) return null;
+  if (!type || !type.preferred) {
+    return null;
+  }
   return type.preferred;
 }
 
@@ -367,8 +387,12 @@ function describeResponseStyle(prefs) {
     lines.push('重思路与解释，少贴大段代码（确有必要才给关键片段）');
   }
 
-  if (p.showTips === false) lines.push('不再附带知识小贴士');
-  if (p.showCost === false) lines.push('不显示 token 费用');
+  if (p.showTips === false) {
+    lines.push('不再附带知识小贴士');
+  }
+  if (p.showCost === false) {
+    lines.push('不显示 token 费用');
+  }
 
   return lines;
 }
@@ -378,7 +402,9 @@ function describeResponseStyle(prefs) {
  * Based on what the user typically does after their last command.
  */
 function predictNextCommands(lastCommands) {
-  if (!lastCommands || lastCommands.length === 0) return [];
+  if (!lastCommands || lastCommands.length === 0) {
+    return [];
+  }
 
   const habits = _load();
   const predictions = [];
@@ -400,11 +426,15 @@ function predictNextCommands(lastCommands) {
   // Sort by confidence and deduplicate
   predictions.sort((a, b) => b.confidence - a.confidence);
   const seen = new Set();
-  return predictions.filter(p => {
-    if (seen.has(p.command)) return false;
-    seen.add(p.command);
-    return true;
-  }).slice(0, 3);
+  return predictions
+    .filter((p) => {
+      if (seen.has(p.command)) {
+        return false;
+      }
+      seen.add(p.command);
+      return true;
+    })
+    .slice(0, 3);
 }
 
 /**
@@ -470,7 +500,9 @@ function refreshTrends() {
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
   for (const [topic, data] of Object.entries(habits.topicFocus)) {
-    if (!data.lastSeen) continue;
+    if (!data.lastSeen) {
+      continue;
+    }
     const lastSeen = new Date(data.lastSeen).getTime();
     const age = now - lastSeen;
 
@@ -496,27 +528,35 @@ function _load() {
       // Merge with defaults (in case new fields were added)
       return { ..._defaultHabits(), ...data };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return _defaultHabits();
 }
 
 function _save(habits) {
   try {
     const dir = path.dirname(HABITS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(HABITS_FILE, JSON.stringify(habits, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function _updatePeakHours(habits) {
   const hourly = habits.timeProfile.hourlyActivity;
   const indexed = hourly.map((count, hour) => ({ hour, count }));
   indexed.sort((a, b) => b.count - a.count);
-  habits.timeProfile.peakHours = indexed.slice(0, 3).map(h => h.hour);
+  habits.timeProfile.peakHours = indexed.slice(0, 3).map((h) => h.hour);
 }
 
 function _classifyTopic(command) {
-  if (!command) return null;
+  if (!command) {
+    return null;
+  }
   const lower = command.toLowerCase();
 
   // General AI-workbench domains come first (khyos is a general assistant, not
@@ -525,30 +565,129 @@ function _classifyTopic(command) {
   // domains (debugging, coding) take precedence over broad ones.
   const TOPIC_KEYWORDS = {
     // ── General developer / OS / writing / research domains ──
-    'debugging': ['debug', 'bug', 'fix', 'error', 'stack trace', 'traceback', 'exception',
-      '报错', '调试', '修复', '排查', '崩溃', '异常', '故障'],
-    'coding': ['code', 'function', 'class', 'refactor', 'implement', 'compile', 'lint',
-      'typescript', 'javascript', 'python', 'rust', '代码', '函数', '重构', '实现', '编译', '写个'],
-    'testing': ['test', 'unit test', 'jest', 'pytest', 'coverage', '测试', '单测', '覆盖率'],
-    'devops': ['deploy', 'docker', 'kubernetes', 'k8s', 'ci/cd', 'pipeline', 'release', 'build',
-      '部署', '发布', '构建', '流水线', '上线'],
-    'system_os': ['kernel', 'syscall', 'process', 'thread', 'memory', 'filesystem', 'driver',
-      '内核', '进程', '线程', '内存', '驱动', '系统盘', '磁盘'],
-    'writing_docs': ['document', 'readme', 'doc', 'write', 'summary', 'translate', 'article',
-      '文档', '撰写', '总结', '翻译', '文章', '报告', '润色'],
-    'research_search': ['search', 'research', 'find', 'latest', 'news', 'compare',
-      '搜索', '调研', '查找', '最新', '新闻', '对比', '资料'],
-    'data_ai': ['dataset', 'model', 'train', 'embedding', 'llm', 'prompt', 'rag', 'agent',
-      '数据集', '训练', '模型', '向量', '提示词', '智能体'],
+    debugging: [
+      'debug',
+      'bug',
+      'fix',
+      'error',
+      'stack trace',
+      'traceback',
+      'exception',
+      '报错',
+      '调试',
+      '修复',
+      '排查',
+      '崩溃',
+      '异常',
+      '故障',
+    ],
+    coding: [
+      'code',
+      'function',
+      'class',
+      'refactor',
+      'implement',
+      'compile',
+      'lint',
+      'typescript',
+      'javascript',
+      'python',
+      'rust',
+      '代码',
+      '函数',
+      '重构',
+      '实现',
+      '编译',
+      '写个',
+    ],
+    testing: ['test', 'unit test', 'jest', 'pytest', 'coverage', '测试', '单测', '覆盖率'],
+    devops: [
+      'deploy',
+      'docker',
+      'kubernetes',
+      'k8s',
+      'ci/cd',
+      'pipeline',
+      'release',
+      'build',
+      '部署',
+      '发布',
+      '构建',
+      '流水线',
+      '上线',
+    ],
+    system_os: [
+      'kernel',
+      'syscall',
+      'process',
+      'thread',
+      'memory',
+      'filesystem',
+      'driver',
+      '内核',
+      '进程',
+      '线程',
+      '内存',
+      '驱动',
+      '系统盘',
+      '磁盘',
+    ],
+    writing_docs: [
+      'document',
+      'readme',
+      'doc',
+      'write',
+      'summary',
+      'translate',
+      'article',
+      '文档',
+      '撰写',
+      '总结',
+      '翻译',
+      '文章',
+      '报告',
+      '润色',
+    ],
+    research_search: [
+      'search',
+      'research',
+      'find',
+      'latest',
+      'news',
+      'compare',
+      '搜索',
+      '调研',
+      '查找',
+      '最新',
+      '新闻',
+      '对比',
+      '资料',
+    ],
+    data_ai: [
+      'dataset',
+      'model',
+      'train',
+      'embedding',
+      'llm',
+      'prompt',
+      'rag',
+      'agent',
+      '数据集',
+      '训练',
+      '模型',
+      '向量',
+      '提示词',
+      '智能体',
+    ],
     // ── Legacy quant domains (kept for backward compatibility) ──
-    'technical_analysis': ['quote', 'rsi', 'macd', 'kdj', 'boll', '行情', '指标', '均线'],
-    'backtesting': ['backtest', '回测', 'strategy', '策略'],
-    'risk_management': ['risk', '风险', 'stop', '止损', 'position'],
-    'portfolio': ['portfolio', '持仓', '组合', 'account', '账户'],
+    technical_analysis: ['quote', 'rsi', 'macd', 'kdj', 'boll', '行情', '指标', '均线'],
+    backtesting: ['backtest', '回测', 'strategy', '策略'],
+    risk_management: ['risk', '风险', 'stop', '止损', 'position'],
+    portfolio: ['portfolio', '持仓', '组合', 'account', '账户'],
   };
 
   for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-    if (keywords.some(kw => lower.includes(kw))) {
+    if (keywords.some((kw) => lower.includes(kw))) {
       return topic;
     }
   }
@@ -556,7 +695,9 @@ function _classifyTopic(command) {
 }
 
 function _calculatePreferred(history) {
-  if (!history || history.length === 0) return null;
+  if (!history || history.length === 0) {
+    return null;
+  }
 
   // Weight recent entries more heavily
   const scores = {};
@@ -566,7 +707,9 @@ function _calculatePreferred(history) {
     const entry = recent[i];
     const key = `${entry.adapter}/${entry.model}`;
     const recencyWeight = (i + 1) / recent.length; // Later = higher weight
-    if (!scores[key]) scores[key] = { total: 0, count: 0 };
+    if (!scores[key]) {
+      scores[key] = { total: 0, count: 0 };
+    }
     scores[key].total += entry.satisfaction * recencyWeight;
     scores[key].count += recencyWeight;
   }

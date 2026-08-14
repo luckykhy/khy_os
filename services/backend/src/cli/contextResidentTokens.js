@@ -37,7 +37,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 // 门控:默认开;值为 0/false/off/no(大小写不敏感、去空白)→ 关,逐字节回退。
 function isEnabled(env) {
   const raw = env && env.KHY_CONTEXT_CACHE_TOKENS;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -50,7 +52,9 @@ const _num = require('../utils/finiteNumber').toNonNegOr0;
 // 由 call-site 传入(其历史已解析的未缓存输入基数),叶子只负责把缓存两段加回去。
 function contextResidentTokensOr(tokenUsage, legacyBase, env = process.env) {
   const base = _num(legacyBase);
-  if (!isEnabled(env)) return base;
+  if (!isEnabled(env)) {
+    return base;
+  }
   const read = _num(tokenUsage && tokenUsage.cacheReadInputTokens);
   const write = _num(tokenUsage && tokenUsage.cacheWriteInputTokens);
   return base + read + write;

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.8",
+  "version": "1.1.9",
   "nodeTarget": "node22",
   "modules": [
     {
@@ -40,7 +40,7 @@
         "gatewayStatusView"
       ],
       "services": ["aiGateway", "adapters", "protocolConverter"],
-      "excludeDeps": ["ink", "react", "react-devtools-core", "inquirer", "ora", "better-sqlite3"],
+      "excludeDeps": ["ink", "react", "inquirer", "ora", "better-sqlite3"],
       "includeDeps": ["express", "axios", "ws", "chalk", "dotenv", "winston", "cors"],
       "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
     },
@@ -59,7 +59,7 @@
         "training"
       ],
       "services": ["backtestEngine", "akshareDataService", "alternativeDataService", "modelTrainingService"],
-      "excludeDeps": ["ink", "react", "react-devtools-core", "@opentelemetry/*", "node-llama-cpp"],
+      "excludeDeps": ["ink", "react", "@opentelemetry/*", "node-llama-cpp"],
       "includeDeps": ["pg", "sequelize", "axios", "chalk", "dotenv", "winston", "moment"],
       "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
     },
@@ -70,7 +70,7 @@
       "entry": "khy-server-entry.js",
       "handlers": [],
       "services": ["expressRoutes", "models", "admin"],
-      "excludeDeps": ["ink", "react", "react-devtools-core", "inquirer", "ora", "node-pty"],
+      "excludeDeps": ["ink", "react", "inquirer", "ora", "node-pty"],
       "includeDeps": ["express", "pg", "sequelize", "cors", "helmet", "jsonwebtoken", "bcryptjs", "prom-client"],
       "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]
     },

@@ -33,7 +33,9 @@ const ON_VALUES = ['1', 'true', 'on', 'yes'];
 
 /** 门控:无人值守自动作答(默认关;仅显式真值开)。 */
 function isEnabled(env = process.env) {
-  const v = String((env && env.KHY_UNATTENDED_AUTOANSWER) == null ? '' : env.KHY_UNATTENDED_AUTOANSWER)
+  const v = String(
+    (env && env.KHY_UNATTENDED_AUTOANSWER) == null ? '' : env.KHY_UNATTENDED_AUTOANSWER
+  )
     .trim()
     .toLowerCase();
   return ON_VALUES.includes(v);
@@ -41,8 +43,12 @@ function isEnabled(env = process.env) {
 
 /** 取一个选项的可读标签(string 直接用,对象取 label/value)。 */
 function _optLabel(o) {
-  if (typeof o === 'string') return o;
-  if (o && (o.label || o.value)) return String(o.label || o.value);
+  if (typeof o === 'string') {
+    return o;
+  }
+  if (o && (o.label || o.value)) {
+    return String(o.label || o.value);
+  }
   return '';
 }
 
@@ -55,14 +61,24 @@ function _optLabel(o) {
  * @returns {{ qText:string, answer:string, recommended:boolean, realigned:boolean, reason:string }|null}
  */
 function _pickForQuestion(q, intentContext, env = process.env) {
-  if (!q || typeof q !== 'object') return null;
+  if (!q || typeof q !== 'object') {
+    return null;
+  }
   const qText = String(q.question || '').trim();
-  if (!qText) return null;
+  if (!qText) {
+    return null;
+  }
   const opts = Array.isArray(q.options) ? q.options : [];
-  if (opts.length === 0) return null;
+  if (opts.length === 0) {
+    return null;
+  }
   // 推荐前置(门控关时 questionQuality 返回原序;此处我们仍取 index 0 作为「最推荐」默认)。
   let ordered = opts;
-  try { ordered = questionQuality.promoteRecommendedFirst(opts); } catch { ordered = opts; }
+  try {
+    ordered = questionQuality.promoteRecommendedFirst(opts);
+  } catch {
+    ordered = opts;
+  }
   let chosen = ordered[0];
   let realigned = false;
   let reason = 'baseline';
@@ -81,12 +97,20 @@ function _pickForQuestion(q, intentContext, env = process.env) {
         realigned = !!refined.realigned;
         reason = refined.reason || reason;
       }
-    } catch { /* fail-soft:校准失败绝不影响作答,保留基线 */ }
+    } catch {
+      /* fail-soft:校准失败绝不影响作答,保留基线 */
+    }
   }
   const answer = _optLabel(chosen).trim();
-  if (!answer) return null;
+  if (!answer) {
+    return null;
+  }
   let recommended = false;
-  try { recommended = questionQuality.isRecommendedOption(chosen); } catch { recommended = false; }
+  try {
+    recommended = questionQuality.isRecommendedOption(chosen);
+  } catch {
+    recommended = false;
+  }
   return { qText, answer, recommended, realigned, reason };
 }
 
@@ -100,14 +124,20 @@ function _pickForQuestion(q, intentContext, env = process.env) {
  */
 function selectAutoAnswers(questions, env = process.env, intentContext = null) {
   const empty = { answers: {}, picks: [] };
-  if (!isEnabled(env)) return empty;
-  if (!Array.isArray(questions) || questions.length === 0) return empty;
+  if (!isEnabled(env)) {
+    return empty;
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return empty;
+  }
   try {
     const answers = {};
     const picks = [];
     for (const q of questions) {
       const p = _pickForQuestion(q, intentContext, env);
-      if (!p) continue;
+      if (!p) {
+        continue;
+      }
       answers[p.qText] = p.answer;
       picks.push({
         question: p.qText,
@@ -130,10 +160,12 @@ function selectAutoAnswers(questions, env = process.env, intentContext = null) {
  */
 function buildAutoAnswerNote(picks) {
   try {
-    if (!Array.isArray(picks) || picks.length === 0) return '';
+    if (!Array.isArray(picks) || picks.length === 0) {
+      return '';
+    }
     const parts = picks.map((p) => {
       // 透明轨迹:被按用户本意校准过的卡显式标注,让「不偏离本意」的动作可见、可审计。
-      const tag = p.realigned ? '(已按你的目标校准)' : (p.recommended ? '(推荐)' : '');
+      const tag = p.realigned ? '(已按你的目标校准)' : p.recommended ? '(推荐)' : '';
       return `「${p.question}」→ ${p.answer}${tag}`;
     });
     return `[无人值守·已自动采用推荐选项作答] ${parts.join('; ')}`;

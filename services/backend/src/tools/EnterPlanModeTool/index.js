@@ -15,8 +15,12 @@ class EnterPlanModeTool extends BaseTool {
   static searchHint = 'plan mode planning structured task';
   static alwaysLoad = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Enter plan mode to create a structured execution plan for a complex task.
@@ -47,7 +51,8 @@ Provide a clear, detailed description of the task so the plan generator has full
       properties: {
         task_description: {
           type: 'string',
-          description: 'Detailed description of the task to plan. Include all relevant context, constraints, and expected outcomes.',
+          description:
+            'Detailed description of the task to plan. Include all relevant context, constraints, and expected outcomes.',
         },
       },
       required: ['task_description'],
@@ -74,7 +79,10 @@ Provide a clear, detailed description of the task so the plan generator has full
 
       // Generate the plan
       const ai = require('../../cli/ai');
-      const { plan, rawResponse, provider, elapsed } = await planMode.enterPlanMode(task_description, ai);
+      const { plan, rawResponse, provider, elapsed } = await planMode.enterPlanMode(
+        task_description,
+        ai
+      );
 
       if (!plan || !plan.steps || plan.steps.length === 0) {
         planMode.reset();
@@ -98,7 +106,11 @@ Provide a clear, detailed description of the task so the plan generator has full
         message: `Plan generated with ${plan.steps.length} steps. Use ExitPlanMode to approve and execute.`,
       };
     } catch (err) {
-      try { require('../../services/planModeService').reset(); } catch { /* ignore */ }
+      try {
+        require('../../services/planModeService').reset();
+      } catch {
+        /* ignore */
+      }
       return { success: false, error: err.message };
     }
   }

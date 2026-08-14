@@ -47,7 +47,7 @@
     <el-card class="section-card" shadow="hover">
       <template #header>
         <span>Agent 层级</span>
-        <el-tag v-if="dashboard.stats" size="small" type="info" style="margin-left:8px">
+        <el-tag v-if="dashboard.stats" size="small" type="info" style="margin-left: 8px">
           最大深度：{{ dashboard.stats.maxDepth }}
         </el-tag>
       </template>
@@ -115,111 +115,113 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Cpu } from '@element-plus/icons-vue'
-import request from '@/api/request'
-import KhyEmpty from '@/components/KhyEmpty.vue'
-import KhyPageHeader from '@/components/KhyPageHeader.vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Cpu } from '@element-plus/icons-vue';
+import request from '@/api/request';
+import KhyEmpty from '@/components/KhyEmpty.vue';
+import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
-const loading = ref(false)
-const autoRefresh = ref(true)
-const degraded = ref(false)
-const dashboard = ref({ agents: [], tree: [], stats: {} })
+const loading = ref(false);
+const autoRefresh = ref(true);
+const degraded = ref(false);
+const dashboard = ref({ agents: [], tree: [], stats: {} });
 
 // 轮询退避:正常 5s 一次;连续失败按指数退避(封顶 60s),连续失败达上限后
 // 停摆并亮出降级横幅,等待用户手动重试。避免后端不可用时的固定高频空转。
-const BASE_INTERVAL = 5000
-const MAX_INTERVAL = 60000
-const MAX_FAILURES = 3
-let timer = null
-let failures = 0
+const BASE_INTERVAL = 5000;
+const MAX_INTERVAL = 60000;
+const MAX_FAILURES = 3;
+let timer = null;
+let failures = 0;
 
-const agents = computed(() => dashboard.value.agents || [])
-const tree = computed(() => dashboard.value.tree || [])
+const agents = computed(() => dashboard.value.agents || []);
+const tree = computed(() => dashboard.value.tree || []);
 
 const statCards = computed(() => {
-  const s = dashboard.value.stats || {}
+  const s = dashboard.value.stats || {};
   return [
     { label: '总计', value: s.total || 0, color: 'var(--khy-primary)' },
     { label: '运行中', value: s.running || 0, color: 'var(--khy-warning)' },
     { label: '已完成', value: s.completed || 0, color: 'var(--khy-success)' },
     { label: '失败', value: s.failed || 0, color: 'var(--khy-danger)' },
-  ]
-})
+  ];
+});
 
 function statusTagType(status) {
-  const map = { running: 'warning', completed: 'success', failed: 'danger', idle: 'info' }
-  return map[status] || 'info'
+  const map = { running: 'warning', completed: 'success', failed: 'danger', idle: 'info' };
+  return map[status] || 'info';
 }
 
 function formatMs(ms) {
-  if (!ms || ms <= 0) return '-'
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  if (!ms || ms <= 0) return '-';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function clearTimer() {
-  if (timer) { clearTimeout(timer); timer = null }
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
 }
 
 // 退避轮询下一拍:成功恢复基准间隔,失败按 2^n 增长封顶 60s。
 function scheduleNext() {
-  if (!autoRefresh.value || degraded.value) return
-  const delay = failures > 0
-    ? Math.min(BASE_INTERVAL * 2 ** failures, MAX_INTERVAL)
-    : BASE_INTERVAL
-  clearTimer()
-  timer = setTimeout(fetchDashboard, delay)
+  if (!autoRefresh.value || degraded.value) return;
+  const delay =
+    failures > 0 ? Math.min(BASE_INTERVAL * 2 ** failures, MAX_INTERVAL) : BASE_INTERVAL;
+  clearTimer();
+  timer = setTimeout(fetchDashboard, delay);
 }
 
 async function fetchDashboard() {
-  loading.value = true
+  loading.value = true;
   try {
     // silent:轮询自带降级横幅,不需要全局拦截器再弹 toast。
-    const res = await request.get('/api/ai-gateway-admin/agents/dashboard', { silent: true })
-    const data = res?.data?.data || res?.data || res
+    const res = await request.get('/api/ai-gateway-admin/agents/dashboard', { silent: true });
+    const data = res?.data?.data || res?.data || res;
     if (data && typeof data === 'object') {
-      dashboard.value = data
+      dashboard.value = data;
     }
-    failures = 0
-    degraded.value = false
+    failures = 0;
+    degraded.value = false;
   } catch {
-    failures += 1
+    failures += 1;
     if (failures >= MAX_FAILURES) {
-      degraded.value = true
-      clearTimer()
+      degraded.value = true;
+      clearTimer();
     }
   } finally {
-    loading.value = false
-    scheduleNext()
+    loading.value = false;
+    scheduleNext();
   }
 }
 
 // 手动刷新 / 重试:清零退避状态并立即拉取,失败计数归零后自动恢复轮询。
 function manualRefresh() {
-  failures = 0
-  degraded.value = false
-  clearTimer()
-  fetchDashboard()
+  failures = 0;
+  degraded.value = false;
+  clearTimer();
+  fetchDashboard();
 }
 
 function toggleAutoRefresh(val) {
   if (val) {
-    failures = 0
-    degraded.value = false
-    fetchDashboard()
+    failures = 0;
+    degraded.value = false;
+    fetchDashboard();
   } else {
-    clearTimer()
+    clearTimer();
   }
 }
 
 onMounted(() => {
-  fetchDashboard()
-})
+  fetchDashboard();
+});
 
 onUnmounted(() => {
-  clearTimer()
-})
+  clearTimer();
+});
 </script>
 
 <style scoped>

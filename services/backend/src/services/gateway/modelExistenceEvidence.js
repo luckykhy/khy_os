@@ -35,10 +35,14 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
 function isEnabled(env = process.env) {
   try {
     return require('../flagRegistry').isFlagEnabled('KHY_MNF_EXISTENCE_NOTE', env || process.env);
-  } catch { /* fall through to local */ }
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_MNF_EXISTENCE_NOTE;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -48,15 +52,24 @@ function isEnabled(env = process.env) {
 // 「已送达上游」的信号:上游对参数/token 的拒绝证明请求到了模型(模型存在),这类**不是** 404 不存在。
 //   GLM code 1210(max_tokens 过大)/1211(视觉参数超限)、max_tokens/context length/too large/too long、
 //   以及泛化的参数类 invalid_request/parameter 报错。
-const _REACHED_MSG_RE = /(?:\b|code\s*)(?:1210|1211)\b|max[_\s-]?tokens|context[_\s-]?length|too\s+(?:large|long|many\s+tokens)|invalid[_\s-]?request|parameter/i;
+const _REACHED_MSG_RE =
+  /(?:\b|code\s*)(?:1210|1211)\b|max[_\s-]?tokens|context[_\s-]?length|too\s+(?:large|long|many\s+tokens)|invalid[_\s-]?request|parameter/i;
 
 // 「已送达上游」的 errorType:凡非「不存在/鉴权/不可用」类的失败,都意味着请求到达了模型。
 const _ABSENCE_OR_PREFLIGHT_TYPES = new Set([
-  'model_not_found', 'auth', 'auth_permanent', 'permission', 'unavailable', 'cancelled', 'empty',
+  'model_not_found',
+  'auth',
+  'auth_permanent',
+  'permission',
+  'unavailable',
+  'cancelled',
+  'empty',
 ]);
 
 function _norm(s) {
-  return String(s == null ? '' : s).trim().toLowerCase();
+  return String(s == null ? '' : s)
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -69,11 +82,17 @@ function hasReachedEvidence(attempts) {
   try {
     const list = Array.isArray(attempts) ? attempts : [];
     for (const a of list) {
-      if (!a || a.success === true) continue;
+      if (!a || a.success === true) {
+        continue;
+      }
       const type = _norm(a.errorType);
-      if (type && !_ABSENCE_OR_PREFLIGHT_TYPES.has(type)) return true;
+      if (type && !_ABSENCE_OR_PREFLIGHT_TYPES.has(type)) {
+        return true;
+      }
       const msg = String(a.error || a.rawError || a.message || '');
-      if (_REACHED_MSG_RE.test(msg)) return true;
+      if (_REACHED_MSG_RE.test(msg)) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -86,12 +105,15 @@ function hasReachedEvidence(attempts) {
 const _COMPOSITE_ROUTE_RE = /^[a-z0-9_-]+[:/][a-z0-9_-]+[:/].+$/i;
 
 // 从错误消息里粗取模型串(用于复合 id 形状判定)。取不到 → ''。
-const _MODEL_IN_MSG_RE = /model[_\s-]?not[_\s-]?found[:\s]+[`'"]?([\w./:\-]+)|the\s+model\s+[`'"]?([\w./:\-]+)[`'"]?\s+does\s+not\s+exist/i;
+const _MODEL_IN_MSG_RE =
+  /model[_\s-]?not[_\s-]?found[:\s]+[`'"]?([\w./:\-]+)|the\s+model\s+[`'"]?([\w./:\-]+)[`'"]?\s+does\s+not\s+exist/i;
 
 function _looksComposite(model, message) {
   try {
     const explicit = String(model == null ? '' : model).trim();
-    if (explicit) return _COMPOSITE_ROUTE_RE.test(explicit);
+    if (explicit) {
+      return _COMPOSITE_ROUTE_RE.test(explicit);
+    }
     const m = String(message == null ? '' : message).match(_MODEL_IN_MSG_RE);
     const found = m && (m[1] || m[2]);
     return found ? _COMPOSITE_ROUTE_RE.test(found.trim()) : false;
@@ -116,17 +138,29 @@ function _looksComposite(model, message) {
 function annotateModelNotFoundLine(opts = {}) {
   const line = String((opts && opts.line) == null ? '' : opts.line);
   try {
-    if (!isEnabled(opts && opts.env)) return line;
-    if (_norm(opts.errorType) !== 'model_not_found') return line;
+    if (!isEnabled(opts && opts.env)) {
+      return line;
+    }
+    if (_norm(opts.errorType) !== 'model_not_found') {
+      return line;
+    }
     const composite = _looksComposite(opts.model, opts.message);
     const reached = hasReachedEvidence(opts.attempts);
-    if (!composite && !reached) return line;
-    if (composite) {
-      return line + '（注:送出的是复合路由 id[api:<pool>:<model>],上游只认裸模型名——属送错字符串,'
-        + '剥成裸名即可,非模型不存在）';
+    if (!composite && !reached) {
+      return line;
     }
-    return line + '（注:本轮该模型曾送达上游[有参数/token 类报错为证],此 model_not_found 多为复合 id 未剥裸名'
-      + '或临时路由所致,非模型真的不存在——剥裸名/重试通常即可成功）';
+    if (composite) {
+      return (
+        line +
+        '（注:送出的是复合路由 id[api:<pool>:<model>],上游只认裸模型名——属送错字符串,' +
+        '剥成裸名即可,非模型不存在）'
+      );
+    }
+    return (
+      line +
+      '（注:本轮该模型曾送达上游[有参数/token 类报错为证],此 model_not_found 多为复合 id 未剥裸名' +
+      '或临时路由所致,非模型真的不存在——剥裸名/重试通常即可成功）'
+    );
   } catch {
     return line;
   }
@@ -138,9 +172,10 @@ function describeModelExistenceEvidence() {
     gate: 'KHY_MNF_EXISTENCE_NOTE',
     parent: 'KHY_MODEL_NOT_FOUND_RECOVERY',
     defaultOn: true,
-    summary: '当有证据表明模型已送达上游(参数/token 类报错、或送出串为复合路由 id)时,为 model_not_found 的'
-      + '「真实失败原因」行追加纠偏注解(复合 id → 送错字符串;已送达 → 非模型不存在),消解「刚嫌 token 太大、'
-      + '转头又说找不到模型」的自相矛盾。只改显示、不改分类,门控关或无证据则逐字节回退。',
+    summary:
+      '当有证据表明模型已送达上游(参数/token 类报错、或送出串为复合路由 id)时,为 model_not_found 的' +
+      '「真实失败原因」行追加纠偏注解(复合 id → 送错字符串;已送达 → 非模型不存在),消解「刚嫌 token 太大、' +
+      '转头又说找不到模型」的自相矛盾。只改显示、不改分类,门控关或无证据则逐字节回退。',
   };
 }
 

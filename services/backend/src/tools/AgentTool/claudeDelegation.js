@@ -55,11 +55,16 @@ function _defaultIsAutoDelegationEnabled() {
  */
 function _looksLikeClaudeCodeTask(prompt, role) {
   const text = String(prompt || '');
-  if (text.trim().length < 40) return false; // 太短的任务不值得委派重进程
+  if (text.trim().length < 40) {
+    return false;
+  } // 太短的任务不值得委派重进程
 
   // 强信号：跨多文件 / 重构 / 大型实现 / 迁移 / 端到端。中英双语。
-  const strong = /(重构|多文件|跨文件|整个(项目|模块|代码库)|端到端|大规模|迁移|migrat(e|ion)|refactor|across (multiple )?files|whole (project|codebase|module)|end[- ]to[- ]end|large[- ]scale)/i;
-  if (strong.test(text)) return true;
+  const strong =
+    /(重构|多文件|跨文件|整个(项目|模块|代码库)|端到端|大规模|迁移|migrat(e|ion)|refactor|across (multiple )?files|whole (project|codebase|module)|end[- ]to[- ]end|large[- ]scale)/i;
+  if (strong.test(text)) {
+    return true;
+  }
 
   // 中等信号需叠加：明确「实现 + 长描述」才算（实现类 role 且描述足够具体）。
   const impl = /(实现|开发|搭建|build|implement|develop|scaffold)/i;
@@ -83,9 +88,10 @@ function _looksLikeClaudeCodeTask(prompt, role) {
  */
 function decideClaudeDelegation(task = {}, deps = {}) {
   const detect = typeof deps.detect === 'function' ? deps.detect : _defaultDetect;
-  const isAutoDelegationEnabled = typeof deps.isAutoDelegationEnabled === 'function'
-    ? deps.isAutoDelegationEnabled
-    : _defaultIsAutoDelegationEnabled;
+  const isAutoDelegationEnabled =
+    typeof deps.isAutoDelegationEnabled === 'function'
+      ? deps.isAutoDelegationEnabled
+      : _defaultIsAutoDelegationEnabled;
 
   const { prompt = '', role = '', explicitlyRequested = false } = task;
 
@@ -113,10 +119,22 @@ function decideClaudeDelegation(task = {}, deps = {}) {
 
     // ── auto：Khy 自动判断（flag 默认关，opt-in） ──
     if (!isAutoDelegationEnabled()) {
-      return { delegate: false, adapter: null, reason: 'auto 委派未启用', available: false, mode: 'none' };
+      return {
+        delegate: false,
+        adapter: null,
+        reason: 'auto 委派未启用',
+        available: false,
+        mode: 'none',
+      };
     }
     if (!_looksLikeClaudeCodeTask(prompt, role)) {
-      return { delegate: false, adapter: null, reason: '任务未达 Claude Code 委派阈值，由 Khy 自身处理', available: false, mode: 'none' };
+      return {
+        delegate: false,
+        adapter: null,
+        reason: '任务未达 Claude Code 委派阈值，由 Khy 自身处理',
+        available: false,
+        mode: 'none',
+      };
     }
     const available = !!detect();
     if (!available) {
@@ -137,7 +155,13 @@ function decideClaudeDelegation(task = {}, deps = {}) {
     };
   } catch {
     // fail-soft：决策本身出任何错都不委派、不抛，让 AgentTool 走自身路径。
-    return { delegate: false, adapter: null, reason: '委派决策异常，已回退 Khy 自身处理', available: false, mode: 'none' };
+    return {
+      delegate: false,
+      adapter: null,
+      reason: '委派决策异常，已回退 Khy 自身处理',
+      available: false,
+      mode: 'none',
+    };
   }
 }
 

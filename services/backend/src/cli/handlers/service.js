@@ -2,8 +2,9 @@
  * Service management CLI handlers: server start/status, db init/seed/status.
  */
 const { execFileSync } = require('child_process');
-const path = require('path');
 const http = require('http');
+const path = require('path');
+
 const chalk = require('chalk').default || require('chalk');
 const { bootstrap } = require('../bootstrap');
 const { printSuccess, printError, printInfo, printTable, withSpinner } = require('../formatters');
@@ -14,7 +15,9 @@ async function handleServerStart(options = {}) {
   const { spawn } = require('child_process');
   const net = require('net');
   const PORT = parseInt(options.port || process.env.PORT || '3000', 10);
-  if (options.port) process.env.PORT = String(PORT);
+  if (options.port) {
+    process.env.PORT = String(PORT);
+  }
   const STARTUP_WAIT_MS = parseInt(process.env.KHY_SERVER_START_WAIT_MS || '6000', 10);
   const MAX_ERR_CHARS = 1200;
 
@@ -22,7 +25,10 @@ async function handleServerStart(options = {}) {
   const inUse = await new Promise((resolve) => {
     const srv = net.createServer();
     srv.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
-    srv.once('listening', () => { srv.close(); resolve(false); });
+    srv.once('listening', () => {
+      srv.close();
+      resolve(false);
+    });
     srv.listen(PORT);
   });
 
@@ -45,7 +51,9 @@ async function handleServerStart(options = {}) {
   let exitCode = null;
   let earlyError = '';
   const captureEarlyOutput = (chunk) => {
-    if (earlyError.length >= MAX_ERR_CHARS) return;
+    if (earlyError.length >= MAX_ERR_CHARS) {
+      return;
+    }
     earlyError += String(chunk || '').slice(0, MAX_ERR_CHARS - earlyError.length);
   };
   child.on('exit', (code) => {
@@ -56,16 +64,20 @@ async function handleServerStart(options = {}) {
   child.stderr.on('data', captureEarlyOutput);
 
   // Wait for server to bind
-  await new Promise(r => setTimeout(r, STARTUP_WAIT_MS));
-  const portInUse = async () => new Promise((resolve) => {
-    const srv = net.createServer();
-    srv.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
-    srv.once('listening', () => { srv.close(); resolve(false); });
-    srv.listen(PORT);
-  });
+  await new Promise((r) => setTimeout(r, STARTUP_WAIT_MS));
+  const portInUse = async () =>
+    new Promise((resolve) => {
+      const srv = net.createServer();
+      srv.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
+      srv.once('listening', () => {
+        srv.close();
+        resolve(false);
+      });
+      srv.listen(PORT);
+    });
   let nowRunning = await portInUse();
   if (!nowRunning) {
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1500));
     nowRunning = await portInUse();
   }
 
@@ -78,7 +90,7 @@ async function handleServerStart(options = {}) {
     printError(`后端服务启动失败 (exit code: ${exitCode == null ? 'unknown' : exitCode})`);
     const hint = String(earlyError || '')
       .split('\n')
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .find(Boolean);
     if (hint) {
       printInfo(`错误摘要: ${hint.slice(0, 180)}`);
@@ -91,12 +103,18 @@ async function handleServerStart(options = {}) {
   const bindError = /listen\\s+E(?:PERM|ADDRINUSE|ACCES)|uncaught\\s+exception/i.test(earlyError);
   if (bindError) {
     printError('后端服务启动失败 (端口监听异常)');
-    const hint = String(earlyError || '')
-      .split('\n')
-      .map(s => s.trim())
-      .find(s => /listen\\s+E(?:PERM|ADDRINUSE|ACCES)|uncaught\\s+exception/i.test(s))
-      || String(earlyError || '').split('\n').map(s => s.trim()).find(Boolean);
-    if (hint) printInfo(`错误摘要: ${hint.slice(0, 180)}`);
+    const hint =
+      String(earlyError || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .find((s) => /listen\\s+E(?:PERM|ADDRINUSE|ACCES)|uncaught\\s+exception/i.test(s)) ||
+      String(earlyError || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .find(Boolean);
+    if (hint) {
+      printInfo(`错误摘要: ${hint.slice(0, 180)}`);
+    }
     return;
   }
 
@@ -111,7 +129,9 @@ async function handleServerStatus() {
   return new Promise((resolve) => {
     const req = http.get(url, { timeout: 3000 }, (res) => {
       let body = '';
-      res.on('data', chunk => { body += chunk; });
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
       res.on('end', () => {
         try {
           const data = JSON.parse(body);

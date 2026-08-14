@@ -32,11 +32,12 @@
  * Deterministic + side-effect free (the solver holds no mutable state).
  */
 
-const strategy = require('../metaplan/constraintStrategy');
 const injection = require('../metaplan/constraintInjection');
+const strategy = require('../metaplan/constraintStrategy');
+
 const probeMod = require('./capabilityProbe');
-const riskMod = require('./riskClassifier');
 const matrix = require('./constraintMatrix');
+const riskMod = require('./riskClassifier');
 
 class MetaConstraintSolver {
   /**
@@ -102,13 +103,20 @@ class MetaConstraintSolver {
   reconcile(capabilityFloor, declaredStrategy) {
     const eff = strategy.escalate(capabilityFloor, declaredStrategy);
     let raisedBy = 'equal';
-    if (strategy.rankOf(capabilityFloor) > strategy.rankOf(declaredStrategy)) raisedBy = 'capability';
-    else if (strategy.rankOf(declaredStrategy) > strategy.rankOf(capabilityFloor)) raisedBy = 'model';
+    if (strategy.rankOf(capabilityFloor) > strategy.rankOf(declaredStrategy)) {
+      raisedBy = 'capability';
+    } else if (strategy.rankOf(declaredStrategy) > strategy.rankOf(capabilityFloor)) {
+      raisedBy = 'model';
+    }
     return {
       strategy: eff,
       raisedBy,
-      capabilityFloor: strategy.isStrategy(capabilityFloor) ? capabilityFloor : strategy.STRATEGIES.SYSTEM_BLOCK,
-      declaredStrategy: strategy.isStrategy(declaredStrategy) ? declaredStrategy : strategy.STRATEGIES.SYSTEM_BLOCK,
+      capabilityFloor: strategy.isStrategy(capabilityFloor)
+        ? capabilityFloor
+        : strategy.STRATEGIES.SYSTEM_BLOCK,
+      declaredStrategy: strategy.isStrategy(declaredStrategy)
+        ? declaredStrategy
+        : strategy.STRATEGIES.SYSTEM_BLOCK,
     };
   }
 
@@ -127,7 +135,9 @@ class MetaConstraintSolver {
    * @returns {object} a new ticket with the capability layer applied
    */
   applyToTicket(ticket, args = {}) {
-    if (!ticket || !ticket._plan) return ticket;
+    if (!ticket || !ticket._plan) {
+      return ticket;
+    }
 
     const solved = this.solve({
       modelId: args.modelId,

@@ -62,7 +62,9 @@ function _sessionKey(sessionId) {
   return sessionId ? String(sessionId) : '_no-session';
 }
 
-function _two(n) { return String(n).padStart(2, '0'); }
+function _two(n) {
+  return String(n).padStart(2, '0');
+}
 
 /**
  * Build a sortable receipt id: RCPT-YYYYMMDD-HHMMSS-<rand>.
@@ -78,11 +80,15 @@ function _newReceiptId() {
 }
 
 function _summarizeParams(params) {
-  if (!params || typeof params !== 'object') return {};
+  if (!params || typeof params !== 'object') {
+    return {};
+  }
   const out = {};
   for (const [k, v] of Object.entries(params)) {
-    if (k.startsWith('_')) continue; // internal fields
-    if (SENSITIVE_KEYS.some(s => k.toLowerCase().includes(s))) {
+    if (k.startsWith('_')) {
+      continue;
+    } // internal fields
+    if (SENSITIVE_KEYS.some((s) => k.toLowerCase().includes(s))) {
       out[k] = '***';
     } else if (typeof v === 'string' && v.length > MAX_STR) {
       out[k] = `${v.slice(0, MAX_STR)}… (${v.length} chars)`;
@@ -100,13 +106,18 @@ function _summarizeResult(result) {
     return { success: false };
   }
   const summary = { success: !!result.success };
-  if (result.error) summary.error = String(result.error).slice(0, MAX_STR);
-  if (typeof result.output === 'string' && result.output) {
-    summary.output = result.output.length > MAX_STR
-      ? `${result.output.slice(0, MAX_STR)}… (${result.output.length} chars)`
-      : result.output;
+  if (result.error) {
+    summary.error = String(result.error).slice(0, MAX_STR);
   }
-  if (result.exitCode != null) summary.exitCode = result.exitCode;
+  if (typeof result.output === 'string' && result.output) {
+    summary.output =
+      result.output.length > MAX_STR
+        ? `${result.output.slice(0, MAX_STR)}… (${result.output.length} chars)`
+        : result.output;
+  }
+  if (result.exitCode != null) {
+    summary.exitCode = result.exitCode;
+  }
   return summary;
 }
 
@@ -114,7 +125,9 @@ function _summarizeResult(result) {
 const _normTool = require('../utils/normalizeToolName');
 
 function _filePathOf(params) {
-  if (!params || typeof params !== 'object') return '';
+  if (!params || typeof params !== 'object') {
+    return '';
+  }
   return params.file_path || params.filePath || params.path || '';
 }
 
@@ -141,13 +154,21 @@ function startReceipt(ctx = {}) {
   const key = _sessionKey(ctx.sessionId);
   if (_open.has(key)) {
     // Flush the stale one before opening a new turn.
-    try { finalizeReceipt({ sessionId: ctx.sessionId, status: 'partial' }); } catch { /* ignore */ }
+    try {
+      finalizeReceipt({ sessionId: ctx.sessionId, status: 'partial' });
+    } catch {
+      /* ignore */
+    }
   }
   // Associate with the active companion (AgentFS #2 五类资产: Receipts). Explicit
   // ctx.companionId wins; otherwise fall back to the active companion pointer.
   let companionId = ctx.companionId || null;
   if (!companionId) {
-    try { companionId = require('./agentFs/agentFsService').getActiveAgentId(); } catch { companionId = null; }
+    try {
+      companionId = require('./agentFs/agentFsService').getActiveAgentId();
+    } catch {
+      companionId = null;
+    }
   }
 
   const receipt = {
@@ -190,7 +211,9 @@ function startReceipt(ctx = {}) {
  * @param {string} [entry.error]
  */
 function appendToolCall(entry = {}) {
-  if (!entry.tool) return;
+  if (!entry.tool) {
+    return;
+  }
   const key = _sessionKey(entry.sessionId);
   let receipt = _open.get(key);
   if (!receipt) {
@@ -198,9 +221,7 @@ function appendToolCall(entry = {}) {
   }
 
   const success = entry.result ? entry.result.success !== false : !entry.error;
-  const status = entry.permission === 'deny'
-    ? 'denied'
-    : (success ? 'ok' : 'failed');
+  const status = entry.permission === 'deny' ? 'denied' : success ? 'ok' : 'failed';
 
   const call = {
     seq: receipt.toolChain.length + 1,
@@ -219,8 +240,11 @@ function appendToolCall(entry = {}) {
 
   // Counters
   receipt.counts.tools += 1;
-  if (status === 'ok') receipt.counts.ok += 1;
-  else if (status === 'failed') receipt.counts.failed += 1;
+  if (status === 'ok') {
+    receipt.counts.ok += 1;
+  } else if (status === 'failed') {
+    receipt.counts.failed += 1;
+  }
 
   // Risk / approval rollup (可控)
   receipt.riskApproval.maxRisk = _higherRisk(receipt.riskApproval.maxRisk, call.risk);
@@ -239,15 +263,23 @@ function appendToolCall(entry = {}) {
     const fp = _filePathOf(entry.params);
     if (fp) {
       let action = null;
-      if (WRITE_TOOLS.has(n)) action = 'write';
-      else if (EDIT_TOOLS.has(n)) action = 'edit';
-      else if (DELETE_TOOLS.has(n)) action = 'delete';
-      if (action) receipt.artifacts.files.push({ action, path: fp, seq: call.seq });
+      if (WRITE_TOOLS.has(n)) {
+        action = 'write';
+      } else if (EDIT_TOOLS.has(n)) {
+        action = 'edit';
+      } else if (DELETE_TOOLS.has(n)) {
+        action = 'delete';
+      }
+      if (action) {
+        receipt.artifacts.files.push({ action, path: fp, seq: call.seq });
+      }
     }
   }
 
   // First-seen error becomes the receipt-level error summary.
-  if (!receipt.error && call.error) receipt.error = call.error;
+  if (!receipt.error && call.error) {
+    receipt.error = call.error;
+  }
 
   return call;
 }
@@ -268,15 +300,25 @@ function appendToolCall(entry = {}) {
 function finalizeReceipt(opts = {}) {
   const key = _sessionKey(opts.sessionId);
   const receipt = _open.get(key);
-  if (!receipt) return null;
+  if (!receipt) {
+    return null;
+  }
   _open.delete(key);
 
   receipt.finalizedAt = new Date().toISOString();
   receipt.durationMs = Date.now() - receipt.startedTs;
-  if (opts.plan && !receipt.plan) receipt.plan = String(opts.plan).slice(0, 4000);
-  if (opts.summary) receipt.artifacts.summary = String(opts.summary).slice(0, 2000);
-  if (opts.error && !receipt.error) receipt.error = String(opts.error).slice(0, MAX_STR);
-  if (opts.gitCommit) receipt.gitCommit = String(opts.gitCommit);
+  if (opts.plan && !receipt.plan) {
+    receipt.plan = String(opts.plan).slice(0, 4000);
+  }
+  if (opts.summary) {
+    receipt.artifacts.summary = String(opts.summary).slice(0, 2000);
+  }
+  if (opts.error && !receipt.error) {
+    receipt.error = String(opts.error).slice(0, MAX_STR);
+  }
+  if (opts.gitCommit) {
+    receipt.gitCommit = String(opts.gitCommit);
+  }
 
   // Derive status when not explicitly provided.
   if (opts.status) {
@@ -291,28 +333,36 @@ function finalizeReceipt(opts = {}) {
   try {
     const dir = getDataDir('receipts', _sessionKey(receipt.sessionId));
     fs.writeFileSync(path.join(dir, `${receipt.id}.json`), JSON.stringify(receipt, null, 2));
-  } catch { /* persistence failure is non-critical to the turn */ }
+  } catch {
+    /* persistence failure is non-critical to the turn */
+  }
 
   // Emit onto the trace/audit bus for trace correlation + remote sinks.
   try {
     const traceAudit = require('./traceAuditService');
-    traceAudit.logEvent('tool.receipt', {
-      receiptId: receipt.id,
-      status: receipt.status,
-      tools: receipt.counts.tools,
-      ok: receipt.counts.ok,
-      failed: receipt.counts.failed,
-      maxRisk: receipt.riskApproval.maxRisk,
-      humanGated: receipt.riskApproval.humanGated.length,
-      durationMs: receipt.durationMs,
-    }, {
-      sessionId: receipt.sessionId,
-      traceId: receipt.traceId,
-      requestId: receipt.requestId,
-      source: 'receipt-service',
-      visibility: 'summary',
-    });
-  } catch { /* trace audit optional */ }
+    traceAudit.logEvent(
+      'tool.receipt',
+      {
+        receiptId: receipt.id,
+        status: receipt.status,
+        tools: receipt.counts.tools,
+        ok: receipt.counts.ok,
+        failed: receipt.counts.failed,
+        maxRisk: receipt.riskApproval.maxRisk,
+        humanGated: receipt.riskApproval.humanGated.length,
+        durationMs: receipt.durationMs,
+      },
+      {
+        sessionId: receipt.sessionId,
+        traceId: receipt.traceId,
+        requestId: receipt.requestId,
+        source: 'receipt-service',
+        visibility: 'summary',
+      }
+    );
+  } catch {
+    /* trace audit optional */
+  }
 
   return receipt;
 }
@@ -329,7 +379,11 @@ function _receiptsRoot() {
 }
 
 function _readReceiptFile(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 /** Walk every receipt JSON across all session folders. */
@@ -337,16 +391,26 @@ function _allReceiptFiles() {
   const root = _receiptsRoot();
   const files = [];
   let sessions = [];
-  try { sessions = fs.readdirSync(root); } catch { return files; }
+  try {
+    sessions = fs.readdirSync(root);
+  } catch {
+    return files;
+  }
   for (const s of sessions) {
     const sdir = path.join(root, s);
     let entries = [];
     try {
-      if (!fs.statSync(sdir).isDirectory()) continue;
+      if (!fs.statSync(sdir).isDirectory()) {
+        continue;
+      }
       entries = fs.readdirSync(sdir);
-    } catch { continue; }
+    } catch {
+      continue;
+    }
     for (const e of entries) {
-      if (e.startsWith('RCPT-') && e.endsWith('.json')) files.push(path.join(sdir, e));
+      if (e.startsWith('RCPT-') && e.endsWith('.json')) {
+        files.push(path.join(sdir, e));
+      }
     }
   }
   return files;
@@ -366,19 +430,22 @@ function listReceipts(opts = {}) {
   if (opts.sessionId) {
     const sdir = path.join(_receiptsRoot(), _sessionKey(opts.sessionId));
     try {
-      files = fs.readdirSync(sdir)
-        .filter(e => e.startsWith('RCPT-') && e.endsWith('.json'))
-        .map(e => path.join(sdir, e));
-    } catch { files = []; }
+      files = fs
+        .readdirSync(sdir)
+        .filter((e) => e.startsWith('RCPT-') && e.endsWith('.json'))
+        .map((e) => path.join(sdir, e));
+    } catch {
+      files = [];
+    }
   } else {
     files = _allReceiptFiles();
   }
   let records = files.map(_readReceiptFile).filter(Boolean);
   if (opts.companionId) {
-    records = records.filter(r => r.companionId === opts.companionId);
+    records = records.filter((r) => r.companionId === opts.companionId);
   }
   records.sort((a, b) => String(b.id).localeCompare(String(a.id)));
-  return records.slice(0, limit).map(r => ({
+  return records.slice(0, limit).map((r) => ({
     id: r.id,
     sessionId: r.sessionId,
     companionId: r.companionId || null,
@@ -393,9 +460,13 @@ function listReceipts(opts = {}) {
 
 /** Load a full receipt by id (searches all sessions). */
 function getReceipt(id) {
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   for (const f of _allReceiptFiles()) {
-    if (path.basename(f) === `${id}.json`) return _readReceiptFile(f);
+    if (path.basename(f) === `${id}.json`) {
+      return _readReceiptFile(f);
+    }
   }
   return null;
 }
@@ -406,22 +477,35 @@ function getReceipt(id) {
  * @param {object} [opts] — { limit }
  */
 function searchReceipts(keyword, opts = {}) {
-  const kw = String(keyword || '').toLowerCase().trim();
-  if (!kw) return [];
+  const kw = String(keyword || '')
+    .toLowerCase()
+    .trim();
+  if (!kw) {
+    return [];
+  }
   const limit = opts.limit || 50;
   const hits = [];
   for (const f of _allReceiptFiles()) {
     const r = _readReceiptFile(f);
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     const haystack = [
-      r.goal, r.plan, r.error,
-      ...(r.toolChain || []).map(c => c.tool),
-      ...(r.artifacts?.files || []).map(a => a.path),
-    ].join(' ').toLowerCase();
+      r.goal,
+      r.plan,
+      r.error,
+      ...(r.toolChain || []).map((c) => c.tool),
+      ...(r.artifacts?.files || []).map((a) => a.path),
+    ]
+      .join(' ')
+      .toLowerCase();
     if (haystack.includes(kw)) {
       hits.push({
-        id: r.id, sessionId: r.sessionId, status: r.status,
-        goal: (r.goal || '').slice(0, 80), startedAt: r.startedAt,
+        id: r.id,
+        sessionId: r.sessionId,
+        status: r.status,
+        goal: (r.goal || '').slice(0, 80),
+        startedAt: r.startedAt,
       });
     }
   }
@@ -456,8 +540,9 @@ function _newOrchId() {
  */
 function saveOrchestrationReceipt(entry = {}) {
   const summary = entry.summary || {};
-  const status = entry.status
-    || (summary.failCount > 0 ? (summary.successCount > 0 ? 'partial' : 'failed') : 'completed');
+  const status =
+    entry.status ||
+    (summary.failCount > 0 ? (summary.successCount > 0 ? 'partial' : 'failed') : 'completed');
 
   const receipt = {
     id: _newOrchId(),
@@ -479,26 +564,34 @@ function saveOrchestrationReceipt(entry = {}) {
   try {
     const dir = getDataDir('receipts', 'orchestration', receipt.sessionId);
     fs.writeFileSync(path.join(dir, `${receipt.id}.json`), JSON.stringify(receipt, null, 2));
-  } catch { /* persistence failure is non-critical */ }
+  } catch {
+    /* persistence failure is non-critical */
+  }
 
   try {
     const traceAudit = require('./traceAuditService');
-    traceAudit.logEvent('tool.orchestration.receipt', {
-      receiptId: receipt.id,
-      mode: receipt.mode,
-      status: receipt.status,
-      subtaskCount: receipt.subtaskCount,
-      successCount: receipt.successCount,
-      failCount: receipt.failCount,
-      totalDurationMs: receipt.totalDurationMs,
-      byExecutor: receipt.byExecutor,
-      byStepType: receipt.byStepType,
-    }, {
-      sessionId: receipt.sessionId,
-      source: 'receipt-service',
-      visibility: 'summary',
-    });
-  } catch { /* trace audit optional */ }
+    traceAudit.logEvent(
+      'tool.orchestration.receipt',
+      {
+        receiptId: receipt.id,
+        mode: receipt.mode,
+        status: receipt.status,
+        subtaskCount: receipt.subtaskCount,
+        successCount: receipt.successCount,
+        failCount: receipt.failCount,
+        totalDurationMs: receipt.totalDurationMs,
+        byExecutor: receipt.byExecutor,
+        byStepType: receipt.byStepType,
+      },
+      {
+        sessionId: receipt.sessionId,
+        source: 'receipt-service',
+        visibility: 'summary',
+      }
+    );
+  } catch {
+    /* trace audit optional */
+  }
 
   return receipt;
 }
@@ -517,16 +610,28 @@ function listOrchestrationReceipts(opts = {}) {
     for (const sess of fs.readdirSync(root)) {
       const sessDir = path.join(root, sess);
       let stat;
-      try { stat = fs.statSync(sessDir); } catch { continue; }
-      if (!stat.isDirectory()) continue;
+      try {
+        stat = fs.statSync(sessDir);
+      } catch {
+        continue;
+      }
+      if (!stat.isDirectory()) {
+        continue;
+      }
       for (const f of fs.readdirSync(sessDir)) {
-        if (!f.endsWith('.json')) continue;
+        if (!f.endsWith('.json')) {
+          continue;
+        }
         try {
           out.push(JSON.parse(fs.readFileSync(path.join(sessDir, f), 'utf-8')));
-        } catch { /* skip unreadable */ }
+        } catch {
+          /* skip unreadable */
+        }
       }
     }
-  } catch { /* no orchestration receipts yet */ }
+  } catch {
+    /* no orchestration receipts yet */
+  }
   out.sort((a, b) => String(b.id).localeCompare(String(a.id)));
   return out.slice(0, limit);
 }

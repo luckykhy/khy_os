@@ -45,6 +45,7 @@ describe('gateway status endpoint visibility options', () => {
     }));
     jest.doMock('../src/services/gateway/aiGateway', () => ({
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => []),
       testAdapter: jest.fn(async () => null),
@@ -131,6 +132,8 @@ describe('gateway status endpoint visibility options', () => {
     process.env.GATEWAY_API_POOL_DEFAULT_MODEL_MAP = JSON.stringify({
       sensenova: 'sensenova-6.7-flash-lite',
     });
+    // Built-in sensenova key is now env-var sourced (no hardcoded keys in source).
+    process.env.KHY_BUILTIN_SENSENOVA_KEY = 'builtin-sns-test-key';
 
     mockBaseDeps({
       apiKeysJson: JSON.stringify({
@@ -174,6 +177,8 @@ describe('gateway status endpoint visibility options', () => {
       relay: 'relay-model',
     });
     process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE = '/tmp/khy_gateway_prompt_debug.log';
+    // Built-in sensenova key is now env-var sourced (no hardcoded keys in source).
+    process.env.KHY_BUILTIN_SENSENOVA_KEY = 'builtin-sns-test-key-2';
 
     mockBaseDeps({
       apiKeysJson: JSON.stringify({
@@ -195,6 +200,7 @@ describe('gateway status endpoint visibility options', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'relay_api', name: 'API 中转', enabled: true, available: true, detail: 'ok', priority: 12 },
@@ -221,7 +227,7 @@ describe('gateway status endpoint visibility options', () => {
     });
 
     const payload = JSON.parse(logSpy.mock.calls.map((call) => String(call[0] || '')).join(''));
-    expect(payload.activeChannel).toEqual({ name: 'API 中转', type: 'relay_api' });
+    expect(payload.activeChannel).toEqual({ name: 'API 中转', type: 'relay_api', protocol: 'OpenAI' });
     expect(payload.activeKhyProtocolRisk).toEqual({
       risky: false,
       level: 'info',
@@ -320,6 +326,7 @@ describe('gateway status endpoint visibility options', () => {
     const never = new Promise(() => {});
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'relay_api', name: 'API 中转', enabled: true, available: true, detail: 'relay ok', priority: 10 },

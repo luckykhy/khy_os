@@ -37,7 +37,9 @@
  */
 
 function postEditDiagnosticsEnabled(env = process.env) {
-  const flag = String((env && env.KHY_POST_EDIT_DIAGNOSTICS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_POST_EDIT_DIAGNOSTICS) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -54,20 +56,32 @@ const _LINECOL_RE = /:\d+(?::\d+)?/g;
  */
 function normalizeErrorSignature(line) {
   try {
-    if (line == null) return '';
+    if (line == null) {
+      return '';
+    }
     let s = String(line).trim();
-    if (!s) return '';
+    if (!s) {
+      return '';
+    }
     // 栈帧行(node 的 "    at Object.<anonymous> (…)")
-    if (/^at\s+/.test(s)) return '';
+    if (/^at\s+/.test(s)) {
+      return '';
+    }
     // 纯 `^`/`~`/空白 的指示行
-    if (/^[\s^~]+$/.test(s)) return '';
+    if (/^[\s^~]+$/.test(s)) {
+      return '';
+    }
     // 抹平路径与行列号
     s = s.replace(_PATH_RE, ' <path> ').replace(_LINECOL_RE, ' ');
     // 压空白、小写
     s = s.replace(/\s+/g, ' ').trim().toLowerCase();
-    if (!s) return '';
+    if (!s) {
+      return '';
+    }
     // 归一后若不含任何字母(纯 <path>/标点/数字的定位头行)→ 噪声
-    if (!/[a-zÀ-ɏ]/.test(s.replace(/<path>/g, ''))) return '';
+    if (!/[a-zÀ-ɏ]/.test(s.replace(/<path>/g, ''))) {
+      return '';
+    }
     return s;
   } catch {
     return '';
@@ -85,10 +99,14 @@ function toSignatureSet(lines) {
     if (Array.isArray(lines)) {
       for (const ln of lines) {
         const sig = normalizeErrorSignature(ln);
-        if (sig) set.add(sig);
+        if (sig) {
+          set.add(sig);
+        }
       }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return set;
 }
 
@@ -101,21 +119,30 @@ function toSignatureSet(lines) {
 function diffNewErrors(beforeSignatures, afterErrorLines) {
   const out = [];
   try {
-    const before = beforeSignatures instanceof Set
-      ? beforeSignatures
-      : new Set(Array.isArray(beforeSignatures) ? beforeSignatures : []);
+    const before =
+      beforeSignatures instanceof Set
+        ? beforeSignatures
+        : new Set(Array.isArray(beforeSignatures) ? beforeSignatures : []);
     const seen = new Set();
     if (Array.isArray(afterErrorLines)) {
       for (const ln of afterErrorLines) {
         const sig = normalizeErrorSignature(ln);
-        if (!sig) continue;
-        if (before.has(sig)) continue;
-        if (seen.has(sig)) continue;
+        if (!sig) {
+          continue;
+        }
+        if (before.has(sig)) {
+          continue;
+        }
+        if (seen.has(sig)) {
+          continue;
+        }
         seen.add(sig);
         out.push(String(ln).trim());
       }
     }
-  } catch { /* fail-soft → 空 */ }
+  } catch {
+    /* fail-soft → 空 */
+  }
   return out;
 }
 
@@ -133,10 +160,14 @@ function _posInt(n) {
  */
 function buildPostEditDiagnosticsSummary(p = {}, env = process.env) {
   try {
-    if (!postEditDiagnosticsEnabled(env)) return null;
+    if (!postEditDiagnosticsEnabled(env)) {
+      return null;
+    }
     const issueCount = _posInt(p && p.issueCount);
     const fileCount = _posInt(p && p.fileCount);
-    if (issueCount <= 0 || fileCount <= 0) return null;
+    if (issueCount <= 0 || fileCount <= 0) {
+      return null;
+    }
     return `发现 ${issueCount} 处新增诊断问题（${fileCount} 个文件）`;
   } catch {
     return null;

@@ -24,7 +24,23 @@ const TAG_LEN = 16;
 
 function getEncryptionKey() {
   const hex = process.env.FIELD_ENCRYPTION_KEY || process.env.JWT_SECRET;
-  if (!hex || hex.length < 32) return null;
+  if (!hex || hex.length < 32) {
+    // 无加密密钥时的降级行为：返回 null → encryptField 返回明文、decryptField 原样返回。
+    // 在生产部署中应始终设置 FIELD_ENCRYPTION_KEY 环境变量。
+    try {
+      if (!process.env.FIELD_ENCRYPTION_KEY && !process.env.JWT_SECRET) {
+        process.stderr.write('[fieldCrypto] ⚠️ 未配置 FIELD_ENCRYPTION_KEY — 敏感字段将以明文存储！\n');
+      }
+    } catch (_) {}
+    return null;
+  }
+  if (hex === process.env.JWT_SECRET && process.env.FIELD_ENCRYPTION_KEY !== hex) {
+    // 回退到 JWT_SECRET 作为加密密钥：密钥复用风险。
+    // 建议设置独立的 FIELD_ENCRYPTION_KEY 环境变量。
+    try {
+      process.stderr.write('[fieldCrypto] ⚠️ 使用 JWT_SECRET 作为字段加密密钥（降级）— 建议设置独立的 FIELD_ENCRYPTION_KEY\n');
+    } catch (_) {}
+  }
   return crypto.createHash('sha256').update(hex).digest();
 }
 
@@ -65,8 +81,13 @@ function decryptField(stored) {
     const decipher = crypto.createDecipheriv(ALGO, key, iv);
     decipher.setAuthTag(tag);
     return decipher.update(enc, null, 'utf8') + decipher.final('utf8');
-  } catch {
-    return stored; // plaintext legacy value
+  } catch (err) {
+    // 解密失败：返回 stored 会导致后续使用乱码 base64 作为有效数据 → 永久数据损坏。
+    // 改为抛出明确错误，避免静默数据损坏。
+    const prefix = String(stored).slice(0, 32);
+    const logErr = `[fieldCrypto] 解密失败 (keyHash=${key.toString('hex').slice(0, 8)}, prefix=${prefix}): ${err.message}`;
+    try { process.stderr.write(logErr + '\n'); } catch (_) {}
+    throw new Error('字段解密失败 — 请检查 FIELD_ENCRYPTION_KEY 是否正确，或该值是否为未加密的明文。');
   }
 }
 

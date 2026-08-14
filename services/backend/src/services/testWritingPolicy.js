@@ -35,8 +35,10 @@ function isEnabled(env) {
 // ── 写测试意图识别(零假阳性优先;均为线性正则,无灾难性回溯)──────────────────────
 // 判据 = 同时命中「写/补/生成 类动词」与「测试 类名词」。仅「运行测试 / 测试一下功能」这类
 // 没有写作动词的句子不会命中(那是跑测试 / 试用,不是写测试)——这是刻意的零假阳性边界。
-const _WRITE_RE = /(写|编写|添加|新增|补充|补上?|补全|补一?些|加上?|加个|加一?些|加点|写一?些|写个|写下|生成|创建|做个?|搞个?|整个?|来一?个|覆盖|write|writing|add|adding|create|creating|generate|author|cover)/i;
-const _TEST_NOUN_RE = /(单元测试|集成测试|端到端测试|端到端|回归测试|测试用例|测试覆盖|覆盖率|单测|测试代码|测试脚本|测试套件|测试|用例|unit\s*tests?|integration\s*tests?|e2e\s*tests?|end[\s-]?to[\s-]?end|regression\s*tests?|test\s*cases?|test\s*coverage|test\s*suites?|\btests?\b|\bspecs?\b)/i;
+const _WRITE_RE =
+  /(写|编写|添加|新增|补充|补上?|补全|补一?些|加上?|加个|加一?些|加点|写一?些|写个|写下|生成|创建|做个?|搞个?|整个?|来一?个|覆盖|write|writing|add|adding|create|creating|generate|author|cover)/i;
+const _TEST_NOUN_RE =
+  /(单元测试|集成测试|端到端测试|端到端|回归测试|测试用例|测试覆盖|覆盖率|单测|测试代码|测试脚本|测试套件|测试|用例|unit\s*tests?|integration\s*tests?|e2e\s*tests?|end[\s-]?to[\s-]?end|regression\s*tests?|test\s*cases?|test\s*coverage|test\s*suites?|\btests?\b|\bspecs?\b)/i;
 // 强信号名词:即便写作动词措辞古怪,出现这些明确「编写测试」名词也算命中(仍需配合写作动词,
 // 避免「运行单元测试」误命中——它没有写作动词)。此表用于题型(kind)细分。
 const _KIND_INTEGRATION_RE = /(集成测试|integration\s*tests?)/i;
@@ -54,15 +56,25 @@ const _stripCode = require('../utils/stripCodeSpans');
 function detectTestWritingIntent(text) {
   try {
     const cleaned = _stripCode(text);
-    if (!cleaned.trim()) return { shouldInject: false, kinds: [] };
+    if (!cleaned.trim()) {
+      return { shouldInject: false, kinds: [] };
+    }
     if (!_TEST_NOUN_RE.test(cleaned) || !_WRITE_RE.test(cleaned)) {
       return { shouldInject: false, kinds: [] };
     }
     const kinds = [];
-    if (_KIND_UNIT_RE.test(cleaned)) kinds.push('unit');
-    if (_KIND_INTEGRATION_RE.test(cleaned)) kinds.push('integration');
-    if (_KIND_E2E_RE.test(cleaned)) kinds.push('e2e');
-    if (!kinds.length) kinds.push('general');
+    if (_KIND_UNIT_RE.test(cleaned)) {
+      kinds.push('unit');
+    }
+    if (_KIND_INTEGRATION_RE.test(cleaned)) {
+      kinds.push('integration');
+    }
+    if (_KIND_E2E_RE.test(cleaned)) {
+      kinds.push('e2e');
+    }
+    if (!kinds.length) {
+      kinds.push('general');
+    }
     return { shouldInject: true, kinds };
   } catch {
     return { shouldInject: false, kinds: [] };
@@ -102,7 +114,7 @@ function buildTestWritingDirective({ kinds = [] } = {}) {
   if ((Array.isArray(kinds) ? kinds : []).some((k) => k === 'integration' || k === 'e2e')) {
     lines.push(
       '附(集成 / 端到端):跨组件用真实接线而非全打桩,但外部不可控边界(第三方网络、时钟、支付等)仍需在',
-      '   确定性接缝处替身;给足建链/拆链(setup/teardown),确保可重复且互不污染。',
+      '   确定性接缝处替身;给足建链/拆链(setup/teardown),确保可重复且互不污染。'
     );
   }
   return lines.join('\n');
@@ -117,10 +129,18 @@ function buildTestWritingDirective({ kinds = [] } = {}) {
  */
 function routeTestWriting({ text = '', env } = {}) {
   try {
-    if (!isEnabled(env)) return { shouldInject: false, kinds: [], directive: '' };
+    if (!isEnabled(env)) {
+      return { shouldInject: false, kinds: [], directive: '' };
+    }
     const det = detectTestWritingIntent(text);
-    if (!det.shouldInject) return { shouldInject: false, kinds: [], directive: '' };
-    return { shouldInject: true, kinds: det.kinds, directive: buildTestWritingDirective({ kinds: det.kinds }) };
+    if (!det.shouldInject) {
+      return { shouldInject: false, kinds: [], directive: '' };
+    }
+    return {
+      shouldInject: true,
+      kinds: det.kinds,
+      directive: buildTestWritingDirective({ kinds: det.kinds }),
+    };
   } catch {
     return { shouldInject: false, kinds: [], directive: '' };
   }

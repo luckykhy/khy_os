@@ -75,7 +75,10 @@ const EXECUTORS = Object.freeze([
 ]);
 
 const _BY_ID = Object.freeze(
-  EXECUTORS.reduce((acc, e) => { acc[e.id] = e; return acc; }, {}),
+  EXECUTORS.reduce((acc, e) => {
+    acc[e.id] = e;
+    return acc;
+  }, {})
 );
 
 /** All executors (copy). */
@@ -100,10 +103,10 @@ function isRegistered(id) {
 
 /** Executors that can operate on a given language id (includes the '*' generics). */
 function executorsForLanguage(language) {
-  const lang = String(language || '').trim().toLowerCase();
-  return listExecutors().filter(
-    (e) => e.languages.includes('*') || e.languages.includes(lang),
-  );
+  const lang = String(language || '')
+    .trim()
+    .toLowerCase();
+  return listExecutors().filter((e) => e.languages.includes('*') || e.languages.includes(lang));
 }
 
 /**
@@ -136,13 +139,11 @@ function validateToolchain(toolchain) {
  * @returns {string}
  */
 function describeForModel() {
-  return EXECUTORS
-    .map((e) => {
-      const langs = e.languages.includes('*') ? '任意语言' : e.languages.join('/');
-      const net = e.astSafetyNet ? '有 AST 安全网' : '无 AST 校验';
-      return `  - "${e.id}"（${e.label}，${langs}，${net}）：${e.summary} 风险：${e.risk}`;
-    })
-    .join('\n');
+  return EXECUTORS.map((e) => {
+    const langs = e.languages.includes('*') ? '任意语言' : e.languages.join('/');
+    const net = e.astSafetyNet ? '有 AST 安全网' : '无 AST 校验';
+    return `  - "${e.id}"（${e.label}，${langs}，${net}）：${e.summary} 风险：${e.risk}`;
+  }).join('\n');
 }
 
 /**
@@ -152,7 +153,9 @@ function describeForModel() {
  */
 function toolchainHasUnguarded(toolchain) {
   const v = validateToolchain(toolchain);
-  if (!v.valid) return true;
+  if (!v.valid) {
+    return true;
+  }
   return v.toolchain.some((id) => {
     const e = getExecutor(id);
     return e && e.astSafetyNet === false;

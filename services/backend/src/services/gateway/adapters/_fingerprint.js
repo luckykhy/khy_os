@@ -8,16 +8,32 @@
  * Persists device identity to ~/.khyquant/device_id.json for session
  * continuity, with periodic rotation (default 24h).
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const sleep = require('../../../utils/sleep'); // single-source sleep ([MGMT-RPT-020] REQ-2026-010)
 
 // ── Config ──────────────────────────────────────────────────────────────
-const DATA_DIR = path.join(os.homedir(), '.khyquant');
-const DEVICE_ID_FILE = path.join(DATA_DIR, 'device_id.json');
-const ROTATION_HOURS = Math.max(1, parseInt(process.env.KIRO_DEVICE_ROTATION_HOURS || '24', 10) || 24);
+// Lazily resolve the app home (portable-aware); fallback to legacy path.
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _dataDir() {
+  try {
+    const { getAppHome } = require('../../../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _deviceIdFile() {
+  return path.join(_dataDir(), 'device_id.json');
+}
+const ROTATION_HOURS = Math.max(
+  1,
+  parseInt(process.env.KIRO_DEVICE_ROTATION_HOURS || '24', 10) || 24
+);
 const ROTATION_MS = ROTATION_HOURS * 60 * 60 * 1000;
 const JITTER_ENABLED = String(process.env.KIRO_JITTER || 'true').toLowerCase() !== 'false';
 
@@ -34,20 +50,22 @@ function generateDeviceId() {
 }
 
 function loadOrCreateDeviceState() {
-  if (_cachedDeviceState && (Date.now() - _cachedDeviceState.createdAt) < ROTATION_MS) {
+  if (_cachedDeviceState && Date.now() - _cachedDeviceState.createdAt < ROTATION_MS) {
     return _cachedDeviceState;
   }
 
   // Try loading from disk
   try {
-    if (fs.existsSync(DEVICE_ID_FILE)) {
-      const data = JSON.parse(fs.readFileSync(DEVICE_ID_FILE, 'utf8'));
-      if (data.deviceId && data.createdAt && (Date.now() - data.createdAt) < ROTATION_MS) {
+    if (fs.existsSync(_deviceIdFile())) {
+      const data = JSON.parse(fs.readFileSync(_deviceIdFile(), 'utf8'));
+      if (data.deviceId && data.createdAt && Date.now() - data.createdAt < ROTATION_MS) {
         _cachedDeviceState = data;
         return data;
       }
     }
-  } catch { /* regenerate */ }
+  } catch {
+    /* regenerate */
+  }
 
   // Generate new device state
   const state = {
@@ -58,9 +76,11 @@ function loadOrCreateDeviceState() {
 
   // Persist
   try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DEVICE_ID_FILE, JSON.stringify(state, null, 2));
-  } catch { /* non-fatal */ }
+    fs.mkdirSync(_dataDir(), { recursive: true });
+    fs.writeFileSync(_deviceIdFile(), JSON.stringify(state, null, 2));
+  } catch {
+    /* non-fatal */
+  }
 
   _cachedDeviceState = state;
   return state;
@@ -70,15 +90,25 @@ function loadOrCreateDeviceState() {
 // Simple format matching kiro-proxy: "KiroIDE {version} {machineId}"
 // DO NOT use AWS SDK full format — it triggers AWS anti-abuse detection.
 const KIRO_VERSION_POOL = [
-  '0.10.98', '0.10.101', '0.10.104',
-  '0.11.100', '0.11.103', '0.11.107', '0.11.110', '0.11.112',
-  '0.12.1', '0.12.3', '0.12.5',
+  '0.10.98',
+  '0.10.101',
+  '0.10.104',
+  '0.11.100',
+  '0.11.103',
+  '0.11.107',
+  '0.11.110',
+  '0.11.112',
+  '0.12.1',
+  '0.12.3',
+  '0.12.5',
 ];
 
 let _sessionVersion = null;
 
 function pickSessionVersion() {
-  if (_sessionVersion) return _sessionVersion;
+  if (_sessionVersion) {
+    return _sessionVersion;
+  }
   const envVersion = (process.env.KIRO_VERSION || '').trim();
   if (envVersion) {
     _sessionVersion = envVersion;
@@ -97,16 +127,17 @@ function buildKiroUserAgent() {
 
 // ── Session management ──────────────────────────────────────────────────
 let _session = null;
-const SESSION_MIN_LIFETIME_MS = 1 * 60 * 60 * 1000;  // 1 hour
-const SESSION_MAX_LIFETIME_MS = 4 * 60 * 60 * 1000;  // 4 hours
+const SESSION_MIN_LIFETIME_MS = 1 * 60 * 60 * 1000; // 1 hour
+const SESSION_MAX_LIFETIME_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 function getSession() {
-  if (_session && (Date.now() - _session.startedAt) < _session.lifetimeMs) {
+  if (_session && Date.now() - _session.startedAt < _session.lifetimeMs) {
     _session.requestCount++;
     return _session;
   }
 
-  const lifetimeMs = SESSION_MIN_LIFETIME_MS +
+  const lifetimeMs =
+    SESSION_MIN_LIFETIME_MS +
     Math.floor(Math.random() * (SESSION_MAX_LIFETIME_MS - SESSION_MIN_LIFETIME_MS));
 
   _session = {
@@ -126,7 +157,7 @@ function buildKiroHeaders(baseHeaders = {}) {
   return {
     ...baseHeaders,
     'User-Agent': buildKiroUserAgent(),
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
     'X-Request-Id': crypto.randomUUID(),
@@ -144,7 +175,9 @@ function jitterDelayMs() {
 }
 
 function applyJitter() {
-  if (!JITTER_ENABLED) return Promise.resolve();
+  if (!JITTER_ENABLED) {
+    return Promise.resolve();
+  }
   const delayMs = jitterDelayMs();
   return sleep(delayMs);
 }
@@ -201,9 +234,11 @@ function resetForAccount(email) {
 
   // Persist
   try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DEVICE_ID_FILE, JSON.stringify(state, null, 2));
-  } catch { /* non-fatal */ }
+    fs.mkdirSync(_dataDir(), { recursive: true });
+    fs.writeFileSync(_deviceIdFile(), JSON.stringify(state, null, 2));
+  } catch {
+    /* non-fatal */
+  }
 
   _cachedDeviceState = state;
 }

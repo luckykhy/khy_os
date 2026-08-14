@@ -21,7 +21,9 @@
 
 function toNonNegInt(n) {
   const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return 0;
+  if (!Number.isFinite(v) || v <= 0) {
+    return 0;
+  }
   return Math.floor(v);
 }
 

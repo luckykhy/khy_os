@@ -17,7 +17,9 @@ const { NODE_CATALOG, CATEGORIES } = require('@khy/shared/workflow/nodeCatalog')
 
 describe('catalogPrompt projection', () => {
   test('getNodeSpecs covers every catalog node type, no extras', () => {
-    const specTypes = getNodeSpecs().map((s) => s.type).sort();
+    const specTypes = getNodeSpecs()
+      .map((s) => s.type)
+      .sort();
     const catTypes = NODE_CATALOG.map((n) => n.type).sort();
     expect(specTypes).toEqual(catTypes);
     // Sanity: the four known node types we rely on most must be present.
@@ -64,10 +66,8 @@ describe('catalogPrompt projection', () => {
   test('branch/loop nodes advertise their special ports', () => {
     const specs = new Map(getNodeSpecs().map((s) => [s.type, s]));
     expect(specs.get('ifElse').outputs).toEqual(
-      expect.arrayContaining(['branch-true', 'branch-false']),
+      expect.arrayContaining(['branch-true', 'branch-false'])
     );
-    expect(specs.get('loop').outputs).toEqual(
-      expect.arrayContaining(['loop-body', 'loop-done']),
-    );
+    expect(specs.get('loop').outputs).toEqual(expect.arrayContaining(['loop-body', 'loop-done']));
   });
 });

@@ -1,8 +1,15 @@
 {
   "name": "remember",
-  "command": "/remember",
   "description": "Save information to persistent memory for future conversations",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["memory", "persistence"]
+  "trigger": "/remember",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "memory",
+    "persistence"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

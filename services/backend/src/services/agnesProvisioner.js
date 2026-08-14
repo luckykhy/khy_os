@@ -44,7 +44,7 @@ const { writeEnvPatch } = require('./gatewayEnvFile');
 /** Pull the built-in Agnes chat preset (endpoint + chat model) — single source. */
 function _agnesChatPreset() {
   const presets = registrar.getPresets();
-  return presets.find(p => p.id === 'agnes') || null;
+  return presets.find((p) => p.id === 'agnes') || null;
 }
 
 /**
@@ -70,7 +70,9 @@ function _agnesChatPreset() {
  */
 function provisionAgnes(opts = {}) {
   const apiKey = String(opts.apiKey || '').trim();
-  if (!apiKey) throw new Error('Agnes API Key 不能为空');
+  if (!apiKey) {
+    throw new Error('Agnes API Key 不能为空');
+  }
 
   const wantChat = opts.chat !== false;
   const wantImage = opts.image !== false;
@@ -94,9 +96,10 @@ function provisionAgnes(opts = {}) {
         endpoint: (preset && preset.endpoint) || 'https://apihub.agnes-ai.com/v1',
         keyInput: apiKey,
         defaultModel: (preset && preset.defaultModel) || 'agnes-2.0-flash',
-        extraModels: preset && Array.isArray(preset.models)
-          ? preset.models.filter(m => m !== preset.defaultModel)
-          : [],
+        extraModels:
+          preset && Array.isArray(preset.models)
+            ? preset.models.filter((m) => m !== preset.defaultModel)
+            : [],
         tier: opts.tier,
         ensureInit: !!opts.ensureInit,
       });
@@ -120,7 +123,9 @@ function provisionAgnes(opts = {}) {
   if (wantImage) {
     try {
       const imgEnv = { KHY_IMAGE_GEN_AGNES_API_KEY: apiKey };
-      if (opts.forceImageBackend) imgEnv.KHY_IMAGE_GEN_BACKEND = 'agnes';
+      if (opts.forceImageBackend) {
+        imgEnv.KHY_IMAGE_GEN_BACKEND = 'agnes';
+      }
       writeEnvPatch(imgEnv);
       const imageGenService = require('./imageGenService');
       summary.image = {
@@ -158,7 +163,9 @@ function provisionAgnes(opts = {}) {
 /** Mask an API key for state-transparency reporting (never log the raw key). */
 function _mask(key) {
   const s = String(key || '');
-  if (s.length <= 8) return '*'.repeat(s.length);
+  if (s.length <= 8) {
+    return '*'.repeat(s.length);
+  }
   return `${s.slice(0, 4)}…${s.slice(-4)}`;
 }
 
@@ -167,13 +174,20 @@ function formatProvisionSummary(summary) {
   const lines = [];
   lines.push(`Agnes 一键置备 (key ${summary.apiKeyMasked}):`);
   if (summary.chat.wired) {
-    lines.push(`  ✓ 对话/代码/Agent → ${summary.chat.models.join(', ')} (provider: ${summary.chat.poolKey})`);
+    lines.push(
+      `  ✓ 对话/代码/Agent → ${summary.chat.models.join(', ')} (provider: ${summary.chat.poolKey})`
+    );
   } else if (summary.chat.error) {
     lines.push(`  ✗ 对话置备失败: ${summary.chat.error}`);
   }
   if (summary.image.wired) {
-    const active = summary.image.backendActive === 'agnes' ? '已激活' : `当前激活后端=${summary.image.backendActive || '无'}`;
-    lines.push(`  ✓ 文生图 + 图改图 → agnes-image-2.0-flash (默认) / agnes-image-2.1-flash (升级版可选) (${active})`);
+    const active =
+      summary.image.backendActive === 'agnes'
+        ? '已激活'
+        : `当前激活后端=${summary.image.backendActive || '无'}`;
+    lines.push(
+      `  ✓ 文生图 + 图改图 → agnes-image-2.0-flash (默认) / agnes-image-2.1-flash (升级版可选) (${active})`
+    );
   } else if (summary.image.error) {
     lines.push(`  ✗ 图像置备失败: ${summary.image.error}`);
   }

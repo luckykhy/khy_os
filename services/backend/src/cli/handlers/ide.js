@@ -14,11 +14,11 @@
 const chalk = require('chalk').default || require('chalk');
 const readline = require('readline');
 
-const { printSuccess, printError, printInfo, printTable, withSpinner } = require('../formatters');
 const {
   buildIdeLaunchFeatureKey,
   buildIdeLaunchFeatureLabel,
 } = require('../../services/featureKeyBuilder');
+const { printSuccess, printError, printInfo, printTable, withSpinner } = require('../formatters');
 
 /**
  * Handle an agent-backend command: resolve launcher → (list models → select) → chat.
@@ -51,7 +51,9 @@ async function handleIdeCommand(ideName, options = {}, context = {}) {
   }
 
   const gateway = require('../../services/gateway/aiGateway');
-  if (!gateway._initialized) await gateway.init();
+  if (!gateway.isInitialized()) {
+    await gateway.init();
+  }
 
   const adapter = gateway.getAdapter(ideName);
   if (!adapter) {
@@ -72,7 +74,9 @@ async function handleIdeCommand(ideName, options = {}, context = {}) {
         io: { info: printInfo, warn: printError },
       });
       recovered = !!(r && r.available);
-    } catch { recovered = false; }
+    } catch {
+      recovered = false;
+    }
     if (!recovered) {
       printError(`${status.name} 不可用: ${status.detail}`);
       return;
@@ -109,7 +113,7 @@ async function handleIdeCommand(ideName, options = {}, context = {}) {
 
   // If --model specified, use it directly
   if (options.model) {
-    const found = models.find(m => m.id === options.model || m.name === options.model);
+    const found = models.find((m) => m.id === options.model || m.name === options.model);
     if (!found) {
       printError(`模型 "${options.model}" 不存在`);
       displayModelList(status.name, models);
@@ -123,7 +127,9 @@ async function handleIdeCommand(ideName, options = {}, context = {}) {
   displayModelList(status.name, models);
 
   const selected = await promptModelSelection(models, context);
-  if (!selected) return;
+  if (!selected) {
+    return;
+  }
 
   await startChat(ideName, selected, context);
 }
@@ -137,12 +143,7 @@ function displayModelList(adapterName, models) {
   console.log('');
   printTable(
     ['#', '模型 ID', '名称', '默认'],
-    models.map((m, i) => [
-      String(i + 1),
-      m.id,
-      m.name || m.id,
-      m.isDefault ? chalk.green('✓') : '',
-    ])
+    models.map((m, i) => [String(i + 1), m.id, m.name || m.id, m.isDefault ? chalk.green('✓') : ''])
   );
   console.log('');
 }
@@ -152,18 +153,24 @@ function displayModelList(adapterName, models) {
  */
 function promptModelSelection(models, context) {
   return new Promise((resolve) => {
-    const rl = context.rl || readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    const rl =
+      context.rl ||
+      readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
     const ownRl = !context.rl;
 
     rl.question(chalk.cyan('选择模型编号 (输入数字，回车取消): '), (answer) => {
-      if (ownRl) rl.close();
+      if (ownRl) {
+        rl.close();
+      }
 
       const num = parseInt(answer, 10);
       if (isNaN(num) || num < 1 || num > models.length) {
-        if (answer.trim()) printError('无效选择');
+        if (answer.trim()) {
+          printError('无效选择');
+        }
         resolve(null);
         return;
       }
@@ -190,10 +197,12 @@ async function startChat(adapterKey, model, context) {
   }
   console.log('');
 
-  const rl = context.rl || readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+  const rl =
+    context.rl ||
+    readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
   const ownRl = !context.rl;
 
   const prompt = () => {
@@ -201,7 +210,9 @@ async function startChat(adapterKey, model, context) {
       const trimmed = input.trim();
       if (!trimmed || trimmed === 'exit' || trimmed === 'quit') {
         printInfo('退出 IDE 对话模式');
-        if (ownRl) rl.close();
+        if (ownRl) {
+          rl.close();
+        }
         return;
       }
 
@@ -211,16 +222,23 @@ async function startChat(adapterKey, model, context) {
         // choose, so we omit the model option.
         const genOptions = {
           onChunk: (chunk) => {
-            if (chunk.type === 'text') process.stdout.write(chunk.text);
+            if (chunk.type === 'text') {
+              process.stdout.write(chunk.text);
+            }
           },
         };
-        if (model && model.id) genOptions.model = model.id;
+        if (model && model.id) {
+          genOptions.model = model.id;
+        }
         const result = await gateway.generateWithAdapter(adapterKey, trimmed, genOptions);
 
         if (result.success) {
           // Only print newline if streaming was used (content already output)
-          if (!result.content) console.log('');
-          else console.log('\n' + result.content);
+          if (!result.content) {
+            console.log('');
+          } else {
+            console.log('\n' + result.content);
+          }
         } else {
           printError('请求失败: ' + (result.attempts?.[0]?.error || '未知错误'));
         }

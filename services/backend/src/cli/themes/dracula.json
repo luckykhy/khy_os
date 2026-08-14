@@ -22,6 +22,11 @@
     "diffAddedWord": "#50FA7B",
     "diffRemovedWord": "#FF5555",
     "permissionPurple": "#BD93F9",
-    "userMessageBg": "#282A36"
+    "userMessageBg": "#282A36",
+    "mdBold": "#FFB86C",
+    "mdBullet": "#8BE9FD",
+    "mdListNumber": "#8BE9FD",
+    "mdH3": "#8BE9FD",
+    "mdQuote": "#6272A4"
   }
 }

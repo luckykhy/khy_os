@@ -11,16 +11,24 @@
 
 // ── Imports ──
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const chalk = require('chalk').default || require('chalk');
 
+const _isPathWithin = require('../../utils/isPathWithin');
 const {
-  printSuccess, printError, printWarn, printInfo, printTable, withSpinner,
-  MASCOT_MINI, ICON_HEART, ICON_GEAR,
+  printSuccess,
+  printError,
+  printWarn,
+  printInfo,
+  printTable,
+  withSpinner,
+  MASCOT_MINI,
+  ICON_HEART,
+  ICON_GEAR,
 } = require('../formatters');
 
 // ── Constants ──
@@ -50,7 +58,11 @@ const DEFAULT_KHY_MD = `# KHY Project Instructions
 
 function runSilent(cmd, args = []) {
   try {
-    return execFileSync(cmd, args, { encoding: 'utf-8', timeout: 15000, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return execFileSync(cmd, args, {
+      encoding: 'utf-8',
+      timeout: 15000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
   } catch {
     return null;
   }
@@ -66,8 +78,12 @@ function runProbe(cmd, args = []) {
     return { ok: true, output };
   } catch (err) {
     const toText = (v) => {
-      if (v === null || v === undefined) return '';
-      if (Buffer.isBuffer(v)) return v.toString('utf-8').trim();
+      if (v === null || v === undefined) {
+        return '';
+      }
+      if (Buffer.isBuffer(v)) {
+        return v.toString('utf-8').trim();
+      }
       return String(v).trim();
     };
     const stderr = toText(err?.stderr);
@@ -76,16 +92,28 @@ function runProbe(cmd, args = []) {
     const combined = `${stderr} ${stdout} ${message}`.toLowerCase();
 
     const code = String(err?.code || '');
-    if (code === 'ENOENT') return { ok: false, reason: 'missing' };
-    if (code === 'EPERM' || code === 'EACCES') return { ok: false, reason: 'blocked' };
-    if (code === 'ETIMEDOUT') return { ok: false, reason: 'timeout' };
-    if (/permission denied|operation not permitted|sandbox|not allowed|access denied/i.test(combined)) {
+    if (code === 'ENOENT') {
+      return { ok: false, reason: 'missing' };
+    }
+    if (code === 'EPERM' || code === 'EACCES') {
+      return { ok: false, reason: 'blocked' };
+    }
+    if (code === 'ETIMEDOUT') {
+      return { ok: false, reason: 'timeout' };
+    }
+    if (
+      /permission denied|operation not permitted|sandbox|not allowed|access denied/i.test(combined)
+    ) {
       return { ok: false, reason: 'blocked', message };
     }
     if (/timed out|timeout|etimedout/i.test(combined)) {
       return { ok: false, reason: 'timeout', message };
     }
-    if (/connection refused|could not connect|econnrefused|service unavailable|host is down/i.test(combined)) {
+    if (
+      /connection refused|could not connect|econnrefused|service unavailable|host is down/i.test(
+        combined
+      )
+    ) {
       return { ok: false, reason: 'unavailable', message: stderr || stdout || message };
     }
     return { ok: false, reason: 'error', message: stderr || stdout || message };
@@ -93,17 +121,29 @@ function runProbe(cmd, args = []) {
 }
 
 function probeFailureDetail(probe, fallback = '未安装') {
-  if (!probe || probe.ok) return '';
-  if (probe.reason === 'blocked') return '检测受限（权限/沙箱限制）';
-  if (probe.reason === 'timeout') return '检测超时';
-  if (probe.reason === 'missing') return fallback;
-  if (probe.reason === 'unavailable') return probe.message ? String(probe.message).slice(0, 160) : '服务不可用';
+  if (!probe || probe.ok) {
+    return '';
+  }
+  if (probe.reason === 'blocked') {
+    return '检测受限（权限/沙箱限制）';
+  }
+  if (probe.reason === 'timeout') {
+    return '检测超时';
+  }
+  if (probe.reason === 'missing') {
+    return fallback;
+  }
+  if (probe.reason === 'unavailable') {
+    return probe.message ? String(probe.message).slice(0, 160) : '服务不可用';
+  }
   return probe.message ? String(probe.message).slice(0, 160) : fallback;
 }
 
 function formatLocalTime(ts) {
   const n = Number(ts || 0);
-  if (!Number.isFinite(n) || n <= 0) return '';
+  if (!Number.isFinite(n) || n <= 0) {
+    return '';
+  }
   try {
     return new Date(n).toLocaleString('zh-CN', { hour12: false });
   } catch {
@@ -113,8 +153,10 @@ function formatLocalTime(ts) {
 
 function isLocalAdapterName(name = '') {
   const lower = String(name || '').toLowerCase();
-  if (!lower) return false;
-  return ['local', 'ollama', 'llama'].some(token => lower.includes(token));
+  if (!lower) {
+    return false;
+  }
+  return ['local', 'ollama', 'llama'].some((token) => lower.includes(token));
 }
 
 function isTruthyFlag(raw = '') {
@@ -124,21 +166,27 @@ function isTruthyFlag(raw = '') {
 
 function isLoopbackUrl(raw = '') {
   const input = String(raw || '').trim();
-  if (!input) return false;
+  if (!input) {
+    return false;
+  }
   try {
     const parsed = new URL(input);
-    const host = String(parsed.hostname || '').trim().toLowerCase();
+    const host = String(parsed.hostname || '')
+      .trim()
+      .toLowerCase();
     return host === '127.0.0.1' || host === 'localhost' || host === '::1';
   } catch {
     return false;
   }
 }
 
-const _isPathWithin = require('../../utils/isPathWithin');
-
 function _buildCodexHomeEnvironmentCheck(activeAdapter = null, preferredAdapter = '') {
-  const activeType = String(activeAdapter?.type || '').trim().toLowerCase();
-  const preferredType = String(preferredAdapter || '').trim().toLowerCase();
+  const activeType = String(activeAdapter?.type || '')
+    .trim()
+    .toLowerCase();
+  const preferredType = String(preferredAdapter || '')
+    .trim()
+    .toLowerCase();
   const envHome = String(process.env.HOME || '').trim();
   const resolvedHome = envHome || os.homedir() || '';
   const tmpDir = String(os.tmpdir() || '').trim();
@@ -160,7 +208,9 @@ function _buildCodexHomeEnvironmentCheck(activeAdapter = null, preferredAdapter 
     category: 'AI 能力',
     label: 'Codex HOME 环境',
     ok: !codexRelevant,
-    detail: codexRelevant ? `${detail}；建议改回真实用户主目录后重试` : `${detail}；当前未激活 Codex，可暂时忽略`,
+    detail: codexRelevant
+      ? `${detail}；建议改回真实用户主目录后重试`
+      : `${detail}；当前未激活 Codex，可暂时忽略`,
     level: codexRelevant ? 'warn' : 'info',
   };
 }
@@ -168,22 +218,34 @@ function _buildCodexHomeEnvironmentCheck(activeAdapter = null, preferredAdapter 
 function _buildGatewayPromptRiskDebugSuffix(active = null) {
   try {
     const gatewayHandler = require('./gateway');
-    if (!gatewayHandler || typeof gatewayHandler.getGatewayDebugPromptSnapshot !== 'function') return '';
+    if (!gatewayHandler || typeof gatewayHandler.getGatewayDebugPromptSnapshot !== 'function') {
+      return '';
+    }
     const snapshot = gatewayHandler.getGatewayDebugPromptSnapshot({ tail: 1 });
-    if (!snapshot || snapshot.ok === false) return '';
+    if (!snapshot || snapshot.ok === false) {
+      return '';
+    }
     if (!snapshot.exists || !snapshot.latest) {
       return `；当前尚无 KHY 注入日志，建议先执行 ${snapshot?.recommendedCommand || 'KHY_GATEWAY_DEBUG_PROMPT=1 khy gateway status'} 生成证据`;
     }
 
     const latest = snapshot.latest;
-    const activeType = String(active?.type || active?.adapter || active?.key || '').trim().toLowerCase();
-    const latestAdapter = String(latest.adapter || '').trim().toLowerCase();
-    const adapterHint = activeType && latestAdapter && activeType !== latestAdapter
-      ? `最近记录来自 ${latest.adapter}，当前活跃通道为 ${active?.name || activeType}`
-      : `最近记录来自 ${latest.provider || latest.adapter || 'unknown'}`;
-    const preview = String(latest.promptPreview || '').replace(/\s+/g, ' ').trim();
+    const activeType = String(active?.type || active?.adapter || active?.key || '')
+      .trim()
+      .toLowerCase();
+    const latestAdapter = String(latest.adapter || '')
+      .trim()
+      .toLowerCase();
+    const adapterHint =
+      activeType && latestAdapter && activeType !== latestAdapter
+        ? `最近记录来自 ${latest.adapter}，当前活跃通道为 ${active?.name || activeType}`
+        : `最近记录来自 ${latest.provider || latest.adapter || 'unknown'}`;
+    const preview = String(latest.promptPreview || '')
+      .replace(/\s+/g, ' ')
+      .trim();
     const compactPreview = preview.length > 96 ? `${preview.slice(0, 95)}…` : preview;
-    const timeText = formatLocalTime(Date.parse(String(latest.timestamp || ''))) || String(latest.timestamp || '');
+    const timeText =
+      formatLocalTime(Date.parse(String(latest.timestamp || ''))) || String(latest.timestamp || '');
     return `；${adapterHint}，注入时间 ${timeText || '-'}，system=${latest.systemLength || 0} chars，prompt=${latest.promptLength || 0} chars，preview=${compactPreview || '(empty)'}`;
   } catch {
     return '';
@@ -193,13 +255,18 @@ function _buildGatewayPromptRiskDebugSuffix(active = null) {
 function _printGatewayPromptDebugCommandsForDoctor() {
   try {
     const gatewayHandler = require('./gateway');
-    if (!gatewayHandler || typeof gatewayHandler.getGatewayDebugPromptSnapshot !== 'function') return;
+    if (!gatewayHandler || typeof gatewayHandler.getGatewayDebugPromptSnapshot !== 'function') {
+      return;
+    }
     const snapshot = gatewayHandler.getGatewayDebugPromptSnapshot({ tail: 1 });
-    const statusCommand = snapshot?.recommendedCommand || 'KHY_GATEWAY_DEBUG_PROMPT=1 khy gateway status';
+    const statusCommand =
+      snapshot?.recommendedCommand || 'KHY_GATEWAY_DEBUG_PROMPT=1 khy gateway status';
     const debugCommand = `khy gateway debug-prompt --file ${snapshot?.file || '~/.khyquant/logs/khy_gateway_prompt_debug.log'} --tail 1`;
     printInfo(`KHY 协议排查命令: ${statusCommand}`);
     printInfo(`KHY 注入摘要命令: ${debugCommand}`);
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function _buildLatestDeliveryRequestDetail() {
@@ -306,8 +373,16 @@ function _buildLatestLanguageConsistencyDetail() {
 }
 
 function _hasDoctorToolCandidate(toolNames = new Set(), candidates = []) {
-  if (!(toolNames instanceof Set) || toolNames.size === 0) return false;
-  return candidates.some((candidate) => toolNames.has(String(candidate || '').trim().toLowerCase()));
+  if (!(toolNames instanceof Set) || toolNames.size === 0) {
+    return false;
+  }
+  return candidates.some((candidate) =>
+    toolNames.has(
+      String(candidate || '')
+        .trim()
+        .toLowerCase()
+    )
+  );
 }
 
 function _probeDoctorTempWorkspace() {
@@ -324,13 +399,17 @@ function _probeDoctorTempWorkspace() {
     }
     return { ok: true, detail: '可写' };
   } catch (err) {
-    const message = String(err?.message || 'unknown error').replace(/\s+/g, ' ').trim();
+    const message = String(err?.message || 'unknown error')
+      .replace(/\s+/g, ' ')
+      .trim();
     return { ok: false, detail: message ? message.slice(0, 120) : '临时工作区不可写' };
   } finally {
     if (tempDir) {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
   }
 }
@@ -378,10 +457,34 @@ function _buildCodingAgentSmokeCheck(activeAdapter = null) {
     const toolGroups = [
       { label: 'read', candidates: ['readfile', 'read_file', 'read'] },
       { label: 'search', candidates: ['grep', 'search', 'glob', 'explore', 'toolsearch'] },
-      { label: 'edit', candidates: ['editfile', 'edit_file', 'writefile', 'write_file', 'apply_patch', 'applypatch', 'patch'] },
-      { label: 'execute', candidates: ['shellcommand', 'shell_command', 'bash', 'executecode', 'run_tests', 'build_project', 'lint_code'] },
+      {
+        label: 'edit',
+        candidates: [
+          'editfile',
+          'edit_file',
+          'writefile',
+          'write_file',
+          'apply_patch',
+          'applypatch',
+          'patch',
+        ],
+      },
+      {
+        label: 'execute',
+        candidates: [
+          'shellcommand',
+          'shell_command',
+          'bash',
+          'executecode',
+          'run_tests',
+          'build_project',
+          'lint_code',
+        ],
+      },
     ];
-    const readyGroups = toolGroups.filter((group) => _hasDoctorToolCandidate(toolNames, group.candidates));
+    const readyGroups = toolGroups.filter((group) =>
+      _hasDoctorToolCandidate(toolNames, group.candidates)
+    );
     const missingGroups = toolGroups
       .filter((group) => !_hasDoctorToolCandidate(toolNames, group.candidates))
       .map((group) => group.label);
@@ -429,8 +532,8 @@ function readClaudeSettingsSnapshot() {
 
   try {
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    const settings = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
-    const env = (settings.env && typeof settings.env === 'object') ? settings.env : {};
+    const settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const env = settings.env && typeof settings.env === 'object' ? settings.env : {};
     return {
       settingsPath,
       exists: true,
@@ -484,16 +587,16 @@ function inspectClaudeSettingsConflict() {
   const hasDualAuth = !!authToken && !!apiKey;
   const hasKhyApiKey = apiKey.startsWith('khy-');
   const hasExternalBaseUrl = !!baseUrl && !isLoopbackUrl(baseUrl);
-  const writeSettingsEnabled = (
-    isTruthyFlag(process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS)
-    || isTruthyFlag(process.env.KHY_MANAGE_CLAUDE_SETTINGS)
-  );
+  const writeSettingsEnabled =
+    isTruthyFlag(process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS) ||
+    isTruthyFlag(process.env.KHY_MANAGE_CLAUDE_SETTINGS);
 
   if (hasDualAuth && hasKhyApiKey && hasExternalBaseUrl) {
     return {
       ok: false,
       level: 'warn',
-      detail: '检测到外部 AUTH_TOKEN + khy-* API_KEY + 外部 BASE_URL，存在高风险冲突（建议删除 settings.json 中 ANTHROPIC_API_KEY）',
+      detail:
+        '检测到外部 AUTH_TOKEN + khy-* API_KEY + 外部 BASE_URL，存在高风险冲突（建议删除 settings.json 中 ANTHROPIC_API_KEY）',
     };
   }
 
@@ -525,7 +628,8 @@ function inspectClaudeSettingsConflict() {
     return {
       ok: false,
       level: 'warn',
-      detail: '检测到已开启 Claude settings 写入开关且使用外部 BASE_URL（建议关闭 KHY_ALLOW_WRITE_CLAUDE_SETTINGS）',
+      detail:
+        '检测到已开启 Claude settings 写入开关且使用外部 BASE_URL（建议关闭 KHY_ALLOW_WRITE_CLAUDE_SETTINGS）',
     };
   }
 
@@ -603,8 +707,9 @@ function fixClaudeSettingsConflict() {
 function ensureBuiltinSenseNovaProvider(options = {}) {
   // Single source: delegate to the shared registrar so the built-in SenseNova
   // channel is seeded identically here, at server/gateway startup, and in tests.
-  require('../../services/customProviderRegistrar')
-    .ensureBuiltinSenseNova({ force: !!options.force });
+  require('../../services/customProviderRegistrar').ensureBuiltinSenseNova({
+    force: !!options.force,
+  });
 }
 
 // ── khy init ─────────────────────────────────────────────────────────────────
@@ -624,7 +729,7 @@ async function handleInit(options = {}) {
 
   // Check what needs initialization
   const checks = runDoctorChecks();
-  const issues = checks.filter(c => !c.ok);
+  const issues = checks.filter((c) => !c.ok);
 
   if (issues.length === 0 && !options.force) {
     printSuccess('环境检测正常，无需初始化');
@@ -635,7 +740,7 @@ async function handleInit(options = {}) {
   // Show current issues
   if (issues.length > 0) {
     console.log(chalk.yellow('  发现以下问题:'));
-    issues.forEach(issue => {
+    issues.forEach((issue) => {
       console.log(chalk.red('    ✗ ') + issue.label + ': ' + issue.detail);
     });
     console.log('');
@@ -643,39 +748,45 @@ async function handleInit(options = {}) {
 
   // .env configuration
   if (!fs.existsSync(ENV_FILE) || options.force) {
-    const { dbType } = await promptCompat([{
-      type: 'list',
-      name: 'dbType',
-      message: '选择数据库类型:',
-      choices: [
-        { name: 'SQLite (零配置，推荐开发)', value: 'sqlite' },
-        { name: 'PostgreSQL (生产推荐)', value: 'postgres' },
-      ],
-    }]);
+    const { dbType } = await promptCompat([
+      {
+        type: 'list',
+        name: 'dbType',
+        message: '选择数据库类型:',
+        choices: [
+          { name: 'SQLite (零配置，推荐开发)', value: 'sqlite' },
+          { name: 'PostgreSQL (生产推荐)', value: 'postgres' },
+        ],
+      },
+    ]);
 
-    const { port } = await promptCompat([{
-      type: 'input',
-      name: 'port',
-      message: '服务端口:',
-      default: '3000',
-      validate: (v) => /^\d+$/.test(v) ? true : '请输入数字',
-    }]);
+    const { port } = await promptCompat([
+      {
+        type: 'input',
+        name: 'port',
+        message: '服务端口:',
+        default: '3000',
+        validate: (v) => (/^\d+$/.test(v) ? true : '请输入数字'),
+      },
+    ]);
 
     let pgConfig = {};
     if (dbType === 'postgres') {
-      pgConfig = (await promptCompat([
+      pgConfig = await promptCompat([
         { type: 'input', name: 'dbHost', message: 'PostgreSQL 地址:', default: '127.0.0.1' },
         { type: 'input', name: 'dbPort', message: 'PostgreSQL 端口:', default: '5432' },
         { type: 'input', name: 'dbName', message: '数据库名称:', default: 'quant_trading' },
         { type: 'input', name: 'dbUser', message: '数据库用户:', default: 'postgres' },
         { type: 'password', name: 'dbPassword', message: '数据库密码 (留空自动生成):' },
-      ]));
+      ]);
     }
 
     // Generate secure JWT secret
     const crypto = require('crypto');
     const jwtSecret = crypto.randomBytes(32).toString('hex');
-    if (!pgConfig.dbPassword) pgConfig.dbPassword = crypto.randomBytes(16).toString('hex');
+    if (!pgConfig.dbPassword) {
+      pgConfig.dbPassword = crypto.randomBytes(16).toString('hex');
+    }
 
     const lines = [
       '# khy OS Environment Configuration',
@@ -696,7 +807,8 @@ async function handleInit(options = {}) {
     lines.push('', `JWT_SECRET=${jwtSecret}`, 'JWT_EXPIRES_IN=7d');
     lines.push('', 'ENABLE_AKSHARE=true', 'ENABLE_TUSHARE=false', 'DEFAULT_DATA_SOURCE=reliable');
     lines.push('', '# AI Providers', '# GEMINI_API_KEY=', '# GROQ_API_KEY=');
-    lines.push('',
+    lines.push(
+      '',
       '# ── Provider 路由配置 ──',
       '# 内置示例: SenseNova (OpenAI-compatible)',
       'GATEWAY_API_POOL_SERVICE_MAP={"sensenova":"openai"}',
@@ -707,16 +819,19 @@ async function handleInit(options = {}) {
       // 默认/首选用 flash-lite：可正常文本对话、走 /v1/chat/completions。它**不收图像输入**
       // (实测带图当作没收到)，带图请求会自动退回本地 OCR(见 visionCapability/decideVisionRouting)。
       // 切勿用 u1-fast 当默认——那是信息图生成模型(独立端点、不收图/不做通用对话)，会 404。
-      'GATEWAY_PREFERRED_MODEL=sensenova-6.7-flash-lite',
+      'GATEWAY_PREFERRED_MODEL=sensenova-6.7-flash-lite'
     );
 
     fs.writeFileSync(ENV_FILE, lines.join('\n') + '\n');
     // Restrict .env permissions to owner only (Unix)
     if (process.platform !== 'win32') {
-      try { fs.chmodSync(ENV_FILE, 0o600); } catch { /* ignore */ }
+      try {
+        fs.chmodSync(ENV_FILE, 0o600);
+      } catch {
+        /* ignore */
+      }
     }
     printSuccess('.env 配置文件已生成');
-
   } else {
     printInfo('.env 已存在，跳过');
   }
@@ -731,58 +846,75 @@ async function handleInit(options = {}) {
     if (qoderSeed && qoderSeed.seeded) {
       printSuccess('已配置 Qoder 反代 Provider (OpenAI + Anthropic)');
     }
-  } catch { /* best effort — never block init wizard */ }
-
+  } catch {
+    /* best effort — never block init wizard */
+  }
 
   // Database initialization
-  const { shouldInitDb } = await promptCompat([{
-    type: 'confirm',
-    name: 'shouldInitDb',
-    message: '初始化数据库结构?',
-    default: true,
-  }]);
+  const { shouldInitDb } = await promptCompat([
+    {
+      type: 'confirm',
+      name: 'shouldInitDb',
+      message: '初始化数据库结构?',
+      default: true,
+    },
+  ]);
 
   if (shouldInitDb) {
-    await withSpinner('初始化数据库...', async () => {
-      const { bootstrap } = require('../bootstrap');
-      await bootstrap({ syncSchema: true, silent: true });
-    }, { muteOutput: true });
+    await withSpinner(
+      '初始化数据库...',
+      async () => {
+        const { bootstrap } = require('../bootstrap');
+        await bootstrap({ syncSchema: true, silent: true });
+      },
+      { muteOutput: true }
+    );
   }
 
   // Seed data
-  const { shouldSeed } = await promptCompat([{
-    type: 'confirm',
-    name: 'shouldSeed',
-    message: '填充示例数据（策略、品种）?',
-    default: true,
-  }]);
+  const { shouldSeed } = await promptCompat([
+    {
+      type: 'confirm',
+      name: 'shouldSeed',
+      message: '填充示例数据（策略、品种）?',
+      default: true,
+    },
+  ]);
 
   if (shouldSeed) {
-    await withSpinner('填充示例数据...', async () => {
-      const { execFileSync } = require('child_process');
-      execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'seed.js')], {
-        cwd: ROOT,
-        stdio: 'pipe',
-        timeout: 60000,
-      });
-    }, { muteOutput: true });
+    await withSpinner(
+      '填充示例数据...',
+      async () => {
+        const { execFileSync } = require('child_process');
+        execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'seed.js')], {
+          cwd: ROOT,
+          stdio: 'pipe',
+          timeout: 60000,
+        });
+      },
+      { muteOutput: true }
+    );
   }
 
   const shouldCreateKhyMdDefault = !fs.existsSync(projectInstructionFile) || !!options.force;
   if (shouldCreateKhyMdDefault) {
-    const { createKhyMd } = await promptCompat([{
-      type: 'confirm',
-      name: 'createKhyMd',
-      message: `创建默认项目指令文件 ${path.basename(projectInstructionFile)}?（默认中文优先，除非用户明确要求其他语言）`,
-      default: true,
-    }]);
+    const { createKhyMd } = await promptCompat([
+      {
+        type: 'confirm',
+        name: 'createKhyMd',
+        message: `创建默认项目指令文件 ${path.basename(projectInstructionFile)}?（默认中文优先，除非用户明确要求其他语言）`,
+        default: true,
+      },
+    ]);
 
     if (createKhyMd) {
       try {
         fs.writeFileSync(projectInstructionFile, DEFAULT_KHY_MD, 'utf-8');
         printSuccess(`已创建项目指令文件: ${projectInstructionFile}（默认中文优先）`);
       } catch (err) {
-        printWarn(`创建 ${path.basename(projectInstructionFile)} 失败: ${String(err?.message || err).slice(0, 160)}`);
+        printWarn(
+          `创建 ${path.basename(projectInstructionFile)} 失败: ${String(err?.message || err).slice(0, 160)}`
+        );
       }
     }
   } else {
@@ -790,12 +922,14 @@ async function handleInit(options = {}) {
   }
 
   // AI key configuration
-  const { configAi } = await promptCompat([{
-    type: 'confirm',
-    name: 'configAi',
-    message: '现在配置 AI 密钥?',
-    default: false,
-  }]);
+  const { configAi } = await promptCompat([
+    {
+      type: 'confirm',
+      name: 'configAi',
+      message: '现在配置 AI 密钥?',
+      default: false,
+    },
+  ]);
 
   if (configAi) {
     const { handleGatewayConfig } = require('./gateway');
@@ -821,14 +955,19 @@ async function handleDoctor(options = {}, args = []) {
     console.log('');
   }
 
-  const fixRequested = (
-    isTruthyFlag(options['fix-claude-conflict'])
-    || isTruthyFlag(options['fix-claude'])
-    || (Array.isArray(args) && args.some(arg => (
-      String(arg || '').trim().toLowerCase() === 'fix-claude-conflict'
-      || String(arg || '').trim().toLowerCase() === 'fix-claude'
-    )))
-  );
+  const fixRequested =
+    isTruthyFlag(options['fix-claude-conflict']) ||
+    isTruthyFlag(options['fix-claude']) ||
+    (Array.isArray(args) &&
+      args.some(
+        (arg) =>
+          String(arg || '')
+            .trim()
+            .toLowerCase() === 'fix-claude-conflict' ||
+          String(arg || '')
+            .trim()
+            .toLowerCase() === 'fix-claude'
+      ));
   let fixResult = null;
   if (fixRequested) {
     fixResult = fixClaudeSettingsConflict();
@@ -844,12 +983,70 @@ async function handleDoctor(options = {}, args = []) {
     }
   }
 
+  // ── khy doctor --fix：便携可修复项自动修复（断链重建、指针校准）────────────
+  const portableFixRequested =
+    isTruthyFlag(options.fix) ||
+    (Array.isArray(args) &&
+      args.some(
+        (arg) =>
+          String(arg || '')
+            .trim()
+            .toLowerCase() === 'fix'
+      ));
+  if (portableFixRequested) {
+    try {
+      const { fixPortableIssues } = require('../../services/freshInstallDoctor');
+      const fixReport = fixPortableIssues({ bundleRoot: ROOT, env: process.env });
+      if (!asJson) {
+        for (const item of fixReport.fixed) {
+          printSuccess(`便携修复：${item}`);
+        }
+        for (const item of fixReport.skipped) {
+          printInfo(`便携修复跳过：${item}`);
+        }
+        for (const item of fixReport.failed) {
+          printWarn(`便携修复失败：${item}`);
+        }
+        if (!fixReport.fixed.length && !fixReport.skipped.length && !fixReport.failed.length) {
+          printInfo('便携修复：未发现可修复项');
+        }
+        console.log('');
+      }
+    } catch {
+      /* --fix 附加能力绝不阻断 doctor */
+    }
+  }
+
   const checks = runDoctorChecks();
+
+  // Connectivity checks are async (WS handshake / TCP probe, ≤10s connect
+  // exemption) so they run outside the synchronous runDoctorChecks() and are
+  // merged into the same report. Fail-soft: a probe crash never blocks doctor.
+  try {
+    const { runConnectivityChecks } = require('./doctorConnectivity');
+    const connectivityChecks = await runConnectivityChecks({
+      onProgress: asJson ? null : (text) => printInfo(text),
+    });
+    checks.push(...connectivityChecks);
+  } catch (err) {
+    if (!asJson) {
+      printError(`连接诊断执行失败: ${String(err?.message || err).slice(0, 160)}`);
+    }
+    checks.push({
+      category: '连接诊断',
+      label: '连接诊断执行',
+      ok: false,
+      detail: `检查执行异常: ${String(err?.message || err).slice(0, 120)}`,
+      level: 'warn',
+    });
+  }
 
   // Group by category
   const categories = {};
-  checks.forEach(check => {
-    if (!categories[check.category]) categories[check.category] = [];
+  checks.forEach((check) => {
+    if (!categories[check.category]) {
+      categories[check.category] = [];
+    }
     categories[check.category].push(check);
   });
 
@@ -857,48 +1054,64 @@ async function handleDoctor(options = {}, args = []) {
   let totalFail = 0;
   let totalWarn = 0;
 
-  checks.forEach(item => {
-    if (item.ok) totalOk++;
-    else if (item.level === 'warn') totalWarn++;
-    else totalFail++;
+  checks.forEach((item) => {
+    if (item.ok) {
+      totalOk++;
+    } else if (item.level === 'warn') {
+      totalWarn++;
+    } else {
+      totalFail++;
+    }
   });
 
   if (asJson) {
-    const status = totalFail > 0 ? 'fail' : (totalWarn > 0 ? 'warn' : 'ok');
+    const status = totalFail > 0 ? 'fail' : totalWarn > 0 ? 'warn' : 'ok';
     const groupedCategories = Object.entries(categories).map(([category, items]) => ({
       category,
       checks: items,
     }));
-    console.log(JSON.stringify({
-      generatedAt: Date.now(),
-      status,
-      counts: {
-        ok: totalOk,
-        warn: totalWarn,
-        fail: totalFail,
-        total: checks.length,
-      },
-      fix: fixRequested ? {
-        requested: true,
-        ok: !!fixResult?.ok,
-        changed: !!fixResult?.changed,
-        detail: String(fixResult?.detail || ''),
-      } : null,
-      checks,
-      categories: groupedCategories,
-      maintenance: [
-        'khy docs maintainer',
-        'npm run maintainer:map',
-        'npm run test:maintainer:gateway',
-      ],
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          generatedAt: Date.now(),
+          status,
+          counts: {
+            ok: totalOk,
+            warn: totalWarn,
+            fail: totalFail,
+            total: checks.length,
+          },
+          fix: fixRequested
+            ? {
+                requested: true,
+                ok: !!fixResult?.ok,
+                changed: !!fixResult?.changed,
+                detail: String(fixResult?.detail || ''),
+              }
+            : null,
+          checks,
+          categories: groupedCategories,
+          maintenance: [
+            'khy docs maintainer',
+            'npm run maintainer:map',
+            'npm run test:maintainer:gateway',
+          ],
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
   for (const [category, items] of Object.entries(categories)) {
     console.log(chalk.cyan(`  ${category}`));
-    items.forEach(item => {
-      const icon = item.ok ? chalk.green('✓') : (item.level === 'warn' ? chalk.yellow('⚠') : chalk.red('✗'));
+    items.forEach((item) => {
+      const icon = item.ok
+        ? chalk.green('✓')
+        : item.level === 'warn'
+          ? chalk.yellow('⚠')
+          : chalk.red('✗');
       const detail = item.detail ? chalk.dim(` — ${item.detail}`) : '';
       console.log(`    ${icon} ${item.label}${detail}`);
     });
@@ -907,9 +1120,15 @@ async function handleDoctor(options = {}, args = []) {
 
   // Summary
   const summary = [];
-  if (totalOk > 0) summary.push(chalk.green(`${totalOk} 通过`));
-  if (totalWarn > 0) summary.push(chalk.yellow(`${totalWarn} 警告`));
-  if (totalFail > 0) summary.push(chalk.red(`${totalFail} 失败`));
+  if (totalOk > 0) {
+    summary.push(chalk.green(`${totalOk} 通过`));
+  }
+  if (totalWarn > 0) {
+    summary.push(chalk.yellow(`${totalWarn} 警告`));
+  }
+  if (totalFail > 0) {
+    summary.push(chalk.red(`${totalFail} 失败`));
+  }
   console.log(`  ${chalk.bold('总计:')} ${summary.join(' · ')}`);
 
   if (totalFail > 0) {
@@ -923,45 +1142,65 @@ async function handleDoctor(options = {}, args = []) {
     printSuccess('所有检查通过，系统就绪');
   }
 
-  const localModelBlocked = checks.find(c => c.label === '本地模型可用性' && !c.ok);
-  const localListenBlocked = checks.find(c => c.label === '本地监听能力' && !c.ok);
+  const localModelBlocked = checks.find((c) => c.label === '本地模型可用性' && !c.ok);
+  const localListenBlocked = checks.find((c) => c.label === '本地监听能力' && !c.ok);
   if (localModelBlocked || localListenBlocked) {
     printInfo('检测到当前环境限制本地模型通道，可一键执行: `khy gateway prefer-remote`');
     printInfo('也可手动使用 `khy gateway model` 切换到 API/桥接通道');
   }
-  const codexHealCheck = checks.find(c => c.label === 'Codex 自愈状态');
+  const codexHealCheck = checks.find((c) => c.label === 'Codex 自愈状态');
   if (codexHealCheck && codexHealCheck.level === 'warn') {
-    printWarn('检测到 Codex 通道近期异常；建议先重启 Codex CLI 会话，再执行 `khy gateway status` 复查');
+    printWarn(
+      '检测到 Codex 通道近期异常；建议先重启 Codex CLI 会话，再执行 `khy gateway status` 复查'
+    );
   }
-  const codexHomeCheck = checks.find(c => c.label === 'Codex HOME 环境' && !c.ok && c.level === 'warn');
+  const codexHomeCheck = checks.find(
+    (c) => c.label === 'Codex HOME 环境' && !c.ok && c.level === 'warn'
+  );
   if (codexHomeCheck) {
-    printWarn('检测到 Codex CLI 使用临时 HOME；建议切回真实用户主目录后，再执行 `khy gateway status` 或 `khy gateway sample codex`');
+    printWarn(
+      '检测到 Codex CLI 使用临时 HOME；建议切回真实用户主目录后，再执行 `khy gateway status` 或 `khy gateway sample codex`'
+    );
   }
-  const claudeSettingsCheck = checks.find(c => c.label === 'Claude 配置隔离');
+  const claudeSettingsCheck = checks.find((c) => c.label === 'Claude 配置隔离');
   if (claudeSettingsCheck && !claudeSettingsCheck.ok) {
     printWarn('检测到 Claude 配置冲突风险；建议清理 ~/.claude/settings.json 中冲突认证项');
     printInfo('可执行 `khy doctor --fix-claude-conflict` 自动修复常见冲突项');
   }
-  const khyProtocolRiskCheck = checks.find(c => c.label === 'KHY 协议优先级风险' && !c.ok);
+  const khyProtocolRiskCheck = checks.find((c) => c.label === 'KHY 协议优先级风险' && !c.ok);
   if (khyProtocolRiskCheck) {
     _printGatewayPromptDebugCommandsForDoctor();
   }
-  const codingAgentSmokeCheck = checks.find(c => c.label === '编程智能体烟雾测试' && !c.ok);
+  const codingAgentSmokeCheck = checks.find((c) => c.label === '编程智能体烟雾测试' && !c.ok);
   if (codingAgentSmokeCheck) {
-    printInfo('编程代理排查建议: 先执行 `khy gateway status` 确认活跃通道；如工具组缺失或临时目录受限，优先检查 `npm install`、coding tool profile 与当前工作区写权限');
+    printInfo(
+      '编程代理排查建议: 先执行 `khy gateway status` 确认活跃通道；如工具组缺失或临时目录受限，优先检查 `npm install`、coding tool profile 与当前工作区写权限'
+    );
   }
-  const deliveryChainCheck = checks.find(c => c.label === '最近交付链路' && !c.ok && c.level === 'warn');
+  const deliveryChainCheck = checks.find(
+    (c) => c.label === '最近交付链路' && !c.ok && c.level === 'warn'
+  );
   if (deliveryChainCheck) {
-    printInfo('交付链路排查建议: 结合 `khy gateway status --json` 查看 latestDeliveryRequest，并按 requestId 回查网关请求、工具调用与最终响应是否缺段');
-    const requestIdMatch = String(deliveryChainCheck.detail || '').match(/requestId=([a-zA-Z0-9._:-]+)/);
+    printInfo(
+      '交付链路排查建议: 结合 `khy gateway status --json` 查看 latestDeliveryRequest，并按 requestId 回查网关请求、工具调用与最终响应是否缺段'
+    );
+    const requestIdMatch = String(deliveryChainCheck.detail || '').match(
+      /requestId=([a-zA-Z0-9._:-]+)/
+    );
     if (requestIdMatch?.[1]) {
       printInfo(`快速复盘命令: khy gateway trace ${requestIdMatch[1]}`);
     }
   }
-  const languageConsistencyCheck = checks.find(c => c.label === '首段语言一致性' && !c.ok && c.level === 'warn');
+  const languageConsistencyCheck = checks.find(
+    (c) => c.label === '首段语言一致性' && !c.ok && c.level === 'warn'
+  );
   if (languageConsistencyCheck) {
-    printInfo('语言偏航排查建议: 结合 `khy gateway status --json` 查看 latestLanguageConsistency，并按 requestId 回查首段正文、最终答复与 KHY 语言注入证据');
-    const requestIdMatch = String(languageConsistencyCheck.detail || '').match(/requestId=([a-zA-Z0-9._:-]+)/);
+    printInfo(
+      '语言偏航排查建议: 结合 `khy gateway status --json` 查看 latestLanguageConsistency，并按 requestId 回查首段正文、最终答复与 KHY 语言注入证据'
+    );
+    const requestIdMatch = String(languageConsistencyCheck.detail || '').match(
+      /requestId=([a-zA-Z0-9._:-]+)/
+    );
     if (requestIdMatch?.[1]) {
       printInfo(`快速复盘命令: khy gateway trace ${requestIdMatch[1]}`);
     }
@@ -998,7 +1237,9 @@ function runDoctorChecks() {
   for (const cmd of ['python3', 'python', 'py']) {
     const probe = runProbe(cmd, ['--version']);
     if (!probe.ok) {
-      if (probe.reason === 'blocked') pythonBlocked = true;
+      if (probe.reason === 'blocked') {
+        pythonBlocked = true;
+      }
       continue;
     }
     const ver = probe.output;
@@ -1086,11 +1327,12 @@ function runDoctorChecks() {
     if (dbType === 'sqlite' || dbType === 'auto') {
       // Check for SQLite file in common locations
       const sqliteLocations = [
+        path.join(ROOT, '.khy', 'khyquant', 'data', 'khy-quant.db'),
         path.join(ROOT, 'data', 'khy-quant.db'),
         path.join(ROOT, 'khy-quant.db'),
         path.join(ROOT, 'data', 'database.sqlite'),
       ];
-      const dbExists = sqliteLocations.some(p => fs.existsSync(p));
+      const dbExists = sqliteLocations.some((p) => fs.existsSync(p));
       results.push({
         category: '数据库',
         label: 'SQLite 数据文件',
@@ -1130,10 +1372,14 @@ function runDoctorChecks() {
   if (fs.existsSync(ENV_FILE)) {
     const envContent = fs.readFileSync(ENV_FILE, 'utf-8');
     const aiKeys = [
-      'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY',
-      'ZHIPU_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY',
+      'GEMINI_API_KEY',
+      'GROQ_API_KEY',
+      'OPENROUTER_API_KEY',
+      'ZHIPU_API_KEY',
+      'OPENAI_API_KEY',
+      'ANTHROPIC_API_KEY',
     ];
-    const hasAiKey = aiKeys.some(key => {
+    const hasAiKey = aiKeys.some((key) => {
       const match = envContent.match(new RegExp(`^${key}=(.+)$`, 'm'));
       return match && match[1] && !match[1].startsWith('#');
     });
@@ -1161,14 +1407,17 @@ function runDoctorChecks() {
     const active = aiGateway.getActiveAdapter();
     activeAdapter = active || null;
     activeAdapterName = String(active?.name || '');
-    const defaultRouteRecommendation = typeof aiGateway.getDefaultRouteRecommendation === 'function'
-      ? aiGateway.getDefaultRouteRecommendation()
-      : null;
+    const defaultRouteRecommendation =
+      typeof aiGateway.getDefaultRouteRecommendation === 'function'
+        ? aiGateway.getDefaultRouteRecommendation()
+        : null;
     results.push({
       category: 'AI 能力',
       label: 'AI 网关',
       ok: !!active,
-      detail: active ? `${active.name}${active.activeModel ? ' · ' + active.activeModel : ''}` : '无可用适配器',
+      detail: active
+        ? `${active.name}${active.activeModel ? ' · ' + active.activeModel : ''}`
+        : '无可用适配器',
       level: 'warn',
     });
     results.push({
@@ -1192,7 +1441,9 @@ function runDoctorChecks() {
           riskDetail += _buildGatewayPromptRiskDebugSuffix(active);
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
     results.push({
       category: 'AI 能力',
       label: 'KHY 协议优先级风险',
@@ -1224,18 +1475,25 @@ function runDoctorChecks() {
     });
   }
   const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '');
-  const localModelExpected = isLocalAdapterName(preferredAdapter) || isLocalAdapterName(activeAdapterName);
+  const localModelExpected =
+    isLocalAdapterName(preferredAdapter) || isLocalAdapterName(activeAdapterName);
   results.push(_buildCodexHomeEnvironmentCheck(activeAdapter, preferredAdapter));
 
   try {
     const aiGateway = require('../../services/gateway/aiGateway');
-    const activeAdapterKey = String(activeAdapter?.key || activeAdapter?.type || preferredAdapter || '').trim();
-    const runtimeAdapter = activeAdapterKey && typeof aiGateway.getAdapter === 'function'
-      ? aiGateway.getAdapter(activeAdapterKey)
-      : null;
-    const runtimeLabel = activeAdapterKey === 'codex'
-      ? 'Codex 自愈状态'
-      : (activeAdapter?.name ? `${activeAdapter.name} 运行时诊断` : 'AI 通道运行时诊断');
+    const activeAdapterKey = String(
+      activeAdapter?.key || activeAdapter?.type || preferredAdapter || ''
+    ).trim();
+    const runtimeAdapter =
+      activeAdapterKey && typeof aiGateway.getAdapter === 'function'
+        ? aiGateway.getAdapter(activeAdapterKey)
+        : null;
+    const runtimeLabel =
+      activeAdapterKey === 'codex'
+        ? 'Codex 自愈状态'
+        : activeAdapter?.name
+          ? `${activeAdapter.name} 运行时诊断`
+          : 'AI 通道运行时诊断';
     if (!runtimeAdapter || typeof runtimeAdapter.getRuntimeDiagnostics !== 'function') {
       results.push({
         category: 'AI 能力',
@@ -1248,28 +1506,49 @@ function runDoctorChecks() {
       });
     } else {
       const runtimeDiag = runtimeAdapter.getRuntimeDiagnostics({ includePersisted: true });
-      const recentStallDiag = runtimeAdapter.getRuntimeDiagnostics({ includePersisted: true, preferCategory: 'stall' });
+      const recentStallDiag = runtimeAdapter.getRuntimeDiagnostics({
+        includePersisted: true,
+        preferCategory: 'stall',
+      });
       const collectDiagDetails = (diag, { diagnosisLimit = 200, errorLimit = 120 } = {}) => {
         const out = [];
         const timeText = formatLocalTime(diag?.at);
-        const diagText = String(diag?.diagnosis || '').replace(/\s+/g, ' ').trim();
-        const errorText = String(diag?.lastError || '').replace(/\s+/g, ' ').trim();
-        if (timeText) out.push(`时间: ${timeText}`);
-        if (diagText) out.push(`自检: ${diagText.slice(0, diagnosisLimit)}`);
-        if (errorText) out.push(`错误: ${errorText.slice(0, errorLimit)}`);
+        const diagText = String(diag?.diagnosis || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const errorText = String(diag?.lastError || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (timeText) {
+          out.push(`时间: ${timeText}`);
+        }
+        if (diagText) {
+          out.push(`自检: ${diagText.slice(0, diagnosisLimit)}`);
+        }
+        if (errorText) {
+          out.push(`错误: ${errorText.slice(0, errorLimit)}`);
+        }
         return out;
       };
       const buildHeadline = (diag) => {
         const healed = !!diag?.healed;
-        const trigger = String(diag?.trigger || '').trim().toLowerCase();
-        const category = String(diag?.category || '').trim().toLowerCase();
+        const trigger = String(diag?.trigger || '')
+          .trim()
+          .toLowerCase();
+        const category = String(diag?.category || '')
+          .trim()
+          .toLowerCase();
         if (healed) {
           return activeAdapterKey === 'codex'
             ? '已执行自愈（sandbox=none，仅当前进程）'
             : '已执行恢复动作';
         }
-        if (trigger === 'first_response_timeout') return '检测到首响阻塞，未触发自愈';
-        if (category === 'stall' || /timeout|handshake|no_stream|canceled/.test(trigger)) return '检测到通道阻塞，未触发自愈';
+        if (trigger === 'first_response_timeout') {
+          return '检测到首响阻塞，未触发自愈';
+        }
+        if (category === 'stall' || /timeout|handshake|no_stream|canceled/.test(trigger)) {
+          return '检测到通道阻塞，未触发自愈';
+        }
         return '检测到通道异常，未触发自愈';
       };
       const hasRecentRecord = runtimeDiag && Number(runtimeDiag.at) > 0;
@@ -1285,15 +1564,24 @@ function runDoctorChecks() {
         const detailParts = [buildHeadline(runtimeDiag)];
         detailParts.push(...collectDiagDetails(runtimeDiag));
         const hasRecentStall = recentStallDiag && Number(recentStallDiag.at) > 0;
-        const recentStallIsSeparate = hasRecentStall && (
-          String(recentStallDiag.trigger || '').trim().toLowerCase() !== String(runtimeDiag.trigger || '').trim().toLowerCase()
-          || Number(recentStallDiag.at || 0) !== Number(runtimeDiag.at || 0)
-        );
+        const recentStallIsSeparate =
+          hasRecentStall &&
+          (String(recentStallDiag.trigger || '')
+            .trim()
+            .toLowerCase() !==
+            String(runtimeDiag.trigger || '')
+              .trim()
+              .toLowerCase() ||
+            Number(recentStallDiag.at || 0) !== Number(runtimeDiag.at || 0));
         if (recentStallIsSeparate) {
-          detailParts.push(`最近首响阻塞: ${collectDiagDetails(recentStallDiag, {
-            diagnosisLimit: 180,
-            errorLimit: 110,
-          }).join('；') || '已记录'}`);
+          detailParts.push(
+            `最近首响阻塞: ${
+              collectDiagDetails(recentStallDiag, {
+                diagnosisLimit: 180,
+                errorLimit: 110,
+              }).join('；') || '已记录'
+            }`
+          );
         }
         results.push({
           category: 'AI 能力',
@@ -1322,9 +1610,9 @@ function runDoctorChecks() {
   const loopbackBlocked = !loopbackProbe.ok;
   const loopbackDetail = loopbackProbe.ok
     ? '可监听 127.0.0.1（本地模型后端可启动）'
-    : (localModelExpected
+    : localModelExpected
       ? `受限：${probeFailureDetail(loopbackProbe, loopbackProbe.message ? loopbackProbe.message.slice(0, 120) : 'listen 失败')}`
-      : `受限：${probeFailureDetail(loopbackProbe, 'listen 失败')}（当前未启用本地模型，可忽略）`);
+      : `受限：${probeFailureDetail(loopbackProbe, 'listen 失败')}（当前未启用本地模型，可忽略）`;
   results.push({
     category: 'AI 能力',
     label: '本地监听能力',
@@ -1338,21 +1626,32 @@ function runDoctorChecks() {
     path.resolve(__dirname, '../../../bin/ollama-runner/bin/ollama'),
     path.resolve(__dirname, '../../../bin/ollama-runner/bin/ollama.exe'),
   ];
-  const bundledRunner = bundledRunnerCandidates.find(p => fs.existsSync(p)) || '';
-  const bundledRunnerProbe = bundledRunner ? runProbe(bundledRunner, ['runner', '--help']) : { ok: false, reason: 'missing' };
-  const systemRunnerProbe = runProbe(process.platform === 'win32' ? 'ollama.exe' : 'ollama', ['runner', '--help']);
+  const bundledRunner = bundledRunnerCandidates.find((p) => fs.existsSync(p)) || '';
+  const bundledRunnerProbe = bundledRunner
+    ? runProbe(bundledRunner, ['runner', '--help'])
+    : { ok: false, reason: 'missing' };
+  const systemRunnerProbe = runProbe(process.platform === 'win32' ? 'ollama.exe' : 'ollama', [
+    'runner',
+    '--help',
+  ]);
   const runnerProbe = bundledRunnerProbe.ok ? bundledRunnerProbe : systemRunnerProbe;
-  const runnerSource = bundledRunnerProbe.ok ? 'bundled' : (systemRunnerProbe.ok ? 'system' : 'none');
+  const runnerSource = bundledRunnerProbe.ok ? 'bundled' : systemRunnerProbe.ok ? 'system' : 'none';
   const runnerBaseDetail = runnerProbe.ok
-    ? (runnerSource === 'bundled' ? '可执行（内置二进制）' : '可执行（系统 ollama）')
-    : (bundledRunner ? probeFailureDetail(runnerProbe, '不可执行') : '未找到二进制（首次使用自动拉取，或 `khy runtime install` 预拉取）');
+    ? runnerSource === 'bundled'
+      ? '可执行（内置二进制）'
+      : '可执行（系统 ollama）'
+    : bundledRunner
+      ? probeFailureDetail(runnerProbe, '不可执行')
+      : '未找到二进制（首次使用自动拉取，或 `khy runtime install` 预拉取）';
   results.push({
     category: 'AI 能力',
     label: 'ollama-runner',
     ok: runnerProbe.ok || !localModelExpected,
     detail: runnerProbe.ok
       ? runnerBaseDetail
-      : (localModelExpected ? runnerBaseDetail : `${runnerBaseDetail}（当前未启用本地模型，可忽略）`),
+      : localModelExpected
+        ? runnerBaseDetail
+        : `${runnerBaseDetail}（当前未启用本地模型，可忽略）`,
     level: localModelExpected ? 'warn' : 'info',
   });
 
@@ -1364,29 +1663,36 @@ function runDoctorChecks() {
   ];
   if (fs.existsSync(bundledLlamaRoot)) {
     try {
-      const dirs = fs.readdirSync(bundledLlamaRoot, { withFileTypes: true })
-        .filter(d => d.isDirectory())
-        .map(d => d.name);
+      const dirs = fs
+        .readdirSync(bundledLlamaRoot, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name);
       for (const dir of dirs) {
         bundledLlamaCandidates.push(path.join(bundledLlamaRoot, dir, 'llama-completion'));
         bundledLlamaCandidates.push(path.join(bundledLlamaRoot, dir, 'llama-cli'));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
-  const bundledLlamaBin = bundledLlamaCandidates.find(p => fs.existsSync(p));
+  const bundledLlamaBin = bundledLlamaCandidates.find((p) => fs.existsSync(p));
   const bundledLlamaProbe = bundledLlamaBin
     ? runProbe(bundledLlamaBin, ['--help'])
     : { ok: false, reason: 'missing' };
   const llamaBaseDetail = bundledLlamaProbe.ok
     ? '已内置（可离线推理）'
-    : (bundledLlamaBin ? probeFailureDetail(bundledLlamaProbe, '不可执行') : '未找到二进制（首次使用自动拉取，或 `khy runtime install` 预拉取）');
+    : bundledLlamaBin
+      ? probeFailureDetail(bundledLlamaProbe, '不可执行')
+      : '未找到二进制（首次使用自动拉取，或 `khy runtime install` 预拉取）';
   results.push({
     category: 'AI 能力',
     label: 'llama-cpp binary',
     ok: bundledLlamaProbe.ok || !localModelExpected,
     detail: bundledLlamaProbe.ok
       ? llamaBaseDetail
-      : (localModelExpected ? llamaBaseDetail : `${llamaBaseDetail}（当前未启用本地模型，可忽略）`),
+      : localModelExpected
+        ? llamaBaseDetail
+        : `${llamaBaseDetail}（当前未启用本地模型，可忽略）`,
     level: localModelExpected ? 'warn' : 'info',
   });
 
@@ -1398,11 +1704,11 @@ function runDoctorChecks() {
   const hasBundledLocalBackend = runnerProbe.ok || bundledLlamaProbe.ok;
   const nodeLlamaDetail = llamaCppProbe.ok
     ? '已安装（可用进程内本地推理）'
-    : (hasBundledLocalBackend
+    : hasBundledLocalBackend
       ? '未安装（已内置 runner/llama-cpp，可正常本地推理）'
-      : (localModelExpected
+      : localModelExpected
         ? '未安装 — 本地模型仅能依赖 runner/python/http 后端'
-        : '未安装（当前未启用本地模型，可忽略）'));
+        : '未安装（当前未启用本地模型，可忽略）';
   results.push({
     category: 'AI 能力',
     label: 'node-llama-cpp',
@@ -1435,7 +1741,13 @@ function runDoctorChecks() {
     let tags = [];
     if (tagsProbe.ok) {
       const m = String(tagsProbe.output || '').match(/TAGS:(\[.*\])/);
-      if (m) { try { tags = JSON.parse(m[1]); } catch { tags = []; } }
+      if (m) {
+        try {
+          tags = JSON.parse(m[1]);
+        } catch {
+          tags = [];
+        }
+      }
     }
     const verdict = localLLM.diagnoseOllamaModel({
       online: !!tagsProbe.ok,
@@ -1448,8 +1760,10 @@ function runDoctorChecks() {
       category: 'AI 能力',
       label: 'Ollama 推理服务',
       ok: verdict.ok || softWhenNotExpected,
-      detail: softWhenNotExpected ? `${verdict.detail}（当前未启用本地模型，可忽略）` : verdict.detail,
-      level: verdict.ok || softWhenNotExpected ? 'info' : (localModelExpected ? 'warn' : 'info'),
+      detail: softWhenNotExpected
+        ? `${verdict.detail}（当前未启用本地模型，可忽略）`
+        : verdict.detail,
+      level: verdict.ok || softWhenNotExpected ? 'info' : localModelExpected ? 'warn' : 'info',
     });
   } catch {
     // diagnose 不可用不应阻断 doctor 其它检查。
@@ -1475,7 +1789,9 @@ function runDoctorChecks() {
       detail: dangerMode ? '⚠ 危险模式已开启 (跳过权限确认)' : '正常 (工具调用需确认)',
       level: dangerMode ? 'warn' : 'info',
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   results.push(_buildCodingAgentSmokeCheck(activeAdapter));
   const latestDeliveryRequestCheck = _buildLatestDeliveryRequestDetail();
@@ -1506,10 +1822,15 @@ function runDoctorChecks() {
       category: 'AI 能力',
       label: 'MCP 服务器',
       ok: true,
-      detail: serverCount > 0 ? `${enabledCount}/${serverCount} 已启用` : '未配置 — 在 ~/.khy/mcp.json 中添加',
+      detail:
+        serverCount > 0
+          ? `${enabledCount}/${serverCount} 已启用`
+          : '未配置 — 在 ~/.khy/mcp.json 中添加',
       level: 'info',
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // ── Ecosystem ─────────────────────────────────────────────────────────
   try {
@@ -1522,7 +1843,9 @@ function runDoctorChecks() {
       detail: `5 内置 + ${installed.length} 已安装`,
       level: 'info',
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   try {
     const cloudSync = require('../../services/cloudSync');
@@ -1534,7 +1857,9 @@ function runDoctorChecks() {
       detail: loggedIn ? `已登录 (${cloudSync.getUsername()})` : '未登录 — 可选: khy cloud login',
       level: loggedIn ? 'info' : 'warn',
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // User profile
   try {
@@ -1547,7 +1872,9 @@ function runDoctorChecks() {
       detail: `等级: ${profile.skillLevel || 'beginner'} · 命令: ${profile.commandCount || 0}次`,
       level: 'info',
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // ── 离机还原自检 (fresh-machine off-machine-restore) ───────────────────────
   // Shipped, human-facing "真实原因 + 解决方法" for a fresh pip/npm install:
@@ -1567,7 +1894,21 @@ function runDoctorChecks() {
     })) {
       results.push(c);
     }
-  } catch { /* ignore — add-on must never crash doctor */ }
+  } catch {
+    /* ignore — add-on must never crash doctor */
+  }
+
+  // ── 便携自检 (portable self-heal) ──────────────────────────────────────────
+  // SQLite 驱动（子进程隔离防段错误静默死亡）、junction/symlink 断链、数据指针
+  // 一致性。门控 KHY_DOCTOR_PORTABLE（默认开）；fail-soft — never breaks doctor.
+  try {
+    const { portableSelfHealChecks } = require('../../services/freshInstallDoctor');
+    for (const c of portableSelfHealChecks({ bundleRoot: ROOT, env: process.env })) {
+      results.push(c);
+    }
+  } catch {
+    /* ignore — portable add-on must never crash doctor */
+  }
 
   return results;
 }

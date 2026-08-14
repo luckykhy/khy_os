@@ -33,10 +33,14 @@ function normalizeUriAndGetScheme(input) {
 // 剥去 `scheme://` 前缀;scheme 不在 expected 内则抛 errorMessage(上游语义,供协议解析器 catch)。
 function stripUriScheme(uri, expectedSchemes, errorMessage) {
   const match = URI_SCHEME_RE.exec(String(uri == null ? '' : uri));
-  if (!match) throw new Error(errorMessage);
+  if (!match) {
+    throw new Error(errorMessage);
+  }
   const scheme = match[1].toLowerCase();
   const expected = typeof expectedSchemes === 'string' ? [expectedSchemes] : expectedSchemes;
-  if (!expected.includes(scheme)) throw new Error(errorMessage);
+  if (!expected.includes(scheme)) {
+    throw new Error(errorMessage);
+  }
   return String(uri).slice(match[0].length);
 }
 
@@ -57,7 +61,9 @@ function trimStr(str) {
 }
 
 function safeDecodeURIComponent(value) {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   try {
     return decodeURIComponent(value);
   } catch {
@@ -74,18 +80,26 @@ function decodeAndTrim(value) {
 function splitOnce(input, delimiter) {
   const s = String(input == null ? '' : input);
   const idx = s.indexOf(delimiter);
-  if (idx === -1) return [s];
+  if (idx === -1) {
+    return [s];
+  }
   return [s.slice(0, idx), s.slice(idx + delimiter.length)];
 }
 
 function parseQueryString(query) {
   const out = {};
-  if (!query) return out;
+  if (!query) {
+    return out;
+  }
   for (const part of String(query).split('&')) {
-    if (!part) continue;
+    if (!part) {
+      continue;
+    }
     const [keyRaw, valueRaw] = splitOnce(part, '=');
     const key = keyRaw.trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     out[key] = valueRaw === undefined ? undefined : (safeDecodeURIComponent(valueRaw) ?? valueRaw);
   }
   return out;
@@ -106,46 +120,68 @@ function parseQueryStringNormalized(query) {
 }
 
 function parseBool(value) {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   return /^(?:true|1)$/i.test(String(value));
 }
 
 // 无值(键存在但无 `=value`)或空串视为 true(存在即真);否则按 true/1 判定。
 function parseBoolOrPresence(value) {
-  if (value === undefined) return true;
+  if (value === undefined) {
+    return true;
+  }
   const trimmed = String(value).trim();
-  if (trimmed === '') return true;
+  if (trimmed === '') {
+    return true;
+  }
   return /^(?:true|1)$/i.test(trimmed);
 }
 
 function parseVlessFlow(value) {
   const flow = getIfNotBlank(value);
-  if (!flow) return undefined;
-  if (/^none$/i.test(flow)) return undefined;
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(flow)) return undefined;
+  if (!flow) {
+    return undefined;
+  }
+  if (/^none$/i.test(flow)) {
+    return undefined;
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(flow)) {
+    return undefined;
+  }
   return flow;
 }
 
 function parseInteger(value) {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 // 严格端口:必须是纯数字且 1–65535,否则返 undefined(过滤 0 / 越界 / 非数字)。
 function parsePortStrict(value) {
-  if (value === null || value === undefined) return undefined;
+  if (value === null || value === undefined) {
+    return undefined;
+  }
   const raw = String(value).trim();
-  if (!/^\d+$/.test(raw)) return undefined;
+  if (!/^\d+$/.test(raw)) {
+    return undefined;
+  }
   const parsed = Number.parseInt(raw, 10);
-  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) return undefined;
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {
+    return undefined;
+  }
   return parsed;
 }
 
 // 必需端口:非法则抛(供各协议解析器 catch → 该行返 null)。
 function parseRequiredPort(value, errorMessage) {
   const parsed = parsePortStrict(value);
-  if (parsed === undefined) throw new Error(errorMessage);
+  if (parsed === undefined) {
+    throw new Error(errorMessage);
+  }
   return parsed;
 }
 
@@ -200,7 +236,10 @@ function isIPv6(address) {
 // 控制字符(<32 或 127,除 \t\n\r)出现即判非文本,返原串。`atob` 不可用故用 Buffer(latin1 等价)。
 function decodeBase64OrOriginal(str) {
   const s = String(str == null ? '' : str);
-  const normalized = s.replace(/[\r\n\s]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  const normalized = s
+    .replace(/[\r\n\s]/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
   const padLen = normalized.length % 4;
   const padded = padLen === 0 ? normalized : normalized + '='.repeat(4 - padLen);
   try {
@@ -210,8 +249,12 @@ function decodeBase64OrOriginal(str) {
     const decoded = buf.toString('latin1');
     for (let i = 0; i < decoded.length; i++) {
       const code = decoded.charCodeAt(i);
-      if (code === 9 || code === 10 || code === 13) continue;
-      if (code < 32 || code === 127) return s;
+      if (code === 9 || code === 10 || code === 13) {
+        continue;
+      }
+      if (code < 32 || code === 127) {
+        return s;
+      }
     }
     // 通过启发式 → 返 UTF-8 文本(多字节节点名/中文备注可读)。
     return buf.toString('utf8');
@@ -260,17 +303,25 @@ const KNOWN_CIPHERS = new Set([
 
 // cipher 归一:未知/非字符串 → 'auto';缺失 → 'none';别名映射到 clash 规范名。
 function getCipher(value) {
-  if (value === undefined) return 'none';
-  if (typeof value !== 'string') return 'auto';
+  if (value === undefined) {
+    return 'none';
+  }
+  if (typeof value !== 'string') {
+    return 'auto';
+  }
   const aliased = CIPHER_ALIASES[value] ?? value;
   return KNOWN_CIPHERS.has(aliased) ? aliased : 'auto';
 }
 
 // 取「第一个字符串」(数组取首元、标量转字符串),供 vmess host/path 可能为数组时归一。
 function firstString(value) {
-  if (value === null || value === undefined) return undefined;
+  if (value === null || value === undefined) {
+    return undefined;
+  }
   if (Array.isArray(value)) {
-    if (value.length === 0) return undefined;
+    if (value.length === 0) {
+      return undefined;
+    }
     const first = value[0];
     return first === null || first === undefined ? undefined : String(first);
   }

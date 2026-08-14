@@ -21,8 +21,12 @@
 
 function maskToken(raw) {
   const token = String(raw || '').trim();
-  if (!token) return '(empty)';
-  if (token.length <= 10) return `${token.slice(0, 3)}***`;
+  if (!token) {
+    return '(empty)';
+  }
+  if (token.length <= 10) {
+    return `${token.slice(0, 3)}***`;
+  }
   return `${token.slice(0, 6)}***${token.slice(-4)}`;
 }
 

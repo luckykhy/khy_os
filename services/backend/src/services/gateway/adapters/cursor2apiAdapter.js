@@ -10,11 +10,12 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
+const { PRIMARY: MODELS } = require('../../../constants/models');
 const integration = require('../../cursor2apiIntegrationService');
+
 const { createProtocolHandler } = require('./_protocolPipeline');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
 // Model-name SSOT: relay-family default flows from constants/models.js.
-const { PRIMARY: MODELS } = require('../../../constants/models');
 
 const _openaiHandler = createProtocolHandler({ protocol: 'openai', adapterName: 'cursor2api' });
 
@@ -35,9 +36,15 @@ function toInt(raw, fallback) {
 function getConfig(options = {}) {
   const stored = integration.loadConfig();
   const port = toInt(process.env.CURSOR2API_PORT, toInt(stored.port, 3010));
-  const baseUrl = (process.env.CURSOR2API_BASE_URL || `http://127.0.0.1:${port}`).replace(/\/+$/, '');
-  const token = String(options.apiKey || options.token || process.env.CURSOR2API_TOKEN || stored.authToken || '').trim();
-  const model = String(options.model || process.env.CURSOR2API_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  const baseUrl = (process.env.CURSOR2API_BASE_URL || `http://127.0.0.1:${port}`).replace(
+    /\/+$/,
+    ''
+  );
+  const token = String(
+    options.apiKey || options.token || process.env.CURSOR2API_TOKEN || stored.authToken || ''
+  ).trim();
+  const model =
+    String(options.model || process.env.CURSOR2API_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
   return { baseUrl, token, model, port };
 }
 
@@ -45,34 +52,46 @@ function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function makeRequest(url, { method = 'GET', headers = {}, body = null, timeout = DEFAULT_TIMEOUT_MS } = {}) {
+function makeRequest(
+  url,
+  { method = 'GET', headers = {}, body = null, timeout = DEFAULT_TIMEOUT_MS } = {}
+) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const mod = u.protocol === 'https:' ? https : http;
 
-    const req = mod.request({
-      protocol: u.protocol,
-      hostname: u.hostname,
-      port: u.port || (u.protocol === 'https:' ? 443 : 80),
-      path: `${u.pathname}${u.search || ''}`,
-      method,
-      headers,
-      timeout,
-    }, (res) => {
-      const contentType = String(res.headers['content-type'] || '').toLowerCase();
-      if (contentType.includes('text/event-stream')) {
-        resolve({ status: res.statusCode || 0, stream: res, headers: res.headers });
-        return;
-      }
+    const req = mod.request(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port || (u.protocol === 'https:' ? 443 : 80),
+        path: `${u.pathname}${u.search || ''}`,
+        method,
+        headers,
+        timeout,
+      },
+      (res) => {
+        const contentType = String(res.headers['content-type'] || '').toLowerCase();
+        if (contentType.includes('text/event-stream')) {
+          resolve({ status: res.statusCode || 0, stream: res, headers: res.headers });
+          return;
+        }
 
-      let raw = '';
-      res.on('data', (chunk) => { raw += chunk.toString(); });
-      res.on('end', () => {
-        let data = raw;
-        try { data = raw ? JSON.parse(raw) : {}; } catch { /* keep raw */ }
-        resolve({ status: res.statusCode || 0, data, headers: res.headers });
-      });
-    });
+        let raw = '';
+        res.on('data', (chunk) => {
+          raw += chunk.toString();
+        });
+        res.on('end', () => {
+          let data = raw;
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch {
+            /* keep raw */
+          }
+          resolve({ status: res.statusCode || 0, data, headers: res.headers });
+        });
+      }
+    );
 
     req.on('error', reject);
     req.on('timeout', () => {
@@ -88,8 +107,12 @@ function makeRequest(url, { method = 'GET', headers = {}, body = null, timeout =
 
 function extractErrorMessage(response) {
   const data = response?.data;
-  if (!data) return `HTTP ${response?.status || 500}`;
-  if (typeof data === 'string') return data.slice(0, 500);
+  if (!data) {
+    return `HTTP ${response?.status || 500}`;
+  }
+  if (typeof data === 'string') {
+    return data.slice(0, 500);
+  }
   return data?.error?.message || data?.message || `HTTP ${response?.status || 500}`;
 }
 
@@ -107,7 +130,14 @@ function parseSSEStream(stream, onChunk, { hasTools = false } = {}) {
     staleOptions: {
       provider: 'openai',
       onStale: (elapsed) => {
-        try { onChunk({ type: 'status', text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s` }); } catch { /* ignore */ }
+        try {
+          onChunk({
+            type: 'status',
+            text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s`,
+          });
+        } catch {
+          /* ignore */
+        }
       },
     },
   });
@@ -121,7 +151,9 @@ async function detectAsync(forceRefresh = false) {
   }
 
   const now = Date.now();
-  if (!forceRefresh && now - _lastCheckAt < DETECT_CACHE_MS) return _available;
+  if (!forceRefresh && now - _lastCheckAt < DETECT_CACHE_MS) {
+    return _available;
+  }
 
   const { baseUrl, token } = getConfig();
   try {
@@ -152,7 +184,9 @@ function detect() {
 
 async function listModels() {
   const { baseUrl, token, model } = getConfig();
-  const fallback = [{ id: model, name: model, isDefault: true, provider: 'cursor2api', description: '' }];
+  const fallback = [
+    { id: model, name: model, isDefault: true, provider: 'cursor2api', description: '' },
+  ];
 
   try {
     const res = await makeRequest(`${baseUrl}/v1/models`, {
@@ -172,7 +206,9 @@ async function listModels() {
     const models = rows
       .map((m) => {
         const id = String(m.id || '').trim();
-        if (!id) return null;
+        if (!id) {
+          return null;
+        }
         return {
           id,
           name: String(m.name || id),
@@ -217,8 +253,17 @@ async function generate(prompt, options = {}) {
     if (!(res.status >= 200 && res.status < 300) && !res.stream) {
       const errMsg = extractErrorMessage(res);
       return buildFailure(errMsg, {
-        adapter: 'cursor2api', provider: 'Cursor2API', statusCode: res.status,
-        attempts: [{ provider: `Cursor2API (${cfg.model})`, success: false, error: errMsg, statusCode: res.status }],
+        adapter: 'cursor2api',
+        provider: 'Cursor2API',
+        statusCode: res.status,
+        attempts: [
+          {
+            provider: `Cursor2API (${cfg.model})`,
+            success: false,
+            error: errMsg,
+            statusCode: res.status,
+          },
+        ],
       });
     }
 
@@ -226,7 +271,9 @@ async function generate(prompt, options = {}) {
       const streamed = await parseSSEStream(res.stream, options.onChunk, { hasTools });
       const usedModel = streamed.model || cfg.model;
       return buildSuccess(String(streamed.content || '').trim(), {
-        adapter: 'cursor2api', provider: `Cursor2API (${usedModel})`, model: usedModel,
+        adapter: 'cursor2api',
+        provider: `Cursor2API (${usedModel})`,
+        model: usedModel,
         toolUseBlocks: streamed.toolUseBlocks || [],
         stopReason: streamed.stopReason || 'end_turn',
         attempts: [{ provider: `Cursor2API (${usedModel})`, success: true }],
@@ -237,13 +284,17 @@ async function generate(prompt, options = {}) {
     const parsed = _openaiHandler.parseJsonResponse(res.data);
     const usedModel = parsed.model || cfg.model;
     return buildSuccess(parsed.content, {
-      adapter: 'cursor2api', provider: `Cursor2API (${usedModel})`, model: usedModel,
-      toolUseBlocks: parsed.toolUseBlocks, stopReason: parsed.stopReason,
+      adapter: 'cursor2api',
+      provider: `Cursor2API (${usedModel})`,
+      model: usedModel,
+      toolUseBlocks: parsed.toolUseBlocks,
+      stopReason: parsed.stopReason,
       attempts: [{ provider: `Cursor2API (${usedModel})`, success: true }],
     });
   } catch (err) {
     return buildFailure(err, {
-      adapter: 'cursor2api', provider: 'Cursor2API',
+      adapter: 'cursor2api',
+      provider: 'Cursor2API',
       attempts: [{ provider: `Cursor2API (${cfg.model})`, success: false, error: err.message }],
     });
   }

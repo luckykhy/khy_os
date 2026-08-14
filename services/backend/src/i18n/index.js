@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const log = require('../utils/logger');
 
 // ── Locale Loading ──
@@ -42,7 +43,9 @@ let _currentLocale = DEFAULT_LOCALE;
  * @returns {object}
  */
 function _loadLocale(locale) {
-  if (_localeData.has(locale)) return _localeData.get(locale);
+  if (_localeData.has(locale)) {
+    return _localeData.get(locale);
+  }
 
   const filePath = path.join(LOCALES_DIR, `${locale}.json`);
   try {
@@ -67,20 +70,25 @@ function _loadLocale(locale) {
  * @returns {string}
  */
 function detectLocale() {
-  const envLocale = process.env.KHY_LOCALE
-    || process.env.LANG
-    || process.env.LC_ALL
-    || process.env.LC_MESSAGES
-    || '';
+  const envLocale =
+    process.env.KHY_LOCALE ||
+    process.env.LANG ||
+    process.env.LC_ALL ||
+    process.env.LC_MESSAGES ||
+    '';
 
   // Extract language code: "zh_CN.UTF-8" → "zh"
   const lang = envLocale.split(/[_.@]/)[0].toLowerCase();
 
-  if (lang && SUPPORTED_LOCALES.includes(lang)) return lang;
+  if (lang && SUPPORTED_LOCALES.includes(lang)) {
+    return lang;
+  }
 
   // Try 2-letter prefix match
   for (const supported of SUPPORTED_LOCALES) {
-    if (lang.startsWith(supported)) return supported;
+    if (lang.startsWith(supported)) {
+      return supported;
+    }
   }
 
   return DEFAULT_LOCALE;
@@ -110,7 +118,9 @@ function t(key, params) {
   }
 
   // Fallback to key itself
-  if (value === undefined) return _interpolate(key, params);
+  if (value === undefined) {
+    return _interpolate(key, params);
+  }
 
   return _interpolate(value, params);
 }
@@ -151,7 +161,9 @@ function _resolve(key, locale) {
   let current = data;
 
   for (const part of parts) {
-    if (current == null || typeof current !== 'object') return undefined;
+    if (current == null || typeof current !== 'object') {
+      return undefined;
+    }
     current = current[part];
   }
 
@@ -166,7 +178,9 @@ function _resolve(key, locale) {
  * @returns {string}
  */
 function _interpolate(str, params) {
-  if (!params || typeof str !== 'string') return str;
+  if (!params || typeof str !== 'string') {
+    return str;
+  }
   return str.replace(/\{(\w+)\}/g, (match, key) => {
     return params[key] !== undefined ? String(params[key]) : match;
   });

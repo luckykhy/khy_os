@@ -36,7 +36,11 @@ const FALLBACK_TYPE = 'feedback';
 const PROMOTABLE_SOURCES = new Set(['deep', 'pattern']);
 
 function isEnabled(env = process.env) {
-  return !OFF.has(String((env && env.KHY_MEMORY_DREAM_PROMOTE) || '').trim().toLowerCase());
+  return !OFF.has(
+    String((env && env.KHY_MEMORY_DREAM_PROMOTE) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function minScore(env = process.env) {
@@ -55,16 +59,19 @@ function maxPerRun(env = process.env) {
  * @returns {'user'|'feedback'|'project'|'reference'}
  */
 function mapType(dreamType) {
-  const t = String(dreamType || '').trim().toLowerCase();
+  const t = String(dreamType || '')
+    .trim()
+    .toLowerCase();
   return TYPE_MAP[t] || FALLBACK_TYPE;
 }
 
 /** 由 content 派生一个简短标题(首行/首句,截 ~60 字,加前缀)。 */
 function _deriveName(content) {
-  const firstLine = String(content || '')
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .find((s) => s.length > 0) || '';
+  const firstLine =
+    String(content || '')
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .find((s) => s.length > 0) || '';
   // 优先在首句边界切
   const sentence = firstLine.split(/(?<=[。.!?！？])/)[0] || firstLine;
   const core = sentence.slice(0, 60).trim();
@@ -73,10 +80,11 @@ function _deriveName(content) {
 
 /** 由 content 派生一行 description(首行,截 120 字)。 */
 function _deriveDescription(content) {
-  const firstLine = String(content || '')
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .find((s) => s.length > 0) || '';
+  const firstLine =
+    String(content || '')
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .find((s) => s.length > 0) || '';
   return firstLine.slice(0, 120).trim();
 }
 
@@ -92,26 +100,41 @@ function _deriveDescription(content) {
  * @returns {Array<{id,memdirType,name,description,content}>}
  */
 function selectPromotable(entries, promoted, env = process.env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   const list = Array.isArray(entries) ? entries : [];
-  const seen = promoted instanceof Set ? promoted : new Set(Array.isArray(promoted) ? promoted : []);
+  const seen =
+    promoted instanceof Set ? promoted : new Set(Array.isArray(promoted) ? promoted : []);
   const floor = minScore(env);
 
   const eligible = [];
   for (const e of list) {
-    if (!e || typeof e !== 'object') continue;
-    if (!PROMOTABLE_SOURCES.has(String(e.source || '').toLowerCase())) continue;
-    if (!(Number(e.score) >= floor)) continue;
-    if (!e.id || seen.has(e.id)) continue;
+    if (!e || typeof e !== 'object') {
+      continue;
+    }
+    if (!PROMOTABLE_SOURCES.has(String(e.source || '').toLowerCase())) {
+      continue;
+    }
+    if (!(Number(e.score) >= floor)) {
+      continue;
+    }
+    if (!e.id || seen.has(e.id)) {
+      continue;
+    }
     const content = String(e.content || '').trim();
-    if (!content) continue;
+    if (!content) {
+      continue;
+    }
     eligible.push({ e, content });
   }
 
-  eligible.sort((a, b) =>
-    (Number(b.e.score) || 0) - (Number(a.e.score) || 0)
-    || (Number(b.e.createdAt) || 0) - (Number(a.e.createdAt) || 0)
-    || String(a.e.id).localeCompare(String(b.e.id)));
+  eligible.sort(
+    (a, b) =>
+      (Number(b.e.score) || 0) - (Number(a.e.score) || 0) ||
+      (Number(b.e.createdAt) || 0) - (Number(a.e.createdAt) || 0) ||
+      String(a.e.id).localeCompare(String(b.e.id))
+  );
 
   return eligible.slice(0, maxPerRun(env)).map(({ e, content }) => ({
     id: String(e.id),

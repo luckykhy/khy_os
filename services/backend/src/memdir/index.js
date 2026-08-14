@@ -45,7 +45,9 @@ function isValidMemoryType(type) {
  * @returns {string|null}
  */
 function parseMemoryType(raw) {
-  if (typeof raw !== 'string') return null;
+  if (typeof raw !== 'string') {
+    return null;
+  }
   return MEMORY_TYPES.includes(raw) ? raw : null;
 }
 

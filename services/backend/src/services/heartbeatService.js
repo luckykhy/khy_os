@@ -42,6 +42,78 @@ const { getDataDir } = require('../utils/dataHome');
 const EVENTS_FILE = 'events.json';
 const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h dedup window
 
+// ── 巡逻节流(heartbeatCooldown 接线,KHY_HEARTBEAT_COOLDOWN 默认开)──────────
+// heartbeatService.js 头注声明 heartbeatCooldown.js(intent matrix)是配套部件,此前从未
+// require —— 本段把它接成「巡逻节流层」:每次真实执行 patrol 记一次 run start,min-spacing 内
+// 再次触发 → {status:'throttled'},flood 窗口内频繁触发 → 同样 throttled。门关 /
+// AgentCooldownTracker 不可用 → 逐字节回退(不节流,与今日行为一致)。stamp 注入(测试确定性)
+// 时跳过节流判定 —— 测试靠注入时间验证 24h dedup,节流若掺入会破坏确定性。
+const {
+  AgentCooldownTracker,
+  DEFAULT_MIN_WAKE_SPACING_MS,
+  DEFAULT_FLOOD_THRESHOLD,
+} = require('./heartbeatCooldown');
+
+const _patrolTracker = new AgentCooldownTracker({ defaultIntervalMs: DEFAULT_MIN_WAKE_SPACING_MS });
+
+function _patrolCooldownEnabled(env = process.env) {
+  const raw = env && env.KHY_HEARTBEAT_COOLDOWN;
+  const v = String(raw == null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
+  return !['0', 'false', 'off', 'no'].includes(v);
+}
+
+/**
+ * 判定本次 patrol 是否应被节流(仅在启用节流且未注入 stamp 时生效)。
+ * @param {object} opts
+ * @param {string} [opts.companionId]
+ * @param {string} [opts.stamp] ISO 时间(注入 → 跳过节流,保测试确定性)
+ * @param {object} [opts.env]
+ * @returns {{defer:boolean, reason?:'min-spacing'|'flood'}}
+ */
+function _throttleCheck(opts = {}) {
+  if (opts.stamp) {
+    return { defer: false };
+  } // 确定性测试路径不过节流
+  if (!_patrolCooldownEnabled(opts.env || process.env)) {
+    return { defer: false };
+  }
+  const id = opts.companionId || null;
+  if (!id) {
+    return { defer: false };
+  }
+  try {
+    // manual 意图永不 defer;这里把「心跳巡检」当 event 意图 —— 有上次运行才受 min-spacing/flood 约束。
+    const tracker = _patrolTracker;
+    if (typeof tracker.registerAgent !== 'function') {
+      return { defer: false };
+    }
+    tracker.registerAgent(id, DEFAULT_MIN_WAKE_SPACING_MS);
+    const decision = tracker.shouldDefer(id, 'event');
+    if (decision && decision.defer) {
+      return { defer: true, reason: decision.reason || 'min-spacing' };
+    }
+    return { defer: false };
+  } catch {
+    return { defer: false }; // 节流器异常 → 放行(与关闭节流等价)
+  }
+}
+
+function _recordPatrolRun(id) {
+  if (!id) {
+    return;
+  }
+  try {
+    const tracker = _patrolTracker;
+    if (typeof tracker.recordStart === 'function') {
+      tracker.recordStart(id);
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
 // ── Dedup ledger I/O ──────────────────────────────────────────────────────────
 
 function _eventsPath() {
@@ -55,7 +127,9 @@ function _load() {
     if (data && typeof data === 'object' && data.events && typeof data.events === 'object') {
       return data;
     }
-  } catch { /* missing or corrupt — start fresh */ }
+  } catch {
+    /* missing or corrupt — start fresh */
+  }
   return { version: 1, events: {} };
 }
 
@@ -69,7 +143,11 @@ function _save(data) {
 }
 
 function _globalEnabled() {
-  return String(process.env.KHY_HEARTBEAT || 'on').trim().toLowerCase() !== 'off';
+  return (
+    String(process.env.KHY_HEARTBEAT || 'on')
+      .trim()
+      .toLowerCase() !== 'off'
+  );
 }
 
 // ── Checklist parsing ─────────────────────────────────────────────────────────
@@ -96,24 +174,41 @@ function parseChecklist(md) {
 
   for (const line of raw.split(/\r?\n/)) {
     const t = line.trim();
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
 
     if (t.startsWith('#')) {
       const head = t.replace(/^#+\s*/, '');
       // "# - …" is a commented example bullet — ignore, keep current section.
-      if (/^-\s+/.test(head)) continue;
-      if (_SOURCE_HEAD_RE.test(head)) { section = 'sources'; continue; }
-      if (_CRITERIA_HEAD_RE.test(head)) { section = 'criteria'; continue; }
+      if (/^-\s+/.test(head)) {
+        continue;
+      }
+      if (_SOURCE_HEAD_RE.test(head)) {
+        section = 'sources';
+        continue;
+      }
+      if (_CRITERIA_HEAD_RE.test(head)) {
+        section = 'criteria';
+        continue;
+      }
       section = null; // any other heading ends the current section
       continue;
     }
-    if (t.startsWith('>')) continue; // blockquote / note
+    if (t.startsWith('>')) {
+      continue;
+    } // blockquote / note
 
     if (t.startsWith('- ')) {
       const item = t.slice(2).trim();
-      if (!item) continue;
-      if (section === 'sources') sources.push(item);
-      else if (section === 'criteria') criteria.push(item);
+      if (!item) {
+        continue;
+      }
+      if (section === 'sources') {
+        sources.push(item);
+      } else if (section === 'criteria') {
+        criteria.push(item);
+      }
     }
   }
 
@@ -129,15 +224,22 @@ function parseChecklist(md) {
  */
 function shouldNotify(opts = {}) {
   const key = opts.key;
-  if (!key) return false;
-  const windowMs = Number.isFinite(opts.windowMs) && opts.windowMs > 0 ? opts.windowMs : DEFAULT_WINDOW_MS;
+  if (!key) {
+    return false;
+  }
+  const windowMs =
+    Number.isFinite(opts.windowMs) && opts.windowMs > 0 ? opts.windowMs : DEFAULT_WINDOW_MS;
   const now = opts.stamp ? Date.parse(opts.stamp) : Date.now();
 
   const entry = _load().events[key];
-  if (!entry || !entry.lastNotified) return true;
+  if (!entry || !entry.lastNotified) {
+    return true;
+  }
   const last = Date.parse(entry.lastNotified);
-  if (!Number.isFinite(last) || !Number.isFinite(now)) return true; // fail-open
-  return (now - last) >= windowMs;
+  if (!Number.isFinite(last) || !Number.isFinite(now)) {
+    return true;
+  } // fail-open
+  return now - last >= windowMs;
 }
 
 /**
@@ -146,7 +248,9 @@ function shouldNotify(opts = {}) {
  */
 function recordEvent(opts = {}) {
   const key = opts.key;
-  if (!key) return;
+  if (!key) {
+    return;
+  }
   const data = _load();
   const now = opts.stamp || new Date().toISOString();
   const entry = data.events[key] || { lastNotified: null, count: 0, firstSeen: now };
@@ -180,25 +284,54 @@ function patrol(opts = {}) {
     suppressed: [],
   };
 
-  if (!_globalEnabled()) { result.reason = 'disabled'; return result; }
+  if (!_globalEnabled()) {
+    result.reason = 'disabled';
+    return result;
+  }
 
   const svc = require('./agentFs/agentFsService');
   let id = opts.companionId;
   if (!id) {
-    try { id = svc.getActiveAgentId(); } catch { id = null; }
+    try {
+      id = svc.getActiveAgentId();
+    } catch {
+      id = null;
+    }
   }
-  if (!id) { result.reason = 'no-active-companion'; return result; }
+  if (!id) {
+    result.reason = 'no-active-companion';
+    return result;
+  }
   result.companionId = id;
 
   let md = '';
-  try { md = svc.readAsset(id, svc.ASSET_FILES.heartbeat) || ''; } catch { md = ''; }
+  try {
+    md = svc.readAsset(id, svc.ASSET_FILES.heartbeat) || '';
+  } catch {
+    md = '';
+  }
   const checklist = parseChecklist(md);
   result.enabled = checklist.enabled;
-  if (!checklist.enabled) { result.reason = 'no-checklist'; return result; }
+  if (!checklist.enabled) {
+    result.reason = 'no-checklist';
+    return result;
+  }
+
+  // 巡逻节流(heartbeatCooldown 接线):同一 companion 在 min-spacing/flood 内被再次触发 →
+  // 本次 throttled,不进入 dedup/notify 处理。门 KHY_HEARTBEAT_COOLDOWN 关 / 注入 stamp →
+  // 逐字节回退(不节流)。记录发生在「确认要处理 findings」之后,避免干跑也计节流。
+  const throttle = _throttleCheck({ companionId: id, stamp: opts.stamp, env: opts.env });
+  if (throttle.defer) {
+    result.status = 'throttled';
+    result.reason = throttle.reason;
+    return result;
+  }
 
   const findings = Array.isArray(opts.findings) ? opts.findings : [];
   for (const f of findings) {
-    if (!f || !f.key) continue;
+    if (!f || !f.key) {
+      continue;
+    }
     const dedupKey = `${id}:${f.key}`;
     if (shouldNotify({ key: dedupKey, stamp: opts.stamp })) {
       recordEvent({ key: dedupKey, stamp: opts.stamp });
@@ -209,6 +342,10 @@ function patrol(opts = {}) {
   }
 
   result.status = result.notified.length > 0 ? 'notify' : 'silent';
+  // 真实执行完一轮 patrol(无论 notify 还是 silent)记一次 run start,供下次节流判定。
+  if (!opts.stamp) {
+    _recordPatrolRun(id);
+  }
   return result;
 }
 
@@ -231,5 +368,9 @@ module.exports = {
   recordEvent,
   getEvents,
   reset,
-  get EVENTS_PATH() { return _eventsPath(); },
+  // 节流接线(heartbeatCooldown):测试/诊断可直接读门控与判定。
+  patrolCooldownEnabled: _patrolCooldownEnabled,
+  get EVENTS_PATH() {
+    return _eventsPath();
+  },
 };

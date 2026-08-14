@@ -21,27 +21,108 @@
 // ── Policy Registry ─────────────────────────────────────────────────
 
 const POLICIES = {
-  bash:       { showIntent: true,  boxPreview: true,  resultStyle: 'tree',      maxLines: 6,  foldHead: 3, foldTail: 3 },
-  read:       { showIntent: true,  boxPreview: false, resultStyle: 'collapsed', maxLines: 3,  foldHead: 2, foldTail: 1 },
-  write:      { showIntent: true,  boxPreview: false, resultStyle: 'diff',      maxLines: 10, foldHead: 5, foldTail: 5 },
-  edit:       { showIntent: true,  boxPreview: false, resultStyle: 'diff',      maxLines: 10, foldHead: 5, foldTail: 5 },
-  grep:       { showIntent: true,  boxPreview: false, resultStyle: 'tree',      maxLines: 8,  foldHead: 4, foldTail: 4 },
-  glob:       { showIntent: true,  boxPreview: false, resultStyle: 'tree',      maxLines: 8,  foldHead: 4, foldTail: 4 },
-  agent:      { showIntent: false, boxPreview: false, resultStyle: 'delegate',  maxLines: 0,  foldHead: 0, foldTail: 0 },
-  websearch:  { showIntent: true,  boxPreview: false, resultStyle: 'collapsed', maxLines: 4,  foldHead: 2, foldTail: 2 },
-  webfetch:   { showIntent: true,  boxPreview: false, resultStyle: 'collapsed', maxLines: 4,  foldHead: 2, foldTail: 2 },
-  todowrite:  { showIntent: true,  boxPreview: false, resultStyle: 'inline',    maxLines: 3,  foldHead: 2, foldTail: 1 },
+  bash: {
+    showIntent: true,
+    boxPreview: true,
+    resultStyle: 'tree',
+    maxLines: 6,
+    foldHead: 3,
+    foldTail: 3,
+  },
+  read: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'collapsed',
+    maxLines: 3,
+    foldHead: 2,
+    foldTail: 1,
+  },
+  write: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'diff',
+    maxLines: 10,
+    foldHead: 5,
+    foldTail: 5,
+  },
+  edit: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'diff',
+    maxLines: 10,
+    foldHead: 5,
+    foldTail: 5,
+  },
+  grep: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'tree',
+    maxLines: 8,
+    foldHead: 4,
+    foldTail: 4,
+  },
+  glob: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'tree',
+    maxLines: 8,
+    foldHead: 4,
+    foldTail: 4,
+  },
+  agent: {
+    showIntent: false,
+    boxPreview: false,
+    resultStyle: 'delegate',
+    maxLines: 0,
+    foldHead: 0,
+    foldTail: 0,
+  },
+  websearch: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'collapsed',
+    maxLines: 4,
+    foldHead: 2,
+    foldTail: 2,
+  },
+  webfetch: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'collapsed',
+    maxLines: 4,
+    foldHead: 2,
+    foldTail: 2,
+  },
+  todowrite: {
+    showIntent: true,
+    boxPreview: false,
+    resultStyle: 'inline',
+    maxLines: 3,
+    foldHead: 2,
+    foldTail: 1,
+  },
 };
 
 // Aliases — multiple raw tool names map to the same canonical policy key.
 const ALIASES = {
-  shell: 'bash', shellcommand: 'bash', command: 'bash',
-  readfile: 'read', notebookread: 'read',
-  writefile: 'write', createfile: 'write',
-  editfile: 'edit', multiedit: 'edit', notebookedit: 'edit',
-  search: 'grep', searchcontent: 'grep',
-  find: 'glob', findfiles: 'glob', ls: 'glob',
-  task: 'agent', spawnworker: 'agent', subagent: 'agent',
+  shell: 'bash',
+  shellcommand: 'bash',
+  command: 'bash',
+  readfile: 'read',
+  notebookread: 'read',
+  writefile: 'write',
+  createfile: 'write',
+  editfile: 'edit',
+  multiedit: 'edit',
+  notebookedit: 'edit',
+  search: 'grep',
+  searchcontent: 'grep',
+  find: 'glob',
+  findfiles: 'glob',
+  ls: 'glob',
+  task: 'agent',
+  spawnworker: 'agent',
+  subagent: 'agent',
 };
 
 const DEFAULT_POLICY = {
@@ -63,7 +144,9 @@ const DEFAULT_POLICY = {
  * @returns {{ showIntent: boolean, boxPreview: boolean, resultStyle: string, maxLines: number, foldHead: number, foldTail: number }}
  */
 function getToolPolicy(toolName) {
-  const key = String(toolName || '').toLowerCase().replace(/[\s_-]/g, '');
+  const key = String(toolName || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
   const canonical = ALIASES[key] || key;
   return POLICIES[canonical] || DEFAULT_POLICY;
 }
@@ -95,9 +178,10 @@ function collapseConsecutiveDuplicates(lines, opts = {}) {
   // A run must reach this length before it collapses: at 2 the marker would
   // replace a single duplicate (2 lines → 2 lines, no gain), so start at 3.
   const minRun = Math.max(3, Number(opts.minRun) || 3);
-  const marker = typeof opts.marker === 'function'
-    ? opts.marker
-    : (repeats) => `… +${repeats} 行相同（ctrl+o 展开）`;
+  const marker =
+    typeof opts.marker === 'function'
+      ? opts.marker
+      : (repeats) => `… +${repeats} 行相同（ctrl+o 展开）`;
 
   const out = [];
   let hiddenCount = 0;
@@ -105,7 +189,9 @@ function collapseConsecutiveDuplicates(lines, opts = {}) {
   while (i < lines.length) {
     const cur = lines[i];
     let end = i + 1;
-    while (end < lines.length && lines[end] === cur) end++;
+    while (end < lines.length && lines[end] === cur) {
+      end++;
+    }
     const runLen = end - i;
     out.push(cur);
     if (runLen >= minRun) {
@@ -114,7 +200,9 @@ function collapseConsecutiveDuplicates(lines, opts = {}) {
       hiddenCount += repeats;
     } else {
       // Short run — keep the remaining duplicate(s) verbatim; not worth a marker.
-      for (let k = i + 1; k < end; k++) out.push(lines[k]);
+      for (let k = i + 1; k < end; k++) {
+        out.push(lines[k]);
+      }
     }
     i = end;
   }

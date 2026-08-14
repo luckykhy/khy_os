@@ -15,9 +15,13 @@ router.post('/mock', express.json({ limit: '256kb' }), async (req, res) => {
     res.json({ success: true, data: payment });
   } catch (error) {
     const message = String(error && error.message ? error.message : error);
-    const status = /signature|amount mismatch|unsupported webhook status|orderId is required/i.test(message)
+    const status = /signature|amount mismatch|unsupported webhook status|orderId is required/i.test(
+      message
+    )
       ? 400
-      : (/not found/i.test(message) ? 404 : 500);
+      : /not found/i.test(message)
+        ? 404
+        : 500;
     res.status(status).json({ success: false, message });
   }
 });

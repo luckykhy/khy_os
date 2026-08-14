@@ -18,17 +18,17 @@ const PROBE_TIMEOUT_MS = 8_000;
 
 // Known provider → lightweight health endpoint mapping
 const _HEALTH_ENDPOINTS = {
-  openai:     '/v1/models',
-  deepseek:   '/v1/models',
-  qwen:       '/v1/models',
-  glm:        '/v1/models',
-  doubao:     '/v1/models',
-  anthropic:  '/v1/models',
-  trae:       '/v1/models',
-  relay:      '/v1/models',
-  codex:      '/v1/models',
-  wenxin:     '/v1/models',
-  ollama:     '/api/tags',
+  openai: '/v1/models',
+  deepseek: '/v1/models',
+  qwen: '/v1/models',
+  glm: '/v1/models',
+  doubao: '/v1/models',
+  anthropic: '/v1/models',
+  trae: '/v1/models',
+  relay: '/v1/models',
+  codex: '/v1/models',
+  wenxin: '/v1/models',
+  ollama: '/api/tags',
 };
 
 // ── State ──
@@ -44,7 +44,9 @@ let _running = false;
  * @param {number} [opts.intervalMs=300000] - Probe interval in ms
  */
 function start(opts = {}) {
-  if (_timer) return; // already running
+  if (_timer) {
+    return;
+  } // already running
 
   const interval = opts.intervalMs || DEFAULT_INTERVAL_MS;
   _timer = setInterval(() => {
@@ -52,7 +54,9 @@ function start(opts = {}) {
   }, interval);
 
   // Don't block process exit
-  if (_timer.unref) _timer.unref();
+  if (_timer.unref) {
+    _timer.unref();
+  }
   _running = true;
 }
 
@@ -151,7 +155,7 @@ async function probeKey(provider, keyEntry) {
     }
   } catch (err) {
     result.latencyMs = Date.now() - t0;
-    result.error = err.name === 'AbortError' ? 'Timeout' : (err.message || 'Unknown error');
+    result.error = err.name === 'AbortError' ? 'Timeout' : err.message || 'Unknown error';
   }
 
   _reportResult(result);
@@ -170,7 +174,9 @@ function _reportResult(result) {
     } else {
       pool.markFailure(result.keyId, result.statusCode || 0, result.error || 'Health probe failed');
     }
-  } catch { /* pool operation failure is non-fatal */ }
+  } catch {
+    /* pool operation failure is non-fatal */
+  }
 }
 
 /** @internal Reset for testing */

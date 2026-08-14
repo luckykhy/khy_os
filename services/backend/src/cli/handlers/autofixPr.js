@@ -17,13 +17,13 @@
  * 关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/autofixPr/autofixPrPlan');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
 // async try/catch combinator 单一真源 utils/tryOrAsync:await fn,任何异常 → dflt。
 const _safeAsync = require('../../utils/tryOrAsync');
+const { printInfo, printError } = require('../formatters');
 
 /** 读当前分支 CI 状态(委托既有 ciStatusService SSOT)。 */
 function _checkCi(target) {
@@ -33,7 +33,9 @@ function _checkCi(target) {
   }
   const options = {};
   // target 仅作分支线索透传给既有 CI 查询(绝不在此解析仓库)。
-  if (target && !/^\d+$/.test(target)) options.branch = target;
+  if (target && !/^\d+$/.test(target)) {
+    options.branch = target;
+  }
   return _safe(() => svc.checkCIStatus(options), { error: 'CI 状态读取失败' });
 }
 
@@ -52,18 +54,21 @@ function _modelAvailable() {
  */
 function _makeDispatchAgent(options) {
   return async ({ role, prompt, timeout }) => {
-    return _safeAsync(async () => {
-      const agentTool = require('../../tools/AgentTool');
-      const res = await agentTool.execute(
-        { prompt, subagent_type: role, role, timeout },
-        { _agentContext: (options && options._agentContext) || null, traceContext: {} },
-      );
-      return {
-        text: (res && (res.output || res.error)) || '',
-        filesModified: (res && res.filesModified) || [],
-        success: !!(res && res.success !== false),
-      };
-    }, { text: '', filesModified: [], success: false });
+    return _safeAsync(
+      async () => {
+        const agentTool = require('../../tools/AgentTool');
+        const res = await agentTool.execute(
+          { prompt, subagent_type: role, role, timeout },
+          { _agentContext: (options && options._agentContext) || null, traceContext: {} }
+        );
+        return {
+          text: (res && (res.output || res.error)) || '',
+          filesModified: (res && res.filesModified) || [],
+          success: !!(res && res.success !== false),
+        };
+      },
+      { text: '', filesModified: [], success: false }
+    );
   };
 }
 
@@ -119,17 +124,24 @@ async function handleAutofixPr(_subCommand, args = [], options = {}) {
   }
   const dispatchAgent = _makeDispatchAgent(options);
   const afResult = await _safeAsync(
-    () => afLoop.runAuditFixCycle({
-      dispatchAgent,
-      taskDescription: `修复当前分支失败的 CI${parsed.target ? `(目标线索: ${parsed.target})` : ''}`,
-      files: [],
-      onEvent: (evt) => {
-        if (evt && (evt.type === 'audit_start' || evt.type === 'fix_start')) {
-          printInfo(`  · ${evt.type === 'audit_start' ? '审计' : '修复'}(第 ${evt.round} 轮)…`);
-        }
-      },
-    }),
-    { outcome: 'error', error: '修复闭环执行异常', filesFixed: [], totalActionableRemaining: 0, rounds: [] },
+    () =>
+      afLoop.runAuditFixCycle({
+        dispatchAgent,
+        taskDescription: `修复当前分支失败的 CI${parsed.target ? `(目标线索: ${parsed.target})` : ''}`,
+        files: [],
+        onEvent: (evt) => {
+          if (evt && (evt.type === 'audit_start' || evt.type === 'fix_start')) {
+            printInfo(`  · ${evt.type === 'audit_start' ? '审计' : '修复'}(第 ${evt.round} 轮)…`);
+          }
+        },
+      }),
+    {
+      outcome: 'error',
+      error: '修复闭环执行异常',
+      filesFixed: [],
+      totalActionableRemaining: 0,
+      rounds: [],
+    }
   );
 
   printInfo(leaf.buildOutcomeText(afResult));

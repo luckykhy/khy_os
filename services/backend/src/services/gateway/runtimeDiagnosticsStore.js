@@ -2,40 +2,66 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 function compactText(value, maxLen = 320) {
-  const text = String(value === undefined || value === null ? '' : value).replace(/\s+/g, ' ').trim();
-  if (!text) return '';
+  const text = String(value === undefined || value === null ? '' : value)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) {
+    return '';
+  }
   return text.length > maxLen ? `${text.slice(0, maxLen - 1)}…` : text;
 }
 
 function inferCategory(payload = {}) {
-  const explicit = String(payload.category || '').trim().toLowerCase();
-  if (explicit) return explicit;
+  const explicit = String(payload.category || '')
+    .trim()
+    .toLowerCase();
+  if (explicit) {
+    return explicit;
+  }
 
-  const trigger = String(payload.trigger || '').trim().toLowerCase();
-  if (!trigger) return payload.healed ? 'recovery' : '';
-  if (payload.healed) return 'recovery';
+  const trigger = String(payload.trigger || '')
+    .trim()
+    .toLowerCase();
+  if (!trigger) {
+    return payload.healed ? 'recovery' : '';
+  }
+  if (payload.healed) {
+    return 'recovery';
+  }
   if (
-    trigger.includes('first_response_timeout')
-    || trigger.includes('handshake_timeout')
-    || trigger.includes('idle_timeout')
-    || trigger.includes('stall')
+    trigger.includes('first_response_timeout') ||
+    trigger.includes('handshake_timeout') ||
+    trigger.includes('idle_timeout') ||
+    trigger.includes('stall')
   ) {
     return 'stall';
   }
-  if (trigger.includes('reconnect') || trigger.includes('bridge_canceled') || trigger.includes('bridge_no_stream')) {
+  if (
+    trigger.includes('reconnect') ||
+    trigger.includes('bridge_canceled') ||
+    trigger.includes('bridge_no_stream')
+  ) {
     return 'transport';
   }
-  if (trigger.includes('fallback') || trigger.includes('recovered') || trigger.includes('self_heal')) {
+  if (
+    trigger.includes('fallback') ||
+    trigger.includes('recovered') ||
+    trigger.includes('self_heal')
+  ) {
     return 'recovery';
   }
   return '';
 }
 
 function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
-  const normalizedAdapterKey = String(adapterKey || '').trim().toLowerCase() || 'unknown';
+  const normalizedAdapterKey =
+    String(adapterKey || '')
+      .trim()
+      .toLowerCase() || 'unknown';
 
   // In-memory merge cache ([MGMT-RPT-020] REQ-2026-004). The previous
   // read-modify-write did a sync readFileSync + JSON.parse on EVERY diagnostic
@@ -93,18 +119,24 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
 
   function normalizeState(payload = null) {
     const emptyState = createEmptyState();
-    if (!payload || typeof payload !== 'object') return emptyState;
+    if (!payload || typeof payload !== 'object') {
+      return emptyState;
+    }
 
     if (payload.latest || payload.latestByTrigger || payload.latestByCategory) {
       const latestByTrigger = {};
       for (const [key, value] of Object.entries(payload.latestByTrigger || {})) {
         const normalized = normalizeDiagnostic(value);
-        if (normalized.at > 0) latestByTrigger[String(key).trim().toLowerCase()] = normalized;
+        if (normalized.at > 0) {
+          latestByTrigger[String(key).trim().toLowerCase()] = normalized;
+        }
       }
       const latestByCategory = {};
       for (const [key, value] of Object.entries(payload.latestByCategory || {})) {
         const normalized = normalizeDiagnostic(value);
-        if (normalized.at > 0) latestByCategory[String(key).trim().toLowerCase()] = normalized;
+        if (normalized.at > 0) {
+          latestByCategory[String(key).trim().toLowerCase()] = normalized;
+        }
       }
       return {
         adapterKey: normalizedAdapterKey,
@@ -131,7 +163,9 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
       const stall = normalizeDiagnostic(payload.lastFirstResponseTimeout);
       if (stall.at > 0) {
         legacyState.latestByTrigger.first_response_timeout = stall;
-        if (stall.category) legacyState.latestByCategory[stall.category.toLowerCase()] = stall;
+        if (stall.category) {
+          legacyState.latestByCategory[stall.category.toLowerCase()] = stall;
+        }
       }
     }
     return legacyState;
@@ -146,13 +180,27 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
     _cachedState = normalizedState;
     try {
       fs.writeFileSync(getFile(), `${JSON.stringify(normalizedState, null, 2)}\n`, 'utf-8');
-    } catch { /* best effort */ }
+      _diskStamp = fs.statSync(getFile()).mtimeMs;
+    } catch {
+      /* best effort */
+    }
   }
+
+  // mtime of the on-disk file backing _cachedState; 0 means "never validated".
+  let _diskStamp = 0;
 
   function readState() {
     let state;
     try {
+      // Revalidate via a cheap stat instead of re-reading + re-parsing the
+      // JSON on every call: readDiagnostic() runs several times per request
+      // (once per adapter) and the parse cost lands on the submit path.
+      const st = fs.statSync(getFile());
+      if (_cachedState && st.mtimeMs === _diskStamp) {
+        return _cachedState;
+      }
       const raw = JSON.parse(fs.readFileSync(getFile(), 'utf-8'));
+      _diskStamp = st.mtimeMs;
       state = normalizeState(raw);
     } catch {
       state = createEmptyState();
@@ -164,13 +212,19 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
   // Merge base for the per-event hot path. Uses the in-memory cache when warm so
   // writeDiagnostic does not read disk on every event; cold path seeds from disk.
   function readMergeBase() {
-    if (_cachedState) return _cachedState;
+    if (_cachedState) {
+      return _cachedState;
+    }
     return readState();
   }
 
   function clear() {
     _cachedState = null;
-    try { fs.unlinkSync(getFile()); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(getFile());
+    } catch {
+      /* ignore */
+    }
   }
 
   function writeDiagnostic(payload = null) {
@@ -193,11 +247,15 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
 
   function readDiagnostic(options = {}) {
     const state = readState();
-    const preferTrigger = String(options?.preferTrigger || '').trim().toLowerCase();
+    const preferTrigger = String(options?.preferTrigger || '')
+      .trim()
+      .toLowerCase();
     if (preferTrigger) {
       return normalizeDiagnostic(state.latestByTrigger?.[preferTrigger]);
     }
-    const preferCategory = String(options?.preferCategory || '').trim().toLowerCase();
+    const preferCategory = String(options?.preferCategory || '')
+      .trim()
+      .toLowerCase();
     if (preferCategory) {
       return normalizeDiagnostic(state.latestByCategory?.[preferCategory]);
     }
@@ -205,30 +263,43 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
   }
 
   function record(currentDiagnostic, payload = {}, options = {}) {
-    const diagnostic = normalizeDiagnostic({
-      ...payload,
-      at: Date.now(),
-    }, options?.fallbackTrigger || 'unknown');
-    if (options?.persist !== false) writeDiagnostic(diagnostic);
+    const diagnostic = normalizeDiagnostic(
+      {
+        ...payload,
+        at: Date.now(),
+      },
+      options?.fallbackTrigger || 'unknown'
+    );
+    if (options?.persist !== false) {
+      writeDiagnostic(diagnostic);
+    }
     return diagnostic;
   }
 
   function get(currentDiagnostic, options = {}) {
     const current = normalizeDiagnostic(currentDiagnostic);
-    if (options?.includePersisted !== true) return current;
+    if (options?.includePersisted !== true) {
+      return current;
+    }
 
-    const preferTrigger = String(options?.preferTrigger || '').trim().toLowerCase();
+    const preferTrigger = String(options?.preferTrigger || '')
+      .trim()
+      .toLowerCase();
     if (preferTrigger) {
-      const currentPreferred = current.trigger.toLowerCase() === preferTrigger ? current : createEmptyDiagnostic();
+      const currentPreferred =
+        current.trigger.toLowerCase() === preferTrigger ? current : createEmptyDiagnostic();
       const persistedPreferred = readDiagnostic({ preferTrigger });
       return Number(persistedPreferred.at || 0) > Number(currentPreferred.at || 0)
         ? persistedPreferred
         : currentPreferred;
     }
 
-    const preferCategory = String(options?.preferCategory || '').trim().toLowerCase();
+    const preferCategory = String(options?.preferCategory || '')
+      .trim()
+      .toLowerCase();
     if (preferCategory) {
-      const currentPreferred = current.category.toLowerCase() === preferCategory ? current : createEmptyDiagnostic();
+      const currentPreferred =
+        current.category.toLowerCase() === preferCategory ? current : createEmptyDiagnostic();
       const persistedPreferred = readDiagnostic({ preferCategory });
       return Number(persistedPreferred.at || 0) > Number(currentPreferred.at || 0)
         ? persistedPreferred
@@ -236,9 +307,7 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
     }
 
     const persisted = readDiagnostic();
-    return Number(persisted.at || 0) > Number(current.at || 0)
-      ? persisted
-      : current;
+    return Number(persisted.at || 0) > Number(current.at || 0) ? persisted : current;
   }
 
   return {

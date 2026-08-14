@@ -15,13 +15,19 @@
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
-function _leaf() { return require('../../services/sessionInsights'); }
-function _persistence() { return require('../../services/sessionPersistence'); }
+function _leaf() {
+  return require('../../services/sessionInsights');
+}
+
+function _persistence() {
+  return require('../../services/sessionPersistence');
+}
 
 function _persist(value, deps) {
-  const writeEnvPatch = (deps && typeof deps.writeEnvPatch === 'function')
-    ? deps.writeEnvPatch
-    : require('./config')._writeEnvPatch;
+  const writeEnvPatch =
+    deps && typeof deps.writeEnvPatch === 'function'
+      ? deps.writeEnvPatch
+      : require('./config')._writeEnvPatch;
   return writeEnvPatch({ KHY_INSIGHTS: value });
 }
 
@@ -31,11 +37,17 @@ function _emit(text) {
 }
 
 function _resolveSessionId(explicit) {
-  if (explicit) return String(explicit);
+  if (explicit) {
+    return String(explicit);
+  }
   try {
     const recent = _persistence().listPersistedSessions({ limit: 1 });
-    if (recent && recent.length) return recent[0].sessionId;
-  } catch { /* fail-soft */ }
+    if (recent && recent.length) {
+      return recent[0].sessionId;
+    }
+  } catch {
+    /* fail-soft */
+  }
   return '';
 }
 
@@ -79,7 +91,7 @@ function _handleList() {
   }
   const rows = sessions.map((s) => [
     s.sessionId || '-',
-    (s.title || '(无标题)').length > 40 ? `${s.title.slice(0, 37)}...` : (s.title || '(无标题)'),
+    (s.title || '(无标题)').length > 40 ? `${s.title.slice(0, 37)}...` : s.title || '(无标题)',
     String(s.messageCount || 0),
     s.model || '-',
   ]);
@@ -92,7 +104,9 @@ function _handleToggle(turnOn, deps) {
   const value = turnOn ? 'true' : 'off';
   try {
     const p = _persist(value, deps);
-    printSuccess(`✅ 会话洞见能力${turnOn ? '已开启' : '已关闭'}（KHY_INSIGHTS=${value}）。已即时生效并持久化。`);
+    printSuccess(
+      `✅ 会话洞见能力${turnOn ? '已开启' : '已关闭'}（KHY_INSIGHTS=${value}）。已即时生效并持久化。`
+    );
     printInfo(`已写入:${p}`);
     return 0;
   } catch (e) {
@@ -114,9 +128,15 @@ function handleInsights(subCommand, args = [], options = {}, deps = {}) {
     printInfo('用法: insights [<会话 ID>] | insights list | insights on | insights off');
     return 0;
   }
-  if (sub === 'list' || sub === 'ls') return _handleList();
-  if (sub === 'on') return _handleToggle(true, deps);
-  if (sub === 'off') return _handleToggle(false, deps);
+  if (sub === 'list' || sub === 'ls') {
+    return _handleList();
+  }
+  if (sub === 'on') {
+    return _handleToggle(true, deps);
+  }
+  if (sub === 'off') {
+    return _handleToggle(false, deps);
+  }
   if (!sub || sub === 'show' || sub === 'report') {
     // `khy insights` 或 `khy insights show [id]`
     return _handleReport(Array.isArray(args) ? args[0] : undefined);

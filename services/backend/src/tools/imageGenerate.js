@@ -16,15 +16,25 @@
  */
 
 const { defineTool } = require('./_baseTool');
+
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const imageGenService = require('../services/imageGenService');
 const imageService = require('../services/imageService');
 const toolErrorCodes = require('../services/toolErrorCodes');
 
-const SUPPORTED_SIZES = ['256x256', '512x512', '768x768', '1024x1024', '1024x768', '768x1024', '1024x1792', '1792x1024'];
+const SUPPORTED_SIZES = [
+  '256x256',
+  '512x512',
+  '768x768',
+  '1024x1024',
+  '1024x768',
+  '768x1024',
+  '1024x1792',
+  '1792x1024',
+];
 
 /** Resolve a user path with Windows %VAR% / ~ expansion (mirrors imageDetect). */
 const _resolvePath = require('../utils/resolveToolPath');
@@ -32,18 +42,25 @@ const _resolvePath = require('../utils/resolveToolPath');
 module.exports = defineTool({
   name: 'image_generate',
   description:
-    'Generate an image from a text prompt (text-to-image / 文生图 / 绘图 / 画图 / draw / comic). '
-    + 'Routes to a configurable backend (OpenAI-compatible, a domestic API, or a local Stable Diffusion WebUI). '
-    + 'Saves the generated image(s) to disk and returns their file paths. '
-    + 'If no backend is configured, returns clear setup instructions instead of failing silently.',
+    'Generate an image from a text prompt (text-to-image / 文生图 / 绘图 / 画图 / draw / comic). ' +
+    'Routes to a configurable backend (OpenAI-compatible, a domestic API, or a local Stable Diffusion WebUI). ' +
+    'Saves the generated image(s) to disk and returns their file paths. ' +
+    'If no backend is configured, returns clear setup instructions instead of failing silently.',
   category: 'analysis',
   risk: 'low',
   isReadOnly: false,
   isConcurrencySafe: true,
   searchHint: 'image generate draw picture comic text-to-image 文生图 绘图 画图 生成图片',
   aliases: [
-    'imageGenerate', 'generate_image', 'draw_image', 'text_to_image',
-    '文生图', '生成图片', '绘图', '画图', '生成图像',
+    'imageGenerate',
+    'generate_image',
+    'draw_image',
+    'text_to_image',
+    '文生图',
+    '生成图片',
+    '绘图',
+    '画图',
+    '生成图像',
   ],
 
   inputSchema: {
@@ -56,7 +73,8 @@ module.exports = defineTool({
     negativePrompt: {
       type: 'string',
       maxLength: 2000,
-      description: 'Things to avoid in the image. Used by Stable Diffusion / domestic backends; ignored by OpenAI.',
+      description:
+        'Things to avoid in the image. Used by Stable Diffusion / domestic backends; ignored by OpenAI.',
     },
     size: {
       type: 'string',
@@ -74,11 +92,13 @@ module.exports = defineTool({
     outputPath: {
       type: 'string',
       maxLength: 4096,
-      description: 'Optional file path (or directory) to save the first image. Defaults to a temp file.',
+      description:
+        'Optional file path (or directory) to save the first image. Defaults to a temp file.',
     },
     seed: {
       type: 'number',
-      description: 'Optional random seed for reproducibility (honored by SD / some domestic backends).',
+      description:
+        'Optional random seed for reproducibility (honored by SD / some domestic backends).',
     },
   },
 
@@ -87,10 +107,14 @@ module.exports = defineTool({
       return { valid: false, message: 'prompt is required and cannot be empty.' };
     }
     if (input.outputPath) {
-      const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+      const {
+        validateNotDevicePath,
+        validateNotUNCPath,
+        composeValidations,
+      } = require('./inputValidators');
       return composeValidations(
         validateNotDevicePath(input.outputPath),
-        validateNotUNCPath(input.outputPath),
+        validateNotUNCPath(input.outputPath)
       );
     }
     return { valid: true };
@@ -118,7 +142,9 @@ module.exports = defineTool({
       if (userId != null) {
         userPref = await require('../services/imageGenUserPref').getUserImagePref(userId);
       }
-    } catch { /* fail-soft: fall back to global/auto */ }
+    } catch {
+      /* fail-soft: fall back to global/auto */
+    }
 
     // ── Generate ──────────────────────────────────────────────────────────────
     let result;
@@ -147,13 +173,21 @@ module.exports = defineTool({
           model: (userPref && userPref.model) || undefined,
           env: process.env,
         });
-      } catch { summary = null; }
+      } catch {
+        summary = null;
+      }
 
       if (err && err.code === 'NO_USABLE_KEY') {
         // All known image-capable keys were tried and rejected/cooled down → invite
         // the user to paste a key (model then routes it to configureModelProvider).
         const content = summary || err.message;
-        return toolErrorCodes.enrich({ success: false, code: 'CONFIG_MISSING', error: content, content, meta: { backend: backend || null } });
+        return toolErrorCodes.enrich({
+          success: false,
+          code: 'CONFIG_MISSING',
+          error: content,
+          content,
+          meta: { backend: backend || null },
+        });
       }
 
       if (err && err.code === 'NO_BACKEND') {
@@ -164,11 +198,23 @@ module.exports = defineTool({
         // key problem (no available key across whitelisted providers), prefer its
         // "configure a key?" invite; else keep the raw backend help text.
         const content = summary || err.message;
-        return toolErrorCodes.enrich({ success: false, code: 'NO_BACKEND', error: content, content, meta: { backend: null } });
+        return toolErrorCodes.enrich({
+          success: false,
+          code: 'NO_BACKEND',
+          error: content,
+          content,
+          meta: { backend: null },
+        });
       }
 
       const error = summary || `图像生成失败（后端 ${backend || 'unknown'}）：${err.message}`;
-      return toolErrorCodes.enrich({ success: false, code: err && err.code ? err.code : 'BACKEND_ERROR', error, content: error, meta: { backend } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: err && err.code ? err.code : 'BACKEND_ERROR',
+        error,
+        content: error,
+        meta: { backend },
+      });
     }
 
     // ── Save images ─────────────────────────────────────────────────────────────
@@ -216,17 +262,29 @@ module.exports = defineTool({
               sizeBytes: Buffer.byteLength(b64, 'base64'),
               mimeType: 'image/png',
             });
-          } catch { /* preview is non-essential */ }
+          } catch {
+            /* preview is non-essential */
+          }
         }
       }
     } catch (err) {
       const error = `图像生成成功但写入磁盘失败：${err.message}`;
-      return { success: false, error, content: error, meta: { backend: result.backend, model: result.model } };
+      return {
+        success: false,
+        error,
+        content: error,
+        meta: { backend: result.backend, model: result.model },
+      };
     }
 
     if (!paths.length) {
       const error = '图像生成成功但未能保存任何文件。';
-      return { success: false, error, content: error, meta: { backend: result.backend, model: result.model } };
+      return {
+        success: false,
+        error,
+        content: error,
+        meta: { backend: result.backend, model: result.model },
+      };
     }
 
     const content = `已生成 ${paths.length} 张图像：\n${paths.map((p) => `- ${p}`).join('\n')}`;

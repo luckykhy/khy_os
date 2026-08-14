@@ -9,10 +9,14 @@ const { isWordChar, isWhitespace } = require('./motions');
 // ── Bracket pair mapping ───────────────────────────────────────────
 
 const BRACKET_PAIRS = {
-  '(': ')', ')': '(',
-  '[': ']', ']': '[',
-  '{': '}', '}': '{',
-  '<': '>', '>': '<',
+  '(': ')',
+  ')': '(',
+  '[': ']',
+  ']': '[',
+  '{': '}',
+  '}': '{',
+  '<': '>',
+  '>': '<',
 };
 
 const OPEN_BRACKETS = new Set(['(', '[', '{', '<']);
@@ -23,18 +27,26 @@ function findMatchingBracket(line, pos, openChar, closeChar, searchForward) {
   let depth = 0;
   if (searchForward) {
     for (let i = pos; i < line.length; i++) {
-      if (line[i] === openChar) depth++;
+      if (line[i] === openChar) {
+        depth++;
+      }
       if (line[i] === closeChar) {
         depth--;
-        if (depth === 0) return i;
+        if (depth === 0) {
+          return i;
+        }
       }
     }
   } else {
     for (let i = pos; i >= 0; i--) {
-      if (line[i] === closeChar) depth++;
+      if (line[i] === closeChar) {
+        depth++;
+      }
       if (line[i] === openChar) {
         depth--;
-        if (depth === 0) return i;
+        if (depth === 0) {
+          return i;
+        }
       }
     }
   }
@@ -93,33 +105,57 @@ function findQuoteBounds(line, cursor, quoteChar) {
  * @returns {{ start: number, end: number }|null}
  */
 function resolveTextObject(type, modifier, line, cursor) {
-  if (line.length === 0) return null;
+  if (line.length === 0) {
+    return null;
+  }
 
   switch (type) {
     // ── Word text object ──
     case 'w': {
-      if (cursor >= line.length) return null;
+      if (cursor >= line.length) {
+        return null;
+      }
 
       let start = cursor;
       let end = cursor;
 
       if (isWhitespace(line[cursor])) {
         // On whitespace — select whitespace run
-        while (start > 0 && isWhitespace(line[start - 1])) start--;
-        while (end < line.length - 1 && isWhitespace(line[end + 1])) end++;
+        while (start > 0 && isWhitespace(line[start - 1])) {
+          start--;
+        }
+        while (end < line.length - 1 && isWhitespace(line[end + 1])) {
+          end++;
+        }
       } else {
         const curIsWord = isWordChar(line[cursor]);
         // Expand to word boundary
-        while (start > 0 && !isWhitespace(line[start - 1]) && isWordChar(line[start - 1]) === curIsWord) start--;
-        while (end < line.length - 1 && !isWhitespace(line[end + 1]) && isWordChar(line[end + 1]) === curIsWord) end++;
+        while (
+          start > 0 &&
+          !isWhitespace(line[start - 1]) &&
+          isWordChar(line[start - 1]) === curIsWord
+        ) {
+          start--;
+        }
+        while (
+          end < line.length - 1 &&
+          !isWhitespace(line[end + 1]) &&
+          isWordChar(line[end + 1]) === curIsWord
+        ) {
+          end++;
+        }
       }
 
       if (modifier === 'a') {
         // Include trailing whitespace (or leading if at end)
         if (end < line.length - 1 && isWhitespace(line[end + 1])) {
-          while (end < line.length - 1 && isWhitespace(line[end + 1])) end++;
+          while (end < line.length - 1 && isWhitespace(line[end + 1])) {
+            end++;
+          }
         } else if (start > 0 && isWhitespace(line[start - 1])) {
-          while (start > 0 && isWhitespace(line[start - 1])) start--;
+          while (start > 0 && isWhitespace(line[start - 1])) {
+            start--;
+          }
         }
       }
 
@@ -128,24 +164,38 @@ function resolveTextObject(type, modifier, line, cursor) {
 
     // ── WORD text object ──
     case 'W': {
-      if (cursor >= line.length) return null;
+      if (cursor >= line.length) {
+        return null;
+      }
 
       let start = cursor;
       let end = cursor;
 
       if (isWhitespace(line[cursor])) {
-        while (start > 0 && isWhitespace(line[start - 1])) start--;
-        while (end < line.length - 1 && isWhitespace(line[end + 1])) end++;
+        while (start > 0 && isWhitespace(line[start - 1])) {
+          start--;
+        }
+        while (end < line.length - 1 && isWhitespace(line[end + 1])) {
+          end++;
+        }
       } else {
-        while (start > 0 && !isWhitespace(line[start - 1])) start--;
-        while (end < line.length - 1 && !isWhitespace(line[end + 1])) end++;
+        while (start > 0 && !isWhitespace(line[start - 1])) {
+          start--;
+        }
+        while (end < line.length - 1 && !isWhitespace(line[end + 1])) {
+          end++;
+        }
       }
 
       if (modifier === 'a') {
         if (end < line.length - 1 && isWhitespace(line[end + 1])) {
-          while (end < line.length - 1 && isWhitespace(line[end + 1])) end++;
+          while (end < line.length - 1 && isWhitespace(line[end + 1])) {
+            end++;
+          }
         } else if (start > 0 && isWhitespace(line[start - 1])) {
-          while (start > 0 && isWhitespace(line[start - 1])) start--;
+          while (start > 0 && isWhitespace(line[start - 1])) {
+            start--;
+          }
         }
       }
 
@@ -157,7 +207,9 @@ function resolveTextObject(type, modifier, line, cursor) {
     case "'":
     case '`': {
       const bounds = findQuoteBounds(line, cursor, type);
-      if (!bounds) return null;
+      if (!bounds) {
+        return null;
+      }
 
       if (modifier === 'i') {
         return { start: bounds.start + 1, end: bounds.end - 1 };
@@ -217,9 +269,13 @@ function resolveBracketObject(openCh, closeCh, modifier, line, cursor) {
     // first opening bracket reached at depth 0 encloses the cursor.
     let depth = 0;
     for (let i = cursor; i >= 0; i--) {
-      if (line[i] === closeCh) depth++;
-      else if (line[i] === openCh) {
-        if (depth === 0) { openPos = i; break; }
+      if (line[i] === closeCh) {
+        depth++;
+      } else if (line[i] === openCh) {
+        if (depth === 0) {
+          openPos = i;
+          break;
+        }
         depth--;
       }
     }
@@ -228,7 +284,9 @@ function resolveBracketObject(openCh, closeCh, modifier, line, cursor) {
     }
   }
 
-  if (openPos < 0 || closePos < 0 || openPos >= closePos) return null;
+  if (openPos < 0 || closePos < 0 || openPos >= closePos) {
+    return null;
+  }
 
   if (modifier === 'i') {
     return { start: openPos + 1, end: closePos - 1 };

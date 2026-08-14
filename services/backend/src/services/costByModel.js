@@ -25,7 +25,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_COST_BY_MODEL 默认开;{0,false,off,no} 关。 */
 function costByModelEnabled(env = process.env) {
   const raw = env && env.KHY_COST_BY_MODEL;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -42,30 +44,44 @@ const _num = require('../utils/finiteNumber').toFiniteOr0;
  */
 function aggregateSessionUsageByModel(records, labelFn) {
   try {
-    if (!Array.isArray(records) || records.length === 0) return [];
+    if (!Array.isArray(records) || records.length === 0) {
+      return [];
+    }
     const label = typeof labelFn === 'function' ? labelFn : (m) => m;
     const groups = new Map();
     for (const rec of records) {
-      if (!rec || typeof rec !== 'object') continue;
-      const rawModel = typeof rec.model === 'string' && rec.model.trim() ? rec.model.trim() : '(unknown)';
+      if (!rec || typeof rec !== 'object') {
+        continue;
+      }
+      const rawModel =
+        typeof rec.model === 'string' && rec.model.trim() ? rec.model.trim() : '(unknown)';
       let key;
-      try { key = String(label(rawModel) || rawModel); } catch { key = rawModel; }
-      if (!key) key = rawModel;
+      try {
+        key = String(label(rawModel) || rawModel);
+      } catch {
+        key = rawModel;
+      }
+      if (!key) {
+        key = rawModel;
+      }
       let g = groups.get(key);
-      if (!g) { g = { label: key, input: 0, output: 0, total: 0, cost: 0, requests: 0 }; groups.set(key, g); }
+      if (!g) {
+        g = { label: key, input: 0, output: 0, total: 0, cost: 0, requests: 0 };
+        groups.set(key, g);
+      }
       const inTok = _num(rec.inputTokens);
       const outTok = _num(rec.outputTokens);
       g.input += inTok;
       g.output += outTok;
-      g.total += _num(rec.total) || (inTok + outTok);
+      g.total += _num(rec.total) || inTok + outTok;
       g.cost += _num(rec.costUSD);
       g.requests += 1;
     }
     const rows = Array.from(groups.values());
-    rows.sort((a, b) =>
-      (b.cost - a.cost)
-      || (b.total - a.total)
-      || (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+    rows.sort(
+      (a, b) =>
+        b.cost - a.cost || b.total - a.total || (a.label < b.label ? -1 : a.label > b.label ? 1 : 0)
+    );
     return rows;
   } catch {
     return [];

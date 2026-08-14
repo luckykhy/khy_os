@@ -71,10 +71,14 @@ function buildStallError(opts = {}) {
 
 /** 判定一个错误是否是本叶子产出的「流卡死」错误(结构化优先,fail-soft)。 */
 function isStreamStallError(err) {
-  if (!err || typeof err !== 'object') return false;
-  return err.code === STREAM_STALL_MARKER
-    || err.isStreamStall === true
-    || err.name === 'StreamStallError';
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
+  return (
+    err.code === STREAM_STALL_MARKER ||
+    err.isStreamStall === true ||
+    err.name === 'StreamStallError'
+  );
 }
 
 /** 自描述(给工具 / CLI / 帮助 / 提示词用)。 */

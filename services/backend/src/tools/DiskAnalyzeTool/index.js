@@ -13,8 +13,8 @@
  * 门控 KHY_DISKANALYZE_TOOL(flagRegistry 声明式注册,默认开)。关 → 导出 benign 非工具对象,
  * 自动发现循环(tools/index.js Phase 1)全部跳过 → 工具不注册(= 今日无此工具的行为)。
  */
-const { BaseTool } = require('../_baseTool');
 const diskAnalyze = require('../../services/diskAnalyze');
+const { BaseTool } = require('../_baseTool');
 
 function _gateEnabled(env = process.env) {
   try {
@@ -22,7 +22,9 @@ function _gateEnabled(env = process.env) {
     return flagRegistry.isFlagEnabled('KHY_DISKANALYZE_TOOL', env);
   } catch {
     const raw = env && env.KHY_DISKANALYZE_TOOL;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -31,13 +33,26 @@ class DiskAnalyzeTool extends BaseTool {
   static toolName = 'DiskAnalyze';
   static category = 'system';
   static risk = 'low';
-  static aliases = ['analyze_disk', 'find_large_files', 'find_duplicates', 'find_old_installers', 'disk_usage'];
-  static searchHint = '磁盘分析 大文件 旧安装包 重复文件 磁盘占用 空间去哪了 D盘 C盘 large files duplicate files old installers disk usage what takes space';
+  static aliases = [
+    'analyze_disk',
+    'find_large_files',
+    'find_duplicates',
+    'find_old_installers',
+    'disk_usage',
+  ];
+  static searchHint =
+    '磁盘分析 大文件 旧安装包 重复文件 磁盘占用 空间去哪了 D盘 C盘 large files duplicate files old installers disk usage what takes space';
 
   // 恒只读:纯 stat/readdir/readFile,永不删除。
-  isReadOnly() { return true; }
-  isDestructive() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return true;
+  }
+  isDestructive() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return [
@@ -74,7 +89,8 @@ class DiskAnalyzeTool extends BaseTool {
         },
         find: {
           type: 'array',
-          description: '找哪几类:large(大文件) / installers(旧安装包) / duplicates(重复文件)。省略=全找',
+          description:
+            '找哪几类:large(大文件) / installers(旧安装包) / duplicates(重复文件)。省略=全找',
           items: { type: 'string', enum: ['large', 'installers', 'duplicates'] },
         },
         top: {
@@ -102,8 +118,12 @@ class DiskAnalyzeTool extends BaseTool {
     const p = params || {};
     // 逐参覆盖:工具入参 → 引擎读的临时 env(不污染 process.env,只本次调用生效)。
     const env = Object.assign({}, process.env);
-    if (Number.isFinite(p.minSizeMB) && p.minSizeMB > 0) env.KHY_DISKANALYZE_MIN_SIZE_MB = String(Math.floor(p.minSizeMB));
-    if (Number.isFinite(p.olderThanDays) && p.olderThanDays > 0) env.KHY_DISKANALYZE_OLD_INSTALLER_DAYS = String(Math.floor(p.olderThanDays));
+    if (Number.isFinite(p.minSizeMB) && p.minSizeMB > 0) {
+      env.KHY_DISKANALYZE_MIN_SIZE_MB = String(Math.floor(p.minSizeMB));
+    }
+    if (Number.isFinite(p.olderThanDays) && p.olderThanDays > 0) {
+      env.KHY_DISKANALYZE_OLD_INSTALLER_DAYS = String(Math.floor(p.olderThanDays));
+    }
 
     const result = diskAnalyze.analyze({
       roots: p.roots,

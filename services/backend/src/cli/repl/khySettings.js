@@ -22,8 +22,8 @@
  * byte-for-byte the user file — existing single-file deployments are unaffected.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 /**
  * Resolve the current user's home directory, honoring an explicitly overridden
@@ -33,10 +33,10 @@ const os = require('os');
  * ignores a reassigned process.env.HOME on some platforms).
  */
 function _homeDir() {
-  const override = process.platform === 'win32'
-    ? process.env.USERPROFILE
-    : process.env.HOME;
-  if (override && String(override).trim()) return String(override);
+  const override = process.platform === 'win32' ? process.env.USERPROFILE : process.env.HOME;
+  if (override && String(override).trim()) {
+    return String(override);
+  }
   return os.homedir();
 }
 
@@ -55,7 +55,9 @@ const KHY_SETTINGS_FILE = _userSettingsFile();
  */
 function _managedSettingsPath() {
   const override = process.env.KHY_MANAGED_SETTINGS;
-  if (override && String(override).trim()) return String(override).trim();
+  if (override && String(override).trim()) {
+    return String(override).trim();
+  }
   if (process.platform === 'win32') {
     const base = process.env.PROGRAMDATA || 'C:\\ProgramData';
     return path.join(base, 'khy', 'managed-settings.json');
@@ -82,10 +84,14 @@ const _jsonCache = new Map(); // file -> { mtimeMs, value }
 
 function _readJsonObject(file) {
   try {
-    if (!fs.existsSync(file)) return null;
+    if (!fs.existsSync(file)) {
+      return null;
+    }
     const st = fs.statSync(file);
     const cached = _jsonCache.get(file);
-    if (cached && st.mtimeMs === cached.mtimeMs) return cached.value;
+    if (cached && st.mtimeMs === cached.mtimeMs) {
+      return cached.value;
+    }
     const raw = fs.readFileSync(file, 'utf-8');
     const parsed = JSON.parse(raw);
     const value = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
@@ -130,7 +136,9 @@ function resolveKhySettings(opts = {}) {
   let merged = {};
   for (const layer of _settingsLayers(cwd)) {
     const data = _readJsonObject(layer.file);
-    if (data) merged = _deepMerge(merged, data);
+    if (data) {
+      merged = _deepMerge(merged, data);
+    }
   }
   return merged;
 }
@@ -150,9 +158,13 @@ function resolveKhySettingsWithProvenance(opts = {}) {
   const layers = [];
   for (const layer of _settingsLayers(cwd)) {
     const data = _readJsonObject(layer.file);
-    if (!data) continue;
+    if (!data) {
+      continue;
+    }
     layers.push({ name: layer.name, file: layer.file });
-    for (const key of Object.keys(data)) sources[key] = layer.name;
+    for (const key of Object.keys(data)) {
+      sources[key] = layer.name;
+    }
     merged = _deepMerge(merged, data);
   }
   return { value: merged, sources, layers };
@@ -174,7 +186,9 @@ function _writeKhySettings(nextSettings = {}) {
   try {
     const file = _userSettingsFile();
     const dir = path.dirname(file);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(file, JSON.stringify(nextSettings, null, 2), 'utf-8');
     // Keep the read cache coherent with what was just written.
     try {
@@ -190,7 +204,9 @@ function _writeKhySettings(nextSettings = {}) {
 
 function _loadBooleanKhySetting(key, fallback = false) {
   const settings = _readKhySettings();
-  if (typeof settings[key] === 'boolean') return settings[key];
+  if (typeof settings[key] === 'boolean') {
+    return settings[key];
+  }
   return !!fallback;
 }
 
@@ -212,8 +228,11 @@ function _persistBooleanKhySetting(key, value) {
  */
 function _persistStringKhySetting(key, value) {
   const settings = _readJsonObject(_userSettingsFile()) || {};
-  if (value === null || value === undefined) delete settings[key];
-  else settings[key] = String(value);
+  if (value === null || value === undefined) {
+    delete settings[key];
+  } else {
+    settings[key] = String(value);
+  }
   return _writeKhySettings(settings);
 }
 
@@ -225,8 +244,11 @@ function _persistStringKhySetting(key, value) {
  */
 function _persistObjectKhySetting(key, value) {
   const settings = _readJsonObject(_userSettingsFile()) || {};
-  if (value === null || value === undefined) delete settings[key];
-  else settings[key] = value;
+  if (value === null || value === undefined) {
+    delete settings[key];
+  } else {
+    settings[key] = value;
+  }
   return _writeKhySettings(settings);
 }
 

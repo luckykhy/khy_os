@@ -12,10 +12,10 @@
  * 规范：docs/03_DESIGN_设计/[DESIGN-ARCH-027] Agent 依赖自愈机制.md
  */
 
+const healingLoop = require('./healingLoop');
+const installRunner = require('./installRunner');
 const registry = require('./registry');
 const resolver = require('./resolver');
-const installRunner = require('./installRunner');
-const healingLoop = require('./healingLoop');
 const toolchainVersions = require('./toolchainVersions');
 
 module.exports = {

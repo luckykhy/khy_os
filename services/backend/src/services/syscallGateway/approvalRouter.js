@@ -37,8 +37,8 @@ const DENY_CAUSES = Object.freeze({
 const { LEVELS } = require('./resourceClassifier');
 
 const DECISIONS = Object.freeze({
-  AUTO_ALLOW: 'auto-allow',  // 网关自主放行（L0，或 L1 命中已有授权）
-  USER_ALLOW: 'user-allow',  // 用户当场批准
+  AUTO_ALLOW: 'auto-allow', // 网关自主放行（L0，或 L1 命中已有授权）
+  USER_ALLOW: 'user-allow', // 用户当场批准
   DENY: 'deny',
 });
 
@@ -58,7 +58,14 @@ const DEFAULT_L2_CONFIRM = 'YES';
  *        键入确认串（对齐「能力隔离铁律：模式可省去黄灯一问，但红线永不可越」）。
  * @returns {Promise<{decision:string, reasons:string[], level:string}>}
  */
-async function route({ intent, level, cache, prompter, l2ConfirmWord = DEFAULT_L2_CONFIRM, autoApproveL1 = false }) {
+async function route({
+  intent,
+  level,
+  cache,
+  prompter,
+  l2ConfirmWord = DEFAULT_L2_CONFIRM,
+  autoApproveL1 = false,
+}) {
   const reasons = [];
 
   // ── L0 绿灯：自动放行 ──────────────────────────────
@@ -86,7 +93,12 @@ async function route({ intent, level, cache, prompter, l2ConfirmWord = DEFAULT_L
     // 没有交互器 → fail-closed
     if (!prompter || typeof prompter.askL1 !== 'function') {
       reasons.push('L1 需用户确认但无交互器，fail-closed 拒绝');
-      return { decision: DECISIONS.DENY, reasons, level, cause: DENY_CAUSES.NO_INTERACTIVE_CHANNEL };
+      return {
+        decision: DECISIONS.DENY,
+        reasons,
+        level,
+        cause: DENY_CAUSES.NO_INTERACTIVE_CHANNEL,
+      };
     }
     let answer;
     try {
@@ -128,16 +140,19 @@ async function route({ intent, level, cache, prompter, l2ConfirmWord = DEFAULT_L
     return { decision: DECISIONS.DENY, reasons, level, cause: DENY_CAUSES.INTERACTION_ERROR };
   }
   // 归一交互器返回：兼容旧 string（仅键入串）与新 { typed, session }（含「本会话总是允许」标志）。
-  const typed = typeof res === 'string' ? res : (res && typeof res.typed === 'string' ? res.typed : '');
+  const typed =
+    typeof res === 'string' ? res : res && typeof res.typed === 'string' ? res.typed : '';
   const wantsSession = !!(res && typeof res === 'object' && res.session);
   // 防呆③：必须严格等于确认串；回车/空/小写一律不过。会话免审不绕过键入确认——仍须键入确认串。
   if (typeof typed === 'string' && typed.trim() === l2ConfirmWord) {
     if (wantsSession && cache && typeof cache.grantL2SessionExempt === 'function') {
       // grantL2SessionExempt 内部再门控一道：门控关时返回 false（no-op），仅本次放行不留免审。
       const granted = cache.grantL2SessionExempt(intent);
-      reasons.push(granted
-        ? `用户键入确认串「${l2ConfirmWord}」并授予本会话同类免审，放行 L2`
-        : `用户键入确认串「${l2ConfirmWord}」，放行本次 L2（会话免审门控关，未留免审）`);
+      reasons.push(
+        granted
+          ? `用户键入确认串「${l2ConfirmWord}」并授予本会话同类免审，放行 L2`
+          : `用户键入确认串「${l2ConfirmWord}」，放行本次 L2（会话免审门控关，未留免审）`
+      );
       return { decision: DECISIONS.USER_ALLOW, reasons, level };
     }
     reasons.push(`用户键入确认串「${l2ConfirmWord}」，放行本次 L2`);

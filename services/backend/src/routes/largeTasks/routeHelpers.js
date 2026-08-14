@@ -13,16 +13,25 @@ const trimmedString = require('../../utils/trimIfString');
 
 function parseIntInRange(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return fallback;
-  if (parsed < min) return min;
-  if (parsed > max) return max;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (parsed < min) {
+    return min;
+  }
+  if (parsed > max) {
+    return max;
+  }
   return parsed;
 }
 
-const parseBoolean = (value, fallback = false) => require('../../utils/parseBoolean')(value, fallback, { extended: false });
+const parseBoolean = (value, fallback = false) =>
+  require('../../utils/parseBoolean')(value, fallback, { extended: false });
 
 function parseSchemaVersions(value) {
-  if (!Array.isArray(value)) return null;
+  if (!Array.isArray(value)) {
+    return null;
+  }
   const versions = value
     .map((item) => Number.parseInt(item, 10))
     .filter((item) => Number.isFinite(item) && item > 0);
@@ -30,7 +39,9 @@ function parseSchemaVersions(value) {
 }
 
 function parseRetryPolicy(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
   const out = {};
 
   if (Array.isArray(value.non_retryable_error_types)) {
@@ -72,7 +83,9 @@ function buildRunOptions(input = {}) {
     retry_jitter_pct: Number.isFinite(Number(input.retry_jitter_pct))
       ? Math.max(0, Math.min(1, Number(input.retry_jitter_pct)))
       : 0.2,
-    allowed_checkpoint_schema_versions: parseSchemaVersions(input.allowed_checkpoint_schema_versions),
+    allowed_checkpoint_schema_versions: parseSchemaVersions(
+      input.allowed_checkpoint_schema_versions
+    ),
     retry_policy: parseRetryPolicy(input.retry_policy || input.retryPolicy),
   };
 }
@@ -87,8 +100,12 @@ function buildWorkerStartOptions(input = {}) {
 }
 
 function headerAsString(value) {
-  if (typeof value === 'string') return value.trim();
-  if (Array.isArray(value) && typeof value[0] === 'string') return value[0].trim();
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (Array.isArray(value) && typeof value[0] === 'string') {
+    return value[0].trim();
+  }
   return '';
 }
 
@@ -96,27 +113,41 @@ function parseAfterEventId(req) {
   const fromQuery = req.query?.after_id;
   if (fromQuery !== undefined && fromQuery !== null && String(fromQuery).trim() !== '') {
     const parsed = Number.parseInt(fromQuery, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
   }
   const fromHeader = headerAsString(req.headers['last-event-id']);
-  if (!fromHeader) return 0;
+  if (!fromHeader) {
+    return 0;
+  }
   const parsed = Number.parseInt(fromHeader, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
   return parsed;
 }
 
 function normalizePayload(value) {
-  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
   return {};
 }
 
 function normalizeSteps(value) {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    return [];
+  }
   return value
     .map((step, index) => {
-      if (!step || typeof step !== 'object') return null;
+      if (!step || typeof step !== 'object') {
+        return null;
+      }
       const action = trimmedString(step.action || step.type).toLowerCase();
-      if (!action) return null;
+      if (!action) {
+        return null;
+      }
       return {
         action,
         index,
@@ -143,13 +174,19 @@ function normalizeStatusCode(value) {
 }
 
 function normalizeRetryFlag(value) {
-  if (value === true) return true;
-  if (value === false) return false;
+  if (value === true) {
+    return true;
+  }
+  if (value === false) {
+    return false;
+  }
   return null;
 }
 
 function normalizeEventRecord(event) {
-  if (!event || typeof event !== 'object') return event;
+  if (!event || typeof event !== 'object') {
+    return event;
+  }
   return {
     ...event,
     retryable: normalizeRetryFlag(event.retryable),
@@ -160,7 +197,9 @@ function normalizeEventRecord(event) {
 }
 
 function normalizeAttemptRecord(attempt) {
-  if (!attempt || typeof attempt !== 'object') return attempt;
+  if (!attempt || typeof attempt !== 'object') {
+    return attempt;
+  }
   return {
     ...attempt,
     retryable: normalizeRetryFlag(attempt.retryable),

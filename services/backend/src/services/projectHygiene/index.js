@@ -15,12 +15,16 @@
 
 const fs = require('fs');
 const path = require('path');
-const { assessGodFile } = require('./godFile');
+
+const safeExists = require('../../utils/existsSyncSafe');
+
 const { findDuplicateModule } = require('./duplicateModule');
+const { assessGodFile } = require('./godFile');
 const { extOf, CODE_EXTS } = require('./symbols');
 const T = require('./thresholds');
 
-const SKIP_DIR_RE = /(^|\/)(node_modules|\.git|dist|build|out|coverage|vendor|\.next|\.cache|__pycache__)(\/|$)/;
+const SKIP_DIR_RE =
+  /(^|\/)(node_modules|\.git|dist|build|out|coverage|vendor|\.next|\.cache|__pycache__)(\/|$)/;
 
 /** Default sibling discovery: code files under the same directory subtree as the
  * target, bounded by dupMaxScanFiles, same extension only, skipping vendor/build
@@ -28,7 +32,9 @@ const SKIP_DIR_RE = /(^|\/)(node_modules|\.git|dist|build|out|coverage|vendor|\.
  * joins, which is where real duplicates cluster. */
 function defaultListFiles(targetAbs) {
   const ext = extOf(targetAbs);
-  if (!ext) return { files: [], capped: false };
+  if (!ext) {
+    return { files: [], capped: false };
+  }
   const root = path.dirname(targetAbs);
   const cap = T.dupMaxScanFiles();
   const out = [];
@@ -37,15 +43,31 @@ function defaultListFiles(targetAbs) {
   while (stack.length && out.length < cap) {
     const dir = stack.pop();
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
     for (const ent of entries) {
       const full = path.join(dir, ent.name);
       const rel = full.split(path.sep).join('/');
-      if (ent.name.startsWith('.') || SKIP_DIR_RE.test('/' + rel)) continue;
-      if (ent.isDirectory()) { stack.push(full); continue; }
-      if (!ent.isFile()) continue;
-      if (extOf(ent.name) !== ext) continue;
-      if (out.length >= cap) { capped = true; break; }
+      if (ent.name.startsWith('.') || SKIP_DIR_RE.test('/' + rel)) {
+        continue;
+      }
+      if (ent.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (!ent.isFile()) {
+        continue;
+      }
+      if (extOf(ent.name) !== ext) {
+        continue;
+      }
+      if (out.length >= cap) {
+        capped = true;
+        break;
+      }
       out.push(full);
     }
   }
@@ -55,9 +77,13 @@ function defaultListFiles(targetAbs) {
 function defaultReadFile(p) {
   try {
     const st = fs.statSync(p);
-    if (st.size > T.dupMaxFileBytes()) return null; // too big to compare cheaply
+    if (st.size > T.dupMaxFileBytes()) {
+      return null;
+    } // too big to compare cheaply
     return fs.readFileSync(p, 'utf8');
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -74,10 +100,14 @@ function defaultReadFile(p) {
  * @returns {{ ok: boolean, violations: Array<{type, message, ...}>, capped?: boolean }}
  */
 function assessWrite(opts = {}) {
-  if (!T.enabled()) return { ok: true, violations: [] };
+  if (!T.enabled()) {
+    return { ok: true, violations: [] };
+  }
   try {
     const { path: filePath, content } = opts;
-    if (!filePath || typeof content !== 'string') return { ok: true, violations: [] };
+    if (!filePath || typeof content !== 'string') {
+      return { ok: true, violations: [] };
+    }
     const targetAbs = path.resolve(String(filePath));
     const violations = [];
 
@@ -104,20 +134,25 @@ function assessWrite(opts = {}) {
       const listing = lister(targetAbs) || { files: [], capped: false };
       capped = !!listing.capped;
       const siblings = [];
-      for (const f of (listing.files || [])) {
+      for (const f of listing.files || []) {
         const abs = path.resolve(String(f));
-        if (abs === targetAbs) continue;
+        if (abs === targetAbs) {
+          continue;
+        }
         const c = reader(abs);
-        if (typeof c === 'string') siblings.push({ path: f, content: c });
+        if (typeof c === 'string') {
+          siblings.push({ path: f, content: c });
+        }
       }
       const dup = findDuplicateModule({ path: filePath, content, siblings });
       if (dup.duplicate) {
         const pct = Math.round(dup.similarity * 100);
-        const why = dup.reason === 'name'
-          ? '同名/改名复制'
-          : dup.reason === 'symbols'
-            ? `导出符号高度重叠（${pct}%）`
-            : `内容近乎重复（${pct}%）`;
+        const why =
+          dup.reason === 'name'
+            ? '同名/改名复制'
+            : dup.reason === 'symbols'
+              ? `导出符号高度重叠（${pct}%）`
+              : `内容近乎重复（${pct}%）`;
         violations.push({
           type: 'duplicate-module',
           existingPath: dup.existingPath,
@@ -139,7 +174,6 @@ function assessWrite(opts = {}) {
 }
 
 // 收敛到 utils/existsSyncSafe 单一真源(逐字节委托,调用点不变)
-const safeExists = require('../../utils/existsSyncSafe');
 
 /**
  * Assess a BATCH of pending file writes (project scaffolding) against the same
@@ -157,18 +191,26 @@ const safeExists = require('../../utils/existsSyncSafe');
  * @returns {{ ok: boolean, violations: Array<{file, type, message, ...}> }}
  */
 function assessScaffold(opts = {}) {
-  if (!T.enabled()) return { ok: true, violations: [] };
+  if (!T.enabled()) {
+    return { ok: true, violations: [] };
+  }
   try {
     const files = Array.isArray(opts.files) ? opts.files : [];
-    if (files.length === 0) return { ok: true, violations: [] };
+    if (files.length === 0) {
+      return { ok: true, violations: [] };
+    }
 
     // Normalize once; only entries that actually carry a path are assessable.
     const entries = [];
     for (const f of files) {
-      if (!f || typeof f !== 'object') continue;
+      if (!f || typeof f !== 'object') {
+        continue;
+      }
       const p = String(f.path || f.file_path || '').trim();
       const content = typeof f.content === 'string' ? f.content : '';
-      if (!p) continue;
+      if (!p) {
+        continue;
+      }
       entries.push({ path: p, content });
     }
 
@@ -198,8 +240,12 @@ function assessScaffold(opts = {}) {
       if (CODE_EXTS.has(extOf(filePath))) {
         const siblings = [];
         for (let j = 0; j < entries.length && siblings.length < dupScanCap; j++) {
-          if (j === i) continue;
-          if (extOf(entries[j].path) !== extOf(filePath)) continue;
+          if (j === i) {
+            continue;
+          }
+          if (extOf(entries[j].path) !== extOf(filePath)) {
+            continue;
+          }
           siblings.push({ path: entries[j].path, content: entries[j].content });
         }
         if (siblings.length > 0) {
@@ -211,11 +257,12 @@ function assessScaffold(opts = {}) {
             const matchIdx = entries.findIndex((e) => e.path === dup.existingPath);
             if (matchIdx === -1 || matchIdx < i) {
               const pct = Math.round(dup.similarity * 100);
-              const why = dup.reason === 'name'
-                ? '同名/改名复制'
-                : dup.reason === 'symbols'
-                  ? `导出符号高度重叠（${pct}%）`
-                  : `内容近乎重复（${pct}%）`;
+              const why =
+                dup.reason === 'name'
+                  ? '同名/改名复制'
+                  : dup.reason === 'symbols'
+                    ? `导出符号高度重叠（${pct}%）`
+                    : `内容近乎重复（${pct}%）`;
               violations.push({
                 file: filePath,
                 type: 'duplicate-module',

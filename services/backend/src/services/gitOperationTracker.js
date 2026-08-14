@@ -20,8 +20,8 @@ const GIT_PATTERNS = [
   {
     type: 'commit',
     patterns: [
-      /\[(\S+)\s+([a-f0-9]{7,})\]\s+(.+)/,           // [branch abc1234] message
-      /create mode \d+ (.+)/,                           // create mode 100644 file
+      /\[(\S+)\s+([a-f0-9]{7,})\]\s+(.+)/, // [branch abc1234] message
+      /create mode \d+ (.+)/, // create mode 100644 file
     ],
     extract: (match) => ({
       branch: match[1],
@@ -33,8 +33,8 @@ const GIT_PATTERNS = [
     type: 'push',
     patterns: [
       /([a-f0-9]+)\.\.([a-f0-9]+)\s+(\S+)\s+->\s+(\S+)/, // abc..def branch -> remote/branch
-      /\* \[new branch\]\s+(\S+)\s+->\s+(\S+)/,            // * [new branch] branch -> remote
-      /\* \[new tag\]\s+(\S+)\s+->\s+(\S+)/,               // * [new tag] tag -> remote
+      /\* \[new branch\]\s+(\S+)\s+->\s+(\S+)/, // * [new branch] branch -> remote
+      /\* \[new tag\]\s+(\S+)\s+->\s+(\S+)/, // * [new tag] tag -> remote
     ],
     extract: (match) => ({
       from: match[1],
@@ -79,37 +79,26 @@ const GIT_PATTERNS = [
   },
   {
     type: 'rebase',
-    patterns: [
-      /Successfully rebased and updated (\S+)/,
-      /Current branch (\S+) is up to date/,
-    ],
+    patterns: [/Successfully rebased and updated (\S+)/, /Current branch (\S+) is up to date/],
     extract: (match) => ({
       ref: match[1],
     }),
   },
   {
     type: 'stash',
-    patterns: [
-      /Saved working directory and index state/,
-      /Dropped refs\/stash@\{(\d+)\}/,
-    ],
+    patterns: [/Saved working directory and index state/, /Dropped refs\/stash@\{(\d+)\}/],
     extract: () => ({}),
   },
   {
     type: 'tag',
-    patterns: [
-      /tag '([^']+)'/,
-    ],
+    patterns: [/tag '([^']+)'/],
     extract: (match) => ({
       tag: match[1],
     }),
   },
   {
     type: 'reset',
-    patterns: [
-      /HEAD is now at ([a-f0-9]+)\s+(.*)/,
-      /Unstaged changes after reset/,
-    ],
+    patterns: [/HEAD is now at ([a-f0-9]+)\s+(.*)/, /Unstaged changes after reset/],
     extract: (match) => ({
       hash: match[1] || '',
       message: match[2] || '',
@@ -130,14 +119,18 @@ const MAX_OPERATIONS = 100;
  * @returns {Array<{ type: string, command: string, details: object, timestamp: number }>}
  */
 function detectOperations(command, output) {
-  if (!output || typeof output !== 'string') return [];
+  if (!output || typeof output !== 'string') {
+    return [];
+  }
 
   // Quick check: skip if no git-related content
   const isGitCommand = /\bgit\b/i.test(command || '');
   const hasGitOutput = /\b(commit|push|merge|branch|rebase|tag|stash)\b/i.test(output);
   const hasGitUrl = /github\.com|gitlab\./i.test(output);
 
-  if (!isGitCommand && !hasGitOutput && !hasGitUrl) return [];
+  if (!isGitCommand && !hasGitOutput && !hasGitUrl) {
+    return [];
+  }
 
   const detected = [];
   const lines = output.split('\n');
@@ -195,7 +188,7 @@ function getOperations() {
  * @returns {Array}
  */
 function getOperationsByType(type) {
-  return _operations.filter(op => op.type === type);
+  return _operations.filter((op) => op.type === type);
 }
 
 /**
@@ -205,27 +198,31 @@ function getOperationsByType(type) {
  */
 function summarize(limit = 10) {
   const recent = _operations.slice(-limit);
-  if (recent.length === 0) return 'No git operations detected.';
+  if (recent.length === 0) {
+    return 'No git operations detected.';
+  }
 
-  return recent.map(op => {
-    const ts = new Date(op.timestamp).toLocaleTimeString();
-    switch (op.type) {
-      case 'commit':
-        return `[${ts}] commit ${op.details.hash || ''} on ${op.details.branch || ''}: ${op.details.message || ''}`;
-      case 'push':
-        return `[${ts}] push ${op.details.localRef || ''} -> ${op.details.remoteRef || ''}`;
-      case 'merge':
-        return `[${ts}] merge (${op.details.strategy || ''})`;
-      case 'pr_create':
-        return `[${ts}] PR created: ${op.details.url || ''}`;
-      case 'checkout':
-        return `[${ts}] checkout ${op.details.branch || ''}`;
-      case 'rebase':
-        return `[${ts}] rebase ${op.details.ref || ''}`;
-      default:
-        return `[${ts}] ${op.type}`;
-    }
-  }).join('\n');
+  return recent
+    .map((op) => {
+      const ts = new Date(op.timestamp).toLocaleTimeString();
+      switch (op.type) {
+        case 'commit':
+          return `[${ts}] commit ${op.details.hash || ''} on ${op.details.branch || ''}: ${op.details.message || ''}`;
+        case 'push':
+          return `[${ts}] push ${op.details.localRef || ''} -> ${op.details.remoteRef || ''}`;
+        case 'merge':
+          return `[${ts}] merge (${op.details.strategy || ''})`;
+        case 'pr_create':
+          return `[${ts}] PR created: ${op.details.url || ''}`;
+        case 'checkout':
+          return `[${ts}] checkout ${op.details.branch || ''}`;
+        case 'rebase':
+          return `[${ts}] rebase ${op.details.ref || ''}`;
+        default:
+          return `[${ts}] ${op.type}`;
+      }
+    })
+    .join('\n');
 }
 
 /**
@@ -235,8 +232,8 @@ function summarize(limit = 10) {
  */
 function hasRecentDestructiveOp(withinMs = 60000) {
   const cutoff = Date.now() - withinMs;
-  return _operations.some(op =>
-    op.timestamp > cutoff && (op.type === 'reset' || op.type === 'rebase')
+  return _operations.some(
+    (op) => op.timestamp > cutoff && (op.type === 'reset' || op.type === 'rebase')
   );
 }
 

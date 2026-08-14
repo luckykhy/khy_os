@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const proxyServer = require('./proxyServer');
+
 const { getDataHome, getLegacyDataHome } = require('../../utils/dataHome');
 
 const KHY_DIR = getDataHome();
@@ -22,6 +22,8 @@ const DEFAULT_QUOTA = Object.freeze({
 // 收敛到 utils/mkdirpSync 单一真源(逐字节委托,调用点不变)
 const ensureDir = require('../../utils/mkdirpSync');
 
+const proxyServer = require('./proxyServer');
+
 function safeJsonParse(raw, fallback) {
   try {
     const parsed = JSON.parse(raw);
@@ -34,7 +36,9 @@ function safeJsonParse(raw, fallback) {
 function readJsonWithFallback(filePaths = [], fallback = {}) {
   for (const filePath of filePaths) {
     try {
-      if (!filePath || !fs.existsSync(filePath)) continue;
+      if (!filePath || !fs.existsSync(filePath)) {
+        continue;
+      }
       const raw = fs.readFileSync(filePath, 'utf-8');
       return safeJsonParse(raw, fallback);
     } catch {
@@ -52,14 +56,14 @@ function writeJsonAtomic(filePath, payload) {
 }
 
 function normalizeStringArray(input) {
-  if (!Array.isArray(input)) return [];
-  return [...new Set(input
-    .map(item => String(item || '').trim())
-    .filter(Boolean))];
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return [...new Set(input.map((item) => String(item || '').trim()).filter(Boolean))];
 }
 
 function normalizeQuota(input) {
-  const source = (input && typeof input === 'object') ? input : {};
+  const source = input && typeof input === 'object' ? input : {};
   const monthlyRequests = Number(source.monthlyRequests) || 0;
   const monthlyTokens = Number(source.monthlyTokens) || 0;
   const monthlyBudgetCny = Number(source.monthlyBudgetCny) || 0;
@@ -71,21 +75,26 @@ function normalizeQuota(input) {
 }
 
 function sanitizeCustomerId(raw, fallback = '') {
-  const id = String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const id = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
   return id || fallback;
 }
 
 function generateCustomerId(existing = new Set()) {
   for (let i = 0; i < 8; i += 1) {
     const id = `cus_${crypto.randomBytes(4).toString('hex')}`;
-    if (!existing.has(id)) return id;
+    if (!existing.has(id)) {
+      return id;
+    }
   }
   return `cus_${Date.now().toString(36)}`;
 }
 
 function normalizeCustomer(raw, existingIds = new Set()) {
   const now = new Date().toISOString();
-  const input = (raw && typeof raw === 'object') ? raw : {};
+  const input = raw && typeof raw === 'object' ? raw : {};
   let id = sanitizeCustomerId(input.id);
   if (!id || existingIds.has(id)) {
     id = generateCustomerId(existingIds);
@@ -95,8 +104,8 @@ function normalizeCustomer(raw, existingIds = new Set()) {
     id,
     name: String(input.name || id).trim() || id,
     enabled: input.enabled !== false,
-    allowedProviders: normalizeStringArray(input.allowedProviders).map(x => x.toLowerCase()),
-    allowedModels: normalizeStringArray(input.allowedModels).map(x => x.toLowerCase()),
+    allowedProviders: normalizeStringArray(input.allowedProviders).map((x) => x.toLowerCase()),
+    allowedModels: normalizeStringArray(input.allowedModels).map((x) => x.toLowerCase()),
     quota: normalizeQuota(input.quota || DEFAULT_QUOTA),
     note: String(input.note || '').trim(),
     tokenIds: normalizeStringArray(input.tokenIds),
@@ -107,13 +116,13 @@ function normalizeCustomer(raw, existingIds = new Set()) {
 
 function loadStore() {
   ensureDir(KHY_DIR);
-  const raw = readJsonWithFallback(
-    [CUSTOMER_FILE, LEGACY_CUSTOMER_FILE],
-    { version: 1, customers: [] }
-  );
+  const raw = readJsonWithFallback([CUSTOMER_FILE, LEGACY_CUSTOMER_FILE], {
+    version: 1,
+    customers: [],
+  });
   const rows = Array.isArray(raw.customers) ? raw.customers : [];
   const existingIds = new Set();
-  const customers = rows.map(row => normalizeCustomer(row, existingIds));
+  const customers = rows.map((row) => normalizeCustomer(row, existingIds));
   return {
     version: 1,
     customers,
@@ -123,22 +132,21 @@ function loadStore() {
 function saveStore(store) {
   const rows = Array.isArray(store?.customers) ? store.customers : [];
   const existingIds = new Set();
-  const normalized = rows.map(row => normalizeCustomer(row, existingIds));
+  const normalized = rows.map((row) => normalizeCustomer(row, existingIds));
   writeJsonAtomic(CUSTOMER_FILE, { version: 1, customers: normalized });
   return { version: 1, customers: normalized };
 }
 
 function loadManagedTokenSecrets() {
-  const raw = readJsonWithFallback(
-    [PROXY_AUTH_FILE, LEGACY_PROXY_AUTH_FILE],
-    {}
-  );
+  const raw = readJsonWithFallback([PROXY_AUTH_FILE, LEGACY_PROXY_AUTH_FILE], {});
   const rows = Array.isArray(raw.managedTokens) ? raw.managedTokens : [];
   const out = new Map();
   for (const row of rows) {
     const id = String(row?.id || '').trim();
     const token = String(row?.token || '').trim();
-    if (!id || !token) continue;
+    if (!id || !token) {
+      continue;
+    }
     out.set(id, token);
   }
   return out;
@@ -161,38 +169,55 @@ function toTokenView(base, tokenSecrets = new Map(), includeSecrets = false) {
 }
 
 function parseProviderFromModelId(modelId) {
-  const m = String(modelId || '').trim().toLowerCase().match(/^([a-z0-9_-]+)[/:](.+)$/);
+  const m = String(modelId || '')
+    .trim()
+    .toLowerCase()
+    .match(/^([a-z0-9_-]+)[/:](.+)$/);
   return m ? m[1] : '';
 }
 
 function matchModelRule(rule, modelId) {
-  const normalizedRule = String(rule || '').trim().toLowerCase();
-  const normalizedModel = String(modelId || '').trim().toLowerCase();
-  if (!normalizedRule || !normalizedModel) return false;
-  if (normalizedRule === '*') return true;
-  if (!normalizedRule.includes('*')) return normalizedRule === normalizedModel;
-  const escaped = normalizedRule
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*');
+  const normalizedRule = String(rule || '')
+    .trim()
+    .toLowerCase();
+  const normalizedModel = String(modelId || '')
+    .trim()
+    .toLowerCase();
+  if (!normalizedRule || !normalizedModel) {
+    return false;
+  }
+  if (normalizedRule === '*') {
+    return true;
+  }
+  if (!normalizedRule.includes('*')) {
+    return normalizedRule === normalizedModel;
+  }
+  const escaped = normalizedRule.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
   return new RegExp(`^${escaped}$`).test(normalizedModel);
 }
 
 function customerHasModelAccess(customer, modelId) {
-  const normalizedModel = String(modelId || '').trim().toLowerCase();
-  if (!normalizedModel) return true;
+  const normalizedModel = String(modelId || '')
+    .trim()
+    .toLowerCase();
+  if (!normalizedModel) {
+    return true;
+  }
   const provider = parseProviderFromModelId(normalizedModel);
   if (Array.isArray(customer.allowedProviders) && customer.allowedProviders.length > 0) {
-    if (!provider || !customer.allowedProviders.includes(provider)) return false;
+    if (!provider || !customer.allowedProviders.includes(provider)) {
+      return false;
+    }
   }
   if (!Array.isArray(customer.allowedModels) || customer.allowedModels.length === 0) {
     return true;
   }
-  return customer.allowedModels.some(rule => matchModelRule(rule, normalizedModel));
+  return customer.allowedModels.some((rule) => matchModelRule(rule, normalizedModel));
 }
 
 function buildCustomerViews(customers, { includeSecrets = false, model = '' } = {}) {
   const managed = proxyServer.listManagedTokens();
-  const managedMap = new Map(managed.map(item => [item.id, item]));
+  const managedMap = new Map(managed.map((item) => [item.id, item]));
   const tokenSecrets = includeSecrets ? loadManagedTokenSecrets() : new Map();
 
   const rows = [];
@@ -224,7 +249,7 @@ function buildCustomerViews(customers, { includeSecrets = false, model = '' } = 
       quota: normalizeQuota(customer.quota || DEFAULT_QUOTA),
       note: customer.note || '',
       tokenCount: tokens.length,
-      enabledTokenCount: tokens.filter(t => t.enabled).length,
+      enabledTokenCount: tokens.filter((t) => t.enabled).length,
       tokens,
       createdAt: customer.createdAt || null,
       updatedAt: customer.updatedAt || null,
@@ -242,23 +267,27 @@ function buildCustomerViews(customers, { includeSecrets = false, model = '' } = 
 
 function getCustomerById(store, customerId) {
   const id = sanitizeCustomerId(customerId);
-  return store.customers.find(item => item.id === id) || null;
+  return store.customers.find((item) => item.id === id) || null;
 }
 
 function updateCustomerFields(customer, data = {}) {
   if (data.name !== undefined) {
     const name = String(data.name || '').trim();
-    if (!name) throw new Error('name is required');
+    if (!name) {
+      throw new Error('name is required');
+    }
     customer.name = name;
   }
   if (data.enabled !== undefined) {
     customer.enabled = data.enabled !== false;
   }
   if (data.allowedProviders !== undefined) {
-    customer.allowedProviders = normalizeStringArray(data.allowedProviders).map(x => x.toLowerCase());
+    customer.allowedProviders = normalizeStringArray(data.allowedProviders).map((x) =>
+      x.toLowerCase()
+    );
   }
   if (data.allowedModels !== undefined) {
-    customer.allowedModels = normalizeStringArray(data.allowedModels).map(x => x.toLowerCase());
+    customer.allowedModels = normalizeStringArray(data.allowedModels).map((x) => x.toLowerCase());
   }
   if (data.quota !== undefined) {
     customer.quota = normalizeQuota(data.quota || DEFAULT_QUOTA);
@@ -273,16 +302,22 @@ function updateCustomerFields(customer, data = {}) {
 function getCustomer(customerId, options = {}) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) return null;
-  return buildCustomerViews([customer], {
-    includeSecrets: options.includeSecrets === true,
-  })[0] || null;
+  if (!customer) {
+    return null;
+  }
+  return (
+    buildCustomerViews([customer], {
+      includeSecrets: options.includeSecrets === true,
+    })[0] || null
+  );
 }
 
 function adjustCustomerQuota(customerId, delta = {}, options = {}) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
 
   const current = normalizeQuota(customer.quota || DEFAULT_QUOTA);
   const patch = normalizeQuota(delta || DEFAULT_QUOTA);
@@ -294,9 +329,11 @@ function adjustCustomerQuota(customerId, delta = {}, options = {}) {
   customer.updatedAt = new Date().toISOString();
   saveStore(store);
 
-  return buildCustomerViews([customer], {
-    includeSecrets: options.includeSecrets === true,
-  })[0] || null;
+  return (
+    buildCustomerViews([customer], {
+      includeSecrets: options.includeSecrets === true,
+    })[0] || null
+  );
 }
 
 function listCustomers(options = {}) {
@@ -308,19 +345,24 @@ function listCustomers(options = {}) {
 
 function createCustomer(data = {}) {
   const name = String(data.name || '').trim();
-  if (!name) throw new Error('name is required');
+  if (!name) {
+    throw new Error('name is required');
+  }
   const store = loadStore();
-  const existingIds = new Set(store.customers.map(item => item.id));
-  const created = normalizeCustomer({
-    id: data.id || generateCustomerId(existingIds),
-    name,
-    enabled: data.enabled !== false,
-    allowedProviders: data.allowedProviders || [],
-    allowedModels: data.allowedModels || [],
-    quota: data.quota || DEFAULT_QUOTA,
-    note: data.note || '',
-    tokenIds: [],
-  }, existingIds);
+  const existingIds = new Set(store.customers.map((item) => item.id));
+  const created = normalizeCustomer(
+    {
+      id: data.id || generateCustomerId(existingIds),
+      name,
+      enabled: data.enabled !== false,
+      allowedProviders: data.allowedProviders || [],
+      allowedModels: data.allowedModels || [],
+      quota: data.quota || DEFAULT_QUOTA,
+      note: data.note || '',
+      tokenIds: [],
+    },
+    existingIds
+  );
   store.customers.push(created);
   saveStore(store);
   return buildCustomerViews([created], { includeSecrets: true })[0];
@@ -329,7 +371,9 @@ function createCustomer(data = {}) {
 function updateCustomer(customerId, data = {}) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
   updateCustomerFields(customer, data);
   saveStore(store);
   return buildCustomerViews([customer], { includeSecrets: true })[0];
@@ -341,8 +385,12 @@ function setCustomerEnabled(customerId, enabled) {
 
 function ensureCustomerOwnsToken(customer, tokenId) {
   const id = String(tokenId || '').trim();
-  if (!id) throw new Error('token id is required');
-  if (!Array.isArray(customer.tokenIds)) customer.tokenIds = [];
+  if (!id) {
+    throw new Error('token id is required');
+  }
+  if (!Array.isArray(customer.tokenIds)) {
+    customer.tokenIds = [];
+  }
   if (!customer.tokenIds.includes(id)) {
     throw new Error(`token ${id} is not bound to customer ${customer.id}`);
   }
@@ -350,16 +398,24 @@ function ensureCustomerOwnsToken(customer, tokenId) {
 
 function bindTokenToCustomer(store, customer, tokenId) {
   const id = String(tokenId || '').trim();
-  if (!id) return;
-  if (!Array.isArray(customer.tokenIds)) customer.tokenIds = [];
+  if (!id) {
+    return;
+  }
+  if (!Array.isArray(customer.tokenIds)) {
+    customer.tokenIds = [];
+  }
   if (!customer.tokenIds.includes(id)) {
     customer.tokenIds.push(id);
   }
   for (const other of store.customers) {
-    if (other.id === customer.id) continue;
-    if (!Array.isArray(other.tokenIds)) continue;
+    if (other.id === customer.id) {
+      continue;
+    }
+    if (!Array.isArray(other.tokenIds)) {
+      continue;
+    }
     const before = other.tokenIds.length;
-    other.tokenIds = other.tokenIds.filter(tid => tid !== id);
+    other.tokenIds = other.tokenIds.filter((tid) => tid !== id);
     if (other.tokenIds.length !== before) {
       other.updatedAt = new Date().toISOString();
     }
@@ -370,7 +426,9 @@ function bindTokenToCustomer(store, customer, tokenId) {
 function issueToken(customerId, data = {}) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
 
   const countRaw = parseInt(data.count, 10);
   const count = Number.isFinite(countRaw) ? Math.max(1, Math.min(20, countRaw)) : 1;
@@ -379,7 +437,9 @@ function issueToken(customerId, data = {}) {
     throw new Error('custom token only supports count=1');
   }
 
-  const baseLabel = String(data.label || customer.name || customer.id).trim().slice(0, 120);
+  const baseLabel = String(data.label || customer.name || customer.id)
+    .trim()
+    .slice(0, 120);
   const createdRows = [];
   for (let i = 0; i < count; i += 1) {
     const label = count > 1 ? `${baseLabel} #${i + 1}` : baseLabel;
@@ -398,7 +458,9 @@ function issueToken(customerId, data = {}) {
     tokenView.token = row.token;
     return tokenView;
   });
-  if (tokenViews.length === 1) return tokenViews[0];
+  if (tokenViews.length === 1) {
+    return tokenViews[0];
+  }
   return {
     customerId: customer.id,
     count: tokenViews.length,
@@ -409,7 +471,9 @@ function issueToken(customerId, data = {}) {
 function rotateToken(customerId, tokenId, token = '') {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
   ensureCustomerOwnsToken(customer, tokenId);
   const rotated = proxyServer.rotateManagedToken(tokenId, token);
   customer.updatedAt = new Date().toISOString();
@@ -422,7 +486,9 @@ function rotateToken(customerId, tokenId, token = '') {
 function setTokenEnabled(customerId, tokenId, enabled) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
   ensureCustomerOwnsToken(customer, tokenId);
   const updated = proxyServer.setManagedTokenEnabled(tokenId, enabled !== false);
   customer.updatedAt = new Date().toISOString();
@@ -433,10 +499,12 @@ function setTokenEnabled(customerId, tokenId, enabled) {
 function deleteToken(customerId, tokenId) {
   const store = loadStore();
   const customer = getCustomerById(store, customerId);
-  if (!customer) throw new Error(`customer not found: ${customerId}`);
+  if (!customer) {
+    throw new Error(`customer not found: ${customerId}`);
+  }
   ensureCustomerOwnsToken(customer, tokenId);
   const removed = proxyServer.deleteManagedToken(tokenId);
-  customer.tokenIds = (customer.tokenIds || []).filter(tid => tid !== tokenId);
+  customer.tokenIds = (customer.tokenIds || []).filter((tid) => tid !== tokenId);
   customer.updatedAt = new Date().toISOString();
   saveStore(store);
   return toTokenView(removed, new Map(), false);
@@ -452,18 +520,20 @@ function getCustomerSummary(customers = []) {
 }
 
 function normalizeProviderList(input = []) {
-  return normalizeStringArray(input).map(x => x.toLowerCase());
+  return normalizeStringArray(input).map((x) => x.toLowerCase());
 }
 
 function normalizeModelList(input = []) {
-  return normalizeStringArray(input).map(x => x.toLowerCase());
+  return normalizeStringArray(input).map((x) => x.toLowerCase());
 }
 
 function deriveProvidersFromModels(modelIds = []) {
   const providers = new Set();
   for (const id of modelIds) {
     const provider = parseProviderFromModelId(id);
-    if (provider) providers.add(provider);
+    if (provider) {
+      providers.add(provider);
+    }
   }
   return [...providers];
 }
@@ -483,21 +553,25 @@ function ensureAutoSharedCustomer(options = {}) {
   let changed = false;
 
   if (!customer) {
-    customer = normalizeCustomer({
-      id: AUTO_SHARED_CUSTOMER_ID,
-      name: '自动共享 API',
-      enabled: true,
-      allowedProviders,
-      allowedModels: modelIds,
-      quota: DEFAULT_QUOTA,
-      note: AUTO_SHARED_CUSTOMER_NOTE_TAG,
-      tokenIds: [],
-    }, new Set(store.customers.map(item => item.id)));
+    customer = normalizeCustomer(
+      {
+        id: AUTO_SHARED_CUSTOMER_ID,
+        name: '自动共享 API',
+        enabled: true,
+        allowedProviders,
+        allowedModels: modelIds,
+        quota: DEFAULT_QUOTA,
+        note: AUTO_SHARED_CUSTOMER_NOTE_TAG,
+        tokenIds: [],
+      },
+      new Set(store.customers.map((item) => item.id))
+    );
     store.customers.push(customer);
     changed = true;
   } else {
-    const nextProviders = allowedProviders.length > 0 ? allowedProviders : (customer.allowedProviders || []);
-    const nextModels = modelIds.length > 0 ? modelIds : (customer.allowedModels || []);
+    const nextProviders =
+      allowedProviders.length > 0 ? allowedProviders : customer.allowedProviders || [];
+    const nextModels = modelIds.length > 0 ? modelIds : customer.allowedModels || [];
 
     if (JSON.stringify(nextProviders) !== JSON.stringify(customer.allowedProviders || [])) {
       customer.allowedProviders = nextProviders;

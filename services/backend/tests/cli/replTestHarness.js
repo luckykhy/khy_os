@@ -285,6 +285,23 @@ async function setupCliHarness(config = {}) {
         displayWidth: (s) => String(s || '').length,
         padToWidth: (s, w) => String(s || '').padEnd(w),
         stripAnsi: (s) => String(s || ''),
+        // Real formatters exports getTerminalColumns and replSession calls it in
+        // many render paths (prompt frame, status bar, resize guards). The mock
+        // omitted it -> `fmt().getTerminalColumns is not a function`. Read the
+        // live stdout width (with the same fallback chain as the real impl) so
+        // resize-driven tests keep observing dynamic column changes.
+        getTerminalColumns: () => {
+          let cols = 0;
+          try { cols = Number(process.stdout && process.stdout.columns) || 0; } catch { cols = 0; }
+          if (!(Number.isFinite(cols) && cols > 0)) {
+            try {
+              cols = Number(process.stderr && process.stderr.columns)
+                || parseInt(process.env.COLUMNS, 10)
+                || 0;
+            } catch { cols = 0; }
+          }
+          return (Number.isFinite(cols) && cols > 0) ? cols : 80;
+        },
         ICON_PROMPT: '>',
         ICON_AI: '*',
         ICON_BOT: '*',

@@ -93,8 +93,12 @@ function handleCronAdd(args, options) {
     printSuccess(`Cron job created: ${id}`);
     console.log(chalk.dim(`  Schedule : ${job.cron}`));
     console.log(chalk.dim(`  Prompt   : ${job.prompt}`));
-    if (job.channel) console.log(chalk.dim(`  Channel  : ${job.channel}`));
-    if (job.noAgent) console.log(chalk.dim(`  Mode     : shell-only (noAgent)`));
+    if (job.channel) {
+      console.log(chalk.dim(`  Channel  : ${job.channel}`));
+    }
+    if (job.noAgent) {
+      console.log(chalk.dim(`  Mode     : shell-only (noAgent)`));
+    }
     console.log('');
   } catch (err) {
     printError(`Failed to add cron job: ${err.message}`);
@@ -166,7 +170,9 @@ function handleCronStatus() {
     console.log(chalk.bold('  Active Jobs:'));
     for (const j of enabled) {
       const lastRun = j.lastRunAt ? new Date(j.lastRunAt).toLocaleString() : 'never';
-      console.log(`    ${chalk.cyan(j.id)}  ${chalk.dim(j.cron)}  ${j.prompt.slice(0, 40)}  (last: ${lastRun})`);
+      console.log(
+        `    ${chalk.cyan(j.id)}  ${chalk.dim(j.cron)}  ${j.prompt.slice(0, 40)}  (last: ${lastRun})`
+      );
     }
     console.log('');
   }
@@ -185,9 +191,15 @@ function _printHelp() {
   console.log(chalk.dim('    cron status                               Scheduler status'));
   console.log('');
   console.log('  Options:');
-  console.log(chalk.dim('    --channel <channel>     Deliver results to channel (e.g. slack:general)'));
-  console.log(chalk.dim('    --no-agent              Shell-only mode (run prompt as shell command)'));
-  console.log(chalk.dim('    --context-from <id>     Chain: inject previous job result into prompt'));
+  console.log(
+    chalk.dim('    --channel <channel>     Deliver results to channel (e.g. slack:general)')
+  );
+  console.log(
+    chalk.dim('    --no-agent              Shell-only mode (run prompt as shell command)')
+  );
+  console.log(
+    chalk.dim('    --context-from <id>     Chain: inject previous job result into prompt')
+  );
   console.log(chalk.dim('    --timeout <sec>         Per-job timeout in seconds (default: 180)'));
   console.log('');
   console.log('  Examples:');

@@ -14,6 +14,10 @@
  *   5. control_request round-trips host decision back into the loop.
  */
 
+// Per-test timeout: each case re-initialises hookSystem via resetModules +
+// dynamic require, costing 5–11s. Default 5000ms is too tight for this suite.
+jest.setTimeout(15000);
+
 const mockExecuteTool = jest.fn(async (name) => {
   if (name === 'web_search') {
     return { success: true, results: [{ title: 'r1' }], output: 'web ok' };

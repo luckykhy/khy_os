@@ -12,9 +12,9 @@
  * 回落今天行为(仅对话回溯,或无操作)。React 与 IO 胶水留在 App.js / useQueryBridge.js。
  */
 
-const REWIND_FLAG = 'KHY_ESC_REWIND';            // 主闸:双击 ESC 回溯,默认开
+const REWIND_FLAG = 'KHY_ESC_REWIND'; // 主闸:双击 ESC 回溯,默认开
 const CHECKPOINT_FLAG = 'KHY_TUI_TURN_CHECKPOINT'; // 每轮前自动检查点(代码回溯前提),默认开
-const HINT_FLAG = 'KHY_ESC_REWIND_HINT';         // 显示子闸:可恢复错误后附「双击 Esc 回溯」提示,默认开
+const HINT_FLAG = 'KHY_ESC_REWIND_HINT'; // 显示子闸:可恢复错误后附「双击 Esc 回溯」提示,默认开
 
 // 「双击 Esc 回到上一条消息编辑后重试」的一行提示——对齐 Claude Code errors.ts 里
 // 那句 "Double press esc to go back and edit your message and try again"。措辞与
@@ -26,14 +26,36 @@ const ESC_REWIND_HINT_TEXT = '提示：双击 Esc 可回到上一条消息，编
 // 消息没用(CC 亦另引导 /login),也不含语法/工具执行错误(那不是「上一条用户消息」的锅)。
 const _RECOVERABLE_HINT_RE = new RegExp(
   [
-    'too large', '过大', '太大', 'payload_too_large', 'request too large',
-    'too many tokens', 'prompt[_\\s-]?too[_\\s-]?long', 'context[_\\s-]?length', 'maximum context',
-    'rate[_\\s-]?limit', '限流', '频率', 'too many requests', 'overloaded', '过载',
-    '\\b429\\b', '\\b529\\b',
-    'timed out', 'timeout', '超时', 'etimedout', 'econnreset', 'econnrefused',
-    'network', '网络', 'temporarily', '稍后重试', '请重试',
+    'too large',
+    '过大',
+    '太大',
+    'payload_too_large',
+    'request too large',
+    'too many tokens',
+    'prompt[_\\s-]?too[_\\s-]?long',
+    'context[_\\s-]?length',
+    'maximum context',
+    'rate[_\\s-]?limit',
+    '限流',
+    '频率',
+    'too many requests',
+    'overloaded',
+    '过载',
+    '\\b429\\b',
+    '\\b529\\b',
+    'timed out',
+    'timeout',
+    '超时',
+    'etimedout',
+    'econnreset',
+    'econnrefused',
+    'network',
+    '网络',
+    'temporarily',
+    '稍后重试',
+    '请重试',
   ].join('|'),
-  'i',
+  'i'
 );
 
 /**
@@ -42,14 +64,21 @@ const _RECOVERABLE_HINT_RE = new RegExp(
  * @returns {boolean}
  */
 function flagOn(flag) {
-  const v = String(process.env[flag] == null ? '' : process.env[flag]).trim().toLowerCase();
+  const v = String(process.env[flag] == null ? '' : process.env[flag])
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 主闸:双击 ESC 回溯是否启用。 */
-function isRewindEnabled() { return flagOn(REWIND_FLAG); }
+function isRewindEnabled() {
+  return flagOn(REWIND_FLAG);
+}
+
 /** 每轮前检查点子闸(代码回溯的前提;关掉则只能对话回溯)。 */
-function turnCheckpointEnabled() { return flagOn(CHECKPOINT_FLAG); }
+function turnCheckpointEnabled() {
+  return flagOn(CHECKPOINT_FLAG);
+}
 
 /**
  * 可恢复错误后是否给用户一行「双击 Esc 回溯」提示——纯判定,env 门控默认开。
@@ -58,7 +87,9 @@ function turnCheckpointEnabled() { return flagOn(CHECKPOINT_FLAG); }
  */
 function escRewindHintEnabled(env) {
   const src = env || (typeof process !== 'undefined' ? process.env : {});
-  const v = String(src[HINT_FLAG] == null ? '' : src[HINT_FLAG]).trim().toLowerCase();
+  const v = String(src[HINT_FLAG] == null ? '' : src[HINT_FLAG])
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -78,12 +109,22 @@ function escRewindHintEnabled(env) {
  */
 function buildEscRewindHint(errorText, { rewindEnabled, interactive, env } = {}) {
   try {
-    if (!escRewindHintEnabled(env)) return null;   // 显示子闸关
-    if (!rewindEnabled) return null;               // 回溯未启用 → 抑制(诚实耦合)
-    if (!interactive) return null;                 // 非交互 → 双击 ESC 不可用
+    if (!escRewindHintEnabled(env)) {
+      return null;
+    } // 显示子闸关
+    if (!rewindEnabled) {
+      return null;
+    } // 回溯未启用 → 抑制(诚实耦合)
+    if (!interactive) {
+      return null;
+    } // 非交互 → 双击 ESC 不可用
     const text = String(errorText == null ? '' : errorText);
-    if (!text.trim()) return null;
-    if (!_RECOVERABLE_HINT_RE.test(text)) return null; // 仅「改消息即可自救」的可恢复类
+    if (!text.trim()) {
+      return null;
+    }
+    if (!_RECOVERABLE_HINT_RE.test(text)) {
+      return null;
+    } // 仅「改消息即可自救」的可恢复类
     return ESC_REWIND_HINT_TEXT;
   } catch {
     return null;
@@ -104,15 +145,21 @@ function buildEscRewindHint(errorText, { rewindEnabled, interactive, env } = {})
  * @returns {'vim'|'drop-images'|'clear-input'|'arm-clear'|'open-rewind'|'arm-rewind'|'noop'}
  */
 function decideEscIdle({ vimEnabled, pendingImagesLen, value, withinWindow, rewindEnabled } = {}) {
-  if (vimEnabled) return 'vim';
-  if (Number(pendingImagesLen) > 0) return 'drop-images';
+  if (vimEnabled) {
+    return 'vim';
+  }
+  if (Number(pendingImagesLen) > 0) {
+    return 'drop-images';
+  }
   const hasDraft = String(value == null ? '' : value).length > 0;
   if (hasDraft) {
     // 有草稿:保持今天行为——双击清空 / 单击 arm。回溯绝不劫持非空输入框(护草稿)。
     return withinWindow ? 'clear-input' : 'arm-clear';
   }
   // 空行:回溯启用时双击进回溯;否则维持今天的无操作。
-  if (!rewindEnabled) return 'noop';
+  if (!rewindEnabled) {
+    return 'noop';
+  }
   return withinWindow ? 'open-rewind' : 'arm-rewind';
 }
 
@@ -126,13 +173,21 @@ function decideEscIdle({ vimEnabled, pendingImagesLen, value, withinWindow, rewi
  * @returns {number} >=1 名次,或 0 表示无效
  */
 function userTurnRankFromEnd(messages, idx) {
-  if (!Array.isArray(messages)) return 0;
+  if (!Array.isArray(messages)) {
+    return 0;
+  }
   const i = Math.floor(Number(idx));
-  if (!Number.isFinite(i) || i < 0 || i >= messages.length) return 0;
-  if (String(messages[i] && messages[i].role || '').toLowerCase() !== 'user') return 0;
+  if (!Number.isFinite(i) || i < 0 || i >= messages.length) {
+    return 0;
+  }
+  if (String((messages[i] && messages[i].role) || '').toLowerCase() !== 'user') {
+    return 0;
+  }
   let rank = 0;
   for (let k = messages.length - 1; k >= i; k--) {
-    if (String(messages[k] && messages[k].role || '').toLowerCase() === 'user') rank++;
+    if (String((messages[k] && messages[k].role) || '').toLowerCase() === 'user') {
+      rank++;
+    }
   }
   return rank;
 }
@@ -143,7 +198,9 @@ function userTurnRankFromEnd(messages, idx) {
  * @returns {{idx:number, content:string, checkpointId:(string|null), rankFromEnd:number}|null}
  */
 function selectLastUserTarget(messages) {
-  if (!Array.isArray(messages)) return null;
+  if (!Array.isArray(messages)) {
+    return null;
+  }
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m && String(m.role || '').toLowerCase() === 'user') {
@@ -169,12 +226,16 @@ function selectLastUserTarget(messages) {
  * @returns {Array<{idx:number, content:string, preview:string, checkpointId:(string|null), rankFromEnd:number}>}
  */
 function listUserTargets(messages, previewLen = 80) {
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   const out = [];
   let rank = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (!m || String(m.role || '').toLowerCase() !== 'user') continue;
+    if (!m || String(m.role || '').toLowerCase() !== 'user') {
+      continue;
+    }
     rank += 1;
     const content = String(m.content == null ? '' : m.content);
     const flat = content.replace(/\s+/g, ' ').trim();
@@ -195,10 +256,17 @@ function listUserTargets(messages, previewLen = 80) {
  * @returns {Array<object>}
  */
 function patchUserCheckpointId(messages, timestamp, id) {
-  if (!Array.isArray(messages) || !id) return messages;
+  if (!Array.isArray(messages) || !id) {
+    return messages;
+  }
   let patched = false;
   const next = messages.map((m) => {
-    if (!patched && m && String(m.role || '').toLowerCase() === 'user' && m.timestamp === timestamp) {
+    if (
+      !patched &&
+      m &&
+      String(m.role || '').toLowerCase() === 'user' &&
+      m.timestamp === timestamp
+    ) {
       patched = true;
       return { ...m, checkpointId: id };
     }
@@ -209,8 +277,7 @@ function patchUserCheckpointId(messages, timestamp, id) {
 
 // ── RULES:何时回溯 / 何时让位(冻结,文档即契约)──────────────────────────
 const RULES = Object.freeze({
-  R1_esc_busy:
-    'ESC 在忙时只中断当前轮次,永不退出、永不回溯(由 App.js 在调用本模块前处理)。',
+  R1_esc_busy: 'ESC 在忙时只中断当前轮次,永不退出、永不回溯(由 App.js 在调用本模块前处理)。',
   R2_double_esc_idle:
     '空闲且输入框为空时,双击 ESC(窗口内第二次)进入回溯;首击仅 arm 提示「再按一次 Esc 回溯对话」。',
   R3_draft_never_rewind:
@@ -218,14 +285,14 @@ const RULES = Object.freeze({
   R4_vim_owns_esc:
     'vim 模式下 ESC 归编辑器(INSERT→NORMAL / 取消),回溯经 ESC 不可达,降级用 /rewind。',
   R5_rewind_pipeline:
-    '回溯 = 后端 ai.rewindToUserTurn(rankFromEnd) 截断 _messages + 可选 restoreCheckpoint 恢复代码'
-    + ' + UI setMessages(slice(0,idx)) + textInput.setText(content) 回填;任一步失败 fail-soft 退化为仅对话回溯。',
+    '回溯 = 后端 ai.rewindToUserTurn(rankFromEnd) 截断 _messages + 可选 restoreCheckpoint 恢复代码' +
+    ' + UI setMessages(slice(0,idx)) + textInput.setText(content) 回填;任一步失败 fail-soft 退化为仅对话回溯。',
   R6_gates:
     'KHY_ESC_REWIND(主闸)/ KHY_TUI_TURN_CHECKPOINT(每轮检查点,代码回溯前提)默认开,仅 0/false/off/no 关。',
   R7_error_hint:
-    '回合以「可恢复且改消息即可自救」的错误类失败时(过大/限流/过载/超时/网络),交互式 TTY 且回溯启用'
-    + '(KHY_ESC_REWIND 开)下,错误行末追加一句「双击 Esc 可回到上一条消息,编辑后重试」(对齐 CC errors.ts);'
-    + '显示子闸 KHY_ESC_REWIND_HINT 默认开。auth/权限/无效 key/语法/工具错误不追加(改消息无用)。',
+    '回合以「可恢复且改消息即可自救」的错误类失败时(过大/限流/过载/超时/网络),交互式 TTY 且回溯启用' +
+    '(KHY_ESC_REWIND 开)下,错误行末追加一句「双击 Esc 可回到上一条消息,编辑后重试」(对齐 CC errors.ts);' +
+    '显示子闸 KHY_ESC_REWIND_HINT 默认开。auth/权限/无效 key/语法/工具错误不追加(改消息无用)。',
 });
 
 module.exports = {

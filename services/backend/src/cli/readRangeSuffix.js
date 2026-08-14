@@ -34,19 +34,25 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function readRangeSuffixEnabled(env = process.env) {
-  const flag = String((env && env.KHY_READ_RANGE_SUFFIX) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_READ_RANGE_SUFFIX) || '')
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(flag);
 }
 
 /** 工具名归一后判定是否为 read(与 toolDisplay 的归一同规则:小写、去空格/下划线/连字符)。 */
 function isReadToolName(toolName) {
-  const name = String(toolName || '').toLowerCase().replace(/[\s_-]/g, '');
+  const name = String(toolName || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
   return name === 'read' || name === 'readfile';
 }
 
 /** 仅接受**正整数**(数字或纯数字串);其余 → null。 */
 function _posInt(v) {
-  if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? Math.floor(v) : null;
+  if (typeof v === 'number') {
+    return Number.isFinite(v) && v > 0 ? Math.floor(v) : null;
+  }
   if (typeof v === 'string' && /^\d+$/.test(v.trim())) {
     const n = parseInt(v.trim(), 10);
     return n > 0 ? n : null;
@@ -69,15 +75,20 @@ function _posInt(v) {
  * @returns {string}  后缀串(空串表示不追加)。
  */
 function buildReadRangeSuffix(params, env = process.env) {
-  if (!readRangeSuffixEnabled(env)) return '';
-  if (!params || typeof params !== 'object') return '';
+  if (!readRangeSuffixEnabled(env)) {
+    return '';
+  }
+  if (!params || typeof params !== 'object') {
+    return '';
+  }
   const offset = _posInt(params.offset);
   const limit = _posInt(params.limit);
-  if (offset == null && limit == null) return '';
+  if (offset == null && limit == null) {
+    return '';
+  }
   const startLine = offset == null ? 1 : offset;
-  const range = limit != null
-    ? `第 ${startLine}-${startLine + limit - 1} 行`
-    : `从第 ${startLine} 行起`;
+  const range =
+    limit != null ? `第 ${startLine}-${startLine + limit - 1} 行` : `从第 ${startLine} 行起`;
   return ` · ${range}`;
 }
 

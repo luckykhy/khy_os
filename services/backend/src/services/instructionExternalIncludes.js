@@ -31,14 +31,16 @@
 // gating with a modal, matching khy's existing inline `⚠ [SECURITY]` prompt-
 // injection notice in loadInstructions.
 
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function externalIncludeWarningEnabled(env) {
   const raw = env && env.KHY_EXTERNAL_INCLUDE_WARNING;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -49,8 +51,12 @@ const INCLUDE_LINE_SOURCE = '^@(\\S+)\\s*$';
 // True when `child` is the same path as `parent` or nested beneath it — using a
 // path-separator boundary so `/foo/bar2` is NOT considered inside `/foo/bar`.
 function _isInside(child, parent) {
-  if (!parent) return false;
-  if (child === parent) return true;
+  if (!parent) {
+    return false;
+  }
+  if (child === parent) {
+    return true;
+  }
   const withSep = parent.endsWith(path.sep) ? parent : parent + path.sep;
   return child.startsWith(withSep);
 }
@@ -62,8 +68,14 @@ function _isInside(child, parent) {
 // de-duplicated, order-preserving. Gate off / bad input / any error → [].
 function detectExternalIncludes(content, baseDir, cwd, env) {
   try {
-    if (!externalIncludeWarningEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) return [];
-    if (typeof content !== 'string' || content.length === 0) return [];
+    if (
+      !externalIncludeWarningEnabled(env || (typeof process !== 'undefined' ? process.env : {}))
+    ) {
+      return [];
+    }
+    if (typeof content !== 'string' || content.length === 0) {
+      return [];
+    }
     const home = os.homedir();
     const base = path.resolve(baseDir || '.');
     const root = path.resolve(cwd || base);
@@ -78,10 +90,16 @@ function detectExternalIncludes(content, baseDir, cwd, env) {
       // outside BOTH baseDir and home are already DENIED by khy → never inlined →
       // no warning needed. We only warn about what khy actually injects.
       const allowed = resolved.startsWith(base) || resolved.startsWith(home);
-      if (!allowed) continue;
+      if (!allowed) {
+        continue;
+      }
       // External (CC): resolves outside the project working directory.
-      if (_isInside(resolved, root)) continue;
-      if (seen.has(resolved)) continue;
+      if (_isInside(resolved, root)) {
+        continue;
+      }
+      if (seen.has(resolved)) {
+        continue;
+      }
       seen.add(resolved);
       out.push({ path: rel, resolved });
     }
@@ -97,8 +115,10 @@ function detectExternalIncludes(content, baseDir, cwd, env) {
 // when there is nothing to warn about (caller then appends nothing → byte-
 // identical fallback).
 function buildExternalIncludeWarning(filePath, externals) {
-  if (!Array.isArray(externals) || externals.length === 0) return '';
-  const list = externals.map((e) => (e && e.path) ? e.path : String(e)).join(', ');
+  if (!Array.isArray(externals) || externals.length === 0) {
+    return '';
+  }
+  const list = externals.map((e) => (e && e.path ? e.path : String(e))).join(', ');
   return `⚠ [SECURITY] ${filePath} 引入了工作目录之外的文件(第三方仓库切勿允许): ${list}`;
 }
 

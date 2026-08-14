@@ -21,7 +21,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env) {
   const e = env && typeof env === 'object' ? env : {};
   const raw = e.KHY_PROJECT_MEMORY;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -101,10 +103,14 @@ function buildProjectMemoryIndexContract(args = {}) {
  * @returns {number}
  */
 function countIndexEntries(raw) {
-  if (typeof raw !== 'string' || !raw) return 0;
+  if (typeof raw !== 'string' || !raw) {
+    return 0;
+  }
   let n = 0;
   for (const line of raw.split('\n')) {
-    if (/^\s*-\s+\[[^\]]+\]\([^)]+\)/.test(line)) n += 1;
+    if (/^\s*-\s+\[[^\]]+\]\([^)]+\)/.test(line)) {
+      n += 1;
+    }
   }
   return n;
 }

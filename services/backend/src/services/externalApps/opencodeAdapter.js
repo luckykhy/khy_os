@@ -24,6 +24,7 @@
  */
 
 const path = require('path');
+
 const S = require('./_shared');
 
 const APP = 'opencode';
@@ -51,9 +52,13 @@ function _isHealEnabled(env = process.env) {
  * @returns {{ changed: boolean, defaultModelId: string }}
  */
 function _healProviderModels(p) {
-  if (!p || typeof p !== 'object') return { changed: false, defaultModelId: '' };
+  if (!p || typeof p !== 'object') {
+    return { changed: false, defaultModelId: '' };
+  }
   const models = p.models;
-  if (models === undefined) return { changed: false, defaultModelId: '' };
+  if (models === undefined) {
+    return { changed: false, defaultModelId: '' };
+  }
   if (typeof models !== 'object' || models === null || Array.isArray(models)) {
     // models 整体不是对象(如被写成数组/字符串)→ 规整为空映射。
     p.models = {};
@@ -64,15 +69,21 @@ function _healProviderModels(p) {
   for (const key of Object.keys(models)) {
     const v = models[key];
     const isValidEntry = v && typeof v === 'object' && !Array.isArray(v);
-    if (isValidEntry) continue;
+    if (isValidEntry) {
+      continue;
+    }
     if (key === 'default' && typeof v === 'string' && v.trim()) {
       const id = v.trim();
       defaultModelId = id;
-      if (!models[id]) models[id] = { name: id };
+      if (!models[id]) {
+        models[id] = { name: id };
+      }
     } else if (key === 'list' && Array.isArray(v)) {
       for (const m of v) {
         const id = typeof m === 'string' ? m.trim() : '';
-        if (id && !models[id]) models[id] = { name: id };
+        if (id && !models[id]) {
+          models[id] = { name: id };
+        }
       }
     }
     delete models[key]; // 无论能否迁移,损坏键一律移除(opencode 会因它拒绝整个配置)
@@ -87,16 +98,25 @@ function _healProviderModels(p) {
  * @returns {{ changed: boolean }}
  */
 function _healDoc(doc) {
-  if (!doc || typeof doc.provider !== 'object' || doc.provider === null) return { changed: false };
+  if (!doc || typeof doc.provider !== 'object' || doc.provider === null) {
+    return { changed: false };
+  }
   let changed = false;
   for (const id of Object.keys(doc.provider)) {
     const p = doc.provider[id];
-    if (!p || typeof p !== 'object') continue;
+    if (!p || typeof p !== 'object') {
+      continue;
+    }
     const r = _healProviderModels(p);
-    if (r.changed) changed = true;
+    if (r.changed) {
+      changed = true;
+    }
     if (r.defaultModelId) {
       const cur = typeof doc.model === 'string' ? doc.model.trim() : '';
-      if (!cur) { doc.model = `${id}/${r.defaultModelId}`; changed = true; }
+      if (!cur) {
+        doc.model = `${id}/${r.defaultModelId}`;
+        changed = true;
+      }
     }
   }
   return { changed };
@@ -104,7 +124,9 @@ function _healDoc(doc) {
 
 /** opencode.json 官方路径(XDG:~/.config/opencode/)。OPENCODE_CONFIG 覆盖。 */
 function configPath(env = process.env) {
-  if (env && env.OPENCODE_CONFIG) return S.expandHome(env.OPENCODE_CONFIG, env);
+  if (env && env.OPENCODE_CONFIG) {
+    return S.expandHome(env.OPENCODE_CONFIG, env);
+  }
   const xdg = (env && env.XDG_CONFIG_HOME) || S.expandHome('~/.config', env);
   return path.join(xdg, 'opencode', 'opencode.json');
 }
@@ -114,14 +136,18 @@ function _loadRaw(env) {
   const file = configPath(env);
   const text = S.readIfExists(file);
   const doc = text ? JSON.parse(text) : {};
-  if (!doc.provider || typeof doc.provider !== 'object') doc.provider = {};
+  if (!doc.provider || typeof doc.provider !== 'object') {
+    doc.provider = {};
+  }
   return { file, doc };
 }
 
 /** 消费侧读取:门开时对内存视图自愈(list/get/add/remove/usable 皆见干净数据)。 */
 function _load(env) {
   const { file, doc } = _loadRaw(env);
-  if (_isHealEnabled(env)) _healDoc(doc);
+  if (_isHealEnabled(env)) {
+    _healDoc(doc);
+  }
   return { file, doc };
 }
 
@@ -153,7 +179,9 @@ function get(target, env = process.env) {
     const { doc } = _load(env);
     const id = String(target || '').toLowerCase();
     const p = doc.provider[id];
-    if (!p) return { success: false, app: APP, error: `provider not found: ${id}` };
+    if (!p) {
+      return { success: false, app: APP, error: `provider not found: ${id}` };
+    }
     return { success: true, app: APP, provider: _providerView(id, p) };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -164,7 +192,9 @@ function get(target, env = process.env) {
 function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
   try {
     const id = String(provider || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'provider is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'provider is required' };
+    }
     const { file, doc } = _load(env);
 
     const resolvedKey = S.resolveApiKey(id, apiKey);
@@ -172,21 +202,39 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
     const resolvedModel = S.resolveModel(id, model);
 
     const p = doc.provider[id] && typeof doc.provider[id] === 'object' ? doc.provider[id] : {};
-    if (!p.npm) p.npm = '@ai-sdk/openai-compatible';
-    if (!p.name) p.name = id;
+    if (!p.npm) {
+      p.npm = '@ai-sdk/openai-compatible';
+    }
+    if (!p.name) {
+      p.name = id;
+    }
     p.options = p.options && typeof p.options === 'object' ? p.options : {};
-    if (resolvedEndpoint) p.options.baseURL = resolvedEndpoint;
-    if (resolvedKey.key) p.options.apiKey = resolvedKey.key;
+    if (resolvedEndpoint) {
+      p.options.baseURL = resolvedEndpoint;
+    }
+    if (resolvedKey.key) {
+      p.options.apiKey = resolvedKey.key;
+    }
     p.models = p.models && typeof p.models === 'object' ? p.models : {};
-    if (resolvedModel && !p.models[resolvedModel]) p.models[resolvedModel] = { name: resolvedModel };
+    if (resolvedModel && !p.models[resolvedModel]) {
+      p.models[resolvedModel] = { name: resolvedModel };
+    }
     doc.provider[id] = p;
-    if (resolvedModel) doc.model = `${id}/${resolvedModel}`;
+    if (resolvedModel) {
+      doc.model = `${id}/${resolvedModel}`;
+    }
 
     S.atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
     return {
-      success: true, app: APP, action: 'add', provider: id,
-      model: resolvedModel, endpoint: resolvedEndpoint,
-      keySource: resolvedKey.source, keyMasked: S.maskKey(resolvedKey.key), file,
+      success: true,
+      app: APP,
+      action: 'add',
+      provider: id,
+      model: resolvedModel,
+      endpoint: resolvedEndpoint,
+      keySource: resolvedKey.source,
+      keyMasked: S.maskKey(resolvedKey.key),
+      file,
     };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -197,20 +245,31 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
 function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
   try {
     const id = String(target || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'target is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'target is required' };
+    }
     const { file, doc } = _load(env);
-    if (!doc.provider[id]) return { success: false, app: APP, error: `provider not found: ${id}` };
+    if (!doc.provider[id]) {
+      return { success: false, app: APP, error: `provider not found: ${id}` };
+    }
 
     if (!confirmed) {
       return {
-        success: true, app: APP, action: 'remove', preview: true, confirmed: false,
-        target: id, willRemoveKeys: Boolean(removeKeys),
+        success: true,
+        app: APP,
+        action: 'remove',
+        preview: true,
+        confirmed: false,
+        target: id,
+        willRemoveKeys: Boolean(removeKeys),
         message: `将从 ${APP} 删除 provider「${id}」${removeKeys ? '(连同其 apiKey)' : ''}。回复「确认删除」以执行。`,
       };
     }
 
     delete doc.provider[id];
-    if (doc.model && String(doc.model).startsWith(`${id}/`)) delete doc.model;
+    if (doc.model && String(doc.model).startsWith(`${id}/`)) {
+      delete doc.model;
+    }
     S.atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
     return { success: true, app: APP, action: 'remove', confirmed: true, target: id, file };
   } catch (e) {
@@ -253,7 +312,12 @@ function usable(env = process.env) {
 function repair(env = process.env) {
   try {
     if (!_isHealEnabled(env)) {
-      return { success: false, app: APP, action: 'repair', error: 'config heal disabled (KHY_OPENCODE_CONFIG_HEAL=off)' };
+      return {
+        success: false,
+        app: APP,
+        action: 'repair',
+        error: 'config heal disabled (KHY_OPENCODE_CONFIG_HEAL=off)',
+      };
     }
     const { file, doc } = _loadRaw(env);
     const before = JSON.stringify(doc);
@@ -263,10 +327,28 @@ function repair(env = process.env) {
     }
     S.atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
     const providers = Object.keys(doc.provider).map((id) => _providerView(id, doc.provider[id]));
-    return { success: true, app: APP, action: 'repair', changed: true, file, model: doc.model || '', providers };
+    return {
+      success: true,
+      app: APP,
+      action: 'repair',
+      changed: true,
+      file,
+      model: doc.model || '',
+      providers,
+    };
   } catch (e) {
     return { success: false, app: APP, action: 'repair', error: String((e && e.message) || e) };
   }
 }
 
-module.exports = { configPath, list, get, add, remove, usable, repair, _healProviderModels, _healDoc };
+module.exports = {
+  configPath,
+  list,
+  get,
+  add,
+  remove,
+  usable,
+  repair,
+  _healProviderModels,
+  _healDoc,
+};

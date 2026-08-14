@@ -54,7 +54,9 @@ function recordInteraction(type, data) {
       ...data,
     };
     fs.appendFileSync(RECORDS_FILE, JSON.stringify(record) + '\n', 'utf-8');
-  } catch { /* best-effort, don't crash */ }
+  } catch {
+    /* best-effort, don't crash */
+  }
 }
 
 /**
@@ -109,10 +111,14 @@ function getDatasetStats() {
       try {
         const record = JSON.parse(line);
         byType[record.type] = (byType[record.type] || 0) + 1;
-      } catch { /* skip malformed */ }
+      } catch {
+        /* skip malformed */
+      }
     }
     return { total: lines.length, byType };
-  } catch { return { total: 0, byType: {} }; }
+  } catch {
+    return { total: 0, byType: {} };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -132,13 +138,21 @@ function exportDataset(format = 'alpaca', filter = {}) {
   }
 
   const lines = fs.readFileSync(RECORDS_FILE, 'utf-8').split('\n').filter(Boolean);
-  const records = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const records = lines
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
   // Apply filters
   let filtered = records;
-  if (filter.type) filtered = filtered.filter(r => r.type === filter.type);
-  if (filter.quality) filtered = filtered.filter(r => r.quality === filter.quality);
-  if (filter.minDate) filtered = filtered.filter(r => r.timestamp >= filter.minDate);
+  if (filter.type) filtered = filtered.filter((r) => r.type === filter.type);
+  if (filter.quality) filtered = filtered.filter((r) => r.quality === filter.quality);
+  if (filter.minDate) filtered = filtered.filter((r) => r.timestamp >= filter.minDate);
 
   // Convert to training format
   let dataset;
@@ -146,8 +160,8 @@ function exportDataset(format = 'alpaca', filter = {}) {
 
   if (format === 'alpaca') {
     dataset = filtered
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         instruction: r.instruction,
         input: '',
         output: r.output,
@@ -155,10 +169,13 @@ function exportDataset(format = 'alpaca', filter = {}) {
       }));
   } else if (format === 'sharegpt') {
     dataset = filtered
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         conversations: [
-          { from: 'system', value: 'You are KHY-Quant, a professional quantitative trading AI assistant.' },
+          {
+            from: 'system',
+            value: 'You are KHY-Quant, a professional quantitative trading AI assistant.',
+          },
           { from: 'human', value: r.instruction },
           { from: 'gpt', value: r.output },
         ],
@@ -166,10 +183,13 @@ function exportDataset(format = 'alpaca', filter = {}) {
   } else {
     // OpenAI fine-tune format
     dataset = filtered
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         messages: [
-          { role: 'system', content: 'You are KHY-Quant, a professional quantitative trading AI assistant.' },
+          {
+            role: 'system',
+            content: 'You are KHY-Quant, a professional quantitative trading AI assistant.',
+          },
           { role: 'user', content: r.instruction },
           { role: 'assistant', content: r.output },
         ],
@@ -230,31 +250,43 @@ function getComputeStatus() {
   try {
     execSync('python3 --version', { encoding: 'utf-8', stdio: 'pipe' });
     status.pythonAvailable = true;
-  } catch { /* no python3 */ }
+  } catch {
+    /* no python3 */
+  }
 
   // Check PyTorch
   try {
-    const torchCheck = execSync('python3 -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available() if hasattr(torch.backends, \'mps\') else False, torch.cuda.device_count() if torch.cuda.is_available() else 0)"', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+    const torchCheck = execSync(
+      'python3 -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available() if hasattr(torch.backends, \'mps\') else False, torch.cuda.device_count() if torch.cuda.is_available() else 0)"',
+      { encoding: 'utf-8', stdio: 'pipe' }
+    ).trim();
     const [cuda, mps, gpuCount] = torchCheck.split(' ');
     status.cuda = cuda === 'True';
     status.mps = mps === 'True';
     status.torchAvailable = true;
     if (status.cuda) status.gpu = { count: parseInt(gpuCount), type: 'CUDA' };
     else if (status.mps) status.gpu = { count: 1, type: 'Apple Metal' };
-  } catch { /* no torch */ }
+  } catch {
+    /* no torch */
+  }
 
   // Check NVIDIA GPU via nvidia-smi
   if (!status.gpu) {
     try {
-      const smi = execSync('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+      const smi = execSync('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader', {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      }).trim();
       if (smi) {
-        const gpus = smi.split('\n').map(line => {
-          const [name, mem] = line.split(',').map(s => s.trim());
+        const gpus = smi.split('\n').map((line) => {
+          const [name, mem] = line.split(',').map((s) => s.trim());
           return { name, memory: mem };
         });
         status.gpu = { count: gpus.length, type: 'NVIDIA', devices: gpus };
       }
-    } catch { /* no nvidia-smi */ }
+    } catch {
+      /* no nvidia-smi */
+    }
   }
 
   return status;
@@ -284,8 +316,12 @@ async function trainLocal(opts) {
   } = opts;
 
   const base = BASE_MODELS[baseModel];
-  if (!base) throw new Error(`Unknown base model: ${baseModel}. Available: ${Object.keys(BASE_MODELS).join(', ')}`);
-  if (!datasetPath || !fs.existsSync(datasetPath)) throw new Error(`Dataset not found: ${datasetPath}`);
+  if (!base)
+    throw new Error(
+      `Unknown base model: ${baseModel}. Available: ${Object.keys(BASE_MODELS).join(', ')}`
+    );
+  if (!datasetPath || !fs.existsSync(datasetPath))
+    throw new Error(`Dataset not found: ${datasetPath}`);
 
   const compute = getComputeStatus();
   if (!compute.pythonAvailable) throw new Error('Python3 not found. Install Python 3.10+');
@@ -341,7 +377,11 @@ async function trainLocal(opts) {
 
     proc.on('close', (code) => {
       // Clean up script
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
 
       if (code === 0) {
         // Register model in local registry
@@ -406,7 +446,9 @@ async function distill(opts) {
   const { teacherModel = 'best-available', studentBase = 'qwen-1.5b', prompts, outputName } = opts;
 
   if (!prompts || prompts.length === 0) {
-    throw new Error('Distillation requires a set of prompts. Provide prompts or use recorded interactions.');
+    throw new Error(
+      'Distillation requires a set of prompts. Provide prompts or use recorded interactions.'
+    );
   }
 
   // Step 1: Generate teacher responses
@@ -426,7 +468,9 @@ async function distill(opts) {
           system: 'You are KHY-Quant, a professional quantitative trading AI assistant.',
         });
       }
-    } catch { /* skip failed */ }
+    } catch {
+      /* skip failed */
+    }
   }
 
   // Step 2: Save as dataset
@@ -481,7 +525,9 @@ function loadModelRegistry() {
     if (fs.existsSync(MODEL_REGISTRY_FILE)) {
       return JSON.parse(fs.readFileSync(MODEL_REGISTRY_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return {};
 }
 
@@ -552,10 +598,18 @@ except Exception as e:
   return new Promise((resolve) => {
     const proc = spawn('python3', [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
-    proc.stdout.on('data', d => { output += d.toString(); });
-    proc.stderr.on('data', d => { output += d.toString(); });
+    proc.stdout.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      output += d.toString();
+    });
     proc.on('close', (code) => {
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
       if (code === 0 && output.includes('SUCCESS:')) {
         resolve({ success: true, ggufPath: outputFile });
       } else {
@@ -613,10 +667,18 @@ print(f"SUCCESS:{output_path}")
   return new Promise((resolve) => {
     const proc = spawn('python3', [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
-    proc.stdout.on('data', d => { output += d.toString(); });
-    proc.stderr.on('data', d => { output += d.toString(); });
+    proc.stdout.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      output += d.toString();
+    });
     proc.on('close', (code) => {
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
       if (code === 0 && output.includes('SUCCESS:')) {
         resolve({ success: true, safetensorsPath: mergedDir });
       } else {
@@ -646,12 +708,22 @@ PARAMETER num_ctx 4096
   fs.writeFileSync(modelfilePath, modelfile, 'utf-8');
 
   try {
-    execSync(`ollama create ${modelName} -f "${modelfilePath}"`, { encoding: 'utf-8', timeout: 120000 });
-    return { success: true, message: `Model ${modelName} registered with Ollama. Use: ollama run ${modelName}` };
+    execSync(`ollama create ${modelName} -f "${modelfilePath}"`, {
+      encoding: 'utf-8',
+      timeout: 120000,
+    });
+    return {
+      success: true,
+      message: `Model ${modelName} registered with Ollama. Use: ollama run ${modelName}`,
+    };
   } catch (err) {
     return { success: false, error: err.message };
   } finally {
-    try { fs.unlinkSync(modelfilePath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(modelfilePath);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -684,12 +756,16 @@ async function uploadToHuggingFace(modelName, opts = {}) {
   const registry = loadModelRegistry();
   const model = registry[modelName];
   if (!model) throw new Error(`Model not found: ${modelName}`);
-  if (!model.path || !fs.existsSync(model.path)) throw new Error(`Model files not found at: ${model.path}`);
-  if (!repoId || !repoId.includes('/')) throw new Error('Invalid repo ID. Format: username/model-name');
+  if (!model.path || !fs.existsSync(model.path))
+    throw new Error(`Model files not found at: ${model.path}`);
+  if (!repoId || !repoId.includes('/'))
+    throw new Error('Invalid repo ID. Format: username/model-name');
 
   const hfToken = process.env.HF_TOKEN || process.env.HUGGING_FACE_HUB_TOKEN || '';
   if (!hfToken) {
-    throw new Error('HuggingFace token not set. Configure via: gateway config → provider-keys → HuggingFace, or set HF_TOKEN env var.');
+    throw new Error(
+      'HuggingFace token not set. Configure via: gateway config → provider-keys → HuggingFace, or set HF_TOKEN env var.'
+    );
   }
 
   const modelPath = model.path;
@@ -752,20 +828,19 @@ and quantitative trading scenarios.
         `huggingface-cli repo create ${repoId.split('/')[1]} --type model ${isPrivate ? '--private' : ''} -y`,
         { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, HF_TOKEN: hfToken } }
       );
-    } catch { /* repo may already exist */ }
+    } catch {
+      /* repo may already exist */
+    }
 
     if (onProgress) onProgress(30, 'Uploading model files...');
 
     // Upload entire folder
-    execSync(
-      `huggingface-cli upload ${repoId} "${modelPath}" . --repo-type model`,
-      {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        env: { ...process.env, HF_TOKEN: hfToken },
-        timeout: 600000, // 10 min
-      }
-    );
+    execSync(`huggingface-cli upload ${repoId} "${modelPath}" . --repo-type model`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      env: { ...process.env, HF_TOKEN: hfToken },
+      timeout: 600000, // 10 min
+    });
 
     if (onProgress) onProgress(100, 'Upload complete');
 
@@ -829,16 +904,30 @@ except Exception as e:
           onProgress(parseInt(progressMatch[1]), progressMatch[2]);
         }
       });
-      proc.stderr.on('data', (data) => { output += data.toString(); });
+      proc.stderr.on('data', (data) => {
+        output += data.toString();
+      });
 
       proc.on('close', (code) => {
-        try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+        try {
+          fs.unlinkSync(scriptPath);
+        } catch {
+          /* ignore */
+        }
         const successMatch = output.match(/SUCCESS:(.+)/);
         if (code === 0 && successMatch) {
-          resolve({ success: true, url: successMatch[1].trim(), message: `Model ${modelName} uploaded to ${successMatch[1].trim()}` });
+          resolve({
+            success: true,
+            url: successMatch[1].trim(),
+            message: `Model ${modelName} uploaded to ${successMatch[1].trim()}`,
+          });
         } else {
           const errorMatch = output.match(/ERROR:(.+)/);
-          resolve({ success: false, url: '', message: errorMatch ? errorMatch[1].trim() : output.slice(-300) });
+          resolve({
+            success: false,
+            url: '',
+            message: errorMatch ? errorMatch[1].trim() : output.slice(-300),
+          });
         }
       });
     });
@@ -861,8 +950,8 @@ function ensureDir(dir) {
 function getNextVersion() {
   const registry = loadModelRegistry();
   const versions = Object.keys(registry)
-    .filter(name => /^khy-\d+\.\d+$/.test(name))
-    .map(name => {
+    .filter((name) => /^khy-\d+\.\d+$/.test(name))
+    .map((name) => {
       const [major, minor] = name.replace('khy-', '').split('.').map(Number);
       return { major, minor, raw: major * 100 + minor };
     })
@@ -905,7 +994,10 @@ function setActiveModel(version) {
   const registry = loadModelRegistry();
   if (!version) {
     // Find latest
-    const versions = Object.keys(registry).filter(n => /^khy-\d+\.\d+$/.test(n)).sort().reverse();
+    const versions = Object.keys(registry)
+      .filter((n) => /^khy-\d+\.\d+$/.test(n))
+      .sort()
+      .reverse();
     version = versions[0] || null;
   }
   if (version && registry[version]) {
@@ -960,7 +1052,8 @@ async function uploadToGitRepo(modelName, opts = {}) {
   const registry = loadModelRegistry();
   const model = registry[modelName];
   if (!model) throw new Error(`Model not found: ${modelName}`);
-  if (!model.path || !fs.existsSync(model.path)) throw new Error(`Model files not found at: ${model.path}`);
+  if (!model.path || !fs.existsSync(model.path))
+    throw new Error(`Model files not found at: ${model.path}`);
 
   if (!repo) throw new Error('Repository name required. Use --repo <name>');
 
@@ -989,7 +1082,11 @@ async function uploadToGitRepo(modelName, opts = {}) {
     // Setup LFS tracking for large files
     const lfsPatterns = ['*.bin', '*.safetensors', '*.gguf', '*.pt', '*.pth', '*.onnx'];
     for (const pattern of lfsPatterns) {
-      try { execSync(`git lfs track "${pattern}"`, { cwd: modelPath, stdio: 'pipe' }); } catch { /* ignore */ }
+      try {
+        execSync(`git lfs track "${pattern}"`, { cwd: modelPath, stdio: 'pipe' });
+      } catch {
+        /* ignore */
+      }
     }
 
     // Create model card
@@ -1018,12 +1115,16 @@ khy train import ${modelName} --from ${remoteUrl}
     execSync('git add -A', { cwd: modelPath, stdio: 'pipe' });
     try {
       execSync(`git commit -m "Upload ${modelName}"`, { cwd: modelPath, stdio: 'pipe' });
-    } catch { /* already committed */ }
+    } catch {
+      /* already committed */
+    }
 
     // Set remote
     try {
       execSync(`git remote remove origin`, { cwd: modelPath, stdio: 'pipe' });
-    } catch { /* no remote */ }
+    } catch {
+      /* no remote */
+    }
     execSync(`git remote add origin ${remoteUrl}`, { cwd: modelPath, stdio: 'pipe' });
 
     // Try to create repo via API (if token provided)
@@ -1034,11 +1135,16 @@ khy train import ${modelName} --from ${remoteUrl}
     // Push
     execSync('git push -u origin main --force', { cwd: modelPath, stdio: 'pipe', timeout: 300000 });
 
-    const publicUrl = platform === 'gitee'
-      ? `https://gitee.com/${gitOwner}/${repo}`
-      : `https://github.com/${gitOwner}/${repo}`;
+    const publicUrl =
+      platform === 'gitee'
+        ? `https://gitee.com/${gitOwner}/${repo}`
+        : `https://github.com/${gitOwner}/${repo}`;
 
-    return { success: true, url: publicUrl, message: `Model ${modelName} uploaded to ${publicUrl}` };
+    return {
+      success: true,
+      url: publicUrl,
+      message: `Model ${modelName} uploaded to ${publicUrl}`,
+    };
   } catch (err) {
     return { success: false, url: '', message: err.message };
   }
@@ -1051,26 +1157,36 @@ async function createRemoteRepo(platform, repoName, token, owner) {
   const axios = require('axios');
   try {
     if (platform === 'github') {
-      await axios.post('https://api.github.com/user/repos', {
-        name: repoName,
-        private: true,
-        description: 'KHY-Quant trained model',
-      }, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        timeout: 15000,
-      });
+      await axios.post(
+        'https://api.github.com/user/repos',
+        {
+          name: repoName,
+          private: true,
+          description: 'KHY-Quant trained model',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          timeout: 15000,
+        }
+      );
     } else if (platform === 'gitee') {
-      await axios.post('https://gitee.com/api/v5/user/repos', {
-        access_token: token,
-        name: repoName,
-        private: true,
-        description: 'KHY-Quant trained model',
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000,
-      });
+      await axios.post(
+        'https://gitee.com/api/v5/user/repos',
+        {
+          access_token: token,
+          name: repoName,
+          private: true,
+          description: 'KHY-Quant trained model',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 15000,
+        }
+      );
     }
-  } catch { /* repo may already exist, ignore */ }
+  } catch {
+    /* repo may already exist, ignore */
+  }
 }
 
 /**
@@ -1079,13 +1195,24 @@ async function createRemoteRepo(platform, repoName, token, owner) {
 function getGitUser() {
   try {
     return execSync('git config user.name', { encoding: 'utf-8', stdio: 'pipe' }).trim() || 'user';
-  } catch { return 'user'; }
+  } catch {
+    return 'user';
+  }
 }
 
 /**
  * Generate the Python training script.
  */
-function generateTrainScript({ baseModelId, datasetPath, outputDir, outputName, method, config, useCuda, useMps }) {
+function generateTrainScript({
+  baseModelId,
+  datasetPath,
+  outputDir,
+  outputName,
+  method,
+  config,
+  useCuda,
+  useMps,
+}) {
   const device = useCuda ? 'cuda' : useMps ? 'mps' : 'cpu';
 
   if (method === 'lora') {

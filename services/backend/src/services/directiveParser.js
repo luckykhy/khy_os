@@ -33,16 +33,20 @@ const MAX_REPLY_ID_LENGTH = 256;
 const _SENTINEL_LINEAR_OFF = ['0', 'false', 'off', 'no'];
 function _sentinelLinearEnabled() {
   return !_SENTINEL_LINEAR_OFF.includes(
-    String((process.env && process.env.KHY_DIRECTIVE_SENTINEL_LINEAR) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_DIRECTIVE_SENTINEL_LINEAR) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // Directive regex patterns
 const AUDIO_TAG_RE = /\[\[\s*audio_as_voice\s*\]\]/gi;
 const REPLY_TAG_RE = /\[\[\s*(?:reply_to_current|reply_to\s*:\s*([^\]\n]+))\s*\]\]/gi;
-const ALL_DIRECTIVES_RE = /\s*(?:\[\[\s*audio_as_voice\s*\]\]|\[\[\s*(?:reply_to_current|reply_to\s*:\s*[^\]\n]+)\s*\]\])\s*/gi;
+const ALL_DIRECTIVES_RE =
+  /\s*(?:\[\[\s*audio_as_voice\s*\]\]|\[\[\s*(?:reply_to_current|reply_to\s*:\s*[^\]\n]+)\s*\]\])\s*/gi;
 
 // Fenced code block pattern (triple backticks/tildes + indented blocks)
-const CODE_BLOCK_RE = /(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[^\n]*|(?:(?:^|\n)(?:    |\t)[^\n]*)+/gm;
+const CODE_BLOCK_RE = /(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1[^\n]*|(?:(?:^|\n)(?: {4}|\t)[^\n]*)+/gm;
 
 /**
  * Create a sentinel string guaranteed not to appear in the input text.
@@ -66,7 +70,9 @@ function _createSentinel(text) {
   for (let i = 0; i < text.length; i++) {
     if (text[i] === seed) {
       run += 1;
-      if (run > longestRun) longestRun = run;
+      if (run > longestRun) {
+        longestRun = run;
+      }
     } else {
       run = 0;
     }
@@ -83,18 +89,24 @@ function _createSentinel(text) {
  */
 function sanitizeReplyId(rawId) {
   const trimmed = rawId?.trim();
-  if (!trimmed) return undefined;
+  if (!trimmed) {
+    return undefined;
+  }
 
   let result = '';
   for (const ch of trimmed) {
     const code = ch.charCodeAt(0);
     // Skip control chars (0-31, 127) and brackets
-    if ((code >= 0 && code <= 31) || code === 127 || ch === '[' || ch === ']') continue;
+    if ((code >= 0 && code <= 31) || code === 127 || ch === '[' || ch === ']') {
+      continue;
+    }
     result += ch;
   }
 
   const cleaned = result.trim();
-  if (!cleaned) return undefined;
+  if (!cleaned) {
+    return undefined;
+  }
   return cleaned.length > MAX_REPLY_ID_LENGTH ? cleaned.slice(0, MAX_REPLY_ID_LENGTH) : cleaned;
 }
 
@@ -138,7 +150,9 @@ function extractDirectives(text) {
  * @returns {string}
  */
 function stripDirectives(text) {
-  if (!text || typeof text !== 'string') return text || '';
+  if (!text || typeof text !== 'string') {
+    return text || '';
+  }
 
   const { masked, blocks, sentinel } = _maskCodeBlocks(text);
 
@@ -156,7 +170,10 @@ function stripDirectives(text) {
 
   // Restore code blocks
   if (blocks.length > 0) {
-    const placeholderRe = new RegExp(`${_escapeRegex(sentinel)}(\\d+)${_escapeRegex(sentinel)}`, 'g');
+    const placeholderRe = new RegExp(
+      `${_escapeRegex(sentinel)}(\\d+)${_escapeRegex(sentinel)}`,
+      'g'
+    );
     stripped = stripped.replace(placeholderRe, (_, idx) => blocks[Number(idx)] || '');
   }
 
@@ -170,7 +187,9 @@ function stripDirectives(text) {
  * @returns {string}
  */
 function normalizeWhitespace(text) {
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
 
   const { masked, blocks, sentinel } = _maskCodeBlocks(text);
 
@@ -185,7 +204,10 @@ function normalizeWhitespace(text) {
 
   // Restore code blocks
   if (blocks.length > 0) {
-    const placeholderRe = new RegExp(`${_escapeRegex(sentinel)}(\\d+)${_escapeRegex(sentinel)}`, 'g');
+    const placeholderRe = new RegExp(
+      `${_escapeRegex(sentinel)}(\\d+)${_escapeRegex(sentinel)}`,
+      'g'
+    );
     normalized = normalized.replace(placeholderRe, (_, idx) => blocks[Number(idx)] || '');
   }
 

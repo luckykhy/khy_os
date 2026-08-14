@@ -35,23 +35,33 @@ const MAX_RECORDS = 100;
 const SPARSE_ABS = 3;
 
 let _clock = () => Date.now();
-function __setClock(fn) { _clock = typeof fn === 'function' ? fn : (() => Date.now()); }
+function __setClock(fn) {
+  _clock = typeof fn === 'function' ? fn : () => Date.now();
+}
 
 // 落日志出口(可注入):默认懒加载规范 winston logger 的 error 通道(error-%DATE%.log)。
 let _sink = null;
-function __setSink(fn) { _sink = typeof fn === 'function' ? fn : null; }
+function __setSink(fn) {
+  _sink = typeof fn === 'function' ? fn : null;
+}
+
 function _persist(entry) {
   try {
-    if (_sink) { _sink(entry); return; }
+    if (_sink) {
+      _sink(entry);
+      return;
+    }
     const logger = require('../utils/logger');
     if (logger && typeof logger.error === 'function') {
       logger.error(`[outputIntegrity] ${entry.type}: ${entry.detail}`, entry);
     }
-  } catch { /* 落日志失败绝不反噬调用点 */ }
+  } catch {
+    /* 落日志失败绝不反噬调用点 */
+  }
 }
 
 // ── 进程内有界状态(供 health/doctor 被动呈现) ──
-const _records = [];           // {type, severity, repaired, detail, at}
+const _records = []; // {type, severity, repaired, detail, at}
 let _repairedCount = 0;
 let _unrepairedCount = 0;
 
@@ -66,13 +76,24 @@ class OutputIntegrityError extends Error {
 
 function mode(env = process.env) {
   const raw = env && env.KHY_OUTPUT_MONITOR;
-  if (raw === 'off' || raw === '0' || raw === 'false') return 'off';
-  if (raw === 'strict') return 'strict';
-  if (raw === 'observe' || raw === 'on' || raw === '1') return 'observe';
-  if (env && env.NODE_ENV === 'test') return 'strict';
+  if (raw === 'off' || raw === '0' || raw === 'false') {
+    return 'off';
+  }
+  if (raw === 'strict') {
+    return 'strict';
+  }
+  if (raw === 'observe' || raw === 'on' || raw === '1') {
+    return 'observe';
+  }
+  if (env && env.NODE_ENV === 'test') {
+    return 'strict';
+  }
   return 'observe';
 }
-function isEnabled(env = process.env) { return mode(env) !== 'off'; }
+
+function isEnabled(env = process.env) {
+  return mode(env) !== 'off';
+}
 
 function _ratioThreshold(env) {
   const v = Number(env && env.KHY_OUTPUT_MOJIBAKE_RATIO);
@@ -81,8 +102,14 @@ function _ratioThreshold(env) {
 
 function _record(rec) {
   _records.push(rec);
-  while (_records.length > MAX_RECORDS) _records.shift();
-  if (rec.repaired) _repairedCount += 1; else _unrepairedCount += 1;
+  while (_records.length > MAX_RECORDS) {
+    _records.shift();
+  }
+  if (rec.repaired) {
+    _repairedCount += 1;
+  } else {
+    _unrepairedCount += 1;
+  }
 }
 
 // ── 乱码 / mojibake 检测 ─────────────────────────────────────────────────────
@@ -97,10 +124,14 @@ const _MISDECODE_RE = /Ã[-¿]|â€|ï¿½|Â[-¿]/g;
 
 function detectMojibake(text) {
   const s = String(text || '');
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   const repl = (s.match(_REPLACEMENT_RE) || []).length;
   const mis = (s.match(_MISDECODE_RE) || []).length;
-  if (repl === 0 && mis < 3) return null; // 保守:零替换符且误解码不足 3 处 → 不判,避免误报
+  if (repl === 0 && mis < 3) {
+    return null;
+  } // 保守:零替换符且误解码不足 3 处 → 不判,避免误报
   return { type: 'mojibake', replacement: repl, misdecode: mis, length: s.length };
 }
 
@@ -110,11 +141,15 @@ function detectMojibake(text) {
 const _TRUNCATION_MARKERS = /内容较长，已截断|\[输出可能不完整\]/;
 function detectIncomplete(text) {
   const s = String(text || '');
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   const fenceCount = (s.match(/```/g) || []).length;
   const unbalancedFence = fenceCount % 2 === 1;
   const knownTruncation = _TRUNCATION_MARKERS.test(s);
-  if (!unbalancedFence) return null;
+  if (!unbalancedFence) {
+    return null;
+  }
   return { type: 'incomplete', reason: 'unbalanced-fence', knownTruncation };
 }
 
@@ -122,9 +157,13 @@ function detectIncomplete(text) {
 function inspectText(text) {
   const signals = [];
   const moji = detectMojibake(text);
-  if (moji) signals.push(moji);
+  if (moji) {
+    signals.push(moji);
+  }
   const inc = detectIncomplete(text);
-  if (inc) signals.push(inc);
+  if (inc) {
+    signals.push(inc);
+  }
   return signals;
 }
 
@@ -168,30 +207,53 @@ function repairText(text, signals, env = process.env) {
  * @returns {{ text:string, report:{ ok:boolean, repaired:Array, unrepaired:Array } }}
  */
 function guardText(text, context = {}, env = process.env) {
-  if (!isEnabled(env)) return { text: String(text == null ? '' : text), report: { ok: true, repaired: [], unrepaired: [] } };
+  if (!isEnabled(env)) {
+    return {
+      text: String(text == null ? '' : text),
+      report: { ok: true, repaired: [], unrepaired: [] },
+    };
+  }
   let strictThrow = null;
   try {
     const signals = inspectText(text);
-    if (!signals.length) return { text: String(text == null ? '' : text), report: { ok: true, repaired: [], unrepaired: [] } };
+    if (!signals.length) {
+      return {
+        text: String(text == null ? '' : text),
+        report: { ok: true, repaired: [], unrepaired: [] },
+      };
+    }
     const { text: fixed, repaired, unrepaired } = repairText(text, signals, env);
     const at = _clock();
-    for (const r of repaired) _record({ type: r.type, severity: 'info', repaired: true, detail: r.fix || 'repaired', at });
+    for (const r of repaired) {
+      _record({ type: r.type, severity: 'info', repaired: true, detail: r.fix || 'repaired', at });
+    }
     for (const u of unrepaired) {
-      const detail = u.type === 'mojibake'
-        ? `garbled output unrepairable (replacement=${u.replacement}, misdecode=${u.misdecode}, len=${u.length})`
-        : `incomplete output unrepairable (${u.reason || 'unknown'})`;
+      const detail =
+        u.type === 'mojibake'
+          ? `garbled output unrepairable (replacement=${u.replacement}, misdecode=${u.misdecode}, len=${u.length})`
+          : `incomplete output unrepairable (${u.reason || 'unknown'})`;
       _record({ type: u.type, severity: 'error', repaired: false, detail, at });
       _persist({ type: u.type, detail, source: context.source || 'unknown', at });
     }
     // strict:不可修复时抛(渲染路径除外——抛会把要保护的输出整屏弄没)。
     if (unrepaired.length && mode(env) === 'strict' && !context.render) {
-      strictThrow = new OutputIntegrityError(unrepaired[0].type, unrepaired.length > 1 ? `${unrepaired.length} unrepairable signals` : null);
+      strictThrow = new OutputIntegrityError(
+        unrepaired[0].type,
+        unrepaired.length > 1 ? `${unrepaired.length} unrepairable signals` : null
+      );
     }
-    if (strictThrow) throw strictThrow;
+    if (strictThrow) {
+      throw strictThrow;
+    }
     return { text: fixed, report: { ok: unrepaired.length === 0, repaired, unrepaired } };
   } catch (e) {
-    if (e && e.isOutputIntegrity) throw e; // 有意的 strict 硬失败,照常抛
-    return { text: String(text == null ? '' : text), report: { ok: true, repaired: [], unrepaired: [] } };
+    if (e && e.isOutputIntegrity) {
+      throw e;
+    } // 有意的 strict 硬失败,照常抛
+    return {
+      text: String(text == null ? '' : text),
+      report: { ok: true, repaired: [], unrepaired: [] },
+    };
   }
 }
 
@@ -205,16 +267,31 @@ function guardText(text, context = {}, env = process.env) {
  * @returns {{type:'incomplete', recovered:boolean, continuations:number, chars:number}|null}
  */
 function noteTruncation(info = {}, env = process.env) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const recovered = !!info.recovered;
   const continuations = Number(info.continuations) || 0;
   const chars = Number(info.chars) || 0;
   const detail = recovered
     ? `incomplete output recovered after ${continuations} continuation(s), ${chars} chars accumulated`
     : `incomplete output: truncation recovery exhausted after ${continuations} attempt(s), ${chars} chars — finalized with truncation notice`;
-  _record({ type: 'incomplete', severity: recovered ? 'info' : 'error', repaired: recovered, detail, at: _clock() });
+  _record({
+    type: 'incomplete',
+    severity: recovered ? 'info' : 'error',
+    repaired: recovered,
+    detail,
+    at: _clock(),
+  });
   // 未完全恢复 = 不可修复的输出不全 → 落错误日志(已恢复仅记 snapshot,不刷错误日志)。
-  if (!recovered) _persist({ type: 'incomplete', detail, source: info.source || 'truncation-recovery', at: _clock() });
+  if (!recovered) {
+    _persist({
+      type: 'incomplete',
+      detail,
+      source: info.source || 'truncation-recovery',
+      at: _clock(),
+    });
+  }
   return { type: 'incomplete', recovered, continuations, chars };
 }
 
@@ -240,7 +317,7 @@ function assessResize(geom = {}, env = process.env) {
   if (!isEnabled(env)) {
     // 监听关 = 逐字节 legacy:仅缩小方向全屏重绘(今日行为),不含放大方向修复。
     return {
-      action: (shrunk && isTTY && validRows) ? 'full-repaint' : 'incremental',
+      action: shrunk && isTTY && validRows ? 'full-repaint' : 'incremental',
       rows: validRows ? rows : 0,
       riskLineLoss: false,
       detail: 'monitor-off',
@@ -266,13 +343,20 @@ function assessResize(geom = {}, env = process.env) {
     _persist({ type: 'line-loss', detail, source: geom.source || 'resize', at: _clock() });
     return { action: 'full-repaint', rows: safeRows, riskLineLoss: true, detail };
   }
-  return { action: 'incremental', rows: validRows ? rows : 0, riskLineLoss: false, detail: colsChanged ? 'cols-changed-non-tty' : 'equal-cols' };
+  return {
+    action: 'incremental',
+    rows: validRows ? rows : 0,
+    riskLineLoss: false,
+    detail: colsChanged ? 'cols-changed-non-tty' : 'equal-cols',
+  };
 }
 
 // ── 被动呈现契约(供 khy health / doctor) ──
 function snapshot() {
   const byType = {};
-  for (const r of _records) byType[r.type] = (byType[r.type] || 0) + 1;
+  for (const r of _records) {
+    byType[r.type] = (byType[r.type] || 0) + 1;
+  }
   return {
     mode: mode(),
     repaired: _repairedCount,
@@ -281,7 +365,11 @@ function snapshot() {
     recent: _records.slice(-10),
   };
 }
-function hasSignal() { return _repairedCount > 0 || _unrepairedCount > 0; }
+
+function hasSignal() {
+  return _repairedCount > 0 || _unrepairedCount > 0;
+}
+
 function reset() {
   _records.length = 0;
   _repairedCount = 0;

@@ -26,11 +26,16 @@
  * @returns {string} 如 `'512 B'` / `'1.5 KB'` / `'340 MB'` / `'2 GB'`;非有限/<=0 → `'0 B'`。
  */
 function humanBytes(n) {
-  if (!Number.isFinite(n) || n <= 0) return '0 B';
+  if (!Number.isFinite(n) || n <= 0) {
+    return '0 B';
+  }
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let v = n;
   let i = 0;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
   return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
 }
 

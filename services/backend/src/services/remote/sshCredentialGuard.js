@@ -5,7 +5,9 @@ const os = require('os');
 const path = require('path');
 
 function _compactHomePath(inputPath) {
-  if (!inputPath || typeof inputPath !== 'string') return null;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return null;
+  }
   const homeDir = os.homedir();
   const normalized = path.normalize(inputPath);
   if (normalized.startsWith(homeDir)) {
@@ -16,7 +18,9 @@ function _compactHomePath(inputPath) {
 
 function _validateMode(stat) {
   // NTFS stat.mode 不反映实际 ACL，Windows 上跳过权限检查
-  if (process.platform === 'win32') return { mode: 0o600, secure: true };
+  if (process.platform === 'win32') {
+    return { mode: 0o600, secure: true };
+  }
   const mode = stat.mode & 0o777;
   const hasUnsafeBits = (mode & 0o077) !== 0;
   return {

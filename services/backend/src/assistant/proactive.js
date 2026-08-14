@@ -35,18 +35,24 @@ function isProactiveActive() {
  * @param {function} [onTick] - Callback on each tick
  */
 function activate(intervalMs, onTick) {
-  if (_active) return;
+  if (_active) {
+    return;
+  }
   _active = true;
   _paused = false;
 
   const interval = intervalMs || DEFAULT_INTERVAL_MS;
   _timer = setInterval(() => {
-    if (_paused) return;
+    if (_paused) {
+      return;
+    }
     _runTick(onTick);
   }, interval);
 
   // Don't keep process alive
-  if (_timer.unref) _timer.unref();
+  if (_timer.unref) {
+    _timer.unref();
+  }
 
   _emit('activated');
 }
@@ -68,7 +74,9 @@ function deactivate() {
  * Pause proactive mode (e.g., when user is typing).
  */
 function pause() {
-  if (!_active) return;
+  if (!_active) {
+    return;
+  }
   _paused = true;
   _emit('paused');
 }
@@ -77,7 +85,9 @@ function pause() {
  * Resume proactive mode.
  */
 function resume() {
-  if (!_active) return;
+  if (!_active) {
+    return;
+  }
   _paused = false;
   _emit('resumed');
 }
@@ -90,7 +100,7 @@ function resume() {
 function subscribe(listener) {
   _listeners.push(listener);
   return () => {
-    _listeners = _listeners.filter(l => l !== listener);
+    _listeners = _listeners.filter((l) => l !== listener);
   };
 }
 
@@ -98,7 +108,11 @@ function subscribe(listener) {
 
 function _emit(event) {
   for (const listener of _listeners) {
-    try { listener(event); } catch { /* ignore listener errors */ }
+    try {
+      listener(event);
+    } catch {
+      /* ignore listener errors */
+    }
   }
 }
 
@@ -115,7 +129,9 @@ async function _runTick(onTick) {
     if (onTick) {
       await onTick({ dreamNeeded: dreamCheck.needed, dreamReason: dreamCheck.reason });
     }
-  } catch { /* tick error, silently continue */ }
+  } catch {
+    /* tick error, silently continue */
+  }
 }
 
 module.exports = {
