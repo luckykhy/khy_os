@@ -1,0 +1,22 @@
+═══════════════════════════════════════════════════════════════════
+  📋 复制下面的命令，粘贴到 PowerShell 中运行
+═══════════════════════════════════════════════════════════════════
+
+cd C:\khy-os; if(!(Test-Path $PROFILE)){New-Item -ItemType File -Path $PROFILE -Force|Out-Null}; Add-Content $PROFILE "`nfunction khy{node C:\khy-os\services\backend\bin\khy.js `$args}"; . $PROFILE; Write-Host "`n✓ 配置完成！测试：khy --version`n" -ForegroundColor Green; khy --version
+
+═══════════════════════════════════════════════════════════════════
+  ⬆️ 这是一行命令，复制整行即可
+═══════════════════════════════════════════════════════════════════
+
+执行后：
+  ✓ 配置文件已创建
+  ✓ khy 函数已添加
+  ✓ 配置已重载
+  ✓ 可以在任何位置使用 khy 命令
+
+测试：
+  khy --version
+  khy --help
+  khy gateway status
+
+═══════════════════════════════════════════════════════════════════

@@ -1,0 +1,5 @@
+复制下面这一整行（包括最后的分号），粘贴到 PowerShell：
+
+if(!(Test-Path $PROFILE)){New-Item -ItemType File -Path $PROFILE -Force|Out-Null};Add-Content $PROFILE "`nfunction khy{node C:\khy-os\services\backend\bin\khy.js `$args}";.$PROFILE;khy --version
+
+注意：这是完整的一行命令，确保复制到最后！

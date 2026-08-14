@@ -684,11 +684,90 @@ async function ensureAuthenticated() {
 
     // Allow up to 3 login attempts before offering recovery
     for (let attempt = 0; attempt < 3; attempt++) {
+      // Auto-detect OS username for CLI auto-login
+      const osUsername = (os.userInfo && os.userInfo().username) || process.env.USERNAME || process.env.USER || '';
+      const defaultUsername = osUsername ? osUsername.toLowerCase().replace(/[^a-z0-9_-]/g, '') : '';
+
+      // Try auto-login with credentials file or environment variable (first attempt only)
+      if (attempt === 0 && defaultUsername && process.env.KHY_CLI_AUTO_LOGIN !== '0') {
+        let autoPassword = null;
+        let credentialsPath = null;
+
+        // Try 1: Read from credentials file
+        const credPath = path.join(
+          require('../src/utils/dataHome').getDataHome(),
+          'credentials',
+          'default-admin.json'
+        );
+        credentialsPath = credPath;
+
+        try {
+          if (fs.existsSync(credPath)) {
+            const cred = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+            if (cred.username === defaultUsername && cred.password) {
+              autoPassword = cred.password;
+              printInfo(`检测到凭据文件，尝试自动登录...`);
+            }
+          } else {
+            // Credentials file doesn't exist - try to create default admin automatically
+            printInfo(`首次运行，正在创建默认管理员账号 (${defaultUsername})...`);
+
+            try {
+              // Use synchronous credential generation (no database required for CLI)
+              const credGen = require('../src/services/credentialGenerator');
+              const adminCreds = credGen.loadOrCreateDefaultAdminCredentials();
+
+              if (adminCreds && adminCreds.password) {
+                printSuccess(`✓ 默认管理员凭据已生成`);
+                console.log(chalk.dim(`  用户名: ${adminCreds.username}`));
+                console.log(chalk.dim(`  凭据文件: ${adminCreds.filePath || credPath}`));
+
+                autoPassword = adminCreds.password;
+                printInfo(`使用生成的凭据尝试登录...`);
+              } else {
+                printInfo(`凭据生成失败，请手动输入`);
+              }
+            } catch (createErr) {
+              // If auto-creation fails, continue to manual login
+              printInfo(`自动创建失败，将使用手动登录`);
+              console.log(chalk.dim(`  错误: ${createErr.message}`));
+            }
+          }
+        } catch (err) {
+          // Ignore and try next method
+        }
+
+        // Try 2: Read from environment variable
+        if (!autoPassword && process.env.KHY_DEFAULT_PASSWORD) {
+          autoPassword = process.env.KHY_DEFAULT_PASSWORD;
+          printInfo(`使用环境变量密码，尝试自动登录...`);
+        }
+
+        // Try auto-login if we have a password
+        if (autoPassword) {
+          try {
+            const result = await auth.login(defaultUsername, autoPassword);
+            if (result.success) {
+              console.log('');
+              printSuccess(`✓ 自动登录成功! 欢迎回来, ${result.username}`);
+              console.log('');
+              return true;
+            } else {
+              printInfo('自动登录失败，请手动输入凭据');
+            }
+          } catch (err) {
+            printInfo('自动登录失败，请手动输入凭据');
+          }
+          console.log('');
+        }
+      }
+
       const answers = await inquirer.prompt([
         {
           type: 'input',
           name: 'username',
           message: '用户名:',
+          default: defaultUsername || undefined,
           validate: v => v.trim().length > 0 || '请输入用户名',
         },
         {
