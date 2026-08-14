@@ -219,18 +219,26 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
   // Fast probe for model-selection UX.
   // For unstable-prone adapters, include a lightweight generation probe
   // to avoid "detected but unusable" false positives in /model.
+  // Reduced default timeouts to prevent hanging on unreachable adapters
   const probeTimeoutMs = Math.max(
-    4000,
-    parseInt(process.env.KHY_MODEL_PROBE_TIMEOUT_MS || '8000', 10) || 8000
+    2000,
+    parseInt(process.env.KHY_MODEL_PROBE_TIMEOUT_MS || '4000', 10) || 4000
   );
   const generationProbeTimeoutMs = Math.max(
     probeTimeoutMs,
-    parseInt(process.env.KHY_MODEL_PROBE_GENERATION_TIMEOUT_MS || '25000', 10) || 25000
+    parseInt(process.env.KHY_MODEL_PROBE_GENERATION_TIMEOUT_MS || '8000', 10) || 8000
   );
   const strictOperationalAdapters = STRICT_OPERATIONAL_ADAPTERS;
   const twoPhaseProbeEnabled =
     String(process.env.KHY_MODEL_TWO_PHASE_PROBE || 'true').toLowerCase() !== 'false';
-  onNotice(`检测各通道连通性（快速模式，单通道超时 ${Math.round(probeTimeoutMs / 1000)}s）...`);
+
+  // Overall timeout protection: prevent hanging when multiple adapters are slow/unreachable
+  const overallTimeoutMs = Math.max(
+    15000,
+    parseInt(process.env.KHY_MODEL_OVERALL_TIMEOUT_MS || '30000', 10) || 30000
+  );
+
+  onNotice(`检测各通道连通性（快速模式，单通道超时 ${Math.round(probeTimeoutMs / 1000)}s，总超时 ${Math.round(overallTimeoutMs / 1000)}s）...`);
   const testResults = {};
   const strictCandidates = [];
   const testPromises = enabledAdapters.map(async (s) => {
@@ -264,7 +272,23 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       };
     }
   });
-  await Promise.all(testPromises);
+
+  // Race all probes against overall timeout
+  try {
+    await Promise.race([
+      Promise.all(testPromises),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('overall timeout')), overallTimeoutMs)
+      )
+    ]);
+  } catch (err) {
+    if (err && err.message === 'overall timeout') {
+      onNotice('部分通道探测超时，显示当前可用结果');
+      // Continue with whatever results we have so far
+    } else {
+      throw err;
+    }
+  }
   const preferredIssueAfterProbe = _resolvePreferredAdapterIssue(enabledAdapters, testResults);
 
   let debounceRetried = 0;
