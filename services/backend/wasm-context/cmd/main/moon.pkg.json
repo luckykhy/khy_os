@@ -1,0 +1,18 @@
+{
+  "import": [
+    { "path": "khyos/context_utils", "alias": "ctx" }
+  ],
+  "is-main": true,
+  "link": {
+    "wasm-gc": {
+      "exports": [
+        "estimate_tokens",
+        "estimate_tokens_with_margin",
+        "check_overflow",
+        "single_tool_result_cap",
+        "preemptive_threshold",
+        "truncate_position"
+      ]
+    }
+  }
+}

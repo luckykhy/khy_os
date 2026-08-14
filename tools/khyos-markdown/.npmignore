@@ -1,0 +1,8 @@
+# Dev & build files
+muya-embed/
+test/
+.gitattributes
+node_modules/
+
+# Platform-specific (included via files array)
+# vendor/ is intentionally included for offline WYSIWYG

@@ -1,96 +1,298 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useUserStore } from '@/stores/user';
+import { routeStart, routeDone } from '@/composables/useGlobalLoading';
+import { viewLoaders } from '@/composables/useRoutePrefetch';
 
+function detectRouterBase() {
+  if (typeof window === 'undefined') return '/';
+  const pathname = String(window.location.pathname || '/');
+  const envBase = String(import.meta.env.VITE_AI_ROUTER_BASE || '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (envBase && (pathname === envBase || pathname.startsWith(`${envBase}/`))) {
+    return envBase.startsWith('/') ? envBase : `/${envBase}`;
+  }
+  const adminPrefix = pathname.match(/^\/admin\/[^/]+/i);
+  if (adminPrefix && adminPrefix[0]) {
+    return adminPrefix[0];
+  }
+  return '/';
+}
+
+// Lazy view importers come from a shared registry (useRoutePrefetch) so the
+// prefetcher warms the exact same chunks the router resolves on navigation.
 const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { public: true }
+    component: viewLoaders['/login'],
+    meta: { requiresAuth: false },
   },
   {
     path: '/',
-    component: () => import('@/views/Layout.vue'),
-    redirect: '/dashboard',
+    component: viewLoaders['/'],
+    redirect: '/home',
+    meta: { requiresAuth: true },
     children: [
       {
+        path: 'home',
+        name: 'UserHome',
+        component: viewLoaders['/home'],
+      },
+      {
         path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '工作台' }
+        name: 'AIDashboard',
+        component: viewLoaders['/dashboard'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'ai-gateway',
+        path: 'gateway',
         name: 'AIGateway',
-        component: () => import('@/views/AIGateway.vue'),
-        meta: { title: 'AI 网关' }
+        component: viewLoaders['/gateway'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'ai-chat',
-        name: 'AIChat',
-        component: () => import('@/views/AIChat.vue'),
-        meta: { title: 'AI 对话' }
+        path: 'bridge-channels',
+        name: 'BridgeChannels',
+        component: viewLoaders['/bridge-channels'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'agent-dashboard',
-        name: 'AgentDashboard',
-        component: () => import('@/views/AgentDashboard.vue'),
-        meta: { title: '智能体控制台' }
+        path: 'wx-binding',
+        name: 'WxBinding',
+        component: viewLoaders['/wx-binding'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'ai-monitor',
-        name: 'AIMonitor',
-        component: () => import('@/views/AIMonitor.vue'),
-        meta: { title: 'AI 监控' }
-      },
-      {
-        path: 'account-pool',
+        path: 'accounts',
         name: 'AccountPool',
-        component: () => import('@/views/AccountPool.vue'),
-        meta: { title: '账号池管理' }
+        component: viewLoaders['/accounts'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'ai-assets',
-        name: 'AIAssets',
-        component: () => import('@/views/AIAssets.vue'),
-        meta: { title: 'AI 资产管理' }
+        path: 'assets-customers',
+        name: 'AIAssetsCustomers',
+        component: viewLoaders['/assets-customers'],
+        meta: { requiresAdmin: true },
       },
       {
-        path: 'ai-payments',
+        path: 'payments',
         name: 'AIPayments',
-        component: () => import('@/views/AIPayments.vue'),
-        meta: { title: '支付管理' }
+        component: viewLoaders['/payments'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'usage',
+        name: 'AIUsageLogs',
+        component: viewLoaders['/usage'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'pricing',
+        name: 'AIPricing',
+        component: viewLoaders['/pricing'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'monitor',
+        name: 'AIMonitor',
+        component: viewLoaders['/monitor'],
+        meta: { requiresAdmin: true },
       },
       {
         path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/Settings.vue'),
-        meta: { title: '系统设置' }
-      }
-    ]
+        name: 'AISettings',
+        component: viewLoaders['/settings'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'agents',
+        name: 'AgentDashboard',
+        component: viewLoaders['/agents'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'chat',
+        name: 'AIChat',
+        component: viewLoaders['/chat'],
+      },
+      {
+        // Per-user prompt library — auth only, NO requiresAdmin.
+        path: 'prompts',
+        name: 'PromptLibrary',
+        component: viewLoaders['/prompts'],
+      },
+      {
+        // Feature index / command catalog — auth only, NO requiresAdmin.
+        // Read-only capability reference consuming GET /api/commands.
+        path: 'features',
+        name: 'FeatureCatalog',
+        component: viewLoaders['/features'],
+      },
+      {
+        // KHY OS bare-metal kernel terminal — auth only, NO requiresAdmin.
+        path: 'khyos',
+        name: 'KhyOsTerminal',
+        component: viewLoaders['/khyos'],
+      },
+      {
+        // KHY OS graphical desktop viewer (read-only framebuffer stream) —
+        // auth only, NO requiresAdmin. Reached from the terminal's 进入桌面 button.
+        path: 'khyos/desktop',
+        name: 'KhyOsDesktop',
+        component: viewLoaders['/khyos/desktop'],
+      },
+      {
+        // Per-user (multi-tenant) gateway — auth only, NO requiresAdmin.
+        path: 'my-gateway',
+        name: 'MyGateway',
+        component: viewLoaders['/my-gateway'],
+      },
+      {
+        // Per-user visual workflows — auth only, NO requiresAdmin.
+        path: 'workflows',
+        name: 'Workflows',
+        component: viewLoaders['/workflows'],
+      },
+      {
+        path: 'workflows/:id',
+        name: 'WorkflowEditor',
+        component: viewLoaders['/workflows/:id'],
+      },
+      {
+        // Per-user coding projects (命名工作区) — auth only, NO requiresAdmin.
+        path: 'projects',
+        name: 'Projects',
+        component: viewLoaders['/projects'],
+      },
+      {
+        // Per-user plugin marketplace — auth only, NO requiresAdmin.
+        path: 'marketplace',
+        name: 'Marketplace',
+        component: viewLoaders['/marketplace'],
+      },
+      {
+        // GUI Agent 评测平台 (admin only)
+        path: 'gui-eval',
+        name: 'GuiEvalDashboard',
+        component: viewLoaders['/gui-eval'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/tasks',
+        name: 'GuiEvalTasks',
+        component: viewLoaders['/gui-eval/tasks'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/tasks/:id',
+        name: 'GuiEvalTaskEditor',
+        component: viewLoaders['/gui-eval/tasks/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/runs',
+        name: 'GuiEvalRuns',
+        component: viewLoaders['/gui-eval/runs'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'gui-eval/runs/:id',
+        name: 'GuiEvalRunDetail',
+        component: viewLoaders['/gui-eval/runs/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval',
+        name: 'WebFrontendEvalDashboard',
+        component: viewLoaders['/web-frontend-eval'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/tasks',
+        name: 'WebFrontendEvalTasks',
+        component: viewLoaders['/web-frontend-eval/tasks'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/tasks/:id',
+        name: 'WebFrontendEvalTaskEditor',
+        component: viewLoaders['/web-frontend-eval/tasks/:id'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/runs',
+        name: 'WebFrontendEvalRuns',
+        component: viewLoaders['/web-frontend-eval/runs'],
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'web-frontend-eval/runs/:id',
+        name: 'WebFrontendEvalRunDetail',
+        component: viewLoaders['/web-frontend-eval/runs/:id'],
+        meta: { requiresAdmin: true },
+      },
+    ],
   },
   {
+    // Markdown 工作台 — 独立顶层挂载 Layout 外壳，meta.requiresAuth:false 使其
+    // 在未登录时也可经外壳访问（不分割的关键）。守卫用 to.matched.some(...) 判定，
+    // 故该链上无 requiresAuth:true 记录 → 匿名访问不会 401 跳 login。已登录用户点
+    // 同一菜单项同样命中此路由，两类用户 UI 统一。浏览器内编辑零后端；服务器文件
+    // 目录（Phase B）在组件内经 authenticateToken 的 API 二次门控，匿名永不触发。
+    path: '/markdown',
+    component: viewLoaders['/'],
+    meta: { requiresAuth: false },
+    children: [{ path: '', name: 'Markdown', component: viewLoaders['/markdown'] }],
+  },
+  {
+    // Catch-all 404 fallback — declared LAST so it only matches when nothing else
+    // did. requiresAuth:false so a mistyped URL (even unauthenticated) lands on the
+    // friendly NotFound page instead of a blank <router-view> or a login bounce.
     path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
-  }
+    name: 'NotFound',
+    component: viewLoaders['/not-found'],
+    meta: { requiresAuth: false },
+  },
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+  history: createWebHistory(detectRouterBase()),
+  routes,
 });
 
-// Navigation guard for authentication
-router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
-
-  if (!to.meta.public && !authStore.isAuthenticated) {
-    next({ name: 'Login', query: { redirect: to.fullPath } });
-  } else if (to.name === 'Login' && authStore.isAuthenticated) {
-    next({ name: 'Dashboard' });
-  } else {
-    next();
+router.beforeEach(async (to, from, next) => {
+  // Show the global progress bar across the guard's async work (ensureSession)
+  // and the lazy route chunk download, so navigation never looks frozen.
+  routeStart();
+  const userStore = useUserStore();
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  if (requiresAuth) {
+    if (!userStore.isAuthenticated()) return next('/login');
+    const ok = await userStore.ensureSession();
+    if (!ok) return next('/login');
   }
+
+  if (to.path === '/login' && userStore.isAuthenticated()) {
+    return next(userStore.preferredHome);
+  }
+
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
+  if (requiresAdmin && !userStore.isAdmin) {
+    return next('/home');
+  }
+
+  return next();
+});
+
+// Clear the bar once navigation settles (success or error). afterEach fires
+// after the matched component's lazy chunk has resolved, so the bar spans the
+// full download too. routeLoading is a boolean, so redirect chains can't leak it.
+router.afterEach(() => {
+  routeDone();
+});
+router.onError(() => {
+  routeDone();
 });
 
 export default router;

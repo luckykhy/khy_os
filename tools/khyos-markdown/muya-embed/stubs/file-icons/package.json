@@ -1,0 +1,7 @@
+{
+  "name": "file-icons",
+  "version": "0.0.0-khyos-stub",
+  "description": "Local stub for the unreachable github:file-icons/atom build-time dependency of @marktext/file-icons. The published @marktext/file-icons ships self-contained build/index.js (zero runtime refs to file-icons), so this stub is never used at runtime — it only unblocks npm install in offline/github-blocked environments.",
+  "main": "index.js",
+  "private": true
+}

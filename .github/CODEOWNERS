@@ -1,0 +1,805 @@
+# This file is auto-generated from docs/维护者/维护映射表.json
+# Each area's paths list the area maintainer as owner using @<area-id> placeholder.
+# Replace @<area-id> placeholders with actual GitHub usernames as needed.
+# In CODEOWNERS, the first matching pattern takes precedence.
+
+# 面向小白概念文档 + 修仙学 AI 故事内容（作者向房屋风格 + 单人维护体检）
+scripts/docs/check_beginner_docs.js @beginner-docs-content
+scripts/docs/check_beginner_docs.test.js @beginner-docs-content
+docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.md @beginner-docs-content
+docs/09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.md @beginner-docs-content
+
+# Bootstrap and Packaging
+platform/khy_platform/cli.py @bootstrap-packaging
+platform/khy_platform/_bootstrap.py @bootstrap-packaging
+platform/khy_platform/__init__.py @bootstrap-packaging
+pyproject.toml @bootstrap-packaging
+software/khyquant/setup.py @bootstrap-packaging
+software/khyquant/MANIFEST.in @bootstrap-packaging
+packaging/npm/package.json @bootstrap-packaging
+services/backend/package.json @bootstrap-packaging
+
+# CLI Routing and Help Surface
+services/backend/src/constants/commandSchema.js @cli-routing
+services/backend/src/cli/aliases.js @cli-routing
+services/backend/src/cli/router.js @cli-routing
+services/backend/src/cli/repl.js @cli-routing
+services/backend/src/cli/handlers/ @cli-routing
+services/backend/tests/cli/router.test.js @cli-routing
+services/backend/tests/cli/repl.tasks.interaction.test.js @cli-routing
+
+# Prompt Capsule and Debug Prompt System
+services/backend/src/constants/prompts.js @prompt-capsule-system
+services/backend/src/services/khyUpgradeRuntime.js @prompt-capsule-system
+services/backend/src/services/compact/prompt.js @prompt-capsule-system
+services/backend/src/cli/handlers/gateway.js @prompt-capsule-system
+services/backend/tests/promptOnDemandSections.test.js @prompt-capsule-system
+services/backend/tests/promptLearningRules.test.js @prompt-capsule-system
+services/backend/tests/gatewayDebugPrompt.test.js @prompt-capsule-system
+
+# AI Gateway and Adapter Layer
+services/backend/src/services/gateway/aiGateway.js @gateway-adapters
+services/backend/src/services/gateway/adapters/ @gateway-adapters
+services/backend/src/services/gateway/proxyServer.js @gateway-adapters
+services/backend/tests/aiGateway.stability.test.js @gateway-adapters
+services/backend/tests/gateway/transportResilience.test.js @gateway-adapters
+services/backend/tests/gatewayAdapters.stability.test.js @gateway-adapters
+
+# Proxy, Daemon, and Runtime Port Discovery
+services/backend/src/services/daemonManager.js @proxy-daemon-runtime
+services/backend/src/services/aiManagementServer.js @proxy-daemon-runtime
+services/backend/src/services/gateway/proxyServer.js @proxy-daemon-runtime
+services/backend/src/utils/proxyBaseUrl.js @proxy-daemon-runtime
+services/backend/src/constants/serviceDefaults.js @proxy-daemon-runtime
+services/backend/tests/daemonManager.runtimePort.test.js @proxy-daemon-runtime
+services/backend/tests/gatewayManage.portDrift.integration.test.js @proxy-daemon-runtime
+services/backend/tests/services/proxyBaseUrl.test.js @proxy-daemon-runtime
+services/backend/tests/services/serviceDefaults.test.js @proxy-daemon-runtime
+
+# AI Management UI and API
+services/backend/src/routes/aiGatewayAdmin.js @ai-management-surface
+services/ai-backend/src/routes/aiGatewayAdmin.js @ai-management-surface
+apps/ai-frontend/src/ @ai-management-surface
+apps/ai-frontend/package.json @ai-management-surface
+apps/ai-frontend/vite.config.js @ai-management-surface
+services/backend/src/cli/handlers/gateway.js @ai-management-surface
+services/backend/tests/routes/aiGatewayAdmin.modelSlots.test.js @ai-management-surface
+services/backend/tests/gatewayManage.apiDisplay.test.js @ai-management-surface
+
+# Coding Projects (named workspaces + chat linkage)
+platform/packages/shared/src/models/UserProject.js @coding-projects
+platform/packages/shared/src/models/index.js @coding-projects
+services/backend/src/services/projectStore.js @coding-projects
+services/backend/src/services/aiManagementProjects.js @coding-projects
+services/backend/src/services/aiManagementServer.js @coding-projects
+platform/packages/shared/src/models/Conversation.js @coding-projects
+services/backend/src/services/conversationStore.js @coding-projects
+apps/ai-frontend/src/composables/useProjects.js @coding-projects
+apps/ai-frontend/src/composables/useChatConversations.js @coding-projects
+apps/ai-frontend/src/views/Projects.vue @coding-projects
+apps/ai-frontend/src/views/AIChat.vue @coding-projects
+apps/ai-frontend/src/composables/useRoutePrefetch.js @coding-projects
+apps/ai-frontend/src/router/index.js @coding-projects
+apps/ai-frontend/src/views/Layout.vue @coding-projects
+services/backend/tests/projectStore.test.js @coding-projects
+apps/ai-frontend/src/composables/useProjects.wiring.test.js @coding-projects
+
+# Workspace, Publish, and Verification Commands
+services/backend/src/cli/handlers/workspace.js @workspace-publish-verify
+services/backend/src/cli/handlers/publish.js @workspace-publish-verify
+services/backend/src/cli/handlers/verify.js @workspace-publish-verify
+services/backend/tests/publish.sourceReleaseMode.test.js @workspace-publish-verify
+services/backend/tests/publish.dbPreflight.test.js @workspace-publish-verify
+
+# Maintenance Safety and Rule Gates
+AGENTS.md @maintenance-safety
+CONTRIBUTING.md @maintenance-safety
+scripts/check-agent-rules.js @maintenance-safety
+scripts/check-change-safety.js @maintenance-safety
+scripts/install-git-hooks.js @maintenance-safety
+scripts/ci/check-version-sync.js @maintenance-safety
+scripts/ci/check-node-syntax.js @maintenance-safety
+scripts/ci/check-python-syntax.py @maintenance-safety
+docs/维护者/维护映射表.json @maintenance-safety
+
+# Release and Rollback
+maintenance/stable-release.json @release-rollback
+maintenance/lib/ops.js @release-rollback
+maintenance/lib/ops-lib.js @release-rollback
+services/backend/src/cli/handlers/publish.js @release-rollback
+scripts/release/build-and-audit-pip-purity.sh @release-rollback
+scripts/ci/check-version-sync.js @release-rollback
+maintenance/tests/ops-lib.test.js @release-rollback
+
+# Build Best Environment (Self-check / Repair / Probes)
+services/backend/src/services/localBrainEnvOptimize.js @env-optimize
+services/backend/src/services/envProbes.js @env-optimize
+services/backend/src/services/envRepair.js @env-optimize
+services/backend/src/services/envPlatform.js @env-optimize
+services/backend/src/services/diskCleanup/ @env-optimize
+services/backend/src/services/localBrainService.js @env-optimize
+services/backend/src/cli/tui/hooks/useQueryBridge.js @env-optimize
+services/backend/tests/services/localBrainEnvOptimize.test.js @env-optimize
+services/backend/tests/services/envProbes.test.js @env-optimize
+services/backend/tests/services/envRepair.test.js @env-optimize
+services/backend/tests/services/envPlatform.test.js @env-optimize
+
+# Evolution Prompt Playbook (1000 preset prompts)
+scripts/docs/gen-evolution-prompts.js @evolution-prompts
+scripts/tests/gen-evolution-prompts.test.js @evolution-prompts
+docs/维护者/维护映射表.json @evolution-prompts
+
+# Symptom Triage (route a symptom to its subsystem)
+scripts/lib/maintainerTriage.js @triage
+scripts/triage.js @triage
+scripts/tests/maintainerTriage.test.js @triage
+docs/维护者/维护映射表.json @triage
+
+# Off-machine Restore Readiness
+scripts/lib/restoreReadiness.js @restore-readiness
+scripts/restore-check.js @restore-readiness
+scripts/tests/restoreReadiness.test.js @restore-readiness
+
+# Installed-copy Integrity
+scripts/lib/installIntegrity.js @install-integrity
+scripts/verify-install.js @install-integrity
+scripts/tests/installIntegrity.test.js @install-integrity
+
+# First-run Hydration Health
+scripts/lib/hydrationHealth.js @hydration-health
+scripts/hydration-doctor.js @hydration-health
+scripts/tests/hydrationHealth.test.js @hydration-health
+
+# Agent Restore Plan Synthesizer
+scripts/lib/agentRestorePlan.js @agent-restore-plan
+scripts/restore-plan.js @agent-restore-plan
+scripts/tests/agentRestorePlan.test.js @agent-restore-plan
+
+# Cross-mirror Restore Conflict Detector
+scripts/lib/restoreConflictDetector.js @restore-conflict-detector
+scripts/restore-conflicts.js @restore-conflict-detector
+scripts/tests/restoreConflictDetector.test.js @restore-conflict-detector
+
+# Cross-mirror Restore Conflict Resolver
+scripts/lib/restoreConflictResolver.js @restore-conflict-resolver
+scripts/restore-resolve.js @restore-conflict-resolver
+scripts/tests/restoreConflictResolver.test.js @restore-conflict-resolver
+
+# Off-machine Launch-entry Contract
+scripts/lib/bundleLaunchContract.js @bundle-launch-contract
+scripts/tests/bundleLaunchContract.test.js @bundle-launch-contract
+scripts/release/pip_packaging_rules.py @bundle-launch-contract
+packaging/npm/scripts/audit-purity.js @bundle-launch-contract
+
+# Proxy Egress Bridge (select node + enable/disable)
+services/backend/src/services/proxy/proxyCoreConfigGen.js @proxy-egress
+services/backend/src/services/proxy/proxyCoreManager.js @proxy-egress
+services/backend/src/services/proxyConfigService.js @proxy-egress
+services/backend/src/services/aiManagementProxyEgress.js @proxy-egress
+services/backend/src/services/aiManagementServer.js @proxy-egress
+apps/ai-frontend/src/composables/useProxies.js @proxy-egress
+apps/ai-frontend/src/views/ProxyManagement.vue @proxy-egress
+services/backend/tests/proxyCoreConfigGen.test.js @proxy-egress
+services/backend/tests/proxyCoreManager.test.js @proxy-egress
+services/backend/tests/proxyConfigService.egress.test.js @proxy-egress
+services/backend/tests/aiManagementProxyEgress.wiring.test.js @proxy-egress
+apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js @proxy-egress
+services/backend/src/bootstrap/ensureProxyCoreEnv.js @proxy-egress
+services/backend/src/services/proxy/proxyCoreInstaller.js @proxy-egress
+services/backend/tests/bootstrap/ensureProxyCoreEnv.test.js @proxy-egress
+services/backend/tests/services/proxyCoreInstaller.test.js @proxy-egress
+
+# 斜杠命令菜单单一真源(经典REPL⇄TUI)
+services/backend/src/cli/slashExtraCommands.js @slash-menu-ssot
+services/backend/src/cli/resumeHint.js @slash-menu-ssot
+services/backend/src/cli/replSession.js @slash-menu-ssot
+services/backend/src/cli/tui/hooks/useCompletions.js @slash-menu-ssot
+services/backend/src/cli/tui/app.jsx @slash-menu-ssot
+services/backend/tests/slashExtraCommands.test.js @slash-menu-ssot
+services/backend/tests/cli/resumeHint.test.js @slash-menu-ssot
+services/backend/tests/cli/useCompletionsSlashExtras.test.js @slash-menu-ssot
+
+# 前端响应信封解包单一真源(unwrap)
+apps/ai-frontend/src/api/unwrap.js @frontend-response-envelope
+apps/ai-frontend/src/api/unwrap.test.js @frontend-response-envelope
+apps/ai-frontend/src/api/unwrap.wiring.test.js @frontend-response-envelope
+
+# khy codex 凭据便捷管理(与 claude 一样启动)
+services/backend/src/services/gateway/adapters/codexEnvAdoptPolicy.js @codex-adopt-env
+services/backend/src/services/gateway/adapters/openaiRelayPresets.js @codex-adopt-env
+services/backend/src/cli/handlers/codexAdopt.js @codex-adopt-env
+services/backend/src/cli/router.js @codex-adopt-env
+services/backend/tests/services/gateway/codexEnvAdoptPolicy.test.js @codex-adopt-env
+services/backend/tests/services/gateway/openaiRelayPresets.test.js @codex-adopt-env
+services/backend/tests/cli/codexAdoptRouting.test.js @codex-adopt-env
+
+# AI 失败诊断质量(真实失败原因排序 + model_not_found 形状分诊/按模型冷却/存在性纠偏)
+services/backend/src/services/gateway/failureReasonRanking.js @failure-diagnostics
+services/backend/src/services/gateway/modelNotFoundRecovery.js @failure-diagnostics
+services/backend/src/services/gateway/modelNotFoundCooldownScope.js @failure-diagnostics
+services/backend/src/services/gateway/modelExistenceEvidence.js @failure-diagnostics
+services/backend/src/services/gateway/aiGateway.js @failure-diagnostics
+services/backend/tests/services/gateway/failureReasonRanking.test.js @failure-diagnostics
+services/backend/tests/services/gateway/modelNotFoundRecovery.test.js @failure-diagnostics
+services/backend/tests/services/gateway/modelNotFoundCooldownScope.test.js @failure-diagnostics
+services/backend/tests/services/gateway/modelExistenceEvidence.test.js @failure-diagnostics
+
+# 通配兜底守卫(裸模型盲落默认池打错端点的防护)
+services/backend/src/services/gateway/wildcardPoolGuard.js @wildcard-pool-guard
+services/backend/src/services/gateway/aiGateway.js @wildcard-pool-guard
+services/backend/src/services/flagRegistry.js @wildcard-pool-guard
+services/backend/tests/services/gateway/wildcardPoolGuard.test.js @wildcard-pool-guard
+services/backend/tests/services/gateway/wildcardPoolGuard.wiring.test.js @wildcard-pool-guard
+
+# 安装台账(khy 写进宿主 exe/CLI 后保证卸载干净的真源)
+services/backend/src/services/uninstall/installLedger.js @install-ledger
+services/backend/src/services/uninstall/ledgerWriter.js @install-ledger
+services/backend/src/cli/handlers/uninstall.js @install-ledger
+services/backend/src/services/mdEditorRegister.js @install-ledger
+services/backend/src/services/runtimeProvisioner.js @install-ledger
+services/backend/src/services/flagRegistry.js @install-ledger
+services/backend/tests/services/installLedger.test.js @install-ledger
+services/backend/tests/services/uninstallLedgerWiring.test.js @install-ledger
+services/backend/tests/services/ledgerWriter.test.js @install-ledger
+
+# 卸载第三方应用(原生自带卸载器 T2 层)
+services/backend/src/services/deviceApps/nativeUninstallPolicy.js @native-uninstall
+services/backend/src/services/deviceApps/nativeUninstaller.js @native-uninstall
+services/backend/src/services/deviceApps/uninstallRoute.js @native-uninstall
+services/backend/src/cli/handlers/device.js @native-uninstall
+services/backend/src/tools/DeviceAppsTool/index.js @native-uninstall
+services/backend/src/services/flagRegistry.js @native-uninstall
+services/backend/tests/services/deviceApps/nativeUninstallPolicy.test.js @native-uninstall
+services/backend/tests/services/deviceApps/nativeUninstaller.test.js @native-uninstall
+services/backend/tests/services/deviceApps/uninstallRoute.test.js @native-uninstall
+services/backend/tests/services/deviceApps/nativeUninstallWiring.test.js @native-uninstall
+
+# 持久目标连续多日运行不中断的底气自检
+services/backend/src/services/goalEndurance.js @goal-endurance
+services/backend/src/services/unattendedAutoAnswer.js @goal-endurance
+services/backend/src/services/chatErrorGuard.js @goal-endurance
+services/backend/src/services/autoAnswerIntentGuard.js @goal-endurance
+services/backend/src/services/goalStopGate.js @goal-endurance
+services/backend/src/cli/handlers/goal.js @goal-endurance
+services/backend/tests/services/goalEndurance.test.js @goal-endurance
+services/backend/tests/services/goalEnduranceWiring.test.js @goal-endurance
+services/backend/tests/services/unattendedAutoAnswer.test.js @goal-endurance
+services/backend/tests/toolUseLoop.unattendedAutoAnswer.test.js @goal-endurance
+services/backend/tests/services/chatErrorGuard.test.js @goal-endurance
+services/backend/tests/toolUseLoop.chatErrorGuard.test.js @goal-endurance
+services/backend/tests/services/autoAnswerIntentGuard.test.js @goal-endurance
+services/backend/tests/services/goalStopGateVerifyRan.test.js @goal-endurance
+
+# Startup Failure Real-cause + Fix
+services/backend/src/bootstrap/startupFailureExplain.js @startup-failure-explain
+services/backend/tests/bootstrap/startupFailureExplain.test.js @startup-failure-explain
+services/backend/bin/khy.js @startup-failure-explain
+
+# Windows .md Suggested-app Registration
+services/backend/src/services/mdSuggestedAppsPlan.js @md-suggested-apps
+services/backend/tests/services/mdSuggestedAppsPlan.test.js @md-suggested-apps
+tools/khyos-markdown/register-windows.ps1 @md-suggested-apps
+tools/khyos-markdown/unregister-windows.ps1 @md-suggested-apps
+services/backend/src/services/mdEditorRegister.js @md-suggested-apps
+
+# Fresh-machine Off-machine-restore Self-check in khy doctor
+services/backend/src/services/freshInstallDoctor.js @fresh-install-doctor
+services/backend/tests/services/freshInstallDoctor.test.js @fresh-install-doctor
+services/backend/src/cli/handlers/init.js @fresh-install-doctor
+
+# CJK-ize /recap so session recap produces content on Chinese sessions
+services/backend/src/services/sessionRecapCjk.js @session-recap-cjk
+services/backend/tests/services/sessionRecapCjk.test.js @session-recap-cjk
+services/backend/tests/services/sessionRecapService.cjk.test.js @session-recap-cjk
+services/backend/src/services/sessionRecapService.js @session-recap-cjk
+
+# npm-channel Node version preflight
+packaging/npm/scripts/nodeVersionPreflight.js @npm-node-preflight
+packaging/npm/test/nodeVersionPreflight.test.js @npm-node-preflight
+packaging/npm/bin/khy.js @npm-node-preflight
+
+# Restore Convergence & Loop-Guard Verifier
+scripts/lib/restoreConvergenceVerifier.js @restore-convergence-verifier
+scripts/restore-converge.js @restore-convergence-verifier
+scripts/tests/restoreConvergenceVerifier.test.js @restore-convergence-verifier
+
+# Dependency-aware WAVE scheduling + fault-aware execution
+services/backend/src/services/orchestrator/dependencyWaveScheduler.js @dependency-wave-scheduler
+services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js @dependency-wave-scheduler
+services/backend/src/services/agenticHarnessService.js @dependency-wave-scheduler
+services/backend/src/services/taskDecomposer.js @dependency-wave-scheduler
+services/backend/tests/services/mergeResultsSkipDistinct.test.js @dependency-wave-scheduler
+services/backend/tests/services/sequentialChainDecompose.test.js @dependency-wave-scheduler
+services/backend/src/services/orchestrator/roleToolScope.js @dependency-wave-scheduler
+services/backend/tests/services/orchestrator/roleToolScope.test.js @dependency-wave-scheduler
+services/backend/src/tools/AgentTool/index.js @dependency-wave-scheduler
+services/backend/src/services/orchestrator/mergeFileConflicts.js @dependency-wave-scheduler
+services/backend/tests/services/orchestrator/mergeFileConflicts.test.js @dependency-wave-scheduler
+services/backend/src/services/orchestrator/mergeEmptySuccess.js @dependency-wave-scheduler
+services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js @dependency-wave-scheduler
+services/backend/src/services/orchestrator/mergeRoleAttribution.js @dependency-wave-scheduler
+services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js @dependency-wave-scheduler
+
+# Restore Self-Drive Authorization Gate
+scripts/lib/restoreAutonomyGate.js @restore-autonomy-gate
+scripts/restore-authorize.js @restore-autonomy-gate
+scripts/tests/restoreAutonomyGate.test.js @restore-autonomy-gate
+
+# Restore Recourse / Actionable Denial
+scripts/lib/restoreRecoursePlan.js @restore-recourse-plan
+scripts/restore-recourse.js @restore-recourse-plan
+scripts/tests/restoreRecoursePlan.test.js @restore-recourse-plan
+
+# Restore Trace Journal / Durable Agent Memory
+scripts/lib/restoreTraceJournal.js @restore-trace-journal
+scripts/restore-trace.js @restore-trace-journal
+scripts/tests/restoreTraceJournal.test.js @restore-trace-journal
+
+# Restore Strategy Ledger / Cross-Session Learning
+scripts/lib/restoreStrategyLedger.js @restore-strategy-ledger
+scripts/restore-ledger.js @restore-strategy-ledger
+scripts/tests/restoreStrategyLedger.test.js @restore-strategy-ledger
+
+# Restore Skip Applier / Apply Cross-Session Learning
+scripts/lib/restoreSkipApplier.js @restore-skip-applier
+scripts/restore-apply.js @restore-skip-applier
+scripts/tests/restoreSkipApplier.test.js @restore-skip-applier
+
+# Restore Navigator / Single Next-Action
+scripts/lib/restoreNavigator.js @restore-navigator
+scripts/restore-navigate.js @restore-navigator
+scripts/tests/restoreNavigator.test.js @restore-navigator
+
+# Restore Extraction-Completeness Verifier
+scripts/lib/restoreCompletenessVerifier.js @restore-completeness-verifier
+scripts/restore-verify-complete.js @restore-completeness-verifier
+scripts/tests/restoreCompletenessVerifier.test.js @restore-completeness-verifier
+
+# Restore Snapshot-Format Compatibility Gate
+scripts/lib/snapshotFormatCompat.js @snapshot-format-compat
+scripts/restore-check-format.js @snapshot-format-compat
+scripts/tests/snapshotFormatCompat.test.js @snapshot-format-compat
+
+# Restore Provenance Reconciler
+scripts/lib/restoreProvenance.js @restore-provenance
+scripts/restore-provenance.js @restore-provenance
+scripts/tests/restoreProvenance.test.js @restore-provenance
+
+# Restore Archive-Extract Compatibility Gate
+scripts/lib/archiveExtractCompat.js @archive-extract-compat
+scripts/restore-check-archive.js @archive-extract-compat
+scripts/tests/archiveExtractCompat.test.js @archive-extract-compat
+
+# Restore Crypto-Suite Performability Gate
+scripts/lib/cryptoSuiteCompat.js @crypto-suite-compat
+scripts/restore-check-crypto.js @crypto-suite-compat
+scripts/tests/cryptoSuiteCompat.test.js @crypto-suite-compat
+
+# Restore Field Effect Probe / Jacobian Lens
+scripts/lib/restoreEffectProbe.js @restore-effect-probe
+scripts/restore-effect-probe.js @restore-effect-probe
+scripts/tests/restoreEffectProbe.test.js @restore-effect-probe
+
+# Restore Field-Consumer Attribution Probe / Label Preservation
+scripts/lib/restoreFieldAttribution.js @restore-field-attribution
+scripts/restore-field-attribution.js @restore-field-attribution
+scripts/tests/restoreFieldAttribution.test.js @restore-field-attribution
+
+# Restore Completeness Reconciliation -- RUNTIME wiring
+services/backend/src/services/restoreCompletenessCheck.js @restore-completeness-check
+services/backend/src/cli/handlers/publish.js @restore-completeness-check
+services/backend/tests/services/restoreCompletenessCheck.test.js @restore-completeness-check
+
+# Restore PRE-DECRYPT Compatibility Preflight -- RUNTIME wiring
+services/backend/src/services/restorePreflightCheck.js @restore-preflight-check
+services/backend/src/cli/handlers/publish.js @restore-preflight-check
+services/backend/tests/services/restorePreflightCheck.test.js @restore-preflight-check
+
+# Restore POST-DECRYPT PRE-EXTRACT inner-archive-shape check -- RUNTIME wiring
+services/backend/src/services/restoreArchiveExtractCheck.js @restore-archive-extract-check
+services/backend/src/cli/handlers/publish.js @restore-archive-extract-check
+services/backend/tests/services/restoreArchiveExtractCheck.test.js @restore-archive-extract-check
+
+# Restore ON-SUCCESS provenance honesty -- RUNTIME banner wiring
+services/backend/src/services/restoreProvenanceCheck.js @restore-provenance-check
+services/backend/src/cli/handlers/publish.js @restore-provenance-check
+services/backend/tests/services/restoreProvenanceCheck.test.js @restore-provenance-check
+
+# Restore POST-DECRYPT PRE-EXTRACT cross-OS path-portability pre-scan -- RUNTIME wiring
+services/backend/src/services/restorePathPortabilityCheck.js @restore-path-portability-check
+services/backend/src/cli/handlers/publish.js @restore-path-portability-check
+services/backend/tests/services/restorePathPortabilityCheck.test.js @restore-path-portability-check
+
+# First-response silent-window guard
+services/backend/src/cli/firstResponseAckVoice.js @first-response-ack-voice
+services/backend/src/cli/replSession.js @first-response-ack-voice
+services/backend/tests/cli/firstResponseAckVoice.test.js @first-response-ack-voice
+
+# readFile PRE-READ binary guard
+services/backend/src/tools/readBinaryGuard.js @readfile-binary-guard
+services/backend/src/tools/readFile.js @readfile-binary-guard
+services/backend/tests/tools/readBinaryGuard.test.js @readfile-binary-guard
+
+# readFile FORMAT-AWARE routing to existing extractors
+services/backend/src/tools/readFileFormatRouter.js @readfile-format-route
+services/backend/src/tools/readFile.js @readfile-format-route
+services/backend/tests/tools/readFileFormatRouter.test.js @readfile-format-route
+
+# readFile special-file (FIFO/socket/char-or-block-device) pre-read guard
+services/backend/src/tools/specialFileReadGuard.js @readfile-special-guard
+services/backend/src/tools/readFile.js @readfile-special-guard
+services/backend/tests/tools/specialFileReadGuard.test.js @readfile-special-guard
+
+# readFile pseudo-filesystem (/proc·/sys) bounded-timeout read
+services/backend/src/tools/pseudoFileReadGuard.js @readfile-pseudo-guard
+services/backend/src/tools/readFile.js @readfile-pseudo-guard
+services/backend/tests/tools/pseudoFileReadGuard.test.js @readfile-pseudo-guard
+
+# Shared pre-read hang guard for secondary file-reading tools
+services/backend/src/tools/filePreReadHangGuard.js @file-preread-hang-guard
+services/backend/src/tools/inspectDocument.js @file-preread-hang-guard
+services/backend/src/tools/replaceAtLocation.js @file-preread-hang-guard
+services/backend/src/tools/editFile.js @file-preread-hang-guard
+services/backend/src/tools/exploreTool.js @file-preread-hang-guard
+services/backend/tests/tools/filePreReadHangGuard.test.js @file-preread-hang-guard
+services/backend/src/tools/unpackTool.js @file-preread-hang-guard
+
+# Multi-Model-Type Provider Config Reconciler
+scripts/lib/modelTypeProviderPlan.js @model-type-provider-plan
+scripts/model-type-providers.js @model-type-provider-plan
+scripts/tests/modelTypeProviderPlan.test.js @model-type-provider-plan
+
+# 卡住任务的强制结束会话逃生舱
+services/backend/src/cli/repl/busyInterruptEscalation.js @busy-interrupt-escalation
+services/backend/src/cli/replSession.js @busy-interrupt-escalation
+services/backend/tests/services/cli/repl/busyInterruptEscalation.test.js @busy-interrupt-escalation
+
+# 便携 CLI 子系统
+services/backend/src/services/gateway/adapters/portableCliRegistry.js @portable-cli
+services/backend/src/services/gateway/adapters/portableCliResolver.js @portable-cli
+services/backend/src/services/gateway/adapters/portableCliInstaller.js @portable-cli
+services/backend/src/services/gateway/adapters/portableAdapterSpawn.js @portable-cli
+services/backend/src/services/gateway/adapters/opencodeBinResolver.js @portable-cli
+services/backend/src/cli/handlers/tools.js @portable-cli
+services/backend/src/cli/handlers/_portableAutoInstall.js @portable-cli
+services/backend/src/cli/handlers/ide.js @portable-cli
+services/backend/tests/services/gateway/adapters/portableCli.test.js @portable-cli
+
+# 写记忆/召回记忆时明确告知用户(记忆操作可见化纯叶)
+services/backend/src/services/memoryOpsNotice.js @memory-ops-notice
+services/backend/src/cli/ai.js @memory-ops-notice
+services/backend/src/cli/aiChatCore.js @memory-ops-notice
+services/backend/tests/services/memoryOpsNotice.test.js @memory-ops-notice
+
+# Text-only-model Image OCR Fallback + Honest Confidence Caveat
+services/backend/src/services/gateway/ocrConfidenceCaveat.js @ocr-fallback-confidence
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-confidence
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-confidence
+services/backend/src/services/ocrSnippetService.js @ocr-fallback-confidence
+services/backend/src/services/docHelper.py @ocr-fallback-confidence
+services/backend/tests/gateway/ocrConfidenceCaveat.test.js @ocr-fallback-confidence
+services/backend/tests/gateway/imageOcrFallbackWiring.test.js @ocr-fallback-confidence
+services/backend/tests/gateway/imageOcrFallbackRealImage.test.js @ocr-fallback-confidence
+tests/unit/test_dochelper_ocr_confidence.py @ocr-fallback-confidence
+
+# Text-only-model Image OCR Fallback -- Honest COVERAGE Caveat
+services/backend/src/services/gateway/ocrCoverageNotice.js @ocr-fallback-coverage
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-coverage
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-coverage
+services/backend/tests/gateway/ocrCoverageNotice.test.js @ocr-fallback-coverage
+services/backend/tests/gateway/imageOcrCoverageWiring.test.js @ocr-fallback-coverage
+
+# Text-only-model Image OCR Fallback -- Honest TRUNCATION Caveat
+services/backend/src/services/gateway/ocrTruncationNotice.js @ocr-fallback-truncation
+services/backend/src/services/ocrSnippetService.js @ocr-fallback-truncation
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-truncation
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-truncation
+services/backend/tests/gateway/ocrTruncationNotice.test.js @ocr-fallback-truncation
+services/backend/tests/gateway/imageOcrTruncationWiring.test.js @ocr-fallback-truncation
+
+# Text-only-model Image OCR Fallback -- Honest LANGUAGE-PACK Caveat
+services/backend/src/services/gateway/ocrLanguageNotice.js @ocr-fallback-language
+services/backend/src/services/docHelper.py @ocr-fallback-language
+services/backend/src/services/ocrSnippetService.js @ocr-fallback-language
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-language
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-language
+services/backend/tests/gateway/ocrLanguageNotice.test.js @ocr-fallback-language
+services/backend/tests/gateway/imageOcrLanguageWiring.test.js @ocr-fallback-language
+services/backend/tests/gateway/ocrLanguageNarrowing.test.js @ocr-fallback-language
+
+# Text-only-model Image OCR Fallback -- Auto-ORIENTATION Correction
+services/backend/src/services/gateway/ocrOrientationNotice.js @ocr-fallback-orientation
+services/backend/src/services/docHelper.py @ocr-fallback-orientation
+services/backend/src/services/ocrSnippetService.js @ocr-fallback-orientation
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-orientation
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-orientation
+services/backend/tests/gateway/ocrOrientationNotice.test.js @ocr-fallback-orientation
+services/backend/tests/gateway/imageOcrOrientationWiring.test.js @ocr-fallback-orientation
+services/backend/tests/gateway/ocrOrientationRecovery.test.js @ocr-fallback-orientation
+
+# Text-only-model Image OCR Fallback -- Low-RESOLUTION Auto-Upscale
+services/backend/src/services/gateway/ocrResolutionNotice.js @ocr-fallback-resolution
+services/backend/src/services/docHelper.py @ocr-fallback-resolution
+services/backend/src/services/ocrSnippetService.js @ocr-fallback-resolution
+services/backend/src/services/gateway/aiGateway.js @ocr-fallback-resolution
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-fallback-resolution
+services/backend/tests/gateway/ocrResolutionNotice.test.js @ocr-fallback-resolution
+services/backend/tests/gateway/imageOcrResolutionWiring.test.js @ocr-fallback-resolution
+services/backend/tests/gateway/ocrResolutionRecovery.test.js @ocr-fallback-resolution
+
+# unpack Unknown-Format Self-Remediation
+services/backend/src/services/reverseEngineer/genericExtractor.js @unpack-generic-fallback
+services/backend/src/tools/unpackTool.js @unpack-generic-fallback
+services/backend/tests/tools/unpackGeneric.test.js @unpack-generic-fallback
+services/backend/tests/tools/unpackAsar.test.js @unpack-generic-fallback
+
+# Text-only-model Image OCR Fallback -- Describe-cascade-fail SAFETY FLOOR
+services/backend/src/services/gateway/visionOcrFallback.js @vision-describe-fail-ocr-floor
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-describe-fail-ocr-floor
+services/backend/src/services/flagRegistry.js @vision-describe-fail-ocr-floor
+services/backend/tests/visionOcrFallback.test.js @vision-describe-fail-ocr-floor
+services/backend/tests/gateway/visionDescribeFailFloorWiring.test.js @vision-describe-fail-ocr-floor
+services/backend/tests/gateway/visionDescribeFailFloorRealImage.test.js @vision-describe-fail-ocr-floor
+
+# Text-only-model Image OCR Fallback -- STRIP-IMAGE irreducible honesty floor
+services/backend/src/services/gateway/visionOcrFallback.js @vision-strip-image-floor
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-strip-image-floor
+services/backend/src/services/flagRegistry.js @vision-strip-image-floor
+services/backend/tests/gateway/visionStripImageFloorWiring.test.js @vision-strip-image-floor
+services/backend/tests/gateway/visionStripImageFloorRealImage.test.js @vision-strip-image-floor
+
+# Text-only-model Image OCR Fallback -- POST-FAILURE rescue-net STRIP-IMAGE honesty floor
+services/backend/src/services/gateway/visionOcrFallback.js @vision-rescue-strip-floor
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-rescue-strip-floor
+services/backend/src/services/flagRegistry.js @vision-rescue-strip-floor
+services/backend/tests/gateway/visionRescueStripFloorWiring.test.js @vision-rescue-strip-floor
+services/backend/tests/gateway/visionRescueStripFloorRealImage.test.js @vision-rescue-strip-floor
+
+# Text-only-model Image OCR Fallback -- OCR-SUCCESS user-facing TRANSPARENCY disclosure
+services/backend/src/services/gateway/ocrUsageNotice.js @ocr-usage-disclosure
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-usage-disclosure
+services/backend/src/services/flagRegistry.js @ocr-usage-disclosure
+services/backend/tests/gateway/ocrUsageNotice.test.js @ocr-usage-disclosure
+services/backend/tests/gateway/ocrUsageDisclosureWiring.test.js @ocr-usage-disclosure
+services/backend/tests/gateway/ocrUsageDisclosureRealImage.test.js @ocr-usage-disclosure
+
+# Text-only-model Image OCR Fallback -- DETERMINISTIC user-facing OCR footnote
+services/backend/src/services/gateway/ocrUsageFootnote.js @ocr-usage-footnote
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-usage-footnote
+services/backend/src/services/flagRegistry.js @ocr-usage-footnote
+services/backend/tests/gateway/ocrUsageFootnote.test.js @ocr-usage-footnote
+services/backend/tests/gateway/ocrUsageFootnoteWiring.test.js @ocr-usage-footnote
+services/backend/tests/gateway/ocrUsageFootnoteRealImage.test.js @ocr-usage-footnote
+
+# Text-only-model Image OCR Fallback -- DETERMINISTIC answer-side CORRECTION when model denies image
+services/backend/src/services/gateway/visionDenialCorrection.js @vision-denial-correction
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-denial-correction
+services/backend/src/services/flagRegistry.js @vision-denial-correction
+services/backend/tests/gateway/visionDenialCorrection.test.js @vision-denial-correction
+services/backend/tests/gateway/visionDenialCorrectionWiring.test.js @vision-denial-correction
+services/backend/tests/gateway/visionDenialCorrectionRealImage.test.js @vision-denial-correction
+
+# Text-only-model Image OCR Fallback -- DEFER vision-failure WALL until OCR outcome known
+services/backend/src/services/gateway/visionFailureSummary.js @vision-failure-summary-ocr-suppress
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-failure-summary-ocr-suppress
+services/backend/src/services/flagRegistry.js @vision-failure-summary-ocr-suppress
+services/backend/tests/services/gateway/visionFailureSummary.test.js @vision-failure-summary-ocr-suppress
+services/backend/tests/gateway/visionFailureSummaryOcrSuppressWiring.test.js @vision-failure-summary-ocr-suppress
+services/backend/tests/gateway/visionFailureSummaryOcrSuppressRealImage.test.js @vision-failure-summary-ocr-suppress
+
+# Text-only-model Image OCR Fallback -- user-visible CLOSURE when describe-fail to OCR-SUCCESS
+services/backend/src/services/gateway/visionOcrSuccessClosure.js @vision-ocr-success-closure
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-ocr-success-closure
+services/backend/src/services/flagRegistry.js @vision-ocr-success-closure
+services/backend/tests/services/gateway/visionOcrSuccessClosure.test.js @vision-ocr-success-closure
+services/backend/tests/gateway/visionOcrSuccessClosureWiring.test.js @vision-ocr-success-closure
+services/backend/tests/gateway/visionOcrSuccessClosureRealImage.test.js @vision-ocr-success-closure
+
+# Text-only-model Image OCR Fallback -- de-duplicate per-candidate cascade notices
+services/backend/src/services/gateway/visionCascadeAttemptNotice.js @vision-cascade-attempt-notice
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-cascade-attempt-notice
+services/backend/src/services/flagRegistry.js @vision-cascade-attempt-notice
+services/backend/tests/services/gateway/visionCascadeAttemptNotice.test.js @vision-cascade-attempt-notice
+services/backend/tests/gateway/visionCascadeAttemptNoticeWiring.test.js @vision-cascade-attempt-notice
+services/backend/tests/gateway/visionCascadeAttemptNoticeRealImage.test.js @vision-cascade-attempt-notice
+
+# Text-only-model Image OCR Fallback -- strip provider ROUTING PREFIX from vision model names
+services/backend/src/services/gateway/visionModelDisplayName.js @vision-model-display-name
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-model-display-name
+services/backend/src/services/flagRegistry.js @vision-model-display-name
+services/backend/tests/services/gateway/visionModelDisplayName.test.js @vision-model-display-name
+services/backend/tests/gateway/visionModelDisplayNameWiring.test.js @vision-model-display-name
+services/backend/tests/gateway/visionModelDisplayNameRealImage.test.js @vision-model-display-name
+
+# Text-only-model Image OCR Fallback -- strip provider prefix from failure-summary wall model name
+services/backend/src/services/gateway/visionFailureSummary.js @vision-failure-summary-display-name
+services/backend/src/services/gateway/visionModelDisplayName.js @vision-failure-summary-display-name
+services/backend/tests/gateway/visionFailureSummaryDisplayName.test.js @vision-failure-summary-display-name
+
+# Text-only-model Image OCR Fallback -- dedup '真实失败原因:' label on failure-summary wall
+services/backend/src/services/gateway/visionFailureSummary.js @vision-failure-cause-dedup
+services/backend/src/services/flagRegistry.js @vision-failure-cause-dedup
+services/backend/tests/gateway/visionFailureCauseDedup.test.js @vision-failure-cause-dedup
+
+# Text-only-model Image OCR Fallback -- humanize vision-pool adapter-failure STATUS on OCR-rescued path
+services/backend/src/services/gateway/visionPoolFailStatus.js @vision-pool-fail-status-humanize
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @vision-pool-fail-status-humanize
+services/backend/src/services/flagRegistry.js @vision-pool-fail-status-humanize
+services/backend/tests/gateway/visionPoolFailStatusHumanize.test.js @vision-pool-fail-status-humanize
+
+# Text-only-model Image OCR Fallback -- DETERMINISTIC live-STATUS at post-failure rescue net
+services/backend/src/services/gateway/ocrRescueStatusNotice.js @ocr-rescue-status
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-rescue-status
+services/backend/src/services/flagRegistry.js @ocr-rescue-status
+services/backend/tests/gateway/ocrRescueStatusNotice.test.js @ocr-rescue-status
+services/backend/tests/gateway/ocrRescueStatusNoticeWiring.test.js @ocr-rescue-status
+services/backend/tests/gateway/ocrRescueStatusNoticeRealImage.test.js @ocr-rescue-status
+
+# CI Duplicate-code Detection Gate + Shared OCR-gateway Test Harness
+services/backend/tests/gateway/_ocrGatewayHarness.js @ci-duplication-guard
+scripts/lib/duplicationGuard.js @ci-duplication-guard
+scripts/check-duplication.js @ci-duplication-guard
+.duplication-baseline.json @ci-duplication-guard
+scripts/tests/duplicationGuard.test.js @ci-duplication-guard
+scripts/tests/check-duplication.test.js @ci-duplication-guard
+
+# Text-only-model Image OCR Fallback -- DETERMINISTIC live-STATUS at PREP-time sites
+services/backend/src/services/gateway/ocrRescueStatusNotice.js @ocr-rescue-status-prep
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-rescue-status-prep
+services/backend/src/services/flagRegistry.js @ocr-rescue-status-prep
+services/backend/tests/gateway/ocrRescueStatusPrep.test.js @ocr-rescue-status-prep
+services/backend/tests/gateway/ocrRescueStatusPrepWiring.test.js @ocr-rescue-status-prep
+services/backend/tests/gateway/ocrRescueStatusPrepRealImage.test.js @ocr-rescue-status-prep
+
+# Text-only-model Image OCR Fallback -- CROSS-LAYER de-dup of Site1 prep-status and OCR-success closure
+services/backend/src/services/gateway/ocrRescueStatusNotice.js @ocr-rescue-prep-closure-dedup
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @ocr-rescue-prep-closure-dedup
+services/backend/src/services/flagRegistry.js @ocr-rescue-prep-closure-dedup
+services/backend/tests/gateway/ocrRescueStatusNotice.test.js @ocr-rescue-prep-closure-dedup
+services/backend/tests/gateway/ocrRescuePrepClosureDedupWiring.test.js @ocr-rescue-prep-closure-dedup
+services/backend/tests/gateway/ocrRescuePrepClosureDedupRealImage.test.js @ocr-rescue-prep-closure-dedup
+
+# Vision-Cascade Exhaustion Diagnostic -- NETWORK reason class
+services/backend/src/services/gateway/visionExhaustionDiagnostic.js @vision-network-exhaustion
+services/backend/src/services/flagRegistry.js @vision-network-exhaustion
+services/backend/tests/services/visionExhaustionDiagnostic.test.js @vision-network-exhaustion
+services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js @vision-network-exhaustion
+
+# Workflow list load -- page-scoped degraded UI
+apps/ai-frontend/src/composables/useWorkflow.js @workflow-frontend-degraded-load
+apps/ai-frontend/src/views/Workflows.vue @workflow-frontend-degraded-load
+apps/ai-frontend/src/composables/useWorkflow.wiring.test.js @workflow-frontend-degraded-load
+
+# 缓存前缀击穿归因
+services/backend/src/constants/promptPrefixShape.js @cache-prefix-shape-attribution
+services/backend/src/cli/cacheWarning.js @cache-prefix-shape-attribution
+services/backend/src/services/gateway/aiGatewayGenerateMethod.js @cache-prefix-shape-attribution
+services/backend/src/cli/replSession.js @cache-prefix-shape-attribution
+services/backend/tests/constants/promptPrefixShape.test.js @cache-prefix-shape-attribution
+services/backend/tests/cli/cacheWarning.test.js @cache-prefix-shape-attribution
+
+# 交付门人类可读报告落盘
+services/backend/src/services/deliveryGateReporter.js @delivery-gate-report-artifact
+services/backend/src/services/agenticHarnessService.js @delivery-gate-report-artifact
+services/backend/src/services/flagRegistry.js @delivery-gate-report-artifact
+services/backend/tests/services/deliveryGateReporter.test.js @delivery-gate-report-artifact
+
+# 会话快照损坏兜底修复
+services/backend/src/services/sessionFileRepair.js @session-file-repair-restore
+services/backend/src/services/sessionPersistence.js @session-file-repair-restore
+services/backend/src/services/flagRegistry.js @session-file-repair-restore
+services/backend/tests/services/sessionFileRepairWiring.test.js @session-file-repair-restore
+
+# 任务模板执行手册注入
+services/backend/src/services/taskTemplates.js @task-template-hint-injection
+services/backend/src/services/agenticHarnessService.js @task-template-hint-injection
+services/backend/src/services/flagRegistry.js @task-template-hint-injection
+services/backend/tests/services/taskTemplateHintWiring.test.js @task-template-hint-injection
+
+# 指令注册表编译期收敛守卫
+services/backend/src/services/directiveRegistryAudit.js @directive-registry-audit-guard
+services/backend/src/services/directiveComposer.js @directive-registry-audit-guard
+services/backend/src/cli/aiChatCore.js @directive-registry-audit-guard
+services/backend/tests/services/directiveRegistryAudit.guard.test.js @directive-registry-audit-guard
+
+# 取来即执行安全守卫接线
+services/backend/src/services/fetchExecuteGuard.js @fetch-execute-guard-shell-safety
+services/backend/src/services/shellSafetyValidator.js @fetch-execute-guard-shell-safety
+services/backend/src/services/flagRegistry.js @fetch-execute-guard-shell-safety
+services/backend/tests/security/fetchExecuteGuardWiring.test.js @fetch-execute-guard-shell-safety
+
+# 用户显式 git-init 白名单覆盖接线
+services/backend/src/services/gitTrackWhitelist.js @git-track-whitelist-init-override
+services/backend/src/services/workspaceGitInit.js @git-track-whitelist-init-override
+services/backend/src/services/workspaceGitInitPolicy.js @git-track-whitelist-init-override
+services/backend/tests/services/gitTrackWhitelistWiring.test.js @git-track-whitelist-init-override
+
+# 本地 Ollama 模型并入统一目录接线
+services/backend/src/services/gateway/localOllamaProbe.js @local-model-catalog-graph
+services/backend/src/services/gateway/modelCatalogGraph.js @local-model-catalog-graph
+services/backend/src/services/flagRegistry.js @local-model-catalog-graph
+services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js @local-model-catalog-graph
+
+# 行为特征化并入误报收口裁决接线
+services/backend/src/services/characterizationSnapshot.js @characterization-silent-drift-fpf
+services/backend/src/services/falsePositiveFixGuard.js @characterization-silent-drift-fpf
+services/backend/src/services/agenticHarnessService.js @characterization-silent-drift-fpf
+services/backend/src/services/flagRegistry.js @characterization-silent-drift-fpf
+services/backend/tests/services/characterizationFpfWiring.test.js @characterization-silent-drift-fpf
+
+# CLI/Web 管理面平价守卫
+services/backend/src/services/management/parityGuard.js @parity-guard-cli-web
+services/backend/src/services/management/index.js @parity-guard-cli-web
+services/backend/src/constants/commandSchema.js @parity-guard-cli-web
+services/backend/tests/services/management/parityGuardWiring.test.js @parity-guard-cli-web
+
+# 动作契约极小核验器 V 的 CI 强制
+services/backend/src/services/syscallGateway/actionContractVerifier.js @action-contract-verifier-ci-guard
+services/backend/tests/actionContractVerifier.test.js @action-contract-verifier-ci-guard
+services/backend/src/services/flagRegistry.js @action-contract-verifier-ci-guard
+
+# 离线文档站生成器
+scripts/docs/build_docs_site.js @docs-site-generator
+scripts/docs/verify_docs_site.js @docs-site-generator
+scripts/docs/build_docs_site.test.js @docs-site-generator
+scripts/docs/lint_docs_widgets.js @docs-site-generator
+scripts/docs/lint_docs_widgets.test.js @docs-site-generator
+docs/_assets/docs-site.css @docs-site-generator
+docs/_assets/docs-site.js @docs-site-generator
+docs/_assets/nav-data.js @docs-site-generator
+scripts/release/docs_bundle_regen.py @docs-site-generator
+platform/khy_platform/docs_site.py @docs-site-generator
+setup.py @docs-site-generator
+tests/unit/test_docs_site_build.py @docs-site-generator
+
+# Google Vertex AI 端点成形 CLI 接线
+services/backend/src/services/gateway/vertexRequestShaping.js @gateway-vertex-shaping
+services/backend/src/services/gateway/providerPresets.js @gateway-vertex-shaping
+services/backend/src/cli/handlers/gateway.js @gateway-vertex-shaping
+services/backend/src/cli/router.js @gateway-vertex-shaping
+services/backend/tests/services/gateway/vertexRequestShaping.test.js @gateway-vertex-shaping
+services/backend/tests/services/gateway/vertexHandlerWiring.test.js @gateway-vertex-shaping
+
+# khy msg 多平台消息收发 (钉钉/飞书/企业微信)
+services/backend/src/services/messaging/msgChannelCore.js @messaging-channels
+services/backend/src/services/messaging/msgInboundCore.js @messaging-channels
+services/backend/src/services/messaging/msgConfigStore.js @messaging-channels
+services/backend/src/services/messaging/msgSender.js @messaging-channels
+services/backend/src/services/channels/dingtalkChannel.js @messaging-channels
+services/backend/src/services/channels/feishuChannel.js @messaging-channels
+services/backend/src/services/channels/wecomChannel.js @messaging-channels
+services/backend/src/services/channels/messageRouter.js @messaging-channels
+services/backend/src/services/messaging/msgReplyBridge.js @messaging-channels
+services/backend/src/routes/webhooks.js @messaging-channels
+services/backend/src/cli/handlers/msg.js @messaging-channels
+services/backend/src/cli/router.js @messaging-channels
+services/backend/src/constants/commandSchema.js @messaging-channels
+
+# 弱模型护栏引擎
+services/backend/src/services/weakModelGuidance.js @weak-model-guidance
+services/backend/src/tools/WeakModelGuidanceTool/index.js @weak-model-guidance
+services/backend/src/tools/CommentGuidanceTool/index.js @weak-model-guidance
+services/backend/src/services/__tests__/weakModelGuidance.test.js @weak-model-guidance
+
+# 弱模型改动守卫
+services/backend/src/services/weakModelChangeGuard.js @weak-model-change-guard
+services/backend/tests/services/weakModelChangeGuard.test.js @weak-model-change-guard
+
+# 注释引导引擎
+services/backend/src/services/commentGuidance.js @comment-guidance
+services/backend/src/tools/CommentGuidanceTool/index.js @comment-guidance
+services/backend/tests/commentGuidance.test.js @comment-guidance
+
+# 定时调度(khy cron)
+services/backend/src/jobs/cronScheduler.js @cron-scheduling
+services/backend/src/services/cronScheduler.js @cron-scheduling
+services/backend/src/tools/ScheduleCronTool/ @cron-scheduling
+services/backend/src/tools/CronListTool/ @cron-scheduling
+services/backend/src/tools/CronDeleteTool/ @cron-scheduling
+services/backend/src/cli/handlers/cron.js @cron-scheduling
+services/backend/tests/services/cronScheduler.test.js @cron-scheduling
+
+# 未来抗性四支柱体检
+services/backend/src/services/futureProofing.js @future-proofing
+services/backend/src/cli/handlers/maintain.js @future-proofing
+services/backend/tests/services/futureProofing.test.js @future-proofing

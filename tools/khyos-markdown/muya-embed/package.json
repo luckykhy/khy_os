@@ -1,0 +1,19 @@
+{
+  "name": "khyos-muya-embed",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dev-only build harness: bundles MarkText @muyajs/core into a self-contained offline vendor/ asset served same-origin by khyos-md-bridge.js. Output committed to ../vendor/; this dir's node_modules is NOT shipped.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@muyajs/core": "^0.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "overrides": {
+    "file-icons": "file:./stubs/file-icons"
+  }
+}

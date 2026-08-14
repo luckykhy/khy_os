@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Agents.md Guide · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>wasm-indicators<span class="sep">›</span>Project Agents.md Guide</div>
+      <header class="hero reveal"><h1>Project Agents.md Guide</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#project-agents-md-guide">Project Agents.md Guide</a></li><li class="lvl-2"><a href="#project-structure">Project Structure</a></li><li class="lvl-2"><a href="#coding-convention">Coding convention</a></li><li class="lvl-2"><a href="#tooling">Tooling</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="project-agents-md-guide">Project Agents.md Guide<a class="anchor" href="#project-agents-md-guide" aria-label="锚点">#</a></h1>
+<p>This is a <a href="https://docs.moonbitlang.com" target="_blank" rel="noopener">MoonBit</a> project.</p>
+<p>You can browse and install extra skills here:<br><a href="https://github.com/moonbitlang/skills" target="_blank" rel="noopener">https://github.com/moonbitlang/skills</a></p>
+<h2 id="project-structure">Project Structure<a class="anchor" href="#project-structure" aria-label="锚点">#</a></h2>
+<ul><li>MoonBit packages are organized per directory; each directory contains a</li></ul>
+<p><code>moon.pkg</code> file listing its dependencies. Each package has its files and<br>  blackbox test files (ending in <code>_test.mbt</code>) and whitebox test files (ending in<br>  <code>_wbtest.mbt</code>).</p>
+<ul><li>In the toplevel directory, there is a <code>moon.mod.json</code> file listing module</li></ul>
+<p>metadata.</p>
+<h2 id="coding-convention">Coding convention<a class="anchor" href="#coding-convention" aria-label="锚点">#</a></h2>
+<ul><li>MoonBit code is organized in block style, each block is separated by <code>///|</code>,</li></ul>
+<p>the order of each block is irrelevant. In some refactorings, you can process<br>  block by block independently.</p>
+<ul><li>Try to keep deprecated blocks in file called <code>deprecated.mbt</code> in each</li></ul>
+<p>directory.</p>
+<h2 id="tooling">Tooling<a class="anchor" href="#tooling" aria-label="锚点">#</a></h2>
+<ul><li><code>moon fmt</code> is used to format your code properly.</li><li><code>moon ide</code> provides project navigation helpers like <code>peek-def</code>, <code>outline</code>, and</li></ul>
+<p><code>find-references</code>. See $moonbit-agent-guide for details.</p>
+<ul><li><code>moon info</code> is used to update the generated interface of the package, each</li></ul>
+<p>package has a generated interface file <code>.mbti</code>, it is a brief formal<br>  description of the package. If nothing in <code>.mbti</code> changes, this means your<br>  change does not bring the visible changes to the external package users, it is<br>  typically a safe refactoring.</p>
+<ul><li>In the last step, run <code>moon info &amp;&amp; moon fmt</code> to update the interface and</li></ul>
+<p>format the code. Check the diffs of <code>.mbti</code> file to see if the changes are<br>  expected.</p>
+<ul><li>Run <code>moon test</code> to check tests pass. MoonBit supports snapshot testing; when</li></ul>
+<p>changes affect outputs, run <code>moon test --update</code> to refresh snapshots.</p>
+<ul><li>Prefer <code>assert_eq</code> or <code>assert_true(pattern is Pattern(...))</code> for results that</li></ul>
+<p>are stable or very unlikely to change. Use snapshot tests to record current<br>  behavior. For solid, well-defined results (e.g. scientific computations),<br>  prefer assertion tests. You can use <code>moon coverage analyze &gt; uncovered.log</code> to<br>  see which parts of your code are not covered by tests.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../services/backend/src/skills/system-admin/linux-admin/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Linux System Administration</div></a><a class="next" href="../../../services/backend/wasm-indicators/README.html"><div class="dir">下一篇 →</div><div class="ttl">khyquant/indicators</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="services/backend/wasm-indicators/AGENTS.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

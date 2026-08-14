@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# khyosMarkdown — Cross-platform Markdown editor launcher
+# Usage: khyosmarkdown [file.md]
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BRIDGE="$SCRIPT_DIR/khyos-md-bridge.js"
+
+# Find node executable
+find_node() {
+    # fnm managed
+    if command -v fnm &>/dev/null; then
+        local fnm_node
+        fnm_node="$(fnm exec --using default -- which node 2>/dev/null)"
+        if [ -n "$fnm_node" ] && [ -x "$fnm_node" ]; then
+            echo "$fnm_node"
+            return
+        fi
+    fi
+    # nvm managed
+    if [ -n "$NVM_DIR" ] && [ -x "$NVM_DIR/nvm.sh" ]; then
+        source "$NVM_DIR/nvm.sh" --no-use
+        local nvm_node
+        nvm_node="$(nvm which default 2>/dev/null)"
+        if [ -n "$nvm_node" ] && [ -x "$nvm_node" ]; then
+            echo "$nvm_node"
+            return
+        fi
+    fi
+    # System PATH
+    if command -v node &>/dev/null; then
+        command -v node
+        return
+    fi
+    echo ""
+}
+
+NODE="$(find_node)"
+if [ -z "$NODE" ]; then
+    echo "错误：未找到 Node.js，请安装 Node.js 20+ 后重试" >&2
+    echo "  推荐: curl -fsSL https://fnm.vercel.app/install | bash" >&2
+    exit 1
+fi
+
+# Check node version >= 20
+NODE_VER="$("$NODE" -e "process.stdout.write(String(process.versions.node.split('.')[0]))")"
+if [ "$NODE_VER" -lt 20 ] 2>/dev/null; then
+    echo "警告：Node.js 版本 $NODE_VER 过低，建议升级到 20+" >&2
+fi
+
+# Launch bridge with file argument
+exec "$NODE" "$BRIDGE" "$@"

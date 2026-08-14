@@ -1,0 +1,3 @@
+// Library package for `khyos/context_utils`.
+// Provides token estimation, FNV-1a hashing, and text truncation.
+// Executable entrypoints live under `cmd/`.
