@@ -753,10 +753,24 @@ async function ensureAuthenticated() {
               console.log('');
               return true;
             } else {
-              printInfo('自动登录失败，请手动输入凭据');
+              // Auto-login failed, try auto-register if user doesn't exist
+              printInfo(`用户不存在，正在自动注册...`);
+              try {
+                const registerResult = await auth.register(defaultUsername, autoPassword);
+                if (registerResult.success) {
+                  console.log('');
+                  printSuccess(`✓ 自动注册并登录成功! 欢迎, ${registerResult.username}`);
+                  console.log('');
+                  return true;
+                } else {
+                  printInfo(`自动注册失败: ${registerResult.error || 'unknown'}`);
+                }
+              } catch (regErr) {
+                printInfo(`自动注册失败，将进入手动登录`);
+              }
             }
           } catch (err) {
-            printInfo('自动登录失败，请手动输入凭据');
+            printInfo(`自动登录异常: ${err.message || 'unknown'}`);
           }
           console.log('');
         }
