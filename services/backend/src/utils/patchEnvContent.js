@@ -22,8 +22,11 @@ function patchEnvContent(content, envMap = {}, unsetKeys = []) {
   for (const [key, value] of Object.entries(envMap)) {
     const regex = new RegExp(`^${key}=.*$`, 'm');
     const line = `${key}=${value}`;
-    if (regex.test(next)) next = next.replace(regex, line);
-    else next = next.trimEnd() + '\n' + line + '\n';
+    if (regex.test(next)) {
+      next = next.replace(regex, line);
+    } else {
+      next = next.trimEnd() + '\n' + line + '\n';
+    }
   }
   for (const key of unsetKeys) {
     const regex = new RegExp(`^${key}=.*\\n?`, 'm');

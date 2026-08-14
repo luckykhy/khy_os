@@ -122,6 +122,33 @@ const STAGES = [
     kind: 'deterministic',
     command: 'npm run check:pip-packaging',
   },
+  {
+    // 协议合规:校验 .khy/ 下 JSON 文件是否符合 FILE-FORMAT-PROTOCOL.md 注册的 schema。
+    // 防止运行时状态 / 审计记录结构漂移导致解析器静默失败。
+    id: 'json-schema-validation',
+    title: 'JSON 协议合规(.khy/ JSON schema 校验)',
+    tier: 'must',
+    kind: 'deterministic',
+    command: 'node scripts/ci/validate-json-schemas.js',
+  },
+  {
+    // 通信协议契约:校验 HTTP/WebSocket/IPC 消息信封、工具调用块等协议契约 schema。
+    // 对应 COMMUNICATION-PROTOCOL.md 定义，防止消息格式漂移导致跨组件通信断裂。
+    id: 'protocol-contract-validation',
+    title: '通信协议契约校验(HTTP/WS/IPC 消息格式)',
+    tier: 'must',
+    kind: 'deterministic',
+    command: 'node scripts/ci/validate-protocol-contracts.js',
+  },
+  {
+    // 可靠性契约:校验任务状态机完整性、Watchdog 覆盖率、Receipt 闭合性、AbortSignal
+    // 传播链路、重试分类。对应 RELIABILITY-PROTOCOL.md 定义，防止长任务可靠性机制漂移。
+    id: 'reliability-gate',
+    title: '可靠性契约校验(状态机/Watchdog/Receipt/AbortSignal/重试)',
+    tier: 'must',
+    kind: 'deterministic',
+    command: 'node scripts/ci/validate-reliability.js',
+  },
 
   // ── 环境门 ────────────────────────────────────────────────────────────────
   // 干净容器新装、真实旧版升级、前后端实连、回滚——本机无法确定性执行。门禁把它们

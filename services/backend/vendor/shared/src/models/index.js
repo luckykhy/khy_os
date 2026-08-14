@@ -42,6 +42,10 @@ const UserProject = require('./UserProject');
 const PromptTemplate = require('./PromptTemplate');
 const MarketplacePlugin = require('./MarketplacePlugin');
 const UserInstalledPlugin = require('./UserInstalledPlugin');
+const GuiEvalTask = require('./GuiEvalTask');
+const GuiEvalRun = require('./GuiEvalRun');
+const WebFrontendEvalTask = require('./WebFrontendEvalTask');
+const WebFrontendEvalRun = require('./WebFrontendEvalRun');
 
 // 定义关联关系
 User.hasMany(Strategy, { foreignKey: 'user_id', as: 'strategies' });
@@ -156,6 +160,22 @@ UserInstalledPlugin.belongsTo(User, { foreignKey: 'user_id', as: 'user', constra
 MarketplacePlugin.hasMany(UserInstalledPlugin, { foreignKey: 'plugin_id', as: 'installations', constraints: false });
 UserInstalledPlugin.belongsTo(MarketplacePlugin, { foreignKey: 'plugin_id', as: 'plugin', constraints: false });
 
+// GUI Agent 评测：每用户可创建评测任务，每个任务可触发多次运行。constraints:false —— 与
+// Conversation 同理，单机/可信网络旁路模式下 user_id 可能为哨兵 0。
+User.hasMany(GuiEvalTask, { foreignKey: 'created_by', as: 'guiEvalTasks', constraints: false });
+GuiEvalTask.belongsTo(User, { foreignKey: 'created_by', as: 'author', constraints: false });
+
+GuiEvalTask.hasMany(GuiEvalRun, { foreignKey: 'task_id', as: 'runs', constraints: false });
+GuiEvalRun.belongsTo(GuiEvalTask, { foreignKey: 'task_id', as: 'task', constraints: false });
+
+// ── Web Frontend 轨迹标注 ──────────────────────────────────────
+// constraints:false —— 与 GuiEval 同理，单机/可信网络旁路模式下 user_id 可能为哨兵 0。
+User.hasMany(WebFrontendEvalTask, { foreignKey: 'created_by', as: 'webFrontendEvalTasks', constraints: false });
+WebFrontendEvalTask.belongsTo(User, { foreignKey: 'created_by', as: 'author', constraints: false });
+
+WebFrontendEvalTask.hasMany(WebFrontendEvalRun, { foreignKey: 'task_id', as: 'runs', constraints: false });
+WebFrontendEvalRun.belongsTo(WebFrontendEvalTask, { foreignKey: 'task_id', as: 'task', constraints: false });
+
 module.exports = {
   sequelize,
   User,
@@ -187,5 +207,9 @@ module.exports = {
   UserProject,
   PromptTemplate,
   MarketplacePlugin,
-  UserInstalledPlugin
+  UserInstalledPlugin,
+  GuiEvalTask,
+  GuiEvalRun,
+  WebFrontendEvalTask,
+  WebFrontendEvalRun,
 };

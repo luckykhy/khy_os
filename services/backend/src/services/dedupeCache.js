@@ -40,12 +40,16 @@ function createDedupeCache(options) {
 
   function _hasUnexpired(key, now, touchOnRead) {
     const ts = entries.get(key);
-    if (ts === undefined) return false;
-    if (ttlMs > 0 && (now - ts) >= ttlMs) {
+    if (ts === undefined) {
+      return false;
+    }
+    if (ttlMs > 0 && now - ts >= ttlMs) {
       entries.delete(key);
       return false;
     }
-    if (touchOnRead) _touch(key, now);
+    if (touchOnRead) {
+      _touch(key, now);
+    }
     return true;
   }
 
@@ -54,7 +58,9 @@ function createDedupeCache(options) {
     if (ttlMs > 0) {
       const cutoff = now - ttlMs;
       for (const [key, ts] of entries) {
-        if (ts <= cutoff) entries.delete(key);
+        if (ts <= cutoff) {
+          entries.delete(key);
+        }
       }
     }
     // LRU size eviction
@@ -65,7 +71,9 @@ function createDedupeCache(options) {
       const iter = entries.keys();
       for (let i = 0; i < excess; i++) {
         const key = iter.next().value;
-        if (key !== undefined) entries.delete(key);
+        if (key !== undefined) {
+          entries.delete(key);
+        }
       }
     }
   }
@@ -76,9 +84,13 @@ function createDedupeCache(options) {
      * First call for a key returns false (new), subsequent calls return true (dup).
      */
     check(key, now) {
-      if (!key) return false;
+      if (!key) {
+        return false;
+      }
       const t = now ?? Date.now();
-      if (_hasUnexpired(key, t, true)) return true;
+      if (_hasUnexpired(key, t, true)) {
+        return true;
+      }
       // Mark as seen
       entries.set(key, t);
       _prune(t);
@@ -89,7 +101,9 @@ function createDedupeCache(options) {
      * Check if key exists without modifying state.
      */
     peek(key, now) {
-      if (!key) return false;
+      if (!key) {
+        return false;
+      }
       return _hasUnexpired(key, now ?? Date.now(), false);
     },
 
@@ -97,7 +111,9 @@ function createDedupeCache(options) {
      * Remove a specific key.
      */
     delete(key) {
-      if (key) entries.delete(key);
+      if (key) {
+        entries.delete(key);
+      }
     },
 
     /**

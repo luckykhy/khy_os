@@ -10,8 +10,9 @@
  * - Scoped logger (prefixed with plugin name)
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
 const { getDataHome } = require('../utils/dataHome');
 
 function getPluginsHome() {
@@ -89,7 +90,7 @@ function createContextFactory(opts) {
                 commandRegistry.unregister(`/${alias}`);
               }
             }
-          }
+          },
         };
         disposables.push(disposable);
         return disposable;
@@ -101,7 +102,11 @@ function createContextFactory(opts) {
           disposableList.push(d);
         }
         const groupDisposable = {
-          dispose() { for (const d of disposableList) d.dispose(); }
+          dispose() {
+            for (const d of disposableList) {
+              d.dispose();
+            }
+          },
         };
         disposables.push(groupDisposable);
         return groupDisposable;
@@ -112,9 +117,8 @@ function createContextFactory(opts) {
     const tools = {
       register(def) {
         // Prefix tool name with namespace
-        const qualifiedName = def.name.includes('_') && def.name.startsWith(ns)
-          ? def.name
-          : `${ns}_${def.name}`;
+        const qualifiedName =
+          def.name.includes('_') && def.name.startsWith(ns) ? def.name : `${ns}_${def.name}`;
 
         const toolDef = { ...def, name: qualifiedName, _pluginNamespace: ns };
 
@@ -128,7 +132,7 @@ function createContextFactory(opts) {
             if (toolRegistry && toolRegistry.unregisterPlugin) {
               toolRegistry.unregisterPlugin(qualifiedName);
             }
-          }
+          },
         };
         disposables.push(disposable);
         return disposable;
@@ -143,8 +147,10 @@ function createContextFactory(opts) {
         const disposable = {
           dispose() {
             const i = registeredDataSources.indexOf(def);
-            if (i >= 0) registeredDataSources.splice(i, 1);
-          }
+            if (i >= 0) {
+              registeredDataSources.splice(i, 1);
+            }
+          },
         };
         disposables.push(disposable);
         return disposable;
@@ -155,7 +161,11 @@ function createContextFactory(opts) {
     const ai = {
       async generate(prompt, aiOpts = {}) {
         if (!aiGateway) {
-          return { text: '[AI not available]', model: 'none', usage: { inputTokens: 0, outputTokens: 0 } };
+          return {
+            text: '[AI not available]',
+            model: 'none',
+            usage: { inputTokens: 0, outputTokens: 0 },
+          };
         }
         try {
           const messages = aiOpts.messages || [{ role: 'user', content: prompt }];
@@ -173,7 +183,11 @@ function createContextFactory(opts) {
             usage: result.usage || { inputTokens: 0, outputTokens: 0 },
           };
         } catch (err) {
-          return { text: `[AI error: ${err.message}]`, model: 'error', usage: { inputTokens: 0, outputTokens: 0 } };
+          return {
+            text: `[AI error: ${err.message}]`,
+            model: 'error',
+            usage: { inputTokens: 0, outputTokens: 0 },
+          };
         }
       },
       async *stream(prompt, aiOpts = {}) {
@@ -207,9 +221,13 @@ function createContextFactory(opts) {
       async get(key) {
         try {
           const filePath = path.join(storageDir, `${key}.json`);
-          if (!fs.existsSync(filePath)) return undefined;
+          if (!fs.existsSync(filePath)) {
+            return undefined;
+          }
           return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        } catch { return undefined; }
+        } catch {
+          return undefined;
+        }
       },
       async set(key, value) {
         fs.mkdirSync(storageDir, { recursive: true });
@@ -219,16 +237,22 @@ function createContextFactory(opts) {
       async del(key) {
         try {
           const filePath = path.join(storageDir, `${key}.json`);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
         } catch {}
       },
       async list(prefix) {
         try {
-          if (!fs.existsSync(storageDir)) return [];
-          const files = fs.readdirSync(storageDir).filter(f => f.endsWith('.json'));
-          const keys = files.map(f => f.slice(0, -5));
-          return prefix ? keys.filter(k => k.startsWith(prefix)) : keys;
-        } catch { return []; }
+          if (!fs.existsSync(storageDir)) {
+            return [];
+          }
+          const files = fs.readdirSync(storageDir).filter((f) => f.endsWith('.json'));
+          const keys = files.map((f) => f.slice(0, -5));
+          return prefix ? keys.filter((k) => k.startsWith(prefix)) : keys;
+        } catch {
+          return [];
+        }
       },
     };
 
@@ -236,7 +260,9 @@ function createContextFactory(opts) {
     const configPath = path.join(pluginsHome, ns, 'config.json');
     let _configCache = null;
     function loadConfig() {
-      if (_configCache) return _configCache;
+      if (_configCache) {
+        return _configCache;
+      }
       try {
         if (fs.existsSync(configPath)) {
           _configCache = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -261,16 +287,34 @@ function createContextFactory(opts) {
         fs.writeFileSync(configPath, JSON.stringify(c, null, 2));
         _configCache = c;
       },
-      getAll() { return { ...loadConfig() }; },
+      getAll() {
+        return { ...loadConfig() };
+      },
     };
 
     // ─── Logger (scoped) ──────────────────────────────────────────────
     const prefix = `[plugin:${ns}]`;
     const logger = {
-      debug(msg, ...args) { if (hostLogger.debug) hostLogger.debug(`${prefix} ${msg}`, ...args); },
-      info(msg, ...args) { if (hostLogger.info) hostLogger.info(`${prefix} ${msg}`, ...args); },
-      warn(msg, ...args) { if (hostLogger.warn) hostLogger.warn(`${prefix} ${msg}`, ...args); },
-      error(msg, ...args) { if (hostLogger.error) hostLogger.error(`${prefix} ${msg}`, ...args); },
+      debug(msg, ...args) {
+        if (hostLogger.debug) {
+          hostLogger.debug(`${prefix} ${msg}`, ...args);
+        }
+      },
+      info(msg, ...args) {
+        if (hostLogger.info) {
+          hostLogger.info(`${prefix} ${msg}`, ...args);
+        }
+      },
+      warn(msg, ...args) {
+        if (hostLogger.warn) {
+          hostLogger.warn(`${prefix} ${msg}`, ...args);
+        }
+      },
+      error(msg, ...args) {
+        if (hostLogger.error) {
+          hostLogger.error(`${prefix} ${msg}`, ...args);
+        }
+      },
     };
 
     // ─── Identity ─────────────────────────────────────────────────────
@@ -280,7 +324,9 @@ function createContextFactory(opts) {
     const http = {
       async fetch(url, init = {}) {
         if (!permissions.network) {
-          throw new Error(`Plugin "${ns}" does not have network permission. Add permissions.network: true to manifest.`);
+          throw new Error(
+            `Plugin "${ns}" does not have network permission. Add permissions.network: true to manifest.`
+          );
         }
         // Use Node's built-in fetch (Node 18+) or fallback
         const fetchFn = globalThis.fetch || require('node:https').request;
@@ -314,13 +360,19 @@ function createContextFactory(opts) {
         });
         return {
           stdout: (async function* () {
-            for await (const chunk of proc.stdout) yield chunk.toString();
+            for await (const chunk of proc.stdout) {
+              yield chunk.toString();
+            }
           })(),
           stderr: (async function* () {
-            for await (const chunk of proc.stderr) yield chunk.toString();
+            for await (const chunk of proc.stderr) {
+              yield chunk.toString();
+            }
           })(),
-          exitCode: new Promise(resolve => proc.on('close', resolve)),
-          kill() { require('../tools/platformUtils').safeKill(proc); },
+          exitCode: new Promise((resolve) => proc.on('close', resolve)),
+          kill() {
+            require('../tools/platformUtils').safeKill(proc);
+          },
         };
       };
     }
@@ -384,22 +436,28 @@ function createEventBus() {
   const handlers = new Map();
   return {
     on(event, handler) {
-      if (!handlers.has(event)) handlers.set(event, []);
+      if (!handlers.has(event)) {
+        handlers.set(event, []);
+      }
       handlers.get(event).push(handler);
       return {
         dispose() {
           const list = handlers.get(event);
           if (list) {
             const i = list.indexOf(handler);
-            if (i >= 0) list.splice(i, 1);
+            if (i >= 0) {
+              list.splice(i, 1);
+            }
           }
-        }
+        },
       };
     },
     emit(event, ...args) {
       const list = handlers.get(event) || [];
       for (const h of list) {
-        try { h(...args); } catch {}
+        try {
+          h(...args);
+        } catch {}
       }
     },
   };

@@ -12,44 +12,30 @@ const { authenticateToken } = require('../middleware/auth');
 const { Op } = Sequelize;
 
 const generateToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  });
 };
 
-function resolveAdminCompatibilityPasswords() {
-  const candidates = ['admin123.'];
-  const envCandidates = [
-    process.env.AI_MGMT_ADMIN_PASSWORD,
-    process.env.DEFAULT_ADMIN_PASSWORD,
-  ]
-    .map(v => String(v || '').trim())
-    .filter(Boolean);
-  return [...new Set([...candidates, ...envCandidates])];
-}
-
-async function verifyPasswordWithCompatibility(user, password) {
-  let valid = await user.comparePassword(password);
-  const isAdmin = String(user?.username || '').toLowerCase() === 'admin';
-  if (!valid && isAdmin && password === 'admin123') {
-    const bridgeCandidates = resolveAdminCompatibilityPasswords();
-    for (const candidate of bridgeCandidates) {
-      if (candidate === password) continue;
-      const matched = await user.comparePassword(candidate);
-      if (!matched) continue;
-      valid = true;
-      try {
-        await user.update({ password: 'admin123' });
-      } catch {
-        // best-effort password migration
-      }
-      break;
+// GET /api/auth/default-admin — lightweight, unauthenticated.
+// Exposes ONLY the default admin username (NEVER the password) so the login
+// page can prefill it. The password lives in .khy/credentials/default-admin.json.
+router.get('/default-admin', async (req, res) => {
+  try {
+    const admin = await User.findOne({
+      where: { role: 'admin', status: 'active' },
+      order: [['id', 'ASC']],
+      attributes: ['username'],
+    });
+    if (!admin) {
+      return res.status(404).json({ success: false, message: '尚未初始化默认管理员' });
     }
+    return res.json({ success: true, data: { username: admin.username } });
+  } catch (err) {
+    console.error('Default admin lookup error:', err.message);
+    return res.status(500).json({ success: false, message: '无法获取默认管理员信息' });
   }
-  return valid;
-}
+});
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -57,26 +43,32 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Username and password are required' });
     }
 
     const user = await User.findOne({
-      where: { [Op.or]: [{ username }, { email: username }] }
+      where: { [Op.or]: [{ username }, { email: username }] },
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     if (String(user.status || '').toLowerCase() !== 'active') {
-      return res.status(403).json({ message: 'Account is not active' });
+      return res.status(403).json({ success: false, message: 'Account is not active' });
     }
 
-    const valid = await verifyPasswordWithCompatibility(user, password);
+    // Straight bcrypt comparison — the legacy admin123 compatibility shim
+    // (which rewrote passwords to a weak hardcoded literal) was removed with
+    // the dynamic-credential seeding scheme.
+    const valid = await user.comparePassword(password);
     if (!valid) {
       return res.status(401).json({
+        success: false,
         message: 'Invalid credentials',
-        hint: 'Run: node ai-backend/scripts/reset-admin-password.js --password admin123',
+        hint: '默认管理员初始密码保存在数据目录的凭证文件中',
       });
     }
 
@@ -86,10 +78,10 @@ router.post('/login', async (req, res) => {
     const userData = user.toJSON();
     delete userData.password;
 
-    res.json({ token, user: userData });
+    res.json({ success: true, data: { token, user: userData } });
   } catch (err) {
     console.error('Auth error:', err.message);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -97,10 +89,10 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userData = req.user?.toJSON ? req.user.toJSON() : req.user;
-    res.json({ user: userData || null });
+    res.json({ success: true, data: { user: userData || null } });
   } catch (err) {
     console.error('Auth profile error:', err.message);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 

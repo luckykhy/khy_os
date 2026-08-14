@@ -3,84 +3,287 @@
   "_generated": "deterministic (no timestamp)",
   "layering": [
     {
+      "file": "src/services/aiManagementChatHttp.js",
+      "line": 172,
+      "target": "../cli/toolResultSummary",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/aiManagementChatHttp.js",
+      "line": 86,
+      "target": "../cli/repl/imageIntent",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/aiManagementKhyosWs.js",
+      "line": 385,
+      "target": "../cli/handlers/md",
+      "rule": "R1-layering"
+    },
+    {
       "file": "src/services/aiManagementServer.js",
-      "line": 91,
+      "line": 128,
       "target": "../cli/ai",
       "rule": "R1-layering"
     },
     {
-      "file": "src/services/inputPreprocessor.js",
-      "line": 623,
-      "target": "../cli/ui/inkComponents",
+      "file": "src/services/aiMonitor.js",
+      "line": 235,
+      "target": "../cli/formatters",
       "rule": "R1-layering"
     },
     {
-      "file": "src/services/preflightPermission.js",
-      "line": 139,
-      "target": "../cli/ui/permissionDialog",
+      "file": "src/services/aiUploadStore.js",
+      "line": 207,
+      "target": "../cli/handlers/convert",
       "rule": "R1-layering"
     },
     {
-      "file": "src/services/toolCalling.js",
-      "line": 2236,
-      "target": "../cli/ui/permissionDialog",
+      "file": "src/services/aiUploadStore.js",
+      "line": 330,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/archiveManifestPolicy.js",
+      "line": 165,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/channels/ilinkDispatcher.js",
+      "line": 1015,
+      "target": "../../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/channels/ilinkDispatcher.js",
+      "line": 1049,
+      "target": "../../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/channels/ilinkDispatcher.js",
+      "line": 502,
+      "target": "../../cli/aiConversationOps",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/channels/ilinkDispatcher.js",
+      "line": 61,
+      "target": "../../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/channels/ilinkDispatcher.js",
+      "line": 799,
+      "target": "../../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/deliveryFormatter.js",
+      "line": 176,
+      "target": "../cli/toolCallNoise",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/fileSalience.js",
+      "line": 284,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/gateway/adapters/claudeAdapter.js",
+      "line": 1620,
+      "target": "../../../cli/betaFallbackNotice",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/gateway/breakCacheState.js",
+      "line": 20,
+      "target": "../../cli/breakCache",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/gateway/inlineImageOcrGuardPolicy.js",
+      "line": 54,
+      "target": "../../cli/repl/imageIntent",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/gatewayLogLease/noiseFilter.js",
+      "line": 18,
+      "target": "../../cli/statusMessageFormatter",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/gatewayResetService.js",
+      "line": 10,
+      "target": "../cli/formatters",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/imageService.js",
+      "line": 386,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/intentArbiter/intentPreprocess.js",
+      "line": 21,
+      "target": "../../cli/fullWidthInput",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/mdEditorRegister.js",
+      "line": 169,
+      "target": "../cli/handlers/md",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/multimodalInputService.js",
+      "line": 200,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/resumeAdvisor.js",
+      "line": 116,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/session/sessionForestService.js",
+      "line": 151,
+      "target": "../../cli/sessionSlots",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/session/sessionForestService.js",
+      "line": 24,
+      "target": "../../cli/sessionTopology",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/session/sessionForestService.js",
+      "line": 30,
+      "target": "../../cli/ai",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/session/sessionForestService.js",
+      "line": 375,
+      "target": "../../cli/crossBranchSynthesis",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/tokenUsageService.js",
+      "line": 307,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/tokenUsageService.js",
+      "line": 462,
+      "target": "../cli/ccFormat",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/tokenUsageService.js",
+      "line": 515,
+      "target": "../cli/ccModelName",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolCallingPermissions.js",
+      "line": 661,
+      "target": "../cli/permissionReply",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolUseLoopCore.js",
+      "line": 72,
+      "target": "../cli/toolPrefaceVoice",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolUseLoopCore.js",
+      "line": 79,
+      "target": "../cli/keyFindings",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolUseLoopCore.js",
+      "line": 90,
+      "target": "../cli/resultGuard",
+      "rule": "R1-layering"
+    },
+    {
+      "file": "src/services/toolUseLoopHelpers.js",
+      "line": 28,
+      "target": "../cli/keyFindings",
       "rule": "R1-layering"
     }
   ],
   "godFiles": [
     {
-      "file": "src/cli/repl.js",
-      "loc": 7978,
+      "file": "src/cli/replSession.js",
+      "loc": 10571,
       "rule": "R2-god-file"
     },
     {
-      "file": "src/services/toolUseLoop.js",
-      "loc": 7203,
+      "file": "src/services/toolUseLoopCore.js",
+      "loc": 9079,
       "rule": "R2-god-file"
     },
     {
-      "file": "src/cli/handlers/gateway.js",
-      "loc": 6789,
+      "file": "src/services/gateway/aiGatewayGenerateMethod.js",
+      "loc": 4623,
       "rule": "R2-god-file"
     },
     {
-      "file": "src/services/gateway/aiGateway.js",
-      "loc": 6248,
+      "file": "src/cli/aiChatCore.js",
+      "loc": 3546,
       "rule": "R2-god-file"
     },
     {
-      "file": "src/cli/ai.js",
-      "loc": 5425,
-      "rule": "R2-god-file"
-    },
-    {
-      "file": "src/cli/router.js",
-      "loc": 4259,
+      "file": "src/cli/tui/ink-components/App.js",
+      "loc": 3456,
       "rule": "R2-god-file"
     },
     {
       "file": "src/services/aiManagementServer.js",
-      "loc": 3425,
+      "loc": 2812,
       "rule": "R2-god-file"
     },
     {
       "file": "src/services/toolCalling.js",
-      "loc": 3378,
+      "loc": 2774,
       "rule": "R2-god-file"
     },
     {
-      "file": "src/services/accountPool.js",
-      "loc": 3111,
+      "file": "src/services/flagRegistry.js",
+      "loc": 2740,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/router.js",
+      "loc": 2698,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/cli/tui/hooks/useQueryBridge.js",
+      "loc": 2635,
+      "rule": "R2-god-file"
+    },
+    {
+      "file": "src/services/gateway/proxyServer.js",
+      "loc": 2579,
       "rule": "R2-god-file"
     },
     {
       "file": "src/services/gateway/adapters/codexAdapter.js",
-      "loc": 3086,
-      "rule": "R2-god-file"
-    },
-    {
-      "file": "src/cli/handlers/proxy.js",
-      "loc": 3070,
+      "loc": 2506,
       "rule": "R2-god-file"
     }
   ],
@@ -88,49 +291,137 @@
     {
       "members": [
         "src/cli/ai.js",
+        "src/cli/aiChatCore.js",
+        "src/cli/aiContextFlow.js",
+        "src/cli/aiConversationOps.js",
+        "src/cli/aiGatewayGenerateHelpers.js",
+        "src/cli/aiMessageBuilder.js",
+        "src/cli/aiRequestAnalysis.js",
+        "src/cli/aiRequestParsers.js",
+        "src/cli/aiSession.js",
+        "src/cli/aiTaskClassifier.js",
+        "src/cli/bulkLines.js",
+        "src/cli/diffRenderer.js",
         "src/cli/formatters.js",
+        "src/cli/handlers/convert.js",
         "src/cli/handlers/gateway.js",
+        "src/cli/handlers/gatewayConfigEditor.js",
+        "src/cli/handlers/gatewayManageDaemon.js",
+        "src/cli/handlers/gatewayModelChoices.js",
+        "src/cli/handlers/gatewayProviderKeyPool.js",
+        "src/cli/handlers/gatewayRuntimeProbes.js",
+        "src/cli/handlers/gatewayStatusView.js",
+        "src/cli/handlers/md.js",
         "src/cli/handlers/proxy.js",
+        "src/cli/handlers/proxySwitchProfiles.js",
         "src/cli/hudRenderer.js",
-        "src/cli/ui/permissionDialog.js",
+        "src/cli/renderTheme.js",
+        "src/cli/spinner.js",
+        "src/cli/toolResultSummary.js",
         "src/constants/prompts.js",
         "src/coordinator/workerAgent.js",
         "src/routes/aiGatewayAdmin.js",
         "src/services/agentCommunicationService.js",
+        "src/services/agenticHarnessService.js",
+        "src/services/aiManagementChatHttp.js",
+        "src/services/aiManagementConversationsPrompts.js",
+        "src/services/aiManagementGatewayAdmin.js",
+        "src/services/aiManagementKhyosWs.js",
         "src/services/aiManagementServer.js",
+        "src/services/aiMonitor.js",
+        "src/services/aiUploadStore.js",
+        "src/services/appLaunchRecovery.js",
+        "src/services/baseSelfCheckService.js",
+        "src/services/bugfixRegressionGate.js",
+        "src/services/capabilityAssessment.js",
+        "src/services/changeRegressionGate.js",
+        "src/services/channels/ilinkDispatcher.js",
+        "src/services/channels/messageRouter.js",
         "src/services/cliAgentRunner.js",
+        "src/services/contextCompressor.js",
+        "src/services/contextPruner.js",
         "src/services/cronScheduler.js",
         "src/services/expandModelService.js",
         "src/services/gateway/adapters/claudeAdapter.js",
         "src/services/gateway/adapters/codexAdapter.js",
         "src/services/gateway/aiGateway.js",
+        "src/services/gateway/aiGatewayGenerateMethod.js",
+        "src/services/gateway/aiGatewayRoutingMethods.js",
         "src/services/gateway/appLaunchInterceptor.js",
         "src/services/gateway/customerRegistry.js",
+        "src/services/gateway/desktopIntentInterceptor.js",
+        "src/services/gateway/paymentGatewayService.js",
         "src/services/gateway/proxyServer.js",
+        "src/services/gateway/refusalRecovery.js",
+        "src/services/goalModeService.js",
+        "src/services/guardApproval.js",
         "src/services/khyUpgradeRuntime.js",
         "src/services/knowledgeTeachingService.js",
+        "src/services/localBrainEnvOptimize.js",
         "src/services/localBrainService.js",
         "src/services/management/index.js",
         "src/services/management/resources/cron.resource.js",
+        "src/services/mcp/toolPool.js",
         "src/services/modelImportService.js",
         "src/services/modelTrainingService.js",
+        "src/services/networkHealthMonitor.js",
+        "src/services/orchestrationFlow.js",
+        "src/services/preflightPermission.js",
+        "src/services/query/compactPipeline.js",
         "src/services/ragRetrievalService.js",
         "src/services/reversibility.js",
         "src/services/riskGate.js",
         "src/services/selfProfile.js",
+        "src/services/serviceRegistry.js",
+        "src/services/session/sessionForestService.js",
+        "src/services/syntheticToolLayer.js",
+        "src/services/toolCallParser.js",
         "src/services/toolCalling.js",
-        "src/tools/index.js"
+        "src/services/toolCallingBuiltins.js",
+        "src/services/toolCallingPermissions.js",
+        "src/services/toolExecutionEngine.js",
+        "src/services/toolProtocolAdapter.js",
+        "src/services/toolUseLoop.js",
+        "src/services/toolUseLoopCore.js",
+        "src/services/toolUseLoopHelpers.js",
+        "src/services/versionService.js",
+        "src/services/worktreeManager.js",
+        "src/tools/AgentTool/claudeDelegation.js",
+        "src/tools/AgentTool/index.js",
+        "src/tools/TodoWriteTool/index.js",
+        "src/tools/_taskStore.js",
+        "src/tools/index.js",
+        "src/tools/taskMemorySection.js",
+        "src/tools/teammateBus.js"
       ],
       "rule": "R3-cycle"
     },
     {
       "members": [
-        "src/services/agenticHarnessService.js",
-        "src/services/baseSelfCheckService.js",
-        "src/services/serviceRegistry.js",
-        "src/services/toolUseLoop.js",
-        "src/tools/AgentTool/index.js",
-        "src/tools/teammateBus.js"
+        "src/cli/handlers/onboarding.js",
+        "src/cli/router.js",
+        "src/cli/routerDispatchSlash.js"
+      ],
+      "rule": "R3-cycle"
+    },
+    {
+      "members": [
+        "src/cli/tui/ink-components/PromptFrame.js",
+        "src/cli/tui/ink-components/caretGeometry.js"
+      ],
+      "rule": "R3-cycle"
+    },
+    {
+      "members": [
+        "src/memdir/memdir.js",
+        "src/memdir/paths.js"
+      ],
+      "rule": "R3-cycle"
+    },
+    {
+      "members": [
+        "src/services/guiEval/index.js",
+        "src/services/guiEval/runEngine.js"
       ],
       "rule": "R3-cycle"
     }

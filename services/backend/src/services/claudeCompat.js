@@ -8,11 +8,15 @@
  */
 
 function _cleanName(name) {
-  return String(name || '').trim().replace(/^["'`]+|["'`]+$/g, '');
+  return String(name || '')
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '');
 }
 
 function _lookupKey(name) {
-  return _cleanName(name).toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return _cleanName(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
 }
 
 const TOOL_ALIASES = Object.freeze({
@@ -223,7 +227,10 @@ const CLAUDE_COMPAT_TOOLS = Object.freeze([
     parameters: {
       prompt: { type: 'string', description: 'Sub-agent task prompt' },
       role: { type: 'string', description: 'Agent role' },
-      subagent_type: { type: 'string', description: 'Claude-style subagent type alias (e.g. explorer, worker, default)' },
+      subagent_type: {
+        type: 'string',
+        description: 'Claude-style subagent type alias (e.g. explorer, worker, default)',
+      },
       agent_type: { type: 'string', description: 'Agent type alias' },
       adapter: { type: 'string', description: 'Preferred adapter override (e.g. codex, claude)' },
       preferred_adapter: { type: 'string', description: 'Alias of adapter' },
@@ -323,7 +330,11 @@ const CLAUDE_COMPAT_TOOLS = Object.freeze([
     risk: 'safe',
     parameters: {
       query: { type: 'string', description: 'Search query' },
-      freshness: { type: 'string', description: 'Time filter: day/week/month/year/auto/none. Required for time-sensitive queries (latest/recent/today/news).' },
+      freshness: {
+        type: 'string',
+        description:
+          'Time filter: day/week/month/year/auto/none. Required for time-sensitive queries (latest/recent/today/news).',
+      },
     },
   },
   {
@@ -361,7 +372,8 @@ const CLAUDE_COMPAT_TOOLS = Object.freeze([
   {
     name: 'apply_patch',
     canonical: 'apply_patch',
-    description: 'Apply a unified diff patch to one or more files atomically (all-or-nothing rollback).',
+    description:
+      'Apply a unified diff patch to one or more files atomically (all-or-nothing rollback).',
     category: 'filesystem',
     risk: 'high',
     parameters: {
@@ -375,65 +387,109 @@ function normalizeToolName(toolName) {
   // Some providers occasionally emit "toolName(...)" in the name field.
   // Strip invocation syntax and keep only the callable tool identifier.
   const fnLike = raw.match(/^([A-Za-z_][\w-]*)\s*\([\s\S]*\)$/);
-  if (fnLike && fnLike[1]) raw = fnLike[1];
+  if (fnLike && fnLike[1]) {
+    raw = fnLike[1];
+  }
   raw = raw.replace(/[：:]+$/g, '');
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   const alias = TOOL_ALIASES[_lookupKey(raw)];
-  if (alias) return alias;
+  if (alias) {
+    return alias;
+  }
   // keep original spelling for non-Claude tools, only normalize separators
   return raw.replace(/[\s-]+/g, '_');
 }
 
 function normalizeAgentRole(role) {
   const raw = _cleanName(role);
-  if (!raw) return 'general';
+  if (!raw) {
+    return 'general';
+  }
   const mapped = AGENT_ROLE_ALIASES[_lookupKey(raw)];
   return mapped || raw.toLowerCase();
 }
 
 function normalizeToolParams(toolName, params = {}) {
   const normalizedTool = normalizeToolName(toolName);
-  const src = (params && typeof params === 'object') ? { ...params } : {};
+  const src = params && typeof params === 'object' ? { ...params } : {};
 
   if (normalizedTool === 'shell_command') {
-    if (!src.command && typeof src.cmd === 'string') src.command = src.cmd;
-    if (!src.command && typeof src.script === 'string') src.command = src.script;
+    if (!src.command && typeof src.cmd === 'string') {
+      src.command = src.cmd;
+    }
+    if (!src.command && typeof src.script === 'string') {
+      src.command = src.script;
+    }
   }
 
   if (normalizedTool === 'readFile' || normalizedTool === 'notebookRead') {
-    if (!src.path && typeof src.file_path === 'string') src.path = src.file_path;
-    if (!src.path && typeof src.filePath === 'string') src.path = src.filePath;
-    if (!src.path && typeof src.file === 'string') src.path = src.file;
-    if (src.offset === undefined && src.line_offset !== undefined) src.offset = src.line_offset;
-    if (src.limit === undefined && src.max_lines !== undefined) src.limit = src.max_lines;
+    if (!src.path && typeof src.file_path === 'string') {
+      src.path = src.file_path;
+    }
+    if (!src.path && typeof src.filePath === 'string') {
+      src.path = src.filePath;
+    }
+    if (!src.path && typeof src.file === 'string') {
+      src.path = src.file;
+    }
+    if (src.offset === undefined && src.line_offset !== undefined) {
+      src.offset = src.line_offset;
+    }
+    if (src.limit === undefined && src.max_lines !== undefined) {
+      src.limit = src.max_lines;
+    }
   }
 
   if (normalizedTool === 'writeFile') {
-    if (!src.path && typeof src.file_path === 'string') src.path = src.file_path;
-    if (!src.path && typeof src.filePath === 'string') src.path = src.filePath;
-    if (src.content === undefined && typeof src.text === 'string') src.content = src.text;
+    if (!src.path && typeof src.file_path === 'string') {
+      src.path = src.file_path;
+    }
+    if (!src.path && typeof src.filePath === 'string') {
+      src.path = src.filePath;
+    }
+    if (src.content === undefined && typeof src.text === 'string') {
+      src.content = src.text;
+    }
   }
 
   if (normalizedTool === 'editFile' || normalizedTool === 'notebookEdit') {
-    if (!src.file_path && typeof src.path === 'string') src.file_path = src.path;
-    if (!src.file_path && typeof src.filePath === 'string') src.file_path = src.filePath;
-    if (!src.file_path && typeof src.file === 'string') src.file_path = src.file;
-    if (src.old_string === undefined && typeof src.oldText === 'string') src.old_string = src.oldText;
-    if (src.new_string === undefined && typeof src.newText === 'string') src.new_string = src.newText;
-    if (src.replace_all === undefined && src.replaceAll !== undefined) src.replace_all = Boolean(src.replaceAll);
+    if (!src.file_path && typeof src.path === 'string') {
+      src.file_path = src.path;
+    }
+    if (!src.file_path && typeof src.filePath === 'string') {
+      src.file_path = src.filePath;
+    }
+    if (!src.file_path && typeof src.file === 'string') {
+      src.file_path = src.file;
+    }
+    if (src.old_string === undefined && typeof src.oldText === 'string') {
+      src.old_string = src.oldText;
+    }
+    if (src.new_string === undefined && typeof src.newText === 'string') {
+      src.new_string = src.newText;
+    }
+    if (src.replace_all === undefined && src.replaceAll !== undefined) {
+      src.replace_all = Boolean(src.replaceAll);
+    }
   }
 
   if (normalizedTool === 'multiEdit') {
-    if (!src.file_path && typeof src.path === 'string') src.file_path = src.path;
+    if (!src.file_path && typeof src.path === 'string') {
+      src.file_path = src.path;
+    }
     if (!Array.isArray(src.edits)) {
       const singleOld = src.old_string ?? src.oldText;
       const singleNew = src.new_string ?? src.newText;
       if (singleOld !== undefined && singleNew !== undefined) {
-        src.edits = [{
-          old_string: singleOld,
-          new_string: singleNew,
-          replace_all: Boolean(src.replace_all ?? src.replaceAll),
-        }];
+        src.edits = [
+          {
+            old_string: singleOld,
+            new_string: singleNew,
+            replace_all: Boolean(src.replace_all ?? src.replaceAll),
+          },
+        ];
       }
     } else {
       src.edits = src.edits.map((edit) => ({
@@ -445,41 +501,75 @@ function normalizeToolParams(toolName, params = {}) {
   }
 
   if (normalizedTool === 'ls') {
-    if (!src.path && typeof src.dir === 'string') src.path = src.dir;
-    if (!src.path && typeof src.directory === 'string') src.path = src.directory;
-    if (src.recursive === undefined && src.recurse !== undefined) src.recursive = Boolean(src.recurse);
-    if (src.max_entries === undefined && src.limit !== undefined) src.max_entries = src.limit;
+    if (!src.path && typeof src.dir === 'string') {
+      src.path = src.dir;
+    }
+    if (!src.path && typeof src.directory === 'string') {
+      src.path = src.directory;
+    }
+    if (src.recursive === undefined && src.recurse !== undefined) {
+      src.recursive = Boolean(src.recurse);
+    }
+    if (src.max_entries === undefined && src.limit !== undefined) {
+      src.max_entries = src.limit;
+    }
   }
 
   if (normalizedTool === 'grep') {
-    if (!src.pattern && typeof src.query === 'string') src.pattern = src.query;
+    if (!src.pattern && typeof src.query === 'string') {
+      src.pattern = src.query;
+    }
   }
 
   if (normalizedTool === 'webSearch') {
-    if (!src.query && typeof src.q === 'string') src.query = src.q;
+    if (!src.query && typeof src.q === 'string') {
+      src.query = src.q;
+    }
   }
 
   if (normalizedTool === 'webFetch') {
-    if (!src.url && typeof src.uri === 'string') src.url = src.uri;
-    if (!src.url && typeof src.href === 'string') src.url = src.href;
+    if (!src.url && typeof src.uri === 'string') {
+      src.url = src.uri;
+    }
+    if (!src.url && typeof src.href === 'string') {
+      src.url = src.href;
+    }
   }
 
   if (normalizedTool === 'agent') {
-    if (!src.prompt && typeof src.description === 'string') src.prompt = src.description;
-    if (!src.prompt && typeof src.task === 'string') src.prompt = src.task;
-    if (!src.prompt && typeof src.message === 'string') src.prompt = src.message;
+    if (!src.prompt && typeof src.description === 'string') {
+      src.prompt = src.description;
+    }
+    if (!src.prompt && typeof src.task === 'string') {
+      src.prompt = src.task;
+    }
+    if (!src.prompt && typeof src.message === 'string') {
+      src.prompt = src.message;
+    }
     if (src.role || src.subagent_type || src.agent_type) {
       src.role = normalizeAgentRole(src.role || src.subagent_type || src.agent_type);
     }
-    if (!src.preferred_adapter && typeof src.adapter === 'string') src.preferred_adapter = src.adapter;
-    if (!src.preferred_adapter && typeof src.provider === 'string') src.preferred_adapter = src.provider;
-    if (!src.preferred_model && typeof src.model === 'string') src.preferred_model = src.model;
+    if (!src.preferred_adapter && typeof src.adapter === 'string') {
+      src.preferred_adapter = src.adapter;
+    }
+    if (!src.preferred_adapter && typeof src.provider === 'string') {
+      src.preferred_adapter = src.provider;
+    }
+    if (!src.preferred_model && typeof src.model === 'string') {
+      src.preferred_model = src.model;
+    }
   }
 
   if (normalizedTool === 'slashCommand') {
-    if (!src.command && typeof src.cmd === 'string') src.command = src.cmd;
-    if (!src.command && typeof src.name === 'string') src.command = src.name;
-    if (!src.command && typeof src.text === 'string') src.command = src.text;
+    if (!src.command && typeof src.cmd === 'string') {
+      src.command = src.cmd;
+    }
+    if (!src.command && typeof src.name === 'string') {
+      src.command = src.name;
+    }
+    if (!src.command && typeof src.text === 'string') {
+      src.command = src.text;
+    }
     if (typeof src.command === 'string') {
       const trimmed = src.command.trim();
       src.command = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
@@ -487,52 +577,92 @@ function normalizeToolParams(toolName, params = {}) {
   }
 
   if (normalizedTool === 'spawnAgent') {
-    if (!src.prompt && typeof src.message === 'string') src.prompt = src.message;
+    if (!src.prompt && typeof src.message === 'string') {
+      src.prompt = src.message;
+    }
     if (!src.prompt && Array.isArray(src.items)) {
-      const textItems = src.items.filter(i => i && i.type === 'text' && typeof i.text === 'string');
-      if (textItems.length > 0) src.prompt = textItems.map(i => i.text).join('\n');
+      const textItems = src.items.filter(
+        (i) => i && i.type === 'text' && typeof i.text === 'string'
+      );
+      if (textItems.length > 0) {
+        src.prompt = textItems.map((i) => i.text).join('\n');
+      }
     }
     if (src.role || src.subagent_type || src.agent_type) {
       src.role = normalizeAgentRole(src.role || src.subagent_type || src.agent_type);
     }
     if (src.timeout === undefined && src.timeout_ms !== undefined) {
       const ms = Number(src.timeout_ms);
-      if (Number.isFinite(ms) && ms > 0) src.timeout = Math.ceil(ms / 1000);
+      if (Number.isFinite(ms) && ms > 0) {
+        src.timeout = Math.ceil(ms / 1000);
+      }
     }
-    if (!src.preferred_adapter && typeof src.adapter === 'string') src.preferred_adapter = src.adapter;
-    if (!src.preferred_adapter && typeof src.provider === 'string') src.preferred_adapter = src.provider;
-    if (!src.preferred_model && typeof src.model === 'string') src.preferred_model = src.model;
+    if (!src.preferred_adapter && typeof src.adapter === 'string') {
+      src.preferred_adapter = src.adapter;
+    }
+    if (!src.preferred_adapter && typeof src.provider === 'string') {
+      src.preferred_adapter = src.provider;
+    }
+    if (!src.preferred_model && typeof src.model === 'string') {
+      src.preferred_model = src.model;
+    }
   }
 
   if (normalizedTool === 'sendInput') {
-    if (!src.agent_id && typeof src.target === 'string') src.agent_id = src.target;
-    if (!src.agent_id && typeof src.id === 'string') src.agent_id = src.id;
-    if (!src.message && typeof src.prompt === 'string') src.message = src.prompt;
+    if (!src.agent_id && typeof src.target === 'string') {
+      src.agent_id = src.target;
+    }
+    if (!src.agent_id && typeof src.id === 'string') {
+      src.agent_id = src.id;
+    }
+    if (!src.message && typeof src.prompt === 'string') {
+      src.message = src.prompt;
+    }
   }
 
   if (normalizedTool === 'waitAgent') {
-    if (!Array.isArray(src.targets) && typeof src.target === 'string') src.targets = [src.target];
-    if (!Array.isArray(src.targets) && typeof src.agent_id === 'string') src.targets = [src.agent_id];
+    if (!Array.isArray(src.targets) && typeof src.target === 'string') {
+      src.targets = [src.target];
+    }
+    if (!Array.isArray(src.targets) && typeof src.agent_id === 'string') {
+      src.targets = [src.agent_id];
+    }
   }
 
   if (normalizedTool === 'closeAgent') {
-    if (!src.agent_id && typeof src.target === 'string') src.agent_id = src.target;
-    if (!src.agent_id && typeof src.id === 'string') src.agent_id = src.id;
+    if (!src.agent_id && typeof src.target === 'string') {
+      src.agent_id = src.target;
+    }
+    if (!src.agent_id && typeof src.id === 'string') {
+      src.agent_id = src.id;
+    }
   }
 
   if (normalizedTool === 'resumeAgent') {
-    if (!src.agent_id && typeof src.id === 'string') src.agent_id = src.id;
-    if (!src.agent_id && typeof src.target === 'string') src.agent_id = src.target;
+    if (!src.agent_id && typeof src.id === 'string') {
+      src.agent_id = src.id;
+    }
+    if (!src.agent_id && typeof src.target === 'string') {
+      src.agent_id = src.target;
+    }
   }
 
   if (normalizedTool === 'todoWrite') {
-    if (!Array.isArray(src.todos) && Array.isArray(src.items)) src.todos = src.items;
-    if (!Array.isArray(src.todos) && Array.isArray(src.list)) src.todos = src.list;
+    if (!Array.isArray(src.todos) && Array.isArray(src.items)) {
+      src.todos = src.items;
+    }
+    if (!Array.isArray(src.todos) && Array.isArray(src.list)) {
+      src.todos = src.list;
+    }
   }
 
   if (normalizedTool === 'apply_patch') {
-    if (!src.patch && typeof src.diff === 'string') src.patch = src.diff;
-    if (!src.patch && typeof src.content === 'string') src.patch = src.content;
+    if (!src.patch && typeof src.diff === 'string') {
+      src.patch = src.diff;
+    }
+    if (!src.patch && typeof src.content === 'string') {
+      src.patch = src.content;
+    }
   }
 
   return src;
@@ -569,9 +699,12 @@ function normalizeToolCall(toolName, params = {}) {
 // byte-identical fresh rebuild.
 let _compatDefsCache = null;
 function _isCompatDefsMemoEnabled() {
-  const v = String(process.env.KHY_TOOL_COMPAT_DEFS_MEMO || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_COMPAT_DEFS_MEMO || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'off' || v === 'false' || v === 'no');
 }
+
 function _buildClaudeCompatToolDefinitions() {
   return CLAUDE_COMPAT_TOOLS.map((tool) => ({
     name: tool.name,
@@ -584,9 +717,14 @@ function _buildClaudeCompatToolDefinitions() {
     _compatCanonical: tool.canonical,
   }));
 }
+
 function getClaudeCompatToolDefinitions() {
-  if (!_isCompatDefsMemoEnabled()) return _buildClaudeCompatToolDefinitions();
-  if (_compatDefsCache === null) _compatDefsCache = _buildClaudeCompatToolDefinitions();
+  if (!_isCompatDefsMemoEnabled()) {
+    return _buildClaudeCompatToolDefinitions();
+  }
+  if (_compatDefsCache === null) {
+    _compatDefsCache = _buildClaudeCompatToolDefinitions();
+  }
   return _compatDefsCache;
 }
 
@@ -611,5 +749,7 @@ module.exports = {
 
   // getClaudeCompatToolDefinitions memo (Ch2) — exported for unit testing.
   _buildClaudeCompatToolDefinitions,
-  _resetCompatDefsMemo: () => { _compatDefsCache = null; },
+  _resetCompatDefsMemo: () => {
+    _compatDefsCache = null;
+  },
 };

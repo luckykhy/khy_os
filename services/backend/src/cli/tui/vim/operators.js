@@ -33,21 +33,33 @@ const _PASTE_CAP_OFF = ['0', 'false', 'off', 'no'];
 const MAX_PASTE_OUTPUT = 10_000_000;
 function _pasteCapEnabled() {
   return !_PASTE_CAP_OFF.includes(
-    String((process.env && process.env.KHY_VIM_PASTE_CAP) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_VIM_PASTE_CAP) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
+
 // Largest repeat count that keeps `unit * count` within MAX_PASTE_OUTPUT
 // (always ≥ 1 so a single paste is never suppressed). `unit` is the per-repeat
 // cost: content.length charwise, contentLines.length linewise.
 function _clampPasteCount(count, unit) {
-  if (!_pasteCapEnabled()) return count;
-  if (!Number.isFinite(count) || count <= 1 || !unit) return count;
-  if (unit * count <= MAX_PASTE_OUTPUT) return count;
+  if (!_pasteCapEnabled()) {
+    return count;
+  }
+  if (!Number.isFinite(count) || count <= 1 || !unit) {
+    return count;
+  }
+  if (unit * count <= MAX_PASTE_OUTPUT) {
+    return count;
+  }
   return Math.max(1, Math.floor(MAX_PASTE_OUTPUT / unit));
 }
 
 function executeOperatorMotion(op, motion, count, ctx) {
   const target = resolveMotion(motion, ctx.cursor, count);
-  if (target.equals(ctx.cursor)) return;
+  if (target.equals(ctx.cursor)) {
+    return;
+  }
 
   const range = getOperatorRange(ctx.cursor, target, motion, op, count);
   applyOperator(op, range.from, range.to, ctx, range.linewise);
@@ -56,7 +68,9 @@ function executeOperatorMotion(op, motion, count, ctx) {
 
 function executeOperatorFind(op, findType, char, count, ctx) {
   const targetOffset = ctx.cursor.findCharacter(char, findType, count);
-  if (targetOffset === null) return;
+  if (targetOffset === null) {
+    return;
+  }
 
   const target = new VimCursor(ctx.cursor.text, targetOffset);
   const range = getOperatorRangeForFind(ctx.cursor, target, findType);
@@ -68,7 +82,9 @@ function executeOperatorFind(op, findType, char, count, ctx) {
 
 function executeOperatorTextObj(op, scope, objType, count, ctx) {
   const range = findTextObject(ctx.text, ctx.cursor.offset, objType, scope === 'inner');
-  if (!range) return;
+  if (!range) {
+    return;
+  }
 
   applyOperator(op, range.start, range.end, ctx);
   ctx.recordChange({ type: 'operatorTextObj', op, objType, scope, count });
@@ -87,7 +103,9 @@ function executeLineOp(op, count, ctx) {
   }
 
   let content = text.slice(lineStart, lineEnd);
-  if (!content.endsWith('\n')) content = content + '\n';
+  if (!content.endsWith('\n')) {
+    content = content + '\n';
+  }
   ctx.setRegister(content, true);
 
   if (op === 'yank') {
@@ -120,7 +138,9 @@ function executeLineOp(op, count, ctx) {
 
 function executeX(count, ctx) {
   const from = ctx.cursor.offset;
-  if (from >= ctx.text.length) return;
+  if (from >= ctx.text.length) {
+    return;
+  }
 
   let endCursor = ctx.cursor;
   for (let i = 0; i < count && !endCursor.isAtEnd(); i++) {
@@ -155,7 +175,9 @@ function executeReplace(char, count, ctx) {
 
 function executeToggleCase(count, ctx) {
   const startOffset = ctx.cursor.offset;
-  if (startOffset >= ctx.text.length) return;
+  if (startOffset >= ctx.text.length) {
+    return;
+  }
 
   let newText = ctx.text;
   let offset = startOffset;
@@ -164,9 +186,8 @@ function executeToggleCase(count, ctx) {
   while (offset < newText.length && toggled < count) {
     const grapheme = firstGrapheme(newText.slice(offset));
     const graphemeLen = grapheme.length;
-    const toggledGrapheme = grapheme === grapheme.toUpperCase()
-      ? grapheme.toLowerCase()
-      : grapheme.toUpperCase();
+    const toggledGrapheme =
+      grapheme === grapheme.toUpperCase() ? grapheme.toLowerCase() : grapheme.toUpperCase();
     newText = newText.slice(0, offset) + toggledGrapheme + newText.slice(offset + graphemeLen);
     offset += toggledGrapheme.length;
     toggled++;
@@ -181,7 +202,9 @@ function executeJoin(count, ctx) {
   const text = ctx.text;
   const lines = text.split('\n');
   const { line: currentLine } = ctx.cursor.getPosition();
-  if (currentLine >= lines.length - 1) return;
+  if (currentLine >= lines.length - 1) {
+    return;
+  }
 
   const linesToJoin = Math.min(count, lines.length - currentLine - 1);
   let joinedLine = lines[currentLine];
@@ -190,7 +213,9 @@ function executeJoin(count, ctx) {
   for (let i = 1; i <= linesToJoin; i++) {
     const nextLine = (lines[currentLine + i] || '').trimStart();
     if (nextLine.length > 0) {
-      if (!joinedLine.endsWith(' ') && joinedLine.length > 0) joinedLine += ' ';
+      if (!joinedLine.endsWith(' ') && joinedLine.length > 0) {
+        joinedLine += ' ';
+      }
       joinedLine += nextLine;
     }
   }
@@ -209,7 +234,9 @@ function executeJoin(count, ctx) {
 
 function executePaste(after, count, ctx) {
   const register = ctx.getRegister();
-  if (!register) return;
+  if (!register) {
+    return;
+  }
 
   const isLinewise = register.endsWith('\n');
   const content = isLinewise ? register.slice(0, -1) : register;
@@ -223,13 +250,11 @@ function executePaste(after, count, ctx) {
     const contentLines = content.split('\n');
     const safeCount = _clampPasteCount(count, contentLines.length);
     const repeatedLines = [];
-    for (let i = 0; i < safeCount; i++) repeatedLines.push(...contentLines);
+    for (let i = 0; i < safeCount; i++) {
+      repeatedLines.push(...contentLines);
+    }
 
-    const newLines = [
-      ...lines.slice(0, insertLine),
-      ...repeatedLines,
-      ...lines.slice(insertLine),
-    ];
+    const newLines = [...lines.slice(0, insertLine), ...repeatedLines, ...lines.slice(insertLine)];
 
     const newText = newLines.join('\n');
     ctx.setText(newText);
@@ -237,9 +262,10 @@ function executePaste(after, count, ctx) {
   } else {
     const safeCount = _clampPasteCount(count, content.length);
     const textToInsert = content.repeat(safeCount);
-    const insertPoint = after && ctx.cursor.offset < ctx.text.length
-      ? ctx.cursor.measuredText.nextOffset(ctx.cursor.offset)
-      : ctx.cursor.offset;
+    const insertPoint =
+      after && ctx.cursor.offset < ctx.text.length
+        ? ctx.cursor.measuredText.nextOffset(ctx.cursor.offset)
+        : ctx.cursor.offset;
 
     const newText = ctx.text.slice(0, insertPoint) + textToInsert + ctx.text.slice(insertPoint);
     const lastGr = lastGrapheme(textToInsert);
@@ -279,7 +305,7 @@ function executeIndent(dir, count, ctx) {
 
   const newText = lines.join('\n');
   const currentLineText = lines[currentLine] || '';
-  const firstNonBlank = ((currentLineText.match(/^\s*/) || [''])[0]).length;
+  const firstNonBlank = (currentLineText.match(/^\s*/) || [''])[0].length;
 
   ctx.setText(newText);
   ctx.setOffset(getLineStartOffset(lines, currentLine) + firstNonBlank);
@@ -324,7 +350,9 @@ function getOperatorRange(cursor, target, motion, op, count) {
     const nextNewline = text.indexOf('\n', to);
     if (nextNewline === -1) {
       to = text.length;
-      if (from > 0 && text[from - 1] === '\n') from -= 1;
+      if (from > 0 && text[from - 1] === '\n') {
+        from -= 1;
+      }
     } else {
       to = nextNewline + 1;
     }
@@ -347,7 +375,9 @@ function getOperatorRangeForFind(cursor, target /*, findType */) {
 
 function applyOperator(op, from, to, ctx, linewise = false) {
   let content = ctx.text.slice(from, to);
-  if (linewise && !content.endsWith('\n')) content = content + '\n';
+  if (linewise && !content.endsWith('\n')) {
+    content = content + '\n';
+  }
   ctx.setRegister(content, linewise);
 
   if (op === 'yank') {
@@ -366,7 +396,9 @@ function applyOperator(op, from, to, ctx, linewise = false) {
 
 function executeOperatorG(op, count, ctx) {
   const target = count === 1 ? ctx.cursor.startOfLastLine() : ctx.cursor.goToLine(count);
-  if (target.equals(ctx.cursor)) return;
+  if (target.equals(ctx.cursor)) {
+    return;
+  }
   const range = getOperatorRange(ctx.cursor, target, 'G', op, count);
   applyOperator(op, range.from, range.to, ctx, range.linewise);
   ctx.recordChange({ type: 'operator', op, motion: 'G', count });
@@ -374,7 +406,9 @@ function executeOperatorG(op, count, ctx) {
 
 function executeOperatorGg(op, count, ctx) {
   const target = count === 1 ? ctx.cursor.startOfFirstLine() : ctx.cursor.goToLine(count);
-  if (target.equals(ctx.cursor)) return;
+  if (target.equals(ctx.cursor)) {
+    return;
+  }
   const range = getOperatorRange(ctx.cursor, target, 'gg', op, count);
   applyOperator(op, range.from, range.to, ctx, range.linewise);
   ctx.recordChange({ type: 'operator', op, motion: 'gg', count });

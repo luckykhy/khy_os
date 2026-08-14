@@ -68,22 +68,35 @@ function _commaList(raw) {
 function resolveConfig(deps, daemonStatus, bridgeSnapshot) {
   const env = deps.env;
   let sshConfigPath = null;
-  try { sshConfigPath = deps.remote.sshConfigService.getConfigPath(); } catch { /* best-effort */ }
+  try {
+    sshConfigPath = deps.remote.sshConfigService.getConfigPath();
+  } catch {
+    /* best-effort */
+  }
   let statePath = null;
   try {
-    statePath = deps.remote.remoteStatePersistence
-      && deps.remote.remoteStatePersistence.getStatePath
-      ? deps.remote.remoteStatePersistence.getStatePath() : null;
-  } catch { /* best-effort */ }
+    statePath =
+      deps.remote.remoteStatePersistence && deps.remote.remoteStatePersistence.getStatePath
+        ? deps.remote.remoteStatePersistence.getStatePath()
+        : null;
+  } catch {
+    /* best-effort */
+  }
 
   // Prefer the LIVE port (authoritative when running); fall back to the env
   // override; never a hardcoded literal.
-  const daemonPort = (daemonStatus && daemonStatus.port != null)
-    ? daemonStatus.port
-    : (env.KHY_DAEMON_PORT != null && env.KHY_DAEMON_PORT !== '' ? env.KHY_DAEMON_PORT : null);
-  const bridgePort = (bridgeSnapshot && bridgeSnapshot.url)
-    ? _portFromUrl(bridgeSnapshot.url)
-    : (env.BRIDGE_PORT != null && env.BRIDGE_PORT !== '' ? env.BRIDGE_PORT : null);
+  const daemonPort =
+    daemonStatus && daemonStatus.port != null
+      ? daemonStatus.port
+      : env.KHY_DAEMON_PORT != null && env.KHY_DAEMON_PORT !== ''
+        ? env.KHY_DAEMON_PORT
+        : null;
+  const bridgePort =
+    bridgeSnapshot && bridgeSnapshot.url
+      ? _portFromUrl(bridgeSnapshot.url)
+      : env.BRIDGE_PORT != null && env.BRIDGE_PORT !== ''
+        ? env.BRIDGE_PORT
+        : null;
 
   return {
     sshConfigPath,
@@ -92,8 +105,10 @@ function resolveConfig(deps, daemonStatus, bridgeSnapshot) {
     bridgePinSet: Boolean(env.BRIDGE_PIN),
     allowlist: _commaList(env.KHY_REMOTE_SSH_ALLOWLIST),
     workspaceAllowlist: _commaList(env.KHY_REMOTE_WORKSPACE_ALLOWLIST),
-    execEnabled: env.KHY_REMOTE_SSH_ENABLE_EXEC === '1' || env.KHY_REMOTE_SSH_ENABLE_EXEC === 'true',
-    persistEnabled: env.KHY_REMOTE_SSH_PERSIST_STATE === '1' || env.KHY_REMOTE_SSH_PERSIST_STATE === 'true',
+    execEnabled:
+      env.KHY_REMOTE_SSH_ENABLE_EXEC === '1' || env.KHY_REMOTE_SSH_ENABLE_EXEC === 'true',
+    persistEnabled:
+      env.KHY_REMOTE_SSH_PERSIST_STATE === '1' || env.KHY_REMOTE_SSH_PERSIST_STATE === 'true',
     statePath,
   };
 }
@@ -107,22 +122,44 @@ function _portFromUrl(url) {
 async function getUnifiedStatus(opts = {}) {
   const deps = _deps(opts);
   let daemon = { running: false };
-  try { daemon = await deps.daemon.daemonStatus(); } catch { /* best-effort */ }
+  try {
+    daemon = await deps.daemon.daemonStatus();
+  } catch {
+    /* best-effort */
+  }
 
   let bridge = { running: false };
-  try { bridge = deps.bridge.getStatusSnapshot(); } catch { /* best-effort */ }
+  try {
+    bridge = deps.bridge.getStatusSnapshot();
+  } catch {
+    /* best-effort */
+  }
 
   let remoteSnapshot = {};
-  try { remoteSnapshot = deps.remote.remoteStateSyncService.getSnapshot(); } catch { /* best-effort */ }
+  try {
+    remoteSnapshot = deps.remote.remoteStateSyncService.getSnapshot();
+  } catch {
+    /* best-effort */
+  }
 
   let hosts = [];
-  try { hosts = (deps.remote.sshConfigService.listHosts() || {}).hosts || []; } catch { /* best-effort */ }
+  try {
+    hosts = (deps.remote.sshConfigService.listHosts() || {}).hosts || [];
+  } catch {
+    /* best-effort */
+  }
 
   const pointer = deps.store.readPointer();
   const config = resolveConfig(deps, daemon, bridge);
 
   return state.buildUnifiedState({
-    daemon, bridge, remoteSnapshot, hosts, pointer, config, nowIso: _nowIso(),
+    daemon,
+    bridge,
+    remoteSnapshot,
+    hosts,
+    pointer,
+    config,
+    nowIso: _nowIso(),
   });
 }
 
@@ -151,7 +188,9 @@ async function connect(hostAlias, opts = {}) {
   }
 
   let listing;
-  try { listing = deps.remote.sshConfigService.listHosts(); } catch (err) {
+  try {
+    listing = deps.remote.sshConfigService.listHosts();
+  } catch (err) {
     return { ok: false, code: 'config_read_failed', message: `读取 SSH 配置失败：${err.message}` };
   }
   const hostEntry = (listing.hosts || []).find((h) => h && h.alias === alias);
@@ -180,7 +219,11 @@ async function connect(hostAlias, opts = {}) {
       hostEntry,
     });
   } catch (err) {
-    return { ok: false, code: err.code || 'workspace_invalid', message: `工作目录解析失败：${err.message}` };
+    return {
+      ok: false,
+      code: err.code || 'workspace_invalid',
+      message: `工作目录解析失败：${err.message}`,
+    };
   }
 
   let session;
@@ -196,7 +239,10 @@ async function connect(hostAlias, opts = {}) {
   }
 
   const descriptor = state.buildSessionDescriptor({
-    session, hostEntry, workspace, savedAt: _nowIso(),
+    session,
+    hostEntry,
+    workspace,
+    savedAt: _nowIso(),
   });
   deps.store.writePointer(descriptor);
 
@@ -213,15 +259,24 @@ async function connect(hostAlias, opts = {}) {
 async function attach(opts = {}) {
   const deps = _deps(opts);
   let remoteSnapshot = {};
-  try { remoteSnapshot = deps.remote.remoteStateSyncService.getSnapshot(); } catch { /* best-effort */ }
+  try {
+    remoteSnapshot = deps.remote.remoteStateSyncService.getSnapshot();
+  } catch {
+    /* best-effort */
+  }
   const live = Array.isArray(remoteSnapshot.active_remote_sessions)
-    ? remoteSnapshot.active_remote_sessions : [];
+    ? remoteSnapshot.active_remote_sessions
+    : [];
 
   const wantedId = opts.connectionId ? String(opts.connectionId).trim() : null;
   if (wantedId) {
     const match = live.find((s) => s && String(s.connectionId) === wantedId);
     if (!match) {
-      return { ok: false, code: 'session_not_live', message: `未找到活动会话 ${wantedId}（可能进程已重启）` };
+      return {
+        ok: false,
+        code: 'session_not_live',
+        message: `未找到活动会话 ${wantedId}（可能进程已重启）`,
+      };
     }
     const descriptor = state.buildSessionDescriptor({ session: match, savedAt: _nowIso() });
     deps.store.writePointer(descriptor);
@@ -247,7 +302,11 @@ async function status(opts = {}) {
 function logs(opts = {}) {
   const deps = _deps(opts);
   let logPath = null;
-  try { logPath = deps.daemon.getLogPath(); } catch { /* best-effort */ }
+  try {
+    logPath = deps.daemon.getLogPath();
+  } catch {
+    /* best-effort */
+  }
   let lines = [];
   let error = null;
   if (logPath) {
@@ -276,14 +335,27 @@ async function stop(opts = {}) {
   const result = { scope, sessionCleared: false, bridgeStopped: false, daemonStopped: false };
 
   if (scope === 'session' || scope === 'all') {
-    try { deps.remote.sshConnectionManager.clearAll(); } catch { /* best-effort */ }
+    try {
+      deps.remote.sshConnectionManager.clearAll();
+    } catch {
+      /* best-effort */
+    }
     result.sessionCleared = deps.store.clearPointer() || true;
   }
   if (scope === 'bridge' || scope === 'all') {
-    try { await deps.bridge.stopBridgeServer(); result.bridgeStopped = true; } catch { /* best-effort */ }
+    try {
+      await deps.bridge.stopBridgeServer();
+      result.bridgeStopped = true;
+    } catch {
+      /* best-effort */
+    }
   }
   if (scope === 'daemon' || scope === 'all') {
-    try { result.daemonStopped = Boolean(deps.daemon.daemonStop()); } catch { /* best-effort */ }
+    try {
+      result.daemonStopped = Boolean(deps.daemon.daemonStop());
+    } catch {
+      /* best-effort */
+    }
   }
   return result;
 }

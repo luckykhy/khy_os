@@ -21,8 +21,16 @@
 /* ── Request handlers ────────────────────────────────────────── */
 
 static void _handle_send(const struct ipc_message *req, struct ipc_message *reply) {
+    if (req->payload_len < 3) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload[1] = 0;
+        reply->payload_len = 2;
+        return;
+    }
     /* payload[1] = data length, payload[2..] = data bytes */
     uint8_t len = req->payload[1];
+    if (len > req->payload_len - 2)
+        len = (uint8_t)(req->payload_len - 2);
     if (len > IPC_PAYLOAD_SIZE - 2)
         len = IPC_PAYLOAD_SIZE - 2;
     int rc = net_send(&req->payload[2], len);
@@ -52,14 +60,10 @@ static void _handle_stats(const struct ipc_message *req, struct ipc_message *rep
     struct net_stats stats;
     net_get_stats(&stats);
     reply->payload[0] = 0;
-    /* Pack stats as 4 x uint32_t (tx_packets, rx_packets, tx_bytes, rx_bytes) */
-    uint32_t *out = (uint32_t *)&reply->payload[4]; /* align to 4 bytes */
-    reply->payload[1] = (uint8_t)(stats.tx_packets & 0xFF);
-    reply->payload[2] = (uint8_t)(stats.rx_packets & 0xFF);
-    reply->payload[3] = (uint8_t)(stats.tx_bytes & 0xFF);
-    reply->payload[4] = (uint8_t)(stats.rx_bytes & 0xFF);
-    (void)out;
-    reply->payload_len = 5;
+    /* Pack basic count of drops as a single byte (debug aid, not a full
+     * stats protocol — counters larger than 255 lose precision here). */
+    reply->payload[1] = (uint8_t)(stats.drops & 0xFF);
+    reply->payload_len = 2;
 }
 
 /* ── Main service loop ───────────────────────────────────────── */
@@ -90,22 +94,28 @@ void net_service_task(void) {
         reply.type        = IPC_MSG_REPLY;
         reply.seq         = req.seq;
 
-        uint8_t op = req.payload[0];
-        switch (op) {
-        case NET_OP_SEND:
-            _handle_send(&req, &reply);
-            break;
-        case NET_OP_RECV:
-            _handle_recv(&req, &reply);
-            break;
-        case NET_OP_GET_STATS:
-            _handle_stats(&req, &reply);
-            break;
-        default:
+        if (req.payload_len < 1) {
             reply.type = IPC_MSG_ERROR;
             reply.payload[0] = (uint8_t)-1;
             reply.payload_len = 1;
-            break;
+        } else {
+            uint8_t op = req.payload[0];
+            switch (op) {
+            case NET_OP_SEND:
+                _handle_send(&req, &reply);
+                break;
+            case NET_OP_RECV:
+                _handle_recv(&req, &reply);
+                break;
+            case NET_OP_GET_STATS:
+                _handle_stats(&req, &reply);
+                break;
+            default:
+                reply.type = IPC_MSG_ERROR;
+                reply.payload[0] = (uint8_t)-1;
+                reply.payload_len = 1;
+                break;
+            }
         }
 
         if (req.sender_port > 0) {

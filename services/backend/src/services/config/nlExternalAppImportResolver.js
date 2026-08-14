@@ -27,21 +27,36 @@ function isEnabled(env = process.env) {
     if (reg && typeof reg.isFlagEnabled === 'function') {
       return reg.isFlagEnabled('KHY_NL_EXTERNAL_APP_IMPORT', env);
     }
-  } catch { /* registry unavailable — local CANON fallback */ }
+  } catch {
+    /* registry unavailable — local CANON fallback */
+  }
   const raw = env && env.KHY_NL_EXTERNAL_APP_IMPORT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 // ── app 名别名 → 规范 app id(与正向 resolver 同表,按长度降序先长后短)─────────────
 const _APP_ALIASES = [
-  ['deepseek-reasonix', 'reasonix'], ['deepseek reasonix', 'reasonix'], ['reasonix', 'reasonix'],
-  ['deepseek-tui', 'deepseek-tui'], ['deepseek tui', 'deepseek-tui'], ['ds-tui', 'deepseek-tui'],
+  ['deepseek-reasonix', 'reasonix'],
+  ['deepseek reasonix', 'reasonix'],
+  ['reasonix', 'reasonix'],
+  ['deepseek-tui', 'deepseek-tui'],
+  ['deepseek tui', 'deepseek-tui'],
+  ['ds-tui', 'deepseek-tui'],
   ['deepseek 终端', 'deepseek-tui'],
-  ['opencode', 'opencode'], ['open code', 'opencode'],
-  ['openclaw', 'openclaw'], ['open claw', 'openclaw'],
-  ['coze-studio', 'coze'], ['coze studio', 'coze'], ['coze', 'coze'], ['扣子', 'coze'],
-  ['claude-code', 'claude-code'], ['claude code', 'claude-code'], ['claudecode', 'claude-code'],
+  ['opencode', 'opencode'],
+  ['open code', 'opencode'],
+  ['openclaw', 'openclaw'],
+  ['open claw', 'openclaw'],
+  ['coze-studio', 'coze'],
+  ['coze studio', 'coze'],
+  ['coze', 'coze'],
+  ['扣子', 'coze'],
+  ['claude-code', 'claude-code'],
+  ['claude code', 'claude-code'],
+  ['claudecode', 'claude-code'],
 ].sort((a, b) => b[0].length - a[0].length);
 
 /** 从文本抽出被点名的 app(最先出现者)。命中不到 → ''。 */
@@ -51,7 +66,10 @@ function _extractApp(text) {
   let bestIdx = Infinity;
   for (const [alias, appId] of _APP_ALIASES) {
     const idx = s.indexOf(alias);
-    if (idx !== -1 && idx < bestIdx) { bestIdx = idx; best = appId; }
+    if (idx !== -1 && idx < bestIdx) {
+      bestIdx = idx;
+      best = appId;
+    }
   }
   return best;
 }
@@ -59,7 +77,8 @@ function _extractApp(text) {
 // ── 反向动词分两级 ────────────────────────────────────────────────────────────
 // 强反向动词:导入/引入/复用/借用/纳入/注册进…——语义上**只能**是"把外部软件的模型拿进 khy",
 // 即便句中还带正向词(如「复用 claude code **配置**的模型」里 配置 是定语)也判反向。
-const _STRONG_IMPORT_RE = /(导入|引入|复用|借用|拿来用|拿过来用|接过来用|注册进|注册到|纳入|收进来|接入到\s*khy|\bimport\b|\breuse\b)/i;
+const _STRONG_IMPORT_RE =
+  /(导入|引入|复用|借用|拿来用|拿过来用|接过来用|注册进|注册到|纳入|收进来|接入到\s*khy|\bimport\b|\breuse\b)/i;
 // 弱反向动词:使用/用——可能是正向「配置 opencode **使用** deepseek」的一部分,故仅当句中**无正向
 // 配置动作**时才判反向。「使用/借用/复用/引用」等复合已由强动词或此处覆盖,裸「用」另表补。
 const _WEAK_USE_RE = /(使用|用起来|用上|\buse\b)/i;
@@ -68,7 +87,8 @@ const _WEAK_USE_RE = /(使用|用起来|用上|\buse\b)/i;
 const _BARE_USE_RE = /(?:^|[\s，。、；;:：给让把从对想要能会来去]|想要|可以|打算|准备)用\s*/;
 // 正向配置动作(镜像 nlExternalAppResolver 的 add 动词,但**排除**反向的 注册进/注册到):命中即认为
 // 是"把模型配进外部软件"的正向意图,弱反向动词须让位(强反向动词不让位)。
-const _FORWARD_ADD_RE = /(添加|新增|增加|配置|设置|接入(?!到\s*khy)|注册(?!进|到)|加上|加个|加一个|\badd\b|\bconfig(?:ure)?\b|\bset\s*up\b|\bsetup\b)/i;
+const _FORWARD_ADD_RE =
+  /(添加|新增|增加|配置|设置|接入(?!到\s*khy)|注册(?!进|到)|加上|加个|加一个|\badd\b|\bconfig(?:ure)?\b|\bset\s*up\b|\bsetup\b)/i;
 
 // ── 模型领域引用(必须命中,才认为在谈"模型")──────────────────────────────────────
 const _DOMAIN_MODEL_RE = /(模型|\bmodel(?:s)?\b|大模型|\bllm\b)/i;
@@ -90,24 +110,34 @@ const _clean = require('../../utils/cleanText');
  */
 function resolve(text, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const t = _clean(text);
-    if (!t || t.length > 500) return null;
+    if (!t || t.length > 500) {
+      return null;
+    }
 
     // 必须在谈"模型"(领域闸门),否则不接管("怎么使用 opencode" 谈的是软件本身)。
-    if (!_DOMAIN_MODEL_RE.test(t)) return null;
+    if (!_DOMAIN_MODEL_RE.test(t)) {
+      return null;
+    }
 
     const strong = _STRONG_IMPORT_RE.test(t);
     // 弱反向动词仅当**无正向配置动作**时才算(让位正向「配置…使用…」)。
     const weak = (_WEAK_USE_RE.test(t) || _BARE_USE_RE.test(t)) && !_FORWARD_ADD_RE.test(t);
     const hasImport = strong || weak;
-    if (!hasImport) return null;
+    if (!hasImport) {
+      return null;
+    }
 
     const app = _extractApp(t);
 
     // 无 app 名:仅当「所有外部软件 + 导入动词」→ 整体导入;否则不接管(不猜单个 app)。
     if (!app) {
-      if (_ALL_APPS_RE.test(t)) return { action: 'import', all: true };
+      if (_ALL_APPS_RE.test(t)) {
+        return { action: 'import', all: true };
+      }
       return null;
     }
     return { app, action: 'import' };

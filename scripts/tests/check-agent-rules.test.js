@@ -8,7 +8,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const scriptPath = path.join(ROOT, 'scripts', 'check-agent-rules.js');
+const scriptPath = path.join(ROOT, 'scripts', 'ci', 'check-agent-rules.js');
 
 // Build ESC-related fixture content WITHOUT writing a literal "\x1b" token in
 // this source file — the editing/tooling layer rewrites that token into a raw

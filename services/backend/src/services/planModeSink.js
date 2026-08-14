@@ -54,8 +54,12 @@ function setTurnReadOnly(on) {
  * @returns {boolean}
  */
 function isPlanReadOnly() {
-  if (_turnReadOnly) return true;
-  if (!_provider) return false;
+  if (_turnReadOnly) {
+    return true;
+  }
+  if (!_provider) {
+    return false;
+  }
   try {
     return _provider() === true;
   } catch {

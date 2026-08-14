@@ -19,12 +19,13 @@
  */
 
 const os = require('os');
-const { printInfo, printError } = require('../formatters');
+
 const leaf = require('../../services/claimMain/claimMainPlan');
 const store = require('../../services/claimMain/claimMainStore');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
+const { printInfo, printError } = require('../formatters');
 
 /** 读当前指针(best-effort)。 */
 function _readPointer() {
@@ -33,7 +34,9 @@ function _readPointer() {
 
 /** 判持有者是否存活(委托 store 的 process.kill(pid,0))。 */
 function _holderAlive(pointer) {
-  if (!pointer || pointer.pid == null) return false;
+  if (!pointer || pointer.pid == null) {
+    return false;
+  }
   return _safe(() => store.isPidAlive(pointer.pid), false) === true;
 }
 
@@ -72,7 +75,9 @@ async function handleClaimMain(_subCommand, args = [], _options = {}) {
 
   if (parsed.action === 'release') {
     const decision = leaf.decideRelease({ pointer, selfPid });
-    if (decision.shouldClear) _safe(() => store.clearPointer(), false);
+    if (decision.shouldClear) {
+      _safe(() => store.clearPointer(), false);
+    }
     printInfo(leaf.buildReleaseText(decision));
     return true;
   }

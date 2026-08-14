@@ -39,7 +39,9 @@ function searchSkills(query, options = {}) {
   } = options;
 
   const q = (query || '').toLowerCase().trim();
-  if (!q) return [];
+  if (!q) {
+    return [];
+  }
 
   const results = [];
 
@@ -50,11 +52,17 @@ function searchSkills(query, options = {}) {
 
     for (const skill of skills.values()) {
       // Apply filters
-      if (userInvocableOnly && !skill.userInvocable) continue;
-      if (category && skill.category !== category) continue;
+      if (userInvocableOnly && !skill.userInvocable) {
+        continue;
+      }
+      if (category && skill.category !== category) {
+        continue;
+      }
       if (tags && tags.length > 0) {
-        const hasTag = tags.some(t => (skill.tags || []).includes(t));
-        if (!hasTag) continue;
+        const hasTag = tags.some((t) => (skill.tags || []).includes(t));
+        if (!hasTag) {
+          continue;
+        }
       }
 
       const score = _scoreSkill(skill, q);
@@ -66,7 +74,9 @@ function searchSkills(query, options = {}) {
         });
       }
     }
-  } catch { /* skill module not available */ }
+  } catch {
+    /* skill module not available */
+  }
 
   // Search legacy registry skills
   try {
@@ -74,7 +84,9 @@ function searchSkills(query, options = {}) {
     const builtinSkills = registry.BUILTIN_SKILLS || [];
     for (const skill of builtinSkills) {
       // Avoid duplicates (if already found via manifest-based loading)
-      if (results.some(r => r.skill.name === skill.id)) continue;
+      if (results.some((r) => r.skill.name === skill.id)) {
+        continue;
+      }
 
       const score = _scoreLegacySkill(skill, q);
       if (score > 0) {
@@ -91,7 +103,9 @@ function searchSkills(query, options = {}) {
         });
       }
     }
-  } catch { /* registry not available */ }
+  } catch {
+    /* registry not available */
+  }
 
   // Search MCP tools
   if (includeMcp) {
@@ -115,7 +129,9 @@ function searchSkills(query, options = {}) {
           });
         }
       }
-    } catch { /* MCP not available */ }
+    } catch {
+      /* MCP not available */
+    }
   }
 
   // Sort by score descending, then truncate
@@ -132,7 +148,9 @@ function searchSkills(query, options = {}) {
  */
 function surfaceRelevantSkills(message) {
   const result = { explicit: null, suggestions: [] };
-  if (!message || typeof message !== 'string') return result;
+  if (!message || typeof message !== 'string') {
+    return result;
+  }
 
   // Check for explicit slash command trigger
   const triggerMatch = message.match(/^\/(\S+)/);
@@ -145,12 +163,16 @@ function surfaceRelevantSkills(message) {
         result.explicit = _toSearchResult(skill);
         return result;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Implicit intent matching via keyword search
   const keywords = _extractKeywords(message);
-  if (keywords.length === 0) return result;
+  if (keywords.length === 0) {
+    return result;
+  }
 
   const matches = searchSkills(keywords.join(' '), {
     limit: 3,
@@ -158,8 +180,8 @@ function surfaceRelevantSkills(message) {
   });
 
   result.suggestions = matches
-    .filter(m => m.score >= 0.3) // Only reasonably confident matches
-    .map(m => m.skill);
+    .filter((m) => m.score >= 0.3) // Only reasonably confident matches
+    .map((m) => m.skill);
 
   return result;
 }
@@ -186,7 +208,9 @@ function buildSystemReminder(options = {}) {
     if (listing) {
       sections.push(listing);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // MCP tools
   if (includeMcp) {
@@ -195,10 +219,11 @@ function buildSystemReminder(options = {}) {
       const tools = mcp.listMCPTools();
       if (tools.length > 0) {
         const mcpBudget = charBudget - sections.reduce((s, sec) => s + sec.length, 0);
-        const mcpLines = tools.map(t => {
-          const desc = (t.description || '').length > 120
-            ? t.description.slice(0, 119) + '\u2026'
-            : (t.description || '');
+        const mcpLines = tools.map((t) => {
+          const desc =
+            (t.description || '').length > 120
+              ? t.description.slice(0, 119) + '\u2026'
+              : t.description || '';
           return `- ${t.name}: ${desc}`;
         });
 
@@ -207,7 +232,9 @@ function buildSystemReminder(options = {}) {
           // Truncate tool list to fit budget
           mcpSection = '';
           for (const line of mcpLines) {
-            if (mcpSection.length + line.length + 1 > mcpBudget) break;
+            if (mcpSection.length + line.length + 1 > mcpBudget) {
+              break;
+            }
             mcpSection += (mcpSection ? '\n' : '') + line;
           }
         }
@@ -216,7 +243,9 @@ function buildSystemReminder(options = {}) {
           sections.push(mcpSection);
         }
       }
-    } catch { /* MCP not available */ }
+    } catch {
+      /* MCP not available */
+    }
   }
 
   // MCP server instructions
@@ -227,7 +256,9 @@ function buildSystemReminder(options = {}) {
       if (instructions.length > 0) {
         sections.push('\n' + instructions.join('\n\n'));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return sections.join('\n');
@@ -244,20 +275,28 @@ function _scoreSkill(skill, query) {
   const q = query.toLowerCase();
 
   // Exact name match
-  if (skill.name.toLowerCase() === q) return 1.0;
+  if (skill.name.toLowerCase() === q) {
+    return 1.0;
+  }
 
   // Trigger match
-  if (skill.trigger === `/${q}` || skill.trigger === q) return 0.95;
+  if (skill.trigger === `/${q}` || skill.trigger === q) {
+    return 0.95;
+  }
 
   // Alias match
   if (skill.aliases) {
     for (const alias of skill.aliases) {
-      if (alias === `/${q}` || alias === q) return 0.9;
+      if (alias === `/${q}` || alias === q) {
+        return 0.9;
+      }
     }
   }
 
   // Name contains query
-  if (skill.name.toLowerCase().includes(q)) score = Math.max(score, 0.7);
+  if (skill.name.toLowerCase().includes(q)) {
+    score = Math.max(score, 0.7);
+  }
 
   // Description match
   if (skill.description && skill.description.toLowerCase().includes(q)) {
@@ -267,8 +306,14 @@ function _scoreSkill(skill, query) {
   // Tag match
   if (skill.tags) {
     for (const tag of skill.tags) {
-      if (tag.toLowerCase() === q) { score = Math.max(score, 0.6); break; }
-      if (tag.toLowerCase().includes(q)) { score = Math.max(score, 0.4); break; }
+      if (tag.toLowerCase() === q) {
+        score = Math.max(score, 0.6);
+        break;
+      }
+      if (tag.toLowerCase().includes(q)) {
+        score = Math.max(score, 0.4);
+        break;
+      }
     }
   }
 
@@ -278,10 +323,11 @@ function _scoreSkill(skill, query) {
   }
 
   // Multi-word query: check each word
-  const words = q.split(/\s+/).filter(w => w.length >= 2);
+  const words = q.split(/\s+/).filter((w) => w.length >= 2);
   if (words.length > 1) {
-    const text = `${skill.name} ${skill.description} ${(skill.tags || []).join(' ')} ${skill.category}`.toLowerCase();
-    const matchCount = words.filter(w => text.includes(w)).length;
+    const text =
+      `${skill.name} ${skill.description} ${(skill.tags || []).join(' ')} ${skill.category}`.toLowerCase();
+    const matchCount = words.filter((w) => text.includes(w)).length;
     const wordScore = (matchCount / words.length) * 0.6;
     score = Math.max(score, wordScore);
   }
@@ -297,15 +343,25 @@ function _scoreLegacySkill(skill, query) {
   let score = 0;
   const q = query.toLowerCase();
 
-  if (skill.id && skill.id.toLowerCase() === q) return 0.9;
-  if (skill.trigger === `/${q}` || skill.trigger === q) return 0.85;
+  if (skill.id && skill.id.toLowerCase() === q) {
+    return 0.9;
+  }
+  if (skill.trigger === `/${q}` || skill.trigger === q) {
+    return 0.85;
+  }
   if (skill.aliases) {
     for (const alias of skill.aliases) {
-      if (alias === `/${q}` || alias === q) return 0.8;
+      if (alias === `/${q}` || alias === q) {
+        return 0.8;
+      }
     }
   }
-  if (skill.description && skill.description.toLowerCase().includes(q)) score = 0.4;
-  if (skill.id && skill.id.toLowerCase().includes(q)) score = Math.max(score, 0.5);
+  if (skill.description && skill.description.toLowerCase().includes(q)) {
+    score = 0.4;
+  }
+  if (skill.id && skill.id.toLowerCase().includes(q)) {
+    score = Math.max(score, 0.5);
+  }
 
   return score;
 }
@@ -319,8 +375,12 @@ function _scoreMcpTool(tool, query) {
   const q = query.toLowerCase();
   const name = (tool.originalToolName || tool.name || '').toLowerCase();
 
-  if (name === q) return 0.9;
-  if (name.includes(q)) score = Math.max(score, 0.6);
+  if (name === q) {
+    return 0.9;
+  }
+  if (name.includes(q)) {
+    score = Math.max(score, 0.6);
+  }
   if (tool.description && tool.description.toLowerCase().includes(q)) {
     score = Math.max(score, 0.4);
   }
@@ -336,12 +396,24 @@ function _scoreMcpTool(tool, query) {
  */
 function _getMatchType(skill, query) {
   const q = query.toLowerCase();
-  if (skill.name.toLowerCase() === q) return 'name-exact';
-  if (skill.trigger === `/${q}`) return 'trigger';
-  if (skill.aliases && skill.aliases.some(a => a === `/${q}`)) return 'alias';
-  if (skill.name.toLowerCase().includes(q)) return 'name-partial';
-  if (skill.tags && skill.tags.some(t => t.toLowerCase().includes(q))) return 'tag';
-  if (skill.description && skill.description.toLowerCase().includes(q)) return 'description';
+  if (skill.name.toLowerCase() === q) {
+    return 'name-exact';
+  }
+  if (skill.trigger === `/${q}`) {
+    return 'trigger';
+  }
+  if (skill.aliases && skill.aliases.some((a) => a === `/${q}`)) {
+    return 'alias';
+  }
+  if (skill.name.toLowerCase().includes(q)) {
+    return 'name-partial';
+  }
+  if (skill.tags && skill.tags.some((t) => t.toLowerCase().includes(q))) {
+    return 'tag';
+  }
+  if (skill.description && skill.description.toLowerCase().includes(q)) {
+    return 'description';
+  }
   return 'keyword';
 }
 
@@ -369,20 +441,76 @@ function _toSearchResult(skill) {
 function _extractKeywords(message) {
   // Common stop words to filter out
   const stopWords = new Set([
-    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
-    'on', 'with', 'at', 'by', 'from', 'it', 'this', 'that', 'these',
-    'those', 'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'she',
-    'they', 'them', 'and', 'or', 'but', 'not', 'no', 'if', 'then',
-    'please', 'help', 'want', 'need', 'like', 'just', 'also',
+    'the',
+    'a',
+    'an',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'can',
+    'shall',
+    'to',
+    'of',
+    'in',
+    'for',
+    'on',
+    'with',
+    'at',
+    'by',
+    'from',
+    'it',
+    'this',
+    'that',
+    'these',
+    'those',
+    'i',
+    'me',
+    'my',
+    'we',
+    'our',
+    'you',
+    'your',
+    'he',
+    'she',
+    'they',
+    'them',
+    'and',
+    'or',
+    'but',
+    'not',
+    'no',
+    'if',
+    'then',
+    'please',
+    'help',
+    'want',
+    'need',
+    'like',
+    'just',
+    'also',
   ]);
 
   return message
     .toLowerCase()
     .replace(/[^\w\s-]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length >= 2 && !stopWords.has(w))
+    .filter((w) => w.length >= 2 && !stopWords.has(w))
     .slice(0, 8); // Limit to top 8 keywords
 }
 

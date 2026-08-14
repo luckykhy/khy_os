@@ -26,7 +26,6 @@
  *   KHY_FS_WALK_BUDGET_MS   默认 8000 —— 墙钟预算毫秒(numeric,clamp[250, 600000])。
  */
 
-
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
 /** 总开关:墙钟预算是否启用。默认 on。 */
@@ -53,17 +52,22 @@ function isWalkAsyncEnabled(env) {
   return _isEnabled('KHY_FS_WALK_ASYNC', env);
 }
 
-
 /** 解析墙钟预算(毫秒)。经 flagRegistry.resolveNumeric;不可用则本地 clamp。默认 8000。 */
 function resolveWalkBudgetMs(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : {});
   try {
     const flagRegistry = require('../services/flagRegistry');
     const v = flagRegistry.resolveNumeric('KHY_FS_WALK_BUDGET_MS', e);
-    if (Number.isFinite(v) && v > 0) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v > 0) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const raw = Number.parseInt((e && e.KHY_FS_WALK_BUDGET_MS) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return Math.min(600000, Math.max(250, raw));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.min(600000, Math.max(250, raw));
+  }
   return 8000;
 }
 
@@ -77,7 +81,9 @@ function resolveWalkBudgetMs(env) {
 function createWalkDeadline(env, nowFn) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isWalkBudgetEnabled(e)) return null;
+    if (!isWalkBudgetEnabled(e)) {
+      return null;
+    }
     const clock = typeof nowFn === 'function' ? nowFn : Date.now;
     const budgetMs = resolveWalkBudgetMs(e);
     const startedAt = clock();
@@ -86,7 +92,11 @@ function createWalkDeadline(env, nowFn) {
       budgetMs,
       startedAt,
       exceeded() {
-        try { return clock() >= deadline; } catch { return false; }
+        try {
+          return clock() >= deadline;
+        } catch {
+          return false;
+        }
       },
     };
   } catch {

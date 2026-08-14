@@ -1,6 +1,7 @@
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 class DiscoverSkillsTool extends BaseTool {
   static toolName = 'DiscoverSkills';
@@ -9,8 +10,12 @@ class DiscoverSkillsTool extends BaseTool {
   static aliases = ['discover_skills', 'list_skills'];
   static searchHint = 'discover skills list available commands';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Discover and list available skills (slash commands).
@@ -33,15 +38,32 @@ Shows both built-in and user-created skills.`;
       path.join(process.cwd(), '.khy', 'skills'),
       path.join(require('os').homedir(), '.khy', 'skills'),
     ];
+    // Portable-aware user skills dir (dedup: equals ~/.khy/skills in
+    // non-portable installs, so behavior there is unchanged).
+    try {
+      const { getDataHome } = require('../../utils/dataHome');
+      const portableDir = path.join(getDataHome(), 'skills');
+      if (!skillDirs.includes(portableDir)) {
+        skillDirs.push(portableDir);
+      }
+    } catch {
+      /* dataHome unavailable */
+    }
 
     const skills = [];
     for (const dir of skillDirs) {
-      if (!fs.existsSync(dir)) continue;
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
         const manifestPath = path.join(dir, entry.name, 'manifest.json');
-        if (!fs.existsSync(manifestPath)) continue;
+        if (!fs.existsSync(manifestPath)) {
+          continue;
+        }
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
           skills.push({
@@ -50,13 +72,17 @@ Shows both built-in and user-created skills.`;
             description: manifest.description || '',
             source: dir.includes('built-in') ? 'built-in' : 'user',
           });
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
     }
 
     const query = (params.query || '').toLowerCase();
     const filtered = query
-      ? skills.filter(s => s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query))
+      ? skills.filter(
+          (s) => s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query)
+        )
       : skills;
 
     return { success: true, skills: filtered, total: filtered.length };

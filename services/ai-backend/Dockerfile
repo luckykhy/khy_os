@@ -3,9 +3,14 @@ FROM node:20-slim
 WORKDIR /app
 
 # System dependencies (curl for healthcheck, build tools for better-sqlite3)
-RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
-    sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list 2>/dev/null; \
-    true
+ARG APT_MIRROR=""
+RUN if [ -n "$APT_MIRROR" ]; then \
+      if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+      elif [ -f /etc/apt/sources.list ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list; \
+      fi; \
+    fi
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl build-essential ca-certificates python3 python3-dev && \
@@ -18,9 +23,15 @@ ENV npm_config_python=/usr/bin/python3
 COPY platform/packages/shared /app/packages/shared
 
 # Copy ai-backend package files
-COPY services/ai-backend/package*.json services/ai-backend/.npmrc ./
+COPY services/ai-backend/package*.json ./
 
-RUN npm install --no-audit --no-fund && npm cache clean --force
+# ai-backend/package.json uses "@khy/shared": "^1.6.5" for monorepo local dev.
+# In Docker single-package build, rewrite it to a local file dependency.
+RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));if(p.dependencies&&p.dependencies['@khy/shared'])p.dependencies['@khy/shared']='file:packages/shared';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
+RUN rm -f package-lock.json
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN npm config set registry $NPM_REGISTRY
+RUN npm install --no-audit --no-fund
 
 # Copy ai-backend source
 COPY services/ai-backend/ ./

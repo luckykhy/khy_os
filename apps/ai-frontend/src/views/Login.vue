@@ -17,20 +17,45 @@
           <el-input v-model="form.username" size="large" placeholder="用户名" prefix-icon="User" />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="form.password" size="large" placeholder="密码" type="password" prefix-icon="Lock" show-password />
+          <el-input
+            v-model="form.password"
+            size="large"
+            placeholder="密码"
+            type="password"
+            prefix-icon="Lock"
+            show-password
+          />
         </el-form-item>
 
         <div class="login-row">
-          <el-button text type="primary" class="login-fill-btn" @click="fillDefaultAdmin">
-            使用默认管理员账号填充
+          <el-button
+            text
+            type="primary"
+            class="login-fill-btn"
+            :loading="filling"
+            @click="fillDefaultAdmin"
+          >
+            填充默认管理员用户名
           </el-button>
         </div>
 
-        <el-form-item v-if="error" class="login-error-item">
-          <el-alert :title="error" type="error" show-icon :closable="false" />
+        <el-form-item v-if="fillHint" class="login-error-item">
+          <el-alert :title="fillHint" type="info" :closable="false">
+            <template #icon><KhyIcon kind="user" size="sm" /></template>
+          </el-alert>
         </el-form-item>
 
-        <el-button type="primary" native-type="submit" size="large" :loading="loading" class="login-submit">
+        <el-form-item v-if="error" class="login-error-item">
+          <el-alert :title="error" type="error" :closable="false" />
+        </el-form-item>
+
+        <el-button
+          type="primary"
+          native-type="submit"
+          size="large"
+          :loading="loading"
+          class="login-submit"
+        >
           校验账号并进入用户首页
         </el-button>
       </el-form>
@@ -43,53 +68,76 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
+import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/stores/user';
+import request from '@/api/request';
 
-const router = useRouter()
-const userStore = useUserStore()
-const loading = ref(false)
-const error = ref('')
-const form = reactive({ username: '', password: '' })
+const router = useRouter();
+const userStore = useUserStore();
+const loading = ref(false);
+const error = ref('');
+const fillHint = ref('');
+const filling = ref(false);
+const form = reactive({ username: '', password: '' });
 
-function fillDefaultAdmin() {
-  form.username = 'admin'
-  form.password = 'admin123' // pragma: allowlist secret — 「填充默认管理员」便捷按钮的示范默认口令,非真实凭据
+// Fill ONLY the username from the backend (the initial password is generated
+// per machine and never exposed via API — it lives in the credentials file).
+async function fillDefaultAdmin() {
+  filling.value = true;
+  try {
+    const { data } = await request.get('/api/auth/default-admin');
+    const payload = data && typeof data.data === 'object' && data.data ? data.data : data;
+    const username = String(payload?.username || '').trim();
+    if (username) {
+      form.username = username;
+      fillHint.value = '已填充默认管理员用户名；密码见数据目录 .khy/credentials/default-admin.json';
+    } else {
+      fillHint.value = '未获取到默认管理员；密码见数据目录 .khy/credentials/default-admin.json';
+    }
+  } catch {
+    fillHint.value = '无法获取默认管理员用户名；凭据见数据目录 .khy/credentials/default-admin.json';
+  } finally {
+    filling.value = false;
+  }
 }
 
 function mapLoginError(err) {
-  const serverMsg = String(err?.response?.data?.message || err?.response?.data?.error || '').trim()
-  const localMsg = String(err?.message || '').trim()
-  const raw = serverMsg || localMsg
-  const lower = raw.toLowerCase()
+  const serverMsg = String(err?.response?.data?.message || err?.response?.data?.error || '').trim();
+  const localMsg = String(err?.message || '').trim();
+  const raw = serverMsg || localMsg;
+  const lower = raw.toLowerCase();
 
-  if (!raw) return '登录失败，请稍后重试'
+  if (!raw) return '登录失败，请稍后重试';
   if (err?.response?.status === 401 || lower.includes('invalid username or password')) {
-    return '用户名或密码错误。请使用交易系统管理员账号，默认可尝试 admin / admin123。'
+    return '用户名或密码错误。默认管理员初始密码保存在数据目录 .khy/credentials/default-admin.json。';
   }
   if (err?.response?.status === 403 || lower.includes('not active')) {
-    return '账号未激活，请检查用户状态。'
+    return '账号未激活，请检查用户状态。';
   }
   if (lower.includes('jwt_secret') || lower.includes('not configured')) {
-    return '后端认证配置缺失（JWT_SECRET）。请先检查 .env 后重启服务。'
+    return '后端认证配置缺失（JWT_SECRET）。请先检查 .env 后重启服务。';
   }
-  if (lower.includes('network error') || lower.includes('econnrefused') || lower.includes('failed to fetch')) {
-    return '无法连接 AI 管理后端（Network Error）。请确认 ai-backend 服务 healthy，且当前页面 API 代理配置正确。'
+  if (
+    lower.includes('network error') ||
+    lower.includes('econnrefused') ||
+    lower.includes('failed to fetch')
+  ) {
+    return '无法连接 AI 管理后端（Network Error）。请确认 ai-backend 服务 healthy，且当前页面 API 代理配置正确。';
   }
-  return raw
+  return raw;
 }
 
 async function handleLogin() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
   try {
-    await userStore.login(form.username, form.password)
-    router.push('/home')
+    await userStore.login(form.username, form.password);
+    router.push('/home');
   } catch (err) {
-    error.value = mapLoginError(err)
+    error.value = mapLoginError(err);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -133,8 +181,13 @@ async function handleLogin() {
 }
 
 @keyframes login-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(20px, -24px) scale(1.08); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -24px) scale(1.08);
+  }
 }
 
 .login-card {
@@ -150,8 +203,14 @@ async function handleLogin() {
 }
 
 @keyframes login-rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .login-brand {

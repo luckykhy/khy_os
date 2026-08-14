@@ -31,7 +31,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_SUBAGENT_MODEL_AUTOSELECT;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -48,7 +50,9 @@ const _TIER_ALIASES = new Set(['haiku', 'sonnet', 'opus']);
  */
 function isTierAlias(s) {
   try {
-    if (typeof s !== 'string') return false;
+    if (typeof s !== 'string') {
+      return false;
+    }
     return _TIER_ALIASES.has(s.trim().toLowerCase());
   } catch {
     return false;
@@ -63,7 +67,12 @@ const _ALIAS_PREFER_TIER = { haiku: 'T3', sonnet: 'T1', opus: 'T0' };
 const _SOURCE_RANK = { remote: 0, config: 1, hint: 2 };
 
 function _sourceRank(src) {
-  const r = _SOURCE_RANK[String(src || '').trim().toLowerCase()];
+  const r =
+    _SOURCE_RANK[
+      String(src || '')
+        .trim()
+        .toLowerCase()
+    ];
   return Number.isFinite(r) ? r : 3;
 }
 
@@ -76,7 +85,9 @@ function _sourceRank(src) {
 function _normalizeAvailable(available) {
   const out = [];
   const seen = new Set();
-  if (!Array.isArray(available)) return out;
+  if (!Array.isArray(available)) {
+    return out;
+  }
   for (const entry of available) {
     let id = '';
     let source = '';
@@ -87,9 +98,13 @@ function _normalizeAvailable(available) {
       source = entry.discoverySource || entry.source || '';
     }
     id = typeof id === 'string' ? id.trim() : '';
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     const key = id.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push({ id, source: typeof source === 'string' ? source : '' });
   }
@@ -117,19 +132,24 @@ function _normalizeAvailable(available) {
 function selectAvailableModels(requested, available, opts = {}) {
   try {
     const list = _normalizeAvailable(available);
-    if (list.length === 0) return [];
+    if (list.length === 0) {
+      return [];
+    }
 
-    const max = Number.isFinite(opts && opts.max) && opts.max > 0 ? (opts.max | 0) : 3;
+    const max = Number.isFinite(opts && opts.max) && opts.max > 0 ? opts.max | 0 : 3;
     const req = typeof requested === 'string' ? requested.trim() : '';
 
     // 2. 具体 id 命中可用列表 → 直接返回那一个(原样)。
     if (req && !isTierAlias(req)) {
       const hit = list.find((e) => e.id.toLowerCase() === req.toLowerCase());
-      if (hit) return [hit.id];
+      if (hit) {
+        return [hit.id];
+      }
     }
 
     // 期望 tier:别名取映射;具体未命中 id 取其自身 tier;否则默认最轻 T3。
-    let preferTier = opts && typeof opts.preferTier === 'string' ? opts.preferTier.trim().toUpperCase() : '';
+    let preferTier =
+      opts && typeof opts.preferTier === 'string' ? opts.preferTier.trim().toUpperCase() : '';
     if (!_TIER_ORDER.hasOwnProperty(preferTier)) {
       if (req && isTierAlias(req)) {
         preferTier = _ALIAS_PREFER_TIER[req.toLowerCase()] || 'T3';
@@ -144,11 +164,15 @@ function selectAvailableModels(requested, available, opts = {}) {
     // 3. decorate-sort-undecorate(稳定、确定性)。
     const decorated = list.map((e, i) => {
       let tier;
-      try { tier = modelTier.resolveTier(e.id); } catch { tier = 'T2'; }
+      try {
+        tier = modelTier.resolveTier(e.id);
+      } catch {
+        tier = 'T2';
+      }
       const tIdx = _TIER_ORDER.hasOwnProperty(tier) ? _TIER_ORDER[tier] : _TIER_ORDER.T2;
       return { id: e.id, idx: i, dist: Math.abs(tIdx - preferIdx), src: _sourceRank(e.source) };
     });
-    decorated.sort((a, b) => (a.dist - b.dist) || (a.src - b.src) || (a.idx - b.idx));
+    decorated.sort((a, b) => a.dist - b.dist || a.src - b.src || a.idx - b.idx);
 
     return decorated.slice(0, max).map((d) => d.id);
   } catch {
@@ -161,8 +185,9 @@ function describeSubAgentModelSelect() {
   return {
     gate: 'KHY_SUBAGENT_MODEL_AUTOSELECT',
     defaultOn: true,
-    summary: '子 agent 从「当前通道真正可用的模型列表」里按 tier 贴合度 + 发现来源可信度挑模型'
-      + '(优先轻量),取代盲发写死的 tier 别名;门控关则候选级联用原盲列表(字节回退)。',
+    summary:
+      '子 agent 从「当前通道真正可用的模型列表」里按 tier 贴合度 + 发现来源可信度挑模型' +
+      '(优先轻量),取代盲发写死的 tier 别名;门控关则候选级联用原盲列表(字节回退)。',
   };
 }
 

@@ -18,6 +18,7 @@
 
 const http = require('http');
 const { URL } = require('url');
+
 const { createServerCore } = require('./mcpServer');
 const policy = require('./mcpServeToolPolicy');
 
@@ -31,9 +32,17 @@ const DEFAULT_PORT = 3737;
  * @returns {boolean}
  */
 function isLoopbackHost(host) {
-  const h = String(host == null ? '' : host).trim().toLowerCase();
-  return h === '' || h === '127.0.0.1' || h === 'localhost' || h === '::1'
-    || h === '0:0:0:0:0:0:0:1' || h.startsWith('127.');
+  const h = String(host == null ? '' : host)
+    .trim()
+    .toLowerCase();
+  return (
+    h === '' ||
+    h === '127.0.0.1' ||
+    h === 'localhost' ||
+    h === '::1' ||
+    h === '0:0:0:0:0:0:0:1' ||
+    h.startsWith('127.')
+  );
 }
 
 /**
@@ -43,12 +52,17 @@ function isLoopbackHost(host) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 function canStartOnHost(host, token) {
-  if (isLoopbackHost(host)) return { ok: true };
-  if (token && String(token).length > 0) return { ok: true };
+  if (isLoopbackHost(host)) {
+    return { ok: true };
+  }
+  if (token && String(token).length > 0) {
+    return { ok: true };
+  }
   return {
     ok: false,
-    reason: `拒绝在非 loopback 地址 ${host} 上无 token 启动:khy 暴露全量工具(含 shell/文件写),`
-      + `绝不裸奔上网。请加 --token <令牌> 或绑定到 127.0.0.1。`,
+    reason:
+      `拒绝在非 loopback 地址 ${host} 上无 token 启动:khy 暴露全量工具(含 shell/文件写),` +
+      `绝不裸奔上网。请加 --token <令牌> 或绑定到 127.0.0.1。`,
   };
 }
 
@@ -60,12 +74,18 @@ function canStartOnHost(host, token) {
  * @returns {boolean}
  */
 function isAuthorized(req, token) {
-  if (!token || String(token).length === 0) return true; // 仅 loopback,无 token 门
+  if (!token || String(token).length === 0) {
+    return true;
+  } // 仅 loopback,无 token 门
   const r = req && typeof req === 'object' ? req : {};
   const auth = String(r.authorization == null ? '' : r.authorization);
   const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  if (bearer && bearer === token) return true;
-  if (r.queryToken && String(r.queryToken) === token) return true;
+  if (bearer && bearer === token) {
+    return true;
+  }
+  if (r.queryToken && String(r.queryToken) === token) {
+    return true;
+  }
   return false;
 }
 
@@ -90,7 +110,11 @@ function startHttpServer(opts = {}) {
 
   const guard = canStartOnHost(host, token);
   if (!guard.ok) {
-    try { errOutput.write(`khy MCP server (http): ${guard.reason}\n`); } catch { /* ignore */ }
+    try {
+      errOutput.write(`khy MCP server (http): ${guard.reason}\n`);
+    } catch {
+      /* ignore */
+    }
     return { ok: false, reason: guard.reason };
   }
 
@@ -103,7 +127,7 @@ function startHttpServer(opts = {}) {
   function authFromReq(req, urlObj) {
     return isAuthorized(
       { authorization: req.headers['authorization'], queryToken: urlObj.searchParams.get('token') },
-      token,
+      token
     );
   }
 
@@ -140,43 +164,57 @@ function startHttpServer(opts = {}) {
       sseSessions.set(sessionId, res);
       // 告知客户端往哪 POST 回信(spec:endpoint 事件)。
       res.write(`event: endpoint\ndata: /messages?sessionId=${encodeURIComponent(sessionId)}\n\n`);
-      req.on('close', () => { sseSessions.delete(sessionId); });
+      req.on('close', () => {
+        sseSessions.delete(sessionId);
+      });
       return;
     }
 
     // ── 传统 SSE 回信:POST /messages?sessionId=… ────────────────────────────
     if (req.method === 'POST' && pathname === '/messages') {
       const sessionId = urlObj.searchParams.get('sessionId') || '';
-      readBody(req).then(async (body) => {
-        const resp = await core.handleMessage(body);
-        // 通知无回包 → 202;否则经该会话 SSE 流推。
-        const sink = sseSessions.get(sessionId);
-        if (resp && sink) {
-          try { sink.write(`event: message\ndata: ${JSON.stringify(resp)}\n\n`); } catch { /* stream 关 */ }
-        }
-        res.writeHead(202, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
-      }).catch((err) => {
-        writeJson(res, 500, { error: err && err.message ? err.message : 'internal error' });
-      });
+      readBody(req)
+        .then(async (body) => {
+          const resp = await core.handleMessage(body);
+          // 通知无回包 → 202;否则经该会话 SSE 流推。
+          const sink = sseSessions.get(sessionId);
+          if (resp && sink) {
+            try {
+              sink.write(`event: message\ndata: ${JSON.stringify(resp)}\n\n`);
+            } catch {
+              /* stream 关 */
+            }
+          }
+          res.writeHead(202, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        })
+        .catch((err) => {
+          writeJson(res, 500, { error: err && err.message ? err.message : 'internal error' });
+        });
       return;
     }
 
     // ── Streamable HTTP:POST / 或 /mcp → JSON 回包 ──────────────────────────
     if (req.method === 'POST' && (pathname === '/' || pathname === '/mcp')) {
-      readBody(req).then(async (body) => {
-        const resp = await core.handleMessage(body);
-        const headers = { 'Content-Type': 'application/json' };
-        // 回显/签发会话 id(Streamable HTTP)。
-        const sid = req.headers['mcp-session-id'] || `khy-${++sessionSeq}`;
-        headers['Mcp-Session-Id'] = sid;
-        // 通知无回包 → 202 空体。
-        if (!resp) { res.writeHead(202, headers); res.end(); return; }
-        res.writeHead(200, headers);
-        res.end(JSON.stringify(resp));
-      }).catch((err) => {
-        writeJson(res, 500, { error: err && err.message ? err.message : 'internal error' });
-      });
+      readBody(req)
+        .then(async (body) => {
+          const resp = await core.handleMessage(body);
+          const headers = { 'Content-Type': 'application/json' };
+          // 回显/签发会话 id(Streamable HTTP)。
+          const sid = req.headers['mcp-session-id'] || `khy-${++sessionSeq}`;
+          headers['Mcp-Session-Id'] = sid;
+          // 通知无回包 → 202 空体。
+          if (!resp) {
+            res.writeHead(202, headers);
+            res.end();
+            return;
+          }
+          res.writeHead(200, headers);
+          res.end(JSON.stringify(resp));
+        })
+        .catch((err) => {
+          writeJson(res, 500, { error: err && err.message ? err.message : 'internal error' });
+        });
       return;
     }
 
@@ -187,15 +225,27 @@ function startHttpServer(opts = {}) {
     try {
       const summary = policy.summarizeExposure(core.exposedTools());
       errOutput.write(
-        `khy MCP server (http) ready — 绑定 ${host}:${port} · token: ${token ? '已启用' : '未启用(仅 loopback)'} · `
-        + `暴露 ${summary.total} 个工具(含破坏性: ${summary.hasDestructive ? 'yes' : 'no'})\n`,
+        `khy MCP server (http) ready — 绑定 ${host}:${port} · token: ${token ? '已启用' : '未启用(仅 loopback)'} · ` +
+          `暴露 ${summary.total} 个工具(含破坏性: ${summary.hasDestructive ? 'yes' : 'no'})\n`
       );
-    } catch { /* 横幅 best-effort */ }
+    } catch {
+      /* 横幅 best-effort */
+    }
   });
 
   const close = () => {
-    try { server.close(); } catch { /* ignore */ }
-    for (const sink of sseSessions.values()) { try { sink.end(); } catch { /* ignore */ } }
+    try {
+      server.close();
+    } catch {
+      /* ignore */
+    }
+    for (const sink of sseSessions.values()) {
+      try {
+        sink.end();
+      } catch {
+        /* ignore */
+      }
+    }
     sseSessions.clear();
   };
 
@@ -212,9 +262,14 @@ function readBody(req) {
     let data = '';
     let tooBig = false;
     req.on('data', (chunk) => {
-      if (tooBig) return;
+      if (tooBig) {
+        return;
+      }
       data += chunk;
-      if (data.length > 4 * 1024 * 1024) { tooBig = true; data = ''; }
+      if (data.length > 4 * 1024 * 1024) {
+        tooBig = true;
+        data = '';
+      }
     });
     req.on('end', () => resolve(data));
     req.on('error', () => resolve(''));

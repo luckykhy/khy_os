@@ -25,12 +25,13 @@
  * 把 Execution 放行结果串到 [[dataSovereignty]] 与权限审批之前。
  */
 
-const { IntentSpectrumAnalyzer } = require('./intentSpectrumAnalyzer');
-const { TieredResponseRouter, EXECUTION_DOWNSTREAM } = require('./tieredResponseRouter');
-const { MisjudgmentQuencher, MISJUDGMENT_KIND } = require('./misjudgmentQuencher');
-const { BANDS } = require('./intentLexicon');
-const calibration = require('./intentCalibration');
 const evoLedger = require('../evoEngine/evoLedger');
+
+const calibration = require('./intentCalibration');
+const { BANDS } = require('./intentLexicon');
+const { IntentSpectrumAnalyzer } = require('./intentSpectrumAnalyzer');
+const { MisjudgmentQuencher, MISJUDGMENT_KIND } = require('./misjudgmentQuencher');
+const { TieredResponseRouter, EXECUTION_DOWNSTREAM } = require('./tieredResponseRouter');
 
 const DEFAULT_BRANCH = 'intent_arbiter_pool';
 
@@ -38,7 +39,19 @@ const DEFAULT_BRANCH = 'intent_arbiter_pool';
 // 非静默截断 —— 在校准归因里说明「基于近 N 条纠正」。
 const CALIBRATION_POOL_CAP = 200;
 
-const AFFIRMATIVE = Object.freeze(['y', 'yes', '是', '确认', '确定', '对', '好', '嗯', '要', '可以', '进入']);
+const AFFIRMATIVE = Object.freeze([
+  'y',
+  'yes',
+  '是',
+  '确认',
+  '确定',
+  '对',
+  '好',
+  '嗯',
+  '要',
+  '可以',
+  '进入',
+]);
 const NEGATIVE = Object.freeze(['n', 'no', '否', '不', '不要', '取消', '算了', '别']);
 
 class IntentArbiter {
@@ -60,8 +73,12 @@ class IntentArbiter {
     // 确定性历史校准（Phase C-2 第 2 层，best-effort，仅降级）。门控关 → calibrated===analysis。
     const calibrated = this._calibrate(analysis);
     const route = this.router.route(calibrated);
-    const status = route.band === BANDS.EXECUTION ? 'execution'
-      : route.band === BANDS.CONFIRM ? 'confirm' : 'chat';
+    const status =
+      route.band === BANDS.EXECUTION
+        ? 'execution'
+        : route.band === BANDS.CONFIRM
+          ? 'confirm'
+          : 'chat';
     return { status, analysis: calibrated, route };
   }
 
@@ -79,22 +96,36 @@ class IntentArbiter {
    */
   _calibrate(analysis) {
     try {
-      if (!calibration.isEnabled(process.env)) return analysis;
+      if (!calibration.isEnabled(process.env)) {
+        return analysis;
+      }
       const entries = this.pool(); // 已内置 try/catch,失败返 []
-      if (!Array.isArray(entries) || entries.length === 0) return analysis;
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return analysis;
+      }
       const exemplars = entries
-        .filter((e) => e && e.payload
-          && e.payload.misjudgmentKind === MISJUDGMENT_KIND.FALSE_TRIGGER
-          && typeof e.payload.originalText === 'string'
-          && e.payload.originalText)
+        .filter(
+          (e) =>
+            e &&
+            e.payload &&
+            e.payload.misjudgmentKind === MISJUDGMENT_KIND.FALSE_TRIGGER &&
+            typeof e.payload.originalText === 'string' &&
+            e.payload.originalText
+        )
         .slice(-CALIBRATION_POOL_CAP)
         .map((e) => ({ originalText: e.payload.originalText }));
-      if (exemplars.length === 0) return analysis;
+      if (exemplars.length === 0) {
+        return analysis;
+      }
 
       const c = calibration.selectCalibration(analysis, exemplars, process.env);
-      if (!c || !c.adjusted) return analysis;
+      if (!c || !c.adjusted) {
+        return analysis;
+      }
       // 叶子结构上只产出 CHAT；此处再兜一道防呆②,绝不让校准把 band 抬到执行带。
-      if (c.band === BANDS.EXECUTION) return analysis;
+      if (c.band === BANDS.EXECUTION) {
+        return analysis;
+      }
       return {
         ...analysis,
         band: c.band,
@@ -115,7 +146,9 @@ class IntentArbiter {
    * @returns {{status:'execution'|'aborted'|'unclear', route?:object, analysis?:object}}
    */
   confirm(originalText, reply) {
-    const r = String(reply || '').trim().toLowerCase();
+    const r = String(reply || '')
+      .trim()
+      .toLowerCase();
     const isYes = AFFIRMATIVE.some((w) => r === w.toLowerCase() || r.startsWith(w.toLowerCase()));
     const isNo = NEGATIVE.some((w) => r === w.toLowerCase() || r.startsWith(w.toLowerCase()));
 
@@ -142,33 +175,48 @@ class IntentArbiter {
    */
   feedback(correctionText, context = {}) {
     const quench = this.quencher.quench(correctionText, context);
-    if (!quench) return { status: 'no-signal' };
+    if (!quench) {
+      return { status: 'no-signal' };
+    }
     this._log(quench);
     return { status: 'quenched', misjudgmentKind: quench.misjudgmentKind, quench };
   }
 
   /** 意图进化需求池（不可变哈希链拷贝）。 */
   pool() {
-    try { return this.ledger.read({ branch: this.branch }); } catch { return []; }
+    try {
+      return this.ledger.read({ branch: this.branch });
+    } catch {
+      return [];
+    }
   }
 
   /** 校验需求池链完整性（复用 evoLedger）。 */
   verifyPool() {
-    try { return this.ledger.verify({ branch: this.branch }); }
-    catch { return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' }; }
+    try {
+      return this.ledger.verify({ branch: this.branch });
+    } catch {
+      return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' };
+    }
   }
 
   _log(quench) {
     try {
-      return this.ledger.append(this.ledger.KIND.REQUIREMENT, {
-        source: 'intent-arbiter',
-        misjudgmentKind: quench.misjudgmentKind,
-        targetFeature: quench.targetFeature,
-        requirementId: quench.requirement.id,
-        level: quench.requirement.level,
-        originalText: quench.requirement.originalText,
-      }, { branch: this.branch });
-    } catch { return { ok: false }; }
+      return this.ledger.append(
+        this.ledger.KIND.REQUIREMENT,
+        {
+          source: 'intent-arbiter',
+          misjudgmentKind: quench.misjudgmentKind,
+          targetFeature: quench.targetFeature,
+          requirementId: quench.requirement.id,
+          level: quench.requirement.level,
+          originalText: quench.requirement.originalText,
+        },
+        { branch: this.branch }
+      );
+    } catch {
+      return { ok: false };
+    }
   }
 }
 

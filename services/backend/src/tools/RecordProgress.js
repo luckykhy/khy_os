@@ -26,25 +26,32 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _progressEnabled(env) {
   const e = env || process.env;
-  const disabled = String(e.KHY_DISABLE_MEMORY || '').trim().toLowerCase();
-  if (disabled === '1' || disabled === 'true') return false;
-  const raw = String(e.KHY_PROGRESS_LOG == null ? '' : e.KHY_PROGRESS_LOG).trim().toLowerCase();
+  const disabled = String(e.KHY_DISABLE_MEMORY || '')
+    .trim()
+    .toLowerCase();
+  if (disabled === '1' || disabled === 'true') {
+    return false;
+  }
+  const raw = String(e.KHY_PROGRESS_LOG == null ? '' : e.KHY_PROGRESS_LOG)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
 module.exports = defineTool({
   name: 'RecordProgress',
   description:
-    'Checkpoint cross-session learning/work progress for the current project folder, so a '
-    + 'later session can resume instead of starting over. Use this at a natural milestone '
-    + '(finished a chapter/topic, completed a step, agreed on what comes next) when the work '
-    + 'spans multiple sessions — e.g. tutoring the user through a study plan. Appends to a '
-    + 'project-scoped progress log (isolated per folder); it does NOT replace durable memory '
-    + '(identity/preferences) — it records resumable progress that durable memory intentionally '
-    + 'excludes. Provide the topic, what was covered this session, and the next step to resume from.',
+    'Checkpoint cross-session learning/work progress for the current project folder, so a ' +
+    'later session can resume instead of starting over. Use this at a natural milestone ' +
+    '(finished a chapter/topic, completed a step, agreed on what comes next) when the work ' +
+    'spans multiple sessions — e.g. tutoring the user through a study plan. Appends to a ' +
+    'project-scoped progress log (isolated per folder); it does NOT replace durable memory ' +
+    '(identity/preferences) — it records resumable progress that durable memory intentionally ' +
+    'excludes. Provide the topic, what was covered this session, and the next step to resume from.',
   category: 'system',
   risk: 'low',
   aliases: ['recordProgress', 'checkpoint', 'saveProgress'],
+  searchHint: 'milestone checkpoint save state resume 进度 检查点 记录进展',
   isReadOnly: () => false,
   isConcurrencySafe: false,
   isEnabled: () => _progressEnabled(process.env),
@@ -52,8 +59,9 @@ module.exports = defineTool({
     topic: {
       type: 'string',
       required: true,
-      description: 'The learning/work track this checkpoint belongs to (e.g. "考公-行测", "React 教程"). '
-        + 'Reuse the same topic string across sessions so progress accumulates on one track.',
+      description:
+        'The learning/work track this checkpoint belongs to (e.g. "考公-行测", "React 教程"). ' +
+        'Reuse the same topic string across sessions so progress accumulates on one track.',
     },
     covered: {
       type: 'string',
@@ -68,14 +76,21 @@ module.exports = defineTool({
   },
   async execute(params, _context) {
     if (!_progressEnabled(process.env)) {
-      return { success: false, error: 'RecordProgress is disabled (KHY_PROGRESS_LOG=off or memory disabled).' };
+      return {
+        success: false,
+        error: 'RecordProgress is disabled (KHY_PROGRESS_LOG=off or memory disabled).',
+      };
     }
     const topic = String((params && params.topic) || '').trim();
     const covered = String((params && params.covered) || '').trim();
     const next = params && params.next ? String(params.next).trim() : '';
 
-    if (!topic) return { success: false, error: 'topic is required (the learning/work track).' };
-    if (!covered) return { success: false, error: 'covered is required (what was covered this session).' };
+    if (!topic) {
+      return { success: false, error: 'topic is required (the learning/work track).' };
+    }
+    if (!covered) {
+      return { success: false, error: 'covered is required (what was covered this session).' };
+    }
 
     let memdir;
     try {
@@ -87,9 +102,13 @@ module.exports = defineTool({
     try {
       const res = memdir.appendProjectProgress({ topic, covered, next });
       if (!res || !res.ok) {
-        return { success: false, error: (res && res.enabled === false)
-          ? 'progress log is disabled'
-          : 'failed to append progress checkpoint' };
+        return {
+          success: false,
+          error:
+            res && res.enabled === false
+              ? 'progress log is disabled'
+              : 'failed to append progress checkpoint',
+        };
       }
       return { success: true, data: { topic, path: res.path, created: res.created } };
     } catch (err) {

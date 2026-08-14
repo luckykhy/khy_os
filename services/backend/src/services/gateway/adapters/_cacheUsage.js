@@ -32,19 +32,28 @@ function normalizeCacheUsage(rawUsage) {
   let write = _num(u.cacheWriteInputTokens);
 
   // 2) Anthropic 原生字段。
-  if (!read) read = _num(u.cache_read_input_tokens);
-  if (!write) write = _num(u.cache_creation_input_tokens);
+  if (!read) {
+    read = _num(u.cache_read_input_tokens);
+  }
+  if (!write) {
+    write = _num(u.cache_creation_input_tokens);
+  }
 
   // 3) OpenAI：prompt_tokens_details.cached_tokens（仅读，无写区分）。
   if (!read) {
-    const details = u.prompt_tokens_details && typeof u.prompt_tokens_details === 'object'
-      ? u.prompt_tokens_details
-      : null;
-    if (details) read = _num(details.cached_tokens);
+    const details =
+      u.prompt_tokens_details && typeof u.prompt_tokens_details === 'object'
+        ? u.prompt_tokens_details
+        : null;
+    if (details) {
+      read = _num(details.cached_tokens);
+    }
   }
 
   // 4) DeepSeek：prompt_cache_hit_tokens（读）。miss 仅信息量，不计为写。
-  if (!read) read = _num(u.prompt_cache_hit_tokens);
+  if (!read) {
+    read = _num(u.prompt_cache_hit_tokens);
+  }
 
   return { cacheReadInputTokens: read, cacheWriteInputTokens: write };
 }
@@ -59,7 +68,9 @@ function normalizeCacheUsage(rawUsage) {
 function withCacheUsage(tokenUsage, rawUsage) {
   const base = tokenUsage && typeof tokenUsage === 'object' ? tokenUsage : {};
   const { cacheReadInputTokens, cacheWriteInputTokens } = normalizeCacheUsage(rawUsage);
-  if (!cacheReadInputTokens && !cacheWriteInputTokens) return base;
+  if (!cacheReadInputTokens && !cacheWriteInputTokens) {
+    return base;
+  }
   return { ...base, cacheReadInputTokens, cacheWriteInputTokens };
 }
 

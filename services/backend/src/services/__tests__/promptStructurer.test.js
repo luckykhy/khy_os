@@ -9,8 +9,8 @@
  * 空输入返 null / 幂等不二次包裹 / 坏输入返 null 不抛)。零 IO、确定性——显式传 env。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const ps = require('../promptStructurer');
 
@@ -95,7 +95,10 @@ test('classify:整段皆问候 → 退回首句兜底(不空)', () => {
 test('classify:问候式问句不被误判为纯问候(实质诉求保留)', () => {
   // 「你好吗?能不能帮我…」——首句是问句而非纯问候,应原样保留为关键动作。
   const info = ps.classify('你好吗？能不能帮我写个函数');
-  assert.ok(/你好吗|帮我|函数/.test(info.action), `实质问句不该被当纯问候丢弃,实得: ${info.action}`);
+  assert.ok(
+    /你好吗|帮我|函数/.test(info.action),
+    `实质问句不该被当纯问候丢弃,实得: ${info.action}`
+  );
 });
 
 test('buildStructuredPrompt:问候开场的短请求 → 不出冗余「关键动作」行,但原文(含问候)逐字保留', () => {
@@ -123,7 +126,10 @@ test('buildStructuredPrompt:门开 + 值得结构化 → 产「结构 + 内容�
 
 test('buildStructuredPrompt:门关 → 返 null(接线处逐字节回退,保持原文)', () => {
   assert.equal(ps.buildStructuredPrompt('随便什么', { KHY_PROMPT_STRUCTURING: 'off' }), null);
-  assert.equal(ps.buildStructuredPrompt('随便什么', { KHY_FLAG_REGISTRY: '0', KHY_PROMPT_STRUCTURING: '0' }), null);
+  assert.equal(
+    ps.buildStructuredPrompt('随便什么', { KHY_FLAG_REGISTRY: '0', KHY_PROMPT_STRUCTURING: '0' }),
+    null
+  );
 });
 
 test('buildStructuredPrompt:空输入 / 纯空白 → 返 null(无可结构化)', () => {
@@ -148,15 +154,31 @@ test('buildStructuredPrompt:坏输入 → 返 null 不抛', () => {
 // /goal 2026-07-08:结构块是纯附加 token(## 内容 已含完整原文),给「你好」/清晰一句话套 200+ token
 // 结构是纯浪费。只在任务够实质、结构前缀能在对话层少走试错时才包裹;否则原样(返 null,逐字节回退)。
 test('isWorthStructuring:纯问候 / 极短 / 清晰单命令 → false(不值得,保持原样)', () => {
-  for (const t of ['你好', '您好', 'hi', 'hello', '谢谢', '好的', '嗯', '帮我改个错别字', '写个函数']) {
+  for (const t of [
+    '你好',
+    '您好',
+    'hi',
+    'hello',
+    '谢谢',
+    '好的',
+    '嗯',
+    '帮我改个错别字',
+    '写个函数',
+  ]) {
     assert.equal(ps.isWorthStructuring(t), false, `「${t}」不该被结构化`);
   }
 });
 
 test('isWorthStructuring:多约束 / 多步 / 长请求 / 含代码 → true(值得)', () => {
   assert.equal(ps.isWorthStructuring('实现一个登录接口，必须用 JWT，不要存明文密码'), true);
-  assert.equal(ps.isWorthStructuring('先创建用户表，然后实现登录接口，必须用 JWT，不要引入新依赖'), true);
-  assert.equal(ps.isWorthStructuring('看看这个\n```js\nconst a=1\n```\n帮我优化一下这段逻辑'), true);
+  assert.equal(
+    ps.isWorthStructuring('先创建用户表，然后实现登录接口，必须用 JWT，不要引入新依赖'),
+    true
+  );
+  assert.equal(
+    ps.isWorthStructuring('看看这个\n```js\nconst a=1\n```\n帮我优化一下这段逻辑'),
+    true
+  );
 });
 
 test('isWorthStructuring:坏输入不抛,一律保守取 false', () => {
@@ -171,7 +193,10 @@ test('buildStructuredPrompt:不值得结构化的消息 → 返 null(接线处�
   assert.equal(ps.buildStructuredPrompt('你好', {}), null);
   assert.equal(ps.buildStructuredPrompt('帮我修复登录报错', {}), null);
   // 截图里那句随口的元问题也不再被结构化——正是省 token 的期望结果。
-  assert.equal(ps.buildStructuredPrompt('你好，那么我发送你好，结构化处理后发送给你提示词变成了什么样', {}), null);
+  assert.equal(
+    ps.buildStructuredPrompt('你好，那么我发送你好，结构化处理后发送给你提示词变成了什么样', {}),
+    null
+  );
 });
 
 // ── 精简格式:表头单行 + 只发带正信号的行(缺省/不存在的行是零信息噪声,不发)────────────
@@ -182,13 +207,19 @@ test('格式:表头压缩为单行(第二行是空行,不再是第二行元解�
   const lines = out.split('\n');
   assert.ok(lines[0].startsWith(ps.STRUCTURE_MARKER), '首行是标记 + 单行说明');
   assert.equal(lines[1], '', '第二行应为空行(表头仅一行)');
-  assert.ok(lines[0].includes('以「## 内容」原文为准') || lines[0].includes('原文为准'), '表头保留"冲突以原文为准"语义');
+  assert.ok(
+    lines[0].includes('以「## 内容」原文为准') || lines[0].includes('原文为准'),
+    '表头保留"冲突以原文为准"语义'
+  );
 });
 
 test('格式:instance 请求 → 无「抽象层级」行、无资产透镜(缺省作用域不占 token)', () => {
   const out = ps.buildStructuredPrompt('实现一个登录接口，必须用 JWT，不要存明文密码', {});
   assert.ok(!out.includes('抽象层级:'), 'instance 作用域不发抽象层级行');
-  assert.ok(!out.includes('## 复用性判断'), 'instance 作用域不发资产透镜(其首问对一次性请求是噪声)');
+  assert.ok(
+    !out.includes('## 复用性判断'),
+    'instance 作用域不发资产透镜(其首问对一次性请求是噪声)'
+  );
   // 但带正信号的行都在
   assert.ok(out.includes('- 约束:'), '有约束 → 发约束行');
   assert.ok(out.includes('- 任务类型:') && out.includes('- 期望产出:'), '任务类型/期望产出恒发');
@@ -262,13 +293,29 @@ test('classify:scopeLabel 与 scope 一致', () => {
   assert.match(ps.classify('修这一处').scopeLabel, /这只猫/);
 });
 
+// ── 回归:遗漏的 instance marker 必须被正确识别 ─────────────────────────────
+test('classify:抽象层级——遗漏的 instance marker 回归(该/这时/我的)', () => {
+  // E-001: 该 + 非列表后缀 应被识别为 instance
+  assert.equal(ps.classify('修该方法里的所有bug').scope, 'instance');
+  assert.equal(ps.classify('改该接口的参数').scope, 'instance');
+  // E-002: 这 + 非列表后缀 应被识别为 instance
+  assert.equal(ps.classify('这时统一加限流').scope, 'instance');
+  assert.equal(ps.classify('这样做').scope, 'instance');
+  assert.equal(ps.classify('这些文件').scope, 'instance');
+  // E-003: 我的 应被识别为 instance
+  assert.equal(ps.classify('修我的所有代码').scope, 'instance');
+});
+
 test('assetLensEnabled:默认开;子门控 / 父门控任一显式关 → 关', () => {
   assert.equal(ps.assetLensEnabled({}), true);
   assert.equal(ps.assetLensEnabled({ KHY_PROMPT_STRUCTURING_ASSET_LENS: 'off' }), false);
   // 父关 → 子必关(注册表 resolver 与手写回退都成立)
   assert.equal(ps.assetLensEnabled({ KHY_PROMPT_STRUCTURING: 'off' }), false);
   assert.equal(ps.assetLensEnabled({ KHY_FLAG_REGISTRY: '0', KHY_PROMPT_STRUCTURING: '0' }), false);
-  assert.equal(ps.assetLensEnabled({ KHY_FLAG_REGISTRY: '0', KHY_PROMPT_STRUCTURING_ASSET_LENS: '0' }), false);
+  assert.equal(
+    ps.assetLensEnabled({ KHY_FLAG_REGISTRY: '0', KHY_PROMPT_STRUCTURING_ASSET_LENS: '0' }),
+    false
+  );
 });
 
 test('ASSET_LENS:冻结常量含三条判断标准(可复用性/场景性/工作流)', () => {
@@ -296,7 +343,9 @@ test('buildStructuredPrompt:门开含「抽象层级」行 + 附「复用性判�
 });
 
 test('buildStructuredPrompt:子门控关 → 无透镜段(逐字节回退到基础结构化,仍保留抽象层级行)', () => {
-  const out = ps.buildStructuredPrompt('给所有接口统一加限流，必须可配置，不要影响现有逻辑', { KHY_PROMPT_STRUCTURING_ASSET_LENS: 'off' });
+  const out = ps.buildStructuredPrompt('给所有接口统一加限流，必须可配置，不要影响现有逻辑', {
+    KHY_PROMPT_STRUCTURING_ASSET_LENS: 'off',
+  });
   assert.ok(typeof out === 'string');
   assert.ok(out.startsWith(ps.STRUCTURE_MARKER));
   assert.ok(out.includes('抽象层级:'), '抽象层级行是基础结构化的一部分,始终在');
@@ -304,7 +353,10 @@ test('buildStructuredPrompt:子门控关 → 无透镜段(逐字节回退到基�
 });
 
 test('buildStructuredPrompt:父门控关 → 整个结构化返 null(透镜随父一起消失)', () => {
-  assert.equal(ps.buildStructuredPrompt('给所有接口统一加限流', { KHY_PROMPT_STRUCTURING: 'off' }), null);
+  assert.equal(
+    ps.buildStructuredPrompt('给所有接口统一加限流', { KHY_PROMPT_STRUCTURING: 'off' }),
+    null
+  );
 });
 
 // ── 代码化提示词(复杂任务 → ```spec 声明式规格)────────────────────────────
@@ -315,7 +367,10 @@ test('isComplex:简单短请求 → false;多约束/多动作/长请求 → true
   // 多约束 + 多动作
   assert.equal(ps.isComplex('先创建用户表，然后实现登录接口，必须用 JWT，不要引入新依赖'), true);
   // 长 + 多从句
-  assert.equal(ps.isComplex('重构支付模块。第一步抽出金额计算。第二步补单元测试。必须保持对外契约不变。'), true);
+  assert.equal(
+    ps.isComplex('重构支付模块。第一步抽出金额计算。第二步补单元测试。必须保持对外契约不变。'),
+    true
+  );
 });
 
 test('isComplex:坏输入不抛', () => {
@@ -338,7 +393,10 @@ test('buildCodeSpec:复杂任务 + 门开 → 产 ```spec 规格(取自 classify
   assert.ok(spec.includes('TASK'));
   assert.ok(spec.includes('CONSTRAINTS'));
   assert.ok(spec.includes('JWT'));
-  assert.ok(spec.includes('冲突以 ## 内容 为准') || spec.includes('冲突') , 'spec 须声明冲突以原文为准');
+  assert.ok(
+    spec.includes('冲突以 ## 内容 为准') || spec.includes('冲突'),
+    'spec 须声明冲突以原文为准'
+  );
 });
 
 test('buildCodeSpec:简单任务 → 空串(仅复杂任务代码化,不加噪)', () => {
@@ -346,7 +404,12 @@ test('buildCodeSpec:简单任务 → 空串(仅复杂任务代码化,不加噪)'
 });
 
 test('buildCodeSpec:门关 → 空串;坏输入 → 空串不抛', () => {
-  assert.equal(ps.buildCodeSpec('先创建用户表，然后实现登录接口，必须用 JWT', { KHY_PROMPT_STRUCTURING_CODE_SPEC: 'off' }), '');
+  assert.equal(
+    ps.buildCodeSpec('先创建用户表，然后实现登录接口，必须用 JWT', {
+      KHY_PROMPT_STRUCTURING_CODE_SPEC: 'off',
+    }),
+    ''
+  );
   assert.doesNotThrow(() => ps.buildCodeSpec(undefined, {}));
   assert.equal(ps.buildCodeSpec(undefined, {}), '');
 });

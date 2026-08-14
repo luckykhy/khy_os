@@ -23,15 +23,15 @@
  *   - Chinese eastAsia handling is enforced downstream in docTypeset.py.
  */
 const { defineTool } = require('./_baseTool');
+
 const { spawn } = require('child_process');
-const { safeKill } = require('./platformUtils');
-const path = require('path');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
-const crypto = require('crypto');
+const path = require('path');
 
-const { markdownToAst } = require('../services/typeset/markdownToAst');
 const { validateDocument } = require('../services/typeset/contentSchema');
+const { markdownToAst } = require('../services/typeset/markdownToAst');
 const { resolveTemplate, listTemplates } = require('../services/typeset/styleTemplates');
 
 const DOC_TYPESET = path.join(__dirname, '../services/docTypeset.py');
@@ -40,17 +40,23 @@ const IDLE_TIMEOUT_MS = 60000;
 
 let _enabled = null;
 function _checkEnabled() {
-  if (!fs.existsSync(DOC_TYPESET)) return false;
+  if (!fs.existsSync(DOC_TYPESET)) {
+    return false;
+  }
   for (const py of ['python3', 'python']) {
     try {
       require('child_process').execFileSync(py, ['--version'], { stdio: 'ignore', timeout: 3000 });
       return true;
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   return false;
 }
 
 const _resolvePath = require('../utils/resolveUserPath');
+
+const { safeKill } = require('./platformUtils');
 
 /**
  * Coerce the model-supplied `content` into a validated document AST.
@@ -68,19 +74,29 @@ function _toAst(content, title) {
     if (trimmed.startsWith('{')) {
       try {
         const parsed = JSON.parse(trimmed);
-        if (parsed && Array.isArray(parsed.blocks)) ast = parsed;
-      } catch { /* not JSON → fall through to Markdown */ }
+        if (parsed && Array.isArray(parsed.blocks)) {
+          ast = parsed;
+        }
+      } catch {
+        /* not JSON → fall through to Markdown */
+      }
     }
-    if (!ast) ast = markdownToAst(content);
+    if (!ast) {
+      ast = markdownToAst(content);
+    }
   } else {
     return { error: 'content must be a Markdown string or a document AST object/JSON' };
   }
 
-  if (title && !ast.title) ast.title = String(title);
+  if (title && !ast.title) {
+    ast.title = String(title);
+  }
 
   // 防呆 interception: structural validation + reject any smuggled format code.
   const v = validateDocument(ast);
-  if (!v.valid) return { error: v.error };
+  if (!v.valid) {
+    return { error: v.error };
+  }
   return { ast };
 }
 
@@ -94,7 +110,9 @@ function _runTypeset(pythonPath, payloadPath) {
     let stderr = '';
     let timer = null;
     const arm = () => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       timer = setTimeout(() => {
         safeKill(child);
         reject(new Error('Document typesetting idle-timed out (60s with no output)'));
@@ -104,15 +122,25 @@ function _runTypeset(pythonPath, payloadPath) {
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d) => { stdout += d; arm(); });
-    child.stderr.on('data', (d) => { stderr += d; arm(); });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      arm();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      arm();
+    });
 
     child.on('error', (err) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       reject(new Error(`Python process error: ${err.message}`));
     });
     child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       if (code !== 0) {
         reject(new Error(`Python exit code ${code}: ${stderr || stdout}`));
         return;
@@ -140,13 +168,16 @@ module.exports = defineTool({
   risk: 'medium',
   isReadOnly: false,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
   isConcurrencySafe: true,
 
   aliases: ['typeset_document', 'render_document', 'render_docx', 'create_paper', 'typeset_docx'],
-  searchHint: 'typeset format paper thesis report docx word academic gb7714 ieee style template 排版 论文 格式',
+  searchHint:
+    'typeset format paper thesis report docx word academic gb7714 ieee style template 排版 论文 格式',
 
   inputSchema: {
     content: {
@@ -166,7 +197,8 @@ module.exports = defineTool({
     template: {
       type: 'string',
       required: false,
-      description: 'Style template: "default" (general A4), "gbt7714" (国标中文学术), or "ieee". ' +
+      description:
+        'Style template: "default" (general A4), "gbt7714" (国标中文学术), or "ieee". ' +
         'May also be an absolute path to a custom JSON template. Defaults to "default".',
     },
     title: {
@@ -177,16 +209,21 @@ module.exports = defineTool({
     overrides: {
       type: 'object',
       required: false,
-      description: 'Optional partial template object to deep-merge over the chosen template, ' +
+      description:
+        'Optional partial template object to deep-merge over the chosen template, ' +
         'e.g. {"paragraph":{"lineSpacing":2}}. Lets you tweak any single style key without restating the baseline.',
     },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       input.outputPath ? validateNotUNCPath(input.outputPath) : { valid: true },
-      input.outputPath ? validateNotDevicePath(input.outputPath) : { valid: true },
+      input.outputPath ? validateNotDevicePath(input.outputPath) : { valid: true }
     );
   },
 
@@ -197,7 +234,9 @@ module.exports = defineTool({
   },
 
   getToolUseSummary(input) {
-    if (!input?.outputPath) return null;
+    if (!input?.outputPath) {
+      return null;
+    }
     return `按模板排版文档：${input.outputPath}`;
   },
 
@@ -208,7 +247,10 @@ module.exports = defineTool({
     if (!params?.outputPath) {
       return { success: false, error: 'Output path is required' };
     }
-    if (typeof params.content === 'string' && Buffer.byteLength(params.content, 'utf-8') > MAX_CONTENT_SIZE) {
+    if (
+      typeof params.content === 'string' &&
+      Buffer.byteLength(params.content, 'utf-8') > MAX_CONTENT_SIZE
+    ) {
       return { success: false, error: 'Content too large (max 4MB)' };
     }
 
@@ -218,13 +260,18 @@ module.exports = defineTool({
       return {
         success: false,
         error: `Structured-content check failed: ${astError}`,
-        hint: 'Emit semantic content only (Markdown headings/lists/tables or a document AST). ' +
+        hint:
+          'Emit semantic content only (Markdown headings/lists/tables or a document AST). ' +
           'Formatting is applied by the template — do not write format codes.',
       };
     }
 
     // 2) Resolve the style template (+ optional overrides).
-    const { template, error: tplError, source } = resolveTemplate(params.template, params.overrides);
+    const {
+      template,
+      error: tplError,
+      source,
+    } = resolveTemplate(params.template, params.overrides);
     if (tplError) {
       return {
         success: false,
@@ -237,18 +284,22 @@ module.exports = defineTool({
     //    re-confinement: validateInput only saw the raw path).
     const cwd = process.env.KHYQUANT_CWD || process.cwd();
     let outputPath = _resolvePath(params.outputPath, cwd);
-    if (!/\.docx$/i.test(outputPath)) outputPath += '.docx';
+    if (!/\.docx$/i.test(outputPath)) {
+      outputPath += '.docx';
+    }
     {
       const { validateNoPathTraversal } = require('./inputValidators');
       const confine = validateNoPathTraversal(outputPath);
-      if (!confine.valid) return { success: false, error: confine.message };
+      if (!confine.valid) {
+        return { success: false, error: confine.message };
+      }
     }
 
     // 4) Hand {ast, template, output} to the deterministic renderer via a temp
     //    payload file (avoids shell arg-length limits for large content).
     const payloadPath = path.join(
       os.tmpdir(),
-      `khy-typeset-${process.pid}-${crypto.randomBytes(4).toString('hex')}.json`,
+      `khy-typeset-${process.pid}-${crypto.randomBytes(4).toString('hex')}.json`
     );
     try {
       fs.writeFileSync(payloadPath, JSON.stringify({ ast, template, output: outputPath }), 'utf-8');
@@ -267,7 +318,11 @@ module.exports = defineTool({
     } catch (err) {
       return { success: false, error: err.message };
     } finally {
-      try { fs.unlinkSync(payloadPath); } catch { /* best-effort temp cleanup */ }
+      try {
+        fs.unlinkSync(payloadPath);
+      } catch {
+        /* best-effort temp cleanup */
+      }
     }
   },
 });

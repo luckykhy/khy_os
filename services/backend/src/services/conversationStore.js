@@ -50,7 +50,9 @@ function normMessages(value) {
 // Any blank / non-numeric / non-positive value collapses to null so a
 // conversation without a project stays in the always-visible "全部" bucket.
 function normProjectId(value) {
-  if (value == null || value === '') return null;
+  if (value == null || value === '') {
+    return null;
+  }
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
@@ -59,17 +61,27 @@ function normProjectId(value) {
 // `content` as a string; tolerate array/object shapes (multimodal) by pulling
 // the first text-ish field so the title/preview never renders "[object Object]".
 function messageText(msg) {
-  if (!msg || typeof msg !== 'object') return '';
+  if (!msg || typeof msg !== 'object') {
+    return '';
+  }
   const c = msg.content;
-  if (typeof c === 'string') return c;
+  if (typeof c === 'string') {
+    return c;
+  }
   if (Array.isArray(c)) {
     for (const part of c) {
-      if (typeof part === 'string') return part;
-      if (part && typeof part === 'object' && typeof part.text === 'string') return part.text;
+      if (typeof part === 'string') {
+        return part;
+      }
+      if (part && typeof part === 'object' && typeof part.text === 'string') {
+        return part.text;
+      }
     }
     return '';
   }
-  if (typeof msg.text === 'string') return msg.text;
+  if (typeof msg.text === 'string') {
+    return msg.text;
+  }
   return '';
 }
 
@@ -78,7 +90,9 @@ function deriveTitle(messages) {
   const list = normMessages(messages);
   const firstUser = list.find((m) => m && m.role === 'user');
   const text = messageText(firstUser).trim().replace(/\s+/g, ' ');
-  if (!text) return '新对话';
+  if (!text) {
+    return '新对话';
+  }
   return text.length > TITLE_MAX ? `${text.slice(0, TITLE_MAX)}…` : text;
 }
 
@@ -119,10 +133,15 @@ async function list(userId, options = {}) {
   await ensureTable();
   const where = { userId };
   const projectId = normProjectId(options && options.projectId);
-  if (projectId != null) where.projectId = projectId;
+  if (projectId != null) {
+    where.projectId = projectId;
+  }
   const rows = await Conversation.findAll({
     where,
-    order: [['updatedAt', 'DESC'], ['id', 'DESC']],
+    order: [
+      ['updatedAt', 'DESC'],
+      ['id', 'DESC'],
+    ],
   });
   return rows.map(toSummary);
 }
@@ -130,7 +149,9 @@ async function list(userId, options = {}) {
 async function get(userId, id) {
   await ensureTable();
   const row = await Conversation.findOne({ where: { userId, id } });
-  if (!row) throw httpError(404, 'Conversation not found');
+  if (!row) {
+    throw httpError(404, 'Conversation not found');
+  }
   return toFull(row);
 }
 
@@ -151,11 +172,17 @@ async function create(userId, body = {}) {
 async function update(userId, id, body = {}) {
   await ensureTable();
   const row = await Conversation.findOne({ where: { userId, id } });
-  if (!row) throw httpError(404, 'Conversation not found');
+  if (!row) {
+    throw httpError(404, 'Conversation not found');
+  }
 
   const patch = {};
-  if (body.messages != null) patch.messages = normMessages(body.messages);
-  if (body.projectId !== undefined) patch.projectId = normProjectId(body.projectId);
+  if (body.messages != null) {
+    patch.messages = normMessages(body.messages);
+  }
+  if (body.projectId !== undefined) {
+    patch.projectId = normProjectId(body.projectId);
+  }
   if (body.title != null) {
     patch.title = String(body.title).trim().slice(0, 200) || '新对话';
   } else if (body.messages != null && (!row.title || row.title === '新对话')) {
@@ -170,22 +197,31 @@ async function update(userId, id, body = {}) {
 async function remove(userId, id) {
   await ensureTable();
   const deleted = await Conversation.destroy({ where: { userId, id } });
-  if (!deleted) throw httpError(404, 'Conversation not found');
+  if (!deleted) {
+    throw httpError(404, 'Conversation not found');
+  }
   return { deleted: true, id: Number(id) };
 }
 
 // Drop the oldest rows beyond the per-user cap so history stays bounded.
 async function pruneOld(userId) {
   const count = await Conversation.count({ where: { userId } });
-  if (count <= MAX_PER_USER) return;
+  if (count <= MAX_PER_USER) {
+    return;
+  }
   const stale = await Conversation.findAll({
     where: { userId },
-    order: [['updatedAt', 'ASC'], ['id', 'ASC']],
+    order: [
+      ['updatedAt', 'ASC'],
+      ['id', 'ASC'],
+    ],
     limit: count - MAX_PER_USER,
     attributes: ['id'],
   });
   const ids = stale.map((r) => r.id);
-  if (ids.length) await Conversation.destroy({ where: { userId, id: ids } });
+  if (ids.length) {
+    await Conversation.destroy({ where: { userId, id: ids } });
+  }
 }
 
 module.exports = {

@@ -26,7 +26,9 @@
  */
 
 function ccFormatEnabled(env = process.env) {
-  const flag = String((env && env.KHY_CC_FORMAT) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_CC_FORMAT) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -38,10 +40,16 @@ function ccFormatEnabled(env = process.env) {
  */
 function ccFormatDuration(ms, options) {
   const n = Number(ms);
-  if (!Number.isFinite(n)) return '';
+  if (!Number.isFinite(n)) {
+    return '';
+  }
   if (n < 60000) {
-    if (n === 0) return '0s';
-    if (n < 1) return `${(n / 1000).toFixed(1)}s`;
+    if (n === 0) {
+      return '0s';
+    }
+    if (n < 1) {
+      return `${(n / 1000).toFixed(1)}s`;
+    }
     return `${Math.floor(n / 1000)}s`;
   }
 
@@ -51,31 +59,56 @@ function ccFormatDuration(ms, options) {
   let seconds = Math.round((n % 60000) / 1000);
 
   // 进位(CC 同:59.5s round → 60s 须进位到分钟)
-  if (seconds === 60) { seconds = 0; minutes++; }
-  if (minutes === 60) { minutes = 0; hours++; }
-  if (hours === 24) { hours = 0; days++; }
+  if (seconds === 60) {
+    seconds = 0;
+    minutes++;
+  }
+  if (minutes === 60) {
+    minutes = 0;
+    hours++;
+  }
+  if (hours === 24) {
+    hours = 0;
+    days++;
+  }
 
   const hide = options && options.hideTrailingZeros;
 
   if (options && options.mostSignificantOnly) {
-    if (days > 0) return `${days}d`;
-    if (hours > 0) return `${hours}h`;
-    if (minutes > 0) return `${minutes}m`;
+    if (days > 0) {
+      return `${days}d`;
+    }
+    if (hours > 0) {
+      return `${hours}h`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m`;
+    }
     return `${seconds}s`;
   }
 
   if (days > 0) {
-    if (hide && hours === 0 && minutes === 0) return `${days}d`;
-    if (hide && minutes === 0) return `${days}d ${hours}h`;
+    if (hide && hours === 0 && minutes === 0) {
+      return `${days}d`;
+    }
+    if (hide && minutes === 0) {
+      return `${days}d ${hours}h`;
+    }
     return `${days}d ${hours}h ${minutes}m`;
   }
   if (hours > 0) {
-    if (hide && minutes === 0 && seconds === 0) return `${hours}h`;
-    if (hide && seconds === 0) return `${hours}h ${minutes}m`;
+    if (hide && minutes === 0 && seconds === 0) {
+      return `${hours}h`;
+    }
+    if (hide && seconds === 0) {
+      return `${hours}h ${minutes}m`;
+    }
     return `${hours}h ${minutes}m ${seconds}s`;
   }
   if (minutes > 0) {
-    if (hide && seconds === 0) return `${minutes}m`;
+    if (hide && seconds === 0) {
+      return `${minutes}m`;
+    }
     return `${minutes}m ${seconds}s`;
   }
   return `${seconds}s`;
@@ -97,7 +130,9 @@ function ccFormatDuration(ms, options) {
  * @returns {string}
  */
 function ccFormatDurationOr(ms, legacy, env, options) {
-  if (!ccFormatEnabled(env)) return legacy;
+  if (!ccFormatEnabled(env)) {
+    return legacy;
+  }
   const out = ccFormatDuration(ms, options);
   return out || legacy;
 }
@@ -108,12 +143,20 @@ let _fmtInconsistent = null;
 function _numberFormatter(consistent) {
   if (consistent) {
     if (!_fmtConsistent) {
-      _fmtConsistent = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1, minimumFractionDigits: 1 });
+      _fmtConsistent = new Intl.NumberFormat('en-US', {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+        minimumFractionDigits: 1,
+      });
     }
     return _fmtConsistent;
   }
   if (!_fmtInconsistent) {
-    _fmtInconsistent = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    _fmtInconsistent = new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+      minimumFractionDigits: 0,
+    });
   }
   return _fmtInconsistent;
 }
@@ -125,9 +168,13 @@ function _numberFormatter(consistent) {
  */
 function ccFormatNumber(number) {
   const v = Number(number);
-  if (!Number.isFinite(v)) return '';
+  if (!Number.isFinite(v)) {
+    return '';
+  }
   try {
-    return _numberFormatter(v >= 1000).format(v).toLowerCase();
+    return _numberFormatter(v >= 1000)
+      .format(v)
+      .toLowerCase();
   } catch {
     return String(Math.round(v));
   }
@@ -156,7 +203,9 @@ function ccFormatTokens(count) {
  * @returns {string}
  */
 function ccFormatTokensOr(count, legacy, env = process.env) {
-  if (!ccFormatEnabled(env)) return legacy;
+  if (!ccFormatEnabled(env)) {
+    return legacy;
+  }
   const out = ccFormatTokens(count);
   return out || legacy;
 }
@@ -176,12 +225,20 @@ function ccFormatTokensOr(count, legacy, env = process.env) {
  */
 function ccFormatFileSize(sizeInBytes) {
   const n = Number(sizeInBytes);
-  if (!Number.isFinite(n) || n < 0) return '';
+  if (!Number.isFinite(n) || n < 0) {
+    return '';
+  }
   const kb = n / 1024;
-  if (kb < 1) return `${n} bytes`;
-  if (kb < 1024) return `${kb.toFixed(1).replace(/\.0$/, '')}KB`;
+  if (kb < 1) {
+    return `${n} bytes`;
+  }
+  if (kb < 1024) {
+    return `${kb.toFixed(1).replace(/\.0$/, '')}KB`;
+  }
   const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(1).replace(/\.0$/, '')}MB`;
+  if (mb < 1024) {
+    return `${mb.toFixed(1).replace(/\.0$/, '')}MB`;
+  }
   const gb = mb / 1024;
   return `${gb.toFixed(1).replace(/\.0$/, '')}GB`;
 }
@@ -216,7 +273,9 @@ const _REL_INTERVALS = [
  */
 function ccRelativeAgeParts(ageMs) {
   const n = Number(ageMs);
-  if (!Number.isFinite(n)) return null;
+  if (!Number.isFinite(n)) {
+    return null;
+  }
   const isPast = n >= 0;
   // CC: diffInSeconds = Math.trunc(diffInMs / 1000);区间值同样 Math.trunc。
   const absSeconds = Math.abs(Math.trunc(n / 1000));
@@ -251,11 +310,17 @@ function _startOfDayLocalMs(ms) {
 function ccBriefTimestampScale(targetMs, nowMs) {
   const t = Number(targetMs);
   const n = Number(nowMs);
-  if (!Number.isFinite(t) || !Number.isFinite(n)) return null;
+  if (!Number.isFinite(t) || !Number.isFinite(n)) {
+    return null;
+  }
   // CC: daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000)
   const daysAgo = Math.round((_startOfDayLocalMs(n) - _startOfDayLocalMs(t)) / 86400000);
-  if (daysAgo === 0) return 'time';
-  if (daysAgo > 0 && daysAgo < 7) return 'weekday';
+  if (daysAgo === 0) {
+    return 'time';
+  }
+  if (daysAgo > 0 && daysAgo < 7) {
+    return 'weekday';
+  }
   return 'full'; // 未来(daysAgo<0)或 ≥7 日前,均落 CC 的最末 return(周几+月日+时间)。
 }
 
@@ -274,7 +339,9 @@ const _BRIEF_OPTS = {
  */
 function ccBriefTimestamp(targetMs, nowMs, locale = 'zh-CN') {
   const scale = ccBriefTimestampScale(targetMs, nowMs);
-  if (!scale) return '';
+  if (!scale) {
+    return '';
+  }
   try {
     return new Date(Number(targetMs)).toLocaleString(locale, _BRIEF_OPTS[scale]);
   } catch {
@@ -291,7 +358,9 @@ function ccBriefTimestamp(targetMs, nowMs, locale = 'zh-CN') {
  * @param {object} [env]
  */
 function ccBriefTimestampOr(targetMs, nowMs, legacy, env) {
-  if (!ccFormatEnabled(env)) return legacy;
+  if (!ccFormatEnabled(env)) {
+    return legacy;
+  }
   const out = ccBriefTimestamp(targetMs, nowMs);
   return out || legacy;
 }
@@ -324,7 +393,9 @@ function ccBriefTimestampOr(targetMs, nowMs, legacy, env) {
 function ccResetTimeScale(targetMs, nowMs) {
   const t = Number(targetMs);
   const n = Number(nowMs);
-  if (!Number.isFinite(t) || !Number.isFinite(n)) return null;
+  if (!Number.isFinite(t) || !Number.isFinite(n)) {
+    return null;
+  }
   // CC: hoursUntilReset = (date.getTime() - now.getTime()) / (1000*60*60);>24h → 补日期。
   return (t - n) / 3600000 > 24 ? 'datetime' : 'time';
 }
@@ -340,7 +411,9 @@ function ccResetTimeScale(targetMs, nowMs) {
  */
 function ccFormatResetTime(targetMs, nowMs, opts) {
   const scale = ccResetTimeScale(targetMs, nowMs);
-  if (!scale) return '';
+  if (!scale) {
+    return '';
+  }
   try {
     const date = new Date(Number(targetMs));
     const now = new Date(Number(nowMs));
@@ -358,7 +431,9 @@ function ccFormatResetTime(targetMs, nowMs, opts) {
         hour: showTime ? 'numeric' : undefined,
         minute: !showTime || minutes === 0 ? undefined : '2-digit',
       };
-      if (date.getFullYear() !== now.getFullYear()) o.year = 'numeric';
+      if (date.getFullYear() !== now.getFullYear()) {
+        o.year = 'numeric';
+      }
       out = date.toLocaleString(locale, o);
     } else {
       // CC time-only 分支:仅时分,整点省分钟。
@@ -386,9 +461,13 @@ function ccFormatResetTime(targetMs, nowMs, opts) {
  * @returns {string}
  */
 function ccFormatResetTimeOr(targetSeconds, nowMs, legacy, env, opts) {
-  if (!ccFormatEnabled(env)) return legacy;
+  if (!ccFormatEnabled(env)) {
+    return legacy;
+  }
   const sec = Number(targetSeconds);
-  if (!Number.isFinite(sec) || sec <= 0) return legacy;
+  if (!Number.isFinite(sec) || sec <= 0) {
+    return legacy;
+  }
   const out = ccFormatResetTime(sec * 1000, nowMs, opts);
   return out || legacy;
 }
@@ -417,9 +496,13 @@ function _round(number, precision) {
  * @returns {string}  非有限 / 负 → ''(绝不抛;调用方均已 gate `>0`)。
  */
 function ccFormatCost(cost, maxDecimalPlaces = 4) {
-  if (cost == null) return '';
+  if (cost == null) {
+    return '';
+  }
   const n = Number(cost);
-  if (!Number.isFinite(n) || n < 0) return '';
+  if (!Number.isFinite(n) || n < 0) {
+    return '';
+  }
   const mdpRaw = Number(maxDecimalPlaces);
   const mdp = Number.isFinite(mdpRaw) && mdpRaw >= 0 ? mdpRaw : 4;
   return n > 0.5 ? _round(n, 100).toFixed(2) : n.toFixed(mdp);
@@ -435,7 +518,9 @@ function ccFormatCost(cost, maxDecimalPlaces = 4) {
  * @param {number} [maxDecimalPlaces=4]
  */
 function ccFormatCostOr(cost, legacy, env, maxDecimalPlaces = 4) {
-  if (!ccFormatEnabled(env)) return legacy;
+  if (!ccFormatEnabled(env)) {
+    return legacy;
+  }
   const out = ccFormatCost(cost, maxDecimalPlaces);
   return out || legacy;
 }

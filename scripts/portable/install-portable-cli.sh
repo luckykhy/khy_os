@@ -50,16 +50,16 @@ if [[ -z "$PORTABLE_DIR" ]]; then
   # Support both:
   # 1) repo mode: scripts/portable/install-portable-cli.sh
   # 2) portable mode: <portable>/scripts/portable/install-portable-cli.sh
-  if [[ -f "$SCRIPT_DIR/../../run-khy.sh" ]]; then
+  if [[ -f "$SCRIPT_DIR/../../khy.sh" ]]; then
     PORTABLE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
   else
     PORTABLE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
   fi
 fi
 
-RUNNER="$PORTABLE_DIR/run-khy.sh"
+RUNNER="$PORTABLE_DIR/khy.sh"
 if [[ ! -f "$RUNNER" ]]; then
-  fail "run-khy.sh not found under: $PORTABLE_DIR"
+  fail "khy.sh not found under: $PORTABLE_DIR"
 fi
 
 mkdir -p "$BIN_DIR"

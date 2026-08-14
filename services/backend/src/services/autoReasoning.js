@@ -52,20 +52,28 @@ function resolveEffort(userMessage, options = {}) {
   }
 
   // Subagent contexts default to low (cheaper, faster)
-  if (options.isSubagent) return 'low';
+  if (options.isSubagent) {
+    return 'low';
+  }
 
-  if (!userMessage || typeof userMessage !== 'string') return 'high';
+  if (!userMessage || typeof userMessage !== 'string') {
+    return 'high';
+  }
 
   const text = userMessage;
 
   // Check max patterns first (debugging takes priority)
   for (const pattern of MAX_EFFORT_PATTERNS) {
-    if (pattern.test(text)) return 'max';
+    if (pattern.test(text)) {
+      return 'max';
+    }
   }
 
   // Check low patterns
   for (const pattern of LOW_EFFORT_PATTERNS) {
-    if (pattern.test(text)) return 'low';
+    if (pattern.test(text)) {
+      return 'low';
+    }
   }
 
   // Default
@@ -88,11 +96,13 @@ function effortToParams(tier, provider = 'anthropic') {
       // multiFreeService.js) read `options.thinking.budgetTokens`. Emitting
       // snake_case here silently dropped the budget (fell back to a flat
       // 10000), neutering the per-effort / thinkingFloor tiers.
-      return {
-        low:  { thinking: { budgetTokens: 1024 } },
-        high: { thinking: { budgetTokens: 8192 } },
-        max:  { thinking: { budgetTokens: 32768 } },
-      }[tier] || {};
+      return (
+        {
+          low: { thinking: { budgetTokens: 1024 } },
+          high: { thinking: { budgetTokens: 8192 } },
+          max: { thinking: { budgetTokens: 32768 } },
+        }[tier] || {}
+      );
 
     case 'deepseek':
       // DeepSeek: reasoning_effort parameter

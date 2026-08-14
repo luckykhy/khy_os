@@ -11,26 +11,26 @@
  * Dependencies: child_process (execFileSync).
  */
 
-const { searchExecutable } = require('../tools/platformUtils');
 const { resolvePlatformLabel } = require('../constants/nodePlatformLabel');
+const { searchExecutable } = require('../tools/platformUtils');
 
 let _probed = false;
 const _caps = {
-  platform: process.platform,          // 'darwin' | 'linux' | 'win32'
-  arch: process.arch,                   // 'arm64' | 'x64' | ...
-  shell: null,                          // detected default shell
+  platform: process.platform, // 'darwin' | 'linux' | 'win32'
+  arch: process.arch, // 'arm64' | 'x64' | ...
+  shell: null, // detected default shell
   hasGit: false,
-  hasRg: false,                         // ripgrep
+  hasRg: false, // ripgrep
   hasGrep: false,
   hasPython: false,
-  pythonBin: null,                      // 'python3' | 'python' | null
-  hasNode: true,                        // always true (we're running on it)
-  hasBrew: false,                       // macOS package manager
+  pythonBin: null, // 'python3' | 'python' | null
+  hasNode: true, // always true (we're running on it)
+  hasBrew: false, // macOS package manager
   hasCurl: false,
   hasWget: false,
-  hasPbcopy: false,                     // macOS clipboard
-  hasXclip: false,                      // Linux clipboard
-  hasPwsh: false,                       // PowerShell Core 7+
+  hasPbcopy: false, // macOS clipboard
+  hasXclip: false, // Linux clipboard
+  hasPwsh: false, // PowerShell Core 7+
   hasDocker: false,
 };
 
@@ -49,7 +49,9 @@ function _hasBin(bin) {
  * Non-blocking in terms of errors — every check is best-effort.
  */
 function probe() {
-  if (_probed) return _caps;
+  if (_probed) {
+    return _caps;
+  }
   _probed = true;
 
   // Shell detection
@@ -93,7 +95,9 @@ function probe() {
  * @returns {typeof _caps}
  */
 function getCapabilities() {
-  if (!_probed) probe();
+  if (!_probed) {
+    probe();
+  }
   return { ..._caps };
 }
 
@@ -119,7 +123,9 @@ function getCapabilities() {
  *   platform is unrecognized and no generic guidance applies.
  */
 function branchGuidance(platformOverride) {
-  if (!_probed) probe();
+  if (!_probed) {
+    probe();
+  }
   const p = platformOverride || _caps.platform;
   const have = (cond, line) => (cond ? [line] : []);
 
@@ -151,20 +157,31 @@ function branchGuidance(platformOverride) {
       '## Windows Optimal Path',
       `- Prefer ${_caps.hasPwsh ? 'PowerShell 7 (pwsh)' : 'PowerShell'} for structured/system tasks; cmd.exe for simple chaining.`,
       '- Native strengths: Windows service management (sc / Get-Service), registry, Office automation, .exe packaging.',
-      ...have(_hasBin('wsl'), '- WSL is available — use it for Linux-only toolchains when a native Windows path does not exist.'),
+      ...have(
+        _hasBin('wsl'),
+        '- WSL is available — use it for Linux-only toolchains when a native Windows path does not exist.'
+      ),
       '- Avoid: assuming bash/zsh is present; never use `sudo`.',
     ];
   }
 
   if (p === 'linux') {
-    const pkg = _hasBin('apt-get') ? 'apt'
-      : _hasBin('dnf') ? 'dnf'
-        : _hasBin('yum') ? 'yum'
-          : _hasBin('pacman') ? 'pacman' : null;
+    const pkg = _hasBin('apt-get')
+      ? 'apt'
+      : _hasBin('dnf')
+        ? 'dnf'
+        : _hasBin('yum')
+          ? 'yum'
+          : _hasBin('pacman')
+            ? 'pacman'
+            : null;
     return [
       '## Linux Optimal Path',
       '- Prefer bash for shell work; POSIX coreutils (ls/cat/cp/mv/rm, grep, sed, awk) are the native path.',
-      ...have(_hasBin('systemctl'), '- Service orchestration: use `systemctl` for units; `journalctl` for log analysis.'),
+      ...have(
+        _hasBin('systemctl'),
+        '- Service orchestration: use `systemctl` for units; `journalctl` for log analysis.'
+      ),
       ...have(!!pkg, `- Package management: use \`${pkg}\` (the detected package manager).`),
       ...have(_hasBin('crontab'), '- Scheduling: use `cron`/`crontab` for recurring jobs.'),
       ...have(_caps.hasDocker, '- Containerization/isolation: `docker` is available.'),
@@ -179,7 +196,10 @@ function branchGuidance(platformOverride) {
       '- Prefer zsh/bash; BSD coreutils differ subtly from GNU (e.g. `sed -i`, `date` flags) — account for that.',
       '- Service management: use `launchctl` (launchd), not `systemctl`.',
       ...have(_caps.hasBrew, '- Package management: use Homebrew (`brew` / `brew services`).'),
-      ...have(_hasBin('xcrun') || _hasBin('xcodebuild'), '- Build/sign: Xcode toolchain (`xcrun`, `xcodebuild`, `codesign`) is available.'),
+      ...have(
+        _hasBin('xcrun') || _hasBin('xcodebuild'),
+        '- Build/sign: Xcode toolchain (`xcrun`, `xcodebuild`, `codesign`) is available.'
+      ),
       ...have(_caps.hasPbcopy, '- Clipboard: `pbcopy`/`pbpaste`.'),
       '- Native strengths: app signing, dmg packaging, AppleScript automation, Xcode toolchain.',
       '- Avoid: assuming `systemctl`; do not use Windows service management.',
@@ -191,8 +211,12 @@ function branchGuidance(platformOverride) {
     '## Cross-Platform Path (unrecognized OS)',
     '- Platform fingerprint is unknown; prefer portable tooling and do not assume OS-specific commands.',
   ];
-  if (_caps.hasPython) generic.push(`- Use ${_caps.pythonBin} for portable scripting.`);
-  generic.push('- Use Node.js (already present) and, where available, Docker / generic REST APIs for portability.');
+  if (_caps.hasPython) {
+    generic.push(`- Use ${_caps.pythonBin} for portable scripting.`);
+  }
+  generic.push(
+    '- Use Node.js (already present) and, where available, Docker / generic REST APIs for portability.'
+  );
   return generic;
 }
 
@@ -201,13 +225,25 @@ function branchGuidance(platformOverride) {
  * @returns {string}
  */
 function toSystemPromptLine() {
-  if (!_probed) probe();
+  if (!_probed) {
+    probe();
+  }
   const tools = [];
-  if (_caps.hasGit) tools.push('git');
-  if (_caps.hasRg) tools.push('rg');
-  if (_caps.hasPython) tools.push(_caps.pythonBin);
-  if (_caps.hasDocker) tools.push('docker');
-  if (_caps.hasCurl) tools.push('curl');
+  if (_caps.hasGit) {
+    tools.push('git');
+  }
+  if (_caps.hasRg) {
+    tools.push('rg');
+  }
+  if (_caps.hasPython) {
+    tools.push(_caps.pythonBin);
+  }
+  if (_caps.hasDocker) {
+    tools.push('docker');
+  }
+  if (_caps.hasCurl) {
+    tools.push('curl');
+  }
   const platform = resolvePlatformLabel(_caps.platform);
   return `Platform: ${platform} ${_caps.arch}, Shell: ${_caps.shell}, Tools: ${tools.join(', ') || 'basic'}`;
 }

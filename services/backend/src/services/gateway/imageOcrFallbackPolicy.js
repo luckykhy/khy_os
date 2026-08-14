@@ -27,7 +27,9 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function _gateOn(value) {
-  if (value == null) return true; // 默认开
+  if (value == null) {
+    return true;
+  } // 默认开
   return !_FALSY.has(String(value).trim().toLowerCase());
 }
 
@@ -53,7 +55,9 @@ const MAX_TOTAL_MS = 600000;
 function getTotalTimeoutMs(env) {
   const raw = (env || process.env || {}).KHY_IMAGE_OCR_TOTAL_MS;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return DEFAULT_TOTAL_MS;
+  if (!Number.isFinite(n) || n <= 0) {
+    return DEFAULT_TOTAL_MS;
+  }
   return Math.max(MIN_TOTAL_MS, Math.min(MAX_TOTAL_MS, Math.floor(n)));
 }
 
@@ -86,17 +90,27 @@ function decideImageOcrNext(input) {
   const forceAi = !!i.forceAi;
 
   if (forceAi) {
-    if (visionAvailable) return { action: 'try-vision', reason: 'force-ai-vision-available' };
-    if (localHasText) return { action: 'use-local', reason: 'force-ai-no-vision-use-local-text' };
+    if (visionAvailable) {
+      return { action: 'try-vision', reason: 'force-ai-vision-available' };
+    }
+    if (localHasText) {
+      return { action: 'use-local', reason: 'force-ai-no-vision-use-local-text' };
+    }
     return { action: 'fail-honest', reason: 'force-ai-no-vision-no-text' };
   }
 
   const adequateLocal = localSuccess && localHasText && !localNeedsAiFallback;
-  if (adequateLocal) return { action: 'use-local', reason: 'local-adequate' };
+  if (adequateLocal) {
+    return { action: 'use-local', reason: 'local-adequate' };
+  }
 
   // 本地不充分(失败 / 低置信 / 无文字)。
-  if (visionAvailable) return { action: 'try-vision', reason: 'local-insufficient-vision-available' };
-  if (localHasText) return { action: 'use-local', reason: 'no-vision-fallback-to-local-text' };
+  if (visionAvailable) {
+    return { action: 'try-vision', reason: 'local-insufficient-vision-available' };
+  }
+  if (localHasText) {
+    return { action: 'use-local', reason: 'no-vision-fallback-to-local-text' };
+  }
   return { action: 'fail-honest', reason: 'no-vision-no-text' };
 }
 
@@ -151,10 +165,20 @@ const OCR_NETFAIL_MARKER = '网络暂时不可用';
  */
 function shouldApplyOcrTextOnNetFail(input) {
   const i = input || {};
-  if (!isOcrTextOnNetFailEnabled(i.env)) return false;
-  if (!i.ocrApplied) return false;
-  if (!i.hasText) return false;
-  return _NETFAIL_TYPES.has(String(i.errorType || '').trim().toLowerCase());
+  if (!isOcrTextOnNetFailEnabled(i.env)) {
+    return false;
+  }
+  if (!i.ocrApplied) {
+    return false;
+  }
+  if (!i.hasText) {
+    return false;
+  }
+  return _NETFAIL_TYPES.has(
+    String(i.errorType || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -168,9 +192,13 @@ function shouldApplyOcrTextOnNetFail(input) {
  */
 function buildOcrTextOnNetFailNote(input) {
   const i = input || {};
-  if (!isOcrTextOnNetFailEnabled(i.env)) return null;
+  if (!isOcrTextOnNetFailEnabled(i.env)) {
+    return null;
+  }
   const text = String(i.text == null ? '' : i.text).trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   return [
     `${OCR_NETFAIL_MARKER},无法把图片交给远端模型作答;以下是我在本地离线 OCR 识别到的图片文字,供你参考:`,
     '',

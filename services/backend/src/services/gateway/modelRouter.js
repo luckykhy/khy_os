@@ -48,9 +48,13 @@ const parseBoolean = require('../../utils/parseBoolean');
 
 function normalizeAdapterKey(raw, prefixToAdapter = DEFAULT_PREFIX_TO_ADAPTER) {
   const normalized = String(raw || '').trim();
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
   const lowered = normalized.toLowerCase();
-  if (lowered === 'localllm') return 'localLLM';
+  if (lowered === 'localllm') {
+    return 'localLLM';
+  }
   return prefixToAdapter[lowered] || normalized;
 }
 
@@ -102,27 +106,42 @@ function parseAdapterScopedModel(model, prefixToAdapter = DEFAULT_PREFIX_TO_ADAP
 }
 
 function parseRouteMap(raw) {
-  if (!raw) return {};
-  if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  if (!raw) {
+    return {};
+  }
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw;
+  }
 
   const input = String(raw || '').trim();
-  if (!input) return {};
+  if (!input) {
+    return {};
+  }
 
-  if ((input.startsWith('{') && input.endsWith('}')) || (input.startsWith('[') && input.endsWith(']'))) {
+  if (
+    (input.startsWith('{') && input.endsWith('}')) ||
+    (input.startsWith('[') && input.endsWith(']'))
+  ) {
     try {
       const parsed = JSON.parse(input);
       if (Array.isArray(parsed)) {
         const mapped = {};
         for (const row of parsed) {
-          if (!row || typeof row !== 'object') continue;
+          if (!row || typeof row !== 'object') {
+            continue;
+          }
           const pattern = String(row.pattern || row.match || '').trim();
           const target = row.target || row.route || row.to;
-          if (!pattern || !target) continue;
+          if (!pattern || !target) {
+            continue;
+          }
           mapped[pattern] = target;
         }
         return mapped;
       }
-      if (parsed && typeof parsed === 'object') return parsed;
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
     } catch {
       return {};
     }
@@ -130,14 +149,21 @@ function parseRouteMap(raw) {
   }
 
   const mapped = {};
-  const parts = input.split(/\r?\n|,/g).map(s => s.trim()).filter(Boolean);
+  const parts = input
+    .split(/\r?\n|,/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (const line of parts) {
     const sep = line.includes('=>') ? '=>' : '=';
     const idx = line.indexOf(sep);
-    if (idx <= 0) continue;
+    if (idx <= 0) {
+      continue;
+    }
     const pattern = line.slice(0, idx).trim();
     const target = line.slice(idx + sep.length).trim();
-    if (!pattern || !target) continue;
+    if (!pattern || !target) {
+      continue;
+    }
     mapped[pattern] = target;
   }
   return mapped;
@@ -145,21 +171,29 @@ function parseRouteMap(raw) {
 
 function normalizeRouteRules(routeMap) {
   const rules = [];
-  if (!routeMap || typeof routeMap !== 'object') return rules;
+  if (!routeMap || typeof routeMap !== 'object') {
+    return rules;
+  }
 
   for (const [rawPattern, value] of Object.entries(routeMap)) {
     const pattern = String(rawPattern || '').trim();
-    if (!pattern) continue;
+    if (!pattern) {
+      continue;
+    }
 
     let target = value;
     let strict = null;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       target = value.target || value.route || value.to || '';
-      if (value.strict !== undefined) strict = !!value.strict;
+      if (value.strict !== undefined) {
+        strict = !!value.strict;
+      }
     }
 
     const targetText = String(target || '').trim();
-    if (!targetText) continue;
+    if (!targetText) {
+      continue;
+    }
 
     const loweredPattern = pattern.toLowerCase();
     const isPrefix = loweredPattern.endsWith('*');
@@ -174,19 +208,31 @@ function normalizeRouteRules(routeMap) {
   }
 
   return rules.sort((a, b) => {
-    if (a.isPrefix !== b.isPrefix) return a.isPrefix ? 1 : -1;
+    if (a.isPrefix !== b.isPrefix) {
+      return a.isPrefix ? 1 : -1;
+    }
     return b.matchValue.length - a.matchValue.length;
   });
 }
 
 function findRouteRule(model, routeRules) {
-  const modelLower = String(model || '').trim().toLowerCase();
-  if (!modelLower) return null;
+  const modelLower = String(model || '')
+    .trim()
+    .toLowerCase();
+  if (!modelLower) {
+    return null;
+  }
 
   for (const rule of routeRules) {
-    if (!rule) continue;
-    if (!rule.isPrefix && rule.matchValue === modelLower) return rule;
-    if (rule.isPrefix && rule.matchValue && modelLower.startsWith(rule.matchValue)) return rule;
+    if (!rule) {
+      continue;
+    }
+    if (!rule.isPrefix && rule.matchValue === modelLower) {
+      return rule;
+    }
+    if (rule.isPrefix && rule.matchValue && modelLower.startsWith(rule.matchValue)) {
+      return rule;
+    }
   }
   return null;
 }
@@ -202,10 +248,16 @@ const BUILTIN_MODEL_ROUTE_MAP = Object.freeze({
 
 function inferBuiltinFamilyRoute(modelId) {
   const normalized = String(modelId || '').trim();
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
   const lower = normalized.toLowerCase();
-  if (lower.includes('codex')) return null;
-  if (!/^(gpt-|o1-|o3-|o4-)/.test(lower)) return null;
+  if (lower.includes('codex')) {
+    return null;
+  }
+  if (!/^(gpt-|o1-|o3-|o4-)/.test(lower)) {
+    return null;
+  }
   return {
     pattern: '__openai_gpt_family__',
     target: `api/openai:${normalized}`,
@@ -218,9 +270,10 @@ function resolveModelRoute(input = {}) {
     ...DEFAULT_PREFIX_TO_ADAPTER,
     ...(input.prefixMap || {}),
   };
-  const routeMapRaw = input.routeMap !== undefined
-    ? input.routeMap
-    : (process.env.GATEWAY_MODEL_ROUTE_MAP || process.env.PROXY_MODEL_ROUTE_MAP || '');
+  const routeMapRaw =
+    input.routeMap !== undefined
+      ? input.routeMap
+      : process.env.GATEWAY_MODEL_ROUTE_MAP || process.env.PROXY_MODEL_ROUTE_MAP || '';
   const userRouteMap = parseRouteMap(routeMapRaw);
   // 内置路由兜底，用户配置优先
   const mergedRouteMap = { ...BUILTIN_MODEL_ROUTE_MAP, ...userRouteMap };
@@ -265,9 +318,10 @@ function resolveModelRoute(input = {}) {
     }
   }
 
-  const defaultPreferredAdapterRaw = input.defaultPreferredAdapter !== undefined
-    ? input.defaultPreferredAdapter
-    : (process.env.PROXY_PRIMARY_ADAPTER || 'localLLM');
+  const defaultPreferredAdapterRaw =
+    input.defaultPreferredAdapter !== undefined
+      ? input.defaultPreferredAdapter
+      : process.env.PROXY_PRIMARY_ADAPTER || 'localLLM';
   const defaultPreferredAdapter = normalizeAdapterKey(defaultPreferredAdapterRaw, prefixToAdapter);
 
   let preferredAdapter = null;
@@ -289,9 +343,10 @@ function resolveModelRoute(input = {}) {
   } else if (defaultPreferredAdapter && defaultPreferredAdapter !== 'auto') {
     preferredAdapter = defaultPreferredAdapter;
     preferredModel = routed.modelId || null;
-    strictPreferred = input.strictPreferred !== undefined
-      ? !!input.strictPreferred
-      : parseBoolean(process.env.PROXY_PRIMARY_STRICT, false);
+    strictPreferred =
+      input.strictPreferred !== undefined
+        ? !!input.strictPreferred
+        : parseBoolean(process.env.PROXY_PRIMARY_STRICT, false);
   }
 
   // 用户是否「显式钉选」了这个渠道——区别于 env 默认 strict 与 auto 模式。
@@ -304,11 +359,9 @@ function resolveModelRoute(input = {}) {
   const userPinned = !!(
     preferredAdapter &&
     preferredAdapter !== 'auto' &&
-    (
-      direct.explicitAdapter ||
+    (direct.explicitAdapter ||
       (routed.adapterKey && strictFromRule === true) ||
-      (routed.adapterKey && input.strictPreferred === true)
-    )
+      (routed.adapterKey && input.strictPreferred === true))
   );
 
   return {

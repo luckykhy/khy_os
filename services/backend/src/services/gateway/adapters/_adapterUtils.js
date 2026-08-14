@@ -22,11 +22,11 @@ const path = require('path');
  */
 function parseList(raw) {
   if (Array.isArray(raw)) {
-    return raw.map(v => String(v || '').trim()).filter(Boolean);
+    return raw.map((v) => String(v || '').trim()).filter(Boolean);
   }
   return String(raw || '')
     .split(/[\n,]/g)
-    .map(v => String(v || '').trim())
+    .map((v) => String(v || '').trim())
     .filter(Boolean);
 }
 
@@ -42,7 +42,9 @@ function dedupe(values = []) {
   const seen = new Set();
   for (const value of values) {
     const key = String(value || '').trim();
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(key);
   }
@@ -61,9 +63,13 @@ function dedupePaths(paths = []) {
   const seen = new Set();
   for (const p of paths) {
     const key = String(p || '').trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     const normalized = path.normalize(key);
-    if (seen.has(normalized)) continue;
+    if (seen.has(normalized)) {
+      continue;
+    }
     seen.add(normalized);
     out.push(normalized);
   }
@@ -82,7 +88,9 @@ function dedupePaths(paths = []) {
  */
 function parsePositiveInt(raw, fallback, min = 1, max = Infinity) {
   const parsed = parseInt(String(raw ?? fallback), 10);
-  if (!Number.isFinite(parsed) || parsed < min) return fallback;
+  if (!Number.isFinite(parsed) || parsed < min) {
+    return fallback;
+  }
   return Math.min(max, parsed);
 }
 
@@ -95,8 +103,12 @@ function parsePositiveInt(raw, fallback, min = 1, max = Infinity) {
  * @returns {string}
  */
 function compactText(value, maxLen = 200) {
-  const t = String(value || '').replace(/\s+/g, ' ').trim();
-  if (!t) return '';
+  const t = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) {
+    return '';
+  }
   return t.length > maxLen ? `${t.slice(0, maxLen - 1)}…` : t;
 }
 
@@ -115,12 +127,9 @@ function resolveUserHomeRoots() {
       : '',
   ];
 
-  const isWsl = process.platform === 'linux'
-    && (
-      !!process.env.WSL_DISTRO_NAME
-      || !!process.env.WSL_INTEROP
-      || fs.existsSync('/mnt/c/Windows')
-    );
+  const isWsl =
+    process.platform === 'linux' &&
+    (!!process.env.WSL_DISTRO_NAME || !!process.env.WSL_INTEROP || fs.existsSync('/mnt/c/Windows'));
   if (isWsl) {
     const userHints = dedupePaths([
       process.env.USERNAME ? `/mnt/c/Users/${process.env.USERNAME}` : '',
@@ -130,10 +139,14 @@ function resolveUserHomeRoots() {
     for (const drive of ['c', 'd', 'e']) {
       const usersDir = `/mnt/${drive}/Users`;
       try {
-        if (!fs.existsSync(usersDir)) continue;
+        if (!fs.existsSync(usersDir)) {
+          continue;
+        }
         const entries = fs.readdirSync(usersDir, { withFileTypes: true });
         for (const entry of entries) {
-          if (!entry.isDirectory()) continue;
+          if (!entry.isDirectory()) {
+            continue;
+          }
           roots.push(path.join(usersDir, entry.name));
         }
       } catch {

@@ -1,17 +1,28 @@
 'use strict';
 
-const express = require('express');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const express = require('express');
+
+const { remoteStateSyncService } = require('../services/remote');
 const { attach: attachSseKeepalive } = require('../services/sseKeepalive');
-const runtime = require('../tasks/largeTaskRuntimeStore');
 const taskControlService = require('../services/taskControlService');
 const { createLargeTaskOrchestrator } = require('../tasks/largeTaskOrchestrator');
+const runtime = require('../tasks/largeTaskRuntimeStore');
 const { createLargeTaskWorkerService } = require('../tasks/largeTaskWorkerService');
 const { getLegacyDataHome } = require('../utils/dataHome');
 const envInt = require('../utils/envInt');
-const { remoteStateSyncService } = require('../services/remote');
+
+const {
+  RETRY_POLICY_APPROVAL_DEFAULT_LIMIT,
+  RETRY_POLICY_AUDIT_DEFAULT_LIMIT,
+  evaluateRetryPolicyGuardrails: _evaluateRetryPolicyGuardrails,
+  evaluateRetryPolicyRisk: _evaluateRetryPolicyRisk,
+  validateRetryPolicyApprovalRetentionPatch: _validateRetryPolicyApprovalRetentionPatch,
+  validateRetryPolicyPatch: _validateRetryPolicyPatch,
+} = require('./largeTasks/retryPolicy');
 const {
   buildRunOptions: _buildRunOptions,
   buildTraceId: _buildTraceId,
@@ -26,17 +37,22 @@ const {
   parseIntInRange: _parseIntInRange,
   trimmedString: _trimmedString,
 } = require('./largeTasks/routeHelpers');
-const {
-  RETRY_POLICY_APPROVAL_DEFAULT_LIMIT,
-  RETRY_POLICY_AUDIT_DEFAULT_LIMIT,
-  evaluateRetryPolicyGuardrails: _evaluateRetryPolicyGuardrails,
-  evaluateRetryPolicyRisk: _evaluateRetryPolicyRisk,
-  validateRetryPolicyApprovalRetentionPatch: _validateRetryPolicyApprovalRetentionPatch,
-  validateRetryPolicyPatch: _validateRetryPolicyPatch,
-} = require('./largeTasks/retryPolicy');
 
-const ACTIVE_TASK_STATUSES = new Set(['claimed', 'running', 'retry_wait', 'pausing', 'paused', 'cancelling']);
-const KEY_OPERATION_STATES = new Set(['running', 'succeeded', 'failed', 'cancelled', 'dead_letter']);
+const ACTIVE_TASK_STATUSES = new Set([
+  'claimed',
+  'running',
+  'retry_wait',
+  'pausing',
+  'paused',
+  'cancelling',
+]);
+const KEY_OPERATION_STATES = new Set([
+  'running',
+  'succeeded',
+  'failed',
+  'cancelled',
+  'dead_letter',
+]);
 const TODO_STATE_FILE_NAME = 'todo_state.json';
 const DEFAULT_HANDOVER_WINDOW_MINUTES = 60;
 
@@ -58,7 +74,9 @@ function _taskControlFail(res, traceId, operationName, result = {}) {
     trace_id: traceId,
     code: result.code || 'task_control_failed',
   };
-  if (result.task) data.task = result.task;
+  if (result.task) {
+    data.task = result.task;
+  }
   return res.status(status).json({
     success: false,
     message: `${operationName}失败: ${result.message || '未知错误'}`,
@@ -75,12 +93,35 @@ function _candidateTodoStateFiles() {
     const store = require('../services/todoStateStorePaths');
     if (store.todoStateUnifyEnabled()) {
       let tmp = os.tmpdir();
-      try { tmp = require('../tools/platformUtils').getTmpDir() || tmp; } catch { /* 回退 os.tmpdir */ }
-      return store.todoStateCandidateFiles({
-        homedir: os.homedir(), cwd: process.cwd(), tmpdir: tmp,
-      }).map((c) => ({ source: c.source, file_path: c.file_path }));
+      try {
+        tmp = require('../tools/platformUtils').getTmpDir() || tmp;
+      } catch {
+        /* 回退 os.tmpdir */
+      }
+      const files = store
+        .todoStateCandidateFiles({
+          homedir: os.homedir(),
+          cwd: process.cwd(),
+          tmpdir: tmp,
+        })
+        .map((c) => ({ source: c.source, file_path: c.file_path }));
+      // Portable-aware app home candidate first — mirrors the write side in
+      // services/toolCalling.js (dedup: equals ~/.khyquant on legacy installs).
+      try {
+        const { getAppHome } = require('../utils/dataHome');
+        const appHome = getAppHome();
+        const appHomeFile = path.join(appHome, TODO_STATE_FILE_NAME);
+        if (!files.some((f) => f && f.file_path === appHomeFile)) {
+          files.unshift({ source: 'app_home', file_path: appHomeFile });
+        }
+      } catch {
+        /* dataHome unavailable */
+      }
+      return files;
     }
-  } catch { /* fail-soft:落回今日内联清单 */ }
+  } catch {
+    /* fail-soft:落回今日内联清单 */
+  }
   return [
     {
       source: 'legacy_data_home',
@@ -98,11 +139,21 @@ function _candidateTodoStateFiles() {
 }
 
 function _normalizeTodoStatus(status, done) {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'completed' || normalized === 'done') return 'completed';
-  if (normalized === 'pending' || normalized === 'todo') return 'pending';
-  if (normalized === 'in_progress' || normalized === 'doing') return 'in_progress';
-  if (done === true) return 'completed';
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
+  if (normalized === 'completed' || normalized === 'done') {
+    return 'completed';
+  }
+  if (normalized === 'pending' || normalized === 'todo') {
+    return 'pending';
+  }
+  if (normalized === 'in_progress' || normalized === 'doing') {
+    return 'in_progress';
+  }
+  if (done === true) {
+    return 'completed';
+  }
   return 'pending';
 }
 
@@ -115,14 +166,16 @@ let _todoSnapshotCache = null; // { at, payload }
 
 function _loadTodoSnapshotPayload() {
   const now = Date.now();
-  if (_todoSnapshotCache && (now - _todoSnapshotCache.at) < _TODO_SNAPSHOT_TTL_MS) {
+  if (_todoSnapshotCache && now - _todoSnapshotCache.at < _TODO_SNAPSHOT_TTL_MS) {
     return _todoSnapshotCache.payload;
   }
 
   let payload = { source: null, updated_at: null, normalized: [] };
   for (const candidate of _candidateTodoStateFiles()) {
     try {
-      if (!fs.existsSync(candidate.file_path)) continue;
+      if (!fs.existsSync(candidate.file_path)) {
+        continue;
+      }
       const raw = fs.readFileSync(candidate.file_path, 'utf-8');
       const parsed = JSON.parse(raw);
       const todos = Array.isArray(parsed?.todos) ? parsed.todos : [];
@@ -136,7 +189,9 @@ function _loadTodoSnapshotPayload() {
               priority: 'normal',
             };
           }
-          if (!todo || typeof todo !== 'object') return null;
+          if (!todo || typeof todo !== 'object') {
+            return null;
+          }
           return {
             id: String(todo.id || `todo-${index + 1}`),
             content: String(todo.content || todo.text || '').trim(),
@@ -176,8 +231,12 @@ function _readPendingTodos(limit = 10) {
 }
 
 function _isKeyOperationEvent(event) {
-  if (!event || typeof event !== 'object') return false;
-  if (KEY_OPERATION_STATES.has(event.state_to)) return true;
+  if (!event || typeof event !== 'object') {
+    return false;
+  }
+  if (KEY_OPERATION_STATES.has(event.state_to)) {
+    return true;
+  }
   return event.state_from === 'claimed' && event.state_to === 'running';
 }
 
@@ -189,7 +248,7 @@ function _buildRecentOperations(options = {}) {
     24 * 60
   );
   const limit = _parseIntInRange(options.limit, 3, 1, 30);
-  const afterAt = new Date(Date.now() - (windowMinutes * 60 * 1000)).toISOString();
+  const afterAt = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
   const events = runtime.listTaskEvents({
     after_at: afterAt,
     limit: 5_000,
@@ -228,7 +287,7 @@ function _buildRecentRetentionChanges(options = {}) {
     24 * 60
   );
   const limit = _parseIntInRange(options.limit, 3, 1, 30);
-  const afterMs = Date.now() - (windowMinutes * 60 * 1000);
+  const afterMs = Date.now() - windowMinutes * 60 * 1000;
 
   return runtime
     .listRetryPolicyApprovalRetentionEvents({ limit: 5_000 })
@@ -282,31 +341,27 @@ function _buildRemoteHandoverSnapshot(options = {}) {
       : [];
 
     return {
-      active_remote_sessions: sessions
-        .slice(0, sessionLimit)
-        .map((session) => ({
-          connection_id: session.connectionId || null,
-          host_alias: session.hostAlias || null,
-          status: session.status || null,
-          purpose: session.purpose || null,
-          connected_at: session.connectedAt || null,
-          last_activity_at: session.lastActivityAt || null,
-          remote_workspace: session.remoteWorkspace || null,
-        })),
-      pending_remote_approvals: pendingApprovals
-        .slice(0, approvalLimit)
-        .map((ticket) => ({
-          ticket_id: ticket.ticket_id || null,
-          trace_id: ticket.trace_id || null,
-          connection_id: ticket.connection_id || null,
-          host_alias: ticket.host_alias || null,
-          status: ticket.status || 'pending',
-          risk_level: ticket.risk_level || null,
-          reason: ticket.reason || null,
-          created_at: ticket.created_at || null,
-          expires_at: ticket.expires_at || null,
-          command_count: Array.isArray(ticket.commands) ? ticket.commands.length : 0,
-        })),
+      active_remote_sessions: sessions.slice(0, sessionLimit).map((session) => ({
+        connection_id: session.connectionId || null,
+        host_alias: session.hostAlias || null,
+        status: session.status || null,
+        purpose: session.purpose || null,
+        connected_at: session.connectedAt || null,
+        last_activity_at: session.lastActivityAt || null,
+        remote_workspace: session.remoteWorkspace || null,
+      })),
+      pending_remote_approvals: pendingApprovals.slice(0, approvalLimit).map((ticket) => ({
+        ticket_id: ticket.ticket_id || null,
+        trace_id: ticket.trace_id || null,
+        connection_id: ticket.connection_id || null,
+        host_alias: ticket.host_alias || null,
+        status: ticket.status || 'pending',
+        risk_level: ticket.risk_level || null,
+        reason: ticket.reason || null,
+        created_at: ticket.created_at || null,
+        expires_at: ticket.expires_at || null,
+        command_count: Array.isArray(ticket.commands) ? ticket.commands.length : 0,
+      })),
       summary: {
         active_session_count: Number(remoteSnapshot.summary?.active_session_count || 0),
         pending_approval_count: Number(remoteSnapshot.summary?.pending_approval_count || 0),
@@ -326,16 +381,24 @@ function _buildRemoteHandoverSnapshot(options = {}) {
 
 function _compactText(value, maxLen = 100) {
   const text = String(value || '').trim();
-  if (!text) return '';
-  if (text.length <= maxLen) return text;
+  if (!text) {
+    return '';
+  }
+  if (text.length <= maxLen) {
+    return text;
+  }
   return `${text.slice(0, Math.max(1, maxLen - 3))}...`;
 }
 
 function _statusLight({ recentOperations, activeTasks, remoteSnapshot }) {
   const riskyStates = new Set(['failed', 'dead_letter', 'cancelled']);
   const hasFailure = recentOperations.some((item) => riskyStates.has(item.state_to));
-  if (hasFailure) return '🔴';
-  if (activeTasks.length > 0 || Number(remoteSnapshot.summary?.pending_approval_count || 0) > 0) return '🟡';
+  if (hasFailure) {
+    return '🔴';
+  }
+  if (activeTasks.length > 0 || Number(remoteSnapshot.summary?.pending_approval_count || 0) > 0) {
+    return '🟡';
+  }
   return '🟢';
 }
 
@@ -445,21 +508,38 @@ function _buildMobileSnapshot({
 async function _runBuiltinTaskHandler(ctx) {
   const payload = _normalizePayload(ctx.payload);
   const steps = _normalizeSteps(payload.steps);
+  // ── 断点续接(resumeFromCheckpoint 的消费者)──
+  // ctx.checkpoint 来自 resumeFromCheckpoint(step_no = 已完成步数)。resume 时
+  // 跳过已完成步骤、恢复已保存的 state,而不是从头重放全部步骤——否则所谓"断点
+  // 续接"只是全量重放 + 幂等侧效果,已完成的中间 state 会静默丢失。
+  const resumeCp = ctx.checkpoint && typeof ctx.checkpoint === 'object' ? ctx.checkpoint : null;
+  const resumeStateBlob =
+    resumeCp && resumeCp.state_blob_json && typeof resumeCp.state_blob_json === 'object'
+      ? resumeCp.state_blob_json
+      : null;
+  const startIndex = (() => {
+    const raw = resumeCp ? Number(resumeCp.step_no) : NaN;
+    return Number.isFinite(raw) && raw >= 0 && raw <= steps.length ? Math.floor(raw) : 0;
+  })();
   const plan = await ctx.plan(async () => ({
     task_id: ctx.taskId,
     trace_id: ctx.traceId,
     step_total: steps.length,
     dry_run: true,
-    checkpoint_step: ctx.checkpoint?.step_no || null,
+    checkpoint_step: resumeCp?.step_no || null,
+    resume_step: startIndex,
   }));
 
   const state = {
     ...(payload.state && typeof payload.state === 'object' ? payload.state : {}),
+    ...(resumeStateBlob && resumeStateBlob.state && typeof resumeStateBlob.state === 'object'
+      ? resumeStateBlob.state
+      : {}),
   };
   const sideEffects = [];
   const checkpointEvery = _parseIntInRange(payload.checkpoint_every, 0, 0, 10_000);
 
-  for (let i = 0; i < steps.length; i += 1) {
+  for (let i = startIndex; i < steps.length; i += 1) {
     const step = steps[i];
     ctx.ensureNotCancelled();
 
@@ -477,14 +557,18 @@ async function _runBuiltinTaskHandler(ctx) {
         await new Promise((resolve) => setTimeout(resolve, sleepMs));
       }
     } else if (step.action === 'checkpoint') {
-      const progress = step.progress_pct === undefined ? Math.round(((i + 1) / Math.max(1, steps.length)) * 100) : step.progress_pct;
+      const progress =
+        step.progress_pct === undefined
+          ? Math.round(((i + 1) / Math.max(1, steps.length)) * 100)
+          : step.progress_pct;
       ctx.saveCheckpoint({
         step_no: i + 1,
         progress_pct: progress,
         schema_version: _parseIntInRange(step.schema_version, 1, 1, 10_000),
-        state_blob_json: step.state_blob_json && typeof step.state_blob_json === 'object'
-          ? step.state_blob_json
-          : { state, step_index: i },
+        state_blob_json:
+          step.state_blob_json && typeof step.state_blob_json === 'object'
+            ? step.state_blob_json
+            : { state, step_index: i },
       });
     } else if (step.action === 'side_effect') {
       const commitResult = await ctx.commit({
@@ -506,7 +590,9 @@ async function _runBuiltinTaskHandler(ctx) {
         result: commitResult.result || null,
       });
       if (ctx.commitEnabled && !ctx.dryRun && !commitResult.ok) {
-        throw new Error(`builtin side_effect step ${i} failed: ${commitResult.code || 'side_effect_failed'}`);
+        throw new Error(
+          `builtin side_effect step ${i} failed: ${commitResult.code || 'side_effect_failed'}`
+        );
       }
     } else if (step.action === 'fail') {
       throw new Error(step.fail_message || `builtin step ${i} failed`);
@@ -644,15 +730,17 @@ router.get('/events', async (req, res) => {
     const afterId = _parseAfterEventId(req);
     const limit = _parseIntInRange(req.query?.limit, 100, 1, 5000);
 
-    const events = runtime.listTaskEvents({
-      task_id: taskId || undefined,
-      trace_id: traceFilter || undefined,
-      state_to: stateTo || undefined,
-      state_from: stateFrom || undefined,
-      after_at: afterAt || undefined,
-      after_id: afterId,
-      limit,
-    }).map(_normalizeEventRecord);
+    const events = runtime
+      .listTaskEvents({
+        task_id: taskId || undefined,
+        trace_id: traceFilter || undefined,
+        state_to: stateTo || undefined,
+        state_from: stateFrom || undefined,
+        after_at: afterAt || undefined,
+        after_id: afterId,
+        limit,
+      })
+      .map(_normalizeEventRecord);
 
     return res.json({
       success: true,
@@ -747,7 +835,9 @@ router.post('/:taskId/cancel', async (req, res) => {
       trace_id: traceId,
       task: result.task,
     };
-    if (result.already_terminal) data.already_terminal = true;
+    if (result.already_terminal) {
+      data.already_terminal = true;
+    }
     return res.json({
       success: true,
       data,
@@ -773,7 +863,9 @@ router.post('/:taskId/pause', async (req, res) => {
       trace_id: traceId,
       task: result.task,
     };
-    if (result.already_paused) data.already_paused = true;
+    if (result.already_paused) {
+      data.already_paused = true;
+    }
     return res.json({
       success: true,
       data,
@@ -799,7 +891,9 @@ router.post('/:taskId/resume', async (req, res) => {
       trace_id: traceId,
       task: result.task,
     };
-    if (result.already_running) data.already_running = true;
+    if (result.already_running) {
+      data.already_running = true;
+    }
     return res.json({
       success: true,
       data,
@@ -829,9 +923,8 @@ router.get('/handover/snapshot', async (req, res) => {
     const remoteApprovalLimit = _parseIntInRange(req.query?.approval_limit, 10, 1, 100);
     const remoteSessionLimit = _parseIntInRange(req.query?.session_limit, 10, 1, 100);
     const format = _trimmedString(req.query?.format).toLowerCase();
-    const mobileCompact = _parseBoolean(req.query?.mobile, false)
-      || format === 'mobile'
-      || format === 'compact';
+    const mobileCompact =
+      _parseBoolean(req.query?.mobile, false) || format === 'mobile' || format === 'compact';
 
     const metrics = orchestrator.getMetrics();
     const recentOperations = _buildRecentOperations({
@@ -923,9 +1016,17 @@ router.get('/events/stream', async (req, res) => {
   let unsubscribe = null;
 
   const teardown = () => {
-    if (unsubscribed) return;
+    if (unsubscribed) {
+      return;
+    }
     unsubscribed = true;
-    try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { /* ignore */ }
+    try {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    } catch {
+      /* ignore */
+    }
     sse.stop();
   };
 
@@ -935,11 +1036,21 @@ router.get('/events/stream', async (req, res) => {
   res.on('error', teardown);
 
   const shouldPass = (event) => {
-    if (!event || typeof event !== 'object') return false;
-    if (taskId && event.task_id !== taskId) return false;
-    if (traceFilter && event.trace_id !== traceFilter) return false;
-    if (stateTo && event.state_to !== stateTo) return false;
-    if (stateFrom && event.state_from !== stateFrom) return false;
+    if (!event || typeof event !== 'object') {
+      return false;
+    }
+    if (taskId && event.task_id !== taskId) {
+      return false;
+    }
+    if (traceFilter && event.trace_id !== traceFilter) {
+      return false;
+    }
+    if (stateTo && event.state_to !== stateTo) {
+      return false;
+    }
+    if (stateFrom && event.state_from !== stateFrom) {
+      return false;
+    }
     if (afterAt) {
       const eventMs = Date.parse(String(event.at));
       const afterMs = Date.parse(afterAt);
@@ -951,15 +1062,17 @@ router.get('/events/stream', async (req, res) => {
   };
 
   try {
-    const replayEvents = runtime.listTaskEvents({
-      task_id: taskId || undefined,
-      trace_id: traceFilter || undefined,
-      state_to: stateTo || undefined,
-      state_from: stateFrom || undefined,
-      after_at: afterAt || undefined,
-      after_id: afterId,
-      limit,
-    }).map(_normalizeEventRecord);
+    const replayEvents = runtime
+      .listTaskEvents({
+        task_id: taskId || undefined,
+        trace_id: traceFilter || undefined,
+        state_to: stateTo || undefined,
+        state_from: stateFrom || undefined,
+        after_at: afterAt || undefined,
+        after_id: afterId,
+        limit,
+      })
+      .map(_normalizeEventRecord);
 
     for (const event of replayEvents) {
       const eventId = Number.parseInt(event.event_id, 10);
@@ -984,7 +1097,9 @@ router.get('/events/stream', async (req, res) => {
     }
 
     unsubscribe = runtime.subscribeTaskEvents((event) => {
-      if (!shouldPass(event)) return;
+      if (!shouldPass(event)) {
+        return;
+      }
       const normalizedEvent = _normalizeEventRecord(event);
       const eventId = Number.parseInt(normalizedEvent.event_id, 10);
       sse.sendWithId('task_event', normalizedEvent, Number.isFinite(eventId) ? eventId : null);
@@ -1018,9 +1133,17 @@ router.get('/retry-policy/approvals/stream', async (req, res) => {
   let unsubscribe = null;
 
   const teardown = () => {
-    if (unsubscribed) return;
+    if (unsubscribed) {
+      return;
+    }
     unsubscribed = true;
-    try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { /* ignore */ }
+    try {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    } catch {
+      /* ignore */
+    }
     sse.stop();
   };
 
@@ -1030,10 +1153,18 @@ router.get('/retry-policy/approvals/stream', async (req, res) => {
   res.on('error', teardown);
 
   const shouldPass = (event) => {
-    if (!event || typeof event !== 'object') return false;
-    if (ticketId && event.ticket_id !== ticketId) return false;
-    if (traceFilter && event.trace_id !== traceFilter) return false;
-    if (eventType && event.event_type !== eventType) return false;
+    if (!event || typeof event !== 'object') {
+      return false;
+    }
+    if (ticketId && event.ticket_id !== ticketId) {
+      return false;
+    }
+    if (traceFilter && event.trace_id !== traceFilter) {
+      return false;
+    }
+    if (eventType && event.event_type !== eventType) {
+      return false;
+    }
     return true;
   };
 
@@ -1048,7 +1179,11 @@ router.get('/retry-policy/approvals/stream', async (req, res) => {
 
     for (const event of replayEvents) {
       const eventId = Number.parseInt(event.approval_event_id, 10);
-      sse.sendWithId('retry_policy_approval_event', event, Number.isFinite(eventId) ? eventId : null);
+      sse.sendWithId(
+        'retry_policy_approval_event',
+        event,
+        Number.isFinite(eventId) ? eventId : null
+      );
     }
 
     sse.send('ready', {
@@ -1069,9 +1204,15 @@ router.get('/retry-policy/approvals/stream', async (req, res) => {
     }
 
     unsubscribe = runtime.subscribeRetryPolicyApprovalEvents((event) => {
-      if (!shouldPass(event)) return;
+      if (!shouldPass(event)) {
+        return;
+      }
       const eventId = Number.parseInt(event.approval_event_id, 10);
-      sse.sendWithId('retry_policy_approval_event', event, Number.isFinite(eventId) ? eventId : null);
+      sse.sendWithId(
+        'retry_policy_approval_event',
+        event,
+        Number.isFinite(eventId) ? eventId : null
+      );
     });
     return undefined;
   } catch (error) {
@@ -1119,9 +1260,9 @@ router.get('/retry-policy', async (req, res) => {
     const retryPolicy = runtime.getRetryPolicy();
     const events = includeAudit
       ? runtime.listRetryPolicyEvents({
-        limit,
-        after_id: afterId,
-      })
+          limit,
+          after_id: afterId,
+        })
       : [];
 
     return res.json({
@@ -1220,9 +1361,10 @@ router.get('/retry-policy/approvals/retention', async (req, res) => {
 router.post('/retry-policy/approvals/retention', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
-    const retentionInput = req.body?.retry_policy_approval_retention
-      || req.body?.retryPolicyApprovalRetention
-      || req.body?.retention;
+    const retentionInput =
+      req.body?.retry_policy_approval_retention ||
+      req.body?.retryPolicyApprovalRetention ||
+      req.body?.retention;
     const { errors, patch } = _validateRetryPolicyApprovalRetentionPatch(retentionInput);
     if (errors.length > 0 || !patch) {
       return res.status(400).json({
@@ -1232,10 +1374,11 @@ router.post('/retry-policy/approvals/retention', async (req, res) => {
       });
     }
 
-    const actor = _trimmedString(req.body?.actor)
-      || _headerAsString(req.headers['x-operator-id'])
-      || _headerAsString(req.headers['x-actor-id'])
-      || 'unknown_operator';
+    const actor =
+      _trimmedString(req.body?.actor) ||
+      _headerAsString(req.headers['x-operator-id']) ||
+      _headerAsString(req.headers['x-actor-id']) ||
+      'unknown_operator';
     const reason = _trimmedString(req.body?.reason).slice(0, 300) || null;
     const updated = runtime.updateRetryPolicyApprovalRetention(patch, {
       trace_id: traceId,
@@ -1303,9 +1446,17 @@ router.get('/retry-policy/approvals/retention/stream', async (req, res) => {
   let unsubscribe = null;
 
   const teardown = () => {
-    if (unsubscribed) return;
+    if (unsubscribed) {
+      return;
+    }
     unsubscribed = true;
-    try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { /* ignore */ }
+    try {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    } catch {
+      /* ignore */
+    }
     sse.stop();
   };
 
@@ -1315,9 +1466,15 @@ router.get('/retry-policy/approvals/retention/stream', async (req, res) => {
   res.on('error', teardown);
 
   const shouldPass = (event) => {
-    if (!event || typeof event !== 'object') return false;
-    if (traceFilter && event.trace_id !== traceFilter) return false;
-    if (actorFilter && event.actor !== actorFilter) return false;
+    if (!event || typeof event !== 'object') {
+      return false;
+    }
+    if (traceFilter && event.trace_id !== traceFilter) {
+      return false;
+    }
+    if (actorFilter && event.actor !== actorFilter) {
+      return false;
+    }
     return true;
   };
 
@@ -1356,7 +1513,9 @@ router.get('/retry-policy/approvals/retention/stream', async (req, res) => {
     }
 
     unsubscribe = runtime.subscribeRetryPolicyApprovalRetentionEvents((event) => {
-      if (!shouldPass(event)) return;
+      if (!shouldPass(event)) {
+        return;
+      }
       const eventId = Number.parseInt(event.retention_event_id, 10);
       sse.sendWithId(
         'retry_policy_approval_retention_event',
@@ -1419,10 +1578,11 @@ router.post('/retry-policy/approvals/decision', async (req, res) => {
   try {
     const ticketId = _trimmedString(req.body?.ticket_id);
     const decision = _trimmedString(req.body?.decision).toLowerCase();
-    const reviewer = _trimmedString(req.body?.reviewer)
-      || _headerAsString(req.headers['x-operator-id'])
-      || _headerAsString(req.headers['x-actor-id'])
-      || null;
+    const reviewer =
+      _trimmedString(req.body?.reviewer) ||
+      _headerAsString(req.headers['x-operator-id']) ||
+      _headerAsString(req.headers['x-actor-id']) ||
+      null;
     const reason = _trimmedString(req.body?.reason) || null;
 
     if (!ticketId) {
@@ -1456,9 +1616,14 @@ router.post('/retry-policy/approvals/decision', async (req, res) => {
       });
     }
 
-    const nextTicket = decision === 'approve'
-      ? runtime.approveRetryPolicyApprovalTicket(ticketId, reviewer)
-      : runtime.rejectRetryPolicyApprovalTicket(ticketId, reviewer, reason || 'rejected_by_reviewer');
+    const nextTicket =
+      decision === 'approve'
+        ? runtime.approveRetryPolicyApprovalTicket(ticketId, reviewer)
+        : runtime.rejectRetryPolicyApprovalTicket(
+            ticketId,
+            reviewer,
+            reason || 'rejected_by_reviewer'
+          );
 
     return res.json({
       success: true,
@@ -1489,10 +1654,11 @@ router.post('/retry-policy', async (req, res) => {
       });
     }
 
-    const actor = _trimmedString(req.body?.actor)
-      || _headerAsString(req.headers['x-operator-id'])
-      || _headerAsString(req.headers['x-actor-id'])
-      || 'unknown_operator';
+    const actor =
+      _trimmedString(req.body?.actor) ||
+      _headerAsString(req.headers['x-operator-id']) ||
+      _headerAsString(req.headers['x-actor-id']) ||
+      'unknown_operator';
     const reason = _trimmedString(req.body?.reason).slice(0, 300);
     const currentPolicy = runtime.getRetryPolicy();
     const guardrail = _evaluateRetryPolicyGuardrails(currentPolicy, patch);
@@ -1510,7 +1676,9 @@ router.post('/retry-policy', async (req, res) => {
     }
 
     const risk = _evaluateRetryPolicyRisk(currentPolicy, patch);
-    const approvalTicketId = _trimmedString(req.body?.approval_ticket_id || req.body?.approvalTicketId);
+    const approvalTicketId = _trimmedString(
+      req.body?.approval_ticket_id || req.body?.approvalTicketId
+    );
 
     if (risk.requires_approval) {
       if (!approvalTicketId) {

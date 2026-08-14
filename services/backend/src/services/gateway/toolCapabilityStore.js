@@ -21,26 +21,95 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getBaseDataDir } = require('../../utils/dataHome');
+
 const probe = require('./toolCallingProbe');
 
 const SCHEMA_VERSION = 1;
 
 function _file() {
   const override = process.env.KHY_TOOL_CAP_FILE;
-  if (override && String(override).trim()) return String(override).trim();
+  if (override && String(override).trim()) {
+    return String(override).trim();
+  }
   return path.join(getBaseDataDir('.'), 'tool_capability.json');
 }
 
 let _cache = null; // { version, entries: { [normModel]: { verdict, source, measuredAt, latencyMs } } }
 
+/**
+ * 把历史上带适配器前缀写入的键(`api:agnes:agnes-2.5-flash`)迁移到规范键(裸模型名)。
+ *
+ * 为什么需要:主动探测曾按路由 id 写库、被动学习按裸名写库,于是同一个模型留下两条键
+ * 不同、裁决相反的记录,两道闸各读一条 → 模型同时收到「有原生工具」与「你没有原生
+ * 工具」两套指令(见 capabilityModelKey.js 头部)。键规范化之后旧键会变成读不到的孤儿,
+ * 这里在加载时就地合并,让已有的缓存文件自愈,而不是让用户去手删 JSON。
+ *
+ * 撞键时的取舍:**'native' 压过 'text'** —— 观察到过一次真实的原生 tool_calls 是正面
+ * 证据,而 'text' 只是「这一次没看到」,是证据的缺席。同为 native 或同为 text 时取
+ * measuredAt 更新的那条。
+ * @param {object} entries
+ * @returns {{entries: object, changed: boolean}}
+ */
+function _migrateKeys(entries) {
+  const out = {};
+  let changed = false;
+  for (const [rawKey, entry] of Object.entries(entries || {})) {
+    let key = rawKey;
+    try {
+      key = probe.normalizeModel(rawKey) || rawKey;
+    } catch {
+      key = rawKey;
+    }
+    if (key !== rawKey) {
+      changed = true;
+    }
+    const prev = out[key];
+    if (!prev) {
+      out[key] = entry;
+      continue;
+    }
+    changed = true;
+    out[key] = _preferEntry(prev, entry);
+  }
+  return { entries: out, changed };
+}
+
+/** 二选一:native 胜 text;同档取更新的那条。 */
+function _preferEntry(a, b) {
+  const av = a && a.verdict;
+  const bv = b && b.verdict;
+  if (av === 'native' && bv !== 'native') {
+    return a;
+  }
+  if (bv === 'native' && av !== 'native') {
+    return b;
+  }
+  const at = Number(a && a.measuredAt) || 0;
+  const bt = Number(b && b.measuredAt) || 0;
+  return bt > at ? b : a;
+}
+
 function _load() {
-  if (_cache) return _cache;
+  if (_cache) {
+    return _cache;
+  }
   try {
     const raw = fs.readFileSync(_file(), 'utf-8');
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.entries && typeof parsed.entries === 'object') {
-      _cache = { version: SCHEMA_VERSION, entries: parsed.entries };
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.entries &&
+      typeof parsed.entries === 'object'
+    ) {
+      const migrated = _migrateKeys(parsed.entries);
+      _cache = { version: SCHEMA_VERSION, entries: migrated.entries };
+      // 迁移结果落盘一次,避免每次启动都重算(写失败也无妨——内存里已是规范键)。
+      if (migrated.changed) {
+        _save(_cache);
+      }
     } else {
       _cache = { version: SCHEMA_VERSION, entries: {} };
     }
@@ -58,7 +127,9 @@ function _save(state) {
     const tmp = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf-8');
     fs.renameSync(tmp, file);
-  } catch { /* best effort — 热路径绝不因磁盘失败而抛 */ }
+  } catch {
+    /* best effort — 热路径绝不因磁盘失败而抛 */
+  }
 }
 
 /**
@@ -69,10 +140,16 @@ function _save(state) {
 function getVerdict(model) {
   try {
     const key = probe.normalizeModel(model);
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const entry = _load().entries[key];
-    if (!entry) return null;
-    if (probe.shouldReprobe(entry)) return null; // 过期视为未测
+    if (!entry) {
+      return null;
+    }
+    if (probe.shouldReprobe(entry)) {
+      return null;
+    } // 过期视为未测
     return entry.verdict === 'native' || entry.verdict === 'text' ? entry.verdict : null;
   } catch {
     return null;
@@ -87,10 +164,16 @@ function getVerdict(model) {
 function getRecord(model) {
   try {
     const key = probe.normalizeModel(model);
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const entry = _load().entries[key];
-    if (!entry) return null;
-    if (probe.shouldReprobe(entry)) return null;
+    if (!entry) {
+      return null;
+    }
+    if (probe.shouldReprobe(entry)) {
+      return null;
+    }
     return { model: key, ...entry };
   } catch {
     return null;
@@ -99,17 +182,38 @@ function getRecord(model) {
 
 /**
  * 写入实测裁决。verdict 必须是 'native'|'text'('unknown' 不记录,留待重测)。
+ *
+ * **不静默降级**:已有一条新鲜的 'native' 记录时,一次 'text' 观测**不会**覆盖它 ——
+ * 「见过一次真实的原生 tool_calls」是正面证据,「这次没见到」只是证据的缺席(探测用的
+ * 极简单工具 + 极短 maxTokens 与真实一轮差别很大,假阴性完全正常)。降级必须显式:
+ * CLI 主动重测传 force,或用户经 KHY_TEXT_ONLY_TOOL_MODELS 钉死。
+ * 这条不变量原本只写在被动学习那侧的注释里(aiGatewayGenerateMethod.js:771「只晋升不
+ * 降级」),但存储层并不强制,于是一次探测就能把它推翻 —— 现在由存储层保证。
  * @param {string} model
  * @param {'native'|'text'} verdict
- * @param {{source?:string, latencyMs?:number}} [meta]
+ * @param {{source?:string, latencyMs?:number, force?:boolean}} [meta]
  * @returns {boolean} 是否写入
  */
 function recordVerdict(model, verdict, meta = {}) {
   try {
     const key = probe.normalizeModel(model);
-    if (!key) return false;
-    if (verdict !== 'native' && verdict !== 'text') return false;
+    if (!key) {
+      return false;
+    }
+    if (verdict !== 'native' && verdict !== 'text') {
+      return false;
+    }
     const state = _load();
+    const prev = state.entries[key];
+    if (
+      verdict === 'text' &&
+      !(meta && meta.force) &&
+      prev &&
+      prev.verdict === 'native' &&
+      !probe.shouldReprobe(prev)
+    ) {
+      return false; // 拒绝把「确证支持」降级成「这次没看到」
+    }
     state.entries[key] = {
       verdict,
       source: meta && meta.source ? String(meta.source) : 'probe',
@@ -129,7 +233,9 @@ function listFresh() {
     const entries = _load().entries;
     const out = [];
     for (const [k, v] of Object.entries(entries)) {
-      if (!probe.shouldReprobe(v)) out.push({ model: k, ...v });
+      if (!probe.shouldReprobe(v)) {
+        out.push({ model: k, ...v });
+      }
     }
     return out;
   } catch {
@@ -148,7 +254,9 @@ function listPassing() {
     const entries = _load().entries;
     const out = [];
     for (const [k, v] of Object.entries(entries)) {
-      if (v && v.verdict === 'native' && !probe.shouldReprobe(v)) out.push({ model: k, ...v });
+      if (v && v.verdict === 'native' && !probe.shouldReprobe(v)) {
+        out.push({ model: k, ...v });
+      }
     }
     return out;
   } catch {

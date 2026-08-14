@@ -2,7 +2,10 @@ const { defineTool } = require('./_baseTool');
 
 module.exports = defineTool({
   name: 'webSearch',
-  description: 'Search the web for information using a query string',
+  description:
+    'Search the public web and return result titles, snippets, URLs and publish dates. ' +
+    'Use it for facts that may have changed since training (news, prices, releases, "latest" anything); do NOT use it for local files (grep/glob) or local market data (quote/dataFetch). ' +
+    'Pass freshness for any time-sensitive query, otherwise results may be stale.',
   category: 'data',
   risk: 'low',
   isReadOnly: true,
@@ -42,30 +45,46 @@ only for timeless/reference lookups.`;
   },
 
   inputSchema: {
-    query: { type: 'string', required: true, description: 'Search query' },
+    query: {
+      type: 'string',
+      required: true,
+      description: 'Search query text, e.g. "node 22 lts release date".',
+      example: 'node 22 lts release date',
+    },
     count: {
       type: 'number',
       required: false,
-      description: 'How many results to return (default 8, max 30). Request more for broad/time-sensitive queries, fewer for a quick lookup.',
+      description:
+        'How many results to return (default: 8, max 30). Request more for broad/time-sensitive queries, fewer for a quick lookup.',
+      example: 15,
     },
     freshness: {
       type: 'string',
       required: false,
       enum: ['day', 'week', 'month', 'year', 'auto', 'none'],
-      description: 'Time filter for recency. day=24h, week=7d, month=30d, year=12mo. REQUIRED for time-sensitive queries (最新/最近/今天/新闻/latest/recent). "auto" infers the window from the query; omit or "none" for timeless lookups.',
+      description:
+        'Time filter for recency. day=24h, week=7d, month=30d, year=12mo. REQUIRED for time-sensitive queries (最新/最近/今天/新闻/latest/recent). "auto" infers the window from the query; omit or "none" for timeless lookups.',
     },
   },
   async execute(params, context) {
     const toolErrorCodes = require('../services/toolErrorCodes');
     try {
       const webSearchService = require('../services/webSearchService');
-      const result = await webSearchService.search(params.query, { count: params.count, freshness: params.freshness });
+      const result = await webSearchService.search(params.query, {
+        count: params.count,
+        freshness: params.freshness,
+      });
       // 如实传播内层失败（含自愈所需的 depId），而非一律包成 success:true ——
       // 否则 executeTool 的依赖自愈漏斗看到的是「假成功」，永远不会接管缺失依赖。
       // 再经 toolErrorCodes 叠语义分类:有 depId → MISSING_DEPENDENCY,否则 UNKNOWN
       // (零假阳性,不臆测网络/服务原因),供调用方分支(P2#5)。
       if (result && result.success === false) {
-        return toolErrorCodes.enrich({ success: false, error: result.error || 'web search failed', depId: result.depId, data: result });
+        return toolErrorCodes.enrich({
+          success: false,
+          error: result.error || 'web search failed',
+          depId: result.depId,
+          data: result,
+        });
       }
       return { success: true, data: result };
     } catch (err) {

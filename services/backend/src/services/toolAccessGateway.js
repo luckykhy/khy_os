@@ -30,13 +30,17 @@ let _state = { allowedRaw: null, disallowedRaw: null, allowed: null, disallowed:
 const _normalizeToolName = require('../utils/trimLowerStripUnderscores');
 
 function _normSet(arr) {
-  if (!Array.isArray(arr) || arr.length === 0) return null;
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return null;
+  }
   const s = new Set(arr.map(_normalizeToolName).filter(Boolean));
   return s.size ? s : null;
 }
 
 function _rawList(arr) {
-  if (!Array.isArray(arr) || arr.length === 0) return null;
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return null;
+  }
   const out = arr.map((x) => String(x).trim()).filter(Boolean);
   return out.length ? out : null;
 }
@@ -71,12 +75,18 @@ function isGatewayActive() {
  * @returns {Array}
  */
 function filterToolDefs(defs) {
-  if (!isGatewayActive() || !Array.isArray(defs)) return defs;
+  if (!isGatewayActive() || !Array.isArray(defs)) {
+    return defs;
+  }
   const { allowed, disallowed } = _state;
   return defs.filter((d) => {
     const n = _normalizeToolName(d && d.name);
-    if (disallowed && disallowed.has(n)) return false;
-    if (allowed && !allowed.has(n)) return false;
+    if (disallowed && disallowed.has(n)) {
+      return false;
+    }
+    if (allowed && !allowed.has(n)) {
+      return false;
+    }
     return true;
   });
 }
@@ -87,11 +97,17 @@ function filterToolDefs(defs) {
  * @returns {string|null} refusal reason, or null when permitted
  */
 function gatewayDecision(toolName) {
-  if (!isGatewayActive()) return null;
+  if (!isGatewayActive()) {
+    return null;
+  }
   const { allowed, disallowed } = _state;
   const n = _normalizeToolName(toolName);
-  if (disallowed && disallowed.has(n)) return `Tool "${toolName}" is blocked by --disallowedTools`;
-  if (allowed && !allowed.has(n)) return `Tool "${toolName}" is not in --allowedTools`;
+  if (disallowed && disallowed.has(n)) {
+    return `Tool "${toolName}" is blocked by --disallowedTools`;
+  }
+  if (allowed && !allowed.has(n)) {
+    return `Tool "${toolName}" is not in --allowedTools`;
+  }
   return null;
 }
 
@@ -114,7 +130,9 @@ function gatewayDecision(toolName) {
  */
 function buildClaudeAllowDenyArgs(defaultAllowed) {
   const base = Array.isArray(defaultAllowed) ? defaultAllowed.slice() : [];
-  if (!isGatewayActive()) return ['--allowedTools', base.join(',')];
+  if (!isGatewayActive()) {
+    return ['--allowedTools', base.join(',')];
+  }
 
   const { allowed, allowedRaw, disallowed, disallowedRaw } = _state;
   const isDenied = (name) => disallowed && disallowed.has(_normalizeToolName(name));

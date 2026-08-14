@@ -55,7 +55,11 @@ function ratioEnv(name, def) {
 function listJsFiles(dir) {
   const out = [];
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
   for (const ent of entries) {
     if (ent.name.startsWith('.') || ent.name === 'node_modules') continue;
     const full = path.join(dir, ent.name);
@@ -72,7 +76,11 @@ function rel(file) {
 /** 提取一个文件里所有 require('...') 的字面量参数 + 行号。 */
 function extractRequires(file) {
   let text;
-  try { text = fs.readFileSync(file, 'utf8'); } catch { return []; }
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch {
+    return [];
+  }
   const lines = text.split('\n');
   const re = /require\(\s*['"]([^'"]+)['"]\s*\)/g;
   const out = [];
@@ -112,7 +120,11 @@ function scanGodFiles(srcDir = SRC_DIR, threshold = GOD_FILE_LOC) {
   const out = [];
   for (const file of files) {
     let loc;
-    try { loc = fs.readFileSync(file, 'utf8').split('\n').length; } catch { continue; }
+    try {
+      loc = fs.readFileSync(file, 'utf8').split('\n').length;
+    } catch {
+      continue;
+    }
     if (loc > threshold) out.push({ file: rel(file), loc, rule: 'R2-god-file' });
   }
   out.sort((a, b) => b.loc - a.loc);
@@ -135,7 +147,11 @@ function scanGodReport(srcDir = SRC_DIR, threshold = GOD_FILE_LOC) {
   for (const g of scanGodFiles(srcDir, threshold)) {
     const abs = path.join(BACKEND_ROOT, g.file);
     let raw;
-    try { raw = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    try {
+      raw = fs.readFileSync(abs, 'utf8');
+    } catch {
+      continue;
+    }
     // 结构层：剥注释、保留字符串，避免把注释/字符串里的 "function"/"class" 误计。
     const struct = _blankNonCode(raw, { blankStrings: false });
 
@@ -151,7 +167,11 @@ function scanGodReport(srcDir = SRC_DIR, threshold = GOD_FILE_LOC) {
     // 导出的对外符号数（module.exports = { ... } 里的键）——拆分后须保持的契约面。
     let exportsCount = 0;
     const me = /module\.exports\s*=\s*\{([^}]*)\}/m.exec(struct);
-    if (me) exportsCount = me[1].split(',').map((s) => s.trim()).filter(Boolean).length;
+    if (me)
+      exportsCount = me[1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean).length;
 
     // 作者自己画的分节横幅注释（// ── … / // === …）= 现成的物理拆分边界。
     const sectionBanners = (raw.match(/^\s*\/\/\s*[─=]{2,}/gm) || []).length;
@@ -179,7 +199,11 @@ function resolveModule(fromFile, spec) {
   const base = path.resolve(path.dirname(fromFile), spec);
   const candidates = [base, base + '.js', path.join(base, 'index.js')];
   for (const c of candidates) {
-    try { if (fs.statSync(c).isFile()) return c; } catch { /* next */ }
+    try {
+      if (fs.statSync(c).isFile()) return c;
+    } catch {
+      /* next */
+    }
   }
   return null; // 解析不到（可能是目录无 index 或非 js）→ 不入图
 }
@@ -292,30 +316,68 @@ function _blankNonCode(text, opts = {}) {
     const c = text[i];
     const n = text[i + 1];
     if (state === 'code') {
-      if (c === '/' && n === '/') { state = 'line'; out.push('  '); i++; continue; }
-      if (c === '/' && n === '*') { state = 'block'; out.push('  '); i++; continue; }
-      if (c === "'") { state = 'sq'; out.push(c); continue; }
-      if (c === '"') { state = 'dq'; out.push(c); continue; }
-      if (c === '`') { state = 'tpl'; out.push(c); continue; }
-      out.push(c); continue;
+      if (c === '/' && n === '/') {
+        state = 'line';
+        out.push('  ');
+        i++;
+        continue;
+      }
+      if (c === '/' && n === '*') {
+        state = 'block';
+        out.push('  ');
+        i++;
+        continue;
+      }
+      if (c === "'") {
+        state = 'sq';
+        out.push(c);
+        continue;
+      }
+      if (c === '"') {
+        state = 'dq';
+        out.push(c);
+        continue;
+      }
+      if (c === '`') {
+        state = 'tpl';
+        out.push(c);
+        continue;
+      }
+      out.push(c);
+      continue;
     }
     if (state === 'line') {
-      if (c === '\n') { state = 'code'; out.push('\n'); } else out.push(' ');
+      if (c === '\n') {
+        state = 'code';
+        out.push('\n');
+      } else out.push(' ');
       continue;
     }
     if (state === 'block') {
-      if (c === '*' && n === '/') { state = 'code'; out.push('  '); i++; }
-      else out.push(c === '\n' ? '\n' : ' ');
+      if (c === '*' && n === '/') {
+        state = 'code';
+        out.push('  ');
+        i++;
+      } else out.push(c === '\n' ? '\n' : ' ');
       continue;
     }
     // 字符串/模板内部：处理转义、识别结束定界符；内容按 blankStrings 决定原样或置空
     if (c === '\\') {
       out.push(blankStrings ? ' ' : c);
-      if (n !== undefined) { out.push(blankStrings ? (n === '\n' ? '\n' : ' ') : n); i++; }
+      if (n !== undefined) {
+        out.push(blankStrings ? (n === '\n' ? '\n' : ' ') : n);
+        i++;
+      }
       continue;
     }
-    if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) {
-      state = 'code'; out.push(c); continue;
+    if (
+      (state === 'sq' && c === "'") ||
+      (state === 'dq' && c === '"') ||
+      (state === 'tpl' && c === '`')
+    ) {
+      state = 'code';
+      out.push(c);
+      continue;
     }
     out.push(blankStrings ? (c === '\n' ? '\n' : ' ') : c);
   }
@@ -339,7 +401,11 @@ function scanDriftR4(srcDir = SRC_DIR) {
   const out = [];
   for (const file of files) {
     let raw;
-    try { raw = fs.readFileSync(file, 'utf8'); } catch { continue; }
+    try {
+      raw = fs.readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
     // 结构层：剥注释、保留字符串 → 抽 require/export/fn（require spec 必须可见）。
     const struct = _blankNonCode(raw, { blankStrings: false });
     // 调用层：注释与字符串均置空 → 仅检真实的 name( 调用（不误命中字面量）。
@@ -347,7 +413,8 @@ function scanDriftR4(srcDir = SRC_DIR) {
 
     // (a) helper 模块本地变量名：const/let/var X = require('./rel')（仅相对引入）
     const helperVars = new Set();
-    const reqRe = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(\s*['"](\.[^'"]+)['"]\s*\)/g;
+    const reqRe =
+      /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(\s*['"](\.[^'"]+)['"]\s*\)/g;
     let rm;
     while ((rm = reqRe.exec(struct)) !== null) helperVars.add(rm[1]);
     if (helperVars.size === 0) continue;
@@ -429,7 +496,8 @@ function analyzeGiantScc(srcDir = SRC_DIR) {
   let giant = [];
   for (const comp of _sccComponents(graph)) if (comp.length > giant.length) giant = comp;
   const giantSize = giant.length;
-  if (giantSize < 2) return { giantSize, edgeCount: 0, edges: [], greedy: [], dissolvedAfter: null };
+  if (giantSize < 2)
+    return { giantSize, edgeCount: 0, edges: [], greedy: [], dissolvedAfter: null };
 
   const giantSet = new Set(giant);
   // 候选反向边：services/** → cli/**，两端都在巨型 SCC 内
@@ -450,8 +518,9 @@ function analyzeGiantScc(srcDir = SRC_DIR) {
     if (had) graph.get(u).add(v);
     return { from: label(u), to: label(v), leverage: giantSize - after, giantAfter: after };
   });
-  single.sort((a, b) =>
-    b.leverage - a.leverage || a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+  single.sort(
+    (a, b) => b.leverage - a.leverage || a.from.localeCompare(b.from) || a.to.localeCompare(b.to)
+  );
 
   // 贪心批量破环：在工作副本上反复移除当前杠杆最大的边，直到巨型环 <2 或无正收益
   const working = new Map();
@@ -475,9 +544,17 @@ function analyzeGiantScc(srcDir = SRC_DIR) {
     if (!best || best.lev <= 0) break; // 单边收益耗尽 → 剩余需联合移除（见设计稿批次）
     working.get(best.u).delete(best.v);
     curGiant = best.after;
-    greedy.push({ from: label(best.u), to: label(best.v), leverage: best.lev, giantAfter: best.after });
+    greedy.push({
+      from: label(best.u),
+      to: label(best.v),
+      leverage: best.lev,
+      giantAfter: best.after,
+    });
     remaining = remaining.filter(([u, v]) => !(u === best.u && v === best.v));
-    if (curGiant < 2) { dissolvedAfter = greedy.length; break; }
+    if (curGiant < 2) {
+      dissolvedAfter = greedy.length;
+      break;
+    }
   }
 
   return { giantSize, edgeCount: candidates.length, edges: single, greedy, dissolvedAfter };
@@ -493,8 +570,11 @@ function scanAll(srcDir = SRC_DIR) {
 }
 
 function loadBaseline(file = BASELINE_FILE) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch { return { layering: [], godFiles: [], cycles: [] }; }
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return { layering: [], godFiles: [], cycles: [] };
+  }
 }
 
 /** 稳定指纹，用于「新增 vs 基线」对比。 */
@@ -556,10 +636,14 @@ function diffNewCycles(result, baseline) {
  * @param {object} [opts]   overlapThreshold：判为 drift 的最小重叠占比（默认 0.5）
  * @returns {Array<{kind:'drift'|'new', curSize:number, baseSize:number, added:string[], removed:string[]}>}
  */
-function analyzeCycleDrift(result, baseline, {
-  overlapThreshold = 0.5,
-  containmentThreshold = ratioEnv('KHY_ARCH_CYCLE_CONTAINMENT_RATIO', 0.5),
-} = {}) {
+function analyzeCycleDrift(
+  result,
+  baseline,
+  {
+    overlapThreshold = 0.5,
+    containmentThreshold = ratioEnv('KHY_ARCH_CYCLE_CONTAINMENT_RATIO', 0.5),
+  } = {}
+) {
   const curCycles = result.cycles || [];
   const baseCycles = baseline.cycles || [];
   const baseFps = new Set(baseCycles.map((c) => fingerprint('cycles', c)));
@@ -571,7 +655,10 @@ function analyzeCycleDrift(result, baseline, {
     let bestOverlap = 0;
     for (const b of baseCycles) {
       const overlap = (b.members || []).filter((m) => cm.has(m)).length;
-      if (overlap > bestOverlap) { bestOverlap = overlap; best = b; }
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        best = b;
+      }
     }
     const baseSize = best ? (best.members || []).length : 0;
     const curSize = (c.members || []).length;
@@ -591,7 +678,13 @@ function analyzeCycleDrift(result, baseline, {
       const removed = (best.members || []).filter((m) => !cm.has(m));
       out.push({ kind: 'drift', curSize, baseSize, added, removed });
     } else {
-      out.push({ kind: 'new', curSize: (c.members || []).length, baseSize: 0, added: c.members || [], removed: [] });
+      out.push({
+        kind: 'new',
+        curSize: (c.members || []).length,
+        baseSize: 0,
+        added: c.members || [],
+        removed: [],
+      });
     }
   }
   return out;
@@ -642,8 +735,12 @@ function formatDriftReport(items) {
   L.push('');
   for (const it of items) {
     L.push(`  ${it.file}`);
-    L.push(`    符号 ${it.symbol}：导出走 ${it.reExportVia}，但本地 ${it.localImpl}() 被内部调用 ${it.callCount} 次`);
-    L.push(`    本地调用行: ${it.callLines.join(', ')}${it.callCount > it.callLines.length ? ' …' : ''}`);
+    L.push(
+      `    符号 ${it.symbol}：导出走 ${it.reExportVia}，但本地 ${it.localImpl}() 被内部调用 ${it.callCount} 次`
+    );
+    L.push(
+      `    本地调用行: ${it.callLines.join(', ')}${it.callCount > it.callLines.length ? ' …' : ''}`
+    );
   }
   if (!items.length) L.push('✅ 未发现 re-export 与本地副本分叉。');
   return L.join('\n');
@@ -660,7 +757,9 @@ function formatSccReport(scc) {
   if (scc.edges.length) {
     L.push('— 单边杠杆 (移除后巨型环缩小的节点数，降序) —');
     for (const e of scc.edges) {
-      L.push(`  ${String(e.leverage).padStart(4)}  ${e.from} → ${e.to}  (巨型环 ${scc.giantSize}→${e.giantAfter})`);
+      L.push(
+        `  ${String(e.leverage).padStart(4)}  ${e.from} → ${e.to}  (巨型环 ${scc.giantSize}→${e.giantAfter})`
+      );
     }
     L.push('');
   }
@@ -670,9 +769,11 @@ function formatSccReport(scc) {
     for (const g of scc.greedy) {
       L.push(`  ${i++}. 移除 ${g.from} → ${g.to}  → 巨型环降至 ${g.giantAfter} (−${g.leverage})`);
     }
-    L.push(scc.dissolvedAfter
-      ? `  巨型环在移除 ${scc.dissolvedAfter} 条边后瓦解。`
-      : '  单边贪心收益耗尽：剩余节点需联合移除（见 DESIGN-ARCH-021 批次设计）。');
+    L.push(
+      scc.dissolvedAfter
+        ? `  巨型环在移除 ${scc.dissolvedAfter} 条边后瓦解。`
+        : '  单边贪心收益耗尽：剩余节点需联合移除（见 DESIGN-ARCH-021 批次设计）。'
+    );
   } else {
     L.push('  无正收益单边：巨型环为强耦合块，须联合移除多条反向边（见设计稿）。');
   }
@@ -697,8 +798,8 @@ function formatGodReport(items, threshold = GOD_FILE_LOC) {
   for (const it of items) {
     L.push(
       `${String(i++).padStart(3)}. ${String(it.loc).padStart(5)} / +${String(it.overBy).padStart(4)}` +
-      `   →${String(it.suggestedFiles).padStart(2)} 个文件` +
-      `   fn:${it.topLevelFns} · class:${it.classes} · exports:${it.exports} · 横幅:${it.sectionBanners}`,
+        `   →${String(it.suggestedFiles).padStart(2)} 个文件` +
+        `   fn:${it.topLevelFns} · class:${it.classes} · exports:${it.exports} · 横幅:${it.sectionBanners}`
     );
     L.push(`       ${it.file}`);
   }
@@ -712,23 +813,27 @@ function main(argv = process.argv.slice(2)) {
   // 新增只读子命令：不参与默认 CI 退码门禁，始终退码 0（除解析异常）。
   if (argv.includes('--drift')) {
     const items = scanDriftR4();
-    process.stdout.write((argv.includes('--json')
-      ? JSON.stringify({ drift: items }, null, 2)
-      : formatDriftReport(items)) + '\n');
+    process.stdout.write(
+      (argv.includes('--json')
+        ? JSON.stringify({ drift: items }, null, 2)
+        : formatDriftReport(items)) + '\n'
+    );
     return 0;
   }
   if (argv.includes('--scc')) {
     const scc = analyzeGiantScc();
-    process.stdout.write((argv.includes('--json')
-      ? JSON.stringify({ scc }, null, 2)
-      : formatSccReport(scc)) + '\n');
+    process.stdout.write(
+      (argv.includes('--json') ? JSON.stringify({ scc }, null, 2) : formatSccReport(scc)) + '\n'
+    );
     return 0;
   }
   if (argv.includes('--god-report')) {
     const items = scanGodReport();
-    process.stdout.write((argv.includes('--json')
-      ? JSON.stringify({ godReport: items }, null, 2)
-      : formatGodReport(items)) + '\n');
+    process.stdout.write(
+      (argv.includes('--json')
+        ? JSON.stringify({ godReport: items }, null, 2)
+        : formatGodReport(items)) + '\n'
+    );
     return 0;
   }
 
@@ -736,7 +841,8 @@ function main(argv = process.argv.slice(2)) {
 
   if (argv.includes('--update-baseline')) {
     const baseline = {
-      _comment: 'archDebtScan 基线：已承认的存量架构债。CI 只拦截不在此列的新增项。用 --update-baseline 刷新。',
+      _comment:
+        'archDebtScan 基线：已承认的存量架构债。CI 只拦截不在此列的新增项。用 --update-baseline 刷新。',
       _generated: 'deterministic (no timestamp)',
       layering: result.layering,
       godFiles: result.godFiles,

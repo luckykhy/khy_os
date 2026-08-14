@@ -34,7 +34,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function _enabled(env) {
   try {
     const raw = env && env.KHY_VISION_EXHAUSTION_DIAG;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -51,9 +53,15 @@ function _enabled(env) {
  */
 function _isModelNotProvisioned(att) {
   try {
-    if (!att) return false;
-    if (att.errorType === 'model_not_found') return true;
-    if (Number(att.statusCode) === 404) return true;
+    if (!att) {
+      return false;
+    }
+    if (att.errorType === 'model_not_found') {
+      return true;
+    }
+    if (Number(att.statusCode) === 404) {
+      return true;
+    }
     const msg = String(att.error == null ? '' : att.error).toLowerCase();
     return /model_not_found|model not found|does not exist|code\s*1211|未开通|未领取/.test(msg);
   } catch {
@@ -71,9 +79,15 @@ function _isModelNotProvisioned(att) {
  */
 function _isRateLimited(att) {
   try {
-    if (!att) return false;
-    if (att.errorType === 'rate_limit') return true;
-    if (Number(att.statusCode) === 429) return true;
+    if (!att) {
+      return false;
+    }
+    if (att.errorType === 'rate_limit') {
+      return true;
+    }
+    if (Number(att.statusCode) === 429) {
+      return true;
+    }
     const msg = String(att.error == null ? '' : att.error).toLowerCase();
     return /rate.?limit|too many requests|code\s*1302|(^|\D)429(\D|$)|请求过多|并发|限流/.test(msg);
   } catch {
@@ -99,8 +113,12 @@ const _NETWORK_TEXT_RE =
  */
 function _isNetworkFailure(att) {
   try {
-    if (!att) return false;
-    if (att.errorType === 'network') return true;
+    if (!att) {
+      return false;
+    }
+    if (att.errorType === 'network') {
+      return true;
+    }
     const msg = String(att.error == null ? '' : att.error).toLowerCase();
     return _NETWORK_TEXT_RE.test(msg);
   } catch {
@@ -120,7 +138,9 @@ const _NETWORK_FIX = [
 function _networkEnabled(env) {
   try {
     const raw = env && env.KHY_VISION_NETWORK_EXHAUSTION_DIAG;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -148,23 +168,39 @@ const _RATE_LIMITED_FIX = '  → 降低并发、别连发,稍等几分钟待限�
 function diagnoseVisionExhaustion({ attempts, hasImageInput, env } = {}) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!_enabled(e)) return null;
-    if (!hasImageInput) return null;
+    if (!_enabled(e)) {
+      return null;
+    }
+    if (!hasImageInput) {
+      return null;
+    }
     const list = Array.isArray(attempts) ? attempts : [];
-    if (!list.length) return null;
+    if (!list.length) {
+      return null;
+    }
 
     const netGateOn = _networkEnabled(e);
     let notProvisioned = false;
     let rateLimited = false;
     let networkFailed = false;
     for (const att of list) {
-      if (!notProvisioned && _isModelNotProvisioned(att)) notProvisioned = true;
-      if (!rateLimited && _isRateLimited(att)) rateLimited = true;
+      if (!notProvisioned && _isModelNotProvisioned(att)) {
+        notProvisioned = true;
+      }
+      if (!rateLimited && _isRateLimited(att)) {
+        rateLimited = true;
+      }
       // 网络信号仅在子门开时才可见 → 门关逐字节回退到只识 404/429 的历史行为。
-      if (netGateOn && !networkFailed && _isNetworkFailure(att)) networkFailed = true;
-      if (notProvisioned && rateLimited && (networkFailed || !netGateOn)) break;
+      if (netGateOn && !networkFailed && _isNetworkFailure(att)) {
+        networkFailed = true;
+      }
+      if (notProvisioned && rateLimited && (networkFailed || !netGateOn)) {
+        break;
+      }
     }
-    if (!notProvisioned && !rateLimited && !networkFailed) return null;
+    if (!notProvisioned && !rateLimited && !networkFailed) {
+      return null;
+    }
 
     const lines = [];
     let reason;
@@ -191,8 +227,12 @@ function diagnoseVisionExhaustion({ attempts, hasImageInput, env } = {}) {
       if (causeCount === 1) {
         // 纯网络不可达:传输层故障,图确实收到、只是送不到视觉模型。绝不谎称「没收到图」。
         reason = 'network_unreachable';
-        lines.push('⚠ 识图失败:视觉通道网络不可达(如 socket hang up / 连接被重置 / 代理隧道不通)。');
-        lines.push('  我确实收到了你的图片,但当前网络无法把它送达视觉模型识别 —— 这不是「没收到图」。');
+        lines.push(
+          '⚠ 识图失败:视觉通道网络不可达(如 socket hang up / 连接被重置 / 代理隧道不通)。'
+        );
+        lines.push(
+          '  我确实收到了你的图片,但当前网络无法把它送达视觉模型识别 —— 这不是「没收到图」。'
+        );
         lines.push(_NETWORK_FIX);
       } else {
         // 网络 + 账号侧多因叠加:逐因列出(网络在先,因它是传输层、最直接可自查)。

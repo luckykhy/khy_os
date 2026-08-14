@@ -28,10 +28,16 @@ const _OFF = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
  */
 function toolCatalogEnabled(env = process.env) {
   try {
-    const raw = String((env && env.KHY_TOOL_CATALOG) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_TOOL_CATALOG) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -40,17 +46,17 @@ function toolCatalogEnabled(env = process.env) {
  * mcp/custom);未知类别兜底到「其他」。
  */
 const CATEGORY_META = {
-  filesystem:  { label: '文件读写', order: 1 },
-  execution:   { label: '执行与 Shell', order: 2 },
-  git:         { label: 'Git 版本控制', order: 3 },
-  analysis:    { label: '分析与回测', order: 4 },
-  data:        { label: '数据与行情', order: 5 },
-  system:      { label: '系统与配置', order: 6 },
-  optimization:{ label: '优化与提案', order: 7 },
+  filesystem: { label: '文件读写', order: 1 },
+  execution: { label: '执行与 Shell', order: 2 },
+  git: { label: 'Git 版本控制', order: 3 },
+  analysis: { label: '分析与回测', order: 4 },
+  data: { label: '数据与行情', order: 5 },
+  system: { label: '系统与配置', order: 6 },
+  optimization: { label: '优化与提案', order: 7 },
   coordinator: { label: '多智能体编排', order: 8 },
-  mcp:         { label: 'MCP 工具', order: 9 },
-  custom:      { label: '自定义工具', order: 10 },
-  other:       { label: '其他', order: 99 },
+  mcp: { label: 'MCP 工具', order: 9 },
+  custom: { label: '自定义工具', order: 10 },
+  other: { label: '其他', order: 99 },
 };
 
 function _categoryMeta(cat) {
@@ -69,8 +75,14 @@ const _s = require('../../utils/trimIfString');
  */
 function _summarize(desc) {
   const s = _s(desc);
-  if (!s) return '';
-  const firstLine = s.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0) || '';
+  if (!s) {
+    return '';
+  }
+  const firstLine =
+    s
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find((l) => l.length > 0) || '';
   const clipped = firstLine.length > 120 ? `${firstLine.slice(0, 117)}…` : firstLine;
   return clipped;
 }
@@ -83,7 +95,9 @@ function _summarize(desc) {
 function _readOnly(tool) {
   try {
     return typeof tool.isReadOnly === 'function' ? !!tool.isReadOnly() : false;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -92,12 +106,14 @@ function _readOnly(tool) {
  * @returns {{name,category,desc,readOnly,risk,aliases:string[]}|null}
  */
 function _normalizeTool(tool) {
-  if (!tool || typeof tool !== 'object') return null;
+  if (!tool || typeof tool !== 'object') {
+    return null;
+  }
   const name = _s(tool.name);
-  if (!name) return null;
-  const aliases = Array.isArray(tool.aliases)
-    ? tool.aliases.map(_s).filter(Boolean)
-    : [];
+  if (!name) {
+    return null;
+  }
+  const aliases = Array.isArray(tool.aliases) ? tool.aliases.map(_s).filter(Boolean) : [];
   return {
     name,
     category: _s(tool.category) || 'custom',
@@ -118,29 +134,42 @@ function _normalizeTool(tool) {
  */
 function buildToolCatalog(deps = {}, env = process.env) {
   const empty = { categories: [], total: 0, generatedBy: 'toolRegistry' };
-  if (!toolCatalogEnabled(env)) return empty;
+  if (!toolCatalogEnabled(env)) {
+    return empty;
+  }
 
   let tools = [];
   try {
-    const getAll = (deps && typeof deps.getAll === 'function')
-      ? deps.getAll
-      : require('../../tools').getAll;
+    const getAll =
+      deps && typeof deps.getAll === 'function' ? deps.getAll : require('../../tools').getAll;
     const map = getAll();
     // Map<name,tool> | Array | iterable → 值数组
-    if (map && typeof map.values === 'function') tools = Array.from(map.values());
-    else if (Array.isArray(map)) tools = map;
-    else tools = [];
-  } catch { return empty; }
+    if (map && typeof map.values === 'function') {
+      tools = Array.from(map.values());
+    } else if (Array.isArray(map)) {
+      tools = map;
+    } else {
+      tools = [];
+    }
+  } catch {
+    return empty;
+  }
 
   // 按 category 分组;按 name 去重(同名保留首个)。
   const buckets = new Map(); // catKey -> Map(name -> entry)
   for (const raw of tools) {
     const t = _normalizeTool(raw);
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
     const catKey = t.category || 'custom';
-    if (!buckets.has(catKey)) buckets.set(catKey, new Map());
+    if (!buckets.has(catKey)) {
+      buckets.set(catKey, new Map());
+    }
     const byName = buckets.get(catKey);
-    if (byName.has(t.name)) continue; // 去重
+    if (byName.has(t.name)) {
+      continue;
+    } // 去重
     byName.set(t.name, t);
   }
 
@@ -151,7 +180,7 @@ function buildToolCatalog(deps = {}, env = process.env) {
     const list = Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
     categories.push({ key, label: meta.label, order: meta.order, tools: list });
   }
-  categories.sort((a, b) => (a.order - b.order) || a.key.localeCompare(b.key));
+  categories.sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
 
   const total = categories.reduce((n, c) => n + c.tools.length, 0);
   return { categories, total, generatedBy: 'toolRegistry' };

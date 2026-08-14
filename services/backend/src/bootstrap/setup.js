@@ -11,10 +11,11 @@
  *   await setup({ mode: 'khy', silent: true });
  */
 
-const path = require('path');
 const fs = require('fs');
-const state = require('./state');
+const path = require('path');
+
 const { checkpoint } = require('./startupProfiler');
+const state = require('./state');
 
 let _done = false;
 
@@ -23,7 +24,9 @@ let _done = false;
  * @param {{ mode?: string, silent?: boolean }} options
  */
 async function setup(options = {}) {
-  if (_done) return;
+  if (_done) {
+    return;
+  }
 
   const { mode = 'khyquant', silent = false } = options;
   checkpoint('setup:start');
@@ -35,8 +38,7 @@ async function setup(options = {}) {
   if (!nodeVersion || parseInt(nodeVersion, 10) < 18) {
     if (!silent) {
       process.stderr.write(
-        '\n  Warning: khy OS requires Node.js >= 18. ' +
-        `Current: ${process.version}\n\n`
+        '\n  Warning: khy OS requires Node.js >= 18. ' + `Current: ${process.version}\n\n`
       );
     }
   }
@@ -45,9 +47,7 @@ async function setup(options = {}) {
   const backendRoot = process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..');
   const envPath = path.join(backendRoot, '.env');
   if (!fs.existsSync(envPath) && !silent) {
-    process.stderr.write(
-      '  Warning: .env not found. Run `khy setup` first.\n'
-    );
+    process.stderr.write('  Warning: .env not found. Run `khy setup` first.\n');
   }
 
   // 3. In full mode: pre-check database connection
@@ -92,7 +92,9 @@ async function setup(options = {}) {
   //    self-contained fail-soft, guarded again here for defence in depth.
   try {
     require('../services/mdEditorRegister').ensureMdRegistered();
-  } catch { /* auto-register is best-effort; never block startup */ }
+  } catch {
+    /* auto-register is best-effort; never block startup */
+  }
 
   // 6. Mark session as ready
   state.set('sessionReady', true);

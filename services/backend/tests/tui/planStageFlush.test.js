@@ -48,6 +48,24 @@ describe('planStageFlush — whole-segment draining', () => {
     const tl = [txt('para\n\nmore in progress')];
     expect(planStageFlush(tl, { sealTrailing: true })).toEqual({ k: 1, sealed: '' });
   });
+
+  test('sealTrailing on a >64KB open segment drains it whole — seal + remainder reconstruct the text', () => {
+    // Capacity seal guard scenario (KHY_TUI_LIVE_SEAL_KB): a very long reply
+    // whose open segment exceeded 64KB is sealed on a newline boundary via
+    // flushCompletedStages(false, undefined, true) → sealTrailing here.
+    const line = 'a long line of streamed prose that keeps on going and going\n';
+    let big = '';
+    while (big.length <= 64 * 1024) big += line;
+    const tl = [txt(big)];
+    const { k, sealed } = planStageFlush(tl, { sealTrailing: true });
+    expect(k).toBe(1);          // exactly one whole-segment drain
+    expect(sealed).toBe('');    // no partial seal on top of the drain
+    // Mirror the hook: committed drain + live remainder = original, no dup/loss.
+    const committed = tl.slice(0, k).map((e) => e.text).join('');
+    const remainder = tl.slice(k).map((e) => e.text).join('');
+    expect(committed + remainder).toBe(big);
+    expect(remainder).toBe(''); // the live region shrank to empty
+  });
 });
 
 describe('planStageFlush — progressive seal of the open tail', () => {

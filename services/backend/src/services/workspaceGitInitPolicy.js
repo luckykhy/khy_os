@@ -22,31 +22,60 @@ const path = require('path');
 // 系统/共享根目录黑名单（精确匹配归一化后的绝对路径才拒绝；其**子目录**不受影响）。
 // 在这些目录直接 git init 几乎必然是误操作。
 const SYSTEM_DIR_DENYLIST = [
-  '/', '/root', '/home', '/Users', '/etc', '/usr', '/var', '/opt',
-  '/bin', '/sbin', '/lib', '/lib64', '/tmp', '/mnt', '/media', '/srv',
-  '/boot', '/dev', '/proc', '/sys', '/run',
+  '/',
+  '/root',
+  '/home',
+  '/Users',
+  '/etc',
+  '/usr',
+  '/var',
+  '/opt',
+  '/bin',
+  '/sbin',
+  '/lib',
+  '/lib64',
+  '/tmp',
+  '/mnt',
+  '/media',
+  '/srv',
+  '/boot',
+  '/dev',
+  '/proc',
+  '/sys',
+  '/run',
 ];
 
 /** 是否启用自动 git init（门控关 → 字节回退，整功能不跑）。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_AUTO_GIT_INIT) != null ? env.KHY_AUTO_GIT_INIT : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 归一化路径：去尾部分隔符（保留根），fail-soft 返回 ''（绝不抛）。 */
 function _norm(p) {
   try {
-    if (typeof p !== 'string' || !p.trim()) return '';
+    if (typeof p !== 'string' || !p.trim()) {
+      return '';
+    }
     let n = path.normalize(p.trim());
-    while (n.length > 1 && (n.endsWith('/') || n.endsWith('\\'))) n = n.slice(0, -1);
+    while (n.length > 1 && (n.endsWith('/') || n.endsWith('\\'))) {
+      n = n.slice(0, -1);
+    }
     return n;
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** 文件系统根（'/' 或 Windows 盘符根 'C:\\'）：dirname 等于自身。 */
 function _isFilesystemRoot(c) {
-  try { return !!c && path.dirname(c) === c; } catch { return false; }
+  try {
+    return !!c && path.dirname(c) === c;
+  } catch {
+    return false;
+  }
 }
 
 /** Windows 盘符根，如 'C:' / 'C:\\'。 */
@@ -66,27 +95,36 @@ function _isWindowsDriveRoot(c) {
  */
 function assessGitInitTarget(ctx = {}) {
   const c = _norm(ctx && ctx.cwd);
-  if (!c) return { shouldInit: false, reason: 'no-cwd' };
+  if (!c) {
+    return { shouldInit: false, reason: 'no-cwd' };
+  }
   // 相对路径无法可靠判定安全性 → 保守拒绝（IO 层应传绝对路径）。
-  if (!path.isAbsolute(c)) return { shouldInit: false, reason: 'cwd-not-absolute' };
+  if (!path.isAbsolute(c)) {
+    return { shouldInit: false, reason: 'cwd-not-absolute' };
+  }
   // 已在仓库内（含上层仓库）：幂等，不重复 init。
-  if (ctx.isGitRepo === true) return { shouldInit: false, reason: 'already-repo' };
+  if (ctx.isGitRepo === true) {
+    return { shouldInit: false, reason: 'already-repo' };
+  }
   // 文件系统根 / 盘符根：绝不 init。
   if (_isFilesystemRoot(c) || _isWindowsDriveRoot(c)) {
     return { shouldInit: false, reason: 'filesystem-root' };
   }
   // HOME 目录本身：绝不 init（会跟踪整个家目录）。
   const h = _norm(ctx && ctx.home);
-  if (h && c === h) return { shouldInit: false, reason: 'home-dir' };
+  if (h && c === h) {
+    return { shouldInit: false, reason: 'home-dir' };
+  }
 
   // HOME 的直接子目录（一级）：允许 init（如 ~/Desktop、~/Documents、~/projects）。
   // 这让用户常用工作目录自动 git 化，同时保护 HOME 本身。
   if (h && c.startsWith(h + path.sep)) {
     const relPath = c.slice(h.length + 1);
     // 一级子目录：路径中不含分隔符（Unix '/' 或 Windows '\\'）
-    const isDirectChild = relPath.indexOf(path.sep) === -1 &&
-                          relPath.indexOf('/') === -1 &&
-                          relPath.indexOf('\\') === -1;
+    const isDirectChild =
+      relPath.indexOf(path.sep) === -1 &&
+      relPath.indexOf('/') === -1 &&
+      relPath.indexOf('\\') === -1;
     if (isDirectChild) {
       return { shouldInit: true, reason: 'home-direct-subdir' };
     }
@@ -97,7 +135,9 @@ function assessGitInitTarget(ctx = {}) {
     return { shouldInit: false, reason: 'ancestor-of-home' };
   }
   // 已知系统/共享根目录（精确匹配；子目录不受限）。
-  if (SYSTEM_DIR_DENYLIST.includes(c)) return { shouldInit: false, reason: 'system-dir' };
+  if (SYSTEM_DIR_DENYLIST.includes(c)) {
+    return { shouldInit: false, reason: 'system-dir' };
+  }
   return { shouldInit: true, reason: 'eligible' };
 }
 
@@ -107,7 +147,7 @@ function noticeLine(cwd, opts = {}) {
   const c = _norm(cwd) || String(cwd || '');
   return color(
     `📁 已将当前目录初始化为 Git 仓库：${c}（方便提交 / 回滚 / 管理）。如不需要：KHY_AUTO_GIT_INIT=off`,
-    'init',
+    'init'
   );
 }
 

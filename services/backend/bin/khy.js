@@ -85,6 +85,16 @@ const IDE_ADAPTER_FLAGS = Object.freeze({
 const { checkpoint } = require('../src/bootstrap/startupProfiler');
 checkpoint('entry');
 
+// ── Shadow startup-phase FSM (observability only, zero behavior change) ──
+// Fail-soft + optional: the stateMachine module must never slow down or
+// break startup. Mounted on `process` so diagnostics can read it even
+// though the bin/ and src/ module graphs are not otherwise connected.
+let _startupFsm = null;
+try { _startupFsm = require('../src/services/stateMachine/startupPhases').createStartupFsm({ name: 'startup' }); } catch { /* fsm is optional */ }
+try { process.__khyStartupFsm = _startupFsm; } catch { /* best effort */ }
+// Optional stderr transition logger (KHY_STATE_DEBUG=1 only); fail-soft.
+try { require('../src/services/stateMachine/debugLog').attachDebugLog(_startupFsm, 'startup'); } catch { /* debug log optional */ }
+
 function _isTruthy(value) {
   return value === true || ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
@@ -230,9 +240,20 @@ async function maybeAutoPreferRemoteOnRestrictedLocal(args = [], { printInfo } =
   try {
     loopbackAvailable = await new Promise((resolve) => {
       const socket = new _net.Socket();
-      const timer = setTimeout(() => { try { socket.destroy(); } catch {} resolve(true); }, 300);
-      socket.connect(53, '127.0.0.1', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(true); });
-      socket.on('error', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(false); });
+      // Single finish path: clear timer + detach listeners + destroy socket,
+      // so the probe never leaves dangling handles or listeners behind.
+      let finished = false;
+      const finish = (ok) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        try { socket.removeAllListeners(); } catch {}
+        try { socket.destroy(); } catch {}
+        resolve(ok);
+      };
+      const timer = setTimeout(() => finish(true), 300);
+      socket.connect(53, '127.0.0.1', () => finish(true));
+      socket.on('error', () => finish(false));
     });
   } catch { loopbackAvailable = false; }
   if (loopbackAvailable) return { switched: false, reason: 'loopback-ok' };
@@ -470,12 +491,14 @@ if (process.platform === 'win32') {
 const pkg = require('../package.json');
 const cliVersion = process.env.KHYQUANT_PKG_VERSION || pkg.version; // CLI 版本号
 
-// ── 引导初始化：延迟到快速路径之后 ──────────────────────────────────────
-// --help / --version 等快速路径不需要 bootstrap（dotenv、env defaults 等），
-// 故将 _bootstrapInit() 推迟到 main() 中快速路径检查之后执行。
-// 这样 fast path 只需加载本文件和 package.json，无需解析 .env / 注册 shutdown。
+// ── Bootstrap init: fully deferred off the informational quick paths ──
+// --version / --help (and print variants) need neither .env parsing nor env
+// defaults, so the bootstrap/init module is intentionally NOT required at
+// module top-level. It is lazily required inside main() only after those quick
+// paths have already exited, right where _bootstrapInit() is first invoked.
+// This keeps the fast path to this file + package.json only — no bootstrap/init
+// module load, no .env parse, no shutdown registration.
 let _initPromise = null;
-const { init: _bootstrapInit } = require('../src/bootstrap/init');
 
 // 懒加载 CLI 认证服务（单例模式，首次调用时才加载）
 let _cliAuth;
@@ -525,12 +548,19 @@ async function ensureAuthenticated() {
   } catch { _serverQuickOk = false; }
 
   if (!registered) {
-    // ── First-time: auto-login with builtin account if server reachable ────
+    // ── First-time: auto-login with the generated default admin (if the
+    //    credentials file exists) when the server is reachable ────────────
     if (_serverQuickOk) {
-      const autoResult = await auth.login('admin05', '012003', undefined, 2000);
-      if (autoResult && autoResult.success) {
-        console.log(chalk.dim(`  ℹ 已自动登录: admin05 (管理员)`));
-        return true;
+      let _defaultCreds = null;
+      try {
+        _defaultCreds = require('../src/services/credentialGenerator').readDefaultAdminCredentials();
+      } catch { _defaultCreds = null; }
+      if (_defaultCreds) {
+        const autoResult = await auth.login(_defaultCreds.username, _defaultCreds.password, undefined, 2000);
+        if (autoResult && autoResult.success) {
+          console.log(chalk.dim(`  ℹ 已自动登录: ${_defaultCreds.username} (管理员)`));
+          return true;
+        }
       }
     }
     // Fallback: manual registration
@@ -611,17 +641,45 @@ async function ensureAuthenticated() {
       return false;
     }
   } else {
+    // ── Existing account: try auto-login with default admin first ───────────
+    // If the default-admin credentials file exists (generated on first seed),
+    // attempt a silent builtin login so the user never has to type credentials
+    // for the machine-local admin account.
+    {
+      let _defaultCreds = null;
+      try {
+        _defaultCreds = require('../src/services/credentialGenerator').readDefaultAdminCredentials();
+      } catch { _defaultCreds = null; }
+      if (_defaultCreds) {
+        const autoResult = await auth.login(_defaultCreds.username, _defaultCreds.password, undefined, 2000);
+        if (autoResult && autoResult.success) {
+          console.log(chalk.dim(`  ℹ 已自动登录: ${_defaultCreds.username} (管理员)`));
+          return true;
+        }
+      }
+    }
+
     // ── Existing account: login with forgot-password option ──
+    // Default-admin credentials file path (no plaintext password in output).
+    let _credFileHint = '';
+    try {
+      _credFileHint = require('../src/services/credentialGenerator').getDefaultAdminCredentialsPath();
+    } catch { _credFileHint = ''; }
     console.log('');
     console.log(chalk.cyan('  🔐 请登录 KHY 平台'));
     console.log(chalk.dim('  会话已过期，请重新登录'));
-    console.log(chalk.dim('  提示: 默认账号 admin05 / 012003\n'));
+    if (_credFileHint) {
+      console.log(chalk.dim(`  提示: 默认管理员凭据见 ${_credFileHint}\n`));
+    } else {
+      console.log('');
+    }
 
     // Quick server reachability check before prompting for credentials.
     // If server is down, warn the user but still allow local builtin login.
-    // Built-in accounts (admin05) authenticate locally without the server.
+    // The generated default admin (credentials file) authenticates locally
+    // without the server.
     if (!_serverQuickOk) {
-      printInfo('提示: 后端服务未运行，本地账号仍可正常登录 (admin05 / 012003)。');
+      printInfo('提示: 后端服务未运行，本地默认管理员仍可登录（凭据见上方文件）。');
     }
 
     // Allow up to 3 login attempts before offering recovery
@@ -919,9 +977,21 @@ function isPortReady(port, timeoutMs = 500) {
   const net = require('net');
   return new Promise((resolve) => {
     const socket = new net.Socket();
-    const timer = setTimeout(() => { try { socket.destroy(); } catch {} resolve(false); }, timeoutMs);
-    socket.connect(port, '127.0.0.1', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(true); });
-    socket.on('error', () => { clearTimeout(timer); try { socket.destroy(); } catch {} resolve(false); });
+    // Single finish path: clear timer + detach listeners + destroy socket.
+    // This probe runs in polling loops, so every completion (success/failure/
+    // timeout) must fully release its handles to avoid accumulation.
+    let finished = false;
+    const finish = (ready) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try { socket.removeAllListeners(); } catch {}
+      try { socket.destroy(); } catch {}
+      resolve(ready);
+    };
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    socket.connect(port, '127.0.0.1', () => finish(true));
+    socket.on('error', () => finish(false));
   });
 }
 
@@ -968,6 +1038,22 @@ function getInvokedBinary() {
 async function main() {
   const rawArgs = process.argv.slice(2);
   const args = normalizeArgs(rawArgs);
+  if (_startupFsm) _startupFsm.fire('advance', { step: 'args_normalized' }); // -> env_check
+
+  // ── 启动提示：阶段进度指示器 ──────────────────────────────────────
+  // 仅交互式终端下显示，管道/重定向时静默。
+  // 在引导初始化的各关键节点调用 _updateBootPhase() 更新进度文本，
+  // 使用 \r 覆盖同一行，让用户感知系统正在逐步就绪。
+  const _isBootTty = process.stderr.isTTY && !args.includes('--help') && args[0] !== 'help';
+  let _bootPhaseWrite = null; // 函数引用,在 _isBootTty 判定后才创建
+  if (_isBootTty) {
+    _bootPhaseWrite = (phaseText) => {
+      try {
+        process.stderr.write(`\r  ${phaseText}...\x1b[K`);
+      } catch { /* stderr 不可写时静默 */ }
+    };
+    _bootPhaseWrite('⌛ khy 正在启动');
+  }
 
   // ── 快速路径：在 bootstrap 之前检查，立即退出 ─────────────────────────
   // --help / --version 不需要数据库或环境初始化，直接响应
@@ -997,9 +1083,18 @@ async function main() {
   }
 
   // ── 引导初始化（非快速路径才需要）──────────────────────────────────
-  if (!_initPromise) _initPromise = _bootstrapInit();
+  // Lazy require: the bootstrap/init module is pulled into the require graph
+  // here, past the quick paths, so --version/--help never load it. For real
+  // commands this runs before any other init, exactly as the eager require did.
+  if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载环境配置');
+  if (!_initPromise) {
+    const { init: _bootstrapInit } = require('../src/bootstrap/init');
+    _initPromise = _bootstrapInit();
+  }
   await _initPromise;
+  if (_bootPhaseWrite) _bootPhaseWrite('✓ 环境就绪');
   checkpoint('main:start');
+  if (_startupFsm) _startupFsm.fire('advance', { step: 'bootstrap_init_done' }); // -> modules_load
 
   const invokedAs = getInvokedBinary();       // 检测是 khy 还是 khyquant 调用
   process.env.KHY_RUNTIME_MODE = invokedAs === 'khy' ? 'khy' : 'khyquant';
@@ -1011,6 +1106,11 @@ async function main() {
     if (process.env.KHY_SLASH_AUTOMENU === undefined) process.env.KHY_SLASH_AUTOMENU = 'false';
     if (process.env.KHY_INPUT_BATCH_MODE === undefined) process.env.KHY_INPUT_BATCH_MODE = 'off';
     if (process.env.KHY_INPUT_ESCAPE_TIMEOUT_MS === undefined) process.env.KHY_INPUT_ESCAPE_TIMEOUT_MS = '40';
+    // Sidebar threshold: DO NOT override here. The single source of truth is
+    // sidebarLayout.minCols (default 120) — quoted by the Ctrl+T hint and the
+    // OPS-MAN-062 doc. A launcher default of 200 silently killed the sidebar on
+    // real maximized terminals (DPI-scaled ≈150–160 cols never reach 200).
+    // Users can still override via KHY_SIDEBAR_MIN_COLS or disable via KHY_SIDEBAR=0.
     // Fast-response defaults with minimum resilience for adapter failover.
     if (process.env.GATEWAY_MAX_TOTAL_ATTEMPTS === undefined) process.env.GATEWAY_MAX_TOTAL_ATTEMPTS = '4';
     if (process.env.GATEWAY_MAX_RETRY_DELAY_BUDGET_MS === undefined) process.env.GATEWAY_MAX_RETRY_DELAY_BUDGET_MS = '5000';
@@ -1066,6 +1166,8 @@ async function main() {
     if (process.env.KHY_INTENT_LOOP_MAX_CAP === undefined) process.env.KHY_INTENT_LOOP_MAX_CAP = '16';
   }
 
+  if (_bootPhaseWrite) _bootPhaseWrite('🔄 准备运行环境');
+
   // ── 参数标准化：用户常把 -version 写成单横线，自动补齐为 --version ────
   // (args already normalized at top of main() for fast-path checks)
   enforceNonInteractiveGatewayGuards(args);
@@ -1099,6 +1201,7 @@ async function main() {
   const printInfo = (...a) => fmt().printInfo(...a);
   const printHelp = (...a) => fmt().printHelp(...a);
 
+  if (_startupFsm) _startupFsm.fire('advance', { step: 'gateway_auto_prefer_remote' }); // -> service_discover
   // 启动自愈：若当前优先本地通道且运行环境禁止 loopback 监听，自动切到可用远端通道
   await maybeAutoPreferRemoteOnRestrictedLocal(args, { printInfo });
 
@@ -1159,6 +1262,7 @@ async function main() {
           printError('用法: khy ai run <model-id> -p "your question"');
           process.exit(1);
         }
+        if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'ai_run_print' }); // one-shot, skips repl
         const { chat } = require('../src/cli/ai');
         const result = await chat(prompt, { onChunk: null });
         if (result && result.reply) process.stdout.write(result.reply + '\n');
@@ -1166,16 +1270,19 @@ async function main() {
       }
 
       if (prompt) {
+        if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'ai_run_oneshot' }); // one-shot, skips repl
         const { startRepl } = require('../src/cli/repl');
         await startRepl({ oneShot: true, prompt });
         process.exit(0);
       }
 
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'ai_run_repl_init' }); // -> repl_init
       if (isInteractiveTerminal()) {
         const authOk = await ensureAuthenticated();
         if (!authOk) { printError('认证失败，无法使用终端。'); process.exit(1); }
       }
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'ai_run_repl_enter' }); // -> running
       await startRepl();
       return;
     }
@@ -1188,6 +1295,7 @@ async function main() {
         require('../src/cli/formatters').printError('用法: khy -p "your question"');
         process.exit(1);
       }
+      if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'ai_print' }); // one-shot, skips repl
       const { chat } = require('../src/cli/ai');
       const result = await chat(prompt, { onChunk: null });
       if (result && result.reply) process.stdout.write(result.reply + '\n');
@@ -1197,23 +1305,27 @@ async function main() {
     // ── khy ai "问题" / khy --lite "问题" → 一次性格式化查询（带美化输出后退出）──
     const hasPrompt = aiArgs.length > 0 && !aiArgs[0].startsWith('-');
     if (hasPrompt) {
+      if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'ai_oneshot' }); // one-shot, skips repl
       const { startRepl } = require('../src/cli/repl');
       await startRepl({ oneShot: true, prompt: aiArgs.join(' ') });
       process.exit(0);
     }
 
     // ── khy ai / khy --lite（无附加参数）→ 进入 AI REPL ────────────
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'ai_repl_init' }); // -> repl_init
     if (isInteractiveTerminal()) {
       const authOk = await ensureAuthenticated();
       if (!authOk) { printError('认证失败，无法使用终端。'); process.exit(1); }
     }
     const { startRepl } = require('../src/cli/repl');
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'ai_repl_enter' }); // -> running
     await startRepl();
     return;
   }
 
   // ── 分支2：khy / khyquant -i / --interactive → 带 AI 功能的交互式 REPL ──
   if (args.includes('--interactive') || args.includes('-i')) {
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'interactive_repl_init' }); // -> repl_init
     if (!isInteractiveTerminal()) {
       printError('当前环境不支持交互登录。请在终端中运行，或使用 --print/-p 非交互模式。');
       process.exit(1);
@@ -1227,6 +1339,7 @@ async function main() {
       } catch { /* non-critical */ }
       checkpoint('khy:setup-done');
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'interactive_khy_repl_enter' }); // -> running
       await startRepl({ mode: 'khy', enablePluginAutoload: false });
       return;
     }
@@ -1237,6 +1350,7 @@ async function main() {
     }
     process.env.KHYQUANT_AI_MODE = 'true';
     const { startRepl } = require('../src/cli/repl');
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'interactive_repl_enter' }); // -> running
     await startRepl();
     return;
   }
@@ -1249,7 +1363,7 @@ async function main() {
     const { parsePrintFlags, render, resolveExitCode } = require('../src/cli/printOutputFormat');
     // Tokens AFTER the -p/--print flag form the prompt (plus any output flags).
     const tail = args.slice(printIdx + 1);
-    const { format, maxTurns, systemPrompt, appendSystemPrompt, allowedTools, disallowedTools, continueSession, resumeSessionId, outputSchema, args: rest, error: flagError } = parsePrintFlags(tail);
+    const { format, maxTurns, systemPrompt, appendSystemPrompt, allowedTools, disallowedTools, continueSession, resumeSessionId, outputSchema, includeTimeline, args: rest, error: flagError } = parsePrintFlags(tail);
     if (flagError) {
       printError(`参数错误: ${flagError}`);
       process.exit(1);
@@ -1296,6 +1410,7 @@ async function main() {
         require('../src/services/toolAccessGateway').setToolAccessGateway({ allowed: allowedTools, disallowed: disallowedTools });
       } catch { /* best effort — gateway is additive safety */ }
     }
+    if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'headless_print' }); // one-shot, skips repl
     const ai = require('../src/cli/ai');
     const { chat, getLiveSessionId } = ai;
     // Headless cross-session multi-turn (Claude Code parity for `-p --continue` /
@@ -1471,6 +1586,8 @@ async function main() {
       prompt,
       maxTurns,
       durationMs: Date.now() - _headlessT0,
+      // --include-timeline → result 对象附带 timeline 字段（无标志时字节不变）。
+      includeTimeline,
     };
     const out = render(format, result || {}, ctx);
     if (out) process.stdout.write(out + '\n');
@@ -1486,6 +1603,7 @@ async function main() {
       process.exit(1);
     }
     process.env.KHYQUANT_AI_MODE = 'true';
+    if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'ai_flag_oneshot' }); // one-shot, skips repl
     const { chat } = require('../src/cli/ai');
     const result = await chat(prompt, { onChunk: null });
     if (result && result.reply) {
@@ -1497,6 +1615,7 @@ async function main() {
   if (args.length === 0) {
     // ── 分支5A：khy（无参数）→ khy OS REPL（零顶层启动，不拉起默认应用）──
     if (invokedAs === 'khy') {
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'khy_repl_init' }); // -> repl_init
       if (!isInteractiveTerminal()) {
         printError('当前环境不支持交互终端。请使用 khy <命令> 或 khy ai -p "your question"。');
         process.exit(1);
@@ -1510,12 +1629,15 @@ async function main() {
         await setup({ mode: 'khy', silent: true });
       } catch { /* non-critical */ }
       checkpoint('khy:setup-done');
+      if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪');
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'khy_repl_enter' }); // -> running
       await startRepl({ mode: 'khy', enablePluginAutoload: false });
       return;
     }
 
     // ── 分支5B：khyquant（无参数，完整模式）：认证 → 启动服务器 → REPL ──
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'khyquant_full_repl_init' }); // -> repl_init
     if (!isInteractiveTerminal()) {
       printError('当前环境不支持交互登录。请使用 --print/-p 进行非交互调用。');
       process.exit(1);
@@ -1549,11 +1671,13 @@ async function main() {
     checkpoint('khyquant:setup-done');
 
     // 默认流程：启动后端服务器 + 前端，然后进入 REPL
+    if (_startupFsm) _startupFsm.fire('advance', { step: 'full_server_repl_enter' }); // -> running
     await startWithServer();
   } else if (args.includes('--no-server') || args.includes('--cli')) {
     // ── 分支6：khyquant --no-server / --cli → 纯 CLI 模式（不启动服务器）
     const filteredArgs = args.filter(a => a !== '--no-server' && a !== '--cli');
     if (filteredArgs.length === 0) {
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'cli_repl_init' }); // -> repl_init
       if (!isInteractiveTerminal()) {
         printError('当前环境不支持交互登录。请使用 --print/-p 进行非交互调用。');
         process.exit(1);
@@ -1569,9 +1693,11 @@ async function main() {
       } catch { /* bootstrap setup is non-critical */ }
       checkpoint('khyquant:setup-done');
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'cli_repl_enter' }); // -> running
       await startRepl();
     } else {
       // --no-server/--cli 后面还有其他参数 → 当作单条命令执行（无需认证）
+      if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'cli_command' }); // one-shot, skips repl
       const { parseInput, route } = require('../src/cli/router');
       const parsed = parseInput(filteredArgs);
       if (!parsed) {
@@ -1606,6 +1732,7 @@ async function main() {
     // 对话。`resume` 经 aliases.js 归一为 history/resume。非交互终端无法进入窗口，
     // 保持旧的一次性恢复语义（下方 route() 分支）。
     if (parsed.command === 'history' && parsed.subCommand === 'resume' && isInteractiveTerminal()) {
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'resume_repl_init' }); // -> repl_init
       const authOk = await ensureAuthenticated();
       if (!authOk) { printError('认证失败，无法使用终端。'); process.exit(1); }
       try {
@@ -1625,6 +1752,7 @@ async function main() {
         printError(`恢复失败：${err && err.message ? err.message : err}`);
       }
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'resume_repl_enter' }); // -> running
       await startRepl({
         mode: 'khy',
         enablePluginAutoload: false,
@@ -1650,6 +1778,8 @@ async function main() {
       } catch { /* non-critical */ }
       checkpoint('khyos:setup-done');
       const { startRepl } = require('../src/cli/repl');
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'khyos_repl_init' }); // -> repl_init
+      if (_startupFsm) _startupFsm.fire('advance', { step: 'khyos_repl_enter' }); // -> running
       await startRepl({ mode: 'khy', enablePluginAutoload: false, khyosDirect: true });
       return;
     }
@@ -1660,6 +1790,7 @@ async function main() {
     // 直接启动 server 后 return,让事件循环随传输存活,直到客户端关 stdin / 进程被杀。
     // stdio 分支进入循环后 stdout 专供 JSON-RPC(诊断全走 stderr),故这里不再打印任何收尾。
     if (parsed.command === 'mcp' && parsed.subCommand === 'serve') {
+      if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'mcp_serve' }); // resident server, skips repl
       try {
         const { handleMcp } = require('../src/cli/handlers/mcp');
         const code = handleMcp('serve', parsed.args || [], parsed.options || {});
@@ -1672,6 +1803,7 @@ async function main() {
       return;
     }
 
+    if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'single_command' }); // one-shot, skips repl
     try {
       const result = await route(parsed);
       await handleRouterResultForNonInteractive(result, parsed, printError, printHelp);
@@ -1695,6 +1827,8 @@ main().catch(err => {
   console.error(err);    // 未被捕获的致命错误，打印并退出
   process.exit(1);
 }).finally(() => {
+  // Shadow FSM shutdown marker (fail-soft, observability only).
+  if (_startupFsm) _startupFsm.fire('shutdown', { step: 'main_settled' });
   // REPL 退出后（或命令执行完毕后），打印启动性能分析报告（如果开启了性能分析）
   try {
     const { printSummary } = require('../src/bootstrap/startupProfiler');

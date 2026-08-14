@@ -30,7 +30,9 @@ const CAP = 16; // 每命令表身份保留的活跃 filter 结果上限(退格/
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_SLASH_RANK_RESULT_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -39,7 +41,9 @@ const _cache = new WeakMap();
 
 function _touch(lru, key, value) {
   // 已存在则先删再插,把它挪到「最新」端(Map 保序)。
-  if (lru.has(key)) lru.delete(key);
+  if (lru.has(key)) {
+    lru.delete(key);
+  }
   lru.set(key, value);
   // 超容量 → 淘汰最旧(迭代首元素)。
   while (lru.size > CAP) {
@@ -58,7 +62,9 @@ function _touch(lru, key, value) {
  */
 function getRankedNames(cmds, filter, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !cmds || typeof cmds !== 'object') return computeFn();
+    if (!isEnabled(env) || !cmds || typeof cmds !== 'object') {
+      return computeFn();
+    }
     const key = String(filter == null ? '' : filter);
     let slot = _cache.get(cmds);
     if (!slot || slot.len !== cmds.length) {
@@ -74,7 +80,11 @@ function getRankedNames(cmds, filter, computeFn, env = process.env) {
     _touch(slot.lru, key, result);
     return result;
   } catch {
-    try { return computeFn(); } catch { return []; }
+    try {
+      return computeFn();
+    } catch {
+      return [];
+    }
   }
 }
 

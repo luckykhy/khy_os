@@ -16,10 +16,11 @@
  * @module promptCacheService
  */
 
-const os = require('os');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+
 const log = require('../utils/logger');
 
 // ── Constants ──
@@ -81,9 +82,7 @@ class PromptCache {
       tools: (content.tools || []).map((t) => t.name || t.function?.name || '').sort(),
       model: content.model || '',
     };
-    return crypto.createHash('sha256')
-      .update(JSON.stringify(normalized))
-      .digest('hex');
+    return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
   }
 
   /**
@@ -143,7 +142,9 @@ class PromptCache {
 
     // Evict if needed
     while (this._entries.size >= this._maxEntries || this._totalBytes + byteSize > this._maxBytes) {
-      if (this._entries.size === 0) break;
+      if (this._entries.size === 0) {
+        break;
+      }
       this._evictLRU();
     }
 
@@ -177,7 +178,9 @@ class PromptCache {
    */
   has(key) {
     const entry = this._entries.get(key);
-    if (!entry) return false;
+    if (!entry) {
+      return false;
+    }
     if (Date.now() - entry.createdAt > this._ttlMs) {
       this._evict(key);
       return false;
@@ -210,7 +213,9 @@ class PromptCache {
    */
   invalidateDeferred(key) {
     const entry = this._entries.get(key);
-    if (!entry) return;
+    if (!entry) {
+      return;
+    }
     entry._pendingInvalidation = true;
   }
 
@@ -260,7 +265,7 @@ class PromptCache {
       hits: this._hits,
       misses: this._misses,
       evictions: this._evictions,
-      hitRate: total > 0 ? (this._hits / total * 100).toFixed(1) + '%' : '0%',
+      hitRate: total > 0 ? ((this._hits / total) * 100).toFixed(1) + '%' : '0%',
     };
   }
 
@@ -291,12 +296,18 @@ class PromptCache {
   persistToDisk(filePath, minAccessCount = 2) {
     const target = filePath || _defaultCachePath();
     const dir = path.dirname(target);
-    try { fs.mkdirSync(dir, { recursive: true }); } catch { /* exists */ }
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      /* exists */
+    }
 
     const entries = [];
     for (const entry of this._entries.values()) {
       // Skip entries with pending deferred invalidation — they die with this session
-      if (entry._pendingInvalidation) continue;
+      if (entry._pendingInvalidation) {
+        continue;
+      }
       if (entry.accessCount >= minAccessCount) {
         entries.push({
           key: entry.key,
@@ -308,7 +319,11 @@ class PromptCache {
       }
     }
 
-    fs.writeFileSync(target, JSON.stringify({ version: 1, entries, savedAt: Date.now() }, null, 2), 'utf-8');
+    fs.writeFileSync(
+      target,
+      JSON.stringify({ version: 1, entries, savedAt: Date.now() }, null, 2),
+      'utf-8'
+    );
     return entries.length;
   }
 
@@ -327,15 +342,23 @@ class PromptCache {
       return 0;
     }
 
-    if (!data || data.version !== 1 || !Array.isArray(data.entries)) return 0;
+    if (!data || data.version !== 1 || !Array.isArray(data.entries)) {
+      return 0;
+    }
 
     let loaded = 0;
     for (const entry of data.entries) {
-      if (!entry.key || !entry.content) continue;
-      if (this._entries.has(entry.key)) continue;
+      if (!entry.key || !entry.content) {
+        continue;
+      }
+      if (this._entries.has(entry.key)) {
+        continue;
+      }
 
       const byteSize = entry.byteSize || _estimateBytes(entry.content);
-      if (this._entries.size >= this._maxEntries || this._totalBytes + byteSize > this._maxBytes) break;
+      if (this._entries.size >= this._maxEntries || this._totalBytes + byteSize > this._maxBytes) {
+        break;
+      }
 
       this._entries.set(entry.key, {
         key: entry.key,
@@ -367,7 +390,9 @@ class PromptCache {
     const now = Date.now();
     const keys = [];
     for (const entry of this._entries.values()) {
-      if (entry._pendingInvalidation) continue;
+      if (entry._pendingInvalidation) {
+        continue;
+      }
       if (entry.accessCount >= minAccess && (now - entry.createdAt) / 1000 < maxAgeSec) {
         keys.push(entry.key);
       }
@@ -396,8 +421,12 @@ class PromptCache {
         oldestKey = key;
         continue;
       }
-      const entryOrder = Number.isFinite(entry.lastAccessOrder) ? entry.lastAccessOrder : entry.lastAccessAt;
-      const oldestOrder = Number.isFinite(oldest.lastAccessOrder) ? oldest.lastAccessOrder : oldest.lastAccessAt;
+      const entryOrder = Number.isFinite(entry.lastAccessOrder)
+        ? entry.lastAccessOrder
+        : entry.lastAccessAt;
+      const oldestOrder = Number.isFinite(oldest.lastAccessOrder)
+        ? oldest.lastAccessOrder
+        : oldest.lastAccessAt;
       if (entryOrder < oldestOrder) {
         oldest = entry;
         oldestKey = key;
@@ -419,8 +448,13 @@ function _estimateBytes(obj) {
 }
 
 function _defaultCachePath() {
-  const home = os.homedir();
-  return path.join(home, '.khyquant', 'cache', 'prompt_cache.json');
+  // Portable-aware app home; fallback to the legacy location.
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return path.join(getAppHome(), 'cache', 'prompt_cache.json');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'cache', 'prompt_cache.json');
+  }
 }
 
 // ── Singleton ──

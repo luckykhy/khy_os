@@ -26,8 +26,9 @@ const backgroundShells = new Map();
  */
 function collectBackgroundResults() {
   try {
-    return require('../services/query/taskNotification')
-      .drainCompletedBackgroundAgents(backgroundShells);
+    return require('../services/query/taskNotification').drainCompletedBackgroundAgents(
+      backgroundShells
+    );
   } catch {
     return [];
   }

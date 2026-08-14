@@ -234,7 +234,7 @@ test('不改入参', () => {
 
 test('说明 OPS-MAN-076 已落盘且与生成器输出一致(防手改漂移)', () => {
   const fs = require('node:fs');
-  const { buildDoc, DOC_PATH } = require('../restore-conflicts');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-conflicts');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   const generated = buildDoc();
   assert.strictEqual(

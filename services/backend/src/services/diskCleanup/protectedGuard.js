@@ -16,23 +16,33 @@
  */
 
 const path = require('path');
+
 const catalog = require('./junkCatalog');
 
 /** 归一化为绝对、解析符号后的比较基准（不访问磁盘，纯字符串）。 */
 function _norm(p) {
-  if (!p || typeof p !== 'string') return '';
+  if (!p || typeof p !== 'string') {
+    return '';
+  }
   // 统一分隔符 + 去尾斜杠（保留盘根/根的尾斜杠语义由调用方处理）。
-  let s = path.resolve(p);
+  const s = path.resolve(p);
   return s;
 }
 
 /** a 是否等于 b，或在 b 之内（路径包含，跨平台大小写：Windows 不敏感）。 */
 function _isWithin(child, parent, caseInsensitive) {
-  if (!child || !parent) return false;
+  if (!child || !parent) {
+    return false;
+  }
   let c = _norm(child);
   let pr = _norm(parent);
-  if (caseInsensitive) { c = c.toLowerCase(); pr = pr.toLowerCase(); }
-  if (c === pr) return true;
+  if (caseInsensitive) {
+    c = c.toLowerCase();
+    pr = pr.toLowerCase();
+  }
+  if (c === pr) {
+    return true;
+  }
   const sep = path.sep;
   const prWithSep = pr.endsWith(sep) ? pr : pr + sep;
   return c.startsWith(prWithSep);
@@ -43,12 +53,18 @@ function _isDriveOrRoot(p, deps) {
   const n = _norm(p);
   const parsed = path.parse(n);
   // 盘根：root === dir（如 C:\ 解析后 root='C:\\', dir='C:\\'）。
-  if (parsed.root === n || parsed.dir === parsed.root && parsed.base === '') return true;
-  if (n === '/' || n === parsed.root) return true;
+  if (parsed.root === n || (parsed.dir === parsed.root && parsed.base === '')) {
+    return true;
+  }
+  if (n === '/' || n === parsed.root) {
+    return true;
+  }
   // 路径段数过少 → 太靠近盘根，拒。
   const rel = n.slice(parsed.root.length);
   const segs = rel.split(/[\\/]+/).filter(Boolean);
-  if (segs.length < catalog.thresholds.minPathSegments) return true;
+  if (segs.length < catalog.thresholds.minPathSegments) {
+    return true;
+  }
   return false;
 }
 
@@ -56,9 +72,15 @@ function _resolveAll(resolvers, deps) {
   const out = [];
   for (const resolver of resolvers || []) {
     let roots = [];
-    try { roots = resolver(deps) || []; } catch { roots = []; }
+    try {
+      roots = resolver(deps) || [];
+    } catch {
+      roots = [];
+    }
     for (const r of roots) {
-      if (r && typeof r === 'string') out.push(_norm(r));
+      if (r && typeof r === 'string') {
+        out.push(_norm(r));
+      }
     }
   }
   return [...new Set(out)];
@@ -157,7 +179,9 @@ function userDataSignals(dir, deps) {
     if (ext && (docExtensions.includes(ext) || mediaExtensions.includes(ext))) {
       signals.push(`用户文档/媒体: ${name}`);
     }
-    if (signals.length >= 5) break; // 取证够了即止
+    if (signals.length >= 5) {
+      break;
+    } // 取证够了即止
   }
   return { hasSignal: signals.length > 0, signals };
 }

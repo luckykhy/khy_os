@@ -25,10 +25,12 @@ const SYSTEM_HINT_RE = /\[(?:system|系统)[^\]]*\]/gi;
 // the confidence floor downstream guards against the occasional in-word match.
 // Note: bare 并 is a connector ("编写…并验证…") but 并发/并行 are single words —
 // a negative lookahead keeps those intact.
-const CONJUNCTION_SPLIT_RE = /\s*(?:、|；|;|以及|还有|然后|并且|并(?![发行])|和|与|\band\b|\bplus\b|&)\s*/i;
+const CONJUNCTION_SPLIT_RE =
+  /\s*(?:、|；|;|以及|还有|然后|并且|并(?![发行])|和|与|\band\b|\bplus\b|&)\s*/i;
 
 // Action verbs that mark a clause as an actionable deliverable (not prose).
-const ACTION_VERB_RE = /实现|编写|创建|新增|生成|构建|开发|修复|重构|实施|搭建|更新|更改|修改|删除|移除|调研|研究|搜索|查找|查询|检索|收集|分析|评估|设计|规划|测试|验证|校验|添加|配置|部署|优化|integrat|implement|build|create|write|generate|develop|fix|refactor|update|modify|remove|delete|add\b|research|investigate|analy[sz]e|design|test|verify|configure|deploy|optimi[sz]e|set\s+up/i;
+const ACTION_VERB_RE =
+  /实现|编写|创建|新增|生成|构建|开发|修复|重构|实施|搭建|更新|更改|修改|删除|移除|调研|研究|搜索|查找|查询|检索|收集|分析|评估|设计|规划|测试|验证|校验|添加|配置|部署|优化|integrat|implement|build|create|write|generate|develop|fix|refactor|update|modify|remove|delete|add\b|research|investigate|analy[sz]e|design|test|verify|configure|deploy|optimi[sz]e|set\s+up/i;
 
 /** Normalize a raw user message for structural analysis. */
 function _normalize(message) {
@@ -41,9 +43,15 @@ function _normalize(message) {
 /** A clause qualifies as a deliverable if it is substantive and action-bearing. */
 function _isDeliverableClause(clause) {
   const c = String(clause || '').trim();
-  if (c.length < 4) return false;
-  if (c.length > LIMITS.MAX_SUBTASK_CHARS) return false;
-  if (/^[?？。.!！\s]*$/.test(c)) return false; // punctuation/empty only
+  if (c.length < 4) {
+    return false;
+  }
+  if (c.length > LIMITS.MAX_SUBTASK_CHARS) {
+    return false;
+  }
+  if (/^[?？。.!！\s]*$/.test(c)) {
+    return false;
+  } // punctuation/empty only
   return ACTION_VERB_RE.test(c);
 }
 
@@ -57,13 +65,15 @@ function _extractEnumerated(text) {
   const lines = text.split('\n');
   for (const line of lines) {
     const m = line.match(/^\s*(?:\d+[.)、]|[-*+•]|[(（]\s*\d+\s*[)）])\s+(.*\S)\s*$/);
-    if (m && m[1]) out.push(m[1].trim());
+    if (m && m[1]) {
+      out.push(m[1].trim());
+    }
   }
   // Inline enumerated form: "1. xxx 2. yyy 3. zzz" on a single line.
   if (out.length < 2) {
     const inline = text.match(/\d+\s*[.)、]\s*[^0-9]+?(?=(?:\d+\s*[.)、])|$)/g);
     if (inline && inline.length >= 2) {
-      return inline.map(s => s.replace(/^\d+\s*[.)、]\s*/, '').trim()).filter(Boolean);
+      return inline.map((s) => s.replace(/^\d+\s*[.)、]\s*/, '').trim()).filter(Boolean);
     }
   }
   return out;
@@ -82,9 +92,14 @@ function _extractEnumerated(text) {
  */
 function _extractConjoined(text) {
   // Work on the first sentence-ish span; avoid splitting an entire paragraph.
-  const span = text.split(/[。\n]/).find(s => CONJUNCTION_SPLIT_RE.test(s)) || text;
-  const parts = span.split(CONJUNCTION_SPLIT_RE).map(s => s.trim()).filter(Boolean);
-  if (parts.length < 2) return [];
+  const span = text.split(/[。\n]/).find((s) => CONJUNCTION_SPLIT_RE.test(s)) || text;
+  const parts = span
+    .split(CONJUNCTION_SPLIT_RE)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length < 2) {
+    return [];
+  }
 
   const firstVerbMatch = parts[0].match(ACTION_VERB_RE);
   if (!firstVerbMatch) {
@@ -97,9 +112,14 @@ function _extractConjoined(text) {
   const out = [];
   for (const p of parts) {
     const clause = p.trim();
-    if (!clause) continue;
-    if (ACTION_VERB_RE.test(clause)) out.push(clause);
-    else out.push(`${sharedVerb}${clause}`);
+    if (!clause) {
+      continue;
+    }
+    if (ACTION_VERB_RE.test(clause)) {
+      out.push(clause);
+    } else {
+      out.push(`${sharedVerb}${clause}`);
+    }
   }
   return out;
 }
@@ -109,8 +129,11 @@ function _extractConjoined(text) {
  * Used purely as a corroborating signal (multiple targets ⇒ parallelizable).
  */
 function _distinctTargets(text) {
-  const matches = text.match(/[A-Za-z0-9_./-]+\.(?:js|ts|jsx|tsx|py|go|rs|java|c|cpp|h|css|vue|md|json|ya?ml|sh)\b/g) || [];
-  return [...new Set(matches.map(s => s.toLowerCase()))];
+  const matches =
+    text.match(
+      /[A-Za-z0-9_./-]+\.(?:js|ts|jsx|tsx|py|go|rs|java|c|cpp|h|css|vue|md|json|ya?ml|sh)\b/g
+    ) || [];
+  return [...new Set(matches.map((s) => s.toLowerCase()))];
 }
 
 /**
@@ -125,7 +148,8 @@ function _distinctTargets(text) {
  * Pure: same input always yields the same output.
  */
 function detectCollaborationOpportunity(message, opts = {}) {
-  const minConfidence = typeof opts.minConfidence === 'number' ? opts.minConfidence : LIMITS.MIN_CONFIDENCE;
+  const minConfidence =
+    typeof opts.minConfidence === 'number' ? opts.minConfidence : LIMITS.MIN_CONFIDENCE;
   const minSubtasks = LIMITS.MIN_SUBTASKS;
 
   const empty = {
@@ -143,7 +167,8 @@ function detectCollaborationOpportunity(message, opts = {}) {
 
   // ── Gather candidate sub-tasks from the two structural extractors ──────────
   const enumerated = _extractEnumerated(text).filter(_isDeliverableClause);
-  const conjoined = enumerated.length >= minSubtasks ? [] : _extractConjoined(text).filter(_isDeliverableClause);
+  const conjoined =
+    enumerated.length >= minSubtasks ? [] : _extractConjoined(text).filter(_isDeliverableClause);
   const targets = _distinctTargets(text);
 
   // Prefer enumerated structure (most explicit); fall back to conjoined clauses.
@@ -152,16 +177,21 @@ function detectCollaborationOpportunity(message, opts = {}) {
   // De-duplicate while preserving order.
   const seen = new Set();
   candidates = candidates
-    .map(s => s.replace(/\s+/g, ' ').trim())
-    .filter(s => {
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter((s) => {
       const key = s.toLowerCase();
-      if (!s || seen.has(key)) return false;
+      if (!s || seen.has(key)) {
+        return false;
+      }
       seen.add(key);
       return true;
     });
 
   if (candidates.length < minSubtasks) {
-    return { ...empty, reason: `only ${candidates.length} independent deliverable(s) found (need ${minSubtasks})` };
+    return {
+      ...empty,
+      reason: `only ${candidates.length} independent deliverable(s) found (need ${minSubtasks})`,
+    };
   }
 
   // ── Confidence scoring ─────────────────────────────────────────────────────
@@ -170,7 +200,9 @@ function detectCollaborationOpportunity(message, opts = {}) {
   // targets, richer enumeration) raises confidence toward 1.0.
   let parallelWeight = 0;
   for (const m of PARALLEL_MARKERS) {
-    if (m.pattern.test(text)) parallelWeight += m.weight;
+    if (m.pattern.test(text)) {
+      parallelWeight += m.weight;
+    }
   }
   parallelWeight = Math.min(parallelWeight, 0.5);
 
@@ -185,11 +217,16 @@ function detectCollaborationOpportunity(message, opts = {}) {
   const verbSet = new Set();
   for (const ct of candidates) {
     const m = ct.match(ACTION_VERB_RE);
-    if (m) verbSet.add(m[0]);
+    if (m) {
+      verbSet.add(m[0]);
+    }
   }
   const diversityBonus = verbSet.size >= 3 ? 0.3 : verbSet.size >= 2 ? 0.2 : 0;
 
-  const confidence = Math.min(0.4 + enumeratedBonus + parallelWeight + targetBonus + countBonus + diversityBonus, 1);
+  const confidence = Math.min(
+    0.4 + enumeratedBonus + parallelWeight + targetBonus + countBonus + diversityBonus,
+    1
+  );
 
   const signals = {
     enumerated: enumerated.length,
@@ -201,7 +238,7 @@ function detectCollaborationOpportunity(message, opts = {}) {
   if (confidence < minConfidence) {
     return {
       shouldCollaborate: false,
-      subtasks: candidates.map(task => ({ task })),
+      subtasks: candidates.map((task) => ({ task })),
       confidence,
       reason: `confidence ${confidence.toFixed(2)} below floor ${minConfidence.toFixed(2)}`,
       signals,
@@ -210,7 +247,7 @@ function detectCollaborationOpportunity(message, opts = {}) {
 
   return {
     shouldCollaborate: true,
-    subtasks: candidates.map(task => ({ task })),
+    subtasks: candidates.map((task) => ({ task })),
     confidence,
     reason: `detected ${candidates.length} independent deliverables (confidence ${confidence.toFixed(2)})`,
     signals,

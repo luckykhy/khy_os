@@ -24,6 +24,7 @@
  *   - 编辑链   src/cli/tui/hooks/useTextInput.js(Enter、Shift/Alt/Ctrl+Enter、emacs Ctrl/Alt 链)
  *   - Vim 链   src/cli/tui/hooks/useVimInput.js(/vim 开启时)
  *   - 入口提示 App.js 状态行 '/ 命令,@ 文件,! shell,# 记忆,? 快捷键'
+ *   - 语音入口 App.js 全局链 Alt+M → services/voiceInputService.triggerWinH(Win+H 听写,仅 Windows)
  */
 
 /**
@@ -39,8 +40,9 @@ const KEYBINDING_CATALOG = Object.freeze([
       { keys: 'Ctrl + D', desc: '有文本时向后删除;空行时连按两次退出' },
       { keys: 'Ctrl + L', desc: '清屏(清除已提交的对话记录)' },
       { keys: 'Ctrl + O', desc: '展开/折叠过程组与工具输出' },
-      { keys: 'Ctrl + T', desc: '显示/隐藏任务清单面板' },
+      { keys: 'Ctrl + T', desc: '显示/隐藏任务清单面板(仅宽屏终端，默认 ≥120 列)' },
       { keys: 'Ctrl + V', desc: '粘贴/暂存剪贴板图片到下一回合(Windows 为 Alt + V)' },
+      { keys: 'Alt + M', desc: '语音输入：触发 Win+H 听写，识别文字落入输入框(仅 Windows)' },
       { keys: 'Shift + Tab', desc: '切换权限模式(循环 4 档)' },
       { keys: 'Esc', desc: '取消计划评审 / 中断当前回合 / 连按两次清空输入或回溯' },
       { keys: '?', desc: '在空输入框显示/隐藏键盘快捷键浮层' },
@@ -160,9 +162,13 @@ function getEssentialShortcuts() {
  * @returns {Array<{context:string,label:string,bindings:Array<{keys:string,desc:string}>}>}
  */
 function selectCatalog(opts = {}) {
-  const o = (opts && typeof opts === 'object') ? opts : {};
-  const ctx = String(o.context == null ? '' : o.context).trim().toLowerCase();
-  const query = String(o.query == null ? '' : o.query).trim().toLowerCase();
+  const o = opts && typeof opts === 'object' ? opts : {};
+  const ctx = String(o.context == null ? '' : o.context)
+    .trim()
+    .toLowerCase();
+  const query = String(o.query == null ? '' : o.query)
+    .trim()
+    .toLowerCase();
 
   let groups = KEYBINDING_CATALOG.map((g) => ({
     context: g.context,
@@ -202,8 +208,12 @@ function formatCatalog(groups) {
   const list = Array.isArray(groups) ? groups : [];
   const lines = [];
   for (const g of list) {
-    if (!g || !Array.isArray(g.bindings) || g.bindings.length === 0) continue;
-    if (lines.length) lines.push('');
+    if (!g || !Array.isArray(g.bindings) || g.bindings.length === 0) {
+      continue;
+    }
+    if (lines.length) {
+      lines.push('');
+    }
     lines.push(`【${g.label}】`);
     const keyWidth = g.bindings.reduce((w, b) => Math.max(w, String(b.keys).length), 0);
     for (const b of g.bindings) {
@@ -215,7 +225,7 @@ function formatCatalog(groups) {
 
 /** 门控读取(KHY_KEYBINDINGS 默认开;关 → 命令不接管)。注入 env,叶子不读 process.env。 */
 function isEnabled(env = {}) {
-  return !_falsy(env && env.KHY_KEYBINDINGS === undefined ? 'true' : (env && env.KHY_KEYBINDINGS));
+  return !_falsy(env && env.KHY_KEYBINDINGS === undefined ? 'true' : env && env.KHY_KEYBINDINGS);
 }
 
 module.exports = {

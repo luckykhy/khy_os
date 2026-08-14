@@ -18,9 +18,11 @@
 
 const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
-const { findPython } = require('../utils/pythonPath');
 const path = require('path');
+
 const log = require('../utils/logger');
+const { findPython } = require('../utils/pythonPath');
+
 const { extractFirstJson } = require('./gateway/safeJsonParse');
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -47,22 +49,40 @@ function detectProject(cwd) {
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       if (pkg.scripts) {
-        if (pkg.scripts.lint) steps.push('lint');
-        if (pkg.scripts.test) steps.push('test');
-        if (pkg.scripts.build) steps.push('build');
-        if (pkg.scripts.typecheck || pkg.scripts['type-check']) steps.push('typecheck');
+        if (pkg.scripts.lint) {
+          steps.push('lint');
+        }
+        if (pkg.scripts.test) {
+          steps.push('test');
+        }
+        if (pkg.scripts.build) {
+          steps.push('build');
+        }
+        if (pkg.scripts.typecheck || pkg.scripts['type-check']) {
+          steps.push('typecheck');
+        }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
     return { type, steps };
   }
 
   // Python
-  if (fs.existsSync(path.join(cwd, 'pyproject.toml')) || fs.existsSync(path.join(cwd, 'setup.py'))) {
+  if (
+    fs.existsSync(path.join(cwd, 'pyproject.toml')) ||
+    fs.existsSync(path.join(cwd, 'setup.py'))
+  ) {
     type = 'python';
     steps.push('syntax');
-    if (_commandExists('ruff')) steps.push('lint');
-    else if (_commandExists('flake8')) steps.push('lint');
-    if (_commandExists('pytest')) steps.push('test');
+    if (_commandExists('ruff')) {
+      steps.push('lint');
+    } else if (_commandExists('flake8')) {
+      steps.push('lint');
+    }
+    if (_commandExists('pytest')) {
+      steps.push('test');
+    }
     return { type, steps };
   }
 
@@ -82,7 +102,9 @@ function detectProject(cwd) {
     type = 'go';
     steps.push('build'); // go build
     steps.push('test');
-    if (_commandExists('golangci-lint')) steps.push('lint');
+    if (_commandExists('golangci-lint')) {
+      steps.push('lint');
+    }
     return { type, steps };
   }
 
@@ -119,7 +141,9 @@ function _runSyntaxCheck(files, projectType, cwd) {
       } else if (ext === '.py') {
         const pyBin = findPython();
         execSync(`"${pyBin}" -c "import py_compile; py_compile.compile('${file}', doraise=True)"`, {
-          cwd, timeout: 10000, stdio: 'pipe',
+          cwd,
+          timeout: 10000,
+          stdio: 'pipe',
         });
       } else if (ext === '.json') {
         JSON.parse(fs.readFileSync(path.resolve(cwd, file), 'utf-8'));
@@ -144,8 +168,11 @@ function _runSyntaxCheck(files, projectType, cwd) {
 function _runNpmScript(script, cwd) {
   // Detect package manager
   let pm = 'npm';
-  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) pm = 'pnpm';
-  else if (fs.existsSync(path.join(cwd, 'yarn.lock'))) pm = 'yarn';
+  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
+    pm = 'pnpm';
+  } else if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
+    pm = 'yarn';
+  }
 
   try {
     const result = spawnSync(pm, ['run', script], {
@@ -168,13 +195,18 @@ function _runNpmScript(script, cwd) {
  * @returns {{ pass: boolean, output: string }}
  */
 function _runPythonLint(files, cwd) {
-  const pyFiles = files.filter(f => f.endsWith('.py'));
-  if (pyFiles.length === 0) return { pass: true, output: 'No Python files to lint' };
+  const pyFiles = files.filter((f) => f.endsWith('.py'));
+  if (pyFiles.length === 0) {
+    return { pass: true, output: 'No Python files to lint' };
+  }
 
   const linter = _commandExists('ruff') ? 'ruff check' : 'flake8';
   try {
     const result = spawnSync(linter.split(' ')[0], [...linter.split(' ').slice(1), ...pyFiles], {
-      cwd, timeout: VERIFICATION_TIMEOUT, encoding: 'utf-8', stdio: 'pipe',
+      cwd,
+      timeout: VERIFICATION_TIMEOUT,
+      encoding: 'utf-8',
+      stdio: 'pipe',
     });
     const output = `${result.stdout || ''}${result.stderr || ''}`.slice(0, MAX_OUTPUT_CHARS);
     return { pass: result.status === 0, output };
@@ -198,7 +230,10 @@ function _runCargoStep(step, cwd) {
   const [cmd, args] = commands[step] || commands.build;
   try {
     const result = spawnSync(cmd, args, {
-      cwd, timeout: VERIFICATION_TIMEOUT, encoding: 'utf-8', stdio: 'pipe',
+      cwd,
+      timeout: VERIFICATION_TIMEOUT,
+      encoding: 'utf-8',
+      stdio: 'pipe',
     });
     const output = `${result.stdout || ''}${result.stderr || ''}`.slice(0, MAX_OUTPUT_CHARS);
     return { pass: result.status === 0, output };
@@ -222,7 +257,10 @@ function _runGoStep(step, cwd) {
   const [cmd, args] = commands[step] || commands.build;
   try {
     const result = spawnSync(cmd, args, {
-      cwd, timeout: VERIFICATION_TIMEOUT, encoding: 'utf-8', stdio: 'pipe',
+      cwd,
+      timeout: VERIFICATION_TIMEOUT,
+      encoding: 'utf-8',
+      stdio: 'pipe',
     });
     const output = `${result.stdout || ''}${result.stderr || ''}`.slice(0, MAX_OUTPUT_CHARS);
     return { pass: result.status === 0, output };
@@ -254,7 +292,9 @@ function verify(params) {
   let allPassed = true;
 
   for (const step of steps) {
-    if (skipSteps.has(step)) continue;
+    if (skipSteps.has(step)) {
+      continue;
+    }
 
     const start = Date.now();
     let result;
@@ -265,36 +305,57 @@ function verify(params) {
           result = _runSyntaxCheck(files, type, cwd);
           break;
         case 'lint':
-          if (type === 'node') result = _runNpmScript('lint', cwd);
-          else if (type === 'python') result = _runPythonLint(files, cwd);
-          else if (type === 'rust') result = _runCargoStep('lint', cwd);
-          else if (type === 'go') result = _runGoStep('lint', cwd);
-          else result = { pass: true, output: 'No linter available' };
+          if (type === 'node') {
+            result = _runNpmScript('lint', cwd);
+          } else if (type === 'python') {
+            result = _runPythonLint(files, cwd);
+          } else if (type === 'rust') {
+            result = _runCargoStep('lint', cwd);
+          } else if (type === 'go') {
+            result = _runGoStep('lint', cwd);
+          } else {
+            result = { pass: true, output: 'No linter available' };
+          }
           break;
         case 'typecheck':
           result = _runNpmScript(step === 'typecheck' ? 'typecheck' : 'type-check', cwd);
           break;
         case 'test':
-          if (type === 'node') result = _runNpmScript('test', cwd);
-          else if (type === 'python') {
+          if (type === 'node') {
+            result = _runNpmScript('test', cwd);
+          } else if (type === 'python') {
             try {
               const r = spawnSync('pytest', ['--tb=short', '-q'], {
-                cwd, timeout: VERIFICATION_TIMEOUT, encoding: 'utf-8', stdio: 'pipe',
+                cwd,
+                timeout: VERIFICATION_TIMEOUT,
+                encoding: 'utf-8',
+                stdio: 'pipe',
               });
-              result = { pass: r.status === 0, output: `${r.stdout || ''}${r.stderr || ''}`.slice(0, MAX_OUTPUT_CHARS) };
+              result = {
+                pass: r.status === 0,
+                output: `${r.stdout || ''}${r.stderr || ''}`.slice(0, MAX_OUTPUT_CHARS),
+              };
             } catch (e) {
               result = { pass: false, output: e.message };
             }
+          } else if (type === 'rust') {
+            result = _runCargoStep('test', cwd);
+          } else if (type === 'go') {
+            result = _runGoStep('test', cwd);
+          } else {
+            result = { pass: true, output: 'No test runner available' };
           }
-          else if (type === 'rust') result = _runCargoStep('test', cwd);
-          else if (type === 'go') result = _runGoStep('test', cwd);
-          else result = { pass: true, output: 'No test runner available' };
           break;
         case 'build':
-          if (type === 'node') result = _runNpmScript('build', cwd);
-          else if (type === 'rust') result = _runCargoStep('build', cwd);
-          else if (type === 'go') result = _runGoStep('build', cwd);
-          else result = { pass: true, output: 'No build step available' };
+          if (type === 'node') {
+            result = _runNpmScript('build', cwd);
+          } else if (type === 'rust') {
+            result = _runCargoStep('build', cwd);
+          } else if (type === 'go') {
+            result = _runGoStep('build', cwd);
+          } else {
+            result = { pass: true, output: 'No build step available' };
+          }
           break;
         default:
           result = { pass: true, output: `Unknown step: ${step}` };
@@ -308,15 +369,17 @@ function verify(params) {
 
     if (!result.pass) {
       allPassed = false;
-      if (failFast) break;
+      if (failFast) {
+        break;
+      }
     }
   }
 
   // Build summary
-  const passCount = results.filter(r => r.pass).length;
-  const failCount = results.filter(r => !r.pass).length;
+  const passCount = results.filter((r) => r.pass).length;
+  const failCount = results.filter((r) => !r.pass).length;
   const totalMs = results.reduce((s, r) => s + r.durationMs, 0);
-  const failNames = results.filter(r => !r.pass).map(r => r.name);
+  const failNames = results.filter((r) => !r.pass).map((r) => r.name);
 
   let summary;
   if (results.length === 0) {
@@ -327,7 +390,17 @@ function verify(params) {
     summary = `${failCount}/${results.length} step(s) failed: ${failNames.join(', ')} (${totalMs}ms).`;
   }
 
-  return { passed: allPassed, steps: results, summary, projectType: type };
+  return {
+    passed: allPassed,
+    steps: results,
+    summary,
+    projectType: type,
+    // 诚实暴露「无可验证步骤」:当项目没有任何可运行的验证步骤(syntax/lint/test/build)时,
+    // passed 仍按无失败处理(不误伤无测试基建的项目),但同时告知调用方「未真正验证」,
+    // 由交付判定把它升为 warning,而不是让「no steps = pass」静默充当绿旗。
+    noSteps: results.length === 0,
+    verified: results.length > 0,
+  };
 }
 
 /**
@@ -381,8 +454,10 @@ async function adversarialVerify(params) {
     const staticResult = verify({ files, cwd, failFast: false });
     return {
       verdict: staticResult.passed ? 'PASS' : 'FAIL',
-      checks: staticResult.steps.map(s => ({
-        command: s.name, output: s.output, result: s.pass ? 'PASS' : 'FAIL',
+      checks: staticResult.steps.map((s) => ({
+        command: s.name,
+        output: s.output,
+        result: s.pass ? 'PASS' : 'FAIL',
       })),
       rawOutput: staticResult.summary,
       summary: staticResult.summary,
@@ -391,29 +466,34 @@ async function adversarialVerify(params) {
   }
 
   // 构建对抗性验证 prompt
-  const fileList = files.map(f => `- ${f}`).join('\n');
+  const fileList = files.map((f) => `- ${f}`).join('\n');
   const prompt = _buildAdversarialPrompt(taskDescription, fileList, cwd);
 
   try {
     const response = await params.executeAI(prompt);
-    const rawOutput = typeof response === 'string' ? response : (response.content || response.text || '');
+    const rawOutput =
+      typeof response === 'string' ? response : response.content || response.text || '';
 
     // Primary channel: a structured JSON verdict block. The model is asked to
     // emit { "verdict": "...", "checks": [...] } so the control flow consuming
     // this result reads machine-typed fields rather than scraping prose.
     const structured = _parseStructuredVerdict(rawOutput);
-    const verdict = structured ? structured.verdict
-      // Fallback: recover the verdict from the human-readable VERDICT: line.
-      : (rawOutput.match(VERDICT_RE) ? rawOutput.match(VERDICT_RE)[1].toUpperCase() : 'PARTIAL');
+    const verdict = structured
+      ? structured.verdict
+      : // Fallback: recover the verdict from the human-readable VERDICT: line.
+        rawOutput.match(VERDICT_RE)
+        ? rawOutput.match(VERDICT_RE)[1].toUpperCase()
+        : 'PARTIAL';
 
     // Prefer structured checks; fall back to line-oriented prose parsing.
-    const checks = structured && structured.checks.length
-      ? structured.checks
-      : _parseAdversarialChecks(rawOutput);
+    const checks =
+      structured && structured.checks.length
+        ? structured.checks
+        : _parseAdversarialChecks(rawOutput);
 
     // 生成摘要
-    const passCount = checks.filter(c => c.result === 'PASS').length;
-    const failCount = checks.filter(c => c.result === 'FAIL').length;
+    const passCount = checks.filter((c) => c.result === 'PASS').length;
+    const failCount = checks.filter((c) => c.result === 'FAIL').length;
     const summary = `对抗性验证: ${verdict} (${passCount} 通过, ${failCount} 失败, ${checks.length} 项检查)`;
 
     return { verdict, checks, rawOutput, summary, _source: 'adversarial' };
@@ -477,13 +557,17 @@ ${cwd}
  */
 function _parseStructuredVerdict(output) {
   const obj = extractFirstJson(output, null);
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return null;
+  }
 
   const verdict = String(obj.verdict || '').toUpperCase();
-  if (!['PASS', 'FAIL', 'PARTIAL'].includes(verdict)) return null;
+  if (!['PASS', 'FAIL', 'PARTIAL'].includes(verdict)) {
+    return null;
+  }
 
   const checks = Array.isArray(obj.checks)
-    ? obj.checks.map(c => ({
+    ? obj.checks.map((c) => ({
         command: String(c?.command || '').trim(),
         output: String(c?.output || '').trim(),
         result: String(c?.result || 'PASS').toUpperCase() === 'FAIL' ? 'FAIL' : 'PASS',
@@ -505,7 +589,9 @@ function _parseAdversarialChecks(output) {
   for (const line of lines) {
     const cmdMatch = line.match(/Command\s*run\s*:\s*(.+)/i);
     if (cmdMatch) {
-      if (currentCheck) checks.push(currentCheck);
+      if (currentCheck) {
+        checks.push(currentCheck);
+      }
       currentCheck = { command: cmdMatch[1].trim(), output: '', result: 'PASS' };
       continue;
     }
@@ -523,7 +609,9 @@ function _parseAdversarialChecks(output) {
     }
   }
 
-  if (currentCheck) checks.push(currentCheck);
+  if (currentCheck) {
+    checks.push(currentCheck);
+  }
   return checks;
 }
 
@@ -554,12 +642,22 @@ async function evidenceSufficiencyCheck(params = {}) {
   }
 
   // Compact evidence digest — tool name + a short slice of each result.
-  const evidence = toolResults.slice(-12).map((t, i) => {
-    const out = t && t.result
-      ? String(t.result.output || t.result.content || t.result.text || (t.result.success === false ? `error: ${t.result.error || ''}` : ''))
-      : '';
-    return `  ${i + 1}. ${t.tool || 'tool'} → ${out.replace(/\s+/g, ' ').slice(0, 200)}`;
-  }).join('\n') || '  (no tool output captured)';
+  const evidence =
+    toolResults
+      .slice(-12)
+      .map((t, i) => {
+        const out =
+          t && t.result
+            ? String(
+                t.result.output ||
+                  t.result.content ||
+                  t.result.text ||
+                  (t.result.success === false ? `error: ${t.result.error || ''}` : '')
+              )
+            : '';
+        return `  ${i + 1}. ${t.tool || 'tool'} → ${out.replace(/\s+/g, ' ').slice(0, 200)}`;
+      })
+      .join('\n') || '  (no tool output captured)';
 
   const prompt = [
     'You are a strict reviewer checking whether a draft answer is actually supported by the evidence gathered so far.',
@@ -585,14 +683,18 @@ async function evidenceSufficiencyCheck(params = {}) {
 
   try {
     const response = await params.executeAI(finalPrompt);
-    const rawOutput = typeof response === 'string' ? response : (response.content || response.text || '');
+    const rawOutput =
+      typeof response === 'string' ? response : response.content || response.text || '';
     const obj = extractFirstJson(rawOutput, null);
     let verdict = 'PASS';
     let gaps = [];
     if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
       verdict = String(obj.verdict || '').toUpperCase() === 'FAIL' ? 'FAIL' : 'PASS';
       if (Array.isArray(obj.gaps)) {
-        gaps = obj.gaps.map(g => String(g || '').trim()).filter(Boolean).slice(0, 8);
+        gaps = obj.gaps
+          .map((g) => String(g || '').trim())
+          .filter(Boolean)
+          .slice(0, 8);
       }
     } else if (/\bFAIL\b/i.test(rawOutput)) {
       verdict = 'FAIL';
@@ -629,7 +731,9 @@ const EVIDENCE_LENSES = [
 /** Clamp an env/param integer into [min,max], falling back to def. @private */
 function _clampInt(raw, def, min, max) {
   const n = parseInt(raw, 10);
-  if (!Number.isFinite(n)) return def;
+  if (!Number.isFinite(n)) {
+    return def;
+  }
   return Math.max(min, Math.min(max, n));
 }
 
@@ -650,9 +754,9 @@ function _clampInt(raw, def, min, max) {
 function _tallyVotes(votes, opts = {}) {
   const list = Array.isArray(votes) ? votes : [];
   const kind = opts.kind === 'gaps' ? 'gaps' : 'checks';
-  const decisive = list.filter(v => v && (v.verdict === 'PASS' || v.verdict === 'FAIL'));
+  const decisive = list.filter((v) => v && (v.verdict === 'PASS' || v.verdict === 'FAIL'));
   const ok = decisive.length;
-  const fail = decisive.filter(v => v.verdict === 'FAIL').length;
+  const fail = decisive.filter((v) => v.verdict === 'FAIL').length;
 
   // No decisive voter at all → abstain (SKIP is treated as pass downstream).
   if (ok === 0) {
@@ -667,17 +771,23 @@ function _tallyVotes(votes, opts = {}) {
   const aggregated = [];
   for (const v of decisive) {
     if (kind === 'checks') {
-      for (const c of (v.checks || [])) {
-        if (!c || c.result !== 'FAIL') continue;
+      for (const c of v.checks || []) {
+        if (!c || c.result !== 'FAIL') {
+          continue;
+        }
         const key = `${c.command}::${c.output}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
         seen.add(key);
         aggregated.push(c);
       }
     } else {
-      for (const g of (v.gaps || [])) {
+      for (const g of v.gaps || []) {
         const key = String(g || '').trim();
-        if (!key || seen.has(key)) continue;
+        if (!key || seen.has(key)) {
+          continue;
+        }
         seen.add(key);
         aggregated.push(key);
       }
@@ -695,16 +805,24 @@ function _tallyVotes(votes, opts = {}) {
 async function _oneAdversarialVote(params, lens) {
   const cwd = params.cwd || process.env.KHYQUANT_CWD || process.cwd();
   const files = params.files || [];
-  const fileList = files.map(f => `- ${f}`).join('\n');
-  const prompt = _buildAdversarialPrompt(params.taskDescription || '', fileList, cwd)
-    + `\n\n## 本轮视角约束\n本轮你**只**从以下角度审查,发现该角度任何问题即判 FAIL:\n${lens}`;
+  const fileList = files.map((f) => `- ${f}`).join('\n');
+  const prompt =
+    _buildAdversarialPrompt(params.taskDescription || '', fileList, cwd) +
+    `\n\n## 本轮视角约束\n本轮你**只**从以下角度审查,发现该角度任何问题即判 FAIL:\n${lens}`;
   try {
     const response = await params.executeAI(prompt);
-    const rawOutput = typeof response === 'string' ? response : (response.content || response.text || '');
+    const rawOutput =
+      typeof response === 'string' ? response : response.content || response.text || '';
     const structured = _parseStructuredVerdict(rawOutput);
-    const verdict = structured ? structured.verdict
-      : (rawOutput.match(VERDICT_RE) ? rawOutput.match(VERDICT_RE)[1].toUpperCase() : 'PARTIAL');
-    const checks = structured && structured.checks.length ? structured.checks : _parseAdversarialChecks(rawOutput);
+    const verdict = structured
+      ? structured.verdict
+      : rawOutput.match(VERDICT_RE)
+        ? rawOutput.match(VERDICT_RE)[1].toUpperCase()
+        : 'PARTIAL';
+    const checks =
+      structured && structured.checks.length
+        ? structured.checks
+        : _parseAdversarialChecks(rawOutput);
     return { verdict, checks };
   } catch (err) {
     return { verdict: 'SKIP', checks: [] };
@@ -728,7 +846,8 @@ async function adversarialVerifyEnsemble(params = {}) {
   const quorum = params.quorum != null ? params.quorum : process.env.KHY_VERIFY_ENSEMBLE_QUORUM;
   const votes = await Promise.all(
     Array.from({ length: n }, (_, i) =>
-      _oneAdversarialVote(params, ADVERSARIAL_LENSES[i % ADVERSARIAL_LENSES.length])),
+      _oneAdversarialVote(params, ADVERSARIAL_LENSES[i % ADVERSARIAL_LENSES.length])
+    )
   );
   const tally = _tallyVotes(votes, { quorum, kind: 'checks' });
   tally.summary = `集成对抗验证: ${tally.verdict} (${n} 视角, ${tally.fail}/${tally.ok} 判否, ${(tally.checks || []).length} 项失败证据)`;
@@ -752,8 +871,9 @@ async function evidenceSufficiencyEnsemble(params = {}) {
   const votes = await Promise.all(
     Array.from({ length: n }, (_, i) =>
       evidenceSufficiencyCheck({ ...params, lens: EVIDENCE_LENSES[i % EVIDENCE_LENSES.length] })
-        .then(r => ({ verdict: r.verdict, gaps: r.gaps || [] }))
-        .catch(() => ({ verdict: 'SKIP', gaps: [] }))),
+        .then((r) => ({ verdict: r.verdict, gaps: r.gaps || [] }))
+        .catch(() => ({ verdict: 'SKIP', gaps: [] }))
+    )
   );
   const tally = _tallyVotes(votes, { quorum, kind: 'gaps' });
   tally.summary = `集成证据自检: ${tally.verdict} (${n} 视角, ${tally.fail}/${tally.ok} 判否, ${(tally.gaps || []).length} 项待补)`;

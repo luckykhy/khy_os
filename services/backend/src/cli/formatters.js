@@ -5,6 +5,7 @@
 const chalkModule = require('chalk');
 const chalk = chalkModule.default || chalkModule;
 const Table = require('cli-table3');
+
 const os = require('os');
 const path = require('path');
 
@@ -23,28 +24,24 @@ const MASCOT_LEGACY = [
 ];
 
 // Legendary flash card pet — Claude Code style pixel art (3 lines tall)
-const MASCOT = [
-  '  ╭━━━━━╮  ',
-  '  ┃✦ ◈ ✦┃  ',
-  '  ╰┳━━┳╯  ',
-];
+const MASCOT = ['  ╭━━━━━╮  ', '  ┃✦ ◈ ✦┃  ', '  ╰┳━━┳╯  '];
 
 // Claude Code style: minimal icons, no emoji
-const MASCOT_MINI = '·';       // for status lines (Claude Code: dot)
-const ICON_PROMPT = '>';       // prompt arrow
-const ICON_AI = '*';           // AI indicator
-const ICON_BULL = '>';         // market up
-const ICON_BEAR = '<';         // market down
-const ICON_BOT = '*';          // AI assistant
-const ICON_CHART = '#';        // chart / backtest
-const ICON_GEAR = '*';         // system
-const ICON_PLUG = '+';         // plugin
-const ICON_HEART = '+';        // health / doctor
-const ICON_ROCKET = '>';       // launch / start
-const ICON_KEY = '*';          // API key
-const ICON_DB = '#';           // database
-const ICON_SEARCH = '*';       // search
-const ICON_GATEWAY = '*';      // gateway / relay
+const MASCOT_MINI = '·'; // for status lines (Claude Code: dot)
+const ICON_PROMPT = '>'; // prompt arrow
+const ICON_AI = '*'; // AI indicator
+const ICON_BULL = '>'; // market up
+const ICON_BEAR = '<'; // market down
+const ICON_BOT = '*'; // AI assistant
+const ICON_CHART = '#'; // chart / backtest
+const ICON_GEAR = '*'; // system
+const ICON_PLUG = '+'; // plugin
+const ICON_HEART = '+'; // health / doctor
+const ICON_ROCKET = '>'; // launch / start
+const ICON_KEY = '*'; // API key
+const ICON_DB = '#'; // database
+const ICON_SEARCH = '*'; // search
+const ICON_GATEWAY = '*'; // gateway / relay
 
 // Random farewell messages
 const TIPS = [
@@ -59,11 +56,11 @@ const TIPS = [
 
 function getClassicMonsterPetLines(color = chalk.hex('#D77757')) {
   // 玄鸟凤凰 — Chinese phoenix (Xuan Niao) in traditional palette
-  const zhu  = chalk.hex('#C41E3A');  // 朱红 vermillion
-  const gold = chalk.hex('#DAA520');  // 赤金 gold
-  const dan  = chalk.hex('#FF6B35');  // 丹砂 cinnabar
-  const jade = chalk.hex('#2E8B57');  // 碧玉 jade
-  const d    = chalk.dim;
+  const zhu = chalk.hex('#C41E3A'); // 朱红 vermillion
+  const gold = chalk.hex('#DAA520'); // 赤金 gold
+  const dan = chalk.hex('#FF6B35'); // 丹砂 cinnabar
+  const jade = chalk.hex('#2E8B57'); // 碧玉 jade
+  const d = chalk.dim;
 
   return [
     `       ${gold('▄█▄')}`,
@@ -104,7 +101,9 @@ function printBanner(version, aiProvider) {
       adapterName = active.name || active.type || '';
       modelName = active.activeModel || process.env.GATEWAY_PREFERRED_MODEL || '';
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   if (!modelName) {
     modelName = process.env.GATEWAY_PREFERRED_MODEL || process.env.OLLAMA_MODEL || 'auto';
@@ -113,8 +112,12 @@ function printBanner(version, aiProvider) {
   // welcome 横幅走同一个 SSOT(cli/ccModelName)。门控关 / require 失败 → 裸 slug 原样。
   try {
     const fn = require('./ccModelName').formatModelLabel;
-    if (typeof fn === 'function') modelName = fn(modelName);
-  } catch { /* keep raw slug */ }
+    if (typeof fn === 'function') {
+      modelName = fn(modelName);
+    }
+  } catch {
+    /* keep raw slug */
+  }
   if (!adapterName) {
     adapterName = process.env.GATEWAY_PREFERRED_ADAPTER || aiProvider || 'auto';
   }
@@ -130,9 +133,16 @@ function printBanner(version, aiProvider) {
   try {
     const ai = require('./ai');
     const effort = ai.getEffort ? ai.getEffort() : 'high';
-    const labels = { max: 'max effort', high: 'high effort', medium: 'medium effort', low: 'low effort' };
+    const labels = {
+      max: 'max effort',
+      high: 'high effort',
+      medium: 'medium effort',
+      low: 'low effort',
+    };
     effortLabel = labels[effort] || 'high effort';
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   const cwd = process.cwd();
   const home = os.homedir();
@@ -148,7 +158,9 @@ function printBanner(version, aiProvider) {
     if (companion && companion.sprite) {
       buddyLines = companion.sprite;
     }
-  } catch { /* no buddy */ }
+  } catch {
+    /* no buddy */
+  }
 
   // Fallback pet sprite (classic little monster)
   if (!buddyLines || buddyLines.length === 0) {
@@ -194,9 +206,104 @@ function printBanner(version, aiProvider) {
   console.log('');
 }
 
+// Full CSI/ESC coverage: SGR colors, cursor movement (\x1b[nA..D, \x1b[n;mH),
+// erase (\x1b[K, \x1b[2J), private modes (\x1b[?25l) and bare ESC finals.
+// eslint-disable-next-line no-control-regex
+const _ANSI_PATTERN = /\u001b(?:[@-Z\\-_]|\[[0-9;?]*[@-~])/g;
+
+// OSC sequences (hyperlinks, window titles): \x1b]...BEL or \x1b]...ESC\ (ST).
+// Lazy body + both terminators; stripped BEFORE _ANSI_PATTERN so the ST's
+// ESC\ is not consumed first, which would leave the OSC body behind.
+// eslint-disable-next-line no-control-regex
+const _OSC_PATTERN = /\u001b\][\s\S]*?(?:\u0007|\u001b\\)/g;
+
+// strip-ansi loader sentinel: undefined = not tried, null = load failed (never retry).
+let _stripAnsiLib;
 function stripAnsi(str) {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\u001b\[[0-9;]*m/g, '');
+  if (_stripAnsiLib === undefined) {
+    try {
+      const mod = require('strip-ansi');
+      const fn =
+        typeof mod === 'function'
+          ? mod
+          : mod && typeof mod.default === 'function'
+            ? mod.default
+            : null;
+      _stripAnsiLib = fn || null;
+    } catch {
+      _stripAnsiLib = null;
+    }
+  }
+  if (_stripAnsiLib) {
+    try {
+      return _stripAnsiLib(str);
+    } catch {
+      _stripAnsiLib = null;
+    }
+  }
+  return str.replace(_OSC_PATTERN, '').replace(_ANSI_PATTERN, '');
+}
+
+/**
+ * Detect terminal width in columns, with a short-lived cache.
+ * Priority: stdout.columns → stderr.columns → env COLUMNS → default 80.
+ * Cache is invalidated by the stdout 'resize' event (registered once) and
+ * additionally expires after ~500ms as a safety net for non-TTY streams.
+ * @returns {number}
+ */
+const _TERM_COLS_CACHE_MS = 500;
+let _termColsCache = 0;
+let _termColsCacheAt = 0;
+let _termColsRawLast = -1;
+let _termColsResizeHooked = false;
+function _hookTermColsResize() {
+  if (_termColsResizeHooked) {
+    return;
+  }
+  _termColsResizeHooked = true;
+  try {
+    if (process.stdout && typeof process.stdout.on === 'function') {
+      process.stdout.on('resize', () => {
+        _termColsCacheAt = 0;
+      });
+    }
+  } catch {
+    /* non-TTY / exotic stdout: TTL alone bounds staleness */
+  }
+}
+
+function getTerminalColumns() {
+  // Raw stdout width is re-read every call: it is cheap and lets the cache
+  // react immediately when the terminal (or a test stub) changes it. The TTL
+  // cache only shields the stderr/env fallback chain.
+  let raw = 0;
+  try {
+    raw = Number(process.stdout && process.stdout.columns) || 0;
+  } catch {
+    raw = 0;
+  }
+  const now = Date.now();
+  if (
+    _termColsCacheAt &&
+    now - _termColsCacheAt < _TERM_COLS_CACHE_MS &&
+    raw === _termColsRawLast
+  ) {
+    return _termColsCache;
+  }
+  _hookTermColsResize();
+  let cols = raw;
+  if (!(Number.isFinite(cols) && cols > 0)) {
+    try {
+      cols =
+        Number(process.stderr && process.stderr.columns) || parseInt(process.env.COLUMNS, 10) || 0;
+    } catch {
+      cols = 0;
+    }
+  }
+  _termColsCache = Number.isFinite(cols) && cols > 0 ? cols : 80;
+  _termColsRawLast = raw;
+  _termColsCacheAt = now;
+  return _termColsCache;
 }
 
 /**
@@ -212,20 +319,40 @@ function stripAnsi(str) {
  * with a fast ASCII-only path for common cases.
  * Strips ANSI escape codes before measuring.
  */
+// string-width loader sentinel: undefined = not tried, null = load failed (never retry).
 let _stringWidth;
 function _computeDisplayWidth(str) {
   const stripped = stripAnsi(str);
-  if (!stripped) return 0;
+  if (!stripped) {
+    return 0;
+  }
 
   // Fast path: pure ASCII (common for code, paths, English text)
-  if (/^[\x20-\x7E]*$/.test(stripped)) return stripped.length;
+  if (/^[\x20-\x7E]*$/.test(stripped)) {
+    return stripped.length;
+  }
 
   // Full Unicode path via string-width (handles CJK, emoji, grapheme clusters)
-  if (!_stringWidth) {
-    try { _stringWidth = require('string-width'); } catch { /* fallback below */ }
+  if (_stringWidth === undefined) {
+    try {
+      const mod = require('string-width');
+      const fn =
+        typeof mod === 'function'
+          ? mod
+          : mod && typeof mod.default === 'function'
+            ? mod.default
+            : null;
+      _stringWidth = fn || null;
+    } catch {
+      _stringWidth = null;
+    }
   }
   if (_stringWidth) {
-    try { return _stringWidth(stripped); } catch { /* fallback below */ }
+    try {
+      return _stringWidth(stripped);
+    } catch {
+      /* fallback below */
+    }
   }
 
   // Fallback: manual calculation for environments without string-width
@@ -233,22 +360,22 @@ function _computeDisplayWidth(str) {
   for (const ch of stripped) {
     const cp = ch.codePointAt(0);
     if (
-      (cp >= 0x1100 && cp <= 0x115F) ||
-      (cp >= 0x2E80 && cp <= 0x303E) ||
-      (cp >= 0x3040 && cp <= 0x33BF) ||
-      (cp >= 0x3400 && cp <= 0x4DBF) ||
-      (cp >= 0x4E00 && cp <= 0x9FFF) ||
-      (cp >= 0xA000 && cp <= 0xA4CF) ||
-      (cp >= 0xAC00 && cp <= 0xD7AF) ||
-      (cp >= 0xF900 && cp <= 0xFAFF) ||
-      (cp >= 0xFE30 && cp <= 0xFE6F) ||
-      (cp >= 0xFF01 && cp <= 0xFF60) ||
-      (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-      (cp >= 0x20000 && cp <= 0x2FA1F) ||
-      (cp >= 0x1F300 && cp <= 0x1F9FF)
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0x303e) ||
+      (cp >= 0x3040 && cp <= 0x33bf) ||
+      (cp >= 0x3400 && cp <= 0x4dbf) ||
+      (cp >= 0x4e00 && cp <= 0x9fff) ||
+      (cp >= 0xa000 && cp <= 0xa4cf) ||
+      (cp >= 0xac00 && cp <= 0xd7af) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe30 && cp <= 0xfe6f) ||
+      (cp >= 0xff01 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x20000 && cp <= 0x2fa1f) ||
+      (cp >= 0x1f300 && cp <= 0x1f9ff)
     ) {
       width += 2;
-    } else if (cp >= 0x0300 && cp <= 0x036F) {
+    } else if (cp >= 0x0300 && cp <= 0x036f) {
       width += 0;
     } else {
       width += 1;
@@ -263,7 +390,9 @@ function _computeDisplayWidth(str) {
 let _displayWidthMemo;
 function displayWidth(str) {
   try {
-    if (!_displayWidthMemo) _displayWidthMemo = require('./displayWidthMemo');
+    if (!_displayWidthMemo) {
+      _displayWidthMemo = require('./displayWidthMemo');
+    }
     return _displayWidthMemo.getDisplayWidth(str, _computeDisplayWidth, process.env);
   } catch {
     return _computeDisplayWidth(str);
@@ -293,19 +422,19 @@ function padToWidth(str, targetWidth, fill = ' ') {
 // linear truncation paths so their width accounting stays byte-identical.
 function _isWideCodePoint(cp) {
   return (
-    (cp >= 0x1100 && cp <= 0x115F) ||
-    (cp >= 0x2E80 && cp <= 0x303E) ||
-    (cp >= 0x3040 && cp <= 0x33BF) ||
-    (cp >= 0x3400 && cp <= 0x4DBF) ||
-    (cp >= 0x4E00 && cp <= 0x9FFF) ||
-    (cp >= 0xA000 && cp <= 0xA4CF) ||
-    (cp >= 0xAC00 && cp <= 0xD7AF) ||
-    (cp >= 0xF900 && cp <= 0xFAFF) ||
-    (cp >= 0xFE30 && cp <= 0xFE6F) ||
-    (cp >= 0xFF01 && cp <= 0xFF60) ||
-    (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-    (cp >= 0x20000 && cp <= 0x2FA1F) ||
-    (cp >= 0x1F300 && cp <= 0x1F9FF)
+    (cp >= 0x1100 && cp <= 0x115f) ||
+    (cp >= 0x2e80 && cp <= 0x303e) ||
+    (cp >= 0x3040 && cp <= 0x33bf) ||
+    (cp >= 0x3400 && cp <= 0x4dbf) ||
+    (cp >= 0x4e00 && cp <= 0x9fff) ||
+    (cp >= 0xa000 && cp <= 0xa4cf) ||
+    (cp >= 0xac00 && cp <= 0xd7af) ||
+    (cp >= 0xf900 && cp <= 0xfaff) ||
+    (cp >= 0xfe30 && cp <= 0xfe6f) ||
+    (cp >= 0xff01 && cp <= 0xff60) ||
+    (cp >= 0xffe0 && cp <= 0xffe6) ||
+    (cp >= 0x20000 && cp <= 0x2fa1f) ||
+    (cp >= 0x1f300 && cp <= 0x1f9ff)
   );
 }
 
@@ -330,7 +459,10 @@ function _isWideCodePoint(cp) {
 const _TRUNCATE_ANSI_OFF = ['0', 'false', 'off', 'no'];
 function _truncateAnsiLinearEnabled() {
   return !_TRUNCATE_ANSI_OFF.includes(
-    String((process.env && process.env.KHY_TRUNCATE_ANSI_LINEAR) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_TRUNCATE_ANSI_LINEAR) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // Sticky CSI-SGR matcher: `y` flag anchors at lastIndex without slicing.
@@ -342,7 +474,7 @@ function _truncateToWidthLegacy(str, maxWidth) {
   for (const ch of str) {
     const cp = ch.codePointAt(0);
     // ANSI escape — skip entirely (zero width)
-    if (cp === 0x1B) {
+    if (cp === 0x1b) {
       // Fast-skip ESC[...m sequences
       const rest = str.slice([...str].indexOf(ch));
       const m = rest.match(/^\x1b\[[0-9;]*m/);
@@ -356,9 +488,12 @@ function _truncateToWidthLegacy(str, maxWidth) {
       continue;
     }
     // Combining characters — zero width
-    if (cp >= 0x0300 && cp <= 0x036F) continue;
+    if (cp >= 0x0300 && cp <= 0x036f) {
+      continue;
+    }
     const charWidth = _isWideCodePoint(cp) ? 2 : 1;
-    if (w + charWidth + 3 > maxWidth) { // reserve 3 for '...'
+    if (w + charWidth + 3 > maxWidth) {
+      // reserve 3 for '...'
       result += '...';
       break;
     }
@@ -369,8 +504,12 @@ function _truncateToWidthLegacy(str, maxWidth) {
 }
 
 function truncateToWidth(str, maxWidth) {
-  if (displayWidth(str) <= maxWidth) return str;
-  if (!_truncateAnsiLinearEnabled()) return _truncateToWidthLegacy(str, maxWidth);
+  if (displayWidth(str) <= maxWidth) {
+    return str;
+  }
+  if (!_truncateAnsiLinearEnabled()) {
+    return _truncateToWidthLegacy(str, maxWidth);
+  }
 
   let result = '';
   let w = 0;
@@ -378,9 +517,9 @@ function truncateToWidth(str, maxWidth) {
   const len = str.length;
   while (i < len) {
     const cp = str.codePointAt(i);
-    const chLen = cp > 0xFFFF ? 2 : 1;
+    const chLen = cp > 0xffff ? 2 : 1;
     // ANSI escape — consume the whole CSI-SGR sequence at zero width.
-    if (cp === 0x1B) {
+    if (cp === 0x1b) {
       _CSI_SGR_STICKY.lastIndex = i;
       const m = _CSI_SGR_STICKY.exec(str);
       if (m) {
@@ -393,9 +532,13 @@ function truncateToWidth(str, maxWidth) {
       continue;
     }
     // Combining characters — zero width, dropped (legacy parity).
-    if (cp >= 0x0300 && cp <= 0x036F) { i += chLen; continue; }
+    if (cp >= 0x0300 && cp <= 0x036f) {
+      i += chLen;
+      continue;
+    }
     const charWidth = _isWideCodePoint(cp) ? 2 : 1;
-    if (w + charWidth + 3 > maxWidth) { // reserve 3 for '...'
+    if (w + charWidth + 3 > maxWidth) {
+      // reserve 3 for '...'
       result += '...';
       break;
     }
@@ -411,7 +554,9 @@ function truncateToWidth(str, maxWidth) {
  * cause rendering issues in terminals that don't support full Unicode.
  */
 function safeTerminalString(str) {
-  if (!str || typeof str !== 'string') return '';
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
   // Replace null bytes and other control characters (except newline/tab)
   // eslint-disable-next-line no-control-regex
   return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
@@ -465,7 +610,9 @@ function printErrorPanel(opts) {
         cur = cur ? cur + ' ' + w : w;
       }
     }
-    if (cur) wrapped.push(cur);
+    if (cur) {
+      wrapped.push(cur);
+    }
     return wrapped.length ? wrapped : [''];
   }
 
@@ -522,17 +669,18 @@ function printErrorPanel(opts) {
   lines.push(dim('  ╰' + '─'.repeat(maxW) + '╯'));
 
   console.log('');
-  lines.forEach(l => console.log(l));
+  lines.forEach((l) => console.log(l));
   console.log('');
 }
 
 function printTable(headers, rows) {
-  const plainOutput = process.env.NO_COLOR != null
-    || String(process.env.FORCE_COLOR || '').trim() === '0'
-    || !(process.stdout && process.stdout.isTTY);
+  const plainOutput =
+    process.env.NO_COLOR != null ||
+    String(process.env.FORCE_COLOR || '').trim() === '0' ||
+    !(process.stdout && process.stdout.isTTY);
   try {
     const table = new Table({
-      head: headers.map(h => plainOutput ? String(h) : chalk.cyan(h)),
+      head: headers.map((h) => (plainOutput ? String(h) : chalk.cyan(h))),
       style: {
         'padding-left': 1,
         'padding-right': 1,
@@ -540,7 +688,7 @@ function printTable(headers, rows) {
         border: plainOutput ? [] : ['grey'],
       },
     });
-    rows.forEach(row => table.push(row));
+    rows.forEach((row) => table.push(row));
     const rendered = table.toString();
     console.log(plainOutput ? stripAnsi(rendered) : rendered);
     return;
@@ -549,22 +697,27 @@ function printTable(headers, rows) {
   }
 
   const colCount = headers.length;
-  const normalizedRows = rows.map(row => {
+  const normalizedRows = rows.map((row) => {
     const arr = Array.isArray(row) ? row : [row];
     const out = new Array(colCount).fill('');
-    for (let i = 0; i < colCount; i++) out[i] = String(arr[i] ?? '');
+    for (let i = 0; i < colCount; i++) {
+      out[i] = String(arr[i] ?? '');
+    }
     return out;
   });
 
   const colWidths = headers.map((h, i) => {
     const headerW = displayWidth(String(h));
-    const rowW = normalizedRows.reduce((max, row) => Math.max(max, displayWidth(String(row[i] ?? ''))), 0);
+    const rowW = normalizedRows.reduce(
+      (max, row) => Math.max(max, displayWidth(String(row[i] ?? ''))),
+      0
+    );
     return Math.max(headerW, rowW);
   });
 
-  const top = `  ╭${colWidths.map(w => '─'.repeat(w + 2)).join('┬')}╮`;
-  const mid = `  ├${colWidths.map(w => '─'.repeat(w + 2)).join('┼')}┤`;
-  const bot = `  ╰${colWidths.map(w => '─'.repeat(w + 2)).join('┴')}╯`;
+  const top = `  ╭${colWidths.map((w) => '─'.repeat(w + 2)).join('┬')}╮`;
+  const mid = `  ├${colWidths.map((w) => '─'.repeat(w + 2)).join('┼')}┤`;
+  const bot = `  ╰${colWidths.map((w) => '─'.repeat(w + 2)).join('┴')}╯`;
 
   console.log(plainOutput ? top : chalk.dim(top));
   const headerLine = headers
@@ -573,14 +726,18 @@ function printTable(headers, rows) {
       return ` ${plainOutput ? text : chalk.cyan(text)} `;
     })
     .join(plainOutput ? '│' : chalk.dim('│'));
-  console.log((plainOutput ? '  │' : chalk.dim('  │')) + headerLine + (plainOutput ? '│' : chalk.dim('│')));
+  console.log(
+    (plainOutput ? '  │' : chalk.dim('  │')) + headerLine + (plainOutput ? '│' : chalk.dim('│'))
+  );
   console.log(plainOutput ? mid : chalk.dim(mid));
 
   for (const row of normalizedRows) {
     const rowLine = row
       .map((cell, i) => ` ${padToWidth(String(cell), colWidths[i])} `)
       .join(plainOutput ? '│' : chalk.dim('│'));
-    console.log((plainOutput ? '  │' : chalk.dim('  │')) + rowLine + (plainOutput ? '│' : chalk.dim('│')));
+    console.log(
+      (plainOutput ? '  │' : chalk.dim('  │')) + rowLine + (plainOutput ? '│' : chalk.dim('│'))
+    );
   }
   console.log(plainOutput ? bot : chalk.dim(bot));
 }
@@ -595,10 +752,18 @@ function printQuote(quote) {
   console.log('');
   console.log(`  ${icon} ${chalk.bold(quote.name)} ${chalk.dim('(' + quote.symbol + ')')}`);
   console.log(chalk.dim('  ┌──────────────────────────────────────'));
-  console.log(`  │ 现价  ${color(chalk.bold('¥' + quote.current.toFixed(2)))}  ${color(arrow + ' ' + (change >= 0 ? '+' : '') + changePct.toFixed(2) + '%')}`);
-  console.log(`  │ 开盘  ¥${quote.open.toFixed(2)}  最高  ${chalk.red('¥' + quote.high.toFixed(2))}  最低  ${chalk.green('¥' + quote.low.toFixed(2))}`);
-  console.log(`  │ 昨收  ¥${quote.preClose.toFixed(2)}  成交量  ${chalk.bold(formatVolume(quote.volume))}`);
-  if (quote.date) console.log(`  │ 时间  ${chalk.dim(quote.date + ' ' + (quote.time || ''))}`);
+  console.log(
+    `  │ 现价  ${color(chalk.bold('¥' + quote.current.toFixed(2)))}  ${color(arrow + ' ' + (change >= 0 ? '+' : '') + changePct.toFixed(2) + '%')}`
+  );
+  console.log(
+    `  │ 开盘  ¥${quote.open.toFixed(2)}  最高  ${chalk.red('¥' + quote.high.toFixed(2))}  最低  ${chalk.green('¥' + quote.low.toFixed(2))}`
+  );
+  console.log(
+    `  │ 昨收  ¥${quote.preClose.toFixed(2)}  成交量  ${chalk.bold(formatVolume(quote.volume))}`
+  );
+  if (quote.date) {
+    console.log(`  │ 时间  ${chalk.dim(quote.date + ' ' + (quote.time || ''))}`);
+  }
   console.log(chalk.dim('  └──────────────────────────────────────'));
   console.log('');
 }
@@ -647,24 +812,37 @@ function printBacktestResult(result) {
 }
 
 function safePercent(value, showSign = true) {
-  if (value === undefined || value === null || isNaN(value)) return '-';
+  if (value === undefined || value === null || isNaN(value)) {
+    return '-';
+  }
   const prefix = showSign && value >= 0 ? '+' : '';
   return prefix + Number(value).toFixed(2) + '%';
 }
 
 function safeNum(value, decimals = 2) {
-  if (value === undefined || value === null || isNaN(value)) return '-';
+  if (value === undefined || value === null || isNaN(value)) {
+    return '-';
+  }
   return Number(value).toFixed(decimals);
 }
 
 function formatCurrency(value) {
-  return '¥' + Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    '¥' +
+    Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
 }
 
 function formatVolume(vol) {
-  if (!vol) return '0';
-  if (vol >= 1e8) return (vol / 1e8).toFixed(2) + '亿';
-  if (vol >= 1e4) return (vol / 1e4).toFixed(2) + '万';
+  if (!vol) {
+    return '0';
+  }
+  if (vol >= 1e8) {
+    return (vol / 1e8).toFixed(2) + '亿';
+  }
+  if (vol >= 1e4) {
+    return (vol / 1e4).toFixed(2) + '万';
+  }
   return String(vol);
 }
 
@@ -680,7 +858,10 @@ function printHelp() {
   // Helper: pad ANSI- and CJK-safe (double-width glyphs counted as 2 columns,
   // so right borders stay aligned for Chinese labels).
   const vis = (s) => displayWidth(s);
-  const pad = (s, w) => { const g = Math.max(0, w - vis(s)); return s + ' '.repeat(g); };
+  const pad = (s, w) => {
+    const g = Math.max(0, w - vis(s));
+    return s + ' '.repeat(g);
+  };
   const row = (s) => dim('  │ ') + pad(s, innerW) + dim(' │');
   const emptyRow = () => row('');
 
@@ -692,7 +873,11 @@ function printHelp() {
   const titleDashes = boxW - 2 - displayWidth(titleText);
   const tLeft = Math.floor(titleDashes / 2);
   const tRight = titleDashes - tLeft;
-  console.log(dim(`  ╭${'─'.repeat(Math.max(1, tLeft))}`) + chalk.cyan.bold(titleText) + dim(`${'─'.repeat(Math.max(1, tRight))}╮`));
+  console.log(
+    dim(`  ╭${'─'.repeat(Math.max(1, tLeft))}`) +
+      chalk.cyan.bold(titleText) +
+      dim(`${'─'.repeat(Math.max(1, tRight))}╮`)
+  );
   console.log(emptyRow());
   console.log(row(dim('用法: khy <命令> [参数] [--选项]    AI: 直接输入自然语言即可对话')));
   console.log(emptyRow());
@@ -773,14 +958,50 @@ function printHelp() {
   // Bottom border
   console.log(dim(`  ╰${hr}╯`));
   console.log('');
+
+  // Keybinding cheat sheet (navigation / editing / session controls).
+  printKeybindingsTip();
+}
+
+/**
+ * Print the REPL keybinding cheat sheet, grouped by category.
+ * Inline plain output (Rule 4: no scroll region), styled with chalk.dim/bold
+ * and 2-space indentation to match the rest of the help surface.
+ */
+function printKeybindingsTip() {
+  const dim = chalk.dim;
+  const bold = chalk.bold;
+  const label = (s) => chalk.white(bold(s));
+  console.log(`  ${chalk.cyan.bold('快捷键')}`);
+  console.log(dim('  ' + '─'.repeat(40)));
+  console.log(
+    `    ${label('导航')}  ${dim('Ctrl+A/E 或 Home/End(行首/尾) · ↑/↓(历史回放) · Ctrl+R(反向搜索)')}`
+  );
+  console.log(
+    `    ${label('编辑')}  ${dim('Ctrl+W(删除单词) · Ctrl+D(删除字符/退出) · Ctrl+L(清屏)')}`
+  );
+  console.log(
+    `    ${label('会话')}  ${dim('Ctrl+C ×1(中止请求) / ×3(强制退出) · Esc(中止/返回) · Tab(自动完成)')}`
+  );
+  console.log('');
 }
 
 function _normalizeHelpTopic(input = '') {
-  const key = String(input || '').trim().toLowerCase();
-  if (!key) return null;
-  if (['gateway', 'gw', 'model', 'models', '网关', '模型'].includes(key)) return 'gateway';
-  if (['quant', 'khyquant', 'trade', 'trading', '量化', '交易'].includes(key)) return 'quant';
-  if (['ops', 'doctor', 'devops', '运维', '诊断', '排障'].includes(key)) return 'ops';
+  const key = String(input || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return null;
+  }
+  if (['gateway', 'gw', 'model', 'models', '网关', '模型'].includes(key)) {
+    return 'gateway';
+  }
+  if (['quant', 'khyquant', 'trade', 'trading', '量化', '交易'].includes(key)) {
+    return 'quant';
+  }
+  if (['ops', 'doctor', 'devops', '运维', '诊断', '排障'].includes(key)) {
+    return 'ops';
+  }
   return null;
 }
 
@@ -802,12 +1023,24 @@ function printHelpTopic(topicInput = '') {
       ['gateway status', '查看通道可用性与实测告警'],
       ['gateway status --json', '输出机器可读 JSON（含 endpoint 明细）'],
       ['gateway status --json --endpoints-only', '仅输出 endpoint 明细（快速模式，不做连通探测）'],
-      ['gateway status --json --endpoints-only --provider <name>', '按 provider 过滤 endpoint 明细（支持逗号分隔）'],
-      ['gateway sample codex [--attempts 4] [--timeout-ms 12000] [--json]', '串行采集 Codex strict 样本并汇总 first_chunk / timeout / promptInjected'],
-      ['gateway debug-prompt [--tail 5|--adapter codex|--capsules|--why-full|--json|live|clear]', '查看、实时监听或清空 KHY 协议注入调试日志'],
+      [
+        'gateway status --json --endpoints-only --provider <name>',
+        '按 provider 过滤 endpoint 明细（支持逗号分隔）',
+      ],
+      [
+        'gateway sample codex [--attempts 4] [--timeout-ms 12000] [--json]',
+        '串行采集 Codex strict 样本并汇总 first_chunk / timeout / promptInjected',
+      ],
+      [
+        'gateway debug-prompt [--tail 5|--adapter codex|--capsules|--why-full|--json|live|clear]',
+        '查看、实时监听或清空 KHY 协议注入调试日志',
+      ],
       ['gateway model', '选择默认通道与模型'],
       ['gateway prefer-remote', '一键切换到可用 API/桥接通道'],
-      ['gateway tune-local [auto|fast|balanced|quality] [apply]', '本地模型参数智能匹配并写入 .env'],
+      [
+        'gateway tune-local [auto|fast|balanced|quality] [apply]',
+        '本地模型参数智能匹配并写入 .env',
+      ],
       ['gateway config', '配置网关参数（endpoint/key/timeout）'],
       ['gateway relay', '启动 Web 中转'],
       ['models list|pull|import|set|delete', '管理本地模型（Ollama）'],
@@ -879,7 +1112,9 @@ function printHelpTopic(topicInput = '') {
 
 async function withSpinner(text, fn, { muteOutput = false } = {}) {
   // When TUI is active, skip all spinner stdout — TUI handles display.
-  if (process.stdout.isTTY) return fn();
+  if (process.stdout.isTTY) {
+    return fn();
+  }
   // On Windows, ora's ANSI cursor control conflicts with readline in REPL mode,
   // causing all output to be swallowed. Use a simple text fallback instead.
   const useSimpleSpinner = process.platform === 'win32' && process.stdin.isTTY;
@@ -889,8 +1124,12 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
     // Simple fallback: just print the text, no animated spinner
     process.stdout.write(chalk.cyan(`  ◌ ${text}...`));
     spinner = {
-      succeed: (msg) => { process.stdout.write('\r' + chalk.green(`  ✓ ${msg || text}`) + '\n'); },
-      fail: (msg) => { process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n'); },
+      succeed: (msg) => {
+        process.stdout.write('\r' + chalk.green(`  ✓ ${msg || text}`) + '\n');
+      },
+      fail: (msg) => {
+        process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n');
+      },
     };
   } else {
     try {
@@ -902,8 +1141,12 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
       // ora dynamic import may fail — fall back to simple text spinner
       process.stdout.write(chalk.cyan(`  ◌ ${text}`));
       spinner = {
-        succeed: (msg) => { process.stdout.write('\r' + chalk.green(`  ✓ ${msg || text}`) + '\n'); },
-        fail: (msg) => { process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n'); },
+        succeed: (msg) => {
+          process.stdout.write('\r' + chalk.green(`  ✓ ${msg || text}`) + '\n');
+        },
+        fail: (msg) => {
+          process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n');
+        },
       };
     }
   }
@@ -922,18 +1165,24 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
       const logger = require('../utils/logger');
       origLogLevel = logger.level;
       logger.level = 'silent';
-    } catch { /* logger not available */ }
+    } catch {
+      /* logger not available */
+    }
   }
 
   const restore = () => {
-    if (!muteOutput) return;
+    if (!muteOutput) {
+      return;
+    }
     console.log = origLog;
     console.warn = origWarn;
     console.error = origError;
     try {
       const logger = require('../utils/logger');
       logger.level = origLogLevel || 'info';
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   try {
@@ -983,9 +1232,8 @@ function printLiteBanner(version, aiProvider) {
 
   const cwd = process.cwd();
   const home = os.homedir();
-  const cwdShort = cwd === home
-    ? '~'
-    : (cwd.startsWith(home + path.sep) ? '~' + cwd.slice(home.length) : cwd);
+  const cwdShort =
+    cwd === home ? '~' : cwd.startsWith(home + path.sep) ? '~' + cwd.slice(home.length) : cwd;
   const ver = version || require('../../package.json').version;
 
   let modelName = '';
@@ -993,15 +1241,16 @@ function printLiteBanner(version, aiProvider) {
     const gateway = require('../services/gateway/aiGateway');
     const active = gateway.getActiveAdapter();
     modelName = active?.activeModel || '';
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   const providerText = String(aiProvider || 'AI');
   const modelText = String(modelName || '');
-  const providerPart = (
+  const providerPart =
     modelText && !providerText.toLowerCase().includes(modelText.toLowerCase())
-  )
-    ? `${modelText} · ${providerText}`
-    : providerText;
+      ? `${modelText} · ${providerText}`
+      : providerText;
 
   const petLines = getClassicMonsterPetLines(orange);
 
@@ -1025,6 +1274,7 @@ module.exports = {
   printQuote,
   printBacktestResult,
   printHelp,
+  printKeybindingsTip,
   printHelpTopic,
   printDivider,
   // Formatting helpers
@@ -1032,6 +1282,7 @@ module.exports = {
   formatVolume,
   stripAnsi,
   displayWidth,
+  getTerminalColumns,
   padToWidth,
   truncateToWidth,
   _truncateAnsiLinearEnabled,

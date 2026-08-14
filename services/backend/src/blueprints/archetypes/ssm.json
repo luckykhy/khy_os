@@ -27,7 +27,7 @@
   "verify": [
     "mvn -q -DskipTests package  # 能编译打包",
     "docker compose up --build   # db+app 一起起",
-    "curl -s localhost:8080/api/users  # 返回 JSON 数组"
+    "curl -s http://localhost:${PORT:-8080}/api/users  # 返回 JSON 数组"
   ],
   "milestones": [
     {

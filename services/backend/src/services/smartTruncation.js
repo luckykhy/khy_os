@@ -237,7 +237,9 @@ function registerProfile(toolName, profile) {
  */
 function _filterShellOutput(text, targetLen) {
   const lines = text.split('\n');
-  if (lines.length <= 30) return text;
+  if (lines.length <= 30) {
+    return text;
+  }
 
   const headLines = 5;
   const head = lines.slice(0, headLines);
@@ -267,10 +269,17 @@ function _filterShellOutput(text, targetLen) {
 
 /**
  * Search output: deduplicate file paths, collapse repetitive matches.
+ *
+ * 降损改进:过滤后若仍超预算,不再盲目 slice(0, targetLen)(那会从头部截断、
+ * 丢掉尾部的错误/汇总行——搜索工具的错误与结论恰恰常在最后几行)。改为
+ * 「头部保留 + 尾部保留」策略:头部折叠后的匹配 + 尾部的非匹配行(错误、汇总、
+ * 摘要)都保留,中间部分用省略标记。信号密度与可交付性显著高于单一头部截断。
  */
 function _filterSearchOutput(text, targetLen) {
   const lines = text.split('\n');
-  if (lines.length <= 50) return text;
+  if (lines.length <= 50) {
+    return text;
+  }
 
   // Track seen file prefixes to collapse repetitive matches
   const seenFiles = new Map();
@@ -284,7 +293,7 @@ function _filterSearchOutput(text, targetLen) {
     let colonIdx;
     try {
       const idx = require('./grepWindowsDriveKey').resolveGrepSeparatorIndex(line, process.env);
-      colonIdx = (idx == null) ? line.indexOf(':') : idx;
+      colonIdx = idx == null ? line.indexOf(':') : idx;
     } catch {
       colonIdx = line.indexOf(':');
     }
@@ -306,7 +315,13 @@ function _filterSearchOutput(text, targetLen) {
   }
 
   const result = filtered.join('\n');
-  return result.length <= targetLen ? result : result.slice(0, targetLen);
+  if (result.length <= targetLen) {
+    return result;
+  }
+
+  // 降损改进:不盲目 slice(0, targetLen) 丢尾部(错误/汇总在尾部),
+  // 而是头部 + 尾部保留 + 中间省略标记(共享实现,见 _headTailCut)。
+  return _headTailCut(result, targetLen);
 }
 
 /**
@@ -314,7 +329,9 @@ function _filterSearchOutput(text, targetLen) {
  */
 function _filterFileList(text, targetLen) {
   const lines = text.split('\n');
-  if (text.length <= targetLen) return text;
+  if (text.length <= targetLen) {
+    return text;
+  }
 
   const keepLines = Math.floor(targetLen / 60); // avg 60 chars per path
   const kept = lines.slice(0, keepLines);
@@ -338,14 +355,18 @@ function _filterTestOutput(text, targetLen) {
     const lower = line.toLowerCase();
 
     // Always keep failure blocks
-    if (/\b(fail|error|assert|expect|throw)\b/i.test(line) ||
-        /^\s*(✕|✗|×|FAIL|ERROR|AssertionError)/i.test(line)) {
+    if (
+      /\b(fail|error|assert|expect|throw)\b/i.test(line) ||
+      /^\s*(✕|✗|×|FAIL|ERROR|AssertionError)/i.test(line)
+    ) {
       inFailure = true;
     }
 
     // Always keep summary lines
-    if (/\b(test suites?|tests?\s+passed|tests?\s+failed|total|duration|coverage)\b/i.test(line) ||
-        /^(Tests|Suites|Time|Snapshots):/.test(line.trim())) {
+    if (
+      /\b(test suites?|tests?\s+passed|tests?\s+failed|total|duration|coverage)\b/i.test(line) ||
+      /^(Tests|Suites|Time|Snapshots):/.test(line.trim())
+    ) {
       result.push(line);
       inFailure = false;
       continue;
@@ -375,7 +396,49 @@ function _filterTestOutput(text, targetLen) {
   }
 
   const output = result.join('\n');
-  return output.length <= targetLen ? output : output.slice(0, targetLen);
+  if (output.length <= targetLen) {
+    return output;
+  }
+
+  // 降损改进(与 _filterSearchOutput 一致):不盲目 slice(0, targetLen) 丢尾部,
+  // 而是头部保留 + 尾部保留 + 中间省略标记。测试失败详情与总览常在尾部,
+  // 尾部丢失会让「哪些用例失败、为什么」不可见,直接损害可交付性。
+  return _headTailCut(output, targetLen);
+}
+
+/**
+ * Head + tail preservation cut shared by search/test/build filters:
+ * keep the leading content and the trailing lines, omit the repetitive
+ * middle with an explicit marker. Guaranteed to terminate (idx strictly
+ * decreases) and to never drop the last lines of the output.
+ *
+ * @param {string} text - filtered output that still exceeds the budget
+ * @param {number} targetLen - preferred max length
+ * @returns {string}
+ */
+function _headTailCut(text, targetLen) {
+  const headLen = Math.floor(targetLen * 0.7);
+  const tailBudget = Math.max(60, targetLen - headLen - 60);
+  const head = text.slice(0, headLen);
+  let tail = '';
+  let tailChars = 0;
+  let idx = text.length;
+  while (idx > 0 && tailChars < tailBudget) {
+    const nl = text.lastIndexOf('\n', idx - 1);
+    const line = text.slice(nl + 1, idx);
+    if (line.length === 0) {
+      idx = nl;
+      continue;
+    }
+    if (tailChars + line.length > tailBudget) {
+      break;
+    }
+    tail = line + tail;
+    tailChars += line.length;
+    idx = nl;
+  }
+  const omitted = text.length - head.length - tail.length;
+  return `${head}\n... [${omitted} chars omitted — showing first and trailing output]\n${tail}`;
 }
 
 /**
@@ -404,14 +467,22 @@ function _filterBuildOutput(text, targetLen) {
   ];
 
   const output = parts.join('\n');
-  return output.length <= targetLen ? output : output.slice(0, targetLen);
+  if (output.length <= targetLen) {
+    return output;
+  }
+  // 降损改进:尾部保留(最后 10 行构建摘要)不被 slice(0, targetLen) 切掉。
+  return _headTailCut(output, targetLen);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function _isImportantLine(line) {
-  if (!line || typeof line !== 'string') return false;
-  return /\b(error|warn(ing)?|fail(ed|ure)?|panic|fatal|exception|cannot|undefined|ENOENT|EACCES|EPERM|ENOTFOUND|TypeError|SyntaxError|ReferenceError)\b/i.test(line);
+  if (!line || typeof line !== 'string') {
+    return false;
+  }
+  return /\b(error|warn(ing)?|fail(ed|ure)?|panic|fatal|exception|cannot|undefined|ENOENT|EACCES|EPERM|ENOTFOUND|TypeError|SyntaxError|ReferenceError)\b/i.test(
+    line
+  );
 }
 
 function _findNewlineBefore(text, pos) {

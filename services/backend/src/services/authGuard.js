@@ -25,7 +25,11 @@ const FEATURE_ACCESS_RULES = Object.freeze([
     loginRequired: false,
     label: buildProxyFeatureLabel(),
   },
-  { re: buildFeatureFamilyPrefixRegex('ide', 'families'), loginRequired: false, label: buildIdeAdapterFeatureLabel() },
+  {
+    re: buildFeatureFamilyPrefixRegex('ide', 'families'),
+    loginRequired: false,
+    label: buildIdeAdapterFeatureLabel(),
+  },
 ]);
 
 function getCliAuth() {
@@ -41,7 +45,9 @@ function getCliAuth() {
 function hasValidSession() {
   try {
     const cliAuth = getCliAuth();
-    if (!cliAuth || typeof cliAuth.checkSession !== 'function') return false;
+    if (!cliAuth || typeof cliAuth.checkSession !== 'function') {
+      return false;
+    }
     const session = cliAuth.checkSession();
     return !!(session && session.loggedIn);
   } catch {
@@ -50,7 +56,9 @@ function hasValidSession() {
 }
 
 function requireLogin(featureName = 'this feature') {
-  if (hasValidSession()) return { ok: true };
+  if (hasValidSession()) {
+    return { ok: true };
+  }
   return {
     ok: false,
     error: `Login required for ${featureName}. Please run login first.`,
@@ -59,9 +67,11 @@ function requireLogin(featureName = 'this feature') {
 }
 
 function getFeatureAccess(featureKey = '', fallbackLabel = '') {
-  const normalized = String(featureKey || '').trim().toLowerCase();
+  const normalized = String(featureKey || '')
+    .trim()
+    .toLowerCase();
   const fallback = String(fallbackLabel || '').trim() || 'this feature';
-  const matched = FEATURE_ACCESS_RULES.find(rule => rule.re.test(normalized));
+  const matched = FEATURE_ACCESS_RULES.find((rule) => rule.re.test(normalized));
   if (!matched) {
     return {
       featureKey: normalized,

@@ -31,7 +31,9 @@ function _asyncRefreshEnabled() {
     return require('./flagRegistry').isFlagEnabled('KHY_GIT_CONTEXT_ASYNC_REFRESH', process.env);
   } catch {
     const raw = process.env.KHY_GIT_CONTEXT_ASYNC_REFRESH;
-    if (raw === undefined || raw === null || raw === '') return true;
+    if (raw === undefined || raw === null || raw === '') {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -134,13 +136,19 @@ function _detectMainBranch(cwd) {
   const remoteHead = _git('symbolic-ref refs/remotes/origin/HEAD', cwd);
   if (remoteHead) {
     const match = remoteHead.match(/refs\/remotes\/origin\/(.+)/);
-    if (match) return match[1];
+    if (match) {
+      return match[1];
+    }
   }
   // Fallback: check if main or master exists
   const branches = _git('branch --list main master', cwd);
   if (branches) {
-    if (branches.includes('main')) return 'main';
-    if (branches.includes('master')) return 'master';
+    if (branches.includes('main')) {
+      return 'main';
+    }
+    if (branches.includes('master')) {
+      return 'master';
+    }
   }
   return 'main';
 }
@@ -166,7 +174,7 @@ function _emptyContext() {
  */
 function _assembleContext(raw) {
   const status = raw.status || '';
-  const isDirty = status.split('\n').some(line => line.length > 0 && !line.startsWith('##'));
+  const isDirty = status.split('\n').some((line) => line.length > 0 && !line.startsWith('##'));
   let stagedDiff = raw.stagedDiff || '';
   if (stagedDiff && stagedDiff.length > MAX_DIFF_CHARS) {
     stagedDiff = stagedDiff.slice(0, MAX_DIFF_CHARS) + '\n... (truncated)';
@@ -218,12 +226,18 @@ async function _detectMainBranchAsync(cwd) {
   const remoteHead = await _gitAsync('symbolic-ref refs/remotes/origin/HEAD', cwd);
   if (remoteHead) {
     const match = remoteHead.match(/refs\/remotes\/origin\/(.+)/);
-    if (match) return match[1];
+    if (match) {
+      return match[1];
+    }
   }
   const branches = await _gitAsync('branch --list main master', cwd);
   if (branches) {
-    if (branches.includes('main')) return 'main';
-    if (branches.includes('master')) return 'master';
+    if (branches.includes('main')) {
+      return 'main';
+    }
+    if (branches.includes('master')) {
+      return 'master';
+    }
   }
   return 'main';
 }
@@ -236,11 +250,16 @@ async function _detectMainBranchAsync(cwd) {
  * @returns {Promise<void>}
  */
 async function _refreshInBackground(cwd) {
-  if (_refreshInFlightCwd === cwd) return; // already refreshing this cwd
+  if (_refreshInFlightCwd === cwd) {
+    return;
+  } // already refreshing this cwd
   _refreshInFlightCwd = cwd;
   try {
     const root = await _gitAsync('rev-parse --show-toplevel', cwd);
-    if (!root) { _storeCache(_emptyContext(), cwd); return; }
+    if (!root) {
+      _storeCache(_emptyContext(), cwd);
+      return;
+    }
     const [branch, mainBranch, status, recentLog, stagedDiff] = await Promise.all([
       _gitAsync('rev-parse --abbrev-ref HEAD', cwd),
       _detectMainBranchAsync(cwd),
@@ -270,7 +289,7 @@ function collectGitContext(cwd, options = {}) {
   const ttl = options.ttlMs || DEFAULT_TTL_MS;
 
   // Check cache
-  if (!options.force && _cache && _cacheCwd === cwd && (Date.now() - _cacheTime) < ttl) {
+  if (!options.force && _cache && _cacheCwd === cwd && Date.now() - _cacheTime < ttl) {
     return _cache;
   }
 
@@ -281,7 +300,9 @@ function collectGitContext(cwd, options = {}) {
   // collection every miss (byte-identical).
   if (!options.force && _cache && _cacheCwd === cwd && _asyncRefreshEnabled()) {
     // Fire-and-forget; _refreshInBackground is self-deduplicating and never throws.
-    Promise.resolve().then(() => _refreshInBackground(cwd)).catch(() => {});
+    Promise.resolve()
+      .then(() => _refreshInBackground(cwd))
+      .catch(() => {});
     return _cache;
   }
 
@@ -313,7 +334,9 @@ function collectGitContext(cwd, options = {}) {
  * @returns {string}
  */
 function formatForSystemPrompt(ctx) {
-  if (!ctx || !ctx.isGitRepo) return '';
+  if (!ctx || !ctx.isGitRepo) {
+    return '';
+  }
 
   const lines = [
     '# Git Context',

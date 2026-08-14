@@ -33,7 +33,9 @@ const JVM_UTF8_PROPS = [
 ];
 
 function isDisabled() {
-  const flag = String(process.env.KHY_WIN_FORCE_UTF8 || '').trim().toLowerCase();
+  const flag = String(process.env.KHY_WIN_FORCE_UTF8 || '')
+    .trim()
+    .toLowerCase();
   return flag === '0' || flag === 'false' || flag === 'off' || flag === 'no';
 }
 
@@ -72,7 +74,9 @@ function jdkToolFlags() {
  * @returns {Record<string,string>}
  */
 function buildToolEnv(baseEnv = process.env) {
-  if (isDisabled()) return {};
+  if (isDisabled()) {
+    return {};
+  }
   const add = JVM_UTF8_PROPS.join(' ');
   const merge = (key) => {
     const prev = baseEnv && baseEnv[key];

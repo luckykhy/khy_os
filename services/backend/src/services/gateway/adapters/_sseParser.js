@@ -23,18 +23,29 @@ function consumeSseText(text = '', onChunk = null) {
 
   for (const lineRaw of chunks) {
     const line = String(lineRaw || '').trim();
-    if (!line || !line.startsWith('data:')) continue;
+    if (!line || !line.startsWith('data:')) {
+      continue;
+    }
     const data = line.slice(5).trim();
-    if (!data || data === '[DONE]') continue;
+    if (!data || data === '[DONE]') {
+      continue;
+    }
     try {
       const obj = JSON.parse(data);
       const delta = obj?.choices?.[0]?.delta?.content;
-      const textPart = typeof delta === 'string'
-        ? delta
-        : (typeof obj?.choices?.[0]?.message?.content === 'string' ? obj.choices[0].message.content : '');
-      if (!textPart) continue;
+      const textPart =
+        typeof delta === 'string'
+          ? delta
+          : typeof obj?.choices?.[0]?.message?.content === 'string'
+            ? obj.choices[0].message.content
+            : '';
+      if (!textPart) {
+        continue;
+      }
       full += textPart;
-      if (typeof onChunk === 'function') onChunk({ type: 'text', text: textPart });
+      if (typeof onChunk === 'function') {
+        onChunk({ type: 'text', text: textPart });
+      }
     } catch {
       // 容忍非 JSON 的 SSE 行
     }
@@ -53,7 +64,9 @@ function consumeSseText(text = '', onChunk = null) {
  * @returns {string} 本次调用中提取的文本（不含累计）
  */
 function consumeSseIncremental(state, incomingText = '', onChunk = null) {
-  if (!state) return '';
+  if (!state) {
+    return '';
+  }
   state.buffer = (state.buffer || '') + String(incomingText || '');
   let out = '';
 
@@ -64,7 +77,7 @@ function consumeSseIncremental(state, incomingText = '', onChunk = null) {
     let sepLen = 0;
     if (lf >= 0 && crlf >= 0) {
       idx = Math.min(lf, crlf);
-      sepLen = (idx === crlf) ? 4 : 2;
+      sepLen = idx === crlf ? 4 : 2;
     } else if (lf >= 0) {
       idx = lf;
       sepLen = 2;
@@ -72,7 +85,9 @@ function consumeSseIncremental(state, incomingText = '', onChunk = null) {
       idx = crlf;
       sepLen = 4;
     }
-    if (idx < 0) break;
+    if (idx < 0) {
+      break;
+    }
 
     const block = state.buffer.slice(0, idx);
     state.buffer = state.buffer.slice(idx + sepLen);
@@ -91,7 +106,9 @@ function consumeSseIncremental(state, incomingText = '', onChunk = null) {
  * @returns {string}
  */
 function flushSseIncremental(state, onChunk = null) {
-  if (!state) return '';
+  if (!state) {
+    return '';
+  }
   const out = consumeSseText(state.buffer, onChunk);
   state.buffer = '';
   return out;

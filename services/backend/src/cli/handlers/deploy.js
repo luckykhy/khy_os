@@ -11,14 +11,14 @@
 
 // ── Imports ──
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 const chalkModule = require('chalk');
 const chalk = chalkModule.default || chalkModule;
 
-const { printError, printInfo, printSuccess, printWarn, printTable } = require('../formatters');
 const { safeKill } = require('../../tools/platformUtils');
+const { printError, printInfo, printSuccess, printWarn, printTable } = require('../formatters');
 
 // ── Constants ──
 
@@ -61,7 +61,9 @@ function renderSteps(result) {
     const detail = String(step.detail || '');
     if (detail.includes('\n')) {
       console.log(`  ${head}`);
-      for (const line of detail.split('\n')) console.log(`      ${chalk.gray(line)}`);
+      for (const line of detail.split('\n')) {
+        console.log(`      ${chalk.gray(line)}`);
+      }
     } else {
       console.log(`  ${head}  ${chalk.gray(detail)}`);
     }
@@ -105,7 +107,9 @@ async function runDeploy(args, options) {
 
   if (result.status === 'running') {
     printSuccess(`部署完成并已启动: ${result.name} (pid ${result.pid})`);
-    if (result.port) printInfo(`端口: ${result.port}`);
+    if (result.port) {
+      printInfo(`端口: ${result.port}`);
+    }
     printInfo(`日志: khy deploy logs ${result.name}`);
     printInfo(`停止: khy deploy stop ${result.name}`);
   } else {
@@ -116,7 +120,9 @@ async function runDeploy(args, options) {
     }
   }
   if (result.notes && result.notes.length) {
-    for (const note of result.notes) printWarn(note);
+    for (const note of result.notes) {
+      printWarn(note);
+    }
   }
   return true;
 }
@@ -124,12 +130,16 @@ async function runDeploy(args, options) {
 function resolveOne(name) {
   const ledger = lazyLedger();
   const records = ledger.listReconciled();
-  if (records.length === 0) return { error: '尚无部署记录' };
+  if (records.length === 0) {
+    return { error: '尚无部署记录' };
+  }
   if (name) {
     const rec = records.find((r) => r.name === name);
     return rec ? { rec } : { error: `未找到部署: ${name}` };
   }
-  if (records.length === 1) return { rec: records[0] };
+  if (records.length === 1) {
+    return { rec: records[0] };
+  }
   return { error: '存在多个部署，请指定名称 (khy deploy list)' };
 }
 
@@ -148,25 +158,33 @@ async function runList() {
       r.pid ? String(r.pid) : '-',
       r.port ? String(r.port) : '-',
       r.target,
-    ]),
+    ])
   );
   return true;
 }
 
 function colorStatus(status) {
   switch (status) {
-    case 'running': return chalk.green(status);
-    case 'deployed': return chalk.cyan(status);
+    case 'running':
+      return chalk.green(status);
+    case 'deployed':
+      return chalk.cyan(status);
     case 'stopped':
-    case 'exited': return chalk.yellow(status);
-    case 'failed': return chalk.red(status);
-    default: return status || '-';
+    case 'exited':
+      return chalk.yellow(status);
+    case 'failed':
+      return chalk.red(status);
+    default:
+      return status || '-';
   }
 }
 
 async function runStatus(args) {
   const { rec, error } = resolveOne(args[0]);
-  if (error) { printError(error); return true; }
+  if (error) {
+    printError(error);
+    return true;
+  }
   printTable(
     ['项目', '值'],
     [
@@ -180,14 +198,17 @@ async function runStatus(args) {
       ['启动命令', rec.startCmd || '-'],
       ['日志', rec.logFile || '-'],
       ['最近启动', rec.startedAt || '-'],
-    ],
+    ]
   );
   return true;
 }
 
 async function runStop(args) {
   const { rec, error } = resolveOne(args[0]);
-  if (error) { printError(error); return true; }
+  if (error) {
+    printError(error);
+    return true;
+  }
   if (!rec.pid) {
     printWarn(`部署 ${rec.name} 没有运行中的进程`);
     return true;
@@ -207,7 +228,10 @@ async function runStop(args) {
 
 async function runLogs(args, options) {
   const { rec, error } = resolveOne(args[0]);
-  if (error) { printError(error); return true; }
+  if (error) {
+    printError(error);
+    return true;
+  }
   if (!rec.logFile || !fs.existsSync(rec.logFile)) {
     printWarn(`部署 ${rec.name} 暂无日志文件`);
     return true;
@@ -235,18 +259,28 @@ async function handleDeploy(parsed = {}) {
   const options = parsed.options || {};
   const sub = String(parsed.subCommand || '').toLowerCase();
 
-  if (sub === 'help' || options.help) { printUsage(); return true; }
-  if (sub === 'list') return runList();
-  if (sub === 'status') return runStatus(args);
-  if (sub === 'stop') return runStop(args);
-  if (sub === 'logs') return runLogs(args, options);
+  if (sub === 'help' || options.help) {
+    printUsage();
+    return true;
+  }
+  if (sub === 'list') {
+    return runList();
+  }
+  if (sub === 'status') {
+    return runStatus(args);
+  }
+  if (sub === 'stop') {
+    return runStop(args);
+  }
+  if (sub === 'logs') {
+    return runLogs(args, options);
+  }
 
   // No recognised sub-command → treat the whole tail as a deploy invocation.
   // `subCommand` may actually be the target path (router splits the 2nd token),
   // so fold it back into args when it is not a known verb.
-  const deployArgs = (parsed.subCommand && !SUB_COMMANDS.has(sub))
-    ? [parsed.subCommand, ...args]
-    : args;
+  const deployArgs =
+    parsed.subCommand && !SUB_COMMANDS.has(sub) ? [parsed.subCommand, ...args] : args;
   return runDeploy(deployArgs, options);
 }
 

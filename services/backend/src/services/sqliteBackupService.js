@@ -3,6 +3,7 @@
  * Provides read-only fallback when PostgreSQL is unavailable.
  */
 const path = require('path');
+
 const logger = require('../utils/logger');
 
 const DB_PATH = path.join(__dirname, '../../data/backup.sqlite');
@@ -40,7 +41,9 @@ class SqliteBackupService {
       this.available = true;
       logger.info('SQLite backup service initialized', { path: DB_PATH });
     } catch (err) {
-      logger.warn('SQLite backup unavailable (better-sqlite3 may not be installed)', { error: err.message });
+      logger.warn('SQLite backup unavailable (better-sqlite3 may not be installed)', {
+        error: err.message,
+      });
       this.available = false;
     }
   }
@@ -49,7 +52,9 @@ class SqliteBackupService {
    * Bulk insert kline data into SQLite
    */
   backupKlineData(symbol, period, rows) {
-    if (!this.available || !rows?.length) return 0;
+    if (!this.available || !rows?.length) {
+      return 0;
+    }
 
     const insert = this.db.prepare(`
       INSERT OR REPLACE INTO kline_backup
@@ -60,7 +65,17 @@ class SqliteBackupService {
     const tx = this.db.transaction((data) => {
       let count = 0;
       for (const r of data) {
-        insert.run(symbol, period, r.date || r.trade_date, r.open, r.high, r.low, r.close, r.volume, r.amount || 0);
+        insert.run(
+          symbol,
+          period,
+          r.date || r.trade_date,
+          r.open,
+          r.high,
+          r.low,
+          r.close,
+          r.volume,
+          r.amount || 0
+        );
         count++;
       }
       return count;
@@ -73,25 +88,33 @@ class SqliteBackupService {
    * Query kline data from SQLite backup
    */
   getKlineData(symbol, period, startDate, endDate, limit = 1000) {
-    if (!this.available) return [];
+    if (!this.available) {
+      return [];
+    }
 
     let sql = 'SELECT * FROM kline_backup WHERE symbol = ? AND period = ?';
     const params = [symbol, period];
 
-    if (startDate) { sql += ' AND trade_date >= ?'; params.push(startDate); }
-    if (endDate) { sql += ' AND trade_date <= ?'; params.push(endDate); }
+    if (startDate) {
+      sql += ' AND trade_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      sql += ' AND trade_date <= ?';
+      params.push(endDate);
+    }
     sql += ' ORDER BY trade_date ASC LIMIT ?';
     params.push(limit);
 
     const rows = this.db.prepare(sql).all(...params);
-    return rows.map(r => ({
+    return rows.map((r) => ({
       date: r.trade_date,
       open: r.open_price,
       high: r.high_price,
       low: r.low_price,
       close: r.close_price,
       volume: r.volume,
-      amount: r.amount
+      amount: r.amount,
     }));
   }
 

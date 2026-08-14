@@ -16,11 +16,12 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+
 const lifecycle = require('./memoryLifecycle');
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const LIGHT_INTERVAL_MS = 6 * 3600_000;         // 6 hours
+const LIGHT_INTERVAL_MS = 6 * 3600_000; // 6 hours
 const LIGHT_LOOKBACK_DAYS = 2;
 const LIGHT_LIMIT = 100;
 const LIGHT_DEDUPE_SIMILARITY = 0.9;
@@ -72,8 +73,9 @@ class MemoryDreaming {
   constructor(opts = {}) {
     this._gateway = opts.gateway || null;
     this._storePath = opts.storePath || null;
-    this._archivePath = opts.archivePath
-      || (this._storePath ? path.join(path.dirname(this._storePath), 'dream-archive.json') : null);
+    this._archivePath =
+      opts.archivePath ||
+      (this._storePath ? path.join(path.dirname(this._storePath), 'dream-archive.json') : null);
     this._onPhaseComplete = opts.onPhaseComplete || null;
     this._logger = opts.logger || console;
     this._memories = [];
@@ -85,7 +87,9 @@ class MemoryDreaming {
    * Load memories from disk.
    */
   load() {
-    if (!this._storePath) return;
+    if (!this._storePath) {
+      return;
+    }
     try {
       if (fs.existsSync(this._storePath)) {
         this._memories = JSON.parse(fs.readFileSync(this._storePath, 'utf-8'));
@@ -118,13 +122,19 @@ class MemoryDreaming {
    * @param {string} stage - terminal stage recorded (pruned|compressed)
    */
   _archiveMemory(entry, stage) {
-    if (!this._archivePath) return;
+    if (!this._archivePath) {
+      return;
+    }
     try {
       const dir = path.dirname(this._archivePath);
       fs.mkdirSync(dir, { recursive: true });
       let archive = [];
       if (fs.existsSync(this._archivePath)) {
-        try { archive = JSON.parse(fs.readFileSync(this._archivePath, 'utf-8')) || []; } catch { archive = []; }
+        try {
+          archive = JSON.parse(fs.readFileSync(this._archivePath, 'utf-8')) || [];
+        } catch {
+          archive = [];
+        }
       }
       archive.push({ ...entry, lifecycle: stage, archivedAt: Date.now() });
       fs.writeFileSync(this._archivePath, JSON.stringify(archive, null, 2));
@@ -142,8 +152,12 @@ class MemoryDreaming {
    * @returns {boolean} whether the entry was removed from the active set
    */
   _retireMemory(entry, stage = lifecycle.LIFECYCLE.PRUNED) {
-    if (!entry) return false;
-    const from = lifecycle.isLifecycleStage(entry.lifecycle) ? entry.lifecycle : lifecycle.LIFECYCLE.ACTIVE;
+    if (!entry) {
+      return false;
+    }
+    const from = lifecycle.isLifecycleStage(entry.lifecycle)
+      ? entry.lifecycle
+      : lifecycle.LIFECYCLE.ACTIVE;
     const target = lifecycle.canTransition(from, stage) ? stage : lifecycle.LIFECYCLE.PRUNED;
     entry.lifecycle = target;
     this._archiveMemory(entry, target);
@@ -159,7 +173,9 @@ class MemoryDreaming {
    * Persist memories to disk.
    */
   save() {
-    if (!this._storePath) return;
+    if (!this._storePath) {
+      return;
+    }
     try {
       const dir = path.dirname(this._storePath);
       fs.mkdirSync(dir, { recursive: true });
@@ -206,8 +222,10 @@ class MemoryDreaming {
    * Record a recall event (memory was accessed by a query).
    */
   recordRecall(memoryId, query) {
-    const mem = this._memories.find(m => m.id === memoryId);
-    if (!mem) return;
+    const mem = this._memories.find((m) => m.id === memoryId);
+    if (!mem) {
+      return;
+    }
     mem.recallCount++;
     if (query && !mem.queries.includes(query)) {
       mem.queries.push(query);
@@ -228,7 +246,7 @@ class MemoryDreaming {
 
     // Collect recent memories from light sources
     const recent = this._memories
-      .filter(m => m.createdAt >= cutoff && ['daily', 'session', 'recall'].includes(m.source))
+      .filter((m) => m.createdAt >= cutoff && ['daily', 'session', 'recall'].includes(m.source))
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, LIGHT_LIMIT);
 
@@ -243,10 +261,12 @@ class MemoryDreaming {
     let dropped = 0;
 
     for (const cluster of clusters) {
-      if (cluster.length <= 1) continue;
+      if (cluster.length <= 1) {
+        continue;
+      }
 
       // Keep the entry with highest score/recallCount
-      cluster.sort((a, b) => (b.score + b.recallCount) - (a.score + a.recallCount));
+      cluster.sort((a, b) => b.score + b.recallCount - (a.score + a.recallCount));
       const keeper = cluster[0];
 
       // Consolidate metadata from duplicates
@@ -254,7 +274,9 @@ class MemoryDreaming {
         const dup = cluster[i];
         keeper.recallCount += dup.recallCount;
         for (const q of dup.queries) {
-          if (!keeper.queries.includes(q)) keeper.queries.push(q);
+          if (!keeper.queries.includes(q)) {
+            keeper.queries.push(q);
+          }
         }
         // Losslessly retire the duplicate: archived as `compressed` (folded into
         // keeper), removed from the active set but never physically destroyed.
@@ -270,7 +292,9 @@ class MemoryDreaming {
     this.save();
 
     const stats = { merged, kept: recent.length - dropped, dropped };
-    if (this._onPhaseComplete) this._onPhaseComplete('light', stats);
+    if (this._onPhaseComplete) {
+      this._onPhaseComplete('light', stats);
+    }
     return stats;
   }
 
@@ -296,22 +320,30 @@ class MemoryDreaming {
 
     // Select candidates for deep synthesis
     const candidates = this._memories
-      .filter(m => {
+      .filter((m) => {
         const ageDays = (now - m.createdAt) / 86400_000;
-        if (ageDays > DEEP_MAX_AGE_DAYS) return false;
-        if (m.phase === 'deep' || m.phase === 'pattern') return false;
+        if (ageDays > DEEP_MAX_AGE_DAYS) {
+          return false;
+        }
+        if (m.phase === 'deep' || m.phase === 'pattern') {
+          return false;
+        }
 
         // Health-weighted score with recency decay
         const recencyFactor = Math.pow(0.5, ageDays / DEEP_RECENCY_HALF_LIFE_DAYS);
         const adjustedScore = m.score * recencyFactor;
 
-        return adjustedScore >= DEEP_MIN_SCORE
-          && m.recallCount >= DEEP_MIN_RECALL_COUNT
-          && m.queries.length >= DEEP_MIN_UNIQUE_QUERIES;
+        return (
+          adjustedScore >= DEEP_MIN_SCORE &&
+          m.recallCount >= DEEP_MIN_RECALL_COUNT &&
+          m.queries.length >= DEEP_MIN_UNIQUE_QUERIES
+        );
       })
-      .sort((a, b) =>
-        (b.score * b.recallCount * lifecycle.typeWeight(b.type))
-        - (a.score * a.recallCount * lifecycle.typeWeight(a.type)))
+      .sort(
+        (a, b) =>
+          b.score * b.recallCount * lifecycle.typeWeight(b.type) -
+          a.score * a.recallCount * lifecycle.typeWeight(a.type)
+      )
       .slice(0, DEEP_LIMIT);
 
     let synthesized = 0;
@@ -326,7 +358,7 @@ class MemoryDreaming {
         });
 
         if (result.success && result.content) {
-          const sourceIds = candidates.map(c => c.id).join(',');
+          const sourceIds = candidates.map((c) => c.id).join(',');
           this.addMemory(result.content, 'deep', {
             phase: 'deep',
             consolidatedFrom: sourceIds,
@@ -348,7 +380,9 @@ class MemoryDreaming {
     this.save();
 
     const stats = { synthesized, recovered, health: this._calculateHealth() };
-    if (this._onPhaseComplete) this._onPhaseComplete('deep', stats);
+    if (this._onPhaseComplete) {
+      this._onPhaseComplete('deep', stats);
+    }
     return stats;
   }
 
@@ -366,7 +400,7 @@ class MemoryDreaming {
 
     // Collect from deep and daily sources
     const sources = this._memories
-      .filter(m => m.createdAt >= cutoff && ['deep', 'daily', 'session'].includes(m.source))
+      .filter((m) => m.createdAt >= cutoff && ['deep', 'daily', 'session'].includes(m.source))
       .sort((a, b) => b.score - a.score)
       .slice(0, REM_LIMIT * 3); // Wider search for pattern finding
 
@@ -395,7 +429,7 @@ class MemoryDreaming {
               this.addMemory(pattern.description, 'pattern', {
                 phase: 'pattern',
                 score: pattern.strength,
-                consolidatedFrom: sources.map(s => s.id).join(','),
+                consolidatedFrom: sources.map((s) => s.id).join(','),
               });
               patternsFound++;
               totalStrength += pattern.strength;
@@ -414,7 +448,9 @@ class MemoryDreaming {
       patterns: patternsFound,
       strength: patternsFound > 0 ? totalStrength / patternsFound : 0,
     };
-    if (this._onPhaseComplete) this._onPhaseComplete('rem', stats);
+    if (this._onPhaseComplete) {
+      this._onPhaseComplete('rem', stats);
+    }
     return stats;
   }
 
@@ -426,34 +462,37 @@ class MemoryDreaming {
   startScheduler() {
     // Light: every 6 hours
     this._timers.light = setInterval(() => {
-      this.runLightPhase().catch(err =>
-        this._logger.warn('Light dreaming failed:', err.message)
-      );
+      this.runLightPhase().catch((err) => this._logger.warn('Light dreaming failed:', err.message));
     }, LIGHT_INTERVAL_MS);
-    if (this._timers.light.unref) this._timers.light.unref();
+    if (this._timers.light.unref) {
+      this._timers.light.unref();
+    }
 
     // Deep: daily at 3am (check every hour)
     this._timers.deep = setInterval(() => {
       const hour = new Date().getHours();
       if (hour === 3 && Date.now() - this._lastPhaseRun.deep > 20 * 3600_000) {
-        this.runDeepPhase().catch(err =>
-          this._logger.warn('Deep dreaming failed:', err.message)
-        );
+        this.runDeepPhase().catch((err) => this._logger.warn('Deep dreaming failed:', err.message));
       }
     }, 3600_000);
-    if (this._timers.deep.unref) this._timers.deep.unref();
+    if (this._timers.deep.unref) {
+      this._timers.deep.unref();
+    }
 
     // REM: weekly Sunday at 5am (check every hour)
     this._timers.rem = setInterval(() => {
       const now = new Date();
-      if (now.getDay() === 0 && now.getHours() === 5
-          && Date.now() - this._lastPhaseRun.rem > 6 * 86400_000) {
-        this.runRemPhase().catch(err =>
-          this._logger.warn('REM dreaming failed:', err.message)
-        );
+      if (
+        now.getDay() === 0 &&
+        now.getHours() === 5 &&
+        Date.now() - this._lastPhaseRun.rem > 6 * 86400_000
+      ) {
+        this.runRemPhase().catch((err) => this._logger.warn('REM dreaming failed:', err.message));
       }
     }, 3600_000);
-    if (this._timers.rem.unref) this._timers.rem.unref();
+    if (this._timers.rem.unref) {
+      this._timers.rem.unref();
+    }
   }
 
   /**
@@ -475,17 +514,21 @@ class MemoryDreaming {
    * @returns {MemoryEntry[][]} clusters
    */
   _clusterBySimilarity(entries, threshold) {
-    const ngrams = entries.map(e => this._extractNgrams(e.content, 3));
+    const ngrams = entries.map((e) => this._extractNgrams(e.content, 3));
     const clusters = [];
     const assigned = new Set();
 
     for (let i = 0; i < entries.length; i++) {
-      if (assigned.has(i)) continue;
+      if (assigned.has(i)) {
+        continue;
+      }
       const cluster = [entries[i]];
       assigned.add(i);
 
       for (let j = i + 1; j < entries.length; j++) {
-        if (assigned.has(j)) continue;
+        if (assigned.has(j)) {
+          continue;
+        }
         const sim = this._jaccardSimilarity(ngrams[i], ngrams[j]);
         if (sim >= threshold) {
           cluster.push(entries[j]);
@@ -509,10 +552,14 @@ class MemoryDreaming {
   }
 
   _jaccardSimilarity(setA, setB) {
-    if (setA.size === 0 && setB.size === 0) return 1;
+    if (setA.size === 0 && setB.size === 0) {
+      return 1;
+    }
     let intersection = 0;
     for (const item of setA) {
-      if (setB.has(item)) intersection++;
+      if (setB.has(item)) {
+        intersection++;
+      }
     }
     const union = setA.size + setB.size - intersection;
     return union > 0 ? intersection / union : 0;
@@ -522,7 +569,9 @@ class MemoryDreaming {
    * Calculate overall memory health (0-1).
    */
   _calculateHealth() {
-    if (this._memories.length === 0) return 0;
+    if (this._memories.length === 0) {
+      return 0;
+    }
     const now = Date.now();
     let totalHealth = 0;
 
@@ -534,8 +583,8 @@ class MemoryDreaming {
       // Gentle type-weight boost: keeps health magnitude stable (weight 0.5→×0.85,
       // 0.9→×0.97) while letting high-value memory types decay slower.
       const typeFactor = 0.7 + 0.3 * lifecycle.typeWeight(m.type);
-      totalHealth += m.score * recencyFactor * typeFactor
-        * (0.4 + 0.3 * recallFactor + 0.3 * diversityFactor);
+      totalHealth +=
+        m.score * recencyFactor * typeFactor * (0.4 + 0.3 * recallFactor + 0.3 * diversityFactor);
     }
 
     return Math.min(1, totalHealth / this._memories.length);
@@ -547,7 +596,7 @@ class MemoryDreaming {
   async _runRecovery(now) {
     const cutoff = now - DEEP_RECOVERY_LOOKBACK_DAYS * 86400_000;
     const candidates = this._memories
-      .filter(m => m.createdAt >= cutoff && m.score < DEEP_RECOVERY_TRIGGER_BELOW_HEALTH)
+      .filter((m) => m.createdAt >= cutoff && m.score < DEEP_RECOVERY_TRIGGER_BELOW_HEALTH)
       .sort((a, b) => b.recallCount - a.recallCount)
       .slice(0, DEEP_RECOVERY_MAX_CANDIDATES);
 
@@ -568,9 +617,9 @@ class MemoryDreaming {
   }
 
   _buildDeepSynthesisPrompt(candidates) {
-    const entries = candidates.map(c =>
-      `[Score:${c.score.toFixed(2)} Recalls:${c.recallCount}] ${c.content}`
-    ).join('\n\n');
+    const entries = candidates
+      .map((c) => `[Score:${c.score.toFixed(2)} Recalls:${c.recallCount}] ${c.content}`)
+      .join('\n\n');
 
     return `Synthesize the following memory fragments into a single coherent insight.
 Preserve all specific identifiers, paths, numbers, and technical details.
@@ -583,7 +632,7 @@ Output a concise synthesis (2-4 sentences) that captures the essential knowledge
   }
 
   _buildPatternExtractionPrompt(sources) {
-    const entries = sources.map(s => `- ${s.content}`).join('\n');
+    const entries = sources.map((s) => `- ${s.content}`).join('\n');
 
     return `Analyze these memory entries and extract recurring patterns or themes.
 Output as JSON array: [{"description": "...", "strength": 0.0-1.0}]
@@ -597,13 +646,21 @@ ${entries}`;
     try {
       // Try direct JSON parse
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed.patterns) return parsed.patterns;
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (parsed.patterns) {
+        return parsed.patterns;
+      }
     } catch {
       // Extract JSON from markdown code blocks
       const match = content.match(/\[[\s\S]*\]/);
       if (match) {
-        try { return JSON.parse(match[0]); } catch { /* fall through */ }
+        try {
+          return JSON.parse(match[0]);
+        } catch {
+          /* fall through */
+        }
       }
     }
     return [];

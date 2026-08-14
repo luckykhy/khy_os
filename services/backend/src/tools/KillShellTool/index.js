@@ -32,7 +32,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function killShellToolEnabled(env) {
   const e = env || process.env;
-  const raw = String(e.KHY_KILL_SHELL_TOOL == null ? '' : e.KHY_KILL_SHELL_TOOL).trim().toLowerCase();
+  const raw = String(e.KHY_KILL_SHELL_TOOL == null ? '' : e.KHY_KILL_SHELL_TOOL)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
@@ -44,9 +46,15 @@ class KillShellTool extends BaseTool {
   static searchHint = 'terminate a running background shell command';
   static shouldDefer = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return true; }
-  isEnabled() { return killShellToolEnabled(process.env); }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
+  isEnabled() {
+    return killShellToolEnabled(process.env);
+  }
 
   prompt() {
     return `Terminate a still-running background shell command.
@@ -59,7 +67,10 @@ class KillShellTool extends BaseTool {
     return {
       type: 'object',
       properties: {
-        bash_id: { type: 'string', description: 'The background shell id (backgroundTaskId) to terminate' },
+        bash_id: {
+          type: 'string',
+          description: 'The background shell id (backgroundTaskId) to terminate',
+        },
       },
       required: ['bash_id'],
     };
@@ -71,17 +82,24 @@ class KillShellTool extends BaseTool {
     }
 
     const id = params && params.bash_id != null ? String(params.bash_id) : '';
-    if (!id) return { success: false, error: 'bash_id is required.' };
+    if (!id) {
+      return { success: false, error: 'bash_id is required.' };
+    }
 
     let registry;
     try {
       registry = require('../backgroundShellRegistry').backgroundShells;
     } catch (e) {
-      return { success: false, error: 'background shell registry unavailable: ' + ((e && e.message) || e) };
+      return {
+        success: false,
+        error: 'background shell registry unavailable: ' + ((e && e.message) || e),
+      };
     }
 
     const entry = registry.get(id);
-    if (!entry) return { success: false, error: `Background shell ${id} not found` };
+    if (!entry) {
+      return { success: false, error: `Background shell ${id} not found` };
+    }
 
     if (entry.status !== 'running') {
       return {
@@ -117,7 +135,9 @@ class KillShellTool extends BaseTool {
     };
   }
 
-  getActivityDescription(input) { return `终止后台命令：${input && input.bash_id ? input.bash_id : ''}`; }
+  getActivityDescription(input) {
+    return `终止后台命令：${input && input.bash_id ? input.bash_id : ''}`;
+  }
 }
 
 module.exports = KillShellTool;

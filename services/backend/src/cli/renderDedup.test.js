@@ -1,7 +1,7 @@
 'use strict';
 
-const test = require('node:test');
 const assert = require('node:assert');
+const test = require('node:test');
 
 const { renderDedupEnabled, finalAlreadyStreamed } = require('./renderDedup');
 
@@ -9,7 +9,8 @@ const ON = {}; // 默认开(无 KHY_RENDER_DEDUP)
 const OFF = { KHY_RENDER_DEDUP: '0' };
 
 // 截图复现句:前轮已流式打印,末轮非流式重述同一句 → 必须判为重复。
-const LINE = '已用 start 命令打开华为应用市场官网(https://appgallery.huawei.com/),默认浏览器应该已经跳转。';
+const LINE =
+  '已用 start 命令打开华为应用市场官网(https://appgallery.huawei.com/),默认浏览器应该已经跳转。';
 
 // ── 门控梯 ──────────────────────────────────────────────────────────────────────
 test('门控:默认开', () => {
@@ -39,7 +40,8 @@ test('命中:末轮文本是已流式内容的尾部(前面还有别的流式片
 });
 
 test('命中:仅空白/换行差异(分片 vs 最终串)→ 折叠后仍判重复', () => {
-  const streamed = '已用 start 命令打开华为应用市场官网\n(https://appgallery.huawei.com/),\n默认浏览器应该已经跳转。';
+  const streamed =
+    '已用 start 命令打开华为应用市场官网\n(https://appgallery.huawei.com/),\n默认浏览器应该已经跳转。';
   assert.equal(finalAlreadyStreamed(LINE, streamed, ON), true);
 });
 

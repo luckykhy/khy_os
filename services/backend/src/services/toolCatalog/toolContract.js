@@ -50,10 +50,16 @@ function toolContractEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_TOOL_CONTRACT', env);
     }
-    const raw = String((env && env.KHY_TOOL_CONTRACT) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_TOOL_CONTRACT) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -69,10 +75,16 @@ function paramAuditEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_TOOL_PARAM_AUDIT', env);
     }
-    const raw = String((env && env.KHY_TOOL_PARAM_AUDIT) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_TOOL_PARAM_AUDIT) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -94,12 +106,25 @@ function _isFn(v) {
 
 /** 惰性取 SSOT 常量（可注入覆盖，测试用）。fail-soft 回退空表 → 该维度不误报。 */
 function _resolveCategories(deps) {
-  if (deps && deps.CATEGORIES && typeof deps.CATEGORIES === 'object') return deps.CATEGORIES;
-  try { return require('../../tools/_baseTool').CATEGORIES || {}; } catch { return {}; }
+  if (deps && deps.CATEGORIES && typeof deps.CATEGORIES === 'object') {
+    return deps.CATEGORIES;
+  }
+  try {
+    return require('../../tools/_baseTool').CATEGORIES || {};
+  } catch {
+    return {};
+  }
 }
+
 function _resolveRiskLevels(deps) {
-  if (deps && Array.isArray(deps.RISK_LEVELS)) return deps.RISK_LEVELS;
-  try { return require('../../constants/riskOrder').RISK_LEVELS || []; } catch { return []; }
+  if (deps && Array.isArray(deps.RISK_LEVELS)) {
+    return deps.RISK_LEVELS;
+  }
+  try {
+    return require('../../constants/riskOrder').RISK_LEVELS || [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -116,21 +141,43 @@ function _auditShape(tool, ctx, out) {
   }
   const name = _s(tool.name);
   const label = name || '(unnamed)';
-  if (!name) out.push({ severity: 'error', rule, tool: label, message: 'name 缺失或非字符串' });
-  if (!_s(tool.description)) out.push({ severity: 'error', rule, tool: label, message: 'description 缺失或为空' });
+  if (!name) {
+    out.push({ severity: 'error', rule, tool: label, message: 'name 缺失或非字符串' });
+  }
+  if (!_s(tool.description)) {
+    out.push({ severity: 'error', rule, tool: label, message: 'description 缺失或为空' });
+  }
 
   const cat = _s(tool.category);
-  const catKeys = ctx.categories && typeof ctx.categories === 'object' ? Object.keys(ctx.categories) : [];
+  const catKeys =
+    ctx.categories && typeof ctx.categories === 'object' ? Object.keys(ctx.categories) : [];
   if (catKeys.length && !catKeys.includes(cat)) {
-    out.push({ severity: 'error', rule, tool: label, message: `category '${cat || '(空)'}' 不在 CATEGORIES 内` });
+    out.push({
+      severity: 'error',
+      rule,
+      tool: label,
+      message: `category '${cat || '(空)'}' 不在 CATEGORIES 内`,
+    });
   }
   const risk = _s(tool.risk);
   if (ctx.risks.length && !ctx.risks.includes(risk)) {
-    out.push({ severity: 'error', rule, tool: label, message: `risk '${risk || '(空)'}' 不在 RISK_LEVELS 内` });
+    out.push({
+      severity: 'error',
+      rule,
+      tool: label,
+      message: `risk '${risk || '(空)'}' 不在 RISK_LEVELS 内`,
+    });
   }
 
   // 行为字段应为函数（注册表工具由 defineTool/BaseTool 挂成方法）。
-  for (const fnField of ['toFunctionDef', 'validate', 'execute', 'isReadOnly', 'isDestructive', 'isEnabled']) {
+  for (const fnField of [
+    'toFunctionDef',
+    'validate',
+    'execute',
+    'isReadOnly',
+    'isDestructive',
+    'isEnabled',
+  ]) {
     if (!_isFn(tool[fnField])) {
       out.push({ severity: 'error', rule, tool: label, message: `${fnField} 应为函数` });
     }
@@ -139,22 +186,64 @@ function _auditShape(tool, ctx, out) {
   // schema:toFunctionDef() 产出合法 function-calling 定义。
   if (_isFn(tool.toFunctionDef)) {
     let def;
-    try { def = tool.toFunctionDef(); } catch (e) {
-      out.push({ severity: 'error', rule: 'schema', tool: label, message: `toFunctionDef() 抛异常: ${e && e.message}` });
+    try {
+      def = tool.toFunctionDef();
+    } catch (e) {
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: `toFunctionDef() 抛异常: ${e && e.message}`,
+      });
       return;
     }
     if (!def || typeof def !== 'object') {
-      out.push({ severity: 'error', rule: 'schema', tool: label, message: 'toFunctionDef() 未返回对象' });
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: 'toFunctionDef() 未返回对象',
+      });
       return;
     }
-    if (!_s(def.name)) out.push({ severity: 'error', rule: 'schema', tool: label, message: 'toFunctionDef().name 缺失' });
-    if (typeof def.description !== 'string') out.push({ severity: 'error', rule: 'schema', tool: label, message: 'toFunctionDef().description 非字符串' });
+    if (!_s(def.name)) {
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: 'toFunctionDef().name 缺失',
+      });
+    }
+    if (typeof def.description !== 'string') {
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: 'toFunctionDef().description 非字符串',
+      });
+    }
     const p = def.parameters;
-    if (!p || typeof p !== 'object' || p.type !== 'object' || !p.properties || typeof p.properties !== 'object') {
-      out.push({ severity: 'error', rule: 'schema', tool: label, message: "toFunctionDef().parameters 非 {type:'object', properties:{…}}" });
+    if (
+      !p ||
+      typeof p !== 'object' ||
+      p.type !== 'object' ||
+      !p.properties ||
+      typeof p.properties !== 'object'
+    ) {
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: "toFunctionDef().parameters 非 {type:'object', properties:{…}}",
+      });
     } else if (p.required !== undefined && !Array.isArray(p.required)) {
       // required 可为 undefined（无必填参数）；若存在必须是数组。
-      out.push({ severity: 'error', rule: 'schema', tool: label, message: 'toFunctionDef().parameters.required 存在但非数组' });
+      out.push({
+        severity: 'error',
+        rule: 'schema',
+        tool: label,
+        message: 'toFunctionDef().parameters.required 存在但非数组',
+      });
     }
   }
 }
@@ -168,36 +257,55 @@ function _auditShape(tool, ctx, out) {
 function _auditCollisions(tools, out) {
   const owners = new Map(); // key -> Map<ownerName, {category, risk}>
   for (const tool of tools) {
-    if (!tool || typeof tool !== 'object') continue;
+    if (!tool || typeof tool !== 'object') {
+      continue;
+    }
     const name = _s(tool.name);
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     const meta = { category: _s(tool.category), risk: _s(tool.risk) };
-    const namesForKeys = [name, ...(Array.isArray(tool.aliases) ? tool.aliases.map(_s).filter(Boolean) : [])];
+    const namesForKeys = [
+      name,
+      ...(Array.isArray(tool.aliases) ? tool.aliases.map(_s).filter(Boolean) : []),
+    ];
     for (const n of namesForKeys) {
       const key = _toolKey(n);
-      if (!key) continue;
-      if (!owners.has(key)) owners.set(key, new Map());
+      if (!key) {
+        continue;
+      }
+      if (!owners.has(key)) {
+        owners.set(key, new Map());
+      }
       // 同一属主对同一键只记一次（name 与其某别名可能归一后相同）。
       const byOwner = owners.get(key);
-      if (!byOwner.has(name)) byOwner.set(name, meta);
+      if (!byOwner.has(name)) {
+        byOwner.set(name, meta);
+      }
     }
   }
 
   // 确定性顺序:按归一键字母序输出。
   for (const key of Array.from(owners.keys()).sort()) {
     const byOwner = owners.get(key);
-    if (byOwner.size < 2) continue; // 唯一属主 → 无冲突
+    if (byOwner.size < 2) {
+      continue;
+    } // 唯一属主 → 无冲突
     const entries = Array.from(byOwner.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     const names = entries.map(([n]) => n);
     const cats = new Set(entries.map(([, m]) => m.category));
     const risks = new Set(entries.map(([, m]) => m.risk));
     const crossRisk = risks.size > 1;
     const crossCat = cats.size > 1;
-    const severity = (crossRisk || crossCat) ? 'error' : 'warning';
-    const why = crossRisk && crossCat ? '跨 risk 且跨 category'
-      : crossRisk ? '跨 risk'
-      : crossCat ? '跨 category'
-      : '同类孪生';
+    const severity = crossRisk || crossCat ? 'error' : 'warning';
+    const why =
+      crossRisk && crossCat
+        ? '跨 risk 且跨 category'
+        : crossRisk
+          ? '跨 risk'
+          : crossCat
+            ? '跨 category'
+            : '同类孪生';
     out.push({
       severity,
       rule: 'collision',
@@ -223,35 +331,73 @@ function _auditCollisions(tools, out) {
  * @param {Array} out
  */
 function _auditParams(tool, out) {
-  if (!tool || typeof tool !== 'object' || !_isFn(tool.toFunctionDef)) return;
+  if (!tool || typeof tool !== 'object' || !_isFn(tool.toFunctionDef)) {
+    return;
+  }
   let def;
-  try { def = tool.toFunctionDef(); } catch { return; } // schema 抛异常已由 _auditShape 记 error
+  try {
+    def = tool.toFunctionDef();
+  } catch {
+    return;
+  } // schema 抛异常已由 _auditShape 记 error
   const label = _s(tool.name) || '(unnamed)';
   const p = def && def.parameters;
-  if (!p || typeof p !== 'object' || !p.properties || typeof p.properties !== 'object') return;
+  if (!p || typeof p !== 'object' || !p.properties || typeof p.properties !== 'object') {
+    return;
+  }
   const props = p.properties;
   const propKeys = Object.keys(props);
   const req = Array.isArray(p.required) ? p.required : [];
 
   for (const r of req) {
     if (!propKeys.includes(_s(r) || r)) {
-      out.push({ severity: 'error', rule: 'param', tool: label, message: `required '${r}' 不在 properties 中(悬垂必填 → 该 tool call 被 API 拒绝)` });
+      out.push({
+        severity: 'error',
+        rule: 'param',
+        tool: label,
+        message: `required '${r}' 不在 properties 中(悬垂必填 → 该 tool call 被 API 拒绝)`,
+      });
     }
   }
   for (const k of propKeys) {
     const spec = props[k] && typeof props[k] === 'object' ? props[k] : {};
     const hasDesc = typeof spec.description === 'string' && spec.description.trim();
-    const hasType = spec.type || spec.enum || spec.oneOf || spec.anyOf || spec.allOf || spec['$ref'];
-    if (!hasDesc) out.push({ severity: 'warning', rule: 'param', tool: label, message: `参数 '${k}' 缺 description(模型难以正确填写)` });
-    if (!hasType) out.push({ severity: 'warning', rule: 'param', tool: label, message: `参数 '${k}' 缺 type/enum(类型不明确)` });
+    const hasType =
+      spec.type || spec.enum || spec.oneOf || spec.anyOf || spec.allOf || spec['$ref'];
+    if (!hasDesc) {
+      out.push({
+        severity: 'warning',
+        rule: 'param',
+        tool: label,
+        message: `参数 '${k}' 缺 description(模型难以正确填写)`,
+      });
+    }
+    if (!hasType) {
+      out.push({
+        severity: 'warning',
+        rule: 'param',
+        tool: label,
+        message: `参数 '${k}' 缺 type/enum(类型不明确)`,
+      });
+    }
     // required + default 矛盾:必填 → 模型每次都得给 → default 永不生效 = 死默认值 + 误导
     // 「有默认所以可选?」。要么设为可选让 default 生效,要么删掉误导性的 default。
     if (req.includes(k) && spec.default !== undefined) {
-      out.push({ severity: 'warning', rule: 'param', tool: label, message: `参数 '${k}' 为 required 却带 default ${JSON.stringify(spec.default)}(default 永不生效 → 应设为可选或删除 default)` });
+      out.push({
+        severity: 'warning',
+        rule: 'param',
+        tool: label,
+        message: `参数 '${k}' 为 required 却带 default ${JSON.stringify(spec.default)}(default 永不生效 → 应设为可选或删除 default)`,
+      });
     }
     // type:'array' 却无 items → 元素类型不明,模型不知该填字符串数组还是对象数组 → 易填错元素形状。
     if (spec.type === 'array' && spec.items === undefined) {
-      out.push({ severity: 'warning', rule: 'param', tool: label, message: `参数 '${k}' 为 array 却无 items(元素类型不明 → 模型易填错元素形状)` });
+      out.push({
+        severity: 'warning',
+        rule: 'param',
+        tool: label,
+        message: `参数 '${k}' 为 array 却无 items(元素类型不明 → 模型易填错元素形状)`,
+      });
     }
   }
 }
@@ -268,34 +414,55 @@ function _auditParams(tool, out) {
  */
 function auditTools(deps = {}, env = process.env) {
   const empty = { findings: [], errors: 0, warnings: 0, total: 0 };
-  if (!toolContractEnabled(env)) return empty;
+  if (!toolContractEnabled(env)) {
+    return empty;
+  }
 
   let tools = [];
   try {
-    const getAll = (deps && _isFn(deps.getAll)) ? deps.getAll : require('../../tools').getAll;
+    const getAll = deps && _isFn(deps.getAll) ? deps.getAll : require('../../tools').getAll;
     const map = getAll();
-    if (map && typeof map.values === 'function') tools = Array.from(map.values());
-    else if (Array.isArray(map)) tools = map;
-    else tools = [];
-  } catch { return empty; }
+    if (map && typeof map.values === 'function') {
+      tools = Array.from(map.values());
+    } else if (Array.isArray(map)) {
+      tools = map;
+    } else {
+      tools = [];
+    }
+  } catch {
+    return empty;
+  }
 
   const ctx = { categories: _resolveCategories(deps), risks: _resolveRiskLevels(deps) };
   const findings = [];
 
   for (const tool of tools) {
-    try { _auditShape(tool, ctx, findings); }
-    catch (e) {
-      findings.push({ severity: 'error', rule: 'shape', tool: _s(tool && tool.name) || '(unknown)', message: `审计抛异常: ${e && e.message}` });
+    try {
+      _auditShape(tool, ctx, findings);
+    } catch (e) {
+      findings.push({
+        severity: 'error',
+        rule: 'shape',
+        tool: _s(tool && tool.name) || '(unknown)',
+        message: `审计抛异常: ${e && e.message}`,
+      });
     }
   }
   // 参数级审计(子门控 KHY_TOOL_PARAM_AUDIT 默认开;关 → 逐字节回退未加此层前的 finding 集)。
   if (paramAuditEnabled(env)) {
     for (const tool of tools) {
-      try { _auditParams(tool, findings); }
-      catch { /* fail-soft:参数巡检异常不阻断 */ }
+      try {
+        _auditParams(tool, findings);
+      } catch {
+        /* fail-soft:参数巡检异常不阻断 */
+      }
     }
   }
-  try { _auditCollisions(tools, findings); } catch { /* fail-soft:冲突巡检异常不阻断 */ }
+  try {
+    _auditCollisions(tools, findings);
+  } catch {
+    /* fail-soft:冲突巡检异常不阻断 */
+  }
 
   const errors = findings.filter((f) => f.severity === 'error').length;
   const warnings = findings.filter((f) => f.severity === 'warning').length;

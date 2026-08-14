@@ -59,10 +59,16 @@ const DEFAULT_EXCLUDES = [
  */
 function shouldExclude(relPath, baseName, opts = {}) {
   const excludes = opts.excludes || DEFAULT_EXCLUDES;
-  if (excludes.includes(baseName)) return true;
+  if (excludes.includes(baseName)) {
+    return true;
+  }
   // Always drop log files and lockless tmp noise regardless of caller list.
-  if (/\.log$/i.test(baseName)) return true;
-  if (opts.excludeDotfiles && baseName.startsWith('.')) return true;
+  if (/\.log$/i.test(baseName)) {
+    return true;
+  }
+  if (opts.excludeDotfiles && baseName.startsWith('.')) {
+    return true;
+  }
   return false;
 }
 
@@ -120,7 +126,9 @@ function syncTree(source, target, opts = {}) {
         // Preserve symlinks verbatim rather than dereferencing them.
         try {
           const linkTarget = fs.readlinkSync(childSrc);
-          if (fs.existsSync(childDst)) fs.rmSync(childDst, { force: true });
+          if (fs.existsSync(childDst)) {
+            fs.rmSync(childDst, { force: true });
+          }
           fs.symlinkSync(linkTarget, childDst);
           result.copied.push(childRel);
         } catch {

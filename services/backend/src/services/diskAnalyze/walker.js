@@ -16,14 +16,27 @@
  */
 
 const path = require('path');
+
 const walkBudget = require('../../tools/_walkBudget');
 
 // 遍历时跳过的目录名(小写):系统/元数据/包管理产物,既非用户「大文件/安装包」诉求所在,
 // 又极易膨胀遍历成本。大小写不敏感匹配。
 const SKIP_DIRS = new Set([
-  '$recycle.bin', 'system volume information', 'windows', 'winsxs',
-  '.git', '.svn', '.hg', 'node_modules', '.cache', '__pycache__',
-  'proc', 'sys', 'dev', '.trash', '.trash-1000',
+  '$recycle.bin',
+  'system volume information',
+  'windows',
+  'winsxs',
+  '.git',
+  '.svn',
+  '.hg',
+  'node_modules',
+  '.cache',
+  '__pycache__',
+  'proc',
+  'sys',
+  'dev',
+  '.trash',
+  '.trash-1000',
 ]);
 
 function _now(deps) {
@@ -35,17 +48,27 @@ function _resolveMaxEntries(env) {
   try {
     const flagRegistry = require('../flagRegistry');
     const v = flagRegistry.resolveNumeric('KHY_DISKANALYZE_MAX_ENTRIES', e);
-    if (Number.isFinite(v) && v > 0) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v > 0) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const raw = Number.parseInt((e && e.KHY_DISKANALYZE_MAX_ENTRIES) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return Math.min(5000000, Math.max(1000, raw));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.min(5000000, Math.max(1000, raw));
+  }
   return 200000;
 }
 
 function _isSkippedDir(name) {
   const n = String(name || '').toLowerCase();
-  if (!n) return true;
-  if (SKIP_DIRS.has(n)) return true;
+  if (!n) {
+    return true;
+  }
+  if (SKIP_DIRS.has(n)) {
+    return true;
+  }
   // 隐藏目录(以点开头)在磁盘分析里通常是缓存/元数据,跳过以聚焦用户可见大文件。
   return false;
 }
@@ -61,39 +84,69 @@ function walk(roots, deps, opts = {}) {
   const out = { files: [], scanned: 0, bytes: 0, truncated: false, reason: '' };
   try {
     const fsImpl = deps.fsImpl;
-    if (!fsImpl || typeof fsImpl.readdirSync !== 'function') { out.reason = 'no-fs'; return out; }
+    if (!fsImpl || typeof fsImpl.readdirSync !== 'function') {
+      out.reason = 'no-fs';
+      return out;
+    }
     const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
     const maxEntries = _resolveMaxEntries(env);
     const maxDepth = Number.isFinite(opts.maxDepth) ? opts.maxDepth : 24;
-    const deadline = opts.deadline !== undefined
-      ? opts.deadline
-      : walkBudget.createWalkDeadline(env, typeof deps.now === 'function' ? deps.now : undefined);
+    const deadline =
+      opts.deadline !== undefined
+        ? opts.deadline
+        : walkBudget.createWalkDeadline(env, typeof deps.now === 'function' ? deps.now : undefined);
 
     // 显式栈,避免超深递归爆栈;每弹一个目录读其子项。
     const stack = [];
-    for (const r of (Array.isArray(roots) ? roots : [])) {
-      if (r) stack.push({ dir: String(r), depth: 0 });
+    for (const r of Array.isArray(roots) ? roots : []) {
+      if (r) {
+        stack.push({ dir: String(r), depth: 0 });
+      }
     }
 
     while (stack.length) {
-      if (out.scanned >= maxEntries) { out.truncated = true; out.reason = 'max-entries'; break; }
+      if (out.scanned >= maxEntries) {
+        out.truncated = true;
+        out.reason = 'max-entries';
+        break;
+      }
       if (deadline && typeof deadline.exceeded === 'function' && deadline.exceeded()) {
-        out.truncated = true; out.reason = 'time-budget'; break;
+        out.truncated = true;
+        out.reason = 'time-budget';
+        break;
       }
       const { dir, depth } = stack.pop();
       let entries;
-      try { entries = fsImpl.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+      try {
+        entries = fsImpl.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
       for (const ent of entries) {
         out.scanned += 1;
-        if (out.scanned >= maxEntries) { out.truncated = true; out.reason = 'max-entries'; break; }
+        if (out.scanned >= maxEntries) {
+          out.truncated = true;
+          out.reason = 'max-entries';
+          break;
+        }
         const name = ent && ent.name;
-        if (!name) continue;
+        if (!name) {
+          continue;
+        }
         const full = path.join(dir, name);
         let st;
-        try { st = fsImpl.lstatSync(full); } catch { continue; }
-        if (st.isSymbolicLink && st.isSymbolicLink()) continue;   // 不跟随链接/junction
+        try {
+          st = fsImpl.lstatSync(full);
+        } catch {
+          continue;
+        }
+        if (st.isSymbolicLink && st.isSymbolicLink()) {
+          continue;
+        } // 不跟随链接/junction
         if (st.isDirectory && st.isDirectory()) {
-          if (depth < maxDepth && !_isSkippedDir(name)) stack.push({ dir: full, depth: depth + 1 });
+          if (depth < maxDepth && !_isSkippedDir(name)) {
+            stack.push({ dir: full, depth: depth + 1 });
+          }
         } else if (st.isFile && st.isFile()) {
           const size = Number(st.size) || 0;
           out.bytes += size;
@@ -116,29 +169,55 @@ function walk(roots, deps, opts = {}) {
  */
 function hashDuplicates(candidates, deps) {
   try {
-    if (!Array.isArray(candidates) || !candidates.length) return [];
+    if (!Array.isArray(candidates) || !candidates.length) {
+      return [];
+    }
     const fsImpl = deps.fsImpl;
-    const cryptoImpl = deps.cryptoImpl || (() => { try { return require('crypto'); } catch { return null; } })();
-    if (!fsImpl || typeof fsImpl.readFileSync !== 'function' || !cryptoImpl) return [];
+    const cryptoImpl =
+      deps.cryptoImpl ||
+      (() => {
+        try {
+          return require('crypto');
+        } catch {
+          return null;
+        }
+      })();
+    if (!fsImpl || typeof fsImpl.readFileSync !== 'function' || !cryptoImpl) {
+      return [];
+    }
 
     const byHash = new Map();
     for (const c of candidates) {
-      if (!c || !c.path) continue;
+      if (!c || !c.path) {
+        continue;
+      }
       let buf;
-      try { buf = fsImpl.readFileSync(c.path); } catch { continue; }
+      try {
+        buf = fsImpl.readFileSync(c.path);
+      } catch {
+        continue;
+      }
       let digest;
       try {
         digest = cryptoImpl.createHash('sha1').update(buf).digest('hex');
-      } catch { continue; }
+      } catch {
+        continue;
+      }
       const sizeBytes = Number(c.sizeBytes != null ? c.sizeBytes : c.size) || 0;
       const key = `${sizeBytes}:${digest}`;
       let g = byHash.get(key);
-      if (!g) { g = { hash: digest, sizeBytes, files: [] }; byHash.set(key, g); }
+      if (!g) {
+        g = { hash: digest, sizeBytes, files: [] };
+        byHash.set(key, g);
+      }
       g.files.push(c.path);
     }
     const groups = [];
     for (const g of byHash.values()) {
-      if (g.files.length >= 2) { g.files.sort(); groups.push(g); }
+      if (g.files.length >= 2) {
+        g.files.sort();
+        groups.push(g);
+      }
     }
     groups.sort((a, b) => b.sizeBytes - a.sizeBytes);
     return groups;

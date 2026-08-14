@@ -15,11 +15,16 @@
 //      warning by isAboveErrorThreshold.
 //
 // Honest divergence from CC: CC's threshold is `effectiveWindow - buffer`.
-// khy's auto-compact actually fires at `budget * AUTOCOMPACT_THRESHOLD`
-// (0.8, see services/query/compactPipeline.js — its real SSOT). To keep the
-// countdown honest (0% == the moment khy actually compacts) we adopt CC's
-// state-machine STRUCTURE but parameterize the threshold by khy's real
-// ratio, injected by the shell from compactPipeline.AUTOCOMPACT_THRESHOLD.
+// khy 的自动压缩真实触发点由 services/contextRouter 决定 ——
+//   raw > contextBudget * PREEMPTIVE_RATIO / SAFETY_MARGIN  (= 0.75 * budget)
+// 调用方注入 contextRouter.autoCompactTriggerTokens(budget) 的**绝对** token 值,
+// 本叶子据此让 0% 恰好落在真实压缩发生的那一刻。
+//
+// 历史误解(本次修正):这里曾以为 SSOT 是 compactPipeline.AUTOCOMPACT_THRESHOLD
+// (0.8),且把它当作「占 contextWindow 的比例」用。但 (a) compactPipeline 的
+// runCompactPipeline 是死码,那个 0.8 是「占 maxTokens 预算」的比例而非占窗口;
+// (b) budget 已扣过 reserve 与 ~12% safety。两者叠加导致底栏承诺 80% 才压缩、
+// 实际在窗口约 63% 就压缩了。比例式表达结构上无法诚实,故改为推导绝对值。
 //
 // Pre-existing bugs this fixes at the two repl.js render sites:
 //   - wrong signal: they used cumulative `sessionTokens.total` (grows
@@ -44,7 +49,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_CONTEXT_WARNING;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -55,8 +62,32 @@ const _num = require('../utils/finiteNumber').toNonNegOr0;
 // A ratio must be in (0,1]; bad inject falls back to the default.
 function _ratio(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0 || n > 1) return DEFAULT_AUTOCOMPACT_RATIO;
+  if (!Number.isFinite(n) || n <= 0 || n > 1) {
+    return DEFAULT_AUTOCOMPACT_RATIO;
+  }
   return n;
+}
+
+// 子门 KHY_CONTEXT_WARNING_REAL_THRESHOLD(默认开,父门 KHY_CONTEXT_WARNING):
+// 关 → 强制走历史比例路径,逐字节等价改动前。
+function _realThresholdEnabled(env) {
+  const raw = env && env.KHY_CONTEXT_WARNING_REAL_THRESHOLD;
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
+  return !OFF_VALUES.includes(v);
+}
+
+/**
+ * 解析自动压缩阈值:绝对值(真实触发点)优先,否则回退比例 × 窗口。
+ * 缺参/0/负/非有限 → 比例路径,故未注入的调用方逐字节等价历史行为。
+ */
+function _resolveAutoCompactThreshold(o, ratio, contextWindow) {
+  const abs = _num(o.autoCompactThresholdTokens);
+  if (abs > 0 && _realThresholdEnabled(o.env || process.env)) {
+    return abs;
+  }
+  return Math.round(ratio * contextWindow);
 }
 
 // Post-compaction staleness gate — the LOGIC behind CC's compactWarningState.
@@ -81,7 +112,10 @@ function isCompactionStale(tokenUsage, lastCompactionUsed) {
 // CC getEffectiveContextWindowSize: raw window minus reserved summary output.
 function effectiveContextWindow(contextWindow, reservedOutputTokens) {
   const window = _num(contextWindow);
-  const reserve = Math.min(_num(reservedOutputTokens) || RESERVED_OUTPUT_TOKENS, RESERVED_OUTPUT_TOKENS);
+  const reserve = Math.min(
+    _num(reservedOutputTokens) || RESERVED_OUTPUT_TOKENS,
+    RESERVED_OUTPUT_TOKENS
+  );
   return Math.max(0, window - reserve);
 }
 
@@ -95,9 +129,10 @@ function calculateTokenWarningState(opts) {
   const ratio = _ratio(o.autoCompactRatio);
 
   const effectiveWindow = effectiveContextWindow(contextWindow, o.reservedOutputTokens);
-  // khy fires auto-compact at ratio * window (compactPipeline). Use the same
-  // signal here so 0% lines up with the real compaction event.
-  const autoCompactThreshold = Math.round(ratio * contextWindow);
+  // 真实触发点优先:调用方注入 services/contextRouter.autoCompactTriggerTokens(budget)
+  // 算出的**绝对** token 阈值。比例式 `ratio * contextWindow` 结构上无法诚实 ——
+  // 窗口→预算的折算随 taskScale/preset/env 浮动,故只作缺参/门关时的降级路径。
+  const autoCompactThreshold = _resolveAutoCompactThreshold(o, ratio, contextWindow);
 
   const threshold = autoCompactEnabled ? autoCompactThreshold : effectiveWindow;
 
@@ -115,13 +150,20 @@ function calculateTokenWarningState(opts) {
     const _g = require('../services/contextWarningThreshold');
     const _wt = _g.guardBandThreshold(threshold, WARNING_BUFFER_TOKENS, process.env);
     const _et = _g.guardBandThreshold(threshold, ERROR_BUFFER_TOKENS, process.env);
-    if (_wt !== null) warningThreshold = _wt;
-    if (_et !== null) errorThreshold = _et;
-  } catch { /* fail-soft → legacy threshold - buffer */ }
+    if (_wt !== null) {
+      warningThreshold = _wt;
+    }
+    if (_et !== null) {
+      errorThreshold = _et;
+    }
+  } catch {
+    /* fail-soft → legacy threshold - buffer */
+  }
 
   const isAboveWarningThreshold = threshold > 0 && tokenUsage >= warningThreshold;
   const isAboveErrorThreshold = threshold > 0 && tokenUsage >= errorThreshold;
-  const isAboveAutoCompactThreshold = autoCompactEnabled && threshold > 0 && tokenUsage >= autoCompactThreshold;
+  const isAboveAutoCompactThreshold =
+    autoCompactEnabled && threshold > 0 && tokenUsage >= autoCompactThreshold;
 
   return {
     percentLeft,

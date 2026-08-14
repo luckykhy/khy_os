@@ -9,14 +9,31 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const { printError, printInfo, printSuccess, printWarn, printTable } = require('../formatters');
 
 const ALLOWLIST = new Set([
-  'pwd', 'ls', 'cat', 'head', 'tail', 'grep', 'find', 'wc',
-  'du', 'df', 'ps', 'whoami', 'uname', 'date', 'ip', 'ss',
-  'ping', 'curl',
+  'pwd',
+  'ls',
+  'cat',
+  'head',
+  'tail',
+  'grep',
+  'find',
+  'wc',
+  'du',
+  'df',
+  'ps',
+  'whoami',
+  'uname',
+  'date',
+  'ip',
+  'ss',
+  'ping',
+  'curl',
 ]);
 
 function _listInterfaces() {
@@ -24,8 +41,10 @@ function _listInterfaces() {
   try {
     const all = os.networkInterfaces();
     for (const [name, entries] of Object.entries(all || {})) {
-      for (const item of (entries || [])) {
-        if (!item || item.internal) continue;
+      for (const item of entries || []) {
+        if (!item || item.internal) {
+          continue;
+        }
         rows.push([name, item.family, item.address, item.mac || '-']);
       }
     }
@@ -57,20 +76,23 @@ async function _checkDns(host) {
 function _checkHttps(host, timeoutMs = 3500) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
-    const req = https.request({
-      hostname: host,
-      path: '/',
-      method: 'HEAD',
-      timeout: timeoutMs,
-      headers: { 'User-Agent': 'khy-os-linux-netcheck/1.0' },
-    }, (res) => {
-      res.resume();
-      resolve({
-        ok: true,
-        statusCode: res.statusCode,
-        latencyMs: Date.now() - startedAt,
-      });
-    });
+    const req = https.request(
+      {
+        hostname: host,
+        path: '/',
+        method: 'HEAD',
+        timeout: timeoutMs,
+        headers: { 'User-Agent': 'khy-os-linux-netcheck/1.0' },
+      },
+      (res) => {
+        res.resume();
+        resolve({
+          ok: true,
+          statusCode: res.statusCode,
+          latencyMs: Date.now() - startedAt,
+        });
+      }
+    );
     req.on('error', (err) => {
       resolve({
         ok: false,
@@ -100,7 +122,9 @@ function _printLinuxHelp() {
   console.log('    linux run ls -la');
   console.log('    linux run ping -c 2 1.1.1.1');
   console.log('');
-  console.log('  说明: 无网络时云端 AI 不可用，请使用本地模型（models list / khy run <model-id>）。');
+  console.log(
+    '  说明: 无网络时云端 AI 不可用，请使用本地模型（models list / khy run <model-id>）。'
+  );
   console.log('');
 }
 
@@ -149,7 +173,9 @@ async function _printNetStatus(hostArg) {
 
   const httpsResult = await _checkHttps(host);
   if (httpsResult.ok) {
-    printSuccess(`HTTPS 可达: status ${httpsResult.statusCode || '-'} (${httpsResult.latencyMs}ms)`);
+    printSuccess(
+      `HTTPS 可达: status ${httpsResult.statusCode || '-'} (${httpsResult.latencyMs}ms)`
+    );
   } else {
     printError(`HTTPS 失败: ${httpsResult.error || 'unknown error'} (${httpsResult.latencyMs}ms)`);
   }
@@ -175,14 +201,19 @@ function _runLinuxCommand(cmd, cmdArgs, options = {}) {
     printError('参数过多，已拒绝执行');
     return;
   }
-  if ((cmdArgs || []).some(a => String(a).length > 1024)) {
+  if ((cmdArgs || []).some((a) => String(a).length > 1024)) {
     printError('参数长度超限，已拒绝执行');
     return;
   }
 
-  const timeoutMs = Math.min(20000, Math.max(1000, parseInt(options.timeout || '8000', 10) || 8000));
+  const timeoutMs = Math.min(
+    20000,
+    Math.max(1000, parseInt(options.timeout || '8000', 10) || 8000)
+  );
   const builtInHandled = _runBuiltinCommand(cmd, cmdArgs);
-  if (builtInHandled) return;
+  if (builtInHandled) {
+    return;
+  }
 
   const startedAt = Date.now();
   const result = spawnSync(cmd, cmdArgs, {
@@ -203,8 +234,12 @@ function _runLinuxCommand(cmd, cmdArgs, options = {}) {
   const stdout = (result.stdout || '').trimEnd();
   const stderr = (result.stderr || '').trimEnd();
 
-  if (stdout) console.log(stdout);
-  if (stderr) console.log(chalk.yellow(stderr));
+  if (stdout) {
+    console.log(stdout);
+  }
+  if (stderr) {
+    console.log(chalk.yellow(stderr));
+  }
 
   if (result.status === 0) {
     printSuccess(`命令执行成功 (${elapsed}ms)`);
@@ -243,7 +278,7 @@ function _runBuiltinCommand(cmd, cmdArgs) {
     return true;
   }
   if (cmd === 'ls') {
-    const target = (cmdArgs || []).find(a => !String(a).startsWith('-')) || '.';
+    const target = (cmdArgs || []).find((a) => !String(a).startsWith('-')) || '.';
     const abs = path.resolve(process.cwd(), target);
     try {
       const entries = fs.readdirSync(abs, { withFileTypes: true });

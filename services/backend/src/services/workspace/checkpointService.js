@@ -22,18 +22,26 @@
  */
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const { execSync, execFileSync, execFile, exec } = require('child_process');
 const crypto = require('crypto');
-const { execSync, execFileSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { promisify } = require('util');
+
+const _execFileAsync = promisify(execFile);
+const _execAsync = promisify(exec);
 // Git Bash 优先解析是 Windows 专属关切(Unix 无特殊路径的 Git Bash 概念)。
 // 仅在 win32 调用检测器,其它平台保持 'git'(字节回退兼容,不引入探针噪声)。
+const _ensureDir = require('../../utils/ensureDirSync');
+const _formatBytesAtom = require('../../utils/formatBytes');
 const gitDetector = require('../gitExecutableDetector');
 
 /** 解析 git 二进制路径:win32 时检测命中显式路径 → 返回它;否则 'git'。绝不抛。 */
 function _gitBin() {
-  if (process.platform !== 'win32') return 'git';
+  if (process.platform !== 'win32') {
+    return 'git';
+  }
   try {
     return gitDetector.detectGitExecutable() || 'git';
   } catch {
@@ -41,22 +49,29 @@ function _gitBin() {
   }
 }
 
-const CHECKPOINT_ROOT = path.join(os.homedir(), '.khyquant', 'checkpoints');
+// Lazily resolve the checkpoint root (portable-aware); fallback to legacy.
+function _checkpointRoot() {
+  try {
+    const { getAppDataDir } = require('../../utils/dataHome');
+    return getAppDataDir('checkpoints');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'checkpoints');
+  }
+}
 const MAX_CHECKPOINTS = 10;
-const MAX_TOTAL_DISK_MB = 500;      // hard cap: 500 MB total checkpoint storage per project
-const TAR_SKIP_THRESHOLD_MB = 200;  // skip tar-full if working dir > 200 MB (estimated)
+const MAX_TOTAL_DISK_MB = 500; // hard cap: 500 MB total checkpoint storage per project
+const TAR_SKIP_THRESHOLD_MB = 200; // skip tar-full if working dir > 200 MB (estimated)
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 // 收敛到 utils/ensureDirSync 单一真源(逐字节委托,调用点不变)
-const _ensureDir = require('../../utils/ensureDirSync');
 
 function _projectHash(projectDir) {
   return crypto.createHash('sha256').update(projectDir).digest('hex').slice(0, 12);
 }
 
 function _projectCheckpointDir(projectDir) {
-  const dir = path.join(CHECKPOINT_ROOT, _projectHash(projectDir));
+  const dir = path.join(_checkpointRoot(), _projectHash(projectDir));
   _ensureDir(dir);
   return dir;
 }
@@ -77,7 +92,24 @@ function _saveManifest(ckptDir, manifest) {
 function _isGitRepo(dir) {
   try {
     execFileSync(_gitBin(), ['rev-parse', '--is-inside-work-tree'], {
-      cwd: dir, encoding: 'utf-8', timeout: 5000, stdio: 'pipe',
+      cwd: dir,
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Async twin of _isGitRepo (same git invocation, non-blocking).
+async function _isGitRepoAsync(dir) {
+  try {
+    await _execFileAsync(_gitBin(), ['rev-parse', '--is-inside-work-tree'], {
+      cwd: dir,
+      encoding: 'utf-8',
+      timeout: 5000,
     });
     return true;
   } catch {
@@ -87,9 +119,24 @@ function _isGitRepo(dir) {
 
 function _gitExec(args, cwd) {
   return execFileSync(_gitBin(), args, {
-    cwd, encoding: 'utf-8', timeout: 30000, stdio: 'pipe',
+    cwd,
+    encoding: 'utf-8',
+    timeout: 30000,
+    stdio: 'pipe',
     maxBuffer: 50 * 1024 * 1024, // 50 MB
   }).trim();
+}
+
+// Async twin of _gitExec (execFile instead of execFileSync; same bin, args,
+// timeout and buffer limits) — used by the *Async save path only.
+async function _gitExecAsync(args, cwd) {
+  const { stdout } = await _execFileAsync(_gitBin(), args, {
+    cwd,
+    encoding: 'utf-8',
+    timeout: 30000,
+    maxBuffer: 50 * 1024 * 1024, // 50 MB
+  });
+  return String(stdout).trim();
 }
 
 function _generateId() {
@@ -122,9 +169,8 @@ function saveCheckpoint(projectDir, options = {}) {
   const id = _generateId();
   const message = options.message || `Checkpoint at ${new Date().toISOString()}`;
   const isGit = _isGitRepo(resolvedDir);
-  const mode = options.mode === 'auto' || !options.mode
-    ? (isGit ? 'git-diff' : 'tar-full')
-    : options.mode;
+  const mode =
+    options.mode === 'auto' || !options.mode ? (isGit ? 'git-diff' : 'tar-full') : options.mode;
 
   let result;
 
@@ -166,11 +212,225 @@ function saveCheckpoint(projectDir, options = {}) {
 }
 
 function _safeGitBranch(dir) {
-  try { return _gitExec(['branch', '--show-current'], dir) || 'HEAD'; } catch { return 'unknown'; }
+  try {
+    return _gitExec(['branch', '--show-current'], dir) || 'HEAD';
+  } catch {
+    return 'unknown';
+  }
 }
 
 function _safeGitHead(dir) {
-  try { return _gitExec(['rev-parse', '--short', 'HEAD'], dir); } catch { return null; }
+  try {
+    return _gitExec(['rev-parse', '--short', 'HEAD'], dir);
+  } catch {
+    return null;
+  }
+}
+
+// ─── Async save path ───────────────────────────────────────────────────────────
+// saveCheckpointAsync mirrors saveCheckpoint LOGIC exactly but routes every
+// child-process call through execFile/exec (promisified) so the event loop is
+// never frozen by git/tar (the sync version's execFileSync blocks for hundreds
+// of ms on big repos — felt as TUI input stalls). The sync saveCheckpoint API
+// above is intentionally untouched (other call sites keep their semantics).
+// Small manifest/patch fs reads/writes stay synchronous — they are local tiny
+// files and not the blocking culprit.
+
+async function _safeGitBranchAsync(dir) {
+  try {
+    return (await _gitExecAsync(['branch', '--show-current'], dir)) || 'HEAD';
+  } catch {
+    return 'unknown';
+  }
+}
+
+async function _safeGitHeadAsync(dir) {
+  try {
+    return await _gitExecAsync(['rev-parse', '--short', 'HEAD'], dir);
+  } catch {
+    return null;
+  }
+}
+
+async function _saveGitDiffAsync(projectDir, ckptDir, id) {
+  // Same capture as _saveGitDiff: staged + unstaged changes + untracked list.
+  const diff = await _gitExecAsync(['diff', 'HEAD'], projectDir);
+  const untrackedRaw = await _gitExecAsync(
+    ['ls-files', '--others', '--exclude-standard'],
+    projectDir
+  );
+  const untracked = untrackedRaw ? untrackedRaw.split('\n').filter(Boolean) : [];
+
+  const patchPath = path.join(ckptDir, `${id}.patch`);
+  let patchContent = diff;
+
+  if (untracked.length > 0) {
+    patchContent += '\n# UNTRACKED FILES (must be manually restored):\n';
+    for (const f of untracked) {
+      patchContent += `# ${f}\n`;
+    }
+  }
+
+  fs.writeFileSync(patchPath, patchContent, 'utf-8');
+
+  const diffStat = await _gitExecAsync(['diff', '--stat', 'HEAD'], projectDir);
+  const fileCount = (diffStat.match(/\d+ file/g) || []).length || untracked.length;
+
+  return { files: fileCount + untracked.length, size: Buffer.byteLength(patchContent) };
+}
+
+async function _saveGitStashAsync(projectDir, ckptDir, id, message) {
+  const stashMsg = `khy-ckpt:${id} ${message}`;
+  await _gitExecAsync(['stash', 'push', '-m', stashMsg, '--include-untracked'], projectDir);
+
+  const stashList = await _gitExecAsync(['stash', 'list', '--oneline'], projectDir);
+  const stashLine = stashList.split('\n').find((l) => l.includes(id));
+  const stashRef = stashLine ? stashLine.split(':')[0] : 'stash@{0}';
+
+  // Re-apply the stash so working directory is unchanged
+  try {
+    await _gitExecAsync(['stash', 'pop'], projectDir);
+  } catch {
+    /* stash was empty */
+  }
+
+  const metaPath = path.join(ckptDir, `${id}.stash.json`);
+  fs.writeFileSync(metaPath, JSON.stringify({ stashRef, message: stashMsg }), 'utf-8');
+
+  return { files: 0, size: 0 };
+}
+
+async function _saveTarFullAsync(projectDir, ckptDir, id) {
+  // Same home-dir safety guard as _saveTarFull.
+  const home = os.homedir();
+  if (projectDir === home || projectDir === home + '/') {
+    return { files: 0, size: 0, skipped: true };
+  }
+
+  const tarPath = path.join(ckptDir, `${id}.tar.gz`);
+  const excludes = [
+    'node_modules',
+    '.git',
+    '__pycache__',
+    '.venv',
+    'venv',
+    'env',
+    'dist',
+    'build',
+    '.next',
+    '.nuxt',
+    '.cache',
+    '.tox',
+    'coverage',
+    '.nyc_output',
+    'bower_components',
+    '.khyquant',
+    '.claude',
+    '.npm',
+    '.cargo',
+    '.rustup',
+    '*.pyc',
+    '.DS_Store',
+    'Thumbs.db',
+    '*.tar.gz',
+    '*.zip',
+    '*.iso',
+  ]
+    .map((e) => `--exclude=${e}`)
+    .join(' ');
+
+  const parentDir = path.dirname(projectDir);
+  const baseName = path.basename(projectDir);
+
+  try {
+    await _execAsync(`tar czf "${tarPath}" ${excludes} -C "${parentDir}" "${baseName}"`, {
+      timeout: 120000,
+    });
+  } catch (err) {
+    try {
+      if (fs.existsSync(tarPath)) {
+        fs.unlinkSync(tarPath);
+      }
+    } catch {
+      /* */
+    }
+    throw new Error(`Tar failed: ${err.message}`);
+  }
+
+  const stat = fs.statSync(tarPath);
+
+  if (stat.size > TAR_SKIP_THRESHOLD_MB * 1024 * 1024) {
+    try {
+      fs.unlinkSync(tarPath);
+    } catch {
+      /* */
+    }
+    return { files: 0, size: 0, skipped: true };
+  }
+
+  return { files: -1, size: stat.size };
+}
+
+/**
+ * Async equivalent of saveCheckpoint — identical semantics/result shape, but
+ * every git/tar invocation is non-blocking (execFile/exec).
+ * @param {string} projectDir - Project root directory
+ * @param {object} [options] - same options as saveCheckpoint
+ * @returns {Promise<{ id: string, mode: string, size: number, files: number, message: string }>}
+ */
+async function saveCheckpointAsync(projectDir, options = {}) {
+  const resolvedDir = path.resolve(projectDir);
+  if (!fs.existsSync(resolvedDir)) {
+    throw new Error(`Directory not found: ${resolvedDir}`);
+  }
+
+  const ckptDir = _projectCheckpointDir(resolvedDir);
+  const manifest = _loadManifest(ckptDir);
+  manifest.project = resolvedDir;
+
+  const id = _generateId();
+  const message = options.message || `Checkpoint at ${new Date().toISOString()}`;
+  const isGit = await _isGitRepoAsync(resolvedDir);
+  const mode =
+    options.mode === 'auto' || !options.mode ? (isGit ? 'git-diff' : 'tar-full') : options.mode;
+
+  let result;
+
+  switch (mode) {
+    case 'git-diff':
+      result = await _saveGitDiffAsync(resolvedDir, ckptDir, id);
+      break;
+    case 'git-stash':
+      result = await _saveGitStashAsync(resolvedDir, ckptDir, id, message);
+      break;
+    case 'tar-full':
+      result = await _saveTarFullAsync(resolvedDir, ckptDir, id);
+      break;
+    default:
+      throw new Error(`Unknown checkpoint mode: ${mode}`);
+  }
+
+  const entry = {
+    id,
+    mode,
+    message,
+    timestamp: new Date().toISOString(),
+    branch: isGit ? await _safeGitBranchAsync(resolvedDir) : null,
+    commitHash: isGit ? await _safeGitHeadAsync(resolvedDir) : null,
+    files: result.files,
+    size: result.size,
+  };
+
+  manifest.checkpoints.push(entry);
+
+  // Enforce max checkpoints — remove oldest if over limit
+  while (manifest.checkpoints.length > MAX_CHECKPOINTS) {
+    const old = manifest.checkpoints.shift();
+    _removeCheckpointFiles(ckptDir, old);
+  }
+
+  _saveManifest(ckptDir, manifest);
+  return entry;
 }
 
 function _saveGitDiff(projectDir, ckptDir, id) {
@@ -204,11 +464,15 @@ function _saveGitStash(projectDir, ckptDir, id, message) {
 
   // Record stash reference
   const stashList = _gitExec(['stash', 'list', '--oneline'], projectDir);
-  const stashLine = stashList.split('\n').find(l => l.includes(id));
+  const stashLine = stashList.split('\n').find((l) => l.includes(id));
   const stashRef = stashLine ? stashLine.split(':')[0] : 'stash@{0}';
 
   // Re-apply the stash so working directory is unchanged
-  try { _gitExec(['stash', 'pop'], projectDir); } catch { /* stash was empty */ }
+  try {
+    _gitExec(['stash', 'pop'], projectDir);
+  } catch {
+    /* stash was empty */
+  }
 
   const metaPath = path.join(ckptDir, `${id}.stash.json`);
   fs.writeFileSync(metaPath, JSON.stringify({ stashRef, message: stashMsg }), 'utf-8');
@@ -225,13 +489,35 @@ function _saveTarFull(projectDir, ckptDir, id) {
 
   const tarPath = path.join(ckptDir, `${id}.tar.gz`);
   const excludes = [
-    'node_modules', '.git', '__pycache__', '.venv', 'venv', 'env',
-    'dist', 'build', '.next', '.nuxt', '.cache', '.tox',
-    'coverage', '.nyc_output', 'bower_components',
-    '.khyquant', '.claude', '.npm', '.cargo', '.rustup',
-    '*.pyc', '.DS_Store', 'Thumbs.db',
-    '*.tar.gz', '*.zip', '*.iso',
-  ].map(e => `--exclude=${e}`).join(' ');
+    'node_modules',
+    '.git',
+    '__pycache__',
+    '.venv',
+    'venv',
+    'env',
+    'dist',
+    'build',
+    '.next',
+    '.nuxt',
+    '.cache',
+    '.tox',
+    'coverage',
+    '.nyc_output',
+    'bower_components',
+    '.khyquant',
+    '.claude',
+    '.npm',
+    '.cargo',
+    '.rustup',
+    '*.pyc',
+    '.DS_Store',
+    'Thumbs.db',
+    '*.tar.gz',
+    '*.zip',
+    '*.iso',
+  ]
+    .map((e) => `--exclude=${e}`)
+    .join(' ');
 
   const parentDir = path.dirname(projectDir);
   const baseName = path.basename(projectDir);
@@ -239,11 +525,18 @@ function _saveTarFull(projectDir, ckptDir, id) {
   // Cross-platform tar
   try {
     execSync(`tar czf "${tarPath}" ${excludes} -C "${parentDir}" "${baseName}"`, {
-      timeout: 120000, stdio: 'pipe',
+      timeout: 120000,
+      stdio: 'pipe',
     });
   } catch (err) {
     // Clean up partial tar on failure
-    try { if (fs.existsSync(tarPath)) fs.unlinkSync(tarPath); } catch { /* */ }
+    try {
+      if (fs.existsSync(tarPath)) {
+        fs.unlinkSync(tarPath);
+      }
+    } catch {
+      /* */
+    }
     throw new Error(`Tar failed: ${err.message}`);
   }
 
@@ -251,7 +544,11 @@ function _saveTarFull(projectDir, ckptDir, id) {
 
   // Post-creation size guard: delete if tar is too large
   if (stat.size > TAR_SKIP_THRESHOLD_MB * 1024 * 1024) {
-    try { fs.unlinkSync(tarPath); } catch { /* */ }
+    try {
+      fs.unlinkSync(tarPath);
+    } catch {
+      /* */
+    }
     return { files: 0, size: 0, skipped: true };
   }
 
@@ -272,14 +569,18 @@ function restoreCheckpoint(projectDir, checkpointId, options = {}) {
   const resolvedDir = path.resolve(projectDir);
   const ckptDir = _projectCheckpointDir(resolvedDir);
   const manifest = _loadManifest(ckptDir);
-  const entry = manifest.checkpoints.find(c => c.id === checkpointId);
+  const entry = manifest.checkpoints.find((c) => c.id === checkpointId);
 
   if (!entry) {
     throw new Error(`Checkpoint "${checkpointId}" not found`);
   }
 
   if (options.dryRun) {
-    return { restored: false, mode: entry.mode, message: `[dry-run] Would restore: ${entry.message}` };
+    return {
+      restored: false,
+      mode: entry.mode,
+      message: `[dry-run] Would restore: ${entry.message}`,
+    };
   }
 
   switch (entry.mode) {
@@ -302,14 +603,20 @@ function _restoreGitDiff(projectDir, ckptDir, entry) {
 
   const patch = fs.readFileSync(patchPath, 'utf-8');
   // Filter out comment lines (untracked file list)
-  const cleanPatch = patch.split('\n').filter(l => !l.startsWith('# ')).join('\n');
+  const cleanPatch = patch
+    .split('\n')
+    .filter((l) => !l.startsWith('# '))
+    .join('\n');
 
   if (cleanPatch.trim()) {
     try {
       const gitBin = _gitBin();
       const quotedGit = gitBin === 'git' ? 'git' : `"${gitBin}"`;
       execSync(`${quotedGit} apply --3way`, {
-        cwd: projectDir, input: cleanPatch, timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: projectDir,
+        input: cleanPatch,
+        timeout: 30000,
+        stdio: ['pipe', 'pipe', 'pipe'],
         maxBuffer: 50 * 1024 * 1024,
       });
     } catch (err) {
@@ -327,10 +634,15 @@ function _restoreGitStash(projectDir, ckptDir, entry) {
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
     // Find stash by message
     const stashList = _gitExec(['stash', 'list', '--oneline'], projectDir);
-    const line = stashList.split('\n').find(l => l.includes(entry.id));
-    if (line) stashRef = line.split(':')[0];
-    else stashRef = meta.stashRef;
-  } catch { /* use default */ }
+    const line = stashList.split('\n').find((l) => l.includes(entry.id));
+    if (line) {
+      stashRef = line.split(':')[0];
+    } else {
+      stashRef = meta.stashRef;
+    }
+  } catch {
+    /* use default */
+  }
 
   _gitExec(['stash', 'apply', stashRef], projectDir);
   return { restored: true, mode: 'git-stash', message: `Applied stash: ${entry.message}` };
@@ -344,7 +656,8 @@ function _restoreTarFull(projectDir, ckptDir, entry) {
 
   const parentDir = path.dirname(projectDir);
   execSync(`tar xzf "${tarPath}" -C "${parentDir}"`, {
-    timeout: 120000, stdio: 'pipe',
+    timeout: 120000,
+    stdio: 'pipe',
   });
 
   return { restored: true, mode: 'tar-full', message: `Extracted: ${entry.message}` };
@@ -375,13 +688,17 @@ function diffCheckpoint(projectDir, checkpointId) {
   const resolvedDir = path.resolve(projectDir);
   const ckptDir = _projectCheckpointDir(resolvedDir);
   const manifest = _loadManifest(ckptDir);
-  const entry = manifest.checkpoints.find(c => c.id === checkpointId);
+  const entry = manifest.checkpoints.find((c) => c.id === checkpointId);
 
-  if (!entry) throw new Error(`Checkpoint "${checkpointId}" not found`);
+  if (!entry) {
+    throw new Error(`Checkpoint "${checkpointId}" not found`);
+  }
 
   if (entry.mode === 'git-diff') {
     const patchPath = path.join(ckptDir, `${entry.id}.patch`);
-    if (!fs.existsSync(patchPath)) throw new Error('Patch file missing');
+    if (!fs.existsSync(patchPath)) {
+      throw new Error('Patch file missing');
+    }
     const patch = fs.readFileSync(patchPath, 'utf-8');
     const additions = (patch.match(/^\+[^+]/gm) || []).length;
     const deletions = (patch.match(/^-[^-]/gm) || []).length;
@@ -389,10 +706,16 @@ function diffCheckpoint(projectDir, checkpointId) {
   }
 
   if (entry.mode === 'tar-full') {
-    return { diff: `[tar-full checkpoint — ${_formatSize(entry.size)}]`, stats: { additions: 0, deletions: 0 } };
+    return {
+      diff: `[tar-full checkpoint — ${_formatSize(entry.size)}]`,
+      stats: { additions: 0, deletions: 0 },
+    };
   }
 
-  return { diff: `[${entry.mode} checkpoint — no diff available]`, stats: { additions: 0, deletions: 0 } };
+  return {
+    diff: `[${entry.mode} checkpoint — no diff available]`,
+    stats: { additions: 0, deletions: 0 },
+  };
 }
 
 // ─── Cleanup ───────────────────────────────────────────────────────────────
@@ -407,8 +730,10 @@ function deleteCheckpoint(projectDir, checkpointId) {
   const resolvedDir = path.resolve(projectDir);
   const ckptDir = _projectCheckpointDir(resolvedDir);
   const manifest = _loadManifest(ckptDir);
-  const idx = manifest.checkpoints.findIndex(c => c.id === checkpointId);
-  if (idx === -1) return false;
+  const idx = manifest.checkpoints.findIndex((c) => c.id === checkpointId);
+  if (idx === -1) {
+    return false;
+  }
 
   const [entry] = manifest.checkpoints.splice(idx, 1);
   _removeCheckpointFiles(ckptDir, entry);
@@ -434,7 +759,9 @@ function cleanupCheckpoints(projectDir, keep = 10) {
     removed++;
   }
 
-  if (removed > 0) _saveManifest(ckptDir, manifest);
+  if (removed > 0) {
+    _saveManifest(ckptDir, manifest);
+  }
   return removed;
 }
 
@@ -442,7 +769,13 @@ function _removeCheckpointFiles(ckptDir, entry) {
   const extensions = ['.patch', '.tar.gz', '.stash.json'];
   for (const ext of extensions) {
     const filePath = path.join(ckptDir, `${entry.id}${ext}`);
-    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch { /* ignore */ }
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -470,20 +803,28 @@ function getCheckpointStats(projectDir) {
   };
 }
 
+// Thin delegate to the canonical formatter (utils/formatBytes); maxUnit 'GB'
+// reproduces the previous 4-tier B/KB/MB/GB cascade byte-for-byte.
 function _formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  return _formatBytesAtom(bytes, { maxUnit: 'GB' });
 }
 
 module.exports = {
   saveCheckpoint,
+  saveCheckpointAsync,
   restoreCheckpoint,
   listCheckpoints,
   diffCheckpoint,
   deleteCheckpoint,
   cleanupCheckpoints,
   getCheckpointStats,
-  CHECKPOINT_ROOT,
 };
+
+// Lazy getter keeps destructured requires working while resolving the
+// portable-aware location at access time (not at require time).
+Object.defineProperty(module.exports, 'CHECKPOINT_ROOT', {
+  enumerable: true,
+  get() {
+    return _checkpointRoot();
+  },
+});

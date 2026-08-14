@@ -33,25 +33,50 @@ function check(detection, opts = {}) {
     items.push({ key, label, limit, actual, pass, ...extra });
 
   // AI 高频词/段 ≤ 2
-  add('highFreqPerPara', 'AI高频词/段', `≤${thresholds.highFreqPerParagraph}`,
-    totals.maxHighFreqPerPara, totals.maxHighFreqPerPara <= thresholds.highFreqPerParagraph);
+  add(
+    'highFreqPerPara',
+    'AI高频词/段',
+    `≤${thresholds.highFreqPerParagraph}`,
+    totals.maxHighFreqPerPara,
+    totals.maxHighFreqPerPara <= thresholds.highFreqPerParagraph
+  );
 
   // 段末总结套句 全文 ≤ 1
-  add('endCliche', '段末套句(全文)', `≤${thresholds.endClicheTotal}`,
-    totals.endCliche, totals.endCliche <= thresholds.endClicheTotal);
+  add(
+    'endCliche',
+    '段末套句(全文)',
+    `≤${thresholds.endClicheTotal}`,
+    totals.endCliche,
+    totals.endCliche <= thresholds.endClicheTotal
+  );
 
   // 三元并列/段 ≤ 1
-  add('tripletPerPara', '三元并列/段', `≤${thresholds.tripletPerParagraph}`,
-    totals.tripletMax, totals.tripletMax <= thresholds.tripletPerParagraph);
+  add(
+    'tripletPerPara',
+    '三元并列/段',
+    `≤${thresholds.tripletPerParagraph}`,
+    totals.tripletMax,
+    totals.tripletMax <= thresholds.tripletPerParagraph
+  );
 
   // 理论起笔段落 ≤ 20%
   const theoryPct = Math.round(totals.theoryOpenerRatio * 100);
-  add('theoryOpener', '理论起笔段落', `≤${Math.round(thresholds.theoryOpenerRatio * 100)}%`,
-    `${theoryPct}%`, totals.theoryOpenerRatio <= thresholds.theoryOpenerRatio + 1e-9);
+  add(
+    'theoryOpener',
+    '理论起笔段落',
+    `≤${Math.round(thresholds.theoryOpenerRatio * 100)}%`,
+    `${theoryPct}%`,
+    totals.theoryOpenerRatio <= thresholds.theoryOpenerRatio + 1e-9
+  );
 
   // 正文加粗 ≤ 5
-  add('bold', '正文加粗', `≤${thresholds.boldTotal}`,
-    stats.boldCount, stats.boldCount <= thresholds.boldTotal);
+  add(
+    'bold',
+    '正文加粗',
+    `≤${thresholds.boldTotal}`,
+    stats.boldCount,
+    stats.boldCount <= thresholds.boldTotal
+  );
 
   // 泛化结尾 = 0（模式 10）
   const generalEnding = (detection.findings.find((f) => f.id === 10) || { count: 0 }).count;
@@ -64,30 +89,50 @@ function check(detection, opts = {}) {
   // 化用密度 20%-40%
   const huayongPct = stats.sentenceCount ? stats.huayongMarkers / stats.sentenceCount : 0;
   const huayongOk = huayongPct >= thresholds.huayongMin && huayongPct <= thresholds.huayongMax;
-  add('huayong', '化用密度', `${Math.round(thresholds.huayongMin * 100)}%-${Math.round(thresholds.huayongMax * 100)}%`,
-    `${Math.round(huayongPct * 100)}%`, huayongOk,
+  add(
+    'huayong',
+    '化用密度',
+    `${Math.round(thresholds.huayongMin * 100)}%-${Math.round(thresholds.huayongMax * 100)}%`,
+    `${Math.round(huayongPct * 100)}%`,
+    huayongOk,
     // 片段模式下化用密度仅作参考，不计入硬失败
-    mode === 'fragment' ? { advisory: true, note: '片段模式化用密度仅供参考' } : {});
+    mode === 'fragment' ? { advisory: true, note: '片段模式化用密度仅供参考' } : {}
+  );
 
   // 显式引用（mode 相关）
   if (mode === 'full') {
     const target = thresholds.explicitCitationFull;
     const ascending = _isStrictlyAscending(stats.citationNumbers);
-    add('citationCount', '显式引用篇数', `=${target}`,
-      stats.distinctCitationNumbers, stats.distinctCitationNumbers === target);
+    add(
+      'citationCount',
+      '显式引用篇数',
+      `=${target}`,
+      stats.distinctCitationNumbers,
+      stats.distinctCitationNumbers === target
+    );
     add('citationAscending', '引用编号递增', '严格递增', ascending ? '是' : '否', ascending);
   } else if (mode === 'chapter') {
-    add('citationCount', '显式引用篇数', '≥1(接续)', stats.distinctCitationNumbers,
-      stats.distinctCitationNumbers >= 1, { advisory: true });
+    add(
+      'citationCount',
+      '显式引用篇数',
+      '≥1(接续)',
+      stats.distinctCitationNumbers,
+      stats.distinctCitationNumbers >= 1,
+      { advisory: true }
+    );
   } else {
-    add('citationCount', '显式引用(片段)', '1-2 正常', stats.explicitCitations, true,
-      { advisory: true, note: '片段 1-2 处角标正常，不判不足' });
+    add('citationCount', '显式引用(片段)', '1-2 正常', stats.explicitCitations, true, {
+      advisory: true,
+      note: '片段 1-2 处角标正常，不判不足',
+    });
   }
 
   // 编造文献 = 0（无法代码判真伪 → advisory，统计 [待核实] 标记数）
   const toVerify = _countToVerify(detection.text || '');
-  add('fabrication', '编造文献([待核实])', '人工/联网核实', toVerify, toVerify === 0,
-    { advisory: true, note: '代码无法判真伪，[待核实] 需 WebSearch 或人工确认' });
+  add('fabrication', '编造文献([待核实])', '人工/联网核实', toVerify, toVerify === 0, {
+    advisory: true,
+    note: '代码无法判真伪，[待核实] 需 WebSearch 或人工确认',
+  });
 
   const hardFailures = items.filter((it) => !it.pass && !it.advisory);
   return {
@@ -99,7 +144,9 @@ function check(detection, opts = {}) {
 
 function _isStrictlyAscending(nums) {
   for (let i = 1; i < nums.length; i += 1) {
-    if (nums[i] <= nums[i - 1]) return false;
+    if (nums[i] <= nums[i - 1]) {
+      return false;
+    }
   }
   return true;
 }

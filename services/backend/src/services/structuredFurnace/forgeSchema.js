@@ -23,9 +23,23 @@ const S = require('../metaplan/constraintStrategy');
 // 标准动作原语 —— L0 降维的落点。模型/坍缩器只能映射到这张表内的动作，
 // 杜绝把自然语言动词原样塞进结构（与 metaplan executorRegistry 的“武器库”同构思想）。
 const ACTION_PRIMITIVES = Object.freeze([
-  'CREATE', 'READ', 'UPDATE', 'DELETE', 'MOVE', 'COPY',
-  'SEARCH', 'ANALYZE', 'EXECUTE', 'BUILD', 'TEST', 'DEPLOY',
-  'NOTIFY', 'WAIT', 'FETCH', 'SUMMARIZE', 'UNKNOWN',
+  'CREATE',
+  'READ',
+  'UPDATE',
+  'DELETE',
+  'MOVE',
+  'COPY',
+  'SEARCH',
+  'ANALYZE',
+  'EXECUTE',
+  'BUILD',
+  'TEST',
+  'DEPLOY',
+  'NOTIFY',
+  'WAIT',
+  'FETCH',
+  'SUMMARIZE',
+  'UNKNOWN',
 ]);
 
 // 模糊词：无歧义性铁律的黑名单（中英）。
@@ -48,13 +62,20 @@ const RELATIVE_CLAUSE_RE = /的[^，。；,;]{4,}的|\b(which|that|who|whom|whos
  */
 function coerceVagueness(text) {
   const raw = String(text || '');
-  if (!VAGUE_RE.test(raw)) return { clean: raw.trim(), confidence: 1, hadVague: false };
-  const clean = raw.replace(new RegExp(VAGUE_RE.source, 'gi'), '').replace(/\s{2,}/g, ' ').trim();
+  if (!VAGUE_RE.test(raw)) {
+    return { clean: raw.trim(), confidence: 1, hadVague: false };
+  }
+  const clean = raw
+    .replace(new RegExp(VAGUE_RE.source, 'gi'), '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
   return { clean, confidence: 0.6, hadVague: true };
 }
 
 function isAtomic(value) {
-  if (typeof value !== 'string') return true; // 非字符串（数值/枚举/uid）天然原子
+  if (typeof value !== 'string') {
+    return true;
+  } // 非字符串（数值/枚举/uid）天然原子
   return !NON_ATOMIC_RE.test(value);
 }
 
@@ -67,57 +88,93 @@ function _fail(error, missing) {
 }
 
 function _checkStringField(label, value) {
-  if (VAGUE_RE.test(String(value))) return `${label} 含模糊词（违反无歧义性，应先转为 confidence/枚举）`;
-  if (hasRelativeClause(value)) return `${label} 含自然语言定语从句（违反防呆③，应拆为属性/关系边）`;
-  if (!isAtomic(value)) return `${label} 非原子（含并列/条件连接词，应拆为多节点或边）`;
+  if (VAGUE_RE.test(String(value))) {
+    return `${label} 含模糊词（违反无歧义性，应先转为 confidence/枚举）`;
+  }
+  if (hasRelativeClause(value)) {
+    return `${label} 含自然语言定语从句（违反防呆③，应拆为属性/关系边）`;
+  }
+  if (!isAtomic(value)) {
+    return `${label} 非原子（含并列/条件连接词，应拆为多节点或边）`;
+  }
   return null;
 }
 
 /** 校验单个实体节点：必带 uid + type + 规范描述原子无歧义。 */
 function _validateEntity(e) {
-  if (!e || !e.uid) return '实体缺少 UID（违反可索引性）';
-  if (!e.type) return `实体 ${e.uid} 缺少 type`;
+  if (!e || !e.uid) {
+    return '实体缺少 UID（违反可索引性）';
+  }
+  if (!e.type) {
+    return `实体 ${e.uid} 缺少 type`;
+  }
   const err = _checkStringField(`实体 ${e.uid} 描述`, e.canonical || '');
   return err;
 }
 
 /** L0：ActionIntent。 */
 function validateActionIntent(payload) {
-  if (!payload || payload.kind !== 'ActionIntent') return _fail('kind 必须为 ActionIntent');
+  if (!payload || payload.kind !== 'ActionIntent') {
+    return _fail('kind 必须为 ActionIntent');
+  }
   const missing = [];
-  if (!payload.uid) missing.push('uid');
-  if (!ACTION_PRIMITIVES.includes(payload.action)) missing.push('action(必须是标准动作原语)');
-  if (!payload.target || !payload.target.uid) missing.push('target.uid(目标实体指针)');
-  if (typeof payload.confidence !== 'number') missing.push('confidence');
-  if (missing.length) return _fail('ActionIntent 要素缺失', missing);
+  if (!payload.uid) {
+    missing.push('uid');
+  }
+  if (!ACTION_PRIMITIVES.includes(payload.action)) {
+    missing.push('action(必须是标准动作原语)');
+  }
+  if (!payload.target || !payload.target.uid) {
+    missing.push('target.uid(目标实体指针)');
+  }
+  if (typeof payload.confidence !== 'number') {
+    missing.push('confidence');
+  }
+  if (missing.length) {
+    return _fail('ActionIntent 要素缺失', missing);
+  }
 
-  if (!S.isStrategy(payload.strategy)) return _fail('strategy 非法（须为 constraintStrategy 枚举）');
+  if (!S.isStrategy(payload.strategy)) {
+    return _fail('strategy 非法（须为 constraintStrategy 枚举）');
+  }
 
   // 参数原子性 + 无歧义性。
   for (const [k, v] of Object.entries(payload.params || {})) {
     const err = _checkStringField(`params.${k}`, v);
-    if (err) return _fail(err);
+    if (err) {
+      return _fail(err);
+    }
   }
   // 实体表逐一校验 + target 必须在实体表内（指针完整性）。
   const entities = payload.entities || {};
   for (const e of Object.values(entities)) {
     const err = _validateEntity(e);
-    if (err) return _fail(err);
+    if (err) {
+      return _fail(err);
+    }
   }
-  if (!entities[payload.target.uid]) return _fail('target.uid 未登记于 entities（悬空指针）');
+  if (!entities[payload.target.uid]) {
+    return _fail('target.uid 未登记于 entities（悬空指针）');
+  }
 
   return { valid: true, normalized: payload };
 }
 
 /** L1：TaskGraph。含依赖必须是非空边的 DAG（防呆②）。 */
 function validateTaskGraph(payload, opts = {}) {
-  if (!payload || payload.kind !== 'TaskGraph') return _fail('kind 必须为 TaskGraph');
-  if (!payload.uid) return _fail('TaskGraph 缺少 uid', ['uid']);
+  if (!payload || payload.kind !== 'TaskGraph') {
+    return _fail('kind 必须为 TaskGraph');
+  }
+  if (!payload.uid) {
+    return _fail('TaskGraph 缺少 uid', ['uid']);
+  }
   const graph = payload.graph;
   if (!graph || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
     return _fail('TaskGraph.graph 须含 nodes[] 与 edges[]');
   }
-  if (graph.nodes.length === 0) return _fail('TaskGraph 至少一个节点', ['nodes']);
+  if (graph.nodes.length === 0) {
+    return _fail('TaskGraph 至少一个节点', ['nodes']);
+  }
 
   // 防呆②：若来源含因果/时序依赖，则边不得为空（不允许退化成扁平列表）。
   if (opts.hadDependency && graph.edges.length === 0) {
@@ -125,14 +182,22 @@ function validateTaskGraph(payload, opts = {}) {
   }
 
   const nodeUids = new Set(graph.nodes.map((n) => n && n.uid));
-  if (nodeUids.size !== graph.nodes.length) return _fail('存在重复/缺失的节点 uid（违反可索引性）');
+  if (nodeUids.size !== graph.nodes.length) {
+    return _fail('存在重复/缺失的节点 uid（违反可索引性）');
+  }
 
   for (const n of graph.nodes) {
-    if (!n.uid) return _fail('节点缺少 uid', ['node.uid']);
-    if (!ACTION_PRIMITIVES.includes(n.action)) return _fail(`节点 ${n.uid} 的 action 非标准原语`);
+    if (!n.uid) {
+      return _fail('节点缺少 uid', ['node.uid']);
+    }
+    if (!ACTION_PRIMITIVES.includes(n.action)) {
+      return _fail(`节点 ${n.uid} 的 action 非标准原语`);
+    }
     for (const [k, v] of Object.entries(n.params || {})) {
       const err = _checkStringField(`节点 ${n.uid} params.${k}`, v);
-      if (err) return _fail(err);
+      if (err) {
+        return _fail(err);
+      }
     }
   }
   for (const e of graph.edges) {
@@ -143,26 +208,40 @@ function validateTaskGraph(payload, opts = {}) {
   // 实体表 + 锁级。
   for (const ent of Object.values(payload.entities || {})) {
     const err = _validateEntity(ent);
-    if (err) return _fail(err);
+    if (err) {
+      return _fail(err);
+    }
   }
-  if (!S.isStrategy(payload.strategy)) return _fail('strategy 非法');
+  if (!S.isStrategy(payload.strategy)) {
+    return _fail('strategy 非法');
+  }
 
   return { valid: true, normalized: payload };
 }
 
 /** L2：StateMachine。 */
 function validateStateMachine(payload) {
-  if (!payload || payload.kind !== 'StateMachine') return _fail('kind 必须为 StateMachine');
-  if (!payload.uid) return _fail('StateMachine 缺少 uid', ['uid']);
+  if (!payload || payload.kind !== 'StateMachine') {
+    return _fail('kind 必须为 StateMachine');
+  }
+  if (!payload.uid) {
+    return _fail('StateMachine 缺少 uid', ['uid']);
+  }
   const sm = payload.machine;
   if (!sm || !Array.isArray(sm.states) || !Array.isArray(sm.transitions)) {
     return _fail('StateMachine.machine 须含 states[] 与 transitions[]');
   }
-  if (sm.states.length === 0) return _fail('StateMachine 至少一个状态', ['states']);
-  if (!sm.initial) return _fail('StateMachine 缺少 initial 状态', ['initial']);
+  if (sm.states.length === 0) {
+    return _fail('StateMachine 至少一个状态', ['states']);
+  }
+  if (!sm.initial) {
+    return _fail('StateMachine 缺少 initial 状态', ['initial']);
+  }
 
   const stateUids = new Set(sm.states.map((s) => s && s.uid));
-  if (!stateUids.has(sm.initial)) return _fail('initial 不在状态集内');
+  if (!stateUids.has(sm.initial)) {
+    return _fail('initial 不在状态集内');
+  }
   for (const t of sm.transitions) {
     if (!stateUids.has(t.from) || !stateUids.has(t.to)) {
       return _fail(`转移端点悬空（${t.from} -> ${t.to}）`);
@@ -170,9 +249,13 @@ function validateStateMachine(payload) {
   }
   for (const ent of Object.values(payload.entities || {})) {
     const err = _validateEntity(ent);
-    if (err) return _fail(err);
+    if (err) {
+      return _fail(err);
+    }
   }
-  if (!S.isStrategy(payload.strategy)) return _fail('strategy 非法');
+  if (!S.isStrategy(payload.strategy)) {
+    return _fail('strategy 非法');
+  }
 
   return { valid: true, normalized: payload };
 }
@@ -180,9 +263,15 @@ function validateStateMachine(payload) {
 /** 统一分派校验。 */
 function validate(payload, opts = {}) {
   const kind = payload && payload.kind;
-  if (kind === 'ActionIntent') return validateActionIntent(payload);
-  if (kind === 'TaskGraph') return validateTaskGraph(payload, opts);
-  if (kind === 'StateMachine') return validateStateMachine(payload);
+  if (kind === 'ActionIntent') {
+    return validateActionIntent(payload);
+  }
+  if (kind === 'TaskGraph') {
+    return validateTaskGraph(payload, opts);
+  }
+  if (kind === 'StateMachine') {
+    return validateStateMachine(payload);
+  }
   return _fail(`未知坍缩产出 kind: ${kind}`);
 }
 

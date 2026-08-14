@@ -65,17 +65,18 @@ const ENFORCEMENT = Object.freeze([
 /** 可变性分级。 */
 const TIERS = Object.freeze({
   IMMUTABLE: 'immutable', // 绝不自治改动(红线):安全守卫/进化机器自身、内核、法律与安全策略、机密。
-  GUARDED: 'guarded',     // 可改但需谨慎 + 联动:单一真源常量、打包/发布、CI、.ai 人工契约。
+  GUARDED: 'guarded', // 可改但需谨慎 + 联动:单一真源常量、打包/发布、CI、.ai 人工契约。
   EVOLVABLE: 'evolvable', // 自由进化:业务服务/应用/文档/测试。
-  UNKNOWN: 'unknown',     // 未匹配任何规则:保守对待,但不阻断。
+  UNKNOWN: 'unknown', // 未匹配任何规则:保守对待,但不阻断。
 });
 
 const OFF = ['0', 'false', 'off', 'no'];
 
 /** 是否启用进化策略(门控关 → 评估恒为安全空、不阻断、无级联)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_EVOLUTION_POLICY) != null ? env.KHY_EVOLUTION_POLICY : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !OFF.includes(v);
 }
 
@@ -92,16 +93,25 @@ const OVERRIDE_OFF = ['', '0', 'false', 'off', 'no'];
  * @param {Object} [env]
  * @returns {{rules:Set<string>, paths:string[]}}
  */
-function overrideAllowlist(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const raw = String((env && env.KHY_EVOLUTION_OVERRIDE) != null ? env.KHY_EVOLUTION_OVERRIDE : '').trim();
-  if (!raw || OVERRIDE_OFF.includes(raw.toLowerCase())) return { rules: new Set(), paths: [] };
+function overrideAllowlist(env = typeof process !== 'undefined' ? process.env : {}) {
+  const raw = String(
+    (env && env.KHY_EVOLUTION_OVERRIDE) != null ? env.KHY_EVOLUTION_OVERRIDE : ''
+  ).trim();
+  if (!raw || OVERRIDE_OFF.includes(raw.toLowerCase())) {
+    return { rules: new Set(), paths: [] };
+  }
   const rules = new Set();
   const paths = [];
   for (const tok of raw.split(/[\s,]+/)) {
     const t = tok.trim();
-    if (!t) continue;
-    if (t.includes('/')) paths.push(_norm(t));
-    else rules.add(t.toLowerCase());
+    if (!t) {
+      continue;
+    }
+    if (t.includes('/')) {
+      paths.push(_norm(t));
+    } else {
+      rules.add(t.toLowerCase());
+    }
   }
   return { rules, paths };
 }
@@ -116,16 +126,23 @@ function overrideAllowlist(env = (typeof process !== 'undefined' ? process.env :
  */
 function isOverrideAuthorized(rule, file, env) {
   const r = String(rule || '').toLowerCase();
-  if (!r || NON_OVERRIDABLE_RULES.includes(r)) return false;
+  if (!r || NON_OVERRIDABLE_RULES.includes(r)) {
+    return false;
+  }
   const al = overrideAllowlist(env);
-  if (al.rules.has(r)) return true;
+  if (al.rules.has(r)) {
+    return true;
+  }
   const f = _norm(file);
   return !!f && al.paths.some((p) => p && f.indexOf(p) >= 0);
 }
 
 /** 归一路径:trim、反斜杠→正斜杠、去开头 './'。保留大小写(LICENSE 等按原名匹配)。 */
 function _norm(p) {
-  return String(p == null ? '' : p).trim().replace(/\\/g, '/').replace(/^\.\//, '');
+  return String(p == null ? '' : p)
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
 }
 
 /** 取 basename(纯字符串,不碰 path 模块以守零依赖)。 */
@@ -153,7 +170,8 @@ const _escapeRe = require('../utils/escapeRegExp');
 const RULES = Object.freeze([
   // ── IMMUTABLE:安全守卫与进化机器自身(绝不能让进化改弱自己的刹车)──
   {
-    tier: TIERS.IMMUTABLE, rule: 'safety-machinery',
+    tier: TIERS.IMMUTABLE,
+    rule: 'safety-machinery',
     reason: '自修复/进化的安全守卫与刹车 —— 自治进化绝不能改弱自己的护栏',
     test: (p) =>
       /(^|\/)scripts\/check-[^/]+\.js$/.test(p) ||
@@ -164,75 +182,92 @@ const RULES = Object.freeze([
   },
   // ── IMMUTABLE:法律 / 安全策略 ──
   {
-    tier: TIERS.IMMUTABLE, rule: 'legal-policy',
+    tier: TIERS.IMMUTABLE,
+    rule: 'legal-policy',
     reason: '法律 / 安全策略文件',
     test: (p) => ['LICENSE', 'SECURITY.md', 'CODE_OF_CONDUCT.md'].includes(_base(p)),
   },
   // ── IMMUTABLE:操作系统内核 ABI / 引导 ──
   {
-    tier: TIERS.IMMUTABLE, rule: 'kernel-abi',
+    tier: TIERS.IMMUTABLE,
+    rule: 'kernel-abi',
     reason: '操作系统内核 ABI / 引导 —— 自治进化不得改写',
     test: (p) => /(^|\/)kernel\//.test(p),
   },
   // ── IMMUTABLE:机密 / 凭据 ──
   {
-    tier: TIERS.IMMUTABLE, rule: 'secrets',
+    tier: TIERS.IMMUTABLE,
+    rule: 'secrets',
     reason: '机密 / 凭据',
     test: (p) => {
       const b = _base(p);
-      if (b === '.env.example') return false; // 模板可变
-      if (b === '.env' || /^\.env\./.test(b)) return true;
-      if (['.pem', '.key', '.p12', '.pfx'].includes(_ext(p))) return true;
+      if (b === '.env.example') {
+        return false;
+      } // 模板可变
+      if (b === '.env' || /^\.env\./.test(b)) {
+        return true;
+      }
+      if (['.pem', '.key', '.p12', '.pfx'].includes(_ext(p))) {
+        return true;
+      }
       return b === 'credentials.json' || /^secrets\./.test(b);
     },
   },
 
   // ── GUARDED:单一真源常量(改动会级联到消费点)──
   {
-    tier: TIERS.GUARDED, rule: 'ssot-constants',
+    tier: TIERS.GUARDED,
+    rule: 'ssot-constants',
     reason: '单一真源常量 —— 改动会级联到消费点',
     test: (p) => /services\/backend\/src\/constants\/[^/]+\.js$/.test(p),
   },
   // ── GUARDED:打包 / 发布完整性 ──
   {
-    tier: TIERS.GUARDED, rule: 'packaging',
+    tier: TIERS.GUARDED,
+    rule: 'packaging',
     reason: '打包 / 发布完整性',
     test: (p) => ['setup.py', 'pyproject.toml', 'MANIFEST.in', 'package.json'].includes(_base(p)),
   },
   // ── GUARDED:CI / CD 流水线 ──
   {
-    tier: TIERS.GUARDED, rule: 'ci-pipeline',
+    tier: TIERS.GUARDED,
+    rule: 'ci-pipeline',
     reason: 'CI / CD 流水线定义',
     test: (p) => /(^|\/)\.github\/workflows\//.test(p),
   },
   // ── GUARDED:.ai 人工权威契约(机器只刷新派生 SKELETON)──
   {
-    tier: TIERS.GUARDED, rule: 'ai-contracts',
+    tier: TIERS.GUARDED,
+    rule: 'ai-contracts',
     reason: '.ai 人工权威契约 —— 机器只刷新派生 SKELETON,正本改动须人工',
     test: (p) => /(^|\/)\.ai\/(GUARDS\.md|MAP\.md|CONTEXT\.yaml)$/.test(p),
   },
 
   // ── EVOLVABLE:机器派生骨架 ──
   {
-    tier: TIERS.EVOLVABLE, rule: 'derived-skeleton',
+    tier: TIERS.EVOLVABLE,
+    rule: 'derived-skeleton',
     reason: '机器派生骨架(khy metadata refresh 重生成)',
     test: (p) => /(^|\/)\.ai\/SKELETON\.auto\.md$/.test(p),
   },
   // ── EVOLVABLE:测试 ──
   {
-    tier: TIERS.EVOLVABLE, rule: 'tests',
+    tier: TIERS.EVOLVABLE,
+    rule: 'tests',
     reason: '测试代码',
     test: (p) => /\.test\.[jt]sx?$/.test(p) || /(^|\/)tests?\//.test(p),
   },
   // ── EVOLVABLE:后端业务源 ──
   {
-    tier: TIERS.EVOLVABLE, rule: 'backend-source',
+    tier: TIERS.EVOLVABLE,
+    rule: 'backend-source',
     reason: '后端业务源 —— 自由进化',
     test: (p) => /services\/backend\/src\//.test(p),
   },
   // ── EVOLVABLE:应用 / 软件 / 文档 ──
   {
-    tier: TIERS.EVOLVABLE, rule: 'apps-docs',
+    tier: TIERS.EVOLVABLE,
+    rule: 'apps-docs',
     reason: '应用 / 软件 / 文档 —— 自由进化',
     test: (p) => /(^|\/)(apps|software|docs)\//.test(p),
   },
@@ -245,11 +280,19 @@ const RULES = Object.freeze([
  */
 function classifyPath(relPath) {
   const p = _norm(relPath);
-  if (!p) return { tier: TIERS.UNKNOWN, rule: 'empty', reason: '空路径' };
+  if (!p) {
+    return { tier: TIERS.UNKNOWN, rule: 'empty', reason: '空路径' };
+  }
   for (const r of RULES) {
     let hit = false;
-    try { hit = !!r.test(p); } catch { hit = false; }
-    if (hit) return { tier: r.tier, rule: r.rule, reason: r.reason };
+    try {
+      hit = !!r.test(p);
+    } catch {
+      hit = false;
+    }
+    if (hit) {
+      return { tier: r.tier, rule: r.rule, reason: r.reason };
+    }
   }
   return { tier: TIERS.UNKNOWN, rule: 'unmatched', reason: '未匹配规则 —— 保守对待(不阻断)' };
 }
@@ -260,7 +303,9 @@ function _uniqNorm(files) {
   const out = [];
   for (const raw of Array.isArray(files) ? files : []) {
     const f = _norm(raw);
-    if (!f || seen.has(f)) continue;
+    if (!f || seen.has(f)) {
+      continue;
+    }
     seen.add(f);
     out.push(f);
   }
@@ -282,24 +327,33 @@ function deriveCascades(changedFiles) {
   if (files.some((f) => /services\/backend\/src\/constants\/commandSchema\.js$/.test(f))) {
     const routerChanged = files.some((f) => /services\/backend\/src\/cli\/router\.js$/.test(f));
     out.push({
-      id: 'command-wiring', kind: 'co-change', severity: 'warn',
-      trigger: 'constants/commandSchema.js', expected: 'cli/router.js', satisfied: routerChanged,
+      id: 'command-wiring',
+      kind: 'co-change',
+      severity: 'warn',
+      trigger: 'constants/commandSchema.js',
+      expected: 'cli/router.js',
+      satisfied: routerChanged,
       message: '改了命令表 commandSchema.js,应同步 cli/router.js 的 case 分发(否则新命令无入口)',
     });
   }
 
   // 业务叶子 → 其 node:test 同步演进。
-  const srcLeaves = files.filter((f) =>
-    /services\/backend\/src\/services\/[^/]*\.js$/.test(f) &&
-    !/\.test\.js$/.test(f) &&
-    classifyPath(f).tier !== TIERS.IMMUTABLE,
+  const srcLeaves = files.filter(
+    (f) =>
+      /services\/backend\/src\/services\/[^/]*\.js$/.test(f) &&
+      !/\.test\.js$/.test(f) &&
+      classifyPath(f).tier !== TIERS.IMMUTABLE
   );
   for (const f of srcLeaves.slice(0, 20)) {
     const base = _base(f).replace(/\.js$/, '');
     const hasTest = files.some((t) => new RegExp(`(^|/)${_escapeRe(base)}\\.test\\.js$`).test(t));
     out.push({
-      id: 'leaf-test', kind: 'co-change', severity: 'warn',
-      trigger: f, expected: `tests/${base}.test.js`, satisfied: hasTest,
+      id: 'leaf-test',
+      kind: 'co-change',
+      severity: 'warn',
+      trigger: f,
+      expected: `tests/${base}.test.js`,
+      satisfied: hasTest,
       message: `改了 ${base}.js,应同步其 node:test(${base}.test.js)以锁定新行为`,
     });
   }
@@ -307,9 +361,14 @@ function deriveCascades(changedFiles) {
   // 后端源改动 → 须重建 wheel(动作提醒)。
   if (files.some((f) => /services\/backend\/src\//.test(f))) {
     out.push({
-      id: 'wheel-rebuild', kind: 'action', severity: 'info',
-      trigger: 'services/backend/src/**', expected: null, satisfied: false,
-      message: '改了 services/backend/ 源 —— 须重建 wheel 重发布才能到 pip 用户(editable 本地已生效)',
+      id: 'wheel-rebuild',
+      kind: 'action',
+      severity: 'info',
+      trigger: 'services/backend/src/**',
+      expected: null,
+      satisfied: false,
+      message:
+        '改了 services/backend/ 源 —— 须重建 wheel 重发布才能到 pip 用户(editable 本地已生效)',
     });
   }
 
@@ -325,7 +384,15 @@ function deriveCascades(changedFiles) {
 function assessEvolution(opts = {}) {
   const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
   if (!isEnabled(env)) {
-    return { enabled: false, blocked: false, immutable: [], guarded: [], cascades: [], tiers: {}, overrides: [] };
+    return {
+      enabled: false,
+      blocked: false,
+      immutable: [],
+      guarded: [],
+      cascades: [],
+      tiers: {},
+      overrides: [],
+    };
   }
   const files = _uniqNorm(opts && opts.changedFiles);
   const tiers = {};
@@ -340,7 +407,9 @@ function assessEvolution(opts = {}) {
       const overridden = isOverrideAuthorized(c.rule, f, env);
       const hit = { file: f, reason: c.reason, rule: c.rule, overridden };
       immutable.push(hit);
-      if (overridden) overrides.push(hit);
+      if (overridden) {
+        overrides.push(hit);
+      }
     } else if (c.tier === TIERS.GUARDED) {
       guarded.push({ file: f, reason: c.reason, rule: c.rule });
     }
@@ -359,24 +428,37 @@ function assessEvolution(opts = {}) {
  */
 function buildEvolutionDirective(assessment) {
   const a = assessment && typeof assessment === 'object' ? assessment : null;
-  if (!a || !a.enabled) return '';
+  if (!a || !a.enabled) {
+    return '';
+  }
   const lines = [];
   if (Array.isArray(a.immutable) && a.immutable.length) {
     lines.push('禁止改动以下不可变区域(若已改动须撤销并征得人工同意):');
-    for (const im of a.immutable.slice(0, 8)) lines.push(`  - ${im.file} —— ${im.reason}`);
+    for (const im of a.immutable.slice(0, 8)) {
+      lines.push(`  - ${im.file} —— ${im.reason}`);
+    }
   }
-  const unmet = (Array.isArray(a.cascades) ? a.cascades : [])
-    .filter((c) => c && c.satisfied === false && c.kind === 'co-change');
+  const unmet = (Array.isArray(a.cascades) ? a.cascades : []).filter(
+    (c) => c && c.satisfied === false && c.kind === 'co-change'
+  );
   if (unmet.length) {
     lines.push('以下「联动改动」尚未完成(改了 A 应随改 B):');
-    for (const c of unmet.slice(0, 8)) lines.push(`  - ${c.message}`);
+    for (const c of unmet.slice(0, 8)) {
+      lines.push(`  - ${c.message}`);
+    }
   }
-  const actions = (Array.isArray(a.cascades) ? a.cascades : []).filter((c) => c && c.kind === 'action');
+  const actions = (Array.isArray(a.cascades) ? a.cascades : []).filter(
+    (c) => c && c.kind === 'action'
+  );
   if (actions.length) {
     lines.push('进化后须执行的动作:');
-    for (const c of actions.slice(0, 4)) lines.push(`  - ${c.message}`);
+    for (const c of actions.slice(0, 4)) {
+      lines.push(`  - ${c.message}`);
+    }
   }
-  if (!lines.length) return '';
+  if (!lines.length) {
+    return '';
+  }
   return '[SYSTEM:进化策略] ' + lines.join('\n');
 }
 
@@ -387,7 +469,9 @@ function buildEvolutionDirective(assessment) {
  * @returns {string}
  */
 function buildPolicyDirective(env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   return [
     '[SYSTEM:进化策略] 你在自我进化(改 khyos 自身代码)时,先按可变性分级判断该不该改',
     '  (本规则只治自治进化,不限制人类维护者手改):',
@@ -420,7 +504,8 @@ function describePolicy() {
       gate: 'KHY_EVOLUTION_OVERRIDE',
       default: 'off',
       nonOverridable: [...NON_OVERRIDABLE_RULES],
-      howTo: 'KHY_EVOLUTION_OVERRIDE="<规则名|路径片段>[,…]" —— 显式、按需、可审计的升级通道;' +
+      howTo:
+        'KHY_EVOLUTION_OVERRIDE="<规则名|路径片段>[,…]" —— 显式、按需、可审计的升级通道;' +
         'safety-machinery / secrets / legal-policy 永不可越权(刹车的刹车)',
     },
   };

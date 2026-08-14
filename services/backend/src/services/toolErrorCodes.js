@@ -18,7 +18,9 @@
  */
 
 function _enabled() {
-  const v = String(process.env.KHY_TOOL_ERROR_CODES || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_ERROR_CODES || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -80,12 +82,16 @@ const RETRYABLE_CLASSES = Object.freeze(new Set([ERROR_CLASS.SERVICE_UNAVAILABLE
  */
 function classify(code, opts = {}) {
   try {
-    const key = String(code == null ? '' : code).trim().toLowerCase();
+    const key = String(code == null ? '' : code)
+      .trim()
+      .toLowerCase();
     if (key && Object.prototype.hasOwnProperty.call(CODE_TO_CLASS, key)) {
       return CODE_TO_CLASS[key];
     }
     // 无可识别 code,但带依赖自愈标识 → 依赖缺失(配置类)。
-    if (opts && opts.depId) return ERROR_CLASS.MISSING_DEPENDENCY;
+    if (opts && opts.depId) {
+      return ERROR_CLASS.MISSING_DEPENDENCY;
+    }
     return ERROR_CLASS.UNKNOWN; // 零假阳性:绝不臆测
   } catch {
     return ERROR_CLASS.UNKNOWN; // fail-soft
@@ -100,7 +106,9 @@ function classify(code, opts = {}) {
 function isRetryable(classOrCode) {
   try {
     const s = String(classOrCode || '');
-    if (RETRYABLE_CLASSES.has(s)) return true;
+    if (RETRYABLE_CLASSES.has(s)) {
+      return true;
+    }
     return RETRYABLE_CLASSES.has(classify(s));
   } catch {
     return false;
@@ -117,11 +125,19 @@ function isRetryable(classOrCode) {
  * @returns {object}
  */
 function enrich(result) {
-  if (!_enabled()) return result;
+  if (!_enabled()) {
+    return result;
+  }
   try {
-    if (!result || typeof result !== 'object') return result;
-    if (result.success !== false) return result;
-    if (result.errorClass) return result; // 已有则不覆盖(单一真源由首个写入者决定)
+    if (!result || typeof result !== 'object') {
+      return result;
+    }
+    if (result.success !== false) {
+      return result;
+    }
+    if (result.errorClass) {
+      return result;
+    } // 已有则不覆盖(单一真源由首个写入者决定)
     const errorClass = classify(result.code, { depId: result.depId });
     return { ...result, errorClass, retryable: RETRYABLE_CLASSES.has(errorClass) };
   } catch {

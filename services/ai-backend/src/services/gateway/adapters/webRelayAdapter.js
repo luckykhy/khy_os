@@ -17,7 +17,7 @@ let _server = null;
 let _wss = null;
 let _port = null;
 let _pending = null; // { id, text, resolve, reject, timer }
-let _token = null;   // per-session auth token
+let _token = null; // per-session auth token
 
 /**
  * Ensure the relay server is running.
@@ -27,7 +27,7 @@ function ensureServer() {
   if (_server) return Promise.resolve(_port);
 
   const rawPort = parseInt(process.env.GATEWAY_RELAY_PORT, 10) || DEFAULT_PORT;
-  const port = (rawPort > 0 && rawPort <= 65535) ? rawPort : DEFAULT_PORT;
+  const port = rawPort > 0 && rawPort <= 65535 ? rawPort : DEFAULT_PORT;
 
   // Generate a per-session token for WS auth
   if (!_token) _token = crypto.randomBytes(16).toString('hex');
@@ -56,21 +56,28 @@ function ensureServer() {
       server: srv,
       maxPayload: 1024 * 1024, // 1 MB limit
       verifyClient: ({ req }) => {
-        // Require token via query param: ws://localhost:PORT/?token=XXX
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        return url.searchParams.get('token') === _token;
+        // Require token via WebSocket subprotocol (Sec-WebSocket-Protocol header).
+        // 不再使用 URL 查询参数，防止 token 被代理/负载均衡记录到访问日志。
+        const protocol = req.headers['sec-websocket-protocol'];
+        if (!protocol) return false;
+        const protocols = String(protocol)
+          .split(',')
+          .map((s) => s.trim());
+        return protocols.includes(_token);
       },
     });
 
     wss.on('connection', (ws) => {
       // If there's a pending prompt, send it immediately to the new client
       if (_pending) {
-        ws.send(JSON.stringify({
-          type: 'prompt',
-          id: _pending.id,
-          text: _pending.text,
-          timestamp: new Date().toISOString(),
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'prompt',
+            id: _pending.id,
+            text: _pending.text,
+            timestamp: new Date().toISOString(),
+          })
+        );
       }
 
       ws.on('message', (raw) => {
@@ -92,7 +99,9 @@ function ensureServer() {
           if (msg.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));
           }
-        } catch { /* ignore malformed messages */ }
+        } catch {
+          /* ignore malformed messages */
+        }
       });
     });
 

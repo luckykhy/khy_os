@@ -141,12 +141,15 @@ describe('selective provisioning', () => {
     expect(out.image.envKeys).toContain('KHY_IMAGE_GEN_BACKEND');
   });
 
-  test('without forceImageBackend, an existing openai backend keeps precedence', () => {
+  test('without forceImageBackend, an existing openai backend is not force-pinned to agnes', () => {
     process.env.KHY_IMAGE_GEN_OPENAI_API_KEY = 'k';
     process.env.KHY_IMAGE_GEN_OPENAI_BASE_URL = 'https://o.example/v1';
     const out = provisioner.provisionAgnes({ apiKey: 'sk-k', chat: false, video: false });
+    // No force → KHY_IMAGE_GEN_BACKEND stays unset (never steals the pin).
     expect(process.env.KHY_IMAGE_GEN_BACKEND).toBeUndefined();
-    expect(out.image.backendActive).toBe('openai');
+    // Agnes is now configured and outranks openai in AUTO_ORDER
+    // (sensenova > agnes > stepfun > openai > ...) → auto resolution picks agnes.
+    expect(out.image.backendActive).toBe('agnes');
   });
 });
 

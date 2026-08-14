@@ -15,9 +15,8 @@ const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
 
-const {
-  printSuccess, printError, printWarn, printInfo, printTable,
-} = require('../formatters');
+const _formatBytesAtom = require('../../utils/formatBytes');
+const { printSuccess, printError, printWarn, printInfo, printTable } = require('../formatters');
 
 let _checkpointService = null;
 
@@ -49,7 +48,9 @@ async function handleWorkspaceSave(args = [], options = {}) {
     console.log(`  Message: ${result.message}`);
     console.log(`  Branch:  ${result.branch || 'N/A'}`);
     console.log(`  Commit:  ${result.commitHash || 'N/A'}`);
-    if (result.size > 0) console.log(`  Size:    ${_formatSize(result.size)}`);
+    if (result.size > 0) {
+      console.log(`  Size:    ${_formatSize(result.size)}`);
+    }
     return result;
   } catch (err) {
     printError(`Failed to save checkpoint: ${err.message}`);
@@ -116,10 +117,7 @@ async function handleWorkspaceList() {
     (c.message || '').slice(0, 40),
   ]);
 
-  printTable(
-    ['#', 'ID', 'Mode', 'Branch', 'Commit', 'Size', 'Time', 'Message'],
-    rows,
-  );
+  printTable(['#', 'ID', 'Mode', 'Branch', 'Commit', 'Size', 'Time', 'Message'], rows);
 
   return checkpoints;
 }
@@ -141,7 +139,9 @@ async function handleWorkspaceDiff(args = []) {
     if (result.diff) {
       console.log(result.diff);
       if (result.stats.additions || result.stats.deletions) {
-        console.log(`\n  ${chalk.green(`+${result.stats.additions}`)} / ${chalk.red(`-${result.stats.deletions}`)}`);
+        console.log(
+          `\n  ${chalk.green(`+${result.stats.additions}`)} / ${chalk.red(`-${result.stats.deletions}`)}`
+        );
       }
     }
     return result;
@@ -189,7 +189,9 @@ async function handleWorkspaceCleanup(args = [], options = {}) {
     if (removed > 0) {
       printSuccess(`Cleaned up ${removed} old checkpoint(s), keeping ${keep} most recent.`);
     } else {
-      printInfo(`Nothing to clean — ${svc.listCheckpoints(projectDir).length} checkpoints within limit.`);
+      printInfo(
+        `Nothing to clean — ${svc.listCheckpoints(projectDir).length} checkpoints within limit.`
+      );
     }
     return removed;
   } catch (err) {
@@ -260,12 +262,16 @@ function _formatSize(bytes, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(bytes);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  } catch {
+    /* fall through to legacy */
+  }
+  // Legacy fallback: thin delegate to the canonical formatter (utils/formatBytes);
+  // the default 3-tier B/KB/MB cascade is byte-identical to the old local code.
+  return _formatBytesAtom(bytes);
 }
 
 module.exports = {

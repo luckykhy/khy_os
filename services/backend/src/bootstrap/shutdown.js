@@ -41,7 +41,9 @@ function removeShutdownHook(name) {
  * @param {string} signal  The signal that triggered shutdown
  */
 async function requestShutdown(signal) {
-  if (_shuttingDown) return; // Prevent double-fire
+  if (_shuttingDown) {
+    return;
+  } // Prevent double-fire
   _shuttingDown = true;
   state.set('shutdownRequested', true);
 
@@ -68,10 +70,7 @@ async function requestShutdown(signal) {
     }
   });
 
-  await Promise.race([
-    Promise.allSettled(hookPromises),
-    deadline,
-  ]);
+  await Promise.race([Promise.allSettled(hookPromises), deadline]);
 
   if (logger) {
     logger.info('Server closed gracefully');
@@ -80,7 +79,11 @@ async function requestShutdown(signal) {
   // Failsafe: if process.exit() hangs (native addons, stuck handlers),
   // force kill after a grace period.
   const failsafe = setTimeout(() => {
-    try { process.kill(process.pid, 'SIGKILL'); } catch { /* last resort */ }
+    try {
+      process.kill(process.pid, 'SIGKILL');
+    } catch {
+      /* last resort */
+    }
   }, FAILSAFE_TIMEOUT_MS - SHUTDOWN_TIMEOUT_MS);
   failsafe.unref();
 
@@ -93,7 +96,9 @@ async function requestShutdown(signal) {
  * Safe to call multiple times — only registers once.
  */
 function registerShutdownHandlers() {
-  if (_registered) return;
+  if (_registered) {
+    return;
+  }
   _registered = true;
 
   process.on('SIGTERM', () => requestShutdown('SIGTERM'));

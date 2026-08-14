@@ -4,41 +4,85 @@
  * Consolidates platform-specific logic (DISPLAY detection, executable lookup,
  * shell escaping, grep availability) so individual tools stay platform-agnostic.
  */
-const { execFileSync, execSync } = require('child_process');
+const { execFileSync, execSync, execFile } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ── Executable lookup ────────────────────────────────────────────────
 
 let _rgAvailable = null;
 let _grepAvailable = null;
 
+// where/which spawns a subprocess (~150-300ms on Windows). Cache per-name
+// results so hot paths (tool isEnabled checks) never re-block the event loop.
+// Expired entries are served stale while an async refresh runs in background.
+const _SEARCH_EXEC_TTL_MS = 30000;
+const _searchExecCache = new Map();
+const _searchExecRefreshing = new Set();
+
 /**
  * Cross-platform `which` / `where`.
  * Returns the resolved path on success, null on failure.
+ * Results are cached per name with a short TTL (stale-while-revalidate).
  */
 function searchExecutable(name) {
+  const now = Date.now();
   const isWin = process.platform === 'win32';
-  try {
-    const cmd = isWin ? 'where' : 'which';
-    return execFileSync(cmd, [name], {
-      encoding: 'utf-8',
-      timeout: 3000,
-      stdio: ['pipe', 'pipe', 'ignore'],
-    }).split(/\r?\n/)[0].trim() || null;
-  } catch {
-    return null;
+  const cmd = isWin ? 'where' : 'which';
+  const hit = _searchExecCache.get(name);
+  if (hit) {
+    if (now - hit.at >= _SEARCH_EXEC_TTL_MS && !_searchExecRefreshing.has(name)) {
+      _searchExecRefreshing.add(name);
+      try {
+        execFile(
+          cmd,
+          [name],
+          { encoding: 'utf-8', timeout: 3000, windowsHide: true },
+          (err, stdout) => {
+            const value = err
+              ? null
+              : String(stdout || '')
+                  .split(/\r?\n/)[0]
+                  .trim() || null;
+            _searchExecCache.set(name, { value, at: Date.now() });
+            _searchExecRefreshing.delete(name);
+          }
+        );
+      } catch {
+        _searchExecRefreshing.delete(name);
+      }
+    }
+    return hit.value;
   }
+  let value = null;
+  try {
+    value =
+      execFileSync(cmd, [name], {
+        encoding: 'utf-8',
+        timeout: 3000,
+        stdio: ['pipe', 'pipe', 'ignore'],
+      })
+        .split(/\r?\n/)[0]
+        .trim() || null;
+  } catch {
+    value = null;
+  }
+  _searchExecCache.set(name, { value, at: now });
+  return value;
 }
 
 function isRgAvailable() {
-  if (_rgAvailable === null) _rgAvailable = !!searchExecutable('rg');
+  if (_rgAvailable === null) {
+    _rgAvailable = !!searchExecutable('rg');
+  }
   return _rgAvailable;
 }
 
 function isGrepAvailable() {
-  if (_grepAvailable === null) _grepAvailable = !!searchExecutable('grep');
+  if (_grepAvailable === null) {
+    _grepAvailable = !!searchExecutable('grep');
+  }
   return _grepAvailable;
 }
 
@@ -49,14 +93,24 @@ function isGrepAvailable() {
  * Returns the DISPLAY string (e.g. ':0') or null.
  */
 function getDisplay() {
-  if (process.env.DISPLAY) return process.env.DISPLAY;
-  if (process.platform !== 'linux') return null;
+  if (process.env.DISPLAY) {
+    return process.env.DISPLAY;
+  }
+  if (process.platform !== 'linux') {
+    return null;
+  }
   // Check for X11 unix socket
   try {
-    if (fs.existsSync('/tmp/.X11-unix/X0')) return ':0';
-  } catch { /* ignore */ }
+    if (fs.existsSync('/tmp/.X11-unix/X0')) {
+      return ':0';
+    }
+  } catch {
+    /* ignore */
+  }
   // Check for Wayland
-  if (process.env.WAYLAND_DISPLAY) return null; // Wayland doesn't use DISPLAY
+  if (process.env.WAYLAND_DISPLAY) {
+    return null;
+  } // Wayland doesn't use DISPLAY
   return null;
 }
 
@@ -68,7 +122,9 @@ function buildGuiEnv(baseEnv) {
   const env = { ...(baseEnv || process.env) };
   if (process.platform === 'linux' && !env.DISPLAY) {
     const display = getDisplay();
-    if (display) env.DISPLAY = display;
+    if (display) {
+      env.DISPLAY = display;
+    }
   }
   return env;
 }
@@ -85,9 +141,13 @@ function buildGuiEnv(baseEnv) {
  * @param {'bash'|'cmd'|'powershell'} [shell] - Override shell type (default: auto-detect)
  */
 function shellEscape(arg, shell) {
-  if (!arg) return "''";
+  if (!arg) {
+    return "''";
+  }
   // Safe chars that need no quoting on any platform
-  if (/^[a-zA-Z0-9._\-/\\:=@]+$/.test(arg)) return arg;
+  if (/^[a-zA-Z0-9._\-/\\:=@]+$/.test(arg)) {
+    return arg;
+  }
   const sh = shell || getShellConfiguration().shell;
   if (sh === 'powershell') {
     return "'" + arg.replace(/'/g, "''") + "'";
@@ -103,26 +163,74 @@ function shellEscape(arg, shell) {
 // ── GUI app detection ───────────────────────────────────────────────
 
 const LINUX_GUI_APPS = new Set([
-  'firefox', 'chromium', 'chrome', 'google-chrome', 'google-chrome-stable',
-  'code', 'vscode', 'cursor', 'gedit', 'nautilus', 'thunar', 'dolphin',
-  'evince', 'eog', 'vlc', 'mpv', 'gimp', 'inkscape', 'libreoffice',
-  'xdg-open', 'wps', 'typora', 'okular', 'kate', 'mousepad',
-  'obs', 'blender', 'kdenlive', 'krita', 'shotcut',
+  'firefox',
+  'chromium',
+  'chrome',
+  'google-chrome',
+  'google-chrome-stable',
+  'code',
+  'vscode',
+  'cursor',
+  'gedit',
+  'nautilus',
+  'thunar',
+  'dolphin',
+  'evince',
+  'eog',
+  'vlc',
+  'mpv',
+  'gimp',
+  'inkscape',
+  'libreoffice',
+  'xdg-open',
+  'wps',
+  'typora',
+  'okular',
+  'kate',
+  'mousepad',
+  'obs',
+  'blender',
+  'kdenlive',
+  'krita',
+  'shotcut',
 ]);
 
 const WINDOWS_GUI_APPS = new Set([
-  'notepad', 'calc', 'mspaint', 'explorer', 'msedge', 'chrome',
-  'firefox', 'code', 'cursor', 'winword', 'excel', 'powerpnt',
-  'outlook', 'teams', 'slack', 'discord', 'spotify', 'vlc',
-  'mstsc', 'control', 'taskmgr', 'regedit', 'devenv',
+  'notepad',
+  'calc',
+  'mspaint',
+  'explorer',
+  'msedge',
+  'chrome',
+  'firefox',
+  'code',
+  'cursor',
+  'winword',
+  'excel',
+  'powerpnt',
+  'outlook',
+  'teams',
+  'slack',
+  'discord',
+  'spotify',
+  'vlc',
+  'mstsc',
+  'control',
+  'taskmgr',
+  'regedit',
+  'devenv',
 ]);
 
 /**
  * Check if a command base name is a known GUI application.
  */
 function isGuiApp(baseName) {
-  const name = String(baseName).toLowerCase().replace(/\.exe$/, '');
-  if (process.platform === 'win32') return WINDOWS_GUI_APPS.has(name);
+  const name = String(baseName)
+    .toLowerCase()
+    .replace(/\.exe$/, '');
+  if (process.platform === 'win32') {
+    return WINDOWS_GUI_APPS.has(name);
+  }
   return LINUX_GUI_APPS.has(name);
 }
 
@@ -138,13 +246,17 @@ function spawnGuiApp(command, args = [], options = {}) {
   let child;
   if (isWin) {
     // Windows: use COMSPEC/start for proper detach and consistent shell flags.
-    child = spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', 'start', '', command, ...args], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      env,
-      ...(options.cwd ? { cwd: options.cwd } : {}),
-    });
+    child = spawn(
+      process.env.COMSPEC || 'cmd.exe',
+      ['/d', '/s', '/c', 'start', '', command, ...args],
+      {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env,
+        ...(options.cwd ? { cwd: options.cwd } : {}),
+      }
+    );
   } else {
     child = spawn(command, args, {
       detached: true,
@@ -153,7 +265,9 @@ function spawnGuiApp(command, args = [], options = {}) {
       ...(options.cwd ? { cwd: options.cwd } : {}),
     });
   }
-  child.on('error', () => { /* GUI app spawn failure — non-critical */ });
+  child.on('error', () => {
+    /* GUI app spawn failure — non-critical */
+  });
   child.unref();
   return child;
 }
@@ -166,11 +280,26 @@ function spawnGuiApp(command, args = [], options = {}) {
  * here only.
  * @type {string[]}
  */
-const DEFAULT_EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', '.cache', 'coverage', '__pycache__'];
+const DEFAULT_EXCLUDE_DIRS = [
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  '.cache',
+  'coverage',
+  '__pycache__',
+];
 
 /**
  * Pure-JS grep implementation for platforms without grep/rg.
  * Walks directories recursively and matches file contents against a RegExp.
+ *
+ * NOTE (「正在搜索卡死」修复):这是无 rg/grep 平台上 Grep 的**唯一**执行路径。同步递归 walk
+ * 无时间上限时,超大树 / Windows junction 回环 / 慢盘(Defender、网络盘)会把整个 Node 事件
+ * 循环阻塞到分钟级,表现为「一显示正在搜索就卡死、ESC 打不断」——与 GlobTool/ListDirTool 同一
+ * 根因。此处复用 tools/_walkBudget 的墙钟预算:opts.deadline({exceeded():boolean}) 非空时,
+ * walk 在预算耗尽处优雅提前返回并标 truncated;预算为 null(门控关)→ 逐字节回退今日无预算行为。
+ * 调用方应同时经 _walkBudget.isWalkAsyncEnabled 选择 pureJsGrepAsync(异步、事件循环不被冻结)。
  *
  * @param {string} searchPath - Directory or file to search
  * @param {RegExp} regex - Pattern to match
@@ -179,7 +308,8 @@ const DEFAULT_EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', '.cache',
  * @param {string} [opts.glob] - Glob filter (e.g. '*.js')
  * @param {number} [opts.maxResults=50]
  * @param {string[]} [opts.excludeDirs] - Directories to skip
- * @returns {{ files?: string[], matches?: object[], counts?: object[], count?: number, total?: number }}
+ * @param {object} [opts.deadline] - { exceeded():boolean } 墙钟预算判定器(null=无预算,今日行为)
+ * @returns {{ files?: string[], matches?: object[], counts?: object[], count?: number, total?: number, truncated?: boolean, timedOut?: boolean }}
  */
 function pureJsGrep(searchPath, regex, opts = {}) {
   const {
@@ -187,12 +317,25 @@ function pureJsGrep(searchPath, regex, opts = {}) {
     glob: globPattern,
     maxResults = 50,
     excludeDirs = DEFAULT_EXCLUDE_DIRS,
+    deadline = null,
   } = opts;
 
   const excludeSet = new Set(excludeDirs);
   const results = { files: [], matches: [], counts: [] };
   let totalCount = 0;
   let resultCount = 0;
+  let budgetHit = false;
+
+  const budgetExceeded = () => {
+    if (!deadline || typeof deadline.exceeded !== 'function') {
+      return false;
+    }
+    try {
+      return deadline.exceeded() === true;
+    } catch {
+      return false;
+    }
+  };
 
   // Simple glob-to-regex conversion for --include filter
   let includeRe = null;
@@ -205,32 +348,60 @@ function pureJsGrep(searchPath, regex, opts = {}) {
   }
 
   function shouldInclude(filePath) {
-    if (!includeRe) return true;
+    if (!includeRe) {
+      return true;
+    }
     return includeRe.test(path.basename(filePath));
   }
 
   function walkDir(dir) {
-    if (resultCount >= maxResults) return;
+    if (resultCount >= maxResults) {
+      return;
+    }
+    if (budgetExceeded()) {
+      budgetHit = true;
+      return;
+    }
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
 
     for (const entry of entries) {
-      if (resultCount >= maxResults) break;
+      if (resultCount >= maxResults) {
+        break;
+      }
+      if (budgetExceeded()) {
+        budgetHit = true;
+        break;
+      }
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!excludeSet.has(entry.name)) walkDir(fullPath);
+        if (!excludeSet.has(entry.name)) {
+          walkDir(fullPath);
+        }
         continue;
       }
 
-      if (!entry.isFile() || !shouldInclude(fullPath)) continue;
+      if (!entry.isFile() || !shouldInclude(fullPath)) {
+        continue;
+      }
 
       // Read file and match
       let content;
-      try { content = fs.readFileSync(fullPath, 'utf-8'); } catch { continue; }
+      try {
+        content = fs.readFileSync(fullPath, 'utf-8');
+      } catch {
+        continue;
+      }
 
       // Skip binary-looking files
-      if (content.includes('\0')) continue;
+      if (content.includes('\0')) {
+        continue;
+      }
 
       const lines = content.split('\n');
       let fileMatchCount = 0;
@@ -265,7 +436,11 @@ function pureJsGrep(searchPath, regex, opts = {}) {
   if (stat.isFile()) {
     // Single file search
     let content;
-    try { content = fs.readFileSync(searchPath, 'utf-8'); } catch { return results; }
+    try {
+      content = fs.readFileSync(searchPath, 'utf-8');
+    } catch {
+      return results;
+    }
     const lines = content.split('\n');
     let fileMatchCount = 0;
     for (let i = 0; i < lines.length; i++) {
@@ -287,7 +462,176 @@ function pureJsGrep(searchPath, regex, opts = {}) {
 
   results.count = mode === 'files_with_matches' ? results.files.length : resultCount;
   results.total = totalCount;
-  results.truncated = resultCount >= maxResults;
+  results.truncated = resultCount >= maxResults || budgetHit;
+  // 预算耗尽:结果可能不完整,诚实标注(加法式;无预算时永不出现 → 字节回退)。
+  if (budgetHit) {
+    results.timedOut = true;
+  }
+  return results;
+}
+
+/**
+ * 异步孪生:与 pureJsGrep 逐行等价,readdirSync/statSync/readFileSync → fs.promises 版,
+ * 每个 entry 之间 await 让出。走 libuv 线程池 ⇒ 单个慢系统调用不再冻结事件循环 ⇒ 既有
+ * 工具漏斗 120s 墙钟竞赛 / abort(ESC)/ 本模块 deadline.exceeded() 全部恢复生效。结果形状
+ * ({ files, matches, counts, count, total, truncated, timedOut } 与集合)与同步版一致。
+ *
+ * @param {string} searchPath - Directory or file to search
+ * @param {RegExp} regex - Pattern to match
+ * @param {object} opts - 同 pureJsGrep(support opts.deadline)
+ * @returns {Promise<{ files?: string[], matches?: object[], counts?: object[], count?: number, total?: number, truncated?: boolean, timedOut?: boolean }>}
+ */
+async function pureJsGrepAsync(searchPath, regex, opts = {}) {
+  const {
+    mode = 'files_with_matches',
+    glob: globPattern,
+    maxResults = 50,
+    excludeDirs = DEFAULT_EXCLUDE_DIRS,
+    deadline = null,
+  } = opts;
+
+  const excludeSet = new Set(excludeDirs);
+  const results = { files: [], matches: [], counts: [] };
+  let totalCount = 0;
+  let resultCount = 0;
+  let budgetHit = false;
+
+  const budgetExceeded = () => {
+    if (!deadline || typeof deadline.exceeded !== 'function') {
+      return false;
+    }
+    try {
+      return deadline.exceeded() === true;
+    } catch {
+      return false;
+    }
+  };
+
+  let includeRe = null;
+  if (globPattern) {
+    const escaped = globPattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    includeRe = new RegExp('^' + escaped + '$', 'i');
+  }
+
+  const shouldInclude = (filePath) => {
+    if (!includeRe) {
+      return true;
+    }
+    return includeRe.test(path.basename(filePath));
+  };
+
+  async function walkDir(dir) {
+    if (resultCount >= maxResults) {
+      return;
+    }
+    if (budgetExceeded()) {
+      budgetHit = true;
+      return;
+    }
+    let entries;
+    try {
+      entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (resultCount >= maxResults) {
+        break;
+      }
+      if (budgetExceeded()) {
+        budgetHit = true;
+        break;
+      }
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        if (!excludeSet.has(entry.name)) {
+          await walkDir(fullPath);
+        }
+        continue;
+      }
+
+      if (!entry.isFile() || !shouldInclude(fullPath)) {
+        continue;
+      }
+
+      let content;
+      try {
+        content = await fs.promises.readFile(fullPath, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      if (content.includes('\0')) {
+        continue;
+      }
+
+      const lines = content.split('\n');
+      let fileMatchCount = 0;
+      const fileMatches = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        if (regex.test(lines[i])) {
+          fileMatchCount++;
+          if (mode === 'content' && resultCount + fileMatches.length < maxResults) {
+            fileMatches.push({ file: fullPath, line: i + 1, content: lines[i] });
+          }
+        }
+      }
+
+      if (fileMatchCount > 0) {
+        if (mode === 'files_with_matches') {
+          results.files.push(fullPath);
+          resultCount++;
+        } else if (mode === 'content') {
+          results.matches.push(...fileMatches);
+          resultCount += fileMatches.length;
+        } else if (mode === 'count') {
+          results.counts.push({ file: fullPath, count: fileMatchCount });
+          totalCount += fileMatchCount;
+          resultCount++;
+        }
+      }
+    }
+  }
+
+  const stat = await fs.promises.stat(searchPath);
+  if (stat.isFile()) {
+    let content;
+    try {
+      content = await fs.promises.readFile(searchPath, 'utf-8');
+    } catch {
+      return results;
+    }
+    const lines = content.split('\n');
+    let fileMatchCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (regex.test(lines[i])) {
+        fileMatchCount++;
+        if (mode === 'content' && results.matches.length < maxResults) {
+          results.matches.push({ file: searchPath, line: i + 1, content: lines[i] });
+        }
+      }
+    }
+    if (fileMatchCount > 0) {
+      results.files.push(searchPath);
+      results.counts.push({ file: searchPath, count: fileMatchCount });
+      totalCount = fileMatchCount;
+    }
+  } else {
+    await walkDir(searchPath);
+  }
+
+  results.count = mode === 'files_with_matches' ? results.files.length : resultCount;
+  results.total = totalCount;
+  results.truncated = resultCount >= maxResults || budgetHit;
+  if (budgetHit) {
+    results.timedOut = true;
+  }
   return results;
 }
 
@@ -321,7 +665,9 @@ let _exitHookRegistered = false;
  * 格式: /tmp/khy-{uid}/{pid}/
  */
 function getSessionTmpDir() {
-  if (_sessionTmpDir) return _sessionTmpDir;
+  if (_sessionTmpDir) {
+    return _sessionTmpDir;
+  }
   const base = getTmpDir();
   const uid = typeof process.getuid === 'function' ? process.getuid() : '';
   const rootDir = path.join(base, `khy-${uid}`);
@@ -339,12 +685,20 @@ function ensureSessionTmpDir() {
   const dir = getSessionTmpDir();
   try {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  } catch { /* already exists or permission issue */ }
+  } catch {
+    /* already exists or permission issue */
+  }
   if (!_exitHookRegistered) {
     _exitHookRegistered = true;
     // 'exit' 在所有非 SIGKILL/非崩溃退出时触发（含 process.exit()）。回调内只能
     // 同步操作，rmSync 同步合法。与 shutdown hook 幂等共存（rmSync force 不会重复报错）。
-    try { process.once('exit', () => { cleanupSessionTmpDir(); }); } catch { /* best effort */ }
+    try {
+      process.once('exit', () => {
+        cleanupSessionTmpDir();
+      });
+    } catch {
+      /* best effort */
+    }
   }
   return dir;
 }
@@ -357,7 +711,9 @@ function cleanupSessionTmpDir() {
   const dir = getSessionTmpDir();
   try {
     fs.rmSync(dir, { recursive: true, force: true });
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
   // 尝试清理空的父目录 khy-{uid}/（如果已无其他会话目录）
   try {
     const parent = path.dirname(dir);
@@ -365,7 +721,9 @@ function cleanupSessionTmpDir() {
     if (remaining.length === 0) {
       fs.rmdirSync(parent);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 // ── Platform constants ─────────────────────────────────────────────
@@ -389,9 +747,17 @@ const POWERSHELL_BINS = Object.freeze(['pwsh', 'powershell']);
  */
 let _platformCache = null;
 function getPlatform() {
-  if (_platformCache) return _platformCache;
-  if (isWin) { _platformCache = 'windows'; return _platformCache; }
-  if (isMac) { _platformCache = 'macos'; return _platformCache; }
+  if (_platformCache) {
+    return _platformCache;
+  }
+  if (isWin) {
+    _platformCache = 'windows';
+    return _platformCache;
+  }
+  if (isMac) {
+    _platformCache = 'macos';
+    return _platformCache;
+  }
   if (process.platform === 'linux') {
     try {
       const pv = fs.readFileSync('/proc/version', 'utf8').toLowerCase();
@@ -399,7 +765,9 @@ function getPlatform() {
         _platformCache = 'wsl';
         return _platformCache;
       }
-    } catch { /* not WSL */ }
+    } catch {
+      /* not WSL */
+    }
     _platformCache = 'linux';
     return _platformCache;
   }
@@ -411,13 +779,21 @@ function getPlatform() {
  * Detect WSL version (1 or 2). Returns undefined on non-WSL.
  */
 function getWslVersion() {
-  if (getPlatform() !== 'wsl') return undefined;
+  if (getPlatform() !== 'wsl') {
+    return undefined;
+  }
   try {
     const pv = fs.readFileSync('/proc/version', 'utf8');
     const m = pv.match(/WSL(\d+)/i);
-    if (m && m[1]) return m[1];
-    if (pv.toLowerCase().includes('microsoft')) return '1';
-  } catch { /* ignore */ }
+    if (m && m[1]) {
+      return m[1];
+    }
+    if (pv.toLowerCase().includes('microsoft')) {
+      return '1';
+    }
+  } catch {
+    /* ignore */
+  }
   return undefined;
 }
 
@@ -431,8 +807,13 @@ let _gitBashCache = null;
  * Returns path to bash.exe, or 'bash' as last-resort fallback.
  */
 function findGitBashPath() {
-  if (_gitBashCache) return _gitBashCache;
-  if (!isWin) { _gitBashCache = 'bash'; return _gitBashCache; }
+  if (_gitBashCache) {
+    return _gitBashCache;
+  }
+  if (!isWin) {
+    _gitBashCache = 'bash';
+    return _gitBashCache;
+  }
 
   // 1. Explicit override
   if (process.env.KHY_GIT_BASH_PATH) {
@@ -441,7 +822,9 @@ function findGitBashPath() {
         _gitBashCache = process.env.KHY_GIT_BASH_PATH;
         return _gitBashCache;
       }
-    } catch { /* fallthrough */ }
+    } catch {
+      /* fallthrough */
+    }
   }
 
   // 2. Search PATH
@@ -452,7 +835,9 @@ function findGitBashPath() {
       fs.accessSync(candidate, fs.constants.X_OK);
       _gitBashCache = candidate;
       return _gitBashCache;
-    } catch { /* next */ }
+    } catch {
+      /* next */
+    }
   }
 
   // 3. Common Git for Windows locations
@@ -472,7 +857,9 @@ function findGitBashPath() {
       fs.accessSync(p, fs.constants.X_OK);
       _gitBashCache = p;
       return _gitBashCache;
-    } catch { /* next */ }
+    } catch {
+      /* next */
+    }
   }
 
   _gitBashCache = 'bash';
@@ -512,8 +899,10 @@ function getShellConfiguration(options = {}) {
     // checks below.
     if (isWin && forced === 'powershell') {
       return {
-        executable: process.env.COMSPEC && process.env.COMSPEC.toLowerCase().endsWith('powershell.exe')
-          ? process.env.COMSPEC : 'powershell.exe',
+        executable:
+          process.env.COMSPEC && process.env.COMSPEC.toLowerCase().endsWith('powershell.exe')
+            ? process.env.COMSPEC
+            : 'powershell.exe',
         argsPrefix: ['-NoProfile', '-NonInteractive', '-Command'],
         shell: 'powershell',
       };
@@ -533,22 +922,31 @@ function getShellConfiguration(options = {}) {
       };
     }
     if (forced === 'bash') {
-      const bashPath = isWin ? findGitBashPath() : (fs.existsSync('/bin/bash') ? '/bin/bash' : null);
+      const bashPath = isWin ? findGitBashPath() : fs.existsSync('/bin/bash') ? '/bin/bash' : null;
       if (bashPath) {
-        return { executable: bashPath, argsPrefix: (login && !isWin) ? ['-lc'] : ['-c'], shell: 'bash' };
+        return {
+          executable: bashPath,
+          argsPrefix: login && !isWin ? ['-lc'] : ['-c'],
+          shell: 'bash',
+        };
       }
     }
     if (forced === 'sh' && !isWin && fs.existsSync('/bin/sh')) {
       return { executable: '/bin/sh', argsPrefix: ['-c'], shell: 'sh' };
     }
-  } catch { /* fall through to auto-detection */ }
+  } catch {
+    /* fall through to auto-detection */
+  }
 
   if (isWin) {
     // Detect Git Bash / MSYS2 environment
     const msystem = process.env.MSYSTEM || '';
     const term = process.env.TERM || '';
-    const isGitBashEnv = msystem.startsWith('MINGW') || msystem.startsWith('MSYS')
-      || term.includes('msys') || term.includes('cygwin');
+    const isGitBashEnv =
+      msystem.startsWith('MINGW') ||
+      msystem.startsWith('MSYS') ||
+      term.includes('msys') ||
+      term.includes('cygwin');
     if (isGitBashEnv) {
       return { executable: findGitBashPath(), argsPrefix: ['-c'], shell: 'bash' };
     }
@@ -580,7 +978,7 @@ function getShellConfiguration(options = {}) {
     const isBash = envShell.endsWith('/bash');
     return {
       executable: envShell,
-      argsPrefix: (login && isBash) ? ['-lc'] : ['-c'],
+      argsPrefix: login && isBash ? ['-lc'] : ['-c'],
       shell: isBash ? 'bash' : 'sh',
     };
   }
@@ -600,26 +998,41 @@ function getShellConfiguration(options = {}) {
  * @returns {object} Normalized env (new object, original not mutated)
  */
 function normalizePathEnvForWindows(env) {
-  if (!isWin) return env;
+  if (!isWin) {
+    return env;
+  }
   const out = { ...env };
-  const pathKeys = Object.keys(out).filter(k => k.toLowerCase() === 'path');
-  if (pathKeys.length <= 1) return out;
+  const pathKeys = Object.keys(out).filter((k) => k.toLowerCase() === 'path');
+  if (pathKeys.length <= 1) {
+    return out;
+  }
 
   // Merge all values, dedup
   const seen = new Set();
   const merged = [];
   // Prefer uppercase PATH first
-  const ordered = pathKeys.sort((a, b) => (a === 'PATH' ? -1 : b === 'PATH' ? 1 : a.localeCompare(b)));
+  const ordered = pathKeys.sort((a, b) =>
+    a === 'PATH' ? -1 : b === 'PATH' ? 1 : a.localeCompare(b)
+  );
   for (const key of ordered) {
     const val = out[key];
-    if (!val) continue;
+    if (!val) {
+      continue;
+    }
     for (const entry of val.split(';')) {
-      if (!seen.has(entry)) { seen.add(entry); merged.push(entry); }
+      if (!seen.has(entry)) {
+        seen.add(entry);
+        merged.push(entry);
+      }
     }
   }
 
   // Remove all variants, set canonical PATH
-  for (const key of pathKeys) { if (key !== 'PATH') delete out[key]; }
+  for (const key of pathKeys) {
+    if (key !== 'PATH') {
+      delete out[key];
+    }
+  }
   out.PATH = merged.join(';');
   return out;
 }
@@ -632,7 +1045,9 @@ function normalizePathEnvForWindows(env) {
  * Windows: COMSPEC /d /s /c "command"
  */
 function platformShell(command) {
-  if (isWin) return { cmd: process.env.COMSPEC || 'cmd.exe', args: ['/d', '/s', '/c', command] };
+  if (isWin) {
+    return { cmd: process.env.COMSPEC || 'cmd.exe', args: ['/d', '/s', '/c', command] };
+  }
   return { cmd: 'sh', args: ['-c', command] };
 }
 
@@ -640,7 +1055,9 @@ function platformShell(command) {
  * Return the default interactive shell path.
  */
 function defaultShell() {
-  if (isWin) return process.env.COMSPEC || 'cmd.exe';
+  if (isWin) {
+    return process.env.COMSPEC || 'cmd.exe';
+  }
   return process.env.SHELL || '/bin/sh';
 }
 
@@ -656,13 +1073,17 @@ function defaultShell() {
  */
 function safeKill(childOrPid, signal = 'SIGTERM', escalateMs = 3000) {
   const pid = typeof childOrPid === 'number' ? childOrPid : childOrPid?.pid;
-  if (!pid) return;
+  if (!pid) {
+    return;
+  }
 
   if (isWin) {
     // taskkill /T terminates the process tree
     try {
       require('child_process').execSync(`taskkill /T /F /PID ${pid}`, {
-        stdio: 'ignore', timeout: 5000, windowsHide: true,
+        stdio: 'ignore',
+        timeout: 5000,
+        windowsHide: true,
       });
     } catch {
       // Process may have already exited
@@ -672,7 +1093,9 @@ function safeKill(childOrPid, signal = 'SIGTERM', escalateMs = 3000) {
         } else {
           process.kill(pid);
         }
-      } catch { /* already dead */ }
+      } catch {
+        /* already dead */
+      }
     }
     return;
   }
@@ -687,7 +1110,9 @@ function safeKill(childOrPid, signal = 'SIGTERM', escalateMs = 3000) {
       } else {
         process.kill(pid, signal);
       }
-    } catch { /* already dead */ }
+    } catch {
+      /* already dead */
+    }
   }
 
   // Escalate to SIGKILL after timeout if process is still alive
@@ -695,10 +1120,18 @@ function safeKill(childOrPid, signal = 'SIGTERM', escalateMs = 3000) {
     setTimeout(() => {
       try {
         process.kill(pid, 0); // Check if still alive (throws if dead)
-        try { process.kill(-pid, 'SIGKILL'); } catch {
-          try { process.kill(pid, 'SIGKILL'); } catch { /* already dead */ }
+        try {
+          process.kill(-pid, 'SIGKILL');
+        } catch {
+          try {
+            process.kill(pid, 'SIGKILL');
+          } catch {
+            /* already dead */
+          }
         }
-      } catch { /* already dead, no escalation needed */ }
+      } catch {
+        /* already dead, no escalation needed */
+      }
     }, escalateMs).unref();
   }
 }
@@ -710,14 +1143,18 @@ function safeKill(childOrPid, signal = 'SIGTERM', escalateMs = 3000) {
  */
 function safeSignal(childOrPid, signal = 'SIGTERM') {
   const pid = typeof childOrPid === 'number' ? childOrPid : childOrPid?.pid;
-  if (!pid) return;
+  if (!pid) {
+    return;
+  }
   try {
     if (typeof childOrPid === 'object' && typeof childOrPid.kill === 'function') {
       childOrPid.kill(signal);
     } else {
       process.kill(pid, signal);
     }
-  } catch { /* already dead */ }
+  } catch {
+    /* already dead */
+  }
 }
 
 // ── Symlink / junction ─────────────────────────────────────────────
@@ -733,7 +1170,9 @@ function safeMklink(target, linkPath) {
     const isDir = fs.statSync(resolved).isDirectory();
     fs.symlinkSync(resolved, linkPath, isDir ? 'junction' : 'file');
   } catch (e1) {
-    if (!isWin) throw e1;
+    if (!isWin) {
+      throw e1;
+    }
     // Windows fallback: junction for dirs, copy for files
     try {
       if (fs.statSync(resolved).isDirectory()) {
@@ -754,10 +1193,14 @@ function safeMklink(target, linkPath) {
  * ineffective on NTFS.
  */
 function safeChmod(filePath, mode) {
-  if (isWin) return;
+  if (isWin) {
+    return;
+  }
   try {
     fs.chmodSync(filePath, mode);
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 }
 
 // ── Open URL / file in default application ─────────────────────────
@@ -769,7 +1212,9 @@ function safeChmod(filePath, mode) {
 function openDefault(target) {
   const { spawn } = require('child_process');
   const safeTarget = String(target || '').trim();
-  if (!safeTarget) throw new Error('openDefault target is required');
+  if (!safeTarget) {
+    throw new Error('openDefault target is required');
+  }
   let child;
   if (isWin) {
     // Use cmd.exe `start` with the safe flags (/d /s /c). The whole `start`
@@ -779,7 +1224,9 @@ function openDefault(target) {
     const cmdPath = process.env.COMSPEC || 'cmd.exe';
     const quotedTarget = `"${safeTarget.replace(/"/g, '""')}"`;
     child = spawn(cmdPath, ['/d', '/s', '/c', `start "" ${quotedTarget}`], {
-      detached: true, stdio: 'ignore', windowsHide: true,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
     });
   } else if (process.platform === 'darwin') {
     child = spawn('open', [safeTarget], { detached: true, stdio: 'ignore' });
@@ -790,20 +1237,24 @@ function openDefault(target) {
       child = spawn('wslview', [safeTarget], { detached: true, stdio: 'ignore' });
     } else {
       // Fallback: invoke cmd.exe directly through the WSL interop layer.
-      const cmdPath = searchExecutable('cmd.exe')
-        || '/mnt/c/Windows/system32/cmd.exe';
+      const cmdPath = searchExecutable('cmd.exe') || '/mnt/c/Windows/system32/cmd.exe';
       const quotedTarget = `"${safeTarget.replace(/"/g, '""')}"`;
       child = spawn(cmdPath, ['/d', '/s', '/c', `start "" ${quotedTarget}`], {
-        detached: true, stdio: 'ignore',
+        detached: true,
+        stdio: 'ignore',
       });
     }
   } else {
     // Linux: xdg-open → sensible-browser → fallback
-    const opener = searchExecutable('xdg-open') ? 'xdg-open'
-      : searchExecutable('sensible-browser') ? 'sensible-browser'
-      : 'xdg-open';
+    const opener = searchExecutable('xdg-open')
+      ? 'xdg-open'
+      : searchExecutable('sensible-browser')
+        ? 'sensible-browser'
+        : 'xdg-open';
     child = spawn(opener, [safeTarget], {
-      detached: true, stdio: 'ignore', env: buildGuiEnv(),
+      detached: true,
+      stdio: 'ignore',
+      env: buildGuiEnv(),
     });
   }
   child.unref();
@@ -816,11 +1267,17 @@ function openDefault(target) {
  * Detect if running inside a Docker/container environment.
  */
 function isContainer() {
-  if (isWin) return false;
+  if (isWin) {
+    return false;
+  }
   try {
-    if (fs.existsSync('/.dockerenv')) return true;
+    if (fs.existsSync('/.dockerenv')) {
+      return true;
+    }
     const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf8');
-    return cgroup.includes('docker') || cgroup.includes('kubepods') || cgroup.includes('containerd');
+    return (
+      cgroup.includes('docker') || cgroup.includes('kubepods') || cgroup.includes('containerd')
+    );
   } catch {
     return false;
   }
@@ -836,16 +1293,21 @@ function isContainer() {
  */
 let _legacyWinCache = null;
 function isLegacyWinTerminal() {
-  if (_legacyWinCache !== null) return _legacyWinCache;
-  if (!isWin) { _legacyWinCache = false; return false; }
+  if (_legacyWinCache !== null) {
+    return _legacyWinCache;
+  }
+  if (!isWin) {
+    _legacyWinCache = false;
+    return false;
+  }
   const env = process.env;
   const isModern = !!(
-    env.WT_SESSION ||                                     // Windows Terminal
-    (env.TERM_PROGRAM && env.TERM_PROGRAM !== 'cmd') ||   // VS Code, iTerm2 等
-    env.ConEmuPID ||                                      // ConEmu / Cmder
-    env.ALACRITTY_LOG ||                                  // Alacritty
-    env.KITTY_PID ||                                      // Kitty
-    env.WEZTERM_PANE                                      // WezTerm
+    env.WT_SESSION || // Windows Terminal
+    (env.TERM_PROGRAM && env.TERM_PROGRAM !== 'cmd') || // VS Code, iTerm2 等
+    env.ConEmuPID || // ConEmu / Cmder
+    env.ALACRITTY_LOG || // Alacritty
+    env.KITTY_PID || // Kitty
+    env.WEZTERM_PANE // WezTerm
   );
   _legacyWinCache = !isModern;
   return _legacyWinCache;
@@ -856,9 +1318,14 @@ function isLegacyWinTerminal() {
  * Mintty uses MSYS PTY with different escape sequence support.
  */
 function isMintty() {
-  if (!isWin) return false;
+  if (!isWin) {
+    return false;
+  }
   const env = process.env;
-  return !!(env.TERM_PROGRAM === 'mintty' || (env.MSYSTEM && env.TERM && env.TERM.includes('xterm')));
+  return !!(
+    env.TERM_PROGRAM === 'mintty' ||
+    (env.MSYSTEM && env.TERM && env.TERM.includes('xterm'))
+  );
 }
 
 /**
@@ -867,7 +1334,9 @@ function isMintty() {
  * (Windows Terminal, VS Code, ConEmu, Alacritty, WezTerm, Kitty, mintty).
  */
 function isModernWinTerminal() {
-  if (!isWin) return true;
+  if (!isWin) {
+    return true;
+  }
   return !isLegacyWinTerminal() || isMintty();
 }
 
@@ -878,12 +1347,18 @@ function isModernWinTerminal() {
  * On non-Windows, calls fn once without retry.
  */
 function retryOnBusy(fn, retries = 3, delayMs = 100) {
-  if (!isWin) return fn();
+  if (!isWin) {
+    return fn();
+  }
   for (let i = 0; ; i++) {
-    try { return fn(); } catch (err) {
+    try {
+      return fn();
+    } catch (err) {
       if ((err.code === 'EBUSY' || err.code === 'EPERM') && i < retries) {
         const end = Date.now() + delayMs * (1 << i);
-        while (Date.now() < end) { /* spin */ }
+        while (Date.now() < end) {
+          /* spin */
+        }
         continue;
       }
       throw err;
@@ -895,11 +1370,15 @@ function retryOnBusy(fn, retries = 3, delayMs = 100) {
  * Async version of retryOnBusy.
  */
 async function retryOnBusyAsync(fn, retries = 3, delayMs = 100) {
-  if (!isWin) return fn();
+  if (!isWin) {
+    return fn();
+  }
   for (let i = 0; ; i++) {
-    try { return await fn(); } catch (err) {
+    try {
+      return await fn();
+    } catch (err) {
       if ((err.code === 'EBUSY' || err.code === 'EPERM') && i < retries) {
-        await new Promise(r => setTimeout(r, delayMs * (1 << i)));
+        await new Promise((r) => setTimeout(r, delayMs * (1 << i)));
         continue;
       }
       throw err;
@@ -950,6 +1429,7 @@ module.exports = {
   cleanupSessionTmpDir,
   // Search
   pureJsGrep,
+  pureJsGrepAsync,
   DEFAULT_EXCLUDE_DIRS,
   // Environment
   isContainer,

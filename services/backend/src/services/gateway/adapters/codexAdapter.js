@@ -15,20 +15,23 @@
  */
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
 const os = require('os');
 const path = require('path');
-const https = require('https');
-const http = require('http');
-const { extractPrimaryApiKey } = require('../../apiKeyFormat');
-const { toCodexInputImages } = require('./_imageCompat');
+
 const { safeKill } = require('../../../tools/platformUtils');
+const _isPathWithin = require('../../../utils/isPathWithin');
+const { extractPrimaryApiKey } = require('../../apiKeyFormat');
+const { splitShellArgs } = require('../../shellSafetyValidator');
 const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
+
 const { normalizeAbortReason, isAbortLikeError } = require('./_abortHelpers');
+const { normalizeCacheUsage } = require('./_cacheUsage');
 const { classifyAdapterError: _sharedClassify } = require('./_errorClassifiers');
+const { toCodexInputImages } = require('./_imageCompat');
 const { connectThroughProxy: _sharedConnectProxy } = require('./_proxyTunnel');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
-const { normalizeCacheUsage } = require('./_cacheUsage');
-const { splitShellArgs } = require('../../shellSafetyValidator');
 const {
   extractMessageText,
   extractThinkingTags,
@@ -37,27 +40,43 @@ const {
 } = require('./_responsesFormat');
 // Portable codex (便携版 ~/.khy/tools) spawn/detect helpers — shared leaf keeps
 // this 2500-line-capped file's call sites tiny; never throws (falls back to bare).
+const { applyCodexCredentialGate, buildCodexUnavailableDetail } = require('./codexCredentialProbe');
+const {
+  compactText,
+  appendCodexExecDebugLog,
+  isReconnectChannelClosed,
+  summarizeValue,
+  getItemType,
+  inferToolName,
+  inferToolInput,
+  inferToolOutput,
+  isToolLike,
+  normalizeTrackedFileOperation,
+  classifyTrackedRelocation,
+  dedupeTrackedFileOps,
+  extractTrackedFileOpsFromShellCommand,
+  inferTrackedFileOps,
+  createCodexProgressEvidence,
+  recordCodexProgressEvent,
+  classifyCodexPreResponseStall,
+  snapshotCodexProgressEvidence,
+  formatCodexProgressEvidence,
+  createCodexProgressTimeoutError,
+  appendCodexExecProgressLog,
+  buildCodexProgressDiagnostics,
+  emitCodexEvent,
+} = require('./codexEventStream');
 const { portableSpawn: _portableCodexSpawn, portableInstalled: _portableCodexInstalled } =
   require('./portableAdapterSpawn').forTool('codex');
+// Credential-level detect gate (leaf; strict mode default-on, KHY_CODEX_STRICT_DETECT=0 disables).
 
 // ── Codex 事件流解释(已抽取为叶子 ./codexEventStream.js)────────────────────
 // stdout_json 事件 → 归一化进度/工具/文件操作证据。零可变模块态;仅
 // appendCodexExecDebugLog 写调试日志(KHY_GATEWAY_DEBUG_PROMPT_FILE)。宿主
 // runCodexExec/generate 及 __test__ 按 **同名 re-import** 接回,调用点字节不变。
-const {
-  compactText, appendCodexExecDebugLog, isReconnectChannelClosed,
-  summarizeValue, getItemType, inferToolName, inferToolInput, inferToolOutput, isToolLike,
-  normalizeTrackedFileOperation, classifyTrackedRelocation, dedupeTrackedFileOps,
-  extractTrackedFileOpsFromShellCommand, inferTrackedFileOps,
-  createCodexProgressEvidence, recordCodexProgressEvent, classifyCodexPreResponseStall,
-  snapshotCodexProgressEvidence, formatCodexProgressEvidence, createCodexProgressTimeoutError,
-  appendCodexExecProgressLog, buildCodexProgressDiagnostics, emitCodexEvent,
-} = require('./codexEventStream');
 
 const DEFAULT_IDLE_TIMEOUT_MS = parseInt(
-  process.env.GATEWAY_CODEX_TIMEOUT_MS
-  || process.env.KHY_CODEX_TIMEOUT_MS
-  || '300000',
+  process.env.GATEWAY_CODEX_TIMEOUT_MS || process.env.KHY_CODEX_TIMEOUT_MS || '300000',
   10
 );
 const PROBE_TIMEOUT_MS = 4000;
@@ -69,10 +88,22 @@ const MAX_BUFFER = 10 * 1024 * 1024;
 // once per Codex model round-trip and formerly rebuilt this literal Set each call.
 // Consumed read-only (`.has`); never mutated/returned. (The per-call `seen` dedup
 // Set in buildDirectToolDefs is legitimately per-call state and stays inline.)
-const _CODEX_DIRECT_ALLOWED_TOOLS = new Set(['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'web_search']);
+const _CODEX_DIRECT_ALLOWED_TOOLS = new Set([
+  'Bash',
+  'Read',
+  'Write',
+  'Edit',
+  'Glob',
+  'Grep',
+  'web_search',
+  'image_generate',
+  'video_generate',
+]);
 
 // ── Direct mode constants ─────────────────────────────────────────
-const CODEX_MODE = String(process.env.GATEWAY_CODEX_MODE || 'cli').trim().toLowerCase();
+const CODEX_MODE = String(process.env.GATEWAY_CODEX_MODE || 'cli')
+  .trim()
+  .toLowerCase();
 const CODEX_DIRECT_TIMEOUT_MS = parseInt(process.env.CODEX_DIRECT_TIMEOUT_MS || '120000', 10);
 const CODEX_DIRECT_MAX_ITERATIONS = parseInt(process.env.CODEX_DIRECT_MAX_ITERATIONS || '10', 10);
 
@@ -113,9 +144,7 @@ let _runtimeDiagnostics = createEmptyRuntimeDiagnostics();
 function resolveExecIdleTimeoutMs(options = {}) {
   const explicitIdleTimeout = parseInt(String(options.idleTimeoutMs ?? ''), 10);
   const envIdleTimeout = parseInt(
-    process.env.GATEWAY_CODEX_IDLE_TIMEOUT_MS
-    || process.env.KHY_CODEX_IDLE_TIMEOUT_MS
-    || '',
+    process.env.GATEWAY_CODEX_IDLE_TIMEOUT_MS || process.env.KHY_CODEX_IDLE_TIMEOUT_MS || '',
     10
   );
   const resolvedTimeoutMs = resolveExecTimeoutMs(options);
@@ -137,9 +166,9 @@ function resolveExecIdleTimeoutMs(options = {}) {
 function resolveExecFirstResponseTimeoutMs(options = {}) {
   const explicitFirstResponseTimeout = parseInt(String(options.firstResponseTimeoutMs ?? ''), 10);
   const envFirstResponseTimeout = parseInt(
-    process.env.GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS
-    || process.env.KHY_CODEX_FIRST_RESPONSE_TIMEOUT_MS
-    || '',
+    process.env.GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS ||
+      process.env.KHY_CODEX_FIRST_RESPONSE_TIMEOUT_MS ||
+      '',
     10
   );
   const resolvedTimeoutMs = resolveExecTimeoutMs(options);
@@ -156,11 +185,15 @@ function resolveExecFirstResponseTimeoutMs(options = {}) {
 }
 
 function safeEmitStatus(options, text) {
-  if (!options || typeof options.onChunk !== 'function') return;
-  try { options.onChunk({ type: 'status', text: String(text || '') }); } catch { /* best effort */ }
+  if (!options || typeof options.onChunk !== 'function') {
+    return;
+  }
+  try {
+    options.onChunk({ type: 'status', text: String(text || '') });
+  } catch {
+    /* best effort */
+  }
 }
-
-const _isPathWithin = require('../../../utils/isPathWithin');
 
 function getCodexHomeContext() {
   const envHome = String(process.env.HOME || '').trim();
@@ -177,18 +210,25 @@ function getCodexHomeContext() {
 function shouldAttachTempHomeHint(message = '') {
   const lower = String(message || '').toLowerCase();
   return (
-    /timeout|reconnecting|channel closed|stream disconnected|tls handshake eof|failed to connect to websocket|error sending request for url/.test(lower)
-    || /temporary dir|helper binaries|refusing to create helper binaries/.test(lower)
+    /timeout|reconnecting|channel closed|stream disconnected|tls handshake eof|failed to connect to websocket|error sending request for url/.test(
+      lower
+    ) || /temporary dir|helper binaries|refusing to create helper binaries/.test(lower)
   );
 }
 
 function appendTempHomeHint(message = '', homeContext = null) {
   const context = homeContext || getCodexHomeContext();
-  if (!context.isTempHome) return String(message || '');
-  if (!shouldAttachTempHomeHint(message)) return String(message || '');
+  if (!context.isTempHome) {
+    return String(message || '');
+  }
+  if (!shouldAttachTempHomeHint(message)) {
+    return String(message || '');
+  }
   const hint = `home_hint=temp_home:${compactText(context.homeDir, 120)}; codex_cli_temp_home_may_break_tls_or_helper_setup`;
   const current = String(message || '');
-  if (current.includes('home_hint=temp_home:')) return current;
+  if (current.includes('home_hint=temp_home:')) {
+    return current;
+  }
   return current ? `${current} | ${hint}` : hint;
 }
 
@@ -248,7 +288,9 @@ function escapeRegExp(text = '') {
 
 function parseTomlSection(content = '', sectionName = '') {
   const key = String(sectionName || '').trim();
-  if (!key) return '';
+  if (!key) {
+    return '';
+  }
   const pattern = new RegExp(`\\[${escapeRegExp(key)}\\]([\\s\\S]*?)(?=\\n\\[|$)`);
   const matched = String(content || '').match(pattern);
   return matched ? String(matched[1] || '') : '';
@@ -256,8 +298,12 @@ function parseTomlSection(content = '', sectionName = '') {
 
 function extractQuotedValue(source = '', key = '') {
   const k = String(key || '').trim();
-  if (!k) return null;
-  const matched = String(source || '').match(new RegExp(`^\\s*${escapeRegExp(k)}\\s*=\\s*"([^"]+)"\\s*$`, 'm'));
+  if (!k) {
+    return null;
+  }
+  const matched = String(source || '').match(
+    new RegExp(`^\\s*${escapeRegExp(k)}\\s*=\\s*"([^"]+)"\\s*$`, 'm')
+  );
   return matched ? String(matched[1] || '').trim() : null;
 }
 
@@ -266,18 +312,24 @@ function extractQuotedValue(source = '', key = '') {
 // are bare integers, so extractQuotedValue (quoted-string only) can't read them.
 function extractNumericValue(source = '', key = '') {
   const k = String(key || '').trim();
-  if (!k) return null;
+  if (!k) {
+    return null;
+  }
   const matched = String(source || '').match(
     new RegExp(`^\\s*${escapeRegExp(k)}\\s*=\\s*([0-9_]+)\\s*$`, 'm')
   );
-  if (!matched) return null;
+  if (!matched) {
+    return null;
+  }
   const n = parseInt(String(matched[1]).replace(/_/g, ''), 10);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function isOpenAIBaseUrl(rawUrl = '') {
   const input = String(rawUrl || '').trim();
-  if (!input) return false;
+  if (!input) {
+    return false;
+  }
   try {
     const parsed = new URL(input);
     return parsed.hostname.toLowerCase() === 'api.openai.com';
@@ -287,18 +339,28 @@ function isOpenAIBaseUrl(rawUrl = '') {
 }
 
 function hasCustomProviderConfig(config = {}) {
-  const modelProvider = String(config.modelProvider || '').trim().toLowerCase();
-  if (modelProvider && modelProvider !== 'openai' && modelProvider !== 'oss') return true;
-  if (config.providerBaseUrl && !isOpenAIBaseUrl(config.providerBaseUrl)) return true;
+  const modelProvider = String(config.modelProvider || '')
+    .trim()
+    .toLowerCase();
+  if (modelProvider && modelProvider !== 'openai' && modelProvider !== 'oss') {
+    return true;
+  }
+  if (config.providerBaseUrl && !isOpenAIBaseUrl(config.providerBaseUrl)) {
+    return true;
+  }
   return false;
 }
 
 function isLikelyProviderTransportFailure(message = '') {
   const lower = String(message || '').toLowerCase();
   return (
-    /reconnecting|channel closed|failed to record rollout items|stream disconnected|error sending request for url/.test(lower)
-    || /network|fetch failed|socket hang up|getaddrinfo|econn|enotfound|ehostunreach|enetunreach|tls|proxy/.test(lower)
-    || /timeout|timed out|deadline exceeded|http 5\d\d/.test(lower)
+    /reconnecting|channel closed|failed to record rollout items|stream disconnected|error sending request for url/.test(
+      lower
+    ) ||
+    /network|fetch failed|socket hang up|getaddrinfo|econn|enotfound|ehostunreach|enetunreach|tls|proxy/.test(
+      lower
+    ) ||
+    /timeout|timed out|deadline exceeded|http 5\d\d/.test(lower)
   );
 }
 
@@ -306,45 +368,59 @@ function buildOpenAIFallbackArgs(baseArgs = []) {
   const args = Array.isArray(baseArgs) ? baseArgs.slice() : [];
   // Avoid carrying custom-provider model slug into OpenAI fallback.
   const modelIdx = args.indexOf('--model');
-  if (modelIdx >= 0) args.splice(modelIdx, 2);
+  if (modelIdx >= 0) {
+    args.splice(modelIdx, 2);
+  }
   args.push('-c', 'model_provider="openai"');
   args.push('-c', 'openai_base_url="https://api.openai.com/v1"');
   const fallbackModel = String(process.env.GATEWAY_CODEX_OPENAI_FALLBACK_MODEL || '').trim();
-  if (fallbackModel) args.push('-c', `model="${fallbackModel}"`);
+  if (fallbackModel) {
+    args.push('-c', `model="${fallbackModel}"`);
+  }
   return args;
 }
 
 function shouldTryOpenAIFallback(message = '', config = {}, options = {}) {
-  const enabled = String(
-    process.env.GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED
-    || process.env.GATEWAY_CODEX_PROVIDER_FALLBACK_OPENAI
-    || 'true'
-  ).toLowerCase() !== 'false';
-  if (!enabled) return false;
-  if (options && options.disableProviderFallback) return false;
-  if (!hasCustomProviderConfig(config)) return false;
+  const enabled =
+    String(
+      process.env.GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED ||
+        process.env.GATEWAY_CODEX_PROVIDER_FALLBACK_OPENAI ||
+        'true'
+    ).toLowerCase() !== 'false';
+  if (!enabled) {
+    return false;
+  }
+  if (options && options.disableProviderFallback) {
+    return false;
+  }
+  if (!hasCustomProviderConfig(config)) {
+    return false;
+  }
   return isLikelyProviderTransportFailure(message);
 }
 
 function resolveExecTimeoutMs(options = {}) {
-  const envTimeout = parseInt(
-    process.env.GATEWAY_CODEX_TIMEOUT_MS
-    || process.env.KHY_CODEX_TIMEOUT_MS
-    || String(DEFAULT_IDLE_TIMEOUT_MS),
-    10
-  ) || DEFAULT_IDLE_TIMEOUT_MS;
-  const hasExplicitTimeout = options.timeoutMs !== undefined && options.timeoutMs !== null && options.timeoutMs !== '';
-  let timeoutMs = hasExplicitTimeout
-    ? parseInt(options.timeoutMs, 10)
-    : envTimeout;
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) timeoutMs = envTimeout;
+  const envTimeout =
+    parseInt(
+      process.env.GATEWAY_CODEX_TIMEOUT_MS ||
+        process.env.KHY_CODEX_TIMEOUT_MS ||
+        String(DEFAULT_IDLE_TIMEOUT_MS),
+      10
+    ) || DEFAULT_IDLE_TIMEOUT_MS;
+  const hasExplicitTimeout =
+    options.timeoutMs !== undefined && options.timeoutMs !== null && options.timeoutMs !== '';
+  let timeoutMs = hasExplicitTimeout ? parseInt(options.timeoutMs, 10) : envTimeout;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    timeoutMs = envTimeout;
+  }
   timeoutMs = Math.max(15000, timeoutMs);
 
   const modelHint = String(options.model || '').toLowerCase();
   const maxTokens = parseInt(options.maxTokens || 0, 10) || 0;
-  const highComplexity = !!options.thinking
-    || maxTokens >= 4096
-    || /claude-opus|opus|gpt-5|o3|o4|reason/i.test(modelHint);
+  const highComplexity =
+    !!options.thinking ||
+    maxTokens >= 4096 ||
+    /claude-opus|opus|gpt-5|o3|o4|reason/i.test(modelHint);
 
   // For high-effort/high-context requests, avoid premature 45s class timeouts.
   if (!hasExplicitTimeout && highComplexity) {
@@ -371,17 +447,27 @@ function probeCodexVersion() {
       const out = compactText((r.stdout || r.stderr || '').trim(), 120) || 'ok';
       return { ok: true, detail: out };
     }
-    if (r && r.error) return { ok: false, detail: compactText(r.error.message || String(r.error), 120) || 'probe error' };
+    if (r && r.error) {
+      return {
+        ok: false,
+        detail: compactText(r.error.message || String(r.error), 120) || 'probe error',
+      };
+    }
     return { ok: false, detail: compactText(`exit ${r?.status}`, 120) };
   } catch (err) {
-    return { ok: false, detail: compactText(err && err.message ? err.message : String(err), 120) || 'probe exception' };
+    return {
+      ok: false,
+      detail: compactText(err && err.message ? err.message : String(err), 120) || 'probe exception',
+    };
   }
 }
 
 function diagnoseReconnectFailure(errMessage = '') {
   const parts = [];
   const versionProbe = probeCodexVersion();
-  parts.push(versionProbe.ok ? `codex=${versionProbe.detail}` : `codex_probe=${versionProbe.detail}`);
+  parts.push(
+    versionProbe.ok ? `codex=${versionProbe.detail}` : `codex_probe=${versionProbe.detail}`
+  );
 
   const execUsable = probeExecUsable(true);
   if (!execUsable) {
@@ -391,22 +477,36 @@ function diagnoseReconnectFailure(errMessage = '') {
   }
 
   const config = readCodexConfig() || {};
-  if (config.model) parts.push(`config_model=${compactText(config.model, 64)}`);
-  if (config.profile) parts.push(`profile=${compactText(config.profile, 64)}`);
-  if (config.providerBaseUrl) parts.push(`provider=${compactText(config.providerBaseUrl, 96)}`);
-  if (/sandbox/i.test(String(errMessage || ''))) parts.push('hint=retry_no_sbx');
+  if (config.model) {
+    parts.push(`config_model=${compactText(config.model, 64)}`);
+  }
+  if (config.profile) {
+    parts.push(`profile=${compactText(config.profile, 64)}`);
+  }
+  if (config.providerBaseUrl) {
+    parts.push(`provider=${compactText(config.providerBaseUrl, 96)}`);
+  }
+  if (/sandbox/i.test(String(errMessage || ''))) {
+    parts.push('hint=retry_no_sbx');
+  }
 
   return compactText(parts.join('; '), 320);
 }
 
 function maybeSelfHealReconnect(options = {}) {
-  const autoHealEnabled = String(
-    process.env.GATEWAY_CODEX_AUTO_DISABLE_SANDBOX_ON_RECONNECT || 'true'
-  ).toLowerCase() !== 'false';
-  if (!autoHealEnabled) return false;
+  const autoHealEnabled =
+    String(process.env.GATEWAY_CODEX_AUTO_DISABLE_SANDBOX_ON_RECONNECT || 'true').toLowerCase() !==
+    'false';
+  if (!autoHealEnabled) {
+    return false;
+  }
 
-  const current = String(process.env.GATEWAY_CODEX_SANDBOX || 'workspace-write').trim().toLowerCase();
-  if (!current || current === 'none') return false;
+  const current = String(process.env.GATEWAY_CODEX_SANDBOX || 'workspace-write')
+    .trim()
+    .toLowerCase();
+  if (!current || current === 'none') {
+    return false;
+  }
 
   process.env.GATEWAY_CODEX_SANDBOX = 'none';
   safeEmitStatus(options, 'Codex 自愈: 已临时禁用 sandbox（仅当前进程），后续请求将自动重试该模式');
@@ -421,7 +521,9 @@ function hasMeaningfulPlainOutput(chunk) {
  * Parse codex config.toml to extract configured model and provider info.
  */
 function readCodexConfig() {
-  if (_configCache) return _configCache;
+  if (_configCache) {
+    return _configCache;
+  }
   const homeDir = require('os').homedir();
   const candidates = [
     path.join(homeDir, '.codex', 'config.toml'),
@@ -429,9 +531,18 @@ function readCodexConfig() {
   ];
   for (const configPath of candidates) {
     try {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
       const content = fs.readFileSync(configPath, 'utf-8');
-      const result = { model: null, profile: null, modelProvider: null, providerBaseUrl: null, modelContextWindow: null, modelReasoningEffort: null };
+      const result = {
+        model: null,
+        profile: null,
+        modelProvider: null,
+        providerBaseUrl: null,
+        modelContextWindow: null,
+        modelReasoningEffort: null,
+      };
 
       // Extract top-level model
       result.model = extractQuotedValue(content, 'model') || null;
@@ -452,32 +563,45 @@ function readCodexConfig() {
       if (result.profile) {
         const profileSection = parseTomlSection(content, `profiles.${result.profile}`);
         const pModel = extractQuotedValue(profileSection, 'model');
-        if (pModel) result.model = pModel;
+        if (pModel) {
+          result.model = pModel;
+        }
         const pProvider = extractQuotedValue(profileSection, 'model_provider');
-        if (pProvider) result.modelProvider = pProvider;
+        if (pProvider) {
+          result.modelProvider = pProvider;
+        }
         const pCtx = extractNumericValue(profileSection, 'model_context_window');
-        if (pCtx) result.modelContextWindow = pCtx;
+        if (pCtx) {
+          result.modelContextWindow = pCtx;
+        }
         const pEffort = extractQuotedValue(profileSection, 'model_reasoning_effort');
-        if (pEffort) result.modelReasoningEffort = pEffort;
+        if (pEffort) {
+          result.modelReasoningEffort = pEffort;
+        }
       }
 
       // Extract provider base_url (prefer selected provider section)
       if (result.modelProvider) {
-        const providerSection = (
-          parseTomlSection(content, `model_providers.${result.modelProvider}`)
-          || parseTomlSection(content, `providers.${result.modelProvider}`)
-        );
+        const providerSection =
+          parseTomlSection(content, `model_providers.${result.modelProvider}`) ||
+          parseTomlSection(content, `providers.${result.modelProvider}`);
         const providerUrl = extractQuotedValue(providerSection, 'base_url');
-        if (providerUrl) result.providerBaseUrl = providerUrl;
+        if (providerUrl) {
+          result.providerBaseUrl = providerUrl;
+        }
       }
       if (!result.providerBaseUrl) {
         const providerMatch = content.match(/base_url\s*=\s*"([^"]+)"/);
-        if (providerMatch) result.providerBaseUrl = providerMatch[1];
+        if (providerMatch) {
+          result.providerBaseUrl = providerMatch[1];
+        }
       }
 
       _configCache = result;
       return result;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   _configCache = {};
   return _configCache;
@@ -490,12 +614,14 @@ function commandExists(cmd) {
   // through the cache collapses that storm while still surfacing the probe error
   // for diagnostics via `_lastDetectError`.
   const result = require('./_commandAvailability').check(cmd);
-  _lastDetectError = result.ok ? '' : (result.error || '');
+  _lastDetectError = result.ok ? '' : result.error || '';
   return result.ok;
 }
 
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   // Direct mode only needs CODEX_API_KEY (or pool key), no CLI binary required
   if (CODEX_MODE === 'direct') {
     _available = !!extractPrimaryApiKey(process.env.CODEX_API_KEY);
@@ -504,7 +630,9 @@ function detect(forceRefresh = false) {
         const pool = require('../../apiKeyPool');
         pool.init();
         _available = pool.hasAvailableKeys('codex') || pool.hasAvailableKeys('openai');
-      } catch { /* pool unavailable */ }
+      } catch {
+        /* pool unavailable */
+      }
     }
     _lastDetectError = _available ? '' : 'CODEX_API_KEY not set and no pool keys';
     return _available;
@@ -512,7 +640,12 @@ function detect(forceRefresh = false) {
   _available = commandExists('codex');
   // Portable-first: a codex under ~/.khy/tools (or KHY_CODEX_BIN) is off PATH, so
   // commandExists misses it — count a portable install as available too.
-  if (!_available && _portableCodexInstalled()) _available = true;
+  if (!_available && _portableCodexInstalled()) {
+    _available = true;
+  }
+  _available = applyCodexCredentialGate(_available, (msg) => {
+    _lastDetectError = msg;
+  });
   if (forceRefresh) {
     _execProbeOk = null;
     _lastExecProbeError = '';
@@ -528,11 +661,19 @@ function detect(forceRefresh = false) {
  * latency. Detection outcome is identical to detect(); only the probe is async.
  */
 async function detectAsync(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
-  if (CODEX_MODE === 'direct') return detect(forceRefresh);
-  const result = await require('./_commandAvailability').checkAsync('codex', { force: forceRefresh });
-  _lastDetectError = result.ok ? '' : (result.error || '');
-  _available = result.ok;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
+  if (CODEX_MODE === 'direct') {
+    return detect(forceRefresh);
+  }
+  const result = await require('./_commandAvailability').checkAsync('codex', {
+    force: forceRefresh,
+  });
+  _lastDetectError = result.ok ? '' : result.error || '';
+  _available = applyCodexCredentialGate(result.ok, (msg) => {
+    _lastDetectError = msg;
+  });
   if (forceRefresh) {
     _execProbeOk = null;
     _lastExecProbeError = '';
@@ -541,7 +682,9 @@ async function detectAsync(forceRefresh = false) {
 }
 
 function probeExecUsable(forceRefresh = false) {
-  if (!forceRefresh && _execProbeOk !== null) return _execProbeOk;
+  if (!forceRefresh && _execProbeOk !== null) {
+    return _execProbeOk;
+  }
   try {
     const r = spawnSync('codex', ['exec', '--help'], {
       stdio: 'ignore',
@@ -570,7 +713,9 @@ function probeExecUsable(forceRefresh = false) {
 function resolveUpstreamProviderMeta(config = {}) {
   const provider = String(config.modelProvider || '').trim() || 'openai';
   const rawBaseUrl = String(config.providerBaseUrl || '').trim();
-  if (!rawBaseUrl) return { provider, host: '' };
+  if (!rawBaseUrl) {
+    return { provider, host: '' };
+  }
   try {
     const u = new URL(rawBaseUrl);
     return { provider, host: u.host || u.hostname || rawBaseUrl };
@@ -588,51 +733,69 @@ async function listModels() {
   // Try to fetch models from the provider's API
   if (config.providerBaseUrl) {
     try {
-      const envKey = extractPrimaryApiKey(process.env.CODEX_API_KEY)
-        || extractPrimaryApiKey(process.env.OPENAI_API_KEY)
-        || '';
+      const envKey =
+        extractPrimaryApiKey(process.env.CODEX_API_KEY) ||
+        extractPrimaryApiKey(process.env.OPENAI_API_KEY) ||
+        '';
       if (envKey) {
         const https = require('https');
         const http = require('http');
         const url = new URL(`${config.providerBaseUrl}/models`);
         const client = url.protocol === 'https:' ? https : http;
         const models = await new Promise((resolve, reject) => {
-          const req = client.get(url, { headers: { Authorization: `Bearer ${envKey}` }, timeout: 5000 }, (res) => {
-            let data = '';
-            res.on('data', chunk => { data += chunk; });
-            res.on('end', () => {
-              try {
-                const parsed = JSON.parse(data);
-                resolve((parsed.data || []).map(m => ({
-                  id: m.id,
-                  name: m.id,
-                  isDefault: m.id === configModel,
-                  provider: 'codex',
-                  description: '',
-                  // Carry the provider-reported context window when present so the
-                  // gateway caches REAL data instead of a static guess. Config
-                  // model_context_window wins for the configured model.
-                  contextWindow:
-                    (m.id === configModel ? config.modelContextWindow : 0)
-                    || m.context_length || m.context_window || m.max_context_window_tokens
-                    || undefined,
-                  discoverySource: 'remote',
-                  connectionMode: transportMode,
-                  upstreamProvider: upstreamMeta.provider,
-                  upstreamHost: upstreamMeta.host,
-                })));
-              } catch { resolve(null); }
-            });
-          });
+          const req = client.get(
+            url,
+            { headers: { Authorization: `Bearer ${envKey}` }, timeout: 5000 },
+            (res) => {
+              let data = '';
+              res.on('data', (chunk) => {
+                data += chunk;
+              });
+              res.on('end', () => {
+                try {
+                  const parsed = JSON.parse(data);
+                  resolve(
+                    (parsed.data || []).map((m) => ({
+                      id: m.id,
+                      name: m.id,
+                      isDefault: m.id === configModel,
+                      provider: 'codex',
+                      description: '',
+                      // Carry the provider-reported context window when present so the
+                      // gateway caches REAL data instead of a static guess. Config
+                      // model_context_window wins for the configured model.
+                      contextWindow:
+                        (m.id === configModel ? config.modelContextWindow : 0) ||
+                        m.context_length ||
+                        m.context_window ||
+                        m.max_context_window_tokens ||
+                        undefined,
+                      discoverySource: 'remote',
+                      connectionMode: transportMode,
+                      upstreamProvider: upstreamMeta.provider,
+                      upstreamHost: upstreamMeta.host,
+                    }))
+                  );
+                } catch {
+                  resolve(null);
+                }
+              });
+            }
+          );
           req.on('error', () => resolve(null));
-          req.on('timeout', () => { req.destroy(); resolve(null); });
+          req.on('timeout', () => {
+            req.destroy();
+            resolve(null);
+          });
         });
         if (models && models.length > 0) {
-          _providerModels = new Set(models.map(m => m.id));
+          _providerModels = new Set(models.map((m) => m.id));
           return models;
         }
       }
-    } catch { /* fallback below */ }
+    } catch {
+      /* fallback below */
+    }
   }
 
   // Fallback: use config model + known defaults
@@ -652,22 +815,20 @@ async function listModels() {
         upstreamProvider: upstreamMeta.provider,
         upstreamHost: upstreamMeta.host,
       },
-      ...FALLBACK_MODELS
-        .filter(m => m.id !== configModel)
-        .map(m => ({
-          ...m,
-          isDefault: false,
-          provider: 'codex',
-          description: '',
-          discoverySource: 'builtin',
-          connectionMode: transportMode,
-          upstreamProvider: upstreamMeta.provider,
-          upstreamHost: upstreamMeta.host,
-        })),
+      ...FALLBACK_MODELS.filter((m) => m.id !== configModel).map((m) => ({
+        ...m,
+        isDefault: false,
+        provider: 'codex',
+        description: '',
+        discoverySource: 'builtin',
+        connectionMode: transportMode,
+        upstreamProvider: upstreamMeta.provider,
+        upstreamHost: upstreamMeta.host,
+      })),
     ];
   }
 
-  return FALLBACK_MODELS.map(m => ({
+  return FALLBACK_MODELS.map((m) => ({
     ...m,
     provider: 'codex',
     description: '',
@@ -680,11 +841,17 @@ async function listModels() {
 
 function isUserModelAllowed(modelId, config = {}) {
   const chosen = String(modelId || '').trim();
-  if (!chosen) return false;
-  if (chosen === config.model) return true;
+  if (!chosen) {
+    return false;
+  }
+  if (chosen === config.model) {
+    return true;
+  }
   // If provider model catalog is not loaded yet, optimistically allow user-selected model.
   // Unknown-model failures are already handled by retry logic without --model.
-  if (!_providerModels || _providerModels.size === 0) return true;
+  if (!_providerModels || _providerModels.size === 0) {
+    return true;
+  }
   return _providerModels.has(chosen);
 }
 
@@ -692,7 +859,9 @@ function buildCliPrompt(prompt, options = {}) {
   const raw = String(prompt || '');
   const system = String(options.system || '').trim();
   const messages = Array.isArray(options.messages) ? options.messages : [];
-  if (!system && messages.length === 0) return raw;
+  if (!system && messages.length === 0) {
+    return raw;
+  }
 
   // Codex CLI mode only gets a single flattened stdin prompt. Prepend a compact
   // reminder so the highest-priority KHY language rule remains salient even when
@@ -708,35 +877,50 @@ function buildCliPrompt(prompt, options = {}) {
   // The full system prompt is too large for CLI stdin, but lightweight
   // conversation directives (joke format, language rules) must survive
   // or the model falls back to its built-in English code-review behavior.
-  const lightweightMatch = system.match(/# 轻量对话[^\n]*\n[\s\S]*?(?=\n#\s|\n\n#|$)/);
+  const lightweightMatch = system.match(
+    new RegExp('# 轻量对话[^\n]*\n[\\s\\S]*?(?=\n#\\s|\n\n#|$)')
+  );
   if (lightweightMatch) {
     parts.push('');
     parts.push(lightweightMatch[0].trim());
   }
-  const languageMatch = system.match(/# Language\n[^\n]+(?:\n[^\n#]+)*/);
+  const languageMatch = system.match(new RegExp('# Language\n[^\n]+(?:\n[^\n#]+)*'));
   if (languageMatch) {
     parts.push('');
     parts.push(languageMatch[0].trim());
   }
 
   let contentToText = (content) => String(content || '');
-  try { contentToText = require('../../contentBlockUtils').contentToText; } catch { /* fallback */ }
+  try {
+    contentToText = require('../../contentBlockUtils').contentToText;
+  } catch {
+    /* fallback */
+  }
 
   const normalizeCliLine = (value, maxLen = 1200) => {
-    return compactText(String(value || '').replace(/\s+/g, ' ').trim(), maxLen);
+    return compactText(
+      String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+      maxLen
+    );
   };
 
   const recentConversationLines = [];
   if (messages.length > 0) {
     const recentMessages = messages.slice(-6);
     for (const message of recentMessages) {
-      const role = String(message?.role || '').trim().toLowerCase();
-      if (!role || role === 'system') continue;
+      const role = String(message?.role || '')
+        .trim()
+        .toLowerCase();
+      if (!role || role === 'system') {
+        continue;
+      }
       const text = normalizeCliLine(contentToText(message?.content), 1600);
-      if (!text) continue;
-      const label = role === 'assistant'
-        ? 'Assistant'
-        : (role === 'user' ? 'User' : role);
+      if (!text) {
+        continue;
+      }
+      const label = role === 'assistant' ? 'Assistant' : role === 'user' ? 'User' : role;
       recentConversationLines.push(`- ${label}: ${text}`);
     }
   }
@@ -744,9 +928,17 @@ function buildCliPrompt(prompt, options = {}) {
   let latestUserRequest = '';
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    if (String(message?.role || '').trim().toLowerCase() !== 'user') continue;
+    if (
+      String(message?.role || '')
+        .trim()
+        .toLowerCase() !== 'user'
+    ) {
+      continue;
+    }
     const text = normalizeCliLine(contentToText(message?.content), 4000);
-    if (!text) continue;
+    if (!text) {
+      continue;
+    }
     latestUserRequest = text;
     break;
   }
@@ -801,23 +993,32 @@ function runCodexExec(prompt, args, options = {}) {
           homeDir: homeContext.homeDir,
           homeWritable,
         });
-      } catch { preflight = { ok: true }; }
+      } catch {
+        preflight = { ok: true };
+      }
       if (!preflight.ok) {
         appendCodexExecDebugLog('spawn_preflight_failed', {
           code: preflight.code || 'preflight_failed',
           home: homeContext.homeDir,
         });
-        const err = new Error(appendTempHomeHint(
-          `codex spawn preflight failed: ${preflight.reason || preflight.code}`,
-          homeContext
-        ));
+        const err = new Error(
+          appendTempHomeHint(
+            `codex spawn preflight failed: ${preflight.reason || preflight.code}`,
+            homeContext
+          )
+        );
         err.code = 'CODEX_SPAWN_PREFLIGHT_FAILED';
         err.codexPreflightCode = preflight.code || 'preflight_failed';
         try {
           if (options.onChunk) {
-            options.onChunk({ type: 'status', text: `Codex 预检失败，跳过启动: ${preflight.reason || preflight.code}` });
+            options.onChunk({
+              type: 'status',
+              text: `Codex 预检失败，跳过启动: ${preflight.reason || preflight.code}`,
+            });
           }
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
         reject(err);
         return;
       }
@@ -828,18 +1029,14 @@ function runCodexExec(prompt, args, options = {}) {
     // Portable-first: resolvePortableSpawn returns a `node <entry>` spec when a
     // portable codex is installed under ~/.khy/tools (fixes Windows ENOENT);
     // gate off / not installed → byte-equivalent cmd.exe/codex fallback.
-    const _fbCmd = isWin ? (process.env.COMSPEC || 'cmd.exe') : 'codex';
+    const _fbCmd = isWin ? process.env.COMSPEC || 'cmd.exe' : 'codex';
     const _fbArgs = isWin ? ['/d', '/s', '/c', 'codex.cmd', ...args] : args;
     const _sp = _portableCodexSpawn(args, _fbCmd, _fbArgs);
-    const child = spawn(
-      _sp.command,
-      _sp.args,
-      {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: process.env,
-        windowsHide: isWin,
-      },
-    );
+    const child = spawn(_sp.command, _sp.args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env,
+      windowsHide: isWin,
+    });
     appendCodexExecDebugLog('spawn', {
       pid: child?.pid || '',
       json: args.includes('--json') ? '1' : '0',
@@ -850,9 +1047,20 @@ function runCodexExec(prompt, args, options = {}) {
     });
 
     if (options.onChunk) {
-      try { options.onChunk({ type: 'status', text: 'Codex 启动中...' }); } catch { /* best effort */ }
+      try {
+        options.onChunk({ type: 'status', text: 'Codex 启动中...' });
+      } catch {
+        /* best effort */
+      }
       if (idleTimeoutMs > 120000) {
-        try { options.onChunk({ type: 'status', text: `Codex 已启用延长空闲等待窗口：${Math.round(idleTimeoutMs / 1000)}s` }); } catch { /* best effort */ }
+        try {
+          options.onChunk({
+            type: 'status',
+            text: `Codex 已启用延长空闲等待窗口：${Math.round(idleTimeoutMs / 1000)}s`,
+          });
+        } catch {
+          /* best effort */
+        }
       }
     }
 
@@ -867,7 +1075,7 @@ function runCodexExec(prompt, args, options = {}) {
       toolCalls: 0,
       toolDurationMs: 0,
       activeTools: new Map(),
-      fileOps: [],  // Track file operations for completion panel
+      fileOps: [], // Track file operations for completion panel
     };
     const progressEvidence = createCodexProgressEvidence();
     let finished = false;
@@ -890,7 +1098,12 @@ function runCodexExec(prompt, args, options = {}) {
       // Some mocked or transient child-process objects may not expose pid yet.
       // In that case, call child.kill directly as a best-effort fallback.
       if ((!child || !child.pid) && child && typeof child.kill === 'function') {
-        try { child.kill(signal); return; } catch { /* continue to safeKill */ }
+        try {
+          child.kill(signal);
+          return;
+        } catch {
+          /* continue to safeKill */
+        }
       }
       safeKill(child, signal, escalateMs);
     };
@@ -907,10 +1120,14 @@ function runCodexExec(prompt, args, options = {}) {
       }
     };
     const scheduleIdleTimeout = () => {
-      if (finished || killedByIdleTimeout) return;
+      if (finished || killedByIdleTimeout) {
+        return;
+      }
       clearIdleTimer();
       idleTimer = setTimeout(() => {
-        if (finished || killedByIdleTimeout) return;
+        if (finished || killedByIdleTimeout) {
+          return;
+        }
         const idleMs = Date.now() - lastActivityAt;
         killedByIdleTimeout = true;
         try {
@@ -920,7 +1137,9 @@ function runCodexExec(prompt, args, options = {}) {
               text: `Codex idle timeout: no subprocess output for ${Math.round(idleMs / 1000)}s, stopping request`,
             });
           }
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
         killChild('SIGTERM', 1500);
       }, idleTimeoutMs);
       idleTimer.unref?.();
@@ -930,7 +1149,9 @@ function runCodexExec(prompt, args, options = {}) {
       scheduleIdleTimeout();
     };
     const markMeaningfulResponseOutput = () => {
-      if (sawMeaningfulResponseOutput) return;
+      if (sawMeaningfulResponseOutput) {
+        return;
+      }
       sawMeaningfulResponseOutput = true;
       clearFirstResponseTimer();
       appendCodexExecProgressLog('meaningful_output', progressEvidence);
@@ -938,28 +1159,40 @@ function runCodexExec(prompt, args, options = {}) {
 
     let abortWatcher = null;
     const done = (err, value) => {
-      if (finished) return;
+      if (finished) {
+        return;
+      }
       finished = true;
       clearIdleTimer();
       clearFirstResponseTimer();
       clearInterval(heartbeatTimer);
       if (abortWatcher && abortSignal && typeof abortSignal.removeEventListener === 'function') {
-        try { abortSignal.removeEventListener('abort', abortWatcher); } catch { /* ignore */ }
+        try {
+          abortSignal.removeEventListener('abort', abortWatcher);
+        } catch {
+          /* ignore */
+        }
       }
-      appendCodexExecDebugLog('done', err
-        ? {
-            outcome: 'reject',
-            error_code: err.code || '',
-            error_name: err.name || '',
-            error: err.message || String(err),
-          }
-        : {
-            outcome: 'resolve',
-            content_len: String(value?.content || '').length,
-            tool_calls: Number(value?.toolSummary?.totalCalls || 0),
-          });
-      if (err) reject(err);
-      else resolve(value);
+      appendCodexExecDebugLog(
+        'done',
+        err
+          ? {
+              outcome: 'reject',
+              error_code: err.code || '',
+              error_name: err.name || '',
+              error: err.message || String(err),
+            }
+          : {
+              outcome: 'resolve',
+              content_len: String(value?.content || '').length,
+              tool_calls: Number(value?.toolSummary?.totalCalls || 0),
+            }
+      );
+      if (err) {
+        reject(err);
+      } else {
+        resolve(value);
+      }
     };
 
     const abortChild = (reason) => {
@@ -994,9 +1227,18 @@ function runCodexExec(prompt, args, options = {}) {
       parseInt(process.env.GATEWAY_CODEX_HEARTBEAT_MS || '10000', 10) || 10000
     );
     heartbeatTimer = setInterval(() => {
-      if (finished || !options.onChunk) return;
+      if (finished || !options.onChunk) {
+        return;
+      }
       const elapsedSec = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-      try { options.onChunk({ type: 'status', text: `等待 OpenAI Codex 流式输出（已等待 ${elapsedSec}s）` }); } catch { /* best effort */ }
+      try {
+        options.onChunk({
+          type: 'status',
+          text: `等待 OpenAI Codex 流式输出（已等待 ${elapsedSec}s）`,
+        });
+      } catch {
+        /* best effort */
+      }
     }, heartbeatIntervalMs);
     heartbeatTimer.unref?.();
     scheduleIdleTimeout();
@@ -1004,7 +1246,9 @@ function runCodexExec(prompt, args, options = {}) {
       timeout_ms: firstResponseTimeoutMs,
     });
     firstResponseTimer = setTimeout(() => {
-      if (finished || killedByFirstResponseTimeout || sawMeaningfulResponseOutput) return;
+      if (finished || killedByFirstResponseTimeout || sawMeaningfulResponseOutput) {
+        return;
+      }
       killedByFirstResponseTimeout = true;
       const progressSummary = formatCodexProgressEvidence(progressEvidence);
       firstResponseTimeoutError = createCodexProgressTimeoutError(
@@ -1020,7 +1264,9 @@ function runCodexExec(prompt, args, options = {}) {
               : `Codex first response timeout: no meaningful model progress for ${Math.round(firstResponseTimeoutMs / 1000)}s, stopping request`,
           });
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
       appendCodexExecProgressLog('first_response_timeout_fired', progressEvidence, {
         timeout_ms: firstResponseTimeoutMs,
       });
@@ -1043,15 +1289,21 @@ function runCodexExec(prompt, args, options = {}) {
       parseInt(process.env.GATEWAY_CODEX_RECONNECT_BAIL_THRESHOLD || '3', 10) || 3
     );
     const maybeEarlyBailOnReconnectLoop = () => {
-      if (finished || killedByFirstResponseTimeout || sawMeaningfulResponseOutput) return;
+      if (finished || killedByFirstResponseTimeout || sawMeaningfulResponseOutput) {
+        return;
+      }
       let bail = false;
       try {
         const snapshot = snapshotCodexProgressEvidence(progressEvidence);
         bail = require('../codexStallPolicy').shouldEarlyBailOnReconnectLoop(snapshot, {
           threshold: reconnectLoopBailThreshold,
         });
-      } catch { bail = false; }
-      if (!bail) return;
+      } catch {
+        bail = false;
+      }
+      if (!bail) {
+        return;
+      }
       killedByFirstResponseTimeout = true;
       const progressSummary = formatCodexProgressEvidence(progressEvidence);
       firstResponseTimeoutError = createCodexProgressTimeoutError(
@@ -1067,7 +1319,9 @@ function runCodexExec(prompt, args, options = {}) {
               : 'Codex reconnect loop detected, bypassing without waiting full window',
           });
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
       appendCodexExecProgressLog('reconnect_loop_early_bail', progressEvidence, {
         threshold: reconnectLoopBailThreshold,
       });
@@ -1077,7 +1331,9 @@ function runCodexExec(prompt, args, options = {}) {
 
     child.stdout.on('data', (chunk) => {
       touchActivity();
-      if (stdout.length < MAX_BUFFER) stdout += chunk;
+      if (stdout.length < MAX_BUFFER) {
+        stdout += chunk;
+      }
       const text = _textDecoder.write(chunk);
       if (!jsonMode) {
         if (hasMeaningfulPlainOutput(text)) {
@@ -1090,7 +1346,9 @@ function runCodexExec(prompt, args, options = {}) {
           });
           markMeaningfulResponseOutput();
         }
-        if (options.onChunk) options.onChunk({ type: 'text', text });
+        if (options.onChunk) {
+          options.onChunk({ type: 'text', text });
+        }
         return;
       }
       stdoutBuffer += text;
@@ -1098,12 +1356,21 @@ function runCodexExec(prompt, args, options = {}) {
       stdoutBuffer = lines.pop() || '';
       for (const raw of lines) {
         const line = raw.trim();
-        if (!line) continue;
+        if (!line) {
+          continue;
+        }
         let event = null;
-        try { event = JSON.parse(line); } catch { /* non-JSON line from CLI wrapper */ }
+        try {
+          event = JSON.parse(line);
+        } catch {
+          /* non-JSON line from CLI wrapper */
+        }
         if (event && typeof event === 'object') {
-          if (emitCodexEvent(event, state, options, progressEvidence, 'stdout_json')) markMeaningfulResponseOutput();
-          else maybeEarlyBailOnReconnectLoop();
+          if (emitCodexEvent(event, state, options, progressEvidence, 'stdout_json')) {
+            markMeaningfulResponseOutput();
+          } else {
+            maybeEarlyBailOnReconnectLoop();
+          }
         } else if (/reconnecting|channel closed|failed to record rollout items/i.test(line)) {
           recordCodexProgressEvent(progressEvidence, {
             channel: 'stdout',
@@ -1111,7 +1378,9 @@ function runCodexExec(prompt, args, options = {}) {
             summary: line,
             reconnectWarning: true,
           });
-          if (options.onChunk) options.onChunk({ type: 'status', text: line });
+          if (options.onChunk) {
+            options.onChunk({ type: 'status', text: line });
+          }
           maybeEarlyBailOnReconnectLoop();
         } else if (hasMeaningfulPlainOutput(line)) {
           recordCodexProgressEvent(progressEvidence, {
@@ -1136,19 +1405,28 @@ function runCodexExec(prompt, args, options = {}) {
       stderrJsonBuffer = stderrLines.pop();
       for (const line of stderrLines) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {
+          continue;
+        }
         if (jsonMode && trimmed.startsWith('{')) {
           try {
             const event = JSON.parse(trimmed);
             if (event && typeof event === 'object' && typeof event.type === 'string') {
-              if (emitCodexEvent(event, state, options, progressEvidence, 'stderr_json')) markMeaningfulResponseOutput();
-              else maybeEarlyBailOnReconnectLoop();
+              if (emitCodexEvent(event, state, options, progressEvidence, 'stderr_json')) {
+                markMeaningfulResponseOutput();
+              } else {
+                maybeEarlyBailOnReconnectLoop();
+              }
               continue;
             }
-          } catch { /* not valid JSON, fall through */ }
+          } catch {
+            /* not valid JSON, fall through */
+          }
         }
         // Non-JSON stderr — accumulate for error diagnostics
-        if (stderr.length < MAX_BUFFER) stderr += trimmed + '\n';
+        if (stderr.length < MAX_BUFFER) {
+          stderr += trimmed + '\n';
+        }
         recordCodexProgressEvent(progressEvidence, {
           channel: 'stderr',
           kind: isReconnectChannelClosed(trimmed) ? 'transport_warning' : 'stderr',
@@ -1158,8 +1436,12 @@ function runCodexExec(prompt, args, options = {}) {
         });
         if (isReconnectChannelClosed(trimmed)) {
           sawTransientTransportWarning = true;
-          lastTransientTransportMessage = compactText(trimmed, 220) || 'codex transport issue during rollout recording';
-          safeEmitStatus(options, `Codex transport issue detected, waiting for recovery: ${lastTransientTransportMessage}`);
+          lastTransientTransportMessage =
+            compactText(trimmed, 220) || 'codex transport issue during rollout recording';
+          safeEmitStatus(
+            options,
+            `Codex transport issue detected, waiting for recovery: ${lastTransientTransportMessage}`
+          );
           maybeEarlyBailOnReconnectLoop();
         }
       }
@@ -1176,7 +1458,9 @@ function runCodexExec(prompt, args, options = {}) {
         try {
           const evt = JSON.parse(stdoutBuffer.trim());
           emitCodexEvent(evt, state, options, progressEvidence, 'stdout_json');
-        } catch { /* ignore trailing partial */ }
+        } catch {
+          /* ignore trailing partial */
+        }
       }
       // Drain trailing stderr buffer.
       // Important: some codex builds emit a single stderr line without trailing
@@ -1188,13 +1472,19 @@ function runCodexExec(prompt, args, options = {}) {
           try {
             const evt = JSON.parse(trailingStderr);
             if (evt && typeof evt === 'object' && typeof evt.type === 'string') {
-              if (emitCodexEvent(evt, state, options, progressEvidence, 'stderr_json')) markMeaningfulResponseOutput();
+              if (emitCodexEvent(evt, state, options, progressEvidence, 'stderr_json')) {
+                markMeaningfulResponseOutput();
+              }
               consumedAsJson = true;
             }
-          } catch { /* fall through and treat as plain stderr text */ }
+          } catch {
+            /* fall through and treat as plain stderr text */
+          }
         }
         if (!consumedAsJson) {
-          if (stderr.length < MAX_BUFFER) stderr += `${trailingStderr}\n`;
+          if (stderr.length < MAX_BUFFER) {
+            stderr += `${trailingStderr}\n`;
+          }
           recordCodexProgressEvent(progressEvidence, {
             channel: 'stderr',
             kind: isReconnectChannelClosed(trailingStderr) ? 'transport_warning' : 'stderr',
@@ -1204,7 +1494,8 @@ function runCodexExec(prompt, args, options = {}) {
           });
           if (isReconnectChannelClosed(trailingStderr)) {
             sawTransientTransportWarning = true;
-            lastTransientTransportMessage = compactText(trailingStderr, 220) || 'codex transport issue during rollout recording';
+            lastTransientTransportMessage =
+              compactText(trailingStderr, 220) || 'codex transport issue during rollout recording';
           }
         }
       }
@@ -1214,17 +1505,18 @@ function runCodexExec(prompt, args, options = {}) {
         return;
       }
       if (killedByFirstResponseTimeout) {
-        done(firstResponseTimeoutError || createCodexProgressTimeoutError(
-          `codex first response timeout after ${firstResponseTimeoutMs}ms without meaningful model progress`,
-          progressEvidence
-        ));
+        done(
+          firstResponseTimeoutError ||
+            createCodexProgressTimeoutError(
+              `codex first response timeout after ${firstResponseTimeoutMs}ms without meaningful model progress`,
+              progressEvidence
+            )
+        );
         return;
       }
 
       if (code === 0) {
-        const content = jsonMode
-          ? state.finalParts.join('\n').trim()
-          : stdout.trim();
+        const content = jsonMode ? state.finalParts.join('\n').trim() : stdout.trim();
         if (content) {
           done(null, {
             content,
@@ -1282,26 +1574,48 @@ function makeDirectRequest(url, body, { timeout = CODEX_DIRECT_TIMEOUT_MS, signa
 
     let settled = false;
     let activeReq = null;
-    let connectReq = null;
+    const connectReq = null;
 
     const finish = (fn, value) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       if (signal && onAbort) {
-        try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+        try {
+          signal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
       }
       fn(value);
     };
     const finishResolve = (v) => finish(resolve, v);
     const finishReject = (e) => finish(reject, e);
     const onAbort = () => {
-      const err = new Error(`codex direct request aborted: ${normalizeAbortReason(signal ? signal.reason : null)}`);
+      const err = new Error(
+        `codex direct request aborted: ${normalizeAbortReason(signal ? signal.reason : null)}`
+      );
       err.name = 'AbortError';
-      try { if (connectReq && !connectReq.destroyed) connectReq.destroy(err); } catch { /* ignore */ }
-      try { if (activeReq && !activeReq.destroyed) activeReq.destroy(err); } catch { /* ignore */ }
+      try {
+        if (connectReq && !connectReq.destroyed) {
+          connectReq.destroy(err);
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (activeReq && !activeReq.destroyed) {
+          activeReq.destroy(err);
+        }
+      } catch {
+        /* ignore */
+      }
       finishReject(err);
     };
-    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
 
     const parsed = new URL(url);
     const mod = parsed.protocol === 'https:' ? https : http;
@@ -1314,19 +1628,25 @@ function makeDirectRequest(url, body, { timeout = CODEX_DIRECT_TIMEOUT_MS, signa
         const pool = require('../../apiKeyPool');
         pool.init();
         const picked = pool.pick('codex') || pool.pick('openai');
-        if (picked) codexApiKey = picked.key;
-      } catch { /* pool unavailable */ }
+        if (picked) {
+          codexApiKey = picked.key;
+        }
+      } catch {
+        /* pool unavailable */
+      }
     }
 
     const headers = {
-      'Authorization': `Bearer ${codexApiKey}`,
+      Authorization: `Bearer ${codexApiKey}`,
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(payload),
     };
 
     const handleResponse = (res) => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
@@ -1343,13 +1663,20 @@ function makeDirectRequest(url, body, { timeout = CODEX_DIRECT_TIMEOUT_MS, signa
     };
 
     // Proxy support via shared _proxyTunnel (Phase 2C)
-    const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY ||
-                     process.env.http_proxy || process.env.HTTP_PROXY;
+    const proxyUrl =
+      process.env.https_proxy ||
+      process.env.HTTPS_PROXY ||
+      process.env.http_proxy ||
+      process.env.HTTP_PROXY;
     let effectiveProxy = proxyUrl;
     try {
       const sidecar = require('../tlsSidecar');
-      if (sidecar.shouldProxy(parsed.hostname)) effectiveProxy = sidecar.getProxyUrl();
-    } catch { /* sidecar not available */ }
+      if (sidecar.shouldProxy(parsed.hostname)) {
+        effectiveProxy = sidecar.getProxyUrl();
+      }
+    } catch {
+      /* sidecar not available */
+    }
 
     const reqOptions = {
       hostname: parsed.hostname,
@@ -1363,7 +1690,10 @@ function makeDirectRequest(url, body, { timeout = CODEX_DIRECT_TIMEOUT_MS, signa
     const sendDirect = () => {
       activeReq = mod.request(reqOptions, handleResponse);
       activeReq.on('error', finishReject);
-      activeReq.on('timeout', () => { activeReq.destroy(); finishReject(new Error('request timeout')); });
+      activeReq.on('timeout', () => {
+        activeReq.destroy();
+        finishReject(new Error('request timeout'));
+      });
       activeReq.write(payload);
       activeReq.end();
     };
@@ -1373,11 +1703,16 @@ function makeDirectRequest(url, body, { timeout = CODEX_DIRECT_TIMEOUT_MS, signa
         .then((socket) => {
           activeReq = https.request({ ...reqOptions, socket, agent: false }, handleResponse);
           activeReq.on('error', finishReject);
-          activeReq.on('timeout', () => { activeReq.destroy(); finishReject(new Error('request timeout')); });
+          activeReq.on('timeout', () => {
+            activeReq.destroy();
+            finishReject(new Error('request timeout'));
+          });
           activeReq.write(payload);
           activeReq.end();
         })
-        .catch(() => { sendDirect(); });
+        .catch(() => {
+          sendDirect();
+        });
       return;
     }
 
@@ -1394,26 +1729,103 @@ function buildDirectToolDefs() {
     const defs = getToolDefinitions();
     // PascalCase names only — claudeCompat handles aliases at execution time
     const seen = new Set();
-    return defs.filter(d => {
-      if (!_CODEX_DIRECT_ALLOWED_TOOLS.has(d.name) || seen.has(d.name)) return false;
-      seen.add(d.name);
-      return true;
-    }).map(d => ({
-      type: 'function',
-      name: d.name,
-      description: d.description || '',
-      parameters: d.parameters || { type: 'object', properties: {} },
-    }));
+    return defs
+      .filter((d) => {
+        if (!_CODEX_DIRECT_ALLOWED_TOOLS.has(d.name) || seen.has(d.name)) {
+          return false;
+        }
+        seen.add(d.name);
+        return true;
+      })
+      .map((d) => ({
+        type: 'function',
+        name: d.name,
+        description: d.description || '',
+        parameters: d.parameters || { type: 'object', properties: {} },
+      }));
   } catch {
     // Fallback: minimal tool set
     return [
-      { type: 'function', name: 'Bash', description: 'Execute a shell command', parameters: { type: 'object', properties: { command: { type: 'string', description: 'Shell command to execute' } }, required: ['command'] } },
-      { type: 'function', name: 'Read', description: 'Read a file', parameters: { type: 'object', properties: { file_path: { type: 'string', description: 'Absolute file path' } }, required: ['file_path'] } },
-      { type: 'function', name: 'Glob', description: 'Find files by glob pattern', parameters: { type: 'object', properties: { pattern: { type: 'string', description: 'Glob pattern like **/*.js' } }, required: ['pattern'] } },
-      { type: 'function', name: 'Grep', description: 'Search file contents with regex', parameters: { type: 'object', properties: { pattern: { type: 'string', description: 'Regex pattern' }, path: { type: 'string', description: 'Directory to search' } }, required: ['pattern'] } },
-      { type: 'function', name: 'Edit', description: 'Edit a file with string replacement', parameters: { type: 'object', properties: { file_path: { type: 'string', description: 'File path' }, old_string: { type: 'string', description: 'Text to replace' }, new_string: { type: 'string', description: 'Replacement text' } }, required: ['file_path', 'old_string', 'new_string'] } },
-      { type: 'function', name: 'Write', description: 'Write/create a file', parameters: { type: 'object', properties: { file_path: { type: 'string', description: 'File path' }, content: { type: 'string', description: 'File content' } }, required: ['file_path', 'content'] } },
-      { type: 'function', name: 'web_search', description: 'Search the web for current information (news, docs, prices, etc.)', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Search query (max 200 chars)' } }, required: ['query'] } },
+      {
+        type: 'function',
+        name: 'Bash',
+        description: 'Execute a shell command',
+        parameters: {
+          type: 'object',
+          properties: { command: { type: 'string', description: 'Shell command to execute' } },
+          required: ['command'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'Read',
+        description: 'Read a file',
+        parameters: {
+          type: 'object',
+          properties: { file_path: { type: 'string', description: 'Absolute file path' } },
+          required: ['file_path'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'Glob',
+        description: 'Find files by glob pattern',
+        parameters: {
+          type: 'object',
+          properties: { pattern: { type: 'string', description: 'Glob pattern like **/*.js' } },
+          required: ['pattern'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'Grep',
+        description: 'Search file contents with regex',
+        parameters: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Regex pattern' },
+            path: { type: 'string', description: 'Directory to search' },
+          },
+          required: ['pattern'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'Edit',
+        description: 'Edit a file with string replacement',
+        parameters: {
+          type: 'object',
+          properties: {
+            file_path: { type: 'string', description: 'File path' },
+            old_string: { type: 'string', description: 'Text to replace' },
+            new_string: { type: 'string', description: 'Replacement text' },
+          },
+          required: ['file_path', 'old_string', 'new_string'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'Write',
+        description: 'Write/create a file',
+        parameters: {
+          type: 'object',
+          properties: {
+            file_path: { type: 'string', description: 'File path' },
+            content: { type: 'string', description: 'File content' },
+          },
+          required: ['file_path', 'content'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'web_search',
+        description: 'Search the web for current information (news, docs, prices, etc.)',
+        parameters: {
+          type: 'object',
+          properties: { query: { type: 'string', description: 'Search query (max 200 chars)' } },
+          required: ['query'],
+        },
+      },
     ];
   }
 }
@@ -1441,6 +1853,13 @@ function buildDirectSystemPrompt(options = {}) {
   }
 
   const cwd = process.cwd();
+  const desktopPath = (() => {
+    try {
+      return require('../../utils/dataHome').getDesktopPath();
+    } catch {
+      return null;
+    }
+  })();
   const platform = process.platform;
   const parts = [
     // ── 1. Role & Capabilities ──
@@ -1460,7 +1879,7 @@ function buildDirectSystemPrompt(options = {}) {
     '6. When asked about code, files, or project structure, ALWAYS use tools first. Never guess.',
     '7. When asked to CREATE a file, you MUST call Write. When asked to MODIFY a file, you MUST call Edit.',
     '8. Keep answers SHORT: 3-5 sentences for simple questions, 8-10 max for complex ones.',
-    '9. Respond in the SAME LANGUAGE as the user\'s message. Code/comments stay in English.',
+    "9. Respond in the SAME LANGUAGE as the user's message. Code/comments stay in English.",
     '',
 
     // ── 3. Tool Selection ──
@@ -1499,10 +1918,10 @@ function buildDirectSystemPrompt(options = {}) {
 
     // ── 6. Code Quality & Safety ──
     '# Code Quality',
-    '- Read files before modifying. Never modify code you haven\'t read.',
+    "- Read files before modifying. Never modify code you haven't read.",
     '- Prefer editing existing files over creating new ones.',
     '- Before creating a file with Write, check if it already exists using Glob.',
-    '- Don\'t add features beyond what was asked. Don\'t over-engineer.',
+    "- Don't add features beyond what was asked. Don't over-engineer.",
     '- Be careful with security: no XSS, SQL injection, or command injection.',
     '- For destructive/irreversible actions, confirm with the user first.',
     '',
@@ -1511,11 +1930,12 @@ function buildDirectSystemPrompt(options = {}) {
     '# Multi-Step Tasks',
     '- For complex tasks, plan your steps: locate → read → analyze → act → verify.',
     '- For cross-file tasks, use Grep to batch-locate all targets first, then process each.',
-    '- Don\'t waste iterations reading files one by one — use Grep for bulk discovery.',
+    "- Don't waste iterations reading files one by one — use Grep for bulk discovery.",
     '',
 
     // ── 8. Environment ──
     `Working directory: ${cwd}`,
+    `User Desktop: ${desktopPath || 'unknown'}`,
     `Platform: ${platform}`,
   ];
 
@@ -1534,18 +1954,30 @@ function buildDirectSystemPrompt(options = {}) {
 async function runCodexDirect(prompt, options = {}) {
   const config = readCodexConfig() || {};
   // Provider-agnostic: resolve base URL from multiple sources
-  const baseUrl = config.providerBaseUrl
-    || String(process.env.CODEX_DIRECT_BASE_URL || '').trim()
-    || String(process.env.OPENAI_BASE_URL || '').trim()
-    || 'https://api.openai.com/v1';
+  const baseUrl =
+    config.providerBaseUrl ||
+    String(process.env.CODEX_DIRECT_BASE_URL || '').trim() ||
+    String(process.env.OPENAI_BASE_URL || '').trim() ||
+    'https://api.openai.com/v1';
   // Validate options.model against known provider models before using it.
   // Gateway's _modelSwitch may inject a model from another adapter (e.g., 'qwen3.5:4b')
   // that the Codex provider doesn't support.
-  const defaultModel = String(process.env.CODEX_DIRECT_MODEL || '').trim() || config.model || 'codex-mini';
+  const defaultModel =
+    String(process.env.CODEX_DIRECT_MODEL || '').trim() || config.model || 'codex-mini';
   let model = defaultModel;
-  if (options.model && isUserModelAllowed(options.model, config)) model = options.model;
+  if (options.model && isUserModelAllowed(options.model, config)) {
+    model = options.model;
+  }
   const onChunk = typeof options.onChunk === 'function' ? options.onChunk : null;
-  const emit = (chunk) => { if (onChunk) { try { onChunk(chunk); } catch { /* best effort */ } } };
+  const emit = (chunk) => {
+    if (onChunk) {
+      try {
+        onChunk(chunk);
+      } catch {
+        /* best effort */
+      }
+    }
+  };
 
   const toolDefs = buildDirectToolDefs();
   const systemPrompt = buildDirectSystemPrompt(options);
@@ -1561,14 +1993,20 @@ async function runCodexDirect(prompt, options = {}) {
     // 不注入,userContent 逐字节回退。
     let _inlineNote = null;
     try {
-      _inlineNote = require('../visionDirectTurnPolicy').buildInlineImageNote({ count: codexImages.length });
-    } catch { /* 叶子不可用 → 保持原文本 */ }
-    if (_inlineNote) userContent[0].text = `${_inlineNote}\n\n${prompt || ''}`;
-    for (const imageItem of codexImages) userContent.push(imageItem);
+      _inlineNote = require('../visionDirectTurnPolicy').buildInlineImageNote({
+        count: codexImages.length,
+      });
+    } catch {
+      /* 叶子不可用 → 保持原文本 */
+    }
+    if (_inlineNote) {
+      userContent[0].text = `${_inlineNote}\n\n${prompt || ''}`;
+    }
+    for (const imageItem of codexImages) {
+      userContent.push(imageItem);
+    }
   }
-  const input = [
-    { type: 'message', role: 'user', content: userContent },
-  ];
+  const input = [{ type: 'message', role: 'user', content: userContent }];
 
   const state = {
     finalParts: [],
@@ -1584,8 +2022,11 @@ async function runCodexDirect(prompt, options = {}) {
   const seenCalls = new Set();
 
   if (process.env.CODEX_DIRECT_DEBUG === '1') {
-    emit({ type: 'status', text: `[debug] tools: ${toolDefs.length}, model: ${model}, endpoint: ${baseUrl}` });
-    emit({ type: 'status', text: `[debug] tool names: ${toolDefs.map(t => t.name).join(', ')}` });
+    emit({
+      type: 'status',
+      text: `[debug] tools: ${toolDefs.length}, model: ${model}, endpoint: ${baseUrl}`,
+    });
+    emit({ type: 'status', text: `[debug] tool names: ${toolDefs.map((t) => t.name).join(', ')}` });
     emit({ type: 'status', text: `[debug] system prompt length: ${systemPrompt.length} chars` });
   }
   emit({ type: 'status', text: 'Codex Direct 启动中...' });
@@ -1606,7 +2047,9 @@ async function runCodexDirect(prompt, options = {}) {
         iteration,
         hasImage: codexImages.length > 0,
       });
-    } catch { /* 叶子不可用 → legacy 行为 */ }
+    } catch {
+      /* 叶子不可用 → legacy 行为 */
+    }
     const toolChoice = _forceFirstToolCall ? 'required' : 'auto';
 
     const requestBody = {
@@ -1630,21 +2073,29 @@ async function runCodexDirect(prompt, options = {}) {
 
     if (process.env.CODEX_DIRECT_DEBUG === '1') {
       const payloadSize = JSON.stringify(requestBody).length;
-      emit({ type: 'status', text: `[debug] POST ${baseUrl}/responses, payload: ${payloadSize} bytes, tools: ${toolDefs.length}` });
+      emit({
+        type: 'status',
+        text: `[debug] POST ${baseUrl}/responses, payload: ${payloadSize} bytes, tools: ${toolDefs.length}`,
+      });
     }
 
     let response;
     try {
-      response = await makeDirectRequest(
-        `${baseUrl}/responses`,
-        requestBody,
-        { timeout: CODEX_DIRECT_TIMEOUT_MS, signal: options.abortSignal || null },
-      );
+      response = await makeDirectRequest(`${baseUrl}/responses`, requestBody, {
+        timeout: CODEX_DIRECT_TIMEOUT_MS,
+        signal: options.abortSignal || null,
+      });
       if (process.env.CODEX_DIRECT_DEBUG === '1') {
-        emit({ type: 'status', text: `[debug] response received in ${((Date.now() - reqStart) / 1000).toFixed(1)}s` });
+        emit({
+          type: 'status',
+          text: `[debug] response received in ${((Date.now() - reqStart) / 1000).toFixed(1)}s`,
+        });
       }
     } catch (err) {
-      emit({ type: 'status', text: `API error (${((Date.now() - reqStart) / 1000).toFixed(1)}s): ${compactText(err.message, 100)}` });
+      emit({
+        type: 'status',
+        text: `API error (${((Date.now() - reqStart) / 1000).toFixed(1)}s): ${compactText(err.message, 100)}`,
+      });
       throw err;
     } finally {
       clearInterval(heartbeatInterval);
@@ -1654,16 +2105,35 @@ async function runCodexDirect(prompt, options = {}) {
     if (process.env.CODEX_DIRECT_DEBUG === '1') {
       const debugKeys = Object.keys(response || {}).join(', ');
       const outputLen = Array.isArray(response.output) ? response.output.length : 'N/A';
-      const textField = typeof response.text === 'string' ? response.text.slice(0, 200) : (response.text ? JSON.stringify(response.text).slice(0, 200) : 'N/A');
-      emit({ type: 'status', text: `[debug] keys: ${debugKeys}, output: ${outputLen}, status: ${response.status || 'none'}` });
+      const textField =
+        typeof response.text === 'string'
+          ? response.text.slice(0, 200)
+          : response.text
+            ? JSON.stringify(response.text).slice(0, 200)
+            : 'N/A';
+      emit({
+        type: 'status',
+        text: `[debug] keys: ${debugKeys}, output: ${outputLen}, status: ${response.status || 'none'}`,
+      });
       emit({ type: 'status', text: `[debug] text field: ${textField}` });
       const toolCount = Array.isArray(response.tools) ? response.tools.length : 'N/A';
       const toolChoice = JSON.stringify(response.tool_choice || 'N/A').slice(0, 100);
-      emit({ type: 'status', text: `[debug] tools: ${toolCount}, tool_choice: ${toolChoice}, model: ${response.model || 'N/A'}` });
-      if (response.usage) emit({ type: 'status', text: `[debug] usage: in=${response.usage.input_tokens} out=${response.usage.output_tokens}` });
+      emit({
+        type: 'status',
+        text: `[debug] tools: ${toolCount}, tool_choice: ${toolChoice}, model: ${response.model || 'N/A'}`,
+      });
+      if (response.usage) {
+        emit({
+          type: 'status',
+          text: `[debug] usage: in=${response.usage.input_tokens} out=${response.usage.output_tokens}`,
+        });
+      }
       if (Array.isArray(response.output)) {
         for (const item of response.output.slice(0, 5)) {
-          emit({ type: 'status', text: `[debug] item: type=${item.type}, role=${item.role || '-'}, keys=${Object.keys(item).join(',')}` });
+          emit({
+            type: 'status',
+            text: `[debug] item: type=${item.type}, role=${item.role || '-'}, keys=${Object.keys(item).join(',')}`,
+          });
         }
       }
     }
@@ -1721,7 +2191,9 @@ async function runCodexDirect(prompt, options = {}) {
     try {
       quarantinePolicy = require('../../trajectoryProvenance/quarantinePolicy');
       riskGate = require('../../riskGate');
-    } catch { /* 隔离子系统不可用：退回旧行为（下方按 gateEnabled=false 处理） */ }
+    } catch {
+      /* 隔离子系统不可用：退回旧行为（下方按 gateEnabled=false 处理） */
+    }
     const gateEnabled = quarantinePolicy ? quarantinePolicy.isGateEnabled() : false;
     const interactive = !!(process.stdin && process.stdin.isTTY);
     const relayProducer = 'codex';
@@ -1735,17 +2207,32 @@ async function runCodexDirect(prompt, options = {}) {
     // 当前逻辑下 willEnableDangerous 仅在闸关闭时为真，故正常不触发；此断言锁死「日后
     // 任何改动若让中转调用在闸开启时自动开 dangerous mode」必当场抛错。
     if (quarantinePolicy) {
-      quarantinePolicy.assertNoAutoDangerous({ producer: relayProducer, enablingDangerous: willEnableDangerous, gateEnabled });
+      quarantinePolicy.assertNoAutoDangerous({
+        producer: relayProducer,
+        enablingDangerous: willEnableDangerous,
+        gateEnabled,
+      });
     }
-    if (willEnableDangerous) toolCalling.enableDangerousMode();
+    if (willEnableDangerous) {
+      toolCalling.enableDangerousMode();
+    }
 
     for (const fc of functionCalls) {
       // Dedup check
       const dedupKey = `${fc.name}:${fc.arguments}`;
       if (seenCalls.has(dedupKey)) {
         // Append skip result and continue
-        input.push({ type: 'function_call', call_id: fc.call_id, name: fc.name, arguments: fc.arguments });
-        input.push({ type: 'function_call_output', call_id: fc.call_id, output: JSON.stringify({ error: 'Duplicate call skipped' }) });
+        input.push({
+          type: 'function_call',
+          call_id: fc.call_id,
+          name: fc.name,
+          arguments: fc.arguments,
+        });
+        input.push({
+          type: 'function_call_output',
+          call_id: fc.call_id,
+          output: JSON.stringify({ error: 'Duplicate call skipped' }),
+        });
         continue;
       }
       seenCalls.add(dedupKey);
@@ -1754,9 +2241,13 @@ async function runCodexDirect(prompt, options = {}) {
 
       // Parse arguments
       let parsedArgs = {};
-      try { parsedArgs = typeof fc.arguments === 'string' ? JSON.parse(fc.arguments) : (fc.arguments || {}); } catch {
+      try {
+        parsedArgs =
+          typeof fc.arguments === 'string' ? JSON.parse(fc.arguments) : fc.arguments || {};
+      } catch {
         const { safeJsonParse } = require('../safeJsonParse');
-        parsedArgs = typeof fc.arguments === 'string' ? safeJsonParse(fc.arguments, {}) : (fc.arguments || {});
+        parsedArgs =
+          typeof fc.arguments === 'string' ? safeJsonParse(fc.arguments, {}) : fc.arguments || {};
       }
 
       // Normalize tool name/params via claudeCompat
@@ -1776,7 +2267,11 @@ async function runCodexDirect(prompt, options = {}) {
       let quarantined = false;
       if (quarantinePolicy) {
         let riskLevel;
-        try { riskLevel = riskGate && riskGate.assess(normalized.name, normalized.params).riskLevel; } catch { /* 评级仅透明展示 */ }
+        try {
+          riskLevel = riskGate && riskGate.assess(normalized.name, normalized.params).riskLevel;
+        } catch {
+          /* 评级仅透明展示 */
+        }
         const verdict = quarantinePolicy.decide({
           producer: relayProducer,
           interactive,
@@ -1786,16 +2281,20 @@ async function runCodexDirect(prompt, options = {}) {
         });
         if (verdict.action === quarantinePolicy.ACTION.QUARANTINE) {
           quarantined = true;
-          result = { success: false, error: verdict.reason, _khyTrace: { v: 1, producer: relayProducer, trust: 'quarantined', kind: 'tool_call' } };
+          result = {
+            success: false,
+            error: verdict.reason,
+            _khyTrace: { v: 1, producer: relayProducer, trust: 'quarantined', kind: 'tool_call' },
+          };
           emit({ type: 'status', text: `⚠ quarantined: ${fc.name}（中转调用需批准）` });
         }
       }
       if (!quarantined) {
-      try {
-        result = await toolCalling.executeTool(normalized.name, normalized.params);
-      } catch (err) {
-        result = { success: false, error: err.message || 'tool execution failed' };
-      }
+        try {
+          result = await toolCalling.executeTool(normalized.name, normalized.params);
+        } catch (err) {
+          result = { success: false, error: err.message || 'tool execution failed' };
+        }
       }
       const elapsed = Date.now() - start;
       state.toolDurationMs += elapsed;
@@ -1803,10 +2302,13 @@ async function runCodexDirect(prompt, options = {}) {
       // Build output string for the model
       let outputStr;
       if (result && result.success) {
-        const content = result.output || result.content || result.result || result.text || 'success';
+        const content =
+          result.output || result.content || result.result || result.text || 'success';
         outputStr = typeof content === 'string' ? content : JSON.stringify(content);
         // Cap large outputs to prevent context overflow
-        if (outputStr.length > 8000) outputStr = outputStr.slice(0, 8000) + '\n...(truncated)';
+        if (outputStr.length > 8000) {
+          outputStr = outputStr.slice(0, 8000) + '\n...(truncated)';
+        }
       } else {
         outputStr = JSON.stringify({ error: (result && result.error) || 'tool execution failed' });
       }
@@ -1818,12 +2320,19 @@ async function runCodexDirect(prompt, options = {}) {
       });
 
       // Append function_call + result to input for next API turn
-      input.push({ type: 'function_call', call_id: fc.call_id, name: fc.name, arguments: typeof fc.arguments === 'string' ? fc.arguments : JSON.stringify(fc.arguments) });
+      input.push({
+        type: 'function_call',
+        call_id: fc.call_id,
+        name: fc.name,
+        arguments: typeof fc.arguments === 'string' ? fc.arguments : JSON.stringify(fc.arguments),
+      });
       input.push({ type: 'function_call_output', call_id: fc.call_id, output: outputStr });
     }
 
     // Restore previous permission mode (only if we enabled it on this pass).
-    if (willEnableDangerous) toolCalling.disableDangerousMode();
+    if (willEnableDangerous) {
+      toolCalling.disableDangerousMode();
+    }
   }
 
   const content = state.finalParts.join('\n').trim();
@@ -1834,14 +2343,19 @@ async function runCodexDirect(prompt, options = {}) {
       totalCalls: state.toolCalls,
       totalDurationMs: state.toolDurationMs,
     },
-    tokenUsage: hasUsage ? {
-      inputTokens: state.totalInputTokens,
-      outputTokens: state.totalOutputTokens,
-      totalTokens: state.totalInputTokens + state.totalOutputTokens,
-      ...(state.totalCacheReadTokens || state.totalCacheWriteTokens
-        ? { cacheReadInputTokens: state.totalCacheReadTokens, cacheWriteInputTokens: state.totalCacheWriteTokens }
-        : {}),
-    } : undefined,
+    tokenUsage: hasUsage
+      ? {
+          inputTokens: state.totalInputTokens,
+          outputTokens: state.totalOutputTokens,
+          totalTokens: state.totalInputTokens + state.totalOutputTokens,
+          ...(state.totalCacheReadTokens || state.totalCacheWriteTokens
+            ? {
+                cacheReadInputTokens: state.totalCacheReadTokens,
+                cacheWriteInputTokens: state.totalCacheWriteTokens,
+              }
+            : {}),
+        }
+      : undefined,
   };
 }
 
@@ -1860,13 +2374,20 @@ async function generateDirect(prompt, options = {}) {
 
   const config = readCodexConfig() || {};
   // Same model validation as runCodexDirect — don't blindly use gateway-injected model
-  const directDefaultModel = String(process.env.CODEX_DIRECT_MODEL || '').trim() || config.model || 'codex-mini';
+  const directDefaultModel =
+    String(process.env.CODEX_DIRECT_MODEL || '').trim() || config.model || 'codex-mini';
   let usedModel = directDefaultModel;
-  if (options.model && isUserModelAllowed(options.model, config)) usedModel = options.model;
+  if (options.model && isUserModelAllowed(options.model, config)) {
+    usedModel = options.model;
+  }
 
   try {
     if (options.onChunk) {
-      try { options.onChunk({ type: 'status', text: `Codex Direct (${usedModel})` }); } catch { /* best effort */ }
+      try {
+        options.onChunk({ type: 'status', text: `Codex Direct (${usedModel})` });
+      } catch {
+        /* best effort */
+      }
     }
 
     const result = await runCodexDirect(prompt, options);
@@ -1905,23 +2426,33 @@ async function _tryAppLaunchIntent(prompt, options) {
   const rawUserMessage = String(options?.userMessage || '').trim();
   const text = rawUserMessage || String(prompt || '').trim();
   const m = _OPEN_APP_RE.exec(text);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
 
   const appQuery = m[1].trim();
-  if (!appQuery || appQuery.length > 30) return null; // Too long to be an app name
+  if (!appQuery || appQuery.length > 30) {
+    return null;
+  } // Too long to be an app name
 
   // Check against APP_ALIAS_MAP to verify this is actually an app
   let toolCalling;
-  try { toolCalling = require('../../services/toolCalling'); } catch { return null; }
+  try {
+    toolCalling = require('../../services/toolCalling');
+  } catch {
+    return null;
+  }
   const candidates = toolCalling._buildAppCandidates(appQuery);
-  if (!candidates || candidates.length === 0) return null;
+  if (!candidates || candidates.length === 0) {
+    return null;
+  }
 
   // At least one candidate must match a known alias
   const aliasMap = toolCalling.APP_ALIAS_MAP;
-  const hasKnownApp = candidates.some(c =>
-    aliasMap[c] || Object.values(aliasMap).includes(c)
-  );
-  if (!hasKnownApp) return null;
+  const hasKnownApp = candidates.some((c) => aliasMap[c] || Object.values(aliasMap).includes(c));
+  if (!hasKnownApp) {
+    return null;
+  }
 
   // Execute via KHY's open_app tool
   const { onChunk } = options;
@@ -1933,8 +2464,8 @@ async function _tryAppLaunchIntent(prompt, options) {
     const result = await toolCalling.executeTool('open_app', { name: appQuery });
     const ok = result && result.success;
     const output = ok
-      ? (result.output || `已启动 ${appQuery}`)
-      : (result.error || `无法启动 ${appQuery}`);
+      ? result.output || `已启动 ${appQuery}`
+      : result.error || `无法启动 ${appQuery}`;
 
     if (onChunk) {
       onChunk({ type: 'tool_result', id: 'app_launch_0', content: output });
@@ -1967,6 +2498,11 @@ async function _tryAppLaunchIntent(prompt, options) {
 // ═══════════════════════════════════════════════════════════════════
 
 async function generate(prompt, options = {}) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    console.error(
+      `[DEBUG-ADAPTER] codexAdapter.generate tools=${Array.isArray(options.tools) ? options.tools.length : 0}`
+    );
+  }
   // NOTE: app-launch intent 拦截已提升到 gateway 层 (appLaunchInterceptor.js)，
   // 在 adapter cascade 之前统一处理，此处不再重复拦截。
   const homeContext = getCodexHomeContext();
@@ -1995,7 +2531,13 @@ async function generate(prompt, options = {}) {
       adapter: 'codex',
       provider: 'Codex',
       errorType: 'unknown',
-      attempts: [{ provider: 'Codex', success: false, error: _lastExecProbeError || 'codex exec unavailable' }],
+      attempts: [
+        {
+          provider: 'Codex',
+          success: false,
+          error: _lastExecProbeError || 'codex exec unavailable',
+        },
+      ],
     });
   }
 
@@ -2033,16 +2575,24 @@ async function generate(prompt, options = {}) {
       });
     } catch (firstErr) {
       const firstErrMessage = String(firstErr?.message || '');
-      const firstResponseTimedOut = firstErr?.code === 'CODEX_FIRST_RESPONSE_TIMEOUT'
-        || /codex first response timeout after \d+ms without meaningful model progress/i.test(firstErrMessage);
-      if (firstResponseTimedOut) throw firstErr;
+      const firstResponseTimedOut =
+        firstErr?.code === 'CODEX_FIRST_RESPONSE_TIMEOUT' ||
+        /codex first response timeout after \d+ms without meaningful model progress/i.test(
+          firstErrMessage
+        );
+      if (firstResponseTimedOut) {
+        throw firstErr;
+      }
 
       const msg = firstErrMessage.toLowerCase();
       const retryArgs = args.slice();
       let shouldRetry = false;
 
       // Old codex versions may not support --json.
-      if (retryArgs.includes('--json') && /(unknown|unrecognized|unexpected).*(--json|json)/i.test(msg)) {
+      if (
+        retryArgs.includes('--json') &&
+        /(unknown|unrecognized|unexpected).*(--json|json)/i.test(msg)
+      ) {
         const ji = retryArgs.indexOf('--json');
         if (ji >= 0) {
           retryArgs.splice(ji, 1);
@@ -2051,7 +2601,12 @@ async function generate(prompt, options = {}) {
       }
 
       // Model mismatch can trigger backend reconnect; retry once without --model.
-      if (usedModel && /(unknown model|invalid model|model .*not found|unsupported model|model_not_found)/i.test(msg)) {
+      if (
+        usedModel &&
+        /(unknown model|invalid model|model .*not found|unsupported model|model_not_found)/i.test(
+          msg
+        )
+      ) {
         const mi = retryArgs.indexOf('--model');
         if (mi >= 0) {
           retryArgs.splice(mi, 2);
@@ -2061,7 +2616,10 @@ async function generate(prompt, options = {}) {
       }
 
       // Some codex builds fail under strict sandbox; retry without explicit sandbox flag.
-      if (!shouldRetry && /(reconnecting|channel closed|failed to record rollout items|sandbox)/i.test(msg)) {
+      if (
+        !shouldRetry &&
+        /(reconnecting|channel closed|failed to record rollout items|sandbox)/i.test(msg)
+      ) {
         const si = retryArgs.indexOf('--sandbox');
         if (si >= 0) {
           retryArgs.splice(si, 2);
@@ -2069,11 +2627,15 @@ async function generate(prompt, options = {}) {
         }
       }
 
-      if (!shouldRetry) throw firstErr;
+      if (!shouldRetry) {
+        throw firstErr;
+      }
       if (options.onChunk) {
         try {
           options.onChunk({ type: 'status', text: 'Codex 重试中（自动降级参数）...' });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
       execResult = await runCodexExec(prompt, retryArgs, {
         ...options,
@@ -2089,8 +2651,11 @@ async function generate(prompt, options = {}) {
     });
   } catch (err) {
     const rawMessage = String(err && err.message ? err.message : err || 'codex failed');
-    const isFirstResponseTimeout = err?.code === 'CODEX_FIRST_RESPONSE_TIMEOUT'
-      || /codex first response timeout after \d+ms without meaningful model progress/i.test(rawMessage);
+    const isFirstResponseTimeout =
+      err?.code === 'CODEX_FIRST_RESPONSE_TIMEOUT' ||
+      /codex first response timeout after \d+ms without meaningful model progress/i.test(
+        rawMessage
+      );
     const codexDiagnostics = buildCodexProgressDiagnostics(
       err?.codexProgressEvidence || null,
       err?.codexProgressSummary || ''
@@ -2126,7 +2691,11 @@ async function generate(prompt, options = {}) {
           ],
         });
       } catch (fallbackErr) {
-        const fallbackMsg = String(fallbackErr && fallbackErr.message ? fallbackErr.message : fallbackErr || 'openai fallback failed');
+        const fallbackMsg = String(
+          fallbackErr && fallbackErr.message
+            ? fallbackErr.message
+            : fallbackErr || 'openai fallback failed'
+        );
         safeEmitStatus(options, `Codex provider 回退失败: ${compactText(fallbackMsg, 120)}`);
         classifyMessage = appendTempHomeHint(fallbackMsg, homeContext);
         finalErrorMessage = `${rawMessage} | openai_fallback=${compactText(fallbackMsg, 240)}`;
@@ -2182,8 +2751,12 @@ async function generate(prompt, options = {}) {
         safeEmitStatus(options, `Codex 自检: ${diagnosis}`);
       }
       const extras = [];
-      if (healed) extras.push('self_heal=mode_none');
-      if (diagnosis) extras.push(`diagnosis=${diagnosis}`);
+      if (healed) {
+        extras.push('self_heal=mode_none');
+      }
+      if (diagnosis) {
+        extras.push(`diagnosis=${diagnosis}`);
+      }
       if (extras.length > 0) {
         finalErrorMessage = `${classifyMessage || rawMessage} | ${extras.join(' | ')}`;
       }
@@ -2193,7 +2766,9 @@ async function generate(prompt, options = {}) {
     if (isFirstResponseTimeout) {
       recordRuntimeDiagnostics({
         healed: false,
-        diagnosis: codexDiagnostics?.progressSummary || `stall=${codexDiagnostics?.stallFingerprint || 'unknown'}`,
+        diagnosis:
+          codexDiagnostics?.progressSummary ||
+          `stall=${codexDiagnostics?.stallFingerprint || 'unknown'}`,
         lastError: finalErrorMessage,
         trigger: 'first_response_timeout',
       });
@@ -2201,16 +2776,31 @@ async function generate(prompt, options = {}) {
 
     const lower = String(classifyMessage || rawMessage).toLowerCase();
     let errorType = 'unknown';
-    if (isAbortLikeError(err)) errorType = 'cancelled';
-    else if (isFirstResponseTimeout) errorType = 'timeout';
-    else if (/\bcancelled\b|\bcanceled\b/.test(lower)) errorType = 'process';
-    else if (lower.includes('timeout')) errorType = 'timeout';
-    else if (lower.includes('eacces') || lower.includes('eperm')) errorType = 'permission';
-    else if (lower.includes('enoent') || lower.includes('not found')) errorType = 'unavailable';
-    else if (lower.includes('unauthorized') || lower.includes('api key') || lower.includes('login')) errorType = 'auth';
-    else if (lower.includes('rate') && lower.includes('limit')) errorType = 'rate_limit';
-    else if (isReconnectChannelClosed(lower)) errorType = 'network';
-    else if (/spawn|exited with code/.test(lower)) errorType = 'process';
+    if (isAbortLikeError(err)) {
+      errorType = 'cancelled';
+    } else if (isFirstResponseTimeout) {
+      errorType = 'timeout';
+    } else if (/\bcancelled\b|\bcanceled\b/.test(lower)) {
+      errorType = 'process';
+    } else if (lower.includes('timeout')) {
+      errorType = 'timeout';
+    } else if (lower.includes('eacces') || lower.includes('eperm')) {
+      errorType = 'permission';
+    } else if (lower.includes('enoent') || lower.includes('not found')) {
+      errorType = 'unavailable';
+    } else if (
+      lower.includes('unauthorized') ||
+      lower.includes('api key') ||
+      lower.includes('login')
+    ) {
+      errorType = 'auth';
+    } else if (lower.includes('rate') && lower.includes('limit')) {
+      errorType = 'rate_limit';
+    } else if (isReconnectChannelClosed(lower)) {
+      errorType = 'network';
+    } else if (/spawn|exited with code/.test(lower)) {
+      errorType = 'process';
+    }
 
     return buildFailure(finalErrorMessage, {
       adapter: 'codex',
@@ -2226,9 +2816,10 @@ function getStatus() {
   detect();
   const config = readCodexConfig() || {};
   const upstreamMeta = resolveUpstreamProviderMeta(config);
-  const isOpenAiLike = !upstreamMeta.provider
-    || String(upstreamMeta.provider).toLowerCase() === 'openai'
-    || String(upstreamMeta.provider).toLowerCase() === 'oss';
+  const isOpenAiLike =
+    !upstreamMeta.provider ||
+    String(upstreamMeta.provider).toLowerCase() === 'openai' ||
+    String(upstreamMeta.provider).toLowerCase() === 'oss';
   const codexName = isOpenAiLike ? 'OpenAI Codex' : `Codex CLI (${upstreamMeta.provider})`;
   if (CODEX_MODE === 'direct') {
     return {
@@ -2247,7 +2838,7 @@ function getStatus() {
     available: _available,
     detail: _available
       ? `codex CLI ${transportLabel}可用${upstreamMeta.host ? ` · 上游 ${upstreamMeta.host}` : ''}`
-      : `未检测到 codex 命令${_lastDetectError ? ` (${_lastDetectError})` : ''} · 可运行 khy tools install codex 安装便携版`,
+      : buildCodexUnavailableDetail(_lastDetectError),
   };
 }
 
@@ -2268,7 +2859,9 @@ function destroy() {
  * show the real effort instead of KHY's unrelated global effort setting.
  */
 function getConfiguredEffort() {
-  const effort = String(readCodexConfig().modelReasoningEffort || '').trim().toLowerCase();
+  const effort = String(readCodexConfig().modelReasoningEffort || '')
+    .trim()
+    .toLowerCase();
   return effort || null;
 }
 
@@ -2289,13 +2882,14 @@ const VALID_WIRE_APIS = ['responses', 'chat'];
 /** Resolve the config.toml / auth.json paths, preferring an existing config. */
 function resolveCodexConfigPaths() {
   const homeDir = require('os').homedir();
-  const candidates = [
-    path.join(homeDir, '.codex'),
-    path.join(homeDir, '.config', 'codex'),
-  ];
+  const candidates = [path.join(homeDir, '.codex'), path.join(homeDir, '.config', 'codex')];
   for (const dir of candidates) {
     if (fs.existsSync(path.join(dir, 'config.toml'))) {
-      return { dir, configPath: path.join(dir, 'config.toml'), authPath: path.join(dir, 'auth.json') };
+      return {
+        dir,
+        configPath: path.join(dir, 'config.toml'),
+        authPath: path.join(dir, 'auth.json'),
+      };
     }
   }
   // Default to the canonical ~/.codex when nothing exists yet.
@@ -2305,10 +2899,12 @@ function resolveCodexConfigPaths() {
 
 /** TOML key-name sanitizer (matches cc-switch sanitize_provider_name). */
 function sanitizeProviderName(name = '') {
-  return String(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
-    .replace(/^_+|_+$/g, '') || 'custom';
+  return (
+    String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '') || 'custom'
+  );
 }
 
 /**
@@ -2319,15 +2915,23 @@ function sanitizeProviderName(name = '') {
 function upsertPreambleKey(content = '', key = '', valueLiteral = '') {
   const lines = String(content).split('\n');
   let firstSection = lines.findIndex((l) => /^\s*\[/.test(l));
-  if (firstSection < 0) firstSection = lines.length;
+  if (firstSection < 0) {
+    firstSection = lines.length;
+  }
   const head = lines.slice(0, firstSection);
   const tail = lines.slice(firstSection);
   const keyRe = new RegExp(`^\\s*${escapeRegExp(key)}\\s*=`);
   let replaced = false;
   for (let i = 0; i < head.length; i += 1) {
-    if (keyRe.test(head[i])) { head[i] = `${key} = ${valueLiteral}`; replaced = true; break; }
+    if (keyRe.test(head[i])) {
+      head[i] = `${key} = ${valueLiteral}`;
+      replaced = true;
+      break;
+    }
   }
-  if (!replaced) head.push(`${key} = ${valueLiteral}`);
+  if (!replaced) {
+    head.push(`${key} = ${valueLiteral}`);
+  }
   return head.concat(tail).join('\n');
 }
 
@@ -2340,9 +2944,13 @@ function removeTomlSection(content = '', sectionName = '') {
     const m = line.match(/^\s*\[([^\]]+)\]\s*$/);
     if (m) {
       skipping = m[1].trim() === sectionName;
-      if (skipping) continue;
+      if (skipping) {
+        continue;
+      }
     }
-    if (!skipping) out.push(line);
+    if (!skipping) {
+      out.push(line);
+    }
   }
   return out.join('\n');
 }
@@ -2350,8 +2958,12 @@ function removeTomlSection(content = '', sectionName = '') {
 /** Atomic write with a single .khy-bak backup of the prior contents. */
 function atomicWriteWithBackup(targetPath, data) {
   try {
-    if (fs.existsSync(targetPath)) fs.copyFileSync(targetPath, `${targetPath}.khy-bak`);
-  } catch { /* backup is best-effort */ }
+    if (fs.existsSync(targetPath)) {
+      fs.copyFileSync(targetPath, `${targetPath}.khy-bak`);
+    }
+  } catch {
+    /* backup is best-effort */
+  }
   const tmp = `${targetPath}.khy-tmp`;
   fs.writeFileSync(tmp, data, 'utf-8');
   fs.renameSync(tmp, targetPath);
@@ -2368,7 +2980,9 @@ function getCodexUpstreamSnapshot() {
   try {
     const auth = JSON.parse(fs.readFileSync(authPath, 'utf-8')) || {};
     hasApiKey = !!String(auth.OPENAI_API_KEY || '').trim();
-  } catch { /* no auth.json */ }
+  } catch {
+    /* no auth.json */
+  }
   return {
     provider: config.modelProvider || '',
     model: config.model || '',
@@ -2400,16 +3014,31 @@ function setCodexUpstream(opts = {}) {
   const providerNameRaw = String(opts.providerName || '').trim();
   const baseUrl = String(opts.baseUrl || '').trim();
   const model = String(opts.model || '').trim();
-  if (!providerNameRaw) throw new Error('providerName is required');
-  if (!baseUrl) throw new Error('baseUrl is required');
-  if (!model) throw new Error('model is required');
-  try { new URL(baseUrl); } catch { throw new Error('baseUrl must be a valid http(s) URL'); }
+  if (!providerNameRaw) {
+    throw new Error('providerName is required');
+  }
+  if (!baseUrl) {
+    throw new Error('baseUrl is required');
+  }
+  if (!model) {
+    throw new Error('model is required');
+  }
+  try {
+    new URL(baseUrl);
+  } catch {
+    throw new Error('baseUrl must be a valid http(s) URL');
+  }
 
-  const reasoningEffort = String(opts.reasoningEffort || '').trim().toLowerCase();
+  const reasoningEffort = String(opts.reasoningEffort || '')
+    .trim()
+    .toLowerCase();
   if (reasoningEffort && !VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
     throw new Error(`reasoningEffort must be one of ${VALID_REASONING_EFFORTS.join('|')}`);
   }
-  const wireApi = (String(opts.wireApi || 'responses').trim().toLowerCase()) || 'responses';
+  const wireApi =
+    String(opts.wireApi || 'responses')
+      .trim()
+      .toLowerCase() || 'responses';
   if (!VALID_WIRE_APIS.includes(wireApi)) {
     throw new Error(`wireApi must be one of ${VALID_WIRE_APIS.join('|')}`);
   }
@@ -2420,7 +3049,11 @@ function setCodexUpstream(opts = {}) {
   fs.mkdirSync(dir, { recursive: true });
 
   let content = '';
-  try { content = fs.readFileSync(configPath, 'utf-8'); } catch { content = ''; }
+  try {
+    content = fs.readFileSync(configPath, 'utf-8');
+  } catch {
+    content = '';
+  }
 
   content = upsertPreambleKey(content, 'model_provider', `"${provider}"`);
   content = upsertPreambleKey(content, 'model', `"${model}"`);
@@ -2444,13 +3077,25 @@ function setCodexUpstream(opts = {}) {
 
   if (apiKey) {
     let auth = {};
-    try { auth = JSON.parse(fs.readFileSync(authPath, 'utf-8')) || {}; } catch { auth = {}; }
+    try {
+      auth = JSON.parse(fs.readFileSync(authPath, 'utf-8')) || {};
+    } catch {
+      auth = {};
+    }
     auth.OPENAI_API_KEY = apiKey;
     atomicWriteWithBackup(authPath, `${JSON.stringify(auth, null, 2)}\n`);
   }
 
   _configCache = null; // force re-read on next status/footer query
-  return { configPath, authPath, provider, baseUrl, model, reasoningEffort: reasoningEffort || null, wireApi };
+  return {
+    configPath,
+    authPath,
+    provider,
+    baseUrl,
+    model,
+    reasoningEffort: reasoningEffort || null,
+    wireApi,
+  };
 }
 
 module.exports = {

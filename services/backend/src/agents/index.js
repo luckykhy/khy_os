@@ -11,21 +11,10 @@
  * - Type guards and utilities
  */
 
-const {
-  getBuiltInAgents,
-  getActiveAgentsFromList,
-  formatAgentLine,
-} = require('./builtInAgents');
-
-const {
-  AGENT_COLORS,
-  isBuiltInAgent,
-  isCustomAgent,
-  isPluginAgent,
-} = require('./types');
-
-const { getAgentToolPrompt } = require('./prompt');
+const { getBuiltInAgents, getActiveAgentsFromList, formatAgentLine } = require('./builtInAgents');
 const { loadCustomAgents, clearAgentCache } = require('./loadAgents');
+const { getAgentToolPrompt } = require('./prompt');
+const { AGENT_COLORS, isBuiltInAgent, isCustomAgent, isPluginAgent } = require('./types');
 
 /**
  * Get all agent definitions (built-in + custom).

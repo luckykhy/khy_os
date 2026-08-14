@@ -3,8 +3,15 @@
  */
 const fs = require('fs');
 const path = require('path');
+
 const { bootstrap, muteDbLogs, restoreDbLogs } = require('../bootstrap');
-const { printBacktestResult, printTable, printSuccess, printError, withSpinner } = require('../formatters');
+const {
+  printBacktestResult,
+  printTable,
+  printSuccess,
+  printError,
+  withSpinner,
+} = require('../formatters');
 
 // Built-in strategies that work universally (stocks, futures, ETFs)
 const BUILTIN_STRATEGIES = {
@@ -84,7 +91,7 @@ async function handleBacktestRun(symbol, options = {}) {
     if (BUILTIN_STRATEGIES[strategyRef]) {
       signalFn = BUILTIN_STRATEGIES[strategyRef].code;
       strategyName = BUILTIN_STRATEGIES[strategyRef].name;
-    // Numeric ID → load from database
+      // Numeric ID → load from database
     } else if (/^\d+$/.test(strategyRef)) {
       const dbStrategy = await Strategy.findByPk(parseInt(strategyRef));
       if (!dbStrategy) {
@@ -152,7 +159,14 @@ async function handleBacktestRun(symbol, options = {}) {
       console.log(chalk.cyan('  → 自动使用内置均线策略重试...'));
       const fallbackResult = await withSpinner(
         `均线策略回测 ${symbol}...`,
-        () => backtestEngine.run({ symbol, startDate, endDate, initialCapital, signalFn: BUILTIN_STRATEGIES.ma_cross.code }),
+        () =>
+          backtestEngine.run({
+            symbol,
+            startDate,
+            endDate,
+            initialCapital,
+            signalFn: BUILTIN_STRATEGIES.ma_cross.code,
+          }),
         { muteOutput: true }
       );
       if (fallbackResult.trades && fallbackResult.trades.length > 0) {
@@ -171,7 +185,7 @@ async function handleBacktestRun(symbol, options = {}) {
     console.log(chalk.bold('  交易记录'));
     printTable(
       ['日期', '方向', '价格', '数量', '盈亏'],
-      result.trades.map(t => [
+      result.trades.map((t) => [
         t.date || '-',
         t.side === 'buy' ? chalk.red('买入') : chalk.green('卖出'),
         '¥' + Number(t.price).toFixed(2),
@@ -189,7 +203,9 @@ async function handleBacktestList(options = {}) {
   const limit = parseInt(options.limit) || 20;
 
   const where = {};
-  if (options.status) where.status = options.status;
+  if (options.status) {
+    where.status = options.status;
+  }
 
   const backtests = await Backtest.findAll({
     where,
@@ -206,7 +222,7 @@ async function handleBacktestList(options = {}) {
   printSuccess(`共 ${backtests.length} 条回测记录`);
   printTable(
     ['ID', '名称', '品种', '状态', '收益率', '夏普', '创建时间'],
-    backtests.map(b => [
+    backtests.map((b) => [
       String(b.id),
       (b.name || '-').substring(0, 16),
       b.symbol || '-',
@@ -246,7 +262,7 @@ async function handleStrategyList() {
     printSuccess(`数据库策略 (${strategies.length} 个)`);
     printTable(
       ['ID', '名称', '语言', '类型', '状态'],
-      strategies.map(s => [
+      strategies.map((s) => [
         String(s.id),
         (s.name || '-').substring(0, 20),
         s.language || 'javascript',

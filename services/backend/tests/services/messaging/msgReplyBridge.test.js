@@ -96,6 +96,52 @@ test('handler:chat 抛错 → null,fail-soft 不外抛', async () => {
   assert.strictEqual(await handler({ text: 'x' }), null);
 });
 
+test('handler:chat 经由注入的 runExclusive 包裹执行(全局串行锁 seam)', async () => {
+  let wrapped = 0;
+  let chatCalled = 0;
+  const handler = buildAiReplyHandler({
+    env: {},
+    getChat: () => async () => { chatCalled += 1; return 'ok'; },
+    // Injected lock: prove the chat call runs *inside* runExclusive, and the
+    // fn's resolved value is propagated back unchanged.
+    runExclusive: async (fn) => { wrapped += 1; return fn(); },
+    log: silentLog,
+  });
+  const out = await handler({ text: '查库存' });
+  assert.strictEqual(out, 'ok');
+  assert.strictEqual(wrapped, 1);
+  assert.strictEqual(chatCalled, 1);
+});
+
+test('handler:并发两条经真实 runExclusive → chat 严格串行不交叠', async () => {
+  // Real ilinkExecutionLock (no injection). A chat that records enter/exit with
+  // a microtask gap must never observe a second chat entering before it exits.
+  let inFlight = 0;
+  let maxConcurrent = 0;
+  const order = [];
+  const makeChat = (tag) => async () => {
+    inFlight += 1;
+    maxConcurrent = Math.max(maxConcurrent, inFlight);
+    order.push(`${tag}:enter`);
+    await new Promise((r) => setTimeout(r, 5));
+    order.push(`${tag}:exit`);
+    inFlight -= 1;
+    return tag;
+  };
+  const h1 = buildAiReplyHandler({ env: {}, getChat: () => makeChat('a'), log: silentLog });
+  const h2 = buildAiReplyHandler({ env: {}, getChat: () => makeChat('b'), log: silentLog });
+  const [r1, r2] = await Promise.all([h1({ text: '1' }), h2({ text: '2' })]);
+  assert.strictEqual(r1, 'a');
+  assert.strictEqual(r2, 'b');
+  assert.strictEqual(maxConcurrent, 1, '两条 chat 不得同时在飞');
+  // Each chat's enter/exit form a contiguous, non-interleaved pair.
+  assert.ok(
+    order.join(',') === 'a:enter,a:exit,b:enter,b:exit'
+    || order.join(',') === 'b:enter,b:exit,a:enter,a:exit',
+    `串行顺序异常: ${order.join(',')}`,
+  );
+});
+
 test('handler:getChat 本身抛错 → null', async () => {
   const handler = buildAiReplyHandler({
     env: {},

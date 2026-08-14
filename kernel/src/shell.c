@@ -35,11 +35,11 @@ static int is_printable(char c) {
     return c >= 32 && c <= 126;
 }
 
-static void print_u64_hex_or_dash(uint32_t v) {
-    if (v == (uint32_t)-1) {
+static void print_u64_hex_or_dash(uint64_t v) {
+    if (v == (uint64_t)-1) {
         console_print("-");
     } else {
-        console_print_dec(v);
+        console_print_hex(v);
     }
 }
 
@@ -115,6 +115,10 @@ static void cmd_cat(const char *path) {
         console_print("cat: file not found\n");
         return;
     }
+    if (sz + 1 < sz) {
+        console_print("cat: invalid size\n");
+        return;
+    }
     char *buf = (char *)kmalloc(sz + 1);
     if (!buf) {
         console_print("cat: out of memory\n");
@@ -157,7 +161,7 @@ static void cmd_run(const char *path) {
         return;
     }
     console_print("run: loaded pid=");
-    console_print_dec((uint64_t)pid);
+    console_print_dec((uint64_t)(uint32_t)pid);
     console_print(" (execution path pending user-mode switch)\n");
 }
 
@@ -188,7 +192,7 @@ static void cmd_netsend(const char *text) {
         return;
     }
     console_print("netsend: ");
-    console_print_dec((uint64_t)rc);
+    console_print_dec((uint64_t)(uint32_t)rc);
     console_print(" bytes queued\n");
 }
 

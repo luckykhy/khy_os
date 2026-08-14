@@ -21,12 +21,18 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 // Families that do not bill for prompt caching at all (local inference). For
 // these, a zero hit rate is expected and must NOT be read as gouging.
 const NON_CACHEABLE_FAMILIES = new Set([
-  'ollama', 'local', 'lmstudio', 'llamacpp', 'llama.cpp', 'vllm-local',
+  'ollama',
+  'local',
+  'lmstudio',
+  'llamacpp',
+  'llama.cpp',
+  'vllm-local',
 ]);
 
 function _envInt(name, fallback) {
@@ -51,10 +57,16 @@ function _hitRateFloor() {
 }
 
 function _isCacheCapableFamily(family) {
-  const f = String(family || '').trim().toLowerCase();
-  if (!f) return true; // unknown → assume cloud/cacheable (conservative: still probe)
+  const f = String(family || '')
+    .trim()
+    .toLowerCase();
+  if (!f) {
+    return true;
+  } // unknown → assume cloud/cacheable (conservative: still probe)
   for (const token of NON_CACHEABLE_FAMILIES) {
-    if (f.includes(token)) return false;
+    if (f.includes(token)) {
+      return false;
+    }
   }
   return true;
 }
@@ -63,7 +75,11 @@ function _isCacheCapableFamily(family) {
 const _num = require('../../utils/finiteNumber').toPositiveOr0;
 
 function _normalizeKey(adapterKey) {
-  return String(adapterKey || '').trim().toLowerCase() || 'unknown';
+  return (
+    String(adapterKey || '')
+      .trim()
+      .toLowerCase() || 'unknown'
+  );
 }
 
 function _emptyEntry(adapterKey) {
@@ -90,7 +106,9 @@ function _file() {
 let _state = null;
 
 function _loadState() {
-  if (_state) return _state;
+  if (_state) {
+    return _state;
+  }
   try {
     const raw = JSON.parse(fs.readFileSync(_file(), 'utf-8'));
     const adapters = {};
@@ -122,7 +140,9 @@ function _loadState() {
 function _persist() {
   try {
     fs.writeFileSync(_file(), `${JSON.stringify(_loadState(), null, 2)}\n`, 'utf-8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -137,23 +157,26 @@ function _persist() {
  *   insufficient_data        — too few requests to judge.
  */
 function _deriveVerdict(entry) {
-  if (!entry.cacheCapableFamily) return 'not_cacheable';
+  if (!entry.cacheCapableFamily) {
+    return 'not_cacheable';
+  }
   const minReq = _minRequests();
   if (!entry.exposesCacheFields) {
-    if (entry.requests >= minReq) return 'opaque_suspected_gouging';
+    if (entry.requests >= minReq) {
+      return 'opaque_suspected_gouging';
+    }
     return 'insufficient_data';
   }
-  const hitRate = entry.totalInputTokens > 0
-    ? entry.totalCacheReadTokens / entry.totalInputTokens
-    : 0;
-  if (hitRate >= _hitRateFloor()) return 'transparent_caching';
+  const hitRate =
+    entry.totalInputTokens > 0 ? entry.totalCacheReadTokens / entry.totalInputTokens : 0;
+  if (hitRate >= _hitRateFloor()) {
+    return 'transparent_caching';
+  }
   return 'no_cache_benefit';
 }
 
 function _hitRate(entry) {
-  return entry.totalInputTokens > 0
-    ? entry.totalCacheReadTokens / entry.totalInputTokens
-    : 0;
+  return entry.totalInputTokens > 0 ? entry.totalCacheReadTokens / entry.totalInputTokens : 0;
 }
 
 /**
@@ -175,17 +198,22 @@ function record(adapterKey, opts = {}) {
   const cacheWrite = _num(usage.cacheWriteInputTokens);
   // A field is "exposed" only when the usage object actually carries the
   // canonical key — presence, not a positive value (0 is still a disclosure).
-  const hasCacheField = Object.prototype.hasOwnProperty.call(usage, 'cacheReadInputTokens')
-    || Object.prototype.hasOwnProperty.call(usage, 'cacheWriteInputTokens');
+  const hasCacheField =
+    Object.prototype.hasOwnProperty.call(usage, 'cacheReadInputTokens') ||
+    Object.prototype.hasOwnProperty.call(usage, 'cacheWriteInputTokens');
 
   const now = Date.now();
   entry.requests += 1;
   entry.totalInputTokens += inputTokens;
   entry.totalCacheReadTokens += cacheRead;
   entry.totalCacheWriteTokens += cacheWrite;
-  if (hasCacheField) entry.exposesCacheFields = true; // sticky
+  if (hasCacheField) {
+    entry.exposesCacheFields = true;
+  } // sticky
   entry.cacheCapableFamily = _isCacheCapableFamily(opts.family);
-  if (!entry.firstSeen) entry.firstSeen = now;
+  if (!entry.firstSeen) {
+    entry.firstSeen = now;
+  }
   entry.lastSeen = now;
 
   // One-time alert when the verdict first crosses into suspected gouging.
@@ -195,10 +223,12 @@ function record(adapterKey, opts = {}) {
     try {
       // eslint-disable-next-line no-console
       console.warn(
-        `[cacheEconomy] 适配器 "${key}" 经 ${entry.requests} 次请求从未回传缓存计费字段，`
-        + '疑似缓存不透明计费（享受缓存却全价计费或根本不缓存），默认路由已降权。',
+        `[cacheEconomy] 适配器 "${key}" 经 ${entry.requests} 次请求从未回传缓存计费字段，` +
+          '疑似缓存不透明计费（享受缓存却全价计费或根本不缓存），默认路由已降权。'
       );
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   state.adapters[key] = entry;
@@ -213,7 +243,9 @@ function getVerdict(adapterKey) {
   const key = _normalizeKey(adapterKey);
   const state = _loadState();
   const entry = state.adapters[key];
-  if (!entry) return 'insufficient_data';
+  if (!entry) {
+    return 'insufficient_data';
+  }
   return _deriveVerdict(entry);
 }
 
@@ -240,7 +272,11 @@ function getReport() {
 // Test/maintenance hooks.
 function _reset() {
   _state = { adapters: {} };
-  try { fs.unlinkSync(_file()); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(_file());
+  } catch {
+    /* ignore */
+  }
 }
 
 module.exports = {

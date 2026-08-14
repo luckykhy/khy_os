@@ -6,21 +6,20 @@
  * and account pool fallback.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
-const { requestJson } = require('./_proxyTunnel');
-const { parseList, dedupePaths, resolveUserHomeRoots } = require('./_adapterUtils');
+const path = require('path');
+
 // Model-name SSOT: default IDE model flows from constants/models.js.
 const { PRIMARY: MODELS } = require('../../../constants/models');
-const { createProtocolHandler } = require('./_protocolPipeline');
-const {
-  normalizeToken, isLikelyCredentialToken,
-  isNativeLoginToken, countsTowardAvailability,
-} = require('./_ideTokenMixin');
-const { findInstallation, findDataPath } = require('./ideDetector');
-const { buildSuccess, buildFailure } = require('./_responseBuilder');
 
+const { parseList, dedupePaths, resolveUserHomeRoots } = require('./_adapterUtils');
+const {
+  normalizeToken,
+  isLikelyCredentialToken,
+  isNativeLoginToken,
+  countsTowardAvailability,
+} = require('./_ideTokenMixin');
+const { createProtocolHandler } = require('./_protocolPipeline');
 
 // resolveUserHomeRoots imported from _adapterUtils
 
@@ -28,8 +27,20 @@ function buildCursorStoragePaths() {
   const out = [];
   for (const homeRoot of resolveUserHomeRoots()) {
     out.push(path.join(homeRoot, '.config', 'Cursor', 'User', 'globalStorage', 'storage.json'));
-    out.push(path.join(homeRoot, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'storage.json'));
-    out.push(path.join(homeRoot, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'storage.json'));
+    out.push(
+      path.join(
+        homeRoot,
+        'Library',
+        'Application Support',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'storage.json'
+      )
+    );
+    out.push(
+      path.join(homeRoot, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'storage.json')
+    );
   }
   for (const p of parseList(process.env.CURSOR_STORAGE_PATHS || process.env.CURSOR_STORAGE_PATH)) {
     out.push(p);
@@ -41,11 +52,45 @@ function buildCursorDbPaths() {
   const out = [];
   for (const homeRoot of resolveUserHomeRoots()) {
     out.push(path.join(homeRoot, '.config', 'Cursor', 'User', 'globalStorage', 'state.vscdb'));
-    out.push(path.join(homeRoot, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'state.vscdb'));
-    out.push(path.join(homeRoot, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'state.vscdb'));
-    out.push(path.join(homeRoot, '.config', 'Cursor', 'User', 'globalStorage', 'state-global.vscdb'));
-    out.push(path.join(homeRoot, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'state-global.vscdb'));
-    out.push(path.join(homeRoot, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'state-global.vscdb'));
+    out.push(
+      path.join(
+        homeRoot,
+        'Library',
+        'Application Support',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'state.vscdb'
+      )
+    );
+    out.push(
+      path.join(homeRoot, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'state.vscdb')
+    );
+    out.push(
+      path.join(homeRoot, '.config', 'Cursor', 'User', 'globalStorage', 'state-global.vscdb')
+    );
+    out.push(
+      path.join(
+        homeRoot,
+        'Library',
+        'Application Support',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'state-global.vscdb'
+      )
+    );
+    out.push(
+      path.join(
+        homeRoot,
+        'AppData',
+        'Roaming',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'state-global.vscdb'
+      )
+    );
   }
   for (const p of parseList(process.env.CURSOR_DB_PATHS || process.env.CURSOR_DB_PATH)) {
     out.push(p);
@@ -65,6 +110,10 @@ const KNOWN_MODELS = [
 ];
 
 const { DEFAULT_TIMEOUT_MS } = require('./_protocolPipeline');
+const { requestJson } = require('./_proxyTunnel');
+const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { findInstallation, findDataPath } = require('./ideDetector');
+const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
 const TIMEOUT_MS = parseInt(process.env.CURSOR_TIMEOUT_MS || '', 10) || DEFAULT_TIMEOUT_MS;
 const ACCOUNT_POOL_TYPE = 'cursor';
 
@@ -78,18 +127,26 @@ const hasTokenShape = isLikelyCredentialToken;
 function firstNonEmpty(values = []) {
   for (const value of values) {
     const text = String(value ?? '').trim();
-    if (text) return text;
+    if (text) {
+      return text;
+    }
   }
   return '';
 }
 
 function extractTokenFromUnknown(value, depth = 0) {
-  if (depth > 6 || value == null) return '';
+  if (depth > 6 || value == null) {
+    return '';
+  }
 
   if (typeof value === 'string') {
     const raw = value.trim();
-    if (!raw) return '';
-    if (hasTokenShape(raw)) return normalizeToken(raw);
+    if (!raw) {
+      return '';
+    }
+    if (hasTokenShape(raw)) {
+      return normalizeToken(raw);
+    }
     if ((raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']'))) {
       try {
         return extractTokenFromUnknown(JSON.parse(raw), depth + 1);
@@ -107,12 +164,16 @@ function extractTokenFromUnknown(value, depth = 0) {
   if (Array.isArray(value)) {
     for (const item of value) {
       const token = extractTokenFromUnknown(item, depth + 1);
-      if (token) return token;
+      if (token) {
+        return token;
+      }
     }
     return '';
   }
 
-  if (typeof value !== 'object') return '';
+  if (typeof value !== 'object') {
+    return '';
+  }
 
   const directKeys = [
     'accessToken',
@@ -127,20 +188,28 @@ function extractTokenFromUnknown(value, depth = 0) {
   ];
   for (const key of directKeys) {
     const token = normalizeToken(value[key]);
-    if (hasTokenShape(token)) return token;
+    if (hasTokenShape(token)) {
+      return token;
+    }
   }
 
   const nested = ['cursorAuth', 'auth', 'session', 'credentials', 'login'];
   for (const key of nested) {
     const token = extractTokenFromUnknown(value[key], depth + 1);
-    if (token) return token;
+    if (token) {
+      return token;
+    }
   }
 
   for (const [k, v] of Object.entries(value)) {
-    if (/(refresh.?token)/i.test(k)) continue;
+    if (/(refresh.?token)/i.test(k)) {
+      continue;
+    }
     if (/(access.?token|auth.?token|id.?token|jwt|bearer)/i.test(k)) {
       const token = extractTokenFromUnknown(v, depth + 1);
-      if (token) return token;
+      if (token) {
+        return token;
+      }
     }
   }
   return '';
@@ -155,9 +224,13 @@ function readCursorToken() {
     try {
       if (fs.existsSync(dbPath)) {
         const token = readTokenFromVscdb(dbPath);
-        if (token) return { accessToken: token, source: 'state.vscdb', path: dbPath };
+        if (token) {
+          return { accessToken: token, source: 'state.vscdb', path: dbPath };
+        }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   // Fallback: try storage.json (older versions)
@@ -181,7 +254,9 @@ function readCursorToken() {
           return { accessToken: normalizeToken(token), source: 'storage.json', path: p };
         }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -197,11 +272,13 @@ function readTokenFromVscdb(dbPath) {
     try {
       const tables = db.prepare('SELECT name FROM sqlite_master WHERE type = ?').all('table');
       const tableName = (
-        tables.find(t => String(t.name || '') === 'ItemTable')
-        || tables.find(t => String(t.name || '').toLowerCase() === 'itemtable')
-        || tables.find(t => /itemtable/i.test(String(t.name || '')))
+        tables.find((t) => String(t.name || '') === 'ItemTable') ||
+        tables.find((t) => String(t.name || '').toLowerCase() === 'itemtable') ||
+        tables.find((t) => /itemtable/i.test(String(t.name || '')))
       )?.name;
-      if (!tableName || !/^[A-Za-z0-9_]+$/.test(String(tableName))) return null;
+      if (!tableName || !/^[A-Za-z0-9_]+$/.test(String(tableName))) {
+        return null;
+      }
 
       const tokenKeys = [
         'cursorAuth/accessToken',
@@ -217,19 +294,29 @@ function readTokenFromVscdb(dbPath) {
         try {
           const row = db.prepare(`SELECT value FROM "${tableName}" WHERE key = ?`).get(key);
           const token = extractTokenFromUnknown(row && row.value);
-          if (hasTokenShape(token)) return normalizeToken(token);
-        } catch { /* try next */ }
+          if (hasTokenShape(token)) {
+            return normalizeToken(token);
+          }
+        } catch {
+          /* try next */
+        }
       }
 
       try {
-        const rows = db.prepare(
-          `SELECT key, value FROM "${tableName}" WHERE key LIKE ? OR key LIKE ? OR key LIKE ? LIMIT 200`
-        ).all('%cursorAuth%', '%accessToken%', '%token%');
+        const rows = db
+          .prepare(
+            `SELECT key, value FROM "${tableName}" WHERE key LIKE ? OR key LIKE ? OR key LIKE ? LIMIT 200`
+          )
+          .all('%cursorAuth%', '%accessToken%', '%token%');
         for (const row of rows) {
           const key = String(row?.key || '');
-          if (/refresh.?token/i.test(key)) continue;
+          if (/refresh.?token/i.test(key)) {
+            continue;
+          }
           const token = extractTokenFromUnknown(row?.value);
-          if (hasTokenShape(token)) return normalizeToken(token);
+          if (hasTokenShape(token)) {
+            return normalizeToken(token);
+          }
         }
       } catch {
         // ignore broad-scan failures
@@ -253,7 +340,9 @@ function readTokenFromVscdb(dbPath) {
     ];
     for (const pattern of tokenPatterns) {
       const match = content.match(pattern);
-      if (match && hasTokenShape(match[1])) return normalizeToken(match[1]);
+      if (match && hasTokenShape(match[1])) {
+        return normalizeToken(match[1]);
+      }
     }
   } catch {
     // ignore final fallback failures
@@ -268,23 +357,34 @@ function readTokenFromVscdb(dbPath) {
 // NOT count unless KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS is set AND Cursor is
 // locally installed. Token assignment for routing/generate is unchanged.
 function _cursorInstalled() {
-  try { return !!(findInstallation('cursor') || findDataPath('cursor')); }
-  catch { return false; }
+  try {
+    return !!(findInstallation('cursor') || findDataPath('cursor'));
+  } catch {
+    return false;
+  }
 }
 
 function _computeAvailable(token) {
-  if (isNativeLoginToken(token)) return true;
+  if (isNativeLoginToken(token)) {
+    return true;
+  }
   return _cursorInstalled() && countsTowardAvailability(token);
 }
 
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
 
   const localToken = readCursorToken();
   if (localToken && hasTokenShape(localToken.accessToken)) {
     _token = localToken;
     persistObservedToken(localToken);
-  } else if (!(_token && hasTokenShape(_token.accessToken) && String(_token.source || '').startsWith('pool:'))) {
+  } else if (!(
+    _token &&
+    hasTokenShape(_token.accessToken) &&
+    String(_token.source || '').startsWith('pool:')
+  )) {
     _token = null;
   }
   _available = _computeAvailable(_token);
@@ -292,7 +392,9 @@ function detect(forceRefresh = false) {
 }
 
 function toPoolTokenShape(poolToken = null) {
-  if (!poolToken || !hasTokenShape(poolToken.accessToken)) return null;
+  if (!poolToken || !hasTokenShape(poolToken.accessToken)) {
+    return null;
+  }
   return {
     accessToken: normalizeToken(poolToken.accessToken),
     refreshToken: poolToken.refreshToken ? String(poolToken.refreshToken).trim() : null,
@@ -304,7 +406,9 @@ function toPoolTokenShape(poolToken = null) {
 
 async function detectAsync(forceRefresh = false) {
   const localDetected = detect(forceRefresh);
-  if (localDetected) return true;
+  if (localDetected) {
+    return true;
+  }
 
   const poolToken = await getPoolActiveToken();
   if (poolToken && hasTokenShape(poolToken.accessToken)) {
@@ -339,33 +443,45 @@ function _stableLabel(source) {
 function _decodeJwtEmail(accessToken) {
   try {
     const parts = String(accessToken || '').split('.');
-    if (parts.length < 2) return null;
+    if (parts.length < 2) {
+      return null;
+    }
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
     return payload.email || payload.unique_name || payload.preferred_username || null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function persistObservedToken(token = null) {
-  if (!token || !token.accessToken) return;
+  if (!token || !token.accessToken) {
+    return;
+  }
   Promise.resolve().then(async () => {
     try {
       const pool = require('../../accountPool');
       await pool.init();
       const email = token.email || _decodeJwtEmail(token.accessToken);
-      await pool.saveObservedToken(ACCOUNT_POOL_TYPE, {
-        accessToken: token.accessToken,
-        refreshToken: token.refreshToken || null,
-        email: email || null,
-        sourcePath: token.path || '',
-        label: email || _stableLabel(token.source),
-        authData: {
-          source: token.source || ACCOUNT_POOL_TYPE,
-          path: token.path || '',
-          expiresAt: token.expiresAt || null,
+      await pool.saveObservedToken(
+        ACCOUNT_POOL_TYPE,
+        {
+          accessToken: token.accessToken,
+          refreshToken: token.refreshToken || null,
+          email: email || null,
+          sourcePath: token.path || '',
+          label: email || _stableLabel(token.source),
+          authData: {
+            source: token.source || ACCOUNT_POOL_TYPE,
+            path: token.path || '',
+            expiresAt: token.expiresAt || null,
+          },
         },
-      }, { activateIfNone: true });
+        { activateIfNone: true }
+      );
       await pool.autoImportObservedCredentials(ACCOUNT_POOL_TYPE);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   });
 }
 
@@ -379,7 +495,7 @@ async function listModels() {
   if (_token && hasTokenShape(_token.accessToken)) {
     persistObservedToken(_token);
   }
-  return KNOWN_MODELS.map(m => ({
+  return KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'cursor',
     description: '',
@@ -387,10 +503,34 @@ async function listModels() {
 }
 
 /**
+ * Optional gateway hook: force re-read the Cursor credential after a 401/403.
+ * Cursor has no token-exchange endpoint; the existing recovery path is a
+ * forced re-read of local IDE storage plus the account pool (detectAsync with
+ * forceRefresh). Returns the re-acquired token only when it differs from the
+ * one that just failed — otherwise null so the gateway falls back to pool
+ * rotation instead of retrying a known-bad token.
+ */
+async function refreshCredential() {
+  try {
+    const prev = _token ? String(_token.accessToken || '') : '';
+    await detectAsync(true);
+    const next = _token && hasTokenShape(_token.accessToken) ? String(_token.accessToken) : '';
+    return next && next !== prev ? _token : null;
+  } catch {
+    return null; // fail-soft: gateway falls back to existing rotation
+  }
+}
+
+/**
  * Generate a response using Cursor's API.
  * Falls back to OpenAI-compatible endpoint if direct API unavailable.
  */
 async function generate(prompt, options = {}) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    console.error(
+      `[DEBUG-ADAPTER] cursorAdapter.generate tools=${Array.isArray(options.tools) ? options.tools.length : 0}`
+    );
+  }
   const poolToken = await getPoolActiveToken();
   if (poolToken && hasTokenShape(poolToken.accessToken)) {
     _token = poolToken;
@@ -399,7 +539,9 @@ async function generate(prompt, options = {}) {
 
   if (!detect()) {
     return buildFailure('Cursor token not available', {
-      adapter: 'cursor', provider: 'Cursor', errorType: 'auth',
+      adapter: 'cursor',
+      provider: 'Cursor',
+      errorType: 'auth',
     });
   }
 
@@ -412,7 +554,9 @@ async function generate(prompt, options = {}) {
     // Use OpenAI-compatible endpoint
     const chatResult = await cursorChat(prompt, model, onChunk, options);
     return buildSuccess(chatResult.content, {
-      adapter: 'cursor', provider: `Cursor (${model})`, model,
+      adapter: 'cursor',
+      provider: `Cursor (${model})`,
+      model,
       toolUseBlocks: chatResult.toolUseBlocks || [],
       stopReason: chatResult.stopReason || 'end_turn',
       attempts: [{ provider: 'Cursor', success: true }],
@@ -420,7 +564,9 @@ async function generate(prompt, options = {}) {
   } catch (err) {
     const statusCode = err.status || err.statusCode || err.response?.status || undefined;
     return buildFailure(err, {
-      adapter: 'cursor', provider: 'Cursor', statusCode,
+      adapter: 'cursor',
+      provider: 'Cursor',
+      statusCode,
       attempts: [{ provider: 'Cursor', success: false, error: err.message, statusCode }],
     });
   }
@@ -444,7 +590,7 @@ function cursorChat(prompt, model, onChunk, options = {}) {
       timeout: TIMEOUT_MS,
       headers: sanitizeOutgoingHeaders({
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_token.accessToken}`,
+        Authorization: `Bearer ${_token.accessToken}`,
       }),
       body,
     },
@@ -465,12 +611,16 @@ function cursorChat(prompt, model, onChunk, options = {}) {
 
     const result = res.data || {};
     if (!result.choices?.[0]) {
-      if (result.error) throw new Error(result.error.message || 'Cursor API error');
+      if (result.error) {
+        throw new Error(result.error.message || 'Cursor API error');
+      }
       throw new Error(`Invalid response from Cursor API (HTTP ${statusCode})`);
     }
 
     const parsed = _openaiHandler.parseJsonResponse(result);
-    if (parsed.content) onChunk({ type: 'text', text: parsed.content });
+    if (parsed.content) {
+      onChunk({ type: 'text', text: parsed.content });
+    }
 
     return {
       content: parsed.content,
@@ -506,4 +656,12 @@ function destroy() {
   _token = null;
 }
 
-module.exports = { detect, detectAsync, listModels, generate, getStatus, destroy };
+module.exports = {
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  destroy,
+  refreshCredential,
+};

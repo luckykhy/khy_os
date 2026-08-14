@@ -11,27 +11,41 @@ function parseBool(value, fallback = false) {
 
 function parseHeaders(raw) {
   const value = String(raw || '').trim();
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   const headers = {};
   for (const pair of value.split(',')) {
     const [k, ...rest] = pair.split('=');
     const key = String(k || '').trim();
     const val = String(rest.join('=') || '').trim();
-    if (key) headers[key] = val;
+    if (key) {
+      headers[key] = val;
+    }
   }
   return Object.keys(headers).length ? headers : undefined;
 }
 
 function resolveEnabled() {
-  if (parseBool(process.env.KHY_OTEL_ENABLED, false)) return true;
-  if (process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) return true;
-  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) return true;
-  if (process.env.OTEL_TRACES_EXPORTER) return true;
+  if (parseBool(process.env.KHY_OTEL_ENABLED, false)) {
+    return true;
+  }
+  if (process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) {
+    return true;
+  }
+  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    return true;
+  }
+  if (process.env.OTEL_TRACES_EXPORTER) {
+    return true;
+  }
   return false;
 }
 
 function createTraceExporter(mode, logger) {
-  if (mode === 'none') return null;
+  if (mode === 'none') {
+    return null;
+  }
 
   if (mode === 'console') {
     const { ConsoleSpanExporter } = require('@opentelemetry/sdk-trace-base');
@@ -40,12 +54,17 @@ function createTraceExporter(mode, logger) {
 
   if (mode === 'otlp-http' || mode === 'otlp') {
     const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-    const endpoint = process.env.KHY_OTEL_OTLP_ENDPOINT
-      || process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-      || process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-    const headers = parseHeaders(process.env.KHY_OTEL_OTLP_HEADERS || process.env.OTEL_EXPORTER_OTLP_HEADERS);
+    const endpoint =
+      process.env.KHY_OTEL_OTLP_ENDPOINT ||
+      process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    const headers = parseHeaders(
+      process.env.KHY_OTEL_OTLP_HEADERS || process.env.OTEL_EXPORTER_OTLP_HEADERS
+    );
     if (!endpoint) {
-      logger.warn('[otel] OTLP exporter selected but endpoint is missing; using default OTLP endpoint.');
+      logger.warn(
+        '[otel] OTLP exporter selected but endpoint is missing; using default OTLP endpoint.'
+      );
       return new OTLPTraceExporter();
     }
     return new OTLPTraceExporter({ url: endpoint, headers });
@@ -72,23 +91,26 @@ function initializeOpenTelemetry(options = {}) {
     const { resourceFromAttributes } = require('@opentelemetry/resources');
     const { HttpInstrumentation } = require('@opentelemetry/instrumentation-http');
     const { ExpressInstrumentation } = require('@opentelemetry/instrumentation-express');
-    const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = require('@opentelemetry/semantic-conventions');
+    const {
+      ATTR_SERVICE_NAME,
+      ATTR_SERVICE_VERSION,
+    } = require('@opentelemetry/semantic-conventions');
 
     const serviceName = String(
-      process.env.KHY_OTEL_SERVICE_NAME
-      || options.serviceName
-      || 'khy-os-backend'
+      process.env.KHY_OTEL_SERVICE_NAME || options.serviceName || 'khy-os-backend'
     );
     const serviceVersion = String(
-      process.env.KHY_OTEL_SERVICE_VERSION
-      || options.serviceVersion
-      || ''
+      process.env.KHY_OTEL_SERVICE_VERSION || options.serviceVersion || ''
     ).trim();
 
     const exporterMode = String(
-      process.env.KHY_OTEL_EXPORTER
-      || (process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_ENDPOINT ? 'otlp-http' : 'console')
-    ).trim().toLowerCase();
+      process.env.KHY_OTEL_EXPORTER ||
+        (process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+          ? 'otlp-http'
+          : 'console')
+    )
+      .trim()
+      .toLowerCase();
 
     const traceExporter = createTraceExporter(exporterMode, logger);
 
@@ -99,10 +121,7 @@ function initializeOpenTelemetry(options = {}) {
 
     const sdkConfig = {
       resource: resourceFromAttributes(resourceAttrs),
-      instrumentations: [
-        new HttpInstrumentation(),
-        new ExpressInstrumentation(),
-      ],
+      instrumentations: [new HttpInstrumentation(), new ExpressInstrumentation()],
     };
 
     if (traceExporter) {
@@ -149,7 +168,9 @@ async function shutdownOpenTelemetry(logger = console) {
       // Startup failure already logged by initializer.
     }
   }
-  if (!activeSdk) return;
+  if (!activeSdk) {
+    return;
+  }
   try {
     await activeSdk.shutdown();
     currentStatus = 'stopped';
@@ -170,4 +191,3 @@ module.exports = {
   shutdownOpenTelemetry,
   getOpenTelemetryStatus,
 };
-

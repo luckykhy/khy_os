@@ -34,7 +34,10 @@ const MAX_CAPTURE = 4000; // chars of stdout/stderr to retain for diagnostics
 function _spawnTarget(command, platform) {
   const useCmd = platform === 'win32' && /\.(cmd|bat)$/i.test(command.exe);
   if (useCmd) {
-    return { exe: process.env.COMSPEC || 'cmd.exe', args: ['/d', '/s', '/c', command.exe, ...command.args] };
+    return {
+      exe: process.env.COMSPEC || 'cmd.exe',
+      args: ['/d', '/s', '/c', command.exe, ...command.args],
+    };
   }
   return { exe: command.exe, args: command.args };
 }
@@ -70,7 +73,8 @@ function runStep(command, opts = {}) {
       signal: null,
       output: (missing
         ? `命令未找到: ${command.exe}（请确认其已安装并在 PATH 中）`
-        : String(res.error.message || res.error)).slice(0, MAX_CAPTURE),
+        : String(res.error.message || res.error)
+      ).slice(0, MAX_CAPTURE),
       command: display,
     };
   }
@@ -115,10 +119,20 @@ function launch(command, opts = {}) {
   });
 
   const pid = child.pid || null;
-  if (child.unref) child.unref();
+  if (child.unref) {
+    child.unref();
+  }
   // Close our copies of the fds; the child keeps its own.
-  try { deps.fs.closeSync(out); } catch { /* noop */ }
-  try { deps.fs.closeSync(errFd); } catch { /* noop */ }
+  try {
+    deps.fs.closeSync(out);
+  } catch {
+    /* noop */
+  }
+  try {
+    deps.fs.closeSync(errFd);
+  } catch {
+    /* noop */
+  }
 
   return { pid, logFile, command: display };
 }

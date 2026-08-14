@@ -17,8 +17,9 @@
 
 const { execSync, spawnSync } = require('child_process');
 const os = require('os');
-const policy = require('./workspaceGitInitPolicy');
+
 const gitDetector = require('./gitExecutableDetector');
+const policy = require('./workspaceGitInitPolicy');
 
 /**
  * 极薄 git 包装：失败返回 null（绝不抛），5s 超时，吞掉 stderr。
@@ -80,7 +81,9 @@ function _defaultRunner(cmd, cwd) {
       encoding: 'utf8',
       windowsHide: true,
     });
-    if (res && res.error) throw res.error;
+    if (res && res.error) {
+      throw res.error;
+    }
     if (!res || res.status !== 0) {
       throw new Error(`git exited with status ${res ? res.status : 'unknown'}`);
     }
@@ -106,7 +109,9 @@ function _defaultRunner(cmd, cwd) {
  */
 function detectIsGitRepo(cwd, runner) {
   const top = _git('rev-parse --show-toplevel', cwd, runner);
-  if (top === null) return null; // git 不可用 / 探测失败
+  if (top === null) {
+    return null;
+  } // git 不可用 / 探测失败
   return top.length > 0;
 }
 
@@ -127,26 +132,35 @@ function ensureWorkspaceRepo(options = {}) {
   const log = typeof options.log === 'function' ? options.log : () => {};
   const runner = options.runner;
   try {
-    if (!policy.isEnabled(env)) return { status: 'disabled' };
+    if (!policy.isEnabled(env)) {
+      return { status: 'disabled' };
+    }
 
     const cwd = options.cwd || env.KHYQUANT_CWD || process.cwd();
     const home = options.home || os.homedir();
 
     // 前置检查：git 是否可用（Windows 优先 Git Bash，回退系统 PATH）
-    if (!runner) { // 非测试注入时才检查真实 git
+    if (!runner) {
+      // 非测试注入时才检查真实 git
       const gitPath = gitDetector.detectGitExecutable();
       if (!gitPath) {
         // 无可用 git → 友好提示后返回 error
         try {
           const msg = gitDetector.buildNoGitMessage({ platform: process.platform });
           log(msg);
-        } catch { /* 提示失败不影响返回 */ }
+        } catch {
+          /* 提示失败不影响返回 */
+        }
         return { status: 'error', reason: 'git-not-found', cwd };
       }
     }
 
     let isGitRepo;
-    try { isGitRepo = detectIsGitRepo(cwd, runner); } catch { isGitRepo = null; }
+    try {
+      isGitRepo = detectIsGitRepo(cwd, runner);
+    } catch {
+      isGitRepo = null;
+    }
 
     const verdict = policy.assessGitInitTarget({ cwd, home, isGitRepo });
     if (!verdict.shouldInit) {
@@ -161,19 +175,33 @@ function ensureWorkspaceRepo(options = {}) {
         try {
           const { isWhitelisted } = require('./gitTrackWhitelist');
           overridden = isWhitelisted(cwd) === true;
-        } catch { overridden = false; }
+        } catch {
+          overridden = false;
+        }
       }
-      if (!overridden) return { status: 'skip', reason: verdict.reason, cwd };
+      if (!overridden) {
+        return { status: 'skip', reason: verdict.reason, cwd };
+      }
     }
 
     const initOut = _git('init', cwd, runner);
-    if (initOut === null) return { status: 'error', reason: 'git-init-failed', cwd };
+    if (initOut === null) {
+      return { status: 'error', reason: 'git-init-failed', cwd };
+    }
 
-    try { log(policy.noticeLine(cwd)); } catch { /* 通知失败不影响结果 */ }
+    try {
+      log(policy.noticeLine(cwd));
+    } catch {
+      /* 通知失败不影响结果 */
+    }
 
     // 全自动一条龙(向导):init 之后按栈写 .gitignore + 有 git 身份时首次 commit。
     // 全 fail-soft——任何一步失败都不影响「已 init」这个结果。门控关 → 逐字节退回今日「仅 init」。
-    try { _runInitWizard(cwd, runner, log, env); } catch { /* 向导失败不影响 init 成功 */ }
+    try {
+      _runInitWizard(cwd, runner, log, env);
+    } catch {
+      /* 向导失败不影响 init 成功 */
+    }
 
     return { status: 'initialized', cwd };
   } catch (e) {
@@ -195,23 +223,33 @@ function _runInitWizard(cwd, runner, log, env) {
   try {
     const gis = require('./gitignoreService');
     hasGitignore = gis.hasGitignore(cwd);
-  } catch { /* 探测失败按无处理 */ }
+  } catch {
+    /* 探测失败按无处理 */
+  }
 
   const hasGitIdentity = _hasGitIdentity(cwd, runner);
   const plan = wizardPolicy.planInitWizard({ hasGitignore, hasGitIdentity, env });
-  if (!plan.enabled) return; // 门控关 → 逐字节退回「仅 init」
+  if (!plan.enabled) {
+    return;
+  } // 门控关 → 逐字节退回「仅 init」
 
   // 1) 建首 .gitignore(按探测到的技术栈)。
   if (plan.writeGitignore) {
     try {
       const gis = require('./gitignoreService');
       gis.generateForProject(cwd);
-    } catch { /* 建 gitignore 失败不影响后续 */ }
+    } catch {
+      /* 建 gitignore 失败不影响后续 */
+    }
   }
 
   // 2) 首次 commit。缺身份 + fallback 门开 → 先写仓库级 fallback 身份(仅此仓库)。
   if (!plan.commit) {
-    try { log(wizardPolicy.noIdentityNoticeLine()); } catch { /* 提示失败无妨 */ }
+    try {
+      log(wizardPolicy.noIdentityNoticeLine());
+    } catch {
+      /* 提示失败无妨 */
+    }
     return;
   }
 
@@ -225,10 +263,14 @@ function _runInitWizard(cwd, runner, log, env) {
   }
 
   const added = _git('add -A', cwd, runner);
-  if (added === null) return; // add 失败 → 放弃 commit(init 仍成功)
+  if (added === null) {
+    return;
+  } // add 失败 → 放弃 commit(init 仍成功)
 
   const committed = _git(`commit -m "${wizardPolicy.INITIAL_COMMIT_MESSAGE}"`, cwd, runner);
-  if (committed === null) return; // commit 失败(如 git 拒绝)→ fail-soft,不再改分支
+  if (committed === null) {
+    return;
+  } // commit 失败(如 git 拒绝)→ fail-soft,不再改分支
 
   // 3) 规范主线名为 `main`(commit 之后分支才存在,-M 强制重命名当前分支;幂等)。
   if (plan.setDefaultBranch) {
@@ -236,10 +278,14 @@ function _runInitWizard(cwd, runner, log, env) {
   }
 
   try {
-    log(plan.useFallbackIdentity
-      ? wizardPolicy.fallbackCommitNoticeLine(fallbackLabel)
-      : wizardPolicy.noIdentityNoticeLine()); // 有真身份时不打无身份提示;仅 fallback 分支有提示
-  } catch { /* 提示失败无妨 */ }
+    log(
+      plan.useFallbackIdentity
+        ? wizardPolicy.fallbackCommitNoticeLine(fallbackLabel)
+        : wizardPolicy.noIdentityNoticeLine()
+    ); // 有真身份时不打无身份提示;仅 fallback 分支有提示
+  } catch {
+    /* 提示失败无妨 */
+  }
 }
 
 /**
@@ -250,14 +296,27 @@ function _runInitWizard(cwd, runner, log, env) {
  * @returns {{name:string,email:string}}
  */
 function _resolveFallbackIdentity(env, fallback) {
-  const safe = (s) => String(s || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 64);
+  const safe = (s) =>
+    String(s || '')
+      .replace(/[^A-Za-z0-9._-]/g, '')
+      .slice(0, 64);
   const fb = fallback && fallback.name ? fallback : { name: 'Khy OS', email: 'khy@localhost' };
   try {
     let user = '';
-    try { user = (os.userInfo && os.userInfo().username) || ''; } catch { user = ''; }
-    if (!user && env) user = env.USER || env.USERNAME || env.LOGNAME || '';
+    try {
+      user = (os.userInfo && os.userInfo().username) || '';
+    } catch {
+      user = '';
+    }
+    if (!user && env) {
+      user = env.USER || env.USERNAME || env.LOGNAME || '';
+    }
     let host = '';
-    try { host = (os.hostname && os.hostname()) || ''; } catch { host = ''; }
+    try {
+      host = (os.hostname && os.hostname()) || '';
+    } catch {
+      host = '';
+    }
     const name = safe(user) || fb.name;
     const emailUser = safe(user) || 'khy';
     const emailHost = safe(host) || 'localhost';

@@ -17,9 +17,10 @@
  *   抛出、不得阻塞会话;最差只是「这次没清」。
  */
 
-const os = require('os');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+
 const policy = require('./sessionChecklistResetPolicy');
 const todoStorePath = require('./todoStorePath');
 
@@ -35,13 +36,27 @@ function _resolvePaths() {
   let compatTmpdir = '';
   try {
     compatTmpdir = require('../tools/platformUtils').getTmpDir();
-  } catch { /* platformUtils 不可用 → 叶子会回退到 tmpdir */ }
+  } catch {
+    /* platformUtils 不可用 → 叶子会回退到 tmpdir */
+  }
   let tmpdir = '';
-  try { tmpdir = os.tmpdir(); } catch { /* ignore */ }
+  try {
+    tmpdir = os.tmpdir();
+  } catch {
+    /* ignore */
+  }
   let homedir = '';
-  try { homedir = os.homedir(); } catch { /* ignore */ }
+  try {
+    homedir = os.homedir();
+  } catch {
+    /* ignore */
+  }
   let cwd = '';
-  try { cwd = (typeof process !== 'undefined' && typeof process.cwd === 'function') ? process.cwd() : ''; } catch { /* ignore */ }
+  try {
+    cwd = typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '';
+  } catch {
+    /* ignore */
+  }
   return {
     tmpdir: tmpdir || '',
     compatTmpdir: compatTmpdir || tmpdir || '',
@@ -62,31 +77,52 @@ function _resolvePaths() {
  */
 function _pruneStaleScopedTodos(paths, fsImpl, env) {
   try {
-    if (!todoStorePath.todoSessionScopeEnabled(env)) return [];
+    if (!todoStorePath.todoSessionScopeEnabled(env)) {
+      return [];
+    }
     const tmpdir = (paths && paths.tmpdir) || '';
-    if (!tmpdir) return [];
+    if (!tmpdir) {
+      return [];
+    }
     let names = [];
-    try { names = fsImpl.readdirSync(tmpdir); } catch { return []; }
-    if (!Array.isArray(names) || names.length === 0) return [];
+    try {
+      names = fsImpl.readdirSync(tmpdir);
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(names) || names.length === 0) {
+      return [];
+    }
 
     const entries = [];
     for (const name of names) {
-      if (!todoStorePath.SCOPED_FILE_RE.test(String(name || ''))) continue;
+      if (!todoStorePath.SCOPED_FILE_RE.test(String(name || ''))) {
+        continue;
+      }
       const full = path.join(tmpdir, name);
       try {
         const st = fsImpl.statSync(full);
         entries.push({ path: full, mtimeMs: st && Number(st.mtimeMs) });
-      } catch { /* stat 失败(竞态删除等):跳过 */ }
+      } catch {
+        /* stat 失败(竞态删除等):跳过 */
+      }
     }
-    if (entries.length === 0) return [];
+    if (entries.length === 0) {
+      return [];
+    }
 
     const now = Date.now();
     const stale = todoStorePath.selectStaleTodoFiles({ entries, now, env });
     const removed = [];
     for (const p of stale) {
       try {
-        if (fsImpl.existsSync(p)) { fsImpl.unlinkSync(p); removed.push(p); }
-      } catch { /* 单条失败:少清而已 */ }
+        if (fsImpl.existsSync(p)) {
+          fsImpl.unlinkSync(p);
+          removed.push(p);
+        }
+      } catch {
+        /* 单条失败:少清而已 */
+      }
     }
     return removed;
   } catch {
@@ -99,7 +135,7 @@ function _noticeLine(removed, color) {
   const paint = typeof color === 'function' ? color : (t) => t;
   return paint(
     `🧹 已清空上一会话遗留的临时任务清单(${removed} 个 legacy todo 文件);本会话从空白清单开始。`,
-    'notice',
+    'notice'
   );
 }
 
@@ -131,7 +167,7 @@ function resetSessionChecklist(opts = {}) {
     const fsImpl = opts.fs || fs;
 
     const removed = [];
-    for (const p of (Array.isArray(targets) ? targets : [])) {
+    for (const p of Array.isArray(targets) ? targets : []) {
       try {
         if (fsImpl.existsSync(p)) {
           fsImpl.unlinkSync(p);
@@ -145,8 +181,12 @@ function resetSessionChecklist(opts = {}) {
     // 会话作用域启用时:附带清理长期未动的 `khy-todos-<sid>.json` 孤儿(并发活会话安全)。
     // 与 legacy 清空正交——即便 targets 为空(全局文件不存在)也应回收陈旧分文件。
     try {
-      for (const p of _pruneStaleScopedTodos(paths, fsImpl, env)) removed.push(p);
-    } catch { /* fail-soft:孤儿清理失败不影响主流程 */ }
+      for (const p of _pruneStaleScopedTodos(paths, fsImpl, env)) {
+        removed.push(p);
+      }
+    } catch {
+      /* fail-soft:孤儿清理失败不影响主流程 */
+    }
 
     if (removed.length === 0) {
       return { ran: true, removed: 0, paths: [] };

@@ -31,10 +31,16 @@ const _OFF = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
  */
 function selfLocationEnabled(env = process.env) {
   try {
-    const raw = String((env && env.KHY_SELF_LOCATION) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_SELF_LOCATION) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /** 稳定字符串化(去两端空白;非字符串 → '')。 */
@@ -51,10 +57,16 @@ const _s = require('../utils/trimIfString');
  */
 function classifyInstallKind(appRoot) {
   const p = _s(appRoot);
-  if (!p) return 'dev';
+  if (!p) {
+    return 'dev';
+  }
   const norm = p.replace(/\\/g, '/').toLowerCase();
-  if (norm.includes('/node_modules/') || norm.endsWith('/node_modules')) return 'npm';
-  if (norm.includes('site-packages') || norm.includes('/bundled/') || norm.endsWith('/bundled')) return 'pip';
+  if (norm.includes('/node_modules/') || norm.endsWith('/node_modules')) {
+    return 'npm';
+  }
+  if (norm.includes('site-packages') || norm.includes('/bundled/') || norm.endsWith('/bundled')) {
+    return 'pip';
+  }
   return 'dev';
 }
 
@@ -93,21 +105,37 @@ function resolveSelfLocation(deps = {}, env = process.env) {
  * @returns {string}
  */
 function formatLocationForSystemPrompt(loc, env = process.env) {
-  if (!selfLocationEnabled(env)) return '';
-  if (!loc || typeof loc !== 'object') return '';
+  if (!selfLocationEnabled(env)) {
+    return '';
+  }
+  if (!loc || typeof loc !== 'object') {
+    return '';
+  }
   const src = _s(loc.selfSrcDir);
   const root = _s(loc.appRoot);
-  if (!src && !root) return '';
+  if (!src && !root) {
+    return '';
+  }
 
   const lines = ['## Your install location (search your own source here)'];
   if (src) {
-    lines.push(`- Source: ${src}  (to inspect your own code, pass this ABSOLUTE path to Grep/Glob/Read — they honor absolute paths outside the user's cwd)`);
+    lines.push(
+      `- Source: ${src}  (to inspect your own code, pass this ABSOLUTE path to Grep/Glob/Read — they honor absolute paths outside the user's cwd)`
+    );
   }
   const rootBits = [];
-  if (root) rootBits.push(`Install root: ${root} (${loc.installKind || 'dev'})`);
-  if (_s(loc.dataHome)) rootBits.push(`Data home: ${loc.dataHome}`);
-  if (rootBits.length) lines.push(`- ${rootBits.join('  ·  ')}`);
-  lines.push('- To introspect yourself on demand (list/search your own commands, re-resolve these paths), call the KhySelf tool.');
+  if (root) {
+    rootBits.push(`Install root: ${root} (${loc.installKind || 'dev'})`);
+  }
+  if (_s(loc.dataHome)) {
+    rootBits.push(`Data home: ${loc.dataHome}`);
+  }
+  if (rootBits.length) {
+    lines.push(`- ${rootBits.join('  ·  ')}`);
+  }
+  lines.push(
+    '- To introspect yourself on demand (list/search your own commands, re-resolve these paths), call the KhySelf tool.'
+  );
   return lines.join('\n');
 }
 
@@ -123,27 +151,40 @@ function formatLocationForSystemPrompt(loc, env = process.env) {
  * @returns {string}
  */
 function formatCommandOverviewForSystemPrompt(catalog, env = process.env, opts = {}) {
-  if (!selfLocationEnabled(env)) return '';
-  if (!catalog || typeof catalog !== 'object') return '';
+  if (!selfLocationEnabled(env)) {
+    return '';
+  }
+  if (!catalog || typeof catalog !== 'object') {
+    return '';
+  }
   const cats = Array.isArray(catalog.categories) ? catalog.categories : [];
-  if (cats.length === 0) return '';
-  const perCategory = Number.isFinite(opts.perCategory) && opts.perCategory > 0 ? opts.perCategory : 4;
+  if (cats.length === 0) {
+    return '';
+  }
+  const perCategory =
+    Number.isFinite(opts.perCategory) && opts.perCategory > 0 ? opts.perCategory : 4;
 
   const total = Number.isFinite(catalog.total) ? catalog.total : 0;
   const lines = [`## Your own commands (${total} total — you can invoke these, don't guess names)`];
   for (const cat of cats) {
-    if (!cat || typeof cat !== 'object') continue;
+    if (!cat || typeof cat !== 'object') {
+      continue;
+    }
     const label = _s(cat.label) || _s(cat.key);
     const cmds = Array.isArray(cat.commands) ? cat.commands : [];
     const names = cmds
-      .map(c => _s(c && c.cmd))
+      .map((c) => _s(c && c.cmd))
       .filter(Boolean)
       .slice(0, perCategory);
-    if (names.length === 0) continue;
+    if (names.length === 0) {
+      continue;
+    }
     const more = cmds.length > names.length ? `, +${cmds.length - names.length}` : '';
     lines.push(`- ${label}: ${names.join(', ')}${more}`);
   }
-  if (lines.length === 1) return '';
+  if (lines.length === 1) {
+    return '';
+  }
   lines.push('Full catalog: run `/features` (TUI) or GET /api/commands.');
   return lines.join('\n');
 }

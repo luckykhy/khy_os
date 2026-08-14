@@ -18,13 +18,13 @@
  * 生成器，使引擎模型无关、可确定性单测。零侵入：不接管 toolUseLoop / executeTool（后续 PR）。
  */
 
-const { PainPointScanner } = require('./painPointScanner');
-const { OrganogenesisSandbox } = require('./organogenesisSandbox');
-const { HostPatcher, SandboxBypassError, ConstitutionViolation } = require('./hostPatcher');
-const { EvoTrustBreaker } = require('./evoTrustBreaker');
-const evoRequirement = require('./evoRequirement');
-const evoLevels = require('./evoLevels');
 const evoLedger = require('./evoLedger');
+const evoLevels = require('./evoLevels');
+const evoRequirement = require('./evoRequirement');
+const { EvoTrustBreaker } = require('./evoTrustBreaker');
+const { HostPatcher, SandboxBypassError, ConstitutionViolation } = require('./hostPatcher');
+const { OrganogenesisSandbox } = require('./organogenesisSandbox');
+const { PainPointScanner } = require('./painPointScanner');
 
 class SelfBootstrapEngine {
   /**
@@ -56,13 +56,17 @@ class SelfBootstrapEngine {
     const valid = evoRequirement.validate(req);
     if (!valid.valid) {
       // 防呆②：L2 缺架构对比/爆炸半径在此被拦死。
-      return this._halt('requirement-invalid', req, { missing: valid.missing,
-        reason: `需求规格不合规：${valid.missing.join('、')}` });
+      return this._halt('requirement-invalid', req, {
+        missing: valid.missing,
+        reason: `需求规格不合规：${valid.missing.join('、')}`,
+      });
     }
 
     // —— 熔断前置：分支已熔断 / 引擎只读 → 拒绝自举 ——
     if (this.breaker.isBranchFused(req.id)) {
-      return this._halt('branch-fused', req, { reason: `痛点 ${req.id} 分支已熔断，停止自举（§3.4）。` });
+      return this._halt('branch-fused', req, {
+        reason: `痛点 ${req.id} 分支已熔断，停止自举（§3.4）。`,
+      });
     }
     if (this.breaker.isEngineReadOnly()) {
       return this._halt('engine-readonly', req, { reason: '演进引擎已锁定为只读（防呆④）。' });
@@ -70,7 +74,9 @@ class SelfBootstrapEngine {
 
     // —— 阶段2 代码生成（注入式） ——
     if (!this.codeGenerator) {
-      return this._halt('no-generator', req, { reason: '未配置 codeGenerator，无法生成候选器官。' });
+      return this._halt('no-generator', req, {
+        reason: '未配置 codeGenerator，无法生成候选器官。',
+      });
     }
     let candidate;
     try {
@@ -82,8 +88,11 @@ class SelfBootstrapEngine {
       return this._halt('generation-empty', req, { reason: '生成器未产出有效 {code, entry}。' });
     }
     this._log(evoLedger.KIND.CODE, {
-      requirementId: req.id, entry: candidate.entry, codeLength: String(candidate.code).length,
-      executionLevel: req.executionLevel, validationSteps: req.validationSteps,
+      requirementId: req.id,
+      entry: candidate.entry,
+      codeLength: String(candidate.code).length,
+      executionLevel: req.executionLevel,
+      validationSteps: req.validationSteps,
     });
 
     // —— 阶段3 沙箱验证（影子执行 + 毒性 + 差异校验） ——
@@ -94,21 +103,37 @@ class SelfBootstrapEngine {
       baseline: candidate.baseline,
     });
     this._log(evoLedger.KIND.SANDBOX, {
-      requirementId: req.id, passed: verdict.passed, solved: verdict.solved,
-      regressed: verdict.regressed, toxic: verdict.toxic, toxicity: verdict.toxicity,
-      error: verdict.error, codeHash: verdict.codeHash,
+      requirementId: req.id,
+      passed: verdict.passed,
+      solved: verdict.solved,
+      regressed: verdict.regressed,
+      toxic: verdict.toxic,
+      toxicity: verdict.toxicity,
+      error: verdict.error,
+      codeHash: verdict.codeHash,
     });
 
     const fuse = this.breaker.recordSandboxResult(req.id, verdict.passed);
-    if (fuse.alert) this._log(evoLedger.KIND.ALERT, fuse.alert);
-    if (fuse.engineReadOnly && !verdict.passed) this._log(evoLedger.KIND.FUSE, this.breaker._snapshot());
+    if (fuse.alert) {
+      this._log(evoLedger.KIND.ALERT, fuse.alert);
+    }
+    if (fuse.engineReadOnly && !verdict.passed) {
+      this._log(evoLedger.KIND.FUSE, this.breaker._snapshot());
+    }
 
     if (!verdict.passed) {
       return this._halt('sandbox-rejected', req, {
-        reason: verdict.toxic ? `沙箱判毒：${verdict.toxicity.join('；')}`
-          : verdict.regressed ? '影子方案引入退化，否决热载。'
-            : verdict.error ? `影子执行异常：${verdict.error}` : '未解决痛点，否决热载。',
-        verdict, branchFused: fuse.branchFused, engineReadOnly: fuse.engineReadOnly, alert: fuse.alert,
+        reason: verdict.toxic
+          ? `沙箱判毒：${verdict.toxicity.join('；')}`
+          : verdict.regressed
+            ? '影子方案引入退化，否决热载。'
+            : verdict.error
+              ? `影子执行异常：${verdict.error}`
+              : '未解决痛点，否决热载。',
+        verdict,
+        branchFused: fuse.branchFused,
+        engineReadOnly: fuse.engineReadOnly,
+        alert: fuse.alert,
       });
     }
 
@@ -117,19 +142,33 @@ class SelfBootstrapEngine {
     try {
       load = this.patcher.applyPatch({
         target: candidate.target || `organ:${req.id}`,
-        code: candidate.code, entry: candidate.entry,
-        verdict, requirementId: req.id,
+        code: candidate.code,
+        entry: candidate.entry,
+        verdict,
+        requirementId: req.id,
       });
     } catch (e) {
       // 凭证伪造/宪法越界：记日志并上抛语义，绝不静默。
-      this._log(evoLedger.KIND.ALERT, { kind: 'patch-rejected', requirementId: req.id, error: e.message, code: e.code });
-      return this._halt(e.code === 'EVO_CONSTITUTION' ? 'constitution-violation' : 'sandbox-bypass-blocked',
-        req, { reason: e.message, verdict });
+      this._log(evoLedger.KIND.ALERT, {
+        kind: 'patch-rejected',
+        requirementId: req.id,
+        error: e.message,
+        code: e.code,
+      });
+      return this._halt(
+        e.code === 'EVO_CONSTITUTION' ? 'constitution-violation' : 'sandbox-bypass-blocked',
+        req,
+        { reason: e.message, verdict }
+      );
     }
     if (!load.ok) {
       return this._halt('hotload-failed', req, { reason: load.error || load.reason, verdict });
     }
-    this._log(evoLedger.KIND.HOTLOAD, { requirementId: req.id, patchId: load.patchId, target: load.target });
+    this._log(evoLedger.KIND.HOTLOAD, {
+      requirementId: req.id,
+      patchId: load.patchId,
+      target: load.target,
+    });
 
     return {
       status: 'evolved',
@@ -149,21 +188,33 @@ class SelfBootstrapEngine {
     const r = this.breaker.recordPostLoadOutcome(patchId, anomaly);
     if (r.rollback) {
       const rb = this.patcher.rollback(target);
-      this._log(evoLedger.KIND.ROLLBACK, { patchId, target, anomalies: r.anomalies, restored: rb.restored });
+      this._log(evoLedger.KIND.ROLLBACK, {
+        patchId,
+        target,
+        anomalies: r.anomalies,
+        restored: rb.restored,
+      });
       return { ...r, rolledBack: rb };
     }
     return r;
   }
 
   /** 校验进化黑历史链完整性（防呆⑤）。 */
-  verifyLedger() { return this.ledger.verify({ branch: this.branch }); }
+  verifyLedger() {
+    return this.ledger.verify({ branch: this.branch });
+  }
 
   /** 读取进化黑历史（只读拷贝）。 */
-  history() { return this.ledger.read({ branch: this.branch }); }
+  history() {
+    return this.ledger.read({ branch: this.branch });
+  }
 
   _log(kind, payload) {
-    try { return this.ledger.append(kind, payload, { branch: this.branch }); }
-    catch { return { ok: false }; }
+    try {
+      return this.ledger.append(kind, payload, { branch: this.branch });
+    } catch {
+      return { ok: false };
+    }
   }
 
   _halt(status, requirement, extra) {

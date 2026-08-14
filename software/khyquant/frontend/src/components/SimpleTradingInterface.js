@@ -1539,8 +1539,6 @@ export default {
 
           clearTimeout(timeoutId)
 
-          clearTimeout(timeoutId)
-
         
 
           if (response.ok) {

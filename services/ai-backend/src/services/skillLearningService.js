@@ -28,18 +28,33 @@ const DISCOVERY_SOURCES = [
   // npm packages with quant/trading keywords
   { type: 'npm', keywords: ['quant', 'trading', 'backtest', 'technical-analysis', 'stock-market'] },
   // GitHub topics
-  { type: 'github', topics: ['quantitative-finance', 'algorithmic-trading', 'technical-indicators', 'stock-analysis'] },
+  {
+    type: 'github',
+    topics: [
+      'quantitative-finance',
+      'algorithmic-trading',
+      'technical-indicators',
+      'stock-analysis',
+    ],
+  },
   // Known high-quality projects to learn from
-  { type: 'curated', projects: [
-    { name: 'technicalindicators', source: 'npm', description: 'Technical indicators (RSI, MACD, Bollinger, etc.)' },
-    { name: 'tulind', source: 'npm', description: 'Technical analysis indicator library' },
-    { name: 'ta-lib', source: 'npm', description: 'TA-Lib wrapper for Node.js' },
-    { name: 'backtrader', source: 'pip', description: 'Python backtesting framework' },
-    { name: 'zipline', source: 'pip', description: 'Algorithmic trading library' },
-    { name: 'ccxt', source: 'npm', description: 'Crypto exchange trading library' },
-    { name: 'pandas-ta', source: 'pip', description: 'Technical analysis for pandas' },
-    { name: 'quantlib', source: 'pip', description: 'Quantitative finance library' },
-  ]},
+  {
+    type: 'curated',
+    projects: [
+      {
+        name: 'technicalindicators',
+        source: 'npm',
+        description: 'Technical indicators (RSI, MACD, Bollinger, etc.)',
+      },
+      { name: 'tulind', source: 'npm', description: 'Technical analysis indicator library' },
+      { name: 'ta-lib', source: 'npm', description: 'TA-Lib wrapper for Node.js' },
+      { name: 'backtrader', source: 'pip', description: 'Python backtesting framework' },
+      { name: 'zipline', source: 'pip', description: 'Algorithmic trading library' },
+      { name: 'ccxt', source: 'npm', description: 'Crypto exchange trading library' },
+      { name: 'pandas-ta', source: 'pip', description: 'Technical analysis for pandas' },
+      { name: 'quantlib', source: 'pip', description: 'Quantitative finance library' },
+    ],
+  },
 ];
 
 // ─── Skill Templates ────────────────────────────────────────────────────────
@@ -136,7 +151,9 @@ function recordCommandSequence(commands) {
       };
     }
     return null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -144,7 +161,7 @@ function recordCommandSequence(commands) {
  */
 function learnWorkflow(name, commands, description) {
   const id = `workflow-${crypto.randomUUID().slice(0, 8)}`;
-  const steps = commands.map(cmd => ({ command: cmd }));
+  const steps = commands.map((cmd) => ({ command: cmd }));
 
   const code = SKILL_TEMPLATES.workflow.template
     .replace(/{id}/g, id)
@@ -191,7 +208,15 @@ async function discoverFromNpm(packageName) {
 
   // Security: validate package name format (prevent require injection)
   if (!packageName || !/^[@a-z0-9][\w.\-/]*$/i.test(packageName)) {
-    return [{ name: packageName, source: 'npm', type: 'invalid', adaptable: false, error: 'Invalid package name' }];
+    return [
+      {
+        name: packageName,
+        source: 'npm',
+        type: 'invalid',
+        adaptable: false,
+        error: 'Invalid package name',
+      },
+    ];
   }
 
   try {
@@ -296,7 +321,7 @@ async function learnFromGitHub(repoUrl, options = {}) {
  */
 function adaptSkill(sourceSkillId, targetContext, adaptations) {
   const learned = _loadLearnedSkills();
-  const source = learned.find(s => s.id === sourceSkillId);
+  const source = learned.find((s) => s.id === sourceSkillId);
   if (!source) return { success: false, error: 'Source skill not found' };
 
   const newId = `adapted-${crypto.randomUUID().slice(0, 8)}`;
@@ -367,7 +392,9 @@ function getSuggestedLearning() {
         }
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return suggestions;
 }
@@ -391,7 +418,9 @@ function getLearningStats() {
     byCategory: _groupBy(skills, 'category'),
     bySource: _groupBy(skills, 'source'),
     patternCount: Object.keys(patterns.sequences || {}).length,
-    suggestedWorkflows: Object.values(patterns.sequences || {}).filter(s => s.suggestSkill && !s.learned).length,
+    suggestedWorkflows: Object.values(patterns.sequences || {}).filter(
+      (s) => s.suggestSkill && !s.learned
+    ).length,
     discoverySources: DISCOVERY_SOURCES.length,
   };
 }
@@ -401,7 +430,7 @@ function getLearningStats() {
  */
 function forgetSkill(skillId) {
   const skills = _loadLearnedSkills();
-  const idx = skills.findIndex(s => s.id === skillId);
+  const idx = skills.findIndex((s) => s.id === skillId);
   if (idx === -1) return false;
 
   const skill = skills[idx];
@@ -422,7 +451,9 @@ function _loadLearnedSkills() {
     if (fs.existsSync(LEARNED_FILE)) {
       return JSON.parse(fs.readFileSync(LEARNED_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 
@@ -431,13 +462,15 @@ function _saveLearnedSkills(skills) {
     const dir = path.dirname(LEARNED_FILE);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(LEARNED_FILE, JSON.stringify(skills, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function _recordLearnedSkill(skill) {
   const skills = _loadLearnedSkills();
   // Avoid duplicates
-  if (!skills.find(s => s.id === skill.id)) {
+  if (!skills.find((s) => s.id === skill.id)) {
     skills.push(skill);
     _saveLearnedSkills(skills);
   }
@@ -448,7 +481,9 @@ function _loadPatterns() {
     if (fs.existsSync(PATTERNS_FILE)) {
       return JSON.parse(fs.readFileSync(PATTERNS_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { sequences: {} };
 }
 
@@ -457,12 +492,14 @@ function _savePatterns(patterns) {
     const dir = path.dirname(PATTERNS_FILE);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(PATTERNS_FILE, JSON.stringify(patterns, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function _hasSkillCategory(category) {
   const skills = _loadLearnedSkills();
-  return skills.some(s => s.category === category);
+  return skills.some((s) => s.category === category);
 }
 
 function _groupBy(arr, key) {

@@ -15,23 +15,23 @@
 'use strict';
 
 const chalk = require('chalk').default || require('chalk');
-const {
-  printError, printWarn, printInfo, printSuccess, printTable,
-} = require('../formatters');
-
-const sessionPersistence = require('../../services/sessionPersistence');
-const replayLedger = require('../../services/trajectoryReplay/replayLedger');
-const replayBundle = require('../../services/trajectoryReplay/replayBundle');
-const mapAuthor = require('../../services/trajectoryGuide/mapAuthor');
-const mapStore = require('../../services/trajectoryGuide/mapStore');
-const mapExport = require('../../services/trajectoryGuide/mapExport');
-const trajectoryGuideConfig = require('../../services/trajectoryGuide/config');
-// Model-name SSOT: strongest-known model fallback flows from constants/models.js.
 const { PRIMARY: MODELS } = require('../../constants/models');
+const sessionPersistence = require('../../services/sessionPersistence');
+const trajectoryGuideConfig = require('../../services/trajectoryGuide/config');
+const mapAuthor = require('../../services/trajectoryGuide/mapAuthor');
+const mapExport = require('../../services/trajectoryGuide/mapExport');
+const mapStore = require('../../services/trajectoryGuide/mapStore');
+const replayBundle = require('../../services/trajectoryReplay/replayBundle');
+const replayLedger = require('../../services/trajectoryReplay/replayLedger');
+const { printError, printWarn, printInfo, printSuccess, printTable } = require('../formatters');
+
+// Model-name SSOT: strongest-known model fallback flows from constants/models.js.
 
 /** 解析目标 sessionId：显式参数优先，否则取最近一条会话。 */
 function resolveSessionId(arg) {
-  if (arg) return String(arg);
+  if (arg) {
+    return String(arg);
+  }
   const sessions = sessionPersistence.listPersistedSessions({ limit: 1 });
   return sessions.length ? sessions[0].sessionId : null;
 }
@@ -90,7 +90,9 @@ function guideMap(arg, options = {}) {
   const m = result.map;
   console.log(`\n  ${chalk.cyan.bold('地图模板已蒸馏')}  ${chalk.dim(m.id)}\n`);
   printInfo(`任务: ${m.task}`);
-  printInfo(`步骤: ${m.steps.length}  质量分: ${chalk.green(String(m.qualityScore))}  作者: ${m.createdBy} (${m.createdTier})`);
+  printInfo(
+    `步骤: ${m.steps.length}  质量分: ${chalk.green(String(m.qualityScore))}  作者: ${m.createdBy} (${m.createdTier})`
+  );
   printInfo(`已存: ${file}`);
   printSuccess(`导出为技能: khy guide export ${m.id}`);
 }
@@ -136,7 +138,7 @@ function guideList() {
       (m.task || '(untitled)').slice(0, 36),
       String((m.steps || []).length),
       chalk.green(String(m.qualityScore == null ? '?' : m.qualityScore)),
-      (m.createdBy || '?'),
+      m.createdBy || '?',
     ]);
   console.log(`\n  ${chalk.cyan.bold('地图模板')}\n`);
   printTable(['地图 ID', '任务', '步数', '质量分', '作者模型'], rows);
@@ -149,9 +151,15 @@ function guideList() {
 async function handleGuide(subCommand, args = [], options = {}) {
   const sub = String(subCommand || 'list').toLowerCase();
 
-  if (sub === 'map') return guideMap(args[0], options);
-  if (sub === 'export') return guideExport(args[0], options);
-  if (sub === 'list') return guideList();
+  if (sub === 'map') {
+    return guideMap(args[0], options);
+  }
+  if (sub === 'export') {
+    return guideExport(args[0], options);
+  }
+  if (sub === 'list') {
+    return guideList();
+  }
 
   printError(`未知子命令: ${sub}`);
   printInfo('可用: map | export | list');

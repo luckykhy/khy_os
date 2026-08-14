@@ -30,20 +30,30 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_ALWAYS_ALLOW_LABEL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // 与 permissionDialog.js::formatToolContent 同口径的名称归一(小写 + 去空白/下划线/连字符)。
 function _normalize(toolName) {
-  return String(toolName == null ? '' : toolName).toLowerCase().replace(/[\s_-]/g, '');
+  return String(toolName == null ? '' : toolName)
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 // 写/编辑族(改文件):对齐 CC FilePermissionDialog 的 "allow all edits"。
 const WRITE_EDIT = new Set([
-  'write', 'writefile', 'createfile',
-  'edit', 'editfile', 'multiedit', 'notebookedit',
-  'scaffold', 'scaffoldfiles',
+  'write',
+  'writefile',
+  'createfile',
+  'edit',
+  'editfile',
+  'multiedit',
+  'notebookedit',
+  'scaffold',
+  'scaffoldfiles',
 ]);
 
 // bash/命令族:对齐 CC BashPermissionRequest(khy 用真实通用措辞,不臆造命令前缀)。
@@ -59,7 +69,9 @@ const BASH = new Set(['bash', 'shellcommand', 'command']);
  * @returns {string}
  */
 function buildAlwaysAllowLabelOr(toolName, legacyLabel, env = process.env) {
-  if (!isEnabled(env)) return legacyLabel;
+  if (!isEnabled(env)) {
+    return legacyLabel;
+  }
   const name = _normalize(toolName);
   if (WRITE_EDIT.has(name)) {
     return 'Yes, allow all edits in {project} from this project';

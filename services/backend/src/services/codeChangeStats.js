@@ -37,7 +37,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_CODE_CHANGES 默认开;{0,false,off,no} 关。 */
 function codeChangesEnabled(env = process.env) {
   const raw = env && env.KHY_CODE_CHANGES;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -49,7 +51,9 @@ function _num(v) {
 
 /** 字符串行数(空串 → 0)。 */
 function _lineCount(s) {
-  if (typeof s !== 'string' || s === '') return 0;
+  if (typeof s !== 'string' || s === '') {
+    return 0;
+  }
   return s.split('\n').length;
 }
 
@@ -73,16 +77,24 @@ function countEditChurn(oldString, newString) {
 
 /** 归一工具名:小写并去空白/下划线/连字符(与 _buildDeliverySummary 同口径)。 */
 function _normTool(tool) {
-  return String(tool || '').toLowerCase().replace(/[\s_-]/g, '');
+  return String(tool || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 /** 该日志条目是否算「成功且真实」的一次工具调用(去重/循环拦截/显式失败 → 否)。 */
 function _isSuccessfulReal(entry) {
   const r = entry && entry.result;
-  if (r && (r._deduped || r._loopDetected)) return false;
+  if (r && (r._deduped || r._loopDetected)) {
+    return false;
+  }
   // success 缺省视为成功(与 _buildDeliverySummary `success !== false` 同口径)。
-  if (r && r.success === false) return false;
-  if (entry && entry.success === false) return false;
+  if (r && r.success === false) {
+    return false;
+  }
+  if (entry && entry.success === false) {
+    return false;
+  }
   return true;
 }
 
@@ -102,28 +114,42 @@ function collectUncountedChurn(toolCallLog) {
   let added = 0;
   let removed = 0;
   try {
-    if (!Array.isArray(toolCallLog)) return { added: 0, removed: 0, counted };
+    if (!Array.isArray(toolCallLog)) {
+      return { added: 0, removed: 0, counted };
+    }
     for (const entry of toolCallLog) {
-      if (!entry || typeof entry !== 'object') continue;
-      if (entry._khyChurnCounted) continue;
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+      if (entry._khyChurnCounted) {
+        continue;
+      }
       const tool = _normTool(entry.tool);
       const isEdit = /^(edit|editfile|fileedit)$/.test(tool);
       const isWrite = /^(write|writefile|createfile)$/.test(tool);
-      if (!isEdit && !isWrite) continue;      // 非改动工具:不打标、不计,留待后续判断
-      if (!_isSuccessfulReal(entry)) { counted.push(entry); continue; } // 失败:打标消费但不计
+      if (!isEdit && !isWrite) {
+        continue;
+      } // 非改动工具:不打标、不计,留待后续判断
+      if (!_isSuccessfulReal(entry)) {
+        counted.push(entry);
+        continue;
+      } // 失败:打标消费但不计
       const params = entry.params || {};
       if (isEdit) {
         const churn = countEditChurn(
           params.old_string || params.oldString || '',
-          params.new_string || params.newString || '',
+          params.new_string || params.newString || ''
         );
         added += churn.added;
         removed += churn.removed;
       } else {
         const diff = entry.result && entry.result._khyWriteDiff;
-        const after = diff && typeof diff.afterContent === 'string'
-          ? diff.afterContent
-          : (typeof params.content === 'string' ? params.content : '');
+        const after =
+          diff && typeof diff.afterContent === 'string'
+            ? diff.afterContent
+            : typeof params.content === 'string'
+              ? params.content
+              : '';
         added += _lineCount(after);
         // 覆盖写只增不减(见文件头诚实边界)。
       }
@@ -144,7 +170,9 @@ function collectUncountedChurn(toolCallLog) {
 function buildCodeChangesValue(added, removed) {
   const a = _num(added);
   const r = _num(removed);
-  if (a <= 0 && r <= 0) return '';
+  if (a <= 0 && r <= 0) {
+    return '';
+  }
   return `${a.toLocaleString('en-US')} 行新增 · ${r.toLocaleString('en-US')} 行删除`;
 }
 

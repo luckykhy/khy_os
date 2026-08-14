@@ -42,7 +42,9 @@ const DEFAULTS = {
 
 function _envInt(name, fallback) {
   const raw = process.env[name];
-  if (raw == null || raw === '') return fallback;
+  if (raw == null || raw === '') {
+    return fallback;
+  }
   const n = Number.parseInt(String(raw), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -50,7 +52,9 @@ function _envInt(name, fallback) {
 /** Whether the live guard is enabled (default on; KHY_STREAM_REPETITION_GUARD=0 disables). */
 function isEnabled() {
   const raw = process.env.KHY_STREAM_REPETITION_GUARD;
-  if (raw == null || raw === '') return true;
+  if (raw == null || raw === '') {
+    return true;
+  }
   return !/^(0|false|off|no)$/i.test(String(raw).trim());
 }
 
@@ -84,7 +88,9 @@ function findRepetition(text, opts = {}) {
   const cfg = { ...resolveConfig(), ...opts };
   const s = typeof text === 'string' ? text : '';
   const len = s.length;
-  if (len < cfg.minRunChars) return { tripped: false };
+  if (len < cfg.minRunChars) {
+    return { tripped: false };
+  }
 
   const maxUnit = Math.min(cfg.maxUnit, Math.floor(len / 2));
 
@@ -121,7 +127,9 @@ function findRepetition(text, opts = {}) {
  * and stop re-prompting (mirrors the refusal-repeat break).
  */
 function repetitionSignature(result) {
-  if (!result || !result.tripped) return null;
+  if (!result || !result.tripped) {
+    return null;
+  }
   return `rep:${result.unitLength}:${String(result.unit || '').slice(0, 16)}`;
 }
 
@@ -140,18 +148,26 @@ function create(opts = {}) {
     config: cfg,
     /** Append a streamed text fragment. */
     push(text) {
-      if (typeof text !== 'string' || text.length === 0) return;
+      if (typeof text !== 'string' || text.length === 0) {
+        return;
+      }
       buf += text;
-      if (buf.length > cfg.maxBuffer) buf = buf.slice(buf.length - cfg.maxBuffer);
+      if (buf.length > cfg.maxBuffer) {
+        buf = buf.slice(buf.length - cfg.maxBuffer);
+      }
     },
     /**
      * @returns {{ tripped: boolean, ... }} the (cached) detector result over the
      *   accumulated tail buffer. Once tripped, stays tripped.
      */
     inspect() {
-      if (tripped) return tripped;
+      if (tripped) {
+        return tripped;
+      }
       const r = findRepetition(buf, cfg);
-      if (r.tripped) tripped = r;
+      if (r.tripped) {
+        tripped = r;
+      }
       return r;
     },
     /** True once a degeneration has been detected this round. */

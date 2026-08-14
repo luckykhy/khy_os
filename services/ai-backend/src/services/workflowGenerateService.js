@@ -49,7 +49,9 @@ const SYSTEM_PROMPT = [
  * @returns {{baseUrl:string, keyField:string, defaultModel:string}|null}
  */
 function _presetForProvider(provider) {
-  const id = String(provider || '').trim().toLowerCase();
+  const id = String(provider || '')
+    .trim()
+    .toLowerCase();
   if (!id) return null;
   try {
     // eslint-disable-next-line global-require
@@ -139,9 +141,14 @@ function _firstRelayApiKey(raw) {
           return String(item.key).trim();
         }
       }
-    } catch { /* not JSON — fall through to delimiter split */ }
+    } catch {
+      /* not JSON — fall through to delimiter split */
+    }
   }
-  const first = text.split(/[\n,;]+/g).map((s) => s.trim()).filter(Boolean)[0];
+  const first = text
+    .split(/[\n,;]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
   return first || '';
 }
 
@@ -166,10 +173,11 @@ function _resolveSystemRelay() {
   try {
     const baseUrl = String(process.env.RELAY_API_ENDPOINT || '').trim();
     if (!baseUrl) return null;
-    const field = String(process.env.RELAY_API_KEY_FIELD || '').trim().toLowerCase();
-    const apiKeyField = (field === 'x-api-key' || field === 'api-key')
-      ? field
-      : 'authorization_bearer';
+    const field = String(process.env.RELAY_API_KEY_FIELD || '')
+      .trim()
+      .toLowerCase();
+    const apiKeyField =
+      field === 'x-api-key' || field === 'api-key' ? field : 'authorization_bearer';
     return {
       baseUrl,
       apiKey: _firstRelayApiKey(process.env.RELAY_API_KEY || ''),
@@ -218,7 +226,10 @@ async function _defaultChat(upstream, messages, model) {
     validateStatus: () => true,
   });
   if (res.status >= 400) {
-    const detail = typeof res.data === 'object' ? JSON.stringify(res.data).slice(0, 300) : String(res.data || '').slice(0, 300);
+    const detail =
+      typeof res.data === 'object'
+        ? JSON.stringify(res.data).slice(0, 300)
+        : String(res.data || '').slice(0, 300);
     throw httpError(502, `Upstream model error (${res.status}): ${detail}`);
   }
   const data = res.data || {};
@@ -241,7 +252,11 @@ function extractFirstJson(text) {
   if (fence) s = fence[1].trim();
 
   // Fast path: whole string is JSON.
-  try { return JSON.parse(s); } catch { /* scan for a balanced object */ }
+  try {
+    return JSON.parse(s);
+  } catch {
+    /* scan for a balanced object */
+  }
 
   const start = s.indexOf('{');
   if (start < 0) return null;
@@ -262,7 +277,11 @@ function extractFirstJson(text) {
       depth--;
       if (depth === 0) {
         const candidate = s.slice(start, i + 1);
-        try { return JSON.parse(candidate); } catch { return null; }
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          return null;
+        }
       }
     }
   }
@@ -276,7 +295,9 @@ function _coerceGraph(parsed) {
   const nodes = Array.isArray(obj.nodes) ? obj.nodes : [];
   const connections = Array.isArray(obj.connections)
     ? obj.connections
-    : (Array.isArray(obj.edges) ? obj.edges : []);
+    : Array.isArray(obj.edges)
+      ? obj.edges
+      : [];
   return {
     name: typeof obj.name === 'string' ? obj.name : '',
     description: typeof obj.description === 'string' ? obj.description : '',
@@ -285,9 +306,10 @@ function _coerceGraph(parsed) {
         id: String(n && n.id != null ? n.id : `n${i + 1}`),
         type: n && n.type,
         name: n && (n.name || n.label) ? String(n.name || n.label) : (n && n.type) || 'node',
-        position: n && n.position && typeof n.position === 'object'
-          ? { x: Number(n.position.x) || 0, y: Number(n.position.y) || 0 }
-          : { x: 0, y: 0 },
+        position:
+          n && n.position && typeof n.position === 'object'
+            ? { x: Number(n.position.x) || 0, y: Number(n.position.y) || 0 }
+            : { x: 0, y: 0 },
         data: n && n.data && typeof n.data === 'object' ? n.data : {},
       })),
       connections: connections.map((c, i) => ({
@@ -331,7 +353,10 @@ function autoLayout(graph) {
 
   const level = new Map();
   const queue = [];
-  for (const id of seeds) { level.set(id, 0); queue.push(id); }
+  for (const id of seeds) {
+    level.set(id, 0);
+    queue.push(id);
+  }
   while (queue.length) {
     const id = queue.shift();
     const lv = level.get(id) || 0;
@@ -384,10 +409,10 @@ async function generate(userId, opts = {}) {
     if (!upstream) {
       throw httpError(
         409,
-        '尚未配置 AI 上游：请到「我的网关」填写中转(Relay)或添加一个带 Key 的供应商，'
-          + '或由管理员在全局网关(RELAY_API_ENDPOINT)配置后再生成工作流。'
-          + ' (No AI upstream configured — set up your relay / add a provider key in 我的网关,'
-          + ' or configure the global gateway, first.)',
+        '尚未配置 AI 上游：请到「我的网关」填写中转(Relay)或添加一个带 Key 的供应商，' +
+          '或由管理员在全局网关(RELAY_API_ENDPOINT)配置后再生成工作流。' +
+          ' (No AI upstream configured — set up your relay / add a provider key in 我的网关,' +
+          ' or configure the global gateway, first.)'
       );
     }
     model = model || upstream.model;
@@ -453,7 +478,11 @@ async function generate(userId, opts = {}) {
   };
 
   if (opts.persist) {
-    const workflow = await workflowService.create(userId, { name, description, graph: coerced.graph });
+    const workflow = await workflowService.create(userId, {
+      name,
+      description,
+      graph: coerced.graph,
+    });
     return { graph: coerced.graph, name, description, report, workflow };
   }
 

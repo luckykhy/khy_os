@@ -17,22 +17,40 @@
  *
  * @module services/proxy/proxyCoreManager
  */
-const path = require('path');
 const os = require('os');
+const path = require('path');
+
+const { isFlagEnabled } = require('../flagRegistry');
 
 const configGen = require('./proxyCoreConfigGen');
-const { isFlagEnabled } = require('../flagRegistry');
 
 const FLAG = 'KHY_PROXY_CORE';
 const AUTO_INSTALL_FLAG = 'KHY_PROXY_CORE_AUTO_INSTALL';
 // 「内核去哪下」指引门(default-on):core-missing 指引与 getStatus 附上确切官方下载 URL。
 // 关此门 → 逐字节回退到旧的「请下载 mihomo 放到 …/bin/」无 URL 文案(向后兼容)。
 const DOWNLOAD_HINT_FLAG = 'KHY_PROXY_CORE_DOWNLOAD_HINT';
-const KHY_DIR = path.join(os.homedir(), '.khyquant');
-const BIN_DIR = path.join(KHY_DIR, 'bin');
+// Lazily resolve the app home (portable-aware); fallback to legacy path.
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _khyDir() {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _binDir() {
+  return path.join(_khyDir(), 'bin');
+}
 const BINARY_NAME = process.platform === 'win32' ? 'mihomo.exe' : 'mihomo';
-const BINARY_PATH = path.join(BIN_DIR, BINARY_NAME);
-const CONFIG_PATH = path.join(KHY_DIR, 'proxy-core.yaml');
+function _binaryFullPath() {
+  return path.join(_binDir(), BINARY_NAME);
+}
+
+function _coreConfigPath() {
+  return path.join(_khyDir(), 'proxy-core.yaml');
+}
 const DEFAULT_MIXED_PORT = 7899;
 const STARTUP_TIMEOUT_MS = 10000;
 // mihomo 启动成功时 stdout/stderr 常见握手片段(不同版本措辞略异,取交集关键字)。
@@ -62,7 +80,9 @@ function _setDeps(overrides = {}) {
     _deps[k] = overrides[k];
   }
   return function restore() {
-    for (const k of Object.keys(prev)) _deps[k] = prev[k];
+    for (const k of Object.keys(prev)) {
+      _deps[k] = prev[k];
+    }
   };
 }
 
@@ -72,12 +92,23 @@ let _activeNodeName = '';
 
 // ── 极简 YAML 序列化(仅覆盖 mihomo 配置用到的形状:标量/数组/对象嵌套)────────────
 function _yamlScalar(v) {
-  if (v === null || v === undefined) return 'null';
-  if (typeof v === 'boolean') return v ? 'true' : 'false';
-  if (typeof v === 'number') return String(v);
+  if (v === null || v === undefined) {
+    return 'null';
+  }
+  if (typeof v === 'boolean') {
+    return v ? 'true' : 'false';
+  }
+  if (typeof v === 'number') {
+    return String(v);
+  }
   const s = String(v);
   // 含特殊字符/前后空格/看起来像数字或布尔 → 加引号。
-  if (s === '' || /[:#{}\[\],&*?|<>=!%@`"']/.test(s) || /^\s|\s$/.test(s) || /^(true|false|null|~|\d)/.test(s)) {
+  if (
+    s === '' ||
+    /[:#{}\[\],&*?|<>=!%@`"']/.test(s) ||
+    /^\s|\s$/.test(s) ||
+    /^(true|false|null|~|\d)/.test(s)
+  ) {
     return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   }
   return s;
@@ -138,7 +169,7 @@ function _autoInstallEnabled(env) {
 
 function isBinaryInstalled() {
   try {
-    _deps.fs.accessSync(BINARY_PATH, _deps.fs.constants.X_OK);
+    _deps.fs.accessSync(_binaryFullPath(), _deps.fs.constants.X_OK);
     return true;
   } catch {
     return false;
@@ -146,7 +177,7 @@ function isBinaryInstalled() {
 }
 
 function getBinaryPath() {
-  return BINARY_PATH;
+  return _binaryFullPath();
 }
 
 function isRunning() {
@@ -169,7 +200,9 @@ function _downloadHintEnabled(env) {
  * 门关 → null(调用方回退旧行为);installer 异常 → null(诊断路径永不因取指引崩)。
  */
 function _coreDownload(env) {
-  if (!_downloadHintEnabled(env)) return null;
+  if (!_downloadHintEnabled(env)) {
+    return null;
+  }
   try {
     return _deps.installer.describeCoreDownload();
   } catch {
@@ -181,24 +214,31 @@ function _coreMissingResult(installAttempt, env) {
   const dl = _coreDownload(env);
   // 门开且平台受支持 → 指引直接给出确切官方固定 URL(用户诉求:别再让人猜去哪下);
   // 门关 / 冷门平台 → 逐字节回退到原「请下载 mihomo 放到 …/bin/」无 URL 文案。
-  const guidance = dl && dl.supported
-    ? `未找到代理内核二进制(${BINARY_PATH})。请下载 mihomo(clash-meta)内核 ${dl.version}:`
-      + `${dl.url} —— 解压出可执行文件放到 ${BIN_DIR}/ 并赋可执行权限后重试;`
-      + `或改用 http 类型节点(无需内核)、或启动本机 Clash 混合端口。`
-    : `未找到代理内核二进制(${BINARY_PATH})。请下载 mihomo(clash-meta)内核放到 `
-      + `${BIN_DIR}/ 并赋可执行权限后重试;或改用 http 类型节点(无需内核)、或启动本机 Clash 混合端口。`;
+  const guidance =
+    dl && dl.supported
+      ? `未找到代理内核二进制(${_binaryFullPath()})。请下载 mihomo(clash-meta)内核 ${dl.version}:` +
+        `${dl.url} —— 解压出可执行文件放到 ${_binDir()}/ 并赋可执行权限后重试;` +
+        `或改用 http 类型节点(无需内核)、或启动本机 Clash 混合端口。`
+      : `未找到代理内核二进制(${_binaryFullPath()})。请下载 mihomo(clash-meta)内核放到 ` +
+        `${_binDir()}/ 并赋可执行权限后重试;或改用 http 类型节点(无需内核)、或启动本机 Clash 混合端口。`;
   const result = {
     success: false,
     reason: 'core-missing',
     guidance,
   };
   // 门开时附结构化下载描述符(前端可点链接/复制路径;向后兼容:旧消费者忽略即可)。
-  if (dl) result.download = dl;
+  if (dl) {
+    result.download = dl;
+  }
   // 若本次尝试过自动安装但未成功,附上结构化诊断(不改 reason/guidance,向后兼容)。
   if (installAttempt && installAttempt.success === false) {
     result.autoInstall = { attempted: true, reason: installAttempt.reason };
-    if (installAttempt.error) result.autoInstall.error = installAttempt.error;
-    if (installAttempt.guidance) result.autoInstall.guidance = installAttempt.guidance;
+    if (installAttempt.error) {
+      result.autoInstall.error = installAttempt.error;
+    }
+    if (installAttempt.guidance) {
+      result.autoInstall.guidance = installAttempt.guidance;
+    }
   }
   return result;
 }
@@ -214,8 +254,9 @@ async function start(node, options = {}) {
     return {
       success: false,
       reason: 'disabled',
-      guidance: '代理内核出站未启用。设置环境变量 KHY_PROXY_CORE=1 开启后重试'
-        + '(raw 协议节点需本机内核承载)。',
+      guidance:
+        '代理内核出站未启用。设置环境变量 KHY_PROXY_CORE=1 开启后重试' +
+        '(raw 协议节点需本机内核承载)。',
     };
   }
   if (_process) {
@@ -223,9 +264,10 @@ async function start(node, options = {}) {
     await stop();
   }
 
-  const mixedPort = Number.parseInt(options.mixedPort, 10) > 0
-    ? Number.parseInt(options.mixedPort, 10)
-    : DEFAULT_MIXED_PORT;
+  const mixedPort =
+    Number.parseInt(options.mixedPort, 10) > 0
+      ? Number.parseInt(options.mixedPort, 10)
+      : DEFAULT_MIXED_PORT;
 
   const built = configGen.buildMihomoConfig(node, { mixedPort });
   if (!built.ok) {
@@ -242,7 +284,11 @@ async function start(node, options = {}) {
       try {
         installAttempt = await _deps.installer.install({ env: options.env });
       } catch (err) {
-        installAttempt = { success: false, reason: 'install-threw', error: err && err.message ? err.message : String(err) };
+        installAttempt = {
+          success: false,
+          reason: 'install-threw',
+          error: err && err.message ? err.message : String(err),
+        };
       }
     }
     if (!isBinaryInstalled()) {
@@ -252,20 +298,31 @@ async function start(node, options = {}) {
 
   // 写配置到盘(mihomo -f <yaml> -d <dir>)。
   try {
-    _deps.fs.mkdirSync(KHY_DIR, { recursive: true });
-    _deps.fs.writeFileSync(CONFIG_PATH, _deps.dumpYaml(built.config));
+    _deps.fs.mkdirSync(_khyDir(), { recursive: true });
+    _deps.fs.writeFileSync(_coreConfigPath(), _deps.dumpYaml(built.config));
   } catch (err) {
-    return { success: false, reason: 'config-write-failed', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      reason: 'config-write-failed',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 
   return new Promise((resolve) => {
     let settled = false;
-    const args = ['-f', CONFIG_PATH, '-d', KHY_DIR];
+    const args = ['-f', _coreConfigPath(), '-d', _khyDir()];
     let child;
     try {
-      child = _deps.spawn(BINARY_PATH, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: false });
+      child = _deps.spawn(_binaryFullPath(), args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+      });
     } catch (err) {
-      resolve({ success: false, reason: 'spawn-failed', error: err && err.message ? err.message : String(err) });
+      resolve({
+        success: false,
+        reason: 'spawn-failed',
+        error: err && err.message ? err.message : String(err),
+      });
       return;
     }
     _process = child;
@@ -274,12 +331,18 @@ async function start(node, options = {}) {
       if (!settled) {
         settled = true;
         stop();
-        resolve({ success: false, reason: 'startup-timeout', error: `内核启动超时(${STARTUP_TIMEOUT_MS}ms)` });
+        resolve({
+          success: false,
+          reason: 'startup-timeout',
+          error: `内核启动超时(${STARTUP_TIMEOUT_MS}ms)`,
+        });
       }
     }, STARTUP_TIMEOUT_MS);
 
     const onReady = () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       _deps.clearTimeout(timeout);
       _activeMixedPort = mixedPort;
@@ -289,11 +352,17 @@ async function start(node, options = {}) {
 
     const scan = (buf) => {
       const msg = String(buf || '').toLowerCase();
-      if (READY_MARKERS.some((m) => msg.includes(m))) onReady();
+      if (READY_MARKERS.some((m) => msg.includes(m))) {
+        onReady();
+      }
     };
 
-    if (child.stdout && child.stdout.on) child.stdout.on('data', scan);
-    if (child.stderr && child.stderr.on) child.stderr.on('data', scan);
+    if (child.stdout && child.stdout.on) {
+      child.stdout.on('data', scan);
+    }
+    if (child.stderr && child.stderr.on) {
+      child.stderr.on('data', scan);
+    }
 
     child.on('exit', (code) => {
       _process = null;
@@ -308,25 +377,40 @@ async function start(node, options = {}) {
       if (!settled) {
         settled = true;
         _deps.clearTimeout(timeout);
-        resolve({ success: false, reason: 'spawn-error', error: err && err.message ? err.message : String(err) });
+        resolve({
+          success: false,
+          reason: 'spawn-error',
+          error: err && err.message ? err.message : String(err),
+        });
       }
     });
   });
 }
 
 async function stop() {
-  if (!_process) return;
+  if (!_process) {
+    return;
+  }
   const child = _process;
   try {
     _deps.safeSignal(child, 'SIGTERM');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   await new Promise((resolve) => {
     const t = _deps.setTimeout(() => {
-      try { _deps.safeKill(child, 'SIGKILL'); } catch { /* ignore */ }
+      try {
+        _deps.safeKill(child, 'SIGKILL');
+      } catch {
+        /* ignore */
+      }
       resolve();
     }, 3000);
     if (child && child.on) {
-      child.on('exit', () => { _deps.clearTimeout(t); resolve(); });
+      child.on('exit', () => {
+        _deps.clearTimeout(t);
+        resolve();
+      });
     } else {
       _deps.clearTimeout(t);
       resolve();
@@ -339,14 +423,20 @@ async function stop() {
 
 function health() {
   return new Promise((resolve) => {
-    if (!_activeMixedPort) { resolve({ alive: false, port: 0 }); return; }
+    if (!_activeMixedPort) {
+      resolve({ alive: false, port: 0 });
+      return;
+    }
     const port = _activeMixedPort;
     const socket = _deps.net.createConnection({ host: '127.0.0.1', port }, () => {
       socket.destroy();
       resolve({ alive: true, port });
     });
     socket.on('error', () => resolve({ alive: false, port }));
-    socket.setTimeout(2000, () => { socket.destroy(); resolve({ alive: false, port }); });
+    socket.setTimeout(2000, () => {
+      socket.destroy();
+      resolve({ alive: false, port });
+    });
   });
 }
 
@@ -355,7 +445,7 @@ function getStatus(env) {
     running: isRunning(),
     enabled: isEnabled(env),
     binaryInstalled: isBinaryInstalled(),
-    binaryPath: BINARY_PATH,
+    binaryPath: _binaryFullPath(),
     mixedPort: _activeMixedPort || null,
     activeNodeName: _activeNodeName || '',
     pid: _process && _process.pid ? _process.pid : null,
@@ -374,10 +464,23 @@ module.exports = {
   isBinaryInstalled,
   getBinaryPath,
   getStatus,
-  BINARY_PATH,
-  CONFIG_PATH,
   DEFAULT_MIXED_PORT,
   FLAG,
   _setDeps,
   _dumpYaml,
 };
+
+// Lazy getters keep destructured requires working while resolving the
+// portable-aware locations at access time (not at require time).
+Object.defineProperty(module.exports, 'BINARY_PATH', {
+  enumerable: true,
+  get() {
+    return _binaryFullPath();
+  },
+});
+Object.defineProperty(module.exports, 'CONFIG_PATH', {
+  enumerable: true,
+  get() {
+    return _coreConfigPath();
+  },
+});

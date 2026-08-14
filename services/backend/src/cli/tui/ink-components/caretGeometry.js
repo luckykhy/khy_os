@@ -38,19 +38,30 @@ function _defaultMeasure(s) {
  * @returns {{ col:number, rowIndex:number }}
  */
 function caretColumn(rows, opts = {}) {
-  const measure = (opts && typeof opts.measure === 'function') ? opts.measure : _defaultMeasure;
+  const measure = opts && typeof opts.measure === 'function' ? opts.measure : _defaultMeasure;
   const fallback = { col: MARKER_W, rowIndex: -1 };
-  if (!Array.isArray(rows)) return fallback;
+  if (!Array.isArray(rows)) {
+    return fallback;
+  }
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.kind !== 'line') continue;
-    if (row.caretCol == null) continue;
+    if (!row || row.kind !== 'line') {
+      continue;
+    }
+    if (row.caretCol == null) {
+      continue;
+    }
     const text = String(row.text == null ? '' : row.text);
     const col = Math.max(0, Number(row.caretCol) || 0);
     let width;
-    try { width = Number(measure(text.slice(0, col))); }
-    catch { width = text.slice(0, col).length; }
-    if (!Number.isFinite(width) || width < 0) width = 0;
+    try {
+      width = Number(measure(text.slice(0, col)));
+    } catch {
+      width = text.slice(0, col).length;
+    }
+    if (!Number.isFinite(width) || width < 0) {
+      width = 0;
+    }
     return { col: MARKER_W + width, rowIndex: i };
   }
   return fallback;
@@ -68,15 +79,21 @@ function clampColumn(col, cols, minMenuWidth) {
   const c = Number(col);
   const w = Number(cols);
   const m = Number(minMenuWidth);
-  if (!Number.isFinite(c) || c <= 0) return 0;
-  if (!Number.isFinite(w) || w <= 0) return 0;
+  if (!Number.isFinite(c) || c <= 0) {
+    return 0;
+  }
+  if (!Number.isFinite(w) || w <= 0) {
+    return 0;
+  }
   const room = w - (Number.isFinite(m) && m > 0 ? m : 0);
   return Math.max(0, Math.min(Math.floor(c), Math.floor(room)));
 }
 
 /** 门控判定:显式 falsy(0/false/off/no,大小写/空白不敏感)→ false;其余(含 unset)→ true。 */
 function _flagOn(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 

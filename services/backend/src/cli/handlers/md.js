@@ -19,16 +19,19 @@
  * 全程 fail-soft：脚本缺失/平台不支持/桥接器异常都只提示，绝不抛、绝不 500。
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 function fmt() {
   return require('../formatters');
 }
 
 function flagOn(name) {
-  try { return require('../../services/flagRegistry').isFlagEnabled(name); }
-  catch (_) { return true; } // 保守：注册表不可用时视为开（default-on 语义）。
+  try {
+    return require('../../services/flagRegistry').isFlagEnabled(name);
+  } catch (_) {
+    return true;
+  } // 保守：注册表不可用时视为开（default-on 语义）。
 }
 
 /**
@@ -38,13 +41,21 @@ function flagOn(name) {
 function resolveToolsDir() {
   const candidates = [];
   const envDir = process.env.KHY_MD_TOOLS_DIR;
-  if (envDir) candidates.push(envDir);
+  if (envDir) {
+    candidates.push(envDir);
+  }
   // handlers → cli → src → backend → services → <root> → tools/khyos-markdown
   candidates.push(path.resolve(__dirname, '..', '..', '..', '..', '..', 'tools', 'khyos-markdown'));
   // 兜底：再上溯一层（防个别打包层级差异）。
-  candidates.push(path.resolve(__dirname, '..', '..', '..', '..', '..', '..', 'tools', 'khyos-markdown'));
+  candidates.push(
+    path.resolve(__dirname, '..', '..', '..', '..', '..', '..', 'tools', 'khyos-markdown')
+  );
   for (const c of candidates) {
-    try { if (fs.existsSync(path.join(c, 'khyos-md-bridge.js'))) return c; } catch (_) {}
+    try {
+      if (fs.existsSync(path.join(c, 'khyos-md-bridge.js'))) {
+        return c;
+      }
+    } catch (_) {}
   }
   return null;
 }
@@ -59,14 +70,20 @@ async function openEditor(targetPath) {
     return true;
   }
   let bridge;
-  try { bridge = require(path.join(toolsDir, 'khyos-md-bridge.js')); }
-  catch (e) { printError('加载桥接器失败：' + e.message); return true; }
+  try {
+    bridge = require(path.join(toolsDir, 'khyos-md-bridge.js'));
+  } catch (e) {
+    printError('加载桥接器失败：' + e.message);
+    return true;
+  }
 
   let abs = '';
   if (targetPath) {
     const base = process.env.KHYQUANT_CWD || process.cwd();
     abs = path.resolve(base, String(targetPath));
-    if (!fs.existsSync(abs)) printWarn('目标文件不存在，将以空白工作台打开：' + abs);
+    if (!fs.existsSync(abs)) {
+      printWarn('目标文件不存在，将以空白工作台打开：' + abs);
+    }
   }
 
   const wysiwyg = flagOn('KHY_MD_WYSIWYG');
@@ -80,21 +97,29 @@ async function openEditor(targetPath) {
     printError('启动 Markdown 工作台失败：' + e.message);
     return true;
   }
-  printSuccess('khyosMarkdown 已就绪' + (wysiwyg ? '（muya WYSIWYG）' : '（内联引擎）') + '：' + handle.url);
+  printSuccess(
+    'khyosMarkdown 已就绪' + (wysiwyg ? '（muya WYSIWYG）' : '（内联引擎）') + '：' + handle.url
+  );
 
   // REPL 内：桥接器 socket 常驻后台，直接返回不阻塞，编辑器持续可用。
-  if (process.env.KHY_REPL_ACTIVE === '1') return true;
+  if (process.env.KHY_REPL_ACTIVE === '1') {
+    return true;
+  }
 
   // 非 REPL 单次调用：监听 socket 已保活事件循环；显式阻塞 stdin 并挂 SIGINT 清理，
   // 让用户 Ctrl+C 干净关闭。
   printInfo('编辑器运行中，按 Ctrl+C 关闭。');
   const shutdown = () => {
-    try { handle.server.close(); } catch (_) {}
+    try {
+      handle.server.close();
+    } catch (_) {}
     process.exit(0);
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-  try { process.stdin.resume(); } catch (_) {}
+  try {
+    process.stdin.resume();
+  } catch (_) {}
   // 永不 resolve 的等待：由 SIGINT/SIGTERM 结束进程。
   await new Promise(() => {});
   return true;
@@ -104,14 +129,23 @@ async function openEditor(targetPath) {
 function runRegisterScript(action) {
   const { printInfo, printError, printWarn, printSuccess } = fmt();
   const toolsDir = resolveToolsDir();
-  if (!toolsDir) { printError('未找到 tools/khyos-markdown。'); return true; }
+  if (!toolsDir) {
+    printError('未找到 tools/khyos-markdown。');
+    return true;
+  }
 
   const plat = process.platform;
   let cmd, scriptArgs, scriptFile;
   if (plat === 'win32') {
     scriptFile = action === 'register' ? 'register-windows.ps1' : 'unregister-windows.ps1';
     cmd = 'powershell';
-    scriptArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(toolsDir, scriptFile)];
+    scriptArgs = [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      path.join(toolsDir, scriptFile),
+    ];
   } else if (plat === 'linux') {
     scriptFile = action === 'register' ? 'register-linux.sh' : 'unregister-linux.sh';
     cmd = 'bash';
@@ -124,7 +158,10 @@ function runRegisterScript(action) {
   }
 
   const scriptPath = path.join(toolsDir, scriptFile);
-  if (!fs.existsSync(scriptPath)) { printError('注册脚本缺失：' + scriptPath); return true; }
+  if (!fs.existsSync(scriptPath)) {
+    printError('注册脚本缺失：' + scriptPath);
+    return true;
+  }
 
   const { spawnSync } = require('child_process');
   let r;
@@ -135,12 +172,18 @@ function runRegisterScript(action) {
     return true;
   }
   if (r && r.status === 0) {
-    printSuccess(action === 'register'
-      ? 'khyosMarkdown 已注册到系统「打开方式」——右键 .md 即可选择。'
-      : 'khyosMarkdown 关联已移除。');
+    printSuccess(
+      action === 'register'
+        ? 'khyosMarkdown 已注册到系统「打开方式」——右键 .md 即可选择。'
+        : 'khyosMarkdown 关联已移除。'
+    );
   } else {
-    printWarn((action === 'register' ? '注册' : '注销') + '脚本返回非零（status='
-      + (r ? r.status : 'n/a') + '）；请检查上方输出。');
+    printWarn(
+      (action === 'register' ? '注册' : '注销') +
+        '脚本返回非零（status=' +
+        (r ? r.status : 'n/a') +
+        '）；请检查上方输出。'
+    );
   }
   return true;
 }
@@ -167,7 +210,9 @@ async function handleMd(parsed = {}) {
     }
   }
 
-  if (sub === 'register' || sub === 'unregister') return runRegisterScript(sub);
+  if (sub === 'register' || sub === 'unregister') {
+    return runRegisterScript(sub);
+  }
 
   // --ai 选项：启用 AI 辅助写作（设置环境变量让 bridge 知道 AI 可用）
   const hasAI = rawArgs.includes('--ai') || (parsed.options && parsed.options.ai);
@@ -176,10 +221,21 @@ async function handleMd(parsed = {}) {
     // 如果 khy 后端 AI 网关已运行，传递端口
     if (!process.env.KHY_AI_GATEWAY_PORT) {
       try {
-        const configPath = path.join(require('os').homedir(), '.khyquant', 'config.json');
+        // Portable-aware app home; fallback to legacy path when unavailable.
+        let configPath;
+        try {
+          const { getAppHome } = require('../../utils/dataHome');
+          configPath = path.join(getAppHome(), 'config.json');
+        } catch {
+          configPath = path.join(require('os').homedir(), '.khyquant', 'config.json');
+        }
         const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        if (cfg.ai_gateway_port) process.env.KHY_AI_GATEWAY_PORT = String(cfg.ai_gateway_port);
-      } catch (_) { /* 配置不可用，bridge 自行降级 */ }
+        if (cfg.ai_gateway_port) {
+          process.env.KHY_AI_GATEWAY_PORT = String(cfg.ai_gateway_port);
+        }
+      } catch (_) {
+        /* 配置不可用，bridge 自行降级 */
+      }
     }
     printInfo('AI 辅助写作已启用（Ctrl+Shift+A 打开 AI 面板）');
   }

@@ -33,11 +33,21 @@ export const API_ADAPTER = 'api';
 
 /** Case-insensitive, trimmed string equality (model ids / provider names). */
 function _eq(a, b) {
-  return String(a == null ? '' : a).trim().toLowerCase()
-    === String(b == null ? '' : b).trim().toLowerCase();
+  return (
+    String(a == null ? '' : a)
+      .trim()
+      .toLowerCase() ===
+    String(b == null ? '' : b)
+      .trim()
+      .toLowerCase()
+  );
 }
-export function sameModel(a, b) { return _eq(a, b); }
-export function sameProvider(a, b) { return _eq(a, b); }
+export function sameModel(a, b) {
+  return _eq(a, b);
+}
+export function sameProvider(a, b) {
+  return _eq(a, b);
+}
 
 // ── User plane ────────────────────────────────────────────────────────────
 
@@ -51,7 +61,9 @@ export function sameProvider(a, b) { return _eq(a, b); }
 export function userEdgeRowId(edge, models) {
   if (!edge || !edge.model) return null;
   const list = Array.isArray(models) ? models : [];
-  const hit = list.find(r => r && sameProvider(r.provider, edge.provider) && sameModel(r.model, edge.model));
+  const hit = list.find(
+    (r) => r && sameProvider(r.provider, edge.provider) && sameModel(r.model, edge.model)
+  );
   return hit ? hit.id : null;
 }
 
@@ -83,7 +95,7 @@ export function ownKeyRowForGroup(groupKey, providers) {
   if (groupKey == null || groupKey === '') return null;
   const list = Array.isArray(providers) ? providers : [];
   const target = String(groupKey);
-  return list.find(p => p && p.id != null && String(p.id) === target) || null;
+  return list.find((p) => p && p.id != null && String(p.id) === target) || null;
 }
 
 /**
@@ -105,7 +117,7 @@ export function poolKeyForGroup(groupKey, pool) {
   if (!pool || typeof pool !== 'object') return null;
   const target = String(groupKey);
   for (const [provider, keys] of Object.entries(pool)) {
-    for (const k of (Array.isArray(keys) ? keys : [])) {
+    for (const k of Array.isArray(keys) ? keys : []) {
       if (k && k.keyId != null && String(k.keyId) === target) {
         return { keyId: k.keyId, keyPreview: k.keyPreview || '', label: k.label || '', provider };
       }
@@ -147,7 +159,7 @@ export function adminEdgeTarget(edge, overridesMap) {
   const qualifiedId = adminQualifiedId(edge);
   const bucket = (overridesMap && overridesMap[API_ADAPTER]) || {};
   const added = Array.isArray(bucket.added) ? bucket.added : [];
-  const custom = added.some(m => m && m.id === qualifiedId);
+  const custom = added.some((m) => m && m.id === qualifiedId);
   return { adapter: API_ADAPTER, qualifiedId, custom };
 }
 
@@ -174,7 +186,7 @@ export function applyApiOverridesToEdges(edges, overridesMap) {
   const list = Array.isArray(edges) ? edges : [];
   const bucket = (overridesMap && overridesMap[API_ADAPTER]) || {};
   const hidden = new Set((Array.isArray(bucket.hidden) ? bucket.hidden : []).map(String));
-  const renamed = (bucket.renamed && typeof bucket.renamed === 'object') ? bucket.renamed : {};
+  const renamed = bucket.renamed && typeof bucket.renamed === 'object' ? bucket.renamed : {};
   const added = Array.isArray(bucket.added) ? bucket.added : [];
   const defaultModel = bucket.defaultModel ? String(bucket.defaultModel) : '';
 
@@ -190,14 +202,14 @@ export function applyApiOverridesToEdges(edges, overridesMap) {
     const qid = adminQualifiedId(edge);
     if (hidden.has(qid)) continue; // hidden → removed from every view
     presentChatIds.add(qid);
-    const customAdded = added.some(m => m && m.id === qid);
+    const customAdded = added.some((m) => m && m.id === qid);
     out.push({
       ...edge,
       editable: true,
       qualifiedId: qid,
       custom: customAdded,
       displayName: renamed[qid] != null ? String(renamed[qid]) : edge.model,
-      isDefault: defaultModel ? (qid === defaultModel) : Boolean(edge.isDefault),
+      isDefault: defaultModel ? qid === defaultModel : Boolean(edge.isDefault),
     });
   }
 
@@ -207,13 +219,15 @@ export function applyApiOverridesToEdges(edges, overridesMap) {
     if (!a || !a.id || hidden.has(String(a.id)) || presentChatIds.has(a.id)) continue;
     const parsed = _parseQualified(a.id);
     if (!parsed) continue;
-    const sibling = out.find(e => e.source === 'chat' && sameProvider(e.provider, parsed.provider));
+    const sibling = out.find(
+      (e) => e.source === 'chat' && sameProvider(e.provider, parsed.provider)
+    );
     out.push({
       provider: parsed.provider,
       providerLabel: sibling ? sibling.providerLabel : parsed.provider,
       model: parsed.model,
       keyIds: [],
-      keyCount: sibling ? (sibling.keyCount || 0) : 0,
+      keyCount: sibling ? sibling.keyCount || 0 : 0,
       capability: sibling ? sibling.capability : 'text',
       tier: sibling ? sibling.tier : '',
       status: sibling ? sibling.status : 'active',
@@ -223,7 +237,7 @@ export function applyApiOverridesToEdges(edges, overridesMap) {
       qualifiedId: a.id,
       custom: true,
       displayName: a.name != null ? String(a.name) : parsed.model,
-      isDefault: defaultModel ? (a.id === defaultModel) : Boolean(a.isDefault),
+      isDefault: defaultModel ? a.id === defaultModel : Boolean(a.isDefault),
     });
     presentChatIds.add(a.id);
   }

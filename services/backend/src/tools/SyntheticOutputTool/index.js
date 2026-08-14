@@ -5,10 +5,15 @@ class SyntheticOutputTool extends BaseTool {
   static category = 'system';
   static risk = 'safe';
   static aliases = ['synthetic_output'];
+  static searchHint = 'inject output system message notification context 注入 系统消息 通知';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Inject synthetic output into the conversation, as if from a tool result.

@@ -26,8 +26,8 @@
  * @module services/fileSalience
  */
 
-const flagRegistry = require('./flagRegistry');
 const { applyBudget } = require('./contextScope/budgetController');
+const flagRegistry = require('./flagRegistry');
 // 注意:**不**在此 require archiveManifestPolicy —— 后者会 require 本模块,成环。
 // 字节格式化直接走 ccFormat SSOT(与 archiveManifestPolicy._formatBytes 同口径,叶子→叶子相对 require 合规)。
 
@@ -37,7 +37,9 @@ function isEnabled(env = process.env) {
     // flagRegistry 关(自门控)→ 逐字节回退:此处保守放行(默认开语义),等价于注册表未介入。
     if (!flagRegistry.isRegistryEnabled(env)) {
       const raw = env && env.KHY_FILE_SALIENCE;
-      if (raw === undefined || raw === null) return true;
+      if (raw === undefined || raw === null) {
+        return true;
+      }
       return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
     }
     return flagRegistry.isFlagEnabled('KHY_FILE_SALIENCE', env);
@@ -48,61 +50,115 @@ function isEnabled(env = process.env) {
 
 // ── 噪声目录集(与 GlobTool.SKIP_DIRS / projectMetadataService 同口径)──────────────
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', '.hg', '.svn', 'dist', 'build', '.cache',
-  '__pycache__', '.tox', '.mypy_cache', '.pytest_cache', 'coverage',
-  '.next', '.nuxt', '.output', 'vendor', 'target', 'out',
+  'node_modules',
+  '.git',
+  '.hg',
+  '.svn',
+  'dist',
+  'build',
+  '.cache',
+  '__pycache__',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  'coverage',
+  '.next',
+  '.nuxt',
+  '.output',
+  'vendor',
+  'target',
+  'out',
 ]);
 
 // ── 内在重要性权重(加法式,模仿 scopeRanker 的可解释 reasons[])──────────────────
 // query-free:不依赖任务查询,只看路径 / 文件名的内在角色。高分 → pinned 顶部。
 const WEIGHTS = Object.freeze({
-  entryPoint: 10,   // index/main/server/app/cli + 各语言 main
-  manifest: 9,      // package.json / Cargo.toml / pyproject.toml / go.mod / Dockerfile ...
-  readme: 8,        // README / LICENSE / CHANGELOG
-  config: 5,        // .env / *.config.* / *.toml / *.ya?ml / *.ini
-  shallowBonus: 3,  // 顶层文件加分(按深度线性递减)
+  entryPoint: 10, // index/main/server/app/cli + 各语言 main
+  manifest: 9, // package.json / Cargo.toml / pyproject.toml / go.mod / Dockerfile ...
+  readme: 8, // README / LICENSE / CHANGELOG
+  config: 5, // .env / *.config.* / *.toml / *.ya?ml / *.ini
+  shallowBonus: 3, // 顶层文件加分(按深度线性递减)
   // 降权(负权)
-  skipDir: -8,      // 路径含 node_modules/dist/... 噪声目录
-  lockfile: -4,     // *-lock.json / *.lock / yarn.lock
-  minified: -4,     // *.min.js / *.min.css
-  sourcemap: -3,    // *.map
+  skipDir: -8, // 路径含 node_modules/dist/... 噪声目录
+  lockfile: -4, // *-lock.json / *.lock / yarn.lock
+  minified: -4, // *.min.js / *.min.css
+  sourcemap: -3, // *.map
 });
 
 // 入口文件名单(复用 projectMetadataService._inferEntryPoints 的 candidate 口径为单一真源)。
 const _ENTRY_BASENAMES = new Set([
-  'index.js', 'index.ts', 'index.mjs', 'index.cjs', 'index.jsx', 'index.tsx', 'index.html',
-  'main.js', 'main.ts', 'main.py', 'main.go', 'main.rs',
-  'server.js', 'server.ts', 'app.js', 'app.ts', 'app.py', 'app.vue',
-  'cli.js', 'cli.ts', '__main__.py', 'lib.rs',
+  'index.js',
+  'index.ts',
+  'index.mjs',
+  'index.cjs',
+  'index.jsx',
+  'index.tsx',
+  'index.html',
+  'main.js',
+  'main.ts',
+  'main.py',
+  'main.go',
+  'main.rs',
+  'server.js',
+  'server.ts',
+  'app.js',
+  'app.ts',
+  'app.py',
+  'app.vue',
+  'cli.js',
+  'cli.ts',
+  '__main__.py',
+  'lib.rs',
 ]);
 const _MANIFEST_BASENAMES = new Set([
-  'package.json', 'cargo.toml', 'pyproject.toml', 'go.mod', 'pom.xml',
-  'dockerfile', 'makefile', 'cmakelists.txt', 'composer.json', 'gemfile',
-  'build.gradle', 'build.gradle.kts', 'requirements.txt', 'setup.py',
+  'package.json',
+  'cargo.toml',
+  'pyproject.toml',
+  'go.mod',
+  'pom.xml',
+  'dockerfile',
+  'makefile',
+  'cmakelists.txt',
+  'composer.json',
+  'gemfile',
+  'build.gradle',
+  'build.gradle.kts',
+  'requirements.txt',
+  'setup.py',
 ]);
 
 function _normalise(p) {
-  return String(p || '').replace(/\\/g, '/').replace(/^\.\//, '');
+  return String(p || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
 }
+
 function _basename(p) {
   const s = _normalise(p);
   const slash = s.lastIndexOf('/');
   return slash >= 0 ? s.slice(slash + 1) : s;
 }
+
 function _topSegment(p) {
   const s = _normalise(p);
   const slash = s.indexOf('/');
-  return slash >= 0 ? s.slice(0, slash) : '';   // '' = 根文件
+  return slash >= 0 ? s.slice(0, slash) : ''; // '' = 根文件
 }
+
 function _ext(p) {
   const base = _basename(p);
   const dot = base.lastIndexOf('.');
   return dot > 0 ? base.slice(dot).toLowerCase() : '';
 }
+
 function _depth(p) {
   const s = _normalise(p);
   let n = 0;
-  for (let i = 0; i < s.length; i += 1) if (s[i] === '/') n += 1;
+  for (let i = 0; i < s.length; i += 1) {
+    if (s[i] === '/') {
+      n += 1;
+    }
+  }
   return n;
 }
 
@@ -117,30 +173,59 @@ function scoreFile(entry) {
   const reasons = [];
   let score = 0;
   try {
-    if (!path) return { path: '', score: 0, reasons: [], size };
+    if (!path) {
+      return { path: '', score: 0, reasons: [], size };
+    }
     const base = _basename(path).toLowerCase();
     const lower = path.toLowerCase();
 
     // 加分:内在角色
-    if (_ENTRY_BASENAMES.has(base)) { score += WEIGHTS.entryPoint; reasons.push('entry-point'); }
-    if (_MANIFEST_BASENAMES.has(base)) { score += WEIGHTS.manifest; reasons.push('manifest'); }
-    if (/^(readme|license|licence|changelog)(\.|$)/.test(base)) { score += WEIGHTS.readme; reasons.push('readme/license'); }
+    if (_ENTRY_BASENAMES.has(base)) {
+      score += WEIGHTS.entryPoint;
+      reasons.push('entry-point');
+    }
+    if (_MANIFEST_BASENAMES.has(base)) {
+      score += WEIGHTS.manifest;
+      reasons.push('manifest');
+    }
+    if (/^(readme|license|licence|changelog)(\.|$)/.test(base)) {
+      score += WEIGHTS.readme;
+      reasons.push('readme/license');
+    }
     if (
-      /^\.env(\.|$)/.test(base)
-      || /\.config\./.test(base)
-      || /\.(toml|ya?ml|ini|cfg|conf|properties)$/.test(base)
-    ) { score += WEIGHTS.config; reasons.push('config'); }
+      /^\.env(\.|$)/.test(base) ||
+      /\.config\./.test(base) ||
+      /\.(toml|ya?ml|ini|cfg|conf|properties)$/.test(base)
+    ) {
+      score += WEIGHTS.config;
+      reasons.push('config');
+    }
 
     // 浅层加分(顶层 depth=0 得满,越深越少,不低于 0)
     const shallow = Math.max(0, WEIGHTS.shallowBonus - _depth(path));
-    if (shallow > 0) { score += shallow; reasons.push('shallow'); }
+    if (shallow > 0) {
+      score += shallow;
+      reasons.push('shallow');
+    }
 
     // 降权:噪声
     const segs = lower.split('/');
-    if (segs.some((s) => SKIP_DIRS.has(s))) { score += WEIGHTS.skipDir; reasons.push('skip-dir'); }
-    if (/(^|\/)([^/]*-lock\.json|[^/]*\.lock|yarn\.lock|package-lock\.json)$/.test(lower)) { score += WEIGHTS.lockfile; reasons.push('lockfile'); }
-    if (/\.min\.(js|css)$/.test(lower)) { score += WEIGHTS.minified; reasons.push('minified'); }
-    if (/\.map$/.test(lower)) { score += WEIGHTS.sourcemap; reasons.push('sourcemap'); }
+    if (segs.some((s) => SKIP_DIRS.has(s))) {
+      score += WEIGHTS.skipDir;
+      reasons.push('skip-dir');
+    }
+    if (/(^|\/)([^/]*-lock\.json|[^/]*\.lock|yarn\.lock|package-lock\.json)$/.test(lower)) {
+      score += WEIGHTS.lockfile;
+      reasons.push('lockfile');
+    }
+    if (/\.min\.(js|css)$/.test(lower)) {
+      score += WEIGHTS.minified;
+      reasons.push('minified');
+    }
+    if (/\.map$/.test(lower)) {
+      score += WEIGHTS.sourcemap;
+      reasons.push('sourcemap');
+    }
 
     return { path, score, reasons, size };
   } catch {
@@ -157,7 +242,9 @@ function _dirHotspotsEnabled(env) {
   try {
     if (!flagRegistry.isRegistryEnabled(env)) {
       const raw = env && env.KHY_DIR_HOTSPOTS;
-      if (raw === undefined || raw === null) return true;
+      if (raw === undefined || raw === null) {
+        return true;
+      }
       return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
     }
     return flagRegistry.isFlagEnabled('KHY_DIR_HOTSPOTS', env);
@@ -169,7 +256,9 @@ function _dirHotspotsEnabled(env) {
 function _parentDir(p, maxDirDepth) {
   const s = _normalise(p);
   const slash = s.lastIndexOf('/');
-  if (slash < 0) return '(根)';          // 根文件 → 归入「(根)」桶
+  if (slash < 0) {
+    return '(根)';
+  } // 根文件 → 归入「(根)」桶
   const dir = s.slice(0, slash);
   // 受深度上限 rollup:超过 maxDirDepth 段的深路径,只取前 maxDirDepth 段(把深树卷上来)。
   const segs = dir.split('/');
@@ -180,7 +269,11 @@ function _dirRollup(list, maxDirDepth, topK) {
   const agg = new Map();
   for (const e of list) {
     let dir;
-    try { dir = _parentDir((e.path || e.name), maxDirDepth); } catch { dir = '(根)'; }
+    try {
+      dir = _parentDir(e.path || e.name, maxDirDepth);
+    } catch {
+      dir = '(根)';
+    }
     const size = Number(e && e.size) || 0;
     const cur = agg.get(dir) || { dir, count: 0, totalSize: 0 };
     cur.count += 1;
@@ -189,7 +282,10 @@ function _dirRollup(list, maxDirDepth, topK) {
   }
   const arr = Array.from(agg.values());
   // 按体积降序 → 文件数降序 → 名升序(确定性)。
-  arr.sort((a, b) => (b.totalSize - a.totalSize) || (b.count - a.count) || (a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0));
+  arr.sort(
+    (a, b) =>
+      b.totalSize - a.totalSize || b.count - a.count || (a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0)
+  );
   return arr.slice(0, Math.max(1, topK || 8));
 }
 
@@ -198,12 +294,18 @@ function _groupCount(entries, keyFn, topK) {
   const counts = new Map();
   for (const e of entries) {
     let key;
-    try { key = keyFn(e); } catch { key = ''; }
-    if (key === undefined || key === null) key = '';
+    try {
+      key = keyFn(e);
+    } catch {
+      key = '';
+    }
+    if (key === undefined || key === null) {
+      key = '';
+    }
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   const arr = Array.from(counts.entries()).map(([key, count]) => ({ key, count }));
-  arr.sort((a, b) => (b.count - a.count) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  arr.sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return arr.slice(0, Math.max(1, topK || 12));
 }
 
@@ -221,13 +323,22 @@ function summarizeListing(entries, opts = {}) {
 
   // 退化形(门控关):不重排,原序取前 fallbackShown 条 —— 逐字节复现旧「原序 slice」行为。
   if (!isEnabled(env)) {
-    const shownN = Number.isFinite(opts.fallbackShown) ? Math.max(0, opts.fallbackShown) : list.length;
+    const shownN = Number.isFinite(opts.fallbackShown)
+      ? Math.max(0, opts.fallbackShown)
+      : list.length;
     const fallbackList = list.slice(0, shownN);
     return {
       enabled: false,
-      pinned: [], byDir: [], byExt: [], largest: [], dirHotspots: [],
-      total, shown: fallbackList.length, hidden: Math.max(0, total - fallbackList.length),
-      stopReason: 'disabled', fallbackList,
+      pinned: [],
+      byDir: [],
+      byExt: [],
+      largest: [],
+      dirHotspots: [],
+      total,
+      shown: fallbackList.length,
+      hidden: Math.max(0, total - fallbackList.length),
+      stopReason: 'disabled',
+      fallbackList,
     };
   }
 
@@ -238,41 +349,59 @@ function summarizeListing(entries, opts = {}) {
     const maxDirDepth = Number.isFinite(opts.maxDirDepth) ? Math.max(1, opts.maxDirDepth) : 3;
 
     // pinned:内在重要性打分 → applyBudget 充分即停(绝不选全部)。
-    const ranked = list.map(scoreFile).filter((c) => c.path)
-      .sort((a, b) => (b.score - a.score) || (a.path.length - b.path.length) || (a.path < b.path ? -1 : 1));
+    const ranked = list
+      .map(scoreFile)
+      .filter((c) => c.path)
+      .sort(
+        (a, b) => b.score - a.score || a.path.length - b.path.length || (a.path < b.path ? -1 : 1)
+      );
     const budget = applyBudget(ranked, { maxFiles: maxPinned, minFiles: 1 });
     // 只保留正分文件当「关键文件」(负/零分是噪声或普通文件,不该置顶谎报重要)。
     const pinned = budget.selected.filter((c) => c.score > 0);
 
-    const byDir = _groupCount(list, (e) => _topSegment((e.path || e.name)) || '(根)', maxGroups);
-    const byExt = _groupCount(list, (e) => _ext((e.path || e.name)) || '(无扩展名)', maxGroups);
+    const byDir = _groupCount(list, (e) => _topSegment(e.path || e.name) || '(根)', maxGroups);
+    const byExt = _groupCount(list, (e) => _ext(e.path || e.name) || '(无扩展名)', maxGroups);
 
     const largest = list
       .map((e) => ({ path: _normalise(e.path || e.name), size: Number(e.size) || 0 }))
       .filter((e) => e.path && e.size > 0)
-      .sort((a, b) => (b.size - a.size) || (a.path < b.path ? -1 : 1))
+      .sort((a, b) => b.size - a.size || (a.path < b.path ? -1 : 1))
       .slice(0, maxLargest);
 
     // 目录体积热点(接缝3):深树 rollup + 按体积剪枝。门控关 → [](不渲染,字节回退)。
-    const dirHotspots = _dirHotspotsEnabled(env)
-      ? _dirRollup(list, maxDirDepth, maxLargest)
-      : [];
+    const dirHotspots = _dirHotspotsEnabled(env) ? _dirRollup(list, maxDirDepth, maxLargest) : [];
 
     return {
       enabled: true,
-      pinned, byDir, byExt, largest, dirHotspots,
-      total, shown: list.length, hidden: Math.max(0, total - list.length),
+      pinned,
+      byDir,
+      byExt,
+      largest,
+      dirHotspots,
+      total,
+      shown: list.length,
+      hidden: Math.max(0, total - list.length),
       stopReason: budget.stopReason,
       fallbackList: [],
     };
   } catch {
     // fail-soft:退化到原序,绝不破坏调用方。
-    const fallbackList = list.slice(0, Number.isFinite(opts.fallbackShown) ? Math.max(0, opts.fallbackShown) : list.length);
+    const fallbackList = list.slice(
+      0,
+      Number.isFinite(opts.fallbackShown) ? Math.max(0, opts.fallbackShown) : list.length
+    );
     return {
       enabled: false,
-      pinned: [], byDir: [], byExt: [], largest: [], dirHotspots: [],
-      total, shown: fallbackList.length, hidden: Math.max(0, total - fallbackList.length),
-      stopReason: 'error', fallbackList,
+      pinned: [],
+      byDir: [],
+      byExt: [],
+      largest: [],
+      dirHotspots: [],
+      total,
+      shown: fallbackList.length,
+      hidden: Math.max(0, total - fallbackList.length),
+      stopReason: 'error',
+      fallbackList,
     };
   }
 }
@@ -284,13 +413,23 @@ function _fmtBytes(n, env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(Number(n || 0) || 0);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   const bytes = Number(n || 0) || 0;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
@@ -304,7 +443,9 @@ function _fmtBytes(n, env) {
 function renderSalienceBlock(summary, opts = {}) {
   try {
     const env = opts.env || process.env;
-    if (!summary || summary.enabled === false) return '';
+    if (!summary || summary.enabled === false) {
+      return '';
+    }
     const lines = [];
 
     if (Array.isArray(summary.pinned) && summary.pinned.length) {
@@ -335,8 +476,11 @@ function renderSalienceBlock(summary, opts = {}) {
 
     // 📁 目录体积热点(接缝3):仅当有多于1个目录且至少一个目录有体积时渲染(深树抓重点)。
     // 单目录 / 全 0 体积(如纯 find 无 size)→ 不渲染(byDir 已足够,避免噪声段)。
-    if (Array.isArray(summary.dirHotspots) && summary.dirHotspots.length > 1
-        && summary.dirHotspots.some((d) => d.totalSize > 0)) {
+    if (
+      Array.isArray(summary.dirHotspots) &&
+      summary.dirHotspots.length > 1 &&
+      summary.dirHotspots.some((d) => d.totalSize > 0)
+    ) {
       lines.push('');
       lines.push('📁 目录体积热点(按占用):');
       for (const d of summary.dirHotspots) {
@@ -347,7 +491,9 @@ function renderSalienceBlock(summary, opts = {}) {
 
     if (summary.hidden > 0) {
       lines.push('');
-      lines.push(`共 ${summary.total} 个文件;上面按重要性 / 大小 / 分类突出了重点,其余 ${summary.hidden} 个未逐一列出。`);
+      lines.push(
+        `共 ${summary.total} 个文件;上面按重要性 / 大小 / 分类突出了重点,其余 ${summary.hidden} 个未逐一列出。`
+      );
     }
 
     return lines.join('\n');

@@ -23,26 +23,47 @@
 
 // Charset label aliases → a label TextDecoder understands.
 function normalizeCharset(raw) {
-  const c = String(raw || '').trim().toLowerCase().replace(/["']/g, '');
-  if (!c) return 'utf-8';
-  if (c === 'gb2312' || c === 'gb_2312-80' || c === 'gbk' || c === 'gb-2312' || c === 'csgb2312') return 'gbk';
-  if (c === 'gb18030') return 'gb18030';
-  if (c === 'big5' || c === 'big-5' || c === 'cn-big5' || c === 'csbig5') return 'big5';
-  if (c === 'utf8' || c === 'utf-8' || c === 'unicode-1-1-utf-8') return 'utf-8';
-  if (c === 'latin1' || c === 'iso-8859-1' || c === 'iso8859-1') return 'windows-1252';
+  const c = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/["']/g, '');
+  if (!c) {
+    return 'utf-8';
+  }
+  if (c === 'gb2312' || c === 'gb_2312-80' || c === 'gbk' || c === 'gb-2312' || c === 'csgb2312') {
+    return 'gbk';
+  }
+  if (c === 'gb18030') {
+    return 'gb18030';
+  }
+  if (c === 'big5' || c === 'big-5' || c === 'cn-big5' || c === 'csbig5') {
+    return 'big5';
+  }
+  if (c === 'utf8' || c === 'utf-8' || c === 'unicode-1-1-utf-8') {
+    return 'utf-8';
+  }
+  if (c === 'latin1' || c === 'iso-8859-1' || c === 'iso8859-1') {
+    return 'windows-1252';
+  }
   return c; // pass through (utf-16le, shift_jis, euc-jp, windows-125x, …)
 }
 
 function detectCharset(buffer, contentTypeHeader) {
   const fromHeader = /charset\s*=\s*["']?([\w-]+)/i.exec(contentTypeHeader || '');
-  if (fromHeader) return normalizeCharset(fromHeader[1]);
+  if (fromHeader) {
+    return normalizeCharset(fromHeader[1]);
+  }
   // Sniff the first 4 KB as latin1 (bytes 1:1) to read the <meta> declaration
   // without first committing to a decoding.
   const head = buffer.slice(0, 4096).toString('latin1');
   const metaCharset = /<meta[^>]+charset\s*=\s*["']?([\w-]+)/i.exec(head);
-  if (metaCharset) return normalizeCharset(metaCharset[1]);
+  if (metaCharset) {
+    return normalizeCharset(metaCharset[1]);
+  }
   const metaHttp = /<meta[^>]+content\s*=\s*["'][^"']*charset\s*=\s*([\w-]+)/i.exec(head);
-  if (metaHttp) return normalizeCharset(metaHttp[1]);
+  if (metaHttp) {
+    return normalizeCharset(metaHttp[1]);
+  }
   return 'utf-8';
 }
 
@@ -59,10 +80,20 @@ function decodeBuffer(buffer, charset) {
 }
 
 const ENTITY_MAP = {
-  '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>',
-  '&quot;': '"', '&#39;': "'", '&apos;': "'", '&mdash;': '—',
-  '&ndash;': '–', '&hellip;': '…', '&middot;': '·', '&copy;': '©',
-  '&raquo;': '»', '&laquo;': '«',
+  '&nbsp;': ' ',
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&mdash;': '—',
+  '&ndash;': '–',
+  '&hellip;': '…',
+  '&middot;': '·',
+  '&copy;': '©',
+  '&raquo;': '»',
+  '&laquo;': '«',
 };
 
 function decodeEntities(s) {
@@ -71,23 +102,35 @@ function decodeEntities(s) {
       const cp = parseInt(h, 16);
       try {
         const r = require('./htmlEntityCodePointGuard').safeDecodeCodePoint(cp, _, process.env);
-        if (r !== null) return r;
-      } catch { /* fail-soft → legacy expression below */ }
+        if (r !== null) {
+          return r;
+        }
+      } catch {
+        /* fail-soft → legacy expression below */
+      }
       return Number.isFinite(cp) ? String.fromCodePoint(cp) : _;
     })
     .replace(/&#(\d+);/g, (_, d) => {
       const cp = parseInt(d, 10);
       try {
         const r = require('./htmlEntityCodePointGuard').safeDecodeCodePoint(cp, _, process.env);
-        if (r !== null) return r;
-      } catch { /* fail-soft → legacy expression below */ }
+        if (r !== null) {
+          return r;
+        }
+      } catch {
+        /* fail-soft → legacy expression below */
+      }
       return Number.isFinite(cp) ? String.fromCodePoint(cp) : _;
     })
-    .replace(/&[a-z]+;/gi, (m) => (Object.prototype.hasOwnProperty.call(ENTITY_MAP, m) ? ENTITY_MAP[m] : m));
+    .replace(/&[a-z]+;/gi, (m) =>
+      Object.prototype.hasOwnProperty.call(ENTITY_MAP, m) ? ENTITY_MAP[m] : m
+    );
 }
 
 function looksLikeHtml(decoded, contentType) {
-  if (/html/i.test(contentType || '')) return true;
+  if (/html/i.test(contentType || '')) {
+    return true;
+  }
   return /<!doctype\s+html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(decoded.slice(0, 2048));
 }
 
@@ -99,7 +142,10 @@ function htmlToText(html) {
   s = s.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
   // Map block-level boundaries to newlines so paragraphs stay separated.
   s = s.replace(/<br\s*\/?>/gi, '\n');
-  s = s.replace(/<\/(p|div|h[1-6]|li|tr|section|article|header|footer|blockquote|ul|ol|table)\s*>/gi, '\n');
+  s = s.replace(
+    /<\/(p|div|h[1-6]|li|tr|section|article|header|footer|blockquote|ul|ol|table)\s*>/gi,
+    '\n'
+  );
   s = s.replace(/<[^>]+>/g, ' ');
   s = decodeEntities(s);
   s = s.replace(/[ \t\f\v ]+/g, ' ');

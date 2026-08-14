@@ -29,10 +29,14 @@ const FOOTER_IDENTITY_KEYS = ['model', 'adapter', 'effort', 'contextLimit', 'con
  * @returns {string}
  */
 function normalizeAdapterStatus(payload) {
-  if (typeof payload === 'string') return payload.trim();
+  if (typeof payload === 'string') {
+    return payload.trim();
+  }
   if (payload && typeof payload === 'object') {
     const cand = payload.message || payload.phase || payload.text || payload.status;
-    if (typeof cand === 'string') return cand.trim();
+    if (typeof cand === 'string') {
+      return cand.trim();
+    }
   }
   return '';
 }
@@ -45,10 +49,16 @@ function normalizeAdapterStatus(payload) {
  * @returns {boolean}
  */
 function footersEqual(a, b) {
-  if (a === b) return true;
-  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') {
+    return false;
+  }
   for (const k of FOOTER_IDENTITY_KEYS) {
-    if (a[k] !== b[k]) return false;
+    if (a[k] !== b[k]) {
+      return false;
+    }
   }
   return true;
 }

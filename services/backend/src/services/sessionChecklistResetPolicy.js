@@ -40,10 +40,12 @@ const _OFF = new Set(['0', 'false', 'off', 'no']);
  * @param {object} [env]
  * @returns {boolean}
  */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_SESSION_TODO_RESET;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -51,10 +53,10 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
 }
 
 // 已知会话清单文件名(叶子拥有的知识;基目录由壳注入)。
-const V1_TODO_FILE = 'khy-todos.json';       // V1 TodoWrite,直接位于 tmpdir 下
-const COMPAT_TODO_FILE = 'todo_state.json';  // 兼容 todoWrite,位于 .khyquant/ 或 khyquant/ 下
-const COMPAT_DOT_DIR = '.khyquant';          // homedir / cwd 下的隐藏目录
-const COMPAT_TMP_DIR = 'khyquant';           // tmp 下的非隐藏目录
+const V1_TODO_FILE = 'khy-todos.json'; // V1 TodoWrite,直接位于 tmpdir 下
+const COMPAT_TODO_FILE = 'todo_state.json'; // 兼容 todoWrite,位于 .khyquant/ 或 khyquant/ 下
+const COMPAT_DOT_DIR = '.khyquant'; // homedir / cwd 下的隐藏目录
+const COMPAT_TMP_DIR = 'khyquant'; // tmp 下的非隐藏目录
 
 /**
  * 计算新会话应清空的 legacy 会话清单文件的绝对路径集合。
@@ -72,26 +74,41 @@ const COMPAT_TMP_DIR = 'khyquant';           // tmp 下的非隐藏目录
 function selectResetPaths(args = {}) {
   try {
     const env = args.env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return [];
-    if (args && args.resumed) return [];
+    if (!isEnabled(env)) {
+      return [];
+    }
+    if (args && args.resumed) {
+      return [];
+    }
 
     const p = (args && args.paths) || {};
     const tmpdir = typeof p.tmpdir === 'string' ? p.tmpdir : '';
     // compatTmpdir 缺省回退 tmpdir(壳解析失败时保守用 os.tmpdir 语义)。
-    const compatTmpdir = typeof p.compatTmpdir === 'string' && p.compatTmpdir ? p.compatTmpdir : tmpdir;
+    const compatTmpdir =
+      typeof p.compatTmpdir === 'string' && p.compatTmpdir ? p.compatTmpdir : tmpdir;
     const homedir = typeof p.homedir === 'string' ? p.homedir : '';
     const cwd = typeof p.cwd === 'string' ? p.cwd : '';
 
     const out = [];
     // ① V1 TodoWrite:tmpdir/khy-todos.json
-    if (tmpdir) out.push(path.join(tmpdir, V1_TODO_FILE));
+    if (tmpdir) {
+      out.push(path.join(tmpdir, V1_TODO_FILE));
+    }
     // ② 兼容 todoWrite 三候选目录 + 读取侧 legacyDataHome(=homedir/.khyquant,dedup 合并)
-    if (homedir) out.push(path.join(homedir, COMPAT_DOT_DIR, COMPAT_TODO_FILE));
-    if (cwd) out.push(path.join(cwd, COMPAT_DOT_DIR, COMPAT_TODO_FILE));
-    if (compatTmpdir) out.push(path.join(compatTmpdir, COMPAT_TMP_DIR, COMPAT_TODO_FILE));
+    if (homedir) {
+      out.push(path.join(homedir, COMPAT_DOT_DIR, COMPAT_TODO_FILE));
+    }
+    if (cwd) {
+      out.push(path.join(cwd, COMPAT_DOT_DIR, COMPAT_TODO_FILE));
+    }
+    if (compatTmpdir) {
+      out.push(path.join(compatTmpdir, COMPAT_TMP_DIR, COMPAT_TODO_FILE));
+    }
     // 读取侧(largeTasks)在 tmpdir 下也可能存 khyquant/todo_state.json(getTmpDir vs os.tmpdir
     // 在部分平台不同);一并纳入以免遗漏。dedup 折叠与 compatTmpdir 相同的情形。
-    if (tmpdir) out.push(path.join(tmpdir, COMPAT_TMP_DIR, COMPAT_TODO_FILE));
+    if (tmpdir) {
+      out.push(path.join(tmpdir, COMPAT_TMP_DIR, COMPAT_TODO_FILE));
+    }
 
     return [...new Set(out.filter((x) => typeof x === 'string' && x))];
   } catch {

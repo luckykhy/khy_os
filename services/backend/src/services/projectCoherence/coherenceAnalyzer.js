@@ -18,6 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { parseFile, detectLang } = require('./importGraph');
 const { resolveImport, makeIoFromSet } = require('./resolver');
 
@@ -25,46 +26,76 @@ const SEVERITY = { HIGH: 'high', MEDIUM: 'medium' };
 const DEFAULT_MAX_FILES = 400;
 
 function _defaultRead(p) {
-  try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
+  try {
+    return fs.readFileSync(p, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
 /** 仅检查「看起来是项目内相对/本地路径」的清单值，跳过 URL、glob、纯条件键。 */
 function _looksLikeLocalPath(v) {
-  if (typeof v !== 'string' || !v) return false;
-  if (/^https?:|^[a-z]+:\/\//i.test(v)) return false;
-  if (v.includes('*')) return false; // glob/exports 模式不逐一判定
+  if (typeof v !== 'string' || !v) {
+    return false;
+  }
+  if (/^https?:|^[a-z]+:\/\//i.test(v)) {
+    return false;
+  }
+  if (v.includes('*')) {
+    return false;
+  } // glob/exports 模式不逐一判定
   return v.startsWith('.') || v.startsWith('/') || /\.[cm]?[jt]sx?$|\.json$/.test(v);
 }
 
 /** 递归收集 exports 字段里的字符串叶子（条件导出可深层嵌套）。 */
 function _collectExportLeaves(node, out) {
-  if (typeof node === 'string') { out.push(node); return; }
+  if (typeof node === 'string') {
+    out.push(node);
+    return;
+  }
   if (node && typeof node === 'object') {
-    for (const v of Object.values(node)) _collectExportLeaves(v, out);
+    for (const v of Object.values(node)) {
+      _collectExportLeaves(v, out);
+    }
   }
 }
 
 function _analyzeManifest(file, content, manifestDir, io, gaps) {
   let pkg;
-  try { pkg = JSON.parse(content); } catch { return; } // 坏 JSON 由语法门处理，这里只看引用
-  if (!pkg || typeof pkg !== 'object') return;
+  try {
+    pkg = JSON.parse(content);
+  } catch {
+    return;
+  } // 坏 JSON 由语法门处理，这里只看引用
+  if (!pkg || typeof pkg !== 'object') {
+    return;
+  }
 
   const refs = [];
   for (const key of ['main', 'module', 'types', 'typings', 'browser']) {
-    if (_looksLikeLocalPath(pkg[key])) refs.push({ key, value: pkg[key] });
+    if (_looksLikeLocalPath(pkg[key])) {
+      refs.push({ key, value: pkg[key] });
+    }
   }
   // bin: string 或 { name: path }
-  if (typeof pkg.bin === 'string' && _looksLikeLocalPath(pkg.bin)) refs.push({ key: 'bin', value: pkg.bin });
-  else if (pkg.bin && typeof pkg.bin === 'object') {
+  if (typeof pkg.bin === 'string' && _looksLikeLocalPath(pkg.bin)) {
+    refs.push({ key: 'bin', value: pkg.bin });
+  } else if (pkg.bin && typeof pkg.bin === 'object') {
     for (const [name, p] of Object.entries(pkg.bin)) {
-      if (_looksLikeLocalPath(p)) refs.push({ key: `bin.${name}`, value: p });
+      if (_looksLikeLocalPath(p)) {
+        refs.push({ key: `bin.${name}`, value: p });
+      }
     }
   }
   // exports: 收集字符串叶子
   if (pkg.exports != null) {
     const leaves = [];
     _collectExportLeaves(pkg.exports, leaves);
-    for (const p of leaves) if (_looksLikeLocalPath(p)) refs.push({ key: 'exports', value: p });
+    for (const p of leaves) {
+      if (_looksLikeLocalPath(p)) {
+        refs.push({ key: 'exports', value: p });
+      }
+    }
   }
 
   for (const ref of refs) {
@@ -100,10 +131,10 @@ function analyze(opts = {}) {
   const read = opts.readFile || _defaultRead;
   const maxFiles = opts.maxFiles || DEFAULT_MAX_FILES;
 
-  const absFiles = (opts.files || [])
-    .filter(Boolean)
-    .map((f) => path.resolve(cwd, f));
-  const knownAbs = [...new Set([...absFiles, ...[...(opts.knownFiles || [])].map((f) => path.resolve(cwd, f))])];
+  const absFiles = (opts.files || []).filter(Boolean).map((f) => path.resolve(cwd, f));
+  const knownAbs = [
+    ...new Set([...absFiles, ...[...(opts.knownFiles || [])].map((f) => path.resolve(cwd, f))]),
+  ];
   const io = makeIoFromSet(knownAbs, true);
 
   const gaps = [];
@@ -113,7 +144,9 @@ function analyze(opts = {}) {
   // 目标模块导出面缓存：resolvedPath → exports 对象（避免重复读取/解析）
   const exportCache = new Map();
   const getExports = (resolvedPath) => {
-    if (exportCache.has(resolvedPath)) return exportCache.get(resolvedPath);
+    if (exportCache.has(resolvedPath)) {
+      return exportCache.get(resolvedPath);
+    }
     const src = read(resolvedPath);
     const parsed = src == null ? null : parseFile(resolvedPath, src);
     const ex = parsed ? parsed.exports : null;
@@ -127,22 +160,32 @@ function analyze(opts = {}) {
     // package.json 走清单检查
     if (base === 'package.json') {
       const content = read(file);
-      if (content != null) _analyzeManifest(file, content, path.dirname(file), io, gaps);
+      if (content != null) {
+        _analyzeManifest(file, content, path.dirname(file), io, gaps);
+      }
       analyzed += 1;
       continue;
     }
 
     const lang = detectLang(file);
-    if (!lang) { skipped += 1; continue; }
+    if (!lang) {
+      skipped += 1;
+      continue;
+    }
     const content = read(file);
-    if (content == null) { skipped += 1; continue; }
+    if (content == null) {
+      skipped += 1;
+      continue;
+    }
 
     const node = parseFile(file, content);
     analyzed += 1;
 
     for (const imp of node.imports) {
       const res = resolveImport(imp.spec, file, lang, io);
-      if (!res.local) continue; // 裸包：不归我们管
+      if (!res.local) {
+        continue;
+      } // 裸包：不归我们管
 
       if (!res.resolved) {
         gaps.push({
@@ -158,9 +201,13 @@ function analyze(opts = {}) {
       // 命名导出一致性（仅 JS、目标导出面可静态确定、非动态时才判）
       if (lang === 'js') {
         const named = (imp.names || []).filter((n) => n !== 'default' && n !== '*');
-        if (named.length === 0) continue;
+        if (named.length === 0) {
+          continue;
+        }
         const ex = getExports(res.resolved);
-        if (!ex || ex.dynamic || ex.names.size === 0) continue; // 无法确定导出面 → 跳过，零误报
+        if (!ex || ex.dynamic || ex.names.size === 0) {
+          continue;
+        } // 无法确定导出面 → 跳过，零误报
         for (const name of named) {
           if (!ex.names.has(name)) {
             gaps.push({

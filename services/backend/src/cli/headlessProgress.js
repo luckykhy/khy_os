@@ -21,8 +21,17 @@ const flagRegistry = require('../services/flagRegistry');
 
 // 从工具参数里择一条最能说明「在干什么」的显著字段(路径/命令/查询等),截断避免刷屏。
 const _PARAM_KEYS = [
-  'path', 'file', 'file_path', 'filePath', 'command', 'cmd',
-  'pattern', 'query', 'url', 'name', 'subagent_type',
+  'path',
+  'file',
+  'file_path',
+  'filePath',
+  'command',
+  'cmd',
+  'pattern',
+  'query',
+  'url',
+  'name',
+  'subagent_type',
 ];
 const _ARG_MAX = 56;
 
@@ -41,7 +50,9 @@ function _displayName(name) {
     if (t && typeof t.getToolDisplayName === 'function') {
       return t.getToolDisplayName(name) || String(name || 'tool');
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return String(name || 'tool');
 }
 
@@ -50,36 +61,58 @@ function _icon(name) {
   try {
     if (t && typeof t.getToolFamilyIcon === 'function') {
       const ic = t.getToolFamilyIcon(name);
-      if (ic) return ic;
+      if (ic) {
+        return ic;
+      }
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return '•';
 }
 
 function _dotSuccess() {
   const t = _theme();
-  try { if (t && t.DOT_SUCCESS) return t.DOT_SUCCESS; } catch { /* noop */ }
+  try {
+    if (t && t.DOT_SUCCESS) {
+      return t.DOT_SUCCESS;
+    }
+  } catch {
+    /* noop */
+  }
   return '●';
 }
 
 function _dotError() {
   const t = _theme();
-  try { if (t && t.DOT_ERROR) return t.DOT_ERROR; } catch { /* noop */ }
+  try {
+    if (t && t.DOT_ERROR) {
+      return t.DOT_ERROR;
+    }
+  } catch {
+    /* noop */
+  }
   return '●';
 }
 
 // renderTheme._formatElapsed 吃**秒**;此处自带一个 ms→人类可读的独立格式(不依赖它)以免口径错配。
 function _formatMs(ms) {
   const n = Number(ms);
-  if (!Number.isFinite(n) || n < 0) return '';
-  if (n < 1000) return `${Math.round(n)}ms`;
+  if (!Number.isFinite(n) || n < 0) {
+    return '';
+  }
+  if (n < 1000) {
+    return `${Math.round(n)}ms`;
+  }
   const sec = n / 1000;
   if (sec < 60) {
     // 1 位小数,去掉末尾 .0
     const s = sec.toFixed(1).replace(/\.0$/, '');
     // toFixed 会把 [59.95, 60) 窗口进位成 "60.0"→"60";它必须进位成 "1m",
     // 而非打出越界的 "60s"。只有这一个进位串会落到下面的分钟分支。
-    if (s !== '60') return `${s}s`;
+    if (s !== '60') {
+      return `${s}s`;
+    }
   }
   // 分钟+ 显示:min 与 rem 都从**同一个**四舍五入后的整秒数派生。
   // 若像旧代码那样 floor(sec/60) 与 round(sec%60) 各自独立取整,余数可能
@@ -95,12 +128,16 @@ function _formatMs(ms) {
  * 从工具参数对象/字符串里提取一条显著参数用于展示。返回 '' 表示无可展示项。
  */
 function _salientArg(params) {
-  if (params == null) return '';
+  if (params == null) {
+    return '';
+  }
   if (typeof params === 'string') {
     const s = params.trim().replace(/\s+/g, ' ');
     return s.length > _ARG_MAX ? `${s.slice(0, _ARG_MAX)}…` : s;
   }
-  if (typeof params !== 'object') return '';
+  if (typeof params !== 'object') {
+    return '';
+  }
   for (const key of _PARAM_KEYS) {
     const v = params[key];
     if (typeof v === 'string' && v.trim()) {
@@ -117,14 +154,19 @@ function _salientArg(params) {
 
 // 路径末段(basename)。跨平台切 / 与 \,取最后非空段;无则返原串。纯函数。
 function _basename(p) {
-  if (typeof p !== 'string' || !p) return '';
+  if (typeof p !== 'string' || !p) {
+    return '';
+  }
   const parts = p.split(/[\\/]+/).filter(Boolean);
   return parts.length ? parts[parts.length - 1] : p;
 }
 
 // 归一化工具名用于家族判定:小写并剥分隔符(readFile/read_file/read-file → readfile)。
 function _normName(name) {
-  return String(name || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
 }
 
 // 多重集行级增删计数(before/after 皆为整文件文本)。逐行入多重集,取正差:
@@ -135,13 +177,21 @@ function _diffLineCounts(before, after) {
     const b = typeof before === 'string' ? before.split('\n') : [];
     const a = typeof after === 'string' ? after.split('\n') : [];
     const bc = new Map();
-    for (const l of b) bc.set(l, (bc.get(l) || 0) + 1);
+    for (const l of b) {
+      bc.set(l, (bc.get(l) || 0) + 1);
+    }
     const ac = new Map();
-    for (const l of a) ac.set(l, (ac.get(l) || 0) + 1);
+    for (const l of a) {
+      ac.set(l, (ac.get(l) || 0) + 1);
+    }
     let added = 0;
     let removed = 0;
-    for (const [l, c] of ac) added += Math.max(0, c - (bc.get(l) || 0));
-    for (const [l, c] of bc) removed += Math.max(0, c - (ac.get(l) || 0));
+    for (const [l, c] of ac) {
+      added += Math.max(0, c - (bc.get(l) || 0));
+    }
+    for (const [l, c] of bc) {
+      removed += Math.max(0, c - (ac.get(l) || 0));
+    }
     return { added, removed };
   } catch {
     return { added: 0, removed: 0 };
@@ -154,10 +204,15 @@ function _diffLineCounts(before, after) {
  */
 function _summarizeResultContent(name, result, params) {
   try {
-    if (!result || typeof result !== 'object') return '';
+    if (!result || typeof result !== 'object') {
+      return '';
+    }
     const fam = _normName(name);
     const p = params && typeof params === 'object' ? params : {};
-    const wd = result._khyWriteDiff && typeof result._khyWriteDiff === 'object' ? result._khyWriteDiff : null;
+    const wd =
+      result._khyWriteDiff && typeof result._khyWriteDiff === 'object'
+        ? result._khyWriteDiff
+        : null;
 
     // 读取:读了多少行(截断加注)。
     if (fam === 'read' || fam === 'readfile') {
@@ -186,27 +241,47 @@ function _summarizeResultContent(name, result, params) {
         const lines = wd.afterContent === '' ? 0 : wd.afterContent.split('\n').length;
         return `写入 ${base || '文件'}(${lines} 行)`;
       }
-      if (Number.isFinite(result.bytes)) return `写入 ${base || '文件'}(${result.bytes} 字节)`;
+      if (Number.isFinite(result.bytes)) {
+        return `写入 ${base || '文件'}(${result.bytes} 字节)`;
+      }
       return base ? `写入 ${base}` : '';
     }
     // 搜索(grep):匹配处数。
     if (fam === 'grep' || fam === 'search' || fam === 'ripgrep') {
-      if (Number.isFinite(result.count)) return `${result.count} 处匹配${result.truncated ? '(截断)' : ''}`;
-      if (Array.isArray(result.matches)) return `${result.matches.length} 处匹配`;
+      if (Number.isFinite(result.count)) {
+        return `${result.count} 处匹配${result.truncated ? '(截断)' : ''}`;
+      }
+      if (Array.isArray(result.matches)) {
+        return `${result.matches.length} 处匹配`;
+      }
       return '';
     }
     // 文件(glob):命中文件数。
     if (fam === 'glob' || fam === 'globtool' || fam === 'findfiles') {
-      if (Number.isFinite(result.count)) return `${result.count} 个文件${result.truncated ? '(截断)' : ''}`;
-      if (Array.isArray(result.files)) return `${result.files.length} 个文件`;
+      if (Number.isFinite(result.count)) {
+        return `${result.count} 个文件${result.truncated ? '(截断)' : ''}`;
+      }
+      if (Array.isArray(result.files)) {
+        return `${result.files.length} 个文件`;
+      }
       return '';
     }
     // 命令(shell/bash):退出码 + 输出行数。
-    if (fam === 'shell' || fam === 'shellcommand' || fam === 'bash' || fam === 'runcommand' || fam === 'executecode') {
+    if (
+      fam === 'shell' ||
+      fam === 'shellcommand' ||
+      fam === 'bash' ||
+      fam === 'runcommand' ||
+      fam === 'executecode'
+    ) {
       const hasExit = Number.isFinite(result.exitCode);
       const out = typeof result.output === 'string' ? result.output : '';
       const outLines = out ? out.split('\n').filter((l) => l.length > 0).length : 0;
-      if (hasExit) return outLines > 0 ? `退出码 ${result.exitCode} · ${outLines} 行` : `退出码 ${result.exitCode}`;
+      if (hasExit) {
+        return outLines > 0
+          ? `退出码 ${result.exitCode} · ${outLines} 行`
+          : `退出码 ${result.exitCode}`;
+      }
       return '';
     }
     return '';
@@ -272,10 +347,17 @@ function isLoopFallbackDiagEnabled(env = process.env) {
 function formatLoopFallbackDiag(err) {
   try {
     let msg = '';
-    if (err && typeof err.message === 'string') msg = err.message;
-    else if (typeof err === 'string') msg = err;
-    msg = String(msg || '').trim().replace(/\s+/g, ' ');
-    if (msg.length > _ARG_MAX) msg = `${msg.slice(0, _ARG_MAX)}…`;
+    if (err && typeof err.message === 'string') {
+      msg = err.message;
+    } else if (typeof err === 'string') {
+      msg = err;
+    }
+    msg = String(msg || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (msg.length > _ARG_MAX) {
+      msg = `${msg.slice(0, _ARG_MAX)}…`;
+    }
     return msg ? `  ⚠ 原生工具循环失败,回退单发 · ${msg}` : '  ⚠ 原生工具循环失败,回退单发';
   } catch {
     return '  ⚠ 原生工具循环失败,回退单发';
@@ -293,7 +375,9 @@ const HEARTBEAT_INTERVAL_MS = 5000;
 function formatToolHeartbeat(name, elapsedMs) {
   try {
     const el = _formatMs(elapsedMs);
-    if (!el) return '';
+    if (!el) {
+      return '';
+    }
     return `  ⏳ ${_displayName(name)} 运行中 ${el}`;
   } catch {
     return '';
@@ -312,11 +396,17 @@ const _TEXT_MAX = 4000; // 单块叙述展示上限(极长散文截断,避免刷
  */
 function formatAssistantText(text) {
   try {
-    if (typeof text !== 'string') return '';
+    if (typeof text !== 'string') {
+      return '';
+    }
     let s = text.replace(/\r\n/g, '\n');
-    if (s.length > _TEXT_MAX) s = `${s.slice(0, _TEXT_MAX)}…`;
+    if (s.length > _TEXT_MAX) {
+      s = `${s.slice(0, _TEXT_MAX)}…`;
+    }
     const trimmed = s.trim();
-    if (!trimmed) return '';
+    if (!trimmed) {
+      return '';
+    }
     // 逐行右侧去空白;折叠内部连续空行为最多一行;丢弃首尾空行。
     const rawLines = trimmed.split('\n').map((l) => l.replace(/\s+$/, ''));
     const out = [];
@@ -324,13 +414,17 @@ function formatAssistantText(text) {
     for (const l of rawLines) {
       if (l === '') {
         blank += 1;
-        if (blank > 1) continue;
+        if (blank > 1) {
+          continue;
+        }
       } else {
         blank = 0;
       }
       out.push(l === '' ? '' : `${_TEXT_PREFIX}${l}`);
     }
-    while (out.length && out[out.length - 1] === '') out.pop();
+    while (out.length && out[out.length - 1] === '') {
+      out.pop();
+    }
     return out.join('\n');
   } catch {
     return '';
@@ -353,11 +447,17 @@ const _MSG_MAX = 4000; // 单条中间消息展示上限(极长内容截断,避�
  */
 function formatAssistantMessage(content) {
   try {
-    if (typeof content !== 'string') return '';
+    if (typeof content !== 'string') {
+      return '';
+    }
     let s = content.replace(/\r\n/g, '\n');
-    if (s.length > _MSG_MAX) s = `${s.slice(0, _MSG_MAX)}…`;
+    if (s.length > _MSG_MAX) {
+      s = `${s.slice(0, _MSG_MAX)}…`;
+    }
     const trimmed = s.trim();
-    if (!trimmed) return '';
+    if (!trimmed) {
+      return '';
+    }
     const rawLines = trimmed.split('\n').map((l) => l.replace(/\s+$/, ''));
     const out = [];
     let blank = 0;
@@ -365,7 +465,9 @@ function formatAssistantMessage(content) {
     for (const l of rawLines) {
       if (l === '') {
         blank += 1;
-        if (blank > 1) continue;
+        if (blank > 1) {
+          continue;
+        }
         out.push('');
       } else {
         blank = 0;
@@ -374,7 +476,9 @@ function formatAssistantMessage(content) {
         first = false;
       }
     }
-    while (out.length && out[out.length - 1] === '') out.pop();
+    while (out.length && out[out.length - 1] === '') {
+      out.pop();
+    }
     return out.join('\n');
   } catch {
     return '';
@@ -390,9 +494,13 @@ const _FORCE_RE = /^(1|true|on|yes|force)$/i;
  * - 门开 + auto → 仅 stderr 是 TTY 才发(重定向到文件不污染日志),对齐 CC `-p`。
  */
 function shouldEmitProgress(env = process.env, isTTY = false) {
-  if (!isHeadlessProgressEnabled(env)) return false;
+  if (!isHeadlessProgressEnabled(env)) {
+    return false;
+  }
   const raw = env && env.KHY_HEADLESS_PROGRESS;
-  if (typeof raw === 'string' && _FORCE_RE.test(raw.trim())) return true;
+  if (typeof raw === 'string' && _FORCE_RE.test(raw.trim())) {
+    return true;
+  }
   return !!isTTY;
 }
 
@@ -433,13 +541,17 @@ function formatToolResult(name, result, elapsedMs, params, env = process.env) {
     const mark = failed ? `${dot} 失败` : `${dot} 完成`;
     const el = _formatMs(elapsedMs);
     let line = `  ${mark}`;
-    if (el) line += ` ${el}`;
+    if (el) {
+      line += ` ${el}`;
+    }
     if (failed && errText) {
       const e = errText.trim().replace(/\s+/g, ' ');
       line += ` · ${e.length > _ARG_MAX ? `${e.slice(0, _ARG_MAX)}…` : e}`;
     } else if (!failed && isDetailEnabled(env)) {
       const summary = _summarizeResultContent(name, result, params);
-      if (summary) line += ` · ${summary}`;
+      if (summary) {
+        line += ` · ${summary}`;
+      }
     }
     return line;
   } catch {

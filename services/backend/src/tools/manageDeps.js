@@ -1,9 +1,10 @@
-const { defineTool } = require('./_baseTool');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { NULL_DEVICE } = require('./platformUtils');
+
+const { defineTool } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
+const { NULL_DEVICE } = require('./platformUtils');
 
 module.exports = defineTool({
   name: 'manageDeps',
@@ -12,6 +13,7 @@ module.exports = defineTool({
     'Auto-detects package manager (npm/yarn/pnpm/pip/cargo).',
   category: 'execution',
   risk: 'medium',
+  searchHint: 'install dependencies npm pip cargo package 依赖 安装包 包管理',
   isReadOnly: false,
   isConcurrencySafe: false,
 
@@ -45,7 +47,11 @@ module.exports = defineTool({
     // Detect package manager
     const pm = _detectPM(cwd);
     if (!pm) {
-      return { success: false, error: 'No recognized package manager detected (package.json, pyproject.toml, Cargo.toml, go.mod)' };
+      return {
+        success: false,
+        error:
+          'No recognized package manager detected (package.json, pyproject.toml, Cargo.toml, go.mod)',
+      };
     }
 
     const action = params.action;
@@ -98,12 +104,27 @@ module.exports = defineTool({
 });
 
 function _detectPM(cwd) {
-  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return { type: 'pnpm' };
-  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return { type: 'yarn' };
-  if (fs.existsSync(path.join(cwd, 'package.json'))) return { type: 'npm' };
-  if (fs.existsSync(path.join(cwd, 'Cargo.toml'))) return { type: 'cargo' };
-  if (fs.existsSync(path.join(cwd, 'go.mod'))) return { type: 'go' };
-  if (fs.existsSync(path.join(cwd, 'pyproject.toml')) || fs.existsSync(path.join(cwd, 'requirements.txt'))) return { type: 'pip' };
+  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
+    return { type: 'pnpm' };
+  }
+  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
+    return { type: 'yarn' };
+  }
+  if (fs.existsSync(path.join(cwd, 'package.json'))) {
+    return { type: 'npm' };
+  }
+  if (fs.existsSync(path.join(cwd, 'Cargo.toml'))) {
+    return { type: 'cargo' };
+  }
+  if (fs.existsSync(path.join(cwd, 'go.mod'))) {
+    return { type: 'go' };
+  }
+  if (
+    fs.existsSync(path.join(cwd, 'pyproject.toml')) ||
+    fs.existsSync(path.join(cwd, 'requirements.txt'))
+  ) {
+    return { type: 'pip' };
+  }
   return null;
 }
 
@@ -114,48 +135,78 @@ function _buildNodeCmd(pm, action, packages, isDev) {
     pnpm: isDev ? '--save-dev' : '',
   };
   switch (action) {
-    case 'install': return `${pm} install`;
-    case 'add': return packages ? `${pm} ${pm === 'npm' ? 'install' : 'add'} ${packages} ${devFlag[pm]}`.trim() : null;
-    case 'remove': return packages ? `${pm} ${pm === 'npm' ? 'uninstall' : 'remove'} ${packages}` : null;
-    case 'outdated': return `${pm} outdated`;
-    case 'audit': return `${pm} audit`;
-    case 'list': return `${pm} list --depth=0`;
-    default: return null;
+    case 'install':
+      return `${pm} install`;
+    case 'add':
+      return packages
+        ? `${pm} ${pm === 'npm' ? 'install' : 'add'} ${packages} ${devFlag[pm]}`.trim()
+        : null;
+    case 'remove':
+      return packages ? `${pm} ${pm === 'npm' ? 'uninstall' : 'remove'} ${packages}` : null;
+    case 'outdated':
+      return `${pm} outdated`;
+    case 'audit':
+      return `${pm} audit`;
+    case 'list':
+      return `${pm} list --depth=0`;
+    default:
+      return null;
   }
 }
 
 function _buildPipCmd(action, packages) {
   switch (action) {
-    case 'install': return 'pip install -r requirements.txt';
-    case 'add': return packages ? `pip install ${packages}` : null;
-    case 'remove': return packages ? `pip uninstall -y ${packages}` : null;
-    case 'outdated': return 'pip list --outdated';
-    case 'audit': return `pip-audit 2>${NULL_DEVICE} || echo "pip-audit not installed"`;
-    case 'list': return 'pip list';
-    default: return null;
+    case 'install':
+      return 'pip install -r requirements.txt';
+    case 'add':
+      return packages ? `pip install ${packages}` : null;
+    case 'remove':
+      return packages ? `pip uninstall -y ${packages}` : null;
+    case 'outdated':
+      return 'pip list --outdated';
+    case 'audit':
+      return `pip-audit 2>${NULL_DEVICE} || echo "pip-audit not installed"`;
+    case 'list':
+      return 'pip list';
+    default:
+      return null;
   }
 }
 
 function _buildCargoCmd(action, packages, isDev) {
   switch (action) {
-    case 'install': return 'cargo build';
-    case 'add': return packages ? `cargo add ${packages} ${isDev ? '--dev' : ''}`.trim() : null;
-    case 'remove': return packages ? `cargo remove ${packages}` : null;
-    case 'outdated': return `cargo outdated 2>${NULL_DEVICE} || echo "cargo-outdated not installed"`;
-    case 'audit': return `cargo audit 2>${NULL_DEVICE} || echo "cargo-audit not installed"`;
-    case 'list': return 'cargo tree --depth=1';
-    default: return null;
+    case 'install':
+      return 'cargo build';
+    case 'add':
+      return packages ? `cargo add ${packages} ${isDev ? '--dev' : ''}`.trim() : null;
+    case 'remove':
+      return packages ? `cargo remove ${packages}` : null;
+    case 'outdated':
+      return `cargo outdated 2>${NULL_DEVICE} || echo "cargo-outdated not installed"`;
+    case 'audit':
+      return `cargo audit 2>${NULL_DEVICE} || echo "cargo-audit not installed"`;
+    case 'list':
+      return 'cargo tree --depth=1';
+    default:
+      return null;
   }
 }
 
 function _buildGoCmd(action, packages) {
   switch (action) {
-    case 'install': return 'go mod download';
-    case 'add': return packages ? `go get ${packages}` : null;
-    case 'remove': return packages ? `go get ${packages}@none && go mod tidy` : null;
-    case 'outdated': return 'go list -u -m all';
-    case 'audit': return 'go vet ./...';
-    case 'list': return 'go list -m all';
-    default: return null;
+    case 'install':
+      return 'go mod download';
+    case 'add':
+      return packages ? `go get ${packages}` : null;
+    case 'remove':
+      return packages ? `go get ${packages}@none && go mod tidy` : null;
+    case 'outdated':
+      return 'go list -u -m all';
+    case 'audit':
+      return 'go vet ./...';
+    case 'list':
+      return 'go list -m all';
+    default:
+      return null;
   }
 }

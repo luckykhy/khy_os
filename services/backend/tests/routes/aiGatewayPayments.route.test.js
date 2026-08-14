@@ -140,7 +140,7 @@ describe('aiGatewayPayments route', () => {
     expect(detailRes.body.data.status).toBe('fulfilled');
     expect(detailRes.body.data.result.appliedGrant.monthlyTokens).toBe(100000);
     expect(detailRes.body.data.events.some((event) => event.type === 'payment.fulfilled')).toBe(true);
-  });
+  }, 30000); // 4 次往返 × (模块重载 + QR 生成) 实测约 12s，超出 jest 默认 5s
 
   test('admin can fulfill a payment through the local mock confirm endpoint', async () => {
     const customerRegistry = load('../../src/services/gateway/customerRegistry');
@@ -171,7 +171,7 @@ describe('aiGatewayPayments route', () => {
 
     const customer = customerRegistry.getCustomer('cus_confirm');
     expect(customer.quota.monthlyRequests).toBe(25);
-  });
+  }, 30000); // 同上：实测 2.2~4.3s 波动，贴近 jest 默认 5s，显式放宽避免偶发 flake
 
   test('non-admin users cannot create payment orders', async () => {
     createCustomer({ id: 'cus_user' });

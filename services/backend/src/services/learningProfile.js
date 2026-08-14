@@ -24,17 +24,26 @@ const DEFAULT_LEVEL = 'normal';
 
 // 收敛到 utils/growthDataDir 单一真源(逐字节委托,调用点不变) // ~/.khyos/growth
 const _profileDir = require('../utils/growthDataDir');
-function _profileFile() { return path.join(_profileDir(), 'learn_profile.json'); }
-function _profileBak() { return path.join(_profileDir(), 'learn_profile.bak'); }
+function _profileFile() {
+  return path.join(_profileDir(), 'learn_profile.json');
+}
+
+function _profileBak() {
+  return path.join(_profileDir(), 'learn_profile.bak');
+}
 
 /** 环境默认档位：仅当磁盘上没有档位文件时生效。非法值忽略 → 'normal'。 */
 function _envLevel() {
-  const v = String(process.env.KHY_LEARN_LEVEL || '').trim().toLowerCase();
+  const v = String(process.env.KHY_LEARN_LEVEL || '')
+    .trim()
+    .toLowerCase();
   return LEVELS.includes(v) ? v : DEFAULT_LEVEL;
 }
 
 function _normalizeLevel(level) {
-  const v = String(level == null ? '' : level).trim().toLowerCase();
+  const v = String(level == null ? '' : level)
+    .trim()
+    .toLowerCase();
   return LEVELS.includes(v) ? v : null;
 }
 
@@ -42,9 +51,13 @@ function _normalizeLevel(level) {
 function _readProfileFile() {
   try {
     const file = _profileFile();
-    if (!fs.existsSync(file)) return null;
+    if (!fs.existsSync(file)) {
+      return null;
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    if (!raw || typeof raw !== 'object') return null;
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
     const level = _normalizeLevel(raw.level);
     return {
       version: Number(raw.version) || PROFILE_VERSION,
@@ -52,23 +65,31 @@ function _readProfileFile() {
       updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
     };
   } catch {
-    return null;   // 损坏 / 不可读 → 视为不存在
+    return null; // 损坏 / 不可读 → 视为不存在
   }
 }
 
 /** 返回完整档位对象（文件优先 → 环境默认）。fail-soft，永不抛。 */
 function loadProfile() {
   const onDisk = _readProfileFile();
-  if (onDisk) return onDisk;
+  if (onDisk) {
+    return onDisk;
+  }
   return { version: PROFILE_VERSION, level: _envLevel(), updatedAt: null };
 }
 
 /** 当前档位 'beginner' | 'normal'。最坏回落 'normal'，绝不抛。 */
 function getLevel() {
-  try { return loadProfile().level; } catch { return DEFAULT_LEVEL; }
+  try {
+    return loadProfile().level;
+  } catch {
+    return DEFAULT_LEVEL;
+  }
 }
 
-function isBeginner() { return getLevel() === 'beginner'; }
+function isBeginner() {
+  return getLevel() === 'beginner';
+}
 
 /**
  * 设置档位并持久化（原子写 + .bak 轮转）。
@@ -76,12 +97,20 @@ function isBeginner() { return getLevel() === 'beginner'; }
  */
 function setLevel(level) {
   const norm = _normalizeLevel(level);
-  if (!norm) return { ok: false, error: `invalid level; choose ${LEVELS.join(' | ')}` };
+  if (!norm) {
+    return { ok: false, error: `invalid level; choose ${LEVELS.join(' | ')}` };
+  }
   try {
-    const dir = _profileDir();           // getBaseDataDir 已确保目录存在
+    const dir = _profileDir(); // getBaseDataDir 已确保目录存在
     const file = _profileFile();
     // 写前轮转单份备份，损坏时可回退
-    try { if (fs.existsSync(file)) fs.copyFileSync(file, _profileBak()); } catch { /* best-effort */ }
+    try {
+      if (fs.existsSync(file)) {
+        fs.copyFileSync(file, _profileBak());
+      }
+    } catch {
+      /* best-effort */
+    }
     const payload = { version: PROFILE_VERSION, level: norm, updatedAt: new Date().toISOString() };
     // 原子写：同目录临时文件 + rename（同卷 rename 原子，避免半写损坏）
     const tmp = path.join(dir, `.learn_profile.${process.pid}.tmp`);

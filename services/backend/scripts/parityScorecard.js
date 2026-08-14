@@ -68,9 +68,27 @@ function v1AgenticLoop() {
     streamGuard: /_streamRepGuard|_sawStreamedText|degenerat/i.test(src),
   };
   let closure = false;
-  try { closure = !!req('src/services/projectCoherence/deliverableClosure'); } catch { closure = false; }
+  try {
+    closure = !!req('src/services/projectCoherence/deliverableClosure');
+  } catch {
+    closure = false;
+  }
   const hit = Object.values(signals).filter(Boolean).length + (closure ? 1 : 0);
-  return { score: hit, detail: 'loop=' + signals.runToolUseLoop + ' maxIter=' + signals.maxIterations + ' streamGuard=' + signals.streamGuard + ' closure=' + closure + ' (' + hit + '/4)' };
+  return {
+    score: hit,
+    detail:
+      'loop=' +
+      signals.runToolUseLoop +
+      ' maxIter=' +
+      signals.maxIterations +
+      ' streamGuard=' +
+      signals.streamGuard +
+      ' closure=' +
+      closure +
+      ' (' +
+      hit +
+      '/4)',
+  };
 }
 
 // V2 工具覆盖面:CC 基线核心工具是否齐备(比例)
@@ -78,13 +96,38 @@ function v2ToolCoverage() {
   const idx = req('src/tools/index');
   const names = new Set([...idx.getAll().keys()]);
   // Bash 的 canonical 名是 shellCommand;其余按注册名
-  const CORE = ['Read', 'Write', 'Edit', 'MultiEdit', 'Grep', 'Glob', 'shellCommand',
-    'Agent', 'WebFetch', 'WebSearch', 'TaskCreate', 'TodoWrite', 'Skill',
-    'EnterPlanMode', 'ExitPlanMode', 'VerifyPlanExecution'];
+  const CORE = [
+    'Read',
+    'Write',
+    'Edit',
+    'MultiEdit',
+    'Grep',
+    'Glob',
+    'shellCommand',
+    'Agent',
+    'WebFetch',
+    'WebSearch',
+    'TaskCreate',
+    'TodoWrite',
+    'Skill',
+    'EnterPlanMode',
+    'ExitPlanMode',
+    'VerifyPlanExecution',
+  ];
   const present = CORE.filter((c) => names.has(c));
   const ratio = present.length / CORE.length;
   const missing = CORE.filter((c) => !names.has(c));
-  return { score: ratio * 3, detail: '核心工具 ' + present.length + '/' + CORE.length + (missing.length ? ' 缺:' + missing.join(',') : '') + ' · 注册总数 ' + names.size };
+  return {
+    score: ratio * 3,
+    detail:
+      '核心工具 ' +
+      present.length +
+      '/' +
+      CORE.length +
+      (missing.length ? ' 缺:' + missing.join(',') : '') +
+      ' · 注册总数 ' +
+      names.size,
+  };
 }
 
 // V3 工具契约洁净:契约审计 0 error(冲突/形状/schema),warning 仅报告
@@ -93,7 +136,17 @@ function v3ToolContract() {
   const r = auditTools();
   const errors = Number(r.errors) || 0;
   const warnings = Number(r.warnings) || 0;
-  return { score: errors === 0 ? 2 : 0, detail: 'errors=' + errors + ' warnings=' + warnings + ' total=' + r.total + (errors === 0 ? ' ✓' : ' ✗ 存在契约冲突') };
+  return {
+    score: errors === 0 ? 2 : 0,
+    detail:
+      'errors=' +
+      errors +
+      ' warnings=' +
+      warnings +
+      ' total=' +
+      r.total +
+      (errors === 0 ? ' ✓' : ' ✗ 存在契约冲突'),
+  };
 }
 
 // V4 收敛 / 有界终止:目标不会无限跑(轮次预算 + 终止态词汇)
@@ -103,7 +156,10 @@ function v4Convergence() {
   const fns = hasFns(g, need);
   const terminal = Array.isArray(g.GOAL_TERMINAL_STATUSES) && g.GOAL_TERMINAL_STATUSES.length >= 3;
   const hit = fns.length + (terminal ? 1 : 0);
-  return { score: hit >= 4 ? 2 : (hit >= 2 ? 1 : 0), detail: '有界函数 ' + fns.length + '/' + need.length + ' 终止态=' + terminal };
+  return {
+    score: hit >= 4 ? 2 : hit >= 2 ? 1 : 0,
+    detail: '有界函数 ' + fns.length + '/' + need.length + ' 终止态=' + terminal,
+  };
 }
 
 // V5 安全 / 权限门:多级审批 + 风险分类
@@ -112,9 +168,25 @@ function v5Safety() {
   const hasPerm = e && e.PERMISSION && typeof e.PERMISSION === 'object';
   const hasRisk = typeof e.classifyRisk === 'function';
   let router = false;
-  try { router = !!req('src/services/syscallGateway/approvalRouter'); } catch { router = false; }
+  try {
+    router = !!req('src/services/syscallGateway/approvalRouter');
+  } catch {
+    router = false;
+  }
   const hit = (hasPerm ? 1 : 0) + (hasRisk ? 1 : 0) + (router ? 1 : 0);
-  return { score: hit >= 2 ? 2 : hit, detail: 'PERMISSION=' + hasPerm + ' classifyRisk=' + hasRisk + ' approvalRouter=' + router + ' (' + hit + '/3)' };
+  return {
+    score: hit >= 2 ? 2 : hit,
+    detail:
+      'PERMISSION=' +
+      hasPerm +
+      ' classifyRisk=' +
+      hasRisk +
+      ' approvalRouter=' +
+      router +
+      ' (' +
+      hit +
+      '/3)',
+  };
 }
 
 // V6 自我认知:命令目录规模 + 自我定位
@@ -123,9 +195,17 @@ function v6SelfAwareness() {
   const cmds = getBuiltinSlashCommands();
   const count = Array.isArray(cmds) ? cmds.length : 0;
   let selfLoc = false;
-  try { const sl = req('src/services/selfLocation'); selfLoc = typeof sl.formatLocationForSystemPrompt === 'function'; } catch { selfLoc = false; }
+  try {
+    const sl = req('src/services/selfLocation');
+    selfLoc = typeof sl.formatLocationForSystemPrompt === 'function';
+  } catch {
+    selfLoc = false;
+  }
   const ok = count >= 150 && selfLoc;
-  return { score: ok ? 1 : (count >= 150 || selfLoc ? 0.5 : 0), detail: 'slash 命令 ' + count + ' 条 · selfLocation=' + selfLoc };
+  return {
+    score: ok ? 1 : count >= 150 || selfLoc ? 0.5 : 0,
+    detail: 'slash 命令 ' + count + ' 条 · selfLocation=' + selfLoc,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -140,7 +220,11 @@ function s1PlanMode() {
   const enter = fs.existsSync(path.join(BACKEND_ROOT, 'src/tools/EnterPlanModeTool/index.js'));
   const exit = fs.existsSync(path.join(BACKEND_ROOT, 'src/tools/ExitPlanModeTool/index.js'));
   const hit = fns.length + (enter ? 1 : 0) + (exit ? 1 : 0);
-  return { score: hit >= 4 ? 2 : (hit >= 2 ? 1 : 0), detail: 'planModeService ' + fns.length + '/3 · EnterPlanMode=' + enter + ' ExitPlanMode=' + exit };
+  return {
+    score: hit >= 4 ? 2 : hit >= 2 ? 1 : 0,
+    detail:
+      'planModeService ' + fns.length + '/3 · EnterPlanMode=' + enter + ' ExitPlanMode=' + exit,
+  };
 }
 
 // S2 计划执行验证:对照计划逐项核验 + runtime 证据
@@ -151,11 +235,22 @@ function s2PlanVerify() {
   // 故按源码存在性+接线判定,而非公开导出。
   let evidence = false;
   try {
-    const src = fs.readFileSync(path.join(BACKEND_ROOT, 'src/services/planModeService.js'), 'utf-8');
-    evidence = /function hasRuntimeEvidence/.test(src) && /function isStepExecutionFailure/.test(src) && /hasRuntimeEvidence\(reply\)/.test(src);
-  } catch { evidence = false; }
+    const src = fs.readFileSync(
+      path.join(BACKEND_ROOT, 'src/services/planModeService.js'),
+      'utf-8'
+    );
+    evidence =
+      /function hasRuntimeEvidence/.test(src) &&
+      /function isStepExecutionFailure/.test(src) &&
+      /hasRuntimeEvidence\(reply\)/.test(src);
+  } catch {
+    evidence = false;
+  }
   const hit = (tool ? 1 : 0) + (evidence ? 1 : 0);
-  return { score: hit, detail: 'VerifyPlanExecution=' + tool + ' runtimeEvidence门控=' + evidence + '(内部接线)' };
+  return {
+    score: hit,
+    detail: 'VerifyPlanExecution=' + tool + ' runtimeEvidence门控=' + evidence + '(内部接线)',
+  };
 }
 
 // S3 规格→实现→对照验证闭环:acceptance pack + deliveryGate verdict + remediation 回灌
@@ -166,7 +261,19 @@ function s3SpecClosedLoop() {
   const evalOk = typeof dg.evaluateDelivery === 'function';
   const remedy = typeof dg.buildRemediationPrompt === 'function';
   const hit = (acOk ? 1 : 0) + (evalOk ? 1 : 0) + (remedy ? 1 : 0);
-  return { score: hit >= 3 ? 3 : hit, detail: 'buildAcceptancePack=' + acOk + ' evaluateDelivery=' + evalOk + ' remediation=' + remedy + ' (' + hit + '/3)' };
+  return {
+    score: hit >= 3 ? 3 : hit,
+    detail:
+      'buildAcceptancePack=' +
+      acOk +
+      ' evaluateDelivery=' +
+      evalOk +
+      ' remediation=' +
+      remedy +
+      ' (' +
+      hit +
+      '/3)',
+  };
 }
 
 // S4 任务分解 / 追踪:创建 + 依赖(blockedBy)
@@ -178,7 +285,10 @@ function s4TaskDecomp() {
   const storePath = path.join(BACKEND_ROOT, 'src/tools/_taskStore.js');
   const blocked = fs.existsSync(storePath) && /blockedBy/.test(fs.readFileSync(storePath, 'utf-8'));
   const hit = tools.length + (blocked ? 1 : 0);
-  return { score: hit >= 3 ? 2 : (hit >= 2 ? 1 : 0), detail: '任务工具 ' + tools.length + '/3 · blockedBy 依赖=' + blocked };
+  return {
+    score: hit >= 3 ? 2 : hit >= 2 ? 1 : 0,
+    detail: '任务工具 ' + tools.length + '/3 · blockedBy 依赖=' + blocked,
+  };
 }
 
 // S5 spec-driven 技能:SPECIFY→PLAN→TASKS→IMPLEMENT 分阶段 gated
@@ -187,19 +297,30 @@ function s5SpecSkill() {
   const skill = path.join(BACKEND_ROOT, 'src/skills/built-in/spec-driven-development/prompt.md');
   if (!fs.existsSync(skill)) return { score: 0, detail: 'spec-driven-development 技能缺失' };
   const src = fs.readFileSync(skill, 'utf-8');
-  const stages = ['SPECIFY', 'PLAN', 'TASKS', 'IMPLEMENT'].filter((s) => new RegExp(s, 'i').test(src));
-  return { score: stages.length >= 4 ? 1 : (stages.length >= 2 ? 0.5 : 0), detail: '四阶段命中 ' + stages.length + '/4 (' + stages.join('→') + ')' };
+  const stages = ['SPECIFY', 'PLAN', 'TASKS', 'IMPLEMENT'].filter((s) =>
+    new RegExp(s, 'i').test(src)
+  );
+  return {
+    score: stages.length >= 4 ? 1 : stages.length >= 2 ? 0.5 : 0,
+    detail: '四阶段命中 ' + stages.length + '/4 (' + stages.join('→') + ')',
+  };
 }
 
 // S6 外部编辑器编排:AgentTool subagent_type 含 claude/codex/opencode + 适配器齐备
 function s6ExternalOrch() {
   const fs = require('fs');
   const atSrc = fs.readFileSync(path.join(BACKEND_ROOT, 'src/tools/AgentTool/index.js'), 'utf-8');
-  const editors = ['claude', 'codex', 'opencode'].filter((e) => new RegExp("'" + e + "'", 'i').test(atSrc));
+  const editors = ['claude', 'codex', 'opencode'].filter((e) =>
+    new RegExp("'" + e + "'", 'i').test(atSrc)
+  );
   const adapters = ['claudeAdapter', 'codexAdapter', 'opencodeAdapter'].filter((a) =>
-    fs.existsSync(path.join(BACKEND_ROOT, 'src/services/gateway/adapters/' + a + '.js')));
+    fs.existsSync(path.join(BACKEND_ROOT, 'src/services/gateway/adapters/' + a + '.js'))
+  );
   const hit = (editors.length >= 3 ? 1 : 0) + (adapters.length >= 3 ? 1 : 0);
-  return { score: hit, detail: 'subagent 编辑器 ' + editors.length + '/3 · 专属适配器 ' + adapters.length + '/3' };
+  return {
+    score: hit,
+    detail: 'subagent 编辑器 ' + editors.length + '/3 · 专属适配器 ' + adapters.length + '/3',
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -209,12 +330,26 @@ function x1TestScale() {
   const { execFileSync } = require('child_process');
   let nodeTest = 0;
   try {
-    const out = execFileSync('bash', ['-c',
-      "grep -rl --include=*.test.js 'node:test' " + JSON.stringify(BACKEND_ROOT) + "/src " + JSON.stringify(BACKEND_ROOT) + "/tests 2>/dev/null | wc -l"],
-      { encoding: 'utf-8', timeout: 20000 });
+    const out = execFileSync(
+      'bash',
+      [
+        '-c',
+        "grep -rl --include=*.test.js 'node:test' " +
+          JSON.stringify(BACKEND_ROOT) +
+          '/src ' +
+          JSON.stringify(BACKEND_ROOT) +
+          '/tests 2>/dev/null | wc -l',
+      ],
+      { encoding: 'utf-8', timeout: 20000 }
+    );
     nodeTest = parseInt(String(out).trim(), 10) || 0;
-  } catch { nodeTest = 0; }
-  return { score: nodeTest >= 500 ? 1 : (nodeTest >= 200 ? 0.5 : 0), detail: 'node:test 文件 ' + nodeTest + ' 个(阈值 ≥500=满分)' };
+  } catch {
+    nodeTest = 0;
+  }
+  return {
+    score: nodeTest >= 500 ? 1 : nodeTest >= 200 ? 0.5 : 0,
+    detail: 'node:test 文件 ' + nodeTest + ' 个(阈值 ≥500=满分)',
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -248,11 +383,23 @@ const GATE_B = [
 function computeScorecard(opts) {
   const rows = DIMENSIONS.map((d) => {
     const r = safe(d.run, d.max);
-    return { id: d.id, domain: d.domain, label: d.label, score: r.score, max: d.max, detail: r.detail };
+    return {
+      id: d.id,
+      domain: d.domain,
+      label: d.label,
+      score: r.score,
+      max: d.max,
+      detail: r.detail,
+    };
   });
-  const sum = (dom) => rows.filter((r) => dom === 'all' || r.domain === dom)
-    .reduce((a, r) => ({ score: a.score + r.score, max: a.max + r.max }), { score: 0, max: 0 });
-  const vibe = sum('vibe'), spec = sum('spec'), cross = sum('cross'), total = sum('all');
+  const sum = (dom) =>
+    rows
+      .filter((r) => dom === 'all' || r.domain === dom)
+      .reduce((a, r) => ({ score: a.score + r.score, max: a.max + r.max }), { score: 0, max: 0 });
+  const vibe = sum('vibe'),
+    spec = sum('spec'),
+    cross = sum('cross'),
+    total = sum('all');
   const gate = opts.gate;
   const ratio = total.max ? total.score / total.max : 0;
   const vibeRatio = vibe.max ? vibe.score / vibe.max : 0;
@@ -263,10 +410,24 @@ function computeScorecard(opts) {
   if (vibeRatio >= gate && specRatio >= gate && ratio >= gate) verdict = 'PASS';
   else if (vibeRatio < floor || specRatio < floor) verdict = 'FAIL';
   else verdict = 'PARTIAL';
-  return { rows, vibe, spec, cross, total, ratio, vibeRatio, specRatio, gate, verdict, gateB: GATE_B };
+  return {
+    rows,
+    vibe,
+    spec,
+    cross,
+    total,
+    ratio,
+    vibeRatio,
+    specRatio,
+    gate,
+    verdict,
+    gateB: GATE_B,
+  };
 }
 
-function pct(n) { return (n * 100).toFixed(1) + '%'; }
+function pct(n) {
+  return (n * 100).toFixed(1) + '%';
+}
 
 function renderText(sc) {
   const L = [];
@@ -277,14 +438,27 @@ function renderText(sc) {
   L.push('  维度   分/满   域    说明');
   L.push('  ' + '─'.repeat(66));
   for (const r of sc.rows) {
-    const s = (r.score % 1 === 0 ? r.score.toFixed(0) : r.score.toFixed(1));
+    const s = r.score % 1 === 0 ? r.score.toFixed(0) : r.score.toFixed(1);
     const cell = (r.id + ' ' + r.label).padEnd(24, ' ').slice(0, 24);
     L.push('  ' + cell + ' ' + (s + '/' + r.max).padEnd(6) + r.domain.padEnd(6) + r.detail);
   }
   L.push('  ' + '─'.repeat(66));
-  L.push('  VIBE 域: ' + sc.vibe.score.toFixed(1) + '/' + sc.vibe.max + ' (' + pct(sc.vibeRatio) + ')');
-  L.push('  SPEC 域: ' + sc.spec.score.toFixed(1) + '/' + sc.spec.max + ' (' + pct(sc.specRatio) + ')');
-  L.push('  总  分: ' + sc.total.score.toFixed(1) + '/' + sc.total.max + ' (' + pct(sc.ratio) + ') · 阈值 ' + pct(sc.gate));
+  L.push(
+    '  VIBE 域: ' + sc.vibe.score.toFixed(1) + '/' + sc.vibe.max + ' (' + pct(sc.vibeRatio) + ')'
+  );
+  L.push(
+    '  SPEC 域: ' + sc.spec.score.toFixed(1) + '/' + sc.spec.max + ' (' + pct(sc.specRatio) + ')'
+  );
+  L.push(
+    '  总  分: ' +
+      sc.total.score.toFixed(1) +
+      '/' +
+      sc.total.max +
+      ' (' +
+      pct(sc.ratio) +
+      ') · 阈值 ' +
+      pct(sc.gate)
+  );
   L.push('  Gate A 判定: ' + sc.verdict);
   L.push('');
   L.push('  Gate B(实证对齐 / 需 golden-task 基准跑,本脚本不自动打分):');
@@ -299,17 +473,34 @@ function renderText(sc) {
 function main() {
   const argv = process.argv.slice(2);
   const json = argv.includes('--json');
-  let gate = 0.90;
-  for (const a of argv) { const m = /^--gate=([0-9.]+)$/.exec(a); if (m) gate = Math.max(0, Math.min(1, parseFloat(m[1]))); }
+  let gate = 0.9;
+  for (const a of argv) {
+    const m = /^--gate=([0-9.]+)$/.exec(a);
+    if (m) gate = Math.max(0, Math.min(1, parseFloat(m[1])));
+  }
   const sc = computeScorecard({ gate });
   if (json) {
-    process.stdout.write(JSON.stringify({
-      standard: 'MGMT-STD-006', gateA: 'structural-readiness',
-      gate, verdict: sc.verdict,
-      total: sc.total, ratio: sc.ratio,
-      domains: { vibe: { ...sc.vibe, ratio: sc.vibeRatio }, spec: { ...sc.spec, ratio: sc.specRatio }, cross: sc.cross },
-      rows: sc.rows, gateB: sc.gateB,
-    }, null, 2) + '\n');
+    process.stdout.write(
+      JSON.stringify(
+        {
+          standard: 'MGMT-STD-006',
+          gateA: 'structural-readiness',
+          gate,
+          verdict: sc.verdict,
+          total: sc.total,
+          ratio: sc.ratio,
+          domains: {
+            vibe: { ...sc.vibe, ratio: sc.vibeRatio },
+            spec: { ...sc.spec, ratio: sc.specRatio },
+            cross: sc.cross,
+          },
+          rows: sc.rows,
+          gateB: sc.gateB,
+        },
+        null,
+        2
+      ) + '\n'
+    );
   } else {
     process.stdout.write(renderText(sc));
   }

@@ -10,7 +10,7 @@
  * @returns {Promise<void>}
  */
 function sleep(ms, options = {}) {
-  const normalizedOptions = typeof options === 'boolean' ? { unref: options } : (options || {});
+  const normalizedOptions = typeof options === 'boolean' ? { unref: options } : options || {};
   const { unref = false } = normalizedOptions;
 
   if (!Number.isFinite(ms) || ms < 0) {

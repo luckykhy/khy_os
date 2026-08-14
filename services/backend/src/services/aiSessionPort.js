@@ -22,11 +22,12 @@ let _session = null;
 
 /** cli/ai registers `{ handleAiStatus, handleAiConfig, clearHistory }` here on load. */
 function registerAiSession(session) {
-  _session = session
-    && typeof session.handleAiStatus === 'function'
-    && typeof session.handleAiConfig === 'function'
-    ? session
-    : null;
+  _session =
+    session &&
+    typeof session.handleAiStatus === 'function' &&
+    typeof session.handleAiConfig === 'function'
+      ? session
+      : null;
 }
 
 /** Returns the registered session handlers, or null when the CLI was never loaded. */

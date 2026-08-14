@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scripts/ — 项目管理与自动化脚本 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../docs/index.html">首页</a><span class="sep">›</span>scripts<span class="sep">›</span>scripts/ — 项目管理与自动化脚本</div>
+      <header class="hero reveal"><h1>scripts/ — 项目管理与自动化脚本</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#scripts-项目管理与自动化脚本">scripts/ — 项目管理与自动化脚本</a></li><li class="lvl-2"><a href="#目录分类">目录分类</a></li><li class="lvl-2"><a href="#使用约定">使用约定</a></li><li class="lvl-2"><a href="#常用入口">常用入口</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="scripts-项目管理与自动化脚本">scripts/ — 项目管理与自动化脚本<a class="anchor" href="#scripts-项目管理与自动化脚本" aria-label="锚点">#</a></h1>
+<p>本目录集中存放 khy OS 仓库的<strong>维护、构建、发布与工程化脚本</strong>。<br>业务运行时代码不在此处（它们在 <code>services/</code>、<code>kernel/</code>、<code>software/</code>、<code>apps/</code> 各自的模块目录内）。</p>
+<h2 id="目录分类">目录分类<a class="anchor" href="#目录分类" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>子目录</th><th>用途</th></tr></thead><tbody><tr><td><code>admin/</code></td><td>管理员辅助：账号/凭据创建、重置、修复</td></tr><tr><td><code>alpine/</code></td><td>Alpine Linux ISO 构建（Docker / Windows）</td></tr><tr><td><code>bench/</code></td><td>性能基准与 A/B 对比实验</td></tr><tr><td><code>ci/</code></td><td>CI 与工程规则检查：agent 规则、版本同步、模式契约、模式注册表</td></tr><tr><td><code>diagnostics/</code></td><td>诊断与模糊测试工具</td></tr><tr><td><code>docs/</code></td><td>文档站构建、校验、PDF 导出</td></tr><tr><td><code>install/</code></td><td>安装/部署：CLI 安装、git hooks、链接 shared 包、环境校验</td></tr><tr><td><code>khytogo/</code></td><td>khytogo 便携发行构建</td></tr><tr><td><code>lib/</code></td><td>脚本共享库（restore/check 等公共模块）</td></tr><tr><td><code>maintenance/</code></td><td>日常维护：体积精简（slim-down.bat/.sh）等</td></tr><tr><td><code>moonbit/</code></td><td>MoonBit/WASM 指标测试</td></tr><tr><td><code>portable/</code></td><td>便携化：USB 构建、数据迁移、路径包装、自修复</td></tr><tr><td><code>qoder-bridge/</code></td><td>Qoder 桥接（自启脚本 + 日志）</td></tr><tr><td><code>release/</code></td><td>发布：pip/npm 构建、双通道发布、门禁与版本工具</td></tr><tr><td><code>restore/</code></td><td>恢复子系统各阶段脚本</td></tr><tr><td><code>tests/</code></td><td>上述脚本的单元测试（对应 <code>lib/</code> 模块）</td></tr></tbody></table>
+<h2 id="使用约定">使用约定<a class="anchor" href="#使用约定" aria-label="锚点">#</a></h2>
+<ul><li><strong>入口脚本</strong>：CLI 启动器 <code>khy.bat</code> / <code>khy.sh</code> 放根目录（供 PATH 全局调用）；便携化启动</li></ul>
+<p><code>run.ps1</code> / <code>run-portable.bat</code> / <code>run-portable.sh</code> 归入 <code>portable/</code>。</p>
+<ul><li><strong>新增脚本</strong>按上述主题放入对应子目录；不建一次性散落目录。</li><li><strong>跨平台</strong>：新增批处理类脚本应同时提供 <code>.bat</code> 与 <code>.sh</code> 配对（参照 <code>install-path-wrappers</code>、<code>slim-down</code>）。</li><li><strong>共享逻辑</strong>写入 <code>lib/</code>，脚本主体保持薄壳。</li><li><strong>运行时产物</strong>（<code>__pycache__</code>、<code>logs/</code>、<code>ab-traces/</code> 等）不入库，随运行产生。</li></ul>
+<h2 id="常用入口">常用入口<a class="anchor" href="#常用入口" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 体积精简（Win）
+scripts/maintenance/slim-down.bat
+# 体积精简（Linux/macOS）
+bash scripts/maintenance/slim-down.sh
+# 版本同步校验
+node scripts/ci/check-version-sync.js
+# agent 规则检查
+node scripts/ci/check-agent-rules.js --changed</code></pre>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../scripts/release/publish/README.html"><div class="dir">下一篇 →</div><div class="ttl">多渠道发布工具箱（scripts/release/publish/）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../";window.__KHY_CUR__="scripts/README.html";</script>
+<script src="../docs/_assets/nav-data.js"></script>
+<script src="../docs/_assets/mermaid.min.js"></script>
+<script src="../docs/_assets/docs-site.js"></script>
+</body>
+</html>

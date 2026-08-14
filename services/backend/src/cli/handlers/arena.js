@@ -48,7 +48,10 @@ async function handleArena(input, deps) {
   // Parse models from --models flag or from config
   let models = [];
   if (options.models) {
-    models = options.models.split(',').map((m) => m.trim()).filter(Boolean);
+    models = options.models
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
   }
 
   // Default: use 2-3 available models
@@ -83,7 +86,9 @@ async function handleArena(input, deps) {
   // Progress tracking
   const progress = {};
   const onProgress = (model, event) => {
-    if (!progress[model]) progress[model] = { chunks: 0, chars: 0 };
+    if (!progress[model]) {
+      progress[model] = { chunks: 0, chars: 0 };
+    }
     if (event.type === 'chunk') {
       progress[model].chunks++;
       progress[model].chars += (event.content || '').length;
@@ -116,11 +121,16 @@ async function handleArena(input, deps) {
     // Print individual responses if --verbose
     if (options.verbose) {
       for (const entry of result.entries) {
-        if (entry.failed) continue;
+        if (entry.failed) {
+          continue;
+        }
         console.log(c.bold(`  ── ${entry.model} ──`));
         console.log('');
         // Indent each line
-        const indented = entry.content.split('\n').map((l) => `    ${l}`).join('\n');
+        const indented = entry.content
+          .split('\n')
+          .map((l) => `    ${l}`)
+          .join('\n');
         console.log(indented);
         console.log('');
       }
@@ -153,7 +163,9 @@ function _getDefaultModels(aiModule) {
         return models.slice(0, 3).map((m) => m.id || m.name || m);
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return [];
 }

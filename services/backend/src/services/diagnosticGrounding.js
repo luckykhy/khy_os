@@ -58,13 +58,19 @@ let _lastFailure = null;
  */
 function recordFailure(failure) {
   try {
-    if (!failure || typeof failure !== 'object') return;
+    if (!failure || typeof failure !== 'object') {
+      return;
+    }
     const cause = failure.cause == null ? '' : String(failure.cause).trim();
     const errorType = failure.errorType == null ? '' : String(failure.errorType).trim();
-    if (!cause && !errorType) return; // 空失败不登记(不覆盖上一条有效失败)
+    if (!cause && !errorType) {
+      return;
+    } // 空失败不登记(不覆盖上一条有效失败)
     // cause 截断防超长污染 prompt(诊断只需要真因的头部即可定位)。
     _lastFailure = { errorType, cause: cause.slice(0, 600) };
-  } catch { /* fail-soft:登记失败绝不拖垮主循环 */ }
+  } catch {
+    /* fail-soft:登记失败绝不拖垮主循环 */
+  }
 }
 
 /** 取最近一次失败(无则 null)。绝不抛。 */
@@ -83,7 +89,8 @@ function _resetRecentFailure() {
 // 保守闸门:必须同时含**疑问触发**(为什么/为啥/怎么/why)与**失败名词**,单独一个不接管
 // (避免把「怎么用这个工具」「why is this fast」误判为诊断追问)。
 const _WHY_TRIGGER_RE = /(为什么|为啥|为何|怎么(会|回事|搞的|回事儿)?|咋(会|回事)|\bwhy\b)/i;
-const _FAIL_NOUN_RE = /(报错|失败|错误|出错|异常|不行|挂了|崩了|跑不动|无法|fail(ed|ing|s|ure)?|error|crash|broke(n)?|\b[45]\d\d\b)/i;
+const _FAIL_NOUN_RE =
+  /(报错|失败|错误|出错|异常|不行|挂了|崩了|跑不动|无法|fail(ed|ing|s|ure)?|error|crash|broke(n)?|\b[45]\d\d\b)/i;
 
 /**
  * 用户消息是否在追问「为什么失败/报错」。门关或非字符串或未双命中 → false。绝不抛。
@@ -93,10 +100,16 @@ const _FAIL_NOUN_RE = /(报错|失败|错误|出错|异常|不行|挂了|崩了|
  */
 function detectWhyFailureQuestion(msg, env) {
   try {
-    if (!isDiagnosticGroundingEnabled(env)) return false;
-    if (typeof msg !== 'string' || !msg.trim()) return false;
+    if (!isDiagnosticGroundingEnabled(env)) {
+      return false;
+    }
+    if (typeof msg !== 'string' || !msg.trim()) {
+      return false;
+    }
     return _WHY_TRIGGER_RE.test(msg) && _FAIL_NOUN_RE.test(msg);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -108,23 +121,31 @@ function detectWhyFailureQuestion(msg, env) {
  */
 function buildGroundingDirective(failure, env) {
   try {
-    if (!isDiagnosticGroundingEnabled(env)) return null;
+    if (!isDiagnosticGroundingEnabled(env)) {
+      return null;
+    }
     const f = failure || getRecentFailure();
-    if (!f || typeof f !== 'object') return null;
+    if (!f || typeof f !== 'object') {
+      return null;
+    }
     const cause = f.cause == null ? '' : String(f.cause).trim();
     const errorType = f.errorType == null ? '' : String(f.errorType).trim();
-    if (!cause && !errorType) return null;
+    if (!cause && !errorType) {
+      return null;
+    }
     const typeLine = errorType ? `错误类型:${errorType}\n` : '';
     const causeLine = cause ? `真实失败原因(上一轮已捕获):${cause}\n` : '';
     return (
-      '[SYSTEM: 诊断锚定] 用户在追问上一轮的失败。当前上下文里**已捕获**具体真因,先诊断它,'
-      + '不要另起无关调查、不要凭表层字样(如状态码数字)臆测成别的系统的问题:\n'
-      + typeLine
-      + causeLine
-      + '要求:①直接针对上面这条真因解释「为什么会这样」;②给出针对该真因的**可执行**下一步;'
-      + '③只有当这条真因确实不足以定位时,才用工具收集更多证据(并说明还缺什么)。'
+      '[SYSTEM: 诊断锚定] 用户在追问上一轮的失败。当前上下文里**已捕获**具体真因,先诊断它,' +
+      '不要另起无关调查、不要凭表层字样(如状态码数字)臆测成别的系统的问题:\n' +
+      typeLine +
+      causeLine +
+      '要求:①直接针对上面这条真因解释「为什么会这样」;②给出针对该真因的**可执行**下一步;' +
+      '③只有当这条真因确实不足以定位时,才用工具收集更多证据(并说明还缺什么)。'
     );
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 module.exports = {

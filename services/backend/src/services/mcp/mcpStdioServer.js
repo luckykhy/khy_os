@@ -13,6 +13,7 @@
  */
 
 const readline = require('readline');
+
 const { createServerCore } = require('./mcpServer');
 const policy = require('./mcpServeToolPolicy');
 
@@ -33,7 +34,11 @@ function startStdioServer(opts = {}) {
   const errOutput = opts.errOutput || process.stderr;
 
   // stdout 净化哨兵:告知下游「此进程 stdout 专供 JSON-RPC」。
-  try { env.KHY_MCP_SERVE_STDIO = '1'; } catch { /* 只读 env → 忽略 */ }
+  try {
+    env.KHY_MCP_SERVE_STDIO = '1';
+  } catch {
+    /* 只读 env → 忽略 */
+  }
 
   const core = createServerCore({ version: opts.version, env, context: opts.context });
 
@@ -41,33 +46,53 @@ function startStdioServer(opts = {}) {
   try {
     const summary = policy.summarizeExposure(core.exposedTools());
     errOutput.write(
-      `khy MCP server (stdio) ready — 暴露 ${summary.total} 个工具(含破坏性: ${summary.hasDestructive ? 'yes' : 'no'})\n`,
+      `khy MCP server (stdio) ready — 暴露 ${summary.total} 个工具(含破坏性: ${summary.hasDestructive ? 'yes' : 'no'})\n`
     );
-  } catch { /* 横幅是 best-effort,绝不因它中断启动 */ }
+  } catch {
+    /* 横幅是 best-effort,绝不因它中断启动 */
+  }
 
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
 
   rl.on('line', async (line) => {
     const trimmed = String(line == null ? '' : line).trim();
-    if (!trimmed) return; // 空行忽略
+    if (!trimmed) {
+      return;
+    } // 空行忽略
     let resp;
     try {
       resp = await core.handleMessage(trimmed);
     } catch (err) {
       // handleMessage 已内部兜底,这里是双保险;绝不让单条消息杀死循环。
-      try { errOutput.write(`khy MCP server: 处理消息出错: ${err && err.message}\n`); } catch { /* ignore */ }
+      try {
+        errOutput.write(`khy MCP server: 处理消息出错: ${err && err.message}\n`);
+      } catch {
+        /* ignore */
+      }
       return;
     }
     if (resp) {
-      try { output.write(`${JSON.stringify(resp)}\n`); } catch { /* stdout 关 → 无处可写,忽略 */ }
+      try {
+        output.write(`${JSON.stringify(resp)}\n`);
+      } catch {
+        /* stdout 关 → 无处可写,忽略 */
+      }
     }
   });
 
   const close = () => {
-    try { rl.close(); } catch { /* ignore */ }
+    try {
+      rl.close();
+    } catch {
+      /* ignore */
+    }
   };
   rl.on('close', () => {
-    try { errOutput.write('khy MCP server (stdio) closed\n'); } catch { /* ignore */ }
+    try {
+      errOutput.write('khy MCP server (stdio) closed\n');
+    } catch {
+      /* ignore */
+    }
   });
 
   return { core, rl, close };

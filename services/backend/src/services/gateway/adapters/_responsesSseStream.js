@@ -74,32 +74,55 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
         staleDetector = new StreamStaleDetector({
           ...staleOptions,
           onStale: (elapsed) => {
-            if (staleOptions.onStale) staleOptions.onStale(elapsed);
+            if (staleOptions.onStale) {
+              staleOptions.onStale(elapsed);
+            }
             // Stalled stream → actively tear it down (single-sourced decision/error
             // in streamStallPolicy). Reuses this parser's stream.on('error')
             // partial-salvage path. Gate KHY_STREAM_STALL_ABORT off → byte-identical.
             if (_stallPolicy.shouldAbortStaleStream()) {
               try {
-                stream.destroy(_stallPolicy.buildStallError({ provider: staleOptions.provider, elapsedMs: elapsed }));
-              } catch { /* ignore */ }
+                stream.destroy(
+                  _stallPolicy.buildStallError({
+                    provider: staleOptions.provider,
+                    elapsedMs: elapsed,
+                  })
+                );
+              } catch {
+                /* ignore */
+              }
             }
           },
         });
         staleDetector.start();
-      } catch { /* stale detection unavailable */ }
+      } catch {
+        /* stale detection unavailable */
+      }
     }
 
     // Abort handling
     if (signal) {
       if (signal.aborted) {
-        if (staleDetector) staleDetector.stop();
+        if (staleDetector) {
+          staleDetector.stop();
+        }
         return reject(new DOMException('Aborted', 'AbortError'));
       }
-      signal.addEventListener('abort', () => {
-        if (staleDetector) staleDetector.stop();
-        try { stream.destroy(); } catch { /* ignore */ }
-        reject(new DOMException('Aborted', 'AbortError'));
-      }, { once: true });
+      signal.addEventListener(
+        'abort',
+        () => {
+          if (staleDetector) {
+            staleDetector.stop();
+          }
+          try {
+            stream.destroy();
+          } catch {
+            /* ignore */
+          }
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true }
+      );
     }
 
     const parsePayload = (payload) => {
@@ -110,15 +133,21 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
         try {
           const { safeJsonParse } = require('../safeJsonParse');
           obj = safeJsonParse(payload, null);
-        } catch { return; }
-        if (!obj) return;
+        } catch {
+          return;
+        }
+        if (!obj) {
+          return;
+        }
       }
       handleEvent(obj);
     };
 
     const handleEvent = (ev) => {
       const type = ev && ev.type;
-      if (!type) return;
+      if (!type) {
+        return;
+      }
 
       switch (type) {
         case 'response.created':
@@ -128,10 +157,20 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
         case 'response.incomplete': {
           const snap = ev.response;
           if (snap && typeof snap === 'object') {
-            if (snap.model && !model) model = snap.model;
-            if (snap.usage) usage = snap.usage;
-            if (snap.status) finishReason = snap.status;
-            if (type === 'response.completed' || type === 'response.failed' || type === 'response.incomplete') {
+            if (snap.model && !model) {
+              model = snap.model;
+            }
+            if (snap.usage) {
+              usage = snap.usage;
+            }
+            if (snap.status) {
+              finishReason = snap.status;
+            }
+            if (
+              type === 'response.completed' ||
+              type === 'response.failed' ||
+              type === 'response.incomplete'
+            ) {
               completedSnapshot = snap;
             }
           }
@@ -142,7 +181,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
           const text = typeof ev.delta === 'string' ? ev.delta : '';
           if (text) {
             content += text;
-            if (onChunk) onChunk({ type: 'text', text });
+            if (onChunk) {
+              onChunk({ type: 'text', text });
+            }
           }
           break;
         }
@@ -151,7 +192,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
         case 'response.reasoning_text.delta': {
           if (enableThinking) {
             const text = typeof ev.delta === 'string' ? ev.delta : '';
-            if (text && onChunk) onChunk({ type: 'thinking', text });
+            if (text && onChunk) {
+              onChunk({ type: 'thinking', text });
+            }
           }
           break;
         }
@@ -170,7 +213,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
               });
             }
             const accum = toolAccum.get(itemId);
-            if (onChunk) onChunk({ type: 'tool_use_start', id: accum.callId, name: accum.name });
+            if (onChunk) {
+              onChunk({ type: 'tool_use_start', id: accum.callId, name: accum.name });
+            }
           }
           break;
         }
@@ -181,7 +226,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
             const frag = typeof ev.delta === 'string' ? ev.delta : '';
             if (itemId && toolAccum.has(itemId) && frag) {
               toolAccum.get(itemId).arguments += frag;
-              if (onChunk) onChunk({ type: 'tool_use_input_delta', partialJson: frag });
+              if (onChunk) {
+                onChunk({ type: 'tool_use_input_delta', partialJson: frag });
+              }
             }
           }
           break;
@@ -197,7 +244,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
             if (accum && typeof ev.arguments === 'string' && ev.arguments && !accum.arguments) {
               accum.arguments = ev.arguments;
             }
-            if (accum && onChunk) onChunk({ type: 'tool_use_end' });
+            if (accum && onChunk) {
+              onChunk({ type: 'tool_use_end' });
+            }
           }
           break;
         }
@@ -208,8 +257,12 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
             const itemId = ev.item.id || ev.item_id;
             const accum = itemId && toolAccum.get(itemId);
             if (accum) {
-              if (ev.item.call_id) accum.callId = ev.item.call_id;
-              if (ev.item.name) accum.name = ev.item.name;
+              if (ev.item.call_id) {
+                accum.callId = ev.item.call_id;
+              }
+              if (ev.item.name) {
+                accum.name = ev.item.name;
+              }
               if (typeof ev.item.arguments === 'string' && ev.item.arguments && !accum.arguments) {
                 accum.arguments = ev.item.arguments;
               }
@@ -225,7 +278,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
 
     stream.on('data', (chunk) => {
       const raw = _textDecoder.write(chunk);
-      if (staleDetector) staleDetector.touch(raw.length);
+      if (staleDetector) {
+        staleDetector.touch(raw.length);
+      }
 
       buffer += raw;
       const lines = buffer.split('\n');
@@ -233,29 +288,41 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
 
       for (const line of lines) {
         // Responses streams interleave `event:` and `data:` lines; only data carries JSON.
-        if (!line.startsWith('data:')) continue;
+        if (!line.startsWith('data:')) {
+          continue;
+        }
         const payload = line.slice(5).trim();
-        if (!payload || payload === '[DONE]') continue; // [DONE] is not part of the Responses spec, tolerate it
+        if (!payload || payload === '[DONE]') {
+          continue;
+        } // [DONE] is not part of the Responses spec, tolerate it
         parsePayload(payload);
       }
     });
 
     stream.on('error', (err) => {
-      if (staleDetector) staleDetector.stop();
+      if (staleDetector) {
+        staleDetector.stop();
+      }
       reject(err);
     });
 
     stream.on('end', () => {
-      if (staleDetector) staleDetector.stop();
+      if (staleDetector) {
+        staleDetector.stop();
+      }
 
       // 冲刷解码器残字节(拼齐最后一个多字节字符);上游中途截断则残留 U+FFFD(不可救)。
       const _tail = _textDecoder.end();
-      if (_tail) buffer += _tail;
+      if (_tail) {
+        buffer += _tail;
+      }
 
       // Flush a trailing buffered data line, if any.
       if (buffer.trim().startsWith('data:')) {
         const payload = buffer.trim().slice(5).trim();
-        if (payload && payload !== '[DONE]') parsePayload(payload);
+        if (payload && payload !== '[DONE]') {
+          parsePayload(payload);
+        }
       }
 
       // Build tool_use blocks from the accumulator (ordered by appearance).
@@ -271,7 +338,9 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
               try {
                 const { safeJsonParse } = require('../safeJsonParse');
                 input = safeJsonParse(t.arguments, {});
-              } catch { input = {}; }
+              } catch {
+                input = {};
+              }
             }
           }
           return { type: 'tool_use', id: t.callId, name: t.name || 'unknown', input };
@@ -279,23 +348,37 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
       }
 
       // Fallback: a provider that only sent response.completed (no deltas).
-      if (!content && toolUseBlocks.length === 0 && completedSnapshot && Array.isArray(completedSnapshot.output)) {
+      if (
+        !content &&
+        toolUseBlocks.length === 0 &&
+        completedSnapshot &&
+        Array.isArray(completedSnapshot.output)
+      ) {
         try {
           const { parseDirectResponse } = require('./_responsesFormat');
           const { textParts, functionCalls } = parseDirectResponse(completedSnapshot.output);
           content = textParts.join('\n').trim();
           toolUseBlocks = functionCalls.map((fc) => {
             let input = {};
-            try { input = JSON.parse(fc.arguments); } catch { input = {}; }
+            try {
+              input = JSON.parse(fc.arguments);
+            } catch {
+              input = {};
+            }
             return { type: 'tool_use', id: fc.call_id, name: fc.name, input };
           });
-        } catch { /* snapshot malformed — leave as-is */ }
+        } catch {
+          /* snapshot malformed — leave as-is */
+        }
       }
 
       // Normalize finish reason: a tool call means the upstream awaits action.
-      const normalizedFinish = toolUseBlocks.length > 0
-        ? 'tool_use'
-        : (finishReason === 'completed' ? 'stop' : (finishReason || 'stop'));
+      const normalizedFinish =
+        toolUseBlocks.length > 0
+          ? 'tool_use'
+          : finishReason === 'completed'
+            ? 'stop'
+            : finishReason || 'stop';
 
       resolve({ content, model, toolUseBlocks, finishReason: normalizedFinish, usage });
     });

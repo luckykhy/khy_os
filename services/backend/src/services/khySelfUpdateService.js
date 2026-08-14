@@ -45,7 +45,11 @@ function _versionService() {
 }
 
 function _pipPolicy() {
-  try { return require('./pipFailurePolicy'); } catch { return null; }
+  try {
+    return require('./pipFailurePolicy');
+  } catch {
+    return null;
+  }
 }
 
 function _pipCmd() {
@@ -82,13 +86,13 @@ function _npmGlobalHasKhy(execImpl) {
 /** npm 全局已安装版本(取不到 → '')。 */
 function _npmGlobalVersion(execImpl) {
   const collect = (out) => {
-    const m = String(out || '').match(
-      new RegExp(NPM_PACKAGE.replace('/', '\\/') + '@([\\d.]+)')
-    );
+    const m = String(out || '').match(new RegExp(NPM_PACKAGE.replace('/', '\\/') + '@([\\d.]+)'));
     return m ? m[1] : '';
   };
   try {
-    return collect(execImpl(`npm ls -g ${NPM_PACKAGE} --depth=0`, { encoding: 'utf-8', timeout: 15000 }));
+    return collect(
+      execImpl(`npm ls -g ${NPM_PACKAGE} --depth=0`, { encoding: 'utf-8', timeout: 15000 })
+    );
   } catch (err) {
     return collect(err && err.stdout);
   }
@@ -102,7 +106,11 @@ function _updateNpmChannel(execImpl, env) {
   const before = _npmGlobalVersion(execImpl);
   try {
     const out = String(
-      execImpl(`npm install -g ${NPM_PACKAGE}@latest`, { encoding: 'utf-8', timeout: 180000, env }) || ''
+      execImpl(`npm install -g ${NPM_PACKAGE}@latest`, {
+        encoding: 'utf-8',
+        timeout: 180000,
+        env,
+      }) || ''
     );
     const after = _npmGlobalVersion(execImpl);
     return {
@@ -124,18 +132,26 @@ function _updateNpmChannel(execImpl, env) {
   }
 }
 
-
 /** 查某个 PyPI 包的最新版(官方 JSON API,白名单主机,绝不抛)。同步不可,故 async。 */
 async function _pypiLatest(pkgName, fetchImpl, timeoutMs = 8000) {
   const doFetch = fetchImpl || (typeof fetch === 'function' ? fetch : null);
-  if (!doFetch) return null;
+  if (!doFetch) {
+    return null;
+  }
   let signal;
-  try { signal = AbortSignal.timeout(timeoutMs); } catch { /* older runtime */ }
+  try {
+    signal = AbortSignal.timeout(timeoutMs);
+  } catch {
+    /* older runtime */
+  }
   try {
     const res = await doFetch(`https://pypi.org/pypi/${encodeURIComponent(pkgName)}/json`, {
-      signal, headers: { Accept: 'application/json', 'User-Agent': 'khy-os-selfupdate/1.0' },
+      signal,
+      headers: { Accept: 'application/json', 'User-Agent': 'khy-os-selfupdate/1.0' },
     });
-    if (!res || !res.ok) return null;
+    if (!res || !res.ok) {
+      return null;
+    }
     const j = await res.json();
     return (j && j.info && j.info.version) || null;
   } catch {
@@ -156,17 +172,26 @@ async function _pypiLatest(pkgName, fetchImpl, timeoutMs = 8000) {
  */
 async function checkUpdate(opts) {
   // 兼容:既可 checkUpdate(env) 也可 checkUpdate({env,_exec,_fetch})。
-  const isOptsObj = opts && typeof opts === 'object' && ('env' in opts || '_exec' in opts || '_fetch' in opts);
-  const env = isOptsObj ? (opts.env || process.env) : (opts || process.env);
-  const execImpl = isOptsObj && typeof opts._exec === 'function' ? opts._exec : require('child_process').execSync;
+  const isOptsObj =
+    opts && typeof opts === 'object' && ('env' in opts || '_exec' in opts || '_fetch' in opts);
+  const env = isOptsObj ? opts.env || process.env : opts || process.env;
+  const execImpl =
+    isOptsObj && typeof opts._exec === 'function' ? opts._exec : require('child_process').execSync;
   const fetchImpl = isOptsObj && typeof opts._fetch === 'function' ? opts._fetch : null;
 
   if (!isEnabled(env)) {
-    return { success: false, disabled: true, error: 'khyos self-update disabled (KHY_SELF_UPDATE=0)' };
+    return {
+      success: false,
+      disabled: true,
+      error: 'khyos self-update disabled (KHY_SELF_UPDATE=0)',
+    };
   }
   try {
     const vs = _versionService();
-    const candidates = (vs.PACKAGE_CANDIDATES && vs.PACKAGE_CANDIDATES.length) ? vs.PACKAGE_CANDIDATES : ['khy-os', 'khy-quant'];
+    const candidates =
+      vs.PACKAGE_CANDIDATES && vs.PACKAGE_CANDIDATES.length
+        ? vs.PACKAGE_CANDIDATES
+        : ['khy-os', 'khy-quant'];
     // 同包比对:优先用「实际安装的包 + 其 pip 安装版本」;取不到安装版本时回落到 repo 内版本号。
     const installedPkg = _detectInstalledPackage(execImpl, candidates);
     const installedVersion = _readInstalledVersion(execImpl, installedPkg);
@@ -213,7 +238,9 @@ function _readInstalledVersion(execImpl, pkgName) {
 
 function _detectInstalledPackage(execImpl, candidates) {
   for (const pkgName of candidates) {
-    if (_readInstalledVersion(execImpl, pkgName)) return pkgName;
+    if (_readInstalledVersion(execImpl, pkgName)) {
+      return pkgName;
+    }
   }
   return candidates[0];
 }
@@ -230,25 +257,36 @@ function _detectInstalledPackage(execImpl, candidates) {
 function applyUpdate(opts = {}) {
   const env = opts.env || process.env;
   if (!isEnabled(env)) {
-    return { success: false, disabled: true, error: 'khyos self-update disabled (KHY_SELF_UPDATE=0)' };
+    return {
+      success: false,
+      disabled: true,
+      error: 'khyos self-update disabled (KHY_SELF_UPDATE=0)',
+    };
   }
 
-  const execImpl = typeof opts._exec === 'function'
-    ? opts._exec
-    : require('child_process').execSync;
+  const execImpl =
+    typeof opts._exec === 'function' ? opts._exec : require('child_process').execSync;
 
   // 同步睡眠(供文件占用重试前等待 OS 释放句柄);可注入供测试(避免真等 1.5s)。
-  const sleepImpl = typeof opts._sleep === 'function'
-    ? opts._sleep
-    : (ms) => {
-        try {
-          const n = Number(ms) || 0;
-          if (n > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
-        } catch { /* fail-soft:睡眠失败不阻断升级。 */ }
-      };
+  const sleepImpl =
+    typeof opts._sleep === 'function'
+      ? opts._sleep
+      : (ms) => {
+          try {
+            const n = Number(ms) || 0;
+            if (n > 0) {
+              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+            }
+          } catch {
+            /* fail-soft:睡眠失败不阻断升级。 */
+          }
+        };
 
   const vs = _versionService();
-  const candidates = (vs.PACKAGE_CANDIDATES && vs.PACKAGE_CANDIDATES.length) ? vs.PACKAGE_CANDIDATES : ['khy-os', 'khy-quant'];
+  const candidates =
+    vs.PACKAGE_CANDIDATES && vs.PACKAGE_CANDIDATES.length
+      ? vs.PACKAGE_CANDIDATES
+      : ['khy-os', 'khy-quant'];
   const pip = _pipCmd();
 
   const pipPolicy = _pipPolicy();
@@ -281,7 +319,9 @@ function applyUpdate(opts = {}) {
             cmd += ' --proxy ""';
             execOpts.env = pipPolicy.stripProxyEnv(env);
           }
-          if (forceReinstall) cmd += ' --force-reinstall --no-cache-dir';
+          if (forceReinstall) {
+            cmd += ' --force-reinstall --no-cache-dir';
+          }
           cmd += ` --upgrade ${pkgName} 2>&1`;
           output = String(execImpl(cmd, execOpts) || '');
           upgradedPkg = pkgName;
@@ -299,9 +339,10 @@ function applyUpdate(opts = {}) {
             }
             // 文件占用(WinError 32):等待句柄释放后以 --force-reinstall 干净覆盖重试一次
             //(修:「pip 装到一半失败,往往要装两次才成功」——把手动的「第二次」收进本次调用内)。
-            const lockPlan = typeof pipPolicy.buildLockRetryPlan === 'function'
-              ? pipPolicy.buildLockRetryPlan({ kind: cls.kind, alreadyRetried: lockRetried, env })
-              : { shouldRetry: false };
+            const lockPlan =
+              typeof pipPolicy.buildLockRetryPlan === 'function'
+                ? pipPolicy.buildLockRetryPlan({ kind: cls.kind, alreadyRetried: lockRetried, env })
+                : { shouldRetry: false };
             if (lockPlan.shouldRetry) {
               lockRetried = true;
               sleepImpl(lockPlan.waitMs);
@@ -311,21 +352,31 @@ function applyUpdate(opts = {}) {
             break; // not-found / 重试后仍失败 / 其它 → 换下一个候选
           }
           // 门控关:逐字节回退旧行为(找不到分布→换候选;其它→抛)。
-          if (/No matching distribution found|Could not find a version|404|not found/i.test(detail)) break;
+          if (
+            /No matching distribution found|Could not find a version|404|not found/i.test(detail)
+          ) {
+            break;
+          }
           throw err;
         }
       }
-      if (upgradedPkg) break;
+      if (upgradedPkg) {
+        break;
+      }
     }
 
-    if (!upgradedPkg) throw lastError || new Error('No installable package found for upgrade');
+    if (!upgradedPkg) {
+      throw lastError || new Error('No installable package found for upgrade');
+    }
 
     if (/Successfully installed|already up-to-date|already satisfied/i.test(output)) {
       const newVersion = _readInstalledVersion(execImpl, upgradedPkg) || currentVersion;
       const changed = newVersion !== currentVersion;
       // 渠道共存:pip 升级完成后,若 npm 渠道也在,顺带把它升到最新,保持两渠道同步
       // (避免 PATH 遮蔽下另一渠道变陈旧)。fail-soft:npm 步骤失败绝不影响 pip 结果。
-      const channels = [{ channel: 'pip', success: true, changed, from: currentVersion, to: newVersion }];
+      const channels = [
+        { channel: 'pip', success: true, changed, from: currentVersion, to: newVersion },
+      ];
       let npmResult = null;
       if (coexistEnabled(env) && _npmGlobalHasKhy(execImpl)) {
         npmResult = _updateNpmChannel(execImpl, env);

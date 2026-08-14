@@ -18,7 +18,9 @@
  */
 
 function transparencyEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TOOL_RESULT_TRANSPARENT) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TOOL_RESULT_TRANSPARENT) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -31,7 +33,9 @@ function transparencyEnabled(env = process.env) {
  */
 function selectResultBody(result) {
   try {
-    if (!result) return '';
+    if (!result) {
+      return '';
+    }
     const raw = result.text || result.content || result.output || '';
     const s = typeof raw === 'string' ? raw : JSON.stringify(raw);
     return s && s.trim() ? s : '';

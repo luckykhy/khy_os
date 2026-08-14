@@ -1,5 +1,6 @@
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 /**
@@ -19,20 +20,50 @@ function _isForce(params) {
 
 module.exports = defineTool({
   name: 'gitPush',
-  description: 'Push local commits to a remote. A normal push only adds commits; set force=true only when you must overwrite remote history (treated as a destructive red-line operation).',
+  description:
+    'Push local commits to a remote. A normal push only adds commits; set force=true only when you must overwrite remote history (treated as a destructive red-line operation).',
   category: 'git',
   risk: 'medium',
+  searchHint: 'upload remote publish origin 推送 远程 上传代码',
   isReadOnly: false,
   // Dynamic: a force push can destroy remote history → red line; a normal push cannot.
   isDestructive: (params) => _isForce(params),
   isConcurrencySafe: false,
   isEnabled: isGitRepo,
   inputSchema: {
-    remote: { type: 'string', required: false, description: 'Remote name (default: origin).' },
-    branch: { type: 'string', required: false, description: 'Branch to push (default: current branch).' },
-    setUpstream: { type: 'boolean', required: false, description: 'Set the pushed branch as upstream (-u). Use on first push of a new branch.' },
-    force: { type: 'boolean', required: false, description: 'Overwrite remote history (--force). Destructive; avoid unless required.' },
-    forceWithLease: { type: 'boolean', required: false, description: 'Safer force (--force-with-lease): refuse if remote moved unexpectedly.' },
+    remote: {
+      type: 'string',
+      required: false,
+      description: 'Remote name to push to (default: origin).',
+      example: 'origin',
+    },
+    branch: {
+      type: 'string',
+      required: false,
+      description: 'Branch to push (default: the current branch).',
+      example: 'main',
+    },
+    setUpstream: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Set the pushed branch as upstream (-u). Use on the first push of a new branch (default: false).',
+      example: true,
+    },
+    force: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Overwrite remote history (--force). Destructive red-line operation; avoid unless explicitly required (default: false).',
+      example: false,
+    },
+    forceWithLease: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Safer force push (--force-with-lease): refuses if the remote moved unexpectedly (default: false).',
+      example: false,
+    },
   },
   async execute(params, _context) {
     try {
@@ -44,9 +75,14 @@ module.exports = defineTool({
       const _run = (c) => (_nb ? _execCompat.execAsync(c, opts) : execSync(c, opts));
 
       const args = ['push'];
-      if (params.setUpstream) args.push('-u');
-      if (params.forceWithLease) args.push('--force-with-lease');
-      else if (params.force) args.push('--force');
+      if (params.setUpstream) {
+        args.push('-u');
+      }
+      if (params.forceWithLease) {
+        args.push('--force-with-lease');
+      } else if (params.force) {
+        args.push('--force');
+      }
 
       const remote = params.remote || 'origin';
       // Only append remote/branch when a remote is explicitly given or upstream is set,
@@ -61,7 +97,7 @@ module.exports = defineTool({
         }
       }
 
-      const cmd = `git ${args.map(a => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)).join(' ')}`;
+      const cmd = `git ${args.map((a) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)).join(' ')}`;
       const output = await _run(cmd);
       return { success: true, output: (output || '').toString().trim(), forced: _isForce(params) };
     } catch (err) {

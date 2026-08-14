@@ -62,7 +62,9 @@ const CHARS_PER_TOKEN = 4;
  */
 function _envInt(name, dflt) {
   const raw = process.env[name];
-  if (raw === undefined || raw === null || String(raw).trim() === '') return dflt;
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return dflt;
+  }
   const n = Number.parseInt(String(raw).trim(), 10);
   return Number.isFinite(n) && n > 0 ? n : dflt;
 }
@@ -93,9 +95,15 @@ function _normWindow(contextWindowTokens) {
  */
 function classifyWindow(contextWindowTokens) {
   const w = _normWindow(contextWindowTokens);
-  if (w <= 0) return 'unknown';
-  if (w <= _veryShortThreshold()) return 'very_short';
-  if (w <= _shortThreshold()) return 'short';
+  if (w <= 0) {
+    return 'unknown';
+  }
+  if (w <= _veryShortThreshold()) {
+    return 'very_short';
+  }
+  if (w <= _shortThreshold()) {
+    return 'short';
+  }
   return 'normal';
 }
 
@@ -124,11 +132,11 @@ function deriveGuardThresholds(contextWindowTokens) {
   }
   const hardMin = Math.min(
     Math.max(GUARD_HARD_MIN_TOKENS, Math.floor(w * GUARD_HARD_MIN_RATIO)),
-    Math.floor(w * GUARD_HARD_MIN_CAP_RATIO),
+    Math.floor(w * GUARD_HARD_MIN_CAP_RATIO)
   );
   const warn = Math.min(
     Math.max(GUARD_WARN_BELOW_TOKENS, Math.floor(w * GUARD_WARN_BELOW_RATIO)),
-    Math.floor(w * GUARD_WARN_BELOW_CAP_RATIO),
+    Math.floor(w * GUARD_WARN_BELOW_CAP_RATIO)
   );
   // Guarantee warn ≥ hardMin (only matters at pathological tiny windows).
   return { hardMinTokens: hardMin, warnBelowTokens: Math.max(warn, hardMin) };
@@ -146,7 +154,9 @@ function deriveGuardThresholds(contextWindowTokens) {
 function deriveReserveTokens(contextWindowTokens, requested = 4096) {
   const w = _normWindow(contextWindowTokens);
   const req = Math.max(256, Math.floor(Number(requested) || 4096));
-  if (w <= 0) return req;
+  if (w <= 0) {
+    return req;
+  }
   return Math.min(req, Math.max(512, Math.floor(w * RESERVE_CAP_RATIO)));
 }
 
@@ -161,7 +171,9 @@ function deriveReserveTokens(contextWindowTokens, requested = 4096) {
 function deriveToolResultCap(contextWindowTokens, defaultChars = 5000) {
   const w = _normWindow(contextWindowTokens);
   const dflt = Math.max(500, Math.floor(Number(defaultChars) || 5000));
-  if (w <= 0 || !isShortContext(w)) return dflt;
+  if (w <= 0 || !isShortContext(w)) {
+    return dflt;
+  }
   const windowCap = Math.floor(w * CHARS_PER_TOKEN * TOOL_RESULT_WINDOW_CHAR_RATIO);
   return Math.max(800, Math.min(dflt, windowCap));
 }

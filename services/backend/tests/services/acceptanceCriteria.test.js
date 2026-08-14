@@ -79,6 +79,38 @@ describe('acceptanceCriteria', () => {
     ]));
   });
 
+  test('explicitly-mentioned tests make test evidence required and add a real test-run check', () => {
+    const pack = buildAcceptancePack({
+      modes: ['coding'],
+      userMessage: 'Refactor the auth module and write unit tests',
+      toolCallLog: [{ tool: 'editFile', params: { path: '/tmp/auth.js' } }],
+    });
+
+    const testAssets = pack.criteria.find((criterion) => criterion.id === 'test_assets');
+    const testEntrypoint = pack.criteria.find((criterion) => criterion.id === 'test_entrypoint');
+    const testRun = pack.criteria.find((criterion) => criterion.id === 'test_run_evidence');
+
+    // 任务显式提到测试 → 测试证据升级为 required(必须真实验收),并追加真实跑测判据。
+    expect(testAssets.required).toBe(true);
+    expect(testEntrypoint.required).toBe(true);
+    expect(testRun).toBeDefined();
+    expect(testRun.required).toBe(true);
+    expect(testRun.validator).toBe('test_run_evidence');
+    expect(pack.profiles.map((profile) => profile.id)).toContain('coding_test_run_evidence');
+  });
+
+  test('task without test mention keeps test evidence non-blocking', () => {
+    const pack = buildAcceptancePack({
+      modes: ['coding'],
+      userMessage: 'Fix the login redirect bug',
+      toolCallLog: [{ tool: 'editFile', params: { path: '/tmp/login.js' } }],
+    });
+
+    const testAssets = pack.criteria.find((criterion) => criterion.id === 'test_assets');
+    expect(testAssets.required).toBe(false);
+    expect(pack.criteria.find((criterion) => criterion.id === 'test_run_evidence')).toBeUndefined();
+  });
+
   test('buildAcceptancePack activates scaffold profile only for scaffold-like tasks', () => {
     const pack = buildAcceptancePack({
       modes: ['coding'],

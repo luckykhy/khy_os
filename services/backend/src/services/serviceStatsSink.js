@@ -43,7 +43,9 @@ function setServiceStatsProvider(fn) {
  * @returns {object | undefined}
  */
 function getServiceStats() {
-  if (!_provider) return undefined;
+  if (!_provider) {
+    return undefined;
+  }
   try {
     return _provider();
   } catch {

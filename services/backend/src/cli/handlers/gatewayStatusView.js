@@ -17,16 +17,23 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const os = require('os');
 const path = require('path');
-const {
-  printSuccess,
-  printError,
-  printInfo,
-  printTable,
-  ICON_GATEWAY,
-} = require('../formatters');
+
+const { printSuccess, printError, printInfo, printTable, ICON_GATEWAY } = require('../formatters');
+
+// Lazily resolve a file under the app home (portable-aware); fallback to
+// the legacy ~/.khyquant location when the dataHome resolver is unavailable.
+function _appHomeFile(name) {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return path.join(getAppHome(), name);
+  } catch {
+    return path.join(os.homedir(), '.khyquant', name);
+  }
+}
 
 // ── Host callbacks injected via DI (avoid a require cycle back into gateway.js) ──
 let _getGatewayHomeRiskSnapshot = null;
@@ -46,25 +53,85 @@ let _parseProviderFilterFromOptions = null;
 let _filterEndpointObjectsByProvider = null;
 let withTimeout = null;
 let _resolveEnvPathForGateway = null;
+let _resolveProtocolLabel = null;
+
+// Protocol label resolution — resolved directly to avoid DI hoisting issues.
+const _PROTOCOL_LABELS = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  responses: 'Responses',
+  codewhisperer: 'CodeWhisperer',
+  codex: 'Codex',
+  'cli-stream-json': 'CLI Stream',
+  'trae-native': 'Trae Native',
+  direct: 'Direct',
+  manual: 'Manual',
+};
+function _localResolveProtocolLabel(adapterType) {
+  try {
+    const { getProtocolForAdapter } = require('../../services/gateway/adapters/_protocolRegistry');
+    const protocol = getProtocolForAdapter(String(adapterType || '').toLowerCase(), null, {});
+    return _PROTOCOL_LABELS[protocol] || protocol || '—';
+  } catch {
+    return '—';
+  }
+}
 
 function setGatewayStatusViewDeps(deps = {}) {
-  if (typeof deps._getGatewayHomeRiskSnapshot === 'function') _getGatewayHomeRiskSnapshot = deps._getGatewayHomeRiskSnapshot;
-  if (typeof deps.shouldTreatGenerationFailureAsWarning === 'function') shouldTreatGenerationFailureAsWarning = deps.shouldTreatGenerationFailureAsWarning;
-  if (typeof deps.shouldTreatConnectivityFailureAsWarning === 'function') shouldTreatConnectivityFailureAsWarning = deps.shouldTreatConnectivityFailureAsWarning;
-  if (typeof deps._resolvePreferredAdapterIssue === 'function') _resolvePreferredAdapterIssue = deps._resolvePreferredAdapterIssue;
-  if (typeof deps._appendGatewayProtocolRiskDetail === 'function') _appendGatewayProtocolRiskDetail = deps._appendGatewayProtocolRiskDetail;
-  if (typeof deps.getGatewayDebugPromptSnapshot === 'function') getGatewayDebugPromptSnapshot = deps.getGatewayDebugPromptSnapshot;
-  if (typeof deps._printGatewayStatusTable === 'function') _printGatewayStatusTable = deps._printGatewayStatusTable;
-  if (typeof deps._buildGatewayLanguageConsistencyText === 'function') _buildGatewayLanguageConsistencyText = deps._buildGatewayLanguageConsistencyText;
-  if (typeof deps._buildGatewayTraceCommandHint === 'function') _buildGatewayTraceCommandHint = deps._buildGatewayTraceCommandHint;
-  if (typeof deps._printLatencyAutoTuneSnapshot === 'function') _printLatencyAutoTuneSnapshot = deps._printLatencyAutoTuneSnapshot;
-  if (typeof deps.maybeAutoSyncSwitchCenterForGateway === 'function') maybeAutoSyncSwitchCenterForGateway = deps.maybeAutoSyncSwitchCenterForGateway;
-  if (typeof deps._resolvePreferredRouteSnapshot === 'function') _resolvePreferredRouteSnapshot = deps._resolvePreferredRouteSnapshot;
-  if (typeof deps._collectConfiguredEndpointObjects === 'function') _collectConfiguredEndpointObjects = deps._collectConfiguredEndpointObjects;
-  if (typeof deps._parseProviderFilterFromOptions === 'function') _parseProviderFilterFromOptions = deps._parseProviderFilterFromOptions;
-  if (typeof deps._filterEndpointObjectsByProvider === 'function') _filterEndpointObjectsByProvider = deps._filterEndpointObjectsByProvider;
-  if (typeof deps.withTimeout === 'function') withTimeout = deps.withTimeout;
-  if (typeof deps._resolveEnvPathForGateway === 'function') _resolveEnvPathForGateway = deps._resolveEnvPathForGateway;
+  if (typeof deps._getGatewayHomeRiskSnapshot === 'function') {
+    _getGatewayHomeRiskSnapshot = deps._getGatewayHomeRiskSnapshot;
+  }
+  if (typeof deps.shouldTreatGenerationFailureAsWarning === 'function') {
+    shouldTreatGenerationFailureAsWarning = deps.shouldTreatGenerationFailureAsWarning;
+  }
+  if (typeof deps.shouldTreatConnectivityFailureAsWarning === 'function') {
+    shouldTreatConnectivityFailureAsWarning = deps.shouldTreatConnectivityFailureAsWarning;
+  }
+  if (typeof deps._resolvePreferredAdapterIssue === 'function') {
+    _resolvePreferredAdapterIssue = deps._resolvePreferredAdapterIssue;
+  }
+  if (typeof deps._appendGatewayProtocolRiskDetail === 'function') {
+    _appendGatewayProtocolRiskDetail = deps._appendGatewayProtocolRiskDetail;
+  }
+  if (typeof deps.getGatewayDebugPromptSnapshot === 'function') {
+    getGatewayDebugPromptSnapshot = deps.getGatewayDebugPromptSnapshot;
+  }
+  if (typeof deps._printGatewayStatusTable === 'function') {
+    _printGatewayStatusTable = deps._printGatewayStatusTable;
+  }
+  if (typeof deps._buildGatewayLanguageConsistencyText === 'function') {
+    _buildGatewayLanguageConsistencyText = deps._buildGatewayLanguageConsistencyText;
+  }
+  if (typeof deps._buildGatewayTraceCommandHint === 'function') {
+    _buildGatewayTraceCommandHint = deps._buildGatewayTraceCommandHint;
+  }
+  if (typeof deps._printLatencyAutoTuneSnapshot === 'function') {
+    _printLatencyAutoTuneSnapshot = deps._printLatencyAutoTuneSnapshot;
+  }
+  if (typeof deps.maybeAutoSyncSwitchCenterForGateway === 'function') {
+    maybeAutoSyncSwitchCenterForGateway = deps.maybeAutoSyncSwitchCenterForGateway;
+  }
+  if (typeof deps._resolvePreferredRouteSnapshot === 'function') {
+    _resolvePreferredRouteSnapshot = deps._resolvePreferredRouteSnapshot;
+  }
+  if (typeof deps._collectConfiguredEndpointObjects === 'function') {
+    _collectConfiguredEndpointObjects = deps._collectConfiguredEndpointObjects;
+  }
+  if (typeof deps._parseProviderFilterFromOptions === 'function') {
+    _parseProviderFilterFromOptions = deps._parseProviderFilterFromOptions;
+  }
+  if (typeof deps._filterEndpointObjectsByProvider === 'function') {
+    _filterEndpointObjectsByProvider = deps._filterEndpointObjectsByProvider;
+  }
+  if (typeof deps.withTimeout === 'function') {
+    withTimeout = deps.withTimeout;
+  }
+  if (typeof deps._resolveEnvPathForGateway === 'function') {
+    _resolveEnvPathForGateway = deps._resolveEnvPathForGateway;
+  }
+  if (typeof deps._resolveProtocolLabel === 'function') {
+    _resolveProtocolLabel = deps._resolveProtocolLabel;
+  }
 }
 
 /**
@@ -73,7 +140,11 @@ function setGatewayStatusViewDeps(deps = {}) {
 async function handleGatewayStatus(options = {}) {
   const gateway = require('../../services/gateway/aiGateway');
   const asJson = !!options.json;
-  const endpointsOnly = !!(options['endpoints-only'] || options.endpointsOnly || options.endpoints_only);
+  const endpointsOnly = !!(
+    options['endpoints-only'] ||
+    options.endpointsOnly ||
+    options.endpoints_only
+  );
   const providerFilters = _parseProviderFilterFromOptions(options);
 
   if (endpointsOnly) {
@@ -88,16 +159,17 @@ async function handleGatewayStatus(options = {}) {
         provider: providerFilters,
       },
       files: {
-        proxy: path.join(os.homedir(), '.khyquant', 'proxy.json'),
+        proxy: _appHomeFile('proxy.json'),
         env: _resolveEnvPathForGateway(),
-        apiKeysPool: path.join(os.homedir(), '.khyquant', 'api_keys.json'),
+        apiKeysPool: _appHomeFile('api_keys.json'),
       },
       endpoints: endpointObjects,
     };
     if (asJson) {
       console.log(JSON.stringify(payload, null, 2));
     } else {
-      const providerHint = providerFilters.length > 0 ? ` (provider=${providerFilters.join(',')})` : '';
+      const providerHint =
+        providerFilters.length > 0 ? ` (provider=${providerFilters.join(',')})` : '';
       printInfo(`已配置 Key 的 Endpoint 明细${providerHint}:`);
       const endpointRows = endpointObjects.map((item) => [
         `${item.displayName}${item.displayName.toLowerCase() === item.provider ? '' : ` (${item.provider})`}`,
@@ -117,18 +189,27 @@ async function handleGatewayStatus(options = {}) {
   }
 
   const autoSync = await maybeAutoSyncSwitchCenterForGateway('gateway-status');
-  if (!gateway._initialized) await gateway.init();
+  if (!gateway.isInitialized()) {
+    await gateway.init();
+  }
   if (autoSync && autoSync.synced && (autoSync.changed || autoSync.activeChanged)) {
-    try { await gateway.refreshAdapters(); } catch { /* best effort */ }
+    try {
+      await gateway.refreshAdapters();
+    } catch {
+      /* best effort */
+    }
     if (!asJson) {
-      printInfo(`已自动同步 switch-center: ${(autoSync.profileName || autoSync.profileId || 'windsurf-auto')} (${autoSync.modelsCount || 0} models)`);
+      printInfo(
+        `已自动同步 switch-center: ${autoSync.profileName || autoSync.profileId || 'windsurf-auto'} (${autoSync.modelsCount || 0} models)`
+      );
     }
   }
 
   const statuses = gateway.getStatus();
-  const defaultRouteRecommendation = typeof gateway.getDefaultRouteRecommendation === 'function'
-    ? gateway.getDefaultRouteRecommendation()
-    : null;
+  const defaultRouteRecommendation =
+    typeof gateway.getDefaultRouteRecommendation === 'function'
+      ? gateway.getDefaultRouteRecommendation()
+      : null;
 
   if (!asJson) {
     console.log('');
@@ -139,7 +220,8 @@ async function handleGatewayStatus(options = {}) {
 
   // Run connectivity tests in parallel for enabled+available adapters
   // Global timeout ensures the entire test phase finishes within a reasonable wall-clock window.
-  const GLOBAL_TEST_TIMEOUT_MS = parseInt(process.env.GATEWAY_STATUS_TIMEOUT_MS || '20000', 10) || 20000;
+  const GLOBAL_TEST_TIMEOUT_MS =
+    parseInt(process.env.GATEWAY_STATUS_TIMEOUT_MS || '20000', 10) || 20000;
   const GLOBAL_TEST_TIMEOUT_GRACE_MS = Math.min(
     1500,
     Math.max(50, Math.round(GLOBAL_TEST_TIMEOUT_MS * 0.1))
@@ -151,21 +233,25 @@ async function handleGatewayStatus(options = {}) {
     }
   }
   const testResults = {};
-  await Promise.all(Object.entries(testPromises).map(async ([key, promise]) => {
-    try {
-      testResults[key] = await withTimeout(
-        Promise.resolve(promise),
-        GLOBAL_TEST_TIMEOUT_MS + GLOBAL_TEST_TIMEOUT_GRACE_MS,
-        `${key} status probe`
-      );
-    } catch {
-      testResults[key] = { connectivity: { success: false, latencyMs: 0, error: 'global timeout' } };
-    }
-  }));
+  await Promise.all(
+    Object.entries(testPromises).map(async ([key, promise]) => {
+      try {
+        testResults[key] = await withTimeout(
+          Promise.resolve(promise),
+          GLOBAL_TEST_TIMEOUT_MS + GLOBAL_TEST_TIMEOUT_GRACE_MS,
+          `${key} status probe`
+        );
+      } catch {
+        testResults[key] = {
+          connectivity: { success: false, latencyMs: 0, error: 'global timeout' },
+        };
+      }
+    })
+  );
   const preferredIssue = _resolvePreferredAdapterIssue(statuses, testResults);
   const importCommands = [];
 
-  const effectiveStatuses = statuses.map(s => {
+  const effectiveStatuses = statuses.map((s) => {
     const test = testResults[s.type];
 
     // 探测完成后，刷新 api adapter 的 detail（含每个 provider 延迟）
@@ -174,7 +260,9 @@ async function handleGatewayStatus(options = {}) {
         const apiAdapter = require('../../services/gateway/adapters/apiAdapter');
         const fresh = apiAdapter.getStatus();
         s = { ...s, detail: fresh.detail };
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     if (s.enabled && s.available && test?.connectivity && !test.connectivity.success) {
@@ -210,87 +298,93 @@ async function handleGatewayStatus(options = {}) {
     }
     return s;
   });
-  const effectiveStatusesWithRisk = effectiveStatuses.map((status) => ({
-    ...status,
-    khyProtocolRisk: typeof gateway.getKhyProtocolPriorityRisk === 'function'
-      ? gateway.getKhyProtocolPriorityRisk(status)
-      : null,
-  }));
+  const effectiveStatusesWithRisk = effectiveStatuses.map((status) => {
+    const resolvedProtocol = _localResolveProtocolLabel(status.type);
+    return {
+      ...status,
+      resolvedProtocol,
+      khyProtocolRisk:
+        typeof gateway.getKhyProtocolPriorityRisk === 'function'
+          ? gateway.getKhyProtocolPriorityRisk(status)
+          : null,
+    };
+  });
 
-  const tableRows = effectiveStatusesWithRisk.map(s => {
-      const test = testResults[s.type];
-      if (
-        String(s.type || '').toLowerCase() === 'localllm'
-        && !s.available
-        && typeof s.importCommand === 'string'
-        && s.importCommand.trim()
-      ) {
-        importCommands.push(s.importCommand.trim());
-      }
-      let connectivityText = '—';
-      let connectivityColor = chalk.dim;
-      if (!s.enabled) {
-        connectivityText = '已禁用';
+  const tableRows = effectiveStatusesWithRisk.map((s) => {
+    const test = testResults[s.type];
+    if (
+      String(s.type || '').toLowerCase() === 'localllm' &&
+      !s.available &&
+      typeof s.importCommand === 'string' &&
+      s.importCommand.trim()
+    ) {
+      importCommands.push(s.importCommand.trim());
+    }
+    let connectivityText = '—';
+    let connectivityColor = chalk.dim;
+    if (!s.enabled) {
+      connectivityText = '已禁用';
+      connectivityColor = chalk.dim;
+    } else if (!s.available) {
+      if (test?.generation && !test.generation.success) {
+        connectivityText = `● ${test.generation.error || 'generation failed'}`;
+        connectivityColor = chalk.red;
+      } else {
+        connectivityText = '—';
         connectivityColor = chalk.dim;
-      } else if (!s.available) {
-        if (test?.generation && !test.generation.success) {
+      }
+    } else if (test) {
+      if (test.connectivity?.success) {
+        const ms = test.connectivity.latencyMs;
+        const modelOk = test.models?.success;
+        const generationFail = test.generation && !test.generation.success;
+        if (generationFail) {
           connectivityText = `● ${test.generation.error || 'generation failed'}`;
           connectivityColor = chalk.red;
+        } else if (modelOk) {
+          connectivityText = `● ${ms}ms (${test.models.count} models)`;
+          connectivityColor = chalk.green;
+        } else if (test.models) {
+          connectivityText = `● ${ms}ms (models: ${test.models.error})`;
+          connectivityColor = chalk.yellow;
         } else {
-          connectivityText = '—';
-          connectivityColor = chalk.dim;
+          connectivityText = `● ${ms}ms`;
+          connectivityColor = chalk.green;
         }
-      } else if (test) {
-        if (test.connectivity?.success) {
-          const ms = test.connectivity.latencyMs;
-          const modelOk = test.models?.success;
-          const generationFail = test.generation && !test.generation.success;
-          if (generationFail) {
-            connectivityText = `● ${test.generation.error || 'generation failed'}`;
-            connectivityColor = chalk.red;
-          } else if (modelOk) {
-            connectivityText = `● ${ms}ms (${test.models.count} models)`;
-            connectivityColor = chalk.green;
-          } else if (test.models) {
-            connectivityText = `● ${ms}ms (models: ${test.models.error})`;
-            connectivityColor = chalk.yellow;
-          } else {
-            connectivityText = `● ${ms}ms`;
-            connectivityColor = chalk.green;
-          }
-        } else {
-          const reason = test.connectivity?.error || 'failed';
-          connectivityText = `● ${reason}`;
-          connectivityColor = shouldTreatConnectivityFailureAsWarning(s.type, reason)
-            ? chalk.yellow
-            : chalk.red;
-        }
+      } else {
+        const reason = test.connectivity?.error || 'failed';
+        connectivityText = `● ${reason}`;
+        connectivityColor = shouldTreatConnectivityFailureAsWarning(s.type, reason)
+          ? chalk.yellow
+          : chalk.red;
       }
+    }
 
-      const statusText = s.enabled
-        ? (s.available ? '✓ 可用' : '⚠ 不可用')
-        : '已禁用';
-      const statusColor = !s.enabled
-        ? chalk.dim
-        : (s.available ? chalk.green : chalk.yellow);
+    const statusText = s.enabled ? (s.available ? '✓ 可用' : '⚠ 不可用') : '已禁用';
+    const statusColor = !s.enabled ? chalk.dim : s.available ? chalk.green : chalk.yellow;
 
-      return {
-        priority: String(s.priority),
-        adapter: s.name,
-        type: s.type,
-        status: {
-          text: statusText,
-          color: statusColor,
-        },
-        connectivity: {
-          text: connectivityText,
-          color: connectivityColor,
-        },
-        detail: _appendGatewayProtocolRiskDetail(s.detail, s.khyProtocolRisk),
-        khyProtocolRisk: s.khyProtocolRisk,
-      };
-    });
-  if (!asJson) _printGatewayStatusTable(tableRows);
+    const protocolLabel = s.resolvedProtocol || '—';
+
+    return {
+      priority: String(s.priority),
+      adapter: s.name,
+      type: s.type,
+      status: {
+        text: statusText,
+        color: statusColor,
+      },
+      connectivity: {
+        text: connectivityText,
+        color: connectivityColor,
+      },
+      protocol: protocolLabel,
+      detail: _appendGatewayProtocolRiskDetail(s.detail, s.khyProtocolRisk),
+      khyProtocolRisk: s.khyProtocolRisk,
+    };
+  });
+  if (!asJson) {
+    _printGatewayStatusTable(tableRows);
+  }
 
   if (!asJson && importCommands.length > 0) {
     const uniqueCommands = [...new Set(importCommands)];
@@ -302,20 +396,39 @@ async function handleGatewayStatus(options = {}) {
 
   // Keep the "active channel" consistent with effective availability shown above.
   const preferredRoute = _resolvePreferredRouteSnapshot();
-  const availableStatuses = effectiveStatusesWithRisk.filter(s => s.enabled && s.available);
+  const availableStatuses = effectiveStatusesWithRisk.filter((s) => s.enabled && s.available);
   let activeEntry = null;
   if (preferredRoute?.adapter) {
-    activeEntry = availableStatuses.find(s => String(s.type || '').trim().toLowerCase() === preferredRoute.adapter) || null;
+    activeEntry =
+      availableStatuses.find(
+        (s) =>
+          String(s.type || '')
+            .trim()
+            .toLowerCase() === preferredRoute.adapter
+      ) || null;
   }
   if (!activeEntry && defaultRouteRecommendation?.adapter) {
-    activeEntry = availableStatuses.find(
-      s => String(s.type || '').trim().toLowerCase() === String(defaultRouteRecommendation.adapter || '').trim().toLowerCase()
-    ) || null;
+    activeEntry =
+      availableStatuses.find(
+        (s) =>
+          String(s.type || '')
+            .trim()
+            .toLowerCase() ===
+          String(defaultRouteRecommendation.adapter || '')
+            .trim()
+            .toLowerCase()
+      ) || null;
   }
   if (!activeEntry) {
     activeEntry = availableStatuses[0] || null;
   }
-  const active = activeEntry ? { name: activeEntry.name, type: activeEntry.type } : null;
+  const active = activeEntry
+    ? {
+        name: activeEntry.name,
+        type: activeEntry.type,
+        protocol: activeEntry.resolvedProtocol || '—',
+      }
+    : null;
   const activeKhyProtocolRisk = activeEntry?.khyProtocolRisk || null;
   const homeRisk = _getGatewayHomeRiskSnapshot({ activeAdapterType: active?.type });
   let latestLanguageConsistency = null;
@@ -324,14 +437,24 @@ async function handleGatewayStatus(options = {}) {
     if (traceAudit && typeof traceAudit.getLatestLanguageConsistencySummary === 'function') {
       latestLanguageConsistency = traceAudit.getLatestLanguageConsistencySummary();
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
   if (!asJson) {
     if (active) {
       console.log('');
-      const showRouteHint = preferredRoute
-        && String(active.type || '').trim().toLowerCase() === String(preferredRoute.adapter || '').trim().toLowerCase()
-        && preferredRoute.routeLabel;
-      printSuccess(`当前活跃通道: ${active.name} (${active.type})${showRouteHint ? ` · 默认路由: ${preferredRoute.routeLabel}` : ''}`);
+      const showRouteHint =
+        preferredRoute &&
+        String(active.type || '')
+          .trim()
+          .toLowerCase() ===
+          String(preferredRoute.adapter || '')
+            .trim()
+            .toLowerCase() &&
+        preferredRoute.routeLabel;
+      printSuccess(
+        `当前活跃通道: ${active.name} (${active.type}) · ${active.protocol}${showRouteHint ? ` · 默认路由: ${preferredRoute.routeLabel}` : ''}`
+      );
     } else {
       console.log('');
       printInfo('无活跃通道 — 可用 khy gateway relay 启动 Web 中转');
@@ -351,8 +474,12 @@ async function handleGatewayStatus(options = {}) {
     if (latestLanguageConsistency) {
       printInfo(`语言一致性: ${_buildGatewayLanguageConsistencyText(latestLanguageConsistency)}`);
       if (latestLanguageConsistency.ok && latestLanguageConsistency.status !== 'aligned') {
-        printInfo('排查建议: 用 `khy gateway status --json` 查看 latestLanguageConsistency / latestDeliveryRequest，并结合 requestId 回查首段正文与最终答复是否偏航');
-        printInfo(`快速复盘命令: ${_buildGatewayTraceCommandHint(latestLanguageConsistency.requestId)}`);
+        printInfo(
+          '排查建议: 用 `khy gateway status --json` 查看 latestLanguageConsistency / latestDeliveryRequest，并结合 requestId 回查首段正文与最终答复是否偏航'
+        );
+        printInfo(
+          `快速复盘命令: ${_buildGatewayTraceCommandHint(latestLanguageConsistency.requestId)}`
+        );
       }
     }
     const traceRequestId = String(latestLanguageConsistency?.requestId || '').trim();
@@ -374,9 +501,12 @@ async function handleGatewayStatus(options = {}) {
     _printLatencyAutoTuneSnapshot();
   }
   const envPath = _resolveEnvPathForGateway();
-  const proxyFile = path.join(os.homedir(), '.khyquant', 'proxy.json');
-  const apiKeysPoolFile = path.join(os.homedir(), '.khyquant', 'api_keys.json');
-  const routeMode = String(process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto').trim().toLowerCase() || 'auto';
+  const proxyFile = _appHomeFile('proxy.json');
+  const apiKeysPoolFile = _appHomeFile('api_keys.json');
+  const routeMode =
+    String(process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto')
+      .trim()
+      .toLowerCase() || 'auto';
   if (!asJson) {
     printInfo(`代理配置位置: ${proxyFile}`);
     printInfo(`模型/API Key 配置位置: ${envPath}`);
@@ -398,7 +528,8 @@ async function handleGatewayStatus(options = {}) {
     ]);
     if (endpointRows.length > 0) {
       console.log('');
-      const providerHint = providerFilters.length > 0 ? ` (provider=${providerFilters.join(',')})` : '';
+      const providerHint =
+        providerFilters.length > 0 ? ` (provider=${providerFilters.join(',')})` : '';
       printInfo(`已配置 Key 的 Endpoint 明细${providerHint}:`);
       printTable(['Provider', 'Endpoint', 'Keys', 'Default Model', 'Source'], endpointRows);
     }
@@ -413,21 +544,27 @@ async function handleGatewayStatus(options = {}) {
     if (traceAudit && typeof traceAudit.getLatestDeliveryRequestSummary === 'function') {
       latestDeliveryRequest = traceAudit.getLatestDeliveryRequestSummary();
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
   if (!latestLanguageConsistency) {
     try {
       const traceAudit = require('../../services/traceAuditService');
       if (traceAudit && typeof traceAudit.getLatestLanguageConsistencySummary === 'function') {
         latestLanguageConsistency = traceAudit.getLatestLanguageConsistencySummary();
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
   const jsonPayload = {
     generatedAt: Date.now(),
     filters: {
       provider: providerFilters,
     },
-    activeChannel: active ? { name: active.name, type: active.type } : null,
+    activeChannel: active
+      ? { name: active.name, type: active.type, protocol: active.protocol }
+      : null,
     activeKhyProtocolRisk: activeKhyProtocolRisk || null,
     environment: {
       homeRisk,
@@ -451,12 +588,15 @@ async function handleGatewayStatus(options = {}) {
     },
     routeMode,
     adapters: tableRows.map((row) => {
-      const raw = effectiveStatuses.find((s) => String(s.type || '') === String(row.type || '')) || null;
+      const raw =
+        effectiveStatusesWithRisk.find((s) => String(s.type || '') === String(row.type || '')) ||
+        null;
       const test = testResults[row.type];
       return {
         priority: Number(raw?.priority ?? row.priority ?? 0),
         name: row.adapter,
         type: row.type,
+        protocol: raw?.resolvedProtocol || null,
         enabled: !!raw?.enabled,
         available: !!raw?.available,
         status: row.status.text,

@@ -13,18 +13,27 @@
  */
 
 function isEnabled() {
-  const v = String(process.env.KHY_TOOL_DATA_SUMMARY || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_DATA_SUMMARY || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'off' || v === 'false' || v === 'no');
 }
 
 function _humanSize(bytes) {
   const n = Number(bytes);
-  if (!Number.isFinite(n) || n < 0) return '';
-  if (n < 1024) return `${n} B`;
+  if (!Number.isFinite(n) || n < 0) {
+    return '';
+  }
+  if (n < 1024) {
+    return `${n} B`;
+  }
   const units = ['KB', 'MB', 'GB', 'TB', 'PB'];
   let v = n / 1024;
   let i = 0;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v >= 10 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
 }
 
@@ -39,7 +48,9 @@ function _toInt(s) {
  */
 function parseDirectoryListing(text) {
   const body = String(text || '');
-  if (!body.trim()) return null;
+  if (!body.trim()) {
+    return null;
+  }
   const lines = body.split(/\r?\n/);
 
   const dirs = [];
@@ -51,44 +62,70 @@ function parseDirectoryListing(text) {
   // Windows: "C:\ 的目录" / "Directory of C:\"
   for (const raw of lines) {
     const line = raw.replace(/\s+$/, '');
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
 
     let m;
     // 路径头
     if (!dirPath) {
       m = line.match(/^\s*(.+?)\s*的目录\s*$/) || line.match(/^\s*Directory of\s+(.+?)\s*$/i);
-      if (m) { dirPath = m[1].trim(); continue; }
+      if (m) {
+        dirPath = m[1].trim();
+        continue;
+      }
     }
     // 可用空间页脚（Windows）
-    m = line.match(/个目录[^0-9]*([\d,，]+)\s*(?:可用字节|bytes free)/i)
-      || line.match(/Dir\(s\)\s*([\d,]+)\s*bytes free/i);
-    if (m) { freeBytes = _toInt(m[1]); signals++; continue; }
+    m =
+      line.match(/个目录[^0-9]*([\d,，]+)\s*(?:可用字节|bytes free)/i) ||
+      line.match(/Dir\(s\)\s*([\d,]+)\s*bytes free/i);
+    if (m) {
+      freeBytes = _toInt(m[1]);
+      signals++;
+      continue;
+    }
     // 文件计数页脚——只作信号，不计入条目
-    if (/个文件|File\(s\)/i.test(line) && /字节|bytes/i.test(line)) { signals++; continue; }
-    if (/^\s*total\s+\d+\s*$/i.test(line)) { signals++; continue; } // ls 头
+    if (/个文件|File\(s\)/i.test(line) && /字节|bytes/i.test(line)) {
+      signals++;
+      continue;
+    }
+    if (/^\s*total\s+\d+\s*$/i.test(line)) {
+      signals++;
+      continue;
+    } // ls 头
 
     // Windows 目录行：含 <DIR>/<JUNCTION>
     m = line.match(/<(?:DIR|JUNCTION|SYMLINKD)>\s+(.+?)\s*$/i);
     if (m) {
       const name = m[1].trim();
-      if (name && name !== '.' && name !== '..') { dirs.push(name); signals++; }
+      if (name && name !== '.' && name !== '..') {
+        dirs.push(name);
+        signals++;
+      }
       continue;
     }
     // Windows 文件行：日期 时间 大小(带千分位) 文件名
-    m = line.match(/^\s*\d{2,4}[/.-]\d{1,2}[/.-]\d{1,4}\s+\d{1,2}:\d{2}(?:\s*[APMapm]{2})?\s+([\d,，]+)\s+(\S.*?)\s*$/);
+    m = line.match(
+      /^\s*\d{2,4}[/.-]\d{1,2}[/.-]\d{1,4}\s+\d{1,2}:\d{2}(?:\s*[APMapm]{2})?\s+([\d,，]+)\s+(\S.*?)\s*$/
+    );
     if (m) {
       files.push({ name: m[2].trim(), size: _toInt(m[1]) });
       signals++;
       continue;
     }
     // Unix ls -l：权限位开头
-    m = line.match(/^([dl-])([rwxsStTl-]{9})[.+@]?\s+\d+\s+\S+\s+\S+\s+(\d+)\s+\S+\s+\d{1,2}(?:\s+[\d:]+)?\s+(.+?)\s*$/);
+    m = line.match(
+      /^([dl-])([rwxsStTl-]{9})[.+@]?\s+\d+\s+\S+\s+\S+\s+(\d+)\s+\S+\s+\d{1,2}(?:\s+[\d:]+)?\s+(.+?)\s*$/
+    );
     if (m) {
       const type = m[1];
       const name = m[4].replace(/\s*->\s*.*$/, '').trim(); // 去掉软链目标
       if (name && name !== '.' && name !== '..') {
-        if (type === 'd') dirs.push(name);
-        else files.push({ name, size: _toInt(m[3]) });
+        if (type === 'd') {
+          dirs.push(name);
+        } else {
+          files.push({ name, size: _toInt(m[3]) });
+        }
         signals++;
       }
       continue;
@@ -96,7 +133,9 @@ function parseDirectoryListing(text) {
   }
 
   // 零误报闸门：必须有足够清单信号，且至少有一个条目或可用空间页脚。
-  if (signals < 2 || (dirs.length + files.length === 0 && freeBytes == null)) return null;
+  if (signals < 2 || (dirs.length + files.length === 0 && freeBytes == null)) {
+    return null;
+  }
   return { path: dirPath, dirs, files, freeBytes };
 }
 
@@ -115,14 +154,22 @@ function _joinCapped(items, cap) {
  */
 function summarizeDirectoryListing(text) {
   const p = parseDirectoryListing(text);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const total = p.dirs.length + p.files.length;
   const where = p.path ? `${p.path} ` : '';
   const free = p.freeBytes != null ? `，可用空间约 ${_humanSize(p.freeBytes)}` : '';
-  const lines = [`${where}共 ${total} 项：${p.dirs.length} 个目录、${p.files.length} 个文件${free}。`];
-  if (p.dirs.length) lines.push(`目录：${_joinCapped(p.dirs, 12)}`);
+  const lines = [
+    `${where}共 ${total} 项：${p.dirs.length} 个目录、${p.files.length} 个文件${free}。`,
+  ];
+  if (p.dirs.length) {
+    lines.push(`目录：${_joinCapped(p.dirs, 12)}`);
+  }
   if (p.files.length) {
-    const fileStrs = p.files.map((f) => (f.size != null ? `${f.name}（${_humanSize(f.size)}）` : f.name));
+    const fileStrs = p.files.map((f) =>
+      f.size != null ? `${f.name}（${_humanSize(f.size)}）` : f.name
+    );
     lines.push(`文件：${_joinCapped(fileStrs, 12)}`);
   }
   return lines.join('\n');
@@ -133,16 +180,24 @@ function summarizeDirectoryListing(text) {
  */
 function summarizeToolOutput(text, opts = {}) {
   const body = String(text || '');
-  if (!body.trim()) return '';
+  if (!body.trim()) {
+    return '';
+  }
   const dir = summarizeDirectoryListing(body);
-  if (dir) return dir;
+  if (dir) {
+    return dir;
+  }
 
   // 散文：交给 localNlp 抽取式摘要（失败则 fail-soft 走截断）。
   try {
     const nlp = require('./localNlp');
     const s = nlp.summarize(body, { query: opts.query || '', maxSentences: 3, maxChars: 400 });
-    if (s && s.length < body.length) return s;
-  } catch { /* fail-soft */ }
+    if (s && s.length < body.length) {
+      return s;
+    }
+  } catch {
+    /* fail-soft */
+  }
 
   // 结构化/非散文文本：给"共 N 行"+前几行作为摘要。
   const rows = body.split(/\r?\n/).filter((l) => l.trim());
@@ -159,26 +214,44 @@ function summarizeToolOutput(text, opts = {}) {
  * @returns {string} 空串表示无可总结数据
  */
 function summarizeToolData(toolCallLog, opts = {}) {
-  if (!Array.isArray(toolCallLog)) return '';
+  if (!Array.isArray(toolCallLog)) {
+    return '';
+  }
   const blocks = [];
   for (const entry of toolCallLog) {
     const r = entry && entry.result;
-    if (!r || r.success !== true) continue;
+    if (!r || r.success !== true) {
+      continue;
+    }
     let text = '';
-    if (typeof r.output === 'string' && r.output.trim()) text = r.output.trim();
-    else if (Array.isArray(r.results) && r.results.length) {
-      text = r.results.map((it, i) => {
-        if (it == null) return '';
-        if (typeof it === 'string') return `${i + 1}. ${it}`;
-        const title = it.title || it.name || it.headline || '';
-        const snippet = it.snippet || it.summary || it.description || '';
-        return `${i + 1}. ${title}${snippet ? ` — ${snippet}` : ''}`.trim();
-      }).filter(Boolean).join('\n');
-    } else if (typeof r.content === 'string' && r.content.trim()) text = r.content.trim();
-    if (!text) continue;
+    if (typeof r.output === 'string' && r.output.trim()) {
+      text = r.output.trim();
+    } else if (Array.isArray(r.results) && r.results.length) {
+      text = r.results
+        .map((it, i) => {
+          if (it == null) {
+            return '';
+          }
+          if (typeof it === 'string') {
+            return `${i + 1}. ${it}`;
+          }
+          const title = it.title || it.name || it.headline || '';
+          const snippet = it.snippet || it.summary || it.description || '';
+          return `${i + 1}. ${title}${snippet ? ` — ${snippet}` : ''}`.trim();
+        })
+        .filter(Boolean)
+        .join('\n');
+    } else if (typeof r.content === 'string' && r.content.trim()) {
+      text = r.content.trim();
+    }
+    if (!text) {
+      continue;
+    }
     const label = entry && entry.tool ? `【${entry.tool}】` : '';
     const digest = summarizeToolOutput(text, opts);
-    if (digest) blocks.push(label ? `${label}\n${digest}` : digest);
+    if (digest) {
+      blocks.push(label ? `${label}\n${digest}` : digest);
+    }
   }
   return blocks.join('\n\n');
 }

@@ -9,21 +9,21 @@
  *   - Graceful recovery from hangs
  *   - Child process resource limits (adaptive: container-aware, env-tunable)
  */
-const os = require('os');
 const { execSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 
 // ── Limits ──────────────────────────────────────────────────────────────
 const MAX_HEAP_MB = parseInt(process.env.KHY_MAX_HEAP_MB, 10) || 512;
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.KHY_WATCHDOG_MS, 10) || 120_000; // 2 min
-const NETWORK_TIMEOUT_MS = 60_000;     // 1 min for network calls
-const SHELL_TIMEOUT_MS = 30_000;       // 30s for shell commands
+const NETWORK_TIMEOUT_MS = 60_000; // 1 min for network calls
+const SHELL_TIMEOUT_MS = 30_000; // 30s for shell commands
 const SHELL_MAX_BUFFER = 10 * 1024 * 1024; // 10 MB output buffer
-const GC_CHECK_INTERVAL_MS = 30_000;   // Check memory every 30s
-const GC_THRESHOLD_PERCENT = 80;       // Trigger GC at 80% of limit
+const GC_CHECK_INTERVAL_MS = 30_000; // Check memory every 30s
+const GC_THRESHOLD_PERCENT = 80; // Trigger GC at 80% of limit
 
-let _watchdogTimer = null;
-let _watchdogCallback = null;
+const _watchdogTimer = null;
+const _watchdogCallback = null;
 let _gcTimer = null;
 let _operationStack = [];
 
@@ -41,7 +41,8 @@ let _operationStack = [];
  */
 function startWatchdog(operationName, timeoutMs = WATCHDOG_TIMEOUT_MS, onTimeout = null) {
   const startTime = Date.now();
-  const safeTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : WATCHDOG_TIMEOUT_MS;
+  const safeTimeoutMs =
+    Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : WATCHDOG_TIMEOUT_MS;
   const pollMs = Math.max(250, Math.min(1000, Math.floor(safeTimeoutMs / 6)));
   const entry = {
     name: operationName,
@@ -53,27 +54,43 @@ function startWatchdog(operationName, timeoutMs = WATCHDOG_TIMEOUT_MS, onTimeout
   _operationStack.push(entry);
 
   const stopTimer = (timer) => {
-    if (!timer) return;
+    if (!timer) {
+      return;
+    }
     clearInterval(timer);
   };
 
   const timer = setInterval(() => {
-    if (entry.done || entry.timedOut) return;
+    if (entry.done || entry.timedOut) {
+      return;
+    }
     const idleMs = Date.now() - entry.lastActivityAt;
-    if (idleMs < safeTimeoutMs) return;
+    if (idleMs < safeTimeoutMs) {
+      return;
+    }
 
     entry.timedOut = true;
     stopTimer(timer);
     const idx = _operationStack.indexOf(entry);
-    if (idx >= 0) _operationStack.splice(idx, 1);
+    if (idx >= 0) {
+      _operationStack.splice(idx, 1);
+    }
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const msg = `[ResourceGuard] Operation "${operationName}" timed out after ${elapsed}s`;
 
     // Log warning
-    try { console.error(`\n  ⚠ ${msg}\n`); } catch { /* ignore */ }
+    try {
+      console.error(`\n  ⚠ ${msg}\n`);
+    } catch {
+      /* ignore */
+    }
 
     if (onTimeout) {
-      try { onTimeout(operationName, elapsed); } catch { /* ignore */ }
+      try {
+        onTimeout(operationName, elapsed);
+      } catch {
+        /* ignore */
+      }
     }
   }, pollMs);
 
@@ -84,10 +101,14 @@ function startWatchdog(operationName, timeoutMs = WATCHDOG_TIMEOUT_MS, onTimeout
       entry.done = true;
       stopTimer(timer);
       const idx = _operationStack.indexOf(entry);
-      if (idx >= 0) _operationStack.splice(idx, 1);
+      if (idx >= 0) {
+        _operationStack.splice(idx, 1);
+      }
     },
     touch() {
-      if (entry.done || entry.timedOut) return;
+      if (entry.done || entry.timedOut) {
+        return;
+      }
       entry.lastActivityAt = Date.now();
     },
     elapsed() {
@@ -128,17 +149,16 @@ function checkMemoryPressure() {
     }
 
     // Clear module caches for non-essential modules
-    const expendable = [
-      '../services/strategyRecommender',
-      '../services/finlightNewsService',
-    ];
+    const expendable = ['../services/strategyRecommender', '../services/finlightNewsService'];
     for (const mod of expendable) {
       try {
         const resolved = require.resolve(mod);
         if (require.cache[resolved]) {
           delete require.cache[resolved];
         }
-      } catch { /* module not loaded */ }
+      } catch {
+        /* module not loaded */
+      }
     }
 
     return false;
@@ -151,34 +171,52 @@ function checkMemoryPressure() {
  * Start periodic memory monitoring.
  */
 function startMemoryMonitor() {
-  if (_gcTimer) return;
+  if (_gcTimer) {
+    return;
+  }
   _gcTimer = setInterval(() => {
     try {
       const mem = getMemoryUsage();
       if (mem.percentUsed > 95) {
-        console.error(`\n  ⚠ 内存使用过高: ${mem.heapUsedMB}/${mem.limitMB} MB (${mem.percentUsed}%)`);
+        console.error(
+          `\n  ⚠ 内存使用过高: ${mem.heapUsedMB}/${mem.limitMB} MB (${mem.percentUsed}%)`
+        );
         console.error('  建议: 减少并发操作或重启终端\n');
         checkMemoryPressure();
       }
-    } catch { /* monitor must never crash */ }
+    } catch {
+      /* monitor must never crash */
+    }
   }, GC_CHECK_INTERVAL_MS);
   _gcTimer.unref();
 }
 
 function stopMemoryMonitor() {
-  if (_gcTimer) { clearInterval(_gcTimer); _gcTimer = null; }
+  if (_gcTimer) {
+    clearInterval(_gcTimer);
+    _gcTimer = null;
+  }
 }
 
 // ── Container detection ────────────────────────────────────────────────
 
 let _isContainerCached;
 function _isContainer() {
-  if (_isContainerCached !== undefined) return _isContainerCached;
-  if (process.platform === 'win32') { _isContainerCached = false; return false; }
+  if (_isContainerCached !== undefined) {
+    return _isContainerCached;
+  }
+  if (process.platform === 'win32') {
+    _isContainerCached = false;
+    return false;
+  }
   try {
-    if (fs.existsSync('/.dockerenv')) { _isContainerCached = true; return true; }
+    if (fs.existsSync('/.dockerenv')) {
+      _isContainerCached = true;
+      return true;
+    }
     const cg = fs.readFileSync('/proc/1/cgroup', 'utf8');
-    _isContainerCached = cg.includes('docker') || cg.includes('kubepods') || cg.includes('containerd');
+    _isContainerCached =
+      cg.includes('docker') || cg.includes('kubepods') || cg.includes('containerd');
   } catch {
     _isContainerCached = false;
   }
@@ -218,11 +256,11 @@ function safeExec(command, opts = {}) {
       wrappedCommand = `bash -c '${command.replace(/'/g, "'\\''")}'`;
     } else {
       // Tunable via environment; defaults are generous enough for normal dev workflows
-      const nproc  = parseInt(process.env.KHY_ULIMIT_NPROC, 10)  || 1024;  // child processes (was 256)
-      const vmemKB = parseInt(process.env.KHY_ULIMIT_VMEM, 10)   || 1048576; // 1GB virtual memory (was 512MB)
-      const fd     = parseInt(process.env.KHY_ULIMIT_FD, 10)     || 512;   // file descriptors (was 256)
-      const fsize  = parseInt(process.env.KHY_ULIMIT_FSIZE, 10)  || 204800; // 200MB max file size (was 100MB)
-      const cpuSec = parseInt(process.env.KHY_ULIMIT_CPU, 10)    || 60;    // CPU seconds (was 30)
+      const nproc = parseInt(process.env.KHY_ULIMIT_NPROC, 10) || 1024; // child processes (was 256)
+      const vmemKB = parseInt(process.env.KHY_ULIMIT_VMEM, 10) || 1048576; // 1GB virtual memory (was 512MB)
+      const fd = parseInt(process.env.KHY_ULIMIT_FD, 10) || 512; // file descriptors (was 256)
+      const fsize = parseInt(process.env.KHY_ULIMIT_FSIZE, 10) || 204800; // 200MB max file size (was 100MB)
+      const cpuSec = parseInt(process.env.KHY_ULIMIT_CPU, 10) || 60; // CPU seconds (was 30)
 
       const limits = [
         `ulimit -t ${cpuSec}`,
@@ -297,8 +335,8 @@ function timeoutWrap(fn, timeoutMs = WATCHDOG_TIMEOUT_MS, label = '') {
  */
 function getActiveOperations() {
   return _operationStack
-    .filter(op => !op.done)
-    .map(op => ({
+    .filter((op) => !op.done)
+    .map((op) => ({
       name: op.name,
       elapsedMs: Date.now() - op.startTime,
       idleMs: Math.max(0, Date.now() - (op.lastActivityAt || op.startTime)),
@@ -310,7 +348,9 @@ function getActiveOperations() {
  * Cancel all active watchdogs (for graceful shutdown).
  */
 function cancelAll() {
-  for (const op of _operationStack) op.done = true;
+  for (const op of _operationStack) {
+    op.done = true;
+  }
   _operationStack = [];
   stopMemoryMonitor();
 }
@@ -331,7 +371,9 @@ function systemHealthCheck() {
   const warnings = [];
 
   if (memPercent > 90) {
-    warnings.push(`系统内存使用过高: ${memPercent}% (${Math.round(freeMem / (1024 * 1024))} MB 可用)`);
+    warnings.push(
+      `系统内存使用过高: ${memPercent}% (${Math.round(freeMem / (1024 * 1024))} MB 可用)`
+    );
   }
   if (loadPercent > 80) {
     warnings.push(`CPU 负载过高: ${loadPercent}% (1min avg: ${loadAvg[0].toFixed(1)})`);
@@ -346,7 +388,9 @@ function systemHealthCheck() {
       if (usePercent > 90) {
         warnings.push(`磁盘空间不足: 已用 ${usePercent}% (${parts[3]} 可用)`);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return {
@@ -364,10 +408,10 @@ function systemHealthCheck() {
  * @type {Record<string, number>}
  */
 const ROLE_HEAP_DEFAULTS = {
-  explore:  128,
+  explore: 128,
   reviewer: 128,
-  coder:    256,
-  general:  256,
+  coder: 256,
+  general: 256,
 };
 
 /**
@@ -385,9 +429,7 @@ function createProcessLimits(opts = {}) {
   const heap = opts.maxHeapMB || ROLE_HEAP_DEFAULTS[role] || 256;
   const threads = opts.threadPoolSize || 2;
 
-  const execArgv = [
-    `--max-old-space-size=${heap}`,
-  ];
+  const execArgv = [`--max-old-space-size=${heap}`];
 
   const env = {
     ...process.env,

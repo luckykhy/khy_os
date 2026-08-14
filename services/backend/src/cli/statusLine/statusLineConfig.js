@@ -25,7 +25,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_STATUS_LINE 默认开;{0,false,off,no} 关。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -35,7 +37,9 @@ function isEnabled(env = process.env) {
  */
 function _pctRoundEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_PCT_ROUND;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -45,7 +49,9 @@ function _pctRoundEnabled(env = process.env) {
  */
 function _costEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_COST;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -55,7 +61,9 @@ function _costEnabled(env = process.env) {
  */
 function _modelNameEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_MODEL_NAME;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -65,7 +73,9 @@ function _modelNameEnabled(env = process.env) {
  */
 function _outputStyleEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_OUTPUT_STYLE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -75,7 +85,9 @@ function _outputStyleEnabled(env = process.env) {
  */
 function _permissionModeEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_PERMISSION_MODE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -85,7 +97,9 @@ function _permissionModeEnabled(env = process.env) {
  */
 function _sessionIdEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_SESSION_ID;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -95,7 +109,9 @@ function _sessionIdEnabled(env = process.env) {
  */
 function _transcriptPathEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_LINE_TRANSCRIPT_PATH;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -110,7 +126,9 @@ function resolveStatusLineSetting(settings) {
   const out = { configured: false, type: null, command: null, padding: 0 };
   try {
     const sl = settings && typeof settings === 'object' ? settings.statusLine : null;
-    if (!sl || typeof sl !== 'object') return out;
+    if (!sl || typeof sl !== 'object') {
+      return out;
+    }
     const type = typeof sl.type === 'string' && sl.type.trim() ? sl.type.trim() : 'command';
     const command = typeof sl.command === 'string' ? sl.command.trim() : '';
     const padding = Number.isFinite(sl.padding) ? Math.max(0, Math.floor(sl.padding)) : 0;
@@ -120,7 +138,9 @@ function resolveStatusLineSetting(settings) {
       out.command = command;
       out.configured = true;
     }
-  } catch { /* fail-soft → 未配置 */ }
+  } catch {
+    /* fail-soft → 未配置 */
+  }
   return out;
 }
 
@@ -147,7 +167,9 @@ const _num = require('../../utils/finiteNumber').toFiniteOr0;
  */
 function _usagePercent(usedTokens, windowSize, env = process.env) {
   const size = _num(windowSize);
-  if (size <= 0) return { used: null, remaining: null };
+  if (size <= 0) {
+    return { used: null, remaining: null };
+  }
   const ratio = (_num(usedTokens) / size) * 100;
   if (_pctRoundEnabled(env)) {
     // CC 口径:round → clamp → remaining 由 clampedUsed 派生(均为整数,和恒为 100)。
@@ -201,7 +223,9 @@ function buildStdinPayload(snapshot = {}, env = process.env) {
     workspace: {
       current_dir: cwd,
       project_dir: typeof s.projectDir === 'string' ? s.projectDir : cwd,
-      added_dirs: Array.isArray(s.addedDirs) ? s.addedDirs.filter((d) => typeof d === 'string') : [],
+      added_dirs: Array.isArray(s.addedDirs)
+        ? s.addedDirs.filter((d) => typeof d === 'string')
+        : [],
     },
     version: typeof s.version === 'string' ? s.version : '',
     context_window: {
@@ -242,7 +266,9 @@ function buildStdinPayload(snapshot = {}, env = process.env) {
   // KHY_STATUS_LINE_OUTPUT_STYLE 关 → 不含 output_style 段(逐字节回退刀97前的 payload)。
   if (_outputStyleEnabled(env)) {
     const name = typeof s.outputStyle === 'string' ? s.outputStyle.trim() : '';
-    if (name) payload.output_style = { name };
+    if (name) {
+      payload.output_style = { name };
+    }
   }
   // 刀98:permission_mode 字段 —— 对齐 CC `types/statusLine.ts:9` + `StatusLine.tsx:228/331`
   // (顶层 `permission_mode: toolPermissionContext.mode`),让用户配置的 status-line command 能照官方
@@ -252,7 +278,9 @@ function buildStdinPayload(snapshot = {}, env = process.env) {
   // (不臆造 'default')。子门控 KHY_STATUS_LINE_PERMISSION_MODE 关 → 不含该字段(逐字节回退刀98前)。
   if (_permissionModeEnabled(env)) {
     const pm = resolvePermissionModeLabel(s.permissionMode);
-    if (pm) payload.permission_mode = pm;
+    if (pm) {
+      payload.permission_mode = pm;
+    }
   }
   // 刀100:transcript_path 字段 —— 对齐 CC `types/statusLine.ts:7`(顶层 `transcript_path: string`)。
   // half-wired 底座:khy `sessionPersistence.jsonlPathFor(sessionId)`(:175)是「会话 JSONL transcript
@@ -289,11 +317,17 @@ function buildStdinPayload(snapshot = {}, env = process.env) {
  * @returns {string} 友好名或原始 id(绝不返回 undefined)
  */
 function resolveModelDisplayName(rawModel, formatModelLabel, env = process.env) {
-  const raw = typeof rawModel === 'string' ? rawModel : (rawModel == null ? '' : String(rawModel));
+  const raw = typeof rawModel === 'string' ? rawModel : rawModel == null ? '' : String(rawModel);
   try {
-    if (!raw) return '';
-    if (!_modelNameEnabled(env)) return raw; // 门控关 → 逐字节回退原始 id(刀96 前)。
-    if (typeof formatModelLabel !== 'function') return raw;
+    if (!raw) {
+      return '';
+    }
+    if (!_modelNameEnabled(env)) {
+      return raw;
+    } // 门控关 → 逐字节回退原始 id(刀96 前)。
+    if (typeof formatModelLabel !== 'function') {
+      return raw;
+    }
     const label = formatModelLabel(raw, env);
     return typeof label === 'string' && label.trim() ? label : raw;
   } catch {
@@ -334,7 +368,9 @@ const _CC_PERMISSION_MODE = Object.freeze({
 function resolvePermissionModeLabel(mode) {
   try {
     const raw = typeof mode === 'string' ? mode.trim() : '';
-    if (!raw) return '';
+    if (!raw) {
+      return '';
+    }
     return _CC_PERMISSION_MODE[raw] || '';
   } catch {
     return '';
@@ -359,11 +395,16 @@ function normalizeRenderedLine(raw, opts = {}) {
     // 取首个非空行(CC 状态行是单行展示)。
     let line = '';
     for (const ln of text.split('\n')) {
-      if (ln.trim() !== '') { line = ln; break; }
+      if (ln.trim() !== '') {
+        line = ln;
+        break;
+      }
     }
     // 去掉行尾回车/空白(保留行内对齐),按上限截断。
     line = line.replace(/[\r\s]+$/, '');
-    if (maxLen > 0 && line.length > maxLen) line = line.slice(0, maxLen);
+    if (maxLen > 0 && line.length > maxLen) {
+      line = line.slice(0, maxLen);
+    }
     return padding > 0 ? ' '.repeat(padding) + line : line;
   } catch {
     return '';
@@ -378,8 +419,12 @@ function normalizeRenderedLine(raw, opts = {}) {
  */
 function summarizeStatusLine(resolved, enabled) {
   const r = resolved && typeof resolved === 'object' ? resolved : {};
-  if (!enabled) return '状态行:已关闭(KHY_STATUS_LINE=0)';
-  if (!r.configured) return '状态行:未配置(运行 `khy statusline setup` 或 `statusline set <command>`)';
+  if (!enabled) {
+    return '状态行:已关闭(KHY_STATUS_LINE=0)';
+  }
+  if (!r.configured) {
+    return '状态行:未配置(运行 `khy statusline setup` 或 `statusline set <command>`)';
+  }
   const cmd = String(r.command || '');
   const shown = cmd.length > 60 ? cmd.slice(0, 57) + '…' : cmd;
   return `状态行:已配置 [${r.type || 'command'}] ${shown}`;

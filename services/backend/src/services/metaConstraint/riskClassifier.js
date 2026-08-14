@@ -51,21 +51,63 @@ const RISK_RANK = Object.freeze({
 
 // File extensions whose edits are pure prose/data — no executable logic.
 const CREATIVE_EXTS = new Set([
-  '.md', '.markdown', '.txt', '.rst', '.adoc',
-  '.csv', '.log', '.text',
+  '.md',
+  '.markdown',
+  '.txt',
+  '.rst',
+  '.adoc',
+  '.csv',
+  '.log',
+  '.text',
 ]);
 
 // Code extensions — editing these is a logic change by default.
 const CODE_EXTS = new Set([
-  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.c', '.h',
-  '.cc', '.cpp', '.hpp', '.java', '.kt', '.rb', '.php', '.swift', '.sh', '.bash',
-  '.zsh', '.sql', '.lua', '.scala', '.dart', '.vue', '.svelte', '.asm', '.s',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.tsx',
+  '.jsx',
+  '.py',
+  '.go',
+  '.rs',
+  '.c',
+  '.h',
+  '.cc',
+  '.cpp',
+  '.hpp',
+  '.java',
+  '.kt',
+  '.rb',
+  '.php',
+  '.swift',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.sql',
+  '.lua',
+  '.scala',
+  '.dart',
+  '.vue',
+  '.svelte',
+  '.asm',
+  '.s',
 ]);
 
 // Read-only tool/command signatures → creative-grade (no mutation risk at all).
 const READONLY_TOOL_NAMES = new Set([
-  'readfile', 'read_file', 'read', 'cat', 'grep', 'glob', 'ls', 'list', 'search',
-  'view', 'stat',
+  'readfile',
+  'read_file',
+  'read',
+  'cat',
+  'grep',
+  'glob',
+  'ls',
+  'list',
+  'search',
+  'view',
+  'stat',
 ]);
 
 function _ext(path) {
@@ -80,7 +122,9 @@ function _creativeExts() {
   if (extra) {
     for (const e of extra.split(',')) {
       const t = e.trim().toLowerCase();
-      if (t) base.add(t.startsWith('.') ? t : `.${t}`);
+      if (t) {
+        base.add(t.startsWith('.') ? t : `.${t}`);
+      }
     }
   }
   return base;
@@ -100,16 +144,22 @@ function _creativeExts() {
  */
 function classify(action = {}) {
   // Explicit, legal override wins (lets a caller pin a known risk).
-  const pinned = String(action.riskClass || '').trim().toLowerCase();
+  const pinned = String(action.riskClass || '')
+    .trim()
+    .toLowerCase();
   if (Object.prototype.hasOwnProperty.call(RISK_RANK, pinned)) {
     return { riskClass: pinned, reason: '调用方显式指定风险级别。' };
   }
 
   const params = action.params || {};
-  const tool = String(action.tool || params.tool || '').trim().toLowerCase();
+  const tool = String(action.tool || params.tool || '')
+    .trim()
+    .toLowerCase();
   const command = _str(action.command != null ? action.command : params.command);
   const sql = _str(params.sql != null ? params.sql : params.query);
-  const path = _str(action.path != null ? action.path : (params.path || params.file || params.filename));
+  const path = _str(
+    action.path != null ? action.path : params.path || params.file || params.filename
+  );
   const content = _str(action.content != null ? action.content : params.content);
   const commandish = `${command}\n${sql}`;
 
@@ -121,7 +171,10 @@ function classify(action = {}) {
     return { riskClass: RISK.IRREVERSIBLE, reason: '命令包含删除/drop/强推等不可逆操作。' };
   }
   if (path && _any(IRREVERSIBLE_PATH_PATTERNS, path)) {
-    return { riskClass: RISK.IRREVERSIBLE, reason: `目标路径 "${path}" 属依赖清单/锁文件/机密，高危。` };
+    return {
+      riskClass: RISK.IRREVERSIBLE,
+      reason: `目标路径 "${path}" 属依赖清单/锁文件/机密，高危。`,
+    };
   }
 
   // --- creative: pure read, or prose/data files ------------------------------
@@ -142,7 +195,10 @@ function classify(action = {}) {
   }
 
   // --- fail-safe: unknown → logic (never under-lock to creative) -------------
-  return { riskClass: RISK.LOGIC, reason: '未能识别动作类型，保守按逻辑变更处理（防呆 fail-safe）。' };
+  return {
+    riskClass: RISK.LOGIC,
+    reason: '未能识别动作类型，保守按逻辑变更处理（防呆 fail-safe）。',
+  };
 }
 
 module.exports = {

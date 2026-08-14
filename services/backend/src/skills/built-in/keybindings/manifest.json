@@ -1,8 +1,15 @@
 {
   "name": "keybindings",
-  "command": "/keybindings",
   "description": "Show available keyboard shortcuts and keybindings",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["help", "keyboard"]
+  "trigger": "/keybindings",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "help",
+    "keyboard"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

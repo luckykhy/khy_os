@@ -49,9 +49,7 @@ const scoped = jestArgs.some((a) => !a.startsWith('-'));
 const logChunks = [];
 const childEnv = { ...process.env };
 const heapFlag = `--max-old-space-size=${HEAP_CAP_MB}`;
-childEnv.NODE_OPTIONS = childEnv.NODE_OPTIONS
-  ? `${childEnv.NODE_OPTIONS} ${heapFlag}`
-  : heapFlag;
+childEnv.NODE_OPTIONS = childEnv.NODE_OPTIONS ? `${childEnv.NODE_OPTIONS} ${heapFlag}` : heapFlag;
 
 function section(title) {
   logChunks.push(`\n===== ${title} =====\n`);
@@ -136,6 +134,8 @@ process.stdout.write(shown.join('\n') + '\n');
 if (lines.length > shown.length) {
   process.stdout.write(`... ${lines.length - shown.length} more lines suppressed\n`);
 }
-process.stdout.write(`\nVERDICT: ${failed ? 'FAIL' : 'PASS'}  |  full log: ${path.relative(process.cwd(), LOG_PATH)}\n`);
+process.stdout.write(
+  `\nVERDICT: ${failed ? 'FAIL' : 'PASS'}  |  full log: ${path.relative(process.cwd(), LOG_PATH)}\n`
+);
 
 process.exit(failed ? 1 : 0);

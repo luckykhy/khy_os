@@ -24,11 +24,12 @@
  *   /issue --label bug -l urgent --assignee alice <标题...>
  */
 
+const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync, spawnSync } = require('child_process');
-const { printInfo, printError, printWarn, printSuccess } = require('../formatters');
+
 const issueReport = require('../../services/issue/issueReport');
+const { printInfo, printError, printWarn, printSuccess } = require('../formatters');
 
 const MAX_TRANSCRIPT_LINES = 20000; // OOM 帽,与 perfIssue 同
 
@@ -45,21 +46,31 @@ function _gitRemoteUrl(cwd) {
 function _readTranscript(file) {
   let raw;
   try {
-    if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) return [];
+    if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      return [];
+    }
     raw = fs.readFileSync(file, 'utf-8');
   } catch {
     return [];
   }
   let lines = raw.split('\n');
-  if (lines.length > MAX_TRANSCRIPT_LINES) lines = lines.slice(-MAX_TRANSCRIPT_LINES);
+  if (lines.length > MAX_TRANSCRIPT_LINES) {
+    lines = lines.slice(-MAX_TRANSCRIPT_LINES);
+  }
   const out = [];
   for (const line of lines) {
     const s = line.trim();
-    if (!s) continue;
+    if (!s) {
+      continue;
+    }
     try {
       const obj = JSON.parse(s);
-      if (obj && typeof obj === 'object') out.push(obj);
-    } catch { /* 坏行跳过 */ }
+      if (obj && typeof obj === 'object') {
+        out.push(obj);
+      }
+    } catch {
+      /* 坏行跳过 */
+    }
   }
   return out;
 }
@@ -68,9 +79,16 @@ function _readTranscript(file) {
 function _detectTemplate(cwd) {
   try {
     const dir = path.join(cwd, '.github', 'ISSUE_TEMPLATE');
-    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return '';
-    const md = fs.readdirSync(dir).filter((f) => /\.md$/i.test(f)).sort();
-    if (!md.length) return '';
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+      return '';
+    }
+    const md = fs
+      .readdirSync(dir)
+      .filter((f) => /\.md$/i.test(f))
+      .sort();
+    if (!md.length) {
+      return '';
+    }
     return fs.readFileSync(path.join(dir, md[0]), 'utf-8');
   } catch {
     return '';
@@ -122,7 +140,9 @@ async function handleIssue(subCommand, args = [], _options = {}) {
     const sessionPersistence = require('../../services/sessionPersistence');
     const recent = sessionPersistence.listPersistedSessions({ limit: 1 }) || [];
     const sid = recent.length && recent[0] ? recent[0].sessionId : null;
-    if (sid) transcript = _readTranscript(sessionPersistence.jsonlPathFor(sid));
+    if (sid) {
+      transcript = _readTranscript(sessionPersistence.jsonlPathFor(sid));
+    }
   } catch (e) {
     printWarn(`无法读取会话 transcript:${e && e.message ? e.message : e}`);
   }
@@ -135,16 +155,30 @@ async function handleIssue(subCommand, args = [], _options = {}) {
 
   // 分支 A:gh 可用 + 有 remote → 真创建(网络写)。
   if (hasRepo && _ghAvailable()) {
-    const ghArgs = ['issue', 'create', '--title', parsed.title, '--body', body,
-      '--repo', `${repoInfo.owner}/${repoInfo.repo}`];
-    for (const l of parsed.labels) ghArgs.push('--label', l);
-    for (const a of parsed.assignees) ghArgs.push('--assignee', a);
+    const ghArgs = [
+      'issue',
+      'create',
+      '--title',
+      parsed.title,
+      '--body',
+      body,
+      '--repo',
+      `${repoInfo.owner}/${repoInfo.repo}`,
+    ];
+    for (const l of parsed.labels) {
+      ghArgs.push('--label', l);
+    }
+    for (const a of parsed.assignees) {
+      ghArgs.push('--assignee', a);
+    }
     try {
       const r = spawnSync('gh', ghArgs, { cwd, encoding: 'utf-8', timeout: 30000 });
       if (r.status === 0) {
         const out = String(r.stdout || '').trim();
         printSuccess('issue 已创建。');
-        if (out) printInfo(out);
+        if (out) {
+          printInfo(out);
+        }
         return true;
       }
       printWarn(`gh issue create 失败:${String(r.stderr || '').trim() || `exit ${r.status}`}`);
@@ -157,8 +191,12 @@ async function handleIssue(subCommand, args = [], _options = {}) {
   // 分支 B:降级为浏览器 URL(+ body 超长落本地草稿)。
   if (hasRepo) {
     const { url, bodyTruncated } = issueReport.buildIssueUrl({
-      host: repoInfo.host, owner: repoInfo.owner, repo: repoInfo.repo,
-      title: parsed.title, body, labels: parsed.labels,
+      host: repoInfo.host,
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      title: parsed.title,
+      body,
+      labels: parsed.labels,
     });
     printInfo('在浏览器中打开以下链接创建 issue:');
     printInfo(url);
@@ -169,7 +207,9 @@ async function handleIssue(subCommand, args = [], _options = {}) {
         printInfo(draftPath);
       }
     }
-    if (!_ghAvailable()) printInfo('提示:安装并 `gh auth login` 后,/issue 可直接创建。');
+    if (!_ghAvailable()) {
+      printInfo('提示:安装并 `gh auth login` 后,/issue 可直接创建。');
+    }
     return true;
   }
 

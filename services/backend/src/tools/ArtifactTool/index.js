@@ -1,8 +1,9 @@
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
-const { getDataDir } = require('../../utils/dataHome');
+
 const leaf = require('../../services/artifact/artifactPlan');
+const { getDataDir } = require('../../utils/dataHome');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * ArtifactTool — 把生成内容持久化为**本地工件**(create / list / read)。对齐 Claude Code 的 Artifact 工具
@@ -25,11 +26,16 @@ class ArtifactTool extends BaseTool {
 
   // create 写文件(非只读);list/read 只读。destructive 永假(只新增/覆盖自管目录,不删他人文件)。
   isReadOnly(input) {
-    const action = input && typeof input.action === 'string' ? input.action.toLowerCase() : 'create';
+    const action =
+      input && typeof input.action === 'string' ? input.action.toLowerCase() : 'create';
     return action === 'list' || action === 'read';
   }
-  isDestructive() { return false; }
-  isConcurrencySafe(input) { return this.isReadOnly(input); }
+  isDestructive() {
+    return false;
+  }
+  isConcurrencySafe(input) {
+    return this.isReadOnly(input);
+  }
 
   prompt() {
     return `Persist generated content as a LOCAL artifact under the khy data dir, or list/read existing ones.
@@ -43,16 +49,29 @@ Honest local equivalent of a shareable artifact: returns a local path, NOT a clo
     return {
       type: 'object',
       properties: {
-        action: { type: 'string', description: 'create | list | read', enum: ['create', 'list', 'read'], default: 'create' },
+        action: {
+          type: 'string',
+          description: 'create | list | read',
+          enum: ['create', 'list', 'read'],
+          default: 'create',
+        },
         content: { type: 'string', description: 'Artifact content (required for create)' },
-        name: { type: 'string', description: 'Artifact name (required for read; optional for create)' },
-        kind: { type: 'string', description: 'Content kind hint for file extension (js, py, json, html, md, …)' },
+        name: {
+          type: 'string',
+          description: 'Artifact name (required for read; optional for create)',
+        },
+        kind: {
+          type: 'string',
+          description: 'Content kind hint for file extension (js, py, json, html, md, …)',
+        },
       },
       required: [],
     };
   }
 
-  _dir() { return getDataDir('artifacts'); }
+  _dir() {
+    return getDataDir('artifacts');
+  }
 
   async execute(params) {
     // 门控关 → 诚实回退「如同未装」:不写任何文件,返回禁用提示(逐字节稳定,绝不伪造成功)。
@@ -60,11 +79,17 @@ Honest local equivalent of a shareable artifact: returns a local path, NOT a clo
       return leaf.buildErrorResult('Artifact 工具已被 KHY_ARTIFACT_TOOL 门控关闭。');
     }
     const v = leaf.validateInput(params);
-    if (!v.ok) return leaf.buildErrorResult(v.error);
+    if (!v.ok) {
+      return leaf.buildErrorResult(v.error);
+    }
 
     try {
-      if (v.action === 'list') return this._list();
-      if (v.action === 'read') return this._read(params);
+      if (v.action === 'list') {
+        return this._list();
+      }
+      if (v.action === 'read') {
+        return this._read(params);
+      }
       return this._create(params);
     } catch (err) {
       return leaf.buildErrorResult((err && err.message) || err);
@@ -91,16 +116,26 @@ Honest local equivalent of a shareable artifact: returns a local path, NOT a clo
   _list() {
     const dir = this._dir();
     let names = [];
-    try { names = fs.readdirSync(dir); } catch { names = []; }
+    try {
+      names = fs.readdirSync(dir);
+    } catch {
+      names = [];
+    }
     const entries = [];
     for (const name of names) {
-      if (name.includes('.tmp-')) continue; // 跳过半成品临时文件
+      if (name.includes('.tmp-')) {
+        continue;
+      } // 跳过半成品临时文件
       let bytes = 0;
       try {
         const st = fs.statSync(path.join(dir, name));
-        if (!st.isFile()) continue;
+        if (!st.isFile()) {
+          continue;
+        }
         bytes = st.size;
-      } catch { continue; }
+      } catch {
+        continue;
+      }
       entries.push({ name, bytes });
     }
     return leaf.buildListResult(entries);
@@ -114,12 +149,16 @@ Honest local equivalent of a shareable artifact: returns a local path, NOT a clo
       return leaf.buildErrorResult(`未找到工件:${safeName}(用 action=list 查看现有工件)`);
     }
     const st = fs.statSync(file);
-    if (st.size > 1024 * 1024) return leaf.buildErrorResult('工件过大(>1MB),拒绝读回。');
+    if (st.size > 1024 * 1024) {
+      return leaf.buildErrorResult('工件过大(>1MB),拒绝读回。');
+    }
     const content = fs.readFileSync(file, 'utf-8');
     return leaf.buildReadResult({ name: safeName, path: file, content });
   }
 
-  getActivityDescription(input) { return leaf.describeActivity(input); }
+  getActivityDescription(input) {
+    return leaf.describeActivity(input);
+  }
 }
 
 module.exports = ArtifactTool;

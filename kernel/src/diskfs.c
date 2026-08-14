@@ -40,7 +40,7 @@ struct diskfs_slot {
     uint32_t mtime;                   /*  4 — last content change, epoch seconds */
     uint32_t atime;                   /*  4 — last content read */
     uint32_t ctime;                   /*  4 — last status change */
-    uint32_t reserved[13];            /* 52 → 128 bytes total */
+    uint32_t reserved[14];            /* 56 → 128 bytes total */
 };
 
 static int                 mounted;

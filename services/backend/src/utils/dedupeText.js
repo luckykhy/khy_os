@@ -18,7 +18,9 @@ function dedupeText(items = []) {
   const out = [];
   for (const item of items) {
     const normalized = String(item || '').trim();
-    if (!normalized || seen.has(normalized)) continue;
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
     seen.add(normalized);
     out.push(normalized);
   }

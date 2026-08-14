@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-042] 交互过程与输出结构化：持久化字段与机器可读输出 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-042] 交互过程与输出结构化：持久化字段与机器可读输出</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-042] 交互过程与输出结构化：持久化字段与机器可读输出</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-042-交互过程与输出结构化-持久化字段与机器可读输出">[IMPL-RPT-042] 交互过程与输出结构化：持久化字段与机器可读输出</a></li><li class="lvl-2"><a href="#一-背景与目标">一、背景与目标</a></li><li class="lvl-2"><a href="#二-三个可选持久化字段-jsonl-transcript-json-快照">二、三个可选持久化字段（JSONL transcript + JSON 快照）</a></li><li class="lvl-3"><a href="#2-1-timeline-有序回合时间线">2.1 `_timeline` — 有序回合时间线</a></li><li class="lvl-3"><a href="#2-2-toolcalls-工具调用摘要">2.2 `_toolCalls` — 工具调用摘要</a></li><li class="lvl-3"><a href="#2-3-turnstats-回合统计">2.3 `_turnStats` — 回合统计</a></li><li class="lvl-2"><a href="#三-khy-p-机器可读输出的增量字段">三、`khy -p` 机器可读输出的增量字段</a></li><li class="lvl-2"><a href="#四-session-export-detailed-与-session-analyze">四、`session export --detailed` 与 `session analyze`</a></li><li class="lvl-3"><a href="#4-1-导出-khy-session-export-format-json-detailed">4.1 导出：`khy session export  --format json --detailed`</a></li><li class="lvl-3"><a href="#4-2-分析-khy-session-analyze-json">4.2 分析：`khy session analyze  [--json]`</a></li><li class="lvl-2"><a href="#五-jq-使用示例">五、jq 使用示例</a></li><li class="lvl-2"><a href="#六-向后兼容承诺与门控清单">六、向后兼容承诺与门控清单</a></li><li class="lvl-2"><a href="#七-测试与验证">七、测试与验证</a></li><li class="lvl-2"><a href="#八-涉及文件">八、涉及文件</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-042-交互过程与输出结构化-持久化字段与机器可读输出">[IMPL-RPT-042] 交互过程与输出结构化：持久化字段与机器可读输出<a class="anchor" href="#impl-rpt-042-交互过程与输出结构化-持久化字段与机器可读输出" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 docs/03_DESIGN_设计/，本目录索引见 00_INDEX_实现-分类索引.md</p></blockquote>
+<ul><li>日期：2026-07-27</li><li>范围：会话回合的结构化持久化字段（<code>_timeline</code> / <code>_toolCalls</code> / <code>_turnStats</code>）、<code>khy -p</code> 机器可读输出的增量字段（<code>tool_calls</code> / <code>turn_stats</code> / <code>timeline</code>）、<code>session export --detailed</code> 与 <code>session analyze</code> 子命令，以及相关 TUI 展示门控。</li><li>状态：定稿（单元测试 + 整体回归通过）</li></ul>
+<h2 id="一-背景与目标">一、背景与目标<a class="anchor" href="#一-背景与目标" aria-label="锚点">#</a></h2>
+<p>此前一个回合里「模型说了什么、调了哪些工具、每步耗时多少」只存在于终端滚动输出中，落盘的 JSONL/快照只有扁平的 role+content，机器消费方（脚本、CI、二次分析）拿不到结构化过程数据。本次改造在<strong>不破坏任何旧数据与旧输出字节</strong>的前提下，把回合过程结构化：写侧新增三个可选持久化字段，读侧新增机器可读输出与分析命令。</p>
+<h2 id="二-三个可选持久化字段-jsonl-transcript-json-快照">二、三个可选持久化字段（JSONL transcript + JSON 快照）<a class="anchor" href="#二-三个可选持久化字段-jsonl-transcript-json-快照" aria-label="锚点">#</a></h2>
+<p>写入点：<code>services/backend/src/services/sessionPersistence.js</code> 的 <code>appendMessage</code>。三个字段全部是 <strong>present-only</strong>：调用方未挂载（或挂载了空数组/空对象）时，写出的 JSONL 行与旧格式<strong>字节一致</strong>；旧 reader 按「忽略未知字段」的既有增量契约（同 <code>_khyTrace</code>）直接兼容。</p>
+<p>注意存储位置差异：live TUI 回合的新字段经 <code>aiSession.attachTurnArtifacts</code> 挂到内存消息后由 <code>_persistLiveSession</code> 落盘——已追加过的行不会重写，因此<strong>已存在回合的字段落在 JSON 快照</strong>（<code>{bucket}/{sessionId}.json</code> 的原始消息透传）；JSONL 的 append 路径同样支持带字段写入（新追加的行直接携带）。</p>
+<h3 id="2-1-timeline-有序回合时间线">2.1 <code>_timeline</code> — 有序回合时间线<a class="anchor" href="#2-1-timeline-有序回合时间线" aria-label="锚点">#</a></h3>
+<p>模型文本、思考与工具步骤的真实交错顺序（连续文本段合并，工具收拢为 <code>tools</code> 组）：</p>
+<pre><code class="language-json">&quot;_timeline&quot;: [
+  { &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;先看一下配置文件&quot; },
+  { &quot;type&quot;: &quot;thinking&quot;, &quot;text&quot;: &quot;……&quot;, &quot;durationMs&quot;: 800 },
+  { &quot;type&quot;: &quot;tools&quot;, &quot;tools&quot;: [
+    { &quot;name&quot;: &quot;Read&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;, &quot;status&quot;: &quot;done&quot; }
+  ] },
+  { &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;配置没问题，结论是……&quot; }
+]</code></pre>
+<table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>type</code></td><td><code>text</code>（模型正文）/ <code>thinking</code>（思考段）/ <code>tools</code>（连续工具组）</td></tr><tr><td><code>text</code></td><td>该段文本内容（<code>text</code>/<code>thinking</code> 段）</td></tr><tr><td><code>durationMs</code></td><td>思考段真实耗时毫秒，仅实测到才有</td></tr><tr><td><code>tools[].name</code></td><td>工具名</td></tr><tr><td><code>tools[].paramsSummary</code></td><td>参数一行摘要，200 字符截断（不存完整参数/结果，防存储膨胀）</td></tr><tr><td><code>tools[].status</code></td><td><code>done</code> / <code>error</code>；无结果时整个键缺席（不虚构）</td></tr></tbody></table>
+<h3 id="2-2-toolcalls-工具调用摘要">2.2 <code>_toolCalls</code> — 工具调用摘要<a class="anchor" href="#2-2-toolcalls-工具调用摘要" aria-label="锚点">#</a></h3>
+<p>从工具循环权威日志（toolCallLog）蒸馏，<strong>从不保存完整工具结果</strong>：</p>
+<pre><code class="language-json">&quot;_toolCalls&quot;: [
+  { &quot;seq&quot;: 1, &quot;name&quot;: &quot;Read&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;, &quot;durationMs&quot;: 42, &quot;status&quot;: &quot;done&quot; },
+  { &quot;seq&quot;: 2, &quot;name&quot;: &quot;Bash&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;command\&quot;:\&quot;ls\&quot;}&quot;, &quot;durationMs&quot;: 7, &quot;status&quot;: &quot;error&quot;, &quot;error&quot;: &quot;boom&quot; }
+]</code></pre>
+<table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>seq</code></td><td>回合内调用序号（从 1 起）</td></tr><tr><td><code>name</code> / <code>paramsSummary</code></td><td>工具名 / 参数摘要（200 字符截断）</td></tr><tr><td><code>durationMs</code></td><td>实测耗时毫秒，日志未带真实耗时则缺席</td></tr><tr><td><code>status</code></td><td><code>done</code> / <code>error</code></td></tr><tr><td><code>error</code></td><td>失败时的一行摘要（200 字符截断），成功时缺席</td></tr></tbody></table>
+<h3 id="2-3-turnstats-回合统计">2.3 <code>_turnStats</code> — 回合统计<a class="anchor" href="#2-3-turnstats-回合统计" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">&quot;_turnStats&quot;: { &quot;elapsedMs&quot;: 1235, &quot;tokens&quot;: 567, &quot;toolCount&quot;: 2 }</code></pre>
+<p>诚实省略规则（与 turnStats.js 同一红线）：不可得的量整键缺席、绝不补零。<code>elapsedMs</code>/<code>tokens</code> 仅实测大于 0 才写；<code>toolCount</code> 仅当真实提供了日志数组才写（空数组是事实「零工具运行」→ <code>toolCount: 0</code>）；三个量都缺时整个 <code>_turnStats</code> 缺席。</p>
+<h2 id="三-khy-p-机器可读输出的增量字段">三、<code>khy -p</code> 机器可读输出的增量字段<a class="anchor" href="#三-khy-p-机器可读输出的增量字段" aria-label="锚点">#</a></h2>
+<p>实现：<code>services/backend/src/cli/printOutputFormat.js</code> 的 <code>buildResultMessage</code>。<code>--output-format json</code> 与 <code>stream-json</code> 的终端 <code>result</code> 消息在<strong>旧键序完全不动</strong>的尾部追加：</p>
+<table><thead><tr><th>字段</th><th>出现条件</th><th>内容</th></tr></thead><tbody><tr><td><code>tool_calls</code></td><td>本次运行携带 toolCallLog 数组时（空数组也输出 <code>[]</code>，是「零工具」的事实；降级/旧结果整键缺席）</td><td>同 <code>_toolCalls</code> 结构</td></tr><tr><td><code>turn_stats</code></td><td>至少有一个真实量时</td><td>同 <code>_turnStats</code> 结构</td></tr><tr><td><code>timeline</code></td><td>仅 <code>--include-timeline</code> 开启时（开启但无数据 → <code>[]</code>，门控消费方恒见键）</td><td>同 <code>_timeline</code> 结构</td></tr></tbody></table>
+<p><code>--include-timeline</code> 标志：裸标志即开启；<code>--include-timeline=true|false</code>（或 <code>1|0</code>）显式指定；未知值按 <code>--output-format</code> 同样式报错。</p>
+<pre><code class="language-bash">khy -p &quot;统计 src 下 js 文件数量&quot; --output-format json
+khy -p &quot;同上&quot; --output-format stream-json --include-timeline</code></pre>
+<h2 id="四-session-export-detailed-与-session-analyze">四、<code>session export --detailed</code> 与 <code>session analyze</code><a class="anchor" href="#四-session-export-detailed-与-session-analyze" aria-label="锚点">#</a></h2>
+<p>实现：<code>services/backend/src/cli/handlers/session.js</code>；命令别名登记于 <code>aliases.js</code>（<code>会话分析</code> / <code>分析会话</code> / <code>huihuafenxi</code> → <code>session analyze</code>），schema 与 <code>bin/khy.js</code> 已同步接线。</p>
+<h3 id="4-1-导出-khy-session-export-format-json-detailed">4.1 导出：<code>khy session export &lt;序号|ID&gt; --format json --detailed</code><a class="anchor" href="#4-1-导出-khy-session-export-format-json-detailed" aria-label="锚点">#</a></h3>
+<p>restore 读侧白名单会剥离 artifact 字段；<code>--detailed</code>（仅 json 格式生效）从原始快照按 uuid（退化到同下标+同角色）把 <code>_timeline</code>/<code>_toolCalls</code>/<code>_turnStats</code> 重新贴回导出消息。不带该标志时<strong>导出字节与旧输出一致</strong>。</p>
+<h3 id="4-2-分析-khy-session-analyze-json">4.2 分析：<code>khy session analyze &lt;序号|ID&gt; [--json]</code><a class="anchor" href="#4-2-分析-khy-session-analyze-json" aria-label="锚点">#</a></h3>
+<p>按人类用户消息切回合，聚合每回合耗时/工具/tokens（来源为原始快照；旧会话无 artifact 字段时诚实降级为仅回合切分）。人类可读输出示例：</p>
+<pre><code class="language-text">  会话分析：重构数据层
+  ID sess-a1b2c3d4 · 共 6 条消息
+
+  共切分出 2 个回合，累计耗时 46.6 秒，累计调用工具 5 次，累计消耗 8123 tokens。
+
+  回合 1 帮我看看 dataHome 的解析逻辑
+      耗时 12.3 秒，调用工具 2 次（Read、Grep），消耗 3011 tokens，回合已完成
+  回合 2 把缓存路径改成可覆盖的
+      耗时 34.3 秒，调用工具 3 次（Read、Edit、Bash），消耗 5112 tokens，回合已完成</code></pre>
+<p><code>--json</code> 输出 <code>{ ok, action: &quot;analyze&quot;, sessionId, metrics, rounds }</code>，其中 <code>rounds[]</code> 为 <code>{ index, userInput, elapsedMs, tools, tokens, status }</code>（不可得的量为 <code>null</code>/<code>[]</code>，不补零）。</p>
+<p>中文别名等价用法：</p>
+<pre><code class="language-bash">khy 会话分析 1
+khy 分析会话 sess-a1b2c3d4 --json
+khy huihuafenxi 1 --json</code></pre>
+<h2 id="五-jq-使用示例">五、jq 使用示例<a class="anchor" href="#五-jq-使用示例" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 单次运行：提取每个工具的耗时
+khy -p &quot;检查依赖&quot; --output-format json | jq '.tool_calls[] | {name, durationMs}'
+
+# 单次运行：回合累计 tokens
+khy -p &quot;检查依赖&quot; --output-format json | jq '.turn_stats.tokens'
+
+# 会话分析：每回合耗时与工具清单
+khy session analyze 1 --json | jq '.rounds[] | {index, elapsedMs, tools}'
+
+# 会话分析：全会话累计 tokens
+khy session analyze 1 --json | jq '.metrics.totalTokens'
+
+# 详细导出：跨消息累加所有工具调用耗时（缺字段的旧消息自动跳过）
+khy session export 1 --format json --detailed --json
+jq '[.messages[]._toolCalls // [] | .[] | .durationMs // 0] | add' &lt;导出文件&gt;.json
+
+# 详细导出：找出最慢的一次工具调用
+jq '[.messages[]._toolCalls // [] | .[]] | max_by(.durationMs // 0)' &lt;导出文件&gt;.json</code></pre>
+<h2 id="六-向后兼容承诺与门控清单">六、向后兼容承诺与门控清单<a class="anchor" href="#六-向后兼容承诺与门控清单" aria-label="锚点">#</a></h2>
+<p>兼容红线（均有单元测试锁定）：</p>
+<ol><li>旧数据降级：无 artifact 字段的历史会话，所有 reader（restore/export/analyze）照常工作，analyze 诚实降级为仅回合切分并明示「旧版本记录」。</li><li>无新标志时输出字节不变：不带 <code>--include-timeline</code> 的 <code>-p</code> 输出不含 <code>timeline</code> 键；不带 <code>--detailed</code> 的导出与旧字节一致；appendMessage 未挂载新字段时 JSONL 行与旧格式字节一致。</li><li>旧 reader 读新数据不崩溃：新字段遵循「未知字段忽略」的既有增量契约。</li></ol>
+<p>相关门控（全部默认开，<code>0/false/off/no</code> 关闭即逐字节回退旧渲染）：</p>
+<table><thead><tr><th>门控</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_TUI_SECTION_GAP</code></td><td>TUI 转录/流式区段间空行分隔（sectionGap.js 叶子，StreamingBlock 与 Transcript 同步翻转）</td></tr><tr><td><code>KHY_TOOL_HEADER_DURATION</code></td><td>工具头行内联耗时标记（如 <code> (45ms)</code> / <code> (1.2s)</code>），仅实测数据、从不估算</td></tr><tr><td><code>KHY_TOOL_RESULT_TRUNCATION_TAG</code></td><td>工具结果体截断标记 <code>[已截断 shown/total 字]</code>，真实计数</td></tr></tbody></table>
+<h2 id="七-测试与验证">七、测试与验证<a class="anchor" href="#七-测试与验证" aria-label="锚点">#</a></h2>
+<ul><li><code>tests/services/sessionPersistence.turnArtifacts.test.js</code>（node --test）：行键集合向后兼容、present-only、写入读回、persistSession/快照透传、旧 reader 不崩溃。</li><li><code>tests/tui/queryBridgeTimeline.buildTurnArtifacts.test.js</code>（node --test）：完整投影、诚实省略、paramsSummary/错误摘要截断。</li><li>既有回归：<code>tests/cli/printOutputFormat.test.js</code> 54 用例、TUI jest 套件、<code>node scripts/check-agent-rules.js --changed</code> 全部通过。</li></ul>
+<h2 id="八-涉及文件">八、涉及文件<a class="anchor" href="#八-涉及文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td>services/backend/src/services/sessionPersistence.js</td><td>appendMessage 三个可选字段的 present-only 透传</td></tr><tr><td>services/backend/src/cli/tui/hooks/queryBridgeTimeline.js</td><td>buildTurnArtifacts 投影（纯函数）</td></tr><tr><td>services/backend/src/cli/aiSession.js</td><td>attachTurnArtifacts：把投影挂到最近一条 assistant 消息并落盘</td></tr><tr><td>services/backend/src/cli/tui/hooks/useQueryBridge.js</td><td>回合 finalize 时挂载 artifacts</td></tr><tr><td>services/backend/src/cli/printOutputFormat.js</td><td>result 消息增量字段 + <code>--include-timeline</code> 解析</td></tr><tr><td>services/backend/src/cli/handlers/session.js</td><td><code>export --detailed</code> 重贴字段；<code>analyze</code> 回合聚合</td></tr><tr><td>services/backend/src/cli/aliases.js、commandSchema.js、bin/khy.js</td><td>别名/schema/入口接线</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-041] Qoder接入khy网关与开机自启实现记录-2026-07-13.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-041] Qoder 接入 khy 网关与开机自启实现记录</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-043] 输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-043] 输出截断根治与无感接续：maxtokens 元数据缺失与锚点续写</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-042] 交互过程与输出结构化-持久化与机器可读输出-2026-07-27.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

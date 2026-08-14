@@ -44,6 +44,8 @@ class MCPClient {
     this._resources = [];
     this._prompts = [];
     this._ready = false;
+    this._connecting = false;
+    this._rl = null;
     this._requestId = 0;
     this._pendingRequests = new Map();
     this._buffer = '';
@@ -55,6 +57,7 @@ class MCPClient {
   async connect() {
     if (!this.enabled) return false;
 
+    this._connecting = true;
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`MCP server "${this.name}" timed out during startup`));
@@ -68,12 +71,14 @@ class MCPClient {
         });
 
         // Read JSON-RPC messages from stdout
-        const rl = readline.createInterface({ input: this._process.stdout });
-        rl.on('line', (line) => {
+        this._rl = readline.createInterface({ input: this._process.stdout });
+        this._rl.on('line', (line) => {
           try {
             const msg = JSON.parse(line);
             this._handleMessage(msg);
-          } catch { /* ignore non-JSON lines */ }
+          } catch {
+            /* ignore non-JSON lines */
+          }
         });
 
         this._process.stderr.on('data', (data) => {
@@ -92,7 +97,7 @@ class MCPClient {
 
         this._process.on('exit', (code) => {
           this._ready = false;
-          if (!this._ready) {
+          if (this._connecting) {
             clearTimeout(timeout);
             reject(new Error(`MCP server "${this.name}" exited with code ${code}`));
           }
@@ -110,32 +115,41 @@ class MCPClient {
             name: 'khy-quant',
             version: require('../../package.json').version,
           },
-        }).then(async (result) => {
-          clearTimeout(timeout);
+        })
+          .then(async (result) => {
+            clearTimeout(timeout);
 
-          // Send initialized notification
-          this._sendNotification('notifications/initialized', {});
+            // Send initialized notification
+            this._sendNotification('notifications/initialized', {});
 
-          // Fetch available tools
-          try {
-            const toolsResult = await this._sendRequest('tools/list', {});
-            this._tools = toolsResult.tools || [];
-          } catch { this._tools = []; }
+            // Fetch available tools
+            try {
+              const toolsResult = await this._sendRequest('tools/list', {});
+              this._tools = toolsResult.tools || [];
+            } catch {
+              this._tools = [];
+            }
 
-          // Fetch resources
-          try {
-            const resourcesResult = await this._sendRequest('resources/list', {});
-            this._resources = resourcesResult.resources || [];
-          } catch { this._resources = []; }
+            // Fetch resources
+            try {
+              const resourcesResult = await this._sendRequest('resources/list', {});
+              this._resources = resourcesResult.resources || [];
+            } catch {
+              this._resources = [];
+            }
 
-          this._ready = true;
-          resolve(true);
-        }).catch((err) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
+            this._ready = true;
+            this._connecting = false;
+            resolve(true);
+          })
+          .catch((err) => {
+            clearTimeout(timeout);
+            this._connecting = false;
+            reject(err);
+          });
       } catch (err) {
         clearTimeout(timeout);
+        this._connecting = false;
         reject(err);
       }
     });
@@ -184,7 +198,18 @@ class MCPClient {
       this._process.kill('SIGTERM');
       this._process = null;
     }
+    if (this._rl) {
+      this._rl.close();
+      this._rl = null;
+    }
+    // Settle any pending requests so callers don't hang forever
+    for (const entry of this._pendingRequests.values()) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error(`MCP server "${this.name}" disconnected`));
+    }
+    this._pendingRequests.clear();
     this._ready = false;
+    this._connecting = false;
   }
 
   // ── Internal JSON-RPC ──
@@ -199,16 +224,16 @@ class MCPClient {
         params,
       });
 
-      this._pendingRequests.set(id, { resolve, reject });
-      this._process.stdin.write(msg + '\n');
-
       // Timeout per request
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this._pendingRequests.has(id)) {
           this._pendingRequests.delete(id);
           reject(new Error(`MCP request timeout: ${method}`));
         }
       }, 30000);
+
+      this._pendingRequests.set(id, { resolve, reject, timer });
+      this._process.stdin.write(msg + '\n');
     });
   }
 
@@ -225,7 +250,8 @@ class MCPClient {
 
   _handleMessage(msg) {
     if (msg.id && this._pendingRequests.has(msg.id)) {
-      const { resolve, reject } = this._pendingRequests.get(msg.id);
+      const { resolve, reject, timer } = this._pendingRequests.get(msg.id);
+      clearTimeout(timer);
       this._pendingRequests.delete(msg.id);
 
       if (msg.error) {
@@ -236,9 +262,11 @@ class MCPClient {
     }
     // Handle notifications from server (e.g., tool updates)
     if (msg.method === 'notifications/tools/list_changed') {
-      this._sendRequest('tools/list', {}).then(result => {
-        this._tools = result.tools || [];
-      }).catch(() => {});
+      this._sendRequest('tools/list', {})
+        .then((result) => {
+          this._tools = result.tools || [];
+        })
+        .catch(() => {});
     }
   }
 }
@@ -251,7 +279,9 @@ function loadMCPConfig() {
     if (fs.existsSync(MCP_CONFIG_PATH)) {
       return JSON.parse(fs.readFileSync(MCP_CONFIG_PATH, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { servers: [] };
 }
 
@@ -263,7 +293,9 @@ function saveMCPConfig(config) {
     const dir = path.dirname(MCP_CONFIG_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(MCP_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**

@@ -1,46 +1,6 @@
 {
-  "total": 56,
+  "total": 51,
   "items": [
-    {
-      "from": "AGENTS.html",
-      "type": "a",
-      "href": "CONTRIBUTING.html"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "README.zh-CN.md"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "CHANGELOG.html"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "CONTRIBUTING.html"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "CODE_OF_CONDUCT.html"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "SECURITY.html"
-    },
-    {
-      "from": "README.html",
-      "type": "a",
-      "href": "LICENSE"
-    },
-    {
-      "from": "README.html",
-      "type": "img",
-      "href": "assets/banner.svg"
-    },
     {
       "from": "docs/00_INDEX_文档索引.html",
       "type": "a",
@@ -85,6 +45,11 @@
       "from": "docs/01_INIT_立项/[INIT-PRD-001] Khy-OS-定位与已实现能力-2026-06-12.html",
       "type": "a",
       "href": "../../.ai/MAP.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/FILE-FORMAT-PROTOCOL.html",
+      "type": "a",
+      "href": "./COMMUNICATION-PROTOCOL.html"
     },
     {
       "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
@@ -212,6 +177,11 @@
       "href": "/home/kodehu03/Khy-OS/backend/src/controllers/marketController.js:27"
     },
     {
+      "from": "docs/06_DEPLOY_部署/[DEPLOY-MAN-010] pip-打包对等-发现-2026-05-17.html",
+      "type": "a",
+      "href": "/home/kodehu03/Khy-OS/MANIFEST.in"
+    },
+    {
       "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
       "type": "a",
       "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/agent/agent.ts"
@@ -255,6 +225,11 @@
       "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
       "type": "a",
       "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/plan.ts"
+    },
+    {
+      "from": "docs/08_MGMT_项目管理/CONTRIBUTING.html",
+      "type": "a",
+      "href": "../AGENTS.html"
     },
     {
       "from": "docs/08_MGMT_项目管理/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",

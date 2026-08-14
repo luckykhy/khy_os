@@ -33,21 +33,45 @@ function classifyPreReadHang(args) {
 
   // 1) Windows 保留设备名(纯路径,无需 stat)。
   try {
-    const { winDeviceGuardEnabled, classifyWindowsDevice, buildWinDeviceRefusal } = require('./winDeviceReadGuard');
+    const {
+      winDeviceGuardEnabled,
+      classifyWindowsDevice,
+      buildWinDeviceRefusal,
+    } = require('./winDeviceReadGuard');
     if (winDeviceGuardEnabled(env)) {
       const k = classifyWindowsDevice(absPath);
-      if (k) return { blocked: true, kind: `win-device:${k}`, error: buildWinDeviceRefusal({ kind: k, path: absPath }) };
+      if (k) {
+        return {
+          blocked: true,
+          kind: `win-device:${k}`,
+          error: buildWinDeviceRefusal({ kind: k, path: absPath }),
+        };
+      }
     }
-  } catch { /* 判定失败 → 跳过本向量 */ }
+  } catch {
+    /* 判定失败 → 跳过本向量 */
+  }
 
   // 2) 特殊文件 FIFO/套接字/字符或块设备(用已算好的 stat 类型谓词,statSync 对设备只读元数据不阻塞)。
   try {
-    const { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = require('./specialFileReadGuard');
+    const {
+      specialReadGuardEnabled,
+      classifySpecialFile,
+      buildSpecialFileRefusal,
+    } = require('./specialFileReadGuard');
     if (stat && specialReadGuardEnabled(env)) {
       const k = classifySpecialFile(stat);
-      if (k) return { blocked: true, kind: `special:${k}`, error: buildSpecialFileRefusal({ kind: k, path: absPath, size: stat.size }) };
+      if (k) {
+        return {
+          blocked: true,
+          kind: `special:${k}`,
+          error: buildSpecialFileRefusal({ kind: k, path: absPath, size: stat.size }),
+        };
+      }
     }
-  } catch { /* 判定失败 → 跳过本向量 */ }
+  } catch {
+    /* 判定失败 → 跳过本向量 */
+  }
 
   // 3) 阻塞伪文件(/proc·/sys)。本合成器面向「只需拒绝」的工具,故检测即拒绝(不做有界读回内容);
   //    需要其背后实时数据者按提示改用带超时的定向 shell。
@@ -59,14 +83,17 @@ function classifyPreReadHang(args) {
         return {
           blocked: true,
           kind: `pseudo:${k}`,
-          error: `拒绝读取：目标是会阻塞的伪文件(/proc·/sys)：${absPath}。`
-            + `读取它会永久等待(内核按需产出 / 无尽输入)。`
-            + `\n若你想要的是该路径背后的实时数据,请改用带超时的定向 shell(如 \`timeout 2 cat ${absPath}\`),不要用文件工具整读。`
-            + `\n如确需强读(可能卡死),设 ${PSEUDO_GUARD_FLAG}=0 后重试。`,
+          error:
+            `拒绝读取：目标是会阻塞的伪文件(/proc·/sys)：${absPath}。` +
+            `读取它会永久等待(内核按需产出 / 无尽输入)。` +
+            `\n若你想要的是该路径背后的实时数据,请改用带超时的定向 shell(如 \`timeout 2 cat ${absPath}\`),不要用文件工具整读。` +
+            `\n如确需强读(可能卡死),设 ${PSEUDO_GUARD_FLAG}=0 后重试。`,
         };
       }
     }
-  } catch { /* 判定失败 → 跳过本向量 */ }
+  } catch {
+    /* 判定失败 → 跳过本向量 */
+  }
 
   return null;
 }

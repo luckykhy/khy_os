@@ -44,7 +44,9 @@ const OFF_VALUES = new Set(['0', 'false', 'off', 'no']);
 
 // 门控 KHY_HUMAN_TURN_COUNT。
 function humanTurnCountEnabled(env = process.env) {
-  const flag = String((env && env.KHY_HUMAN_TURN_COUNT) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_HUMAN_TURN_COUNT) || '')
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.has(flag);
 }
 
@@ -53,13 +55,19 @@ function _userCarrierKind(content) {
   if (Array.isArray(content)) {
     // 结构化 tool_result 块(ai.js:4933)。
     for (const b of content) {
-      if (b && b.type === 'tool_result') return 'tool';
+      if (b && b.type === 'tool_result') {
+        return 'tool';
+      }
     }
     return null;
   }
   if (typeof content === 'string') {
-    if (content.startsWith('[Tool Result]')) return 'tool';       // ai.js:4938/5997/6003
-    if (content.startsWith('[ContextCompact ')) return 'meta';    // ai.js:1776 压缩摘要
+    if (content.startsWith('[Tool Result]')) {
+      return 'tool';
+    } // ai.js:4938/5997/6003
+    if (content.startsWith('[ContextCompact ')) {
+      return 'meta';
+    } // ai.js:1776 压缩摘要
   }
   return null;
 }
@@ -70,10 +78,16 @@ function _userCarrierKind(content) {
  * @returns {('human'|'tool'|'meta'|null)}
  */
 function userMessageKind(msg) {
-  if (!msg || typeof msg !== 'object') return null;
+  if (!msg || typeof msg !== 'object') {
+    return null;
+  }
   const role = String(msg.role || msg.type || '').toLowerCase();
-  if (role !== 'user' && role !== 'human') return null;
-  if (msg.isMeta === true) return 'meta';
+  if (role !== 'user' && role !== 'human') {
+    return null;
+  }
+  if (msg.isMeta === true) {
+    return 'meta';
+  }
   const kind = _userCarrierKind(msg.content);
   return kind || 'human';
 }

@@ -22,7 +22,9 @@ let _cwModule = null;
  * @throws {Error} If the package is not installed
  */
 async function getCWModule() {
-  if (_cwModule) return _cwModule;
+  if (_cwModule) {
+    return _cwModule;
+  }
   try {
     _cwModule = await import('@aws/codewhisperer-streaming-client');
   } catch (err) {
@@ -57,14 +59,18 @@ function resetCWModuleCache() {
  * @returns {Array} Repaired messages (shallow copy; originals not mutated)
  */
 function repairToolUsePairing(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return messages;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return messages;
+  }
 
   // Work on a shallow copy to avoid mutating the original
-  const repaired = messages.map(m => ({ ...m }));
+  const repaired = messages.map((m) => ({ ...m }));
 
   for (let i = 0; i < repaired.length; i++) {
     const msg = repaired[i];
-    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) continue;
+    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) {
+      continue;
+    }
 
     // Collect tool_use IDs in this assistant message
     const toolUseIds = new Set();
@@ -73,7 +79,9 @@ function repairToolUsePairing(messages) {
         toolUseIds.add(block.id);
       }
     }
-    if (toolUseIds.size === 0) continue;
+    if (toolUseIds.size === 0) {
+      continue;
+    }
 
     // Check the next message for matching tool_result blocks
     const next = repaired[i + 1];
@@ -89,7 +97,10 @@ function repairToolUsePairing(messages) {
     // Check if all tool_use IDs have matching tool_result
     let allMatched = true;
     for (const id of toolUseIds) {
-      if (!resultIds.has(id)) { allMatched = false; break; }
+      if (!resultIds.has(id)) {
+        allMatched = false;
+        break;
+      }
     }
 
     if (!allMatched) {
@@ -100,7 +111,9 @@ function repairToolUsePairing(messages) {
           textParts.push(block.text);
         } else if (block.type === 'tool_use') {
           const inputStr = block.input ? JSON.stringify(block.input).slice(0, 200) : '';
-          textParts.push(`[Called tool: ${block.name || 'unknown'}${inputStr ? ` with ${inputStr}` : ''}]`);
+          textParts.push(
+            `[Called tool: ${block.name || 'unknown'}${inputStr ? ` with ${inputStr}` : ''}]`
+          );
         }
       }
       repaired[i] = {
@@ -111,8 +124,10 @@ function repairToolUsePairing(messages) {
       // Also remove orphan tool_result blocks from the next message
       // to avoid "tool_result without preceding tool_use" errors
       if (next && Array.isArray(next.content)) {
-        const filtered = next.content.filter(b => {
-          if (b.type !== 'tool_result') return true;
+        const filtered = next.content.filter((b) => {
+          if (b.type !== 'tool_result') {
+            return true;
+          }
           return !toolUseIds.has(b.tool_use_id);
         });
         // If only tool_results remain and all were removed, keep text or set fallback
@@ -184,16 +199,24 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
     }
 
     // Metering event (must consume to advance stream)
-    if (event.meteringEvent) { /* consumed */ }
+    if (event.meteringEvent) {
+      /* consumed */
+    }
 
     // Code reference event
-    if (event.codeReferenceEvent) { /* consumed */ }
+    if (event.codeReferenceEvent) {
+      /* consumed */
+    }
 
     // Context usage event
-    if (event.contextUsageEvent) { /* consumed */ }
+    if (event.contextUsageEvent) {
+      /* consumed */
+    }
 
     // Supplementary links
-    if (event.supplementaryWebLinksEvent) { /* consumed */ }
+    if (event.supplementaryWebLinksEvent) {
+      /* consumed */
+    }
 
     // Token usage metadata
     if (event.metadataEvent?.tokenUsage) {
@@ -237,7 +260,11 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
           let parsedInput = {};
           const raw = tool.inputChunks.join('');
           if (raw) {
-            try { parsedInput = JSON.parse(raw); } catch { parsedInput = { raw }; }
+            try {
+              parsedInput = JSON.parse(raw);
+            } catch {
+              parsedInput = { raw };
+            }
           }
           const block = { type: 'tool_use', id, name: tool.name, input: parsedInput };
           toolUseBlocks.push(block);
@@ -254,7 +281,11 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
       let parsedInput = {};
       const raw = tool.inputChunks.join('');
       if (raw) {
-        try { parsedInput = JSON.parse(raw); } catch { parsedInput = { raw }; }
+        try {
+          parsedInput = JSON.parse(raw);
+        } catch {
+          parsedInput = { raw };
+        }
       }
       const block = { type: 'tool_use', id, name: tool.name, input: parsedInput };
       toolUseBlocks.push(block);
@@ -272,16 +303,24 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
   // gateway retry/failover. Gate KHY_STREAM_STALL_ABORT off (or caller did not
   // opt in) → the plain `for await` path below runs, byte-identical to before. ──
   let _stallPolicy = null;
-  try { _stallPolicy = require('./streamStallPolicy'); } catch { _stallPolicy = null; }
+  try {
+    _stallPolicy = require('./streamStallPolicy');
+  } catch {
+    _stallPolicy = null;
+  }
   const _staleEnabled = !!(
-    opts.enableStaleDetection && opts.staleOptions
-    && _stallPolicy && _stallPolicy.shouldAbortStaleStream()
+    opts.enableStaleDetection &&
+    opts.staleOptions &&
+    _stallPolicy &&
+    _stallPolicy.shouldAbortStaleStream()
   );
 
   if (!_staleEnabled) {
     // Legacy path — unchanged behavior.
     for await (const event of eventStream) {
-      if (opts.signal?.aborted) break;
+      if (opts.signal?.aborted) {
+        break;
+      }
       processEvent(event);
     }
     flushOpenToolUses();
@@ -293,26 +332,37 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
   const STALL = Symbol('cw_stall');
   let stallElapsed = 0;
   let resolveStall = null;
-  const stallPromise = new Promise((res) => { resolveStall = res; });
+  const stallPromise = new Promise((res) => {
+    resolveStall = res;
+  });
   const detector = new StreamStaleDetector({
     ...opts.staleOptions,
     onStale: (elapsed) => {
       stallElapsed = elapsed;
       if (typeof opts.staleOptions.onStale === 'function') {
-        try { opts.staleOptions.onStale(elapsed); } catch { /* ignore */ }
+        try {
+          opts.staleOptions.onStale(elapsed);
+        } catch {
+          /* ignore */
+        }
       }
-      if (resolveStall) resolveStall(STALL);
+      if (resolveStall) {
+        resolveStall(STALL);
+      }
     },
   });
 
-  const iterator = typeof eventStream[Symbol.asyncIterator] === 'function'
-    ? eventStream[Symbol.asyncIterator]()
-    : eventStream;
+  const iterator =
+    typeof eventStream[Symbol.asyncIterator] === 'function'
+      ? eventStream[Symbol.asyncIterator]()
+      : eventStream;
 
   detector.start();
   try {
     while (true) {
-      if (opts.signal?.aborted) break;
+      if (opts.signal?.aborted) {
+        break;
+      }
       const nextP = Promise.resolve(iterator.next());
       // If a stall wins the race, this promise is abandoned; swallow any late
       // rejection so it never surfaces as an unhandledRejection. Real rejections
@@ -331,23 +381,42 @@ async function parseCWStreamEvents(eventStream, onChunk, opts = {}) {
         try {
           if (typeof iterator.return === 'function') {
             const rp = iterator.return();
-            if (rp && typeof rp.catch === 'function') rp.catch(() => {});
+            if (rp && typeof rp.catch === 'function') {
+              rp.catch(() => {});
+            }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         flushOpenToolUses();
         if (content || toolUseBlocks.length > 0) {
           // Partial progress: hand back what we have so the caller's normal
           // success path keeps the half-answer (continuation-friendly).
-          return { content, modelId, tokenUsage, toolUseBlocks, thinking, interrupted: true, finishReason: 'length' };
+          return {
+            content,
+            modelId,
+            tokenUsage,
+            toolUseBlocks,
+            thinking,
+            interrupted: true,
+            finishReason: 'interrupted',
+          };
         }
         // Zero progress: surface a timeout-classified stall error for retry/failover.
-        throw _stallPolicy.buildStallError({ provider: opts.staleOptions.provider, elapsedMs: stallElapsed });
+        throw _stallPolicy.buildStallError({
+          provider: opts.staleOptions.provider,
+          elapsedMs: stallElapsed,
+        });
       }
 
       const step = winner.step;
-      if (step.done) break;
+      if (step.done) {
+        break;
+      }
       detector.touch();
-      if (opts.signal?.aborted) break;
+      if (opts.signal?.aborted) {
+        break;
+      }
       processEvent(step.value);
     }
   } finally {

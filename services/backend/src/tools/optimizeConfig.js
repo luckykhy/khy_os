@@ -5,6 +5,7 @@ module.exports = defineTool({
   description: 'Optimize a configuration key-value pair via the self-optimizer service',
   category: 'optimization',
   risk: 'medium',
+  searchHint: 'tuning self optimizer setting adjust 优化配置 调优 参数调整',
   isReadOnly: false,
   isConcurrencySafe: false,
   inputSchema: {

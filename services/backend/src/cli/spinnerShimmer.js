@@ -35,7 +35,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function spinnerShimmerEnabled(env) {
   const raw = env && env.KHY_SPINNER_SHIMMER;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -46,9 +48,13 @@ function spinnerShimmerEnabled(env) {
 function computeGlimmerIndex(tick, messageWidth) {
   const t = Number(tick);
   const w = Number(messageWidth);
-  if (!Number.isFinite(t) || !Number.isFinite(w)) return -100; // offscreen → no shimmer
+  if (!Number.isFinite(t) || !Number.isFinite(w)) {
+    return -100;
+  } // offscreen → no shimmer
   const cycleLength = w + 20;
-  if (cycleLength <= 0) return -100;
+  if (cycleLength <= 0) {
+    return -100;
+  }
   const mod = ((Math.trunc(t) % cycleLength) + cycleLength) % cycleLength;
   return w + 10 - mod;
 }
@@ -74,9 +80,13 @@ function computeShimmerSegments(text, glimmerIndex, widthOf) {
   let after = '';
   for (const seg of Array.from(s)) {
     const segWidth = w(seg);
-    if (colPos + segWidth <= clampedStart) before += seg;
-    else if (colPos > shimmerEnd) after += seg;
-    else shimmer += seg;
+    if (colPos + segWidth <= clampedStart) {
+      before += seg;
+    } else if (colPos > shimmerEnd) {
+      after += seg;
+    } else {
+      shimmer += seg;
+    }
     colPos += segWidth;
   }
   return { before, shimmer, after };

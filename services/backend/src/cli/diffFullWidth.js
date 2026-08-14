@@ -23,7 +23,9 @@
 
 // 门控梯:默认开,仅 0/false/off/no 关 → 字节回退(call-site 不追加任何空格)。
 function diffFullWidthEnabled(env = process.env) {
-  const flag = String((env && env.KHY_DIFF_FULL_WIDTH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_DIFF_FULL_WIDTH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -35,7 +37,9 @@ function diffFullWidthEnabled(env = process.env) {
 function diffRowPadCount(usedWidth, totalWidth) {
   const u = Number(usedWidth);
   const t = Number(totalWidth);
-  if (!Number.isFinite(u) || !Number.isFinite(t)) return 0;
+  if (!Number.isFinite(u) || !Number.isFinite(t)) {
+    return 0;
+  }
   const pad = Math.floor(t) - Math.floor(u);
   return pad > 0 ? pad : 0;
 }
@@ -45,7 +49,9 @@ function diffRowPadCount(usedWidth, totalWidth) {
  * chalk 背景由 call-site 再套(本叶子绝不引入 chalk)。
  */
 function diffRowPadSpaces(usedWidth, totalWidth, env = process.env) {
-  if (!diffFullWidthEnabled(env)) return '';
+  if (!diffFullWidthEnabled(env)) {
+    return '';
+  }
   return ' '.repeat(diffRowPadCount(usedWidth, totalWidth));
 }
 

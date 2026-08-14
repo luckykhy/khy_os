@@ -35,30 +35,35 @@
  *   - source: 'chat' | 'image' | 'video' | 'local' — origin store, drives capability.
  */
 
-const customRegistry = require('../customProviderRegistry');
 const apiKeyPool = require('../apiKeyPool');
-const modelTier = require('../modelTier');
-const modelCapability = require('./modelCapability');
-const apiAdapter = require('./adapters/apiAdapter');
+const customRegistry = require('../customProviderRegistry');
 const imageGenService = require('../imageGenService');
+const modelTier = require('../modelTier');
 const videoGenService = require('../videoGenService');
+
+const apiAdapter = require('./adapters/apiAdapter');
+const modelCapability = require('./modelCapability');
 
 /**
  * Gate for the local-model catalog wire (KHY_LOCAL_MODEL_CATALOG, default-on).
  * Off only on an explicit off-word → §4 is skipped → byte-identical edge list.
  */
 function _localModelCatalogEnabled() {
-  const v = String(process.env.KHY_LOCAL_MODEL_CATALOG || 'true').trim().toLowerCase();
+  const v = String(process.env.KHY_LOCAL_MODEL_CATALOG || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** Parse a JSON object env var into a plain object; {} on any failure. */
 function _parseJsonMapEnv(name) {
   const raw = process.env[name];
-  if (!raw || !String(raw).trim()) return {};
+  if (!raw || !String(raw).trim()) {
+    return {};
+  }
   try {
     const parsed = JSON.parse(raw);
-    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
@@ -71,15 +76,22 @@ function _parseJsonMapEnv(name) {
  */
 function _providerKeyStatus(provider) {
   let entries = [];
-  try { entries = apiKeyPool.getPoolStatus(provider) || []; } catch { entries = []; }
-  const keyIds = entries.map(e => e.keyId);
+  try {
+    entries = apiKeyPool.getPoolStatus(provider) || [];
+  } catch {
+    entries = [];
+  }
+  const keyIds = entries.map((e) => e.keyId);
   let hasActive = false;
   let hasCooldown = false;
   for (const e of entries) {
-    if (e.status === 'active') hasActive = true;
-    else if (e.status === 'cooldown') hasCooldown = true;
+    if (e.status === 'active') {
+      hasActive = true;
+    } else if (e.status === 'cooldown') {
+      hasCooldown = true;
+    }
   }
-  const status = hasActive ? 'active' : (hasCooldown ? 'cooldown' : 'disabled');
+  const status = hasActive ? 'active' : hasCooldown ? 'cooldown' : 'disabled';
   return { keyIds, status, hasActive };
 }
 
@@ -93,7 +105,11 @@ function _providerKeyStatus(provider) {
  */
 async function buildCatalogGraph(opts = {}) {
   const live = Boolean(opts.live);
-  try { apiKeyPool.init(); } catch { /* already initialised */ }
+  try {
+    apiKeyPool.init();
+  } catch {
+    /* already initialised */
+  }
 
   const edges = [];
   const sources = {
@@ -123,14 +139,24 @@ async function buildCatalogGraph(opts = {}) {
   sources.customProviders = providers.length;
 
   let poolProviders = [];
-  try { poolProviders = apiKeyPool.getProviders() || []; } catch { poolProviders = []; }
+  try {
+    poolProviders = apiKeyPool.getProviders() || [];
+  } catch {
+    poolProviders = [];
+  }
   for (const poolKey of poolProviders) {
-    if (providers.some(p => p.poolKey === poolKey)) continue;
+    if (providers.some((p) => p.poolKey === poolKey)) {
+      continue;
+    }
     const dm = defaultModelMap[poolKey];
     // 智谱 key 配好后自动加入免费模型:裸 poolKey `glm` 的静态集并入免费聊天/视觉模型
     // (门控 KHY_ZHIPU_FREE_MODELS,门关/非 glm/异常 → 原样返回,逐字节回退)。
     let staticModels = dm ? [dm] : [];
-    try { staticModels = require('./zhipuFreeModels').augmentGlmPoolModels(poolKey, staticModels); } catch { /* fail-soft: keep base */ }
+    try {
+      staticModels = require('./zhipuFreeModels').augmentGlmPoolModels(poolKey, staticModels);
+    } catch {
+      /* fail-soft: keep base */
+    }
     providers.push({
       poolKey,
       label: poolKey,
@@ -148,30 +174,40 @@ async function buildCatalogGraph(opts = {}) {
   if (live) {
     try {
       const rows = await apiAdapter.listModels();
-      for (const r of (rows || [])) {
-        const m = /^api:([^:]+):(.+)$/.exec(String(r && r.id || ''));
-        if (!m) continue;
+      for (const r of rows || []) {
+        const m = /^api:([^:]+):(.+)$/.exec(String((r && r.id) || ''));
+        if (!m) {
+          continue;
+        }
         const pk = m[1];
         const mid = m[2];
         (liveModelMap[pk] = liveModelMap[pk] || []).push(mid);
       }
-    } catch { /* ignore discovery failure; static fallback below */ }
+    } catch {
+      /* ignore discovery failure; static fallback below */
+    }
   }
 
   for (const p of providers) {
     const { keyIds, status } = _providerKeyStatus(p.poolKey);
-    let models = (liveModelMap[p.poolKey] && liveModelMap[p.poolKey].length)
-      ? liveModelMap[p.poolKey]
-      : p.staticModels;
+    let models =
+      liveModelMap[p.poolKey] && liveModelMap[p.poolKey].length
+        ? liveModelMap[p.poolKey]
+        : p.staticModels;
     if (!models || models.length === 0) {
       // Provider configured but no enumerable model yet — emit a placeholder edge
       // using the default model if known, else skip (surfaced via sources count).
-      if (p.defaultModel) models = [p.defaultModel];
-      else continue;
+      if (p.defaultModel) {
+        models = [p.defaultModel];
+      } else {
+        continue;
+      }
     }
     for (const raw of models) {
-      const model = typeof raw === 'string' ? raw : (raw && raw.id);
-      if (!model) continue;
+      const model = typeof raw === 'string' ? raw : raw && raw.id;
+      if (!model) {
+        continue;
+      }
       const tier = p.tier || modelTier.resolveTier(model);
       // Chat-registry models: do NOT force source:'text'. The provider registry is
       // reached via the chat endpoint, but a model listed there can still be a
@@ -184,9 +220,13 @@ async function buildCatalogGraph(opts = {}) {
       // connectionMode precedence: pooled keys → account-pool; else a proxy
       // route entry with no keys → proxy; else direct.
       let connectionMode;
-      if (keyIds.length > 0) connectionMode = 'account-pool';
-      else if (proxyRouteMap[model]) connectionMode = 'proxy';
-      else connectionMode = 'direct';
+      if (keyIds.length > 0) {
+        connectionMode = 'account-pool';
+      } else if (proxyRouteMap[model]) {
+        connectionMode = 'proxy';
+      } else {
+        connectionMode = 'direct';
+      }
       edges.push({
         provider: p.poolKey,
         providerLabel: p.label,
@@ -209,7 +249,9 @@ async function buildCatalogGraph(opts = {}) {
     const seenImg = new Set();
     for (const m of imageModels) {
       const key = `${m.backend}:${m.model}`;
-      if (seenImg.has(key)) continue;
+      if (seenImg.has(key)) {
+        continue;
+      }
       seenImg.add(key);
       edges.push({
         provider: m.backend,
@@ -227,7 +269,9 @@ async function buildCatalogGraph(opts = {}) {
       });
     }
     sources.imageBackends = seenImg.size;
-  } catch { /* image service optional */ }
+  } catch {
+    /* image service optional */
+  }
 
   // ── 3. Video models (OUTSIDE the provider registry) ──
   try {
@@ -235,7 +279,9 @@ async function buildCatalogGraph(opts = {}) {
     const seenVid = new Set();
     for (const m of videoModels) {
       const key = `${m.backend}:${m.model}`;
-      if (seenVid.has(key)) continue;
+      if (seenVid.has(key)) {
+        continue;
+      }
       seenVid.add(key);
       edges.push({
         provider: m.backend,
@@ -252,7 +298,9 @@ async function buildCatalogGraph(opts = {}) {
       });
     }
     sources.videoBackends = seenVid.size;
-  } catch { /* video service optional */ }
+  } catch {
+    /* video service optional */
+  }
 
   // ── 4. Local models served by a running Ollama instance (OUTSIDE the registry) ──
   // Wires the localOllamaProbe leaf (previously zero production consumers) into the
@@ -269,7 +317,9 @@ async function buildCatalogGraph(opts = {}) {
         const seenLocal = new Set();
         for (const m of probe.models) {
           const model = m && m.id;
-          if (!model || seenLocal.has(model)) continue;
+          if (!model || seenLocal.has(model)) {
+            continue;
+          }
           seenLocal.add(model);
           edges.push({
             provider: 'ollama',
@@ -287,7 +337,9 @@ async function buildCatalogGraph(opts = {}) {
         }
         sources.localModels = seenLocal.size;
       }
-    } catch { /* local probe optional; never breaks catalog assembly */ }
+    } catch {
+      /* local probe optional; never breaks catalog assembly */
+    }
   }
 
   return { edges, generatedAt: Date.now(), sources };

@@ -4,9 +4,9 @@
  * Combines schema compression, response compression, and history rewriting
  * into a single Gateway plugin interface.
  */
-const { compressSchema, compressTools } = require('./schemaCompressor');
-const { compressResponse, compressToolOutput } = require('./responseCompressor');
 const { rewriteHistory, stripCompletedToolCalls } = require('./commandRewriter');
+const { compressResponse, compressToolOutput } = require('./responseCompressor');
+const { compressSchema, compressTools } = require('./schemaCompressor');
 const toonCodec = require('./toonCodec');
 
 // Cumulative stats across the session
@@ -34,7 +34,9 @@ const tokenlessPlugin = {
       if (ctx.tools && Array.isArray(ctx.tools)) {
         const { tools, stats } = compressTools(ctx.tools);
         ctx.tools = tools;
-        if (stats) _stats.schemaTokensSaved += stats.savedPercent;
+        if (stats) {
+          _stats.schemaTokensSaved += stats.savedPercent;
+        }
       }
 
       // Rewrite conversation history
@@ -72,7 +74,9 @@ function getStats() {
 }
 
 function resetStats() {
-  Object.keys(_stats).forEach(k => { _stats[k] = 0; });
+  Object.keys(_stats).forEach((k) => {
+    _stats[k] = 0;
+  });
 }
 
 module.exports = {

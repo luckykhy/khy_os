@@ -54,7 +54,9 @@ const SYSTEM_PROMPT_DYNAMIC_BOUNDARY = '__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__';
 function splitSystemPromptAtBoundary(system) {
   const text = typeof system === 'string' ? system : '';
   const idx = text.indexOf(SYSTEM_PROMPT_DYNAMIC_BOUNDARY);
-  if (idx === -1) return { staticPrefix: '', dynamicSuffix: text };
+  if (idx === -1) {
+    return { staticPrefix: '', dynamicSuffix: text };
+  }
   const before = text.slice(0, idx).replace(/\n+$/, '');
   const after = text.slice(idx + SYSTEM_PROMPT_DYNAMIC_BOUNDARY.length).replace(/^\n+/, '');
   return { staticPrefix: before, dynamicSuffix: after };
@@ -70,7 +72,9 @@ function splitSystemPromptAtBoundary(system) {
  */
 function stripSystemPromptBoundary(system) {
   const text = typeof system === 'string' ? system : '';
-  if (!text.includes(SYSTEM_PROMPT_DYNAMIC_BOUNDARY)) return text;
+  if (!text.includes(SYSTEM_PROMPT_DYNAMIC_BOUNDARY)) {
+    return text;
+  }
   return text
     .replace(new RegExp(`\\n*${SYSTEM_PROMPT_DYNAMIC_BOUNDARY}\\n*`), '\n\n')
     .replace(SYSTEM_PROMPT_DYNAMIC_BOUNDARY, '');

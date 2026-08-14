@@ -26,7 +26,9 @@
  */
 
 function normalizeToolName(name) {
-  return String(name || '').toLowerCase().replace(/[\s_-]/g, '');
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 module.exports = normalizeToolName;

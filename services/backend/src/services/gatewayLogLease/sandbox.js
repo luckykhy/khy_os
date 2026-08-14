@@ -22,9 +22,9 @@ const { AsyncLocalStorage } = require('async_hooks');
 const util = require('util');
 
 const ctxMod = require('./context');
+const devLog = require('./devLog');
 const logLease = require('./logLease');
 const noiseFilter = require('./noiseFilter');
-const devLog = require('./devLog');
 const { ADAPTER_TOKENS } = require('./noiseFilter');
 
 // "当前正在打日志的适配器"上下文（provenance），与"活跃适配器"(lease.activeAdapter)正交。
@@ -42,28 +42,44 @@ let _orig = null;
 let _userWrite = null; // L0 出口：默认写真实 stdout
 
 function _composeText(args) {
-  try { return util.format(...args); } catch { return args.map(String).join(' '); }
+  try {
+    return util.format(...args);
+  } catch {
+    return args.map(String).join(' ');
+  }
 }
 
 /** 从文本前缀嗅探来源适配器（[kiroAdapter] / [kiro:debug] / [relay_api] …）。 */
 function _sniffSource(text) {
   const m = String(text).match(/^\s*\[([^\]]+)\]/);
-  if (!m) return null;
-  const inner = m[1].toLowerCase().replace(/:.*/, '').replace(/adapter$/, '').replace(/[_-]/g, '');
+  if (!m) {
+    return null;
+  }
+  const inner = m[1]
+    .toLowerCase()
+    .replace(/:.*/, '')
+    .replace(/adapter$/, '')
+    .replace(/[_-]/g, '');
   for (const tok of ADAPTER_TOKENS) {
     const norm = tok.replace(/adapter$/, '').replace(/[_-]/g, '');
-    if (norm && inner.includes(norm)) return ctxMod.normalizeAdapterId(tok.replace(/adapter$/, ''));
+    if (norm && inner.includes(norm)) {
+      return ctxMod.normalizeAdapterId(tok.replace(/adapter$/, ''));
+    }
   }
   return null;
 }
 
 /** 解析这条输出归属的来源适配器：显式 > 文本标记(跨适配器优先) > provenance 上下文。 */
 function _resolveSource(explicit, text) {
-  if (explicit) return ctxMod.normalizeAdapterId(explicit);
+  if (explicit) {
+    return ctxMod.normalizeAdapterId(explicit);
+  }
   // 文本里显式带了 [xxxAdapter] 标记时，即便它出现在别的适配器的 provenance 块内，
   // 也必须归到被点名的那个适配器（否则 deepseek 请求里 kiro 的后台日志会被误判为 deepseek）。
   const sniffed = _sniffSource(text);
-  if (sniffed) return sniffed;
+  if (sniffed) {
+    return sniffed;
+  }
   return _sourceStore.getStore() || null;
 }
 
@@ -75,9 +91,13 @@ function _route(explicitSource, level, text) {
   // 沙箱模式下接管一切（init/token 刷新内的所有输出都属适配器内部）。
   const sandbox = ctxMod.isSandbox();
   // 非沙箱、非适配器来源、且不在任何租界里 → 不接管，原样放行（最小爆破半径）。
-  if (!sandbox && !source && !inLease) return false;
+  if (!sandbox && !source && !inLease) {
+    return false;
+  }
   // 非沙箱、非适配器来源、但在租界里：仍不接管（避免吞掉请求内其它服务的普通日志）。
-  if (!sandbox && !source) return false;
+  if (!sandbox && !source) {
+    return false;
+  }
 
   let verdict;
   try {
@@ -95,8 +115,11 @@ function _route(explicitSource, level, text) {
       return true;
     case logLease.CHANNELS.BUFFER: {
       const c = ctxMod.current();
-      if (c && Array.isArray(c.buffer)) c.buffer.push(`[${source || '?'}] ${verdict.output}`);
-      else devLog.write({ kind: 'sandbox', adapter: source, level, message: verdict.output });
+      if (c && Array.isArray(c.buffer)) {
+        c.buffer.push(`[${source || '?'}] ${verdict.output}`);
+      } else {
+        devLog.write({ kind: 'sandbox', adapter: source, level, message: verdict.output });
+      }
       return true;
     }
     case logLease.CHANNELS.DROP:
@@ -107,9 +130,15 @@ function _route(explicitSource, level, text) {
 
 /** L0 出口：净味后的用户可见提示写到真实用户流。 */
 function _emitUser(text) {
-  if (text == null || text === '') return;
+  if (text == null || text === '') {
+    return;
+  }
   const line = String(text).endsWith('\n') ? String(text) : String(text) + '\n';
-  try { (_userWrite || process.stdout.write.bind(process.stdout))(line); } catch { /* 出口失败不致命 */ }
+  try {
+    (_userWrite || process.stdout.write.bind(process.stdout))(line);
+  } catch {
+    /* 出口失败不致命 */
+  }
 }
 
 // ── 显式 API（防呆①推荐：适配器带源打日志）───────────────────────────
@@ -119,7 +148,9 @@ function emit(adapterId, level, ...args) {
   const text = _composeText(args);
   const handled = _route(adapterId, level || 'log', text);
   // 未被接管（如纯系统提示），回退到真实输出，避免静默丢信息。
-  if (!handled) _emitUser(noiseFilter.sanitizeForStatus(text));
+  if (!handled) {
+    _emitUser(noiseFilter.sanitizeForStatus(text));
+  }
 }
 
 /** 声明一段代码块的来源适配器（不改变 lease 模式/活跃适配器）。 */
@@ -132,7 +163,9 @@ function withSource(adapterId, fn) {
 /** 为一次请求绑定活跃适配器（task 模式）：该适配器日志净味后可见 L0。 */
 function runForAdapter(adapterId, fn) {
   const id = ctxMod.normalizeAdapterId(adapterId);
-  return ctxMod.runWith({ activeAdapter: id, mode: ctxMod.MODES.TASK }, () => withSource(id, () => fn()));
+  return ctxMod.runWith({ activeAdapter: id, mode: ctxMod.MODES.TASK }, () =>
+    withSource(id, () => fn())
+  );
 }
 
 /** 查网关状态上下文：放行全部适配器日志（全量可见）。 */
@@ -154,7 +187,12 @@ async function runSandboxed(adapterId, fn) {
         return { result, buffer: ctx.buffer, error: null };
       } catch (error) {
         // 沙箱内异常不外泄：摘要下沉 L1，调用方拿结构化结果自行决定降级。
-        devLog.write({ kind: 'sandbox-error', adapter: id, level: 'error', message: noiseFilter.sanitizeForStatus(error) });
+        devLog.write({
+          kind: 'sandbox-error',
+          adapter: id,
+          level: 'error',
+          message: noiseFilter.sanitizeForStatus(error),
+        });
         return { result: null, buffer: ctx.buffer, error };
       }
     });
@@ -168,11 +206,17 @@ async function runSandboxed(adapterId, fn) {
  */
 function guardBackground(adapterId, fnOrPromise) {
   const id = ctxMod.normalizeAdapterId(adapterId);
-  const p = typeof fnOrPromise === 'function'
-    ? Promise.resolve().then(() => _sourceStore.run(id, fnOrPromise))
-    : Promise.resolve(fnOrPromise);
+  const p =
+    typeof fnOrPromise === 'function'
+      ? Promise.resolve().then(() => _sourceStore.run(id, fnOrPromise))
+      : Promise.resolve(fnOrPromise);
   return p.catch((err) => {
-    devLog.write({ kind: 'background-error', adapter: id, level: 'error', message: noiseFilter.sanitizeForStatus(err) });
+    devLog.write({
+      kind: 'background-error',
+      adapter: id,
+      level: 'error',
+      message: noiseFilter.sanitizeForStatus(err),
+    });
     return null;
   });
 }
@@ -183,25 +227,36 @@ const _LEVELS = ['log', 'info', 'warn', 'error', 'debug'];
 
 /** 安装拦截补丁。幂等；受 env 门控。返回 uninstall()。 */
 function install(opts = {}) {
-  if (_installed) return uninstall;
-  if (!opts.force && !_enabled()) return () => {};
+  if (_installed) {
+    return uninstall;
+  }
+  if (!opts.force && !_enabled()) {
+    return () => {};
+  }
 
-  _userWrite = typeof opts.userSink === 'function'
-    ? opts.userSink
-    : process.stdout.write.bind(process.stdout);
+  _userWrite =
+    typeof opts.userSink === 'function' ? opts.userSink : process.stdout.write.bind(process.stdout);
 
   _orig = {
     console: {},
     stdout: process.stdout.write.bind(process.stdout),
     stderr: process.stderr.write.bind(process.stderr),
   };
-  for (const lvl of _LEVELS) _orig.console[lvl] = console[lvl].bind(console);
+  for (const lvl of _LEVELS) {
+    _orig.console[lvl] = console[lvl].bind(console);
+  }
 
   for (const lvl of _LEVELS) {
     console[lvl] = (...args) => {
       let handled = false;
-      try { handled = _route(null, lvl, _composeText(args)); } catch { handled = false; }
-      if (!handled) _orig.console[lvl](...args);
+      try {
+        handled = _route(null, lvl, _composeText(args));
+      } catch {
+        handled = false;
+      }
+      if (!handled) {
+        _orig.console[lvl](...args);
+      }
     };
   }
   // stdout/stderr.write：仅当能确定适配器来源或在沙箱内才接管，否则原样放行。
@@ -215,23 +270,37 @@ function install(opts = {}) {
 function _wrapWrite(origWrite, level) {
   return function patched(chunk, encoding, cb) {
     try {
-      const text = typeof chunk === 'string' ? chunk : (Buffer.isBuffer(chunk) ? chunk.toString(encoding || 'utf8') : String(chunk));
+      const text =
+        typeof chunk === 'string'
+          ? chunk
+          : Buffer.isBuffer(chunk)
+            ? chunk.toString(encoding || 'utf8')
+            : String(chunk);
       // _userWrite 自身就是 origWrite 时不要递归：L0 出口已直接走 origWrite。
       const handled = _route(null, level, text);
       if (handled) {
-        if (typeof encoding === 'function') encoding();
-        else if (typeof cb === 'function') cb();
+        if (typeof encoding === 'function') {
+          encoding();
+        } else if (typeof cb === 'function') {
+          cb();
+        }
         return true;
       }
-    } catch { /* fail-safe 放行 */ }
+    } catch {
+      /* fail-safe 放行 */
+    }
     return origWrite(chunk, encoding, cb);
   };
 }
 
 /** 还原原生 sink。 */
 function uninstall() {
-  if (!_installed || !_orig) return;
-  for (const lvl of _LEVELS) console[lvl] = _orig.console[lvl];
+  if (!_installed || !_orig) {
+    return;
+  }
+  for (const lvl of _LEVELS) {
+    console[lvl] = _orig.console[lvl];
+  }
   process.stdout.write = _orig.stdout;
   process.stderr.write = _orig.stderr;
   _installed = false;
@@ -242,27 +311,45 @@ function uninstall() {
 
 let _guardsInstalled = false;
 function installProcessGuards() {
-  if (_guardsInstalled) return () => {};
+  if (_guardsInstalled) {
+    return () => {};
+  }
   const onRejection = (reason) => {
     const id = _attributeAdapter(reason);
-    if (!id) return; // 非适配器可归因：交给既有处理器，绝不越权
+    if (!id) {
+      return;
+    } // 非适配器可归因：交给既有处理器，绝不越权
     const active = ctxMod.activeAdapter();
-    if (active && id === active) return; // 活跃路径的真实错误：不吞，留给正常错误流
-    devLog.write({ kind: 'unhandled-rejection', adapter: id, level: 'error', message: noiseFilter.sanitizeForStatus(reason) });
+    if (active && id === active) {
+      return;
+    } // 活跃路径的真实错误：不吞，留给正常错误流
+    devLog.write({
+      kind: 'unhandled-rejection',
+      adapter: id,
+      level: 'error',
+      message: noiseFilter.sanitizeForStatus(reason),
+    });
   };
   process.on('unhandledRejection', onRejection);
   _guardsInstalled = true;
-  return () => { process.removeListener('unhandledRejection', onRejection); _guardsInstalled = false; };
+  return () => {
+    process.removeListener('unhandledRejection', onRejection);
+    _guardsInstalled = false;
+  };
 }
 
 /** 尝试把一个错误归因到某适配器（显式字段 > 文本嗅探）。 */
 function _attributeAdapter(err) {
-  if (err && typeof err === 'object' && err.adapterId) return ctxMod.normalizeAdapterId(err.adapterId);
+  if (err && typeof err === 'object' && err.adapterId) {
+    return ctxMod.normalizeAdapterId(err.adapterId);
+  }
   // 优先用 message（栈以 "Error:" 开头，会让前缀嗅探落空）；message 无果再扫栈里的 [xxxAdapter] 标记。
-  const msg = err instanceof Error ? (err.message || '') : String(err || '');
+  const msg = err instanceof Error ? err.message || '' : String(err || '');
   const hit = _sniffSource(msg);
-  if (hit) return hit;
-  const stack = err instanceof Error ? (err.stack || '') : '';
+  if (hit) {
+    return hit;
+  }
+  const stack = err instanceof Error ? err.stack || '' : '';
   const m = stack.match(/\[([^\]]*adapter[^\]]*)\]/i);
   return m ? _sniffSource(`[${m[1]}]`) : null;
 }
@@ -277,8 +364,8 @@ module.exports = {
   runStatusQuery,
   runSandboxed,
   guardBackground,
-  _route,            // 测试用
-  _sniffSource,      // 测试用
+  _route, // 测试用
+  _sniffSource, // 测试用
   _attributeAdapter, // 测试用
   ENV_FLAG,
 };

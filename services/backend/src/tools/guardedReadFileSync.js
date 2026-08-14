@@ -29,13 +29,19 @@
 function guardedReadFileSync(absPath, options, env = process.env) {
   const fs = require('fs');
   let stat = null;
-  try { stat = fs.statSync(absPath); } catch { stat = null; }
+  try {
+    stat = fs.statSync(absPath);
+  } catch {
+    stat = null;
+  }
   if (stat) {
     let verdict = null;
     try {
       const { classifyPreReadHang } = require('./filePreReadHangGuard');
       verdict = classifyPreReadHang({ absPath, stat, env });
-    } catch { verdict = null; }
+    } catch {
+      verdict = null;
+    }
     if (verdict && verdict.blocked) {
       const err = new Error(verdict.error);
       err.code = 'EREADHANG';

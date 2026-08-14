@@ -69,6 +69,15 @@ describe('fetchUpstreamModels', () => {
     ]);
   });
 
+  test('openai: recognizes max_output_length field (sensenova-style metadata)', async () => {
+    mockFetchOnce(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: [{ id: 'deepseek-v4-flash', context_length: 1048576, max_output_length: 65536 }] }),
+    }));
+    const out = await probe.fetchUpstreamModels({ baseUrl: 'https://x/v1', apiKey: 'k' });
+    expect(out).toEqual([{ id: 'deepseek-v4-flash', contextWindow: 1048576, maxOutputTokens: 65536 }]);
+  });
+
   test('anthropic: uses x-api-key + anthropic-version header and /v1/models', async () => {
     let seenUrl;
     let seenHeaders;

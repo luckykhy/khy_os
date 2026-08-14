@@ -20,6 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 // EWMA 平滑系数:新样本权重。0.3 → 约 3~4 个近期样本主导,老样本快速衰减。可 env 覆盖。
@@ -34,7 +35,11 @@ function _num(v) {
 }
 
 function _normalizeKey(adapterKey) {
-  return String(adapterKey || '').trim().toLowerCase() || 'unknown';
+  return (
+    String(adapterKey || '')
+      .trim()
+      .toLowerCase() || 'unknown'
+  );
 }
 
 function _emptyEntry(adapterKey) {
@@ -55,7 +60,9 @@ function _file() {
 let _state = null;
 
 function _loadState() {
-  if (_state) return _state;
+  if (_state) {
+    return _state;
+  }
   try {
     const raw = JSON.parse(fs.readFileSync(_file(), 'utf-8'));
     const adapters = {};
@@ -83,7 +90,9 @@ function _loadState() {
 function _persist() {
   try {
     fs.writeFileSync(_file(), `${JSON.stringify(_loadState(), null, 2)}\n`, 'utf-8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -94,21 +103,28 @@ function _persist() {
 function record(adapterKey, latencyMs) {
   try {
     const ms = Number(latencyMs);
-    if (!Number.isFinite(ms) || ms <= 0) return; // 坏样本不污染 EWMA
+    if (!Number.isFinite(ms) || ms <= 0) {
+      return;
+    } // 坏样本不污染 EWMA
     const key = _normalizeKey(adapterKey);
     const state = _loadState();
     const entry = state.adapters[key] || _emptyEntry(key);
     const a = _alpha();
-    entry.ewmaMs = (entry.ewmaMs === null || !Number.isFinite(entry.ewmaMs))
-      ? ms
-      : (a * ms) + ((1 - a) * entry.ewmaMs);
+    entry.ewmaMs =
+      entry.ewmaMs === null || !Number.isFinite(entry.ewmaMs)
+        ? ms
+        : a * ms + (1 - a) * entry.ewmaMs;
     entry.samples += 1;
     const now = Date.now();
-    if (!entry.firstSeen) entry.firstSeen = now;
+    if (!entry.firstSeen) {
+      entry.firstSeen = now;
+    }
     entry.lastSeen = now;
     state.adapters[key] = entry;
     _persist();
-  } catch { /* best effort — 遥测失败绝不影响主路径 */ }
+  } catch {
+    /* best effort — 遥测失败绝不影响主路径 */
+  }
 }
 
 /**
@@ -121,7 +137,9 @@ function getStats(adapterKey) {
     const key = _normalizeKey(adapterKey);
     const state = _loadState();
     const entry = state.adapters[key];
-    if (!entry) return { ewmaMs: null, samples: 0, ageMs: Infinity };
+    if (!entry) {
+      return { ewmaMs: null, samples: 0, ageMs: Infinity };
+    }
     const ageMs = entry.lastSeen > 0 ? Math.max(0, Date.now() - entry.lastSeen) : Infinity;
     return { ewmaMs: entry.ewmaMs, samples: entry.samples, ageMs };
   } catch {
@@ -148,7 +166,11 @@ function getReport() {
 // 测试/运维钩子。
 function _reset() {
   _state = { adapters: {} };
-  try { fs.unlinkSync(_file()); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(_file());
+  } catch {
+    /* ignore */
+  }
 }
 
 module.exports = {

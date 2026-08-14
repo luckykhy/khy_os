@@ -27,16 +27,16 @@
  * 全流程经 chaosInterceptor 串联并 fail-closed 盖封。
  */
 
-const entropyAssessor = require('./entropyAssessor');
-const entityRegistry = require('./entityRegistry');
-const taskGraph = require('./taskGraph');
-const stateMachine = require('./stateMachine');
-const forgeSchema = require('./forgeSchema');
-const dimensionReducer = require('./dimensionReducer');
-const intentWeaver = require('./intentWeaver');
-const skeletonReconstructor = require('./skeletonReconstructor');
 const anomalyHandler = require('./anomalyHandler');
 const chaosInterceptor = require('./chaosInterceptor');
+const dimensionReducer = require('./dimensionReducer');
+const entityRegistry = require('./entityRegistry');
+const entropyAssessor = require('./entropyAssessor');
+const forgeSchema = require('./forgeSchema');
+const intentWeaver = require('./intentWeaver');
+const skeletonReconstructor = require('./skeletonReconstructor');
+const stateMachine = require('./stateMachine');
+const taskGraph = require('./taskGraph');
 
 module.exports = {
   // —— 主入口（绝对前置拦截）——

@@ -36,13 +36,13 @@ function makeDisk(tree, { now = 1_000_000_000_000 } = {}) {
   function get(p) { return nodes.get(path.resolve(p)); }
   function childrenOf(dir) {
     const base = path.resolve(dir);
-    const prefix = base.endsWith('/') ? base : base + '/';
+    const prefix = base.endsWith(path.sep) ? base : base + path.sep;
     const names = new Set();
     for (const key of nodes.keys()) {
       if (key === base) continue;
       if (key.startsWith(prefix)) {
         const rest = key.slice(prefix.length);
-        const first = rest.split('/')[0];
+        const first = rest.split(path.sep)[0];
         if (first) names.add(first);
       }
     }
@@ -170,7 +170,7 @@ describe('diskCleanup — 受保护根不变量（零误删）', () => {
     const exactRoots = guard.protectedExactPaths(deps);
     expect(Array.isArray(exactRoots)).toBe(true);
     // home 必在精确根内
-    expect(exactRoots.map((p) => path.resolve(p))).toContain('/home/u');
+    expect(exactRoots.map((p) => path.resolve(p))).toContain(path.resolve('/home/u'));
   });
 });
 

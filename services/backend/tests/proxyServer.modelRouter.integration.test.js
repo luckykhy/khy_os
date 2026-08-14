@@ -68,6 +68,8 @@ describe('proxyServer model router integration', () => {
 
     gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
+      getAdapters() { return this._adapters; },
       init: jest.fn(async () => {}),
       generate: jest.fn(async (prompt, options) => ({
         success: true,

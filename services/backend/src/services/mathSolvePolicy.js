@@ -37,10 +37,14 @@ function isEnabled(env) {
 }
 
 // ── 数学题意图识别(零假阳性优先;关键词为主,均为线性正则,无灾难性回溯)──────────
-const _CALCULUS_RE = /(求导|导数|微分|偏导|积分|定积分|不定积分|原函数|极限|泰勒|级数|微积分|梯度|derivative|differentiat|integral|integrate|antiderivative|\blim\b|limit|taylor|∫|d\s*\/\s*dx)/i;
-const _EQUATION_RE = /(方程组|方程|解方程|联立|未知数|求根|方程的根|不等式|solve\b|equation|simultaneous|inequalit)/i;
-const _LINALG_RE = /(矩阵|行列式|线性方程组|特征值|特征向量|向量|matrix|matrices|determinant|eigen|linear\s+system)/i;
-const _SOLVE_INTENT_RE = /(解一?下|解这|解出|求解|求出|求这|计算|算一?下|算出|化简|证明|展开|因式分解|solve|compute|evaluate|simplify|factor|find\s+(the\s+)?(value|roots?|solution|x\b))/i;
+const _CALCULUS_RE =
+  /(求导|导数|微分|偏导|积分|定积分|不定积分|原函数|极限|泰勒|级数|微积分|梯度|derivative|differentiat|integral|integrate|antiderivative|\blim\b|limit|taylor|∫|d\s*\/\s*dx)/i;
+const _EQUATION_RE =
+  /(方程组|方程|解方程|联立|未知数|求根|方程的根|不等式|solve\b|equation|simultaneous|inequalit)/i;
+const _LINALG_RE =
+  /(矩阵|行列式|线性方程组|特征值|特征向量|向量|matrix|matrices|determinant|eigen|linear\s+system)/i;
+const _SOLVE_INTENT_RE =
+  /(解一?下|解这|解出|求解|求出|求这|计算|算一?下|算出|化简|证明|展开|因式分解|solve|compute|evaluate|simplify|factor|find\s+(the\s+)?(value|roots?|solution|x\b))/i;
 // 形如 `2x+3=7` / `x^2-5x+6=0` 的变量方程:左有字母、右有数字,中间仅数学字符(有界,防回溯)。
 const _VAR_EQUATION_RE = /[A-Za-z][\sA-Za-z0-9+\-*/^().]{0,80}=[\s0-9A-Za-z+\-*/^().]{0,80}[0-9)]/;
 // 是否含「数字 + 算符」的算式(配合解题意图判定),有界。
@@ -57,15 +61,27 @@ const _stripCode = require('../utils/stripCodeSpans');
 function detectMathProblem(text) {
   try {
     const cleaned = _stripCode(text);
-    if (!cleaned.trim()) return { isMath: false, kinds: [] };
+    if (!cleaned.trim()) {
+      return { isMath: false, kinds: [] };
+    }
     const kinds = [];
-    if (_CALCULUS_RE.test(cleaned)) kinds.push('calculus');
-    if (_LINALG_RE.test(cleaned)) kinds.push('linear-algebra');
-    if (_EQUATION_RE.test(cleaned) || _VAR_EQUATION_RE.test(cleaned)) kinds.push('equation');
+    if (_CALCULUS_RE.test(cleaned)) {
+      kinds.push('calculus');
+    }
+    if (_LINALG_RE.test(cleaned)) {
+      kinds.push('linear-algebra');
+    }
+    if (_EQUATION_RE.test(cleaned) || _VAR_EQUATION_RE.test(cleaned)) {
+      kinds.push('equation');
+    }
     // 解题意图 + 存在算式:兜住「解一下 3*(4+5)」「计算 12/7」这类无领域关键词但确为数学题。
-    if (!kinds.length && _SOLVE_INTENT_RE.test(cleaned) && _HAS_EXPR_RE.test(cleaned)) kinds.push('general');
+    if (!kinds.length && _SOLVE_INTENT_RE.test(cleaned) && _HAS_EXPR_RE.test(cleaned)) {
+      kinds.push('general');
+    }
     return { isMath: kinds.length > 0, kinds };
-  } catch { return { isMath: false, kinds: [] }; }
+  } catch {
+    return { isMath: false, kinds: [] };
+  }
 }
 
 // ── 解题指令(注入系统提示词)─────────────────────────────────────────────────
@@ -85,7 +101,7 @@ function buildMathSolveDirective({ kinds = [], hasImage = false } = {}) {
     lines.push(
       '1) 读题(图片):先把图片里的题目**完整、准确**转写成文本——公式、上下标、分数、根号、',
       '   积分号、矩阵都要转对;并在作答开头**复述你读到的题目**,便于用户纠正。',
-      '   **若图片中的数学内容看不清/读不出,如实说明并请用户补充或粘贴文字,绝不臆测、绝不编造题目。**',
+      '   **若图片中的数学内容看不清/读不出,如实说明并请用户补充或粘贴文字,绝不臆测、绝不编造题目。**'
     );
   }
   lines.push(
@@ -109,7 +125,7 @@ function buildMathSolveDirective({ kinds = [], hasImage = false } = {}) {
     '   规则:`vars:` 写你给出的解(有理数,可写分数如 3/2);`eq:` 逐行写**原方程**;',
     '   乘法**必须显式写 `*`**(写 `2*x`,不要写 `2x`);无理数/超越解无法精确表示时可省略此块。',
     `${hasImage ? '6' : '5'}) 诚实边界:超出可确定性验证范围的结论(典型:符号微积分恒等式)如实标注「需人工复核」,`,
-    '   绝不伪称「已验证」。你不确定的地方要说不确定。',
+    '   绝不伪称「已验证」。你不确定的地方要说不确定。'
   );
   void kinds; // 题型目前不改变协议主体(协议对各类数学题通用);保留参数以备将来分型措辞。
   return lines.join('\n');
@@ -124,10 +140,18 @@ function buildMathSolveDirective({ kinds = [], hasImage = false } = {}) {
  * @returns {{isMath:boolean, kinds:string[], directive:string}}
  */
 function routeMathSolve({ text = '', hasImage = false, env } = {}) {
-  if (!isEnabled(env)) return { isMath: false, kinds: [], directive: '' };
+  if (!isEnabled(env)) {
+    return { isMath: false, kinds: [], directive: '' };
+  }
   const det = detectMathProblem(text);
-  if (!det.isMath) return { isMath: false, kinds: [], directive: '' };
-  return { isMath: true, kinds: det.kinds, directive: buildMathSolveDirective({ kinds: det.kinds, hasImage }) };
+  if (!det.isMath) {
+    return { isMath: false, kinds: [], directive: '' };
+  }
+  return {
+    isMath: true,
+    kinds: det.kinds,
+    directive: buildMathSolveDirective({ kinds: det.kinds, hasImage }),
+  };
 }
 
 // ── 解的代入复核(生成后,消费模型吐出的 ```khy-check 块)──────────────────────
@@ -145,27 +169,39 @@ function _parseCheckBlock(body) {
   const linesArr = String(body || '').split(/\r?\n/);
   for (const rawLine of linesArr) {
     const line = rawLine.trim();
-    if (!line) continue;
+    if (!line) {
+      continue;
+    }
     const varsM = /^vars?\s*:\s*(.+)$/i.exec(line);
     if (varsM) {
       for (const pair of varsM[1].split(/[,;]/)) {
         const eqIdx = pair.indexOf('=');
-        if (eqIdx <= 0) continue;
+        if (eqIdx <= 0) {
+          continue;
+        }
         const name = pair.slice(0, eqIdx).trim();
         const val = pair.slice(eqIdx + 1).trim();
-        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && val) bindings[name] = val;
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && val) {
+          bindings[name] = val;
+        }
       }
       continue;
     }
     const eqM = /^eq\s*:\s*(.+)$/i.exec(line);
     if (eqM) {
       const rest = eqM[1].trim();
-      if (rest.includes('<') || rest.includes('>')) continue;   // 只处理等式,不处理不等式
+      if (rest.includes('<') || rest.includes('>')) {
+        continue;
+      } // 只处理等式,不处理不等式
       const parts = rest.split('=');
-      if (parts.length !== 2) continue;                          // 必须恰好一个 '='
+      if (parts.length !== 2) {
+        continue;
+      } // 必须恰好一个 '='
       const lhs = parts[0].trim();
       const rhs = parts[1].trim();
-      if (!lhs || !rhs) continue;
+      if (!lhs || !rhs) {
+        continue;
+      }
       eqs.push({ text: rest, lhs, rhs });
     }
   }
@@ -183,32 +219,53 @@ function _parseCheckBlock(body) {
 function verifySolution(text, env) {
   const result = { ran: false, confirmed: [], falsified: [] };
   try {
-    if (!isEnabled(env)) return result;
+    if (!isEnabled(env)) {
+      return result;
+    }
     const raw = String(text == null ? '' : text);
-    if (!raw || raw.indexOf('khy-check') === -1 && raw.indexOf('khycheck') === -1) return result;
+    if (!raw || (raw.indexOf('khy-check') === -1 && raw.indexOf('khycheck') === -1)) {
+      return result;
+    }
     let gt;
-    try { gt = require('./groundTruth'); } catch { return result; }
-    if (typeof gt.equalsUnderBindings !== 'function') return result;
+    try {
+      gt = require('./groundTruth');
+    } catch {
+      return result;
+    }
+    if (typeof gt.equalsUnderBindings !== 'function') {
+      return result;
+    }
 
     let block;
     let blocks = 0;
     let totalEqs = 0;
     _FENCE_RE.lastIndex = 0;
     while ((block = _FENCE_RE.exec(raw)) !== null) {
-      if (blocks >= _MAX_BLOCKS) break;
+      if (blocks >= _MAX_BLOCKS) {
+        break;
+      }
       blocks += 1;
       const { bindings, eqs } = _parseCheckBlock(block[1]);
       for (const eq of eqs) {
-        if (totalEqs >= _MAX_EQS) break;
+        if (totalEqs >= _MAX_EQS) {
+          break;
+        }
         totalEqs += 1;
         const r = gt.equalsUnderBindings(eq.lhs, eq.rhs, bindings);
-        if (!r || !r.ok) continue;            // 无法精确求值(无理/超越/未绑定)→ 跳过,不下结论
+        if (!r || !r.ok) {
+          continue;
+        } // 无法精确求值(无理/超越/未绑定)→ 跳过,不下结论
         result.ran = true;
-        if (r.equal) result.confirmed.push({ eqText: eq.text });
-        else result.falsified.push({ eqText: eq.text, lhs: r.lhs, rhs: r.rhs });
+        if (r.equal) {
+          result.confirmed.push({ eqText: eq.text });
+        } else {
+          result.falsified.push({ eqText: eq.text, lhs: r.lhs, rhs: r.rhs });
+        }
       }
     }
-  } catch { /* fail-soft:复核是附加证据,出错绝不阻断答复 */ }
+  } catch {
+    /* fail-soft:复核是附加证据,出错绝不阻断答复 */
+  }
   return result;
 }
 
@@ -221,12 +278,20 @@ function verifySolution(text, env) {
  */
 function buildSolutionConfirmation(r) {
   try {
-    if (!r || !r.ran) return null;
-    if (Array.isArray(r.falsified) && r.falsified.length) return null; // 有失败时不出正向注记
+    if (!r || !r.ran) {
+      return null;
+    }
+    if (Array.isArray(r.falsified) && r.falsified.length) {
+      return null;
+    } // 有失败时不出正向注记
     const confirmed = Array.isArray(r.confirmed) ? r.confirmed : [];
-    if (!confirmed.length) return null;
+    if (!confirmed.length) {
+      return null;
+    }
     return `\n\n${SOLUTION_MARKER} 我已用精确有理数把你给出的解代回每个原方程复核:全部 ${confirmed.length} 个方程都精确满足 ✓(此解经 khyos 确定性验证为真)。`;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 module.exports = {

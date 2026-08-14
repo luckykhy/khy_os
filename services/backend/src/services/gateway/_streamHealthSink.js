@@ -52,7 +52,9 @@ function setStreamHealthSink(fn) {
  * @returns {boolean} true if a sink consumed the payload without throwing.
  */
 function emitStreamHealth(payload) {
-  if (!_sink) return false;
+  if (!_sink) {
+    return false;
+  }
   try {
     _sink(payload);
     return true;

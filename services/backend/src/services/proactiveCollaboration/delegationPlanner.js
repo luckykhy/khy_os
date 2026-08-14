@@ -17,7 +17,9 @@ const { LIMITS, ROLE_SIGNALS, DEFAULT_ROLE } = require('./constants');
 function inferRole(task) {
   const t = String(task || '');
   for (const bucket of ROLE_SIGNALS) {
-    if (bucket.patterns.some(re => re.test(t))) return bucket.role;
+    if (bucket.patterns.some((re) => re.test(t))) {
+      return bucket.role;
+    }
   }
   return DEFAULT_ROLE;
 }
@@ -41,7 +43,9 @@ function _cleanTask(task) {
  * Returns toolCall=null when the opportunity is not actionable.
  */
 function planDelegation(opportunity, opts = {}) {
-  const goal = String(opts.goal || '').replace(/\s+/g, ' ').trim();
+  const goal = String(opts.goal || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   const maxSubtasks = LIMITS.MAX_SUBTASKS;
 
   const raw = Array.isArray(opportunity && opportunity.subtasks) ? opportunity.subtasks : [];
@@ -51,7 +55,9 @@ function planDelegation(opportunity, opts = {}) {
   for (const st of raw) {
     const task = _cleanTask(st && st.task);
     const key = task.toLowerCase();
-    if (!task || seen.has(key)) continue;
+    if (!task || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     cleaned.push(task);
   }
@@ -63,8 +69,8 @@ function planDelegation(opportunity, opts = {}) {
   const kept = cleaned.slice(0, maxSubtasks);
   const dropped = cleaned.length - kept.length;
 
-  const subtasks = kept.map(task => ({ task, role: inferRole(task) }));
-  const roles = subtasks.map(s => s.role);
+  const subtasks = kept.map((task) => ({ task, role: inferRole(task) }));
+  const roles = subtasks.map((s) => s.role);
 
   // Coordinator prompt: states the overall goal and that the sub-tasks below are
   // being handled by collaborating agents whose results must be synthesized.

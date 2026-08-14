@@ -27,8 +27,11 @@ function read(rel) {
 
 test('viewLoaders registers the /projects chunk importer', () => {
   const src = read('composables/useRoutePrefetch.js');
-  assert.match(src, /'\/projects':\s*\(\)\s*=>\s*import\('@\/views\/Projects\.vue'\)/,
-    'useRoutePrefetch.viewLoaders must lazy-import Projects.vue at /projects');
+  assert.match(
+    src,
+    /'\/projects':\s*\(\)\s*=>\s*import\('@\/views\/Projects\.vue'\)/,
+    'useRoutePrefetch.viewLoaders must lazy-import Projects.vue at /projects'
+  );
 });
 
 test('router mounts the Projects route (auth-only, no requiresAdmin)', () => {
@@ -38,15 +41,21 @@ test('router mounts the Projects route (auth-only, no requiresAdmin)', () => {
   assert.match(src, /viewLoaders\['\/projects'\]/, 'router must resolve the /projects viewLoader');
   // Guard against accidentally gating it behind admin: the projects route block
   // must not carry a requiresAdmin meta flag. Check the immediate route object region.
-  const block = src.slice(src.indexOf("name: 'Projects'") - 200, src.indexOf("name: 'Projects'") + 120);
+  const block = src.slice(
+    src.indexOf("name: 'Projects'") - 200,
+    src.indexOf("name: 'Projects'") + 120
+  );
   assert.doesNotMatch(block, /requiresAdmin:\s*true/, 'Projects route must stay auth-only');
 });
 
 test('sidebar menu exposes the 项目工作区 entry with the Folder icon', () => {
   const src = read('views/Layout.vue');
   assert.match(src, /Folder\b/, 'Layout must import the Folder icon');
-  assert.match(src, /path:\s*'\/projects'.*icon:\s*Folder/s,
-    'USER_MENU must list /projects with the Folder icon');
+  assert.match(
+    src,
+    /path:\s*'\/projects'.*icon:\s*Folder/s,
+    'USER_MENU must list /projects with the Folder icon'
+  );
 });
 
 test('useProjects assembles the per-user REST URLs and shares activeProjectId', () => {
@@ -60,21 +69,37 @@ test('useProjects assembles the per-user REST URLs and shares activeProjectId', 
   assert.match(src, /request\.post\(`\/api\/ai\/projects\/\$\{id\}\/archive`/, 'archive endpoint');
   // Active-project selection is module-scoped (shared across instances) and
   // persisted to localStorage so the chat sidebar and the projects view agree.
-  assert.match(src, /const activeProjectId = ref\(readActive\(\)\)/,
-    'activeProjectId must be a module-level shared ref');
-  assert.match(src, /localStorage\.setItem\(ACTIVE_KEY/, 'active project must persist to localStorage');
+  assert.match(
+    src,
+    /const activeProjectId = ref\(readActive\(\)\)/,
+    'activeProjectId must be a module-level shared ref'
+  );
+  assert.match(
+    src,
+    /localStorage\.setItem\(ACTIVE_KEY/,
+    'active project must persist to localStorage'
+  );
 });
 
 test('useChatConversations links conversations to a project (filter + stamp)', () => {
   const src = read('composables/useChatConversations.js');
   // fetchList appends ?projectId only for a positive id (default call unchanged).
-  assert.match(src, /async function fetchList\(projectId = null\)/,
-    'fetchList must accept an optional projectId');
-  assert.match(src, /\/api\/ai\/conversations\?projectId=\$\{pid\}/,
-    'fetchList must filter by projectId when positive');
+  assert.match(
+    src,
+    /async function fetchList\(projectId = null\)/,
+    'fetchList must accept an optional projectId'
+  );
+  assert.match(
+    src,
+    /\/api\/ai\/conversations\?projectId=\$\{pid\}/,
+    'fetchList must filter by projectId when positive'
+  );
   // createConversation stamps projectId only when positive.
-  assert.match(src, /createConversation\(\{ messages, title, projectId \}/,
-    'createConversation must accept projectId');
+  assert.match(
+    src,
+    /createConversation\(\{ messages, title, projectId \}/,
+    'createConversation must accept projectId'
+  );
   assert.match(src, /body\.projectId = pid/, 'createConversation must stamp a positive projectId');
 });
 
@@ -83,6 +108,9 @@ test('AIChat wires the project selector into the sidebar', () => {
   assert.match(src, /useProjects/, 'AIChat must use the projects composable');
   assert.match(src, /onProjectChange/, 'AIChat must define a project-change handler');
   assert.match(src, /chat-project-select/, 'AIChat must render the project selector');
-  assert.match(src, /createConversation\(\{ messages: payload, projectId: activeProjectId\.value \}\)/,
-    'new conversations must inherit the active project');
+  assert.match(
+    src,
+    /createConversation\(\{ messages: payload, projectId: activeProjectId\.value \}\)/,
+    'new conversations must inherit the active project'
+  );
 });

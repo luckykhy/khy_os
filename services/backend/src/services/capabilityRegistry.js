@@ -47,7 +47,9 @@ function listCapabilities() {
   const out = [];
   for (const tool of tools.values()) {
     const cap = tool && tool.capability;
-    if (!cap || typeof cap !== 'object') continue;
+    if (!cap || typeof cap !== 'object') {
+      continue;
+    }
     out.push({
       name: tool.name,
       summary: cap.summary || tool.description || '',
@@ -69,12 +71,18 @@ function listCapabilities() {
  */
 function describeCapability(name) {
   const info = listCapabilities().find((c) => c.name === name);
-  if (!info) return null;
+  if (!info) {
+    return null;
+  }
 
   const testsResolved = info.tests.map((rel) => {
     const absPath = path.resolve(PACKAGE_ROOT, rel);
     let exists = false;
-    try { exists = fs.existsSync(absPath); } catch { exists = false; }
+    try {
+      exists = fs.existsSync(absPath);
+    } catch {
+      exists = false;
+    }
     return { path: rel, absPath, exists };
   });
 

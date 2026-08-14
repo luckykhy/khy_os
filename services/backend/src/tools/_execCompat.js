@@ -38,7 +38,9 @@ function isNonBlockingExecEnabled(env) {
     return flagRegistry.isFlagEnabled('KHY_EXEC_NONBLOCKING', e);
   } catch {
     const raw = e && e.KHY_EXEC_NONBLOCKING;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
@@ -56,7 +58,9 @@ function execAsync(command, options) {
   // 走 Windows 智能解码),未指定 encoding 时补 'buffer',让 exec 也返回 Buffer。显式传了
   // encoding(如 Grep 的 'utf-8')则原样透传。浅拷贝避免改到调用方对象。
   const opts = options ? { ...options } : {};
-  if (opts.encoding === undefined) opts.encoding = 'buffer';
+  if (opts.encoding === undefined) {
+    opts.encoding = 'buffer';
+  }
   return new Promise((resolve, reject) => {
     // exec 的回调:err 为 null → 成功;否则 err 带 .code(退出码)/.signal/.killed。
     exec(command, opts, (err, stdout, stderr) => {
@@ -68,11 +72,17 @@ function execAsync(command, options) {
       // exec 已在 err 上带了 message;补齐 status/stdout/stderr,让调用方 `err.status===1` 等分支复用。
       try {
         if (err.status === undefined) {
-          err.status = (typeof err.code === 'number') ? err.code : null;
+          err.status = typeof err.code === 'number' ? err.code : null;
         }
-        if (err.stdout === undefined) err.stdout = stdout;
-        if (err.stderr === undefined) err.stderr = stderr;
-      } catch { /* 防呆:归一失败也照常 reject 原 err */ }
+        if (err.stdout === undefined) {
+          err.stdout = stdout;
+        }
+        if (err.stderr === undefined) {
+          err.stderr = stderr;
+        }
+      } catch {
+        /* 防呆:归一失败也照常 reject 原 err */
+      }
       reject(err);
     });
   });

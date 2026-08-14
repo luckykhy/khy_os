@@ -21,10 +21,14 @@
 
 function parseListToSet(raw) {
   const out = new Set();
-  if (!raw || typeof raw !== 'string') return out;
+  if (!raw || typeof raw !== 'string') {
+    return out;
+  }
   for (const part of raw.split(/[,\s]+/)) {
     const v = part.trim().toLowerCase();
-    if (v) out.add(v);
+    if (v) {
+      out.add(v);
+    }
   }
   return out;
 }

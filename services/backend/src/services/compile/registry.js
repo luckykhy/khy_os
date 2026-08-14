@@ -24,6 +24,7 @@
  */
 
 const path = require('path');
+
 const { javacFlags, javaRunFlags } = require('../../utils/javaEncoding');
 
 /** Platform-correct executable name (adds .exe on Windows). */
@@ -39,36 +40,83 @@ function _javaClass(stem) {
 
 const LANGUAGES = {
   c: {
-    id: 'c', label: 'C (gcc)', exts: ['.c'], bin: 'gcc', toolchainDepId: 'gcc',
-    diagnosticsType: 'c', mode: 'compiled',
+    id: 'c',
+    label: 'C (gcc)',
+    exts: ['.c'],
+    bin: 'gcc',
+    toolchainDepId: 'gcc',
+    diagnosticsType: 'c',
+    mode: 'compiled',
     artifactPath: ({ outDir, stem }) => path.join(outDir, _exe(stem)),
-    buildArgv: ({ src, outDir, stem }) => ['gcc', src, '-o', path.join(outDir, _exe(stem)), '-O2', '-w'],
+    buildArgv: ({ src, outDir, stem }) => [
+      'gcc',
+      src,
+      '-o',
+      path.join(outDir, _exe(stem)),
+      '-O2',
+      '-w',
+    ],
     runArgv: ({ artifact }) => [artifact],
   },
   cpp: {
-    id: 'cpp', label: 'C++ (g++)', exts: ['.cpp', '.cc', '.cxx'], bin: 'g++', toolchainDepId: 'gpp',
-    diagnosticsType: 'cpp', mode: 'compiled',
+    id: 'cpp',
+    label: 'C++ (g++)',
+    exts: ['.cpp', '.cc', '.cxx'],
+    bin: 'g++',
+    toolchainDepId: 'gpp',
+    diagnosticsType: 'cpp',
+    mode: 'compiled',
     artifactPath: ({ outDir, stem }) => path.join(outDir, _exe(stem)),
-    buildArgv: ({ src, outDir, stem }) => ['g++', src, '-o', path.join(outDir, _exe(stem)), '-O2', '-std=c++17', '-w'],
+    buildArgv: ({ src, outDir, stem }) => [
+      'g++',
+      src,
+      '-o',
+      path.join(outDir, _exe(stem)),
+      '-O2',
+      '-std=c++17',
+      '-w',
+    ],
     runArgv: ({ artifact }) => [artifact],
   },
   rust: {
-    id: 'rust', label: 'Rust (rustc)', exts: ['.rs'], bin: 'rustc', toolchainDepId: 'rust',
-    diagnosticsType: 'rust', mode: 'compiled',
+    id: 'rust',
+    label: 'Rust (rustc)',
+    exts: ['.rs'],
+    bin: 'rustc',
+    toolchainDepId: 'rust',
+    diagnosticsType: 'rust',
+    mode: 'compiled',
     artifactPath: ({ outDir, stem }) => path.join(outDir, _exe(stem)),
-    buildArgv: ({ src, outDir, stem }) => ['rustc', src, '-o', path.join(outDir, _exe(stem)), '-A', 'warnings'],
+    buildArgv: ({ src, outDir, stem }) => [
+      'rustc',
+      src,
+      '-o',
+      path.join(outDir, _exe(stem)),
+      '-A',
+      'warnings',
+    ],
     runArgv: ({ artifact }) => [artifact],
   },
   go: {
-    id: 'go', label: 'Go', exts: ['.go'], bin: 'go', toolchainDepId: 'go',
-    diagnosticsType: 'go', mode: 'compiled',
+    id: 'go',
+    label: 'Go',
+    exts: ['.go'],
+    bin: 'go',
+    toolchainDepId: 'go',
+    diagnosticsType: 'go',
+    mode: 'compiled',
     artifactPath: ({ outDir, stem }) => path.join(outDir, _exe(stem)),
     buildArgv: ({ src, outDir, stem }) => ['go', 'build', '-o', path.join(outDir, _exe(stem)), src],
     runArgv: ({ artifact }) => [artifact],
   },
   java: {
-    id: 'java', label: 'Java (javac)', exts: ['.java'], bin: 'javac', toolchainDepId: 'openjdk',
-    diagnosticsType: 'java', mode: 'compiled',
+    id: 'java',
+    label: 'Java (javac)',
+    exts: ['.java'],
+    bin: 'javac',
+    toolchainDepId: 'openjdk',
+    diagnosticsType: 'java',
+    mode: 'compiled',
     // We pin the JVM to UTF-8 output via buildArgv/runArgv below, so the consumer
     // must decode the pipe as UTF-8 (not the console code page) for them to agree.
     utf8Output: true,
@@ -79,16 +127,26 @@ const LANGUAGES = {
     runArgv: ({ outDir, stem }) => ['java', ...javaRunFlags(), '-cp', outDir, _javaClass(stem)],
   },
   python: {
-    id: 'python', label: 'Python (py_compile syntax check)', exts: ['.py'], bin: 'python3', toolchainDepId: 'python3',
-    diagnosticsType: 'python', mode: 'interpreted',
+    id: 'python',
+    label: 'Python (py_compile syntax check)',
+    exts: ['.py'],
+    bin: 'python3',
+    toolchainDepId: 'python3',
+    diagnosticsType: 'python',
+    mode: 'interpreted',
     artifactPath: () => null,
     // compile_file does a syntax check (compileall, no bytecode written to cwd).
     buildArgv: ({ src }) => ['python3', '-m', 'py_compile', src],
     runArgv: ({ src }) => ['python3', src],
   },
   typescript: {
-    id: 'typescript', label: 'TypeScript (tsc)', exts: ['.ts'], bin: 'tsc', toolchainDepId: 'typescript',
-    diagnosticsType: 'typescript', mode: 'syntax',
+    id: 'typescript',
+    label: 'TypeScript (tsc)',
+    exts: ['.ts'],
+    bin: 'tsc',
+    toolchainDepId: 'typescript',
+    diagnosticsType: 'typescript',
+    mode: 'syntax',
     artifactPath: ({ outDir, stem }) => path.join(outDir, `${stem}.js`),
     // Type-check only for compile_file (no emit); execution path emits then runs node.
     buildArgv: ({ src }) => ['tsc', '--noEmit', '--pretty', 'false', src],
@@ -99,13 +157,26 @@ const LANGUAGES = {
 // Build an extension → languageId index once.
 const _byExt = {};
 for (const lang of Object.values(LANGUAGES)) {
-  for (const e of lang.exts) _byExt[e.toLowerCase()] = lang.id;
+  for (const e of lang.exts) {
+    _byExt[e.toLowerCase()] = lang.id;
+  }
 }
 
 /** Canonicalize an alias to a registry language id (or the input if unknown). */
 function _canon(language) {
-  const l = String(language || '').trim().toLowerCase();
-  const alias = { 'c++': 'cpp', cxx: 'cpp', cc: 'cpp', rs: 'rust', golang: 'go', py: 'python', ts: 'typescript', js: 'javascript' };
+  const l = String(language || '')
+    .trim()
+    .toLowerCase();
+  const alias = {
+    'c++': 'cpp',
+    cxx: 'cpp',
+    cc: 'cpp',
+    rs: 'rust',
+    golang: 'go',
+    py: 'python',
+    ts: 'typescript',
+    js: 'javascript',
+  };
   return alias[l] || l;
 }
 

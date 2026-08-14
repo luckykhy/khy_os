@@ -32,20 +32,43 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_DOCS_FRESHNESS 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function docsFreshnessEnabled(env = process.env) {
   const raw = env && env.KHY_DOCS_FRESHNESS;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
 // 视为源码的扩展名(触发它们被改 → 引用它们的文档可能过时)。
 const SOURCE_EXTS = new Set([
-  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx',
-  'py', 'c', 'h', 'sh', 'json', 'vue', 'mbt',
+  'js',
+  'mjs',
+  'cjs',
+  'ts',
+  'tsx',
+  'jsx',
+  'py',
+  'c',
+  'h',
+  'sh',
+  'json',
+  'vue',
+  'mbt',
 ]);
 
 // 仓库相对路径的合法首段(锚定,避免把随手一句 `foo.js` 当路径)。
 const ROOT_SEGMENTS = new Set([
-  'services', 'scripts', 'kernel', 'packaging', 'tools', 'extensions',
-  'frontend', 'src', 'apps', 'packages', 'bin', 'lib',
+  'services',
+  'scripts',
+  'kernel',
+  'packaging',
+  'tools',
+  'extensions',
+  'frontend',
+  'src',
+  'apps',
+  'packages',
+  'bin',
+  'lib',
 ]);
 
 const MAX_PATHS_PER_DOC = 200;
@@ -60,9 +83,13 @@ const _BACKTICK_RE = /`([^`\r\n]{1,200})`/g;
  *  - 只接受首段在 ROOT_SEGMENTS 且扩展名在 SOURCE_EXTS 的路径
  */
 function _cleanSourcePath(token) {
-  if (typeof token !== 'string') return null;
+  if (typeof token !== 'string') {
+    return null;
+  }
   let s = token.trim();
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   // 反引号 token 里可能夹带说明文字(如 `router.js:3230 的 case`)→ 只取第一个空白前。
   s = s.split(/\s/)[0];
   // 剥锚点 #... 与行号 :N / :N-M / :N:C。
@@ -72,14 +99,24 @@ function _cleanSourcePath(token) {
   s = s.replace(/^\.\//, '').replace(/^\/+/, '');
   // 统一分隔符(容忍 Windows 反斜杠)。
   s = s.replace(/\\/g, '/');
-  if (!s || s.includes('..')) return null;
+  if (!s || s.includes('..')) {
+    return null;
+  }
   const parts = s.split('/');
-  if (parts.length < 2) return null; // 需至少 dir/file,单个裸文件名不锚定
-  if (!ROOT_SEGMENTS.has(parts[0])) return null;
+  if (parts.length < 2) {
+    return null;
+  } // 需至少 dir/file,单个裸文件名不锚定
+  if (!ROOT_SEGMENTS.has(parts[0])) {
+    return null;
+  }
   const ext = (s.split('.').pop() || '').toLowerCase();
-  if (!SOURCE_EXTS.has(ext)) return null;
+  if (!SOURCE_EXTS.has(ext)) {
+    return null;
+  }
   // 路径段合法性(不含空白/引号)。
-  if (/[\s"'`<>|]/.test(s)) return null;
+  if (/[\s"'`<>|]/.test(s)) {
+    return null;
+  }
   return s;
 }
 
@@ -91,14 +128,18 @@ function _cleanSourcePath(token) {
 function extractSourcePaths(docText) {
   const out = new Set();
   try {
-    if (typeof docText !== 'string' || !docText) return [];
+    if (typeof docText !== 'string' || !docText) {
+      return [];
+    }
     let m;
     _BACKTICK_RE.lastIndex = 0;
     while ((m = _BACKTICK_RE.exec(docText)) !== null) {
       const cleaned = _cleanSourcePath(m[1]);
       if (cleaned) {
         out.add(cleaned);
-        if (out.size >= MAX_PATHS_PER_DOC) break;
+        if (out.size >= MAX_PATHS_PER_DOC) {
+          break;
+        }
       }
     }
   } catch {
@@ -117,13 +158,19 @@ function buildDocPathIndex(docRecords) {
   let docCount = 0;
   try {
     for (const rec of Array.isArray(docRecords) ? docRecords : []) {
-      if (!rec || typeof rec.text !== 'string') continue;
+      if (!rec || typeof rec.text !== 'string') {
+        continue;
+      }
       const docId = rec.path || rec.id || '';
-      if (!docId) continue;
+      if (!docId) {
+        continue;
+      }
       docCount += 1;
       for (const src of extractSourcePaths(rec.text)) {
         const list = bySource.get(src) || [];
-        if (!list.includes(docId)) list.push(docId);
+        if (!list.includes(docId)) {
+          list.push(docId);
+        }
         bySource.set(src, list);
       }
     }
@@ -137,7 +184,11 @@ function buildDocPathIndex(docRecords) {
  * 归一化一个源码相对路径(供匹配比较)。
  */
 function _normRel(rel) {
-  return String(rel == null ? '' : rel).trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
+  return String(rel == null ? '' : rel)
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '');
 }
 
 /**
@@ -174,16 +225,22 @@ function matchStaleSuspects(changedSourceRels, index) {
       const chDir = ch.includes('/') ? ch.slice(0, ch.lastIndexOf('/')) : '';
       if (chDir) {
         for (const [src, docs] of bySource.entries()) {
-          if (src === ch) continue; // exact 已处理
+          if (src === ch) {
+            continue;
+          } // exact 已处理
           const srcDir = src.includes('/') ? src.slice(0, src.lastIndexOf('/')) : '';
           if (srcDir && srcDir === chDir) {
             hit = true;
-            for (const doc of docs) _addSuspect(suspects, doc, ch, 'prefix');
+            for (const doc of docs) {
+              _addSuspect(suspects, doc, ch, 'prefix');
+            }
           }
         }
       }
 
-      if (!hit) unmatched.push(ch);
+      if (!hit) {
+        unmatched.push(ch);
+      }
     }
   } catch {
     /* fail-soft */
@@ -199,7 +256,9 @@ function matchStaleSuspects(changedSourceRels, index) {
   }
   // 确定性排序:exact 优先,再按文档路径。
   list.sort((a, b) => {
-    if (a.confidence !== b.confidence) return a.confidence === 'exact' ? -1 : 1;
+    if (a.confidence !== b.confidence) {
+      return a.confidence === 'exact' ? -1 : 1;
+    }
     return a.doc < b.doc ? -1 : a.doc > b.doc ? 1 : 0;
   });
   return { suspects: list, unmatchedChanges: unmatched };
@@ -209,7 +268,9 @@ function _addSuspect(map, doc, source, confidence) {
   const cur = map.get(doc) || { matchedSources: new Set(), confidence: 'prefix' };
   cur.matchedSources.add(source);
   // exact 一旦出现就升级(exact 覆盖 prefix)。
-  if (confidence === 'exact') cur.confidence = 'exact';
+  if (confidence === 'exact') {
+    cur.confidence = 'exact';
+  }
   map.set(doc, cur);
 }
 

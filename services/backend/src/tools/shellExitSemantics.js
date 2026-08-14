@@ -23,7 +23,9 @@
 
 /** 门控关? */
 function _gateOff(env) {
-  const v = String((env && env.KHY_SHELL_EXIT_SEMANTICS) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_SHELL_EXIT_SEMANTICS) || '')
+    .trim()
+    .toLowerCase();
   return v === '0' || v === 'false' || v === 'off' || v === 'no';
 }
 
@@ -37,7 +39,10 @@ const _COMMAND_SEMANTICS = {
   // ripgrep 与 grep 同语义
   rg: (code) => ({ isError: code >= 2, message: code === 1 ? 'No matches found' : undefined }),
   // find: 0=成功, 1=部分目录不可访问, 2+=错误
-  find: (code) => ({ isError: code >= 2, message: code === 1 ? 'Some directories were inaccessible' : undefined }),
+  find: (code) => ({
+    isError: code >= 2,
+    message: code === 1 ? 'Some directories were inaccessible' : undefined,
+  }),
   // diff: 0=无差异, 1=有差异, 2+=错误
   diff: (code) => ({ isError: code >= 2, message: code === 1 ? 'Files differ' : undefined }),
   // test / [ : 0=条件真, 1=条件假, 2+=错误
@@ -51,11 +56,19 @@ const _COMMAND_SEMANTICS = {
  * 的 getBaseCommand,但内联以保持本叶子零依赖。
  */
 function _baseOfSegment(segment) {
-  const tokens = String(segment == null ? '' : segment).trim().split(/\s+/);
+  const tokens = String(segment == null ? '' : segment)
+    .trim()
+    .split(/\s+/);
   let i = 0;
-  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) i++;
-  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) i++;
-  if (i >= tokens.length) return '';
+  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) {
+    i++;
+  }
+  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) {
+    i++;
+  }
+  if (i >= tokens.length) {
+    return '';
+  }
   const full = tokens[i];
   const slash = full.lastIndexOf('/');
   return slash >= 0 ? full.slice(slash + 1) : full;
@@ -68,14 +81,21 @@ function _baseOfSegment(segment) {
  */
 function _heuristicBaseCommand(command) {
   const cmd = String(command == null ? '' : command);
-  if (!cmd.trim()) return '';
+  if (!cmd.trim()) {
+    return '';
+  }
   // 按 shell 控制操作符切分;JS 交替按顺序匹配,`||`/`&&` 先于 `|`/`&`。
   const segments = cmd.split(/\|\||&&|;|\|&|\||&/g);
   let last = '';
   for (let k = segments.length - 1; k >= 0; k--) {
-    if (segments[k] && segments[k].trim()) { last = segments[k]; break; }
+    if (segments[k] && segments[k].trim()) {
+      last = segments[k];
+      break;
+    }
   }
-  if (!last) last = cmd;
+  if (!last) {
+    last = cmd;
+  }
   return _baseOfSegment(last);
 }
 
@@ -92,15 +112,26 @@ function interpretShellExit(command, exitCode, env) {
   const code = Number.isFinite(exitCode) ? exitCode : 0;
   const legacy = { isError: code !== 0, message: undefined, source: 'legacy' };
   try {
-    if (_gateOff(env || (typeof process !== 'undefined' ? process.env : undefined))) return legacy;
+    if (_gateOff(env || (typeof process !== 'undefined' ? process.env : undefined))) {
+      return legacy;
+    }
     const base = _heuristicBaseCommand(command);
-    const sem = base && Object.prototype.hasOwnProperty.call(_COMMAND_SEMANTICS, base)
-      ? _COMMAND_SEMANTICS[base]
-      : null;
-    if (!sem) return legacy; // 默认语义 == legacy(只 0 成功)
+    const sem =
+      base && Object.prototype.hasOwnProperty.call(_COMMAND_SEMANTICS, base)
+        ? _COMMAND_SEMANTICS[base]
+        : null;
+    if (!sem) {
+      return legacy;
+    } // 默认语义 == legacy(只 0 成功)
     const r = sem(code);
-    if (!r || typeof r.isError !== 'boolean') return legacy;
-    return { isError: r.isError, message: typeof r.message === 'string' ? r.message : undefined, source: 'semantic' };
+    if (!r || typeof r.isError !== 'boolean') {
+      return legacy;
+    }
+    return {
+      isError: r.isError,
+      message: typeof r.message === 'string' ? r.message : undefined,
+      source: 'semantic',
+    };
   } catch {
     return legacy;
   }

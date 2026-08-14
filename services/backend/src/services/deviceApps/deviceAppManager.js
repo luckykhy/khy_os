@@ -23,7 +23,9 @@ function _gateEnabled(env = process.env) {
     return require('../flagRegistry').isFlagEnabled('KHY_DEVICE_APPS', env);
   } catch (_) {
     const raw = env && env.KHY_DEVICE_APPS;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -36,23 +38,38 @@ function _defaultDeps() {
     platform: process.platform,
     hasExecutable: (bin) => !!platformUtils.searchExecutable(bin),
     // 运行 argv、收集 stdout。仅用于 list(只读)。
-    runCapture: (argv, timeoutMs) => new Promise((resolve) => {
-      try {
-        execFile(argv[0], argv.slice(1), { timeout: timeoutMs || 30000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
-          (err, stdout) => resolve({ ok: !err, stdout: String(stdout || ''), error: err ? String(err.message || err) : null }));
-      } catch (e) {
-        resolve({ ok: false, stdout: '', error: String(e && e.message || e) });
-      }
-    }),
+    runCapture: (argv, timeoutMs) =>
+      new Promise((resolve) => {
+        try {
+          execFile(
+            argv[0],
+            argv.slice(1),
+            { timeout: timeoutMs || 30000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
+            (err, stdout) =>
+              resolve({
+                ok: !err,
+                stdout: String(stdout || ''),
+                error: err ? String(err.message || err) : null,
+              })
+          );
+        } catch (e) {
+          resolve({ ok: false, stdout: '', error: String((e && e.message) || e) });
+        }
+      }),
     // 运行 argv、继承 stdio(供卸载/安装把包管理器进度直显给用户)。
-    runInherit: (argv, timeoutMs) => new Promise((resolve) => {
-      try {
-        execFile(argv[0], argv.slice(1), { timeout: timeoutMs || 600000, stdio: 'inherit', windowsHide: true },
-          (err) => resolve({ ok: !err, error: err ? String(err.message || err) : null }));
-      } catch (e) {
-        resolve({ ok: false, error: String(e && e.message || e) });
-      }
-    }),
+    runInherit: (argv, timeoutMs) =>
+      new Promise((resolve) => {
+        try {
+          execFile(
+            argv[0],
+            argv.slice(1),
+            { timeout: timeoutMs || 600000, stdio: 'inherit', windowsHide: true },
+            (err) => resolve({ ok: !err, error: err ? String(err.message || err) : null })
+          );
+        } catch (e) {
+          resolve({ ok: false, error: String((e && e.message) || e) });
+        }
+      }),
   };
 }
 
@@ -81,9 +98,13 @@ function getManager(env = process.env, deps) {
     /** 列出已安装应用。→ { ok, apps:[{name,id,version}], error? } */
     async listInstalled() {
       const argv = policy.buildListCommand(pm);
-      if (!argv) return { ok: false, apps: [], error: '无法构造列举命令' };
+      if (!argv) {
+        return { ok: false, apps: [], error: '无法构造列举命令' };
+      }
       const res = await d.runCapture(argv, 60000);
-      if (!res.ok) return { ok: false, apps: [], error: res.error || '列举失败' };
+      if (!res.ok) {
+        return { ok: false, apps: [], error: res.error || '列举失败' };
+      }
       return { ok: true, apps: policy.parseListOutput(pm.parse, res.stdout) };
     },
     /**
@@ -91,10 +112,16 @@ function getManager(env = process.env, deps) {
      * @returns {{ok:boolean, error?:string, argv?:string[]}}
      */
     async uninstall(appId, { confirmed = false } = {}) {
-      if (!policy.isSafeAppId(appId)) return { ok: false, error: `非法应用标识:${String(appId)}` };
+      if (!policy.isSafeAppId(appId)) {
+        return { ok: false, error: `非法应用标识:${String(appId)}` };
+      }
       const argv = policy.buildUninstallCommand(pm, appId);
-      if (!argv) return { ok: false, error: '无法构造卸载命令' };
-      if (!confirmed) return { ok: false, error: '卸载未确认(需 confirmed:true)', argv };
+      if (!argv) {
+        return { ok: false, error: '无法构造卸载命令' };
+      }
+      if (!confirmed) {
+        return { ok: false, error: '卸载未确认(需 confirmed:true)', argv };
+      }
       const res = await d.runInherit(argv, 600000);
       return { ok: res.ok, error: res.error || undefined, argv };
     },
@@ -103,10 +130,16 @@ function getManager(env = process.env, deps) {
      * @returns {{ok:boolean, error?:string, argv?:string[]}}
      */
     async install(appId, { confirmed = false } = {}) {
-      if (!policy.isSafeAppId(appId)) return { ok: false, error: `非法应用标识:${String(appId)}` };
+      if (!policy.isSafeAppId(appId)) {
+        return { ok: false, error: `非法应用标识:${String(appId)}` };
+      }
       const argv = policy.buildInstallCommand(pm, appId);
-      if (!argv) return { ok: false, error: '无法构造安装命令' };
-      if (!confirmed) return { ok: false, error: '安装未确认(需 confirmed:true)', argv };
+      if (!argv) {
+        return { ok: false, error: '无法构造安装命令' };
+      }
+      if (!confirmed) {
+        return { ok: false, error: '安装未确认(需 confirmed:true)', argv };
+      }
       const res = await d.runInherit(argv, 600000);
       return { ok: res.ok, error: res.error || undefined, argv };
     },

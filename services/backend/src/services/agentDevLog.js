@@ -39,9 +39,9 @@
 
 const fs = require('fs');
 
-const MAX_TEXT = 100;          // 大文本摘要上限（字符），见 §1.4
-const MAX_ACTION = 60;         // action 字段更短
-const MAX_TRACES = 256;        // per-trace step 计数器 Map 上限（防无界增长）
+const MAX_TEXT = 100; // 大文本摘要上限（字符），见 §1.4
+const MAX_ACTION = 60; // action 字段更短
+const MAX_TRACES = 256; // per-trace step 计数器 Map 上限（防无界增长）
 
 // ── 脱敏（§1.3 / R4）─────────────────────────────────────────────────────────
 // 命中密钥/令牌类子串即打码；保留少量首尾字符以保可排障性，其余以 *** 代替。
@@ -58,7 +58,9 @@ const SECRET_PATTERNS = [
 
 function _maskValue(v) {
   const s = String(v);
-  if (s.length <= 6) return '***';
+  if (s.length <= 6) {
+    return '***';
+  }
   return `${s.slice(0, 4)}***${s.slice(-2)}`;
 }
 
@@ -66,7 +68,11 @@ function _safeStringify(obj) {
   try {
     return JSON.stringify(obj);
   } catch {
-    try { return String(obj); } catch { return ''; }
+    try {
+      return String(obj);
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -76,7 +82,9 @@ function _safeStringify(obj) {
  * @returns {string}
  */
 function redact(input) {
-  if (input == null) return '';
+  if (input == null) {
+    return '';
+  }
   let s = typeof input === 'string' ? input : _safeStringify(input);
   s = s.replace(SECRET_PATTERNS[0], (m, prefix, body) => `${prefix}${_maskValue(body)}`);
   s = s.replace(SECRET_PATTERNS[1], (m, prefix, body) => `${prefix}${_maskValue(body)}`);
@@ -92,7 +100,9 @@ function redact(input) {
  */
 function summarize(input, max = MAX_TEXT) {
   const s = redact(input);
-  if (s.length <= max) return s;
+  if (s.length <= max) {
+    return s;
+  }
   return `${s.slice(0, max)}…(+${s.length - max} chars)`;
 }
 
@@ -110,7 +120,9 @@ function phaseForType(type, data) {
       return 'error';
     case 'session_state': {
       const to = String((data && data.to) || '').toLowerCase();
-      if (/(end|done|idle|stop|complete|finish)/.test(to)) return 'end';
+      if (/(end|done|idle|stop|complete|finish)/.test(to)) {
+        return 'end';
+      }
       return 'start';
     }
     default:
@@ -156,13 +168,17 @@ class _StepCounter {
     if (this._m.size > this._max) {
       // 删最旧（Map 保持插入序）
       const oldest = this._m.keys().next().value;
-      if (oldest !== undefined) this._m.delete(oldest);
+      if (oldest !== undefined) {
+        this._m.delete(oldest);
+      }
     }
     return cur;
   }
 
   release(traceId) {
-    if (traceId) this._m.delete(traceId);
+    if (traceId) {
+      this._m.delete(traceId);
+    }
   }
 }
 
@@ -185,26 +201,40 @@ function toDevLogRecord(event, ctx = {}) {
     step: ctx.step || 1,
     phase: phaseForType(type, data),
   };
-  if (event && event.spanId) rec.span_id = event.spanId;
+  if (event && event.spanId) {
+    rec.span_id = event.spanId;
+  }
 
   const action = actionForEvent(type, data);
-  if (action) rec.action = summarize(action, MAX_ACTION);
+  if (action) {
+    rec.action = summarize(action, MAX_ACTION);
+  }
 
   // thought / detail（摘要 + 脱敏）
-  if (data.thought != null) rec.thought = summarize(data.thought);
+  if (data.thought != null) {
+    rec.thought = summarize(data.thought);
+  }
   const detailRaw = _deriveDetail(type, data);
-  if (detailRaw != null && detailRaw !== '') rec.detail = summarize(detailRaw);
+  if (detailRaw != null && detailRaw !== '') {
+    rec.detail = summarize(detailRaw);
+  }
 
   // tokens（§1.2）
   const tokens = _deriveTokens(type, data);
-  if (tokens) rec.tokens = tokens;
+  if (tokens) {
+    rec.tokens = tokens;
+  }
 
   // duration_ms
-  if (typeof data.durationMs === 'number') rec.duration_ms = Math.round(data.durationMs);
+  if (typeof data.durationMs === 'number') {
+    rec.duration_ms = Math.round(data.durationMs);
+  }
 
   // status
   const status = _deriveStatus(type, data, event);
-  if (status) rec.status = status;
+  if (status) {
+    rec.status = status;
+  }
 
   return rec;
 }
@@ -225,7 +255,11 @@ function _deriveDetail(type, data) {
       return data.reason != null ? String(data.reason) : null;
     case 'error':
       // 仅取首行摘要；完整堆栈不进常规日志流（§1.4）。
-      return data.message != null ? String(data.message) : (data.stack ? String(data.stack).split('\n')[0] : null);
+      return data.message != null
+        ? String(data.message)
+        : data.stack
+          ? String(data.stack).split('\n')[0]
+          : null;
     default:
       return null;
   }
@@ -236,20 +270,35 @@ function _deriveTokens(type, data) {
     const inn = Number(data.inputTokens || 0) || 0;
     const out = Number(data.outputTokens || 0) || 0;
     const total = Number(data.totalTokens || inn + out) || 0;
-    if (inn || out || total) return { in: inn, out, total };
+    if (inn || out || total) {
+      return { in: inn, out, total };
+    }
   }
   if (type === 'model_request' && data.tokenEstimate) {
     const inn = Number(data.tokenEstimate) || 0;
-    if (inn) return { in: inn, out: 0, total: inn };
+    if (inn) {
+      return { in: inn, out: 0, total: inn };
+    }
   }
   return null;
 }
 
 function _deriveStatus(type, data, event) {
-  if (type === 'error') return 'error';
-  if (type === 'tool_result') return data.success ? 'ok' : 'error';
-  if (event && event.attention) return 'fallback';
-  if (type === 'session_state' || type === 'tool_call' || type === 'model_request' || type === 'model_response') {
+  if (type === 'error') {
+    return 'error';
+  }
+  if (type === 'tool_result') {
+    return data.success ? 'ok' : 'error';
+  }
+  if (event && event.attention) {
+    return 'fallback';
+  }
+  if (
+    type === 'session_state' ||
+    type === 'tool_call' ||
+    type === 'model_request' ||
+    type === 'model_response'
+  ) {
     return 'ok';
   }
   return null;
@@ -267,12 +316,20 @@ function _parseFd(v) {
  * @returns {{kind:'fd'|'file'|'stderr', fd?:number, file?:string}|null}
  */
 function resolveTarget(env = process.env) {
-  if (String(env.KHY_AGENT_LOG) === '0') return null; // 极致静默，最高优先级
+  if (String(env.KHY_AGENT_LOG) === '0') {
+    return null;
+  } // 极致静默，最高优先级
   const fd = _parseFd(env.KHYOS_REPORT_FD);
-  if (fd != null) return { kind: 'fd', fd };          // eco 模式：默认开启
-  if (env.KHY_AGENT_LOG_FILE) return { kind: 'file', file: String(env.KHY_AGENT_LOG_FILE) };
+  if (fd != null) {
+    return { kind: 'fd', fd };
+  } // eco 模式：默认开启
+  if (env.KHY_AGENT_LOG_FILE) {
+    return { kind: 'file', file: String(env.KHY_AGENT_LOG_FILE) };
+  }
   const flag = String(env.KHY_AGENT_LOG || '').toLowerCase();
-  if (flag === '1' || flag === 'true' || flag === 'stderr') return { kind: 'stderr' };
+  if (flag === '1' || flag === 'true' || flag === 'stderr') {
+    return { kind: 'stderr' };
+  }
   return null; // standalone 未显式开启 → 静默，保持交互式 CLI 既有行为
 }
 
@@ -298,12 +355,16 @@ class AgentDevLogSink {
   /** 处理一个 diagnostics 事件，写出一行 NDJSON。绝不抛。 */
   handle(event) {
     try {
-      if (!event || !this.target) return;
+      if (!event || !this.target) {
+        return;
+      }
       const step = this._steps.next(event.traceId);
       const rec = toDevLogRecord(event, { app: this.app, agent: this.agent, step });
       this._write(rec, event);
       // 运行收尾时回收该 trace 的计数器，防止长生命周期进程无界增长。
-      if (rec.phase === 'end') this._steps.release(event.traceId);
+      if (rec.phase === 'end') {
+        this._steps.release(event.traceId);
+      }
     } catch {
       /* 序列化/写入失败一律静默（§3.2 防呆，绝不崩 Agent） */
     }
@@ -315,26 +376,46 @@ class AgentDevLogSink {
       // 嵌入（eco）模式上报通道（§3.2）：NDJSON 状态事件，由底座排空。
       // TODO: [Agent-Display-Unresolved] 宿主提供正式 khyos.api.report_status 绑定后，
       // 应在此优先调用该 API；当前宿主未暴露该通道，按规范降级写 fd，不盲调不存在的 API。
-      const payload = _safeStringify({ type: 'agent.log', trace_id: rec.trace_id, payload: rec }) + '\n';
-      try { fs.writeSync(t.fd, payload); return; } catch { this._writeStderr(rec); return; }
+      const payload =
+        _safeStringify({ type: 'agent.log', trace_id: rec.trace_id, payload: rec }) + '\n';
+      try {
+        fs.writeSync(t.fd, payload);
+        return;
+      } catch {
+        this._writeStderr(rec);
+        return;
+      }
     }
     if (t.kind === 'file') {
       try {
-        if (this._fileFd == null) this._fileFd = fs.openSync(t.file, 'a');
+        if (this._fileFd == null) {
+          this._fileFd = fs.openSync(t.file, 'a');
+        }
         fs.writeSync(this._fileFd, _safeStringify(rec) + '\n');
         return;
-      } catch { this._writeStderr(rec); return; }
+      } catch {
+        this._writeStderr(rec);
+        return;
+      }
     }
     this._writeStderr(rec);
   }
 
   _writeStderr(rec) {
-    try { process.stderr.write(_safeStringify(rec) + '\n'); } catch { /* 终极兜底：彻底静默 */ }
+    try {
+      process.stderr.write(_safeStringify(rec) + '\n');
+    } catch {
+      /* 终极兜底：彻底静默 */
+    }
   }
 
   dispose() {
     if (this._fileFd != null) {
-      try { fs.closeSync(this._fileFd); } catch { /* ignore */ }
+      try {
+        fs.closeSync(this._fileFd);
+      } catch {
+        /* ignore */
+      }
       this._fileFd = null;
     }
   }
@@ -352,8 +433,12 @@ let _attached = null;
  */
 function enableKhyosAgentDevLog(opts = {}) {
   const target = resolveTarget();
-  if (!target) return _attached; // 静默：不挂 sink（且不改既有行为）
-  if (_attached) return _attached; // 已挂载，幂等
+  if (!target) {
+    return _attached;
+  } // 静默：不挂 sink（且不改既有行为）
+  if (_attached) {
+    return _attached;
+  } // 已挂载，幂等
   let diagnostics;
   try {
     ({ diagnostics } = require('./diagnosticEvents'));
@@ -374,8 +459,18 @@ function enableKhyosAgentDevLog(opts = {}) {
   _attached = {
     sink,
     dispose() {
-      try { if (unsub) unsub(); } catch { /* ignore */ }
-      try { sink.dispose(); } catch { /* ignore */ }
+      try {
+        if (unsub) {
+          unsub();
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        sink.dispose();
+      } catch {
+        /* ignore */
+      }
       _attached = null;
     },
   };
@@ -385,7 +480,11 @@ function enableKhyosAgentDevLog(opts = {}) {
 /** 测试缝：复位单例挂载状态。 */
 function _resetForTest() {
   if (_attached) {
-    try { _attached.dispose(); } catch { /* ignore */ }
+    try {
+      _attached.dispose();
+    } catch {
+      /* ignore */
+    }
   }
   _attached = null;
 }

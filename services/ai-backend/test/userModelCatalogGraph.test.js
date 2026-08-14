@@ -45,8 +45,18 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'cat-a', email: 'cat-a@test.local', password: 'pw-a-123456', status: 'active' });
-  userB = await User.create({ username: 'cat-b', email: 'cat-b@test.local', password: 'pw-b-123456', status: 'active' });
+  userA = await User.create({
+    username: 'cat-a',
+    email: 'cat-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'cat-b',
+    email: 'cat-b@test.local',
+    password: 'pw-b-123456',
+    status: 'active',
+  });
 
   // A: relay upstream with an image-capable model id + two provider keys.
   await svc.saveRelayConfig(userA.id, {
@@ -55,7 +65,12 @@ beforeAll(async () => {
     compatibility: 'openai',
     apiKey: 'sk-a-secret-xyz',
   });
-  await svc.addProviderEntry(userA.id, { provider: 'deepseek', displayName: 'DeepSeek', key: 'sk-ds-1', baseUrl: 'https://api.deepseek.com' });
+  await svc.addProviderEntry(userA.id, {
+    provider: 'deepseek',
+    displayName: 'DeepSeek',
+    key: 'sk-ds-1',
+    baseUrl: 'https://api.deepseek.com',
+  });
   await svc.addProviderEntry(userA.id, { provider: 'moonshot', key: 'sk-ms-1' });
 
   // B: nothing configured.
@@ -63,13 +78,17 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('userModelCatalogGraph.buildCatalogGraph', () => {
   test('relay model surfaces as one edge with classified capability', async () => {
     const { edges, sources } = await graph.buildCatalogGraph(userA.id);
-    const relay = edges.find(e => e.source === 'relay');
+    const relay = edges.find((e) => e.source === 'relay');
     expect(relay).toBeDefined();
     expect(relay.model).toBe('some-image-gen-model');
     expect(relay.capability).toBe('image'); // shared classifier saw "image-gen"
@@ -82,10 +101,10 @@ describe('userModelCatalogGraph.buildCatalogGraph', () => {
 
   test('each provider key surfaces as a provider-level edge; model not invented', async () => {
     const { edges, sources } = await graph.buildCatalogGraph(userA.id);
-    const providerEdges = edges.filter(e => e.source === 'provider');
-    expect(providerEdges.map(e => e.provider).sort()).toEqual(['deepseek', 'moonshot']);
+    const providerEdges = edges.filter((e) => e.source === 'provider');
+    expect(providerEdges.map((e) => e.provider).sort()).toEqual(['deepseek', 'moonshot']);
     for (const e of providerEdges) {
-      expect(e.model).toBe('');          // never fabricated
+      expect(e.model).toBe(''); // never fabricated
       expect(e.keyCount).toBe(1);
       expect(e.keyIds).toHaveLength(1);
       expect(e.status).toBe('active');
@@ -96,9 +115,9 @@ describe('userModelCatalogGraph.buildCatalogGraph', () => {
 
   test('displayName drives the provider label when present', async () => {
     const { edges } = await graph.buildCatalogGraph(userA.id);
-    const ds = edges.find(e => e.provider === 'deepseek');
+    const ds = edges.find((e) => e.provider === 'deepseek');
     expect(ds.providerLabel).toBe('DeepSeek');
-    const ms = edges.find(e => e.provider === 'moonshot');
+    const ms = edges.find((e) => e.provider === 'moonshot');
     expect(ms.providerLabel).toBe('moonshot'); // falls back to provider id
   });
 
@@ -119,26 +138,35 @@ describe('userModelCatalogGraph.buildCatalogGraph', () => {
 describe('userModelCatalogGraph — detected/local/system merge', () => {
   afterEach(() => {
     fetchLocalModels.mockResolvedValue({ running: false, models: [], error: null });
-    globalCatalogGraph.buildCatalogGraph.mockResolvedValue({ edges: [], generatedAt: 0, sources: {} });
+    globalCatalogGraph.buildCatalogGraph.mockResolvedValue({
+      edges: [],
+      generatedAt: 0,
+      sources: {},
+    });
   });
 
   test('persisted own models fill provider edges (one edge per detected model)', async () => {
     // Persist two detected models for deepseek; the placeholder collapses into
     // real per-model edges. Manual additions co-exist.
-    await svc.upsertModels(userA.id, 'deepseek', [
-      { model: 'deepseek-chat', capability: 'text' },
-      { model: 'deepseek-reasoner', capability: 'text' },
-    ], { source: 'detected' });
+    await svc.upsertModels(
+      userA.id,
+      'deepseek',
+      [
+        { model: 'deepseek-chat', capability: 'text' },
+        { model: 'deepseek-reasoner', capability: 'text' },
+      ],
+      { source: 'detected' }
+    );
 
     const { edges, sources } = await graph.buildCatalogGraph(userA.id);
-    const ds = edges.filter(e => e.provider === 'deepseek');
-    expect(ds.map(e => e.model).sort()).toEqual(['deepseek-chat', 'deepseek-reasoner']);
+    const ds = edges.filter((e) => e.provider === 'deepseek');
+    expect(ds.map((e) => e.model).sort()).toEqual(['deepseek-chat', 'deepseek-reasoner']);
     for (const e of ds) {
       expect(e.source).toBe('provider');
       expect(e.keyCount).toBe(1); // key ids aggregated onto each model edge
     }
     // moonshot still has no detected models → keeps its placeholder edge.
-    const ms = edges.filter(e => e.provider === 'moonshot');
+    const ms = edges.filter((e) => e.provider === 'moonshot');
     expect(ms).toHaveLength(1);
     expect(ms[0].model).toBe('');
     expect(sources.ownModels).toBeGreaterThanOrEqual(2);
@@ -147,27 +175,58 @@ describe('userModelCatalogGraph — detected/local/system merge', () => {
   test('local Ollama models merge as source:local edges (never persisted)', async () => {
     fetchLocalModels.mockResolvedValue({
       running: true,
-      models: [{ id: 'qwen2.5:7b', source: 'local' }, { id: 'llama3.1:8b', source: 'local' }],
+      models: [
+        { id: 'qwen2.5:7b', source: 'local' },
+        { id: 'llama3.1:8b', source: 'local' },
+      ],
       error: null,
     });
     const { edges, sources } = await graph.buildCatalogGraph(userB.id); // B owns nothing
-    const local = edges.filter(e => e.source === 'local');
-    expect(local.map(e => e.model).sort()).toEqual(['llama3.1:8b', 'qwen2.5:7b']);
-    expect(local.every(e => e.provider === 'local' && e.connectionMode === 'direct' && e.keyCount === 0)).toBe(true);
+    const local = edges.filter((e) => e.source === 'local');
+    expect(local.map((e) => e.model).sort()).toEqual(['llama3.1:8b', 'qwen2.5:7b']);
+    expect(
+      local.every(
+        (e) => e.provider === 'local' && e.connectionMode === 'direct' && e.keyCount === 0
+      )
+    ).toBe(true);
     expect(sources.local).toEqual({ running: true, count: 2 });
   });
 
   test('system/global models merge as metadata-only edges with no keys', async () => {
     globalCatalogGraph.buildCatalogGraph.mockResolvedValue({
       edges: [
-        { provider: 'openai', providerLabel: 'OpenAI', model: 'gpt-4o', keyIds: ['secret-key-id'], keyCount: 1, capability: 'text', tier: 'T0', status: 'active', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
-        { provider: 'openai', providerLabel: 'OpenAI', model: 'gpt-cold', keyIds: [], keyCount: 0, capability: 'text', tier: 'T1', status: 'disabled', connectionMode: 'direct', isDefault: false, source: 'chat' },
+        {
+          provider: 'openai',
+          providerLabel: 'OpenAI',
+          model: 'gpt-4o',
+          keyIds: ['secret-key-id'],
+          keyCount: 1,
+          capability: 'text',
+          tier: 'T0',
+          status: 'active',
+          connectionMode: 'account-pool',
+          isDefault: true,
+          source: 'chat',
+        },
+        {
+          provider: 'openai',
+          providerLabel: 'OpenAI',
+          model: 'gpt-cold',
+          keyIds: [],
+          keyCount: 0,
+          capability: 'text',
+          tier: 'T1',
+          status: 'disabled',
+          connectionMode: 'direct',
+          isDefault: false,
+          source: 'chat',
+        },
       ],
       generatedAt: 0,
       sources: {},
     });
     const { edges, sources } = await graph.buildCatalogGraph(userB.id);
-    const sys = edges.filter(e => e.source === 'system');
+    const sys = edges.filter((e) => e.source === 'system');
     expect(sys).toHaveLength(2);
     // Tenant isolation: NO global key ids leak into the user plane.
     for (const e of sys) {
@@ -175,8 +234,8 @@ describe('userModelCatalogGraph — detected/local/system merge', () => {
       expect(e.keyCount).toBe(0);
       expect(e.connectionMode).toBe('system');
     }
-    expect(sys.find(e => e.model === 'gpt-4o').status).toBe('system-ready');
-    expect(sys.find(e => e.model === 'gpt-cold').status).toBe('needs-key');
+    expect(sys.find((e) => e.model === 'gpt-4o').status).toBe('system-ready');
+    expect(sys.find((e) => e.model === 'gpt-cold').status).toBe('needs-key');
     expect(sources.system).toEqual({ count: 2 });
   });
 
@@ -188,20 +247,56 @@ describe('userModelCatalogGraph — detected/local/system merge', () => {
     // missing. Tenant isolation still holds: keyCount/keyIds stay zeroed.
     globalCatalogGraph.buildCatalogGraph.mockResolvedValue({
       edges: [
-        { provider: 'sensenova', providerLabel: 'SenseNova', model: 'sensenova-6.7-flash-lite', keyIds: ['k1', 'k2'], keyCount: 2, capability: 'text', tier: '', status: 'disabled', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
-        { provider: 'sensenova', providerLabel: 'SenseNova', model: 'sensenova-6.7-flash-image', keyIds: ['k1'], keyCount: 1, capability: 'image', tier: '', status: 'cooldown', connectionMode: 'account-pool', isDefault: false, source: 'chat' },
-        { provider: 'ghost', providerLabel: 'Ghost', model: 'ghost-1', keyIds: [], keyCount: 0, capability: 'text', tier: '', status: 'disabled', connectionMode: 'direct', isDefault: false, source: 'chat' },
+        {
+          provider: 'sensenova',
+          providerLabel: 'SenseNova',
+          model: 'sensenova-6.7-flash-lite',
+          keyIds: ['k1', 'k2'],
+          keyCount: 2,
+          capability: 'text',
+          tier: '',
+          status: 'disabled',
+          connectionMode: 'account-pool',
+          isDefault: true,
+          source: 'chat',
+        },
+        {
+          provider: 'sensenova',
+          providerLabel: 'SenseNova',
+          model: 'sensenova-6.7-flash-image',
+          keyIds: ['k1'],
+          keyCount: 1,
+          capability: 'image',
+          tier: '',
+          status: 'cooldown',
+          connectionMode: 'account-pool',
+          isDefault: false,
+          source: 'chat',
+        },
+        {
+          provider: 'ghost',
+          providerLabel: 'Ghost',
+          model: 'ghost-1',
+          keyIds: [],
+          keyCount: 0,
+          capability: 'text',
+          tier: '',
+          status: 'disabled',
+          connectionMode: 'direct',
+          isDefault: false,
+          source: 'chat',
+        },
       ],
       generatedAt: 0,
       sources: {},
     });
     const { edges } = await graph.buildCatalogGraph(userB.id);
-    const byModel = (m) => edges.find(e => e.source === 'system' && e.model === m);
-    expect(byModel('sensenova-6.7-flash-lite').status).toBe('system-error');   // key exists, disabled
+    const byModel = (m) => edges.find((e) => e.source === 'system' && e.model === m);
+    expect(byModel('sensenova-6.7-flash-lite').status).toBe('system-error'); // key exists, disabled
     expect(byModel('sensenova-6.7-flash-image').status).toBe('system-cooldown'); // key exists, cooling
-    expect(byModel('ghost-1').status).toBe('needs-key');                        // genuinely no key
+    expect(byModel('ghost-1').status).toBe('needs-key'); // genuinely no key
     // Isolation invariant: no key material leaks regardless of status.
-    for (const e of edges.filter(e => e.source === 'system')) {
+    for (const e of edges.filter((e) => e.source === 'system')) {
       expect(e.keyIds).toEqual([]);
       expect(e.keyCount).toBe(0);
     }

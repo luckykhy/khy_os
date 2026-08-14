@@ -136,3 +136,71 @@ test('buildContextWarning:压缩释放后计数刷新到低位 → 一次性门�
   assert.strictEqual(d.show, false, '70000 在警告带外,本就不显示(非抑制路径)');
   assert.strictEqual(d.suppressed, undefined, '未走抑制分支');
 });
+
+// ── 绝对阈值(真实触发点)优先于比例式 ─────────────────────────────────────
+//
+// 历史 bug:这里把 compactPipeline 的 0.8 当作「占 contextWindow 的比例」用,而真实
+// 触发是 contextRouter 的 0.9-of-budget / 1.2-safety-margin 复合条件。budget 已扣过
+// reserve 与 ~12% safety,两者叠加 → 512k 窗口下底栏承诺 80% 才压缩、实际约 63% 就压缩,
+// 用户在「还剩 21%」时就被压缩打断。比例式表达结构上无法诚实(窗口→预算的折算随
+// taskScale/preset/env 浮动),故改由调用方注入 contextRouter.autoCompactTriggerTokens
+// 推导出的**绝对** token 阈值。
+const REAL_TRIGGER = 323328; // autoCompactTriggerTokens(431104),即 512k 窗口的真实触发点
+
+test('绝对阈值优先:注入 autoCompactThresholdTokens → 覆盖 ratio×window', () => {
+  const d = leaf.calculateTokenWarningState({
+    tokenUsage: REAL_TRIGGER,
+    contextWindow: 512000,
+    autoCompactThresholdTokens: REAL_TRIGGER,
+  });
+  assert.strictEqual(d.autoCompactThreshold, REAL_TRIGGER);
+  assert.strictEqual(d.threshold, REAL_TRIGGER);
+  assert.strictEqual(d.percentLeft, 0, '已用==触发点 → 倒计时必须归零');
+  assert.strictEqual(d.isAboveAutoCompactThreshold, true);
+});
+
+test('诚实性回归:同一占用下,比例路径谎报剩余而绝对路径归零', () => {
+  const common = { tokenUsage: REAL_TRIGGER, contextWindow: 512000 };
+  const lying = leaf.calculateTokenWarningState({ ...common });                       // 0.8×512000=409600
+  const honest = leaf.calculateTokenWarningState({ ...common, autoCompactThresholdTokens: REAL_TRIGGER });
+  assert.strictEqual(honest.percentLeft, 0);
+  assert.ok(lying.percentLeft > 15, `比例路径此刻仍谎报剩余 ${lying.percentLeft}%(历史行为)`);
+  assert.ok(lying.autoCompactThreshold > honest.autoCompactThreshold);
+});
+
+test('缺参/0/负/非有限 → 回退比例路径(未注入的调用方逐字节等价历史)', () => {
+  const base = { tokenUsage: 150000, contextWindow: WINDOW, autoCompactRatio: RATIO };
+  const expected = leaf.calculateTokenWarningState(base).autoCompactThreshold;
+  assert.strictEqual(expected, 160000); // 200k × 0.8
+  for (const bad of [undefined, 0, -1, NaN, Infinity, null, 'abc']) {
+    const d = leaf.calculateTokenWarningState({ ...base, autoCompactThresholdTokens: bad });
+    assert.strictEqual(d.autoCompactThreshold, expected, `应回退比例路径: ${String(bad)}`);
+  }
+});
+
+test('子门 KHY_CONTEXT_WARNING_REAL_THRESHOLD 关 → 强制比例路径(逐字节回退)', () => {
+  const args = {
+    tokenUsage: 150000, contextWindow: WINDOW, autoCompactRatio: RATIO,
+    autoCompactThresholdTokens: REAL_TRIGGER,
+  };
+  for (const off of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
+    const d = leaf.calculateTokenWarningState({ ...args, env: { KHY_CONTEXT_WARNING_REAL_THRESHOLD: off } });
+    assert.strictEqual(d.autoCompactThreshold, 160000, `门应关: ${off}`);
+  }
+  // 未设/任意非 falsy 串 → 开
+  const on = leaf.calculateTokenWarningState({ ...args, env: {} });
+  assert.strictEqual(on.autoCompactThreshold, REAL_TRIGGER);
+});
+
+test('buildContextWarning 端到端:绝对阈值下越警告带即提示', () => {
+  // 警告带 = 触发点 - 20000。带外 → 不提示;带内 → 提示。
+  const outside = leaf.buildContextWarning({
+    tokenUsage: REAL_TRIGGER - 20001, contextWindow: 512000, autoCompactThresholdTokens: REAL_TRIGGER,
+  });
+  const inside = leaf.buildContextWarning({
+    tokenUsage: REAL_TRIGGER - 1000, contextWindow: 512000, autoCompactThresholdTokens: REAL_TRIGGER,
+  });
+  assert.strictEqual(outside.show, false);
+  assert.strictEqual(inside.show, true);
+  assert.match(inside.text, /until auto-compact|Context low/);
+});

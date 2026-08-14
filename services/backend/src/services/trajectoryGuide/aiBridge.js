@@ -29,8 +29,14 @@ const config = require('./config');
 /** Truncate a value to a short, log-safe preview string. */
 function _preview(v, max = 200) {
   let s;
-  try { s = typeof v === 'string' ? v : JSON.stringify(v); } catch { s = String(v); }
-  if (s == null) return '';
+  try {
+    s = typeof v === 'string' ? v : JSON.stringify(v);
+  } catch {
+    s = String(v);
+  }
+  if (s == null) {
+    return '';
+  }
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
 
@@ -40,7 +46,9 @@ function _artifactBrief(step) {
   return arts
     .filter((a) => a && a.path)
     .map((a) => {
-      if (a.op === 'delete') return `- DELETE ${a.path}`;
+      if (a.op === 'delete') {
+        return `- DELETE ${a.path}`;
+      }
       return `- ${a.path}  (sha256=${a.sha256 || '?'}, op=${a.op || 'create'})`;
     })
     .join('\n');
@@ -87,13 +95,16 @@ function createRepairHook(opts = {}) {
   const max = config.repairMax();
   const preferredModel = opts.preferredModel || config.repairModel() || '';
   const timeoutSec = Math.max(1, Math.round((opts.timeoutMs || config.repairTimeoutMs()) / 1000));
-  const onControlRequest = typeof opts.onControlRequest === 'function' ? opts.onControlRequest : null;
+  const onControlRequest =
+    typeof opts.onControlRequest === 'function' ? opts.onControlRequest : null;
 
   // Lazily resolve the real AgentTool so importing this module never drags the
   // tool graph into the engine's process unless a repair actually runs.
   let agentTool = opts.agentTool || null;
   const getAgentTool = () => {
-    if (agentTool) return agentTool;
+    if (agentTool) {
+      return agentTool;
+    }
     const AgentTool = require('../../tools/AgentTool');
     const Ctor = AgentTool && AgentTool.AgentTool ? AgentTool.AgentTool : AgentTool;
     agentTool = new Ctor();
@@ -127,14 +138,20 @@ function createRepairHook(opts = {}) {
         { traceContext: { onControlRequest } }
       );
     } catch (e) {
-      return { attempted: true, ok: false, reason: `repair agent error: ${e && e.message ? e.message : String(e)}` };
+      return {
+        attempted: true,
+        ok: false,
+        reason: `repair agent error: ${e && e.message ? e.message : String(e)}`,
+      };
     }
 
     const ok = !!(result && result.success);
     return {
       attempted: true,
       ok, // advisory only — the engine re-verifies the recorded sha256 itself
-      reason: ok ? 'AI 子代理已执行复现操作（待引擎哈希校验）' : `AI 子代理未成功：${_preview(result && (result.error || result.message), 200)}`,
+      reason: ok
+        ? 'AI 子代理已执行复现操作（待引擎哈希校验）'
+        : `AI 子代理未成功：${_preview(result && (result.error || result.message), 200)}`,
       agent: result || null,
     };
   };

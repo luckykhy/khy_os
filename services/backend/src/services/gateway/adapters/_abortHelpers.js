@@ -16,10 +16,20 @@
  * @returns {string}
  */
 function normalizeAbortReason(reason) {
-  if (!reason) return 'aborted';
-  if (typeof reason === 'string') return reason;
-  if (reason && typeof reason.message === 'string') return reason.message;
-  try { return JSON.stringify(reason); } catch { return String(reason); }
+  if (!reason) {
+    return 'aborted';
+  }
+  if (typeof reason === 'string') {
+    return reason;
+  }
+  if (reason && typeof reason.message === 'string') {
+    return reason.message;
+  }
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return String(reason);
+  }
 }
 
 /**
@@ -41,10 +51,16 @@ function createAbortError(reason, prefix = 'request aborted') {
  * @returns {boolean}
  */
 function isAbortLikeError(err) {
-  if (!err) return false;
-  if (err.name === 'AbortError' || err.code === 'ABORT_ERR') return true;
+  if (!err) {
+    return false;
+  }
+  if (err.name === 'AbortError' || err.code === 'ABORT_ERR') {
+    return true;
+  }
   const msg = String(err && err.message ? err.message : err || '').toLowerCase();
-  return /\baborted\b|\brequest aborted\b|\babort(ed)? by\b|signal aborted|user[-\s]?cancel|abort_err/.test(msg);
+  return /\baborted\b|\brequest aborted\b|\babort(ed)? by\b|signal aborted|user[-\s]?cancel|abort_err/.test(
+    msg
+  );
 }
 
 module.exports = {

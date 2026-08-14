@@ -26,7 +26,17 @@
 
 const _LIST_WORDS = new Set(['list', 'ls', '列出', '列表']);
 const _CHECK_WORDS = new Set(['check', 'poll', 'refresh', '检查', '轮询', '刷新']);
-const _UNSUB_WORDS = new Set(['unsubscribe', 'remove', 'rm', 'off', 'del', 'delete', '取消', '退订', '删除']);
+const _UNSUB_WORDS = new Set([
+  'unsubscribe',
+  'remove',
+  'rm',
+  'off',
+  'del',
+  'delete',
+  '取消',
+  '退订',
+  '删除',
+]);
 const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
 
 /** CI 终态分类(仅这些才触发通知)。 */
@@ -39,15 +49,27 @@ const _TERMINAL = new Set(['pass', 'fail']);
  * @returns {{action:'subscribe'|'list'|'check'|'unsubscribe'|'help', ref:(string|null), valid:boolean, parseError:(string|null)}}
  */
 function parseSubscribeArgs(args) {
-  const list = Array.isArray(args) ? args.map((a) => String(a == null ? '' : a).trim()).filter(Boolean) : [];
-  if (list.length === 0) return { action: 'list', ref: null, valid: true, parseError: null };
+  const list = Array.isArray(args)
+    ? args.map((a) => String(a == null ? '' : a).trim()).filter(Boolean)
+    : [];
+  if (list.length === 0) {
+    return { action: 'list', ref: null, valid: true, parseError: null };
+  }
   const first = list[0].toLowerCase();
-  if (_HELP_WORDS.has(first)) return { action: 'help', ref: null, valid: true, parseError: null };
-  if (_LIST_WORDS.has(first)) return { action: 'list', ref: null, valid: true, parseError: null };
-  if (_CHECK_WORDS.has(first)) return { action: 'check', ref: list[1] || null, valid: true, parseError: null };
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', ref: null, valid: true, parseError: null };
+  }
+  if (_LIST_WORDS.has(first)) {
+    return { action: 'list', ref: null, valid: true, parseError: null };
+  }
+  if (_CHECK_WORDS.has(first)) {
+    return { action: 'check', ref: list[1] || null, valid: true, parseError: null };
+  }
   if (_UNSUB_WORDS.has(first)) {
     const ref = list[1] || null;
-    if (!ref) return { action: 'unsubscribe', ref: null, valid: false, parseError: 'missing_ref' };
+    if (!ref) {
+      return { action: 'unsubscribe', ref: null, valid: false, parseError: 'missing_ref' };
+    }
     return { action: 'unsubscribe', ref, valid: true, parseError: null };
   }
   // 否则首 token 即 PR 引用 → 订阅。
@@ -61,11 +83,20 @@ function parseSubscribeArgs(args) {
  */
 function parsePrRef(ref) {
   const raw = String(ref == null ? '' : ref).trim();
-  if (raw === '') return { raw: '', owner: null, repo: null, number: null, branch: null, key: '' };
+  if (raw === '') {
+    return { raw: '', owner: null, repo: null, number: null, branch: null, key: '' };
+  }
   // owner/repo#N
   let m = raw.match(/^([^/\s]+)\/([^#\s]+)#(\d+)$/);
   if (m) {
-    return { raw, owner: m[1], repo: m[2], number: Number(m[3]), branch: null, key: `${m[1]}/${m[2]}#${m[3]}` };
+    return {
+      raw,
+      owner: m[1],
+      repo: m[2],
+      number: Number(m[3]),
+      branch: null,
+      key: `${m[1]}/${m[2]}#${m[3]}`,
+    };
   }
   // #N 或 N
   m = raw.match(/^#?(\d+)$/);
@@ -130,7 +161,9 @@ function buildSubscribeText(subscription) {
 }
 
 function buildListText(subscriptions) {
-  const list = Array.isArray(subscriptions) ? subscriptions.filter((x) => x && typeof x === 'object') : [];
+  const list = Array.isArray(subscriptions)
+    ? subscriptions.filter((x) => x && typeof x === 'object')
+    : [];
   const lines = ['🔔 subscribe-pr · 当前订阅'];
   if (list.length === 0) {
     lines.push('  暂无订阅(用 `/subscribe-pr <owner/repo#N | #N | 分支>` 订阅)。');
@@ -145,7 +178,9 @@ function buildListText(subscriptions) {
 }
 
 function buildUnsubscribeText(ref, removed) {
-  if (removed) return `🔔 subscribe-pr · 已退订 ${ref}。`;
+  if (removed) {
+    return `🔔 subscribe-pr · 已退订 ${ref}。`;
+  }
   return `🔔 subscribe-pr · 未找到订阅 ${ref}(用 \`/subscribe-pr list\` 查看现有订阅)。`;
 }
 
@@ -166,13 +201,19 @@ function buildCheckText(outcomes, opts) {
     const it = item && typeof item === 'object' ? item : {};
     const cls = (it.decision && it.decision.classification) || 'unknown';
     let suffix = '';
-    if (it.notified) suffix = ' → 已推送通知';
-    else if (it.decision && it.decision.shouldNotify && it.pushError) suffix = ` → 应通知但推送失败(${it.pushError})`;
-    else if (it.decision && it.decision.terminal && !it.decision.changed) suffix = ' → 终态但无变化,不重复通知';
+    if (it.notified) {
+      suffix = ' → 已推送通知';
+    } else if (it.decision && it.decision.shouldNotify && it.pushError) {
+      suffix = ` → 应通知但推送失败(${it.pushError})`;
+    } else if (it.decision && it.decision.terminal && !it.decision.changed) {
+      suffix = ' → 终态但无变化,不重复通知';
+    }
     lines.push(`  · ${it.key}: ${cls}${suffix}`);
   }
   if (o.pushConfigured === false) {
-    lines.push('  提示: 尚未配置推送,达到终态也无法通知。先 `khy notify set <provider> <target>`。');
+    lines.push(
+      '  提示: 尚未配置推送,达到终态也无法通知。先 `khy notify set <provider> <target>`。'
+    );
   }
   return lines.join('\n');
 }
@@ -204,7 +245,9 @@ function buildUnknownText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_SUBSCRIBE_PR === undefined ? 'true' : e.KHY_SUBSCRIBE_PR;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

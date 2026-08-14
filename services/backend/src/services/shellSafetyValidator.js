@@ -23,9 +23,20 @@ const SOURCE_BUILTINS = new Set(['.', 'source']);
 const SHELL_KEYWORDS = new Set(['if', 'then', 'do', 'elif', 'else', 'while', 'until', 'time']);
 
 const DISPATCH_WRAPPERS = new Set([
-  'arch', 'caffeinate', 'chrt', 'ionice', 'nice', 'nohup',
-  'sandbox-exec', 'script', 'setsid', 'stdbuf', 'taskset',
-  'time', 'timeout', 'xcrun',
+  'arch',
+  'caffeinate',
+  'chrt',
+  'ionice',
+  'nice',
+  'nohup',
+  'sandbox-exec',
+  'script',
+  'setsid',
+  'stdbuf',
+  'taskset',
+  'time',
+  'timeout',
+  'xcrun',
 ]);
 const MAX_UNWRAP_DEPTH = 32;
 
@@ -65,26 +76,45 @@ function splitShellArgs(cmd) {
   for (let i = 0; i < cmd.length; i++) {
     const ch = cmd[i];
     if (inSingle) {
-      if (ch === "'") inSingle = false;
-      else buf += ch;
+      if (ch === "'") {
+        inSingle = false;
+      } else {
+        buf += ch;
+      }
       continue;
     }
     if (inDouble) {
-      if (ch === '"') inDouble = false;
-      else buf += ch;
+      if (ch === '"') {
+        inDouble = false;
+      } else {
+        buf += ch;
+      }
       continue;
     }
-    if (ch === "'") { inSingle = true; continue; }
-    if (ch === '"') { inDouble = true; continue; }
+    if (ch === "'") {
+      inSingle = true;
+      continue;
+    }
+    if (ch === '"') {
+      inDouble = true;
+      continue;
+    }
     if (/\s/.test(ch)) {
-      if (buf.length > 0) { tokens.push(buf); buf = ''; }
+      if (buf.length > 0) {
+        tokens.push(buf);
+        buf = '';
+      }
       continue;
     }
     buf += ch;
   }
 
-  if (inSingle || inDouble) return null;
-  if (buf.length > 0) tokens.push(buf);
+  if (inSingle || inDouble) {
+    return null;
+  }
+  if (buf.length > 0) {
+    tokens.push(buf);
+  }
   return tokens;
 }
 
@@ -94,7 +124,9 @@ function splitShellArgs(cmd) {
  * Normalize executable name (strip path, lowercase, remove .exe).
  */
 function normalizeExe(token) {
-  if (!token) return '';
+  if (!token) {
+    return '';
+  }
   const base = token.split(/[/\\]/).pop() || '';
   const lower = base.toLowerCase();
   return lower.endsWith('.exe') ? lower.slice(0, -4) : lower;
@@ -105,7 +137,9 @@ function normalizeExe(token) {
  */
 function stripEnvAssignments(argv) {
   let i = 0;
-  while (i < argv.length && ENV_ASSIGNMENT_RE.test(argv[i])) i++;
+  while (i < argv.length && ENV_ASSIGNMENT_RE.test(argv[i])) {
+    i++;
+  }
   return i > 0 ? argv.slice(i) : argv;
 }
 
@@ -118,7 +152,9 @@ function stripEnvAssignments(argv) {
  * @returns {{ effective: string[], wrappers: string[], payloads: string[] }}
  */
 function unwrapCommand(argv, seen) {
-  if (!seen) seen = new Set();
+  if (!seen) {
+    seen = new Set();
+  }
   const key = argv.join('\0');
   if (seen.has(key) || seen.size >= MAX_UNWRAP_DEPTH) {
     return { effective: argv, wrappers: [], payloads: [argv.join(' ')] };
@@ -126,7 +162,9 @@ function unwrapCommand(argv, seen) {
   seen.add(key);
 
   const stripped = stripEnvAssignments(argv);
-  if (stripped.length === 0) return { effective: argv, wrappers: [], payloads: [] };
+  if (stripped.length === 0) {
+    return { effective: argv, wrappers: [], payloads: [] };
+  }
 
   const exe = normalizeExe(stripped[0]);
   const args = stripped.slice(1);
@@ -184,42 +222,124 @@ function unwrapCommand(argv, seen) {
 }
 
 function _resolveCarrier(exe, args) {
-  if (exe === 'env') return _resolveEnvCarrier(args);
-  if (exe === 'sudo' || exe === 'doas') return _resolveSudoCarrier(args);
+  if (exe === 'env') {
+    return _resolveEnvCarrier(args);
+  }
+  if (exe === 'sudo' || exe === 'doas') {
+    return _resolveSudoCarrier(args);
+  }
   // command, builtin, exec: next arg is the command
-  if (args.length > 0 && !args[0].startsWith('-')) return args;
+  if (args.length > 0 && !args[0].startsWith('-')) {
+    return args;
+  }
   return null;
 }
 
 function _resolveEnvCarrier(args) {
   let i = 0;
-  const optsWithValue = new Set(['-C', '-P', '-S', '-s', '-u', '--chdir', '--unset', '--split-string']);
+  const optsWithValue = new Set([
+    '-C',
+    '-P',
+    '-S',
+    '-s',
+    '-u',
+    '--chdir',
+    '--unset',
+    '--split-string',
+  ]);
   const standalone = new Set(['-0', '-i', '--ignore-environment', '--null']);
   while (i < args.length) {
     const arg = args[i];
-    if (arg === '--') { i++; break; }
-    if (ENV_ASSIGNMENT_RE.test(arg)) { i++; continue; }
-    if (standalone.has(arg)) { i++; continue; }
-    if (optsWithValue.has(arg)) { i += 2; continue; }
-    if (arg.startsWith('-')) { i++; continue; }
+    if (arg === '--') {
+      i++;
+      break;
+    }
+    if (ENV_ASSIGNMENT_RE.test(arg)) {
+      i++;
+      continue;
+    }
+    if (standalone.has(arg)) {
+      i++;
+      continue;
+    }
+    if (optsWithValue.has(arg)) {
+      i += 2;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      i++;
+      continue;
+    }
     break;
   }
   return i < args.length ? args.slice(i) : null;
 }
 
 function _resolveSudoCarrier(args) {
-  const optsWithValue = new Set(['-C', '-D', '-g', '-h', '-p', '-R', '-T', '-U', '-u',
-    '--chdir', '--chroot', '--close-from', '--group', '--host', '--user']);
-  const standalone = new Set(['-A', '-B', '-b', '-E', '-H', '-i', '-k', '-N', '-n', '-P', '-S', '-s']);
-  const nonExec = new Set(['-K', '-l', '-V', '-v', '-e', '--edit', '--help', '--list', '--version']);
+  const optsWithValue = new Set([
+    '-C',
+    '-D',
+    '-g',
+    '-h',
+    '-p',
+    '-R',
+    '-T',
+    '-U',
+    '-u',
+    '--chdir',
+    '--chroot',
+    '--close-from',
+    '--group',
+    '--host',
+    '--user',
+  ]);
+  const standalone = new Set([
+    '-A',
+    '-B',
+    '-b',
+    '-E',
+    '-H',
+    '-i',
+    '-k',
+    '-N',
+    '-n',
+    '-P',
+    '-S',
+    '-s',
+  ]);
+  const nonExec = new Set([
+    '-K',
+    '-l',
+    '-V',
+    '-v',
+    '-e',
+    '--edit',
+    '--help',
+    '--list',
+    '--version',
+  ]);
   let i = 0;
   while (i < args.length) {
     const arg = args[i];
-    if (arg === '--') { i++; break; }
-    if (nonExec.has(arg)) return null; // Not executing a command
-    if (optsWithValue.has(arg)) { i += 2; continue; }
-    if (standalone.has(arg)) { i++; continue; }
-    if (arg.startsWith('-')) { i++; continue; }
+    if (arg === '--') {
+      i++;
+      break;
+    }
+    if (nonExec.has(arg)) {
+      return null;
+    } // Not executing a command
+    if (optsWithValue.has(arg)) {
+      i += 2;
+      continue;
+    }
+    if (standalone.has(arg)) {
+      i++;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      i++;
+      continue;
+    }
     break;
   }
   return i < args.length ? args.slice(i) : null;
@@ -228,9 +348,13 @@ function _resolveSudoCarrier(args) {
 function _extractShellPayload(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === '-c') return args[i + 1] || null;
+    if (arg === '-c') {
+      return args[i + 1] || null;
+    }
     // Combined flags like -xc
-    if (/^-[A-Za-z]+$/.test(arg) && arg.includes('c')) return args[i + 1] || null;
+    if (/^-[A-Za-z]+$/.test(arg) && arg.includes('c')) {
+      return args[i + 1] || null;
+    }
   }
   return null;
 }
@@ -246,9 +370,18 @@ function _unwrapDispatchWrapper(exe, args) {
   const opts = optsWithValue[exe] || new Set();
   while (i < args.length) {
     const arg = args[i];
-    if (arg === '--') { i++; break; }
-    if (opts.has(arg)) { i += 2; continue; }
-    if (arg.startsWith('-')) { i++; continue; }
+    if (arg === '--') {
+      i++;
+      break;
+    }
+    if (opts.has(arg)) {
+      i += 2;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      i++;
+      continue;
+    }
     break;
   }
   return i < args.length ? args.slice(i) : null;
@@ -264,7 +397,9 @@ function _unwrapDispatchWrapper(exe, args) {
  */
 function detectInterpreterScript(argv) {
   const stripped = stripEnvAssignments(argv);
-  if (stripped.length === 0) return null;
+  if (stripped.length === 0) {
+    return null;
+  }
 
   const exe = normalizeExe(stripped[0]);
   const args = stripped.slice(1);
@@ -284,11 +419,22 @@ function _findPythonScript(args) {
   const skipNext = new Set(['-W', '-X', '-Q', '--check-hash-based-pycs']);
   for (let i = 0; i < args.length; i++) {
     const t = args[i];
-    if (t === '--') return args[i + 1]?.toLowerCase().endsWith('.py') ? args[i + 1] : null;
-    if (t === '-' || t === '-c' || t === '-m') return null;
-    if ((t.startsWith('-c') || t.startsWith('-m')) && t.length > 2) return null;
-    if (skipNext.has(t)) { i++; continue; }
-    if (t.startsWith('-')) continue;
+    if (t === '--') {
+      return args[i + 1]?.toLowerCase().endsWith('.py') ? args[i + 1] : null;
+    }
+    if (t === '-' || t === '-c' || t === '-m') {
+      return null;
+    }
+    if ((t.startsWith('-c') || t.startsWith('-m')) && t.length > 2) {
+      return null;
+    }
+    if (skipNext.has(t)) {
+      i++;
+      continue;
+    }
+    if (t.startsWith('-')) {
+      continue;
+    }
     return t.toLowerCase().endsWith('.py') ? t : null;
   }
   return null;
@@ -308,23 +454,38 @@ function _findNodeScripts(args) {
       }
       break;
     }
-    if (['-e', '-p', '--eval', '--print'].includes(t) ||
-        t.startsWith('--eval=') || t.startsWith('--print=') ||
-        ((t.startsWith('-e') || t.startsWith('-p')) && t.length > 2)) {
+    if (
+      ['-e', '-p', '--eval', '--print'].includes(t) ||
+      t.startsWith('--eval=') ||
+      t.startsWith('--print=') ||
+      ((t.startsWith('-e') || t.startsWith('-p')) && t.length > 2)
+    ) {
       hasInlineEval = true;
-      if (['-e', '-p', '--eval', '--print'].includes(t)) i++;
+      if (['-e', '-p', '--eval', '--print'].includes(t)) {
+        i++;
+      }
       continue;
     }
     if (preloadFlags.has(t)) {
-      if (args[i + 1]?.toLowerCase().endsWith('.js')) preloads.push(args[i + 1]);
-      i++; continue;
+      if (args[i + 1]?.toLowerCase().endsWith('.js')) {
+        preloads.push(args[i + 1]);
+      }
+      i++;
+      continue;
     }
-    if (t.startsWith('-')) continue;
-    if (!hasInlineEval && !entry && t.toLowerCase().endsWith('.js')) { entry = t; break; }
+    if (t.startsWith('-')) {
+      continue;
+    }
+    if (!hasInlineEval && !entry && t.toLowerCase().endsWith('.js')) {
+      entry = t;
+      break;
+    }
   }
 
   const result = [...preloads];
-  if (entry) result.push(entry);
+  if (entry) {
+    result.push(entry);
+  }
   return result;
 }
 
@@ -338,13 +499,17 @@ function _findNodeScripts(args) {
  * @returns {{ hasBleed: boolean, variables: string[] }}
  */
 function checkShellBleed(content) {
-  if (!content || typeof content !== 'string') return { hasBleed: false, variables: [] };
+  if (!content || typeof content !== 'string') {
+    return { hasBleed: false, variables: [] };
+  }
 
   SHELL_VAR_INJECTION_RE.lastIndex = 0;
   const variables = [];
   let match;
   while ((match = SHELL_VAR_INJECTION_RE.exec(content)) !== null) {
-    if (!variables.includes(match[0])) variables.push(match[0]);
+    if (!variables.includes(match[0])) {
+      variables.push(match[0]);
+    }
   }
 
   return { hasBleed: variables.length > 0, variables };
@@ -359,28 +524,69 @@ function checkShellBleed(content) {
  * @returns {{ hasComplexSyntax: boolean, hasPipe: boolean, hasSubshell: boolean, hasProcessSub: boolean, details: string[] }}
  */
 function detectComplexSyntax(cmd) {
-  if (!cmd) return { hasComplexSyntax: false, hasPipe: false, hasSubshell: false, hasProcessSub: false, details: [] };
+  if (!cmd) {
+    return {
+      hasComplexSyntax: false,
+      hasPipe: false,
+      hasSubshell: false,
+      hasProcessSub: false,
+      details: [],
+    };
+  }
 
   const details = [];
-  let inSingle = false, inDouble = false;
-  let hasPipe = false, hasSubshell = false, hasProcessSub = false;
+  let inSingle = false,
+    inDouble = false;
+  let hasPipe = false,
+    hasSubshell = false,
+    hasProcessSub = false;
 
   for (let i = 0; i < cmd.length; i++) {
     const ch = cmd[i];
-    if (ch === "'" && !inDouble) { inSingle = !inSingle; continue; }
-    if (ch === '"' && !inSingle) { inDouble = !inDouble; continue; }
-    if (inSingle || inDouble) continue;
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (inSingle || inDouble) {
+      continue;
+    }
 
-    if (ch === '|' && cmd[i + 1] !== '|') { hasPipe = true; details.push('pipe'); }
-    if (ch === '|' && cmd[i + 1] === '|') { details.push('or-operator'); i++; }
-    if (ch === '&' && cmd[i + 1] === '&') { details.push('and-operator'); i++; }
-    if (ch === ';') details.push('semicolon');
-    if (ch === '$' && cmd[i + 1] === '(') { hasSubshell = true; details.push('command-substitution'); }
-    if (ch === '`') { hasSubshell = true; details.push('backtick-substitution'); }
-    if ((ch === '<' || ch === '>') && cmd[i + 1] === '(') { hasProcessSub = true; details.push('process-substitution'); }
+    if (ch === '|' && cmd[i + 1] !== '|') {
+      hasPipe = true;
+      details.push('pipe');
+    }
+    if (ch === '|' && cmd[i + 1] === '|') {
+      details.push('or-operator');
+      i++;
+    }
+    if (ch === '&' && cmd[i + 1] === '&') {
+      details.push('and-operator');
+      i++;
+    }
+    if (ch === ';') {
+      details.push('semicolon');
+    }
+    if (ch === '$' && cmd[i + 1] === '(') {
+      hasSubshell = true;
+      details.push('command-substitution');
+    }
+    if (ch === '`') {
+      hasSubshell = true;
+      details.push('backtick-substitution');
+    }
+    if ((ch === '<' || ch === '>') && cmd[i + 1] === '(') {
+      hasProcessSub = true;
+      details.push('process-substitution');
+    }
   }
 
-  if (cmd.includes('\n') || cmd.includes('\r')) details.push('multiline');
+  if (cmd.includes('\n') || cmd.includes('\r')) {
+    details.push('multiline');
+  }
 
   return {
     hasComplexSyntax: details.length > 0,
@@ -400,15 +606,21 @@ function detectComplexSyntax(cmd) {
  * @returns {{ detected: boolean, interpreter: string, flag: string }|null}
  */
 function detectInlineEval(argv) {
-  if (!argv || argv.length === 0) return null;
+  if (!argv || argv.length === 0) {
+    return null;
+  }
 
   const exe = normalizeExe(argv[0]);
   for (const spec of INTERPRETER_EVAL_SPECS) {
-    if (!spec.names.includes(exe)) continue;
+    if (!spec.names.includes(exe)) {
+      continue;
+    }
 
     for (let i = 1; i < argv.length; i++) {
       const token = argv[i];
-      if (token === '--') break;
+      if (token === '--') {
+        break;
+      }
       const lower = token.toLowerCase();
       if (spec.flags.has(lower)) {
         return { detected: true, interpreter: exe, flag: lower };
@@ -435,8 +647,12 @@ function detectInlineEval(argv) {
  */
 function detectDangerousBuiltin(argv) {
   const exe = normalizeExe(argv[0]);
-  if (exe === 'eval') return { kind: 'eval', command: 'eval' };
-  if (SOURCE_BUILTINS.has(exe)) return { kind: 'source', command: exe };
+  if (exe === 'eval') {
+    return { kind: 'eval', command: 'eval' };
+  }
+  if (SOURCE_BUILTINS.has(exe)) {
+    return { kind: 'source', command: exe };
+  }
   return null;
 }
 
@@ -448,35 +664,83 @@ function detectDangerousBuiltin(argv) {
  */
 const DESTRUCTIVE_PATTERNS = [
   // File system destruction
-  { pattern: /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|--recursive|--force)\b/, severity: 'critical', detail: 'Recursive force delete (rm -rf)' },
+  {
+    pattern: /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|--recursive|--force)\b/,
+    severity: 'critical',
+    detail: 'Recursive force delete (rm -rf)',
+  },
   { pattern: /\brm\s+-[a-zA-Z]*r\b/, severity: 'warning', detail: 'Recursive delete (rm -r)' },
   { pattern: /\bshred\b/, severity: 'critical', detail: 'Secure file erasure (shred)' },
   { pattern: /\bwipefs\b/, severity: 'critical', detail: 'Filesystem signature wipe' },
 
   // Disk / partition
-  { pattern: /\bmkfs\b/, severity: 'critical', detail: 'Filesystem creation (mkfs) — destroys data' },
+  {
+    pattern: /\bmkfs\b/,
+    severity: 'critical',
+    detail: 'Filesystem creation (mkfs) — destroys data',
+  },
   { pattern: /\bdd\s+.*\bif=/, severity: 'critical', detail: 'Direct disk write (dd)' },
   { pattern: /\bfdisk\b/, severity: 'critical', detail: 'Disk partitioning (fdisk)' },
   { pattern: /\bparted\b/, severity: 'warning', detail: 'Partition editor (parted)' },
 
   // Git destructive
-  { pattern: /\bgit\s+push\s+.*--force(?!-with-lease)\b/, severity: 'critical', detail: 'Force push (git push --force) — overwrites remote history' },
-  { pattern: /\bgit\s+push\s+.*-f\b/, severity: 'critical', detail: 'Force push (git push -f) — overwrites remote history' },
-  { pattern: /\bgit\s+reset\s+--hard\b/, severity: 'critical', detail: 'Hard reset — discards uncommitted changes' },
-  { pattern: /\bgit\s+clean\s+.*-f/, severity: 'warning', detail: 'Force clean — removes untracked files' },
-  { pattern: /\bgit\s+checkout\s+--\s+\./, severity: 'warning', detail: 'Discard all unstaged changes' },
+  {
+    pattern: /\bgit\s+push\s+.*--force(?!-with-lease)\b/,
+    severity: 'critical',
+    detail: 'Force push (git push --force) — overwrites remote history',
+  },
+  {
+    pattern: /\bgit\s+push\s+.*-f\b/,
+    severity: 'critical',
+    detail: 'Force push (git push -f) — overwrites remote history',
+  },
+  {
+    pattern: /\bgit\s+reset\s+--hard\b/,
+    severity: 'critical',
+    detail: 'Hard reset — discards uncommitted changes',
+  },
+  {
+    pattern: /\bgit\s+clean\s+.*-f/,
+    severity: 'warning',
+    detail: 'Force clean — removes untracked files',
+  },
+  {
+    pattern: /\bgit\s+checkout\s+--\s+\./,
+    severity: 'warning',
+    detail: 'Discard all unstaged changes',
+  },
   { pattern: /\bgit\s+branch\s+-D\b/, severity: 'warning', detail: 'Force delete branch' },
   { pattern: /\bgit\s+stash\s+drop\b/, severity: 'warning', detail: 'Drop stash entry' },
   { pattern: /\bgit\s+rebase\b/, severity: 'info', detail: 'Rebase — rewrites history' },
 
   // Database
-  { pattern: /\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX)\b/i, severity: 'critical', detail: 'SQL DROP statement — destroys data' },
-  { pattern: /\bTRUNCATE\s+TABLE\b/i, severity: 'critical', detail: 'SQL TRUNCATE — removes all rows' },
-  { pattern: /\bDELETE\s+FROM\b.*\bWHERE\b/i, severity: 'warning', detail: 'SQL DELETE with WHERE' },
-  { pattern: /\bDELETE\s+FROM\b(?!.*\bWHERE\b)/i, severity: 'critical', detail: 'SQL DELETE without WHERE — removes all rows' },
+  {
+    pattern: /\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX)\b/i,
+    severity: 'critical',
+    detail: 'SQL DROP statement — destroys data',
+  },
+  {
+    pattern: /\bTRUNCATE\s+TABLE\b/i,
+    severity: 'critical',
+    detail: 'SQL TRUNCATE — removes all rows',
+  },
+  {
+    pattern: /\bDELETE\s+FROM\b.*\bWHERE\b/i,
+    severity: 'warning',
+    detail: 'SQL DELETE with WHERE',
+  },
+  {
+    pattern: /\bDELETE\s+FROM\b(?!.*\bWHERE\b)/i,
+    severity: 'critical',
+    detail: 'SQL DELETE without WHERE — removes all rows',
+  },
 
   // Docker
-  { pattern: /\bdocker\s+(system\s+prune|container\s+prune|image\s+prune)\b/, severity: 'warning', detail: 'Docker prune — removes unused resources' },
+  {
+    pattern: /\bdocker\s+(system\s+prune|container\s+prune|image\s+prune)\b/,
+    severity: 'warning',
+    detail: 'Docker prune — removes unused resources',
+  },
   { pattern: /\bdocker\s+rm\s+-f\b/, severity: 'warning', detail: 'Force remove container' },
 
   // Package managers (unintentional uninstall)
@@ -484,11 +748,19 @@ const DESTRUCTIVE_PATTERNS = [
   { pattern: /\bpip\s+uninstall\b/, severity: 'info', detail: 'pip uninstall' },
 
   // System-level
-  { pattern: /\bchmod\s+.*777\b/, severity: 'warning', detail: 'World-writable permissions (chmod 777)' },
+  {
+    pattern: /\bchmod\s+.*777\b/,
+    severity: 'warning',
+    detail: 'World-writable permissions (chmod 777)',
+  },
   { pattern: /\bchown\s+-R\b/, severity: 'warning', detail: 'Recursive ownership change' },
   { pattern: /\bkillall\b/, severity: 'warning', detail: 'Kill all processes by name' },
   { pattern: /\bkill\s+-9\b/, severity: 'info', detail: 'Force kill (SIGKILL)' },
-  { pattern: /\bsystemctl\s+(stop|disable|mask)\b/, severity: 'warning', detail: 'Stopping/disabling system service' },
+  {
+    pattern: /\bsystemctl\s+(stop|disable|mask)\b/,
+    severity: 'warning',
+    detail: 'Stopping/disabling system service',
+  },
 ];
 
 // ── Strict destructive patterns (gated: KHY_SHELL_DESTRUCTIVE_FLAG_NORMALIZE) ──
@@ -509,7 +781,11 @@ const DESTRUCTIVE_PATTERNS = [
 const DESTRUCTIVE_PATTERNS_STRICT = DESTRUCTIVE_PATTERNS.map((entry) => {
   // rm 关键级:order/case 无关,要求同时出现 r-类 与 f-类 flag(或裸 --recursive/--force)。
   if (entry.detail === 'Recursive force delete (rm -rf)') {
-    return { ...entry, pattern: /\brm\b(?:(?=[^\n;&|]*?\s--(?:recursive|force)\b)|(?=[^\n;&|]*?\s-(?:-recursive\b|[a-z]*r))(?=[^\n;&|]*?\s-(?:-force\b|[a-z]*f)))/i };
+    return {
+      ...entry,
+      pattern:
+        /\brm\b(?:(?=[^\n;&|]*?\s--(?:recursive|force)\b)|(?=[^\n;&|]*?\s-(?:-recursive\b|[a-z]*r))(?=[^\n;&|]*?\s-(?:-force\b|[a-z]*f)))/i,
+    };
   }
   // rm 警告级:任何递归 flag(-r / -R / --recursive),case 无关。
   if (entry.detail === 'Recursive delete (rm -r)') {
@@ -543,7 +819,10 @@ DESTRUCTIVE_PATTERNS_STRICT.push({
  */
 function _selectDestructivePatterns(env = process.env) {
   try {
-    const enabled = require('./flagRegistry').isFlagEnabled('KHY_SHELL_DESTRUCTIVE_FLAG_NORMALIZE', env);
+    const enabled = require('./flagRegistry').isFlagEnabled(
+      'KHY_SHELL_DESTRUCTIVE_FLAG_NORMALIZE',
+      env
+    );
     return enabled ? DESTRUCTIVE_PATTERNS_STRICT : DESTRUCTIVE_PATTERNS;
   } catch {
     return DESTRUCTIVE_PATTERNS_STRICT;
@@ -558,7 +837,9 @@ function _selectDestructivePatterns(env = process.env) {
  * @returns {{ severity: string, detail: string } | null}
  */
 function detectDestructiveCommand(argv, rawCommand) {
-  if (!rawCommand) return null;
+  if (!rawCommand) {
+    return null;
+  }
 
   let highestSeverity = null;
   let highestDetail = '';
@@ -634,7 +915,7 @@ function analyzeCommand(command) {
     const innerArgv = splitShellArgs(payload);
     if (innerArgv) {
       const nestedEval = detectInlineEval(innerArgv);
-      if (nestedEval && nestedEval.interpreter !== (inlineEval?.interpreter)) {
+      if (nestedEval && nestedEval.interpreter !== inlineEval?.interpreter) {
         risks.push({
           type: 'carrier_inline_eval',
           severity: 'critical',
@@ -682,7 +963,9 @@ function analyzeCommand(command) {
     for (const r of buildFetchExecuteRisks(command)) {
       risks.push({ type: r.type, severity: r.severity, detail: r.detail });
     }
-  } catch { /* fail-soft: 守卫绝不破坏既有分析路径 */ }
+  } catch {
+    /* fail-soft: 守卫绝不破坏既有分析路径 */
+  }
 
   const maxSeverity = risks.reduce((max, r) => {
     const order = { info: 0, warning: 1, critical: 2 };

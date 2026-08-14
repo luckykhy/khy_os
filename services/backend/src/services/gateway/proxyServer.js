@@ -9,19 +9,23 @@
  *   GET  /health               — Health check
  *   GET  /reservoir/stats      — Reservoir cache statistics
  */
-const http = require('http');
-const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
 const path = require('path');
-const parseBoolean = require('../../utils/parseBoolean');
-const protocolConverter = require('./protocolConverter');
-const responseSessionStore = require('./responseSessionStore');
-const modelRouter = require('./modelRouter');
-
-const { resolveProxyCorsOrigin } = require('./corsUtils');
 
 const { getDataHome, getLegacyDataHome } = require('../../utils/dataHome');
+const maskToken = require('../../utils/maskToken');
+const ensureDir = require('../../utils/mkdirpSync');
+const normalizeAuthToken = require('../../utils/normalizeAuthToken');
+const parseBoolean = require('../../utils/parseBoolean');
+
+const { resolveProxyCorsOrigin } = require('./corsUtils');
+const customerQuotaEnforcer = require('./customerQuotaEnforcer');
+const modelRouter = require('./modelRouter');
+const protocolConverter = require('./protocolConverter');
+const responseSessionStore = require('./responseSessionStore');
 const webSearchInterceptor = require('./webSearchInterceptor');
 const { encodeWindsurfModelConfigResponse } = require('./windsurfProtobuf');
 const { PROTOCOLS } = protocolConverter;
@@ -44,13 +48,17 @@ const LEGACY_PROXY_RUNTIME_FILE = path.join(LEGACY_KHY_DIR, 'proxy_server_runtim
 const PORT_RETRY_LIMIT = 10;
 
 function getGateway() {
-  if (!_gateway) _gateway = require('./aiGateway');
+  if (!_gateway) {
+    _gateway = require('./aiGateway');
+  }
   return _gateway;
 }
 
 let _expandModelService;
 function getExpandModelService() {
-  if (!_expandModelService) _expandModelService = require('../expandModelService');
+  if (!_expandModelService) {
+    _expandModelService = require('../expandModelService');
+  }
   return _expandModelService;
 }
 
@@ -74,39 +82,64 @@ const WINDSURF_MODEL_CONFIG_PATHS = new Set([
   '/exa.language_server_pb.LanguageServerService/GetCascadeModelConfigs',
   '/exa.api_server_pb.ApiServerService/GetCascadeModelConfigs',
 ]);
-const WINDSURF_PROXY_DEFAULT_MODELS = [
-  'gpt-4o',
-  'claude-3.5-sonnet',
-  'windsurf-cascade',
-];
+const WINDSURF_PROXY_DEFAULT_MODELS = ['gpt-4o', 'claude-3.5-sonnet', 'windsurf-cascade'];
 
 const LOW_TIER_MODEL_PATTERN = /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i;
 const _reservoir = new Map();
 
+// 后台低频清理：惰性 TTL 检查之外的兜底，避免过期条目长期驻留内存。
+const RESERVOIR_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+const _reservoirSweepTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of _reservoir) {
+    if (!item || now > item.expiresAt) {
+      _reservoir.delete(key);
+    }
+  }
+}, RESERVOIR_SWEEP_INTERVAL_MS);
+if (typeof _reservoirSweepTimer.unref === 'function') {
+  _reservoirSweepTimer.unref();
+}
+
 function parseList(raw) {
   return String(raw || '')
     .split(',')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
 // 收敛到 utils/mkdirpSync 单一真源(逐字节委托,调用点不变)
-const ensureDir = require('../../utils/mkdirpSync');
 
 function mergeAbortSignals(...signals) {
-  const activeSignals = signals.filter(signal => signal && typeof signal.addEventListener === 'function');
-  if (activeSignals.length === 0) return null;
-  if (activeSignals.length === 1) return activeSignals[0];
+  const activeSignals = signals.filter(
+    (signal) => signal && typeof signal.addEventListener === 'function'
+  );
+  if (activeSignals.length === 0) {
+    return null;
+  }
+  if (activeSignals.length === 1) {
+    return activeSignals[0];
+  }
 
   const merged = new AbortController();
   const cleanup = [];
   const forwardAbort = (source) => {
-    if (merged.signal.aborted) return;
+    if (merged.signal.aborted) {
+      return;
+    }
     const reason = source && 'reason' in source ? source.reason : undefined;
-    try { merged.abort(reason); } catch { merged.abort(); }
+    try {
+      merged.abort(reason);
+    } catch {
+      merged.abort();
+    }
     while (cleanup.length > 0) {
       const detach = cleanup.pop();
-      try { detach(); } catch { /* ignore */ }
+      try {
+        detach();
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -129,39 +162,62 @@ function mergeAbortSignals(...signals) {
  * in the next user message to plain text, preventing Bedrock API errors.
  */
 function _repairToolUsePairing(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) return messages;
-  const repaired = messages.map(m => ({ ...m }));
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return messages;
+  }
+  const repaired = messages.map((m) => ({ ...m }));
   for (let i = 0; i < repaired.length; i++) {
     const msg = repaired[i];
-    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) continue;
+    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) {
+      continue;
+    }
     const toolUseIds = new Set();
     for (const block of msg.content) {
-      if (block && block.type === 'tool_use' && block.id) toolUseIds.add(block.id);
+      if (block && block.type === 'tool_use' && block.id) {
+        toolUseIds.add(block.id);
+      }
     }
-    if (toolUseIds.size === 0) continue;
+    if (toolUseIds.size === 0) {
+      continue;
+    }
     const next = repaired[i + 1];
     const resultIds = new Set();
     if (next && Array.isArray(next.content)) {
       for (const block of next.content) {
-        if (block && block.type === 'tool_result' && block.tool_use_id) resultIds.add(block.tool_use_id);
+        if (block && block.type === 'tool_result' && block.tool_use_id) {
+          resultIds.add(block.tool_use_id);
+        }
       }
     }
     let allMatched = true;
-    for (const id of toolUseIds) { if (!resultIds.has(id)) { allMatched = false; break; } }
+    for (const id of toolUseIds) {
+      if (!resultIds.has(id)) {
+        allMatched = false;
+        break;
+      }
+    }
     if (!allMatched) {
       const textParts = [];
       for (const block of msg.content) {
-        if (block.type === 'text' && block.text) textParts.push(block.text);
-        else if (block.type === 'tool_use') {
+        if (block.type === 'text' && block.text) {
+          textParts.push(block.text);
+        } else if (block.type === 'tool_use') {
           const inputStr = block.input ? JSON.stringify(block.input).slice(0, 200) : '';
-          textParts.push(`[Called tool: ${block.name || 'unknown'}${inputStr ? ` with ${inputStr}` : ''}]`);
+          textParts.push(
+            `[Called tool: ${block.name || 'unknown'}${inputStr ? ` with ${inputStr}` : ''}]`
+          );
         }
       }
       repaired[i] = { ...msg, content: textParts.join('\n') || '[assistant response]' };
       if (next && Array.isArray(next.content)) {
-        const filtered = next.content.filter(b => b.type !== 'tool_result' || !toolUseIds.has(b.tool_use_id));
-        if (filtered.length === 0) repaired[i + 1] = { ...next, content: '[tool results unavailable]' };
-        else if (filtered.length !== next.content.length) repaired[i + 1] = { ...next, content: filtered };
+        const filtered = next.content.filter(
+          (b) => b.type !== 'tool_result' || !toolUseIds.has(b.tool_use_id)
+        );
+        if (filtered.length === 0) {
+          repaired[i + 1] = { ...next, content: '[tool results unavailable]' };
+        } else if (filtered.length !== next.content.length) {
+          repaired[i + 1] = { ...next, content: filtered };
+        }
       }
     }
   }
@@ -173,9 +229,13 @@ function shouldExposeRawRelayModels() {
 }
 
 function toPort(raw, fallback = null) {
-  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (raw === undefined || raw === null || raw === '') {
+    return fallback;
+  }
   const n = parseInt(String(raw), 10);
-  if (!Number.isFinite(n) || n <= 0 || n > 65535) return fallback;
+  if (!Number.isFinite(n) || n <= 0 || n > 65535) {
+    return fallback;
+  }
   return n;
 }
 
@@ -220,26 +280,25 @@ function buildRuntimeStatus(config = {}, authToken = '') {
   const host = config.host || '127.0.0.1';
   const httpInfo = config.http?.enabled
     ? {
-      enabled: true,
-      port: config.http.port,
-      host,
-      url: `http://${host}:${config.http.port}`,
-    }
+        enabled: true,
+        port: config.http.port,
+        host,
+        url: `http://${host}:${config.http.port}`,
+      }
     : { enabled: false, port: null, host, url: '' };
   const httpsInfo = config.https?.enabled
     ? {
-      enabled: true,
-      port: config.https.port,
-      host,
-      url: `https://${host}:${config.https.port}`,
-      certSource: config.https.certSource || '',
-      certFile: config.https.certFile || '',
-      keyFile: config.https.keyFile || '',
-    }
+        enabled: true,
+        port: config.https.port,
+        host,
+        url: `https://${host}:${config.https.port}`,
+        certSource: config.https.certSource || '',
+        certFile: config.https.certFile || '',
+        keyFile: config.https.keyFile || '',
+      }
     : { enabled: false, port: null, host, url: '', certSource: '', certFile: '', keyFile: '' };
-  const mode = httpInfo.enabled && httpsInfo.enabled
-    ? 'dual'
-    : (httpsInfo.enabled ? 'https-only' : 'http-only');
+  const mode =
+    httpInfo.enabled && httpsInfo.enabled ? 'dual' : httpsInfo.enabled ? 'https-only' : 'http-only';
   return {
     mode,
     host,
@@ -253,9 +312,10 @@ function writeRuntimeStatus(runtime) {
   const payload = {
     pid: process.pid,
     host: runtime?.host || '127.0.0.1',
-    port: runtime?.http?.enabled && Number.isFinite(runtime.http.port)
-      ? runtime.http.port
-      : runtime?.https?.port || null,
+    port:
+      runtime?.http?.enabled && Number.isFinite(runtime.http.port)
+        ? runtime.http.port
+        : runtime?.https?.port || null,
     httpPort: runtime?.http?.enabled ? runtime.http.port : null,
     httpsPort: runtime?.https?.enabled ? runtime.https.port : null,
     httpsEnabled: runtime?.https?.enabled === true,
@@ -269,15 +329,21 @@ function writeRuntimeStatus(runtime) {
     try {
       ensureDir(path.dirname(filePath));
       fs.writeFileSync(filePath, serialized, 'utf-8');
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 }
 
 function clearRuntimeStatus() {
   for (const filePath of [PROXY_RUNTIME_FILE, LEGACY_PROXY_RUNTIME_FILE]) {
     try {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch { /* best effort */ }
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      /* best effort */
+    }
   }
 }
 
@@ -312,9 +378,10 @@ function bumpStartConfigPorts(config = {}, step = 1) {
 }
 
 function resolveStartConfig(portOrOptions = null) {
-  const options = (portOrOptions && typeof portOrOptions === 'object')
-    ? { ...portOrOptions }
-    : { port: portOrOptions };
+  const options =
+    portOrOptions && typeof portOrOptions === 'object'
+      ? { ...portOrOptions }
+      : { port: portOrOptions };
 
   const host = String(options.host || process.env.PROXY_HOST || '127.0.0.1').trim() || '127.0.0.1';
   const basePort = toPort(options.port, toPort(process.env.PROXY_PORT, 9100)) || 9100;
@@ -327,10 +394,14 @@ function resolveStartConfig(portOrOptions = null) {
   if (options.tlsCertFile || options.tlsKeyFile || options.tlsCertPem || options.tlsKeyPem) {
     httpsEnabled = true;
   }
-  if (httpsOnly) httpsEnabled = true;
+  if (httpsOnly) {
+    httpsEnabled = true;
+  }
 
   let httpEnabled = parseBoolean(options.http ?? process.env.PROXY_ENABLE_HTTP, true);
-  if (httpsOnly) httpEnabled = false;
+  if (httpsOnly) {
+    httpEnabled = false;
+  }
 
   if (!httpEnabled && !httpsEnabled) {
     throw new Error('HTTP 与 HTTPS 不能同时禁用');
@@ -339,18 +410,20 @@ function resolveStartConfig(portOrOptions = null) {
   const httpPort = httpEnabled ? toPort(options.httpPort, basePort) : null;
   const httpsPort = httpsEnabled
     ? toPort(
-      options.httpsPort,
-      toPort(
-        process.env.PROXY_HTTPS_PORT,
-        httpsOnly
-          ? basePort
-          : (httpEnabled ? Math.min(basePort + 1, 65535) : basePort)
+        options.httpsPort,
+        toPort(
+          process.env.PROXY_HTTPS_PORT,
+          httpsOnly ? basePort : httpEnabled ? Math.min(basePort + 1, 65535) : basePort
+        )
       )
-    )
     : null;
 
-  if (httpEnabled && !httpPort) throw new Error('HTTP 端口无效');
-  if (httpsEnabled && !httpsPort) throw new Error('HTTPS 端口无效');
+  if (httpEnabled && !httpPort) {
+    throw new Error('HTTP 端口无效');
+  }
+  if (httpsEnabled && !httpsPort) {
+    throw new Error('HTTPS 端口无效');
+  }
   if (httpEnabled && httpsEnabled && httpPort === httpsPort) {
     throw new Error(`HTTP 与 HTTPS 端口冲突: ${httpPort}`);
   }
@@ -413,24 +486,26 @@ function listenServer(server, port, host) {
   });
 }
 
-const normalizeAuthToken = require('../../utils/normalizeAuthToken');
-
 function generateAuthToken() {
   return `khy-${crypto.randomBytes(24).toString('hex')}`;
 }
 
 // 收敛到 utils/maskToken 单一真源(逐字节委托,调用点不变)
-const maskToken = require('../../utils/maskToken');
 
 function normalizeTokenId(raw, fallback = '') {
-  const id = String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const id = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
   return id || fallback;
 }
 
 function generateTokenId(existing = new Set()) {
   for (let i = 0; i < 10; i += 1) {
     const id = `tk_${crypto.randomBytes(4).toString('hex')}`;
-    if (!existing.has(id)) return id;
+    if (!existing.has(id)) {
+      return id;
+    }
   }
   return `tk_${Date.now().toString(36)}`;
 }
@@ -443,7 +518,9 @@ function normalizeManagedTokens(rawTokens) {
 
   for (const row of rows) {
     const token = normalizeAuthToken(row?.token, { allowEmpty: true });
-    if (!token) continue;
+    if (!token) {
+      continue;
+    }
 
     let id = normalizeTokenId(row?.id);
     if (!id || usedIds.has(id)) {
@@ -451,7 +528,9 @@ function normalizeManagedTokens(rawTokens) {
     }
     usedIds.add(id);
 
-    const label = String(row?.label || row?.name || '').trim().slice(0, 120);
+    const label = String(row?.label || row?.name || '')
+      .trim()
+      .slice(0, 120);
     const enabled = row?.enabled !== false;
     out.push({
       id,
@@ -481,7 +560,9 @@ function loadAuthConfig() {
   const candidates = [PROXY_AUTH_FILE, LEGACY_PROXY_AUTH_FILE];
   for (const filePath of candidates) {
     try {
-      if (!fs.existsSync(filePath)) continue;
+      if (!fs.existsSync(filePath)) {
+        continue;
+      }
       const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
       return {
         authToken: normalizeAuthToken(raw.authToken, { allowEmpty: true }),
@@ -576,7 +657,7 @@ function getAuthStatus() {
     generated: primary.generated,
     tokenCount: authTokens.size,
     managedTokenCount: managedTokens.length,
-    managedTokenEnabledCount: managedTokens.filter(t => t.enabled !== false).length,
+    managedTokenEnabledCount: managedTokens.filter((t) => t.enabled !== false).length,
     managedTokens: managedTokens.map(toManagedTokenView),
   };
 }
@@ -584,15 +665,23 @@ function getAuthStatus() {
 function buildAuthTokenSet(primaryToken, { managedTokens = [] } = {}) {
   const tokens = new Set();
   const primary = normalizeAuthToken(primaryToken, { allowEmpty: true });
-  if (primary) tokens.add(primary);
+  if (primary) {
+    tokens.add(primary);
+  }
   for (const t of parseList(process.env.PROXY_AUTH_TOKENS)) {
     const n = normalizeAuthToken(t, { allowEmpty: true });
-    if (n) tokens.add(n);
+    if (n) {
+      tokens.add(n);
+    }
   }
   for (const row of normalizeManagedTokens(managedTokens)) {
-    if (row.enabled === false) continue;
+    if (row.enabled === false) {
+      continue;
+    }
     const n = normalizeAuthToken(row.token, { allowEmpty: true });
-    if (n) tokens.add(n);
+    if (n) {
+      tokens.add(n);
+    }
   }
   return tokens;
 }
@@ -606,11 +695,13 @@ function listManagedTokens() {
 function createManagedToken({ label = '', token = '', enabled = true } = {}) {
   const cfg = loadAuthConfig();
   const rows = normalizeManagedTokens(cfg.managedTokens);
-  const used = new Set(rows.map(r => r.id));
+  const used = new Set(rows.map((r) => r.id));
   const createdToken = normalizeAuthToken(token, { allowEmpty: true }) || generateAuthToken();
   const entry = {
     id: generateTokenId(used),
-    label: String(label || '').trim().slice(0, 120),
+    label: String(label || '')
+      .trim()
+      .slice(0, 120),
     token: createdToken,
     enabled: enabled !== false,
     createdAt: new Date().toISOString(),
@@ -626,11 +717,15 @@ function createManagedToken({ label = '', token = '', enabled = true } = {}) {
 
 function setManagedTokenEnabled(tokenId, enabled) {
   const id = normalizeTokenId(tokenId);
-  if (!id) throw new Error('token id 不能为空');
+  if (!id) {
+    throw new Error('token id 不能为空');
+  }
   const cfg = loadAuthConfig();
   const rows = normalizeManagedTokens(cfg.managedTokens);
-  const idx = rows.findIndex(r => r.id === id);
-  if (idx < 0) throw new Error(`未找到 token: ${tokenId}`);
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx < 0) {
+    throw new Error(`未找到 token: ${tokenId}`);
+  }
   rows[idx] = {
     ...rows[idx],
     enabled: enabled !== false,
@@ -642,11 +737,15 @@ function setManagedTokenEnabled(tokenId, enabled) {
 
 function deleteManagedToken(tokenId) {
   const id = normalizeTokenId(tokenId);
-  if (!id) throw new Error('token id 不能为空');
+  if (!id) {
+    throw new Error('token id 不能为空');
+  }
   const cfg = loadAuthConfig();
   const rows = normalizeManagedTokens(cfg.managedTokens);
-  const idx = rows.findIndex(r => r.id === id);
-  if (idx < 0) throw new Error(`未找到 token: ${tokenId}`);
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx < 0) {
+    throw new Error(`未找到 token: ${tokenId}`);
+  }
   const removed = rows[idx];
   rows.splice(idx, 1);
   saveAuthConfig({ managedTokens: rows });
@@ -655,11 +754,15 @@ function deleteManagedToken(tokenId) {
 
 function rotateManagedToken(tokenId, nextToken = '') {
   const id = normalizeTokenId(tokenId);
-  if (!id) throw new Error('token id 不能为空');
+  if (!id) {
+    throw new Error('token id 不能为空');
+  }
   const cfg = loadAuthConfig();
   const rows = normalizeManagedTokens(cfg.managedTokens);
-  const idx = rows.findIndex(r => r.id === id);
-  if (idx < 0) throw new Error(`未找到 token: ${tokenId}`);
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx < 0) {
+    throw new Error(`未找到 token: ${tokenId}`);
+  }
   const token = normalizeAuthToken(nextToken, { allowEmpty: true }) || generateAuthToken();
   rows[idx] = {
     ...rows[idx],
@@ -683,7 +786,9 @@ function normalizeText(input) {
 
 function isLowTierRoute(route, options) {
   const adapter = String(route?.adapterKey || '').toLowerCase();
-  if (adapter === 'localllm' || adapter === 'ollama') return true;
+  if (adapter === 'localllm' || adapter === 'ollama') {
+    return true;
+  }
   const model = String(options?.model || route?.modelId || '').toLowerCase();
   return LOW_TIER_MODEL_PATTERN.test(model);
 }
@@ -693,11 +798,14 @@ function optimizeLowTier(route, prompt, options) {
     return { prompt, options };
   }
 
-  const maxChars = Math.max(2000, parseInt(process.env.PROXY_LOW_MODEL_MAX_CHARS || '12000', 10) || 12000);
+  const maxChars = Math.max(
+    2000,
+    parseInt(process.env.PROXY_LOW_MODEL_MAX_CHARS || '12000', 10) || 12000
+  );
   const cleanedMessages = Array.isArray(options.messages)
     ? options.messages
-      .map(m => ({ ...m, content: normalizeText(m.content) }))
-      .filter(m => m.content.length > 0)
+        .map((m) => ({ ...m, content: normalizeText(m.content) }))
+        .filter((m) => m.content.length > 0)
     : [];
 
   let total = cleanedMessages.reduce((sum, m) => sum + m.content.length, 0);
@@ -722,10 +830,11 @@ function optimizeLowTier(route, prompt, options) {
   }
 
   const system = normalizeText(options.system || '');
-  const nextPrompt = normalizeText([
-    system ? `System: ${system}` : '',
-    ...cleanedMessages.map(m => `${m.role}: ${m.content}`),
-  ].filter(Boolean).join('\n'));
+  const nextPrompt = normalizeText(
+    [system ? `System: ${system}` : '', ...cleanedMessages.map((m) => `${m.role}: ${m.content}`)]
+      .filter(Boolean)
+      .join('\n')
+  );
 
   return {
     prompt: nextPrompt || prompt,
@@ -766,10 +875,14 @@ function makeReservoirKey(kind, route, prompt, options) {
 
 function reservoirGet(key) {
   const cfg = getReservoirConfig();
-  if (!cfg.enabled) return null;
+  if (!cfg.enabled) {
+    return null;
+  }
 
   const item = _reservoir.get(key);
-  if (!item) return null;
+  if (!item) {
+    return null;
+  }
   if (Date.now() > item.expiresAt) {
     _reservoir.delete(key);
     return null;
@@ -779,7 +892,9 @@ function reservoirGet(key) {
 
 function reservoirSet(key, value) {
   const cfg = getReservoirConfig();
-  if (!cfg.enabled) return;
+  if (!cfg.enabled) {
+    return;
+  }
 
   _reservoir.set(key, {
     value,
@@ -792,85 +907,26 @@ function reservoirSet(key, value) {
     for (const k of _reservoir.keys()) {
       _reservoir.delete(k);
       i += 1;
-      if (i >= overflow) break;
+      if (i >= overflow) {
+        break;
+      }
     }
   }
 }
 
-function reservoirGetDegraded(kind, route) {
-  const cfg = getReservoirConfig();
-  if (!cfg.enabled || _reservoir.size === 0) return null;
+// (Batch 5 清理:reservoirGetDegraded / withFallbackMeta / extractOpenAIContent / sanitizeIpHeaders
+// 四个本地函数全仓零引用、未导出,已删除;函数声明无顶层副作用,删除不改变任何行为。)
 
-  const desiredAdapter = route?.adapterKey || 'auto';
-  const entries = Array.from(_reservoir.entries()).reverse();
-
-  for (const [rawKey, item] of entries) {
-    try {
-      const key = JSON.parse(rawKey);
-      if (key.k !== kind) continue;
-      if (desiredAdapter !== 'auto' && key.a !== desiredAdapter) continue;
-      return {
-        value: item.value,
-        stale: Date.now() > item.expiresAt,
-        adapter: key.a || 'auto',
-      };
-    } catch {
-      // skip malformed key
-    }
-  }
-  return null;
-}
-
-function withFallbackMeta(payload, reason, source = 'reservoir') {
-  if (!payload || typeof payload !== 'object') return payload;
-  return {
-    ...payload,
-    khyFallback: {
-      mode: 'degraded',
-      source,
-      reason: String(reason || 'upstream_unavailable'),
-      generatedAt: new Date().toISOString(),
-    },
-  };
-}
-
-function extractOpenAIContent(responseBody) {
-  try {
-    return String(responseBody?.choices?.[0]?.message?.content || '').trim();
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Strip real IP headers from outgoing requests to prevent IP leaking.
- * Called before forwarding to IDE adapters.
- */
-function sanitizeIpHeaders() {
-  // Set fake forwarded headers to mask real IP
-  const fakeIp = `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
-  return {
-    'X-Forwarded-For': fakeIp,
-    'X-Real-IP': fakeIp,
-    'CF-Connecting-IP': fakeIp,
-    'True-Client-IP': fakeIp,
-  };
-}
-
-function normalizeModelId(raw) {
-  return String(raw || '').trim().replace(/^['"]|['"]$/g, '');
-}
+// normalizeModelId 已收敛至 gateway/_modelIdParse.js(Batch 2 纯函数原子层);
+// 保留本地常量名,调用点逐字节不变。
+const normalizeModelId = require('./_modelIdParse').normalizeModelIdTrimQuotes;
 
 function isWindsurfModelConfigPath(pathname = '') {
   return WINDSURF_MODEL_CONFIG_PATHS.has(String(pathname || ''));
 }
 
 function parseWindsurfProxyModelOverrides() {
-  return parseList(
-    process.env.WINDSURF_PROXY_MODELS
-    || process.env.WINDSURF_MODELS
-    || ''
-  )
+  return parseList(process.env.WINDSURF_PROXY_MODELS || process.env.WINDSURF_MODELS || '')
     .map(normalizeModelId)
     .filter(Boolean);
 }
@@ -881,7 +937,9 @@ function dedupeModels(models = []) {
   for (const model of models) {
     const id = normalizeModelId(model);
     const key = id.toLowerCase();
-    if (!id || seen.has(key)) continue;
+    if (!id || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(id);
   }
@@ -893,21 +951,25 @@ function dedupeModels(models = []) {
 
 async function resolveWindsurfProxyModels() {
   const overridden = parseWindsurfProxyModelOverrides();
-  if (overridden.length > 0) return dedupeModels(overridden);
+  if (overridden.length > 0) {
+    return dedupeModels(overridden);
+  }
 
   try {
     const gw = getGateway();
-    if (!gw._initialized) await gw.init();
+    if (!gw.isInitialized()) {
+      await gw.init();
+    }
     const models = await gw.listModels('windsurf');
     if (Array.isArray(models) && models.length > 0) {
       const prioritized = [
-        ...models.filter(m => m && m.isDefault),
-        ...models.filter(m => m && !m.isDefault),
+        ...models.filter((m) => m && m.isDefault),
+        ...models.filter((m) => m && !m.isDefault),
       ];
-      const resolved = prioritized
-        .map(m => normalizeModelId(m?.id))
-        .filter(Boolean);
-      if (resolved.length > 0) return dedupeModels(resolved);
+      const resolved = prioritized.map((m) => normalizeModelId(m?.id)).filter(Boolean);
+      if (resolved.length > 0) {
+        return dedupeModels(resolved);
+      }
     }
   } catch {
     // fallback to defaults
@@ -924,11 +986,16 @@ async function handleWindsurfModelConfigs(req, res) {
   const resolvedCorsOrigin = resolveProxyCorsOrigin(req.headers.origin);
 
   if (reqContentType.includes('application/json')) {
-    return sendJson(res, 200, {
-      ok: true,
-      models,
-      source: 'khy-windsurf-proxy',
-    }, resolvedCorsOrigin);
+    return sendJson(
+      res,
+      200,
+      {
+        ok: true,
+        models,
+        source: 'khy-windsurf-proxy',
+      },
+      resolvedCorsOrigin
+    );
   }
 
   res.writeHead(200, {
@@ -942,14 +1009,39 @@ async function handleWindsurfModelConfigs(req, res) {
 
 /**
  * Parse request body as JSON.
+ * 请求体设硬上限，防止异常/恶意客户端无限累积导致 OOM/DoS。
  */
+const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50MB
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', chunk => { data += chunk; });
+    let received = 0;
+    let tooLarge = false;
+    req.on('data', (chunk) => {
+      if (tooLarge) {
+        return;
+      } // 已超限：继续排空但不再累积
+      received += Buffer.byteLength(chunk);
+      if (received > MAX_BODY_BYTES) {
+        tooLarge = true;
+        data = '';
+        const err = new Error('Request body too large');
+        err.statusCode = 413;
+        reject(err);
+        return;
+      }
+      data += chunk;
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(data)); }
-      catch { reject(new Error('Invalid JSON')); }
+      if (tooLarge) {
+        return;
+      }
+      try {
+        resolve(JSON.parse(data));
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
@@ -976,12 +1068,18 @@ function sendJson(res, status, data, origin) {
  * blocks are silently skipped.
  */
 function extractImagesFromMessages(messages) {
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   const images = [];
   for (const msg of messages) {
     const content = msg.content;
-    if (typeof content === 'string') continue;          // text-only message
-    if (!Array.isArray(content)) continue;
+    if (typeof content === 'string') {
+      continue;
+    } // text-only message
+    if (!Array.isArray(content)) {
+      continue;
+    }
     for (const part of content) {
       if (part && part.type === 'image_url') {
         const url = part.image_url?.url || part.image_url;
@@ -997,15 +1095,24 @@ function extractImagesFromMessages(messages) {
   return images;
 }
 
-
 function flattenMessageContent(content) {
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return '';
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
   return content
     .map((part) => {
-      if (typeof part === 'string') return part;
-      if (part?.text) return String(part.text);
-      if (part?.type === 'image_url') return '[image]';
+      if (typeof part === 'string') {
+        return part;
+      }
+      if (part?.text) {
+        return String(part.text);
+      }
+      if (part?.type === 'image_url') {
+        return '[image]';
+      }
       return '';
     })
     .filter(Boolean)
@@ -1013,19 +1120,33 @@ function flattenMessageContent(content) {
 }
 
 async function generateByRoute(gw, route, prompt, options) {
+  // Peel off the quota-metering context before handing options to the gateway.
+  const { quotaCustomer, ...restOptions } = options || {};
   const mergedOptions = {
-    ...options,
+    ...restOptions,
     preferredAdapter: route?.preferredAdapter || options.preferredAdapter || undefined,
     preferredModel: route?.preferredModel || options.preferredModel || undefined,
-    strictPreferred: route?.strictPreferred !== undefined
-      ? !!route.strictPreferred
-      : options.strictPreferred,
+    strictPreferred:
+      route?.strictPreferred !== undefined ? !!route.strictPreferred : options.strictPreferred,
     // Durable "user explicitly pinned this channel" signal. When true the gateway
     // must never relax strict and cascade into an unselected adapter (e.g. trae);
     // it retries within the chosen channel and otherwise fails with a clear cause.
-    userPinnedAdapter: route?.userPinned === true ? true : (options.userPinnedAdapter || undefined),
+    userPinnedAdapter: route?.userPinned === true ? true : options.userPinnedAdapter || undefined,
   };
-  return gw.generate(prompt, mergedOptions);
+  const result = await gw.generate(prompt, mergedOptions);
+  // Single accounting point for customer usage (requests/tokens/cost CNY):
+  // every proxied generation funnels through here, so no route double-counts.
+  if (quotaCustomer && quotaCustomer.id) {
+    try {
+      customerQuotaEnforcer.recordUsage(quotaCustomer.id, {
+        result,
+        adapterKey: route?.adapterKey || null,
+      });
+    } catch {
+      /* usage metering must never break the response path */
+    }
+  }
+  return result;
 }
 
 /**
@@ -1041,32 +1162,49 @@ async function generateByRoute(gw, route, prompt, options) {
  */
 /** Best-effort parse of a function_call arguments JSON string → object. */
 function parseCodexArgs(args) {
-  if (!args) return {};
-  if (typeof args === 'object') return args;
-  try { return JSON.parse(args); } catch { return { _raw: String(args) }; }
+  if (!args) {
+    return {};
+  }
+  if (typeof args === 'object') {
+    return args;
+  }
+  try {
+    return JSON.parse(args);
+  } catch {
+    return { _raw: String(args) };
+  }
 }
 
 function persistCodexTurn(codexSession, priorMessages, assistantContent, assistantToolCalls) {
-  if (!codexSession || !codexSession.store) return;
+  if (!codexSession || !codexSession.store) {
+    return;
+  }
   try {
     const assistantMsg = {
       role: 'assistant',
       content: assistantContent || '',
       thinking: null,
-      toolCalls: (Array.isArray(assistantToolCalls) && assistantToolCalls.length > 0) ? assistantToolCalls : null,
+      toolCalls:
+        Array.isArray(assistantToolCalls) && assistantToolCalls.length > 0
+          ? assistantToolCalls
+          : null,
       toolResults: null,
     };
     responseSessionStore.put(codexSession.id, {
       messages: [...(priorMessages || []), assistantMsg],
       createdAt: Date.now(),
     });
-  } catch { /* persistence is best-effort; never break the response */ }
+  } catch {
+    /* persistence is best-effort; never break the response */
+  }
 }
 
 function recordTrainingSample(prompt, reply, meta = {}) {
   const p = String(prompt || '').trim();
   const r = String(reply || '').trim();
-  if (!p || !r) return;
+  if (!p || !r) {
+    return;
+  }
   try {
     const training = require('../modelTrainingService');
     const saved = training.recordConversation(p, r, {
@@ -1075,18 +1213,31 @@ function recordTrainingSample(prompt, reply, meta = {}) {
       quality: 'neutral',
       tokenCount: meta.tokenCount || 0,
     });
-    if (saved && !saved.accepted && String(process.env.PROXY_TRAINING_DEBUG || '').toLowerCase() === 'true') {
+    if (
+      saved &&
+      !saved.accepted &&
+      String(process.env.PROXY_TRAINING_DEBUG || '').toLowerCase() === 'true'
+    ) {
       console.warn('[proxyServer] training sample skipped', {
         reasons: saved.reasons || [],
         path: saved.path || '',
       });
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   try {
     const habits = require('../usageHabitService');
-    habits.recordModelUsage(meta.adapter || meta.provider || 'proxy', meta.model || '', 'conversation', 1);
+    habits.recordModelUsage(
+      meta.adapter || meta.provider || 'proxy',
+      meta.model || '',
+      'conversation',
+      1
+    );
     habits.recordInteraction(p);
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**
@@ -1104,7 +1255,9 @@ async function handleChatCompletions(req, res) {
     max_completion_tokens: maxCompletionTokens,
   } = body;
 
-  if (!rawMsgs?.length) return sendJson(res, 400, { error: { message: 'messages required' } }, resolvedCorsOrigin);
+  if (!rawMsgs?.length) {
+    return sendJson(res, 400, { error: { message: 'messages required' } }, resolvedCorsOrigin);
+  }
 
   // Extract images from message content blocks BEFORE flattening —
   // flattenMessageContent discards image data.
@@ -1123,31 +1276,54 @@ async function handleChatCompletions(req, res) {
 
   const prompt = [
     system ? `System: ${system}` : '',
-    ...messages.map(m => `${m.role}: ${m.content}`),
-  ].filter(Boolean).join('\n');
+    ...messages.map((m) => `${m.role}: ${m.content}`),
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   // ── ExpandModel 拦截 ──
   try {
     const expandSvc = getExpandModelService();
     if (expandSvc.isExpandModel(model)) {
-      const userText = messages.filter(m => m.role === 'user').map(m => m.content).pop() || prompt;
-      return _handleExpandChatCompletions(req, res, { model, stream, userText, messages, system, temperature, maxTokens, maxCompletionTokens });
+      const userText =
+        messages
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content)
+          .pop() || prompt;
+      return _handleExpandChatCompletions(req, res, {
+        model,
+        stream,
+        userText,
+        messages,
+        system,
+        temperature,
+        maxTokens,
+        maxCompletionTokens,
+      });
     }
-  } catch { /* expandModelService not available, proceed normally */ }
+  } catch {
+    /* expandModelService not available, proceed normally */
+  }
 
   const route = modelRouter.resolveModelRoute({ model });
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   const generateOptions = {
     system: system || undefined,
     messages,
     model: route.modelId || undefined,
     temperature: typeof temperature === 'number' ? temperature : undefined,
-    maxTokens: typeof maxTokens === 'number'
-      ? maxTokens
-      : (typeof maxCompletionTokens === 'number' ? maxCompletionTokens : undefined),
+    maxTokens:
+      typeof maxTokens === 'number'
+        ? maxTokens
+        : typeof maxCompletionTokens === 'number'
+          ? maxCompletionTokens
+          : undefined,
     images: _rawImages.length > 0 ? _rawImages : undefined,
+    quotaCustomer: req._khyQuotaCustomer || undefined,
   };
   const optimized = optimizeLowTier(route, prompt, generateOptions);
   const runPrompt = optimized.prompt;
@@ -1158,14 +1334,17 @@ async function handleChatCompletions(req, res) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': resolvedCorsOrigin,
     });
 
     const responseId = `chatcmpl-${crypto.randomUUID()}`;
     const created = Math.floor(Date.now() / 1000);
-    const streamModel = model
-      || (route.adapterKey ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${route.modelId || 'default'}` : (route.modelId || 'default'));
+    const streamModel =
+      model ||
+      (route.adapterKey
+        ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${route.modelId || 'default'}`
+        : route.modelId || 'default');
 
     const sendSSE = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
@@ -1173,11 +1352,24 @@ async function handleChatCompletions(req, res) {
       const result = await generateByRoute(gw, route, runPrompt, {
         ...runOptions,
         onChunk: (chunk) => {
-          if (chunk.type === 'text') {
+          if (chunk.type === 'text' && chunk.text) {
             sendSSE({
-              id: responseId, object: 'chat.completion.chunk', created,
+              id: responseId,
+              object: 'chat.completion.chunk',
+              created,
               model: streamModel,
               choices: [{ index: 0, delta: { content: chunk.text }, finish_reason: null }],
+            });
+          } else if (chunk.type === 'tool_use') {
+            // Emit a tool_use event that the frontend recognizes → renders tool card
+            const rawInput =
+              typeof chunk.input === 'string' ? chunk.input : JSON.stringify(chunk.input || {});
+            sendSSE({
+              type: 'tool_use',
+              id: chunk.id || '',
+              tool: chunk.name || 'unknown',
+              name: chunk.name || '',
+              input: rawInput,
             });
           }
         },
@@ -1187,8 +1379,11 @@ async function handleChatCompletions(req, res) {
         throw new Error(result.error || result.content || 'Generation failed');
       }
 
-      const responseModel = model
-        || (route.adapterKey ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${result.model || route.modelId || 'default'}` : (result.model || 'default'));
+      const responseModel =
+        model ||
+        (route.adapterKey
+          ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${result.model || route.modelId || 'default'}`
+          : result.model || 'default');
 
       recordTrainingSample(runPrompt, result.content, {
         provider: result.provider || route.adapterKey || 'proxy',
@@ -1197,7 +1392,9 @@ async function handleChatCompletions(req, res) {
       });
 
       sendSSE({
-        id: responseId, object: 'chat.completion.chunk', created,
+        id: responseId,
+        object: 'chat.completion.chunk',
+        created,
         model: responseModel,
         choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
       });
@@ -1219,18 +1416,46 @@ async function handleChatCompletions(req, res) {
       const result = await generateByRoute(gw, route, runPrompt, runOptions);
 
       if (!result.success) {
-        return sendJson(res, 500, { error: { message: result.error || result.content || 'Generation failed' } }, resolvedCorsOrigin);
+        return sendJson(
+          res,
+          500,
+          { error: { message: result.error || result.content || 'Generation failed' } },
+          resolvedCorsOrigin
+        );
       }
 
-      const responseModel = model
-        || (route.adapterKey ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${result.model || route.modelId || 'default'}` : (result.model || 'default'));
+      const responseModel =
+        model ||
+        (route.adapterKey
+          ? `${ADAPTER_KEY_TO_PREFIX[route.adapterKey] || route.adapterKey}/${result.model || route.modelId || 'default'}`
+          : result.model || 'default');
+
+      const toolUseBlocks = Array.isArray(result.toolUseBlocks) ? result.toolUseBlocks : [];
+      const toolCalls = toolUseBlocks.map((block) => ({
+        id: block.id || '',
+        type: 'function',
+        function: {
+          name: block.name || '',
+          arguments:
+            typeof block.input === 'string' ? block.input : JSON.stringify(block.input || {}),
+        },
+      }));
 
       const responseBody = {
         id: `chatcmpl-${crypto.randomUUID()}`,
         object: 'chat.completion',
         created: Math.floor(Date.now() / 1000),
         model: responseModel,
-        choices: [{ index: 0, message: { role: 'assistant', content: result.content }, finish_reason: 'stop' }],
+        choices: [
+          {
+            index: 0,
+            message:
+              toolCalls.length > 0
+                ? { role: 'assistant', content: result.content || null, tool_calls: toolCalls }
+                : { role: 'assistant', content: result.content },
+            finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
+          },
+        ],
         usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       };
       recordTrainingSample(runPrompt, result.content, {
@@ -1259,12 +1484,16 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   // 服务端执行搜索并返回 server_tool_use → web_search_tool_result。非 Anthropic
   // 后端无法执行该服务端工具，会导致 "Did 0 searches" 死循环。这里在路由前用
   // KHY 自带的多引擎搜索直接合成响应，绕过模型后端，对所有适配器一致生效。
-  if (sourceProtocol === PROTOCOLS.ANTHROPIC
-      && String(process.env.PROXY_WEBSEARCH_INTERCEPT || 'true').toLowerCase() !== 'false'
-      && webSearchInterceptor.isPureWebSearchRequest(body)) {
+  if (
+    sourceProtocol === PROTOCOLS.ANTHROPIC &&
+    String(process.env.PROXY_WEBSEARCH_INTERCEPT || 'true').toLowerCase() !== 'false' &&
+    webSearchInterceptor.isPureWebSearchRequest(body)
+  ) {
     try {
       const handled = await webSearchInterceptor.handleWebSearchRequest(req, res, body);
-      if (handled) return;
+      if (handled) {
+        return;
+      }
     } catch (err) {
       // 拦截失败则继续走正常路由，避免拦截器自身故障阻断请求。
       if (String(process.env.PROXY_TOOL_DEBUG || '').toLowerCase() === 'true') {
@@ -1280,9 +1509,13 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   // stable `resp_…` id up front: it is BOTH the id streamed/returned to the
   // client AND the key the turn is persisted under, so a follow-up request's
   // `previous_response_id` resolves the very thread the client just saw.
-  const codexSession = (sourceProtocol === PROTOCOLS.CODEX)
-    ? { id: `resp_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`, store: body.store !== false }
-    : null;
+  const codexSession =
+    sourceProtocol === PROTOCOLS.CODEX
+      ? {
+          id: `resp_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`,
+          store: body.store !== false,
+        }
+      : null;
   if (codexSession && body.previous_response_id) {
     const prior = responseSessionStore.get(body.previous_response_id);
     if (prior && Array.isArray(prior.messages)) {
@@ -1291,14 +1524,19 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
       canonical.messages = [...prior.messages, ...canonical.messages];
     } else if (String(process.env.RESPONSES_STORE_STRICT || 'true').toLowerCase() !== 'false') {
       // Unknown / expired id → Responses-style 400 (env-relaxable to ignore).
-      return sendJson(res, 400, {
-        error: {
-          message: `Previous response '${body.previous_response_id}' not found or expired.`,
-          type: 'invalid_request_error',
-          code: 'previous_response_not_found',
-          param: 'previous_response_id',
+      return sendJson(
+        res,
+        400,
+        {
+          error: {
+            message: `Previous response '${body.previous_response_id}' not found or expired.`,
+            type: 'invalid_request_error',
+            code: 'previous_response_not_found',
+            param: 'previous_response_id',
+          },
         },
-      }, resolvedCorsOrigin);
+        resolvedCorsOrigin
+      );
     }
   }
 
@@ -1306,18 +1544,34 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   try {
     const expandSvc = getExpandModelService();
     if (expandSvc.isExpandModel(canonical.model)) {
-      const userText = (canonical.messages || [])
-        .filter(m => m.role === 'user')
-        .map(m => typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(b => b.type === 'text').map(b => b.text).join('\n') : ''))
-        .pop() || '';
+      const userText =
+        (canonical.messages || [])
+          .filter((m) => m.role === 'user')
+          .map((m) =>
+            typeof m.content === 'string'
+              ? m.content
+              : Array.isArray(m.content)
+                ? m.content
+                    .filter((b) => b.type === 'text')
+                    .map((b) => b.text)
+                    .join('\n')
+                : ''
+          )
+          .pop() || '';
       const isStream = canonical.metadata?.stream || body.stream;
       return _handleExpandMultiProtocol(req, res, {
-        userText, messages: canonical.messages, system: canonical.system,
-        temperature: canonical.metadata?.temperature, maxTokens: canonical.metadata?.maxTokens,
-        stream: isStream, protocol: detectedProtocol || sourceProtocol,
+        userText,
+        messages: canonical.messages,
+        system: canonical.system,
+        temperature: canonical.metadata?.temperature,
+        maxTokens: canonical.metadata?.maxTokens,
+        stream: isStream,
+        protocol: detectedProtocol || sourceProtocol,
       });
     }
-  } catch { /* proceed normally */ }
+  } catch {
+    /* proceed normally */
+  }
 
   const route = modelRouter.resolveModelRoute({ model: canonical.model || null });
 
@@ -1336,14 +1590,19 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   // Claude Code 发来的 claude-* 模型名 → 优先走 claude 适配器（透传模式），
   // 避免被 kiro 截走导致 tool_use 重组出错。
   // 仅当用户未显式指定适配器前缀时生效（trae/deepseek-v3 会正常路由）。
-  if (sourceProtocol === PROTOCOLS.ANTHROPIC
-      && routeSource !== 'explicit' && routeSource !== 'route-map'
-      && /^claude[-_]/i.test(String(canonical.model || ''))) {
+  if (
+    sourceProtocol === PROTOCOLS.ANTHROPIC &&
+    routeSource !== 'explicit' &&
+    routeSource !== 'route-map' &&
+    /^claude[-_]/i.test(String(canonical.model || ''))
+  ) {
     // 如果 claude 适配器可用（有 API key 或已登录），优先透传
     const _gw = getGateway();
-    const _claudeAdapter = _gw?._adapters?.find(a => a.key === 'claude');
-    const _claudeAvailable = _claudeAdapter && typeof _claudeAdapter.adapter?.isAvailable === 'function'
-      ? _claudeAdapter.adapter.isAvailable() : false;
+    const _claudeAdapter = _gw?.getAdapters()?.find((a) => a.key === 'claude');
+    const _claudeAvailable =
+      _claudeAdapter && typeof _claudeAdapter.adapter?.isAvailable === 'function'
+        ? _claudeAdapter.adapter.isAvailable()
+        : false;
     if (_claudeAvailable) {
       route.adapterKey = 'claude';
       route.preferredAdapter = 'claude';
@@ -1360,26 +1619,34 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   // rawMessages 使用原始请求体中的 messages（body.messages），而非 canonical.messages，
   // 因为 canonical 会把 tool_use/tool_result 从 content 数组中提取到 toolCalls/toolResults 顶层字段，
   // 但 kiroAdapter/relayApiAdapter 期望原始 Anthropic 格式（content 数组内含 tool_use/tool_result 块）。
-  const structuredMessages = canonical.messages.map(m => {
+  const structuredMessages = canonical.messages.map((m) => {
     const base = { role: m.role };
     if (typeof m.content === 'string') {
       base.content = m.content;
     } else if (Array.isArray(m.content)) {
-      base.content = m.content.map(b => (b.type === 'text' ? b.text || '' : '')).join('');
+      base.content = m.content.map((b) => (b.type === 'text' ? b.text || '' : '')).join('');
     } else {
       base.content = '';
     }
-    if (m.toolCalls) base.toolCalls = m.toolCalls;
-    if (m.toolResults) base.toolResults = m.toolResults;
-    if (m.thinking) base.thinking = m.thinking;
+    if (m.toolCalls) {
+      base.toolCalls = m.toolCalls;
+    }
+    if (m.toolResults) {
+      base.toolResults = m.toolResults;
+    }
+    if (m.thinking) {
+      base.thinking = m.thinking;
+    }
     return base;
   });
 
   // Flat prompt as fallback for adapters that only accept a string
   const prompt = [
     canonical.system ? `System: ${canonical.system}` : '',
-    ...structuredMessages.map(m => `${m.role}: ${m.content}`),
-  ].filter(Boolean).join('\n');
+    ...structuredMessages.map((m) => `${m.role}: ${m.content}`),
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   // ── Repair unpaired tool_use/tool_result in raw messages ──────────
   // Bedrock requires every tool_use to have a matching tool_result.
@@ -1398,7 +1665,7 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   const generateOptions = {
     system: canonical.system || undefined,
     messages: structuredMessages,
-    rawMessages: repairedRawMessages,  // 原始 Anthropic 请求体中的 messages，已修复 tool_use/tool_result 配对
+    rawMessages: repairedRawMessages, // 原始 Anthropic 请求体中的 messages，已修复 tool_use/tool_result 配对
     model: route.modelId || undefined,
     temperature: canonical.metadata.temperature || undefined,
     maxTokens: canonical.metadata.maxTokens || undefined,
@@ -1413,19 +1680,24 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     reasoningEffort: canonical.metadata.reasoningEffort ?? undefined,
     thinking: canonical.metadata.thinking ?? undefined,
     tools: canonical.tools || undefined,
-    rawTools: body.tools || undefined,  // 保留原始工具定义（含服务端工具 type 字段如 web_search_20250305）
+    rawTools: body.tools || undefined, // 保留原始工具定义（含服务端工具 type 字段如 web_search_20250305）
     images: _extractedImages.length > 0 ? _extractedImages : undefined,
     // 透传 CC 追踪头部
     _ccTraceHeaders: req._ccTraceHeaders || undefined,
     // 透传 CC 的 anthropic-beta 头部
     _anthropicBeta: req.headers['anthropic-beta'] || undefined,
+    quotaCustomer: req._khyQuotaCustomer || undefined,
   };
 
   // 清理 CC 实验字段：非 Anthropic 直连的适配器不认识 strict/eager_input_streaming/defer_loading
   // 对齐 CC 的 CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS 行为
-  if (Array.isArray(generateOptions.tools) && generateOptions.tools.length > 0
-      && route.adapterKey !== 'claude' && route.adapterKey !== 'api') {
-    generateOptions.tools = generateOptions.tools.map(t => {
+  if (
+    Array.isArray(generateOptions.tools) &&
+    generateOptions.tools.length > 0 &&
+    route.adapterKey !== 'claude' &&
+    route.adapterKey !== 'api'
+  ) {
+    generateOptions.tools = generateOptions.tools.map((t) => {
       const { strict, eager_input_streaming, defer_loading, ...clean } = t;
       return clean;
     });
@@ -1435,16 +1707,24 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   if (String(process.env.PROXY_TOOL_DEBUG || '').toLowerCase() === 'true') {
     const toolCount = canonical.tools?.length || 0;
     const rawMsgCount = canonical.messages?.length || 0;
-    const hasToolUseInMsgs = canonical.messages?.some(m => Array.isArray(m.content) && m.content.some(b => b.type === 'tool_use'));
-    const hasToolResultInMsgs = canonical.messages?.some(m => Array.isArray(m.content) && m.content.some(b => b.type === 'tool_result'));
-    console.log(`[proxy:tool-debug] tools=${toolCount} rawMsgs=${rawMsgCount} hasToolUse=${hasToolUseInMsgs} hasToolResult=${hasToolResultInMsgs} route=${route.adapterKey}/${route.modelId}`);
+    const hasToolUseInMsgs = canonical.messages?.some(
+      (m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_use')
+    );
+    const hasToolResultInMsgs = canonical.messages?.some(
+      (m) => Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_result')
+    );
+    console.log(
+      `[proxy:tool-debug] tools=${toolCount} rawMsgs=${rawMsgCount} hasToolUse=${hasToolUseInMsgs} hasToolResult=${hasToolResultInMsgs} route=${route.adapterKey}/${route.modelId}`
+    );
   }
   const optimized = optimizeLowTier(route, prompt, generateOptions);
   const runPrompt = optimized.prompt;
   const runOptions = optimized.options;
 
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   const outputProtocol = detectedProtocol;
 
@@ -1454,16 +1734,17 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     // Only claudeAdapter supports onRawChunk/passthroughStream — do NOT include
     // 'api' or 'relay_api' here; they use OpenAI protocol upstream and would
     // produce an empty SSE stream since onRawChunk is never called.
-    const isAnthropicPassthrough = sourceProtocol === PROTOCOLS.ANTHROPIC
-      && outputProtocol === PROTOCOLS.ANTHROPIC
-      && route.adapterKey === 'claude'
-      && String(process.env.PROXY_ANTHROPIC_PASSTHROUGH || 'true').toLowerCase() !== 'false';
+    const isAnthropicPassthrough =
+      sourceProtocol === PROTOCOLS.ANTHROPIC &&
+      outputProtocol === PROTOCOLS.ANTHROPIC &&
+      route.adapterKey === 'claude' &&
+      String(process.env.PROXY_ANTHROPIC_PASSTHROUGH || 'true').toLowerCase() !== 'false';
 
     if (isAnthropicPassthrough) {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
         'Access-Control-Allow-Origin': resolvedCorsOrigin,
       });
       try {
@@ -1471,7 +1752,11 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
           ...runOptions,
           passthroughStream: true,
           onRawChunk: (buf) => {
-            try { res.write(buf); } catch { /* client disconnected */ }
+            try {
+              res.write(buf);
+            } catch {
+              /* client disconnected */
+            }
           },
         });
         if (!result.success && !result.passthrough) {
@@ -1480,15 +1765,22 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
           const sseEvent = (eventType, data) => {
             res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
           };
-          sseEvent('error', { type: 'error', error: { type: 'api_error', message: result.error || 'Passthrough failed' } });
+          sseEvent('error', {
+            type: 'error',
+            error: { type: 'api_error', message: result.error || 'Passthrough failed' },
+          });
         }
         res.end();
         return;
       } catch (err) {
         // 透传失败，发送错误事件
         try {
-          res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', error: { type: 'api_error', message: err.message } })}\n\n`);
-        } catch { /* client disconnected */ }
+          res.write(
+            `event: error\ndata: ${JSON.stringify({ type: 'error', error: { type: 'api_error', message: err.message } })}\n\n`
+          );
+        } catch {
+          /* client disconnected */
+        }
         res.end();
         return;
       }
@@ -1497,7 +1789,7 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': resolvedCorsOrigin,
     });
 
@@ -1539,7 +1831,7 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     let hasThinkingBlock = false;
     let hasTextBlock = false;
     let hasToolUse = false;
-    let streamToolUseBlocks = [];
+    const streamToolUseBlocks = [];
     let tokenUsage = null;
 
     // ── Codex (Responses API) streaming state machine ──
@@ -1560,8 +1852,9 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     let codexMsgText = '';
     let codexCurrentTool = null; // in-flight incremental function_call entry
     const codexToolItems = []; // { itemId, callId, name, arguments } for the final snapshot
-    const codexRespId = (codexSession && codexSession.id)
-      || `resp_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
+    const codexRespId =
+      (codexSession && codexSession.id) ||
+      `resp_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
     const codexEvent = (eventType, data) => {
       const payload = { type: eventType, sequence_number: codexSeq++, ...data };
       res.write(`event: ${eventType}\ndata: ${JSON.stringify(payload)}\n\n`);
@@ -1575,31 +1868,54 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
       usage: usage || null,
     });
     const codexOpenMsg = () => {
-      if (codexMsgOpen) return;
+      if (codexMsgOpen) {
+        return;
+      }
       codexMsgItemId = `msg_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
       codexMsgText = '';
       codexEvent('response.output_item.added', {
         output_index: codexOutputIndex,
-        item: { id: codexMsgItemId, type: 'message', status: 'in_progress', role: 'assistant', content: [] },
+        item: {
+          id: codexMsgItemId,
+          type: 'message',
+          status: 'in_progress',
+          role: 'assistant',
+          content: [],
+        },
       });
       codexEvent('response.content_part.added', {
-        item_id: codexMsgItemId, output_index: codexOutputIndex, content_index: 0,
+        item_id: codexMsgItemId,
+        output_index: codexOutputIndex,
+        content_index: 0,
         part: { type: 'output_text', text: '', annotations: [] },
       });
       codexMsgOpen = true;
     };
     const codexCloseMsg = () => {
-      if (!codexMsgOpen) return;
+      if (!codexMsgOpen) {
+        return;
+      }
       codexEvent('response.output_text.done', {
-        item_id: codexMsgItemId, output_index: codexOutputIndex, content_index: 0, text: codexMsgText,
+        item_id: codexMsgItemId,
+        output_index: codexOutputIndex,
+        content_index: 0,
+        text: codexMsgText,
       });
       codexEvent('response.content_part.done', {
-        item_id: codexMsgItemId, output_index: codexOutputIndex, content_index: 0,
+        item_id: codexMsgItemId,
+        output_index: codexOutputIndex,
+        content_index: 0,
         part: { type: 'output_text', text: codexMsgText, annotations: [] },
       });
       codexEvent('response.output_item.done', {
         output_index: codexOutputIndex,
-        item: { id: codexMsgItemId, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: codexMsgText, annotations: [] }] },
+        item: {
+          id: codexMsgItemId,
+          type: 'message',
+          status: 'completed',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: codexMsgText, annotations: [] }],
+        },
       });
       codexOutputIndex++;
       codexMsgOpen = false;
@@ -1610,13 +1926,35 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
       codexToolItems.push({ itemId, callId, name, arguments: argsStr });
       codexEvent('response.output_item.added', {
         output_index: codexOutputIndex,
-        item: { id: itemId, type: 'function_call', status: 'in_progress', name, call_id: callId, arguments: '' },
+        item: {
+          id: itemId,
+          type: 'function_call',
+          status: 'in_progress',
+          name,
+          call_id: callId,
+          arguments: '',
+        },
       });
-      codexEvent('response.function_call_arguments.delta', { item_id: itemId, output_index: codexOutputIndex, delta: argsStr });
-      codexEvent('response.function_call_arguments.done', { item_id: itemId, output_index: codexOutputIndex, arguments: argsStr });
+      codexEvent('response.function_call_arguments.delta', {
+        item_id: itemId,
+        output_index: codexOutputIndex,
+        delta: argsStr,
+      });
+      codexEvent('response.function_call_arguments.done', {
+        item_id: itemId,
+        output_index: codexOutputIndex,
+        arguments: argsStr,
+      });
       codexEvent('response.output_item.done', {
         output_index: codexOutputIndex,
-        item: { id: itemId, type: 'function_call', status: 'completed', name, call_id: callId, arguments: argsStr },
+        item: {
+          id: itemId,
+          type: 'function_call',
+          status: 'completed',
+          name,
+          call_id: callId,
+          arguments: argsStr,
+        },
       });
       codexOutputIndex++;
     };
@@ -1626,23 +1964,33 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
       const output = [];
       if (fullContent) {
         output.push({
-          type: 'message', id: codexMsgItemId || `msg_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`,
-          status: 'completed', role: 'assistant',
+          type: 'message',
+          id: codexMsgItemId || `msg_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`,
+          status: 'completed',
+          role: 'assistant',
           content: [{ type: 'output_text', text: fullContent, annotations: [] }],
         });
       }
       for (const t of codexToolItems) {
-        output.push({ type: 'function_call', id: t.itemId, call_id: t.callId, name: t.name, arguments: t.arguments, status: 'completed' });
+        output.push({
+          type: 'function_call',
+          id: t.itemId,
+          call_id: t.callId,
+          name: t.name,
+          arguments: t.arguments,
+          status: 'completed',
+        });
       }
       return output;
     };
-    const codexUsage = () => (tokenUsage
-      ? {
-          input_tokens: tokenUsage.inputTokens || 0,
-          output_tokens: tokenUsage.outputTokens || 0,
-          total_tokens: (tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0),
-        }
-      : { input_tokens: 0, output_tokens: outputTokens, total_tokens: outputTokens });
+    const codexUsage = () =>
+      tokenUsage
+        ? {
+            input_tokens: tokenUsage.inputTokens || 0,
+            output_tokens: tokenUsage.outputTokens || 0,
+            total_tokens: (tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0),
+          }
+        : { input_tokens: 0, output_tokens: outputTokens, total_tokens: outputTokens };
 
     if (isCodex) {
       codexEvent('response.created', { response: codexSnapshot('in_progress', [], null) });
@@ -1650,29 +1998,81 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     }
 
     // 代理层默认不额外强杀流；仅在显式启用时补一层 idle abort。
-    const STREAM_IDLE_TIMEOUT_MS = parseInt(process.env.PROXY_STREAM_IDLE_TIMEOUT_MS || '90000', 10);
-    const PROXY_STREAM_IDLE_ABORT_ENABLED = parseBoolean(process.env.PROXY_STREAM_IDLE_ABORT_ENABLED, false);
+    const STREAM_IDLE_TIMEOUT_MS = parseInt(
+      process.env.PROXY_STREAM_IDLE_TIMEOUT_MS || '90000',
+      10
+    );
+    const PROXY_STREAM_IDLE_ABORT_ENABLED = parseBoolean(
+      process.env.PROXY_STREAM_IDLE_ABORT_ENABLED,
+      false
+    );
     const streamIdleAc = PROXY_STREAM_IDLE_ABORT_ENABLED ? new AbortController() : null;
     let streamIdleTimer = null;
     const resetStreamIdle = () => {
-      if (!streamIdleAc) return;
-      if (streamIdleTimer) clearTimeout(streamIdleTimer);
+      if (!streamIdleAc) {
+        return;
+      }
+      if (streamIdleTimer) {
+        clearTimeout(streamIdleTimer);
+      }
       streamIdleTimer = setTimeout(() => {
         streamIdleAc.abort('stream idle timeout');
       }, STREAM_IDLE_TIMEOUT_MS);
     };
     const clearStreamIdle = () => {
-      if (streamIdleTimer) { clearTimeout(streamIdleTimer); streamIdleTimer = null; }
+      if (streamIdleTimer) {
+        clearTimeout(streamIdleTimer);
+        streamIdleTimer = null;
+      }
     };
-    if (streamIdleAc) resetStreamIdle(); // 首次启动
-    const mergedAbortSignal = mergeAbortSignals(runOptions.abortSignal || null, streamIdleAc ? streamIdleAc.signal : null);
+    if (streamIdleAc) {
+      resetStreamIdle();
+    } // 首次启动
+
+    // 客户端提前断开时中止上游生成，否则上游继续产出，白烧 token/配额。
+    const clientAbortAc = new AbortController();
+    let streamFinished = false;
+    const onClientClose = () => {
+      if (streamFinished) {
+        return;
+      } // 正常结束后不误 abort
+      streamFinished = true;
+      clearStreamIdle();
+      try {
+        clientAbortAc.abort('client disconnected');
+      } catch {
+        /* ignore */
+      }
+    };
+    const detachClientClose = () => {
+      try {
+        res.removeListener('close', onClientClose);
+      } catch {
+        /* ignore */
+      }
+      try {
+        req.removeListener('close', onClientClose);
+      } catch {
+        /* ignore */
+      }
+    };
+    res.on('close', onClientClose);
+    req.on('close', onClientClose);
+
+    const mergedAbortSignal = mergeAbortSignals(
+      runOptions.abortSignal || null,
+      streamIdleAc ? streamIdleAc.signal : null,
+      clientAbortAc.signal
+    );
 
     try {
       const result = await generateByRoute(gw, route, runPrompt, {
         ...runOptions,
         ...(mergedAbortSignal ? { abortSignal: mergedAbortSignal } : {}),
         onChunk: (chunk) => {
-          if (streamIdleAc) resetStreamIdle(); // 每收到 chunk 重置计时器
+          if (streamIdleAc) {
+            resetStreamIdle();
+          } // 每收到 chunk 重置计时器
 
           if (chunk.type === 'token_usage') {
             // 保存 token usage 供 message_delta 使用
@@ -1688,35 +2088,63 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
               codexMsgText += chunk.text;
               outputTokens++;
               codexEvent('response.output_text.delta', {
-                item_id: codexMsgItemId, output_index: codexOutputIndex, content_index: 0, delta: chunk.text,
+                item_id: codexMsgItemId,
+                output_index: codexOutputIndex,
+                content_index: 0,
+                delta: chunk.text,
               });
             } else if (chunk.type === 'tool_use_start') {
               codexCloseMsg();
               const itemId = `fc_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
-              const callId = chunk.toolUseId || `call_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
-              codexCurrentTool = { itemId, callId, name: chunk.name, outputIndex: codexOutputIndex, arguments: '' };
+              const callId =
+                chunk.toolUseId || `call_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
+              codexCurrentTool = {
+                itemId,
+                callId,
+                name: chunk.name,
+                outputIndex: codexOutputIndex,
+                arguments: '',
+              };
               codexToolItems.push(codexCurrentTool);
               codexEvent('response.output_item.added', {
                 output_index: codexOutputIndex,
-                item: { id: itemId, type: 'function_call', status: 'in_progress', name: chunk.name, call_id: callId, arguments: '' },
+                item: {
+                  id: itemId,
+                  type: 'function_call',
+                  status: 'in_progress',
+                  name: chunk.name,
+                  call_id: callId,
+                  arguments: '',
+                },
               });
             } else if (chunk.type === 'tool_use_input_delta') {
               if (codexCurrentTool) {
                 const part = chunk.partialJson || '';
                 codexCurrentTool.arguments += part;
                 codexEvent('response.function_call_arguments.delta', {
-                  item_id: codexCurrentTool.itemId, output_index: codexCurrentTool.outputIndex, delta: part,
+                  item_id: codexCurrentTool.itemId,
+                  output_index: codexCurrentTool.outputIndex,
+                  delta: part,
                 });
               }
             } else if (chunk.type === 'tool_use_end') {
               hasToolUse = true;
               if (codexCurrentTool) {
                 codexEvent('response.function_call_arguments.done', {
-                  item_id: codexCurrentTool.itemId, output_index: codexCurrentTool.outputIndex, arguments: codexCurrentTool.arguments,
+                  item_id: codexCurrentTool.itemId,
+                  output_index: codexCurrentTool.outputIndex,
+                  arguments: codexCurrentTool.arguments,
                 });
                 codexEvent('response.output_item.done', {
                   output_index: codexCurrentTool.outputIndex,
-                  item: { id: codexCurrentTool.itemId, type: 'function_call', status: 'completed', name: codexCurrentTool.name, call_id: codexCurrentTool.callId, arguments: codexCurrentTool.arguments },
+                  item: {
+                    id: codexCurrentTool.itemId,
+                    type: 'function_call',
+                    status: 'completed',
+                    name: codexCurrentTool.name,
+                    call_id: codexCurrentTool.callId,
+                    arguments: codexCurrentTool.arguments,
+                  },
                 });
                 codexOutputIndex++;
                 codexCurrentTool = null;
@@ -1725,8 +2153,13 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
               // Whole-chunk tool call (adapters that don't stream arg deltas).
               codexCloseMsg();
               hasToolUse = true;
-              const callId = chunk.id || `call_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
-              codexEmitToolBlock(callId, chunk.name, JSON.stringify(chunk.input || chunk.arguments || {}));
+              const callId =
+                chunk.id || `call_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`;
+              codexEmitToolBlock(
+                callId,
+                chunk.name,
+                JSON.stringify(chunk.input || chunk.arguments || {})
+              );
             }
             // thinking / thinking_signature are dropped in v1 (no malformed
             // reasoning item; clients tolerate its absence).
@@ -1738,7 +2171,9 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             if (chunk.type === 'text') {
               fullContent += chunk.text;
               outputTokens++;
-              res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk.text } })}\n\n`);
+              res.write(
+                `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk.text } })}\n\n`
+              );
             }
             return;
           }
@@ -1767,20 +2202,23 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             closeText();
             if (!hasThinkingBlock) {
               sseEvent('content_block_start', {
-                type: 'content_block_start', index: blockIndex,
+                type: 'content_block_start',
+                index: blockIndex,
                 content_block: { type: 'thinking', thinking: '' },
               });
               hasThinkingBlock = true;
             }
             sseEvent('content_block_delta', {
-              type: 'content_block_delta', index: blockIndex,
+              type: 'content_block_delta',
+              index: blockIndex,
               delta: { type: 'thinking_delta', thinking: chunk.text },
             });
           } else if (chunk.type === 'thinking_signature') {
             // thinking 签名 + 关闭 thinking block
             if (hasThinkingBlock) {
               sseEvent('content_block_delta', {
-                type: 'content_block_delta', index: blockIndex,
+                type: 'content_block_delta',
+                index: blockIndex,
                 delta: { type: 'signature_delta', signature: chunk.signature },
               });
               sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
@@ -1792,7 +2230,8 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             closeThinking();
             if (!hasTextBlock) {
               sseEvent('content_block_start', {
-                type: 'content_block_start', index: blockIndex,
+                type: 'content_block_start',
+                index: blockIndex,
                 content_block: { type: 'text', text: '' },
               });
               hasTextBlock = true;
@@ -1800,22 +2239,26 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             fullContent += chunk.text;
             outputTokens++;
             sseEvent('content_block_delta', {
-              type: 'content_block_delta', index: blockIndex,
+              type: 'content_block_delta',
+              index: blockIndex,
               delta: { type: 'text_delta', text: chunk.text },
             });
           } else if (chunk.type === 'tool_use_start') {
             // 增量 tool_use 开始（kiroAdapter 发出）
             closeThinking();
             closeText();
-            const toolId = chunk.toolUseId || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+            const toolId =
+              chunk.toolUseId || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
             sseEvent('content_block_start', {
-              type: 'content_block_start', index: blockIndex,
+              type: 'content_block_start',
+              index: blockIndex,
               content_block: { type: 'tool_use', id: toolId, name: chunk.name, input: {} },
             });
           } else if (chunk.type === 'tool_use_input_delta') {
             // 增量 tool_use input 片段
             sseEvent('content_block_delta', {
-              type: 'content_block_delta', index: blockIndex,
+              type: 'content_block_delta',
+              index: blockIndex,
               delta: { type: 'input_json_delta', partial_json: chunk.partialJson },
             });
           } else if (chunk.type === 'tool_use_end') {
@@ -1829,15 +2272,21 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             closeThinking();
             closeText();
             hasToolUse = true;
-            const toolId = chunk.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+            const toolId =
+              chunk.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
             streamToolUseBlocks.push(chunk);
             sseEvent('content_block_start', {
-              type: 'content_block_start', index: blockIndex,
+              type: 'content_block_start',
+              index: blockIndex,
               content_block: { type: 'tool_use', id: toolId, name: chunk.name, input: {} },
             });
             sseEvent('content_block_delta', {
-              type: 'content_block_delta', index: blockIndex,
-              delta: { type: 'input_json_delta', partial_json: JSON.stringify(chunk.input || chunk.arguments || {}) },
+              type: 'content_block_delta',
+              index: blockIndex,
+              delta: {
+                type: 'input_json_delta',
+                partial_json: JSON.stringify(chunk.input || chunk.arguments || {}),
+              },
             });
             sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
             blockIndex++;
@@ -1855,7 +2304,9 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
 
       // 调试：结果工具信息
       if (String(process.env.PROXY_TOOL_DEBUG || '').toLowerCase() === 'true') {
-        console.log(`[proxy:tool-debug] result: success=${result.success} stopReason=${result.stopReason} toolUseBlocks=${result.toolUseBlocks?.length || 0} hasToolUseInStream=${hasToolUse} streamToolUseBlocks=${streamToolUseBlocks?.length || 0} contentLen=${fullContent?.length || 0}`);
+        console.log(
+          `[proxy:tool-debug] result: success=${result.success} stopReason=${result.stopReason} toolUseBlocks=${result.toolUseBlocks?.length || 0} hasToolUseInStream=${hasToolUse} streamToolUseBlocks=${streamToolUseBlocks?.length || 0} contentLen=${fullContent?.length || 0}`
+        );
       }
 
       recordTrainingSample(runPrompt, fullContent, {
@@ -1876,33 +2327,36 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             codexEmitToolBlock(callId, tc.name, JSON.stringify(tc.input || tc.arguments || {}));
           }
         } else {
-        // 关闭已开的 thinking/text block
-        if (hasThinkingBlock) {
-          sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
-          blockIndex++;
-          hasThinkingBlock = false;
-        }
-        if (hasTextBlock) {
-          sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
-          blockIndex++;
-          hasTextBlock = false;
-        }
-        hasToolUse = true;
-        for (const tc of result.toolUseBlocks) {
-          const toolId = tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
-          sseEvent('content_block_start', {
-            type: 'content_block_start',
-            index: blockIndex,
-            content_block: { type: 'tool_use', id: toolId, name: tc.name, input: {} },
-          });
-          sseEvent('content_block_delta', {
-            type: 'content_block_delta',
-            index: blockIndex,
-            delta: { type: 'input_json_delta', partial_json: JSON.stringify(tc.input || tc.arguments || {}) },
-          });
-          sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
-          blockIndex++;
-        }
+          // 关闭已开的 thinking/text block
+          if (hasThinkingBlock) {
+            sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
+            blockIndex++;
+            hasThinkingBlock = false;
+          }
+          if (hasTextBlock) {
+            sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
+            blockIndex++;
+            hasTextBlock = false;
+          }
+          hasToolUse = true;
+          for (const tc of result.toolUseBlocks) {
+            const toolId = tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+            sseEvent('content_block_start', {
+              type: 'content_block_start',
+              index: blockIndex,
+              content_block: { type: 'tool_use', id: toolId, name: tc.name, input: {} },
+            });
+            sseEvent('content_block_delta', {
+              type: 'content_block_delta',
+              index: blockIndex,
+              delta: {
+                type: 'input_json_delta',
+                partial_json: JSON.stringify(tc.input || tc.arguments || {}),
+              },
+            });
+            sseEvent('content_block_stop', { type: 'content_block_stop', index: blockIndex });
+            blockIndex++;
+          }
         }
       }
 
@@ -1912,12 +2366,20 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
         codexCloseMsg();
         const finalOutput = codexBuildFinalOutput();
         const status = codexToolItems.length > 0 ? 'requires_action' : 'completed';
-        codexEvent('response.completed', { response: codexSnapshot(status, finalOutput, codexUsage()) });
+        codexEvent('response.completed', {
+          response: codexSnapshot(status, finalOutput, codexUsage()),
+        });
         // NO `data: [DONE]` — response.completed is the terminal event.
         // Persist the turn for previous_response_id chaining (store:true only).
         persistCodexTurn(
-          codexSession, canonical.messages, fullContent,
-          codexToolItems.map((t) => ({ id: t.callId, name: t.name, arguments: parseCodexArgs(t.arguments) })),
+          codexSession,
+          canonical.messages,
+          fullContent,
+          codexToolItems.map((t) => ({
+            id: t.callId,
+            name: t.name,
+            arguments: parseCodexArgs(t.arguments),
+          }))
         );
       } else if (isAnthropic) {
         // 关闭未关闭的 thinking/text block
@@ -1938,29 +2400,42 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
           usage: {
             output_tokens: tokenUsage ? tokenUsage.outputTokens : outputTokens,
             input_tokens: tokenUsage ? tokenUsage.inputTokens : 0,
-            cache_read_input_tokens: tokenUsage ? (tokenUsage.cacheReadInputTokens || 0) : 0,
-            cache_creation_input_tokens: tokenUsage ? (tokenUsage.cacheWriteInputTokens || 0) : 0,
+            cache_read_input_tokens: tokenUsage ? tokenUsage.cacheReadInputTokens || 0 : 0,
+            cache_creation_input_tokens: tokenUsage ? tokenUsage.cacheWriteInputTokens || 0 : 0,
           },
         });
         // message_stop
         sseEvent('message_stop', { type: 'message_stop' });
       } else {
-        const elseToolCalls = Array.isArray(result.toolUseBlocks) && result.toolUseBlocks.length > 0
-          ? result.toolUseBlocks.map(tc => ({
-              id: tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`,
-              name: tc.name,
-              arguments: tc.input || tc.arguments || {},
-            }))
-          : null;
-        const canonicalResp = { id: msgId, model: finalModel, content: fullContent, thinking: null, toolCalls: elseToolCalls, stopReason: elseToolCalls ? 'tool_use' : 'end_turn', usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
+        const elseToolCalls =
+          Array.isArray(result.toolUseBlocks) && result.toolUseBlocks.length > 0
+            ? result.toolUseBlocks.map((tc) => ({
+                id: tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`,
+                name: tc.name,
+                arguments: tc.input || tc.arguments || {},
+              }))
+            : null;
+        const canonicalResp = {
+          id: msgId,
+          model: finalModel,
+          content: fullContent,
+          thinking: null,
+          toolCalls: elseToolCalls,
+          stopReason: elseToolCalls ? 'tool_use' : 'end_turn',
+          usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        };
         const formatted = protocolConverter.convertResponse(canonicalResp, outputProtocol);
         res.write(`data: ${JSON.stringify(formatted)}\n\n`);
         res.write('data: [DONE]\n\n');
       }
+      streamFinished = true;
       res.end();
       clearStreamIdle();
+      detachClientClose();
     } catch (err) {
+      streamFinished = true;
       clearStreamIdle();
+      detachClientClose();
       if (isCodex) {
         // Guarantee a complete, well-formed terminal sequence even on mid-stream
         // failure: close any dangling message/tool item, then emit
@@ -1968,19 +2443,32 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
         try {
           if (codexCurrentTool) {
             codexEvent('response.function_call_arguments.done', {
-              item_id: codexCurrentTool.itemId, output_index: codexCurrentTool.outputIndex, arguments: codexCurrentTool.arguments,
+              item_id: codexCurrentTool.itemId,
+              output_index: codexCurrentTool.outputIndex,
+              arguments: codexCurrentTool.arguments,
             });
             codexEvent('response.output_item.done', {
               output_index: codexCurrentTool.outputIndex,
-              item: { id: codexCurrentTool.itemId, type: 'function_call', status: 'completed', name: codexCurrentTool.name, call_id: codexCurrentTool.callId, arguments: codexCurrentTool.arguments },
+              item: {
+                id: codexCurrentTool.itemId,
+                type: 'function_call',
+                status: 'completed',
+                name: codexCurrentTool.name,
+                call_id: codexCurrentTool.callId,
+                arguments: codexCurrentTool.arguments,
+              },
             });
             codexOutputIndex++;
             codexCurrentTool = null;
           }
           codexCloseMsg();
           const status = codexToolItems.length > 0 ? 'requires_action' : 'completed';
-          codexEvent('response.completed', { response: codexSnapshot(status, codexBuildFinalOutput(), codexUsage()) });
-        } catch { /* client may have disconnected */ }
+          codexEvent('response.completed', {
+            response: codexSnapshot(status, codexBuildFinalOutput(), codexUsage()),
+          });
+        } catch {
+          /* client may have disconnected */
+        }
       } else if (isAnthropic) {
         // 流中断时确保 content_block 正确关闭（对齐 CC 的孤儿 tool_use 处理）
         try {
@@ -2001,7 +2489,9 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
             },
           });
           sseEvent('message_stop', { type: 'message_stop' });
-        } catch { /* client may have disconnected */ }
+        } catch {
+          /* client may have disconnected */
+        }
       } else {
         res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
       }
@@ -2009,7 +2499,12 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     }
   } else {
     try {
-      const reservoirKey = makeReservoirKey(`proto:${sourceProtocol}`, route, runPrompt, runOptions);
+      const reservoirKey = makeReservoirKey(
+        `proto:${sourceProtocol}`,
+        route,
+        runPrompt,
+        runOptions
+      );
       const cached = reservoirGet(reservoirKey);
       if (cached) {
         return sendJson(res, 200, cached, resolvedCorsOrigin);
@@ -2017,22 +2512,42 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
 
       const result = await generateByRoute(gw, route, runPrompt, runOptions);
       if (!result.success) {
-        return sendJson(res, 500, { error: { message: result.error || result.content || 'Generation failed' } }, resolvedCorsOrigin);
+        return sendJson(
+          res,
+          500,
+          { error: { message: result.error || result.content || 'Generation failed' } },
+          resolvedCorsOrigin
+        );
       }
 
       const resolvedModel = canonical.model || result.model || 'default';
-      const toolCalls = Array.isArray(result.toolUseBlocks) && result.toolUseBlocks.length > 0
-        ? result.toolUseBlocks.map(tc => ({
-            id: tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`,
-            name: tc.name,
-            arguments: tc.input || tc.arguments || {},
-          }))
-        : null;
-      const canonicalResp = { id: (codexSession && codexSession.id) || `msg_${crypto.randomUUID()}`, model: resolvedModel, content: result.content, thinking: null, toolCalls, stopReason: toolCalls ? 'tool_use' : 'end_turn', usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } };
+      const toolCalls =
+        Array.isArray(result.toolUseBlocks) && result.toolUseBlocks.length > 0
+          ? result.toolUseBlocks.map((tc) => ({
+              id: tc.id || `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`,
+              name: tc.name,
+              arguments: tc.input || tc.arguments || {},
+            }))
+          : null;
+      const canonicalResp = {
+        id: (codexSession && codexSession.id) || `msg_${crypto.randomUUID()}`,
+        model: resolvedModel,
+        content: result.content,
+        thinking: null,
+        toolCalls,
+        stopReason: toolCalls ? 'tool_use' : 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      };
       const formatted = protocolConverter.convertResponse(canonicalResp, outputProtocol);
       // Persist for previous_response_id chaining (codex/Responses, store:true).
-      persistCodexTurn(codexSession, canonical.messages, result.content,
-        toolCalls ? toolCalls.map((tc) => ({ id: tc.id, name: tc.name, arguments: tc.arguments })) : null);
+      persistCodexTurn(
+        codexSession,
+        canonical.messages,
+        result.content,
+        toolCalls
+          ? toolCalls.map((tc) => ({ id: tc.id, name: tc.name, arguments: tc.arguments }))
+          : null
+      );
       recordTrainingSample(runPrompt, result.content, {
         provider: result.provider || route.adapterKey || 'proxy',
         adapter: route.adapterKey || result.adapter || null,
@@ -2055,63 +2570,94 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
  */
 async function _handleExpandChatCompletions(req, res, ctx) {
   const resolvedCorsOrigin = resolveProxyCorsOrigin(req.headers.origin);
-  const { model, stream, userText, messages, system, temperature, maxTokens, maxCompletionTokens } = ctx;
+  const { stream, userText, messages, system, temperature, maxTokens, maxCompletionTokens } = ctx;
   const expandSvc = getExpandModelService();
   const responseId = `chatcmpl-${crypto.randomUUID()}`;
   const created = Math.floor(Date.now() / 1000);
 
   const expandOpts = {
     cwd: process.cwd(),
-    messages, system, temperature,
-    maxTokens: typeof maxTokens === 'number' ? maxTokens : (typeof maxCompletionTokens === 'number' ? maxCompletionTokens : undefined),
+    messages,
+    system,
+    temperature,
+    maxTokens:
+      typeof maxTokens === 'number'
+        ? maxTokens
+        : typeof maxCompletionTokens === 'number'
+          ? maxCompletionTokens
+          : undefined,
   };
 
   if (!stream) {
     const result = await expandSvc.handleExpandModel(userText, expandOpts);
-    return sendJson(res, 200, {
-      id: responseId,
-      object: 'chat.completion',
-      created,
-      model: 'khy-expand',
-      choices: [{
-        index: 0,
-        message: { role: 'assistant', content: result.content || '' },
-        finish_reason: 'stop',
-      }],
-      usage: result.tokenUsage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-    }, resolvedCorsOrigin);
+    return sendJson(
+      res,
+      200,
+      {
+        id: responseId,
+        object: 'chat.completion',
+        created,
+        model: 'khy-expand',
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: result.content || '' },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: result.tokenUsage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      },
+      resolvedCorsOrigin
+    );
   }
 
   // Streaming SSE
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': resolvedCorsOrigin,
   });
 
-  const sendSSE = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+  const sendSSE = (data) => {
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  };
 
   // Role chunk
-  sendSSE({ id: responseId, object: 'chat.completion.chunk', created, model: 'khy-expand',
-    choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] });
+  sendSSE({
+    id: responseId,
+    object: 'chat.completion.chunk',
+    created,
+    model: 'khy-expand',
+    choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+  });
 
-  let fullContent = '';
-  const result = await expandSvc.handleExpandModelStream(userText, {
+  await expandSvc.handleExpandModelStream(userText, {
     ...expandOpts,
     onChunk: (chunk) => {
       const text = chunk?.text || chunk?.content || '';
       if (text) {
-        fullContent += text;
-        sendSSE({ id: responseId, object: 'chat.completion.chunk', created, model: 'khy-expand',
-          choices: [{ index: 0, delta: { content: text }, finish_reason: null }] });
+        sendSSE({
+          id: responseId,
+          object: 'chat.completion.chunk',
+          created,
+          model: 'khy-expand',
+          choices: [{ index: 0, delta: { content: text }, finish_reason: null }],
+        });
       }
     },
   });
 
   // Finish chunk
-  sendSSE({ id: responseId, object: 'chat.completion.chunk', created, model: 'khy-expand',
-    choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] });
+  sendSSE({
+    id: responseId,
+    object: 'chat.completion.chunk',
+    created,
+    model: 'khy-expand',
+    choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+  });
   res.write('data: [DONE]\n\n');
   res.end();
 }
@@ -2121,7 +2667,7 @@ async function _handleExpandChatCompletions(req, res, ctx) {
  */
 async function _handleExpandMultiProtocol(req, res, ctx) {
   const resolvedCorsOrigin = resolveProxyCorsOrigin(req.headers.origin);
-  const { userText, messages, system, temperature, maxTokens, stream, protocol } = ctx;
+  const { userText, messages, system, temperature, maxTokens, stream } = ctx;
   const expandSvc = getExpandModelService();
   const msgId = `msg_${crypto.randomUUID()}`;
 
@@ -2129,40 +2675,60 @@ async function _handleExpandMultiProtocol(req, res, ctx) {
 
   if (!stream) {
     const result = await expandSvc.handleExpandModel(userText, expandOpts);
-    return sendJson(res, 200, {
-      id: msgId,
-      type: 'message',
-      role: 'assistant',
-      model: 'khy-expand',
-      content: [{ type: 'text', text: result.content || '' }],
-      stop_reason: 'end_turn',
-      stop_sequence: null,
-      usage: result.tokenUsage || { input_tokens: 0, output_tokens: 0 },
-    }, resolvedCorsOrigin);
+    return sendJson(
+      res,
+      200,
+      {
+        id: msgId,
+        type: 'message',
+        role: 'assistant',
+        model: 'khy-expand',
+        content: [{ type: 'text', text: result.content || '' }],
+        stop_reason: 'end_turn',
+        stop_sequence: null,
+        usage: result.tokenUsage || { input_tokens: 0, output_tokens: 0 },
+      },
+      resolvedCorsOrigin
+    );
   }
 
   // Anthropic SSE streaming
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': resolvedCorsOrigin,
   });
 
-  const sendEvent = (event, data) => { try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch {} };
+  const sendEvent = (event, data) => {
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  };
 
   // message_start
   sendEvent('message_start', {
     type: 'message_start',
-    message: { id: msgId, type: 'message', role: 'assistant', model: 'khy-expand',
-      content: [], stop_reason: null, stop_sequence: null,
-      usage: { input_tokens: 0, output_tokens: 0 } },
+    message: {
+      id: msgId,
+      type: 'message',
+      role: 'assistant',
+      model: 'khy-expand',
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    },
   });
 
   sendEvent('ping', { type: 'ping' });
 
   // content_block_start
-  sendEvent('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
+  sendEvent('content_block_start', {
+    type: 'content_block_start',
+    index: 0,
+    content_block: { type: 'text', text: '' },
+  });
 
   let fullContent = '';
   await expandSvc.handleExpandModelStream(userText, {
@@ -2171,7 +2737,11 @@ async function _handleExpandMultiProtocol(req, res, ctx) {
       const text = chunk?.text || chunk?.content || '';
       if (text) {
         fullContent += text;
-        sendEvent('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+        sendEvent('content_block_delta', {
+          type: 'content_block_delta',
+          index: 0,
+          delta: { type: 'text_delta', text },
+        });
       }
     },
   });
@@ -2180,7 +2750,11 @@ async function _handleExpandMultiProtocol(req, res, ctx) {
   sendEvent('content_block_stop', { type: 'content_block_stop', index: 0 });
 
   // message_delta
-  sendEvent('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: fullContent.length } });
+  sendEvent('message_delta', {
+    type: 'message_delta',
+    delta: { stop_reason: 'end_turn', stop_sequence: null },
+    usage: { output_tokens: fullContent.length },
+  });
 
   // message_stop
   sendEvent('message_stop', { type: 'message_stop' });
@@ -2193,7 +2767,9 @@ async function _handleExpandMultiProtocol(req, res, ctx) {
 async function handleListModels(req, res) {
   const resolvedCorsOrigin = resolveProxyCorsOrigin(req.headers.origin);
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   const created = Math.floor(Date.now() / 1000);
   const includeRawRelayModels = shouldExposeRawRelayModels();
@@ -2207,7 +2783,9 @@ async function handleListModels(req, res) {
     isDefault = false,
   } = {}) => {
     const normalizedId = String(id || '').trim();
-    if (!normalizedId || seen.has(normalizedId)) return;
+    if (!normalizedId || seen.has(normalizedId)) {
+      return;
+    }
     seen.add(normalizedId);
     allModels.push({
       id: normalizedId,
@@ -2225,7 +2803,9 @@ async function handleListModels(req, res) {
       const models = await gw.listModels(key);
       const prefix = ADAPTER_KEY_TO_PREFIX[key] || key;
       for (const m of models) {
-        if (!m?.id) continue;
+        if (!m?.id) {
+          continue;
+        }
         pushModel({
           id: `${prefix}/${m.id}`,
           owner: key,
@@ -2260,7 +2840,9 @@ async function handleListModels(req, res) {
           });
         }
       }
-    } catch { /* adapter not available */ }
+    } catch {
+      /* adapter not available */
+    }
   }
 
   // Inject khy-expand virtual model
@@ -2272,7 +2854,9 @@ async function handleListModels(req, res) {
       name: expandInfo.name || 'KHY ExpandModel',
       description: expandInfo.description || '',
     });
-  } catch { /* expandModelService not available */ }
+  } catch {
+    /* expandModelService not available */
+  }
 
   sendJson(res, 200, { object: 'list', data: allModels }, resolvedCorsOrigin);
 }
@@ -2322,11 +2906,25 @@ async function start(portOrOptions) {
     const apiKey = String(req.headers['x-api-key'] || req.headers['x-goog-api-key'] || '').trim();
     const liveCfg = loadAuthConfig();
     const livePrimary = resolvePrimaryAuthToken();
-    const liveTokens = buildAuthTokenSet(livePrimary.token, { managedTokens: liveCfg.managedTokens });
-    const queryKey = String(new URL(req.url, 'http://localhost').searchParams.get('key') || '').trim();
+    const liveTokens = buildAuthTokenSet(livePrimary.token, {
+      managedTokens: liveCfg.managedTokens,
+    });
+    const queryKey = String(
+      new URL(req.url, 'http://localhost').searchParams.get('key') || ''
+    ).trim();
     const presented = bearer || apiKey || queryKey;
     if (!presented || !liveTokens.has(presented)) {
-      return sendJson(res, 401, { error: { message: 'Unauthorized — use Authorization: Bearer <khy-...> (PROXY_AUTH_TOKEN or PROXY_AUTH_TOKENS)' } }, resolvedCorsOrigin);
+      return sendJson(
+        res,
+        401,
+        {
+          error: {
+            message:
+              'Unauthorized — use Authorization: Bearer <khy-...> (PROXY_AUTH_TOKEN or PROXY_AUTH_TOKENS)',
+          },
+        },
+        resolvedCorsOrigin
+      );
     }
 
     // Strip real client IP from incoming request before processing
@@ -2344,6 +2942,43 @@ async function start(portOrOptions) {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
 
+    // Real-time customer quota enforcement — generation endpoints only, and
+    // only for managed-token callers bound to a customer. Primary-token and
+    // unbound callers pass through unchanged (backward compatible).
+    const isGenerationRequest =
+      req.method === 'POST' &&
+      (pathname === '/v1/chat/completions' ||
+        pathname === '/v1/messages' ||
+        pathname === '/v1/responses' ||
+        /^\/v1beta\/models\/[^/]+:generateContent$/.test(pathname));
+    if (isGenerationRequest) {
+      const enforcement = customerQuotaEnforcer.enforce(presented);
+      if (!enforcement.allowed) {
+        return sendJson(
+          res,
+          enforcement.status,
+          {
+            error: {
+              message: enforcement.message,
+              type:
+                enforcement.code === 'customer_disabled' ? 'customer_disabled' : 'quota_exceeded',
+              code: enforcement.code,
+              quota: enforcement.scope
+                ? {
+                    scope: enforcement.scope,
+                    used: enforcement.used,
+                    limit: enforcement.limit,
+                    month: enforcement.month,
+                  }
+                : undefined,
+            },
+          },
+          resolvedCorsOrigin
+        );
+      }
+      req._khyQuotaCustomer = enforcement.customer || null;
+    }
+
     try {
       if (req.method === 'POST' && isWindsurfModelConfigPath(pathname)) {
         await handleWindsurfModelConfigs(req, res);
@@ -2351,7 +2986,10 @@ async function start(portOrOptions) {
         await handleChatCompletions(req, res);
       } else if (req.method === 'POST' && pathname === '/v1/messages') {
         await handleMultiProtocol(req, res, PROTOCOLS.ANTHROPIC);
-      } else if (req.method === 'POST' && pathname.match(/^\/v1beta\/models\/[^/]+:generateContent$/)) {
+      } else if (
+        req.method === 'POST' &&
+        pathname.match(/^\/v1beta\/models\/[^/]+:generateContent$/)
+      ) {
         await handleMultiProtocol(req, res, PROTOCOLS.GEMINI);
       } else if (req.method === 'POST' && pathname === '/v1/responses') {
         await handleMultiProtocol(req, res, PROTOCOLS.CODEX);
@@ -2359,26 +2997,47 @@ async function start(portOrOptions) {
         await handleListModels(req, res);
       } else if (req.method === 'GET' && pathname === '/health') {
         const r = getReservoirConfig();
-        sendJson(res, 200, {
-          status: 'ok',
-          adapters: PUBLIC_ADAPTERS,
-          protocols: protocolConverter.getSupportedProtocols(),
-          runtime: _runtime || buildRuntimeStatus(activeConfig, authToken),
-          reservoir: { enabled: r.enabled, size: _reservoir.size, ttlMs: r.ttlMs, maxEntries: r.maxEntries },
-        }, resolvedCorsOrigin);
+        sendJson(
+          res,
+          200,
+          {
+            status: 'ok',
+            adapters: PUBLIC_ADAPTERS,
+            protocols: protocolConverter.getSupportedProtocols(),
+            runtime: _runtime || buildRuntimeStatus(activeConfig, authToken),
+            reservoir: {
+              enabled: r.enabled,
+              size: _reservoir.size,
+              ttlMs: r.ttlMs,
+              maxEntries: r.maxEntries,
+            },
+          },
+          resolvedCorsOrigin
+        );
       } else if (req.method === 'GET' && pathname === '/reservoir/stats') {
         const r = getReservoirConfig();
-        sendJson(res, 200, {
-          enabled: r.enabled,
-          size: _reservoir.size,
-          ttlMs: r.ttlMs,
-          maxEntries: r.maxEntries,
-        }, resolvedCorsOrigin);
+        sendJson(
+          res,
+          200,
+          {
+            enabled: r.enabled,
+            size: _reservoir.size,
+            ttlMs: r.ttlMs,
+            maxEntries: r.maxEntries,
+          },
+          resolvedCorsOrigin
+        );
       } else {
         sendJson(res, 404, { error: { message: 'Not found' } }, resolvedCorsOrigin);
       }
     } catch (err) {
-      sendJson(res, 500, { error: { message: err.message } }, resolvedCorsOrigin);
+      // parseBody 超限等带 statusCode 的错误按其真实状态码返回（如 413）。
+      sendJson(
+        res,
+        (err && err.statusCode) || 500,
+        { error: { message: err.message } },
+        resolvedCorsOrigin
+      );
     }
   };
 
@@ -2389,12 +3048,19 @@ async function start(portOrOptions) {
   for (let attempt = 0; attempt <= PORT_RETRY_LIMIT; attempt += 1) {
     localHttpServer = activeConfig.http.enabled ? http.createServer(requestHandler) : null;
     localHttpsServer = activeConfig.https.enabled
-      ? https.createServer({ cert: activeConfig.https.cert, key: activeConfig.https.key }, requestHandler)
+      ? https.createServer(
+          { cert: activeConfig.https.cert, key: activeConfig.https.key },
+          requestHandler
+        )
       : null;
 
     try {
-      if (localHttpServer) await listenServer(localHttpServer, activeConfig.http.port, activeConfig.host);
-      if (localHttpsServer) await listenServer(localHttpsServer, activeConfig.https.port, activeConfig.host);
+      if (localHttpServer) {
+        await listenServer(localHttpServer, activeConfig.http.port, activeConfig.host);
+      }
+      if (localHttpsServer) {
+        await listenServer(localHttpsServer, activeConfig.https.port, activeConfig.host);
+      }
       break;
     } catch (err) {
       await closeServer(localHttpServer);
@@ -2455,16 +3121,24 @@ function stop() {
   });
 }
 
-function isRunning() { return !!_httpServer || !!_httpsServer; }
+function isRunning() {
+  return !!_httpServer || !!_httpsServer;
+}
 
 function getPort() {
-  if (_runtime?.http?.enabled && Number.isFinite(_runtime.http.port)) return _runtime.http.port;
-  if (_runtime?.https?.enabled && Number.isFinite(_runtime.https.port)) return _runtime.https.port;
+  if (_runtime?.http?.enabled && Number.isFinite(_runtime.http.port)) {
+    return _runtime.http.port;
+  }
+  if (_runtime?.https?.enabled && Number.isFinite(_runtime.https.port)) {
+    return _runtime.https.port;
+  }
   return toPort(process.env.PROXY_PORT, 9100) || 9100;
 }
 
 function getRuntimeStatus() {
-  if (_runtime) return { ..._runtime, http: { ..._runtime.http }, https: { ..._runtime.https } };
+  if (_runtime) {
+    return { ..._runtime, http: { ..._runtime.http }, https: { ..._runtime.https } };
+  }
   try {
     const fallback = resolveStartConfig({ port: getPort() });
     return buildRuntimeStatus(fallback, resolvePrimaryAuthToken().token);

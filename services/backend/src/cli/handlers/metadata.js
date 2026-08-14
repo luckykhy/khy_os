@@ -22,15 +22,15 @@
  * 但裸 `khy maintain` / `khy maintain status|audit` 是维护者驾驶舱（handlers/maintain.js）。
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 function fmt() {
   return require('../formatters');
 }
 
 function resolveRoot(args) {
-  const cand = (args && args[0] && !String(args[0]).startsWith('--')) ? String(args[0]) : '';
+  const cand = args && args[0] && !String(args[0]).startsWith('--') ? String(args[0]) : '';
   const base = process.env.KHYQUANT_CWD || process.cwd();
   return cand ? path.resolve(base, cand) : base;
 }
@@ -78,7 +78,9 @@ async function handleMetadata(parsed = {}) {
       printError(`缺少可维护性元数据：${root}/.ai/MAP.md 不存在`);
       printInfo('补齐：khy metadata gen');
     } else {
-      printError(`元数据已过期（结构已变更）：${root}/.ai/${status.mode === 'skeleton' ? 'SKELETON.auto.md' : 'MAP.md'}`);
+      printError(
+        `元数据已过期（结构已变更）：${root}/.ai/${status.mode === 'skeleton' ? 'SKELETON.auto.md' : 'MAP.md'}`
+      );
       printInfo('更新：khy metadata refresh');
     }
     // CI 门禁：以非零退出。
@@ -95,7 +97,9 @@ async function handleMetadata(parsed = {}) {
       printInfo(`  ${exists ? '✓' : '✗'} .ai/${f}${exists ? '' : '（缺失）'}`);
     }
     if (status.exists) {
-      printInfo(`  归属：${status.mode === 'skeleton' ? '人工撰写（机器只刷新派生骨架）' : '机器自有（可被 refresh 覆盖）'}`);
+      printInfo(
+        `  归属：${status.mode === 'skeleton' ? '人工撰写（机器只刷新派生骨架）' : '机器自有（可被 refresh 覆盖）'}`
+      );
       printInfo(`  状态：${status.stale ? '⚠ 已过期，建议 khy metadata refresh' : '✓ 最新'}`);
     } else {
       printInfo('生成：khy metadata gen');
@@ -111,10 +115,18 @@ async function handleMetadata(parsed = {}) {
       printError(`未写入：${r.reason || 'unknown'}`);
       return true;
     }
-    if (r.written.length) printSuccess(`已写入/更新：${r.written.join(', ')}`);
-    if (r.unchanged.length) printInfo(`已是最新：${r.unchanged.join(', ')}`);
-    if (r.skipped.length) printWarn(`跳过（同名外部文件，未覆盖）：${r.skipped.join(', ')}`);
-    if (!r.written.length && !r.unchanged.length) printWarn('无入口文件被处理（检查 KHY_META_POINTER_TARGETS）。');
+    if (r.written.length) {
+      printSuccess(`已写入/更新：${r.written.join(', ')}`);
+    }
+    if (r.unchanged.length) {
+      printInfo(`已是最新：${r.unchanged.join(', ')}`);
+    }
+    if (r.skipped.length) {
+      printWarn(`跳过（同名外部文件，未覆盖）：${r.skipped.join(', ')}`);
+    }
+    if (!r.written.length && !r.unchanged.length) {
+      printWarn('无入口文件被处理（检查 KHY_META_POINTER_TARGETS）。');
+    }
     printInfo('此后 Claude Code/Codex/Cursor/Copilot 等会经各自入口文件读到 .ai/ 种子文档。');
     return true;
   }
@@ -181,8 +193,9 @@ async function handleMetadata(parsed = {}) {
 function handleHook(args, { printInfo, printSuccess, printError, printWarn }) {
   const hookSvc = require('../../services/metadataHook');
   // args[0] 可能是 install/uninstall/status，其后是可选路径。
-  const action = (args[0] && !String(args[0]).startsWith('--')) ? String(args[0]).toLowerCase() : 'status';
-  const pathArg = (args[1] && !String(args[1]).startsWith('--')) ? String(args[1]) : '';
+  const action =
+    args[0] && !String(args[0]).startsWith('--') ? String(args[0]).toLowerCase() : 'status';
+  const pathArg = args[1] && !String(args[1]).startsWith('--') ? String(args[1]) : '';
   const base = process.env.KHYQUANT_CWD || process.cwd();
   const startDir = pathArg ? path.resolve(base, pathArg) : base;
 
@@ -199,7 +212,9 @@ function handleHook(args, { printInfo, printSuccess, printError, printWarn }) {
       printWarn(`检测到已有非 khy 的 pre-commit 钩子，未覆盖：${r.preCommit}`);
       printInfo('请手工把以下片段加入该钩子以启用自动刷新：');
       printInfo('');
-      for (const line of String(r.snippet || '').split('\n')) printInfo(`  ${line}`);
+      for (const line of String(r.snippet || '').split('\n')) {
+        printInfo(`  ${line}`);
+      }
     } else {
       printError(`安装失败：${r.reason || 'unknown'}`);
     }
@@ -208,16 +223,24 @@ function handleHook(args, { printInfo, printSuccess, printError, printWarn }) {
 
   if (action === 'uninstall') {
     const r = hookSvc.uninstallHook(startDir);
-    if (r.action === 'removed') printSuccess(`已移除 pre-commit 钩子：${r.preCommit}`);
-    else if (r.action === 'absent') printInfo('未安装 pre-commit 钩子，无需移除。');
-    else if (r.action === 'not_ours') printWarn(`pre-commit 钩子非本工具所装，未移除：${r.preCommit}`);
-    else if (r.action === 'not_a_repo') printError('当前目录不是 git 仓库。');
+    if (r.action === 'removed') {
+      printSuccess(`已移除 pre-commit 钩子：${r.preCommit}`);
+    } else if (r.action === 'absent') {
+      printInfo('未安装 pre-commit 钩子，无需移除。');
+    } else if (r.action === 'not_ours') {
+      printWarn(`pre-commit 钩子非本工具所装，未移除：${r.preCommit}`);
+    } else if (r.action === 'not_a_repo') {
+      printError('当前目录不是 git 仓库。');
+    }
     return true;
   }
 
   // status（默认）
   const s = hookSvc.hookStatus(startDir);
-  if (!s.repo) { printError('当前目录不是 git 仓库。'); return true; }
+  if (!s.repo) {
+    printError('当前目录不是 git 仓库。');
+    return true;
+  }
   printInfo(`仓库：${s.repo}`);
   if (!s.installed) {
     printInfo('  ✗ 未安装 pre-commit 钩子（安装：khy metadata hook install）');

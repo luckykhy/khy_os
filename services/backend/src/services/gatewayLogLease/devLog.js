@@ -39,19 +39,27 @@ function write(ev = {}) {
     extra: ev.extra || null,
   };
   _ring.push(rec);
-  if (_ring.length > RING_MAX) _ring.shift();
+  if (_ring.length > RING_MAX) {
+    _ring.shift();
+  }
 
   const file = _filePath();
   if (file) {
     // 结构化单行 JSON；任何 I/O 失败都吞掉，绝不回退 stdout。
-    try { fs.appendFileSync(file, JSON.stringify(rec) + '\n'); } catch { /* 静默：L1 不得污染主流 */ }
+    try {
+      fs.appendFileSync(file, JSON.stringify(rec) + '\n');
+    } catch {
+      /* 静默：L1 不得污染主流 */
+    }
   }
   return rec;
 }
 
 /** 读取最近 n 条（默认全部）。供状态查询/测试。 */
 function tail(n) {
-  if (!n || n >= _ring.length) return _ring.slice();
+  if (!n || n >= _ring.length) {
+    return _ring.slice();
+  }
   return _ring.slice(_ring.length - n);
 }
 

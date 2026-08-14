@@ -7,6 +7,7 @@
  * management page both invoke these ops through managementRegistry.
  */
 const path = require('path');
+
 const { getDataHome } = require('../../../utils/dataHome');
 const curation = require('../../gateway/modelCuration');
 
@@ -15,10 +16,17 @@ const OVERRIDES_FILE = process.env.KHY_MODEL_OVERRIDES_FILE
   : path.join(getDataHome(), 'model_overrides.json');
 
 function _parseList(value) {
-  if (Array.isArray(value)) return value.map((x) => String(x)).filter(Boolean);
+  if (Array.isArray(value)) {
+    return value.map((x) => String(x)).filter(Boolean);
+  }
   const text = String(value || '').trim();
-  if (!text) return undefined;
-  return text.split(',').map((s) => s.trim()).filter(Boolean);
+  if (!text) {
+    return undefined;
+  }
+  return text
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /** @type {import('../resourceContract').Contract} */
@@ -44,15 +52,21 @@ const contract = {
       return { overrides: curation.getOverrides() };
     },
     async set(args) {
-      if (!args || !args.adapterKey) throw new Error('adapterKey is required');
+      if (!args || !args.adapterKey) {
+        throw new Error('adapterKey is required');
+      }
       const patch = {};
       if ('hidden' in args) {
         const v = _parseList(args.hidden);
-        if (v !== undefined) patch.hidden = v;
+        if (v !== undefined) {
+          patch.hidden = v;
+        }
       }
       if ('added' in args) {
         const v = _parseList(args.added);
-        if (v !== undefined) patch.added = v;
+        if (v !== undefined) {
+          patch.added = v;
+        }
       }
       if ('defaultModel' in args && String(args.defaultModel || '').trim()) {
         patch.defaultModel = String(args.defaultModel).trim();
@@ -61,7 +75,9 @@ const contract = {
       return { adapterKey: args.adapterKey, override: normalized };
     },
     async clear(args) {
-      if (!args || !args.adapterKey) throw new Error('adapterKey is required');
+      if (!args || !args.adapterKey) {
+        throw new Error('adapterKey is required');
+      }
       const cleared = curation.clearAdapterOverride(args.adapterKey);
       return { adapterKey: args.adapterKey, cleared };
     },

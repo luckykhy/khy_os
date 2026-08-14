@@ -10,12 +10,15 @@
  * key→leaf dispatch). Fail-soft: a missing / empty state renders nothing.
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
 
 function HistorySearchOverlay({ state }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
-  if (!state) return null;
+  if (!state) {
+    return null;
+  }
 
   const query = String(state.query == null ? '' : state.query);
   const current = String(state.current == null ? '' : state.current);
@@ -23,16 +26,23 @@ function HistorySearchOverlay({ state }) {
 
   // `(reverse-i-search)'query': match` — dim the fixed label, keep the query and
   // matched command legible. A non-empty query with no match shows a hint.
-  return h(Box, { flexDirection: 'column' },
-    h(Box, null,
+  return h(
+    Box,
+    { flexDirection: 'column' },
+    h(
+      Box,
+      null,
       h(Text, { color: noMatch ? 'red' : 'cyan' }, '(reverse-i-search)'),
       h(Text, { dimColor: true }, `'${query}': `),
       h(Text, null, current)
     ),
-    h(Text, { dimColor: true },
+    h(
+      Text,
+      { dimColor: true },
       noMatch
         ? '  无匹配 · Backspace 改词 · Esc 取消'
-        : '  Ctrl+R 上一条 · Enter/Tab 采用 · Esc 取消')
+        : '  Ctrl+R 上一条 · Enter/Tab 采用 · Esc 取消'
+    )
   );
 }
 

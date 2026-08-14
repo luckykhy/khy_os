@@ -70,13 +70,21 @@ const SAMPLE = [
   assert.ok(found, 'renderer must not hard-wrap a bare URL line');
 }
 
-// 4) 渲染层仍对普通长中文段落换行（回归保护）
+// 4) 渲染层对长纯拉丁行仍硬折行（回归保护）；中文散文行交给终端软折行
 {
-  const longText = '这是一段很长的中文文本'.repeat(20);
-  const rendered = stripAnsi(renderAiResponse(longText));
+  const longLatin = 'long english words flow here and wrap on spaces '.repeat(10);
+  const renderedLatin = stripAnsi(renderAiResponse(longLatin));
   assert.ok(
-    rendered.split('\n').length > 1,
-    'normal long prose should still wrap',
+    renderedLatin.split('\n').length > 1,
+    'long pure-Latin prose should still hard-wrap',
+  );
+  // 中文散文不硬断句（aiRenderer CJK typography 契约）：整行保留为单一逻辑行，
+  // 由终端软折行，避免在中文↔拉丁边界吃空格 / 把收尾标点甩到行首。
+  const longCjk = '这是一段很长的中文文本'.repeat(20);
+  const renderedCjk = stripAnsi(renderAiResponse(longCjk));
+  assert.ok(
+    renderedCjk.split('\n').length === 1,
+    'CJK prose stays one logical line (terminal soft-wraps)',
   );
 }
 

@@ -39,8 +39,17 @@
 // 能做原生 function calling 的适配器(SSOT)。其余适配器(local/localLLM/ollama 的
 // 弱档/clipboard/webRelay…)一律走文本拦截。小写精确匹配。
 const NATIVE_TOOL_USE_ADAPTERS = Object.freeze([
-  'kiro', 'cursor', 'trae', 'claude', 'codex', 'api',
-  'windsurf', 'vscode', 'warp', 'cursor2api', 'relay_api',
+  'kiro',
+  'cursor',
+  'trae',
+  'claude',
+  'codex',
+  'api',
+  'windsurf',
+  'vscode',
+  'warp',
+  'cursor2api',
+  'relay_api',
 ]);
 
 // 名字含这些片段的模型**暂定(провизионально)**视为「小模型、缺乏可靠原生工具调用」。
@@ -75,7 +84,9 @@ const parseModelListEnv = require('../../utils/parseListToSet');
  */
 function adapterSupportsNativeToolUse(adapter) {
   const a = _norm(adapter);
-  if (!a) return false;
+  if (!a) {
+    return false;
+  }
   return NATIVE_TOOL_USE_ADAPTERS.includes(a);
 }
 
@@ -88,19 +99,29 @@ function adapterSupportsNativeToolUse(adapter) {
  */
 function modelLacksReliableToolCalling(model, opts = {}) {
   const m = _norm(model);
-  if (!m) return false; // 未知/空 → 视为不缺(不过度教学,保留原生路径)
+  if (!m) {
+    return false;
+  } // 未知/空 → 视为不缺(不过度教学,保留原生路径)
   const env = (opts && opts.env) || process.env;
 
   const nativeForced = parseModelListEnv(env && env.KHY_NATIVE_TOOL_MODELS);
-  if (nativeForced.has(m)) return false; // 用户强制原生,最高优先级
+  if (nativeForced.has(m)) {
+    return false;
+  } // 用户强制原生,最高优先级
 
   const textForced = parseModelListEnv(env && env.KHY_TEXT_ONLY_TOOL_MODELS);
-  if (textForced.has(m)) return true; // 用户强制纯文本工具
+  if (textForced.has(m)) {
+    return true;
+  } // 用户强制纯文本工具
 
   // 实测裁决:胜过任何按名字的启发(「不硬编码,实测为准」)。
   const measured = opts && opts.measured;
-  if (measured === 'native') return false; // 实测能原生调工具
-  if (measured === 'text') return true; // 实测不支持原生工具
+  if (measured === 'native') {
+    return false;
+  } // 实测能原生调工具
+  if (measured === 'text') {
+    return true;
+  } // 实测不支持原生工具
 
   // 实测前的暂定默认:小模型名 → 缺(安全走文本协议);其余 → 不缺(保留原生)。
   return SMALL_MODEL_HINTS.test(m);
@@ -114,7 +135,9 @@ function modelLacksReliableToolCalling(model, opts = {}) {
  */
 function hasNativeToolUse(opts = {}) {
   const { model, adapter, env, measured } = opts || {};
-  if (!adapterSupportsNativeToolUse(adapter)) return false;
+  if (!adapterSupportsNativeToolUse(adapter)) {
+    return false;
+  }
   return !modelLacksReliableToolCalling(model, { env, measured });
 }
 

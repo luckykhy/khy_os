@@ -11,11 +11,20 @@
  */
 const { execSync, exec } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const QUARANTINE_DIR = path.join(os.homedir(), '.khyquant', 'quarantine');
-const SCAN_LOG = path.join(os.homedir(), '.khyquant', 'scan.log');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const QUARANTINE_DIR = path.join(_appHome(), 'quarantine');
+const SCAN_LOG = path.join(_appHome(), 'scan.log');
 const BACKEND_ROOT = process.env.KHYQUANT_ROOT || path.resolve(__dirname, '..', '..');
 
 let _scanTimer = null;
@@ -52,17 +61,28 @@ function getInstallInstructions() {
     // Detect distro
     let distro = 'linux';
     try {
-      const release = execSync('cat /etc/os-release 2>/dev/null', { encoding: 'utf-8', timeout: 3000 });
-      if (/ubuntu|debian/i.test(release)) distro = 'debian';
-      else if (/centos|rhel|fedora/i.test(release)) distro = 'rhel';
-      else if (/arch/i.test(release)) distro = 'arch';
-    } catch { /* ignore */ }
+      const release = execSync('cat /etc/os-release 2>/dev/null', {
+        encoding: 'utf-8',
+        timeout: 3000,
+      });
+      if (/ubuntu|debian/i.test(release)) {
+        distro = 'debian';
+      } else if (/centos|rhel|fedora/i.test(release)) {
+        distro = 'rhel';
+      } else if (/arch/i.test(release)) {
+        distro = 'arch';
+      }
+    } catch {
+      /* ignore */
+    }
 
     switch (distro) {
       case 'debian':
         return {
-          install: 'sudo apt update && sudo apt install -y clamav clamav-daemon chkrootkit rkhunter',
-          update: 'sudo systemctl stop clamav-freshclam && sudo freshclam && sudo systemctl start clamav-freshclam',
+          install:
+            'sudo apt update && sudo apt install -y clamav clamav-daemon chkrootkit rkhunter',
+          update:
+            'sudo systemctl stop clamav-freshclam && sudo freshclam && sudo systemctl start clamav-freshclam',
           enable: 'sudo systemctl enable clamav-daemon && sudo systemctl start clamav-daemon',
         };
       case 'rhel':
@@ -137,7 +157,14 @@ function updateDefinitions() {
 function scan(targetPath, opts = {}) {
   const tools = detectTools();
   if (!tools.scanCommand) {
-    return { clean: true, infected: 0, scanned: 0, threats: [], elapsed: 0, error: 'ClamAV not installed' };
+    return {
+      clean: true,
+      infected: 0,
+      scanned: 0,
+      threats: [],
+      elapsed: 0,
+      error: 'ClamAV not installed',
+    };
   }
 
   const startTime = Date.now();
@@ -146,13 +173,15 @@ function scan(targetPath, opts = {}) {
 
   // Build scan command
   const args = [
-    '--infected',                          // only show infected
-    '--no-summary',                        // machine-parsable output
+    '--infected', // only show infected
+    '--no-summary', // machine-parsable output
     `--max-filesize=${maxSize}M`,
     `--max-scansize=${maxSize * 2}M`,
   ];
 
-  if (recursive) args.push('-r');
+  if (recursive) {
+    args.push('-r');
+  }
 
   // Use quarantine if requested
   if (opts.quarantine !== false) {
@@ -198,7 +227,14 @@ function scan(targetPath, opts = {}) {
       return result;
     }
 
-    return { clean: true, infected: 0, scanned: 0, threats: [], elapsed: Date.now() - startTime, error: err.message };
+    return {
+      clean: true,
+      infected: 0,
+      scanned: 0,
+      threats: [],
+      elapsed: Date.now() - startTime,
+      error: err.message,
+    };
   }
 }
 
@@ -225,11 +261,14 @@ function checkRootkit() {
 
   if (tools.chkrootkit) {
     try {
-      const output = execSync('sudo chkrootkit 2>&1 | grep -i "INFECTED\\|vulnerable\\|suspicious" || echo "CLEAN"', {
-        encoding: 'utf-8',
-        timeout: 120_000,
-        stdio: 'pipe',
-      });
+      const output = execSync(
+        'sudo chkrootkit 2>&1 | grep -i "INFECTED\\|vulnerable\\|suspicious" || echo "CLEAN"',
+        {
+          encoding: 'utf-8',
+          timeout: 120_000,
+          stdio: 'pipe',
+        }
+      );
 
       const clean = output.trim() === 'CLEAN' || !output.includes('INFECTED');
       logScan({ type: 'rootkit', tool: 'chkrootkit', clean });
@@ -241,11 +280,14 @@ function checkRootkit() {
 
   if (tools.rkhunter) {
     try {
-      const output = execSync('sudo rkhunter --check --skip-keypress --report-warnings-only 2>&1 || true', {
-        encoding: 'utf-8',
-        timeout: 300_000,
-        stdio: 'pipe',
-      });
+      const output = execSync(
+        'sudo rkhunter --check --skip-keypress --report-warnings-only 2>&1 || true',
+        {
+          encoding: 'utf-8',
+          timeout: 300_000,
+          stdio: 'pipe',
+        }
+      );
 
       const clean = !output.includes('Warning:') && !output.includes('infected');
       logScan({ type: 'rootkit', tool: 'rkhunter', clean });
@@ -255,7 +297,11 @@ function checkRootkit() {
     }
   }
 
-  return { clean: true, tool: 'none', output: 'No rootkit scanner installed (chkrootkit / rkhunter)' };
+  return {
+    clean: true,
+    tool: 'none',
+    output: 'No rootkit scanner installed (chkrootkit / rkhunter)',
+  };
 }
 
 /**
@@ -265,7 +311,7 @@ function listQuarantine() {
   ensureQuarantineDir();
   try {
     const files = fs.readdirSync(QUARANTINE_DIR);
-    return files.map(f => {
+    return files.map((f) => {
       const fp = path.join(QUARANTINE_DIR, f);
       const stat = fs.statSync(fp);
       return {
@@ -275,7 +321,9 @@ function listQuarantine() {
         quarantinedAt: stat.mtime.toISOString(),
       };
     });
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -283,11 +331,15 @@ function listQuarantine() {
  */
 function deleteQuarantined(filename) {
   const fp = path.join(QUARANTINE_DIR, filename);
-  if (!fp.startsWith(QUARANTINE_DIR)) return false; // path traversal guard
+  if (!fp.startsWith(QUARANTINE_DIR)) {
+    return false;
+  } // path traversal guard
   try {
     fs.unlinkSync(fp);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -295,22 +347,34 @@ function deleteQuarantined(filename) {
  * @param {number} [intervalMs=21600000] - default 6 hours
  */
 function startPeriodicScan(intervalMs = 6 * 3600_000) {
-  if (_scanTimer) return;
+  if (_scanTimer) {
+    return;
+  }
 
   // Skip on lightweight/server-minimal
-  if (process.env.KHY_LIGHTWEIGHT === 'true') return;
+  if (process.env.KHY_LIGHTWEIGHT === 'true') {
+    return;
+  }
 
   const tools = detectTools();
-  if (!tools.hasClamAV) return;
+  if (!tools.hasClamAV) {
+    return;
+  }
 
   _scanTimer = setInterval(() => {
     try {
       const result = scanProject();
       if (!result.clean) {
         // Log warning — in REPL context this would show a notification
-        logScan({ type: 'periodic_scan', threats: result.threats.length, infected: result.infected });
+        logScan({
+          type: 'periodic_scan',
+          threats: result.threats.length,
+          infected: result.infected,
+        });
       }
-    } catch { /* periodic scan must never crash */ }
+    } catch {
+      /* periodic scan must never crash */
+    }
   }, intervalMs);
 
   _scanTimer.unref();
@@ -348,7 +412,9 @@ function ensureQuarantineDir() {
 }
 
 function parseThreats(output) {
-  if (!output) return [];
+  if (!output) {
+    return [];
+  }
   const threats = [];
   const lines = output.split('\n');
   for (const line of lines) {
@@ -371,8 +437,13 @@ function logScan(entry) {
   try {
     const dir = path.dirname(SCAN_LOG);
     fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(SCAN_LOG, JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n');
-  } catch { /* best effort */ }
+    fs.appendFileSync(
+      SCAN_LOG,
+      JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n'
+    );
+  } catch {
+    /* best effort */
+  }
 }
 
 module.exports = {

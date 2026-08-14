@@ -4,21 +4,23 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-MOONBIT_LINUX_TAR="${MOONBIT_LINUX_TAR:-/home/kodehu03/Downloads/moonbit-linux-x86_64.tar(1).gz}"
-MOONBIT_WASM_TAR="${MOONBIT_WASM_TAR:-/home/kodehu03/Downloads/moonbit-wasm.tar.gz}"
+MOONBIT_LINUX_TAR="${MOONBIT_LINUX_TAR:-}"
+MOONBIT_WASM_TAR="${MOONBIT_WASM_TAR:-}"
 MOON_DENY_WARN="${MOON_DENY_WARN:-true}"
 
 TOOLCHAIN_DIR="${ROOT_DIR}/.tmp/moonbit-linux"
 WASM_SDK_DIR="${ROOT_DIR}/.tmp/moonbit-wasm"
 CORE_DIR="${ROOT_DIR}/.tmp/moonbit-core/core"
 
-if [[ ! -f "${MOONBIT_LINUX_TAR}" ]]; then
-  echo "Missing MoonBit Linux toolchain tar: ${MOONBIT_LINUX_TAR}" >&2
+if [[ -z "${MOONBIT_LINUX_TAR}" ]] || [[ ! -f "${MOONBIT_LINUX_TAR}" ]]; then
+  echo "Error: MoonBit Linux toolchain tar not found." >&2
+  echo "       Set MOONBIT_LINUX_TAR to the path of moonbit-linux-x86_64.tar.gz" >&2
   exit 1
 fi
 
-if [[ ! -f "${MOONBIT_WASM_TAR}" ]]; then
-  echo "Missing MoonBit WASM tar: ${MOONBIT_WASM_TAR}" >&2
+if [[ -z "${MOONBIT_WASM_TAR}" ]] || [[ ! -f "${MOONBIT_WASM_TAR}" ]]; then
+  echo "Error: MoonBit WASM tar not found." >&2
+  echo "       Set MOONBIT_WASM_TAR to the path of moonbit-wasm.tar.gz" >&2
   exit 1
 fi
 

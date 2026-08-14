@@ -36,12 +36,16 @@ const DEFAULT_ROUND_CAP = 3;
  * @returns {boolean}
  */
 function flagOn(flag) {
-  const v = String(process.env[flag] == null ? '' : process.env[flag]).trim().toLowerCase();
+  const v = String(process.env[flag] == null ? '' : process.env[flag])
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 主闸。 */
-function isEnabled() { return flagOn(MASTER_FLAG); }
+function isEnabled() {
+  return flagOn(MASTER_FLAG);
+}
 
 /** 连续纯搜索轮上限(可经 KHY_SEARCH_ROUND_CAP 调整,非法值回落默认)。 */
 function roundCap() {
@@ -52,13 +56,13 @@ function roundCap() {
 // ── RULES:何时主动收敛 / 何时不(冻结,文档即契约)───────────────────────────
 const RULES = Object.freeze({
   S1_converge_after_n:
-    '连续 N 轮(KHY_SEARCH_ROUND_CAP,默认 3)都是「纯外部搜索/抓取且未综合作答」且已检索到结果时,'
-    + '主动强制一轮禁用工具的收敛作答(一次性),不放任循环到超时。',
+    '连续 N 轮(KHY_SEARCH_ROUND_CAP,默认 3)都是「纯外部搜索/抓取且未综合作答」且已检索到结果时,' +
+    '主动强制一轮禁用工具的收敛作答(一次性),不放任循环到超时。',
   S2_synthesize_gathered:
     '收敛轮必须基于已检索到的结果直接作答,信息不足处明确标注「未能确证」,本轮不得再发起搜索/抓取。',
   S3_baidu_real_url:
-    '提升准确度:百度结果链接应还原为真实 URL(详见 webSearchService._baiduRealUrl),'
-    + '让模型看到真实站点、减少为每个 /link? 跳转桩额外 WebFetch —— 那些多余抓取会反向喂大本循环。',
+    '提升准确度:百度结果链接应还原为真实 URL(详见 webSearchService._baiduRealUrl),' +
+    '让模型看到真实站点、减少为每个 /link? 跳转桩额外 WebFetch —— 那些多余抓取会反向喂大本循环。',
 });
 
 /**
@@ -73,12 +77,20 @@ const RULES = Object.freeze({
  */
 function classifySearchLoop(opts = {}) {
   const o = opts || {};
-  if (!isEnabled()) return { converge: false, reason: 'disabled', detail: null };
-  if (o.alreadyForced) return { converge: false, reason: 'already_forced', detail: null };
+  if (!isEnabled()) {
+    return { converge: false, reason: 'disabled', detail: null };
+  }
+  if (o.alreadyForced) {
+    return { converge: false, reason: 'already_forced', detail: null };
+  }
   const rounds = Number(o.searchRounds) || 0;
   const gathered = Number(o.resultsGathered) || 0;
-  if (gathered <= 0) return { converge: false, reason: 'no_results', detail: null };
-  if (rounds < roundCap()) return { converge: false, reason: 'below_cap', detail: null };
+  if (gathered <= 0) {
+    return { converge: false, reason: 'no_results', detail: null };
+  }
+  if (rounds < roundCap()) {
+    return { converge: false, reason: 'below_cap', detail: null };
+  }
   return { converge: true, reason: 'converge_now', detail: rounds };
 }
 
@@ -93,13 +105,17 @@ function buildConvergenceDirective(opts = {}) {
   const o = opts || {};
   const rounds = Number(o.searchRounds) || 0;
   const gathered = Number(o.resultsGathered) || 0;
-  const stat = (rounds > 0 || gathered > 0)
-    ? `你已做了 ${rounds || '多'} 次外部搜索、累计约 ${gathered || '若干'} 条结果（见上方工具结果）。`
-    : '你已做了多轮外部搜索（见上方工具结果）。';
-  return '\n\n[SYSTEM: ' + stat
-    + '现在请停止继续搜索——本轮禁止再调用任何工具（不要再 web_search / 不要再 WebFetch）。'
-    + '请直接基于已经检索到的内容，用中文给出一份完整、结构化的最终答案；'
-    + '对仍未查到或无法确证的点，明确标注「未能确证」即可，不要为此再发起搜索或抓取。]';
+  const stat =
+    rounds > 0 || gathered > 0
+      ? `你已做了 ${rounds || '多'} 次外部搜索、累计约 ${gathered || '若干'} 条结果（见上方工具结果）。`
+      : '你已做了多轮外部搜索（见上方工具结果）。';
+  return (
+    '\n\n[SYSTEM: ' +
+    stat +
+    '现在请停止继续搜索——本轮禁止再调用任何工具（不要再 web_search / 不要再 WebFetch）。' +
+    '请直接基于已经检索到的内容，用中文给出一份完整、结构化的最终答案；' +
+    '对仍未查到或无法确证的点，明确标注「未能确证」即可，不要为此再发起搜索或抓取。]'
+  );
 }
 
 module.exports = {

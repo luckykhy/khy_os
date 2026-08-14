@@ -17,8 +17,16 @@ const providerPresets = require('./providerPresets');
 
 // 三步叙事:打开网关页/向导第一眼就知道要做什么。
 const GATEWAY_STEPS = [
-  { n: 1, title: '选择供应商', desc: '挑一个 AI 服务商(DeepSeek/通义千问/OpenAI/Claude…)或一个 API 中转站。' },
-  { n: 2, title: '填入 API Key', desc: '到供应商控制台申请 Key 后粘贴进来;khy 会安全存入本地密钥池。' },
+  {
+    n: 1,
+    title: '选择供应商',
+    desc: '挑一个 AI 服务商(DeepSeek/通义千问/OpenAI/Claude…)或一个 API 中转站。',
+  },
+  {
+    n: 2,
+    title: '填入 API Key',
+    desc: '到供应商控制台申请 Key 后粘贴进来;khy 会安全存入本地密钥池。',
+  },
   { n: 3, title: '选择模型', desc: '为该供应商选一个默认模型,之后对话即用它,随时可换。' },
 ];
 
@@ -64,8 +72,12 @@ const ENV_BY_ID = {
 
 /** 派生某 provider id 的环境变量名(确定性,绝不抛)。 */
 function envVarForId(id) {
-  const key = String(id || '').trim().toLowerCase();
-  if (!key) return '';
+  const key = String(id || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return '';
+  }
   return ENV_BY_ID[key] || `${key.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_API_KEY`;
 }
 
@@ -79,13 +91,21 @@ function envVarForId(id) {
 function buildKeyReferences(presets) {
   let list = presets;
   if (!Array.isArray(list)) {
-    try { list = providerPresets.getProviderPresets(); } catch { list = []; }
+    try {
+      list = providerPresets.getProviderPresets();
+    } catch {
+      list = [];
+    }
   }
   const out = [];
   for (const p of list) {
-    if (!p || typeof p !== 'object') continue;
-    const links = (p.links && typeof p.links === 'object') ? p.links : {};
-    if (!links.console) continue; // 没有「创建 Key」页面的不进申请清单
+    if (!p || typeof p !== 'object') {
+      continue;
+    }
+    const links = p.links && typeof p.links === 'object' ? p.links : {};
+    if (!links.console) {
+      continue;
+    } // 没有「创建 Key」页面的不进申请清单
     out.push({
       id: String(p.id || ''),
       label: String(p.label || p.id || ''),
@@ -125,9 +145,13 @@ function buildGuide(opts = {}) {
 
 function toLowerSet(input) {
   const set = new Set();
-  if (!input) return set;
-  const arr = (input instanceof Set) ? Array.from(input) : (Array.isArray(input) ? input : []);
-  for (const v of arr) set.add(String(v == null ? '' : v).toLowerCase());
+  if (!input) {
+    return set;
+  }
+  const arr = input instanceof Set ? Array.from(input) : Array.isArray(input) ? input : [];
+  for (const v of arr) {
+    set.add(String(v == null ? '' : v).toLowerCase());
+  }
   return set;
 }
 
@@ -141,7 +165,7 @@ function toLowerSet(input) {
  * @returns {string[]}
  */
 function renderGuide(guide, opts = {}) {
-  const g = (guide && typeof guide === 'object') ? guide : buildGuide();
+  const g = guide && typeof guide === 'object' ? guide : buildGuide();
   const c = opts.c || null;
   const bold = (s) => (c && c.bold ? c.bold(s) : s);
   const cyan = (s) => (c && c.cyan ? c.cyan(s) : s);
@@ -152,33 +176,51 @@ function renderGuide(guide, opts = {}) {
   const lines = [];
   lines.push('');
   lines.push(bold('🚀 模型网关 · 从这里开始'));
-  if (g.intro) lines.push(dim('  ' + g.intro));
+  if (g.intro) {
+    lines.push(dim('  ' + g.intro));
+  }
   lines.push('');
 
   lines.push(bold('  三步配置'));
-  for (const s of (g.steps || [])) {
+  for (const s of g.steps || []) {
     lines.push('  ' + cyan(`${s.n}. ${s.title}`) + dim(' — ' + (s.desc || '')));
   }
   lines.push('');
 
   lines.push(bold('  配置方式(按你的情况选一种)'));
-  for (const m of (g.methods || [])) {
+  for (const m of g.methods || []) {
     lines.push('  ' + cyan('• ' + m.label) + dim('  适用:' + (m.when || '')));
-    if (m.how) lines.push('      ' + dim(m.how));
+    if (m.how) {
+      lines.push('      ' + dim(m.how));
+    }
   }
   lines.push('');
 
   lines.push(bold('  去哪申请 API Key'));
-  for (const p of (g.providers || [])) {
+  for (const p of g.providers || []) {
     const mark = p.configured ? green(' ✓ 已配置') : '';
     lines.push('  ' + cyan('• ' + p.label) + mark);
-    if (p.console) lines.push('      ' + dim('申请:') + ' ' + p.console);
-    if (p.docs) lines.push('      ' + dim('文档:') + ' ' + p.docs);
-    if (p.keyExample) lines.push('      ' + dim('示例:') + ' ' + p.keyExample);
-    if (p.envVar) lines.push('      ' + dim('环境变量(进阶):') + ' ' + p.envVar);
+    if (p.console) {
+      lines.push('      ' + dim('申请:') + ' ' + p.console);
+    }
+    if (p.docs) {
+      lines.push('      ' + dim('文档:') + ' ' + p.docs);
+    }
+    if (p.keyExample) {
+      lines.push('      ' + dim('示例:') + ' ' + p.keyExample);
+    }
+    if (p.envVar) {
+      lines.push('      ' + dim('环境变量(进阶):') + ' ' + p.envVar);
+    }
   }
   lines.push('');
-  lines.push(dim('  提示:运行 ') + yellow('khy gateway guide') + dim(' 可随时再看本引导;') + yellow('khy gateway config') + dim(' 开始配置。'));
+  lines.push(
+    dim('  提示:运行 ') +
+      yellow('khy gateway guide') +
+      dim(' 可随时再看本引导;') +
+      yellow('khy gateway config') +
+      dim(' 开始配置。')
+  );
   lines.push('');
   return lines;
 }
@@ -186,7 +228,8 @@ function renderGuide(guide, opts = {}) {
 /** KHY_GATEWAY_GUIDE 门控:默认开,{0,false,off,no} 回退关。 */
 function isEnabled() {
   const raw = String(process.env.KHY_GATEWAY_GUIDE == null ? '' : process.env.KHY_GATEWAY_GUIDE)
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -195,7 +238,9 @@ function isEnabled() {
  * @returns {string}
  */
 function guideHintLine() {
-  if (!isEnabled()) return '';
+  if (!isEnabled()) {
+    return '';
+  }
   return '💡 新手不知怎么配?运行 `khy gateway guide` 看图配置。';
 }
 

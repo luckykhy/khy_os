@@ -47,22 +47,32 @@ async function runWithConcurrency(params) {
   const workers = Array.from({ length: resolvedLimit }, async () => {
     while (true) {
       // Early exit on stop mode
-      if (errorMode === 'stop' && hasError) return;
+      if (errorMode === 'stop' && hasError) {
+        return;
+      }
 
       // Atomic task acquisition (safe in single-threaded JS)
       const index = next++;
-      if (index >= tasks.length) return;
+      if (index >= tasks.length) {
+        return;
+      }
 
       try {
         results[index] = await tasks[index]();
-        if (onTaskComplete) onTaskComplete(results[index], index);
+        if (onTaskComplete) {
+          onTaskComplete(results[index], index);
+        }
       } catch (error) {
         if (!hasError) {
           firstError = error;
           hasError = true;
         }
-        if (onTaskError) onTaskError(error, index);
-        if (errorMode === 'stop') return;
+        if (onTaskError) {
+          onTaskError(error, index);
+        }
+        if (errorMode === 'stop') {
+          return;
+        }
       }
     }
   });
@@ -86,11 +96,19 @@ async function runWithConcurrencyAndTimeout(params) {
       const timer = setTimeout(() => {
         reject(new Error(`Task ${i} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
-      if (timer.unref) timer.unref();
+      if (timer.unref) {
+        timer.unref();
+      }
 
       task().then(
-        result => { clearTimeout(timer); resolve(result); },
-        error => { clearTimeout(timer); reject(error); }
+        (result) => {
+          clearTimeout(timer);
+          resolve(result);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        }
       );
     });
   });
@@ -113,7 +131,9 @@ async function mapWithConcurrency(items, fn, limit) {
     limit,
     errorMode: 'continue',
   });
-  if (hasError) throw firstError;
+  if (hasError) {
+    throw firstError;
+  }
   return results;
 }
 

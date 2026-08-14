@@ -24,24 +24,51 @@ test('userEdgeRowId: exact + case-insensitive match', () => {
     { id: 7, provider: 'deepseek', model: 'deepseek-chat' },
     { id: 9, provider: 'relay', model: 'gpt-4o-mini' },
   ];
-  assert.equal(userEdgeRowId({ provider: 'deepseek', model: 'deepseek-chat', source: 'provider' }, models), 7);
-  assert.equal(userEdgeRowId({ provider: 'DeepSeek', model: 'DEEPSEEK-CHAT', source: 'provider' }, models), 7);
-  assert.equal(userEdgeRowId({ provider: 'relay', model: 'gpt-4o-mini', source: 'relay' }, models), 9);
+  assert.equal(
+    userEdgeRowId({ provider: 'deepseek', model: 'deepseek-chat', source: 'provider' }, models),
+    7
+  );
+  assert.equal(
+    userEdgeRowId({ provider: 'DeepSeek', model: 'DEEPSEEK-CHAT', source: 'provider' }, models),
+    7
+  );
+  assert.equal(
+    userEdgeRowId({ provider: 'relay', model: 'gpt-4o-mini', source: 'relay' }, models),
+    9
+  );
 });
 
 test('userEdgeRowId: empty model / no row → null', () => {
   const models = [{ id: 1, provider: 'deepseek', model: 'deepseek-chat' }];
-  assert.equal(userEdgeRowId({ provider: 'deepseek', model: '', source: 'provider' }, models), null);
-  assert.equal(userEdgeRowId({ provider: 'openai', model: 'gpt-4o', source: 'provider' }, models), null);
+  assert.equal(
+    userEdgeRowId({ provider: 'deepseek', model: '', source: 'provider' }, models),
+    null
+  );
+  assert.equal(
+    userEdgeRowId({ provider: 'openai', model: 'gpt-4o', source: 'provider' }, models),
+    null
+  );
 });
 
 test('userEdgeEditable: provider/relay with row = true; system/local/rowless = false', () => {
   const models = [{ id: 1, provider: 'deepseek', model: 'deepseek-chat' }];
-  assert.equal(userEdgeEditable({ provider: 'deepseek', model: 'deepseek-chat', source: 'provider' }, models), true);
-  assert.equal(userEdgeEditable({ provider: 'deepseek', model: 'deepseek-chat', source: 'system' }, models), false);
-  assert.equal(userEdgeEditable({ provider: 'local', model: 'llama3', source: 'local' }, models), false);
+  assert.equal(
+    userEdgeEditable({ provider: 'deepseek', model: 'deepseek-chat', source: 'provider' }, models),
+    true
+  );
+  assert.equal(
+    userEdgeEditable({ provider: 'deepseek', model: 'deepseek-chat', source: 'system' }, models),
+    false
+  );
+  assert.equal(
+    userEdgeEditable({ provider: 'local', model: 'llama3', source: 'local' }, models),
+    false
+  );
   // provider edge but no backing row (e.g. placeholder)
-  assert.equal(userEdgeEditable({ provider: 'deepseek', model: '', source: 'provider' }, models), false);
+  assert.equal(
+    userEdgeEditable({ provider: 'deepseek', model: '', source: 'provider' }, models),
+    false
+  );
 });
 
 test('userEdgeReadonlyTag: source → label', () => {
@@ -54,8 +81,22 @@ test('userEdgeReadonlyTag: source → label', () => {
 
 test('ownKeyRowForGroup: group key (own key id) → masked provider row', () => {
   const providers = [
-    { id: 7, provider: 'deepseek', displayName: 'DeepSeek', keyMasked: 'sk-…1234', label: '我的主号', isActive: true },
-    { id: 9, provider: 'openai', displayName: '', keyMasked: 'sk-…abcd', label: '', isActive: true },
+    {
+      id: 7,
+      provider: 'deepseek',
+      displayName: 'DeepSeek',
+      keyMasked: 'sk-…1234',
+      label: '我的主号',
+      isActive: true,
+    },
+    {
+      id: 9,
+      provider: 'openai',
+      displayName: '',
+      keyMasked: 'sk-…abcd',
+      label: '',
+      isActive: true,
+    },
   ];
   // The user-plane catalog uses String(row.id) as the own-key group key.
   const row = ownKeyRowForGroup('7', providers);
@@ -87,7 +128,12 @@ test('poolKeyForGroup: group key (pool key id) → masked preview + label + prov
     ],
     relay: [{ keyId: 'k-ccc', keyPreview: 'sk-…9999', label: '中转', status: 'active' }],
   };
-  assert.deepEqual(poolKeyForGroup('k-aaa', pool), { keyId: 'k-aaa', keyPreview: 'sk-…1234', label: '主号', provider: 'sensenova' });
+  assert.deepEqual(poolKeyForGroup('k-aaa', pool), {
+    keyId: 'k-aaa',
+    keyPreview: 'sk-…1234',
+    label: '主号',
+    provider: 'sensenova',
+  });
   assert.equal(poolKeyForGroup('k-ccc', pool).provider, 'relay');
   assert.equal(poolKeyForGroup('k-bbb', pool).label, ''); // missing label → ''
 });
@@ -106,7 +152,10 @@ test('poolKeyForGroup: synthetic buckets / unknown id / empty inputs → null', 
 // ── admin plane ─────────────────────────────────────────────────────────────
 
 test('adminQualifiedId / adminEdgeEditable', () => {
-  assert.equal(adminQualifiedId({ provider: 'sensenova', model: 'SenseNova-V6', source: 'chat' }), 'api:sensenova:SenseNova-V6');
+  assert.equal(
+    adminQualifiedId({ provider: 'sensenova', model: 'SenseNova-V6', source: 'chat' }),
+    'api:sensenova:SenseNova-V6'
+  );
   assert.equal(adminEdgeEditable({ provider: 'sensenova', model: 'x', source: 'chat' }), true);
   assert.equal(adminEdgeEditable({ provider: 'dalle', model: 'dall-e-3', source: 'image' }), false);
   assert.equal(adminEdgeEditable({ provider: 'x', model: '', source: 'chat' }), false);
@@ -114,9 +163,15 @@ test('adminQualifiedId / adminEdgeEditable', () => {
 
 test('adminEdgeTarget: chat → qualified id + custom flag; image/video → null', () => {
   const overrides = { api: { added: [{ id: 'api:deepseek:my-model', name: 'Mine' }] } };
-  const t1 = adminEdgeTarget({ provider: 'deepseek', model: 'my-model', source: 'chat' }, overrides);
+  const t1 = adminEdgeTarget(
+    { provider: 'deepseek', model: 'my-model', source: 'chat' },
+    overrides
+  );
   assert.deepEqual(t1, { adapter: 'api', qualifiedId: 'api:deepseek:my-model', custom: true });
-  const t2 = adminEdgeTarget({ provider: 'deepseek', model: 'deepseek-chat', source: 'chat' }, overrides);
+  const t2 = adminEdgeTarget(
+    { provider: 'deepseek', model: 'deepseek-chat', source: 'chat' },
+    overrides
+  );
   assert.equal(t2.custom, false);
   assert.equal(adminEdgeTarget({ provider: 'v', model: 'sora', source: 'video' }, overrides), null);
 });
@@ -124,34 +179,75 @@ test('adminEdgeTarget: chat → qualified id + custom flag; image/video → null
 // ── applyApiOverridesToEdges ─────────────────────────────────────────────────
 
 const baseEdges = () => [
-  { provider: 'deepseek', providerLabel: 'DeepSeek', model: 'deepseek-chat', keyIds: ['k1'], keyCount: 1, capability: 'text', tier: 'T1', status: 'active', connectionMode: 'account-pool', isDefault: false, source: 'chat' },
-  { provider: 'deepseek', providerLabel: 'DeepSeek', model: 'deepseek-reasoner', keyIds: ['k1'], keyCount: 1, capability: 'text', tier: 'T0', status: 'active', connectionMode: 'account-pool', isDefault: false, source: 'chat' },
-  { provider: 'dalle', providerLabel: 'dalle (image)', model: 'dall-e-3', keyIds: [], keyCount: 0, capability: 'image', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'image' },
+  {
+    provider: 'deepseek',
+    providerLabel: 'DeepSeek',
+    model: 'deepseek-chat',
+    keyIds: ['k1'],
+    keyCount: 1,
+    capability: 'text',
+    tier: 'T1',
+    status: 'active',
+    connectionMode: 'account-pool',
+    isDefault: false,
+    source: 'chat',
+  },
+  {
+    provider: 'deepseek',
+    providerLabel: 'DeepSeek',
+    model: 'deepseek-reasoner',
+    keyIds: ['k1'],
+    keyCount: 1,
+    capability: 'text',
+    tier: 'T0',
+    status: 'active',
+    connectionMode: 'account-pool',
+    isDefault: false,
+    source: 'chat',
+  },
+  {
+    provider: 'dalle',
+    providerLabel: 'dalle (image)',
+    model: 'dall-e-3',
+    keyIds: [],
+    keyCount: 0,
+    capability: 'image',
+    tier: 'T3',
+    status: 'active',
+    connectionMode: 'direct',
+    isDefault: false,
+    source: 'image',
+  },
 ];
 
 test('applyApiOverridesToEdges: hidden removed, renamed relabeled, default re-derived', () => {
-  const overrides = { api: {
-    hidden: ['api:deepseek:deepseek-reasoner'],
-    renamed: { 'api:deepseek:deepseek-chat': 'DeepSeek Chat ✨' },
-    defaultModel: 'api:deepseek:deepseek-chat',
-  } };
+  const overrides = {
+    api: {
+      hidden: ['api:deepseek:deepseek-reasoner'],
+      renamed: { 'api:deepseek:deepseek-chat': 'DeepSeek Chat ✨' },
+      defaultModel: 'api:deepseek:deepseek-chat',
+    },
+  };
   const out = applyApiOverridesToEdges(baseEdges(), overrides);
   // reasoner hidden
-  assert.equal(out.some(e => e.model === 'deepseek-reasoner'), false);
-  const chat = out.find(e => e.model === 'deepseek-chat');
+  assert.equal(
+    out.some((e) => e.model === 'deepseek-reasoner'),
+    false
+  );
+  const chat = out.find((e) => e.model === 'deepseek-chat');
   assert.equal(chat.displayName, 'DeepSeek Chat ✨');
   assert.equal(chat.isDefault, true);
   assert.equal(chat.editable, true);
   assert.equal(chat.qualifiedId, 'api:deepseek:deepseek-chat');
   // image edge: read-only, untouched
-  const img = out.find(e => e.model === 'dall-e-3');
+  const img = out.find((e) => e.model === 'dall-e-3');
   assert.equal(img.editable, false);
 });
 
 test('applyApiOverridesToEdges: added injected once, custom, keyIds:[] (no key leak)', () => {
   const overrides = { api: { added: [{ id: 'api:deepseek:deepseek-v4', name: 'DS V4' }] } };
   const out = applyApiOverridesToEdges(baseEdges(), overrides);
-  const added = out.filter(e => e.model === 'deepseek-v4');
+  const added = out.filter((e) => e.model === 'deepseek-v4');
   assert.equal(added.length, 1, 'injected exactly once');
   assert.equal(added[0].custom, true);
   assert.equal(added[0].displayName, 'DS V4');
@@ -164,16 +260,16 @@ test('applyApiOverridesToEdges: added injected once, custom, keyIds:[] (no key l
 test('applyApiOverridesToEdges: added already present is not duplicated', () => {
   const overrides = { api: { added: [{ id: 'api:deepseek:deepseek-chat', name: 'x' }] } };
   const out = applyApiOverridesToEdges(baseEdges(), overrides);
-  assert.equal(out.filter(e => e.model === 'deepseek-chat').length, 1);
+  assert.equal(out.filter((e) => e.model === 'deepseek-chat').length, 1);
   // the live edge is flagged custom because it's in added
-  assert.equal(out.find(e => e.model === 'deepseek-chat').custom, true);
+  assert.equal(out.find((e) => e.model === 'deepseek-chat').custom, true);
 });
 
 test('applyApiOverridesToEdges: no overrides → chat editable, inputs not mutated', () => {
   const edges = baseEdges();
   const out = applyApiOverridesToEdges(edges, {});
-  assert.equal(out.find(e => e.model === 'deepseek-chat').editable, true);
-  assert.equal(out.find(e => e.model === 'dall-e-3').editable, false);
+  assert.equal(out.find((e) => e.model === 'deepseek-chat').editable, true);
+  assert.equal(out.find((e) => e.model === 'dall-e-3').editable, false);
   // original input untouched
   assert.equal('editable' in edges[0], false);
 });

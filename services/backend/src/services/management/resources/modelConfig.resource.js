@@ -19,7 +19,9 @@ const _maskKey = require('../../../utils/maskSecret');
 
 function _snapshot() {
   const apiKey = String(process.env.RELAY_API_KEY || '').trim();
-  const rawCompat = String(process.env.RELAY_API_COMPATIBILITY || 'openai').trim().toLowerCase();
+  const rawCompat = String(process.env.RELAY_API_COMPATIBILITY || 'openai')
+    .trim()
+    .toLowerCase();
   return {
     baseUrl: String(process.env.RELAY_API_ENDPOINT || '').trim(),
     modelId: String(process.env.RELAY_API_MODEL || '').trim(),
@@ -54,10 +56,16 @@ const contract = {
     async set(args) {
       const baseUrl = String(args?.baseUrl || '').trim();
       const modelId = String(args?.modelId || '').trim();
-      if (!baseUrl) throw new Error('baseUrl is required');
-      if (!modelId) throw new Error('modelId is required');
+      if (!baseUrl) {
+        throw new Error('baseUrl is required');
+      }
+      if (!modelId) {
+        throw new Error('modelId is required');
+      }
 
-      const rawCompat = String(args?.compatibility || 'openai').trim().toLowerCase();
+      const rawCompat = String(args?.compatibility || 'openai')
+        .trim()
+        .toLowerCase();
       const compatibility = VALID_COMPAT.includes(rawCompat) ? rawCompat : 'openai';
       const clearApiKey = args?.clearApiKey === true;
       const apiKeyInput = String(args?.apiKey || '').trim();

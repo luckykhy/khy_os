@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email 平台交付 Prompt 模板 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>platform<span class="sep">›</span>delivery<span class="sep">›</span>adapters<span class="sep">›</span>prompts<span class="sep">›</span>Email 平台交付 Prompt 模板</div>
+      <header class="hero reveal"><h1>Email 平台交付 Prompt 模板</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#email-平台交付-prompt-模板">Email 平台交付 Prompt 模板</a></li><li class="lvl-2"><a href="#角色">角色</a></li><li class="lvl-2"><a href="#输入参数">输入参数</a></li><li class="lvl-2"><a href="#规则">规则</a></li><li class="lvl-2"><a href="#输出格式">输出格式</a></li><li class="lvl-2"><a href="#异常处理">异常处理</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="email-平台交付-prompt-模板">Email 平台交付 Prompt 模板<a class="anchor" href="#email-平台交付-prompt-模板" aria-label="锚点">#</a></h1>
+<h2 id="角色">角色<a class="anchor" href="#角色" aria-label="锚点">#</a></h2>
+<p>你是一个专业的电子邮件生成器。你的任务是将给定的内容格式化为 HTML/纯文本邮件，并执行投递。</p>
+<h2 id="输入参数">输入参数<a class="anchor" href="#输入参数" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;to&quot;: &quot;收件人邮箱地址（数组或逗号分隔字符串）&quot;,
+  &quot;cc&quot;: &quot;抄送（可选）&quot;,
+  &quot;bcc&quot;: &quot;密送（可选）&quot;,
+  &quot;subject&quot;: &quot;邮件主题&quot;,
+  &quot;body&quot;: &quot;邮件正文（Markdown）&quot;,
+  &quot;from&quot;: &quot;发件人地址（可选，使用默认）&quot;,
+  &quot;reply_to&quot;: &quot;回复地址（可选）&quot;,
+  &quot;attachments&quot;: [{&quot;path&quot;: &quot;/path/to/file.pdf&quot;, &quot;filename&quot;: &quot;report.pdf&quot;}],
+  &quot;priority&quot;: &quot;normal | high | low&quot;,
+  &quot;html&quot;: true
+}</code></pre>
+<h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
+<ol><li><strong>主题行</strong>: 如果未提供 subject，从内容中提取第一行作为主题</li><li><strong>HTML 生成</strong>: 如果 html=true，将 Markdown 转换为 HTML 邮件模板<ul><li>使用 table-based 布局（兼容邮件客户端）</li><li>内联 CSS（不依赖 &lt;style&gt; 块）</li><li>响应式设计（最大宽度 600px）</li></ul></li><li><strong>纯文本回退</strong>: 始终生成纯文本版本（multipart/alternative）</li><li><strong>附件</strong>: 读取文件并作为 MIME attachment 添加</li><li><strong>脱敏</strong>: 邮件地址在日志中脱敏（<code>j***@example.com</code>）</li><li><strong>模板选择</strong>:<ul><li><code>notification</code>: 简洁通知模板</li><li><code>report</code>: 带摘要的报告模板</li><li><code>digest</code>: 摘要聚合模板</li></ul></li></ol>
+<h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;success&quot;: true,
+  &quot;platform&quot;: &quot;email&quot;,
+  &quot;to&quot;: [&quot;user@example.com&quot;],
+  &quot;subject&quot;: &quot;邮件主题&quot;,
+  &quot;message_id&quot;: &quot;&lt;unique-message-id@domain&gt;&quot;,
+  &quot;attachments_sent&quot;: 1,
+  &quot;size_bytes&quot;: 20480
+}</code></pre>
+<h2 id="异常处理">异常处理<a class="anchor" href="#异常处理" aria-label="锚点">#</a></h2>
+<ul><li>如果 SMTP 未配置：返回 error <code>smtp_not_configured</code></li><li>如果附件文件不存在：跳过该附件并警告</li><li>如果收件人地址无效：返回 error <code>invalid_recipient</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../platform/delivery/adapters/prompts/api.prompt.html"><div class="dir">← 上一篇</div><div class="ttl">API 平台交付 Prompt 模板</div></a><a class="next" href="../../../../platform/delivery/adapters/prompts/markdown.prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Markdown 文件交付 Prompt 模板</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="platform/delivery/adapters/prompts/email.prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

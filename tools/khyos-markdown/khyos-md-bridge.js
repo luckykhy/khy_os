@@ -160,6 +160,7 @@ function resolveProjectRoot(scriptDir) {
  *                                   /api/list 默认列该文件所在目录（而非项目 docs/）。
  * @param {boolean}[cfg.sidebarCurrentDir] 显式覆盖「侧边栏列当前文件目录」门控（测试用；缺省按 env 解析）
  * @param {string} [cfg.vendorDir]  muya 自打包静态资产目录（默认 htmlPath 同级 vendor/）
+ * @param {string[]}[cfg.allowedRoots] 额外追加的白名单根目录（测试用；生产入口不传）
  * @param {object} [cfg.fsImpl]    注入的 fs（测试用）
  */
 function createHandler(cfg) {
@@ -188,6 +189,44 @@ function createHandler(cfg) {
   const defaultLabel = targetDir ? ('📁 ' + path.basename(targetDir)) : '本项目 docs/';
   // vendor/ 与 khyosMarkdown.html 同级；resolve 一次作为 confinement 的锚点。
   const vendorDir = path.resolve(cfg.vendorDir || path.join(path.dirname(cfg.htmlPath), VENDOR_DIR_NAME));
+
+  // ── 路径限制（红线：所有文件操作限制在 projectRoot 内，防止 token 泄露后的越权读写）──
+  // 构建允许的根目录列表：projectRoot + 目标文件所在目录（全局工具模式）
+  const allowedRoots = [];
+  if (cfg.projectRoot) allowedRoots.push(path.resolve(cfg.projectRoot));
+  if (cfg.targetPath) {
+    try {
+      const tp = path.resolve(cfg.targetPath);
+      const st = fsImpl.existsSync(tp) ? fsImpl.statSync(tp) : null;
+      const dir = (st && st.isDirectory()) ? tp : path.dirname(tp);
+      // Global tool mode: always whitelist the target file's directory, even when it
+      // lies outside projectRoot (e.g. right-click open on a Desktop .md file).
+      // /api/list already lists this directory, so read/save must be consistent.
+      // withinAllowed still rejects any path escaping the whitelisted roots.
+      allowedRoots.push(path.resolve(dir));
+    } catch (_) { /* fail-soft: projectRoot 兜底 */ }
+  }
+  // Optional extra whitelist roots (tests only; production entries never pass this).
+  // Each entry is resolved and appended; bad entries are ignored fail-soft.
+  if (Array.isArray(cfg.allowedRoots)) {
+    for (const r of cfg.allowedRoots) {
+      try { allowedRoots.push(path.resolve(r)); } catch (_) { /* fail-soft: skip bad entry */ }
+    }
+  }
+  // 如果没有任何根，回退到 cwd
+  if (allowedRoots.length === 0) allowedRoots.push(process.cwd());
+
+  /**
+   * 检查路径是否在允许的根目录内，防止路径穿越。
+   * 使用 path.relative 严格限制，避免 bare startsWith 绕过（如 D:\proj-evil 绕过 D:\proj）。
+   */
+  function withinAllowed(absPath) {
+    const abs = path.resolve(absPath);
+    return allowedRoots.some(root => {
+      const rel = path.relative(root, abs);
+      return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+    });
+  }
 
   const send = (res, code, type, body) => {
     res.writeHead(code, {
@@ -302,6 +341,8 @@ function createHandler(cfg) {
       const p = url.searchParams.get('path');
       if (!p) return fail(res, 400, 'missing path');
       const abs = path.resolve(p);
+      // 路径限制：防止 token 泄露后越权读取任意文件
+      if (!withinAllowed(abs)) return fail(res, 403, 'forbidden: path out of bounds');
       let stat;
       try { stat = fsImpl.statSync(abs); } catch (_) { return fail(res, 404, '文件不存在: ' + abs); }
       if (!stat.isFile()) return fail(res, 400, '非文件: ' + abs);
@@ -325,6 +366,8 @@ function createHandler(cfg) {
     if (req.method === 'GET' && route === '/api/list') {
       const dirParam = url.searchParams.get('dir');
       const dir = dirParam ? path.resolve(dirParam) : defaultDir;
+      // 路径限制：防止 token 泄露后越权列出目录
+      if (dirParam && !withinAllowed(dir)) return fail(res, 403, 'forbidden: path out of bounds');
       const label = dirParam ? path.basename(dir) : defaultLabel;
       return send(res, 200, 'application/json; charset=utf-8', JSON.stringify(listMarkdown(dir, label)));
     }
@@ -334,6 +377,8 @@ function createHandler(cfg) {
       const p = url.searchParams.get('path');
       if (!p) return fail(res, 400, 'missing path');
       const abs = path.resolve(p);
+      // 路径限制：防止 token 泄露后越权写入任意文件
+      if (!withinAllowed(abs)) return fail(res, 403, 'forbidden: path out of bounds');
       if (!READABLE_EXT.has(path.extname(abs).toLowerCase()))
         return fail(res, 400, '仅允许写回文本/Markdown 文件');
       const chunks = [];
@@ -363,6 +408,8 @@ function createHandler(cfg) {
         catch (_) { return fail(res, 400, '无效 JSON'); }
         const { dir: baseDir, name: fileName, data: b64Data } = body || {};
         if (!baseDir || !fileName || !b64Data) return fail(res, 400, '缺少 dir/name/data 参数');
+        // 路径限制：防止 token 泄露后越权上传到任意目录
+        if (!withinAllowed(baseDir)) return fail(res, 403, 'forbidden: path out of bounds');
         // Sanitize filename: strip path separators to prevent escape
         const safeName = String(fileName).replace(/[\/]/g, '_').replace(/\.\.+/g, '_');
         const assetsDir = path.resolve(baseDir, 'assets');
@@ -554,9 +601,10 @@ function openBrowser(url, platform, spawnImpl) {
       } catch (_) { continue; }
     }
     // 全部失败：降级到 start 命令（浏览器标签页兜底）
-    // cmd.exe 会把 & 解释为命令分隔符，必须用 ^ 转义。
+    // cmd.exe 会把 & 解释为命令分隔符（^转义），% 会触发变量展开（%%转义）
     try {
-      const c = sp('cmd', ['/c', 'start', '""', url.replace(/&/g, '^&')], { detached: true, stdio: 'ignore' });
+      const safeUrl = url.replace(/&/g, '^&').replace(/%/g, '%%');
+      const c = sp('cmd', ['/c', 'start', '""', safeUrl], { detached: true, stdio: 'ignore' });
       if (c.unref) c.unref();
     } catch (_) { /* URL 已打印到控制台供手动访问 */ }
   } else if (plat === 'darwin') {

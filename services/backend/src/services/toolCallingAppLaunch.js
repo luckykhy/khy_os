@@ -14,11 +14,16 @@
  * 兄弟**以保迁移的 require 相对路径字节不变。宿主 open_app 处理器、_openFilesystemTarget
  * 及 module.exports 按**同名 re-import** 接回,调用点字节不变。
  */
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 // App Paths registry leaf (fail-soft): missing bundled copy must never crash.
-let _winAppPaths; try { _winAppPaths = require('./winAppPaths'); } catch { _winAppPaths = null; }
+let _winAppPaths;
+try {
+  _winAppPaths = require('./winAppPaths');
+} catch {
+  _winAppPaths = null;
+}
 
 // ── Interactive Application Detection ──────────────────────────────
 // Detects whether a command is an interactive/GUI application that should
@@ -29,19 +34,117 @@ let _guiAppCache = null;
 
 // CLI tools that should NEVER be spawned detached (they expect piped I/O)
 const _cliTools = new Set([
-  'ls', 'cat', 'head', 'tail', 'grep', 'rg', 'find', 'wc', 'file', 'stat',
-  'pwd', 'which', 'echo', 'tree', 'du', 'df', 'date', 'whoami', 'hostname',
-  'uname', 'env', 'printenv', 'sort', 'uniq', 'sed', 'awk', 'cut', 'tr',
-  'tee', 'xargs', 'curl', 'wget', 'ssh', 'scp', 'rsync', 'tar', 'gzip',
-  'zip', 'unzip', 'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'chmod', 'chown',
-  'ln', 'touch', 'diff', 'patch', 'git', 'npm', 'node', 'python', 'python3',
-  'pip', 'pip3', 'docker', 'systemctl', 'journalctl', 'ps', 'top', 'htop',
-  'kill', 'pkill', 'pgrep', 'mount', 'umount', 'fdisk', 'lsblk', 'ip',
-  'ifconfig', 'ping', 'traceroute', 'nslookup', 'dig', 'netstat', 'ss',
-  'apt', 'apt-get', 'yum', 'dnf', 'pacman', 'brew', 'snap', 'flatpak',
-  'dpkg', 'rpm', 'make', 'cmake', 'gcc', 'g++', 'cargo', 'go', 'javac',
-  'java', 'mvn', 'gradle', 'bash', 'sh', 'zsh', 'fish', 'crontab', 'at',
-  'systemctl', 'service', 'sudo', 'su', 'man', 'info', 'help',
+  'ls',
+  'cat',
+  'head',
+  'tail',
+  'grep',
+  'rg',
+  'find',
+  'wc',
+  'file',
+  'stat',
+  'pwd',
+  'which',
+  'echo',
+  'tree',
+  'du',
+  'df',
+  'date',
+  'whoami',
+  'hostname',
+  'uname',
+  'env',
+  'printenv',
+  'sort',
+  'uniq',
+  'sed',
+  'awk',
+  'cut',
+  'tr',
+  'tee',
+  'xargs',
+  'curl',
+  'wget',
+  'ssh',
+  'scp',
+  'rsync',
+  'tar',
+  'gzip',
+  'zip',
+  'unzip',
+  'cp',
+  'mv',
+  'rm',
+  'mkdir',
+  'rmdir',
+  'chmod',
+  'chown',
+  'ln',
+  'touch',
+  'diff',
+  'patch',
+  'git',
+  'npm',
+  'node',
+  'python',
+  'python3',
+  'pip',
+  'pip3',
+  'docker',
+  'systemctl',
+  'journalctl',
+  'ps',
+  'top',
+  'htop',
+  'kill',
+  'pkill',
+  'pgrep',
+  'mount',
+  'umount',
+  'fdisk',
+  'lsblk',
+  'ip',
+  'ifconfig',
+  'ping',
+  'traceroute',
+  'nslookup',
+  'dig',
+  'netstat',
+  'ss',
+  'apt',
+  'apt-get',
+  'yum',
+  'dnf',
+  'pacman',
+  'brew',
+  'snap',
+  'flatpak',
+  'dpkg',
+  'rpm',
+  'make',
+  'cmake',
+  'gcc',
+  'g++',
+  'cargo',
+  'go',
+  'javac',
+  'java',
+  'mvn',
+  'gradle',
+  'bash',
+  'sh',
+  'zsh',
+  'fish',
+  'crontab',
+  'at',
+  'systemctl',
+  'service',
+  'sudo',
+  'su',
+  'man',
+  'info',
+  'help',
 ]);
 
 /**
@@ -62,24 +165,35 @@ function _buildGuiAppCache() {
     ];
     for (const dir of desktopDirs) {
       try {
-        if (!fs.existsSync(dir)) continue;
-        const files = fs.readdirSync(dir).filter(f => f.endsWith('.desktop'));
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
+        const files = fs.readdirSync(dir).filter((f) => f.endsWith('.desktop'));
         for (const file of files) {
           try {
             const content = fs.readFileSync(path.join(dir, file), 'utf-8');
             // Extract Exec= line and get the binary name
             const execMatch = content.match(/^Exec\s*=\s*(.+)$/m);
-            if (!execMatch) continue;
+            if (!execMatch) {
+              continue;
+            }
             // Exec line may have %f %u etc. args, env prefixes, or full paths
-            let execCmd = execMatch[1].trim()
-              .replace(/^env\s+\S+=\S+\s+/, '')  // strip env VAR=val prefix
-              .replace(/%[fFuUdDnNickvm]/g, '')   // strip desktop entry codes
+            const execCmd = execMatch[1]
+              .trim()
+              .replace(/^env\s+\S+=\S+\s+/, '') // strip env VAR=val prefix
+              .replace(/%[fFuUdDnNickvm]/g, '') // strip desktop entry codes
               .trim();
             const bin = path.basename(execCmd.split(/\s+/)[0]);
-            if (bin) cache.add(bin);
-          } catch { /* skip unreadable files */ }
+            if (bin) {
+              cache.add(bin);
+            }
+          } catch {
+            /* skip unreadable files */
+          }
         }
-      } catch { /* skip inaccessible dirs */ }
+      } catch {
+        /* skip inaccessible dirs */
+      }
     }
   } else if (process.platform === 'win32') {
     // On Windows, scan common app directories and Start Menu shortcuts
@@ -90,42 +204,70 @@ function _buildGuiAppCache() {
     ].filter(Boolean);
     for (const dir of progDirs) {
       try {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         // Only scan top-level subdirectories (app names)
         const entries = fs.readdirSync(dir);
         for (const entry of entries) {
           // Use the directory/exe name as a potential app name
           cache.add(entry.toLowerCase().replace(/\.exe$/i, ''));
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
     // Also scan Start Menu for .lnk files (covers most installed apps)
     const startMenuDirs = [
-      path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
-      path.join(process.env.ProgramData || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+      path.join(
+        os.homedir(),
+        'AppData',
+        'Roaming',
+        'Microsoft',
+        'Windows',
+        'Start Menu',
+        'Programs'
+      ),
+      path.join(
+        process.env.ProgramData || 'C:\\ProgramData',
+        'Microsoft',
+        'Windows',
+        'Start Menu',
+        'Programs'
+      ),
     ];
     for (const dir of startMenuDirs) {
       try {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         const walk = (d) => {
           for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-            if (entry.isDirectory()) { try { walk(path.join(d, entry.name)); } catch {} }
-            else if (entry.name.endsWith('.lnk')) {
+            if (entry.isDirectory()) {
+              try {
+                walk(path.join(d, entry.name));
+              } catch {}
+            } else if (entry.name.endsWith('.lnk')) {
               cache.add(entry.name.replace(/\.lnk$/i, '').toLowerCase());
             }
           }
         };
         walk(dir);
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
   } else if (process.platform === 'darwin') {
     // macOS: scan /Applications
     try {
-      const apps = fs.readdirSync('/Applications')
-        .filter(f => f.endsWith('.app'))
-        .map(f => f.replace(/\.app$/, '').toLowerCase());
-      apps.forEach(a => cache.add(a));
-    } catch { /* skip */ }
+      const apps = fs
+        .readdirSync('/Applications')
+        .filter((f) => f.endsWith('.app'))
+        .map((f) => f.replace(/\.app$/, '').toLowerCase());
+      apps.forEach((a) => cache.add(a));
+    } catch {
+      /* skip */
+    }
   }
 
   return cache;
@@ -140,16 +282,26 @@ function _buildGuiAppCache() {
  *   4. `which` resolves it and it's not in system bin → likely app
  */
 function _isGuiApplication(cmdBin) {
-  if (!cmdBin) return false;
+  if (!cmdBin) {
+    return false;
+  }
   const bin = path.basename(cmdBin).toLowerCase();
 
   // Definitely a CLI tool
-  if (_cliTools.has(bin)) return false;
+  if (_cliTools.has(bin)) {
+    return false;
+  }
 
   // Platform-specific GUI launchers
-  if (bin === 'xdg-open') return true;
-  if (bin === 'open' && process.platform === 'darwin') return true;
-  if (bin === 'start' && process.platform === 'win32') return true;
+  if (bin === 'xdg-open') {
+    return true;
+  }
+  if (bin === 'open' && process.platform === 'darwin') {
+    return true;
+  }
+  if (bin === 'start' && process.platform === 'win32') {
+    return true;
+  }
 
   // Build cache once
   if (!_guiAppCache) {
@@ -157,7 +309,9 @@ function _isGuiApplication(cmdBin) {
   }
 
   // Direct match in desktop file cache
-  if (_guiAppCache.has(bin)) return true;
+  if (_guiAppCache.has(bin)) {
+    return true;
+  }
 
   // Check if a .desktop file exists for this binary name
   if (process.platform === 'linux') {
@@ -168,7 +322,9 @@ function _isGuiApplication(cmdBin) {
     ];
     for (const dir of desktopDirs) {
       try {
-        if (fs.existsSync(path.join(dir, `${bin}.desktop`))) return true;
+        if (fs.existsSync(path.join(dir, `${bin}.desktop`))) {
+          return true;
+        }
       } catch {}
     }
   }
@@ -179,14 +335,20 @@ function _isGuiApplication(cmdBin) {
     const resolved = _searchExec(bin);
     if (resolved) {
       // Binaries in /opt, /snap, ~/local/bin, AppImage paths are usually GUI apps
-      if (/\/(opt|snap|flatpak|AppImage|\.local\/bin)\//.test(resolved)) return true;
+      if (/\/(opt|snap|flatpak|AppImage|\.local\/bin)\//.test(resolved)) {
+        return true;
+      }
       // Symlinks to /opt or snap are also GUI apps
       try {
         const real = fs.realpathSync(resolved);
-        if (/\/(opt|snap|flatpak)\//.test(real)) return true;
+        if (/\/(opt|snap|flatpak)\//.test(real)) {
+          return true;
+        }
       } catch {}
     }
-  } catch { /* binary not found */ }
+  } catch {
+    /* binary not found */
+  }
 
   return false;
 }
@@ -200,51 +362,51 @@ const APP_CACHE_TTL = 60000; // refresh every 60s
 
 const APP_ALIAS_MAP = Object.freeze({
   // Browsers
-  '火狐': 'firefox',
-  '火狐浏览器': 'firefox',
-  'firefox': 'firefox',
-  'ff': 'firefox',
-  '夸克': 'quark',
-  '夸克浏览器': 'quark',
-  'quark': 'quark',
-  '谷歌浏览器': 'google-chrome',
-  '谷歌': 'google-chrome',
-  'chrome': 'google-chrome',
-  'chromium': 'chromium',
-  'edge': 'microsoft-edge',
-  '微软浏览器': 'microsoft-edge',
-  '浏览器': 'firefox',
+  火狐: 'firefox',
+  火狐浏览器: 'firefox',
+  firefox: 'firefox',
+  ff: 'firefox',
+  夸克: 'quark',
+  夸克浏览器: 'quark',
+  quark: 'quark',
+  谷歌浏览器: 'google-chrome',
+  谷歌: 'google-chrome',
+  chrome: 'google-chrome',
+  chromium: 'chromium',
+  edge: 'microsoft-edge',
+  微软浏览器: 'microsoft-edge',
+  浏览器: 'firefox',
 
   // IM / Collaboration
-  '飞书': 'bytedance-feishu',
-  'lark': 'bytedance-feishu',
-  'feishu': 'bytedance-feishu',
-  '微信': 'wechat',
-  '企业微信': 'wxwork',
-  'qq': 'qq',
-  '钉钉': 'dingtalk',
+  飞书: 'bytedance-feishu',
+  lark: 'bytedance-feishu',
+  feishu: 'bytedance-feishu',
+  微信: 'wechat',
+  企业微信: 'wxwork',
+  qq: 'qq',
+  钉钉: 'dingtalk',
 
   // System utilities
-  '终端': 'gnome-terminal',
-  '控制台': 'gnome-terminal',
-  '文件管理器': 'nautilus',
-  '文件': 'nautilus',
+  终端: 'gnome-terminal',
+  控制台: 'gnome-terminal',
+  文件管理器: 'nautilus',
+  文件: 'nautilus',
 
   // Category intents
-  '图片编辑器': 'gimp',
-  '图像编辑器': 'gimp',
-  '照片编辑器': 'gimp',
+  图片编辑器: 'gimp',
+  图像编辑器: 'gimp',
+  照片编辑器: 'gimp',
   'image editor': 'gimp',
   'photo editor': 'gimp',
-  'pdf编辑器': 'libreoffice',
+  pdf编辑器: 'libreoffice',
   'pdf editor': 'libreoffice',
 
   // App stores (deterministic backstop so the gateway interceptor proceeds and
   // the installed-app matcher launches the local client, e.g. Huawei AppGallery
   // at C:\Program Files\Huawei\AppGallery\AppGallery.exe — never the website).
-  '华为应用市场': 'appgallery',
-  '应用市场': 'appgallery',
-  'appgallery': 'appgallery',
+  华为应用市场: 'appgallery',
+  应用市场: 'appgallery',
+  appgallery: 'appgallery',
   'app gallery': 'appgallery',
   'huawei appgallery': 'appgallery',
 });
@@ -262,13 +424,16 @@ function _normalizeAppQuery(input) {
 // 及 `String(v).toLowerCase()`。APP_ALIAS_MAP 是 Object.freeze 的模块常量,_normalizeAppQuery 是纯
 // 字符串函数→归一化结果与调用无关,构造一次即可。只读迭代、不 mutate,派生 keyNorm/valLower 逐字节
 // 等价;插入顺序经 Object.entries→map 保持不变,故 candidates Set 的可观测顺序不变。
-const _APP_ALIAS_NORM = Object.entries(APP_ALIAS_MAP).map(
-  ([k, v]) => [_normalizeAppQuery(k), String(v).toLowerCase()],
-);
+const _APP_ALIAS_NORM = Object.entries(APP_ALIAS_MAP).map(([k, v]) => [
+  _normalizeAppQuery(k),
+  String(v).toLowerCase(),
+]);
 
 function _buildAppCandidates(input) {
   const raw = String(input || '').trim();
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
 
   const normalized = _normalizeAppQuery(raw);
   const candidates = new Set();
@@ -277,10 +442,15 @@ function _buildAppCandidates(input) {
   candidates.add(normalized);
 
   const directAlias = APP_ALIAS_MAP[raw] || APP_ALIAS_MAP[normalized];
-  if (directAlias) candidates.add(String(directAlias).toLowerCase());
+  if (directAlias) {
+    candidates.add(String(directAlias).toLowerCase());
+  }
 
   for (const [keyNorm, valLower] of _APP_ALIAS_NORM) {
-    if (normalized && (normalized === keyNorm || normalized.includes(keyNorm) || keyNorm.includes(normalized))) {
+    if (
+      normalized &&
+      (normalized === keyNorm || normalized.includes(keyNorm) || keyNorm.includes(normalized))
+    ) {
       candidates.add(valLower);
     }
   }
@@ -305,17 +475,30 @@ function _matchInstalledApp(rawName) {
 
   let match = null;
   for (const candidate of candidates.length > 0 ? candidates : [appName]) {
-    match = apps.find(a => a.bin === candidate || a.name.toLowerCase() === candidate);
-    if (!match) match = apps.find(a => a.bin.startsWith(candidate) || a.name.toLowerCase().startsWith(candidate));
-    if (!match) match = apps.find(a => a.bin.includes(candidate) || a.name.toLowerCase().includes(candidate));
-    if (!match && name) match = apps.find(a => a.nameCn && a.nameCn.includes(name));
+    match = apps.find((a) => a.bin === candidate || a.name.toLowerCase() === candidate);
     if (!match) {
-      match = apps.find(a =>
-        a.keywords.some(k => k.includes(candidate))
-        || candidate.split(/\s+/).every(w => a.searchText.includes(w))
+      match = apps.find(
+        (a) => a.bin.startsWith(candidate) || a.name.toLowerCase().startsWith(candidate)
       );
     }
-    if (match) break;
+    if (!match) {
+      match = apps.find(
+        (a) => a.bin.includes(candidate) || a.name.toLowerCase().includes(candidate)
+      );
+    }
+    if (!match && name) {
+      match = apps.find((a) => a.nameCn && a.nameCn.includes(name));
+    }
+    if (!match) {
+      match = apps.find(
+        (a) =>
+          a.keywords.some((k) => k.includes(candidate)) ||
+          candidate.split(/\s+/).every((w) => a.searchText.includes(w))
+      );
+    }
+    if (match) {
+      break;
+    }
   }
   return match || null;
 }
@@ -329,7 +512,11 @@ function _matchInstalledApp(rawName) {
  * @returns {boolean}
  */
 function hasInstalledAppMatch(rawName) {
-  try { return !!_matchInstalledApp(rawName); } catch { return false; }
+  try {
+    return !!_matchInstalledApp(rawName);
+  } catch {
+    return false;
+  }
 }
 
 // 测试钩子:直接注入已装应用索引(绕过文件系统扫描)。仅供单测;传 null 复位为真实扫描。
@@ -339,14 +526,18 @@ function _primeInstalledAppsForTest(apps) {
 }
 
 function _commandExists(bin) {
-  if (!bin) return false;
+  if (!bin) {
+    return false;
+  }
   const { searchExecutable } = require('../tools/platformUtils');
   return !!searchExecutable(bin);
 }
 
 function _splitExecLine(line) {
   const raw = String(line || '').trim();
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
   const out = [];
   const re = /"([^"]*)"|'([^']*)'|([^\s]+)/g;
   let m;
@@ -368,7 +559,11 @@ async function _launchLinuxDesktopEntry(app = {}) {
     launchers.push({ command: 'gtk-launch', args: [desktopId], hint: `gtk-launch ${desktopId}` });
   }
   if (desktopPath && _commandExists('gio')) {
-    launchers.push({ command: 'gio', args: ['launch', desktopPath], hint: `gio launch ${desktopPath}` });
+    launchers.push({
+      command: 'gio',
+      args: ['launch', desktopPath],
+      hint: `gio launch ${desktopPath}`,
+    });
   }
   if (desktopPath && _commandExists('xdg-open')) {
     launchers.push({ command: 'xdg-open', args: [desktopPath], hint: `xdg-open ${desktopPath}` });
@@ -403,13 +598,21 @@ async function _launchLinuxDesktopEntry(app = {}) {
 }
 
 function _resolveWindowsShortcutTarget(linkPath) {
-  if (process.platform !== 'win32') return '';
-  const raw = String(linkPath || '').trim().replace(/^"+|"+$/g, '');
-  if (!raw || !/\.lnk$/i.test(raw)) return '';
+  if (process.platform !== 'win32') {
+    return '';
+  }
+  const raw = String(linkPath || '')
+    .trim()
+    .replace(/^"+|"+$/g, '');
+  if (!raw || !/\.lnk$/i.test(raw)) {
+    return '';
+  }
 
   const { execFileSync } = require('child_process');
-  const psBin = _commandExists('pwsh') ? 'pwsh' : (_commandExists('powershell') ? 'powershell' : '');
-  if (!psBin) return '';
+  const psBin = _commandExists('pwsh') ? 'pwsh' : _commandExists('powershell') ? 'powershell' : '';
+  if (!psBin) {
+    return '';
+  }
 
   const escaped = raw.replace(/'/g, "''");
   const script = [
@@ -420,17 +623,14 @@ function _resolveWindowsShortcutTarget(linkPath) {
   ].join('; ');
 
   try {
-    const stdout = execFileSync(psBin, [
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      script,
-    ], {
+    const stdout = execFileSync(psBin, ['-NoProfile', '-NonInteractive', '-Command', script], {
       encoding: 'utf8',
       windowsHide: true,
       timeout: 4000,
     });
-    return String(stdout || '').trim().replace(/^"+|"+$/g, '');
+    return String(stdout || '')
+      .trim()
+      .replace(/^"+|"+$/g, '');
   } catch {
     return '';
   }
@@ -438,14 +638,27 @@ function _resolveWindowsShortcutTarget(linkPath) {
 
 function _looksLikePowerShellCommand(command) {
   const trimmed = String(command || '').trim();
-  if (!trimmed) return false;
-  if (/^(?:powershell|pwsh)(?:\.exe)?\b/i.test(trimmed)) return false;
-  if (/^(?:cmd|cmd\.exe)\b/i.test(trimmed)) return false;
-  if (/^[A-Za-z]:\\/.test(trimmed) || /^\\\\/.test(trimmed)) return false;
-  if (/^\.\.?[\\/]/.test(trimmed)) return false;
-  if (/^[A-Za-z0-9_.-]+(?:\.exe|\.cmd|\.bat)?\b/.test(trimmed) && !/-[A-Za-z]/.test(trimmed)) return false;
-  return /^(?:New|Get|Set|Remove|Copy|Move|Rename|Test|Resolve|Clear|Start|Stop|Restart|Enable|Disable|Add)-[A-Za-z]+/i
-    .test(trimmed);
+  if (!trimmed) {
+    return false;
+  }
+  if (/^(?:powershell|pwsh)(?:\.exe)?\b/i.test(trimmed)) {
+    return false;
+  }
+  if (/^(?:cmd|cmd\.exe)\b/i.test(trimmed)) {
+    return false;
+  }
+  if (/^[A-Za-z]:\\/.test(trimmed) || /^\\\\/.test(trimmed)) {
+    return false;
+  }
+  if (/^\.\.?[\\/]/.test(trimmed)) {
+    return false;
+  }
+  if (/^[A-Za-z0-9_.-]+(?:\.exe|\.cmd|\.bat)?\b/.test(trimmed) && !/-[A-Za-z]/.test(trimmed)) {
+    return false;
+  }
+  return /^(?:New|Get|Set|Remove|Copy|Move|Rename|Test|Resolve|Clear|Start|Stop|Restart|Enable|Disable|Add)-[A-Za-z]+/i.test(
+    trimmed
+  );
 }
 
 /**
@@ -461,9 +674,13 @@ async function _trySpawnInTerminal(spawn, built, options, env) {
     let child;
     try {
       const spawnOpts = { detached: true, env };
-      if (options && options.cwd) spawnOpts.cwd = options.cwd;
+      if (options && options.cwd) {
+        spawnOpts.cwd = options.cwd;
+      }
       if (process.platform === 'win32') {
-        if (built.windowsHide) spawnOpts.windowsHide = true;
+        if (built.windowsHide) {
+          spawnOpts.windowsHide = true;
+        }
       } else {
         spawnOpts.stdio = 'ignore';
       }
@@ -472,11 +689,22 @@ async function _trySpawnInTerminal(spawn, built, options, env) {
       resolve(null);
       return;
     }
-    child.once('error', () => { if (!settled) { settled = true; resolve(null); } });
+    child.once('error', () => {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+    });
     child.once('spawn', () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { child.unref(); } catch { /* noop */ }
+      try {
+        child.unref();
+      } catch {
+        /* noop */
+      }
       resolve(child);
     });
   });
@@ -497,15 +725,28 @@ async function _spawnDetached(command, args = [], options = {}) {
   // (e.g. no terminal emulator), fall through to the historical detached launch
   // so we never regress an app launch into an outright failure.
   let _termLeaf = null;
-  try { _termLeaf = require('./terminalLaunchCommand'); } catch { _termLeaf = null; }
-  const _wantTerminal = !!(_termLeaf
-    && _termLeaf.isEnabled(env)
-    && (options.interactive === true || _termLeaf.isInteractiveTerminalApp(command, env)));
+  try {
+    _termLeaf = require('./terminalLaunchCommand');
+  } catch {
+    _termLeaf = null;
+  }
+  const _wantTerminal = !!(
+    _termLeaf &&
+    _termLeaf.isEnabled(env) &&
+    (options.interactive === true || _termLeaf.isInteractiveTerminalApp(command, env))
+  );
   if (_wantTerminal) {
-    const built = _termLeaf.buildTerminalLaunchArgv({ target: command, args, platform: process.platform, env });
+    const built = _termLeaf.buildTerminalLaunchArgv({
+      target: command,
+      args,
+      platform: process.platform,
+      env,
+    });
     if (built && built.command) {
       const termChild = await _trySpawnInTerminal(spawn, built, options, env);
-      if (termChild) return termChild;
+      if (termChild) {
+        return termChild;
+      }
       // terminal spawn failed → fall through to historical detached launch below
     }
   }
@@ -515,9 +756,11 @@ async function _spawnDetached(command, args = [], options = {}) {
     let child;
     try {
       if (isWin) {
-        const target = String(command || '').trim().replace(/^"+|"+$/g, '');
+        const target = String(command || '')
+          .trim()
+          .replace(/^"+|"+$/g, '');
         const targetBase = path.basename(target).toLowerCase();
-        const normalizedArgs = Array.isArray(args) ? args.map(a => String(a)) : [];
+        const normalizedArgs = Array.isArray(args) ? args.map((a) => String(a)) : [];
         const spawnOptions = {
           detached: true,
           stdio: 'ignore',
@@ -531,7 +774,11 @@ async function _spawnDetached(command, args = [], options = {}) {
         } else if (/\.(lnk|url)$/i.test(target)) {
           child = spawn('explorer.exe', [target, ...normalizedArgs], spawnOptions);
         } else if (/\.msi$/i.test(target)) {
-          child = spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', 'start', '', target, ...normalizedArgs], spawnOptions);
+          child = spawn(
+            process.env.COMSPEC || 'cmd.exe',
+            ['/d', '/s', '/c', 'start', '', target, ...normalizedArgs],
+            spawnOptions
+          );
         } else {
           child = spawn(target, normalizedArgs, spawnOptions);
         }
@@ -548,31 +795,53 @@ async function _spawnDetached(command, args = [], options = {}) {
       return;
     }
     child.once('error', (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       reject(err);
     });
     child.once('spawn', () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { child.unref(); } catch { /* noop */ }
+      try {
+        child.unref();
+      } catch {
+        /* noop */
+      }
       resolve(child);
     });
   });
 }
 
 function _inferWindowsImageName(command) {
-  let raw = String(command || '').trim().replace(/^"+|"+$/g, '');
-  if (!raw) return '';
+  let raw = String(command || '')
+    .trim()
+    .replace(/^"+|"+$/g, '');
+  if (!raw) {
+    return '';
+  }
   if (/\.lnk$/i.test(raw)) {
     const target = _resolveWindowsShortcutTarget(raw);
-    if (target) raw = target;
+    if (target) {
+      raw = target;
+    }
   }
   const base = path.basename(raw).toLowerCase();
-  if (!base || base === 'explorer' || base === 'explorer.exe') return '';
-  if (/\.(lnk|url|msi|cmd|bat|ps1|vbs|js)$/i.test(base)) return '';
-  if (base.endsWith('.exe')) return base;
-  if (/^[a-z0-9_.-]+$/i.test(base)) return `${base}.exe`;
+  if (!base || base === 'explorer' || base === 'explorer.exe') {
+    return '';
+  }
+  if (/\.(lnk|url|msi|cmd|bat|ps1|vbs|js)$/i.test(base)) {
+    return '';
+  }
+  if (base.endsWith('.exe')) {
+    return base;
+  }
+  if (/^[a-z0-9_.-]+$/i.test(base)) {
+    return `${base}.exe`;
+  }
   return '';
 }
 
@@ -595,26 +864,35 @@ function _formatLaunchOutput(displayName, execHint, verification) {
 function _getWindowsProcessPids(imageName) {
   const { execFileSync } = require('child_process');
   const out = new Set();
-  if (!imageName) return out;
+  if (!imageName) {
+    return out;
+  }
   try {
-    const stdout = execFileSync('tasklist', [
-      '/FI',
-      `IMAGENAME eq ${imageName}`,
-      '/FO',
-      'CSV',
-      '/NH',
-    ], {
-      encoding: 'utf8',
-      windowsHide: true,
-      timeout: 2000,
-    });
-    const lines = String(stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const stdout = execFileSync(
+      'tasklist',
+      ['/FI', `IMAGENAME eq ${imageName}`, '/FO', 'CSV', '/NH'],
+      {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 2000,
+      }
+    );
+    const lines = String(stdout || '')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     for (const line of lines) {
-      if (!line.startsWith('"')) continue;
+      if (!line.startsWith('"')) {
+        continue;
+      }
       const m = line.match(/^"[^"]*","([^"]+)",/);
-      if (!m) continue;
+      if (!m) {
+        continue;
+      }
       const pid = Number(m[1].replace(/,/g, ''));
-      if (Number.isFinite(pid) && pid > 0) out.add(pid);
+      if (Number.isFinite(pid) && pid > 0) {
+        out.add(pid);
+      }
     }
   } catch {
     return out;
@@ -634,7 +912,7 @@ async function _verifyWindowsLaunch(command, beforePids = new Set(), timeoutMs =
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    await new Promise(resolve => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 250));
     const afterPids = _getWindowsProcessPids(imageName);
     for (const pid of afterPids) {
       if (!beforePids.has(pid)) {
@@ -661,11 +939,17 @@ async function _verifyWindowsLaunch(command, beforePids = new Set(), timeoutMs =
  * Examples: `which feishu`, `command -v lark`, `nohup feishu &`, `pgrep -i feishu`
  */
 function _looksLikeShellAppProbe(command) {
-  const cmd = String(command || '').trim().toLowerCase();
-  if (!cmd) return false;
-  return /\b(which|whereis|command\s+-v|type\s+-p|nohup|xdg-open|gtk-launch|gio\s+launch)\b/.test(cmd)
-    || /\b(pgrep|pidof)\b/.test(cmd)
-    || /\bps\s+aux\b.*\bgrep\b/.test(cmd);
+  const cmd = String(command || '')
+    .trim()
+    .toLowerCase();
+  if (!cmd) {
+    return false;
+  }
+  return (
+    /\b(which|whereis|command\s+-v|type\s+-p|nohup|xdg-open|gtk-launch|gio\s+launch)\b/.test(cmd) ||
+    /\b(pgrep|pidof)\b/.test(cmd) ||
+    /\bps\s+aux\b.*\bgrep\b/.test(cmd)
+  );
 }
 
 /**
@@ -676,13 +960,19 @@ function _extractAppTargetFromCommand(command) {
   const cmd = String(command || '').trim();
   // "which X" / "whereis X" / "command -v X" / "type -p X"
   let m = cmd.match(/\b(?:which|whereis|command\s+-v|type\s+-p)\s+(\S+)/i);
-  if (m) return m[1];
+  if (m) {
+    return m[1];
+  }
   // "nohup X ..." / "nohup X &"
   m = cmd.match(/\bnohup\s+(\S+)/i);
-  if (m) return m[1];
+  if (m) {
+    return m[1];
+  }
   // "gtk-launch X" / "gio launch X"
   m = cmd.match(/\b(?:gtk-launch|gio\s+launch)\s+(\S+)/i);
-  if (m) return m[1].replace(/\.desktop$/, '');
+  if (m) {
+    return m[1].replace(/\.desktop$/, '');
+  }
   // Direct binary invocation (single word or word + args)
   const parts = cmd.split(/\s+/);
   if (parts.length <= 3 && !/[|><;&$`]/.test(cmd)) {
@@ -692,7 +982,9 @@ function _extractAppTargetFromCommand(command) {
 }
 
 function _hasGraphicalSession() {
-  if (process.platform !== 'linux') return true;
+  if (process.platform !== 'linux') {
+    return true;
+  }
   const { getDisplay } = require('../tools/platformUtils');
   const display = getDisplay();
   const wayland = String(process.env.WAYLAND_DISPLAY || '').trim();
@@ -703,7 +995,13 @@ function _hasGraphicalSession() {
 // to the system default handler). A `.exe`/`.bat`/… is something to *run*, not a
 // document to "open with the default program".
 const _OPEN_DEFAULT_EXECUTABLE_EXT = new Set([
-  '.exe', '.app', '.com', '.bat', '.cmd', '.msi', '.lnk',
+  '.exe',
+  '.app',
+  '.com',
+  '.bat',
+  '.cmd',
+  '.msi',
+  '.lnk',
 ]);
 
 /**
@@ -727,27 +1025,41 @@ const _OPEN_DEFAULT_EXECUTABLE_EXT = new Set([
  */
 function _resolveOpenDefaultTarget(rawName, cwd) {
   const raw = String(rawName || '').trim();
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   // 1) Explicit URL scheme → delegate verbatim (http/https/file).
-  if (/^(?:https?|file):\/\//i.test(raw)) return raw;
+  if (/^(?:https?|file):\/\//i.test(raw)) {
+    return raw;
+  }
   // 2) A bare executable name/suffix stays on the app-launch path.
   let ext = '';
-  try { ext = path.extname(raw).toLowerCase(); } catch { ext = ''; }
-  if (_OPEN_DEFAULT_EXECUTABLE_EXT.has(ext)) return null;
+  try {
+    ext = path.extname(raw).toLowerCase();
+  } catch {
+    ext = '';
+  }
+  if (_OPEN_DEFAULT_EXECUTABLE_EXT.has(ext)) {
+    return null;
+  }
   // 3) An existing file/path (relative or absolute) → open with default handler.
   //    Covers .html / .pdf / images / documents the model wants to "open".
   try {
     const base = cwd || process.cwd();
     const resolved = path.isAbsolute(raw) ? raw : path.resolve(base, raw);
-    if (fs.existsSync(resolved)) return resolved;
-  } catch { /* not a usable path — fall through */ }
+    if (fs.existsSync(resolved)) {
+      return resolved;
+    }
+  } catch {
+    /* not a usable path — fall through */
+  }
   // Neither a URL nor an existing file: a real app name — let the matcher run.
   return null;
 }
 
 function _getInstalledApps() {
   const now = Date.now();
-  if (_installedAppsCache && (now - _installedAppsCacheTime) < APP_CACHE_TTL) {
+  if (_installedAppsCache && now - _installedAppsCacheTime < APP_CACHE_TTL) {
     return _installedAppsCache;
   }
 
@@ -764,13 +1076,17 @@ function _getInstalledApps() {
 
     for (const dir of desktopDirs) {
       try {
-        if (!fs.existsSync(dir)) continue;
-        const files = fs.readdirSync(dir).filter(f => f.endsWith('.desktop'));
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
+        const files = fs.readdirSync(dir).filter((f) => f.endsWith('.desktop'));
         for (const file of files) {
           try {
             const content = fs.readFileSync(path.join(dir, file), 'utf-8');
             // Skip entries that are truly hidden services (Type=Service, OnlyShowIn=...)
-            if (/^Type\s*=\s*Service/mi.test(content)) continue;
+            if (/^Type\s*=\s*Service/im.test(content)) {
+              continue;
+            }
 
             const nameMatch = content.match(/^Name\s*=\s*(.+)$/m);
             const nameCnMatch = content.match(/^Name\[zh_CN\]\s*=\s*(.+)$/m);
@@ -779,24 +1095,39 @@ function _getInstalledApps() {
             const commentMatch = content.match(/^Comment\s*=\s*(.+)$/m);
             const commentCnMatch = content.match(/^Comment\[zh_CN\]\s*=\s*(.+)$/m);
 
-            if (!execMatch) continue;
+            if (!execMatch) {
+              continue;
+            }
 
-            let execCmd = execMatch[1].trim()
-              .replace(/%[fFuUdDnNickvm]/g, '')  // strip desktop entry field codes
+            const execCmd = execMatch[1]
+              .trim()
+              .replace(/%[fFuUdDnNickvm]/g, '') // strip desktop entry field codes
               .replace(/^env\s+\S+=\S+\s+/g, '') // strip env prefixes
               .trim();
             const bin = path.basename(execCmd.split(/\s+/)[0]);
-            const name = (nameMatch ? nameMatch[1].trim() : bin);
+            const name = nameMatch ? nameMatch[1].trim() : bin;
             const nameCn = nameCnMatch ? nameCnMatch[1].trim() : '';
             const keywords = keywordsMatch
-              ? keywordsMatch[1].split(';').map(k => k.trim().toLowerCase()).filter(Boolean)
+              ? keywordsMatch[1]
+                  .split(';')
+                  .map((k) => k.trim().toLowerCase())
+                  .filter(Boolean)
               : [];
             const comment = commentMatch ? commentMatch[1].trim() : '';
             const commentCn = commentCnMatch ? commentCnMatch[1].trim() : '';
 
             // Build combined search text for fuzzy matching
-            const searchText = [name, nameCn, bin, comment, commentCn, ...keywords, file.replace('.desktop', '')]
-              .join(' ').toLowerCase();
+            const searchText = [
+              name,
+              nameCn,
+              bin,
+              comment,
+              commentCn,
+              ...keywords,
+              file.replace('.desktop', ''),
+            ]
+              .join(' ')
+              .toLowerCase();
 
             apps.push({
               name,
@@ -809,30 +1140,55 @@ function _getInstalledApps() {
               desktopId: file.replace(/\.desktop$/i, ''),
               desktopPath: path.join(dir, file),
             });
-          } catch { /* skip unreadable */ }
+          } catch {
+            /* skip unreadable */
+          }
         }
-      } catch { /* skip inaccessible dir */ }
+      } catch {
+        /* skip inaccessible dir */
+      }
     }
   } else if (process.platform === 'win32') {
     // Windows: scan Start Menu shortcuts
     const startMenuDirs = [
       path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
-      path.join(process.env.ProgramData || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+      path.join(
+        process.env.ProgramData || 'C:\\ProgramData',
+        'Microsoft',
+        'Windows',
+        'Start Menu',
+        'Programs'
+      ),
     ];
     for (const dir of startMenuDirs) {
       try {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         const walk = (d) => {
           for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-            if (entry.isDirectory()) { try { walk(path.join(d, entry.name)); } catch {} }
-            else if (entry.name.endsWith('.lnk') || entry.name.endsWith('.url')) {
+            if (entry.isDirectory()) {
+              try {
+                walk(path.join(d, entry.name));
+              } catch {}
+            } else if (entry.name.endsWith('.lnk') || entry.name.endsWith('.url')) {
               const name = entry.name.replace(/\.(lnk|url)$/i, '');
-              apps.push({ name, nameCn: '', bin: name.toLowerCase(), exec: path.join(d, entry.name), keywords: [], searchText: name.toLowerCase(), file: entry.name });
+              apps.push({
+                name,
+                nameCn: '',
+                bin: name.toLowerCase(),
+                exec: path.join(d, entry.name),
+                keywords: [],
+                searchText: name.toLowerCase(),
+                file: entry.name,
+              });
             }
           }
         };
         walk(dir);
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
     // Second discovery source: the Windows "App Paths" registry — the
     // authoritative SSOT for "where is <exe> installed", covering apps that
@@ -844,7 +1200,7 @@ function _getInstalledApps() {
     if (_winAppPaths && _winAppPaths.isEnabled(process.env)) {
       try {
         const { execFileSync } = require('child_process');
-        const seen = new Set(apps.map(a => String(a.bin || '').toLowerCase()));
+        const seen = new Set(apps.map((a) => String(a.bin || '').toLowerCase()));
         const roots = [
           'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths',
           'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths',
@@ -857,24 +1213,40 @@ function _getInstalledApps() {
               windowsHide: true,
               timeout: 4000,
             });
-          } catch { continue; /* key absent or reg unavailable — best-effort */ }
+          } catch {
+            continue; /* key absent or reg unavailable — best-effort */
+          }
           for (const rec of _winAppPaths.buildAppPathRecords(stdout)) {
             const key = String(rec.bin || '').toLowerCase();
-            if (!key || seen.has(key)) continue;
+            if (!key || seen.has(key)) {
+              continue;
+            }
             seen.add(key);
             apps.push(rec);
           }
         }
-      } catch { /* best-effort: never let discovery crash the tool layer */ }
+      } catch {
+        /* best-effort: never let discovery crash the tool layer */
+      }
     }
   } else if (process.platform === 'darwin') {
     try {
-      const macApps = fs.readdirSync('/Applications').filter(f => f.endsWith('.app'));
+      const macApps = fs.readdirSync('/Applications').filter((f) => f.endsWith('.app'));
       for (const app of macApps) {
         const name = app.replace('.app', '');
-        apps.push({ name, nameCn: '', bin: name.toLowerCase(), exec: `open -a "${name}"`, keywords: [], searchText: name.toLowerCase(), file: app });
+        apps.push({
+          name,
+          nameCn: '',
+          bin: name.toLowerCase(),
+          exec: `open -a "${name}"`,
+          keywords: [],
+          searchText: name.toLowerCase(),
+          file: app,
+        });
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   _installedAppsCache = apps;
@@ -883,12 +1255,28 @@ function _getInstalledApps() {
 }
 
 module.exports = {
-  _buildGuiAppCache, _isGuiApplication,
-  APP_ALIAS_MAP, _normalizeAppQuery, _buildAppCandidates, _matchInstalledApp,
-  hasInstalledAppMatch, _primeInstalledAppsForTest, _commandExists, _splitExecLine,
-  _launchLinuxDesktopEntry, _resolveWindowsShortcutTarget, _looksLikePowerShellCommand,
-  _trySpawnInTerminal, _spawnDetached, _inferWindowsImageName, _formatLaunchOutput,
-  _getWindowsProcessPids, _verifyWindowsLaunch, _looksLikeShellAppProbe,
-  _extractAppTargetFromCommand, _hasGraphicalSession, _resolveOpenDefaultTarget,
+  _buildGuiAppCache,
+  _isGuiApplication,
+  APP_ALIAS_MAP,
+  _normalizeAppQuery,
+  _buildAppCandidates,
+  _matchInstalledApp,
+  hasInstalledAppMatch,
+  _primeInstalledAppsForTest,
+  _commandExists,
+  _splitExecLine,
+  _launchLinuxDesktopEntry,
+  _resolveWindowsShortcutTarget,
+  _looksLikePowerShellCommand,
+  _trySpawnInTerminal,
+  _spawnDetached,
+  _inferWindowsImageName,
+  _formatLaunchOutput,
+  _getWindowsProcessPids,
+  _verifyWindowsLaunch,
+  _looksLikeShellAppProbe,
+  _extractAppTargetFromCommand,
+  _hasGraphicalSession,
+  _resolveOpenDefaultTarget,
   _getInstalledApps,
 };

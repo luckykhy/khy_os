@@ -59,9 +59,9 @@ function commandExists(cmd) {
 function detect(forceRefresh = false) {
   if (_detected !== null && !forceRefresh) return _detected.length > 0;
 
-  _detected = TOOLS
-    .filter(tool => commandExists(tool.cmd))
-    .sort((a, b) => a.priority - b.priority);
+  _detected = TOOLS.filter((tool) => commandExists(tool.cmd)).sort(
+    (a, b) => a.priority - b.priority
+  );
 
   return _detected.length > 0;
 }
@@ -105,7 +105,9 @@ function invokeStreamingTool(tool, prompt, onChunk) {
         if (!line.trim()) continue;
         try {
           const event = JSON.parse(line);
-          processStreamEvent(event, onChunk, (text) => { fullContent += text; });
+          processStreamEvent(event, onChunk, (text) => {
+            fullContent += text;
+          });
         } catch {
           // not valid JSON, ignore
         }
@@ -124,8 +126,12 @@ function invokeStreamingTool(tool, prompt, onChunk) {
       if (buffer.trim()) {
         try {
           const event = JSON.parse(buffer);
-          processStreamEvent(event, onChunk, (text) => { fullContent += text; });
-        } catch { /* ignore */ }
+          processStreamEvent(event, onChunk, (text) => {
+            fullContent += text;
+          });
+        } catch {
+          /* ignore */
+        }
       }
 
       if (code === 0 || fullContent.trim()) {
@@ -179,7 +185,7 @@ function invokeToolAsync(tool, prompt) {
     if (tool.useStdin) {
       args = tool.buildArgs();
     } else {
-      args = tool.buildArgs().map(a => a === '__PROMPT__' ? prompt : a);
+      args = tool.buildArgs().map((a) => (a === '__PROMPT__' ? prompt : a));
     }
 
     const child = spawn(tool.cmd, args, {
@@ -197,7 +203,9 @@ function invokeToolAsync(tool, prompt) {
       if (totalBytes <= MAX_BUFFER) stdout += chunk;
     });
 
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
 
     child.on('close', (code) => {
       if (code === 0 && stdout.trim()) {
@@ -268,9 +276,8 @@ function getStatus() {
     name: 'CLI 工具桥接',
     type: 'cli',
     available: tools.length > 0,
-    detail: tools.length > 0
-      ? tools.map(t => t.name).join(', ')
-      : '未检测到 (claude/codex/aider)',
+    detail:
+      tools.length > 0 ? tools.map((t) => t.name).join(', ') : '未检测到 (claude/codex/aider)',
   };
 }
 

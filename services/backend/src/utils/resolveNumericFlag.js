@@ -20,10 +20,16 @@ function resolveNumericFlag(name, env, fallback, lo, hi) {
   try {
     const flagRegistry = require('../services/flagRegistry');
     const v = flagRegistry.resolveNumeric(name, e);
-    if (Number.isFinite(v) && v > 0) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v > 0) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const raw = Number.parseInt((e && e[name]) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return Math.min(hi, Math.max(lo, raw));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.min(hi, Math.max(lo, raw));
+  }
   return fallback;
 }
 

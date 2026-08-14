@@ -16,8 +16,12 @@ function stripAnsi(s) {
 /** 把纯文本截断到至多 n 个字符，超出以 '…' 收尾。 */
 function truncatePlain(s, n) {
   const text = String(s == null ? '' : s);
-  if (n <= 0) return '';
-  if (text.length <= n) return text;
+  if (n <= 0) {
+    return '';
+  }
+  if (text.length <= n) {
+    return text;
+  }
   return n <= 1 ? text.slice(0, n) : `${text.slice(0, n - 1)}…`;
 }
 
@@ -43,9 +47,10 @@ function composePermissionFooter({ permLeft, rightPlain, cols, dim }) {
   const plainLeft = stripAnsi(permLeft);
   const rightLen = stripAnsi(rightText).length;
   const leftBudget = Math.max(1, width - rightLen - 2);
-  const safeLeft = plainLeft.length > leftBudget
-    ? style(plainLeft.slice(0, Math.max(1, leftBudget - 1)) + '…')
-    : permLeft;
+  const safeLeft =
+    plainLeft.length > leftBudget
+      ? style(plainLeft.slice(0, Math.max(1, leftBudget - 1)) + '…')
+      : permLeft;
 
   const leftLen = stripAnsi(safeLeft).length;
   const pad = Math.max(1, width - leftLen - rightLen - 1);

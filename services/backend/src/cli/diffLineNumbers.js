@@ -20,7 +20,9 @@
  */
 
 function diffLineNumbersEnabled(env = process.env) {
-  const flag = String((env && env.KHY_DIFF_LINE_NUMBERS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_DIFF_LINE_NUMBERS) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -31,12 +33,18 @@ function diffLineNumbersEnabled(env = process.env) {
  */
 function parseUnifiedHunkHeader(line) {
   try {
-    if (typeof line !== 'string') return null;
+    if (typeof line !== 'string') {
+      return null;
+    }
     const m = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
-    if (!m) return null;
+    if (!m) {
+      return null;
+    }
     const oldStart = parseInt(m[1], 10);
     const newStart = parseInt(m[2], 10);
-    if (!Number.isFinite(oldStart) || !Number.isFinite(newStart)) return null;
+    if (!Number.isFinite(oldStart) || !Number.isFinite(newStart)) {
+      return null;
+    }
     return { oldStart, newStart };
   } catch {
     return null;

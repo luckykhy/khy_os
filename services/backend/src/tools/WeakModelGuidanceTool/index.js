@@ -1,7 +1,7 @@
 'use strict';
 
-const { BaseTool } = require('../_baseTool');
 const wmg = require('../../services/weakModelGuidance');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * WeakModelGuidanceTool — 「弱/陌生模型改 khyos 前先查这里」的确定性护栏出口。
@@ -22,10 +22,15 @@ class WeakModelGuidanceTool extends BaseTool {
   static category = 'analysis';
   static risk = 'safe';
   static aliases = ['weak_model', 'weak_model_guard', 'khy_guardrails', 'guardrails'];
-  static searchHint = '弱模型 护栏 别改坏 别绕过 照抄 示范 纯叶子 门控 接线 工具漏斗 PreToolUse 硬底 EXEC_APPROVED 改 khyos 前先看';
+  static searchHint =
+    '弱模型 护栏 别改坏 别绕过 照抄 示范 纯叶子 门控 接线 工具漏斗 PreToolUse 硬底 EXEC_APPROVED 改 khyos 前先看';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -46,13 +51,15 @@ class WeakModelGuidanceTool extends BaseTool {
       properties: {
         view: {
           type: 'string',
-          description: "返回粒度:'sites' 全部位点+示范(默认) / 'directive' 仅 coding profile 指令 / 'exemplars' 反例→正例成对示范 / 'intentional' 看似 bug 实为刻意设计的清单 / 'site' 单个位点(需 site=)",
+          description:
+            "返回粒度:'sites' 全部位点+示范(默认) / 'directive' 仅 coding profile 指令 / 'exemplars' 反例→正例成对示范 / 'intentional' 看似 bug 实为刻意设计的清单 / 'site' 单个位点(需 site=)",
           enum: ['sites', 'directive', 'exemplars', 'intentional', 'site'],
           default: 'sites',
         },
         site: {
           type: 'string',
-          description: "view='site' 时指定位点键:tool-funnel / pretooluse-hardfloor / exec-approved-stamp / flag-registry / leaf-authoring / wiring / tool-description",
+          description:
+            "view='site' 时指定位点键:tool-funnel / pretooluse-hardfloor / exec-approved-stamp / flag-registry / leaf-authoring / wiring / tool-description",
         },
       },
       required: [],
@@ -62,7 +69,11 @@ class WeakModelGuidanceTool extends BaseTool {
   async execute(params = {}) {
     // 门控关 → 逐字节回退:降级为一条提示,不返回护栏内容。
     if (!wmg.isEnabled(process.env)) {
-      return { success: true, enabled: false, note: 'KHY_WEAK_MODEL_GUIDANCE 已关闭:弱模型护栏出口已禁用。' };
+      return {
+        success: true,
+        enabled: false,
+        note: 'KHY_WEAK_MODEL_GUIDANCE 已关闭:弱模型护栏出口已禁用。',
+      };
     }
 
     const view = params.view || 'sites';
@@ -100,7 +111,12 @@ class WeakModelGuidanceTool extends BaseTool {
           error: `未知位点:${key || '(空)'}。可选:${Object.keys(wmg.GUARD_SITES).join(' / ')}`,
         };
       }
-      return { success: true, enabled: true, view, site: { key, ...site, banner: wmg.bannerFor(key) } };
+      return {
+        success: true,
+        enabled: true,
+        view,
+        site: { key, ...site, banner: wmg.bannerFor(key) },
+      };
     }
 
     // sites(默认):所有位点 + 就地横幅 + 调工具要点 + 反例示范 + 刻意设计清单 + profile 指令。
@@ -108,7 +124,7 @@ class WeakModelGuidanceTool extends BaseTool {
       success: true,
       enabled: true,
       view: 'sites',
-      sites: wmg.listGuardSites().map(s => ({ ...s, banner: wmg.bannerFor(s.key) })),
+      sites: wmg.listGuardSites().map((s) => ({ ...s, banner: wmg.bannerFor(s.key) })),
       toolCallHint: wmg.toolCallHint(),
       exemplars: wmg.WEAK_MODEL_EXEMPLARS,
       intentionalDesigns: wmg.INTENTIONAL_DESIGNS,
@@ -118,10 +134,18 @@ class WeakModelGuidanceTool extends BaseTool {
 
   getActivityDescription(input) {
     const view = (input && input.view) || 'sites';
-    if (view === 'directive') return '弱模型编码指令查询';
-    if (view === 'exemplars') return '弱模型反例示范查询';
-    if (view === 'intentional') return '刻意设计清单查询(勿把设计当 bug)';
-    if (view === 'site') return `弱模型护栏查询(${(input && input.site) || '?'})`;
+    if (view === 'directive') {
+      return '弱模型编码指令查询';
+    }
+    if (view === 'exemplars') {
+      return '弱模型反例示范查询';
+    }
+    if (view === 'intentional') {
+      return '刻意设计清单查询(勿把设计当 bug)';
+    }
+    if (view === 'site') {
+      return `弱模型护栏查询(${(input && input.site) || '?'})`;
+    }
     return '弱模型护栏查询';
   }
 }

@@ -20,13 +20,12 @@
  * 零侵入：自成纯子系统，不接管 executeTool；可由后续 PR 把真实多源取值改道经本门面注入。
  */
 
-const {
-  DataSovereigntyGateway, SovereigntyConflictError,
-} = require('./dataSovereigntyGateway');
-const { GhostValueAnnotator, GhostPollutionError } = require('./ghostValueAnnotator');
-const { ConflictQuencher, QUENCH_KIND } = require('./conflictQuencher');
-const sovereigntyTiers = require('./sovereigntyTiers');
 const evoLedger = require('../evoEngine/evoLedger');
+
+const { ConflictQuencher, QUENCH_KIND } = require('./conflictQuencher');
+const { DataSovereigntyGateway, SovereigntyConflictError } = require('./dataSovereigntyGateway');
+const { GhostValueAnnotator, GhostPollutionError } = require('./ghostValueAnnotator');
+const sovereigntyTiers = require('./sovereigntyTiers');
 
 const DEFAULT_BRANCH = 'data_sovereignty_pool';
 
@@ -34,7 +33,10 @@ const DEFAULT_BRANCH = 'data_sovereignty_pool';
 const FORBIDDEN_DIRECT_READS = Object.freeze([
   { name: 'process.env 直读', re: /\bprocess\s*\.\s*env\b/ },
   { name: 'global/globalThis 直读', re: /\b(?:globalThis|global)\s*\.\s*[A-Za-z_$]/ },
-  { name: '数据库直接查询', re: /\b(?:db|database|knex|sequelize|prisma|pool)\s*\.\s*(?:query|execute|raw|find\w*|select)\b/i },
+  {
+    name: '数据库直接查询',
+    re: /\b(?:db|database|knex|sequelize|prisma|pool)\s*\.\s*(?:query|execute|raw|find\w*|select)\b/i,
+  },
 ]);
 
 class DataSovereignty {
@@ -48,7 +50,9 @@ class DataSovereignty {
     this.branch = opts.branch || DEFAULT_BRANCH;
     this.annotator = opts.annotator || new GhostValueAnnotator();
     this.quencher = opts.quencher || new ConflictQuencher();
-    this.gateway = opts.gateway || new DataSovereigntyGateway({ annotator: this.annotator, quencher: this.quencher });
+    this.gateway =
+      opts.gateway ||
+      new DataSovereigntyGateway({ annotator: this.annotator, quencher: this.quencher });
     this.ledger = opts.ledger || evoLedger;
   }
 
@@ -70,8 +74,10 @@ class DataSovereignty {
         // 防呆③：同阶层熔断——淬出的 L1 需求落账本，绝不放行任何参数。
         this._log(this.ledger.KIND.REQUIREMENT, {
           conflictKind: QUENCH_KIND.SAME_TIER_FIGHT,
-          param: e.param, tier: e.tier,
-          conflict_sources: e.conflict_sources, requirement: e.requirement,
+          param: e.param,
+          tier: e.tier,
+          conflict_sources: e.conflict_sources,
+          requirement: e.requirement,
         });
         return {
           status: 'conflict',
@@ -87,7 +93,9 @@ class DataSovereignty {
     for (const osc of resolved.oscillations) {
       this._log(this.ledger.KIND.REQUIREMENT, {
         conflictKind: QUENCH_KIND.OSCILLATION,
-        param: osc.param, conflict_sources: osc.conflict_sources, requirement: osc.requirement,
+        param: osc.param,
+        conflict_sources: osc.conflict_sources,
+        requirement: osc.requirement,
       });
     }
 
@@ -98,7 +106,10 @@ class DataSovereignty {
       status: 'injected',
       params,
       ghosts: resolved.ghosts,
-      oscillations: resolved.oscillations.map((o) => ({ param: o.param, requirementId: o.requirement.id })),
+      oscillations: resolved.oscillations.map((o) => ({
+        param: o.param,
+        requirementId: o.requirement.id,
+      })),
       decisions: resolved.decisions,
     };
   }
@@ -114,34 +125,49 @@ class DataSovereignty {
     const violations = [];
     for (const f of FORBIDDEN_DIRECT_READS) {
       const m = f.re.exec(src);
-      if (m) violations.push({ rule: f.name, snippet: m[0] });
+      if (m) {
+        violations.push({ rule: f.name, snippet: m[0] });
+      }
     }
     return { pure: violations.length === 0, violations };
   }
 
   /** 主权需求池（不可变哈希链拷贝）。 */
   pool() {
-    try { return this.ledger.read({ branch: this.branch }); } catch { return []; }
+    try {
+      return this.ledger.read({ branch: this.branch });
+    } catch {
+      return [];
+    }
   }
 
   /** 校验需求池链完整性（复用 evoLedger）。 */
   verifyPool() {
-    try { return this.ledger.verify({ branch: this.branch }); }
-    catch { return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' }; }
+    try {
+      return this.ledger.verify({ branch: this.branch });
+    } catch {
+      return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' };
+    }
   }
 
   _log(kind, q) {
     try {
-      return this.ledger.append(kind, {
-        source: 'data-sovereignty',
-        conflictKind: q.conflictKind,
-        param: q.param,
-        tier: q.tier,
-        conflict_sources: q.conflict_sources,   // 防呆④：审计可追溯打架来源
-        requirementId: q.requirement.id,
-        level: q.requirement.level,
-      }, { branch: this.branch });
-    } catch { return { ok: false }; }
+      return this.ledger.append(
+        kind,
+        {
+          source: 'data-sovereignty',
+          conflictKind: q.conflictKind,
+          param: q.param,
+          tier: q.tier,
+          conflict_sources: q.conflict_sources, // 防呆④：审计可追溯打架来源
+          requirementId: q.requirement.id,
+          level: q.requirement.level,
+        },
+        { branch: this.branch }
+      );
+    } catch {
+      return { ok: false };
+    }
   }
 }
 
@@ -153,5 +179,5 @@ module.exports = {
   GhostPollutionError,
   ConflictQuencher,
   QUENCH_KIND,
-  ...sovereigntyTiers,   // TIER / tierOf / rankOf / isGhostable / ERR_SOVEREIGNTY_CONFLICT …
+  ...sovereigntyTiers, // TIER / tierOf / rankOf / isGhostable / ERR_SOVEREIGNTY_CONFLICT …
 };

@@ -22,10 +22,11 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { getDataDir } = require('../utils/dataHome');
+const path = require('path');
+
 const skillLoader = require('../skills/skillLoader');
+const { getDataDir } = require('../utils/dataHome');
 
 /** User skills root — the manifest loader's user dir. */
 function _skillsRoot() {
@@ -86,7 +87,9 @@ function _ensureDir(dir) {
 function _copyTreeSafe(srcDir, destRoot, rel = '') {
   const entries = fs.readdirSync(path.join(srcDir, rel), { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.name === '.' || entry.name === '..') continue;
+    if (entry.name === '.' || entry.name === '..') {
+      continue;
+    }
     const relPath = rel ? `${rel}/${entry.name}` : entry.name;
     const target = _safeJoin(destRoot, relPath);
     if (entry.isDirectory()) {
@@ -111,15 +114,23 @@ function _folderSkillName(dir) {
   if (fs.existsSync(manifestPath)) {
     try {
       const m = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-      if (m && m.name) return _sanitizeName(m.name);
-    } catch { /* fall through */ }
+      if (m && m.name) {
+        return _sanitizeName(m.name);
+      }
+    } catch {
+      /* fall through */
+    }
   }
   const skillMd = path.join(dir, 'SKILL.md');
   if (fs.existsSync(skillMd)) {
     try {
       const parsed = skillLoader.parseSkillFile(skillMd);
-      if (parsed.meta && parsed.meta.name) return _sanitizeName(parsed.meta.name);
-    } catch { /* fall through */ }
+      if (parsed.meta && parsed.meta.name) {
+        return _sanitizeName(parsed.meta.name);
+      }
+    } catch {
+      /* fall through */
+    }
   }
   return _sanitizeName(path.basename(dir));
 }
@@ -131,7 +142,7 @@ function _folderSkillName(dir) {
 function _importMarkdown(srcPath) {
   const parsed = skillLoader.parseSkillFile(srcPath);
   const name = _sanitizeName(
-    (parsed.meta && parsed.meta.name) || path.basename(srcPath).replace(/\.md$/i, ''),
+    (parsed.meta && parsed.meta.name) || path.basename(srcPath).replace(/\.md$/i, '')
   );
   const destDir = _safeJoin(_skillsRoot(), name);
   _ensureDir(destDir);
@@ -178,7 +189,9 @@ async function _importZip(srcPath) {
   // If the archive wrapped everything in a single top-level folder, descend
   // into it so the skill name comes from the real skill dir, not the wrapper.
   let importDir = tmpRoot;
-  const top = fs.readdirSync(tmpRoot, { withFileTypes: true }).filter(e => e.name !== '.' && e.name !== '..');
+  const top = fs
+    .readdirSync(tmpRoot, { withFileTypes: true })
+    .filter((e) => e.name !== '.' && e.name !== '..');
   if (top.length === 1 && top[0].isDirectory()) {
     importDir = path.join(tmpRoot, top[0].name);
   }
@@ -186,7 +199,11 @@ async function _importZip(srcPath) {
   try {
     return _importFolder(importDir);
   } finally {
-    try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* best effort */ }
+    try {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
   }
 }
 
@@ -197,7 +214,9 @@ async function _importZip(srcPath) {
  * @returns {Promise<{ name: string, dest: string }>}
  */
 async function importSkill(srcPath, opts = {}) {
-  if (!srcPath) throw new Error('importSkill requires a source path');
+  if (!srcPath) {
+    throw new Error('importSkill requires a source path');
+  }
   const resolved = path.resolve(srcPath);
   let stat;
   try {
@@ -226,8 +245,12 @@ async function importSkill(srcPath, opts = {}) {
 function _resolveSkillDir(name) {
   const registry = require('../skills');
   const skill = registry.findSkill(name);
-  if (!skill) throw new Error(`Skill "${name}" not found.`);
-  if (!skill.dir) throw new Error(`Skill "${name}" has no on-disk directory to export.`);
+  if (!skill) {
+    throw new Error(`Skill "${name}" not found.`);
+  }
+  if (!skill.dir) {
+    throw new Error(`Skill "${name}" has no on-disk directory to export.`);
+  }
   return skill;
 }
 
@@ -247,16 +270,20 @@ async function exportSkill(name, destDir, opts = {}) {
 
   if (format === 'md') {
     // Prefer an existing SKILL.md / prompt.md / legacy body.
-    const candidates = [
-      path.join(skill.dir, 'SKILL.md'),
-      skill.promptPath,
-    ].filter(Boolean);
+    const candidates = [path.join(skill.dir, 'SKILL.md'), skill.promptPath].filter(Boolean);
     let content = null;
     for (const c of candidates) {
-      if (fs.existsSync(c)) { content = fs.readFileSync(c, 'utf-8'); break; }
+      if (fs.existsSync(c)) {
+        content = fs.readFileSync(c, 'utf-8');
+        break;
+      }
     }
-    if (content == null && skill._legacyBody) content = skill._legacyBody;
-    if (content == null) throw new Error(`Skill "${name}" has no markdown body to export.`);
+    if (content == null && skill._legacyBody) {
+      content = skill._legacyBody;
+    }
+    if (content == null) {
+      throw new Error(`Skill "${name}" has no markdown body to export.`);
+    }
     const safeName = _sanitizeName(skill.name);
     const out = _safeJoin(outBase, `${safeName}.md`);
     fs.writeFileSync(out, content, 'utf-8');
@@ -277,6 +304,6 @@ async function exportSkill(name, destDir, opts = {}) {
 module.exports = {
   importSkill,
   exportSkill,
-  _safeJoin,       // exposed for tests
-  _sanitizeName,   // exposed for tests
+  _safeJoin, // exposed for tests
+  _sanitizeName, // exposed for tests
 };

@@ -99,8 +99,7 @@ Guidelines:
 /** @type {import('../types').BuiltInAgentDefinition} */
 const STATUSLINE_SETUP_AGENT = {
   agentType: 'statusline-setup',
-  whenToUse:
-    "Use this agent to configure the user's khy OS status line setting.",
+  whenToUse: "Use this agent to configure the user's khy OS status line setting.",
   tools: ['Read', 'Edit'],
   source: 'built-in',
   baseDir: 'built-in',

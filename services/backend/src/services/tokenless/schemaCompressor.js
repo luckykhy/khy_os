@@ -11,6 +11,9 @@
  * Typical compression: 60-80% token reduction on tool schemas.
  */
 
+// Canonical chars/4 estimate atom (utils leaf).
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 const TYPE_MAP = {
   string: 's',
   integer: 'i',
@@ -25,26 +28,30 @@ const TYPE_MAP = {
  * Compress a JSON Schema into compact type notation.
  */
 function compressSchema(schema) {
-  if (!schema || typeof schema !== 'object') return String(schema);
+  if (!schema || typeof schema !== 'object') {
+    return String(schema);
+  }
   return _compressNode(schema);
 }
 
 function _compressNode(node) {
-  if (!node || typeof node !== 'object') return '?';
+  if (!node || typeof node !== 'object') {
+    return '?';
+  }
 
   // Handle anyOf / oneOf (nullable patterns)
   if (node.anyOf || node.oneOf) {
     const variants = (node.anyOf || node.oneOf)
-      .filter(v => v.type !== 'null')
-      .map(v => _compressNode(v));
-    const hasNull = (node.anyOf || node.oneOf).some(v => v.type === 'null');
+      .filter((v) => v.type !== 'null')
+      .map((v) => _compressNode(v));
+    const hasNull = (node.anyOf || node.oneOf).some((v) => v.type === 'null');
     const base = variants.join('|');
     return hasNull ? `${base}?` : base;
   }
 
   // Enum → literal values
   if (node.enum) {
-    return node.enum.map(v => JSON.stringify(v)).join('|');
+    return node.enum.map((v) => JSON.stringify(v)).join('|');
   }
 
   // Const
@@ -78,11 +85,21 @@ function _compressNode(node) {
   if (type && TYPE_MAP[type]) {
     // Include constraints that affect semantics
     const extras = [];
-    if (node.format) extras.push(node.format);
-    if (node.minimum !== undefined) extras.push(`>=${node.minimum}`);
-    if (node.maximum !== undefined) extras.push(`<=${node.maximum}`);
-    if (node.pattern) extras.push(`/${node.pattern}/`);
-    if (node.maxLength) extras.push(`max${node.maxLength}`);
+    if (node.format) {
+      extras.push(node.format);
+    }
+    if (node.minimum !== undefined) {
+      extras.push(`>=${node.minimum}`);
+    }
+    if (node.maximum !== undefined) {
+      extras.push(`<=${node.maximum}`);
+    }
+    if (node.pattern) {
+      extras.push(`/${node.pattern}/`);
+    }
+    if (node.maxLength) {
+      extras.push(`max${node.maxLength}`);
+    }
 
     const base = TYPE_MAP[type];
     return extras.length > 0 ? `${base}(${extras.join(',')})` : base;
@@ -90,7 +107,7 @@ function _compressNode(node) {
 
   // Array type
   if (Array.isArray(type)) {
-    return type.map(t => TYPE_MAP[t] || t).join('|');
+    return type.map((t) => TYPE_MAP[t] || t).join('|');
   }
 
   // Fallback
@@ -104,7 +121,9 @@ function decompressSchema(compact) {
   // Reverse map for basic reconstruction
   const REVERSE = { s: 'string', i: 'integer', n: 'number', b: 'boolean', a: 'array', o: 'object' };
 
-  if (!compact || typeof compact !== 'string') return {};
+  if (!compact || typeof compact !== 'string') {
+    return {};
+  }
 
   if (compact.startsWith('{') && compact.endsWith('}')) {
     const inner = compact.slice(1, -1);
@@ -113,17 +132,25 @@ function decompressSchema(compact) {
 
     for (const part of _splitTopLevel(inner)) {
       const colonIdx = part.indexOf(':');
-      if (colonIdx === -1) continue;
+      if (colonIdx === -1) {
+        continue;
+      }
       const key = part.slice(0, colonIdx);
       let valStr = part.slice(colonIdx + 1);
       const optional = valStr.endsWith('?') && !valStr.endsWith('|?');
-      if (optional) valStr = valStr.slice(0, -1);
-      if (!optional) required.push(key);
+      if (optional) {
+        valStr = valStr.slice(0, -1);
+      }
+      if (!optional) {
+        required.push(key);
+      }
       props[key] = decompressSchema(valStr);
     }
 
     const result = { type: 'object', properties: props };
-    if (required.length > 0) result.required = required;
+    if (required.length > 0) {
+      result.required = required;
+    }
     return result;
   }
 
@@ -131,7 +158,9 @@ function decompressSchema(compact) {
     return { type: 'array', items: decompressSchema(compact.slice(1, -1)) };
   }
 
-  if (REVERSE[compact]) return { type: REVERSE[compact] };
+  if (REVERSE[compact]) {
+    return { type: REVERSE[compact] };
+  }
 
   return {};
 }
@@ -145,8 +174,12 @@ function _splitTopLevel(str) {
   let current = '';
 
   for (const ch of str) {
-    if (ch === '{' || ch === '[') depth++;
-    if (ch === '}' || ch === ']') depth--;
+    if (ch === '{' || ch === '[') {
+      depth++;
+    }
+    if (ch === '}' || ch === ']') {
+      depth--;
+    }
     if (ch === ',' && depth === 0) {
       parts.push(current);
       current = '';
@@ -154,7 +187,9 @@ function _splitTopLevel(str) {
       current += ch;
     }
   }
-  if (current) parts.push(current);
+  if (current) {
+    parts.push(current);
+  }
   return parts;
 }
 
@@ -163,11 +198,15 @@ function _splitTopLevel(str) {
  * Returns compressed tools + stats.
  */
 function compressTools(tools) {
-  if (!Array.isArray(tools)) return { tools, stats: null };
+  if (!Array.isArray(tools)) {
+    return { tools, stats: null };
+  }
 
   const originalJson = JSON.stringify(tools);
-  const compressed = tools.map(tool => {
-    if (!tool.function?.parameters) return tool;
+  const compressed = tools.map((tool) => {
+    if (!tool.function?.parameters) {
+      return tool;
+    }
     return {
       ...tool,
       function: {
@@ -180,8 +219,9 @@ function compressTools(tools) {
 
   const compressedJson = JSON.stringify(compressed);
   const stats = {
-    originalTokensEstimate: Math.ceil(originalJson.length / 4),
-    compressedTokensEstimate: Math.ceil(compressedJson.length / 4),
+    // Thin delegates; byte-identical to Math.ceil(json.length / 4).
+    originalTokensEstimate: _simpleTokenEstimate(originalJson),
+    compressedTokensEstimate: _simpleTokenEstimate(compressedJson),
     savedPercent: Math.round((1 - compressedJson.length / originalJson.length) * 100),
   };
 

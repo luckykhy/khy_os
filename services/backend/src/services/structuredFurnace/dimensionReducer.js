@@ -12,7 +12,9 @@
  */
 
 const crypto = require('crypto');
+
 const S = require('../metaplan/constraintStrategy');
+
 const { EntityRegistry } = require('./entityRegistry');
 const { coerceVagueness, ACTION_PRIMITIVES } = require('./forgeSchema');
 
@@ -40,10 +42,15 @@ const VERB_MAP = [
 const RISKY_ACTIONS = new Set(['DELETE', 'DEPLOY', 'EXECUTE', 'MOVE', 'UPDATE', 'BUILD']);
 
 // 语气词/礼貌前缀，降维时剥离。
-const FILLER_RE = /^(请|帮我|麻烦|能不能|可以|帮忙|给我|我想|我要|想要|please|can you|could you|i want to|i'd like to)\s*/i;
+const FILLER_RE =
+  /^(请|帮我|麻烦|能不能|可以|帮忙|给我|我想|我要|想要|please|can you|could you|i want to|i'd like to)\s*/i;
 
 function mapActionVerb(text) {
-  for (const [re, action] of VERB_MAP) if (re.test(text)) return action;
+  for (const [re, action] of VERB_MAP) {
+    if (re.test(text)) {
+      return action;
+    }
+  }
   return 'UNKNOWN';
 }
 
@@ -51,16 +58,24 @@ function mapActionVerb(text) {
 function extractTarget(text, registry) {
   // 1) 文件型 token（含扩展名）最具体。
   const fileTok = text.match(/[\w./-]+\.[A-Za-z0-9]{1,8}\b/);
-  if (fileTok) return registry.mint('file', fileTok[0]);
+  if (fileTok) {
+    return registry.mint('file', fileTok[0]);
+  }
   // 2) 引号包裹的对象。
   const quoted = text.match(/["'「『“]([^"'」』”]{1,40})["'」』”]/);
-  if (quoted) return registry.mint('topic', quoted[1]);
+  if (quoted) {
+    return registry.mint('topic', quoted[1]);
+  }
   // 3) URL。
   const url = text.match(/https?:\/\/\S+/);
-  if (url) return registry.mint('url', url[0]);
+  if (url) {
+    return registry.mint('url', url[0]);
+  }
   // 4) 兜底：剥掉语气词与命中的动词后，剩余名词短语作 topic。
   let stripped = text.replace(FILLER_RE, '');
-  for (const [re] of VERB_MAP) stripped = stripped.replace(re, '');
+  for (const [re] of VERB_MAP) {
+    stripped = stripped.replace(re, '');
+  }
   const noun = stripped.replace(/[\s,，。.!！?？;；:：]+/g, ' ').trim();
   return registry.mint('topic', (noun || text.trim()).slice(0, 40) || '<unspecified>');
 }
@@ -97,7 +112,9 @@ function reduce(raw, registry = new EntityRegistry()) {
   const node = reduceClause(raw, registry);
   const uid = _uid('ai', raw);
   const entities = {};
-  for (const e of registry.list()) entities[e.uid] = e;
+  for (const e of registry.list()) {
+    entities[e.uid] = e;
+  }
   return {
     kind: 'ActionIntent',
     uid,

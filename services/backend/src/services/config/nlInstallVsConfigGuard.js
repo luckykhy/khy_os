@@ -42,7 +42,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_INSTALL_CONFIG_GUARD 默认开,仅 {0,false,off,no} 关。env 由调用方注入。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_INSTALL_CONFIG_GUARD;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -63,7 +65,7 @@ const _INSTALL_CMD_RE = new RegExp(
     'gem\\s+install',
     'curl\\s+[^\\n]*\\|\\s*(?:sh|bash)', // curl … | sh 一键装
   ].join('|'),
-  'i',
+  'i'
 );
 // 全局安装旗标(`-g` / `--global`)进一步佐证「装一个 CLI 工具」而非项目依赖。可选增强,不单独成立。
 const _GLOBAL_FLAG_RE = /(?:\s-g\b|--global\b)/i;
@@ -71,17 +73,31 @@ const _GLOBAL_FLAG_RE = /(?:\s-g\b|--global\b)/i;
 // ── 配置 / 参照语言(用户意图是「照着这个配 khy」而非「执行这些安装命令」)──────────
 const _CONFIG_REF_RE = new RegExp(
   [
-    '参照', '参考', '按照', '照(?:着|这|此)', '仿照', '依照',
-    '配置', '设置', '设定', '配一?下', '配好',
-    '\\bconfig(?:ure)?\\b', '\\bset\\s*up\\b', '\\bsetup\\b', '\\breference\\b',
-    '\\bfollow\\s+(?:this|the)\\b', '\\bbased\\s+on\\b',
+    '参照',
+    '参考',
+    '按照',
+    '照(?:着|这|此)',
+    '仿照',
+    '依照',
+    '配置',
+    '设置',
+    '设定',
+    '配一?下',
+    '配好',
+    '\\bconfig(?:ure)?\\b',
+    '\\bset\\s*up\\b',
+    '\\bsetup\\b',
+    '\\breference\\b',
+    '\\bfollow\\s+(?:this|the)\\b',
+    '\\bbased\\s+on\\b',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // ── khy 自身配置领域引用(有它更确信「配的是 khy」,但非必需——参照语言已足够歧义)─────
 // 仅用于让指令更精准地点名(是不是在配 provider / key / 模型),不参与触发判据。
-const _KHY_CONFIG_DOMAIN_RE = /(api\s*key|apikey|密钥|秘钥|令牌|\bkey\b|\btoken\b|模型|\bmodel\b|供应商|厂商|provider|渠道|中转|base\s*url|endpoint|端点|接口)/i;
+const _KHY_CONFIG_DOMAIN_RE =
+  /(api\s*key|apikey|密钥|秘钥|令牌|\bkey\b|\btoken\b|模型|\bmodel\b|供应商|厂商|provider|渠道|中转|base\s*url|endpoint|端点|接口)/i;
 
 // nullish-安全字符串规整单一真源 utils/cleanText:null/undefined → 空串,其余 String 后 trim。
 const _clean = require('../../utils/cleanText');
@@ -116,14 +132,22 @@ const _DIRECTIVE = [
  */
 function resolve(text, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const t = _clean(text);
     // 上限放宽到 4000:粘贴的配置文档通常较长(本场景的核心输入形态)。
-    if (!t || t.length > 4000) return null;
+    if (!t || t.length > 4000) {
+      return null;
+    }
 
     // 零假阳性闸门:必须同时命中「安装命令」+「配置/参照语言」。
-    if (!_INSTALL_CMD_RE.test(t)) return null;
-    if (!_CONFIG_REF_RE.test(t)) return null;
+    if (!_INSTALL_CMD_RE.test(t)) {
+      return null;
+    }
+    if (!_CONFIG_REF_RE.test(t)) {
+      return null;
+    }
 
     return { directive: _DIRECTIVE };
   } catch {

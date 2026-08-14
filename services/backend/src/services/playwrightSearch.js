@@ -36,9 +36,17 @@ const { UA } = engine;
 
 // Markers that a "200 OK" page is actually a bot wall rather than real results.
 const _BOT_BLOCK_MARKERS = [
-  'unusual traffic', 'are you a robot', 'captcha', 'verify you are human',
-  'access denied', 'enable javascript', '人机验证', '安全验证', '请输入验证码',
-  '百度安全验证', '网络不给力',
+  'unusual traffic',
+  'are you a robot',
+  'captcha',
+  'verify you are human',
+  'access denied',
+  'enable javascript',
+  '人机验证',
+  '安全验证',
+  '请输入验证码',
+  '百度安全验证',
+  '网络不给力',
 ];
 
 const _DEFAULT_BROWSER_BUDGET_MS = 30_000;
@@ -57,7 +65,9 @@ function _hardTimeoutEnabled() {
     return require('./flagRegistry').isFlagEnabled('KHY_SEARCH_BROWSER_HARD_TIMEOUT', process.env);
   } catch {
     const raw = process.env.KHY_SEARCH_BROWSER_HARD_TIMEOUT;
-    if (raw === undefined || raw === null || raw === '') return true;
+    if (raw === undefined || raw === null || raw === '') {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -72,8 +82,13 @@ function _hardTimeoutEnabled() {
  */
 function _browserBudgetMs(navTimeout) {
   const raw = Number(process.env.KHY_SEARCH_BROWSER_BUDGET_MS);
-  if (Number.isFinite(raw) && raw > 0) return raw;
-  const floor = Number.isFinite(navTimeout) && navTimeout > 0 ? navTimeout + 10_000 : _DEFAULT_BROWSER_BUDGET_MS;
+  if (Number.isFinite(raw) && raw > 0) {
+    return raw;
+  }
+  const floor =
+    Number.isFinite(navTimeout) && navTimeout > 0
+      ? navTimeout + 10_000
+      : _DEFAULT_BROWSER_BUDGET_MS;
   return Math.max(floor, _DEFAULT_BROWSER_BUDGET_MS);
 }
 
@@ -85,7 +100,9 @@ function _browserBudgetMs(navTimeout) {
  * @returns {boolean}
  */
 function looksBotBlocked(html) {
-  if (!html || html.length < 2000) return true; // suspiciously small = challenge/shell
+  if (!html || html.length < 2000) {
+    return true;
+  } // suspiciously small = challenge/shell
   const lower = html.toLowerCase();
   return _BOT_BLOCK_MARKERS.some((m) => lower.includes(m.toLowerCase()));
 }
@@ -97,8 +114,10 @@ function looksBotBlocked(html) {
  * @returns {'request'|'auto'|'playwright'}
  */
 function getSearchMode() {
-  const m = String(process.env.KHY_SEARCH_MODE || 'auto').trim().toLowerCase();
-  return (m === 'request' || m === 'playwright') ? m : 'auto';
+  const m = String(process.env.KHY_SEARCH_MODE || 'auto')
+    .trim()
+    .toLowerCase();
+  return m === 'request' || m === 'playwright' ? m : 'auto';
 }
 
 /** True unless explicitly disabled via request mode. */
@@ -115,11 +134,30 @@ function isEnabled() {
 function _bounded(p, ms) {
   return new Promise((resolve) => {
     let done = false;
-    const t = setTimeout(() => { if (!done) { done = true; resolve({ __closeTimedOut: true }); } }, ms);
-    if (t && typeof t.unref === 'function') t.unref();
+    const t = setTimeout(() => {
+      if (!done) {
+        done = true;
+        resolve({ __closeTimedOut: true });
+      }
+    }, ms);
+    if (t && typeof t.unref === 'function') {
+      t.unref();
+    }
     Promise.resolve(p).then(
-      (v) => { if (!done) { done = true; clearTimeout(t); resolve(v); } },
-      () => { if (!done) { done = true; clearTimeout(t); resolve({ __closeError: true }); } },
+      (v) => {
+        if (!done) {
+          done = true;
+          clearTimeout(t);
+          resolve(v);
+        }
+      },
+      () => {
+        if (!done) {
+          done = true;
+          clearTimeout(t);
+          resolve({ __closeError: true });
+        }
+      }
     );
   });
 }
@@ -143,7 +181,9 @@ function _bounded(p, ms) {
 async function fetchRenderedHtml(url, opts = {}) {
   const pw = engine.loadPlaywright();
   const chromium = pw && pw.chromium;
-  if (!chromium) return { unavailable: true };
+  if (!chromium) {
+    return { unavailable: true };
+  }
 
   const navTimeout = engine.navTimeoutMs();
   let browser = null;
@@ -155,17 +195,35 @@ async function fetchRenderedHtml(url, opts = {}) {
   // wedged close can never stall), and for a wedged LOCAL launch force-kill the
   // process so a stuck browser can never leak Chromium. Always reaches SIGKILL.
   const teardown = async () => {
-    if (tornDown) return;
+    if (tornDown) {
+      return;
+    }
     tornDown = true;
-    try { if (context) await _bounded(context.close(), _CLOSE_BOUND_MS); } catch { /* ignore */ }
-    try { if (browser && typeof browser.close === 'function') await _bounded(browser.close(), _CLOSE_BOUND_MS); } catch { /* ignore */ }
+    try {
+      if (context) {
+        await _bounded(context.close(), _CLOSE_BOUND_MS);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (browser && typeof browser.close === 'function') {
+        await _bounded(browser.close(), _CLOSE_BOUND_MS);
+      }
+    } catch {
+      /* ignore */
+    }
     // Belt-and-suspenders: if the local browser process survived close(), kill it.
     try {
       if (browser && !isRemote && typeof browser.process === 'function') {
         const proc = browser.process();
-        if (proc && typeof proc.kill === 'function' && proc.killed !== true) proc.kill('SIGKILL');
+        if (proc && typeof proc.kill === 'function' && proc.killed !== true) {
+          proc.kill('SIGKILL');
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const run = async () => {
@@ -176,14 +234,23 @@ async function fetchRenderedHtml(url, opts = {}) {
       viewport: { width: 1280, height: 800 },
     });
     // Belt for every default-timeout-honoring op inside this context.
-    try { if (typeof context.setDefaultTimeout === 'function') context.setDefaultTimeout(navTimeout); } catch { /* ignore */ }
+    try {
+      if (typeof context.setDefaultTimeout === 'function') {
+        context.setDefaultTimeout(navTimeout);
+      }
+    } catch {
+      /* ignore */
+    }
     const page = await context.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: navTimeout });
     if (opts.waitForSelector) {
       // Best-effort: results may already be present; don't fail the whole pass
       // just because the selector wait timed out.
-      try { await page.waitForSelector(opts.waitForSelector, { timeout: Math.min(navTimeout, 8000) }); }
-      catch { /* fall through and grab whatever rendered */ }
+      try {
+        await page.waitForSelector(opts.waitForSelector, { timeout: Math.min(navTimeout, 8000) });
+      } catch {
+        /* fall through and grab whatever rendered */
+      }
     }
     const html = await page.content();
     return { success: true, html };
@@ -195,10 +262,25 @@ async function fetchRenderedHtml(url, opts = {}) {
     try {
       return await run();
     } catch (err) {
-      return { success: false, error: `Playwright fetch failed: ${err && err.message ? err.message : err}` };
+      return {
+        success: false,
+        error: `Playwright fetch failed: ${err && err.message ? err.message : err}`,
+      };
     } finally {
-      try { if (context) await context.close(); } catch { /* ignore */ }
-      try { if (browser && typeof browser.close === 'function') await browser.close(); } catch { /* ignore */ }
+      try {
+        if (context) {
+          await context.close();
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (browser && typeof browser.close === 'function') {
+          await browser.close();
+        }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -209,12 +291,17 @@ async function fetchRenderedHtml(url, opts = {}) {
   let timer = null;
   const timeoutPromise = new Promise((resolve) => {
     timer = setTimeout(() => resolve({ __budgetExceeded: true }), budgetMs);
-    if (timer && typeof timer.unref === 'function') timer.unref();
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
   });
 
   try {
     const outcome = await Promise.race([
-      run().then((r) => r, (err) => ({ __runError: err })),
+      run().then(
+        (r) => r,
+        (err) => ({ __runError: err })
+      ),
       timeoutPromise,
     ]);
     if (outcome && outcome.__budgetExceeded) {
@@ -225,11 +312,20 @@ async function fetchRenderedHtml(url, opts = {}) {
     }
     if (outcome && outcome.__runError) {
       const err = outcome.__runError;
-      return { success: false, error: `Playwright fetch failed: ${err && err.message ? err.message : err}` };
+      return {
+        success: false,
+        error: `Playwright fetch failed: ${err && err.message ? err.message : err}`,
+      };
     }
     return outcome;
   } finally {
-    if (timer) { try { clearTimeout(timer); } catch { /* ignore */ } }
+    if (timer) {
+      try {
+        clearTimeout(timer);
+      } catch {
+        /* ignore */
+      }
+    }
     // Bounded + idempotent: reaps the browser (force-kill if wedged) before we
     // return, so a stuck pass can neither hang the search nor leak Chromium.
     await teardown();
@@ -242,5 +338,7 @@ module.exports = {
   looksBotBlocked,
   fetchRenderedHtml,
   // test hook — forwards to the shared engine's loader cache.
-  __setPlaywrightModuleForTests(mod) { engine.__setPlaywrightModuleForTests(mod); },
+  __setPlaywrightModuleForTests(mod) {
+    engine.__setPlaywrightModuleForTests(mod);
+  },
 };

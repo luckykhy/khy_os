@@ -11,8 +11,11 @@ const { sequelize } = require('../src/config/database');
 const { QueryTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const { hashApiKey } = require('@khy/shared/utils/apiKeyHash');
-const STRICT_SEED = ['1', 'true', 'yes', 'on']
-  .includes(String(process.env.KHY_SEED_STRICT || '').trim().toLowerCase());
+const STRICT_SEED = ['1', 'true', 'yes', 'on'].includes(
+  String(process.env.KHY_SEED_STRICT || '')
+    .trim()
+    .toLowerCase()
+);
 
 // Run a raw SQL statement, silently ignoring "already exists" errors
 async function safeQuery(sql) {
@@ -252,18 +255,30 @@ async function migrate() {
       }
     }
 
-    await safeQuery('CREATE UNIQUE INDEX IF NOT EXISTS "api_keys_key_hash_uq" ON "api_keys" ("key_hash")');
+    await safeQuery(
+      'CREATE UNIQUE INDEX IF NOT EXISTS "api_keys_key_hash_uq" ON "api_keys" ("key_hash")'
+    );
   }
 
   if (await tableExists('auth_sessions')) {
-    await safeQuery('CREATE INDEX IF NOT EXISTS "auth_sessions_user_id_idx" ON "auth_sessions" ("user_id")');
-    await safeQuery('CREATE INDEX IF NOT EXISTS "auth_sessions_status_idx" ON "auth_sessions" ("status")');
-    await safeQuery('CREATE INDEX IF NOT EXISTS "auth_sessions_expires_at_idx" ON "auth_sessions" ("expires_at")');
-    await safeQuery('CREATE INDEX IF NOT EXISTS "auth_sessions_revoked_at_idx" ON "auth_sessions" ("revoked_at")');
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "auth_sessions_user_id_idx" ON "auth_sessions" ("user_id")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "auth_sessions_status_idx" ON "auth_sessions" ("status")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "auth_sessions_expires_at_idx" ON "auth_sessions" ("expires_at")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "auth_sessions_revoked_at_idx" ON "auth_sessions" ("revoked_at")'
+    );
   }
 
   if (await tableExists('user_auth_states')) {
-    await safeQuery('CREATE INDEX IF NOT EXISTS "user_auth_states_token_invalid_before_idx" ON "user_auth_states" ("token_invalid_before")');
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_auth_states_token_invalid_before_idx" ON "user_auth_states" ("token_invalid_before")'
+    );
   }
 
   console.log('Schema migrations applied');
@@ -283,25 +298,43 @@ async function seed() {
     // Now safe to load models (they reference columns that exist)
     const { User, Strategy, Instrument, Watchlist } = require('../src/models');
 
-    // 1. Upsert admin user (idempotent)
-    // Always pre-hash and use raw SQL to avoid double-hashing by model hooks
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    const existing = await User.findOne({ where: { username: 'admin' } });
+    // 1. Ensure the default admin user exists (idempotent).
+    // Credentials come from the unified credentialGenerator module (OS-user
+    // derived username + machine-derived password persisted under
+    // .khy/credentials/default-admin.json). Existing accounts are NEVER
+    // touched — no rename, no password reset.
+    // Always pre-hash and use raw SQL to avoid double-hashing by model hooks.
+    const credGen = require('../src/services/credentialGenerator');
+    const adminUsername = credGen.resolveDefaultAdminUsername();
+    const existing = await User.findOne({ where: { username: adminUsername } });
     const now = new Date().toISOString();
     if (existing) {
-      await sequelize.query(
-        'UPDATE users SET password = :password, email = :email, role = :role, status = :status WHERE username = :username',
-        { replacements: { password: adminPassword, email: 'admin@khy-quant.com', role: 'admin', status: 'active', username: 'admin' } }
-      );
-      console.log('Admin user updated (admin / admin123)');
+      console.log(`默认管理员已存在（用户名: ${adminUsername}），未修改密码与任何字段`);
     } else {
+      const creds = credGen.loadOrCreateDefaultAdminCredentials();
+      const adminPassword = await bcrypt.hash(creds.password, 10);
       await sequelize.query(
         'INSERT INTO users (username, password, email, role, status, created_at, updated_at) VALUES (:username, :password, :email, :role, :status, :now, :now)',
-        { replacements: { username: 'admin', password: adminPassword, email: 'admin@khy-quant.com', role: 'admin', status: 'active', now } }
+        {
+          replacements: {
+            username: creds.username,
+            password: adminPassword,
+            email: 'admin@khy-quant.com',
+            role: 'admin',
+            status: 'active',
+            now,
+          },
+        }
       );
-      console.log('Admin user created (admin / admin123)');
+      if (creds.fromEnv) {
+        console.log(`已生成初始管理员 ${creds.username}，密码来自环境变量`);
+      } else {
+        console.log(
+          `已生成初始管理员 ${creds.username}，密码已保存至 ${creds.filePath || '(写入失败，请设置 KHY_ADMIN_PASSWORD 后重跑)'}`
+        );
+      }
     }
-    const admin = await User.findOne({ where: { username: 'admin' } });
+    const admin = await User.findOne({ where: { username: adminUsername } });
 
     // 2. Create sample strategies
     const strategies = [
@@ -323,7 +356,7 @@ if (pma5 <= pma20 && ma5 > ma20) return 'buy';
 if (pma5 >= pma20 && ma5 < ma20) return 'sell';
 return null;`,
         parameters: { shortPeriod: 5, longPeriod: 20 },
-        user_id: admin.id
+        user_id: admin.id,
       },
       {
         name: 'RSI反转策略',
@@ -342,7 +375,7 @@ if (rsi < 30) return 'buy';
 if (rsi > 70) return 'sell';
 return null;`,
         parameters: { period: 14, overbought: 70, oversold: 30 },
-        user_id: admin.id
+        user_id: admin.id,
       },
       {
         name: 'MACD动量策略',
@@ -361,16 +394,18 @@ if (pdif <= 0 && dif > 0) return 'buy';
 if (pdif >= 0 && dif < 0) return 'sell';
 return null;`,
         parameters: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
-        user_id: admin.id
-      }
+        user_id: admin.id,
+      },
     ];
 
     for (const s of strategies) {
       const [, wasCreated] = await Strategy.findOrCreate({
         where: { name: s.name, user_id: s.user_id },
-        defaults: s
+        defaults: s,
       });
-      console.log(wasCreated ? `Strategy "${s.name}" created` : `Strategy "${s.name}" already exists`);
+      console.log(
+        wasCreated ? `Strategy "${s.name}" created` : `Strategy "${s.name}" already exists`
+      );
     }
 
     // 3. Seed default instruments (idempotent)
@@ -390,27 +425,71 @@ return null;`,
     for (const inst of defaultInstruments) {
       const [, wasCreated] = await Instrument.findOrCreate({
         where: { symbol: inst.symbol },
-        defaults: inst
+        defaults: inst,
       });
-      console.log(wasCreated ? `Instrument "${inst.symbol} ${inst.name}" created` : `Instrument "${inst.symbol}" already exists`);
+      console.log(
+        wasCreated
+          ? `Instrument "${inst.symbol} ${inst.name}" created`
+          : `Instrument "${inst.symbol}" already exists`
+      );
     }
 
     // 4. Seed default watchlist for admin user (idempotent)
     const defaultWatchlist = [
-      { symbol: 'sh000300', symbolName: '沪深300', instrumentType: 'index', category: '指数', basePrice: 4660 },
-      { symbol: 'sh000001', symbolName: '上证指数', instrumentType: 'index', category: '指数', basePrice: 3350 },
-      { symbol: 'sz399001', symbolName: '深证成指', instrumentType: 'index', category: '指数', basePrice: 10800 },
-      { symbol: 'rb_main', symbolName: '螺纹钢主力', instrumentType: 'futures', category: '期货', basePrice: 3380 },
-      { symbol: 'sh600519', symbolName: '贵州茅台', instrumentType: 'stock', category: '股票', basePrice: 1680 },
-      { symbol: 'sh600036', symbolName: '招商银行', instrumentType: 'stock', category: '股票', basePrice: 38 },
+      {
+        symbol: 'sh000300',
+        symbolName: '沪深300',
+        instrumentType: 'index',
+        category: '指数',
+        basePrice: 4660,
+      },
+      {
+        symbol: 'sh000001',
+        symbolName: '上证指数',
+        instrumentType: 'index',
+        category: '指数',
+        basePrice: 3350,
+      },
+      {
+        symbol: 'sz399001',
+        symbolName: '深证成指',
+        instrumentType: 'index',
+        category: '指数',
+        basePrice: 10800,
+      },
+      {
+        symbol: 'rb_main',
+        symbolName: '螺纹钢主力',
+        instrumentType: 'futures',
+        category: '期货',
+        basePrice: 3380,
+      },
+      {
+        symbol: 'sh600519',
+        symbolName: '贵州茅台',
+        instrumentType: 'stock',
+        category: '股票',
+        basePrice: 1680,
+      },
+      {
+        symbol: 'sh600036',
+        symbolName: '招商银行',
+        instrumentType: 'stock',
+        category: '股票',
+        basePrice: 38,
+      },
     ];
 
     for (const item of defaultWatchlist) {
       const [, wasCreated] = await Watchlist.findOrCreate({
         where: { userId: admin.id, symbol: item.symbol },
-        defaults: { userId: admin.id, ...item }
+        defaults: { userId: admin.id, ...item },
       });
-      console.log(wasCreated ? `Watchlist "${item.symbol} ${item.symbolName}" added` : `Watchlist "${item.symbol}" already exists`);
+      console.log(
+        wasCreated
+          ? `Watchlist "${item.symbol} ${item.symbolName}" added`
+          : `Watchlist "${item.symbol}" already exists`
+      );
     }
 
     console.log('Seed completed');

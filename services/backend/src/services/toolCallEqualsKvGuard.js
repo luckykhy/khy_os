@@ -43,14 +43,21 @@ function eqKvGuardEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_TOOLCALL_EQ_KV_GUARD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_TOOLCALL_EQ_KV_GUARD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -67,8 +74,12 @@ function eqKvGuardEnabled(env = process.env) {
  */
 function shouldParseAsKvArgs(argsStr, env = process.env) {
   try {
-    if (!eqKvGuardEnabled(env)) return null;
-    if (typeof argsStr !== 'string') return null;
+    if (!eqKvGuardEnabled(env)) {
+      return null;
+    }
+    if (typeof argsStr !== 'string') {
+      return null;
+    }
     return _KV_KEY_LEAD.test(argsStr);
   } catch {
     return null;

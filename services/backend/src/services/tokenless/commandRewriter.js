@@ -8,6 +8,9 @@
  *   4. Merge consecutive same-role messages
  */
 
+// Canonical chars/4 estimate atom (utils leaf).
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 /**
  * Rewrite conversation history to minimize token count.
  * Keeps the last N turns verbatim, summarizes older ones.
@@ -42,7 +45,9 @@ function rewriteHistory(messages, options = {}) {
   let _split = null;
   try {
     _split = require('../recentTurnsSplit').splitRecent(conversation, keepRecent, process.env);
-  } catch { /* fail-soft → legacy slice below */ }
+  } catch {
+    /* fail-soft → legacy slice below */
+  }
   if (_split) {
     oldTurns = _split.oldTurns;
     recentTurns = _split.recentTurns;
@@ -55,7 +60,9 @@ function rewriteHistory(messages, options = {}) {
   const summary = _summarizeTurns(oldTurns, maxHistoryTokens);
 
   const rewritten = [];
-  if (systemMsg) rewritten.push(systemMsg);
+  if (systemMsg) {
+    rewritten.push(systemMsg);
+  }
   if (summary) {
     rewritten.push({
       role: 'system',
@@ -98,7 +105,9 @@ function _summarizeTurns(turns, maxTokens) {
         .slice(0, 200)
         .replace(/\n/g, ' ')
         .trim();
-      if (cleaned) points.push(`Assistant: ${cleaned}`);
+      if (cleaned) {
+        points.push(`Assistant: ${cleaned}`);
+      }
     }
   }
 
@@ -117,7 +126,12 @@ function _mergeSameRole(messages) {
   const merged = [];
   for (const msg of messages) {
     const last = merged[merged.length - 1];
-    if (last && last.role === msg.role && typeof last.content === 'string' && typeof msg.content === 'string') {
+    if (
+      last &&
+      last.role === msg.role &&
+      typeof last.content === 'string' &&
+      typeof msg.content === 'string'
+    ) {
       last.content += '\n' + msg.content;
     } else {
       merged.push({ ...msg });
@@ -135,15 +149,18 @@ function _estimateTokens(messages) {
     const c = typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '');
     chars += c.length;
   }
-  return Math.ceil(chars / 4);
+  // Thin delegate; byte-identical to Math.ceil(chars / 4).
+  return _simpleTokenEstimate.fromCharCount(chars);
 }
 
 /**
  * Strip completed tool calls from messages to save context tokens.
  */
 function stripCompletedToolCalls(messages) {
-  return messages.map(msg => {
-    if (msg.role !== 'assistant' || typeof msg.content !== 'string') return msg;
+  return messages.map((msg) => {
+    if (msg.role !== 'assistant' || typeof msg.content !== 'string') {
+      return msg;
+    }
 
     const stripped = msg.content
       .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '[tool executed]')

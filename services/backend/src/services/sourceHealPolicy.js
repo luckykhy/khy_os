@@ -31,10 +31,12 @@ const _OFF = new Set(['0', 'false', 'off', 'no']);
 const DEFAULT_MAX_HEAL = 200;
 
 /** 门控:KHY_SOURCE_HEAL 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_SOURCE_HEAL;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -45,12 +47,16 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
  * 解析一次自愈的文件数上限。KHY_SOURCE_HEAL_MAX 覆盖,非正整数/坏值 → 默认 200。
  * 显式 0 或负数被视为坏值回落默认(封顶永远 ≥1,避免「关掉封顶」的歧义)。
  */
-function resolveMaxHeal(env = (typeof process !== 'undefined' ? process.env : {})) {
+function resolveMaxHeal(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_SOURCE_HEAL_MAX;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_MAX_HEAL;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return DEFAULT_MAX_HEAL;
+    }
     const n = Number(String(raw).trim());
-    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return DEFAULT_MAX_HEAL;
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+      return DEFAULT_MAX_HEAL;
+    }
     return n;
   } catch {
     return DEFAULT_MAX_HEAL;
@@ -63,15 +69,25 @@ function resolveMaxHeal(env = (typeof process !== 'undefined' ? process.env : {}
  */
 function _isSafeRelPath(rel) {
   try {
-    if (typeof rel !== 'string') return false;
+    if (typeof rel !== 'string') {
+      return false;
+    }
     const s = rel.trim();
-    if (!s) return false;
-    if (path.isAbsolute(s)) return false;
+    if (!s) {
+      return false;
+    }
+    if (path.isAbsolute(s)) {
+      return false;
+    }
     // Windows 盘符(C:\ / C:/)也算绝对,path.isAbsolute 在 posix 上不识别 → 额外拦。
-    if (/^[A-Za-z]:[\\/]/.test(s)) return false;
+    if (/^[A-Za-z]:[\\/]/.test(s)) {
+      return false;
+    }
     // 规范化后若以 `..` 起头或含 `../` 段 → 逃逸,拒绝。
     const norm = path.normalize(s).replace(/\\/g, '/');
-    if (norm === '..' || norm.startsWith('../') || norm.includes('/../')) return false;
+    if (norm === '..' || norm.startsWith('../') || norm.includes('/../')) {
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -80,7 +96,9 @@ function _isSafeRelPath(rel) {
 
 /** 把 expected/actual 归一为普通 {relPath: hash} 映射(容忍 null/非对象)。 */
 function _asMap(obj) {
-  if (!obj || typeof obj !== 'object') return {};
+  if (!obj || typeof obj !== 'object') {
+    return {};
+  }
   return obj;
 }
 
@@ -121,7 +139,9 @@ function planSourceHeal(expected, actual, opts = {}) {
 
   try {
     const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return empty(false);
+    if (!isEnabled(env)) {
+      return empty(false);
+    }
 
     const exp = _asMap(expected);
     const act = _asMap(actual);
@@ -136,7 +156,10 @@ function planSourceHeal(expected, actual, opts = {}) {
     for (const rel of expKeys) {
       const wantRaw = exp[rel];
       const want = typeof wantRaw === 'string' ? wantRaw : '';
-      if (!_isSafeRelPath(rel)) { skippedUnsafe.push(rel); continue; }
+      if (!_isSafeRelPath(rel)) {
+        skippedUnsafe.push(rel);
+        continue;
+      }
       const haveRaw = act[rel];
       const have = typeof haveRaw === 'string' ? haveRaw : '';
       if (!have) {
@@ -153,7 +176,9 @@ function planSourceHeal(expected, actual, opts = {}) {
     const extra = [];
     const expSet = new Set(expKeys);
     for (const rel of actKeys) {
-      if (!expSet.has(rel)) extra.push(rel);
+      if (!expSet.has(rel)) {
+        extra.push(rel);
+      }
     }
 
     missing.sort();

@@ -5,8 +5,8 @@
  * validateInput() method for security and safety checks.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const { isBlockedDevicePath } = require('./shellClassifier');
 
@@ -21,9 +21,23 @@ const { isBlockedDevicePath } = require('./shellClassifier');
 // are blocked even in non-strict mode; KHY_ALLOW_SENSITIVE_HOME_WRITE=1 is the
 // operator-informed opt-out.
 const _SENSITIVE_HOME_EXACT = new Set([
-  '.bashrc', '.bash_profile', '.bash_login', '.bash_logout', '.bash_aliases',
-  '.profile', '.zshrc', '.zprofile', '.zshenv', '.zlogin', '.zlogout',
-  '.kshrc', '.cshrc', '.tcshrc', '.login', '.xprofile', '.xinitrc',
+  '.bashrc',
+  '.bash_profile',
+  '.bash_login',
+  '.bash_logout',
+  '.bash_aliases',
+  '.profile',
+  '.zshrc',
+  '.zprofile',
+  '.zshenv',
+  '.zlogin',
+  '.zlogout',
+  '.kshrc',
+  '.cshrc',
+  '.tcshrc',
+  '.login',
+  '.xprofile',
+  '.xinitrc',
 ]);
 const _SENSITIVE_HOME_PREFIXES = [
   '.ssh/',
@@ -39,32 +53,54 @@ const _SENSITIVE_HOME_EXACT_LC = new Set([..._SENSITIVE_HOME_EXACT].map((s) => s
 const _SENSITIVE_HOME_PREFIXES_LC = _SENSITIVE_HOME_PREFIXES.map((p) => p.toLowerCase());
 
 function _isSensitiveHomeWrite(resolved) {
-  if (String(process.env.KHY_ALLOW_SENSITIVE_HOME_WRITE || '').trim() === '1') return false;
+  if (String(process.env.KHY_ALLOW_SENSITIVE_HOME_WRITE || '').trim() === '1') {
+    return false;
+  }
   let home;
-  try { home = os.homedir(); } catch { return false; }
-  if (!home) return false;
+  try {
+    home = os.homedir();
+  } catch {
+    return false;
+  }
+  if (!home) {
+    return false;
+  }
   let rel = path.relative(home, resolved);
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return false; // outside home
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return false;
+  } // outside home
   rel = rel.split(path.sep).join('/');
   // Legacy exact-case match (preserved first → byte-revert baseline when gate off).
-  if (_SENSITIVE_HOME_EXACT.has(rel)) return true;
-  if (_SENSITIVE_HOME_PREFIXES.some((p) => rel === p.slice(0, -1) || rel.startsWith(p))) return true;
+  if (_SENSITIVE_HOME_EXACT.has(rel)) {
+    return true;
+  }
+  if (_SENSITIVE_HOME_PREFIXES.some((p) => rel === p.slice(0, -1) || rel.startsWith(p))) {
+    return true;
+  }
   // 门控 KHY_SENSITIVE_HOME_CASEFOLD(默认开):大小写折叠超集,封堵 `.SSH/`/`.BASHRC`/
   // `launchagents/` 等大小写变体绕过(大小写不敏感 FS 上是同一文件)。门关/异常 → foldSensitiveRel
   // 返 null → 跳过 → 逐字节回退 legacy 精确大小写结果。fail-closed:只多封锁,绝不放行 legacy 拦的。
   try {
     const folded = require('../services/sensitiveHomeCaseFold').foldSensitiveRel(rel, process.env);
     if (folded != null && folded !== rel) {
-      if (_SENSITIVE_HOME_EXACT_LC.has(folded)) return true;
-      if (_SENSITIVE_HOME_PREFIXES_LC.some((p) => folded === p.slice(0, -1) || folded.startsWith(p))) return true;
+      if (_SENSITIVE_HOME_EXACT_LC.has(folded)) {
+        return true;
+      }
+      if (
+        _SENSITIVE_HOME_PREFIXES_LC.some((p) => folded === p.slice(0, -1) || folded.startsWith(p))
+      ) {
+        return true;
+      }
     }
-  } catch { /* fail-soft → legacy result (not sensitive) */ }
+  } catch {
+    /* fail-soft → legacy result (not sensitive) */
+  }
   return false;
 }
 
 // ── Default limits ─────────────────────────────────────────────────
 
-const MAX_READ_FILE_SIZE = 500 * 1024;   // 500 KB
+const MAX_READ_FILE_SIZE = 500 * 1024; // 500 KB
 const MAX_EDIT_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
 // ── Validators ─────────────────────────────────────────────────────
@@ -132,11 +168,14 @@ function validateNotNoop(oldStr, newStr) {
  * @returns {{ valid: boolean, message?: string }}
  */
 function validateNotUNCPath(filePath) {
-  if (!filePath || typeof filePath !== 'string') return { valid: true };
+  if (!filePath || typeof filePath !== 'string') {
+    return { valid: true };
+  }
   if (filePath.startsWith('\\\\') || filePath.startsWith('//')) {
     return {
       valid: false,
-      message: 'Blocked: UNC network paths are not allowed (security: prevents NTLM credential leakage).',
+      message:
+        'Blocked: UNC network paths are not allowed (security: prevents NTLM credential leakage).',
     };
   }
   return { valid: true };
@@ -149,7 +188,9 @@ function validateNotUNCPath(filePath) {
  * @returns {{ valid: boolean, message?: string }}
  */
 function validateNoPathTraversal(filePath, baseCwd) {
-  if (!baseCwd) baseCwd = process.env.KHYQUANT_CWD || process.cwd();
+  if (!baseCwd) {
+    baseCwd = process.env.KHYQUANT_CWD || process.cwd();
+  }
   try {
     const resolved = path.resolve(baseCwd, filePath);
     const normalizedBase = path.resolve(baseCwd);
@@ -171,9 +212,18 @@ function validateNoPathTraversal(filePath, baseCwd) {
     // (proj-secrets vs proj)误判「项目内」而绕过边界;锚定分隔符边界收紧。门关/异常 → 回退 legacy。
     let _withinBase = resolved.startsWith(normalizedBase);
     try {
-      const _a = require('../services/projectBoundaryAnchor').anchorWithinBase(resolved, normalizedBase, path.sep, process.env);
-      if (_a !== null) _withinBase = _a;
-    } catch { /* fail-soft → legacy startsWith */ }
+      const _a = require('../services/projectBoundaryAnchor').anchorWithinBase(
+        resolved,
+        normalizedBase,
+        path.sep,
+        process.env
+      );
+      if (_a !== null) {
+        _withinBase = _a;
+      }
+    } catch {
+      /* fail-soft → legacy startsWith */
+    }
     if (!_withinBase) {
       // Outside the project CWD. Still allow the user's OWN data folders
       // (home / Desktop / Documents / Downloads), including drive-relocated
@@ -182,7 +232,11 @@ function validateNoPathTraversal(filePath, baseCwd) {
       const strict = String(process.env.KHY_STRICT_WRITE_BOUNDARY || '').trim() === '1';
       let trusted = false;
       if (!strict) {
-        try { trusted = require('./_userDirs').isUnderTrustedRoot(resolved); } catch { trusted = false; }
+        try {
+          trusted = require('./_userDirs').isUnderTrustedRoot(resolved);
+        } catch {
+          trusted = false;
+        }
       }
       if (!trusted) {
         return {
@@ -225,24 +279,51 @@ function validateNoPathTraversal(filePath, baseCwd) {
  */
 function validateReadAccess(filePath, baseCwd) {
   const strict = String(process.env.KHY_STRICT_READ_BOUNDARY || '').trim() === '1';
-  if (!strict) return { valid: true }; // 全局可读：默认放行，越界审批交给 readBoundaryGuard
-  if (!baseCwd) baseCwd = process.env.KHYQUANT_CWD || process.cwd();
+  if (!strict) {
+    return { valid: true };
+  } // 全局可读：默认放行，越界审批交给 readBoundaryGuard
+  if (!baseCwd) {
+    baseCwd = process.env.KHYQUANT_CWD || process.cwd();
+  }
   try {
     const resolved = path.resolve(baseCwd, filePath);
     const normalizedBase = path.resolve(baseCwd);
     // 门控 KHY_PROJECT_BOUNDARY_ANCHOR(默认开):同写路径,锚定分隔符边界防兄弟目录名前缀绕过。
     let _within = resolved.startsWith(normalizedBase);
     try {
-      const _a = require('../services/projectBoundaryAnchor').anchorWithinBase(resolved, normalizedBase, path.sep, process.env);
-      if (_a !== null) _within = _a;
-    } catch { /* fail-soft → legacy startsWith */ }
-    if (_within) return { valid: true };
+      const _a = require('../services/projectBoundaryAnchor').anchorWithinBase(
+        resolved,
+        normalizedBase,
+        path.sep,
+        process.env
+      );
+      if (_a !== null) {
+        _within = _a;
+      }
+    } catch {
+      /* fail-soft → legacy startsWith */
+    }
+    if (_within) {
+      return { valid: true };
+    }
     let trusted = false;
-    try { trusted = require('./_userDirs').isUnderTrustedRoot(resolved); } catch { trusted = false; }
-    if (trusted) return { valid: true };
+    try {
+      trusted = require('./_userDirs').isUnderTrustedRoot(resolved);
+    } catch {
+      trusted = false;
+    }
+    if (trusted) {
+      return { valid: true };
+    }
     let granted = false;
-    try { granted = require('../services/additionalDirectories').isUnderAdditionalDir(resolved); } catch { granted = false; }
-    if (granted) return { valid: true };
+    try {
+      granted = require('../services/additionalDirectories').isUnderAdditionalDir(resolved);
+    } catch {
+      granted = false;
+    }
+    if (granted) {
+      return { valid: true };
+    }
     return {
       valid: false,
       approvable: true, // 可升级为用户审批，而非直接失败
@@ -263,7 +344,9 @@ function validateReadAccess(filePath, baseCwd) {
  */
 function composeValidations(...results) {
   for (const r of results) {
-    if (!r.valid) return r;
+    if (!r.valid) {
+      return r;
+    }
   }
   return { valid: true };
 }

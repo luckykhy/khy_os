@@ -9,18 +9,25 @@
  *   - khy plugin link     — symlink local plugin into discovery path
  *   - khy plugin unlink   — remove symlink
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const Module = require('module');
 const { execSync, execFileSync, spawn } = require('child_process');
+const fs = require('fs');
+const Module = require('module');
+const os = require('os');
+const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 const readline = require('readline');
+
 const { validateManifest } = require('@khy/plugin-sdk');
 const { createMockContext } = require('@khy/plugin-sdk/testing');
+
 const { getDataHome } = require('../../utils/dataHome');
 const {
-  printSuccess, printError, printWarn, printInfo, printTable, withSpinner,
+  printSuccess,
+  printError,
+  printWarn,
+  printInfo,
+  printTable,
+  withSpinner,
   MASCOT_MINI,
 } = require('../formatters');
 
@@ -34,19 +41,19 @@ const SDK_VERSION = '1.0.0';
 const ensureDir = require('../../utils/ensureDirSync');
 
 function ask(rl, question, defaultValue) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const suffix = defaultValue ? ` (${defaultValue})` : '';
-    rl.question(chalk.cyan(`  ${question}${suffix}: `), answer => {
+    rl.question(chalk.cyan(`  ${question}${suffix}: `), (answer) => {
       resolve(answer.trim() || defaultValue || '');
     });
   });
 }
 
 function askChoice(rl, question, choices) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     console.log(chalk.cyan(`  ${question}`));
     choices.forEach((c, i) => console.log(chalk.white(`    ${i + 1}) ${c}`)));
-    rl.question(chalk.cyan('  > '), answer => {
+    rl.question(chalk.cyan('  > '), (answer) => {
       const idx = parseInt(answer, 10) - 1;
       resolve(choices[idx] || choices[0]);
     });
@@ -137,16 +144,33 @@ async function handlePluginInit(args) {
   }
 }
 
-async function generatePlugin({ targetDir, pkgName, namespace, displayName, description, author, template, permissions }) {
+async function generatePlugin({
+  targetDir,
+  pkgName,
+  namespace,
+  displayName,
+  description,
+  author,
+  template,
+  permissions,
+}) {
   const includeBackend = template.includes('full') || template.includes('backend');
   const includeFrontend = template.includes('full') || template.includes('frontend');
 
   // Root dirs
   ensureDir(targetDir);
-  if (includeBackend) ensureDir(path.join(targetDir, 'src', 'commands'));
-  if (includeBackend) ensureDir(path.join(targetDir, 'src', 'tools'));
-  if (includeFrontend) ensureDir(path.join(targetDir, 'frontend', 'views'));
-  if (includeFrontend) ensureDir(path.join(targetDir, 'frontend', 'dev'));
+  if (includeBackend) {
+    ensureDir(path.join(targetDir, 'src', 'commands'));
+  }
+  if (includeBackend) {
+    ensureDir(path.join(targetDir, 'src', 'tools'));
+  }
+  if (includeFrontend) {
+    ensureDir(path.join(targetDir, 'frontend', 'views'));
+  }
+  if (includeFrontend) {
+    ensureDir(path.join(targetDir, 'frontend', 'dev'));
+  }
 
   // ─── package.json ───
   const pkg = {
@@ -185,7 +209,9 @@ async function generatePlugin({ targetDir, pkgName, namespace, displayName, desc
 
   // ─── Backend entry ───
   if (includeBackend) {
-    fs.writeFileSync(path.join(targetDir, 'src', 'index.js'), `/**
+    fs.writeFileSync(
+      path.join(targetDir, 'src', 'index.js'),
+      `/**
  * ${displayName} Plugin Entry
  * @implements {import('@khy/plugin-sdk').KhyPlugin}
  */
@@ -207,9 +233,12 @@ module.exports = {
     // Cleanup resources here
   },
 };
-`);
+`
+    );
 
-    fs.writeFileSync(path.join(targetDir, 'src', 'commands', 'hello.js'), `/**
+    fs.writeFileSync(
+      path.join(targetDir, 'src', 'commands', 'hello.js'),
+      `/**
  * Example command: ${namespace}.hello
  */
 module.exports = function registerHelloCommand(ctx) {
@@ -226,12 +255,15 @@ module.exports = function registerHelloCommand(ctx) {
     },
   });
 };
-`);
+`
+    );
   }
 
   // ─── Frontend entry ───
   if (includeFrontend) {
-    fs.writeFileSync(path.join(targetDir, 'frontend', 'index.js'), `/**
+    fs.writeFileSync(
+      path.join(targetDir, 'frontend', 'index.js'),
+      `/**
  * ${displayName} Frontend Plugin
  */
 export default {
@@ -253,9 +285,12 @@ export default {
     ]);
   },
 };
-`);
+`
+    );
 
-    fs.writeFileSync(path.join(targetDir, 'frontend', 'views', 'Home.vue'), `<template>
+    fs.writeFileSync(
+      path.join(targetDir, 'frontend', 'views', 'Home.vue'),
+      `<template>
   <div class="${namespace}-home">
     <h1>${displayName}</h1>
     <p>Plugin ${pkgName} is running.</p>
@@ -271,10 +306,13 @@ export default {
   padding: 24px;
 }
 </style>
-`);
+`
+    );
 
     // Vite config for standalone dev
-    fs.writeFileSync(path.join(targetDir, 'frontend', 'vite.config.js'), `import { defineConfig } from 'vite'
+    fs.writeFileSync(
+      path.join(targetDir, 'frontend', 'vite.config.js'),
+      `import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
@@ -294,10 +332,13 @@ export default defineConfig({
     },
   },
 })
-`);
+`
+    );
 
     // Dev harness
-    fs.writeFileSync(path.join(targetDir, 'frontend', 'index.html'), `<!DOCTYPE html>
+    fs.writeFileSync(
+      path.join(targetDir, 'frontend', 'index.html'),
+      `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -309,9 +350,12 @@ export default defineConfig({
   <script type="module" src="./dev/main.js"></script>
 </body>
 </html>
-`);
+`
+    );
 
-    fs.writeFileSync(path.join(targetDir, 'frontend', 'dev', 'main.js'), `/**
+    fs.writeFileSync(
+      path.join(targetDir, 'frontend', 'dev', 'main.js'),
+      `/**
  * Dev harness — standalone development without the host app.
  */
 import { createApp } from 'vue'
@@ -343,14 +387,18 @@ plugin.install({
 })
 
 app.mount('#app')
-`);
+`
+    );
   }
 
   // ─── .gitignore ───
-  fs.writeFileSync(path.join(targetDir, '.gitignore'), `node_modules/
+  fs.writeFileSync(
+    path.join(targetDir, '.gitignore'),
+    `node_modules/
 dist/
 .DS_Store
-`);
+`
+  );
 }
 
 // ── khy plugin dev ───────────────────────────────────────────────────────────
@@ -376,7 +424,11 @@ async function handlePluginDev(args) {
   const hasBackend = pkg.khy.main && fs.existsSync(path.join(pluginDir, pkg.khy.main));
 
   console.log('');
-  console.log(chalk.bold.blue(`  ${MASCOT_MINI} Plugin Dev Mode: ${chalk.white(pkg.khy.displayName || namespace)}`));
+  console.log(
+    chalk.bold.blue(
+      `  ${MASCOT_MINI} Plugin Dev Mode: ${chalk.white(pkg.khy.displayName || namespace)}`
+    )
+  );
   console.log(chalk.gray('  ─────────────────────────────────────'));
 
   if (hasFrontend) {
@@ -387,14 +439,14 @@ async function handlePluginDev(args) {
     // without the warning. POSIX spawns npx directly (it's on PATH).
     const isWin = process.platform === 'win32';
     const viteProcess = spawn(
-      isWin ? (process.env.COMSPEC || 'cmd.exe') : 'npx',
+      isWin ? process.env.COMSPEC || 'cmd.exe' : 'npx',
       isWin
         ? ['/d', '/s', '/c', 'npx', 'vite', '--config', 'vite.config.js']
         : ['vite', '--config', 'vite.config.js'],
-      { cwd: frontendDir, stdio: 'inherit', windowsHide: true },
+      { cwd: frontendDir, stdio: 'inherit', windowsHide: true }
     );
 
-    viteProcess.on('error', err => {
+    viteProcess.on('error', (err) => {
       printError(`Frontend dev server failed: ${err.message}`);
     });
 
@@ -413,17 +465,27 @@ async function handlePluginDev(args) {
     printInfo(`Watching ${path.relative(process.cwd(), pluginDir)}/ for changes...`);
 
     let debounce = null;
-    const watcher = fs.watch(path.join(pluginDir, 'src'), { recursive: true }, (event, filename) => {
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => {
-        console.log(chalk.yellow(`  ↻ File changed: ${filename} — clearing module cache`));
-        // Clear require cache for the plugin
-        Object.keys(require.cache)
-          .filter(k => k.startsWith(pluginDir))
-          .forEach(k => delete require.cache[k]);
-        console.log(chalk.green('  ✓ Plugin module cache cleared. Changes will take effect on next command.'));
-      }, 300);
-    });
+    const watcher = fs.watch(
+      path.join(pluginDir, 'src'),
+      { recursive: true },
+      (event, filename) => {
+        if (debounce) {
+          clearTimeout(debounce);
+        }
+        debounce = setTimeout(() => {
+          console.log(chalk.yellow(`  ↻ File changed: ${filename} — clearing module cache`));
+          // Clear require cache for the plugin
+          Object.keys(require.cache)
+            .filter((k) => k.startsWith(pluginDir))
+            .forEach((k) => delete require.cache[k]);
+          console.log(
+            chalk.green(
+              '  ✓ Plugin module cache cleared. Changes will take effect on next command.'
+            )
+          );
+        }, 300);
+      }
+    );
 
     process.on('SIGINT', () => {
       watcher.close();
@@ -445,9 +507,14 @@ function parseDoctorOptions(args = []) {
   const positional = [];
   for (const raw of args) {
     const token = String(raw || '').trim();
-    if (!token) continue;
-    if (token.startsWith('-')) flags.add(token.toLowerCase());
-    else positional.push(token);
+    if (!token) {
+      continue;
+    }
+    if (token.startsWith('-')) {
+      flags.add(token.toLowerCase());
+    } else {
+      positional.push(token);
+    }
   }
 
   const all = flags.has('--all') || positional[0] === 'all';
@@ -469,7 +536,9 @@ function collectJsFiles(rootDir, maxFiles = 1200) {
   const allowedExt = new Set(['.js', '.cjs', '.mjs']);
 
   function walk(dir) {
-    if (files.length >= maxFiles) return;
+    if (files.length >= maxFiles) {
+      return;
+    }
     let entries = [];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -477,19 +546,27 @@ function collectJsFiles(rootDir, maxFiles = 1200) {
       return;
     }
     for (const entry of entries) {
-      if (files.length >= maxFiles) return;
+      if (files.length >= maxFiles) {
+        return;
+      }
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (skipDirs.has(entry.name)) continue;
+        if (skipDirs.has(entry.name)) {
+          continue;
+        }
         walk(abs);
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (allowedExt.has(ext)) files.push(abs);
+        if (allowedExt.has(ext)) {
+          files.push(abs);
+        }
       }
     }
   }
 
-  if (fs.existsSync(rootDir)) walk(rootDir);
+  if (fs.existsSync(rootDir)) {
+    walk(rootDir);
+  }
   return files;
 }
 
@@ -521,22 +598,26 @@ function extractModuleSpecifiers(sourceText) {
   for (const re of patterns) {
     let m;
     while ((m = re.exec(sourceText)) !== null) {
-      if (m[1]) specs.add(m[1]);
+      if (m[1]) {
+        specs.add(m[1]);
+      }
     }
   }
   return [...specs];
 }
 
-const BUILTIN_MODULES = new Set(
-  Module.builtinModules.map(m => m.replace(/^node:/, ''))
-);
+const BUILTIN_MODULES = new Set(Module.builtinModules.map((m) => m.replace(/^node:/, '')));
 
 function resolveModuleFromFile(specifier, fromFile, pluginDir) {
   const spec = String(specifier || '').trim();
-  if (!spec) return { ok: true };
+  if (!spec) {
+    return { ok: true };
+  }
 
   const builtInName = spec.replace(/^node:/, '');
-  if (BUILTIN_MODULES.has(builtInName)) return { ok: true };
+  if (BUILTIN_MODULES.has(builtInName)) {
+    return { ok: true };
+  }
 
   try {
     if (spec.startsWith('.') || spec.startsWith('/')) {
@@ -553,20 +634,34 @@ function resolveModuleFromFile(specifier, fromFile, pluginDir) {
 function findWorkspacePluginDirs() {
   const found = [];
   const wsRoot = findWorkspaceRoot();
-  if (!wsRoot) return found;
+  if (!wsRoot) {
+    return found;
+  }
   const packagesDir = path.join(wsRoot, 'packages');
-  if (!fs.existsSync(packagesDir)) return found;
+  if (!fs.existsSync(packagesDir)) {
+    return found;
+  }
 
   for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (!entry.name.startsWith('khy-')) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    if (!entry.name.startsWith('khy-')) {
+      continue;
+    }
     const pluginDir = path.join(packagesDir, entry.name);
     const pkgFile = path.join(pluginDir, 'package.json');
-    if (!fs.existsSync(pkgFile)) continue;
+    if (!fs.existsSync(pkgFile)) {
+      continue;
+    }
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8'));
-      if (pkg && pkg.khy) found.push(pluginDir);
-    } catch { /* ignore malformed package */ }
+      if (pkg && pkg.khy) {
+        found.push(pluginDir);
+      }
+    } catch {
+      /* ignore malformed package */
+    }
   }
   return found;
 }
@@ -574,14 +669,20 @@ function findWorkspacePluginDirs() {
 function findUserPluginDirs() {
   const dirs = [];
   for (const base of [PLUGINS_DIR, LEGACY_PLUGINS_DIR]) {
-    if (!fs.existsSync(base)) continue;
+    if (!fs.existsSync(base)) {
+      continue;
+    }
     try {
       const entries = fs.readdirSync(base, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
         dirs.push(path.join(base, entry.name));
       }
-    } catch { /* ignore unreadable dirs */ }
+    } catch {
+      /* ignore unreadable dirs */
+    }
   }
   return dirs;
 }
@@ -591,7 +692,7 @@ function findDiscoveredPluginDirs() {
     const pluginLoader = require('../../plugin-loader');
     const nullLogger = { info() {}, warn() {}, error() {} };
     const candidates = pluginLoader.discoverPlugins(nullLogger);
-    return candidates.map(c => c.pluginPath).filter(Boolean);
+    return candidates.map((c) => c.pluginPath).filter(Boolean);
   } catch {
     return [];
   }
@@ -632,7 +733,9 @@ function resolveDoctorTargets(options) {
 
 function clearModuleCacheUnder(rootDir) {
   for (const key of Object.keys(require.cache)) {
-    if (key.startsWith(rootDir)) delete require.cache[key];
+    if (key.startsWith(rootDir)) {
+      delete require.cache[key];
+    }
   }
 }
 
@@ -642,24 +745,35 @@ function withTimeout(promise, timeoutMs, message) {
     timer = setTimeout(() => reject(new Error(message || 'operation timeout')), timeoutMs);
   });
   return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
   });
 }
 
 function buildDummyObjectFromSchema(schema) {
-  if (!schema || typeof schema !== 'object') return {};
+  if (!schema || typeof schema !== 'object') {
+    return {};
+  }
   const obj = {};
   const props = schema.properties || {};
   const required = Array.isArray(schema.required) ? schema.required : [];
   for (const key of required) {
     const def = props[key] || {};
     const type = def.type;
-    if (type === 'string') obj[key] = 'test';
-    else if (type === 'number' || type === 'integer') obj[key] = 0;
-    else if (type === 'boolean') obj[key] = false;
-    else if (type === 'array') obj[key] = [];
-    else if (type === 'object') obj[key] = {};
-    else obj[key] = null;
+    if (type === 'string') {
+      obj[key] = 'test';
+    } else if (type === 'number' || type === 'integer') {
+      obj[key] = 0;
+    } else if (type === 'boolean') {
+      obj[key] = false;
+    } else if (type === 'array') {
+      obj[key] = [];
+    } else if (type === 'object') {
+      obj[key] = {};
+    } else {
+      obj[key] = null;
+    }
   }
   return obj;
 }
@@ -692,7 +806,8 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
   report.pkgName = pkg.name || '';
   const manifest = { name: pkg.name, version: pkg.version, ...(pkg.khy || {}) };
   report.namespace = manifest.namespace || '';
-  report.displayName = manifest.displayName || manifest.namespace || pkg.name || path.basename(pluginDir);
+  report.displayName =
+    manifest.displayName || manifest.namespace || pkg.name || path.basename(pluginDir);
 
   if (!pkg.khy) {
     addIssue(report.errors, '缺少 package.json.khy 字段');
@@ -701,7 +816,9 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
 
   const manifestCheck = validateManifest(manifest);
   if (!manifestCheck.valid) {
-    for (const err of manifestCheck.errors) addIssue(report.errors, `Manifest 校验失败: ${err}`);
+    for (const err of manifestCheck.errors) {
+      addIssue(report.errors, `Manifest 校验失败: ${err}`);
+    }
   } else {
     addIssue(report.infos, `Manifest 校验通过 (${manifest.name}@${manifest.version})`);
   }
@@ -716,9 +833,15 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
     addIssue(report.warnings, '未声明 @khy/plugin-sdk peerDependencies');
   }
 
-  const normRel = (p) => String(p || '').replace(/\\/g, '/').replace(/^\.\//, '');
+  const normRel = (p) =>
+    String(p || '')
+      .replace(/\\/g, '/')
+      .replace(/^\.\//, '');
   if (pkg.main && manifest.main && normRel(pkg.main) !== normRel(manifest.main)) {
-    addIssue(report.warnings, `package.json.main (${pkg.main}) 与 khy.main (${manifest.main}) 不一致`);
+    addIssue(
+      report.warnings,
+      `package.json.main (${pkg.main}) 与 khy.main (${manifest.main}) 不一致`
+    );
   }
 
   const entryRel = manifest.main || pkg.main;
@@ -738,8 +861,10 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
   const sourceRoots = new Set([path.dirname(entryPath), path.join(pluginDir, 'src')]);
   const files = fastMode
     ? [entryPath]
-    : dedupePaths([...sourceRoots].flatMap(d => collectJsFiles(d)));
-  if (!files.includes(entryPath)) files.push(entryPath);
+    : dedupePaths([...sourceRoots].flatMap((d) => collectJsFiles(d)));
+  if (!files.includes(entryPath)) {
+    files.push(entryPath);
+  }
   addIssue(report.infos, `扫描 JS 文件: ${files.length}`);
 
   for (const filePath of files) {
@@ -766,14 +891,29 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
       }
     }
 
-    if (code.includes('ctx.http.fetch') && !(manifest.permissions && manifest.permissions.network === true)) {
-      addIssue(report.warnings, `权限风险 ${rel}: 使用 ctx.http.fetch 但未声明 permissions.network=true`);
+    if (
+      code.includes('ctx.http.fetch') &&
+      !(manifest.permissions && manifest.permissions.network === true)
+    ) {
+      addIssue(
+        report.warnings,
+        `权限风险 ${rel}: 使用 ctx.http.fetch 但未声明 permissions.network=true`
+      );
     }
-    if (code.includes('ctx.spawn') && !(manifest.permissions && manifest.permissions.spawn === true)) {
+    if (
+      code.includes('ctx.spawn') &&
+      !(manifest.permissions && manifest.permissions.spawn === true)
+    ) {
       addIssue(report.warnings, `权限风险 ${rel}: 使用 ctx.spawn 但未声明 permissions.spawn=true`);
     }
-    if (code.includes('ctx.database') && !(manifest.permissions && manifest.permissions.database === true)) {
-      addIssue(report.warnings, `权限风险 ${rel}: 使用 ctx.database 但未声明 permissions.database=true`);
+    if (
+      code.includes('ctx.database') &&
+      !(manifest.permissions && manifest.permissions.database === true)
+    ) {
+      addIssue(
+        report.warnings,
+        `权限风险 ${rel}: 使用 ctx.database 但未声明 permissions.database=true`
+      );
     }
   }
 
@@ -796,8 +936,12 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
   const mockCtx = createMockContext({
     host: { version: '1.0.0', capabilities: ['commands', 'tools', 'storage', 'events', 'ai'] },
     database: {
-      async query() { return []; },
-      getModel() { return null; },
+      async query() {
+        return [];
+      },
+      getModel() {
+        return null;
+      },
     },
   });
 
@@ -822,21 +966,32 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
 
   addIssue(report.infos, `命令声明/注册: ${declaredCommands.length}/${registeredCommands.length}`);
   addIssue(report.infos, `工具声明/注册: ${declaredTools.length}/${registeredTools.length}`);
-  addIssue(report.infos, `数据源声明/注册: ${declaredDataSources.length}/${registeredDataSources.length}`);
+  addIssue(
+    report.infos,
+    `数据源声明/注册: ${declaredDataSources.length}/${registeredDataSources.length}`
+  );
 
-  const declaredCommandNames = new Set(declaredCommands.map(c => c && c.name).filter(Boolean));
-  const registeredCommandNames = new Set(registeredCommands.map(c => c && c.name).filter(Boolean));
-  const declaredToolNames = new Set(declaredTools.map(t => t && t.name).filter(Boolean));
-  const registeredToolNames = new Set(registeredTools.map(t => t && t.name).filter(Boolean));
+  const declaredCommandNames = new Set(declaredCommands.map((c) => c && c.name).filter(Boolean));
+  const registeredCommandNames = new Set(
+    registeredCommands.map((c) => c && c.name).filter(Boolean)
+  );
+  const declaredToolNames = new Set(declaredTools.map((t) => t && t.name).filter(Boolean));
+  const registeredToolNames = new Set(registeredTools.map((t) => t && t.name).filter(Boolean));
 
   for (const name of declaredCommandNames) {
     if (!registeredCommandNames.has(name)) {
-      addIssue(report.errors, `命令未注册: contributions.commands 声明了 "${name}"，但 activate() 未注册`);
+      addIssue(
+        report.errors,
+        `命令未注册: contributions.commands 声明了 "${name}"，但 activate() 未注册`
+      );
     }
   }
   for (const name of declaredToolNames) {
     if (!registeredToolNames.has(name)) {
-      addIssue(report.errors, `工具未注册: contributions.tools 声明了 "${name}"，但 activate() 未注册`);
+      addIssue(
+        report.errors,
+        `工具未注册: contributions.tools 声明了 "${name}"，但 activate() 未注册`
+      );
     }
   }
 
@@ -870,16 +1025,24 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
     const cmdCtx = {
       print() {},
       printStyled() {},
-      async prompt() { return ''; },
-      spinner() { return { stop() {}, succeed() {}, fail() {} }; },
+      async prompt() {
+        return '';
+      },
+      spinner() {
+        return { stop() {}, succeed() {}, fail() {} };
+      },
       cwd: pluginDir,
     };
 
     for (const cmd of registeredCommands) {
-      if (!cmd || typeof cmd.handler !== 'function') continue;
+      if (!cmd || typeof cmd.handler !== 'function') {
+        continue;
+      }
       try {
         await withTimeout(
-          Promise.resolve(cmd.handler({ raw: cmd.name, positional: ['test'], flags: { dryRun: true } }, cmdCtx)),
+          Promise.resolve(
+            cmd.handler({ raw: cmd.name, positional: ['test'], flags: { dryRun: true } }, cmdCtx)
+          ),
           1500,
           `命令 ${cmd.name} 运行超时`
         );
@@ -894,7 +1057,9 @@ async function runPluginDoctorForDir(pluginDir, options = {}) {
       signal: undefined,
     };
     for (const tool of registeredTools) {
-      if (!tool || typeof tool.execute !== 'function') continue;
+      if (!tool || typeof tool.execute !== 'function') {
+        continue;
+      }
       try {
         const input = buildDummyObjectFromSchema(tool.parameters);
         await withTimeout(
@@ -936,8 +1101,11 @@ function printDoctorReport(report) {
 
   const resultText = `errors=${report.errors.length}, warnings=${report.warnings.length}`;
   if (report.errors.length === 0) {
-    if (report.warnings.length === 0) printSuccess(`检查通过 (${resultText})`);
-    else printWarn(`检查完成 (${resultText})`);
+    if (report.warnings.length === 0) {
+      printSuccess(`检查通过 (${resultText})`);
+    } else {
+      printWarn(`检查完成 (${resultText})`);
+    }
   } else {
     printError(`检查失败 (${resultText})`);
   }
@@ -948,7 +1116,7 @@ function buildDoctorSummary(reports, options) {
   const pluginCount = reports.length;
   const totalErrors = reports.reduce((sum, r) => sum + r.errors.length, 0);
   const totalWarnings = reports.reduce((sum, r) => sum + r.warnings.length, 0);
-  const passed = reports.filter(r => r.errors.length === 0).length;
+  const passed = reports.filter((r) => r.errors.length === 0).length;
   const failed = pluginCount - passed;
   const shouldFail = totalErrors > 0 || (options.strict && totalWarnings > 0);
   return {
@@ -980,7 +1148,14 @@ async function handlePluginDoctor(args) {
         options: { all: options.all, deep: options.deep, strict: options.strict, json: true },
         targets: [],
         reports: [],
-        summary: { pluginCount: 0, passed: 0, failed: 0, totalErrors: 0, totalWarnings: 0, shouldFail: false },
+        summary: {
+          pluginCount: 0,
+          passed: 0,
+          failed: 0,
+          totalErrors: 0,
+          totalWarnings: 0,
+          shouldFail: false,
+        },
       };
       console.log(JSON.stringify(payload, null, 2));
       process.exitCode = 0;
@@ -1009,7 +1184,7 @@ async function handlePluginDoctor(args) {
       generatedAt: new Date().toISOString(),
       options: { all: options.all, deep: options.deep, strict: options.strict, json: true },
       targets,
-      reports: reports.map(r => ({
+      reports: reports.map((r) => ({
         pluginDir: r.pluginDir,
         pkgName: r.pkgName,
         namespace: r.namespace,
@@ -1025,7 +1200,11 @@ async function handlePluginDoctor(args) {
     return;
   }
 
-  console.log(chalk.white(`  汇总: ${summary.pluginCount} 个插件, ${summary.passed} 通过, ${summary.failed} 失败, ${summary.totalErrors} error(s), ${summary.totalWarnings} warning(s)`));
+  console.log(
+    chalk.white(
+      `  汇总: ${summary.pluginCount} 个插件, ${summary.passed} 通过, ${summary.failed} 失败, ${summary.totalErrors} error(s), ${summary.totalWarnings} warning(s)`
+    )
+  );
   if (options.strict && summary.totalWarnings > 0) {
     printWarn('严格模式已启用：warnings 也应视为阻断项');
   }
@@ -1054,7 +1233,7 @@ async function handlePluginList() {
     const pluginLoader = require('../../plugin-loader');
     const loaded = pluginLoader.getAllPlugins();
     if (loaded.length > 0) {
-      entries = loaded.map(p => ({
+      entries = loaded.map((p) => ({
         name: p.manifest?.name || p.namespace,
         namespace: p.namespace,
         displayName: p.manifest?.displayName || p.namespace,
@@ -1064,10 +1243,11 @@ async function handlePluginList() {
       }));
     } else {
       const discovered = pluginLoader.discoverPlugins({ info() {}, warn() {}, error() {} });
-      entries = discovered.map(c => ({
+      entries = discovered.map((c) => ({
         name: c.manifestData?.name || path.basename(c.pluginPath),
         namespace: c.manifestData?.namespace || '',
-        displayName: c.manifestData?.displayName || c.manifestData?.name || path.basename(c.pluginPath),
+        displayName:
+          c.manifestData?.displayName || c.manifestData?.name || path.basename(c.pluginPath),
         version: c.manifestData?.version || '-',
         runtimeState: 'discovered',
         pluginDir: c.pluginPath,
@@ -1078,11 +1258,8 @@ async function handlePluginList() {
   }
 
   if (entries.length === 0) {
-    const fallbackDirs = dedupePaths([
-      ...findWorkspacePluginDirs(),
-      ...findUserPluginDirs(),
-    ]);
-    entries = fallbackDirs.map(dir => {
+    const fallbackDirs = dedupePaths([...findWorkspacePluginDirs(), ...findUserPluginDirs()]);
+    entries = fallbackDirs.map((dir) => {
       const pkgFile = path.join(dir, 'package.json');
       try {
         const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8'));
@@ -1120,15 +1297,18 @@ async function handlePluginList() {
 
   const rows = [];
   for (const p of entries) {
-    const report = await runPluginDoctorForDir(p.pluginDir, { deep: false, strict: false, fast: false });
-    const quality = report.errors.length > 0
-      ? chalk.red('bad')
-      : chalk.green('health');
-    const runtime = p.runtimeState === 'active'
-      ? chalk.green('● active')
-      : p.runtimeState === 'disabled:error'
-        ? chalk.red('✕ error')
-        : chalk.yellow(`○ ${p.runtimeState}`);
+    const report = await runPluginDoctorForDir(p.pluginDir, {
+      deep: false,
+      strict: false,
+      fast: false,
+    });
+    const quality = report.errors.length > 0 ? chalk.red('bad') : chalk.green('health');
+    const runtime =
+      p.runtimeState === 'active'
+        ? chalk.green('● active')
+        : p.runtimeState === 'disabled:error'
+          ? chalk.red('✕ error')
+          : chalk.yellow(`○ ${p.runtimeState}`);
 
     rows.push([
       p.displayName || p.name || '-',
@@ -1140,10 +1320,7 @@ async function handlePluginList() {
     ]);
   }
 
-  printTable(
-    ['插件', 'Namespace', 'Version', 'Runtime', 'Quality', 'Warnings'],
-    rows
-  );
+  printTable(['插件', 'Namespace', 'Version', 'Runtime', 'Quality', 'Warnings'], rows);
   console.log('');
 }
 
@@ -1211,11 +1388,17 @@ function findWorkspaceRoot() {
     if (fs.existsSync(pkgFile)) {
       try {
         const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf-8'));
-        if (pkg.workspaces) return dir;
-      } catch { /* ignore */ }
+        if (pkg.workspaces) {
+          return dir;
+        }
+      } catch {
+        /* ignore */
+      }
     }
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+    if (parent === dir) {
+      break;
+    }
     dir = parent;
   }
   return null;
@@ -1299,4 +1482,6 @@ module.exports = {
 // cli → services direction; exports unchanged.
 try {
   require('../../services/pluginDoctorPort').registerPluginDoctor(runPluginDoctorForDir);
-} catch { /* port unavailable — doctor sub-check degrades to skipped */ }
+} catch {
+  /* port unavailable — doctor sub-check degrades to skipped */
+}

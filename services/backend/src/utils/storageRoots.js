@@ -21,9 +21,9 @@
  * migrate` (see cli/handlers/storage.js), honoring the [Eco-Arch-Unresolved]
  * red line in dataHome.js.
  */
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
 const MIN_FREE_BYTES = 1024 * 1024 * 1024; // 1 GB, mirrors dataHome.js
 
@@ -39,7 +39,11 @@ function _d(deps = {}) {
 }
 
 function _ensureDir(dir, fsImpl) {
-  try { (fsImpl || fs).mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+  try {
+    (fsImpl || fs).mkdirSync(dir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -65,7 +69,9 @@ function freeBytesFor(root, deps = {}) {
     const st = fsImpl.statfsSync(root);
     const avail = typeof st.bavail === 'number' ? st.bavail : st.bfree;
     return st.bsize * avail;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 /** Total bytes of the filesystem holding `root` (0 on failure). */
@@ -74,7 +80,9 @@ function totalBytesFor(root, deps = {}) {
   try {
     const st = fsImpl.statfsSync(root);
     return st.bsize * st.blocks;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 /** True if `dir` is writable (probe only; writes nothing). */
@@ -83,16 +91,26 @@ function isWritable(dir, deps = {}) {
   try {
     fsImpl.accessSync(dir, fs.constants.W_OK);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /** Device id of `p`, or null if it can't be stat'd. */
 function _devOf(p, fsImpl) {
-  try { return fsImpl.statSync(p).dev; } catch { return null; }
+  try {
+    return fsImpl.statSync(p).dev;
+  } catch {
+    return null;
+  }
 }
 
 function _isDir(p, fsImpl) {
-  try { return fsImpl.statSync(p).isDirectory(); } catch { return false; }
+  try {
+    return fsImpl.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -112,21 +130,35 @@ function listNonSystemDrives(deps = {}) {
       const sysLetter = getSystemDriveRoot(d)[0].toUpperCase();
       for (let i = 0; i < 26; i++) {
         const letter = String.fromCharCode(65 + i);
-        if (letter === sysLetter) continue;
+        if (letter === sysLetter) {
+          continue;
+        }
         const root = letter + ':\\';
         try {
-          if (fsImpl.existsSync(root) && _isDir(root, fsImpl)) roots.push(root);
-        } catch { /* drive not ready */ }
+          if (fsImpl.existsSync(root) && _isDir(root, fsImpl)) {
+            roots.push(root);
+          }
+        } catch {
+          /* drive not ready */
+        }
       }
     } else if (platform === 'darwin') {
       const rootDev = _devOf('/', fsImpl);
       let names = [];
-      try { names = fsImpl.readdirSync('/Volumes'); } catch { names = []; }
+      try {
+        names = fsImpl.readdirSync('/Volumes');
+      } catch {
+        names = [];
+      }
       for (const name of names) {
         const vol = path.join('/Volumes', name);
-        if (!_isDir(vol, fsImpl)) continue;
+        if (!_isDir(vol, fsImpl)) {
+          continue;
+        }
         const dev = _devOf(vol, fsImpl);
-        if (dev === null || dev === rootDev) continue; // skip system volume
+        if (dev === null || dev === rootDev) {
+          continue;
+        } // skip system volume
         roots.push(vol);
       }
     } else {
@@ -135,31 +167,55 @@ function listNonSystemDrives(deps = {}) {
       const candidates = [];
       for (const parent of ['/mnt', '/media']) {
         let names = [];
-        try { names = fsImpl.readdirSync(parent); } catch { names = []; }
-        for (const name of names) candidates.push(path.join(parent, name));
+        try {
+          names = fsImpl.readdirSync(parent);
+        } catch {
+          names = [];
+        }
+        for (const name of names) {
+          candidates.push(path.join(parent, name));
+        }
       }
       // /run/media/<user>/<label>
       let users = [];
-      try { users = fsImpl.readdirSync('/run/media'); } catch { users = []; }
+      try {
+        users = fsImpl.readdirSync('/run/media');
+      } catch {
+        users = [];
+      }
       for (const u of users) {
         let labels = [];
-        try { labels = fsImpl.readdirSync(path.join('/run/media', u)); } catch { labels = []; }
-        for (const label of labels) candidates.push(path.join('/run/media', u, label));
+        try {
+          labels = fsImpl.readdirSync(path.join('/run/media', u));
+        } catch {
+          labels = [];
+        }
+        for (const label of labels) {
+          candidates.push(path.join('/run/media', u, label));
+        }
       }
       for (const cand of candidates) {
-        if (!_isDir(cand, fsImpl)) continue;
+        if (!_isDir(cand, fsImpl)) {
+          continue;
+        }
         const dev = _devOf(cand, fsImpl);
-        if (dev === null || dev === rootDev) continue; // not a separate mount
+        if (dev === null || dev === rootDev) {
+          continue;
+        } // not a separate mount
         roots.push(cand);
       }
     }
-  } catch { /* enumeration is best-effort */ }
+  } catch {
+    /* enumeration is best-effort */
+  }
 
   const out = [];
   for (const root of roots) {
     const writable = isWritable(root, d);
     const freeBytes = freeBytesFor(root, d);
-    if (!writable || freeBytes < minFree) continue;
+    if (!writable || freeBytes < minFree) {
+      continue;
+    }
     out.push({ root, freeBytes, totalBytes: totalBytesFor(root, d), writable });
   }
   out.sort((a, b) => b.freeBytes - a.freeBytes);
@@ -183,7 +239,9 @@ let _notedThisProcess = false;
  */
 function noteIfOutsideSystemDrive(info = {}, deps = {}) {
   const { dir, source } = info;
-  if (source !== 'non-system-drive') return; // env=explicit, cwd/system=expected
+  if (source !== 'non-system-drive') {
+    return;
+  } // env=explicit, cwd/system=expected
   const { homedir } = _d(deps);
   // Low-level util: render the info color HERE via chalk rather than reaching up
   // into the cli layer (`cli/formatters`). That upward import is a layering
@@ -192,16 +250,27 @@ function noteIfOutsideSystemDrive(info = {}, deps = {}) {
     try {
       const chalk = require('chalk');
       console.log(chalk.blue('  ℹ ') + msg);
-    } catch { console.log(msg); }
+    } catch {
+      console.log(msg);
+    }
   };
   if (!_notedThisProcess) {
     _notedThisProcess = true;
     const markerDir = path.join(homedir, '.khy');
     const marker = path.join(markerDir, '.location-note-shown');
     let alreadyShown = false;
-    try { alreadyShown = fs.existsSync(marker); } catch { /* ignore */ }
+    try {
+      alreadyShown = fs.existsSync(marker);
+    } catch {
+      /* ignore */
+    }
     if (!alreadyShown) {
-      try { _ensureDir(markerDir, fs); fs.writeFileSync(marker, new Date().toISOString()); } catch { /* best-effort */ }
+      try {
+        _ensureDir(markerDir, fs);
+        fs.writeFileSync(marker, new Date().toISOString());
+      } catch {
+        /* best-effort */
+      }
     }
     say(`khy 已将大体量文件写入非系统盘以保护系统盘：${dir}`);
     say('  （可用 KHY_OUTPUT_HOME 指定位置；运行 `khy storage status` 查看全部存储位置）');
@@ -240,7 +309,9 @@ function resolveGeneratedFileDir(opts = {}) {
         _ensureDir(dir, fsImpl);
         return { dir, source: 'cwd' };
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
 
   // 3. Largest-free non-system drive
@@ -249,7 +320,11 @@ function resolveGeneratedFileDir(opts = {}) {
     const dir = path.join(best.root, '.khy', subdir);
     _ensureDir(dir, fsImpl);
     const result = { dir, source: 'non-system-drive' };
-    try { noteIfOutsideSystemDrive(result, opts.deps); } catch { /* best-effort */ }
+    try {
+      noteIfOutsideSystemDrive(result, opts.deps);
+    } catch {
+      /* best-effort */
+    }
     return result;
   }
 
@@ -263,7 +338,11 @@ function resolveGeneratedFileDir(opts = {}) {
   const dataHomeBase = env.KHY_DATA_HOME || process.env.KHY_DATA_HOME;
   const base = dataHomeBase || path.join(d.homedir, '.khy');
   const dir = path.join(base, subdir);
-  try { _ensureDir(dir, fsImpl); } catch { /* never crash on the final fallback */ }
+  try {
+    _ensureDir(dir, fsImpl);
+  } catch {
+    /* never crash on the final fallback */
+  }
   return { dir, source: 'system' };
 }
 
@@ -277,5 +356,7 @@ module.exports = {
   pickBestNonSystemDrive,
   resolveGeneratedFileDir,
   noteIfOutsideSystemDrive,
-  _resetNoteFlag: () => { _notedThisProcess = false; },
+  _resetNoteFlag: () => {
+    _notedThisProcess = false;
+  },
 };

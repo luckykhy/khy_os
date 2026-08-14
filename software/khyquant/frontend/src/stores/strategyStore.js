@@ -345,11 +345,9 @@ export const useStrategyStore = defineStore('strategy', () => {
 
   // In-memory cache for backtest results to avoid repeated localStorage parsing
   let _backtestCache = null
-  let _backtestCacheVersion = 0
 
   function invalidateBacktestCache() {
     _backtestCache = null
-    _backtestCacheVersion++
   }
 
   // 🔥 新增：获取所有回测结果（合并 store 和 localStorage）

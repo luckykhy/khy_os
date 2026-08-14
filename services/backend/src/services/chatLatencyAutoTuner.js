@@ -113,28 +113,47 @@ function getAutoTuneSnapshot(profile) {
 
 function _resolveProfile(raw) {
   const value = String(raw || '').trim();
-  if (value) return value;
-  const runtimeIsKhy = String(process.env.KHY_RUNTIME_MODE || '').trim().toLowerCase() === 'khy';
+  if (value) {
+    return value;
+  }
+  const runtimeIsKhy =
+    String(process.env.KHY_RUNTIME_MODE || '')
+      .trim()
+      .toLowerCase() === 'khy';
   return runtimeIsKhy ? PROFILE_KHY : PROFILE_DEFAULT;
 }
 
 function _isAutoTuneEnabled(profile) {
-  const explicit = String(process.env.KHY_CHAT_AUTOTUNE || '').trim().toLowerCase();
-  if (explicit === 'false' || explicit === '0' || explicit === 'off' || explicit === 'no') return false;
-  if (explicit === 'true' || explicit === '1' || explicit === 'on' || explicit === 'yes') return true;
+  const explicit = String(process.env.KHY_CHAT_AUTOTUNE || '')
+    .trim()
+    .toLowerCase();
+  if (explicit === 'false' || explicit === '0' || explicit === 'off' || explicit === 'no') {
+    return false;
+  }
+  if (explicit === 'true' || explicit === '1' || explicit === 'on' || explicit === 'yes') {
+    return true;
+  }
   return profile === PROFILE_KHY;
 }
 
 function _asNumber(value, fallback) {
   const n = Number.parseInt(String(value), 10);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return n;
 }
 
 function _clamp(value, min, max) {
-  if (!Number.isFinite(value)) return min;
-  if (value < min) return min;
-  if (value > max) return max;
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  if (value < min) {
+    return min;
+  }
+  if (value > max) {
+    return max;
+  }
   return value;
 }
 
@@ -147,9 +166,15 @@ function _getMinIntervalMs() {
 }
 
 function _isAdaptiveFineTuneEnabled(profile) {
-  const explicit = String(process.env.KHY_CHAT_AUTOTUNE_ADAPTIVE || '').trim().toLowerCase();
-  if (['false', '0', 'off', 'no'].includes(explicit)) return false;
-  if (['true', '1', 'on', 'yes'].includes(explicit)) return true;
+  const explicit = String(process.env.KHY_CHAT_AUTOTUNE_ADAPTIVE || '')
+    .trim()
+    .toLowerCase();
+  if (['false', '0', 'off', 'no'].includes(explicit)) {
+    return false;
+  }
+  if (['true', '1', 'on', 'yes'].includes(explicit)) {
+    return true;
+  }
   return profile === PROFILE_KHY;
 }
 
@@ -164,11 +189,11 @@ function _buildAdaptiveOverrides(profile, preset, summary) {
   const noTokenRate = Math.max(0, Number(summary && summary.noFirstTokenCount) || 0) / count;
 
   if (
-    preset === 'aggressive'
-    && p50 <= 850
-    && p95 <= 1600
-    && failureRate <= 0.03
-    && noTokenRate <= 0.03
+    preset === 'aggressive' &&
+    p50 <= 850 &&
+    p95 <= 1600 &&
+    failureRate <= 0.03 &&
+    noTokenRate <= 0.03
   ) {
     return {
       delta: {
@@ -181,11 +206,11 @@ function _buildAdaptiveOverrides(profile, preset, summary) {
   }
 
   if (
-    preset === 'balanced'
-    && p50 <= 1200
-    && p95 <= 2200
-    && failureRate <= 0.05
-    && noTokenRate <= 0.05
+    preset === 'balanced' &&
+    p50 <= 1200 &&
+    p95 <= 2200 &&
+    failureRate <= 0.05 &&
+    noTokenRate <= 0.05
   ) {
     return {
       delta: {
@@ -197,10 +222,7 @@ function _buildAdaptiveOverrides(profile, preset, summary) {
     };
   }
 
-  if (
-    preset === 'balanced'
-    && (p95 >= 5000 || failureRate >= 0.12 || noTokenRate >= 0.12)
-  ) {
+  if (preset === 'balanced' && (p95 >= 5000 || failureRate >= 0.12 || noTokenRate >= 0.12)) {
     return {
       delta: {
         KHY_PREFLIGHT_MAX_MS: 220,
@@ -212,9 +234,9 @@ function _buildAdaptiveOverrides(profile, preset, summary) {
   }
 
   if (
-    preset === 'stable'
-    && count >= Math.max(12, _getMinSamples())
-    && (p95 >= 16000 || failureRate >= 0.35 || noTokenRate >= 0.3)
+    preset === 'stable' &&
+    count >= Math.max(12, _getMinSamples()) &&
+    (p95 >= 16000 || failureRate >= 0.35 || noTokenRate >= 0.3)
   ) {
     return {
       delta: {
@@ -245,8 +267,8 @@ function _decidePreset(summary) {
   const samples = Math.max(0, Number(summary && summary.sampleCount) || 0);
   const p50 = Math.max(0, Number(summary && summary.p50) || 0);
   const p95 = Math.max(0, Number(summary && summary.p95) || 0);
-  const failureRate = count > 0 ? (Math.max(0, Number(summary.failureCount) || 0) / count) : 0;
-  const noTokenRate = count > 0 ? (Math.max(0, Number(summary.noFirstTokenCount) || 0) / count) : 0;
+  const failureRate = count > 0 ? Math.max(0, Number(summary.failureCount) || 0) / count : 0;
+  const noTokenRate = count > 0 ? Math.max(0, Number(summary.noFirstTokenCount) || 0) / count : 0;
 
   if (failureRate >= 0.22 || noTokenRate >= 0.2 || p95 >= 12000) {
     return { preset: 'stable', ready: true, reason: 'stability protection' };
@@ -283,8 +305,13 @@ function _applyDecision(profile, decision, summary) {
 
   const now = Date.now();
   const minIntervalMs = _getMinIntervalMs();
-  const presetChanged = decision.preset !== _runtimeState.lastPreset || profile !== _runtimeState.lastProfile;
-  if (!presetChanged && _runtimeState.lastAppliedAt > 0 && (now - _runtimeState.lastAppliedAt) < minIntervalMs) {
+  const presetChanged =
+    decision.preset !== _runtimeState.lastPreset || profile !== _runtimeState.lastProfile;
+  if (
+    !presetChanged &&
+    _runtimeState.lastAppliedAt > 0 &&
+    now - _runtimeState.lastAppliedAt < minIntervalMs
+  ) {
     return { applied: false, reason: 'interval guard', appliedConfig: null };
   }
 
@@ -292,9 +319,10 @@ function _applyDecision(profile, decision, summary) {
   const adaptive = _buildAdaptiveOverrides(profile, decision.preset, summary);
   const appliedConfig = {};
   for (const [key, value] of Object.entries(rawPreset)) {
-    const delta = adaptive.delta && Number.isFinite(Number(adaptive.delta[key]))
-      ? Number(adaptive.delta[key])
-      : 0;
+    const delta =
+      adaptive.delta && Number.isFinite(Number(adaptive.delta[key]))
+        ? Number(adaptive.delta[key])
+        : 0;
     const target = Number(value) + delta;
     const bounds = PARAM_BOUNDS[key];
     const min = Array.isArray(bounds) ? bounds[0] : value;
@@ -324,7 +352,7 @@ function _applyDecision(profile, decision, summary) {
     applied: true,
     reason: adaptive.tag
       ? `${decision.reason || 'applied'} (${adaptive.tag})`
-      : (decision.reason || 'applied'),
+      : decision.reason || 'applied',
     appliedConfig,
   };
 }

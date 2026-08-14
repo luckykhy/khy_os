@@ -49,10 +49,14 @@ function shouldPushOnCompletion(p) {
 function humanizeElapsed(ms) {
   const n = Math.max(0, Math.floor(Number(ms) || 0));
   const totalSec = Math.floor(n / 1000);
-  if (totalSec < 60) return `${totalSec}s`;
+  if (totalSec < 60) {
+    return `${totalSec}s`;
+  }
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
-  if (m < 60) return s ? `${m}m${s}s` : `${m}m`;
+  if (m < 60) {
+    return s ? `${m}m${s}s` : `${m}m`;
+  }
   const h = Math.floor(m / 60);
   const mm = m % 60;
   return mm ? `${h}h${mm}m` : `${h}h`;
@@ -60,8 +64,12 @@ function humanizeElapsed(ms) {
 
 /** 截断单行摘要,去掉换行,避免把整段输出塞进推送(确定性)。 */
 function _oneLine(text, max = 140) {
-  const flat = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
-  if (!flat) return '';
+  const flat = String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!flat) {
+    return '';
+  }
   const lim = Math.max(16, Math.floor(Number(max)) || 140);
   return flat.length > lim ? `${flat.slice(0, lim - 1)}…` : flat;
 }
@@ -79,7 +87,9 @@ function buildCompletionPushMessage(info = {}) {
   const parts = [];
   parts.push(ok ? `耗时 ${took},可以回到终端查看结果了。` : `耗时 ${took} 后失败,回终端看看吧。`);
   const sum = _oneLine(info.summary, 140);
-  if (sum) parts.push(sum);
+  if (sum) {
+    parts.push(sum);
+  }
   return {
     title,
     body: parts.join('\n'),
@@ -94,8 +104,9 @@ function describeCompletionPush() {
     gate: 'KHY_PUSH_ON_DONE',
     thresholdEnv: 'KHY_PUSH_ON_DONE_MIN_MS',
     defaultMinMs: DEFAULT_MIN_MS,
-    summary: '长任务/turn 完成且耗时超阈值时,自动把一条提醒推到终端之外(复用已配置的推送目标);'
-      + 'opt-in 默认关,且仅在已 `khy notify set` 配过目标时才触发。',
+    summary:
+      '长任务/turn 完成且耗时超阈值时,自动把一条提醒推到终端之外(复用已配置的推送目标);' +
+      'opt-in 默认关,且仅在已 `khy notify set` 配过目标时才触发。',
   };
 }
 

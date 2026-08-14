@@ -31,7 +31,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_PASTED_REF_LINES;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -57,7 +59,9 @@ function countPastedRefLines(text) {
  * @returns {number}
  */
 function pastedRefLineCountOr(text, legacy, env = process.env) {
-  if (!isEnabled(env)) return legacy;
+  if (!isEnabled(env)) {
+    return legacy;
+  }
   return countPastedRefLines(text);
 }
 

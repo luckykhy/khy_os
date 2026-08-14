@@ -126,6 +126,12 @@ describe('deliveryGate', () => {
       }, tmpDir);
       expect(result).toBe('fail');
     });
+
+    test('unknown check type fails loudly instead of silently passing', () => {
+      // 拼错的 check 类型必须暴露,不能静默放行(交付门形同虚设)。
+      const result = _runCheck({ check: 'file_exsit', target: 'README.md' }, tmpDir);
+      expect(result).toBe('fail');
+    });
   });
 
   describe('CUSTOM_VALIDATORS', () => {
@@ -156,6 +162,35 @@ describe('deliveryGate', () => {
         projectRoot: tmpDir,
       });
       expect(result.status).toBe('pass');
+    });
+
+    test('test_run_evidence fails when project has no runnable test step', () => {
+      fs.writeFileSync(path.join(tmpDir, 'package.json'), '{}');
+      const result = CUSTOM_VALIDATORS.test_run_evidence({
+        projectRoot: tmpDir,
+      });
+      expect(result.status).toBe('fail');
+    });
+
+    test('test_run_evidence reuses a passed verificationReport test step without re-running', () => {
+      const result = CUSTOM_VALIDATORS.test_run_evidence({
+        projectRoot: tmpDir,
+        verificationReport: {
+          steps: [{ name: 'test', pass: true, output: '3 passed', durationMs: 12 }],
+        },
+      });
+      expect(result.status).toBe('pass');
+      expect(result.evidence.durationMs).toBe(12);
+    });
+
+    test('test_run_evidence reports fail from a failed verificationReport test step', () => {
+      const result = CUSTOM_VALIDATORS.test_run_evidence({
+        projectRoot: tmpDir,
+        verificationReport: {
+          steps: [{ name: 'test', pass: false, output: '1 failed', durationMs: 9 }],
+        },
+      });
+      expect(result.status).toBe('fail');
     });
   });
 
@@ -226,6 +261,43 @@ describe('deliveryGate', () => {
       expect(verdict.verdict).toBe('warn');
       expect(verdict.needsHumanReview).toBe(true);
       expect(verdict.warningSources).toContain('delivery_gate');
+    });
+
+    test('warns (not fails) when verification passed but no steps ran', () => {
+      // 「no steps = pass」不再静默当绿旗:无任何可运行验证步骤时如实升为 warn。
+      const verdict = buildHarnessDeliveryVerdict({
+        loopResult: { iterations: 2 },
+        verificationReport: {
+          passed: true,
+          noSteps: true,
+          verified: false,
+          summary: 'No verification steps detected for node project.',
+          projectType: 'node',
+        },
+        toolCallLog: [],
+      });
+
+      expect(verdict.verdict).toBe('warn');
+      expect(verdict.needsHumanReview).toBe(true);
+      expect(verdict.warningSources).toContain('verification_gate_no_steps');
+      expect(verdict.gates.verificationGate.verdict).toBe('not-verified');
+    });
+
+    test('does not warn when verification genuinely passed with executed steps', () => {
+      const verdict = buildHarnessDeliveryVerdict({
+        loopResult: { iterations: 2 },
+        verificationReport: {
+          passed: true,
+          noSteps: false,
+          verified: true,
+          summary: 'All 2 verification step(s) passed.',
+          projectType: 'node',
+        },
+        toolCallLog: [],
+      });
+
+      expect(verdict.verdict).toBe('pass');
+      expect(verdict.warningSources).not.toContain('verification_gate_no_steps');
     });
   });
 });

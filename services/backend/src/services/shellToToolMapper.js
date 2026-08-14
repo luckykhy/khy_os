@@ -15,6 +15,7 @@
  *   4. Git subcommand awareness (git status=safe, git push=medium)
  */
 
+const { RISK_ORDER } = require('../constants/riskOrder');
 const {
   splitCommandWithOperators,
   getBaseCommand,
@@ -27,7 +28,6 @@ const {
 
 // ── Risk severity ordering ─────────────────────────────────────────
 // Single source of truth: zero-dependency leaf constants/riskOrder.js.
-const { RISK_ORDER } = require('../constants/riskOrder');
 
 function maxRisk(a, b) {
   return (RISK_ORDER[a] || 0) >= (RISK_ORDER[b] || 0) ? a : b;
@@ -37,63 +37,110 @@ function maxRisk(a, b) {
 
 // Read-like commands → virtual read_file
 const READ_TOOL_COMMANDS = new Set([
-  ...READ_COMMANDS,    // cat, head, tail, less, more, wc, stat, file, strings, jq, awk, cut, sort, uniq, tr
+  ...READ_COMMANDS, // cat, head, tail, less, more, wc, stat, file, strings, jq, awk, cut, sort, uniq, tr
 ]);
 
 // Search-like commands → virtual grep
 const SEARCH_TOOL_COMMANDS = new Set([
-  ...SEARCH_COMMANDS,  // find, grep, rg, ag, ack, locate, which, whereis
+  ...SEARCH_COMMANDS, // find, grep, rg, ag, ack, locate, which, whereis
 ]);
 
 // List-like commands → virtual glob
 const LIST_TOOL_COMMANDS = new Set([
-  ...LIST_COMMANDS,    // ls, dir, tree, du, df
+  ...LIST_COMMANDS, // ls, dir, tree, du, df
 ]);
 
 // Info/status commands → safe, read-only
 const INFO_COMMANDS = new Set([
-  'pwd', 'whoami', 'hostname', 'uname', 'date', 'uptime', 'id',
-  'env', 'printenv', 'set', 'type', 'command',
+  'pwd',
+  'whoami',
+  'hostname',
+  'uname',
+  'date',
+  'uptime',
+  'id',
+  'env',
+  'printenv',
+  'set',
+  'type',
+  'command',
 ]);
 
 // Destructive commands → high risk
-const DESTRUCTIVE_COMMANDS = new Set([
-  'rm', 'rmdir', 'mv', 'chmod', 'chown', 'chgrp', 'ln',
-]);
+const DESTRUCTIVE_COMMANDS = new Set(['rm', 'rmdir', 'mv', 'chmod', 'chown', 'chgrp', 'ln']);
 
 // Critical system commands
 const CRITICAL_COMMANDS = new Set([
-  'reboot', 'shutdown', 'halt', 'poweroff', 'init',
-  'mkfs', 'fdisk', 'parted', 'dd',
-  'kill', 'killall', 'pkill',
+  'reboot',
+  'shutdown',
+  'halt',
+  'poweroff',
+  'init',
+  'mkfs',
+  'fdisk',
+  'parted',
+  'dd',
+  'kill',
+  'killall',
+  'pkill',
 ]);
 
 // Write commands → medium risk
-const WRITE_COMMANDS = new Set([
-  'tee', 'touch', 'mkdir', 'install', 'cp',
-]);
+const WRITE_COMMANDS = new Set(['tee', 'touch', 'mkdir', 'install', 'cp']);
 
 // Package manager commands → medium risk
 const PACKAGE_COMMANDS = new Set([
-  'npm', 'yarn', 'pnpm', 'pip', 'pip3', 'apt', 'apt-get', 'yum',
-  'dnf', 'pacman', 'brew', 'cargo', 'go',
+  'npm',
+  'yarn',
+  'pnpm',
+  'pip',
+  'pip3',
+  'apt',
+  'apt-get',
+  'yum',
+  'dnf',
+  'pacman',
+  'brew',
+  'cargo',
+  'go',
 ]);
 
 // Git subcommand classification
 const GIT_READONLY_SUBCOMMANDS = new Set([
-  'status', 'log', 'diff', 'show', 'branch', 'tag', 'remote',
-  'stash', 'describe', 'shortlog', 'reflog', 'blame', 'bisect',
-  'ls-files', 'ls-tree', 'ls-remote',
+  'status',
+  'log',
+  'diff',
+  'show',
+  'branch',
+  'tag',
+  'remote',
+  'stash',
+  'describe',
+  'shortlog',
+  'reflog',
+  'blame',
+  'bisect',
+  'ls-files',
+  'ls-tree',
+  'ls-remote',
 ]);
 
 const GIT_WRITE_SUBCOMMANDS = new Set([
-  'add', 'commit', 'merge', 'rebase', 'cherry-pick', 'pull',
-  'fetch', 'clone', 'init', 'checkout', 'switch', 'restore',
+  'add',
+  'commit',
+  'merge',
+  'rebase',
+  'cherry-pick',
+  'pull',
+  'fetch',
+  'clone',
+  'init',
+  'checkout',
+  'switch',
+  'restore',
 ]);
 
-const GIT_DANGEROUS_SUBCOMMANDS = new Set([
-  'push', 'reset', 'clean', 'gc', 'filter-branch',
-]);
+const GIT_DANGEROUS_SUBCOMMANDS = new Set(['push', 'reset', 'clean', 'gc', 'filter-branch']);
 
 // ── Command substitution detection ─────────────────────────────────
 
@@ -105,7 +152,9 @@ const CMD_SUBST_RE = /\$\(|`[^`]*`/;
  * @returns {boolean}
  */
 function hasCommandSubstitution(command) {
-  if (!command || typeof command !== 'string') return false;
+  if (!command || typeof command !== 'string') {
+    return false;
+  }
   return CMD_SUBST_RE.test(command);
 }
 
@@ -120,7 +169,13 @@ function hasCommandSubstitution(command) {
 function mapSingleCommand(cmd) {
   const base = getBaseCommand(cmd);
   if (!base) {
-    return { tool: 'shell_command', risk: 'low', isReadOnly: false, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'low',
+      isReadOnly: false,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   const lower = base.toLowerCase();
@@ -132,7 +187,13 @@ function mapSingleCommand(cmd) {
 
   // Read-like → read_file
   if (READ_TOOL_COMMANDS.has(lower)) {
-    return { tool: 'read_file', risk: 'safe', isReadOnly: true, isDestructive: false, command: cmd };
+    return {
+      tool: 'read_file',
+      risk: 'safe',
+      isReadOnly: true,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   // Search-like → grep
@@ -147,36 +208,78 @@ function mapSingleCommand(cmd) {
 
   // Info commands → safe
   if (INFO_COMMANDS.has(lower)) {
-    return { tool: 'shell_command', risk: 'safe', isReadOnly: true, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'safe',
+      isReadOnly: true,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   // Neutral → safe
   if (NEUTRAL_COMMANDS.has(lower)) {
-    return { tool: 'shell_command', risk: 'safe', isReadOnly: true, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'safe',
+      isReadOnly: true,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   // Critical system commands
   if (CRITICAL_COMMANDS.has(lower)) {
-    return { tool: 'shell_command', risk: 'critical', isReadOnly: false, isDestructive: true, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'critical',
+      isReadOnly: false,
+      isDestructive: true,
+      command: cmd,
+    };
   }
 
   // Destructive commands
   if (DESTRUCTIVE_COMMANDS.has(lower)) {
-    return { tool: 'shell_command', risk: 'high', isReadOnly: false, isDestructive: true, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'high',
+      isReadOnly: false,
+      isDestructive: true,
+      command: cmd,
+    };
   }
 
   // Write commands
   if (WRITE_COMMANDS.has(lower)) {
-    return { tool: 'write_file', risk: 'medium', isReadOnly: false, isDestructive: false, command: cmd };
+    return {
+      tool: 'write_file',
+      risk: 'medium',
+      isReadOnly: false,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   // Package managers
   if (PACKAGE_COMMANDS.has(lower)) {
-    return { tool: 'shell_command', risk: 'medium', isReadOnly: false, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'medium',
+      isReadOnly: false,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   // Unknown command → default medium
-  return { tool: 'shell_command', risk: 'medium', isReadOnly: false, isDestructive: false, command: cmd };
+  return {
+    tool: 'shell_command',
+    risk: 'medium',
+    isReadOnly: false,
+    isDestructive: false,
+    command: cmd,
+  };
 }
 
 /**
@@ -197,31 +300,75 @@ function _mapGitCommand(cmd) {
   }
 
   if (!subCmd) {
-    return { tool: 'shell_command', risk: 'safe', isReadOnly: true, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'safe',
+      isReadOnly: true,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   if (GIT_READONLY_SUBCOMMANDS.has(subCmd)) {
-    return { tool: 'git_status', risk: 'safe', isReadOnly: true, isDestructive: false, command: cmd };
+    return {
+      tool: 'git_status',
+      risk: 'safe',
+      isReadOnly: true,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   if (GIT_WRITE_SUBCOMMANDS.has(subCmd)) {
-    return { tool: 'shell_command', risk: 'medium', isReadOnly: false, isDestructive: false, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'medium',
+      isReadOnly: false,
+      isDestructive: false,
+      command: cmd,
+    };
   }
 
   if (GIT_DANGEROUS_SUBCOMMANDS.has(subCmd)) {
     // Check for --force flag
-    const hasForce = tokens.some(t => t === '--force' || t === '-f' || t === '--force-with-lease');
+    const hasForce = tokens.some(
+      (t) => t === '--force' || t === '-f' || t === '--force-with-lease'
+    );
     if (subCmd === 'push' && hasForce) {
-      return { tool: 'shell_command', risk: 'critical', isReadOnly: false, isDestructive: true, command: cmd };
+      return {
+        tool: 'shell_command',
+        risk: 'critical',
+        isReadOnly: false,
+        isDestructive: true,
+        command: cmd,
+      };
     }
     if (subCmd === 'reset' && tokens.includes('--hard')) {
-      return { tool: 'shell_command', risk: 'critical', isReadOnly: false, isDestructive: true, command: cmd };
+      return {
+        tool: 'shell_command',
+        risk: 'critical',
+        isReadOnly: false,
+        isDestructive: true,
+        command: cmd,
+      };
     }
-    return { tool: 'shell_command', risk: 'high', isReadOnly: false, isDestructive: true, command: cmd };
+    return {
+      tool: 'shell_command',
+      risk: 'high',
+      isReadOnly: false,
+      isDestructive: true,
+      command: cmd,
+    };
   }
 
   // Unknown git subcommand → medium
-  return { tool: 'shell_command', risk: 'medium', isReadOnly: false, isDestructive: false, command: cmd };
+  return {
+    tool: 'shell_command',
+    risk: 'medium',
+    isReadOnly: false,
+    isDestructive: false,
+    command: cmd,
+  };
 }
 
 // ── Compound command mapping ───────────────────────────────────────
@@ -251,12 +398,16 @@ function mapCommandToVirtualTools(command) {
     hasCommandSubstitution: false,
   };
 
-  if (!command || typeof command !== 'string') return empty;
+  if (!command || typeof command !== 'string') {
+    return empty;
+  }
 
   const hasCmdSubst = hasCommandSubstitution(command);
 
   const parts = splitCommandWithOperators(command);
-  if (parts.length === 0) return { ...empty, hasCommandSubstitution: hasCmdSubst };
+  if (parts.length === 0) {
+    return { ...empty, hasCommandSubstitution: hasCmdSubst };
+  }
 
   const virtualTools = [];
   let overallRisk = 'safe';
@@ -279,15 +430,21 @@ function mapCommandToVirtualTools(command) {
     }
 
     // Skip pipeline/logic operators
-    if (OPERATORS.has(part)) continue;
+    if (OPERATORS.has(part)) {
+      continue;
+    }
 
     const mapped = mapSingleCommand(part);
     virtualTools.push(mapped);
 
     // Aggregate: strictest wins
     overallRisk = maxRisk(overallRisk, mapped.risk);
-    if (!mapped.isReadOnly) overallReadOnly = false;
-    if (mapped.isDestructive) overallDestructive = true;
+    if (!mapped.isReadOnly) {
+      overallReadOnly = false;
+    }
+    if (mapped.isDestructive) {
+      overallDestructive = true;
+    }
   }
 
   return {

@@ -33,11 +33,6 @@ jest.mock('../src/services/usageTracker', () => ({
   usageTracker: { record: jest.fn() },
 }));
 
-jest.mock('../src/services/apiKeyRotation', () => ({
-  executeWithRotation: jest.fn(),
-  collectProviderKeys: jest.fn(() => []),
-}));
-
 jest.mock('../src/services/contextWindowGuard', () => ({
   evaluateGuard: jest.fn(() => ({ passed: true })),
   formatWarning: jest.fn(() => ''),
@@ -388,7 +383,6 @@ describe('Cascade Failover', () => {
       generateTraceId: () => 'test-trace',
     }));
     jest.mock('../src/services/usageTracker', () => ({ usageTracker: { record: jest.fn() } }));
-    jest.mock('../src/services/apiKeyRotation', () => ({ executeWithRotation: jest.fn(), collectProviderKeys: jest.fn(() => []) }));
     jest.mock('../src/services/contextWindowGuard', () => ({ evaluateGuard: jest.fn(() => ({ passed: true })), formatWarning: jest.fn(() => '') }));
     jest.mock('../src/services/aiMonitor', () => ({ startTrace: jest.fn(() => 'trace'), endTrace: jest.fn(), addCascadeAttempt: jest.fn() }));
     jest.mock('../src/services/liveModelSwitch', () => ({ getInstance: () => ({ getActiveModel: () => null, generationStarted: jest.fn(), generationCompleted: jest.fn() }) }));
@@ -590,7 +584,6 @@ describe('Cancellation Handling', () => {
     jest.resetModules();
     jest.mock('../src/services/diagnosticEvents', () => ({ diagnostics: { emitModelRequest: jest.fn(), emitModelResponse: jest.fn() }, generateTraceId: () => 'test' }));
     jest.mock('../src/services/usageTracker', () => ({ usageTracker: { record: jest.fn() } }));
-    jest.mock('../src/services/apiKeyRotation', () => ({ executeWithRotation: jest.fn(), collectProviderKeys: jest.fn(() => []) }));
     jest.mock('../src/services/contextWindowGuard', () => ({ evaluateGuard: jest.fn(() => ({ passed: true })), formatWarning: jest.fn(() => '') }));
     jest.mock('../src/services/aiMonitor', () => ({ startTrace: jest.fn(() => 'trace'), endTrace: jest.fn(), addCascadeAttempt: jest.fn() }));
     jest.mock('../src/services/liveModelSwitch', () => ({ getInstance: () => ({ getActiveModel: () => null, generationStarted: jest.fn(), generationCompleted: jest.fn() }) }));

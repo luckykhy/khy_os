@@ -34,11 +34,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_DELIVERY_SUMMARY_FORMAT', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_DELIVERY_SUMMARY_FORMAT;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -50,15 +56,18 @@ const _stripCode = require('../utils/stripCodeSpans');
 // 判据 = 命中「改动 / 交付类动作动词」。纯提问(为什么 / 是什么 / 解释一下)与闲聊没有这类
 // 动作动词,不会命中 —— 这是刻意的零假阳性边界。指令文本内部亦声明「若只是闲聊/问答/检索则
 // 不必套用」,构成第二重保险。
-const _TASK_VERB_RE = new RegExp([
-  // 中文:修复 / 实现 / 重构 / 改动 / 对齐 / 集成 / 落地 / 优化 / 搭建 / 完成……
-  '修复|修好|修一下|修个|修掉|解决|处理掉|实现|实装|落地|接线|对齐|重构|优化|改进',
-  '|改一下|改成|改造|封装|集成|搭建|构建|建立|开发|新增|添加|加个|加上|做这个|做一个|完成',
-  // 英文:fix / implement / refactor / optimize / integrate / wire / build / add……
-  '|\\bfix(es|ed|ing)?\\b|\\bimplement(s|ed|ing)?\\b|\\brefactor(s|ed|ing)?\\b|\\boptimi[sz]e',
-  '|\\bintegrat(e|es|ed|ing)\\b|\\bwir(e|es|ed|ing)\\b|\\bbuild\\b|\\badd(s|ed|ing)?\\b',
-  '|\\brefactor\\b|\\bresolv(e|es|ed|ing)\\b|\\bmigrat(e|es|ed|ing)\\b|\\bpatch(es|ed|ing)?\\b',
-].join(''), 'i');
+const _TASK_VERB_RE = new RegExp(
+  [
+    // 中文:修复 / 实现 / 重构 / 改动 / 对齐 / 集成 / 落地 / 优化 / 搭建 / 完成……
+    '修复|修好|修一下|修个|修掉|解决|处理掉|实现|实装|落地|接线|对齐|重构|优化|改进',
+    '|改一下|改成|改造|封装|集成|搭建|构建|建立|开发|新增|添加|加个|加上|做这个|做一个|完成',
+    // 英文:fix / implement / refactor / optimize / integrate / wire / build / add……
+    '|\\bfix(es|ed|ing)?\\b|\\bimplement(s|ed|ing)?\\b|\\brefactor(s|ed|ing)?\\b|\\boptimi[sz]e',
+    '|\\bintegrat(e|es|ed|ing)\\b|\\bwir(e|es|ed|ing)\\b|\\bbuild\\b|\\badd(s|ed|ing)?\\b',
+    '|\\brefactor\\b|\\bresolv(e|es|ed|ing)\\b|\\bmigrat(e|es|ed|ing)\\b|\\bpatch(es|ed|ing)?\\b',
+  ].join(''),
+  'i'
+);
 
 /**
  * 识别一段文本是否为「实质工程任务」意图(应产出结构化交付总结)。零假阳性优先。
@@ -68,7 +77,9 @@ const _TASK_VERB_RE = new RegExp([
 function detectDeliveryTask(text) {
   try {
     const cleaned = _stripCode(text);
-    if (!cleaned.trim()) return { shouldInject: false };
+    if (!cleaned.trim()) {
+      return { shouldInject: false };
+    }
     return { shouldInject: _TASK_VERB_RE.test(cleaned) };
   } catch {
     return { shouldInject: false };
@@ -119,10 +130,17 @@ function buildDeliverySummaryDirective(opts = {}) {
  */
 function routeDeliverySummary({ text = '', env } = {}) {
   try {
-    if (!isEnabled(env)) return { shouldInject: false, directive: '' };
+    if (!isEnabled(env)) {
+      return { shouldInject: false, directive: '' };
+    }
     const det = detectDeliveryTask(text);
-    if (!det.shouldInject) return { shouldInject: false, directive: '' };
-    return { shouldInject: true, directive: buildDeliverySummaryDirective({ locale: pickLocale(text) }) };
+    if (!det.shouldInject) {
+      return { shouldInject: false, directive: '' };
+    }
+    return {
+      shouldInject: true,
+      directive: buildDeliverySummaryDirective({ locale: pickLocale(text) }),
+    };
   } catch {
     return { shouldInject: false, directive: '' };
   }

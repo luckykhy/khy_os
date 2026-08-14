@@ -28,13 +28,17 @@ const _OFF = new Set(['0', 'false', 'off', 'no']);
 /** KHY_COMMIT_PRECHECK 默认开。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_COMMIT_PRECHECK;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.has(v);
 }
 
 /** KHY_COMMIT_PRECHECK_BLOCK 默认关(仅显式开才阻断)。 */
 function isBlockMode(env = process.env) {
-  const v = String((env && env.KHY_COMMIT_PRECHECK_BLOCK) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_COMMIT_PRECHECK_BLOCK) || '')
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes'].includes(v);
 }
 
@@ -42,7 +46,11 @@ function isBlockMode(env = process.env) {
 const _gitSoft = require('../utils/gitSoftExec');
 
 function _statSize(cwd, rel) {
-  try { return fs.statSync(path.join(cwd, rel)).size; } catch { return undefined; }
+  try {
+    return fs.statSync(path.join(cwd, rel)).size;
+  } catch {
+    return undefined;
+  }
 }
 
 function _currentBranch(cwd) {
@@ -52,7 +60,9 @@ function _currentBranch(cwd) {
 
 function _detectMainBranch(cwd) {
   const ref = _gitSoft(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], cwd);
-  if (ref.ok && ref.out.includes('/')) return ref.out.split('/').pop();
+  if (ref.ok && ref.out.includes('/')) {
+    return ref.out.split('/').pop();
+  }
   return undefined;
 }
 
@@ -65,12 +75,16 @@ function _offendingPaths(report) {
   const out = new Set();
   try {
     for (const f of (report && report.findings) || []) {
-      if (!f || !f.path) continue;
+      if (!f || !f.path) {
+        continue;
+      }
       if (f.kind === 'large-file' || f.kind === 'binary-artifact') {
         out.add(f.path);
       }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return [...out];
 }
 
@@ -90,17 +104,32 @@ function _offendingPaths(report) {
  */
 function runPrecommitCheck(opts = {}) {
   const env = opts.env || process.env;
-  const log = typeof opts.log === 'function' ? opts.log : (line) => { try { console.log(line); } catch { /* ignore */ } };
+  const log =
+    typeof opts.log === 'function'
+      ? opts.log
+      : (line) => {
+          try {
+            console.log(line);
+          } catch {
+            /* ignore */
+          }
+        };
   try {
-    if (!isEnabled(env)) return { ran: false, shouldBlock: false };
-    if (opts.noVerify) return { ran: false, shouldBlock: false };
+    if (!isEnabled(env)) {
+      return { ran: false, shouldBlock: false };
+    }
+    if (opts.noVerify) {
+      return { ran: false, shouldBlock: false };
+    }
 
     const cwd = opts.cwd || env.KHYQUANT_CWD || process.cwd();
 
     // 只看已暂存(即将提交)的改动。无暂存 → 不跑(commit 也无内容)。
     const names = _gitSoft(['diff', '--cached', '--name-only'], cwd);
     const fileList = names.ok && names.out ? names.out.split(/\r?\n/).filter(Boolean) : [];
-    if (fileList.length === 0) return { ran: false, shouldBlock: false };
+    if (fileList.length === 0) {
+      return { ran: false, shouldBlock: false };
+    }
 
     const diff = _gitSoft(['diff', '--cached'], cwd);
     const files = fileList.map((rel) => ({ path: rel, size: _statSize(cwd, rel) }));
@@ -117,8 +146,12 @@ function runPrecommitCheck(opts = {}) {
       env,
     });
 
-    if (!report || !report.enabled) return { ran: false, shouldBlock: false };
-    if (report.verdict === 'clean') return { ran: true, verdict: 'clean', shouldBlock: false, report, enqueued: [] };
+    if (!report || !report.enabled) {
+      return { ran: false, shouldBlock: false };
+    }
+    if (report.verdict === 'clean') {
+      return { ran: true, verdict: 'clean', shouldBlock: false, report, enqueued: [] };
+    }
 
     // ── 呈现(只提示不阻断)────────────────────────────────────────────────────
     if (report.verdict === 'block') {
@@ -141,15 +174,23 @@ function runPrecommitCheck(opts = {}) {
         const r = store.enqueue({ patterns: offending, reason: 'precommit', source: 'auto', cwd });
         if (r && r.success && !r.skipped) {
           enqueued.push(...offending);
-          log(`   → 已把 ${offending.length} 个文件加入 \`/gitignore\` 待审核队列(approve 后写入 .gitignore)`, 'info');
+          log(
+            `   → 已把 ${offending.length} 个文件加入 \`/gitignore\` 待审核队列(approve 后写入 .gitignore)`,
+            'info'
+          );
         }
-      } catch { /* fail-soft:联动失败不影响自检 */ }
+      } catch {
+        /* fail-soft:联动失败不影响自检 */
+      }
     }
 
     const blockMode = isBlockMode(env);
     const shouldBlock = blockMode && report.verdict === 'block';
     if (blockMode && shouldBlock) {
-      log('   本次提交被阻断(KHY_COMMIT_PRECHECK_BLOCK=on)。解决后重试,或用 --no-verify 跳过自检。', 'block');
+      log(
+        '   本次提交被阻断(KHY_COMMIT_PRECHECK_BLOCK=on)。解决后重试,或用 --no-verify 跳过自检。',
+        'block'
+      );
     } else if (report.verdict === 'block') {
       log('   ⚠️ 已放行(仅提示不阻断)。如需硬阻断:设 KHY_COMMIT_PRECHECK_BLOCK=on。', 'info');
     }

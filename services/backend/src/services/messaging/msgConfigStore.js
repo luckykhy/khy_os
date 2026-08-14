@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { getBaseDataDir } = require('../../utils/dataHome');
+
 const core = require('./msgChannelCore');
 
 const FILE_MODE = 0o600;
@@ -28,17 +29,28 @@ const FIELDS = {
   wecom: ['webhook', 'token', 'encodingAesKey'],
 };
 
-function _dir() { return getBaseDataDir('.'); }               // ~/.khyos
-function _file() { return path.join(_dir(), 'msg.json'); }
-function _bak() { return path.join(_dir(), 'msg.bak'); }
+function _dir() {
+  return getBaseDataDir('.');
+} // ~/.khyos
+
+function _file() {
+  return path.join(_dir(), 'msg.json');
+}
+
+function _bak() {
+  return path.join(_dir(), 'msg.bak');
+}
 
 /** 读原始文件对象;缺失/损坏 → { platforms:{} }。绝不抛。 */
 function _readAll() {
   try {
     const file = _file();
-    if (!fs.existsSync(file)) return { platforms: {} };
+    if (!fs.existsSync(file)) {
+      return { platforms: {} };
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    const platforms = raw && typeof raw.platforms === 'object' && raw.platforms ? raw.platforms : {};
+    const platforms =
+      raw && typeof raw.platforms === 'object' && raw.platforms ? raw.platforms : {};
     return { platforms, updatedAt: (raw && raw.updatedAt) || '' };
   } catch {
     return { platforms: {} };
@@ -51,30 +63,48 @@ function _writeAll(state) {
   try {
     if (fs.existsSync(file)) {
       fs.copyFileSync(file, _bak());
-      try { fs.chmodSync(_bak(), FILE_MODE); } catch { /* best-effort */ }
+      try {
+        fs.chmodSync(_bak(), FILE_MODE);
+      } catch {
+        /* best-effort */
+      }
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   const payload = { platforms: state.platforms || {}, updatedAt: new Date().toISOString() };
   const tmp = path.join(dir, `.msg.${process.pid}.tmp`);
   fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), { encoding: 'utf-8', mode: FILE_MODE });
   fs.renameSync(tmp, file);
-  try { fs.chmodSync(file, FILE_MODE); } catch { /* best-effort */ }
+  try {
+    fs.chmodSync(file, FILE_MODE);
+  } catch {
+    /* best-effort */
+  }
 }
 
 /** 取某平台配置(归一 platform 别名);无 → null。 */
 function getPlatform(platform) {
   const p = core.normalizePlatform(platform);
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   const cfg = _readAll().platforms[p];
-  if (!cfg || typeof cfg !== 'object') return null;
+  if (!cfg || typeof cfg !== 'object') {
+    return null;
+  }
   const webhook = typeof cfg.webhook === 'string' ? cfg.webhook : '';
-  if (!webhook) return null;
+  if (!webhook) {
+    return null;
+  }
   return { platform: p, ...cfg };
 }
 
 /** 是否已配置某平台(或任一平台)。 */
 function isConfigured(platform) {
-  if (platform) return getPlatform(platform) !== null;
+  if (platform) {
+    return getPlatform(platform) !== null;
+  }
   const all = _readAll().platforms;
   return Object.keys(all).some((p) => getPlatform(p) !== null);
 }
@@ -87,19 +117,29 @@ function isConfigured(platform) {
  */
 function setPlatform(platform, fields = {}) {
   const p = core.normalizePlatform(platform);
-  if (!p) return { ok: false, error: `不支持的平台。可选:${Object.keys(FIELDS).join(' / ')}。` };
+  if (!p) {
+    return { ok: false, error: `不支持的平台。可选:${Object.keys(FIELDS).join(' / ')}。` };
+  }
   const allowed = FIELDS[p];
   try {
     const state = _readAll();
-    const prev = (state.platforms[p] && typeof state.platforms[p] === 'object') ? state.platforms[p] : {};
+    const prev =
+      state.platforms[p] && typeof state.platforms[p] === 'object' ? state.platforms[p] : {};
     const next = { ...prev };
     for (const key of allowed) {
-      if (!Object.prototype.hasOwnProperty.call(fields, key)) continue;
+      if (!Object.prototype.hasOwnProperty.call(fields, key)) {
+        continue;
+      }
       const val = fields[key] == null ? '' : String(fields[key]).trim();
-      if (val) next[key] = val;
-      else delete next[key];
+      if (val) {
+        next[key] = val;
+      } else {
+        delete next[key];
+      }
     }
-    if (!next.webhook) return { ok: false, error: `${core.PLATFORMS[p].label} 至少需要 webhook。` };
+    if (!next.webhook) {
+      return { ok: false, error: `${core.PLATFORMS[p].label} 至少需要 webhook。` };
+    }
     state.platforms[p] = next;
     _writeAll(state);
     return { ok: true, platform: p, preview: core.maskWebhook(next.webhook) };
@@ -116,7 +156,9 @@ function clearPlatform(platform) {
       return { ok: true };
     }
     const p = core.normalizePlatform(platform);
-    if (!p) return { ok: false, error: '不支持的平台。' };
+    if (!p) {
+      return { ok: false, error: '不支持的平台。' };
+    }
     const state = _readAll();
     delete state.platforms[p];
     _writeAll(state);

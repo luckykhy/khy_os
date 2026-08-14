@@ -14,7 +14,11 @@
 const { summarizeToolResult } = require('../../toolResultSummary');
 const _timelineAppendMerge = require('../timelineAppendMerge');
 let _toolPrefaceVoice;
-try { _toolPrefaceVoice = require('../../toolPrefaceVoice'); } catch { _toolPrefaceVoice = null; }
+try {
+  _toolPrefaceVoice = require('../../toolPrefaceVoice');
+} catch {
+  _toolPrefaceVoice = null;
+}
 
 // ── Ordered turn timeline helpers ──
 // A turn is modeled as an ordered list of segments preserving the REAL
@@ -36,6 +40,44 @@ function tlAppendText(timeline, text) {
 
 function tlPushTool(timeline, tool) {
   return [...timeline, { type: 'tool', tool }];
+}
+
+// ── Stream-reset (retract) support ──
+// A {type:'reset'} chunk (responseDebounce protocol) means the upstream
+// retracted the already-streamed draft (gateway language-recovery retry, tool
+// loop bare-refusal/echo retry) and a regenerated answer follows. Unlike the
+// append-only REPL, the TUI re-renders from state, so it can genuinely DROP
+// the draft: remove the draft text segments while keeping thinking/tool
+// history (tools really ran — only the visible prose is void). Pure reducers,
+// extracted here so the retract semantics are unit-testable without React.
+function tlDiscardDraftText(timeline) {
+  return (Array.isArray(timeline) ? timeline : []).filter((e) => e && e.type !== 'text');
+}
+
+// Reduce the live streaming state for a reset frame: clear the aggregate text
+// and drop draft text segments from the ordered timeline. No-op-safe on null.
+function reduceStreamReset(s) {
+  if (!s) {
+    return s;
+  }
+  return { ...s, text: '', timeline: tlDiscardDraftText(s.timeline || []) };
+}
+
+// User-facing notice for a stream reset (动作+目标+进度). Reason labels mirror
+// the classic REPL's reset branch so both front-ends narrate the same event
+// with the same vocabulary. Unknown/missing reasons fall back to a generic
+// honest label instead of leaking the machine token.
+const STREAM_RESET_REASON_LABELS = {
+  'language-recovery-retry': '答复语言不符',
+  'bare-refusal-retry': '模板化拒答',
+  'answer-echo': '答案重复回声',
+};
+
+function buildStreamResetNotice(reason, discardedChars) {
+  const label = STREAM_RESET_REASON_LABELS[String(reason || '')] || '上游判定草稿无效';
+  const n = Number(discardedChars);
+  const scope = Number.isFinite(n) && n > 0 ? `${n} 字草稿` : '当前草稿';
+  return `✳ 重新生成：${label}，已作废${scope}，正在重新生成替换答复，请以新内容为准`;
 }
 
 // Split an OPEN (still-streaming) text segment into a committed-safe `sealed`
@@ -69,7 +111,11 @@ const _SOFT_SEAL_OFF = new Set(['0', 'false', 'off', 'no']);
 const _SOFT_SEAL_DEFAULT_CHARS = 2000;
 
 function _isSoftSealEnabled(env) {
-  return !_SOFT_SEAL_OFF.has(String((env && env.KHY_TUI_SOFT_SEAL) || '').trim().toLowerCase());
+  return !_SOFT_SEAL_OFF.has(
+    String((env && env.KHY_TUI_SOFT_SEAL) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function _softSealThreshold(env) {
@@ -81,21 +127,41 @@ function _softSealThreshold(env) {
 // 保守取舍:只要疑似结构(表格竖线 / 列表 / 引用 / 标题 / 缩进码 / 分隔线)一律判非纯散文,
 // 宁可不在此切割,也绝不劈开结构。
 function _isPlainProseLine(rawLine) {
-  if (rawLine == null) return false;
+  if (rawLine == null) {
+    return false;
+  }
   const trimmed = rawLine.trim();
-  if (trimmed === '') return false;                       // 空行走既有主路径
-  if (/^\s{4,}/.test(rawLine) || rawLine.startsWith('\t')) return false; // 缩进码/续行
-  if (rawLine.includes('|')) return false;                // 表格行(含转义竖线也保守排除)
-  if (/^([-*+]\s|\d{1,9}[.)]\s)/.test(trimmed)) return false; // 无序/有序列表项
-  if (trimmed.startsWith('>')) return false;              // 引用块
-  if (/^#{1,6}\s/.test(trimmed)) return false;            // ATX 标题
-  if (/^[-=_*]{2,}[\s]*$/.test(trimmed)) return false;    // 分隔线 / setext 下划线
-  if (/^(`{3,}|~{3,})/.test(trimmed)) return false;       // fence 定界(另有 inFence 跟踪)
+  if (trimmed === '') {
+    return false;
+  } // 空行走既有主路径
+  if (/^\s{4,}/.test(rawLine) || rawLine.startsWith('\t')) {
+    return false;
+  } // 缩进码/续行
+  if (rawLine.includes('|')) {
+    return false;
+  } // 表格行(含转义竖线也保守排除)
+  if (/^([-*+]\s|\d{1,9}[.)]\s)/.test(trimmed)) {
+    return false;
+  } // 无序/有序列表项
+  if (trimmed.startsWith('>')) {
+    return false;
+  } // 引用块
+  if (/^#{1,6}\s/.test(trimmed)) {
+    return false;
+  } // ATX 标题
+  if (/^[-=_*]{2,}[\s]*$/.test(trimmed)) {
+    return false;
+  } // 分隔线 / setext 下划线
+  if (/^(`{3,}|~{3,})/.test(trimmed)) {
+    return false;
+  } // fence 定界(另有 inFence 跟踪)
   return true;
 }
 
 function splitSealedText(text, env = process.env) {
-  if (!text) return { sealed: '', live: text || '' };
+  if (!text) {
+    return { sealed: '', live: text || '' };
+  }
   const lines = text.split('\n');
   let inFence = false;
   let fenceChar = '';
@@ -110,13 +176,22 @@ function splitSealedText(text, env = process.env) {
     const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
     if (fenceMatch) {
       const ch = fenceMatch[1][0];
-      if (!inFence) { inFence = true; fenceChar = ch; }
-      else if (ch === fenceChar) { inFence = false; fenceChar = ''; }
+      if (!inFence) {
+        inFence = true;
+        fenceChar = ch;
+      } else if (ch === fenceChar) {
+        inFence = false;
+        fenceChar = '';
+      }
     } else if (!inFence && trimmed === '' && hasNewline) {
       // A terminated blank line outside any fence — safe to seal up to here.
       offset = lineEnd;
-    } else if (!inFence && hasNewline
-      && _isPlainProseLine(line) && _isPlainProseLine(lines[i + 1])) {
+    } else if (
+      !inFence &&
+      hasNewline &&
+      _isPlainProseLine(line) &&
+      _isPlainProseLine(lines[i + 1])
+    ) {
       // 软边界:当前行与下一行都是纯散文行,且当前行已终止(有换行)、都在 fence 外。
       // 在此切割至多把一个段落拆成两段(外观级),绝不劈开任何多行结构。
       softOffset = lineEnd;
@@ -126,8 +201,11 @@ function splitSealedText(text, env = process.env) {
   // 主路径:空行边界(历史行为,恒优先)。
   if (offset > 0) {
     // 软扩展:空行后的活跃尾部仍然过长且存在更靠后的软边界 → 进一步封存以封顶 live 段长度。
-    if (_isSoftSealEnabled(env) && softOffset > offset
-      && (text.length - offset) > _softSealThreshold(env)) {
+    if (
+      _isSoftSealEnabled(env) &&
+      softOffset > offset &&
+      text.length - offset > _softSealThreshold(env)
+    ) {
       return { sealed: text.slice(0, softOffset), live: text.slice(softOffset) };
     }
     return { sealed: text.slice(0, offset), live: text.slice(offset) };
@@ -153,7 +231,9 @@ function splitSealedText(text, env = process.env) {
 // the React hook (the hook keeps the setMessages/liveRef side effects).
 function planStageFlush(timeline, { force = false, sealTrailing = false } = {}) {
   const tl = Array.isArray(timeline) ? timeline : [];
-  if (tl.length === 0) return { k: 0, sealed: '' };
+  if (tl.length === 0) {
+    return { k: 0, sealed: '' };
+  }
   let k;
   if (force) {
     k = tl.length;
@@ -163,13 +243,22 @@ function planStageFlush(timeline, { force = false, sealTrailing = false } = {}) 
       const e = tl[k];
       const isLast = k === tl.length - 1;
       if (e.type === 'tool') {
-        if (e.tool && e.tool.result) { k++; continue; }
+        if (e.tool && e.tool.result) {
+          k++;
+          continue;
+        }
         break; // pending tool: keep it and everything after in the live region
       } else {
-        if (!isLast) { k++; continue; } // sealed text segment (a tool follows)
+        if (!isLast) {
+          k++;
+          continue;
+        } // sealed text segment (a tool follows)
         // Open trailing text normally stays live; `sealTrailing` (turn paused on
         // a control request) commits it so it is not folded behind the overlay.
-        if (sealTrailing) { k++; continue; }
+        if (sealTrailing) {
+          k++;
+          continue;
+        }
         break;
       }
     }
@@ -177,7 +266,9 @@ function planStageFlush(timeline, { force = false, sealTrailing = false } = {}) 
   let sealed = '';
   if (!force && !sealTrailing && k === tl.length - 1) {
     const e = tl[k];
-    if (e && e.type === 'text') sealed = splitSealedText(e.text).sealed;
+    if (e && e.type === 'text') {
+      sealed = splitSealedText(e.text).sealed;
+    }
   }
   return { k, sealed };
 }
@@ -189,33 +280,51 @@ function planStageFlush(timeline, { force = false, sealTrailing = false } = {}) 
 function formatCompactionResult(evt) {
   const before = Number(evt && evt.tokensBefore) || 0;
   const after = Number(evt && evt.tokensAfter) || 0;
-  if (before <= 0 || after <= 0 || after >= before) return '';
+  if (before <= 0 || after <= 0 || after >= before) {
+    return '';
+  }
   // CC 后端口径对齐:已提交的压缩结果行 token 数走与进度条(CompactionProgress ⑦)同一个
   // ccFormatTokens SSOT(去尾随 ".0":24000→"24k")。门控 KHY_COMPACTION_CC_TOKENS(默认开,
   // 与进度条共用同一门控,因二者同属「压缩 token 显示」家族);关 → 逐字节回退旧 toFixed(1)。
   //   ccFormat require 包在 try 里,异常静默回退,绝不让结果行渲染抛错。
   const _ccTok = (() => {
-    const v = String(process.env.KHY_COMPACTION_CC_TOKENS || '').trim().toLowerCase();
-    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return null;
-    try { const f = require('../../ccFormat').ccFormatTokens; return typeof f === 'function' ? f : null; }
-    catch { return null; }
+    const v = String(process.env.KHY_COMPACTION_CC_TOKENS || '')
+      .trim()
+      .toLowerCase();
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+      return null;
+    }
+    try {
+      const f = require('../../ccFormat').ccFormatTokens;
+      return typeof f === 'function' ? f : null;
+    } catch {
+      return null;
+    }
   })();
-  const fmtK = (n) => (_ccTok ? _ccTok(n) : (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)));
+  const fmtK = (n) => (_ccTok ? _ccTok(n) : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
   // CC 后端口径对齐:压缩结果行的「耗时」走与进度条(CompactionProgress formatElapsed)
   // 同一个 ccFormatDuration SSOT + 同一门控 KHY_COMPACTION_CC_FORMAT(二者同属「压缩时长
   // 显示」家族,与上方 token 侧的 KHY_COMPACTION_CC_TOKENS 对称)。此前本行裸 toFixed(1) 是
   // 漏接的孤儿:同一次压缩,进度条已显 "1m 5s" 而本结果行显 "65.0s"(同一事件两种时长格式)。
   //   门控开 → ccFormatDuration(带 h/m/s 进位);关 / require 异常 → 逐字节回退旧 toFixed(1)。
   const _ccDur = (() => {
-    const v = String(process.env.KHY_COMPACTION_CC_FORMAT || '').trim().toLowerCase();
-    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return null;
-    try { const f = require('../../ccFormat').ccFormatDuration; return typeof f === 'function' ? f : null; }
-    catch { return null; }
+    const v = String(process.env.KHY_COMPACTION_CC_FORMAT || '')
+      .trim()
+      .toLowerCase();
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+      return null;
+    }
+    try {
+      const f = require('../../ccFormat').ccFormatDuration;
+      return typeof f === 'function' ? f : null;
+    } catch {
+      return null;
+    }
   })();
   const saved = before - after;
   const durMs = Number(evt && evt.durationMs) || 0;
   const _durLegacy = `${(durMs / 1000).toFixed(1)}s`;
-  const dur = durMs > 0 ? ` · ${_ccDur ? (_ccDur(durMs) || _durLegacy) : _durLegacy}` : '';
+  const dur = durMs > 0 ? ` · ${_ccDur ? _ccDur(durMs) || _durLegacy : _durLegacy}` : '';
   return `✻ 已压缩上下文：${fmtK(before)} → ${fmtK(after)} tokens（节省 ${fmtK(saved)}${dur}）`;
 }
 
@@ -236,7 +345,9 @@ function tlAppendThinking(timeline, text) {
 // that gap. Once the turn has settled, `inFlight` drops and `done` keeps the
 // historical affordance that a follow-up can be sent immediately.
 function submitGateBusy(status, inFlight) {
-  if (inFlight) return true;
+  if (inFlight) {
+    return true;
+  }
   const s = String(status || '');
   return s !== 'idle' && s !== 'done';
 }
@@ -248,10 +359,14 @@ function submitGateBusy(status, inFlight) {
 // the last un-stamped thinking entry is touched, so interleaved thinking runs each
 // keep their own duration. No-op when there is no thinking entry or it is stamped.
 function tlStampThinkingDuration(timeline, durationMs) {
-  if (!Array.isArray(timeline) || !(Number(durationMs) > 0)) return timeline;
+  if (!Array.isArray(timeline) || !(Number(durationMs) > 0)) {
+    return timeline;
+  }
   for (let i = timeline.length - 1; i >= 0; i--) {
     if (timeline[i].type === 'thinking') {
-      if (timeline[i].durationMs != null) return timeline; // already stamped
+      if (timeline[i].durationMs != null) {
+        return timeline;
+      } // already stamped
       const copy = timeline.slice();
       copy[i] = { ...copy[i], durationMs: Number(durationMs) };
       return copy;
@@ -275,8 +390,12 @@ function resolveSelfRender() {
     try {
       const gw = require('../../../services/gateway/aiGateway');
       const adapter = typeof gw.getActiveAdapter === 'function' ? gw.getActiveAdapter() : null;
-      if (adapter && adapter.activeModel) model = adapter.activeModel;
-    } catch { /* gateway not ready: fall back to env / empty */ }
+      if (adapter && adapter.activeModel) {
+        model = adapter.activeModel;
+      }
+    } catch {
+      /* gateway not ready: fall back to env / empty */
+    }
     return shouldSelfRender(model);
   } catch {
     return false;
@@ -285,14 +404,24 @@ function resolveSelfRender() {
 
 // Brief one-line summary of a tool's input for the decision history entry.
 function summarizeControlInput(input) {
-  if (input == null) return '';
+  if (input == null) {
+    return '';
+  }
   let obj = input;
   if (typeof input === 'string') {
-    try { obj = JSON.parse(input); } catch { return String(input).replace(/\s+/g, ' ').trim().slice(0, 60); }
+    try {
+      obj = JSON.parse(input);
+    } catch {
+      return String(input).replace(/\s+/g, ' ').trim().slice(0, 60);
+    }
   }
-  if (typeof obj !== 'object') return String(obj).slice(0, 60);
+  if (typeof obj !== 'object') {
+    return String(obj).slice(0, 60);
+  }
   for (const k of ['command', 'file_path', 'path', 'pattern', 'query', 'url', 'description']) {
-    if (obj[k]) return String(obj[k]).replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (obj[k]) {
+      return String(obj[k]).replace(/\s+/g, ' ').trim().slice(0, 60);
+    }
   }
   const keys = Object.keys(obj);
   return keys.length ? keys.join(', ').slice(0, 60) : '';
@@ -303,30 +432,43 @@ function summarizeControlInput(input) {
 // scrollback after the overlay clears. Returns null when there is nothing to
 // record. Pure helper — no React state access.
 function buildDecisionRecord(req, answer, now) {
-  if (!req) return null;
-  const r = (req && req.request) ? req.request : req;
+  if (!req) {
+    return null;
+  }
+  const r = req && req.request ? req.request : req;
   const tool = (r && (r.tool_name || r.tool)) || 'tool';
-  const isQuestion = String((r && r.subtype) || '').toLowerCase() === 'can_use_tool'
-    && String(tool).toLowerCase().replace(/[\s_-]/g, '') === 'askuserquestion';
+  const isQuestion =
+    String((r && r.subtype) || '').toLowerCase() === 'can_use_tool' &&
+    String(tool)
+      .toLowerCase()
+      .replace(/[\s_-]/g, '') === 'askuserquestion';
 
   if (isQuestion) {
-    const answers = answer && answer.behavior === 'allow'
-      && answer.updatedInput && answer.updatedInput.answers;
+    const answers =
+      answer && answer.behavior === 'allow' && answer.updatedInput && answer.updatedInput.answers;
     if (answers && typeof answers === 'object') {
       const qa = Object.entries(answers).map(([question, choice]) => ({
         question: String(question),
         choice: Array.isArray(choice) ? choice.join(', ') : String(choice),
       }));
-      if (qa.length) return { role: 'qa', qa, timestamp: now };
+      if (qa.length) {
+        return { role: 'qa', qa, timestamp: now };
+      }
     }
     return { role: 'qa', cancelled: true, timestamp: now };
   }
 
   // Permission decision: answer is true | false | 'always' | {behavior:'discuss'}.
-  const behavior = answer && typeof answer === 'object' ? String(answer.behavior || '').toLowerCase() : '';
-  const decision = behavior === 'discuss' ? 'discuss'
-    : answer === false ? 'deny'
-    : (answer === 'always' ? 'always' : 'allow');
+  const behavior =
+    answer && typeof answer === 'object' ? String(answer.behavior || '').toLowerCase() : '';
+  const decision =
+    behavior === 'discuss'
+      ? 'discuss'
+      : answer === false
+        ? 'deny'
+        : answer === 'always'
+          ? 'always'
+          : 'allow';
   return {
     role: 'decision',
     decision,
@@ -362,23 +504,35 @@ function tlResolveTool(timeline, predicate, result) {
 //   - the tool yields no narration for the given params
 function computeToolPreface({ name, params, segmentNarrated, segmentText, occurrence, env } = {}) {
   const e = env || process.env;
-  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') return '';
+  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
+    return '';
+  }
   if (typeof segmentText === 'string' && segmentText.trim()) {
     // Relaxed gating: silence ONLY when the model already named this tool.
     if (_toolPrefaceVoice && typeof _toolPrefaceVoice.segmentMentionsTool === 'function') {
       try {
-        if (_toolPrefaceVoice.segmentMentionsTool(segmentText, name, params || {})) return '';
-      } catch { /* fall through — a detection error must not suppress narration */ }
+        if (_toolPrefaceVoice.segmentMentionsTool(segmentText, name, params || {})) {
+          return '';
+        }
+      } catch {
+        /* fall through — a detection error must not suppress narration */
+      }
     } else if (segmentNarrated) {
       return '';
     }
   } else if (segmentNarrated) {
     return '';
   }
-  if (!_toolPrefaceVoice) return '';
+  if (!_toolPrefaceVoice) {
+    return '';
+  }
   try {
-    return _toolPrefaceVoice.toolProgressReason(name, params || {}, { mode: 'lite', occurrence }) || '';
-  } catch { return ''; }
+    return (
+      _toolPrefaceVoice.toolProgressReason(name, params || {}, { mode: 'lite', occurrence }) || ''
+    );
+  } catch {
+    return '';
+  }
 }
 
 // Pure "执行中" narration decision (staged transparency). Returns the present-
@@ -391,13 +545,23 @@ function computeToolPreface({ name, params, segmentNarrated, segmentText, occurr
 // the master KHY_TOOL_PREFACE=0 or the dedicated KHY_TOOL_PROGRESS=0.
 function computeToolProgress({ name, params, env, modelNarrated, occurrence } = {}) {
   const e = env || process.env;
-  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') return '';
-  if (String(e.KHY_TOOL_PROGRESS || '').trim() === '0') return '';
-  if (modelNarrated) return '';
-  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.toolRunningNarration !== 'function') return '';
+  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
+    return '';
+  }
+  if (String(e.KHY_TOOL_PROGRESS || '').trim() === '0') {
+    return '';
+  }
+  if (modelNarrated) {
+    return '';
+  }
+  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.toolRunningNarration !== 'function') {
+    return '';
+  }
   try {
     return _toolPrefaceVoice.toolRunningNarration(name, params || {}, { occurrence }) || '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // Pure "结果 + 行动" decision (Issue「完成一个小任务就给一段结果+下一步的自然说明」).
@@ -412,12 +576,22 @@ function computeToolProgress({ name, params, env, modelNarrated, occurrence } = 
 //   - the step failed, or nothing concrete can be said (voice returns '')
 function computeToolOutcome({ name, result, params, env, occurrence } = {}) {
   const e = env || process.env;
-  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') return '';
-  if (String(e.KHY_TOOL_OUTCOME || '').trim() === '0') return '';
-  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.toolOutcomeNarration !== 'function') return '';
+  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
+    return '';
+  }
+  if (String(e.KHY_TOOL_OUTCOME || '').trim() === '0') {
+    return '';
+  }
+  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.toolOutcomeNarration !== 'function') {
+    return '';
+  }
   try {
-    return _toolPrefaceVoice.toolOutcomeNarration(name, result || {}, params || {}, { occurrence }) || '';
-  } catch { return ''; }
+    return (
+      _toolPrefaceVoice.toolOutcomeNarration(name, result || {}, params || {}, { occurrence }) || ''
+    );
+  } catch {
+    return '';
+  }
 }
 
 // Honesty gate for the TERMINAL outcome flush ("此路不通不换一条" follow-up). The
@@ -430,8 +604,12 @@ function computeToolOutcome({ name, result, params, env, occurrence } = {}) {
 function shouldFlushTerminalOutcome({ sawText, salvaged, env } = {}) {
   const e = env || process.env;
   // Dedicated opt-out keeps the old (always-flush) behavior if ever needed.
-  if (String(e.KHY_OUTCOME_TERMINAL_HONEST || '').trim() === '0') return true;
-  if (salvaged) return false;
+  if (String(e.KHY_OUTCOME_TERMINAL_HONEST || '').trim() === '0') {
+    return true;
+  }
+  if (salvaged) {
+    return false;
+  }
   return !!sawText;
 }
 
@@ -445,13 +623,23 @@ function shouldFlushTerminalOutcome({ sawText, salvaged, env } = {}) {
 // the plan is absent/single-step (composePlanAnnouncement returns '').
 function computePlanAnnouncement({ plan, segmentModelNarrated, env } = {}) {
   const e = env || process.env;
-  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') return '';
-  if (String(e.KHY_PLAN_ANNOUNCE || '').trim() === '0') return '';
-  if (segmentModelNarrated) return '';
-  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.composePlanAnnouncement !== 'function') return '';
+  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
+    return '';
+  }
+  if (String(e.KHY_PLAN_ANNOUNCE || '').trim() === '0') {
+    return '';
+  }
+  if (segmentModelNarrated) {
+    return '';
+  }
+  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.composePlanAnnouncement !== 'function') {
+    return '';
+  }
   try {
     return _toolPrefaceVoice.composePlanAnnouncement(plan) || '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // Pure plan step-transition gate — task-level companion of computeToolOutcome.
@@ -464,13 +652,23 @@ function computePlanAnnouncement({ plan, segmentModelNarrated, env } = {}) {
 // model narrated this segment.
 function computePlanProgress({ plan, stepIndex, status, segmentModelNarrated, env } = {}) {
   const e = env || process.env;
-  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') return '';
-  if (String(e.KHY_PLAN_PROGRESS || '').trim() === '0') return '';
-  if (segmentModelNarrated) return '';
-  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.composePlanProgress !== 'function') return '';
+  if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
+    return '';
+  }
+  if (String(e.KHY_PLAN_PROGRESS || '').trim() === '0') {
+    return '';
+  }
+  if (segmentModelNarrated) {
+    return '';
+  }
+  if (!_toolPrefaceVoice || typeof _toolPrefaceVoice.composePlanProgress !== 'function') {
+    return '';
+  }
   try {
     return _toolPrefaceVoice.composePlanProgress(plan, stepIndex, status) || '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // Pure reducers for pairing the native loop's tool callbacks onto the streaming
@@ -482,11 +680,15 @@ function computePlanProgress({ plan, stepIndex, status, segmentModelNarrated, en
 // for the SAME call. With a real id we match exactly (id-bearing calls never
 // collapse together); without one we fall back to first-unresolved-same-name.
 function reduceToolPush(s, { name, params, id, toolId, progress }) {
-  if (!s) return s;
+  if (!s) {
+    return s;
+  }
   const already = toolId
     ? s.tools.some((t) => t.id === toolId)
     : s.tools.some((t) => (t.name || t.toolName) === name && !t.result);
-  if (already) return s;
+  if (already) {
+    return s;
+  }
   // `progress` is the live "正在…" narration shown under the running row; carried
   // on the tool object so the view stays pure (no voice logic in the renderer).
   const tool = progress ? { name, input: params, id, progress } : { name, input: params, id };
@@ -498,21 +700,31 @@ function reduceToolPush(s, { name, params, id, toolId, progress }) {
 // matched nothing (result raced ahead of its push), fall back to the first
 // unresolved same-name row so the result is never dropped.
 function reduceToolResult(s, { name, result, toolId }) {
-  if (!s) return s;
+  if (!s) {
+    return s;
+  }
   const sameName = (t) => (t.name || t.toolName) === name;
   const match = toolId ? (t) => t.id === toolId : sameName;
   let marked = false;
   const tools = s.tools.map((t) => {
-    if (!marked && match(t) && !t.result) { marked = true; return { ...t, result }; }
+    if (!marked && match(t) && !t.result) {
+      marked = true;
+      return { ...t, result };
+    }
     return t;
   });
   if (toolId && !marked) {
     let fb = false;
     const tools2 = tools.map((t) => {
-      if (!fb && sameName(t) && !t.result) { fb = true; return { ...t, result }; }
+      if (!fb && sameName(t) && !t.result) {
+        fb = true;
+        return { ...t, result };
+      }
       return t;
     });
-    if (fb) return { ...s, tools: tools2, timeline: tlResolveTool(s.timeline || [], sameName, result) };
+    if (fb) {
+      return { ...s, tools: tools2, timeline: tlResolveTool(s.timeline || [], sameName, result) };
+    }
   }
   return { ...s, tools, timeline: tlResolveTool(s.timeline || [], match, result) };
 }
@@ -524,13 +736,17 @@ function reduceToolResult(s, { name, result, toolId }) {
 // place of the generic agent(...) summary without a new timeline segment type.
 // Pure + no-op-safe on null state; exported for unit testing.
 function reduceAgentTree(s, { toolId, agents }) {
-  if (!s) return s;
+  if (!s) {
+    return s;
+  }
   const patch = (t) => (t && t.id === toolId ? { ...t, _agentTree: agents } : t);
   const tools = Array.isArray(s.tools) ? s.tools.map(patch) : s.tools;
   const timeline = Array.isArray(s.timeline)
-    ? s.timeline.map((seg) => (seg && seg.type === 'tool' && seg.tool && seg.tool.id === toolId
-      ? { ...seg, tool: patch(seg.tool) }
-      : seg))
+    ? s.timeline.map((seg) =>
+        seg && seg.type === 'tool' && seg.tool && seg.tool.id === toolId
+          ? { ...seg, tool: patch(seg.tool) }
+          : seg
+      )
     : s.timeline;
   return { ...s, tools, timeline };
 }
@@ -548,26 +764,44 @@ function reduceAgentTree(s, { toolId, agents }) {
 function projectToolResultForView(res, toolName, params) {
   const text = (res && (res.text || res.output || res.content)) || '';
   const result = { text, isError: !(res && res.success) };
-  if (!res || typeof res !== 'object') return result;
+  if (!res || typeof res !== 'object') {
+    return result;
+  }
   // Failure reason (HIGH #1): string OR structured {code,message,hint,...}.
-  if (res.error != null) result.error = res.error;
-  if (res.reason != null) result.reason = res.reason;
-  if (res.message != null) result.message = res.message;
+  if (res.error != null) {
+    result.error = res.error;
+  }
+  if (res.reason != null) {
+    result.reason = res.reason;
+  }
+  if (res.message != null) {
+    result.message = res.message;
+  }
   // 干净的、给用户看的失败/跳过说明(绝不含 [SYSTEM:…] 内部转向指令)。ToolLines.errorText
   // 优先渲染它,避免模型专属的 nudge 文本泄漏到可见的工具结果行。
-  if (res._displayHint != null) result._displayHint = res._displayHint;
+  if (res._displayHint != null) {
+    result._displayHint = res._displayHint;
+  }
   // Permission-gate denial (HIGH #2): lets ToolLines label it "权限被拒绝".
-  if (res.denied) result.denied = true;
+  if (res.denied) {
+    result.denied = true;
+  }
   // Goal7 red/green ±diff context.
-  if (res._khyWriteDiff) result._khyWriteDiff = res._khyWriteDiff;
+  if (res._khyWriteDiff) {
+    result._khyWriteDiff = res._khyWriteDiff;
+  }
   // Shell exit code: a `success:true, exitCode:2` command must not render as a
   // clean run — carry the code so ToolLines can annotate the (folded) stdout
   // with "↳ 退出码 N". Without this it is stripped like the field family above.
-  if (typeof res.exitCode === 'number') result.exitCode = res.exitCode;
+  if (typeof res.exitCode === 'number') {
+    result.exitCode = res.exitCode;
+  }
   // DESIGN-ARCH-047 P1: trajectory provenance envelope — carry it through like
   // _khyWriteDiff so ToolLines can prefix the trust glyph (✓/⟳/⚠) and surface
   // quarantined / unverified-claim labels for relayed tool calls.
-  if (res._khyTrace) result._khyTrace = res._khyTrace;
+  if (res._khyTrace) {
+    result._khyTrace = res._khyTrace;
+  }
   // Success summary ("已读取 N 行" / "找到 N 个匹配" / "已在后台运行"…): collapse the
   // rich result (whose heavy arrays we deliberately do NOT carry into React
   // state) into one display string HERE, where the full result is still
@@ -578,15 +812,152 @@ function projectToolResultForView(res, toolName, params) {
   if (toolName && res.success) {
     try {
       const summary = summarizeToolResult(toolName, res, params);
-      if (summary) result.summary = summary;
-    } catch { /* summary is best-effort; never block the result */ }
+      if (summary) {
+        result.summary = summary;
+      }
+    } catch {
+      /* summary is best-effort; never block the result */
+    }
   }
   return result;
+}
+
+// ── Turn artifacts for persistence ──
+// Project the in-memory turn state into the OPTIONAL persistence fields
+// (_timeline/_toolCalls/_turnStats) that sessionPersistence.appendMessage
+// carries through to the JSONL transcript (and the JSON snapshot via raw
+// message pass-through). Present-only semantics: a quantity that is not truly
+// available is OMITTED (never zero-filled — same honesty rule as turnStats.js),
+// and an empty projection returns {} so callers can skip attaching entirely,
+// keeping the persisted bytes identical to the legacy format. Full tool
+// results are intentionally NOT persisted (storage bloat); tools shrink to
+// light {name, paramsSummary, status} descriptors. Pure + React-free.
+const _PARAMS_SUMMARY_MAX = 200;
+
+function _summarizeParamsForPersist(params) {
+  if (params == null) {
+    return '';
+  }
+  try {
+    const s = typeof params === 'string' ? params : JSON.stringify(params);
+    const one = String(s).replace(/\s+/g, ' ').trim();
+    return one.length > _PARAMS_SUMMARY_MAX ? `${one.slice(0, _PARAMS_SUMMARY_MAX)}…` : one;
+  } catch {
+    return '';
+  }
+}
+
+function buildTurnArtifacts({ timeline, toolCallLog, elapsedMs, tokens } = {}) {
+  const out = {};
+  // _timeline: light projection of the ordered turn timeline. Consecutive text
+  // runs merge back together (progressive sealing splits one streamed segment
+  // into several drained pieces); thinking keeps its own entry so the REAL
+  // per-run durationMs survives; tool segments collapse into a 'tools' group.
+  if (Array.isArray(timeline) && timeline.length > 0) {
+    const tl = [];
+    for (const seg of timeline) {
+      if (!seg || !seg.type) {
+        continue;
+      }
+      if (seg.type === 'text' || seg.type === 'thinking') {
+        const text = typeof seg.text === 'string' ? seg.text : '';
+        if (!text) {
+          continue;
+        }
+        const last = tl[tl.length - 1];
+        if (seg.type === 'text' && last && last.type === 'text') {
+          last.text += text;
+          continue;
+        }
+        const e = { type: seg.type, text };
+        if (Number(seg.durationMs) > 0) {
+          e.durationMs = Number(seg.durationMs);
+        }
+        tl.push(e);
+      } else if (seg.type === 'tool' && seg.tool) {
+        const t = seg.tool;
+        const light = { name: String(t.name || t.toolName || 'tool') };
+        const ps = _summarizeParamsForPersist(t.input);
+        if (ps) {
+          light.paramsSummary = ps;
+        }
+        if (t.result) {
+          light.status = t.result.isError ? 'error' : 'done';
+        }
+        const last = tl[tl.length - 1];
+        if (last && last.type === 'tools') {
+          last.tools.push(light);
+        } else {
+          tl.push({ type: 'tools', tools: [light] });
+        }
+      }
+    }
+    if (tl.length > 0) {
+      out._timeline = tl;
+    }
+  }
+  // _toolCalls: summaries distilled from the loop's authoritative toolCallLog
+  // — never the full results. durationMs only when the log carries a real
+  // elapsed value; error text is a bounded one-line summary.
+  if (Array.isArray(toolCallLog) && toolCallLog.length > 0) {
+    const calls = [];
+    for (const e of toolCallLog) {
+      if (!e) {
+        continue;
+      }
+      const c = { seq: calls.length + 1, name: String(e.tool || e.name || 'tool') };
+      const ps = _summarizeParamsForPersist(e.params);
+      if (ps) {
+        c.paramsSummary = ps;
+      }
+      if (Number(e.elapsed) > 0) {
+        c.durationMs = Number(e.elapsed);
+      }
+      const ok = e.result ? e.result.success !== false : e.success !== false;
+      c.status = ok ? 'done' : 'error';
+      if (!ok) {
+        const raw = e.result && (e.result.error != null ? e.result.error : e.result.reason);
+        const errText =
+          raw == null
+            ? ''
+            : typeof raw === 'string'
+              ? raw
+              : raw.message || _summarizeParamsForPersist(raw);
+        if (errText) {
+          c.error = String(errText).replace(/\s+/g, ' ').trim().slice(0, _PARAMS_SUMMARY_MAX);
+        }
+      }
+      calls.push(c);
+    }
+    if (calls.length > 0) {
+      out._toolCalls = calls;
+    }
+  }
+  // _turnStats: honest — omit any quantity that is unavailable and the whole
+  // object when nothing is. toolCount is only a fact when a real log array was
+  // supplied (an empty array IS the fact "zero tools ran").
+  const stats = {};
+  if (Number(elapsedMs) > 0) {
+    stats.elapsedMs = Math.round(Number(elapsedMs));
+  }
+  if (Number(tokens) > 0) {
+    stats.tokens = Number(tokens);
+  }
+  if (Array.isArray(toolCallLog)) {
+    stats.toolCount = toolCallLog.length;
+  }
+  if (Object.keys(stats).length > 0) {
+    out._turnStats = stats;
+  }
+  return out;
 }
 
 module.exports = {
   tlAppendText,
   tlPushTool,
+  tlDiscardDraftText,
+  reduceStreamReset,
+  buildStreamResetNotice,
   splitSealedText,
   planStageFlush,
   formatCompactionResult,
@@ -607,4 +978,5 @@ module.exports = {
   reduceToolResult,
   reduceAgentTree,
   projectToolResultForView,
+  buildTurnArtifacts,
 };

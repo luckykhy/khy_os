@@ -13,13 +13,15 @@
  * 用户仍可用 `config set language.preference`)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/config/langPreference');
+const { printInfo, printError } = require('../formatters');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _enabled(env = process.env) {
   const raw = env && env.KHY_LANG_COMMAND;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -40,7 +42,9 @@ async function handleLang(subCommand, args = [], options = {}) {
   // 无参数 / 查看 → 只读显示当前生效语言。
   if (!arg || arg === 'status' || arg === 'show' || arg === 'get') {
     const { preference, source } = leaf.resolveActive(process.env);
-    printInfo(`当前输出语言:${leaf.describeLanguage(preference)}${source === 'default' ? '(默认未覆盖)' : ''}`);
+    printInfo(
+      `当前输出语言:${leaf.describeLanguage(preference)}${source === 'default' ? '(默认未覆盖)' : ''}`
+    );
     printInfo('可选:`/lang zh`、`/lang en`、`/lang auto`');
     return true;
   }

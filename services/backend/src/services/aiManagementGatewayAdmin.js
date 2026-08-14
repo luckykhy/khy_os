@@ -30,8 +30,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { URL } = require('url');
-const { parseApiKeyEntries } = require('./apiKeyFormat');
+
 const { resolveAnthropicBaseUrl } = require('../utils/proxyBaseUrl');
+
+const { parseApiKeyEntries } = require('./apiKeyFormat');
 
 // 随簇迁入的模块常量(与宿主副本同值;宿主 _GATEWAY_CACHE_PREFIX 仍被 §4 使用故双持无害)。
 const AUTO_IMPORT_INTERVAL_MS = Math.max(
@@ -103,36 +105,96 @@ let getProtocolConverter = null;
 let getProxyServer = null;
 let getTlsSidecar = null;
 function setGatewayAdminDeps(deps = {}) {
-  if (typeof deps.applyGatewayConfigPatch === 'function') applyGatewayConfigPatch = deps.applyGatewayConfigPatch;
-  if (typeof deps.authenticateRequest === 'function') authenticateRequest = deps.authenticateRequest;
-  if (typeof deps.cachedGatewayPayload === 'function') cachedGatewayPayload = deps.cachedGatewayPayload;
-  if (typeof deps.corsHeaders === 'function') corsHeaders = deps.corsHeaders;
-  if (typeof deps.invalidateGatewayCache === 'function') invalidateGatewayCache = deps.invalidateGatewayCache;
-  if (typeof deps.writeGatewayCache === 'function') writeGatewayCache = deps.writeGatewayCache;
-  if (typeof deps.parseBody === 'function') parseBody = deps.parseBody;
-  if (typeof deps.sendError === 'function') sendError = deps.sendError;
-  if (typeof deps.sendJson === 'function') sendJson = deps.sendJson;
-  if (typeof deps.requireManagerAccess === 'function') requireManagerAccess = deps.requireManagerAccess;
-  if (typeof deps.parseBooleanLike === 'function') parseBooleanLike = deps.parseBooleanLike;
-  if (typeof deps.getGatewayConfigSnapshot === 'function') getGatewayConfigSnapshot = deps.getGatewayConfigSnapshot;
-  if (typeof deps.handleListModels === 'function') handleListModels = deps.handleListModels;
-  if (typeof deps.readAccountCircuitBreakerConfig === 'function') readAccountCircuitBreakerConfig = deps.readAccountCircuitBreakerConfig;
-  if (typeof deps.saveAccountCircuitBreakerConfig === 'function') saveAccountCircuitBreakerConfig = deps.saveAccountCircuitBreakerConfig;
-  if (typeof deps.getPluginFilePath === 'function') getPluginFilePath = deps.getPluginFilePath;
-  if (typeof deps.sanitizePluginName === 'function') sanitizePluginName = deps.sanitizePluginName;
-  if (typeof deps.getAccountPool === 'function') getAccountPool = deps.getAccountPool;
-  if (typeof deps.getAiMonitor === 'function') getAiMonitor = deps.getAiMonitor;
-  if (typeof deps.getApiKeyPool === 'function') getApiKeyPool = deps.getApiKeyPool;
-  if (typeof deps.getConcurrencySlots === 'function') getConcurrencySlots = deps.getConcurrencySlots;
-  if (typeof deps.getCustomerRegistry === 'function') getCustomerRegistry = deps.getCustomerRegistry;
-  if (typeof deps.getGateway === 'function') getGateway = deps.getGateway;
-  if (typeof deps.getModelRouter === 'function') getModelRouter = deps.getModelRouter;
-  if (typeof deps.getOauthManager === 'function') getOauthManager = deps.getOauthManager;
-  if (typeof deps.getPaymentGatewayService === 'function') getPaymentGatewayService = deps.getPaymentGatewayService;
-  if (typeof deps.getPluginChain === 'function') getPluginChain = deps.getPluginChain;
-  if (typeof deps.getProtocolConverter === 'function') getProtocolConverter = deps.getProtocolConverter;
-  if (typeof deps.getProxyServer === 'function') getProxyServer = deps.getProxyServer;
-  if (typeof deps.getTlsSidecar === 'function') getTlsSidecar = deps.getTlsSidecar;
+  if (typeof deps.applyGatewayConfigPatch === 'function') {
+    applyGatewayConfigPatch = deps.applyGatewayConfigPatch;
+  }
+  if (typeof deps.authenticateRequest === 'function') {
+    authenticateRequest = deps.authenticateRequest;
+  }
+  if (typeof deps.cachedGatewayPayload === 'function') {
+    cachedGatewayPayload = deps.cachedGatewayPayload;
+  }
+  if (typeof deps.corsHeaders === 'function') {
+    corsHeaders = deps.corsHeaders;
+  }
+  if (typeof deps.invalidateGatewayCache === 'function') {
+    invalidateGatewayCache = deps.invalidateGatewayCache;
+  }
+  if (typeof deps.writeGatewayCache === 'function') {
+    writeGatewayCache = deps.writeGatewayCache;
+  }
+  if (typeof deps.parseBody === 'function') {
+    parseBody = deps.parseBody;
+  }
+  if (typeof deps.sendError === 'function') {
+    sendError = deps.sendError;
+  }
+  if (typeof deps.sendJson === 'function') {
+    sendJson = deps.sendJson;
+  }
+  if (typeof deps.requireManagerAccess === 'function') {
+    requireManagerAccess = deps.requireManagerAccess;
+  }
+  if (typeof deps.parseBooleanLike === 'function') {
+    parseBooleanLike = deps.parseBooleanLike;
+  }
+  if (typeof deps.getGatewayConfigSnapshot === 'function') {
+    getGatewayConfigSnapshot = deps.getGatewayConfigSnapshot;
+  }
+  if (typeof deps.handleListModels === 'function') {
+    handleListModels = deps.handleListModels;
+  }
+  if (typeof deps.readAccountCircuitBreakerConfig === 'function') {
+    readAccountCircuitBreakerConfig = deps.readAccountCircuitBreakerConfig;
+  }
+  if (typeof deps.saveAccountCircuitBreakerConfig === 'function') {
+    saveAccountCircuitBreakerConfig = deps.saveAccountCircuitBreakerConfig;
+  }
+  if (typeof deps.getPluginFilePath === 'function') {
+    getPluginFilePath = deps.getPluginFilePath;
+  }
+  if (typeof deps.sanitizePluginName === 'function') {
+    sanitizePluginName = deps.sanitizePluginName;
+  }
+  if (typeof deps.getAccountPool === 'function') {
+    getAccountPool = deps.getAccountPool;
+  }
+  if (typeof deps.getAiMonitor === 'function') {
+    getAiMonitor = deps.getAiMonitor;
+  }
+  if (typeof deps.getApiKeyPool === 'function') {
+    getApiKeyPool = deps.getApiKeyPool;
+  }
+  if (typeof deps.getConcurrencySlots === 'function') {
+    getConcurrencySlots = deps.getConcurrencySlots;
+  }
+  if (typeof deps.getCustomerRegistry === 'function') {
+    getCustomerRegistry = deps.getCustomerRegistry;
+  }
+  if (typeof deps.getGateway === 'function') {
+    getGateway = deps.getGateway;
+  }
+  if (typeof deps.getModelRouter === 'function') {
+    getModelRouter = deps.getModelRouter;
+  }
+  if (typeof deps.getOauthManager === 'function') {
+    getOauthManager = deps.getOauthManager;
+  }
+  if (typeof deps.getPaymentGatewayService === 'function') {
+    getPaymentGatewayService = deps.getPaymentGatewayService;
+  }
+  if (typeof deps.getPluginChain === 'function') {
+    getPluginChain = deps.getPluginChain;
+  }
+  if (typeof deps.getProtocolConverter === 'function') {
+    getProtocolConverter = deps.getProtocolConverter;
+  }
+  if (typeof deps.getProxyServer === 'function') {
+    getProxyServer = deps.getProxyServer;
+  }
+  if (typeof deps.getTlsSidecar === 'function') {
+    getTlsSidecar = deps.getTlsSidecar;
+  }
 }
 
 function validatePluginCode(code) {
@@ -149,13 +211,20 @@ function toGatewayModelId(adapterKey, rawModelId) {
   const prefixMap = getModelRouter().DEFAULT_ADAPTER_TO_PREFIX || {};
   const prefix = prefixMap[adapterKey] || adapterKey;
   const modelId = String(rawModelId || '').trim();
-  if (!modelId) return '';
-  if (modelId.startsWith(`${prefix}/`)) return modelId;
+  if (!modelId) {
+    return '';
+  }
+  if (modelId.startsWith(`${prefix}/`)) {
+    return modelId;
+  }
   return `${prefix}/${modelId}`;
 }
 
 function parseProviderFromModelId(modelId) {
-  const m = String(modelId || '').trim().toLowerCase().match(/^([a-z0-9_-]+)[/:](.+)$/);
+  const m = String(modelId || '')
+    .trim()
+    .toLowerCase()
+    .match(/^([a-z0-9_-]+)[/:](.+)$/);
   return m ? m[1] : '';
 }
 
@@ -165,7 +234,7 @@ async function runAutoImportIfNeeded() {
   }
 
   const now = Date.now();
-  if (_autoImportSummary && (now - _autoImportLastAt) < AUTO_IMPORT_INTERVAL_MS) {
+  if (_autoImportSummary && now - _autoImportLastAt < AUTO_IMPORT_INTERVAL_MS) {
     return _autoImportSummary;
   }
 
@@ -210,10 +279,14 @@ function ensureAutoSharedCustomerFromSnapshot(gatewayAssets, apiPoolStatus = {})
 
     for (const item of gatewayAssets?.list || []) {
       const provider = parseProviderFromModelId(item?.id || '');
-      if (provider) discoveredProviders.add(provider);
+      if (provider) {
+        discoveredProviders.add(provider);
+      }
     }
     for (const provider of Object.keys(apiPoolStatus || {})) {
-      if (provider) discoveredProviders.add(String(provider).toLowerCase());
+      if (provider) {
+        discoveredProviders.add(String(provider).toLowerCase());
+      }
     }
     for (const row of gatewayAssets?.adapters || []) {
       if (row?.enabled && row?.available && row?.key) {
@@ -222,7 +295,7 @@ function ensureAutoSharedCustomerFromSnapshot(gatewayAssets, apiPoolStatus = {})
     }
 
     customerRegistry.ensureAutoSharedCustomer({
-      modelIds: (gatewayAssets?.list || []).map(item => item.id).filter(Boolean),
+      modelIds: (gatewayAssets?.list || []).map((item) => item.id).filter(Boolean),
       providers: [...discoveredProviders],
     });
   } catch {
@@ -232,8 +305,10 @@ function ensureAutoSharedCustomerFromSnapshot(gatewayAssets, apiPoolStatus = {})
 
 async function collectGatewayModelsSnapshot() {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
-  const statuses = gw.getStatus().filter(row => row.enabled !== false);
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
+  const statuses = gw.getStatus().filter((row) => row.enabled !== false);
 
   const adapters = [];
   const list = [];
@@ -244,7 +319,7 @@ async function collectGatewayModelsSnapshot() {
     let modelError = '';
     if (row.available) {
       try {
-        models = await gw.listModels(row.type) || [];
+        models = (await gw.listModels(row.type)) || [];
       } catch (err) {
         modelError = err.message || String(err);
       }
@@ -253,7 +328,9 @@ async function collectGatewayModelsSnapshot() {
     let modelCount = 0;
     for (const model of models) {
       const rawId = String(model?.id || model?.name || '').trim();
-      if (!rawId) continue;
+      if (!rawId) {
+        continue;
+      }
       modelCount += 1;
 
       const canonicalId = toGatewayModelId(row.type, rawId);
@@ -272,11 +349,21 @@ async function collectGatewayModelsSnapshot() {
         const nirvanaId = `nirvana/${rawId}`;
         if (!seen.has(antiId)) {
           seen.add(antiId);
-          list.push({ id: antiId, name: model?.name || rawId, adapter: row.type, isDefault: false });
+          list.push({
+            id: antiId,
+            name: model?.name || rawId,
+            adapter: row.type,
+            isDefault: false,
+          });
         }
         if (!seen.has(nirvanaId)) {
           seen.add(nirvanaId);
-          list.push({ id: nirvanaId, name: model?.name || rawId, adapter: row.type, isDefault: false });
+          list.push({
+            id: nirvanaId,
+            name: model?.name || rawId,
+            adapter: row.type,
+            isDefault: false,
+          });
         }
       }
     }
@@ -295,14 +382,19 @@ async function collectGatewayModelsSnapshot() {
     const discovery = require('./gateway/modelDiscovery').discoverModels();
     for (const id of discovery.models || []) {
       const normalized = String(id || '').trim();
-      if (!normalized) continue;
+      if (!normalized) {
+        continue;
+      }
       let guessed = normalized;
       if (!normalized.includes('/')) {
-        const looksLocalOllama = normalized.includes(':')
-          && /(qwen|llama|mistral|gemma|phi|yi|baichuan|deepseek|qwq|qvq)/i.test(normalized);
+        const looksLocalOllama =
+          normalized.includes(':') &&
+          /(qwen|llama|mistral|gemma|phi|yi|baichuan|deepseek|qwq|qvq)/i.test(normalized);
         guessed = looksLocalOllama ? `ollama/${normalized}` : `api/${normalized}`;
       }
-      if (seen.has(guessed)) continue;
+      if (seen.has(guessed)) {
+        continue;
+      }
       seen.add(guessed);
       list.push({
         id: guessed,
@@ -327,13 +419,50 @@ async function collectGatewayModelsSnapshot() {
 
 async function handleAiGatewayStatus(req, res) {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
   const adapters = gw.getStatus();
   const active = gw.getActiveAdapter();
   sendJson(res, 200, {
     adapters,
     active: active ? { name: active.name, type: active.type } : null,
   });
+}
+
+/**
+ * GET /api/ai-gateway/health — read-only gateway health snapshot.
+ * Reports adapter availability / cooldown / activity from already-known state;
+ * never triggers a real AI provider request (no active probing), so it stays
+ * fast even when every upstream channel is down. Auth mirrors the adjacent
+ * read-only diagnostics route (/api/ai-gateway/status).
+ */
+async function handleAiGatewayHealth(req, res) {
+  try {
+    const gw = getGateway();
+    // Match handleAiGatewayStatus: lazy-init so early requests right after
+    // process start still get a complete adapter snapshot.
+    if (!gw.isInitialized()) {
+      await gw.init();
+    }
+    sendJson(res, 200, { success: true, data: gw.health() });
+  } catch (err) {
+    sendError(res, 500, String(err && err.message ? err.message : err));
+  }
+}
+
+/**
+ * GET /api/ai-gateway/proxy-stats — read-only proxy node success/failure
+ * counters and backoff windows from the shared proxy tunnel. Pure in-memory
+ * snapshot, no probing. Auth mirrors /api/ai-gateway/health.
+ */
+async function handleAiGatewayProxyStats(req, res) {
+  try {
+    const { getProxyStats } = require('./gateway/adapters/_proxyTunnel');
+    sendJson(res, 200, { success: true, data: getProxyStats() });
+  } catch (err) {
+    sendError(res, 500, String(err && err.message ? err.message : err));
+  }
 }
 
 async function handleAiGatewayPool(req, res) {
@@ -364,7 +493,7 @@ async function handleAiGatewayCatalog(req, res, searchParams) {
     }
     sendJson(res, 200, { ok: true, ...result });
   } catch (e) {
-    sendJson(res, 500, { ok: false, error: String(e && e.message || e) });
+    sendJson(res, 500, { ok: false, error: String((e && e.message) || e) });
   }
 }
 
@@ -379,7 +508,9 @@ async function handleAiGatewayPoolAddKey(req, res, provider) {
   };
   const rawKeys = body.keys !== undefined ? body.keys : body.key;
   const entries = parseApiKeyEntries(rawKeys, defaults);
-  if (entries.length === 0) return sendError(res, 400, 'key or keys is required');
+  if (entries.length === 0) {
+    return sendError(res, 400, 'key or keys is required');
+  }
 
   let added = 0;
   let skippedDuplicates = 0;
@@ -415,12 +546,20 @@ async function handleAiGatewayPoolUpdateKey(req, res, provider, keyId) {
   const pool = getApiKeyPool();
   pool.init();
   const entries = pool.getPoolStatus(provider) || [];
-  const entry = entries.find(e => e.id === keyId || e.keyId === keyId);
-  if (!entry) return sendError(res, 404, `Key ${keyId} not found for provider ${provider}`);
+  const entry = entries.find((e) => e.id === keyId || e.keyId === keyId);
+  if (!entry) {
+    return sendError(res, 404, `Key ${keyId} not found for provider ${provider}`);
+  }
   // 手动更新字段并持久化
-  if (body.endpoint !== undefined) entry.endpoint = String(body.endpoint || '').trim();
-  if (body.label !== undefined) entry.label = String(body.label || '').trim();
-  if (body.priority !== undefined) entry.priority = Number(body.priority) || 0;
+  if (body.endpoint !== undefined) {
+    entry.endpoint = String(body.endpoint || '').trim();
+  }
+  if (body.label !== undefined) {
+    entry.label = String(body.label || '').trim();
+  }
+  if (body.priority !== undefined) {
+    entry.priority = Number(body.priority) || 0;
+  }
   pool.save();
   sendJson(res, 200, { success: true });
 }
@@ -447,7 +586,12 @@ async function handleAiGatewayCustomProvidersAdd(req, res) {
       displayName: body.displayName || body.name,
       poolKey: body.poolKey,
       endpoint: body.endpoint || body.baseUrl,
-      keyInput: body.keyInput !== undefined ? body.keyInput : (body.keys !== undefined ? body.keys : body.key),
+      keyInput:
+        body.keyInput !== undefined
+          ? body.keyInput
+          : body.keys !== undefined
+            ? body.keys
+            : body.key,
       defaultModel: body.defaultModel,
       extraModels: body.extraModels,
       tier: body.tier,
@@ -464,9 +608,12 @@ async function handleAiGatewayCustomProvidersAdd(req, res) {
 async function handleAiGatewayCustomProvidersRemove(req, res, poolKey, searchParams) {
   const registrar = require('./customProviderRegistrar');
   try {
-    const removeKeys = searchParams && String(searchParams.get('removeKeys') || '').toLowerCase() === 'true';
+    const removeKeys =
+      searchParams && String(searchParams.get('removeKeys') || '').toLowerCase() === 'true';
     const result = registrar.unregisterCustomProvider(poolKey, { removeKeys });
-    if (!result.removed) return sendError(res, 404, `Custom provider "${poolKey}" not found`);
+    if (!result.removed) {
+      return sendError(res, 404, `Custom provider "${poolKey}" not found`);
+    }
     sendJson(res, 200, { success: true, ...result });
   } catch (err) {
     sendError(res, 400, String(err && err.message ? err.message : err));
@@ -477,8 +624,8 @@ async function handleAiGatewayCustomProvidersReplace(req, res, poolKey) {
   const body = await parseBody(req);
   const registrar = require('./customProviderRegistrar');
   try {
-    const newKey = body.keyInput !== undefined ? body.keyInput
-      : (body.keys !== undefined ? body.keys : body.key);
+    const newKey =
+      body.keyInput !== undefined ? body.keyInput : body.keys !== undefined ? body.keys : body.key;
     const result = registrar.replaceProviderKeys(poolKey, newKey);
     sendJson(res, 200, { success: true, ...result });
   } catch (err) {
@@ -501,7 +648,9 @@ async function handleModelOverridesPut(req, res, adapterKey) {
     // Only forward the recognized fields; unknown keys are ignored by the layer.
     const patch = {};
     for (const field of ['hidden', 'added', 'renamed', 'defaultModel']) {
-      if (body && Object.prototype.hasOwnProperty.call(body, field)) patch[field] = body[field];
+      if (body && Object.prototype.hasOwnProperty.call(body, field)) {
+        patch[field] = body[field];
+      }
     }
     const override = modelCuration.setAdapterOverride(adapterKey, patch);
     sendJson(res, 200, { success: true, adapter: adapterKey, override });
@@ -512,7 +661,9 @@ async function handleModelOverridesPut(req, res, adapterKey) {
 
 async function handleModelVerify(req, res, adapterKey, searchParams) {
   const gw = getGateway();
-  if (!gw._initialized) await gw.init();
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
   const singleModel = searchParams && searchParams.get('model');
   try {
     let targets;
@@ -521,7 +672,7 @@ async function handleModelVerify(req, res, adapterKey, searchParams) {
     } else {
       const modelCuration = require('./gateway/modelCuration');
       const raw = await gw.listModels(adapterKey).catch(() => []);
-      targets = modelCuration.applyOverrides(adapterKey, raw || []).map(m => m.id);
+      targets = modelCuration.applyOverrides(adapterKey, raw || []).map((m) => m.id);
     }
     const results = [];
     for (const modelId of targets) {
@@ -549,21 +700,26 @@ function _shouldWriteClaudeSettings() {
   // 同名孪生此前逐字节相同却各自内联，收敛后共用单一解析语义，杜绝两处漂移矛盾。
   const _parseBoolean = require('../utils/parseBoolean');
   return _parseBoolean(
-    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS
-      || process.env.KHY_MANAGE_CLAUDE_SETTINGS,
+    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS || process.env.KHY_MANAGE_CLAUDE_SETTINGS,
     false,
-    { extended: false },
+    { extended: false }
   );
 }
 
 function _readClaudeSettings() {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
-  try { return JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch { return {}; }
+  try {
+    return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+  } catch {
+    return {};
+  }
 }
 
 function _writeClaudeSettings(obj) {
   const dir = path.join(os.homedir(), '.claude');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   const settingsPath = path.join(dir, 'settings.json');
   const tmp = settingsPath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n', 'utf-8');
@@ -588,26 +744,44 @@ async function handleAiGatewayModelSlotsPut(req, res) {
   const body = await parseBody(req);
   const updates = {};
   for (const slot of Object.keys(MODEL_SLOT_ENV_KEYS)) {
-    if (body[slot] !== undefined) updates[slot] = String(body[slot]).trim();
+    if (body[slot] !== undefined) {
+      updates[slot] = String(body[slot]).trim();
+    }
   }
-  if (Object.keys(updates).length === 0) return sendError(res, 400, '至少需要提供一个槽位更新');
+  if (Object.keys(updates).length === 0) {
+    return sendError(res, 400, '至少需要提供一个槽位更新');
+  }
   const canWriteClaudeSettings = _shouldWriteClaudeSettings();
   // 1) ~/.claude/settings.json (explicit opt-in only)
   const settings = _readClaudeSettings();
-  if (!settings.env || typeof settings.env !== 'object') settings.env = {};
-  for (const [slot, model] of Object.entries(updates)) {
-    if (canWriteClaudeSettings) settings.env[MODEL_SLOT_ENV_KEYS[slot]] = model;
+  if (!settings.env || typeof settings.env !== 'object') {
+    settings.env = {};
   }
-  if (canWriteClaudeSettings) _writeClaudeSettings(settings);
+  for (const [slot, model] of Object.entries(updates)) {
+    if (canWriteClaudeSettings) {
+      settings.env[MODEL_SLOT_ENV_KEYS[slot]] = model;
+    }
+  }
+  if (canWriteClaudeSettings) {
+    _writeClaudeSettings(settings);
+  }
   // 2) .env + process.env
   let envContent = '';
   const envPath = path.join(__dirname, '../../.env');
-  try { envContent = fs.readFileSync(envPath, 'utf-8'); } catch { /* ignore */ }
+  try {
+    envContent = fs.readFileSync(envPath, 'utf-8');
+  } catch {
+    /* ignore */
+  }
   for (const [slot, model] of Object.entries(updates)) {
     const envKey = MODEL_SLOT_ENV_KEYS[slot];
     const line = `${envKey}=${model}`;
     const regex = new RegExp(`^${envKey}=.*$`, 'm');
-    envContent = regex.test(envContent) ? envContent.replace(regex, line) : (envContent.trimEnd() ? `${envContent.trimEnd()}\n${line}\n` : `${line}\n`);
+    envContent = regex.test(envContent)
+      ? envContent.replace(regex, line)
+      : envContent.trimEnd()
+        ? `${envContent.trimEnd()}\n${line}\n`
+        : `${line}\n`;
     process.env[envKey] = model;
   }
   const tmpEnv = envPath + '.tmp';
@@ -636,9 +810,9 @@ const IMAGE_MODEL_ENV_KEYS = {
 };
 
 function _imageBackendEnv() {
-  return String(
-    process.env.KHY_IMAGE_GEN_BACKEND || process.env.GATEWAY_IMAGE_GEN_BACKEND || '',
-  ).trim().toLowerCase();
+  return String(process.env.KHY_IMAGE_GEN_BACKEND || process.env.GATEWAY_IMAGE_GEN_BACKEND || '')
+    .trim()
+    .toLowerCase();
 }
 
 function _buildImageConfigSnapshot() {
@@ -662,13 +836,19 @@ async function handleAiGatewayImageConfigPut(req, res) {
   const imageGenService = require('./imageGenService');
   const gatewayEnvFile = require('./gatewayEnvFile');
   const body = await parseBody(req);
-  const rawBackend = String(body && body.backend != null ? body.backend : '').trim().toLowerCase();
+  const rawBackend = String(body && body.backend != null ? body.backend : '')
+    .trim()
+    .toLowerCase();
   const rawModel = String(body && body.model != null ? body.model : '').trim();
 
   // "auto" (or empty) clears the pin; otherwise the backend must be a known id.
   const isAuto = !rawBackend || rawBackend === 'auto';
   if (!isAuto && !imageGenService.AUTO_ORDER.includes(rawBackend)) {
-    return sendError(res, 400, `未知的图像后端: ${rawBackend}（可选: ${imageGenService.AUTO_ORDER.join(', ')} 或 auto）`);
+    return sendError(
+      res,
+      400,
+      `未知的图像后端: ${rawBackend}（可选: ${imageGenService.AUTO_ORDER.join(', ')} 或 auto）`
+    );
   }
 
   const envMap = {};
@@ -678,7 +858,9 @@ async function handleAiGatewayImageConfigPut(req, res) {
   } else {
     envMap.KHY_IMAGE_GEN_BACKEND = rawBackend;
     const modelKey = IMAGE_MODEL_ENV_KEYS[rawBackend];
-    if (rawModel && modelKey) envMap[modelKey] = rawModel;
+    if (rawModel && modelKey) {
+      envMap[modelKey] = rawModel;
+    }
   }
   gatewayEnvFile.writeEnvPatch(envMap, unsetKeys);
 
@@ -693,11 +875,21 @@ async function handleAiGatewayMonitorTraces(req, res, searchParams) {
   const provider = String(searchParams.get('provider') || '').trim();
   const success = searchParams.get('success');
   const since = String(searchParams.get('since') || '').trim();
-  if (Number.isFinite(limit) && limit > 0) filter.limit = limit;
-  if (Number.isFinite(offset) && offset >= 0) filter.offset = offset;
-  if (provider) filter.provider = provider;
-  if (success !== null) filter.success = success === 'true';
-  if (since) filter.since = since;
+  if (Number.isFinite(limit) && limit > 0) {
+    filter.limit = limit;
+  }
+  if (Number.isFinite(offset) && offset >= 0) {
+    filter.offset = offset;
+  }
+  if (provider) {
+    filter.provider = provider;
+  }
+  if (success !== null) {
+    filter.success = success === 'true';
+  }
+  if (since) {
+    filter.since = since;
+  }
   sendJson(res, 200, monitor.getTraces(filter));
 }
 
@@ -730,7 +922,13 @@ async function handleAttributionDetail(req, res, searchParams) {
   try {
     summary = require('./traceAuditService').getRequestTraceSummary({ requestId, role });
   } catch (err) {
-    return sendJson(res, 200, { ok: false, reason: 'trace_unavailable', requestId, timeline: [], error: err.message });
+    return sendJson(res, 200, {
+      ok: false,
+      reason: 'trace_unavailable',
+      requestId,
+      timeline: [],
+      error: err.message,
+    });
   }
   // ok:false (no session / no events / not found) is a normal "nothing to show"
   // outcome, not an error — answer 200 with an empty timeline so the card degrades
@@ -803,7 +1001,9 @@ async function handleAiGatewayPluginCode(req, res, name) {
   } catch (err) {
     return sendError(res, 400, err.message);
   }
-  if (!fs.existsSync(pluginPath)) return sendError(res, 404, 'plugin not found');
+  if (!fs.existsSync(pluginPath)) {
+    return sendError(res, 404, 'plugin not found');
+  }
   const code = fs.readFileSync(pluginPath, 'utf-8');
   sendJson(res, 200, { code });
 }
@@ -816,11 +1016,17 @@ async function handleAiGatewayCreatePlugin(req, res) {
   } catch (err) {
     return sendError(res, 400, err.message);
   }
-  if (fs.existsSync(pluginPath)) return sendError(res, 409, 'plugin already exists');
+  if (fs.existsSync(pluginPath)) {
+    return sendError(res, 409, 'plugin already exists');
+  }
   const code = String(body.code || '').trim();
-  if (!code) return sendError(res, 400, 'code is required');
+  if (!code) {
+    return sendError(res, 400, 'code is required');
+  }
   const valid = validatePluginCode(code);
-  if (!valid.valid) return sendError(res, 400, valid.error || 'invalid plugin code');
+  if (!valid.valid) {
+    return sendError(res, 400, valid.error || 'invalid plugin code');
+  }
   fs.mkdirSync(path.dirname(pluginPath), { recursive: true });
   fs.writeFileSync(pluginPath, code, 'utf-8');
   getPluginChain().reload();
@@ -836,9 +1042,13 @@ async function handleAiGatewayUpdatePlugin(req, res, name) {
     return sendError(res, 400, err.message);
   }
   const code = String(body.code || '').trim();
-  if (!code) return sendError(res, 400, 'code is required');
+  if (!code) {
+    return sendError(res, 400, 'code is required');
+  }
   const valid = validatePluginCode(code);
-  if (!valid.valid) return sendError(res, 400, valid.error || 'invalid plugin code');
+  if (!valid.valid) {
+    return sendError(res, 400, valid.error || 'invalid plugin code');
+  }
   fs.mkdirSync(path.dirname(pluginPath), { recursive: true });
   fs.writeFileSync(pluginPath, code, 'utf-8');
   getPluginChain().reload();
@@ -852,7 +1062,9 @@ async function handleAiGatewayDeletePlugin(req, res, name) {
   } catch (err) {
     return sendError(res, 400, err.message);
   }
-  if (!fs.existsSync(pluginPath)) return sendError(res, 404, 'plugin not found');
+  if (!fs.existsSync(pluginPath)) {
+    return sendError(res, 404, 'plugin not found');
+  }
   fs.unlinkSync(pluginPath);
   getPluginChain().reload();
   sendJson(res, 200, { success: true });
@@ -927,17 +1139,24 @@ async function handleAiGatewayModelConfigPut(req, res) {
     // Single funnel: the same managementRegistry op the CLI uses. The op
     // delegates to gatewayEnvFile (canonical + mirror + KHY_ENV_FILE), so the
     // Web admin no longer writes a hardcoded backend/.env behind the CLI's back.
-    const result = await registry.invoke('model-config', 'set', {
-      baseUrl: body?.baseUrl,
-      modelId: body?.modelId,
-      compatibility: body?.compatibility,
-      apiKey: body?.apiKey,
-      clearApiKey: body?.clearApiKey === true,
-    }, { source: 'web' });
+    const result = await registry.invoke(
+      'model-config',
+      'set',
+      {
+        baseUrl: body?.baseUrl,
+        modelId: body?.modelId,
+        compatibility: body?.compatibility,
+        apiKey: body?.apiKey,
+        clearApiKey: body?.clearApiKey === true,
+      },
+      { source: 'web' }
+    );
     sendJson(res, 200, { success: true, data: result });
   } catch (err) {
-    const msg = String(err && err.message || '');
-    if (/is required/.test(msg)) return sendError(res, 400, msg);
+    const msg = String((err && err.message) || '');
+    if (/is required/.test(msg)) {
+      return sendError(res, 400, msg);
+    }
     sendError(res, 500, msg);
   }
 }
@@ -957,11 +1176,13 @@ function _getCodexAdapter() {
 async function handleAiGatewayCodexConfigGet(req, res) {
   try {
     const codex = _getCodexAdapter();
-    const snapshot = typeof codex.getCodexUpstreamSnapshot === 'function'
-      ? codex.getCodexUpstreamSnapshot()
-      : {};
+    const snapshot =
+      typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
     const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
-    sendJson(res, 200, { success: true, data: { ...snapshot, active: preferredAdapter.toLowerCase() === 'codex', preferredAdapter } });
+    sendJson(res, 200, {
+      success: true,
+      data: { ...snapshot, active: preferredAdapter.toLowerCase() === 'codex', preferredAdapter },
+    });
   } catch (err) {
     sendError(res, 500, err.message);
   }
@@ -972,9 +1193,15 @@ async function handleAiGatewayCodexConfigPut(req, res) {
   const providerName = String(body?.providerName || '').trim();
   const baseUrl = String(body?.baseUrl || '').trim();
   const model = String(body?.model || '').trim();
-  if (!providerName) return sendError(res, 400, 'providerName is required');
-  if (!baseUrl) return sendError(res, 400, 'baseUrl is required');
-  if (!model) return sendError(res, 400, 'model is required');
+  if (!providerName) {
+    return sendError(res, 400, 'providerName is required');
+  }
+  if (!baseUrl) {
+    return sendError(res, 400, 'baseUrl is required');
+  }
+  if (!model) {
+    return sendError(res, 400, 'model is required');
+  }
 
   try {
     const codex = _getCodexAdapter();
@@ -998,7 +1225,11 @@ async function handleAiGatewayCodexConfigPut(req, res) {
     if (body?.activate === true) {
       const envPath = path.resolve(__dirname, '../../.env');
       let envContent = '';
-      try { envContent = fs.readFileSync(envPath, 'utf-8'); } catch { /* no .env */ }
+      try {
+        envContent = fs.readFileSync(envPath, 'utf-8');
+      } catch {
+        /* no .env */
+      }
       const envMap = {
         GATEWAY_PREFERRED_ADAPTER: 'codex',
         GATEWAY_PREFERRED_MODEL: model,
@@ -1006,8 +1237,11 @@ async function handleAiGatewayCodexConfigPut(req, res) {
       for (const [key, value] of Object.entries(envMap)) {
         const regex = new RegExp(`^${key}=.*$`, 'm');
         const line = `${key}=${value}`;
-        if (regex.test(envContent)) envContent = envContent.replace(regex, line);
-        else envContent = envContent.trimEnd() + '\n' + line + '\n';
+        if (regex.test(envContent)) {
+          envContent = envContent.replace(regex, line);
+        } else {
+          envContent = envContent.trimEnd() + '\n' + line + '\n';
+        }
         process.env[key] = String(value);
       }
       const tmpPath = envPath + '.tmp.' + process.pid;
@@ -1016,16 +1250,27 @@ async function handleAiGatewayCodexConfigPut(req, res) {
       activated = true;
     }
 
-    const snapshot = typeof codex.getCodexUpstreamSnapshot === 'function'
-      ? codex.getCodexUpstreamSnapshot()
-      : {};
+    const snapshot =
+      typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
     sendJson(res, 200, {
       success: true,
       data: {
         updated: true,
         activated,
-        written: { provider: written.provider, baseUrl: written.baseUrl, model: written.model, wireApi: written.wireApi, configPath: written.configPath },
-        config: { ...snapshot, active: String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase() === 'codex' },
+        written: {
+          provider: written.provider,
+          baseUrl: written.baseUrl,
+          model: written.model,
+          wireApi: written.wireApi,
+          configPath: written.configPath,
+        },
+        config: {
+          ...snapshot,
+          active:
+            String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+              .trim()
+              .toLowerCase() === 'codex',
+        },
       },
     });
   } catch (err) {
@@ -1058,7 +1303,9 @@ async function handleAiGatewayOAuthCredentialPut(req, res, provider) {
   try {
     const body = await parseBody(req);
     const oauthMgr = getOauthManager();
-    if (oauthMgr.saveCredential) await oauthMgr.saveCredential(provider, body || {});
+    if (oauthMgr.saveCredential) {
+      await oauthMgr.saveCredential(provider, body || {});
+    }
     sendJson(res, 200, { success: true });
   } catch (err) {
     sendError(res, 500, err.message);
@@ -1068,7 +1315,9 @@ async function handleAiGatewayOAuthCredentialPut(req, res, provider) {
 async function handleAiGatewayOAuthCredentialDelete(req, res, provider) {
   try {
     const oauthMgr = getOauthManager();
-    if (oauthMgr.deleteCredential) await oauthMgr.deleteCredential(provider);
+    if (oauthMgr.deleteCredential) {
+      await oauthMgr.deleteCredential(provider);
+    }
     sendJson(res, 200, { success: true });
   } catch (err) {
     sendError(res, 500, err.message);
@@ -1098,7 +1347,9 @@ async function handleAiGatewayCredentialWatcherScan(req, res) {
 async function handleAiGatewayCredentialWatcherStart(req, res) {
   try {
     const pool = getAccountPool();
-    if (pool.startWatcher) pool.startWatcher();
+    if (pool.startWatcher) {
+      pool.startWatcher();
+    }
     const status = pool.getWatcherStatus ? pool.getWatcherStatus() : { running: true };
     sendJson(res, 200, { status });
   } catch (err) {
@@ -1109,7 +1360,9 @@ async function handleAiGatewayCredentialWatcherStart(req, res) {
 async function handleAiGatewayCredentialWatcherStop(req, res) {
   try {
     const pool = getAccountPool();
-    if (pool.stopWatcher) pool.stopWatcher();
+    if (pool.stopWatcher) {
+      pool.stopWatcher();
+    }
     sendJson(res, 200, { success: true });
   } catch (err) {
     sendError(res, 500, err.message);
@@ -1218,9 +1471,9 @@ async function handleAiGatewayIssueToken(req, res, customerId) {
   } catch (err) {
     const message = String(err?.message || 'issue token failed');
     if (
-      message.includes('not found')
-      || message.includes('only supports count=1')
-      || message.includes('already exists')
+      message.includes('not found') ||
+      message.includes('only supports count=1') ||
+      message.includes('already exists')
     ) {
       return sendError(res, 400, message);
     }
@@ -1246,16 +1499,21 @@ async function handleAiGatewayDeleteToken(req, res, customerId, tokenId) {
 
 async function handleAiGatewayListPayments(req, res, searchParams) {
   const actorUser = requireManagerAccess(req, res);
-  if (!actorUser) return;
+  if (!actorUser) {
+    return;
+  }
 
   try {
-    const data = await getPaymentGatewayService().listPayments({
-      page: searchParams.get('page'),
-      pageSize: searchParams.get('pageSize'),
-      status: searchParams.get('status'),
-      customerId: searchParams.get('customerId'),
-      provider: searchParams.get('provider'),
-    }, { actorUser });
+    const data = await getPaymentGatewayService().listPayments(
+      {
+        page: searchParams.get('page'),
+        pageSize: searchParams.get('pageSize'),
+        status: searchParams.get('status'),
+        customerId: searchParams.get('customerId'),
+        provider: searchParams.get('provider'),
+      },
+      { actorUser }
+    );
     sendJson(res, 200, data);
   } catch (err) {
     sendError(res, 500, err.message);
@@ -1264,7 +1522,9 @@ async function handleAiGatewayListPayments(req, res, searchParams) {
 
 async function handleAiGatewayCreatePayment(req, res) {
   const actorUser = requireManagerAccess(req, res);
-  if (!actorUser) return;
+  if (!actorUser) {
+    return;
+  }
 
   try {
     const body = await parseBody(req);
@@ -1278,14 +1538,18 @@ async function handleAiGatewayCreatePayment(req, res) {
     const message = String(err?.message || 'create payment failed');
     const status = /required|greater than 0|unsupported payment provider/i.test(message)
       ? 400
-      : (/customer not found/i.test(message) ? 404 : 500);
+      : /customer not found/i.test(message)
+        ? 404
+        : 500;
     sendError(res, status, message);
   }
 }
 
 async function handleAiGatewayGetPayment(req, res, paymentId) {
   const actorUser = requireManagerAccess(req, res);
-  if (!actorUser) return;
+  if (!actorUser) {
+    return;
+  }
 
   try {
     const service = getPaymentGatewayService();
@@ -1298,16 +1562,16 @@ async function handleAiGatewayGetPayment(req, res, paymentId) {
     sendJson(res, 200, data);
   } catch (err) {
     const message = String(err?.message || 'get payment failed');
-    const status = /forbidden/i.test(message)
-      ? 403
-      : (/not found/i.test(message) ? 404 : 500);
+    const status = /forbidden/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 500;
     sendError(res, status, message);
   }
 }
 
 async function handleAiGatewayCancelPayment(req, res, paymentId) {
   const actorUser = requireManagerAccess(req, res);
-  if (!actorUser) return;
+  if (!actorUser) {
+    return;
+  }
 
   try {
     const body = await parseBody(req);
@@ -1321,14 +1585,18 @@ async function handleAiGatewayCancelPayment(req, res, paymentId) {
     const message = String(err?.message || 'cancel payment failed');
     const status = /cannot be cancelled/i.test(message)
       ? 409
-      : (/not found/i.test(message) ? 404 : 500);
+      : /not found/i.test(message)
+        ? 404
+        : 500;
     sendError(res, status, message);
   }
 }
 
 async function handleAiGatewayConfirmMockPayment(req, res, paymentId) {
   const actorUser = requireManagerAccess(req, res);
-  if (!actorUser) return;
+  if (!actorUser) {
+    return;
+  }
 
   try {
     const body = await parseBody(req);
@@ -1357,9 +1625,13 @@ async function handlePublicPaymentWebhook(req, res, provider) {
     sendJson(res, 200, { success: true, data });
   } catch (err) {
     const message = String(err?.message || 'payment webhook failed');
-    const status = /signature|amount mismatch|unsupported webhook status|orderId is required/i.test(message)
+    const status = /signature|amount mismatch|unsupported webhook status|orderId is required/i.test(
+      message
+    )
       ? 400
-      : (/not found/i.test(message) ? 404 : 500);
+      : /not found/i.test(message)
+        ? 404
+        : 500;
     sendError(res, status, message);
   }
 }
@@ -1383,7 +1655,9 @@ async function handleAiGatewayUpdateAccount(req, res, accountId) {
   const body = await parseBody(req);
   const pool = getAccountPool();
   await pool.init();
-  if (!pool.updateAccount) return sendError(res, 501, 'updateAccount is not implemented');
+  if (!pool.updateAccount) {
+    return sendError(res, 501, 'updateAccount is not implemented');
+  }
   const updated = await pool.updateAccount(accountId, body || {});
   sendJson(res, 200, updated || {});
 }
@@ -1398,8 +1672,11 @@ async function handleAiGatewayDeleteAccount(req, res, accountId) {
 async function handleAiGatewaySetAccountEnabled(req, res, accountId, enabled) {
   const pool = getAccountPool();
   await pool.init();
-  if (enabled) await pool.enableAccount(accountId);
-  else await pool.disableAccount(accountId);
+  if (enabled) {
+    await pool.enableAccount(accountId);
+  } else {
+    await pool.disableAccount(accountId);
+  }
   sendJson(res, 200, { success: true });
 }
 
@@ -1444,7 +1721,9 @@ async function handleAiGatewayImportAccounts(req, res, provider) {
 async function handleAiGatewayUnbanAccount(req, res, accountId) {
   const pool = getAccountPool();
   await pool.init();
-  if (!pool.updateAccount) return sendError(res, 501, 'updateAccount is not implemented');
+  if (!pool.updateAccount) {
+    return sendError(res, 501, 'updateAccount is not implemented');
+  }
   await pool.updateAccount(accountId, { status: 'available' });
   sendJson(res, 200, { success: true });
 }
@@ -1496,7 +1775,9 @@ async function handleDependencyInstall(req, res, depId) {
 
     const env = resolver.defaultEnv();
     const plan = resolver.buildInstallPlan(depId, env);
-    if (!plan) return sendError(res, 404, `未知或不可安装的依赖: ${depId}`);
+    if (!plan) {
+      return sendError(res, 404, `未知或不可安装的依赖: ${depId}`);
+    }
 
     // 服务端独立判分级——绝不信任前端的 installable 标记。
     if (!inventory._isPlanAutoInstallable(plan)) {
@@ -1505,9 +1786,10 @@ async function handleDependencyInstall(req, res, depId) {
         manualOnly: true,
         displayCommand: plan.displayCommand,
         docsUrl: plan.docsUrl,
-        reason: plan.requiresElevation || plan.scope !== 'project'
-          ? '该依赖为系统级/需管理员授权，仅提供命令，请手动执行。'
-          : '该依赖风险较高，仅提供命令，请手动执行。',
+        reason:
+          plan.requiresElevation || plan.scope !== 'project'
+            ? '该依赖为系统级/需管理员授权，仅提供命令，请手动执行。'
+            : '该依赖风险较高，仅提供命令，请手动执行。',
       });
     }
 
@@ -1515,9 +1797,14 @@ async function handleDependencyInstall(req, res, depId) {
       try {
         const net = require('./networkDetector');
         if (typeof net.isOnline === 'function' && net.isOnline() === false) {
-          return sendJson(res, 409, { success: false, error: '当前离线，无法下载安装该依赖。请联网后重试。' });
+          return sendJson(res, 409, {
+            success: false,
+            error: '当前离线，无法下载安装该依赖。请联网后重试。',
+          });
         }
-      } catch { /* networkDetector 不可用时不阻断安装 */ }
+      } catch {
+        /* networkDetector 不可用时不阻断安装 */
+      }
     }
 
     const result = await runInstall(plan, { cwd: env.cwd });
@@ -1553,7 +1840,9 @@ async function handleManageResource(req, res, resourceId) {
   try {
     const registry = require('./management');
     const contract = registry.get(resourceId);
-    if (!contract) return sendError(res, 404, `未知资源: ${resourceId}`);
+    if (!contract) {
+      return sendError(res, 404, `未知资源: ${resourceId}`);
+    }
     sendJson(res, 200, {
       success: true,
       data: {
@@ -1574,7 +1863,9 @@ async function handleManageInvoke(req, res, resourceId, op) {
   try {
     const registry = require('./management');
     const contract = registry.get(resourceId);
-    if (!contract) return sendError(res, 404, `未知资源: ${resourceId}`);
+    if (!contract) {
+      return sendError(res, 404, `未知资源: ${resourceId}`);
+    }
     if (!contract.capabilities.includes(op)) {
       return sendError(res, 400, `资源 ${resourceId} 不支持操作: ${op}`);
     }
@@ -1582,8 +1873,12 @@ async function handleManageInvoke(req, res, resourceId, op) {
     let args = {};
     try {
       const body = await parseBody(req);
-      if (body && typeof body === 'object') args = body;
-    } catch { /* empty / non-JSON body → no args */ }
+      if (body && typeof body === 'object') {
+        args = body;
+      }
+    } catch {
+      /* empty / non-JSON body → no args */
+    }
 
     const user = req.khyUser || req.user || null;
     const result = await registry.invoke(resourceId, op, args, { source: 'web', user });
@@ -1600,14 +1895,18 @@ async function handleAiGatewayNamespace(req, res, pathname, searchParams) {
   if (apiPath.startsWith('/api/gateway')) {
     apiPath = `/api/ai-gateway${apiPath.slice('/api/gateway'.length)}`;
   }
-  if (!apiPath.startsWith('/api/ai-gateway')) return false;
+  if (!apiPath.startsWith('/api/ai-gateway')) {
+    return false;
+  }
 
   // Any mutating request (POST/PUT/DELETE/PATCH) can change what the cached
   // catalog/model reads return — drop the gateway read caches once the mutation
   // response finishes. Over-invalidation is intentional: one extra recompute on
   // the next read beats per-handler bookkeeping across dozens of mutations.
   if (method !== 'GET' && method !== 'HEAD') {
-    res.once('finish', () => { invalidateGatewayCache(); });
+    res.once('finish', () => {
+      invalidateGatewayCache();
+    });
   }
 
   // Monitor SSE stream must short-circuit with persistent connection.
@@ -1616,134 +1915,298 @@ async function handleAiGatewayNamespace(req, res, pathname, searchParams) {
     return true;
   }
 
-  if (method === 'GET' && apiPath === '/api/ai-gateway/status') return handleAiGatewayStatus(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/models') return handleListModels(req, res, null, searchParams);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/pool') return handleAiGatewayPool(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/catalog') return handleAiGatewayCatalog(req, res, searchParams);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/custom-providers') return handleAiGatewayCustomProvidersList(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/custom-providers') return handleAiGatewayCustomProvidersAdd(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/config') return handleAiGatewayConfigGet(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/config') return handleAiGatewayConfigPut(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/model-config') return handleAiGatewayModelConfigGet(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/model-config') return handleAiGatewayModelConfigPut(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/codex-config') return handleAiGatewayCodexConfigGet(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/codex-config') return handleAiGatewayCodexConfigPut(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/model-slots') return handleAiGatewayModelSlotsGet(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/model-slots') return handleAiGatewayModelSlotsPut(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/image-config') return handleAiGatewayImageConfigGet(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/image-config') return handleAiGatewayImageConfigPut(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/model-overrides') return handleModelOverridesList(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/oauth/providers') return handleAiGatewayOAuthProviders(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/credential-watcher/status') return handleAiGatewayCredentialWatcherStatus(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/scan') return handleAiGatewayCredentialWatcherScan(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/start') return handleAiGatewayCredentialWatcherStart(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/stop') return handleAiGatewayCredentialWatcherStop(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/slots') return handleAiGatewaySlots(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/protocols') return handleAiGatewayProtocols(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/plugins') return handleAiGatewayPlugins(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/oauth/status') return handleAiGatewayOAuthStatus(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/tls/status') return handleAiGatewayTlsStatus(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/tls/start') return handleAiGatewayTlsStart(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/tls/stop') return handleAiGatewayTlsStop(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/stats') return handleAiGatewayMonitorStats(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/traces') return handleAiGatewayMonitorTraces(req, res, searchParams);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/attribution') return handleAttributionDetail(req, res, searchParams);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/assets/overview') return handleAiGatewayAssetsOverview(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/customers') return handleAiGatewayListCustomers(req, res, searchParams);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/customers') return handleAiGatewayCreateCustomer(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/payments') return handleAiGatewayListPayments(req, res, searchParams);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/payments') return handleAiGatewayCreatePayment(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts') return handleAiGatewayListAccounts(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/accounts') return handleAiGatewayAddAccount(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/accounts/batch-delete') return handleAiGatewayBatchDeleteAccounts(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts/scheduling') return handleAiGatewayGetScheduling(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/accounts/scheduling') return handleAiGatewayUpdateScheduling(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts/circuit-breaker') return handleAiGatewayGetCircuitBreaker(req, res);
-  if (method === 'PUT' && apiPath === '/api/ai-gateway/accounts/circuit-breaker') return handleAiGatewayUpdateCircuitBreaker(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins') return handleAiGatewayCreatePlugin(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins/validate') return handleAiGatewayValidatePlugin(req, res);
-  if (method === 'GET' && apiPath === '/api/ai-gateway/plugins/template') return handleAiGatewayPluginTemplate(req, res);
-  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins/reload') return handleAiGatewayReloadPlugins(req, res);
+  if (method === 'GET' && apiPath === '/api/ai-gateway/status') {
+    return handleAiGatewayStatus(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/health') {
+    return handleAiGatewayHealth(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/proxy-stats') {
+    return handleAiGatewayProxyStats(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/models') {
+    return handleListModels(req, res, null, searchParams);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/pool') {
+    return handleAiGatewayPool(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/catalog') {
+    return handleAiGatewayCatalog(req, res, searchParams);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/custom-providers') {
+    return handleAiGatewayCustomProvidersList(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/custom-providers') {
+    return handleAiGatewayCustomProvidersAdd(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/config') {
+    return handleAiGatewayConfigGet(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/config') {
+    return handleAiGatewayConfigPut(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/model-config') {
+    return handleAiGatewayModelConfigGet(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/model-config') {
+    return handleAiGatewayModelConfigPut(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/codex-config') {
+    return handleAiGatewayCodexConfigGet(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/codex-config') {
+    return handleAiGatewayCodexConfigPut(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/model-slots') {
+    return handleAiGatewayModelSlotsGet(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/model-slots') {
+    return handleAiGatewayModelSlotsPut(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/image-config') {
+    return handleAiGatewayImageConfigGet(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/image-config') {
+    return handleAiGatewayImageConfigPut(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/model-overrides') {
+    return handleModelOverridesList(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/oauth/providers') {
+    return handleAiGatewayOAuthProviders(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/credential-watcher/status') {
+    return handleAiGatewayCredentialWatcherStatus(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/scan') {
+    return handleAiGatewayCredentialWatcherScan(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/start') {
+    return handleAiGatewayCredentialWatcherStart(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/credential-watcher/stop') {
+    return handleAiGatewayCredentialWatcherStop(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/slots') {
+    return handleAiGatewaySlots(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/protocols') {
+    return handleAiGatewayProtocols(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/plugins') {
+    return handleAiGatewayPlugins(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/oauth/status') {
+    return handleAiGatewayOAuthStatus(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/tls/status') {
+    return handleAiGatewayTlsStatus(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/tls/start') {
+    return handleAiGatewayTlsStart(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/tls/stop') {
+    return handleAiGatewayTlsStop(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/stats') {
+    return handleAiGatewayMonitorStats(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/traces') {
+    return handleAiGatewayMonitorTraces(req, res, searchParams);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/monitor/attribution') {
+    return handleAttributionDetail(req, res, searchParams);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/assets/overview') {
+    return handleAiGatewayAssetsOverview(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/customers') {
+    return handleAiGatewayListCustomers(req, res, searchParams);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/customers') {
+    return handleAiGatewayCreateCustomer(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/payments') {
+    return handleAiGatewayListPayments(req, res, searchParams);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/payments') {
+    return handleAiGatewayCreatePayment(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts') {
+    return handleAiGatewayListAccounts(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/accounts') {
+    return handleAiGatewayAddAccount(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/accounts/batch-delete') {
+    return handleAiGatewayBatchDeleteAccounts(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts/scheduling') {
+    return handleAiGatewayGetScheduling(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/accounts/scheduling') {
+    return handleAiGatewayUpdateScheduling(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/accounts/circuit-breaker') {
+    return handleAiGatewayGetCircuitBreaker(req, res);
+  }
+  if (method === 'PUT' && apiPath === '/api/ai-gateway/accounts/circuit-breaker') {
+    return handleAiGatewayUpdateCircuitBreaker(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins') {
+    return handleAiGatewayCreatePlugin(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins/validate') {
+    return handleAiGatewayValidatePlugin(req, res);
+  }
+  if (method === 'GET' && apiPath === '/api/ai-gateway/plugins/template') {
+    return handleAiGatewayPluginTemplate(req, res);
+  }
+  if (method === 'POST' && apiPath === '/api/ai-gateway/plugins/reload') {
+    return handleAiGatewayReloadPlugins(req, res);
+  }
 
   let match = apiPath.match(/^\/api\/ai-gateway\/custom-providers\/([a-z0-9_-]+)$/i);
-  if (match && method === 'DELETE') return handleAiGatewayCustomProvidersRemove(req, res, match[1], searchParams);
-  if (match && method === 'PUT') return handleAiGatewayCustomProvidersReplace(req, res, match[1]);
+  if (match && method === 'DELETE') {
+    return handleAiGatewayCustomProvidersRemove(req, res, match[1], searchParams);
+  }
+  if (match && method === 'PUT') {
+    return handleAiGatewayCustomProvidersReplace(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/model-overrides\/([a-z0-9_-]+)$/i);
-  if (match && method === 'PUT') return handleModelOverridesPut(req, res, match[1]);
+  if (match && method === 'PUT') {
+    return handleModelOverridesPut(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/models\/([a-z0-9_-]+)\/verify$/i);
-  if (match && method === 'POST') return handleModelVerify(req, res, match[1], searchParams);
+  if (match && method === 'POST') {
+    return handleModelVerify(req, res, match[1], searchParams);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/pool\/([a-z0-9_-]+)\/keys$/i);
-  if (match && method === 'POST') return handleAiGatewayPoolAddKey(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayPoolAddKey(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/pool\/([a-z0-9_-]+)\/keys\/([a-z0-9_-]+)$/i);
-  if (match && method === 'DELETE') return handleAiGatewayPoolRemoveKey(req, res, match[1], match[2]);
-  if (match && method === 'PUT') return handleAiGatewayPoolUpdateKey(req, res, match[1], match[2]);
+  if (match && method === 'DELETE') {
+    return handleAiGatewayPoolRemoveKey(req, res, match[1], match[2]);
+  }
+  if (match && method === 'PUT') {
+    return handleAiGatewayPoolUpdateKey(req, res, match[1], match[2]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/oauth\/([a-z0-9_-]+)\/refresh$/i);
-  if (match && method === 'POST') return handleAiGatewayOAuthRefresh(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayOAuthRefresh(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/oauth\/credentials\/([a-z0-9_-]+)$/i);
-  if (match && method === 'GET') return handleAiGatewayOAuthCredentialGet(req, res, match[1]);
-  if (match && method === 'PUT') return handleAiGatewayOAuthCredentialPut(req, res, match[1]);
-  if (match && method === 'DELETE') return handleAiGatewayOAuthCredentialDelete(req, res, match[1]);
+  if (match && method === 'GET') {
+    return handleAiGatewayOAuthCredentialGet(req, res, match[1]);
+  }
+  if (match && method === 'PUT') {
+    return handleAiGatewayOAuthCredentialPut(req, res, match[1]);
+  }
+  if (match && method === 'DELETE') {
+    return handleAiGatewayOAuthCredentialDelete(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/plugins\/([a-z0-9_-]+)\/toggle$/i);
-  if (match && method === 'POST') return handleAiGatewayTogglePlugin(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayTogglePlugin(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/plugins\/([a-z0-9_-]+)\/code$/i);
-  if (match && method === 'GET') return handleAiGatewayPluginCode(req, res, match[1]);
+  if (match && method === 'GET') {
+    return handleAiGatewayPluginCode(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/plugins\/([a-z0-9_-]+)$/i);
-  if (match && method === 'PUT') return handleAiGatewayUpdatePlugin(req, res, match[1]);
-  if (match && method === 'DELETE') return handleAiGatewayDeletePlugin(req, res, match[1]);
+  if (match && method === 'PUT') {
+    return handleAiGatewayUpdatePlugin(req, res, match[1]);
+  }
+  if (match && method === 'DELETE') {
+    return handleAiGatewayDeletePlugin(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)$/i);
-  if (match && method === 'PUT') return handleAiGatewayUpdateCustomer(req, res, match[1]);
+  if (match && method === 'PUT') {
+    return handleAiGatewayUpdateCustomer(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/(enable|disable)$/i);
-  if (match && method === 'POST') return handleAiGatewaySetCustomerEnabled(req, res, match[1], match[2] === 'enable');
+  if (match && method === 'POST') {
+    return handleAiGatewaySetCustomerEnabled(req, res, match[1], match[2] === 'enable');
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens$/i);
-  if (match && method === 'POST') return handleAiGatewayIssueToken(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayIssueToken(req, res, match[1]);
+  }
 
-  match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens\/([a-z0-9_-]+)\/rotate$/i);
-  if (match && method === 'POST') return handleAiGatewayRotateToken(req, res, match[1], match[2]);
+  match = apiPath.match(
+    /^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens\/([a-z0-9_-]+)\/rotate$/i
+  );
+  if (match && method === 'POST') {
+    return handleAiGatewayRotateToken(req, res, match[1], match[2]);
+  }
 
-  match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens\/([a-z0-9_-]+)\/(enable|disable)$/i);
+  match = apiPath.match(
+    /^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens\/([a-z0-9_-]+)\/(enable|disable)$/i
+  );
   if (match && method === 'POST') {
     return handleAiGatewaySetTokenEnabled(req, res, match[1], match[2], match[3] === 'enable');
   }
 
   match = apiPath.match(/^\/api\/ai-gateway\/customers\/([a-z0-9_-]+)\/tokens\/([a-z0-9_-]+)$/i);
-  if (match && method === 'DELETE') return handleAiGatewayDeleteToken(req, res, match[1], match[2]);
+  if (match && method === 'DELETE') {
+    return handleAiGatewayDeleteToken(req, res, match[1], match[2]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/payments\/([a-z0-9_-]+)$/i);
-  if (match && method === 'GET') return handleAiGatewayGetPayment(req, res, match[1]);
+  if (match && method === 'GET') {
+    return handleAiGatewayGetPayment(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/payments\/([a-z0-9_-]+)\/cancel$/i);
-  if (match && method === 'POST') return handleAiGatewayCancelPayment(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayCancelPayment(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/payments\/([a-z0-9_-]+)\/mock\/confirm$/i);
-  if (match && method === 'POST') return handleAiGatewayConfirmMockPayment(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayConfirmMockPayment(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/accounts\/([0-9]+)$/i);
-  if (match && method === 'PUT') return handleAiGatewayUpdateAccount(req, res, match[1]);
-  if (match && method === 'DELETE') return handleAiGatewayDeleteAccount(req, res, match[1]);
+  if (match && method === 'PUT') {
+    return handleAiGatewayUpdateAccount(req, res, match[1]);
+  }
+  if (match && method === 'DELETE') {
+    return handleAiGatewayDeleteAccount(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/accounts\/([0-9]+)\/(enable|disable)$/i);
-  if (match && method === 'POST') return handleAiGatewaySetAccountEnabled(req, res, match[1], match[2] === 'enable');
+  if (match && method === 'POST') {
+    return handleAiGatewaySetAccountEnabled(req, res, match[1], match[2] === 'enable');
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/accounts\/([0-9]+)\/unban$/i);
-  if (match && method === 'POST') return handleAiGatewayUnbanAccount(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayUnbanAccount(req, res, match[1]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/accounts\/([a-z0-9_-]+)\/use\/([0-9]+)$/i);
-  if (match && method === 'POST') return handleAiGatewayUseAccount(req, res, match[1], match[2]);
+  if (match && method === 'POST') {
+    return handleAiGatewayUseAccount(req, res, match[1], match[2]);
+  }
 
   match = apiPath.match(/^\/api\/ai-gateway\/accounts\/([a-z0-9_-]+)\/import$/i);
-  if (match && method === 'POST') return handleAiGatewayImportAccounts(req, res, match[1]);
+  if (match && method === 'POST') {
+    return handleAiGatewayImportAccounts(req, res, match[1]);
+  }
 
   sendError(res, 404, 'Not found');
   return true;

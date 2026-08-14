@@ -1,11 +1,13 @@
-const { defineTool } = require('./_baseTool');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
+const { parseDiagnostics } = require('../services/compile/diagnostics');
 const compileRegistry = require('../services/compile/registry');
 const { createEphemeralDir } = require('../utils/ephemeralTmp');
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
-const { parseDiagnostics } = require('../services/compile/diagnostics');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * [SAFE] executeCode — arbitrary-JavaScript execution, contained in a separate
@@ -45,7 +47,10 @@ const { parseDiagnostics } = require('../services/compile/diagnostics');
 // code; the outer process timeout is the hard backstop (SIGKILL) for anything the
 // vm timeout cannot interrupt. Both are env-tunable for trusted operators.
 const VM_TIMEOUT_MS = Math.max(100, Number(process.env.KHY_EXECUTE_CODE_VM_TIMEOUT_MS) || 5000);
-const PROC_TIMEOUT_MS = Math.max(VM_TIMEOUT_MS + 1000, Number(process.env.KHY_EXECUTE_CODE_PROC_TIMEOUT_MS) || 8000);
+const PROC_TIMEOUT_MS = Math.max(
+  VM_TIMEOUT_MS + 1000,
+  Number(process.env.KHY_EXECUTE_CODE_PROC_TIMEOUT_MS) || 8000
+);
 const MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 
 // Unique marker so we can recover the JSON verdict from the child's stdout even if
@@ -63,8 +68,8 @@ const CHILD_RUNNER = [
   'try {',
   '  const src = process.env.__KHY_SRC__ || "";',
   '  const wrapper = \'"use strict";\\n\'',
-  '    + \'const console = { log:function(){}, error:function(){}, warn:function(){}, info:function(){} };\\n\'',
-  '    + \'(function () { return eval(__src); }).call(undefined);\';',
+  "    + 'const console = { log:function(){}, error:function(){}, warn:function(){}, info:function(){} };\\n'",
+  "    + '(function () { return eval(__src); }).call(undefined);';",
   '  const r = vm.runInNewContext(wrapper, { __src: src }, {',
   '    timeout: ' + VM_TIMEOUT_MS + ', contextName: "executeCode-sandbox" });',
   '  out = { ok: true, result: r !== undefined ? String(r) : undefined };',
@@ -97,7 +102,9 @@ const EXEC_LANGUAGES = ['javascript', 'python', 'c', 'cpp', 'rust', 'go', 'types
 
 /** Heuristic: did a spawn failure mean "toolchain binary not found"? */
 function _looksLikeMissingBinary(message) {
-  return /ENOENT|not found|command not found|无法找到|不是内部或外部命令/i.test(String(message || ''));
+  return /ENOENT|not found|command not found|无法找到|不是内部或外部命令/i.test(
+    String(message || '')
+  );
 }
 
 /** Structured missing-toolchain soft failure tagged with depId (self-heal funnel). */
@@ -118,7 +125,9 @@ function _nativeEnv(lang, outDir) {
     FORCE_COLOR: '0',
     NO_COLOR: '1',
   };
-  if (process.env.TMPDIR) e.TMPDIR = process.env.TMPDIR;
+  if (process.env.TMPDIR) {
+    e.TMPDIR = process.env.TMPDIR;
+  }
   if (process.platform === 'win32') {
     e.SystemRoot = process.env.SystemRoot;
     e.USERPROFILE = process.env.USERPROFILE;
@@ -142,7 +151,9 @@ function _compileArgv(lang, ctx) {
     // (type-check only, for compile_file). Emit into the ephemeral outDir.
     return ['tsc', '--outDir', ctx.outDir, '--module', 'commonjs', '--target', 'es2020', ctx.src];
   }
-  if (lang.mode === 'compiled') return lang.buildArgv(ctx);
+  if (lang.mode === 'compiled') {
+    return lang.buildArgv(ctx);
+  }
   return null; // interpreted (python) — run directly
 }
 
@@ -153,15 +164,22 @@ function _compileArgv(lang, ctx) {
 async function _runNative(langId, code, context) {
   const lang = compileRegistry.getLanguage(langId);
   if (!lang) {
-    return { success: false, error: `Unsupported language "${langId}". Supported: ${EXEC_LANGUAGES.join(', ')}.` };
+    return {
+      success: false,
+      error: `Unsupported language "${langId}". Supported: ${EXEC_LANGUAGES.join(', ')}.`,
+    };
   }
 
   // Toolchain gate → self-heal install + retry once via executeTool funnel.
   try {
     const dep = require('../services/dependency');
     const miss = dep.ensure(lang.toolchainDepId);
-    if (miss) return { ...miss.toStructuredResult(), depId: lang.toolchainDepId };
-  } catch { /* resolver unavailable — ENOENT below still maps */ }
+    if (miss) {
+      return { ...miss.toStructuredResult(), depId: lang.toolchainDepId };
+    }
+  } catch {
+    /* resolver unavailable — ENOENT below still maps */
+  }
 
   const ephemeral = createEphemeralDir({ prefix: `exec-${lang.id}` });
   const stem = 'Main';
@@ -178,18 +196,39 @@ async function _runNative(langId, code, context) {
       let cres;
       try {
         cres = await spawnWithIdleTimeout(compileArgv[0], compileArgv.slice(1), {
-          idleMs: procTimeout, maxOutputBytes: MAX_OUTPUT_BYTES,
+          idleMs: procTimeout,
+          maxOutputBytes: MAX_OUTPUT_BYTES,
           // Java forces UTF-8 JVM output (compile/registry) — decode as UTF-8 so CN
           // Windows compiler diagnostics don't mojibake.
-          ...(lang.utf8Output ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() } : {}),
+          ...(lang.utf8Output
+            ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() }
+            : {}),
           spawnOpts: { cwd: outDir, env, windowsHide: true },
           label: `executeCode:compile:${lang.id}`,
-          onActivity: (p) => { try { context?.onActivity?.({ tool: 'executeCode', phase: 'compile', language: lang.id, ...p }); } catch { /* non-critical */ } },
+          onActivity: (p) => {
+            try {
+              context?.onActivity?.({
+                tool: 'executeCode',
+                phase: 'compile',
+                language: lang.id,
+                ...p,
+              });
+            } catch {
+              /* non-critical */
+            }
+          },
         });
       } catch (err) {
         const msg = (err && err.message) || String(err);
-        if (err && err.idleTimeout) return { success: false, error: `Compilation timed out after ${procTimeout}ms (process killed).` };
-        if (_looksLikeMissingBinary(msg)) return _missDep(lang.toolchainDepId);
+        if (err && err.idleTimeout) {
+          return {
+            success: false,
+            error: `Compilation timed out after ${procTimeout}ms (process killed).`,
+          };
+        }
+        if (_looksLikeMissingBinary(msg)) {
+          return _missDep(lang.toolchainDepId);
+        }
         return { success: false, error: `Compile failed: ${msg.slice(0, 500)}` };
       }
       if ((Number.isFinite(cres.code) ? cres.code : 1) !== 0) {
@@ -198,7 +237,13 @@ async function _runNative(langId, code, context) {
         return {
           success: false,
           error: `Compilation failed (${errors.length} error(s)) before execution.`,
-          data: { language: lang.id, phase: 'compile', errors, errorCount: errors.length, outputTail: combined.split('\n').slice(-30).join('\n').slice(0, 3000) },
+          data: {
+            language: lang.id,
+            phase: 'compile',
+            errors,
+            errorCount: errors.length,
+            outputTail: combined.split('\n').slice(-30).join('\n').slice(0, 3000),
+          },
         };
       }
     }
@@ -206,24 +251,44 @@ async function _runNative(langId, code, context) {
     // 2) run the artifact / interpret the source.
     const artifact = lang.mode === 'compiled' ? lang.artifactPath({ outDir, stem }) : null;
     const runArgv = lang.runArgv({ artifact, outDir, stem, src });
-    if (!runArgv || !runArgv.length) return { success: false, error: `Language ${lang.id} has no run command.` };
+    if (!runArgv || !runArgv.length) {
+      return { success: false, error: `Language ${lang.id} has no run command.` };
+    }
     // Prefer this runtime's own node binary over a bare 'node' on PATH.
-    if (runArgv[0] === 'node') runArgv[0] = process.execPath;
+    if (runArgv[0] === 'node') {
+      runArgv[0] = process.execPath;
+    }
 
     let rres;
     try {
       rres = await spawnWithIdleTimeout(runArgv[0], runArgv.slice(1), {
-        idleMs: procTimeout, maxOutputBytes: MAX_OUTPUT_BYTES,
+        idleMs: procTimeout,
+        maxOutputBytes: MAX_OUTPUT_BYTES,
         // Same UTF-8 decode for the Java program's own stdout/stderr.
-        ...(lang.utf8Output ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() } : {}),
+        ...(lang.utf8Output
+          ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() }
+          : {}),
         spawnOpts: { cwd: outDir, env, windowsHide: true },
         label: `executeCode:run:${lang.id}`,
-        onActivity: (p) => { try { context?.onActivity?.({ tool: 'executeCode', phase: 'run', language: lang.id, ...p }); } catch { /* non-critical */ } },
+        onActivity: (p) => {
+          try {
+            context?.onActivity?.({ tool: 'executeCode', phase: 'run', language: lang.id, ...p });
+          } catch {
+            /* non-critical */
+          }
+        },
       });
     } catch (err) {
       const msg = (err && err.message) || String(err);
-      if (err && err.idleTimeout) return { success: false, error: `Execution timed out after ${procTimeout}ms (process killed).` };
-      if (_looksLikeMissingBinary(msg)) return _missDep(lang.toolchainDepId);
+      if (err && err.idleTimeout) {
+        return {
+          success: false,
+          error: `Execution timed out after ${procTimeout}ms (process killed).`,
+        };
+      }
+      if (_looksLikeMissingBinary(msg)) {
+        return _missDep(lang.toolchainDepId);
+      }
       return { success: false, error: `Execution failed: ${msg.slice(0, 500)}` };
     }
 
@@ -233,7 +298,9 @@ async function _runNative(langId, code, context) {
     return {
       success: exit === 0,
       result: stdout.slice(0, MAX_OUTPUT_BYTES),
-      ...(exit !== 0 ? { error: (stderr.trim() || `Process exited with code ${exit}`).slice(0, 500) } : {}),
+      ...(exit !== 0
+        ? { error: (stderr.trim() || `Process exited with code ${exit}`).slice(0, 500) }
+        : {}),
       data: {
         language: lang.id,
         exitCode: exit,
@@ -249,14 +316,33 @@ async function _runNative(langId, code, context) {
 
 module.exports = defineTool({
   name: 'executeCode',
-  description: 'Execute a code snippet and return its output. JavaScript runs in a permission-restricted subprocess (no fs/process access). Python/C/C++/Rust/Go/TypeScript compile-then-run under weaker process+tmp confinement (see trust boundary). Disabled unless KHY_ENABLE_EXECUTE_CODE=1.',
+  description:
+    'Execute a standalone code SNIPPET (not a shell command) and return its stdout/stderr. ' +
+    'Use it for quick calculations or algorithm checks; use shellCommand to run project scripts, package managers, or anything needing shell syntax. ' +
+    'Constraints: JavaScript runs in a permission-restricted subprocess (no fs/process access); Python/C/C++/Rust/Go/TypeScript compile-then-run under weaker process+tmp confinement; disabled unless KHY_ENABLE_EXECUTE_CODE=1.',
   category: 'execution',
   risk: 'high',
+  searchHint: 'run snippet javascript python sandbox script 执行代码 代码片段 运行脚本',
   isReadOnly: false,
   isConcurrencySafe: false,
+  // Execution output is bounded like other command-runner tools (30K chars).
+  maxResultSizeChars: 30000,
   inputSchema: {
-    code: { type: 'string', required: true, description: 'Source code to execute' },
-    language: { type: 'string', required: false, enum: EXEC_LANGUAGES, description: 'Code language (default javascript). Non-JS runs under weaker confinement.' },
+    code: {
+      type: 'string',
+      required: true,
+      description:
+        'Source code snippet to execute, e.g. "console.log(2 ** 10)". Must be self-contained.',
+      example: 'console.log(2 ** 10)',
+    },
+    language: {
+      type: 'string',
+      required: false,
+      enum: EXEC_LANGUAGES,
+      description:
+        'Language of the snippet (default: javascript). Non-JS languages run under weaker confinement.',
+      example: 'python',
+    },
   },
 
   async execute(params, context) {
@@ -265,16 +351,21 @@ module.exports = defineTool({
     if (!enabled) {
       return {
         success: false,
-        error: 'executeCode is disabled by default (it executes arbitrary code). Set ' +
-               'KHY_ENABLE_EXECUTE_CODE=1 to enable it; execution is then confined to a ' +
-               'permission-restricted subprocess with no filesystem/process/worker access.',
+        error:
+          'executeCode is disabled by default (it executes arbitrary code). Set ' +
+          'KHY_ENABLE_EXECUTE_CODE=1 to enable it; execution is then confined to a ' +
+          'permission-restricted subprocess with no filesystem/process/worker access.',
       };
     }
 
     const code = String(params.code == null ? '' : params.code);
 
     // Dispatch: javascript → hardened subprocess; everything else → native path.
-    const canon = compileRegistry._canon(String(params.language || 'javascript').trim().toLowerCase());
+    const canon = compileRegistry._canon(
+      String(params.language || 'javascript')
+        .trim()
+        .toLowerCase()
+    );
     if (canon !== 'javascript') {
       return await _runNative(canon, code, context);
     }
@@ -289,11 +380,18 @@ module.exports = defineTool({
       if (policyLimits && policyLimits.timeoutMs > 0) {
         effProcTimeout = Math.min(PROC_TIMEOUT_MS, policyLimits.timeoutMs);
       }
-    } catch { /* policy middleware optional */ }
+    } catch {
+      /* policy middleware optional */
+    }
 
     return await new Promise((resolve) => {
       let settled = false;
-      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+      const done = (v) => {
+        if (!settled) {
+          settled = true;
+          resolve(v);
+        }
+      };
 
       let child;
       try {
@@ -321,24 +419,39 @@ module.exports = defineTool({
                 }
                 return done({ success: false, error: verdict ? verdict.error : 'Unknown error' });
               } catch (parseErr) {
-                return done({ success: false, error: 'Sandbox result parse failed: ' + parseErr.message });
+                return done({
+                  success: false,
+                  error: 'Sandbox result parse failed: ' + parseErr.message,
+                });
               }
             }
             // No verdict: process was killed (timeout) or failed to start. Fail closed —
             // never fall back to in-process execution.
             if (err && err.killed) {
-              return done({ success: false, error: `Execution timed out after ${effProcTimeout}ms (process killed).` });
+              return done({
+                success: false,
+                error: `Execution timed out after ${effProcTimeout}ms (process killed).`,
+              });
             }
-            const detail = (String(stderr || '').trim() || (err && err.message) || 'no output').slice(0, 500);
+            const detail = (
+              String(stderr || '').trim() ||
+              (err && err.message) ||
+              'no output'
+            ).slice(0, 500);
             return done({ success: false, error: 'Sandbox execution failed: ' + detail });
-          },
+          }
         );
       } catch (spawnErr) {
-        return done({ success: false, error: 'Failed to start sandbox process: ' + spawnErr.message });
+        return done({
+          success: false,
+          error: 'Failed to start sandbox process: ' + spawnErr.message,
+        });
       }
 
       if (child) {
-        child.on('error', (e) => done({ success: false, error: 'Sandbox process error: ' + e.message }));
+        child.on('error', (e) =>
+          done({ success: false, error: 'Sandbox process error: ' + e.message })
+        );
       }
     });
   },

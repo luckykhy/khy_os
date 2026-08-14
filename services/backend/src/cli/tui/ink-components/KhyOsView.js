@@ -28,6 +28,7 @@
  */
 
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
 
 const MAX_ROWS = 200; // ring-buffer cap on retained screen lines
@@ -54,11 +55,15 @@ function feed(scr, text) {
     if (ch === '\n') {
       scr.row += 1;
       scr.col = 0;
-      if (!scr.lines[scr.row]) scr.lines[scr.row] = '';
+      if (!scr.lines[scr.row]) {
+        scr.lines[scr.row] = '';
+      }
     } else if (ch === '\r') {
       scr.col = 0;
     } else if (ch === '\b') {
-      if (scr.col > 0) scr.col -= 1;
+      if (scr.col > 0) {
+        scr.col -= 1;
+      }
     } else if (ch === '\t') {
       const next = (scr.col + 8) & ~7;
       const line = scr.lines[scr.row] || '';
@@ -66,7 +71,9 @@ function feed(scr, text) {
       scr.col = next;
     } else if (ch >= ' ' || ch.charCodeAt(0) >= 0x80) {
       let line = scr.lines[scr.row] || '';
-      if (scr.col > line.length) line = line.padEnd(scr.col, ' ');
+      if (scr.col > line.length) {
+        line = line.padEnd(scr.col, ' ');
+      }
       scr.lines[scr.row] = line.slice(0, scr.col) + ch + line.slice(scr.col + 1);
       scr.col += 1;
     }
@@ -82,19 +89,37 @@ function feed(scr, text) {
 
 // Translate an Ink (input, key) pair to the bytes the kernel shell expects.
 function keyToBytes(input, key) {
-  if (key.return) return '\r';
-  if (key.backspace || key.delete) return '\x7f';
-  if (key.upArrow) return '\x1b[A';
-  if (key.downArrow) return '\x1b[B';
-  if (key.rightArrow) return '\x1b[C';
-  if (key.leftArrow) return '\x1b[D';
-  if (key.pageUp || key.pageDown) return ''; // not handled by the kernel shell
-  if (key.tab) return '\t';
+  if (key.return) {
+    return '\r';
+  }
+  if (key.backspace || key.delete) {
+    return '\x7f';
+  }
+  if (key.upArrow) {
+    return '\x1b[A';
+  }
+  if (key.downArrow) {
+    return '\x1b[B';
+  }
+  if (key.rightArrow) {
+    return '\x1b[C';
+  }
+  if (key.leftArrow) {
+    return '\x1b[D';
+  }
+  if (key.pageUp || key.pageDown) {
+    return '';
+  } // not handled by the kernel shell
+  if (key.tab) {
+    return '\t';
+  }
   if (key.ctrl && input && input.length === 1) {
     // Ctrl+letter → control code (Ctrl-A=0x01 … Ctrl-Z=0x1a), matches shell.c.
     return String.fromCharCode(input.toLowerCase().charCodeAt(0) & 0x1f);
   }
-  if (input) return input;
+  if (input) {
+    return input;
+  }
   return '';
 }
 
@@ -118,12 +143,17 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
       try {
         khyos = require('@khy/shared/runtime/khyos');
       } catch (err) {
-        if (alive) { setStatus('error'); setStatusMsg('无法加载 KHY OS 运行时：' + err.message); }
+        if (alive) {
+          setStatus('error');
+          setStatusMsg('无法加载 KHY OS 运行时：' + err.message);
+        }
         return;
       }
       try {
         const iso = isoPath || (await khyos.ensureKhyosIso());
-        if (!alive) return;
+        if (!alive) {
+          return;
+        }
         runner = new khyos.KhyOsRunner({ isoPath: iso, diskPath: diskPath || undefined });
         runnerRef.current = runner;
         runner.on('data', (buf) => {
@@ -131,25 +161,36 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
           dirtyRef.current = true;
         });
         runner.on('error', (err) => {
-          if (!alive) return;
+          if (!alive) {
+            return;
+          }
           setStatus('error');
           setStatusMsg(err.message || String(err));
         });
         runner.on('exit', () => {
-          if (!alive) return;
+          if (!alive) {
+            return;
+          }
           setStatus('exited');
         });
         // First-run portable-QEMU download (~30–40MB): show progress instead of
         // a frozen "booting" line. Additive — no event fires when QEMU is present.
         runner.on('status', (s) => {
-          if (!alive || !s || s.phase !== 'provisioning-qemu') return;
+          if (!alive || !s || s.phase !== 'provisioning-qemu') {
+            return;
+          }
           const pct = s.total > 0 ? Math.min(100, Math.floor((s.downloaded / s.total) * 100)) : 0;
           setStatusMsg(s.done ? '便携 QEMU 下载完成，正在启动…' : `正在下载便携 QEMU… ${pct}%`);
         });
         await runner.start();
-        if (alive) setStatus('ready');
+        if (alive) {
+          setStatus('ready');
+        }
       } catch (err) {
-        if (alive) { setStatus('error'); setStatusMsg(err.message || String(err)); }
+        if (alive) {
+          setStatus('error');
+          setStatusMsg(err.message || String(err));
+        }
       }
     })();
 
@@ -164,19 +205,44 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
     return () => {
       alive = false;
       clearInterval(timer);
-      if (runner) { try { runner.stop(); } catch { /* ignore */ } }
+      if (runner) {
+        try {
+          runner.stop();
+        } catch {
+          /* ignore */
+        }
+      }
       runnerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useInput((input, key) => {
+    // Mouse-button layer: consume SGR mouse sequences so they are never written
+    // to the kernel serial port (App's top useInput dispatches them).
+    try {
+      const _mouse = require('../mouseButtons');
+      if (_mouse && typeof _mouse.isMouseSequence === 'function' && _mouse.isMouseSequence(input)) {
+        return;
+      }
+    } catch {
+      /* mouseButtons unavailable — skip guard */
+    }
     // Lone Esc leaves the view (arrow keys arrive as key.upArrow etc, not escape).
-    if (key.escape) { onExit && onExit(); return; }
+    if (key.escape) {
+      onExit && onExit();
+      return;
+    }
     const runner = runnerRef.current;
-    if (!runner || status !== 'ready') return;
+    if (!runner || status !== 'ready') {
+      return;
+    }
     const bytes = keyToBytes(input, key);
-    if (bytes) { runner.write(bytes).catch(() => { /* surfaced via 'error' */ }); }
+    if (bytes) {
+      runner.write(bytes).catch(() => {
+        /* surfaced via 'error' */
+      });
+    }
   });
 
   // Bounded viewport: show the tail of the screen buffer.
@@ -186,20 +252,36 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
   const body = all.slice(Math.max(0, all.length - maxBody));
 
   const statusLine = (() => {
-    if (status === 'booting') return ['yellow', '◆ 启动 QEMU / 连接内核串口…'];
-    if (status === 'ready') return ['green', '● KHY OS 内核已连接 · 输入即发往 shell · Esc 返回'];
-    if (status === 'exited') return ['gray', '○ QEMU 已退出 · Esc 返回'];
+    if (status === 'booting') {
+      return ['yellow', '◆ 启动 QEMU / 连接内核串口…'];
+    }
+    if (status === 'ready') {
+      return ['green', '● KHY OS 内核已连接 · 输入即发往 shell · Esc 返回'];
+    }
+    if (status === 'exited') {
+      return ['gray', '○ QEMU 已退出 · Esc 返回'];
+    }
     return ['red', '✗ ' + (statusMsg || '内核启动失败') + ' · Esc 返回'];
   })();
 
   return h(
     Box,
-    { flexDirection: 'column', marginTop: 1, borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
-    h(Box, { key: 'title' },
+    {
+      flexDirection: 'column',
+      marginTop: 1,
+      borderStyle: 'round',
+      borderColor: 'cyan',
+      paddingX: 1,
+    },
+    h(
+      Box,
+      { key: 'title' },
       h(Text, { color: 'cyan', bold: true }, '⊞ KHY OS 内核终端  '),
       h(Text, { color: statusLine[0] }, statusLine[1])
     ),
-    h(Box, { key: 'body', flexDirection: 'column', marginTop: 1 },
+    h(
+      Box,
+      { key: 'body', flexDirection: 'column', marginTop: 1 },
       ...body.map((ln, i) => h(Text, { key: i }, ln || ' '))
     )
   );

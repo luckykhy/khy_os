@@ -1,23 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
+
 const crypto = require('crypto');
+
 const { Sequelize } = require('sequelize');
-const { User } = require('../models');
-const { authMiddleware } = require('../middleware/auth');
+
 const { BACKEND_PORT } = require('../constants/serviceDefaults');
-const UserLogService = require('../services/userLogService');
+const { authMiddleware } = require('../middleware/auth');
+const { User } = require('../models');
 const authSessionService = require('../services/authSessionService');
+const UserLogService = require('../services/userLogService');
 const { Op } = Sequelize;
 
-// 获取客户端IP地址
+// 获取客户端IP地址（使用 req.ip，Express 标准，自动处理 IPv6 和 trust proxy）
 const getClientIP = (req) => {
-  return req.headers['x-forwarded-for'] || 
-         req.connection.remoteAddress || 
-         req.socket.remoteAddress ||
-         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-         '127.0.0.1';
+  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
+
+// 仅在非生产环境下附带错误详情，避免向客户端泄露内部实现细节
+const devErrorDetail = (error) =>
+  process.env.NODE_ENV !== 'production' ? { error: error?.message } : {};
 
 const issueAuthResponseData = async (user, req, options = {}) => {
   const bundle = await authSessionService.issueSessionForUser(user, req, options);
@@ -65,6 +68,9 @@ const cleanupQrLoginStore = () => {
     }
   }
 };
+
+// 定时清理过期的扫码登录条目，避免无人访问端点时过期条目永不释放
+setInterval(cleanupQrLoginStore, 60000).unref();
 
 const buildQrLoginPage = (token) => `<!doctype html>
 <html lang="zh-CN">
@@ -120,7 +126,7 @@ const buildQrLoginPage = (token) => `<!doctype html>
       statusEl.textContent = '正在确认登录...';
 
       const payload = {
-        token: '${token}',
+        token: ${JSON.stringify(token)},
         username: document.getElementById('username').value.trim(),
         password: document.getElementById('password').value
       };
@@ -149,220 +155,230 @@ const buildQrLoginPage = (token) => `<!doctype html>
 </html>`;
 
 // 用户注册
-router.post('/register', [
-  body('username').trim().isLength({ min: 3, max: 50 }).withMessage('用户名长度必须在3-50个字符之间'),
-  body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-  body('password').isLength({ min: 6 }).withMessage('密码长度至少6个字符')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
+router.post(
+  '/register',
+  [
+    body('username')
+      .trim()
+      .isLength({ min: 3, max: 50 })
+      .withMessage('用户名长度必须在3-50个字符之间'),
+    body('email').isEmail().withMessage('请输入有效的邮箱地址'),
+    body('password').isLength({ min: 6 }).withMessage('密码长度至少6个字符'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '输入验证失败',
+          errors: errors.array(),
+        });
+      }
+
+      const { username, email, password, securityQuestion, securityAnswer } = req.body;
+
+      // 检查用户是否已存在
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [{ username }, { email }],
+        },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: '用户名或邮箱已被注册',
+        });
+      }
+
+      // 创建新用户数据
+      const userData = {
+        username,
+        email,
+        password,
+      };
+
+      // 如果提供了密保问题，添加到用户数据中
+      if (securityQuestion && securityAnswer) {
+        userData.securityQuestion = securityQuestion;
+        userData.securityAnswer = securityAnswer;
+      }
+
+      // 创建新用户
+      const user = await User.create(userData);
+
+      // 记录注册日志
+      await UserLogService.logUserAction({
+        userId: user.id,
+        username: user.username,
+        action: 'register',
+        actionDescription: '用户注册',
+        ipAddress: getClientIP(req),
+        userAgent: req.headers['user-agent'],
+        status: 'success',
+        details: {
+          email: user.email,
+          registrationTime: new Date(),
+        },
+      });
+
+      const authData = await issueAuthResponseData(user, req, { authMethod: 'register' });
+
+      res.status(201).json({
+        success: true,
+        message: '注册成功',
+        data: authData,
+      });
+    } catch (error) {
+      console.error('注册错误:', error);
+      res.status(500).json({
         success: false,
-        message: '输入验证失败',
-        errors: errors.array()
+        message: '注册失败，请稍后重试',
+        ...devErrorDetail(error),
       });
     }
-
-    const { username, email, password, securityQuestion, securityAnswer } = req.body;
-
-    // 检查用户是否已存在
-    const existingUser = await User.findOne({
-      where: {
-        [Op.or]: [{ username }, { email }]
-      }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: '用户名或邮箱已被注册'
-      });
-    }
-
-    // 创建新用户数据
-    const userData = {
-      username,
-      email,
-      password
-    };
-
-    // 如果提供了密保问题，添加到用户数据中
-    if (securityQuestion && securityAnswer) {
-      userData.securityQuestion = securityQuestion;
-      userData.securityAnswer = securityAnswer;
-    }
-
-    // 创建新用户
-    const user = await User.create(userData);
-
-    // 记录注册日志
-    await UserLogService.logUserAction({
-      userId: user.id,
-      username: user.username,
-      action: 'register',
-      actionDescription: '用户注册',
-      ipAddress: getClientIP(req),
-      userAgent: req.headers['user-agent'],
-      status: 'success',
-      details: {
-        email: user.email,
-        registrationTime: new Date()
-      }
-    });
-
-    const authData = await issueAuthResponseData(user, req, { authMethod: 'register' });
-
-    res.status(201).json({
-      success: true,
-      message: '注册成功',
-      data: authData
-    });
-  } catch (error) {
-    console.error('注册错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '注册失败',
-      error: error.message
-    });
   }
-});
+);
 
 // 用户登录
-router.post('/login', [
-  body('username').notEmpty().withMessage('请输入用户名'),
-  body('password').notEmpty().withMessage('请输入密码')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: '输入验证失败',
-        errors: errors.array()
-      });
-    }
-
-    const { username, password } = req.body;
-
-    // 查找用户（支持用户名或邮箱登录）
-    const user = await User.findOne({
-      where: {
-        [Op.or]: [
-          { username },
-          { email: username }
-        ]
-      }
-    });
-
-    if (!user) {
-      // 记录登录失败日志
-      await UserLogService.logUserAction({
-        userId: 0,
-        username: username,
-        action: 'login',
-        actionDescription: '登录失败 - 用户不存在',
-        ipAddress: getClientIP(req),
-        userAgent: req.headers['user-agent'],
-        status: 'failed',
-        details: {
-          reason: 'user_not_found',
-          attemptedUsername: username
-        }
-      });
-
-      return res.status(401).json({
-        success: false,
-        message: '用户名或密码错误'
-      });
-    }
-
-    // 验证密码
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      // 记录登录失败日志
-      await UserLogService.logUserAction({
-        userId: user.id,
-        username: user.username,
-        action: 'login',
-        actionDescription: '登录失败 - 密码错误',
-        ipAddress: getClientIP(req),
-        userAgent: req.headers['user-agent'],
-        status: 'failed',
-        details: {
-          reason: 'invalid_password',
-          userId: user.id
-        }
-      });
-
-      return res.status(401).json({
-        success: false,
-        message: '用户名或密码错误'
-      });
-    }
-
-    if (user.status !== 'active') {
-      await UserLogService.logUserAction({
-        userId: user.id,
-        username: user.username,
-        action: 'login',
-        actionDescription: '登录失败 - 账户已禁用',
-        ipAddress: getClientIP(req),
-        userAgent: req.headers['user-agent'],
-        status: 'failed',
-        details: {
-          reason: 'user_inactive',
-          userStatus: user.status
-        }
-      });
-
-      return res.status(403).json({
-        success: false,
-        message: '账户已被禁用'
-      });
-    }
-
-    // 更新最后登录时间
-    await user.update({ lastLoginAt: new Date() });
-
-    // 记录登录成功日志
-    await UserLogService.logUserAction({
-      userId: user.id,
-      username: user.username,
-      action: 'login',
-      actionDescription: '用户登录成功',
-      ipAddress: getClientIP(req),
-      userAgent: req.headers['user-agent'],
-      status: 'success',
-      details: {
-        loginTime: new Date(),
-        userRole: user.role
-      }
-    });
-
-    // Trigger daily instrument sync on first login of the day
+router.post(
+  '/login',
+  [
+    body('username').notEmpty().withMessage('请输入用户名'),
+    body('password').notEmpty().withMessage('请输入密码'),
+  ],
+  async (req, res) => {
     try {
-      const instrumentSyncService = require('../services/instrumentSyncService');
-      instrumentSyncService.onLogin().catch(() => {});
-    } catch { /* ignore */ }
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '输入验证失败',
+          errors: errors.array(),
+        });
+      }
 
-    const authData = await issueAuthResponseData(user, req, { authMethod: 'password' });
+      const { username, password } = req.body;
 
-    res.json({
-      success: true,
-      message: '登录成功',
-      data: authData
-    });
-  } catch (error) {
-    console.error('登录错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '登录失败',
-      error: error.message
-    });
+      // 查找用户（支持用户名或邮箱登录）
+      const user = await User.findOne({
+        where: {
+          [Op.or]: [{ username }, { email: username }],
+        },
+      });
+
+      if (!user) {
+        // 记录登录失败日志
+        await UserLogService.logUserAction({
+          userId: 0,
+          username: username,
+          action: 'login',
+          actionDescription: '登录失败 - 用户不存在',
+          ipAddress: getClientIP(req),
+          userAgent: req.headers['user-agent'],
+          status: 'failed',
+          details: {
+            reason: 'user_not_found',
+            attemptedUsername: username,
+          },
+        });
+
+        return res.status(401).json({
+          success: false,
+          message: '用户名或密码错误',
+        });
+      }
+
+      // 验证密码
+      const isPasswordValid = await user.comparePassword(password);
+
+      if (!isPasswordValid) {
+        // 记录登录失败日志
+        await UserLogService.logUserAction({
+          userId: user.id,
+          username: user.username,
+          action: 'login',
+          actionDescription: '登录失败 - 密码错误',
+          ipAddress: getClientIP(req),
+          userAgent: req.headers['user-agent'],
+          status: 'failed',
+          details: {
+            reason: 'invalid_password',
+            userId: user.id,
+          },
+        });
+
+        return res.status(401).json({
+          success: false,
+          message: '用户名或密码错误',
+        });
+      }
+
+      if (user.status !== 'active') {
+        await UserLogService.logUserAction({
+          userId: user.id,
+          username: user.username,
+          action: 'login',
+          actionDescription: '登录失败 - 账户已禁用',
+          ipAddress: getClientIP(req),
+          userAgent: req.headers['user-agent'],
+          status: 'failed',
+          details: {
+            reason: 'user_inactive',
+            userStatus: user.status,
+          },
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: '账户已被禁用',
+        });
+      }
+
+      // 更新最后登录时间
+      await user.update({ lastLoginAt: new Date() });
+
+      // 记录登录成功日志
+      await UserLogService.logUserAction({
+        userId: user.id,
+        username: user.username,
+        action: 'login',
+        actionDescription: '用户登录成功',
+        ipAddress: getClientIP(req),
+        userAgent: req.headers['user-agent'],
+        status: 'success',
+        details: {
+          loginTime: new Date(),
+          userRole: user.role,
+        },
+      });
+
+      // Trigger daily instrument sync on first login of the day
+      try {
+        const instrumentSyncService = require('../services/instrumentSyncService');
+        instrumentSyncService.onLogin().catch(() => {});
+      } catch {
+        /* ignore */
+      }
+
+      const authData = await issueAuthResponseData(user, req, { authMethod: 'password' });
+
+      res.json({
+        success: true,
+        message: '登录成功',
+        data: authData,
+      });
+    } catch (error) {
+      console.error('登录错误:', error);
+      res.status(500).json({
+        success: false,
+        message: '登录失败',
+        ...devErrorDetail(error),
+      });
+    }
   }
-});
+);
 
 // 生成扫码登录一次性 token
 router.post('/qr-token', async (req, res) => {
@@ -380,7 +396,7 @@ router.post('/qr-token', async (req, res) => {
       expiresAt,
       authToken: null,
       user: null,
-      confirmedAt: null
+      confirmedAt: null,
     });
 
     res.json({
@@ -388,13 +404,15 @@ router.post('/qr-token', async (req, res) => {
       data: {
         token,
         qrUrl,
-        expiresIn: Math.floor(QR_LOGIN_TTL_MS / 1000)
-      }
+        expiresIn: Math.floor(QR_LOGIN_TTL_MS / 1000),
+      },
     });
   } catch (error) {
+    console.error('生成扫码登录 token 错误:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to generate QR login token'
+      message: '生成扫码登录 token 失败，请稍后重试',
+      ...devErrorDetail(error),
     });
   }
 });
@@ -425,14 +443,14 @@ router.get('/qr-status', async (req, res) => {
       status: 'confirmed',
       token: record.authToken,
       user: record.user,
-      data: record.authData || null
+      data: record.authData || null,
     });
   }
 
   return res.json({
     success: true,
     status: 'pending',
-    expiresIn: Math.max(0, Math.ceil((record.expiresAt - Date.now()) / 1000))
+    expiresIn: Math.max(0, Math.ceil((record.expiresAt - Date.now()) / 1000)),
   });
 });
 
@@ -456,82 +474,90 @@ router.get('/qr-login', async (req, res) => {
 });
 
 // 扫码端确认登录
-router.post('/qr-confirm', [
-  body('token').notEmpty().withMessage('token is required'),
-  body('username').notEmpty().withMessage('username is required'),
-  body('password').notEmpty().withMessage('password is required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, message: 'Invalid input', errors: errors.array() });
-    }
-
-    cleanupQrLoginStore();
-    const token = String(req.body.token);
-    const username = String(req.body.username || '').trim();
-    const password = String(req.body.password || '');
-
-    const record = qrLoginStore.get(token);
-    if (!record) {
-      return res.status(404).json({ success: false, message: 'QR login request not found' });
-    }
-    if (record.expiresAt <= Date.now()) {
-      qrLoginStore.delete(token);
-      return res.status(410).json({ success: false, message: 'QR login token expired' });
-    }
-
-    const user = await User.findOne({
-      where: {
-        [Op.or]: [{ username }, { email: username }]
+router.post(
+  '/qr-confirm',
+  [
+    body('token').notEmpty().withMessage('token is required'),
+    body('username').notEmpty().withMessage('username is required'),
+    body('password').notEmpty().withMessage('password is required'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'Invalid input', errors: errors.array() });
       }
-    });
 
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid username or password' });
-    }
+      cleanupQrLoginStore();
+      const token = String(req.body.token);
+      const username = String(req.body.username || '').trim();
+      const password = String(req.body.password || '');
 
-    const validPassword = await user.comparePassword(password);
-    if (!validPassword) {
-      return res.status(401).json({ success: false, message: 'Invalid username or password' });
-    }
-
-    if (user.status !== 'active') {
-      return res.status(403).json({ success: false, message: '账户已被禁用' });
-    }
-
-    await user.update({ lastLoginAt: new Date() });
-
-    const authData = await issueAuthResponseData(user, req, { authMethod: 'qr' });
-    record.status = 'confirmed';
-    record.authToken = authData.token;
-    record.user = authData.user;
-    record.authData = authData;
-    record.confirmedAt = Date.now();
-    qrLoginStore.set(token, record);
-
-    await UserLogService.logUserAction({
-      userId: user.id,
-      username: user.username,
-      action: 'login',
-      actionDescription: '扫码确认登录成功',
-      ipAddress: getClientIP(req),
-      userAgent: req.headers['user-agent'],
-      status: 'success',
-      details: {
-        loginType: 'qr',
-        loginTime: new Date()
+      const record = qrLoginStore.get(token);
+      if (!record) {
+        return res.status(404).json({ success: false, message: 'QR login request not found' });
       }
-    }).catch(() => {});
+      if (record.expiresAt <= Date.now()) {
+        qrLoginStore.delete(token);
+        return res.status(410).json({ success: false, message: 'QR login token expired' });
+      }
 
-    res.json({ success: true, message: 'QR login confirmed' });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to confirm QR login'
-    });
+      const user = await User.findOne({
+        where: {
+          [Op.or]: [{ username }, { email: username }],
+        },
+      });
+
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid username or password' });
+      }
+
+      const validPassword = await user.comparePassword(password);
+      if (!validPassword) {
+        return res.status(401).json({ success: false, message: 'Invalid username or password' });
+      }
+
+      if (user.status !== 'active') {
+        return res.status(403).json({ success: false, message: '账户已被禁用' });
+      }
+
+      await user.update({ lastLoginAt: new Date() });
+
+      const authData = await issueAuthResponseData(user, req, { authMethod: 'qr' });
+      record.status = 'confirmed';
+      record.authToken = authData.token;
+      record.user = authData.user;
+      record.authData = authData;
+      record.confirmedAt = Date.now();
+      qrLoginStore.set(token, record);
+
+      await UserLogService.logUserAction({
+        userId: user.id,
+        username: user.username,
+        action: 'login',
+        actionDescription: '扫码确认登录成功',
+        ipAddress: getClientIP(req),
+        userAgent: req.headers['user-agent'],
+        status: 'success',
+        details: {
+          loginType: 'qr',
+          loginTime: new Date(),
+        },
+      }).catch(() => {});
+
+      res.json({ success: true, message: 'QR login confirmed' });
+    } catch (error) {
+      console.error('扫码登录确认错误:', error);
+      res.status(500).json({
+        success: false,
+        message: '扫码登录确认失败，请稍后重试',
+        ...devErrorDetail(error),
+      });
+    }
   }
-});
+);
 
 // 获取当前用户信息
 router.get('/me', authMiddleware, async (req, res) => {
@@ -545,14 +571,14 @@ router.get('/me', authMiddleware, async (req, res) => {
         session: authSessionService.serializeSession(req.authSession, req.authSession?.id || ''),
         authMethod: req.auth?.method || 'jwt',
         legacySession: !!req.auth?.legacy,
-      }
+      },
     });
   } catch (error) {
     console.error('获取用户信息错误:', error);
     res.status(500).json({
       success: false,
       message: '获取用户信息失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
@@ -567,20 +593,20 @@ router.post('/refresh', async (req, res) => {
       const failure = mapRefreshFailure(result);
       return res.status(failure.status).json({
         success: false,
-        message: failure.message
+        message: failure.message,
       });
     }
 
     return res.json({
       success: true,
       message: '令牌刷新成功',
-      data: authSessionService.createAuthResponseData(result.user, result)
+      data: authSessionService.createAuthResponseData(result.user, result),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: '刷新令牌失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
@@ -588,20 +614,23 @@ router.post('/refresh', async (req, res) => {
 // 获取当前账号的登录会话列表
 router.get('/sessions', authMiddleware, async (req, res) => {
   try {
-    const sessions = await authSessionService.listUserSessions(req.user.id, req.authSession?.id || '');
+    const sessions = await authSessionService.listUserSessions(
+      req.user.id,
+      req.authSession?.id || ''
+    );
     res.json({
       success: true,
       data: {
         currentSessionId: req.authSession?.id || null,
         legacySession: !!req.auth?.legacy,
-        sessions
-      }
+        sessions,
+      },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: '获取登录会话失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
@@ -628,8 +657,8 @@ router.post('/logout', authMiddleware, async (req, res) => {
       userAgent: req.headers['user-agent'],
       status: 'success',
       details: {
-        logoutTime: new Date()
-      }
+        logoutTime: new Date(),
+      },
     });
 
     res.json({
@@ -637,15 +666,15 @@ router.post('/logout', authMiddleware, async (req, res) => {
       message: '退出登录成功',
       data: {
         revoked,
-        currentSessionId: req.authSession?.id || null
-      }
+        currentSessionId: req.authSession?.id || null,
+      },
     });
   } catch (error) {
     console.error('退出登录错误:', error);
     res.status(500).json({
       success: false,
       message: '退出登录失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
@@ -654,7 +683,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
 router.post('/logout-all', authMiddleware, async (req, res) => {
   try {
     const revokeResult = await authSessionService.revokeUserSessions(req.user.id, {
-      reason: 'logout_all'
+      reason: 'logout_all',
     });
     await authSessionService.invalidateLegacyTokens(req.user.id, 'logout_all');
 
@@ -668,22 +697,22 @@ router.post('/logout-all', authMiddleware, async (req, res) => {
       status: 'success',
       details: {
         revokedSessions: revokeResult.revokedCount,
-        logoutTime: new Date()
-      }
+        logoutTime: new Date(),
+      },
     });
 
     res.json({
       success: true,
       message: '已退出所有设备',
       data: {
-        revokedSessions: revokeResult.revokedCount
-      }
+        revokedSessions: revokeResult.revokedCount,
+      },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: '退出所有设备失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
@@ -695,16 +724,19 @@ router.delete('/sessions/:sessionId', authMiddleware, async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({
         success: false,
-        message: '缺少会话编号'
+        message: '缺少会话编号',
       });
     }
 
-    const sessions = await authSessionService.listUserSessions(req.user.id, req.authSession?.id || '');
+    const sessions = await authSessionService.listUserSessions(
+      req.user.id,
+      req.authSession?.id || ''
+    );
     const target = sessions.find((session) => String(session.id) === sessionId);
     if (!target) {
       return res.status(404).json({
         success: false,
-        message: '会话不存在'
+        message: '会话不存在',
       });
     }
 
@@ -714,113 +746,118 @@ router.delete('/sessions/:sessionId', authMiddleware, async (req, res) => {
       message: '会话已撤销',
       data: {
         revoked: !!result.revoked,
-        sessionId
-      }
+        sessionId,
+      },
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: '撤销会话失败',
-      error: error.message
+      ...devErrorDetail(error),
     });
   }
 });
 
 // 修改密码
-router.post('/change-password', [
-  body('currentPassword').notEmpty().withMessage('请输入当前密码'),
-  body('newPassword').isLength({ min: 6 }).withMessage('新密码长度至少6个字符'),
-  body('confirmPassword').custom((value, { req }) => {
-    if (value !== req.body.newPassword) {
-      throw new Error('确认密码与新密码不匹配');
-    }
-    return true;
-  })
-], authMiddleware, async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: '输入验证失败',
-        errors: errors.array()
+router.post(
+  '/change-password',
+  [
+    body('currentPassword').notEmpty().withMessage('请输入当前密码'),
+    body('newPassword').isLength({ min: 6 }).withMessage('新密码长度至少6个字符'),
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error('确认密码与新密码不匹配');
+      }
+      return true;
+    }),
+  ],
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: '输入验证失败',
+          errors: errors.array(),
+        });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      // 验证当前密码
+      const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
+      if (!isCurrentPasswordValid) {
+        // 记录密码修改失败日志
+        await UserLogService.logUserAction({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'password_change',
+          actionDescription: '密码修改失败 - 当前密码错误',
+          ipAddress: getClientIP(req),
+          userAgent: req.headers['user-agent'],
+          status: 'failed',
+          details: {
+            reason: 'invalid_current_password',
+          },
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: '当前密码错误',
+        });
+      }
+
+      // 检查新密码是否与当前密码相同
+      const isSamePassword = await req.user.comparePassword(newPassword);
+      if (isSamePassword) {
+        return res.status(400).json({
+          success: false,
+          message: '新密码不能与当前密码相同',
+        });
+      }
+
+      // 更新密码
+      await req.user.update({ password: newPassword });
+      await authSessionService.notePasswordChanged(req.user.id);
+      const revokeResult = await authSessionService.revokeUserSessions(req.user.id, {
+        excludeSessionId: req.authSession?.id || '',
+        reason: 'password_change',
       });
-    }
+      await authSessionService.invalidateLegacyTokens(req.user.id, 'password_change');
 
-    const { currentPassword, newPassword } = req.body;
-
-    // 验证当前密码
-    const isCurrentPasswordValid = await req.user.comparePassword(currentPassword);
-    if (!isCurrentPasswordValid) {
-      // 记录密码修改失败日志
+      // 记录密码修改成功日志
       await UserLogService.logUserAction({
         userId: req.user.id,
         username: req.user.username,
         action: 'password_change',
-        actionDescription: '密码修改失败 - 当前密码错误',
+        actionDescription: '用户修改密码成功',
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'],
-        status: 'failed',
+        status: 'success',
         details: {
-          reason: 'invalid_current_password'
-        }
+          changeTime: new Date(),
+        },
       });
 
-      return res.status(400).json({
+      res.json({
+        success: true,
+        message: '密码修改成功',
+        data: {
+          revokedOtherSessions: revokeResult.revokedCount,
+          currentSessionPreserved: !!req.authSession?.id,
+          legacySession: !!req.auth?.legacy,
+        },
+      });
+    } catch (error) {
+      console.error('修改密码错误:', error);
+      res.status(500).json({
         success: false,
-        message: '当前密码错误'
+        message: '修改密码失败',
+        ...devErrorDetail(error),
       });
     }
-
-    // 检查新密码是否与当前密码相同
-    const isSamePassword = await req.user.comparePassword(newPassword);
-    if (isSamePassword) {
-      return res.status(400).json({
-        success: false,
-        message: '新密码不能与当前密码相同'
-      });
-    }
-
-    // 更新密码
-    await req.user.update({ password: newPassword });
-    await authSessionService.notePasswordChanged(req.user.id);
-    const revokeResult = await authSessionService.revokeUserSessions(req.user.id, {
-      excludeSessionId: req.authSession?.id || '',
-      reason: 'password_change'
-    });
-    await authSessionService.invalidateLegacyTokens(req.user.id, 'password_change');
-
-    // 记录密码修改成功日志
-    await UserLogService.logUserAction({
-      userId: req.user.id,
-      username: req.user.username,
-      action: 'password_change',
-      actionDescription: '用户修改密码成功',
-      ipAddress: getClientIP(req),
-      userAgent: req.headers['user-agent'],
-      status: 'success',
-      details: {
-        changeTime: new Date()
-      }
-    });
-
-    res.json({
-      success: true,
-      message: '密码修改成功',
-      data: {
-        revokedOtherSessions: revokeResult.revokedCount,
-        currentSessionPreserved: !!req.authSession?.id,
-        legacySession: !!req.auth?.legacy
-      }
-    });
-  } catch (error) {
-    console.error('修改密码错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '修改密码失败',
-      error: error.message
-    });
   }
-});
+);
 
 module.exports = router;

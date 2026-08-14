@@ -10,7 +10,6 @@
  * @module services/rateLimiter
  */
 
-
 // ── Main Logic ──
 
 /**
@@ -115,7 +114,6 @@ function createKeyedRateLimiter(opts) {
 
   return { consume, reset };
 }
-
 
 // ── Exports ──
 

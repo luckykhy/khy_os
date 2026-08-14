@@ -19,7 +19,9 @@ const DISABLED = new Set(['0', 'false', 'off', 'no']);
  * @returns {boolean}
  */
 function isPersistEnabled(envValue) {
-  if (envValue == null) return true;
+  if (envValue == null) {
+    return true;
+  }
   return !DISABLED.has(String(envValue).trim().toLowerCase());
 }
 
@@ -32,7 +34,7 @@ function isPersistEnabled(envValue) {
  */
 function mergeHistory(persisted, session, max) {
   const clean = (arr) =>
-    (Array.isArray(arr) ? arr.filter((s) => typeof s === 'string' && s.trim() !== '') : []);
+    Array.isArray(arr) ? arr.filter((s) => typeof s === 'string' && s.trim() !== '') : [];
   const merged = clean(persisted).concat(clean(session));
   const cap = Number.isFinite(max) && max > 0 ? Math.floor(max) : merged.length;
   return merged.length > cap ? merged.slice(merged.length - cap) : merged;

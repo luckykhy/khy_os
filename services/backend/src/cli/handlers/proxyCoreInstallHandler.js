@@ -33,11 +33,17 @@ const DEFAULT_INSTALLER = () => require('../../services/proxy/proxyCoreInstaller
  */
 function formatDownloadHint(descriptor) {
   const lines = [];
-  if (!descriptor || typeof descriptor !== 'object') return lines;
+  if (!descriptor || typeof descriptor !== 'object') {
+    return lines;
+  }
   const url = descriptor.url || descriptor.releasesPage;
   const ver = descriptor.version ? ` ${descriptor.version}` : '';
-  if (url) lines.push(`  下载地址(mihomo${ver}): ${url}`);
-  if (descriptor.dest) lines.push(`  放入路径: ${descriptor.dest}`);
+  if (url) {
+    lines.push(`  下载地址(mihomo${ver}): ${url}`);
+  }
+  if (descriptor.dest) {
+    lines.push(`  放入路径: ${descriptor.dest}`);
+  }
   if (descriptor.supported === false) {
     lines.push('  当前平台无预置资产,请在 releases 页自选对应架构手动下载。');
   }
@@ -53,7 +59,9 @@ function formatDownloadHint(descriptor) {
 function formatCoreInstallResult(result, descriptor) {
   const r = result && typeof result === 'object' ? result : { success: false, reason: 'no-result' };
   if (r.success) {
-    if (r.method === 'existing') return { ok: true, lines: [`✓ 代理内核已就位: ${r.path}`] };
+    if (r.method === 'existing') {
+      return { ok: true, lines: [`✓ 代理内核已就位: ${r.path}`] };
+    }
     if (r.method === 'adopted') {
       const src = r.source ? ` (来源 ${r.source})` : '';
       return { ok: true, lines: [`✓ 已采纳本机现成内核: ${r.path}${src}`] };
@@ -66,12 +74,17 @@ function formatCoreInstallResult(result, descriptor) {
     return { ok: true, lines: [`✓ 代理内核已安装: ${r.path || '(未知路径)'}`] };
   }
   // Failure — always append where-to-download so the user is never stuck.
-  const head = r.reason === 'disabled'
-    ? '⚠ 自动下载内核未启用。'
-    : `⚠ 无法自动安装代理内核(${r.reason || 'unknown'})。`;
+  const head =
+    r.reason === 'disabled'
+      ? '⚠ 自动下载内核未启用。'
+      : `⚠ 无法自动安装代理内核(${r.reason || 'unknown'})。`;
   const lines = [head];
-  if (r.guidance) lines.push(`  ${r.guidance}`);
-  if (r.error) lines.push(`  详情: ${r.error}`);
+  if (r.guidance) {
+    lines.push(`  ${r.guidance}`);
+  }
+  if (r.error) {
+    lines.push(`  详情: ${r.error}`);
+  }
   lines.push('  你可以手动下载:');
   lines.push(...formatDownloadHint(descriptor));
   return { ok: false, lines };
@@ -108,14 +121,22 @@ async function runCore(opts = {}) {
   const installer = opts.installer || DEFAULT_INSTALLER();
 
   let descriptor = null;
-  try { descriptor = installer.describeCoreDownload(); } catch { descriptor = null; }
+  try {
+    descriptor = installer.describeCoreDownload();
+  } catch {
+    descriptor = null;
+  }
 
   if (action === 'install' || action === 'download' || action === 'ensure') {
     let result;
     try {
       result = await installer.install({ env });
     } catch (err) {
-      result = { success: false, reason: 'install-threw', error: err && err.message ? err.message : String(err) };
+      result = {
+        success: false,
+        reason: 'install-threw',
+        error: err && err.message ? err.message : String(err),
+      };
     }
     const rendered = formatCoreInstallResult(result, descriptor);
     rendered.lines.forEach((l) => out(l));
@@ -125,12 +146,19 @@ async function runCore(opts = {}) {
   // Default: status — pure read, zero network.
   let installed = false;
   let binPath = null;
-  try { installed = !!installer.isInstalled(); } catch { installed = false; }
   try {
-    binPath = typeof installer._binaryPath === 'function'
-      ? installer._binaryPath()
-      : (descriptor && descriptor.dest) || null;
-  } catch { binPath = (descriptor && descriptor.dest) || null; }
+    installed = !!installer.isInstalled();
+  } catch {
+    installed = false;
+  }
+  try {
+    binPath =
+      typeof installer._binaryPath === 'function'
+        ? installer._binaryPath()
+        : (descriptor && descriptor.dest) || null;
+  } catch {
+    binPath = (descriptor && descriptor.dest) || null;
+  }
   formatCoreStatus({ installed, path: binPath, descriptor }).forEach((l) => out(l));
   return { action: 'status', ok: installed };
 }

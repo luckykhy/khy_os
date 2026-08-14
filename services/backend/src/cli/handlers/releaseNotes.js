@@ -19,13 +19,16 @@
 
 const fs = require('fs');
 const path = require('path');
-const { printInfo, printError, printWarn } = require('../formatters');
+
 const { parseChangelog, selectReleaseNotes } = require('../../services/changelog/changelogParse');
+const { printInfo, printError, printWarn } = require('../formatters');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _enabled(env = process.env) {
   const raw = env && env.KHY_RELEASE_NOTES;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -37,11 +40,18 @@ function _enabled(env = process.env) {
 function _resolveChangelogPath(env = process.env) {
   // 显式 env 覆盖即权威:只认它,不再静默回退到仓库根(否则覆盖失效难排查)。
   const override = env && env.KHY_CHANGELOG_PATH;
-  const candidates = override && String(override).trim()
-    ? [String(override).trim()]
-    : [path.resolve(__dirname, '../../../../../', 'CHANGELOG.md')];
+  const candidates =
+    override && String(override).trim()
+      ? [String(override).trim()]
+      : [path.resolve(__dirname, '../../../../../', 'CHANGELOG.md')];
   for (const p of candidates) {
-    try { if (fs.existsSync(p) && fs.statSync(p).isFile()) return p; } catch { /* fail-soft */ }
+    try {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        return p;
+      }
+    } catch {
+      /* fail-soft */
+    }
   }
   return null;
 }
@@ -50,7 +60,9 @@ function _resolveChangelogPath(env = process.env) {
 function _renderEntry(entry) {
   const lines = [];
   lines.push(`## ${entry.version}`);
-  if (entry.summary) lines.push(entry.summary);
+  if (entry.summary) {
+    lines.push(entry.summary);
+  }
   if (Array.isArray(entry.highlights) && entry.highlights.length) {
     lines.push('');
     for (const h of entry.highlights) {
@@ -101,14 +113,22 @@ async function handleReleaseNotes(subCommand, args = [], _options = {}) {
   // arg 是纯数字 → 当数量;含点/字母 → 当版本号;空 → 最新 1 个。
   const opts = {};
   if (arg) {
-    if (/^\d+$/.test(arg)) opts.limit = parseInt(arg, 10);
-    else opts.version = arg;
+    if (/^\d+$/.test(arg)) {
+      opts.limit = parseInt(arg, 10);
+    } else {
+      opts.version = arg;
+    }
   }
   const selected = selectReleaseNotes(entries, opts);
 
   if (!selected.length) {
     printWarn(`未找到版本 ${arg} 的发布说明。`);
-    printInfo(`可用版本(最近):${entries.slice(0, 8).map((e) => e.version).join(', ')}`);
+    printInfo(
+      `可用版本(最近):${entries
+        .slice(0, 8)
+        .map((e) => e.version)
+        .join(', ')}`
+    );
     return false;
   }
 

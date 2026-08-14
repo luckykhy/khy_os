@@ -34,7 +34,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function cacheWarningEnabled(env) {
   const raw = env && env.KHY_CACHE_WARNING;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -44,7 +46,9 @@ function cacheWarningEnabled(env) {
 function getCacheThreshold(env) {
   const raw = env && env.KHY_CACHE_THRESHOLD;
   const n = Number(raw);
-  if (Number.isFinite(n) && n >= 1 && n <= 100) return n;
+  if (Number.isFinite(n) && n >= 1 && n <= 100) {
+    return n;
+  }
   return DEFAULT_CACHE_THRESHOLD;
 }
 
@@ -52,7 +56,9 @@ function getCacheThreshold(env) {
 const _num = require('../utils/finiteNumber').toPositiveOr0;
 
 function _numOrNull(v) {
-  if (v == null) return null; // null/undefined → null (a real 0 stays 0)
+  if (v == null) {
+    return null;
+  } // null/undefined → null (a real 0 stays 0)
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -63,18 +69,26 @@ function _numOrNull(v) {
 // Returns 0..100, or null when there is no cache data (both cache segments 0) or
 // no input at all — CC's exact null branches.
 function calculateCacheHitRate(usage) {
-  if (!usage || typeof usage !== 'object') return null;
+  if (!usage || typeof usage !== 'object') {
+    return null;
+  }
   const input = _num(usage.inputTokens != null ? usage.inputTokens : usage.input_tokens);
   const cacheWrite = _num(
-    usage.cacheWriteInputTokens != null ? usage.cacheWriteInputTokens : usage.cache_creation_input_tokens
+    usage.cacheWriteInputTokens != null
+      ? usage.cacheWriteInputTokens
+      : usage.cache_creation_input_tokens
   );
   const cacheRead = _num(
     usage.cacheReadInputTokens != null ? usage.cacheReadInputTokens : usage.cache_read_input_tokens
   );
   // 所有缓存字段为 0 → 无缓存数据(对齐 CC)。
-  if (cacheRead === 0 && cacheWrite === 0) return null;
+  if (cacheRead === 0 && cacheWrite === 0) {
+    return null;
+  }
   const total = input + cacheWrite + cacheRead;
-  if (total === 0) return null;
+  if (total === 0) {
+    return null;
+  }
   return (cacheRead / total) * 100;
 }
 
@@ -86,21 +100,29 @@ function calculateCacheHitRate(usage) {
 // 会话累计门控。默认开;仅显式 0/false/off/no 关。关 → 调用方不累计、不显示会话行。
 function sessionAggregateEnabled(env) {
   const raw = env && env.KHY_CACHE_SESSION_AGGREGATE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // 从一轮 usage 抽出 {input, cacheWrite, cacheRead}(复用 calculateCacheHitRate 的字段口径:
 // khy 规范名优先、CC snake_case 兜底)。无 usage → 全 0。绝不抛。
 function _extractCacheTokens(usage) {
-  if (!usage || typeof usage !== 'object') return { input: 0, cacheWrite: 0, cacheRead: 0 };
+  if (!usage || typeof usage !== 'object') {
+    return { input: 0, cacheWrite: 0, cacheRead: 0 };
+  }
   return {
     input: _num(usage.inputTokens != null ? usage.inputTokens : usage.input_tokens),
     cacheWrite: _num(
-      usage.cacheWriteInputTokens != null ? usage.cacheWriteInputTokens : usage.cache_creation_input_tokens
+      usage.cacheWriteInputTokens != null
+        ? usage.cacheWriteInputTokens
+        : usage.cache_creation_input_tokens
     ),
     cacheRead: _num(
-      usage.cacheReadInputTokens != null ? usage.cacheReadInputTokens : usage.cache_read_input_tokens
+      usage.cacheReadInputTokens != null
+        ? usage.cacheReadInputTokens
+        : usage.cache_read_input_tokens
     ),
   };
 }
@@ -110,12 +132,15 @@ function _extractCacheTokens(usage) {
 // prev 缺省 → 从零起。无缓存数据(read+write 皆 0)的一轮不计入 turns(与单轮「无数据」对齐)。
 // 返回**新对象**(不改 prev),调用方存回自己的 ref。绝不抛。
 function accumulateSessionCache(prev, usage) {
-  const base = prev && typeof prev === 'object'
-    ? { hit: _num(prev.hit), miss: _num(prev.miss), turns: _num(prev.turns) }
-    : { hit: 0, miss: 0, turns: 0 };
+  const base =
+    prev && typeof prev === 'object'
+      ? { hit: _num(prev.hit), miss: _num(prev.miss), turns: _num(prev.turns) }
+      : { hit: 0, miss: 0, turns: 0 };
   try {
     const { input, cacheWrite, cacheRead } = _extractCacheTokens(usage);
-    if (cacheRead === 0 && cacheWrite === 0) return base; // 无缓存数据 → 原样(不计 turn)
+    if (cacheRead === 0 && cacheWrite === 0) {
+      return base;
+    } // 无缓存数据 → 原样(不计 turn)
     return {
       hit: base.hit + cacheRead,
       miss: base.miss + input + cacheWrite,
@@ -131,16 +156,22 @@ function aggregateCacheRate(session) {
   const hit = _num(session && session.hit);
   const miss = _num(session && session.miss);
   const total = hit + miss;
-  if (total === 0) return null;
+  if (total === 0) {
+    return null;
+  }
   return (hit / total) * 100;
 }
 
 // 会话累计一行文案(khy scope 允许中文)。turns<1 或无数据 → null(不打印)。
 function buildSessionAggregateLine(session) {
   const rate = aggregateCacheRate(session);
-  if (rate === null) return null;
+  if (rate === null) {
+    return null;
+  }
   const turns = _num(session && session.turns);
-  if (turns < 1) return null;
+  if (turns < 1) {
+    return null;
+  }
   return `会话累计命中率 ${Math.round(rate)}%(${turns} 轮)`;
 }
 
@@ -151,7 +182,9 @@ function buildSessionAggregateLine(session) {
 function sessionAggregateFor(input, env) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!sessionAggregateEnabled(e)) return null;
+    if (!sessionAggregateEnabled(e)) {
+      return null;
+    }
     const prev = input && input.session;
     const session = accumulateSessionCache(prev, input && input.usage);
     const rate = aggregateCacheRate(session);
@@ -167,7 +200,9 @@ function sessionAggregateFor(input, env) {
 function evaluateCacheWarning({ hitRate, lastHitRate, threshold }) {
   const rate = _numOrNull(hitRate);
   const thr = Number.isFinite(Number(threshold)) ? Number(threshold) : DEFAULT_CACHE_THRESHOLD;
-  if (rate === null) return { shouldWarn: false, trend: null };
+  if (rate === null) {
+    return { shouldWarn: false, trend: null };
+  }
   const last = _numOrNull(lastHitRate);
   const trend = last === null ? null : rate - last;
   return { shouldWarn: rate < thr, trend };
@@ -179,7 +214,9 @@ function evaluateCacheWarning({ hitRate, lastHitRate, threshold }) {
 // existing token-arrow aesthetic instead of CC's ASCII ^/v.
 function buildCacheWarningLine({ hitRate, threshold, trend }) {
   const rate = Math.round(_num(hitRate));
-  const thr = Math.round(Number.isFinite(Number(threshold)) ? Number(threshold) : DEFAULT_CACHE_THRESHOLD);
+  const thr = Math.round(
+    Number.isFinite(Number(threshold)) ? Number(threshold) : DEFAULT_CACHE_THRESHOLD
+  );
   let line = `缓存命中率 ${rate}%,低于 ${thr}% 阈值`;
   const t = _numOrNull(trend);
   if (t !== null && Math.abs(t) > 0.1) {
@@ -197,14 +234,23 @@ function buildCacheWarningLine({ hitRate, threshold, trend }) {
 // off / any error → null (byte-identical no-op fallback). Fully stateless.
 function cacheWarningFor(input, env) {
   try {
-    if (!cacheWarningEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) return null;
+    if (!cacheWarningEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) {
+      return null;
+    }
     const hitRate = calculateCacheHitRate(input && input.usage);
-    if (hitRate === null) return null; // no cache data → keep prior state
+    if (hitRate === null) {
+      return null;
+    } // no cache data → keep prior state
     const threshold = getCacheThreshold(env || (typeof process !== 'undefined' ? process.env : {}));
     const lastHitRate = _numOrNull(input && input.lastHitRate);
-    if (lastHitRate === null) return { hitRate, text: null }; // first obs → seed only
+    if (lastHitRate === null) {
+      return { hitRate, text: null };
+    } // first obs → seed only
     const { shouldWarn, trend } = evaluateCacheWarning({ hitRate, lastHitRate, threshold });
-    return { hitRate, text: shouldWarn ? buildCacheWarningLine({ hitRate, threshold, trend }) : null };
+    return {
+      hitRate,
+      text: shouldWarn ? buildCacheWarningLine({ hitRate, threshold, trend }) : null,
+    };
   } catch {
     return null;
   }
@@ -219,9 +265,13 @@ function prefixAttributionFor(input, env) {
   try {
     const pps = require('../constants/promptPrefixShape');
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!pps.isPrefixShapeEnabled(e)) return null;
+    if (!pps.isPrefixShapeEnabled(e)) {
+      return null;
+    }
     const cur = input && input.curShape;
-    if (!cur || typeof cur !== 'object') return null;
+    if (!cur || typeof cur !== 'object') {
+      return null;
+    }
     const prev = input && input.prevShape ? input.prevShape : null;
     const cmp = pps.compareShape(prev, cur);
     const text = cmp && cmp.changed ? pps.describeReasons(cmp.reasons) : null;

@@ -1,7 +1,7 @@
 'use strict';
 
-const { BaseTool } = require('../_baseTool');
 const weipu = require('../../services/weipuxiezuo');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * WeipuRewriteTool — 维普 AIGC 降重的「确定性检测/评分/判合格」工具。
@@ -20,8 +20,12 @@ class WeipuRewriteTool extends BaseTool {
   static aliases = ['weipu', 'weipuxiezuo', 'aigc_rewrite', 'descatter'];
   static searchHint = 'AIGC 降重 维普 学术写作 去AI味 检测 改写 论文 burstiness 三维评分';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -89,8 +93,12 @@ class WeipuRewriteTool extends BaseTool {
       report,
     };
 
-    if (view === 'report') return base;
-    if (view === 'brief') return { ...base, brief };
+    if (view === 'report') {
+      return base;
+    }
+    if (view === 'brief') {
+      return { ...base, brief };
+    }
 
     // full
     return {

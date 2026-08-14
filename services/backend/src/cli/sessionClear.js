@@ -19,12 +19,20 @@ const _OFF = ['0', 'false', 'off', 'no', 'disable', 'disabled'];
  */
 function resetGatewayBreakerOnSessionClear(env = process.env) {
   try {
-    const v = String((env && env.KHY_BREAKER_RESET_ON_NEW) || '').trim().toLowerCase();
-    if (_OFF.includes(v)) return false;
+    const v = String((env && env.KHY_BREAKER_RESET_ON_NEW) || '')
+      .trim()
+      .toLowerCase();
+    if (_OFF.includes(v)) {
+      return false;
+    }
     const gw = require('../services/syscallGateway');
-    if (typeof gw.resetAllSessions === 'function') gw.resetAllSessions();
-    else if (typeof gw.resetSession === 'function') gw.resetSession();
-    else return false;
+    if (typeof gw.resetAllSessions === 'function') {
+      gw.resetAllSessions();
+    } else if (typeof gw.resetSession === 'function') {
+      gw.resetSession();
+    } else {
+      return false;
+    }
     return true;
   } catch {
     return false;

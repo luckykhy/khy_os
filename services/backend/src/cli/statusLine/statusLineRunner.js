@@ -83,14 +83,25 @@ function renderOnce(args = {}) {
     result = exec(resolved.command, input, { timeoutMs: _timeoutMs(env) });
   } catch (err) {
     return {
-      ok: false, line: null, raw: null, reason: 'exec_error',
-      error: err && err.message ? err.message : String(err), command: resolved.command,
+      ok: false,
+      line: null,
+      raw: null,
+      reason: 'exec_error',
+      error: err && err.message ? err.message : String(err),
+      command: resolved.command,
     };
   }
 
   if (result && result.error) {
     const msg = result.error.message || String(result.error);
-    return { ok: false, line: null, raw: null, reason: 'exec_error', error: msg, command: resolved.command };
+    return {
+      ok: false,
+      line: null,
+      raw: null,
+      reason: 'exec_error',
+      error: msg,
+      command: resolved.command,
+    };
   }
 
   const raw = result && typeof result.stdout === 'string' ? result.stdout : '';
@@ -98,8 +109,12 @@ function renderOnce(args = {}) {
   if (!line) {
     const stderr = result && result.stderr ? String(result.stderr).trim() : '';
     return {
-      ok: false, line: '', raw, reason: 'empty_output',
-      error: stderr || null, command: resolved.command,
+      ok: false,
+      line: '',
+      raw,
+      reason: 'empty_output',
+      error: stderr || null,
+      command: resolved.command,
     };
   }
   return { ok: true, line, raw, reason: null, error: null, command: resolved.command };

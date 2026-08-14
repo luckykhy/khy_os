@@ -14,8 +14,12 @@ class ExitPlanModeTool extends BaseTool {
   static searchHint = 'exit plan mode approve cancel execute';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Exit plan mode by approving or cancelling the current plan.
@@ -47,7 +51,8 @@ IMPORTANT: Always use this tool (not AskUserQuestion) when you need plan approva
         },
         plan: {
           type: 'string',
-          description: 'The finished plan as a numbered execution list (required when approving). One concrete step per line.',
+          description:
+            'The finished plan as a numbered execution list (required when approving). One concrete step per line.',
         },
       },
       required: ['action'],

@@ -27,7 +27,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env) {
   const e = env && typeof env === 'object' ? env : {};
   const raw = e.KHY_INTENT_NEGATION;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -43,12 +45,16 @@ function isEnabled(env) {
 function _occurrenceNegated(text, verb, idx, markers, modals) {
   // 前向:某 marker 紧贴动词左侧。
   for (const m of markers) {
-    if (idx >= m.length && text.slice(idx - m.length, idx) === m) return true;
+    if (idx >= m.length && text.slice(idx - m.length, idx) === m) {
+      return true;
+    }
   }
   // 后向:某 modal 紧贴动词右侧。
   const after = idx + verb.length;
   for (const md of modals) {
-    if (text.slice(after, after + md.length) === md) return true;
+    if (text.slice(after, after + md.length) === md) {
+      return true;
+    }
   }
   return false;
 }
@@ -64,26 +70,43 @@ function _occurrenceNegated(text, verb, idx, markers, modals) {
  * @returns {string[]} 被完全否定的动词子集
  */
 function selectNegatedVerbs(text, verbs, env, lexicon) {
-  if (!isEnabled(env)) return [];
-  if (typeof text !== 'string' || !text) return [];
-  if (!Array.isArray(verbs) || verbs.length === 0) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
+  if (typeof text !== 'string' || !text) {
+    return [];
+  }
+  if (!Array.isArray(verbs) || verbs.length === 0) {
+    return [];
+  }
 
   const lex = lexicon && typeof lexicon === 'object' ? lexicon : {};
   const markers = Array.isArray(lex.markers) ? lex.markers : [];
   const modals = Array.isArray(lex.modals) ? lex.modals : [];
-  if (markers.length === 0 && modals.length === 0) return [];
+  if (markers.length === 0 && modals.length === 0) {
+    return [];
+  }
 
   const negated = [];
   for (const verb of verbs) {
-    if (typeof verb !== 'string' || !verb) continue;
+    if (typeof verb !== 'string' || !verb) {
+      continue;
+    }
     let hasActive = false;
     let idx = text.indexOf(verb);
-    if (idx === -1) continue; // 未实际出现 → 不判定
+    if (idx === -1) {
+      continue;
+    } // 未实际出现 → 不判定
     while (idx !== -1) {
-      if (!_occurrenceNegated(text, verb, idx, markers, modals)) { hasActive = true; break; }
+      if (!_occurrenceNegated(text, verb, idx, markers, modals)) {
+        hasActive = true;
+        break;
+      }
       idx = text.indexOf(verb, idx + 1);
     }
-    if (!hasActive) negated.push(verb);
+    if (!hasActive) {
+      negated.push(verb);
+    }
   }
   return negated;
 }

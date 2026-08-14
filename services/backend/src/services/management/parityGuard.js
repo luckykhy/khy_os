@@ -44,7 +44,7 @@ function checkParity(deps = {}) {
   if (JSON.stringify(cliResourceSubs) !== JSON.stringify(registryIds)) {
     errors.push(
       `CLI_PARITY: manage sub-commands [${cliResourceSubs.join(', ')}] ` +
-      `!= registry resources [${registryIds.join(', ')}]`
+        `!= registry resources [${registryIds.join(', ')}]`
     );
   }
   if (!subs.includes('list')) {

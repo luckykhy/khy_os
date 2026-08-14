@@ -28,11 +28,17 @@ function isPresetsEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_MCP_PRESETS', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_MCP_PRESETS;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -173,6 +179,42 @@ const _PRESETS = Object.freeze({
     argHint: null,
     homepage: 'https://github.com/modelcontextprotocol/servers/tree/main/src/time',
   },
+  notion: {
+    description: 'Notion 页面/数据库检索与读写(查询、创建、更新)',
+    transport: 'stdio',
+    command: 'npx',
+    args: ['-y', '@notionhq/notion-mcp-server'],
+    requiresEnv: ['NOTION_TOKEN'],
+    argHint: null,
+    homepage: 'https://github.com/makenotion/notion-mcp-server',
+  },
+  linear: {
+    description: 'Linear 问题/项目/团队管理(查询、创建、更新状态)',
+    transport: 'stdio',
+    command: 'npx',
+    args: ['-y', 'mcp-linear'],
+    requiresEnv: ['LINEAR_API_KEY'],
+    argHint: null,
+    homepage: 'https://github.com/tacticlaunch/mcp-linear',
+  },
+  sentry: {
+    description: 'Sentry 错误监控查询(检索 issue、分析告警与发布)',
+    transport: 'stdio',
+    command: 'npx',
+    args: ['-y', '@sentry/mcp-server'],
+    requiresEnv: ['SENTRY_ACCESS_TOKEN'],
+    argHint: null,
+    homepage: 'https://github.com/getsentry/sentry-mcp',
+  },
+  docker: {
+    description: '本地 Docker 容器/镜像管理(启动、查看、清理)',
+    transport: 'stdio',
+    command: 'uvx',
+    args: ['mcp-server-docker'],
+    requiresEnv: [],
+    argHint: '可追加 --transport 等参数;默认连接本机 Docker 守护进程',
+    homepage: 'https://github.com/ckreiling/mcp-server-docker',
+  },
 });
 
 // 短名别名 → 规范预设名。
@@ -191,10 +233,18 @@ const _ALIASES = Object.freeze({
 
 /** 归一预设名(小写 + 别名解析)。非法输入 → ''。 */
 function canonicalPresetName(name) {
-  const v = String(name == null ? '' : name).trim().toLowerCase();
-  if (!v) return '';
-  if (Object.prototype.hasOwnProperty.call(_PRESETS, v)) return v;
-  if (Object.prototype.hasOwnProperty.call(_ALIASES, v)) return _ALIASES[v];
+  const v = String(name == null ? '' : name)
+    .trim()
+    .toLowerCase();
+  if (!v) {
+    return '';
+  }
+  if (Object.prototype.hasOwnProperty.call(_PRESETS, v)) {
+    return v;
+  }
+  if (Object.prototype.hasOwnProperty.call(_ALIASES, v)) {
+    return _ALIASES[v];
+  }
   return '';
 }
 
@@ -205,7 +255,9 @@ function canonicalPresetName(name) {
  * @returns {boolean}
  */
 function hasPreset(name, env = process.env) {
-  if (!isPresetsEnabled(env)) return false;
+  if (!isPresetsEnabled(env)) {
+    return false;
+  }
   return canonicalPresetName(name) !== '';
 }
 
@@ -226,17 +278,28 @@ function resolvePreset(name, opts = {}) {
   }
   const canon = canonicalPresetName(name);
   if (!canon) {
-    return { ok: false, error: `未知 MCP 预设「${name}」。用 \`khy mcp presets\` 查看全部可用预设。` };
+    return {
+      ok: false,
+      error: `未知 MCP 预设「${name}」。用 \`khy mcp presets\` 查看全部可用预设。`,
+    };
   }
   const p = _PRESETS[canon];
-  const extra = Array.isArray(opts.extraArgs) ? opts.extraArgs.map(String).filter((s) => s !== '') : [];
+  const extra = Array.isArray(opts.extraArgs)
+    ? opts.extraArgs.map(String).filter((s) => s !== '')
+    : [];
   const args = p.args.slice();
-  for (const a of extra) args.push(a);
+  for (const a of extra) {
+    args.push(a);
+  }
 
   const config = { type: 'stdio', command: p.command };
-  if (args.length) config.args = args;
-  const env = (opts.env && typeof opts.env === 'object') ? opts.env : null;
-  if (env && Object.keys(env).length) config.env = { ...env };
+  if (args.length) {
+    config.args = args;
+  }
+  const env = opts.env && typeof opts.env === 'object' ? opts.env : null;
+  if (env && Object.keys(env).length) {
+    config.env = { ...env };
+  }
 
   // 未提供预设声明所需的敏感 env → 收集缺项供 handler 提示(不阻断:server 仍写入)。
   const providedEnvKeys = new Set(env ? Object.keys(env) : []);
@@ -263,18 +326,22 @@ function resolvePreset(name, opts = {}) {
  * @returns {Array<{name:string, description:string, command:string, requiresEnv:string[], argHint:(string|null)}>}
  */
 function listPresets(env = process.env) {
-  if (!isPresetsEnabled(env)) return [];
-  return Object.keys(_PRESETS).sort().map((name) => {
-    const p = _PRESETS[name];
-    return {
-      name,
-      description: p.description,
-      command: `${p.command} ${p.args.join(' ')}`.trim(),
-      requiresEnv: (p.requiresEnv || []).slice(),
-      argHint: p.argHint || null,
-      homepage: p.homepage,
-    };
-  });
+  if (!isPresetsEnabled(env)) {
+    return [];
+  }
+  return Object.keys(_PRESETS)
+    .sort()
+    .map((name) => {
+      const p = _PRESETS[name];
+      return {
+        name,
+        description: p.description,
+        command: `${p.command} ${p.args.join(' ')}`.trim(),
+        requiresEnv: (p.requiresEnv || []).slice(),
+        argHint: p.argHint || null,
+        homepage: p.homepage,
+      };
+    });
 }
 
 module.exports = {

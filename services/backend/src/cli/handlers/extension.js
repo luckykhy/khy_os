@@ -139,7 +139,9 @@ async function _handleInstall(source, extraArgs) {
     }
 
     printSuccess(`Extension "${result.name}" installed successfully`);
-    if (result.version) printInfo(`Version: ${result.version}`);
+    if (result.version) {
+      printInfo(`Version: ${result.version}`);
+    }
   } catch (err) {
     printError(`Install failed: ${err.message}`);
   }
@@ -291,7 +293,9 @@ async function _handleInfo(name) {
     printInfo(`  Status: ${installed.enabled ? 'enabled' : 'disabled'}`);
     printInfo(`  Capabilities: ${(installed.capabilities || []).join(', ') || 'none'}`);
     printInfo(`  Path: ${installed.path}`);
-    if (installed.description) printInfo(`  Description: ${installed.description}`);
+    if (installed.description) {
+      printInfo(`  Description: ${installed.description}`);
+    }
     return;
   }
 
@@ -304,10 +308,18 @@ async function _handleInfo(name) {
   }
 
   printInfo(`${info.name} v${info.version || info.latestVersion || '?'}`);
-  if (info.description) printInfo(`  Description: ${info.description}`);
-  if (info.author) printInfo(`  Author: ${info.author}`);
-  if (info.downloads) printInfo(`  Downloads: ${info.downloads}`);
-  if (info.repository) printInfo(`  Repository: ${info.repository}`);
+  if (info.description) {
+    printInfo(`  Description: ${info.description}`);
+  }
+  if (info.author) {
+    printInfo(`  Author: ${info.author}`);
+  }
+  if (info.downloads) {
+    printInfo(`  Downloads: ${info.downloads}`);
+  }
+  if (info.repository) {
+    printInfo(`  Repository: ${info.repository}`);
+  }
   printInfo('');
   printInfo(`Install: ext install ${name}`);
 }

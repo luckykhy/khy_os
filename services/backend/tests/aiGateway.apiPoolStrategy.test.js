@@ -196,4 +196,35 @@ describe('aiGateway api pool strategy', () => {
     expect(opts.apiPoolProvider).toBe('relay');
     expect(opts.model).toBe('gpt-4o-mini');
   });
+
+  // Regression: the pooled-key success path used to build its result WITHOUT
+  // toolUseBlocks/stopReason, while the non-pooled path included both. A model
+  // answering with pure tool_calls (empty content) is a completely normal turn —
+  // it is exactly what "list my desktop" produces. Dropping the tool blocks left
+  // the caller with content:'' and no tool calls, which surfaced to the user as
+  // "AI 未返回有效回复 — 可能被 max_tokens 截断". So every tool-using turn through a
+  // pooled provider silently died, and the error message pointed at max_tokens
+  // instead of the real cause. Only plain chit-chat worked.
+  test('pooled success path preserves toolUseBlocks and stopReason', async () => {
+    const toolBlocks = [
+      { id: 'call_1', name: 'Glob', params: { path: 'D:\\Desktop', pattern: '*' } },
+    ];
+    const { gw } = buildGatewayWithApiAdapter(async (prompt, options) => ({
+      success: true,
+      content: '',
+      provider: options.provider || 'api',
+      adapter: 'api',
+      model: options.model || null,
+      toolUseBlocks: toolBlocks,
+      stopReason: 'tool_calls',
+    }));
+
+    const result = await gateway.generate.call(gw, 'what is on my desktop', {
+      model: 'openai:gpt-4o-mini',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.toolUseBlocks).toEqual(toolBlocks);
+    expect(result.stopReason).toBe('tool_calls');
+  });
 });

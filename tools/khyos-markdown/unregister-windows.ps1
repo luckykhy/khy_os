@@ -9,7 +9,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-$exts = @('.md', '.markdown')
+$exts = @('.md', '.markdown', '.mdown', '.mkd')
 $removed = 0
 foreach ($ext in $exts) {
   $shellKey = "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\khyosMarkdown"
@@ -23,7 +23,7 @@ foreach ($ext in $exts) {
 }
 
 # ---- 清除「打开方式」ProgID 及其 OpenWithProgids 挂载点（与注册脚本对称）----
-$progId = 'KhyOS.Markdown'
+$progId = 'KhyosMarkdown.exe'
 foreach ($ext in $exts) {
   $owpKey = "HKCU:\Software\Classes\$ext\OpenWithProgids"
   if ((Test-Path $owpKey) -and ($null -ne (Get-ItemProperty -Path $owpKey -Name $progId -ErrorAction SilentlyContinue))) {
@@ -47,7 +47,7 @@ if (Test-Path $progIdKey) {
 }
 
 # ---- 清除「建议的应用」Applications\<app> 注册（与 register 的 SupportedTypes 段对称，零残留）----
-$appKey  = 'khyos-md-launch.vbs'
+$appKey  = 'KhyosMarkdown.exe'
 $appBase = "HKCU:\Software\Classes\Applications\$appKey"
 if (Test-Path $appBase) {
   Remove-Item -Path $appBase -Recurse -Force

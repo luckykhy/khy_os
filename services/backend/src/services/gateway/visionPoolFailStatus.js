@@ -19,11 +19,17 @@ function isVisionPoolFailStatusHumanizeEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_POOL_FAIL_STATUS_HUMANIZE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_VISION_POOL_FAIL_STATUS_HUMANIZE;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -33,10 +39,16 @@ function isVisionPoolFailStatusHumanizeEnabled(env = process.env) {
 // 池名须匹配 /vision/i(仅视觉通道→「视觉通道不可用」在语义上才成立)。
 function buildVisionPoolFailStatus({ poolName, ocrRescued, env } = {}) {
   try {
-    if (!isVisionPoolFailStatusHumanizeEnabled(env)) return null;
-    if (ocrRescued !== true) return null;
+    if (!isVisionPoolFailStatusHumanizeEnabled(env)) {
+      return null;
+    }
+    if (ocrRescued !== true) {
+      return null;
+    }
     const name = typeof poolName === 'string' ? poolName : '';
-    if (!/vision/i.test(name)) return null;
+    if (!/vision/i.test(name)) {
+      return null;
+    }
     return '视觉通道当前不可用，已用本地 OCR 兜底';
   } catch {
     return null;

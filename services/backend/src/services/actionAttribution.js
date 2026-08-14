@@ -32,23 +32,27 @@
  */
 
 // 变更类工具(写/编辑/移动/清理):亲手改变了世界状态。
-const MUTATING_TOOL_RE = /^(write|write_file|writefile|file_write|edit|editfile|file_edit|multiedit|multi_edit|notebookedit|notebook_edit|applypatch|apply_patch|move|rename|mkdir|diskcleanup)$/i;
+const MUTATING_TOOL_RE =
+  /^(write|write_file|writefile|file_write|edit|editfile|file_edit|multiedit|multi_edit|notebookedit|notebook_edit|applypatch|apply_patch|move|rename|mkdir|diskcleanup)$/i;
 
 // 破坏性 shell 动作:删除 / 覆盖 / 强制移动。命中即「破坏性」(数据可能不可逆)。
 //  - posix: rm / rmdir / unlink / shred / truncate
 //  - windows cmd: del / erase / rd / rmdir
 //  - powershell: Remove-Item / ri / del(alias) / rd(alias)
-const DESTRUCTIVE_SHELL_RE = /(^|[\s;&|(])(rm|rmdir|unlink|shred|truncate|del|erase|rd|remove-item|remove-itemproperty)(\s|$)/i;
+const DESTRUCTIVE_SHELL_RE =
+  /(^|[\s;&|(])(rm|rmdir|unlink|shred|truncate|del|erase|rd|remove-item|remove-itemproperty)(\s|$)/i;
 // 覆盖重定向 ( > file,但放行 >> 追加 )。
 const OVERWRITE_REDIR_RE = /[^>]>(?!>)\s*\S/;
 // 移动/重命名(变更但通常非破坏性)。
 const MOVE_SHELL_RE = /(^|[\s;&|(])(mv|move|ren|rename|move-item)(\s|$)/i;
 
 // 命令的结果文本里表示「目标本就不存在 / 没找到」的 no-op 迹象(中英 + cmd/powershell)。
-const NOOP_OUTCOME_RE = /找不到|未找到|不存在|没有找到|无法找到|could not find|cannot find|can't find|no such file|not found|does not exist|doesn't exist|nothing to|0 files?\b/i;
+const NOOP_OUTCOME_RE =
+  /找不到|未找到|不存在|没有找到|无法找到|could not find|cannot find|can't find|no such file|not found|does not exist|doesn't exist|nothing to|0 files?\b/i;
 
 // shell 工具名(不同适配器叫法不一)。
-const SHELL_TOOL_RE = /^(bash|shell|shellcommand|shell_command|cmd|command|exec|run|terminal|_legacy_cmd)$/i;
+const SHELL_TOOL_RE =
+  /^(bash|shell|shellcommand|shell_command|cmd|command|exec|run|terminal|_legacy_cmd)$/i;
 
 const STICKY_WINDOW = 2; // 变更后再注入至多 2 个后续(只读)轮,覆盖「变更→探查→叙述」。
 
@@ -58,19 +62,30 @@ function _enabled(options = {}) {
       String(options.actionAttribution).trim().toLowerCase()
     );
   }
-  const raw = String(process.env.KHY_ACTION_ATTRIBUTION || 'true').trim().toLowerCase();
+  const raw = String(process.env.KHY_ACTION_ATTRIBUTION || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
 function _resultText(result) {
-  if (result == null) return '';
-  if (typeof result === 'string') return result;
+  if (result == null) {
+    return '';
+  }
+  if (typeof result === 'string') {
+    return result;
+  }
   const parts = [];
   for (const k of ['output', 'stdout', 'stderr', 'content', 'error', 'message', 'text']) {
     const v = result[k];
-    if (typeof v === 'string') parts.push(v);
-    else if (v && typeof v === 'object') {
-      for (const kk of ['message', 'code', 'hint']) if (typeof v[kk] === 'string') parts.push(v[kk]);
+    if (typeof v === 'string') {
+      parts.push(v);
+    } else if (v && typeof v === 'object') {
+      for (const kk of ['message', 'code', 'hint']) {
+        if (typeof v[kk] === 'string') {
+          parts.push(v[kk]);
+        }
+      }
     }
   }
   return parts.join(' ');
@@ -88,14 +103,20 @@ function extractTargets(command) {
   // 1) 引号包裹的路径(cmd 删除里几乎都带引号)。
   const quoted = cmd.match(/"([^"]+)"|'([^']+)'/g);
   if (quoted) {
-    for (const q of quoted) targets.push(q.slice(1, -1));
+    for (const q of quoted) {
+      targets.push(q.slice(1, -1));
+    }
   }
-  if (targets.length) return _dedupCap(targets);
+  if (targets.length) {
+    return _dedupCap(targets);
+  }
   // 2) 退一步:动词后的非选项 token(粗略)。
   const m = cmd.match(/\b(rm|del|erase|rd|rmdir|unlink|mv|move|ren|rename)\b\s+(.+)$/i);
   if (m) {
     for (const tok of m[2].split(/\s+/)) {
-      if (tok && !tok.startsWith('-') && !tok.startsWith('/')) targets.push(tok);
+      if (tok && !tok.startsWith('-') && !tok.startsWith('/')) {
+        targets.push(tok);
+      }
     }
   }
   return _dedupCap(targets);
@@ -106,10 +127,14 @@ function _dedupCap(arr, cap = 4) {
   const out = [];
   for (const x of arr) {
     const s = String(x).trim();
-    if (!s || seen.has(s)) continue;
+    if (!s || seen.has(s)) {
+      continue;
+    }
     seen.add(s);
     out.push(s);
-    if (out.length >= cap) break;
+    if (out.length >= cap) {
+      break;
+    }
   }
   return out;
 }
@@ -123,7 +148,9 @@ function classifyToolBatch(toolResults) {
   const actions = [];
   const list = Array.isArray(toolResults) ? toolResults : [];
   for (const tr of list) {
-    if (!tr) continue;
+    if (!tr) {
+      continue;
+    }
     const tool = String(tr.tool || tr.name || '');
     const params = tr.params || tr.input || {};
     const resText = _resultText(tr.result);
@@ -131,24 +158,40 @@ function classifyToolBatch(toolResults) {
 
     if (SHELL_TOOL_RE.test(tool)) {
       const command = String(params.command || params.cmd || params.script || '');
-      if (!command) continue;
+      if (!command) {
+        continue;
+      }
       if (DESTRUCTIVE_SHELL_RE.test(command) || OVERWRITE_REDIR_RE.test(command)) {
-        actions.push({ verb: 'delete', destructive: true, target: extractTargets(command), noop, tool });
+        actions.push({
+          verb: 'delete',
+          destructive: true,
+          target: extractTargets(command),
+          noop,
+          tool,
+        });
       } else if (MOVE_SHELL_RE.test(command)) {
-        actions.push({ verb: 'move', destructive: false, target: extractTargets(command), noop, tool });
+        actions.push({
+          verb: 'move',
+          destructive: false,
+          target: extractTargets(command),
+          noop,
+          tool,
+        });
       }
     } else if (MUTATING_TOOL_RE.test(tool)) {
       const dest = /diskcleanup|del|remove|rm/i.test(tool);
       const target = [];
       for (const k of ['file_path', 'path', 'filePath', 'target', 'source', 'dest']) {
-        if (typeof params[k] === 'string') target.push(params[k]);
+        if (typeof params[k] === 'string') {
+          target.push(params[k]);
+        }
       }
       actions.push({ verb: 'modify', destructive: dest, target: _dedupCap(target), noop, tool });
     }
   }
   return {
     mutated: actions.length > 0,
-    destructive: actions.some(a => a.destructive),
+    destructive: actions.some((a) => a.destructive),
     actions,
   };
 }
@@ -162,21 +205,35 @@ function classifyToolBatch(toolResults) {
  */
 function buildAttributionDirective(ctx = {}) {
   const actions = Array.isArray(ctx.actions) ? ctx.actions : [];
-  const destructive = actions.some(a => a.destructive);
-  const anyNoop = actions.some(a => a.noop);
-  const targets = _dedupCap(actions.flatMap(a => Array.isArray(a.target) ? a.target : []), 4);
+  const destructive = actions.some((a) => a.destructive);
+  const anyNoop = actions.some((a) => a.noop);
+  const targets = _dedupCap(
+    actions.flatMap((a) => (Array.isArray(a.target) ? a.target : [])),
+    4
+  );
 
   const lines = [];
-  lines.push('[SYSTEM: 自我动作认领 —— 你刚刚**亲自**执行了'
-    + (destructive ? '删除/覆盖等变更操作' : '变更操作')
-    + (targets.length ? `(目标:${targets.join('、')})` : '')
-    + '。叙述结果时请遵守:');
-  lines.push('1. **认领你自己的动作**:用第一人称、主动语态说明你做了什么(例如「我已执行删除命令」「我修改了 X」),不要把你刚做的事说成被动发生的。');
-  lines.push('2. **禁止甩锅给模糊外因**:在没有证据时,不要把你自己刚执行的结果归因为「可能之前已经被清理过」「可能是别人/更早的操作做的」这类未知过去原因——那会让因果自相矛盾(你明明刚亲手做了)。');
+  lines.push(
+    '[SYSTEM: 自我动作认领 —— 你刚刚**亲自**执行了' +
+      (destructive ? '删除/覆盖等变更操作' : '变更操作') +
+      (targets.length ? `(目标:${targets.join('、')})` : '') +
+      '。叙述结果时请遵守:'
+  );
+  lines.push(
+    '1. **认领你自己的动作**:用第一人称、主动语态说明你做了什么(例如「我已执行删除命令」「我修改了 X」),不要把你刚做的事说成被动发生的。'
+  );
+  lines.push(
+    '2. **禁止甩锅给模糊外因**:在没有证据时,不要把你自己刚执行的结果归因为「可能之前已经被清理过」「可能是别人/更早的操作做的」这类未知过去原因——那会让因果自相矛盾(你明明刚亲手做了)。'
+  );
   if (anyNoop) {
-    lines.push('3. **命令报告目标不存在时如实说清因果**:这次命令显示目标「找不到/已不存在」。请准确叙述真实因果——是「我执行了删除命令,但系统显示这些文件在执行时已不在该路径」,而不是含糊的「可能之前被清理过」;区分「我删除了它」与「我执行删除时它本就不在」,二者不要混为一谈。');
+    lines.push(
+      '3. **命令报告目标不存在时如实说清因果**:这次命令显示目标「找不到/已不存在」。请准确叙述真实因果——是「我执行了删除命令,但系统显示这些文件在执行时已不在该路径」,而不是含糊的「可能之前被清理过」;区分「我删除了它」与「我执行删除时它本就不在」,二者不要混为一谈。'
+    );
   }
-  lines.push((anyNoop ? '4' : '3') + '. **保持因果链连贯**:我执行了 X → 结果是 Y → 所以现在状态是 Z。不要在同一段里既说自己做了、又把它推给未知过去。]');
+  lines.push(
+    (anyNoop ? '4' : '3') +
+      '. **保持因果链连贯**:我执行了 X → 结果是 Y → 所以现在状态是 Z。不要在同一段里既说自己做了、又把它推给未知过去。]'
+  );
   return lines.join('\n');
 }
 
@@ -202,7 +259,9 @@ function createAttributionState() {
  */
 function recordToolBatch(state, toolResults, opts = {}) {
   const st = state && typeof state === 'object' ? state : createAttributionState();
-  if (!Array.isArray(st.pending)) st.pending = [];
+  if (!Array.isArray(st.pending)) {
+    st.pending = [];
+  }
   const enabled = _enabled(opts.options || {});
   const batch = classifyToolBatch(toolResults);
 
@@ -215,9 +274,7 @@ function recordToolBatch(state, toolResults, opts = {}) {
   }
 
   const within = st.pending.length > 0 && st.sinceMutation <= STICKY_WINDOW;
-  const directive = (enabled && within)
-    ? buildAttributionDirective({ actions: st.pending })
-    : null;
+  const directive = enabled && within ? buildAttributionDirective({ actions: st.pending }) : null;
 
   return { ...batch, directive };
 }

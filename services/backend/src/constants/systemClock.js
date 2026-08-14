@@ -34,17 +34,21 @@ function isEnabled(env) {
 function _bucketSeconds(env) {
   const raw = (env || process.env || {}).KHY_SYSTEM_CLOCK_BUCKET_SECONDS;
   const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (Number.isFinite(n) && n >= 1) return Math.min(n, 86400);
+  if (Number.isFinite(n) && n >= 1) {
+    return Math.min(n, 86400);
+  }
   return 60;
 }
 
-function _pad2(n) { return String(n).padStart(2, '0'); }
+function _pad2(n) {
+  return String(n).padStart(2, '0');
+}
 
 const _WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /** 有效 Date 或回退到「现在」。 */
 function _resolveNow(now) {
-  return (now instanceof Date && !Number.isNaN(now.getTime())) ? now : new Date();
+  return now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
 }
 
 /**
@@ -52,8 +56,14 @@ function _resolveNow(now) {
  * 否则从 Date 派生(getTimezoneOffset 返回「本地落后 UTC 的分钟数」,取负即以东偏移)。
  */
 function _resolveOffsetMinutes(now, offsetMinutes) {
-  if (Number.isFinite(offsetMinutes)) return offsetMinutes;
-  try { return -now.getTimezoneOffset(); } catch { return 0; }
+  if (Number.isFinite(offsetMinutes)) {
+    return offsetMinutes;
+  }
+  try {
+    return -now.getTimezoneOffset();
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -61,11 +71,15 @@ function _resolveOffsetMinutes(now, offsetMinutes) {
  * 便于单测确定性);未传(undefined)→ Intl 解析,失败 → ''。
  */
 function _resolveTimeZone(timeZone) {
-  if (typeof timeZone === 'string') return timeZone;
+  if (typeof timeZone === 'string') {
+    return timeZone;
+  }
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return typeof tz === 'string' ? tz : '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** 历史单行(门控关时逐字节回退):` - Current date: YYYY-MM-DD`(本地日期)。 */
@@ -90,7 +104,9 @@ function legacyDateLine(now) {
  */
 function formatSystemClockLines({ now, env, offsetMinutes, timeZone } = {}) {
   const d = _resolveNow(now);
-  if (!isEnabled(env)) return [legacyDateLine(d)];
+  if (!isEnabled(env)) {
+    return [legacyDateLine(d)];
+  }
 
   const off = _resolveOffsetMinutes(d, offsetMinutes);
   // 平移时间戳,使 UTC getter 读出「本地墙钟」——与宿主时区解耦。
@@ -128,7 +144,9 @@ function formatSystemClockLines({ now, env, offsetMinutes, timeZone } = {}) {
  * 避免注入的时刻被会话级缓存冻结在会话开始时。
  */
 function clockCacheKey({ now, env } = {}) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   const d = _resolveNow(now);
   const bucket = _bucketSeconds(env);
   return `t${Math.floor(d.getTime() / 1000 / bucket)}`;

@@ -33,7 +33,9 @@ async function handleToolCheck(subCommand, args = [], options = {}) {
   const { auditTools, toolContractEnabled } = require('../../services/toolCatalog/toolContract');
 
   if (!toolContractEnabled(env)) {
-    printWarn('工具契约审计已被 KHY_TOOL_CONTRACT 禁用（当前为关闭状态）。CI 守卫 check-tool-contract.js 不受此开关影响。');
+    printWarn(
+      '工具契约审计已被 KHY_TOOL_CONTRACT 禁用（当前为关闭状态）。CI 守卫 check-tool-contract.js 不受此开关影响。'
+    );
     return true;
   }
 
@@ -44,8 +46,12 @@ async function handleToolCheck(subCommand, args = [], options = {}) {
     return true;
   }
 
-  console.log(chalk.bold('\n  🔎 khy 工具契约体检')
-    + chalk.dim(`  (共 ${report.total} 个工具 · ${report.errors} error / ${report.warnings} warning)\n`));
+  console.log(
+    chalk.bold('\n  🔎 khy 工具契约体检') +
+      chalk.dim(
+        `  (共 ${report.total} 个工具 · ${report.errors} error / ${report.warnings} warning)\n`
+      )
+  );
 
   if (report.findings.length === 0) {
     printInfo('全部工具合契约，无命名冲突。工具地基精准可用。');
@@ -64,7 +70,9 @@ async function handleToolCheck(subCommand, args = [], options = {}) {
     console.log('');
   }
   if (warnings.length) {
-    console.log(chalk.bold.yellow(`  ⚠ ${warnings.length} 个 warning（同类孪生，已在模型清单折叠去重）`));
+    console.log(
+      chalk.bold.yellow(`  ⚠ ${warnings.length} 个 warning（同类孪生，已在模型清单折叠去重）`)
+    );
     for (const f of warnings) {
       console.log(`    ${chalk.yellow('⚠')} ${chalk.dim('[' + f.rule + ']')} ${f.tool}`);
       console.log(chalk.dim(`      ${f.message}`));

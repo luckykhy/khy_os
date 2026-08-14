@@ -25,11 +25,12 @@
  */
 
 const fs = require('fs');
+
 const { fetchWithTimeout } = require('./fetchTimeout');
 
 const DEFAULT_TIMEOUT_MS = 120_000;
-const DEFAULT_POLL_INTERVAL_MS = 5_000;   // Agnes docs recommend 5s polling
-const DEFAULT_MAX_WAIT_MS = 10 * 60_000;  // give up after 10 minutes
+const DEFAULT_POLL_INTERVAL_MS = 5_000; // Agnes docs recommend 5s polling
+const DEFAULT_MAX_WAIT_MS = 10 * 60_000; // give up after 10 minutes
 const DEFAULT_AGNES_BASE_URL = 'https://apihub.agnes-ai.com'; // host root: /v1/videos + /agnesapi
 const DEFAULT_AGNES_MODEL = 'agnes-video-v2.0';
 const DEFAULT_NUM_FRAMES = 121;
@@ -48,16 +49,38 @@ function _intEnv(name, fallback) {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
-function _timeoutMs() { return _intEnv('TIMEOUT_MS', DEFAULT_TIMEOUT_MS); }
-function _pollIntervalMs() { return _intEnv('POLL_INTERVAL_MS', DEFAULT_POLL_INTERVAL_MS); }
-function _maxWaitMs() { return _intEnv('MAX_WAIT_MS', DEFAULT_MAX_WAIT_MS); }
+function _timeoutMs() {
+  return _intEnv('TIMEOUT_MS', DEFAULT_TIMEOUT_MS);
+}
+
+function _pollIntervalMs() {
+  return _intEnv('POLL_INTERVAL_MS', DEFAULT_POLL_INTERVAL_MS);
+}
+
+function _maxWaitMs() {
+  return _intEnv('MAX_WAIT_MS', DEFAULT_MAX_WAIT_MS);
+}
+
+/** Normalize a base URL: strip trailing slashes and a trailing `/v1` segment
+ *  so that route appends (`/v1/videos`, `/agnesapi`) never double-up. */
+function _normalizeBase(raw) {
+  let s = String(raw || '').replace(/\/+$/, '');
+  if (s.endsWith('/v1')) {
+    s = s.slice(0, -3);
+  }
+  return s;
+}
 
 /** Resolve the Agnes base URL (env override, else a bridged pool endpoint, else the public default). */
 function _agnesBaseUrl() {
   const envBase = _env('AGNES_BASE_URL');
-  if (envBase) return envBase.replace(/\/+$/, '');
+  if (envBase) {
+    return _normalizeBase(envBase);
+  }
   const bridged = _agnesKeyFromPool();
-  if (bridged && bridged.endpoint) return bridged.endpoint.replace(/\/+$/, '');
+  if (bridged && bridged.endpoint) {
+    return _normalizeBase(bridged.endpoint);
+  }
   return DEFAULT_AGNES_BASE_URL;
 }
 
@@ -77,19 +100,25 @@ function _agnesBaseUrl() {
 function _agnesKeyFromPool() {
   try {
     const bridge = require('./videoGenPoolBridge');
-    if (!bridge.bridgeEnabled(process.env)) return null;
+    if (!bridge.bridgeEnabled(process.env)) {
+      return null;
+    }
 
     const registry = require('./customProviderRegistry');
     const pool = require('./apiKeyPool');
     const providers = (registry.listProviders() || [])
-      .map(p => ({ poolKey: p && p.poolKey, endpoint: p && p.endpoint }))
-      .filter(p => p.poolKey);
+      .map((p) => ({ poolKey: p && p.poolKey, endpoint: p && p.endpoint }))
+      .filter((p) => p.poolKey);
 
     const picked = bridge.pickVideoProviderFromPool({ providers });
-    if (!picked) return null;
+    if (!picked) {
+      return null;
+    }
 
     const sel = pool.pick(picked.poolKey);
-    if (!sel || !sel.key) return null;
+    if (!sel || !sel.key) {
+      return null;
+    }
     // Prefer the live endpoint from the selected key, else the registry endpoint.
     const endpoint = String(sel.endpoint || picked.endpoint || '').replace(/\/+$/, '');
     return { key: sel.key, endpoint };
@@ -98,22 +127,362 @@ function _agnesKeyFromPool() {
   }
 }
 
-/** Resolve the effective Agnes API key: dedicated env key first, else a bridged pool key. */
+/** Resolve the effective Agnes API key:
+ *  1. KHY_VIDEO_GEN_AGNES_API_KEY  (dedicated video key)
+ *  2. AGNES_API_KEY                (shared Agnes key from chat config)
+ *  3. bridged pool key             (borrowed from chat provider pool)
+ */
 function _agnesApiKey() {
   const envKey = _env('AGNES_API_KEY');
-  if (envKey) return envKey;
+  if (envKey) {
+    return envKey;
+  }
+  // Fallback: shared AGNES_API_KEY already loaded from the common .env
+  const shared = String(process.env.AGNES_API_KEY || '').trim();
+  if (shared) {
+    return shared;
+  }
   const bridged = _agnesKeyFromPool();
   return (bridged && bridged.key) || '';
 }
 
 /** Which backends have the minimum env to operate. */
 function backendStatus() {
+  const hasKey =
+    _env('AGNES_API_KEY') || String(process.env.AGNES_API_KEY || '').trim() || _agnesKeyFromPool();
   return {
     // Agnes ships a known public endpoint, so an API key alone is enough. When no
     // dedicated KHY_VIDEO_GEN_AGNES_API_KEY is set, fall back to a chat provider's
     // agnes key bridged from apiKeyPool (videoGenPoolBridge, gated/fail-soft).
-    agnes: Boolean(_env('AGNES_API_KEY') || _agnesKeyFromPool()),
+    agnes: Boolean(hasKey),
   };
+}
+
+// ── Prompt enhancement ──────────────────────────────────────────────────
+// When the user's prompt is short (≤15 chars) or lacks cinematic/depth keywords,
+// append quality descriptors so the model produces a more polished, dynamic result.
+// Gate: KHY_VIDEO_GEN_ENHANCE_PROMPT (default on).
+
+const _VIDEO_ENHANCE_GATE = String(process.env.KHY_VIDEO_GEN_ENHANCE_PROMPT || 'on').toLowerCase();
+
+// Keywords that signal a "rich enough" video prompt already.
+const _VIDEO_DEPTH_KEYWORDS = Object.freeze([
+  'cinematic',
+  'film',
+  'movie',
+  '4k',
+  '8k',
+  'slow motion',
+  'time-lapse',
+  'aerial',
+  'drone',
+  'tracking',
+  'pan',
+  'zoom',
+  'dolly',
+  'steadycam',
+  'golden hour',
+  'moody',
+  'atmospheric',
+  'dramatic lighting',
+  'wide angle',
+  'close-up',
+  'wide shot',
+  'establishing shot',
+  '子弹时间',
+  '延时摄影',
+  '航拍',
+  '慢动作',
+  '电影感',
+  '电影级',
+  '运镜',
+  '推镜',
+  '拉镜',
+  '摇镜',
+  '跟拍',
+  ' stabilized',
+  '超清',
+  '4k',
+  '8k',
+  '专业',
+  '大片',
+  '质感',
+  'anime style',
+  'pixar',
+  'disney',
+  'ghibli',
+  'unreal engine',
+  'photorealistic',
+  'hyperrealistic',
+  'documentary',
+]);
+
+// Subject category detection for targeted modifier selection.
+const _VIDEO_SUBJECT_HINTS = Object.freeze({
+  portrait: [
+    '人',
+    '女孩',
+    '男孩',
+    '男人',
+    '女人',
+    '少女',
+    '少年',
+    'face',
+    'portrait',
+    'person',
+    '女孩',
+    '男孩',
+    '男人',
+    '女人',
+    '少女',
+    '少年',
+  ],
+  animal: [
+    '猫',
+    '狗',
+    '兔',
+    '鸟',
+    '鱼',
+    '熊猫',
+    '老虎',
+    '龙',
+    'horse',
+    'cat',
+    'dog',
+    'rabbit',
+    'bird',
+    'dragon',
+    'panda',
+    'tiger',
+    '动物',
+    '宠物',
+  ],
+  landscape: [
+    '风景',
+    '山',
+    '海',
+    '湖',
+    '森林',
+    '城市',
+    '日落',
+    '星空',
+    '夜景',
+    'mountain',
+    'ocean',
+    'sea',
+    'forest',
+    'city',
+    'sunset',
+    'stars',
+    '天空',
+    '云',
+    '沙漠',
+    '雪',
+    '草原',
+    '海滩',
+  ],
+  scifi: [
+    '科幻',
+    '未来',
+    '机器人',
+    '太空',
+    'cyberpunk',
+    'sci-fi',
+    'future',
+    'space',
+    'robot',
+    '霓虹',
+    '全息',
+    '赛博',
+    '飞船',
+    '外星',
+  ],
+  object: [
+    '车',
+    '房子',
+    '花',
+    '树',
+    '建筑',
+    '手机',
+    '电脑',
+    'car',
+    'house',
+    'flower',
+    'tree',
+    'building',
+    'phone',
+    '汽车',
+    '房子',
+    '花朵',
+    '建筑',
+    '机器人',
+  ],
+  food: [
+    '食物',
+    '蛋糕',
+    '咖啡',
+    '茶',
+    '美食',
+    'food',
+    'cake',
+    'coffee',
+    'pizza',
+    'sushi',
+    '甜点',
+    '饮料',
+    '料理',
+    '餐点',
+  ],
+  fashion: [
+    '服装',
+    '衣服',
+    '裙子',
+    '鞋子',
+    '包包',
+    'fashion',
+    'dress',
+    'shoes',
+    'bag',
+    'clothing',
+    'outfit',
+    '穿搭',
+    '时装',
+  ],
+});
+
+// Category-specific motion + quality boosters.
+const _VIDEO_CATEGORY_BOOST = Object.freeze({
+  portrait: [
+    'slow zoom in',
+    'gentle head turn',
+    'natural blinking',
+    'soft cinematic lighting',
+    'shallow depth of field',
+    'slow push in',
+    'subtle motion',
+    '柔光',
+    '电影级打光',
+    '浅景深',
+    '缓慢推进',
+  ],
+  animal: [
+    'natural movement',
+    'cute behavior',
+    'dynamic action',
+    'smooth motion',
+    'wildlife documentary style',
+    '自然动作',
+    '生动表情',
+    '流畅运动',
+    '纪录片风格',
+  ],
+  landscape: [
+    'slow pan across',
+    'aerial drone view',
+    'atmospheric clouds',
+    'golden hour lighting',
+    'time-lapse clouds',
+    '缓慢横摇',
+    '航拍视角',
+    '大气透视',
+    '黄金时刻',
+  ],
+  scifi: [
+    'neon glow',
+    'futuristic motion',
+    'particle effects',
+    'dynamic camera movement',
+    'cyberpunk atmosphere',
+    '霓虹光效',
+    '未来感',
+    '粒子特效',
+    '动态运镜',
+  ],
+  object: [
+    'product showcase',
+    '360 degree rotation',
+    'smooth reveal',
+    'studio lighting',
+    'clean background',
+    '产品展示',
+    '旋转',
+    '平滑揭示',
+    '棚拍灯光',
+  ],
+  food: [
+    'steam rising',
+    'slow motion pour',
+    'appetizing presentation',
+    'warm tones',
+    'shallow depth of field',
+    '热气升腾',
+    '慢动作',
+    '暖色调',
+    '令人垂涎',
+  ],
+  fashion: [
+    'runway walk',
+    'elegant movement',
+    'fabric flow',
+    'dramatic lighting',
+    'high fashion editorial',
+    'T台走秀',
+    '面料流动',
+    '高级时尚',
+    '杂志大片',
+  ],
+});
+
+const _VIDEO_GENERIC_BOOST = Object.freeze([
+  'cinematic',
+  'smooth motion',
+  'high quality',
+  'detailed',
+  'natural lighting',
+  'professional video',
+  '电影感',
+  '流畅运动',
+  '高清',
+  '自然光',
+]);
+
+/**
+ * Enhance a short or thin video prompt with cinematic/quality keywords.
+ *
+ * @param {string} prompt
+ * @returns {string} enhanced prompt
+ */
+function enhanceVideoPrompt(prompt) {
+  if (
+    _VIDEO_ENHANCE_GATE === 'off' ||
+    _VIDEO_ENHANCE_GATE === '0' ||
+    _VIDEO_ENHANCE_GATE === 'false'
+  ) {
+    return prompt;
+  }
+  const p = String(prompt || '').trim();
+  if (!p || p.length > 80) {
+    return p;
+  }
+
+  const lower = p.toLowerCase();
+  if (_VIDEO_DEPTH_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()))) {
+    return p;
+  }
+
+  const checkOrder = ['scifi', 'portrait', 'animal', 'landscape', 'fashion', 'food', 'object'];
+  let category = 'generic';
+  for (const cat of checkOrder) {
+    const kws = _VIDEO_SUBJECT_HINTS[cat];
+    if (kws && kws.some((kw) => lower.includes(kw.toLowerCase()))) {
+      category = cat;
+      break;
+    }
+  }
+
+  const boosters = _VIDEO_CATEGORY_BOOST[category] || _VIDEO_GENERIC_BOOST;
+  const picked = boosters.slice(0, 4).join(', ');
+  return `${p}, ${picked}`;
 }
 
 /** True when at least one video backend is usable. */
@@ -133,7 +502,11 @@ function catalogModels() {
   const status = backendStatus();
   const out = [];
   if (status.agnes) {
-    out.push({ backend: 'agnes', model: _env('AGNES_MODEL') || DEFAULT_AGNES_MODEL, capability: 'video' });
+    out.push({
+      backend: 'agnes',
+      model: _env('AGNES_MODEL') || DEFAULT_AGNES_MODEL,
+      capability: 'video',
+    });
   }
   return out;
 }
@@ -142,15 +515,19 @@ function catalogModels() {
 function resolveBackend() {
   const explicit = _env('BACKEND').toLowerCase();
   const status = backendStatus();
-  if (explicit) return status[explicit] ? explicit : explicit;
-  if (status.agnes) return 'agnes';
+  if (explicit) {
+    return status[explicit] ? explicit : explicit;
+  }
+  if (status.agnes) {
+    return 'agnes';
+  }
   return null;
 }
 
 function backendHelpText() {
   return [
     '未检测到任何视频生成后端。请配置以下环境变量后重试：',
-    '  Agnes AI: KHY_VIDEO_GEN_AGNES_API_KEY',
+    '  KHY_VIDEO_GEN_AGNES_API_KEY 或 AGNES_API_KEY（共享 Agnes key）',
     '            (可选 KHY_VIDEO_GEN_AGNES_BASE_URL / _MODEL；支持文生视频、图生视频、多图、关键帧)',
     '  提示：若已把 Agnes 配置为聊天 provider，视频会自动复用同一把 key（无需重复配置）。',
     '可选 KHY_VIDEO_GEN_POLL_INTERVAL_MS / _MAX_WAIT_MS 控制轮询节奏与超时。',
@@ -161,20 +538,24 @@ function backendHelpText() {
 const _proxyDispatcher = require('../utils/proxyDispatcherAgent');
 
 async function _request(method, url, { headers, body } = {}) {
-  const dispatcher = _proxyDispatcher();
-  const res = await fetchWithTimeout(
-    (signal) => fetch(url, {
-      method,
-      headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...headers },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal,
-      ...(dispatcher ? { dispatcher } : {}),
-    }),
-    { timeoutMs: _timeoutMs(), url, operation: 'video-generate' },
+  const res = await _proxyDispatcher.fetchWithProxyFallback(
+    (signal, dispatcher) =>
+      fetch(url, {
+        method,
+        headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...headers },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal,
+        ...(dispatcher ? { dispatcher } : {}),
+      }),
+    { timeoutMs: _timeoutMs(), url, operation: 'video-generate' }
   );
   const text = await res.text();
   let json = null;
-  try { json = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    /* non-JSON body */
+  }
   if (!res.ok) {
     const snippet = text ? text.slice(0, 400) : '(empty body)';
     const e = new Error(`HTTP ${res.status} ${res.statusText} — ${snippet}`);
@@ -185,7 +566,12 @@ async function _request(method, url, { headers, body } = {}) {
 }
 
 function _sleep(ms) {
-  return new Promise((resolve) => { const t = setTimeout(resolve, ms); if (t.unref) t.unref(); });
+  return new Promise((resolve) => {
+    const t = setTimeout(resolve, ms);
+    if (t.unref) {
+      t.unref();
+    }
+  });
 }
 
 // ── param validation ───────────────────────────────────────────────────────────
@@ -216,43 +602,72 @@ function validateFrameParams({ numFrames, frameRate } = {}) {
 
 // ── Agnes backend ────────────────────────────────────────────────────────────────
 function _buildAgnesBody(model, opts) {
-  const { prompt, image, images, mode, width, height, numFrames, frameRate, numInferenceSteps, seed, negativePrompt } = opts;
+  const {
+    prompt,
+    image,
+    images,
+    mode,
+    width,
+    height,
+    numFrames,
+    frameRate,
+    numInferenceSteps,
+    seed,
+    negativePrompt,
+  } = opts;
   const body = { model, prompt, num_frames: numFrames, frame_rate: frameRate };
-  if (Number.isFinite(width)) body.width = Math.trunc(width);
-  if (Number.isFinite(height)) body.height = Math.trunc(height);
-  if (Number.isFinite(numInferenceSteps)) body.num_inference_steps = Math.trunc(numInferenceSteps);
-  if (Number.isFinite(seed)) body.seed = Math.trunc(seed);
-  if (negativePrompt) body.negative_prompt = String(negativePrompt);
+  if (Number.isFinite(width)) {
+    body.width = Math.trunc(width);
+  }
+  if (Number.isFinite(height)) {
+    body.height = Math.trunc(height);
+  }
+  if (Number.isFinite(numInferenceSteps)) {
+    body.num_inference_steps = Math.trunc(numInferenceSteps);
+  }
+  if (Number.isFinite(seed)) {
+    body.seed = Math.trunc(seed);
+  }
+  if (negativePrompt) {
+    body.negative_prompt = String(negativePrompt);
+  }
 
   const list = Array.isArray(images) ? images.filter(Boolean).map(String) : [];
   if (list.length > 1 || mode === 'keyframes') {
     // multi-image / keyframes → extra_body
     body.extra_body = { image: list };
-    if (mode === 'keyframes') body.extra_body.mode = 'keyframes';
+    if (mode === 'keyframes') {
+      body.extra_body.mode = 'keyframes';
+    }
   } else if (list.length === 1) {
     body.image = list[0];
   } else if (image) {
     body.image = String(image); // single image-to-video
   }
-  if (mode && mode !== 'keyframes') body.mode = mode; // e.g. ti2vid (top-level)
+  if (mode && mode !== 'keyframes') {
+    body.mode = mode;
+  } // e.g. ti2vid (top-level)
   return body;
 }
 
 /** Extract the completed video URL from a poll result. */
 function _extractVideoUrl(result) {
-  if (!result) return null;
+  if (!result) {
+    return null;
+  }
   // Docs: final URL is in `remixed_from_video_id` when completed. Tolerate the
   // more intuitive aliases too, in case the upstream contract evolves.
-  return result.remixed_from_video_id
-    || result.video_url
-    || (result.video && result.video.url)
-    || null;
+  return (
+    result.remixed_from_video_id || result.video_url || (result.video && result.video.url) || null
+  );
 }
 
 async function _createAgnes(model, opts) {
   const baseUrl = _agnesBaseUrl();
   const apiKey = _agnesApiKey();
-  if (!apiKey) throw new Error('Agnes 视频后端缺少 AGNES_API_KEY');
+  if (!apiKey) {
+    throw new Error('Agnes 视频后端缺少 AGNES_API_KEY');
+  }
   const body = _buildAgnesBody(model, opts);
   const json = await _request('POST', `${baseUrl}/v1/videos`, {
     headers: { authorization: `Bearer ${apiKey}` },
@@ -260,7 +675,9 @@ async function _createAgnes(model, opts) {
   });
   const videoId = json && (json.video_id || null);
   const taskId = json && (json.task_id || json.id || null);
-  if (!videoId && !taskId) throw new Error('Agnes 创建视频任务未返回 video_id/task_id');
+  if (!videoId && !taskId) {
+    throw new Error('Agnes 创建视频任务未返回 video_id/task_id');
+  }
   return { videoId, taskId, raw: json };
 }
 
@@ -276,6 +693,32 @@ async function _pollAgnes({ videoId, taskId }) {
     url = `${baseUrl}/agnesapi?video_id=${encodeURIComponent(videoId)}&model_name=${encodeURIComponent(model)}`;
   }
   return _request('GET', url, { headers: { authorization: `Bearer ${apiKey}` } });
+}
+
+/**
+ * Map an Agnes status string to a rough progress percentage.
+ * Used when the API doesn't return a numeric `progress` field.
+ * @param {string} status
+ * @returns {number} 0–100
+ */
+function _progressFromStatus(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'completed') {
+    return 100;
+  }
+  if (s === 'failed' || s === 'cancelled') {
+    return 100;
+  }
+  if (s === 'processing' || s === 'generating') {
+    return 65;
+  }
+  if (s === 'rendering') {
+    return 80;
+  }
+  if (s === 'uploading') {
+    return 90;
+  }
+  return 10; // queued / pending / unknown
 }
 
 /**
@@ -296,16 +739,23 @@ async function _pollAgnes({ videoId, taskId }) {
  */
 async function generate(opts = {}) {
   const prompt = opts.prompt ? String(opts.prompt) : '';
-  if (!prompt.trim()) throw new Error('prompt 不能为空');
+  if (!prompt.trim()) {
+    throw new Error('prompt 不能为空');
+  }
   const backend = resolveBackend();
   if (!backend) {
     const e = new Error(backendHelpText());
     e.code = 'NO_BACKEND';
     throw e;
   }
-  if (backend !== 'agnes') throw new Error(`未知的视频后端: ${backend}`);
+  if (backend !== 'agnes') {
+    throw new Error(`未知的视频后端: ${backend}`);
+  }
 
-  const { numFrames, frameRate } = validateFrameParams({ numFrames: opts.numFrames, frameRate: opts.frameRate });
+  const { numFrames, frameRate } = validateFrameParams({
+    numFrames: opts.numFrames,
+    frameRate: opts.frameRate,
+  });
   const model = _env('AGNES_MODEL') || DEFAULT_AGNES_MODEL;
 
   const created = await _createAgnes(model, { ...opts, numFrames, frameRate });
@@ -315,27 +765,44 @@ async function generate(opts = {}) {
   const deadline = Date.now() + _maxWaitMs();
   let last = created.raw || {};
   let status = String(last.status || 'queued').toLowerCase();
-  if (typeof opts.onProgress === 'function') {
-    try { opts.onProgress({ status, progress: last.progress || 0 }); } catch { /* non-essential */ }
-  }
+  let reportedProgress = -1;
+  const _report = () => {
+    const rawProgress = last.progress != null ? Number(last.progress) : NaN;
+    const p = Number.isFinite(rawProgress)
+      ? Math.min(100, Math.max(0, rawProgress))
+      : _progressFromStatus(status);
+    if (p !== reportedProgress && typeof opts.onProgress === 'function') {
+      reportedProgress = p;
+      try {
+        opts.onProgress({ status, progress: p });
+      } catch {
+        /* non-essential */
+      }
+    }
+  };
+  _report();
 
   while (status !== 'completed' && status !== 'failed') {
     if (Date.now() >= deadline) {
-      const e = new Error(`视频生成超时（>${Math.round(_maxWaitMs() / 1000)}s），任务仍为 ${status}`);
+      const e = new Error(
+        `视频生成超时（>${Math.round(_maxWaitMs() / 1000)}s），任务仍为 ${status}`
+      );
       e.code = 'TIMEOUT';
       e.partial = { ...ids, status };
       throw e;
     }
     await _sleep(interval);
-    last = await _pollAgnes(ids) || {};
+    last = (await _pollAgnes(ids)) || {};
     status = String(last.status || status).toLowerCase();
-    if (typeof opts.onProgress === 'function') {
-      try { opts.onProgress({ status, progress: last.progress || 0 }); } catch { /* non-essential */ }
-    }
+    _report();
   }
 
   if (status === 'failed') {
-    const reason = last.error ? (typeof last.error === 'string' ? last.error : JSON.stringify(last.error)) : '未知原因';
+    const reason = last.error
+      ? typeof last.error === 'string'
+        ? last.error
+        : JSON.stringify(last.error)
+      : '未知原因';
     const e = new Error(`视频生成失败：${reason}`);
     e.code = 'GENERATION_FAILED';
     e.partial = { ...ids, status };
@@ -343,7 +810,9 @@ async function generate(opts = {}) {
   }
 
   const videoUrl = _extractVideoUrl(last);
-  if (!videoUrl) throw new Error('视频已完成但未返回可下载的视频 URL');
+  if (!videoUrl) {
+    throw new Error('视频已完成但未返回可下载的视频 URL');
+  }
   return {
     backend,
     model,
@@ -351,7 +820,7 @@ async function generate(opts = {}) {
     taskId: ids.taskId,
     status,
     videoUrl,
-    seconds: last.seconds != null ? last.seconds : (numFrames / frameRate),
+    seconds: last.seconds != null ? last.seconds : numFrames / frameRate,
     size: last.size || null,
     progress: last.progress != null ? last.progress : 100,
     raw: last,
@@ -360,12 +829,13 @@ async function generate(opts = {}) {
 
 /** Download a remote video URL to a local file path (proxy-aware). Returns destPath. */
 async function downloadVideo(url, destPath) {
-  const dispatcher = _proxyDispatcher();
-  const res = await fetchWithTimeout(
-    (signal) => fetch(url, { signal, ...(dispatcher ? { dispatcher } : {}) }),
-    { timeoutMs: _timeoutMs(), url, operation: 'video-download' },
+  const res = await _proxyDispatcher.fetchWithProxyFallback(
+    (signal, dispatcher) => fetch(url, { signal, ...(dispatcher ? { dispatcher } : {}) }),
+    { timeoutMs: _timeoutMs(), url, operation: 'video-download' }
   );
-  if (!res.ok) throw new Error(`视频下载失败: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`视频下载失败: HTTP ${res.status}`);
+  }
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(destPath, buf);
   return destPath;
@@ -380,6 +850,15 @@ module.exports = {
   isAnyBackendConfigured,
   backendHelpText,
   validateFrameParams,
+  enhanceVideoPrompt,
   // internals exposed for unit tests (no network)
-  __testHooks: { _env, _agnesBaseUrl, _agnesApiKey, _agnesKeyFromPool, _buildAgnesBody, _extractVideoUrl, _sleep },
+  __testHooks: {
+    _env,
+    _agnesBaseUrl,
+    _agnesApiKey,
+    _agnesKeyFromPool,
+    _buildAgnesBody,
+    _extractVideoUrl,
+    _sleep,
+  },
 };

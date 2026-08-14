@@ -167,7 +167,7 @@ test('全部修法文本不含 commit/push/rm 危险文件/curl/publish', () => 
 
 // ── doc 一致性：OPS-MAN-070 落盘 == 生成器输出（防手改漂移）───────────────────
 test('doc 一致性：OPS-MAN-070 落盘 == 生成器输出', () => {
-  const { buildDoc, DOC_PATH } = require('../hydration-doctor');
+  const { buildDoc, DOC_PATH } = require('../diagnostics/hydration-doctor');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(
     onDisk,

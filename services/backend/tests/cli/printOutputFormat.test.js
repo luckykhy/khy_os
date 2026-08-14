@@ -167,9 +167,16 @@ test('buildResultMessage: schema matches Claude Code contract (success)', () => 
     { reply: 'hi there', errorType: '', elapsed: 1234, toolCallLog: [{}, {}], tokenUsage: null },
     { sessionId: 'abc123', maxTurns: null },
   );
+  // Contract extension: tool_calls/turn_stats are incremental machine-readable
+  // fields APPENDED after the legacy keys (timeline stays flag-gated).
   assert.deepStrictEqual(Object.keys(msg).sort(), [
     'duration_api_ms', 'duration_ms', 'is_error', 'num_turns',
-    'result', 'session_id', 'subtype', 'total_cost_usd', 'type',
+    'result', 'session_id', 'subtype', 'tool_calls', 'total_cost_usd', 'turn_stats', 'type',
+  ]);
+  // Legacy keys keep their exact order at the head of the object.
+  assert.deepStrictEqual(Object.keys(msg).slice(0, 9), [
+    'type', 'subtype', 'total_cost_usd', 'is_error', 'duration_ms',
+    'duration_api_ms', 'num_turns', 'result', 'session_id',
   ]);
   assert.strictEqual(msg.type, 'result');
   assert.strictEqual(msg.subtype, 'success');
@@ -304,4 +311,97 @@ test('render json: maxTurnsHit set -> error_max_turns/is_error true (flag-on pat
   const j = JSON.parse(pof.render('json', { reply: 'partial', toolCallLog: [], maxTurnsHit: true }, { maxTurns: null }));
   assert.strictEqual(j.subtype, 'error_max_turns');
   assert.strictEqual(j.is_error, true);
+});
+
+// ── Incremental machine-readable fields: tool_calls / turn_stats / --include-timeline ──
+
+test('parsePrintFlags: --include-timeline bare flag sets true, stripped', () => {
+  const r = pof.parsePrintFlags(['q', '--include-timeline']);
+  assert.strictEqual(r.includeTimeline, true);
+  assert.deepStrictEqual(r.args, ['q']);
+  assert.strictEqual(r.error, null);
+});
+
+test('parsePrintFlags: --include-timeline=true/false equals forms', () => {
+  assert.strictEqual(pof.parsePrintFlags(['--include-timeline=true', 'q']).includeTimeline, true);
+  assert.strictEqual(pof.parsePrintFlags(['--include-timeline=false', 'q']).includeTimeline, false);
+});
+
+test('parsePrintFlags: invalid --include-timeline value reports error', () => {
+  const r = pof.parsePrintFlags(['q', '--include-timeline=maybe']);
+  assert.match(r.error, /invalid --include-timeline/);
+});
+
+test('parsePrintFlags: --include-timeline defaults to false', () => {
+  assert.strictEqual(pof.parsePrintFlags(['just', 'a', 'prompt']).includeTimeline, false);
+});
+
+test('buildResultMessage: tool_calls distilled from toolCallLog', () => {
+  const msg = pof.buildResultMessage({
+    reply: 'ok',
+    elapsed: 100,
+    toolCallLog: [
+      { tool: 'Read', params: { file_path: 'a.txt' }, elapsed: 12, result: { success: true } },
+      { tool: 'Bash', params: { command: 'x' }, result: { success: false, error: 'boom' } },
+    ],
+  }, { sessionId: 's' });
+  assert.strictEqual(msg.tool_calls.length, 2);
+  assert.deepStrictEqual(msg.tool_calls[0], { seq: 1, name: 'Read', paramsSummary: '{"file_path":"a.txt"}', durationMs: 12, status: 'done' });
+  assert.strictEqual(msg.tool_calls[1].status, 'error');
+  assert.strictEqual(msg.tool_calls[1].error, 'boom');
+});
+
+test('buildResultMessage: no toolCallLog array -> tool_calls omitted, empty log -> []', () => {
+  assert.ok(!('tool_calls' in pof.buildResultMessage({ reply: 'r' }, {})));
+  assert.deepStrictEqual(pof.buildResultMessage({ reply: 'r', toolCallLog: [] }, {}).tool_calls, []);
+});
+
+test('buildResultMessage: turn_stats carries only available quantities', () => {
+  const msg = pof.buildResultMessage(
+    { reply: 'r', elapsed: 500, toolCallLog: [{}], tokenUsage: { totalTokens: 42 } },
+    { sessionId: 's' },
+  );
+  assert.deepStrictEqual(msg.turn_stats, { elapsedMs: 500, tokens: 42, toolCount: 1 });
+  // Nothing available -> whole field omitted (no zero-filling).
+  assert.ok(!('turn_stats' in pof.buildResultMessage({ reply: 'r' }, {})));
+});
+
+test('buildResultMessage: timeline gated by includeTimeline', () => {
+  const r = {
+    reply: 'r',
+    toolCallLog: [],
+    timeline: [
+      { type: 'text', text: 'hi' },
+      { type: 'tool', tool: { name: 'Read', input: { f: 1 }, result: { isError: false } } },
+    ],
+  };
+  const off = pof.buildResultMessage(r, {});
+  assert.ok(!('timeline' in off));
+  const on = pof.buildResultMessage(r, { includeTimeline: true });
+  assert.deepStrictEqual(on.timeline, [
+    { type: 'text', text: 'hi' },
+    { type: 'tools', tools: [{ name: 'Read', paramsSummary: '{"f":1}', status: 'done' }] },
+  ]);
+  // Flag on but no timeline data -> [] so gated consumers always see the key.
+  assert.deepStrictEqual(pof.buildResultMessage({ reply: 'r' }, { includeTimeline: true }).timeline, []);
+});
+
+test('extractTotalTokens: totals, input+output sum, else null', () => {
+  assert.strictEqual(pof.extractTotalTokens(null), null);
+  assert.strictEqual(pof.extractTotalTokens({}), null);
+  assert.strictEqual(pof.extractTotalTokens({ totalTokens: 10 }), 10);
+  assert.strictEqual(pof.extractTotalTokens({ inputTokens: 3, outputTokens: 4 }), 7);
+});
+
+test('render stream-json: result line carries the incremental fields too', () => {
+  const out = pof.render(
+    'stream-json',
+    { reply: 'a', toolCallLog: [{ tool: 'Read', result: { success: true } }], elapsed: 5 },
+    { sessionId: 'sid', prompt: 'q' },
+  );
+  const lines = out.split('\n').map((l) => JSON.parse(l));
+  const result = lines[3];
+  assert.strictEqual(result.type, 'result');
+  assert.strictEqual(result.tool_calls.length, 1);
+  assert.deepStrictEqual(result.turn_stats, { elapsedMs: 5, toolCount: 1 });
 });

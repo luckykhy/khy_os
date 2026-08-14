@@ -17,19 +17,19 @@
 'use strict';
 
 const chalk = require('chalk').default || require('chalk');
-const {
-  printError, printWarn, printInfo, printTable,
-} = require('../formatters');
 
 const sessionPersistence = require('../../services/sessionPersistence');
-const projection = require('../../services/trajectoryProvenance/traceProjection');
-const { TRUST } = require('../../services/trajectoryProvenance/khyTrace');
 const { generateTitle } = require('../../services/sessionTitleService');
+const { TRUST } = require('../../services/trajectoryProvenance/khyTrace');
+const projection = require('../../services/trajectoryProvenance/traceProjection');
+const { printError, printWarn, printInfo, printTable } = require('../formatters');
 
 /** 绝对时间戳 → 本地「MM-DD HH:mm」短格式；无时间回退 '—'。 */
 function formatWhen(ts) {
   const n = Number(ts) || 0;
-  if (!n) return '—';
+  if (!n) {
+    return '—';
+  }
   const d = new Date(n);
   const p = (x) => String(x).padStart(2, '0');
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -42,36 +42,56 @@ function formatWhen(ts) {
  */
 function trajectoryLabel(s) {
   const t = (s.title || '').trim();
-  if (t && t !== '(untitled)') return t.slice(0, 28);
+  if (t && t !== '(untitled)') {
+    return t.slice(0, 28);
+  }
   if (s.firstUserMessage) {
     const derived = generateTitle(s.firstUserMessage);
-    if (derived && derived !== 'New Conversation') return derived.slice(0, 28);
+    if (derived && derived !== 'New Conversation') {
+      return derived.slice(0, 28);
+    }
   }
   return '(未命名)';
 }
 
 /** 给字形上色：verified 绿 / claimed 黄 / quarantined 红。 */
 function colorGlyph(trust, glyph) {
-  if (trust === TRUST.VERIFIED) return chalk.green(glyph);
-  if (trust === TRUST.CLAIMED) return chalk.yellow(glyph);
-  if (trust === TRUST.QUARANTINED) return chalk.red(glyph);
+  if (trust === TRUST.VERIFIED) {
+    return chalk.green(glyph);
+  }
+  if (trust === TRUST.CLAIMED) {
+    return chalk.yellow(glyph);
+  }
+  if (trust === TRUST.QUARANTINED) {
+    return chalk.red(glyph);
+  }
   return chalk.dim(glyph);
 }
 
 /** 链状态页脚上色（intact 绿 / broken 红 / unavailable 灰）。 */
 function colorChainStatus(status) {
   const line = projection.chainStatusLine(status);
-  if (!status || status.available === false) return chalk.dim(line);
+  if (!status || status.available === false) {
+    return chalk.dim(line);
+  }
   return status.ok ? chalk.green(line) : chalk.red(line);
 }
 
 /** 取一条记录的内容预览（单行截断）；隔离条目不回显原文。 */
 function contentPreview(entry, trust) {
-  if (trust === TRUST.QUARANTINED) return chalk.dim('[内容已隔离，不予回显]');
+  if (trust === TRUST.QUARANTINED) {
+    return chalk.dim('[内容已隔离，不予回显]');
+  }
   let raw = entry && entry.content;
-  if (raw == null) return '';
+  if (raw == null) {
+    return '';
+  }
   if (typeof raw !== 'string') {
-    try { raw = JSON.stringify(raw); } catch { raw = String(raw); }
+    try {
+      raw = JSON.stringify(raw);
+    } catch {
+      raw = String(raw);
+    }
   }
   const oneLine = raw.replace(/\s+/g, ' ').trim();
   return oneLine.length > 60 ? oneLine.slice(0, 59) + '…' : oneLine;
@@ -79,7 +99,9 @@ function contentPreview(entry, trust) {
 
 /** 解析目标 sessionId：显式参数优先，否则取最近一条会话。 */
 function resolveSessionId(arg) {
-  if (arg) return String(arg);
+  if (arg) {
+    return String(arg);
+  }
   const sessions = sessionPersistence.listPersistedSessions({ limit: 1 });
   return sessions.length ? sessions[0].sessionId : null;
 }
@@ -96,9 +118,13 @@ function traceList() {
   const rows = sessions.map((s) => {
     const status = sessionPersistence.verifyTraceChain(s.sessionId);
     let chainCell;
-    if (!status || status.available === false) chainCell = chalk.dim('无链');
-    else if (status.ok) chainCell = chalk.green(`完整(${status.length})`);
-    else chainCell = chalk.red(`断链@#${status.brokenAt}`);
+    if (!status || status.available === false) {
+      chainCell = chalk.dim('无链');
+    } else if (status.ok) {
+      chainCell = chalk.green(`完整(${status.length})`);
+    } else {
+      chainCell = chalk.red(`断链@#${status.brokenAt}`);
+    }
     return [
       s.sessionId.slice(0, 8),
       formatWhen(s.updatedAt || s.createdAt),
@@ -135,7 +161,9 @@ function traceShow(arg) {
     const idx = chalk.dim('#' + String(i).padEnd(3));
     const kind = chalk.dim(`[${row.kind || '-'}]`);
     const who = row.trust === TRUST.VERIFIED ? chalk.green(row.label) : chalk.yellow(row.label);
-    console.log(`  ${idx} ${glyph} ${who}  ${kind}  ${chalk.dim(contentPreview(entry, row.trust))}`);
+    console.log(
+      `  ${idx} ${glyph} ${who}  ${kind}  ${chalk.dim(contentPreview(entry, row.trust))}`
+    );
     for (const c of row.contradictions) {
       console.log(`        ${chalk.red(c)}`);
     }
@@ -170,8 +198,12 @@ function traceVerify(arg) {
 async function handleTrace(subCommand, args = [], _options = {}) {
   const sub = String(subCommand || 'show').toLowerCase();
 
-  if (sub === 'list') return traceList();
-  if (sub === 'verify') return traceVerify(args[0]);
+  if (sub === 'list') {
+    return traceList();
+  }
+  if (sub === 'verify') {
+    return traceVerify(args[0]);
+  }
   // 'show' 及缺省
   return traceShow(args[0]);
 }

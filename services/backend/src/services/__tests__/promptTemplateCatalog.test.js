@@ -9,8 +9,8 @@
  * 零 IO、确定性——每个断言显式传 env,不依赖进程环境。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const cat = require('../promptTemplateCatalog');
 
@@ -27,7 +27,10 @@ test('isEnabled:默认开;显式 falsy(含大小写/空白)关', () => {
 
 test('isEnabled:注册表关时回退私有 _off 判定(逐字节等价)', () => {
   assert.equal(cat.isEnabled({ KHY_FLAG_REGISTRY: '0' }), true);
-  assert.equal(cat.isEnabled({ KHY_FLAG_REGISTRY: '0', KHY_PROMPT_TEMPLATE_CATALOG: 'off' }), false);
+  assert.equal(
+    cat.isEnabled({ KHY_FLAG_REGISTRY: '0', KHY_PROMPT_TEMPLATE_CATALOG: 'off' }),
+    false
+  );
 });
 
 test('BUILTIN_PROMPT_TEMPLATES:冻结(纯叶子不可变),元素也冻结', () => {
@@ -53,7 +56,10 @@ test('listTemplates:门开返回非空,每条含 id/title/category/prompt 且非
 
 test('listTemplates:门关返回空数组(纯叶子安全默认)', () => {
   assert.deepEqual(cat.listTemplates({}, { KHY_PROMPT_TEMPLATE_CATALOG: 'off' }), []);
-  assert.deepEqual(cat.listTemplates({ category: '写作' }, { KHY_PROMPT_TEMPLATE_CATALOG: '0' }), []);
+  assert.deepEqual(
+    cat.listTemplates({ category: '写作' }, { KHY_PROMPT_TEMPLATE_CATALOG: '0' }),
+    []
+  );
 });
 
 test('listTemplates:category 过滤只返回该分类,未知分类返空', () => {
@@ -61,7 +67,9 @@ test('listTemplates:category 过滤只返回该分类,未知分类返空', () =>
   const first = cats[0];
   const filtered = cat.listTemplates({ category: first }, {});
   assert.ok(filtered.length > 0);
-  for (const t of filtered) assert.equal(t.category, first);
+  for (const t of filtered) {
+    assert.equal(t.category, first);
+  }
   assert.deepEqual(cat.listTemplates({ category: '不存在的分类xyz' }, {}), []);
 });
 

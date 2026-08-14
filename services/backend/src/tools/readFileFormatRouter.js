@@ -31,7 +31,9 @@ const path = require('path');
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -59,7 +61,9 @@ function _resolveDeps(deps) {
       require('../services/archiveManifestPolicy').buildArchiveManifest(res),
     extractDocx: (fp) => _extractDocxViaPython(fp),
   };
-  if (!deps || typeof deps !== 'object') return defaults;
+  if (!deps || typeof deps !== 'object') {
+    return defaults;
+  }
   return { ...defaults, ...deps };
 }
 
@@ -76,50 +80,90 @@ function _extractDocxViaPython(filePath) {
       const os = require('os');
       const DOC_HELPER = path.join(__dirname, '..', 'services', 'docHelper.py');
       const pyBin = process.platform === 'win32' ? 'python' : 'python3';
-      tmpOut = path.join(
-        fs.mkdtempSync(path.join(os.tmpdir(), 'khy-docx-')),
-        'out.txt',
-      );
+      tmpOut = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'khy-docx-')), 'out.txt');
       const timeoutMs = Math.max(
         1000,
-        parseInt(String(process.env.KHY_READFILE_DOCX_TIMEOUT_MS || '8000'), 10) || 8000,
+        parseInt(String(process.env.KHY_READFILE_DOCX_TIMEOUT_MS || '8000'), 10) || 8000
       );
       let done = false;
       let stdout = '';
       const finish = (val) => {
-        if (done) return;
+        if (done) {
+          return;
+        }
         done = true;
         // 清理临时文件/目录(用后即删,不落盘残留)。
         try {
           const dir = path.dirname(tmpOut);
-          if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut);
-          if (dir && dir.includes('khy-docx-')) fs.rmdirSync(dir);
-        } catch { /* ignore cleanup */ }
+          if (fs.existsSync(tmpOut)) {
+            fs.unlinkSync(tmpOut);
+          }
+          if (dir && dir.includes('khy-docx-')) {
+            fs.rmdirSync(dir);
+          }
+        } catch {
+          /* ignore cleanup */
+        }
         resolve(val);
       };
       const child = spawn(pyBin, [DOC_HELPER, 'docx_to_text', filePath, tmpOut], {
         stdio: ['ignore', 'pipe', 'ignore'],
       });
-      const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* */ } finish({ success: false, error: 'docx extract timeout' }); }, timeoutMs);
-      child.stdout.on('data', (b) => { stdout += String(b); });
-      child.on('error', () => { clearTimeout(timer); finish({ success: false, error: 'python spawn failed' }); });
+      // Idle-aware timeout: reset on stdout activity; kill only after timeoutMs of silence
+      let timer = null;
+      const armIdleTimer = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            /* */
+          }
+          finish({
+            success: false,
+            error: `docx 提取超时:子进程空闲 ${Math.round(timeoutMs / 1000)} 秒无输出,已终止`,
+          });
+        }, timeoutMs);
+      };
+      armIdleTimer();
+      child.stdout.on('data', (b) => {
+        stdout += String(b);
+        armIdleTimer();
+      });
+      child.on('error', () => {
+        clearTimeout(timer);
+        finish({ success: false, error: 'python spawn failed' });
+      });
       child.on('close', () => {
         clearTimeout(timer);
         try {
           let ok = false;
-          try { ok = !!(JSON.parse(stdout.trim() || '{}').success); } catch { ok = false; }
+          try {
+            ok = !!JSON.parse(stdout.trim() || '{}').success;
+          } catch {
+            ok = false;
+          }
           const text = ok && fs.existsSync(tmpOut) ? fs.readFileSync(tmpOut, 'utf8') : '';
-          if (ok && text && text.trim()) finish({ success: true, engine: 'python-docx', text });
-          else finish({ success: false, error: 'docx extract empty' });
-        } catch { finish({ success: false, error: 'docx read failed' }); }
+          if (ok && text && text.trim()) {
+            finish({ success: true, engine: 'python-docx', text });
+          } else {
+            finish({ success: false, error: 'docx extract empty' });
+          }
+        } catch {
+          finish({ success: false, error: 'docx read failed' });
+        }
       });
-    } catch { resolve({ success: false, error: 'docx extract unavailable' }); }
+    } catch {
+      resolve({ success: false, error: 'docx extract unavailable' });
+    }
   });
 }
 
 /** 渲染成功的提取结果为读工具返回体;不成功/空 → null。 */
 function _renderImageOcr(r, size) {
-  if (!r || !r.success || !r.text || !String(r.text).trim()) return null;
+  if (!r || !r.success || !r.text || !String(r.text).trim()) {
+    return null;
+  }
   const engine = r.engine || 'tesseract';
   return {
     success: true,
@@ -132,7 +176,9 @@ function _renderImageOcr(r, size) {
 }
 
 function _renderPdf(r, size) {
-  if (!r || !r.success || !r.text || !String(r.text).trim()) return null;
+  if (!r || !r.success || !r.text || !String(r.text).trim()) {
+    return null;
+  }
   const engine = r.engine || 'pdf';
   const pages = Number.isFinite(r.pageCount) ? r.pageCount : null;
   const used = Number.isFinite(r.pagesUsed) ? r.pagesUsed : null;
@@ -148,7 +194,9 @@ function _renderPdf(r, size) {
 }
 
 function _renderDocx(r, size) {
-  if (!r || !r.success || !r.text || !String(r.text).trim()) return null;
+  if (!r || !r.success || !r.text || !String(r.text).trim()) {
+    return null;
+  }
   const engine = r.engine || 'python-docx';
   return {
     success: true,
@@ -161,7 +209,9 @@ function _renderDocx(r, size) {
 }
 
 function _renderArchive(manifest, r, size) {
-  if (!manifest || !String(manifest).trim()) return null;
+  if (!manifest || !String(manifest).trim()) {
+    return null;
+  }
   return {
     success: true,
     content: String(manifest),
@@ -182,8 +232,12 @@ async function routeFormatRead(args) {
   try {
     const { filePath, fmt, size } = args || {};
     const env = (args && args.env) || process.env;
-    if (!formatRouteEnabled(env)) return { handled: false };
-    if (!fmt || typeof fmt !== 'object' || !filePath) return { handled: false };
+    if (!formatRouteEnabled(env)) {
+      return { handled: false };
+    }
+    if (!fmt || typeof fmt !== 'object' || !filePath) {
+      return { handled: false };
+    }
 
     const d = _resolveDeps(args && args.deps);
     const mime = fmt.mime || '';
@@ -214,7 +268,9 @@ async function routeFormatRead(args) {
       if (r && r.success) {
         const manifest = d.buildArchiveManifest({ ...r, env });
         const rendered = _renderArchive(manifest, r, size);
-        if (rendered) return { handled: true, result: rendered };
+        if (rendered) {
+          return { handled: true, result: rendered };
+        }
       }
       return { handled: false };
     }

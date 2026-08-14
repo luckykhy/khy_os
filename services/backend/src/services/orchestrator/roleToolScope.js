@@ -42,14 +42,7 @@ const NOTEBOOK_EDIT = 'NotebookEdit';
 // 只读语义的角色。与 exploreAgent（探索）/ readingAgent（深读）/ auditAgent
 // （审计）/ planAgent（规划）/ researchAgent（调研）的只读定义对齐。write 角色
 // (`implement` / `coder` / `general` / 未知) 不在此集 → 不收窄。
-const _READ_ONLY_ROLES = new Set([
-  'explore',
-  'verify',
-  'plan',
-  'research',
-  'audit',
-  'review',
-]);
+const _READ_ONLY_ROLES = new Set(['explore', 'verify', 'plan', 'research', 'audit', 'review']);
 
 // 只读角色被剥离的工具集。默认只剥文件写工具，**不剥 Bash**（见 HOW-TO-EXTEND）。
 const _READ_ONLY_DENY = Object.freeze([EDIT, WRITE, NOTEBOOK_EDIT]);
@@ -63,7 +56,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  */
 function _roleScopeEnabled() {
   const v = process.env.KHY_ROLE_TOOL_SCOPE;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_FALSY.has(String(v).trim().toLowerCase());
 }
 
@@ -79,11 +74,19 @@ function _roleScopeEnabled() {
  * @returns {string[]}
  */
 function roleToolScope(role) {
-  if (!_roleScopeEnabled()) return [];
-  if (typeof role !== 'string') return [];
+  if (!_roleScopeEnabled()) {
+    return [];
+  }
+  if (typeof role !== 'string') {
+    return [];
+  }
   const key = role.trim().toLowerCase();
-  if (!key) return [];
-  if (_READ_ONLY_ROLES.has(key)) return [..._READ_ONLY_DENY];
+  if (!key) {
+    return [];
+  }
+  if (_READ_ONLY_ROLES.has(key)) {
+    return [..._READ_ONLY_DENY];
+  }
   return [];
 }
 

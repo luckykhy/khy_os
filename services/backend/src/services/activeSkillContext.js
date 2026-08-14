@@ -36,9 +36,10 @@ function setActiveSkill(skill) {
   }
   _active = {
     name: skill.name,
-    allowedTools: Array.isArray(skill.allowedTools) && skill.allowedTools.length
-      ? skill.allowedTools.slice()
-      : null,
+    allowedTools:
+      Array.isArray(skill.allowedTools) && skill.allowedTools.length
+        ? skill.allowedTools.slice()
+        : null,
   };
   return prev;
 }

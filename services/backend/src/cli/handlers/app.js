@@ -10,8 +10,8 @@
  *   /app status           — show all apps and their running state
  */
 const chalk = require('chalk').default || require('chalk');
-const { printSuccess, printError, printInfo, printTable } = require('../formatters');
 const { SUPPORTED_ABIS, DEFAULT_ABI } = require('../../constants/wasmDefaults');
+const { printSuccess, printError, printInfo, printTable } = require('../formatters');
 
 const SUPPORTED_WASM_IMPORTS = Object.freeze({
   khy_sys: new Set([
@@ -22,14 +22,14 @@ const SUPPORTED_WASM_IMPORTS = Object.freeze({
     'shm_create',
     'shm_map',
   ]),
-  spectest: new Set([
-    'print_char',
-  ]),
+  spectest: new Set(['print_char']),
 });
 
 let _registry;
 function registry() {
-  if (!_registry) _registry = require('../../services/appRegistry');
+  if (!_registry) {
+    _registry = require('../../services/appRegistry');
+  }
   return _registry;
 }
 
@@ -69,22 +69,28 @@ async function handleApp(subCommand, args, options) {
 
 function _parseCommandsFromOptions(name, options = {}) {
   const raw = (options.commands || '').trim();
-  if (!raw) return [name];
+  if (!raw) {
+    return [name];
+  }
   const parsed = raw
     .split(',')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
   return parsed.length ? parsed : [name];
 }
 
 function _parseCapabilitiesOption(rawCaps) {
-  if (!rawCaps || rawCaps === true) return ['ipc'];
+  if (!rawCaps || rawCaps === true) {
+    return ['ipc'];
+  }
   const allowed = new Set(['ipc', 'net', 'fs_read', 'fs_write', 'window', 'shm', 'irq_bind']);
   const caps = String(rawCaps)
     .split(',')
-    .map(s => s.trim().toLowerCase())
+    .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  if (caps.length === 0) return ['ipc'];
+  if (caps.length === 0) {
+    return ['ipc'];
+  }
 
   for (const cap of caps) {
     if (!allowed.has(cap)) {
@@ -104,21 +110,29 @@ function _inspectWasmModuleMeta(wasmPath) {
   return {
     exportsMeta,
     importsMeta,
-    functionExports: exportsMeta.filter(e => e.kind === 'function').map(e => e.name),
+    functionExports: exportsMeta.filter((e) => e.kind === 'function').map((e) => e.name),
   };
 }
 
 function _resolveDefaultWasmExport(meta, requestedExport) {
   const funcs = meta.functionExports || [];
-  if (!funcs.length) return null;
+  if (!funcs.length) {
+    return null;
+  }
 
   if (requestedExport) {
     return funcs.includes(requestedExport) ? requestedExport : null;
   }
 
-  if (funcs.includes('main')) return 'main';
-  if (funcs.includes('_start')) return '_start';
-  if (funcs.length === 1) return funcs[0];
+  if (funcs.includes('main')) {
+    return 'main';
+  }
+  if (funcs.includes('_start')) {
+    return '_start';
+  }
+  if (funcs.length === 1) {
+    return funcs[0];
+  }
   return null;
 }
 
@@ -161,38 +175,52 @@ async function handleList() {
 
   for (const app of apps) {
     const st = await registry().status(app.name);
-    const statusIcon = st.running
-      ? chalk.green('● 运行中')
-      : chalk.dim('○ 未启动');
+    const statusIcon = st.running ? chalk.green('● 运行中') : chalk.dim('○ 未启动');
     const portInfo = st.running ? chalk.dim(` :${st.port}`) : '';
 
     console.log(`  ${statusIcon} ${chalk.white.bold(app.name)}${portInfo}`);
     console.log(chalk.dim(`    ${app.description || '-'}`));
-    console.log(chalk.dim(`    版本: ${app.version} · 来源: ${app.source} · 运行时: ${app.runtime || 'node'} · 命令: ${(app.commands || []).join(', ')}`));
+    console.log(
+      chalk.dim(
+        `    版本: ${app.version} · 来源: ${app.source} · 运行时: ${app.runtime || 'node'} · 命令: ${(app.commands || []).join(', ')}`
+      )
+    );
     console.log('');
   }
 
   // Discover pip-installed khy-* packages not yet registered
   try {
     const discovered = await registry().discover();
-    const registered = new Set(apps.map(a => a.name));
-    const unregistered = discovered.filter(d => !registered.has(d.name.replace('khy-', '')));
+    const registered = new Set(apps.map((a) => a.name));
+    const unregistered = discovered.filter((d) => !registered.has(d.name.replace('khy-', '')));
     if (unregistered.length > 0) {
       console.log(chalk.dim('  可用的未注册应用:'));
       for (const pkg of unregistered) {
-        console.log(chalk.dim(`    ${pkg.name} (${pkg.version}) — 运行 /app install ${pkg.name.replace('khy-', '')}`));
+        console.log(
+          chalk.dim(
+            `    ${pkg.name} (${pkg.version}) — 运行 /app install ${pkg.name.replace('khy-', '')}`
+          )
+        );
       }
       console.log('');
     }
-  } catch { /* discovery is best-effort */ }
+  } catch {
+    /* discovery is best-effort */
+  }
 }
 
 async function handleRegister(name, options = {}) {
   if (!name) {
     printError('用法: /app register <name> --entry <path> [--runtime node|wasm]');
-    printInfo('WASM 例子: /app register demo --runtime wasm --wasm /abs/demo.wasm --abi numeric-v1 --export main');
-    printInfo('WASM string-v2: /app register echo --runtime wasm --wasm /abs/echo.wasm --abi string-v2 --export run');
-    printInfo('WASM json-v2: /app register score --runtime wasm --wasm /abs/score.wasm --abi json-v2 --export run');
+    printInfo(
+      'WASM 例子: /app register demo --runtime wasm --wasm /abs/demo.wasm --abi numeric-v1 --export main'
+    );
+    printInfo(
+      'WASM string-v2: /app register echo --runtime wasm --wasm /abs/echo.wasm --abi string-v2 --export run'
+    );
+    printInfo(
+      'WASM json-v2: /app register score --runtime wasm --wasm /abs/score.wasm --abi json-v2 --export run'
+    );
     printInfo('WASM capability: --caps ipc,net,window (默认仅 ipc)');
     printInfo('WASM khy_sys: --khy-memory <exportName> (默认 memory)');
     return;
@@ -211,7 +239,8 @@ async function handleRegister(name, options = {}) {
   const runtime = String(options.runtime || 'node').toLowerCase();
   const source = options.source || 'local';
   const commands = _parseCommandsFromOptions(name, options);
-  const description = options.description || (runtime === 'wasm' ? `${name} WASM component` : `${name} app`);
+  const description =
+    options.description || (runtime === 'wasm' ? `${name} WASM component` : `${name} app`);
 
   if (runtime === 'wasm') {
     const pathModule = require('path');
@@ -253,15 +282,13 @@ async function handleRegister(name, options = {}) {
 
     const unsupportedImports = _findUnsupportedWasmImports(moduleMeta.importsMeta);
     if (unsupportedImports.length > 0) {
-      const preview = unsupportedImports
-        .slice(0, 6)
-        .map(_formatImportRef)
-        .join(', ');
-      const remain = unsupportedImports.length > 6
-        ? ` (+${unsupportedImports.length - 6} more)`
-        : '';
+      const preview = unsupportedImports.slice(0, 6).map(_formatImportRef).join(', ');
+      const remain =
+        unsupportedImports.length > 6 ? ` (+${unsupportedImports.length - 6} more)` : '';
       printError(`WASM 模块包含当前运行时不支持的导入: ${preview}${remain}`);
-      printInfo('当前支持导入: khy_sys.(cap_check,ipc_call,ipc_last_len,ipc_last_status,shm_create,shm_map), spectest.print_char');
+      printInfo(
+        '当前支持导入: khy_sys.(cap_check,ipc_call,ipc_last_len,ipc_last_status,shm_create,shm_map), spectest.print_char'
+      );
       return;
     }
 
@@ -294,7 +321,7 @@ async function handleRegister(name, options = {}) {
       }
 
       const hasStringMemoryExport = moduleMeta.exportsMeta.some(
-        e => e.kind === 'memory' && e.name === stringMemoryExport
+        (e) => e.kind === 'memory' && e.name === stringMemoryExport
       );
       if (!hasStringMemoryExport) {
         printError(`string ABI 所需内存导出不存在: ${stringMemoryExport}`);
@@ -314,26 +341,30 @@ async function handleRegister(name, options = {}) {
 
     const khyMemoryExport = options['khy-memory'] || 'memory';
     const hasKhyIpcImport = moduleMeta.importsMeta.some(
-      i => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
+      (i) => i.module === 'khy_sys' && i.kind === 'function' && i.name === 'ipc_call'
     );
     const hasExpectedMemoryExport = moduleMeta.exportsMeta.some(
-      e => e.kind === 'memory' && e.name === khyMemoryExport
+      (e) => e.kind === 'memory' && e.name === khyMemoryExport
     );
     if (hasKhyIpcImport && !hasExpectedMemoryExport) {
       if (abi === 'numeric-v1') {
         printError(
           `WASM ABI 不兼容: 检测到 khy_sys.ipc_call 导入，但未找到内存导出 "${khyMemoryExport}"。`
         );
-        printInfo('numeric-v1 需要 ptr/len + 线性内存 ABI；当前模块很可能是 MoonBit wasm-gc externref ABI。');
+        printInfo(
+          'numeric-v1 需要 ptr/len + 线性内存 ABI；当前模块很可能是 MoonBit wasm-gc externref ABI。'
+        );
         printInfo('请改用兼容产物，或使用 string-v2/json-v2 并仅通过 /app ipc 在宿主侧发起 IPC。');
         return;
       }
 
       printInfo(
         `警告: 检测到 khy_sys.ipc_call 导入，但未找到内存导出 "${khyMemoryExport}"。` +
-        '这通常是 MoonBit wasm-gc externref ABI，当前 khy_sys host 不兼容，运行时可能出现 EPROTO。'
+          '这通常是 MoonBit wasm-gc externref ABI，当前 khy_sys host 不兼容，运行时可能出现 EPROTO。'
       );
-      printInfo('建议: 使用兼容 ptr/len + 线性内存的 WASM 产物，或仅通过 /app ipc 在宿主侧发起 IPC。');
+      printInfo(
+        '建议: 使用兼容 ptr/len + 线性内存的 WASM 产物，或仅通过 /app ipc 在宿主侧发起 IPC。'
+      );
     }
 
     registry().register({
@@ -353,12 +384,15 @@ async function handleRegister(name, options = {}) {
         khySys: {
           memoryExport: khyMemoryExport,
         },
-        stringAbi: (abi === 'string-v2' || abi === 'json-v2') ? {
-          memoryExport: options.memory || 'memory',
-          allocExport: options.alloc || 'alloc',
-          freeExport: options.free || '',
-          returnMode: options['return-mode'] || 'i64-ptr-len',
-        } : undefined,
+        stringAbi:
+          abi === 'string-v2' || abi === 'json-v2'
+            ? {
+                memoryExport: options.memory || 'memory',
+                allocExport: options.alloc || 'alloc',
+                freeExport: options.free || '',
+                returnMode: options['return-mode'] || 'i64-ptr-len',
+              }
+            : undefined,
       },
     });
 
@@ -447,7 +481,7 @@ async function handleInstall(name, options = {}) {
     // After pip install, try to discover and register
     // The installed package should have put a manifest or we detect its entry
     const discovered = await registry().discover();
-    const match = discovered.find(d => d.name === pipPkg);
+    const match = discovered.find((d) => d.name === pipPkg);
     if (match) {
       // Try to locate the entry point
       try {
@@ -460,7 +494,13 @@ async function handleInstall(name, options = {}) {
         const locMatch = showOutput.match(/^Location:\s*(.+)$/m);
         if (locMatch) {
           const pkgDir = locMatch[1].trim();
-          const possibleEntry = require('path').join(pkgDir, name.replace(/-/g, '_'), 'bundled', 'backend', 'server.js');
+          const possibleEntry = require('path').join(
+            pkgDir,
+            name.replace(/-/g, '_'),
+            'bundled',
+            'backend',
+            'server.js'
+          );
           if (require('fs').existsSync(possibleEntry)) {
             registry().register({
               name: name.replace('khy-', ''),
@@ -475,7 +515,9 @@ async function handleInstall(name, options = {}) {
             return;
           }
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
 
     printSuccess(`pip 包 ${pipPkg} 已安装`);
@@ -503,7 +545,7 @@ async function handleUninstall(name) {
     printInfo('正在停止应用...');
     registry().stop(name);
     // Wait a moment
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   // Unregister
@@ -513,17 +555,22 @@ async function handleUninstall(name) {
   // Optionally pip uninstall
   if (app.source === 'pip') {
     const { promptCompat } = require('../uiPrompt');
-    const { remove } = await promptCompat([{
-      type: 'confirm',
-      name: 'remove',
-      message: `是否同时 pip uninstall khy-${name}?`,
-      default: false,
-    }]);
+    const { remove } = await promptCompat([
+      {
+        type: 'confirm',
+        name: 'remove',
+        message: `是否同时 pip uninstall khy-${name}?`,
+        default: false,
+      },
+    ]);
     if (remove) {
       const { execFileSync } = require('child_process');
       const pipCmd = process.platform === 'win32' ? 'pip' : 'pip3';
       try {
-        execFileSync(pipCmd, ['uninstall', `khy-${name}`, '-y'], { stdio: 'inherit', timeout: 60000 });
+        execFileSync(pipCmd, ['uninstall', `khy-${name}`, '-y'], {
+          stdio: 'inherit',
+          timeout: 60000,
+        });
         printSuccess(`pip 包 khy-${name} 已卸载`);
       } catch {
         printInfo('pip 卸载失败，请手动运行: pip uninstall khy-' + name);
@@ -583,9 +630,10 @@ async function handleRun(name, args = [], options = {}) {
   let callArgs = args;
   if (abi === 'numeric-v1' && !exportName && args.length > 0) {
     const first = args[0];
-    const looksNumeric = /^-?\d+n$/.test(first)
-      || /^-?\d+$/.test(first)
-      || /^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(first);
+    const looksNumeric =
+      /^-?\d+n$/.test(first) ||
+      /^-?\d+$/.test(first) ||
+      /^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(first);
     if (!looksNumeric) {
       exportName = first;
       callArgs = args.slice(1);
@@ -622,7 +670,9 @@ async function handleRun(name, args = [], options = {}) {
         elapsedMs,
         success: true,
       });
-    } catch { /* telemetry should never break command path */ }
+    } catch {
+      /* telemetry should never break command path */
+    }
 
     printSuccess(`WASM 执行成功: ${result.app}.${result.exportName}`);
     console.log('');
@@ -632,7 +682,9 @@ async function handleRun(name, args = [], options = {}) {
     console.log(`  result: ${JSON.stringify(result.result)}`);
     const currentMs = Math.round(elapsedMs);
     if (latencySummary) {
-      console.log(`  latency:${currentMs}ms  p50:${latencySummary.p50}ms  p95:${latencySummary.p95}ms  n=${latencySummary.successCount}`);
+      console.log(
+        `  latency:${currentMs}ms  p50:${latencySummary.p50}ms  p95:${latencySummary.p95}ms  n=${latencySummary.successCount}`
+      );
     } else {
       console.log(`  latency:${currentMs}ms`);
     }
@@ -648,7 +700,9 @@ async function handleRun(name, args = [], options = {}) {
         elapsedMs,
         success: false,
       });
-    } catch { /* telemetry should never break command path */ }
+    } catch {
+      /* telemetry should never break command path */
+    }
     printError(`WASM 执行失败: ${err.message}`);
   }
 }
@@ -743,7 +797,7 @@ async function handleExports(name) {
     if (!exportsList.length) {
       console.log(chalk.dim('  (none)'));
     } else {
-      exportsList.forEach(fn => console.log(`  - ${fn}`));
+      exportsList.forEach((fn) => console.log(`  - ${fn}`));
     }
     console.log('');
   } catch (err) {
@@ -791,10 +845,7 @@ async function handleStatus() {
     ]);
   }
 
-  printTable(
-    ['应用', '运行时', '状态', '端口', 'PID', '版本'],
-    rows
-  );
+  printTable(['应用', '运行时', '状态', '端口', 'PID', '版本'], rows);
   console.log('');
 }
 
@@ -802,20 +853,26 @@ function _openBrowser(url) {
   try {
     const { openDefault } = require('../../tools/platformUtils');
     openDefault(url);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 // ── KHYanything Sub-command Router (legacy CLI-Anything cli-* still supported) ─
 
 let _cliAnything;
 function cliAnything() {
-  if (!_cliAnything) _cliAnything = require('../../services/cliAnythingService');
+  if (!_cliAnything) {
+    _cliAnything = require('../../services/cliAnythingService');
+  }
   return _cliAnything;
 }
 
 let _khyProxy;
 function khyProxy() {
-  if (!_khyProxy) _khyProxy = require('../../services/khyAnythingProxy');
+  if (!_khyProxy) {
+    _khyProxy = require('../../services/khyAnythingProxy');
+  }
   return _khyProxy;
 }
 
@@ -852,7 +909,9 @@ async function _handleCLIAnything(subCommand, args, options) {
     default:
       printError(`未知 KHYanything 子命令: ${subCommand}`);
       printInfo('代理接入: khy-add, khy-remove, khy-proxies, khy-run');
-      printInfo('注册表: khy-search, khy-install, khy-uninstall, khy-list, khy-sync, khy-import, khy-invoke, khy-gen');
+      printInfo(
+        '注册表: khy-search, khy-install, khy-uninstall, khy-list, khy-sync, khy-import, khy-invoke, khy-gen'
+      );
       return;
   }
 }
@@ -898,8 +957,11 @@ function _handleKhyRemove(args) {
     return;
   }
   const result = khyProxy().removeProxy(name);
-  if (result.success) printSuccess(`已移除代理: ${name}`);
-  else printError(result.error);
+  if (result.success) {
+    printSuccess(`已移除代理: ${name}`);
+  } else {
+    printError(result.error);
+  }
 }
 
 function _handleKhyProxies() {
@@ -913,9 +975,11 @@ function _handleKhyProxies() {
     return;
   }
   for (const p of proxies) {
-    console.log(`  ${chalk.white.bold(p.name)} ${chalk.dim('[' + p.language + '/' + p.buildSystem + ']')}`);
+    console.log(
+      `  ${chalk.white.bold(p.name)} ${chalk.dim('[' + p.language + '/' + p.buildSystem + ']')}`
+    );
     console.log(`    ${chalk.dim(p.path)}`);
-    console.log(`    命令: ${chalk.dim(p.runSpec.commands.map(c => c.command).join(', '))}`);
+    console.log(`    命令: ${chalk.dim(p.runSpec.commands.map((c) => c.command).join(', '))}`);
     console.log('');
   }
 }
@@ -934,10 +998,11 @@ function _handleKhyRun(args, options) {
     console.log(result.data);
   } else {
     printError(result.error);
-    if (result.stderr) console.log(chalk.dim(result.stderr));
+    if (result.stderr) {
+      console.log(chalk.dim(result.stderr));
+    }
   }
 }
-
 
 function _handleCLISearch(args, options) {
   const query = args.join(' ').trim();
@@ -969,7 +1034,9 @@ function _handleCLISearch(args, options) {
     const cat = chalk.dim(`[${cli.category || 'other'}]`);
     console.log(`  ${source} ${chalk.white.bold(cli.display_name || cli.name)} ${cat}`);
     console.log(`    ${chalk.dim(cli.description || '-')}`);
-    if (cli.requires) console.log(`    ${chalk.dim('需要: ' + cli.requires)}`);
+    if (cli.requires) {
+      console.log(`    ${chalk.dim('需要: ' + cli.requires)}`);
+    }
     console.log('');
   }
   if (results.length > 15) {
@@ -992,7 +1059,9 @@ function _handleCLIInstall(args) {
 
     printInfo('正在注册为 KHY 工具和技能...');
     const regResult = cliAnything().registerAllAsKHYTools();
-    printInfo(`注册完成: ${regResult.tools} 工具, ${regResult.skills} 技能, ${regResult.apps} 应用`);
+    printInfo(
+      `注册完成: ${regResult.tools} 工具, ${regResult.skills} 技能, ${regResult.apps} 应用`
+    );
     if (regResult.errors.length > 0) {
       for (const e of regResult.errors.slice(0, 3)) {
         console.log(chalk.dim(`  ⚠ ${e}`));
@@ -1032,8 +1101,15 @@ function _handleCLIList(options) {
   }
 
   for (const cli of installed) {
-    const source = cli._source === 'harness' ? chalk.green('H') : cli._source === 'public' ? chalk.blue('P') : chalk.dim('L');
-    console.log(`  [${source}] ${chalk.white.bold(cli.displayName || cli.name)} ${chalk.dim('v' + cli.version)}`);
+    const source =
+      cli._source === 'harness'
+        ? chalk.green('H')
+        : cli._source === 'public'
+          ? chalk.blue('P')
+          : chalk.dim('L');
+    console.log(
+      `  [${source}] ${chalk.white.bold(cli.displayName || cli.name)} ${chalk.dim('v' + cli.version)}`
+    );
     console.log(`    ${chalk.dim(cli.entryPoint)} — ${cli.description || '-'}`);
     if (cli.commandGroups.length > 0) {
       console.log(`    命令组: ${chalk.dim(cli.commandGroups.join(', '))}`);
@@ -1057,7 +1133,9 @@ function _handleCLIImport(args) {
     return;
   }
 
-  printSuccess(`导入完成: ${result.total} 个工具 (Harness: ${result.harness}, Public: ${result.public})`);
+  printSuccess(
+    `导入完成: ${result.total} 个工具 (Harness: ${result.harness}, Public: ${result.public})`
+  );
   printInfo(`离线 bundle: ${result.bundleRoot}`);
   printInfo('后续: app cli-search <关键词> 搜索, app cli-install <name> 离线安装');
 }
@@ -1066,7 +1144,9 @@ function _handleCLISync() {
   printInfo('正在同步 CLI-Anything 注册表...');
   cliAnything().fetchRegistry(true);
   const stats = cliAnything().getRegistryStats();
-  printSuccess(`注册表已同步: ${stats.total} 个工具 (Harness: ${stats.harness}, Public: ${stats.public})`);
+  printSuccess(
+    `注册表已同步: ${stats.total} 个工具 (Harness: ${stats.harness}, Public: ${stats.public})`
+  );
 
   printInfo('正在扫描已安装 CLI...');
   const installed = cliAnything().discoverInstalled();
@@ -1075,7 +1155,9 @@ function _handleCLISync() {
   if (installed.length > 0) {
     printInfo('正在更新 KHY 注册...');
     const regResult = cliAnything().registerAllAsKHYTools();
-    printSuccess(`注册完成: ${regResult.tools} 工具, ${regResult.skills} 技能, ${regResult.apps} 应用`);
+    printSuccess(
+      `注册完成: ${regResult.tools} 工具, ${regResult.skills} 技能, ${regResult.apps} 应用`
+    );
   }
 }
 
@@ -1087,7 +1169,9 @@ function _handleCLIInvoke(args, options) {
   }
 
   const cmdArgs = args.slice(1);
-  const result = cliAnything().invokeCommand(name, cmdArgs, { timeout: options.timeout ? Number(options.timeout) : 60000 });
+  const result = cliAnything().invokeCommand(name, cmdArgs, {
+    timeout: options.timeout ? Number(options.timeout) : 60000,
+  });
 
   if (result.success) {
     if (result.format === 'json' && typeof result.data === 'object') {
@@ -1097,7 +1181,9 @@ function _handleCLIInvoke(args, options) {
     }
   } else {
     printError(`调用失败: ${result.error}`);
-    if (result.stderr) console.log(chalk.dim(result.stderr));
+    if (result.stderr) {
+      console.log(chalk.dim(result.stderr));
+    }
   }
 }
 

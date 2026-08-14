@@ -8,18 +8,19 @@
  * Delegates to the coordinator (when available) or runs a standalone
  * tool-use loop with direct AI chat.
  */
-const { BaseTool } = require('../_baseTool');
 const path = require('path');
-const { normalizeAgentRole } = require('../../services/claudeCompat');
+
 const { classifyAgentTool } = require('../../cli/agentTreeView');
 // Model-name SSOT: lightweight cloud agent model ids flow from constants/models.js.
 const { LIGHTWEIGHT_AGENT_MODELS } = require('../../constants/models');
+const { normalizeAgentRole } = require('../../services/claudeCompat');
 // Role→tool-scope leaf (OPS-MAN-094): a read-only orchestration role (explore/
 // verify/…) must lose the write tools (Edit/Write/NotebookEdit) even when no
 // built-in agentDef supplies that denylist (e.g. SDK mode with built-in agents
 // disabled → agentDef is null → the role's read-only intent would otherwise be
 // silently lost). Gate KHY_ROLE_TOOL_SCOPE (default-on) inside the leaf.
 const { mergeRoleScopeInto } = require('../../services/orchestrator/roleToolScope');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * Gate for enriching parallel-agent progress with the executing command line and
@@ -27,8 +28,11 @@ const { mergeRoleScopeInto } = require('../../services/orchestrator/roleToolScop
  * omit the extra fields, so a fan-out renders byte-identically to before.
  */
 function _treePreviewEnabled() {
-  const v = String(process.env.KHY_AGENT_TREE_PREVIEW == null ? '' : process.env.KHY_AGENT_TREE_PREVIEW)
-    .trim().toLowerCase();
+  const v = String(
+    process.env.KHY_AGENT_TREE_PREVIEW == null ? '' : process.env.KHY_AGENT_TREE_PREVIEW
+  )
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -37,7 +41,9 @@ function _treePreviewEnabled() {
  * (执行命令). Empty for non-command tools — the tree falls back to the target.
  */
 function _commandOf(name, params) {
-  if (classifyAgentTool(name) !== 'command') return '';
+  if (classifyAgentTool(name) !== 'command') {
+    return '';
+  }
   const p = params || {};
   return String(p.description || p.command || p.cmd || p.script || '').trim();
 }
@@ -54,14 +60,20 @@ function _commandOf(name, params) {
 function _fmtElapsed(ms, env = process.env) {
   const n = Number(ms);
   const safe = Number.isFinite(n) ? n : 0;
-  const v = String((env && env.KHY_AGENT_ELAPSED_CC) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_AGENT_ELAPSED_CC) || '')
+    .trim()
+    .toLowerCase();
   const ccMode = !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   if (ccMode) {
     try {
       const { ccFormatDuration } = require('../../cli/ccFormat');
       const s = ccFormatDuration(safe);
-      if (s) return s;
-    } catch { /* fall through to the legacy fixed-1-decimal seconds below */ }
+      if (s) {
+        return s;
+      }
+    } catch {
+      /* fall through to the legacy fixed-1-decimal seconds below */
+    }
   }
   return `${(safe / 1000).toFixed(1)}s`;
 }
@@ -73,21 +85,36 @@ function _fmtElapsed(ms, env = process.env) {
  * (entries / files / matches) and normalises bare strings to {name,path,type}.
  */
 function _listingEntriesOf(name, result) {
-  if (!result || result.success === false) return null;
-  if (classifyAgentTool(name) !== 'listing') return null;
+  if (!result || result.success === false) {
+    return null;
+  }
+  if (classifyAgentTool(name) !== 'listing') {
+    return null;
+  }
   const raw = result.entries || result.files || result.matches || result.items || null;
-  if (!Array.isArray(raw) || raw.length === 0) return null;
-  const norm = raw.slice(0, 40).map((e) => {
-    if (typeof e === 'string') return { name: e, path: e, type: 'file' };
-    if (!e || typeof e !== 'object') return null;
-    const nm = e.name || e.path || e.file || '';
-    if (!nm) return null;
-    return {
-      name: String(nm),
-      path: String(e.path || nm),
-      type: e.type || (e.isDirectory ? 'directory' : 'file'),
-    };
-  }).filter(Boolean);
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return null;
+  }
+  const norm = raw
+    .slice(0, 40)
+    .map((e) => {
+      if (typeof e === 'string') {
+        return { name: e, path: e, type: 'file' };
+      }
+      if (!e || typeof e !== 'object') {
+        return null;
+      }
+      const nm = e.name || e.path || e.file || '';
+      if (!nm) {
+        return null;
+      }
+      return {
+        name: String(nm),
+        path: String(e.path || nm),
+        type: e.type || (e.isDirectory ? 'directory' : 'file'),
+      };
+    })
+    .filter(Boolean);
   return norm.length ? norm : null;
 }
 
@@ -119,7 +146,14 @@ function collectBackgroundResults() {
 // (so it may farm out its own chunk one more layer); at/over the ceiling these
 // names are stripped from its tool set so the tree cannot grow past the cap.
 // See buildSubagentDenylist for the depth-aware policy.
-const AGENT_TOOL_NAMES = Object.freeze(['Agent', 'agent', 'spawn_worker', 'delegate', 'sub_agent', 'Task']);
+const AGENT_TOOL_NAMES = Object.freeze([
+  'Agent',
+  'agent',
+  'spawn_worker',
+  'delegate',
+  'sub_agent',
+  'Task',
+]);
 
 // Maximum nesting depth for synchronous standalone subagents. Configurable so
 // deployments can tighten/loosen the bound without code changes (zero-hardcode
@@ -167,7 +201,6 @@ async function _mapSettledLimited(items, limit, worker) {
   return results;
 }
 
-
 class AgentTool extends BaseTool {
   static toolName = 'Agent';
   static category = 'coordinator';
@@ -176,8 +209,12 @@ class AgentTool extends BaseTool {
   static searchHint = 'spawn worker agent delegate task parallel explore research plan';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   // ── Recursion guard helpers (s06 parity) ──────────────────────────
 
@@ -239,7 +276,9 @@ class AgentTool extends BaseTool {
     let scope = '';
     try {
       ({ SUBAGENT_EXECUTION_SCOPE: scope } = require('../../agents/constraints'));
-    } catch { /* constraints not available — fall back to role prompt alone */ }
+    } catch {
+      /* constraints not available — fall back to role prompt alone */
+    }
     const role = typeof rolePrompt === 'string' ? rolePrompt : '';
     return scope ? `${scope}\n\n${role}` : role;
   }
@@ -311,12 +350,37 @@ Tips:
         },
         parent_context_summary: {
           type: 'string',
-          description: 'Optional short summary of relevant parent-conversation context (recent intent, decisions, file paths) to give the sub-agent continuity. If omitted, a compact summary is auto-derived from the recent conversation. Keep the main `prompt` self-contained regardless.',
+          description:
+            'Optional short summary of relevant parent-conversation context (recent intent, decisions, file paths) to give the sub-agent continuity. If omitted, a compact summary is auto-derived from the recent conversation. Keep the main `prompt` self-contained regardless.',
         },
         subagent_type: {
           type: 'string',
-          enum: ['Explore', 'Plan', 'general-purpose', 'implement', 'verify', 'verification', 'audit', 'Audit', 'fix', 'Fix', 'research', 'Research', 'reading', 'Reading', 'map', 'Map', 'codex', 'Codex', 'claude', 'Claude', 'opencode', 'OpenCode'],
-          description: 'Agent type: "Explore" read-only fast local search, "Plan" planning, "implement" targeted coding, "verify"/"verification" test and validate, "audit" read-only adversarial critic that nitpicks and reports problems by inspection, "fix" surgical repair agent that closes specific (typically audited) CRITICAL/HIGH defects and stops, "research" read-only multi-source investigator (code + web + docs) that synthesizes a sourced answer, "reading" read-only deep-comprehension agent that reads specified files/documents thoroughly and explains them, "map" read-only codebase cartographer that produces a structural map (tech stack, entry points, dependency graph, key symbols), "general-purpose" full tool access, "codex"/"claude"/"opencode" command a specific external code-editor CLI via its adapter channel',
+          enum: [
+            'Explore',
+            'Plan',
+            'general-purpose',
+            'implement',
+            'verify',
+            'verification',
+            'audit',
+            'Audit',
+            'fix',
+            'Fix',
+            'research',
+            'Research',
+            'reading',
+            'Reading',
+            'map',
+            'Map',
+            'codex',
+            'Codex',
+            'claude',
+            'Claude',
+            'opencode',
+            'OpenCode',
+          ],
+          description:
+            'Agent type: "Explore" read-only fast local search, "Plan" planning, "implement" targeted coding, "verify"/"verification" test and validate, "audit" read-only adversarial critic that nitpicks and reports problems by inspection, "fix" surgical repair agent that closes specific (typically audited) CRITICAL/HIGH defects and stops, "research" read-only multi-source investigator (code + web + docs) that synthesizes a sourced answer, "reading" read-only deep-comprehension agent that reads specified files/documents thoroughly and explains them, "map" read-only codebase cartographer that produces a structural map (tech stack, entry points, dependency graph, key symbols), "general-purpose" full tool access, "codex"/"claude"/"opencode" command a specific external code-editor CLI via its adapter channel',
         },
         adapter: {
           type: 'string',
@@ -336,7 +400,8 @@ Tips:
         },
         role: {
           type: 'string',
-          description: 'Explicit role override (general/explore/planner/coder/reviewer/codex/claude)',
+          description:
+            'Explicit role override (general/explore/planner/coder/reviewer/codex/claude)',
         },
         agent_type: {
           type: 'string',
@@ -348,23 +413,37 @@ Tips:
         },
         run_in_background: {
           type: 'boolean',
-          description: 'Run agent in background. Returns immediately with agent ID; result available via getBackgroundAgent().',
+          description:
+            'Run agent in background. Returns immediately with agent ID; result available via getBackgroundAgent().',
         },
         isolation: {
           type: 'string',
           enum: ['worktree'],
-          description: 'Run agent in an isolated git worktree. The worktree is cleaned up when the agent completes.',
+          description:
+            'Run agent in an isolated git worktree. The worktree is cleaned up when the agent completes.',
         },
         subtasks: {
           type: 'array',
-          description: 'Split into parallel sub-agents for independent subtasks. Each item runs as a separate agent; results are aggregated.',
+          description:
+            'Split into parallel sub-agents for independent subtasks. Each item runs as a separate agent; results are aggregated.',
           items: {
             type: 'object',
             properties: {
               prompt: { type: 'string', description: 'Self-contained subtask description' },
               role: {
                 type: 'string',
-                enum: ['explore', 'implement', 'verify', 'audit', 'fix', 'research', 'reading', 'map', 'general', 'planner'],
+                enum: [
+                  'explore',
+                  'implement',
+                  'verify',
+                  'audit',
+                  'fix',
+                  'research',
+                  'reading',
+                  'map',
+                  'general',
+                  'planner',
+                ],
                 description: 'Subtask agent role (default: inherit from parent)',
               },
             },
@@ -398,59 +477,56 @@ Tips:
       };
     }
 
+    // params.timeout (seconds): under the idle watchdog (KHY_AGENT_IDLE_WATCHDOG,
+    // default on) this feeds the idle ceiling, not a wall-clock kill switch.
     const timeoutMs = (params.timeout || 120) * 1000;
     const requestedType = String(
-      params.role
-      || params.agent_type
-      || params.subagent_type
-      || 'general-purpose'
+      params.role || params.agent_type || params.subagent_type || 'general-purpose'
     ).trim();
     const subagentType = requestedType || 'general-purpose';
 
     // Map subagent_type to the internal role system
     const roleMap = {
-      'Explore': 'explore',
-      'explore': 'explore',
-      'Plan': 'planner', // Plan agents analyze but don't modify
-      'plan': 'planner',
+      Explore: 'explore',
+      explore: 'explore',
+      Plan: 'planner', // Plan agents analyze but don't modify
+      plan: 'planner',
       'general-purpose': 'general',
-      'general': 'general',
-      'implement': 'implement',
-      'implementer': 'implement',
-      'verify': 'verify',
-      'verification': 'verify',
-      'verifier': 'verify',
-      'audit': 'audit',
-      'Audit': 'audit',
-      'auditor': 'audit',
-      'critic': 'audit',
-      'fix': 'fix',
-      'Fix': 'fix',
-      'fixer': 'fix',
-      'repair': 'fix',
-      'research': 'research',
-      'Research': 'research',
-      'researcher': 'research',
-      'reading': 'reading',
-      'Reading': 'reading',
-      'reader': 'reading',
-      'map': 'map',
-      'Map': 'map',
-      'cartographer': 'map',
-      'codex': 'codex',
-      'Codex': 'codex',
-      'claude': 'claude',
-      'Claude': 'claude',
-      'opencode': 'opencode',
-      'OpenCode': 'opencode',
-      'Opencode': 'opencode',
+      general: 'general',
+      implement: 'implement',
+      implementer: 'implement',
+      verify: 'verify',
+      verification: 'verify',
+      verifier: 'verify',
+      audit: 'audit',
+      Audit: 'audit',
+      auditor: 'audit',
+      critic: 'audit',
+      fix: 'fix',
+      Fix: 'fix',
+      fixer: 'fix',
+      repair: 'fix',
+      research: 'research',
+      Research: 'research',
+      researcher: 'research',
+      reading: 'reading',
+      Reading: 'reading',
+      reader: 'reading',
+      map: 'map',
+      Map: 'map',
+      cartographer: 'map',
+      codex: 'codex',
+      Codex: 'codex',
+      claude: 'claude',
+      Claude: 'claude',
+      opencode: 'opencode',
+      OpenCode: 'opencode',
+      Opencode: 'opencode',
     };
     let role = roleMap[subagentType] || normalizeAgentRole(subagentType) || 'general';
-    let preferredAdapter = String(
-      params.preferred_adapter
-      || params.adapter
-      || ''
-    ).trim().toLowerCase();
+    let preferredAdapter = String(params.preferred_adapter || params.adapter || '')
+      .trim()
+      .toLowerCase();
     const _explicitAdapter = !!preferredAdapter;
 
     // ── Claude Code delegation (健壮探测 + 自动回退 + 透明上报) ──────────────────
@@ -463,10 +539,19 @@ Tips:
     try {
       const { decideClaudeDelegation } = require('./claudeDelegation');
       if (role === 'claude') {
-        const d = decideClaudeDelegation({ prompt: params.prompt || '', role, explicitlyRequested: true });
+        const d = decideClaudeDelegation({
+          prompt: params.prompt || '',
+          role,
+          explicitlyRequested: true,
+        });
         if (d.delegate) {
           preferredAdapter = 'claude';
-          _delegationNote = { delegated: true, delegatedTo: 'claude-code', reason: d.reason, mode: d.mode };
+          _delegationNote = {
+            delegated: true,
+            delegatedTo: 'claude-code',
+            reason: d.reason,
+            mode: d.mode,
+          };
         } else {
           // Unavailable: demote to a general Khy agent and let capability
           // auto-selection (below) pick the best AVAILABLE adapter.
@@ -475,18 +560,35 @@ Tips:
           _delegationNote = { delegated: false, delegatedTo: null, reason: d.reason, mode: d.mode };
         }
       } else if (!_explicitAdapter && (role === 'general' || role === 'implement')) {
-        const d = decideClaudeDelegation({ prompt: params.prompt || '', role, explicitlyRequested: false });
+        const d = decideClaudeDelegation({
+          prompt: params.prompt || '',
+          role,
+          explicitlyRequested: false,
+        });
         if (d.delegate) {
           role = 'claude';
           preferredAdapter = 'claude';
-          _delegationNote = { delegated: true, delegatedTo: 'claude-code', reason: d.reason, mode: d.mode };
+          _delegationNote = {
+            delegated: true,
+            delegatedTo: 'claude-code',
+            reason: d.reason,
+            mode: d.mode,
+          };
         }
       }
-    } catch { /* delegation decision is best-effort; fall through to normal routing */ }
+    } catch {
+      /* delegation decision is best-effort; fall through to normal routing */
+    }
 
-    if (!preferredAdapter && role === 'codex') preferredAdapter = 'codex';
-    if (!preferredAdapter && role === 'claude') preferredAdapter = 'claude';
-    if (!preferredAdapter && role === 'opencode') preferredAdapter = 'opencode';
+    if (!preferredAdapter && role === 'codex') {
+      preferredAdapter = 'codex';
+    }
+    if (!preferredAdapter && role === 'claude') {
+      preferredAdapter = 'claude';
+    }
+    if (!preferredAdapter && role === 'opencode') {
+      preferredAdapter = 'opencode';
+    }
     // Capability-aware auto-selection when no explicit adapter is set
     if (!preferredAdapter) {
       try {
@@ -500,21 +602,25 @@ Tips:
         try {
           const agentStats = require('../../services/agentStatsService');
           const statsMap = {};
-          for (const s of agentStats.list()) statsMap[s.type] = s;
+          for (const s of agentStats.list()) {
+            statsMap[s.type] = s;
+          }
           weighting = { stats: statsMap };
           if (Array.isArray(params.skills) && params.skills.length) {
             weighting.skills = params.skills;
           }
-        } catch { /* stats ledger optional */ }
+        } catch {
+          /* stats ledger optional */
+        }
         const ranked = registry.bestAdaptersFor(reqs, { onlyAvailable: true, limit: 1, weighting });
-        if (ranked.length > 0) preferredAdapter = ranked[0].key;
-      } catch { /* registry not available */ }
+        if (ranked.length > 0) {
+          preferredAdapter = ranked[0].key;
+        }
+      } catch {
+        /* registry not available */
+      }
     }
-    const preferredModel = String(
-      params.preferred_model
-      || params.model
-      || ''
-    ).trim();
+    const preferredModel = String(params.preferred_model || params.model || '').trim();
 
     // Extract progress callback from parent trace context (injected by REPL's AgentTreeController)
     const progressCallback = _context?.traceContext?.onAgentProgress || null;
@@ -531,7 +637,9 @@ Tips:
           reason: _delegationNote.reason,
           mode: _delegationNote.mode,
         });
-      } catch { /* progress is best-effort */ }
+      } catch {
+        /* progress is best-effort */
+      }
     }
 
     // GAP 5: Worktree isolation — run agent in a dedicated git worktree
@@ -543,33 +651,64 @@ Tips:
         worktreeInfo = createWorktree({ name: `agent-${Date.now()}` });
         savedCwd = process.env.KHYQUANT_CWD;
         process.env.KHYQUANT_CWD = worktreeInfo.path;
-      } catch { /* worktree not available, continue without isolation */ }
+      } catch {
+        /* worktree not available, continue without isolation */
+      }
     }
 
     // GAP 4: Background agent execution — fire-and-forget, return immediately
     if (params.run_in_background) {
       const agentId = `bg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const bgPromise = this._runStandaloneAgent(
-        params.prompt, role, subagentType, timeoutMs, _context,
-        { preferredAdapter, preferredModel, progressCallback, onControlRequest, delegation: _delegationNote, parentContextSummary: params.parent_context_summary }
+        params.prompt,
+        role,
+        subagentType,
+        timeoutMs,
+        _context,
+        {
+          preferredAdapter,
+          preferredModel,
+          progressCallback,
+          onControlRequest,
+          delegation: _delegationNote,
+          parentContextSummary: params.parent_context_summary,
+        }
       ).finally(() => {
         // Cleanup worktree when background agent finishes
         if (worktreeInfo) {
-          if (savedCwd !== undefined) process.env.KHYQUANT_CWD = savedCwd;
+          if (savedCwd !== undefined) {
+            process.env.KHYQUANT_CWD = savedCwd;
+          }
           try {
             const { removeWorktree } = require('../../services/worktreeManager');
             removeWorktree(worktreeInfo.path, { force: true });
-          } catch { /* best effort */ }
+          } catch {
+            /* best effort */
+          }
         }
       });
-      _backgroundAgents.set(agentId, { promise: bgPromise, status: 'running', startedAt: Date.now(), subagentType, role });
-      bgPromise.then(result => {
-        const entry = _backgroundAgents.get(agentId);
-        if (entry) { entry.status = 'completed'; entry.result = result; }
-      }).catch(err => {
-        const entry = _backgroundAgents.get(agentId);
-        if (entry) { entry.status = 'failed'; entry.error = err.message; }
+      _backgroundAgents.set(agentId, {
+        promise: bgPromise,
+        status: 'running',
+        startedAt: Date.now(),
+        subagentType,
+        role,
       });
+      bgPromise
+        .then((result) => {
+          const entry = _backgroundAgents.get(agentId);
+          if (entry) {
+            entry.status = 'completed';
+            entry.result = result;
+          }
+        })
+        .catch((err) => {
+          const entry = _backgroundAgents.get(agentId);
+          if (entry) {
+            entry.status = 'failed';
+            entry.error = err.message;
+          }
+        });
       return {
         success: true,
         agentId,
@@ -608,12 +747,18 @@ Tips:
             message: `Worker ${worker.id} completed as ${subagentType}.`,
           };
         }
-      } catch { /* coordinator not available, use standalone mode */ }
+      } catch {
+        /* coordinator not available, use standalone mode */
+      }
 
       // Orchestrated mode: parallel subtasks via SubAgentOrchestrator
       if (params.subtasks && Array.isArray(params.subtasks) && params.subtasks.length > 0) {
         return await this._runOrchestrated(params, role, subagentType, timeoutMs, _context, {
-          preferredAdapter, preferredModel, progressCallback, onControlRequest, delegation: _delegationNote,
+          preferredAdapter,
+          preferredModel,
+          progressCallback,
+          onControlRequest,
+          delegation: _delegationNote,
         });
       }
 
@@ -624,16 +769,27 @@ Tips:
         subagentType,
         timeoutMs,
         _context,
-        { preferredAdapter, preferredModel, progressCallback, onControlRequest, delegation: _delegationNote, parentContextSummary: params.parent_context_summary }
+        {
+          preferredAdapter,
+          preferredModel,
+          progressCallback,
+          onControlRequest,
+          delegation: _delegationNote,
+          parentContextSummary: params.parent_context_summary,
+        }
       );
     } finally {
       // Cleanup worktree after synchronous execution
       if (worktreeInfo) {
-        if (savedCwd !== undefined) process.env.KHYQUANT_CWD = savedCwd;
+        if (savedCwd !== undefined) {
+          process.env.KHYQUANT_CWD = savedCwd;
+        }
         try {
           const { removeWorktree } = require('../../services/worktreeManager');
           removeWorktree(worktreeInfo.path, { force: true });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
     }
   }
@@ -648,17 +804,36 @@ Tips:
     const _delegation = route.delegation || null;
     // Flattened transparency fields, spread into every return object below.
     const _delegationFields = _delegation
-      ? { delegated: _delegation.delegated, delegatedTo: _delegation.delegatedTo, delegationReason: _delegation.reason }
+      ? {
+          delegated: _delegation.delegated,
+          delegatedTo: _delegation.delegatedTo,
+          delegationReason: _delegation.reason,
+        }
       : {};
 
     // Load matching built-in agent definition (Explore, Plan, etc.)
     let agentDef = null;
     try {
       const { getBuiltInAgents } = require('../../agents/builtInAgents');
-      const roleToType = { explore: 'Explore', planner: 'Plan', general: 'general-purpose', verify: 'verification', audit: 'audit', fix: 'fix', research: 'research', reading: 'reading', map: 'map' };
+      const roleToType = {
+        explore: 'Explore',
+        planner: 'Plan',
+        general: 'general-purpose',
+        verify: 'verification',
+        audit: 'audit',
+        fix: 'fix',
+        research: 'research',
+        reading: 'reading',
+        map: 'map',
+      };
       const agentType = roleToType[role] || subagentType;
-      agentDef = getBuiltInAgents({ enableVerification: true, enableAudit: true, enableFix: true }).find(a => a.agentType === agentType) || null;
-    } catch { /* built-in agents not available */ }
+      agentDef =
+        getBuiltInAgents({ enableVerification: true, enableAudit: true, enableFix: true }).find(
+          (a) => a.agentType === agentType
+        ) || null;
+    } catch {
+      /* built-in agents not available */
+    }
 
     // Depth of the child being spawned: main=0, its child=1, grandchild=2.
     // Drives layered delegation — a child below the ceiling keeps the spawn
@@ -673,7 +848,15 @@ Tips:
       const parentCtx = parentContext?._agentContext;
       const ctxOpts = {
         role,
-        toolFilter: (role === 'explore' || role === 'planner' || role === 'audit' || role === 'research' || role === 'reading' || role === 'map') ? 'explore' : null,
+        toolFilter:
+          role === 'explore' ||
+          role === 'planner' ||
+          role === 'audit' ||
+          role === 'research' ||
+          role === 'reading' ||
+          role === 'map'
+            ? 'explore'
+            : null,
         // Recursion guard: a subagent keeps the Agent/Task tool only while below
         // the nesting ceiling, so it may break its own chunk into independent
         // pieces and farm one more layer out; at/over the ceiling the spawn tool
@@ -683,25 +866,32 @@ Tips:
         // tools even when agentDef carries no denylist (OPS-MAN-094).
         disallowedTools: AgentTool.buildSubagentDenylist(agentDef, childDepth, undefined, role),
       };
-      agentCtx = parentCtx
-        ? parentCtx.fork(ctxOpts)
-        : new AgentContext(ctxOpts);
-    } catch { /* agentContext not available */ }
+      agentCtx = parentCtx ? parentCtx.fork(ctxOpts) : new AgentContext(ctxOpts);
+    } catch {
+      /* agentContext not available */
+    }
 
     // Use rich system prompt from agent definition if available, fallback to role hints
     const roleHints = {
-      explore: 'You are a codebase exploration agent. Search files, read code, and summarize findings. Do NOT modify files.',
-      reviewer: 'You are a planning agent. Analyze requirements, explore the codebase, and produce a structured execution plan. Do NOT modify files.',
-      audit: 'You are a read-only audit agent. Adversarially review the code/design and find problems — bugs, security holes, races, missing edge cases, spec violations, and smells. Report findings ranked by severity with file:line evidence. Do NOT edit, run builds, or fix anything; you only find and report.',
+      explore:
+        'You are a codebase exploration agent. Search files, read code, and summarize findings. Do NOT modify files.',
+      reviewer:
+        'You are a planning agent. Analyze requirements, explore the codebase, and produce a structured execution plan. Do NOT modify files.',
+      audit:
+        'You are a read-only audit agent. Adversarially review the code/design and find problems — bugs, security holes, races, missing edge cases, spec violations, and smells. Report findings ranked by severity with file:line evidence. Do NOT edit, run builds, or fix anything; you only find and report.',
       fix: 'You are a surgical fix agent. Close EXACTLY the CRITICAL/HIGH defects you were handed (typically from an audit) — root cause, minimal diff, verified — then stop. Do NOT refactor, rename, or expand scope, and do NOT rubber-stamp (a comment or swallowed error is not a fix). End with the FIX: summary line.',
-      research: 'You are a read-only research agent. Investigate the question across the local codebase (Glob/Grep/Read), the live web (WebFetch/WebSearch), and read-only repo history — cross-check sources, mark confidence honestly, and synthesize a grounded answer. End with a "Sources:" list of the URLs you used. Do NOT edit, install, or run state-changing commands.',
-      reading: 'You are a read-only reading agent. Read the specified files/documents in full and explain them faithfully — responsibilities, control/data flow, key decisions, invariants, edge cases, and traps — grounded in file:line citations. Use Glob/Grep only to locate what to read. Explain only what you actually read; never invent behavior. Do NOT edit files.',
+      research:
+        'You are a read-only research agent. Investigate the question across the local codebase (Glob/Grep/Read), the live web (WebFetch/WebSearch), and read-only repo history — cross-check sources, mark confidence honestly, and synthesize a grounded answer. End with a "Sources:" list of the URLs you used. Do NOT edit, install, or run state-changing commands.',
+      reading:
+        'You are a read-only reading agent. Read the specified files/documents in full and explain them faithfully — responsibilities, control/data flow, key decisions, invariants, edge cases, and traps — grounded in file:line citations. Use Glob/Grep only to locate what to read. Explain only what you actually read; never invent behavior. Do NOT edit files.',
       map: 'You are a read-only codebase cartographer. Produce a structural map — tech stack, entry points, build/run/test commands, top-level directory responsibilities, a pruned directory tree, the module dependency graph, and key symbols. Read .ai/MAP.md and .ai/CONTEXT.yaml as ground truth when present. Report the map as your final message; do NOT write any file.',
-      general: 'You are a general-purpose agent. Use available tools to complete the task efficiently.',
+      general:
+        'You are a general-purpose agent. Use available tools to complete the task efficiently.',
     };
-    const rolePrompt = (agentDef && typeof agentDef.getSystemPrompt === 'function')
-      ? agentDef.getSystemPrompt()
-      : (roleHints[role] || roleHints.general);
+    const rolePrompt =
+      agentDef && typeof agentDef.getSystemPrompt === 'function'
+        ? agentDef.getSystemPrompt()
+        : roleHints[role] || roleHints.general;
 
     try {
       const toolUseLoop = require('../../services/toolUseLoop');
@@ -718,19 +908,28 @@ Tips:
             route.parentContextSummary,
             parentContext?.parentConversation || null,
             {},
-            process.env,
+            process.env
           );
-        } catch { /* fail-soft: no parent summary */ }
+        } catch {
+          /* fail-soft: no parent summary */
+        }
         const agentPrompt = _parentSummaryBlock
           ? `[Agent Task — Type: ${subagentType}]\n${AgentTool.buildSubagentSystemPrompt(rolePrompt)}\n\n${_parentSummaryBlock}\n\nTask:\n${prompt}`
           : `[Agent Task — Type: ${subagentType}]\n${AgentTool.buildSubagentSystemPrompt(rolePrompt)}\n\nTask:\n${prompt}`;
         const toolLog = [];
 
+        // Activity-aware idle tracking (AGENTS.md rule 3): every observable sign
+        // of sub-agent progress (stream chunk, tool start, tool result) resets
+        // this timestamp; only a continuous idle span can time the agent out.
+        let _lastSubagentActivity = Date.now();
+        const _touchActivity = () => {
+          _lastSubagentActivity = Date.now();
+        };
+
         // Resolve effective model with fallback cascade:
         //   explicit param > agent definition > cloud lightweight > local models > main model
         // If a model is not available, the chat call fails and we retry the next candidate.
-        const agentDefModel = (agentDef?.model && agentDef.model !== 'inherit')
-          ? agentDef.model : '';
+        const agentDefModel = agentDef?.model && agentDef.model !== 'inherit' ? agentDef.model : '';
         const effectiveModel = preferredModel || agentDefModel;
 
         // Auto-select an AVAILABLE model for alias-driven sub-agents (Explore/khyGuide
@@ -744,16 +943,25 @@ Tips:
           const _sel = require('../../services/subAgentModelSelect');
           if (_sel.isEnabled() && agentDefModel && !preferredModel) {
             const _gw = require('../../services/gateway/aiGateway');
-            const _activeKey = (_gw && typeof _gw._resolveActiveChannelKey === 'function')
-              ? _gw._resolveActiveChannelKey() : null;
+            const _activeKey =
+              _gw && typeof _gw._resolveActiveChannelKey === 'function'
+                ? _gw._resolveActiveChannelKey()
+                : null;
             if (_activeKey && typeof _gw.listModels === 'function') {
               _availableModels = await _gw.listModels(_activeKey); // cached (5-min TTL)
             }
           }
-        } catch { _availableModels = null; }
+        } catch {
+          _availableModels = null;
+        }
 
         // Build fallback list: [preferred, cloud alternatives, local, '' (main model)]
-        const modelCandidates = _buildModelCandidates(effectiveModel, preferredModel, agentDefModel, _availableModels);
+        const modelCandidates = _buildModelCandidates(
+          effectiveModel,
+          preferredModel,
+          agentDefModel,
+          _availableModels
+        );
 
         let _currentModelIdx = 0;
         // Sub-agent prose streaming (对齐 Claude Code): coalesce the child's text
@@ -762,22 +970,32 @@ Tips:
         // _onTextDelta is a no-op and zero agent_text events are emitted (字节回退到
         // 只流 status). All coalescing rules live in the pure leaf — never inline.
         const _subAgentTextStream = (() => {
-          try { return require('../../services/subAgentTextStream'); } catch { return null; }
+          try {
+            return require('../../services/subAgentTextStream');
+          } catch {
+            return null;
+          }
         })();
         let _textBuf = '';
         let _lastTextPreview = '';
         const _onTextDelta = (chunk) => {
-          if (!progressCallback || !_subAgentTextStream || !_subAgentTextStream.isEnabled()) return;
+          if (!progressCallback || !_subAgentTextStream || !_subAgentTextStream.isEnabled()) {
+            return;
+          }
           try {
             const delta = _subAgentTextStream.textFromChunk(chunk);
-            if (!delta) return;
+            if (!delta) {
+              return;
+            }
             _textBuf = _subAgentTextStream.appendDelta(_textBuf, delta);
             const preview = _subAgentTextStream.previewLine(_textBuf);
             if (preview && preview !== _lastTextPreview) {
               _lastTextPreview = preview;
               progressCallback(_subAgentTextStream.buildAgentTextEvent(preview));
             }
-          } catch { /* prose preview is cosmetic; never disturb the sub-agent */ }
+          } catch {
+            /* prose preview is cosmetic; never disturb the sub-agent */
+          }
         };
         const _chatWithFallback = async (message, chatOpts = {}) => {
           const candidate = modelCandidates[_currentModelIdx];
@@ -785,8 +1003,15 @@ Tips:
           // stealing the channel (sub-agent path previously omitted onChunk).
           const _priorOnChunk = typeof chatOpts.onChunk === 'function' ? chatOpts.onChunk : null;
           const _chainedOnChunk = (chunk) => {
+            _touchActivity();
             _onTextDelta(chunk);
-            if (_priorOnChunk) { try { _priorOnChunk(chunk); } catch { /* caller's sink */ } }
+            if (_priorOnChunk) {
+              try {
+                _priorOnChunk(chunk);
+              } catch {
+                /* caller's sink */
+              }
+            }
           };
           try {
             return await ai.chat(message, {
@@ -800,7 +1025,11 @@ Tips:
               // chatOpts still wins, but is clamped the same way downstream.
               _isSubagent: true,
               effort: chatOpts.effort || 'medium',
-              ...(candidate.adapter ? { preferredAdapter: candidate.adapter } : (preferredAdapter ? { preferredAdapter } : {})),
+              ...(candidate.adapter
+                ? { preferredAdapter: candidate.adapter }
+                : preferredAdapter
+                  ? { preferredAdapter }
+                  : {}),
               ...(candidate.model ? { preferredModel: candidate.model } : {}),
               _agentContext: agentCtx,
             });
@@ -825,48 +1054,199 @@ Tips:
         };
 
         const _treePreview = _treePreviewEnabled();
-        const result = await Promise.race([
-          toolUseLoop.runToolUseLoop(agentPrompt, {
-            chat: _chatWithFallback,
-            // Sub-agent marker — must live under chatOpts, which is what the loop
-            // spreads into effectiveChatOpts and reads `_isSubagent` from. This
-            // restores the main-loop-only gates (e.g. the proactive-collaboration
-            // fan-out, gated on !_isSubagent) so a sub-agent's recursion only
-            // happens via the explicit, depth-bounded Agent tool — never
-            // auto-fanned-out.
-            chatOpts: { _isSubagent: true },
-            // Subagent permission bubbling: child shell approvals reach the host channel
-            onControlRequest,
-            // D1: Subagent-type-based budget differentiation
-            // Explore/Plan are typically shorter; general/implement need more iterations
-            maxIterations: ({ explore: 12, planner: 6, verify: 6, audit: 12, fix: 15, general: 15, implement: 15, codex: 15, claude: 15, opencode: 15 })[role] || 8,
-            onToolCall: (name, _params, iteration) => {
-              toolLog.push({ tool: name, iteration, status: 'started', target: _params?.file_path || _params?.path || _params?.pattern || '' });
-              if (progressCallback) {
-                const evt = { type: 'tool_start', tool: name, target: _params?.file_path || _params?.path || _params?.pattern || '' };
-                // 执行命令: forward the command line so a Bash row reads what it runs.
-                if (_treePreview) { const cmd = _commandOf(name, _params); if (cmd) evt.command = cmd; }
-                progressCallback(evt);
+        // AbortSignal propagation: forward parent's abortSignal to sub-agent tool loop
+        // so ESC / parent cancel can terminate sub-agent execution (not just the 30s Promise.race).
+        const _parentAbortSignal = parentContext?.traceContext?.abortSignal || null;
+
+        // Gate KHY_AGENT_IDLE_WATCHDOG (default on): activity-aware idle timeout
+        // instead of a wall-clock hard kill. '0'/'off'/'false' restores the
+        // legacy Promise.race path byte-for-byte.
+        const _wdRaw = String(process.env.KHY_AGENT_IDLE_WATCHDOG || '')
+          .trim()
+          .toLowerCase();
+        const _idleWatchdogOn = !(_wdRaw === '0' || _wdRaw === 'off' || _wdRaw === 'false');
+        // Idle ceiling: env override wins; otherwise params.timeout is reinterpreted
+        // as an idle limit with a 120s floor (never below the legacy default).
+        const _idleLimitMs = (() => {
+          const envMs = parseInt(process.env.KHY_AGENT_IDLE_TIMEOUT_MS || '', 10);
+          if (Number.isFinite(envMs) && envMs > 0) {
+            return envMs;
+          }
+          return Math.max(timeoutMs, 120000);
+        })();
+        // Short-interval periodic checker (see aiChatCore idle watchdog) instead
+        // of one long timer, so activity resets take effect within one period.
+        const _idleCheckIntervalMs = 5000;
+
+        // Orphan-loop fix: an internal controller owns the loop's lifetime. The
+        // parent signal is forwarded one-way into it (never back), so both an
+        // ESC/parent cancel AND an idle timeout actually stop the inner loop
+        // instead of leaking it as a token-burning orphan.
+        const _agentAbort = _idleWatchdogOn ? new AbortController() : null;
+        let _onParentAbort = null;
+        if (_agentAbort && _parentAbortSignal) {
+          if (_parentAbortSignal.aborted) {
+            try {
+              _agentAbort.abort(_parentAbortSignal.reason);
+            } catch {
+              _agentAbort.abort();
+            }
+          } else {
+            _onParentAbort = () => {
+              try {
+                _agentAbort.abort(_parentAbortSignal.reason);
+              } catch {
+                _agentAbort.abort();
               }
-            },
-            onToolResult: (name, _params, result, _iteration, elapsed) => {
-              const last = toolLog.find(t => t.tool === name && t.status === 'started');
-              if (last) {
-                last.status = result?.success ? 'success' : 'error';
-                last.elapsed = elapsed;
+            };
+            _parentAbortSignal.addEventListener('abort', _onParentAbort, { once: true });
+          }
+        }
+
+        const _loopOpts = {
+          chat: _chatWithFallback,
+          // Sub-agent marker — must live under chatOpts, which is what the loop
+          // spreads into effectiveChatOpts and reads `_isSubagent` from. This
+          // restores the main-loop-only gates (e.g. the proactive-collaboration
+          // fan-out, gated on !_isSubagent) so a sub-agent's recursion only
+          // happens via the explicit, depth-bounded Agent tool — never
+          // auto-fanned-out.
+          chatOpts: { _isSubagent: true },
+          // Subagent permission bubbling: child shell approvals reach the host channel
+          onControlRequest,
+          // Watchdog on: internal controller (parent forwarded into it).
+          // Watchdog off: legacy direct parent-signal pass-through.
+          abortSignal: _agentAbort ? _agentAbort.signal : _parentAbortSignal,
+          // D1: Subagent-type-based budget differentiation
+          // Explore/Plan are typically shorter; general/implement need more iterations
+          maxIterations:
+            {
+              explore: 12,
+              planner: 6,
+              verify: 6,
+              audit: 12,
+              fix: 15,
+              general: 15,
+              implement: 15,
+              codex: 15,
+              claude: 15,
+              opencode: 15,
+            }[role] || 8,
+          onToolCall: (name, _params, iteration) => {
+            _touchActivity();
+            toolLog.push({
+              tool: name,
+              iteration,
+              status: 'started',
+              target: _params?.file_path || _params?.path || _params?.pattern || '',
+            });
+            if (progressCallback) {
+              const evt = {
+                type: 'tool_start',
+                tool: name,
+                target: _params?.file_path || _params?.path || _params?.pattern || '',
+              };
+              // 执行命令: forward the command line so a Bash row reads what it runs.
+              if (_treePreview) {
+                const cmd = _commandOf(name, _params);
+                if (cmd) {
+                  evt.command = cmd;
+                }
               }
-              if (progressCallback) {
-                const evt = { type: 'tool_end', tool: name, success: !!result?.success, elapsed };
-                // 目录树: forward a bounded listing so the tree shows what was explored.
-                if (_treePreview) { const entries = _listingEntriesOf(name, result); if (entries) evt.entries = entries; }
-                progressCallback(evt);
+              progressCallback(evt);
+            }
+          },
+          onToolResult: (name, _params, result, _iteration, elapsed) => {
+            _touchActivity();
+            const last = toolLog.find((t) => t.tool === name && t.status === 'started');
+            if (last) {
+              last.status = result?.success ? 'success' : 'error';
+              last.elapsed = elapsed;
+            }
+            if (progressCallback) {
+              const evt = { type: 'tool_end', tool: name, success: !!result?.success, elapsed };
+              // 目录树: forward a bounded listing so the tree shows what was explored.
+              if (_treePreview) {
+                const entries = _listingEntriesOf(name, result);
+                if (entries) {
+                  evt.entries = entries;
+                }
               }
-            },
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Agent timed out')), timeoutMs)
-          ),
-        ]);
+              progressCallback(evt);
+            }
+          },
+        };
+
+        let result;
+        if (_idleWatchdogOn) {
+          const loopPromise = toolUseLoop.runToolUseLoop(agentPrompt, _loopOpts);
+          // If the idle-abort wins the race, swallow the loop's late rejection
+          // so it never surfaces as an unhandled rejection.
+          loopPromise.catch(() => {});
+          let _idleTimer = null;
+          const idleAbortPromise = new Promise((_, reject) => {
+            const check = () => {
+              const idleFor = Date.now() - _lastSubagentActivity;
+              if (idleFor < _idleLimitMs) {
+                _idleTimer = setTimeout(check, _idleCheckIntervalMs);
+                _idleTimer.unref?.();
+                return;
+              }
+              // Idle ceiling hit: abort the inner loop FIRST (no orphan loop
+              // keeps consuming tokens), then reject with an honest summary.
+              const idleSec = Math.round(idleFor / 1000);
+              const runSec = Math.round((Date.now() - startTime) / 1000);
+              const okCount = toolLog.filter((t) => t.status === 'success').length;
+              const failCount = toolLog.filter((t) => t.status === 'error').length;
+              const timeoutErr = new Error(
+                [
+                  `子代理空闲超时：空闲 ${idleSec} 秒无产出已中止，已产出的部分结果如下（如有）。`,
+                  `目标: ${subagentType} 子代理 | 进度: 已运行 ${runSec} 秒，已执行工具调用 ${toolLog.length} 次（成功 ${okCount}，失败 ${failCount}）。`,
+                  toolLog.length
+                    ? `工具摘要：${toolLog
+                        .slice(-5)
+                        .map((t) => `${t.tool}(${t.status})`)
+                        .join('、')}`
+                    : '未执行任何工具调用。',
+                  `（空闲上限 ${Math.round(_idleLimitMs / 1000)} 秒，可用 KHY_AGENT_IDLE_TIMEOUT_MS 调整）`,
+                ].join('\n')
+              );
+              timeoutErr.errorType = 'idle_timeout';
+              try {
+                _agentAbort.abort(timeoutErr);
+              } catch {
+                /* best effort */
+              }
+              reject(timeoutErr);
+            };
+            _idleTimer = setTimeout(check, _idleCheckIntervalMs);
+            _idleTimer.unref?.();
+          });
+          try {
+            result = await Promise.race([loopPromise, idleAbortPromise]);
+          } finally {
+            if (_idleTimer) {
+              clearTimeout(_idleTimer);
+              _idleTimer = null;
+            }
+            // Detach the one-way parent→internal forwarder to avoid listener leaks.
+            if (_parentAbortSignal && _onParentAbort) {
+              try {
+                _parentAbortSignal.removeEventListener('abort', _onParentAbort);
+              } catch {
+                /* best effort */
+              }
+            }
+          }
+        } else {
+          // Legacy wall-clock hard timeout (KHY_AGENT_IDLE_WATCHDOG off).
+          result = await Promise.race([
+            toolUseLoop.runToolUseLoop(agentPrompt, _loopOpts),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Agent timed out')), timeoutMs)
+            ),
+          ]);
+        }
 
         const elapsed = Date.now() - startTime;
         if (progressCallback) {
@@ -874,14 +1254,21 @@ Tips:
         }
 
         // Extract structured metadata from the tool log
-        const filesModified = [...new Set(
-          toolLog
-            .filter(t => /edit|write|scaffold|apply_patch/i.test(t.tool) && t.status === 'success')
-            .map(t => t.target)
-            .filter(Boolean)
-        )];
+        const filesModified = [
+          ...new Set(
+            toolLog
+              .filter(
+                (t) => /edit|write|scaffold|apply_patch/i.test(t.tool) && t.status === 'success'
+              )
+              .map((t) => t.target)
+              .filter(Boolean)
+          ),
+        ];
         const planCompletion = result.executionPlan
-          ? { total: result.executionPlan.steps.length, completed: result.executionPlan.steps.filter(s => s.status === 'completed').length }
+          ? {
+              total: result.executionPlan.steps.length,
+              completed: result.executionPlan.steps.filter((s) => s.status === 'completed').length,
+            }
           : null;
 
         return {
@@ -928,7 +1315,13 @@ Tips:
         if (localResult) {
           const elapsed = Date.now() - startTime;
           if (progressCallback) {
-            progressCallback({ type: 'done', success: true, toolCalls: 0, elapsed, fallback: 'local-search' });
+            progressCallback({
+              type: 'done',
+              success: true,
+              toolCalls: 0,
+              elapsed,
+              fallback: 'local-search',
+            });
           }
           return {
             success: true,
@@ -997,25 +1390,52 @@ Tips:
     // failure, local fallback, exception) so it can never leak.
     const executor = agent.executor || route.adapter || role;
     let agentStats = null;
-    try { agentStats = require('../../services/agentStatsService'); } catch { /* optional */ }
-    if (agentStats) { try { agentStats.incActive(executor); } catch { /* best-effort */ } }
+    try {
+      agentStats = require('../../services/agentStatsService');
+    } catch {
+      /* optional */
+    }
+    if (agentStats) {
+      try {
+        agentStats.incActive(executor);
+      } catch {
+        /* best-effort */
+      }
+    }
 
     try {
       const result = await this._runStandaloneAgent(
-        agent.task, role, subagentType, timeoutMs, parentContext, route
+        agent.task,
+        role,
+        subagentType,
+        timeoutMs,
+        parentContext,
+        route
       );
 
       // If the model-based execution failed, try local mode fallback
-      let reworked = result.success === false;
+      const reworked = result.success === false;
       if (!result.success) {
         const localResult = await _localModeFallback(agent.task, role, route.progressCallback);
         if (localResult) {
-          if (agentStats) { try { agentStats.recordResult(executor, { reworked: true }); } catch { /* */ } }
+          if (agentStats) {
+            try {
+              agentStats.recordResult(executor, { reworked: true });
+            } catch {
+              /* */
+            }
+          }
           return localResult;
         }
       }
 
-      if (agentStats) { try { agentStats.recordResult(executor, { reworked }); } catch { /* */ } }
+      if (agentStats) {
+        try {
+          agentStats.recordResult(executor, { reworked });
+        } catch {
+          /* */
+        }
+      }
 
       // Return structured result for aggregation
       return {
@@ -1028,10 +1448,22 @@ Tips:
         filesModified: result.filesModified || [],
       };
     } catch (err) {
-      if (agentStats) { try { agentStats.recordResult(executor, { reworked: true }); } catch { /* */ } }
+      if (agentStats) {
+        try {
+          agentStats.recordResult(executor, { reworked: true });
+        } catch {
+          /* */
+        }
+      }
       throw err;
     } finally {
-      if (agentStats) { try { agentStats.decActive(executor); } catch { /* */ } }
+      if (agentStats) {
+        try {
+          agentStats.decActive(executor);
+        } catch {
+          /* */
+        }
+      }
     }
   }
 
@@ -1048,10 +1480,15 @@ Tips:
     // B2 — orchestration mode: hardened (auditable SOP) | flexible (AI fan-out).
     // Default flexible to preserve current behavior. Per-subtask stepType may
     // override the run-level mode.
-    const orchMode = (params.mode === 'hardened' || params.mode === 'mixed') ? params.mode : 'flexible';
+    const orchMode =
+      params.mode === 'hardened' || params.mode === 'mixed' ? params.mode : 'flexible';
 
     if (progressCallback) {
-      progressCallback({ type: 'orchestrated_start', subtaskCount: params.subtasks.length, mode: orchMode });
+      progressCallback({
+        type: 'orchestrated_start',
+        subtaskCount: params.subtasks.length,
+        mode: orchMode,
+      });
     }
 
     // B2 — hardened SOP path: drive subtasks strictly in declared order through
@@ -1059,7 +1496,12 @@ Tips:
     // (and mixed) runs keep the existing SubAgentOrchestrator path below.
     if (orchMode === 'hardened') {
       return await this._runHardenedFlow(
-        params, parentRole, subagentType, timeoutMs, parentContext, route,
+        params,
+        parentRole,
+        subagentType,
+        timeoutMs,
+        parentContext,
+        route,
         { startTime, startedAt, orchMode }
       );
     }
@@ -1085,12 +1527,16 @@ Tips:
         const m = /subtask-(\d+)/.exec(ev && ev.name ? String(ev.name) : '');
         if (m) {
           const st = params.subtasks[Number(m[1]) - 1];
-          if (st) return (st.role && String(st.role).trim()) || st.name || `子任务${m[1]}`;
+          if (st) {
+            return (st.role && String(st.role).trim()) || st.name || `子任务${m[1]}`;
+          }
         }
         return (ev && ev.name) || 'agent';
       };
       const fwd = (type) => (ev) => {
-        if (!ev || ev.name === 'task-coordinator') return; // skip the root coordinator
+        if (!ev || ev.name === 'task-coordinator') {
+          return;
+        } // skip the root coordinator
         try {
           progressCallback({
             type,
@@ -1100,7 +1546,9 @@ Tips:
             parentId: ev.parentId,
             error: ev.error && (ev.error.message || String(ev.error)),
           });
-        } catch { /* progress is best-effort */ }
+        } catch {
+          /* progress is best-effort */
+        }
       };
       const handlers = {
         'agent:spawned': fwd('agent_spawned'),
@@ -1109,10 +1557,16 @@ Tips:
         'agent:failed': fwd('agent_failed'),
         'agent:killed': fwd('agent_failed'),
       };
-      for (const [evt, h] of Object.entries(handlers)) orch.on(evt, h);
+      for (const [evt, h] of Object.entries(handlers)) {
+        orch.on(evt, h);
+      }
       _detachOrchListeners = () => {
         for (const [evt, h] of Object.entries(handlers)) {
-          try { orch.removeListener(evt, h); } catch { /* ignore */ }
+          try {
+            orch.removeListener(evt, h);
+          } catch {
+            /* ignore */
+          }
         }
       };
     }
@@ -1121,11 +1575,23 @@ Tips:
     for (let i = 0; i < params.subtasks.length; i++) {
       const st = params.subtasks[i];
       const childRole = st.role || parentRole;
-      const roleToType = { explore: 'Explore', planner: 'Plan', general: 'general-purpose', implement: 'implement', verify: 'verify', audit: 'audit', fix: 'fix', research: 'research', reading: 'reading', map: 'map' };
+      const roleToType = {
+        explore: 'Explore',
+        planner: 'Plan',
+        general: 'general-purpose',
+        implement: 'implement',
+        verify: 'verify',
+        audit: 'audit',
+        fix: 'fix',
+        research: 'research',
+        reading: 'reading',
+        map: 'map',
+      };
       // B1/B2 — record executor (adapter/role driving the subtask) + stepType
       // (per-subtask override, else the run-level mode) for the rollup receipt.
-      const stepType = st.stepType
-        || (orchMode === 'hardened' ? 'hardened' : (orchMode === 'mixed' ? 'flexible' : 'flexible'));
+      const stepType =
+        st.stepType ||
+        (orchMode === 'hardened' ? 'hardened' : orchMode === 'mixed' ? 'flexible' : 'flexible');
       const executor = st.executor || route.adapter || childRole;
       orch.fork(root.id, {
         name: `subtask-${i + 1}`,
@@ -1150,9 +1616,7 @@ Tips:
     if (progressCallback && fanout !== Infinity) {
       progressCallback({ type: 'orchestrated_fanout', limit: fanout, total: root.childIds.length });
     }
-    const childResults = await _mapSettledLimited(
-      root.childIds, fanout, (id) => orch.execute(id)
-    );
+    const childResults = await _mapSettledLimited(root.childIds, fanout, (id) => orch.execute(id));
 
     // Mark root as completed
     root.state = 'completed';
@@ -1174,14 +1638,18 @@ Tips:
         summary,
         startedAt,
       });
-    } catch { /* rollup receipt is non-critical to the run */ }
+    } catch {
+      /* rollup receipt is non-critical to the run */
+    }
 
     // Aggregate results
     const aggregated = orch.aggregateResults(root.id);
     const formatted = _formatAggregatedResult(aggregated);
 
     const elapsed = Date.now() - startTime;
-    const successCount = childResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+    const successCount = childResults.filter(
+      (r) => r.status === 'fulfilled' && r.value?.success
+    ).length;
     const failCount = params.subtasks.length - successCount;
 
     if (progressCallback) {
@@ -1228,29 +1696,75 @@ Tips:
 
     const executeSubtask = async (subtask, index) => {
       const childRole = subtask.role || parentRole;
-      const roleToType = { explore: 'Explore', planner: 'Plan', general: 'general-purpose', implement: 'implement', verify: 'verify', audit: 'audit', fix: 'fix', research: 'research', reading: 'reading', map: 'map' };
+      const roleToType = {
+        explore: 'Explore',
+        planner: 'Plan',
+        general: 'general-purpose',
+        implement: 'implement',
+        verify: 'verify',
+        audit: 'audit',
+        fix: 'fix',
+        research: 'research',
+        reading: 'reading',
+        map: 'map',
+      };
       if (progressCallback) {
-        progressCallback({ type: 'orchestrated_step', index, total: params.subtasks.length, name: subtask.name || `subtask-${index + 1}` });
+        progressCallback({
+          type: 'orchestrated_step',
+          index,
+          total: params.subtasks.length,
+          name: subtask.name || `subtask-${index + 1}`,
+        });
       }
       // B3 — same load/rework ledger as the flexible path, keyed by executor.
       const executor = subtask.executor || route.adapter || childRole;
       let agentStats = null;
-      try { agentStats = require('../../services/agentStatsService'); } catch { /* optional */ }
-      if (agentStats) { try { agentStats.incActive(executor); } catch { /* */ } }
+      try {
+        agentStats = require('../../services/agentStatsService');
+      } catch {
+        /* optional */
+      }
+      if (agentStats) {
+        try {
+          agentStats.incActive(executor);
+        } catch {
+          /* */
+        }
+      }
       try {
         const result = await this._runStandaloneAgent(
-          subtask.prompt, childRole, roleToType[childRole] || subagentType,
-          timeoutMs, parentContext, route
+          subtask.prompt,
+          childRole,
+          roleToType[childRole] || subagentType,
+          timeoutMs,
+          parentContext,
+          route
         );
-        let reworked = result.success === false;
+        const reworked = result.success === false;
         if (!result.success) {
-          const localResult = await _localModeFallback(subtask.prompt, childRole, route.progressCallback);
+          const localResult = await _localModeFallback(
+            subtask.prompt,
+            childRole,
+            route.progressCallback
+          );
           if (localResult) {
-            if (agentStats) { try { agentStats.recordResult(executor, { reworked: true }); } catch { /* */ } }
+            if (agentStats) {
+              try {
+                agentStats.recordResult(executor, { reworked: true });
+              } catch {
+                /* */
+              }
+            }
             return localResult;
           }
         }
-        if (agentStats) { try { agentStats.recordResult(executor, { reworked }); } catch { /* */ } }
+        if (agentStats) {
+          try {
+            agentStats.recordResult(executor, { reworked });
+          } catch {
+            /* */
+          }
+        }
         return {
           text: result.output || '',
           toolCalls: result.toolCalls || 0,
@@ -1260,10 +1774,22 @@ Tips:
           filesModified: result.filesModified || [],
         };
       } catch (err) {
-        if (agentStats) { try { agentStats.recordResult(executor, { reworked: true }); } catch { /* */ } }
+        if (agentStats) {
+          try {
+            agentStats.recordResult(executor, { reworked: true });
+          } catch {
+            /* */
+          }
+        }
         throw err;
       } finally {
-        if (agentStats) { try { agentStats.decActive(executor); } catch { /* */ } }
+        if (agentStats) {
+          try {
+            agentStats.decActive(executor);
+          } catch {
+            /* */
+          }
+        }
       }
     };
 
@@ -1284,15 +1810,19 @@ Tips:
         summary: flow.summary,
         startedAt,
       });
-    } catch { /* rollup receipt is non-critical to the run */ }
+    } catch {
+      /* rollup receipt is non-critical to the run */
+    }
 
     // Shape the flow results into the same aggregated form _formatAggregatedResult expects.
-    const aggregated = flow.results.map((r, i) => ({
-      agentId: `step-${i}`,
-      name: (params.subtasks[i] && params.subtasks[i].name) || `subtask-${i + 1}`,
-      depth: 1,
-      result: r,
-    })).filter(e => e.result);
+    const aggregated = flow.results
+      .map((r, i) => ({
+        agentId: `step-${i}`,
+        name: (params.subtasks[i] && params.subtasks[i].name) || `subtask-${i + 1}`,
+        depth: 1,
+        result: r,
+      }))
+      .filter((e) => e.result);
     const formatted = _formatAggregatedResult(aggregated);
 
     const elapsed = Date.now() - startTime;
@@ -1340,19 +1870,29 @@ Tips:
  * @returns {string}
  */
 function _formatAggregatedResult(aggregated) {
-  if (!aggregated || aggregated.length === 0) return '(no subtask results)';
+  if (!aggregated || aggregated.length === 0) {
+    return '(no subtask results)';
+  }
 
   const sections = [];
   for (const entry of aggregated) {
     const { name, result } = entry;
-    if (!result) continue;
+    if (!result) {
+      continue;
+    }
     const header = `### ${name}`;
     const status = result.success !== false ? 'Completed' : `Failed: ${result.error || 'unknown'}`;
     const body = result.text || '(no output)';
     const meta = [];
-    if (result.toolCalls) meta.push(`Tool calls: ${result.toolCalls}`);
-    if (result.elapsed) meta.push(`Time: ${result.elapsed}`);
-    sections.push(`${header}\n**Status**: ${status}\n${body}${meta.length ? '\n_' + meta.join(' | ') + '_' : ''}`);
+    if (result.toolCalls) {
+      meta.push(`Tool calls: ${result.toolCalls}`);
+    }
+    if (result.elapsed) {
+      meta.push(`Time: ${result.elapsed}`);
+    }
+    sections.push(
+      `${header}\n**Status**: ${status}\n${body}${meta.length ? '\n_' + meta.join(' | ') + '_' : ''}`
+    );
   }
 
   return `## Subtask Results\n\n${sections.join('\n\n---\n\n')}`;
@@ -1374,7 +1914,9 @@ function _buildModelCandidates(effectiveModel, userModel, agentDefModel, availab
   const seen = new Set();
   const add = (model, adapter, label) => {
     const key = `${adapter || ''}:${model}`;
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     candidates.push({ model, adapter: adapter || null, label });
   };
@@ -1394,9 +1936,15 @@ function _buildModelCandidates(effectiveModel, userModel, agentDefModel, availab
     if (availableModels) {
       try {
         const _sel = require('../../services/subAgentModelSelect');
-        const ids = _sel.selectAvailableModels(effectiveModel || agentDefModel, availableModels, { max: 3 });
-        if (Array.isArray(ids) && ids.length) injected = ids.map((id) => ({ model: id, label: id }));
-      } catch { injected = null; }
+        const ids = _sel.selectAvailableModels(effectiveModel || agentDefModel, availableModels, {
+          max: 3,
+        });
+        if (Array.isArray(ids) && ids.length) {
+          injected = ids.map((id) => ({ model: id, label: id }));
+        }
+      } catch {
+        injected = null;
+      }
     }
     const cloudLightweight = injected || [
       { model: 'haiku', label: 'haiku' },
@@ -1404,7 +1952,9 @@ function _buildModelCandidates(effectiveModel, userModel, agentDefModel, availab
       { model: 'flash', label: 'gemini-flash' },
       { model: LIGHTWEIGHT_AGENT_MODELS[1], label: LIGHTWEIGHT_AGENT_MODELS[1] },
     ];
-    for (const c of cloudLightweight) add(c.model, null, c.label);
+    for (const c of cloudLightweight) {
+      add(c.model, null, c.label);
+    }
   }
 
   // 3. Local models — detect available ollama/localLLM and add as candidates
@@ -1415,8 +1965,18 @@ function _buildModelCandidates(effectiveModel, userModel, agentDefModel, availab
         const ollamaModels = ollamaAdapter.getModels?.() || [];
         // Prefer small/fast models for sub-agent work
         const smallFirst = [...ollamaModels].sort((a, b) => {
-          const aSmall = /qwen.*0\.5|qwen.*1\.5|qwen.*3b|phi|gemma.*2b|llama.*3\.2|deepseek.*lite|coder.*1b/i.test(a) ? 0 : 1;
-          const bSmall = /qwen.*0\.5|qwen.*1\.5|qwen.*3b|phi|gemma.*2b|llama.*3\.2|deepseek.*lite|coder.*1b/i.test(b) ? 0 : 1;
+          const aSmall =
+            /qwen.*0\.5|qwen.*1\.5|qwen.*3b|phi|gemma.*2b|llama.*3\.2|deepseek.*lite|coder.*1b/i.test(
+              a
+            )
+              ? 0
+              : 1;
+          const bSmall =
+            /qwen.*0\.5|qwen.*1\.5|qwen.*3b|phi|gemma.*2b|llama.*3\.2|deepseek.*lite|coder.*1b/i.test(
+              b
+            )
+              ? 0
+              : 1;
           return aSmall - bSmall;
         });
         // Add up to 2 local model candidates
@@ -1424,14 +1984,18 @@ function _buildModelCandidates(effectiveModel, userModel, agentDefModel, availab
           add(m, 'ollama', `ollama:${m}`);
         }
       }
-    } catch { /* ollama not available */ }
+    } catch {
+      /* ollama not available */
+    }
 
     try {
       const localLLMAdapter = require('../../services/gateway/adapters/localLLMAdapter');
       if (localLLMAdapter.detect()) {
         add('', 'localLLM', 'local-gguf');
       }
-    } catch { /* localLLM not available */ }
+    } catch {
+      /* localLLM not available */
+    }
   }
 
   // 4. Main model (gateway default) — ultimate fallback
@@ -1457,8 +2021,10 @@ async function _localModeFallback(prompt, role, progressCallback) {
   switch (role) {
     case 'explore':
       // Heuristic file search (no LLM)
-      return _localExploreFallback(prompt, progressCallback).then(text =>
-        text ? { text, success: true, toolCalls: 0, iterations: 0, elapsed: '0s', error: null } : null
+      return _localExploreFallback(prompt, progressCallback).then((text) =>
+        text
+          ? { text, success: true, toolCalls: 0, iterations: 0, elapsed: '0s', error: null }
+          : null
       );
 
     case 'verify': {
@@ -1469,20 +2035,40 @@ async function _localModeFallback(prompt, role, progressCallback) {
         const cwd = process.env.KHYQUANT_CWD || process.cwd();
         const fs = require('fs');
         let cmd = null;
-        if (fs.existsSync(require('path').join(cwd, 'package.json'))) cmd = 'npm test --if-present 2>&1';
-        else if (fs.existsSync(require('path').join(cwd, 'Cargo.toml'))) cmd = 'cargo test 2>&1';
-        else if (fs.existsSync(require('path').join(cwd, 'Makefile'))) cmd = 'make test 2>&1';
-        if (!cmd) return null;
+        if (fs.existsSync(require('path').join(cwd, 'package.json'))) {
+          cmd = 'npm test --if-present 2>&1';
+        } else if (fs.existsSync(require('path').join(cwd, 'Cargo.toml'))) {
+          cmd = 'cargo test 2>&1';
+        } else if (fs.existsSync(require('path').join(cwd, 'Makefile'))) {
+          cmd = 'make test 2>&1';
+        }
+        if (!cmd) {
+          return null;
+        }
         // 非阻塞 exec 垫片(门控 KHY_EXEC_NONBLOCKING 默认开):测试可能久,同步 execSync 期间
         // 冻结事件循环(spinner 停 / ESC 死);换异步 exec 后事件循环照转;OFF 逐字节回退。
         const _opts = { cwd, timeout: 60_000, encoding: 'utf-8', maxBuffer: 1024 * 512 };
         const output = _execCompat.isNonBlockingExecEnabled(process.env)
           ? await _execCompat.execAsync(cmd, _opts)
           : execSync(cmd, _opts);
-        return { text: `[本地测试结果]\n${output.slice(0, 2000)}`, success: true, toolCalls: 1, iterations: 1, elapsed: '0s', error: null };
+        return {
+          text: `[本地测试结果]\n${output.slice(0, 2000)}`,
+          success: true,
+          toolCalls: 1,
+          iterations: 1,
+          elapsed: '0s',
+          error: null,
+        };
       } catch (e) {
         const stderr = e.stderr ? String(e.stderr).slice(0, 1000) : e.message;
-        return { text: `[测试失败]\n${stderr}`, success: false, toolCalls: 1, iterations: 1, elapsed: '0s', error: stderr.slice(0, 200) };
+        return {
+          text: `[测试失败]\n${stderr}`,
+          success: false,
+          toolCalls: 1,
+          iterations: 1,
+          elapsed: '0s',
+          error: stderr.slice(0, 200),
+        };
       }
     }
 
@@ -1500,8 +2086,10 @@ async function _localModeFallback(prompt, role, progressCallback) {
     case 'general':
     default:
       // Fall back to explore-style search for information gathering
-      return _localExploreFallback(prompt, progressCallback).then(text =>
-        text ? { text, success: true, toolCalls: 0, iterations: 0, elapsed: '0s', error: null } : null
+      return _localExploreFallback(prompt, progressCallback).then((text) =>
+        text
+          ? { text, success: true, toolCalls: 0, iterations: 0, elapsed: '0s', error: null }
+          : null
       );
   }
 }
@@ -1515,14 +2103,23 @@ async function _localExploreFallback(prompt, progressCallback) {
   try {
     const exploreTool = require('../exploreTool');
     if (progressCallback) {
-      progressCallback({ type: 'model_fallback', from: '(all models)', to: 'local-search', reason: 'all model candidates exhausted' });
+      progressCallback({
+        type: 'model_fallback',
+        from: '(all models)',
+        to: 'local-search',
+        reason: 'all model candidates exhausted',
+      });
     }
     const result = await exploreTool.execute({ query: prompt, max_results: 15 });
-    if (!result?.success) return null;
+    if (!result?.success) {
+      return null;
+    }
     const d = result.data || {};
     const parts = [];
     if (d.files_found?.length > 0) {
-      parts.push(`Found ${d.files_found.length} relevant files:\n${d.files_found.map(f => `  - ${f}`).join('\n')}`);
+      parts.push(
+        `Found ${d.files_found.length} relevant files:\n${d.files_found.map((f) => `  - ${f}`).join('\n')}`
+      );
     }
     if (d.content_matches?.length > 0) {
       parts.push(`${d.content_matches.length} content matches.`);

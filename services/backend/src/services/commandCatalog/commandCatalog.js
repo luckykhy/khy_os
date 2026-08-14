@@ -26,10 +26,16 @@ const _OFF = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
  */
 function commandCatalogEnabled(env = process.env) {
   try {
-    const raw = String((env && env.KHY_COMMAND_CATALOG) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_COMMAND_CATALOG) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -37,14 +43,14 @@ function commandCatalogEnabled(env = process.env) {
  * system / dev / workflow / analysis / security;未知类别兜底到「其他」)。
  */
 const CATEGORY_META = {
-  system:   { label: '系统与平台', order: 1 },
-  dev:      { label: '开发与工程', order: 2 },
+  system: { label: '系统与平台', order: 1 },
+  dev: { label: '开发与工程', order: 2 },
   workflow: { label: '工作流与编排', order: 3 },
   analysis: { label: '分析与洞察', order: 4 },
   security: { label: '安全与权限', order: 5 },
-  data:     { label: '数据与存储', order: 6 },
-  model:    { label: '模型与推理', order: 7 },
-  other:    { label: '其他', order: 99 },
+  data: { label: '数据与存储', order: 6 },
+  model: { label: '模型与推理', order: 7 },
+  other: { label: '其他', order: 99 },
 };
 
 function _categoryMeta(cat) {
@@ -65,22 +71,27 @@ const _s = require('../../utils/trimIfString');
  */
 function buildCommandCatalog(deps = {}, env = process.env) {
   const empty = { categories: [], total: 0, generatedBy: 'commandSchema' };
-  if (!commandCatalogEnabled(env)) return empty;
+  if (!commandCatalogEnabled(env)) {
+    return empty;
+  }
 
   let list = [];
   try {
-    const getList = (deps && typeof deps.getBuiltinSlashCommands === 'function')
-      ? deps.getBuiltinSlashCommands
-      : require('../../constants/commandSchema').getBuiltinSlashCommands;
+    const getList =
+      deps && typeof deps.getBuiltinSlashCommands === 'function'
+        ? deps.getBuiltinSlashCommands
+        : require('../../constants/commandSchema').getBuiltinSlashCommands;
     const raw = getList();
     list = Array.isArray(raw) ? raw : [];
-  } catch { return empty; }
+  } catch {
+    return empty;
+  }
 
   // 别名折叠(收敛自审 #7「命令过载」的可发现性面):把声明式别名(COMMAND_ALIASES)从各自
   // 占位折叠到其 canonical 命令之下(canonical 挂 aliases[])。门控 KHY_COMMAND_PRIMARY_PANEL
   // 经 commandOverlapAudit.isPanelEnabled 集中判定,关 → foldAliases 为空 → 目录逐字节回退今日
   // 全量列举。别名 SSOT/门控不可用时 fail-soft 回退不折叠。
-  let aliasByCmd = {};      // 别名 /cmd → canonical route(用于从列举中剔除别名条目)
+  let aliasByCmd = {}; // 别名 /cmd → canonical route(用于从列举中剔除别名条目)
   let aliasByRoute = new Map(); // canonical route → 折叠到其下的别名 /cmd[]
   let foldAliases = false;
   try {
@@ -90,30 +101,50 @@ function buildCommandCatalog(deps = {}, env = process.env) {
       aliasByCmd = getCommandAliases() || {};
       for (const [aliasCmd, route] of Object.entries(aliasByCmd)) {
         const r = _s(route);
-        if (!r) continue;
-        if (!aliasByRoute.has(r)) aliasByRoute.set(r, []);
+        if (!r) {
+          continue;
+        }
+        if (!aliasByRoute.has(r)) {
+          aliasByRoute.set(r, []);
+        }
         aliasByRoute.get(r).push(aliasCmd);
       }
       foldAliases = Object.keys(aliasByCmd).length > 0;
     }
-  } catch { foldAliases = false; aliasByCmd = {}; aliasByRoute = new Map(); }
+  } catch {
+    foldAliases = false;
+    aliasByCmd = {};
+    aliasByRoute = new Map();
+  }
 
   // 按 category 分组;每条命令规整为发现所需的最小字段。去重按 cmd。
   const buckets = new Map(); // catKey -> Map(cmd -> entry)
   for (const item of list) {
-    if (!item || typeof item !== 'object') continue;
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
     const cmd = _s(item.cmd);
-    if (!cmd) continue;
-    if (foldAliases && Object.prototype.hasOwnProperty.call(aliasByCmd, cmd)) continue; // 别名折叠:不单独占位
+    if (!cmd) {
+      continue;
+    }
+    if (foldAliases && Object.prototype.hasOwnProperty.call(aliasByCmd, cmd)) {
+      continue;
+    } // 别名折叠:不单独占位
     const name = cmd.replace(/^\/+/, '');
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     const catKey = _s(item.category) || 'other';
-    if (!buckets.has(catKey)) buckets.set(catKey, new Map());
+    if (!buckets.has(catKey)) {
+      buckets.set(catKey, new Map());
+    }
     const byCmd = buckets.get(catKey);
-    if (byCmd.has(cmd)) continue; // 去重
+    if (byCmd.has(cmd)) {
+      continue;
+    } // 去重
     const route = _s(item.route);
-    const folded = (foldAliases && route && aliasByRoute.has(route))
-      ? aliasByRoute.get(route).slice().sort() : [];
+    const folded =
+      foldAliases && route && aliasByRoute.has(route) ? aliasByRoute.get(route).slice().sort() : [];
     byCmd.set(cmd, {
       cmd,
       name,
@@ -131,7 +162,7 @@ function buildCommandCatalog(deps = {}, env = process.env) {
     const commands = Array.from(byCmd.values()).sort((a, b) => a.cmd.localeCompare(b.cmd));
     categories.push({ key, label: meta.label, order: meta.order, commands });
   }
-  categories.sort((a, b) => (a.order - b.order) || a.key.localeCompare(b.key));
+  categories.sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
 
   const total = categories.reduce((n, c) => n + c.commands.length, 0);
   return { categories, total, generatedBy: 'commandSchema' };

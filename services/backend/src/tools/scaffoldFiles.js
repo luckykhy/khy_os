@@ -1,33 +1,41 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { defineTool } = require('./_baseTool');
 
 const _expandPath = require('../utils/expandEnvPath');
 
+const { defineTool } = require('./_baseTool');
+
 function _normalizeDirectories(raw) {
-  if (!Array.isArray(raw)) return [];
-  return [...new Set(raw
-    .map(v => String(v || '').trim())
-    .filter(Boolean))];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return [...new Set(raw.map((v) => String(v || '').trim()).filter(Boolean))];
 }
 
 function _normalizeFiles(raw) {
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
   const out = [];
   for (const entry of raw) {
     if (typeof entry === 'string') {
       const p = entry.trim();
-      if (!p) continue;
+      if (!p) {
+        continue;
+      }
       out.push({ path: p, content: '' });
       continue;
     }
-    if (!entry || typeof entry !== 'object') continue;
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
     const p = String(entry.path || entry.file_path || '').trim();
-    if (!p) continue;
-    const content = entry.content === undefined || entry.content === null
-      ? ''
-      : String(entry.content);
+    if (!p) {
+      continue;
+    }
+    const content =
+      entry.content === undefined || entry.content === null ? '' : String(entry.content);
     out.push({ path: p, content });
   }
   return out;
@@ -40,22 +48,20 @@ function _inScope(target, scopeRoot) {
 
 module.exports = defineTool({
   name: 'scaffoldFiles',
-  description: 'Batch-create project folders and files in one call, with configurable parallel file writes.',
+  description:
+    'Batch-create project folders and files in one call, with configurable parallel file writes.',
   category: 'filesystem',
   risk: 'high',
-  aliases: [
-    'scaffold_files',
-    'create_project_structure',
-    'project_scaffold',
-    'batch_create_files',
-  ],
+  aliases: ['scaffold_files', 'create_project_structure', 'project_scaffold', 'batch_create_files'],
   searchHint: 'scaffold project folders files batch parallel create structure',
   alwaysLoad: true,
   maxResultSizeChars: 3000,
 
   isReadOnly: false,
   isDestructive: (input) => {
-    if (!input || input.overwrite !== true) return false;
+    if (!input || input.overwrite !== true) {
+      return false;
+    }
     const cwd = process.env.KHYQUANT_CWD || process.cwd();
     const rootPath = path.resolve(cwd, _expandPath(input.root || '.'));
     const files = _normalizeFiles(input.files);
@@ -125,14 +131,20 @@ module.exports = defineTool({
 
   async validateInput(input) {
     try {
-      const { validateNotUNCPath, validateNoPathTraversal, composeValidations } = require('./inputValidators');
+      const {
+        validateNotUNCPath,
+        validateNoPathTraversal,
+        composeValidations,
+      } = require('./inputValidators');
       const cwd = process.env.KHYQUANT_CWD || process.cwd();
       const rootRaw = String(input?.root || '.').trim() || '.';
       const rootCheck = composeValidations(
         validateNotUNCPath(rootRaw),
-        validateNoPathTraversal(rootRaw, cwd),
+        validateNoPathTraversal(rootRaw, cwd)
       );
-      if (!rootCheck.valid) return rootCheck;
+      if (!rootCheck.valid) {
+        return rootCheck;
+      }
 
       const dirs = _normalizeDirectories(input?.directories);
       const files = _normalizeFiles(input?.files);
@@ -141,14 +153,17 @@ module.exports = defineTool({
       }
 
       const rootPath = path.resolve(cwd, _expandPath(rootRaw));
-      const checkPath = (p) => composeValidations(
-        validateNotUNCPath(p),
-        validateNoPathTraversal(path.join(rootRaw, p), cwd),
-      );
+      const checkPath = (p) =>
+        composeValidations(
+          validateNotUNCPath(p),
+          validateNoPathTraversal(path.join(rootRaw, p), cwd)
+        );
 
       for (const d of dirs) {
         const verdict = checkPath(d);
-        if (!verdict.valid) return verdict;
+        if (!verdict.valid) {
+          return verdict;
+        }
         const abs = path.resolve(rootPath, d);
         if (!_inScope(abs, rootPath)) {
           return { valid: false, message: `Directory path escapes root: ${d}` };
@@ -156,7 +171,9 @@ module.exports = defineTool({
       }
       for (const f of files) {
         const verdict = checkPath(f.path);
-        if (!verdict.valid) return verdict;
+        if (!verdict.valid) {
+          return verdict;
+        }
         const abs = path.resolve(rootPath, f.path);
         if (!_inScope(abs, rootPath)) {
           return { valid: false, message: `File path escapes root: ${f.path}` };
@@ -200,7 +217,9 @@ module.exports = defineTool({
       {
         const { validateNoPathTraversal } = require('./inputValidators');
         const confineCheck = validateNoPathTraversal(rootPath);
-        if (!confineCheck.valid) return { success: false, error: confineCheck.message };
+        if (!confineCheck.valid) {
+          return { success: false, error: confineCheck.message };
+        }
       }
 
       const overwrite = params.overwrite === true;
@@ -248,21 +267,27 @@ module.exports = defineTool({
             return;
           }
           await fs.promises.writeFile(absPath, entry.content, 'utf-8');
-          if (exists) overwrittenFiles.push(path.relative(cwd, absPath));
-          else createdFiles.push(path.relative(cwd, absPath));
+          if (exists) {
+            overwrittenFiles.push(path.relative(cwd, absPath));
+          } else {
+            createdFiles.push(path.relative(cwd, absPath));
+          }
         } catch (err) {
           failedFiles.push({ path: entry.path, error: err.message || 'write failed' });
         }
       });
 
       let index = 0;
-      const workers = Array.from({ length: Math.min(writeConcurrency, jobs.length || 1) }, async () => {
-        while (index < jobs.length) {
-          const current = index;
-          index += 1;
-          await jobs[current]();
+      const workers = Array.from(
+        { length: Math.min(writeConcurrency, jobs.length || 1) },
+        async () => {
+          while (index < jobs.length) {
+            const current = index;
+            index += 1;
+            await jobs[current]();
+          }
         }
-      });
+      );
       await Promise.all(workers);
 
       if (failedFiles.length > 0) {

@@ -76,15 +76,25 @@ const BARE_COMMITMENT_RE = Object.freeze([
 
 function _matchAny(res, text) {
   for (const re of res) {
-    try { if (re.test(text)) return re.source; } catch { /* defensive */ }
+    try {
+      if (re.test(text)) {
+        return re.source;
+      }
+    } catch {
+      /* defensive */
+    }
   }
   return null;
 }
 
 function _looksLikeUserQuestion(text) {
   // 结尾问句 / 显式征询用户输入 → 模型在合法等待,而非放弃。
-  return /[?？]\s*$/.test(text)
-    || /(请问|请确认|请提供|需要你|能否(帮我)?(提供|确认|重新发送)|你希望|你想要|do you want|would you like|could you (please )?(provide|confirm|resend|clarify))/i.test(text);
+  return (
+    /[?？]\s*$/.test(text) ||
+    /(请问|请确认|请提供|需要你|能否(帮我)?(提供|确认|重新发送)|你希望|你想要|do you want|would you like|could you (please )?(provide|confirm|resend|clarify))/i.test(
+      text
+    )
+  );
 }
 
 /**
@@ -101,15 +111,27 @@ function _looksLikeUserQuestion(text) {
  */
 function assessFollowThrough(ctx, env) {
   try {
-    if (!isFollowThroughGuardEnabled(env)) return null;
-    if (!ctx || typeof ctx !== 'object') return null;
-    if (!ctx.isActionTask) return null;
-    if (Number(ctx.toolCallCount) > 0) return null; // 只兜零工具调用的中途放弃
-    if (ctx.substantiveDelivery) return null;        // 长答复=交付,尊重同一边界不唠叨
+    if (!isFollowThroughGuardEnabled(env)) {
+      return null;
+    }
+    if (!ctx || typeof ctx !== 'object') {
+      return null;
+    }
+    if (!ctx.isActionTask) {
+      return null;
+    }
+    if (Number(ctx.toolCallCount) > 0) {
+      return null;
+    } // 只兜零工具调用的中途放弃
+    if (ctx.substantiveDelivery) {
+      return null;
+    } // 长答复=交付,尊重同一边界不唠叨
 
     const reply = typeof ctx.reply === 'string' ? ctx.reply : '';
     const text = reply.trim();
-    if (!text) return null; // 空回复由既有「无感衔接保底」链处理,不重叠
+    if (!text) {
+      return null;
+    } // 空回复由既有「无感衔接保底」链处理,不重叠
 
     // A) 虚构 / 未经核实的阻碍(优先——更有害:它把「没核实的猜测」当既成事实放弃)
     const blockerMarker = _matchAny(FABRICATED_BLOCKER_RE, text);
@@ -133,16 +155,16 @@ function assessFollowThrough(ctx, env) {
 
 const _NUDGE = Object.freeze({
   'fabricated-blocker':
-    '[SYSTEM: 纪律回核] 你在**没有实际调用任何工具**的情况下,就以「指令被截断 / 内容不完整 / 无法继续」之类的理由准备收场。'
-    + '这是智能体纪律缺口——你用「叙述一个阻碍」代替了「行动去核实它」。请立即二选一,不要再空谈:\n'
-    + '1) 如果阻碍可能是**真实**的:先调用相应工具取回**具体证据**——把文件真的 Read 出来、把命令真的跑一遍,'
-    + '用工具的原始输出 / 真实报错来证明它确实无法进行,再把证据贴出来;\n'
-    + '2) 如果只是不确定:直接发起你本该做的那次工具调用(Read / Edit / Bash / …),用结果说话。\n'
-    + '禁止在**一次工具都没尝试**的情况下,凭感觉断言「被截断 / 不完整 / 做不了」就放弃这一步。',
+    '[SYSTEM: 纪律回核] 你在**没有实际调用任何工具**的情况下,就以「指令被截断 / 内容不完整 / 无法继续」之类的理由准备收场。' +
+    '这是智能体纪律缺口——你用「叙述一个阻碍」代替了「行动去核实它」。请立即二选一,不要再空谈:\n' +
+    '1) 如果阻碍可能是**真实**的:先调用相应工具取回**具体证据**——把文件真的 Read 出来、把命令真的跑一遍,' +
+    '用工具的原始输出 / 真实报错来证明它确实无法进行,再把证据贴出来;\n' +
+    '2) 如果只是不确定:直接发起你本该做的那次工具调用(Read / Edit / Bash / …),用结果说话。\n' +
+    '禁止在**一次工具都没尝试**的情况下,凭感觉断言「被截断 / 不完整 / 做不了」就放弃这一步。',
   'bare-commitment':
-    '[SYSTEM: 纪律回核] 你声明了下一步动作(例如「我将编辑 / 让我修改」),但这一轮**没有实际发起任何工具调用**就停下了。'
-    + '承诺不等于执行。请立即把你刚才所说的动作**真的做出来**——现在就发起对应的工具调用(Read / Edit / Bash / …),'
-    + '而不是只描述你打算做什么。做完再向用户说明结果。',
+    '[SYSTEM: 纪律回核] 你声明了下一步动作(例如「我将编辑 / 让我修改」),但这一轮**没有实际发起任何工具调用**就停下了。' +
+    '承诺不等于执行。请立即把你刚才所说的动作**真的做出来**——现在就发起对应的工具调用(Read / Edit / Bash / …),' +
+    '而不是只描述你打算做什么。做完再向用户说明结果。',
 });
 
 /**

@@ -22,9 +22,9 @@
  * Same範式 as sessionSourcePort / commandDispatchPort.
  */
 
-let _resultRenderer = null;   // (data) => void                     from cli/aiRenderer
-let _hudSignals = null;       // { setCompacting, clearCompacting }  from cli/hudRenderer
-let _todoRenderer = null;     // (todos) => void                    from cli/hudRenderer
+let _resultRenderer = null; // (data) => void                     from cli/aiRenderer
+let _hudSignals = null; // { setCompacting, clearCompacting }  from cli/hudRenderer
+let _todoRenderer = null; // (todos) => void                    from cli/hudRenderer
 
 // ── #1 compaction result render (cli/aiRenderer.printCompactionResult) ──
 
@@ -39,28 +39,53 @@ function registerCompactionResultRenderer(fn) {
  * @returns {boolean} true if rendered, false if degraded (no renderer / threw).
  */
 function emitCompactionResult(data) {
-  if (!_resultRenderer) return false;
-  try { _resultRenderer(data); return true; } catch { return false; }
+  if (!_resultRenderer) {
+    return false;
+  }
+  try {
+    _resultRenderer(data);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── #2 HUD compacting state (cli/hudRenderer.setCompacting/clearCompacting) ──
 
 /** Register HUD compaction signals. Called by cli/hudRenderer on load. */
 function registerHudCompactionSignals(signals) {
-  _hudSignals = signals && typeof signals.setCompacting === 'function'
-    && typeof signals.clearCompacting === 'function' ? signals : null;
+  _hudSignals =
+    signals &&
+    typeof signals.setCompacting === 'function' &&
+    typeof signals.clearCompacting === 'function'
+      ? signals
+      : null;
 }
 
 /** Signal the HUD that compaction is starting. Silent no-op if unregistered. */
 function signalCompactingStart(tokensBefore) {
-  if (!_hudSignals) return false;
-  try { _hudSignals.setCompacting(tokensBefore); return true; } catch { return false; }
+  if (!_hudSignals) {
+    return false;
+  }
+  try {
+    _hudSignals.setCompacting(tokensBefore);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Signal the HUD that compaction has finished. Silent no-op if unregistered. */
 function signalCompactingDone() {
-  if (!_hudSignals) return false;
-  try { _hudSignals.clearCompacting(); return true; } catch { return false; }
+  if (!_hudSignals) {
+    return false;
+  }
+  try {
+    _hudSignals.clearCompacting();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── #3 HUD todo list (cli/hudRenderer.updateTodos) — Batch 3 ──
@@ -76,8 +101,15 @@ function registerHudTodoRenderer(fn) {
  * @returns {boolean} true if rendered, false if degraded.
  */
 function emitTodoUpdate(todos) {
-  if (!_todoRenderer) return false;
-  try { _todoRenderer(todos); return true; } catch { return false; }
+  if (!_todoRenderer) {
+    return false;
+  }
+  try {
+    _todoRenderer(todos);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** @internal Reset registrations for testing. */

@@ -11,8 +11,12 @@ class CronDeleteTool extends BaseTool {
   static aliases = ['cron_delete', 'delete_cron'];
   static searchHint = 'cancel cron job schedule remove';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Cancel a cron job previously scheduled with ScheduleCron/CronCreate.

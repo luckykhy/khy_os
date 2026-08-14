@@ -71,9 +71,28 @@ const HAZARD_KINDS = ['reserved', 'illegalChar', 'trailingDotSpace', 'tooLong', 
 
 // Windows 保留设备名（大小写与扩展名无关；判定时取路径段的「主名」= 第一个点之前的部分）。
 const RESERVED_NAMES = new Set([
-  'CON', 'PRN', 'AUX', 'NUL',
-  'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-  'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+  'CON',
+  'PRN',
+  'AUX',
+  'NUL',
+  'COM1',
+  'COM2',
+  'COM3',
+  'COM4',
+  'COM5',
+  'COM6',
+  'COM7',
+  'COM8',
+  'COM9',
+  'LPT1',
+  'LPT2',
+  'LPT3',
+  'LPT4',
+  'LPT5',
+  'LPT6',
+  'LPT7',
+  'LPT8',
+  'LPT9',
 ]);
 
 // Windows 文件名非法字符 `< > : " | ? *` 加控制字符 0x00-0x1F（不含路径分隔符 '/'；空格 / 连字符合法，不列入）。
@@ -93,7 +112,9 @@ function _isNonEmptyStr(x) {
 
 /** 把条目名切成路径段，过滤空段与 '.' / '..' 导航段。 */
 function _segments(name) {
-  return String(name).split('/').filter((s) => s && s !== '.' && s !== '..');
+  return String(name)
+    .split('/')
+    .filter((s) => s && s !== '.' && s !== '..');
 }
 
 /** 段的「主名」（第一个点之前）大写后是否命中保留设备名。 */
@@ -110,7 +131,9 @@ function _hasIllegalChar(segment) {
 /** 段是否以 '.' 或 ' ' 结尾（Windows 会静默剥掉）。 */
 function _hasTrailingDotSpace(segment) {
   const s = String(segment);
-  if (s.length === 0) return false;
+  if (s.length === 0) {
+    return false;
+  }
   const last = s[s.length - 1];
   return last === '.' || last === ' ';
 }
@@ -125,14 +148,28 @@ function _classifyEntry(name) {
   let illegal = false;
   let trailing = false;
   for (const seg of segs) {
-    if (!reserved && _isReservedSegment(seg)) reserved = true;
-    if (!illegal && _hasIllegalChar(seg)) illegal = true;
-    if (!trailing && _hasTrailingDotSpace(seg)) trailing = true;
+    if (!reserved && _isReservedSegment(seg)) {
+      reserved = true;
+    }
+    if (!illegal && _hasIllegalChar(seg)) {
+      illegal = true;
+    }
+    if (!trailing && _hasTrailingDotSpace(seg)) {
+      trailing = true;
+    }
   }
-  if (reserved) hits.push('reserved');
-  if (illegal) hits.push('illegalChar');
-  if (trailing) hits.push('trailingDotSpace');
-  if (String(name).length > MAX_PATH_LEN) hits.push('tooLong');
+  if (reserved) {
+    hits.push('reserved');
+  }
+  if (illegal) {
+    hits.push('illegalChar');
+  }
+  if (trailing) {
+    hits.push('trailingDotSpace');
+  }
+  if (String(name).length > MAX_PATH_LEN) {
+    hits.push('tooLong');
+  }
   return hits;
 }
 
@@ -161,7 +198,9 @@ function _emptyVerdict() {
 function assessPathPortability(entryNames, opts) {
   void opts;
   try {
-    if (!Array.isArray(entryNames)) return _emptyVerdict();
+    if (!Array.isArray(entryNames)) {
+      return _emptyVerdict();
+    }
 
     const names = entryNames.filter(_isNonEmptyStr);
     const verdict = _emptyVerdict();
@@ -173,7 +212,9 @@ function assessPathPortability(entryNames, opts) {
       const hits = _classifyEntry(name);
       for (const kind of hits) {
         const bucket = verdict.hazards[kind];
-        if (bucket.length < _BUCKET_CAP) bucket.push(name);
+        if (bucket.length < _BUCKET_CAP) {
+          bucket.push(name);
+        }
         verdict.counts[kind] += 1;
       }
     }
@@ -193,14 +234,18 @@ function assessPathPortability(entryNames, opts) {
       if (group.size >= 2) {
         for (const name of group) {
           const bucket = verdict.hazards.caseCollision;
-          if (bucket.length < _BUCKET_CAP) bucket.push(name);
+          if (bucket.length < _BUCKET_CAP) {
+            bucket.push(name);
+          }
           verdict.counts.caseCollision += 1;
         }
       }
     }
 
     let hazardTotal = 0;
-    for (const k of HAZARD_KINDS) hazardTotal += verdict.counts[k];
+    for (const k of HAZARD_KINDS) {
+      hazardTotal += verdict.counts[k];
+    }
     verdict.hazardTotal = hazardTotal;
     verdict.ok = hazardTotal === 0;
     return verdict;
@@ -223,9 +268,13 @@ function _fragments(verdict, kinds) {
   const parts = [];
   for (const k of kinds) {
     const n = verdict.counts[k] || 0;
-    if (n <= 0) continue;
+    if (n <= 0) {
+      continue;
+    }
     const examples = (verdict.hazards[k] || []).slice(0, 3);
-    const exStr = examples.length ? `（例 ${examples.join('、')}${n > examples.length ? ' …' : ''}）` : '';
+    const exStr = examples.length
+      ? `（例 ${examples.join('、')}${n > examples.length ? ' …' : ''}）`
+      : '';
     parts.push(`${_KIND_LABEL[k]}×${n}${exStr}`);
   }
   return parts;
@@ -241,10 +290,14 @@ function _fragments(verdict, kinds) {
  */
 function buildPortabilityBannerLine(verdict, opts) {
   try {
-    if (!verdict || typeof verdict !== 'object') return null;
-    if (!(verdict.hazardTotal > 0)) return null; // 无危害 → 不打行，横幅字节等价旧行为。
+    if (!verdict || typeof verdict !== 'object') {
+      return null;
+    }
+    if (!(verdict.hazardTotal > 0)) {
+      return null;
+    } // 无危害 → 不打行，横幅字节等价旧行为。
 
-    const host = (opts && _isNonEmptyStr(opts.hostPlatform)) ? opts.hostPlatform : '';
+    const host = opts && _isNonEmptyStr(opts.hostPlatform) ? opts.hostPlatform : '';
     const present = HAZARD_KINDS.filter((k) => (verdict.counts[k] || 0) > 0);
 
     let severity;
@@ -264,7 +317,9 @@ function buildPortabilityBannerLine(verdict, opts) {
     }
 
     const frags = _fragments(verdict, present);
-    if (frags.length === 0) return null;
+    if (frags.length === 0) {
+      return null;
+    }
 
     const line = `路径可移植性：${hostNote} —— ${frags.join('；')}`;
     return { severity, line };

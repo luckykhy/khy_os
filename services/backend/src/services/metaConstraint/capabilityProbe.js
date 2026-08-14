@@ -55,7 +55,9 @@ const DEFAULT_CAGE_REASONING = 50;
 function _envNum(name, fallback, { min = 0, max = 100 } = {}) {
   const raw = process.env[name];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -81,8 +83,12 @@ function cageReasoning() {
  */
 function bandForReasoning(reasoning) {
   const r = Number.isFinite(reasoning) ? reasoning : 0;
-  if (r < cageReasoning()) return BANDS.CAGE;
-  if (r >= guestReasoning()) return BANDS.GUEST;
+  if (r < cageReasoning()) {
+    return BANDS.CAGE;
+  }
+  if (r >= guestReasoning()) {
+    return BANDS.GUEST;
+  }
   return BANDS.STANDARD;
 }
 
@@ -116,22 +122,32 @@ function _normBand(b) {
  * @returns {string|null}
  */
 function _selfReportBand(selfReport, baseReasoning) {
-  if (selfReport == null) return null;
+  if (selfReport == null) {
+    return null;
+  }
 
   if (typeof selfReport === 'string') {
     const s = selfReport.trim().toLowerCase();
     return Object.prototype.hasOwnProperty.call(BAND_RANK, s) ? s : null;
   }
-  if (typeof selfReport !== 'object') return null;
+  if (typeof selfReport !== 'object') {
+    return null;
+  }
 
   if (typeof selfReport.band === 'string') {
     const s = selfReport.band.trim().toLowerCase();
-    if (Object.prototype.hasOwnProperty.call(BAND_RANK, s)) return s;
+    if (Object.prototype.hasOwnProperty.call(BAND_RANK, s)) {
+      return s;
+    }
   }
   if (typeof selfReport.confidence === 'string') {
     const c = selfReport.confidence.trim().toLowerCase();
-    if (c === 'low') return BANDS.CAGE;
-    if (c === 'medium') return BANDS.STANDARD;
+    if (c === 'low') {
+      return BANDS.CAGE;
+    }
+    if (c === 'medium') {
+      return BANDS.STANDARD;
+    }
     // 'high' is NOT a loosening lever — it cannot upgrade past the tier. Ignored.
   }
   if (Number.isFinite(selfReport.reasoning)) {
@@ -179,11 +195,12 @@ function probe(modelId, opts = {}) {
 }
 
 function _rationale(assessment, band, tierBand, tightened) {
-  const head = {
-    [BANDS.GUEST]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）≥ 宾客线，按宾客原则释放自由度`,
-    [BANDS.STANDARD]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）属标准区间，常规按级管控`,
-    [BANDS.CAGE]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）< 电笼线，重点关押`,
-  }[band] || '未知能力，保守按标准管控';
+  const head =
+    {
+      [BANDS.GUEST]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）≥ 宾客线，按宾客原则释放自由度`,
+      [BANDS.STANDARD]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）属标准区间，常规按级管控`,
+      [BANDS.CAGE]: `能力等级 ${assessment.tier}（reasoning=${assessment.vector.reasoning}）< 电笼线，重点关押`,
+    }[band] || '未知能力，保守按标准管控';
   if (tightened) {
     return `${head}（注：模型自评置信偏低，已由 ${tierBand} 单调收紧至 ${band}，防呆②）。`;
   }

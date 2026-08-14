@@ -57,6 +57,13 @@ const _TOOLS = Object.freeze([
     portableDir: 'opencode-portable',
     versionArgs: ['--version'],
   },
+  {
+    key: 'openclaw',
+    pkg: 'openclaw',
+    bin: 'openclaw',
+    portableDir: 'openclaw-portable',
+    versionArgs: ['--version'],
+  },
 ]);
 
 /**

@@ -12,11 +12,12 @@
  * cancelling existing tasks is never gated.
  */
 
-const path = require('path');
 const { spawn } = require('child_process');
+const path = require('path');
 
-const runtime = require('../tasks/largeTaskRuntimeStore');
 const diskOutput = require('../tasks/diskOutput');
+const runtime = require('../tasks/largeTaskRuntimeStore');
+
 const { buildTaskSpec, buildStopPlan } = require('./backgroundTaskSpec');
 
 const RUNNER_PATH = path.resolve(__dirname, '../../scripts/task-runner.js');
@@ -41,7 +42,9 @@ function _freshStore() {
 
 /** Whether the background-task create path is enabled (default-on). */
 function isEnabled(env = process.env) {
-  const raw = String((env && env.KHY_BG_TASKS) ?? '').trim().toLowerCase();
+  const raw = String((env && env.KHY_BG_TASKS) ?? '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -80,6 +83,23 @@ function launch(input = {}) {
     return { ok: false, error: `创建任务失败: ${err && err.message ? err.message : err}` };
   }
 
+  // Verify the task record actually reached disk before spawning the detached
+  // runner: the runner re-reads the store from disk in a separate process and
+  // would exit immediately (or run against a phantom task) otherwise.
+  try {
+    const fresh = _freshStore();
+    const persisted = fresh.getTask(task.id);
+    if (!persisted) {
+      return { ok: false, error: `任务 ${task.id} 创建后未能持久化到磁盘存储，已取消启动。` };
+    }
+  } catch (err) {
+    const detail = err && err.message ? err.message : String(err);
+    return {
+      ok: false,
+      error: `任务 ${task.id} 创建后未能持久化到磁盘存储，已取消启动。(${detail})`,
+    };
+  }
+
   try {
     const child = spawn(process.execPath, [RUNNER_PATH, task.id], {
       detached: true,
@@ -89,7 +109,14 @@ function launch(input = {}) {
     });
     child.unref();
   } catch (err) {
-    try { runtime.markFailed(task.id, 'bg-task-launcher', { type: 'spawn_failed', message: String(err && err.message || err) }); } catch { /* ignore */ }
+    try {
+      runtime.markFailed(task.id, 'bg-task-launcher', {
+        type: 'spawn_failed',
+        message: String((err && err.message) || err),
+      });
+    } catch {
+      /* ignore */
+    }
     return { ok: false, error: `启动后台进程失败: ${err && err.message ? err.message : err}` };
   }
 
@@ -104,14 +131,22 @@ function launch(input = {}) {
  */
 function stop(taskId) {
   const id = String(taskId || '').trim();
-  if (!id) return { ok: false, error: 'taskId 为必填项。' };
+  if (!id) {
+    return { ok: false, error: 'taskId 为必填项。' };
+  }
 
   // Read fresh from disk so we see the runner_pid/child_pid the detached child
   // wrote — the default in-process singleton never reloads and would be stale.
   const store = _freshStore();
   let task = null;
-  try { task = store.getTask(id); } catch { /* ignore */ }
-  if (!task) return { ok: false, error: `未找到任务 ${id}。` };
+  try {
+    task = store.getTask(id);
+  } catch {
+    /* ignore */
+  }
+  if (!task) {
+    return { ok: false, error: `未找到任务 ${id}。` };
+  }
 
   const { pid } = buildStopPlan(task);
   let killed = false;
@@ -120,7 +155,11 @@ function stop(taskId) {
   }
 
   let latest = task;
-  try { latest = store.cancelTask(id, 'cancelled by tasks command') || task; } catch { /* already terminal */ }
+  try {
+    latest = store.cancelTask(id, 'cancelled by tasks command') || task;
+  } catch {
+    /* already terminal */
+  }
   return { ok: true, task: latest, killed };
 }
 
@@ -157,11 +196,17 @@ function _killProcessTree(pid) {
  */
 function tailLogs(taskId, maxBytes) {
   const id = String(taskId || '').trim();
-  if (!id) return '';
+  if (!id) {
+    return '';
+  }
   try {
     const result = diskOutput.tailTaskOutput(id, maxBytes);
-    if (typeof result === 'string') return result;
-    if (result && typeof result.content === 'string') return result.content;
+    if (typeof result === 'string') {
+      return result;
+    }
+    if (result && typeof result.content === 'string') {
+      return result.content;
+    }
     return '';
   } catch {
     return '';

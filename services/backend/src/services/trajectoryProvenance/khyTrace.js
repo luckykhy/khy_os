@@ -18,15 +18,15 @@
  */
 
 const PRODUCER = Object.freeze({
-  KHY_LOCAL: 'khy-local',   // Khyos 自有模型 / agent loop
-  CODEX: 'codex',           // codex-direct / codex 中转
+  KHY_LOCAL: 'khy-local', // Khyos 自有模型 / agent loop
+  CODEX: 'codex', // codex-direct / codex 中转
   CLAUDE_CODE: 'claude-code', // claude-code 中转
-  RELAY: 'relay',           // 通用中转 relay:<id>（id 落在 producerId）
+  RELAY: 'relay', // 通用中转 relay:<id>（id 落在 producerId）
 });
 
 const TRUST = Object.freeze({
-  VERIFIED: 'verified',     // 本地重跑 / 本地校验过
-  CLAIMED: 'claimed',       // 外部声称，未经本地验证
+  VERIFIED: 'verified', // 本地重跑 / 本地校验过
+  CLAIMED: 'claimed', // 外部声称，未经本地验证
   QUARANTINED: 'quarantined', // 注入调用被审批闸扣留
 });
 
@@ -44,7 +44,11 @@ const _TRUSTS = new Set(Object.values(TRUST));
 const _KINDS = new Set(Object.values(KIND));
 
 function _stamp() {
-  try { return Date.now(); } catch { return 0; }
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -65,7 +69,9 @@ function normalizeProducer(producer, producerId = null) {
 }
 
 function _normalizeTrust(trust, producer) {
-  if (typeof trust === 'string' && _TRUSTS.has(trust)) return trust;
+  if (typeof trust === 'string' && _TRUSTS.has(trust)) {
+    return trust;
+  }
   // 缺/异常 trust：我方→verified，外部→claimed（保守，绝不默认 verified 给外部）。
   return producer === PRODUCER.KHY_LOCAL ? TRUST.VERIFIED : TRUST.CLAIMED;
 }
@@ -103,16 +109,20 @@ function makeTrace(opts = {}) {
  * @returns {object} entry 的浅拷贝 + `_khyTrace`
  */
 function stamp(entry, opts = {}) {
-  const base = (entry && typeof entry === 'object') ? entry : {};
+  const base = entry && typeof entry === 'object' ? entry : {};
   return { ...base, _khyTrace: makeTrace(opts) };
 }
 
 /** 是否带（结构合法的）_khyTrace。 */
 function isTrace(value) {
-  return !!(value && typeof value === 'object'
-    && value._khyTrace && typeof value._khyTrace === 'object'
-    && _PRODUCERS.has(value._khyTrace.producer)
-    && _TRUSTS.has(value._khyTrace.trust));
+  return !!(
+    value &&
+    typeof value === 'object' &&
+    value._khyTrace &&
+    typeof value._khyTrace === 'object' &&
+    _PRODUCERS.has(value._khyTrace.producer) &&
+    _TRUSTS.has(value._khyTrace.trust)
+  );
 }
 
 /**
@@ -120,13 +130,17 @@ function isTrace(value) {
  * 这样下游渲染/链/核对永远拿得到一个结构完整的信封。
  */
 function traceOf(entry) {
-  if (isTrace(entry)) return entry._khyTrace;
+  if (isTrace(entry)) {
+    return entry._khyTrace;
+  }
   return makeTrace({ producer: PRODUCER.KHY_LOCAL, trust: TRUST.VERIFIED });
 }
 
 /** producer 是否为外部中转（非 khy-local）。隔离/核对的统一判定入口。 */
 function isRelayed(producer) {
-  return typeof producer === 'string' && producer !== PRODUCER.KHY_LOCAL && _PRODUCERS.has(producer);
+  return (
+    typeof producer === 'string' && producer !== PRODUCER.KHY_LOCAL && _PRODUCERS.has(producer)
+  );
 }
 
 module.exports = {

@@ -39,28 +39,39 @@ const DIRECTIVE_REGISTRY = Object.freeze({
   // 因此排在所有 guard 之首:它是后续一切工作流协议都必须服务/遵守的前提。历史上它被
   // 单独注入在整合层之后(=「贯通」缺口:用户真实意图与协调计划脱节),现纳入整合层作
   // 为领头 guard,让协调头之下的多套协议显式地为「这个主目标 + 这些约束」服务。
-  intentAssurance:      { tier: 'guard',    label: '意图保护(用户主目标 / 硬约束 / 必保锚点——一切协议都为它服务)' },
-  groundTruth:          { tier: 'guard',    label: '地面真值(算术/进制已精确算出,直接采用勿重算)' },
-  deterministicFacts:   { tier: 'guard',    label: '确定性真值(单位/常数/定理权威值,直接采用)' },
-  inlineImageOcrGuard:  { tier: 'guard',    label: '内联图片路径护栏(禁 DIY-OCR / 反复 Read)' },
-  searchNecessity:      { tier: 'guard',    label: '联网搜索必要性(该搜/不该搜)' },
-  changeWatch:          { tier: 'guard',    label: 'khy 自身改动回核(对/不对/无法判断)' },
-  installConfigGuard:   { tier: 'guard',    label: '配置 khy vs 安装第三方工具歧义护栏(别装第三方、把参数映射到 khy)' },
+  intentAssurance: {
+    tier: 'guard',
+    label: '意图保护(用户主目标 / 硬约束 / 必保锚点——一切协议都为它服务)',
+  },
+  groundTruth: { tier: 'guard', label: '地面真值(算术/进制已精确算出,直接采用勿重算)' },
+  deterministicFacts: { tier: 'guard', label: '确定性真值(单位/常数/定理权威值,直接采用)' },
+  inlineImageOcrGuard: { tier: 'guard', label: '内联图片路径护栏(禁 DIY-OCR / 反复 Read)' },
+  searchNecessity: { tier: 'guard', label: '联网搜索必要性(该搜/不该搜)' },
+  changeWatch: { tier: 'guard', label: 'khy 自身改动回核(对/不对/无法判断)' },
+  installConfigGuard: {
+    tier: 'guard',
+    label: '配置 khy vs 安装第三方工具歧义护栏(别装第三方、把参数映射到 khy)',
+  },
+  flowPriority: { tier: 'guard', label: '流程优先(操作类任务先检索沉淀流程,失败断点接管并自愈)' },
 
   // —— protocol:工作流协议,后注入并参与协调 ——
-  intent:               { tier: 'protocol', label: '意图模式(goal/coding/analyze/…)' },
-  multimodalIntent:     { tier: 'protocol', label: '多模态分路消歧(勿混淆/勿丢弃任一路)' },
-  promptIntentRepair:   { tier: 'protocol', label: '奔赴真实意图(先结合语境纠错复述)' },
-  clarification:        { tier: 'protocol', label: '选项卡澄清(把真实需求选出来)' },
-  diskCleanupClarify:   { tier: 'protocol', label: '清盘参数澄清(扫描深度/颗粒细度交用户选)' },
-  mathSolve:            { tier: 'protocol', label: '数学解题协议(分步+精确值+回代自检)' },
-  testWriting:          { tier: 'protocol', label: '测试编写协议(对齐框架+成体系覆盖+确定性+跑出证据)' },
-  errorEnumeration:     { tier: 'protocol', label: '先枚举再修复(列全错误清单再逐个修)' },
-  nlConfig:             { tier: 'protocol', label: '自然语言改设置(直接调 Configure)' },
-  nlAction:             { tier: 'protocol', label: '自然语言驱动动作(找/修自身 bug、学开源)' },
-  philosophyDesign:     { tier: 'protocol', label: '哲学→软件类比落地' },
-  laziness:             { tier: 'protocol', label: '最小代码方法论(懒人阶梯)' },
-  goal:                 { tier: 'protocol', label: '持久目标(朝目标持续推进)' },
+  intent: { tier: 'protocol', label: '意图模式(goal/coding/analyze/…)' },
+  multimodalIntent: { tier: 'protocol', label: '多模态分路消歧(勿混淆/勿丢弃任一路)' },
+  promptIntentRepair: { tier: 'protocol', label: '奔赴真实意图(先结合语境纠错复述)' },
+  clarification: { tier: 'protocol', label: '选项卡澄清(把真实需求选出来)' },
+  referenceDisambiguation: {
+    tier: 'protocol',
+    label: '指代消歧(代词/身份指向——唯一则展开·歧义则让用户选·多次澄清则降级推断)',
+  },
+  diskCleanupClarify: { tier: 'protocol', label: '清盘参数澄清(扫描深度/颗粒细度交用户选)' },
+  mathSolve: { tier: 'protocol', label: '数学解题协议(分步+精确值+回代自检)' },
+  testWriting: { tier: 'protocol', label: '测试编写协议(对齐框架+成体系覆盖+确定性+跑出证据)' },
+  errorEnumeration: { tier: 'protocol', label: '先枚举再修复(列全错误清单再逐个修)' },
+  nlConfig: { tier: 'protocol', label: '自然语言改设置(直接调 Configure)' },
+  nlAction: { tier: 'protocol', label: '自然语言驱动动作(找/修自身 bug、学开源)' },
+  philosophyDesign: { tier: 'protocol', label: '哲学→软件类比落地' },
+  laziness: { tier: 'protocol', label: '最小代码方法论(懒人阶梯)' },
+  goal: { tier: 'protocol', label: '持久目标(朝目标持续推进)' },
   // 收尾格式协议:实质工程任务完成后按「根因/改动/验证」三段式收尾。排在末位——它规范的是
   // 「所有工作做完后怎么呈现总结」,天然是最后一环。
   deliverySummaryFormat: { tier: 'protocol', label: '收尾总结格式(根因/改动/验证三段式)' },
@@ -81,7 +92,9 @@ function _enabled(options = {}) {
       String(options.directiveComposer).trim().toLowerCase()
     );
   }
-  const raw = String(process.env.KHY_DIRECTIVE_COMPOSER || 'true').trim().toLowerCase();
+  const raw = String(process.env.KHY_DIRECTIVE_COMPOSER || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -93,7 +106,7 @@ function _enabled(options = {}) {
  */
 function _legacyJoin(entries) {
   return entries
-    .map(e => String((e && e.directive) || '').trim())
+    .map((e) => String((e && e.directive) || '').trim())
     .filter(Boolean)
     .join('\n\n');
 }
@@ -108,18 +121,24 @@ function _legacyJoin(entries) {
  */
 function buildCoherenceHeader(protocolLabels = []) {
   const labels = (Array.isArray(protocolLabels) ? protocolLabels : [])
-    .map(s => String(s || '').trim())
+    .map((s) => String(s || '').trim())
     .filter(Boolean);
   const lines = [];
   lines.push('## 本回合有多套处理协议同时生效 —— 请「贯通」执行,勿只挑其一');
-  lines.push('本次输入同时命中了下列处理协议。它们**互补、并非互斥**,请把它们当成**一套有次序的执行计划**协调执行:');
+  lines.push(
+    '本次输入同时命中了下列处理协议。它们**互补、并非互斥**,请把它们当成**一套有次序的执行计划**协调执行:'
+  );
   labels.forEach((label, i) => {
     lines.push(`${i + 1}. ${label}`);
   });
   lines.push('');
   lines.push('协调规则:');
-  lines.push('1. **全部生效,按上列次序执行**:先满足靠前的协议的前提,再推进靠后的;绝不只执行其中一个而忽略其余,也绝不把多套协议混为一谈。');
-  lines.push('2. **若两套协议看似冲突**:以更靠前者为优先约束,在不违背它的前提下尽量满足靠后者;无法同时满足时,用一行说明你的取舍理由,再继续推进。');
+  lines.push(
+    '1. **全部生效,按上列次序执行**:先满足靠前的协议的前提,再推进靠后的;绝不只执行其中一个而忽略其余,也绝不把多套协议混为一谈。'
+  );
+  lines.push(
+    '2. **若两套协议看似冲突**:以更靠前者为优先约束,在不违背它的前提下尽量满足靠后者;无法同时满足时,用一行说明你的取舍理由,再继续推进。'
+  );
   lines.push('3. **先于其后的各协议详述**:下面紧接着是各协议的完整要求,逐条遵守。');
   return lines.join('\n');
 }
@@ -148,7 +167,9 @@ function composeDirectives(input = {}) {
     const active = [];
     for (const e of entries) {
       const directive = String((e && e.directive) || '').trim();
-      if (!directive) continue;
+      if (!directive) {
+        continue;
+      }
       const key = String((e && e.key) || '');
       const meta = DIRECTIVE_REGISTRY[key];
       // 未知 key → 按 protocol 兜底(绝不丢弃),label 用 key 本身。
@@ -157,7 +178,9 @@ function composeDirectives(input = {}) {
       active.push({ key, directive, tier, label });
     }
 
-    if (active.length === 0) return '';
+    if (active.length === 0) {
+      return '';
+    }
 
     // 2) 按 tier 分组,组内保持入参相对顺序。
     const byTier = { guard: [], protocol: [] };
@@ -171,33 +194,45 @@ function composeDirectives(input = {}) {
     let arbitrationNotice = '';
     try {
       const protocolArbitration = require('./protocolArbitration');
-      const protoKeys = byTier.protocol.map(p => p.key);
+      const protoKeys = byTier.protocol.map((p) => p.key);
       const { suppressed, arbitrations } = protocolArbitration.arbitrate(protoKeys);
       if (suppressed && suppressed.size > 0) {
-        byTier.protocol = byTier.protocol.filter(p => !suppressed.has(p.key));
+        byTier.protocol = byTier.protocol.filter((p) => !suppressed.has(p.key));
         const labels = {};
-        for (const k of Object.keys(DIRECTIVE_REGISTRY)) labels[k] = DIRECTIVE_REGISTRY[k].label;
+        for (const k of Object.keys(DIRECTIVE_REGISTRY)) {
+          labels[k] = DIRECTIVE_REGISTRY[k].label;
+        }
         arbitrationNotice = protocolArbitration.buildArbitrationNotice(arbitrations, labels);
       }
-    } catch { /* 仲裁失败 → 不抑制,退化为今日协调头软取舍 */ }
+    } catch {
+      /* 仲裁失败 → 不抑制,退化为今日协调头软取舍 */
+    }
 
     // 4) 统计**仲裁后**生效的 protocol 数量,决定是否插入协调头。
     const protocolCount = byTier.protocol.length;
 
     const out = [];
     // guard 段(若有)先注入。
-    for (const g of byTier.guard) out.push(g.directive);
+    for (const g of byTier.guard) {
+      out.push(g.directive);
+    }
 
     // 仲裁说明(若有)紧随 guard:它是「哪些 protocol 本回合不生效」的元规则,须先于协议详述。
-    if (arbitrationNotice) out.push(arbitrationNotice);
+    if (arbitrationNotice) {
+      out.push(arbitrationNotice);
+    }
 
     if (protocolCount >= 2) {
       // 真正的「多路打架」场景 → 协调头 + 各 protocol。
-      out.push(buildCoherenceHeader(byTier.protocol.map(p => p.label)));
-      for (const p of byTier.protocol) out.push(p.directive);
+      out.push(buildCoherenceHeader(byTier.protocol.map((p) => p.label)));
+      for (const p of byTier.protocol) {
+        out.push(p.directive);
+      }
     } else {
       // 0 或 1 个 protocol → 不加噪声,直接注入(近字节回退)。
-      for (const p of byTier.protocol) out.push(p.directive);
+      for (const p of byTier.protocol) {
+        out.push(p.directive);
+      }
     }
 
     return out.join('\n\n');

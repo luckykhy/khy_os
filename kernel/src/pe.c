@@ -237,6 +237,22 @@ int pe_load_user_image(const uint8_t *image, size_t size,
         if (sec_size == 0)
             sec_size = sec->size_of_raw_data;
 
+        /* [SAFE] Confine every section's virtual address to the user address
+         * window. A crafted image_base or virtual_address can otherwise place a
+         * section in kernel space (PML4 index >= 256), and the subsequent
+         * vmm_map_page call would happily overwrite kernel page-table entries
+         * since the PML4 entry is already present (copied from kernel_space at
+         * space creation). This is the same defence the ELF loader applies. */
+        if (sec_va < VMM_USER_BASE || sec_va + sec_size > VMM_USER_LIMIT)
+            return -25;
+
+        /* Enforce W^X: a section that is both writable and executable is
+         * refused — allowing W+X would let a user process write shellcode
+         * and jump into it, defeating page-level protection. */
+        if ((sec->characteristics & (PE_SCN_MEM_WRITE | PE_SCN_MEM_EXECUTE)) ==
+            (PE_SCN_MEM_WRITE | PE_SCN_MEM_EXECUTE))
+            return -26;
+
         /* Determine permissions */
         uint64_t flags = VMM_FLAG_USER;
         if (sec->characteristics & PE_SCN_MEM_WRITE)
@@ -372,7 +388,7 @@ int pe_load_user_image(const uint8_t *image, size_t size,
             /* Iterate until null-terminated entry. [SAFE] The in-bounds check
              * is evaluated BEFORE imp->name so a descriptor that has advanced
              * past the image is never dereferenced (read-before-check OOB). */
-            while ((uint32_t)((const uint8_t *)imp - image) + sizeof(*imp) <= size && imp->name != 0) {
+            while ((size_t)((const uint8_t *)imp - image) + sizeof(*imp) <= size && imp->name != 0) {
                 const char *dll_name = _rva_to_str(image, size, imp->name);
                 serial_print("  Import DLL: ");
                 serial_print(dll_name);
@@ -389,6 +405,8 @@ int pe_load_user_image(const uint8_t *image, size_t size,
     /* ── Fill output ─────────────────────────────────────── */
 
     out->entry = load_base + opt->address_of_entry_point;
+    if (out->entry < VMM_USER_BASE || out->entry >= VMM_USER_LIMIT)
+        return -27;
     out->image_base = load_base;
     out->image_size = opt->size_of_image;
     out->sections = loaded_sections;

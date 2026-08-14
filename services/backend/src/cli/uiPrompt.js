@@ -82,12 +82,16 @@ const UNSUPPORTED_KEYS = ['when', 'filter', 'transformer'];
 // FormFlow's { name, value } shape. Separators (inquirer.Separator instances or
 // {type:'separator'}) are dropped — FormFlow has no separator row.
 function _normalizeChoice(choice) {
-  if (choice == null) return null;
+  if (choice == null) {
+    return null;
+  }
   if (typeof choice === 'string' || typeof choice === 'number') {
     return { name: String(choice), value: choice };
   }
   if (typeof choice === 'object') {
-    if (choice.type === 'separator' || choice.constructor?.name === 'Separator') return null;
+    if (choice.type === 'separator' || choice.constructor?.name === 'Separator') {
+      return null;
+    }
     const value = 'value' in choice ? choice.value : choice.name;
     const name = choice.name != null ? String(choice.name) : String(value);
     return { name, value };
@@ -114,11 +118,17 @@ function _resolve(maybeFn, answers) {
  * @returns {{ ok: true, field: object } | { ok: false, reason: string }}
  */
 function translateQuestion(q, answers = {}) {
-  if (!q || typeof q !== 'object') return { ok: false, reason: 'empty question' };
+  if (!q || typeof q !== 'object') {
+    return { ok: false, reason: 'empty question' };
+  }
   const type = q.type || 'input';
-  if (!SUPPORTED_TYPES.has(type)) return { ok: false, reason: `unsupported type: ${type}` };
+  if (!SUPPORTED_TYPES.has(type)) {
+    return { ok: false, reason: `unsupported type: ${type}` };
+  }
   for (const key of UNSUPPORTED_KEYS) {
-    if (q[key] != null) return { ok: false, reason: `unsupported feature: ${key}` };
+    if (q[key] != null) {
+      return { ok: false, reason: `unsupported feature: ${key}` };
+    }
   }
 
   const name = q.name || 'value';
@@ -135,8 +145,14 @@ function translateQuestion(q, answers = {}) {
         type: 'select',
         // 是 first when default-yes so Enter keeps the inquirer default.
         choices: def
-          ? [{ name: '是', value: true }, { name: '否', value: false }]
-          : [{ name: '否', value: false }, { name: '是', value: true }],
+          ? [
+              { name: '是', value: true },
+              { name: '否', value: false },
+            ]
+          : [
+              { name: '否', value: false },
+              { name: '是', value: true },
+            ],
         __coerce: 'boolean',
       },
     };
@@ -144,24 +160,40 @@ function translateQuestion(q, answers = {}) {
 
   if (type === 'list' || type === 'checkbox') {
     const rawChoices = _resolve(q.choices, answers);
-    if (!Array.isArray(rawChoices)) return { ok: false, reason: 'choices not resolvable to an array' };
+    if (!Array.isArray(rawChoices)) {
+      return { ok: false, reason: 'choices not resolvable to an array' };
+    }
     const choices = rawChoices.map(_normalizeChoice).filter(Boolean);
-    if (choices.length === 0) return { ok: false, reason: 'no renderable choices' };
+    if (choices.length === 0) {
+      return { ok: false, reason: 'no renderable choices' };
+    }
     const field = { name, label, type: 'select', choices };
-    if (type === 'checkbox') field.multi = true;
-    if (q.default != null) field.defaultValue = q.default;
+    if (type === 'checkbox') {
+      field.multi = true;
+    }
+    if (q.default != null) {
+      field.defaultValue = q.default;
+    }
     return { ok: true, field };
   }
 
   // input / password / number
   const field = { name, label, type: type === 'password' ? 'password' : 'input' };
-  if (type === 'password' && q.mask) field.mask = q.mask;
+  if (type === 'password' && q.mask) {
+    field.mask = q.mask;
+  }
   const def = _resolve(q.default, answers);
-  if (def != null) field.defaultValue = def;
+  if (def != null) {
+    field.defaultValue = def;
+  }
   if (type === 'number') {
     field.validate = (v, a) => {
-      if (String(v).trim() === '') return validate ? validate(v, a) : '请输入数字';
-      if (Number.isNaN(Number(v))) return '请输入有效数字';
+      if (String(v).trim() === '') {
+        return validate ? validate(v, a) : '请输入数字';
+      }
+      if (Number.isNaN(Number(v))) {
+        return '请输入有效数字';
+      }
       return validate ? validate(Number(v), a) : true;
     };
     field.__coerce = 'number';
@@ -182,12 +214,16 @@ function translateQuestion(q, answers = {}) {
  */
 function inquirerToFormSpec(questions) {
   const list = Array.isArray(questions) ? questions : [questions];
-  if (list.length === 0) return { ok: false, reason: 'no questions' };
+  if (list.length === 0) {
+    return { ok: false, reason: 'no questions' };
+  }
   const fields = [];
   const coerce = {}; // name → 'boolean' | 'number', applied after collection
   for (const q of list) {
     const t = translateQuestion(q, {});
-    if (!t.ok) return { ok: false, reason: t.reason };
+    if (!t.ok) {
+      return { ok: false, reason: t.reason };
+    }
     if (t.field.__coerce) {
       coerce[t.field.name] = t.field.__coerce;
       delete t.field.__coerce;
@@ -202,12 +238,19 @@ function inquirerToFormSpec(questions) {
 // Coerce collected raw FormFlow answers back to the types inquirer would have
 // produced (confirm→boolean, number→Number), leaving everything else untouched.
 function _applyCoercion(answers, coerce) {
-  if (!answers || !coerce) return answers;
+  if (!answers || !coerce) {
+    return answers;
+  }
   const out = { ...answers };
   for (const [name, kind] of Object.entries(coerce)) {
-    if (!(name in out)) continue;
-    if (kind === 'boolean') out[name] = !!out[name];
-    else if (kind === 'number') out[name] = Number(out[name]);
+    if (!(name in out)) {
+      continue;
+    }
+    if (kind === 'boolean') {
+      out[name] = !!out[name];
+    } else if (kind === 'number') {
+      out[name] = Number(out[name]);
+    }
   }
   return out;
 }
@@ -233,7 +276,9 @@ async function promptCompat(questions) {
     const t = inquirerToFormSpec(questions);
     if (t.ok) {
       const answers = await _askForm(t.spec);
-      if (answers == null) return {}; // Esc/cancel → empty answers (caller treats as cancel)
+      if (answers == null) {
+        return {};
+      } // Esc/cancel → empty answers (caller treats as cancel)
       return _applyCoercion(answers, t.coerce);
     }
     // Fall through to inquirer on any untranslatable question.

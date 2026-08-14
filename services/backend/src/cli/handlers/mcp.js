@@ -4,11 +4,15 @@
  * MCP Command Handler — `khy mcp add` / `khy mcp remove`(对齐 `claude mcp add`)。
  *
  * khy 早有成熟的 MCP client/host(services/mcp:stdio/SSE/HTTP、autoConnect、tool pool、`~/.khy/mcp.json`),
- * 本 handler 补上「把一台外部 MCP server 写进配置」的 CLI 入口。只读状态/governance 视图仍在 router 的
- * `case 'mcp'` 里;这里只处理增删。
+ * 本 handler 补上「把一台外部 MCP server 写进配置」的 CLI 入口 + 单台管理(show/test/enable/disable)。
+ * 只读状态/governance 视图仍在 router 的 `case 'mcp'` 里;这里只处理增删改查。
  *
  *   mcp add <名> [--scope user|project] [--env K=V] [--transport sse|http --url <地址>] -- <命令> [参数…]
  *   mcp remove <名> [--scope user|project]
+ *   mcp presets                                   # 列出内置开源 server 预设
+ *   mcp show <名>                                 # 查看单台 server 配置详情
+ *   mcp test <名>                                 # 连接并验证一台已配置 server
+ *   mcp enable|disable <名> [--scope user|project] # 启用/禁用(不删除配置)
  *
  * 解析/校验/构形在纯叶子 mcpAddSpec(单一真源);文件读改写在薄 IO 层 mcpConfigStore。
  *
@@ -17,9 +21,17 @@
 
 const { printInfo, printError, printSuccess } = require('../formatters');
 
-function _spec() { return require('../../services/mcp/mcpAddSpec'); }
-function _store() { return require('../../services/mcp/mcpConfigStore'); }
-function _presets() { return require('../../services/mcp/mcpServerPresets'); }
+function _spec() {
+  return require('../../services/mcp/mcpAddSpec');
+}
+
+function _store() {
+  return require('../../services/mcp/mcpConfigStore');
+}
+
+function _presets() {
+  return require('../../services/mcp/mcpServerPresets');
+}
 
 function _handleAdd(args, options) {
   const spec = _spec();
@@ -28,7 +40,9 @@ function _handleAdd(args, options) {
   const built = spec.buildServerConfig({ name, rest, options: options || {} });
   if (!built.ok) {
     printError(built.error);
-    printInfo('例:khy mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem ~/Documents');
+    printInfo(
+      '例:khy mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem ~/Documents'
+    );
     return 1;
   }
   let res;
@@ -39,7 +53,9 @@ function _handleAdd(args, options) {
     return 1;
   }
   const scopeLabel = built.scope === 'project' ? '项目级' : '用户级';
-  printSuccess(`✅ 已${res.replaced ? '更新' : '添加'} MCP server「${built.name}」(${scopeLabel})。`);
+  printSuccess(
+    `✅ 已${res.replaced ? '更新' : '添加'} MCP server「${built.name}」(${scopeLabel})。`
+  );
   printInfo(`配置写入:${res.path}`);
   const cfg = built.config;
   if (cfg.type === 'stdio') {
@@ -47,16 +63,22 @@ function _handleAdd(args, options) {
   } else {
     printInfo(`  ${cfg.type} 端点:${cfg.url}`);
   }
-  if (cfg.env) printInfo(`  环境变量:${Object.keys(cfg.env).join(', ')}`);
+  if (cfg.env) {
+    printInfo(`  环境变量:${Object.keys(cfg.env).join(', ')}`);
+  }
   // 预设展开时提示缺失的敏感 env(server 已写入,但不配 token 连不上)。
   if (built.preset) {
-    if (built.preset.description) printInfo(`  预设:${built.preset.description}`);
+    if (built.preset.description) {
+      printInfo(`  预设:${built.preset.description}`);
+    }
     const missing = Array.isArray(built.preset.missingEnv) ? built.preset.missingEnv : [];
     if (missing.length) {
       printInfo(`  ⚠ 该预设需要环境变量:${missing.join(', ')}。`);
       printInfo(`    重新运行并追加,例:khy mcp add ${built.name} --env ${missing[0]}=<你的值>`);
     }
-    if (built.preset.argHint) printInfo(`  提示:${built.preset.argHint}`);
+    if (built.preset.argHint) {
+      printInfo(`  提示:${built.preset.argHint}`);
+    }
   }
   printInfo('下次启动 khy 会话时会自动连接(autoConnect);`khy mcp` 查看状态。');
   return 0;
@@ -75,9 +97,12 @@ function _handlePresets() {
   }
   printInfo(`内置开源 MCP server 预设(${list.length} 个)。用 \`khy mcp add <名>\` 一键安装:`);
   for (const p of list) {
-    const envHint = p.requiresEnv && p.requiresEnv.length ? `  [需 env: ${p.requiresEnv.join(', ')}]` : '';
+    const envHint =
+      p.requiresEnv && p.requiresEnv.length ? `  [需 env: ${p.requiresEnv.join(', ')}]` : '';
     printInfo(`  • ${p.name} — ${p.description}${envHint}`);
-    if (p.argHint) printInfo(`      ${p.argHint}`);
+    if (p.argHint) {
+      printInfo(`      ${p.argHint}`);
+    }
   }
   printInfo('例:khy mcp add github --env GITHUB_PERSONAL_ACCESS_TOKEN=<token>');
   return 0;
@@ -99,17 +124,25 @@ function _handlePresets() {
 function _handleServe(args, options) {
   const protocol = require('../../services/mcp/mcpServerProtocol');
   if (!protocol.isServeEnabled(process.env)) {
-    printError('`khy mcp serve` 未启用(KHY_MCP_SERVE 已关闭)。开启后 khy 可作为 MCP server 对外暴露工具。');
+    printError(
+      '`khy mcp serve` 未启用(KHY_MCP_SERVE 已关闭)。开启后 khy 可作为 MCP server 对外暴露工具。'
+    );
     return 1;
   }
   const opts = options || {};
   const transport = String(opts.transport || 'stdio').toLowerCase();
   const expose = opts.expose ? String(opts.expose).toLowerCase() : undefined;
   // 暴露模式经 env 传给策略叶子(尊重用户 --expose;缺省 all)。
-  if (expose) process.env.KHY_MCP_SERVE_EXPOSE = expose;
+  if (expose) {
+    process.env.KHY_MCP_SERVE_EXPOSE = expose;
+  }
 
   let version = '0.0.0';
-  try { version = require('../../../package.json').version || version; } catch { /* 读不到 → 兜底 */ }
+  try {
+    version = require('../../../package.json').version || version;
+  } catch {
+    /* 读不到 → 兜底 */
+  }
 
   if (transport === 'http' || transport === 'sse') {
     const httpServer = require('../../services/mcp/mcpHttpServer');
@@ -150,7 +183,9 @@ function _handleRemove(args, options) {
     return 1;
   }
   if (!res.removed) {
-    printInfo(`${scope === 'project' ? '项目级' : '用户级'}配置里没有名为「${name}」的 MCP server(${res.path})。`);
+    printInfo(
+      `${scope === 'project' ? '项目级' : '用户级'}配置里没有名为「${name}」的 MCP server(${res.path})。`
+    );
     return 0;
   }
   printSuccess(`✅ 已删除 MCP server「${name}」(${scope === 'project' ? '项目级' : '用户级'})。`);
@@ -159,25 +194,196 @@ function _handleRemove(args, options) {
 }
 
 /**
- * @param {string} subCommand - 'add' | 'remove' | 'rm' | 'presets'
+ * `khy mcp show <名>` — 查看单台已配置 server 的详情(来源/传输/状态/命令或端点/环境变量键)。
+ * 纯只读;读 loadConfig(合并 user/project/legacy 后的单一事实)。
+ * @param {string} name
+ * @returns {number}
+ */
+function _handleShow(name) {
+  if (!name) {
+    printError('用法:khy mcp show <名>');
+    return 1;
+  }
+  let mcp, gov;
+  try {
+    mcp = require('../../services/mcp');
+    gov = require('../../services/mcp/mcpGovernance');
+  } catch (e) {
+    printError(`MCP 服务读取失败:${(e && e.message) || e}`);
+    return 1;
+  }
+  const cfg =
+    typeof mcp.loadConfig === 'function' ? mcp.loadConfig(process.cwd()) : { mcpServers: {} };
+  const entry = (cfg.mcpServers || {})[name];
+  if (!entry) {
+    printInfo(`配置里没有名为「${name}」的 MCP server。`);
+    return 0;
+  }
+  const scope = gov.classifyServerScope(entry);
+  const connected = (
+    typeof mcp.getConnectedServers === 'function' ? mcp.getConnectedServers() : []
+  ).includes(name);
+  const tools = (typeof mcp.listMCPTools === 'function' ? mcp.listMCPTools() : []).filter(
+    (t) => t && (t.serverName === name || t.normalizedServerName === name)
+  );
+  const envKeys = entry.env && typeof entry.env === 'object' ? Object.keys(entry.env) : [];
+  printInfo(`MCP server「${name}」:`);
+  printInfo(`  来源: ${scope.scopeLabel}`);
+  printInfo(`  传输: ${scope.transport}`);
+  printInfo(`  状态: ${scope.disabled ? '已禁用' : connected ? '已连接' : '未连接'}`);
+  printInfo(`  工具: ${tools.length} 个`);
+  if (entry.command) {
+    printInfo(
+      `  启动命令: ${entry.command}${Array.isArray(entry.args) && entry.args.length ? ` ${entry.args.join(' ')}` : ''}`
+    );
+  }
+  if (entry.url) {
+    printInfo(`  端点: ${entry.url}`);
+  }
+  if (envKeys.length) {
+    printInfo(`  环境变量: ${envKeys.join(', ')}`);
+  }
+  if (scope.configPath) {
+    printInfo(`  配置文件: ${scope.configPath}`);
+  }
+  return 0;
+}
+
+/**
+ * `khy mcp test <名>` — 连接并验证一台已配置 server,报告暴露工具数。
+ * 只读 + 主动连接(不写配置);连接成功会留在连接表里(autoConnect 之外的按需连通),供后续调用。
+ * @param {string} name
+ * @returns {number}
+ */
+async function _handleTest(name) {
+  if (!name) {
+    printError('用法:khy mcp test <名>');
+    return 1;
+  }
+  let mcp;
+  try {
+    mcp = require('../../services/mcp');
+  } catch (e) {
+    printError(`MCP 服务读取失败:${(e && e.message) || e}`);
+    return 1;
+  }
+  const cfg =
+    typeof mcp.loadConfig === 'function' ? mcp.loadConfig(process.cwd()) : { mcpServers: {} };
+  const entry = (cfg.mcpServers || {})[name];
+  if (!entry) {
+    printError(`配置里没有名为「${name}」的 MCP server。`);
+    return 1;
+  }
+  if (entry._disabled) {
+    printInfo(`「${name}」已禁用,先 khy mcp enable ${name}。`);
+    return 1;
+  }
+  const already = (
+    typeof mcp.getConnectedServers === 'function' ? mcp.getConnectedServers() : []
+  ).includes(name);
+  // 剥离内部注解字段(_scope/_configPath/_disabled)再交给 connectMCPServer 校验。
+  const { _scope, _configPath, _disabled, ...clean } = entry;
+  try {
+    if (!already) {
+      printInfo(`正在连接「${name}」...`);
+      await mcp.connectMCPServer(name, clean);
+    }
+    const client = typeof mcp.getClient === 'function' ? mcp.getClient(name) : null;
+    const tools = client && typeof client.listTools === 'function' ? client.listTools() : [];
+    printSuccess(`✅ MCP server「${name}」连接成功,暴露 ${tools.length} 个工具。`);
+    return 0;
+  } catch (e) {
+    printError(`MCP server「${name}」连接失败:${(e && e.message) || e}`);
+    return 1;
+  }
+}
+
+/**
+ * `khy mcp enable|disable <名>` — 启用/禁用一台 server(不删除配置)。
+ * @param {string[]} args
+ * @param {object} options
+ * @param {boolean} enabled
+ * @returns {number}
+ */
+function _handleSetEnabled(args, options, enabled) {
+  const name = Array.isArray(args) ? args[0] : undefined;
+  const action = enabled ? '启用' : '禁用';
+  if (!name) {
+    printError(`用法:khy mcp ${enabled ? 'enable' : 'disable'} <名> [--scope user|project]`);
+    return 1;
+  }
+  const spec = _spec();
+  const scope = spec.normalizeScope(options && options.scope);
+  let res;
+  try {
+    res = _store().setServerEnabled(String(name), enabled, { scope });
+  } catch (e) {
+    printError(`写入 MCP 配置失败:${(e && e.message) || e}`);
+    return 1;
+  }
+  if (!res.found) {
+    printInfo(
+      `${scope === 'project' ? '项目级' : '用户级'}配置里没有名为「${name}」的 MCP server(${res.path})。`
+    );
+    return 0;
+  }
+  printSuccess(
+    `✅ 已${action} MCP server「${name}」(${scope === 'project' ? '项目级' : '用户级'})。`
+  );
+  printInfo(`配置更新:${res.path}`);
+  printInfo(
+    enabled
+      ? '下次启动 khy 会话时会自动连接(autoConnect);`khy mcp` 查看状态。'
+      : '禁用后不会自动连接;`khy mcp` 查看状态。'
+  );
+  return 0;
+}
+
+/**
+ * @param {string} subCommand - 'add' | 'remove' | 'rm' | 'presets' | 'serve' | 'show' | 'test' | 'enable' | 'disable'
  * @param {string[]} args
  * @param {object} options
  * @returns {number} exit-ish code (0 ok)
  */
-function handleMcp(subCommand, args = [], options = {}) {
+async function handleMcp(subCommand, args = [], options = {}) {
   const sub = String(subCommand || '').toLowerCase();
   // `presets` 是只读发现入口,门控在 KHY_MCP_PRESETS(不受 KHY_MCP_ADD 约束)。
-  if (sub === 'presets' || sub === 'preset') return _handlePresets();
+  if (sub === 'presets' || sub === 'preset') {
+    return _handlePresets();
+  }
   // `serve` 让 khy 作为 MCP server,门控在 KHY_MCP_SERVE(不受 KHY_MCP_ADD 约束)。
-  if (sub === 'serve') return _handleServe(args, options);
+  if (sub === 'serve') {
+    return _handleServe(args, options);
+  }
+  // `show` 只读详情,`test` 连接验证——均不写配置,不受 KHY_MCP_ADD 约束。
+  if (sub === 'show') {
+    return _handleShow(Array.isArray(args) ? args[0] : undefined);
+  }
+  if (sub === 'test') {
+    return _handleTest(Array.isArray(args) ? args[0] : undefined);
+  }
   const spec = _spec();
   if (!spec.isMcpAddEnabled(process.env)) {
-    printError('`khy mcp add/remove` 未启用(KHY_MCP_ADD 已关闭)。开启后可从命令行安装外部 MCP server。');
+    printError(
+      '`khy mcp add/remove/enable/disable` 未启用(KHY_MCP_ADD 已关闭)。开启后可从命令行管理外部 MCP server。'
+    );
     return 1;
   }
-  if (sub === 'add') return _handleAdd(args, options);
-  if (sub === 'remove' || sub === 'rm') return _handleRemove(args, options);
-  printError(`未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve。`);
+  if (sub === 'add') {
+    return _handleAdd(args, options);
+  }
+  if (sub === 'remove' || sub === 'rm') {
+    return _handleRemove(args, options);
+  }
+  if (sub === 'enable') {
+    return _handleSetEnabled(args, options, true);
+  }
+  if (sub === 'disable') {
+    return _handleSetEnabled(args, options, false);
+  }
+  printError(
+    `未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve / list / show / test / enable / disable。`
+  );
   return 1;
 }
 

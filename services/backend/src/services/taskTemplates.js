@@ -31,7 +31,7 @@ class TaskTemplate {
    */
   matches(userInput) {
     const input = userInput.toLowerCase();
-    return this.applicableWhen.some(keyword => input.includes(keyword));
+    return this.applicableWhen.some((keyword) => input.includes(keyword));
   }
 
   /**
@@ -120,25 +120,27 @@ const TEMPLATES = [
         toolParams: {
           file_path: '{{serverFile}}',
           old_string: '{{insertPoint}}',
-          new_string: '{{insertPoint}}\n  } else if (req.url === \'{{endpoint}}\' && req.method === \'{{method}}\') {\n    res.writeHead(200, { \'Content-Type\': \'application/json\' });\n    res.end(JSON.stringify({{responseData}}));\n'
+          new_string:
+            "{{insertPoint}}\n  } else if (req.url === '{{endpoint}}' && req.method === '{{method}}') {\n    res.writeHead(200, { 'Content-Type': 'application/json' });\n    res.end(JSON.stringify({{responseData}}));\n",
         },
         verify: '端点代码已插入,响应格式正确',
-        onFailure: '如找不到插入点,在文件末尾添加'
+        onFailure: '如找不到插入点,在文件末尾添加',
       },
       {
         description: '创建测试文件验证端点',
         tool: 'Write',
         toolParams: {
           file_path: '{{testFile}}',
-          content: 'const http = require(\'http\');\nconst assert = require(\'assert\');\n\nhttp.get(\'http://localhost:3000{{endpoint}}\', (res) => {\n  let data = \'\';\n  res.on(\'data\', chunk => data += chunk);\n  res.on(\'end\', () => {\n    const json = JSON.parse(data);\n    console.log(\'✓ Endpoint working:\', json);\n  });\n});'
+          content:
+            "const http = require('http');\nconst assert = require('assert');\nconst PORT = process.env.PORT || 3000;\n\nhttp.get('http://localhost:' + PORT + '{{endpoint}}', (res) => {\n  let data = '';\n  res.on('data', chunk => data += chunk);\n  res.on('end', () => {\n    const json = JSON.parse(data);\n    console.log('✓ Endpoint working:', json);\n  });\n});",
         },
-        verify: '测试文件已创建'
+        verify: '测试文件已创建',
       },
       {
         description: '更新 README 文档',
         tool: 'Read',
         toolParams: { file_path: 'README.md' },
-        verify: '确认 README 存在'
+        verify: '确认 README 存在',
       },
       {
         description: '在 README 的 Endpoints 章节添加新端点说明',
@@ -146,12 +148,12 @@ const TEMPLATES = [
         toolParams: {
           file_path: 'README.md',
           old_string: '## Endpoints',
-          new_string: '## Endpoints\n- {{method}} {{endpoint}} - {{description}}'
+          new_string: '## Endpoints\n- {{method}} {{endpoint}} - {{description}}',
         },
         verify: '文档已更新',
-        onFailure: '如无 Endpoints 章节,创建新章节'
-      }
-    ]
+        onFailure: '如无 Endpoints 章节,创建新章节',
+      },
+    ],
   }),
 
   // VB-2 类型: 修复 Bug
@@ -159,18 +161,29 @@ const TEMPLATES = [
     id: 'fix-bug',
     name: '修复 Bug',
     description: '定位并修复代码中的错误',
-    applicableWhen: ['修bug', 'fix bug', '有bug', '有错误', '不工作', 'not working', 'bug', '修', '修复', 'fix'],
+    applicableWhen: [
+      '修bug',
+      'fix bug',
+      '有bug',
+      '有错误',
+      '不工作',
+      'not working',
+      'bug',
+      '修',
+      '修复',
+      'fix',
+    ],
     requiredParams: ['bugFile', 'symptom'],
     steps: [
       {
         description: '读取问题文件',
         tool: 'Read',
         toolParams: { file_path: '{{bugFile}}' },
-        verify: '文件内容已显示'
+        verify: '文件内容已显示',
       },
       {
         description: '分析症状并定位错误代码',
-        verify: '在响应中明确指出错误的行号和原因'
+        verify: '在响应中明确指出错误的行号和原因',
       },
       {
         description: '修复错误',
@@ -178,22 +191,22 @@ const TEMPLATES = [
         toolParams: {
           file_path: '{{bugFile}}',
           old_string: '{{buggyCode}}',
-          new_string: '{{fixedCode}}'
+          new_string: '{{fixedCode}}',
         },
-        verify: '代码已修复,逻辑正确'
+        verify: '代码已修复,逻辑正确',
       },
       {
         description: '如有测试文件,运行测试验证修复',
         tool: 'Bash',
         toolParams: { command: 'npm test || node test.js' },
         verify: '测试通过或无测试可跳过',
-        onFailure: '如测试失败,检查修复是否引入新问题'
+        onFailure: '如测试失败,检查修复是否引入新问题',
       },
       {
         description: '在响应中解释修复逻辑',
-        verify: '用户能理解为什么这样修复'
-      }
-    ]
+        verify: '用户能理解为什么这样修复',
+      },
+    ],
   }),
 
   // VB-4 类型: 添加功能模块
@@ -209,15 +222,15 @@ const TEMPLATES = [
         tool: 'Write',
         toolParams: {
           file_path: '{{moduleFile}}',
-          content: '{{moduleCode}}'
+          content: '{{moduleCode}}',
         },
-        verify: '模块文件已创建,导出接口清晰'
+        verify: '模块文件已创建,导出接口清晰',
       },
       {
         description: '读取主文件准备集成',
         tool: 'Read',
         toolParams: { file_path: '{{mainFile}}' },
-        verify: '主文件内容已显示'
+        verify: '主文件内容已显示',
       },
       {
         description: '在主文件中导入并使用新模块',
@@ -225,9 +238,9 @@ const TEMPLATES = [
         toolParams: {
           file_path: '{{mainFile}}',
           old_string: '{{importSection}}',
-          new_string: '{{importSection}}\nconst {{featureName}} = require(\'./{{moduleFile}}\');'
+          new_string: "{{importSection}}\nconst {{featureName}} = require('./{{moduleFile}}');",
         },
-        verify: '模块已导入'
+        verify: '模块已导入',
       },
       {
         description: '在适当位置调用模块功能',
@@ -235,30 +248,30 @@ const TEMPLATES = [
         toolParams: {
           file_path: '{{mainFile}}',
           old_string: '{{usagePoint}}',
-          new_string: '{{usageCode}}'
+          new_string: '{{usageCode}}',
         },
-        verify: '模块已集成到业务逻辑'
+        verify: '模块已集成到业务逻辑',
       },
       {
         description: '创建单元测试',
         tool: 'Write',
         toolParams: {
           file_path: '{{testFile}}',
-          content: '{{testCode}}'
+          content: '{{testCode}}',
         },
-        verify: '测试文件已创建'
+        verify: '测试文件已创建',
       },
       {
         description: '运行测试验证功能',
         tool: 'Bash',
         toolParams: { command: 'node {{testFile}}' },
         verify: '所有测试通过',
-        onFailure: '检查模块实现,修复失败的测试'
+        onFailure: '检查模块实现,修复失败的测试',
       },
       {
         description: '更新文档',
         tool: 'Read',
-        toolParams: { file_path: 'README.md' }
+        toolParams: { file_path: 'README.md' },
       },
       {
         description: '在 README 中添加功能说明',
@@ -266,11 +279,12 @@ const TEMPLATES = [
         toolParams: {
           file_path: 'README.md',
           old_string: '## Features',
-          new_string: '## Features\n\n### {{featureName}}\n{{featureDescription}}\n\n**配置**:\n```javascript\n{{configExample}}\n```\n\n**使用**:\n```javascript\n{{usageExample}}\n```'
+          new_string:
+            '## Features\n\n### {{featureName}}\n{{featureDescription}}\n\n**配置**:\n```javascript\n{{configExample}}\n```\n\n**使用**:\n```javascript\n{{usageExample}}\n```',
         },
-        verify: '文档已完整更新'
-      }
-    ]
+        verify: '文档已完整更新',
+      },
+    ],
   }),
 
   // SP-1 类型: spec-driven 实现
@@ -286,50 +300,51 @@ const TEMPLATES = [
         tool: 'Write',
         toolParams: {
           file_path: '{{specFile}}',
-          content: '# {{featureName}} Specification\n\n## Requirements\n{{requirements}}\n\n## Acceptance Criteria\n{{acceptanceCriteria}}\n\n## Implementation Plan\n{{implementationPlan}}'
+          content:
+            '# {{featureName}} Specification\n\n## Requirements\n{{requirements}}\n\n## Acceptance Criteria\n{{acceptanceCriteria}}\n\n## Implementation Plan\n{{implementationPlan}}',
         },
-        verify: '规格文档完整,包含需求、验收条件、实现计划'
+        verify: '规格文档完整,包含需求、验收条件、实现计划',
       },
       {
         description: '按规格实现核心功能',
         tool: 'Write',
         toolParams: {
           file_path: '{{implFile}}',
-          content: '{{implementationCode}}'
+          content: '{{implementationCode}}',
         },
-        verify: '实现代码覆盖所有需求项'
+        verify: '实现代码覆盖所有需求项',
       },
       {
         description: '创建验收测试(对应 AC)',
         tool: 'Write',
         toolParams: {
           file_path: '{{testFile}}',
-          content: '{{testCode}}'
+          content: '{{testCode}}',
         },
-        verify: '每条 AC 有对应测试'
+        verify: '每条 AC 有对应测试',
       },
       {
         description: '运行测试验证',
         tool: 'Bash',
         toolParams: { command: 'node {{testFile}}' },
         verify: '所有 AC 测试通过',
-        onFailure: '测试失败 → 回到实现步骤修复'
+        onFailure: '测试失败 → 回到实现步骤修复',
       },
       {
         description: '创建 deliveryGate 验证脚本',
         tool: 'Write',
         toolParams: {
           file_path: '{{verifyFile}}',
-          content: '{{verifyCode}}'
+          content: '{{verifyCode}}',
         },
-        verify: 'deliveryGate 脚本已创建'
+        verify: 'deliveryGate 脚本已创建',
       },
       {
         description: '运行 deliveryGate',
         tool: 'Bash',
         toolParams: { command: 'node {{verifyFile}}' },
         verify: 'deliveryGate verdict = PASS',
-        onFailure: '如 FAIL,根据 missing 项补全'
+        onFailure: '如 FAIL,根据 missing 项补全',
       },
       {
         description: '更新文档',
@@ -337,12 +352,12 @@ const TEMPLATES = [
         toolParams: {
           file_path: 'README.md',
           old_string: '{{docInsertPoint}}',
-          new_string: '{{docContent}}'
+          new_string: '{{docContent}}',
         },
-        verify: '文档包含规格链接和使用说明'
-      }
-    ]
-  })
+        verify: '文档包含规格链接和使用说明',
+      },
+    ],
+  }),
 ];
 
 /**
@@ -355,7 +370,7 @@ function matchTemplate(userInput) {
   let maxMatches = 0;
 
   for (const template of TEMPLATES) {
-    const matchCount = template.applicableWhen.filter(keyword =>
+    const matchCount = template.applicableWhen.filter((keyword) =>
       input.includes(keyword.toLowerCase())
     ).length;
 
@@ -382,7 +397,7 @@ function generateTaskInstructions(userInput, params = {}) {
     templateId: template.id,
     templateName: template.name,
     instructions: template.generateInstructions(params),
-    requiredParams: template.requiredParams
+    requiredParams: template.requiredParams,
   };
 }
 
@@ -390,12 +405,12 @@ function generateTaskInstructions(userInput, params = {}) {
  * 列出所有可用模板
  */
 function listTemplates() {
-  return TEMPLATES.map(t => ({
+  return TEMPLATES.map((t) => ({
     id: t.id,
     name: t.name,
     description: t.description,
     keywords: t.applicableWhen,
-    requiredParams: t.requiredParams
+    requiredParams: t.requiredParams,
   }));
 }
 
@@ -404,5 +419,5 @@ module.exports = {
   TEMPLATES,
   matchTemplate,
   generateTaskInstructions,
-  listTemplates
+  listTemplates,
 };

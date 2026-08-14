@@ -21,7 +21,9 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_COMPLETION_READDIR_CACHE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -43,13 +45,17 @@ function readdirCached(abs, readdirFn, opts = {}) {
   const env = o.env || process.env;
 
   // 门控关:直读、不缓存 —— 逐字节回退今日 computeFile 的内联 readdirSync。
-  if (!isEnabled(env)) return readdirFn(abs);
+  if (!isEnabled(env)) {
+    return readdirFn(abs);
+  }
 
   const now = typeof o.nowFn === 'function' ? o.nowFn() : Date.now();
   const ttl = Number.isFinite(o.ttlMs) ? o.ttlMs : DEFAULT_TTL_MS;
 
   const hit = _cache.get(abs);
-  if (hit && (now - hit.at) < ttl) return hit.entries;
+  if (hit && now - hit.at < ttl) {
+    return hit.entries;
+  }
 
   // 抛错(ENOENT/ENOTDIR/EACCES…)不写缓存、原样冒泡给调用方(与今日一致)。
   const entries = readdirFn(abs);
@@ -63,6 +69,8 @@ function readdirCached(abs, readdirFn, opts = {}) {
 }
 
 // 测试/生命周期钩子:清空缓存(进程内)。
-function _clearCache() { _cache.clear(); }
+function _clearCache() {
+  _cache.clear();
+}
 
 module.exports = { isEnabled, readdirCached, _clearCache, DEFAULT_TTL_MS };

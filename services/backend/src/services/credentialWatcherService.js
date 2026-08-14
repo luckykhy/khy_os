@@ -29,7 +29,7 @@ let _pollTimer = null;
 const _watchers = new Map();
 /** @type {Array<{ts: string, provider: string, path: string, action: string, detail: string}>} */
 const _events = [];
-let _stats = { scans: 0, detections: 0, errors: 0, lastScanAt: null };
+const _stats = { scans: 0, detections: 0, errors: 0, lastScanAt: null };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,13 +47,17 @@ function logEvent(provider, filePath, action, detail = '') {
     detail: String(detail).slice(0, 300),
   };
   _events.push(entry);
-  if (_events.length > EVENT_RING_SIZE) _events.shift();
+  if (_events.length > EVENT_RING_SIZE) {
+    _events.shift();
+  }
   return entry;
 }
 
 function safeReadFile(filePath) {
   try {
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     return fs.readFileSync(filePath);
   } catch {
     return null;
@@ -72,12 +76,18 @@ const nearestExistingDir = require('../utils/nearestExistingDir');
 // ---------------------------------------------------------------------------
 async function scanFile(filePath, provider, fileType) {
   const buf = safeReadFile(filePath);
-  if (!buf) return false;
+  if (!buf) {
+    return false;
+  }
 
   const hash = sha256(buf);
   const entry = _watchers.get(filePath);
-  if (entry && entry.hash === hash) return false; // unchanged
-  if (entry) entry.hash = hash;
+  if (entry && entry.hash === hash) {
+    return false;
+  } // unchanged
+  if (entry) {
+    entry.hash = hash;
+  }
 
   _stats.scans += 1;
   _stats.lastScanAt = new Date().toISOString();
@@ -93,7 +103,12 @@ async function scanFile(filePath, provider, fileType) {
     const changed = (result.inserted || 0) + (result.updated || 0);
     if (changed > 0) {
       _stats.detections += changed;
-      logEvent(provider, filePath, 'credential_detected', `+${result.inserted} new, ~${result.updated} updated`);
+      logEvent(
+        provider,
+        filePath,
+        'credential_detected',
+        `+${result.inserted} new, ~${result.updated} updated`
+      );
 
       // Bridge to ai_accounts table
       await syncToAiAccounts(provider);
@@ -119,7 +134,7 @@ async function syncToAiAccounts(provider) {
 
     let AIAccount;
     try {
-      AIAccount = require('../../packages/shared/src/models/AIAccount');
+      AIAccount = require('../../vendor/shared/src/models/AIAccount');
     } catch {
       try {
         AIAccount = require('@khy/shared/models/AIAccount');
@@ -129,9 +144,11 @@ async function syncToAiAccounts(provider) {
       }
     }
 
-    for (const acct of (accounts || [])) {
+    for (const acct of accounts || []) {
       const accessToken = String(acct.access_token || acct.accessToken || '').trim();
-      if (!accessToken) continue;
+      if (!accessToken) {
+        continue;
+      }
 
       const email = String(acct.email || '').trim();
       const label = String(acct.label || '').trim();
@@ -154,7 +171,9 @@ async function syncToAiAccounts(provider) {
           if (!created) {
             // Update token if changed
             record.apiKey = accessToken;
-            if (email) record.email = email;
+            if (email) {
+              record.email = email;
+            }
             return record.save();
           }
         });
@@ -171,13 +190,17 @@ async function syncToAiAccounts(provider) {
 // Watcher setup
 // ---------------------------------------------------------------------------
 function setupWatcher(filePath, provider, fileType) {
-  if (_watchers.has(filePath)) return;
+  if (_watchers.has(filePath)) {
+    return;
+  }
 
   const entry = { watcher: null, debounce: null, hash: '', provider, type: fileType };
   _watchers.set(filePath, entry);
 
   const onFileChange = () => {
-    if (entry.debounce) clearTimeout(entry.debounce);
+    if (entry.debounce) {
+      clearTimeout(entry.debounce);
+    }
     entry.debounce = setTimeout(() => {
       entry.debounce = null;
       scanFile(filePath, provider, fileType).catch(() => {});
@@ -188,9 +211,7 @@ function setupWatcher(filePath, provider, fileType) {
 
   // For vscdb files, always watch parent directory (SQLite WAL writes
   // may not trigger fs.watch on the file itself).
-  const watchTarget = !fileExists || fileType === 'vscdb'
-    ? nearestExistingDir(filePath)
-    : filePath;
+  const watchTarget = !fileExists || fileType === 'vscdb' ? nearestExistingDir(filePath) : filePath;
 
   if (!watchTarget) {
     logEvent(provider, filePath, 'watch_skip', 'no accessible parent directory');
@@ -202,7 +223,9 @@ function setupWatcher(filePath, provider, fileType) {
       // If watching parent dir, only react when our target file is affected
       if (watchTarget !== filePath) {
         const target = path.basename(filePath);
-        if (filename && filename !== target) return;
+        if (filename && filename !== target) {
+          return;
+        }
       }
       onFileChange();
     });
@@ -220,7 +243,12 @@ function setupWatcher(filePath, provider, fileType) {
     });
 
     entry.watcher = watcher;
-    logEvent(provider, filePath, 'watch_started', `target=${watchTarget === filePath ? 'file' : 'parent'}`);
+    logEvent(
+      provider,
+      filePath,
+      'watch_started',
+      `target=${watchTarget === filePath ? 'file' : 'parent'}`
+    );
   } catch (err) {
     logEvent(provider, filePath, 'watch_failed', err.message);
   }
@@ -230,7 +258,9 @@ function setupWatcher(filePath, provider, fileType) {
 // Poll fallback — covers NFS, containers, and fs.watch blind spots
 // ---------------------------------------------------------------------------
 async function pollAll() {
-  if (!_started) return;
+  if (!_started) {
+    return;
+  }
   for (const [filePath, entry] of _watchers) {
     try {
       await scanFile(filePath, entry.provider, entry.type);
@@ -244,7 +274,9 @@ async function pollAll() {
 // Public API
 // ---------------------------------------------------------------------------
 async function start() {
-  if (_started) return;
+  if (_started) {
+    return;
+  }
   _started = true;
 
   let pool;
@@ -268,7 +300,9 @@ async function start() {
   // Poll fallback
   _pollTimer = setInterval(() => pollAll().catch(() => {}), POLL_INTERVAL_MS);
   // 待机轮询不应钉住事件循环：主进程退出即随之结束（等价 daemon）。
-  if (_pollTimer.unref) _pollTimer.unref();
+  if (_pollTimer.unref) {
+    _pollTimer.unref();
+  }
 
   // 仅写结构化事件到内存环形缓冲（可观测层）；不再 console.log 抢占 stdout —
   // 启停属生命周期一次性事件，但 stdout 是交互式 CLI 的用户通道，写入即污染 TUI
@@ -277,7 +311,9 @@ async function start() {
 }
 
 function stop() {
-  if (!_started) return;
+  if (!_started) {
+    return;
+  }
   _started = false;
 
   if (_pollTimer) {
@@ -286,9 +322,15 @@ function stop() {
   }
 
   for (const [filePath, entry] of _watchers) {
-    if (entry.debounce) clearTimeout(entry.debounce);
+    if (entry.debounce) {
+      clearTimeout(entry.debounce);
+    }
     if (entry.watcher) {
-      try { entry.watcher.close(); } catch { /* ignore */ }
+      try {
+        entry.watcher.close();
+      } catch {
+        /* ignore */
+      }
     }
   }
   _watchers.clear();

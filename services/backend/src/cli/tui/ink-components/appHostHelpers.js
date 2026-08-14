@@ -12,19 +12,28 @@
  * 需 React / inkRuntime,故在此就地 require(与 App.js 同相对路径)。
  */
 const React = require('react');
+
+const _simpleTokenEstimate = require('../../../utils/simpleTokenEstimate');
 const inkRuntime = require('../inkRuntime');
+// Canonical chars/4 token-estimate atom (zero-dep utils leaf; char fallback only).
 
 // Single-slot memo of the mergeTaskLines parse (pure fn of snap+planTasks) so the
 // checklist isn't re-split/re-deduped every render (incl. every keystroke) when the
 // task state is unchanged. Fail-soft require; gate KHY_TASK_LINES_MEMO. Missing
 // module / gate off → direct compute (byte-identical to today). See taskLinesMemo.js.
 let _taskLinesMemo = null;
-try { _taskLinesMemo = require('./taskLinesMemo'); } catch { _taskLinesMemo = null; }
+try {
+  _taskLinesMemo = require('./taskLinesMemo');
+} catch {
+  _taskLinesMemo = null;
+}
 // taskPanelLines.mergeTaskLines is the single source for the merged checklist
 // lines; lazily required & fault-isolated (the task stores are auxiliary).
 function _readMergedTaskLines() {
   try {
-    if (process.env.KHY_TASK_PANEL === '0') return [];
+    if (process.env.KHY_TASK_PANEL === '0') {
+      return [];
+    }
     const taskStore = require('../../../tools/_taskStore');
     const snap = typeof taskStore.snapshot === 'function' ? taskStore.snapshot() : '';
     let planTasks = null;
@@ -37,7 +46,9 @@ function _readMergedTaskLines() {
     return _taskLinesMemo
       ? _taskLinesMemo.memoMergeTaskLines(snap, planTasks, _compute, process.env)
       : _compute();
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // Permission modes cycled by Shift+Tab. The cycle is 5-wide
@@ -70,12 +81,18 @@ function applyPermissionMode(mode) {
     profile = toolCalling.permissionModeToProfile
       ? toolCalling.permissionModeToProfile(mode)
       : 'normal';
-  } catch { /* toolCalling unavailable — fall back to 'normal' */ }
+  } catch {
+    /* toolCalling unavailable — fall back to 'normal' */
+  }
   try {
     require('../../../services/permissionStore').setProfile(profile);
-  } catch { /* permissionStore unavailable */ }
+  } catch {
+    /* permissionStore unavailable */
+  }
   try {
-    if (!toolCalling) toolCalling = require('../../../services/toolCalling');
+    if (!toolCalling) {
+      toolCalling = require('../../../services/toolCalling');
+    }
     // setDangerousMode was never exported (silent no-op); use the real toggles.
     if (mode === 'bypass') {
       toolCalling.enableDangerousMode();
@@ -83,20 +100,27 @@ function applyPermissionMode(mode) {
     } else {
       toolCalling.disableDangerousMode();
     }
-  } catch { /* toolCalling unavailable */ }
+  } catch {
+    /* toolCalling unavailable */
+  }
 }
 
 // A control request is an AskUserQuestion when its inner request targets the
 // AskUserQuestion tool — those are rendered as a selection menu (QuestionPrompt)
 // rather than the y/n/a permission overlay.
 function _normToolName(n) {
-  return String(n || '').toLowerCase().replace(/[\s_-]/g, '');
+  return String(n || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
+
 function isQuestionRequest(cr) {
   const r = cr && cr.request;
-  return !!r
-    && String(r.subtype || '').toLowerCase() === 'can_use_tool'
-    && _normToolName(r.tool_name || r.tool) === 'askuserquestion';
+  return (
+    !!r &&
+    String(r.subtype || '').toLowerCase() === 'can_use_tool' &&
+    _normToolName(r.tool_name || r.tool) === 'askuserquestion'
+  );
 }
 
 // True when /learn would fall into its offline interactive mode (inquirer loop),
@@ -118,17 +142,22 @@ function _learnNeedsClassic() {
 // check, `/docs maintainer`) still run normally. Auth commands (login/register/
 // passwd) and `/model` are handled by native overlays before this is consulted.
 function tuiUnsupportedReason(parsed) {
-  if (!parsed) return null;
+  if (!parsed) {
+    return null;
+  }
   const cmd = parsed.command;
 
   switch (cmd) {
-    case 'forgot': return '找回密码';
+    case 'forgot':
+      return '找回密码';
     // cloud/app/docs/pool/publish/ai-owner/init and the gateway menu family
     // (incl. /plugin gateway delete, reached via handleGatewayConfig) now collect
     // input through the native uiPrompt bridge (promptCompat → FormFlow), so they
     // run inside the TUI.
-    case 'learn': return _learnNeedsClassic() ? '离线课程交互（无可用模型）' : null;
-    default: break;
+    case 'learn':
+      return _learnNeedsClassic() ? '离线课程交互（无可用模型）' : null;
+    default:
+      break;
   }
 
   // NOTE: /rollback /worktree /review /study /intent /mind are now executed
@@ -149,12 +178,20 @@ function _taskActivity() {
     if (taskStore && typeof taskStore.currentActivity === 'function') {
       return taskStore.currentActivity() || '';
     }
-  } catch { /* task store unavailable — fall back to the static label */ }
+  } catch {
+    /* task store unavailable — fall back to the static label */
+  }
   return '';
 }
 
 function _getStatusLabel(status, activity) {
-  const labels = { thinking: '思考中…', streaming: '生成中…', tool: '执行工具…', compacting: '正在压缩对话…', local: '本地引擎应答中（不调用模型）…' };
+  const labels = {
+    thinking: '思考中…',
+    streaming: '生成中…',
+    tool: '执行工具…',
+    compacting: '正在压缩对话…',
+    local: '本地引擎应答中（不调用模型）…',
+  };
   const base = labels[status] || '思考中…';
   const detail = (activity || '').trim();
   return detail ? `${base} · ${detail}` : base;
@@ -167,21 +204,32 @@ function _getStatusLabel(status, activity) {
 let _deriveLiveActivityFn = null;
 function _liveActivity(status, streaming, statusDetail) {
   if (_deriveLiveActivityFn === null) {
-    try { _deriveLiveActivityFn = require('../../repl/statusLabels').deriveLiveActivity || false; }
-    catch { _deriveLiveActivityFn = false; }
+    try {
+      _deriveLiveActivityFn = require('../../repl/statusLabels').deriveLiveActivity || false;
+    } catch {
+      _deriveLiveActivityFn = false;
+    }
   }
-  if (!_deriveLiveActivityFn) return '';
+  if (!_deriveLiveActivityFn) {
+    return '';
+  }
   try {
     // Running tool = the last tool chunk that has not yet resolved.
     let runningTool = null;
-    const tools = (streaming && Array.isArray(streaming.tools)) ? streaming.tools : [];
+    const tools = streaming && Array.isArray(streaming.tools) ? streaming.tools : [];
     for (let i = tools.length - 1; i >= 0; i -= 1) {
       const t = tools[i];
-      if (t && !t.result) { runningTool = { name: t.name || t.toolName || t.tool, input: t.input }; break; }
+      if (t && !t.result) {
+        runningTool = { name: t.name || t.toolName || t.tool, input: t.input };
+        break;
+      }
     }
-    const thinkingTail = (streaming && streaming.thinking) ? String(streaming.thinking).slice(-200) : '';
+    const thinkingTail =
+      streaming && streaming.thinking ? String(streaming.thinking).slice(-200) : '';
     return _deriveLiveActivityFn({ status, runningTool, thinkingTail, statusDetail }) || '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // CC parity gate for the live spinner token hint. CC (src/components/Spinner.tsx:244)
@@ -191,7 +239,9 @@ function _liveActivity(status, streaming, statusDetail) {
 // only (exclude thinking) and use round (not ceil) for the char fallback. Set
 // KHY_SPINNER_CC_TOKENS ∈ {0,false,off,no} → legacy (text+thinking, ceil), byte-identical.
 function _spinnerCcTokensEnabled(env = process.env) {
-  const v = String((env && env.KHY_SPINNER_CC_TOKENS) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_SPINNER_CC_TOKENS) || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -205,12 +255,21 @@ let _estimateTokFn = null;
 // `text` = pure streaming.text (append-only, prefix-stable). Fail-soft require;
 // gate KHY_SPINNER_TOKEN_INCREMENTAL default-on → gate off / absent = today.
 let _spinnerTokInc = null;
-try { _spinnerTokInc = require('./spinnerTokenEstimate'); } catch { _spinnerTokInc = null; }
+try {
+  _spinnerTokInc = require('./spinnerTokenEstimate');
+} catch {
+  _spinnerTokInc = null;
+}
 function _estimateTok(text, env = process.env, resetKey = null) {
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
   if (_estimateTokFn === null) {
-    try { _estimateTokFn = require('../../../services/tokenUsageService').estimateTokens || false; }
-    catch { _estimateTokFn = false; }
+    try {
+      _estimateTokFn = require('../../../services/tokenUsageService').estimateTokens || false;
+    } catch {
+      _estimateTokFn = false;
+    }
   }
   try {
     if (_estimateTokFn) {
@@ -222,10 +281,15 @@ function _estimateTok(text, env = process.env, resetKey = null) {
       }
       return _estimateTokFn(text) || 0;
     }
-  } catch { /* fall through to the char heuristic */ }
-  // CC parity: round(len/4); legacy (gate off): ceil(len/4).
-  const len = String(text).length;
-  return _spinnerCcTokensEnabled(env) ? Math.round(len / 4) : Math.ceil(len / 4);
+  } catch {
+    /* fall through to the char heuristic */
+  }
+  // CC parity: round(len/4); legacy (gate off): ceil(len/4). Thin delegates to the
+  // canonical atom; byte-identical to Math.round/Math.ceil(String(text).length / 4).
+  const s = String(text);
+  return _spinnerCcTokensEnabled(env)
+    ? _simpleTokenEstimate(s, { rounding: 'round' })
+    : _simpleTokenEstimate(s);
 }
 
 // Derive the spinner's progress props from the turn clock + live stream. Pure
@@ -235,7 +299,7 @@ function _spinnerProgress(turnStartedAt, nowTick, lastActivityAt, streaming, env
   const now = nowTick || Date.now();
   const started = turnStartedAt || 0;
   const elapsedSec = started ? Math.max(0, Math.floor((now - started) / 1000)) : 0;
-  const stalled = !!lastActivityAt && (now - lastActivityAt) > 3000;
+  const stalled = !!lastActivityAt && now - lastActivityAt > 3000;
   let tokens = 0;
   // _spinnerProgress runs in App's RENDER body (every frame while busy, plus the
   // 1s nowTick), and _estimateTok re-scans the WHOLE growing streaming.text each
@@ -248,18 +312,18 @@ function _spinnerProgress(turnStartedAt, nowTick, lastActivityAt, streaming, env
   let _needEstimate = true;
   try {
     _needEstimate = require('./spinnerTokenLazy').shouldEstimateSpinnerTokens({ elapsedSec, env });
-  } catch { _needEstimate = true; }
+  } catch {
+    _needEstimate = true;
+  }
   if (streaming && _needEstimate) {
     // CC parity: the live token hint estimates the streamed RESPONSE TEXT only
     // (CC's responseLength excludes thinking). Gate off → legacy (text + thinking).
     const cc = _spinnerCcTokensEnabled(env);
-    const text = cc
-      ? (streaming.text || '')
-      : ((streaming.text || '') + (streaming.thinking || ''));
+    const text = cc ? streaming.text || '' : (streaming.text || '') + (streaming.thinking || '');
     // On the CC path `text` = pure streaming.text, append-only within a turn → pass
     // turnStartedAt as the incremental reset key (new turn ⇒ full rescan). Legacy
     // composite (text+thinking) is NOT prefix-stable → resetKey null = full scan.
-    tokens = _estimateTok(text, env, cc ? (turnStartedAt || 0) : null);
+    tokens = _estimateTok(text, env, cc ? turnStartedAt || 0 : null);
   }
   return { elapsedSec, tokens, stalled };
 }
@@ -269,12 +333,16 @@ function _spinnerProgress(turnStartedAt, nowTick, lastActivityAt, streaming, env
 // tagged "↑ 取回" and a trailing summary line is appended.
 function _queuePanelLines(items) {
   const list = Array.isArray(items) ? items : [];
-  if (list.length === 0) return [];
+  if (list.length === 0) {
+    return [];
+  }
   const MAX_SHOWN = 5;
   const lastIdx = list.length - 1;
   const rows = [];
   list.slice(0, MAX_SHOWN).forEach((raw, i) => {
-    const oneLine = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+    const oneLine = String(raw == null ? '' : raw)
+      .replace(/\s+/g, ' ')
+      .trim();
     const text = oneLine.length > 56 ? `${oneLine.slice(0, 56)}…` : oneLine;
     const tail = i === lastIdx ? '  ↑ 取回' : '';
     rows.push(`  ${i + 1}. ${text}${tail}`);
@@ -294,8 +362,7 @@ function _renderQueuePanel(items) {
   // so resolve them locally. React (top of file) + inkRuntime are module-level.
   const h = React.createElement;
   const { Text } = inkRuntime.get();
-  return _queuePanelLines(items).map((line, i) =>
-    h(Text, { key: `q${i}`, dimColor: true }, line));
+  return _queuePanelLines(items).map((line, i) => h(Text, { key: `q${i}`, dimColor: true }, line));
 }
 
 // live clamp 的回合边界判定(纯逻辑,导出给单测)。

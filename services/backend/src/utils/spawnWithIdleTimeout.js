@@ -11,8 +11,11 @@
 'use strict';
 
 const { spawn } = require('child_process');
+
 const iconv = require('iconv-lite');
+
 const { safeKill } = require('../tools/platformUtils');
+
 const { getSystemEncoding } = require('./systemEncoding');
 
 /**
@@ -44,7 +47,9 @@ const INTERACTIVE_PROMPT_PATTERNS = [
  * @returns {boolean}
  */
 function detectInteractivePrompt(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const tail = String(text).slice(-300);
   const lines = tail.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const lastLine = lines.length ? lines[lines.length - 1] : tail;
@@ -87,9 +92,13 @@ const _OEM_FALLBACK_CANDIDATES = ['gbk', 'big5', 'shift_jis', 'cp949', 'cp866', 
  * @returns {string}
  */
 function smartDecodeWinOutput(buf, oemEncoding) {
-  if (!buf || !buf.length) return '';
+  if (!buf || !buf.length) {
+    return '';
+  }
   const asUtf8 = buf.toString('utf8');
-  if (!asUtf8.includes('�')) return asUtf8; // genuinely UTF-8 → unchanged
+  if (!asUtf8.includes('�')) {
+    return asUtf8;
+  } // genuinely UTF-8 → unchanged
   const utf8Bad = (asUtf8.match(/�/g) || []).length;
 
   // Build the ordered candidate list: the explicitly-detected page first (if it
@@ -99,9 +108,13 @@ function smartDecodeWinOutput(buf, oemEncoding) {
   const ordered = [];
   const seen = new Set();
   for (const enc of [detected, ..._OEM_FALLBACK_CANDIDATES]) {
-    if (!enc) continue;
+    if (!enc) {
+      continue;
+    }
     const low = String(enc).toLowerCase();
-    if (low === 'utf-8' || low === 'utf8' || seen.has(low)) continue;
+    if (low === 'utf-8' || low === 'utf8' || seen.has(low)) {
+      continue;
+    }
     seen.add(low);
     ordered.push(low);
   }
@@ -110,12 +123,21 @@ function smartDecodeWinOutput(buf, oemEncoding) {
   let bestBad = utf8Bad;
   for (const enc of ordered) {
     try {
-      if (!iconv.encodingExists(enc)) continue;
+      if (!iconv.encodingExists(enc)) {
+        continue;
+      }
       const decoded = iconv.decode(buf, enc);
       const bad = (decoded.match(/�/g) || []).length;
-      if (bad < bestBad) { best = decoded; bestBad = bad; }
-      if (bestBad === 0) break; // perfect decode — stop early
-    } catch { /* try next candidate */ }
+      if (bad < bestBad) {
+        best = decoded;
+        bestBad = bad;
+      }
+      if (bestBad === 0) {
+        break;
+      } // perfect decode — stop early
+    } catch {
+      /* try next candidate */
+    }
   }
   return best;
 }
@@ -159,9 +181,15 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
   // arguments verbatim lets cmd.exe parse its own quotes correctly. PowerShell and
   // (MSYS) bash both decode libuv's `\"` fine, so this is scoped to cmd.exe only.
   const effectiveSpawnOpts = (() => {
-    if (process.platform !== 'win32') return spawnOpts;
-    if (Object.prototype.hasOwnProperty.call(spawnOpts, 'windowsVerbatimArguments')) return spawnOpts;
-    const exe = String(command || '').toLowerCase().replace(/\\/g, '/');
+    if (process.platform !== 'win32') {
+      return spawnOpts;
+    }
+    if (Object.prototype.hasOwnProperty.call(spawnOpts, 'windowsVerbatimArguments')) {
+      return spawnOpts;
+    }
+    const exe = String(command || '')
+      .toLowerCase()
+      .replace(/\\/g, '/');
     const base = exe.slice(exe.lastIndexOf('/') + 1);
     if (base === 'cmd.exe' || base === 'cmd') {
       return { ...spawnOpts, windowsVerbatimArguments: true };
@@ -183,7 +211,11 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     // KillShell can terminate a still-running background command. Default null →
     // zero behavior change for every existing caller. Never allowed to throw.
     if (typeof onChild === 'function') {
-      try { onChild(child); } catch { /* non-critical: caller bookkeeping */ }
+      try {
+        onChild(child);
+      } catch {
+        /* non-critical: caller bookkeeping */
+      }
     }
 
     let stdout = '';
@@ -195,9 +227,8 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     let settled = false;
     let idleTimer = null;
     let recentTail = '';
-    const outputLimit = Number.isFinite(maxOutputBytes) && maxOutputBytes > 0
-      ? Math.floor(maxOutputBytes)
-      : null;
+    const outputLimit =
+      Number.isFinite(maxOutputBytes) && maxOutputBytes > 0 ? Math.floor(maxOutputBytes) : null;
 
     // Windows non-UTF-8 consoles (e.g. GBK/CP936 on Chinese Windows) emit
     // command output and error text in the OEM code page. Decoding those bytes
@@ -211,8 +242,8 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     // e.g. UTF-8 via `chcp 65001`) wins over runtime detection — deterministic and
     // immune to a mis-detected system code page. Otherwise auto-detect on Windows.
     const sysEnc = outputEncoding || (process.platform === 'win32' ? getSystemEncoding() : null);
-    const useIconv = !!sysEnc && sysEnc !== 'utf-8' && sysEnc !== 'utf8'
-      && iconv.encodingExists(sysEnc);
+    const useIconv =
+      !!sysEnc && sysEnc !== 'utf-8' && sysEnc !== 'utf8' && iconv.encodingExists(sysEnc);
     const stdoutDecoder = useIconv ? iconv.getDecoder(sysEnc) : null;
     const stderrDecoder = useIconv ? iconv.getDecoder(sysEnc) : null;
 
@@ -220,8 +251,8 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     // 已 prepend `chcp 65001`）时，chcp 对 dir 等内建命令的管道输出并不可靠 → 字节仍是
     // GBK/OEM，被当 utf-8 解码就成 U+FFFD 乱码。这种情况下累积**原始字节**，到 close 智能解码
     // （先试 UTF-8，含替换符即回落系统 OEM 代码页）。仅此路径启用，其它路径字节级零改动。
-    const smartWinUtf8 = process.platform === 'win32'
-      && (outputEncoding === 'utf-8' || outputEncoding === 'utf8');
+    const smartWinUtf8 =
+      process.platform === 'win32' && (outputEncoding === 'utf-8' || outputEncoding === 'utf8');
     const rawStdout = [];
     const rawStderr = [];
     let rawStdoutBytes = 0;
@@ -249,21 +280,35 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     };
 
     const resetIdle = () => {
-      if (settled) return;
-      if (idleTimer) clearTimeout(idleTimer);
+      if (settled) {
+        return;
+      }
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
       idleTimer = setTimeout(() => {
-        if (settled) return;
+        if (settled) {
+          return;
+        }
         settled = true;
         const interactive = detectInteractivePrompt(recentTail);
-        try { safeKill(child); } catch { /* already dead */ }
+        try {
+          safeKill(child);
+        } catch {
+          /* already dead */
+        }
         if (typeof onActivity === 'function') {
-          try { onActivity({ phase: 'idle_timeout', interactive, label }); } catch { /* non-critical */ }
+          try {
+            onActivity({ phase: 'idle_timeout', interactive, label });
+          } catch {
+            /* non-critical */
+          }
         }
         const err = interactive
           ? new Error(
-            `${label} 疑似等待交互输入（${idleMs / 1000}s 内无输出，且末尾检测到交互提示），` +
-            `已终止：当前为非交互环境，无法应答。请改用非交互参数（如 -y/--yes/--non-interactive）后重试。`
-          )
+              `${label} 疑似等待交互输入（${idleMs / 1000}s 内无输出，且末尾检测到交互提示），` +
+                `已终止：当前为非交互环境，无法应答。请改用非交互参数（如 -y/--yes/--non-interactive）后重试。`
+            )
           : new Error(`${label} 空闲超时（${idleMs / 1000}s 内无输出），已终止`);
         err.interactive = interactive;
         err.idleTimeout = true;
@@ -274,20 +319,40 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     // Start the idle clock
     resetIdle();
     if (typeof onActivity === 'function') {
-      try { onActivity({ phase: 'spawn', label }); } catch { /* non-critical */ }
+      try {
+        onActivity({ phase: 'spawn', label });
+      } catch {
+        /* non-critical */
+      }
     }
 
     const stdoutMeta = {
-      get bytes() { return stdoutBytes; },
-      set bytes(v) { stdoutBytes = v; },
-      get truncated() { return stdoutTruncated; },
-      set truncated(v) { stdoutTruncated = v; },
+      get bytes() {
+        return stdoutBytes;
+      },
+      set bytes(v) {
+        stdoutBytes = v;
+      },
+      get truncated() {
+        return stdoutTruncated;
+      },
+      set truncated(v) {
+        stdoutTruncated = v;
+      },
     };
     const stderrMeta = {
-      get bytes() { return stderrBytes; },
-      set bytes(v) { stderrBytes = v; },
-      get truncated() { return stderrTruncated; },
-      set truncated(v) { stderrTruncated = v; },
+      get bytes() {
+        return stderrBytes;
+      },
+      set bytes(v) {
+        stderrBytes = v;
+      },
+      get truncated() {
+        return stderrTruncated;
+      },
+      set truncated(v) {
+        stderrTruncated = v;
+      },
     };
 
     // Unified data handler for both streams. When a decoder is present (Windows
@@ -298,7 +363,9 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
     const makeDataHandler = (decoder, meta, getAcc, setAcc, onChunk, phase, rawSink) => (d) => {
       // smartWinUtf8: stash the untouched bytes (capped) for a trustworthy decode at
       // close; the live text below stays best-effort utf8 for streaming/idle/tail.
-      if (rawSink && Buffer.isBuffer(d)) rawSink(d);
+      if (rawSink && Buffer.isBuffer(d)) {
+        rawSink(d);
+      }
       const text = decoder ? decoder.write(d) : String(d || '');
       if (text) {
         setAcc(appendCapped(getAcc(), text, meta));
@@ -306,67 +373,125 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
       }
       resetIdle();
       if (typeof onChunk === 'function') {
-        try { onChunk(text); } catch { /* non-critical */ }
+        try {
+          onChunk(text);
+        } catch {
+          /* non-critical */
+        }
       }
       if (typeof onActivity === 'function') {
-        try { onActivity({ phase, bytes: Buffer.byteLength(text, 'utf8'), label }); } catch { /* non-critical */ }
+        try {
+          onActivity({ phase, bytes: Buffer.byteLength(text, 'utf8'), label });
+        } catch {
+          /* non-critical */
+        }
       }
     };
 
     // Raw-byte sink (smartWinUtf8 only): copy + cap to mirror the text cap, so the
     // final OEM/utf8 decision sees the same bounded byte window.
     const makeRawSink = (arr, getBytes, setBytes) => (buf) => {
-      if (!smartWinUtf8) return;
+      if (!smartWinUtf8) {
+        return;
+      }
       let chunk = buf;
       if (outputLimit) {
-        if (getBytes() >= outputLimit) return;
+        if (getBytes() >= outputLimit) {
+          return;
+        }
         const remaining = outputLimit - getBytes();
-        if (chunk.length > remaining) chunk = chunk.slice(0, remaining);
+        if (chunk.length > remaining) {
+          chunk = chunk.slice(0, remaining);
+        }
       }
       arr.push(Buffer.from(chunk)); // copy: the stream may reuse its buffer
       setBytes(getBytes() + chunk.length);
     };
 
     if (child.stdout) {
-      if (!useIconv && !smartWinUtf8) child.stdout.setEncoding('utf8');
-      child.stdout.on('data', makeDataHandler(
-        stdoutDecoder, stdoutMeta,
-        () => stdout, (v) => { stdout = v; },
-        onStdoutChunk, 'stdout',
-        makeRawSink(rawStdout, () => rawStdoutBytes, (v) => { rawStdoutBytes = v; }),
-      ));
+      if (!useIconv && !smartWinUtf8) {
+        child.stdout.setEncoding('utf8');
+      }
+      child.stdout.on(
+        'data',
+        makeDataHandler(
+          stdoutDecoder,
+          stdoutMeta,
+          () => stdout,
+          (v) => {
+            stdout = v;
+          },
+          onStdoutChunk,
+          'stdout',
+          makeRawSink(
+            rawStdout,
+            () => rawStdoutBytes,
+            (v) => {
+              rawStdoutBytes = v;
+            }
+          )
+        )
+      );
     }
 
     if (child.stderr) {
-      if (!useIconv && !smartWinUtf8) child.stderr.setEncoding('utf8');
-      child.stderr.on('data', makeDataHandler(
-        stderrDecoder, stderrMeta,
-        () => stderr, (v) => { stderr = v; },
-        onStderrChunk, 'stderr',
-        makeRawSink(rawStderr, () => rawStderrBytes, (v) => { rawStderrBytes = v; }),
-      ));
+      if (!useIconv && !smartWinUtf8) {
+        child.stderr.setEncoding('utf8');
+      }
+      child.stderr.on(
+        'data',
+        makeDataHandler(
+          stderrDecoder,
+          stderrMeta,
+          () => stderr,
+          (v) => {
+            stderr = v;
+          },
+          onStderrChunk,
+          'stderr',
+          makeRawSink(
+            rawStderr,
+            () => rawStderrBytes,
+            (v) => {
+              rawStderrBytes = v;
+            }
+          )
+        )
+      );
     }
 
     child.on('error', (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      if (idleTimer) clearTimeout(idleTimer);
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
       reject(new Error(`${label} error: ${err.message}`));
     });
 
     child.on('close', (code) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      if (idleTimer) clearTimeout(idleTimer);
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
       // Flush bytes buffered by the streaming decoders (trailing partial
       // multibyte sequences) before finalizing output.
       if (stdoutDecoder) {
         const tail = stdoutDecoder.end();
-        if (tail) stdout = appendCapped(stdout, tail, stdoutMeta);
+        if (tail) {
+          stdout = appendCapped(stdout, tail, stdoutMeta);
+        }
       }
       if (stderrDecoder) {
         const tail = stderrDecoder.end();
-        if (tail) stderr = appendCapped(stderr, tail, stderrMeta);
+        if (tail) {
+          stderr = appendCapped(stderr, tail, stderrMeta);
+        }
       }
       // smartWinUtf8: the live `stdout`/`stderr` above are best-effort utf8 (may hold
       // U+FFFD). Replace them with a trustworthy decode of the captured raw bytes
@@ -376,20 +501,37 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
         stdout = smartDecodeWinOutput(Buffer.concat(rawStdout));
         stderr = smartDecodeWinOutput(Buffer.concat(rawStderr));
         if (outputLimit) {
-          if (rawStdoutBytes >= outputLimit) stdoutTruncated = true;
-          if (rawStderrBytes >= outputLimit) stderrTruncated = true;
+          if (rawStdoutBytes >= outputLimit) {
+            stdoutTruncated = true;
+          }
+          if (rawStderrBytes >= outputLimit) {
+            stderrTruncated = true;
+          }
         }
       }
       if (typeof onActivity === 'function') {
-        try { onActivity({ phase: 'close', code, label }); } catch { /* non-critical */ }
+        try {
+          onActivity({ phase: 'close', code, label });
+        } catch {
+          /* non-critical */
+        }
       }
       if (outputLimit) {
-        if (stdoutTruncated) stdout += '\n... [stdout truncated]';
-        if (stderrTruncated) stderr += '\n... [stderr truncated]';
+        if (stdoutTruncated) {
+          stdout += '\n... [stdout truncated]';
+        }
+        if (stderrTruncated) {
+          stderr += '\n... [stderr truncated]';
+        }
       }
       resolve({ stdout, stderr, code });
     });
   });
 }
 
-module.exports = { spawnWithIdleTimeout, detectInteractivePrompt, smartDecodeWinOutput, INTERACTIVE_PROMPT_PATTERNS };
+module.exports = {
+  spawnWithIdleTimeout,
+  detectInteractivePrompt,
+  smartDecodeWinOutput,
+  INTERACTIVE_PROMPT_PATTERNS,
+};

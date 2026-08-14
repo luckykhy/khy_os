@@ -11,8 +11,9 @@
  * Auto-registered by the tools/ readdir loader (flat .js + defineTool format).
  */
 
-const { defineTool } = require('./_baseTool');
 const { analyzeBinary, compareBinaries } = require('../services/binaryAnalyzer');
+
+const { defineTool } = require('./_baseTool');
 
 module.exports = defineTool({
   name: 'analyzeBinary',
@@ -22,6 +23,7 @@ module.exports = defineTool({
     'Actions: analyze (one file), compare (two files). Read-only — never executes the binary.',
   category: 'analysis',
   risk: 'safe',
+  searchHint: 'binary executable elf pe inspect compare 二进制 可执行文件 分析',
   isReadOnly: true,
   isConcurrencySafe: true,
 

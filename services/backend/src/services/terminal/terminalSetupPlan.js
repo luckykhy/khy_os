@@ -66,19 +66,27 @@ const _falsy = require('../../utils/isOffValue');
 /** VSCode 家族(VSCode/Cursor/Windsurf)的 keybindings.json 路径(按平台推导)。 */
 function _vscodeKeybindingsPath(homedir, platformId, editorDir) {
   let userDir;
-  if (platformId === 'win32') userDir = path.join(homedir, 'AppData', 'Roaming', editorDir, 'User');
-  else if (platformId === 'darwin') userDir = path.join(homedir, 'Library', 'Application Support', editorDir, 'User');
-  else userDir = path.join(homedir, '.config', editorDir, 'User');
+  if (platformId === 'win32') {
+    userDir = path.join(homedir, 'AppData', 'Roaming', editorDir, 'User');
+  } else if (platformId === 'darwin') {
+    userDir = path.join(homedir, 'Library', 'Application Support', editorDir, 'User');
+  } else {
+    userDir = path.join(homedir, '.config', editorDir, 'User');
+  }
   return path.join(userDir, 'keybindings.json');
 }
 
 /** Alacritty 配置路径(XDG_CONFIG_HOME 优先,否则 ~/.config / %APPDATA%)。 */
 function _alacrittyConfigPath(homedir, platformId, env) {
   const xdg = env && env.XDG_CONFIG_HOME;
-  if (xdg && String(xdg).trim()) return path.join(String(xdg).trim(), 'alacritty', 'alacritty.toml');
+  if (xdg && String(xdg).trim()) {
+    return path.join(String(xdg).trim(), 'alacritty', 'alacritty.toml');
+  }
   if (platformId === 'win32') {
     const appData = env && env.APPDATA;
-    if (appData && String(appData).trim()) return path.join(String(appData).trim(), 'alacritty', 'alacritty.toml');
+    if (appData && String(appData).trim()) {
+      return path.join(String(appData).trim(), 'alacritty', 'alacritty.toml');
+    }
   }
   return path.join(homedir, '.config', 'alacritty', 'alacritty.toml');
 }
@@ -109,10 +117,12 @@ function isVSCodeRemoteSSH(env = {}) {
  * }}
  */
 function planTerminalSetup(input = {}) {
-  const name = String(input.name == null ? '' : input.name).trim().toLowerCase();
+  const name = String(input.name == null ? '' : input.name)
+    .trim()
+    .toLowerCase();
   const platformId = String(input.platform || '');
   const homedir = String(input.homedir || '');
-  const env = (input.env && typeof input.env === 'object') ? input.env : {};
+  const env = input.env && typeof input.env === 'object' ? input.env : {};
 
   const base = {
     terminal: name || 'unknown',
@@ -153,15 +163,15 @@ function planTerminalSetup(input = {}) {
       snippet: _VSCODE_SNIPPET,
       steps: base.remoteSSH
         ? [
-          `检测到疑似 ${display} Remote SSH 会话:键绑定必须装在**本地**机器,而非远端服务器。`,
-          `在本地 ${display} 打开命令面板(Cmd/Ctrl+Shift+P)→ "Preferences: Open Keyboard Shortcuts (JSON)"。`,
-          '把下面的绑定加入该 JSON 数组(文件须是合法 JSON 数组):',
-        ]
+            `检测到疑似 ${display} Remote SSH 会话:键绑定必须装在**本地**机器,而非远端服务器。`,
+            `在本地 ${display} 打开命令面板(Cmd/Ctrl+Shift+P)→ "Preferences: Open Keyboard Shortcuts (JSON)"。`,
+            '把下面的绑定加入该 JSON 数组(文件须是合法 JSON 数组):',
+          ]
         : [
-          `打开 ${display} 命令面板(Cmd/Ctrl+Shift+P)→ "Preferences: Open Keyboard Shortcuts (JSON)"。`,
-          '把下面的绑定加入该 JSON 数组(若已存在 shift+enter→sendSequence 绑定则跳过):',
-          '保存后重启集成终端即可在 khy 输入框用 Shift+Enter 换行。',
-        ],
+            `打开 ${display} 命令面板(Cmd/Ctrl+Shift+P)→ "Preferences: Open Keyboard Shortcuts (JSON)"。`,
+            '把下面的绑定加入该 JSON 数组(若已存在 shift+enter→sendSequence 绑定则跳过):',
+            '保存后重启集成终端即可在 khy 输入框用 Shift+Enter 换行。',
+          ],
     });
   }
 
@@ -171,7 +181,8 @@ function planTerminalSetup(input = {}) {
       category: 'needs-setup',
       needsSetup: true,
       method: 'apple-terminal',
-      reason: 'macOS Terminal.app 需启用「Use Option as Meta key」,Shift/Option+Enter 方能作为换行投递。',
+      reason:
+        'macOS Terminal.app 需启用「Use Option as Meta key」,Shift/Option+Enter 方能作为换行投递。',
       configPath: null, // 经偏好设置开启,非文本配置文件。
       snippet: null,
       steps: [
@@ -221,13 +232,16 @@ function planTerminalSetup(input = {}) {
     displayName: name || '未知终端',
     category: 'unknown',
     needsSetup: false,
-    reason: '未识别该终端是否需要 Shift+Enter 配置。多数现代终端原生支持;若 Shift+Enter 无法换行,请查阅终端文档配置「Shift+Enter 发送 ESC+CR(\\u001b\\r)」,或改用换行的替代键。',
+    reason:
+      '未识别该终端是否需要 Shift+Enter 配置。多数现代终端原生支持;若 Shift+Enter 无法换行,请查阅终端文档配置「Shift+Enter 发送 ESC+CR(\\u001b\\r)」,或改用换行的替代键。',
   });
 }
 
 /** 门控读取(KHY_TERMINAL_SETUP 默认开;关 → 命令不接管)。注入 env,叶子不读 process.env。 */
 function isEnabled(env = {}) {
-  return !_falsy(env && env.KHY_TERMINAL_SETUP === undefined ? 'true' : (env && env.KHY_TERMINAL_SETUP));
+  return !_falsy(
+    env && env.KHY_TERMINAL_SETUP === undefined ? 'true' : env && env.KHY_TERMINAL_SETUP
+  );
 }
 
 module.exports = {

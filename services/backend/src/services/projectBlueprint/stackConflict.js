@@ -34,11 +34,17 @@ function stackConflictEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_BLUEPRINT_STACK_CONFLICT_GUARD', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_BLUEPRINT_STACK_CONFLICT_GUARD;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -49,7 +55,11 @@ function stackConflictEnabled(env) {
  * 命中 "pgadmin"/"npg" 之外的噪声,故只收 postgres/postgresql/psql 这类专指词 + 边界受控的 "pg")。
  */
 const _DB_FAMILIES = [
-  { family: 'postgresql', display: 'PostgreSQL', words: ['postgresql', 'postgres', 'psql', 'postgre', 'pgsql'] },
+  {
+    family: 'postgresql',
+    display: 'PostgreSQL',
+    words: ['postgresql', 'postgres', 'psql', 'postgre', 'pgsql'],
+  },
   { family: 'mysql', display: 'MySQL', words: ['mysql', 'mariadb'] },
   { family: 'mongodb', display: 'MongoDB', words: ['mongodb', 'mongo'] },
   { family: 'sqlite', display: 'SQLite', words: ['sqlite'] },
@@ -67,14 +77,20 @@ const _PG_WORD_RE = /(^|[^a-z0-9])pg([^a-z0-9]|$)/i;
  * @returns {{family:string, display:string}|null}
  */
 function _classifyDb(text) {
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   const lower = String(text).toLowerCase();
   for (const fam of _DB_FAMILIES) {
     for (const w of fam.words) {
-      if (lower.includes(w)) return { family: fam.family, display: fam.display };
+      if (lower.includes(w)) {
+        return { family: fam.family, display: fam.display };
+      }
     }
   }
-  if (_PG_WORD_RE.test(lower)) return { family: 'postgresql', display: 'PostgreSQL' };
+  if (_PG_WORD_RE.test(lower)) {
+    return { family: 'postgresql', display: 'PostgreSQL' };
+  }
   return null;
 }
 
@@ -87,16 +103,24 @@ function _classifyDb(text) {
  */
 function detectStackConflict(goalText, archetype, env) {
   try {
-    if (!stackConflictEnabled(env)) return { conflict: false };
-    if (!archetype || typeof archetype !== 'object') return { conflict: false };
+    if (!stackConflictEnabled(env)) {
+      return { conflict: false };
+    }
+    if (!archetype || typeof archetype !== 'object') {
+      return { conflict: false };
+    }
 
     const persistence = archetype.stack && archetype.stack.persistence;
     const requested = _classifyDb(goalText);
     const archetypeDb = _classifyDb(persistence);
 
     // 只有「用户明确点名一个库」且「原型也声明了一个具体库」且「两者不同」才算冲突。
-    if (!requested || !archetypeDb) return { conflict: false };
-    if (requested.family === archetypeDb.family) return { conflict: false };
+    if (!requested || !archetypeDb) {
+      return { conflict: false };
+    }
+    if (requested.family === archetypeDb.family) {
+      return { conflict: false };
+    }
 
     const label = archetype.label || archetype.id || '该原型';
     const guidance =

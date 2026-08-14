@@ -1,8 +1,8 @@
 /**
  * Data management CLI handlers: quote, data fetch/list, cache clear.
  */
-const { bootstrap, muteDbLogs, restoreDbLogs } = require('../bootstrap');
-const { printQuote, printTable, printSuccess, printError, withSpinner } = require('../formatters');
+const { bootstrap, muteDbLogs, restoreDbLogs } = require('./bootstrap');
+const { printQuote, printTable, printSuccess, printError, withSpinner } = require('./formatters');
 
 async function handleQuote(symbol) {
   muteDbLogs();

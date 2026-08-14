@@ -24,10 +24,11 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { printInfo, printError, printWarn, printSuccess } = require('../formatters');
+const path = require('path');
+
 const feedbackDoc = require('../feedbackDoc');
+const { printInfo, printError, printWarn, printSuccess } = require('../formatters');
 
 /** khy 版本(fail-soft)。 */
 function _khyVersion() {
@@ -56,9 +57,15 @@ function _upstreamUrl() {
   try {
     const pkg = require('../../../package.json');
     const bugs = pkg && pkg.bugs;
-    if (typeof bugs === 'string') return bugs;
-    if (bugs && typeof bugs.url === 'string') return bugs.url;
-  } catch { /* ignore */ }
+    if (typeof bugs === 'string') {
+      return bugs;
+    }
+    if (bugs && typeof bugs.url === 'string') {
+      return bugs.url;
+    }
+  } catch {
+    /* ignore */
+  }
   return '';
 }
 

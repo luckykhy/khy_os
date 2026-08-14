@@ -72,36 +72,36 @@ function makeStoredZip(files) {
 
     const lfh = Buffer.alloc(30);
     lfh.writeUInt32LE(0x04034b50, 0); // local file header signature
-    lfh.writeUInt16LE(20, 4);          // version needed
-    lfh.writeUInt16LE(0, 6);           // flags
-    lfh.writeUInt16LE(0, 8);           // method: stored
-    lfh.writeUInt16LE(0, 10);          // mod time
-    lfh.writeUInt16LE(0, 12);          // mod date
-    lfh.writeUInt32LE(crc, 14);        // crc32
+    lfh.writeUInt16LE(20, 4); // version needed
+    lfh.writeUInt16LE(0, 6); // flags
+    lfh.writeUInt16LE(0, 8); // method: stored
+    lfh.writeUInt16LE(0, 10); // mod time
+    lfh.writeUInt16LE(0, 12); // mod date
+    lfh.writeUInt32LE(crc, 14); // crc32
     lfh.writeUInt32LE(data.length, 18); // compressed size
     lfh.writeUInt32LE(data.length, 22); // uncompressed size
     lfh.writeUInt16LE(name.length, 26); // filename length
-    lfh.writeUInt16LE(0, 28);          // extra length
+    lfh.writeUInt16LE(0, 28); // extra length
     locals.push(lfh, name, data);
 
     const cdh = Buffer.alloc(46);
-    cdh.writeUInt32LE(0x02014b50, 0);  // central dir signature
-    cdh.writeUInt16LE(20, 4);          // version made by
-    cdh.writeUInt16LE(20, 6);          // version needed
-    cdh.writeUInt16LE(0, 8);           // flags
-    cdh.writeUInt16LE(0, 10);          // method
-    cdh.writeUInt16LE(0, 12);          // mod time
-    cdh.writeUInt16LE(0, 14);          // mod date
-    cdh.writeUInt32LE(crc, 16);        // crc32
+    cdh.writeUInt32LE(0x02014b50, 0); // central dir signature
+    cdh.writeUInt16LE(20, 4); // version made by
+    cdh.writeUInt16LE(20, 6); // version needed
+    cdh.writeUInt16LE(0, 8); // flags
+    cdh.writeUInt16LE(0, 10); // method
+    cdh.writeUInt16LE(0, 12); // mod time
+    cdh.writeUInt16LE(0, 14); // mod date
+    cdh.writeUInt32LE(crc, 16); // crc32
     cdh.writeUInt32LE(data.length, 20); // compressed size
     cdh.writeUInt32LE(data.length, 24); // uncompressed size
     cdh.writeUInt16LE(name.length, 28); // filename length
-    cdh.writeUInt16LE(0, 30);          // extra length
-    cdh.writeUInt16LE(0, 32);          // comment length
-    cdh.writeUInt16LE(0, 34);          // disk number start
-    cdh.writeUInt16LE(0, 36);          // internal attrs
-    cdh.writeUInt32LE(0, 38);          // external attrs
-    cdh.writeUInt32LE(offset, 42);     // local header offset
+    cdh.writeUInt16LE(0, 30); // extra length
+    cdh.writeUInt16LE(0, 32); // comment length
+    cdh.writeUInt16LE(0, 34); // disk number start
+    cdh.writeUInt16LE(0, 36); // internal attrs
+    cdh.writeUInt32LE(0, 38); // external attrs
+    cdh.writeUInt32LE(offset, 42); // local header offset
     centrals.push(cdh, name);
 
     offset += lfh.length + name.length + data.length;
@@ -111,13 +111,13 @@ function makeStoredZip(files) {
   const centralPart = Buffer.concat(centrals);
   const eocd = Buffer.alloc(22);
   eocd.writeUInt32LE(0x06054b50, 0); // EOCD signature
-  eocd.writeUInt16LE(0, 4);          // disk number
-  eocd.writeUInt16LE(0, 6);          // disk with central dir
-  eocd.writeUInt16LE(files.length, 8);  // entries on this disk
+  eocd.writeUInt16LE(0, 4); // disk number
+  eocd.writeUInt16LE(0, 6); // disk with central dir
+  eocd.writeUInt16LE(files.length, 8); // entries on this disk
   eocd.writeUInt16LE(files.length, 10); // total entries
   eocd.writeUInt32LE(centralPart.length, 12); // central dir size
-  eocd.writeUInt32LE(localPart.length, 16);   // central dir offset
-  eocd.writeUInt16LE(0, 20);         // comment length
+  eocd.writeUInt32LE(localPart.length, 16); // central dir offset
+  eocd.writeUInt16LE(0, 20); // comment length
   return Buffer.concat([localPart, centralPart, eocd]);
 }
 
@@ -127,8 +127,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
-  try { fs.rmSync(EMPTY_CATALOG, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
+  try {
+    fs.rmSync(EMPTY_CATALOG, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('coze gallery — STORED zip writer self-check', () => {
@@ -190,7 +198,10 @@ describe('coze gallery — enumerateBuffer', () => {
 
 describe('coze gallery — session cache (bounded + TTL + ownership)', () => {
   test('enumerateToSession caches without persisting and exposes a preview catalog', async () => {
-    const out = await cozeImport.enumerateToSession({ content: tableJson.toString('utf8') }, { userId: 7 });
+    const out = await cozeImport.enumerateToSession(
+      { content: tableJson.toString('utf8') },
+      { userId: 7 }
+    );
     expect(out.sessionId).toBeTruthy();
     expect(out.total).toBe(1);
     expect(out.entries[0].index).toBe(0);
@@ -201,25 +212,38 @@ describe('coze gallery — session cache (bounded + TTL + ownership)', () => {
   });
 
   test('getSessionGraph returns the converted graph; bad index → 400', async () => {
-    const out = await cozeImport.enumerateToSession({ content: tableJson.toString('utf8') }, { userId: 7 });
+    const out = await cozeImport.enumerateToSession(
+      { content: tableJson.toString('utf8') },
+      { userId: 7 }
+    );
     const { graph, report } = cozeImport.getSessionGraph(out.sessionId, 7, 0);
     expect(graph.nodes.length).toBe(13);
     expect(report.source).toBe('coze');
-    expect(() => cozeImport.getSessionGraph(out.sessionId, 7, 5))
-      .toThrow(/Invalid entry index/);
+    expect(() => cozeImport.getSessionGraph(out.sessionId, 7, 5)).toThrow(/Invalid entry index/);
   });
 
   test('a session is not readable by a different user → 403', async () => {
-    const out = await cozeImport.enumerateToSession({ content: tableJson.toString('utf8') }, { userId: 7 });
+    const out = await cozeImport.enumerateToSession(
+      { content: tableJson.toString('utf8') },
+      { userId: 7 }
+    );
     let caught;
-    try { cozeImport.getSessionGraph(out.sessionId, 99, 0); } catch (e) { caught = e; }
+    try {
+      cozeImport.getSessionGraph(out.sessionId, 99, 0);
+    } catch (e) {
+      caught = e;
+    }
     expect(caught).toBeTruthy();
     expect(caught.statusCode).toBe(403);
   });
 
   test('unknown session → 404', () => {
     let caught;
-    try { cozeImport.getSessionGraph('deadbeefdeadbeefdeadbeef', 7, 0); } catch (e) { caught = e; }
+    try {
+      cozeImport.getSessionGraph('deadbeefdeadbeefdeadbeef', 7, 0);
+    } catch (e) {
+      caught = e;
+    }
     expect(caught).toBeTruthy();
     expect(caught.statusCode).toBe(404);
   });
@@ -229,7 +253,10 @@ describe('coze gallery — session cache (bounded + TTL + ownership)', () => {
     const ids = [];
     for (let i = 0; i < 5; i++) {
       // eslint-disable-next-line no-await-in-loop
-      const out = await cozeImport.enumerateToSession({ content: tableJson.toString('utf8') }, { userId: 1 });
+      const out = await cozeImport.enumerateToSession(
+        { content: tableJson.toString('utf8') },
+        { userId: 1 }
+      );
       ids.push(out.sessionId);
       // Force a strictly increasing createdAt so "oldest" is unambiguous.
       cozeImport._sessions.get(out.sessionId).createdAt = i;
@@ -244,7 +271,10 @@ describe('coze gallery — session cache (bounded + TTL + ownership)', () => {
 
   test('TTL sweep removes expired sessions and unlinks their temp files', async () => {
     cozeImport._sessions.clear();
-    const out = await cozeImport.enumerateToSession({ content: tableJson.toString('utf8') }, { userId: 1 });
+    const out = await cozeImport.enumerateToSession(
+      { content: tableJson.toString('utf8') },
+      { userId: 1 }
+    );
     const meta = cozeImport._sessions.get(out.sessionId);
     const filePath = meta.filePath;
     expect(fs.existsSync(filePath)).toBe(true);
@@ -274,11 +304,16 @@ describe('coze gallery — built-in catalog graceful empty', () => {
 describe('coze gallery — installCozeEntry persists a per-user workflow', () => {
   test('install by { sessionId, index } creates a row whose graph matches the preview', async () => {
     const user = await User.create({
-      username: 'gallery-bob', email: 'gallery-bob@test.local', password: 'pw-bob-123', status: 'active',
+      username: 'gallery-bob',
+      email: 'gallery-bob@test.local',
+      password: 'pw-bob-123',
+      status: 'active',
     });
     const before = await UserWorkflow.count({ where: { userId: user.id } });
 
-    const session = await workflowService.enumerateCoze(user.id, { content: tableJson.toString('utf8') });
+    const session = await workflowService.enumerateCoze(user.id, {
+      content: tableJson.toString('utf8'),
+    });
     const { graph: previewGraph } = cozeImport.getSessionGraph(session.sessionId, user.id, 0);
 
     const created = await workflowService.installCozeEntry(user.id, {
@@ -300,9 +335,14 @@ describe('coze gallery — installCozeEntry persists a per-user workflow', () =>
 
   test('install coerces a Coze name that NAME_RE would otherwise reject', async () => {
     const user = await User.create({
-      username: 'gallery-eve', email: 'gallery-eve@test.local', password: 'pw-eve-123', status: 'active',
+      username: 'gallery-eve',
+      email: 'gallery-eve@test.local',
+      password: 'pw-eve-123',
+      status: 'active',
     });
-    const session = await workflowService.enumerateCoze(user.id, { content: tableJson.toString('utf8') });
+    const session = await workflowService.enumerateCoze(user.id, {
+      content: tableJson.toString('utf8'),
+    });
     const created = await workflowService.installCozeEntry(user.id, {
       sessionId: session.sessionId,
       index: 0,

@@ -18,13 +18,14 @@
  * 纯逻辑，不做 I/O（落账本由门面负责）。
  */
 
-const evoRequirement = require('../evoEngine/evoRequirement');
 const evoLevels = require('../evoEngine/evoLevels');
+const evoRequirement = require('../evoEngine/evoRequirement');
+
 const L = require('./intentLexicon');
 
 const MISJUDGMENT_KIND = Object.freeze({
-  FALSE_TRIGGER: 'false-trigger',   // 误触：过激进
-  MISS: 'miss',                     // 漏判：过保守
+  FALSE_TRIGGER: 'false-trigger', // 误触：过激进
+  MISS: 'miss', // 漏判：过保守
 });
 
 class MisjudgmentQuencher {
@@ -35,8 +36,12 @@ class MisjudgmentQuencher {
    */
   classifySignal(text) {
     const t = String(text || '');
-    if (L._hits(t, L.FALSE_TRIGGER_SIGNALS).length) return MISJUDGMENT_KIND.FALSE_TRIGGER;
-    if (L._hits(t, L.MISS_SIGNALS).length) return MISJUDGMENT_KIND.MISS;
+    if (L._hits(t, L.FALSE_TRIGGER_SIGNALS).length) {
+      return MISJUDGMENT_KIND.FALSE_TRIGGER;
+    }
+    if (L._hits(t, L.MISS_SIGNALS).length) {
+      return MISJUDGMENT_KIND.MISS;
+    }
     return null;
   }
 
@@ -48,7 +53,9 @@ class MisjudgmentQuencher {
    */
   quench(correctionText, context = {}) {
     const kind = this.classifySignal(correctionText);
-    if (!kind) return null;
+    if (!kind) {
+      return null;
+    }
     return kind === MISJUDGMENT_KIND.FALSE_TRIGGER
       ? this._quenchFalseTrigger(correctionText, context)
       : this._quenchMiss(correctionText, context);

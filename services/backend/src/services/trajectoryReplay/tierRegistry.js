@@ -22,31 +22,68 @@ const TIER = Object.freeze({
 
 // File-mutating tools (normalized). Seeded from toolUseLoop._WRITE_TOOL_NAMES so
 // the replay FILE tier and the write-diff capture stay aligned.
-const FILE_TOOLS = Object.freeze(new Set([
-  'writefile', 'write', 'filewrite', 'filewritetool', 'createfile',
-  'editfile', 'edit', 'fileedit', 'fileedittool',
-  'multiedit', 'multiedittool',
-  'notebookedit', 'notebookedittool',
-  'fileop', 'fileoperation',
-  'applypatch', 'scaffoldfiles',
-]));
+const FILE_TOOLS = Object.freeze(
+  new Set([
+    'writefile',
+    'write',
+    'filewrite',
+    'filewritetool',
+    'createfile',
+    'editfile',
+    'edit',
+    'fileedit',
+    'fileedittool',
+    'multiedit',
+    'multiedittool',
+    'notebookedit',
+    'notebookedittool',
+    'fileop',
+    'fileoperation',
+    'applypatch',
+    'scaffoldfiles',
+  ])
+);
 
 // Shell / process-executing tools.
-const SHELL_TOOLS = Object.freeze(new Set([
-  'shellcommand', 'shell', 'bash', 'sh', 'executecommand', 'exec',
-  'runcommand', 'run', 'executecode', 'command',
-]));
+const SHELL_TOOLS = Object.freeze(
+  new Set([
+    'shellcommand',
+    'shell',
+    'bash',
+    'sh',
+    'executecommand',
+    'exec',
+    'runcommand',
+    'run',
+    'executecode',
+    'command',
+  ])
+);
 
 // Network / model-invoking tools — never deterministically reproducible.
-const NETWORK_AI_TOOLS = Object.freeze(new Set([
-  'websearch', 'webfetch', 'fetch', 'search', 'browse',
-  'agent', 'task', 'subagent', 'imagegenerate', 'webintelligence',
-]));
+const NETWORK_AI_TOOLS = Object.freeze(
+  new Set([
+    'websearch',
+    'webfetch',
+    'fetch',
+    'search',
+    'browse',
+    'agent',
+    'task',
+    'subagent',
+    'imagegenerate',
+    'webintelligence',
+  ])
+);
 
 /** Normalize a tool name: lowercase + strip whitespace/underscore/dash. */
 function normalize(name) {
-  if (name == null) return '';
-  return String(name).toLowerCase().replace(/[\s_-]/g, '');
+  if (name == null) {
+    return '';
+  }
+  return String(name)
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 /**
@@ -56,10 +93,18 @@ function normalize(name) {
  */
 function classify(name) {
   const n = normalize(name);
-  if (!n) return 'UNKNOWN';
-  if (FILE_TOOLS.has(n)) return TIER.FILE;
-  if (SHELL_TOOLS.has(n)) return TIER.SHELL;
-  if (NETWORK_AI_TOOLS.has(n)) return TIER.NETWORK_AI;
+  if (!n) {
+    return 'UNKNOWN';
+  }
+  if (FILE_TOOLS.has(n)) {
+    return TIER.FILE;
+  }
+  if (SHELL_TOOLS.has(n)) {
+    return TIER.SHELL;
+  }
+  if (NETWORK_AI_TOOLS.has(n)) {
+    return TIER.NETWORK_AI;
+  }
   return 'UNKNOWN';
 }
 

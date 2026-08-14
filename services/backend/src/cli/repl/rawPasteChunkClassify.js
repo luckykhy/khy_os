@@ -29,7 +29,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_RAW_PASTE_CHUNK_FASTPATH;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -54,7 +56,9 @@ function _countNewlinesUpTo(raw, cap = 2) {
     const ch = raw.charCodeAt(i);
     if (ch === 10 /* \n */ || ch === 13 /* \r */) {
       n++;
-      if (n >= cap) return n;
+      if (n >= cap) {
+        return n;
+      }
     }
   }
   return n;
@@ -82,7 +86,9 @@ function isPasteChunk(raw, threshold, env = process.env) {
     }
 
     // 快路径:短于阈值的 chunk 绝不可能是粘贴 → 免正则短路。
-    if (s.length < th) return false;
+    if (s.length < th) {
+      return false;
+    }
     // 仅长 chunk 才数换行(手扫,数到 2 即停)。
     return _countNewlinesUpTo(s, 2) >= 2;
   } catch {

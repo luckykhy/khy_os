@@ -10,6 +10,7 @@
  */
 
 const fs = require('fs');
+
 const { sha256Hex } = require('../sourceSnapshotCrypto');
 
 /** sha256 of a UTF-8 string. */
@@ -25,7 +26,9 @@ function hashString(s) {
 function readBytes(filePath) {
   try {
     const st = fs.statSync(filePath);
-    if (!st.isFile()) return null;
+    if (!st.isFile()) {
+      return null;
+    }
     return fs.readFileSync(filePath);
   } catch {
     return null;
@@ -35,7 +38,9 @@ function readBytes(filePath) {
 /** sha256 of a file's raw bytes; null if unreadable. */
 function hashFile(filePath) {
   const buf = readBytes(filePath);
-  if (buf == null) return null;
+  if (buf == null) {
+    return null;
+  }
   try {
     return sha256Hex(buf);
   } catch {

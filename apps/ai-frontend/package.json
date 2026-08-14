@@ -9,10 +9,12 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-md-vendor.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:node": "node --test test/**/*.test.mjs"
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "^5.0.0",
     "@vue-flow/background": "^1.3.0",
     "@vue-flow/controls": "^1.1.2",
     "@vue-flow/core": "^1.41.0",
@@ -22,15 +24,18 @@
     "axios": "^1.6.5",
     "element-plus": "^2.5.0",
     "pinia": "^2.1.7",
-    "unplugin-vue-components": "^32.1.0",
-    "vite": "^5.0.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@vitejs/plugin-vue": "^5.0.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-vue": "^9.20.0",
-    "prettier": "^3.2.0"
+    "prettier": "^3.2.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^5.0.0",
+    "vitest": "^2.0.0"
   }
 }

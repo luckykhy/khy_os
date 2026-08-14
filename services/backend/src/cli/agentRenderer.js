@@ -12,23 +12,31 @@
  * Lazy-loads chalk for fast cold start.
  */
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 // Single source of truth for the tree LAYOUT (branch glyphs, stats wording,
 // detail selection) — shared with the ink TUI (AgentTree.js) via agentTreeView.
 // This module only maps the semantic rows onto chalk colours + console.log.
+const {
+  agentToolUsesLabelOr,
+  agentTokensLabelOr,
+  agentDurationLabelOr,
+} = require('./agentStatLine');
 const { buildAgentTreeRows, buildAgentHeader } = require('./agentTreeView');
 // 汇总行三分段(tool uses · tokens · 时长)收敛到纯叶子 cli/agentStatLine.js
 // (对齐 CC AgentTool/UI.tsx;门控 KHY_CC_FORMAT 默认开,关 → legacy 字节回退)。
-const { agentToolUsesLabelOr, agentTokensLabelOr, agentDurationLabelOr } = require('./agentStatLine');
 
 // status → name colour for the classic renderer.
 function nameColorFor(status) {
   switch (status) {
-    case 'completed': return c().green;
-    case 'error': return c().red;
-    case 'running': return c().bold.white;
-    default: return c().dim;
+    case 'completed':
+      return c().green;
+    case 'error':
+      return c().red;
+    case 'running':
+      return c().bold.white;
+    default:
+      return c().dim;
   }
 }
 
@@ -44,10 +52,12 @@ function renderAgentTree(agents) {
       const statsStr = row.stats.length > 0 ? c().dim(` · ${row.stats.join(' · ')}`) : '';
       console.log(`    ${row.branch} ${nameColorFor(row.status)(row.name)}${statsStr}`);
       lines++;
-    } else if (row.kind === 'preview') { // 目录树 sub-line
+    } else if (row.kind === 'preview') {
+      // 目录树 sub-line
       console.log(`    ${row.cont}   ${c().dim(row.text)}`);
       lines++;
-    } else { // detail sub-line
+    } else {
+      // detail sub-line
       console.log(`    ${row.cont} ${c().dim(`└ ${row.text}`)}`);
       lines++;
     }
@@ -64,7 +74,9 @@ function renderAgentHeader(count, finished = false) {
   // Honour the shared header wording (agentTreeView) so the classic REPL and the
   // ink TUI announce a fan-out identically. `finished` overrides allDone for
   // callers that pass an explicit count.
-  const head = buildAgentHeader(Array.from({ length: count }, () => ({ status: finished ? 'completed' : 'running' })));
+  const head = buildAgentHeader(
+    Array.from({ length: count }, () => ({ status: finished ? 'completed' : 'running' }))
+  );
   const hint = c().dim('(ctrl+o to expand)');
   if (finished) {
     console.log(`  ${c().green(head.dot)} ${c().green(head.label)} ${hint}`);
@@ -80,7 +92,9 @@ function renderAgentHeader(count, finished = false) {
  * @returns {number} total lines rendered
  */
 function renderAgentDisplay(agents, finished = false) {
-  if (process.stdout.isTTY) return 0;
+  if (process.stdout.isTTY) {
+    return 0;
+  }
   renderAgentHeader(agents.length, finished);
   const treeLines = renderAgentTree(agents);
   return 1 + treeLines;
@@ -94,10 +108,18 @@ function renderAgentDisplay(agents, finished = false) {
  * @returns {number} new line count
  */
 function rerenderAgentDisplay(agents, previousLines, finished = false) {
-  if (process.stdout.isTTY) return 0;
+  if (process.stdout.isTTY) {
+    return 0;
+  }
   let _sw;
-  try { _sw = require('./syncOutput').syncWrite; } catch { /* ignore */ }
-  if (typeof _sw !== 'function') _sw = (fn) => fn();
+  try {
+    _sw = require('./syncOutput').syncWrite;
+  } catch {
+    /* ignore */
+  }
+  if (typeof _sw !== 'function') {
+    _sw = (fn) => fn();
+  }
   let newLines = 0;
   _sw(() => {
     if (process.stdout.isTTY && previousLines > 0) {
@@ -117,13 +139,13 @@ function renderSynthesisResult(synthesized, agents) {
   const renderer = require('./aiRenderer');
 
   // Show which agents contributed
-  const contributors = agents.filter(a => a.status === 'completed').map(a => a.name);
+  const contributors = agents.filter((a) => a.status === 'completed').map((a) => a.name);
   console.log('');
   console.log(c().dim(`  综合来源: ${contributors.join(' · ')}`));
   console.log(c().dim('  ┌──'));
 
   const rendered = renderer.renderAiResponse(synthesized);
-  rendered.split('\n').forEach(l => console.log(c().dim('  │ ') + l));
+  rendered.split('\n').forEach((l) => console.log(c().dim('  │ ') + l));
   console.log(c().dim('  └──'));
 }
 
@@ -132,21 +154,27 @@ function renderSynthesisResult(synthesized, agents) {
  * @param {Array} agents
  */
 function renderAgentSummary(agents) {
-  if (process.stdout.isTTY) return;
-  const completed = agents.filter(a => a.status === 'completed').length;
-  const failed = agents.filter(a => a.status === 'error').length;
+  if (process.stdout.isTTY) {
+    return;
+  }
+  const completed = agents.filter((a) => a.status === 'completed').length;
+  const failed = agents.filter((a) => a.status === 'error').length;
   const totalTokens = agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
   const totalToolCalls = agents.reduce((sum, a) => sum + (a.toolCalls || 0), 0);
-  const maxElapsed = Math.max(...agents.map(a => a.elapsed || 0));
+  const maxElapsed = Math.max(...agents.map((a) => a.elapsed || 0));
 
   const parts = [];
   parts.push(`${completed} completed`);
-  if (failed > 0) parts.push(`${failed} failed`);
+  if (failed > 0) {
+    parts.push(`${failed} failed`);
+  }
   if (totalToolCalls > 0) {
     parts.push(agentToolUsesLabelOr(totalToolCalls, `${totalToolCalls} tool uses`, process.env));
   }
   if (totalTokens > 0) {
-    parts.push(agentTokensLabelOr(totalTokens, `${(totalTokens / 1000).toFixed(1)}k tokens`, process.env));
+    parts.push(
+      agentTokensLabelOr(totalTokens, `${(totalTokens / 1000).toFixed(1)}k tokens`, process.env)
+    );
   }
   if (maxElapsed > 0) {
     parts.push(agentDurationLabelOr(maxElapsed, `${(maxElapsed / 1000).toFixed(1)}s`, process.env));

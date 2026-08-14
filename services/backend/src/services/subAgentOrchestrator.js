@@ -24,24 +24,24 @@ const { EventEmitter } = require('events');
 // ── Agent states ──
 
 const AGENT_STATE = {
-  CREATED:    'created',
-  RUNNING:    'running',
-  WAITING:    'waiting',
-  COMPLETED:  'completed',
-  FAILED:     'failed',
-  KILLED:     'killed',
-  TIMED_OUT:  'timed_out',
+  CREATED: 'created',
+  RUNNING: 'running',
+  WAITING: 'waiting',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  KILLED: 'killed',
+  TIMED_OUT: 'timed_out',
 };
 
 // ── Default limits ──
 
 const DEFAULTS = {
-  maxDepth: 3,              // Max nesting depth
-  maxChildren: 10,          // Max concurrent child agents
-  agentTimeoutMs: 300_000,  // 5 minutes per agent
-  maxTotalAgents: 50,       // Total agents across all depths
-  inheritContext: true,     // Whether to inherit parent context
-  inheritTools: true,       // Whether to inherit parent tools
+  maxDepth: 3, // Max nesting depth
+  maxChildren: 10, // Max concurrent child agents
+  agentTimeoutMs: 300_000, // 5 minutes per agent
+  maxTotalAgents: 50, // Total agents across all depths
+  inheritContext: true, // Whether to inherit parent context
+  inheritTools: true, // Whether to inherit parent tools
 };
 
 /**
@@ -76,7 +76,9 @@ class SubAgentOrchestrator extends EventEmitter {
     // 绝不降现值。关 → scaleFanout 原引用返回(逐字节回退今日 DEFAULTS/opts merge)。
     try {
       this._config = require('./twentyXMode').scaleFanout(this._config, opts, process.env);
-    } catch { /* twentyXMode 不可用 → 保持原 merge */ }
+    } catch {
+      /* twentyXMode 不可用 → 保持原 merge */
+    }
     this._executeFn = opts.executeFn || null;
 
     /** @type {Map<string, AgentSession>} */
@@ -109,7 +111,9 @@ class SubAgentOrchestrator extends EventEmitter {
         toolFilter: opts.toolFilter || null,
         config: opts.config,
       });
-    } catch { /* agentContext not available */ }
+    } catch {
+      /* agentContext not available */
+    }
 
     return this._spawn({
       parentId: null,
@@ -139,7 +143,9 @@ class SubAgentOrchestrator extends EventEmitter {
    */
   fork(parentId, opts = {}) {
     const parent = this._agents.get(parentId);
-    if (!parent) throw new Error(`Parent agent not found: ${parentId}`);
+    if (!parent) {
+      throw new Error(`Parent agent not found: ${parentId}`);
+    }
     if (parent.state !== AGENT_STATE.RUNNING) {
       throw new Error(`Cannot fork from agent in state: ${parent.state}`);
     }
@@ -150,7 +156,7 @@ class SubAgentOrchestrator extends EventEmitter {
     }
 
     // Children count check
-    const activeChildren = parent.childIds.filter(id => {
+    const activeChildren = parent.childIds.filter((id) => {
       const child = this._agents.get(id);
       return child && (child.state === AGENT_STATE.RUNNING || child.state === AGENT_STATE.WAITING);
     });
@@ -159,7 +165,7 @@ class SubAgentOrchestrator extends EventEmitter {
     }
 
     // Scope restriction — child cannot exceed parent
-    const childScopes = (opts.scopes || parent.scopes).filter(s => parent.scopes.includes(s));
+    const childScopes = (opts.scopes || parent.scopes).filter((s) => parent.scopes.includes(s));
 
     // Context inheritance
     const childContext = this._config.inheritContext
@@ -169,7 +175,7 @@ class SubAgentOrchestrator extends EventEmitter {
     // Tool inheritance
     const childTools = this._config.inheritTools
       ? [...new Set([...(parent.tools || []), ...(opts.tools || [])])]
-      : (opts.tools || []);
+      : opts.tools || [];
 
     // AgentContext inheritance: fork from parent if available
     let childAgentContext = null;
@@ -206,7 +212,9 @@ class SubAgentOrchestrator extends EventEmitter {
    */
   async execute(agentId) {
     const agent = this._agents.get(agentId);
-    if (!agent) throw new Error(`Agent not found: ${agentId}`);
+    if (!agent) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
     if (agent.state !== AGENT_STATE.CREATED) {
       throw new Error(`Agent already started: ${agent.state}`);
     }
@@ -219,7 +227,9 @@ class SubAgentOrchestrator extends EventEmitter {
     const timer = setTimeout(() => {
       this._timeout(agentId);
     }, this._config.agentTimeoutMs);
-    if (timer.unref) timer.unref();
+    if (timer.unref) {
+      timer.unref();
+    }
     this._timers.set(agentId, timer);
 
     try {
@@ -237,7 +247,6 @@ class SubAgentOrchestrator extends EventEmitter {
 
       this.emit('agent:completed', { agentId, name: agent.name, result });
       return { success: true, result };
-
     } catch (err) {
       this._clearTimer(agentId);
       agent.state = AGENT_STATE.FAILED;
@@ -259,7 +268,9 @@ class SubAgentOrchestrator extends EventEmitter {
     const results = new Map();
 
     const agent = this._agents.get(agentId);
-    if (!agent) throw new Error(`Agent not found: ${agentId}`);
+    if (!agent) {
+      throw new Error(`Agent not found: ${agentId}`);
+    }
 
     // Execute this agent
     const result = await this.execute(agentId);
@@ -268,7 +279,7 @@ class SubAgentOrchestrator extends EventEmitter {
     // Execute children concurrently
     if (agent.childIds.length > 0) {
       const childResults = await Promise.allSettled(
-        agent.childIds.map(id => this.executeTree(id))
+        agent.childIds.map((id) => this.executeTree(id))
       );
       for (const cr of childResults) {
         if (cr.status === 'fulfilled') {
@@ -294,7 +305,9 @@ class SubAgentOrchestrator extends EventEmitter {
    * @returns {Promise<Map<string, {status: string, result: any}>>}
    */
   async executeDependencyAware(tasks) {
-    if (!tasks || tasks.length === 0) return new Map();
+    if (!tasks || tasks.length === 0) {
+      return new Map();
+    }
 
     // Build adjacency: taskId → set of taskIds it depends on
     const deps = new Map();
@@ -314,13 +327,17 @@ class SubAgentOrchestrator extends EventEmitter {
       const ready = [];
       for (const id of remaining) {
         const taskDeps = deps.get(id);
-        const allMet = [...taskDeps].every(d => completed.has(d));
-        if (allMet) ready.push(id);
+        const allMet = [...taskDeps].every((d) => completed.has(d));
+        if (allMet) {
+          ready.push(id);
+        }
       }
 
       if (ready.length === 0) {
         // Circular dependency or missing dependency — break cycle by running all remaining
-        for (const id of remaining) ready.push(id);
+        for (const id of remaining) {
+          ready.push(id);
+        }
         remaining.clear();
       }
 
@@ -329,7 +346,9 @@ class SubAgentOrchestrator extends EventEmitter {
         remaining.delete(id);
       }
       // Mark as completed (will be updated after actual execution)
-      for (const id of ready) completed.add(id);
+      for (const id of ready) {
+        completed.add(id);
+      }
     }
 
     // Execute layer by layer
@@ -342,7 +361,7 @@ class SubAgentOrchestrator extends EventEmitter {
         }
 
         // Check if any dependency failed → skip this task
-        for (const depId of (task.dependencies || [])) {
+        for (const depId of task.dependencies || []) {
           const depResult = results.get(depId);
           if (depResult && depResult.status === 'failed') {
             return { taskId, status: 'skipped', result: { reason: `dependency ${depId} failed` } };
@@ -351,24 +370,26 @@ class SubAgentOrchestrator extends EventEmitter {
 
         // Inject predecessor results into agent context
         const predecessorContext = [];
-        for (const depId of (task.dependencies || [])) {
+        for (const depId of task.dependencies || []) {
           const depResult = results.get(depId);
           if (depResult?.result) {
             let depText;
             if (typeof depResult.result === 'string') {
               depText = depResult.result;
             } else if (depResult.result && typeof depResult.result === 'object') {
-              depText = typeof depResult.result.content === 'string'
-                ? depResult.result.content
-                : JSON.stringify(depResult.result);
+              depText =
+                typeof depResult.result.content === 'string'
+                  ? depResult.result.content
+                  : JSON.stringify(depResult.result);
             } else {
               depText = String(depResult.result ?? '');
             }
             const MAX_DEP = 4000;
             if (depText.length > MAX_DEP) {
               const cut = depText.lastIndexOf('\n', MAX_DEP);
-              depText = depText.slice(0, cut > 0 ? cut : MAX_DEP)
-                + `\n... [truncated ${depText.length - MAX_DEP} chars]`;
+              depText =
+                depText.slice(0, cut > 0 ? cut : MAX_DEP) +
+                `\n... [truncated ${depText.length - MAX_DEP} chars]`;
             }
             predecessorContext.push(`[Predecessor ${depId} result]: ${depText}`);
           }
@@ -411,7 +432,9 @@ class SubAgentOrchestrator extends EventEmitter {
    */
   kill(agentId, cascade = true) {
     const agent = this._agents.get(agentId);
-    if (!agent) return;
+    if (!agent) {
+      return;
+    }
 
     this._clearTimer(agentId);
 
@@ -441,11 +464,13 @@ class SubAgentOrchestrator extends EventEmitter {
    */
   getTree(rootId) {
     const agent = this._agents.get(rootId);
-    if (!agent) return null;
+    if (!agent) {
+      return null;
+    }
 
     return {
       ...agent,
-      children: agent.childIds.map(id => this.getTree(id)).filter(Boolean),
+      children: agent.childIds.map((id) => this.getTree(id)).filter(Boolean),
     };
   }
 
@@ -456,7 +481,9 @@ class SubAgentOrchestrator extends EventEmitter {
     const results = [];
     const _collect = (agentId) => {
       const agent = this._agents.get(agentId);
-      if (!agent) return;
+      if (!agent) {
+        return;
+      }
       if (agent.result) {
         results.push({ agentId, name: agent.name, depth: agent.depth, result: agent.result });
       }
@@ -474,8 +501,12 @@ class SubAgentOrchestrator extends EventEmitter {
   listAgents(filter) {
     const agents = [];
     for (const agent of this._agents.values()) {
-      if (filter?.state && agent.state !== filter.state) continue;
-      if (filter?.depth !== undefined && agent.depth !== filter.depth) continue;
+      if (filter?.state && agent.state !== filter.state) {
+        continue;
+      }
+      if (filter?.depth !== undefined && agent.depth !== filter.depth) {
+        continue;
+      }
       agents.push({ ...agent });
     }
     return agents;
@@ -489,7 +520,9 @@ class SubAgentOrchestrator extends EventEmitter {
     let maxDepth = 0;
     for (const agent of this._agents.values()) {
       byState[agent.state] = (byState[agent.state] || 0) + 1;
-      if (agent.depth > maxDepth) maxDepth = agent.depth;
+      if (agent.depth > maxDepth) {
+        maxDepth = agent.depth;
+      }
     }
 
     return {
@@ -509,7 +542,12 @@ class SubAgentOrchestrator extends EventEmitter {
    * Clean up completed/failed/killed agents.
    */
   cleanup() {
-    const terminal = new Set([AGENT_STATE.COMPLETED, AGENT_STATE.FAILED, AGENT_STATE.KILLED, AGENT_STATE.TIMED_OUT]);
+    const terminal = new Set([
+      AGENT_STATE.COMPLETED,
+      AGENT_STATE.FAILED,
+      AGENT_STATE.KILLED,
+      AGENT_STATE.TIMED_OUT,
+    ]);
     for (const [id, agent] of this._agents) {
       if (terminal.has(agent.state)) {
         this._agents.delete(id);
@@ -544,11 +582,14 @@ class SubAgentOrchestrator extends EventEmitter {
 
     const visit = (id, isRoot) => {
       const agent = this._agents.get(id);
-      if (!agent) return;
+      if (!agent) {
+        return;
+      }
       if (!isRoot) {
-        const durationMs = (agent.completedAt && agent.startedTs)
-          ? Math.max(0, agent.completedAt - agent.startedTs)
-          : 0;
+        const durationMs =
+          agent.completedAt && agent.startedTs
+            ? Math.max(0, agent.completedAt - agent.startedTs)
+            : 0;
         const status = agent.state;
         const executor = agent.executor || 'unknown';
         const stepType = agent.stepType || 'flexible';
@@ -556,12 +597,17 @@ class SubAgentOrchestrator extends EventEmitter {
         byStepType[stepType] = (byStepType[stepType] || 0) + 1;
         byExecutor[executor] = (byExecutor[executor] || 0) + 1;
         totalDurationMs += durationMs;
-        if (status === AGENT_STATE.COMPLETED) successCount++;
-        else if (status === AGENT_STATE.FAILED || status === AGENT_STATE.TIMED_OUT) failCount++;
+        if (status === AGENT_STATE.COMPLETED) {
+          successCount++;
+        } else if (status === AGENT_STATE.FAILED || status === AGENT_STATE.TIMED_OUT) {
+          failCount++;
+        }
 
         subtasks.push({ id, name: agent.name, executor, stepType, durationMs, status });
       }
-      for (const childId of agent.childIds) visit(childId, false);
+      for (const childId of agent.childIds) {
+        visit(childId, false);
+      }
     };
 
     visit(rootId, true);
@@ -601,9 +647,10 @@ class SubAgentOrchestrator extends EventEmitter {
       completedAt: null,
       // B1 — rollup attribution. executor = which adapter/role ran the subtask;
       // stepType = hardened | flexible | human-gate (set by the caller via opts).
-      executor: opts.executor
-        || (opts.context && (opts.context.route || opts.context.role || opts.context.adapter))
-        || 'unknown',
+      executor:
+        opts.executor ||
+        (opts.context && (opts.context.route || opts.context.role || opts.context.adapter)) ||
+        'unknown',
       stepType: opts.stepType || 'flexible',
       childIds: [],
     };
@@ -611,13 +658,20 @@ class SubAgentOrchestrator extends EventEmitter {
     this._agents.set(id, agent);
     this._totalSpawned++;
 
-    this.emit('agent:spawned', { agentId: id, name: agent.name, depth: agent.depth, parentId: agent.parentId });
+    this.emit('agent:spawned', {
+      agentId: id,
+      name: agent.name,
+      depth: agent.depth,
+      parentId: agent.parentId,
+    });
     return agent;
   }
 
   _timeout(agentId) {
     const agent = this._agents.get(agentId);
-    if (!agent) return;
+    if (!agent) {
+      return;
+    }
     if (agent.state === AGENT_STATE.RUNNING || agent.state === AGENT_STATE.WAITING) {
       agent.state = AGENT_STATE.TIMED_OUT;
       agent.error = 'Agent timed out';

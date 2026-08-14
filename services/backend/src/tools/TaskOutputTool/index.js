@@ -8,8 +8,12 @@ class TaskOutputTool extends BaseTool {
   static searchHint = 'read background task output result';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Retrieve output from a running or completed background task.
@@ -24,8 +28,18 @@ class TaskOutputTool extends BaseTool {
       type: 'object',
       properties: {
         task_id: { type: 'string', description: 'The task ID to get output from' },
-        block: { type: 'boolean', description: 'Whether to wait for completion (default true)', default: true },
-        timeout: { type: 'number', description: 'Max wait time in ms (default 30000)', default: 30000, minimum: 0, maximum: 600000 },
+        block: {
+          type: 'boolean',
+          description: 'Whether to wait for completion (default true)',
+          default: true,
+        },
+        timeout: {
+          type: 'number',
+          description: 'Max wait time in ms (default 30000)',
+          default: 30000,
+          minimum: 0,
+          maximum: 600000,
+        },
       },
       required: ['task_id'],
     };
@@ -34,7 +48,9 @@ class TaskOutputTool extends BaseTool {
   async execute(params) {
     const taskStore = require('../_taskStore');
     const task = taskStore.getTask(params.task_id);
-    if (!task) return { error: `Task ${params.task_id} not found` };
+    if (!task) {
+      return { error: `Task ${params.task_id} not found` };
+    }
 
     const block = params.block !== false;
     const idleTimeoutMs = Math.max(1000, Math.min(params.timeout || 30000, 600000));
@@ -43,15 +59,17 @@ class TaskOutputTool extends BaseTool {
       // Activity-based idle timeout: reset on output changes (Rule 3)
       let lastActivityAt = Date.now();
       let lastOutput = task.output || '';
-      while ((Date.now() - lastActivityAt) < idleTimeoutMs) {
+      while (Date.now() - lastActivityAt < idleTimeoutMs) {
         const current = taskStore.getTask(params.task_id);
-        if (!current || current.status !== 'running') break;
+        if (!current || current.status !== 'running') {
+          break;
+        }
         const currentOutput = current.output || '';
         if (currentOutput !== lastOutput) {
           lastOutput = currentOutput;
           lastActivityAt = Date.now(); // touch — new output means activity
         }
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
 
@@ -65,7 +83,9 @@ class TaskOutputTool extends BaseTool {
     };
   }
 
-  getActivityDescription(input) { return `读取任务输出：${input.task_id}`; }
+  getActivityDescription(input) {
+    return `读取任务输出：${input.task_id}`;
+  }
 }
 
 module.exports = TaskOutputTool;

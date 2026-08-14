@@ -32,6 +32,7 @@
  * (password values masked).
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
 
 const MARKER = '❯';
@@ -50,22 +51,26 @@ function FormFlow({ fields = [], title, onResolve }) {
   const answersRef = React.useRef({});
 
   const field = list[stepIdx] || null;
-  const type = field ? (field.type || 'input') : 'input';
+  const type = field ? field.type || 'input' : 'input';
   const isSelect = type === 'select';
   const isMulti = isSelect && !!field.multi;
   const isPassword = type === 'password';
-  const choices = (field && Array.isArray(field.choices)) ? field.choices : [];
+  const choices = field && Array.isArray(field.choices) ? field.choices : [];
 
   // Nothing to collect → resolve immediately so the caller is not left hanging.
   React.useEffect(() => {
-    if (list.length === 0) onResolve({});
+    if (list.length === 0) {
+      onResolve({});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.length]);
 
   // Reset the transient editing state whenever we move to a new field, seeding
   // text fields with any default value and multi-select with its default set.
   React.useEffect(() => {
-    if (!field) return;
+    if (!field) {
+      return;
+    }
     setValue(field.defaultValue != null ? String(field.defaultValue) : '');
     setCursor(0);
     setError('');
@@ -82,7 +87,9 @@ function FormFlow({ fields = [], title, onResolve }) {
   const cancel = () => onResolve(null);
 
   const commit = (rawValue) => {
-    if (!field) return;
+    if (!field) {
+      return;
+    }
     const validate = typeof field.validate === 'function' ? field.validate : null;
     if (validate) {
       const verdict = validate(rawValue, answersRef.current);
@@ -100,17 +107,40 @@ function FormFlow({ fields = [], title, onResolve }) {
   };
 
   const moveCursor = (dir) => {
-    if (choices.length === 0) return;
+    if (choices.length === 0) {
+      return;
+    }
     setCursor((c) => (c + dir + choices.length) % choices.length);
   };
 
   useInput((ch, key) => {
-    if (!field) return;
-    if (key.escape) { cancel(); return; }
+    if (!field) {
+      return;
+    }
+    // Mouse-button layer: consume SGR mouse sequences so they are never inserted
+    // into the text/password field (App's top useInput dispatches them).
+    try {
+      const _mouse = require('../mouseButtons');
+      if (_mouse && typeof _mouse.isMouseSequence === 'function' && _mouse.isMouseSequence(ch)) {
+        return;
+      }
+    } catch {
+      /* mouseButtons unavailable — skip guard */
+    }
+    if (key.escape) {
+      cancel();
+      return;
+    }
 
     if (isSelect) {
-      if (key.upArrow) { moveCursor(-1); return; }
-      if (key.downArrow || key.tab) { moveCursor(1); return; }
+      if (key.upArrow) {
+        moveCursor(-1);
+        return;
+      }
+      if (key.downArrow || key.tab) {
+        moveCursor(1);
+        return;
+      }
       // 全角(CJK IME)数字/空格折半角后判定(单一真源 cli/fullWidthInput.js,门控关→原样字节回退)。
       const _fw = require('../../fullWidthInput');
       const navCh = _fw.foldDigits(ch, process.env);
@@ -118,16 +148,28 @@ function FormFlow({ fields = [], title, onResolve }) {
         // Space (or a digit) toggles the row under the cursor; Enter commits the
         // collected value array (inquirer checkbox semantics).
         const toggle = (idx) => {
-          if (idx < 0 || idx >= choices.length) return;
+          if (idx < 0 || idx >= choices.length) {
+            return;
+          }
           setChecked((cur) => {
             const next = new Set(cur);
             const v = choices[idx].value;
-            if (next.has(v)) next.delete(v); else next.add(v);
+            if (next.has(v)) {
+              next.delete(v);
+            } else {
+              next.add(v);
+            }
             return next;
           });
         };
-        if (_fw.foldSpace(ch, process.env) === ' ') { toggle(cursor); return; }
-        if (navCh && navCh >= '1' && navCh <= '9') { toggle(parseInt(navCh, 10) - 1); return; }
+        if (_fw.foldSpace(ch, process.env) === ' ') {
+          toggle(cursor);
+          return;
+        }
+        if (navCh && navCh >= '1' && navCh <= '9') {
+          toggle(parseInt(navCh, 10) - 1);
+          return;
+        }
         if (key.return) {
           // Preserve choice order in the committed array.
           commit(choices.filter((c) => checked.has(c.value)).map((c) => c.value));
@@ -137,24 +179,38 @@ function FormFlow({ fields = [], title, onResolve }) {
       }
       if (navCh && navCh >= '1' && navCh <= '9') {
         const idx = parseInt(navCh, 10) - 1;
-        if (idx >= 0 && idx < choices.length) commit(choices[idx].value);
+        if (idx >= 0 && idx < choices.length) {
+          commit(choices[idx].value);
+        }
         return;
       }
       if (key.return) {
         const picked = choices[cursor];
-        if (picked) commit(picked.value);
+        if (picked) {
+          commit(picked.value);
+        }
         return;
       }
       return;
     }
 
     // Text / password field editing.
-    if (key.return) { commit(value); return; }
-    if (key.backspace || key.delete) { setValue((v) => v.slice(0, -1)); return; }
-    if (ch && !key.ctrl && !key.meta) { setValue((v) => v + ch); }
+    if (key.return) {
+      commit(value);
+      return;
+    }
+    if (key.backspace || key.delete) {
+      setValue((v) => v.slice(0, -1));
+      return;
+    }
+    if (ch && !key.ctrl && !key.meta) {
+      setValue((v) => v + ch);
+    }
   });
 
-  if (!field) return null;
+  if (!field) {
+    return null;
+  }
 
   // Recap of already-answered fields (passwords masked).
   const recap = [];
@@ -186,8 +242,11 @@ function FormFlow({ fields = [], title, onResolve }) {
     const rows = choices.map((c, i) => {
       const active = i === cursor;
       const box = isMulti ? (checked.has(c.value) ? '[x] ' : '[ ] ') : '';
-      return h(Text, { key: `c-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${active ? MARKER : ' '} ${box}${i + 1}. ${c.name}`);
+      return h(
+        Text,
+        { key: `c-${i}`, color: active ? 'cyan' : undefined, bold: active },
+        `   ${active ? MARKER : ' '} ${box}${i + 1}. ${c.name}`
+      );
     });
     body = h(Box, { flexDirection: 'column' }, rows);
   } else {
@@ -196,13 +255,19 @@ function FormFlow({ fields = [], title, onResolve }) {
   }
 
   let footer;
-  if (isMulti) footer = 'Space 选中/取消 · ↑/↓ 导航 · 数字键切换 · Enter 提交 · Esc 取消';
-  else if (isSelect) footer = 'Enter 选择 · ↑/↓ 导航 · 数字键快选 · Esc 取消';
-  else footer = 'Enter 确认 · Backspace 删除 · Esc 取消';
+  if (isMulti) {
+    footer = 'Space 选中/取消 · ↑/↓ 导航 · 数字键切换 · Enter 提交 · Esc 取消';
+  } else if (isSelect) {
+    footer = 'Enter 选择 · ↑/↓ 导航 · 数字键快选 · Esc 取消';
+  } else {
+    footer = 'Enter 确认 · Backspace 删除 · Esc 取消';
+  }
 
   const progress = list.length > 1 ? `（${stepIdx + 1}/${list.length}）` : '';
 
-  return h(Box, { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
+  return h(
+    Box,
+    { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
     title ? h(Text, { color: 'cyan', bold: true }, `${title} ${progress}`) : null,
     recap.length ? h(Box, { flexDirection: 'column' }, recap) : null,
     h(Text, { color: 'yellow', bold: true }, `? ${field.label}`),

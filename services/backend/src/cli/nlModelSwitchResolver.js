@@ -25,39 +25,54 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_NL_MODEL_SWITCH 默认开,仅 {0,false,off,no} 关。env 由调用方注入。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_NL_MODEL_SWITCH;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 // ── 切换动作词(中英)────────────────────────────────────────────────────────
 // 刻意收窄到「切换/更换/使用」语义;不含 add/remove/list,避免与供应商配置(nlProvider)重叠。
-const _SWITCH_RE = /(切换|切到|换成|换为|改用|改成|改为|换到|换用|用一下|使用|\bswitch\b|\bchange\b|\buse\b|\bswitch\s*to\b)/i;
+const _SWITCH_RE =
+  /(切换|切到|换成|换为|改用|改成|改为|换到|换用|用一下|使用|\bswitch\b|\bchange\b|\buse\b|\bswitch\s*to\b)/i;
 
 // ── 模型域引用(必须出现,收窄误判)──────────────────────────────────────────
 const _MODEL_DOMAIN_RE = /(模型|\bmodel\b)/i;
 
 // 模型 ID:「模型/model」后紧跟的一段标识符(允许 . : / -),或句中直接出现的具体模型 ID。
 // 分隔词含中文语气助词(到/至/成)与英文 to,覆盖「切换模型到 deepseek-reasoner」这类语序。
-const _MODEL_AFTER_RE = /(?:模型|\bmodel\b)\s*(?:为|是|=|:|：|id|to|到|至|成)?\s*([A-Za-z][A-Za-z0-9._:/-]{1,60})/i;
+const _MODEL_AFTER_RE =
+  /(?:模型|\bmodel\b)\s*(?:为|是|=|:|：|id|to|到|至|成)?\s*([A-Za-z][A-Za-z0-9._:/-]{1,60})/i;
 
 // 内置厂商 CJK / 常见别名 → poolKey(与 nlProviderResolver 的 _CJK_VENDOR_ALIASES 同值;零 IO 常量)。
 // 加上 ASCII 直名(deepseek/openai/...),便于英文/直接写 poolKey 的输入。按别名长度降序匹配
 // (先长后短:通义千问 先于 通义;deepseek 先于 无冲突短名),避免子串误命中。
 const _VENDOR_ALIASES = [
-  ['通义千问', 'qwen'], ['通义', 'qwen'], ['千问', 'qwen'],
-  ['智谱清言', 'glm'], ['智谱', 'glm'],
+  ['通义千问', 'qwen'],
+  ['通义', 'qwen'],
+  ['千问', 'qwen'],
+  ['智谱清言', 'glm'],
+  ['智谱', 'glm'],
   ['豆包', 'doubao'],
-  ['百度文心', 'wenxin'], ['文心', 'wenxin'], ['百度', 'wenxin'],
+  ['百度文心', 'wenxin'],
+  ['文心', 'wenxin'],
+  ['百度', 'wenxin'],
   ['深度求索', 'deepseek'],
   ['中转', 'relay'],
   // ASCII 直名 / 常见品牌串 → poolKey。
   ['deepseek', 'deepseek'],
-  ['qwen', 'qwen'], ['tongyi', 'qwen'],
-  ['glm', 'glm'], ['zhipu', 'glm'], ['chatglm', 'glm'],
+  ['qwen', 'qwen'],
+  ['tongyi', 'qwen'],
+  ['glm', 'glm'],
+  ['zhipu', 'glm'],
+  ['chatglm', 'glm'],
   ['doubao', 'doubao'],
-  ['wenxin', 'wenxin'], ['ernie', 'wenxin'],
-  ['openai', 'openai'], ['gpt', 'openai'],
-  ['anthropic', 'anthropic'], ['claude', 'anthropic'],
+  ['wenxin', 'wenxin'],
+  ['ernie', 'wenxin'],
+  ['openai', 'openai'],
+  ['gpt', 'openai'],
+  ['anthropic', 'anthropic'],
+  ['claude', 'anthropic'],
   ['trae', 'trae'],
   ['relay', 'relay'],
 ].sort((a, b) => b[0].length - a[0].length);
@@ -99,15 +114,25 @@ function _firstGroup(re, text) {
  */
 function resolve(text, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const t = String(text == null ? '' : text).trim();
-    if (!t || t.length > 500) return null;
+    if (!t || t.length > 500) {
+      return null;
+    }
 
     // 三重同现闸门:切换动作词 + 模型域词 + 已知厂商,缺一不接管。
-    if (!_SWITCH_RE.test(t)) return null;
-    if (!_MODEL_DOMAIN_RE.test(t)) return null;
+    if (!_SWITCH_RE.test(t)) {
+      return null;
+    }
+    if (!_MODEL_DOMAIN_RE.test(t)) {
+      return null;
+    }
     const vendor = _extractVendor(t);
-    if (!vendor) return null;
+    if (!vendor) {
+      return null;
+    }
 
     // 具体模型 ID:优先「模型/model 后的标识符」;否则不强求(留 '' → 交给选择器)。
     // 仅当抽出的 model 串本身就带厂商特征(含 '-' 的多段标识符)才当作模型提示,避免把
@@ -125,11 +150,17 @@ function resolve(text, env = process.env) {
 
 /** vendor 的已知别名 token 集合(小写),用于宽松匹配 model/adapter 命名。零 IO。 */
 function _vendorTokens(vendor) {
-  const v = String(vendor == null ? '' : vendor).trim().toLowerCase();
-  if (!v) return [];
+  const v = String(vendor == null ? '' : vendor)
+    .trim()
+    .toLowerCase();
+  if (!v) {
+    return [];
+  }
   const tokens = new Set([v]);
   for (const [alias, poolKey] of _VENDOR_ALIASES) {
-    if (poolKey === v) tokens.add(String(alias).toLowerCase());
+    if (poolKey === v) {
+      tokens.add(String(alias).toLowerCase());
+    }
   }
   // 仅保留 ASCII token(用于匹配 model/adapter 命名;CJK 别名不会出现在 model id 里)。
   return Array.from(tokens).filter((x) => /^[a-z0-9_-]+$/.test(x));
@@ -148,18 +179,30 @@ function _vendorTokens(vendor) {
  */
 function filterModelChoices(choices, vendor, modelHint) {
   try {
-    if (!Array.isArray(choices) || choices.length === 0) return [];
+    if (!Array.isArray(choices) || choices.length === 0) {
+      return [];
+    }
     const tokens = _vendorTokens(vendor);
-    if (tokens.length === 0) return [];
+    if (tokens.length === 0) {
+      return [];
+    }
     const matched = choices.filter((c) => {
-      if (!c || !c.value) return false;
+      if (!c || !c.value) {
+        return false;
+      }
       const adapter = String(c.value.adapter == null ? '' : c.value.adapter).toLowerCase();
       const model = String(c.value.model == null ? '' : c.value.model).toLowerCase();
-      if (adapter === String(vendor).toLowerCase()) return true;
+      if (adapter === String(vendor).toLowerCase()) {
+        return true;
+      }
       return tokens.some((tk) => adapter.includes(tk) || model.includes(tk));
     });
-    const hint = String(modelHint == null ? '' : modelHint).trim().toLowerCase();
-    if (!hint) return matched;
+    const hint = String(modelHint == null ? '' : modelHint)
+      .trim()
+      .toLowerCase();
+    if (!hint) {
+      return matched;
+    }
     // 精确匹配的排前(不剔除其它,便于同名不同供应商仍可选)。
     return matched.slice().sort((a, b) => {
       const am = String(a.value.model == null ? '' : a.value.model).toLowerCase() === hint ? 0 : 1;
@@ -181,11 +224,19 @@ function filterModelChoices(choices, vendor, modelHint) {
  */
 function resolveDirectPick(filtered, modelHint) {
   try {
-    const hint = String(modelHint == null ? '' : modelHint).trim().toLowerCase();
-    if (!hint || !Array.isArray(filtered)) return null;
-    const exact = filtered.filter((c) =>
-      c && c.value && !c.disabled
-      && String(c.value.model == null ? '' : c.value.model).toLowerCase() === hint);
+    const hint = String(modelHint == null ? '' : modelHint)
+      .trim()
+      .toLowerCase();
+    if (!hint || !Array.isArray(filtered)) {
+      return null;
+    }
+    const exact = filtered.filter(
+      (c) =>
+        c &&
+        c.value &&
+        !c.disabled &&
+        String(c.value.model == null ? '' : c.value.model).toLowerCase() === hint
+    );
     return exact.length === 1 ? exact[0].value : null;
   } catch {
     return null;

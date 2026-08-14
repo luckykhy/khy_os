@@ -15,6 +15,7 @@
  */
 
 const { execFileSync } = require('child_process');
+
 const registry = require('./backendRegistry');
 
 let _searchExecutable = null;
@@ -52,12 +53,16 @@ function _selectBackend(platform, kind, deps) {
   for (const b of backends) {
     const path = which(b.probe);
     if (!path) {
-      if (b.optionalDep) installHints.push({ backend: b.id, ...b.optionalDep });
+      if (b.optionalDep) {
+        installHints.push({ backend: b.id, ...b.optionalDep });
+      }
       continue;
     }
     // 深探：声明 importProbe 的后端需运行期 import 成功。
     if (b.importProbe && !importRun(b.importProbe)) {
-      if (b.optionalDep) installHints.push({ backend: b.id, ...b.optionalDep });
+      if (b.optionalDep) {
+        installHints.push({ backend: b.id, ...b.optionalDep });
+      }
       continue;
     }
     return { available: true, backend: b.id, candidates, installHints };
@@ -77,7 +82,9 @@ function resolveBackend(platform, kind, backendId) {
  */
 function detect(deps = {}) {
   const platform = deps.platform || registry.PLATFORM;
-  if (_cache && !deps.force && !deps.which && !deps.platform) return _cache;
+  if (_cache && !deps.force && !deps.which && !deps.platform) {
+    return _cache;
+  }
 
   const eyes = _selectBackend(platform, 'capture', deps);
   const hands = _selectBackend(platform, 'input', deps);
@@ -85,7 +92,10 @@ function detect(deps = {}) {
   const perception = _selectBackend(platform, 'inspect', deps);
 
   // 嘴/耳复用 voiceService 的能力探测（可注入）。
-  let voice = { tts: { available: false, provider: null }, stt: { available: false, provider: null } };
+  let voice = {
+    tts: { available: false, provider: null },
+    stt: { available: false, provider: null },
+  };
   try {
     // voiceService.getCapabilities() → { tts, stt, platform }，tts/stt 为 provider 串或 null/false。
     const caps = deps.voiceCaps || require('../voiceService').getCapabilities();
@@ -93,7 +103,9 @@ function detect(deps = {}) {
       tts: { available: !!(caps && caps.tts), provider: (caps && caps.tts) || null },
       stt: { available: !!(caps && caps.stt), provider: (caps && caps.stt) || null },
     };
-  } catch { /* voiceService 不可用时保持默认 false */ }
+  } catch {
+    /* voiceService 不可用时保持默认 false */
+  }
 
   const result = {
     platform,
@@ -110,11 +122,16 @@ function detect(deps = {}) {
     },
   };
 
-  if (!deps.which && !deps.platform) _cache = result;
+  if (!deps.which && !deps.platform) {
+    _cache = result;
+  }
   return result;
 }
 
-function reset() { _cache = null; _searchExecutable = null; }
+function reset() {
+  _cache = null;
+  _searchExecutable = null;
+}
 
 module.exports = {
   detect,

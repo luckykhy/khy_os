@@ -12,18 +12,29 @@
  * forwards to the 7-stage generator instead (handled by the CLI layer).
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { execFileSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const gen = require('./cliAnythingGenerator');
 
-const PROXY_DIR = path.join(os.homedir(), '.khy', 'khyanything');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const PROXY_DIR = path.join(_dataHome(), 'khyanything');
 const PROXIES_FILE = path.join(PROXY_DIR, 'proxies.json');
 
 function _ensureDir() {
-  if (!fs.existsSync(PROXY_DIR)) fs.mkdirSync(PROXY_DIR, { recursive: true });
+  if (!fs.existsSync(PROXY_DIR)) {
+    fs.mkdirSync(PROXY_DIR, { recursive: true });
+  }
 }
 
 function _readProxies() {
@@ -41,9 +52,13 @@ function _writeProxies(list) {
 }
 
 function _kebab(s) {
-  return String(s || '').trim().toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'project';
+  return (
+    String(s || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'project'
+  );
 }
 
 // ── Command detection (build a runnable whitelist) ───────────────────────────
@@ -63,7 +78,9 @@ function _detectNpmCommands(dir) {
         out.push({ command: _kebab(k), kind: 'node-bin', file: v });
       }
     }
-  } catch { /* no/invalid package.json */ }
+  } catch {
+    /* no/invalid package.json */
+  }
   return out;
 }
 
@@ -76,11 +93,15 @@ function _detectMakeTargets(dir) {
     let m;
     while ((m = re.exec(mk))) {
       const t = m[1];
-      if (t === '.PHONY' || seen.has(t)) continue;
+      if (t === '.PHONY' || seen.has(t)) {
+        continue;
+      }
       seen.add(t);
       out.push({ command: _kebab(t), kind: 'make', target: t });
     }
-  } catch { /* no Makefile */ }
+  } catch {
+    /* no Makefile */
+  }
   return out;
 }
 
@@ -96,15 +117,23 @@ function _detectPythonCommands(dir, entryPoints) {
 
 function _buildRunSpec(dir, info) {
   const collected = [];
-  if (fs.existsSync(path.join(dir, 'package.json'))) collected.push(..._detectNpmCommands(dir));
-  if (fs.existsSync(path.join(dir, 'Makefile'))) collected.push(..._detectMakeTargets(dir));
-  if (info.language === 'python') collected.push(..._detectPythonCommands(dir, info.entryPoints));
+  if (fs.existsSync(path.join(dir, 'package.json'))) {
+    collected.push(..._detectNpmCommands(dir));
+  }
+  if (fs.existsSync(path.join(dir, 'Makefile'))) {
+    collected.push(..._detectMakeTargets(dir));
+  }
+  if (info.language === 'python') {
+    collected.push(..._detectPythonCommands(dir, info.entryPoints));
+  }
 
   // Dedup by command name (first wins).
   const seen = new Set();
   const commands = [];
   for (const c of collected) {
-    if (seen.has(c.command)) continue;
+    if (seen.has(c.command)) {
+      continue;
+    }
     seen.add(c.command);
     commands.push(c);
   }
@@ -150,7 +179,7 @@ function addProxy(projectPath, opts = {}) {
     addedAt: new Date().toISOString(),
   };
 
-  const list = _readProxies().filter(p => p.name !== name);
+  const list = _readProxies().filter((p) => p.name !== name);
   list.push(proxy);
   _writeProxies(list);
 
@@ -163,7 +192,7 @@ function addProxy(projectPath, opts = {}) {
     language: info.language,
     buildSystem: info.buildSystem,
     entryPoints: info.entryPoints,
-    commands: runSpec.commands.map(c => c.command),
+    commands: runSpec.commands.map((c) => c.command),
     registered,
   };
 }
@@ -174,11 +203,17 @@ function listProxies() {
 
 function removeProxy(name) {
   const list = _readProxies();
-  const idx = list.findIndex(p => p.name === name);
-  if (idx < 0) return { success: false, error: `代理未找到: ${name}` };
+  const idx = list.findIndex((p) => p.name === name);
+  if (idx < 0) {
+    return { success: false, error: `代理未找到: ${name}` };
+  }
   list.splice(idx, 1);
   _writeProxies(list);
-  try { require('./appRegistry').unregister(`khyanything-${name}`); } catch { /* ok */ }
+  try {
+    require('./appRegistry').unregister(`khyanything-${name}`);
+  } catch {
+    /* ok */
+  }
   return { success: true, name };
 }
 
@@ -187,12 +222,14 @@ function removeProxy(name) {
  * Returns the same shape as cliAnythingService.invokeCommand.
  */
 function invokeProxy(name, command, args = [], opts = {}) {
-  const proxy = _readProxies().find(p => p.name === name);
-  if (!proxy) return { success: false, error: `代理未找到: ${name}` };
+  const proxy = _readProxies().find((p) => p.name === name);
+  if (!proxy) {
+    return { success: false, error: `代理未找到: ${name}` };
+  }
 
-  const spec = proxy.runSpec.commands.find(c => c.command === command);
+  const spec = proxy.runSpec.commands.find((c) => c.command === command);
   if (!spec) {
-    const avail = proxy.runSpec.commands.map(c => c.command).join(', ');
+    const avail = proxy.runSpec.commands.map((c) => c.command).join(', ');
     return { success: false, error: `命令 "${command}" 不在白名单。可用: ${avail}` };
   }
 
@@ -259,7 +296,7 @@ function _registerProxyArtifacts(proxy) {
       entry: proxy.path,
       runtime: 'external',
       source: 'khyanything',
-      commands: proxy.runSpec.commands.map(c => `khy-${proxy.name}-${c.command}`),
+      commands: proxy.runSpec.commands.map((c) => `khy-${proxy.name}-${c.command}`),
     });
     res.app = true;
   } catch (e) {
@@ -280,7 +317,7 @@ function _registerProxyArtifacts(proxy) {
 }
 
 function _buildProxyToolDef(proxy) {
-  const cmdList = proxy.runSpec.commands.map(c => c.command).join(', ');
+  const cmdList = proxy.runSpec.commands.map((c) => c.command).join(', ');
   return {
     name: `khyanything__${proxy.name}`,
     description: `Proxy to local project "${proxy.name}" (${proxy.language}/${proxy.buildSystem}). Available commands: ${cmdList}`,

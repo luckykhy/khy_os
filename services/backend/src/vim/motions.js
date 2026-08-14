@@ -22,20 +22,30 @@ function isBigWordChar(ch) {
 
 function findWordEnd(line, pos, bigWord) {
   const len = line.length;
-  if (pos >= len - 1) return len - 1;
+  if (pos >= len - 1) {
+    return len - 1;
+  }
 
   let p = pos + 1;
   // Skip whitespace
-  while (p < len && isWhitespace(line[p])) p++;
-  if (p >= len) return len - 1;
+  while (p < len && isWhitespace(line[p])) {
+    p++;
+  }
+  if (p >= len) {
+    return len - 1;
+  }
 
   if (bigWord) {
-    while (p < len - 1 && isBigWordChar(line[p + 1])) p++;
+    while (p < len - 1 && isBigWordChar(line[p + 1])) {
+      p++;
+    }
   } else {
     const startIsWord = isWordChar(line[p]);
     while (p < len - 1) {
       const nextIsWord = isWordChar(line[p + 1]);
-      if (startIsWord !== nextIsWord || isWhitespace(line[p + 1])) break;
+      if (startIsWord !== nextIsWord || isWhitespace(line[p + 1])) {
+        break;
+      }
       p++;
     }
   }
@@ -44,41 +54,61 @@ function findWordEnd(line, pos, bigWord) {
 
 function findNextWord(line, pos, bigWord) {
   const len = line.length;
-  if (pos >= len - 1) return len - 1;
+  if (pos >= len - 1) {
+    return len - 1;
+  }
 
   let p = pos;
   if (bigWord) {
     // Skip current WORD
-    while (p < len && isBigWordChar(line[p])) p++;
+    while (p < len && isBigWordChar(line[p])) {
+      p++;
+    }
     // Skip whitespace
-    while (p < len && isWhitespace(line[p])) p++;
+    while (p < len && isWhitespace(line[p])) {
+      p++;
+    }
   } else {
     const startIsWord = isWordChar(line[p]);
     if (isWhitespace(line[p])) {
       // Currently on whitespace — skip it
-      while (p < len && isWhitespace(line[p])) p++;
+      while (p < len && isWhitespace(line[p])) {
+        p++;
+      }
     } else {
       // Skip current word class
-      while (p < len && !isWhitespace(line[p]) && isWordChar(line[p]) === startIsWord) p++;
+      while (p < len && !isWhitespace(line[p]) && isWordChar(line[p]) === startIsWord) {
+        p++;
+      }
       // Skip whitespace after word
-      while (p < len && isWhitespace(line[p])) p++;
+      while (p < len && isWhitespace(line[p])) {
+        p++;
+      }
     }
   }
   return Math.min(p, len - 1);
 }
 
 function findPrevWord(line, pos, bigWord) {
-  if (pos <= 0) return 0;
+  if (pos <= 0) {
+    return 0;
+  }
 
   let p = pos - 1;
   // Skip whitespace backwards
-  while (p > 0 && isWhitespace(line[p])) p--;
+  while (p > 0 && isWhitespace(line[p])) {
+    p--;
+  }
 
   if (bigWord) {
-    while (p > 0 && isBigWordChar(line[p - 1])) p--;
+    while (p > 0 && isBigWordChar(line[p - 1])) {
+      p--;
+    }
   } else {
     const endIsWord = isWordChar(line[p]);
-    while (p > 0 && !isWhitespace(line[p - 1]) && isWordChar(line[p - 1]) === endIsWord) p--;
+    while (p > 0 && !isWhitespace(line[p - 1]) && isWordChar(line[p - 1]) === endIsWord) {
+      p--;
+    }
   }
   return p;
 }
@@ -99,7 +129,9 @@ function findCharBackward(line, pos, ch) {
 
 function firstNonBlank(line) {
   for (let i = 0; i < line.length; i++) {
-    if (!isWhitespace(line[i])) return i;
+    if (!isWhitespace(line[i])) {
+      return i;
+    }
   }
   return 0;
 }
@@ -118,9 +150,19 @@ function firstNonBlank(line) {
  * @param {object|null} lastFind - { direction, char } from persistent state for ;/,
  * @returns {{ start: number, end: number, inclusive: boolean }|null}
  */
-function resolveMotion(key, line, cursor, count = 1, findChar = null, findDirection = null, lastFind = null) {
+function resolveMotion(
+  key,
+  line,
+  cursor,
+  count = 1,
+  findChar = null,
+  findDirection = null,
+  lastFind = null
+) {
   const len = line.length;
-  if (len === 0) return null;
+  if (len === 0) {
+    return null;
+  }
 
   const start = cursor;
   let end = cursor;
@@ -138,37 +180,49 @@ function resolveMotion(key, line, cursor, count = 1, findChar = null, findDirect
     // ── Word motions ──
     case 'w': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findNextWord(line, p, false);
+      for (let i = 0; i < count; i++) {
+        p = findNextWord(line, p, false);
+      }
       return { start, end: p, inclusive: false };
     }
 
     case 'W': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findNextWord(line, p, true);
+      for (let i = 0; i < count; i++) {
+        p = findNextWord(line, p, true);
+      }
       return { start, end: p, inclusive: false };
     }
 
     case 'b': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findPrevWord(line, p, false);
+      for (let i = 0; i < count; i++) {
+        p = findPrevWord(line, p, false);
+      }
       return { start: p, end: start, inclusive: false };
     }
 
     case 'B': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findPrevWord(line, p, true);
+      for (let i = 0; i < count; i++) {
+        p = findPrevWord(line, p, true);
+      }
       return { start: p, end: start, inclusive: false };
     }
 
     case 'e': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findWordEnd(line, p, false);
+      for (let i = 0; i < count; i++) {
+        p = findWordEnd(line, p, false);
+      }
       return { start, end: p, inclusive: true };
     }
 
     case 'E': {
       let p = cursor;
-      for (let i = 0; i < count; i++) p = findWordEnd(line, p, true);
+      for (let i = 0; i < count; i++) {
+        p = findWordEnd(line, p, true);
+      }
       return { start, end: p, inclusive: true };
     }
 
@@ -190,7 +244,9 @@ function resolveMotion(key, line, cursor, count = 1, findChar = null, findDirect
     case 'T': {
       const dir = findDirection || key;
       const ch = findChar;
-      if (!ch) return null;
+      if (!ch) {
+        return null;
+      }
 
       let target = -1;
       for (let i = 0; i < count; i++) {
@@ -200,12 +256,18 @@ function resolveMotion(key, line, cursor, count = 1, findChar = null, findDirect
         } else {
           target = findCharBackward(line, i === 0 ? cursor : target, ch);
         }
-        if (target < 0) return null;
+        if (target < 0) {
+          return null;
+        }
       }
 
       // t/T stop one short
-      if (dir === 't' && target > cursor) target--;
-      if (dir === 'T' && target < cursor) target++;
+      if (dir === 't' && target > cursor) {
+        target--;
+      }
+      if (dir === 'T' && target < cursor) {
+        target++;
+      }
 
       return {
         start: Math.min(start, target),
@@ -217,7 +279,9 @@ function resolveMotion(key, line, cursor, count = 1, findChar = null, findDirect
     // ── Repeat find ──
     case ';':
     case ',': {
-      if (!lastFind) return null;
+      if (!lastFind) {
+        return null;
+      }
       let dir = lastFind.direction;
       if (key === ',') {
         // Reverse direction

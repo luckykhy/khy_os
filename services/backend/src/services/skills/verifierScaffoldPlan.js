@@ -67,7 +67,9 @@ function _slug(s) {
  * @returns {string}
  */
 function planVerifierName(appType) {
-  const t = String(appType == null ? '' : appType).trim().toLowerCase();
+  const t = String(appType == null ? '' : appType)
+    .trim()
+    .toLowerCase();
   const hit = VERIFIER_TYPES.find((v) => v.appType === t || v.type === t);
   return hit ? hit.name : 'verifier';
 }
@@ -80,10 +82,14 @@ function planVerifierName(appType) {
  */
 function planVerifierNameScoped(projectName, appType) {
   const proj = _slug(projectName);
-  const type = String(appType == null ? '' : appType).trim().toLowerCase();
+  const type = String(appType == null ? '' : appType)
+    .trim()
+    .toLowerCase();
   const typeHit = VERIFIER_TYPES.find((v) => v.appType === type || v.type === type);
   const typeTok = typeHit ? typeHit.type : 'app';
-  if (!proj) return `verifier-${typeTok}`;
+  if (!proj) {
+    return `verifier-${typeTok}`;
+  }
   return `verifier-${proj}-${typeTok}`;
 }
 
@@ -96,9 +102,9 @@ function planVerifierNameScoped(projectName, appType) {
 function buildScaffoldInstructions(opts = {}) {
   const skillsDir = String(opts && opts.skillsDir ? opts.skillsDir : DEFAULT_SKILLS_DIR);
 
-  const typeLines = VERIFIER_TYPES
-    .map((v) => `  - \`${v.name}\` — ${v.summary};推荐工具:${v.tools}`)
-    .join('\n');
+  const typeLines = VERIFIER_TYPES.map(
+    (v) => `  - \`${v.name}\` — ${v.summary};推荐工具:${v.tools}`
+  ).join('\n');
 
   return [
     '为本项目创建「功能校验器」技能(对齐 Claude Code init-verifiers,但脚手架到 khy 真正可发现的技能约定)。',
@@ -145,7 +151,9 @@ const _falsy = require('../../utils/isOffValue');
 
 /** 门控读取(KHY_INIT_VERIFIERS 默认开;关 → 命令不接管)。注入 env,叶子不读 process.env。 */
 function isEnabled(env = {}) {
-  return !_falsy(env && env.KHY_INIT_VERIFIERS === undefined ? 'true' : (env && env.KHY_INIT_VERIFIERS));
+  return !_falsy(
+    env && env.KHY_INIT_VERIFIERS === undefined ? 'true' : env && env.KHY_INIT_VERIFIERS
+  );
 }
 
 module.exports = {

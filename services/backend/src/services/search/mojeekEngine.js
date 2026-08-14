@@ -47,14 +47,21 @@ function isMojeekEnabled(env = process.env) {
     // flagRegistry 优先(登记为 default-on);不可用则回退本地 CANON 解析。
     try {
       const reg = require('../flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_SEARCH_MOJEEK', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_SEARCH_MOJEEK;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -68,8 +75,12 @@ function isMojeekEnabled(env = process.env) {
  */
 function buildMojeekUrl(query) {
   try {
-    const q = String(query == null ? '' : query).trim().slice(0, 200);
-    if (!q) return '';
+    const q = String(query == null ? '' : query)
+      .trim()
+      .slice(0, 200);
+    if (!q) {
+      return '';
+    }
     return `https://www.mojeek.com/search?q=${encodeURIComponent(q)}`;
   } catch {
     return '';
@@ -85,11 +96,19 @@ function buildMojeekUrl(query) {
 function normalizeMojeekRow(row) {
   try {
     const r = row || {};
-    const title = String(r.title == null ? '' : r.title).replace(/\s+/g, ' ').trim();
+    const title = String(r.title == null ? '' : r.title)
+      .replace(/\s+/g, ' ')
+      .trim();
     const url = String(r.url == null ? '' : r.url).trim();
-    if (!title || !url) return null;
-    if (!/^https?:\/\//i.test(url)) return null;
-    const snippet = String(r.snippet == null ? '' : r.snippet).replace(/\s+/g, ' ').trim();
+    if (!title || !url) {
+      return null;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      return null;
+    }
+    const snippet = String(r.snippet == null ? '' : r.snippet)
+      .replace(/\s+/g, ' ')
+      .trim();
     return { title, url, snippet };
   } catch {
     return null;

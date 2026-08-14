@@ -1,7 +1,7 @@
 'use strict';
 
-const { BaseTool } = require('../_baseTool');
 const blueprint = require('../../services/projectBlueprint');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * ProjectBlueprintTool — 教 khyos 一种类型一种类型地交付项目，弱模型/短上下文也能干成。
@@ -32,11 +32,20 @@ class ProjectBlueprintTool extends BaseTool {
   // latent foot-gun that also crossed risk/category tiers. Removed for a single,
   // unambiguous owner of the `buildproject` normalized key.
   static aliases = ['blueprint', 'project_blueprint', '项目蓝图'];
-  static searchHint = '项目蓝图 脚手架 里程碑 怎么做项目 SSM Spring MVC DDD CQRS SOA EDA BFF 网关 SPA SSR SSG RAG RLHF LoRA OLTP OLAP ETL CDC project blueprint scaffold milestone';
+  static searchHint =
+    '项目蓝图 脚手架 里程碑 怎么做项目 SSM Spring MVC DDD CQRS SOA EDA BFF 网关 SPA SSR SSG RAG RLHF LoRA OLTP OLAP ETL CDC project blueprint scaffold milestone';
 
   // 全模式只读：只返回知识/计划/脚手架数据，不写文件。
-  isReadOnly() { return true; }
-  isDestructive() { return false; }
+  isReadOnly() {
+    return true;
+  }
+  isDestructive() {
+    return false;
+  }
+  // Read-only knowledge/plan lookup — safe for parallel execution.
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -69,7 +78,8 @@ class ProjectBlueprintTool extends BaseTool {
         },
         target: {
           type: 'string',
-          description: 'plan/milestone/scaffold 的原型 id 或目标文本(如 "ssm"/"做个SSM项目")；concept 的概念 id 或触发词；match 的目标文本；verify 的目录路径',
+          description:
+            'plan/milestone/scaffold 的原型 id 或目标文本(如 "ssm"/"做个SSM项目")；concept 的概念 id 或触发词；match 的目标文本；verify 的目录路径',
         },
         index: {
           type: 'number',
@@ -82,7 +92,8 @@ class ProjectBlueprintTool extends BaseTool {
         },
         contextWindow: {
           type: 'number',
-          description: '当前模型上下文窗口(tokens)。短窗口会自动收紧 milestone 切片体积；省略=按默认',
+          description:
+            '当前模型上下文窗口(tokens)。短窗口会自动收紧 milestone 切片体积；省略=按默认',
         },
       },
       required: [],
@@ -104,22 +115,30 @@ class ProjectBlueprintTool extends BaseTool {
       }
       case 'plan': {
         const p = blueprint.plan(params.target);
-        if (p.ok === false) return { success: false, mode, error: p.error };
+        if (p.ok === false) {
+          return { success: false, mode, error: p.error };
+        }
         return { success: true, mode, ...p, report: blueprint.renderPlanReport(p) };
       }
       case 'milestone': {
         const slice = blueprint.milestone(params.target, params.index, opts);
-        if (slice.ok === false) return { success: false, mode, error: slice.error };
+        if (slice.ok === false) {
+          return { success: false, mode, error: slice.error };
+        }
         return { success: true, mode, ...slice };
       }
       case 'concept': {
         const c = blueprint.concept(params.target);
-        if (c.ok === false) return { success: false, mode, error: c.error };
+        if (c.ok === false) {
+          return { success: false, mode, error: c.error };
+        }
         return { success: true, mode, ...c };
       }
       case 'scaffold': {
         const s = blueprint.scaffold(params.target, { variables: params.variables || {} });
-        if (s.ok === false) return { success: false, mode, error: s.error };
+        if (s.ok === false) {
+          return { success: false, mode, error: s.error };
+        }
         return {
           success: true,
           mode,
@@ -132,7 +151,9 @@ class ProjectBlueprintTool extends BaseTool {
       }
       case 'verify': {
         const v = blueprint.verify(params.target);
-        if (v.ok === false) return { success: false, mode, error: v.error };
+        if (v.ok === false) {
+          return { success: false, mode, error: v.error };
+        }
         return { success: true, mode, ...v };
       }
       default:

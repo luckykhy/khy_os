@@ -39,10 +39,14 @@ const _REMOVE_VERBS = new Set(['rm', 'remove', 'del', 'delete', '-', '移除', '
  * @returns {{action:'list'|'add'|'remove'|'clear', symbol:(string|null)}}
  */
 function parseWatchArgs(args) {
-  const list = Array.isArray(args) ? args.map(a => String(a || '').trim()).filter(Boolean) : [];
-  if (list.length === 0) return { action: 'list', symbol: null };
+  const list = Array.isArray(args) ? args.map((a) => String(a || '').trim()).filter(Boolean) : [];
+  if (list.length === 0) {
+    return { action: 'list', symbol: null };
+  }
   const head = list[0].toLowerCase();
-  if (head === 'clear' || head === '清空') return { action: 'clear', symbol: null };
+  if (head === 'clear' || head === '清空') {
+    return { action: 'clear', symbol: null };
+  }
   if (_REMOVE_VERBS.has(head)) {
     return { action: 'remove', symbol: list[1] || null };
   }
@@ -56,12 +60,22 @@ function parseWatchArgs(args) {
  * @returns {number}
  */
 function quoteChangePct(quote) {
-  if (!quote || typeof quote !== 'object') return 0;
+  if (!quote || typeof quote !== 'object') {
+    return 0;
+  }
   const cur = Number(quote.current);
-  if (!Number.isFinite(cur)) return 0;
-  const base = Number(quote.preClose) > 0 ? Number(quote.preClose)
-    : (Number(quote.open) > 0 ? Number(quote.open) : 0);
-  if (!(base > 0)) return 0;
+  if (!Number.isFinite(cur)) {
+    return 0;
+  }
+  const base =
+    Number(quote.preClose) > 0
+      ? Number(quote.preClose)
+      : Number(quote.open) > 0
+        ? Number(quote.open)
+        : 0;
+  if (!(base > 0)) {
+    return 0;
+  }
   const pct = ((cur - base) / base) * 100;
   return Number.isFinite(pct) ? pct : 0;
 }
@@ -89,8 +103,8 @@ function rankQuotes(quotes, opts = {}) {
   const by = opts.by || 'gainers';
   const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 10;
   const rows = (Array.isArray(quotes) ? quotes : [])
-    .filter(q => q && typeof q === 'object' && Number.isFinite(Number(q.current)))
-    .map(q => ({ ...q, _pct: quoteChangePct(q) }));
+    .filter((q) => q && typeof q === 'object' && Number.isFinite(Number(q.current)))
+    .map((q) => ({ ...q, _pct: quoteChangePct(q) }));
   let cmp;
   if (by === 'volume') {
     cmp = (a, b) => (Number(b.volume) || 0) - (Number(a.volume) || 0);
@@ -108,8 +122,8 @@ function rankQuotes(quotes, opts = {}) {
 /** 自选监控表的行:[代码, 名称, 现价, 涨跌幅]。 */
 function buildWatchRows(quotes) {
   return (Array.isArray(quotes) ? quotes : [])
-    .filter(q => q && typeof q === 'object')
-    .map(q => [
+    .filter((q) => q && typeof q === 'object')
+    .map((q) => [
       String(q.symbol || '-'),
       String(q.name || '-'),
       formatPrice(q.current),
@@ -119,14 +133,13 @@ function buildWatchRows(quotes) {
 
 /** 排行表的行:[排名, 代码, 名称, 现价, 涨跌幅]。 */
 function buildRankRows(rankedQuotes) {
-  return (Array.isArray(rankedQuotes) ? rankedQuotes : [])
-    .map((q, i) => [
-      String(i + 1),
-      String(q.symbol || '-'),
-      String(q.name || '-'),
-      formatPrice(q.current),
-      formatPct(q._pct != null ? q._pct : quoteChangePct(q)),
-    ]);
+  return (Array.isArray(rankedQuotes) ? rankedQuotes : []).map((q, i) => [
+    String(i + 1),
+    String(q.symbol || '-'),
+    String(q.name || '-'),
+    formatPrice(q.current),
+    formatPct(q._pct != null ? q._pct : quoteChangePct(q)),
+  ]);
 }
 
 /** 去重保序合并多个符号来源。 */
@@ -134,9 +147,12 @@ function dedupeSymbols(...lists) {
   const seen = new Set();
   const out = [];
   for (const list of lists) {
-    for (const s of (Array.isArray(list) ? list : [])) {
+    for (const s of Array.isArray(list) ? list : []) {
       const sym = String(s || '').trim();
-      if (sym && !seen.has(sym)) { seen.add(sym); out.push(sym); }
+      if (sym && !seen.has(sym)) {
+        seen.add(sym);
+        out.push(sym);
+      }
     }
   }
   return out;
@@ -157,11 +173,11 @@ function _defaultDeps() {
 /** 并发拉取多只行情,fail-soft:失败的丢弃,只返回成功的。 */
 async function _fetchQuotes(symbols, marketDataService) {
   const settled = await Promise.allSettled(
-    symbols.map(sym => marketDataService.getRealTimeQuote(sym)),
+    symbols.map((sym) => marketDataService.getRealTimeQuote(sym))
   );
   return settled
-    .filter(r => r.status === 'fulfilled' && r.value && typeof r.value === 'object')
-    .map(r => r.value);
+    .filter((r) => r.status === 'fulfilled' && r.value && typeof r.value === 'object')
+    .map((r) => r.value);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -181,7 +197,9 @@ async function handleWatch(args, deps) {
   if (action === 'add') {
     userProfile.addFavoriteSymbol(symbol);
     try {
-      const quote = await withSpinner(`查询 ${symbol} 行情...`, () => marketDataService.getRealTimeQuote(symbol));
+      const quote = await withSpinner(`查询 ${symbol} 行情...`, () =>
+        marketDataService.getRealTimeQuote(symbol)
+      );
       printQuote(quote);
     } catch (err) {
       printError(`行情查询失败: ${err.message}`);
@@ -191,7 +209,10 @@ async function handleWatch(args, deps) {
   }
 
   if (action === 'remove') {
-    if (!symbol) { printError('用法: watch rm <代码>'); return true; }
+    if (!symbol) {
+      printError('用法: watch rm <代码>');
+      return true;
+    }
     userProfile.removeFavoriteSymbol(symbol);
     printSuccess(`已移出自选监控: ${symbol}`);
     return true;
@@ -199,7 +220,7 @@ async function handleWatch(args, deps) {
 
   if (action === 'clear') {
     const favs = (userProfile.getProfileSummary().favoriteSymbols || []).slice();
-    favs.forEach(s => userProfile.removeFavoriteSymbol(s));
+    favs.forEach((s) => userProfile.removeFavoriteSymbol(s));
     printSuccess(`已清空自选监控 (${favs.length} 只)`);
     return true;
   }
@@ -207,11 +228,16 @@ async function handleWatch(args, deps) {
   // action === 'list':监控面板
   const favorites = userProfile.getProfileSummary().favoriteSymbols || [];
   if (favorites.length === 0) {
-    printInfo('自选监控为空。用法: watch <代码|名称> 加入自选,watch 查看全部,watch rm <代码> 移出。');
+    printInfo(
+      '自选监控为空。用法: watch <代码|名称> 加入自选,watch 查看全部,watch rm <代码> 移出。'
+    );
     return true;
   }
-  const quotes = await withSpinner(`刷新 ${favorites.length} 只自选行情...`,
-    () => _fetchQuotes(favorites, marketDataService), { muteOutput: true });
+  const quotes = await withSpinner(
+    `刷新 ${favorites.length} 只自选行情...`,
+    () => _fetchQuotes(favorites, marketDataService),
+    { muteOutput: true }
+  );
   if (quotes.length === 0) {
     printError('自选行情全部获取失败(网络或数据源问题),请稍后重试。');
     return true;
@@ -246,8 +272,11 @@ async function handleRank(args, deps) {
     return true;
   }
 
-  const quotes = await withSpinner(`拉取 ${universe.length} 只行情排行...`,
-    () => _fetchQuotes(universe, marketDataService), { muteOutput: true });
+  const quotes = await withSpinner(
+    `拉取 ${universe.length} 只行情排行...`,
+    () => _fetchQuotes(universe, marketDataService),
+    { muteOutput: true }
+  );
   if (quotes.length === 0) {
     printError('行情全部获取失败(网络或数据源问题),请稍后重试。');
     return true;

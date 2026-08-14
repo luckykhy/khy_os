@@ -22,9 +22,9 @@ const VALID_STOP_SCOPES = ['session', 'bridge', 'daemon', 'all'];
 
 /** Session reconciliation verdicts (persisted pointer vs. live in-process registry). */
 const SESSION_STATE = {
-  LIVE: 'live',           // pointer's connectionId is present in the live registry
+  LIVE: 'live', // pointer's connectionId is present in the live registry
   RECOVERABLE: 'recoverable', // pointer exists but the live registry lost it (process restarted)
-  NONE: 'none',           // no persisted dev session at all
+  NONE: 'none', // no persisted dev session at all
 };
 
 function _str(v) {
@@ -105,7 +105,15 @@ function buildSessionDescriptor({ session, hostEntry, workspace, savedAt }) {
  * @param {object}  args.config         discoverable config (see resolveConfig in service)
  * @param {string}  args.nowIso         injected timestamp (clock-free leaf)
  */
-function buildUnifiedState({ daemon, bridge, remoteSnapshot, hosts, pointer, config, nowIso } = {}) {
+function buildUnifiedState({
+  daemon,
+  bridge,
+  remoteSnapshot,
+  hosts,
+  pointer,
+  config,
+  nowIso,
+} = {}) {
   const d = daemon || {};
   const b = bridge || {};
   const rs = remoteSnapshot || {};
@@ -143,7 +151,8 @@ function buildUnifiedState({ daemon, bridge, remoteSnapshot, hosts, pointer, con
     remote: {
       activeSessionCount: liveSessions.length,
       pendingApprovalCount: Array.isArray(rs.pending_remote_approvals)
-        ? rs.pending_remote_approvals.length : 0,
+        ? rs.pending_remote_approvals.length
+        : 0,
       persistenceEnabled: Boolean(rs.summary && rs.summary.persistence_enabled),
       sessions: liveSessions.map((s) => ({
         connectionId: _str(s.connectionId) || null,
@@ -176,15 +185,50 @@ function buildUnifiedState({ daemon, bridge, remoteSnapshot, hosts, pointer, con
 function discoverabilityReport(config) {
   const c = config || {};
   return [
-    { label: 'SSH config path', env: 'KHY_REMOTE_SSH_CONFIG_PATH', value: c.sshConfigPath != null ? _str(c.sshConfigPath) : null },
-    { label: 'Daemon port', env: 'KHY_DAEMON_PORT', value: c.daemonPort != null ? _str(c.daemonPort) : null },
-    { label: 'Bridge port', env: 'BRIDGE_PORT', value: c.bridgePort != null ? _str(c.bridgePort) : null },
+    {
+      label: 'SSH config path',
+      env: 'KHY_REMOTE_SSH_CONFIG_PATH',
+      value: c.sshConfigPath != null ? _str(c.sshConfigPath) : null,
+    },
+    {
+      label: 'Daemon port',
+      env: 'KHY_DAEMON_PORT',
+      value: c.daemonPort != null ? _str(c.daemonPort) : null,
+    },
+    {
+      label: 'Bridge port',
+      env: 'BRIDGE_PORT',
+      value: c.bridgePort != null ? _str(c.bridgePort) : null,
+    },
     { label: 'Bridge PIN', env: 'BRIDGE_PIN', value: c.bridgePinSet ? '(set)' : null },
-    { label: 'Host allowlist', env: 'KHY_REMOTE_SSH_ALLOWLIST', value: (Array.isArray(c.allowlist) && c.allowlist.length) ? c.allowlist.join(', ') : null },
-    { label: 'Workspace allowlist', env: 'KHY_REMOTE_WORKSPACE_ALLOWLIST', value: (Array.isArray(c.workspaceAllowlist) && c.workspaceAllowlist.length) ? c.workspaceAllowlist.join(', ') : null },
-    { label: 'Remote exec', env: 'KHY_REMOTE_SSH_ENABLE_EXEC', value: c.execEnabled ? 'enabled' : 'disabled (dry-run)' },
-    { label: 'State persistence', env: 'KHY_REMOTE_SSH_PERSIST_STATE', value: c.persistEnabled ? 'enabled' : 'disabled' },
-    { label: 'State path', env: 'KHY_REMOTE_SSH_STATE_PATH', value: c.statePath != null ? _str(c.statePath) : null },
+    {
+      label: 'Host allowlist',
+      env: 'KHY_REMOTE_SSH_ALLOWLIST',
+      value: Array.isArray(c.allowlist) && c.allowlist.length ? c.allowlist.join(', ') : null,
+    },
+    {
+      label: 'Workspace allowlist',
+      env: 'KHY_REMOTE_WORKSPACE_ALLOWLIST',
+      value:
+        Array.isArray(c.workspaceAllowlist) && c.workspaceAllowlist.length
+          ? c.workspaceAllowlist.join(', ')
+          : null,
+    },
+    {
+      label: 'Remote exec',
+      env: 'KHY_REMOTE_SSH_ENABLE_EXEC',
+      value: c.execEnabled ? 'enabled' : 'disabled (dry-run)',
+    },
+    {
+      label: 'State persistence',
+      env: 'KHY_REMOTE_SSH_PERSIST_STATE',
+      value: c.persistEnabled ? 'enabled' : 'disabled',
+    },
+    {
+      label: 'State path',
+      env: 'KHY_REMOTE_SSH_STATE_PATH',
+      value: c.statePath != null ? _str(c.statePath) : null,
+    },
   ];
 }
 
@@ -206,9 +250,10 @@ function summarizeConnection(unified) {
   const port = s.port != null ? `:${s.port}` : '';
   const ws = s.remoteWorkspace || '~';
   const cid = s.connectionId ? s.connectionId.slice(0, 8) : '?';
-  const liveTag = s.state === SESSION_STATE.RECOVERABLE
-    ? '（元数据可恢复 · 进程已重启，注册表未持有活动连接）'
-    : '（活动）';
+  const liveTag =
+    s.state === SESSION_STATE.RECOVERABLE
+      ? '（元数据可恢复 · 进程已重启，注册表未持有活动连接）'
+      : '（活动）';
   return `远端开发会话 ${liveTag}：${alias}${user}${host}${port} · 工作目录 ${ws} · 会话 ${cid}`;
 }
 

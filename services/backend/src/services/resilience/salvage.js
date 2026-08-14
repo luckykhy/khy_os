@@ -33,16 +33,19 @@ class SalvageProtector {
    */
   static assemble(args = {}) {
     const {
-      intent, description, attempted = [], salvageData = [],
-      lastFailure = null, circuit = 'tree-exhausted',
+      intent,
+      description,
+      attempted = [],
+      salvageData = [],
+      lastFailure = null,
+      circuit = 'tree-exhausted',
     } = args;
 
-    const paths = (Array.isArray(attempted) ? attempted : [])
-      .map((a) => ({
-        plan: String(a.plan || '(unknown)'),
-        reason: String(a.reason || 'unknown'),
-        retry: Number(a.retry) || 0,
-      }));
+    const paths = (Array.isArray(attempted) ? attempted : []).map((a) => ({
+      plan: String(a.plan || '(unknown)'),
+      reason: String(a.reason || 'unknown'),
+      retry: Number(a.retry) || 0,
+    }));
 
     // 防呆：兜底必须交差 —— attempted_paths 不得为空。
     if (paths.length === 0) {
@@ -60,11 +63,17 @@ class SalvageProtector {
 
   /** 从所有残料里挑出"最有价值"的一份（最长的非空文本；对象则原样保留）。 */
   static _bestSalvage(salvageData) {
-    const items = (Array.isArray(salvageData) ? salvageData : [])
-      .filter((x) => x !== null && x !== undefined && x !== '');
-    if (items.length === 0) return '';
+    const items = (Array.isArray(salvageData) ? salvageData : []).filter(
+      (x) => x !== null && x !== undefined && x !== ''
+    );
+    if (items.length === 0) {
+      return '';
+    }
     // 文本型：取最长非空串。
-    const texts = items.filter((x) => typeof x === 'string').map((s) => s.trim()).filter(Boolean);
+    const texts = items
+      .filter((x) => typeof x === 'string')
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (texts.length > 0) {
       return texts.reduce((a, b) => (b.length > a.length ? b : a));
     }

@@ -17,8 +17,8 @@
  * an install hint when a backing library is missing.
  */
 const { defineTool } = require('./_baseTool');
-const path = require('path');
 
+const path = require('path');
 
 let _enabled = null;
 const _checkEnabled = require('../utils/docHelperEnabled');
@@ -38,7 +38,9 @@ module.exports = defineTool({
   isReadOnly: false,
   isConcurrencySafe: true,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
 
@@ -56,30 +58,39 @@ module.exports = defineTool({
     output: {
       type: 'string',
       required: false,
-      description: 'Where to save the result. Defaults to a sibling file with the target extension.',
+      description:
+        'Where to save the result. Defaults to a sibling file with the target extension.',
     },
     to: {
       type: 'string',
       required: false,
       enum: ['pdf', 'txt', 'docx'],
-      description: 'Target format. If omitted, inferred from the output extension or the source type.',
+      description:
+        'Target format. If omitted, inferred from the output extension or the source type.',
     },
   },
 
   async validateInput(input) {
-    const { validateNotUNCPath, validateNotDevicePath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotUNCPath,
+      validateNotDevicePath,
+      composeValidations,
+    } = require('./inputValidators');
     // `input` may be a comma-separated list for image merges; the runConvert
     // core resolves+confines each path. Here we only sanity-check the obvious.
-    const first = String(input.input || '').split(',')[0].trim();
+    const first = String(input.input || '')
+      .split(',')[0]
+      .trim();
     return composeValidations(
       first ? validateNotUNCPath(first) : { valid: true },
       first ? validateNotDevicePath(first) : { valid: true },
-      input.output ? validateNotUNCPath(input.output) : { valid: true },
+      input.output ? validateNotUNCPath(input.output) : { valid: true }
     );
   },
 
   capability: {
-    summary: '统一格式转换:图片→PDF(可多图合并)/图片→可编辑TXT(OCR)/PDF→TXT/PDF→Word/Word→TXT/TXT→Word',
+    summary:
+      '统一格式转换:图片→PDF(可多图合并)/图片→可编辑TXT(OCR)/PDF→TXT/PDF→Word/Word→TXT/TXT→Word',
     learnedFrom: '2026-06 用户教学:图片转PDF或转可编辑txt等格式转换',
     tests: ['tests/convertFile.test.js'],
     surfaces: ['cli', 'agent', 'mcp'],
@@ -90,13 +101,17 @@ module.exports = defineTool({
     return `格式转换：${name}`;
   },
   getToolUseSummary(input) {
-    if (!input?.input) return null;
+    if (!input?.input) {
+      return null;
+    }
     const name = path.basename(String(input.input).split(',')[0]);
     return input.to ? `转换为 ${input.to}：${name}` : `格式转换：${name}`;
   },
 
   async execute(params) {
-    if (!params?.input) return { success: false, error: 'Input file (or images) is required' };
+    if (!params?.input) {
+      return { success: false, error: 'Input file (or images) is required' };
+    }
     try {
       const { runConvert } = require('../cli/handlers/convert');
       return await runConvert(params);

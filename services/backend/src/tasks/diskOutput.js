@@ -14,8 +14,8 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -48,7 +48,10 @@ function getTaskOutputDir() {
     } else {
       try {
         const { resolveGeneratedFileDir } = require('../utils/storageRoots');
-        _taskOutputDir = resolveGeneratedFileDir({ subdir: path.join('tmp', 'tasks'), preferCwd: false }).dir;
+        _taskOutputDir = resolveGeneratedFileDir({
+          subdir: path.join('tmp', 'tasks'),
+          preferCwd: false,
+        }).dir;
       } catch {
         _taskOutputDir = path.join(os.homedir(), '.khy', 'tmp', 'tasks');
       }
@@ -91,10 +94,14 @@ const _bytesWritten = new Map();
  * @param {string} content
  */
 function writeTaskOutput(taskId, content) {
-  if (!content) return;
+  if (!content) {
+    return;
+  }
 
   const written = _bytesWritten.get(taskId) || 0;
-  if (written > MAX_TASK_OUTPUT_BYTES) return; // already capped
+  if (written > MAX_TASK_OUTPUT_BYTES) {
+    return;
+  } // already capped
 
   const newTotal = written + Buffer.byteLength(content, 'utf-8');
 
@@ -104,9 +111,11 @@ function writeTaskOutput(taskId, content) {
 
     if (newTotal > MAX_TASK_OUTPUT_BYTES) {
       // Write truncation marker and stop
-      fs.appendFileSync(outputPath,
+      fs.appendFileSync(
+        outputPath,
         `\n[output truncated: exceeded ${MAX_TASK_OUTPUT_DISPLAY} disk cap]\n`,
-        'utf-8');
+        'utf-8'
+      );
       _bytesWritten.set(taskId, newTotal);
       return;
     }
@@ -128,10 +137,14 @@ function writeTaskOutput(taskId, content) {
  * @returns {Promise<void>}
  */
 async function writeTaskOutputAsync(taskId, content) {
-  if (!content) return;
+  if (!content) {
+    return;
+  }
 
   const written = _bytesWritten.get(taskId) || 0;
-  if (written > MAX_TASK_OUTPUT_BYTES) return;
+  if (written > MAX_TASK_OUTPUT_BYTES) {
+    return;
+  }
 
   const newTotal = written + Buffer.byteLength(content, 'utf-8');
 
@@ -140,9 +153,11 @@ async function writeTaskOutputAsync(taskId, content) {
     const outputPath = getTaskOutputPath(taskId);
 
     if (newTotal > MAX_TASK_OUTPUT_BYTES) {
-      await fs.promises.appendFile(outputPath,
+      await fs.promises.appendFile(
+        outputPath,
         `\n[output truncated: exceeded ${MAX_TASK_OUTPUT_DISPLAY} disk cap]\n`,
-        'utf-8');
+        'utf-8'
+      );
       _bytesWritten.set(taskId, newTotal);
       return;
     }
@@ -263,7 +278,9 @@ function tailTaskOutput(taskId, maxBytes = DEFAULT_MAX_READ_BYTES) {
 function getTaskOutputSize(taskId) {
   try {
     const outputPath = getTaskOutputPath(taskId);
-    if (!fs.existsSync(outputPath)) return 0;
+    if (!fs.existsSync(outputPath)) {
+      return 0;
+    }
     return fs.statSync(outputPath).size;
   } catch {
     return 0;

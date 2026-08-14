@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khy-os 长任务可靠性协议 (Reliability Protocol) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khy-os 长任务可靠性协议 (Reliability Protocol)</div>
+      <header class="hero reveal"><h1>khy-os 长任务可靠性协议 (Reliability Protocol)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-长任务可靠性协议-reliability-protocol">khy-os 长任务可靠性协议 (Reliability Protocol)</a></li><li class="lvl-2"><a href="#目录">目录</a></li><li class="lvl-2"><a href="#1-总则">1. 总则</a></li><li class="lvl-3"><a href="#1-1-定义">1.1 定义</a></li><li class="lvl-3"><a href="#1-2-强制约束">1.2 强制约束</a></li><li class="lvl-2"><a href="#2-任务状态机-durable-task-store">2. 任务状态机（Durable Task Store）</a></li><li class="lvl-3"><a href="#2-1-状态定义">2.1 状态定义</a></li><li class="lvl-3"><a href="#2-2-合法转换">2.2 合法转换</a></li><li class="lvl-3"><a href="#2-3-心跳保活">2.3 心跳保活</a></li><li class="lvl-3"><a href="#2-4-fail-soft-原则">2.4 Fail-Soft 原则</a></li><li class="lvl-3"><a href="#2-5-实现参考">2.5 实现参考</a></li><li class="lvl-2"><a href="#3-watchdog-空闲超时">3. Watchdog 空闲超时</a></li><li class="lvl-3"><a href="#3-1-原理">3.1 原理</a></li><li class="lvl-3"><a href="#3-2-使用规则">3.2 使用规则</a></li><li class="lvl-3"><a href="#3-3-api">3.3 API</a></li><li class="lvl-3"><a href="#3-4-强制约束">3.4 强制约束</a></li><li class="lvl-3"><a href="#3-5-覆盖要求">3.5 覆盖要求</a></li><li class="lvl-3"><a href="#3-6-实现参考">3.6 实现参考</a></li><li class="lvl-2"><a href="#4-abortsignal-中断传播">4. AbortSignal 中断传播</a></li><li class="lvl-3"><a href="#4-1-传播链">4.1 传播链</a></li><li class="lvl-3"><a href="#4-2-门控开关">4.2 门控开关</a></li><li class="lvl-3"><a href="#4-3-工具执行方的责任">4.3 工具执行方的责任</a></li><li class="lvl-3"><a href="#4-4-esc-中断的响应保证">4.4 ESC 中断的响应保证</a></li><li class="lvl-3"><a href="#4-5-薄弱点与修复">4.5 薄弱点与修复</a></li><li class="lvl-3"><a href="#4-6-实现参考">4.6 实现参考</a></li><li class="lvl-2"><a href="#5-receipt-轨迹不可遗漏">5. Receipt 轨迹不可遗漏</a></li><li class="lvl-3"><a href="#5-1-receipt-生命周期">5.1 Receipt 生命周期</a></li><li class="lvl-3"><a href="#5-2-强制约束">5.2 强制约束</a></li><li class="lvl-3"><a href="#5-3-receipt-结构">5.3 Receipt 结构</a></li><li class="lvl-3"><a href="#5-4-实现参考">5.4 实现参考</a></li><li class="lvl-2"><a href="#6-重试与退避">6. 重试与退避</a></li><li class="lvl-3"><a href="#6-1-指数退避">6.1 指数退避</a></li><li class="lvl-3"><a href="#6-2-重试分类">6.2 重试分类</a></li><li class="lvl-3"><a href="#6-3-持久重试模式">6.3 持久重试模式</a></li><li class="lvl-3"><a href="#6-4-任务级重试">6.4 任务级重试</a></li><li class="lvl-3"><a href="#6-5-实现参考">6.5 实现参考</a></li><li class="lvl-2"><a href="#7-fail-soft-全链路">7. Fail-Soft 全链路</a></li><li class="lvl-3"><a href="#7-1-原则">7.1 原则</a></li><li class="lvl-3"><a href="#7-2-降级模式">7.2 降级模式</a></li><li class="lvl-3"><a href="#7-3-失败定位">7.3 失败定位</a></li><li class="lvl-3"><a href="#7-4-实现参考">7.4 实现参考</a></li><li class="lvl-2"><a href="#8-内存与资源保护">8. 内存与资源保护</a></li><li class="lvl-3"><a href="#8-1-内存监控">8.1 内存监控</a></li><li class="lvl-3"><a href="#8-2-shell-资源限制">8.2 Shell 资源限制</a></li><li class="lvl-3"><a href="#8-3-进程退出保护">8.3 进程退出保护</a></li><li class="lvl-3"><a href="#8-4-实现参考">8.4 实现参考</a></li><li class="lvl-2"><a href="#9-跨进程一致性">9. 跨进程一致性</a></li><li class="lvl-3"><a href="#9-1-多进程数据一致性">9.1 多进程数据一致性</a></li><li class="lvl-3"><a href="#9-2-单进程数据原则">9.2 单进程数据原则</a></li><li class="lvl-3"><a href="#9-3-并发控制">9.3 并发控制</a></li><li class="lvl-3"><a href="#9-4-实现参考">9.4 实现参考</a></li><li class="lvl-2"><a href="#10-可靠性门禁">10. 可靠性门禁</a></li><li class="lvl-3"><a href="#10-1-发布阶段">10.1 发布阶段</a></li><li class="lvl-3"><a href="#10-2-校验项">10.2 校验项</a></li><li class="lvl-3"><a href="#10-3-实现参考">10.3 实现参考</a></li><li class="lvl-2"><a href="#附录-a-可靠性模式速查">附录 A：可靠性模式速查</a></li><li class="lvl-2"><a href="#附录-b-关联文档">附录 B：关联文档</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-长任务可靠性协议-reliability-protocol">khy-os 长任务可靠性协议 (Reliability Protocol)<a class="anchor" href="#khy-os-长任务可靠性协议-reliability-protocol" aria-label="锚点">#</a></h1>
+<blockquote><p>版本: 1.0.0 | 生效: 2026-07-26<br>本文件与 <code>COMMUNICATION-PROTOCOL.md</code>、<code>FILE-FORMAT-PROTOCOL.md</code> 互补，定义「长任务交互的可靠性保障」。<br>违反本协议的变更无法通过 <code>release-gate.js</code> 的 <code>reliability-gate</code> 阶段。</p></blockquote>
+<hr>
+<h2 id="目录">目录<a class="anchor" href="#目录" aria-label="锚点">#</a></h2>
+<ol><li><a href="#1-总则">总则</a></li><li><a href="#2-任务状态机durable-task-store">任务状态机（Durable Task Store）</a></li><li><a href="#3-watchdog-空闲超时">Watchdog 空闲超时</a></li><li><a href="#4-abortsignal-中断传播">AbortSignal 中断传播</a></li><li><a href="#5-receipt-轨迹不可遗漏">Receipt 轨迹不可遗漏</a></li><li><a href="#6-重试与退避">重试与退避</a></li><li><a href="#7-fail-soft-全链路">Fail-Soft 全链路</a></li><li><a href="#8-内存与资源保护">内存与资源保护</a></li><li><a href="#9-跨进程一致性">跨进程一致性</a></li><li><a href="#10-可靠性门禁">可靠性门禁</a></li></ol>
+<hr>
+<h2 id="1-总则">1. 总则<a class="anchor" href="#1-总则" aria-label="锚点">#</a></h2>
+<h3 id="1-1-定义">1.1 定义<a class="anchor" href="#1-1-定义" aria-label="锚点">#</a></h3>
+<p><strong>长任务</strong> = 满足以下任一条件的交互：</p>
+<ul><li>AI 生成耗时 &gt; 30 秒（多轮 tool loop、长文档生成）</li><li>工具执行耗时 &gt; 10 秒（文件读写、网络请求、编译）</li><li>涉及多步工具链（tool_use → tool_result → tool_use → …）</li><li>跨进程/跨服务通信（IPC、WebSocket、SSE 流）</li></ul>
+<h3 id="1-2-强制约束">1.2 强制约束<a class="anchor" href="#1-2-强制约束" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>约束</th><th>说明</th></tr></thead><tbody><tr><td>永不静默失败</td><td>任何失败必须留下可审计的痕迹（日志 / receipt / audit event）</td></tr><tr><td>终态必达</td><td>任务必须落入终态（succeeded / failed / cancelled / dead_letter），不得无限期停留在 running</td></tr><tr><td>超时必设</td><td>任何可能阻塞的异步操作必须有超时保护（Watchdog / hardTimeout / idleTimeout）</td></tr><tr><td>中断必响</td><td>ESC 用户中断必须沿调用链传播到实际执行点，不得吞掉</td></tr><tr><td>轨迹必全</td><td>每个长任务必须有完整的 Receipt（RCPT-*），包含 start → toolChain → finalize</td></tr><tr><td>幂等必保</td><td>可重试操作必须携带幂等 Key（requestId / traceId / callId）</td></tr><tr><td>资源必释</td><td>Watchdog / timer / interval 必须在操作完成/失败/取消时清理</td></tr></tbody></table>
+<hr>
+<h2 id="2-任务状态机-durable-task-store">2. 任务状态机（Durable Task Store）<a class="anchor" href="#2-任务状态机-durable-task-store" aria-label="锚点">#</a></h2>
+<h3 id="2-1-状态定义">2.1 状态定义<a class="anchor" href="#2-1-状态定义" aria-label="锚点">#</a></h3>
+<pre><code>queued       → 等待 worker 认领
+  ↓
+claimed      → worker 已认领，准备启动
+  ↓
+running      → 正在执行
+  ↙     ↘
+retry_wait   succeeded
+（等待重试）   （终态 ✓）
+  ↓
+claimed → ...
+  ↙     ↘
+pausing      cancelling
+  ↓           ↓
+paused       cancelled（终态）
+  ↓
+running → ...
+  ↙     ↘
+failed       dead_letter（终态，重试耗尽）</code></pre>
+<h3 id="2-2-合法转换">2.2 合法转换<a class="anchor" href="#2-2-合法转换" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const STATUS_TRANSITIONS = {
+  queued:       ['claimed', 'cancelling', 'cancelled'],
+  claimed:      ['running', 'retry_wait', 'cancelling', 'cancelled', 'failed'],
+  running:      ['retry_wait', 'pausing', 'cancelling', 'succeeded', 'failed'],
+  retry_wait:   ['claimed', 'dead_letter', 'cancelling', 'cancelled'],
+  pausing:      ['paused', 'cancelling', 'cancelled'],
+  paused:       ['running', 'cancelling', 'cancelled'],
+  cancelling:   ['cancelled'],
+  succeeded:    [],   // 终态
+  failed:       [],   // 终态
+  cancelled:    [],   // 终态
+  dead_letter:  [],   // 终态
+};</code></pre>
+<p>非法状态转换必须被拒绝（抛出错误或忽略）。</p>
+<h3 id="2-3-心跳保活">2.3 心跳保活<a class="anchor" href="#2-3-心跳保活" aria-label="锚点">#</a></h3>
+<p>Detached task runner 每 <strong>15 秒</strong>向 store 发送 heartbeat：</p>
+<pre><code class="language-javascript">const HEARTBEAT_MS = 15_000;
+const heartbeat = setInterval(() =&gt; {
+  store.heartbeatTask(taskId, WORKER_ID);
+}, HEARTBEAT_MS);</code></pre>
+<p>Store 据此检测 worker 存活。Worker 超时未 heartbeat → 标记任务失败。</p>
+<h3 id="2-4-fail-soft-原则">2.4 Fail-Soft 原则<a class="anchor" href="#2-4-fail-soft-原则" aria-label="锚点">#</a></h3>
+<p>状态机操作失败时<strong>不得抛到上层</strong>，而是尽力记录终端状态：</p>
+<pre><code class="language-javascript">try { store.markFailed(taskId, ...); } catch { /* already terminal */ }
+try { store.heartbeatTask(...); } catch { /* best-effort */ }</code></pre>
+<h3 id="2-5-实现参考">2.5 实现参考<a class="anchor" href="#2-5-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/tasks/largeTaskRuntimeStore.js</code> — 状态机定义</li><li><code>services/backend/scripts/task-runner.js</code> — detached runner + heartbeat</li></ul>
+<hr>
+<h2 id="3-watchdog-空闲超时">3. Watchdog 空闲超时<a class="anchor" href="#3-watchdog-空闲超时" aria-label="锚点">#</a></h2>
+<h3 id="3-1-原理">3.1 原理<a class="anchor" href="#3-1-原理" aria-label="锚点">#</a></h3>
+<p>Watchdog 是一个<strong>滑动窗口空闲计时器</strong>。操作每次产生进度时调用 <code>.touch()</code>，重置超时截止。超时未 touch → 触发 <code>onTimeout</code> 回调。</p>
+<pre><code>[t=0]  startWatchdog(&quot;tool:read_file&quot;, 120000)
+[t=10] touch()  ← 读到 1KB
+[t=20] touch()  ← 读到 2KB
+[t=120] 超时！触发 onTimeout → reject(&quot;idle timeout after 120s&quot;)</code></pre>
+<h3 id="3-2-使用规则">3.2 使用规则<a class="anchor" href="#3-2-使用规则" aria-label="锚点">#</a></h3>
+<p><strong>所有可能长时间无输出的异步操作必须挂载 Watchdog</strong>。定量标准：<strong>预期耗时可能超过 1 秒、且期间可能无输出的异步操作</strong>均属于&quot;可能长时间无输出&quot;，必须挂载 Watchdog：</p>
+<table><thead><tr><th>操作类型</th><th>默认超时</th><th>环境变量</th><th>定义/判断依据</th></tr></thead><tbody><tr><td>自然工具调用</td><td>120s</td><td><code>KHY_WATCHDOG_MS</code></td><td>文件 I/O 与外部命令等用户可感知延迟的工具执行</td></tr><tr><td>AI Gateway 生成</td><td>45s hard / 20s idle</td><td><code>KHY_GATEWAY_TIMEOUT_MS</code></td><td>调用 LLM provider 的网络 + 推理过程</td></tr><tr><td>自检 (self-check)</td><td>30s</td><td>硬编码</td><td>本地快速检查</td></tr><tr><td>网络调用</td><td>60s</td><td>硬编码</td><td>单个 HTTP/fetch 请求</td></tr><tr><td>Shell 命令</td><td>30s</td><td>硬编码</td><td>子进程执行</td></tr></tbody></table>
+<blockquote><p>新增操作类型时，按上表&quot;定义/判断依据&quot;列对号入座，套用对应类别的默认超时；无法归类的应新增行并说明判断依据。</p></blockquote>
+<p><strong>AI Gateway 的 &quot;45s hard / 20s idle&quot; 双层超时说明</strong>：</p>
+<ul><li><strong>hard（45s）</strong>：从发起请求到收到<strong>任何响应字节</strong>的绝对上限，用于防御完全无响应的死连接；</li><li><strong>idle（20s）</strong>：相邻流式分块（chunk）之间的最大间隔，用于防御中途停流（连接未断但不再产出数据）；</li><li>两者<strong>同时启用</strong>、各防一类故障：hard 保证&quot;开始有响应&quot;，idle 保证&quot;响应持续推进&quot;。</li></ul>
+<h3 id="3-3-api">3.3 API<a class="anchor" href="#3-3-api" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">const { startWatchdog } = require('./resourceGuard');
+
+const guard = startWatchdog('operation-name', timeoutMs, (name, elapsedSec) =&gt; {
+  // 超时回调：reject promise 或抛错
+  reject(new Error(`Operation &quot;${name}&quot; timed out after ${elapsedSec}s`));
+});
+
+// 有进度时 touch
+guard.touch();
+
+// 完成时清理
+guard.done();
+
+// 查询已耗时
+const elapsed = guard.elapsed();</code></pre>
+<h3 id="3-4-强制约束">3.4 强制约束<a class="anchor" href="#3-4-强制约束" aria-label="锚点">#</a></h3>
+<ol><li><strong>每个 Watchdog 必须有 <code>.done()</code> 清理路径</strong>（成功 / 失败 / 取消 都要调）</li><li><strong>超时回调不得吞异常</strong>——必须向上传播（reject promise 或 throw）</li><li><strong>Watchdog timer 必须 <code>.unref()</code></strong>——不得阻塞进程退出</li><li><strong>内存监控每 30 秒检查一次</strong>，超过 80% heap 触发 GC，超过 95% 告警</li></ol>
+<h3 id="3-5-覆盖要求">3.5 覆盖要求<a class="anchor" href="#3-5-覆盖要求" aria-label="锚点">#</a></h3>
+<p><strong>状态术语定义</strong>：</p>
+<ul><li><strong>✅ 有</strong> = <code>startWatchdog()</code> 在该路径显式创建，且 <code>.done()</code> 清理覆盖成功 / 失败 / 取消所有路径；</li><li><strong>⚠️ 间接有</strong> = Watchdog 只存在于下层依赖中，上层调用方无法感知/处理其超时信号，<strong>不满足要求</strong>，须升级为显式挂载；</li><li><strong>&quot;需要 touch 链&quot;</strong> = 每次进度事件（工具完成、流式分块、迭代推进）都调用 <code>guard.touch()</code>，使 timeoutMs 从固定超时变为真正的空闲超时。</li></ul>
+<p>以下路径<strong>必须</strong>有 Watchdog 保护：</p>
+<table><thead><tr><th>路径</th><th>当前状态</th><th>要求</th><th>具体行动</th></tr></thead><tbody><tr><td><code>runNaturalToolCall</code></td><td>✅ 有 (120s)</td><td>保持</td><td>无需改动</td></tr><tr><td>AI gateway <code>generate()</code></td><td>✅ 有 (hard/idle)</td><td>保持</td><td>无需改动</td></tr><tr><td><code>baseSelfCheckService</code></td><td>✅ 有 (<code>withTimeout</code>)</td><td>保持</td><td>无需改动</td></tr><tr><td>Shell 执行 (<code>safeExec</code>)</td><td>✅ 有 (30s)</td><td>保持</td><td>无需改动</td></tr><tr><td>工具循环 <code>runToolUseLoop</code></td><td>⚠️ 间接有</td><td>必须显式挂载</td><td>在循环入口显式 <code>startWatchdog()</code>，每轮迭代/工具完成时 <code>touch()</code>，循环退出（含异常）时 <code>.done()</code></td></tr><tr><td>AgentTool 子任务</td><td>⚠️ 有 timeoutMs 但无 Watchdog touch</td><td>需要 touch 链</td><td>在子任务迭代推进/工具完成时调用 <code>guard.touch()</code>，将固定 timeoutMs 转为空闲超时</td></tr></tbody></table>
+<h3 id="3-6-实现参考">3.6 实现参考<a class="anchor" href="#3-6-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/resourceGuard.js</code> — Watchdog + 内存监控</li><li><code>services/backend/src/cli/aiGatewayGenerateHelpers.js:178</code> — 自然工具 Watchdog</li><li><code>services/backend/bin/khy.js:1054</code> — Gateway 超时配置</li></ul>
+<hr>
+<h2 id="4-abortsignal-中断传播">4. AbortSignal 中断传播<a class="anchor" href="#4-abortsignal-中断传播" aria-label="锚点">#</a></h2>
+<h3 id="4-1-传播链">4.1 传播链<a class="anchor" href="#4-1-传播链" aria-label="锚点">#</a></h3>
+<pre><code>用户按 ESC
+  → TUI ESC handler → controller.abort()
+    → controller.signal.aborted = true
+      → runToolUseLoop({ abortSignal: controller.signal })
+        → tool 执行函数收到 abortSignal
+          → 工具主动检查 signal.aborted 并退出
+        → Promise.race: 执行 vs 超时拒绝</code></pre>
+<h3 id="4-2-门控开关">4.2 门控开关<a class="anchor" href="#4-2-门控开关" aria-label="锚点">#</a></h3>
+<p>AbortSignal 传播由 <code>KHY_TOOL_ABORT_SIGNAL</code> 控制：</p>
+<pre><code>KHY_TOOL_ABORT_SIGNAL=on  → 传播 abortSignal 到工具
+KHY_TOOL_ABORT_SIGNAL=off → 不传 abortSignal（逐字节回退）</code></pre>
+<p><strong>默认开启</strong>（除非显式关闭）。</p>
+<h3 id="4-3-工具执行方的责任">4.3 工具执行方的责任<a class="anchor" href="#4-3-工具执行方的责任" aria-label="锚点">#</a></h3>
+<p>每个工具/异步操作<strong>必须</strong>尊重 <code>abortSignal</code>：</p>
+<pre><code class="language-javascript">// 模式 1: 传给子 fetch/exec
+fetch(url, { signal })
+
+// 模式 2: 定期检查
+while (working) {
+  if (signal.aborted) throw new Error('Aborted');
+  doWork();
+}
+
+// 模式 3: Promise.race
+const result = await Promise.race([
+  longOperation(),
+  new Promise((_, reject) =&gt; {
+    signal.addEventListener('abort', () =&gt; reject(new Error('Aborted')));
+  }),
+]);</code></pre>
+<h3 id="4-4-esc-中断的响应保证">4.4 ESC 中断的响应保证<a class="anchor" href="#4-4-esc-中断的响应保证" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>场景</th><th>响应时间</th><th>说明</th></tr></thead><tbody><tr><td>工具执行中</td><td>&lt; 1s</td><td>工具检查 <code>signal.aborted</code></td></tr><tr><td>AI 生成中</td><td>&lt; 5s</td><td>Gateway 的 AbortController</td></tr><tr><td>Shell 命令中</td><td>&lt; 1s</td><td><code>child_process.kill()</code></td></tr><tr><td>子 agent 任务中</td><td>&lt; 5s</td><td>IPC <code>kill</code> 消息</td></tr></tbody></table>
+<h3 id="4-5-薄弱点与修复">4.5 薄弱点与修复<a class="anchor" href="#4-5-薄弱点与修复" aria-label="锚点">#</a></h3>
+<p><strong>当前缺口</strong>：</p>
+<ol><li><code>toolUseLoop</code> 的 abortSignal 传播依赖 <code>KHY_TOOL_ABORT_SIGNAL</code> 门控，关闭时中断不会传播</li><li>部分适配器（如 <code>relayApiAdapter</code>）可能忽略 <code>abortSignal</code></li><li>AgentTool 子任务的 abortSignal 传递路径不够直接</li></ol>
+<p><strong>修复原则</strong>：</p>
+<ul><li><code>abortSignal</code> 作为<strong>加法字段</strong>传递——有就传，没有不影响</li><li>每个异步边界都检查 <code>signal?.aborted</code></li><li>超时拒绝的 error name 必须为 <code>AbortError</code></li></ul>
+<h3 id="4-6-实现参考">4.6 实现参考<a class="anchor" href="#4-6-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/cli/replSession.js:8724-8735</code> — ESC → AbortController</li><li><code>services/backend/src/cli/tui/hooks/useQueryBridge.js:1555-1575</code> — TUI abort 传播</li><li><code>services/backend/src/cli/aiMessageBuilder.js:351</code> — abortSignal 传给 gateway</li></ul>
+<hr>
+<h2 id="5-receipt-轨迹不可遗漏">5. Receipt 轨迹不可遗漏<a class="anchor" href="#5-receipt-轨迹不可遗漏" aria-label="锚点">#</a></h2>
+<h3 id="5-1-receipt-生命周期">5.1 Receipt 生命周期<a class="anchor" href="#5-1-receipt-生命周期" aria-label="锚点">#</a></h3>
+<pre><code>startReceipt(sessionId, goal)
+  → _open Map 中创建 receipt（status: 'running'）
+  → 自动 finalize 同会话的前一个 open receipt（defensive）
+
+[tool 调用中]
+  → appendToolCall({ tool, params, result, permission, elapsedMs })
+  → receipt.toolChain 累加
+  → receipt.counts.tools++ / .ok++ / .failed++
+
+[会话结束]
+  → finalizeReceipt({ status, summary, error })
+  → receipt.finalizedAt = ISO timestamp
+  → receipt.durationMs = Date.now() - startedTs
+  → 写入磁盘: .khy/receipts/&lt;sessionId&gt;/RCPT-&lt;id&gt;.json
+  → 写入审计日志: tool.receipt 事件</code></pre>
+<h3 id="5-2-强制约束">5.2 强制约束<a class="anchor" href="#5-2-强制约束" aria-label="锚点">#</a></h3>
+<ol><li><strong>每个长任务会话必须有 Receipt</strong>，从 start 到 finalize 完整闭合</li><li><strong>finalizeReceipt 是幂等的</strong>——对无 open receipt 的调用是 no-op</li><li><strong>startReceipt 自动清理前一个同会话的 open receipt</strong>，防止遗漏</li><li><strong>Receipt 一旦写入磁盘不可变</strong>（不得原地修改已持久化的 JSON 文件）</li><li><strong>失败的任务也必须有 Receipt</strong>（status: 'failed' 或 'partial'）</li></ol>
+<h3 id="5-3-receipt-结构">5.3 Receipt 结构<a class="anchor" href="#5-3-receipt-结构" aria-label="锚点">#</a></h3>
+<pre><code class="language-jsonc">{
+  &quot;id&quot;: &quot;RCPT-20260726-143022-a1b2&quot;,
+  &quot;sessionId&quot;: &quot;s1&quot;,
+  &quot;traceId&quot;: &quot;&lt;32-hex&gt;&quot;,
+  &quot;requestId&quot;: &quot;r1&quot;,
+  &quot;status&quot;: &quot;completed&quot;,        // completed | partial | failed | interrupted
+  &quot;goal&quot;: &quot;分析项目架构&quot;,
+  &quot;plan&quot;: &quot;...&quot;,
+  &quot;toolChain&quot;: [
+    { &quot;tool&quot;: &quot;read_file&quot;, &quot;params&quot;: {...}, &quot;result&quot;: {...}, &quot;elapsedMs&quot;: 25, &quot;permission&quot;: &quot;allow&quot; }
+  ],
+  &quot;artifacts&quot;: { &quot;files&quot;: [], &quot;summary&quot;: &quot;...&quot; },
+  &quot;riskApproval&quot;: {
+    &quot;maxRisk&quot;: &quot;safe&quot;,
+    &quot;humanGated&quot;: [],
+    &quot;denied&quot;: [],
+    &quot;permissions&quot;: {}
+  },
+  &quot;error&quot;: null,
+  &quot;startedAt&quot;: &quot;2026-07-26T14:30:22.000Z&quot;,
+  &quot;startedTs&quot;: 1690000000000,
+  &quot;finalizedAt&quot;: &quot;2026-07-26T14:32:15.000Z&quot;,
+  &quot;durationMs&quot;: 113000,
+  &quot;counts&quot;: { &quot;tools&quot;: 5, &quot;ok&quot;: 4, &quot;failed&quot;: 1 }
+}</code></pre>
+<h3 id="5-4-实现参考">5.4 实现参考<a class="anchor" href="#5-4-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/receiptService.js</code> — startReceipt / appendToolCall / finalizeReceipt</li><li><code>services/backend/src/services/toolCalling.js:1256</code> — emitWrapper 驱动 receipt 记录</li></ul>
+<hr>
+<h2 id="6-重试与退避">6. 重试与退避<a class="anchor" href="#6-重试与退避" aria-label="锚点">#</a></h2>
+<h3 id="6-1-指数退避">6.1 指数退避<a class="anchor" href="#6-1-指数退避" aria-label="锚点">#</a></h3>
+<pre><code>delayMs = min(minDelayMs * 2^(attempt-1) * (1 ± jitter), maxDelayMs)</code></pre>
+<p>默认参数：</p>
+<ul><li><code>attempts = 3</code></li><li><code>minDelayMs = 300</code></li><li><code>maxDelayMs = 30000</code></li><li><code>jitter = 1.0</code>（±100%）</li></ul>
+<h3 id="6-2-重试分类">6.2 重试分类<a class="anchor" href="#6-2-重试分类" aria-label="锚点">#</a></h3>
+<p><strong>可重试</strong>：</p>
+<ul><li><code>timeout</code> — 网络超时（对应：TCP/TLS 握手超时或 read 超时）</li><li><code>network</code> — 连接失败（对应：<code>ECONNREFUSED</code> / <code>ENOTFOUND</code> 等 errno）</li><li><code>rate_limit</code> — 429 限流（对应：HTTP 429）</li><li><code>server</code> — 5xx 服务器错误（对应：HTTP 5xx，但 501 除外，见下方边界情况）</li></ul>
+<p><strong>不可重试</strong>：</p>
+<ul><li><code>auth</code> / <code>authentication_error</code> — 认证失败</li><li><code>permission_denied</code> / <code>forbidden</code> — 权限拒绝</li><li><code>not_found</code> / <code>resource_not_found</code> — 资源不存在</li><li><code>validation_error</code> / <code>invalid_argument</code> — 参数错误</li><li><code>context_length</code> — 上下文超长</li><li><code>task_cancelled</code> — 任务已取消</li><li><code>circuit_open</code> — 熔断器打开</li></ul>
+<p><strong>边界情况</strong>：</p>
+<table><thead><tr><th>状态码 / 情形</th><th>分类</th><th>理由</th></tr></thead><tbody><tr><td>HTTP 408 Request Timeout</td><td>可重试</td><td>与网络超时同因，归入 <code>timeout</code></td></tr><tr><td>HTTP 502 Bad Gateway / 503 Service Unavailable / 504 Gateway Timeout</td><td>可重试</td><td>代理/上游瞬时故障，归入 <code>server</code></td></tr><tr><td>HTTP 501 Not Implemented</td><td>不可重试</td><td>功能恒缺失，重试无意义</td></tr><tr><td>HTTP 500 但响应文本含 rate limit 信息</td><td>可重试</td><td>部分 provider 用 500 包装限流错误，应按 <code>rate_limit</code> 处理</td></tr></tbody></table>
+<h3 id="6-3-持久重试模式">6.3 持久重试模式<a class="anchor" href="#6-3-持久重试模式" aria-label="锚点">#</a></h3>
+<p>无人值守场景（CI）下，429/529 错误持续重试：</p>
+<pre><code>KHY_UNATTENDED_RETRY=true
+  → 指数退避 capped at 5 分钟
+  → 绝对上限 6 小时
+  → 每 30 秒 heartbeat 保持 CI host 存活</code></pre>
+<h3 id="6-4-任务级重试">6.4 任务级重试<a class="anchor" href="#6-4-任务级重试" aria-label="锚点">#</a></h3>
+<p>大任务（large task）在状态机层面支持重试：</p>
+<pre><code>running → retry_wait（等待 3s）
+  → claimed（重新认领）
+  → running（重新执行）</code></pre>
+<p>重试次数上限由任务自身的 <code>max_attempts</code> 字段决定（<code>createTask</code> 默认 3，可逐任务指定）。<br>可重试失败且未达 <code>max_attempts</code> → <code>retry_wait</code>；重试耗尽 → <code>dead_letter</code> 终态。</p>
+<p>以下环境变量仅控制持久化历史的环形缓冲条数（防止存储文件无界膨胀），不影响重试行为：</p>
+<ul><li><code>KHY_TASK_ATTEMPTS_MAX</code> — 每任务保留的重试历史记录条数（默认 100）</li><li><code>KHY_TASK_CHECKPOINTS_MAX</code> — 每任务保留的 checkpoint 条数（默认 200）</li><li><code>KHY_TASK_EVENTS_MAX</code> — 全局 task_events 事件条数上限（默认 10000）</li></ul>
+<h3 id="6-5-实现参考">6.5 实现参考<a class="anchor" href="#6-5-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/retryWithBackoff.js</code> — 指数退避 + jitter + Retry-After</li><li><code>services/backend/src/tasks/largeTaskRuntimeStore.js:96-100</code> — 重试分类常量</li></ul>
+<hr>
+<h2 id="7-fail-soft-全链路">7. Fail-Soft 全链路<a class="anchor" href="#7-fail-soft-全链路" aria-label="锚点">#</a></h2>
+<h3 id="7-1-原则">7.1 原则<a class="anchor" href="#7-1-原则" aria-label="锚点">#</a></h3>
+<p><strong>任何中间层失败不得阻断上层执行</strong>。失败被记录、降级、或跳过，但绝不静默。</p>
+<pre><code>工具执行失败
+  → tool.wrapper.end 记录 error
+    → receipt.appendToolCall 记录失败
+      → traceAudit.logEvent 记录审计事件
+        → 工具循环继续或结束（不崩）
+          → 会话 Receipt finalize（记录完整轨迹）</code></pre>
+<h3 id="7-2-降级模式">7.2 降级模式<a class="anchor" href="#7-2-降级模式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>组件失败</th><th>降级行为</th></tr></thead><tbody><tr><td>审计日志写入失败</td><td>跳过，不阻断执行</td></tr><tr><td>Receipt 写入磁盘失败</td><td>跳过，内存中仍可查询</td></tr><tr><td>traceAudit 不可用</td><td>跳过，不影响工具执行</td></tr><tr><td>Watchdog 启动失败</td><td>无 Watchdog 保护（告警日志）</td></tr><tr><td>状态机持久化失败</td><td>尽力记录终态后退出</td></tr><tr><td>WebSocket 发送失败</td><td>忽略单个客户端，不影响其他</td></tr></tbody></table>
+<h3 id="7-3-失败定位">7.3 失败定位<a class="anchor" href="#7-3-失败定位" aria-label="锚点">#</a></h3>
+<p>每个失败必须携带：</p>
+<ol><li><strong>错误类型</strong>（errorType / code）</li><li><strong>人类可读描述</strong>（message）</li><li><strong>恢复建议</strong>（hint，可选）</li><li><strong>可恢复标记</strong>（recoverable, retryable）</li></ol>
+<pre><code class="language-javascript">{
+  code: &quot;RESOURCE_NOT_FOUND&quot;,
+  message: &quot;File not found: /path/to/file&quot;,
+  hint: &quot;Check the file path or create the file first&quot;,
+  recoverable: true,
+  retryable: false
+}</code></pre>
+<h3 id="7-4-实现参考">7.4 实现参考<a class="anchor" href="#7-4-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/toolCalling.js:1256</code> — emitWrapper fail-soft</li><li><code>services/backend/src/services/receiptService.js:291-294</code> — 写入失败 non-critical</li><li><code>services/backend/scripts/task-runner.js:34-36</code> — heartbeat fail-soft</li></ul>
+<hr>
+<h2 id="8-内存与资源保护">8. 内存与资源保护<a class="anchor" href="#8-内存与资源保护" aria-label="锚点">#</a></h2>
+<h3 id="8-1-内存监控">8.1 内存监控<a class="anchor" href="#8-1-内存监控" aria-label="锚点">#</a></h3>
+<pre><code>每 30 秒检查一次内存使用率
+  → &gt; 80%: 触发 GC（global.gc）或清理 expendable 模块缓存
+  → &gt; 95%: 告警 + 建议减少并发或重启</code></pre>
+<h3 id="8-2-shell-资源限制">8.2 Shell 资源限制<a class="anchor" href="#8-2-shell-资源限制" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// 自适应容器检测
+isContainer() → 跳过 ulimit（cgroup 已限制）
+!isContainer() → 应用 ulimit
+
+// 环境变量覆盖
+KHY_ULIMIT_NPROC=1024    // 子进程数上限（默认 256→1024）
+KHY_ULIMIT_VMEM=...       // 虚拟内存
+KHY_ULIMIT_FD=...         // 文件描述符
+KHY_ULIMIT_FSIZE=...      // 文件大小</code></pre>
+<h3 id="8-3-进程退出保护">8.3 进程退出保护<a class="anchor" href="#8-3-进程退出保护" aria-label="锚点">#</a></h3>
+<pre><code>所有 timer/interval 必须 .unref()
+  → 不阻止进程退出
+  → 防止僵尸进程</code></pre>
+<h3 id="8-4-实现参考">8.4 实现参考<a class="anchor" href="#8-4-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/services/resourceGuard.js</code> — 内存监控 + 容器检测 + safeExec</li></ul>
+<hr>
+<h2 id="9-跨进程一致性">9. 跨进程一致性<a class="anchor" href="#9-跨进程一致性" aria-label="锚点">#</a></h2>
+<h3 id="9-1-多进程数据一致性">9.1 多进程数据一致性<a class="anchor" href="#9-1-多进程数据一致性" aria-label="锚点">#</a></h3>
+<p>TUI 和 Web 后端是<strong>不同进程</strong>，共享同一份磁盘存储（<code>large_task_runtime.json</code>）。</p>
+<p><strong>问题</strong>：A 进程加载后 in-memory 永不再读盘 → 看不到 B 进程的写入。</p>
+<p><strong>修复</strong>：<code>KHY_TASK_STORE_RELOAD_ON_STALE</code>（默认开启）—— 读操作检测磁盘 mtime 前进时重新对齐。</p>
+<h3 id="9-2-单进程数据原则">9.2 单进程数据原则<a class="anchor" href="#9-2-单进程数据原则" aria-label="锚点">#</a></h3>
+<ul><li><strong><code>largeTaskRuntimeStore</code> 是唯一权威数据源</strong>（SSOT）</li><li>所有状态变更必须通过 store 的方法（<code>claimTask</code>, <code>startTask</code>, <code>markSucceeded</code> 等）</li><li>不得直接读写 <code>large_task_runtime.json</code></li></ul>
+<h3 id="9-3-并发控制">9.3 并发控制<a class="anchor" href="#9-3-并发控制" aria-label="锚点">#</a></h3>
+<ul><li>状态机转换校验（非法转换被拒绝）</li><li>Claim 操作原子性（CAS 或文件锁）</li><li>同一任务不能被两个 worker 同时 claimed</li></ul>
+<h3 id="9-4-实现参考">9.4 实现参考<a class="anchor" href="#9-4-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/tasks/largeTaskRuntimeStore.js:57-67</code> — stale reload 机制</li></ul>
+<hr>
+<h2 id="10-可靠性门禁">10. 可靠性门禁<a class="anchor" href="#10-可靠性门禁" aria-label="锚点">#</a></h2>
+<h3 id="10-1-发布阶段">10.1 发布阶段<a class="anchor" href="#10-1-发布阶段" aria-label="锚点">#</a></h3>
+<p>可靠性校验已加入发布门禁：</p>
+<pre><code class="language-javascript">{
+  id: 'reliability-gate',
+  title: '可靠性契约校验(状态机/Watchdog/Receipt/AbortSignal)',
+  tier: 'must',
+  kind: 'deterministic',
+  command: 'node scripts/ci/validate-reliability.js',
+}</code></pre>
+<h3 id="10-2-校验项">10.2 校验项<a class="anchor" href="#10-2-校验项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>校验</th><th>规则</th></tr></thead><tbody><tr><td>状态机合法性</td><td>所有状态转换在 <code>STATUS_TRANSITIONS</code> 中合法</td></tr><tr><td>Watchdog 覆盖率</td><td>所有 <code>execSync</code>/<code>spawn</code>/长时间异步调用有超时保护</td></tr><tr><td>Receipt 闭合</td><td>无无限期 open 的 Receipt（测试环境）</td></tr><tr><td>AbortSignal 传播</td><td>ESC 中断链路中每个异步边界检查 <code>signal.aborted</code></td></tr><tr><td>重试分类</td><td>不可重试错误不进入重试循环</td></tr></tbody></table>
+<h3 id="10-3-实现参考">10.3 实现参考<a class="anchor" href="#10-3-实现参考" aria-label="锚点">#</a></h3>
+<ul><li><code>scripts/ci/validate-reliability.js</code> — 可靠性契约校验执行器</li><li><code>scripts/release/lib/releaseGateStages.js</code> — 门禁阶段定义</li></ul>
+<hr>
+<h2 id="附录-a-可靠性模式速查">附录 A：可靠性模式速查<a class="anchor" href="#附录-a-可靠性模式速查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>模式</th><th>关键代码</th></tr></thead><tbody><tr><td>长时间无输出</td><td>Watchdog + touch</td><td><code>resourceGuard.startWatchdog()</code></td></tr><tr><td>用户按 ESC</td><td>AbortController + signal</td><td><code>controller.abort()</code> → <code>signal.aborted</code></td></tr><tr><td>网络请求</td><td>retryWithBackoff + 退避</td><td><code>retryWithBackoff(fn, { attempts: 3 })</code></td></tr><tr><td>任务崩溃恢复</td><td>Durable store + heartbeat</td><td><code>largeTaskRuntimeStore</code> + 15s heartbeat</td></tr><tr><td>工具链可追溯</td><td>Receipt 轨迹</td><td><code>receiptService.startReceipt/finalizeReceipt</code></td></tr><tr><td>无限循环保护</td><td>迭代上限 + Watchdog</td><td><code>loopMaxIterations</code> + <code>idleTimeoutMs</code></td></tr><tr><td>内存泄漏防护</td><td>GC 监控 + 模块卸载</td><td><code>resourceGuard.checkMemoryPressure()</code></td></tr><tr><td>审计不可丢失</td><td>fail-soft + 多级 fallback</td><td>try/catch 逐层降级</td></tr></tbody></table>
+<h2 id="附录-b-关联文档">附录 B：关联文档<a class="anchor" href="#附录-b-关联文档" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>关系</th></tr></thead><tbody><tr><td><code>COMMUNICATION-PROTOCOL.md</code>（规划中，尚未创建）</td><td>互补：消息传输协议</td></tr><tr><td><code>FILE-FORMAT-PROTOCOL.md</code></td><td>互补：文件存储格式</td></tr><tr><td><code>scripts/ci/validate-reliability.js</code></td><td>实现：可靠性校验执行器</td></tr><tr><td><code>scripts/release/lib/releaseGateStages.js</code></td><td>集成：可靠性门禁阶段</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 设计分类索引</div></a><a class="next" href="../../docs/03_DESIGN_设计/ycode-inspiration-plan.html"><div class="dir">下一篇 →</div><div class="ttl">Y-code (星瑶) → Khyos: Implementation Plan</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/RELIABILITY-PROTOCOL.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

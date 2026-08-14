@@ -47,16 +47,22 @@ function _load() {
     const file = _statsFile();
     if (fs.existsSync(file)) {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (data && typeof data === 'object' && data.agents) return data;
+      if (data && typeof data === 'object' && data.agents) {
+        return data;
+      }
     }
-  } catch { /* corrupt/unreadable — start fresh */ }
+  } catch {
+    /* corrupt/unreadable — start fresh */
+  }
   return _emptyData();
 }
 
 function _save(data) {
   try {
     fs.writeFileSync(_statsFile(), JSON.stringify(data, null, 2), 'utf8');
-  } catch { /* persistence is best-effort */ }
+  } catch {
+    /* persistence is best-effort */
+  }
 }
 
 function _entry(data, type) {
@@ -84,7 +90,9 @@ function _clampNonNeg(n) {
  * @returns {number} the new activeCount
  */
 function incActive(type) {
-  if (!type) return 0;
+  if (!type) {
+    return 0;
+  }
   const data = _load();
   const e = _entry(data, type);
   e.activeCount = _clampNonNeg(e.activeCount) + 1;
@@ -101,7 +109,9 @@ function incActive(type) {
  * @returns {number} the new activeCount
  */
 function decActive(type) {
-  if (!type) return 0;
+  if (!type) {
+    return 0;
+  }
   const data = _load();
   const e = _entry(data, type);
   e.activeCount = Math.max(0, _clampNonNeg(e.activeCount) - 1);
@@ -118,11 +128,15 @@ function decActive(type) {
  * @returns {number} the new reworkRate (0..1)
  */
 function recordResult(type, opts = {}) {
-  if (!type) return 0;
+  if (!type) {
+    return 0;
+  }
   const data = _load();
   const e = _entry(data, type);
   e.completed = _clampNonNeg(e.completed) + 1;
-  if (opts.reworked) e.reworked = _clampNonNeg(e.reworked) + 1;
+  if (opts.reworked) {
+    e.reworked = _clampNonNeg(e.reworked) + 1;
+  }
   e.reworkRate = e.completed > 0 ? e.reworked / e.completed : 0;
   e.lastUpdatedAt = new Date().toISOString();
   _save(data);
@@ -164,9 +178,14 @@ function resetActiveCounts() {
   const data = _load();
   let changed = false;
   for (const e of Object.values(data.agents)) {
-    if (e.activeCount) { e.activeCount = 0; changed = true; }
+    if (e.activeCount) {
+      e.activeCount = 0;
+      changed = true;
+    }
   }
-  if (changed) _save(data);
+  if (changed) {
+    _save(data);
+  }
 }
 
 module.exports = {

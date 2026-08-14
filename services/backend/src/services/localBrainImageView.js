@@ -26,7 +26,11 @@ const path = require('path');
 const probe = require('./imageMetadataProbe');
 
 let _fmt = null;
-try { _fmt = require('./localFormat'); } catch { /* degrade to plain text */ }
+try {
+  _fmt = require('./localFormat');
+} catch {
+  /* degrade to plain text */
+}
 
 // 头部探测只需读前若干字节(JPEG 的 SOF 可能在 EXIF 之后,给足 512KB 兜底);
 // OCR 由 Tesseract 直接读原文件,不经此缓冲。
@@ -35,11 +39,14 @@ const _OCR_MAX_CHARS = 1200;
 
 const _IMAGE_EXT_RE = /\.(?:png|jpe?g|gif|webp|bmp|tiff?)\b/i;
 // 识图动词(中英):看/识别/识图/看图/描述/分析/查看/打开/显示 + recognize/describe/...
-const _IMG_VERB_RE = /(?:识别|识图|看图|看看|查看|描述|分析|读取|打开|显示|认一下|这是什么|recogni[sz]e|describe|analy[sz]e|\bview\b|\bshow\b|\bread\b|\bocr\b)/i;
+const _IMG_VERB_RE =
+  /(?:识别|识图|看图|看看|查看|描述|分析|读取|打开|显示|认一下|这是什么|recogni[sz]e|describe|analy[sz]e|\bview\b|\bshow\b|\bread\b|\bocr\b)/i;
 
 /** 展开 ~ 家目录前缀(与 localBrainFileLookup 一致)。 */
 function _expandHome(p) {
-  if (!p) return p;
+  if (!p) {
+    return p;
+  }
   if (p.startsWith('~/') || p === '~') {
     return path.join(require('os').homedir(), p.slice(1));
   }
@@ -53,13 +60,23 @@ function _expandHome(p) {
  * @returns {boolean}
  */
 function isImageViewIntent(text) {
-  if (!probe.isEnabled(process.env)) return false;
-  if (typeof text !== 'string' || text.length === 0 || text.length > 300) return false;
-  if (!_IMAGE_EXT_RE.test(text)) return false;
-  if (_IMG_VERB_RE.test(text)) return true;
+  if (!probe.isEnabled(process.env)) {
+    return false;
+  }
+  if (typeof text !== 'string' || text.length === 0 || text.length > 300) {
+    return false;
+  }
+  if (!_IMAGE_EXT_RE.test(text)) {
+    return false;
+  }
+  if (_IMG_VERB_RE.test(text)) {
+    return true;
+  }
   // 无动词时:仅当整段去引号后本身就是一个图片路径(如直接粘贴 "~/a.png" / "/tmp/my shot.png")。
   const bare = text.replace(/["'""'`]/g, '').trim();
-  if (!/\.(?:png|jpe?g|gif|webp|bmp|tiff?)$/i.test(bare)) return false;
+  if (!/\.(?:png|jpe?g|gif|webp|bmp|tiff?)$/i.test(bare)) {
+    return false;
+  }
   // 单 token(无空白)即路径;或含路径分隔符时允许路径内空格(引号内带空格的路径)。
   return !/\s/.test(bare) || /[/\\~]/.test(bare);
 }
@@ -81,25 +98,38 @@ function detectImageView(text, opts) {
   } else {
     // 2) 非空白 token,以图片扩展名结尾。
     const bareMatch = text.match(/(\S+\.(?:png|jpe?g|gif|webp|bmp|tiff?))\b/i);
-    if (!bareMatch) return null;
+    if (!bareMatch) {
+      return null;
+    }
     raw = bareMatch[1];
   }
 
   raw = _expandHome(String(raw).trim());
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const filePath = path.resolve(cwd, raw);
   return { type: 'image_view', category: '图片识别', label: path.basename(filePath), filePath };
 }
 
 const _MIME_BY_FORMAT = {
-  png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', bmp: 'image/bmp', tiff: 'image/tiff',
+  png: 'image/png',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  tiff: 'image/tiff',
 };
 
 /** 把可能多行/冗长的 OCR 失败原因收敛成一句(取首行、去多余空白、限长)。 */
 function _tidyReason(msg) {
-  const first = String(msg || '').split('\n')[0].trim().replace(/\s+/g, ' ');
-  if (!first) return '未提取到文字';
+  const first = String(msg || '')
+    .split('\n')[0]
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (!first) {
+    return '未提取到文字';
+  }
   return first.length > 120 ? `${first.slice(0, 117)}...` : first;
 }
 
@@ -115,7 +145,9 @@ function executeImageView(plan) {
   }
 
   let stat;
-  try { stat = fs.statSync(filePath); } catch (e) {
+  try {
+    stat = fs.statSync(filePath);
+  } catch (e) {
     return { type: 'image_view', success: false, error: `无法读取: ${e.message}` };
   }
   if (stat.isDirectory()) {
@@ -130,7 +162,9 @@ function executeImageView(plan) {
       const cap = Math.min(_HEADER_READ_BYTES, stat.size);
       head = Buffer.alloc(cap);
       fs.readSync(fd, head, 0, cap, 0);
-    } finally { fs.closeSync(fd); }
+    } finally {
+      fs.closeSync(fd);
+    }
   } catch (e) {
     return { type: 'image_view', success: false, error: `读取图片头失败: ${e.message}` };
   }
@@ -155,9 +189,17 @@ function executeImageView(plan) {
     const ocrSvc = require('./ocrSnippetService');
     const res = ocrSvc.extractImageOcrSnippet(filePath, mime, { maxChars: _OCR_MAX_CHARS });
     if (res && res.success && res.text && res.text.trim()) {
-      ocr = { available: true, text: res.text.trim(), engine: res.engine || 'tesseract', confidence: res.confidence || 0 };
+      ocr = {
+        available: true,
+        text: res.text.trim(),
+        engine: res.engine || 'tesseract',
+        confidence: res.confidence || 0,
+      };
     } else {
-      ocr = { available: false, reason: _tidyReason((res && res.error) ? res.error : '未提取到文字') };
+      ocr = {
+        available: false,
+        reason: _tidyReason(res && res.error ? res.error : '未提取到文字'),
+      };
     }
   } catch (e) {
     ocr = { available: false, reason: _tidyReason(e && e.message ? e.message : 'OCR 不可用') };
@@ -180,7 +222,9 @@ function executeImageView(plan) {
  * @returns {string}
  */
 function formatImageView(result) {
-  if (!result || !result.success) return `图片识别失败: ${result?.error || '未知错误'}`;
+  if (!result || !result.success) {
+    return `图片识别失败: ${result?.error || '未知错误'}`;
+  }
 
   const desc = result.description || '(无法生成描述)';
   const ocr = result.ocr || {};
@@ -195,9 +239,15 @@ function formatImageView(result) {
   if (_fmt && _fmt.isEnabled()) {
     const sections = [{ heading: '简单描述', lines: [desc] }];
     if (ocr.available && ocr.text) {
-      sections.push({ heading: '识别到的文字(本地 OCR)', lines: ['```', ...String(ocr.text).split('\n'), '```'] });
+      sections.push({
+        heading: '识别到的文字(本地 OCR)',
+        lines: ['```', ...String(ocr.text).split('\n'), '```'],
+      });
     } else {
-      sections.push({ heading: '文字识别', lines: [`未提取到文字(${ocr.reason || '本地 OCR 不可用或图中无文字'})`] });
+      sections.push({
+        heading: '文字识别',
+        lines: [`未提取到文字(${ocr.reason || '本地 OCR 不可用或图中无文字'})`],
+      });
     }
     return _fmt.compose({
       title: `图片识别:${path.basename(result.filePath)}`,

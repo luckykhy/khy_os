@@ -37,7 +37,9 @@ const VIDEO_CAPABLE_HOSTS = ['apihub.agnes-ai.com'];
 function bridgeEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_VIDEO_GEN_POOL_BRIDGE;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return true;
@@ -58,7 +60,9 @@ const _hostOf = require('../utils/hostOfEndpoint');
  */
 function hostServesVideos(endpoint) {
   const host = _hostOf(endpoint);
-  if (!host) return false;
+  if (!host) {
+    return false;
+  }
   return VIDEO_CAPABLE_HOSTS.includes(host);
 }
 
@@ -75,7 +79,9 @@ function hostServesVideos(endpoint) {
 function listVideoProvidersFromPool(args = {}) {
   try {
     const env = args.env || process.env;
-    if (!bridgeEnabled(env)) return [];
+    if (!bridgeEnabled(env)) {
+      return [];
+    }
     const providers = Array.isArray(args.providers) ? args.providers : [];
     const endpointFor = typeof args.endpointFor === 'function' ? args.endpointFor : null;
 
@@ -83,12 +89,20 @@ function listVideoProvidersFromPool(args = {}) {
     const seen = new Set();
     for (const p of providers) {
       const poolKey = p && typeof p.poolKey === 'string' ? p.poolKey.trim() : '';
-      if (!poolKey || seen.has(poolKey)) continue;
+      if (!poolKey || seen.has(poolKey)) {
+        continue;
+      }
       let endpoint = '';
       if (endpointFor) {
-        try { endpoint = String(endpointFor(poolKey) || ''); } catch { endpoint = ''; }
+        try {
+          endpoint = String(endpointFor(poolKey) || '');
+        } catch {
+          endpoint = '';
+        }
       }
-      if (!endpoint) endpoint = String((p && p.endpoint) || '');
+      if (!endpoint) {
+        endpoint = String((p && p.endpoint) || '');
+      }
       if (hostServesVideos(endpoint)) {
         seen.add(poolKey);
         candidates.push({ poolKey, endpoint: endpoint.replace(/\/+$/, '') });

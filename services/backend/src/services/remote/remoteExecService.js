@@ -1,8 +1,9 @@
 'use strict';
 
 const { spawn } = require('child_process');
-const { safeKill } = require('../../tools/platformUtils');
 const crypto = require('crypto');
+
+const { safeKill } = require('../../tools/platformUtils');
 
 const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
 const DEFAULT_CONNECT_TIMEOUT_SEC = 8;
@@ -15,13 +16,17 @@ const _envFlag = require('../../utils/envFlagByName');
 
 function _getIdleTimeoutMs() {
   const parsed = Number.parseInt(process.env.KHY_REMOTE_SSH_IDLE_TIMEOUT_MS || '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
   return DEFAULT_IDLE_TIMEOUT_MS;
 }
 
 function _getConnectTimeoutSec() {
   const parsed = Number.parseInt(process.env.KHY_REMOTE_SSH_CONNECT_TIMEOUT_SEC || '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
   return DEFAULT_CONNECT_TIMEOUT_SEC;
 }
 
@@ -33,12 +38,19 @@ function _redactSecrets(text) {
   const input = String(text || '');
   return input
     .replace(/(password|passwd|token|secret|api[_-]?key)\s*[:=]\s*([^\s"'`]+)/gi, '$1=***')
-    .replace(/-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g, '[redacted-private-key]');
+    .replace(
+      /-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g,
+      '[redacted-private-key]'
+    );
 }
 
 function _trimPreview(text) {
-  if (typeof text !== 'string') return '';
-  if (text.length <= MAX_PREVIEW_CHARS) return text;
+  if (typeof text !== 'string') {
+    return '';
+  }
+  if (text.length <= MAX_PREVIEW_CHARS) {
+    return text;
+  }
   return `${text.slice(0, MAX_PREVIEW_CHARS)}\n...[truncated]`;
 }
 
@@ -59,7 +71,9 @@ class RemoteExecService {
   }
 
   _emitEvent(onEvent, event) {
-    if (typeof onEvent !== 'function' || !event) return;
+    if (typeof onEvent !== 'function' || !event) {
+      return;
+    }
     try {
       onEvent({ ...event });
     } catch {
@@ -94,10 +108,10 @@ class RemoteExecService {
   }
 
   _normalizeCommands(commands) {
-    if (!Array.isArray(commands)) return [];
-    return commands
-      .map((command) => String(command || '').trim())
-      .filter(Boolean);
+    if (!Array.isArray(commands)) {
+      return [];
+    }
+    return commands.map((command) => String(command || '').trim()).filter(Boolean);
   }
 
   _buildIdempotencyStoreKey(connectionId, idempotencyKey) {
@@ -107,7 +121,7 @@ class RemoteExecService {
   _cleanupExpiredIdempotentResults() {
     const now = Date.now();
     for (const [key, record] of this._idempotentResults.entries()) {
-      if ((now - record.createdAtMs) > IDEMPOTENCY_TTL_MS) {
+      if (now - record.createdAtMs > IDEMPOTENCY_TTL_MS) {
         this._idempotentResults.delete(key);
       }
     }
@@ -118,7 +132,8 @@ class RemoteExecService {
       trace_id: traceId || session.traceId || null,
       connection_id: session.connectionId,
       status: 'execution_disabled',
-      message: 'Remote side-effect execution is disabled in this scaffold. Set KHY_REMOTE_SSH_ENABLE_EXEC=true to enable execution.',
+      message:
+        'Remote side-effect execution is disabled in this scaffold. Set KHY_REMOTE_SSH_ENABLE_EXEC=true to enable execution.',
       dry_run: false,
       redaction_applied: true,
       risk_summary: {
@@ -156,12 +171,16 @@ class RemoteExecService {
     let finished = false;
 
     const nextSequence = () => {
-      if (typeof getNextSequence === 'function') return getNextSequence();
+      if (typeof getNextSequence === 'function') {
+        return getNextSequence();
+      }
       return localSequence++;
     };
 
     const pushEvent = (kind, severity, payload) => {
-      if (events.length >= MAX_EVENT_COUNT) return;
+      if (events.length >= MAX_EVENT_COUNT) {
+        return;
+      }
       const event = this._buildEvent(session, traceId, nextSequence(), kind, severity, payload);
       events.push(event);
       this._emitEvent(onEvent, event);
@@ -210,16 +229,26 @@ class RemoteExecService {
     let idleCheckTimer;
     const idlePromise = new Promise((_, reject) => {
       idleCheckTimer = setInterval(() => {
-        if (finished) return;
+        if (finished) {
+          return;
+        }
         const idleMs = Date.now() - lastActivityMs;
         if (idleMs > idleTimeoutMs) {
-          try { safeKill(child); } catch { /* ignore */ }
-          const err = new Error(`Remote exec idle timeout: no output for ${idleMs}ms while running step ${step}.`);
+          try {
+            safeKill(child);
+          } catch {
+            /* ignore */
+          }
+          const err = new Error(
+            `Remote exec idle timeout: no output for ${idleMs}ms while running step ${step}.`
+          );
           err.code = 'remote_exec_idle_timeout';
           reject(err);
         }
       }, 1000);
-      if (idleCheckTimer && idleCheckTimer.unref) idleCheckTimer.unref();
+      if (idleCheckTimer && idleCheckTimer.unref) {
+        idleCheckTimer.unref();
+      }
     });
 
     const exitPromise = new Promise((resolve, reject) => {
@@ -230,7 +259,9 @@ class RemoteExecService {
     try {
       const exitState = await Promise.race([exitPromise, idlePromise]);
       finished = true;
-      if (idleCheckTimer) clearInterval(idleCheckTimer);
+      if (idleCheckTimer) {
+        clearInterval(idleCheckTimer);
+      }
 
       const elapsedMs = Date.now() - startedAt;
       const ok = exitState.code === 0;
@@ -255,7 +286,9 @@ class RemoteExecService {
       };
     } catch (error) {
       finished = true;
-      if (idleCheckTimer) clearInterval(idleCheckTimer);
+      if (idleCheckTimer) {
+        clearInterval(idleCheckTimer);
+      }
 
       const elapsedMs = Date.now() - startedAt;
       pushEvent('remote_exec_step', 'error', {
@@ -287,7 +320,9 @@ class RemoteExecService {
     const nextSequence = () => sequence++;
 
     const pushEvent = (kind, severity, payload) => {
-      if (events.length >= MAX_EVENT_COUNT) return;
+      if (events.length >= MAX_EVENT_COUNT) {
+        return;
+      }
       const event = this._buildEvent(session, traceId, nextSequence(), kind, severity, payload);
       events.push(event);
       this._emitEvent(onEvent, event);
@@ -381,7 +416,15 @@ class RemoteExecService {
     };
   }
 
-  async requestExecution({ connectionId, commands, idempotencyKey, approvalTicketId, traceId, riskContext = null, onEvent = null }) {
+  async requestExecution({
+    connectionId,
+    commands,
+    idempotencyKey,
+    approvalTicketId,
+    traceId,
+    riskContext = null,
+    onEvent = null,
+  }) {
     this._cleanupExpiredIdempotentResults();
 
     const session = this._assertSession(connectionId);
@@ -395,7 +438,10 @@ class RemoteExecService {
         status: 'invalid_commands',
         message: 'Execution request must contain at least one non-empty command.',
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+      );
       return result;
     }
 
@@ -406,12 +452,18 @@ class RemoteExecService {
         status: 'idempotency_key_required',
         message: 'Side-effect execution requires idempotency_key.',
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+      );
       return result;
     }
 
     const requestHash = _hashExecutionRequest(session.connectionId, normalizedCommands);
-    const idempotencyStoreKey = this._buildIdempotencyStoreKey(session.connectionId, idempotencyKey);
+    const idempotencyStoreKey = this._buildIdempotencyStoreKey(
+      session.connectionId,
+      idempotencyKey
+    );
     const existingResult = this._idempotentResults.get(idempotencyStoreKey);
     if (existingResult) {
       if (existingResult.requestHash === requestHash) {
@@ -423,7 +475,10 @@ class RemoteExecService {
           idempotency_key: idempotencyKey,
           result: existingResult.result,
         };
-        this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'info', result));
+        this._emitEvent(
+          onEvent,
+          this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'info', result)
+        );
         return result;
       }
       const result = {
@@ -433,7 +488,10 @@ class RemoteExecService {
         message: 'The same idempotency_key was already used with a different command payload.',
         idempotency_key: idempotencyKey,
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+      );
       return result;
     }
 
@@ -445,7 +503,10 @@ class RemoteExecService {
         message: 'An execution with the same idempotency_key is already in progress.',
         idempotency_key: idempotencyKey,
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'wait', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'wait', result)
+      );
       return result;
     }
 
@@ -454,9 +515,10 @@ class RemoteExecService {
         ? this._approvalBridge.getTicket(approvalTicketId)
         : null;
 
-      const isApproved = approvedTicket
-        && approvedTicket.status === 'approved'
-        && approvedTicket.connection_id === session.connectionId;
+      const isApproved =
+        approvedTicket &&
+        approvedTicket.status === 'approved' &&
+        approvedTicket.connection_id === session.connectionId;
 
       if (!isApproved) {
         const result = {
@@ -472,7 +534,10 @@ class RemoteExecService {
             riskContext,
           }),
         };
-        this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_approval_required', 'warn', result));
+        this._emitEvent(
+          onEvent,
+          this._buildEvent(session, traceId, 1, 'remote_approval_required', 'warn', result)
+        );
         return result;
       }
 
@@ -485,7 +550,10 @@ class RemoteExecService {
           idempotency_key: idempotencyKey,
           approval_ticket_id: approvedTicket.ticket_id,
         };
-        this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+        this._emitEvent(
+          onEvent,
+          this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+        );
         return result;
       }
 
@@ -498,7 +566,10 @@ class RemoteExecService {
           approval_ticket_id: approvedTicket.ticket_id,
           consumed_at: approvedTicket.consumed_at,
         };
-        this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+        this._emitEvent(
+          onEvent,
+          this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+        );
         return result;
       }
     }
@@ -510,7 +581,10 @@ class RemoteExecService {
         evaluation,
         idempotencyKey,
       });
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'wait', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'wait', result)
+      );
       return result;
     }
 
@@ -525,7 +599,10 @@ class RemoteExecService {
           approval_ticket_id: approvalTicketId,
           code: consume.code,
         };
-        this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+        this._emitEvent(
+          onEvent,
+          this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+        );
         return result;
       }
     }
@@ -559,9 +636,10 @@ class RemoteExecService {
         result: wrapped,
       });
       this._connectionManager.touch(session.connectionId);
-      const lastSeq = Array.isArray(wrapped.events) && wrapped.events.length > 0
-        ? Number(wrapped.events[wrapped.events.length - 1].sequence || 0)
-        : 0;
+      const lastSeq =
+        Array.isArray(wrapped.events) && wrapped.events.length > 0
+          ? Number(wrapped.events[wrapped.events.length - 1].sequence || 0)
+          : 0;
       this._emitEvent(
         onEvent,
         this._buildEvent(
@@ -583,7 +661,10 @@ class RemoteExecService {
         redaction_applied: true,
         idempotency_key: idempotencyKey,
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 1, 'remote_exec_summary', 'error', result)
+      );
       return result;
     } finally {
       this._idempotentRunning.delete(idempotencyStoreKey);

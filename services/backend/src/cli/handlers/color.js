@@ -27,13 +27,17 @@ async function handleColor(subCommand, args = [], _options = {}) {
   let sessionId = null;
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   if (!sessionId) {
     printInfo('暂无活动会话 —— 先开始一段对话,再用 /color 给会话设颜色。');
     return true;
   }
 
-  const tokens = [subCommand].concat(Array.isArray(args) ? args : []).filter((t) => t != null && t !== '');
+  const tokens = [subCommand]
+    .concat(Array.isArray(args) ? args : [])
+    .filter((t) => t != null && t !== '');
   const arg = leaf.parseColorArgs(tokens);
 
   // 无参 → 列出可用颜色。
@@ -67,7 +71,9 @@ async function handleColor(subCommand, args = [], _options = {}) {
 
 function _persist(sessionId, color) {
   try {
-    return !!require('../../services/sessionPersistence').updateSessionMetadata(sessionId, { color });
+    return !!require('../../services/sessionPersistence').updateSessionMetadata(sessionId, {
+      color,
+    });
   } catch {
     return false;
   }

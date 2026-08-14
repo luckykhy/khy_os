@@ -13,6 +13,7 @@
  */
 
 const evoRequirement = require('../evoEngine/evoRequirement');
+
 const { mappingFor } = require('./physicalCodes');
 
 class DeterministicElevator {
@@ -30,7 +31,9 @@ class DeterministicElevator {
       throw new Error(`DeterministicElevator.elevate: 未知物理码 ${physical.code}`);
     }
 
-    const surface = String((physical.detail && (physical.detail.surface || physical.detail.toolName)) || physical.code);
+    const surface = String(
+      (physical.detail && (physical.detail.surface || physical.detail.toolName)) || physical.code
+    );
     const painPoint = `${physical.finding || physical.code}`;
 
     const requirement = evoRequirement.forge({
@@ -39,7 +42,10 @@ class DeterministicElevator {
       attribution: { kind: 'physical-assertion', why: m.why, surface },
       impact: `物理断言判定的硬伤（${physical.code}）：${m.action}。`,
       proposedModules: m.proposedModules,
-      acceptanceCriteria: [`消除 ${physical.code} 类硬伤且不引入退化`, `${m.action} 后同类输入不再触发物理断言`],
+      acceptanceCriteria: [
+        `消除 ${physical.code} 类硬伤且不引入退化`,
+        `${m.action} 后同类输入不再触发物理断言`,
+      ],
     });
 
     return {

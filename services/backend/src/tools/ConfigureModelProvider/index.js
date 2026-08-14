@@ -19,39 +19,60 @@
  */
 'use strict';
 
-const { defineTool } = require('../_baseTool');
-const { findBuiltinProvider, applyBuiltinProviderKey } = require('../../services/gateway/builtinProviderConfig');
-const { registerCustomProvider, unregisterCustomProvider } = require('../../services/customProviderRegistrar');
 const { maskToken } = require('../../services/accountPool/credentialHelpers');
+const {
+  registerCustomProvider,
+  unregisterCustomProvider,
+} = require('../../services/customProviderRegistrar');
+const {
+  findBuiltinProvider,
+  applyBuiltinProviderKey,
+} = require('../../services/gateway/builtinProviderConfig');
+const { defineTool } = require('../_baseTool');
 
 // 增/删/列 动作门控:KHY_PROVIDER_CONFIG_ACTIONS 默认开,仅 {0,false,off,no} 关。
 // 关 → 强制 action='add' → 逐字节回退为「只增/替换」的历史行为(remove/list 路径不可达)。
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _actionsEnabled(env = process.env) {
   const raw = env && env.KHY_PROVIDER_CONFIG_ACTIONS;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
+
 /** Resolve the effective action. Gate off (or unknown value) → 'add' (byte-fallback). */
 function resolveAction(input = {}) {
-  if (!_actionsEnabled()) return 'add';
-  const a = String(input.action || 'add').trim().toLowerCase();
-  return (a === 'remove' || a === 'list') ? a : 'add';
+  if (!_actionsEnabled()) {
+    return 'add';
+  }
+  const a = String(input.action || 'add')
+    .trim()
+    .toLowerCase();
+  return a === 'remove' || a === 'list' ? a : 'add';
 }
 
 /** Derive a pool-key slug from a free-form display name. */
 function slugifyPoolKey(name) {
-  return String(name || '').trim().toLowerCase()
+  return String(name || '')
+    .trim()
+    .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
 
 /** Best-effort: does this pool key already hold a key? (drives isDestructive) */
 function poolHasKey(poolKey) {
-  if (!poolKey) return false;
+  if (!poolKey) {
+    return false;
+  }
   try {
     const pool = require('../../services/apiKeyPool');
-    try { pool.init(); } catch { /* already initialised */ }
+    try {
+      pool.init();
+    } catch {
+      /* already initialised */
+    }
     return (pool.getPoolStatus(poolKey) || []).length > 0;
   } catch {
     return false;
@@ -65,14 +86,21 @@ function _gateEnabled(name, env = process.env) {
     const e = env || {};
     try {
       const reg = require('../../services/flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled(name, e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e[name];
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v); // 未设 → 默认开
   } catch {
     return false;
@@ -99,7 +127,9 @@ function _hasRealKey(status) {
 function resolvePoolKey(input = {}) {
   if (input.kind !== 'custom') {
     const builtin = findBuiltinProvider(input.provider);
-    if (builtin && input.kind !== 'custom') return builtin.poolKey;
+    if (builtin && input.kind !== 'custom') {
+      return builtin.poolKey;
+    }
   }
   return input.poolKey ? slugifyPoolKey(input.poolKey) : slugifyPoolKey(input.provider);
 }
@@ -109,7 +139,11 @@ function executeList() {
   try {
     const customRegistry = require('../../services/customProviderRegistry');
     const pool = require('../../services/apiKeyPool');
-    try { pool.init(); } catch { /* already initialised */ }
+    try {
+      pool.init();
+    } catch {
+      /* already initialised */
+    }
     const providers = (customRegistry.listProviders() || []).map((p) => {
       let keyCount = 0;
       let keyHeads = [];
@@ -117,7 +151,9 @@ function executeList() {
         const status = pool.getPoolStatus(p.poolKey) || [];
         keyCount = status.length;
         keyHeads = status.map((e) => e.keyPreview).filter(Boolean); // already masked at source
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
       return {
         provider: p.name || p.poolKey,
         poolKey: p.poolKey,
@@ -138,15 +174,30 @@ function executeList() {
       try {
         const seen = new Set(providers.map((p) => p.poolKey));
         const { listBuiltinProviders } = require('../../services/gateway/builtinProviderConfig');
-        for (const b of (listBuiltinProviders() || [])) {
-          if (!b || !b.poolKey || seen.has(b.poolKey)) continue; // 跳过 poolKey:null(如 HuggingFace)与撞车
+        for (const b of listBuiltinProviders() || []) {
+          if (!b || !b.poolKey || seen.has(b.poolKey)) {
+            continue;
+          } // 跳过 poolKey:null(如 HuggingFace)与撞车
           let status = [];
-          try { status = pool.getPoolStatus(b.poolKey) || []; } catch { status = []; }
-          if (!_hasRealKey(status)) continue; // 只有内置占位假 key → 不谎报「已配置」
+          try {
+            status = pool.getPoolStatus(b.poolKey) || [];
+          } catch {
+            status = [];
+          }
+          if (!_hasRealKey(status)) {
+            continue;
+          } // 只有内置占位假 key → 不谎报「已配置」
           // 智谱 key 配好后自动加入免费模型:glm 行的 models 并入免费聊天/视觉模型
           // (门控 KHY_ZHIPU_FREE_MODELS,门关/非 glm/异常 → 原样,逐字节回退)。
           let bModels = Array.isArray(b.models) ? b.models : [];
-          try { bModels = require('../../services/gateway/zhipuFreeModels').augmentGlmPoolModels(b.poolKey, bModels); } catch { /* keep */ }
+          try {
+            bModels = require('../../services/gateway/zhipuFreeModels').augmentGlmPoolModels(
+              b.poolKey,
+              bModels
+            );
+          } catch {
+            /* keep */
+          }
           providers.push({
             provider: b.name || b.poolKey,
             poolKey: b.poolKey,
@@ -159,7 +210,9 @@ function executeList() {
           });
           seen.add(b.poolKey);
         }
-      } catch { /* fail-soft: 内置合并失败不影响已构好的自定义列表 */ }
+      } catch {
+        /* fail-soft: 内置合并失败不影响已构好的自定义列表 */
+      }
     }
 
     // ── 问 khyos「有哪些模型/渠道」时也给其他免费模型渠道(门控 KHY_FREE_MODEL_CHANNELS)。
@@ -168,12 +221,20 @@ function executeList() {
     try {
       if (_gateEnabled('KHY_FREE_MODEL_CHANNELS')) {
         const channels = require('../../services/freeModelChannels').listFreeModelChannels();
-        if (channels.length) listOut.freeChannels = channels;
+        if (channels.length) {
+          listOut.freeChannels = channels;
+        }
       }
-    } catch { /* fail-soft:免费渠道追加失败不影响 list 结果 */ }
+    } catch {
+      /* fail-soft:免费渠道追加失败不影响 list 结果 */
+    }
     return listOut;
   } catch (err) {
-    return { success: false, action: 'list', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      action: 'list',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 
@@ -184,11 +245,13 @@ function executeList() {
  * (isDestructive=true for remove) provides the "preview + confirm" for Tier B/C.
  */
 function executeRemove(params = {}) {
-  const target = params.poolKey
-    ? slugifyPoolKey(params.poolKey)
-    : resolvePoolKey(params);
+  const target = params.poolKey ? slugifyPoolKey(params.poolKey) : resolvePoolKey(params);
   if (!target) {
-    return { success: false, action: 'remove', error: '未指定要删除的供应商（provider 或 poolKey）' };
+    return {
+      success: false,
+      action: 'remove',
+      error: '未指定要删除的供应商（provider 或 poolKey）',
+    };
   }
   try {
     const res = unregisterCustomProvider(target, { removeKeys: params.removeKeys === true });
@@ -200,7 +263,11 @@ function executeRemove(params = {}) {
       keptKeys: res.keptKeys,
     };
   } catch (err) {
-    return { success: false, action: 'remove', error: err && err.message ? err.message : String(err) };
+    return {
+      success: false,
+      action: 'remove',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 
@@ -215,35 +282,86 @@ module.exports = defineTool({
   isReadOnly: (input) => resolveAction(input || {}) === 'list',
   isDestructive: (input) => {
     const a = resolveAction(input || {});
-    if (a === 'remove') return true;
-    if (a === 'list') return false;
+    if (a === 'remove') {
+      return true;
+    }
+    if (a === 'list') {
+      return false;
+    }
     return poolHasKey(resolvePoolKey(input || {}));
   },
   isConcurrencySafe: false,
   shouldDefer: true,
-  searchHint: '配置 模型 密钥 api key provider 厂商 网关 gateway configure model key add remove delete list provider 中转 relay deepseek qwen openai 删除 移除 列出 查看 替换 换成 换为 更换 切换 改成 改为 修改 更新 replace swap update change 替换密钥 换key 通义 智谱 豆包 文心',
+  searchHint:
+    '配置 模型 密钥 api key provider 厂商 网关 gateway configure model key add remove delete list provider 中转 relay deepseek qwen openai 删除 移除 列出 查看 替换 换成 换为 更换 切换 改成 改为 修改 更新 replace swap update change 替换密钥 换key 通义 智谱 豆包 文心',
   maxResultSizeChars: 2000,
 
   inputSchema: {
-    action: { type: 'string', required: false, description: "动作：'add'(默认,配置/替换密钥)、'remove'(删除供应商,默认保留密钥)、'list'(只读列出已配置供应商,密钥脱敏)" },
+    action: {
+      type: 'string',
+      required: false,
+      description:
+        "动作：'add'(默认,配置/替换密钥)、'remove'(删除供应商,默认保留密钥)、'list'(只读列出已配置供应商,密钥脱敏)",
+    },
     // provider/apiKey 对 add 必需(execute 内校验并友好报错);对 remove 用作目标;对 list 可省。
     // 刻意不在 schema 标 required:true,以便 list/remove 可调;门控关时 execute 的 add 守卫等价兜底。
-    provider: { type: 'string', required: false, description: '厂商名称或 poolKey（内置如 deepseek/DeepSeek/通义千问），或自定义供应商的显示名（add 必填；remove 作为删除目标）' },
-    apiKey: { type: 'string', required: false, description: 'API Key（机密，仅进程内使用，绝不回显完整值；add 必填）' },
-    model: { type: 'string', required: false, description: '要设为默认并登记路由的模型 ID（自定义供应商必填）' },
-    endpoint: { type: 'string', required: false, description: 'Base URL（自定义/中转必填；内置厂商可留空走默认）' },
-    extraModels: { type: 'string', required: false, description: '额外模型 ID，逗号分隔（仅自定义）' },
-    tier: { type: 'string', required: false, description: '能力档位 T0-T3，留空自动分级（仅自定义）' },
-    poolKey: { type: 'string', required: false, description: '自定义供应商的内部 id（小写字母/数字/连字符）；留空则从显示名推导' },
-    kind: { type: 'string', required: false, description: "强制配置类型：'builtin' 或 'custom'；留空自动判定" },
-    removeKeys: { type: 'boolean', required: false, description: 'action=remove 时是否连同已存储的密钥一并删除（默认 false，仅摘 provider 元数据+路由、保留密钥可复用）' },
+    provider: {
+      type: 'string',
+      required: false,
+      description:
+        '厂商名称或 poolKey（内置如 deepseek/DeepSeek/通义千问），或自定义供应商的显示名（add 必填；remove 作为删除目标）',
+    },
+    apiKey: {
+      type: 'string',
+      required: false,
+      description: 'API Key（机密，仅进程内使用，绝不回显完整值；add 必填）',
+    },
+    model: {
+      type: 'string',
+      required: false,
+      description: '要设为默认并登记路由的模型 ID（自定义供应商必填）',
+    },
+    endpoint: {
+      type: 'string',
+      required: false,
+      description: 'Base URL（自定义/中转必填；内置厂商可留空走默认）',
+    },
+    extraModels: {
+      type: 'string',
+      required: false,
+      description: '额外模型 ID，逗号分隔（仅自定义）',
+    },
+    tier: {
+      type: 'string',
+      required: false,
+      description: '能力档位 T0-T3，留空自动分级（仅自定义）',
+    },
+    poolKey: {
+      type: 'string',
+      required: false,
+      description: '自定义供应商的内部 id（小写字母/数字/连字符）；留空则从显示名推导',
+    },
+    kind: {
+      type: 'string',
+      required: false,
+      description: "强制配置类型：'builtin' 或 'custom'；留空自动判定",
+    },
+    removeKeys: {
+      type: 'boolean',
+      required: false,
+      description:
+        'action=remove 时是否连同已存储的密钥一并删除（默认 false，仅摘 provider 元数据+路由、保留密钥可复用）',
+    },
   },
 
   getActivityDescription(input) {
     const action = resolveAction(input || {});
-    if (action === 'list') return '列出已配置的模型供应商（只读，密钥脱敏）';
+    if (action === 'list') {
+      return '列出已配置的模型供应商（只读，密钥脱敏）';
+    }
     if (action === 'remove') {
-      const tgt = input && (input.provider || input.poolKey) ? (input.provider || input.poolKey) : '供应商';
+      const tgt =
+        input && (input.provider || input.poolKey) ? input.provider || input.poolKey : '供应商';
       return `删除供应商 ${tgt}（${input && input.removeKeys ? '连密钥一起删' : '默认保留密钥'}）`;
     }
     const masked = input && input.apiKey ? maskToken(input.apiKey) : '***';
@@ -253,14 +371,22 @@ module.exports = defineTool({
 
   async execute(params = {}) {
     const action = resolveAction(params);
-    if (action === 'list') return executeList();
-    if (action === 'remove') return executeRemove(params);
+    if (action === 'list') {
+      return executeList();
+    }
+    if (action === 'remove') {
+      return executeRemove(params);
+    }
 
     // ── action === 'add'(默认):以下为历史行为,逐字节不变 ──
     const provider = String(params.provider || '').trim();
-    if (!provider) return { success: false, error: '未指定供应商（provider）' };
+    if (!provider) {
+      return { success: false, error: '未指定供应商（provider）' };
+    }
     const apiKey = params.apiKey;
-    if (!apiKey || !String(apiKey).trim()) return { success: false, error: '未提供 API Key' };
+    if (!apiKey || !String(apiKey).trim()) {
+      return { success: false, error: '未提供 API Key' };
+    }
 
     const keyRedacted = maskToken(apiKey);
 
@@ -269,7 +395,10 @@ module.exports = defineTool({
       const builtin = forceCustom ? null : findBuiltinProvider(provider);
 
       if (params.kind === 'builtin' && !builtin) {
-        return { success: false, error: `未知的内置厂商: ${provider}（如需自定义请提供 endpoint 并设 kind=custom）` };
+        return {
+          success: false,
+          error: `未知的内置厂商: ${provider}（如需自定义请提供 endpoint 并设 kind=custom）`,
+        };
       }
 
       // ── built-in vendor branch ──
@@ -302,14 +431,20 @@ module.exports = defineTool({
         if (_gateEnabled('KHY_PROVIDER_ADD_READBACK')) {
           try {
             const pool = require('../../services/apiKeyPool');
-            try { pool.init(); } catch { /* already initialised */ }
+            try {
+              pool.init();
+            } catch {
+              /* already initialised */
+            }
             const status = pool.getPoolStatus(result.poolKey) || [];
             const keyLanded = _hasRealKey(status);
             out.keyLanded = keyLanded;
             out.note = keyLanded
               ? `已写入 key 池:「${result.poolKey}」是内置 provider,其 key 存入内置 key 池而非 custom_providers.json(这是正常的,不要再手动改该文件);现在用 configureModelProvider(action=list) 即可看到它。`
               : `注意:「${result.poolKey}」当前只有内置占位 key(非真实可用),请填入你自己的该厂商 API Key;它不会出现在 custom_providers.json,这是正常的。`;
-          } catch { /* fail-soft:回读失败不影响既有返回 */ }
+          } catch {
+            /* fail-soft:回读失败不影响既有返回 */
+          }
         }
         // ── 目标:智谱 key 配好后自动加入免费模型 + 同时给其他免费模型渠道。─────────────────
         //    纯加法:只 append freeModels/freeChannels 字段与 note 尾注,既有字段逐字节不变;
@@ -317,8 +452,12 @@ module.exports = defineTool({
         //    对齐,该叶子是免费模型权威源);freeChannels 对任何成功的内置 add 都附带,兑现「问
         //    khyos 也会给其他免费模型渠道」。
         try {
-          if (String(result.poolKey || '').trim().toLowerCase() === 'glm'
-            && _gateEnabled('KHY_ZHIPU_FREE_MODELS')) {
+          if (
+            String(result.poolKey || '')
+              .trim()
+              .toLowerCase() === 'glm' &&
+            _gateEnabled('KHY_ZHIPU_FREE_MODELS')
+          ) {
             const zf = require('../../services/gateway/zhipuFreeModels');
             const free = zf.listZhipuFreeModels();
             if (free.length) {
@@ -327,7 +466,9 @@ module.exports = defineTool({
               out.note = `${out.note ? `${out.note} ` : ''}已为「glm」加入 ${free.length} 个智谱免费模型(${ids}),在 /model 选择器可见、可直接免费调用。`;
             }
           }
-        } catch { /* fail-soft:免费模型追加失败不影响既有返回 */ }
+        } catch {
+          /* fail-soft:免费模型追加失败不影响既有返回 */
+        }
         try {
           if (_gateEnabled('KHY_FREE_MODEL_CHANNELS')) {
             const fc = require('../../services/freeModelChannels');
@@ -335,17 +476,24 @@ module.exports = defineTool({
             if (channels.length) {
               out.freeChannels = channels;
               const msg = fc.buildFreeModelChannelsMessage();
-              if (msg) out.note = `${out.note ? `${out.note} ` : ''}此外还有其他免费模型渠道可配置:${msg}。`;
+              if (msg) {
+                out.note = `${out.note ? `${out.note} ` : ''}此外还有其他免费模型渠道可配置:${msg}。`;
+              }
             }
           }
-        } catch { /* fail-soft:免费渠道追加失败不影响既有返回 */ }
+        } catch {
+          /* fail-soft:免费渠道追加失败不影响既有返回 */
+        }
         return out;
       }
 
       // ── custom / relay branch ──
       const endpoint = String(params.endpoint || '').trim();
       if (!endpoint) {
-        return { success: false, error: `「${provider}」不是内置厂商，需要提供 base-url（endpoint）才能作为自定义/中转供应商配置` };
+        return {
+          success: false,
+          error: `「${provider}」不是内置厂商，需要提供 base-url（endpoint）才能作为自定义/中转供应商配置`,
+        };
       }
       const model = String(params.model || '').trim();
       if (!model) {
@@ -353,7 +501,10 @@ module.exports = defineTool({
       }
       const poolKey = params.poolKey ? slugifyPoolKey(params.poolKey) : slugifyPoolKey(provider);
       if (!poolKey) {
-        return { success: false, error: '无法从显示名推导出有效的 poolKey，请提供 poolKey（小写字母/数字/连字符）' };
+        return {
+          success: false,
+          error: '无法从显示名推导出有效的 poolKey，请提供 poolKey（小写字母/数字/连字符）',
+        };
       }
 
       // ── 修 GLM 死循环:内置 poolKey 被误当 custom 的可操作引导。──────────────────────────
@@ -371,7 +522,9 @@ module.exports = defineTool({
             error: `「${poolKey}」是内置 provider,不要当自定义供应商配置(也不要手动改 custom_providers.json)。请改用 configureModelProvider(action=add、不带 kind=custom、provider 填「${provider}」或「${poolKey}」)——它的 key 会写入内置 key 池,配好后用 action=list 即可看到。`,
           };
         }
-      } catch { /* fail-soft:探测失败落回 registrar 原有内置守卫 */ }
+      } catch {
+        /* fail-soft:探测失败落回 registrar 原有内置守卫 */
+      }
 
       const result = registerCustomProvider({
         displayName: provider,

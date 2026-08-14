@@ -36,7 +36,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 const EMPTY_CLOSURE_MAX_CHARS = 12;
 
 function resultGuardEnabled(env = process.env) {
-  const flag = String((env && env.KHY_RESULT_GUARD) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_RESULT_GUARD) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -47,7 +49,9 @@ function resultGuardEnabled(env = process.env) {
  * @returns {boolean}
  */
 function emptyAfterToolsGuardEnabled(env = process.env) {
-  const flag = String((env && env.KHY_RESULT_GUARD_EMPTY) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_RESULT_GUARD_EMPTY) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -67,7 +71,9 @@ function emptyAfterToolsGuardEnabled(env = process.env) {
  * @returns {boolean}
  */
 function progressOnlyGuardEnabled(env = process.env) {
-  const flag = String((env && env.KHY_RESULT_GUARD_PROGRESS_ONLY) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_RESULT_GUARD_PROGRESS_ONLY) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -83,20 +89,24 @@ function progressOnlyGuardEnabled(env = process.env) {
  * @returns {boolean}
  */
 function deliveryNudgeForcedForWeakTier(env = process.env) {
-  const flag = String((env && env.KHY_T0_DELIVERY_NUDGE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_T0_DELIVERY_NUDGE) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
 // 句首/通篇的「把当前动作框定为前置准备」的承诺引导词。
 // 借鉴 toolUseLoop._looksLikeProgressOnlyReply 的前缀直觉,但这里**不限长度**——正是要抓住
 // 那段已经混进一段铺垫、字数早超 80 的「长前言」。
-const _FORWARD_LEAD = /(让我先|我先|让我|我来|我会先|我打算先|我准备先|我这就先|那我先|先看看|先收集|先了解|先分析|先检查|先查|先梳理|让我看看|let me (?:first|start by|begin by)|i'?ll (?:first|start by)|first[, ]+(?:let me|i)\b|i need to first)/i;
+const _FORWARD_LEAD =
+  /(让我先|我先|让我|我来|我会先|我打算先|我准备先|我这就先|那我先|先看看|先收集|先了解|先分析|先检查|先查|先梳理|让我看看|let me (?:first|start by|begin by)|i'?ll (?:first|start by)|first[, ]+(?:let me|i)\b|i need to first)/i;
 
 // 「延迟连接词 + (可选的 给/给出/提供…) + 可交付产物名」紧邻出现:把交付推到「之后」。
 // 命中例:「再给针对性建议」「再给具体建议」「然后给出结论」「之后再做总结」「then I'll give you recommendations」。
 // `[^。．.!?！？\n]{0,16}` 桥接连接词与产物名,但**不跨句**(遇句终止符即断),避免「然后」与远处
 // 名词的伪关联。
-const _DEFERRED_DELIVERABLE = /(再|然后|接下来|之后|稍后|马上|then\b|after that)[^。．.!?！？\n]{0,16}(建议|意见|方案|结论|总结|分析|报告|答复|回答|说明|清单|计划|recommendation|advice|suggestion|summary|conclusion|plan|report)/i;
+const _DEFERRED_DELIVERABLE =
+  /(再|然后|接下来|之后|稍后|马上|then\b|after that)[^。．.!?！？\n]{0,16}(建议|意见|方案|结论|总结|分析|报告|答复|回答|说明|清单|计划|recommendation|advice|suggestion|summary|conclusion|plan|report)/i;
 
 /**
  * 文本是否为「让我先 … <动作> … 再/然后 … 给(建议/结论/…)」式**未兑现的延迟承诺**。
@@ -106,8 +116,12 @@ const _DEFERRED_DELIVERABLE = /(再|然后|接下来|之后|稍后|马上|then\b
  * @returns {boolean}
  */
 function looksLikeForwardPromise(text) {
-  const t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
-  if (!t) return false;
+  const t = String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) {
+    return false;
+  }
   return _FORWARD_LEAD.test(t) && _DEFERRED_DELIVERABLE.test(t);
 }
 
@@ -115,12 +129,14 @@ function looksLikeForwardPromise(text) {
 const _PROGRESS_MAX_CHARS = 400;
 
 // 动作/检视动词:模型正在「找/看/查/读/定位/核对/扫描…」——过程动作,不是交付。
-const _PROGRESS_ACTION = /(找到|发现|定位|查看|看下|看看|读取|检查|排查|梳理|扫描|搜索|匹配|核对|浏览|确认|found|locat|inspect|scan|search|read|check|review|analy[sz]|match|look)/i;
+const _PROGRESS_ACTION =
+  /(找到|发现|定位|查看|看下|看看|读取|检查|排查|梳理|扫描|搜索|匹配|核对|浏览|确认|found|locat|inspect|scan|search|read|check|review|analy[sz]|match|look)/i;
 
 // 连续/推进标记:句子在宣告「先…再…/逐个/往下/继续/下一步/入手…」——摆明还没完、要接着走。
 // 与 _DEFERRED_DELIVERABLE 互补:后者要求出现「建议/结论」等交付名词;本组只认「推进」意图,
 // 抓的正是连交付承诺都没有、纯报进度的更隐蔽一类。
-const _PROGRESS_CONTINUATION = /(先从|先看|先查|先定位|先读|再往下|再看|再查|再定位|再决定|往下走|往下|逐个|逐一|接下来|下一步|继续|入手|着手|然后再|这就|马上就|一个一个|挨个|one by one|step by step|next step|move on|start(?:ing)? with|continuing|proceed)/i;
+const _PROGRESS_CONTINUATION =
+  /(先从|先看|先查|先定位|先读|再往下|再看|再查|再定位|再决定|往下走|往下|逐个|逐一|接下来|下一步|继续|入手|着手|然后再|这就|马上就|一个一个|挨个|one by one|step by step|next step|move on|start(?:ing)? with|continuing|proceed)/i;
 
 /**
  * 文本是否为「只报告处理进度 / 宣告下一步」式的**纯进度旁白**(无结论、无代码、篇幅短)。
@@ -132,11 +148,21 @@ const _PROGRESS_CONTINUATION = /(先从|先看|先查|先定位|先读|再往下
  * @returns {boolean}
  */
 function looksLikeProgressNarration(text) {
-  const t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
-  if (!t) return false;
-  if (t.length > _PROGRESS_MAX_CHARS) return false; // 长正文更可能真交付,保守不误伤
-  if (/```/.test(t)) return false;                  // 含代码块 → 有实质产物
-  if (/<tool_call>/i.test(t)) return false;
+  const t = String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) {
+    return false;
+  }
+  if (t.length > _PROGRESS_MAX_CHARS) {
+    return false;
+  } // 长正文更可能真交付,保守不误伤
+  if (/```/.test(t)) {
+    return false;
+  } // 含代码块 → 有实质产物
+  if (/<tool_call>/i.test(t)) {
+    return false;
+  }
   return _PROGRESS_ACTION.test(t) && _PROGRESS_CONTINUATION.test(t);
 }
 
@@ -151,11 +177,20 @@ function looksLikeProgressNarration(text) {
  * @param {object} [env=process.env]
  * @returns {{unfinished: boolean, reason: (string|null)}}
  */
-function assessClosure({ totalToolCalls, hasDeliveredConclusion, finalText } = {}, env = process.env) {
-  if (!resultGuardEnabled(env)) return { unfinished: false, reason: null };
+function assessClosure(
+  { totalToolCalls, hasDeliveredConclusion, finalText } = {},
+  env = process.env
+) {
+  if (!resultGuardEnabled(env)) {
+    return { unfinished: false, reason: null };
+  }
   const tc = Number(totalToolCalls);
-  if (!Number.isFinite(tc) || tc <= 0) return { unfinished: false, reason: null };
-  if (hasDeliveredConclusion) return { unfinished: false, reason: null };
+  if (!Number.isFinite(tc) || tc <= 0) {
+    return { unfinished: false, reason: null };
+  }
+  if (hasDeliveredConclusion) {
+    return { unfinished: false, reason: null };
+  }
   if (looksLikeForwardPromise(finalText)) {
     return { unfinished: true, reason: 'promise-without-delivery' };
   }
@@ -189,7 +224,10 @@ function assessClosure({ totalToolCalls, hasDeliveredConclusion, finalText } = {
  * @param {object} [env=process.env]
  * @returns {boolean}
  */
-function shouldAppendDeliverySummary({ finalText, hasDeliveredConclusion } = {}, env = process.env) {
+function shouldAppendDeliverySummary(
+  { finalText, hasDeliveredConclusion } = {},
+  env = process.env
+) {
   if (!resultGuardEnabled(env)) {
     return String(finalText == null ? '' : finalText).replace(/\s/g, '').length < 40;
   }
@@ -207,23 +245,31 @@ function shouldAppendDeliverySummary({ finalText, hasDeliveredConclusion } = {},
  * @returns {string}
  */
 function buildClosureNotice({ totalToolCalls, reason } = {}, env = process.env) {
-  if (!resultGuardEnabled(env)) return '';
+  if (!resultGuardEnabled(env)) {
+    return '';
+  }
   const tc = Number(totalToolCalls);
   const n = Number.isFinite(tc) && tc > 0 ? Math.floor(tc) : 0;
   const exec = n > 0 ? `已执行 ${n} 次工具收集信息,` : '';
   if (reason === 'empty-after-tools') {
     // 工具跑完却几乎没吐正文(只剩裸 JSON / 半截话)——明确告诉用户「未给结论」,给一步可执行的出口。
-    return `\n\n---\n⚠ 本轮${exec}但几乎没有给出文字结论(可能只回了工具数据或被截断)。`
-      + `请发送「继续 基于已得到的结果直接作答」,或用 /model 换更强模型。`;
+    return (
+      `\n\n---\n⚠ 本轮${exec}但几乎没有给出文字结论(可能只回了工具数据或被截断)。` +
+      `请发送「继续 基于已得到的结果直接作答」,或用 /model 换更强模型。`
+    );
   }
   if (reason === 'progress-only-after-tools') {
     // 只报告了处理进度 / 宣告下一步,却没交付结论——点破「在原地绕圈」,给一步可执行的出口。
-    return `\n\n---\n⚠ 本轮${exec}但只报告了处理进度、宣告了下一步,尚未给出结论(疑似在收集阶段空转)。`
-      + `请发送「继续 基于已得到的结果直接给出结论」,或用 /model 换更强模型。`;
+    return (
+      `\n\n---\n⚠ 本轮${exec}但只报告了处理进度、宣告了下一步,尚未给出结论(疑似在收集阶段空转)。` +
+      `请发送「继续 基于已得到的结果直接给出结论」,或用 /model 换更强模型。`
+    );
   }
   // 默认(promise-without-delivery 等):统一收尾。
-  return `\n\n---\n⚠ 本轮${exec}但尚未给出最终结论/建议(疑似在收集阶段反复绕圈)。`
-    + `请输入「继续 并直接给出结论」,或用 /model 换更强模型。`;
+  return (
+    `\n\n---\n⚠ 本轮${exec}但尚未给出最终结论/建议(疑似在收集阶段反复绕圈)。` +
+    `请输入「继续 并直接给出结论」,或用 /model 换更强模型。`
+  );
 }
 
 module.exports = {

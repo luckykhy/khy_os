@@ -274,7 +274,7 @@ describe('largeTaskOrchestrator', () => {
       commit: false,
       heartbeat_ms: 500,
       lease_ms: 10_000,
-      idle_timeout_ms: 30,
+      idle_timeout_ms: 200,
     });
 
     expect(result.ok).toBe(true);

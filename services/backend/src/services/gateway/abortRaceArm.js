@@ -56,7 +56,9 @@ function createAbortRejectionArm(signal, reason = 'aborted') {
     if (signal.aborted) {
       try {
         reject(new Error(_describe(reason, signal)));
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return;
     }
 
@@ -68,7 +70,11 @@ function createAbortRejectionArm(signal, reason = 'aborted') {
       return;
     }
     cleanup = () => {
-      try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+      try {
+        signal.removeEventListener('abort', onAbort);
+      } catch {
+        /* ignore */
+      }
       cleanup = () => {}; // 幂等
     };
   });
@@ -84,9 +90,13 @@ function _describe(reason, signal) {
   const base = typeof reason === 'string' && reason ? reason : 'aborted';
   try {
     const r = signal && signal.reason;
-    if (r === undefined || r === null) return base;
-    const text = typeof r === 'string' ? r : (r && r.message) ? r.message : String(r);
-    if (!text || text === base) return base;
+    if (r === undefined || r === null) {
+      return base;
+    }
+    const text = typeof r === 'string' ? r : r && r.message ? r.message : String(r);
+    if (!text || text === base) {
+      return base;
+    }
     return `${base}: ${text}`;
   } catch {
     return base;

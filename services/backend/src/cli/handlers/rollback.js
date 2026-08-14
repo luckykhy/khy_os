@@ -15,10 +15,16 @@ const chalk = (() => {
 })();
 const { printSuccess, printError, printInfo } = require('../formatters');
 
-function _svc() { return require('../../services/rollbackService'); }
+function _svc() {
+  return require('../../services/rollbackService');
+}
 
 function _fmtTime(t) {
-  try { return new Date(t).toLocaleString('zh-CN'); } catch { return String(t || ''); }
+  try {
+    return new Date(t).toLocaleString('zh-CN');
+  } catch {
+    return String(t || '');
+  }
 }
 
 async function handleRollback(command, subCommand, args, options) {
@@ -31,8 +37,10 @@ async function handleRollback(command, subCommand, args, options) {
     const filePath = subCommand || null; // `undo <file>`
     const r = svc.undo({ filePath });
     if (r.success) {
-      printSuccess(`已撤销文件改动${filePath ? `: ${filePath}` : ''}` +
-        (r.restoredTimestamp ? chalk.dim(` (恢复至 ${_fmtTime(r.restoredTimestamp)})`) : ''));
+      printSuccess(
+        `已撤销文件改动${filePath ? `: ${filePath}` : ''}` +
+          (r.restoredTimestamp ? chalk.dim(` (恢复至 ${_fmtTime(r.restoredTimestamp)})`) : '')
+      );
     } else {
       printError(`撤销失败: ${r.error}`);
     }
@@ -48,7 +56,10 @@ async function handleRollback(command, subCommand, args, options) {
   if (command === 'rewind' && /^\d+$/.test(_rwTok)) {
     const n = parseInt(_rwTok, 10);
     const ai = require('../ai');
-    if (typeof ai.rewindToUserTurn !== 'function') { printError('对话回溯不可用'); return true; }
+    if (typeof ai.rewindToUserTurn !== 'function') {
+      printError('对话回溯不可用');
+      return true;
+    }
 
     // Capture the recalled user text + per-turn restore plan BEFORE the splice
     // removes the target. listUserTargets(rewindControl) is the single source of
@@ -61,11 +72,18 @@ async function handleRollback(command, subCommand, args, options) {
       const convo = ai.getConversation();
       const targets = require('../tui/rewindControl').listUserTargets(convo);
       plan = require('../../services/rewindResume').buildRewindPlan(targets, n);
-      if (plan && plan.ok && typeof plan.content === 'string') recalledText = plan.content;
-    } catch { /* best-effort text recall + plan */ }
+      if (plan && plan.ok && typeof plan.content === 'string') {
+        recalledText = plan.content;
+      }
+    } catch {
+      /* best-effort text recall + plan */
+    }
 
     const res = ai.rewindToUserTurn(n);
-    if (!res || res.success === false) { printError(res?.error || '对话回溯失败'); return true; }
+    if (!res || res.success === false) {
+      printError(res?.error || '对话回溯失败');
+      return true;
+    }
 
     // Restore the workspace. When the target turn carries a per-turn checkpointId
     // (KHY_REWIND_PERSIST), restore EXACTLY that — true 逐回合精确. Otherwise fall
@@ -85,7 +103,9 @@ async function handleRollback(command, subCommand, args, options) {
           codeNote = `代码已恢复到最近检查点 ${latest.id}(该回合无逐回合 id,退回最近可用检查点)`;
         }
       }
-    } catch (err) { codeNote = `代码恢复失败: ${err.message}`; }
+    } catch (err) {
+      codeNote = `代码恢复失败: ${err.message}`;
+    }
 
     printSuccess(`已回溯 ${res.removedCount} 条消息：${res.previousCount} -> ${res.nextCount}`);
     printInfo(codeNote);
@@ -103,31 +123,50 @@ async function handleRollback(command, subCommand, args, options) {
   if (subCommand === 'list' || (!subCommand && !args.length)) {
     const g = level || G.SESSION;
     const r = svc.list({ granularity: g, projectDir });
-    if (!r.success) { printError(`列出失败: ${r.error}`); return true; }
+    if (!r.success) {
+      printError(`列出失败: ${r.error}`);
+      return true;
+    }
     console.log(chalk.bold(`\n  ⮌ 回退点 (${g})\n`));
     const items = r.items || [];
-    if (items.length === 0) { printInfo('暂无回退点'); console.log(''); return true; }
+    if (items.length === 0) {
+      printInfo('暂无回退点');
+      console.log('');
+      return true;
+    }
     for (const it of items) {
       if (g === G.PATCH) {
         console.log(`  ${chalk.cyan(it.filePath)} ${chalk.dim(`(${it.snapshotCount} 快照)`)}`);
       } else if (g === G.TURN) {
-        console.log(`  ${chalk.cyan('turn')} ${chalk.dim(_fmtTime(it.timestamp))} — ${chalk.dim(it.goal || '')}`);
+        console.log(
+          `  ${chalk.cyan('turn')} ${chalk.dim(_fmtTime(it.timestamp))} — ${chalk.dim(it.goal || '')}`
+        );
       } else {
-        console.log(`  ${chalk.cyan(it.id)} ${chalk.dim(`[${it.mode}]`)} ${chalk.dim(_fmtTime(it.timestamp))} — ${it.message || ''}`);
+        console.log(
+          `  ${chalk.cyan(it.id)} ${chalk.dim(`[${it.mode}]`)} ${chalk.dim(_fmtTime(it.timestamp))} — ${it.message || ''}`
+        );
       }
     }
-    console.log(chalk.dim('\n  用法: rewind <checkpointId> · rewind file <path> [index] · undo [file]\n'));
+    console.log(
+      chalk.dim('\n  用法: rewind <checkpointId> · rewind file <path> [index] · undo [file]\n')
+    );
     return true;
   }
 
   // rewind file <path> [index] — patch-level
   if (subCommand === 'file') {
     const filePath = args[0];
-    if (!filePath) { printError('用法: rewind file <path> [snapshotIndex]'); return true; }
+    if (!filePath) {
+      printError('用法: rewind file <path> [snapshotIndex]');
+      return true;
+    }
     const idx = args[1] != null ? parseInt(args[1], 10) : undefined;
     const r = svc.rollback({ granularity: G.PATCH, filePath, snapshotIndex: idx });
-    if (r.success) printSuccess(`已回退文件: ${filePath}`);
-    else printError(`回退失败: ${r.error}`);
+    if (r.success) {
+      printSuccess(`已回退文件: ${filePath}`);
+    } else {
+      printError(`回退失败: ${r.error}`);
+    }
     return true;
   }
 
@@ -137,8 +176,11 @@ async function handleRollback(command, subCommand, args, options) {
   const dryRun = !!(options.dryRun || options['dry-run']);
   const r = svc.rollback({ granularity: g, projectDir, checkpointId, dryRun });
   if (r.success) {
-    if (dryRun) printInfo(`预览回退 ${checkpointId} (${r.mode || g})，未实际应用`);
-    else printSuccess(`已回退至 ${checkpointId}${r.message ? chalk.dim(` — ${r.message}`) : ''}`);
+    if (dryRun) {
+      printInfo(`预览回退 ${checkpointId} (${r.mode || g})，未实际应用`);
+    } else {
+      printSuccess(`已回退至 ${checkpointId}${r.message ? chalk.dim(` — ${r.message}`) : ''}`);
+    }
   } else {
     printError(`回退失败: ${r.error}`);
   }

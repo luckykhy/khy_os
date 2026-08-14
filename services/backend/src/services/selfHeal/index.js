@@ -19,12 +19,12 @@
  * 规范：docs/03_DESIGN_设计/[DESIGN-ARCH-029] Agent 自愈微循环.md
  */
 
+const { PrescriptionDeadLoopDetector } = require('./deadLoopDetector');
 const diagnosisDictionary = require('./diagnosisDictionary');
 const { ErrorDiagnostician } = require('./errorDiagnostician');
-const { PrescriptionDeadLoopDetector } = require('./deadLoopDetector');
+const { FallbackTreeWithHeal } = require('./fallbackTree');
 const { FixActions } = require('./fixActions');
 const { MicroLoopExecutor, MAX_LOOP } = require('./microLoopExecutor');
-const { FallbackTreeWithHeal } = require('./fallbackTree');
 
 module.exports = {
   // 门面

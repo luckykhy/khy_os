@@ -49,13 +49,13 @@ const COMMENT_LAYERS = Object.freeze({
     what: '解释**为什么**这么做:取舍、绕过某个 bug 的原因、不变量、单位、边界处理、陷阱',
     avoid: '不要解释**做了什么**(代码已经说了);不要 `i++ // 自增 i` 这种复述',
   },
-  'todo': {
+  todo: {
     title: '待办注释',
     where: '相关代码处',
     what: '可执行的待办:做什么、为什么留、(可选)负责人/关联项;让别人能接手',
     avoid: '不要只写 `// TODO 修一下` 这种无上下文的占位',
   },
-  'none': {
+  none: {
     title: '不写注释',
     where: '自解释的代码处',
     what: '什么都不写——清晰的命名 + 直白的控制流本身就是文档',
@@ -65,24 +65,82 @@ const COMMENT_LAYERS = Object.freeze({
 
 // ─── 各语言的注释语法(单一真源)──────────────────────────────────────────────
 const LANGUAGE_SYNTAX = Object.freeze({
-  js: { line: '//', blockOpen: '/**', blockLine: ' *', blockClose: ' */', doc: 'JSDoc', exportRe: true },
-  ts: { line: '//', blockOpen: '/**', blockLine: ' *', blockClose: ' */', doc: 'JSDoc (TSDoc)', exportRe: true },
-  python: { line: '#', blockOpen: '"""', blockLine: '', blockClose: '"""', doc: 'docstring', exportRe: false },
-  c: { line: '//', blockOpen: '/**', blockLine: ' *', blockClose: ' */', doc: 'Doxygen', exportRe: false },
-  go: { line: '//', blockOpen: '//', blockLine: '//', blockClose: '//', doc: 'godoc', exportRe: false },
-  java: { line: '//', blockOpen: '/**', blockLine: ' *', blockClose: ' */', doc: 'Javadoc', exportRe: false },
+  js: {
+    line: '//',
+    blockOpen: '/**',
+    blockLine: ' *',
+    blockClose: ' */',
+    doc: 'JSDoc',
+    exportRe: true,
+  },
+  ts: {
+    line: '//',
+    blockOpen: '/**',
+    blockLine: ' *',
+    blockClose: ' */',
+    doc: 'JSDoc (TSDoc)',
+    exportRe: true,
+  },
+  python: {
+    line: '#',
+    blockOpen: '"""',
+    blockLine: '',
+    blockClose: '"""',
+    doc: 'docstring',
+    exportRe: false,
+  },
+  c: {
+    line: '//',
+    blockOpen: '/**',
+    blockLine: ' *',
+    blockClose: ' */',
+    doc: 'Doxygen',
+    exportRe: false,
+  },
+  go: {
+    line: '//',
+    blockOpen: '//',
+    blockLine: '//',
+    blockClose: '//',
+    doc: 'godoc',
+    exportRe: false,
+  },
+  java: {
+    line: '//',
+    blockOpen: '/**',
+    blockLine: ' *',
+    blockClose: ' */',
+    doc: 'Javadoc',
+    exportRe: false,
+  },
 });
 
 const KNOWN_LANGS = Object.freeze({
-  js: 'js', javascript: 'js', mjs: 'js', cjs: 'js', jsx: 'js',
-  ts: 'ts', typescript: 'ts', tsx: 'ts',
-  py: 'python', python: 'python',
-  c: 'c', h: 'c', cpp: 'c', cc: 'c', cxx: 'c', hpp: 'c',
-  go: 'go', java: 'java',
+  js: 'js',
+  javascript: 'js',
+  mjs: 'js',
+  cjs: 'js',
+  jsx: 'js',
+  ts: 'ts',
+  typescript: 'ts',
+  tsx: 'ts',
+  py: 'python',
+  python: 'python',
+  c: 'c',
+  h: 'c',
+  cpp: 'c',
+  cc: 'c',
+  cxx: 'c',
+  hpp: 'c',
+  go: 'go',
+  java: 'java',
 });
 
 function normalizeLang(lang) {
-  const k = String(lang || '').trim().toLowerCase().replace(/^\./, '');
+  const k = String(lang || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\./, '');
   return KNOWN_LANGS[k] || 'js';
 }
 
@@ -92,7 +150,9 @@ function normalizeLang(lang) {
  * @returns {string} 归一化语言键
  */
 function languageFromPath(pathOrExt) {
-  const m = String(pathOrExt || '').toLowerCase().match(/\.([a-z0-9]+)$/);
+  const m = String(pathOrExt || '')
+    .toLowerCase()
+    .match(/\.([a-z0-9]+)$/);
   return normalizeLang(m ? m[1] : pathOrExt);
 }
 
@@ -125,17 +185,27 @@ function classifyCommentNeed(ctx = {}) {
     guidance: `${COMMENT_LAYERS[layer].title}:${COMMENT_LAYERS[layer].what}(避免:${COMMENT_LAYERS[layer].avoid})`,
   });
 
-  if (ctx.isTodo) return pick('todo', false);
-  if (scope === 'file') return pick('file-header', true);
-  if (scope === 'class') return pick('api-doc', true);
+  if (ctx.isTodo) {
+    return pick('todo', false);
+  }
+  if (scope === 'file') {
+    return pick('file-header', true);
+  }
+  if (scope === 'class') {
+    return pick('api-doc', true);
+  }
   if (scope === 'function' || scope === 'method') {
     // 导出/公开 API 必须有接口文档;私有但复杂的也建议写。
     const required = !!ctx.exported;
-    if (required || ctx.nonObvious || Number(ctx.complexity) >= 2) return pick('api-doc', required);
+    if (required || ctx.nonObvious || Number(ctx.complexity) >= 2) {
+      return pick('api-doc', required);
+    }
     return pick('none', false);
   }
   // 语句/代码块层:只有「非显然 / 绕过缺陷」才需要行内「为什么」注释;否则不写。
-  if (ctx.isWorkaround || ctx.nonObvious) return pick('inline-why', !!ctx.isWorkaround);
+  if (ctx.isWorkaround || ctx.nonObvious) {
+    return pick('inline-why', !!ctx.isWorkaround);
+  }
   return pick('none', false);
 }
 
@@ -159,14 +229,17 @@ function buildCommentGuidanceDirective() {
 }
 
 // ─── 只读审计(零假阳性优先)─────────────────────────────────────────────────
-const EXPORT_DECL_RE = /^(?:module\.exports|exports)\b|^export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var)\b/;
-const JS_SYMBOL_RE = /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|class\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/;
+const EXPORT_DECL_RE =
+  /^(?:module\.exports|exports)\b|^export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var)\b/;
+const JS_SYMBOL_RE =
+  /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|class\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/;
 const PY_DEF_RE = /^(?:def|class)\s+([A-Za-z_]\w*)/;
 // 只认「注释正文以标记打头」的惯用形态(// TODO: ...),不匹配散文里顺带提到的 TODO。
 const TODO_RE = /^(TODO|FIXME|XXX)\b[:\s]*(.*)$/;
 // 各语言注释引导符,用于剥出注释正文后判 TODO 是否打头。
 const COMMENT_LEAD_RE = /^(?:\/\/+|#+|\*+|\/\*+)\s*/;
-const CODEISH_COMMENT_RE = /[;{}]\s*$|^\s*(?:return|if|for|while|function|const|let|var|else|switch|case|await|import|export)\b|=>|\)\s*\{?\s*$/;
+const CODEISH_COMMENT_RE =
+  /[;{}]\s*$|^\s*(?:return|if|for|while|function|const|let|var|else|switch|case|await|import|export)\b|=>|\)\s*\{?\s*$/;
 
 function _isCommentLine(line, syntax) {
   const t = line.trim();
@@ -178,16 +251,23 @@ function _collectExportedNames(lines) {
   const names = new Set();
   const joined = lines.join('\n');
   let m;
-  const re = /(?:module\.exports(?:\.([A-Za-z_$][\w$]*))?\s*=|exports\.([A-Za-z_$][\w$]*)\s*=|export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*))/g;
+  const re =
+    /(?:module\.exports(?:\.([A-Za-z_$][\w$]*))?\s*=|exports\.([A-Za-z_$][\w$]*)\s*=|export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*))/g;
   while ((m = re.exec(joined)) !== null) {
-    for (let i = 1; i <= 3; i++) if (m[i]) names.add(m[i]);
+    for (let i = 1; i <= 3; i++) {
+      if (m[i]) {
+        names.add(m[i]);
+      }
+    }
   }
   // module.exports = { a, b, c }
   const objExport = joined.match(/module\.exports\s*=\s*\{([\s\S]*?)\}/);
   if (objExport) {
     for (const part of objExport[1].split(',')) {
       const name = part.split(':')[0].trim().replace(/\s+/g, '');
-      if (/^[A-Za-z_$][\w$]*$/.test(name)) names.add(name);
+      if (/^[A-Za-z_$][\w$]*$/.test(name)) {
+        names.add(name);
+      }
     }
   }
   return names;
@@ -226,13 +306,19 @@ function auditComments(input = {}) {
   if (nonBlank.length > 15 && (!syntax.exportRe || hasExport)) {
     const head = firstMeaningful >= 0 ? lines[firstMeaningful].trim() : '';
     if (!head || !_isCommentLine(head, syntax)) {
-      add('missing-file-header', firstMeaningful >= 0 ? firstMeaningful + 1 : 1, 'medium',
-        '文件缺少头部注释(用途/职责/关系)', `在文件顶部加一段 ${syntax.doc} 块,说明本文件用途、职责边界与关键取舍`);
+      add(
+        'missing-file-header',
+        firstMeaningful >= 0 ? firstMeaningful + 1 : 1,
+        'medium',
+        '文件缺少头部注释(用途/职责/关系)',
+        `在文件顶部加一段 ${syntax.doc} 块,说明本文件用途、职责边界与关键取舍`
+      );
     }
   }
 
   // 2) 导出符号无文档 + 3) 整段被注释掉的代码 + 4) 无上下文的 TODO。
-  let runStart = -1, runLen = 0;
+  let runStart = -1,
+    runLen = 0;
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const trimmed = raw.trim();
@@ -241,15 +327,26 @@ function auditComments(input = {}) {
     if (trimmed.startsWith(syntax.line)) {
       const body = trimmed.slice(syntax.line.length).trim();
       if (body && CODEISH_COMMENT_RE.test(body)) {
-        if (runStart < 0) runStart = i;
+        if (runStart < 0) {
+          runStart = i;
+        }
         runLen++;
-      } else { runStart = -1; runLen = 0; }
+      } else {
+        runStart = -1;
+        runLen = 0;
+      }
     } else {
       if (runLen >= 2) {
-        add('commented-out-code', runStart + 1, 'low',
-          `疑似被注释掉的代码(连续 ${runLen} 行)`, '删除死代码;版本历史已经保留它,留在源码里只会误导');
+        add(
+          'commented-out-code',
+          runStart + 1,
+          'low',
+          `疑似被注释掉的代码(连续 ${runLen} 行)`,
+          '删除死代码;版本历史已经保留它,留在源码里只会误导'
+        );
       }
-      runStart = -1; runLen = 0;
+      runStart = -1;
+      runLen = 0;
     }
 
     // 无上下文 TODO:仅当注释正文以 TODO/FIXME/XXX 打头(惯用标记形态),
@@ -260,8 +357,13 @@ function auditComments(input = {}) {
       if (todo) {
         const rest = String(todo[2] || '').trim();
         if (rest.split(/\s+/).filter(Boolean).length < 3) {
-          add('vague-todo', i + 1, 'low',
-            `${todo[1]} 缺少上下文`, `补上「做什么 / 为什么留 / 谁来跟进」,否则别人无法接手`);
+          add(
+            'vague-todo',
+            i + 1,
+            'low',
+            `${todo[1]} 缺少上下文`,
+            `补上「做什么 / 为什么留 / 谁来跟进」,否则别人无法接手`
+          );
         }
       }
     }
@@ -272,10 +374,16 @@ function auditComments(input = {}) {
       const name = sym && (sym[1] || sym[2] || sym[3]);
       if (name && exportedNames.has(name)) {
         const prev = i > 0 ? lines[i - 1].trim() : '';
-        const documented = prev.endsWith('*/') || prev.startsWith('*') || prev.startsWith(syntax.line);
+        const documented =
+          prev.endsWith('*/') || prev.startsWith('*') || prev.startsWith(syntax.line);
         if (!documented) {
-          add('undocumented-export', i + 1, 'high',
-            `导出符号 ${name} 缺少接口文档`, `在 ${name} 上方加 ${syntax.doc}:意图/契约 + @param/@returns + 非显然副作用`);
+          add(
+            'undocumented-export',
+            i + 1,
+            'high',
+            `导出符号 ${name} 缺少接口文档`,
+            `在 ${name} 上方加 ${syntax.doc}:意图/契约 + @param/@returns + 非显然副作用`
+          );
         }
       }
     } else if (lang === 'python') {
@@ -284,22 +392,36 @@ function auditComments(input = {}) {
       if (def && !def[1].startsWith('_')) {
         // 公开 def/class 的下一非空行应是 docstring。
         let j = i + 1;
-        while (j < lines.length && !lines[j].trim()) j++;
+        while (j < lines.length && !lines[j].trim()) {
+          j++;
+        }
         const next = j < lines.length ? lines[j].trim() : '';
         if (!next.startsWith('"""') && !next.startsWith("'''")) {
-          add('undocumented-export', i + 1, 'high',
-            `公开 ${def[1]} 缺少 docstring`, `紧随定义加一段 docstring:意图/契约、参数、返回、异常`);
+          add(
+            'undocumented-export',
+            i + 1,
+            'high',
+            `公开 ${def[1]} 缺少 docstring`,
+            `紧随定义加一段 docstring:意图/契约、参数、返回、异常`
+          );
         }
       }
     }
   }
   if (runLen >= 2) {
-    add('commented-out-code', runStart + 1, 'low',
-      `疑似被注释掉的代码(连续 ${runLen} 行)`, '删除死代码;版本历史已经保留它,留在源码里只会误导');
+    add(
+      'commented-out-code',
+      runStart + 1,
+      'low',
+      `疑似被注释掉的代码(连续 ${runLen} 行)`,
+      '删除死代码;版本历史已经保留它,留在源码里只会误导'
+    );
   }
 
   const byKind = {};
-  for (const f of findings) byKind[f.kind] = (byKind[f.kind] || 0) + 1;
+  for (const f of findings) {
+    byKind[f.kind] = (byKind[f.kind] || 0) + 1;
+  }
   return { lang, findings, summary: { total: findings.length, byKind } };
 }
 

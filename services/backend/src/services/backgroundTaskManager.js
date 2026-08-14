@@ -70,7 +70,9 @@ function _legacyToCanonicalStatus(status) {
 }
 
 function _toLegacyTask(task) {
-  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) return null;
+  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) {
+    return null;
+  }
   const payload = task.payload_json;
   const createdAtMs = Date.parse(task.created_at);
   const updatedAtMs = Date.parse(task.updated_at);
@@ -91,7 +93,9 @@ function _toLegacyTask(task) {
 
 function _listManagedTasks(filter = {}) {
   let tasks = runtime.listTasks({ source: SOURCE });
-  if (filter.type) tasks = tasks.filter((task) => (task.payload_json?.type || task.type) === filter.type);
+  if (filter.type) {
+    tasks = tasks.filter((task) => (task.payload_json?.type || task.type) === filter.type);
+  }
   if (filter.state) {
     const canonical = _legacyToCanonicalStatus(filter.state);
     if (canonical === 'running') {
@@ -119,9 +123,13 @@ function _emit(event, task) {
 }
 
 function _ensureCleanup() {
-  if (_cleanupTimer) return;
+  if (_cleanupTimer) {
+    return;
+  }
   _cleanupTimer = setInterval(_runCleanup, CLEANUP_INTERVAL_MS);
-  if (_cleanupTimer.unref) _cleanupTimer.unref();
+  if (_cleanupTimer.unref) {
+    _cleanupTimer.unref();
+  }
 }
 
 function _runCleanup() {
@@ -129,10 +137,18 @@ function _runCleanup() {
   const tasks = _listManagedTasks();
   for (const task of tasks) {
     const legacy = _toLegacyTask(task);
-    if (!legacy) continue;
-    if (!TERMINAL_STATES.has(legacy.state)) continue;
-    if (!legacy.completedAt) continue;
-    if ((now - legacy.completedAt) <= TERMINAL_TASK_TTL_MS) continue;
+    if (!legacy) {
+      continue;
+    }
+    if (!TERMINAL_STATES.has(legacy.state)) {
+      continue;
+    }
+    if (!legacy.completedAt) {
+      continue;
+    }
+    if (now - legacy.completedAt <= TERMINAL_TASK_TTL_MS) {
+      continue;
+    }
     runtime.deleteTask(task.id);
     _abortControllers.delete(task.id);
   }
@@ -140,25 +156,34 @@ function _runCleanup() {
 
 function _evictIfNeeded() {
   const tasks = _listManagedTasks();
-  if (tasks.length < MAX_TASKS) return;
+  if (tasks.length < MAX_TASKS) {
+    return;
+  }
 
   const removable = tasks
     .filter((task) => {
       const legacy = _toLegacyTask(task);
       return Boolean(legacy && TERMINAL_STATES.has(legacy.state) && legacy.completedAt);
     })
-    .sort((a, b) => Date.parse(a.completed_at || a.updated_at) - Date.parse(b.completed_at || b.updated_at));
+    .sort(
+      (a, b) =>
+        Date.parse(a.completed_at || a.updated_at) - Date.parse(b.completed_at || b.updated_at)
+    );
 
   for (const task of removable) {
     runtime.deleteTask(task.id);
     _abortControllers.delete(task.id);
-    if (_listManagedTasks().length < MAX_TASKS) break;
+    if (_listManagedTasks().length < MAX_TASKS) {
+      break;
+    }
   }
 }
 
 function _updatePayload(id, patch = {}) {
   const task = runtime.getTask(id);
-  if (!task) return null;
+  if (!task) {
+    return null;
+  }
   const payload = {
     ...(task.payload_json || {}),
     ...patch,
@@ -218,7 +243,9 @@ function pause(id) {
     return { success: false, error: 'Task not found' };
   }
   const state = _canonicalToLegacyStatus(task.status);
-  if (state !== 'running') return { success: false, error: `Cannot pause task in state: ${state}` };
+  if (state !== 'running') {
+    return { success: false, error: `Cannot pause task in state: ${state}` };
+  }
 
   runtime.transitionTask(id, 'pausing');
   runtime.transitionTask(id, 'paused');
@@ -233,7 +260,9 @@ function resume(id) {
     return { success: false, error: 'Task not found' };
   }
   const state = _canonicalToLegacyStatus(task.status);
-  if (state !== 'paused') return { success: false, error: `Cannot resume task in state: ${state}` };
+  if (state !== 'paused') {
+    return { success: false, error: `Cannot resume task in state: ${state}` };
+  }
 
   runtime.transitionTask(id, 'running', {
     heartbeat_at: new Date().toISOString(),
@@ -277,9 +306,13 @@ function cancel(id, reason) {
 
 function complete(id, result) {
   const task = runtime.getTask(id);
-  if (!task || task.payload_json?.source !== SOURCE) return { success: false };
+  if (!task || task.payload_json?.source !== SOURCE) {
+    return { success: false };
+  }
   const state = _canonicalToLegacyStatus(task.status);
-  if (TERMINAL_STATES.has(state)) return { success: false };
+  if (TERMINAL_STATES.has(state)) {
+    return { success: false };
+  }
 
   runtime.markSucceeded(id, WORKER_ID, result ?? null, { progress_pct: 100 });
   _updatePayload(id, {
@@ -297,9 +330,13 @@ function complete(id, result) {
 
 function fail(id, error) {
   const task = runtime.getTask(id);
-  if (!task || task.payload_json?.source !== SOURCE) return { success: false };
+  if (!task || task.payload_json?.source !== SOURCE) {
+    return { success: false };
+  }
   const state = _canonicalToLegacyStatus(task.status);
-  if (TERMINAL_STATES.has(state)) return { success: false };
+  if (TERMINAL_STATES.has(state)) {
+    return { success: false };
+  }
 
   runtime.transitionTask(id, 'failed', {
     last_error: {
@@ -341,13 +378,17 @@ function onEvent(listener) {
   _listeners.push(listener);
   return () => {
     const idx = _listeners.indexOf(listener);
-    if (idx >= 0) _listeners.splice(idx, 1);
+    if (idx >= 0) {
+      _listeners.splice(idx, 1);
+    }
   };
 }
 
 function reset() {
   for (const [id, controller] of _abortControllers) {
-    if (!controller.signal.aborted) controller.abort();
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
     _abortControllers.delete(id);
   }
 

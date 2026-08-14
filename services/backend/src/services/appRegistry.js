@@ -9,14 +9,24 @@
  * Lifecycle:
  *   register → start → (running as subprocess) → stop → unregister
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const net = require('net');
-const { safeKill } = require('../tools/platformUtils');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const net = require('net');
+const os = require('os');
+const path = require('path');
 
-const APPS_DIR = path.join(os.homedir(), '.khyquant', 'apps');
+const { safeKill } = require('../tools/platformUtils');
+
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const APPS_DIR = path.join(_appHome(), 'apps');
 
 // In-memory process map: appName → ChildProcess
 const _processes = new Map();
@@ -101,7 +111,9 @@ function get(name) {
     if (fs.existsSync(mp)) {
       return JSON.parse(fs.readFileSync(mp, 'utf-8'));
     }
-  } catch { /* corrupted manifest */ }
+  } catch {
+    /* corrupted manifest */
+  }
   return null;
 }
 
@@ -113,14 +125,18 @@ function list() {
   _ensureDir();
   const apps = [];
   try {
-    const files = fs.readdirSync(APPS_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(APPS_DIR).filter((f) => f.endsWith('.json'));
     for (const file of files) {
       try {
         const content = fs.readFileSync(path.join(APPS_DIR, file), 'utf-8');
         apps.push(JSON.parse(content));
-      } catch { /* skip corrupted files */ }
+      } catch {
+        /* skip corrupted files */
+      }
     }
-  } catch { /* directory read failed */ }
+  } catch {
+    /* directory read failed */
+  }
   return apps;
 }
 
@@ -132,9 +148,9 @@ function list() {
 function findByCommand(cmd) {
   const lower = cmd.toLowerCase();
   const apps = list();
-  return apps.find(app =>
-    app.name === lower || (app.commands && app.commands.includes(lower))
-  ) || null;
+  return (
+    apps.find((app) => app.name === lower || (app.commands && app.commands.includes(lower))) || null
+  );
 }
 
 // ─── Process Lifecycle ────────────────────────────────────────────────────────
@@ -147,7 +163,10 @@ function _isPortInUse(port) {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
-    server.once('listening', () => { server.close(); resolve(false); });
+    server.once('listening', () => {
+      server.close();
+      resolve(false);
+    });
     server.listen(port);
   });
 }
@@ -166,11 +185,17 @@ async function start(name, options = {}) {
   }
 
   if ((app.runtime || 'node') === 'wasm') {
-    return { success: false, error: `应用 "${name}" 是 WASM 组件。请使用 /app run ${name} 执行导出函数` };
+    return {
+      success: false,
+      error: `应用 "${name}" 是 WASM 组件。请使用 /app run ${name} 执行导出函数`,
+    };
   }
 
   if (app.runtime === 'external') {
-    return { success: false, error: `应用 "${name}" 是外部 CLI 工具，通过 subprocess 按需调用，无需启动常驻进程` };
+    return {
+      success: false,
+      error: `应用 "${name}" 是外部 CLI 工具，通过 subprocess 按需调用，无需启动常驻进程`,
+    };
   }
 
   // Verify entry script exists
@@ -193,7 +218,9 @@ async function start(name, options = {}) {
           ownProcess = true;
         }
       }
-    } catch { /* PID not valid or process dead */ }
+    } catch {
+      /* PID not valid or process dead */
+    }
 
     if (ownProcess) {
       return { success: true, port, alreadyRunning: true };
@@ -215,12 +242,16 @@ async function start(name, options = {}) {
 
     // Record PID for later management
     const pidFile = path.join(APPS_DIR, `${name}.pid`);
-    try { fs.writeFileSync(pidFile, String(child.pid)); } catch { /* best effort */ }
+    try {
+      fs.writeFileSync(pidFile, String(child.pid));
+    } catch {
+      /* best effort */
+    }
 
     // Poll for server to bind (up to 10s, checking every 500ms)
     const maxAttempts = 20;
     for (let i = 0; i < maxAttempts; i++) {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
       // Check if process died early
       if (child.exitCode !== null) {
         return { success: false, error: `进程退出 (code ${child.exitCode})，请检查日志` };
@@ -256,19 +287,31 @@ function stop(name) {
     if (fs.existsSync(pidFile)) {
       const pid = parseInt(fs.readFileSync(pidFile, 'utf-8').trim(), 10);
       if (pid > 0) {
-        try { safeKill(pid); } catch { /* already dead */ }
+        try {
+          safeKill(pid);
+        } catch {
+          /* already dead */
+        }
         _removePidFile(name);
         return { success: true };
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return { success: false, error: `应用 "${name}" 未在运行` };
 }
 
 function _removePidFile(name) {
   const pidFile = path.join(APPS_DIR, `${name}.pid`);
-  try { if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile); } catch { /* ignore */ }
+  try {
+    if (fs.existsSync(pidFile)) {
+      fs.unlinkSync(pidFile);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -278,7 +321,9 @@ function _removePidFile(name) {
  */
 async function status(name) {
   const app = get(name);
-  if (!app) return { installed: false, running: false };
+  if (!app) {
+    return { installed: false, running: false };
+  }
 
   if ((app.runtime || 'node') === 'wasm') {
     return {
@@ -309,9 +354,15 @@ async function status(name) {
     if (fs.existsSync(pidFile)) {
       pid = parseInt(fs.readFileSync(pidFile, 'utf-8').trim(), 10);
       // Verify process still exists
-      try { process.kill(pid, 0); } catch { pid = null; }
+      try {
+        process.kill(pid, 0);
+      } catch {
+        pid = null;
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return { installed: true, running, port, pid, runtime: app.runtime || 'node' };
 }
@@ -338,7 +389,9 @@ async function discover() {
         discovered.push({ name: pkg.name, version: pkg.version });
       }
     }
-  } catch { /* pip not available or failed */ }
+  } catch {
+    /* pip not available or failed */
+  }
 
   return discovered;
 }
@@ -350,11 +403,15 @@ async function discover() {
  */
 function autoRegisterDev(backendDir) {
   const serverJs = path.join(backendDir, 'server.js');
-  if (!fs.existsSync(serverJs)) return;
+  if (!fs.existsSync(serverJs)) {
+    return;
+  }
 
   const existing = get('khyquant');
   // If already registered with the same path, skip
-  if (existing && existing.entry === serverJs) return;
+  if (existing && existing.entry === serverJs) {
+    return;
+  }
 
   register({
     name: 'khyquant',

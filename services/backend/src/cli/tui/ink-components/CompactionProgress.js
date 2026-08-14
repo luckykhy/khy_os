@@ -14,6 +14,8 @@
  *   compaction: { pct, stage, tokensBefore, startedAt }
  */
 const React = require('react');
+
+const { formatStatusMessage } = require('../../statusMessageFormatter');
 const inkRuntime = require('../inkRuntime');
 
 const REDUCED_MOTION = process.env.KHY_REDUCED_MOTION === '1';
@@ -37,16 +39,22 @@ const STAGE_LABELS = {
 //   门控 KHY_COMPACTION_CC_FORMAT(默认开)→ ccFormatDuration;关 → 逐字节回退旧 floor 实现。
 //   ccFormat require 包在 try 里,任何异常静默回退旧实现,绝不让进度条渲染抛错。
 function formatElapsed(ms, env = process.env) {
-  const v = String((env && env.KHY_COMPACTION_CC_FORMAT) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_COMPACTION_CC_FORMAT) || '')
+    .trim()
+    .toLowerCase();
   const ccMode = !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   if (ccMode) {
     try {
       const fmt = require('../../ccFormat').ccFormatDuration;
       if (typeof fmt === 'function') {
         const out = fmt(Math.max(0, Number(ms) || 0));
-        if (out) return out;
+        if (out) {
+          return out;
+        }
       }
-    } catch { /* fall through to the legacy floor implementation below */ }
+    } catch {
+      /* fall through to the legacy floor implementation below */
+    }
   }
   const totalSec = Math.floor(Math.max(0, ms) / 1000);
   const m = Math.floor(totalSec / 60);
@@ -61,16 +69,26 @@ function formatElapsed(ms, env = process.env) {
 //   门控 KHY_COMPACTION_CC_TOKENS(默认开)→ ccFormatTokens;关 → 逐字节回退旧的 toFixed(1)+"k"。
 //   ccFormat require 包在 try 里,任何异常静默回退旧实现,绝不让进度条渲染抛错。
 function formatTokens(n, env = process.env) {
-  if (!n || n <= 0) return '';
-  const v = String((env && env.KHY_COMPACTION_CC_TOKENS) || '').trim().toLowerCase();
+  if (!n || n <= 0) {
+    return '';
+  }
+  const v = String((env && env.KHY_COMPACTION_CC_TOKENS) || '')
+    .trim()
+    .toLowerCase();
   const ccMode = !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   if (ccMode) {
     try {
       const fmt = require('../../ccFormat').ccFormatTokens;
-      if (typeof fmt === 'function') return fmt(n);
-    } catch { /* fall through to the legacy form below */ }
+      if (typeof fmt === 'function') {
+        return fmt(n);
+      }
+    } catch {
+      /* fall through to the legacy form below */
+    }
   }
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(1)}k`;
+  }
   return String(n);
 }
 
@@ -93,33 +111,63 @@ function CompactionProgress({ compaction }) {
   }, [floor]);
 
   React.useEffect(() => {
-    if (REDUCED_MOTION) return undefined;
+    if (REDUCED_MOTION) {
+      return undefined;
+    }
     const id = setInterval(() => {
       setNow(Date.now());
       setPct((p) => {
-        if (done) return Math.min(100, p + (100 - p) * 0.4 + 1);
+        if (done) {
+          return Math.min(100, p + (100 - p) * 0.4 + 1);
+        }
         const ceiling = 95; // asymptote toward 95% until the backend reports done
-        if (p >= ceiling) return ceiling;
-        return p + (ceiling - p) * 0.04;
+        if (p >= ceiling) {
+          return ceiling;
+        }
+        // Cubic ease-out feel: the square root curve gives a snappier initial ramp
+        // (50% in ~25 frames / 3s) that decelerates naturally toward the asymptote.
+        const progress = p / ceiling; // 0..1
+        const next = ceiling * (1 - Math.pow(1 - progress, 1.5));
+        return Math.max(p + 0.3, Math.min(ceiling, next + 0.5));
       });
     }, 120);
     return () => clearInterval(id);
   }, [done]);
 
+  // 视觉动画相位:由 now(每 120ms 刷新)派生,保证进度条在百分比未变时也明显在动。
+  // ① 标题尾随的循环点号(「正在压缩对话···」);② 未完成段内往返游走的「扫描光标」。
+  const anim = Math.floor(now / 260) % 4; // 0..3 循环点号帧
+  const dots = '.'.repeat(anim);
+  const sweep = Math.floor(now / 220) % Math.max(1, BAR_WIDTH); // 0..BAR_WIDTH-1 光标位
+
   const shown = done ? 100 : Math.max(floor, Math.round(pct));
   const filled = Math.round((shown / 100) * BAR_WIDTH);
-  const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, BAR_WIDTH - filled));
+  const remaining = Math.max(0, BAR_WIDTH - filled);
+  let tail = '░'.repeat(remaining);
+  if (!done && remaining > 0) {
+    // 扫描光标在未完成段内游走:把该位置换成高亮 ▒,其余 ░ —— 即使 pct 停顿,
+    // 用户也能看到光标在剩余区间来回扫过,明确感知「压缩仍在进行」。
+    const pos = sweep % remaining;
+    tail = tail.slice(0, pos) + '▒' + tail.slice(pos + 1);
+  }
+  const bar = '█'.repeat(filled) + tail;
   const elapsed = formatElapsed(now - startedAt);
   const tokenStr = formatTokens(tokensBefore);
-  const stageLabel = STAGE_LABELS[stage] || '压缩中';
+  const stageLabel = STAGE_LABELS[stage] || formatStatusMessage('压缩', '会话上下文', `${shown}%`);
 
-  return h(Box, { flexDirection: 'column', marginTop: 1 },
-    h(Text, null,
+  return h(
+    Box,
+    { flexDirection: 'column', marginTop: 1 },
+    h(
+      Text,
+      null,
       h(Text, { color: 'magenta' }, '✻ '),
-      h(Text, { color: 'magenta' }, '正在压缩对话… '),
+      h(Text, { color: 'magenta' }, `正在压缩对话${dots} `),
       h(Text, { dimColor: true }, `(${elapsed}${tokenStr ? ` · ↑ ${tokenStr} tokens` : ''})`)
     ),
-    h(Text, null,
+    h(
+      Text,
+      null,
       h(Text, { color: 'magenta' }, bar),
       h(Text, { dimColor: true }, ` ${shown}%  ${stageLabel}`)
     )

@@ -3,8 +3,10 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { defineTool } = require('./_baseTool');
+
 const repoDiscipline = require('../services/repoDisciplineRisk');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * repoAudit — audit the LOCAL repository for discipline & risk before a commit/push.
@@ -41,7 +43,9 @@ function _gitSoft(args, cwd) {
 
 function _detectMainBranch(cwd) {
   const ref = _gitSoft(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], cwd);
-  if (ref.ok && ref.out.includes('/')) return ref.out.split('/').pop();
+  if (ref.ok && ref.out.includes('/')) {
+    return ref.out.split('/').pop();
+  }
   return undefined; // leaf falls back to {main, master}
 }
 
@@ -55,17 +59,37 @@ function _statSize(cwd, rel) {
 
 module.exports = defineTool({
   name: 'repoAudit',
-  description: 'Audit the LOCAL git repo for discipline & risk before committing/pushing: scans the staged diff for leaked secrets, flags large/binary files, scores the commit message (Conventional Commits), warns on immutable/guarded paths, and checks branch/force-push/--no-verify/git-add-all/--amend discipline. Returns a clean/caution/block verdict with findings. Read-only; never mutates git; secrets are masked.',
+  description:
+    'Audit the LOCAL git repo for discipline & risk before committing/pushing: scans the staged diff for leaked secrets, flags large/binary files, scores the commit message (Conventional Commits), warns on immutable/guarded paths, and checks branch/force-push/--no-verify/git-add-all/--amend discipline. Returns a clean/caution/block verdict with findings. Read-only; never mutates git; secrets are masked.',
   category: 'git',
   risk: 'safe',
+  searchHint: 'repository discipline secrets large files precommit 仓库审计 风险检查 提交前检查',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: () => repoDiscipline.isEnabled(),
   inputSchema: {
-    message: { type: 'string', required: false, description: 'Pending commit message to score (optional). If omitted, commit-message quality is not assessed.' },
-    force: { type: 'boolean', required: false, description: 'Set true if the intended push is a force push (raises force-push-to-main to a blocker).' },
-    noVerify: { type: 'boolean', required: false, description: 'Set true if the intended commit/push skips hooks (--no-verify).' },
-    amend: { type: 'boolean', required: false, description: 'Set true if the intended commit is an --amend.' },
+    message: {
+      type: 'string',
+      required: false,
+      description:
+        'Pending commit message to score (optional). If omitted, commit-message quality is not assessed.',
+    },
+    force: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Set true if the intended push is a force push (raises force-push-to-main to a blocker).',
+    },
+    noVerify: {
+      type: 'boolean',
+      required: false,
+      description: 'Set true if the intended commit/push skips hooks (--no-verify).',
+    },
+    amend: {
+      type: 'boolean',
+      required: false,
+      description: 'Set true if the intended commit is an --amend.',
+    },
   },
   async execute(params = {}, _context) {
     const cwd = process.cwd();
@@ -82,7 +106,8 @@ module.exports = defineTool({
     // Prefer the staged change set (what you're about to commit). If nothing is
     // staged, audit the unstaged working tree so the tool is still useful.
     const stagedNames = _gitSoft(['diff', '--cached', '--name-only'], cwd);
-    const staged = stagedNames.ok && stagedNames.out ? stagedNames.out.split(/\r?\n/).filter(Boolean) : [];
+    const staged =
+      stagedNames.ok && stagedNames.out ? stagedNames.out.split(/\r?\n/).filter(Boolean) : [];
     const useStaged = staged.length > 0;
     const cachedArg = useStaged ? ['diff', '--cached'] : ['diff'];
     const nameArg = useStaged ? ['diff', '--cached', '--name-only'] : ['diff', '--name-only'];

@@ -26,7 +26,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  */
 function isAutoReplyEnabled(env = process.env) {
   const raw = env && env.KHY_MSG_AUTOREPLY;
-  const v = String(raw == null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw == null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -37,14 +39,18 @@ function isAutoReplyEnabled(env = process.env) {
  * @returns {string|null}
  */
 function _normalizeReply(out) {
-  if (out == null) return null;
+  if (out == null) {
+    return null;
+  }
   let text = null;
   if (typeof out === 'string') {
     text = out;
   } else if (typeof out === 'object') {
     text = out.text || out.content || out.reply || out.message || out.output || null;
   }
-  if (typeof text !== 'string') return null;
+  if (typeof text !== 'string') {
+    return null;
+  }
   const trimmed = text.trim();
   return trimmed.length ? trimmed : null;
 }
@@ -53,6 +59,7 @@ function _normalizeReply(out) {
  * 构造一个 messageRouter 用的 AI 回复 handler。
  * @param {object} [deps]
  * @param {() => (Function|null)} [deps.getChat] - 返回 chat(prompt, opts) 或 null;默认 aiChatPort.getAiChat
+ * @param {(fn: Function) => Promise<*>} [deps.runExclusive] - 全局串行锁执行器(测试可注入);默认 ilinkExecutionLock.runExclusive
  * @param {NodeJS.ProcessEnv} [deps.env]
  * @param {{warn:Function}} [deps.log]
  * @returns {(msg: {text?:string, userId?:string, channelId?:string, channelName?:string}) => Promise<string|null>}
@@ -60,15 +67,28 @@ function _normalizeReply(out) {
 function buildAiReplyHandler(deps = {}) {
   const env = deps.env || process.env;
   const log = deps.log || require('../../utils/logger');
-  const getChat = typeof deps.getChat === 'function'
-    ? deps.getChat
-    : () => require('../aiChatPort').getAiChat();
+  const getChat =
+    typeof deps.getChat === 'function' ? deps.getChat : () => require('../aiChatPort').getAiChat();
+  // Serialize the daemon auto-reply chat through the SAME process-wide exclusive
+  // lock the ilink dispatcher uses. Other IM channels reach chat() straight
+  // through this handler; without the lock a reply here could overlap an ilink
+  // query's time slice and observe its swapped process-level cwd/active-agent →
+  // tools hitting the wrong workspace/memdir. runExclusive is a fail-soft serial
+  // queue, so wrapping preserves the existing return-value/error semantics.
+  const runExclusive =
+    typeof deps.runExclusive === 'function'
+      ? deps.runExclusive
+      : (fn) => require('../channels/ilinkExecutionLock').runExclusive(fn);
   let _warnedNoChat = false;
 
   return async function aiReplyHandler(msg = {}) {
-    if (!isAutoReplyEnabled(env)) return null;
+    if (!isAutoReplyEnabled(env)) {
+      return null;
+    }
     const text = msg && typeof msg.text === 'string' ? msg.text.trim() : '';
-    if (!text) return null;
+    if (!text) {
+      return null;
+    }
 
     let chat;
     try {
@@ -79,17 +99,21 @@ function buildAiReplyHandler(deps = {}) {
     if (typeof chat !== 'function') {
       if (!_warnedNoChat) {
         _warnedNoChat = true;
-        log.warn('msg auto-reply: no AI chat registered (headless?); inbound messages parsed but not answered');
+        log.warn(
+          'msg auto-reply: no AI chat registered (headless?); inbound messages parsed but not answered'
+        );
       }
       return null;
     }
 
     try {
-      const out = await chat(text, {
-        source: 'msg',
-        channelName: msg.channelName || '',
-        userId: msg.userId || '',
-      });
+      const out = await runExclusive(() =>
+        chat(text, {
+          source: 'msg',
+          channelName: msg.channelName || '',
+          userId: msg.userId || '',
+        })
+      );
       return _normalizeReply(out);
     } catch (err) {
       log.warn(`msg auto-reply chat failed: ${(err && err.message) || err}`);
@@ -105,11 +129,17 @@ function buildAiReplyHandler(deps = {}) {
  * @returns {boolean} 是否完成接线
  */
 function wireReplyBridge(router, deps = {}) {
-  if (!router || typeof router.setAIHandler !== 'function') return false;
+  if (!router || typeof router.setAIHandler !== 'function') {
+    return false;
+  }
   const env = deps.env || process.env;
-  if (!isAutoReplyEnabled(env)) return false;
+  if (!isAutoReplyEnabled(env)) {
+    return false;
+  }
   // 不覆盖既有 handler(某处已显式接线时尊重之)。
-  if (router._aiHandler) return false;
+  if (router._aiHandler) {
+    return false;
+  }
   router.setAIHandler(buildAiReplyHandler(deps));
   return true;
 }

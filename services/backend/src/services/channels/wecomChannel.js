@@ -11,9 +11,10 @@
  * config: { webhook, token, encodingAesKey }
  */
 
-const { BaseChannel } = require('./_baseChannel');
-const sender = require('../messaging/msgSender');
 const inbound = require('../messaging/msgInboundCore');
+const sender = require('../messaging/msgSender');
+
+const { BaseChannel } = require('./_baseChannel');
 
 class WecomChannel extends BaseChannel {
   constructor(config = {}) {
@@ -24,14 +25,18 @@ class WecomChannel extends BaseChannel {
   }
 
   async connect() {
-    if (!this.webhook) throw new Error('wecom: webhook is required');
+    if (!this.webhook) {
+      throw new Error('wecom: webhook is required');
+    }
     this._connected = true;
     this.emit('connected');
   }
 
   async sendMessage(channelId, text, opts = {}) {
     const result = await sender.sendText({ platform: 'wecom', webhook: this.webhook, text });
-    if (!result.ok) { this.emit('error', { error: new Error(result.error) }); }
+    if (!result.ok) {
+      this.emit('error', { error: new Error(result.error) });
+    }
     return result;
   }
 
@@ -54,8 +59,12 @@ class WecomChannel extends BaseChannel {
       echostr: args.echostr,
       xmlBody: args.xmlBody,
     });
-    if (!r.ok) return r;
-    if (r.kind === 'verify') return r; // 路由据此回明文 echostr
+    if (!r.ok) {
+      return r;
+    }
+    if (r.kind === 'verify') {
+      return r;
+    } // 路由据此回明文 echostr
     const msg = r.message;
     if (msg && msg.text) {
       this.emit('message', {

@@ -18,10 +18,10 @@
  */
 
 const { defineTool } = require('./_baseTool');
-const path = require('path');
+
 const fs = require('fs');
 const os = require('os');
-const { guardedReadFileSync } = require('./guardedReadFileSync');
+const path = require('path');
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -42,6 +42,8 @@ const DEFAULT_PROMPT = '请详细描述这张图片的内容，并识别其中�
 // 复用 imageOcr 的路径归一:展开 ~ / $VAR / %VAR% → 绝对路径。
 const resolvePath = require('../utils/resolveToolPath');
 
+const { guardedReadFileSync } = require('./guardedReadFileSync');
+
 function _isRemoteOrDataImage(image) {
   const s = String(image || '').trim();
   return /^(https?:)?\/\//i.test(s) || /^data:/i.test(s);
@@ -54,7 +56,9 @@ function _isRemoteOrDataImage(image) {
 function normalizeImageInput(rawImage, cwd) {
   try {
     const raw = String(rawImage == null ? '' : rawImage).trim();
-    if (!raw) return { error: 'image 不能为空(需图片路径 / http(s) URL / data: URI)' };
+    if (!raw) {
+      return { error: 'image 不能为空(需图片路径 / http(s) URL / data: URI)' };
+    }
     if (_isRemoteOrDataImage(raw)) {
       return { image: { url: raw } };
     }
@@ -94,7 +98,10 @@ async function recognize({ prompt, image, model }) {
     const rawError = (result && result.content) || 'unknown error';
     return { success: false, error: _visionFailureError(rawError, model) };
   } catch (err) {
-    return { success: false, error: _visionFailureError(err && err.message, model, '图像识别出错') };
+    return {
+      success: false,
+      error: _visionFailureError(err && err.message, model, '图像识别出错'),
+    };
   }
 }
 
@@ -103,10 +110,17 @@ async function recognize({ prompt, image, model }) {
 function _visionFailureError(rawError, model, legacyPrefix = '图像识别失败') {
   const raw = rawError == null ? 'unknown error' : String(rawError);
   try {
-    const summary = require('../services/gateway/visionFailureSummary')
-      .buildVisionFailureMessage({ rawError: raw, model, env: process.env });
-    if (summary) return summary;
-  } catch { /* 叶子不可用 → 回退旧文案 */ }
+    const summary = require('../services/gateway/visionFailureSummary').buildVisionFailureMessage({
+      rawError: raw,
+      model,
+      env: process.env,
+    });
+    if (summary) {
+      return summary;
+    }
+  } catch {
+    /* 叶子不可用 → 回退旧文案 */
+  }
   return `${legacyPrefix}: ${raw}`;
 }
 
@@ -121,11 +135,17 @@ function _defaultVisionModel() {
     let usePin = true;
     try {
       const reg = require('../services/flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(process.env)
-        && typeof reg.isFlagEnabled === 'function') {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        reg.isRegistryEnabled(process.env) &&
+        typeof reg.isFlagEnabled === 'function'
+      ) {
         usePin = reg.isFlagEnabled('KHY_RECOGNIZE_IMAGE_POOL_PIN', process.env);
       }
-    } catch { /* 注册表不可用 → 保持默认开(usePin=true) */ }
+    } catch {
+      /* 注册表不可用 → 保持默认开(usePin=true) */
+    }
     if (usePin) {
       return glmVision.glmVisionFallbackPin(process.env) || glmVision.GLM_VISION_FALLBACK_PIN;
     }
@@ -140,7 +160,8 @@ const _impl = { normalizeImageInput, recognize };
 
 const _recognizeImageTool = defineTool({
   name: 'RecognizeImage',
-  description: '识别/理解一张图片(路径、http(s) URL 或 data: URI),路由到 GLM-4.6V-Flash 视觉模型，返回描述与图中文字。适用于文本模型无法直接看图的场景。',
+  description:
+    '识别/理解一张图片(路径、http(s) URL 或 data: URI),路由到 GLM-4.6V-Flash 视觉模型，返回描述与图中文字。适用于文本模型无法直接看图的场景。',
   category: 'analysis',
   risk: 'low',
   isReadOnly: true,
@@ -158,19 +179,34 @@ const _recognizeImageTool = defineTool({
   searchHint: '识别图片 理解图像 看图 识图 图片内容 图中文字 vision recognize describe image',
 
   inputSchema: {
-    image: { type: 'string', required: true, description: '图片来源:本地文件路径 / http(s) URL / data: URI' },
-    prompt: { type: 'string', required: false, description: `识图提问(默认:「${DEFAULT_PROMPT}」)` },
-    model: { type: 'string', required: false, description: '覆盖视觉模型 id(默认 glm/glm-4.6v-flash,池限定到 GLM 视觉端点)' },
+    image: {
+      type: 'string',
+      required: true,
+      description: '图片来源:本地文件路径 / http(s) URL / data: URI',
+    },
+    prompt: {
+      type: 'string',
+      required: false,
+      description: `识图提问(默认:「${DEFAULT_PROMPT}」)`,
+    },
+    model: {
+      type: 'string',
+      required: false,
+      description: '覆盖视觉模型 id(默认 glm/glm-4.6v-flash,池限定到 GLM 视觉端点)',
+    },
   },
 
   getActivityDescription(input) {
     const src = input && input.image ? String(input.image) : 'image';
-    const name = /^(https?:)?\/\//i.test(src) || /^data:/i.test(src) ? src.slice(0, 48) : path.basename(src);
+    const name =
+      /^(https?:)?\/\//i.test(src) || /^data:/i.test(src) ? src.slice(0, 48) : path.basename(src);
     return `识别图片：${name}`;
   },
 
   getToolUseSummary(input) {
-    if (!input || !input.image) return null;
+    if (!input || !input.image) {
+      return null;
+    }
     return `识别图片：${input.image}`;
   },
 

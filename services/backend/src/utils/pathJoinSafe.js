@@ -20,7 +20,9 @@ const path = require('path');
 
 function pathJoinSafe(...parts) {
   try {
-    if (parts.some((p) => p === undefined || p === null || p === '')) return '';
+    if (parts.some((p) => p === undefined || p === null || p === '')) {
+      return '';
+    }
     return path.join(...parts.map(String));
   } catch {
     return '';

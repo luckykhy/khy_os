@@ -25,11 +25,11 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const { isCcCommandBridgeEnabled, ccCommandSearchDirs } = require('../../commands/ccCommandBridge');
 const { parseFrontmatter } = require('../../agents/loadAgents');
+const { isCcCommandBridgeEnabled, ccCommandSearchDirs } = require('../../commands/ccCommandBridge');
 
 /**
  * 从 frontmatter 原文中原样抽取 argument-hint(保留字面量,不经通用 parser 的数组化)。
@@ -41,7 +41,9 @@ const { parseFrontmatter } = require('../../agents/loadAgents');
 function _extractHint(raw) {
   try {
     const m = String(raw == null ? '' : raw).match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!m) return '';
+    if (!m) {
+      return '';
+    }
     for (const line of m[1].split('\n')) {
       const mm = line.match(/^\s*argument-hint\s*:\s*(.*)$/);
       if (mm) {
@@ -62,8 +64,12 @@ function _extractHint(raw) {
  * 归一斜杠命令:确保单个前导 `/`、去空白、取首 token(不含空白)。 */
 function _normCmd(raw) {
   let s = String(raw || '').trim();
-  if (!s) return '';
-  if (!s.startsWith('/')) s = `/${s}`;
+  if (!s) {
+    return '';
+  }
+  if (!s.startsWith('/')) {
+    s = `/${s}`;
+  }
   return s.split(/\s+/)[0];
 }
 
@@ -77,8 +83,13 @@ function _normCmd(raw) {
 function _cmdFromRelPath(relPath) {
   try {
     const noExt = String(relPath || '').replace(/\.md$/i, '');
-    const segs = noExt.split(/[\\/]/).map((s) => s.trim()).filter(Boolean);
-    if (!segs.length) return '';
+    const segs = noExt
+      .split(/[\\/]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!segs.length) {
+      return '';
+    }
     return _normCmd(segs.join(':'));
   } catch {
     return '';
@@ -96,7 +107,9 @@ function _scanCommandRoot(rootDir, source, seen) {
   const out = [];
   let topEntries;
   try {
-    if (!fs.existsSync(rootDir)) return out;
+    if (!fs.existsSync(rootDir)) {
+      return out;
+    }
     topEntries = fs.readdirSync(rootDir, { withFileTypes: true });
   } catch {
     return out;
@@ -110,25 +123,43 @@ function _scanCommandRoot(rootDir, source, seen) {
       } else if (entry.isDirectory()) {
         const nsDir = path.join(rootDir, entry.name);
         let nsEntries = [];
-        try { nsEntries = fs.readdirSync(nsDir, { withFileTypes: true }); } catch { nsEntries = []; }
+        try {
+          nsEntries = fs.readdirSync(nsDir, { withFileTypes: true });
+        } catch {
+          nsEntries = [];
+        }
         for (const ns of nsEntries) {
           if (ns.isFile() && /\.md$/i.test(ns.name)) {
             files.push({ abs: path.join(nsDir, ns.name), rel: `${entry.name}/${ns.name}` });
           }
         }
       }
-    } catch { /* 单条目坏 → 跳过 */ }
+    } catch {
+      /* 单条目坏 → 跳过 */
+    }
   }
 
   for (const f of files) {
     try {
       const cmd = _cmdFromRelPath(f.rel);
-      if (!cmd || seen.has(cmd)) continue;
+      if (!cmd || seen.has(cmd)) {
+        continue;
+      }
       let raw = '';
-      try { raw = fs.readFileSync(f.abs, 'utf-8'); } catch { continue; }
-      if (typeof raw !== 'string' || raw.trim() === '') continue;
+      try {
+        raw = fs.readFileSync(f.abs, 'utf-8');
+      } catch {
+        continue;
+      }
+      if (typeof raw !== 'string' || raw.trim() === '') {
+        continue;
+      }
       let frontmatter = {};
-      try { ({ frontmatter } = parseFrontmatter(raw)); } catch { frontmatter = {}; }
+      try {
+        ({ frontmatter } = parseFrontmatter(raw));
+      } catch {
+        frontmatter = {};
+      }
       seen.add(cmd);
       out.push({
         cmd,
@@ -140,7 +171,9 @@ function _scanCommandRoot(rootDir, source, seen) {
         _argumentHint: _extractHint(raw),
         _aliases: [],
       });
-    } catch { /* 单命令坏 → 跳过,不影响其余 */ }
+    } catch {
+      /* 单命令坏 → 跳过,不影响其余 */
+    }
   }
   return out;
 }
@@ -153,7 +186,9 @@ function _scanCommandRoot(rootDir, source, seen) {
  */
 function listCcCommands(opts = {}) {
   const env = opts.env || process.env;
-  if (!isCcCommandBridgeEnabled(env)) return [];
+  if (!isCcCommandBridgeEnabled(env)) {
+    return [];
+  }
   const cwd = opts.cwd || process.cwd();
   const home = opts.home || os.homedir();
   const out = [];
@@ -161,9 +196,13 @@ function listCcCommands(opts = {}) {
   try {
     const roots = ccCommandSearchDirs({ homedir: home, projectDir: cwd });
     for (const { dir, source } of roots) {
-      for (const d of _scanCommandRoot(dir, source, seen)) out.push(d);
+      for (const d of _scanCommandRoot(dir, source, seen)) {
+        out.push(d);
+      }
     }
-  } catch { /* 兜底:任何意外 → 已收集照返 */ }
+  } catch {
+    /* 兜底:任何意外 → 已收集照返 */
+  }
   return out;
 }
 
@@ -173,13 +212,23 @@ function listCcCommands(opts = {}) {
  * @returns {string|null}
  */
 function loadCcCommandBody(commandFile) {
-  if (!commandFile || typeof commandFile !== 'string') return null;
+  if (!commandFile || typeof commandFile !== 'string') {
+    return null;
+  }
   try {
-    if (!fs.existsSync(commandFile)) return null;
+    if (!fs.existsSync(commandFile)) {
+      return null;
+    }
     const raw = fs.readFileSync(commandFile, 'utf-8');
-    if (typeof raw !== 'string' || raw.trim() === '') return null;
+    if (typeof raw !== 'string' || raw.trim() === '') {
+      return null;
+    }
     let body = raw;
-    try { ({ body } = parseFrontmatter(raw)); } catch { body = raw; }
+    try {
+      ({ body } = parseFrontmatter(raw));
+    } catch {
+      body = raw;
+    }
     const text = String(body == null ? '' : body).trim();
     return text === '' ? null : text;
   } catch {

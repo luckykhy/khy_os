@@ -18,19 +18,30 @@ const fs = require('fs');
 const path = require('path');
 
 const { getBaseDataDir } = require('../utils/dataHome');
+
 const core = require('./vaultCore');
 
 const FILE_MODE = 0o600;
 
-function _dir() { return getBaseDataDir('vault'); }                  // ~/.khyos/vault(已确保存在)
-function _file() { return path.join(_dir(), 'vault.json'); }
-function _bak() { return path.join(_dir(), 'vault.bak'); }
+function _dir() {
+  return getBaseDataDir('vault');
+} // ~/.khyos/vault(已确保存在)
+
+function _file() {
+  return path.join(_dir(), 'vault.json');
+}
+
+function _bak() {
+  return path.join(_dir(), 'vault.bak');
+}
 
 /** 读取保险库;缺失/损坏 → 空库。绝不抛。 */
 function _read() {
   try {
     const file = _file();
-    if (!fs.existsSync(file)) return { version: core.STORE_VERSION, secrets: {} };
+    if (!fs.existsSync(file)) {
+      return { version: core.STORE_VERSION, secrets: {} };
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
     if (!raw || typeof raw !== 'object' || !raw.secrets || typeof raw.secrets !== 'object') {
       return { version: core.STORE_VERSION, secrets: {} };
@@ -49,9 +60,15 @@ function _write(state) {
     try {
       if (fs.existsSync(file)) {
         fs.copyFileSync(file, _bak());
-        try { fs.chmodSync(_bak(), FILE_MODE); } catch { /* best-effort */ }
+        try {
+          fs.chmodSync(_bak(), FILE_MODE);
+        } catch {
+          /* best-effort */
+        }
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
     const payload = {
       version: core.STORE_VERSION,
       secrets: state && state.secrets && typeof state.secrets === 'object' ? state.secrets : {},
@@ -60,7 +77,11 @@ function _write(state) {
     const tmp = path.join(dir, `.vault.${process.pid}.tmp`);
     fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), { encoding: 'utf-8', mode: FILE_MODE });
     fs.renameSync(tmp, file);
-    try { fs.chmodSync(file, FILE_MODE); } catch { /* best-effort */ }
+    try {
+      fs.chmodSync(file, FILE_MODE);
+    } catch {
+      /* best-effort */
+    }
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e && e.message) || String(e) };
@@ -75,7 +96,9 @@ function listSecrets() {
 /** 某密钥是否存在。 */
 function hasSecret(name) {
   const key = core.normalizeName(name);
-  if (!key) return false;
+  if (!key) {
+    return false;
+  }
   return Object.prototype.hasOwnProperty.call(_read().secrets, key);
 }
 
@@ -86,7 +109,9 @@ function hasSecret(name) {
  */
 function getSecret(name) {
   const key = core.normalizeName(name);
-  if (!key) return null;
+  if (!key) {
+    return null;
+  }
   const entry = _read().secrets[key];
   return entry && typeof entry.value === 'string' ? entry.value : null;
 }
@@ -101,7 +126,11 @@ function getSecrets(names) {
   const secrets = _read().secrets;
   for (const raw of Array.isArray(names) ? names : []) {
     const key = core.normalizeName(raw);
-    if (key && Object.prototype.hasOwnProperty.call(secrets, key) && typeof secrets[key].value === 'string') {
+    if (
+      key &&
+      Object.prototype.hasOwnProperty.call(secrets, key) &&
+      typeof secrets[key].value === 'string'
+    ) {
       found[key] = secrets[key].value;
     } else {
       missing.push(raw);
@@ -118,7 +147,9 @@ function getSecrets(names) {
  */
 function setSecret(name, value) {
   const key = core.normalizeName(name);
-  if (!key) return { ok: false, error: `非法密钥名「${name}」。须字母开头、仅字母数字下划线、长度 ≤64。` };
+  if (!key) {
+    return { ok: false, error: `非法密钥名「${name}」。须字母开头、仅字母数字下划线、长度 ≤64。` };
+  }
   if (typeof value !== 'string' || value.length === 0) {
     return { ok: false, error: '密钥值不能为空。' };
   }
@@ -131,7 +162,9 @@ function setSecret(name, value) {
     updatedAt: now,
   };
   const w = _write(state);
-  if (!w.ok) return { ok: false, error: w.error || '写入失败' };
+  if (!w.ok) {
+    return { ok: false, error: w.error || '写入失败' };
+  }
   return { ok: true, name: key, preview: core.maskSecret(value) };
 }
 
@@ -142,14 +175,18 @@ function setSecret(name, value) {
  */
 function removeSecret(name) {
   const key = core.normalizeName(name);
-  if (!key) return { ok: false, error: `非法密钥名「${name}」。` };
+  if (!key) {
+    return { ok: false, error: `非法密钥名「${name}」。` };
+  }
   const state = _read();
   if (!Object.prototype.hasOwnProperty.call(state.secrets, key)) {
     return { ok: true, removed: false };
   }
   delete state.secrets[key];
   const w = _write(state);
-  if (!w.ok) return { ok: false, error: w.error || '写入失败' };
+  if (!w.ok) {
+    return { ok: false, error: w.error || '写入失败' };
+  }
   return { ok: true, removed: true };
 }
 

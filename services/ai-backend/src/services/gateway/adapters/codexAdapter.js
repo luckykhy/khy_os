@@ -21,7 +21,9 @@ function commandExists(cmd) {
     const lookup = process.platform === 'win32' ? 'where' : 'which';
     execFileSync(lookup, [cmd], { stdio: 'pipe', timeout: 5000 });
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function detect(forceRefresh = false) {
@@ -31,7 +33,7 @@ function detect(forceRefresh = false) {
 }
 
 async function listModels() {
-  return KNOWN_MODELS.map(m => ({
+  return KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'codex',
     description: '',
@@ -61,7 +63,9 @@ async function generate(prompt, options = {}) {
         if (stdout.length < MAX_BUFFER) stdout += chunk;
         if (options.onChunk) options.onChunk({ type: 'text', text: chunk.toString() });
       });
-      child.stderr.on('data', (chunk) => { if (stderr.length < MAX_BUFFER) stderr += chunk; });
+      child.stderr.on('data', (chunk) => {
+        if (stderr.length < MAX_BUFFER) stderr += chunk;
+      });
 
       child.on('close', (code) => {
         if (code === 0 && stdout.trim()) resolve(stdout.trim());
@@ -102,6 +106,8 @@ function getStatus() {
   };
 }
 
-function destroy() { _available = null; }
+function destroy() {
+  _available = null;
+}
 
 module.exports = { detect, listModels, generate, getStatus, destroy };

@@ -14,15 +14,21 @@ function getConfigPath() {
 
 function _stripInlineComment(line) {
   const hashIndex = line.indexOf('#');
-  if (hashIndex < 0) return line;
+  if (hashIndex < 0) {
+    return line;
+  }
   return line.slice(0, hashIndex);
 }
 
 function _parseDirective(line) {
   const cleaned = _stripInlineComment(line).trim();
-  if (!cleaned) return null;
+  if (!cleaned) {
+    return null;
+  }
   const match = cleaned.match(/^(\S+)\s+(.+)$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   return {
     key: String(match[1]).toLowerCase(),
     value: String(match[2]).trim(),
@@ -34,13 +40,19 @@ function _isWildcardHostPattern(hostPattern) {
 }
 
 function _expandHomePath(inputPath) {
-  if (!inputPath || typeof inputPath !== 'string') return null;
+  if (!inputPath || typeof inputPath !== 'string') {
+    return null;
+  }
   const trimmed = inputPath.trim();
-  if (!trimmed) return null;
+  if (!trimmed) {
+    return null;
+  }
   if (trimmed.startsWith('~/')) {
     return path.join(os.homedir(), trimmed.slice(2));
   }
-  if (trimmed === '~') return os.homedir();
+  if (trimmed === '~') {
+    return os.homedir();
+  }
   return trimmed;
 }
 
@@ -68,7 +80,9 @@ function parseSshConfig(content) {
 
   for (const rawLine of text.split(/\r?\n/)) {
     const directive = _parseDirective(rawLine);
-    if (!directive) continue;
+    if (!directive) {
+      continue;
+    }
 
     if (directive.key === 'host') {
       const patterns = directive.value.split(/\s+/).filter(Boolean);

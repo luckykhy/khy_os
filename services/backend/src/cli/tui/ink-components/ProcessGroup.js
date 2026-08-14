@@ -18,16 +18,26 @@
  * be noise) — it renders as a plain ToolLines block.
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
+
 const ToolLines = require('./ToolLines');
 // 按 tool 对象身份记忆 toolTarget 输出(消每帧对已完成工具 input 的重复 JSON.parse)。纯叶子,
 // fail-soft require:缺失/抛错 → 直接算(逐字节回退)。门控 KHY_TOOL_TARGET_MEMO。
 let _toolTargetMemo = null;
-try { _toolTargetMemo = require('./toolTargetMemo'); } catch { _toolTargetMemo = null; }
+try {
+  _toolTargetMemo = require('./toolTargetMemo');
+} catch {
+  _toolTargetMemo = null;
+}
 // 按 tool 对象身份记忆 classifyTool 输出(消每帧对分组内每个工具重跑 ~13 条正则的分类电池)。纯叶子,
 // fail-soft require:缺失/抛错 → 直接算(逐字节回退)。门控 KHY_PROCESS_GROUP_CLASSIFY_MEMO。
 let _classifyMemo = null;
-try { _classifyMemo = require('./processGroupClassifyMemo'); } catch { _classifyMemo = null; }
+try {
+  _classifyMemo = require('./processGroupClassifyMemo');
+} catch {
+  _classifyMemo = null;
+}
 // Same shell-family rule ToolLines uses to fold command/third-party-app stdout —
 // reused so the collapse decision and the per-step fold stay in lockstep.
 const { isShellResult } = ToolLines;
@@ -35,7 +45,10 @@ const { isShellResult } = ToolLines;
 // True when a finished tool result represents a failure. Mirrors ToolLines'
 // isErr rule so the header counts match the per-step icons.
 function isToolError(result) {
-  return !!(result && (result.isError || result.is_error || result.error || result.success === false));
+  return !!(
+    result &&
+    (result.isError || result.is_error || result.error || result.success === false)
+  );
 }
 
 // Map a tool name to a semantic action label so the group header reads as what
@@ -50,25 +63,56 @@ function isToolError(result) {
 // rule at all → null. Pinning them here keeps the header honest.
 const EXPLICIT_CATEGORY_SRC = {
   读取: ['Read', 'readFile', 'NotebookRead', 'cat', 'open', 'local_knowledge'],
-  写入: ['Write', 'writeFile', 'save_as_file', 'save_as_docx', 'create_document', 'renderDocument', 'scaffoldFiles', 'scaffold'],
-  编辑: ['Edit', 'MultiEdit', 'editFile', 'NotebookEdit', 'findAndReplace', 'propose_code_change', 'patch'],
+  写入: [
+    'Write',
+    'writeFile',
+    'save_as_file',
+    'save_as_docx',
+    'create_document',
+    'renderDocument',
+    'scaffoldFiles',
+    'scaffold',
+  ],
+  编辑: [
+    'Edit',
+    'MultiEdit',
+    'editFile',
+    'NotebookEdit',
+    'findAndReplace',
+    'propose_code_change',
+    'patch',
+  ],
   搜索: ['Grep', 'Glob', 'search', 'find', 'explore', 'toolSearch', 'tool_search'],
   联网检索: ['WebSearch', 'WebFetch', 'webSearch', 'web_search', 'fetch', 'browse'],
-  执行命令: ['Bash', 'shellCommand', 'shell_command', 'execute_shell', 'executeShell', 'executeCode', 'run_tests', 'runTests'],
+  执行命令: [
+    'Bash',
+    'shellCommand',
+    'shell_command',
+    'execute_shell',
+    'executeShell',
+    'executeCode',
+    'run_tests',
+    'runTests',
+  ],
   子任务: ['Task', 'spawn_agent', 'resume_agent', 'wait_agent', 'chain_run'],
   规划: ['TodoWrite', 'ExitPlanMode', 'plan'],
-  '浏览目录': ['list', 'ls', 'dir', 'tree', 'listDir'],
+  浏览目录: ['list', 'ls', 'dir', 'tree', 'listDir'],
   删除: ['delete', 'remove', 'rm', 'deleteFile'],
   移动: ['move', 'rename', 'mv'],
   提问: ['AskUserQuestion', 'ask', 'question'],
 };
-const _normName = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+const _normName = (s) =>
+  String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
 const EXPLICIT_CATEGORY = (() => {
   const m = new Map();
   for (const [label, names] of Object.entries(EXPLICIT_CATEGORY_SRC)) {
     for (const name of names) {
       const k = _normName(name);
-      if (k && !m.has(k)) m.set(k, label);
+      if (k && !m.has(k)) {
+        m.set(k, label);
+      }
     }
   }
   return m;
@@ -85,7 +129,10 @@ const CATEGORY_RULES = [
   [/multiedit|notebookedit|edit|patch|modify|replace/, '编辑'],
   [/write|create|scaffold|template|document/, '写入'],
   [/read|notebookread|^cat$|^open$/, '读取'],
-  [/bash|shell|exec|runtests|^run|command|terminal|deploy|build|lint|coverage|backtest|^test/, '执行命令'],
+  [
+    /bash|shell|exec|runtests|^run|command|terminal|deploy|build|lint|coverage|backtest|^test/,
+    '执行命令',
+  ],
   [/list|^ls$|^dir$|tree/, '浏览目录'],
   [/delete|remove|^rm$/, '删除'],
   [/move|rename|^mv$/, '移动'],
@@ -94,11 +141,17 @@ const CATEGORY_RULES = [
 
 function classifyTool(name) {
   const n = _normName(name);
-  if (!n) return null;
+  if (!n) {
+    return null;
+  }
   const pinned = EXPLICIT_CATEGORY.get(n);
-  if (pinned) return pinned;
+  if (pinned) {
+    return pinned;
+  }
   for (const [re, label] of CATEGORY_RULES) {
-    if (re.test(n)) return label;
+    if (re.test(n)) {
+      return label;
+    }
   }
   return null;
 }
@@ -112,15 +165,27 @@ function truncateTitle(s, n) {
 // query, etc. Used to enrich a single-category title (e.g. "读取 server.js").
 function toolTarget(t) {
   const raw = t && (t.input ?? t.args ?? t.parameters ?? t.arguments);
-  if (raw == null) return '';
+  if (raw == null) {
+    return '';
+  }
   let obj = raw;
   if (typeof raw === 'string') {
-    try { obj = JSON.parse(raw); } catch { return raw.trim(); }
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      return raw.trim();
+    }
   }
-  if (!obj || typeof obj !== 'object') return String(obj);
-  if (obj.command) return String(obj.command);
+  if (!obj || typeof obj !== 'object') {
+    return String(obj);
+  }
+  if (obj.command) {
+    return String(obj.command);
+  }
   for (const k of ['file_path', 'path', 'pattern', 'query', 'url', 'description']) {
-    if (obj[k]) return String(obj[k]);
+    if (obj[k]) {
+      return String(obj[k]);
+    }
   }
   return '';
 }
@@ -128,7 +193,9 @@ function toolTarget(t) {
 // Reduce a target to a compact token: path-like → basename, else as-is.
 function condenseTarget(s) {
   s = String(s).trim();
-  if (!s) return '';
+  if (!s) {
+    return '';
+  }
   if (/[/\\]/.test(s)) {
     const parts = s.split(/[/\\]/).filter(Boolean);
     return parts[parts.length - 1] || s;
@@ -140,22 +207,28 @@ function condenseTarget(s) {
 // "N 个步骤" count in the header already conveys the multiplicity).
 function representativeTarget(tools) {
   // 每工具的 toolTarget 按 tool 对象身份记忆(冻结工具跳过 JSON.parse)。缺叶子/门控关 → 直接算。
-  const _target = (t) => (_toolTargetMemo
-    ? _toolTargetMemo.memoToolTarget(t, () => toolTarget(t), process.env)
-    : toolTarget(t));
+  const _target = (t) =>
+    _toolTargetMemo
+      ? _toolTargetMemo.memoToolTarget(t, () => toolTarget(t), process.env)
+      : toolTarget(t);
   // 压缩目标(basename 抽取)同按 tool 对象身份记忆(冻结工具连 condense 的 split/正则/数组分配也跳过);
   // 缺 memoCondensedTarget(旧叶子无此函数)/门控关 → 直接 condenseTarget(逐字节回退)。computeFn 内复用
   // 已算 target,故每工具 _target 恰调一次(不在回退路径重复 JSON.parse)。
   const condensed = [];
   for (const t of tools) {
     const target = _target(t);
-    if (!target) continue; // 与旧 raw.filter(Boolean) 等价:无目标工具跳过
-    const c = ((_toolTargetMemo && typeof _toolTargetMemo.memoCondensedTarget === 'function')
-      ? _toolTargetMemo.memoCondensedTarget(t, () => condenseTarget(target), process.env)
-      : condenseTarget(target));
+    if (!target) {
+      continue;
+    } // 与旧 raw.filter(Boolean) 等价:无目标工具跳过
+    const c =
+      _toolTargetMemo && typeof _toolTargetMemo.memoCondensedTarget === 'function'
+        ? _toolTargetMemo.memoCondensedTarget(t, () => condenseTarget(target), process.env)
+        : condenseTarget(target);
     condensed.push(c);
   }
-  if (condensed.length === 0) return '';
+  if (condensed.length === 0) {
+    return '';
+  }
   const distinct = [...new Set(condensed)];
   return distinct.length === 1 ? truncateTitle(distinct[0], 40) : '';
 }
@@ -171,14 +244,20 @@ function groupTitle(tools) {
   for (const t of tools) {
     // classifyTool 按 tool 对象身份记忆(已到达工具跳过 ~13 条正则;缺叶子/门控关 → 直接算)。
     const c = _classifyMemo
-      ? _classifyMemo.memoClassify(t, () => classifyTool(t && (t.name || t.toolName || t.tool)), process.env)
+      ? _classifyMemo.memoClassify(
+          t,
+          () => classifyTool(t && (t.name || t.toolName || t.tool)),
+          process.env
+        )
       : classifyTool(t && (t.name || t.toolName || t.tool));
-    if (c && !cats.includes(c)) cats.push(c);
+    if (c && !cats.includes(c)) {
+      cats.push(c);
+    }
   }
   if (cats.length === 0) {
-    const names = [...new Set(
-      tools.map((t) => t && (t.name || t.toolName || t.tool)).filter(Boolean)
-    )];
+    const names = [
+      ...new Set(tools.map((t) => t && (t.name || t.toolName || t.tool)).filter(Boolean)),
+    ];
     return names.length ? truncateTitle(names.slice(0, 3).join(' · '), 48) : '过程组';
   }
   const base = cats.slice(0, 3).join(' · ');
@@ -188,15 +267,30 @@ function groupTitle(tools) {
 
 // Short status summary for the header: ✓ ok, ✗ failed, ◆ still running.
 function statusSummary(tools) {
-  let ok = 0, err = 0, pending = 0;
+  let ok = 0,
+    err = 0,
+    pending = 0;
   for (const t of tools) {
-    if (!t || !t.result) { pending += 1; continue; }
-    if (isToolError(t.result)) err += 1; else ok += 1;
+    if (!t || !t.result) {
+      pending += 1;
+      continue;
+    }
+    if (isToolError(t.result)) {
+      err += 1;
+    } else {
+      ok += 1;
+    }
   }
   const parts = [];
-  if (ok) parts.push(`✓${ok}`);
-  if (err) parts.push(`✗${err}`);
-  if (pending) parts.push(`◆${pending}`);
+  if (ok) {
+    parts.push(`✓${ok}`);
+  }
+  if (err) {
+    parts.push(`✗${err}`);
+  }
+  if (pending) {
+    parts.push(`◆${pending}`);
+  }
   return parts.join(' ');
 }
 
@@ -212,16 +306,24 @@ function statusSummary(tools) {
  */
 function groupConsecutiveTools(timeline) {
   const out = [];
-  if (!Array.isArray(timeline)) return out;
+  if (!Array.isArray(timeline)) {
+    return out;
+  }
   let run = null;
   for (const e of timeline) {
     if (e && e.type === 'tool' && e.tool) {
-      if (!run) { run = { type: 'tools', tools: [] }; out.push(run); }
+      if (!run) {
+        run = { type: 'tools', tools: [] };
+        out.push(run);
+      }
       run.tools.push(e.tool);
     } else {
       run = null;
-      if (e && e.type === 'text') out.push({ type: 'text', text: e.text });
-      else out.push(e);
+      if (e && e.type === 'text') {
+        out.push({ type: 'text', text: e.text });
+      } else {
+        out.push(e);
+      }
     }
   }
   return out;
@@ -248,30 +350,47 @@ function groupConsecutiveTools(timeline) {
  */
 function groupTimeline(timeline) {
   const out = [];
-  if (!Array.isArray(timeline)) return out;
+  if (!Array.isArray(timeline)) {
+    return out;
+  }
   let think = '';
   let thinkMs = 0; // sum of REAL durations of thinking entries merged this phase
   let text = '';
   let toolRun = null;
   const flushPhase = () => {
     if (think) {
-      out.push(thinkMs > 0 ? { type: 'thinking', text: think, durationMs: thinkMs } : { type: 'thinking', text: think });
-      think = ''; thinkMs = 0;
+      out.push(
+        thinkMs > 0
+          ? { type: 'thinking', text: think, durationMs: thinkMs }
+          : { type: 'thinking', text: think }
+      );
+      think = '';
+      thinkMs = 0;
     }
-    if (text) { out.push({ type: 'text', text }); text = ''; }
+    if (text) {
+      out.push({ type: 'text', text });
+      text = '';
+    }
   };
   for (const e of timeline) {
     if (e && e.type === 'tool' && e.tool) {
       // A tool closes the current text/thinking phase before the tool run.
       flushPhase();
-      if (!toolRun) { toolRun = { type: 'tools', tools: [] }; out.push(toolRun); }
+      if (!toolRun) {
+        toolRun = { type: 'tools', tools: [] };
+        out.push(toolRun);
+      }
       toolRun.tools.push(e.tool);
     } else {
       toolRun = null;
       if (e && e.type === 'thinking' && e.text) {
         think += e.text;
-        if (Number(e.durationMs) > 0) thinkMs += Number(e.durationMs); // carry real elapsed
-      } else if (e && e.type === 'text' && e.text) text += e.text;
+        if (Number(e.durationMs) > 0) {
+          thinkMs += Number(e.durationMs);
+        } // carry real elapsed
+      } else if (e && e.type === 'text' && e.text) {
+        text += e.text;
+      }
       // empty / unknown segments are dropped
     }
   }
@@ -282,7 +401,9 @@ function groupTimeline(timeline) {
 function ProcessGroup({ tools = [], expanded = false, live = false }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
-  if (!tools || tools.length === 0) return null;
+  if (!tools || tools.length === 0) {
+    return null;
+  }
 
   // A single step does not warrant group chrome — render it as a lone tool.
   if (tools.length === 1) {
@@ -307,7 +428,9 @@ function ProcessGroup({ tools = [], expanded = false, live = false }) {
   const isStepVisibleWhenFolded = (t) =>
     t && (isToolError(t.result) || isShellResult(t.name || t.toolName || t.tool || ''));
   const stepTools = showAll ? tools : tools.filter(isStepVisibleWhenFolded);
-  const header = h(Box, { key: 'hdr' },
+  const header = h(
+    Box,
+    { key: 'hdr' },
     h(Text, { color: 'cyan', bold: true }, `${caret} ${title}`),
     h(Text, { dimColor: true }, ` · ${tools.length} 个步骤`),
     summary ? h(Text, { dimColor: true }, `  ${summary}`) : null,
@@ -318,7 +441,9 @@ function ProcessGroup({ tools = [], expanded = false, live = false }) {
     // Folded with no failures: header alone is the whole record.
     return h(Box, { flexDirection: 'column' }, header);
   }
-  return h(Box, { flexDirection: 'column' },
+  return h(
+    Box,
+    { flexDirection: 'column' },
     header,
     // Previews stay gated by the REAL expanded flag (live shows the step list but
     // not success previews — keeping the live region within its height budget).
@@ -327,9 +452,31 @@ function ProcessGroup({ tools = [], expanded = false, live = false }) {
   );
 }
 
-ProcessGroup.groupConsecutiveTools = groupConsecutiveTools;
-ProcessGroup.groupTimeline = groupTimeline;
-ProcessGroup.statusSummary = statusSummary;
-ProcessGroup.groupTitle = groupTitle;
-ProcessGroup.classifyTool = classifyTool;
-module.exports = ProcessGroup;
+// Re-render narrowing (same gate + areEqual as ToolLines — identical
+// { tools, expanded, live } prop shape; `tools` arrays are rebuilt every frame
+// by groupTimeline/groupConsecutiveTools, tool objects are immutably replaced
+// on change, so element-wise identity compare is the faithful signal).
+// Gate KHY_TUI_COMPONENT_MEMO, DEFAULT ON; '0'/'false'/'off'/'no' restores the
+// plain export. Fail-soft: if the shared areEqual is unavailable, fall back to
+// React.memo's default shallow compare (correct, just less effective because
+// of the per-frame tools array).
+function _componentMemoOff(env) {
+  const v = String((env && env.KHY_TUI_COMPONENT_MEMO) || '')
+    .trim()
+    .toLowerCase();
+  return v === '0' || v === 'false' || v === 'off' || v === 'no';
+}
+let _exported = ProcessGroup;
+if (!_componentMemoOff(process.env)) {
+  const areEqual =
+    typeof ToolLines.toolsPropsEqual === 'function' ? ToolLines.toolsPropsEqual : undefined;
+  _exported = React.memo(ProcessGroup, areEqual);
+}
+module.exports = _exported;
+// Static helpers attach to the EXPORTED object (memo or plain) so
+// require('./ProcessGroup').groupTimeline etc. stay reachable either way.
+module.exports.groupConsecutiveTools = groupConsecutiveTools;
+module.exports.groupTimeline = groupTimeline;
+module.exports.statusSummary = statusSummary;
+module.exports.groupTitle = groupTitle;
+module.exports.classifyTool = classifyTool;

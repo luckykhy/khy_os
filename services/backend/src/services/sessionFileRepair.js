@@ -15,9 +15,9 @@
  * - Backup before repair: original file preserved as .bak
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 // ── Validation rules ──
 
@@ -46,21 +46,39 @@ function validateSession(session) {
   let repairable = 0;
 
   if (!session || typeof session !== 'object') {
-    return { valid: false, errors: ['Session is not a valid object'], warnings, messageCount: 0, repairable: 0 };
+    return {
+      valid: false,
+      errors: ['Session is not a valid object'],
+      warnings,
+      messageCount: 0,
+      repairable: 0,
+    };
   }
 
   const messages = session.messages || session.conversation || [];
   if (!Array.isArray(messages)) {
-    return { valid: false, errors: ['Messages field is not an array'], warnings, messageCount: 0, repairable: 0 };
+    return {
+      valid: false,
+      errors: ['Messages field is not an array'],
+      warnings,
+      messageCount: 0,
+      repairable: 0,
+    };
   }
 
   if (messages.length === 0) {
-    return { valid: true, errors, warnings: ['Session has no messages'], messageCount: 0, repairable: 0 };
+    return {
+      valid: true,
+      errors,
+      warnings: ['Session has no messages'],
+      messageCount: 0,
+      repairable: 0,
+    };
   }
 
   let prevRole = null;
-  let toolCallIds = new Set();
-  let pendingToolCalls = new Set();
+  const toolCallIds = new Set();
+  const pendingToolCalls = new Set();
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
@@ -145,17 +163,25 @@ function validateSession(session) {
  * @returns {object[]} repaired message array
  */
 function extractValidMessages(session) {
-  if (!session || typeof session !== 'object') return [];
+  if (!session || typeof session !== 'object') {
+    return [];
+  }
 
   const messages = session.messages || session.conversation || [];
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
 
   const valid = [];
   const toolCallMap = new Map(); // callId → assistant message index in valid[]
 
   for (const msg of messages) {
-    if (!msg || typeof msg !== 'object') continue;
-    if (!msg.role || !VALID_ROLES.has(msg.role)) continue;
+    if (!msg || typeof msg !== 'object') {
+      continue;
+    }
+    if (!msg.role || !VALID_ROLES.has(msg.role)) {
+      continue;
+    }
 
     // Content must be present (or tool_calls for assistant)
     if (msg.content === undefined && msg.content !== null) {
@@ -172,7 +198,9 @@ function extractValidMessages(session) {
       const calls = msg.tool_calls || msg.toolCalls || [];
       for (const call of calls) {
         const callId = call.id || call.callId;
-        if (callId) toolCallMap.set(callId, idx);
+        if (callId) {
+          toolCallMap.set(callId, idx);
+        }
       }
     }
   }
@@ -301,7 +329,11 @@ function repairSessionFile(filePath, opts = {}) {
     fs.renameSync(tmpPath, filePath);
   } catch (err) {
     // Clean up temp file on failure
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
     return {
       repaired: false,
       validation: {
@@ -359,7 +391,13 @@ function validateSessionFile(filePath) {
   try {
     raw = fs.readFileSync(filePath, 'utf8');
   } catch (err) {
-    return { valid: false, errors: [`Cannot read file: ${err.message}`], warnings: [], messageCount: 0, repairable: 0 };
+    return {
+      valid: false,
+      errors: [`Cannot read file: ${err.message}`],
+      warnings: [],
+      messageCount: 0,
+      repairable: 0,
+    };
   }
 
   let session;

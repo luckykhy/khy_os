@@ -38,10 +38,14 @@ function _loadConfig() {
   try {
     const { getDataHome } = require('../utils/dataHome');
     const cfgPath = path.join(getDataHome(), 'features.json');
-    if (!fs.existsSync(cfgPath)) return {};
+    if (!fs.existsSync(cfgPath)) {
+      return {};
+    }
 
     const mtime = fs.statSync(cfgPath).mtimeMs;
-    if (_configCache && mtime === _configMtime) return _configCache;
+    if (_configCache && mtime === _configMtime) {
+      return _configCache;
+    }
 
     _configCache = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
     _configMtime = mtime;
@@ -82,7 +86,7 @@ function isEnabled(feature) {
  */
 function listFeatures() {
   const config = _loadConfig();
-  return Object.keys(DEFAULTS).map(name => {
+  return Object.keys(DEFAULTS).map((name) => {
     const envKey = `KHY_FEATURE_${name.toUpperCase()}`;
     const envVal = process.env[envKey];
     let source = 'default';

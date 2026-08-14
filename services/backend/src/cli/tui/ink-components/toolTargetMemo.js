@@ -20,7 +20,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TOOL_TARGET_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -36,13 +38,21 @@ const _cache = new WeakMap(); // toolObj -> computed target string
  */
 function memoToolTarget(toolObj, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') return computeFn();
-    if (_cache.has(toolObj)) return _cache.get(toolObj);
+    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') {
+      return computeFn();
+    }
+    if (_cache.has(toolObj)) {
+      return _cache.get(toolObj);
+    }
     const target = computeFn();
     _cache.set(toolObj, target);
     return target;
   } catch {
-    try { return computeFn(); } catch { return ''; }
+    try {
+      return computeFn();
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -63,13 +73,21 @@ const _condensedCache = new WeakMap(); // toolObj -> condensed target string
  */
 function memoCondensedTarget(toolObj, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') return computeFn();
-    if (_condensedCache.has(toolObj)) return _condensedCache.get(toolObj);
+    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') {
+      return computeFn();
+    }
+    if (_condensedCache.has(toolObj)) {
+      return _condensedCache.get(toolObj);
+    }
     const condensed = computeFn();
     _condensedCache.set(toolObj, condensed);
     return condensed;
   } catch {
-    try { return computeFn(); } catch { return ''; }
+    try {
+      return computeFn();
+    } catch {
+      return '';
+    }
   }
 }
 

@@ -33,6 +33,7 @@ describe('IDE command feature access boundary', () => {
     }));
     jest.doMock('../../src/services/gateway/aiGateway', () => ({
       _initialized: false,
+      isInitialized() { return this._initialized; },
       init: gatewayInit,
       getAdapter,
     }));

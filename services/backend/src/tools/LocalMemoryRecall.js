@@ -15,12 +15,13 @@ const { defineTool } = require('./_baseTool');
 module.exports = defineTool({
   name: 'LocalMemoryRecall',
   description:
-    'Recall relevant memories from the local memory store on demand (Claude Code-aligned). '
-    + 'Give a query; returns the most relevant remembered facts (ranked, with body previews). '
-    + 'Read-only. Use mode="search" for literal substring matching, mode="relevant" (default) for ranked recall.',
+    'Recall relevant memories from the local memory store on demand (Claude Code-aligned). ' +
+    'Give a query; returns the most relevant remembered facts (ranked, with body previews). ' +
+    'Read-only. Use mode="search" for literal substring matching, mode="relevant" (default) for ranked recall.',
   category: 'system',
   risk: 'low',
   aliases: ['recall', 'memoryRecall', 'localMemoryRecall'],
+  searchHint: 'recall memory past facts notes history 回忆 记忆 检索记忆',
   isReadOnly: () => true,
   isConcurrencySafe: true,
   inputSchema: {
@@ -44,10 +45,15 @@ module.exports = defineTool({
   async execute(params, _context) {
     const leaf = require('../services/localMemoryRecall');
     if (!leaf.isEnabled()) {
-      return { success: false, error: 'Local memory recall is disabled (KHY_MEMORY_RECALL_TOOL=off or memory disabled).' };
+      return {
+        success: false,
+        error: 'Local memory recall is disabled (KHY_MEMORY_RECALL_TOOL=off or memory disabled).',
+      };
     }
     const query = String((params && params.query) || '').trim();
-    if (!query) return { success: false, error: 'query is required.' };
+    if (!query) {
+      return { success: false, error: 'query is required.' };
+    }
 
     let memdir;
     try {
@@ -65,7 +71,13 @@ module.exports = defineTool({
         const memories = leaf.shapeSearch(raw).slice(0, limit);
         return {
           success: true,
-          data: { mode, query, count: memories.length, summary: leaf.buildRecallSummary(query, memories), memories },
+          data: {
+            mode,
+            query,
+            count: memories.length,
+            summary: leaf.buildRecallSummary(query, memories),
+            memories,
+          },
         };
       }
 
@@ -73,7 +85,13 @@ module.exports = defineTool({
       const memories = leaf.shapeRelevant(raw);
       return {
         success: true,
-        data: { mode: 'relevant', query, count: memories.length, summary: leaf.buildRecallSummary(query, memories), memories },
+        data: {
+          mode: 'relevant',
+          query,
+          count: memories.length,
+          summary: leaf.buildRecallSummary(query, memories),
+          memories,
+        },
       };
     } catch (err) {
       return { success: false, error: (err && err.message) || String(err) };

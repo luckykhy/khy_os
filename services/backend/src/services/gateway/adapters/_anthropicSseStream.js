@@ -19,7 +19,11 @@
 // 瞬时 socket 报错时保全已累积 partial(纯叶子)。fail-soft:缺失则 stream.on('error')
 // 逐字节回退现状 reject。门控 KHY_STREAM_ERROR_PRESERVE 默认开。
 let _streamErrorPartial;
-try { _streamErrorPartial = require('./streamErrorPartial'); } catch { _streamErrorPartial = null; }
+try {
+  _streamErrorPartial = require('./streamErrorPartial');
+} catch {
+  _streamErrorPartial = null;
+}
 
 // 跨 chunk 边界安全的流式 UTF-8 解码器:防中文/emoji 被劈成 U+FFFD(◆)乱码。见 _sseTextDecoder.js。
 const { createSseTextDecoder } = require('./_sseTextDecoder');
@@ -78,6 +82,11 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
     // signature, so we accumulate structured blocks here in parallel.
     const thinkingBlocks = [];
 
+    // Track whether the stream was actively interrupted (stale detector or abort)
+    // vs a clean close. Only force truncation on actual interruption, not on a
+    // clean end where a relay proxy may have stripped the terminal markers.
+    let _interrupted = false;
+
     // Stale detection
     let staleDetector = null;
     if (enableStaleDetection && staleOptions) {
@@ -87,32 +96,54 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
         staleDetector = new StreamStaleDetector({
           ...staleOptions,
           onStale: (elapsed) => {
-            if (staleOptions.onStale) staleOptions.onStale(elapsed);
-            // Stalled stream → actively tear it down (single-sourced decision/error
-            // in streamStallPolicy). Reuses this parser's stream.on('error')
-            // partial-salvage path. Gate KHY_STREAM_STALL_ABORT off → byte-identical.
+            if (staleOptions.onStale) {
+              staleOptions.onStale(elapsed);
+            }
             if (_stallPolicy.shouldAbortStaleStream()) {
+              _interrupted = true;
               try {
-                stream.destroy(_stallPolicy.buildStallError({ provider: staleOptions.provider, elapsedMs: elapsed }));
-              } catch { /* ignore */ }
+                stream.destroy(
+                  _stallPolicy.buildStallError({
+                    provider: staleOptions.provider,
+                    elapsedMs: elapsed,
+                  })
+                );
+              } catch {
+                /* ignore */
+              }
             }
           },
         });
         staleDetector.start();
-      } catch { /* stale detection unavailable */ }
+      } catch {
+        /* stale detection unavailable */
+      }
     }
 
     // Abort handling
     if (signal) {
       if (signal.aborted) {
-        if (staleDetector) staleDetector.stop();
+        if (staleDetector) {
+          staleDetector.stop();
+        }
         return reject(new DOMException('Aborted', 'AbortError'));
       }
-      signal.addEventListener('abort', () => {
-        if (staleDetector) staleDetector.stop();
-        try { stream.destroy(); } catch { /* ignore */ }
-        reject(new DOMException('Aborted', 'AbortError'));
-      }, { once: true });
+      signal.addEventListener(
+        'abort',
+        () => {
+          if (staleDetector) {
+            staleDetector.stop();
+          }
+          _interrupted = true;
+          try {
+            stream.destroy();
+          } catch {
+            /* ignore */
+          }
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true }
+      );
     }
 
     /**
@@ -120,7 +151,9 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
      * fall back to inline ev.type from the JSON payload.
      */
     function resolveEventType(ev) {
-      if (currentEventType) return currentEventType;
+      if (currentEventType) {
+        return currentEventType;
+      }
       return ev.type || '';
     }
 
@@ -133,7 +166,9 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
       switch (eventType) {
         case 'message_start': {
           const msg = ev.message || {};
-          if (msg.model) model = msg.model;
+          if (msg.model) {
+            model = msg.model;
+          }
           if (msg.usage) {
             usage = usage || {};
             usage.input_tokens = msg.usage.input_tokens || 0;
@@ -175,28 +210,39 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
 
         case 'content_block_delta': {
           const delta = ev.delta || {};
-          if (!currentBlock) break;
+          if (!currentBlock) {
+            break;
+          }
 
           if (delta.type === 'text_delta' && delta.text) {
             currentBlock.text = (currentBlock.text || '') + delta.text;
             content += delta.text;
-            if (onChunk) onChunk({ type: 'text', text: delta.text });
+            if (onChunk) {
+              onChunk({ type: 'text', text: delta.text });
+            }
           } else if (delta.type === 'thinking_delta' && delta.thinking && enableThinking) {
             currentBlock.thinking = (currentBlock.thinking || '') + delta.thinking;
             thinkingContent += delta.thinking;
-            if (onChunk) onChunk({ type: 'thinking', text: delta.thinking });
+            if (onChunk) {
+              onChunk({ type: 'thinking', text: delta.thinking });
+            }
           } else if (delta.type === 'signature_delta' && delta.signature && enableThinking) {
             // Signature for the preceding thinking block — required to echo it back.
             currentBlock.signature = (currentBlock.signature || '') + delta.signature;
-          } else if (delta.type === 'input_json_delta' && delta.partial_json
-            && (enableToolCalls || currentBlock.type === 'server_tool_use')) {
+          } else if (
+            delta.type === 'input_json_delta' &&
+            delta.partial_json &&
+            (enableToolCalls || currentBlock.type === 'server_tool_use')
+          ) {
             currentBlock.inputJson = (currentBlock.inputJson || '') + delta.partial_json;
           }
           break;
         }
 
         case 'content_block_stop': {
-          if (!currentBlock) break;
+          if (!currentBlock) {
+            break;
+          }
           if (currentBlock.type === 'tool_use' && enableToolCalls) {
             let input = {};
             if (currentBlock.inputJson) {
@@ -224,7 +270,11 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
           } else if (currentBlock.type === 'server_tool_use') {
             let input = {};
             if (currentBlock.inputJson) {
-              try { input = JSON.parse(currentBlock.inputJson); } catch { input = {}; }
+              try {
+                input = JSON.parse(currentBlock.inputJson);
+              } catch {
+                input = {};
+              }
             }
             const serverBlock = {
               type: 'server_tool_use',
@@ -233,7 +283,9 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
               input,
             };
             toolUseBlocks.push(serverBlock);
-            if (onChunk) onChunk({ type: 'server_tool_use', name: serverBlock.name, id: serverBlock.id });
+            if (onChunk) {
+              onChunk({ type: 'server_tool_use', name: serverBlock.name, id: serverBlock.id });
+            }
           } else if (currentBlock.type === 'thinking' && enableThinking) {
             // Preserve the structured thinking block + signature for echo-back.
             thinkingBlocks.push({
@@ -270,7 +322,9 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
 
     stream.on('data', (chunk) => {
       const raw = _textDecoder.write(chunk);
-      if (staleDetector) staleDetector.touch(raw.length);
+      if (staleDetector) {
+        staleDetector.touch(raw.length);
+      }
 
       buffer += raw;
       const lines = buffer.split('\n');
@@ -293,7 +347,9 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
         // Data line: "data: <json>"
         if (trimmed.startsWith('data:')) {
           const payload = trimmed.slice(5).trim();
-          if (!payload || payload === '[DONE]') continue;
+          if (!payload || payload === '[DONE]') {
+            continue;
+          }
 
           let ev;
           try {
@@ -302,8 +358,12 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
             try {
               const { safeJsonParse } = require('../safeJsonParse');
               ev = safeJsonParse(payload, null);
-            } catch { continue; }
-            if (!ev) continue;
+            } catch {
+              continue;
+            }
+            if (!ev) {
+              continue;
+            }
           }
 
           processEvent(ev);
@@ -313,34 +373,50 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
     });
 
     stream.on('error', (err) => {
-      if (staleDetector) staleDetector.stop();
+      if (staleDetector) {
+        staleDetector.stop();
+      }
       // 瞬时传输错误且已吐出 partial:对齐 premature-close,把已产出文本作为截断
-      // ('length')交还,喂给 maxTokensRecovery 续写路径,而非整段丢弃。门控关 / 非瞬时
+      // ('interrupted')交还,喂给 maxTokensRecovery 续写路径(受 interrupted 守卫抑制),而非整段丢弃。门控关 / 非瞬时
       // / 无内容 / 用户中止 → 逐字节回退原 reject(err)。
       try {
-        if (_streamErrorPartial
-          && _streamErrorPartial.shouldPreservePartial({ error: err, hasContent: !!content }, process.env)) {
+        if (
+          _streamErrorPartial &&
+          _streamErrorPartial.shouldPreservePartial(
+            { error: err, hasContent: !!content },
+            process.env
+          )
+        ) {
+          _interrupted = true;
           resolve({
             content,
             model,
             toolUseBlocks: toolUseBlocks.length > 0 ? toolUseBlocks : [],
-            finishReason: 'length',
+            finishReason: 'interrupted',
             usage,
             thinking: thinkingContent || null,
             thinkingBlocks: thinkingBlocks.length > 0 ? thinkingBlocks : [],
+            interrupted: true,
+            interruptError: err && err.message ? String(err.message) : 'stream error',
           });
           return;
         }
-      } catch { /* fall through to reject */ }
+      } catch {
+        /* fall through to reject */
+      }
       reject(err);
     });
 
     stream.on('end', () => {
-      if (staleDetector) staleDetector.stop();
+      if (staleDetector) {
+        staleDetector.stop();
+      }
 
       // 冲刷解码器残字节(拼齐最后一个多字节字符);上游中途截断则残留 U+FFFD(不可救)。
       const _tail = _textDecoder.end();
-      if (_tail) buffer += _tail;
+      if (_tail) {
+        buffer += _tail;
+      }
 
       // Process remaining buffer
       if (buffer.trim()) {
@@ -351,21 +427,21 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
             try {
               const ev = JSON.parse(payload);
               processEvent(ev);
-            } catch { /* ignore trailing garbage */ }
+            } catch {
+              /* ignore trailing garbage */
+            }
           }
         }
       }
 
       // Premature-close detection (DESIGN-ARCH-046): the socket ended without
-      // any terminal marker (no message_delta.stop_reason, no message_stop).
-      // With partial content already accumulated, this is a mid-stream cut-off,
-      // not a clean end. Surface it as a truncation ('length') so the tool loop
-      // auto-continues from the partial text instead of finalizing a half
-      // sentence as a complete answer. We only override when there is content
-      // AND no explicit stop_reason arrived — a clean stream keeps end_turn and
-      // pays zero behavioral cost.
-      if (!sawTerminal && !finishReason && content) {
-        finishReason = 'length';
+      // any terminal marker. This is normally benign (relay proxies strip them),
+      // but if the stream was ACTIVELY interrupted (stale detector tore it down
+      // or abort signal fired), the response was genuinely cut off mid-stream.
+      // Surface it as a truncation ('interrupted') so the tool loop can detect
+      // the interruption without triggering auto-continue.
+      if (_interrupted && !sawTerminal && !finishReason && content) {
+        finishReason = 'interrupted';
       }
 
       resolve({
@@ -376,6 +452,7 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
         usage,
         thinking: thinkingContent || null,
         thinkingBlocks: thinkingBlocks.length > 0 ? thinkingBlocks : [],
+        interrupted: _interrupted,
       });
     });
   });

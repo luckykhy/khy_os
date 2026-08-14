@@ -43,14 +43,21 @@ function htmlEntityCodePointGuardEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_HTML_ENTITY_CODEPOINT_GUARD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_HTML_ENTITY_CODEPOINT_GUARD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -66,7 +73,9 @@ function htmlEntityCodePointGuardEnabled(env = process.env) {
  */
 function safeDecodeCodePoint(cp, fallback, env = process.env) {
   try {
-    if (!htmlEntityCodePointGuardEnabled(env)) return null;
+    if (!htmlEntityCodePointGuardEnabled(env)) {
+      return null;
+    }
     if (!Number.isInteger(cp) || cp < 0 || cp > MAX_CODE_POINT) {
       return fallback == null ? '' : String(fallback);
     }

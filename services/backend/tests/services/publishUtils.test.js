@@ -34,6 +34,32 @@ describe('publish/publishUtils', () => {
     }
   });
 
+  // 批 2 公理化收敛：_isTruthyFlag 委托 utils/parseBoolean(base tier) 后，逐字节复现
+  // 原内联 `value === true || ['1','true','yes','on'].includes(String(value||'').trim().toLowerCase())`
+  // 的采样域。期望值全部按原实现手算写死。
+  test('_isTruthyFlag delegation preserves the pre-refactor byte semantics', () => {
+    const samples = [
+      [true, true],          // boolean passthrough
+      [false, false],
+      ['1', true], ['true', true], ['yes', true], ['on', true],
+      [' ON ', true],        // trim + lowercase
+      ['TrUe', true],
+      [1, true],             // String(1) → '1'
+      [0, false],            // 0 → String(0||'') → '' → not in list
+      ['0', false], ['false', false], ['no', false], ['off', false],
+      ['y', false],          // base tier rejects the y/n shorthand
+      ['n', false],
+      ['maybe', false],      // unknown token → false
+      ['', false], ['   ', false],
+      [null, false], [undefined, false],
+      [2, false],            // '2' not in truthy list
+      [NaN, false],          // String(NaN||'') → ''
+    ];
+    for (const [input, expected] of samples) {
+      assert.equal(u._isTruthyFlag(input), expected, `_isTruthyFlag(${String(input)})`);
+    }
+  });
+
   test('_pickFirstNonEmpty returns the first trimmed non-empty value', () => {
     assert.equal(u._pickFirstNonEmpty(['', '  ', 'x', 'y']), 'x');
     assert.equal(u._pickFirstNonEmpty([null, undefined, '  z  ']), 'z');

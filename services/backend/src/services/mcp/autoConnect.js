@@ -60,21 +60,30 @@ async function ensureMcpConnected({
   state,
 } = {}) {
   const st = state || _processState;
-  if (st.started) return { skipped: 'already-started' };
+  if (st.started) {
+    return { skipped: 'already-started' };
+  }
   st.started = true;
 
   // Gate OFF → legacy behaviour: never connect.
-  if (!autoConnectEnabled(env)) return { skipped: 'disabled' };
+  if (!autoConnectEnabled(env)) {
+    return { skipped: 'disabled' };
+  }
 
   try {
     // Cheap pre-check: don't pay any connect cost when nothing is configured.
-    const cfg = typeof manager.loadConfig === 'function'
-      ? (manager.loadConfig(projectDir) || { mcpServers: {} })
-      : { mcpServers: {} };
+    const cfg =
+      typeof manager.loadConfig === 'function'
+        ? manager.loadConfig(projectDir) || { mcpServers: {} }
+        : { mcpServers: {} };
     const names = Object.keys(cfg.mcpServers || {});
-    if (!names.length) return { skipped: 'no-servers' };
+    if (!names.length) {
+      return { skipped: 'no-servers' };
+    }
 
-    if (typeof manager.connectAll !== 'function') return { skipped: 'unsupported' };
+    if (typeof manager.connectAll !== 'function') {
+      return { skipped: 'unsupported' };
+    }
     const res = await manager.connectAll(projectDir);
     return {
       connected: (res && res.connected) || [],

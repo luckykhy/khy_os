@@ -31,7 +31,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function costThresholdWarningEnabled(env) {
   const raw = env && env.KHY_COST_THRESHOLD_WARNING;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -41,12 +43,16 @@ function costThresholdWarningEnabled(env) {
 function getCostThreshold(env) {
   const raw = env && env.KHY_COST_THRESHOLD_USD;
   const n = Number(raw);
-  if (Number.isFinite(n) && n > 0) return n;
+  if (Number.isFinite(n) && n > 0) {
+    return n;
+  }
   return DEFAULT_COST_THRESHOLD_USD;
 }
 
 function _numOrNull(v) {
-  if (v == null) return null; // null/undefined → null (a real 0 stays 0)
+  if (v == null) {
+    return null;
+  } // null/undefined → null (a real 0 stays 0)
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -58,7 +64,9 @@ function _numOrNull(v) {
 // reachable range. Non-finite / negative → "0.00" (fail-soft, never NaN).
 function _fmtUSD(v) {
   const n = _numOrNull(v);
-  if (n == null || n < 0) return '0.00';
+  if (n == null || n < 0) {
+    return '0.00';
+  }
   return n > 0.5 ? n.toFixed(2) : n.toFixed(4);
 }
 
@@ -83,12 +91,20 @@ function buildCostThresholdLine({ sessionCostUSD, threshold }) {
 function costThresholdFor(input, env) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!costThresholdWarningEnabled(e)) return null;
-    if (input && input.alreadyWarned) return null; // one-time per session
+    if (!costThresholdWarningEnabled(e)) {
+      return null;
+    }
+    if (input && input.alreadyWarned) {
+      return null;
+    } // one-time per session
     const cost = _numOrNull(input && input.sessionCostUSD);
-    if (cost === null) return null; // no spend data → nothing to warn about
+    if (cost === null) {
+      return null;
+    } // no spend data → nothing to warn about
     const threshold = getCostThreshold(e);
-    if (cost < threshold) return null; // not yet crossed
+    if (cost < threshold) {
+      return null;
+    } // not yet crossed
     return { text: buildCostThresholdLine({ sessionCostUSD: cost, threshold }) };
   } catch {
     return null;

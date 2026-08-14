@@ -28,7 +28,9 @@
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -70,12 +72,22 @@ function planLegacyMerge(canonicalNames, legacyNames) {
   const legacy = Array.isArray(legacyNames) ? legacyNames : [];
   const out = [];
   for (const raw of legacy) {
-    if (typeof raw !== 'string') continue;
+    if (typeof raw !== 'string') {
+      continue;
+    }
     const name = raw.trim();
-    if (!name) continue;
-    if (!/\.md$/i.test(name)) continue;       // only markdown memory files
-    if (name === 'MEMORY.md') continue;        // index reconciled separately
-    if (canon.has(name)) continue;             // established-wins: never overwrite
+    if (!name) {
+      continue;
+    }
+    if (!/\.md$/i.test(name)) {
+      continue;
+    } // only markdown memory files
+    if (name === 'MEMORY.md') {
+      continue;
+    } // index reconciled separately
+    if (canon.has(name)) {
+      continue;
+    } // established-wins: never overwrite
     out.push(name);
   }
   return out;

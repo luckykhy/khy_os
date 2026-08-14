@@ -28,17 +28,26 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 // 尾切收尾的 truncated 判定:用停点早停扫描替代每帧全量 filter().length(消整条时间线的重复
 // norm + 抛弃数组分配)。纯叶子,fail-soft require:缺失 → 逐字节回退全量 filter。门控 KHY_TAIL_TRUNCATION_FAST。
 let _tailTrunc = null;
-try { _tailTrunc = require('./tailTruncation'); } catch { _tailTrunc = null; }
+try {
+  _tailTrunc = require('./tailTruncation');
+} catch {
+  _tailTrunc = null;
+}
 
 // CJK/emoji 感知的显示宽度单源(strip ANSI 后测量)。懒加载,取不到则回退 str.length(fail-soft)。
 let _dispW = null;
 function _displayWidth(s) {
   if (_dispW === null) {
-    try { _dispW = require('../../formatters').displayWidth || false; }
-    catch { _dispW = false; }
+    try {
+      _dispW = require('../../formatters').displayWidth || false;
+    } catch {
+      _dispW = false;
+    }
   }
   const str = String(s == null ? '' : s);
-  if (!_dispW) return str.length;
+  if (!_dispW) {
+    return str.length;
+  }
   try {
     const w = _dispW(str);
     return Number.isFinite(w) && w >= 0 ? w : str.length;
@@ -54,7 +63,9 @@ function _displayWidth(s) {
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_LIVE_HARD_CLAMP;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -74,7 +85,9 @@ function isEnabled(env = process.env) {
  */
 function _fastMeasureEnabled(env = process.env) {
   const raw = env && env.KHY_LIVE_CLAMP_FAST_MEASURE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -88,8 +101,12 @@ function _fastMeasureEnabled(env = process.env) {
 function wrappedRows(line, columns) {
   const cols = Number(columns);
   const w = _displayWidth(line);
-  if (!Number.isFinite(cols) || cols <= 0) return 1; // 坏几何 → 不换行
-  if (w <= 0) return 1;
+  if (!Number.isFinite(cols) || cols <= 0) {
+    return 1;
+  } // 坏几何 → 不换行
+  if (w <= 0) {
+    return 1;
+  }
   return Math.max(1, Math.ceil(w / cols));
 }
 
@@ -101,19 +118,27 @@ function wrappedRows(line, columns) {
  */
 function measureVisualRows(text, columns) {
   const s = String(text == null ? '' : text);
-  if (!s) return 0;
+  if (!s) {
+    return 0;
+  }
   const lines = s.split('\n');
   let total = 0;
-  for (const ln of lines) total += wrappedRows(ln, columns);
+  for (const ln of lines) {
+    total += wrappedRows(ln, columns);
+  }
   return total;
 }
 
 // ── 原始行尾切(字节回退目标) ────────────────────────────────────────────────
 // 与 StreamingBlock.tailLines 逐字节等价:保留最末 `max` 条原始行。门控关时委托这里。
 function _tailLinesRaw(str, max) {
-  if (!str) return { text: '', truncated: false };
+  if (!str) {
+    return { text: '', truncated: false };
+  }
   const lines = String(str).split('\n');
-  if (lines.length <= max) return { text: str, truncated: false };
+  if (lines.length <= max) {
+    return { text: str, truncated: false };
+  }
   return { text: lines.slice(-max).join('\n'), truncated: true };
 }
 
@@ -136,7 +161,9 @@ function tailToVisualRows(text, budgetRows, columns, env = process.env) {
     if (!isEnabled(env) || !Number.isFinite(max) || max <= 0) {
       return _tailLinesRaw(text, Number.isFinite(max) ? Math.max(1, max) : 1);
     }
-    if (!text) return { text: '', truncated: false };
+    if (!text) {
+      return { text: '', truncated: false };
+    }
     const lines = String(text).split('\n');
     let used = 0;
     let start = lines.length; // 保留区间 [start, end)
@@ -148,7 +175,9 @@ function tailToVisualRows(text, budgetRows, columns, env = process.env) {
         used = cost;
         continue;
       }
-      if (used + cost > max) break;
+      if (used + cost > max) {
+        break;
+      }
       used += cost;
       start = i;
     }
@@ -177,7 +206,9 @@ function _tailTimelineRaw(timeline, maxLines, normalizeText) {
     const e = timeline[i];
     if (e.type === 'text') {
       const text = norm ? norm(e.text) : e.text;
-      if (!text) continue;
+      if (!text) {
+        continue;
+      }
       const lines = String(text).split('\n');
       const remaining = maxLines - used;
       if (lines.length <= remaining) {
@@ -199,7 +230,9 @@ function _tailTimelineRaw(timeline, maxLines, normalizeText) {
   if (_tailTrunc && _tailTrunc.isEnabled(process.env)) {
     truncatedFinal = _tailTrunc.resolveTailTruncated(truncated, i, timeline, norm);
   } else {
-    const visible = timeline.filter((e) => e.type === 'tool' || (e.type === 'text' && (norm ? norm(e.text) : e.text))).length;
+    const visible = timeline.filter(
+      (e) => e.type === 'tool' || (e.type === 'text' && (norm ? norm(e.text) : e.text))
+    ).length;
     truncatedFinal = truncated || out.length < visible;
   }
   return { entries: out, truncated: truncatedFinal };
@@ -234,7 +267,9 @@ function tailTimelineToVisualRows(timeline, budgetRows, columns, env = process.e
       const e = arr[i];
       if (e.type === 'text') {
         const text = norm ? norm(e.text) : e.text;
-        if (!text) continue;
+        if (!text) {
+          continue;
+        }
         const remaining = max - used;
         if (_fastMeasureEnabled(env)) {
           // 快路径:单次从末尾早停的 tailToVisualRows(大段不再全量宽度扫描)。
@@ -275,7 +310,9 @@ function tailTimelineToVisualRows(timeline, budgetRows, columns, env = process.e
     if (_tailTrunc && _tailTrunc.isEnabled(env)) {
       truncatedFinal = _tailTrunc.resolveTailTruncated(truncated, i, arr, norm);
     } else {
-      const visible = arr.filter((e) => e.type === 'tool' || (e.type === 'text' && (norm ? norm(e.text) : e.text))).length;
+      const visible = arr.filter(
+        (e) => e.type === 'tool' || (e.type === 'text' && (norm ? norm(e.text) : e.text))
+      ).length;
       truncatedFinal = truncated || out.length < visible;
     }
     return { entries: out, truncated: truncatedFinal };

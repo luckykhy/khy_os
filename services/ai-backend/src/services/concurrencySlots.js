@@ -49,8 +49,9 @@ function register(keyId, provider) {
   // Check environment override first
   const envKey = `POOL_MAX_CONCURRENCY_${provider.toUpperCase()}`;
   const envVal = process.env[envKey];
-  const max = envVal ? parseInt(envVal, 10) || DEFAULT_MAX
-    : PROVIDER_DEFAULTS[provider] ?? DEFAULT_MAX;
+  const max = envVal
+    ? parseInt(envVal, 10) || DEFAULT_MAX
+    : (PROVIDER_DEFAULTS[provider] ?? DEFAULT_MAX);
 
   _slots.set(keyId, { current: 0, max });
 }

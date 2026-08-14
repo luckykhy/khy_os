@@ -53,7 +53,9 @@ const envFlagEnabled = require('../../utils/envFlagEnabled');
  */
 function resolveFlag(flagSpec, deps = {}) {
   const env = deps.env || process.env;
-  if (!flagSpec || typeof flagSpec !== 'object') return true; // no flag → unconditional
+  if (!flagSpec || typeof flagSpec !== 'object') {
+    return true;
+  } // no flag → unconditional
   const kind = flagSpec.kind || 'always';
   const name = flagSpec.env;
   const raw = name ? env[name] : undefined;
@@ -77,12 +79,18 @@ function resolveFlag(flagSpec, deps = {}) {
     case 'onEnables':
       // Default-OFF capabilities enabled only by an explicit '1'/'on'
       // (cognitiveSnapshot, contextScope). Catalog-only in cut 1.
-      return ['1', 'on'].includes(String(raw || '').trim().toLowerCase());
+      return ['1', 'on'].includes(
+        String(raw || '')
+          .trim()
+          .toLowerCase()
+      );
 
     case 'module': {
       // Module-internal gate (e.g. unknownProblemHandler.isEnabled()).
       const fn = deps.isEnabledFn;
-      if (typeof fn !== 'function') return false;
+      if (typeof fn !== 'function') {
+        return false;
+      }
       try {
         return !!fn();
       } catch {

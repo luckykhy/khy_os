@@ -21,20 +21,20 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 // 当代原生多模态模型族的名字片段(小写子串匹配)。每个片段对应的模型族**全部变体**均收图。
 const MODERN_VISION_HINTS = Object.freeze([
-  'llama-4',        // Meta Llama 4(Scout/Maverick,原生多模态)
-  'gpt-4.1',        // OpenAI GPT-4.1 / 4.1-mini / 4.1-nano(收图)
-  'gpt-5',          // OpenAI GPT-5 系(多模态)
-  'grok-4',         // xAI Grok 4(收图)
-  'grok-2-vision',  // xAI Grok 2 Vision(显式视觉变体)
-  'glm-4.5v',       // 智谱 GLM-4.5V(与 glmVisionModel 叶子处理的 4.6v 不同代)
-  'nova-lite',      // Amazon Nova Lite(多模态)
-  'nova-pro',       // Amazon Nova Pro(多模态)
-  'gemma-3',        // Google Gemma 3(多模态;gemma-2 及更早为纯文本,故不用裸 'gemma')
+  'llama-4', // Meta Llama 4(Scout/Maverick,原生多模态)
+  'gpt-4.1', // OpenAI GPT-4.1 / 4.1-mini / 4.1-nano(收图)
+  'gpt-5', // OpenAI GPT-5 系(多模态)
+  'grok-4', // xAI Grok 4(收图)
+  'grok-2-vision', // xAI Grok 2 Vision(显式视觉变体)
+  'glm-4.5v', // 智谱 GLM-4.5V(与 glmVisionModel 叶子处理的 4.6v 不同代)
+  'nova-lite', // Amazon Nova Lite(多模态)
+  'nova-pro', // Amazon Nova Pro(多模态)
+  'gemma-3', // Google Gemma 3(多模态;gemma-2 及更早为纯文本,故不用裸 'gemma')
   'mistral-small-3', // Mistral Small 3.1/3.2(多模态;更早的 small 为纯文本)
   'mistral-medium-3', // Mistral Medium 3(多模态)
   'phi-4-multimodal', // Microsoft Phi-4 Multimodal
   'doubao-1.5-vision', // 字节豆包 1.5 Vision(显式视觉;裸 doubao 有纯文本变体故不收)
-  'ernie-4.5-vl',   // 百度文心 4.5 VL
+  'ernie-4.5-vl', // 百度文心 4.5 VL
 ]);
 
 /**
@@ -45,7 +45,9 @@ const MODERN_VISION_HINTS = Object.freeze([
 function modernVisionHintsEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_MODERN_VISION_HINTS;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -61,11 +63,19 @@ function modernVisionHintsEnabled(env = process.env) {
  */
 function isModernVisionModel(model, env = process.env) {
   try {
-    if (!modernVisionHintsEnabled(env)) return false;
-    const m = String(model == null ? '' : model).trim().toLowerCase();
-    if (!m) return false;
+    if (!modernVisionHintsEnabled(env)) {
+      return false;
+    }
+    const m = String(model == null ? '' : model)
+      .trim()
+      .toLowerCase();
+    if (!m) {
+      return false;
+    }
     for (const hint of MODERN_VISION_HINTS) {
-      if (m.includes(hint)) return true;
+      if (m.includes(hint)) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -81,11 +91,19 @@ function isModernVisionModel(model, env = process.env) {
  */
 function matchedModernVisionHint(model, env = process.env) {
   try {
-    if (!modernVisionHintsEnabled(env)) return null;
-    const m = String(model == null ? '' : model).trim().toLowerCase();
-    if (!m) return null;
+    if (!modernVisionHintsEnabled(env)) {
+      return null;
+    }
+    const m = String(model == null ? '' : model)
+      .trim()
+      .toLowerCase();
+    if (!m) {
+      return null;
+    }
     for (const hint of MODERN_VISION_HINTS) {
-      if (m.includes(hint)) return hint;
+      if (m.includes(hint)) {
+        return hint;
+      }
     }
     return null;
   } catch {

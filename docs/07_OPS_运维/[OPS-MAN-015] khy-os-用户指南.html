@@ -95,7 +95,7 @@ khy gateway manage start --daemon
 khy gateway manage open --daemon</code></pre>
 <p>若仍不稳定，显式指定静态前端目录（推荐）：</p>
 <pre><code class="language-bash">khy gateway manage open --daemon --frontend-dist-dir &lt;apps/ai-frontend/dist 绝对路径&gt;</code></pre>
-<p>登录默认账号：<code>admin / admin123</code>（历史安装兼容 <code>admin123.</code>）。</p>
+<p>登录默认账号：后端首次启动自动初始化（幂等，已存在则跳过）。<strong>默认密码没有固定值</strong>——由机器指纹 + 随机熵生成，保存于数据目录 <code>.khy/credentials/default-admin.json</code>（请打开该文件查看初始密码）；用户名默认取 OS 用户名，也可用 <code>KHY_ADMIN_USERNAME</code> / <code>KHY_ADMIN_PASSWORD</code> 覆盖。历史固定的 <code>admin / admin123</code> 等默认口令已被该动态机制取代。</p>
 <h2 id="6-首次启动出现-seed-警告怎么处理">6. 首次启动出现 seed 警告怎么处理<a class="anchor" href="#6-首次启动出现-seed-警告怎么处理" aria-label="锚点">#</a></h2>
 <p>常见提示：</p>
 <ul><li><code>Database seed did not confirm success</code></li><li><code>Database seed not confirmed; will retry on next startup</code></li></ul>

@@ -41,14 +41,21 @@ function toolCallEqKvSplitEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_TOOLCALL_EQ_KV_SPLIT', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_TOOLCALL_EQ_KV_SPLIT;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -65,8 +72,12 @@ function toolCallEqKvSplitEnabled(env = process.env) {
  */
 function splitEqualsKvPairs(argsStr, env = process.env) {
   try {
-    if (!toolCallEqKvSplitEnabled(env)) return null;
-    if (typeof argsStr !== 'string') return null;
+    if (!toolCallEqKvSplitEnabled(env)) {
+      return null;
+    }
+    if (typeof argsStr !== 'string') {
+      return null;
+    }
     return argsStr.split(_EQ_PAIR_BOUNDARY).map((s) => s.trim());
   } catch {
     return null;

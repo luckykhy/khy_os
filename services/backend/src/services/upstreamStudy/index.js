@@ -25,16 +25,19 @@
 const nodeFs = require('fs');
 const nodePath = require('path');
 
-const catalog = require('../upstreamStudyCatalog');
-const report = require('../upstreamStudyReport');
-const plan = require('../upstreamStudyPlan');
 const { createWalkDeadline } = require('../../tools/_walkBudget');
+const catalog = require('../upstreamStudyCatalog');
+const plan = require('../upstreamStudyPlan');
+const report = require('../upstreamStudyReport');
 
-const MAX_BASELINE_ENTRIES = 200000;   // 基线遍历硬上限(叠加墙钟预算),防超大树吃内存。
+const MAX_BASELINE_ENTRIES = 200000; // 基线遍历硬上限(叠加墙钟预算),防超大树吃内存。
 
 /** 归一路径分隔符为 '/',去首尾多余分隔。 */
 function _norm(p) {
-  return String(p || '').replace(/[\\]+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
+  return String(p || '')
+    .replace(/[\\]+/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '');
 }
 
 /** 计算所有条目共享的顶层目录名(压缩包常见 `Proj-main/…` 前缀)。无共享则返 ''。 */
@@ -43,10 +46,15 @@ function _commonTopDir(paths) {
   for (const p of paths) {
     const norm = _norm(p);
     const idx = norm.indexOf('/');
-    if (idx <= 0) return '';                 // 有条目在顶层无目录 → 无公共前缀可剥
+    if (idx <= 0) {
+      return '';
+    } // 有条目在顶层无目录 → 无公共前缀可剥
     const first = norm.slice(0, idx);
-    if (top === null) top = first;
-    else if (top !== first) return '';
+    if (top === null) {
+      top = first;
+    } else if (top !== first) {
+      return '';
+    }
   }
   return top || '';
 }
@@ -73,30 +81,65 @@ function _walkBaseline(root, fsImpl, env, nowFn) {
     const stack = [String(root || '')];
     let count = 0;
     while (stack.length) {
-      if (deadline && deadline.exceeded()) { truncated = true; break; }
-      if (count >= MAX_BASELINE_ENTRIES) { truncated = true; break; }
+      if (deadline && deadline.exceeded()) {
+        truncated = true;
+        break;
+      }
+      if (count >= MAX_BASELINE_ENTRIES) {
+        truncated = true;
+        break;
+      }
       const dir = stack.pop();
       let ents;
-      try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+      try {
+        ents = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
       for (const ent of ents) {
-        if (count >= MAX_BASELINE_ENTRIES) { truncated = true; break; }
+        if (count >= MAX_BASELINE_ENTRIES) {
+          truncated = true;
+          break;
+        }
         const name = ent && ent.name;
-        if (!name || name === '.' || name === '..') continue;
+        if (!name || name === '.' || name === '..') {
+          continue;
+        }
         const full = nodePath.join(dir, name);
         let isDir = false;
         let isSymlink = false;
         try {
-          if (typeof ent.isDirectory === 'function') { isDir = ent.isDirectory(); isSymlink = ent.isSymbolicLink && ent.isSymbolicLink(); }
-        } catch { /* ignore */ }
-        if (isSymlink) continue;             // 不跟 symlink(防环)
-        if (isDir) { stack.push(full); continue; }
+          if (typeof ent.isDirectory === 'function') {
+            isDir = ent.isDirectory();
+            isSymlink = ent.isSymbolicLink && ent.isSymbolicLink();
+          }
+        } catch {
+          /* ignore */
+        }
+        if (isSymlink) {
+          continue;
+        } // 不跟 symlink(防环)
+        if (isDir) {
+          stack.push(full);
+          continue;
+        }
         let size = 0;
-        try { const st = fs.lstatSync(full); size = Number(st && st.size) || 0; } catch { /* ignore */ }
+        try {
+          const st = fs.lstatSync(full);
+          size = Number(st && st.size) || 0;
+        } catch {
+          /* ignore */
+        }
         const rel = _norm(nodePath.relative(String(root || ''), full));
-        if (rel) { map.set(rel, size); count += 1; }
+        if (rel) {
+          map.set(rel, size);
+          count += 1;
+        }
       }
     }
-  } catch { /* fail-soft: 返回已收集部分 */ }
+  } catch {
+    /* fail-soft: 返回已收集部分 */
+  }
   return { map, truncated };
 }
 
@@ -115,16 +158,19 @@ async function study(opts = {}, deps = {}) {
   const env = opts.env || process.env;
   try {
     const archive = String(opts.archive || '');
-    if (!archive) return { success: false, error: '未提供压缩包路径(archive)' };
+    if (!archive) {
+      return { success: false, error: '未提供压缩包路径(archive)' };
+    }
 
-    const inspectFn = deps.inspect
-      || require('../archiveInspectService').inspectArchive;
+    const inspectFn = deps.inspect || require('../archiveInspectService').inspectArchive;
     const fsImpl = deps.fsImpl || nodeFs;
     const nowFn = typeof deps.now === 'function' ? deps.now : undefined;
 
     // 逐参覆盖 top(不污染全局 env,仅本次)。
     const runEnv = Object.assign({}, env);
-    if (Number.isFinite(opts.top) && opts.top > 0) runEnv.KHY_UPSTREAM_STUDY_TOP = String(Math.floor(opts.top));
+    if (Number.isFinite(opts.top) && opts.top > 0) {
+      runEnv.KHY_UPSTREAM_STUDY_TOP = String(Math.floor(opts.top));
+    }
 
     // 1) 只读列目录。
     const inspected = await inspectFn(archive, opts.mimeType, { env: runEnv, name: opts.name });
@@ -165,14 +211,19 @@ async function study(opts = {}, deps = {}) {
     for (const e of entries) {
       const c = catalog.classifyEntry(e, runEnv);
       const rel = _relOf(e.path, topDir);
-      if (archiveRelSet) archiveRelSet.add(rel);
+      if (archiveRelSet) {
+        archiveRelSet.add(rel);
+      }
 
       // 差异标记。
       let isNew = false;
       let isChanged = false;
       if (baselineMap) {
-        if (!baselineMap.has(rel)) isNew = true;
-        else if (Number(baselineMap.get(rel)) !== e.size) isChanged = true;
+        if (!baselineMap.has(rel)) {
+          isNew = true;
+        } else if (Number(baselineMap.get(rel)) !== e.size) {
+          isChanged = true;
+        }
       }
 
       if (c.verdict === 'dross') {
@@ -181,8 +232,13 @@ async function study(opts = {}, deps = {}) {
       } else if (c.verdict === 'essence') {
         essenceCount += 1;
         const item = {
-          path: e.path, size: e.size, bucket: c.bucket, reason: c.reason,
-          tooLarge: !!c.tooLarge, isNew, isChanged,
+          path: e.path,
+          size: e.size,
+          bucket: c.bucket,
+          reason: c.reason,
+          tooLarge: !!c.tooLarge,
+          isNew,
+          isChanged,
         };
         item._score = catalog.scoreEssence(item, { isNew, isChanged }, runEnv);
         essenceAll.push(item);
@@ -192,25 +248,35 @@ async function study(opts = {}, deps = {}) {
     }
 
     // 删除项(在基线、不在更新包)。
-    let removed = [];
+    const removed = [];
     if (baselineMap && archiveRelSet) {
       for (const rel of baselineMap.keys()) {
-        if (!archiveRelSet.has(rel)) removed.push(rel);
-        if (removed.length >= 200) break;      // 有界
+        if (!archiveRelSet.has(rel)) {
+          removed.push(rel);
+        }
+        if (removed.length >= 200) {
+          break;
+        } // 有界
       }
     }
 
     // 4) 排序取 Top-N。
-    essenceAll.sort((a, b) => (b._score - a._score) || String(a.path).localeCompare(String(b.path)));
+    essenceAll.sort((a, b) => b._score - a._score || String(a.path).localeCompare(String(b.path)));
     const top = catalog.resolveTop(runEnv);
     const shortlist = essenceAll.slice(0, top).map((it) => {
-      const { _score, ...rest } = it;   // eslint-disable-line no-unused-vars
+      const { _score, ...rest } = it; // eslint-disable-line no-unused-vars
       // 5) 逐项附「能改/不能改(portability)」与「先改/后改波次(wave)」——门关时叶子返空档/null,
       //    rest 保持原样(逐字节回退)。
       const port = plan.portabilityOf(rest, runEnv);
-      if (port && port.verdict) { rest.portability = port.verdict; rest.portabilityReason = port.reason; }
+      if (port && port.verdict) {
+        rest.portability = port.verdict;
+        rest.portabilityReason = port.reason;
+      }
       const w = plan.portWaveOf(rest, runEnv);
-      if (w) { rest.wave = w.wave; rest.waveLabel = w.label; }
+      if (w) {
+        rest.wave = w.wave;
+        rest.waveLabel = w.label;
+      }
       return rest;
     });
 
@@ -224,8 +290,11 @@ async function study(opts = {}, deps = {}) {
       let chC = 0;
       for (const e of entries) {
         const rel = _relOf(e.path, topDir);
-        if (!baselineMap.has(rel)) newC += 1;
-        else if (Number(baselineMap.get(rel)) !== e.size) chC += 1;
+        if (!baselineMap.has(rel)) {
+          newC += 1;
+        } else if (Number(baselineMap.get(rel)) !== e.size) {
+          chC += 1;
+        }
       }
       diff = {
         newCount: newC,
@@ -257,11 +326,17 @@ async function study(opts = {}, deps = {}) {
       diff,
       truncated,
     };
-    if (studyPlan) result.plan = studyPlan;
+    if (studyPlan) {
+      result.plan = studyPlan;
+    }
     result.report = report.renderStudyReport(result, runEnv);
     return result;
   } catch (err) {
-    return { success: false, archive: String(opts.archive || ''), error: `学习失败: ${(err && err.message) || 'unknown'}` };
+    return {
+      success: false,
+      archive: String(opts.archive || ''),
+      error: `学习失败: ${(err && err.message) || 'unknown'}`,
+    };
   }
 }
 

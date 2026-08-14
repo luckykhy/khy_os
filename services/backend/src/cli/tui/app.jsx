@@ -29,6 +29,13 @@ async function startInkApp(options = {}) {
   // App is a .jsx component; require AFTER registerJsx() so babel transpiles it.
   const App = require('./ink-components/App');
 
+  // React development 渲染每帧调 performance.measure 且从不清理 → 数小时后累积到百万条
+  // (MaxPerformanceEntryBufferExceededWarning 实证),内存/性能持续劣化 → TUI 越用越卡、搜索
+  // 转圈数小时。安装周期清理(门控 KHY_PERF_ENTRY_REAP 默认 on;关 → 不装,字节回退今日行为)。
+  try {
+    require('./perfEntryReaper').installPerfReaper({ env: process.env });
+  } catch { /* 清理器 best-effort,绝不影响 TUI 启动 */ }
+
   // Mark the Ink TUI as the active interactive surface for the whole process.
   // Service-layer handlers routed in-process (e.g. /review's auto-fix confirm)
   // read this to AVOID inquirer, which fights ink for stdin (raw mode) and
@@ -63,22 +70,70 @@ async function startInkApp(options = {}) {
   // unchanged. Not touching process.stdout itself means no teardown is required and
   // non-ink bare writes (topicBar OSC title, etc.) are unaffected. Gate off →
   // normalizeClearTerminal is a byte-identical passthrough → behaves like today.
+  //
+  // The same write() override is also where the RIGHT RAIL task board paints
+  // (门控 KHY_SIDEBAR_RAIL, 默认开). sidebarRail.clearBytes()/paintBytes() perform
+  // no IO — they return absolute-cursor bytes (DECSC … CSI r;cH … DECRC, never a
+  // newline). 顺序是根因级的关键:清槽位字节在 ink 帧之前、重绘字节在之后。
+  // ink 帧提交 <Static> 新消息时会滚屏 —— 屏上旧看板像素若仍在,就会被整屏
+  // 一起卷进 scrollback 形成残影(旧主题/模型行反复堆叠)。先清后写再画,
+  // 滚上去的只有空格;三段拼进 ONE write(),槽位永远不会被观察到「已清未画」。
+  // Gate off / non-TTY / narrow terminal → '' → the concatenation is skipped
+  // entirely and this stays byte-identical to today.
   const scrollbackPreserve = require('./scrollbackPreserve');
+  const sidebarRail = require('./runtime/sidebarRail');
   const _realOut = process.stdout;
   const _tuiStdout = new Proxy(_realOut, {
     get(target, prop) {
       if (prop === 'write') {
         return function (chunk, ...rest) {
-          return target.write(
-            scrollbackPreserve.normalizeClearTerminal(chunk, process.env, process.platform),
-            ...rest,
-          );
+          const normalized = scrollbackPreserve.normalizeClearTerminal(chunk, process.env, process.platform);
+          let pre = '';
+          let rail = '';
+          try { pre = sidebarRail.clearBytes(); } catch { pre = ''; } // 辅助 UI,永不拖垮渲染
+          try { rail = sidebarRail.paintBytes(); } catch { rail = ''; }
+          return target.write((pre || rail) ? pre + normalized + rail : normalized, ...rest);
         };
       }
       const v = Reflect.get(target, prop, target);
       return typeof v === 'function' ? v.bind(target) : v; // bind back to real stdout — avoid `this` drift
     },
   });
+
+  // Anchor the first frame to the screen BOTTOM (gate KHY_TUI_ANCHOR_BOTTOM,
+  // default on): pad the REAL stdout with rows-1 newlines so existing shell
+  // output scrolls into native scrollback and the prompt + footer hug the
+  // bottom edge from frame 1 (the「下面留下了大量的空白」report). This also
+  // makes the rail board's bottom-anchor assumption (footer flush with the
+  // screen bottom) true at startup — see startupAnchor.js. Pure leaf builds
+  // the bytes ('' on non-TTY / gate off); the write itself is best-effort.
+  try {
+    const _pad = require('./startupAnchor').anchorBottomPad(_realOut, process.env);
+    if (_pad) _realOut.write(_pad);
+  } catch { /* cosmetic — never block the TUI on the pad */ }
+
+  // Mouse-button layer (KHY_MOUSE_BUTTONS, default win32-on; see mouseButtons.js):
+  // request SGR mouse tracking so `<Box onClick/onMouseUp/…>` buttons — e.g. the
+  // mic voice button on the prompt — are clickable. Non-TTY streams stay off so
+  // piped output is never polluted. Enabled BEFORE ink mounts so no click is lost.
+  // The exit hooks restore the terminal on every exit path (a terminal left in
+  // mouse-tracking mode silently breaks click-to-select for the next command).
+  try {
+    const mouseButtons = require('./mouseButtons');
+    if (mouseButtons.mouseButtonsEnabled(process.env, process.platform) && _realOut.isTTY) {
+      const _hover = mouseButtons.mouseHoverEnabled(process.env);
+      _realOut.write(mouseButtons.enableBytes({ hover: _hover }));
+      let _mouseHooked = false;
+      const offMouse = () => {
+        if (_mouseHooked) return;
+        _mouseHooked = true;
+        try { _realOut.write(mouseButtons.disableBytes({ hover: _hover })); } catch { /* terminal already gone */ }
+      };
+      process.once('exit', offMouse);
+      process.once('SIGINT', offMouse);
+      process.once('SIGTERM', offMouse);
+    }
+  } catch { /* cosmetic — never block the TUI on mouse setup */ }
 
   const app = render(React.createElement(App, { options }), {
     stdout: _tuiStdout,
@@ -107,6 +162,17 @@ async function startInkApp(options = {}) {
   // effect's cleanup and the process exit hook also call this; disable() is
   // idempotent, so a final explicit call here covers a clean waitUntilExit return.
   try { require('./runtime/topicBar').disable(); } catch { /* terminal already gone */ }
+  // Same for the right rail: blank the reserved gutter so no board fragment
+  // outlives the session (the module's own exit hook covers hard exits).
+  try { require('./runtime/sidebarRail').disable(); } catch { /* terminal already gone */ }
+  // Same for mouse tracking: leave the terminal out of mouse-tracking mode so
+  // the next command can click-to-select again (exit hooks cover hard exits).
+  try {
+    const _mouseButtons = require('./mouseButtons');
+    if (_mouseButtons.mouseButtonsEnabled(process.env, process.platform)) {
+      _realOut.write(_mouseButtons.disableBytes({ hover: _mouseButtons.mouseHoverEnabled(process.env) }));
+    }
+  } catch { /* terminal already gone */ }
 
   // Print the resume hint now that ink has released the terminal. Without this
   // the TUI exits silently after Ctrl-C and the user never learns the session

@@ -298,6 +298,63 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     }
   });
 
+  // 麦克风按钮(鼠标层第一个消费者,学习 opencode 的按钮渲染):mic prop 提供时,
+  // 顶边框左端出现 🎤,闲置/激活(听写中)态都正常渲染(激活高亮是纯色码,jest
+  // 的 chalk 在 import 时已缓存颜色级别、FORCE_COLOR 事后无效,故只断言渲染不
+  // 抛错 + 字形在位;颜色由真终端渲染验证);mic 缺失时逐字节回退旧边框。
+  test('PromptFrame renders the mic voice button at the top-border left when mic is provided', async () => {
+    const idle = stripAnsi(await renderCompFrame('PromptFrame', {
+      value: 'hello', offset: 0, busy: false, placeholder: '', mic: { active: false, onClick: noop },
+    }));
+    expect(idle).toContain('🎤');
+    const active = stripAnsi(await renderCompFrame('PromptFrame', {
+      value: 'hello', offset: 0, busy: false, placeholder: '', mic: { active: true, onClick: noop },
+    }));
+    expect(active).toContain('🎤');
+    const none = stripAnsi(await renderCompFrame('PromptFrame', {
+      value: 'hello', offset: 0, busy: false, placeholder: '',
+    }));
+    expect(none).not.toContain('🎤');
+  });
+
+  // 端到端鼠标层验证(真实 ink 树):onClick Box 必须被 collectLayout 找到、命中、
+  // 松开触发。回归防线:Yoga.DISPLAY_NONE===1(非 0)枚举误判会让 collectLayout
+  // 把整棵可见树当 display:none 跳过 → 「图标可见但点不中」。经 ref 捕获按钮 DOM
+  // 节点、沿 parentNode 回溯到 root,规避 jest ESM 模块隔离下 getInkInstance()
+  // 的 WeakMap 找不到实例(真实 TUI 是纯 node,不受影响)。
+  test('mouse layer finds and clicks a real ink onClick Box end-to-end', async () => {
+    const mouse = require('../../src/cli/tui/mouseButtons');
+    const { Box, Text } = ink;
+    let clicks = 0;
+    let buttonNode = null;
+    const Comp = () => React.createElement(Box, null,
+      React.createElement(Box, {
+        ref: (n) => { buttonNode = n; },
+        onClick: () => { clicks += 1; },
+      },
+        React.createElement(Text, null, 'CLICK_TARGET')));
+    const stdout = fakeStdout();
+    const instance = ink.render(React.createElement(Comp), {
+      stdout, stdin: fakeStdin(), exitOnCtrlC: false, patchConsole: false,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(buttonNode).toBeTruthy();
+    let root = buttonNode;
+    while (root && root.parentNode) root = root.parentNode;
+    expect(root).toBeTruthy();
+    const layout = mouse.collectLayout(root);
+    expect(layout.items.length).toBe(1);
+    const it = layout.items[0];
+    const offset = mouse.screenOffset(layout.height, { rows: stdout.rows, anchorBottom: true });
+    const col = it.x + Math.floor(it.width / 2);
+    const row = it.y + offset + Math.floor(it.height / 2);
+    const dispatch = mouse.createMouseDispatcher({ hover: false, motionThrottleMs: 0 }).onInput;
+    dispatch('[<0;' + (col + 1) + ';' + (row + 1) + 'M', { rootNode: root, rows: stdout.rows, anchorBottom: true });
+    dispatch('[<0;' + (col + 1) + ';' + (row + 1) + 'm', { rootNode: root, rows: stdout.rows, anchorBottom: true });
+    expect(clicks).toBe(1);
+    instance.unmount();
+  });
+
   // Fix 3 — a single-select card shows the 「Space 可多选」 hint when the gate is on,
   // and reverts to no hint / no checkbox when the gate is off (byte-revert footer).
   test('QuestionPrompt single-select shows Space-multipick hint when gated on, hides it when off', async () => {
@@ -1548,4 +1605,92 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     expect(onT).toBeGreaterThan(0);
     expect(onT).toBeLessThanOrEqual(offT);
   });
+  // ── 右栏(KHY_SIDEBAR_RAIL):ink 必须收进 contentCols ─────────────────────────
+  // 这条守的是右栏方案里唯一不安全的方向:任何仍按「终端全宽」排版的渲染路径,画出的行
+  // 都会软换行成额外的视觉行 —— 而高度账本从没数过它们,活动区溢出、ink 擦除错位,就是
+  // sidebarLayout.js 里记录的楼梯/全屏重绘。所以断言 ink 画出的每一行显示宽度都 ≤
+  // railLayout.contentCols(真实列宽),而不是断言「看板出树」:非 TTY 的 jest 环境里
+  // sidebarRail.enable() 本就返回 false(管道没有可寻址单元格),出树路径由
+  // tests/cli/tui/sidebarRailRuntime.test.js 覆盖。
+  const railLayout = require('../../src/cli/tui/railLayout');
+  const { displayWidth } = require('../../src/cli/formatters');
+  const NL = String.fromCharCode(10);
+
+  /**
+   * 临时把 process.stdout 装成一台 150x40 的宽终端(effectiveCols 读的正是它)。
+   * jest 环境里 `rows` 是只读 getter,故一律走 defineProperty,并在 finally 里把原始
+   * property descriptor 原样装回去(删掉自己加的那层,而不是赋一个 undefined 上去)。
+   */
+  async function withWideStdout(env, fn) {
+    const savedDesc = {
+      columns: Object.getOwnPropertyDescriptor(process.stdout, 'columns'),
+      rows: Object.getOwnPropertyDescriptor(process.stdout, 'rows'),
+    };
+    const savedEnv = {};
+    for (const k of Object.keys(env)) { savedEnv[k] = process.env[k]; process.env[k] = env[k]; }
+    const stub = (name, value) => Object.defineProperty(process.stdout, name, {
+      value, configurable: true, writable: true, enumerable: true,
+    });
+    stub('columns', 150);
+    stub('rows', 40);
+    try { return await fn(); } finally {
+      for (const name of ['columns', 'rows']) {
+        if (savedDesc[name]) Object.defineProperty(process.stdout, name, savedDesc[name]);
+        else delete process.stdout[name];
+      }
+      for (const k of Object.keys(savedEnv)) {
+        if (savedEnv[k] === undefined) delete process.env[k]; else process.env[k] = savedEnv[k];
+      }
+    }
+  }
+
+  test('rail on: PromptFrame 的整行边框收到 contentCols,门控关时仍是终端全宽', async () => {
+    const props = { value: '', offset: 0, busy: false, placeholder: '' };
+    const ruleWidth = (frame) => Math.max(
+      0,
+      ...stripAnsi(frame).split(NL).map((ln) => (ln.match(/─+/) || [''])[0].length)
+    );
+    // ink 会把帧裁到它自己 stdout 的宽度,所以这里的假 stdout 也必须是 150 列 ——
+    // 否则测的是 ink 的裁切,而不是 PromptFrame 按 effectiveCols 排版。
+    const renderWide = async (name, p) => {
+      const Comp = require(`../../src/cli/tui/ink-components/${name}`);
+      const stdout = fakeStdout();
+      stdout.columns = 150;
+      stdout.rows = 40;
+      const instance = ink.render(React.createElement(Comp, p), {
+        stdout, stdin: fakeStdin(), exitOnCtrlC: false, patchConsole: false,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const frame = stdout.getBuffer();
+      instance.unmount();
+      return frame;
+    };
+    const on = await withWideStdout({ KHY_SIDEBAR_RAIL: '1' }, () => renderWide('PromptFrame', props));
+    const off = await withWideStdout({ KHY_SIDEBAR_RAIL: '0' }, () => renderWide('PromptFrame', props));
+    // PromptFrame 刻意留一格 slack(`cols - 1`,避开 auto-wrap margin),两边同口径。
+    expect(ruleWidth(on)).toBe(railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' }) - 1);
+    expect(ruleWidth(off)).toBe(149);
+    expect(ruleWidth(on)).toBeLessThan(ruleWidth(off));
+  });
+
+  test('rail on: App 帧里没有任何一行超出 contentCols(否则就是楼梯/全屏重绘)', async () => {
+    await withWideStdout({ KHY_SIDEBAR_RAIL: '1' }, async () => {
+      const limit = railLayout.contentCols(150, { KHY_SIDEBAR_RAIL: '1' });
+      expect(limit).toBeGreaterThan(0);
+      expect(limit).toBeLessThan(150);
+      const App = require('../../src/cli/tui/ink-components/App');
+      const stdout = fakeStdout();
+      stdout.columns = 150;
+      stdout.rows = 40;
+      const instance = ink.render(React.createElement(App, { options: {} }), {
+        stdout, stdin: fakeStdin(), exitOnCtrlC: false, patchConsole: false,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const frame = stdout.getBuffer();
+      instance.unmount();
+      expect(frame.length).toBeGreaterThan(0);
+      const over = stripAnsi(frame).split(NL).filter((ln) => displayWidth(ln) > limit);
+      expect(over).toEqual([]);
+    });
+  }, 20000);
 });

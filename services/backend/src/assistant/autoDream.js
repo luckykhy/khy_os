@@ -17,7 +17,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { tryAcquireLock, releaseLock, rollbackLock, readLastConsolidatedAt } = require('./consolidationLock');
+
+const {
+  tryAcquireLock,
+  releaseLock,
+  rollbackLock,
+  readLastConsolidatedAt,
+} = require('./consolidationLock');
 const { getRecentLogs, getLogFileCount } = require('./dailyLog');
 
 // ── Configuration ──────────────────────────────────────────────────
@@ -44,7 +50,9 @@ let _lastScanAt = 0;
  */
 function _archiveMemoryFile(memDir, filename) {
   const filePath = path.join(memDir, filename);
-  if (!fs.existsSync(filePath)) return null;
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
   try {
     const archiveDir = path.join(memDir, 'archive');
     fs.mkdirSync(archiveDir, { recursive: true });
@@ -82,7 +90,9 @@ function shouldDream() {
     if (!isEnabled('assistant')) {
       return { needed: false, reason: 'Assistant feature disabled' };
     }
-  } catch { /* no feature flags, continue */ }
+  } catch {
+    /* no feature flags, continue */
+  }
 
   // Throttle scans
   const now = Date.now();
@@ -95,7 +105,10 @@ function shouldDream() {
   const lastConsolidated = readLastConsolidatedAt();
   const hoursSince = (now - lastConsolidated) / (1000 * 60 * 60);
   if (hoursSince < MIN_HOURS) {
-    return { needed: false, reason: `Only ${hoursSince.toFixed(1)}h since last dream (need ${MIN_HOURS}h)` };
+    return {
+      needed: false,
+      reason: `Only ${hoursSince.toFixed(1)}h since last dream (need ${MIN_HOURS}h)`,
+    };
   }
 
   // Session gate (approximate: count recent log entries)
@@ -116,15 +129,20 @@ function shouldDream() {
  * @returns {Promise<{success: boolean, phases: string[], filesCreated: string[], error?: string}>}
  */
 async function runDream(aiModule) {
-  const { getDataDir } = require('../utils/dataHome');
-  const memDir = getDataDir('memory');
+  const { getMemoryDataDir } = require('../utils/dataHome');
+  const memDir = getMemoryDataDir();
   const phases = [];
   const filesCreated = [];
 
   // Acquire lock
   const lock = tryAcquireLock();
   if (!lock.acquired) {
-    return { success: false, phases: [], filesCreated: [], error: `Blocked by PID ${lock.blockedBy}` };
+    return {
+      success: false,
+      phases: [],
+      filesCreated: [],
+      error: `Blocked by PID ${lock.blockedBy}`,
+    };
   }
 
   try {
@@ -132,21 +150,29 @@ async function runDream(aiModule) {
     phases.push('orient');
     const existingFiles = [];
     try {
-      const files = fs.readdirSync(memDir).filter(f => f.endsWith('.md') && f !== 'MEMORY.md');
+      const files = fs.readdirSync(memDir).filter((f) => f.endsWith('.md') && f !== 'MEMORY.md');
       for (const f of files) {
         const content = fs.readFileSync(path.join(memDir, f), 'utf-8');
         existingFiles.push({ name: f, preview: content.slice(0, 200) });
       }
-    } catch { /* empty memory dir */ }
+    } catch {
+      /* empty memory dir */
+    }
 
     let memoryIndex = '';
     const indexPath = path.join(memDir, 'MEMORY.md');
-    try { memoryIndex = fs.readFileSync(indexPath, 'utf-8'); } catch { /* no index */ }
+    try {
+      memoryIndex = fs.readFileSync(indexPath, 'utf-8');
+    } catch {
+      /* no index */
+    }
 
     // Phase 2: Gather — collect recent signals
     phases.push('gather');
     const recentLogs = getRecentLogs(7);
-    const logSummary = recentLogs.map(l => `### ${l.date}\n${l.content.slice(0, 500)}`).join('\n\n');
+    const logSummary = recentLogs
+      .map((l) => `### ${l.date}\n${l.content.slice(0, 500)}`)
+      .join('\n\n');
 
     // Phase 3: Consolidate — AI synthesis
     phases.push('consolidate');
@@ -156,7 +182,7 @@ async function runDream(aiModule) {
 ${memoryIndex || '(empty)'}
 
 ## Existing Memory Files (${existingFiles.length})
-${existingFiles.map(f => `- ${f.name}: ${f.preview}`).join('\n')}
+${existingFiles.map((f) => `- ${f.name}: ${f.preview}`).join('\n')}
 
 ## Recent Activity Logs
 ${logSummary || '(no recent logs)'}
@@ -194,7 +220,12 @@ Respond ONLY with valid JSON.`;
     } catch (err) {
       phases.push('error');
       rollbackLock(lock.priorMtime);
-      return { success: false, phases, filesCreated: [], error: `AI consolidation failed: ${err.message}` };
+      return {
+        success: false,
+        phases,
+        filesCreated: [],
+        error: `AI consolidation failed: ${err.message}`,
+      };
     }
 
     // Parse AI response and apply changes
@@ -225,14 +256,15 @@ Respond ONLY with valid JSON.`;
           fs.writeFileSync(indexPath, parsed.indexUpdates, 'utf-8');
         }
       }
-    } catch { /* JSON parse failed, skip file changes */ }
+    } catch {
+      /* JSON parse failed, skip file changes */
+    }
 
     // Phase 4: Prune — cleanup
     phases.push('prune');
 
     releaseLock();
     return { success: true, phases, filesCreated };
-
   } catch (err) {
     rollbackLock(lock.priorMtime);
     return { success: false, phases, filesCreated: [], error: err.message };

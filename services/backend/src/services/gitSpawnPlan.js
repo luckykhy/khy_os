@@ -33,7 +33,9 @@ function isShellFreeGitEnabled(env) {
     /* fall through to local CANON */
   }
   const raw = e.KHY_GIT_SHELL_FREE;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -48,10 +50,16 @@ const _SHELL_META_RE = /[|&;<>()$`\\"'*?{}[\]~#!\n\r\t]/;
  * @returns {string[]|null}
  */
 function toGitArgv(cmd) {
-  if (typeof cmd !== 'string') return null;
+  if (typeof cmd !== 'string') {
+    return null;
+  }
   const trimmed = cmd.trim();
-  if (!trimmed) return null;
-  if (_SHELL_META_RE.test(trimmed)) return null;
+  if (!trimmed) {
+    return null;
+  }
+  if (_SHELL_META_RE.test(trimmed)) {
+    return null;
+  }
   const parts = trimmed.split(/\s+/).filter(Boolean);
   return parts.length ? parts : null;
 }

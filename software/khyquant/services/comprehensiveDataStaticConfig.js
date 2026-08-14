@@ -132,6 +132,48 @@ function createDataSourcesConfig() {
 
 
 
+      // 4. TuShare — token-authorized professional finance data (Pro API)
+
+      tushare: {
+
+        name: 'TuShare',
+
+        priority: 4,
+
+        enabled: process.env.ENABLE_TUSHARE !== 'false',
+
+        description: 'TuShare Pro 专业金融数据接口 — 需要 token 授权，覆盖A股行情与历史数据',
+
+        coverage: {
+
+          stocks: true,
+
+          indices: true,
+
+          futures: false, // 期货数据获取功能暂未实现
+
+          funds: false,
+
+          bonds: false
+
+        },
+
+        historicalRange: '1990-01-01 to present',
+
+        updateFrequency: 'daily',
+
+        language: 'Python',
+
+        apiKey: true,
+
+        successRate: 90,
+
+        dependencies: ['tushare', 'pandas']
+
+      },
+
+
+
       // 99. Enhanced Mock — always-on fallback
 
       mock: {
@@ -1680,3 +1722,4 @@ module.exports = {
   createMarketsConfig,
   createImportantInstrumentsConfig
 };
+

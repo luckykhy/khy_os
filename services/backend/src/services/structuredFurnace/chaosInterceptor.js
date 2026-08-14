@@ -16,14 +16,15 @@
  */
 
 const crypto = require('crypto');
-const { assess } = require('./entropyAssessor');
+
+const anomalyHandler = require('./anomalyHandler');
 const dimensionReducer = require('./dimensionReducer');
+const { EntityRegistry } = require('./entityRegistry');
+const { assess } = require('./entropyAssessor');
+const forgeSchema = require('./forgeSchema');
 const intentWeaver = require('./intentWeaver');
 const skeletonReconstructor = require('./skeletonReconstructor');
-const { EntityRegistry } = require('./entityRegistry');
 const { TaskGraph } = require('./taskGraph');
-const forgeSchema = require('./forgeSchema');
-const anomalyHandler = require('./anomalyHandler');
 const { FurnaceRejection } = anomalyHandler;
 
 // 进程私有封印盐：不持久、不出进程，仅用于本进程内验封（防止业务代码手搓裸 payload 蒙混）。
@@ -31,10 +32,7 @@ const SEAL_SALT = crypto.randomBytes(16).toString('hex');
 const SEAL_BRAND = Symbol.for('khyos.structuredFurnace.sealed');
 
 function _seal(payload) {
-  return crypto
-    .createHmac('sha256', SEAL_SALT)
-    .update(JSON.stringify(payload))
-    .digest('hex');
+  return crypto.createHmac('sha256', SEAL_SALT).update(JSON.stringify(payload)).digest('hex');
 }
 
 /**
@@ -48,7 +46,10 @@ function _seal(payload) {
 function intercept(raw, opts = {}) {
   const text = String(raw == null ? '' : raw);
   if (!text.trim()) {
-    throw new FurnaceRejection('空输入，无可坍缩要素', { kind: 'MISSING_ELEMENTS', missing: ['raw'] });
+    throw new FurnaceRejection('空输入，无可坍缩要素', {
+      kind: 'MISSING_ELEMENTS',
+      missing: ['raw'],
+    });
   }
 
   let assessment;
@@ -77,7 +78,9 @@ function intercept(raw, opts = {}) {
     }
   } catch (err) {
     // fail-closed：坍缩器内部任何意外都转为结构化拒损，绝不把原文泄回业务层。
-    if (err instanceof FurnaceRejection) throw err;
+    if (err instanceof FurnaceRejection) {
+      throw err;
+    }
     throw new FurnaceRejection(`熔炉坍缩内部异常：${err.message}`, {
       kind: 'MISSING_ELEMENTS',
       detail: { stage: assessment ? assessment.level : 'assess', cause: err.message },
@@ -104,9 +107,15 @@ function intercept(raw, opts = {}) {
 /** 从 TaskGraph payload 重建图并检测环（死锁证据）。 */
 function _detectCycle(payload) {
   const g = new TaskGraph();
-  for (const n of payload.graph.nodes) g.addNode(n);
+  for (const n of payload.graph.nodes) {
+    g.addNode(n);
+  }
   for (const e of payload.graph.edges) {
-    try { g.addEdge(e.from, e.to, e.type, e.condition || null); } catch { /* 悬空边交给 schema 报 */ }
+    try {
+      g.addEdge(e.from, e.to, e.type, e.condition || null);
+    } catch {
+      /* 悬空边交给 schema 报 */
+    }
   }
   return g.findCycle();
 }
@@ -149,8 +158,12 @@ function assertForged(envelope) {
 
 /** 仅判定是否已封印（不抛错），供条件分支使用。 */
 function isForged(envelope) {
-  return !!(envelope && typeof envelope === 'object' && envelope[SEAL_BRAND] === true
-    && envelope.seal === _seal(envelope.payload));
+  return !!(
+    envelope &&
+    typeof envelope === 'object' &&
+    envelope[SEAL_BRAND] === true &&
+    envelope.seal === _seal(envelope.payload)
+  );
 }
 
 module.exports = {

@@ -139,28 +139,47 @@ const PRESETS = {
 };
 
 const PRESET_ALIASES = {
-  律师: '资深律师', 法律顾问: '资深律师', lawyer: '资深律师',
-  医生: '资深医生', 大夫: '资深医生', doctor: '资深医生',
-  老师: '资深教师', 教师: '资深教师', teacher: '资深教师',
-  翻译: '专业翻译', 译者: '专业翻译', translator: '专业翻译',
-  面试官: '严格面试官', interviewer: '严格面试官',
-  产品经理: '资深产品经理', pm: '资深产品经理',
+  律师: '资深律师',
+  法律顾问: '资深律师',
+  lawyer: '资深律师',
+  医生: '资深医生',
+  大夫: '资深医生',
+  doctor: '资深医生',
+  老师: '资深教师',
+  教师: '资深教师',
+  teacher: '资深教师',
+  翻译: '专业翻译',
+  译者: '专业翻译',
+  translator: '专业翻译',
+  面试官: '严格面试官',
+  interviewer: '严格面试官',
+  产品经理: '资深产品经理',
+  pm: '资深产品经理',
 };
 
 /** Resolve a free-text role description onto a preset key, or null. */
 function _matchPreset(rawPrompt) {
-  if (!rawPrompt) return null;
+  if (!rawPrompt) {
+    return null;
+  }
   const text = String(rawPrompt).trim();
-  if (PRESETS[text]) return text;
+  if (PRESETS[text]) {
+    return text;
+  }
   // longest canonical/alias substring wins, so "资深律师" beats "律师".
-  const keys = [...Object.keys(PRESETS), ...Object.keys(PRESET_ALIASES)]
-    .sort((a, b) => b.length - a.length);
+  const keys = [...Object.keys(PRESETS), ...Object.keys(PRESET_ALIASES)].sort(
+    (a, b) => b.length - a.length
+  );
   for (const k of keys) {
-    if (text.includes(k)) return PRESETS[k] ? k : PRESET_ALIASES[k];
+    if (text.includes(k)) {
+      return PRESETS[k] ? k : PRESET_ALIASES[k];
+    }
   }
   const lower = text.toLowerCase();
   for (const k of keys) {
-    if (/[a-z]/i.test(k) && lower.includes(k.toLowerCase())) return PRESETS[k] ? k : PRESET_ALIASES[k];
+    if (/[a-z]/i.test(k) && lower.includes(k.toLowerCase())) {
+      return PRESETS[k] ? k : PRESET_ALIASES[k];
+    }
   }
   return null;
 }
@@ -169,7 +188,10 @@ function _matchPreset(rawPrompt) {
 function _cleanTitle(rawPrompt) {
   let t = String(rawPrompt || '').trim();
   t = t.replace(/^(请|帮我|麻烦你?|now|please)\s*/i, '');
-  t = t.replace(/^(你|您)?\s*(现在|从现在起)?\s*(要|请)?\s*(扮演|假装是?|假设是?|当(一个|一名|一位)?|作为|是(一个|一名|一位)?)\s*/i, '');
+  t = t.replace(
+    /^(你|您)?\s*(现在|从现在起)?\s*(要|请)?\s*(扮演|假装是?|假设是?|当(一个|一名|一位)?|作为|是(一个|一名|一位)?)\s*/i,
+    ''
+  );
   t = t.replace(/^(act as|you are( now)?|pretend to be|roleplay as|play the role of)\s*/i, '');
   t = t.replace(/[。.!！?？、,，]+$/u, '').trim();
   // collapse trailing politeness ("…的角色")
@@ -187,7 +209,9 @@ function _cleanTitle(rawPrompt) {
  */
 function synthesizeRole(rawPrompt, opts = {}) {
   const prompt = String(rawPrompt || '').trim();
-  if (!prompt) return { ok: false, error: '请说明要扮演的角色，例如「资深律师」。' };
+  if (!prompt) {
+    return { ok: false, error: '请说明要扮演的角色，例如「资深律师」。' };
+  }
   if (prompt.length > MAX_ROLE_CHARS) {
     return { ok: false, error: `角色描述过长（>${MAX_ROLE_CHARS} 字），请精简。` };
   }
@@ -197,7 +221,8 @@ function synthesizeRole(rawPrompt, opts = {}) {
     if (re.test(prompt)) {
       return {
         ok: false,
-        error: '无法扮演试图绕过安全规则/红线的角色。可以换一个正常的职业或人物角色，例如「资深律师」「专业翻译」。',
+        error:
+          '无法扮演试图绕过安全规则/红线的角色。可以换一个正常的职业或人物角色，例如「资深律师」「专业翻译」。',
       };
     }
   }
@@ -230,8 +255,11 @@ function synthesizeRole(rawPrompt, opts = {}) {
   // (incl. null) is honored as-is; only an absent seam falls back to the default.
   let scan = opts.scan;
   if (!('scan' in opts)) {
-    try { ({ scanForPromptInjection: scan } = require('./instructionFileService')); }
-    catch { scan = null; }
+    try {
+      ({ scanForPromptInjection: scan } = require('./instructionFileService'));
+    } catch {
+      scan = null;
+    }
   }
   if (typeof scan === 'function') {
     const hits = scan(prompt);
@@ -243,7 +271,10 @@ function synthesizeRole(rawPrompt, opts = {}) {
     }
   } else if (!presetKey) {
     // No scanner available and the content is untrusted free-form → fail closed.
-    return { ok: false, error: '安全扫描器不可用，暂无法采纳自由角色；可改用内置预设（如「资深律师」）。' };
+    return {
+      ok: false,
+      error: '安全扫描器不可用，暂无法采纳自由角色；可改用内置预设（如「资深律师」）。',
+    };
   }
 
   return { ok: true, role: { title, block } };
@@ -272,22 +303,31 @@ const _CLEAR_PATTERNS = [
  */
 function detectRoleIntent(text) {
   const raw = String(text || '').trim();
-  if (!raw || raw.length > 200) return { action: null };
+  if (!raw || raw.length > 200) {
+    return { action: null };
+  }
 
   for (const re of _CLEAR_PATTERNS) {
-    if (re.test(raw)) return { action: 'clear' };
+    if (re.test(raw)) {
+      return { action: 'clear' };
+    }
   }
 
   // Skip obvious questions ("你现在是什么模型？" / "are you a lawyer?").
-  const isQuestion = /[?？]\s*$/.test(raw) || /\b(吗|呢|什么|谁|哪|how|what|who|why|are you)\b/i.test(raw);
+  const isQuestion =
+    /[?？]\s*$/.test(raw) || /\b(吗|呢|什么|谁|哪|how|what|who|why|are you)\b/i.test(raw);
 
   for (const re of _SET_PATTERNS) {
     const m = raw.match(re);
     if (m) {
       const role = _cleanTitle(m[m.length - 1] || raw);
       // Reject empty/degenerate or question-shaped extractions.
-      if (!role || role.length < 1) continue;
-      if (isQuestion && !_matchPreset(role)) continue;
+      if (!role || role.length < 1) {
+        continue;
+      }
+      if (isQuestion && !_matchPreset(role)) {
+        continue;
+      }
       return { action: 'set', role };
     }
   }
@@ -300,18 +340,27 @@ let _activeRole = null; // { title, block, stampN }
 let _stampSeq = 0;
 
 function setActiveRole(role) {
-  if (!role || !role.block) return null;
+  if (!role || !role.block) {
+    return null;
+  }
   _stampSeq += 1;
   _activeRole = { title: role.title || '指定角色', block: role.block, stampN: _stampSeq };
   return _activeRole;
 }
-function getActiveRole() { return _activeRole; }
+
+function getActiveRole() {
+  return _activeRole;
+}
+
 function clearActiveRole() {
   const had = _activeRole !== null;
   _activeRole = null;
-  if (had) _stampSeq += 1;
+  if (had) {
+    _stampSeq += 1;
+  }
   return had;
 }
+
 /** Fingerprint for system-prompt cache invalidation; changes on set/clear. */
 function roleStamp() {
   return _activeRole ? `role:${_activeRole.stampN}` : 'none';
@@ -337,29 +386,34 @@ function _globalPersonaPath() {
  * @returns {{ok:boolean, dest?:string, error?:string}}
  */
 function persistRole(role, cwd = process.cwd(), deps = {}) {
-  if (!role || !role.block) return { ok: false, error: '没有可保存的角色。' };
+  if (!role || !role.block) {
+    return { ok: false, error: '没有可保存的角色。' };
+  }
   const readFile = deps.readFile || ((p) => fs.readFileSync(p, 'utf-8'));
   const writeFile = deps.writeFile || ((p, c) => fs.writeFileSync(p, c, 'utf-8'));
   const existsSync = deps.existsSync || ((p) => fs.existsSync(p));
   const mkdir = deps.mkdir || ((d) => fs.mkdirSync(d, { recursive: true }));
 
   let dest;
-  try { dest = deps.dest || _globalPersonaPath(); }
-  catch { return { ok: false, error: '无法定位 persona.md 存储位置。' }; }
+  try {
+    dest = deps.dest || _globalPersonaPath();
+  } catch {
+    return { ok: false, error: '无法定位 persona.md 存储位置。' };
+  }
 
   const region = `${ROLE_REGION_START}\n${role.block.trim()}\n${ROLE_REGION_END}`;
   try {
     let content = '';
-    if (existsSync(dest)) content = readFile(dest) || '';
+    if (existsSync(dest)) {
+      content = readFile(dest) || '';
+    }
 
     if (content.includes(ROLE_REGION_START) && content.includes(ROLE_REGION_END)) {
       // Idempotent replace of the managed region.
       const re = new RegExp(`${ROLE_REGION_START}[\\s\\S]*?${ROLE_REGION_END}`);
       content = content.replace(re, region);
     } else {
-      content = content.trim()
-        ? `${content.replace(/\s+$/, '')}\n\n${region}\n`
-        : `${region}\n`;
+      content = content.trim() ? `${content.replace(/\s+$/, '')}\n\n${region}\n` : `${region}\n`;
     }
     mkdir(path.dirname(dest));
     writeFile(dest, content);
@@ -375,14 +429,27 @@ function unpersistRole(cwd = process.cwd(), deps = {}) {
   const writeFile = deps.writeFile || ((p, c) => fs.writeFileSync(p, c, 'utf-8'));
   const existsSync = deps.existsSync || ((p) => fs.existsSync(p));
   let dest;
-  try { dest = deps.dest || _globalPersonaPath(); }
-  catch { return { ok: false }; }
   try {
-    if (!existsSync(dest)) return { ok: true, dest, changed: false };
+    dest = deps.dest || _globalPersonaPath();
+  } catch {
+    return { ok: false };
+  }
+  try {
+    if (!existsSync(dest)) {
+      return { ok: true, dest, changed: false };
+    }
     const content = readFile(dest) || '';
-    if (!content.includes(ROLE_REGION_START)) return { ok: true, dest, changed: false };
+    if (!content.includes(ROLE_REGION_START)) {
+      return { ok: true, dest, changed: false };
+    }
     const re = new RegExp(`\\n*${ROLE_REGION_START}[\\s\\S]*?${ROLE_REGION_END}\\n*`);
-    writeFile(dest, content.replace(re, '\n').replace(/\n{3,}/g, '\n\n').trim() + '\n');
+    writeFile(
+      dest,
+      content
+        .replace(re, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim() + '\n'
+    );
     return { ok: true, dest, changed: true };
   } catch (err) {
     return { ok: false, error: err.message };

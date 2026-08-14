@@ -18,8 +18,8 @@ const os = require('os');
 // (避免全新 HOME 上 .khy / .khyquant 双写)。见 ../utils/dataHome。
 const { getAppHome, getAppDataDir } = require('../utils/dataHome');
 const KHY_DIR = getAppHome();
-const PRICING_FILE = process.env.AI_GATEWAY_PRICING_FILE
-  || getAppDataDir('ai_gateway_pricing.json');
+const PRICING_FILE =
+  process.env.AI_GATEWAY_PRICING_FILE || getAppDataDir('ai_gateway_pricing.json');
 
 let _tokenUsage = null;
 function tokenUsage() {
@@ -171,7 +171,10 @@ function updatePricing(patch = {}) {
   }
   if (patch.modelPricing && typeof patch.modelPricing === 'object') {
     for (const [model, p] of Object.entries(patch.modelPricing)) {
-      if (p === null) { delete _state.modelPricing[String(model).toLowerCase()]; continue; }
+      if (p === null) {
+        delete _state.modelPricing[String(model).toLowerCase()];
+        continue;
+      }
       const ps = p && typeof p === 'object' ? p : {};
       _state.modelPricing[String(model).toLowerCase()] = {
         input: toNonNegNumber(ps.input, 0),

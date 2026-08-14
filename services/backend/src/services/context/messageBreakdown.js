@@ -21,7 +21,9 @@
 
 function messageBreakdownEnabled(env = process.env) {
   const raw = env && env.KHY_MESSAGE_BREAKDOWN;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -60,16 +62,22 @@ function _blockTokens(block, estimate) {
  *   门控关 / 无消息 / 无估算器 → null。
  */
 function analyzeMessageBreakdown(input = {}, env = process.env) {
-  if (!messageBreakdownEnabled(env)) return null;
-  if (!input || typeof input !== 'object') return null;
+  if (!messageBreakdownEnabled(env)) {
+    return null;
+  }
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
 
   const messages = Array.isArray(input.messages) ? input.messages : null;
   const estimate = typeof input.estimateTokens === 'function' ? input.estimateTokens : null;
-  if (!messages || messages.length === 0 || !estimate) return null;
+  if (!messages || messages.length === 0 || !estimate) {
+    return null;
+  }
 
-  const callByName = new Map();   // name → callTokens
+  const callByName = new Map(); // name → callTokens
   const resultByName = new Map(); // name → resultTokens
-  const idToName = new Map();     // tool_use_id → tool name
+  const idToName = new Map(); // tool_use_id → tool name
   let toolCallTokens = 0;
   let toolResultTokens = 0;
   let assistantMessageTokens = 0;
@@ -77,36 +85,50 @@ function analyzeMessageBreakdown(input = {}, env = process.env) {
 
   // 先建 tool_use_id → name 映射(对齐 CC:先扫一遍再计 result)。
   for (const msg of messages) {
-    if (!msg || msg.role !== 'assistant' || !Array.isArray(msg.content)) continue;
+    if (!msg || msg.role !== 'assistant' || !Array.isArray(msg.content)) {
+      continue;
+    }
     for (const block of msg.content) {
       if (block && typeof block === 'object' && block.type === 'tool_use') {
         const id = typeof block.id === 'string' ? block.id : '';
         const name = (typeof block.name === 'string' && block.name) || 'unknown';
-        if (id) idToName.set(id, name);
+        if (id) {
+          idToName.set(id, name);
+        }
       }
     }
   }
 
   for (const msg of messages) {
-    if (!msg) continue;
+    if (!msg) {
+      continue;
+    }
     const content = msg.content;
     const role = msg.role;
 
     // 字符串内容 → 纯文本,计入对应角色。
     if (typeof content === 'string') {
       const t = _blockTokens(content, estimate);
-      if (role === 'assistant') assistantMessageTokens += t;
-      else userMessageTokens += t;
+      if (role === 'assistant') {
+        assistantMessageTokens += t;
+      } else {
+        userMessageTokens += t;
+      }
       continue;
     }
-    if (!Array.isArray(content)) continue;
+    if (!Array.isArray(content)) {
+      continue;
+    }
 
     for (const block of content) {
       if (!block || typeof block !== 'object') {
         // 非对象块(如纯字符串元素)计入对应角色文本。
         const t = _blockTokens(block, estimate);
-        if (role === 'assistant') assistantMessageTokens += t;
-        else userMessageTokens += t;
+        if (role === 'assistant') {
+          assistantMessageTokens += t;
+        } else {
+          userMessageTokens += t;
+        }
         continue;
       }
       const t = _blockTokens(block, estimate);
@@ -120,8 +142,11 @@ function analyzeMessageBreakdown(input = {}, env = process.env) {
         const name = (id && idToName.get(id)) || 'unknown';
         resultByName.set(name, (resultByName.get(name) || 0) + t);
       } else {
-        if (role === 'assistant') assistantMessageTokens += t;
-        else userMessageTokens += t;
+        if (role === 'assistant') {
+          assistantMessageTokens += t;
+        } else {
+          userMessageTokens += t;
+        }
       }
     }
   }
@@ -134,7 +159,7 @@ function analyzeMessageBreakdown(input = {}, env = process.env) {
       callTokens: callByName.get(name) || 0,
       resultTokens: resultByName.get(name) || 0,
     }))
-    .sort((a, b) => (b.callTokens + b.resultTokens) - (a.callTokens + a.resultTokens));
+    .sort((a, b) => b.callTokens + b.resultTokens - (a.callTokens + a.resultTokens));
 
   const totalTokens =
     toolCallTokens + toolResultTokens + assistantMessageTokens + userMessageTokens;

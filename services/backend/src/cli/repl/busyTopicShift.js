@@ -33,8 +33,12 @@ const DEFAULT_MIN_TOKENS = 2;
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _toSet(v) {
-  if (v instanceof Set) return v;
-  if (Array.isArray(v)) return new Set(v);
+  if (v instanceof Set) {
+    return v;
+  }
+  if (Array.isArray(v)) {
+    return new Set(v);
+  }
   return new Set();
 }
 
@@ -46,11 +50,17 @@ function overlapCoefficient(a, b) {
   const A = _toSet(a);
   const B = _toSet(b);
   const m = Math.min(A.size, B.size);
-  if (m === 0) return 0;
+  if (m === 0) {
+    return 0;
+  }
   let inter = 0;
   // 遍历较小集,减少 has 调用。
   const [small, large] = A.size <= B.size ? [A, B] : [B, A];
-  for (const t of small) if (large.has(t)) inter++;
+  for (const t of small) {
+    if (large.has(t)) {
+      inter++;
+    }
+  }
   return inter / m;
 }
 
@@ -60,7 +70,9 @@ function isEnabled(env) {
   try {
     return flagRegistry.isFlagEnabled('KHY_BUSY_STEER_TOPIC_GUARD', e);
   } catch {
-    const v = String((e && e.KHY_BUSY_STEER_TOPIC_GUARD) || '').trim().toLowerCase();
+    const v = String((e && e.KHY_BUSY_STEER_TOPIC_GUARD) || '')
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   }
 }
@@ -95,11 +107,17 @@ function _minTokens(env) {
 function isNewTopicInterjection(curTokens, baselineTokens, env) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(e)) return false;
+    if (!isEnabled(e)) {
+      return false;
+    }
     const cur = _toSet(curTokens);
     const base = _toSet(baselineTokens);
-    if (cur.size < _minTokens(e)) return false;
-    if (base.size === 0) return false;
+    if (cur.size < _minTokens(e)) {
+      return false;
+    }
+    if (base.size === 0) {
+      return false;
+    }
     return overlapCoefficient(cur, base) < _threshold(e);
   } catch {
     return false; // fail-soft:判定绝不能拖垮忙碌插话路由

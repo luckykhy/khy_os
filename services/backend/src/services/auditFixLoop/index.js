@@ -23,8 +23,13 @@
  * the reason a delivery fails).
  */
 
-const { parseAuditReport, parseFixReport, hasActionableFindings, actionableFindings, summarizeCounts } =
-  require('./auditParser');
+const {
+  parseAuditReport,
+  parseFixReport,
+  hasActionableFindings,
+  actionableFindings,
+  summarizeCounts,
+} = require('./auditParser');
 const { buildAuditPrompt, buildFixPrompt } = require('./promptBuilder');
 const triggerGate = require('./triggerGate');
 
@@ -54,10 +59,25 @@ async function runAuditFixCycle(opts = {}) {
   } = opts;
 
   if (typeof dispatchAgent !== 'function') {
-    return { outcome: 'error', rounds: [], finalReport: null, filesFixed: [], totalActionableRemaining: 0, error: 'no dispatchAgent injected' };
+    return {
+      outcome: 'error',
+      rounds: [],
+      finalReport: null,
+      filesFixed: [],
+      totalActionableRemaining: 0,
+      error: 'no dispatchAgent injected',
+    };
   }
 
-  const _emit = (evt) => { if (onEvent) { try { onEvent(evt); } catch { /* best-effort */ } } };
+  const _emit = (evt) => {
+    if (onEvent) {
+      try {
+        onEvent(evt);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
 
   const rounds = [];
   const filesFixed = new Set();
@@ -111,8 +131,16 @@ async function runAuditFixCycle(opts = {}) {
       });
       const fixReport = parseFixReport(fixOut && fixOut.text);
       priorFix = fixReport;
-      for (const f of (fixOut && fixOut.filesModified) || []) filesFixed.add(f);
-      rounds.push({ round, report, fixed: true, fixReport, filesModified: (fixOut && fixOut.filesModified) || [] });
+      for (const f of (fixOut && fixOut.filesModified) || []) {
+        filesFixed.add(f);
+      }
+      rounds.push({
+        round,
+        report,
+        fixed: true,
+        fixReport,
+        filesModified: (fixOut && fixOut.filesModified) || [],
+      });
       _emit({ type: 'fix_done', round, fixed: fixReport.fixed, deferred: fixReport.deferred });
       // loop → re-audit on the next iteration
     }
@@ -123,7 +151,9 @@ async function runAuditFixCycle(opts = {}) {
       rounds,
       finalReport: lastReport,
       filesFixed: [...filesFixed],
-      totalActionableRemaining: lastReport ? (lastReport.counts.critical + lastReport.counts.high) : 0,
+      totalActionableRemaining: lastReport
+        ? lastReport.counts.critical + lastReport.counts.high
+        : 0,
     };
   } catch (err) {
     return {
@@ -131,7 +161,9 @@ async function runAuditFixCycle(opts = {}) {
       rounds,
       finalReport: lastReport,
       filesFixed: [...filesFixed],
-      totalActionableRemaining: lastReport ? (lastReport.counts.critical + lastReport.counts.high) : 0,
+      totalActionableRemaining: lastReport
+        ? lastReport.counts.critical + lastReport.counts.high
+        : 0,
       error: err && err.message ? err.message : String(err),
     };
   }
@@ -147,7 +179,9 @@ async function runAuditFixCycle(opts = {}) {
  * @returns {string}
  */
 function buildAnnotation(result) {
-  if (!result) return '';
+  if (!result) {
+    return '';
+  }
   const { outcome, finalReport, rounds } = result;
 
   if (outcome === 'clean') {
@@ -161,27 +195,35 @@ function buildAnnotation(result) {
   }
 
   const fixedTotal = rounds
-    .filter(r => r.fixed && r.fixReport)
+    .filter((r) => r.fixed && r.fixReport)
     .reduce((n, r) => n + (r.fixReport.fixed || 0), 0);
 
   if (outcome === 'fixed') {
-    return `\n\n---\n🔍 **完成时审计** — 审计智能体发现问题，已自动派发修复智能体处理并通过重审`
-      + (fixedTotal > 0 ? `（修复 ${fixedTotal} 项严重/高优先级问题）` : '')
-      + '。';
+    return (
+      `\n\n---\n🔍 **完成时审计** — 审计智能体发现问题，已自动派发修复智能体处理并通过重审` +
+      (fixedTotal > 0 ? `（修复 ${fixedTotal} 项严重/高优先级问题）` : '') +
+      '。'
+    );
   }
 
   if (outcome === 'exhausted') {
     const counts = finalReport ? finalReport.counts : null;
-    const remaining = counts ? (counts.critical + counts.high) : 0;
+    const remaining = counts ? counts.critical + counts.high : 0;
     const lines = [];
-    lines.push(`\n\n---\n🔍 **完成时审计** — 经过自动审计与修复后，仍有 ${remaining} 个严重/高优先级问题需人工关注：`);
+    lines.push(
+      `\n\n---\n🔍 **完成时审计** — 经过自动审计与修复后，仍有 ${remaining} 个严重/高优先级问题需人工关注：`
+    );
     const leftover = finalReport ? actionableFindings(finalReport) : [];
     leftover.slice(0, 8).forEach((f) => {
       const loc = f.location ? ` (${f.location})` : '';
       lines.push(`  - [${f.severity.toUpperCase()}] ${f.title || '(未命名)'}${loc}`);
     });
-    if (leftover.length > 8) lines.push(`  …以及另外 ${leftover.length - 8} 项`);
-    if (fixedTotal > 0) lines.push(`（本轮已自动修复 ${fixedTotal} 项，以上为剩余项）`);
+    if (leftover.length > 8) {
+      lines.push(`  …以及另外 ${leftover.length - 8} 项`);
+    }
+    if (fixedTotal > 0) {
+      lines.push(`（本轮已自动修复 ${fixedTotal} 项，以上为剩余项）`);
+    }
     return lines.join('\n');
   }
 

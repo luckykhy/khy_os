@@ -14,48 +14,69 @@
 'use strict';
 
 const chalk = require('chalk').default || require('chalk');
-const {
-  printSuccess, printError, printWarn, printInfo, printTable,
-} = require('../formatters');
+const { printSuccess, printError, printWarn, printInfo, printTable } = require('../formatters');
 
 const ICON_GEAR = '⚙';
 
 // 电路态 → 中文标签 + 颜色。
 function _circuitLabel(state) {
   switch (String(state || '').toLowerCase()) {
-    case 'open':      return chalk.red('● 熔断');
-    case 'half_open': return chalk.yellow('◐ 半开');
-    default:          return chalk.green('○ 正常');
+    case 'open':
+      return chalk.red('● 熔断');
+    case 'half_open':
+      return chalk.yellow('◐ 半开');
+    default:
+      return chalk.green('○ 正常');
   }
 }
 
 function _formatMs(ms) {
   const n = Math.max(0, Number(ms) || 0);
-  if (n <= 0) return '-';
-  if (n < 1000) return `${n}ms`;
-  if (n < 60000) return `${(n / 1000).toFixed(1)}s`;
+  if (n <= 0) {
+    return '-';
+  }
+  if (n < 1000) {
+    return `${n}ms`;
+  }
+  if (n < 60000) {
+    return `${(n / 1000).toFixed(1)}s`;
+  }
   return `${Math.floor(n / 60000)}m${Math.round((n % 60000) / 1000)}s`;
 }
 
 function _formatRate(rate, total) {
   const r = Number(rate) || 0;
-  if (!total) return chalk.dim('-');
+  if (!total) {
+    return chalk.dim('-');
+  }
   const pct = `${(r * 100).toFixed(0)}%`;
-  if (r >= 0.6) return chalk.red(pct);
-  if (r >= 0.3) return chalk.yellow(pct);
+  if (r >= 0.6) {
+    return chalk.red(pct);
+  }
+  if (r >= 0.3) {
+    return chalk.yellow(pct);
+  }
   return chalk.green(pct);
 }
 
 function _truncate(text, max = 36) {
-  const s = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!s) return '-';
+  const s = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) {
+    return '-';
+  }
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
 
 async function _getGateway() {
   const gateway = require('../../services/gateway/aiGateway');
-  if (!gateway._initialized) {
-    try { await gateway.init(); } catch { /* 初始化失败仍可读快照（多为内存态） */ }
+  if (!gateway.isInitialized()) {
+    try {
+      await gateway.init();
+    } catch {
+      /* 初始化失败仍可读快照（多为内存态） */
+    }
   }
   return gateway;
 }
@@ -104,7 +125,9 @@ async function _handleStatus() {
 
   const order = gateway.getFailoverOrder();
   if (order && order.enabled && order.order.length > 0) {
-    console.log(`\n  ${chalk.dim('用户故障转移顺序:')} ${chalk.cyan(order.order.join(' → '))} ${chalk.dim(`(来源: ${order.source})`)}\n`);
+    console.log(
+      `\n  ${chalk.dim('用户故障转移顺序:')} ${chalk.cyan(order.order.join(' → '))} ${chalk.dim(`(来源: ${order.source})`)}\n`
+    );
   } else {
     console.log(`\n  ${chalk.dim('用户故障转移顺序: 未设置（全自动 penalty 评分路由）')}\n`);
   }
@@ -114,12 +137,17 @@ async function _handleStatus() {
 
 async function _handleOrder(args = []) {
   const gateway = await _getGateway();
-  const action = String(args[0] || '').trim().toLowerCase();
+  const action = String(args[0] || '')
+    .trim()
+    .toLowerCase();
 
   if (action === 'set') {
     // 通道列表可用逗号或空格分隔：order set kiro,relay 或 order set kiro relay
     const raw = args.slice(1).join(',');
-    const list = raw.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+    const list = raw
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (list.length === 0) {
       printError('请提供通道列表，例如: khy channels order set relay,kiro');
       return;
@@ -161,7 +189,9 @@ async function _handleOrder(args = []) {
 // ── 手动恢复单通道 ────────────────────────────────────────────────────────────
 
 async function _handleReset(args = []) {
-  const key = String(args[0] || '').trim().toLowerCase();
+  const key = String(args[0] || '')
+    .trim()
+    .toLowerCase();
   if (!key) {
     printError('请指定要恢复的通道，例如: khy channels reset kiro');
     return;
@@ -169,8 +199,11 @@ async function _handleReset(args = []) {
   const gateway = await _getGateway();
   try {
     const ok = await gateway.resetChannel(key);
-    if (ok) printSuccess(`已手动恢复通道 ${key}（清除熔断/冷却/失败计数）`);
-    else printWarn(`未找到通道: ${key}`);
+    if (ok) {
+      printSuccess(`已手动恢复通道 ${key}（清除熔断/冷却/失败计数）`);
+    } else {
+      printWarn(`未找到通道: ${key}`);
+    }
   } catch (err) {
     printError(`恢复失败: ${err.message || err}`);
   }
@@ -180,7 +213,9 @@ async function _handleReset(args = []) {
  * 主入口 — 对标 verify.js 的 handle(subCommand, args, options) 签名。
  */
 async function handleChannels(subCommand, args = [], options = {}) {
-  const sub = String(subCommand || 'status').trim().toLowerCase();
+  const sub = String(subCommand || 'status')
+    .trim()
+    .toLowerCase();
 
   switch (sub) {
     case 'order':

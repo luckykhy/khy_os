@@ -18,6 +18,7 @@
  */
 
 const { spawn } = require('child_process');
+
 const { safeKill } = require('../../tools/platformUtils');
 
 const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
@@ -30,13 +31,17 @@ const _envFlag = require('../../utils/envFlagByName');
 
 function _getIdleTimeoutMs() {
   const parsed = Number.parseInt(process.env.KHY_REMOTE_SSH_IDLE_TIMEOUT_MS || '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
   return DEFAULT_IDLE_TIMEOUT_MS;
 }
 
 function _getConnectTimeoutSec() {
   const parsed = Number.parseInt(process.env.KHY_REMOTE_SSH_CONNECT_TIMEOUT_SEC || '', 10);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
   return DEFAULT_CONNECT_TIMEOUT_SEC;
 }
 
@@ -44,12 +49,19 @@ function _redactSecrets(text) {
   const input = String(text || '');
   return input
     .replace(/(password|passwd|token|secret|api[_-]?key)\s*[:=]\s*([^\s"'`]+)/gi, '$1=***')
-    .replace(/-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g, '[redacted-private-key]');
+    .replace(
+      /-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g,
+      '[redacted-private-key]'
+    );
 }
 
 function _trimPreview(text) {
-  if (typeof text !== 'string') return '';
-  if (text.length <= MAX_PREVIEW_CHARS) return text;
+  if (typeof text !== 'string') {
+    return '';
+  }
+  if (text.length <= MAX_PREVIEW_CHARS) {
+    return text;
+  }
   return `${text.slice(0, MAX_PREVIEW_CHARS)}\n...[truncated]`;
 }
 
@@ -60,7 +72,9 @@ class RemoteFileTransferService {
   }
 
   _emitEvent(onEvent, event) {
-    if (typeof onEvent !== 'function' || !event) return;
+    if (typeof onEvent !== 'function' || !event) {
+      return;
+    }
     try {
       onEvent({ ...event });
     } catch {
@@ -95,7 +109,7 @@ class RemoteFileTransferService {
   _cleanupExpiredIdempotentResults() {
     const now = Date.now();
     for (const [key, record] of this._idempotentResults.entries()) {
-      if ((now - record.createdAtMs) > IDEMPOTENCY_TTL_MS) {
+      if (now - record.createdAtMs > IDEMPOTENCY_TTL_MS) {
         this._idempotentResults.delete(key);
       }
     }
@@ -105,7 +119,14 @@ class RemoteFileTransferService {
    * Upload a single local file to `remotePath` on the host behind `connectionId`.
    * Returns a structured, redacted result; never throws for transport failures.
    */
-  async upload({ connectionId, localPath, remotePath, idempotencyKey, traceId = null, onEvent = null }) {
+  async upload({
+    connectionId,
+    localPath,
+    remotePath,
+    idempotencyKey,
+    traceId = null,
+    onEvent = null,
+  }) {
     this._cleanupExpiredIdempotentResults();
 
     const session = this._assertSession(connectionId);
@@ -119,7 +140,10 @@ class RemoteFileTransferService {
         connection_id: session.connectionId,
         message: 'Both localPath and remotePath are required for an upload.',
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 'remote_transfer_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 'remote_transfer_summary', 'error', result)
+      );
       return result;
     }
 
@@ -130,7 +154,10 @@ class RemoteFileTransferService {
         connection_id: session.connectionId,
         message: 'File transfer requires an idempotency_key.',
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 'remote_transfer_summary', 'error', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 'remote_transfer_summary', 'error', result)
+      );
       return result;
     }
 
@@ -142,7 +169,10 @@ class RemoteFileTransferService {
         status: 'idempotent_replay',
         message: 'Upload replayed from a prior result for the same idempotency_key.',
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 'remote_transfer_summary', 'info', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 'remote_transfer_summary', 'info', result)
+      );
       return result;
     }
 
@@ -152,10 +182,14 @@ class RemoteFileTransferService {
         ok: false,
         status: 'execution_disabled',
         connection_id: session.connectionId,
-        message: 'Remote file transfer is disabled. Set KHY_REMOTE_SSH_ENABLE_EXEC=true to enable uploads.',
+        message:
+          'Remote file transfer is disabled. Set KHY_REMOTE_SSH_ENABLE_EXEC=true to enable uploads.',
         redaction_applied: true,
       };
-      this._emitEvent(onEvent, this._buildEvent(session, traceId, 'remote_transfer_summary', 'wait', result));
+      this._emitEvent(
+        onEvent,
+        this._buildEvent(session, traceId, 'remote_transfer_summary', 'wait', result)
+      );
       return result;
     }
 
@@ -222,16 +256,24 @@ class RemoteFileTransferService {
     let idleCheckTimer;
     const idlePromise = new Promise((_, reject) => {
       idleCheckTimer = setInterval(() => {
-        if (finished) return;
+        if (finished) {
+          return;
+        }
         const idleMs = Date.now() - lastActivityMs;
         if (idleMs > idleTimeoutMs) {
-          try { safeKill(child); } catch { /* ignore */ }
+          try {
+            safeKill(child);
+          } catch {
+            /* ignore */
+          }
           const err = new Error(`Remote upload idle timeout: no progress for ${idleMs}ms.`);
           err.code = 'remote_transfer_idle_timeout';
           reject(err);
         }
       }, 1000);
-      if (idleCheckTimer && idleCheckTimer.unref) idleCheckTimer.unref();
+      if (idleCheckTimer && idleCheckTimer.unref) {
+        idleCheckTimer.unref();
+      }
     });
 
     const exitPromise = new Promise((resolve, reject) => {
@@ -242,7 +284,9 @@ class RemoteFileTransferService {
     try {
       const exitState = await Promise.race([exitPromise, idlePromise]);
       finished = true;
-      if (idleCheckTimer) clearInterval(idleCheckTimer);
+      if (idleCheckTimer) {
+        clearInterval(idleCheckTimer);
+      }
 
       const elapsedMs = Date.now() - startedAt;
       const ok = exitState.code === 0;
@@ -263,7 +307,9 @@ class RemoteFileTransferService {
       return result;
     } catch (error) {
       finished = true;
-      if (idleCheckTimer) clearInterval(idleCheckTimer);
+      if (idleCheckTimer) {
+        clearInterval(idleCheckTimer);
+      }
 
       const result = {
         ok: false,

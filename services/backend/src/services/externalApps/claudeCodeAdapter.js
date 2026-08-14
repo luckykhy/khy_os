@@ -18,13 +18,17 @@
  */
 
 const path = require('path');
+
 const S = require('./_shared');
 
 const APP = 'claude-code';
 
 /** ~/.claude/settings.json(CLAUDE_CONFIG_DIR 覆盖目录)。 */
 function configPath(env = process.env) {
-  const dir = (env && env.CLAUDE_CONFIG_DIR) ? S.expandHome(env.CLAUDE_CONFIG_DIR, env) : S.expandHome('~/.claude', env);
+  const dir =
+    env && env.CLAUDE_CONFIG_DIR
+      ? S.expandHome(env.CLAUDE_CONFIG_DIR, env)
+      : S.expandHome('~/.claude', env);
   return path.join(dir, 'settings.json');
 }
 
@@ -32,7 +36,9 @@ function _load(env) {
   const file = configPath(env);
   const text = S.readIfExists(file);
   const doc = text ? JSON.parse(text) : {};
-  if (!doc.env || typeof doc.env !== 'object') doc.env = {};
+  if (!doc.env || typeof doc.env !== 'object') {
+    doc.env = {};
+  }
   return { file, doc };
 }
 
@@ -41,7 +47,9 @@ function _providersFromEnv(envBlock) {
   const ids = new Set();
   for (const k of Object.keys(envBlock)) {
     const m = k.match(/^([A-Z0-9]+)_(?:API_KEY|BASE_URL)$/);
-    if (m) ids.add(m[1].toLowerCase());
+    if (m) {
+      ids.add(m[1].toLowerCase());
+    }
   }
   return [...ids];
 }
@@ -85,22 +93,36 @@ function get(target, env = process.env) {
 function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
   try {
     const id = String(provider || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'provider is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'provider is required' };
+    }
     const { file, doc } = _load(env);
 
     const resolvedKey = S.resolveApiKey(id, apiKey);
     const resolvedEndpoint = S.resolveEndpoint(id, endpoint);
     const resolvedModel = S.resolveModel(id, model);
 
-    if (resolvedKey.key) doc.env[S.envKeyName(id)] = resolvedKey.key;
-    if (resolvedEndpoint) doc.env[S.envKeyName(id, 'BASE_URL')] = resolvedEndpoint;
-    if (resolvedModel) doc.env.ANTHROPIC_MODEL = resolvedModel;
+    if (resolvedKey.key) {
+      doc.env[S.envKeyName(id)] = resolvedKey.key;
+    }
+    if (resolvedEndpoint) {
+      doc.env[S.envKeyName(id, 'BASE_URL')] = resolvedEndpoint;
+    }
+    if (resolvedModel) {
+      doc.env.ANTHROPIC_MODEL = resolvedModel;
+    }
 
     S.atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
     return {
-      success: true, app: APP, action: 'add', provider: id,
-      model: resolvedModel, endpoint: resolvedEndpoint,
-      keySource: resolvedKey.source, keyMasked: S.maskKey(resolvedKey.key), file,
+      success: true,
+      app: APP,
+      action: 'add',
+      provider: id,
+      model: resolvedModel,
+      endpoint: resolvedEndpoint,
+      keySource: resolvedKey.source,
+      keyMasked: S.maskKey(resolvedKey.key),
+      file,
     };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -110,7 +132,9 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
 function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
   try {
     const id = String(target || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'target is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'target is required' };
+    }
     const { file, doc } = _load(env);
     const keyName = S.envKeyName(id);
     const urlName = S.envKeyName(id, 'BASE_URL');
@@ -120,17 +144,33 @@ function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
 
     if (!confirmed) {
       return {
-        success: true, app: APP, action: 'remove', preview: true, confirmed: false,
-        target: id, willRemoveKeys: Boolean(removeKeys),
+        success: true,
+        app: APP,
+        action: 'remove',
+        preview: true,
+        confirmed: false,
+        target: id,
+        willRemoveKeys: Boolean(removeKeys),
         message: `将从 ${APP} 的 settings.json env 块删除 provider「${id}」的 BASE_URL${removeKeys ? ' 与 API_KEY' : ''}。回复「确认删除」以执行。`,
       };
     }
 
     delete doc.env[urlName];
     let keyRemoved = false;
-    if (removeKeys && doc.env[keyName] !== undefined) { delete doc.env[keyName]; keyRemoved = true; }
+    if (removeKeys && doc.env[keyName] !== undefined) {
+      delete doc.env[keyName];
+      keyRemoved = true;
+    }
     S.atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
-    return { success: true, app: APP, action: 'remove', confirmed: true, target: id, keyRemoved, file };
+    return {
+      success: true,
+      app: APP,
+      action: 'remove',
+      confirmed: true,
+      target: id,
+      keyRemoved,
+      file,
+    };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
   }

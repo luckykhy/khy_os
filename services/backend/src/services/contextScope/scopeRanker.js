@@ -37,8 +37,15 @@ const WEIGHTS = Object.freeze({
 
 const PARTIAL_MIN_LEN = 5; // only treat reasonably specific identifiers as substrings
 
-function _basename(p) { return String(p).split('/').pop() || String(p); }
-function _normalise(p) { return String(p || '').replace(/\\/g, '/').replace(/^\.\//, ''); }
+function _basename(p) {
+  return String(p).split('/').pop() || String(p);
+}
+
+function _normalise(p) {
+  return String(p || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
+}
 
 /**
  * @param {object} signals  output of taskSignalExtractor.extractSignals
@@ -53,16 +60,23 @@ function rankCandidates(signals, index, opts = {}) {
 
   const bump = (file, amount, reason, kind) => {
     const p = _normalise(file);
-    if (!p) return;
+    if (!p) {
+      return;
+    }
     let e = scores.get(p);
-    if (!e) { e = { score: 0, reasons: new Set(), kinds: new Set() }; scores.set(p, e); }
+    if (!e) {
+      e = { score: 0, reasons: new Set(), kinds: new Set() };
+      scores.set(p, e);
+    }
     e.score += amount;
     e.reasons.add(reason);
-    if (kind) e.kinds.add(kind);
+    if (kind) {
+      e.kinds.add(kind);
+    }
   };
 
   const idxOk = index && index.ok;
-  const lookup = (tok) => (idxOk ? (index.byKeyword.get(String(tok).toLowerCase()) || null) : null);
+  const lookup = (tok) => (idxOk ? index.byKeyword.get(String(tok).toLowerCase()) || null : null);
 
   // 1) identifiers — strongest task signal. Exact `.ai` symbol > filename match.
   for (const id of sig.identifiers || []) {
@@ -71,8 +85,12 @@ function rankCandidates(signals, index, opts = {}) {
       for (const f of hits) {
         const entry = idxOk ? index.files.get(f) : null;
         const isSymbol = entry && entry.symbols.has(id);
-        bump(f, isSymbol ? WEIGHTS.aiSymbol : WEIGHTS.aiKeyword,
-          isSymbol ? `symbol "${id}" in .ai` : `"${id}" mapped via .ai`, 'identifier');
+        bump(
+          f,
+          isSymbol ? WEIGHTS.aiSymbol : WEIGHTS.aiKeyword,
+          isSymbol ? `symbol "${id}" in .ai` : `"${id}" mapped via .ai`,
+          'identifier'
+        );
       }
     }
     // Filename containing the identifier (covers files absent from `.ai`).
@@ -89,7 +107,9 @@ function rankCandidates(signals, index, opts = {}) {
       if (!hits && idLow.length >= PARTIAL_MIN_LEN) {
         for (const [kw, fileSet] of index.byKeyword) {
           if (kw.length > idLow.length && kw.includes(idLow)) {
-            for (const f of fileSet) bump(f, WEIGHTS.partialSymbol, `"${id}" ⊂ symbol "${kw}"`, 'identifier');
+            for (const f of fileSet) {
+              bump(f, WEIGHTS.partialSymbol, `"${id}" ⊂ symbol "${kw}"`, 'identifier');
+            }
           }
         }
       }
@@ -103,7 +123,11 @@ function rankCandidates(signals, index, opts = {}) {
     if (idxOk) {
       for (const f of index.files.keys()) {
         const fl = f.toLowerCase();
-        if (fl === fhn.toLowerCase() || fl.endsWith(`/${base}`) || _basename(f).toLowerCase() === base) {
+        if (
+          fl === fhn.toLowerCase() ||
+          fl.endsWith(`/${base}`) ||
+          _basename(f).toLowerCase() === base
+        ) {
           bump(f, WEIGHTS.fileHintExact, `file hint "${fh}"`, 'fileHint');
         }
       }
@@ -115,26 +139,46 @@ function rankCandidates(signals, index, opts = {}) {
   // 3) keywords (incl. CJK) — softer, only via `.ai` index.
   for (const kw of sig.keywords || []) {
     const hits = lookup(kw);
-    if (hits) for (const f of hits) bump(f, WEIGHTS.aiKeywordWord, `keyword "${kw}"`, 'keyword');
+    if (hits) {
+      for (const f of hits) {
+        bump(f, WEIGHTS.aiKeywordWord, `keyword "${kw}"`, 'keyword');
+      }
+    }
   }
 
   // 4) quoted strings often name a function/file precisely.
   for (const q of sig.quoted || []) {
     const hits = lookup(q);
-    if (hits) for (const f of hits) bump(f, WEIGHTS.aiKeyword, `quoted "${q}"`, 'quoted');
+    if (hits) {
+      for (const f of hits) {
+        bump(f, WEIGHTS.aiKeyword, `quoted "${q}"`, 'quoted');
+      }
+    }
   }
 
   // 5) directory + extension hints refine, never originate, a candidate.
   for (const [p, e] of scores) {
     const pl = p.toLowerCase();
     for (const d of sig.dirHints || []) {
-      if (new RegExp(`(^|/)${d.toLowerCase()}(/|$)`).test(pl)) { e.score += WEIGHTS.dirHint; e.reasons.add(`dir "${d}"`); }
+      if (new RegExp(`(^|/)${d.toLowerCase()}(/|$)`).test(pl)) {
+        e.score += WEIGHTS.dirHint;
+        e.reasons.add(`dir "${d}"`);
+      }
     }
     for (const ext of sig.extHints || []) {
-      if (pl.endsWith(ext.toLowerCase())) { e.score += WEIGHTS.extHint; e.reasons.add(`ext "${ext}"`); }
+      if (pl.endsWith(ext.toLowerCase())) {
+        e.score += WEIGHTS.extHint;
+        e.reasons.add(`ext "${ext}"`);
+      }
     }
-    if (recentFiles.has(p)) { e.score += WEIGHTS.recentFile; e.reasons.add('recently touched'); }
-    if (e.kinds.size >= 2) { e.score += WEIGHTS.multiSignal; e.reasons.add('multiple signals'); }
+    if (recentFiles.has(p)) {
+      e.score += WEIGHTS.recentFile;
+      e.reasons.add('recently touched');
+    }
+    if (e.kinds.size >= 2) {
+      e.score += WEIGHTS.multiSignal;
+      e.reasons.add('multiple signals');
+    }
   }
 
   const out = Array.from(scores.entries()).map(([p, e]) => ({
@@ -144,7 +188,9 @@ function rankCandidates(signals, index, opts = {}) {
     signalKinds: e.kinds.size,
   }));
 
-  out.sort((a, b) => (b.score - a.score) || (a.path.length - b.path.length) || a.path.localeCompare(b.path));
+  out.sort(
+    (a, b) => b.score - a.score || a.path.length - b.path.length || a.path.localeCompare(b.path)
+  );
   return out;
 }
 

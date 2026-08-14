@@ -17,8 +17,9 @@
  * 用法:`/init-verifiers`。门控 KHY_INIT_VERIFIERS 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo } = require('../formatters');
 const leaf = require('../../services/skills/verifierScaffoldPlan');
+const { printInfo } = require('../formatters');
+const { formatStatusMessage } = require('../statusMessageFormatter');
 
 /** 解析项目技能目录(展示用,相对项目根)。绝不硬编码绝对路径。 */
 function _skillsDir() {
@@ -37,7 +38,7 @@ async function handleInitVerifiers(_subCommand, _args = [], _options = {}) {
   }
 
   const instructions = leaf.buildScaffoldInstructions({ skillsDir: _skillsDir() });
-  printInfo('正在分析项目并准备创建功能校验器技能…');
+  printInfo(formatStatusMessage('分析', '项目', `准备创建功能校验器技能于 ${_skillsDir()}`));
   return { aiForward: instructions };
 }
 

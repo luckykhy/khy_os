@@ -1,6 +1,7 @@
-const { defineTool } = require('./_baseTool');
-const forgeCore = require('../services/forge/forgeCore');
 const forgeClient = require('../services/forge/forgeClient');
+const forgeCore = require('../services/forge/forgeCore');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * forgeRecon — reconnoiter a remote repository broad-to-narrow, the way a senior
@@ -24,16 +25,31 @@ const forgeClient = require('../services/forge/forgeClient');
  */
 module.exports = defineTool({
   name: 'forgeRecon',
-  description: 'Reconnoiter a GitHub/Gitee/GitLab repo broad-to-narrow: metadata (stars/license/topics), top-level structure, key files (README, CLAUDE.md, package.json…), and deterministic hints (monorepo? agent guide? build & deploy commands). Use to evaluate a project as a reference or to learn how to deploy it before cloning.',
+  description:
+    'Reconnoiter a GitHub/Gitee/GitLab repo broad-to-narrow: metadata (stars/license/topics), top-level structure, key files (README, CLAUDE.md, package.json…), and deterministic hints (monorepo? agent guide? build & deploy commands). Use to evaluate a project as a reference or to learn how to deploy it before cloning.',
   category: 'git',
   risk: 'safe',
+  searchHint: 'github repository inspect structure evaluate readme 仓库调研 结构 评估',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: () => forgeCore.isEnabled(),
   inputSchema: {
-    repo: { type: 'string', required: true, description: 'Repository to inspect: "owner/repo" or a full http(s)/ssh git URL.' },
-    platform: { type: 'string', required: false, enum: ['github', 'gitee', 'gitlab'], description: 'Forge host for "owner/repo" form (default inferred or github).' },
-    ref: { type: 'string', required: false, description: 'Branch/tag/commit to read from (default: the repo default branch).' },
+    repo: {
+      type: 'string',
+      required: true,
+      description: 'Repository to inspect: "owner/repo" or a full http(s)/ssh git URL.',
+    },
+    platform: {
+      type: 'string',
+      required: false,
+      enum: ['github', 'gitee', 'gitlab'],
+      description: 'Forge host for "owner/repo" form (default inferred or github).',
+    },
+    ref: {
+      type: 'string',
+      required: false,
+      description: 'Branch/tag/commit to read from (default: the repo default branch).',
+    },
   },
   async execute(params, _context) {
     const res = await forgeClient.reconRepo({
@@ -41,7 +57,16 @@ module.exports = defineTool({
       platform: params.platform,
       ref: params.ref,
     });
-    if (!res.ok) return { success: false, error: res.error };
+    if (!res.ok) {
+      return {
+        success: false,
+        error: res.recovery
+          ? { message: res.error, recovery: res.recovery, code: res.code, retryable: true }
+          : typeof res.error === 'string'
+            ? { message: res.error }
+            : res.error,
+      };
+    }
     // keyFiles can be large; hand back text but let the model summarize. We keep
     // the structured shape so downstream reasoning is deterministic.
     return {

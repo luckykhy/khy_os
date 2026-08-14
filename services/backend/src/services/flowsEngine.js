@@ -21,11 +21,11 @@ const crypto = require('crypto');
 // ── Flow states ──
 
 const FLOW_STATE = {
-  CREATED:   'created',
-  RUNNING:   'running',
-  WAITING:   'waiting',
+  CREATED: 'created',
+  RUNNING: 'running',
+  WAITING: 'waiting',
   COMPLETED: 'completed',
-  FAILED:    'failed',
+  FAILED: 'failed',
   CANCELLED: 'cancelled',
 };
 
@@ -76,8 +76,8 @@ class FlowInstance {
     this.state = FLOW_STATE.CREATED;
     this.currentStep = null;
     this.context = { ...initialContext };
-    this.history = [];           // { stepId, state, timestamp, data }[]
-    this.version = 0;            // CAS version for concurrent access
+    this.history = []; // { stepId, state, timestamp, data }[]
+    this.version = 0; // CAS version for concurrent access
     this.createdAt = Date.now();
     this.updatedAt = Date.now();
     this.error = null;
@@ -94,7 +94,11 @@ class FlowInstance {
    * @returns {Promise<{ state: string, stepId: string, data?: object }>}
    */
   async run() {
-    if (this.state === FLOW_STATE.COMPLETED || this.state === FLOW_STATE.FAILED || this.state === FLOW_STATE.CANCELLED) {
+    if (
+      this.state === FLOW_STATE.COMPLETED ||
+      this.state === FLOW_STATE.FAILED ||
+      this.state === FLOW_STATE.CANCELLED
+    ) {
       return { state: this.state, stepId: this.currentStep };
     }
 
@@ -208,7 +212,9 @@ class FlowInstance {
    * Cancel the flow.
    */
   cancel(reason) {
-    if (this.state === FLOW_STATE.COMPLETED || this.state === FLOW_STATE.FAILED) return;
+    if (this.state === FLOW_STATE.COMPLETED || this.state === FLOW_STATE.FAILED) {
+      return;
+    }
     this.error = reason || 'Cancelled';
     this._transition(FLOW_STATE.CANCELLED);
     this._bumpVersion();
@@ -242,11 +248,19 @@ class FlowInstance {
    * @returns {boolean} success
    */
   casUpdate(expectedVersion, updates) {
-    if (this.version !== expectedVersion) return false;
+    if (this.version !== expectedVersion) {
+      return false;
+    }
 
-    if (updates.context) Object.assign(this.context, updates.context);
-    if (updates.state) this.state = updates.state;
-    if (updates.currentStep) this.currentStep = updates.currentStep;
+    if (updates.context) {
+      Object.assign(this.context, updates.context);
+    }
+    if (updates.state) {
+      this.state = updates.state;
+    }
+    if (updates.currentStep) {
+      this.currentStep = updates.currentStep;
+    }
 
     this._bumpVersion();
     return true;
@@ -257,7 +271,9 @@ class FlowInstance {
   _transition(newState, meta) {
     this.state = newState;
     this.updatedAt = Date.now();
-    if (meta?.waitReason) this.error = meta.waitReason;
+    if (meta?.waitReason) {
+      this.error = meta.waitReason;
+    }
   }
 
   _fail(message) {
@@ -289,8 +305,14 @@ class FlowInstance {
       }, timeoutMs);
 
       Promise.resolve(step.execute(this.context, this))
-        .then(result => { clearTimeout(timer); resolve(result); })
-        .catch(err => { clearTimeout(timer); reject(err); });
+        .then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
     });
   }
 }
@@ -309,12 +331,18 @@ class FlowRegistry {
    * Register a flow definition.
    */
   registerDefinition(definition) {
-    if (!definition?.id) throw new Error('Flow definition must have an id');
-    if (!definition.steps?.length) throw new Error('Flow definition must have steps');
-    if (!definition.entryStep) throw new Error('Flow definition must have an entryStep');
+    if (!definition?.id) {
+      throw new Error('Flow definition must have an id');
+    }
+    if (!definition.steps?.length) {
+      throw new Error('Flow definition must have steps');
+    }
+    if (!definition.entryStep) {
+      throw new Error('Flow definition must have an entryStep');
+    }
 
     // Validate entryStep exists
-    const stepIds = new Set(definition.steps.map(s => s.id));
+    const stepIds = new Set(definition.steps.map((s) => s.id));
     if (!stepIds.has(definition.entryStep)) {
       throw new Error(`entryStep '${definition.entryStep}' not found in steps`);
     }
@@ -331,7 +359,9 @@ class FlowRegistry {
    */
   createInstance(definitionId, context) {
     const def = this._definitions.get(definitionId);
-    if (!def) throw new Error(`Unknown flow definition: ${definitionId}`);
+    if (!def) {
+      throw new Error(`Unknown flow definition: ${definitionId}`);
+    }
 
     const instance = new FlowInstance(def, context);
     this._instances.set(instance.id, instance);
@@ -350,7 +380,12 @@ class FlowRegistry {
    */
   removeInstance(instanceId) {
     const inst = this._instances.get(instanceId);
-    if (inst && (inst.state === FLOW_STATE.COMPLETED || inst.state === FLOW_STATE.FAILED || inst.state === FLOW_STATE.CANCELLED)) {
+    if (
+      inst &&
+      (inst.state === FLOW_STATE.COMPLETED ||
+        inst.state === FLOW_STATE.FAILED ||
+        inst.state === FLOW_STATE.CANCELLED)
+    ) {
       this._instances.delete(instanceId);
       return true;
     }
@@ -363,7 +398,11 @@ class FlowRegistry {
   listActive() {
     const active = [];
     for (const inst of this._instances.values()) {
-      if (inst.state === FLOW_STATE.RUNNING || inst.state === FLOW_STATE.WAITING || inst.state === FLOW_STATE.CREATED) {
+      if (
+        inst.state === FLOW_STATE.RUNNING ||
+        inst.state === FLOW_STATE.WAITING ||
+        inst.state === FLOW_STATE.CREATED
+      ) {
         active.push(inst.serialize());
       }
     }
@@ -374,7 +413,7 @@ class FlowRegistry {
    * Get registered definitions.
    */
   listDefinitions() {
-    return Array.from(this._definitions.values()).map(d => ({
+    return Array.from(this._definitions.values()).map((d) => ({
       id: d.id,
       name: d.name,
       stepCount: d.steps.length,

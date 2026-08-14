@@ -59,7 +59,12 @@ const AGENT_LAUNCHERS = Object.freeze([
   Object.freeze({ command: 'opencode', adapterKey: 'opencode', kind: 'direct', legacy: false }),
   Object.freeze({ command: 'warp', adapterKey: 'warp', kind: 'model-select', legacy: false }),
   Object.freeze({ command: 'vscode', adapterKey: 'vscode', kind: 'model-select', legacy: false }),
-  Object.freeze({ command: 'windsurf', adapterKey: 'windsurf', kind: 'model-select', legacy: false }),
+  Object.freeze({
+    command: 'windsurf',
+    adapterKey: 'windsurf',
+    kind: 'model-select',
+    legacy: false,
+  }),
 ]);
 
 /**
@@ -72,11 +77,17 @@ function isLaunchersEnabled(env) {
   const e = env || (typeof process !== 'undefined' && process.env) || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_AGENT_LAUNCHERS', e);
     }
-  } catch { /* registry unavailable → local fallback */ }
+  } catch {
+    /* registry unavailable → local fallback */
+  }
   const v = e.KHY_AGENT_LAUNCHERS;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -88,7 +99,7 @@ function isLaunchersEnabled(env) {
  */
 function getAgentLaunchers(env) {
   if (!isLaunchersEnabled(env)) {
-    return AGENT_LAUNCHERS.filter(l => l.legacy === true);
+    return AGENT_LAUNCHERS.filter((l) => l.legacy === true);
   }
   return AGENT_LAUNCHERS.slice();
 }
@@ -99,7 +110,7 @@ function getAgentLaunchers(env) {
  * @returns {string[]}
  */
 function getLauncherCommands(env) {
-  return getAgentLaunchers(env).map(l => l.command);
+  return getAgentLaunchers(env).map((l) => l.command);
 }
 
 /**
@@ -110,9 +121,13 @@ function getLauncherCommands(env) {
  * @returns {{command,adapterKey,kind,legacy}|null}
  */
 function resolveAgentLauncher(name, env) {
-  const n = String(name || '').trim().toLowerCase();
-  if (!n) return null;
-  return getAgentLaunchers(env).find(l => l.command === n) || null;
+  const n = String(name || '')
+    .trim()
+    .toLowerCase();
+  if (!n) {
+    return null;
+  }
+  return getAgentLaunchers(env).find((l) => l.command === n) || null;
 }
 
 /**

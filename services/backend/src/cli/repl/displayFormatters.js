@@ -9,15 +9,18 @@
  */
 const os = require('os');
 const path = require('path');
-const { summarizeToolResult } = require('../toolResultSummary');
+
 const {
   toolProgressReason: sharedToolProgressReason,
   buildStreamingToolPreface: sharedBuildStreamingToolPreface,
 } = require('../toolPrefaceVoice');
+const { summarizeToolResult } = require('../toolResultSummary');
 
 /** Normalize a tool name to its lookup key: lowercase, strip spaces/_/-. */
 function normalizeToolName(toolName) {
-  return String(toolName).toLowerCase().replace(/[\s_-]/g, '');
+  return String(toolName)
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 /**
@@ -28,8 +31,12 @@ function normalizeToolName(toolName) {
 function formatShortCwd() {
   const cwd = process.cwd();
   const home = os.homedir();
-  if (cwd === home) return '~';
-  if (cwd.startsWith(home + path.sep)) return '~' + cwd.slice(home.length);
+  if (cwd === home) {
+    return '~';
+  }
+  if (cwd.startsWith(home + path.sep)) {
+    return '~' + cwd.slice(home.length);
+  }
   return cwd;
 }
 
@@ -54,24 +61,39 @@ function shortenPromptPath(display) {
  * can suppress the line entirely.
  */
 function formatToolSummary(summary) {
-  if (!summary || typeof summary !== 'object') return '';
+  if (!summary || typeof summary !== 'object') {
+    return '';
+  }
   const totalCalls = Number(summary.totalCalls || 0);
   const totalDurationMs = Number(summary.totalDurationMs || 0);
-  if (!Number.isFinite(totalCalls) || !Number.isFinite(totalDurationMs)) return '';
+  if (!Number.isFinite(totalCalls) || !Number.isFinite(totalDurationMs)) {
+    return '';
+  }
   const fileOps = Array.isArray(summary.fileOps) ? summary.fileOps : [];
   const opCounts = {
-    create: fileOps.filter((op) => op?.operation === 'create' || op?.operation === 'scaffold').length,
+    create: fileOps.filter((op) => op?.operation === 'create' || op?.operation === 'scaffold')
+      .length,
     modify: fileOps.filter((op) => op?.operation === 'modify').length,
     rename: fileOps.filter((op) => op?.operation === 'rename').length,
     move: fileOps.filter((op) => op?.operation === 'move').length,
     delete: fileOps.filter((op) => op?.operation === 'delete').length,
   };
   const opParts = [];
-  if (opCounts.modify > 0) opParts.push(`修改 ${opCounts.modify}`);
-  if (opCounts.create > 0) opParts.push(`新建 ${opCounts.create}`);
-  if (opCounts.rename > 0) opParts.push(`重命名 ${opCounts.rename}`);
-  if (opCounts.move > 0) opParts.push(`移动 ${opCounts.move}`);
-  if (opCounts.delete > 0) opParts.push(`删除 ${opCounts.delete}`);
+  if (opCounts.modify > 0) {
+    opParts.push(`修改 ${opCounts.modify}`);
+  }
+  if (opCounts.create > 0) {
+    opParts.push(`新建 ${opCounts.create}`);
+  }
+  if (opCounts.rename > 0) {
+    opParts.push(`重命名 ${opCounts.rename}`);
+  }
+  if (opCounts.move > 0) {
+    opParts.push(`移动 ${opCounts.move}`);
+  }
+  if (opCounts.delete > 0) {
+    opParts.push(`删除 ${opCounts.delete}`);
+  }
   const durStr = _formatToolSummaryDuration(Math.max(0, totalDurationMs));
   return `工具摘要: ${Math.max(0, totalCalls)} 次调用 · ${durStr}${opParts.length > 0 ? ` · ${opParts.join(' · ')}` : ''}`;
 }
@@ -86,14 +108,20 @@ function formatToolSummary(summary) {
 //   关 → 一律逐字节回退旧 `toFixed(1)s`。ccFormat require 包在 try 里,异常静默回退,绝不抛。
 function _formatToolSummaryDuration(durationMs, env = process.env) {
   const legacy = `${(durationMs / 1000).toFixed(1)}s`;
-  if (durationMs < 60000) return legacy; // <60s: keep tenths precision (byte-identical to before)
+  if (durationMs < 60000) {
+    return legacy;
+  } // <60s: keep tenths precision (byte-identical to before)
   try {
     const { ccFormatEnabled, ccFormatDuration } = require('../ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatDuration(durationMs);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to the legacy form below */ }
+  } catch {
+    /* fall through to the legacy form below */
+  }
   return legacy;
 }
 
@@ -104,13 +132,20 @@ function _formatToolSummaryDuration(durationMs, env = process.env) {
  */
 function toolProgressStart(toolName, params = {}) {
   const name = normalizeToolName(toolName);
-  if (name === 'websearch') return { label: '正在搜索', target: params.query || params.q || '' };
+  if (name === 'websearch') {
+    return { label: '正在搜索', target: params.query || params.q || '' };
+  }
   if (name === 'scaffoldfiles') {
     const fileCount = Array.isArray(params.files) ? params.files.length : 0;
     const dirCount = Array.isArray(params.directories) ? params.directories.length : 0;
-    return { label: `正在批量创建结构(${dirCount}目录/${fileCount}文件)`, target: params.root || '.' };
+    return {
+      label: `正在批量创建结构(${dirCount}目录/${fileCount}文件)`,
+      target: params.root || '.',
+    };
   }
-  if (name === 'webfetch') return { label: 'Fetching URL', target: params.url || '' };
+  if (name === 'webfetch') {
+    return { label: 'Fetching URL', target: params.url || '' };
+  }
   if (name === 'grep' || name === 'glob' || name === 'find' || name === 'search' || name === 'ls') {
     return { label: 'Exploring workspace', target: params.path || params.pattern || '' };
   }
@@ -119,17 +154,42 @@ function toolProgressStart(toolName, params = {}) {
     // basename survives (CC toRelativePath + truncatePathMiddle). SSOT
     // toolParamPath.formatToolHeaderPath; both gates off → byte-identical raw.
     const t = params.path || params.file_path || '';
-    return { label: 'Reading file', target: require('../toolParamPath').formatToolHeaderPath(String(t), process.cwd(), process.env) };
+    return {
+      label: 'Reading file',
+      target: require('../toolParamPath').formatToolHeaderPath(
+        String(t),
+        process.cwd(),
+        process.env
+      ),
+    };
   }
-  if (name === 'write' || name === 'writefile' || name === 'createfile' || name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
+  if (
+    name === 'write' ||
+    name === 'writefile' ||
+    name === 'createfile' ||
+    name === 'edit' ||
+    name === 'editfile' ||
+    name === 'multiedit' ||
+    name === 'notebookedit'
+  ) {
     const t = params.file_path || params.filePath || params.path || '';
-    return { label: 'Updating file', target: require('../toolParamPath').formatToolHeaderPath(String(t), process.cwd(), process.env) };
+    return {
+      label: 'Updating file',
+      target: require('../toolParamPath').formatToolHeaderPath(
+        String(t),
+        process.cwd(),
+        process.env
+      ),
+    };
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {
     return { label: 'Running command', target: (params.command || '').slice(0, 80) };
   }
   if (name === 'agent' || name === 'task') {
-    return { label: 'Delegating to agent', target: params.role || params.subagent_type || 'general' };
+    return {
+      label: 'Delegating to agent',
+      target: params.role || params.subagent_type || 'general',
+    };
   }
   return null;
 }
@@ -142,16 +202,29 @@ function toolProgressStart(toolName, params = {}) {
 function toolProgressDone(toolName, success, detail = '') {
   const name = normalizeToolName(toolName);
   const status = success ? 'success' : 'error';
-  if (name === 'websearch') return { status, label: success ? 'Searched' : 'Web search failed', detail };
-  if (name === 'webfetch') return { status, label: success ? 'Fetched URL' : 'URL fetch failed', detail };
-  if (name === 'scaffoldfiles') return { status, label: success ? 'Scaffolded' : 'Scaffold failed', detail };
+  if (name === 'websearch') {
+    return { status, label: success ? 'Searched' : 'Web search failed', detail };
+  }
+  if (name === 'webfetch') {
+    return { status, label: success ? 'Fetched URL' : 'URL fetch failed', detail };
+  }
+  if (name === 'scaffoldfiles') {
+    return { status, label: success ? 'Scaffolded' : 'Scaffold failed', detail };
+  }
   if (name === 'grep' || name === 'glob' || name === 'find' || name === 'search' || name === 'ls') {
     return { status, label: success ? 'Explored' : 'Explore failed', detail };
   }
   if (name === 'read' || name === 'readfile' || name === 'notebookread') {
     return { status, label: success ? 'Read' : 'Read failed', detail };
   }
-  if (name === 'write' || name === 'writefile' || name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
+  if (
+    name === 'write' ||
+    name === 'writefile' ||
+    name === 'edit' ||
+    name === 'editfile' ||
+    name === 'multiedit' ||
+    name === 'notebookedit'
+  ) {
     return { status, label: success ? 'Updated' : 'Update failed', detail };
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {
@@ -198,7 +271,9 @@ function buildStreamingToolPreface(toolName, inputHint = '', occurrence) {
  * Single source shared by the ink TUI (ToolLines) and the classic REPL. Pure.
  */
 function stripInternalControlText(s, opts) {
-  if (typeof s !== 'string' || !s) return s || '';
+  if (typeof s !== 'string' || !s) {
+    return s || '';
+  }
   let out = s;
   // Whole model-only nudge blocks → drop entirely (no internal `]` before close).
   out = out.replace(/\[SYSTEM:[\s\S]*?\]/g, '');
@@ -217,7 +292,10 @@ function stripInternalControlText(s, opts) {
       .join('\n')
       .trim();
   }
-  return out.replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, ' ').trim();
+  return out
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, ' ')
+    .trim();
 }
 
 module.exports = {

@@ -1,6 +1,7 @@
-const { defineTool } = require('./_baseTool');
-const forgeCore = require('../services/forge/forgeCore');
 const forgeClient = require('../services/forge/forgeClient');
+const forgeCore = require('../services/forge/forgeCore');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * forgeCommits — read a repository's recent commit history AND assess its
@@ -20,18 +21,43 @@ const forgeClient = require('../services/forge/forgeClient');
  */
 module.exports = defineTool({
   name: 'forgeCommits',
-  description: 'Read a GitHub/Gitee/GitLab repo\'s recent commits and score commit-message quality (Conventional Commits compliance, vague/over-long subjects). Returns the commit list plus a {score, grade, notes} verdict to judge how well a project is maintained before reusing or contributing.',
+  description:
+    "Read a GitHub/Gitee/GitLab repo's recent commits and score commit-message quality (Conventional Commits compliance, vague/over-long subjects). Returns the commit list plus a {score, grade, notes} verdict to judge how well a project is maintained before reusing or contributing.",
   category: 'git',
   risk: 'safe',
+  searchHint: 'github gitee gitlab commit history quality 提交历史 提交质量 评估',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: () => forgeCore.isEnabled(),
   inputSchema: {
-    repo: { type: 'string', required: true, description: 'Repository to inspect: "owner/repo" or a full http(s)/ssh git URL.' },
-    platform: { type: 'string', required: false, enum: ['github', 'gitee', 'gitlab'], description: 'Forge host for "owner/repo" form (default inferred or github).' },
-    limit: { type: 'number', required: false, min: 1, max: 100, description: 'How many recent commits to fetch (default 20, max 100).' },
-    ref: { type: 'string', required: false, description: 'Branch/tag/commit to read history from (default: the repo default branch).' },
-    path: { type: 'string', required: false, description: 'Only commits touching this file/directory path.' },
+    repo: {
+      type: 'string',
+      required: true,
+      description: 'Repository to inspect: "owner/repo" or a full http(s)/ssh git URL.',
+    },
+    platform: {
+      type: 'string',
+      required: false,
+      enum: ['github', 'gitee', 'gitlab'],
+      description: 'Forge host for "owner/repo" form (default inferred or github).',
+    },
+    limit: {
+      type: 'number',
+      required: false,
+      min: 1,
+      max: 100,
+      description: 'How many recent commits to fetch (default 20, max 100).',
+    },
+    ref: {
+      type: 'string',
+      required: false,
+      description: 'Branch/tag/commit to read history from (default: the repo default branch).',
+    },
+    path: {
+      type: 'string',
+      required: false,
+      description: 'Only commits touching this file/directory path.',
+    },
   },
   async execute(params, _context) {
     const res = await forgeClient.getCommits({
@@ -41,7 +67,9 @@ module.exports = defineTool({
       ref: params.ref,
       path: params.path,
     });
-    if (!res.ok) return { success: false, error: res.error };
+    if (!res.ok) {
+      return { success: false, error: res.error };
+    }
     return {
       success: true,
       platform: res.platform,

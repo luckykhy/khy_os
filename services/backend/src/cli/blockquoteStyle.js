@@ -30,7 +30,9 @@
  * @returns {boolean}
  */
 function blockquoteBodyStyleEnabled(env = process.env) {
-  const flag = String((env && env.KHY_BLOCKQUOTE_STYLE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_BLOCKQUOTE_STYLE) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 

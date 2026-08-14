@@ -1,12 +1,16 @@
 'use strict';
 
 const crypto = require('crypto');
+
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+
 const { User, AuthSession, UserAuthState } = require('../models');
 
-const DEFAULT_ACCESS_EXPIRES_IN = process.env.AUTH_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '7d';
-const DEFAULT_REFRESH_EXPIRES_IN = process.env.AUTH_REFRESH_EXPIRES_IN || process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+const DEFAULT_ACCESS_EXPIRES_IN =
+  process.env.AUTH_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '7d';
+const DEFAULT_REFRESH_EXPIRES_IN =
+  process.env.AUTH_REFRESH_EXPIRES_IN || process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 const SESSION_TOUCH_INTERVAL_MS = 60 * 1000;
 
 function parseDurationMs(rawValue, fallbackMs) {
@@ -14,11 +18,17 @@ function parseDurationMs(rawValue, fallbackMs) {
     return rawValue;
   }
 
-  const normalized = String(rawValue || '').trim().toLowerCase();
-  if (!normalized) return fallbackMs;
+  const normalized = String(rawValue || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    return fallbackMs;
+  }
 
   const match = normalized.match(/^(\d+)\s*(ms|s|m|h|d|w)?$/);
-  if (!match) return fallbackMs;
+  if (!match) {
+    return fallbackMs;
+  }
 
   const amount = Number.parseInt(match[1], 10);
   const unit = match[2] || 'ms';
@@ -47,7 +57,10 @@ function getRefreshTtlMs() {
 }
 
 function hashRefreshToken(token) {
-  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(String(token || ''))
+    .digest('hex');
 }
 
 function createRefreshToken() {
@@ -77,27 +90,47 @@ function detectDeviceLabel(userAgent = '') {
   const ua = String(userAgent || '').toLowerCase();
 
   let browser = 'Unknown Browser';
-  if (ua.includes('edg/')) browser = 'Edge';
-  else if (ua.includes('chrome/')) browser = 'Chrome';
-  else if (ua.includes('firefox/')) browser = 'Firefox';
-  else if (ua.includes('safari/') && !ua.includes('chrome/')) browser = 'Safari';
-  else if (ua.includes('micromessenger/')) browser = 'WeChat';
+  if (ua.includes('edg/')) {
+    browser = 'Edge';
+  } else if (ua.includes('chrome/')) {
+    browser = 'Chrome';
+  } else if (ua.includes('firefox/')) {
+    browser = 'Firefox';
+  } else if (ua.includes('safari/') && !ua.includes('chrome/')) {
+    browser = 'Safari';
+  } else if (ua.includes('micromessenger/')) {
+    browser = 'WeChat';
+  }
 
   let os = 'Unknown OS';
-  if (ua.includes('windows')) os = 'Windows';
-  else if (ua.includes('mac os x') || ua.includes('macintosh')) os = 'macOS';
-  else if (ua.includes('android')) os = 'Android';
-  else if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios')) os = 'iOS';
-  else if (ua.includes('linux')) os = 'Linux';
+  if (ua.includes('windows')) {
+    os = 'Windows';
+  } else if (ua.includes('mac os x') || ua.includes('macintosh')) {
+    os = 'macOS';
+  } else if (ua.includes('android')) {
+    os = 'Android';
+  } else if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ios')) {
+    os = 'iOS';
+  } else if (ua.includes('linux')) {
+    os = 'Linux';
+  }
 
-  if (browser === 'Unknown Browser' && os === 'Unknown OS') return 'Unknown Device';
-  if (browser === 'Unknown Browser') return os;
-  if (os === 'Unknown OS') return browser;
+  if (browser === 'Unknown Browser' && os === 'Unknown OS') {
+    return 'Unknown Device';
+  }
+  if (browser === 'Unknown Browser') {
+    return os;
+  }
+  if (os === 'Unknown OS') {
+    return browser;
+  }
   return `${browser} on ${os}`;
 }
 
 function serializeSession(session, currentSessionId = '') {
-  if (!session) return null;
+  if (!session) {
+    return null;
+  }
 
   const plain = typeof session.get === 'function' ? session.get({ plain: true }) : session;
   const currentId = String(currentSessionId || '').trim();
@@ -135,8 +168,12 @@ function createAuthResponseData(user, bundle) {
 }
 
 async function maybeMarkExpiredSession(session) {
-  if (!session || typeof session.update !== 'function') return;
-  if (session.status === 'expired') return;
+  if (!session || typeof session.update !== 'function') {
+    return;
+  }
+  if (session.status === 'expired') {
+    return;
+  }
   try {
     await session.update({ status: 'expired' });
   } catch {
@@ -145,16 +182,22 @@ async function maybeMarkExpiredSession(session) {
 }
 
 function maybeTouchSession(session) {
-  if (!session || typeof session.update !== 'function') return;
+  if (!session || typeof session.update !== 'function') {
+    return;
+  }
   const lastAt = session.lastActivityAt ? new Date(session.lastActivityAt).getTime() : 0;
   const now = Date.now();
-  if (lastAt && (now - lastAt) < SESSION_TOUCH_INTERVAL_MS) return;
+  if (lastAt && now - lastAt < SESSION_TOUCH_INTERVAL_MS) {
+    return;
+  }
   session.update({ lastActivityAt: new Date(now) }).catch(() => {});
 }
 
 async function getOrCreateUserAuthState(userId) {
   const existing = await UserAuthState.findByPk(userId);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   return UserAuthState.create({ userId });
 }
 
@@ -178,9 +221,13 @@ async function notePasswordChanged(userId) {
 
 async function isLegacyTokenStillValid(userId, decoded = {}) {
   const state = await UserAuthState.findByPk(userId);
-  if (!state?.tokenInvalidBefore) return true;
-  const issuedAtMs = Number(decoded.iat || 0) * 1000;
-  if (!issuedAtMs) return false;
+  if (!state?.tokenInvalidBefore) {
+    return true;
+  }
+  const issuedAtMs = decoded.iat !== undefined ? Number(decoded.iat) * 1000 : null;
+  if (issuedAtMs === null) {
+    return false;
+  }
   return issuedAtMs > new Date(state.tokenInvalidBefore).getTime();
 }
 
@@ -203,13 +250,12 @@ async function cleanupExpiredSessions(userId = null) {
     status: { [Op.ne]: 'expired' },
     expiresAt: { [Op.lt]: new Date() },
   };
-  if (userId) where.userId = userId;
+  if (userId) {
+    where.userId = userId;
+  }
 
   try {
-    await AuthSession.update(
-      { status: 'expired' },
-      { where }
-    );
+    await AuthSession.update({ status: 'expired' }, { where });
   } catch {
     // best effort
   }
@@ -230,7 +276,11 @@ async function issueSessionForUser(user, req, options = {}) {
     authMethod: String(options.authMethod || 'password'),
     ipAddress: String(options.ipAddress || getClientIp(req) || ''),
     userAgent: String(options.userAgent || getUserAgent(req) || ''),
-    deviceLabel: String(options.deviceLabel || detectDeviceLabel(options.userAgent || getUserAgent(req)) || 'Unknown Device'),
+    deviceLabel: String(
+      options.deviceLabel ||
+        detectDeviceLabel(options.userAgent || getUserAgent(req)) ||
+        'Unknown Device'
+    ),
     loginAt: now,
     lastActivityAt: now,
     lastRefreshAt: now,
@@ -241,9 +291,13 @@ async function issueSessionForUser(user, req, options = {}) {
   return {
     accessToken,
     refreshToken,
-    expiresInSeconds: Math.floor(parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000) / 1000),
+    expiresInSeconds: Math.floor(
+      parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000) / 1000
+    ),
     refreshExpiresInSeconds: Math.floor(getRefreshTtlMs() / 1000),
-    expiresAt: new Date(Date.now() + parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000)),
+    expiresAt: new Date(
+      Date.now() + parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000)
+    ),
     refreshExpiresAt,
     session,
   };
@@ -311,7 +365,13 @@ async function authenticateAccessToken(token, options = {}) {
   const decodedVersion = Number(decoded.tokenVersion || 0);
   const sessionVersion = Number(session.tokenVersion || 0);
   if (decodedVersion && sessionVersion && decodedVersion !== sessionVersion) {
-    return { ok: false, code: 'token_version_mismatch', message: 'token version mismatch', user, session };
+    return {
+      ok: false,
+      code: 'token_version_mismatch',
+      message: 'token version mismatch',
+      user,
+      session,
+    };
   }
 
   if (options.touch !== false) {
@@ -331,7 +391,9 @@ async function authenticateAccessToken(token, options = {}) {
 
 async function revokeSessionById(sessionId, reason = 'logout') {
   const session = await AuthSession.findByPk(String(sessionId || ''));
-  if (!session) return { revoked: false, session: null };
+  if (!session) {
+    return { revoked: false, session: null };
+  }
   if (session.revokedAt || session.status === 'revoked') {
     return { revoked: false, session };
   }
@@ -414,7 +476,12 @@ async function refreshSession(refreshToken, req, options = {}) {
     expiresAt: refreshExpiresAt,
     ipAddress: String(options.ipAddress || getClientIp(req) || session.ipAddress || ''),
     userAgent: String(options.userAgent || getUserAgent(req) || session.userAgent || ''),
-    deviceLabel: String(options.deviceLabel || detectDeviceLabel(options.userAgent || getUserAgent(req) || session.userAgent || '') || session.deviceLabel || 'Unknown Device'),
+    deviceLabel: String(
+      options.deviceLabel ||
+        detectDeviceLabel(options.userAgent || getUserAgent(req) || session.userAgent || '') ||
+        session.deviceLabel ||
+        'Unknown Device'
+    ),
   });
 
   const accessToken = signAccessToken(user.id, session);
@@ -424,9 +491,13 @@ async function refreshSession(refreshToken, req, options = {}) {
     user,
     accessToken,
     refreshToken: nextRefreshToken,
-    expiresInSeconds: Math.floor(parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000) / 1000),
+    expiresInSeconds: Math.floor(
+      parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000) / 1000
+    ),
     refreshExpiresInSeconds: Math.floor(getRefreshTtlMs() / 1000),
-    expiresAt: new Date(Date.now() + parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000)),
+    expiresAt: new Date(
+      Date.now() + parseDurationMs(getAccessExpiresIn(), 7 * 24 * 60 * 60 * 1000)
+    ),
     refreshExpiresAt,
     session,
   };

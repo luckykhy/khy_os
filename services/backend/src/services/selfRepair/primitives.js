@@ -16,9 +16,10 @@
  *   - 全部原语 fail-soft:抛错由编排器吞掉并回退,绝不阻断交付。
  */
 
+const { spawnSync, execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+
 const safety = require('../evolutionSafety');
 
 /** node --check 可解析的纯 JS 扩展名(TS/TSX 交给守卫,不走 node --check)。 */
@@ -26,7 +27,10 @@ const NODE_CHECK_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx']);
 
 function _git(args, cwd) {
   return spawnSync('git', args, {
-    cwd, encoding: 'utf8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'],
+    cwd,
+    encoding: 'utf8',
+    timeout: 30000,
+    stdio: ['pipe', 'pipe', 'pipe'],
     maxBuffer: 50 * 1024 * 1024,
   });
 }
@@ -34,6 +38,38 @@ function _git(args, cwd) {
 function _isGitRepo(dir) {
   const r = _git(['rev-parse', '--is-inside-work-tree'], dir);
   return r.status === 0 && String(r.stdout || '').trim() === 'true';
+}
+
+/**
+ * Non-blocking `node --check`: async execFile shaped like a spawnSync result
+ * ({status, stdout, stderr}) so caller handling stays unchanged. spawnSync here
+ * froze the event loop for the whole changed-file set (measured ~300ms/file ×
+ * 70 files ≈ 22s — the TUI "spinner frozen ~30s after submit" root cause,
+ * since changeWatchService.checkOnce() runs this at every chat turn start).
+ * validateFiles is already async and awaited by every consumer, so switching
+ * the probe to async keeps the contract byte-identical. Never rejects.
+ * @param {string} abs absolute file path
+ * @returns {Promise<{status:number, stdout:string, stderr:string}>}
+ */
+function _nodeCheckAsync(abs) {
+  return new Promise((resolve) => {
+    try {
+      execFile(
+        process.execPath,
+        ['--check', abs],
+        { timeout: 8000, windowsHide: true },
+        (err, stdout, stderr) => {
+          resolve({
+            status: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
+            stdout: String(stdout || ''),
+            stderr: String(stderr || (err && err.message) || ''),
+          });
+        }
+      );
+    } catch (e) {
+      resolve({ status: 1, stdout: '', stderr: String((e && e.message) || e) });
+    }
+  });
 }
 
 /** 把可能的相对路径解析为绝对路径。 */
@@ -53,15 +89,28 @@ let _modelGuard = null;
 let _watchedNames = null;
 let _guardsLoaded = false;
 function _loadGuards() {
-  if (_guardsLoaded) return;
+  if (_guardsLoaded) {
+    return;
+  }
   _guardsLoaded = true;
-  try { _leafGuard = require('../../../../../scripts/lib/leafContractGuard'); } catch { _leafGuard = null; }
+  try {
+    _leafGuard = require('../../../../../scripts/lib/leafContractGuard');
+  } catch {
+    _leafGuard = null;
+  }
   try {
     _modelGuard = require('../../../../../scripts/lib/modelHardcodingGuard');
     let modelsMod = null;
-    try { modelsMod = require('../../constants/models'); } catch { modelsMod = null; }
+    try {
+      modelsMod = require('../../constants/models');
+    } catch {
+      modelsMod = null;
+    }
     _watchedNames = _modelGuard.deriveWatchedNames(modelsMod);
-  } catch { _modelGuard = null; _watchedNames = []; }
+  } catch {
+    _modelGuard = null;
+    _watchedNames = [];
+  }
 }
 
 /**
@@ -75,9 +124,13 @@ function create(opts = {}) {
 
   /** 改前快照:git → {kind:'git', ref};非 git → null(无回滚能力)。 */
   async function snapshot() {
-    if (!_isGitRepo(projectDir)) return null;
+    if (!_isGitRepo(projectDir)) {
+      return null;
+    }
     const r = _git(['stash', 'create'], projectDir);
-    if (r.status !== 0) return null;
+    if (r.status !== 0) {
+      return null;
+    }
     const sha = String(r.stdout || '').trim();
     // 空 = 工作树干净(无未提交改动),改前状态等同 HEAD。
     return { kind: 'git', ref: sha || 'HEAD' };
@@ -85,20 +138,29 @@ function create(opts = {}) {
 
   /** 回滚:只还原改动集到快照状态,保留无关改动。返回是否完整执行。 */
   async function restore(snap, changeSet) {
-    if (!snap || snap.kind !== 'git') return false;
-    const files = (changeSet && Array.isArray(changeSet.validatable) ? changeSet.validatable : [])
-      .concat(changeSet && Array.isArray(changeSet.skipped) ? changeSet.skipped : []);
+    if (!snap || snap.kind !== 'git') {
+      return false;
+    }
+    const files = (
+      changeSet && Array.isArray(changeSet.validatable) ? changeSet.validatable : []
+    ).concat(changeSet && Array.isArray(changeSet.skipped) ? changeSet.skipped : []);
     let ok = true;
     for (const f of files) {
       const abs = _abs(projectDir, f);
       const rel = _relToProject(projectDir, f);
       // 先尝试从快照还原文件内容(改前已存在的文件)。
       const co = _git(['checkout', snap.ref, '--', rel], projectDir);
-      if (co.status === 0) continue;
+      if (co.status === 0) {
+        continue;
+      }
       // 快照里没有此文件 → fix 新建的,删除之。
       try {
-        if (fs.existsSync(abs)) fs.rmSync(abs, { force: true });
-      } catch { ok = false; }
+        if (fs.existsSync(abs)) {
+          fs.rmSync(abs, { force: true });
+        }
+      } catch {
+        ok = false;
+      }
     }
     return ok;
   }
@@ -110,7 +172,9 @@ function create(opts = {}) {
     let tests = { ran: false, ok: true, summary: '' };
     let coverage = null;
 
-    if (plan && plan.runGuards) _loadGuards();
+    if (plan && plan.runGuards) {
+      _loadGuards();
+    }
 
     for (const f of Array.isArray(files) ? files : []) {
       const abs = _abs(projectDir, f);
@@ -126,11 +190,14 @@ function create(opts = {}) {
             syntax.push({ file: rel, line: 1, message: `JSON 解析失败: ${e && e.message}` });
           }
         } else if (NODE_CHECK_EXTS.has(ext)) {
-          const r = spawnSync(process.execPath, ['--check', abs], {
-            encoding: 'utf8', timeout: 8000, stdio: ['pipe', 'pipe', 'pipe'],
-          });
+          // Async probe — MUST NOT block the event loop (see _nodeCheckAsync).
+          const r = await _nodeCheckAsync(abs);
           if (r.status !== 0) {
-            const msg = String(r.stderr || r.stdout || '').trim().split('\n').slice(0, 3).join(' ');
+            const msg = String(r.stderr || r.stdout || '')
+              .trim()
+              .split('\n')
+              .slice(0, 3)
+              .join(' ');
             const lineM = msg.match(/:(\d+)/);
             syntax.push({ file: rel, line: lineM ? parseInt(lineM[1], 10) : 1, message: msg });
           }
@@ -141,40 +208,65 @@ function create(opts = {}) {
       // ── 机器守卫 ────────────────────────────────────────────────
       if (plan && plan.runGuards) {
         let source = '';
-        try { source = fs.readFileSync(abs, 'utf8'); } catch { source = ''; }
+        try {
+          source = fs.readFileSync(abs, 'utf8');
+        } catch {
+          source = '';
+        }
         if (source) {
           try {
             if (_leafGuard) {
               const res = _leafGuard.assessFile({ relPath: rel, source });
-              for (const fd of (res && res.findings) || []) guards.push({ ...fd, relPath: rel });
+              for (const fd of (res && res.findings) || []) {
+                guards.push({ ...fd, relPath: rel });
+              }
             }
-          } catch { /* guard best-effort */ }
+          } catch {
+            /* guard best-effort */
+          }
           try {
             if (_modelGuard) {
-              const res = _modelGuard.assessFile({ relPath: rel, source, watchedNames: _watchedNames || [] });
-              for (const fd of (res && res.findings) || []) guards.push({ ...fd, relPath: rel });
+              const res = _modelGuard.assessFile({
+                relPath: rel,
+                source,
+                watchedNames: _watchedNames || [],
+              });
+              for (const fd of (res && res.findings) || []) {
+                guards.push({ ...fd, relPath: rel });
+              }
             }
-          } catch { /* guard best-effort */ }
+          } catch {
+            /* guard best-effort */
+          }
         }
       }
     }
 
     // ── 受影响测试(可选,best-effort)+ 覆盖率 ────────────────────────
     if (plan && plan.runTests) {
-      const runnable = _runnableTests(files);                 // repo 相对、存在且 node:test 的候选
+      const runnable = _runnableTests(files); // repo 相对、存在且 node:test 的候选
       coverage = safety.assessCoverage({ changedFiles: files, runnableTests: runnable });
       // node --test 在 services/backend 下跑,路径需相对该目录。
       const testFiles = [...runnable].map((c) => c.replace(/^services\/backend\//, ''));
       if (testFiles.length) {
         const r = spawnSync(process.execPath, ['--test', ...testFiles], {
           cwd: path.join(projectDir, 'services', 'backend'),
-          encoding: 'utf8', timeout: 120000, stdio: ['pipe', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: 120000,
+          stdio: ['pipe', 'pipe', 'pipe'],
           env: { ...process.env, KHY_RTK_MODE: 'off' },
         });
         tests = {
           ran: true,
           ok: r.status === 0,
-          summary: r.status === 0 ? '' : String(r.stdout || r.stderr || '').trim().split('\n').slice(-5).join(' '),
+          summary:
+            r.status === 0
+              ? ''
+              : String(r.stdout || r.stderr || '')
+                  .trim()
+                  .split('\n')
+                  .slice(-5)
+                  .join(' '),
         };
       }
     }
@@ -197,13 +289,21 @@ function create(opts = {}) {
     const runnable = new Set();
     for (const sel of safety.selectAffectedTests(files)) {
       const cand = sel.candidate;
-      if (!cand) continue;
+      if (!cand) {
+        continue;
+      }
       try {
         const abs = _candAbs(cand);
-        if (!fs.existsSync(abs)) continue;
+        if (!fs.existsSync(abs)) {
+          continue;
+        }
         const src = fs.readFileSync(abs, 'utf8');
-        if (safety.isNodeTestSource(src)) runnable.add(cand);
-      } catch { /* ignore */ }
+        if (safety.isNodeTestSource(src)) {
+          runnable.add(cand);
+        }
+      } catch {
+        /* ignore */
+      }
     }
     return runnable;
   }

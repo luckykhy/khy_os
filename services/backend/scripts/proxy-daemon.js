@@ -61,18 +61,26 @@ function parseOptions(argv) {
 async function shutdown() {
   try {
     await proxy.stop();
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   process.exit(0);
 }
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 process.on('uncaughtException', (err) => {
-  console.error('[proxy-daemon] uncaughtException:', err && err.message ? err.message : String(err));
+  console.error(
+    '[proxy-daemon] uncaughtException:',
+    err && err.message ? err.message : String(err)
+  );
   process.exit(1);
 });
 process.on('unhandledRejection', (err) => {
-  console.error('[proxy-daemon] unhandledRejection:', err && err.message ? err.message : String(err));
+  console.error(
+    '[proxy-daemon] unhandledRejection:',
+    err && err.message ? err.message : String(err)
+  );
   process.exit(1);
 });
 

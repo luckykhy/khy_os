@@ -1,24 +1,40 @@
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 let _fileHistory;
-try { _fileHistory = require('../services/fileHistoryService'); } catch { _fileHistory = null; }
+try {
+  _fileHistory = require('../services/fileHistoryService');
+} catch {
+  _fileHistory = null;
+}
 
 module.exports = defineTool({
   name: 'writeFile',
-  description: 'Write content to a file on the filesystem',
+  description:
+    'Write (create or fully overwrite) a file with the given content; parent directories are created automatically. ' +
+    'Use it for NEW files or full rewrites; prefer editFile for modifying existing files — overwriting destroys unrelated content. ' +
+    'A snapshot is taken before overwriting an existing file. ' +
+    'Do NOT use this tool merely to output/present an answer to the user; reply with plain text instead. ' +
+    'Only write files when the user explicitly asks to create or save one.',
   category: 'filesystem',
   risk: 'high',
+  searchHint: 'create save new file disk persist 写文件 创建文件 保存文件',
   isReadOnly: false,
   isDestructive: (input) => {
     // Overwriting an existing file is destructive
-    if (!input?.path) return false;
+    if (!input?.path) {
+      return false;
+    }
     try {
       const resolved = require('path').resolve(
-        process.env.KHYQUANT_CWD || process.cwd(), input.path
+        process.env.KHYQUANT_CWD || process.cwd(),
+        input.path
       );
       return require('fs').existsSync(resolved);
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   },
   isConcurrencySafe: false,
 
@@ -26,16 +42,27 @@ module.exports = defineTool({
   maxResultSizeChars: 1000, // write results are tiny
 
   inputSchema: {
-    path: { type: 'string', required: true, description: 'File path (relative to CWD or absolute)' },
-    content: { type: 'string', required: true, description: 'Content to write' },
+    path: {
+      type: 'string',
+      required: true,
+      description:
+        'Target file path, relative to CWD or absolute, e.g. "src/newModule.js". Supports ~ and env vars.',
+      example: 'src/newModule.js',
+    },
+    content: {
+      type: 'string',
+      required: true,
+      description: 'Full text content to write; replaces the entire file if it already exists.',
+    },
   },
 
   async validateInput(input) {
-    const { validateNotUNCPath, validateNoPathTraversal, composeValidations } = require('./inputValidators');
-    return composeValidations(
-      validateNotUNCPath(input.path),
-      validateNoPathTraversal(input.path),
-    );
+    const {
+      validateNotUNCPath,
+      validateNoPathTraversal,
+      composeValidations,
+    } = require('./inputValidators');
+    return composeValidations(validateNotUNCPath(input.path), validateNoPathTraversal(input.path));
   },
 
   getActivityDescription(input) {
@@ -57,7 +84,11 @@ module.exports = defineTool({
       }
       // Map a desktop-alias folder (e.g. ~/桌面) to the OS-canonical desktop so
       // "save it to my desktop" lands where the GUI shows it. Best-effort no-op.
-      try { rawPath = require('./_userDirs').normalizeDesktopPath(rawPath); } catch { /* ignore */ }
+      try {
+        rawPath = require('./_userDirs').normalizeDesktopPath(rawPath);
+      } catch {
+        /* ignore */
+      }
 
       // [SAFE] Re-validate AFTER variable/~ expansion. validateInput() ran the
       // path-confinement check on the RAW params.path, but the expansions above
@@ -72,9 +103,13 @@ module.exports = defineTool({
       {
         const { validateNotUNCPath, validateNoPathTraversal } = require('./inputValidators');
         const uncCheck = validateNotUNCPath(rawPath);
-        if (!uncCheck.valid) return { success: false, error: uncCheck.message };
+        if (!uncCheck.valid) {
+          return { success: false, error: uncCheck.message };
+        }
         const confineCheck = validateNoPathTraversal(rawPath);
-        if (!confineCheck.valid) return { success: false, error: confineCheck.message };
+        if (!confineCheck.valid) {
+          return { success: false, error: confineCheck.message };
+        }
       }
 
       const filePath = path.resolve(cwd, rawPath);
@@ -86,7 +121,11 @@ module.exports = defineTool({
 
       // Take snapshot before overwrite
       if (_fileHistory && fs.existsSync(filePath)) {
-        try { _fileHistory.takeSnapshot(filePath, { reason: 'writeFile' }); } catch { /* non-critical */ }
+        try {
+          _fileHistory.takeSnapshot(filePath, { reason: 'writeFile' });
+        } catch {
+          /* non-critical */
+        }
       }
 
       fs.writeFileSync(filePath, params.content, 'utf-8');

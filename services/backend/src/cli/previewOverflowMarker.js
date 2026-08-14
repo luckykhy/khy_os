@@ -23,7 +23,9 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function previewOverflowPluralEnabled(env = process.env) {
-  const flag = String((env && env.KHY_PREVIEW_OVERFLOW_PLURAL) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_PREVIEW_OVERFLOW_PLURAL) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -34,13 +36,17 @@ function previewOverflowPluralEnabled(env = process.env) {
 //   门控 KHY_PREVIEW_OVERFLOW_INLINE_ONE 默认开:hidden===1 → 内联(keep=previewMax+1、
 //   hidden=0、无标记);关 → 逐字节回退历史(hidden===1 仍显 `+1 line` 标记)。
 function foldInlineSingleEnabled(env = process.env) {
-  const flag = String((env && env.KHY_PREVIEW_OVERFLOW_INLINE_ONE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_PREVIEW_OVERFLOW_INLINE_ONE) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
 // 复数守卫:门控关 → 恒复数(legacy 字节回退);门控开 → CC 约定 `=== 1` 守单数。
 function _noun(base, n, env) {
-  if (!previewOverflowPluralEnabled(env)) return `${base}s`;
+  if (!previewOverflowPluralEnabled(env)) {
+    return `${base}s`;
+  }
   return `${base}${n === 1 ? '' : 's'}`;
 }
 
@@ -65,10 +71,14 @@ function _count(n) {
 function resolveFold(total, previewMax, env = process.env) {
   const t = _count(total);
   const p = _count(previewMax);
-  if (t <= p) return { keep: t, hidden: 0 }; // 放得下 —— 无隐藏
+  if (t <= p) {
+    return { keep: t, hidden: 0 };
+  } // 放得下 —— 无隐藏
   const hidden = t - p;
   // CC 规则:恰藏 1 行 → 内联那一行(keep=previewMax+1),不发标记。
-  if (foldInlineSingleEnabled(env) && hidden === 1) return { keep: p + 1, hidden: 0 };
+  if (foldInlineSingleEnabled(env) && hidden === 1) {
+    return { keep: p + 1, hidden: 0 };
+  }
   return { keep: p, hidden };
 }
 

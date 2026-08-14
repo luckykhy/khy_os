@@ -15,9 +15,10 @@
  * @module handlers/rtk
  */
 const chalk = require('chalk').default || require('chalk');
-const { printInfo, printError, printSuccess, printWarn, printTable } = require('../formatters');
-const rtkMode = require('../../services/rtkMode');
 const rtkEffectiveState = require('../../services/rtkEffectiveState');
+const rtkMode = require('../../services/rtkMode');
+const { printInfo, printError, printSuccess, printWarn, printTable } = require('../formatters');
+const { formatStatusMessage } = require('../statusMessageFormatter');
 
 async function _handleStatus() {
   const bin = await rtkMode.resolveBinary();
@@ -31,17 +32,26 @@ async function _handleStatus() {
     process.env
   );
   if (eff) {
-    const tone = eff.status === 'active' ? chalk.green
-      : eff.status === 'pending-install' ? chalk.yellow
-      : chalk.yellow;
+    const tone =
+      eff.status === 'active'
+        ? chalk.green
+        : eff.status === 'pending-install'
+          ? chalk.yellow
+          : chalk.yellow;
     printInfo(`  状态:${tone(eff.label)}(KHY_RTK_MODE)`);
-    if (eff.hint) printInfo(`  ${chalk.dim(eff.hint)}`);
+    if (eff.hint) {
+      printInfo(`  ${chalk.dim(eff.hint)}`);
+    }
   } else {
     printInfo(`  状态:${enabled ? chalk.green('已启用') : chalk.yellow('已关闭')}(KHY_RTK_MODE)`);
   }
 
-  printInfo(`  文件工具(grep content):${rtkMode.fileToolsEnabled() ? chalk.green('开') : chalk.yellow('关')}(KHY_RTK_FILE_TOOLS)`);
-  printInfo(`  自动安装:${rtkMode.autoInstallEnabled() ? chalk.green('开') : chalk.yellow('关')}(KHY_RTK_AUTO_INSTALL)`);
+  printInfo(
+    `  文件工具(grep content):${rtkMode.fileToolsEnabled() ? chalk.green('开') : chalk.yellow('关')}(KHY_RTK_FILE_TOOLS)`
+  );
+  printInfo(
+    `  自动安装:${rtkMode.autoInstallEnabled() ? chalk.green('开') : chalk.yellow('关')}(KHY_RTK_AUTO_INSTALL)`
+  );
   if (bin) {
     const version = rtkMode.probeVersion({ bin }) || '(版本未知)';
     printInfo(`  二进制:${chalk.cyan(bin)}`);
@@ -49,9 +59,11 @@ async function _handleStatus() {
   } else {
     printWarn('  二进制:未找到(rtk 未安装)。');
     printInfo(`  立即安装:${chalk.cyan('khy rtk install')}`);
-    printInfo(rtkMode.autoInstallEnabled()
-      ? '  (或首次跑 shell 命令时会尝试自动安装:cargo / 官方 install.sh)'
-      : '  自动安装已关闭;或手动安装见 https://github.com/rtk-ai/rtk');
+    printInfo(
+      rtkMode.autoInstallEnabled()
+        ? '  (或首次跑 shell 命令时会尝试自动安装:cargo / 官方 install.sh)'
+        : '  自动安装已关闭;或手动安装见 https://github.com/rtk-ai/rtk'
+    );
   }
   printInfo('');
   printInfo(`  查看省量:${chalk.cyan('khy rtk gain')}    开关:${chalk.cyan('khy rtk on|off')}`);
@@ -82,11 +94,15 @@ async function _handleInstall() {
 
   if (!rtkMode.autoInstallEnabled()) {
     printWarn('自动安装当前关闭(KHY_RTK_AUTO_INSTALL=off)。');
-    printInfo('开启后重试:khy capability on rtk_auto_install,或手动装:https://github.com/rtk-ai/rtk');
+    printInfo(
+      '开启后重试:khy capability on rtk_auto_install,或手动装:https://github.com/rtk-ai/rtk'
+    );
     return true;
   }
 
-  printInfo('正在安装 rtk(优先 cargo,失败回落官方 install.sh)…可能需要联网/编译,请稍候。');
+  printInfo(
+    formatStatusMessage('安装', 'rtk', '优先 cargo，失败回落官方 install.sh，可能需联网编译')
+  );
   let res;
   try {
     res = await installer.ensureInstalled();
@@ -110,9 +126,11 @@ async function _handleGain(options = {}) {
   const bin = await rtkMode.resolveBinary();
   if (!bin) {
     printError('rtk 未安装,无统计可显示。');
-    printInfo(rtkMode.autoInstallEnabled()
-      ? '首次跑 shell 命令时会自动安装,之后再试 `khy rtk gain`。'
-      : '开启自动安装(KHY_RTK_AUTO_INSTALL)或手动安装:https://github.com/rtk-ai/rtk');
+    printInfo(
+      rtkMode.autoInstallEnabled()
+        ? '首次跑 shell 命令时会自动安装,之后再试 `khy rtk gain`。'
+        : '开启自动安装(KHY_RTK_AUTO_INSTALL)或手动安装:https://github.com/rtk-ai/rtk'
+    );
     return true;
   }
   const res = rtkMode.runGain({ bin, project: !!options.project });
@@ -122,9 +140,13 @@ async function _handleGain(options = {}) {
   }
   // 直通原始报表(rtk 自带美观表格),并附 khy 侧一行汇总。
   const s = res.stats || {};
-  if (res.raw) console.log(res.raw);
+  if (res.raw) {
+    console.log(res.raw);
+  }
   if (s.tokensSaved && s.savedPercent != null) {
-    printSuccess(`RTK 已为 khy 省下约 ${s.tokensSaved} tokens(${s.savedPercent}%),覆盖 ${s.totalCommands ?? '?'} 条命令。`);
+    printSuccess(
+      `RTK 已为 khy 省下约 ${s.tokensSaved} tokens(${s.savedPercent}%),覆盖 ${s.totalCommands ?? '?'} 条命令。`
+    );
   }
   return true;
 }
@@ -140,8 +162,11 @@ function _handleToggle(turnOn) {
   const value = turnOn ? 'true' : 'false';
   const envPath = writeEnvPatch({ KHY_RTK_MODE: value });
   process.env.KHY_RTK_MODE = value; // 当前进程立即生效
-  if (turnOn) printSuccess('RTK 省 token 模式已开启(KHY_RTK_MODE=true)。');
-  else printSuccess('RTK 省 token 模式已关闭(KHY_RTK_MODE=false)——回到原生命令 + smartTruncation。');
+  if (turnOn) {
+    printSuccess('RTK 省 token 模式已开启(KHY_RTK_MODE=true)。');
+  } else {
+    printSuccess('RTK 省 token 模式已关闭(KHY_RTK_MODE=false)——回到原生命令 + smartTruncation。');
+  }
   printInfo(`已写入:${envPath}`);
   return true;
 }
@@ -150,7 +175,9 @@ function _handleToggle(turnOn) {
  * @param {{ subCommand?:string, args?:string[], options?:object }} parsed
  */
 async function handleRtk(parsed = {}) {
-  const sub = String(parsed.subCommand || (Array.isArray(parsed.args) && parsed.args[0]) || 'status').toLowerCase();
+  const sub = String(
+    parsed.subCommand || (Array.isArray(parsed.args) && parsed.args[0]) || 'status'
+  ).toLowerCase();
   const options = parsed.options || {};
   switch (sub) {
     case 'gain':

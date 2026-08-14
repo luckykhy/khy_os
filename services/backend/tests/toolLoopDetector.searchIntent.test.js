@@ -91,3 +91,54 @@ describe('extractSearchIntent', () => {
     expect(a).toBe(b);
   });
 });
+
+describe('extractSearchIntent — pagination awareness (task #7 regression)', () => {
+  test('same query, different page → distinct signatures (paging is not a repeat)', () => {
+    const p1 = extractSearchIntent({ query: '曲靖天气' });
+    const p2 = extractSearchIntent({ query: '曲靖天气', page: 2 });
+    expect(p1).not.toBeNull();
+    expect(p2).not.toBeNull();
+    expect(p1).not.toBe(p2);
+  });
+
+  test('cursor / offset params also break the signature', () => {
+    const base = extractSearchIntent({ query: 'rust tokenizer' });
+    expect(extractSearchIntent({ query: 'rust tokenizer', offset: 20 })).not.toBe(base);
+    expect(extractSearchIntent({ query: 'rust tokenizer', cursor: 'abc' })).not.toBe(base);
+    expect(extractSearchIntent({ query: 'rust tokenizer', pageToken: 'z9' })).not.toBe(base);
+  });
+
+  test('pagination signature is order-independent and value-sensitive', () => {
+    const a = extractSearchIntent({ query: 'k', page: 2, offset: 10 });
+    const b = extractSearchIntent({ query: 'k', offset: 10, page: 2 });
+    expect(a).toBe(b);
+    expect(extractSearchIntent({ query: 'k', page: 3 })).not.toBe(
+      extractSearchIntent({ query: 'k', page: 2 }));
+  });
+
+  test('empty / absent pagination values keep the bare signature', () => {
+    const bare = extractSearchIntent({ query: 'k' });
+    expect(extractSearchIntent({ query: 'k', page: '' })).toBe(bare);
+    expect(extractSearchIntent({ query: 'k', page: null })).toBe(bare);
+    expect(extractSearchIntent({ query: 'k', page: undefined })).toBe(bare);
+  });
+});
+
+describe('extractSearchIntent — CJK stopword-run short-circuit (task #7 regression)', () => {
+  test('a run made entirely of CJK stopwords → null (no cross-boundary pseudo-bigram)', () => {
+    expect(extractSearchIntent({ query: '今天最新' })).toBeNull();
+  });
+
+  test('real content words after stopwords still survive', () => {
+    const sig = extractSearchIntent({ query: '今天最新新闻' });
+    expect(sig).not.toBeNull();
+    expect(sig).toContain('新闻');
+  });
+
+  test('particle-only rewrites still collapse to the same signature (fold preserved)', () => {
+    const a = extractSearchIntent({ query: '曲靖天气' });
+    const b = extractSearchIntent({ query: '曲靖的天气' });
+    expect(a).not.toBeNull();
+    expect(a).toBe(b);
+  });
+});

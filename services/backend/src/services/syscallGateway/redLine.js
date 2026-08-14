@@ -77,9 +77,13 @@ function describe(intent) {
   let summary;
   if (red) {
     const action = intent && intent.action;
-    if (RED_LINE_ACTION_LABELS[action]) summary = `红线操作：${RED_LINE_ACTION_LABELS[action]}`;
-    else if (intent && intent.isDestructive === true) summary = `红线操作：${DESTRUCTIVE_SUMMARY}`;
-    else summary = '红线操作：高危 / 不可逆，需明确确认';
+    if (RED_LINE_ACTION_LABELS[action]) {
+      summary = `红线操作：${RED_LINE_ACTION_LABELS[action]}`;
+    } else if (intent && intent.isDestructive === true) {
+      summary = `红线操作：${DESTRUCTIVE_SUMMARY}`;
+    } else {
+      summary = '红线操作：高危 / 不可逆，需明确确认';
+    }
   } else if (level === LEVELS.L1) {
     summary = '有限影响：可逆的写入 / 网络 / 进程操作，确认一次即可';
   } else {

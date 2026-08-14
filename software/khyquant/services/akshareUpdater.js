@@ -13,15 +13,17 @@ const https = require('https');
 class AKShareUpdater {
   constructor() {
     this.checkInterval = 24 * 60 * 60 * 1000; // 24 hours
-    this.lastCheckFile = path.join(__dirname, '../../temp/akshare_version_check.json');
-    this.updateLogFile = path.join(__dirname, '../../temp/akshare_update.log');
+    // khyquant runtime scratch lives inside the project data home (.khy/khyquant/temp)
+    const dataTemp = path.join(__dirname, '../../..', '.khy', 'khyquant', 'temp');
+    this.lastCheckFile = path.join(dataTemp, 'akshare_version_check.json');
+    this.updateLogFile = path.join(dataTemp, 'akshare_update.log');
     this.isUpdating = false;
     this.currentVersion = null;
     this.latestVersion = null;
     this.lastCheckTime = null;
     this.updateHistory = [];
 
-    const tempDir = path.join(__dirname, '../../temp');
+    const tempDir = dataTemp;
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }

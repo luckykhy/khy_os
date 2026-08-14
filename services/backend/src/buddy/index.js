@@ -13,14 +13,20 @@
 
 const { rollBones, loadSoul, saveSoul, getCompanion, getUserId } = require('./companion');
 const {
-  renderCard, renderHeartAnimation, renderHatchAnimation,
-  startAnimation, renderNarrowFallback, colorize,
+  renderCard,
+  renderHeartAnimation,
+  renderHatchAnimation,
+  startAnimation,
+  renderNarrowFallback,
+  colorize,
 } = require('./renderer');
 const { RARITY_COLORS } = require('./types');
 
 let _chalk;
 function chalk() {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const m = require('chalk');
   _chalk = m.default || m;
   return _chalk;
@@ -41,7 +47,9 @@ async function handleBuddyCommand(subCommand, args, options) {
       console.log(chalk().gray('Buddy feature is disabled. Set KHY_FEATURE_BUDDY=true to enable.'));
       return true;
     }
-  } catch { /* featureFlags not available */ }
+  } catch {
+    /* featureFlags not available */
+  }
 
   const userId = getUserId();
   const c = chalk();
@@ -69,7 +77,7 @@ async function handleBuddyCommand(subCommand, args, options) {
         console.log(renderCard(companion));
       } else {
         const bones = rollBones(userId);
-        console.log(c.yellow('\n  You don\'t have a companion yet!'));
+        console.log(c.yellow("\n  You don't have a companion yet!"));
         console.log(c.gray(`  Your companion awaits: a ${c.bold(bones.species.name)}...`));
         console.log(c.cyan('  Run ') + c.bold('/buddy hatch') + c.cyan(' to meet them!\n'));
       }
@@ -95,7 +103,9 @@ async function _handleHatch(userId, args, c) {
   // Hatch animation
   try {
     await renderHatchAnimation(bones);
-  } catch { /* animation failed, continue */ }
+  } catch {
+    /* animation failed, continue */
+  }
 
   // Get name from args or prompt
   let name = args.join(' ').trim();
@@ -129,10 +139,9 @@ async function _handleHatch(userId, args, c) {
   console.log(renderCard(companion));
 
   const shinyMsg = bones.shiny ? c.yellow(' \u2728 SHINY!!! ') : '';
-  console.log(colorize(
-    `  A ${bones.rarity.toUpperCase()} ${bones.species.name}!${shinyMsg}`,
-    bones.rarity,
-  ));
+  console.log(
+    colorize(`  A ${bones.rarity.toUpperCase()} ${bones.species.name}!${shinyMsg}`, bones.rarity)
+  );
   console.log(c.gray(`  "${personality}"\n`));
 
   return true;
@@ -149,7 +158,9 @@ async function _handlePet(userId, c) {
 
   try {
     await renderHeartAnimation();
-  } catch { /* animation failed */ }
+  } catch {
+    /* animation failed */
+  }
 
   const reactions = [
     `${companion.name} purrs contentedly.`,
@@ -192,24 +203,24 @@ async function _handleMute(mute, c) {
 
 function _generatePersonality(bones) {
   const traits = {
-    duck:     ['quirky', 'loyal', 'surprisingly wise'],
-    goose:    ['chaotic', 'assertive', 'surprisingly helpful'],
-    cat:      ['independent', 'elegant', 'secretly caring'],
-    dragon:   ['fierce', 'protective', 'ancient wisdom'],
-    octopus:  ['clever', 'adaptable', 'multitasking'],
-    owl:      ['wise', 'observant', 'nocturnal coding buddy'],
-    penguin:  ['determined', 'social', 'cold-resistant'],
-    turtle:   ['patient', 'steady', 'reliable'],
-    snail:    ['methodical', 'persistent', 'detail-oriented'],
-    ghost:    ['mysterious', 'phasing through bugs', 'ethereal'],
-    axolotl:  ['regenerative', 'adorable', 'resilient'],
-    capybara: ['chill', 'everyone\'s friend', 'zen-like'],
-    cactus:   ['tough', 'low-maintenance', 'prickly but lovable'],
-    robot:    ['logical', 'efficient', 'occasionally glitchy'],
-    rabbit:   ['energetic', 'quick-witted', 'fluffy'],
+    duck: ['quirky', 'loyal', 'surprisingly wise'],
+    goose: ['chaotic', 'assertive', 'surprisingly helpful'],
+    cat: ['independent', 'elegant', 'secretly caring'],
+    dragon: ['fierce', 'protective', 'ancient wisdom'],
+    octopus: ['clever', 'adaptable', 'multitasking'],
+    owl: ['wise', 'observant', 'nocturnal coding buddy'],
+    penguin: ['determined', 'social', 'cold-resistant'],
+    turtle: ['patient', 'steady', 'reliable'],
+    snail: ['methodical', 'persistent', 'detail-oriented'],
+    ghost: ['mysterious', 'phasing through bugs', 'ethereal'],
+    axolotl: ['regenerative', 'adorable', 'resilient'],
+    capybara: ['chill', "everyone's friend", 'zen-like'],
+    cactus: ['tough', 'low-maintenance', 'prickly but lovable'],
+    robot: ['logical', 'efficient', 'occasionally glitchy'],
+    rabbit: ['energetic', 'quick-witted', 'fluffy'],
     mushroom: ['grounded', 'spore-adic wisdom', 'growing on you'],
-    jelly:    ['flowing', 'luminescent', 'going with the flow'],
-    chonk:    ['round', 'powerful', 'absolute unit'],
+    jelly: ['flowing', 'luminescent', 'going with the flow'],
+    chonk: ['round', 'powerful', 'absolute unit'],
   };
 
   const speciesTraits = traits[bones.species.id] || ['curious', 'friendly', 'unique'];

@@ -23,7 +23,9 @@
  */
 
 function _enabled() {
-  const v = String(process.env.KHY_PERMISSION_FALLBACK || '').trim().toLowerCase();
+  const v = String(process.env.KHY_PERMISSION_FALLBACK || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -34,12 +36,16 @@ const MAX_ALTERNATIVE_ATTEMPTS = 1;
 /** 稳定参数签名(键排序后 JSON),用于识别「同一被拒调用」。fail-soft 返回 ''。 */
 function paramSignature(params) {
   try {
-    if (!params || typeof params !== 'object') return '';
-    const keys = Object.keys(params).filter((k) => !k.startsWith('_')).sort();
+    if (!params || typeof params !== 'object') {
+      return '';
+    }
+    const keys = Object.keys(params)
+      .filter((k) => !k.startsWith('_'))
+      .sort();
     const flat = {};
     for (const k of keys) {
       const v = params[k];
-      flat[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
+      flat[k] = v && typeof v === 'object' ? JSON.stringify(v) : v;
     }
     return JSON.stringify(flat);
   } catch {
@@ -63,7 +69,9 @@ function denyKey(toolName, params) {
  */
 function evaluateDeny(priorKeys, key) {
   try {
-    if (!_enabled()) return { stop: true, isRepeat: false, attempt: 0 };
+    if (!_enabled()) {
+      return { stop: true, isRepeat: false, attempt: 0 };
+    }
     const prior = Array.isArray(priorKeys) ? priorKeys : [];
     const isRepeat = prior.includes(key);
     // 已尝试过的 distinct 替代次数(不含本次重复)。
@@ -78,13 +86,41 @@ function evaluateDeny(priorKeys, key) {
 
 // 工具名关键词 → 权限类别(零启发式:按词命中,缺省泛化)。
 const _TOOL_PERMISSION_RULES = [
-  { re: /(write|edit|create|mkdir|append|save)/i, perm: '文件写入权限', how: '在权限框选择「允许本次」或「本会话内同类免审」;或确认该工具可写入当前工作区。' },
-  { re: /(delete|remove|\brm\b|erase|unlink|rmdir)/i, perm: '文件删除权限', how: '在权限框选择「允许本次」(删除属高危,请确认目标无误后再授予)。' },
-  { re: /(bash|shell|exec|command|\brun\b|spawn|process)/i, perm: '命令执行权限', how: '在权限框选择「允许本次」;高危命令需在 L2 框中输入确认词执行。' },
-  { re: /(http|fetch|curl|web|network|download|request|url)/i, perm: '网络访问权限', how: '在权限框选择「允许本次」;或设置允许联网的相关开关。' },
-  { re: /(desktop|screenshot|screen|click|type|mouse|keyboard|control)/i, perm: '桌面控制权限', how: '在权限框选择「允许本次」,并确保桌面控制已开启(KHY_DESKTOP_CONTROL=on)。' },
-  { re: /(database|\bsql\b|query|\bdb\b)/i, perm: '数据库访问权限', how: '在权限框选择「允许本次」;并确认已配置数据库连接(KHY_DB_DIALECT / KHY_DB_URL)。' },
-  { re: /(git|commit|push|merge)/i, perm: '版本库写入权限', how: '在权限框选择「允许本次」(提交/推送会改动版本库,请确认)。' },
+  {
+    re: /(write|edit|create|mkdir|append|save)/i,
+    perm: '文件写入权限',
+    how: '在权限框选择「允许本次」或「本会话内同类免审」;或确认该工具可写入当前工作区。',
+  },
+  {
+    re: /(delete|remove|\brm\b|erase|unlink|rmdir)/i,
+    perm: '文件删除权限',
+    how: '在权限框选择「允许本次」(删除属高危,请确认目标无误后再授予)。',
+  },
+  {
+    re: /(bash|shell|exec|command|\brun\b|spawn|process)/i,
+    perm: '命令执行权限',
+    how: '在权限框选择「允许本次」;高危命令需在 L2 框中输入确认词执行。',
+  },
+  {
+    re: /(http|fetch|curl|web|network|download|request|url)/i,
+    perm: '网络访问权限',
+    how: '在权限框选择「允许本次」;或设置允许联网的相关开关。',
+  },
+  {
+    re: /(desktop|screenshot|screen|click|type|mouse|keyboard|control)/i,
+    perm: '桌面控制权限',
+    how: '在权限框选择「允许本次」,并确保桌面控制已开启(KHY_DESKTOP_CONTROL=on)。',
+  },
+  {
+    re: /(database|\bsql\b|query|\bdb\b)/i,
+    perm: '数据库访问权限',
+    how: '在权限框选择「允许本次」;并确认已配置数据库连接(KHY_DB_DIALECT / KHY_DB_URL)。',
+  },
+  {
+    re: /(git|commit|push|merge)/i,
+    perm: '版本库写入权限',
+    how: '在权限框选择「允许本次」(提交/推送会改动版本库,请确认)。',
+  },
 ];
 
 /**
@@ -99,23 +135,41 @@ function describeRequiredPermission(toolName, denyResult = {}) {
   try {
     const r = denyResult || {};
     if (r._planReadOnlyBlocked || r._planModeBlocked) {
-      return { permission: '退出「计划模式」(计划模式下仅允许只读操作)', howToGrant: '先退出 plan/计划模式,再让我重试这一步。' };
+      return {
+        permission: '退出「计划模式」(计划模式下仅允许只读操作)',
+        howToGrant: '先退出 plan/计划模式,再让我重试这一步。',
+      };
     }
     if (r._hookBlocked) {
-      return { permission: '通过 PreToolUse 钩子放行', howToGrant: '检查并调整本仓 PreToolUse 钩子策略,使该操作被允许。' };
+      return {
+        permission: '通过 PreToolUse 钩子放行',
+        howToGrant: '检查并调整本仓 PreToolUse 钩子策略,使该操作被允许。',
+      };
     }
     if (r._capabilityFloorBlocked) {
-      return { permission: '满足「能力地板」所要求的最低能力授权', howToGrant: '在权限/能力设置中为该操作授予所需的最低能力。' };
+      return {
+        permission: '满足「能力地板」所要求的最低能力授权',
+        howToGrant: '在权限/能力设置中为该操作授予所需的最低能力。',
+      };
     }
     if (r._gatewayBlocked) {
-      return { permission: '高危系统调用执行权限(syscall 网关 L2)', howToGrant: '重新运行并在权限框选择「确认执行此高危操作」并输入确认词;反复被拒会触发熔断,稍后再试。' };
+      return {
+        permission: '高危系统调用执行权限(syscall 网关 L2)',
+        howToGrant:
+          '重新运行并在权限框选择「确认执行此高危操作」并输入确认词;反复被拒会触发熔断,稍后再试。',
+      };
     }
     // 普通用户拒绝:按工具名归类。
     const name = String(toolName || '');
     for (const rule of _TOOL_PERMISSION_RULES) {
-      if (rule.re.test(name)) return { permission: rule.perm, howToGrant: rule.how };
+      if (rule.re.test(name)) {
+        return { permission: rule.perm, howToGrant: rule.how };
+      }
     }
-    return { permission: `执行「${name || '该操作'}」的授权`, howToGrant: '在权限框选择「允许本次」或「本会话内同类免审」。' };
+    return {
+      permission: `执行「${name || '该操作'}」的授权`,
+      howToGrant: '在权限框选择「允许本次」或「本会话内同类免审」。',
+    };
   } catch {
     return { permission: '完成该操作所需的授权', howToGrant: '在权限框选择「允许本次」。' };
   }
@@ -130,7 +184,9 @@ function describeRequiredPermission(toolName, denyResult = {}) {
  * @returns {string}
  */
 function buildDenyGuidance(toolName, denyResult = {}) {
-  if (!_enabled()) return '';
+  if (!_enabled()) {
+    return '';
+  }
   try {
     const { permission, howToGrant } = describeRequiredPermission(toolName, denyResult);
     return [
@@ -156,13 +212,20 @@ function buildExhaustedMessage(deniedList) {
     const seen = new Set();
     const lines = [];
     for (const item of list) {
-      const { permission, howToGrant } = describeRequiredPermission(item && item.tool, item && item.denyResult);
+      const { permission, howToGrant } = describeRequiredPermission(
+        item && item.tool,
+        item && item.denyResult
+      );
       const k = `${permission}||${howToGrant}`;
-      if (seen.has(k)) continue;
+      if (seen.has(k)) {
+        continue;
+      }
       seen.add(k);
       lines.push(`- 「${permission}」:${howToGrant}`);
     }
-    const permBlock = lines.length ? lines.join('\n') : '- 完成该操作所需的授权:在权限框选择「允许本次」。';
+    const permBlock = lines.length
+      ? lines.join('\n')
+      : '- 完成该操作所需的授权:在权限框选择「允许本次」。';
     return [
       '⚠ 我已尝试用其它方法完成这一步,但在当前权限下仍无法做到。',
       '',

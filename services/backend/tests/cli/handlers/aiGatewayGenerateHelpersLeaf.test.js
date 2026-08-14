@@ -25,6 +25,8 @@ const ENTRY_POINTS = [
   '_buildToolFallbackReply', '_salvageRecentToolResult', '_extractPlan', '_buildWorkSummary',
   '_toolProgressLabel', '_runNaturalToolCallWithIdleTimeout', '_formatGatewayFailureDetails',
   '_directGenerate', '_shouldInjectTaskSelfAwareness',
+  '_buildWrapUpPrompt', '_buildStepDriverPrompt', '_buildStepRecoveryPrompt', '_buildResumePlanPrompt',
+  '_wrapUpEnabled', '_annotateTruncation', '_buildRecoveryAttemptsNote',
 ];
 
 test('leaf exports the gateway-generation helper entry points + DI setter as functions', () => {

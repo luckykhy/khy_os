@@ -66,6 +66,14 @@ describe('boulderState', () => {
     expect(typeof loaded.lastCheckpointAt).toBe('number');
   });
 
+  // Direct SQLite handle (the service stores checkpoints in SQLite, not the
+  // legacy JSON file) for backdating / corrupting a record.
+  function dbHandle() {
+    const Database = require('../../src/config/sqlite-adapter');
+    const dbPath = path.join(mockBoulderDir, 'boulder', 'boulder.db');
+    return { db: new Database(dbPath), dbPath };
+  }
+
   // ── 24h expiry ──
   test('returns null for expired checkpoint (>24h)', () => {
     saveBoulderState(cwd1, {
@@ -74,16 +82,14 @@ describe('boulderState', () => {
       status: 'in_progress',
     });
 
-    // Manually backdate the checkpoint
-    const filePath = _boulderPath(cwd1);
-    const record = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    record.lastCheckpointAt = Date.now() - TTL_MS - 1000; // 24h + 1s ago
-    fs.writeFileSync(filePath, JSON.stringify(record), 'utf-8');
+    // Manually backdate the checkpoint (updated_at drives the TTL check).
+    const { db } = dbHandle();
+    db.prepare('UPDATE checkpoints SET updated_at = ? WHERE cwd_hash = ?')
+      .run(Date.now() - TTL_MS - 1000, _cwdHash(cwd1));
+    db.close();
 
     const loaded = loadBoulderState(cwd1);
     expect(loaded).toBeNull();
-    // File should also be cleaned up
-    expect(fs.existsSync(filePath)).toBe(false);
   });
 
   // ── clear ──
@@ -162,19 +168,24 @@ describe('boulderState', () => {
     expect(loadBoulderState(undefined)).toBeNull();
   });
 
-  test('loadBoulderState returns null for corrupted file', () => {
+  test('loadBoulderState returns null for corrupted data', () => {
     saveBoulderState(cwd1, { userMessage: 'test', status: 'in_progress' });
-    const filePath = _boulderPath(cwd1);
-    fs.writeFileSync(filePath, '{invalid json!!', 'utf-8');
+    const { db } = dbHandle();
+    db.prepare('UPDATE checkpoints SET data = ? WHERE cwd_hash = ?')
+      .run('{invalid json!!', _cwdHash(cwd1));
+    db.close();
     expect(loadBoulderState(cwd1)).toBeNull();
   });
 
   test('loadBoulderState returns null for wrong schema version', () => {
     saveBoulderState(cwd1, { userMessage: 'test', status: 'in_progress' });
-    const filePath = _boulderPath(cwd1);
-    const record = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const { db } = dbHandle();
+    const row = db.prepare('SELECT data FROM checkpoints WHERE cwd_hash = ?').get(_cwdHash(cwd1));
+    const record = JSON.parse(row.data);
     record.schemaVersion = 999;
-    fs.writeFileSync(filePath, JSON.stringify(record), 'utf-8');
+    db.prepare('UPDATE checkpoints SET data = ? WHERE cwd_hash = ?')
+      .run(JSON.stringify(record), _cwdHash(cwd1));
+    db.close();
     expect(loadBoulderState(cwd1)).toBeNull();
   });
 });

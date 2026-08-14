@@ -34,13 +34,27 @@ let getSecurity = null;
 let getTokenUsage = null;
 let getToolCalling = null;
 function setConversationsPromptsDeps(deps = {}) {
-  if (typeof deps.sendJson === 'function') sendJson = deps.sendJson;
-  if (typeof deps.sendError === 'function') sendError = deps.sendError;
-  if (typeof deps.parseBody === 'function') parseBody = deps.parseBody;
-  if (typeof deps.authenticateRequest === 'function') authenticateRequest = deps.authenticateRequest;
-  if (typeof deps.getSecurity === 'function') getSecurity = deps.getSecurity;
-  if (typeof deps.getTokenUsage === 'function') getTokenUsage = deps.getTokenUsage;
-  if (typeof deps.getToolCalling === 'function') getToolCalling = deps.getToolCalling;
+  if (typeof deps.sendJson === 'function') {
+    sendJson = deps.sendJson;
+  }
+  if (typeof deps.sendError === 'function') {
+    sendError = deps.sendError;
+  }
+  if (typeof deps.parseBody === 'function') {
+    parseBody = deps.parseBody;
+  }
+  if (typeof deps.authenticateRequest === 'function') {
+    authenticateRequest = deps.authenticateRequest;
+  }
+  if (typeof deps.getSecurity === 'function') {
+    getSecurity = deps.getSecurity;
+  }
+  if (typeof deps.getTokenUsage === 'function') {
+    getTokenUsage = deps.getTokenUsage;
+  }
+  if (typeof deps.getToolCalling === 'function') {
+    getToolCalling = deps.getToolCalling;
+  }
 }
 
 // ── Per-user AI chat conversations (backend-persisted sidebar history) ───────
@@ -50,16 +64,21 @@ function setConversationsPromptsDeps(deps = {}) {
 // bootstrap only happens on first use (matches the daemon's boot-order idiom).
 let _conversationStore = null;
 function getConversationStore() {
-  if (!_conversationStore) _conversationStore = require('./conversationStore');
+  if (!_conversationStore) {
+    _conversationStore = require('./conversationStore');
+  }
   return _conversationStore;
 }
 
 // Resolve the authenticated user's id (0 for the local-owner bypass modes).
 // Sends a 401 envelope and returns null when auth fails; legitimate id 0 passes.
 async function resolveAuthUserId(req, res) {
-  const auth = req.authContext || await authenticateRequest(req);
+  const auth = req.authContext || (await authenticateRequest(req));
   if (!auth || !auth.ok) {
-    sendJson(res, 401, { success: false, message: (auth && auth.error) || 'Authentication required' });
+    sendJson(res, 401, {
+      success: false,
+      message: (auth && auth.error) || 'Authentication required',
+    });
     return null;
   }
   return auth.user?.id ?? 0;
@@ -67,7 +86,9 @@ async function resolveAuthUserId(req, res) {
 
 async function handleListAiConversations(req, res, query) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     // Optional ?projectId=<id> filters the sidebar to one coding project; absent
     // → full list (unchanged behavior). Store treats blank/invalid as null.
@@ -81,7 +102,9 @@ async function handleListAiConversations(req, res, query) {
 
 async function handleCreateAiConversation(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getConversationStore().create(userId, body || {});
@@ -93,7 +116,9 @@ async function handleCreateAiConversation(req, res) {
 
 async function handleGetAiConversation(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getConversationStore().get(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -104,7 +129,9 @@ async function handleGetAiConversation(req, res, id) {
 
 async function handleUpdateAiConversation(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getConversationStore().update(userId, id, body || {});
@@ -116,7 +143,9 @@ async function handleUpdateAiConversation(req, res, id) {
 
 async function handleDeleteAiConversation(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getConversationStore().remove(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -134,13 +163,35 @@ async function handleDeleteAiConversation(req, res, id) {
 // is what a "context is N% full" indicator must show. Read-only, no DB write.
 async function handleAiContextStats(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const messages = Array.isArray(body && body.messages) ? body.messages : [];
-    const contextWindow = body && body.contextWindow;
+    let contextWindow = body && body.contextWindow;
+    const model = body && typeof body.model === 'string' ? body.model.trim() : '';
+    // No explicit window but the client named its active model → resolve the
+    // real window from the gateway cache (warmed at init). On miss (0) keep the
+    // existing fallback chain inside analyzeWebContextStats (env → default).
+    if (!(Number(contextWindow) > 0) && model) {
+      try {
+        const gw = require('./gateway/aiGateway');
+        const instance = typeof gw.getInstance === 'function' ? gw.getInstance() : gw;
+        if (instance && typeof instance.getModelContextWindow === 'function') {
+          const resolved = instance.getModelContextWindow(model);
+          if (resolved > 0) {
+            contextWindow = resolved;
+          }
+        }
+      } catch {
+        /* gateway unavailable → keep env/default fallback chain */
+      }
+    }
     const isAutoCompactEnabled =
-      body && typeof body.isAutoCompactEnabled === 'boolean' ? body.isAutoCompactEnabled : undefined;
+      body && typeof body.isAutoCompactEnabled === 'boolean'
+        ? body.isAutoCompactEnabled
+        : undefined;
 
     const { analyzeWebContextStats } = require('./context/webContextStats');
     const { estimateTokens } = require('../services/textHeuristics');
@@ -150,12 +201,16 @@ async function handleAiContextStats(req, res) {
     try {
       const { getToolDefinitions } = require('../services/toolCalling');
       const defs = getToolDefinitions();
-      if (Array.isArray(defs) && defs.length > 0) toolDefsJson = JSON.stringify(defs);
-    } catch { /* registry unavailable → System tools category simply omitted */ }
+      if (Array.isArray(defs) && defs.length > 0) {
+        toolDefsJson = JSON.stringify(defs);
+      }
+    } catch {
+      /* registry unavailable → System tools category simply omitted */
+    }
 
     const stats = analyzeWebContextStats(
       { messages, contextWindow, toolDefsJson, estimateTokens, isAutoCompactEnabled },
-      process.env,
+      process.env
     );
 
     // Gate off (null) → honest empty envelope so the frontend hides the indicator.
@@ -170,7 +225,9 @@ async function handleAiContextStats(req, res) {
 // pending-review). Lazy-required so model/DB bootstrap only happens on first use.
 let _promptStore = null;
 function getPromptStore() {
-  if (!_promptStore) _promptStore = require('./promptStore');
+  if (!_promptStore) {
+    _promptStore = require('./promptStore');
+  }
   return _promptStore;
 }
 
@@ -181,7 +238,9 @@ function getPromptStore() {
 // renders blank either way.
 let _promptTemplateCatalog = null;
 function getPromptTemplateCatalog() {
-  if (!_promptTemplateCatalog) _promptTemplateCatalog = require('./promptTemplateCatalog');
+  if (!_promptTemplateCatalog) {
+    _promptTemplateCatalog = require('./promptTemplateCatalog');
+  }
   return _promptTemplateCatalog;
 }
 
@@ -200,7 +259,9 @@ async function handleListBuiltinPrompts(req, res, query) {
 
 async function handleListPrompts(req, res, query) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const opts = {
       status: query && query.status,
@@ -216,7 +277,9 @@ async function handleListPrompts(req, res, query) {
 
 async function handleCreatePrompt(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getPromptStore().create(userId, body || {});
@@ -228,7 +291,9 @@ async function handleCreatePrompt(req, res) {
 
 async function handleGetPrompt(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getPromptStore().get(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -239,7 +304,9 @@ async function handleGetPrompt(req, res, id) {
 
 async function handleUpdatePrompt(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getPromptStore().update(userId, id, body || {});
@@ -251,7 +318,9 @@ async function handleUpdatePrompt(req, res, id) {
 
 async function handleDeletePrompt(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getPromptStore().remove(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -262,7 +331,9 @@ async function handleDeletePrompt(req, res, id) {
 
 async function handleUsePrompt(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getPromptStore().use(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -273,7 +344,9 @@ async function handleUsePrompt(req, res, id) {
 
 async function handleApprovePrompt(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getPromptStore().approve(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -288,12 +361,18 @@ async function handleApprovePrompt(req, res, id) {
 // Fully fail-soft: any error here must NEVER disturb the chat stream.
 async function maybeAutoCapturePrompt(userId, rawMessage) {
   try {
-    if (userId === null || userId === undefined) return;
+    if (userId === null || userId === undefined) {
+      return;
+    }
     const autoCapture = require('./promptAutoCapture');
-    if (!autoCapture.shouldCapture(rawMessage, process.env)) return;
+    if (!autoCapture.shouldCapture(rawMessage, process.env)) {
+      return;
+    }
     const store = getPromptStore();
     // Skip if this user already has an identical prompt (manual or pending).
-    if (await store.existsByContent(userId, rawMessage)) return;
+    if (await store.existsByContent(userId, rawMessage)) {
+      return;
+    }
     await store.create(userId, {
       content: rawMessage,
       title: autoCapture.deriveTitle(rawMessage),
@@ -342,14 +421,20 @@ async function handleExecuteTool(req, res, toolName) {
 
   // Find the tool
   const tc = getToolCalling();
-  const tool = tc.BUILTIN_TOOLS.find(t => t.name === toolName);
-  if (!tool) return sendError(res, 404, `Tool not found: ${toolName}`);
+  const tool = tc.BUILTIN_TOOLS.find((t) => t.name === toolName);
+  if (!tool) {
+    return sendError(res, 404, `Tool not found: ${toolName}`);
+  }
 
   // Security check on params
   try {
     const check = getSecurity().analyzeInput(JSON.stringify(params));
-    if (!check.safe) return sendError(res, 403, check.refusal);
-  } catch { /* security failure should not block */ }
+    if (!check.safe) {
+      return sendError(res, 403, check.refusal);
+    }
+  } catch {
+    /* security failure should not block */
+  }
 
   // High-risk tools require explicit approval via web (return approval request)
   if (tool.risk !== 'safe' && !tc.isDangerousMode() && !tc.isApproved(toolName)) {

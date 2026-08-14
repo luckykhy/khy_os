@@ -25,10 +25,29 @@
 /* Maximum path length that fits in an IPC payload (after 1-byte opcode) */
 #define VFS_IPC_PATH_MAX (IPC_PAYLOAD_SIZE - 1)
 
+/* Copy the path from req->payload into a local NUL-terminated buffer so the
+ * vfs_* functions, which expect a C string, never read past the payload. */
+static int extract_path(const struct ipc_message *req, char *out, size_t outsz) {
+    if (req->payload_len < 2)
+        return -1;
+    uint32_t plen = req->payload_len - 1;
+    if (plen >= outsz)
+        plen = (uint32_t)(outsz - 1);
+    for (uint32_t i = 0; i < plen; i++)
+        out[i] = (char)req->payload[1 + i];
+    out[plen] = '\0';
+    return 0;
+}
+
 /* ── Request handlers ────────────────────────────────────────── */
 
 static void _handle_exists(const struct ipc_message *req, struct ipc_message *reply) {
-    const char *path = (const char *)&req->payload[1];
+    char path[IPC_PAYLOAD_SIZE];
+    if (extract_path(req, path, sizeof(path)) != 0) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload_len = 1;
+        return;
+    }
     int exists = vfs_exists(path);
     reply->payload[0] = 0;
     reply->payload[1] = (uint8_t)exists;
@@ -36,7 +55,12 @@ static void _handle_exists(const struct ipc_message *req, struct ipc_message *re
 }
 
 static void _handle_is_dir(const struct ipc_message *req, struct ipc_message *reply) {
-    const char *path = (const char *)&req->payload[1];
+    char path[IPC_PAYLOAD_SIZE];
+    if (extract_path(req, path, sizeof(path)) != 0) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload_len = 1;
+        return;
+    }
     int is_dir = vfs_is_dir(path);
     reply->payload[0] = 0;
     reply->payload[1] = (uint8_t)is_dir;
@@ -44,7 +68,12 @@ static void _handle_is_dir(const struct ipc_message *req, struct ipc_message *re
 }
 
 static void _handle_get_size(const struct ipc_message *req, struct ipc_message *reply) {
-    const char *path = (const char *)&req->payload[1];
+    char path[IPC_PAYLOAD_SIZE];
+    if (extract_path(req, path, sizeof(path)) != 0) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload_len = 1;
+        return;
+    }
     size_t sz = 0;
     int rc = vfs_get_size(path, &sz);
     reply->payload[0] = (uint8_t)(rc == 0 ? 0 : (uint8_t)-1);
@@ -57,7 +86,12 @@ static void _handle_get_size(const struct ipc_message *req, struct ipc_message *
 }
 
 static void _handle_mkdir(const struct ipc_message *req, struct ipc_message *reply) {
-    const char *path = (const char *)&req->payload[1];
+    char path[IPC_PAYLOAD_SIZE];
+    if (extract_path(req, path, sizeof(path)) != 0) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload_len = 1;
+        return;
+    }
     int rc = vfs_mkdir(path);
     reply->payload[0] = (uint8_t)(rc == 0 ? 0 : (uint8_t)-1);
     reply->payload_len = 1;
@@ -69,7 +103,12 @@ static void _handle_read(const struct ipc_message *req, struct ipc_message *repl
      * Reply:   payload[0]=rc, payload[1..]=data (up to 47 bytes per reply)
      * For larger files, the client must issue multiple reads with offsets.
      */
-    const char *path = (const char *)&req->payload[1];
+    char path[IPC_PAYLOAD_SIZE];
+    if (extract_path(req, path, sizeof(path)) != 0) {
+        reply->payload[0] = (uint8_t)-1;
+        reply->payload_len = 1;
+        return;
+    }
     uint8_t buf[IPC_PAYLOAD_SIZE - 1];
     int n = vfs_read_file(path, buf, sizeof(buf));
     if (n < 0) {
@@ -111,28 +150,34 @@ void vfs_service_task(void) {
         reply.type        = IPC_MSG_REPLY;
         reply.seq         = req.seq;
 
-        uint8_t op = req.payload[0];
-        switch (op) {
-        case VFS_OP_EXISTS:
-            _handle_exists(&req, &reply);
-            break;
-        case VFS_OP_READ:
-            _handle_read(&req, &reply);
-            break;
-        case VFS_OP_MKDIR:
-            _handle_mkdir(&req, &reply);
-            break;
-        case VFS_OP_GET_SIZE:
-            _handle_get_size(&req, &reply);
-            break;
-        case VFS_OP_IS_DIR:
-            _handle_is_dir(&req, &reply);
-            break;
-        default:
+        if (req.payload_len < 1) {
             reply.type = IPC_MSG_ERROR;
             reply.payload[0] = (uint8_t)-1;
             reply.payload_len = 1;
-            break;
+        } else {
+            uint8_t op = req.payload[0];
+            switch (op) {
+            case VFS_OP_EXISTS:
+                _handle_exists(&req, &reply);
+                break;
+            case VFS_OP_READ:
+                _handle_read(&req, &reply);
+                break;
+            case VFS_OP_MKDIR:
+                _handle_mkdir(&req, &reply);
+                break;
+            case VFS_OP_GET_SIZE:
+                _handle_get_size(&req, &reply);
+                break;
+            case VFS_OP_IS_DIR:
+                _handle_is_dir(&req, &reply);
+                break;
+            default:
+                reply.type = IPC_MSG_ERROR;
+                reply.payload[0] = (uint8_t)-1;
+                reply.payload_len = 1;
+                break;
+            }
         }
 
         /* Send reply back to the caller's reply port */

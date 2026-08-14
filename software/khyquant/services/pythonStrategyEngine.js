@@ -10,7 +10,8 @@ const crypto = require('crypto');
 
 class PythonStrategyEngine {
   constructor() {
-    this.tempDir = path.join(__dirname, '../../temp/python_strategies');
+    // khyquant runtime scratch lives inside the project data home (.khy/khyquant/temp)
+    this.tempDir = path.join(__dirname, '../../..', '.khy', 'khyquant', 'temp', 'python_strategies');
     this.initTempDir();
   }
 

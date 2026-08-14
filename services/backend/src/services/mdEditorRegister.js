@@ -36,7 +36,9 @@ const MAX_ATTEMPTS = 3;
 /** default-on 语义:仅 {0,false,off,no} 视为关。 */
 function flagOn(name, env) {
   const src = env || process.env;
-  const raw = String(src[name] == null ? '' : src[name]).trim().toLowerCase();
+  const raw = String(src[name] == null ? '' : src[name])
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -46,21 +48,30 @@ function flagOn(name, env) {
  */
 function _recordMdRegistrationLedger(plat, env) {
   try {
-    require('./uninstall/ledgerWriter').appendSideEffect({
-      kind: 'registration',
-      target: `md-editor:${plat}`,
-      action: 'unregister-md-editor',
-      meta: { platform: plat, label: 'md-editor' },
-    }, { env });
-  } catch { /* 记台账绝不拖累注册主流程 */ }
+    require('./uninstall/ledgerWriter').appendSideEffect(
+      {
+        kind: 'registration',
+        target: `md-editor:${plat}`,
+        action: 'unregister-md-editor',
+        meta: { platform: plat, label: 'md-editor' },
+      },
+      { env }
+    );
+  } catch {
+    /* 记台账绝不拖累注册主流程 */
+  }
 }
 
 /** sentinel 绝对路径;dataHome 解析失败返 null(则本次不落标记,下次再试,不致命)。 */
 function sentinelPath() {
   try {
     const home = require('../utils/dataHome').getDataHome();
-    if (home) return path.join(home, SENTINEL_NAME);
-  } catch (_) { /* fall through */ }
+    if (home) {
+      return path.join(home, SENTINEL_NAME);
+    }
+  } catch (_) {
+    /* fall through */
+  }
   return null;
 }
 
@@ -68,24 +79,39 @@ function sentinelPath() {
 function readSentinel(target) {
   try {
     const p = target || sentinelPath();
-    if (!p) return null;
-    if (!fs.existsSync(p)) return null;
+    if (!p) {
+      return null;
+    }
+    if (!fs.existsSync(p)) {
+      return null;
+    }
     const raw = fs.readFileSync(p, 'utf8');
     const obj = JSON.parse(raw);
-    return (obj && typeof obj === 'object') ? obj : null;
-  } catch (_) { return null; }
+    return obj && typeof obj === 'object' ? obj : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 /** 写 sentinel(合并给定字段);best-effort,只读文件系统/权限不足等一律忽略。 */
 function writeSentinel(fields, target) {
   try {
     const p = target || sentinelPath();
-    if (!p) return;
+    if (!p) {
+      return;
+    }
     const dir = path.dirname(p);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const payload = Object.assign({ version: SENTINEL_VERSION, updatedAt: new Date().toISOString() }, fields || {});
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const payload = Object.assign(
+      { version: SENTINEL_VERSION, updatedAt: new Date().toISOString() },
+      fields || {}
+    );
     fs.writeFileSync(p, JSON.stringify(payload));
-  } catch (_) { /* best-effort */ }
+  } catch (_) {
+    /* best-effort */
+  }
 }
 
 /** 幂等写「成功」sentinel(仅在确认已注册时调用)。保留旧导出名以兼容既有引用。 */
@@ -112,17 +138,22 @@ function isRegistered(plat, deps) {
       const spawnSync = d.spawnSync || require('child_process').spawnSync;
       // reg query 命中 HKCU ProgID → status 0。缺失 → 非零。任何异常 → 保守 false。
       const r = spawnSync('reg', ['query', 'HKCU\\Software\\Classes\\KhyOS.Markdown'], {
-        stdio: 'ignore', windowsHide: true, timeout: 4000,
+        stdio: 'ignore',
+        windowsHide: true,
+        timeout: 4000,
       });
       return !!(r && r.status === 0);
     }
     if (plat === 'linux') {
-      const base = String(env.XDG_DATA_HOME || '').trim()
-        || path.join(require('os').homedir(), '.local', 'share');
+      const base =
+        String(env.XDG_DATA_HOME || '').trim() ||
+        path.join(require('os').homedir(), '.local', 'share');
       const desktop = path.join(base, 'applications', 'khyosMarkdown.desktop');
       return !!existsSync(desktop);
     }
-  } catch (_) { /* fall through → false */ }
+  } catch (_) {
+    /* fall through → false */
+  }
   return false;
 }
 
@@ -136,18 +167,26 @@ function ensureMdRegistered(env, deps) {
   const source = env || process.env;
   const d = deps || {};
   try {
-    if (!(flagOn('KHY_MD_EDITOR', source) && flagOn('KHY_MD_AUTO_REGISTER', source))) return 'skip-gate';
+    if (!(flagOn('KHY_MD_EDITOR', source) && flagOn('KHY_MD_AUTO_REGISTER', source))) {
+      return 'skip-gate';
+    }
 
     const plat = d.platform || process.platform;
-    if (plat !== 'linux' && plat !== 'win32') return 'skip-platform';
+    if (plat !== 'linux' && plat !== 'win32') {
+      return 'skip-platform';
+    }
 
     const target = d.target || sentinelPath();
     // dataHome 不可用(target=null)→ 无处落标记,保守跳过(避免每次启动都 spawn/探测)。
-    if (!target) return 'skip-sentinel';
+    if (!target) {
+      return 'skip-sentinel';
+    }
 
     // 1. 可信成功标记存在 → 快路径短路(不做 reg query,零启动开销)。
     const prev = readSentinel(target);
-    if (isSuccessSentinel(prev)) return 'skip-sentinel';
+    if (isSuccessSentinel(prev)) {
+      return 'skip-sentinel';
+    }
 
     // 2. 权威检测:系统实际已注册(含旧版失败 sentinel 后手动/上次 spawn 成功的情形)
     //    → 补写成功标记并短路,自愈陈旧标记。
@@ -159,7 +198,9 @@ function ensureMdRegistered(env, deps) {
 
     // 3. 未注册:检查重试预算。超过 MAX_ATTEMPTS → 放弃自动注册(留手动逃生口)。
     const attempts = Number.isFinite(prev && prev.attempts) ? prev.attempts : 0;
-    if (attempts >= MAX_ATTEMPTS) return 'skip-maxed';
+    if (attempts >= MAX_ATTEMPTS) {
+      return 'skip-maxed';
+    }
 
     // 4. 定位脚本。
     let toolsDir = null;
@@ -168,13 +209,21 @@ function ensureMdRegistered(env, deps) {
         ? d.resolveToolsDir()
         : require('../cli/handlers/md').resolveToolsDir();
     } catch (_) {}
-    if (!toolsDir) return 'skip-no-tools';
+    if (!toolsDir) {
+      return 'skip-no-tools';
+    }
 
     let cmd, scriptArgs, scriptFile;
     if (plat === 'win32') {
       scriptFile = 'register-windows.ps1';
       cmd = 'powershell';
-      scriptArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(toolsDir, scriptFile)];
+      scriptArgs = [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        path.join(toolsDir, scriptFile),
+      ];
     } else {
       scriptFile = 'register-linux.sh';
       cmd = 'bash';
@@ -182,15 +231,31 @@ function ensureMdRegistered(env, deps) {
     }
     const scriptPath = path.join(toolsDir, scriptFile);
     const existsSync = d.existsSync || fs.existsSync;
-    try { if (!existsSync(scriptPath)) return 'skip-no-tools'; } catch (_) { return 'skip-no-tools'; }
+    try {
+      if (!existsSync(scriptPath)) {
+        return 'skip-no-tools';
+      }
+    } catch (_) {
+      return 'skip-no-tools';
+    }
 
     // 5. fire-and-forget spawn。**不**写成功标记——只累加 attempts。真正成功由下次启动的
     //    权威检测(步骤 2)确认后补写成功标记;失败则下次启动继续重试直到 MAX_ATTEMPTS。
     const spawn = d.spawn || require('child_process').spawn;
-    const child = spawn(cmd, scriptArgs, { cwd: toolsDir, detached: true, stdio: 'ignore', windowsHide: true });
-    if (child && child.unref) child.unref();
+    const child = spawn(cmd, scriptArgs, {
+      cwd: toolsDir,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    if (child && child.unref) {
+      child.unref();
+    }
 
-    writeSentinel({ success: false, attempts: attempts + 1, lastAttemptAt: new Date().toISOString() }, target);
+    writeSentinel(
+      { success: false, attempts: attempts + 1, lastAttemptAt: new Date().toISOString() },
+      target
+    );
     return 'spawned';
   } catch (_) {
     return 'error';

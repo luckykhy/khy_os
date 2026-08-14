@@ -25,8 +25,12 @@
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _flagOn(raw, dflt = true) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
-  if (v === '') return dflt;
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
+  if (v === '') {
+    return dflt;
+  }
   return !OFF_VALUES.includes(v);
 }
 
@@ -40,8 +44,18 @@ function isEnabled(env = process.env) {
 const DEPTH_MIN = 1;
 const DEPTH_MAX = 64;
 const SCAN_DEPTH_OPTIONS = Object.freeze([
-  { value: 'standard', depth: 6, label: '标准(推荐)', description: '递归 6 层,兼顾速度与体积/在用判定的准确度(默认档)' },
-  { value: 'shallow', depth: 2, label: '浅扫', description: '只看顶层 2 层,最快;深目录里的体积会被低估' },
+  {
+    value: 'standard',
+    depth: 6,
+    label: '标准(推荐)',
+    description: '递归 6 层,兼顾速度与体积/在用判定的准确度(默认档)',
+  },
+  {
+    value: 'shallow',
+    depth: 2,
+    label: '浅扫',
+    description: '只看顶层 2 层,最快;深目录里的体积会被低估',
+  },
   { value: 'deep', depth: 12, label: '深扫', description: '递归 12 层,体积/在用判定最准;深树较慢' },
 ]);
 
@@ -54,8 +68,10 @@ const GRANULARITY_OPTIONS = Object.freeze([
 ]);
 
 // ── 意图检测:清理动作 + 磁盘/盘符目标(两者都出现才触发,零假阳性偏向) ─────
-const _CLEAN_VERB_RE = /清理|清空|清一?下|清盘|清垃圾|腾(?:出)?空间|释放空间|清干净|clean(?:\s*up)?|free\s*(?:up\s*)?space/i;
-const _DISK_TARGET_RE = /[A-Za-z]\s*盘|磁盘|硬盘|系统盘|盘符|回收站|缓存|垃圾文件|drive|disk|\b[A-Za-z]:\b/i;
+const _CLEAN_VERB_RE =
+  /清理|清空|清一?下|清盘|清垃圾|腾(?:出)?空间|释放空间|清干净|clean(?:\s*up)?|free\s*(?:up\s*)?space/i;
+const _DISK_TARGET_RE =
+  /[A-Za-z]\s*盘|磁盘|硬盘|系统盘|盘符|回收站|缓存|垃圾文件|drive|disk|\b[A-Za-z]:\b/i;
 
 /**
  * 是否为「清理磁盘」意图。要求同时出现清理动作与磁盘目标,保守偏向不误触。
@@ -64,7 +80,9 @@ const _DISK_TARGET_RE = /[A-Za-z]\s*盘|磁盘|硬盘|系统盘|盘符|回收站
  */
 function detectDiskCleanupIntent(text) {
   const t = String(text || '');
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   try {
     return _CLEAN_VERB_RE.test(t) && _DISK_TARGET_RE.test(t);
   } catch {
@@ -85,13 +103,21 @@ function buildDiskCleanupDirective() {
   );
   const lines = [];
   lines.push('## 清理 C/D 盘 —— 扫描深度与颗粒细度交给用户决定');
-  lines.push('用户想清理磁盘(C盘/D盘等)。**在真正扫描/清理之前**,先用 AskUserQuestion 把两个关键维度作为选项卡交给用户选择,别擅自用默认档一扫了事:');
-  lines.push('1. 「扫描深度」卡(header 如「扫描深度」):至少给下面这几档,**把推荐档放第一并标「(推荐)」**,description 里说清各档的取舍:');
+  lines.push(
+    '用户想清理磁盘(C盘/D盘等)。**在真正扫描/清理之前**,先用 AskUserQuestion 把两个关键维度作为选项卡交给用户选择,别擅自用默认档一扫了事:'
+  );
+  lines.push(
+    '1. 「扫描深度」卡(header 如「扫描深度」):至少给下面这几档,**把推荐档放第一并标「(推荐)」**,description 里说清各档的取舍:'
+  );
   lines.push(...depthLines);
   lines.push('2. 「颗粒细度」卡(header 如「颗粒细度」):至少给下面这几档,同样推荐档放第一:');
   lines.push(...granLines);
-  lines.push('3. 两张卡可放进同一次 AskUserQuestion 调用(questions 数组);系统会自动为每张卡补「可讨论」与自由输入,你无需自己加。');
-  lines.push('4. 拿到用户选择后,据其选的档把对应的 `maxDepth` 与 `granularity` 传进 DiskCleanup(先 mode:"scan" 或 "plan" 看清单,确认后再 mode:"clean" apply:true)。用户若已在消息里明确指定了深度/粒度,则**不必再问**,直接照其意思传参。');
+  lines.push(
+    '3. 两张卡可放进同一次 AskUserQuestion 调用(questions 数组);系统会自动为每张卡补「可讨论」与自由输入,你无需自己加。'
+  );
+  lines.push(
+    '4. 拿到用户选择后,据其选的档把对应的 `maxDepth` 与 `granularity` 传进 DiskCleanup(先 mode:"scan" 或 "plan" 看清单,确认后再 mode:"clean" apply:true)。用户若已在消息里明确指定了深度/粒度,则**不必再问**,直接照其意思传参。'
+  );
   return lines.join('\n');
 }
 
@@ -104,9 +130,10 @@ function buildDiskCleanupDirective() {
  */
 function routeDiskCleanupClarify(input = {}) {
   const options = input.options || {};
-  const enabled = (options.diskCleanupClarify !== undefined)
-    ? _flagOn(options.diskCleanupClarify, true)
-    : isEnabled(input.env || process.env);
+  const enabled =
+    options.diskCleanupClarify !== undefined
+      ? _flagOn(options.diskCleanupClarify, true)
+      : isEnabled(input.env || process.env);
   const intentDetected = detectDiskCleanupIntent(input.text);
   const need = enabled && intentDetected;
   return {
@@ -121,9 +148,15 @@ function routeDiskCleanupClarify(input = {}) {
 
 function _clampDepth(n) {
   const v = Math.floor(Number(n));
-  if (!Number.isFinite(v)) return null;
-  if (v < DEPTH_MIN) return DEPTH_MIN;
-  if (v > DEPTH_MAX) return DEPTH_MAX;
+  if (!Number.isFinite(v)) {
+    return null;
+  }
+  if (v < DEPTH_MIN) {
+    return DEPTH_MIN;
+  }
+  if (v > DEPTH_MAX) {
+    return DEPTH_MAX;
+  }
   return v;
 }
 
@@ -135,15 +168,23 @@ function _clampDepth(n) {
  * @returns {number|null}
  */
 function resolveScanDepth(params = {}) {
-  if (params == null) return null;
+  if (params == null) {
+    return null;
+  }
   if (params.maxDepth != null && params.maxDepth !== '') {
     const c = _clampDepth(params.maxDepth);
-    if (c != null) return c;
+    if (c != null) {
+      return c;
+    }
   }
-  const key = String(params.scanDepth == null ? '' : params.scanDepth).trim().toLowerCase();
+  const key = String(params.scanDepth == null ? '' : params.scanDepth)
+    .trim()
+    .toLowerCase();
   if (key) {
     const hit = SCAN_DEPTH_OPTIONS.find((o) => o.value === key);
-    if (hit) return hit.depth;
+    if (hit) {
+      return hit.depth;
+    }
   }
   return null;
 }
@@ -153,7 +194,9 @@ function resolveScanDepth(params = {}) {
  * @returns {string}
  */
 function resolveGranularity(params = {}) {
-  const key = String((params && params.granularity) == null ? '' : params.granularity).trim().toLowerCase();
+  const key = String((params && params.granularity) == null ? '' : params.granularity)
+    .trim()
+    .toLowerCase();
   return GRANULARITY_VALUES.includes(key) ? key : 'standard';
 }
 
@@ -173,11 +216,19 @@ function shapeScanCandidates(candidates, granularity) {
     const byCat = new Map();
     for (const c of list) {
       const cat = (c && c.category) || '(未分类)';
-      const acc = byCat.get(cat) || { category: cat, entryCount: 0, sizeBytes: 0, fileCount: 0, eligibleCount: 0 };
+      const acc = byCat.get(cat) || {
+        category: cat,
+        entryCount: 0,
+        sizeBytes: 0,
+        fileCount: 0,
+        eligibleCount: 0,
+      };
       acc.entryCount += 1;
       acc.sizeBytes += Number(c && c.sizeBytes) || 0;
       acc.fileCount += Number(c && c.fileCount) || 0;
-      if (c && c.eligible) acc.eligibleCount += 1;
+      if (c && c.eligible) {
+        acc.eligibleCount += 1;
+      }
       byCat.set(cat, acc);
     }
     const rows = [...byCat.values()].sort((a, b) => b.sizeBytes - a.sizeBytes);
@@ -187,7 +238,10 @@ function shapeScanCandidates(candidates, granularity) {
     // 稳定按体积降序:同尺寸保持原相对序。
     const rows = list
       .map((c, i) => ({ c, i }))
-      .sort((a, b) => (Number(b.c && b.c.sizeBytes) || 0) - (Number(a.c && a.c.sizeBytes) || 0) || a.i - b.i)
+      .sort(
+        (a, b) =>
+          (Number(b.c && b.c.sizeBytes) || 0) - (Number(a.c && a.c.sizeBytes) || 0) || a.i - b.i
+      )
       .map((x) => x.c);
     return { granularity: g, rows, rolledUp: false };
   }

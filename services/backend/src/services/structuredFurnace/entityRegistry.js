@@ -30,8 +30,8 @@ function _normalize(desc) {
 
 class EntityRegistry {
   constructor() {
-    this._byKey = new Map();   // normalizedKey -> entity
-    this._byUid = new Map();   // uid -> entity
+    this._byKey = new Map(); // normalizedKey -> entity
+    this._byUid = new Map(); // uid -> entity
   }
 
   /**
@@ -81,14 +81,18 @@ class EntityRegistry {
   /** uid → 规范描述 的指针表，供上下文压缩时做指针化替换（§5）。 */
   pointerTable() {
     const table = {};
-    for (const e of this._byUid.values()) table[e.uid] = e.canonical;
+    for (const e of this._byUid.values()) {
+      table[e.uid] = e.canonical;
+    }
     return table;
   }
 
   /** 被多处引用（mentions>1）的实体——指针化收益最大者。 */
   deduplicatedCount() {
     let saved = 0;
-    for (const e of this._byUid.values()) saved += Math.max(0, e.mentions - 1);
+    for (const e of this._byUid.values()) {
+      saved += Math.max(0, e.mentions - 1);
+    }
     return saved;
   }
 }
@@ -96,12 +100,24 @@ class EntityRegistry {
 // 类别 → UID 前缀，使 UID 自带可读语义（file_1a2b、proc_9f...）。
 function _uidPrefix(type) {
   const t = String(type || 'ent').toLowerCase();
-  if (t.startsWith('file')) return 'file';
-  if (t.startsWith('url') || t.startsWith('link')) return 'url';
-  if (t.startsWith('proc') || t.startsWith('process')) return 'proc';
-  if (t.startsWith('var')) return 'var';
-  if (t.startsWith('topic')) return 'topic';
-  if (t.startsWith('actor') || t.startsWith('user')) return 'actor';
+  if (t.startsWith('file')) {
+    return 'file';
+  }
+  if (t.startsWith('url') || t.startsWith('link')) {
+    return 'url';
+  }
+  if (t.startsWith('proc') || t.startsWith('process')) {
+    return 'proc';
+  }
+  if (t.startsWith('var')) {
+    return 'var';
+  }
+  if (t.startsWith('topic')) {
+    return 'topic';
+  }
+  if (t.startsWith('actor') || t.startsWith('user')) {
+    return 'actor';
+  }
   return 'ent';
 }
 

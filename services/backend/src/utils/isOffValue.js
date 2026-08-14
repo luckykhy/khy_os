@@ -20,7 +20,9 @@
  */
 
 function isOffValue(v) {
-  const s = String(v == null ? '' : v).trim().toLowerCase();
+  const s = String(v == null ? '' : v)
+    .trim()
+    .toLowerCase();
   return s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no';
 }
 

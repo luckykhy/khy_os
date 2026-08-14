@@ -21,6 +21,8 @@
 
 const path = require('path');
 
+const adaptiveOutput = require('../adaptiveOutput');
+
 // Module-scope deps from aiGateway.js, injected once at host load (see setter). The 11 functions are
 // hoisted declarations on the host; the value deps (route-tuning tables, adapters, localLLMService) are
 // set once at host load. localLLMService can legitimately be null, so it uses a `!== undefined` guard.
@@ -42,22 +44,54 @@ let ollamaAdapter = null;
 let localLLMService = null;
 
 function setAiGatewayRoutingMethodsDeps(deps = {}) {
-  if (typeof deps._appendKhyProtocolDebugLog === 'function') _appendKhyProtocolDebugLog = deps._appendKhyProtocolDebugLog;
-  if (typeof deps._buildKhyProtocolDebugSummary === 'function') _buildKhyProtocolDebugSummary = deps._buildKhyProtocolDebugSummary;
-  if (typeof deps._formatRouteAgeMs === 'function') _formatRouteAgeMs = deps._formatRouteAgeMs;
-  if (typeof deps._getKhyProtocolPriorityRisk === 'function') _getKhyProtocolPriorityRisk = deps._getKhyProtocolPriorityRisk;
-  if (typeof deps._injectKhyExpectedLanguageSystem === 'function') _injectKhyExpectedLanguageSystem = deps._injectKhyExpectedLanguageSystem;
-  if (typeof deps._injectKhyProtocolPrompt === 'function') _injectKhyProtocolPrompt = deps._injectKhyProtocolPrompt;
-  if (typeof deps._injectKhyProtocolSystem === 'function') _injectKhyProtocolSystem = deps._injectKhyProtocolSystem;
-  if (typeof deps._isProcessSensitiveAdapter === 'function') _isProcessSensitiveAdapter = deps._isProcessSensitiveAdapter;
-  if (typeof deps._parseMs === 'function') _parseMs = deps._parseMs;
-  if (typeof deps._parseProcessFailoverCandidates === 'function') _parseProcessFailoverCandidates = deps._parseProcessFailoverCandidates;
-  if (typeof deps._resolveDefaultRouteTuning === 'function') _resolveDefaultRouteTuning = deps._resolveDefaultRouteTuning;
-  if (deps.DEFAULT_ROUTE_BASE_PRIORITY !== undefined) DEFAULT_ROUTE_BASE_PRIORITY = deps.DEFAULT_ROUTE_BASE_PRIORITY;
-  if (deps.DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS !== undefined) DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS = deps.DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS;
-  if (deps.kiroAdapter !== undefined) kiroAdapter = deps.kiroAdapter;
-  if (deps.ollamaAdapter !== undefined) ollamaAdapter = deps.ollamaAdapter;
-  if (deps.localLLMService !== undefined) localLLMService = deps.localLLMService;
+  if (typeof deps._appendKhyProtocolDebugLog === 'function') {
+    _appendKhyProtocolDebugLog = deps._appendKhyProtocolDebugLog;
+  }
+  if (typeof deps._buildKhyProtocolDebugSummary === 'function') {
+    _buildKhyProtocolDebugSummary = deps._buildKhyProtocolDebugSummary;
+  }
+  if (typeof deps._formatRouteAgeMs === 'function') {
+    _formatRouteAgeMs = deps._formatRouteAgeMs;
+  }
+  if (typeof deps._getKhyProtocolPriorityRisk === 'function') {
+    _getKhyProtocolPriorityRisk = deps._getKhyProtocolPriorityRisk;
+  }
+  if (typeof deps._injectKhyExpectedLanguageSystem === 'function') {
+    _injectKhyExpectedLanguageSystem = deps._injectKhyExpectedLanguageSystem;
+  }
+  if (typeof deps._injectKhyProtocolPrompt === 'function') {
+    _injectKhyProtocolPrompt = deps._injectKhyProtocolPrompt;
+  }
+  if (typeof deps._injectKhyProtocolSystem === 'function') {
+    _injectKhyProtocolSystem = deps._injectKhyProtocolSystem;
+  }
+  if (typeof deps._isProcessSensitiveAdapter === 'function') {
+    _isProcessSensitiveAdapter = deps._isProcessSensitiveAdapter;
+  }
+  if (typeof deps._parseMs === 'function') {
+    _parseMs = deps._parseMs;
+  }
+  if (typeof deps._parseProcessFailoverCandidates === 'function') {
+    _parseProcessFailoverCandidates = deps._parseProcessFailoverCandidates;
+  }
+  if (typeof deps._resolveDefaultRouteTuning === 'function') {
+    _resolveDefaultRouteTuning = deps._resolveDefaultRouteTuning;
+  }
+  if (deps.DEFAULT_ROUTE_BASE_PRIORITY !== undefined) {
+    DEFAULT_ROUTE_BASE_PRIORITY = deps.DEFAULT_ROUTE_BASE_PRIORITY;
+  }
+  if (deps.DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS !== undefined) {
+    DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS = deps.DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS;
+  }
+  if (deps.kiroAdapter !== undefined) {
+    kiroAdapter = deps.kiroAdapter;
+  }
+  if (deps.ollamaAdapter !== undefined) {
+    ollamaAdapter = deps.ollamaAdapter;
+  }
+  if (deps.localLLMService !== undefined) {
+    localLLMService = deps.localLLMService;
+  }
 }
 
 const AIGatewayRoutingMethods = {
@@ -73,7 +107,9 @@ const AIGatewayRoutingMethods = {
       fallbackMs,
       1000
     );
-    const normalizedAdapterKey = String(adapterKey || '').trim().toLowerCase();
+    const normalizedAdapterKey = String(adapterKey || '')
+      .trim()
+      .toLowerCase();
     if (normalizedAdapterKey !== 'localllm' && normalizedAdapterKey !== 'ollama') {
       return resolvedMs;
     }
@@ -81,13 +117,16 @@ const AIGatewayRoutingMethods = {
     if (normalizedAdapterKey === 'localllm') {
       let status = null;
       try {
-        status = localLLMService && typeof localLLMService.getStatus === 'function'
-          ? localLLMService.getStatus()
-          : null;
+        status =
+          localLLMService && typeof localLLMService.getStatus === 'function'
+            ? localLLMService.getStatus()
+            : null;
       } catch {
         status = null;
       }
-      if (!status || !status.available) return resolvedMs;
+      if (!status || !status.available) {
+        return resolvedMs;
+      }
 
       const coldStartTimeoutMs = _parseMs(
         process.env.GATEWAY_LOCAL_LLM_COLD_TIMEOUT_MS || '180000',
@@ -100,21 +139,27 @@ const AIGatewayRoutingMethods = {
         1000
       );
       const degradedTimeoutMs = _parseMs(
-        process.env.GATEWAY_LOCAL_LLM_DEGRADED_TIMEOUT_MS || String(Math.max(coldStartTimeoutMs, 210000)),
+        process.env.GATEWAY_LOCAL_LLM_DEGRADED_TIMEOUT_MS ||
+          String(Math.max(coldStartTimeoutMs, 210000)),
         Math.max(coldStartTimeoutMs, 210000),
         1000
       );
 
-      if (status.lastError) return Math.max(resolvedMs, degradedTimeoutMs);
-      if (!status.loaded) return Math.max(resolvedMs, coldStartTimeoutMs);
+      if (status.lastError) {
+        return Math.max(resolvedMs, degradedTimeoutMs);
+      }
+      if (!status.loaded) {
+        return Math.max(resolvedMs, coldStartTimeoutMs);
+      }
       return Math.max(1000, warmTimeoutMs);
     }
 
     let ollamaStatus = null;
     try {
-      ollamaStatus = ollamaAdapter && typeof ollamaAdapter.getStatus === 'function'
-        ? ollamaAdapter.getStatus()
-        : null;
+      ollamaStatus =
+        ollamaAdapter && typeof ollamaAdapter.getStatus === 'function'
+          ? ollamaAdapter.getStatus()
+          : null;
     } catch {
       ollamaStatus = null;
     }
@@ -130,30 +175,45 @@ const AIGatewayRoutingMethods = {
       1000
     );
     const ollamaDegradedTimeoutMs = _parseMs(
-      process.env.GATEWAY_OLLAMA_DEGRADED_TIMEOUT_MS || String(Math.max(210000, ollamaColdTimeoutMs)),
+      process.env.GATEWAY_OLLAMA_DEGRADED_TIMEOUT_MS ||
+        String(Math.max(210000, ollamaColdTimeoutMs)),
       Math.max(210000, ollamaColdTimeoutMs),
       1000
     );
     const recentOllamaFail = this._getRecentFastFail('ollama');
-    if (recentOllamaFail) return Math.max(resolvedMs, ollamaDegradedTimeoutMs);
-    if (ollamaStatus && ollamaStatus.available) return Math.max(resolvedMs, ollamaColdTimeoutMs);
+    if (recentOllamaFail) {
+      return Math.max(resolvedMs, ollamaDegradedTimeoutMs);
+    }
+    if (ollamaStatus && ollamaStatus.available) {
+      return Math.max(resolvedMs, ollamaColdTimeoutMs);
+    }
     return Math.max(resolvedMs, ollamaWarmTimeoutMs);
   },
 
   _shouldSerializeAdapter(adapterKey) {
     const raw = String(adapterKey || '').trim();
-    if (!raw) return false;
-    if (this._serializedAdapterKeys.has(raw)) return true;
+    if (!raw) {
+      return false;
+    }
+    if (this._serializedAdapterKeys.has(raw)) {
+      return true;
+    }
     const lower = raw.toLowerCase();
     for (const key of this._serializedAdapterKeys) {
-      if (String(key || '').toLowerCase() === lower) return true;
+      if (String(key || '').toLowerCase() === lower) {
+        return true;
+      }
     }
     return false;
   },
 
   _getDefaultRouteBasePriority(adapterKey = '') {
-    const normalized = String(adapterKey || '').trim().toLowerCase();
-    if (!normalized) return 999;
+    const normalized = String(adapterKey || '')
+      .trim()
+      .toLowerCase();
+    if (!normalized) {
+      return 999;
+    }
     if (Object.prototype.hasOwnProperty.call(DEFAULT_ROUTE_BASE_PRIORITY, normalized)) {
       return DEFAULT_ROUTE_BASE_PRIORITY[normalized];
     }
@@ -163,12 +223,20 @@ const AIGatewayRoutingMethods = {
   // 是否属于「人肉中转通道」(relay / clipboard)——需要人在场复制粘贴,不该作为自动兜底。
   // 复用唯一真源 DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS(见 aiGateway.js),不新造集合防漂移。
   _isManualFallbackOnlyKey(adapterKey = '') {
-    if (!DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS) return false;
-    return DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS.has(String(adapterKey || '').trim().toLowerCase());
+    if (!DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS) {
+      return false;
+    }
+    return DEFAULT_ROUTE_MANUAL_FALLBACK_KEYS.has(
+      String(adapterKey || '')
+        .trim()
+        .toLowerCase()
+    );
   },
 
   _collectAdapterRuntimeDiagnostics(entry, diagOptions = {}) {
-    if (!entry?.adapter || typeof entry.adapter.getRuntimeDiagnostics !== 'function') return null;
+    if (!entry?.adapter || typeof entry.adapter.getRuntimeDiagnostics !== 'function') {
+      return null;
+    }
     try {
       const runtimeDiag = entry.adapter.getRuntimeDiagnostics({
         includePersisted: true,
@@ -181,19 +249,29 @@ const AIGatewayRoutingMethods = {
   },
 
   _assessDefaultRouteCandidate(entry, options = {}) {
-    if (!entry || !entry.adapter) return null;
+    if (!entry || !entry.adapter) {
+      return null;
+    }
 
     const tuning = _resolveDefaultRouteTuning();
     const adapterKey = String(entry.key || '').trim();
     const keyLower = adapterKey.toLowerCase();
     const status = (() => {
-      try { return entry.adapter.getStatus(); } catch { return {}; }
+      try {
+        return entry.adapter.getStatus();
+      } catch {
+        return {};
+      }
     })();
     let available = entry.available;
     if (available !== true && available !== false && typeof status.available === 'boolean') {
       available = status.available;
     }
-    if ((available === null || available === undefined) && options.detectIfNeeded && typeof entry.adapter.detect === 'function') {
+    if (
+      (available === null || available === undefined) &&
+      options.detectIfNeeded &&
+      typeof entry.adapter.detect === 'function'
+    ) {
       try {
         available = !!entry.adapter.detect();
         entry.available = available;
@@ -209,8 +287,12 @@ const AIGatewayRoutingMethods = {
     const recentFailure = this._getRecentFastFail(adapterKey);
     const latestRuntime = this._collectAdapterRuntimeDiagnostics(entry);
     const stallRuntime = this._collectAdapterRuntimeDiagnostics(entry, { preferCategory: 'stall' });
-    const transportRuntime = this._collectAdapterRuntimeDiagnostics(entry, { preferCategory: 'transport' });
-    const recoveryRuntime = this._collectAdapterRuntimeDiagnostics(entry, { preferCategory: 'recovery' });
+    const transportRuntime = this._collectAdapterRuntimeDiagnostics(entry, {
+      preferCategory: 'transport',
+    });
+    const recoveryRuntime = this._collectAdapterRuntimeDiagnostics(entry, {
+      preferCategory: 'recovery',
+    });
     const protocolRisk = _getKhyProtocolPriorityRisk({
       key: adapterKey,
       type: keyLower,
@@ -291,7 +373,9 @@ const AIGatewayRoutingMethods = {
       });
     }
 
-    const transportAgeMs = transportRuntime ? Math.max(0, now - Number(transportRuntime.at || 0)) : 0;
+    const transportAgeMs = transportRuntime
+      ? Math.max(0, now - Number(transportRuntime.at || 0))
+      : 0;
     if (transportRuntime && transportAgeMs <= tuning.transportWindowMs) {
       reasons.push({
         code: 'recent_transport',
@@ -334,7 +418,9 @@ const AIGatewayRoutingMethods = {
     let cacheVerdict = '';
     try {
       cacheVerdict = require('./cacheEconomyStore').getVerdict(adapterKey);
-    } catch { /* probe optional */ }
+    } catch {
+      /* probe optional */
+    }
     if (cacheVerdict === 'opaque_suspected_gouging' && tuning.cacheGougingPenalty > 0) {
       reasons.push({
         code: 'cache_gouging',
@@ -355,12 +441,16 @@ const AIGatewayRoutingMethods = {
           ceiling: tuning.healthyPenaltyCeiling,
           env: process.env,
         });
-        if (latReason && latReason.penalty > 0) reasons.push(latReason);
+        if (latReason && latReason.penalty > 0) {
+          reasons.push(latReason);
+        }
       }
-    } catch { /* 延迟感知可选,缺失/异常 → 不加罚分,逐字节回退今天 */ }
+    } catch {
+      /* 延迟感知可选,缺失/异常 → 不加罚分,逐字节回退今天 */
+    }
 
     const totalPenalty = reasons.reduce((sum, item) => sum + Number(item.penalty || 0), 0);
-    const score = (basePriority * 10) + totalPenalty;
+    const score = basePriority * 10 + totalPenalty;
     return {
       adapter: adapterKey,
       type: keyLower,
@@ -381,17 +471,22 @@ const AIGatewayRoutingMethods = {
   },
 
   _rankAdaptersForDefaultRoute(options = {}) {
-    const sourceEntries = Array.isArray(options.entries) && options.entries.length > 0
-      ? options.entries
-      : this._adapters;
+    const sourceEntries =
+      Array.isArray(options.entries) && options.entries.length > 0
+        ? options.entries
+        : this._adapters;
     const assessments = sourceEntries
       .map((entry) => this._assessDefaultRouteCandidate(entry, options))
       .filter(Boolean);
     const eligible = assessments
       .filter((item) => !item.blocked)
       .sort((a, b) => {
-        if (a.score !== b.score) return a.score - b.score;
-        if (a.basePriority !== b.basePriority) return a.basePriority - b.basePriority;
+        if (a.score !== b.score) {
+          return a.score - b.score;
+        }
+        if (a.basePriority !== b.basePriority) {
+          return a.basePriority - b.basePriority;
+        }
         return String(a.adapter || '').localeCompare(String(b.adapter || ''));
       });
     if (eligible.length > 0) {
@@ -403,7 +498,9 @@ const AIGatewayRoutingMethods = {
     const manualFallback = assessments
       .filter((item) => item.available && item.enabled)
       .sort((a, b) => {
-        if (a.basePriority !== b.basePriority) return a.basePriority - b.basePriority;
+        if (a.basePriority !== b.basePriority) {
+          return a.basePriority - b.basePriority;
+        }
         return String(a.adapter || '').localeCompare(String(b.adapter || ''));
       });
     return {
@@ -446,9 +543,11 @@ const AIGatewayRoutingMethods = {
       // incoming (penalty-score) order behind ranked ones.
       return [...eligible].sort((a, b) => {
         const ai = order.has(String(a.adapter || '').toLowerCase())
-          ? order.get(String(a.adapter || '').toLowerCase()) : Number.MAX_SAFE_INTEGER;
+          ? order.get(String(a.adapter || '').toLowerCase())
+          : Number.MAX_SAFE_INTEGER;
         const bi = order.has(String(b.adapter || '').toLowerCase())
-          ? order.get(String(b.adapter || '').toLowerCase()) : Number.MAX_SAFE_INTEGER;
+          ? order.get(String(b.adapter || '').toLowerCase())
+          : Number.MAX_SAFE_INTEGER;
         return ai - bi;
       });
     } catch {
@@ -459,10 +558,14 @@ const AIGatewayRoutingMethods = {
   // Records one adapter outcome into the UCB bandit. Best-effort, no-throw, and a
   // no-op while UCB routing is disabled, so the request path is never affected.
   _recordAdapterOutcome(adapterKey, outcome) {
-    if (!this._ucbRoutingEnabled()) return;
+    if (!this._ucbRoutingEnabled()) {
+      return;
+    }
     try {
       require('./ucbRouter').recordOutcome(adapterKey, outcome || {});
-    } catch { /* bandit optional */ }
+    } catch {
+      /* bandit optional */
+    }
   },
 
   // 读取用户自定义故障转移顺序（带短 TTL 缓存，避免每次路由都读磁盘）。
@@ -479,7 +582,9 @@ const AIGatewayRoutingMethods = {
       if (enabled && Array.isArray(order) && order.length > 0) {
         map = new Map(order.map((key, index) => [String(key), index]));
       }
-    } catch { /* store 不可用 → 回退全自动评分 */ }
+    } catch {
+      /* store 不可用 → 回退全自动评分 */
+    }
     this._failoverOrderCache = { map, expiresAt: now + 5000 };
     return map;
   },
@@ -491,7 +596,9 @@ const AIGatewayRoutingMethods = {
 
   _orderAdaptersByDefaultRoutePreference(entries = [], options = {}) {
     const list = Array.isArray(entries) ? entries.filter(Boolean) : [];
-    if (list.length <= 1) return list;
+    if (list.length <= 1) {
+      return list;
+    }
     const routeRanking = this._rankAdaptersForDefaultRoute({
       ...options,
       entries: list,
@@ -510,7 +617,9 @@ const AIGatewayRoutingMethods = {
         const bKey = String(b?.key || '');
         const aUser = userOrder.has(aKey) ? userOrder.get(aKey) : Number.MAX_SAFE_INTEGER;
         const bUser = userOrder.has(bKey) ? userOrder.get(bKey) : Number.MAX_SAFE_INTEGER;
-        if (aUser !== bUser) return aUser - bUser;
+        if (aUser !== bUser) {
+          return aUser - bUser;
+        }
       }
       const aPos = positionByKey.has(String(a?.key || ''))
         ? positionByKey.get(String(a?.key || ''))
@@ -518,29 +627,41 @@ const AIGatewayRoutingMethods = {
       const bPos = positionByKey.has(String(b?.key || ''))
         ? positionByKey.get(String(b?.key || ''))
         : Number.MAX_SAFE_INTEGER;
-      if (aPos !== bPos) return aPos - bPos;
+      if (aPos !== bPos) {
+        return aPos - bPos;
+      }
       return Number(a?.priority || 0) - Number(b?.priority || 0);
     });
   },
 
   _reorderAdaptersByModelProtocolHint(entries = [], options = {}, routeControl = {}) {
     const list = Array.isArray(entries) ? entries.filter(Boolean) : [];
-    if (list.length <= 1) return list;
+    if (list.length <= 1) {
+      return list;
+    }
 
     const model = String(options?.model || '').trim();
-    if (!model) return list;
+    if (!model) {
+      return list;
+    }
 
     let inferProtocolFromModel;
     let getProtocolForAdapter;
     let isProtocolSupported;
     try {
-      ({ inferProtocolFromModel, getProtocolForAdapter, isProtocolSupported } = require('./adapters/_protocolRegistry'));
+      ({
+        inferProtocolFromModel,
+        getProtocolForAdapter,
+        isProtocolSupported,
+      } = require('./adapters/_protocolRegistry'));
     } catch {
       return list;
     }
 
     const hintedProtocol = inferProtocolFromModel(model);
-    if (!hintedProtocol) return list;
+    if (!hintedProtocol) {
+      return list;
+    }
 
     const lockedKeys = new Set(
       (Array.isArray(routeControl?.preserveLeadingKeys) ? routeControl.preserveLeadingKeys : [])
@@ -557,16 +678,8 @@ const AIGatewayRoutingMethods = {
       'trae',
       'ollama',
     ];
-    const anthropicPriority = [
-      'claude',
-      'relay_api',
-      'api',
-    ];
-    const codexPriority = [
-      'codex',
-      'api',
-      'relay_api',
-    ];
+    const anthropicPriority = ['claude', 'relay_api', 'api'];
+    const codexPriority = ['codex', 'api', 'relay_api'];
     const priorityListByProtocol = {
       openai: openaiPriority,
       responses: ['relay_api', 'api'],
@@ -574,21 +687,30 @@ const AIGatewayRoutingMethods = {
       codex: codexPriority,
     };
     const priorityIndex = new Map(
-      (priorityListByProtocol[hintedProtocol] || [])
-        .map((key, index) => [String(key || '').trim(), index])
+      (priorityListByProtocol[hintedProtocol] || []).map((key, index) => [
+        String(key || '').trim(),
+        index,
+      ])
     );
-    const originalIndex = new Map(
-      list.map((entry, index) => [String(entry?.key || ''), index])
-    );
-    const stablePrioritySort = (group) => [...group].sort((a, b) => {
-      const aKey = String(a?.key || '');
-      const bKey = String(b?.key || '');
-      const aPriority = priorityIndex.has(aKey) ? priorityIndex.get(aKey) : Number.MAX_SAFE_INTEGER;
-      const bPriority = priorityIndex.has(bKey) ? priorityIndex.get(bKey) : Number.MAX_SAFE_INTEGER;
-      if (aPriority !== bPriority) return aPriority - bPriority;
-      return (originalIndex.get(aKey) ?? Number.MAX_SAFE_INTEGER)
-        - (originalIndex.get(bKey) ?? Number.MAX_SAFE_INTEGER);
-    });
+    const originalIndex = new Map(list.map((entry, index) => [String(entry?.key || ''), index]));
+    const stablePrioritySort = (group) =>
+      [...group].sort((a, b) => {
+        const aKey = String(a?.key || '');
+        const bKey = String(b?.key || '');
+        const aPriority = priorityIndex.has(aKey)
+          ? priorityIndex.get(aKey)
+          : Number.MAX_SAFE_INTEGER;
+        const bPriority = priorityIndex.has(bKey)
+          ? priorityIndex.get(bKey)
+          : Number.MAX_SAFE_INTEGER;
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+        return (
+          (originalIndex.get(aKey) ?? Number.MAX_SAFE_INTEGER) -
+          (originalIndex.get(bKey) ?? Number.MAX_SAFE_INTEGER)
+        );
+      });
 
     const locked = [];
     const exactMatch = [];
@@ -643,11 +765,19 @@ const AIGatewayRoutingMethods = {
   getDefaultRouteRecommendation(options = {}) {
     const { ranking, assessments } = this._rankAdaptersForDefaultRoute(options);
     const top = ranking[0] || null;
-    if (!top) return null;
+    if (!top) {
+      return null;
+    }
 
     const tuning = _resolveDefaultRouteTuning();
     const degradedAdapters = assessments
-      .filter((item) => item && !item.blocked && item.adapter !== top.adapter && item.totalPenalty >= tuning.summaryPenaltyFloor)
+      .filter(
+        (item) =>
+          item &&
+          !item.blocked &&
+          item.adapter !== top.adapter &&
+          item.totalPenalty >= tuning.summaryPenaltyFloor
+      )
       .sort((a, b) => b.totalPenalty - a.totalPenalty)
       .map((item) => ({
         adapter: item.adapter,
@@ -688,18 +818,28 @@ const AIGatewayRoutingMethods = {
     const preferredAdapter = String(options.preferredAdapter || '').trim();
     const strictPreferredOnly = !!options.strictPreferredOnly;
     const emitStatus = typeof options.emitStatus === 'function' ? options.emitStatus : () => {};
-    const featureEnabled = String(
-      process.env.GATEWAY_PROCESS_FAILOVER_PARALLEL_ENABLED || 'true'
-    ).toLowerCase() !== 'false';
+    const featureEnabled =
+      String(process.env.GATEWAY_PROCESS_FAILOVER_PARALLEL_ENABLED || 'true').toLowerCase() !==
+      'false';
 
-    if (!featureEnabled || strictPreferredOnly) return list;
-    if (!preferredAdapter || preferredAdapter === 'auto') return list;
-    if (!_isProcessSensitiveAdapter(preferredAdapter)) return list;
+    if (!featureEnabled || strictPreferredOnly) {
+      return list;
+    }
+    if (!preferredAdapter || preferredAdapter === 'auto') {
+      return list;
+    }
+    if (!_isProcessSensitiveAdapter(preferredAdapter)) {
+      return list;
+    }
 
     const recentPreferredFail = await this._getRecentFastFail(preferredAdapter);
-    const hasRecentProcessFailure = !!(recentPreferredFail && recentPreferredFail.errorType === 'process');
+    const hasRecentProcessFailure = !!(
+      recentPreferredFail && recentPreferredFail.errorType === 'process'
+    );
     const preferredFailureCount = Number(this._adapterFailures[preferredAdapter] || 0);
-    if (!hasRecentProcessFailure && preferredFailureCount < 1) return list;
+    if (!hasRecentProcessFailure && preferredFailureCount < 1) {
+      return list;
+    }
     if (recentPreferredFail) {
       this._maybeScheduleCooldownSelfHealProbe(preferredAdapter, recentPreferredFail, {
         emitStatus,
@@ -711,62 +851,72 @@ const AIGatewayRoutingMethods = {
     const candidateKeys = _parseProcessFailoverCandidates(
       process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES || ''
     );
-    if (candidateKeys.length === 0) return list;
+    if (candidateKeys.length === 0) {
+      return list;
+    }
 
     const byLowerKey = new Map(
-      list.map(entry => [String(entry?.key || '').toLowerCase(), entry])
+      list.map((entry) => [String(entry?.key || '').toLowerCase(), entry])
     );
     const candidateEntries = candidateKeys
-      .map(key => byLowerKey.get(String(key || '').toLowerCase()))
-      .filter(entry => entry && entry.enabled && entry.key !== preferredAdapter);
-    if (candidateEntries.length === 0) return list;
+      .map((key) => byLowerKey.get(String(key || '').toLowerCase()))
+      .filter((entry) => entry && entry.enabled && entry.key !== preferredAdapter);
+    if (candidateEntries.length === 0) {
+      return list;
+    }
 
     emitStatus(`检测到 ${preferredAdapter} 通道近期异常，正在并行探测远端兜底通道...`);
 
-    const probeResults = await Promise.all(candidateEntries.map(async (entry) => {
-      const statusName = (() => {
-        try { return entry.adapter.getStatus().name || entry.key; } catch { return entry.key; }
-      })();
-      const recentFail = await this._getRecentFastFail(entry.key);
-      if (recentFail) {
-        this._maybeScheduleCooldownSelfHealProbe(entry.key, recentFail, {
-          emitStatus,
-          adapterDisplayName: statusName,
-          source: 'candidate_parallel_failover',
-        });
-        return {
-          key: entry.key,
-          name: statusName,
-          available: false,
-          reason: `cooldown:${recentFail.errorType || 'unknown'}`,
-        };
-      }
-      try {
-        const available = entry.adapter.detectAsync
-          ? await entry.adapter.detectAsync(true)
-          : !!entry.adapter.detect(true);
-        entry.available = !!available;
-        return {
-          key: entry.key,
-          name: statusName,
-          available: !!available,
-          reason: available ? 'ok' : 'unavailable',
-        };
-      } catch {
-        entry.available = false;
-        return {
-          key: entry.key,
-          name: statusName,
-          available: false,
-          reason: 'detect_error',
-        };
-      }
-    }));
+    const probeResults = await Promise.all(
+      candidateEntries.map(async (entry) => {
+        const statusName = (() => {
+          try {
+            return entry.adapter.getStatus().name || entry.key;
+          } catch {
+            return entry.key;
+          }
+        })();
+        const recentFail = await this._getRecentFastFail(entry.key);
+        if (recentFail) {
+          this._maybeScheduleCooldownSelfHealProbe(entry.key, recentFail, {
+            emitStatus,
+            adapterDisplayName: statusName,
+            source: 'candidate_parallel_failover',
+          });
+          return {
+            key: entry.key,
+            name: statusName,
+            available: false,
+            reason: `cooldown:${recentFail.errorType || 'unknown'}`,
+          };
+        }
+        try {
+          const available = entry.adapter.detectAsync
+            ? await entry.adapter.detectAsync(true)
+            : !!entry.adapter.detect(true);
+          entry.available = !!available;
+          return {
+            key: entry.key,
+            name: statusName,
+            available: !!available,
+            reason: available ? 'ok' : 'unavailable',
+          };
+        } catch {
+          entry.available = false;
+          return {
+            key: entry.key,
+            name: statusName,
+            available: false,
+            reason: 'detect_error',
+          };
+        }
+      })
+    );
 
     const availableByLower = new Map(
       probeResults
-        .filter(item => item.available)
-        .map(item => [String(item.key || '').toLowerCase(), item])
+        .filter((item) => item.available)
+        .map((item) => [String(item.key || '').toLowerCase(), item])
     );
     if (availableByLower.size === 0) {
       emitStatus('并行探测完成：未发现可用远端兜底通道');
@@ -774,22 +924,30 @@ const AIGatewayRoutingMethods = {
     }
 
     const promotedEntries = candidateKeys
-      .map(key => byLowerKey.get(String(key || '').toLowerCase()))
-      .filter(entry => entry && availableByLower.has(String(entry.key || '').toLowerCase()));
-    if (promotedEntries.length === 0) return list;
+      .map((key) => byLowerKey.get(String(key || '').toLowerCase()))
+      .filter((entry) => entry && availableByLower.has(String(entry.key || '').toLowerCase()));
+    if (promotedEntries.length === 0) {
+      return list;
+    }
 
-    emitStatus(`并行探测完成：优先兜底通道 ${promotedEntries.map(e => {
-      try { return e.adapter.getStatus().name || e.key; } catch { return e.key; }
-    }).join(', ')}`);
+    emitStatus(
+      `并行探测完成：优先兜底通道 ${promotedEntries
+        .map((e) => {
+          try {
+            return e.adapter.getStatus().name || e.key;
+          } catch {
+            return e.key;
+          }
+        })
+        .join(', ')}`
+    );
 
-    const promotedSet = new Set(promotedEntries.map(entry => entry.key));
-    const preferredEntries = list.filter(entry => entry.key === preferredAdapter);
-    const restEntries = list.filter(entry => entry.key !== preferredAdapter && !promotedSet.has(entry.key));
-    return [
-      ...preferredEntries,
-      ...promotedEntries,
-      ...restEntries,
-    ];
+    const promotedSet = new Set(promotedEntries.map((entry) => entry.key));
+    const preferredEntries = list.filter((entry) => entry.key === preferredAdapter);
+    const restEntries = list.filter(
+      (entry) => entry.key !== preferredAdapter && !promotedSet.has(entry.key)
+    );
+    return [...preferredEntries, ...promotedEntries, ...restEntries];
   },
 
   async _generateWithAdapterIsolation(entry, prompt, adapterOptions = {}) {
@@ -797,18 +955,29 @@ const AIGatewayRoutingMethods = {
     const injectedProtocolSystem = _injectKhyProtocolSystem(generateOptionsRaw.system || '');
     const generateOptions = {
       ...generateOptionsRaw,
-      system: _injectKhyExpectedLanguageSystem(injectedProtocolSystem, prompt, generateOptionsRaw, entry?.key || ''),
+      system: _injectKhyExpectedLanguageSystem(
+        injectedProtocolSystem,
+        prompt,
+        generateOptionsRaw,
+        entry?.key || ''
+      ),
     };
     // Auto-resolve protocol for this adapter + model combination
     try {
       const { getProtocolForAdapter } = require('./adapters/_protocolRegistry');
       generateOptions._resolvedProtocol = getProtocolForAdapter(
-        entry.key, generateOptions.model || '', generateOptions
+        entry.key,
+        generateOptions.model || '',
+        generateOptions
       );
-    } catch { /* protocol registry unavailable — adapters use their defaults */ }
+    } catch {
+      /* protocol registry unavailable — adapters use their defaults */
+    }
     const effectivePrompt = _injectKhyProtocolPrompt(prompt, generateOptions);
     const shouldEmitPromptDebug = String(process.env.KHY_GATEWAY_DEBUG_PROMPT || '').trim() === '1';
-    const shouldWritePromptDebugFile = !!String(process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE || '').trim();
+    const shouldWritePromptDebugFile = !!String(
+      process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE || ''
+    ).trim();
     if (shouldEmitPromptDebug || shouldWritePromptDebugFile) {
       try {
         const summary = _buildKhyProtocolDebugSummary(effectivePrompt, generateOptions);
@@ -821,7 +990,9 @@ const AIGatewayRoutingMethods = {
         if (shouldWritePromptDebugFile) {
           _appendKhyProtocolDebugLog(entry, effectivePrompt, generateOptions, summary);
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     const run = async () => {
       if (typeof beforeRun === 'function') {
@@ -840,14 +1011,26 @@ const AIGatewayRoutingMethods = {
         }
       }
       try {
-        const output = await entry.adapter.generate(effectivePrompt, generateOptions);
+        const adaptiveChat = adaptiveOutput.withAdaptiveOutput(
+          (prompt, opts) => entry.adapter.generate(prompt, opts),
+          { maxRetries: 1 }
+        );
+        const output = await adaptiveChat(effectivePrompt, generateOptions);
         if (typeof afterRun === 'function') {
-          try { await afterRun(output); } catch { /* best effort */ }
+          try {
+            await afterRun(output);
+          } catch {
+            /* best effort */
+          }
         }
         return output;
       } catch (err) {
         if (typeof onRunError === 'function') {
-          try { await onRunError(err); } catch { /* best effort */ }
+          try {
+            await onRunError(err);
+          } catch {
+            /* best effort */
+          }
         }
         throw err;
       }
@@ -857,9 +1040,10 @@ const AIGatewayRoutingMethods = {
     }
 
     const queueKey = `adapter:${entry.key}`;
-    const pendingBefore = typeof this._adapterQueue.getPending === 'function'
-      ? this._adapterQueue.getPending(queueKey)
-      : 0;
+    const pendingBefore =
+      typeof this._adapterQueue.getPending === 'function'
+        ? this._adapterQueue.getPending(queueKey)
+        : 0;
     const statusName = (() => {
       try {
         return entry.adapter.getStatus().name || entry.key;
@@ -868,10 +1052,14 @@ const AIGatewayRoutingMethods = {
       }
     })();
     const emitQueueStatus = (text) => {
-      if (!text || typeof adapterOptions.onChunk !== 'function') return;
+      if (!text || typeof adapterOptions.onChunk !== 'function') {
+        return;
+      }
       try {
         adapterOptions.onChunk({ type: 'status', text: String(text) });
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     };
 
     let queuePulse = null;
@@ -886,7 +1074,9 @@ const AIGatewayRoutingMethods = {
       let lastNoticeSec = -1;
       queuePulse = setInterval(() => {
         const waitedSec = Math.floor((Date.now() - queuedAt) / 1000);
-        if (waitedSec <= lastNoticeSec) return;
+        if (waitedSec <= lastNoticeSec) {
+          return;
+        }
         lastNoticeSec = waitedSec;
         emitQueueStatus(`Waiting for adapter slot: ${statusName} ${waitedSec}s`);
       }, pulseMs);
@@ -927,7 +1117,7 @@ const AIGatewayRoutingMethods = {
    * @returns {Promise<{success: boolean, adapter: string, available: boolean, error?: string}>}
    */
   async forceReconnect(adapterKey) {
-    const entry = this._adapters.find(a => a.key === adapterKey);
+    const entry = this._adapters.find((a) => a.key === adapterKey);
     if (!entry) {
       return { success: false, adapter: adapterKey, available: false, error: 'Adapter not found' };
     }
@@ -938,7 +1128,11 @@ const AIGatewayRoutingMethods = {
 
     // Call adapter's manualRefresh if available (e.g. kiroAdapter clears token cache)
     if (typeof entry.adapter.manualRefresh === 'function') {
-      try { entry.adapter.manualRefresh(); } catch { /* ignore */ }
+      try {
+        entry.adapter.manualRefresh();
+      } catch {
+        /* ignore */
+      }
     }
 
     // Re-detect
@@ -965,18 +1159,22 @@ const AIGatewayRoutingMethods = {
    */
   async refreshAdapters() {
     // Re-detect independent adapters concurrently rather than serially ([MGMT-RPT-020] REQ-2026-009).
-    await Promise.all(this._adapters.map(async (entry) => {
-      if (!entry.enabled) return;
-      try {
-        if (entry.adapter.detectAsync) {
-          entry.available = await entry.adapter.detectAsync(true);
-        } else {
-          entry.available = entry.adapter.detect(true); // force refresh
+    await Promise.all(
+      this._adapters.map(async (entry) => {
+        if (!entry.enabled) {
+          return;
         }
-      } catch {
-        entry.available = false;
-      }
-    }));
+        try {
+          if (entry.adapter.detectAsync) {
+            entry.available = await entry.adapter.detectAsync(true);
+          } else {
+            entry.available = entry.adapter.detect(true); // force refresh
+          }
+        } catch {
+          entry.available = false;
+        }
+      })
+    );
     this._lastRefreshTime = Date.now();
     // Reconcile channel lifecycle after every (re)detection: a channel switch
     // routes through here, so deprecated channels are quiesced the moment the
@@ -993,21 +1191,28 @@ const AIGatewayRoutingMethods = {
    */
   async _enforceRateLimit(adapterKey, options = {}) {
     // Skip rate limiting for local adapters
-    if (this._localAdapters.has(adapterKey)) return;
-    const runtimeIsKhy = String(process.env.KHY_RUNTIME_MODE || '').trim().toLowerCase() === 'khy';
-    const fastInteractive = !!options.fastInteractive
-      || (runtimeIsKhy && String(process.env.KHY_GATEWAY_FAST_RATE_LIMIT || 'true').toLowerCase() !== 'false');
+    if (this._localAdapters.has(adapterKey)) {
+      return;
+    }
+    const runtimeIsKhy =
+      String(process.env.KHY_RUNTIME_MODE || '')
+        .trim()
+        .toLowerCase() === 'khy';
+    const fastInteractive =
+      !!options.fastInteractive ||
+      (runtimeIsKhy &&
+        String(process.env.KHY_GATEWAY_FAST_RATE_LIMIT || 'true').toLowerCase() !== 'false');
     const rateLimitJitterMaxMs = _parseMs(
-      options.rateLimitJitterMaxMs
-      ?? process.env.GATEWAY_RATE_LIMIT_JITTER_MAX_MS
-      ?? (fastInteractive ? '600' : '2000'),
+      options.rateLimitJitterMaxMs ??
+        process.env.GATEWAY_RATE_LIMIT_JITTER_MAX_MS ??
+        (fastInteractive ? '600' : '2000'),
       fastInteractive ? 600 : 2000,
       0
     );
     const maxRateLimitWaitMs = _parseMs(
-      options.maxRateLimitWaitMs
-      ?? process.env.GATEWAY_RATE_LIMIT_MAX_WAIT_MS
-      ?? (fastInteractive ? '2500' : '120000'),
+      options.maxRateLimitWaitMs ??
+        process.env.GATEWAY_RATE_LIMIT_MAX_WAIT_MS ??
+        (fastInteractive ? '2500' : '120000'),
       fastInteractive ? 2500 : 120000,
       100
     );
@@ -1022,28 +1227,30 @@ const AIGatewayRoutingMethods = {
       if (actualWait > 2000 && options.onWait) {
         options.onWait(adapterKey, actualWait);
       }
-      await new Promise(r => setTimeout(r, actualWait));
+      await new Promise((r) => setTimeout(r, actualWait));
     }
 
     // Per-adapter exponential backoff on consecutive failures (capped at 10s for fast failover)
     const failures = this._adapterFailures[adapterKey] || 0;
     if (failures > 0) {
       const attemptIndex = Math.max(0, parseInt(options.attemptIndex, 10) || 0);
-      const allowFirstAttemptBackoff = String(
-        process.env.GATEWAY_FAILURE_BACKOFF_ON_FIRST_ATTEMPT || 'false'
-      ).toLowerCase() === 'true';
-      if (attemptIndex === 0 && !allowFirstAttemptBackoff) return;
+      const allowFirstAttemptBackoff =
+        String(process.env.GATEWAY_FAILURE_BACKOFF_ON_FIRST_ATTEMPT || 'false').toLowerCase() ===
+        'true';
+      if (attemptIndex === 0 && !allowFirstAttemptBackoff) {
+        return;
+      }
       const baseFailureBackoffMs = _parseMs(
-        options.baseFailureBackoffMs
-        ?? process.env.GATEWAY_FAILURE_BACKOFF_BASE_MS
-        ?? (fastInteractive ? '250' : '1000'),
+        options.baseFailureBackoffMs ??
+          process.env.GATEWAY_FAILURE_BACKOFF_BASE_MS ??
+          (fastInteractive ? '250' : '1000'),
         fastInteractive ? 250 : 1000,
         50
       );
       const maxFailureBackoffMs = _parseMs(
-        options.maxFailureBackoffMs
-        ?? process.env.GATEWAY_FAILURE_BACKOFF_CAP_MS
-        ?? (fastInteractive ? '1800' : '10000'),
+        options.maxFailureBackoffMs ??
+          process.env.GATEWAY_FAILURE_BACKOFF_CAP_MS ??
+          (fastInteractive ? '1800' : '10000'),
         fastInteractive ? 1800 : 10000,
         baseFailureBackoffMs
       );
@@ -1057,7 +1264,7 @@ const AIGatewayRoutingMethods = {
       if (totalWait > 2000 && options.onWait) {
         options.onWait(adapterKey, totalWait);
       }
-      await new Promise(r => setTimeout(r, totalWait));
+      await new Promise((r) => setTimeout(r, totalWait));
     }
   },
 
@@ -1066,8 +1273,12 @@ const AIGatewayRoutingMethods = {
    * Safe to call multiple times (idempotent after first, race-safe).
    */
   async init() {
-    if (this._initialized) return;
-    if (this._initPromise) return this._initPromise;
+    if (this._initialized) {
+      return;
+    }
+    if (this._initPromise) {
+      return this._initPromise;
+    }
     this._initPromise = this._doInit().catch((err) => {
       this._initPromise = null;
       throw err;
@@ -1076,22 +1287,93 @@ const AIGatewayRoutingMethods = {
   },
 
   async _doInit() {
-
     // Seed the built-in SenseNova channel idempotently so it is present even
     // when the user never ran `khy init` (fresh machine / first launch).
     try {
       require('../customProviderRegistrar').ensureBuiltinSenseNova();
-    } catch { /* best effort — never block gateway init */ }
+    } catch {
+      /* best effort — never block gateway init */
+    }
 
     // Seed the qoder reverse-proxy channels (OpenAI + Anthropic lines) only when
     // the user has opted in (QODER_PROXY_ENDPOINT/API_KEY or KHY_QODER_PROXY);
     // otherwise this is an internal no-op (avoids dead ECONNREFUSED entries).
     try {
       require('../customProviderRegistrar').ensureBuiltinQoder();
-    } catch { /* best effort — never block gateway init */ }
+    } catch {
+      /* best effort — never block gateway init */
+    }
 
     // Initialize Redis-backed health store (gracefully degrades to memory)
     await this._healthStore.init();
+
+    // Clear stale in-memory failure mirrors left over from previous runs
+    // (_adapterLastError / _adapterFailures / self-heal + fast-fail meta) so an
+    // adapter that failed before a restart gets a fresh chance once the
+    // external cause (API key / network) is fixed. Gated by
+    // GATEWAY_CLEAR_FAILURES_ON_INIT (default on; set 'false' to keep state).
+    // NOTE: init clears local mirrors only; distributed Redis breaker state is
+    // left intact (TTL-governed). Wiping shared fail:/cd:/hostate: keys here
+    // would let one restarting process erase breaker/cooldown state that other
+    // healthy instances legitimately hold (thundering-herd risk). Redis keys
+    // expire on their own; a full wipe stays an explicit operator action via
+    // `khy gateway reset-failures`.
+    if (String(process.env.GATEWAY_CLEAR_FAILURES_ON_INIT || 'true').toLowerCase() !== 'false') {
+      try {
+        const reset = await this.resetAdapterFailures(null, { includeRedis: false });
+        if (reset.failed.length > 0) {
+          console.warn(
+            `[AIGateway] init cleanup: cleared stale failure state for ${reset.cleared.length}/${this._adapters.length} adapters; ` +
+              `${reset.failed.length} store clears failed (${reset.failed.map((f) => f.key).join(', ')}) — continuing init`
+          );
+        }
+      } catch (err) {
+        console.warn(
+          `[AIGateway] init cleanup: stale failure-state clear threw (${err?.message || 'unknown'}) — continuing init`
+        );
+      }
+    } else {
+      // Startup HALF_OPEN restore — only meaningful when init cleanup is OFF
+      // (when cleanup is ON the local half-open mirror was just reset, so a
+      // fresh probe is intended; hostate: keys stay in Redis, TTL-governed).
+      // Restores persisted half-open recovery progress into the in-memory
+      // fast-fail mirror so a restart does not lose the consecutive-success
+      // streak. Fail-soft: restore errors are logged and never block init.
+      try {
+        const states = await this._healthStore.listHalfOpenStates();
+        const knownKeys = new Set(this._adapters.map((a) => a.key));
+        let restored = 0;
+        const total = Object.keys(states || {}).length;
+        for (const [adapterKey, record] of Object.entries(states || {})) {
+          if (!knownKeys.has(adapterKey)) {
+            continue;
+          }
+          if (!record || record.state !== 'half_open') {
+            continue;
+          }
+          // Mirror shape matches _clearAdapterFailure's half-open branch:
+          // at:0 relaxes _getRecentFastFail so requests can probe immediately.
+          this._adapterLastError[adapterKey] = {
+            ...(this._adapterLastError[adapterKey] || {}),
+            errorType: this._adapterLastError[adapterKey]?.errorType || 'unknown',
+            error: this._adapterLastError[adapterKey]?.error || 'restored half-open state',
+            circuitOpen: false,
+            halfOpen: true,
+            consecutiveSuccesses: Math.max(0, Number(record.successes) || 0),
+            cooldownMs: 0,
+            at: 0,
+          };
+          restored += 1;
+        }
+        if (total > 0) {
+          console.log(`[AIGateway] 恢复熔断器半开状态 (${restored}/${total} 个适配器)...`);
+        }
+      } catch (err) {
+        console.warn(
+          `[AIGateway] 恢复熔断器半开状态失败 (${err?.message || 'unknown'}) — 继续初始化`
+        );
+      }
+    }
 
     // Periodic cleanup to prevent memory leaks from stale adapter data
     if (this._cleanupInterval) {
@@ -1099,33 +1381,47 @@ const AIGatewayRoutingMethods = {
       this._cleanupInterval = null;
     }
     this._cleanupInterval = setInterval(() => this._cleanupStaleData(), 5 * 60 * 1000);
-    if (this._cleanupInterval.unref) this._cleanupInterval.unref();
+    if (this._cleanupInterval.unref) {
+      this._cleanupInterval.unref();
+    }
     this._startCooldownSelfHealTicker();
 
     // Respect environment toggles
     if (process.env.GATEWAY_CLI_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'cli').enabled = false;
+      this._adapters.find((a) => a.key === 'cli').enabled = false;
     }
     if (process.env.GATEWAY_OLLAMA_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'ollama').enabled = false;
+      this._adapters.find((a) => a.key === 'ollama').enabled = false;
     }
     if (process.env.GATEWAY_RELAY_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'relay').enabled = false;
+      this._adapters.find((a) => a.key === 'relay').enabled = false;
     }
 
     // Respect IDE adapter toggles
-    for (const ideKey of ['kiro', 'cursor', 'trae', 'claude', 'codex', 'windsurf', 'vscode', 'warp', 'cursor2api']) {
+    for (const ideKey of [
+      'kiro',
+      'cursor',
+      'trae',
+      'claude',
+      'codex',
+      'windsurf',
+      'vscode',
+      'warp',
+      'cursor2api',
+    ]) {
       const envKey = `GATEWAY_${ideKey.toUpperCase()}_ENABLED`;
       if (process.env[envKey] === 'false') {
-        const entry = this._adapters.find(a => a.key === ideKey);
-        if (entry) entry.enabled = false;
+        const entry = this._adapters.find((a) => a.key === ideKey);
+        if (entry) {
+          entry.enabled = false;
+        }
       }
     }
 
     // Run detection on all enabled adapters IN PARALLEL with timeout protection
     const INIT_TIMEOUT_MS = _parseMs(process.env.GATEWAY_INIT_TIMEOUT_MS || '15000', 15000, 3000);
     const detectionJobs = this._adapters
-      .filter(e => e.enabled)
+      .filter((e) => e.enabled)
       .map(async (entry) => {
         let timerId = null;
         try {
@@ -1139,32 +1435,75 @@ const AIGatewayRoutingMethods = {
         } catch {
           entry.available = false;
         } finally {
-          if (timerId) clearTimeout(timerId);
+          if (timerId) {
+            clearTimeout(timerId);
+          }
         }
       });
     await Promise.all(detectionJobs);
 
     // Start background model refresh timer (default 5 min)
-    const MODEL_REFRESH_INTERVAL_MS = Math.max(60000,
-      parseInt(process.env.MODEL_REFRESH_INTERVAL_MS || '300000', 10) || 300000);
-    if (this._modelRefreshTimer) clearInterval(this._modelRefreshTimer);
-    this._modelRefreshTimer = setInterval(() => this._refreshModelsBackground(), MODEL_REFRESH_INTERVAL_MS);
-    if (this._modelRefreshTimer.unref) this._modelRefreshTimer.unref();
+    const MODEL_REFRESH_INTERVAL_MS = Math.max(
+      60000,
+      parseInt(process.env.MODEL_REFRESH_INTERVAL_MS || '300000', 10) || 300000
+    );
+    if (this._modelRefreshTimer) {
+      clearInterval(this._modelRefreshTimer);
+    }
+    this._modelRefreshTimer = setInterval(
+      () => this._refreshModelsBackground(),
+      MODEL_REFRESH_INTERVAL_MS
+    );
+    if (this._modelRefreshTimer.unref) {
+      this._modelRefreshTimer.unref();
+    }
 
     this._initialized = true;
     this._initPromise = null;
 
     // Invalidate selfProfile cache so dynamic adapter counts refresh
-    try { require('../selfProfile').invalidateStaticCache(); } catch { /* optional */ }
+    try {
+      require('../selfProfile').invalidateStaticCache();
+    } catch {
+      /* optional */
+    }
 
     // Start channel health broadcaster with detected adapter keys
-    const adapterKeys = this._adapters.filter(a => a.enabled).map(a => a.key);
+    const adapterKeys = this._adapters.filter((a) => a.enabled).map((a) => a.key);
     this._healthBroadcaster.setAdapterKeys(adapterKeys);
     this._healthBroadcaster.start();
 
     // Quiesce deprecated channels immediately based on the current preference,
     // so a non-active channel never starts its background work in the first place.
     this._syncChannelLifecycle();
+
+    // Warm the per-model context-window cache right after init so the very
+    // first footer/stats read resolves a real window instead of the 128k
+    // fallback. Best-effort and non-blocking: init returns immediately.
+    this._warmupContextWindowCache();
+  },
+
+  /**
+   * Fire-and-forget warmup of _contextWindowCache. Reuses the lifecycle-aware
+   * _refreshModelsBackground (it already extracts contextWindow /
+   * context_length / context_window from listModels results and swallows
+   * per-adapter failures). An in-flight flag deduplicates concurrent triggers;
+   * it is re-armed on completion so channel switches can warm the newly active
+   * adapter's models later.
+   */
+  _warmupContextWindowCache() {
+    if (this._contextWarmupInFlight) {
+      return;
+    }
+    this._contextWarmupInFlight = true;
+    Promise.resolve()
+      .then(() => this._refreshModelsBackground())
+      .catch(() => {
+        /* best effort — static capability tables still apply */
+      })
+      .finally(() => {
+        this._contextWarmupInFlight = false;
+      });
   },
 
   /**
@@ -1183,25 +1522,45 @@ const AIGatewayRoutingMethods = {
     this._syncChannelLifecycle();
     const activeKey = this._resolveActiveChannelKey();
     // Refresh independent adapter model caches concurrently ([MGMT-RPT-020] REQ-2026-009).
-    await Promise.all(this._adapters.map(async (entry) => {
-      if (!entry.enabled || !entry.available) return;
-      if (typeof entry.adapter.listModels !== 'function') return;
-      // Deprecated channel under an explicit selection: skip its background
-      // network work entirely (zombie-task suppression).
-      if (activeKey && entry.key !== activeKey) return;
-      try {
-        const models = await entry.adapter.listModels();
-        // Collect context window metadata from adapters that report it
-        if (Array.isArray(models)) {
-          for (const m of models) {
-            const cw = m.contextWindow || m.context_length || m.context_window;
-            if (cw && cw > 0 && m.id) {
-              this._contextWindowCache.set(m.id, cw);
+    await Promise.all(
+      this._adapters.map(async (entry) => {
+        if (!entry.enabled || !entry.available) {
+          return;
+        }
+        if (typeof entry.adapter.listModels !== 'function') {
+          return;
+        }
+        // Deprecated channel under an explicit selection: skip its background
+        // network work entirely (zombie-task suppression).
+        if (activeKey && entry.key !== activeKey) {
+          return;
+        }
+        try {
+          const models = await entry.adapter.listModels();
+          // Collect context window metadata from adapters that report it
+          if (Array.isArray(models)) {
+            for (const m of models) {
+              const cw = m.contextWindow || m.context_length || m.context_window;
+              if (cw && cw > 0 && m.id) {
+                this._contextWindowCache.set(m.id, cw);
+              }
+              // Cache the model output token limit alongside the context window
+              // (same refresh path; consumed by the maxTokens preflight policy).
+              const mo =
+                m.maxOutputTokens ||
+                m.max_output_tokens ||
+                m.max_completion_tokens ||
+                m.output_token_limit;
+              if (mo && mo > 0 && m.id) {
+                this.setModelMaxOutputTokens(m.id, mo);
+              }
             }
           }
+        } catch {
+          /* ignore */
         }
-      } catch { /* ignore */ }
-    }));
+      })
+    );
   },
 
   /**
@@ -1213,11 +1572,17 @@ const AIGatewayRoutingMethods = {
    */
   _resolveActiveChannelKey() {
     const raw = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
     const lower = raw.toLowerCase();
-    if (lower === 'auto') return null;
-    if (lower === 'localllm') return 'localLLM';
-    const matched = this._adapters.find(a => String(a.key || '').toLowerCase() === lower);
+    if (lower === 'auto') {
+      return null;
+    }
+    if (lower === 'localllm') {
+      return 'localLLM';
+    }
+    const matched = this._adapters.find((a) => String(a.key || '').toLowerCase() === lower);
     return matched ? matched.key : null;
   },
 
@@ -1233,9 +1598,15 @@ const AIGatewayRoutingMethods = {
     const activeKey = this._resolveActiveChannelKey();
     for (const entry of this._adapters) {
       const fn = entry.adapter && entry.adapter.setChannelActive;
-      if (typeof fn !== 'function') continue;
+      if (typeof fn !== 'function') {
+        continue;
+      }
       const active = !activeKey || entry.key === activeKey;
-      try { fn.call(entry.adapter, active); } catch { /* lifecycle hook must never break routing */ }
+      try {
+        fn.call(entry.adapter, active);
+      } catch {
+        /* lifecycle hook must never break routing */
+      }
     }
   },
 
@@ -1250,6 +1621,12 @@ const AIGatewayRoutingMethods = {
       process.env.GATEWAY_PREFERRED_ADAPTER = String(key).trim();
     }
     this._syncChannelLifecycle();
+    // Channel switch changes the effective adapter set → refresh the
+    // context-window cache for the newly active channel's models
+    // (best-effort, non-blocking; no-op before init).
+    if (this._initialized) {
+      this._warmupContextWindowCache();
+    }
   },
 
   /**
@@ -1262,23 +1639,69 @@ const AIGatewayRoutingMethods = {
   },
 
   /**
+   * Set the output token limit for a model (populated from listModels metadata
+   * on the same refresh path as _contextWindowCache). Lazy-init keeps older
+   * host instances (constructed before this cache existed) safe.
+   */
+  setModelMaxOutputTokens(modelId, maxOutputTokens) {
+    if (!this._modelOutputLimitCache) {
+      this._modelOutputLimitCache = new Map();
+    }
+    if (modelId && maxOutputTokens > 0) {
+      this._modelOutputLimitCache.set(modelId, maxOutputTokens);
+    }
+  },
+
+  /**
+   * Get the output token limit for a model.
+   * Priority: adapter-reported cache → partial match → 0 (unknown).
+   * Unlike getModelContextWindow there is no env override here — the policy
+   * layer already honors explicit caller values; 0 simply means "unknown".
+   */
+  getModelMaxOutputTokens(modelId) {
+    if (!modelId || !this._modelOutputLimitCache) {
+      return 0;
+    }
+    const cached = this._modelOutputLimitCache.get(modelId);
+    if (cached) {
+      return cached;
+    }
+    // Partial match (model IDs often carry adapter prefixes / version suffixes)
+    const lower = String(modelId).toLowerCase();
+    for (const [key, val] of this._modelOutputLimitCache) {
+      if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
+        return val;
+      }
+    }
+    return 0;
+  },
+
+  /**
    * Get the context window for a model.
    * Priority: adapter-reported cache → env override → 0 (unknown).
    * For unknown models, triggers async background refresh so next call has real data.
    */
   getModelContextWindow(modelId) {
-    if (!modelId) return 0;
+    if (!modelId) {
+      return 0;
+    }
     // 1. Check adapter-reported cache (real data from API or model metadata)
     const cached = this._contextWindowCache.get(modelId);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
     // 2. Partial match in cache (model IDs often have version suffixes)
     const lower = modelId.toLowerCase();
     for (const [key, val] of this._contextWindowCache) {
-      if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) return val;
+      if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
+        return val;
+      }
     }
     // 3. Env override
     const envVal = parseInt(process.env.KHY_CONTEXT_WINDOW, 10);
-    if (envVal > 0) return envVal;
+    if (envVal > 0) {
+      return envVal;
+    }
     // 4. Trigger background refresh — next call will have real data
     this._resolveContextWindowAsync(modelId);
     return 0;
@@ -1289,30 +1712,57 @@ const AIGatewayRoutingMethods = {
    * Non-blocking, fire-and-forget. Deduplicates concurrent calls for the same model.
    */
   _resolveContextWindowAsync(modelId) {
-    if (!this._contextWindowPending) this._contextWindowPending = new Set();
-    if (this._contextWindowPending.has(modelId)) return;
+    if (!this._contextWindowPending) {
+      this._contextWindowPending = new Set();
+    }
+    if (this._contextWindowPending.has(modelId)) {
+      return;
+    }
     this._contextWindowPending.add(modelId);
     (async () => {
       try {
         for (const entry of this._adapters) {
-          if (!entry.enabled || !entry.available) continue;
-          if (typeof entry.adapter.listModels !== 'function') continue;
+          if (!entry.enabled || !entry.available) {
+            continue;
+          }
+          if (typeof entry.adapter.listModels !== 'function') {
+            continue;
+          }
           try {
             const models = await entry.adapter.listModels();
-            if (!Array.isArray(models)) continue;
+            if (!Array.isArray(models)) {
+              continue;
+            }
             for (const m of models) {
               const cw = m.contextWindow || m.context_length || m.context_window;
               if (cw && cw > 0 && m.id) {
                 this._contextWindowCache.set(m.id, cw);
               }
+              // Same cache-fill discipline as _refreshModelsBackground: output
+              // limits ride along with the context-window resolution pass.
+              const mo =
+                m.maxOutputTokens ||
+                m.max_output_tokens ||
+                m.max_completion_tokens ||
+                m.output_token_limit;
+              if (mo && mo > 0 && m.id) {
+                this.setModelMaxOutputTokens(m.id, mo);
+              }
             }
             // Check if we found it
             const found = this.getModelContextWindow(modelId);
-            if (found > 0) break;
-          } catch { /* adapter unavailable */ }
+            if (found > 0) {
+              break;
+            }
+          } catch {
+            /* adapter unavailable */
+          }
         }
-      } catch { /* non-critical */ }
-      finally { this._contextWindowPending.delete(modelId); }
+      } catch {
+        /* non-critical */
+      } finally {
+        this._contextWindowPending.delete(modelId);
+      }
     })();
   },
 };

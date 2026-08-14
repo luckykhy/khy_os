@@ -14,12 +14,15 @@
  */
 
 const path = require('path');
+
 const catalog = require('./junkCatalog');
 const guard = require('./protectedGuard');
 
 let _platformUtils = null;
 function platformUtils() {
-  if (!_platformUtils) _platformUtils = require('../../tools/platformUtils');
+  if (!_platformUtils) {
+    _platformUtils = require('../../tools/platformUtils');
+  }
   return _platformUtils;
 }
 
@@ -27,7 +30,11 @@ function platformUtils() {
 async function _removePath(full, deps, acc) {
   const fsImpl = deps.fsImpl;
   let st;
-  try { st = fsImpl.lstatSync(full); } catch { return; }
+  try {
+    st = fsImpl.lstatSync(full);
+  } catch {
+    return;
+  }
 
   const doRemove = async () => {
     if (st.isDirectory()) {
@@ -48,32 +55,55 @@ async function _removePath(full, deps, acc) {
     acc.freedBytes += sizeBefore;
     acc.removedItems += 1;
   } catch (err) {
-    acc.failures.push({ path: full, error: err && err.code ? err.code : String(err && err.message) });
+    acc.failures.push({
+      path: full,
+      error: err && err.code ? err.code : String(err && err.message),
+    });
   }
 }
 
 function _safeSize(full, st, deps) {
   try {
-    if (st.isFile()) return st.size || 0;
+    if (st.isFile()) {
+      return st.size || 0;
+    }
     if (st.isDirectory()) {
       // 复用 scanner.measure 太重；这里小递归量一次（删前体积）。
       return _treeSize(full, deps, 0);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 0;
 }
+
 function _treeSize(dir, deps, depth) {
-  if (depth > catalog.thresholds.maxScanDepth) return 0;
+  if (depth > catalog.thresholds.maxScanDepth) {
+    return 0;
+  }
   let total = 0;
   let entries;
-  try { entries = deps.fsImpl.readdirSync(dir, { withFileTypes: true }); } catch { return 0; }
+  try {
+    entries = deps.fsImpl.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
     let st;
-    try { st = deps.fsImpl.lstatSync(full); } catch { continue; }
-    if (st.isSymbolicLink()) continue;
-    if (st.isDirectory()) total += _treeSize(full, deps, depth + 1);
-    else if (st.isFile()) total += st.size || 0;
+    try {
+      st = deps.fsImpl.lstatSync(full);
+    } catch {
+      continue;
+    }
+    if (st.isSymbolicLink()) {
+      continue;
+    }
+    if (st.isDirectory()) {
+      total += _treeSize(full, deps, depth + 1);
+    } else if (st.isFile()) {
+      total += st.size || 0;
+    }
   }
   return total;
 }
@@ -85,7 +115,11 @@ function _treeSize(dir, deps, depth) {
 async function _cleanDirContents(dir, deps) {
   const acc = { freedBytes: 0, removedItems: 0, failures: [] };
   let entries;
-  try { entries = deps.fsImpl.readdirSync(dir, { withFileTypes: true }); } catch { return acc; }
+  try {
+    entries = deps.fsImpl.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return acc;
+  }
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
     await _removePath(full, deps, acc);
@@ -144,7 +178,9 @@ async function execute(plan, opts = {}) {
     entry.status = acc.failures.length ? (acc.removedItems ? 'partial' : 'failed') : 'cleaned';
     totalFreed += acc.freedBytes;
     totalRemoved += acc.removedItems;
-    if (acc.failures.length) allFailures.push(...acc.failures.map((f) => ({ ...f, candidate: cand.id })));
+    if (acc.failures.length) {
+      allFailures.push(...acc.failures.map((f) => ({ ...f, candidate: cand.id })));
+    }
     items.push(entry);
   }
 

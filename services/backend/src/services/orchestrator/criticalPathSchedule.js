@@ -44,7 +44,9 @@ const EPS = 1e-9;
  * @returns {boolean}
  */
 function scheduleEnabled(env = process.env) {
-  const flag = String((env && env.KHY_ORCHESTRATE_SCHEDULE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_ORCHESTRATE_SCHEDULE) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -54,10 +56,14 @@ function _isNonEmptyString(v) {
 
 /** Coerce a duration to a finite non-negative number; default 1 when absent. */
 function _coerceDuration(v) {
-  if (v === undefined || v === null || v === '') return 1;
+  if (v === undefined || v === null || v === '') {
+    return 1;
+  }
   const n = Number(v);
   if (!Number.isFinite(n) || n < 0) {
-    throw new Error(`criticalPathSchedule: duration must be a non-negative number (got ${JSON.stringify(v)})`);
+    throw new Error(
+      `criticalPathSchedule: duration must be a non-negative number (got ${JSON.stringify(v)})`
+    );
   }
   return n;
 }
@@ -120,7 +126,9 @@ function _topoOrder(norm) {
     order.push(id);
     for (const s of succ.get(id)) {
       indeg.set(s, indeg.get(s) - 1);
-      if (indeg.get(s) === 0) queue.push(s);
+      if (indeg.get(s) === 0) {
+        queue.push(s);
+      }
     }
   }
   if (order.length !== norm.length) {
@@ -138,7 +146,9 @@ function _ancestors(norm, order, byId) {
     const set = anc.get(id);
     for (const d of t.dependsOn) {
       set.add(d);
-      for (const a of anc.get(d)) set.add(a);
+      for (const a of anc.get(d)) {
+        set.add(a);
+      }
     }
   }
   return anc;
@@ -166,7 +176,15 @@ function _overlaps(a1, a2, b1, b2) {
 function analyzeSchedule(tasks, opts = {}) {
   const norm = _normalizeTasks(tasks);
   if (norm.length === 0) {
-    return { tasks: [], order: [], makespan: 0, serialTotal: 0, savedTime: 0, criticalPath: [], waitFill: [] };
+    return {
+      tasks: [],
+      order: [],
+      makespan: 0,
+      serialTotal: 0,
+      savedTime: 0,
+      criticalPath: [],
+      waitFill: [],
+    };
   }
 
   const { order, byId, succ } = _topoOrder(norm);
@@ -178,13 +196,17 @@ function analyzeSchedule(tasks, opts = {}) {
   for (const id of order) {
     const t = byId.get(id);
     let start = 0;
-    for (const d of t.dependsOn) start = Math.max(start, ef.get(d));
+    for (const d of t.dependsOn) {
+      start = Math.max(start, ef.get(d));
+    }
     es.set(id, start);
     ef.set(id, start + t.duration);
   }
 
   let makespan = 0;
-  for (const id of order) makespan = Math.max(makespan, ef.get(id));
+  for (const id of order) {
+    makespan = Math.max(makespan, ef.get(id));
+  }
 
   const ls = new Map();
   const lf = new Map();
@@ -194,7 +216,9 @@ function analyzeSchedule(tasks, opts = {}) {
     const t = byId.get(id);
     const successors = succ.get(id);
     let latestFinish = successors.length === 0 ? makespan : Infinity;
-    for (const s of successors) latestFinish = Math.min(latestFinish, ls.get(s));
+    for (const s of successors) {
+      latestFinish = Math.min(latestFinish, ls.get(s));
+    }
     lf.set(id, latestFinish);
     ls.set(id, latestFinish - t.duration);
   }
@@ -224,13 +248,21 @@ function analyzeSchedule(tasks, opts = {}) {
   const waitFill = [];
   for (const id of criticalPath) {
     const C = byEnriched.get(id);
-    if (C.duration <= 0) continue;
+    if (C.duration <= 0) {
+      continue;
+    }
     const canDo = [];
     for (const T of enriched) {
-      if (T.id === C.id) continue;
-      if (T.critical) continue; // recommend only flexible (slack) tasks to fill a wait
+      if (T.id === C.id) {
+        continue;
+      }
+      if (T.critical) {
+        continue;
+      } // recommend only flexible (slack) tasks to fill a wait
       const independent = !anc.get(C.id).has(T.id) && !anc.get(T.id).has(C.id);
-      if (!independent) continue;
+      if (!independent) {
+        continue;
+      }
       if (_overlaps(T.es, T.lf, C.es, C.ef)) {
         canDo.push({ id: T.id, label: T.label, duration: T.duration });
       }

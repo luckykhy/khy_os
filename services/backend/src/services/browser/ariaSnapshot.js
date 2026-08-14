@@ -25,22 +25,27 @@
 const OFF_VALUES = Object.freeze(['0', 'false', 'off', 'no']);
 
 /** 是否启用 aria 快照（门控关 → snapshotForAI 降级为纯文本转储）。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_BROWSER_ARIA) != null ? env.KHY_BROWSER_ARIA : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 /** 快照节点数硬上界：默认 2000，夹到 [1, 5000]，防超大页爆快照。 */
 function clampMax(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 2000;
+  if (!Number.isFinite(n) || n <= 0) {
+    return 2000;
+  }
   return Math.min(Math.round(n), 5000);
 }
 
 /** 归一可访问名：折叠空白、转义内嵌引号、截断到 120 字（确定性，绝不抛）。 */
 function escapeName(name) {
-  const s = String(name == null ? '' : name).replace(/\s+/g, ' ').trim();
+  const s = String(name == null ? '' : name)
+    .replace(/\s+/g, ' ')
+    .trim();
   return s.slice(0, 120).replace(/"/g, '\\"');
 }
 
@@ -50,24 +55,43 @@ function escapeName(name) {
  * 缩进 = 2 空格 × depth；ref 永远放最后（镜像 Playwright MCP 把 ref 追加在 aria 行尾）。
  */
 function formatNode(node) {
-  if (!node || typeof node !== 'object') return '';
+  if (!node || typeof node !== 'object') {
+    return '';
+  }
   const depth = Number.isFinite(node.depth) && node.depth > 0 ? Math.floor(node.depth) : 0;
   const role = String(node.role || 'generic').trim() || 'generic';
   let line = `${'  '.repeat(depth)}- ${role}`;
 
   const name = escapeName(node.name);
-  if (name) line += ` "${name}"`;
+  if (name) {
+    line += ` "${name}"`;
+  }
 
   const props = [];
-  if (Number.isFinite(node.level) && node.level > 0) props.push(`level=${Math.floor(node.level)}`);
-  if (node.checked === true) props.push('checked');
-  else if (node.checked === 'mixed') props.push('checked=mixed');
-  if (node.selected === true) props.push('selected');
-  if (node.expanded === true) props.push('expanded');
-  if (node.disabled === true) props.push('disabled');
-  for (const p of props) line += ` [${p}]`;
+  if (Number.isFinite(node.level) && node.level > 0) {
+    props.push(`level=${Math.floor(node.level)}`);
+  }
+  if (node.checked === true) {
+    props.push('checked');
+  } else if (node.checked === 'mixed') {
+    props.push('checked=mixed');
+  }
+  if (node.selected === true) {
+    props.push('selected');
+  }
+  if (node.expanded === true) {
+    props.push('expanded');
+  }
+  if (node.disabled === true) {
+    props.push('disabled');
+  }
+  for (const p of props) {
+    line += ` [${p}]`;
+  }
 
-  if (node.ref) line += ` [ref=${String(node.ref)}]`;
+  if (node.ref) {
+    line += ` [ref=${String(node.ref)}]`;
+  }
   return line;
 }
 
@@ -76,12 +100,16 @@ function formatNode(node) {
  * 输入非数组 / 空 → 空串。绝不抛。
  */
 function serializeAriaTree(nodes) {
-  if (!Array.isArray(nodes) || nodes.length === 0) return '';
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return '';
+  }
   const out = [];
   for (const n of nodes) {
     if (n && typeof n === 'object') {
       const line = formatNode(n);
-      if (line) out.push(line);
+      if (line) {
+        out.push(line);
+      }
     }
   }
   return out.join('\n');
@@ -95,7 +123,9 @@ const REF_RE = /^e\d+$/;
 /** 把 ref（形如 e5）转成 `[data-khy-ref="e5"]` 选择器;非法 ref → null（绝不拼接）。 */
 function refSelector(ref) {
   const r = String(ref == null ? '' : ref).trim();
-  if (!REF_RE.test(r)) return null;
+  if (!REF_RE.test(r)) {
+    return null;
+  }
   return `[data-khy-ref="${r}"]`;
 }
 
@@ -107,9 +137,15 @@ function refSelector(ref) {
  */
 function decideActionable(state = {}) {
   const s = state || {};
-  if (s.attached === false) return { actionable: false, reason: 'not-attached' };
-  if (s.visible === false) return { actionable: false, reason: 'not-visible' };
-  if (s.enabled === false) return { actionable: false, reason: 'disabled' };
+  if (s.attached === false) {
+    return { actionable: false, reason: 'not-attached' };
+  }
+  if (s.visible === false) {
+    return { actionable: false, reason: 'not-visible' };
+  }
+  if (s.enabled === false) {
+    return { actionable: false, reason: 'disabled' };
+  }
   return { actionable: true, reason: 'ok' };
 }
 
@@ -133,24 +169,40 @@ const LOCATOR_METHODS = Object.freeze({
  */
 function buildLocatorSpec(opts = {}) {
   const o = opts || {};
-  const by = String(o.by || '').trim().toLowerCase();
+  const by = String(o.by || '')
+    .trim()
+    .toLowerCase();
   const method = LOCATOR_METHODS[by];
-  if (!method) return null;
+  if (!method) {
+    return null;
+  }
   const exact = o.exact === true;
 
   if (by === 'role') {
-    const role = String(o.role || '').trim().toLowerCase();
-    if (!role) return null;
+    const role = String(o.role || '')
+      .trim()
+      .toLowerCase();
+    if (!role) {
+      return null;
+    }
     const options = {};
     const name = o.name != null ? String(o.name) : '';
-    if (name) options.name = name;
-    if (exact) options.exact = true;
+    if (name) {
+      options.name = name;
+    }
+    if (exact) {
+      options.exact = true;
+    }
     return { method, primary: role, options: Object.keys(options).length ? options : undefined };
   }
 
-  const value = o.name != null ? String(o.name) : (o.value != null ? String(o.value) : '');
-  if (!value) return null;
-  if (by === 'testid') return { method, primary: value, options: undefined };
+  const value = o.name != null ? String(o.name) : o.value != null ? String(o.value) : '';
+  if (!value) {
+    return null;
+  }
+  if (by === 'testid') {
+    return { method, primary: value, options: undefined };
+  }
   return { method, primary: value, options: exact ? { exact: true } : undefined };
 }
 

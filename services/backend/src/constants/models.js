@@ -25,17 +25,22 @@ const CLAUDE_HAIKU_MODELS = ['claude-haiku-4-5-latest'];
 // ── 角色默认:按用途分组的 Khy 默认选择 ──
 const EMBEDDING_MODELS = ['nomic-embed-text']; // 向量嵌入 (learningRetrieval)
 const LOCAL_BRAIN_MODELS = ['qwen3.5:4b']; // 本地大脑模型 id (localLLMService / localLLMAdapter)
-const LOCAL_BRAIN_GGUF_FILES = [ // 本地大脑权重候选文件名 (localLLMService)
+const LOCAL_BRAIN_GGUF_FILES = [
+  // 本地大脑权重候选文件名 (localLLMService)
   'qwen3.5-4b.gguf',
   'qwen3.5-4b-ollama.gguf',
   'qwen3.5-4b-export.gguf',
 ];
 const OLLAMA_DEFAULT_MODELS = ['qwen2.5:7b']; // ollama 兜底默认 (aiManagementServer)
 const IDE_DEFAULT_MODELS = ['gpt-4o']; // cursor / vscode / windsurf 适配器默认
-const RELAY_DEFAULT_MODELS = ['claude-sonnet-4-20250514']; // relay-api 默认 (gateway.js)
+const RELAY_DEFAULT_MODELS = ['claude-sonnet-4-6', 'claude-sonnet-4-20250514']; // relay-api 默认 (gateway.js)
 const CODEX_PROBE_MODELS = ['o4-mini']; // codex 能力探测模型 (aiGateway)
 const CODEX_AGENT_MODELS = ['gpt-5-codex']; // codex 子 agent 路由关键字 (cliAgentRunner)
-const LIGHTWEIGHT_AGENT_MODELS = ['claude-haiku-3.5', 'gemini-2.0-flash']; // 轻量云端子 agent (AgentTool)
+const LIGHTWEIGHT_AGENT_MODELS = [
+  'claude-haiku-4-5-latest',
+  'claude-haiku-3.5',
+  'gemini-2.0-flash',
+]; // 轻量云端子 agent (AgentTool)
 
 // ── 免费 LLM 渠道默认 (multiFreeService) ──
 const FREE_GOOGLE_MODELS = ['gemini-2.5-flash'];

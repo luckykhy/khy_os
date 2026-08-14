@@ -18,14 +18,22 @@
  * 卸载并恢复前态。所有动作返回结构化结果，由 engine 记入不可变日志。
  */
 
-const sandbox = require('./organogenesisSandbox');
 const { EvoTrustBreaker } = require('./evoTrustBreaker');
+const sandbox = require('./organogenesisSandbox');
 
 class SandboxBypassError extends Error {
-  constructor(msg) { super(msg); this.name = 'SandboxBypassError'; this.code = 'EVO_SANDBOX_BYPASS'; }
+  constructor(msg) {
+    super(msg);
+    this.name = 'SandboxBypassError';
+    this.code = 'EVO_SANDBOX_BYPASS';
+  }
 }
 class ConstitutionViolation extends Error {
-  constructor(msg) { super(msg); this.name = 'ConstitutionViolation'; this.code = 'EVO_CONSTITUTION'; }
+  constructor(msg) {
+    super(msg);
+    this.name = 'ConstitutionViolation';
+    this.code = 'EVO_CONSTITUTION';
+  }
 }
 
 class HostPatcher {
@@ -53,17 +61,26 @@ class HostPatcher {
    */
   applyPatch(patch = {}) {
     const target = String(patch.target || '');
-    if (!target) return { ok: false, error: 'missing target' };
+    if (!target) {
+      return { ok: false, error: 'missing target' };
+    }
 
     // 闸门③：引擎只读锁（防呆④）。
     if (this.breaker && this.breaker.isEngineReadOnly()) {
-      return { ok: false, reason: 'engine-readonly', error: '演进引擎已熔断为只读模式，拒绝热载（防呆④）。' };
+      return {
+        ok: false,
+        reason: 'engine-readonly',
+        error: '演进引擎已熔断为只读模式，拒绝热载（防呆④）。',
+      };
     }
 
     // 闸门②：宪法守卫（防呆③）——绝不热载触碰锁具/红线的目标。
-    if (EvoTrustBreaker.isProtectedTarget(target) || EvoTrustBreaker.isProtectedTarget(patch.code)) {
+    if (
+      EvoTrustBreaker.isProtectedTarget(target) ||
+      EvoTrustBreaker.isProtectedTarget(patch.code)
+    ) {
       throw new ConstitutionViolation(
-        `热载目标触碰受保护不变量（信任熔断/防呆规则/沙箱/日志），绝对禁止（防呆③）：${target}`,
+        `热载目标触碰受保护不变量（信任熔断/防呆规则/沙箱/日志），绝对禁止（防呆③）：${target}`
       );
     }
 
@@ -73,7 +90,9 @@ class HostPatcher {
       throw new SandboxBypassError('缺少有效沙箱判决或未通过，禁止热载（防呆①：绝不跳过沙箱）。');
     }
     if (!sandbox.verifyToken(v.passToken, patch.code, v.verdictDigest)) {
-      throw new SandboxBypassError('沙箱凭证校验失败（代码与凭证不匹配或凭证伪造），禁止热载（防呆①）。');
+      throw new SandboxBypassError(
+        '沙箱凭证校验失败（代码与凭证不匹配或凭证伪造），禁止热载（防呆①）。'
+      );
     }
 
     // 通过三闸门：登记进演进轨影子注册表。保存前态以备回滚。
@@ -111,18 +130,26 @@ class HostPatcher {
     for (let i = this._history.length - 1; i >= 0; i--) {
       if (this._history[i].target === t) {
         const prev = this._history[i].prev;
-        if (prev) { this.registry.set(t, prev); restored = true; }
-        else { this.registry.delete(t); }
+        if (prev) {
+          this.registry.set(t, prev);
+          restored = true;
+        } else {
+          this.registry.delete(t);
+        }
         this._history.splice(i, 1);
         break;
       }
     }
-    if (!restored && this.registry.has(t)) this.registry.delete(t);
+    if (!restored && this.registry.has(t)) {
+      this.registry.delete(t);
+    }
     return { ok: true, target: t, restored };
   }
 
   /** 当前演进轨已热载的 target 列表。 */
-  loadedTargets() { return Array.from(this.registry.keys()); }
+  loadedTargets() {
+    return Array.from(this.registry.keys());
+  }
 
   /** 在隔离上下文里把源码编译成可调用函数（与沙箱同构，宿主调用仍受 vm 边界保护）。 */
   _compile(code, entry) {

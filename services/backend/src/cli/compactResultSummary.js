@@ -48,7 +48,9 @@ const _MODE_LABELS = {
  */
 function compactResultDetailEnabled(env = process.env) {
   const raw = env && env.KHY_COMPACT_RESULT_DETAIL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -72,22 +74,30 @@ function compactResultDetailEnabled(env = process.env) {
  */
 function compactTwinAlignEnabled(env = process.env) {
   const raw = env && env.KHY_COMPACT_TWIN_ALIGN;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
 /** mode 字段 → 中文档标签;空/非字符串 → null(不显);未知档 → 原样。 */
 function _modeLabel(mode) {
-  if (mode == null) return null;
+  if (mode == null) {
+    return null;
+  }
   const m = String(mode).trim().toLowerCase();
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   return _MODE_LABELS[m] || String(mode).trim();
 }
 
 /** 非负整数或 null(用于折叠条数;负/非有限/非数 → null 不显)。 */
 function _nonNegInt(n) {
   const v = Number(n);
-  if (!Number.isFinite(v) || v < 0) return null;
+  if (!Number.isFinite(v) || v < 0) {
+    return null;
+  }
   return Math.floor(v);
 }
 
@@ -102,13 +112,21 @@ function _nonNegInt(n) {
 function buildCompactSuccessLine(result, env = process.env) {
   const r = result || {};
   const base = `会话已压缩：${r.previousCount} -> ${r.nextCount}`;
-  if (!compactResultDetailEnabled(env)) return base;
+  if (!compactResultDetailEnabled(env)) {
+    return base;
+  }
   const extras = [];
   const label = _modeLabel(r.mode);
-  if (label) extras.push(label);
+  if (label) {
+    extras.push(label);
+  }
   const folded = _nonNegInt(r.compactedCount);
-  if (folded != null) extras.push(`折叠 ${folded} 条`);
-  if (!extras.length) return base;
+  if (folded != null) {
+    extras.push(`折叠 ${folded} 条`);
+  }
+  if (!extras.length) {
+    return base;
+  }
   return `${base}（${extras.join('·')}）`;
 }
 

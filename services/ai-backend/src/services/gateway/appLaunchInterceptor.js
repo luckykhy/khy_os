@@ -20,7 +20,11 @@ async function tryAppLaunchIntent(prompt, options) {
   if (!appQuery || appQuery.length > 30) return null;
 
   let toolCalling;
-  try { toolCalling = require('../toolCalling'); } catch { return null; }
+  try {
+    toolCalling = require('../toolCalling');
+  } catch {
+    return null;
+  }
 
   // ai-backend 的 toolCalling 可能缺少 app launching helpers
   if (typeof toolCalling._buildAppCandidates !== 'function' || !toolCalling.APP_ALIAS_MAP) {
@@ -31,25 +35,31 @@ async function tryAppLaunchIntent(prompt, options) {
   if (!candidates || candidates.length === 0) return null;
 
   const aliasMap = toolCalling.APP_ALIAS_MAP;
-  const hasKnownApp = candidates.some(c =>
-    aliasMap[c] || Object.values(aliasMap).includes(c)
-  );
+  const hasKnownApp = candidates.some((c) => aliasMap[c] || Object.values(aliasMap).includes(c));
   if (!hasKnownApp) return null;
 
   const { onChunk } = options || {};
   if (typeof onChunk === 'function') {
-    try { onChunk({ type: 'tool_use', tool: 'open_app', input: appQuery, id: 'app_launch_0' }); } catch { /* best effort */ }
+    try {
+      onChunk({ type: 'tool_use', tool: 'open_app', input: appQuery, id: 'app_launch_0' });
+    } catch {
+      /* best effort */
+    }
   }
 
   try {
     const result = await toolCalling.executeTool('open_app', { name: appQuery });
     const ok = result && result.success;
     const output = ok
-      ? (result.output || `已启动 ${appQuery}`)
-      : (result.error || `无法启动 ${appQuery}`);
+      ? result.output || `已启动 ${appQuery}`
+      : result.error || `无法启动 ${appQuery}`;
 
     if (typeof onChunk === 'function') {
-      try { onChunk({ type: 'tool_result', id: 'app_launch_0', content: output }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'tool_result', id: 'app_launch_0', content: output });
+      } catch {
+        /* best effort */
+      }
     }
 
     return {
@@ -63,7 +73,11 @@ async function tryAppLaunchIntent(prompt, options) {
   } catch (err) {
     const errMsg = `启动失败: ${err.message}`;
     if (typeof onChunk === 'function') {
-      try { onChunk({ type: 'tool_result', id: 'app_launch_0', content: errMsg }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'tool_result', id: 'app_launch_0', content: errMsg });
+      } catch {
+        /* best effort */
+      }
     }
     return null;
   }

@@ -33,25 +33,33 @@
  * }}
  */
 function auditDirectiveRegistry(registry, composedKeys) {
-  const reg = (registry && typeof registry === 'object') ? registry : {};
-  const composed = Array.isArray(composedKeys) ? composedKeys.map(k => String(k || '')).filter(Boolean) : [];
+  const reg = registry && typeof registry === 'object' ? registry : {};
+  const composed = Array.isArray(composedKeys)
+    ? composedKeys.map((k) => String(k || '')).filter(Boolean)
+    : [];
 
   const regKeys = new Set(Object.keys(reg));
   const composedSet = new Set(composed);
 
   const unregistered = [];
   for (const k of composedSet) {
-    if (!regKeys.has(k)) unregistered.push(k);
+    if (!regKeys.has(k)) {
+      unregistered.push(k);
+    }
   }
   const orphaned = [];
   for (const k of regKeys) {
-    if (!composedSet.has(k)) orphaned.push(k);
+    if (!composedSet.has(k)) {
+      orphaned.push(k);
+    }
   }
   // 重复检测:同一 key 在 compose 列表里出现 >1 次。
   const seen = new Set();
   const dupSet = new Set();
   for (const k of composed) {
-    if (seen.has(k)) dupSet.add(k);
+    if (seen.has(k)) {
+      dupSet.add(k);
+    }
     seen.add(k);
   }
   const duplicates = [...dupSet];
@@ -76,13 +84,17 @@ function auditDirectiveRegistry(registry, composedKeys) {
  * @returns {{ badTier: string[], emptyLabel: string[], ok: boolean }}
  */
 function auditRegistryShape(registry, allowedTiers = ['guard', 'protocol']) {
-  const reg = (registry && typeof registry === 'object') ? registry : {};
+  const reg = registry && typeof registry === 'object' ? registry : {};
   const allowed = new Set(allowedTiers);
   const badTier = [];
   const emptyLabel = [];
   for (const [k, v] of Object.entries(reg)) {
-    if (!v || typeof v !== 'object' || !allowed.has(v.tier)) badTier.push(k);
-    if (!v || typeof v !== 'object' || !String(v.label || '').trim()) emptyLabel.push(k);
+    if (!v || typeof v !== 'object' || !allowed.has(v.tier)) {
+      badTier.push(k);
+    }
+    if (!v || typeof v !== 'object' || !String(v.label || '').trim()) {
+      emptyLabel.push(k);
+    }
   }
   badTier.sort();
   emptyLabel.sort();
@@ -101,14 +113,23 @@ function extractComposedKeys(source) {
   const keys = [];
   // 仅在 composeDirectives( ... ) 的实参块内抽取,避免误吞别处的 `key:`。
   const start = s.indexOf('composeDirectives(');
-  if (start < 0) return keys;
+  if (start < 0) {
+    return keys;
+  }
   // 粗定界:从 composeDirectives( 到其后第一个 `entries` 数组闭合附近。用括号配平找实参块尾。
   let depth = 0;
   let end = s.length;
   for (let i = start + 'composeDirectives('.length - 1; i < s.length; i++) {
     const ch = s[i];
-    if (ch === '(') depth++;
-    else if (ch === ')') { depth--; if (depth === 0) { end = i; break; } }
+    if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
   }
   const block = s.slice(start, end);
   const re = /\bkey:\s*'([^']+)'/g;

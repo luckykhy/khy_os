@@ -4,7 +4,7 @@
 """
 获取金融标的列表
 策略（按优先级）：
-  1. 本地缓存 cache/instruments.csv（24h 内有效）
+  1. 本地缓存 .khy/khyquant/cache/instruments.csv（24h 内有效）
   2. akshare 网络获取（SSL 宽松模式）
   3. 内置静态兜底列表（确保系统始终可启动）
 """
@@ -14,7 +14,7 @@ import os
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_DIR  = os.path.normpath(os.path.join(SCRIPT_DIR, '../../../cache'))
+CACHE_DIR  = os.path.normpath(os.path.join(SCRIPT_DIR, '../../..', '.khy', 'khyquant', 'cache'))
 CACHE_FILE = os.path.join(CACHE_DIR, 'instruments.csv')
 CACHE_TTL  = 24 * 3600
 

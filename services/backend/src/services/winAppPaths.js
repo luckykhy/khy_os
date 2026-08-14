@@ -32,7 +32,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_APP_PATHS_REGISTRY;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -58,7 +60,9 @@ const DEFAULT_VALUE_RE = /^\s*\((?:Default|默认)\)\s+REG_(?:SZ|EXPAND_SZ)\s+(.
  */
 function parseAppPathsOutput(stdout) {
   const text = String(stdout == null ? '' : stdout);
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
 
   const lines = text.split(/\r?\n/);
   const out = [];
@@ -73,11 +77,15 @@ function parseAppPathsOutput(stdout) {
       currentExe = keyMatch[1];
       continue;
     }
-    if (!currentExe) continue;
+    if (!currentExe) {
+      continue;
+    }
     const valMatch = line.match(DEFAULT_VALUE_RE);
     if (valMatch) {
       const exePath = valMatch[1].trim().replace(/^"+|"+$/g, '');
-      if (exePath) out.push({ exeName: currentExe, exePath });
+      if (exePath) {
+        out.push({ exeName: currentExe, exePath });
+      }
       // One default per key; reset so a stray later value line can't re-bind.
       currentExe = '';
     }
@@ -102,10 +110,14 @@ function buildAppPathRecords(stdout) {
   const records = [];
   for (const { exeName, exePath } of entries) {
     const path = String(exePath || '').trim();
-    if (!path) continue;
+    if (!path) {
+      continue;
+    }
     const lowerExe = String(exeName || '').toLowerCase();
     const bin = lowerExe.replace(/\.exe$/i, '');
-    if (!bin || seen.has(bin)) continue;
+    if (!bin || seen.has(bin)) {
+      continue;
+    }
     seen.add(bin);
     records.push({
       name: bin,

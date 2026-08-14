@@ -17,13 +17,16 @@
  */
 
 const { execSync } = require('child_process');
+
 const gitContextService = require('../gitContextService');
 
 let _additionalDirectories = null;
 function _getAdditionalDirs() {
   // 懒加载并 fail-soft：额外目录子系统缺失不应拖垮工作区采集。
   try {
-    if (!_additionalDirectories) _additionalDirectories = require('../additionalDirectories');
+    if (!_additionalDirectories) {
+      _additionalDirectories = require('../additionalDirectories');
+    }
     return _additionalDirectories.getDirectories() || [];
   } catch {
     return [];
@@ -39,7 +42,9 @@ function _getAdditionalDirs() {
  * @returns {string}
  */
 function redactRemote(url) {
-  if (!url) return '';
+  if (!url) {
+    return '';
+  }
   // Strip the userinfo segment between the scheme's `//` and the `@`.
   return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1***@');
 }
@@ -54,9 +59,13 @@ function _git(cmd, cwd) {
       try {
         const detector = require('../gitExecutableDetector');
         const detected = detector.detectGitExecutable();
-        if (!detected) return null;
+        if (!detected) {
+          return null;
+        }
         quotedGit = detected === 'git' ? 'git' : `"${detected}"`;
-      } catch { /* 检测失败 → 回退 'git' */ }
+      } catch {
+        /* 检测失败 → 回退 'git' */
+      }
     }
     return execSync(`${quotedGit} ${cmd}`, {
       cwd,
@@ -76,15 +85,26 @@ function _git(cmd, cwd) {
  */
 function _countDirty(status) {
   const counts = { staged: 0, unstaged: 0, untracked: 0, total: 0 };
-  if (!status) return counts;
+  if (!status) {
+    return counts;
+  }
   for (const raw of status.split('\n')) {
-    if (!raw || raw.startsWith('##')) continue;
+    if (!raw || raw.startsWith('##')) {
+      continue;
+    }
     counts.total += 1;
     const x = raw[0];
     const y = raw[1];
-    if (x === '?' && y === '?') { counts.untracked += 1; continue; }
-    if (x && x !== ' ' && x !== '?') counts.staged += 1;
-    if (y && y !== ' ' && y !== '?') counts.unstaged += 1;
+    if (x === '?' && y === '?') {
+      counts.untracked += 1;
+      continue;
+    }
+    if (x && x !== ' ' && x !== '?') {
+      counts.staged += 1;
+    }
+    if (y && y !== ' ' && y !== '?') {
+      counts.unstaged += 1;
+    }
   }
   return counts;
 }
@@ -96,7 +116,9 @@ function _countDirty(status) {
 function _aheadBehind(cwd) {
   // `git rev-list --count --left-right @{upstream}...HEAD` → "behind\tahead".
   const out = _git('rev-list --count --left-right @{upstream}...HEAD', cwd);
-  if (!out) return { ahead: 0, behind: 0, hasUpstream: false };
+  if (!out) {
+    return { ahead: 0, behind: 0, hasUpstream: false };
+  }
   const m = out.split(/\s+/);
   const behind = Number.parseInt(m[0], 10);
   const ahead = Number.parseInt(m[1], 10);
@@ -139,7 +161,14 @@ function collectWorkspaceContext(cwd, options = {}) {
   try {
     git = gitContextService.collectGitContext(cwd, { force: !!options.force });
   } catch {
-    git = { branch: '', mainBranch: '', status: '', recentLog: '', isDirty: false, isGitRepo: false };
+    git = {
+      branch: '',
+      mainBranch: '',
+      status: '',
+      recentLog: '',
+      isDirty: false,
+      isGitRepo: false,
+    };
   }
 
   if (!git || !git.isGitRepo) {
@@ -193,23 +222,36 @@ function collectWorkspaceContext(cwd, options = {}) {
  * @returns {string}
  */
 function formatSummary(ctx) {
-  if (!ctx) return '工作区信息不可用';
+  if (!ctx) {
+    return '工作区信息不可用';
+  }
   if (!ctx.isGitRepo) {
-    const extra = ctx.additionalDirs && ctx.additionalDirs.length
-      ? `；额外目录 ${ctx.additionalDirs.length} 个` : '';
+    const extra =
+      ctx.additionalDirs && ctx.additionalDirs.length
+        ? `；额外目录 ${ctx.additionalDirs.length} 个`
+        : '';
     return `工作区：${ctx.root}（非 git 仓库，版本控制不可用）${extra}`;
   }
 
   const lines = [];
   lines.push(`工作区：${ctx.root}`);
-  lines.push(`分支：${ctx.branch}${ctx.mainBranch && ctx.mainBranch !== ctx.branch ? `（主分支 ${ctx.mainBranch}）` : ''}`);
+  lines.push(
+    `分支：${ctx.branch}${ctx.mainBranch && ctx.mainBranch !== ctx.branch ? `（主分支 ${ctx.mainBranch}）` : ''}`
+  );
 
   if (ctx.hasRemote) {
     const sync = [];
-    if (ctx.ahead) sync.push(`领先 ${ctx.ahead} 个提交`);
-    if (ctx.behind) sync.push(`落后 ${ctx.behind} 个提交`);
-    const syncTxt = !ctx.hasUpstream ? '尚未设置上游分支'
-      : sync.length ? sync.join('、') : '与远端同步';
+    if (ctx.ahead) {
+      sync.push(`领先 ${ctx.ahead} 个提交`);
+    }
+    if (ctx.behind) {
+      sync.push(`落后 ${ctx.behind} 个提交`);
+    }
+    const syncTxt = !ctx.hasUpstream
+      ? '尚未设置上游分支'
+      : sync.length
+        ? sync.join('、')
+        : '与远端同步';
     lines.push(`远端：${ctx.remoteUrlSafe || redactRemote(ctx.remoteUrl)}（${syncTxt}）`);
   } else {
     lines.push('远端：未配置（push 前需先添加 origin）');
@@ -217,7 +259,9 @@ function formatSummary(ctx) {
 
   if (ctx.isDirty) {
     const c = ctx.dirtyCounts;
-    lines.push(`改动：已暂存 ${c.staged}、未暂存 ${c.unstaged}、未跟踪 ${c.untracked}（共 ${c.total} 项待保存）`);
+    lines.push(
+      `改动：已暂存 ${c.staged}、未暂存 ${c.unstaged}、未跟踪 ${c.untracked}（共 ${c.total} 项待保存）`
+    );
   } else {
     lines.push('改动：工作区干净，无未保存内容');
   }

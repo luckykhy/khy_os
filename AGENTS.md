@@ -91,25 +91,40 @@ User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
 ## 版本同步
 
 由 `scripts/ci/check-version-sync.js` 强制（pre-commit / CI / bootstrap）。
-升版本号时，要更新全部三个真源——它们必须保持完全一致：
+该脚本校验**两个独立的版本轨道**（共 6 个真源）：组内必须完全一致，组间刻意不同。
+
+**轨道 1 —— 主 khy-os 包（4 源，组内必须完全一致）**：
 
 1. `pyproject.toml` → `[project] version`
 2. `packaging/npm/package.json` → `version`（npm 渠道清单）
 3. `services/backend/package.json` → `version`
+4. `packaging/modules/modules.json` → `version`（模块化打包清单，各模块构建时继承此版本）
+
+**轨道 2 —— ai-backend 生态（2 源，组内必须一致）**：
+
+1. `services/ai-backend/package.json` → `version`
+2. `platform/packages/shared/package.json` → `version`（`@khy/shared`）
+
+轨道 2 与轨道 1 的版本**刻意不同**（例如 1.1.x vs 1.6.x）：ai-backend 与
+`@khy/shared` 作为捆绑单元随 pip wheel 一起发布、共同开发，因此共享一条
+独立的版本轨道，脚本将其作为单独分组校验。
 
 不要编辑 `platform/khy_platform/__init__.py`：它的 `__version__` 从
 `pyproject.toml` / 已安装元数据中动态解析。在那里硬编码一个字面量
 `__version__ = "x.y.z"` 会让 `check-version-sync.js` 故意失败
 （它防止版本漂移被重新引入）。
 
-`scripts/release/publish-dual.sh` 在发布时从单一 `--version` 输入同步这三处；
-CI 门在发布之外强制同一不变式。
+`scripts/release/publish-dual.sh` 在发布时从单一 `--version` 输入同步
+`pyproject.toml`、`packaging/npm/package.json` 与 `services/backend/package.json`
+三处主轨道真源；`packaging/modules/modules.json` 由构建流程/人工维护，
+最终由 `scripts/ci/check-version-sync.js` 统一校验主轨道 4 源 + ai-backend
+轨道 2 源的组内一致性。CI 门在发布之外强制同一不变式。
 
 ---
 
 ## 人工维护参考
 
-完整的中文开发者指南见 **[CONTRIBUTING.md](CONTRIBUTING.md)**，涵盖：
+完整的中文开发者指南见 **[CONTRIBUTING.md](docs/08_MGMT_项目管理/CONTRIBUTING.md)**，涵盖：
 - 详细的目录结构说明
 - 数据流图
 - 调试技巧
@@ -169,12 +184,43 @@ CI 门在发布之外强制同一不变式。
 | `'C:\\Program Files\\PostgreSQL\\17'` | 用 `PG_HOME` env 变量或动态扫盘 |
 | Ollama URL 在 5 个文件里重复 | 从 `constants/serviceDefaults.js` 导入一次 |
 
+**生产域名检查**：检查脚本用 `PRODUCTION_HOST_PATTERN`（匹配
+`khyquant.top` / `khyquant.com` / `khyquant.cn`）扫描第一方生产域名字面量。
+注意：`process.env.X || 'https://api.khyquant.top'` 式 env 回退**不豁免**——
+可被 env 覆盖的默认值仍把生产域名固化进了非真源模块，域名迁移时会静默
+分叉所有未设置该 env 的安装。域名字面量只允许存在于
+`constants/serviceDefaults.js`，其他文件必须从那里导入。豁免仅限以下三类：
+- 注释/品牌/示例/文档文本（如「官网」「示例」「e.g.」等语境）；
+- 纯主机探测：域名仅作为 `.includes()` / `.endsWith()` / `===` 等比较的操作数
+  （读取当前运行主机来分支行为，未声明网络目标），且同一行没有
+  `http(s)://` URL；
+- 纯邮件地址（如 `admin@khyquant.com`），且同一行没有 `http(s)://` 网址。
+
+**端点检查豁免清单**（`check-agent-rules.js` 实际放行的情形）：
+- 测试文件（`*.test.js` / `*.spec.js` / `__tests__/` / `tests/` 目录）——
+  测试固定规范端点是防护，而非隐藏的硬编码；
+- `constants/serviceDefaults.js` 本身（它就是单一真源）；
+- 注释行；
+- 含 `${}` 插值的模板字符串；
+- `new URL()` 解析用途（解析字符串，不发起网络请求）；
+- 含「例如 / e.g. / example / 示例」的示例文本行；
+- proxy 配置指导文本（`export` / `set *PROXY=` 形式的说明文字）；
+- `'http://localhost:' + 变量` 式字符串拼接（端口来自变量）；
+- 含 `process.env.` / `os.getenv(` 的回退行（注意：该豁免仅适用于
+  localhost/回环端点检查；生产域名检查不接受此豁免，见上）。
+
 **端口冲突容忍**：当 dev server 启动而其端口被占用时，
 它**必须**自动探测下一个可用端口（例如 3000 → 3001 → 3002），
 并把实际端口传播给所有消费者，绝不能以 `EADDRINUSE` 崩溃。
 
-**服务发现**：前端 ↔ 后端连接必须通过以下之一建立：
-环境变量注入、共享运行时配置文件，或服务注册表——绝不能是写死的字面量。
+**服务发现**：适用范围涵盖 HTTP、WebSocket、SSE 与 IPC 等一切前端 ↔ 后端
+连接通道。端点必须通过以下三种合法来源之一建立，绝不能是写死的字面量：
+- 环境变量注入（例如 `VITE_BACKEND_HOST` / `VITE_BACKEND_PORT`）；
+- 共享运行时配置文件（例如 `.khy/` 目录下的运行时 JSON）；
+- 服务注册表。
+
+同一模块若需要多个端点，则**全部**端点都必须来自上述来源之一——
+禁止一部分动态配置、另一部分硬编码的混用。
 
 ### 规则 2：状态透明 —— 不许含糊描述
 
@@ -197,8 +243,36 @@ CI 门在发布之外强制同一不变式。
 ✅  Claude Adapter 处理中（12s）...
 ```
 
-**例外**：UI 枚举标签（例如反馈状态「处理中」）与用于状态解析的正则
-模式不算违规——它们是数据，不是面向用户的消息。
+**执行强度**：自动检查（`check-agent-rules.js`）仅覆盖以下 6 个 token——
+「正在工作」「处理中」「尝试连接」`loading`、`processing`、`connecting`，
+且判定级别为 **warning**（默认不阻断提交；加 `--strict-warnings` 时阻断）。
+本规则列出的「请稍候…」等其余措辞不在自动检查范围内，由人工评审兜底。
+
+**判定标准**：「动作 + 目标 + 进度」三维定义——
+- **动作**：正在执行的操作名（连接、解析、下载…）；
+- **目标**：被操作的对象或服务（PostgreSQL、AST、某个文件…）；
+- **进度**：可量化的推进信号。
+
+检查脚本认可的进度信号包括：`n/m` 数字比例、百分比、「第 n 次」、
+`attempt` / `retry`、`:端口号`、`host` / `port` / `bytes` / `kb` / `mb` / `gb`、
+「节点 / 记录 / 条目」。状态文本命中上述任一信号即视为含进度。
+
+**例外**：以下属于**数据**而非面向用户的消息，不算违规：
+- UI 枚举标签——即选项/枚举值本身，例如 `<option>` 的内容、options 数组的
+  `label` 字段（如反馈状态「处理中」）；
+- i18n 翻译键；
+- 用于状态解析的正则或字符串常量；
+- 数据库 ENUM 值。
+
+判断标准：若字符串在用户看到之前还会被代码进一步处理
+（解析、翻译、替换为更详细的状态），它是数据，不违规；
+若直接打印到终端或 UI 给用户看，则必须遵守「动作+目标+进度」。
+
+注意：当前 `check-agent-rules.js` 尚未对枚举标签、i18n 键、正则常量等
+场景做自动豁免——此类字符串若命中通用状态 token 且缺乏进度信号，
+仍会被脚本标注为 warning。上述例外属**人工评审层面确认的例外**：
+评审时按上面的判断标准确认其为数据（展示前会被代码进一步处理）
+而非直接面向用户的状态文本，即可放行。
 
 **日志**：同一规则适用于后端服务里的 `console.log` / `logger.info`。
 尽可能包含服务名、操作与可度量的进度。
@@ -231,6 +305,29 @@ if (Date.now() - start > 120_000) { /* kills active work */ }
 
 **例外**：短生命周期的网络 fetch 超时（例如 30s HTTP 请求超时）
 与认证握手超时**不**算违规——它们防的是挂死的 I/O，而非活跃的计算。
+其定量化标准见下方合法例外清单。
+
+**合法例外清单**（与 `check-agent-rules.js` 的实际豁免逻辑一致）：
+- 低于 500ms 的 `setTimeout` 完全不检查；
+- Promise 延迟睡眠：`await new Promise(r => setTimeout(r, ms))`（无 kill/abort）；
+- 计数器重置定时器：回调只做 `xxxCount = 0` 类赋值（无 kill/abort/reject）；
+- 短 UI 重置计时器：≤5s，且上下文含 `clearTimeout` 及
+  count/debounce/cooldown/hint/tip 关键词之一；
+- 短 I/O 超时：≤10s，且上下文含 handshake / probe / startup / connect /
+  health / auth / fetch / race 关键词之一（即上文「认证握手超时」例外的
+  定量化）；
+- SIGTERM→SIGKILL 优雅期：≤5s，且涉及 SIGTERM/SIGKILL 信号切换
+  （进程清理的宽限期）；
+- 单次 fetch/request 中止：仅调用 `.abort()`（AbortController 模式），
+  不含 process kill；
+- 仅 reject 的 Promise 超时：回调只 `reject()` 不 kill（例如基于 Promise 的
+  RPC 超时）。
+
+另外两条判定规则：
+- 带 kill 信号的超时，若其上下文存在空闲重置模式（`lastActivity` /
+  `idleTimer` / `resetIdle` / `touch` 等），则视为空闲超时系统的一部分，合规；
+- 固定超时但无 kill 信号且无进度感知信号的，判 **warning**，
+  提示改为滑动/空闲超时。
 
 **会重置空闲计时器的进度指标**：
 - 工具调用完成（成功或失败）
@@ -274,6 +371,13 @@ process.stdout.write(`\x1B[1;${rows - 1}r`);
 **例外**：先切到备用屏幕缓冲区（`\x1B[?1049h`）的全屏 TUI 应用
 （例如内置分页器或编辑器）——那里的滚动区是安全的，因为主回滚被保留。
 
+**检查机制**：检查脚本扫描 DECSTBM 转义序列——`\x1B[...r` 的各种写法
+（`\x1B` / `\u001B` / `\033` / `\e` 前缀及原始 ESC 字节，参数为数字/分号
+或插值 token）。若同一文件中出现**备用缓冲区标志**，该命中降级为
+**warning**（需人工确认滚动区确实只作用于全屏 UI 且退出时恢复）；
+否则判 **error**。备用缓冲区标志的定义：`\x1B[?1049h` 进入备用缓冲区 /
+`\x1B[?1049l` 退出（及兼容模式 `\x1B[?47h` / `\x1B[?47l`）。
+
 **复盘**：见 `docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.md`。
 
 ### 智能体工作流强制
@@ -287,7 +391,7 @@ process.stdout.write(`\x1B[1;${rows - 1}r`);
 
 ### 本地检查脚本
 
-运行：`node scripts/check-agent-rules.js --changed`
+运行：`node scripts/ci/check-agent-rules.js --changed`
 
 它会校验改动文件中是否有硬编码端点模式、含糊的通用状态文本、
 可疑的硬超时用法，以及在非全屏备用缓冲区上下文之外使用的
@@ -297,7 +401,10 @@ ANSI 滚动区转义（DECSTBM）。
 
 ## 代码评审清单
 
-在批准任何 PR 之前，核对全部四项。任何一项失败 = 需要返工。
+在批准任何 PR 之前，核对全部五项。任何一项失败 = 需要返工。
+
+> 跨平台等效做法：直接运行 `node scripts/ci/check-agent-rules.js --changed`
+> （涵盖第 1/3/4/5 项的自动化检查；Windows PowerShell 无 grep 时以此为准）。
 
 - [ ] **硬编码扫描**：`grep -rn 'localhost:[0-9]' --include='*.js' --include='*.vue' --include='*.ts'` 在 `serviceDefaults.js` / `.env*` / 注释之外零命中
 - [ ] **端口韧性**：Dev server 启动能以自动探测处理 `EADDRINUSE`

@@ -68,13 +68,15 @@ function injectWithBudget(files, { perFileMaxChars, totalMaxChars }) {
     });
 
     // Stop if total budget exhausted
-    if (totalUsed >= totalMaxChars) break;
+    if (totalUsed >= totalMaxChars) {
+      break;
+    }
   }
 
   return {
     injected: stats,
     totalChars: totalUsed,
-    truncated: stats.some(s => s.truncated),
+    truncated: stats.some((s) => s.truncated),
   };
 }
 
@@ -95,22 +97,25 @@ function analyzeBootstrapBudget({
   nearLimitRatio = NEAR_LIMIT_RATIO,
 }) {
   const totalUsed = files.reduce((sum, f) => sum + f.injectedChars, 0);
-  const truncatedFiles = files.filter(f => f.truncated);
+  const truncatedFiles = files.filter((f) => f.truncated);
   const nearLimit = totalUsed >= totalMaxChars * nearLimitRatio;
   const overLimit = truncatedFiles.length > 0;
 
   // Generate signature for deduplication
-  const signature = crypto.createHash('sha256')
-    .update(JSON.stringify({
-      perFileMaxChars,
-      totalMaxChars,
-      files: files.map(f => ({
-        path: f.path,
-        rawChars: f.rawChars,
-        injectedChars: f.injectedChars,
-        causes: [...(f.causes || [])].sort(),
-      })),
-    }))
+  const signature = crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        perFileMaxChars,
+        totalMaxChars,
+        files: files.map((f) => ({
+          path: f.path,
+          rawChars: f.rawChars,
+          injectedChars: f.injectedChars,
+          causes: [...(f.causes || [])].sort(),
+        })),
+      })
+    )
     .digest('hex')
     .slice(0, 16);
 
@@ -126,7 +131,9 @@ function analyzeBootstrapBudget({
       const showFiles = truncatedFiles.slice(0, MAX_WARNING_FILES);
       for (const f of showFiles) {
         const causeStr = f.causes.join(', ');
-        lines.push(`- ${f.path}: ${f.rawChars} → ${f.injectedChars} chars (~${f.reductionPct}% removed; ${causeStr})`);
+        lines.push(
+          `- ${f.path}: ${f.rawChars} → ${f.injectedChars} chars (~${f.reductionPct}% removed; ${causeStr})`
+        );
       }
 
       const moreCount = truncatedFiles.length - showFiles.length;
@@ -134,7 +141,9 @@ function analyzeBootstrapBudget({
         lines.push(`+ ${moreCount} more truncated file(s).`);
       }
 
-      lines.push(`\nTotal context: ${totalUsed}/${totalMaxChars} chars (${Math.round(totalUsed / totalMaxChars * 100)}% used)`);
+      lines.push(
+        `\nTotal context: ${totalUsed}/${totalMaxChars} chars (${Math.round((totalUsed / totalMaxChars) * 100)}% used)`
+      );
 
       warning = lines.join('\n');
 
@@ -155,8 +164,12 @@ function analyzeBootstrapBudget({
  * Truncate text at a clean boundary (newline or space).
  */
 function _truncateAtBoundary(text, maxChars) {
-  if (text.length <= maxChars) return text;
-  if (maxChars <= 0) return '';
+  if (text.length <= maxChars) {
+    return text;
+  }
+  if (maxChars <= 0) {
+    return '';
+  }
 
   // Find last newline before maxChars
   const lastNewline = text.lastIndexOf('\n', maxChars);

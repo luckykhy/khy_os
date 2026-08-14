@@ -32,7 +32,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TOOL_HEADER_SUMMARY_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -51,14 +53,22 @@ const _cache = new WeakMap();
  */
 function memoHeader(tool, cwd, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !tool || typeof tool !== 'object') return computeFn();
+    if (!isEnabled(env) || !tool || typeof tool !== 'object') {
+      return computeFn();
+    }
     const hit = _cache.get(tool);
-    if (hit && hit.cwd === cwd) return hit.header;
+    if (hit && hit.cwd === cwd) {
+      return hit.header;
+    }
     const header = computeFn();
     _cache.set(tool, { cwd, header });
     return header;
   } catch {
-    try { return computeFn(); } catch { return { name: '', argSummary: '' }; }
+    try {
+      return computeFn();
+    } catch {
+      return { name: '', argSummary: '' };
+    }
   }
 }
 

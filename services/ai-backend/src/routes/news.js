@@ -37,37 +37,16 @@ router.get('/', authMiddleware, async (req, res) => {
 function fetchNewsFromAkshare(keyword, limit) {
   return new Promise((resolve) => {
     const sym = keyword || '000001';
-    const script = [
-      'import sys, json, io',
-      "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')",
-      'try:',
-      '    import akshare as ak',
-      '    df = ak.stock_news_em(symbol="' + sym + '")',
-      '    if df is not None and len(df) > 0:',
-      '        df = df.head(' + limit + ')',
-      '        records = []',
-      '        for _, row in df.iterrows():',
-      '            records.append({',
-      '                "title": str(row.get("\\u65b0\\u95fb\\u6807\\u9898", "")),',
-      '                "content": str(row.get("\\u65b0\\u95fb\\u5185\\u5bb9", ""))[:200],',
-      '                "source": str(row.get("\\u6587\\u7ae0\\u6765\\u6e90", "")),',
-      '                "url": str(row.get("\\u65b0\\u95fb\\u94fe\\u63a5", "")),',
-      '                "time": str(row.get("\\u53d1\\u5e03\\u65f6\\u95f4", ""))',
-      '            })',
-      '        print(json.dumps({"success": True, "data": records}, ensure_ascii=False))',
-      '    else:',
-      '        print(json.dumps({"success": True, "data": []}))',
-      'except Exception as e:',
-      '    print(json.dumps({"success": False, "error": str(e)}))'
-    ].join('\n');
-
+    // Use a separate script file and pass the keyword via sys.argv to prevent
+    // command injection from user-controlled keyword values.
+    const newsScriptPath = path.join(__dirname, '..', 'scripts', 'fetch_akshare_news.py');
     const { findPython } = require('../utils/pythonPath');
     const pythonPath = findPython();
 
     let python;
     try {
-      python = spawn(pythonPath, ['-c', script], {
-        env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+      python = spawn(pythonPath, [newsScriptPath, sym, String(limit)], {
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       });
     } catch {
       resolve([]);
@@ -75,9 +54,14 @@ function fetchNewsFromAkshare(keyword, limit) {
     }
 
     let out = '';
-    python.stdout.on('data', d => out += d.toString());
+    python.stdout.on('data', (d) => {
+      resetIdle();
+      out += d.toString();
+    });
+    python.stdout.on('error', () => resolve([]));
     python.on('error', () => resolve([]));
     python.on('close', (code) => {
+      if (idleTimer) clearTimeout(idleTimer);
       try {
         const result = JSON.parse(out);
         resolve(result.success ? result.data : []);
@@ -86,7 +70,24 @@ function fetchNewsFromAkshare(keyword, limit) {
       }
     });
 
-    setTimeout(() => { try { python.kill(); } catch {} }, 30000);
+    // Idle (sliding) timeout — AGENTS rule 3: never hard-kill an actively
+    // progressing task. Every stdout chunk resets the timer; only a fetch
+    // that has been silent for the whole window is killed.
+    const IDLE_LIMIT_MS = 30000;
+    let idleTimer = null;
+    function resetIdle() {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        try {
+          python.kill();
+        } catch {}
+        // Resolve even if close event never fires to prevent hanging promise
+        resolve([]);
+      }, IDLE_LIMIT_MS);
+      // Don't keep the event loop alive solely for this watchdog timer.
+      if (idleTimer.unref) idleTimer.unref();
+    }
+    resetIdle();
   });
 }
 

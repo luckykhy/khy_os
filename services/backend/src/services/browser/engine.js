@@ -25,20 +25,28 @@
 
 const DEFAULT_NAV_TIMEOUT_MS = 20_000;
 const DEFAULT_LAUNCH_TIMEOUT_MS = 15_000;
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
 // Lazily resolve a Playwright module. Cached across calls. `null` if absent.
 let _pwModule = null; // resolved module or false (tried, missing)
 
 /** Resolve the Playwright module (playwright → playwright-core), cached. */
 function loadPlaywright() {
-  if (_pwModule && _pwModule.chromium) return _pwModule; // already loaded
+  if (_pwModule && _pwModule.chromium) {
+    return _pwModule;
+  } // already loaded
   for (const name of ['playwright', 'playwright-core']) {
     try {
       // eslint-disable-next-line import/no-dynamic-require, global-require
       const mod = require(name);
-      if (mod && mod.chromium) { _pwModule = mod; return mod; }
-    } catch { /* not installed — try next */ }
+      if (mod && mod.chromium) {
+        _pwModule = mod;
+        return mod;
+      }
+    } catch {
+      /* not installed — try next */
+    }
   }
   // Missing state is not permanently latched: a later require (after a mid-session
   // self-heal install of playwright) can still pick the module up.
@@ -67,7 +75,9 @@ function _hardTimeoutEnabled() {
     return require('../flagRegistry').isFlagEnabled('KHY_SEARCH_BROWSER_HARD_TIMEOUT', process.env);
   } catch {
     const raw = process.env.KHY_SEARCH_BROWSER_HARD_TIMEOUT;
-    if (raw === undefined || raw === null || raw === '') return true;
+    if (raw === undefined || raw === null || raw === '') {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -78,12 +88,23 @@ function getProxyServer() {
     const pcs = require('../proxyConfigService');
     const active = pcs.getActiveProxy ? pcs.getActiveProxy() : null;
     if (active) {
-      if (typeof active === 'string') return active;
-      if (active.url) return active.url;
+      if (typeof active === 'string') {
+        return active;
+      }
+      if (active.url) {
+        return active.url;
+      }
     }
-  } catch { /* ignore */ }
-  return process.env.HTTPS_PROXY || process.env.https_proxy
-    || process.env.HTTP_PROXY || process.env.http_proxy || null;
+  } catch {
+    /* ignore */
+  }
+  return (
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy ||
+    null
+  );
 }
 
 /**
@@ -101,17 +122,23 @@ async function acquireBrowser(chromium) {
     return { browser, isRemote: true };
   }
   if (cdpEndpoint) {
-    const browser = await chromium.connectOverCDP(cdpEndpoint, { timeout: Math.max(navTimeout, 30_000) });
+    const browser = await chromium.connectOverCDP(cdpEndpoint, {
+      timeout: Math.max(navTimeout, 30_000),
+    });
     return { browser, isRemote: true };
   }
   const headless = process.env.KHY_PLAYWRIGHT_HEADLESS !== 'false';
   const proxyServer = getProxyServer();
   const launchOpts = { headless, args: ['--no-sandbox', '--disable-dev-shm-usage'] };
-  if (proxyServer) launchOpts.proxy = { server: proxyServer };
+  if (proxyServer) {
+    launchOpts.proxy = { server: proxyServer };
+  }
   // Bound the launch so a broken/half-installed Chromium rejects instead of
   // hanging. Gate off → byte-identical legacy behavior (Playwright's built-in
   // 30s default applies, no explicit timeout key).
-  if (_hardTimeoutEnabled()) launchOpts.timeout = launchTimeoutMs();
+  if (_hardTimeoutEnabled()) {
+    launchOpts.timeout = launchTimeoutMs();
+  }
   const browser = await chromium.launch(launchOpts);
   return { browser, isRemote: false };
 }
@@ -126,5 +153,7 @@ module.exports = {
   getProxyServer,
   acquireBrowser,
   // test hook — inject a fake chromium module.
-  __setPlaywrightModuleForTests(mod) { _pwModule = mod == null ? null : mod; },
+  __setPlaywrightModuleForTests(mod) {
+    _pwModule = mod == null ? null : mod;
+  },
 };

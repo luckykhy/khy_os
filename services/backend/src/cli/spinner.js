@@ -2,18 +2,39 @@
  * DynamicSpinner — Claude Code-style animated spinner with token/effort display.
  * Extracted from aiRenderer.js for modularity.
  */
+const { displayWidth, truncateToWidth } = require('./formatters');
 const {
-  c, THEME, isInteractiveInputActive,
-  SPINNER_ACTIVE_CHAR, THINKING_VERBS, PHASE_LABELS,
+  c,
+  THEME,
+  isInteractiveInputActive,
+  SPINNER_ACTIVE_CHAR,
+  THINKING_VERBS,
+  PHASE_LABELS,
   _formatElapsed,
 } = require('./renderTheme');
-const { displayWidth, truncateToWidth } = require('./formatters');
 const {
   SHIMMER_INTERVAL_MS,
   spinnerShimmerEnabled,
   computeGlimmerIndex,
   computeShimmerSegments,
 } = require('./spinnerShimmer');
+
+// Module-level external-write sequence. Bumped by noteExternalStdoutWrite()
+// whenever another module (e.g. replSession busy-interject prompt) clears or
+// repaints the spinner's line. Each spinner instance snapshots the sequence;
+// a mismatch forces a full repaint on the next frame so the frame-dedup cache
+// (fix A) never skips a write after someone else touched the line.
+let _externalWriteSeq = 0;
+function noteExternalStdoutWrite() {
+  _externalWriteSeq++;
+}
+
+// Resolve spinner tick interval: KHY_SPINNER_INTERVAL_MS (positive integer)
+// overrides; invalid/absent → 120ms (~8fps matching Claude Code).
+function _resolveSpinnerIntervalMs() {
+  const n = parseInt(process.env.KHY_SPINNER_INTERVAL_MS || '', 10);
+  return Number.isInteger(n) && n > 0 ? n : 120;
+}
 
 class DynamicSpinner {
   constructor() {
@@ -23,12 +44,12 @@ class DynamicSpinner {
     this._detail = '';
     this._startTime = Date.now();
     this._phaseStartTime = Date.now();
-    this._inputTokens = 0;   // ↑ tokens sent
-    this._outputTokens = 0;  // ↓ tokens received
-    this._effort = '';        // 'low' | 'medium' | 'high' | ''
+    this._inputTokens = 0; // ↑ tokens sent
+    this._outputTokens = 0; // ↓ tokens received
+    this._effort = ''; // 'low' | 'medium' | 'high' | ''
     this._blinkState = true;
     this._verbIndex = 0;
-    this._verbRotateAt = 0;  // frame count when we last rotated verb
+    this._verbRotateAt = 0; // frame count when we last rotated verb
     this._tipShown = false;
     this._lastTokenAt = Date.now(); // Track last token arrival for stall detection
     this._promptShown = false;
@@ -40,16 +61,39 @@ class DynamicSpinner {
     this._spinnerOffsetFromPrompt = 0;
     this._promptCursorAnchored = false;
     this._wasInteractiveLastFrame = false;
+    // Frame dedup (fix A): last fully-rendered line (ANSI included) actually
+    // written to stdout. null → next frame must write unconditionally.
+    this._lastWrittenLine = null;
+    this._seenExternalWriteSeq = _externalWriteSeq;
+    // Shimmer single-slot cache (fix B): reuse segments for same (tick, label).
+    this._shimmerCache = null;
+    // Elapsed time cache: formatted string only changes once per second, skip
+    // redundant _formatElapsed calls at 120ms frame intervals.
+    this._cachedElapsedSec = -1;
+    this._cachedElapsedStr = '';
+    // Token formatting cache: avoid reformatting unchanged token counts each frame.
+    this._cachedFmtInput = -1;
+    this._cachedFmtInputStr = '';
   }
 
   start(phase = 'init') {
-    if (this._timer) this.stop();
+    if (this._timer) {
+      this.stop();
+    }
     this._phase = phase;
     this._detail = ''; // reset stale detail from previous setPhase
     this._phaseStartTime = Date.now();
-    if (!this._startTime || phase === 'request') this._startTime = Date.now();
+    if (!this._startTime || phase === 'request') {
+      this._startTime = Date.now();
+    }
     this._lastTokenAt = Date.now();
-    this._timer = setInterval(() => this._render(), 120); // ~8fps matching Claude Code
+    this._lastWrittenLine = null; // force full repaint on (re)start
+    // Reset per-turn caches so a fresh spinner doesn't display stale elapsed/token data.
+    this._cachedElapsedSec = -1;
+    this._cachedElapsedStr = '';
+    this._cachedFmtInput = -1;
+    this._cachedFmtInputStr = '';
+    this._timer = setInterval(() => this._render(), _resolveSpinnerIntervalMs());
   }
 
   setPhase(phase, detail = '') {
@@ -86,8 +130,11 @@ class DynamicSpinner {
    * @param {{ruleColor?: string, footer?: string}} [opts]
    */
   setPromptMode(mode = 'plain', opts = {}) {
-    if (mode === 'none') this._promptMode = 'none';
-    else this._promptMode = (mode === 'framed') ? 'framed' : 'plain';
+    if (mode === 'none') {
+      this._promptMode = 'none';
+    } else {
+      this._promptMode = mode === 'framed' ? 'framed' : 'plain';
+    }
     this._promptRuleColor = String(opts.ruleColor || THEME.claude);
     this._promptFooter = String(opts.footer || '');
   }
@@ -102,7 +149,9 @@ class DynamicSpinner {
   }
 
   _render() {
-    if (!process.stdout.isTTY) return;
+    if (!process.stdout.isTTY) {
+      return;
+    }
     // When the Ink TUI owns the screen, skip direct stdout writes — Ink renders
     // progress through its own loop and our writes would corrupt its frame.
     // NOTE: the original guard here was `if (process.stdout.isTTY) return;`,
@@ -110,7 +159,9 @@ class DynamicSpinner {
     // spinner since the 0.1.88 Ink migration, so legacy Windows conhost (no Ink)
     // showed NO progress at all during a turn and looked frozen. Gate on the
     // actual Ink-active flag instead.
-    if (process.env.KHY_INK_TUI_ACTIVE === '1') return;
+    if (process.env.KHY_INK_TUI_ACTIVE === '1') {
+      return;
+    }
     if (isInteractiveInputActive()) {
       this._wasInteractiveLastFrame = true;
       return;
@@ -118,39 +169,61 @@ class DynamicSpinner {
     // Keep spinner visible even when readline uses raw mode.
     // Some terminals keep stdin in raw while waiting for model replies;
     // hard-blocking here makes users think the process is stalled.
-    const blockInRawMode = String(process.env.KHY_SPINNER_BLOCK_IN_RAW_MODE || 'false').toLowerCase() === 'true';
-    if (process.stdin.isRaw && blockInRawMode) return;
+    const blockInRawMode =
+      String(process.env.KHY_SPINNER_BLOCK_IN_RAW_MODE || 'false').toLowerCase() === 'true';
+    if (process.stdin.isRaw && blockInRawMode) {
+      return;
+    }
 
     let _sync;
-    try { _sync = require('./syncOutput'); } catch { _sync = null; }
-    if (_sync) _sync.beginSync();
+    try {
+      _sync = require('./syncOutput');
+    } catch {
+      _sync = null;
+    }
+    if (_sync) {
+      _sync.beginSync();
+    }
     try {
       // When typing guard just expired, clear the interject prompt remnant
       // before painting the spinner to prevent a single-frame flash of both
       if (this._wasInteractiveLastFrame) {
         this._wasInteractiveLastFrame = false;
         process.stdout.write('\x1b[2K\x1b[1G');
+        this._lastWrittenLine = null; // line was cleared → next paint must write
       }
       this._renderInner();
     } finally {
-      if (_sync) _sync.endSync();
+      if (_sync) {
+        _sync.endSync();
+      }
     }
   }
 
   _renderInner() {
-
     this._blinkState = !this._blinkState;
     this._frame++;
 
-    const elapsedSec = (Date.now() - this._startTime) / 1000;
-    const elapsedStr = _formatElapsed(elapsedSec);
+    const nowMs = Date.now();
+    const elapsedSec = (nowMs - this._startTime) / 1000;
+    // Elapsed time string only changes once per second — cache it to avoid
+    // redundant formatting calls at 120ms intervals.
+    const elapsedSecFloor = Math.floor(elapsedSec);
+    const elapsedStr =
+      this._cachedElapsedSec !== elapsedSecFloor
+        ? (this._cachedElapsedStr = _formatElapsed(elapsedSec))
+        : this._cachedElapsedStr;
+    this._cachedElapsedSec = elapsedSecFloor;
 
     // Determine label — rotate verbs for thinking/request phases;
     // for tool phases, prefer tool-specific Chinese label (G7)
     let label;
     if (this._phase === 'thinking' || this._phase === 'request') {
       label = this._getThinkingVerb();
-    } else if (this._detail && PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`]) {
+    } else if (
+      this._detail &&
+      PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`]
+    ) {
       label = PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`];
     } else {
       label = PHASE_LABELS[this._phase] || this._phase;
@@ -161,9 +234,8 @@ class DynamicSpinner {
     // surrogate pair (rendering �) and .length under-counts CJK width, so a
     // Chinese tool path/name would over-run. truncateToWidth walks by code
     // point and appends its own ellipsis.
-    const detail = displayWidth(detailRaw) > 120
-      ? ` ${truncateToWidth(this._detail, 119)}`
-      : detailRaw;
+    const detail =
+      displayWidth(detailRaw) > 120 ? ` ${truncateToWidth(this._detail, 119)}` : detailRaw;
 
     // Build status parts: (Xm Ys · ↑ 10.3k tokens · thinking with high effort)
     // The timer + token byline is revealed only after 30s (CC
@@ -181,13 +253,28 @@ class DynamicSpinner {
     // formatTokens、保留尾随 ".0")。换 ccFormatNumber 后三者重新一致。门控 KHY_CC_FORMAT
     // (同族门控)关 / 非有限 → 逐字节回退 spinner 历史本地规则(亦保 ".0")。
     const fmtTokens = (n) => {
+      if (n === this._cachedFmtInput && this._cachedFmtInputStr) {
+        return this._cachedFmtInputStr;
+      }
       const ccf = require('./ccFormat');
       if (ccf.ccFormatEnabled(process.env)) {
         const out = ccf.ccFormatNumber(n);
-        if (out) return out; // 非有限 → '' → 回退 legacy
+        if (out) {
+          this._cachedFmtInput = n;
+          this._cachedFmtInputStr = out;
+          return out;
+        }
       }
-      if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-      return String(n);
+      if (n >= 1000) {
+        const s = `${(n / 1000).toFixed(1)}k`;
+        this._cachedFmtInput = n;
+        this._cachedFmtInputStr = s;
+        return s;
+      }
+      const s = String(n);
+      this._cachedFmtInput = n;
+      this._cachedFmtInputStr = s;
+      return s;
     };
     let effortText = '';
     if (this._effort && (this._effort === 'max' || this._effort === 'high')) {
@@ -201,7 +288,7 @@ class DynamicSpinner {
       inputTokensText: this._inputTokens > 0 ? `↑ ${fmtTokens(this._inputTokens)} tokens` : '',
       outputTokensText: this._outputTokens > 0 ? `↓ ${fmtTokens(this._outputTokens)} tokens` : '',
       effortText,
-      elapsedMs: Date.now() - this._startTime,
+      elapsedMs: nowMs - this._startTime,
       verbose: false,
       hasTeammates: false,
       gateEnabled: _spinnerMeta.isEnabled(process.env),
@@ -221,14 +308,14 @@ class DynamicSpinner {
       const r = Math.round(215 + (255 - 215) * t);
       const g = Math.round(119 + (107 - 119) * t);
       const b = Math.round(87 + (128 - 87) * t);
-      charColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+      charColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     } else if (stallSec > 3) {
       // Early stall: interpolate from brand to amber over 5s
       const t = Math.min(1, (stallSec - 3) / 5);
       const r = Math.round(215 + (255 - 215) * t);
       const g = Math.round(119 + (193 - 119) * t);
       const b = Math.round(87 + (7 - 87) * t);
-      charColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+      charColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     } else {
       charColor = THEME.text;
     }
@@ -236,13 +323,10 @@ class DynamicSpinner {
     const dot = c().hex(charColor)(spinnerChar);
     // Within the first 30s the byline can be empty (just the verb); omit the
     // empty "()" wrapper in that case.
-    const plainText = statusStr
-      ? `${label}...${detail} (${statusStr})`
-      : `${label}...${detail}`;
-    const maxCols = Math.max(40, (process.stdout.columns || 100) - 6);
-    const compactPlain = displayWidth(plainText) > maxCols
-      ? truncateToWidth(plainText, maxCols)
-      : plainText;
+    const plainText = statusStr ? `${label}...${detail} (${statusStr})` : `${label}...${detail}`;
+    const maxCols = Math.max(40, require('./tui/effectiveCols').effectiveCols(80) - 6);
+    const compactPlain =
+      displayWidth(plainText) > maxCols ? truncateToWidth(plainText, maxCols) : plainText;
     // Verb "shimmer": CC dims the whole working-verb except a 3-column spot that
     // sweeps right→left every SHIMMER_INTERVAL_MS (src/bridge/bridgeStatusUtil.ts
     // + Spinner.tsx). Backend logic lives in the pure leaf cli/spinnerShimmer.js;
@@ -255,8 +339,21 @@ class DynamicSpinner {
     if (spinnerShimmerEnabled(process.env) && label && compactPlain.startsWith(label)) {
       try {
         const tick = Math.floor((Date.now() - this._startTime) / SHIMMER_INTERVAL_MS);
-        const gi = computeGlimmerIndex(tick, displayWidth(label));
-        const seg = computeShimmerSegments(label, gi, displayWidth);
+        // Single-slot (tick, label) cache: the shimmer tick (150ms) is coarser
+        // than the render tick (120ms), so consecutive frames often share the
+        // same segments — skip the O(n) code-point walk + displayWidth lookups.
+        let seg;
+        if (
+          this._shimmerCache &&
+          this._shimmerCache.tick === tick &&
+          this._shimmerCache.label === label
+        ) {
+          seg = this._shimmerCache.seg;
+        } else {
+          const gi = computeGlimmerIndex(tick, displayWidth(label));
+          seg = computeShimmerSegments(label, gi, displayWidth);
+          this._shimmerCache = { tick, label, seg };
+        }
         if (seg.before + seg.shimmer + seg.after === label) {
           const rest = compactPlain.slice(label.length);
           coloredBody =
@@ -265,10 +362,21 @@ class DynamicSpinner {
             c().hex(THEME.text).dim(seg.after) +
             c().hex(THEME.text)(rest);
         }
-      } catch { /* fall through to flat path */ }
+      } catch {
+        /* fall through to flat path */
+      }
     }
-    if (coloredBody == null) coloredBody = c().hex(THEME.text)(compactPlain);
+    if (coloredBody == null) {
+      coloredBody = c().hex(THEME.text)(compactPlain);
+    }
     const line = `${dot} ${coloredBody}`;
+
+    // External writes (busy prompt repaint/clear) invalidate the dedup cache
+    // so the next frame repaints in full instead of being skipped (fix C).
+    if (this._seenExternalWriteSeq !== _externalWriteSeq) {
+      this._seenExternalWriteSeq = _externalWriteSeq;
+      this._lastWrittenLine = null;
+    }
 
     if (!this._promptShown) {
       // First render: draw spinner line.
@@ -277,11 +385,15 @@ class DynamicSpinner {
       this._promptLines = 0;
       this._spinnerOffsetFromPrompt = 0;
       this._promptCursorAnchored = false;
+      this._lastWrittenLine = line;
       // No prompt scaffold — repl.js showBusyInterjectPrompt handles the prompt.
-    } else {
+    } else if (line !== this._lastWrittenLine) {
       // Subsequent renders: erase current line + rewrite spinner.
       // No cursor offset tracking — just clear current line and rewrite.
+      // Frame dedup (fix A): identical frame → skip the synchronous write
+      // entirely (each write is a blocking syscall on Windows ConHost).
       process.stdout.write(`\r\x1b[K${line}`);
+      this._lastWrittenLine = line;
     }
 
     // Show tip after 5 seconds, once per spinner lifetime
@@ -309,6 +421,7 @@ class DynamicSpinner {
       this._spinnerOffsetFromPrompt = 0;
       this._promptCursorAnchored = false;
     }
+    this._lastWrittenLine = null; // reset dedup cache so a restart repaints
   }
 }
 
@@ -323,7 +436,7 @@ function renderUserMessage(text) {
   const lines = text.split('\n');
   // Measure by display width so CJK (double-width) lines pad to a clean
   // rectangle — .length would under-count and leave the background ragged.
-  const maxLen = Math.max(...lines.map(l => displayWidth(l)));
+  const maxLen = Math.max(...lines.map((l) => displayWidth(l)));
   console.log('');
   for (const line of lines) {
     const padded = line + ' '.repeat(Math.max(0, maxLen + 2 - displayWidth(line)));
@@ -332,4 +445,4 @@ function renderUserMessage(text) {
   console.log('');
 }
 
-module.exports = { DynamicSpinner, renderUserMessage };
+module.exports = { DynamicSpinner, renderUserMessage, noteExternalStdoutWrite };

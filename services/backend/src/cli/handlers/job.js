@@ -24,22 +24,27 @@
  * @module handlers/job
  */
 const chalk = require('chalk').default || require('chalk');
-const { printInfo, printWarn, printSuccess, printError } = require('../formatters');
-const templatesApi = require('../../jobs/jobTemplates');
 const store = require('../../jobs/jobStore');
+const templatesApi = require('../../jobs/jobTemplates');
+const { printInfo, printWarn, printSuccess, printError } = require('../formatters');
 
 const OFF_WORDS = ['0', 'false', 'off', 'no', 'disable', 'disabled'];
 
 /** Whether template jobs are enabled (gate KHY_TEMPLATE_JOBS, default on). */
 function templateJobsEnabled(env = process.env) {
   const v = env.KHY_TEMPLATE_JOBS;
-  if (v === undefined) return true;
+  if (v === undefined) {
+    return true;
+  }
   return !OFF_WORDS.includes(String(v).trim().toLowerCase());
 }
 
 function _newJobId() {
-  try { return require('crypto').randomUUID().slice(0, 8); }
-  catch { return require('crypto').randomBytes(4).toString('hex'); }
+  try {
+    return require('crypto').randomUUID().slice(0, 8);
+  } catch {
+    return require('crypto').randomBytes(4).toString('hex');
+  }
 }
 
 function _printUsage() {
@@ -52,7 +57,9 @@ function _printUsage() {
   console.log('  /job reply <任务ID> <文本>  给任务追加一条回复');
   console.log('');
   console.log(chalk.gray('  模板 = <项目>/.khy/templates/*.md 或 ~/.khy/templates/*.md'));
-  console.log(chalk.gray('  任务 = ~/.khy/jobs/<ID>/（state.json + template.md + input.txt + replies.jsonl）'));
+  console.log(
+    chalk.gray('  任务 = ~/.khy/jobs/<ID>/（state.json + template.md + input.txt + replies.jsonl）')
+  );
 }
 
 function _handleList() {
@@ -84,7 +91,9 @@ function _handleNew(args) {
     const all = templatesApi.listTemplates();
     if (all.length) {
       console.log('可用模板:');
-      for (const t of all) console.log(`  ${t.name}`);
+      for (const t of all) {
+        console.log(`  ${t.name}`);
+      }
     } else {
       console.log(chalk.gray('  （templates/ 目录里还没有任何 .md 模板）'));
     }
@@ -101,7 +110,9 @@ function _handleNew(args) {
   printSuccess(`已创建任务: ${jobId}`);
   console.log(`  模板: ${templateName}`);
   console.log(chalk.gray(`  目录: ${dir}`));
-  if (inputText) console.log(`  输入: ${inputText}`);
+  if (inputText) {
+    console.log(`  输入: ${inputText}`);
+  }
 }
 
 function _handleJobs() {

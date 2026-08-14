@@ -80,7 +80,9 @@ function textBudgetEnabled(env = process.env) {
  */
 function estimateTextTokens(str) {
   const s = String(str == null ? '' : str);
-  if (!s) return 0;
+  if (!s) {
+    return 0;
+  }
   const cjk = (s.match(_CJK_RE) || []).length;
   const other = Math.max(0, s.length - cjk);
   return Math.ceil(cjk / CJK_CHARS_PER_TOKEN + other / ASCII_CHARS_PER_TOKEN);
@@ -95,7 +97,9 @@ function estimateTextTokens(str) {
 function _keepCharsForTokens(str, keepTokens) {
   const s = String(str == null ? '' : str);
   const tokens = estimateTextTokens(s);
-  if (tokens <= 0) return s.length;
+  if (tokens <= 0) {
+    return s.length;
+  }
   const charsPerToken = s.length / tokens; // 该串实际的字符/ token 比
   return Math.max(0, Math.floor(keepTokens * charsPerToken));
 }
@@ -109,7 +113,9 @@ function _keepCharsForTokens(str, keepTokens) {
 function _middleTruncate(str, keepChars) {
   const s = String(str == null ? '' : str);
   const keep = Math.max(0, Math.floor(keepChars));
-  if (s.length <= keep) return s;
+  if (s.length <= keep) {
+    return s;
+  }
   const headLen = Math.floor(keep * 0.6);
   const tailLen = Math.max(0, keep - headLen);
   const cut = s.length - keep;
@@ -129,13 +135,17 @@ function _middleTruncate(str, keepChars) {
  */
 function _collectTextLocations(msg) {
   const out = [];
-  if (!msg || typeof msg !== 'object') return out;
+  if (!msg || typeof msg !== 'object') {
+    return out;
+  }
   const content = msg.content;
   if (typeof content === 'string') {
     if (content.length > 0) {
       out.push({
         get: () => msg.content,
-        set: (s) => { msg.content = s; },
+        set: (s) => {
+          msg.content = s;
+        },
         tokens: estimateTextTokens(content),
       });
     }
@@ -143,13 +153,20 @@ function _collectTextLocations(msg) {
   }
   if (Array.isArray(content)) {
     for (const block of content) {
-      if (!block || typeof block !== 'object') continue;
-      if ((block.type === 'text' || block.type === 'input_text' || block.type === 'output_text')
-          && typeof block.text === 'string' && block.text.length > 0) {
+      if (!block || typeof block !== 'object') {
+        continue;
+      }
+      if (
+        (block.type === 'text' || block.type === 'input_text' || block.type === 'output_text') &&
+        typeof block.text === 'string' &&
+        block.text.length > 0
+      ) {
         const b = block;
         out.push({
           get: () => b.text,
-          set: (s) => { b.text = s; },
+          set: (s) => {
+            b.text = s;
+          },
           tokens: estimateTextTokens(b.text),
         });
       }
@@ -174,26 +191,37 @@ function _collectTextLocations(msg) {
 function clampTextBudgetInMessages(model, messages, options = {}, env = process.env) {
   const noop = { changed: false, beforeTokens: 0, afterTokens: 0, budget: 0, truncated: 0 };
   try {
-    if (!textBudgetEnabled(env)) return noop;
-    if (!Array.isArray(messages) || messages.length === 0) return noop;
+    if (!textBudgetEnabled(env)) {
+      return noop;
+    }
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return noop;
+    }
     const { isGlmVisionModelName } = require('./glmVisionApiPin');
-    if (!isGlmVisionModelName(model)) return noop;
+    if (!isGlmVisionModelName(model)) {
+      return noop;
+    }
 
     // 输入预算:显式 inputBudget 优先;否则 16384 - 输出保留 - 安全余量。
     let budget;
     if (Number.isFinite(Number(options.inputBudget)) && Number(options.inputBudget) > 0) {
       budget = Math.floor(Number(options.inputBudget));
     } else {
-      const outReserve = Number.isFinite(Number(options.maxTokens)) && Number(options.maxTokens) > 0
-        ? Math.floor(Number(options.maxTokens))
-        : DEFAULT_OUTPUT_RESERVE_TOKENS;
+      const outReserve =
+        Number.isFinite(Number(options.maxTokens)) && Number(options.maxTokens) > 0
+          ? Math.floor(Number(options.maxTokens))
+          : DEFAULT_OUTPUT_RESERVE_TOKENS;
       budget = COMBINED_TOKEN_BUDGET - outReserve - SAFETY_MARGIN_TOKENS;
     }
-    if (budget < MIN_KEEP_TOKENS) budget = MIN_KEEP_TOKENS; // 极端情况兜底
+    if (budget < MIN_KEEP_TOKENS) {
+      budget = MIN_KEEP_TOKENS;
+    } // 极端情况兜底
 
     const locations = [];
     for (const msg of messages) {
-      for (const loc of _collectTextLocations(msg)) locations.push(loc);
+      for (const loc of _collectTextLocations(msg)) {
+        locations.push(loc);
+      }
     }
     const beforeTokens = locations.reduce((sum, l) => sum + l.tokens, 0);
     if (beforeTokens <= budget) {
@@ -205,18 +233,25 @@ function clampTextBudgetInMessages(model, messages, options = {}, env = process.
     let truncated = 0;
     const bySizeDesc = locations.slice().sort((a, b) => b.tokens - a.tokens);
     for (const loc of bySizeDesc) {
-      if (toCut <= 0) break;
+      if (toCut <= 0) {
+        break;
+      }
       const maxCutFromThis = loc.tokens - MIN_KEEP_TOKENS;
-      if (maxCutFromThis <= 0) continue; // 已经很小,不再削
+      if (maxCutFromThis <= 0) {
+        continue;
+      } // 已经很小,不再削
       const cutHere = Math.min(toCut, maxCutFromThis);
       const keepTokens = loc.tokens - cutHere;
       // 扣掉截断标记的 token 预留,确保「保留正文 + 标记」合计仍落在目标预算内。
-      const keepChars = _keepCharsForTokens(loc.get(), Math.max(MIN_KEEP_TOKENS / 2, keepTokens - MARKER_TOKEN_RESERVE));
+      const keepChars = _keepCharsForTokens(
+        loc.get(),
+        Math.max(MIN_KEEP_TOKENS / 2, keepTokens - MARKER_TOKEN_RESERVE)
+      );
       const newStr = _middleTruncate(loc.get(), keepChars);
       const newTokens = estimateTextTokens(newStr);
       if (newTokens < loc.tokens) {
         loc.set(newStr);
-        toCut -= (loc.tokens - newTokens);
+        toCut -= loc.tokens - newTokens;
         truncated += 1;
       }
     }

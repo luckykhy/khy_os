@@ -22,12 +22,15 @@
  */
 'use strict';
 
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 const {
   getCompactPrompt,
   getPartialCompactPrompt,
   formatCompactSummary,
   getCompactUserMessage,
 } = require('./prompt');
+// Canonical chars/4 estimate atom (utils leaf).
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -220,11 +223,11 @@ function shouldCompact(messages, contextWindowTokens, reserveTokens = 4096) {
   // Rough token estimate
   let estimatedTokens = 0;
   for (const msg of messages) {
-    const content = typeof msg.content === 'string'
-      ? msg.content
-      : JSON.stringify(msg.content || '');
+    const content =
+      typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
     // ~4 chars per token is a rough heuristic
-    estimatedTokens += Math.ceil(content.length / 4);
+    // Thin delegate; byte-identical to Math.ceil(content.length / 4).
+    estimatedTokens += _simpleTokenEstimate(content);
   }
 
   // Clamp the output reserve to the window. On a small window the fixed 4096
@@ -234,7 +237,9 @@ function shouldCompact(messages, contextWindowTokens, reserveTokens = 4096) {
   let reserve = reserveTokens;
   try {
     reserve = require('../contextProfile').deriveReserveTokens(contextWindowTokens, reserveTokens);
-  } catch { /* contextProfile optional — fall back to the raw reserve */ }
+  } catch {
+    /* contextProfile optional — fall back to the raw reserve */
+  }
 
   const available = Math.max(1, contextWindowTokens - reserve);
   const usage = estimatedTokens / available;

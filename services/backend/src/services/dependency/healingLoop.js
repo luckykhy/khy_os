@@ -31,8 +31,8 @@
  * 总开关 KHY_DEP_HEALING（默认开，=「off」显式关闭）。
  */
 
-const resolver = require('./resolver');
 const { runInstall } = require('./installRunner');
+const resolver = require('./resolver');
 
 function isEnabled() {
   return process.env.KHY_DEP_HEALING !== 'off';
@@ -48,30 +48,54 @@ const _sessions = new Map();
 function _session(sessionId) {
   const key = sessionId || '__default__';
   let s = _sessions.get(key);
-  if (!s) { s = createSession(); _sessions.set(key, s); }
+  if (!s) {
+    s = createSession();
+    _sessions.set(key, s);
+  }
   return s;
 }
-function resetSession(sessionId) { _sessions.delete(sessionId || '__default__'); }
+
+function resetSession(sessionId) {
+  _sessions.delete(sessionId || '__default__');
+}
 
 /** 解码宿主交互通道的回应为 'install' | 'always' | 'discuss' | 'skip'。 */
 function _decodeDecision(resp) {
-  if (resp === true) return 'install';
-  if (resp === 'always' || resp === 'allow-always') return 'always';
-  if (resp === 'discuss' || resp === 'discuss-first') return 'discuss';
-  if (resp === false || resp == null) return 'skip';
-  const r = (resp && resp.response) ? resp.response : resp;
-  if (!r || typeof r !== 'object') return 'skip';
+  if (resp === true) {
+    return 'install';
+  }
+  if (resp === 'always' || resp === 'allow-always') {
+    return 'always';
+  }
+  if (resp === 'discuss' || resp === 'discuss-first') {
+    return 'discuss';
+  }
+  if (resp === false || resp == null) {
+    return 'skip';
+  }
+  const r = resp && resp.response ? resp.response : resp;
+  if (!r || typeof r !== 'object') {
+    return 'skip';
+  }
   const b = String(r.behavior || '').toLowerCase();
   const action = String(r.action || r.choice || '').toLowerCase();
-  if (action === 'discuss' || b === 'discuss') return 'discuss';
-  if (b === 'allow-always' || r.scope === 'session') return 'always';
-  if (b === 'allow') return 'install';
+  if (action === 'discuss' || b === 'discuss') {
+    return 'discuss';
+  }
+  if (b === 'allow-always' || r.scope === 'session') {
+    return 'always';
+  }
+  if (b === 'allow') {
+    return 'install';
+  }
   return 'skip';
 }
 
 /** 经交互通道询问是否安装。无通道返回 null（由调用方降级处理）。 */
 async function _askInstall(control, toolName, plan) {
-  if (typeof control !== 'function') return null;
+  if (typeof control !== 'function') {
+    return null;
+  }
   let resp;
   try {
     resp = await control({
@@ -116,7 +140,9 @@ async function _askInstall(control, toolName, plan) {
  * @returns {Promise<null|object>}  null=非依赖问题；否则结构化自愈结果
  */
 async function heal(args = {}) {
-  if (!isEnabled()) return null;
+  if (!isEnabled()) {
+    return null;
+  }
   try {
     const { toolName, failure, retry, control, sessionId } = args;
     const R = (args.deps && args.deps.resolver) || resolver;
@@ -125,11 +151,15 @@ async function heal(args = {}) {
 
     // 1) 回溯辨认
     const det = R.detectFromError(failure);
-    if (!det) return null; // 非依赖缺失问题 → 不接管
+    if (!det) {
+      return null;
+    } // 非依赖缺失问题 → 不接管
 
     // 2) 去伪：也许其实已就绪（matcher 误报或瞬态）
     const before = R.probe(det.depId, env);
-    if (before.present) return null;
+    if (before.present) {
+      return null;
+    }
 
     const plan = R.buildInstallPlan(det.depId, env);
     const session = _session(sessionId);
@@ -141,7 +171,13 @@ async function heal(args = {}) {
 
     // 4) 无可执行安装计划 → 给结构化指引
     if (!plan) {
-      return { healed: false, depId: det.depId, plan: null, degraded: true, reason: 'no-install-plan' };
+      return {
+        healed: false,
+        depId: det.depId,
+        plan: null,
+        degraded: true,
+        reason: 'no-install-plan',
+      };
     }
 
     // 5) 决策：会话内 always 已授权则免问；否则交互询问（install / discuss / skip）
@@ -152,7 +188,13 @@ async function heal(args = {}) {
       decision = await _askInstall(control, toolName, plan);
       if (decision === null) {
         // 无交互通道 → 优雅降级为结构化指引（绝不静默安装、绝不崩）
-        return { healed: false, depId: det.depId, plan, degraded: true, reason: 'no-control-channel' };
+        return {
+          healed: false,
+          depId: det.depId,
+          plan,
+          degraded: true,
+          reason: 'no-control-channel',
+        };
       }
       if (decision === 'discuss') {
         // 用户选择「一起讨论」：既不安装也不当成跳过/死循环。**刻意不标 attempted**——
@@ -163,7 +205,9 @@ async function heal(args = {}) {
       if (decision === 'skip') {
         return { healed: false, depId: det.depId, plan, declined: true };
       }
-      if (decision === 'always') session.alwaysAllow.add(det.depId);
+      if (decision === 'always') {
+        session.alwaysAllow.add(det.depId);
+      }
     }
 
     // 6) 标记已尝试（即便安装失败也不再重复骚扰本会话）
@@ -198,15 +242,26 @@ async function heal(args = {}) {
  * 调用方可把它合并进原工具错误结果的 _depHealing 字段。
  */
 function summarizeForAgent(outcome) {
-  if (!outcome || outcome.healed) return null;
+  if (!outcome || outcome.healed) {
+    return null;
+  }
   const plan = outcome.plan;
   const base = {
     missingDependency: outcome.depId || null,
     installCommand: plan ? plan.displayCommand : null,
     docsUrl: plan ? plan.docsUrl : null,
   };
-  if (outcome.discuss) return { ...base, status: 'discuss-requested', message: '用户希望先一起讨论：请说明该依赖的作用，并列出「安装 / 换一种实现 / 跳过降级」三条路的取舍，给出方向后再请用户定夺——讨论期间不要擅自安装。' };
-  if (outcome.declined) return { ...base, status: 'user-declined', message: '用户选择跳过依赖安装。' };
+  if (outcome.discuss) {
+    return {
+      ...base,
+      status: 'discuss-requested',
+      message:
+        '用户希望先一起讨论：请说明该依赖的作用，并列出「安装 / 换一种实现 / 跳过降级」三条路的取舍，给出方向后再请用户定夺——讨论期间不要擅自安装。',
+    };
+  }
+  if (outcome.declined) {
+    return { ...base, status: 'user-declined', message: '用户选择跳过依赖安装。' };
+  }
   if (outcome.installFailed) {
     const inst = outcome.install || {};
     // 包管理器本身缺失（如 win32 未装 Node → 无 npm/npx）：给出精准归因 +
@@ -215,11 +270,33 @@ function summarizeForAgent(outcome) {
       const hint = inst.hint || '所需的包管理器不在 PATH 上，请先安装对应运行时后重试。';
       return { ...base, status: 'manager-not-found', message: hint };
     }
-    return { ...base, status: 'install-failed', message: '依赖安装命令执行失败，请检查网络/权限或手动安装。' };
+    return {
+      ...base,
+      status: 'install-failed',
+      message: '依赖安装命令执行失败，请检查网络/权限或手动安装。',
+    };
   }
-  if (outcome.installVerifyFailed) return { ...base, status: 'install-unverified', message: '安装命令已执行但依赖仍不可用，请手动确认。' };
-  if (outcome.alreadyAttempted) return { ...base, status: 'already-attempted', message: '本会话已尝试过该依赖，不再重复安装。' };
-  if (outcome.degraded) return { ...base, status: 'manual-required', message: '无交互通道或无自动安装方案，请手动安装该依赖。' };
+  if (outcome.installVerifyFailed) {
+    return {
+      ...base,
+      status: 'install-unverified',
+      message: '安装命令已执行但依赖仍不可用，请手动确认。',
+    };
+  }
+  if (outcome.alreadyAttempted) {
+    return {
+      ...base,
+      status: 'already-attempted',
+      message: '本会话已尝试过该依赖，不再重复安装。',
+    };
+  }
+  if (outcome.degraded) {
+    return {
+      ...base,
+      status: 'manual-required',
+      message: '无交互通道或无自动安装方案，请手动安装该依赖。',
+    };
+  }
   return { ...base, status: 'unhealed' };
 }
 

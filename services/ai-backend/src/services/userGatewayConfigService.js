@@ -40,11 +40,9 @@ function ensureSchema() {
     // resolve. Then create the per-user tables concurrently. All `.sync()` calls
     // are CREATE TABLE IF NOT EXISTS — never drops/alters existing tables or data.
     _schemaReady = User.sync()
-      .then(() => Promise.all([
-        UserGatewayConfig.sync(),
-        UserProvider.sync(),
-        UserProviderModel.sync(),
-      ]))
+      .then(() =>
+        Promise.all([UserGatewayConfig.sync(), UserProvider.sync(), UserProviderModel.sync()])
+      )
       .then(() => _backfillImageColumns())
       .catch((err) => {
         // Let a genuinely broken DB surface on the actual query below; don't cache
@@ -67,12 +65,24 @@ async function _backfillImageColumns() {
     const table = await qi.describeTable('user_gateway_configs').catch(() => ({}));
     const { DataTypes } = require('sequelize');
     if (!table.image_backend) {
-      await qi.addColumn('user_gateway_configs', 'image_backend', { type: DataTypes.STRING(32), defaultValue: '' }).catch(() => {});
+      await qi
+        .addColumn('user_gateway_configs', 'image_backend', {
+          type: DataTypes.STRING(32),
+          defaultValue: '',
+        })
+        .catch(() => {});
     }
     if (!table.image_model) {
-      await qi.addColumn('user_gateway_configs', 'image_model', { type: DataTypes.STRING(200), defaultValue: '' }).catch(() => {});
+      await qi
+        .addColumn('user_gateway_configs', 'image_model', {
+          type: DataTypes.STRING(200),
+          defaultValue: '',
+        })
+        .catch(() => {});
     }
-  } catch { /* non-fatal: image prefs degrade to global/auto */ }
+  } catch {
+    /* non-fatal: image prefs degrade to global/auto */
+  }
 }
 
 const API_FORMATS = ['openai', 'anthropic', 'openai_responses', 'gemini'];
@@ -80,17 +90,23 @@ const KEY_FIELDS = ['authorization_bearer', 'x-api-key', 'x-goog-api-key'];
 const COMPATIBILITIES = ['openai', 'anthropic', 'unknown'];
 
 function normalizeApiFormat(raw = '') {
-  const v = String(raw || '').trim().toLowerCase();
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
   return API_FORMATS.includes(v) ? v : '';
 }
 
 function normalizeApiKeyField(raw = '') {
-  const v = String(raw || '').trim().toLowerCase();
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
   return KEY_FIELDS.includes(v) ? v : '';
 }
 
 function normalizeCompatibility(raw = '') {
-  const v = String(raw || '').trim().toLowerCase();
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!v) return 'openai';
   return COMPATIBILITIES.includes(v) ? v : 'unknown';
 }
@@ -108,7 +124,8 @@ function defaultKeyFieldFor(apiFormat) {
 function normalizeHttpUrl(raw = '') {
   const url = String(raw || '').trim();
   if (!url) return { ok: false, error: 'baseUrl is required' };
-  if (!/^https?:\/\//i.test(url)) return { ok: false, error: 'baseUrl must be a valid http(s) URL' };
+  if (!/^https?:\/\//i.test(url))
+    return { ok: false, error: 'baseUrl must be a valid http(s) URL' };
   try {
     // eslint-disable-next-line no-new
     new URL(url);
@@ -135,7 +152,9 @@ function normalizeEndpoints(input, primaryUrl) {
   const seen = new Set();
   const out = [];
   for (const raw of list) {
-    const u = String(raw || '').trim().replace(/\/+$/, '');
+    const u = String(raw || '')
+      .trim()
+      .replace(/\/+$/, '');
     if (!u) continue;
     if (!/^https?:\/\//i.test(u)) {
       const err = new Error(`endpoint is not a valid http(s) URL: ${u}`);
@@ -293,7 +312,9 @@ async function getImagePref(userId) {
  */
 async function saveImagePref(userId, body = {}) {
   await ensureSchema();
-  const rawBackend = String(body.backend != null ? body.backend : '').trim().toLowerCase();
+  const rawBackend = String(body.backend != null ? body.backend : '')
+    .trim()
+    .toLowerCase();
   const isAuto = !rawBackend || rawBackend === 'auto';
   if (!isAuto && !IMAGE_BACKENDS.includes(rawBackend)) {
     const err = new Error(`backend must be one of ${IMAGE_BACKENDS.join(', ')} or auto`);
@@ -334,14 +355,20 @@ async function listProviders(userId) {
   await ensureSchema();
   const rows = await UserProvider.findAll({
     where: { userId },
-    order: [['provider', 'ASC'], ['priority', 'DESC'], ['id', 'ASC']],
+    order: [
+      ['provider', 'ASC'],
+      ['priority', 'DESC'],
+      ['id', 'ASC'],
+    ],
   });
   return rows.map(mapProviderRow);
 }
 
 async function addProviderEntry(userId, payload = {}) {
   await ensureSchema();
-  const provider = String(payload.provider || '').trim().toLowerCase();
+  const provider = String(payload.provider || '')
+    .trim()
+    .toLowerCase();
   if (!provider || !/^[a-z0-9._-]{2,40}$/.test(provider)) {
     const err = new Error('provider must match [a-z0-9._-]{2,40}');
     err.statusCode = 400;
@@ -367,7 +394,11 @@ async function addProviderEntry(userId, payload = {}) {
   let baseUrl = String(payload.baseUrl || '').trim();
   if (baseUrl) {
     const res = normalizeHttpUrl(baseUrl);
-    if (!res.ok) { const e = new Error(res.error); e.statusCode = 400; throw e; }
+    if (!res.ok) {
+      const e = new Error(res.error);
+      e.statusCode = 400;
+      throw e;
+    }
     baseUrl = res.url;
   }
 
@@ -427,13 +458,19 @@ async function replaceProviderKey(userId, id, newKey) {
  * row is re-pointed. No-op when the names are equal.
  */
 async function migrateProviderModels(userId, fromProvider, toProvider) {
-  const from = String(fromProvider || '').trim().toLowerCase();
-  const to = String(toProvider || '').trim().toLowerCase();
+  const from = String(fromProvider || '')
+    .trim()
+    .toLowerCase();
+  const to = String(toProvider || '')
+    .trim()
+    .toLowerCase();
   if (!from || !to || from === to) return;
   const rows = await UserProviderModel.findAll({ where: { userId, provider: from } });
   for (const row of rows) {
     // eslint-disable-next-line no-await-in-loop
-    const clash = await UserProviderModel.findOne({ where: { userId, provider: to, model: row.model } });
+    const clash = await UserProviderModel.findOne({
+      where: { userId, provider: to, model: row.model },
+    });
     if (clash) {
       // eslint-disable-next-line no-await-in-loop
       await row.destroy();
@@ -515,7 +552,11 @@ async function updateProviderEntry(userId, id, patch = {}) {
     const raw = String(patch.baseUrl || '').trim();
     if (raw) {
       const res = normalizeHttpUrl(raw);
-      if (!res.ok) { const e = new Error(res.error); e.statusCode = 400; throw e; }
+      if (!res.ok) {
+        const e = new Error(res.error);
+        e.statusCode = 400;
+        throw e;
+      }
       row.baseUrl = res.url;
     } else {
       row.baseUrl = '';
@@ -541,7 +582,9 @@ async function removeProviderEntry(userId, id) {
 
 async function removeProvider(userId, provider) {
   await ensureSchema();
-  const p = String(provider || '').trim().toLowerCase();
+  const p = String(provider || '')
+    .trim()
+    .toLowerCase();
   const removed = await UserProvider.destroy({ where: { userId, provider: p } });
   return { removed, provider: p };
 }
@@ -551,7 +594,10 @@ async function getResolvedProviders(userId) {
   await ensureSchema();
   const rows = await UserProvider.findAll({
     where: { userId, isActive: true },
-    order: [['priority', 'DESC'], ['id', 'ASC']],
+    order: [
+      ['priority', 'DESC'],
+      ['id', 'ASC'],
+    ],
   });
   return rows.map((r) => ({
     provider: r.provider,
@@ -583,7 +629,10 @@ async function listModels(userId, opts = {}) {
   if (opts.provider) where.provider = String(opts.provider).trim().toLowerCase();
   const rows = await UserProviderModel.findAll({
     where,
-    order: [['provider', 'ASC'], ['model', 'ASC']],
+    order: [
+      ['provider', 'ASC'],
+      ['model', 'ASC'],
+    ],
   });
   return rows.map(mapModelRow);
 }
@@ -598,13 +647,15 @@ async function listModels(userId, opts = {}) {
  */
 async function upsertModels(userId, provider, items = [], opts = {}) {
   await ensureSchema();
-  const p = String(provider || '').trim().toLowerCase();
+  const p = String(provider || '')
+    .trim()
+    .toLowerCase();
   if (!p) return { added: 0, total: 0 };
   const source = String(opts.source || 'detected').trim() || 'detected';
 
   let added = 0;
   for (const raw of items) {
-    const model = String((raw && raw.model != null) ? raw.model : raw).trim();
+    const model = String(raw && raw.model != null ? raw.model : raw).trim();
     if (!model) continue;
     const capability = String((raw && raw.capability) || 'text').trim() || 'text';
     // eslint-disable-next-line no-await-in-loop
@@ -630,7 +681,9 @@ const VALID_CAPABILITIES = ['text', 'audio', 'image', 'video'];
 
 // Provider id a model may belong to: any user provider name or the relay upstream.
 function normalizeModelProvider(raw = '') {
-  const p = String(raw || '').trim().toLowerCase();
+  const p = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!p || !/^[a-z0-9._-]{2,40}$/.test(p)) {
     const err = new Error('provider must match [a-z0-9._-]{2,40} (or "relay")');
     err.statusCode = 400;
@@ -640,7 +693,9 @@ function normalizeModelProvider(raw = '') {
 }
 
 function normalizeCapability(raw, modelId) {
-  const c = String(raw || '').trim().toLowerCase();
+  const c = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (c) {
     if (!VALID_CAPABILITIES.includes(c)) {
       const err = new Error('capability must be text|audio|image|video');
@@ -712,11 +767,25 @@ async function updateModel(userId, id, patch = {}) {
 
   if (patch.model != null) {
     const model = String(patch.model).trim();
-    if (!model) { const e = new Error('model cannot be empty'); e.statusCode = 400; throw e; }
-    if (model.length > 200) { const e = new Error('model id is too long (max 200)'); e.statusCode = 400; throw e; }
+    if (!model) {
+      const e = new Error('model cannot be empty');
+      e.statusCode = 400;
+      throw e;
+    }
+    if (model.length > 200) {
+      const e = new Error('model id is too long (max 200)');
+      e.statusCode = 400;
+      throw e;
+    }
     if (model !== row.model) {
-      const clash = await UserProviderModel.findOne({ where: { userId, provider: row.provider, model } });
-      if (clash) { const e = new Error('This model already exists for this provider'); e.statusCode = 409; throw e; }
+      const clash = await UserProviderModel.findOne({
+        where: { userId, provider: row.provider, model },
+      });
+      if (clash) {
+        const e = new Error('This model already exists for this provider');
+        e.statusCode = 409;
+        throw e;
+      }
       row.model = model;
     }
   }

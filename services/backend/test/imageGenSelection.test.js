@@ -26,6 +26,9 @@ function withEnv(vars, fn) {
 }
 
 // Clear every backend's env so each test starts from a known "nothing configured" base.
+// Includes the shared SENSENOVA_API_KEY / STEPFUN_API_KEY that imageGenService falls
+// back to for chat providers — otherwise a live khy session leaks a "configured"
+// backend into every assertion.
 const CLEAR = {
   KHY_IMAGE_GEN_BACKEND: undefined,
   KHY_IMAGE_GEN_OPENAI_BASE_URL: undefined,
@@ -37,12 +40,18 @@ const CLEAR = {
   KHY_IMAGE_GEN_DOMESTIC_API_KEY: undefined,
   KHY_IMAGE_GEN_DOMESTIC_MODEL: undefined,
   KHY_IMAGE_GEN_SD_BASE_URL: undefined,
+  KHY_IMAGE_GEN_SENSENOVA_API_KEY: undefined,
+  KHY_IMAGE_GEN_SENSENOVA_MODEL: undefined,
+  KHY_IMAGE_GEN_STEPFUN_API_KEY: undefined,
+  KHY_IMAGE_GEN_STEPFUN_MODEL: undefined,
+  SENSENOVA_API_KEY: undefined,
+  STEPFUN_API_KEY: undefined,
   GATEWAY_IMAGE_GEN_BACKEND: undefined,
 };
 
 describe('imageGenService — Auto order + backend resolution', () => {
-  test('AUTO_ORDER is the fixed quality precedence', () => {
-    expect(imageGen.AUTO_ORDER).toEqual(['openai', 'agnes', 'domestic', 'sd_webui']);
+  test('AUTO_ORDER is the fixed quality precedence (cost-effective first)', () => {
+    expect(imageGen.AUTO_ORDER).toEqual(['sensenova', 'agnes', 'stepfun', 'openai', 'domestic', 'sd_webui']);
   });
 
   test('auto picks the highest-priority configured backend', () => {
@@ -51,19 +60,40 @@ describe('imageGenService — Auto order + backend resolution', () => {
       KHY_IMAGE_GEN_AGNES_API_KEY: 'k',
       KHY_IMAGE_GEN_SD_BASE_URL: 'http://127.0.0.1:7860',
     }, () => {
-      // openai not configured → first available in order is agnes.
+      // nothing higher than agnes configured → first available in order is agnes.
       expect(imageGen.resolveBackend()).toBe('agnes');
       expect(imageGen.resolveBackend('')).toBe('agnes');
       expect(imageGen.resolveBackend('auto')).toBe('agnes');
     });
   });
 
-  test('auto prefers openai when configured', () => {
+  test('auto prefers sensenova when configured (shared chat key counts)', () => {
+    withEnv({
+      ...CLEAR,
+      SENSENOVA_API_KEY: 'k',
+      KHY_IMAGE_GEN_OPENAI_BASE_URL: 'http://x',
+      KHY_IMAGE_GEN_OPENAI_API_KEY: 'k',
+    }, () => {
+      expect(imageGen.resolveBackend()).toBe('sensenova');
+    });
+  });
+
+  test('auto prefers agnes over openai when both configured', () => {
     withEnv({
       ...CLEAR,
       KHY_IMAGE_GEN_OPENAI_BASE_URL: 'http://x',
       KHY_IMAGE_GEN_OPENAI_API_KEY: 'k',
       KHY_IMAGE_GEN_AGNES_API_KEY: 'k',
+    }, () => {
+      expect(imageGen.resolveBackend()).toBe('agnes');
+    });
+  });
+
+  test('auto uses openai when it is the only configured backend', () => {
+    withEnv({
+      ...CLEAR,
+      KHY_IMAGE_GEN_OPENAI_BASE_URL: 'http://x',
+      KHY_IMAGE_GEN_OPENAI_API_KEY: 'k',
     }, () => {
       expect(imageGen.resolveBackend()).toBe('openai');
     });

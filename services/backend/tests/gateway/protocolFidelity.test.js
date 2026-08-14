@@ -293,3 +293,51 @@ describe('B-layer tool_result image fidelity', () => {
     assert.equal(out[0].content, 'plain text');
   });
 });
+
+// --------------------------------------------------------------------------
+// B-layer: strip-tools safety (hasTools=false) — no residual role:'tool'
+// --------------------------------------------------------------------------
+//
+// Regression anchor for the delivery-stability fix: when the caller strips the
+// top-level `tools` declaration after conversion (small/weak models), the
+// converter must inline every tool block as plain text and never emit a
+// `role:'tool'` message. A bare `role:'tool'` message (or tool_calls array)
+// with no `tools` declaration makes strict OpenAI-compatible providers
+// (stepfun step_plan etc.) answer HTTP 400 "Unrecognized chat message".
+
+describe('B-layer strip-tools safety (hasTools=false)', () => {
+  const toolUseMsgs = () => [
+    { role: 'assistant', content: [
+      { type: 'text', text: 'calling now' },
+      { type: 'tool_use', id: 'x1', name: 'search', input: { q: 'hi' } },
+    ] },
+    { role: 'user', content: [
+      { type: 'tool_result', tool_use_id: 'x1', content: 'done' },
+    ] },
+  ];
+
+  test('hasTools=false inlines tool_use + tool_result as text, zero role:"tool"', () => {
+    const out = convertMessagesAnthropicToOpenAI(toolUseMsgs(), false, { useToolRole: false });
+    assert.ok(!out.some((m) => m.role === 'tool'), 'no role:"tool" message may survive');
+    assert.ok(!out.some((m) => Array.isArray(m.tool_calls) && m.tool_calls.length),
+      'no bare tool_calls array may survive without a tools declaration');
+    const wire = JSON.stringify(out);
+    assert.ok(wire.includes('[Tool Call: search'), 'tool_use inlined as text');
+    assert.ok(wire.includes('done'), 'tool_result text preserved');
+    // assistant-side tool_call text (the "[Tool Call: ...]" lead-in) must not be
+    // dropped when the top-level tools declaration is stripped on a later pass.
+    assert.ok(wire.includes('calling now'), 'assistant text preserved');
+  });
+
+  test('hasTools=false with useToolRole=true still inlines (never leaks tool role)', () => {
+    const out = convertMessagesAnthropicToOpenAI(toolUseMsgs(), false, { useToolRole: true });
+    assert.ok(!out.some((m) => m.role === 'tool'), 'no role:"tool" message may survive');
+  });
+
+  test('hasTools=true keeps native tool role (legacy behavior unchanged)', () => {
+    const out = convertMessagesAnthropicToOpenAI(toolUseMsgs(), true, { useToolRole: true });
+    assert.ok(out.some((m) => m.role === 'tool'), 'tool role kept when tools are declared');
+    assert.ok(out.some((m) => Array.isArray(m.tool_calls) && m.tool_calls.length),
+      'tool_calls kept when tools are declared');
+  });
+});

@@ -45,7 +45,9 @@ const _QUERY_CAP = 500;
  */
 function salvageQueryFocusEnabled(env = process.env) {
   const raw = env && env.KHY_SALVAGE_QUERY_FOCUS;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -55,9 +57,13 @@ function salvageQueryFocusEnabled(env = process.env) {
  * @returns {string}  空/畸形 → ''
  */
 function normalizeFocusQuery(userMessage) {
-  if (userMessage == null) return '';
+  if (userMessage == null) {
+    return '';
+  }
   let s = String(userMessage).replace(/\s+/g, ' ').trim();
-  if (s.length > _QUERY_CAP) s = s.slice(0, _QUERY_CAP);
+  if (s.length > _QUERY_CAP) {
+    s = s.slice(0, _QUERY_CAP);
+  }
   return s;
 }
 
@@ -70,9 +76,13 @@ function normalizeFocusQuery(userMessage) {
  * @returns {{query?:string}}
  */
 function buildSalvageSummaryOpts(userMessage, env = process.env) {
-  if (!salvageQueryFocusEnabled(env)) return {};
+  if (!salvageQueryFocusEnabled(env)) {
+    return {};
+  }
   const query = normalizeFocusQuery(userMessage);
-  if (!query) return {};
+  if (!query) {
+    return {};
+  }
   return { query };
 }
 

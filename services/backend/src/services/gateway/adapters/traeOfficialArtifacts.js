@@ -28,8 +28,8 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ── 路径解析 ──────────────────────────────────────────
 
@@ -55,10 +55,10 @@ const TRAE_NATIVE_API_PATHS = {
 // 实际 host 由 iCubeAuthInfo.host 或 getApi(Kc.ugApi, path) 动态拼接
 const TRAE_KNOWN_NATIVE_HOSTS = [
   // ── product.json 确认的区域主机 (第三轮 2026-05-25) ──
-  'grow-normal.trae.ai',      // CN normal (默认)
-  'growsg-normal.trae.ai',    // SG (新加坡)
-  'growva-normal.trae.ai',    // US Virginia
-  'grow-normal.traeapi.us',   // USTTP (美国 TTP)
+  'grow-normal.trae.ai', // CN normal (默认)
+  'growsg-normal.trae.ai', // SG (新加坡)
+  'growva-normal.trae.ai', // US Virginia
+  'grow-normal.traeapi.us', // USTTP (美国 TTP)
   // ── 日志/逆向确认的主机 ──
   'core-normal.trae.ai',
   'api-us-east.trae.ai',
@@ -91,10 +91,10 @@ const TRAE_KNOWN_NATIVE_HOSTS = [
 // iCubeAuthInfo.host 的值就是 product.json 中 ugApi 对应的主机
 // 当无法从 blob 解密获取 host 时，根据 region hint 推断
 const TRAE_REGION_HOST_MAP = {
-  cn:    'grow-normal.trae.ai',       // CN normal (默认)
-  sg:    'growsg-normal.trae.ai',     // SG (新加坡)
-  va:    'growva-normal.trae.ai',     // US Virginia
-  usttp: 'grow-normal.traeapi.us',    // USTTP (美国 TTP)
+  cn: 'grow-normal.trae.ai', // CN normal (默认)
+  sg: 'growsg-normal.trae.ai', // SG (新加坡)
+  va: 'growva-normal.trae.ai', // US Virginia
+  usttp: 'grow-normal.traeapi.us', // USTTP (美国 TTP)
 };
 
 /**
@@ -103,11 +103,21 @@ const TRAE_REGION_HOST_MAP = {
  * @returns {string} 最佳匹配主机
  */
 function resolveNativeHostByRegion(regionHint) {
-  if (!regionHint) return TRAE_REGION_HOST_MAP.cn;
-  const r = String(regionHint).toLowerCase().replace(/[^a-z]/g, '');
-  if (r.includes('sg') || r.includes('singapore')) return TRAE_REGION_HOST_MAP.sg;
-  if (r.includes('va') || r.includes('virginia') || r.includes('useast')) return TRAE_REGION_HOST_MAP.va;
-  if (r.includes('usttp') || r.includes('ttp')) return TRAE_REGION_HOST_MAP.usttp;
+  if (!regionHint) {
+    return TRAE_REGION_HOST_MAP.cn;
+  }
+  const r = String(regionHint)
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+  if (r.includes('sg') || r.includes('singapore')) {
+    return TRAE_REGION_HOST_MAP.sg;
+  }
+  if (r.includes('va') || r.includes('virginia') || r.includes('useast')) {
+    return TRAE_REGION_HOST_MAP.va;
+  }
+  if (r.includes('usttp') || r.includes('ttp')) {
+    return TRAE_REGION_HOST_MAP.usttp;
+  }
   // cn-east, cn-north, cn 等全部走 CN normal
   return TRAE_REGION_HOST_MAP.cn;
 }
@@ -130,18 +140,48 @@ const BRIDGE_TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h — 超过此值视�
  * 扫描 Trae globalStorage 中的桥接扩展 token 文件
  * @returns {{ token: string|null, refreshToken: string|null, expiresAt: string|null, host: string|null, userId: string|null, bridgePath: string|null, stale: boolean }}
  */
+// Bridge token read cache: the scan touches Roaming-profile paths whose
+// synchronous stat/read can cost 100-200ms each on Windows, and it runs on
+// every chat request. A short TTL keeps the submit path free of that IO;
+// writeBridgeAuthToken() invalidates it on refresh.
+let _bridgeTokenCache = { value: null, at: 0 };
+const _BRIDGE_TOKEN_TTL_MS = 30000;
+
 function readMarsCodeAuthProviderToken() {
-  const result = { token: null, refreshToken: null, expiresAt: null, host: null, userId: null, region: null, bridgePath: null, stale: false };
+  const now = Date.now();
+  if (_bridgeTokenCache.value && now - _bridgeTokenCache.at < _BRIDGE_TOKEN_TTL_MS) {
+    return _bridgeTokenCache.value;
+  }
+  const result = _readMarsCodeAuthProviderTokenUncached();
+  _bridgeTokenCache = { value: result, at: Date.now() };
+  return result;
+}
+
+function _readMarsCodeAuthProviderTokenUncached() {
+  const result = {
+    token: null,
+    refreshToken: null,
+    expiresAt: null,
+    host: null,
+    userId: null,
+    region: null,
+    bridgePath: null,
+    stale: false,
+  };
   const dirs = _globalStorageDirs();
   for (const dir of dirs) {
     const bridgePath = path.join(dir, BRIDGE_EXTENSION_ID, BRIDGE_AUTH_FILENAME);
     try {
-      if (!fs.existsSync(bridgePath)) continue;
+      if (!fs.existsSync(bridgePath)) {
+        continue;
+      }
       const raw = fs.readFileSync(bridgePath, 'utf8');
       const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.accessToken) continue;
+      if (!parsed || !parsed.accessToken) {
+        continue;
+      }
       // 有效性检查: ts 存在时检查时效
-      if (parsed.ts && (Date.now() - parsed.ts) > BRIDGE_TOKEN_MAX_AGE_MS) {
+      if (parsed.ts && Date.now() - parsed.ts > BRIDGE_TOKEN_MAX_AGE_MS) {
         result.bridgePath = bridgePath;
         result.stale = true;
         continue; // 过期但记录路径，后续可提示用户刷新
@@ -168,12 +208,16 @@ function readMarsCodeAuthProviderToken() {
  * @returns {string|null} 写入的路径，或 null（无可写位置）
  */
 function writeBridgeAuthToken(tokenData) {
-  if (!tokenData || !tokenData.accessToken) return null;
+  if (!tokenData || !tokenData.accessToken) {
+    return null;
+  }
   const dirs = _globalStorageDirs();
   for (const dir of dirs) {
     const bridgeDir = path.join(dir, BRIDGE_EXTENSION_ID);
     try {
-      if (!fs.existsSync(bridgeDir)) continue;
+      if (!fs.existsSync(bridgeDir)) {
+        continue;
+      }
       const bridgePath = path.join(bridgeDir, BRIDGE_AUTH_FILENAME);
       const data = {
         accessToken: tokenData.accessToken,
@@ -185,8 +229,12 @@ function writeBridgeAuthToken(tokenData) {
         ts: Date.now(),
       };
       fs.writeFileSync(bridgePath, JSON.stringify(data, null, 2), 'utf8');
+      // Invalidate the read cache so the fresh token is picked up immediately.
+      _bridgeTokenCache = { value: null, at: 0 };
       return bridgePath;
-    } catch { /* 写入失败 → 尝试下一个目录 */ }
+    } catch {
+      /* 写入失败 → 尝试下一个目录 */
+    }
   }
   return null;
 }
@@ -210,7 +258,7 @@ function _globalStorageDirs() {
  * 官方 Trae storage.json 路径列表（不含 Nirvana）
  */
 function resolveTraeOfficialStoragePaths() {
-  return _globalStorageDirs().map(d => path.join(d, 'storage.json'));
+  return _globalStorageDirs().map((d) => path.join(d, 'storage.json'));
 }
 
 /**
@@ -235,10 +283,16 @@ function readTraeOfficialStorageSnapshots() {
   const out = [];
   for (const p of resolveTraeOfficialStoragePaths()) {
     try {
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const data = JSON.parse(fs.readFileSync(p, 'utf8'));
-      if (data && typeof data === 'object') out.push({ path: p, data });
-    } catch { /* 忽略格式错误 */ }
+      if (data && typeof data === 'object') {
+        out.push({ path: p, data });
+      }
+    } catch {
+      /* 忽略格式错误 */
+    }
   }
   return out;
 }
@@ -254,11 +308,17 @@ function readTraeOfficialDbSnapshots() {
   const out = [];
   for (const dbPath of resolveTraeOfficialDbPaths()) {
     try {
-      if (!fs.existsSync(dbPath)) continue;
-    } catch { continue; }
+      if (!fs.existsSync(dbPath)) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
 
     const rows = _readRelevantRowsFromVscdb(dbPath);
-    if (rows.length > 0) out.push({ path: dbPath, rows });
+    if (rows.length > 0) {
+      out.push({ path: dbPath, rows });
+    }
   }
   return out;
 }
@@ -274,33 +334,46 @@ function _readRelevantRowsFromVscdb(dbPath) {
     try {
       const tables = db.prepare('SELECT name FROM sqlite_master WHERE type = ?').all('table');
       const tableName = (
-        tables.find(t => String(t.name || '') === 'ItemTable')
-        || tables.find(t => String(t.name || '').toLowerCase() === 'itemtable')
-        || tables.find(t => /itemtable/i.test(String(t.name || '')))
+        tables.find((t) => String(t.name || '') === 'ItemTable') ||
+        tables.find((t) => String(t.name || '').toLowerCase() === 'itemtable') ||
+        tables.find((t) => /itemtable/i.test(String(t.name || '')))
       )?.name;
-      if (!tableName || !/^[A-Za-z0-9_]+$/.test(String(tableName))) return [];
+      if (!tableName || !/^[A-Za-z0-9_]+$/.test(String(tableName))) {
+        return [];
+      }
 
       // 精确 + 模糊查找
       const rows = [];
       try {
-        const found = db.prepare(
-          `SELECT key, value FROM "${tableName}" WHERE ` +
-          `key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? ` +
-          `OR key LIKE ? OR key LIKE ? OR key LIKE ? LIMIT 500`
-        ).all(
-          '%iCubeAuthInfo%', '%iCubeServerData%', '%traeAuth%',
-          '%bytedance%', '%usertag%', '%region%', '%accessToken%',
-          'secret://%trae%'
-        );
+        const found = db
+          .prepare(
+            `SELECT key, value FROM "${tableName}" WHERE ` +
+              `key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? ` +
+              `OR key LIKE ? OR key LIKE ? OR key LIKE ? LIMIT 500`
+          )
+          .all(
+            '%iCubeAuthInfo%',
+            '%iCubeServerData%',
+            '%traeAuth%',
+            '%bytedance%',
+            '%usertag%',
+            '%region%',
+            '%accessToken%',
+            'secret://%trae%'
+          );
         for (const r of found) {
           rows.push({ key: String(r.key || ''), value: _safeStringify(r.value) });
         }
-      } catch { /* 查询失败 */ }
+      } catch {
+        /* 查询失败 */
+      }
       return rows;
     } finally {
       db.close();
     }
-  } catch { /* better-sqlite3 不可用 */ }
+  } catch {
+    /* better-sqlite3 不可用 */
+  }
 
   // Tier 2: 二进制 grep (4MB cap)
   try {
@@ -317,10 +390,14 @@ function _readRelevantRowsFromVscdb(dbPath) {
     }
     // 检查存在性
     if (/iCubeAuthInfo|iCubeServerData|traeAuth|usertag/i.test(text)) {
-      if (rows.length === 0) rows.push({ key: '__binary_artifact_detected', value: '' });
+      if (rows.length === 0) {
+        rows.push({ key: '__binary_artifact_detected', value: '' });
+      }
     }
     return rows;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return [];
 }
@@ -332,17 +409,27 @@ function _readRelevantRowsFromVscdb(dbPath) {
 const _SAFE_STRINGIFY_MAX_B64 = 512; // base64 输出最大字符数
 
 function _safeStringify(val) {
-  if (val == null) return '';
+  if (val == null) {
+    return '';
+  }
   if (Buffer.isBuffer(val)) {
     // v10/v11 Chromium 加密 blob
     const prefix = val.toString('utf8', 0, Math.min(3, val.length));
     if (prefix === 'v10' || prefix === 'v11') {
-      const b64 = val.length > 384 ? val.subarray(0, 384).toString('base64') + '...' : val.toString('base64');
+      const b64 =
+        val.length > 384 ? val.subarray(0, 384).toString('base64') + '...' : val.toString('base64');
       return `<chromium-encrypted:${prefix}:${b64}>`;
     }
     // Trae 自定义加密 (tc\x05\x10)
-    if (val.length >= 6 && val[0] === 0x74 && val[1] === 0x63 && val[2] === 0x05 && val[3] === 0x10) {
-      const b64 = val.length > 384 ? val.subarray(0, 384).toString('base64') + '...' : val.toString('base64');
+    if (
+      val.length >= 6 &&
+      val[0] === 0x74 &&
+      val[1] === 0x63 &&
+      val[2] === 0x05 &&
+      val[3] === 0x10
+    ) {
+      const b64 =
+        val.length > 384 ? val.subarray(0, 384).toString('base64') + '...' : val.toString('base64');
       return `<trae-encrypted:${b64}>`;
     }
     // 普通 Buffer — 只取前 4KB 防止爆内存
@@ -368,7 +455,9 @@ const ICUBE_SERVER_KEY = /^iCubeServerData:\/\/icube\.cloudide$/i;
 function extractTraeOfficialArtifactsFromStorage(data, sourcePath) {
   const result = _emptyArtifactResult(sourcePath, 'storage.json');
 
-  if (!data || typeof data !== 'object') return result;
+  if (!data || typeof data !== 'object') {
+    return result;
+  }
 
   for (const [key, value] of Object.entries(data)) {
     if (ICUBE_AUTH_KEY.test(key)) {
@@ -406,7 +495,7 @@ function extractTraeOfficialArtifactsFromDb(dbPath) {
   let rows;
   try {
     const snapshots = readTraeOfficialDbSnapshots();
-    const match = snapshots.find(s => s.path === dbPath);
+    const match = snapshots.find((s) => s.path === dbPath);
     rows = match ? match.rows : _readRelevantRowsFromVscdb(dbPath);
   } catch {
     rows = _readRelevantRowsFromVscdb(dbPath);
@@ -424,18 +513,25 @@ function extractTraeOfficialArtifactsFromDb(dbPath) {
     } else if (ICUBE_SERVER_KEY.test(key)) {
       result.serverDataPresent = true;
       result.officialArtifactsDetected = true;
-      if (value !== '<binary-scan>') _tryParseServerData(value, result);
+      if (value !== '<binary-scan>') {
+        _tryParseServerData(value, result);
+      }
     } else if (/traeAuth|bytedance|accessToken/i.test(key)) {
       result.officialArtifactsDetected = true;
-      if (value !== '<binary-scan>') _tryExtractTokenFromEntry(key, value, result);
+      if (value !== '<binary-scan>') {
+        _tryExtractTokenFromEntry(key, value, result);
+      }
     } else if (key === '__binary_artifact_detected') {
       result.officialArtifactsDetected = true;
     } else if (SECRET_KEY_PATTERN.test(key)) {
       // state.vscdb 中的 Electron SecretStorage entry (如 secret://{"extensionId":"trae.ai-code-completion","key":"isActivated"})
       // value 通常是 v10/v11 Chromium 加密 blob
       result.officialArtifactsDetected = true;
-      if (!result.secretEntries) result.secretEntries = [];
-      const isEncrypted = /^<chromium-encrypted:|^<trae-encrypted:/.test(value) || value === '<binary-scan>';
+      if (!result.secretEntries) {
+        result.secretEntries = [];
+      }
+      const isEncrypted =
+        /^<chromium-encrypted:|^<trae-encrypted:/.test(value) || value === '<binary-scan>';
       result.secretEntries.push({ key, encrypted: isEncrypted });
     }
   }
@@ -448,7 +544,38 @@ function extractTraeOfficialArtifactsFromDb(dbPath) {
  * 汇聚所有官方 Trae 来源的 artifact 信息
  * @returns {object} 综合 artifact 结果
  */
+// Full-disk artifact scan (existsSync storm over app dirs + synchronous sqlite
+// reads of state.vscdb) costs seconds on Windows. It sits on every chat
+// request via readTraeToken -> resolveTraeOfficialCredential, so cache the
+// merged result and serve it stale-while-revalidate: an expired entry is
+// returned immediately and rescanned off the current tick, keeping the scan
+// cost away from the submit path. Credentials change rarely (login/logout).
+let _artifactsCache = { value: null, at: 0 };
+let _artifactsRefreshing = false;
+const _ARTIFACTS_TTL_MS = 60000;
+
 function collectTraeOfficialArtifacts() {
+  const now = Date.now();
+  if (_artifactsCache.value) {
+    if (now - _artifactsCache.at >= _ARTIFACTS_TTL_MS && !_artifactsRefreshing) {
+      _artifactsRefreshing = true;
+      setImmediate(() => {
+        try {
+          _artifactsCache = { value: _collectTraeOfficialArtifactsUncached(), at: Date.now() };
+        } catch {
+          /* keep serving previous snapshot */
+        }
+        _artifactsRefreshing = false;
+      });
+    }
+    return _artifactsCache.value;
+  }
+  const merged = _collectTraeOfficialArtifactsUncached();
+  _artifactsCache = { value: merged, at: Date.now() };
+  return merged;
+}
+
+function _collectTraeOfficialArtifactsUncached() {
   const merged = _emptyArtifactResult(null, 'merged');
   merged.sourcePaths = [];
 
@@ -461,7 +588,13 @@ function collectTraeOfficialArtifacts() {
 
   // 2) vscdb 来源
   for (const dbPath of resolveTraeOfficialDbPaths()) {
-    try { if (!fs.existsSync(dbPath)) continue; } catch { continue; }
+    try {
+      if (!fs.existsSync(dbPath)) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
     const r = extractTraeOfficialArtifactsFromDb(dbPath);
     _mergeArtifact(merged, r);
   }
@@ -481,7 +614,7 @@ function decodeTraeOfficialAuthBlob(raw) {
   const result = {
     encoding: 'unknown',
     schemeHint: 'unknown',
-    encryptionService: null,   // 'electron-safeStorage' | null
+    encryptionService: null, // 'electron-safeStorage' | null
     decryptable: false,
     tokenCandidate: null,
     blobLength: 0,
@@ -510,7 +643,9 @@ function decodeTraeOfficialAuthBlob(raw) {
       result.analysisNotes.push('JSON 格式但未找到 token 字段');
     }
     return result;
-  } catch { /* 非 JSON */ }
+  } catch {
+    /* 非 JSON */
+  }
 
   // 2) 检查 base64 编码
   if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length >= 20) {
@@ -531,35 +666,51 @@ function decodeTraeOfficialAuthBlob(raw) {
           result.analysisNotes.push('base64 → JSON 但无 token 字段');
         }
         return result;
-      } catch { /* 非 JSON */ }
+      } catch {
+        /* 非 JSON */
+      }
 
       // 检查首字节判断加密方案
       if (decoded.length >= 4) {
         const header = decoded.slice(0, 6);
         // Trae 自定义加密封装: 前缀 74 63 05 10 00 00 ("tc" + 0x05 0x10 0x00 0x00)
         // 由 Electron 主进程 EncryptionMainService (safeStorage) 生成，外部无法直接解密
-        if (decoded.length >= 6
-          && header[0] === 0x74 && header[1] === 0x63
-          && header[2] === 0x05 && header[3] === 0x10
-          && header[4] === 0x00 && header[5] === 0x00) {
+        if (
+          decoded.length >= 6 &&
+          header[0] === 0x74 &&
+          header[1] === 0x63 &&
+          header[2] === 0x05 &&
+          header[3] === 0x10 &&
+          header[4] === 0x00 &&
+          header[5] === 0x00
+        ) {
           result.schemeHint = 'trae-custom-encrypted';
           result.encryptionService = 'electron-safeStorage';
           result.analysisNotes.push(
             '检测到 Trae 自定义加密前缀 (74 63 05 10 00 00)，' +
-            '由 Electron safeStorage (EncryptionMainService) 加密，外部无法直接解密'
+              '由 Electron safeStorage (EncryptionMainService) 加密，外部无法直接解密'
           );
         }
         // Windows DPAPI: 通常以 01 00 00 00 开头
-        else if (header[0] === 0x01 && header[1] === 0x00 && header[2] === 0x00 && header[3] === 0x00) {
+        else if (
+          header[0] === 0x01 &&
+          header[1] === 0x00 &&
+          header[2] === 0x00 &&
+          header[3] === 0x00
+        ) {
           result.schemeHint = 'dpapi';
           result.analysisNotes.push('检测到 DPAPI 头部签名 (01 00 00 00)');
         }
         // v10/v11 前缀 (Chromium Safe Storage)
-        else if (decoded.toString('utf8', 0, 3) === 'v10' || decoded.toString('utf8', 0, 3) === 'v11') {
+        else if (
+          decoded.toString('utf8', 0, 3) === 'v10' ||
+          decoded.toString('utf8', 0, 3) === 'v11'
+        ) {
           result.schemeHint = `chromium-safe-storage-${decoded.toString('utf8', 0, 3)}`;
-          result.analysisNotes.push(`检测到 Chromium Safe Storage 前缀: ${decoded.toString('utf8', 0, 3)}`);
-        }
-        else {
+          result.analysisNotes.push(
+            `检测到 Chromium Safe Storage 前缀: ${decoded.toString('utf8', 0, 3)}`
+          );
+        } else {
           result.schemeHint = 'base64-binary';
           result.analysisNotes.push(`base64 解码后为二进制 blob (${decoded.length} bytes)`);
         }
@@ -614,7 +765,7 @@ function resolveTraeOfficialCredential(options = {}) {
     refreshToken: null,
     expiresAt: null,
     endpoint: null,
-    nativeHost: null,            // 原生协议主机（从桥接或 blob 解出）
+    nativeHost: null, // 原生协议主机（从桥接或 blob 解出）
     regionHint: artifacts.regionHint || null,
     userIdHint: artifacts.userIdHint || null,
     endpointHints: artifacts.endpointHints || [],
@@ -623,8 +774,8 @@ function resolveTraeOfficialCredential(options = {}) {
     userTagBlobPresent: artifacts.userTagBlobPresent,
     serverDataPresent: artifacts.serverDataPresent,
     authBlobAnalysis: null,
-    bridgePath: null,            // 桥接扩展 token 文件路径
-    bridgeStale: false,          // 桥接 token 是否过期
+    bridgePath: null, // 桥接扩展 token 文件路径
+    bridgeStale: false, // 桥接 token 是否过期
   };
 
   // 0) 桥接扩展 token (最高优先级 — icube.marscode AuthenticationProvider 导出)
@@ -634,12 +785,16 @@ function resolveTraeOfficialCredential(options = {}) {
     result.refreshToken = bridge.refreshToken || null;
     result.expiresAt = bridge.expiresAt || null;
     // bridge.region 传递到 regionHint，供 _isTraeCN 等判断使用
-    if (bridge.region) result.regionHint = bridge.region;
+    if (bridge.region) {
+      result.regionHint = bridge.region;
+    }
     result.nativeHost = bridge.host || resolveNativeHostByRegion(result.regionHint);
     result.credentialMode = 'plaintext';
     result.bridgePath = bridge.bridgePath;
     result.officialArtifactsDetected = true;
-    if (bridge.userId) result.userIdHint = bridge.userId;
+    if (bridge.userId) {
+      result.userIdHint = bridge.userId;
+    }
     if (result.endpointHints.length > 0) {
       result.endpoint = result.endpointHints[0];
     }
@@ -700,17 +855,15 @@ async function verifyTraeOfficialSession(credential, requestJsonFn) {
     return {
       sessionVerified: false,
       reason: credential?.credentialMode === 'encrypted' ? 'encrypted_only' : 'no_token',
-      detail: credential?.credentialMode === 'encrypted'
-        ? '检测到加密登录态，尚未还原为可用 token'
-        : '未找到可用 token',
+      detail:
+        credential?.credentialMode === 'encrypted'
+          ? '检测到加密登录态，尚未还原为可用 token'
+          : '未找到可用 token',
     };
   }
 
   // 尝试端点验证
-  const endpoints = [
-    credential.endpoint,
-    ...(credential.endpointHints || []),
-  ].filter(Boolean);
+  const endpoints = [credential.endpoint, ...(credential.endpointHints || [])].filter(Boolean);
 
   if (endpoints.length === 0) {
     return {
@@ -726,8 +879,8 @@ async function verifyTraeOfficialSession(credential, requestJsonFn) {
       const res = await requestJsonFn(modelsUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${credential.token}`,
-          'Accept': 'application/json',
+          Authorization: `Bearer ${credential.token}`,
+          Accept: 'application/json',
         },
         timeout: 8000,
         maxRetries: 0,
@@ -741,7 +894,9 @@ async function verifyTraeOfficialSession(credential, requestJsonFn) {
           verifiedEndpoint: ep,
         };
       }
-    } catch { /* 尝试下一个端点 */ }
+    } catch {
+      /* 尝试下一个端点 */
+    }
   }
 
   return {
@@ -774,29 +929,43 @@ function _emptyArtifactResult(sourcePath, sourceType) {
 }
 
 function _tryParseServerData(value, result) {
-  if (!value) return;
+  if (!value) {
+    return;
+  }
   const raw = typeof value === 'string' ? value : JSON.stringify(value);
   try {
     const obj = typeof value === 'object' ? value : JSON.parse(raw);
     result.serverData = obj;
     // 提取 region hint
-    if (obj.region) result.regionHint = String(obj.region);
-    if (obj.area) result.regionHint = result.regionHint || String(obj.area);
+    if (obj.region) {
+      result.regionHint = String(obj.region);
+    }
+    if (obj.area) {
+      result.regionHint = result.regionHint || String(obj.area);
+    }
     // 提取 userId hint
-    if (obj.userId || obj.user_id) result.userIdHint = String(obj.userId || obj.user_id);
+    if (obj.userId || obj.user_id) {
+      result.userIdHint = String(obj.userId || obj.user_id);
+    }
     // 提取 endpoint hints — 直接字段
     if (obj.apiHost || obj.api_host) {
       const ep = String(obj.apiHost || obj.api_host).trim();
-      if (ep && !result.endpointHints.includes(ep)) result.endpointHints.push(ep);
+      if (ep && !result.endpointHints.includes(ep)) {
+        result.endpointHints.push(ep);
+      }
     }
     if (obj.endpoint) {
       const ep = String(obj.endpoint).trim();
-      if (ep && !result.endpointHints.includes(ep)) result.endpointHints.push(ep);
+      if (ep && !result.endpointHints.includes(ep)) {
+        result.endpointHints.push(ep);
+      }
     }
     // 深层遍历 — iCubeServerData 的实际结构以 entitlementInfo/commercialActivityInfo
     // 为主，通常不含 apiHost/endpoint 字段。从 serverData 整体扫描 URL 形态的值
     _extractUrlHintsFromObject(obj, result, 0);
-  } catch { /* 不是 JSON，忽略 */ }
+  } catch {
+    /* 不是 JSON，忽略 */
+  }
 }
 
 /**
@@ -804,12 +973,16 @@ function _tryParseServerData(value, result) {
  * 写入 result.endpointHints（浅层 3 级限制，防止死循环）
  */
 function _extractUrlHintsFromObject(obj, result, depth) {
-  if (!obj || typeof obj !== 'object' || depth > 3) return;
+  if (!obj || typeof obj !== 'object' || depth > 3) {
+    return;
+  }
   for (const [, v] of Object.entries(obj)) {
     if (typeof v === 'string') {
       const trimmed = v.trim();
       if (/^https?:\/\/[a-z0-9.-]+\.trae\.(ai|cn)/i.test(trimmed)) {
-        if (!result.endpointHints.includes(trimmed)) result.endpointHints.push(trimmed);
+        if (!result.endpointHints.includes(trimmed)) {
+          result.endpointHints.push(trimmed);
+        }
       }
     } else if (typeof v === 'object' && v !== null) {
       _extractUrlHintsFromObject(v, result, depth + 1);
@@ -818,9 +991,13 @@ function _extractUrlHintsFromObject(obj, result, depth) {
 }
 
 function _tryExtractTokenFromEntry(key, value, result) {
-  if (!value) return;
+  if (!value) {
+    return;
+  }
   const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return;
+  if (!raw) {
+    return;
+  }
 
   // 尝试 JSON
   try {
@@ -835,7 +1012,9 @@ function _tryExtractTokenFromEntry(key, value, result) {
     }
     // 有 JSON 但没 token → 可能是包含其他信息的对象
     return;
-  } catch { /* 非 JSON */ }
+  } catch {
+    /* 非 JSON */
+  }
 
   // 直接判断裸 token
   if (raw.length >= 20 && raw.length <= 4096 && /^[A-Za-z0-9._\-+/=~:]+$/.test(raw)) {
@@ -855,29 +1034,45 @@ function _resolveCredentialMode(result) {
 }
 
 function _mergeArtifact(merged, incoming) {
-  if (incoming.officialArtifactsDetected) merged.officialArtifactsDetected = true;
+  if (incoming.officialArtifactsDetected) {
+    merged.officialArtifactsDetected = true;
+  }
   if (incoming.authBlobPresent) {
     merged.authBlobPresent = true;
-    if (!merged.authBlobRaw && incoming.authBlobRaw) merged.authBlobRaw = incoming.authBlobRaw;
+    if (!merged.authBlobRaw && incoming.authBlobRaw) {
+      merged.authBlobRaw = incoming.authBlobRaw;
+    }
   }
   if (incoming.userTagBlobPresent) {
     merged.userTagBlobPresent = true;
-    if (!merged.userTagBlobRaw && incoming.userTagBlobRaw) merged.userTagBlobRaw = incoming.userTagBlobRaw;
+    if (!merged.userTagBlobRaw && incoming.userTagBlobRaw) {
+      merged.userTagBlobRaw = incoming.userTagBlobRaw;
+    }
   }
   if (incoming.serverDataPresent) {
     merged.serverDataPresent = true;
-    if (!merged.serverData && incoming.serverData) merged.serverData = incoming.serverData;
+    if (!merged.serverData && incoming.serverData) {
+      merged.serverData = incoming.serverData;
+    }
   }
-  if (incoming.regionHint && !merged.regionHint) merged.regionHint = incoming.regionHint;
-  if (incoming.userIdHint && !merged.userIdHint) merged.userIdHint = incoming.userIdHint;
-  for (const ep of (incoming.endpointHints || [])) {
-    if (!merged.endpointHints.includes(ep)) merged.endpointHints.push(ep);
+  if (incoming.regionHint && !merged.regionHint) {
+    merged.regionHint = incoming.regionHint;
+  }
+  if (incoming.userIdHint && !merged.userIdHint) {
+    merged.userIdHint = incoming.userIdHint;
+  }
+  for (const ep of incoming.endpointHints || []) {
+    if (!merged.endpointHints.includes(ep)) {
+      merged.endpointHints.push(ep);
+    }
   }
   if (incoming.plainTextToken && !merged.plainTextToken) {
     merged.plainTextToken = incoming.plainTextToken;
   }
-  for (const p of (incoming.sourcePaths || [])) {
-    if (!merged.sourcePaths.includes(p)) merged.sourcePaths.push(p);
+  for (const p of incoming.sourcePaths || []) {
+    if (!merged.sourcePaths.includes(p)) {
+      merged.sourcePaths.push(p);
+    }
   }
 }
 

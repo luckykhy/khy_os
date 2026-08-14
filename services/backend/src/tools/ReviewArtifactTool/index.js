@@ -1,5 +1,6 @@
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
+
+const { BaseTool } = require('../_baseTool');
 
 class ReviewArtifactTool extends BaseTool {
   static toolName = 'ReviewArtifact';
@@ -9,8 +10,12 @@ class ReviewArtifactTool extends BaseTool {
   static searchHint = 'review code artifact verify quality';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Review a generated artifact (code, config, etc.) for correctness.
@@ -23,7 +28,12 @@ Use this before finalizing changes to verify quality.`;
       type: 'object',
       properties: {
         file_path: { type: 'string', description: 'Path to the file to review' },
-        focus: { type: 'string', description: 'What to focus on: security, correctness, style, all', enum: ['security', 'correctness', 'style', 'all'], default: 'all' },
+        focus: {
+          type: 'string',
+          description: 'What to focus on: security, correctness, style, all',
+          enum: ['security', 'correctness', 'style', 'all'],
+          default: 'all',
+        },
       },
       required: ['file_path'],
     };
@@ -51,7 +61,9 @@ Use this before finalizing changes to verify quality.`;
     };
   }
 
-  getActivityDescription(input) { return `审查文件：${input.file_path}`; }
+  getActivityDescription(input) {
+    return `审查文件：${input.file_path}`;
+  }
 }
 
 module.exports = ReviewArtifactTool;

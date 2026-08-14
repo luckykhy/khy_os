@@ -17,23 +17,27 @@
  * 用法:`/ide [status|list|help]`(空参 = status)。门控 KHY_IDE_COMMAND 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/ide/idePlan');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
+const { printInfo, printError } = require('../formatters');
 
 /** 探测本机已装 IDE(委托既有 ideDetector SSOT)。 */
 function _detectIdes() {
   const det = _safe(() => require('../../services/gateway/adapters/ideDetector'), null);
-  if (!det || typeof det.detectAll !== 'function') return [];
+  if (!det || typeof det.detectAll !== 'function') {
+    return [];
+  }
   return _safe(() => det.detectAll(), []) || [];
 }
 
 /** 读 bridge 运行快照(委托既有 bridgeServer SSOT)。 */
 function _bridgeSnapshot() {
   const bridge = _safe(() => require('../../bridge/bridgeServer'), null);
-  if (!bridge || typeof bridge.getStatusSnapshot !== 'function') return { running: false };
+  if (!bridge || typeof bridge.getStatusSnapshot !== 'function') {
+    return { running: false };
+  }
   return _safe(() => bridge.getStatusSnapshot(), { running: false }) || { running: false };
 }
 

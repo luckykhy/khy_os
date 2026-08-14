@@ -11,10 +11,11 @@
  *  - patch_gguf_rope.py / patch_gguf_tensors.py for Qwen 3.5 fixes
  *  - resourceGuard.safeExec() for safe shell execution
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { execSync, spawnSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 // Model-name SSOT: default GGUF filename flows from constants/models.js.
 const { LOCAL_BRAIN_GGUF_FILES } = require('../constants/models');
 
@@ -27,12 +28,13 @@ const SCRIPTS_DIR = path.resolve(__dirname, '../../scripts');
 const LLAMA_BIN_DIR = path.resolve(__dirname, '../../bin/llama-cpp/llama-b9049');
 const TEMP_BASE = path.join(os.tmpdir(), 'khy-model-import');
 const DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000; // 10 min
-const EXTRACT_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min
+const EXTRACT_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
 const GGUF_MAGIC = Buffer.from('GGUF');
 const OLLAMA_BLOB_NAME_RE = /^sha256[-:][a-f0-9]{32,}$/i;
 const MIN_LIKELY_GGUF_BLOB_SIZE = Math.max(
   16 * 1024 * 1024,
-  parseInt(process.env.KHY_LOCAL_MIN_GGUF_BLOB_SIZE || String(64 * 1024 * 1024), 10) || (64 * 1024 * 1024)
+  parseInt(process.env.KHY_LOCAL_MIN_GGUF_BLOB_SIZE || String(64 * 1024 * 1024), 10) ||
+    64 * 1024 * 1024
 );
 const MODEL_ARCHIVE_RE = /\.(zip|tar\.gz|tgz|tar|7z|rar)$/i;
 
@@ -45,15 +47,24 @@ const MODEL_DISCOVERY_CACHE_TTL = 60_000; // 60 seconds
 // ── Utility ─────────────────────────────────────────────────────────────
 
 function ensureTempDir() {
-  if (!fs.existsSync(TEMP_BASE)) fs.mkdirSync(TEMP_BASE, { recursive: true });
-  const sub = path.join(TEMP_BASE, `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  if (!fs.existsSync(TEMP_BASE)) {
+    fs.mkdirSync(TEMP_BASE, { recursive: true });
+  }
+  const sub = path.join(
+    TEMP_BASE,
+    `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  );
   fs.mkdirSync(sub, { recursive: true });
   return sub;
 }
 
 function expandPath(p) {
-  if (!p || typeof p !== 'string') return p;
-  if (p.startsWith('~/') || p === '~') return path.join(os.homedir(), p.slice(1));
+  if (!p || typeof p !== 'string') {
+    return p;
+  }
+  if (p.startsWith('~/') || p === '~') {
+    return path.join(os.homedir(), p.slice(1));
+  }
   // Windows drive-letter path on Linux/WSL: D:\foo → /mnt/d/foo
   if (/^[A-Za-z]:[\\/]/.test(p) && process.platform === 'linux') {
     try {
@@ -61,7 +72,9 @@ function expandPath(p) {
         const drive = p[0].toLowerCase();
         return `/mnt/${drive}/${p.slice(3).replace(/\\/g, '/')}`;
       }
-    } catch { /* not WSL, keep original */ }
+    } catch {
+      /* not WSL, keep original */
+    }
   }
   // Normalize backslashes on non-Windows (e.g. pasted from Windows)
   if (process.platform !== 'win32' && p.includes('\\')) {
@@ -71,11 +84,17 @@ function expandPath(p) {
 }
 
 function _pushUniquePath(list, seen, candidate) {
-  if (!candidate) return;
+  if (!candidate) {
+    return;
+  }
   const expanded = expandPath(String(candidate).trim());
-  if (!expanded) return;
+  if (!expanded) {
+    return;
+  }
   const full = path.resolve(expanded);
-  if (seen.has(full)) return;
+  if (seen.has(full)) {
+    return;
+  }
   seen.add(full);
   list.push(full);
 }
@@ -85,7 +104,9 @@ function _getKhyDataHomes() {
   const seen = new Set();
 
   const envHome = String(process.env.KHY_DATA_HOME || '').trim();
-  if (envHome) _pushUniquePath(homes, seen, envHome);
+  if (envHome) {
+    _pushUniquePath(homes, seen, envHome);
+  }
 
   try {
     const dataHome = require('../utils/dataHome');
@@ -137,11 +158,17 @@ function _getOllamaBlobDirs() {
  * @returns {string}
  */
 function resolveModelsDest() {
-  if (process.env.KHY_MODELS_DIR) return process.env.KHY_MODELS_DIR;
+  if (process.env.KHY_MODELS_DIR) {
+    return process.env.KHY_MODELS_DIR;
+  }
   const builtin = path.resolve(__dirname, '../../models');
   try {
-    if (fs.existsSync(builtin) && fs.readdirSync(builtin).length > 0) return builtin;
-  } catch { /* fall through */ }
+    if (fs.existsSync(builtin) && fs.readdirSync(builtin).length > 0) {
+      return builtin;
+    }
+  } catch {
+    /* fall through */
+  }
   try {
     const { resolveGeneratedFileDir } = require('../utils/storageRoots');
     return resolveGeneratedFileDir({ subdir: 'models', preferCwd: false }).dir;
@@ -156,7 +183,11 @@ function getModelSearchDirs() {
 
   _pushUniquePath(dirs, seen, path.resolve(__dirname, '../../models'));
   // Where imports actually land (may be a non-system drive) — keep discoverable.
-  try { _pushUniquePath(dirs, seen, resolveModelsDest()); } catch { /* best-effort */ }
+  try {
+    _pushUniquePath(dirs, seen, resolveModelsDest());
+  } catch {
+    /* best-effort */
+  }
   _pushUniquePath(dirs, seen, path.join(process.cwd(), 'models'));
   _pushUniquePath(dirs, seen, path.join(process.cwd(), 'backend', 'models'));
 
@@ -187,7 +218,11 @@ function isUrl(s) {
 }
 
 function cleanupDir(dir) {
-  try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ }
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    /* best effort */
+  }
 }
 
 function hasGgufMagic(filePath) {
@@ -200,7 +235,13 @@ function hasGgufMagic(filePath) {
   } catch {
     return false;
   } finally {
-    if (fd !== undefined) try { fs.closeSync(fd); } catch { /* ignore */ }
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 
@@ -209,11 +250,13 @@ function hasGgufMagic(filePath) {
  * Handles both UTF-8 and UTF-16LE (Windows export) encoding.
  */
 function parseOllamaModelfile(modelfilePath) {
-  if (!fs.existsSync(modelfilePath)) return null;
-  let raw = fs.readFileSync(modelfilePath);
+  if (!fs.existsSync(modelfilePath)) {
+    return null;
+  }
+  const raw = fs.readFileSync(modelfilePath);
   // Detect UTF-16LE BOM or NUL-interleaved ASCII (Windows export)
   let text;
-  if ((raw[0] === 0xFF && raw[1] === 0xFE) || (raw.length > 2 && raw[1] === 0)) {
+  if ((raw[0] === 0xff && raw[1] === 0xfe) || (raw.length > 2 && raw[1] === 0)) {
     text = raw.toString('utf16le').replace(/\uFEFF/g, '');
   } else {
     text = raw.toString('utf-8');
@@ -223,13 +266,19 @@ function parseOllamaModelfile(modelfilePath) {
     const trimmed = line.trim();
     // Extract model name from comment: "# FROM qwen3.5:4b"
     const commentFrom = trimmed.match(/^#\s*FROM\s+(\S+)/i);
-    if (commentFrom && !result.modelName) result.modelName = commentFrom[1];
+    if (commentFrom && !result.modelName) {
+      result.modelName = commentFrom[1];
+    }
     // Extract FROM directive
     const fromMatch = trimmed.match(/^FROM\s+(\S+)/i);
-    if (fromMatch) result.from = fromMatch[1];
+    if (fromMatch) {
+      result.from = fromMatch[1];
+    }
     // Extract PARAMETER directives
     const paramMatch = trimmed.match(/^PARAMETER\s+(\S+)\s+(.+)/i);
-    if (paramMatch) result.parameters[paramMatch[1]] = paramMatch[2].trim();
+    if (paramMatch) {
+      result.parameters[paramMatch[1]] = paramMatch[2].trim();
+    }
   }
   // Infer model name from FROM if not in comment
   if (!result.modelName && result.from) {
@@ -254,8 +303,12 @@ function handleOllamaExport(dir) {
   const steps = [];
   const entries = fs.readdirSync(dir);
   // Find sha256 blob
-  const blobEntry = entries.find(f => OLLAMA_BLOB_NAME_RE.test(f) && hasGgufMagic(path.join(dir, f)));
-  if (!blobEntry) return { handled: false, steps };
+  const blobEntry = entries.find(
+    (f) => OLLAMA_BLOB_NAME_RE.test(f) && hasGgufMagic(path.join(dir, f))
+  );
+  if (!blobEntry) {
+    return { handled: false, steps };
+  }
 
   const blobPath = path.join(dir, blobEntry);
   const blobSize = fs.statSync(blobPath).size;
@@ -263,7 +316,7 @@ function handleOllamaExport(dir) {
 
   // Parse Modelfile if present
   let modelName = '';
-  const modelfileEntry = entries.find(f => /modelfile/i.test(f));
+  const modelfileEntry = entries.find((f) => /modelfile/i.test(f));
   if (modelfileEntry) {
     const mf = parseOllamaModelfile(path.join(dir, modelfileEntry));
     if (mf && mf.modelName) {
@@ -277,7 +330,9 @@ function handleOllamaExport(dir) {
     ? `${modelName.replace(/[^a-zA-Z0-9._-]/g, '-')}.gguf`
     : LOCAL_BRAIN_GGUF_FILES[0];
   const modelsDir = resolveModelsDest();
-  if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
+  if (!fs.existsSync(modelsDir)) {
+    fs.mkdirSync(modelsDir, { recursive: true });
+  }
   const destPath = path.join(modelsDir, destName);
 
   // Copy blob to models directory
@@ -307,12 +362,14 @@ function _peekZipEntryNames(zipPath) {
     // Scan backwards for EOCD signature
     let eocdOffset = -1;
     for (let i = tailSize - 22; i >= 0; i--) {
-      if (buf[i] === 0x50 && buf[i + 1] === 0x4B && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) {
+      if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) {
         eocdOffset = i;
         break;
       }
     }
-    if (eocdOffset < 0) { return null; }
+    if (eocdOffset < 0) {
+      return null;
+    }
     const cdOffset = buf.readUInt32LE(eocdOffset + 16); // central dir start offset
     const cdSize = buf.readUInt32LE(eocdOffset + 12);
     const totalEntries = buf.readUInt16LE(eocdOffset + 10);
@@ -322,18 +379,29 @@ function _peekZipEntryNames(zipPath) {
     const names = [];
     let pos = 0;
     for (let i = 0; i < totalEntries && pos < cdBuf.length - 46; i++) {
-      if (cdBuf.readUInt32LE(pos) !== 0x02014b50) break; // central dir entry signature
+      if (cdBuf.readUInt32LE(pos) !== 0x02014b50) {
+        break;
+      } // central dir entry signature
       const nameLen = cdBuf.readUInt16LE(pos + 28);
       const extraLen = cdBuf.readUInt16LE(pos + 30);
       const commentLen = cdBuf.readUInt16LE(pos + 32);
-      if (pos + 46 + nameLen > cdBuf.length) break;
+      if (pos + 46 + nameLen > cdBuf.length) {
+        break;
+      }
       names.push(cdBuf.toString('utf-8', pos + 46, pos + 46 + nameLen));
       pos += 46 + nameLen + extraLen + commentLen;
     }
     return names;
-  } catch { return null; }
-  finally {
-    if (fd !== undefined) try { fs.closeSync(fd); } catch { /* ignore */ }
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 
@@ -347,16 +415,25 @@ function _extractZipSync(zipPath, destDir) {
   const zip = new StreamZip({ file: zipPath, storeEntries: true });
 
   return new Promise((resolve, reject) => {
-    zip.on('error', err => { zip.close(); reject(err); });
+    zip.on('error', (err) => {
+      zip.close();
+      reject(err);
+    });
     zip.on('ready', () => {
       try {
         fs.mkdirSync(destDir, { recursive: true });
         zip.extract(null, destDir, (err) => {
           zip.close();
-          if (err) reject(new Error(`ZIP extraction failed: ${err.message || err}`));
-          else resolve(destDir);
+          if (err) {
+            reject(new Error(`ZIP extraction failed: ${err.message || err}`));
+          } else {
+            resolve(destDir);
+          }
         });
-      } catch (e) { zip.close(); reject(e); }
+      } catch (e) {
+        zip.close();
+        reject(e);
+      }
     });
   });
 }
@@ -381,15 +458,21 @@ function extractArchive(archivePath, destDir) {
 
   if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz')) {
     command = searchExecutable('tar');
-    if (!command) throw new Error('tar not found — install tar or bsdtar to extract .tar.gz archives');
+    if (!command) {
+      throw new Error('tar not found — install tar or bsdtar to extract .tar.gz archives');
+    }
     args = ['-xzf', archivePath, '-C', destDir];
   } else if (lower.endsWith('.tar')) {
     command = searchExecutable('tar');
-    if (!command) throw new Error('tar not found — install tar or bsdtar to extract .tar archives');
+    if (!command) {
+      throw new Error('tar not found — install tar or bsdtar to extract .tar archives');
+    }
     args = ['-xf', archivePath, '-C', destDir];
   } else if (lower.endsWith('.7z')) {
     command = searchExecutable('7z') || searchExecutable('7za');
-    if (!command) throw new Error('7z not found — install 7-Zip to extract .7z archives');
+    if (!command) {
+      throw new Error('7z not found — install 7-Zip to extract .7z archives');
+    }
     args = ['x', `-o${destDir}`, '-y', archivePath];
   } else {
     throw new Error(`Unsupported archive format: ${path.extname(archivePath)}`);
@@ -426,9 +509,15 @@ function scanForModelFiles(dir, maxDepth = 3) {
 }
 
 function _scanDir(dir, result, depth, maxDepth) {
-  if (depth > maxDepth) return;
+  if (depth > maxDepth) {
+    return;
+  }
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
@@ -436,18 +525,26 @@ function _scanDir(dir, result, depth, maxDepth) {
       _scanDir(fullPath, result, depth + 1, maxDepth);
     } else if (entry.isFile()) {
       const lower = entry.name.toLowerCase();
-      if (lower.endsWith('.gguf')) result.ggufFiles.push(fullPath);
+      if (lower.endsWith('.gguf')) {
+        result.ggufFiles.push(fullPath);
+      }
       const ext = path.extname(lower);
-      if ((OLLAMA_BLOB_NAME_RE.test(lower) || ext === '')) {
+      if (OLLAMA_BLOB_NAME_RE.test(lower) || ext === '') {
         try {
           const stat = fs.statSync(fullPath);
           if (stat.size > MIN_LIKELY_GGUF_BLOB_SIZE && hasGgufMagic(fullPath)) {
             result.ggufFiles.push(fullPath);
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
-      if (lower.endsWith('.safetensors')) result.safetensorsFiles.push(fullPath);
-      if (lower === 'config.json') result.hasConfig = true;
+      if (lower.endsWith('.safetensors')) {
+        result.safetensorsFiles.push(fullPath);
+      }
+      if (lower === 'config.json') {
+        result.hasConfig = true;
+      }
     }
   }
 }
@@ -467,14 +564,22 @@ function detectModelFormat(sourcePath) {
   if (st.isFile()) {
     const lower = abs.toLowerCase();
     const basename = path.basename(abs).toLowerCase();
-    if (lower.endsWith('.gguf')) return { kind: 'gguf', absPath: abs, files: [abs] };
-    if ((OLLAMA_BLOB_NAME_RE.test(basename) || path.extname(basename) === '')
-      && st.size > MIN_LIKELY_GGUF_BLOB_SIZE
-      && hasGgufMagic(abs)) {
+    if (lower.endsWith('.gguf')) {
+      return { kind: 'gguf', absPath: abs, files: [abs] };
+    }
+    if (
+      (OLLAMA_BLOB_NAME_RE.test(basename) || path.extname(basename) === '') &&
+      st.size > MIN_LIKELY_GGUF_BLOB_SIZE &&
+      hasGgufMagic(abs)
+    ) {
       return { kind: 'gguf', absPath: abs, files: [abs], inferredFrom: 'ollama_blob' };
     }
-    if (lower.endsWith('.safetensors')) return { kind: 'adapter', absPath: abs, files: [abs] };
-    if (MODEL_ARCHIVE_RE.test(lower)) return { kind: 'archive', absPath: abs };
+    if (lower.endsWith('.safetensors')) {
+      return { kind: 'adapter', absPath: abs, files: [abs] };
+    }
+    if (MODEL_ARCHIVE_RE.test(lower)) {
+      return { kind: 'archive', absPath: abs };
+    }
     throw new Error(`Unsupported model file type: ${path.extname(abs)}`);
   }
 
@@ -485,7 +590,11 @@ function detectModelFormat(sourcePath) {
     if (scan.ggufFiles.length > 0) {
       // Pick the largest GGUF file (likely the main model, not a split part)
       const sorted = scan.ggufFiles.sort((a, b) => {
-        try { return fs.statSync(b).size - fs.statSync(a).size; } catch { return 0; }
+        try {
+          return fs.statSync(b).size - fs.statSync(a).size;
+        } catch {
+          return 0;
+        }
       });
       return { kind: 'gguf', absPath: sorted[0], files: scan.ggufFiles };
     }
@@ -517,26 +626,36 @@ function checkQwenPatching(ggufPath) {
 
   // Use llama-cli to dump metadata (quick check)
   const llamaCli = path.join(LLAMA_BIN_DIR, 'llama-cli');
-  if (!fs.existsSync(llamaCli)) return result;
+  if (!fs.existsSync(llamaCli)) {
+    return result;
+  }
 
   try {
     // Get model metadata: check architecture and tensor names
-    const env = { ...process.env, LD_LIBRARY_PATH: `${LLAMA_BIN_DIR}:${process.env.LD_LIBRARY_PATH || ''}` };
-    const llamaResult = spawnSync(llamaCli, [
-      '--model', ggufPath,
-      '--log-disable',
-      '-ngl', '0',
-      '-n', '0'
-    ], {
-      encoding: 'utf-8',
-      timeout: 15000,
-      env,
-      maxBuffer: 1024 * 1024,
-    });
+    const env = {
+      ...process.env,
+      LD_LIBRARY_PATH: `${LLAMA_BIN_DIR}:${process.env.LD_LIBRARY_PATH || ''}`,
+    };
+    const llamaResult = spawnSync(
+      llamaCli,
+      ['--model', ggufPath, '--log-disable', '-ngl', '0', '-n', '0'],
+      {
+        encoding: 'utf-8',
+        timeout: 15000,
+        env,
+        maxBuffer: 1024 * 1024,
+      }
+    );
 
-    if (llamaResult.error) throw llamaResult.error;
+    if (llamaResult.error) {
+      throw llamaResult.error;
+    }
 
-    const output = (llamaResult.stdout + llamaResult.stderr).toLowerCase().split('\n').slice(0, 50).join('\n');
+    const output = (llamaResult.stdout + llamaResult.stderr)
+      .toLowerCase()
+      .split('\n')
+      .slice(0, 50)
+      .join('\n');
 
     // Check if it's a Qwen 3.5 architecture
     if (/qwen3_5|qwen35|qwen3\.5/.test(output)) {
@@ -554,7 +673,13 @@ function checkQwenPatching(ggufPath) {
         fd = fs.openSync(ggufPath, 'r');
         fs.readSync(fd, buf, 0, 8192, 0);
       } finally {
-        if (fd !== undefined) try { fs.closeSync(fd); } catch { /* ignore */ }
+        if (fd !== undefined) {
+          try {
+            fs.closeSync(fd);
+          } catch {
+            /* ignore */
+          }
+        }
       }
       const header = buf.toString('utf-8', 0, 8192);
       if (/qwen3[._]?5/i.test(header)) {
@@ -562,7 +687,9 @@ function checkQwenPatching(ggufPath) {
         result.needsRopePatch = true;
         result.needsTensorPatch = true;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return result;
@@ -576,9 +703,14 @@ function applyQwenPatches(ggufPath, patchInfo) {
 
   // Cross-platform Python detection: python3 → python → py
   const { searchExecutable } = require('../tools/platformUtils');
-  const pythonCmd = searchExecutable('python3') || searchExecutable('python') || searchExecutable('py');
+  const pythonCmd =
+    searchExecutable('python3') || searchExecutable('python') || searchExecutable('py');
   if (!pythonCmd) {
-    results.push({ patch: 'python_check', success: false, output: 'Python not found (tried python3, python, py)' });
+    results.push({
+      patch: 'python_check',
+      success: false,
+      output: 'Python not found (tried python3, python, py)',
+    });
     return results;
   }
 
@@ -636,24 +768,40 @@ function validateGguf(ggufPath) {
   } catch (err) {
     return { valid: false, error: `Cannot read file: ${err.message}` };
   } finally {
-    if (fd !== undefined) try { fs.closeSync(fd); } catch { /* ignore */ }
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   // Try to get info via llama-quantize (it prints model info without quantizing)
   const llamaQuantize = path.join(LLAMA_BIN_DIR, 'llama-quantize');
   if (fs.existsSync(llamaQuantize)) {
     try {
-      const env = { ...process.env, LD_LIBRARY_PATH: `${LLAMA_BIN_DIR}:${process.env.LD_LIBRARY_PATH || ''}` };
+      const env = {
+        ...process.env,
+        LD_LIBRARY_PATH: `${LLAMA_BIN_DIR}:${process.env.LD_LIBRARY_PATH || ''}`,
+      };
       const isWin = process.platform === 'win32';
       const shellCmd = isWin
         ? `"${llamaQuantize}" --help 2>NUL & echo --- & "${llamaQuantize}" "${ggufPath}" NUL q4_0 2>&1`
         : `"${llamaQuantize}" --help 2>/dev/null; echo "---"; "${llamaQuantize}" "${ggufPath}" /dev/null q4_0 2>&1 | head -20`;
-      const r = execSync(shellCmd, { encoding: 'utf-8', timeout: 15000, env, stdio: ['pipe', 'pipe', 'pipe'] });
+      const r = execSync(shellCmd, {
+        encoding: 'utf-8',
+        timeout: 15000,
+        env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
       // If we get tensor info, the GGUF is structurally valid
       if (/n_tensors|tensor_count/i.test(r)) {
         return { valid: true, info: r.slice(0, 500) };
       }
-    } catch { /* fallback: magic check was enough */ }
+    } catch {
+      /* fallback: magic check was enough */
+    }
   }
 
   // Magic bytes passed → consider valid
@@ -672,7 +820,9 @@ function downloadFile(url, destDir) {
 
   // Derive filename from URL path
   let filename = path.basename(urlObj.pathname) || 'model-download';
-  if (!path.extname(filename)) filename += '.gguf';
+  if (!path.extname(filename)) {
+    filename += '.gguf';
+  }
 
   const destPath = path.join(destDir, filename);
 
@@ -813,7 +963,9 @@ async function importFromPath(sourcePath, options = {}) {
           ? `${options.name.replace(/[^a-zA-Z0-9._-]/g, '-')}.gguf`
           : path.basename(finalModelPath);
         const destPath = path.join(modelsDir, destName);
-        if (!fs.existsSync(modelsDir)) fs.mkdirSync(modelsDir, { recursive: true });
+        if (!fs.existsSync(modelsDir)) {
+          fs.mkdirSync(modelsDir, { recursive: true });
+        }
         steps.push(`Copying to ${destPath}`);
         fs.copyFileSync(finalModelPath, destPath);
         finalModelPath = destPath;
@@ -831,7 +983,9 @@ async function importFromPath(sourcePath, options = {}) {
       // Python / file-content paths. LLAMA_BIN_DIR is a fixed path constant, so
       // the synchronous calls below pick up freshly provisioned binaries with no
       // re-resolution needed.
-      await require('./runtimeProvisioner').ensureRuntime('llama-cpp').catch(() => null);
+      await require('./runtimeProvisioner')
+        .ensureRuntime('llama-cpp')
+        .catch(() => null);
 
       const validation = validateGguf(finalModelPath);
       if (!validation.valid) {
@@ -860,7 +1014,9 @@ async function importFromPath(sourcePath, options = {}) {
     try {
       const ollamaStatus = await ollamaMgr().ensureOllamaRunning();
       if (ollamaStatus.running) {
-        if (ollamaStatus.autoStarted) steps.push('Auto-started Ollama');
+        if (ollamaStatus.autoStarted) {
+          steps.push('Auto-started Ollama');
+        }
         const importResult = await ollamaMgr().importModel(finalModelPath, options.name || '', {
           base: options.base,
         });
@@ -871,7 +1027,9 @@ async function importFromPath(sourcePath, options = {}) {
           steps.push(`Ollama registration skipped: ${importResult.error}`);
         }
       } else {
-        steps.push('Ollama not running — skipped registration (model file is ready for direct use)');
+        steps.push(
+          'Ollama not running — skipped registration (model file is ready for direct use)'
+        );
       }
     } catch (ollamaErr) {
       steps.push(`Ollama registration failed: ${ollamaErr.message} (model file is still usable)`);
@@ -890,7 +1048,9 @@ async function importFromPath(sourcePath, options = {}) {
     return { success: false, error: err.message || String(err), steps };
   } finally {
     // Cleanup temp extraction directory (keep the original archive)
-    if (tempDir) cleanupDir(tempDir);
+    if (tempDir) {
+      cleanupDir(tempDir);
+    }
   }
 }
 
@@ -927,7 +1087,9 @@ async function importFromUrl(url, options = {}) {
  */
 async function importModel(source, options = {}) {
   const s = String(source || '').trim();
-  if (!s) return { success: false, error: 'No source path or URL provided' };
+  if (!s) {
+    return { success: false, error: 'No source path or URL provided' };
+  }
 
   if (isUrl(s)) {
     return importFromUrl(s, options);
@@ -940,15 +1102,26 @@ async function importModel(source, options = {}) {
  * Used for drag-and-drop model file detection.
  */
 function looksLikeModelPath(p) {
-  const s = String(p || '').trim().replace(/^['"`]+|['"`]+$/g, '');
-  if (!s) return false;
+  const s = String(p || '')
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '');
+  if (!s) {
+    return false;
+  }
 
   // Direct model file extensions
-  if (/\.(gguf|safetensors)$/i.test(s)) return true;
-  if (/sha256[-:][a-f0-9]{32,}$/i.test(path.basename(s))) return true;
+  if (/\.(gguf|safetensors)$/i.test(s)) {
+    return true;
+  }
+  if (/sha256[-:][a-f0-9]{32,}$/i.test(path.basename(s))) {
+    return true;
+  }
 
   // Archive that could contain a model (keyword match)
-  if (MODEL_ARCHIVE_RE.test(s) && /model|gguf|safetensor|qwen|llama|deepseek|phi|gemma|ollama|export/i.test(s)) {
+  if (
+    MODEL_ARCHIVE_RE.test(s) &&
+    /model|gguf|safetensor|qwen|llama|deepseek|phi|gemma|ollama|export/i.test(s)
+  ) {
     return true;
   }
 
@@ -959,13 +1132,18 @@ function looksLikeModelPath(p) {
       const abs = path.isAbsolute(expanded) ? expanded : path.resolve(expanded);
       if (fs.existsSync(abs) && fs.statSync(abs).size > 100 * 1024 * 1024) {
         const entryNames = _peekZipEntryNames(abs);
-        if (entryNames && entryNames.some(n =>
-          /sha256[-:][a-f0-9]{32,}/i.test(n) || /\.gguf\b/i.test(n) || /modelfile/i.test(n)
-        )) {
+        if (
+          entryNames &&
+          entryNames.some(
+            (n) => /sha256[-:][a-f0-9]{32,}/i.test(n) || /\.gguf\b/i.test(n) || /modelfile/i.test(n)
+          )
+        ) {
           return true;
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Directory check — see if it contains model files or Ollama export structure
@@ -974,11 +1152,17 @@ function looksLikeModelPath(p) {
     const abs = path.isAbsolute(expanded) ? expanded : path.resolve(expanded);
     if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) {
       const files = fs.readdirSync(abs);
-      if (files.some(f => /\.(gguf|safetensors)$/i.test(f))) return true;
+      if (files.some((f) => /\.(gguf|safetensors)$/i.test(f))) {
+        return true;
+      }
       // Ollama export: directory contains sha256 blob + optional Modelfile
-      if (files.some(f => OLLAMA_BLOB_NAME_RE.test(f))) return true;
+      if (files.some((f) => OLLAMA_BLOB_NAME_RE.test(f))) {
+        return true;
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return false;
 }
@@ -989,9 +1173,17 @@ function looksLikeModelPath(p) {
 function looksLikeModelUrl(s) {
   const text = String(s || '').trim();
   // Direct model file URL
-  if (/https?:\/\/[^\s]+\.(gguf|safetensors|zip|tar\.gz)/i.test(text)) return true;
+  if (/https?:\/\/[^\s]+\.(gguf|safetensors|zip|tar\.gz)/i.test(text)) {
+    return true;
+  }
   // Known model hosting sites
-  if (/https?:\/\/(huggingface\.co|hf-mirror\.com|modelscope\.cn|github\.com)[^\s]*(model|gguf|safetensor)/i.test(text)) return true;
+  if (
+    /https?:\/\/(huggingface\.co|hf-mirror\.com|modelscope\.cn|github\.com)[^\s]*(model|gguf|safetensor)/i.test(
+      text
+    )
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -1009,7 +1201,7 @@ function discoverLocalModels() {
   if (
     _modelDiscoveryCache &&
     _modelDiscoveryCacheKey === cacheKey &&
-    (now - _modelDiscoveryCacheTime) < MODEL_DISCOVERY_CACHE_TTL
+    now - _modelDiscoveryCacheTime < MODEL_DISCOVERY_CACHE_TTL
   ) {
     return _modelDiscoveryCache;
   }
@@ -1018,10 +1210,14 @@ function discoverLocalModels() {
   const seen = new Set();
 
   for (const dir of modelSearchDirs) {
-    if (!fs.existsSync(dir)) continue;
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
     try {
       _discoverInDir(dir, found, seen, 0, 2);
-    } catch { /* skip inaccessible dirs */ }
+    } catch {
+      /* skip inaccessible dirs */
+    }
   }
 
   _modelDiscoveryCache = found;
@@ -1031,9 +1227,15 @@ function discoverLocalModels() {
 }
 
 function _discoverInDir(dir, results, seen, depth, maxDepth) {
-  if (depth > maxDepth) return;
+  if (depth > maxDepth) {
+    return;
+  }
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
@@ -1041,9 +1243,13 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
     // Skip symlink loops and already-seen files
     try {
       const real = fs.realpathSync(fullPath);
-      if (seen.has(real)) continue;
+      if (seen.has(real)) {
+        continue;
+      }
       seen.add(real);
-    } catch { continue; }
+    } catch {
+      continue;
+    }
 
     if (entry.isDirectory()) {
       _discoverInDir(fullPath, results, seen, depth + 1, maxDepth);
@@ -1054,7 +1260,9 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
         try {
           const stat = fs.statSync(fullPath);
           // Skip tiny files (< 1 MB, likely not real models)
-          if (stat.size < 1024 * 1024) continue;
+          if (stat.size < 1024 * 1024) {
+            continue;
+          }
           results.push({
             path: fullPath,
             name: entry.name.replace(/\.gguf$/i, ''),
@@ -1062,13 +1270,19 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
             format: 'gguf',
             location: _classifyLocation(fullPath),
           });
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
-      if ((OLLAMA_BLOB_NAME_RE.test(lower) || ext === '')) {
+      if (OLLAMA_BLOB_NAME_RE.test(lower) || ext === '') {
         try {
           const stat = fs.statSync(fullPath);
-          if (stat.size < MIN_LIKELY_GGUF_BLOB_SIZE) continue;
-          if (!hasGgufMagic(fullPath)) continue;
+          if (stat.size < MIN_LIKELY_GGUF_BLOB_SIZE) {
+            continue;
+          }
+          if (!hasGgufMagic(fullPath)) {
+            continue;
+          }
           results.push({
             path: fullPath,
             name: entry.name.slice(0, 20),
@@ -1077,12 +1291,16 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
             location: _classifyLocation(fullPath),
           });
           continue;
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
       if (lower.endsWith('.safetensors')) {
         try {
           const stat = fs.statSync(fullPath);
-          if (stat.size < 1024 * 1024) continue;
+          if (stat.size < 1024 * 1024) {
+            continue;
+          }
           results.push({
             path: fullPath,
             name: entry.name.replace(/\.safetensors$/i, ''),
@@ -1090,12 +1308,16 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
             format: 'safetensors',
             location: _classifyLocation(fullPath),
           });
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
       if (MODEL_ARCHIVE_RE.test(lower)) {
         try {
           const stat = fs.statSync(fullPath);
-          if (stat.size < 1024 * 1024) continue;
+          if (stat.size < 1024 * 1024) {
+            continue;
+          }
           results.push({
             path: fullPath,
             name: entry.name,
@@ -1103,20 +1325,39 @@ function _discoverInDir(dir, results, seen, depth, maxDepth) {
             format: 'archive',
             location: _classifyLocation(fullPath),
           });
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
     }
   }
 }
 
 function _classifyLocation(filePath) {
-  const p = String(filePath || '').toLowerCase().replace(/\\/g, '/');
-  if (p.includes('/.ollama/')) return 'ollama';
-  if (p.includes('/.khy/') || p.includes('/.khyquant/')) return 'khy';
-  if (p.includes('/khy-quant/') || p.includes(path.resolve(__dirname, '../..').toLowerCase().replace(/\\/g, '/'))) return 'khy';
-  if (p.includes('huggingface')) return 'huggingface-cache';
-  if (p.includes('modelscope')) return 'modelscope-cache';
-  if (p.includes('/downloads/')) return 'downloads';
+  const p = String(filePath || '')
+    .toLowerCase()
+    .replace(/\\/g, '/');
+  if (p.includes('/.ollama/')) {
+    return 'ollama';
+  }
+  if (p.includes('/.khy/') || p.includes('/.khyquant/')) {
+    return 'khy';
+  }
+  if (
+    p.includes('/khy-quant/') ||
+    p.includes(path.resolve(__dirname, '../..').toLowerCase().replace(/\\/g, '/'))
+  ) {
+    return 'khy';
+  }
+  if (p.includes('huggingface')) {
+    return 'huggingface-cache';
+  }
+  if (p.includes('modelscope')) {
+    return 'modelscope-cache';
+  }
+  if (p.includes('/downloads/')) {
+    return 'downloads';
+  }
   return 'local';
 }
 
@@ -1126,16 +1367,16 @@ function _classifyLocation(filePath) {
  */
 async function listAllModels() {
   const result = {
-    khyModels: [],       // Imported into KHY/Ollama
-    localModels: [],     // Found on disk but not imported
-    ollamaModels: [],    // All Ollama-registered models
-    ideModels: [],       // Models available via IDE adapters
+    khyModels: [], // Imported into KHY/Ollama
+    localModels: [], // Found on disk but not imported
+    ollamaModels: [], // All Ollama-registered models
+    ideModels: [], // Models available via IDE adapters
   };
 
   // 1. Get Ollama models
   try {
     const models = await ollamaMgr().listModels();
-    result.ollamaModels = models.map(m => ({
+    result.ollamaModels = models.map((m) => ({
       name: m.name,
       size: m.size,
       family: m.family,
@@ -1145,17 +1386,20 @@ async function listAllModels() {
       imported: true,
     }));
     result.khyModels = result.ollamaModels.slice(); // Ollama models = KHY models
-  } catch { /* Ollama not running */ }
+  } catch {
+    /* Ollama not running */
+  }
 
   // 2. Discover local model files
   const localFiles = discoverLocalModels();
-  const importedNames = new Set(result.ollamaModels.map(m => m.name.split(':')[0].toLowerCase()));
+  const importedNames = new Set(result.ollamaModels.map((m) => m.name.split(':')[0].toLowerCase()));
 
   for (const file of localFiles) {
     // Check if this model is already imported to Ollama
     const baseName = file.name.toLowerCase().replace(/[-_.]/g, '');
-    const isImported = importedNames.has(baseName) ||
-      [...importedNames].some(n => baseName.includes(n) || n.includes(baseName));
+    const isImported =
+      importedNames.has(baseName) ||
+      [...importedNames].some((n) => baseName.includes(n) || n.includes(baseName));
 
     result.localModels.push({
       ...file,
@@ -1169,23 +1413,31 @@ async function listAllModels() {
     const gateway = require('./gateway/aiGateway');
     const adapters = gateway.getAdapters ? gateway.getAdapters() : [];
     for (const adapter of adapters) {
-      if (!adapter || !adapter.listModels) continue;
+      if (!adapter || !adapter.listModels) {
+        continue;
+      }
       const adapterName = adapter.name || adapter.id || 'unknown';
       // Only query IDE adapters, not cloud ones
-      if (!['cursor', 'trae', 'kiro', 'windsurf', 'vscode', 'warp'].includes(adapterName)) continue;
+      if (!['cursor', 'trae', 'kiro', 'windsurf', 'vscode', 'warp'].includes(adapterName)) {
+        continue;
+      }
       try {
         const models = await adapter.listModels();
-        for (const m of (models || [])) {
+        for (const m of models || []) {
           result.ideModels.push({
-            name: typeof m === 'string' ? m : (m.id || m.name || m.model),
+            name: typeof m === 'string' ? m : m.id || m.name || m.model,
             source: adapterName,
             available: true,
-            route: `${adapterName}/${typeof m === 'string' ? m : (m.id || m.name)}`,
+            route: `${adapterName}/${typeof m === 'string' ? m : m.id || m.name}`,
           });
         }
-      } catch { /* adapter unavailable */ }
+      } catch {
+        /* adapter unavailable */
+      }
     }
-  } catch { /* gateway not loaded */ }
+  } catch {
+    /* gateway not loaded */
+  }
 
   return result;
 }
@@ -1200,7 +1452,9 @@ async function listAllModels() {
  */
 async function exportFromOllama(modelName, destDir) {
   const dest = destDir || path.resolve(__dirname, '../../models');
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
 
   // Find the model blob via ollama show
   try {
@@ -1219,7 +1473,10 @@ async function exportFromOllama(modelName, destDir) {
     // Extract FROM line which points to the blob
     const fromMatch = output.match(/^FROM\s+(.+)$/m);
     if (!fromMatch) {
-      return { success: false, error: `Cannot find model file path in Ollama modelfile for ${modelName}` };
+      return {
+        success: false,
+        error: `Cannot find model file path in Ollama modelfile for ${modelName}`,
+      };
     }
 
     let blobPath = fromMatch[1].trim();
@@ -1236,13 +1493,17 @@ async function exportFromOllama(modelName, destDir) {
     }
 
     // Determine output filename
-    const safeName = String(modelName).replace(/[/:]/g, '-').replace(/[^a-zA-Z0-9._-]/g, '');
+    const safeName = String(modelName)
+      .replace(/[/:]/g, '-')
+      .replace(/[^a-zA-Z0-9._-]/g, '');
     const destFile = path.join(dest, `${safeName}-ollama.gguf`);
 
     // Create symlink (saves disk space) or copy (junction fallback on Windows)
     const { safeMklink } = require('../tools/platformUtils');
     try {
-      if (fs.existsSync(destFile)) fs.unlinkSync(destFile);
+      if (fs.existsSync(destFile)) {
+        fs.unlinkSync(destFile);
+      }
       safeMklink(blobPath, destFile);
     } catch {
       // Symlink/junction failed (e.g. cross-device), fall back to copy

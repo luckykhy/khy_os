@@ -30,7 +30,9 @@ const GLM_VISION_MAX_TOKENS = 1024;
 function clampEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_GLM_VISION_MAX_TOKENS_CLAMP;
-    if (raw == null || String(raw).trim() === '') return true; // 缺省 → 默认开
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    } // 缺省 → 默认开
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {
@@ -47,13 +49,19 @@ function clampEnabled(env = process.env) {
  */
 function clampMaxTokensForGlmVision(model, requested, env = process.env) {
   try {
-    if (!clampEnabled(env)) return requested;
+    if (!clampEnabled(env)) {
+      return requested;
+    }
     // 视觉模型判定复用 glmVisionApiPin 的单一真源(容忍 provider 前缀)。
     const { isGlmVisionModelName } = require('./glmVisionApiPin');
-    if (!isGlmVisionModelName(model)) return requested;
+    if (!isGlmVisionModelName(model)) {
+      return requested;
+    }
     // 非有限数(undefined / null / NaN)→ 直接给上限,确保不会误发无上限默认值。
     const n = Number(requested);
-    if (!Number.isFinite(n) || n <= 0) return GLM_VISION_MAX_TOKENS;
+    if (!Number.isFinite(n) || n <= 0) {
+      return GLM_VISION_MAX_TOKENS;
+    }
     return Math.min(Math.floor(n), GLM_VISION_MAX_TOKENS);
   } catch {
     return requested;

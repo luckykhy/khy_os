@@ -16,10 +16,10 @@
  *   - Non-pixel fields the caller attached (e.g. _filePath) are preserved.
  */
 
+const { execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile } = require('child_process');
 const { promisify } = require('util');
 
 const _execFileAsync = promisify(execFile);
@@ -30,32 +30,42 @@ const _execFileAsync = promisify(execFile);
 // endpoint will accept them, NOT because the format is exotic. Natively
 // accepted formats (png / jpeg / webp / gif) are never touched here.
 const _TRANSCODE_TO_JPEG_MIMES = new Set([
-  'image/heic', 'image/heif',
-  'image/tiff', 'image/x-tiff',
-  'image/bmp', 'image/x-ms-bmp', // BMP is a common photo format, just not API-accepted raw
+  'image/heic',
+  'image/heif',
+  'image/tiff',
+  'image/x-tiff',
+  'image/bmp',
+  'image/x-ms-bmp', // BMP is a common photo format, just not API-accepted raw
   'image/svg+xml',
 ]);
 
 // Re-encode (and downscale) any base64 image whose decoded size exceeds this,
 // even for otherwise-accepted formats (png/jpeg/webp).
 const _MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-const _MAX_DIM = 2048;              // longest side after downscale (px)
+const _MAX_DIM = 2048; // longest side after downscale (px)
 const _FFMPEG_TIMEOUT_MS = 20_000;
 
 const _EXT_BY_MIME = {
-  'image/heic': '.heic', 'image/heif': '.heif',
-  'image/tiff': '.tiff', 'image/x-tiff': '.tiff',
-  'image/bmp': '.bmp', 'image/x-ms-bmp': '.bmp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+  'image/tiff': '.tiff',
+  'image/x-tiff': '.tiff',
+  'image/bmp': '.bmp',
+  'image/x-ms-bmp': '.bmp',
   'image/svg+xml': '.svg',
   'image/png': '.png',
-  'image/jpeg': '.jpg', 'image/jpg': '.jpg',
-  'image/webp': '.webp', 'image/gif': '.gif',
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
 };
 
 let _ffmpeg; // cache: string path | null | undefined(uncached)
 
 function _resolveFfmpeg() {
-  if (_ffmpeg !== undefined) return _ffmpeg;
+  if (_ffmpeg !== undefined) {
+    return _ffmpeg;
+  }
   try {
     const { searchExecutable } = require('../../../tools/platformUtils');
     _ffmpeg = searchExecutable('ffmpeg') || null;
@@ -66,7 +76,9 @@ function _resolveFfmpeg() {
 }
 
 // Test seam: reset the ffmpeg-detection cache between cases.
-function _resetFfmpegCache() { _ffmpeg = undefined; }
+function _resetFfmpegCache() {
+  _ffmpeg = undefined;
+}
 
 function _approxBytes(base64 = '') {
   // base64 decodes to ~3/4 of its character length.
@@ -74,9 +86,13 @@ function _approxBytes(base64 = '') {
 }
 
 function _needsTranscode(img) {
-  if (!img || !img.base64) return false; // url-only or empty → nothing to do
+  if (!img || !img.base64) {
+    return false;
+  } // url-only or empty → nothing to do
   const mime = String(img.mimeType || '').toLowerCase();
-  if (_TRANSCODE_TO_JPEG_MIMES.has(mime)) return true;
+  if (_TRANSCODE_TO_JPEG_MIMES.has(mime)) {
+    return true;
+  }
   return _approxBytes(img.base64) > _MAX_BYTES;
 }
 
@@ -92,16 +108,29 @@ async function _transcodeOne(img, ffmpegPath) {
     // Downscale-only (never upscale) to fit within _MAX_DIM × _MAX_DIM while
     // preserving aspect ratio, take a single frame, re-encode as JPEG.
     const vf = `scale='min(${_MAX_DIM},iw)':'min(${_MAX_DIM},ih)':force_original_aspect_ratio=decrease`;
-    await _execFileAsync(ffmpegPath, [
-      '-y', '-loglevel', 'error',
-      '-i', inPath,
-      '-frames:v', '1',
-      '-vf', vf,
-      '-f', 'image2', outPath,
-    ], { timeout: _FFMPEG_TIMEOUT_MS });
+    await _execFileAsync(
+      ffmpegPath,
+      [
+        '-y',
+        '-loglevel',
+        'error',
+        '-i',
+        inPath,
+        '-frames:v',
+        '1',
+        '-vf',
+        vf,
+        '-f',
+        'image2',
+        outPath,
+      ],
+      { timeout: _FFMPEG_TIMEOUT_MS }
+    );
 
     const buf = fs.readFileSync(outPath);
-    if (!buf || buf.length === 0) return null;
+    if (!buf || buf.length === 0) {
+      return null;
+    }
     const base64 = buf.toString('base64');
     return {
       base64,
@@ -112,7 +141,11 @@ async function _transcodeOne(img, ffmpegPath) {
     return null; // fail-safe: caller keeps the original image
   } finally {
     if (dir) {
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -124,15 +157,24 @@ async function _transcodeOne(img, ffmpegPath) {
  *          everything else (and the whole array on no-op) returned unchanged.
  */
 async function transcodeImagesIfNeeded(images) {
-  if (!Array.isArray(images) || images.length === 0) return images;
-  if (!images.some(_needsTranscode)) return images; // fast path
+  if (!Array.isArray(images) || images.length === 0) {
+    return images;
+  }
+  if (!images.some(_needsTranscode)) {
+    return images;
+  } // fast path
 
   const ffmpegPath = _resolveFfmpeg();
-  if (!ffmpegPath) return images; // no ffmpeg → transparent degradation
+  if (!ffmpegPath) {
+    return images;
+  } // no ffmpeg → transparent degradation
 
   const out = [];
   for (const img of images) {
-    if (!_needsTranscode(img)) { out.push(img); continue; }
+    if (!_needsTranscode(img)) {
+      out.push(img);
+      continue;
+    }
     const conv = await _transcodeOne(img, ffmpegPath); // eslint-disable-line no-await-in-loop
     out.push(conv ? { ...img, ...conv } : img);
   }

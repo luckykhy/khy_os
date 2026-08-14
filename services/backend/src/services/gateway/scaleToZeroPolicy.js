@@ -43,7 +43,9 @@ function scaleToZeroEnabled(env = process.env) {
   } catch {
     try {
       const raw = e && e[KHY_GATEWAY_SCALE_TO_ZERO];
-      if (raw == null) return false;
+      if (raw == null) {
+        return false;
+      }
       const v = String(raw).trim().toLowerCase();
       return v === '1' || v === 'true';
     } catch {
@@ -78,7 +80,11 @@ function resolveIdleWindowMs(env = process.env) {
 function warmupOnNextStart(env = process.env) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    return String((e && e[KHY_GATEWAY_WARMUP_ON_BOOT]) || 'true').trim().toLowerCase() !== 'false';
+    return (
+      String((e && e[KHY_GATEWAY_WARMUP_ON_BOOT]) || 'true')
+        .trim()
+        .toLowerCase() !== 'false'
+    );
   } catch {
     return true;
   }
@@ -101,17 +107,52 @@ function describeScaleDecision(signal = {}, env = process.env) {
     const warmupOnNext = warmupOnNextStart(env);
 
     if (!scaleToZeroEnabled(env)) {
-      return { eligible: false, scaleDown: false, reason: 'disabled', idleMs, idleWindowMs, warmupOnNext: false };
+      return {
+        eligible: false,
+        scaleDown: false,
+        reason: 'disabled',
+        idleMs,
+        idleWindowMs,
+        warmupOnNext: false,
+      };
     }
     if (activeRequests > 0) {
-      return { eligible: true, scaleDown: false, reason: 'active-requests', idleMs, idleWindowMs, warmupOnNext };
+      return {
+        eligible: true,
+        scaleDown: false,
+        reason: 'active-requests',
+        idleMs,
+        idleWindowMs,
+        warmupOnNext,
+      };
     }
     if (idleMs < idleWindowMs) {
-      return { eligible: true, scaleDown: false, reason: 'within-window', idleMs, idleWindowMs, warmupOnNext };
+      return {
+        eligible: true,
+        scaleDown: false,
+        reason: 'within-window',
+        idleMs,
+        idleWindowMs,
+        warmupOnNext,
+      };
     }
-    return { eligible: true, scaleDown: true, reason: 'idle-exceeded', idleMs, idleWindowMs, warmupOnNext };
+    return {
+      eligible: true,
+      scaleDown: true,
+      reason: 'idle-exceeded',
+      idleMs,
+      idleWindowMs,
+      warmupOnNext,
+    };
   } catch {
-    return { eligible: false, scaleDown: false, reason: 'error', idleMs: 0, idleWindowMs: DEFAULT_IDLE_WINDOW_MS, warmupOnNext: false };
+    return {
+      eligible: false,
+      scaleDown: false,
+      reason: 'error',
+      idleMs: 0,
+      idleWindowMs: DEFAULT_IDLE_WINDOW_MS,
+      warmupOnNext: false,
+    };
   }
 }
 

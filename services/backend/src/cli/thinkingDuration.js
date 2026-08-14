@@ -24,7 +24,9 @@
 const { ccFormatEnabled, ccFormatDuration } = require('./ccFormat');
 
 function thinkingDurationEnabled(env = process.env) {
-  const flag = String((env && env.KHY_THINKING_DURATION) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_THINKING_DURATION) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -39,16 +41,24 @@ function thinkingDurationEnabled(env = process.env) {
  */
 function humanizeThinkingMs(ms, env = process.env) {
   const n = Number(ms);
-  if (!Number.isFinite(n) || n <= 0) return '';
+  if (!Number.isFinite(n) || n <= 0) {
+    return '';
+  }
   if (ccFormatEnabled(env)) {
     // 亚秒思考:诚实地不显时长(Khy 刻意保留;不夸大成 CC 的 "0s")。
-    if (n < 1000) return '';
+    if (n < 1000) {
+      return '';
+    }
     return ccFormatDuration(n); // CC 口径:floor 取秒、"1m 30s" 空格分隔、"1m 0s"
   }
   // legacy 字节回退(本刀之前口径,逐字节等价)
   const totalSec = Math.round(n / 1000);
-  if (totalSec < 1) return ''; // 亚秒思考:诚实地不显时长
-  if (totalSec < 60) return `${totalSec}s`;
+  if (totalSec < 1) {
+    return '';
+  } // 亚秒思考:诚实地不显时长
+  if (totalSec < 60) {
+    return `${totalSec}s`;
+  }
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return s ? `${m}m${s}s` : `${m}m`;

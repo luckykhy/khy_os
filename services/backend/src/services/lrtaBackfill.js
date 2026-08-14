@@ -39,7 +39,9 @@ const path = require('path');
 function _envNum(envName, fallback, { min = -Infinity, max = Infinity } = {}) {
   const raw = process.env[envName];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -103,12 +105,18 @@ function _lrtaPath(cwd) {
  * or null when none exists. Best-effort: never throws.
  */
 function loadLearnedHeuristic(cwd) {
-  if (!cwd) return null;
+  if (!cwd) {
+    return null;
+  }
   try {
     const filePath = _lrtaPath(cwd);
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     const rec = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    if (!rec || !Number.isFinite(rec.h)) return null;
+    if (!rec || !Number.isFinite(rec.h)) {
+      return null;
+    }
     return rec;
   } catch {
     return null;
@@ -123,7 +131,9 @@ function loadLearnedHeuristic(cwd) {
  * a future warm start.
  */
 function saveLearnedHeuristic(cwd, h, meta = {}) {
-  if (!cwd || !Number.isFinite(h)) return;
+  if (!cwd || !Number.isFinite(h)) {
+    return;
+  }
   try {
     const filePath = _lrtaPath(cwd);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -140,10 +150,14 @@ function saveLearnedHeuristic(cwd, h, meta = {}) {
 }
 
 function clearLearnedHeuristic(cwd) {
-  if (!cwd) return;
+  if (!cwd) {
+    return;
+  }
   try {
     const filePath = _lrtaPath(cwd);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   } catch {
     /* ignore */
   }

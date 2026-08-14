@@ -62,12 +62,15 @@ function testPostgresPort(host, port, timeout) {
 /**
  * Determine the SQLite database file path.
  * Prefers SQLITE_DB_PATH env, then Electron userData via DB_SQLITE_PATH env,
- * then falls back to backend/data/khy-quant.db.
+ * then falls back to <backendRoot>/.khy/khyquant/data/khy-quant.db
+ * (khyquant data lives inside the project data home for portability).
  */
 function getSQLitePath() {
   if (process.env.SQLITE_DB_PATH) return process.env.SQLITE_DB_PATH;
   if (process.env.DB_PATH) return process.env.DB_PATH;
-  return path.join(_backendRoot, 'data/khy-quant.db');
+  const p = path.join(_backendRoot, '.khy', 'khyquant', 'data', 'khy-quant.db');
+  try { fs.mkdirSync(path.dirname(p), { recursive: true }); } catch { /* read-only context */ }
+  return p;
 }
 
 let sequelize;
@@ -95,7 +98,6 @@ function createPostgresSequelize() {
     port,
     dialect: 'postgres',
     dialectOptions: {
-      charset: 'utf8mb4',
       client_encoding: 'UTF8',
       statement_timeout: queryTimeoutMs,
       query_timeout: queryTimeoutMs,
@@ -112,8 +114,6 @@ function createPostgresSequelize() {
     define: {
       timestamps: true,
       underscored: true,
-      charset: 'utf8mb4',
-      collate: 'utf8mb4_unicode_ci',
     },
   });
 }
@@ -250,7 +250,10 @@ if (dbMode === 'sqlite' || dbMode === 'auto') {
 
 /**
  * Initialize database connection.
- * In 'auto' mode: tests PostgreSQL port first; if unreachable, switches to SQLite.
+ * In 'auto' mode: uses SQLite directly as the default to avoid startup latency
+ * (server.js binds models before init, so a stable dialect must be chosen up front).
+ * In 'postgres' mode: tests the PostgreSQL port and authenticates, keeping the
+ * postgres instance even on failure so the caller can handle retries.
  * Sets process.env.DB_MODE for other services to read.
  */
 async function initDatabase() {

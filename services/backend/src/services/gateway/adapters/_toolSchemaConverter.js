@@ -38,7 +38,9 @@ const { toOpenAIVisionBlocks } = require('./_imageCompat');
  * @returns {{ text: string, images: Array }}
  */
 function _splitToolResultContent(content) {
-  if (typeof content === 'string') return { text: content, images: [] };
+  if (typeof content === 'string') {
+    return { text: content, images: [] };
+  }
   if (!Array.isArray(content)) {
     return { text: content == null ? '' : JSON.stringify(content), images: [] };
   }
@@ -46,7 +48,9 @@ function _splitToolResultContent(content) {
   const images = [];
   for (const b of content) {
     if (!b || typeof b !== 'object') {
-      if (typeof b === 'string') textParts.push(b);
+      if (typeof b === 'string') {
+        textParts.push(b);
+      }
       continue;
     }
     if (b.type === 'text') {
@@ -69,9 +73,11 @@ function _splitToolResultContent(content) {
  * @returns {Array|undefined} OpenAI tools array or undefined if empty
  */
 function anthropicToOpenAI(tools, { descriptionLimit = OPENAI_DESC_LIMIT } = {}) {
-  if (!Array.isArray(tools) || tools.length === 0) return undefined;
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return undefined;
+  }
 
-  return tools.map(t => ({
+  return tools.map((t) => ({
     type: 'function',
     function: {
       name: t.name,
@@ -88,11 +94,13 @@ function anthropicToOpenAI(tools, { descriptionLimit = OPENAI_DESC_LIMIT } = {})
  * @returns {Array|undefined} Anthropic tools array or undefined if empty
  */
 function openAIToAnthropic(tools) {
-  if (!Array.isArray(tools) || tools.length === 0) return undefined;
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return undefined;
+  }
 
   return tools
-    .filter(t => t && (t.type === 'function' || t.function))
-    .map(t => {
+    .filter((t) => t && (t.type === 'function' || t.function))
+    .map((t) => {
       const fn = t.function || t;
       return {
         name: fn.name,
@@ -112,16 +120,22 @@ function openAIToAnthropic(tools) {
  * @returns {Array|undefined} CW tools array or undefined if empty
  */
 function anthropicToCW(tools, { descriptionLimit = CW_DESC_LIMIT, excludeNames = null } = {}) {
-  if (!Array.isArray(tools) || tools.length === 0) return undefined;
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return undefined;
+  }
 
   const excludeSet = excludeNames
-    ? (excludeNames instanceof Set ? excludeNames : new Set(excludeNames))
+    ? excludeNames instanceof Set
+      ? excludeNames
+      : new Set(excludeNames)
     : _DEFAULT_CW_EXCLUDE;
 
-  const filtered = tools.filter(t => !excludeSet.has(t.name));
-  if (filtered.length === 0) return undefined;
+  const filtered = tools.filter((t) => !excludeSet.has(t.name));
+  if (filtered.length === 0) {
+    return undefined;
+  }
 
-  return filtered.map(t => ({
+  return filtered.map((t) => ({
     toolSpecification: {
       name: t.name,
       description: (t.description || '').slice(0, descriptionLimit),
@@ -141,17 +155,22 @@ function anthropicToCW(tools, { descriptionLimit = CW_DESC_LIMIT, excludeNames =
  */
 function openAIToolCallsToAnthropic(choice) {
   const toolCalls = choice?.message?.tool_calls || choice?.tool_calls;
-  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return [];
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+    return [];
+  }
 
   return toolCalls
-    .filter(tc => tc && tc.function)
-    .map(tc => {
+    .filter((tc) => tc && tc.function)
+    .map((tc) => {
       let input = {};
       try {
-        input = typeof tc.function.arguments === 'string'
-          ? JSON.parse(tc.function.arguments)
-          : (tc.function.arguments || {});
-      } catch { /* keep empty */ }
+        input =
+          typeof tc.function.arguments === 'string'
+            ? JSON.parse(tc.function.arguments)
+            : tc.function.arguments || {};
+      } catch {
+        /* keep empty */
+      }
 
       return {
         type: 'tool_use',
@@ -171,115 +190,149 @@ function openAIToolCallsToAnthropic(choice) {
  * @returns {Array} OpenAI-format messages
  */
 function convertMessagesAnthropicToOpenAI(messages, hasTools = true, opts = {}) {
-  if (!Array.isArray(messages)) return messages;
+  if (!Array.isArray(messages)) {
+    return messages;
+  }
 
   // opts.useToolRole: if false, embed tool results as role:'user' plain text
   // (for weak models that don't support role:'tool')
   const useToolRole = opts.useToolRole !== false;
 
-  return messages.map(msg => {
-    if (!msg || !Array.isArray(msg.content)) return msg;
+  return messages
+    .map((msg) => {
+      if (!msg || !Array.isArray(msg.content)) {
+        return msg;
+      }
 
-    // Assistant message with tool_use blocks
-    if (msg.role === 'assistant') {
-      const textParts = [];
-      const toolCalls = [];
+      // Assistant message with tool_use blocks
+      if (msg.role === 'assistant') {
+        const textParts = [];
+        const toolCalls = [];
 
-      for (const block of msg.content) {
-        if (block.type === 'text') {
-          textParts.push(block.text);
-        } else if (block.type === 'tool_use' && hasTools) {
-          if (useToolRole) {
-            toolCalls.push({
-              id: block.id,
-              type: 'function',
-              function: {
-                name: block.name,
-                arguments: typeof block.input === 'string'
-                  ? block.input
-                  : JSON.stringify(block.input || {}),
-              },
-            });
-          } else {
-            // Fallback: embed tool call as text for weak models
-            textParts.push(`[Tool Call: ${block.name}(${JSON.stringify(block.input || {}).slice(0, 200)})]`);
+        for (const block of msg.content) {
+          if (block.type === 'text') {
+            textParts.push(block.text);
+          } else if (block.type === 'tool_use') {
+            if (hasTools && useToolRole) {
+              toolCalls.push({
+                id: block.id,
+                type: 'function',
+                function: {
+                  name: block.name,
+                  arguments:
+                    typeof block.input === 'string'
+                      ? block.input
+                      : JSON.stringify(block.input || {}),
+                },
+              });
+            } else {
+              // Fallback: embed tool call as text for weak models.
+              // Important: this must run even when hasTools=false, because the
+              // caller may have decided to strip the top-level `tools` declaration
+              // after conversion (small/weak models). Leaving raw tool_use blocks
+              // (or a bare tool_calls array without tools) on the wire makes strict
+              // OpenAI-compatible providers (stepfun step_plan, etc.) answer
+              // HTTP 400 "Unrecognized chat message".
+              textParts.push(
+                `[Tool Call: ${block.name}(${JSON.stringify(block.input || {}).slice(0, 200)})]`
+              );
+            }
           }
         }
+
+        const result = { role: 'assistant', content: textParts.join('\n') || null };
+        if (toolCalls.length > 0) {
+          result.tool_calls = toolCalls;
+        }
+        return result;
       }
 
-      const result = { role: 'assistant', content: textParts.join('\n') || null };
-      if (toolCalls.length > 0) result.tool_calls = toolCalls;
-      return result;
-    }
+      // User message with tool_result blocks
+      if (msg.role === 'user') {
+        const toolResults = [];
+        const otherBlocks = [];
 
-    // User message with tool_result blocks
-    if (msg.role === 'user') {
-      const toolResults = [];
-      const otherBlocks = [];
-
-      for (const block of msg.content) {
-        if (block.type === 'tool_result') {
-          toolResults.push(block);
-        } else {
-          otherBlocks.push(block);
+        for (const block of msg.content) {
+          if (block.type === 'tool_result') {
+            toolResults.push(block);
+          } else {
+            otherBlocks.push(block);
+          }
         }
-      }
 
-      if (toolResults.length === 0) return msg;
-
-      if (!useToolRole) {
-        // Fallback: embed tool results as role:'user' plain text
-        const parts = [];
-        for (const b of otherBlocks) {
-          if (b.type === 'text' && b.text) parts.push(b.text);
+        if (toolResults.length === 0) {
+          return msg;
         }
+
+        if (!useToolRole || !hasTools) {
+          // Fallback: embed tool results as role:'user' plain text.
+          // Also used when hasTools=false — the caller stripped the top-level
+          // `tools` declaration after conversion, so emitting role:'tool'
+          // messages would make strict OpenAI-compatible providers answer
+          // HTTP 400 "Unrecognized chat message".
+          const parts = [];
+          for (const b of otherBlocks) {
+            if (b.type === 'text' && b.text) {
+              parts.push(b.text);
+            }
+          }
+          for (const tr of toolResults) {
+            const content =
+              typeof tr.content === 'string'
+                ? tr.content
+                : Array.isArray(tr.content)
+                  ? tr.content
+                      .map((b) => {
+                        if (b.type === 'text') {
+                          return b.text || '';
+                        }
+                        if (b.type === 'image') {
+                          return '[Image]';
+                        }
+                        return b.text || '';
+                      })
+                      .join('')
+                  : JSON.stringify(tr.content || '');
+            parts.push(`[Tool Result: ${tr.tool_use_id || 'unknown'}]\n${content}`);
+          }
+          return { role: 'user', content: parts.join('\n\n') };
+        }
+
+        // Each tool_result becomes a separate role:'tool' message. Embedded
+        // images can't ride in role:'tool' string content, so they are relayed
+        // as a follow-up role:'user' vision message (preserved, not '[Image]').
+        const expanded = [];
+        if (otherBlocks.length > 0) {
+          expanded.push({ ...msg, content: otherBlocks });
+        }
+        const deferredImages = [];
         for (const tr of toolResults) {
-          const content = typeof tr.content === 'string'
-            ? tr.content
-            : (Array.isArray(tr.content)
-              ? tr.content.map(b => {
-                  if (b.type === 'text') return b.text || '';
-                  if (b.type === 'image') return '[Image]';
-                  return b.text || '';
-                }).join('')
-              : JSON.stringify(tr.content || ''));
-          parts.push(`[Tool Result: ${tr.tool_use_id || 'unknown'}]\n${content}`);
-        }
-        return { role: 'user', content: parts.join('\n\n') };
-      }
-
-      // Each tool_result becomes a separate role:'tool' message. Embedded
-      // images can't ride in role:'tool' string content, so they are relayed
-      // as a follow-up role:'user' vision message (preserved, not '[Image]').
-      const expanded = [];
-      if (otherBlocks.length > 0) {
-        expanded.push({ ...msg, content: otherBlocks });
-      }
-      const deferredImages = [];
-      for (const tr of toolResults) {
-        const { text, images } = _splitToolResultContent(tr.content);
-        const content = typeof tr.content === 'string' ? tr.content : (text || '');
-        expanded.push({
-          role: 'tool',
-          tool_call_id: tr.tool_use_id,
-          content: images.length > 0 && !content ? '[see attached image below]' : content,
-        });
-        if (images.length > 0) deferredImages.push(...images);
-      }
-      if (deferredImages.length > 0) {
-        const visionBlocks = toOpenAIVisionBlocks(deferredImages);
-        if (visionBlocks.length > 0) {
+          const { text, images } = _splitToolResultContent(tr.content);
+          const content = typeof tr.content === 'string' ? tr.content : text || '';
           expanded.push({
-            role: 'user',
-            content: [{ type: 'text', text: 'Tool result image(s):' }, ...visionBlocks],
+            role: 'tool',
+            tool_call_id: tr.tool_use_id,
+            content: images.length > 0 && !content ? '[see attached image below]' : content,
           });
+          if (images.length > 0) {
+            deferredImages.push(...images);
+          }
         }
+        if (deferredImages.length > 0) {
+          const visionBlocks = toOpenAIVisionBlocks(deferredImages);
+          if (visionBlocks.length > 0) {
+            expanded.push({
+              role: 'user',
+              content: [{ type: 'text', text: 'Tool result image(s):' }, ...visionBlocks],
+            });
+          }
+        }
+        return expanded;
       }
-      return expanded;
-    }
 
-    return msg;
-  }).flat();
+      return msg;
+    })
+    .flat();
 }
 
 module.exports = {

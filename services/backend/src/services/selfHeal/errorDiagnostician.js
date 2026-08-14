@@ -31,61 +31,113 @@ const diagnosisDictionary = require('./diagnosisDictionary');
 
 let _failsafe = null;
 function _getFailsafe() {
-  if (_failsafe === undefined) return null;
-  if (_failsafe) return _failsafe;
-  try { _failsafe = require('../failsafe'); } catch { _failsafe = undefined; return null; }
+  if (_failsafe === undefined) {
+    return null;
+  }
+  if (_failsafe) {
+    return _failsafe;
+  }
+  try {
+    _failsafe = require('../failsafe');
+  } catch {
+    _failsafe = undefined;
+    return null;
+  }
   return _failsafe;
 }
 
 let _resilience = null;
 function _classifyFailure(failure) {
-  if (_resilience === undefined) return _fallbackClassify(failure);
-  if (!_resilience) {
-    try { _resilience = require('../resilience'); } catch { _resilience = undefined; return _fallbackClassify(failure); }
+  if (_resilience === undefined) {
+    return _fallbackClassify(failure);
   }
-  try { return _resilience.classifyFailure(failure); } catch { return _fallbackClassify(failure); }
+  if (!_resilience) {
+    try {
+      _resilience = require('../resilience');
+    } catch {
+      _resilience = undefined;
+      return _fallbackClassify(failure);
+    }
+  }
+  try {
+    return _resilience.classifyFailure(failure);
+  } catch {
+    return _fallbackClassify(failure);
+  }
 }
 
 function _fallbackClassify(failure) {
   const msg = _extractText(failure);
-  return { code: 'UNKNOWN', reason: 'execution-error', retryable: false, missingDependency: null, message: msg };
+  return {
+    code: 'UNKNOWN',
+    reason: 'execution-error',
+    retryable: false,
+    missingDependency: null,
+    message: msg,
+  };
 }
 
 /** 仅 fixKind 属于"能产生真实本地/受控修复"的种类才进微循环。 */
-const FIXABLE_KINDS = Object.freeze(new Set([
-  'inject-defaults', 'retarget-path', 'install-dependency', 'switch-runtime', 'probe-port',
-]));
+const FIXABLE_KINDS = Object.freeze(
+  new Set([
+    'inject-defaults',
+    'retarget-path',
+    'install-dependency',
+    'switch-runtime',
+    'probe-port',
+  ])
+);
 
 /**
  * 把失败信号抽成可匹配文本（兼容 Error / ToolError 结构化结果 / 软失败对象 / 字符串）。
  */
 function _extractText(failure) {
-  if (!failure) return '';
-  if (typeof failure === 'string') return failure;
+  if (!failure) {
+    return '';
+  }
+  if (typeof failure === 'string') {
+    return failure;
+  }
   const parts = [];
-  if (failure instanceof Error || typeof failure.message === 'string') parts.push(failure.message || '');
-  if (failure.detail) parts.push(String(failure.detail));
-  if (failure.note) parts.push(String(failure.note));
-  if (failure.hint) parts.push(String(failure.hint));
-  if (failure.reason && typeof failure.reason === 'string') parts.push(failure.reason);
+  if (failure instanceof Error || typeof failure.message === 'string') {
+    parts.push(failure.message || '');
+  }
+  if (failure.detail) {
+    parts.push(String(failure.detail));
+  }
+  if (failure.note) {
+    parts.push(String(failure.note));
+  }
+  if (failure.hint) {
+    parts.push(String(failure.hint));
+  }
+  if (failure.reason && typeof failure.reason === 'string') {
+    parts.push(failure.reason);
+  }
   if (failure.error) {
-    if (typeof failure.error === 'string') parts.push(failure.error);
-    else if (typeof failure.error === 'object') {
+    if (typeof failure.error === 'string') {
+      parts.push(failure.error);
+    } else if (typeof failure.error === 'object') {
       parts.push(String(failure.error.message || ''));
       parts.push(String(failure.error.hint || ''));
       parts.push(String(failure.error.code || ''));
     }
   }
-  if (failure.code && typeof failure.code === 'string') parts.push(failure.code);
-  if (failure.stack && typeof failure.stack === 'string') parts.push(failure.stack.split('\n')[0]);
+  if (failure.code && typeof failure.code === 'string') {
+    parts.push(failure.code);
+  }
+  if (failure.stack && typeof failure.stack === 'string') {
+    parts.push(failure.stack.split('\n')[0]);
+  }
   return parts.filter(Boolean).join(' \n ');
 }
 
 /** 从失败信号里抽一个归一化错误码，喂给字典做精确命中（HTTP_403 / EROFS / ECONNREFUSED / ...）。 */
 function _normalizedCode(failure, classified) {
   // 1) 显式结构化码
-  const explicit = (failure && (failure.code || (failure.error && failure.error.code)))
-    || (classified && classified.error_code);
+  const explicit =
+    (failure && (failure.code || (failure.error && failure.error.code))) ||
+    (classified && classified.error_code);
   if (explicit && typeof explicit === 'string') {
     const up = explicit.toUpperCase();
     if (/^E0[1-8]$/.test(up)) {
@@ -97,13 +149,19 @@ function _normalizedCode(failure, classified) {
   // 2) 从文本派生常见系统码
   const t = _extractText(failure);
   let m = t.match(/\b(EROFS|ECONNREFUSED|EACCES|ENOENT|ETIMEDOUT|ENOTFOUND)\b/i);
-  if (m) return m[1].toUpperCase();
+  if (m) {
+    return m[1].toUpperCase();
+  }
   m = t.match(/\bhttp[\s_]?(\d{3})\b|\b(40[13]|429|5\d\d)\b\s*(?:forbidden|unauthorized|error)?/i);
   if (m) {
     const status = m[1] || m[2];
-    if (status) return `HTTP_${status}`;
+    if (status) {
+      return `HTTP_${status}`;
+    }
   }
-  if (/modulenotfounderror|cannot find module|no module named/i.test(t)) return 'MISSING_DEPENDENCY';
+  if (/modulenotfounderror|cannot find module|no module named/i.test(t)) {
+    return 'MISSING_DEPENDENCY';
+  }
   return '';
 }
 
@@ -127,7 +185,11 @@ class ErrorDiagnostician {
     let classified = null;
     const fs = _getFailsafe();
     if (fs && typeof fs.classify === 'function') {
-      try { classified = fs.classify(rawError, { ...context, kind: context.kind || 'tool' }); } catch { classified = null; }
+      try {
+        classified = fs.classify(rawError, { ...context, kind: context.kind || 'tool' });
+      } catch {
+        classified = null;
+      }
     }
     const error_code = (classified && classified.error_code) || 'E04';
     const detail = (classified && classified.detail) || _safeDetail(rawError);
@@ -140,30 +202,44 @@ class ErrorDiagnostician {
     const text = _extractText(rawError);
     const code = _normalizedCode(rawError, classified);
     let dx = null;
-    try { dx = this.dictionary.diagnose(text, code, context); } catch { dx = null; }
+    try {
+      dx = this.dictionary.diagnose(text, code, context);
+    } catch {
+      dx = null;
+    }
 
     if (!dx) {
       // 无字典命中 → 不可本地修复，交降级树。归因仍完整（病因取 failsafe 分类）。
       return {
-        error_code, reason,
+        error_code,
+        reason,
         cause: (classified && classified.category) || '未归类的执行失败',
-        risk: null, needsConfirm: false, fixKind: null, action: null, capture: {},
-        fixable: false, detail,
+        risk: null,
+        needsConfirm: false,
+        fixKind: null,
+        action: null,
+        capture: {},
+        fixable: false,
+        detail,
         missingDependency: (failure && failure.missingDependency) || null,
       };
     }
 
-    const fixable = dx.risk !== this.dictionary.RISK.L2
-      && FIXABLE_KINDS.has(dx.fixKind);
+    const fixable = dx.risk !== this.dictionary.RISK.L2 && FIXABLE_KINDS.has(dx.fixKind);
 
     // 字典命中比 failsafe 文本归类更精准时，校正错误码（保持与 E01–E08 单一真源一致）：
     //   依赖缺失 → E05（即便原始 Error 无结构化码，文本派生为 E04）。
     let code2 = error_code;
-    if (dx.fixKind === 'install-dependency' && code2 === 'E04') code2 = 'E05';
-    if (dx.id === 'http-forbidden' && (code2 === 'E04')) code2 = 'E07';
+    if (dx.fixKind === 'install-dependency' && code2 === 'E04') {
+      code2 = 'E05';
+    }
+    if (dx.id === 'http-forbidden' && code2 === 'E04') {
+      code2 = 'E07';
+    }
 
     return {
-      error_code: code2, reason,
+      error_code: code2,
+      reason,
       cause: dx.cause,
       risk: dx.risk,
       needsConfirm: !!dx.needsConfirm,
@@ -172,8 +248,8 @@ class ErrorDiagnostician {
       capture: dx.capture || {},
       fixable,
       detail,
-      missingDependency: (failure && failure.missingDependency)
-        || (dx.capture && dx.capture.dep) || null,
+      missingDependency:
+        (failure && failure.missingDependency) || (dx.capture && dx.capture.dep) || null,
     };
   }
 }
@@ -181,7 +257,9 @@ class ErrorDiagnostician {
 /** 兜底详情：失败信号转一句安全人读文案（不含栈/密钥风险时也截断）。 */
 function _safeDetail(rawError) {
   const t = _extractText(rawError);
-  if (!t) return '工具执行失败（无可读详情）。';
+  if (!t) {
+    return '工具执行失败（无可读详情）。';
+  }
   return t.replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 

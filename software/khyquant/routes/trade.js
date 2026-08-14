@@ -102,7 +102,9 @@ router.get('/account', authMiddleware, async (req, res) => {
       todayProfit: todayProfit,
       positionValue: positionValue,
       tradeCount: trades.length,
-      winRate: trades.length > 0 ? (trades.filter(t => t.side === 'sell').length / trades.length * 100).toFixed(2) : 0
+      winRate: trades.length > 0
+        ? Math.round((trades.filter(t => parseFloat(t.profit) > 0).length / trades.length * 100) * 100) / 100
+        : 0
     };
 
     res.json({
@@ -406,10 +408,10 @@ router.post('/order', authMiddleware, async (req, res) => {
       const initialFunds = 1000000.00;
       const availableFunds = initialFunds + totalProfit - positionCost;
 
-      // 计算本次交易所需资金
+      // 计算本次交易所需资金（验证路径与执行路径必须使用相同的价格）
       const cleanSym = symbol ? symbol.replace(/^(sh|sz)/i, '') : '';
       const fbPrice = STATIC_FALLBACK[symbol] || STATIC_FALLBACK[cleanSym] || 50;
-      const finalPrice = price || (fbPrice + (Math.random() - 0.5) * (fbPrice * 0.02));
+      const finalPrice = price || 10; // 与执行路径保持一致，不使用 Math.random()
       const requiredAmount = parseFloat(quantity) * parseFloat(finalPrice);
 
       // 🔥 验证资金是否足够
@@ -427,9 +429,8 @@ router.post('/order', authMiddleware, async (req, res) => {
 
     }
 
-    // 模拟订单处理
+    // 模拟订单处理（使用与验证路径相同的 finalPrice）
     const orderId = Date.now().toString();
-    const finalPrice = price || 10; // fallback for market orders without explicit price
     const amount = parseFloat(quantity) * parseFloat(finalPrice);
 
     // 创建交易记录

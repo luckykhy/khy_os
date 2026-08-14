@@ -11,12 +11,21 @@
  * - Registration: auto-register installed CLIs as KHY tools + skills + apps
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { execSync, execFileSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const CLI_ANYTHING_DIR = path.join(os.homedir(), '.khy', 'cli-anything');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const CLI_ANYTHING_DIR = path.join(_dataHome(), 'cli-anything');
 const REGISTRY_CACHE = path.join(CLI_ANYTHING_DIR, 'registry.json');
 const PUBLIC_REGISTRY_CACHE = path.join(CLI_ANYTHING_DIR, 'public_registry.json');
 const INSTALLED_CACHE = path.join(CLI_ANYTHING_DIR, 'installed.json');
@@ -41,7 +50,7 @@ function _ensureDir() {
 function _isCacheValid(filePath) {
   try {
     const stat = fs.statSync(filePath);
-    return (Date.now() - stat.mtimeMs) < CACHE_TTL_MS;
+    return Date.now() - stat.mtimeMs < CACHE_TTL_MS;
   } catch {
     return false;
   }
@@ -76,7 +85,9 @@ function _getBundleRoot() {
  * folder (e.g. "CLI-Anything-main/").
  */
 function _findRegistryRoot(dir) {
-  if (fs.existsSync(path.join(dir, 'registry.json'))) return dir;
+  if (fs.existsSync(path.join(dir, 'registry.json'))) {
+    return dir;
+  }
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -84,9 +95,13 @@ function _findRegistryRoot(dir) {
     return null;
   }
   for (const ent of entries) {
-    if (!ent.isDirectory()) continue;
+    if (!ent.isDirectory()) {
+      continue;
+    }
     const candidate = path.join(dir, ent.name);
-    if (fs.existsSync(path.join(candidate, 'registry.json'))) return candidate;
+    if (fs.existsSync(path.join(candidate, 'registry.json'))) {
+      return candidate;
+    }
   }
   return null;
 }
@@ -124,7 +139,9 @@ function importFromArchive(srcPath, opts = {}) {
     // Extract into the offline bundle directory.
     try {
       fs.rmSync(BUNDLE_DIR, { recursive: true, force: true });
-    } catch { /* ok */ }
+    } catch {
+      /* ok */
+    }
     fs.mkdirSync(BUNDLE_DIR, { recursive: true });
     try {
       execFileSync('unzip', ['-o', '-q', resolved, '-d', BUNDLE_DIR], {
@@ -149,8 +166,10 @@ function importFromArchive(srcPath, opts = {}) {
   }
   _writeJSON(REGISTRY_CACHE, harness);
 
-  let pub = _readJSON(path.join(extractedRoot, 'public_registry.json'));
-  if (pub) _writeJSON(PUBLIC_REGISTRY_CACHE, pub);
+  const pub = _readJSON(path.join(extractedRoot, 'public_registry.json'));
+  if (pub) {
+    _writeJSON(PUBLIC_REGISTRY_CACHE, pub);
+  }
 
   const harnessCount = Array.isArray(harness.clis) ? harness.clis.length : 0;
   const publicCount = pub && Array.isArray(pub.clis) ? pub.clis.length : 0;
@@ -203,14 +222,20 @@ function _resolveRegistry(cacheFile, cdnFile, vendoredFile, force) {
         const parsed = JSON.parse(raw);
         _writeJSON(cacheFile, parsed);
         return { data: parsed, fromCache: false };
-      } catch { /* invalid JSON — fall through to fallbacks */ }
+      } catch {
+        /* invalid JSON — fall through to fallbacks */
+      }
     }
   }
   const cached = _readJSON(cacheFile);
-  if (cached) return { data: cached, fromCache: true };
+  if (cached) {
+    return { data: cached, fromCache: true };
+  }
 
   const vendored = _readJSON(vendoredFile);
-  if (vendored) return { data: vendored, fromCache: false };
+  if (vendored) {
+    return { data: vendored, fromCache: false };
+  }
 
   return { data: null, fromCache: false };
 }
@@ -218,7 +243,12 @@ function _resolveRegistry(cacheFile, cdnFile, vendoredFile, force) {
 function fetchRegistry(force = false) {
   _ensureDir();
   const harness = _resolveRegistry(REGISTRY_CACHE, 'registry.json', VENDORED_REGISTRY, force);
-  const pub = _resolveRegistry(PUBLIC_REGISTRY_CACHE, 'public_registry.json', VENDORED_PUBLIC, force);
+  const pub = _resolveRegistry(
+    PUBLIC_REGISTRY_CACHE,
+    'public_registry.json',
+    VENDORED_PUBLIC,
+    force
+  );
   return {
     harness: harness.data,
     public: pub.data,
@@ -245,7 +275,9 @@ function _getAllCLIs() {
 }
 
 function searchRegistry(query) {
-  if (!query) return [];
+  if (!query) {
+    return [];
+  }
   const q = query.toLowerCase();
   const all = _getAllCLIs();
 
@@ -256,18 +288,29 @@ function searchRegistry(query) {
       const displayName = (cli.display_name || '').toLowerCase();
       const desc = (cli.description || '').toLowerCase();
       const category = (cli.category || '').toLowerCase();
-      const tags = (cli.tags || []).map(t => t.toLowerCase());
+      const tags = (cli.tags || []).map((t) => t.toLowerCase());
 
-      if (name === q) score += 100;
-      else if (name.includes(q)) score += 60;
-      if (displayName.includes(q)) score += 40;
-      if (desc.includes(q)) score += 20;
-      if (category.includes(q)) score += 15;
-      if (tags.some(t => t.includes(q) || q.includes(t))) score += 30;
+      if (name === q) {
+        score += 100;
+      } else if (name.includes(q)) {
+        score += 60;
+      }
+      if (displayName.includes(q)) {
+        score += 40;
+      }
+      if (desc.includes(q)) {
+        score += 20;
+      }
+      if (category.includes(q)) {
+        score += 15;
+      }
+      if (tags.some((t) => t.includes(q) || q.includes(t))) {
+        score += 30;
+      }
 
       return { ...cli, _score: score };
     })
-    .filter(c => c._score > 0)
+    .filter((c) => c._score > 0)
     .sort((a, b) => b._score - a._score);
 }
 
@@ -280,8 +323,8 @@ function getRegistryStats() {
   }
   return {
     total: all.length,
-    harness: all.filter(c => c._source === 'harness').length,
-    public: all.filter(c => c._source === 'public').length,
+    harness: all.filter((c) => c._source === 'harness').length,
+    public: all.filter((c) => c._source === 'public').length,
     categories,
   };
 }
@@ -297,9 +340,13 @@ function _getVersion(cmd) {
   try {
     const { execFileSync } = require('child_process');
     return execFileSync(cmd, ['--version'], {
-      encoding: 'utf-8', timeout: 10000,
+      encoding: 'utf-8',
+      timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim().split('\n')[0].trim();
+    })
+      .trim()
+      .split('\n')[0]
+      .trim();
   } catch {
     return 'unknown';
   }
@@ -309,7 +356,8 @@ function _getHelp(cmd) {
   try {
     const { execFileSync } = require('child_process');
     return execFileSync(cmd, ['--help'], {
-      encoding: 'utf-8', timeout: 10000,
+      encoding: 'utf-8',
+      timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
   } catch {
@@ -322,7 +370,9 @@ function _parseCommandGroups(helpOutput) {
   const lines = (helpOutput || '').split('\n');
   for (const line of lines) {
     const match = line.match(/^\s{2,4}(\w[\w-]*)\s{2,}/);
-    if (match) groups.push(match[1]);
+    if (match) {
+      groups.push(match[1]);
+    }
   }
   return groups;
 }
@@ -357,7 +407,7 @@ function discoverInstalled() {
   // Also scan PATH for any cli-anything-* not in registry
   try {
     const pathDirs = (process.env.PATH || '').split(path.delimiter);
-    const seen = new Set(installed.map(i => i.entryPoint));
+    const seen = new Set(installed.map((i) => i.entryPoint));
     for (const dir of pathDirs) {
       try {
         const files = fs.readdirSync(dir);
@@ -382,9 +432,13 @@ function discoverInstalled() {
             });
           }
         }
-      } catch { /* dir not readable */ }
+      } catch {
+        /* dir not readable */
+      }
     }
-  } catch { /* PATH scan failed */ }
+  } catch {
+    /* PATH scan failed */
+  }
 
   _writeJSON(INSTALLED_CACHE, { updatedAt: new Date().toISOString(), clis: installed });
   return installed;
@@ -392,7 +446,9 @@ function discoverInstalled() {
 
 function getInstalledCLIs() {
   const cached = _readJSON(INSTALLED_CACHE);
-  if (cached && cached.clis) return cached.clis;
+  if (cached && cached.clis) {
+    return cached.clis;
+  }
   return discoverInstalled();
 }
 
@@ -438,7 +494,7 @@ function invokeCommand(cliName, args = [], opts = {}) {
 
 function installCLI(name, opts = {}) {
   const all = _getAllCLIs();
-  const cli = all.find(c => c.name === name || c.display_name === name);
+  const cli = all.find((c) => c.name === name || c.display_name === name);
 
   if (!cli) {
     return { success: false, error: `在注册表中未找到 "${name}"。使用 app cli-search 搜索` };
@@ -453,9 +509,7 @@ function installCLI(name, opts = {}) {
         // Offline-first: if an imported bundle ships this CLI's agent-harness
         // locally, install from the filesystem and skip the GitHub remote.
         const bundleRoot = _getBundleRoot();
-        const localHarness = bundleRoot
-          ? path.join(bundleRoot, name, 'agent-harness')
-          : null;
+        const localHarness = bundleRoot ? path.join(bundleRoot, name, 'agent-harness') : null;
         let cmd;
         if (localHarness && fs.existsSync(path.join(localHarness, 'setup.py'))) {
           cmd = `pip install "${localHarness}"`;
@@ -465,7 +519,9 @@ function installCLI(name, opts = {}) {
           if (!safeName) {
             return { success: false, error: `无效的 CLI 名称: ${name}` };
           }
-          cmd = installCmd || `pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=${safeName}/agent-harness`;
+          cmd =
+            installCmd ||
+            `pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=${safeName}/agent-harness`;
         }
         execSync(cmd, { stdio: 'inherit', timeout: 300000 });
         break;
@@ -483,7 +539,10 @@ function installCLI(name, opts = {}) {
       case 'bundled': {
         const ep = cli.entry_point || `cli-anything-${name}`;
         if (!_which(ep)) {
-          return { success: false, error: `${name} 是 bundled 类型，需要先安装主软件: ${cli.requires || name}` };
+          return {
+            success: false,
+            error: `${name} 是 bundled 类型，需要先安装主软件: ${cli.requires || name}`,
+          };
         }
         break;
       }
@@ -508,7 +567,7 @@ function installCLI(name, opts = {}) {
 
 function uninstallCLI(name) {
   const installed = getInstalledCLIs();
-  const cli = installed.find(c => c.name === name);
+  const cli = installed.find((c) => c.name === name);
 
   if (!cli) {
     return { success: false, error: `${name} 未安装` };
@@ -516,7 +575,11 @@ function uninstallCLI(name) {
 
   try {
     if (cli._source === 'public') {
-      try { execSync(`npm uninstall -g cli-anything-${name}`, { stdio: 'pipe', timeout: 30000 }); } catch { /* ok */ }
+      try {
+        execSync(`npm uninstall -g cli-anything-${name}`, { stdio: 'pipe', timeout: 30000 });
+      } catch {
+        /* ok */
+      }
     }
     execSync(`pip uninstall -y cli-anything-${name}`, { stdio: 'pipe', timeout: 30000 });
     discoverInstalled();
@@ -529,10 +592,14 @@ function uninstallCLI(name) {
 // ── SKILL.md Parsing ──────────────────────────────────────────────────────────
 
 function parseSkillMD(content) {
-  if (!content || typeof content !== 'string') return null;
+  if (!content || typeof content !== 'string') {
+    return null;
+  }
 
   const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-  if (!frontmatterMatch) return { meta: {}, body: content.trim() };
+  if (!frontmatterMatch) {
+    return { meta: {}, body: content.trim() };
+  }
 
   const yamlRaw = frontmatterMatch[1];
   const body = frontmatterMatch[2].trim();
@@ -543,10 +610,17 @@ function parseSkillMD(content) {
     if (m) {
       let value = m[2].trim();
       if (value.startsWith('[') && value.endsWith(']')) {
-        value = value.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
-      } else if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      else if (/^\d+$/.test(value)) value = parseInt(value, 10);
+        value = value
+          .slice(1, -1)
+          .split(',')
+          .map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+      } else if (value === 'true') {
+        value = true;
+      } else if (value === 'false') {
+        value = false;
+      } else if (/^\d+$/.test(value)) {
+        value = parseInt(value, 10);
+      }
       meta[m[1]] = value;
     }
   }
@@ -555,11 +629,15 @@ function parseSkillMD(content) {
 }
 
 function convertToKHYSkill(parsed, cliName) {
-  if (!parsed) return null;
+  if (!parsed) {
+    return null;
+  }
   const meta = parsed.meta || {};
-  const skillDir = path.join(os.homedir(), '.khy', 'skills', `cli-anything-${cliName}`);
+  const skillDir = path.join(_dataHome(), 'skills', `cli-anything-${cliName}`);
 
-  if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+  if (!fs.existsSync(skillDir)) {
+    fs.mkdirSync(skillDir, { recursive: true });
+  }
 
   const manifest = {
     name: `cli-anything-${cliName}`,
@@ -571,7 +649,9 @@ function convertToKHYSkill(parsed, cliName) {
     source: 'cli-anything',
   };
 
-  const prompt = parsed.body || `You have access to the cli-anything-${cliName} command-line tool.\nUse it with --json flag for structured output.\nRun \`cli-anything-${cliName} --help\` to see available commands.`;
+  const prompt =
+    parsed.body ||
+    `You have access to the cli-anything-${cliName} command-line tool.\nUse it with --json flag for structured output.\nRun \`cli-anything-${cliName} --help\` to see available commands.`;
 
   fs.writeFileSync(path.join(skillDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(skillDir, 'prompt.md'), prompt);
@@ -597,7 +677,7 @@ function registerAllAsKHYTools() {
           entry: cli.entryPoint,
           runtime: 'external',
           source: 'cli-anything',
-          commands: cli.commandGroups.map(g => `cli-${cli.name}-${g}`),
+          commands: cli.commandGroups.map((g) => `cli-${cli.name}-${g}`),
         });
         results.apps++;
       } catch (e) {
@@ -630,7 +710,6 @@ function registerAllAsKHYTools() {
       } catch (e) {
         results.errors.push(`tool ${cli.name}: ${e.message}`);
       }
-
     } catch (e) {
       results.errors.push(`${cli.name}: ${e.message}`);
     }
@@ -652,36 +731,42 @@ function _findSkillMD(cli) {
     if (pkgPath) {
       candidates.push(path.join(pkgPath, 'skills', 'SKILL.md'));
     }
-  } catch { /* ok */ }
+  } catch {
+    /* ok */
+  }
 
   // Local clone
   candidates.push(
     path.join(CLI_ANYTHING_DIR, 'generated', cli.name, 'skills', 'SKILL.md'),
-    path.join(os.homedir(), '.khy', 'skills', `cli-anything-${cli.name}`, 'SKILL.md'),
+    path.join(_dataHome(), 'skills', `cli-anything-${cli.name}`, 'SKILL.md')
   );
 
   // Built-in vendored SKILL.md shipped with KHY (offline, zero-config)
-  candidates.push(
-    path.join(VENDORED_SKILLS, `cli-anything-${cli.name}`, 'SKILL.md'),
-  );
+  candidates.push(path.join(VENDORED_SKILLS, `cli-anything-${cli.name}`, 'SKILL.md'));
 
   // Offline bundle (imported via importFromArchive)
   const bundleRoot = _getBundleRoot();
   if (bundleRoot) {
     candidates.push(
       path.join(bundleRoot, 'skills', `cli-anything-${cli.name}`, 'SKILL.md'),
-      path.join(bundleRoot, cli.name, 'agent-harness', 'SKILL.md'),
+      path.join(bundleRoot, cli.name, 'agent-harness', 'SKILL.md')
     );
     // Fallback: first *.md inside the local agent-harness.
     try {
       const harnessDir = path.join(bundleRoot, cli.name, 'agent-harness');
-      const md = fs.readdirSync(harnessDir).find(f => f.toLowerCase().endsWith('.md'));
-      if (md) candidates.push(path.join(harnessDir, md));
-    } catch { /* ok */ }
+      const md = fs.readdirSync(harnessDir).find((f) => f.toLowerCase().endsWith('.md'));
+      if (md) {
+        candidates.push(path.join(harnessDir, md));
+      }
+    } catch {
+      /* ok */
+    }
   }
 
   for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
+    if (fs.existsSync(p)) {
+      return p;
+    }
   }
   return null;
 }
@@ -710,7 +795,9 @@ function _buildToolDef(cli) {
     },
     async execute({ command, args }) {
       const argList = [command];
-      if (args) argList.push(...args.split(/\s+/).filter(Boolean));
+      if (args) {
+        argList.push(...args.split(/\s+/).filter(Boolean));
+      }
       return invokeCommand(cli.name, argList);
     },
   });

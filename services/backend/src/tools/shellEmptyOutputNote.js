@@ -23,7 +23,8 @@ const _FALSY = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
 
 /** 门控:仅显式关闭词关闭,其余(含未设)均开启。 */
 function emptyOutputNoteEnabled(env) {
-  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {}).KHY_SHELL_EMPTY_OUTPUT_NOTE;
+  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {})
+    .KHY_SHELL_EMPTY_OUTPUT_NOTE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
@@ -31,8 +32,24 @@ function emptyOutputNoteEnabled(env) {
 // head/tail:分页器,从空流读到空;grep/rg/findstr:过滤器,无匹配即空;wc:计数(极少空);
 // sort/uniq/cut/sed/awk/tr:流处理器,输入空则输出空;column/less/cat:透传空即空。
 const _FILTER_TAILS = new Set([
-  'head', 'tail', 'grep', 'rg', 'egrep', 'fgrep', 'findstr',
-  'sort', 'uniq', 'cut', 'sed', 'awk', 'tr', 'wc', 'column', 'less', 'cat', 'xargs',
+  'head',
+  'tail',
+  'grep',
+  'rg',
+  'egrep',
+  'fgrep',
+  'findstr',
+  'sort',
+  'uniq',
+  'cut',
+  'sed',
+  'awk',
+  'tr',
+  'wc',
+  'column',
+  'less',
+  'cat',
+  'xargs',
 ]);
 
 // 「列举/枚举」命令:列目录 / 找文件的命令,空输出**常意味着路径不存在或无匹配项**,
@@ -55,12 +72,22 @@ function _looksLikeEnumeration(command) {
  * 内联以保持本叶子零依赖(与 shellExitSemantics._baseOfSegment 同口径)。
  */
 function _baseOfSegment(segment) {
-  const tokens = String(segment == null ? '' : segment).trim().split(/\s+/);
+  const tokens = String(segment == null ? '' : segment)
+    .trim()
+    .split(/\s+/);
   let i = 0;
-  if (i < tokens.length && tokens[i] === 'rtk') i++;           // 剥 RTK 省 token 前缀
-  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) i++;
-  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) i++;
-  if (i >= tokens.length) return '';
+  if (i < tokens.length && tokens[i] === 'rtk') {
+    i++;
+  } // 剥 RTK 省 token 前缀
+  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) {
+    i++;
+  }
+  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) {
+    i++;
+  }
+  if (i >= tokens.length) {
+    return '';
+  }
   const full = tokens[i];
   const slash = full.lastIndexOf('/');
   return slash >= 0 ? full.slice(slash + 1) : full;
@@ -72,13 +99,20 @@ function _baseOfSegment(segment) {
  */
 function _tailBaseCommand(command) {
   const cmd = String(command == null ? '' : command);
-  if (!cmd.trim()) return '';
+  if (!cmd.trim()) {
+    return '';
+  }
   const segments = cmd.split(/\|\||&&|;|\|&|\||&/g);
   let last = '';
   for (let k = segments.length - 1; k >= 0; k--) {
-    if (segments[k] && segments[k].trim()) { last = segments[k]; break; }
+    if (segments[k] && segments[k].trim()) {
+      last = segments[k];
+      break;
+    }
   }
-  if (!last) last = cmd;
+  if (!last) {
+    last = cmd;
+  }
   return _baseOfSegment(last);
 }
 
@@ -94,21 +128,27 @@ function _tailBaseCommand(command) {
  */
 function buildEmptyOutputNote(command, env) {
   try {
-    if (!emptyOutputNoteEnabled(env)) return null;
+    if (!emptyOutputNoteEnabled(env)) {
+      return null;
+    }
     const tail = _tailBaseCommand(command);
     if (tail && _FILTER_TAILS.has(tail)) {
-      return `✓ 命令执行成功(退出码 0),但没有输出。末段是过滤器/分页器 \`${tail}\`,`
-        + '很可能是上游没有产出可匹配/可显示的行(例如 grep 未匹配,或流本身为空);'
-        + '这通常不是错误。若需要确认每一步的结果,可用 `<命令> && echo "=== <标签> OK ==="` '
-        + '为每步追加确定性的成功标记,避免整条管道悄无声息。';
+      return (
+        `✓ 命令执行成功(退出码 0),但没有输出。末段是过滤器/分页器 \`${tail}\`,` +
+        '很可能是上游没有产出可匹配/可显示的行(例如 grep 未匹配,或流本身为空);' +
+        '这通常不是错误。若需要确认每一步的结果,可用 `<命令> && echo "=== <标签> OK ==="` ' +
+        '为每步追加确定性的成功标记,避免整条管道悄无声息。'
+      );
     }
     // 列举/枚举命令零输出:最常见原因是**路径不存在或未匹配**,而非「已扫描、目标为空」。
     // 先让模型核实路径存在,再据此判断,避免把「路径写错/解析为空」误当作「扫过没结果」。
     if (_looksLikeEnumeration(command)) {
-      return '✓ 命令执行成功(退出码 0),但没有列出任何条目。列举/枚举命令的空结果**最常见的原因'
-        + '是目标路径不存在或写错**(而非「已扫描完毕、目标为空」)——退出码 0 只表示命令本身没报错。'
-        + '请先核实路径确实存在(如 `Test-Path <路径>` / `ls -d <路径>`)再下结论;'
-        + '路径含空格/中文时确认引号与盘符正确。';
+      return (
+        '✓ 命令执行成功(退出码 0),但没有列出任何条目。列举/枚举命令的空结果**最常见的原因' +
+        '是目标路径不存在或写错**(而非「已扫描完毕、目标为空」)——退出码 0 只表示命令本身没报错。' +
+        '请先核实路径确实存在(如 `Test-Path <路径>` / `ls -d <路径>`)再下结论;' +
+        '路径含空格/中文时确认引号与盘符正确。'
+      );
     }
     return '✓ 命令执行成功(退出码 0),但没有产生任何输出(stdout/stderr 均为空)。';
   } catch {

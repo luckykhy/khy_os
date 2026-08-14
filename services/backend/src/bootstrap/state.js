@@ -11,21 +11,21 @@
 
 const _state = {
   // Process lifecycle
-  initialized: false,       // Has init() completed?
-  sessionReady: false,       // Has setup() completed?
-  mode: null,                // 'khy' | 'khyquant' — set by entry point
-  shutdownRequested: false,  // Has graceful shutdown begun?
+  initialized: false, // Has init() completed?
+  sessionReady: false, // Has setup() completed?
+  mode: null, // 'khy' | 'khyquant' — set by entry point
+  shutdownRequested: false, // Has graceful shutdown begun?
 
   // Database
   dbConnected: false,
-  dbMode: null,              // 'sqlite' | 'postgres' | null
+  dbMode: null, // 'sqlite' | 'postgres' | null
 
   // Server
-  serverPid: null,           // PID of spawned server child process
-  activePort: null,          // Bound HTTP port
+  serverPid: null, // PID of spawned server child process
+  activePort: null, // Bound HTTP port
 
   // Bootstrap metadata
-  bootstrapVersion: null,    // Last applied migration version
+  bootstrapVersion: null, // Last applied migration version
 
   // Profiler reference (convenience for diagnostics)
   startupProfiler: null,

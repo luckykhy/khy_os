@@ -49,7 +49,9 @@ const GUARD_NOTE_MARKER = '[图片路径未附图]';
  */
 function messageHasImagePath(message) {
   const text = String(message || '');
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   try {
     const { extractInlineImageIntent } = require('../../cli/repl/imageIntent');
     const intent = extractInlineImageIntent(text);
@@ -75,9 +77,15 @@ function messageHasImagePath(message) {
  */
 function buildInlineImageOcrGuardDirective(input = {}) {
   try {
-    if (!isEnabled(input.env)) return null;
-    if (input.hasAttachedImage) return null;
-    if (!messageHasImagePath(input.message)) return null;
+    if (!isEnabled(input.env)) {
+      return null;
+    }
+    if (input.hasAttachedImage) {
+      return null;
+    }
+    if (!messageHasImagePath(input.message)) {
+      return null;
+    }
     return [
       `${GUARD_NOTE_MARKER} 用户消息里给出了一个本地图片路径，但本轮并没有把图片作为附件传给你，`,
       '你看不到这张图的像素内容。请严格遵守：',

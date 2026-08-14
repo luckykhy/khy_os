@@ -5,7 +5,11 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseModelSeed, validateProviderDraft, buildProviderPayload } from './customProviderForm.js';
+import {
+  parseModelSeed,
+  validateProviderDraft,
+  buildProviderPayload,
+} from './customProviderForm.js';
 
 test('parseModelSeed splits on comma / newline / semicolon / Chinese comma', () => {
   assert.deepEqual(parseModelSeed('a,b'), ['a', 'b']);
@@ -15,7 +19,10 @@ test('parseModelSeed splits on comma / newline / semicolon / Chinese comma', () 
 });
 
 test('parseModelSeed trims and drops empties', () => {
-  assert.deepEqual(parseModelSeed('  gpt-4o-mini ,, deepseek-chat , '), ['gpt-4o-mini', 'deepseek-chat']);
+  assert.deepEqual(parseModelSeed('  gpt-4o-mini ,, deepseek-chat , '), [
+    'gpt-4o-mini',
+    'deepseek-chat',
+  ]);
   assert.deepEqual(parseModelSeed(''), []);
   assert.deepEqual(parseModelSeed(null), []);
   assert.deepEqual(parseModelSeed(undefined), []);
@@ -45,7 +52,11 @@ test('buildProviderPayload lower-cases provider and always returns a models arra
 });
 
 test('buildProviderPayload seeds models from the free-text field', () => {
-  const p = buildProviderPayload({ provider: 'deepseek', key: 'sk-1', models: 'deepseek-chat, deepseek-reasoner' });
+  const p = buildProviderPayload({
+    provider: 'deepseek',
+    key: 'sk-1',
+    models: 'deepseek-chat, deepseek-reasoner',
+  });
   assert.deepEqual(p.models, ['deepseek-chat', 'deepseek-reasoner']);
 });
 
@@ -56,7 +67,11 @@ test('buildProviderPayload carries upstream metadata only when present', () => {
   assert.equal('endpoint' in bare, false);
 
   const full = buildProviderPayload({
-    provider: 'acme', key: 'sk-1', baseUrl: 'https://x/v1', apiFormat: 'openai', endpoint: 'https://x/v1',
+    provider: 'acme',
+    key: 'sk-1',
+    baseUrl: 'https://x/v1',
+    apiFormat: 'openai',
+    endpoint: 'https://x/v1',
   });
   assert.equal(full.baseUrl, 'https://x/v1');
   assert.equal(full.apiFormat, 'openai');

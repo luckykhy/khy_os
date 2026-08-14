@@ -8,8 +8,12 @@ class BriefTool extends BaseTool {
   static searchHint = 'brief message proactive status update notification';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Send a brief message to the user. Supports markdown formatting.
@@ -30,7 +34,8 @@ Attachments can include file paths for photos, screenshots, diffs, or logs.`;
         },
         status: {
           type: 'string',
-          description: "Use 'proactive' for unsolicited updates, 'normal' for replies (default 'normal')",
+          description:
+            "Use 'proactive' for unsolicited updates, 'normal' for replies (default 'normal')",
           enum: ['normal', 'proactive'],
           default: 'normal',
         },
@@ -67,7 +72,9 @@ Attachments can include file paths for photos, screenshots, diffs, or logs.`;
     };
   }
 
-  getActivityDescription() { return '发送简报'; }
+  getActivityDescription() {
+    return '发送简报';
+  }
 }
 
 module.exports = BriefTool;

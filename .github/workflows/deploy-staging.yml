@@ -1,0 +1,111 @@
+name: Staging Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging + Smoke Test
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: services/backend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        working-directory: services/backend
+        run: npm ci
+
+      - name: Run test suite (Jest + node:test)
+        working-directory: services/backend
+        run: |
+          npm test -- --passWithNoTests
+          npm run test:node
+
+      # ── Build Docker image (same as docker.yml but only for staging) ──────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push staging image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ghcr.io/${{ github.repository }}:staging
+          push: true
+          platforms: linux/amd64
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
+
+      # ── Deploy to Fly.io staging ─────────────────────────────────────────────
+      - name: Install flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io staging
+        run: flyctl deploy --config fly.staging.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      # ── Smoke tests ──────────────────────────────────────────────────────────
+      - name: Wait for staging to be ready
+        run: |
+          STAGING_URL="https://khy-os-staging.fly.dev"
+          echo "Waiting for $STAGING_URL to respond..."
+          for i in $(seq 1 60); do
+            if curl -sf --max-time 5 "$STAGING_URL" > /dev/null 2>&1; then
+              echo "Staging is ready after ${i}0s"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "Staging did not become ready within 10 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
+        env:
+          STAGING_URL: https://khy-os-staging.fly.dev
+
+      - name: Smoke test: khy --version via HTTP
+        run: |
+          STAGING_URL="https://khy-os-staging.fly.dev"
+          # The staging app exposes a health endpoint; verify it returns 200.
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$STAGING_URL/health")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Health check failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "Health check passed: HTTP 200"
+        env:
+          STAGING_URL: https://khy-os-staging.fly.dev
+
+      - name: Notify staging status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Staging deploy + smoke test PASSED"
+          else
+            echo "Staging deploy + smoke test FAILED"
+          fi

@@ -22,10 +22,19 @@
  * Inspired by Claude Code's multi-layer permission system.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const PERMISSIONS_FILE = path.join(os.homedir(), '.khyquant', 'permissions.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const PERMISSIONS_FILE = path.join(_appHome(), 'permissions.json');
 const LEGACY_FILE = path.join(os.homedir(), '.khyquant', 'tool_permissions.json');
 
 const VALID_PROFILES = ['strict', 'normal', 'acceptEdits', 'auto', 'dontAsk', 'yolo'];
@@ -41,10 +50,28 @@ const _AUTO_ASK_RISKS = new Set(['high', 'critical']);
 // ── In-memory state ─────────────────────────────────────────────────
 
 let _profile = 'normal';
-let _rules = {};           // { toolName: { decision, scope, since, conditions? } }
-let _sessionApprovals = new Set(); // Session-only approvals (cleared on restart)
-let _sessionDenials = new Set();
+let _rules = {}; // { toolName: { decision, scope, since, conditions? } }
+const _sessionApprovals = new Set(); // Session-only approvals (cleared on restart)
+const _sessionDenials = new Set();
+// Pattern rules: [{ toolName, pattern, decision, scope, since }]. Holds both
+// session-scoped (memory only) and forever-scoped (persisted) entries; _save
+// persists forever entries only. Gated by KHY_PERMISSION_PATTERN_RULES
+// (default-off) — see _patternRulesEnabled().
+let _patternRules = [];
 let _loaded = false;
+
+// Gate for the pattern-rule feature. Default-off (opt-in via flagRegistry):
+// when off, check() skips the pattern branch entirely (byte-identical legacy
+// behavior) and the pattern APIs are explicit no-ops. Registry unavailable →
+// fail-closed (feature off).
+function _patternRulesEnabled() {
+  try {
+    const { isFlagEnabled } = require('./flagRegistry');
+    return isFlagEnabled('KHY_PERMISSION_PATTERN_RULES');
+  } catch {
+    return false;
+  }
+}
 
 // ── Persistence ─────────────────────────────────────────────────────
 
@@ -56,7 +83,9 @@ function _ensureDir() {
 }
 
 function _load() {
-  if (_loaded) return;
+  if (_loaded) {
+    return;
+  }
   _loaded = true;
 
   // Try loading new format first
@@ -65,9 +94,17 @@ function _load() {
       const data = JSON.parse(fs.readFileSync(PERMISSIONS_FILE, 'utf-8'));
       _profile = VALID_PROFILES.includes(data.profile) ? data.profile : 'normal';
       _rules = data.rules || {};
+      // Field name is `storePatternRules` (NOT `patternRules`): in portable
+      // deployments getAppHome() and getDataHome() resolve to the SAME
+      // <dataHome>/permissions.json that permissionPolicy/config.js owns, so
+      // a store-scoped name avoids any future key collision. Old files
+      // without the field → empty array (backward compatible).
+      _patternRules = Array.isArray(data.storePatternRules) ? data.storePatternRules : [];
       return;
     }
-  } catch { /* fall through to migration */ }
+  } catch {
+    /* fall through to migration */
+  }
 
   // Migrate from legacy format
   _migrateLegacy();
@@ -82,8 +119,17 @@ function _save() {
       version: 2,
       updatedAt: new Date().toISOString(),
     };
+    // Persist forever-scoped pattern rules only; session-scoped entries stay
+    // in memory. Field omitted entirely when empty so files written before
+    // this feature (or with the gate off) remain byte-shape identical.
+    const foreverPatterns = _patternRules.filter((r) => r && r.scope === 'forever');
+    if (foreverPatterns.length > 0) {
+      data.storePatternRules = foreverPatterns;
+    }
     fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(data, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -92,7 +138,9 @@ function _save() {
  */
 function _migrateLegacy() {
   try {
-    if (!fs.existsSync(LEGACY_FILE)) return;
+    if (!fs.existsSync(LEGACY_FILE)) {
+      return;
+    }
 
     const legacy = JSON.parse(fs.readFileSync(LEGACY_FILE, 'utf-8'));
 
@@ -130,7 +178,9 @@ function _migrateLegacy() {
 
     // Save migrated data
     _save();
-  } catch { /* migration failure is non-critical */ }
+  } catch {
+    /* migration failure is non-critical */
+  }
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -149,7 +199,9 @@ function setProfile(profileName, opts = {}) {
     throw new Error(`Invalid profile: ${profileName}. Valid: ${VALID_PROFILES.join(', ')}`);
   }
   _profile = profileName;
-  if (opts.persist !== false) _save();
+  if (opts.persist !== false) {
+    _save();
+  }
 }
 
 /**
@@ -185,27 +237,65 @@ function check(toolName, params, options = {}) {
   _load();
 
   // Yolo mode = approve everything
-  if (_profile === 'yolo') return 'allow';
+  if (_profile === 'yolo') {
+    return 'allow';
+  }
 
   // Session denial overrides everything else
-  if (_sessionDenials.has(toolName)) return 'deny';
+  if (_sessionDenials.has(toolName)) {
+    return 'deny';
+  }
 
   // Persistent rules
   const rule = _rules[toolName];
   if (rule) {
-    if (rule.decision === 'allow' && rule.scope === 'forever') return 'allow';
-    if (rule.decision === 'deny' && rule.scope === 'forever') return 'deny';
+    if (rule.decision === 'allow' && rule.scope === 'forever') {
+      return 'allow';
+    }
+    if (rule.decision === 'deny' && rule.scope === 'forever') {
+      return 'deny';
+    }
+  }
+
+  // Pattern rules (gated, default-off): evaluated after exact rules, before
+  // session approvals. Deny takes priority over allow (fail-closed). Gate
+  // off → this branch is skipped entirely, byte-identical legacy behavior.
+  if (_patternRulesEnabled() && _patternRules.length > 0) {
+    try {
+      const { matchPatternRule } = require('../permissions/patternMatcher');
+      let patternAllow = false;
+      for (const pRule of _patternRules) {
+        if (!matchPatternRule(pRule, toolName, params)) {
+          continue;
+        }
+        if (pRule.decision === 'deny') {
+          return 'deny';
+        }
+        if (pRule.decision === 'allow') {
+          patternAllow = true;
+        }
+      }
+      if (patternAllow) {
+        return 'allow';
+      }
+    } catch {
+      /* matcher unavailable — fall through (fail-closed: no allow) */
+    }
   }
 
   // Session approval
-  if (_sessionApprovals.has(toolName)) return 'allow';
+  if (_sessionApprovals.has(toolName)) {
+    return 'allow';
+  }
 
   // dontAsk mode (CC-aligned, inverse of yolo): deny everything not EXPLICITLY
   // allowed. Explicit allows above (persistent forever-rule + session approval)
   // survive; the learned-ledger and virtual-tool implicit approvals below are
   // intentionally skipped so a scripted/CI run fails loudly rather than silently
   // proceeding on a heuristic. Reachable via KHY_PERMISSION_MODE=dontAsk.
-  if (_profile === 'dontAsk') return 'deny';
+  if (_profile === 'dontAsk') {
+    return 'deny';
+  }
 
   // Learned auto-approval (借鉴分析 #6): opt-in, low-risk, non-destructive,
   // repeatedly approved with zero denials. Hard-gated inside approvalLedger;
@@ -213,21 +303,35 @@ function check(toolName, params, options = {}) {
   // ignores a learned 'allow'. Best-effort: ledger unavailable → skip.
   try {
     const ledger = require('./approvalLedger');
-    if (ledger.shouldAutoApprove({ key: toolName, risk: options.risk, isDestructive: options.isDestructive })) {
+    if (
+      ledger.shouldAutoApprove({
+        key: toolName,
+        risk: options.risk,
+        isDestructive: options.isDestructive,
+      })
+    ) {
       return 'allow';
     }
-  } catch { /* approvalLedger unavailable — fall through */ }
+  } catch {
+    /* approvalLedger unavailable — fall through */
+  }
 
   // Virtual tool mapping: if a shell command maps to a known tool,
   // check that tool's permission as a transparent fallback
   if (options.virtualTool && options.virtualTool !== toolName) {
     const virtualRule = _rules[options.virtualTool];
-    if (virtualRule?.decision === 'allow' && virtualRule.scope === 'forever') return 'allow';
-    if (_sessionApprovals.has(options.virtualTool)) return 'allow';
+    if (virtualRule?.decision === 'allow' && virtualRule.scope === 'forever') {
+      return 'allow';
+    }
+    if (_sessionApprovals.has(options.virtualTool)) {
+      return 'allow';
+    }
   }
 
   // Strict mode: ask for everything
-  if (_profile === 'strict') return 'ask';
+  if (_profile === 'strict') {
+    return 'ask';
+  }
 
   // auto mode (CC-aligned): auto-approve routine tool calls (incl. safe shell),
   // but destructive or high/critical-risk actions still ask. khy has no
@@ -236,33 +340,47 @@ function check(toolName, params, options = {}) {
   // are the honest analog. The unbypassable red line in toolCalling stays in
   // force regardless, so a routine 'allow' here never overrides a critical gate.
   if (_profile === 'auto') {
-    if (options.isDestructive === true) return 'ask';
-    if (_AUTO_ASK_RISKS.has(options.risk)) return 'ask';
+    if (options.isDestructive === true) {
+      return 'ask';
+    }
+    if (_AUTO_ASK_RISKS.has(options.risk)) {
+      return 'ask';
+    }
     return 'allow';
   }
 
   // Normal & acceptEdits: auto-approve safe tools
-  if ((_profile === 'normal' || _profile === 'acceptEdits') && options.risk === 'safe') return 'allow';
+  if ((_profile === 'normal' || _profile === 'acceptEdits') && options.risk === 'safe') {
+    return 'allow';
+  }
 
   // Normal & acceptEdits: auto-approve readOnly tools (behavioral declaration)
-  if ((_profile === 'normal' || _profile === 'acceptEdits') && options.isReadOnly === true) return 'allow';
+  if ((_profile === 'normal' || _profile === 'acceptEdits') && options.isReadOnly === true) {
+    return 'allow';
+  }
 
   // acceptEdits sweet spot: auto-approve non-destructive filesystem edits
   // (Edit/Write/MultiEdit/apply_patch/NotebookEdit are category 'filesystem').
   // Shell ('execution') and destructive ops fall through and still ask —
   // criticalGate in toolCalling stays an unbypassable red line regardless.
-  if (_profile === 'acceptEdits'
-      && options.category === 'filesystem'
-      && options.isReadOnly !== true
-      && options.isDestructive !== true) {
+  if (
+    _profile === 'acceptEdits' &&
+    options.category === 'filesystem' &&
+    options.isReadOnly !== true &&
+    options.isDestructive !== true
+  ) {
     return 'allow';
   }
 
   // Destructive tools require explicit approval (unless yolo or already authorized)
   if (options.isDestructive === true && _profile !== 'yolo') {
     const destructiveRule = _rules[toolName];
-    if (destructiveRule?.decision === 'allow' && destructiveRule.scope === 'forever') return 'allow';
-    if (_sessionApprovals.has(toolName)) return 'allow';
+    if (destructiveRule?.decision === 'allow' && destructiveRule.scope === 'forever') {
+      return 'allow';
+    }
+    if (_sessionApprovals.has(toolName)) {
+      return 'allow';
+    }
     return 'ask';
   }
 
@@ -292,7 +410,15 @@ function approve(toolName, scope = 'once', meta = {}) {
     _save();
   }
   // 'once' = no persistence, just allow this call
-  try { require('./approvalLedger').record({ key: toolName, decision: 'allow', risk: meta && meta.risk }); } catch { /* best effort */ }
+  try {
+    require('./approvalLedger').record({
+      key: toolName,
+      decision: 'allow',
+      risk: meta && meta.risk,
+    });
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -317,7 +443,87 @@ function deny(toolName, scope = 'once', meta = {}) {
     _sessionApprovals.delete(toolName);
     _save();
   }
-  try { require('./approvalLedger').record({ key: toolName, decision: 'deny', risk: meta && meta.risk }); } catch { /* best effort */ }
+  try {
+    require('./approvalLedger').record({
+      key: toolName,
+      decision: 'deny',
+      risk: meta && meta.risk,
+    });
+  } catch {
+    /* best effort */
+  }
+}
+
+// ── Pattern-rule API (gated by KHY_PERMISSION_PATTERN_RULES) ─────────
+
+/**
+ * Add (or replace) a pattern rule. Scope semantics mirror approve():
+ * 'session' → memory only; 'forever' → persisted to permissions.json
+ * (storePatternRules field). Gate off → explicit no-op return.
+ *
+ * @param {string} toolName
+ * @param {string} pattern - glob, e.g. 'npm run *'
+ * @param {'session'|'forever'} [scope]
+ * @param {'allow'|'deny'} [decision] - internal; use denyPattern for deny
+ * @returns {{ok:boolean, disabled?:boolean, error?:string, rule?:object}}
+ */
+function approvePattern(toolName, pattern, scope = 'session', decision = 'allow') {
+  // Gate off → no-op with an explicit marker so callers can tell why.
+  if (!_patternRulesEnabled()) {
+    return { ok: false, disabled: true };
+  }
+  _load();
+  if (!toolName || typeof toolName !== 'string') {
+    return { ok: false, error: '无效的工具名' };
+  }
+  if (!pattern || typeof pattern !== 'string') {
+    return { ok: false, error: '无效的模式' };
+  }
+  if (scope !== 'session' && scope !== 'forever') {
+    return { ok: false, error: '无效的作用域' };
+  }
+
+  // Replace any existing rule with the same (toolName, pattern) identity.
+  _patternRules = _patternRules.filter(
+    (r) => !(r && r.toolName === toolName && r.pattern === pattern)
+  );
+  const ruleEntry = {
+    toolName,
+    pattern,
+    decision,
+    scope,
+    since: new Date().toISOString(),
+  };
+  _patternRules.push(ruleEntry);
+  if (scope === 'forever') {
+    _save();
+  }
+  return { ok: true, rule: { ...ruleEntry } };
+}
+
+/**
+ * Add (or replace) a deny pattern rule. Deny rules take priority over allow
+ * rules during check() (fail-closed). Gate off → explicit no-op return.
+ *
+ * @param {string} toolName
+ * @param {string} pattern
+ * @param {'session'|'forever'} [scope]
+ * @returns {{ok:boolean, disabled?:boolean, error?:string, rule?:object}}
+ */
+function denyPattern(toolName, pattern, scope = 'session') {
+  return approvePattern(toolName, pattern, scope, 'deny');
+}
+
+/**
+ * List all active pattern rules (copies). Gate off → empty array.
+ * @returns {Array<object>}
+ */
+function listPatternRules() {
+  if (!_patternRulesEnabled()) {
+    return [];
+  }
+  _load();
+  return _patternRules.map((r) => ({ ...r }));
 }
 
 /**
@@ -328,7 +534,9 @@ function getApprovedTools() {
   _load();
   const approved = new Set(_sessionApprovals);
   for (const [name, rule] of Object.entries(_rules)) {
-    if (rule.decision === 'allow') approved.add(name);
+    if (rule.decision === 'allow') {
+      approved.add(name);
+    }
   }
   return [...approved];
 }
@@ -341,7 +549,9 @@ function getDeniedTools() {
   _load();
   const denied = new Set(_sessionDenials);
   for (const [name, rule] of Object.entries(_rules)) {
-    if (rule.decision === 'deny') denied.add(name);
+    if (rule.decision === 'deny') {
+      denied.add(name);
+    }
   }
   return [...denied];
 }
@@ -366,6 +576,7 @@ function getAllRules() {
 function reset() {
   _load();
   _rules = {};
+  _patternRules = [];
   _sessionApprovals.clear();
   _sessionDenials.clear();
   _save();
@@ -389,6 +600,9 @@ module.exports = {
   check,
   approve,
   deny,
+  approvePattern,
+  denyPattern,
+  listPatternRules,
   getApprovedTools,
   getDeniedTools,
   getAllRules,

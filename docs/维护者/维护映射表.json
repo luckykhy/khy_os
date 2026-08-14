@@ -69,8 +69,8 @@
         "platform/khy_platform/_bootstrap.py",
         "platform/khy_platform/__init__.py",
         "pyproject.toml",
-        "setup.py",
-        "MANIFEST.in",
+        "software/khyquant/setup.py",
+        "software/khyquant/MANIFEST.in",
         "packaging/npm/package.json",
         "services/backend/package.json"
       ],
@@ -1631,7 +1631,8 @@
         "a text-only / non-multimodal model receives an image and NO vision model is available: khy must fall to local OCR (docHelper 'ocr' -> tesseract chi_sim+eng), strip the raw image, and inject the extracted text so the text model can answer",
         "OCR text is being injected but the model over-trusts mis-recognized words: the low-confidence caveat (KHY_OCR_LOW_CONFIDENCE_CAVEAT, default-on) appends an honest '置信度较低' note ONLY on a POSITIVE low-confidence signal (needsAiFallback===true OR confidence in (0,60)); unknown/0 confidence (CLI path with no tsv) must NOT warn — byte-revert",
         "the CLI OCR fallback path (pytesseract/PIL missing) reports confidence: single 'tesseract img outbase -l lang txt tsv' pass yields byte-identical text AND per-word tsv; _mean_tsv_confidence averages strictly-positive conf, None when unusable (never fabricates a score)",
-        "honesty boundary: caveat is a decoration that can be gated off; it never changes success/failure attribution; malformed OCR details never throw and never warn"
+        "honesty boundary: caveat is a decoration that can be gated off; it never changes success/failure attribution; malformed OCR details never throw and never warn",
+        "dependency injection contract of aiGatewayGenerateMethod.js: setAiGatewayGenerateMethodDeps 已改为分组注入 (validation/failover/languageRecovery/ocrRescue/diagnostics) + fail-fast 校验——合并后缺失必选项在注入期点名抛错而非在 generate() 路径内静默崩坏；仅 diagnostics 组的 _advDiag/_modelSwitch/_traceAudit 可选（方法体内 if 守卫、可合法为 null）；旧扁平形态（测试桩逐项增量覆盖）仍兼容"
       ],
       "paths": [
         "services/backend/src/services/gateway/ocrConfidenceCaveat.js",

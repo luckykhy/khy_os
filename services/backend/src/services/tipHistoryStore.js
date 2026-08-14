@@ -22,7 +22,9 @@ function _statePath() {
     // eslint-disable-next-line global-require
     const path = require('path');
     const home = getAppHome();
-    if (!home) return '';
+    if (!home) {
+      return '';
+    }
     // 注意：**不能**用 getAppDataDir('tips_state.json')——它对**完整路径**调 _ensureDir，
     // 会把文件名当目录创建（EISDIR，同刀58 search_engines.json 教训）。此处取 home 目录
     // 后 join 文件名，保证 tips_state.json 是**文件**而非目录。
@@ -53,13 +55,17 @@ function _load(p) {
 
 function _save(p, state) {
   try {
-    if (!p) return;
+    if (!p) {
+      return;
+    }
     // eslint-disable-next-line global-require
     const fs = require('fs');
     // eslint-disable-next-line global-require
     const path = require('path');
     const dir = path.dirname(p);
-    if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (dir && !fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(p, JSON.stringify(state), 'utf8');
   } catch {
     /* 持久化尽力而为——写失败不影响本次显示 */
@@ -76,7 +82,9 @@ function bumpStartupAndSelectTip(env) {
     // eslint-disable-next-line global-require
     const leaf = require('./tipScheduler');
     const e = env || process.env || {};
-    if (!leaf.tipsEnabled(e)) return null;
+    if (!leaf.tipsEnabled(e)) {
+      return null;
+    }
 
     const p = _statePath();
     const state = _load(p);
@@ -94,9 +102,11 @@ function bumpStartupAndSelectTip(env) {
         numStartups: state.numStartups,
         ctx: { numStartups: state.numStartups },
       },
-      e,
+      e
     );
-    if (!tip || !tip.id || !tip.text) return null;
+    if (!tip || !tip.id || !tip.text) {
+      return null;
+    }
 
     // 记录本次显示：tipsHistory[id] = 当前 numStartups（对齐 CC recordTipShown）。
     // 使同一会话内二次调用（/clear 重绘）时该条进入 0-会话冷却，浮现另一条。

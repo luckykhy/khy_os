@@ -51,10 +51,13 @@ function buildTaskSpec(input) {
   }
 
   if (kind === 'shell') {
-    if (!command) return { ok: false, error: 'shell 任务需要非空的命令。' };
-    const argv = platform === 'win32'
-      ? { file: 'cmd', args: ['/c', command] }
-      : { file: '/bin/sh', args: ['-c', command] };
+    if (!command) {
+      return { ok: false, error: 'shell 任务需要非空的命令。' };
+    }
+    const argv =
+      platform === 'win32'
+        ? { file: 'cmd', args: ['/c', command] }
+        : { file: '/bin/sh', args: ['-c', command] };
     return {
       ok: true,
       type: 'local_bash',
@@ -71,8 +74,12 @@ function buildTaskSpec(input) {
   }
 
   // kind === 'agent'
-  if (!prompt) return { ok: false, error: 'agent 任务需要非空的目标(prompt)。' };
-  if (!khyEntry) return { ok: false, error: 'agent 任务需要 khy 入口路径。' };
+  if (!prompt) {
+    return { ok: false, error: 'agent 任务需要非空的目标(prompt)。' };
+  }
+  if (!khyEntry) {
+    return { ok: false, error: 'agent 任务需要 khy 入口路径。' };
+  }
   return {
     ok: true,
     type: 'local_agent',
@@ -97,11 +104,16 @@ function buildTaskSpec(input) {
  */
 function buildStopPlan(task) {
   const safe = task && typeof task === 'object' ? task : {};
-  const payload = safe.payload_json && typeof safe.payload_json === 'object' ? safe.payload_json : {};
+  const payload =
+    safe.payload_json && typeof safe.payload_json === 'object' ? safe.payload_json : {};
   const runnerPid = Number(payload.runner_pid);
   const childPid = Number(payload.child_pid);
-  if (Number.isInteger(runnerPid) && runnerPid > 0) return { pid: runnerPid };
-  if (Number.isInteger(childPid) && childPid > 0) return { pid: childPid };
+  if (Number.isInteger(runnerPid) && runnerPid > 0) {
+    return { pid: runnerPid };
+  }
+  if (Number.isInteger(childPid) && childPid > 0) {
+    return { pid: childPid };
+  }
   return { pid: null };
 }
 
@@ -112,7 +124,8 @@ function buildStopPlan(task) {
  */
 function describeTask(task) {
   const safe = task && typeof task === 'object' ? task : {};
-  const payload = safe.payload_json && typeof safe.payload_json === 'object' ? safe.payload_json : {};
+  const payload =
+    safe.payload_json && typeof safe.payload_json === 'object' ? safe.payload_json : {};
   const kind = _str(payload.kind) || '?';
   const detail = kind === 'agent' ? _str(payload.prompt) : _str(payload.command);
   const trimmed = detail.replace(/\s+/g, ' ').trim().slice(0, 60);

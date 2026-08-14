@@ -60,24 +60,35 @@
 
 // ── 门控(唯一允许读 process.env 的地方;不构成 IO)──────────────────────────────
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const raw = env && env.KHY_ACTION_CONTRACT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 // ── 极小公理集(封闭、冻结、可独立审计)─────────────────────────────────────────
 // 这是核验器 V 的**全部**算子。新增算子 = 在此显式登记并在 _evalNode 加分支,绝无隐藏行为。
 const AXIOMS = Object.freeze([
-  'true', 'false',            // 常量
-  'and', 'or', 'not',         // 命题逻辑:布尔组合
-  'eq', 'ne',                 // 相等/不等(确定性深比较;另一侧可为字面 value 或跨路径 ref)
-  'lt', 'le', 'gt', 'ge',     // 数值序(两侧须有限数,否则 fail-closed;另一侧可为 value 或 ref)
-  'in',                       // 成员:state(path) ∈ (value[] 或 ref 解出的数组)
-  'type',                     // 类型:typeOf(state(path)) === value
-  'exists', 'absent',         // 存在/缺失(路径原子)
-  'forbiddenKey',             // 对象在 path 处不得含任一越权键(__proto__/force/skipApproval…)
-  'every', 'some',            // 谓词逻辑:有界全称量词 ∀ / 有界存在量词 ∃(对 path 处数组逐元素)
+  'true',
+  'false', // 常量
+  'and',
+  'or',
+  'not', // 命题逻辑:布尔组合
+  'eq',
+  'ne', // 相等/不等(确定性深比较;另一侧可为字面 value 或跨路径 ref)
+  'lt',
+  'le',
+  'gt',
+  'ge', // 数值序(两侧须有限数,否则 fail-closed;另一侧可为 value 或 ref)
+  'in', // 成员:state(path) ∈ (value[] 或 ref 解出的数组)
+  'type', // 类型:typeOf(state(path)) === value
+  'exists',
+  'absent', // 存在/缺失(路径原子)
+  'forbiddenKey', // 对象在 path 处不得含任一越权键(__proto__/force/skipApproval…)
+  'every',
+  'some', // 谓词逻辑:有界全称量词 ∀ / 有界存在量词 ∃(对 path 处数组逐元素)
 ]);
 const _AXIOM_SET = new Set(AXIOMS);
 
@@ -97,8 +108,12 @@ const _FORBIDDEN_SEG = new Set(['__proto__', 'prototype', 'constructor']);
 const _isPlainObject = require('../../utils/isPlainObject');
 
 function _typeOf(v) {
-  if (v === null) return 'null';
-  if (Array.isArray(v)) return 'array';
+  if (v === null) {
+    return 'null';
+  }
+  if (Array.isArray(v)) {
+    return 'array';
+  }
   return typeof v; // 'string'|'number'|'boolean'|'object'|'undefined'|'function'|'bigint'|'symbol'
 }
 
@@ -107,15 +122,25 @@ function _typeOf(v) {
  * [P2 切断] 任一段命中 __proto__/prototype/constructor、或非自有属性、或越过对象边界 → 返回 MISSING。
  */
 function _get(state, pathStr) {
-  if (typeof pathStr !== 'string' || pathStr.length === 0) return MISSING;
+  if (typeof pathStr !== 'string' || pathStr.length === 0) {
+    return MISSING;
+  }
   const segs = pathStr.split('.');
-  if (segs.length > MAX_PATH_DEPTH) return MISSING;
+  if (segs.length > MAX_PATH_DEPTH) {
+    return MISSING;
+  }
   let cur = state;
   for (let i = 0; i < segs.length; i++) {
     const seg = segs[i];
-    if (seg.length === 0 || _FORBIDDEN_SEG.has(seg)) return MISSING;
-    if (cur === null || (typeof cur !== 'object')) return MISSING;
-    if (!Object.prototype.hasOwnProperty.call(cur, seg)) return MISSING;
+    if (seg.length === 0 || _FORBIDDEN_SEG.has(seg)) {
+      return MISSING;
+    }
+    if (cur === null || typeof cur !== 'object') {
+      return MISSING;
+    }
+    if (!Object.prototype.hasOwnProperty.call(cur, seg)) {
+      return MISSING;
+    }
     cur = cur[seg];
   }
   return cur === undefined ? MISSING : cur;
@@ -123,30 +148,56 @@ function _get(state, pathStr) {
 
 /** 确定性深比较(仅原始值 / 数组 / 纯对象;函数/Symbol/异类一律不相等)。无递归爆栈风险:走 budget。 */
 function _deepEq(a, b, budget) {
-  if (++budget.n > MAX_PRED_NODES) throw new Error('node budget exceeded');
-  if (a === b) return true;
-  const ta = _typeOf(a), tb = _typeOf(b);
-  if (ta !== tb) return false;
-  if (ta === 'number') return a === b; // NaN!==NaN 故上面 a===b 已处理;此处保持严格
+  if (++budget.n > MAX_PRED_NODES) {
+    throw new Error('node budget exceeded');
+  }
+  if (a === b) {
+    return true;
+  }
+  const ta = _typeOf(a),
+    tb = _typeOf(b);
+  if (ta !== tb) {
+    return false;
+  }
+  if (ta === 'number') {
+    return a === b;
+  } // NaN!==NaN 故上面 a===b 已处理;此处保持严格
   if (ta === 'array') {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (!_deepEq(a[i], b[i], budget)) return false;
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (!_deepEq(a[i], b[i], budget)) {
+        return false;
+      }
+    }
     return true;
   }
   if (ta === 'object') {
-    const ka = Object.keys(a), kb = Object.keys(b);
-    if (ka.length !== kb.length) return false;
+    const ka = Object.keys(a),
+      kb = Object.keys(b);
+    if (ka.length !== kb.length) {
+      return false;
+    }
     for (const k of ka) {
-      if (_FORBIDDEN_SEG.has(k)) continue;
-      if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
-      if (!_deepEq(a[k], b[k], budget)) return false;
+      if (_FORBIDDEN_SEG.has(k)) {
+        continue;
+      }
+      if (!Object.prototype.hasOwnProperty.call(b, k)) {
+        return false;
+      }
+      if (!_deepEq(a[k], b[k], budget)) {
+        return false;
+      }
     }
     return true;
   }
   return false; // string/boolean/null 已由 a===b 覆盖;function/symbol/bigint 视为不相等
 }
 
-function _finiteNum(v) { return typeof v === 'number' && Number.isFinite(v); }
+function _finiteNum(v) {
+  return typeof v === 'number' && Number.isFinite(v);
+}
 
 /**
  * 比较算子的「另一侧操作数」:可为字面 `value`,或跨路径 `ref`(关联前后态/帧条件,
@@ -170,7 +221,11 @@ function _operand(node, state) {
 function _bindScope(state, name, value) {
   const o = {};
   if (_isPlainObject(state)) {
-    for (const k of Object.keys(state)) if (!_FORBIDDEN_SEG.has(k)) o[k] = state[k];
+    for (const k of Object.keys(state)) {
+      if (!_FORBIDDEN_SEG.has(k)) {
+        o[k] = state[k];
+      }
+    }
   }
   o[name] = value;
   return o;
@@ -182,61 +237,102 @@ function _bindScope(state, name, value) {
  * [P1 切断] 全程不调用契约里的任何函数、不 eval、不反射;只读字段 + 固定 switch。
  */
 function _evalNode(node, state, budget) {
-  if (++budget.n > MAX_PRED_NODES) throw new Error('node budget exceeded');
-  if (!_isPlainObject(node) || typeof node.op !== 'string') return false;
+  if (++budget.n > MAX_PRED_NODES) {
+    throw new Error('node budget exceeded');
+  }
+  if (!_isPlainObject(node) || typeof node.op !== 'string') {
+    return false;
+  }
   const op = node.op;
-  if (!_AXIOM_SET.has(op)) throw new Error('unknown axiom: ' + op); // [P1] 封闭集外一律 fail-closed
+  if (!_AXIOM_SET.has(op)) {
+    throw new Error('unknown axiom: ' + op);
+  } // [P1] 封闭集外一律 fail-closed
 
   switch (op) {
-    case 'true': return true;
-    case 'false': return false;
+    case 'true':
+      return true;
+    case 'false':
+      return false;
 
     case 'and': {
       const args = node.args;
-      if (!Array.isArray(args) || args.length > MAX_ARGS) return false;
-      for (const a of args) if (!_evalNode(a, state, budget)) return false;
+      if (!Array.isArray(args) || args.length > MAX_ARGS) {
+        return false;
+      }
+      for (const a of args) {
+        if (!_evalNode(a, state, budget)) {
+          return false;
+        }
+      }
       return true; // 空 and = 真(vacuous)
     }
     case 'or': {
       const args = node.args;
-      if (!Array.isArray(args) || args.length > MAX_ARGS) return false;
-      for (const a of args) if (_evalNode(a, state, budget)) return true;
+      if (!Array.isArray(args) || args.length > MAX_ARGS) {
+        return false;
+      }
+      for (const a of args) {
+        if (_evalNode(a, state, budget)) {
+          return true;
+        }
+      }
       return false; // 空 or = 假
     }
     case 'not': {
-      if (!_isPlainObject(node.arg)) return false;
+      if (!_isPlainObject(node.arg)) {
+        return false;
+      }
       return !_evalNode(node.arg, state, budget);
     }
 
-    case 'exists': return _get(state, node.path) !== MISSING;
-    case 'absent': return _get(state, node.path) === MISSING;
+    case 'exists':
+      return _get(state, node.path) !== MISSING;
+    case 'absent':
+      return _get(state, node.path) === MISSING;
 
     case 'type': {
       const v = _get(state, node.path);
-      if (v === MISSING) return false;
+      if (v === MISSING) {
+        return false;
+      }
       return _typeOf(v) === node.value;
     }
 
     case 'eq': {
       const v = _get(state, node.path);
-      if (v === MISSING) return false;
+      if (v === MISSING) {
+        return false;
+      }
       const r = _operand(node, state);
       return r.present ? _deepEq(v, r.value, budget) : false;
     }
     case 'ne': {
       const v = _get(state, node.path);
-      if (v === MISSING) return false;       // 缺失既不 eq 也不 ne:对未知保持保守(fail-closed)
+      if (v === MISSING) {
+        return false;
+      } // 缺失既不 eq 也不 ne:对未知保持保守(fail-closed)
       const r = _operand(node, state);
       return r.present ? !_deepEq(v, r.value, budget) : false;
     }
 
-    case 'lt': case 'le': case 'gt': case 'ge': {
+    case 'lt':
+    case 'le':
+    case 'gt':
+    case 'ge': {
       const v = _get(state, node.path);
       const r = _operand(node, state);
-      if (!r.present || !_finiteNum(v) || !_finiteNum(r.value)) return false; // 两侧须有限数,否则 fail-closed
-      if (op === 'lt') return v < r.value;
-      if (op === 'le') return v <= r.value;
-      if (op === 'gt') return v > r.value;
+      if (!r.present || !_finiteNum(v) || !_finiteNum(r.value)) {
+        return false;
+      } // 两侧须有限数,否则 fail-closed
+      if (op === 'lt') {
+        return v < r.value;
+      }
+      if (op === 'le') {
+        return v <= r.value;
+      }
+      if (op === 'gt') {
+        return v > r.value;
+      }
       return v >= r.value;
     }
 
@@ -244,36 +340,65 @@ function _evalNode(node, state, budget) {
       const v = _get(state, node.path);
       const r = _operand(node, state);
       const list = r.present ? r.value : undefined;
-      if (v === MISSING || !Array.isArray(list) || list.length > MAX_ARGS) return false;
-      for (const cand of list) if (_deepEq(v, cand, budget)) return true;
+      if (v === MISSING || !Array.isArray(list) || list.length > MAX_ARGS) {
+        return false;
+      }
+      for (const cand of list) {
+        if (_deepEq(v, cand, budget)) {
+          return true;
+        }
+      }
       return false;
     }
 
     case 'forbiddenKey': {
       const obj = _get(state, node.path);
-      if (obj === MISSING) return true;               // 对象不存在 = 不含任何越权键 = 满足
-      if (!_isPlainObject(obj) && !Array.isArray(obj)) return true;
+      if (obj === MISSING) {
+        return true;
+      } // 对象不存在 = 不含任何越权键 = 满足
+      if (!_isPlainObject(obj) && !Array.isArray(obj)) {
+        return true;
+      }
       const banned = Array.isArray(node.value) ? node.value : [];
       for (const key of banned) {
-        if (typeof key !== 'string') continue;
-        if (Object.prototype.hasOwnProperty.call(obj, key)) return false; // 命中越权键 → 不满足
+        if (typeof key !== 'string') {
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          return false;
+        } // 命中越权键 → 不满足
       }
       return true;
     }
 
-    case 'every': case 'some': {
+    case 'every':
+    case 'some': {
       // 谓词逻辑:有界量词。对 path 处数组逐元素,把元素以 node.as 绑进作用域后求值 node.body。
       const as = node.as;
-      if (typeof as !== 'string' || as.length === 0 || _FORBIDDEN_SEG.has(as)) return false; // [P6] 绑定名走私 → fail-closed
-      if (!_isPlainObject(node.body)) return false;
+      if (typeof as !== 'string' || as.length === 0 || _FORBIDDEN_SEG.has(as)) {
+        return false;
+      } // [P6] 绑定名走私 → fail-closed
+      if (!_isPlainObject(node.body)) {
+        return false;
+      }
       const arr = _get(state, node.path);
       // [P7] 缺失/非数组/超过元素上限 → fail-closed(注意:缺失数组 ≠ 空数组;无法确认即不放行)
-      if (arr === MISSING || !Array.isArray(arr) || arr.length > MAX_QUANT_ELEMS) return false;
+      if (arr === MISSING || !Array.isArray(arr) || arr.length > MAX_QUANT_ELEMS) {
+        return false;
+      }
       if (op === 'every') {
-        for (const el of arr) if (!_evalNode(node.body, _bindScope(state, as, el), budget)) return false;
+        for (const el of arr) {
+          if (!_evalNode(node.body, _bindScope(state, as, el), budget)) {
+            return false;
+          }
+        }
         return true; // 空数组 → 全称 ∀ 真(vacuous)
       }
-      for (const el of arr) if (_evalNode(node.body, _bindScope(state, as, el), budget)) return true;
+      for (const el of arr) {
+        if (_evalNode(node.body, _bindScope(state, as, el), budget)) {
+          return true;
+        }
+      }
       return false; // 空数组 → 存在 ∃ 假
     }
 
@@ -289,8 +414,12 @@ function _evalNode(node, state, budget) {
  */
 function evaluatePredicate(predicate, state, env) {
   try {
-    if (!isEnabled(env)) return false; // 门控关:V 不工作时按 fail-closed,绝不静默放行
-    if (predicate == null) return true; // 「无此约束」= vacuously true(注意:这不是放行一切,见 verify 语义)
+    if (!isEnabled(env)) {
+      return false;
+    } // 门控关:V 不工作时按 fail-closed,绝不静默放行
+    if (predicate == null) {
+      return true;
+    } // 「无此约束」= vacuously true(注意:这不是放行一切,见 verify 语义)
     return _evalNode(predicate, state || {}, { n: 0 });
   } catch {
     return false; // [P3] 任何异常 → fail-closed
@@ -315,10 +444,24 @@ function evaluatePredicate(predicate, state, env) {
 function verify(contract, states, env) {
   try {
     if (!isEnabled(env)) {
-      return { ok: false, stage: 'error', contract: null, pre: false, post: false, reason: 'verifier disabled (fail-closed)' };
+      return {
+        ok: false,
+        stage: 'error',
+        contract: null,
+        pre: false,
+        post: false,
+        reason: 'verifier disabled (fail-closed)',
+      };
     }
     if (!_isPlainObject(contract)) {
-      return { ok: false, stage: 'error', contract: null, pre: false, post: false, reason: 'contract must be a plain object' };
+      return {
+        ok: false,
+        stage: 'error',
+        contract: null,
+        pre: false,
+        post: false,
+        reason: 'contract must be a plain object',
+      };
     }
     const name = typeof contract.name === 'string' ? contract.name : null;
     const st = _isPlainObject(states) ? states : {};
@@ -328,14 +471,28 @@ function verify(contract, states, env) {
     // Φ_pre 在 preState 上求值。
     const preOk = contract.pre == null ? true : _evalNode(contract.pre, preState, { n: 0 });
     if (!preOk) {
-      return { ok: false, stage: 'pre', contract: name, pre: false, post: false, reason: 'Φ_pre 不成立' };
+      return {
+        ok: false,
+        stage: 'pre',
+        contract: name,
+        pre: false,
+        post: false,
+        reason: 'Φ_pre 不成立',
+      };
     }
 
     // 不变量 I(Hoare):动作必须**保持**它,故须在前态成立(否则连入口都违规)。
     if (contract.inv != null) {
       const invPre = _evalNode(contract.inv, preState, { n: 0 });
       if (!invPre) {
-        return { ok: false, stage: 'inv', contract: name, pre: true, post: false, reason: '不变量在前态不成立' };
+        return {
+          ok: false,
+          stage: 'inv',
+          contract: name,
+          pre: true,
+          post: false,
+          reason: '不变量在前态不成立',
+        };
       }
     }
 
@@ -343,21 +500,42 @@ function verify(contract, states, env) {
     const postView = { in: preState, out: postState };
     const postOk = contract.post == null ? true : _evalNode(contract.post, postView, { n: 0 });
     if (!postOk) {
-      return { ok: false, stage: 'post', contract: name, pre: true, post: false, reason: 'Φ_post 不成立' };
+      return {
+        ok: false,
+        stage: 'post',
+        contract: name,
+        pre: true,
+        post: false,
+        reason: 'Φ_post 不成立',
+      };
     }
 
     // 不变量 I 必须在后态依旧成立(`balance ≥ 0` 恒成立)。
     if (contract.inv != null) {
       const invPost = _evalNode(contract.inv, postState, { n: 0 });
       if (!invPost) {
-        return { ok: false, stage: 'inv', contract: name, pre: true, post: true, reason: '不变量在后态被破坏' };
+        return {
+          ok: false,
+          stage: 'inv',
+          contract: name,
+          pre: true,
+          post: true,
+          reason: '不变量在后态被破坏',
+        };
       }
     }
 
     return { ok: true, stage: null, contract: name, pre: true, post: true, reason: null };
   } catch (e) {
     // [P3] 含未知算子(_evalNode 抛)、预算超限、任意异常 → fail-closed。
-    return { ok: false, stage: 'error', contract: null, pre: false, post: false, reason: e && e.message ? e.message : String(e) };
+    return {
+      ok: false,
+      stage: 'error',
+      contract: null,
+      pre: false,
+      post: false,
+      reason: e && e.message ? e.message : String(e),
+    };
   }
 }
 
@@ -369,22 +547,38 @@ function verify(contract, states, env) {
 function canonicalize(value) {
   const seen = new Set();
   const enc = (v) => {
-    if (v === null) return 'null';
+    if (v === null) {
+      return 'null';
+    }
     const t = _typeOf(v);
-    if (t === 'number') return Number.isFinite(v) ? JSON.stringify(v) : '"__nonfinite__"';
-    if (t === 'string' || t === 'boolean') return JSON.stringify(v);
-    if (t === 'array') return '[' + v.map(enc).join(',') + ']';
+    if (t === 'number') {
+      return Number.isFinite(v) ? JSON.stringify(v) : '"__nonfinite__"';
+    }
+    if (t === 'string' || t === 'boolean') {
+      return JSON.stringify(v);
+    }
+    if (t === 'array') {
+      return '[' + v.map(enc).join(',') + ']';
+    }
     if (t === 'object') {
-      if (seen.has(v)) return '"__cycle__"'; // 防环
+      if (seen.has(v)) {
+        return '"__cycle__"';
+      } // 防环
       seen.add(v);
-      const keys = Object.keys(v).filter((k) => !_FORBIDDEN_SEG.has(k)).sort();
+      const keys = Object.keys(v)
+        .filter((k) => !_FORBIDDEN_SEG.has(k))
+        .sort();
       const body = keys.map((k) => JSON.stringify(k) + ':' + enc(v[k])).join(',');
       seen.delete(v);
       return '{' + body + '}';
     }
     return '"__unrepresentable__"'; // function/symbol/bigint/undefined:不可表示 → 占位(不抛)
   };
-  try { return enc(value); } catch { return '"__canonicalize_error__"'; }
+  try {
+    return enc(value);
+  } catch {
+    return '"__canonicalize_error__"';
+  }
 }
 
 /** 暴露极小公理集供独立审计(「V 的公理集必须极小」可被外部核对)。 */

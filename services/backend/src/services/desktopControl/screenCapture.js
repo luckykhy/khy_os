@@ -13,25 +13,51 @@
  * 低风险审批级（见 safetyGate.js），但仍受总闸门 KHY_DESKTOP_CONTROL 管辖。
  */
 
+const { execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile } = require('child_process');
 
 const detector = require('./backendDetector');
 
-const CAPTURE_DIR = path.join(os.tmpdir(), 'khy-desktop', 'captures');
+/**
+ * Managed captures directory. Honors KHY_SCREENSHOT_DIR override; default
+ * os.tmpdir()/khy-desktop/captures. MUST stay in sync with the validator in
+ * screenshotToContentBlocks.js (_capturesDir) — if the write path and the
+ * validation path disagree, every screenshot is rejected and vision content
+ * blocks are never injected into the model.
+ */
+function capturesDir() {
+  if (process.env.KHY_SCREENSHOT_DIR) {
+    return path.resolve(process.env.KHY_SCREENSHOT_DIR);
+  }
+  return path.join(os.tmpdir(), 'khy-desktop', 'captures');
+}
+
+const CAPTURE_DIR = capturesDir();
 
 function ensureDir() {
-  if (!fs.existsSync(CAPTURE_DIR)) fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+  if (!fs.existsSync(CAPTURE_DIR)) {
+    fs.mkdirSync(CAPTURE_DIR, { recursive: true });
+  }
   return CAPTURE_DIR;
+}
+
+/** Runtime-synced captures dir — picks up KHY_SCREENSHOT_DIR even when it is
+ * set after module load, so the write path always matches the validator. */
+function currentCapturesDir() {
+  const dir = capturesDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
 }
 
 /** 用单调计数器命名，避免依赖被禁用的 Date.now/random（确定性 + 可测）。 */
 let _seq = 0;
 function _outPath(prefix) {
   _seq += 1;
-  return path.join(ensureDir(), `${prefix}_${process.pid}_${_seq}.png`);
+  return path.join(currentCapturesDir(), `${prefix}_${process.pid}_${_seq}.png`);
 }
 
 function _isFiniteInt(n) {
@@ -42,8 +68,15 @@ function _runExecFile(cmd, args, deps, timeoutMs = 15000) {
   const runner = deps.execFile || execFile;
   return new Promise((resolve) => {
     runner(cmd, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
-      if (err) resolve({ ok: false, error: (err && err.message) || String(err), stderr: String(stderr || '') });
-      else resolve({ ok: true, stdout: String(stdout || '') });
+      if (err) {
+        resolve({
+          ok: false,
+          error: (err && err.message) || String(err),
+          stderr: String(stderr || ''),
+        });
+      } else {
+        resolve({ ok: true, stdout: String(stdout || '') });
+      }
     });
   });
 }
@@ -75,14 +108,20 @@ async function capture(opts = {}, deps = {}) {
 
   const out = opts.outPath || _outPath('screen');
   let built;
-  if (opts.region) {
+  if (opts.desktop && backend.ops.desktopFull) {
+    // 桌面专用：后端收起所有窗口（Win+D）→ 截图 → 恢复，拍到桌面图标而非前台终端。
+    built = backend.ops.desktopFull(out);
+  } else if (opts.region) {
     const { x, y, w, h } = opts.region;
     if (![x, y, w, h].every(_isFiniteInt) || w <= 0 || h <= 0 || x < 0 || y < 0) {
       return { success: false, error: '区域截屏参数非法：x,y,w,h 必须为非负整数且 w,h>0。' };
     }
     built = backend.ops.region ? backend.ops.region(x, y, w, h, out) : null;
     if (!built) {
-      return { success: false, error: `后端 ${backend.id} 不支持脚本化区域截屏，请改用全屏或换后端。` };
+      return {
+        success: false,
+        error: `后端 ${backend.id} 不支持脚本化区域截屏，请改用全屏或换后端。`,
+      };
     }
   } else {
     built = backend.ops.full(out);
@@ -91,14 +130,23 @@ async function capture(opts = {}, deps = {}) {
   const res = await _runExecFile(built.cmd, built.args, deps);
   const exists = deps.exists || fs.existsSync;
   if (!res.ok && !exists(out)) {
-    return { success: false, backend: backend.id, error: `截屏失败：${res.error}`, stderr: res.stderr };
+    return {
+      success: false,
+      backend: backend.id,
+      error: `截屏失败：${res.error}`,
+      stderr: res.stderr,
+    };
   }
   if (!exists(out)) {
     return { success: false, backend: backend.id, error: '截屏命令返回成功但未生成文件。' };
   }
 
   let bytes = 0;
-  try { bytes = (deps.statSize ? deps.statSize(out) : fs.statSync(out).size); } catch { /* ignore */ }
+  try {
+    bytes = deps.statSize ? deps.statSize(out) : fs.statSync(out).size;
+  } catch {
+    /* ignore */
+  }
 
   return { success: true, path: out, backend: backend.id, bytes, region: opts.region || null };
 }
@@ -107,5 +155,7 @@ module.exports = {
   capture,
   CAPTURE_DIR,
   ensureDir,
+  capturesDir,
+  currentCapturesDir,
   _internals: { _isFiniteInt, _outPath },
 };

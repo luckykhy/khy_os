@@ -19,7 +19,7 @@
  */
 
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 const CHANGE_THRESHOLD = 0.4; // >40% of the line changed → fall back to line-level
 
@@ -38,14 +38,18 @@ const MAX_LCS_CELLS = 1_000_000;
 // unguarded LCS, byte-identical output but vulnerable to OOM/hang on huge lines
 // (honest escape hatch, not the recommended state).
 function wordDiffGuardEnabled(env = process.env) {
-  const flag = String((env && env.KHY_WORD_DIFF_GUARD) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_WORD_DIFF_GUARD) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
 // Gate for the CC-aligned char-length change-ratio metric (default on). Off
 // (=0/false/off/no) → legacy non-whitespace token-count metric, byte-identical.
 function wordDiffCharRatioEnabled(env = process.env) {
-  const flag = String((env && env.KHY_WORD_DIFF_CHAR_RATIO) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_WORD_DIFF_CHAR_RATIO) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -57,7 +61,9 @@ function wordDiffCharRatioEnabled(env = process.env) {
  * @returns {string[]}
  */
 function tokenizeLine(line) {
-  if (!line) return [];
+  if (!line) {
+    return [];
+  }
   const tokens = [];
   let i = 0;
   while (i < line.length) {
@@ -66,9 +72,9 @@ function tokenizeLine(line) {
     // Surrogate pair (astral code point: emoji, rare CJK ext-B+, etc.) — must be
     // kept as ONE token. Splitting it by UTF-16 code unit would emit two lone
     // surrogates that render as the replacement char (encoding-safety req ③).
-    if (ch >= 0xD800 && ch <= 0xDBFF && i + 1 < line.length) {
+    if (ch >= 0xd800 && ch <= 0xdbff && i + 1 < line.length) {
       const lo = line.charCodeAt(i + 1);
-      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+      if (lo >= 0xdc00 && lo <= 0xdfff) {
         tokens.push(line.slice(i, i + 2));
         i += 2;
         continue;
@@ -76,11 +82,14 @@ function tokenizeLine(line) {
     }
 
     // CJK Unified Ideographs + extensions + common CJK ranges
-    if ((ch >= 0x4E00 && ch <= 0x9FFF) ||   // CJK Unified Ideographs
-        (ch >= 0x3400 && ch <= 0x4DBF) ||   // CJK Extension A
-        (ch >= 0xF900 && ch <= 0xFAFF) ||   // CJK Compatibility Ideographs
-        (ch >= 0x3000 && ch <= 0x303F) ||   // CJK Symbols and Punctuation
-        (ch >= 0xFF00 && ch <= 0xFFEF)) {   // Fullwidth Forms
+    if (
+      (ch >= 0x4e00 && ch <= 0x9fff) || // CJK Unified Ideographs
+      (ch >= 0x3400 && ch <= 0x4dbf) || // CJK Extension A
+      (ch >= 0xf900 && ch <= 0xfaff) || // CJK Compatibility Ideographs
+      (ch >= 0x3000 && ch <= 0x303f) || // CJK Symbols and Punctuation
+      (ch >= 0xff00 && ch <= 0xffef)
+    ) {
+      // Fullwidth Forms
       tokens.push(line[i]);
       i++;
       continue;
@@ -89,20 +98,25 @@ function tokenizeLine(line) {
     // Whitespace run
     if (ch === 32 || ch === 9) {
       let j = i;
-      while (j < line.length && (line.charCodeAt(j) === 32 || line.charCodeAt(j) === 9)) j++;
+      while (j < line.length && (line.charCodeAt(j) === 32 || line.charCodeAt(j) === 9)) {
+        j++;
+      }
       tokens.push(line.slice(i, j));
       i = j;
       continue;
     }
 
     // Word run: letters, digits, underscore
-    if ((ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122) ||
-        (ch >= 48 && ch <= 57) || ch === 95) {
+    if ((ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122) || (ch >= 48 && ch <= 57) || ch === 95) {
       let j = i;
       while (j < line.length) {
         const cc = line.charCodeAt(j);
-        if ((cc >= 65 && cc <= 90) || (cc >= 97 && cc <= 122) ||
-            (cc >= 48 && cc <= 57) || cc === 95) {
+        if (
+          (cc >= 65 && cc <= 90) ||
+          (cc >= 97 && cc <= 122) ||
+          (cc >= 48 && cc <= 57) ||
+          cc === 95
+        ) {
           j++;
         } else {
           break;
@@ -137,7 +151,11 @@ function computeWordDiff(oldTokens, newTokens, env = process.env) {
 
   // Fast path: identical
   if (m === n && oldTokens.every((t, i) => t === newTokens[i])) {
-    return { oldRanges: new Array(m).fill(false), newRanges: new Array(n).fill(false), changeRatio: 0 };
+    return {
+      oldRanges: new Array(m).fill(false),
+      newRanges: new Array(n).fill(false),
+      changeRatio: 0,
+    };
   }
 
   // Overflow guard: the LCS matrices below are O(m·n) in time AND memory. A huge
@@ -179,13 +197,15 @@ function computeWordDiff(oldTokens, newTokens, env = process.env) {
   // Backtrack to find which tokens are in LCS
   const oldInLCS = new Array(m).fill(false);
   const newInLCS = new Array(n).fill(false);
-  let i = m, j = n;
+  let i = m,
+    j = n;
   while (i > 0 && j > 0) {
     const d = dir[i * (n + 1) + j];
     if (d === 0) {
       oldInLCS[i - 1] = true;
       newInLCS[j - 1] = true;
-      i--; j--;
+      i--;
+      j--;
     } else if (d === 1) {
       i--;
     } else {
@@ -194,8 +214,8 @@ function computeWordDiff(oldTokens, newTokens, env = process.env) {
   }
 
   // Ranges: tokens NOT in LCS are changed
-  const oldRanges = oldInLCS.map(v => !v);
-  const newRanges = newInLCS.map(v => !v);
+  const oldRanges = oldInLCS.map((v) => !v);
+  const newRanges = newInLCS.map((v) => !v);
 
   // Change ratio. CC (StructuredDiff/Fallback.tsx::generateWordDiffElements):
   //   totalLength   = removedLineText.length + addedLineText.length   (incl. whitespace)
@@ -212,17 +232,23 @@ function computeWordDiff(oldTokens, newTokens, env = process.env) {
     let totalLen = 0;
     for (let idx = 0; idx < m; idx++) {
       totalLen += oldTokens[idx].length;
-      if (oldRanges[idx]) changedLen += oldTokens[idx].length;
+      if (oldRanges[idx]) {
+        changedLen += oldTokens[idx].length;
+      }
     }
     for (let idx = 0; idx < n; idx++) {
       totalLen += newTokens[idx].length;
-      if (newRanges[idx]) changedLen += newTokens[idx].length;
+      if (newRanges[idx]) {
+        changedLen += newTokens[idx].length;
+      }
     }
     changeRatio = totalLen > 0 ? changedLen / totalLen : 0;
   } else {
-    const totalNonWS = oldTokens.filter(t => t.trim()).length + newTokens.filter(t => t.trim()).length;
-    const changedNonWS = oldTokens.filter((t, idx) => oldRanges[idx] && t.trim()).length +
-                          newTokens.filter((t, idx) => newRanges[idx] && t.trim()).length;
+    const totalNonWS =
+      oldTokens.filter((t) => t.trim()).length + newTokens.filter((t) => t.trim()).length;
+    const changedNonWS =
+      oldTokens.filter((t, idx) => oldRanges[idx] && t.trim()).length +
+      newTokens.filter((t, idx) => newRanges[idx] && t.trim()).length;
     changeRatio = totalNonWS > 0 ? changedNonWS / totalNonWS : 0;
   }
 
@@ -248,7 +274,9 @@ function renderWordDiffLine(oldLine, newLine, theme, env = process.env) {
   const { oldRanges, newRanges, changeRatio } = computeWordDiff(oldTokens, newTokens, env);
 
   // Fall back to line-level if too many changes
-  if (changeRatio > CHANGE_THRESHOLD) return null;
+  if (changeRatio > CHANGE_THRESHOLD) {
+    return null;
+  }
 
   const chalk = c();
 
@@ -284,8 +312,11 @@ function _coalesceSegments(tokens, ranges) {
   for (let i = 0; i < tokens.length; i++) {
     const changed = !!ranges[i];
     const last = segs.length ? segs[segs.length - 1] : null;
-    if (last && last.changed === changed) last.text += tokens[i];
-    else segs.push({ text: tokens[i], changed });
+    if (last && last.changed === changed) {
+      last.text += tokens[i];
+    } else {
+      segs.push({ text: tokens[i], changed });
+    }
   }
   return segs;
 }
@@ -324,7 +355,9 @@ function computeWordDiffSegments(oldLine, newLine, env = process.env) {
     const { oldRanges, newRanges, changeRatio } = computeWordDiff(oldTokens, newTokens, env);
     // Too much of the line changed → word-level highlighting is just noise; fall
     // back to a solid line (matches CC's CHANGE_THRESHOLD branch).
-    if (changeRatio > CHANGE_THRESHOLD) return wholeLine();
+    if (changeRatio > CHANGE_THRESHOLD) {
+      return wholeLine();
+    }
     return {
       old: _coalesceSegments(oldTokens, oldRanges),
       new: _coalesceSegments(newTokens, newRanges),

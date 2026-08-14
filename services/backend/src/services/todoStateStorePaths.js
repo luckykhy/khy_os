@@ -31,10 +31,12 @@ const DOT_DIR = '.khyquant';
 const TMP_SUBDIR = 'khyquant';
 
 /** 门控:KHY_TODO_STATE_UNIFY 默认开,仅 {0,false,off,no} 关。 */
-function todoStateUnifyEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function todoStateUnifyEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_TODO_STATE_UNIFY;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;

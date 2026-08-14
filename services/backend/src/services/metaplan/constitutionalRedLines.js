@@ -56,15 +56,18 @@ const {
  */
 function checkAction(action = {}) {
   const params = action.params || {};
-  const tool = String(action.tool || params.tool || '').trim().toLowerCase();
+  const tool = String(action.tool || params.tool || '')
+    .trim()
+    .toLowerCase();
   const command = _str(action.command != null ? action.command : params.command);
   const sql = _str(params.sql != null ? params.sql : params.query);
-  const path = _str(action.path != null ? action.path : (params.path || params.file || params.filename));
+  const path = _str(
+    action.path != null ? action.path : params.path || params.file || params.filename
+  );
   const content = _str(action.content != null ? action.content : params.content);
 
   const commandish = `${command}\n${sql}`;
-  const isDelete = DELETE_TOOL_NAMES.has(tool)
-    || /\b(rm|del|unlink|rmdir)\b/i.test(command);
+  const isDelete = DELETE_TOOL_NAMES.has(tool) || /\b(rm|del|unlink|rmdir)\b/i.test(command);
 
   // 红线 1: database destruction.
   if (_any(DB_DROP_PATTERNS, commandish) || _any(DB_FILE_PATTERNS, `${command} ${path}`)) {
@@ -76,10 +79,16 @@ function checkAction(action = {}) {
 
   // 红线 2: secret exposure — deleting/leaking a secrets file, or content that
   // embeds a live credential being written/emitted.
-  if (_any(SECRET_PATH_PATTERNS, path) && (isDelete || /(>|>>|tee|curl|wget|fetch|post)/i.test(command))) {
+  if (
+    _any(SECRET_PATH_PATTERNS, path) &&
+    (isDelete || /(>|>>|tee|curl|wget|fetch|post)/i.test(command))
+  ) {
     return _hit('secret_exposure', '检测到对机密文件的删除/外泄操作（宪法红线 2）。');
   }
-  if (_any(SECRET_EXFIL_PATTERNS, content) && /(curl|wget|fetch|http|post|console\.log|process\.stdout|>>?)/i.test(`${command}${content}`)) {
+  if (
+    _any(SECRET_EXFIL_PATTERNS, content) &&
+    /(curl|wget|fetch|http|post|console\.log|process\.stdout|>>?)/i.test(`${command}${content}`)
+  ) {
     return _hit('secret_exposure', '检测到疑似将机密/私钥写入外发或日志（宪法红线 2）。');
   }
 
@@ -89,7 +98,10 @@ function checkAction(action = {}) {
       return _hit('package_core_delete', '检测到删除/清空 package.json（宪法红线 3）。');
     }
     if (_stripsDependencies(content)) {
-      return _hit('package_core_delete', '检测到 package.json 写入将清空核心依赖块（宪法红线 3）。');
+      return _hit(
+        'package_core_delete',
+        '检测到 package.json 写入将清空核心依赖块（宪法红线 3）。'
+      );
     }
   }
 
@@ -98,10 +110,14 @@ function checkAction(action = {}) {
 
 /** Heuristic: a package.json candidate that drops the dependencies block. */
 function _stripsDependencies(content) {
-  if (!content || !/[{]/.test(content)) return false;
+  if (!content || !/[{]/.test(content)) {
+    return false;
+  }
   try {
     const obj = JSON.parse(content);
-    if (!obj || typeof obj !== 'object') return false;
+    if (!obj || typeof obj !== 'object') {
+      return false;
+    }
     const deps = obj.dependencies;
     return deps != null && typeof deps === 'object' && Object.keys(deps).length === 0;
   } catch {
@@ -123,7 +139,9 @@ function _hit(rule, reason) {
  */
 function enforce(currentStrategy, action) {
   const hit = checkAction(action);
-  if (!hit) return { strategy: currentStrategy, redLine: null };
+  if (!hit) {
+    return { strategy: currentStrategy, redLine: null };
+  }
   return { strategy: strategy.escalate(currentStrategy, hit.forced), redLine: hit };
 }
 

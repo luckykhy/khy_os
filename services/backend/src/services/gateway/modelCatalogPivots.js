@@ -20,8 +20,14 @@
  */
 
 const VIEWS = [
-  'by-model', 'by-provider', 'by-key', 'by-capability',
-  'by-tier', 'by-status', 'by-connection', 'flat',
+  'by-model',
+  'by-provider',
+  'by-key',
+  'by-capability',
+  'by-tier',
+  'by-status',
+  'by-connection',
+  'flat',
 ];
 
 const CAPABILITY_LABELS = { text: '文本', audio: '语音', image: '图片', video: '视频' };
@@ -40,9 +46,13 @@ function _groupBy(edges, keyFn, labelFn) {
     const keys = keyFn(edge);
     const list = Array.isArray(keys) ? keys : [keys];
     for (const k of list) {
-      if (k === undefined || k === null || k === '') continue;
+      if (k === undefined || k === null || k === '') {
+        continue;
+      }
       const key = String(k);
-      if (!map.has(key)) map.set(key, { groupKey: key, groupLabel: labelFn ? labelFn(key) : key, edges: [] });
+      if (!map.has(key)) {
+        map.set(key, { groupKey: key, groupLabel: labelFn ? labelFn(key) : key, edges: [] });
+      }
       map.get(key).edges.push(edge);
     }
   }
@@ -61,22 +71,36 @@ function pivot(edges, viewMode, opts = {}) {
   const view = VIEWS.includes(viewMode) ? viewMode : 'by-provider';
   let rows = Array.isArray(edges) ? edges : [];
 
-  const q = String(opts.search || '').trim().toLowerCase();
+  const q = String(opts.search || '')
+    .trim()
+    .toLowerCase();
   if (q) {
-    rows = rows.filter(e =>
-      String(e.model || '').toLowerCase().includes(q)
-      || String(e.provider || '').toLowerCase().includes(q)
-      || String(e.providerLabel || '').toLowerCase().includes(q));
+    rows = rows.filter(
+      (e) =>
+        String(e.model || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(e.provider || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(e.providerLabel || '')
+          .toLowerCase()
+          .includes(q)
+    );
   }
 
   switch (view) {
     case 'by-model':
-      return _groupBy(rows, e => e.model);
+      return _groupBy(rows, (e) => e.model);
     case 'by-provider':
-      return _groupBy(rows, e => e.provider, k => {
-        const first = rows.find(e => e.provider === k);
-        return first ? first.providerLabel : k;
-      });
+      return _groupBy(
+        rows,
+        (e) => e.provider,
+        (k) => {
+          const first = rows.find((e) => e.provider === k);
+          return first ? first.providerLabel : k;
+        }
+      );
     case 'by-key':
       // One group per key id; an edge with N keys appears under each. An edge with
       // no own key id falls into one of two synthetic buckets: a system/global key
@@ -85,18 +109,34 @@ function pivot(edges, viewMode, opts = {}) {
       // keeps a configured system key from being mislabelled as missing on the
       // user plane just because its id is not exposed.
       return _groupBy(rows, (e) => {
-        if (e.keyIds && e.keyIds.length) return e.keyIds;
-        if (typeof e.status === 'string' && e.status.startsWith('system-')) return ['(system key)'];
+        if (e.keyIds && e.keyIds.length) {
+          return e.keyIds;
+        }
+        if (typeof e.status === 'string' && e.status.startsWith('system-')) {
+          return ['(system key)'];
+        }
         return ['(no key)'];
       });
     case 'by-capability':
-      return _groupBy(rows, e => e.capability, k => CAPABILITY_LABELS[k] || k);
+      return _groupBy(
+        rows,
+        (e) => e.capability,
+        (k) => CAPABILITY_LABELS[k] || k
+      );
     case 'by-tier':
-      return _groupBy(rows, e => e.tier);
+      return _groupBy(rows, (e) => e.tier);
     case 'by-status':
-      return _groupBy(rows, e => e.status, k => STATUS_LABELS[k] || k);
+      return _groupBy(
+        rows,
+        (e) => e.status,
+        (k) => STATUS_LABELS[k] || k
+      );
     case 'by-connection':
-      return _groupBy(rows, e => e.connectionMode, k => CONNECTION_LABELS[k] || k);
+      return _groupBy(
+        rows,
+        (e) => e.connectionMode,
+        (k) => CONNECTION_LABELS[k] || k
+      );
     case 'flat':
     default:
       return [{ groupKey: 'all', groupLabel: '全部', edges: rows }];

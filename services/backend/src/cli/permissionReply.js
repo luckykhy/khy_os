@@ -21,13 +21,18 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function permissionReplyEnabled(env = process.env) {
-  const flag = String((env && env.KHY_PERMISSION_REPLY_TOKENS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_PERMISSION_REPLY_TOKENS) || '')
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(flag);
 }
 
 // 归一:NFKC 顺带把全角 ASCII(１/Ｙ 等)折半角,零依赖;再 trim + lowercase。
 function _normalize(input) {
-  return String(input == null ? '' : input).normalize('NFKC').trim().toLowerCase();
+  return String(input == null ? '' : input)
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase();
 }
 
 // ── 词集 ──────────────────────────────────────────────────────────────
@@ -35,7 +40,18 @@ function _normalize(input) {
 
 // 否定:优先级最高。英文既有整串集 + 少量明确否定子串(no 不入子串以免误吞 now/none)。
 const _NEG_CJK = ['不', '否', '别', '拒', '取消', '算了', '放弃', '停'];
-const _NEG_EXACT = new Set(['no', 'n', 'nope', 'cancel', 'deny', 'stop', 'reject', 'abort', 'false', '0']);
+const _NEG_EXACT = new Set([
+  'no',
+  'n',
+  'nope',
+  'cancel',
+  'deny',
+  'stop',
+  'reject',
+  'abort',
+  'false',
+  '0',
+]);
 const _NEG_SUBSTR = ['cancel', 'deny', 'stop', 'reject', 'abort'];
 
 // allow-always:须在 allow 之前(「总是允许」含「允许」)。
@@ -43,15 +59,56 @@ const _ALWAYS_CJK = ['信任', '总是', '一直', '永久', '始终', '永远']
 const _ALWAYS_EXACT = new Set(['always', 'trust', 'a']);
 
 // allow。
-const _ALLOW_CJK = ['是', '好', '可以', '行', '同意', '批准', '允许', '确认', '对', '嗯', '要', '继续', '执行', '通过', '准'];
-const _ALLOW_EXACT = new Set(['y', 'yes', 'ok', 'okay', 'sure', 'yep', 'yeah', 'approve', 'approved', 'allow', 'proceed', 'continue', 'go', 'true', '1']);
+const _ALLOW_CJK = [
+  '是',
+  '好',
+  '可以',
+  '行',
+  '同意',
+  '批准',
+  '允许',
+  '确认',
+  '对',
+  '嗯',
+  '要',
+  '继续',
+  '执行',
+  '通过',
+  '准',
+];
+const _ALLOW_EXACT = new Set([
+  'y',
+  'yes',
+  'ok',
+  'okay',
+  'sure',
+  'yep',
+  'yeah',
+  'approve',
+  'approved',
+  'allow',
+  'proceed',
+  'continue',
+  'go',
+  'true',
+  '1',
+]);
 
 function _hasCjk(text, list) {
-  for (const tok of list) if (text.indexOf(tok) !== -1) return true;
+  for (const tok of list) {
+    if (text.indexOf(tok) !== -1) {
+      return true;
+    }
+  }
   return false;
 }
+
 function _hasSubstr(text, list) {
-  for (const tok of list) if (text.indexOf(tok) !== -1) return true;
+  for (const tok of list) {
+    if (text.indexOf(tok) !== -1) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -62,18 +119,28 @@ function _hasSubstr(text, list) {
  * @returns {'allow'|'allow-always'|'deny'|null}  null = unrecognized (caller keeps default-deny)
  */
 function classifyPermissionReply(input, env = process.env) {
-  if (!permissionReplyEnabled(env)) return null;
+  if (!permissionReplyEnabled(env)) {
+    return null;
+  }
   const t = _normalize(input);
-  if (!t) return null; // 空串语义留给 call-site(逐字节不变)
+  if (!t) {
+    return null;
+  } // 空串语义留给 call-site(逐字节不变)
 
   // 1) 否定优先
-  if (_hasCjk(t, _NEG_CJK) || _NEG_EXACT.has(t) || _hasSubstr(t, _NEG_SUBSTR)) return 'deny';
+  if (_hasCjk(t, _NEG_CJK) || _NEG_EXACT.has(t) || _hasSubstr(t, _NEG_SUBSTR)) {
+    return 'deny';
+  }
 
   // 2) allow-always(在 allow 之前)
-  if (_hasCjk(t, _ALWAYS_CJK) || _ALWAYS_EXACT.has(t)) return 'allow-always';
+  if (_hasCjk(t, _ALWAYS_CJK) || _ALWAYS_EXACT.has(t)) {
+    return 'allow-always';
+  }
 
   // 3) allow
-  if (_hasCjk(t, _ALLOW_CJK) || _ALLOW_EXACT.has(t)) return 'allow';
+  if (_hasCjk(t, _ALLOW_CJK) || _ALLOW_EXACT.has(t)) {
+    return 'allow';
+  }
 
   // 4) 不认 → null(fail-closed,call-site default-deny)
   return null;

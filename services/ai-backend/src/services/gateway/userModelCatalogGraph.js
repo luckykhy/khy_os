@@ -117,9 +117,11 @@ async function buildCatalogGraph(userId, opts = {}) {
       const keyIds = relay.hasApiKey ? ['relay'] : [];
       const defaultModel = relay.modelId || '';
       const relayModels = new Map(); // model -> capability
-      if (defaultModel) relayModels.set(defaultModel, modelCapability.classifyCapability(defaultModel));
-      for (const m of (ownByProvider.get('relay') || [])) {
-        if (!relayModels.has(m.model)) relayModels.set(m.model, m.capability || modelCapability.classifyCapability(m.model));
+      if (defaultModel)
+        relayModels.set(defaultModel, modelCapability.classifyCapability(defaultModel));
+      for (const m of ownByProvider.get('relay') || []) {
+        if (!relayModels.has(m.model))
+          relayModels.set(m.model, m.capability || modelCapability.classifyCapability(m.model));
       }
       for (const [model, capability] of relayModels) {
         edges.push({
@@ -151,7 +153,11 @@ async function buildCatalogGraph(userId, opts = {}) {
     const byName = new Map();
     for (const p of providers) {
       if (!byName.has(p.provider)) {
-        byName.set(p.provider, { label: p.displayName || p.provider, keyIds: [], anyActive: false });
+        byName.set(p.provider, {
+          label: p.displayName || p.provider,
+          keyIds: [],
+          anyActive: false,
+        });
       }
       const g = byName.get(p.provider);
       g.keyIds.push(String(p.id));
@@ -205,7 +211,7 @@ async function buildCatalogGraph(userId, opts = {}) {
     const local = await fetchLocalModels();
     sources.local = { running: !!local.running, count: (local.models || []).length };
     if (local.error) errors.push({ source: 'local', error: local.error });
-    for (const m of (local.models || [])) {
+    for (const m of local.models || []) {
       if (has('local', m.id)) continue;
       edges.push({
         provider: 'local',
@@ -230,7 +236,7 @@ async function buildCatalogGraph(userId, opts = {}) {
   try {
     const global = await globalCatalogGraph.buildCatalogGraph({ live: false });
     let count = 0;
-    for (const e of (global.edges || [])) {
+    for (const e of global.edges || []) {
       // Never leak global key ids/material into a user's plane. Surface only the
       // fact that the system can (or cannot) serve this model.
       if (has(e.provider, e.model)) continue;

@@ -2,11 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ERRNO, IPC, METHOD, SERVICE, negErrno } = require('./m1Constants');
+
 const { createHeader, decodeFrame, encodeFrame } = require('./ipcCodec');
+const { ERRNO, IPC, METHOD, SERVICE, negErrno } = require('./m1Constants');
 
 function _asObjectPayload(payload) {
-  if (!payload || payload.length === 0) return {};
+  if (!payload || payload.length === 0) {
+    return {};
+  }
   const text = Buffer.from(payload).toString('utf-8');
   return JSON.parse(text);
 }
@@ -51,7 +54,9 @@ function createBuiltinRouter(options = {}) {
 
   function customHandler(serviceId, methodId) {
     const exact = custom[`${serviceId}:${methodId}`];
-    if (exact) return exact;
+    if (exact) {
+      return exact;
+    }
     return null;
   }
 

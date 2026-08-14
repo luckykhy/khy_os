@@ -25,11 +25,17 @@ function _parseKvArgs(tokens) {
   for (const tok of tokens) {
     const raw = String(tok || '');
     const eq = raw.indexOf('=');
-    if (eq === -1) continue;
+    if (eq === -1) {
+      continue;
+    }
     const key = raw.slice(0, eq).trim();
     let val = raw.slice(eq + 1);
-    if (!key) continue;
-    if (/^-?\d+(\.\d+)?$/.test(val)) val = Number(val);
+    if (!key) {
+      continue;
+    }
+    if (/^-?\d+(\.\d+)?$/.test(val)) {
+      val = Number(val);
+    }
     out[key] = val;
   }
   return out;
@@ -61,7 +67,9 @@ async function handleManage(parsed = {}) {
   // 无参数 / `list` → 打印能力矩阵。
   if (!first || first.toLowerCase() === 'list') {
     if (jsonMode) {
-      f.printRaw ? f.printRaw(JSON.stringify(reg.describe(), null, 2)) : console.log(JSON.stringify(reg.describe(), null, 2));
+      f.printRaw
+        ? f.printRaw(JSON.stringify(reg.describe(), null, 2))
+        : console.log(JSON.stringify(reg.describe(), null, 2));
     } else {
       _printMatrix(reg, f);
     }
@@ -127,8 +135,12 @@ function _renderResult(resourceId, op, result, f) {
   // 安装类操作的分级回执（manualOnly / offline）。
   if (result.manualOnly) {
     f.printWarn(result.reason || '该依赖需手动安装。');
-    if (result.displayCommand) f.printInfo(`  命令: ${result.displayCommand}`);
-    if (result.docsUrl) f.printInfo(`  文档: ${result.docsUrl}`);
+    if (result.displayCommand) {
+      f.printInfo(`  命令: ${result.displayCommand}`);
+    }
+    if (result.docsUrl) {
+      f.printInfo(`  文档: ${result.docsUrl}`);
+    }
     return;
   }
   if (result.offline) {

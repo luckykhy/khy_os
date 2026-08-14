@@ -756,6 +756,66 @@ describe('largeTasks route', () => {
     expect(metricsRes.body.data.metrics.event_total).toBeGreaterThan(0);
   });
 
+  test('builtin handler resumes from checkpoint step instead of replaying all steps', async () => {
+    // Regression anchor for the resume-from-checkpoint fix: a task that already
+    // saved a checkpoint must resume at step_no (skipping completed steps) and
+    // restore the saved state — NOT replay every step from index 0. Replaying
+    // from 0 would silently drop intermediate state (progress/partial results).
+    const createRes = await _invokeRoute('post', '/', {
+      body: {
+        type: 'resume-checkpoint-task',
+        payload_json: {
+          steps: [
+            { action: 'set', key: 'a', value: 999 }, // would clobber state if replayed
+            { action: 'set', key: 'b', value: 2 },
+            { action: 'set', key: 'c', value: 3 },
+          ],
+        },
+      },
+    });
+    const taskId = createRes.body.data.task.id;
+
+    // Simulate "previous run already completed step 0 and saved a checkpoint"
+    // with a state blob that differs from what step 0 would produce.
+    const cpRes = await _invokeRoute('post', '/:taskId/checkpoints', {
+      params: { taskId },
+      body: {
+        step_no: 1,
+        progress_pct: 33,
+        schema_version: 1,
+        state_blob_json: { state: { a: 1 }, step_index: 0 },
+      },
+    });
+    expect(cpRes.status).toBe(200);
+    expect(cpRes.body.success).toBe(true);
+
+    const runRes = await _invokeRoute('post', '/:taskId/run', {
+      params: { taskId },
+      body: {
+        dry_run: true,
+        commit: false,
+      },
+    });
+    expect(runRes.status).toBe(200);
+    expect(runRes.body.success).toBe(true);
+    const runResult = runRes.body.data.run_result;
+    expect(runResult.ok).toBe(true);
+
+    // Plan must show the resume step (not 0) and the checkpoint step.
+    expect(runResult.result.plan.resume_step).toBe(1);
+    expect(runResult.result.plan.checkpoint_step).toBe(1);
+    expect(runResult.result.plan.step_total).toBe(3);
+    expect(runResult.result.resumed_from_checkpoint).toBe(true);
+    expect(runResult.result.checkpoint_step).toBe(1);
+
+    // Restored state (a=1 from the checkpoint) must survive, and only the
+    // not-yet-done steps (b, c) execute. If the handler replayed from index 0,
+    // a would have been overwritten to 999.
+    expect(runResult.result.state.a).toBe(1);
+    expect(runResult.result.state.b).toBe(2);
+    expect(runResult.result.state.c).toBe(3);
+  });
+
   test('exposes retry classification fields in audit and events payloads', async () => {
     const nonRetryTask = runtime.createTask({
       type: 'audit-non-retry-task',

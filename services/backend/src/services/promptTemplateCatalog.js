@@ -45,7 +45,9 @@ function isEnabled(env) {
     if (flagRegistry.isRegistryEnabled(e)) {
       return flagRegistry.isFlagEnabled('KHY_PROMPT_TEMPLATE_CATALOG', e);
     }
-  } catch { /* 注册表异常 → 回退手写判定 */ }
+  } catch {
+    /* 注册表异常 → 回退手写判定 */
+  }
   return !_off(e.KHY_PROMPT_TEMPLATE_CATALOG);
 }
 
@@ -54,58 +56,120 @@ function isEnabled(env) {
 // 覆盖 12 个角度分类,便于弱模型/新用户快速上手不同类型任务。
 const BUILTIN_PROMPT_TEMPLATES = Object.freeze([
   // 写作
-  Object.freeze({ id: 'write-polish', title: '润色这段文字', category: '写作',
-    prompt: '帮我润色下面这段文字，让它更通顺、专业，同时保持原意：\n\n' }),
-  Object.freeze({ id: 'write-email', title: '写一封正式邮件', category: '写作',
-    prompt: '帮我写一封正式邮件，收件人是【谁】，目的是【要达成什么】，语气礼貌简洁。请先问我缺少的关键信息再动笔。' }),
+  Object.freeze({
+    id: 'write-polish',
+    title: '润色这段文字',
+    category: '写作',
+    prompt: '帮我润色下面这段文字，让它更通顺、专业，同时保持原意：\n\n',
+  }),
+  Object.freeze({
+    id: 'write-email',
+    title: '写一封正式邮件',
+    category: '写作',
+    prompt:
+      '帮我写一封正式邮件，收件人是【谁】，目的是【要达成什么】，语气礼貌简洁。请先问我缺少的关键信息再动笔。',
+  }),
 
   // 分析/总结
-  Object.freeze({ id: 'summarize-points', title: '提炼要点', category: '分析总结',
-    prompt: '帮我总结下面内容的核心要点，用简洁的分点列出，并指出最关键的一条：\n\n' }),
-  Object.freeze({ id: 'analyze-proscons', title: '分析利弊', category: '分析总结',
-    prompt: '帮我客观分析这件事的利弊和风险，并给出一个有理由的建议：\n\n' }),
+  Object.freeze({
+    id: 'summarize-points',
+    title: '提炼要点',
+    category: '分析总结',
+    prompt: '帮我总结下面内容的核心要点，用简洁的分点列出，并指出最关键的一条：\n\n',
+  }),
+  Object.freeze({
+    id: 'analyze-proscons',
+    title: '分析利弊',
+    category: '分析总结',
+    prompt: '帮我客观分析这件事的利弊和风险，并给出一个有理由的建议：\n\n',
+  }),
 
   // 翻译
-  Object.freeze({ id: 'translate-zh-en', title: '中英互译', category: '翻译',
-    prompt: '帮我把下面内容翻译成地道的英文（如果原文是英文则翻成中文），保留专业术语：\n\n' }),
+  Object.freeze({
+    id: 'translate-zh-en',
+    title: '中英互译',
+    category: '翻译',
+    prompt: '帮我把下面内容翻译成地道的英文（如果原文是英文则翻成中文），保留专业术语：\n\n',
+  }),
 
   // 编码
-  Object.freeze({ id: 'code-write', title: '写一个脚本', category: '编码',
-    prompt: '用 Python 写一个读取 CSV 并做分组统计的脚本，带简单的错误处理和注释。' }),
-  Object.freeze({ id: 'code-explain', title: '解释这段代码', category: '编码',
-    prompt: '逐段解释下面这段代码在做什么，指出可能的坑或改进点：\n\n' }),
+  Object.freeze({
+    id: 'code-write',
+    title: '写一个脚本',
+    category: '编码',
+    prompt: '用 Python 写一个读取 CSV 并做分组统计的脚本，带简单的错误处理和注释。',
+  }),
+  Object.freeze({
+    id: 'code-explain',
+    title: '解释这段代码',
+    category: '编码',
+    prompt: '逐段解释下面这段代码在做什么，指出可能的坑或改进点：\n\n',
+  }),
 
   // 代码审查
-  Object.freeze({ id: 'code-review', title: '审查代码隐患', category: '代码审查',
-    prompt: '帮我审查下面这段代码，重点看安全隐患、边界条件和错误处理，按严重程度列出问题：\n\n' }),
+  Object.freeze({
+    id: 'code-review',
+    title: '审查代码隐患',
+    category: '代码审查',
+    prompt: '帮我审查下面这段代码，重点看安全隐患、边界条件和错误处理，按严重程度列出问题：\n\n',
+  }),
 
   // 调试
-  Object.freeze({ id: 'debug-error', title: '帮我看报错', category: '调试',
-    prompt: '我遇到这个报错，帮我把它翻译成人话，分析可能的原因，并给出排查步骤：\n\n' }),
+  Object.freeze({
+    id: 'debug-error',
+    title: '帮我看报错',
+    category: '调试',
+    prompt: '我遇到这个报错，帮我把它翻译成人话，分析可能的原因，并给出排查步骤：\n\n',
+  }),
 
   // 规划/拆解
-  Object.freeze({ id: 'plan-breakdown', title: '拆解成任务清单', category: '规划',
-    prompt: '帮我把下面这个需求拆成可执行的任务清单，标出依赖关系和优先级：\n\n' }),
+  Object.freeze({
+    id: 'plan-breakdown',
+    title: '拆解成任务清单',
+    category: '规划',
+    prompt: '帮我把下面这个需求拆成可执行的任务清单，标出依赖关系和优先级：\n\n',
+  }),
 
   // 学习/解释
-  Object.freeze({ id: 'learn-explain', title: '通俗讲清一个概念', category: '学习',
-    prompt: '用通俗的比喻和一个简单例子，讲清楚【在此填入概念，如"梯度下降"】这个概念，假设我是初学者。' }),
+  Object.freeze({
+    id: 'learn-explain',
+    title: '通俗讲清一个概念',
+    category: '学习',
+    prompt:
+      '用通俗的比喻和一个简单例子，讲清楚【在此填入概念，如"梯度下降"】这个概念，假设我是初学者。',
+  }),
 
   // 数据处理
-  Object.freeze({ id: 'data-table', title: '整理成表格', category: '数据处理',
-    prompt: '帮我把下面这段杂乱信息整理成结构化的 Markdown 表格：\n\n' }),
+  Object.freeze({
+    id: 'data-table',
+    title: '整理成表格',
+    category: '数据处理',
+    prompt: '帮我把下面这段杂乱信息整理成结构化的 Markdown 表格：\n\n',
+  }),
 
   // 图像识别
-  Object.freeze({ id: 'vision-read', title: '识别图片内容', category: '图像',
-    prompt: '（请附上图片）帮我识别这张图片里的文字/表格/关键信息，整理成可复制的文本。' }),
+  Object.freeze({
+    id: 'vision-read',
+    title: '识别图片内容',
+    category: '图像',
+    prompt: '（请附上图片）帮我识别这张图片里的文字/表格/关键信息，整理成可复制的文本。',
+  }),
 
   // 创意
-  Object.freeze({ id: 'creative-ideas', title: '给我一些点子', category: '创意',
-    prompt: '围绕【在此填入主题】帮我头脑风暴 10 个有新意的点子，每个配一句话说明。' }),
+  Object.freeze({
+    id: 'creative-ideas',
+    title: '给我一些点子',
+    category: '创意',
+    prompt: '围绕【在此填入主题】帮我头脑风暴 10 个有新意的点子，每个配一句话说明。',
+  }),
 
   // 办公文书
-  Object.freeze({ id: 'office-report', title: '写一份小结', category: '办公',
-    prompt: '帮我根据下面要点写一份条理清晰的工作小结，分「进展/问题/下一步」三段：\n\n' }),
+  Object.freeze({
+    id: 'office-report',
+    title: '写一份小结',
+    category: '办公',
+    prompt: '帮我根据下面要点写一份条理清晰的工作小结，分「进展/问题/下一步」三段：\n\n',
+  }),
 ]);
 
 /**
@@ -115,10 +179,14 @@ const BUILTIN_PROMPT_TEMPLATES = Object.freeze([
  * @returns {Array<{id:string,title:string,category:string,prompt:string}>}
  */
 function listTemplates(opts = {}, env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   const category = opts && opts.category != null ? String(opts.category).trim() : '';
   const rows = BUILTIN_PROMPT_TEMPLATES.map((t) => ({ ...t }));
-  if (!category) return rows;
+  if (!category) {
+    return rows;
+  }
   return rows.filter((t) => t.category === category);
 }
 
@@ -128,7 +196,9 @@ function listTemplates(opts = {}, env) {
  * @returns {string[]}
  */
 function listCategories(env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   const seen = new Set();
   const out = [];
   for (const t of BUILTIN_PROMPT_TEMPLATES) {

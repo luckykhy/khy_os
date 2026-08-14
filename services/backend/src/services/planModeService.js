@@ -6,23 +6,30 @@
  *
  * State machine: idle → generating → reviewing → executing → complete
  */
-const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const readline = require('readline');
 
 // ── Plan Persistence ─────────────────────────────────────────────────
 const PLANS_DIR_NAME = 'plans';
 
 function _getPlansDir() {
-  const home = os.homedir();
-  return path.join(home, '.khyquant', PLANS_DIR_NAME);
+  // Portable-aware app home; fallback to the legacy location.
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return path.join(getAppHome(), PLANS_DIR_NAME);
+  } catch {
+    return path.join(os.homedir(), '.khyquant', PLANS_DIR_NAME);
+  }
 }
 
 function _ensurePlansDir() {
   const dir = _getPlansDir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   return dir;
 }
 
@@ -70,7 +77,9 @@ function savePlan(plan, userRequest, meta = {}) {
 function updatePersistedPlan(slug, updates) {
   const filePath = path.join(_getPlansDir(), `${slug}.json`);
   try {
-    if (!fs.existsSync(filePath)) return false;
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
     const existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const merged = { ...existing, ...updates, updatedAt: new Date().toISOString() };
     fs.writeFileSync(filePath, JSON.stringify(merged, null, 2), 'utf-8');
@@ -88,7 +97,9 @@ function updatePersistedPlan(slug, updates) {
 function loadPersistedPlan(slug) {
   const filePath = path.join(_getPlansDir(), `${slug}.json`);
   try {
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   } catch {
     return null;
@@ -103,36 +114,64 @@ function loadPersistedPlan(slug) {
 function listPersistedPlans(limit = 10) {
   const dir = _getPlansDir();
   try {
-    if (!fs.existsSync(dir)) return [];
-    const files = fs.readdirSync(dir)
-      .filter(f => f.endsWith('.json'))
-      .map(f => {
+    if (!fs.existsSync(dir)) {
+      return [];
+    }
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => {
         try {
           const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
-          return { slug: data.slug, userRequest: (data.userRequest || '').slice(0, 120), state: data.state, createdAt: data.createdAt, cwd: data.cwd };
-        } catch { return null; }
+          return {
+            slug: data.slug,
+            userRequest: (data.userRequest || '').slice(0, 120),
+            state: data.state,
+            createdAt: data.createdAt,
+            cwd: data.cwd,
+          };
+        } catch {
+          return null;
+        }
       })
       .filter(Boolean)
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return files.slice(0, limit);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // ── State ─────────────────────────────────────────────────────────────
 let _state = 'idle'; // idle | generating | reviewing | executing | complete
 let _currentPlan = null;
 let _currentPlanSlug = null;
+let _verification = null; // [P-verify] last plan verification report (null when not run)
 
 function isStepExecutionFailure(result) {
-  if (!result || typeof result !== 'object') return true;
-  if (result.errorType || result.blocked) return true;
+  if (!result || typeof result !== 'object') {
+    return true;
+  }
+  if (result.errorType || result.blocked) {
+    return true;
+  }
 
   const reply = String(result.reply || '').trim();
-  if (!reply) return true;
+  if (!reply) {
+    return true;
+  }
 
-  if (/^\s*(AI 请求失败|AI 未返回有效回复|error:|错误:)/i.test(reply)) return true;
-  if (/(permission denied|operation not permitted|access denied|forbidden|not allowed)/i.test(reply)) return true;
-  if (/(权限被拒绝|未授权|任务被权限阻止|无法完成|无法运行|未创建)/.test(reply)) return true;
+  if (/^\s*(AI 请求失败|AI 未返回有效回复|error:|错误:)/i.test(reply)) {
+    return true;
+  }
+  if (
+    /(permission denied|operation not permitted|access denied|forbidden|not allowed)/i.test(reply)
+  ) {
+    return true;
+  }
+  if (/(权限被拒绝|未授权|任务被权限阻止|无法完成|无法运行|未创建)/.test(reply)) {
+    return true;
+  }
 
   return false;
 }
@@ -158,25 +197,35 @@ function runWithActivityTimeout(taskFactory, timeoutMs, errorMessage) {
     };
 
     watcher = setInterval(() => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       const idleFor = Date.now() - lastActivity;
-      if (idleFor <= idleMs) return;
+      if (idleFor <= idleMs) {
+        return;
+      }
       settled = true;
       cleanup();
       reject(new Error(errorMessage || `Timeout after ${idleMs}ms`));
     }, checkEveryMs);
-    if (watcher.unref) watcher.unref();
+    if (watcher.unref) {
+      watcher.unref();
+    }
 
     Promise.resolve()
       .then(() => taskFactory({ touch }))
       .then((value) => {
-        if (settled) return;
+        if (settled) {
+          return;
+        }
         settled = true;
         cleanup();
         resolve(value);
       })
       .catch((err) => {
-        if (settled) return;
+        if (settled) {
+          return;
+        }
         settled = true;
         cleanup();
         reject(err);
@@ -185,13 +234,17 @@ function runWithActivityTimeout(taskFactory, timeoutMs, errorMessage) {
 }
 
 function extractAbsolutePaths(text) {
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
   const paths = new Set();
   const pattern = /(?:^|[\s`'"])(\/[^\s`'"]+)/g;
   let m;
   while ((m = pattern.exec(String(text)))) {
     const cleaned = m[1].replace(/[),.;:]+$/g, '').trim();
-    if (cleaned) paths.add(cleaned);
+    if (cleaned) {
+      paths.add(cleaned);
+    }
   }
   return Array.from(paths);
 }
@@ -201,7 +254,7 @@ function inferPlanBaseDirs(plan) {
     ...(plan?.dataNeeds || []),
     ...(plan?.expectedOutputs || []),
     ...(plan?.risks || []),
-    ...(plan?.steps || []).map(s => s.description || ''),
+    ...(plan?.steps || []).map((s) => s.description || ''),
   ].join('\n');
   const absPaths = extractAbsolutePaths(combined);
   const dirs = [];
@@ -214,7 +267,9 @@ function inferPlanBaseDirs(plan) {
     }
   }
   const cwd = process.env.KHYQUANT_CWD || process.cwd();
-  if (cwd) dirs.push(path.resolve(cwd));
+  if (cwd) {
+    dirs.push(path.resolve(cwd));
+  }
   return Array.from(new Set(dirs.filter(Boolean)));
 }
 
@@ -241,45 +296,66 @@ function inferStepFileTargets(stepDescription, plan) {
   // If assistant reply already contains absolute artifact paths, include them.
   for (const p of extractAbsolutePaths(desc)) {
     const base = path.basename(p);
-    if (/\.[a-z0-9]{1,8}$/i.test(base)) targets.add(path.resolve(p));
+    if (/\.[a-z0-9]{1,8}$/i.test(base)) {
+      targets.add(path.resolve(p));
+    }
   }
 
   return Array.from(targets);
 }
 
 function hasExecutionIntent(stepDescription) {
-  return /(创建|新建|写入|编写|生成|修改|编辑|运行|执行|测试|校验|验证|create|write|add|update|edit|run|execute|test|verify)/i
-    .test(String(stepDescription || ''));
+  return /(创建|新建|写入|编写|生成|修改|编辑|运行|执行|测试|校验|验证|create|write|add|update|edit|run|execute|test|verify)/i.test(
+    String(stepDescription || '')
+  );
 }
 
 function hasWriteIntent(stepDescription) {
-  return /(创建|新建|写入|编写|生成|修改|编辑|create|write|add|update|edit|文件|目录)/i
-    .test(String(stepDescription || ''));
+  return /(创建|新建|写入|编写|生成|修改|编辑|create|write|add|update|edit|文件|目录)/i.test(
+    String(stepDescription || '')
+  );
 }
 
 function hasRunIntent(stepDescription) {
-  return /(运行|执行|测试|校验|验证|run|execute|test|verify|命令|command)/i
-    .test(String(stepDescription || ''));
+  return /(运行|执行|测试|校验|验证|run|execute|test|verify|命令|command)/i.test(
+    String(stepDescription || '')
+  );
 }
 
 function hasRuntimeEvidence(reply) {
   const text = String(reply || '');
-  if (!text.trim()) return false;
-  if (/\b(pass|passed|fail|failed|exit code|stdout|stderr)\b/i.test(text)) return true;
-  if (/(测试结果|通过|失败|退出码|命令输出|执行结果)/.test(text)) return true;
-  if (/`(?:bash|node|npm|pnpm|yarn)\s+/i.test(text)) return true;
+  if (!text.trim()) {
+    return false;
+  }
+  if (/\b(pass|passed|fail|failed|exit code|stdout|stderr)\b/i.test(text)) {
+    return true;
+  }
+  if (/(测试结果|通过|失败|退出码|命令输出|执行结果)/.test(text)) {
+    return true;
+  }
+  if (/`(?:bash|node|npm|pnpm|yarn)\s+/i.test(text)) {
+    return true;
+  }
   return false;
 }
 
 function shortenReason(reason, maxLen = 220) {
-  const text = String(reason || '').replace(/\s+/g, ' ').trim();
-  if (!text) return 'unknown reason';
+  const text = String(reason || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) {
+    return 'unknown reason';
+  }
   return text.length > maxLen ? `${text.slice(0, maxLen)}...` : text;
 }
 
 function getPlanPreviewStyle() {
-  const raw = String(process.env.KHY_PLAN_PREVIEW_STYLE || 'natural').trim().toLowerCase();
-  if (raw === 'compact' || raw === 'coach' || raw === 'natural') return raw;
+  const raw = String(process.env.KHY_PLAN_PREVIEW_STYLE || 'natural')
+    .trim()
+    .toLowerCase();
+  if (raw === 'compact' || raw === 'coach' || raw === 'natural') {
+    return raw;
+  }
   return 'natural';
 }
 
@@ -359,7 +435,12 @@ function validateStepResult(step, plan, result, stepStartedAtMs) {
     return { ok: false, reason: `missing expected files: ${missingFiles.join(', ')}` };
   }
 
-  if (hasWriteIntent(desc) && fileTargets.length > 0 && staleFiles.length === fileTargets.length && toolCalls <= 0) {
+  if (
+    hasWriteIntent(desc) &&
+    fileTargets.length > 0 &&
+    staleFiles.length === fileTargets.length &&
+    toolCalls <= 0
+  ) {
     return { ok: false, reason: 'no observable file updates for a write/create step' };
   }
 
@@ -368,7 +449,12 @@ function validateStepResult(step, plan, result, stepStartedAtMs) {
   }
 
   // For mutation steps, require at least one concrete signal.
-  if (hasWriteIntent(desc) && fileTargets.length === 0 && toolCalls <= 0 && !hasRuntimeEvidence(reply)) {
+  if (
+    hasWriteIntent(desc) &&
+    fileTargets.length === 0 &&
+    toolCalls <= 0 &&
+    !hasRuntimeEvidence(reply)
+  ) {
     return { ok: false, reason: 'write step has no tool evidence and no detectable artifacts' };
   }
 
@@ -443,7 +529,9 @@ const PLAN_PROMPT_LEGACY = `[大型任务 — 请先制定详细执行计划]
 
 /** 是否启用资深工程师级富计划(逃生阀 KHY_PLAN_RICH=0/false/off/no 关闭)。 */
 function _isRichPlanEnabled(env = process.env) {
-  const flag = String((env && env.KHY_PLAN_RICH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_PLAN_RICH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -463,32 +551,47 @@ async function enterPlanMode(userRequest, aiModule, opts = {}) {
   const prompt = PLAN_PROMPT.replace('{REQUEST}', userRequest);
   let result;
   try {
-    const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase();
-    const isLocalLikeAdapter = !preferredAdapter
-      || preferredAdapter === 'localllm'
-      || preferredAdapter === 'local-llm'
-      || preferredAdapter === 'local'
-      || preferredAdapter === 'ollama';
+    const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+      .trim()
+      .toLowerCase();
+    const isLocalLikeAdapter =
+      !preferredAdapter ||
+      preferredAdapter === 'localllm' ||
+      preferredAdapter === 'local-llm' ||
+      preferredAdapter === 'local' ||
+      preferredAdapter === 'ollama';
     const defaultPlanTimeout = isLocalLikeAdapter ? '120000' : '90000';
-    const timeoutMs = Math.max(10000, parseInt(process.env.KHY_PLAN_MODE_TIMEOUT_MS || defaultPlanTimeout, 10));
+    const timeoutMs = Math.max(
+      10000,
+      parseInt(process.env.KHY_PLAN_MODE_TIMEOUT_MS || defaultPlanTimeout, 10)
+    );
     result = await runWithActivityTimeout(
       ({ touch }) => {
         const userOnChunk = typeof opts.onChunk === 'function' ? opts.onChunk : null;
         const userOnStatus = typeof opts.onStatus === 'function' ? opts.onStatus : null;
-        const userOnControlRequest = typeof opts.onControlRequest === 'function' ? opts.onControlRequest : null;
+        const userOnControlRequest =
+          typeof opts.onControlRequest === 'function' ? opts.onControlRequest : null;
         return aiModule.chat(prompt, {
           ...opts,
           _isFollowUp: false,
           onChunk: (chunk) => {
             touch();
             if (userOnChunk) {
-              try { userOnChunk(chunk); } catch { /* best effort */ }
+              try {
+                userOnChunk(chunk);
+              } catch {
+                /* best effort */
+              }
             }
           },
           onStatus: (status) => {
             touch();
             if (userOnStatus) {
-              try { userOnStatus(status); } catch { /* best effort */ }
+              try {
+                userOnStatus(status);
+              } catch {
+                /* best effort */
+              }
             }
           },
           onControlRequest: (...args) => {
@@ -506,7 +609,8 @@ async function enterPlanMode(userRequest, aiModule, opts = {}) {
   } catch (err) {
     _state = 'idle';
     const lowerMsg = String(err && err.message ? err.message : '').toLowerCase();
-    const timeoutLike = lowerMsg.includes('timeout') || lowerMsg.includes('timed out') || lowerMsg.includes('超时');
+    const timeoutLike =
+      lowerMsg.includes('timeout') || lowerMsg.includes('timed out') || lowerMsg.includes('超时');
     return {
       plan: null,
       rawResponse: `计划模式生成失败: ${err && err.message ? err.message : 'unknown error'}`,
@@ -540,9 +644,17 @@ async function enterPlanMode(userRequest, aiModule, opts = {}) {
   try {
     const persisted = savePlan(plan, userRequest, { provider: result.provider });
     _currentPlanSlug = persisted.slug;
-  } catch { /* persistence is best-effort */ }
+  } catch {
+    /* persistence is best-effort */
+  }
 
-  return { plan, rawResponse: result.reply, provider: result.provider, elapsed: result.elapsed, slug: _currentPlanSlug };
+  return {
+    plan,
+    rawResponse: result.reply,
+    provider: result.provider,
+    elapsed: result.elapsed,
+    slug: _currentPlanSlug,
+  };
 }
 
 // ── Step-type taxonomy (固化/灵活/人闸门) ──────────────────────────────
@@ -551,13 +663,19 @@ async function enterPlanMode(userRequest, aiModule, opts = {}) {
 let _riskGate = null;
 function riskGate() {
   if (_riskGate === null) {
-    try { _riskGate = require('./riskGate'); } catch { _riskGate = {}; }
+    try {
+      _riskGate = require('./riskGate');
+    } catch {
+      _riskGate = {};
+    }
   }
   return _riskGate;
 }
 
-const _DESTRUCTIVE_RE = /删除|清空|重置|覆盖|迁移|发布|部署|回滚|drop|\brm\b|delete|reset|overwrite|migrate|deploy|force|truncate|wipe/i;
-const _READONLY_RE = /查看|读取|列出|检查|分析|查询|预览|read|list|inspect|analyze|review|check|view|show/i;
+const _DESTRUCTIVE_RE =
+  /删除|清空|重置|覆盖|迁移|发布|部署|回滚|drop|\brm\b|delete|reset|overwrite|migrate|deploy|force|truncate|wipe/i;
+const _READONLY_RE =
+  /查看|读取|列出|检查|分析|查询|预览|read|list|inspect|analyze|review|check|view|show/i;
 
 /**
  * Infer a step type from a natural-language plan-step description. Maps the
@@ -568,11 +686,13 @@ const _READONLY_RE = /查看|读取|列出|检查|分析|查询|预览|read|list
  */
 function inferStepType(description) {
   const rg = riskGate();
-  if (typeof rg.deriveStepType !== 'function') return 'flexible';
+  if (typeof rg.deriveStepType !== 'function') {
+    return 'flexible';
+  }
   const text = String(description || '');
   const isDestructive = _DESTRUCTIVE_RE.test(text);
   const isReadOnly = !isDestructive && _READONLY_RE.test(text);
-  const risk = isDestructive ? 'high' : (isReadOnly ? 'safe' : 'medium');
+  const risk = isDestructive ? 'high' : isReadOnly ? 'safe' : 'medium';
   try {
     return rg.deriveStepType({ risk, isReadOnly, isDestructive });
   } catch {
@@ -587,10 +707,16 @@ function inferStepType(description) {
  */
 function stepTypeTag(stepType) {
   let _chalk;
-  const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
-  if (stepType === 'human-gate') return c().red('🔒人闸门 ');
-  if (stepType === 'hardened') return c().dim('[固化] ');
-  if (stepType === 'flexible') return c().cyan('[灵活] ');
+  const c = () => (_chalk ??= require('chalk').default || require('chalk'));
+  if (stepType === 'human-gate') {
+    return c().red('🔒人闸门 ');
+  }
+  if (stepType === 'hardened') {
+    return c().dim('[固化] ');
+  }
+  if (stepType === 'flexible') {
+    return c().cyan('[灵活] ');
+  }
   return '';
 }
 
@@ -603,11 +729,19 @@ function stepTypeTag(stepType) {
  * @returns {boolean}
  */
 function requiresHumanGateStep(stepType, bypass = false) {
-  if (bypass) return false;
-  if (process.env.KHY_HUMAN_GATE === 'off') return false;
+  if (bypass) {
+    return false;
+  }
+  if (process.env.KHY_HUMAN_GATE === 'off') {
+    return false;
+  }
   const rg = riskGate();
   if (typeof rg.requiresHumanGate === 'function') {
-    try { return !!rg.requiresHumanGate(stepType); } catch { /* fall through */ }
+    try {
+      return !!rg.requiresHumanGate(stepType);
+    } catch {
+      /* fall through */
+    }
   }
   return stepType === 'human-gate';
 }
@@ -622,13 +756,17 @@ function requiresHumanGateStep(stepType, bypass = false) {
  */
 function _confirmHumanGate(step, rl, renderer) {
   let _chalk;
-  const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
-  if (!rl || typeof rl.question !== 'function') return Promise.resolve(true);
+  const c = () => (_chalk ??= require('chalk').default || require('chalk'));
+  if (!rl || typeof rl.question !== 'function') {
+    return Promise.resolve(true);
+  }
   console.log('');
   console.log(c().red(`  🔒 人闸门 — 第 ${step.id} 步需确认: `) + c().white(step.description));
   return new Promise((resolve) => {
     rl.question(c().dim('  执行此步？(Enter/y 确认 · n 跳过) > '), (answer) => {
-      const t = String(answer || '').trim().toLowerCase();
+      const t = String(answer || '')
+        .trim()
+        .toLowerCase();
       if (['n', 'no', '取消', '跳过', 'skip'].includes(t)) {
         console.log(c().dim(`  已跳过第 ${step.id} 步`));
         resolve(false);
@@ -647,7 +785,9 @@ function _confirmHumanGate(step, rl, renderer) {
  * @returns {string} 段落正文(不含标题行);未命中返回空串
  */
 function _grabSection(text, headingAlt) {
-  const re = new RegExp(`(?:^|\\n)#{1,6}\\s*(?:${headingAlt})[^\\n]*\\n([\\s\\S]*?)(?=\\n#{1,6}\\s|$)`);
+  const re = new RegExp(
+    `(?:^|\\n)#{1,6}\\s*(?:${headingAlt})[^\\n]*\\n([\\s\\S]*?)(?=\\n#{1,6}\\s|$)`
+  );
   const m = String(text || '').match(re);
   return m ? m[1] : '';
 }
@@ -662,17 +802,28 @@ function _sectionItems(body) {
   const out = [];
   for (const raw of String(body || '').split('\n')) {
     let line = raw.trim();
-    if (!line) continue;
-    if (/^\|?\s*:?-{3,}/.test(line)) continue; // 表格分隔行 |---|---|
+    if (!line) {
+      continue;
+    }
+    if (/^\|?\s*:?-{3,}/.test(line)) {
+      continue;
+    } // 表格分隔行 |---|---|
     line = line.replace(/^[-•*]\s+/, '').replace(/^\d+[.、)）]\s+/, '');
-    if (line) out.push(line);
+    if (line) {
+      out.push(line);
+    }
   }
   return out;
 }
 
 /** 把段落正文压成单段文本(用于「为什么做」这类散文段)。 */
 function _sectionText(body) {
-  return String(body || '').split('\n').map(s => s.trim()).filter(Boolean).join(' ').trim();
+  return String(body || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
 /**
@@ -689,10 +840,10 @@ function parsePlanFromResponse(text) {
     expectedOutputs: [],
     risks: [],
     // 富计划新增字段(默认空,向后兼容;旧扁平计划不含这些段时保持空)。
-    why: '',            // 「为什么做」:背景/动机/预期(段落文本)
-    currentState: [],   // 「关键现状」:实地查证的 file:line → 现状(逐条)
-    verification: [],   // 「验证」:可运行的命令/测试/证据(逐条)
-    wrapup: [],         // 「收尾」:残留风险/未做项/是否提交/下一步(逐条)
+    why: '', // 「为什么做」:背景/动机/预期(段落文本)
+    currentState: [], // 「关键现状」:实地查证的 file:line → 现状(逐条)
+    verification: [], // 「验证」:可运行的命令/测试/证据(逐条)
+    wrapup: [], // 「收尾」:残留风险/未做项/是否提交/下一步(逐条)
   };
 
   // Extract numbered steps —— 仅从「计划/执行计划」段抽取,避免把「验证/收尾」里的编号项
@@ -707,8 +858,8 @@ function parsePlanFromResponse(text) {
       description: m[2].trim().slice(0, 100),
       status: 'pending', // pending | in_progress | completed | skipped | error
       stepType: inferStepType(m[2]), // hardened | flexible | human-gate
-      blocks: [],        // Step IDs that this step blocks
-      blockedBy: [],     // Step IDs that must complete before this step
+      blocks: [], // Step IDs that this step blocks
+      blockedBy: [], // Step IDs that must complete before this step
     });
   }
 
@@ -722,12 +873,15 @@ function parsePlanFromResponse(text) {
   for (const step of plan.steps) {
     const depMatch = step.description.match(/\[(?:depends|after|依赖)[:\s]+([0-9,\s]+)\]/i);
     if (depMatch) {
-      const depIds = depMatch[1].split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      const depIds = depMatch[1]
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n));
       step.blockedBy = [...new Set([...step.blockedBy, ...depIds])];
       step.description = step.description.replace(depMatch[0], '').trim();
       // Update reverse references
       for (const depId of depIds) {
-        const depStep = plan.steps.find(s => s.id === depId);
+        const depStep = plan.steps.find((s) => s.id === depId);
         if (depStep && !depStep.blocks.includes(step.id)) {
           depStep.blocks.push(step.id);
         }
@@ -765,7 +919,7 @@ async function presentForApproval(plan, renderer, rl) {
   }
 
   let _chalk;
-  const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+  const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
   // 「为什么做」放最前:让用户一眼看懂动机(富计划独有,缺则跳过)。
   if (plan.why) {
@@ -778,7 +932,7 @@ async function presentForApproval(plan, renderer, rl) {
   if (Array.isArray(plan.currentState) && plan.currentState.length > 0) {
     console.log('');
     console.log(c().dim('  关键现状:'));
-    plan.currentState.forEach(s => console.log(c().dim(`    • ${s}`)));
+    plan.currentState.forEach((s) => console.log(c().dim(`    • ${s}`)));
   }
 
   // Render plan as task checklist
@@ -793,47 +947,53 @@ async function presentForApproval(plan, renderer, rl) {
   if (Array.isArray(plan.expectedOutputs) && plan.expectedOutputs.length > 0) {
     console.log('');
     console.log(c().dim('  预计结果:'));
-    plan.expectedOutputs.forEach(o => console.log(c().dim(`    • ${o}`)));
+    plan.expectedOutputs.forEach((o) => console.log(c().dim(`    • ${o}`)));
   }
 
   if (plan.dataNeeds.length > 0) {
     console.log('');
     console.log(c().dim('  需要的数据:'));
-    plan.dataNeeds.forEach(d => console.log(c().dim(`    • ${d}`)));
+    plan.dataNeeds.forEach((d) => console.log(c().dim(`    • ${d}`)));
   }
 
   if (plan.risks.length > 0) {
     console.log('');
     console.log(c().yellow('  风险与对策:'));
-    plan.risks.forEach(r => console.log(c().yellow(`    ⚠ ${r}`)));
+    plan.risks.forEach((r) => console.log(c().yellow(`    ⚠ ${r}`)));
   }
 
   // 「验证」:完成后怎么确认真成了(富计划独有,缺则跳过)。
   if (Array.isArray(plan.verification) && plan.verification.length > 0) {
     console.log('');
     console.log(c().green('  验证:'));
-    plan.verification.forEach(v => console.log(c().green(`    ✓ ${v}`)));
+    plan.verification.forEach((v) => console.log(c().green(`    ✓ ${v}`)));
   }
 
   // 「收尾」:残留风险/未做项/是否提交/下一步(富计划独有,缺则跳过)。
   if (Array.isArray(plan.wrapup) && plan.wrapup.length > 0) {
     console.log('');
     console.log(c().dim('  收尾:'));
-    plan.wrapup.forEach(w => console.log(c().dim(`    ↳ ${w}`)));
+    plan.wrapup.forEach((w) => console.log(c().dim(`    ↳ ${w}`)));
   }
 
-  if (plan.steps.some(s => s.stepType === 'human-gate')) {
+  if (plan.steps.some((s) => s.stepType === 'human-gate')) {
     console.log('');
     console.log(c().red('  🔒 人闸门步骤将在执行前暂停，需你逐一确认'));
   }
 
   console.log('');
-  console.log(c().cyan('  操作: ') +
-    c().white('Enter') + c().dim(' 确认执行 · ') +
-    c().white('skip N') + c().dim(' 跳过步骤 · ') +
-    c().white('edit N 描述') + c().dim(' 修改步骤 · ') +
-    c().white('add after N 描述') + c().dim(' 新增步骤 · ') +
-    c().white('n') + c().dim(' 取消')
+  console.log(
+    c().cyan('  操作: ') +
+      c().white('Enter') +
+      c().dim(' 确认执行 · ') +
+      c().white('skip N') +
+      c().dim(' 跳过步骤 · ') +
+      c().white('edit N 描述') +
+      c().dim(' 修改步骤 · ') +
+      c().white('add after N 描述') +
+      c().dim(' 新增步骤 · ') +
+      c().white('n') +
+      c().dim(' 取消')
   );
   console.log(c().dim('  输入 ? 查看示例；支持英文/中文命令，例如：跳过 2, 修改 1 更新描述'));
 
@@ -843,22 +1003,29 @@ async function presentForApproval(plan, renderer, rl) {
     let autoTimer = null;
 
     const done = (payload) => {
-      if (resolved) return;
+      if (resolved) {
+        return;
+      }
       resolved = true;
-      if (autoTimer) clearTimeout(autoTimer);
+      if (autoTimer) {
+        clearTimeout(autoTimer);
+      }
       resolve(payload);
     };
 
     if (autoApproveMs > 0) {
-      const autoApproveSec = autoApproveMs >= 1000
-        ? `${Math.round(autoApproveMs / 1000)}`
-        : `${(autoApproveMs / 1000).toFixed(1)}`;
+      const autoApproveSec =
+        autoApproveMs >= 1000
+          ? `${Math.round(autoApproveMs / 1000)}`
+          : `${(autoApproveMs / 1000).toFixed(1)}`;
       console.log(c().dim(`  ${autoApproveSec} 秒无输入将自动确认执行`));
       autoTimer = setTimeout(() => {
         console.log(c().dim('  ⏱ 已自动确认，开始执行计划'));
         done({ approved: true, modifications: [] });
       }, autoApproveMs);
-      if (autoTimer.unref) autoTimer.unref();
+      if (autoTimer.unref) {
+        autoTimer.unref();
+      }
     }
 
     const askApproval = () => {
@@ -893,12 +1060,17 @@ async function presentForApproval(plan, renderer, rl) {
 
         const modifications = [];
         const invalidCommands = [];
-        const commands = raw.split(/[;,]/).map(s => s.trim()).filter(Boolean);
+        const commands = raw
+          .split(/[;,]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
 
         for (const cmd of commands) {
           const skipMatch = cmd.match(/^(?:skip|跳过)\s+(\d+)$/i);
           const editMatch = cmd.match(/^(?:edit|修改)\s+(\d+)\s+(.+)$/i);
-          const addMatch = cmd.match(/^(?:add|添加)\s+(?:after\s+)?(\d+)\s+(.+)$/i) || cmd.match(/^在\s*(\d+)\s*后(?:添加)?\s+(.+)$/i);
+          const addMatch =
+            cmd.match(/^(?:add|添加)\s+(?:after\s+)?(\d+)\s+(.+)$/i) ||
+            cmd.match(/^在\s*(\d+)\s*后(?:添加)?\s+(.+)$/i);
 
           if (skipMatch) {
             const idx = parseInt(skipMatch[1], 10) - 1;
@@ -935,7 +1107,9 @@ async function presentForApproval(plan, renderer, rl) {
               status: 'pending',
               stepType: inferStepType(addMatch[2]),
             });
-            plan.steps.forEach((s, i) => { s.id = i + 1; });
+            plan.steps.forEach((s, i) => {
+              s.id = i + 1;
+            });
             modifications.push(`Added step after ${addMatch[1]}`);
             continue;
           }
@@ -990,7 +1164,9 @@ async function executePlanSteps(plan, opts) {
     const goalModeService = require('./goalModeService');
     _execSavedState = goalModeService.activateIfNeeded();
     _userOptedAutonomous = _execSavedState === null;
-  } catch { /* goalModeService not available */ }
+  } catch {
+    /* goalModeService not available */
+  }
 
   const stepTimeoutMs = parseInt(process.env.KHY_PLAN_STEP_TIMEOUT_MS || '180000', 10);
   const maxStepRetry = Math.max(0, parseInt(process.env.KHY_PLAN_STEP_RETRY || '1', 10));
@@ -999,7 +1175,7 @@ async function executePlanSteps(plan, opts) {
   const planTracker = new renderer.TaskPlanTracker({ panelMode: true });
 
   // Add all non-skipped steps
-  const activeSteps = plan.steps.filter(s => s.status !== 'skipped');
+  const activeSteps = plan.steps.filter((s) => s.status !== 'skipped');
   const totalSteps = activeSteps.length;
   const previewStyle = getPlanPreviewStyle();
   for (const step of activeSteps) {
@@ -1010,9 +1186,16 @@ async function executePlanSteps(plan, opts) {
   for (let i = 0; i < activeSteps.length; i++) {
     const step = activeSteps[i];
     renderer.printStepLine('active', '准备执行', `第 ${step.id} 步`, `进度 ${i + 1}/${totalSteps}`);
-    renderer.printStepDetail(buildStepPreviewText(step.description, i, totalSteps, previewStyle), false);
+    renderer.printStepDetail(
+      buildStepPreviewText(step.description, i, totalSteps, previewStyle),
+      false
+    );
     if (typeof onStepStart === 'function') {
-      try { onStepStart({ step, index: i, total: totalSteps }); } catch { /* best effort */ }
+      try {
+        onStepStart({ step, index: i, total: totalSteps });
+      } catch {
+        /* best effort */
+      }
     }
     planTracker.start(i);
 
@@ -1025,7 +1208,11 @@ async function executePlanSteps(plan, opts) {
         const skipped = { step, result: { skipped: true, reason: 'human-gate denied' } };
         results.push(skipped);
         if (typeof onStepResult === 'function') {
-          try { onStepResult(skipped); } catch { /* best effort */ }
+          try {
+            onStepResult(skipped);
+          } catch {
+            /* best effort */
+          }
         }
         continue;
       }
@@ -1045,19 +1232,30 @@ async function executePlanSteps(plan, opts) {
 
       while (attempt <= maxStepRetry) {
         const attemptNumber = attempt + 1;
-        const prompt = attempt === 0
-          ? basePrompt
-          : `${basePrompt}\n\n上次执行未通过校验：${lastValidation.reason}\n请重新执行该步骤，并提供可验证证据。`;
+        const prompt =
+          attempt === 0
+            ? basePrompt
+            : `${basePrompt}\n\n上次执行未通过校验：${lastValidation.reason}\n请重新执行该步骤，并提供可验证证据。`;
 
-        renderer.printStepDetail(buildAttemptPreviewText(step.id, attemptNumber, maxAttempts, previewStyle), false);
+        renderer.printStepDetail(
+          buildAttemptPreviewText(step.id, attemptNumber, maxAttempts, previewStyle),
+          false
+        );
 
         const result = await runWithActivityTimeout(
-          ({ touch }) => aiModule.chat(prompt, {
-            _isFollowUp: true,
-            onChunk: () => { touch(); },
-            onStatus: () => { touch(); },
-            onControlRequest: () => { touch(); },
-          }),
+          ({ touch }) =>
+            aiModule.chat(prompt, {
+              _isFollowUp: true,
+              onChunk: () => {
+                touch();
+              },
+              onStatus: () => {
+                touch();
+              },
+              onControlRequest: () => {
+                touch();
+              },
+            }),
           stepTimeoutMs,
           `Plan step timeout after ${stepTimeoutMs}ms`
         );
@@ -1068,7 +1266,10 @@ async function executePlanSteps(plan, opts) {
           break;
         }
 
-        renderer.printStepDetail(`步骤 ${step.id} 校验未通过: ${shortenReason(lastValidation.reason)}`, false);
+        renderer.printStepDetail(
+          `步骤 ${step.id} 校验未通过: ${shortenReason(lastValidation.reason)}`,
+          false
+        );
         attempt += 1;
       }
 
@@ -1078,17 +1279,30 @@ async function executePlanSteps(plan, opts) {
         const finalStepResult = { step, result: { ...acceptedResult, _planAttempts: attempt + 1 } };
         results.push(finalStepResult);
         if (typeof onStepResult === 'function') {
-          try { onStepResult(finalStepResult); } catch { /* best effort */ }
+          try {
+            onStepResult(finalStepResult);
+          } catch {
+            /* best effort */
+          }
         }
       } else {
         planTracker.fail(i);
         step.status = 'error';
-        const errorMsg = lastValidation.reason || (lastResult && lastResult.reply ? lastResult.reply : 'No response');
+        const errorMsg =
+          lastValidation.reason ||
+          (lastResult && lastResult.reply ? lastResult.reply : 'No response');
         renderer.printStepDetail(`步骤 ${step.id} 失败: ${shortenReason(errorMsg)}`, false);
-        const finalStepResult = { step, result: { ...lastResult, error: errorMsg, _planAttempts: maxAttempts } };
+        const finalStepResult = {
+          step,
+          result: { ...lastResult, error: errorMsg, _planAttempts: maxAttempts },
+        };
         results.push(finalStepResult);
         if (typeof onStepResult === 'function') {
-          try { onStepResult(finalStepResult); } catch { /* best effort */ }
+          try {
+            onStepResult(finalStepResult);
+          } catch {
+            /* best effort */
+          }
         }
       }
     } catch (err) {
@@ -1097,32 +1311,285 @@ async function executePlanSteps(plan, opts) {
       const finalStepResult = { step, result: { error: err.message } };
       results.push(finalStepResult);
       if (typeof onStepResult === 'function') {
-        try { onStepResult(finalStepResult); } catch { /* best effort */ }
+        try {
+          onStepResult(finalStepResult);
+        } catch {
+          /* best effort */
+        }
       }
     }
   }
 
+  // [P-verify] 富计划「验证」段落地:步骤执行完后实地运行验证,并用真实证据判定交付是否达标。
+  // 已跳过则整体计划仍计完成,但验证失败会如实报告(绝不假装成功)。门控 KHY_PLAN_VERIFY。
+  let verification = null;
+  try {
+    const hasStepGenFailed =
+      results.filter((r) => r.step && r.step.status === 'error').length >= results.length &&
+      results.length > 0;
+    if (!hasStepGenFailed && Array.isArray(plan.verification) && plan.verification.length > 0) {
+      renderer?.printStepLine &&
+        renderer.printStepLine(
+          'active',
+          '计划验证',
+          '验证段',
+          `正在执行 ${plan.verification.length} 项验证`
+        );
+      verification = await _runPlanVerification(plan, {
+        ai: aiModule,
+        cwd: process.env.KHYQUANT_CWD || process.cwd(),
+        onStatus: (st) => {
+          const level =
+            st.level === 'success' ? 'success' : st.level === 'error' ? 'error' : 'active';
+          const action = String(st.action || '计划验证').trim() || '计划验证';
+          const target = String(st.target || '').trim();
+          const progress = String(st.progress || '').trim();
+          try {
+            renderer.printStepLine(
+              level,
+              action,
+              target,
+              progress || `0/${plan.verification.length} 项`
+            );
+            if (st.detail) {
+              renderer.printStepDetail(st.detail);
+            }
+          } catch {
+            /* best effort */
+          }
+        },
+      });
+      if (verification) {
+        renderer.printStepLine(
+          verification.passed ? 'success' : 'error',
+          '验证结果',
+          verification.summary,
+          `通过 ${verification.counts?.pass || 0} · 失败 ${verification.counts?.fail || 0} · 跳过 ${verification.counts?.skip || 0}`
+        );
+        if (typeof onStepResult === 'function') {
+          try {
+            onStepResult({
+              step: {
+                id: 'verify',
+                description: '计划验证',
+                status: verification.passed ? 'completed' : 'error',
+              },
+              result: { verification, _planVerification: true },
+            });
+          } catch {
+            /* best effort */
+          }
+        }
+      }
+    }
+  } catch (err) {
+    renderer?.printStepLine &&
+      renderer.printStepLine(
+        'error',
+        '计划验证',
+        '执行失败',
+        String(err && err.message ? err.message : err || '未知错误')
+      );
+    verification = {
+      passed: false,
+      summary: '计划验证执行失败',
+      counts: { pass: 0, fail: 0, skip: 0 },
+      error: String(err && err.message ? err.message : err),
+    };
+  }
+
   _state = 'complete';
   _currentPlan = null;
+  _verification = verification;
 
   // 确保任务面板清理
-  try { require('./taskPanelState').clearTasks(); } catch { /* ignore */ }
+  try {
+    require('./taskPanelState').clearTasks();
+  } catch {
+    /* ignore */
+  }
 
   // 恢复权限
   if (_execSavedState) {
     try {
       const goalModeService = require('./goalModeService');
       goalModeService.deactivateIfNeeded(_execSavedState);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   // Persist final plan state
   if (_currentPlanSlug) {
-    try { updatePersistedPlan(_currentPlanSlug, { state: 'complete', plan }); } catch { /* best effort */ }
+    try {
+      updatePersistedPlan(_currentPlanSlug, {
+        state: 'complete',
+        plan,
+        verification: verification
+          ? { passed: verification.passed, summary: verification.summary }
+          : undefined,
+      });
+    } catch {
+      /* best effort */
+    }
     _currentPlanSlug = null;
   }
 
   return results;
+}
+
+/**
+ * [P-verify] 富计划「验证」段的落地执行。
+ *
+ * 背景:PLAN_PROMPT_RICH 要求模型给出「验证」命令/证据,但计划审批后**从未真正运行**过这些
+ * 验证——完成即宣称成功,交付没有证据。这违背 goal「复杂任务的实际可交付性,切合使用者心意
+ * 完成目标」。本函数在计划步骤执行完后,把「验证」段交给同一工具循环**实地执行**,并强制返回
+ * 真实证据(退出码/测试输出/命令结果),**绝不编造成功**。
+ *
+ * 门控:KHY_PLAN_VERIFY 默认开,仅 0/false/off/no 关。仅当 plan.verification 非空且确实执行过
+ * 步骤时才运行;否则返回空报告(零行为变化)。复用 runWithActivityTimeout 的活动感知超时
+ * (规则 3)、不 kill;状态文本遵守「动作+目标+进度」(规则 2)。
+ *
+ * @param {object} plan 已执行(或部分执行)的计划
+ * @param {object} opts { ai, renderer, results?, cwd, env? }
+ * @returns {Promise<{ items: Array, passed: boolean, summary: string, counts: object, reply: string }|null>}
+ *   未启用/无需验证时返 null
+ */
+async function _runPlanVerification(plan, opts) {
+  const items = Array.isArray(plan?.verification)
+    ? plan.verification.filter((v) => String(v || '').trim())
+    : [];
+  if (items.length === 0) {
+    _verification = null;
+    return null;
+  }
+
+  const env = opts?.env || process.env;
+  const flag = String(env.KHY_PLAN_VERIFY || '')
+    .trim()
+    .toLowerCase();
+  if (flag && ['0', 'false', 'off', 'no'].includes(flag)) {
+    _verification = null;
+    return null;
+  }
+
+  const aiModule = opts?.ai;
+  if (!aiModule || typeof aiModule.chat !== 'function') {
+    _verification = null;
+    return null;
+  }
+
+  const cwd = opts?.cwd || process.env.KHYQUANT_CWD || process.cwd();
+  const emitStatus = (payload) => {
+    try {
+      if (typeof opts?.onStatus === 'function') {
+        opts.onStatus(payload);
+      }
+    } catch {
+      /* best effort */
+    }
+  };
+  const listBlock = items.map((v, i) => `${i + 1}. ${v}`).join('\n');
+
+  const prompt = [
+    '[SYSTEM: Plan Verification Gate — execute the listed verification checks for real]',
+    '',
+    'A plan was just executed. Before declaring delivery, run each verification item below',
+    'and report REAL evidence (exit codes, test output, file existence, command results).',
+    '',
+    `Working directory: ${cwd}`,
+    '',
+    'Verification items:',
+    listBlock,
+    '',
+    'Rules:',
+    '1) Actually execute the checks that can be executed (run tests, linters, builds, or',
+    '   confirm the claimed outputs exist). Do NOT speculate or "describe" the verification.',
+    '2) For each item, report one line: `[PASS]` or `[FAIL]` + the concrete evidence you saw.',
+    '3) If an item is genuinely not runnable here, mark it `[SKIP]` with the reason — do not',
+    '   pretend it passed.',
+    '4) Only mark `[PASS]` when you have observable evidence. Never fabricate success.',
+    '5) End with a one-line summary: `验证通过` if all pass, `验证存在失败` otherwise, followed',
+    '   by evidence count (passed/total).',
+  ].join('\n');
+
+  emitStatus({
+    level: 'active',
+    action: '执行计划验证',
+    target: cwd,
+    progress: `0/${items.length} 项`,
+  });
+
+  const stepTimeoutMs = parseInt(env.KHY_PLAN_STEP_TIMEOUT_MS || '180000', 10);
+  let result;
+  try {
+    result = await runWithActivityTimeout(
+      ({ touch }) =>
+        aiModule.chat(prompt, {
+          _isFollowUp: true,
+          _planContinuous: false,
+          onChunk: () => {
+            touch();
+          },
+          onStatus: (st) => {
+            touch();
+            emitStatus(st);
+          },
+          onControlRequest: () => {
+            touch();
+            return undefined;
+          },
+        }),
+      stepTimeoutMs,
+      `Plan verification timeout after ${stepTimeoutMs}ms`
+    );
+  } catch (err) {
+    result = { reply: '', errorType: 'error' };
+    emitStatus({
+      level: 'error',
+      action: '执行计划验证',
+      target: cwd,
+      progress: `0/${items.length} 项`,
+      detail: String(err && err.message ? err.message : err || 'verification failed'),
+    });
+  }
+
+  const reply = String(result?.reply || '');
+  const passCount = (reply.match(/\[PASS\]/gi) || []).length;
+  const failCount = (reply.match(/\[FAIL\]/gi) || []).length;
+  const skipCount = (reply.match(/\[SKIP\]/gi) || []).length;
+
+  // 诚实判定:有明确 [FAIL] 或模型自报失败 → 未通过;否则至少须有 [PASS] 证据才算通过;
+  // 两者皆无 → 未取得证据,不能假装成功。
+  let passed;
+  let summary;
+  if (failCount > 0 || /验证存在失败|存在失败|failed|未通过/i.test(reply)) {
+    passed = false;
+    summary = '验证存在失败';
+  } else if (passCount > 0) {
+    passed = true;
+    summary = '验证通过';
+  } else {
+    passed = false;
+    summary = '未取得验证证据';
+  }
+
+  emitStatus({
+    level: passed ? 'success' : 'error',
+    action: '计划验证完成',
+    target: cwd,
+    progress: `通过 ${passCount} · 失败 ${failCount} · 跳过 ${skipCount} · 共 ${items.length} 项`,
+  });
+
+  const report = {
+    items,
+    passed,
+    summary,
+    counts: { pass: passCount, fail: failCount, skip: skipCount },
+    reply,
+  };
+  _verification = report;
+  return report;
 }
 
 /**
@@ -1132,9 +1599,15 @@ async function executePlanSteps(plan, opts) {
  * @returns {string}
  */
 function _stepTypeLabelPlain(stepType) {
-  if (stepType === 'human-gate') return '[人闸门] ';
-  if (stepType === 'hardened') return '[固化] ';
-  if (stepType === 'flexible') return '[灵活] ';
+  if (stepType === 'human-gate') {
+    return '[人闸门] ';
+  }
+  if (stepType === 'hardened') {
+    return '[固化] ';
+  }
+  if (stepType === 'flexible') {
+    return '[灵活] ';
+  }
   return '';
 }
 
@@ -1189,10 +1662,12 @@ async function _executePlanContinuous(plan, opts) {
     const goalModeService = require('./goalModeService');
     _execSavedState = goalModeService.activateIfNeeded();
     _userOptedAutonomous = _execSavedState === null;
-  } catch { /* goalModeService not available */ }
+  } catch {
+    /* goalModeService not available */
+  }
 
   const results = [];
-  const activeSteps = plan.steps.filter(s => s.status !== 'skipped');
+  const activeSteps = plan.steps.filter((s) => s.status !== 'skipped');
 
   // Human-gate steps: confirm up front; denied steps are excluded from the run
   // (still records a skipped result so callers see the same shape as legacy).
@@ -1205,7 +1680,11 @@ async function _executePlanContinuous(plan, opts) {
         const skipped = { step, result: { skipped: true, reason: 'human-gate denied' } };
         results.push(skipped);
         if (typeof onStepResult === 'function') {
-          try { onStepResult(skipped); } catch { /* best effort */ }
+          try {
+            onStepResult(skipped);
+          } catch {
+            /* best effort */
+          }
         }
         continue;
       }
@@ -1222,11 +1701,22 @@ async function _executePlanContinuous(plan, opts) {
 
   if (totalSteps > 0) {
     if (typeof onStepStart === 'function') {
-      try { onStepStart({ step: runnableSteps[0], index: 0, total: totalSteps }); } catch { /* best effort */ }
+      try {
+        onStepStart({ step: runnableSteps[0], index: 0, total: totalSteps });
+      } catch {
+        /* best effort */
+      }
     }
-    for (let i = 0; i < totalSteps; i++) planTracker.start(i);
+    for (let i = 0; i < totalSteps; i++) {
+      planTracker.start(i);
+    }
 
-    renderer.printStepLine('active', '连续执行', `共 ${totalSteps} 步`, '已批准计划交由主循环连续执行');
+    renderer.printStepLine(
+      'active',
+      '连续执行',
+      `共 ${totalSteps} 步`,
+      '已批准计划交由主循环连续执行'
+    );
 
     const message = _serializeContinuousPlanMessage(plan, runnableSteps);
     let result = null;
@@ -1237,7 +1727,8 @@ async function _executePlanContinuous(plan, opts) {
         _planContinuous: true,
         onChunk: () => {},
         onStatus: () => {},
-        onControlRequest: typeof opts.onControlRequest === 'function' ? opts.onControlRequest : undefined,
+        onControlRequest:
+          typeof opts.onControlRequest === 'function' ? opts.onControlRequest : undefined,
       });
     } catch (err) {
       runError = err;
@@ -1258,13 +1749,19 @@ async function _executePlanContinuous(plan, opts) {
         : {
             step,
             result: {
-              error: runError ? runError.message : ((result && result.errorType) || 'continuous run failed'),
+              error: runError
+                ? runError.message
+                : (result && result.errorType) || 'continuous run failed',
               _planContinuous: true,
             },
           };
       results.push(stepResult);
       if (typeof onStepResult === 'function') {
-        try { onStepResult(stepResult); } catch { /* best effort */ }
+        try {
+          onStepResult(stepResult);
+        } catch {
+          /* best effort */
+        }
       }
     }
   }
@@ -1272,17 +1769,27 @@ async function _executePlanContinuous(plan, opts) {
   _state = 'complete';
   _currentPlan = null;
 
-  try { require('./taskPanelState').clearTasks(); } catch { /* ignore */ }
+  try {
+    require('./taskPanelState').clearTasks();
+  } catch {
+    /* ignore */
+  }
 
   if (_execSavedState) {
     try {
       const goalModeService = require('./goalModeService');
       goalModeService.deactivateIfNeeded(_execSavedState);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   if (_currentPlanSlug) {
-    try { updatePersistedPlan(_currentPlanSlug, { state: 'complete', plan }); } catch { /* best effort */ }
+    try {
+      updatePersistedPlan(_currentPlanSlug, { state: 'complete', plan });
+    } catch {
+      /* best effort */
+    }
     _currentPlanSlug = null;
   }
 
@@ -1315,6 +1822,7 @@ function reset() {
   _state = 'idle';
   _currentPlan = null;
   _currentPlanSlug = null;
+  _verification = null;
 }
 
 module.exports = {
@@ -1332,6 +1840,9 @@ module.exports = {
   loadPersistedPlan,
   listPersistedPlans,
   PLAN_PROMPT,
+  // [P-verify] 富计划验证段落地:导出运行器与只读访问器(供 REPL/报告/测试使用)。
+  _runPlanVerification,
+  getLastVerification: () => _verification,
 };
 
 // 把只读状态读取器登记到零依赖叶子（[DESIGN-ARCH-051] §6.11）：toolCalling

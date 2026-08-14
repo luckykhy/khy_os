@@ -20,6 +20,7 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const { printInfo, printWarn, printError, printSuccess } = require('../formatters');
 
@@ -36,7 +37,9 @@ async function _directCallModel(prompt, opts) {
   try {
     const aiMod = require('../ai');
     const ai = typeof aiMod === 'function' ? aiMod() : aiMod;
-    if (!ai || typeof ai.chat !== 'function') return '';
+    if (!ai || typeof ai.chat !== 'function') {
+      return '';
+    }
     return await ai.chat(prompt, opts);
   } catch {
     return '';
@@ -53,19 +56,29 @@ async function _directCallModel(prompt, opts) {
 function buildCreateOptions(args = [], options = {}) {
   const opt = {};
   const base = String(options.base || options.target || '').trim();
-  if (base) opt.base = base;
+  if (base) {
+    opt.base = base;
+  }
   const title = String(options.title || '').trim();
-  if (title) opt.title = title;
+  if (title) {
+    opt.title = title;
+  }
   const body = typeof options.body === 'string' ? options.body : '';
-  if (body) opt.body = body;
-  if (options.draft) opt.draft = true;
+  if (body) {
+    opt.body = body;
+  }
+  if (options.draft) {
+    opt.draft = true;
+  }
 
   // Free-text positional args become a context hint for the AI description.
   const rest = (Array.isArray(args) ? args : [])
     .filter((a) => a != null && !String(a).startsWith('-'))
     .map((a) => String(a).trim())
     .filter(Boolean);
-  if (rest.length) opt.userContext = rest.join(' ');
+  if (rest.length) {
+    opt.userContext = rest.join(' ');
+  }
   return opt;
 }
 
@@ -122,7 +135,9 @@ async function handlePr(subCommand, args = [], options = {}, deps = {}) {
 
   if (result && result.success) {
     printSuccess(`✅ 已创建：${result.title || '(无标题)'}`);
-    if (result.url) printInfo(result.url);
+    if (result.url) {
+      printInfo(result.url);
+    }
   } else {
     printError(`❌ 创建失败：${(result && result.error) || '未知错误'}`);
   }

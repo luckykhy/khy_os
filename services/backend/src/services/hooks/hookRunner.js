@@ -7,6 +7,7 @@
  *   - Emit JSON on stdout: modify the context
  */
 const { spawn } = require('child_process');
+
 const { platformShell, safeKill } = require('../../tools/platformUtils');
 
 /**
@@ -44,15 +45,22 @@ const CMD_HOOK_ALLOWED_FIELDS = {
  * @returns {{ filtered: Object, dropped: string[] }}
  */
 function filterCommandOutput(event, output) {
-  if (!output || typeof output !== 'object') return { filtered: output, dropped: [] };
+  if (!output || typeof output !== 'object') {
+    return { filtered: output, dropped: [] };
+  }
   const allowed = CMD_HOOK_ALLOWED_FIELDS[event];
   // Unknown event (should not happen — registry validates): pass through untouched.
-  if (!allowed) return { filtered: output, dropped: [] };
+  if (!allowed) {
+    return { filtered: output, dropped: [] };
+  }
   const filtered = {};
   const dropped = [];
   for (const key of Object.keys(output)) {
-    if (allowed.includes(key)) filtered[key] = output[key];
-    else dropped.push(key);
+    if (allowed.includes(key)) {
+      filtered[key] = output[key];
+    } else {
+      dropped.push(key);
+    }
   }
   return { filtered, dropped };
 }
@@ -83,11 +91,16 @@ async function _runFunctionHook(hook, context) {
     const result = await Promise.race([
       Promise.resolve(hook.handler(context)),
       new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error('Hook function timed out')), hook.timeout || 10000);
+        timer = setTimeout(
+          () => reject(new Error('Hook function timed out')),
+          hook.timeout || 10000
+        );
         timer.unref?.();
       }),
     ]);
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
 
     // Normalize return value
     if (!result || typeof result !== 'object') {
@@ -110,7 +123,9 @@ async function _runFunctionHook(hook, context) {
     }
     return { action: result.action || 'allow', output: result };
   } catch (err) {
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
     return { action: 'allow', error: err.message };
   }
 }
@@ -133,25 +148,40 @@ async function _runCommandHook(hook, context) {
     let stderr = '';
     let settled = false;
     const finish = (result) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      if (killTimer) { clearTimeout(killTimer); killTimer = null; }
+      if (killTimer) {
+        clearTimeout(killTimer);
+        killTimer = null;
+      }
       resolve(result);
     };
 
     // Manual timeout — spawn()'s `timeout` option is unreliable
     let killTimer = setTimeout(() => {
-      if (settled) return;
-      try { safeKill(child, 'SIGKILL', 0); } catch { /* ignore */ }
+      if (settled) {
+        return;
+      }
+      try {
+        safeKill(child, 'SIGKILL', 0);
+      } catch {
+        /* ignore */
+      }
       finish({ action: 'allow', error: `Hook timed out after ${hookTimeoutMs}ms` });
     }, hookTimeoutMs);
     killTimer.unref?.();
 
-    child.stdout.on('data', d => {
-      if (stdout.length < HOOK_MAX_BUFFER) stdout += d;
+    child.stdout.on('data', (d) => {
+      if (stdout.length < HOOK_MAX_BUFFER) {
+        stdout += d;
+      }
     });
-    child.stderr.on('data', d => {
-      if (stderr.length < HOOK_MAX_BUFFER) stderr += d;
+    child.stderr.on('data', (d) => {
+      if (stderr.length < HOOK_MAX_BUFFER) {
+        stderr += d;
+      }
     });
 
     child.on('error', (err) => {
@@ -167,7 +197,9 @@ async function _runCommandHook(hook, context) {
       if (stdout.trim()) {
         try {
           output = JSON.parse(stdout.trim());
-        } catch { /* not JSON, ignore */ }
+        } catch {
+          /* not JSON, ignore */
+        }
       }
 
       // Contain untrusted command-hook JSON: only event-whitelisted fields may
@@ -183,9 +215,9 @@ async function _runCommandHook(hook, context) {
       }
 
       finish({
-        action: (output && Object.keys(output).length > 0) ? 'modify' : 'allow',
+        action: output && Object.keys(output).length > 0 ? 'modify' : 'allow',
         output,
-        error: code !== 0 ? (stderr.trim() || `Hook exited with code ${code}`) : dropWarning,
+        error: code !== 0 ? stderr.trim() || `Hook exited with code ${code}` : dropWarning,
       });
     });
 
@@ -193,7 +225,9 @@ async function _runCommandHook(hook, context) {
     try {
       child.stdin.write(JSON.stringify(context));
       child.stdin.end();
-    } catch { /* broken pipe is fine */ }
+    } catch {
+      /* broken pipe is fine */
+    }
   });
 }
 
@@ -216,16 +250,31 @@ async function safeRunHook(hook, context) {
   try {
     const result = await runHook(hook, context);
     const duration = Date.now() - start;
-    _hookMetrics.push({ hookSource: hook.source || hook.command || 'unknown', event: hook._event || hook.event, durationMs: duration, action: result?.action || 'allow' });
-    if (_hookMetrics.length > HOOK_METRICS_MAX) _hookMetrics.splice(0, _hookMetrics.length - HOOK_METRICS_MAX);
+    _hookMetrics.push({
+      hookSource: hook.source || hook.command || 'unknown',
+      event: hook._event || hook.event,
+      durationMs: duration,
+      action: result?.action || 'allow',
+    });
+    if (_hookMetrics.length > HOOK_METRICS_MAX) {
+      _hookMetrics.splice(0, _hookMetrics.length - HOOK_METRICS_MAX);
+    }
     if (!result || typeof result.action !== 'string') {
       return { action: 'allow', error: 'Hook returned invalid result' };
     }
     return result;
   } catch (err) {
     const duration = Date.now() - start;
-    _hookMetrics.push({ hookSource: hook.source || hook.command || 'unknown', event: hook._event || hook.event, durationMs: duration, action: 'allow', error: err.message });
-    if (_hookMetrics.length > HOOK_METRICS_MAX) _hookMetrics.splice(0, _hookMetrics.length - HOOK_METRICS_MAX);
+    _hookMetrics.push({
+      hookSource: hook.source || hook.command || 'unknown',
+      event: hook._event || hook.event,
+      durationMs: duration,
+      action: 'allow',
+      error: err.message,
+    });
+    if (_hookMetrics.length > HOOK_METRICS_MAX) {
+      _hookMetrics.splice(0, _hookMetrics.length - HOOK_METRICS_MAX);
+    }
     return { action: 'allow', error: `Hook crash: ${err.message}` };
   }
 }
@@ -269,4 +318,12 @@ async function runHooks(hooks, context) {
   return { blocked: false, context: ctx };
 }
 
-module.exports = { runHook, safeRunHook, runHooks, getHookMetrics, filterCommandOutput, CMD_HOOK_ALLOWED_FIELDS, _hookMetrics };
+module.exports = {
+  runHook,
+  safeRunHook,
+  runHooks,
+  getHookMetrics,
+  filterCommandOutput,
+  CMD_HOOK_ALLOWED_FIELDS,
+  _hookMetrics,
+};

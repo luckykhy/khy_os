@@ -1,8 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
+
 const express = require('express');
-const { attach: attachSseKeepalive } = require('../services/sseKeepalive');
 
 const {
   sshConfigService,
@@ -18,6 +18,7 @@ const {
   subscribePersistenceAlerts,
   markPersistenceAlertsAcknowledged,
 } = require('../services/remote');
+const { attach: attachSseKeepalive } = require('../services/sseKeepalive');
 
 const router = express.Router();
 
@@ -33,7 +34,9 @@ function _buildTraceId(req) {
 const _trimmedString = require('../utils/trimIfString');
 
 function _normalizeCommandList(commands) {
-  if (!Array.isArray(commands)) return [];
+  if (!Array.isArray(commands)) {
+    return [];
+  }
   return commands
     .map((command) => (typeof command === 'string' ? command.trim() : ''))
     .filter(Boolean);
@@ -41,13 +44,20 @@ function _normalizeCommandList(commands) {
 
 function _parsePositiveInt(value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return fallback;
-  if (parsed < min) return fallback;
-  if (parsed > max) return max;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (parsed < min) {
+    return fallback;
+  }
+  if (parsed > max) {
+    return max;
+  }
   return parsed;
 }
 
-const _parseBoolean = (value, fallback = false) => require('../utils/parseBoolean')(value, fallback, { extended: false });
+const _parseBoolean = (value, fallback = false) =>
+  require('../utils/parseBoolean')(value, fallback, { extended: false });
 
 function _allowedHostAliasSet() {
   const raw = process.env.KHY_REMOTE_SSH_ALLOWLIST || '';
@@ -60,8 +70,12 @@ function _allowedHostAliasSet() {
 }
 
 function _headerAsString(value) {
-  if (typeof value === 'string') return value.trim();
-  if (Array.isArray(value) && typeof value[0] === 'string') return value[0].trim();
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (Array.isArray(value) && typeof value[0] === 'string') {
+    return value[0].trim();
+  }
   return '';
 }
 
@@ -69,19 +83,27 @@ function _parseAfterSeqFromRequest(req) {
   const fromBody = req.body?.after_seq;
   if (fromBody !== undefined && fromBody !== null && String(fromBody).trim() !== '') {
     const parsed = Number.parseInt(fromBody, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
   }
 
   const fromQuery = req.query?.after_seq;
   if (fromQuery !== undefined && fromQuery !== null && String(fromQuery).trim() !== '') {
     const parsed = Number.parseInt(fromQuery, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
   }
 
   const fromHeader = _headerAsString(req.headers['last-event-id']);
-  if (!fromHeader) return 0;
+  if (!fromHeader) {
+    return 0;
+  }
   const parsed = Number.parseInt(fromHeader, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
   return parsed;
 }
 
@@ -89,34 +111,33 @@ function _buildStreamId() {
   return `stream_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 }
 
-async function _runRemoteExecStreamExecution({
-  streamId,
-  traceId,
-  executionRequest,
-}) {
+async function _runRemoteExecStreamExecution({ streamId, traceId, executionRequest }) {
   const connectionId = _trimmedString(executionRequest?.connection_id);
   const commands = _normalizeCommandList(executionRequest?.commands);
   const dryRun = executionRequest?.dry_run !== false;
   const idempotencyKey = _trimmedString(executionRequest?.idempotency_key);
   const approvalTicketId = _trimmedString(executionRequest?.approval_ticket_id);
-  const riskContext = executionRequest?.risk_context && typeof executionRequest.risk_context === 'object'
-    ? executionRequest.risk_context
-    : null;
+  const riskContext =
+    executionRequest?.risk_context && typeof executionRequest.risk_context === 'object'
+      ? executionRequest.risk_context
+      : null;
 
-  const append = (event, payload = {}) => remoteExecStreamStore.appendEvent(streamId, {
-    event,
-    data: {
-      stream_id: streamId,
-      ...payload,
-    },
-  });
+  const append = (event, payload = {}) =>
+    remoteExecStreamStore.appendEvent(streamId, {
+      event,
+      data: {
+        stream_id: streamId,
+        ...payload,
+      },
+    });
 
-  const appendDone = (status, extra = {}) => append('done', {
-    trace_id: traceId,
-    status,
-    ts: new Date().toISOString(),
-    ...extra,
-  });
+  const appendDone = (status, extra = {}) =>
+    append('done', {
+      trace_id: traceId,
+      status,
+      ts: new Date().toISOString(),
+      ...extra,
+    });
 
   try {
     append('start', {
@@ -349,9 +370,10 @@ router.post('/exec', async (req, res) => {
     const dryRun = req.body?.dry_run !== false;
     const idempotencyKey = _trimmedString(req.body?.idempotency_key);
     const approvalTicketId = _trimmedString(req.body?.approval_ticket_id);
-    const riskContext = req.body?.risk_context && typeof req.body.risk_context === 'object'
-      ? req.body.risk_context
-      : null;
+    const riskContext =
+      req.body?.risk_context && typeof req.body.risk_context === 'object'
+        ? req.body.risk_context
+        : null;
 
     if (!connectionId) {
       return res.status(400).json({
@@ -495,19 +517,21 @@ router.post('/exec/stream', async (req, res) => {
     const dryRun = req.body?.dry_run !== false;
     const idempotencyKey = _trimmedString(req.body?.idempotency_key);
     const approvalTicketId = _trimmedString(req.body?.approval_ticket_id);
-    const riskContext = req.body?.risk_context && typeof req.body.risk_context === 'object'
-      ? req.body.risk_context
-      : null;
+    const riskContext =
+      req.body?.risk_context && typeof req.body.risk_context === 'object'
+        ? req.body.risk_context
+        : null;
     const streamIdFromBody = _trimmedString(req.body?.stream_id);
     const streamIdFromHeader = _headerAsString(req.headers['x-stream-id']);
     const streamId = streamIdFromBody || streamIdFromHeader || _buildStreamId();
     const afterSeq = _parseAfterSeqFromRequest(req);
-    const hasExecutionPayload = Boolean(connectionId)
-      || commands.length > 0
-      || Boolean(idempotencyKey)
-      || Boolean(approvalTicketId)
-      || Boolean(riskContext)
-      || dryRunExplicit;
+    const hasExecutionPayload =
+      Boolean(connectionId) ||
+      commands.length > 0 ||
+      Boolean(idempotencyKey) ||
+      Boolean(approvalTicketId) ||
+      Boolean(riskContext) ||
+      dryRunExplicit;
 
     if (!hasExecutionPayload && !streamIdFromBody && !streamIdFromHeader) {
       return res.status(400).json({
@@ -582,17 +606,31 @@ router.post('/exec/stream', async (req, res) => {
     let unsubscribe = () => {};
 
     const finish = () => {
-      if (streamClosed) return;
+      if (streamClosed) {
+        return;
+      }
       streamClosed = true;
-      try { unsubscribe(); } catch { /* ignore */ }
+      try {
+        unsubscribe();
+      } catch {
+        /* ignore */
+      }
       sse.stop();
-      try { res.end(); } catch { /* ignore */ }
+      try {
+        res.end();
+      } catch {
+        /* ignore */
+      }
     };
 
     const sendRecord = (record) => {
-      if (streamClosed || !record) return;
+      if (streamClosed || !record) {
+        return;
+      }
       const seq = Number.parseInt(record.seq, 10);
-      if (!Number.isFinite(seq) || seq <= lastDeliveredSeq) return;
+      if (!Number.isFinite(seq) || seq <= lastDeliveredSeq) {
+        return;
+      }
       lastDeliveredSeq = seq;
       sse.sendWithId(record.event, record.data, seq);
       if (record.event === 'done') {
@@ -637,7 +675,9 @@ router.post('/exec/stream', async (req, res) => {
 
     for (const record of replay.events) {
       sendRecord(record);
-      if (streamClosed) return;
+      if (streamClosed) {
+        return;
+      }
     }
 
     if (remoteExecStreamStore.isDone(streamId)) {
@@ -818,9 +858,10 @@ router.post('/approvals/decision', async (req, res) => {
       });
     }
 
-    const nextTicket = decision === 'approve'
-      ? remoteApprovalBridge.approveTicket(ticketId, reviewer)
-      : remoteApprovalBridge.rejectTicket(ticketId, reviewer, reason || 'rejected_by_reviewer');
+    const nextTicket =
+      decision === 'approve'
+        ? remoteApprovalBridge.approveTicket(ticketId, reviewer)
+        : remoteApprovalBridge.rejectTicket(ticketId, reviewer, reason || 'rejected_by_reviewer');
 
     return res.json({
       success: true,
@@ -962,18 +1003,34 @@ router.get('/alerts/persistence/stream', async (req, res) => {
   let lastDeliveredId = afterId;
 
   const close = () => {
-    if (closed) return;
+    if (closed) {
+      return;
+    }
     closed = true;
-    try { unsubscribe(); } catch { /* ignore */ }
+    try {
+      unsubscribe();
+    } catch {
+      /* ignore */
+    }
     sse.stop();
-    try { res.end(); } catch { /* ignore */ }
+    try {
+      res.end();
+    } catch {
+      /* ignore */
+    }
   };
 
   const sendAlert = (alert) => {
-    if (closed || !alert || typeof alert !== 'object') return;
+    if (closed || !alert || typeof alert !== 'object') {
+      return;
+    }
     const alertId = _parsePositiveInt(alert.alert_id, 0, 1);
-    if (alertId <= lastDeliveredId) return;
-    if (onlyUnacked && alert.acked) return;
+    if (alertId <= lastDeliveredId) {
+      return;
+    }
+    if (onlyUnacked && alert.acked) {
+      return;
+    }
     lastDeliveredId = alertId;
     sse.sendWithId('persistence_alert', alert, alertId);
   };

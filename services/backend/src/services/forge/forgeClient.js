@@ -12,6 +12,7 @@
  */
 
 const { execFile } = require('child_process');
+
 const forgeCore = require('./forgeCore');
 
 const GIT_TIMEOUT_MS = 10 * 60 * 1000; // 克隆大库可能较久;给足 10 分钟。
@@ -27,7 +28,9 @@ function _readToken(platform) {
   const keys = TOKEN_ENV_KEYS[platform] || [];
   for (const k of keys) {
     const v = String(process.env[k] || '').trim();
-    if (v) return v;
+    if (v) {
+      return v;
+    }
   }
   return '';
 }
@@ -45,11 +48,15 @@ async function searchRepos(opts = {}, deps = {}) {
   }
   const platform = forgeCore.resolvePlatform(opts.platform, opts.repoHint || opts.query);
   const query = String(opts.query || '').trim();
-  if (!query) return { ok: false, error: '缺少搜索关键词' };
+  if (!query) {
+    return { ok: false, error: '缺少搜索关键词' };
+  }
 
   const token = _readToken(platform);
   const req = forgeCore.buildSearchRequest(platform, query, { limit: opts.limit, token });
-  if (!req) return { ok: false, error: `无法为平台 ${platform} 构造搜索请求` };
+  if (!req) {
+    return { ok: false, error: `无法为平台 ${platform} 构造搜索请求` };
+  }
 
   const axios = deps.axios || require('axios');
   try {
@@ -62,14 +69,15 @@ async function searchRepos(opts = {}, deps = {}) {
       validateStatus: (s) => s >= 200 && s < 500,
     });
     if (resp.status >= 400) {
-      // 不回显 token;只透出平台返回的简短信息。
-      const msg = (resp.data && (resp.data.message || resp.data.error)) || `HTTP ${resp.status}`;
-      return { ok: false, error: `搜索失败(${platform}): ${msg}`, status: resp.status };
+      return _httpErr(platform, resp, '搜索');
     }
     const results = forgeCore.parseSearchResults(platform, resp.data);
     return { ok: true, platform, query, results };
   } catch (err) {
-    return { ok: false, error: `搜索请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `搜索请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -79,14 +87,18 @@ function _runGit(args, { cwd, onActivity } = {}, deps = {}) {
   return new Promise((resolve) => {
     let child;
     try {
-      child = runner('git', args, { cwd: cwd || process.cwd(), timeout: GIT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 },
+      child = runner(
+        'git',
+        args,
+        { cwd: cwd || process.cwd(), timeout: GIT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 },
         (err, stdout, stderr) => {
           if (err) {
             resolve({ ok: false, error: (stderr || err.message || String(err)).toString().trim() });
           } else {
             resolve({ ok: true, output: (stdout || stderr || '').toString().trim() });
           }
-        });
+        }
+      );
     } catch (err) {
       resolve({ ok: false, error: (err && err.message) || String(err) });
       return;
@@ -94,7 +106,11 @@ function _runGit(args, { cwd, onActivity } = {}, deps = {}) {
     if (onActivity && child && child.stderr) {
       // git 把进度写到 stderr;按行透传给调用方做进度展示。
       child.stderr.on('data', (chunk) => {
-        try { onActivity(String(chunk).trim()); } catch { /* fail-soft */ }
+        try {
+          onActivity(String(chunk).trim());
+        } catch {
+          /* fail-soft */
+        }
       });
     }
   });
@@ -112,7 +128,9 @@ async function cloneRepo(opts = {}, deps = {}) {
     return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
   }
   const input = String(opts.input || '').trim();
-  if (!input) return { ok: false, error: '缺少要克隆的仓库(owner/repo 或 git URL)' };
+  if (!input) {
+    return { ok: false, error: '缺少要克隆的仓库(owner/repo 或 git URL)' };
+  }
 
   const platform = forgeCore.resolvePlatform(opts.platform, input);
   let url;
@@ -125,7 +143,9 @@ async function cloneRepo(opts = {}, deps = {}) {
   // `--` 终结选项,url 之后才是目标目录,杜绝以 '-' 开头的参数被当 git 选项。
   const args = ['clone'];
   const depth = Number.parseInt(opts.depth, 10);
-  if (Number.isFinite(depth) && depth > 0) args.push('--depth', String(depth));
+  if (Number.isFinite(depth) && depth > 0) {
+    args.push('--depth', String(depth));
+  }
   args.push('--', url);
   const dir = String(opts.dir || '').trim();
   if (dir) {
@@ -136,8 +156,15 @@ async function cloneRepo(opts = {}, deps = {}) {
   }
 
   const res = await _runGit(args, { cwd: opts.cwd, onActivity: opts.onActivity }, deps);
-  if (!res.ok) return { ok: false, error: res.error, url };
-  return { ok: true, url, dir: dir || forgeCore.parseRepoSlug(input).split('/').pop() || '', output: res.output };
+  if (!res.ok) {
+    return { ok: false, error: res.error, url };
+  }
+  return {
+    ok: true,
+    url,
+    dir: dir || forgeCore.parseRepoSlug(input).split('/').pop() || '',
+    output: res.output,
+  };
 }
 
 /**
@@ -157,10 +184,14 @@ async function pullRepo(opts = {}, deps = {}) {
   // remote/branch 经安全字符校验后才追加(它们也会成为 git 参数)。
   if (remote && /^[A-Za-z0-9._/-]+$/.test(remote)) {
     args.push(remote);
-    if (branch && /^[A-Za-z0-9._/-]+$/.test(branch)) args.push(branch);
+    if (branch && /^[A-Za-z0-9._/-]+$/.test(branch)) {
+      args.push(branch);
+    }
   }
   const res = await _runGit(args, { onActivity: opts.onActivity }, deps);
-  if (!res.ok) return { ok: false, error: res.error, dir };
+  if (!res.ok) {
+    return { ok: false, error: res.error, dir };
+  }
   return { ok: true, dir, output: res.output };
 }
 
@@ -172,17 +203,45 @@ async function pullRepo(opts = {}, deps = {}) {
 async function _axiosGet(req, deps, { responseType } = {}) {
   const axios = deps.axios || require('axios');
   const cfg = {
-    method: req.method, url: req.url, headers: req.headers, params: req.params,
-    timeout: 30000, validateStatus: (s) => s >= 200 && s < 500,
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    params: req.params,
+    timeout: 30000,
+    validateStatus: (s) => s >= 200 && s < 500,
   };
-  if (responseType) cfg.responseType = responseType;
+  if (responseType) {
+    cfg.responseType = responseType;
+  }
   const resp = await axios(cfg);
   return resp;
 }
 
 function _httpErr(platform, resp, what) {
-  const msg = (resp && resp.data && (resp.data.message || resp.data.error)) || `HTTP ${resp && resp.status}`;
-  return { ok: false, error: `${what}失败(${platform}): ${msg}`, status: resp && resp.status };
+  const msg =
+    (resp && resp.data && (resp.data.message || resp.data.error)) || `HTTP ${resp && resp.status}`;
+  const status = resp && resp.status;
+  const err = { ok: false, error: `${what}失败(${platform}): ${msg}`, status };
+  // 当 GitHub 返回 403/429 限流时,附带结构化恢复指南,让 AI 能一步步引导用户完成配置。
+  if ((status === 403 || status === 429) && /rate.limit/i.test(msg)) {
+    err.code = 'FORGE_RATE_LIMIT';
+    err.retryable = true;
+    err.recovery = {
+      cause: '未配置 GITHUB_TOKEN,匿名请求速率限制为 60 次/小时',
+      fix: '配置 token 后提升至 5000 次/小时',
+      envFile: 'D:\\Portable\\khy-os\\services\\backend\\.env',
+      envKey: 'GITHUB_TOKEN',
+      envValue: 'ghp_你的token粘贴在这里',
+      steps: [
+        '请在浏览器打开 https://github.com/settings/tokens 创建 classic token',
+        '仅勾选 public_repo 权限即可',
+        '点击 Generate 后把生成的 token 粘贴给我',
+        '我会自动写入 .env 文件并重启服务',
+      ],
+      openUrl: 'https://github.com/settings/tokens/new?scopes=public_repo&description=khyos',
+    };
+  }
+  return err;
 }
 
 /**
@@ -191,22 +250,38 @@ function _httpErr(platform, resp, what) {
  * @param {object} [deps]
  */
 async function getRepoMeta(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const input = String(opts.input || '').trim();
-  if (!input) return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  if (!input) {
+    return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, input);
   let req;
-  try { req = forgeCore.buildRepoMetaRequest(platform, input, { token: _readToken(platform) }); }
-  catch (err) { return { ok: false, error: (err && err.message) || String(err) }; }
-  if (!req) return { ok: false, error: `无法为平台 ${platform} 构造元数据请求` };
+  try {
+    req = forgeCore.buildRepoMetaRequest(platform, input, { token: _readToken(platform) });
+  } catch (err) {
+    return { ok: false, error: (err && err.message) || String(err) };
+  }
+  if (!req) {
+    return { ok: false, error: `无法为平台 ${platform} 构造元数据请求` };
+  }
   try {
     const resp = await _axiosGet(req, deps);
-    if (resp.status >= 400) return _httpErr(platform, resp, '获取元数据');
+    if (resp.status >= 400) {
+      return _httpErr(platform, resp, '获取元数据');
+    }
     const meta = forgeCore.parseRepoMeta(platform, resp.data);
-    if (!meta) return { ok: false, error: `元数据解析失败(${platform})` };
+    if (!meta) {
+      return { ok: false, error: `元数据解析失败(${platform})` };
+    }
     return { ok: true, platform, meta };
   } catch (err) {
-    return { ok: false, error: `元数据请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `元数据请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -215,20 +290,42 @@ async function getRepoMeta(opts = {}, deps = {}) {
  * @param {{input:string, platform?:string, path?:string, ref?:string}} opts
  */
 async function listContents(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const input = String(opts.input || '').trim();
-  if (!input) return { ok: false, error: '缺少仓库' };
+  if (!input) {
+    return { ok: false, error: '缺少仓库' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, input);
   let req;
-  try { req = forgeCore.buildContentsRequest(platform, input, opts.path || '', { ref: opts.ref, token: _readToken(platform) }); }
-  catch (err) { return { ok: false, error: (err && err.message) || String(err) }; }
-  if (!req) return { ok: false, error: `无法为平台 ${platform} 构造目录请求` };
+  try {
+    req = forgeCore.buildContentsRequest(platform, input, opts.path || '', {
+      ref: opts.ref,
+      token: _readToken(platform),
+    });
+  } catch (err) {
+    return { ok: false, error: (err && err.message) || String(err) };
+  }
+  if (!req) {
+    return { ok: false, error: `无法为平台 ${platform} 构造目录请求` };
+  }
   try {
     const resp = await _axiosGet(req, deps);
-    if (resp.status >= 400) return _httpErr(platform, resp, '列出目录');
-    return { ok: true, platform, path: String(opts.path || ''), entries: forgeCore.parseContents(platform, resp.data) };
+    if (resp.status >= 400) {
+      return _httpErr(platform, resp, '列出目录');
+    }
+    return {
+      ok: true,
+      platform,
+      path: String(opts.path || ''),
+      entries: forgeCore.parseContents(platform, resp.data),
+    };
   } catch (err) {
-    return { ok: false, error: `目录请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `目录请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -237,23 +334,42 @@ async function listContents(opts = {}, deps = {}) {
  * @param {{input:string, platform?:string, path:string, ref?:string, maxBytes?:number}} opts
  */
 async function getFile(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const input = String(opts.input || '').trim();
   const path = String(opts.path || '').trim();
-  if (!input || !path) return { ok: false, error: '缺少仓库或文件路径' };
+  if (!input || !path) {
+    return { ok: false, error: '缺少仓库或文件路径' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, input);
   let req;
-  try { req = forgeCore.buildFileRequest(platform, input, path, { ref: opts.ref, token: _readToken(platform) }); }
-  catch (err) { return { ok: false, error: (err && err.message) || String(err) }; }
-  if (!req) return { ok: false, error: `无法为平台 ${platform} 构造文件请求` };
+  try {
+    req = forgeCore.buildFileRequest(platform, input, path, {
+      ref: opts.ref,
+      token: _readToken(platform),
+    });
+  } catch (err) {
+    return { ok: false, error: (err && err.message) || String(err) };
+  }
+  if (!req) {
+    return { ok: false, error: `无法为平台 ${platform} 构造文件请求` };
+  }
   try {
     // gitlab raw 端点返回纯文本;github/gitee 返回含 base64 的 JSON。统一交给 parseFileContent。
     const resp = await _axiosGet(req, deps);
-    if (resp.status >= 400) return _httpErr(platform, resp, '读取文件');
-    const { text, truncated } = forgeCore.parseFileContent(platform, resp.data, { maxBytes: opts.maxBytes });
+    if (resp.status >= 400) {
+      return _httpErr(platform, resp, '读取文件');
+    }
+    const { text, truncated } = forgeCore.parseFileContent(platform, resp.data, {
+      maxBytes: opts.maxBytes,
+    });
     return { ok: true, platform, path, text, truncated };
   } catch (err) {
-    return { ok: false, error: `文件请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `文件请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -265,34 +381,56 @@ async function getFile(opts = {}, deps = {}) {
  * @returns {Promise<{ok, platform, meta, tree, keyFiles, hints} | {ok:false,error}>}
  */
 async function reconRepo(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const input = String(opts.input || '').trim();
-  if (!input) return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  if (!input) {
+    return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, input);
 
   // 第 1 层:元数据(也给出默认分支,供 gitlab raw 文件读取用 ref)。
   const metaRes = await getRepoMeta({ input, platform }, deps);
-  if (!metaRes.ok) return { ok: false, error: metaRes.error, platform };
-  const meta = metaRes.meta;
-  const ref = String(opts.ref || meta.defaultBranch || '').trim();
+  const meta = metaRes.ok ? metaRes.meta : null;
 
   // 第 2 层:顶层目录树。
   const treeRes = await listContents({ input, platform }, deps);
   const entries = treeRes.ok ? treeRes.entries : [];
 
   // 第 3 层:只精读实际存在的关键文件(并发;像列目录后按已知路径取文件)。
-  const picks = forgeCore.pickKeyFiles(entries);
+  const picks = entries.length > 0 ? forgeCore.pickKeyFiles(entries) : [];
   const keyFiles = {};
-  const fetched = await Promise.all(picks.map((f) =>
-    getFile({ input, platform, path: f.path, ref }, deps)
-      .then((r) => ({ name: f.name, r }))
-      .catch((err) => ({ name: f.name, r: { ok: false, error: (err && err.message) || String(err) } }))));
+  const ref = meta ? meta.defaultBranch : '';
+  const fetched = await Promise.all(
+    picks.map((f) =>
+      getFile({ input, platform, path: f.path, ref, maxBytes: 8000 }, deps)
+        .then((r) => ({ name: f.name, r }))
+        .catch((err) => ({
+          name: f.name,
+          r: { ok: false, error: (err && err.message) || String(err) },
+        }))
+    )
+  );
   for (const { name, r } of fetched) {
-    if (r && r.ok) keyFiles[name] = { text: r.text, truncated: r.truncated, path: r.path };
+    if (r && r.ok) {
+      keyFiles[name] = { text: r.text, truncated: r.truncated, path: r.path };
+    }
   }
 
   // 第 4 层:确定性洞见(monorepo / agent 指南 / 构建·部署命令)。
   const hints = forgeCore.deriveReconHints({ tree: entries, keyFiles });
+  if (!metaRes.ok) {
+    return {
+      ok: false,
+      error: metaRes.error,
+      platform,
+      partial: true,
+      tree: entries.length > 0 ? entries : undefined,
+      keyFiles: Object.keys(keyFiles).length > 0 ? keyFiles : undefined,
+      hints,
+    };
+  }
   return { ok: true, platform, meta, tree: entries, keyFiles, hints };
 }
 
@@ -306,25 +444,41 @@ async function reconRepo(opts = {}, deps = {}) {
  * @returns {Promise<{ok, platform, commits, quality} | {ok:false,error}>}
  */
 async function getCommits(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const input = String(opts.input || '').trim();
-  if (!input) return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  if (!input) {
+    return { ok: false, error: '缺少仓库(owner/repo 或 git URL)' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, input);
   let req;
   try {
     req = forgeCore.buildCommitsRequest(platform, input, {
-      limit: opts.limit, ref: opts.ref, path: opts.path, token: _readToken(platform),
+      limit: opts.limit,
+      ref: opts.ref,
+      path: opts.path,
+      token: _readToken(platform),
     });
-  } catch (err) { return { ok: false, error: (err && err.message) || String(err) }; }
-  if (!req) return { ok: false, error: `无法为平台 ${platform} 构造提交请求` };
+  } catch (err) {
+    return { ok: false, error: (err && err.message) || String(err) };
+  }
+  if (!req) {
+    return { ok: false, error: `无法为平台 ${platform} 构造提交请求` };
+  }
   try {
     const resp = await _axiosGet(req, deps);
-    if (resp.status >= 400) return _httpErr(platform, resp, '获取提交历史');
+    if (resp.status >= 400) {
+      return _httpErr(platform, resp, '获取提交历史');
+    }
     const commits = forgeCore.parseCommits(platform, resp.data);
     const quality = forgeCore.evaluateCommitQuality(commits);
     return { ok: true, platform, commits, quality };
   } catch (err) {
-    return { ok: false, error: `提交请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `提交请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -335,29 +489,35 @@ async function getCommits(opts = {}, deps = {}) {
  * @returns {Promise<{ok, platform, query, results} | {ok:false,error}>}
  */
 async function searchCode(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const query = String(opts.query || '').trim();
-  if (!query) return { ok: false, error: '缺少代码搜索关键词' };
+  if (!query) {
+    return { ok: false, error: '缺少代码搜索关键词' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, opts.repo || '');
   const token = _readToken(platform);
-  const req = forgeCore.buildCodeSearchRequest(platform, query, { repo: opts.repo, limit: opts.limit, token });
+  const req = forgeCore.buildCodeSearchRequest(platform, query, {
+    repo: opts.repo,
+    limit: opts.limit,
+    token,
+  });
   if (!req) {
     return { ok: false, error: `代码搜索暂仅支持 github(${platform} 无对等的公开代码搜索端点)` };
   }
   try {
     const resp = await _axiosGet(req, deps);
     if (resp.status >= 400) {
-      // 代码搜索匿名常被拒;给出可操作提示(配置 GITHUB_TOKEN 提升配额/解锁)。
-      const base = _httpErr(platform, resp, '代码搜索');
-      if (resp.status === 401 || resp.status === 403) {
-        base.error += '(代码搜索通常需要鉴权:设置 GITHUB_TOKEN 环境变量)';
-      }
-      return base;
+      return _httpErr(platform, resp, '代码搜索');
     }
     const results = forgeCore.parseCodeSearchResults(platform, resp.data);
     return { ok: true, platform, query, results };
   } catch (err) {
-    return { ok: false, error: `代码搜索出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `代码搜索出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 
@@ -368,18 +528,29 @@ async function searchCode(opts = {}, deps = {}) {
  * @returns {Promise<{ok, platform, rate} | {ok:false,error}>}
  */
 async function checkRateLimit(opts = {}, deps = {}) {
-  if (!forgeCore.isEnabled()) return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  if (!forgeCore.isEnabled()) {
+    return { ok: false, error: 'forge 能力已被 KHY_FORGE 关闭' };
+  }
   const platform = forgeCore.resolvePlatform(opts.platform, '');
   const req = forgeCore.buildRateLimitRequest(platform, { token: _readToken(platform) });
-  if (!req) return { ok: false, error: `速率限制查询暂仅支持 github(${platform} 无对等端点)` };
+  if (!req) {
+    return { ok: false, error: `速率限制查询暂仅支持 github(${platform} 无对等端点)` };
+  }
   try {
     const resp = await _axiosGet(req, deps);
-    if (resp.status >= 400) return _httpErr(platform, resp, '查询速率限制');
+    if (resp.status >= 400) {
+      return _httpErr(platform, resp, '查询速率限制');
+    }
     const rate = forgeCore.parseRateLimit(platform, resp.data);
-    if (!rate) return { ok: false, error: `速率限制解析失败(${platform})` };
+    if (!rate) {
+      return { ok: false, error: `速率限制解析失败(${platform})` };
+    }
     return { ok: true, platform, rate };
   } catch (err) {
-    return { ok: false, error: `速率限制请求出错(${platform}): ${(err && err.message) || String(err)}` };
+    return {
+      ok: false,
+      error: `速率限制请求出错(${platform}): ${(err && err.message) || String(err)}`,
+    };
   }
 }
 

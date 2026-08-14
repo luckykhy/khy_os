@@ -15,15 +15,19 @@
  *   - Single file: max 8000 chars (truncated with warning)
  *   - Total merged: max 24000 chars
  */
-const path = require('path');
+const { execSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
-const { execSync } = require('child_process');
+const path = require('path');
+
 // External-include detection (aligns CC ClaudeMdExternalIncludesDialog 背后逻辑):
 // flags `@path` imports resolving OUTSIDE the repo/cwd trust boundary so
 // loadInstructions can surface a security warning — display/awareness only, the
 // allow/deny gate in resolveIncludes is untouched. Pure leaf (no fs).
-const { detectExternalIncludes, buildExternalIncludeWarning } = require('./instructionExternalIncludes');
+const {
+  detectExternalIncludes,
+  buildExternalIncludeWarning,
+} = require('./instructionExternalIncludes');
 
 const MAX_FILE_CHARS = 8000;
 const MAX_TOTAL_CHARS = 24000;
@@ -55,9 +59,13 @@ function findGitRoot(from) {
 
 function readFileSafe(filePath, maxChars = MAX_FILE_CHARS) {
   try {
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     const stat = fs.statSync(filePath);
-    if (!stat.isFile()) return null;
+    if (!stat.isFile()) {
+      return null;
+    }
 
     let content = fs.readFileSync(filePath, 'utf-8');
     let truncated = false;
@@ -84,11 +92,15 @@ function readFileSafe(filePath, maxChars = MAX_FILE_CHARS) {
  * @returns {string} Content with includes resolved
  */
 function resolveIncludes(content, baseDir, depth = 0, visited = new Set()) {
-  if (depth >= MAX_INCLUDE_DEPTH || visited.size >= MAX_INCLUDE_FILES) return content;
+  if (depth >= MAX_INCLUDE_DEPTH || visited.size >= MAX_INCLUDE_FILES) {
+    return content;
+  }
 
   // Match @path/to/file patterns on their own line
   return content.replace(/^@(\S+)\s*$/gm, (match, relPath) => {
-    if (visited.size >= MAX_INCLUDE_FILES) return match;
+    if (visited.size >= MAX_INCLUDE_FILES) {
+      return match;
+    }
 
     const absPath = path.resolve(baseDir, relPath);
     const resolved = path.resolve(absPath);
@@ -99,9 +111,19 @@ function resolveIncludes(content, baseDir, depth = 0, visited = new Set()) {
     // 文件进系统提示词(@include 注入 / 机密内联);锚定分隔符边界收紧。门关/异常 → 回退 legacy。
     let _includeAllowed = resolved.startsWith(baseDir) || resolved.startsWith(os.homedir());
     try {
-      const _a = require('./instructionIncludeBoundary').isIncludeAllowed(resolved, baseDir, os.homedir(), path.sep, process.env);
-      if (_a !== null) _includeAllowed = _a;
-    } catch { /* fail-soft → legacy naive startsWith */ }
+      const _a = require('./instructionIncludeBoundary').isIncludeAllowed(
+        resolved,
+        baseDir,
+        os.homedir(),
+        path.sep,
+        process.env
+      );
+      if (_a !== null) {
+        _includeAllowed = _a;
+      }
+    } catch {
+      /* fail-soft → legacy naive startsWith */
+    }
     if (!_includeAllowed) {
       return `<!-- @include denied: ${relPath} (outside allowed scope) -->`;
     }
@@ -133,10 +155,13 @@ function discoverRuleFiles(projectRoot) {
   const results = [];
 
   try {
-    if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) return results;
+    if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
+      return results;
+    }
 
-    const files = fs.readdirSync(rulesDir)
-      .filter(f => f.endsWith('.md'))
+    const files = fs
+      .readdirSync(rulesDir)
+      .filter((f) => f.endsWith('.md'))
       .sort(); // Deterministic order
 
     for (const file of files) {
@@ -174,9 +199,21 @@ function findFirstInstructionFile(dir) {
   for (const filename of FILENAMES) {
     const filePath = path.join(dir, filename);
     const file = readFileSafe(filePath);
-    if (file) return { path: filePath, file };
+    if (file) {
+      return { path: filePath, file };
+    }
   }
   return null;
+}
+
+// Portable-aware app home; fallback to the legacy ~/.khyquant location.
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
 }
 
 function discoverInstructionFiles(cwd) {
@@ -185,7 +222,7 @@ function discoverInstructionFiles(cwd) {
   const seen = new Set();
 
   // 1. Global: ~/.khyquant/khy.md 或 KHY.md
-  const globalHit = findFirstInstructionFile(path.join(os.homedir(), '.khyquant'));
+  const globalHit = findFirstInstructionFile(_appHome());
   if (globalHit) {
     const content = resolveIncludes(globalHit.file.content, path.dirname(globalHit.path));
     results.push({
@@ -212,7 +249,11 @@ function discoverInstructionFiles(cwd) {
           level: 'project',
           truncated: projectHit.file.truncated,
           size: projectHit.file.size,
-          externalIncludes: detectExternalIncludes(projectHit.file.content, path.dirname(projectHit.path), gitRoot),
+          externalIncludes: detectExternalIncludes(
+            projectHit.file.content,
+            path.dirname(projectHit.path),
+            gitRoot
+          ),
         });
         seen.add(resolved);
       }
@@ -249,7 +290,11 @@ function discoverInstructionFiles(cwd) {
         level: 'directory',
         truncated: cwdHit.file.truncated,
         size: cwdHit.file.size,
-        externalIncludes: detectExternalIncludes(cwdHit.file.content, path.dirname(cwdHit.path), cwd),
+        externalIncludes: detectExternalIncludes(
+          cwdHit.file.content,
+          path.dirname(cwdHit.path),
+          cwd
+        ),
       });
     }
   }
@@ -266,7 +311,9 @@ function discoverInstructionFiles(cwd) {
  */
 function loadInstructions(cwd) {
   const files = discoverInstructionFiles(cwd);
-  if (files.length === 0) return '';
+  if (files.length === 0) {
+    return '';
+  }
 
   const LEVEL_LABELS = {
     global: '全局指令',
@@ -286,7 +333,7 @@ function loadInstructions(cwd) {
     // Security scan: detect potential prompt injection patterns
     const scanResult = scanForPromptInjection(content);
     if (scanResult.length > 0) {
-      const warnings = scanResult.map(s => s.pattern).join(', ');
+      const warnings = scanResult.map((s) => s.pattern).join(', ');
       const warningLine = `⚠ [SECURITY] Potential prompt injection detected in ${file.path}: ${warnings}`;
       // Strip dangerous lines but keep the rest
       for (const match of scanResult) {
@@ -313,7 +360,9 @@ function loadInstructions(cwd) {
 
     // Enforce total limit
     const remaining = MAX_TOTAL_CHARS - totalChars - header.length - 2;
-    if (remaining <= 0) break;
+    if (remaining <= 0) {
+      break;
+    }
     if (content.length > remaining) {
       content = content.slice(0, remaining);
     }
@@ -322,7 +371,9 @@ function loadInstructions(cwd) {
     sections.push(section);
     totalChars += section.length;
 
-    if (totalChars >= MAX_TOTAL_CHARS) break;
+    if (totalChars >= MAX_TOTAL_CHARS) {
+      break;
+    }
   }
 
   return sections.join('\n\n');
@@ -345,16 +396,40 @@ function loadInstructions(cwd) {
  * @returns {Array<{pattern: string, line: number, snippet: string}>}
  */
 const INJECTION_PATTERNS = [
-  { name: 'instruction_override', regex: /(?:^|\n)\s*(?:ignore|disregard|forget|override|bypass)\s+(?:all\s+)?(?:previous|above|prior|earlier|existing)\s+(?:instructions?|rules?|prompts?|guidelines?)/im },
-  { name: 'role_hijack', regex: /(?:^|\n)\s*(?:you are now|from now on you are|act as|pretend (?:to be|you are)|assume the role of|new system prompt|your new (?:role|instructions?|prompt))/im },
-  { name: 'system_escape', regex: /<\/system>|<<SYS>>|<\|im_start\|>system|\[SYSTEM\]\s*:|<\|system\|>/i },
-  { name: 'base64_command', regex: /(?:execute|run|eval|decode)\s*(?:this\s+)?base64[:\s]+[A-Za-z0-9+/]{40,}={0,2}/i },
-  { name: 'privilege_escalation', regex: /(?:^|\n)\s*(?:enable|activate|enter|switch to)\s+(?:admin|developer|debug|god|root|sudo|jailbreak|unrestricted)\s+mode/im },
-  { name: 'output_suppression', regex: /(?:do not|don't|never)\s+(?:mention|reveal|disclose|show|output)\s+(?:this|these|the)\s+(?:instructions?|rules?|prompt|system)/im },
+  {
+    name: 'instruction_override',
+    regex:
+      /(?:^|\n)\s*(?:ignore|disregard|forget|override|bypass)\s+(?:all\s+)?(?:previous|above|prior|earlier|existing)\s+(?:instructions?|rules?|prompts?|guidelines?)/im,
+  },
+  {
+    name: 'role_hijack',
+    regex:
+      /(?:^|\n)\s*(?:you are now|from now on you are|act as|pretend (?:to be|you are)|assume the role of|new system prompt|your new (?:role|instructions?|prompt))/im,
+  },
+  {
+    name: 'system_escape',
+    regex: /<\/system>|<<SYS>>|<\|im_start\|>system|\[SYSTEM\]\s*:|<\|system\|>/i,
+  },
+  {
+    name: 'base64_command',
+    regex: /(?:execute|run|eval|decode)\s*(?:this\s+)?base64[:\s]+[A-Za-z0-9+/]{40,}={0,2}/i,
+  },
+  {
+    name: 'privilege_escalation',
+    regex:
+      /(?:^|\n)\s*(?:enable|activate|enter|switch to)\s+(?:admin|developer|debug|god|root|sudo|jailbreak|unrestricted)\s+mode/im,
+  },
+  {
+    name: 'output_suppression',
+    regex:
+      /(?:do not|don't|never)\s+(?:mention|reveal|disclose|show|output)\s+(?:this|these|the)\s+(?:instructions?|rules?|prompt|system)/im,
+  },
 ];
 
 function scanForPromptInjection(text) {
-  if (!text || typeof text !== 'string') return [];
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
   const results = [];
   const lines = text.split('\n');
 
@@ -386,7 +461,7 @@ function scanForPromptInjection(text) {
     if (secGuard && typeof secGuard.analyzeInput === 'function') {
       const analysis = secGuard.analyzeInput(text);
       if (analysis && !analysis.safe && analysis.severity !== 'LOW') {
-        const existing = new Set(results.map(r => r.pattern));
+        const existing = new Set(results.map((r) => r.pattern));
         if (!existing.has(analysis.threat)) {
           results.push({
             pattern: `security_guard:${analysis.threat || 'unknown'}`,
@@ -396,7 +471,9 @@ function scanForPromptInjection(text) {
         }
       }
     }
-  } catch { /* securityGuardService not available */ }
+  } catch {
+    /* securityGuardService not available */
+  }
 
   return results;
 }
@@ -421,15 +498,21 @@ function getCompatInstructionSummary(cwd) {
   const seen = new Set();
   const homeDir = os.homedir();
   const searchDirs = [cwd];
-  if (homeDir !== cwd) searchDirs.push(homeDir);
+  if (homeDir !== cwd) {
+    searchDirs.push(homeDir);
+  }
 
   for (const dir of searchDirs) {
     for (const filename of COMPAT_FILENAMES) {
       const filePath = path.join(dir, filename);
       const resolved = path.resolve(filePath);
-      if (seen.has(resolved)) continue;
+      if (seen.has(resolved)) {
+        continue;
+      }
       const file = readFileSafe(filePath);
-      if (!file) continue;
+      if (!file) {
+        continue;
+      }
       seen.add(resolved);
       results.push({
         path: filePath,
@@ -456,13 +539,15 @@ function _resolveQuickMemoryTarget(scope, cwd) {
   cwd = cwd || process.cwd();
   let dir;
   if (scope === 'global') {
-    dir = path.join(os.homedir(), '.khyquant');
+    dir = _appHome();
   } else {
     dir = findGitRoot(cwd) || cwd;
   }
   // Reuse an existing instruction file name if present, else default to khy.md.
   for (const name of FILENAMES) {
-    if (fs.existsSync(path.join(dir, name))) return { file: path.join(dir, name), dir };
+    if (fs.existsSync(path.join(dir, name))) {
+      return { file: path.join(dir, name), dir };
+    }
   }
   return { file: path.join(dir, FILENAMES[0]), dir };
 }
@@ -484,11 +569,15 @@ const AGENT_FILENAMES = ['agent.md', 'AGENT.md'];
  * @returns {{ file: string, dir: string }}
  */
 function _resolveInstructionTarget(target, scope, cwd) {
-  if (target !== 'agent') return _resolveQuickMemoryTarget(scope, cwd);
+  if (target !== 'agent') {
+    return _resolveQuickMemoryTarget(scope, cwd);
+  }
   cwd = cwd || process.cwd();
-  const dir = scope === 'global' ? path.join(os.homedir(), '.khyquant') : (findGitRoot(cwd) || cwd);
+  const dir = scope === 'global' ? _appHome() : findGitRoot(cwd) || cwd;
   for (const name of AGENT_FILENAMES) {
-    if (fs.existsSync(path.join(dir, name))) return { file: path.join(dir, name), dir };
+    if (fs.existsSync(path.join(dir, name))) {
+      return { file: path.join(dir, name), dir };
+    }
   }
   return { file: path.join(dir, AGENT_FILENAMES[0]), dir };
 }
@@ -513,7 +602,9 @@ function _resolveInstructionTarget(target, scope, cwd) {
  */
 function appendQuickMemory(note, opts = {}) {
   const text = String(note || '').trim();
-  if (!text) return { success: false, error: '空记忆：# 后需跟随要记住的内容' };
+  if (!text) {
+    return { success: false, error: '空记忆：# 后需跟随要记住的内容' };
+  }
 
   const scope = opts.scope === 'global' ? 'global' : 'project';
   const target = opts.target === 'agent' ? 'agent' : 'khy';
@@ -532,7 +623,9 @@ function appendQuickMemory(note, opts = {}) {
   const bullet = `- (${stamp}) ${text}`;
 
   try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const created = !fs.existsSync(file);
     let content = created ? '' : fs.readFileSync(file, 'utf-8');
 
@@ -543,11 +636,16 @@ function appendQuickMemory(note, opts = {}) {
       const headIdx = lines.findIndex((l) => l.trim() === QUICK_MEMORY_HEADING);
       let insertAt = lines.length;
       for (let i = headIdx + 1; i < lines.length; i++) {
-        if (/^#{1,6}\s/.test(lines[i])) { insertAt = i; break; }
+        if (/^#{1,6}\s/.test(lines[i])) {
+          insertAt = i;
+          break;
+        }
       }
       // Trim trailing blank lines inside the section so bullets stay contiguous.
       let end = insertAt;
-      while (end > headIdx + 1 && lines[end - 1].trim() === '') end--;
+      while (end > headIdx + 1 && lines[end - 1].trim() === '') {
+        end--;
+      }
       lines.splice(end, 0, bullet);
       content = lines.join('\n');
     } else {

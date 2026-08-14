@@ -10,22 +10,32 @@
  * regardless of how casually the user types.
  */
 
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ─── Stock Code Normalization ────────────────────────────────────────────────
 
 const STOCK_PATTERNS = [
   // Match 6-digit codes with or without prefix
-  { pattern: /(?:^|\s)(\d{6})(?:\s|$|[,，。.!！?？])/g, normalize: (code) => _addExchangePrefix(code) },
+  {
+    pattern: /(?:^|\s)(\d{6})(?:\s|$|[,，。.!！?？])/g,
+    normalize: (code) => _addExchangePrefix(code),
+  },
   // Match codes with prefix like sh600519, sz000001
-  { pattern: /(?:^|\s)((?:sh|sz|SH|SZ)\d{6})(?:\s|$|[,，。.!！?？])/g, normalize: (code) => code.toLowerCase() },
+  {
+    pattern: /(?:^|\s)((?:sh|sz|SH|SZ)\d{6})(?:\s|$|[,，。.!！?？])/g,
+    normalize: (code) => code.toLowerCase(),
+  },
 ];
 
 function _addExchangePrefix(code) {
   // 6/9 开头 → 上海, 0/3 开头 → 深圳
-  if (code.startsWith('6') || code.startsWith('9')) return `sh${code}`;
-  if (code.startsWith('0') || code.startsWith('3')) return `sz${code}`;
+  if (code.startsWith('6') || code.startsWith('9')) {
+    return `sh${code}`;
+  }
+  if (code.startsWith('0') || code.startsWith('3')) {
+    return `sz${code}`;
+  }
   return code;
 }
 
@@ -33,19 +43,19 @@ function _addExchangePrefix(code) {
 
 const ABBREVIATIONS = {
   // Chinese abbreviations
-  '茅台': '贵州茅台(sh600519)',
-  '平安': '中国平安(sh601318)',
-  '宁德': '宁德时代(sz300750)',
-  '比亚迪': '比亚迪(sz002594)',
-  '中芯': '中芯国际(sh688981)',
-  '腾讯': '腾讯控股(港股)',
-  '阿里': '阿里巴巴(港股/美股)',
+  茅台: '贵州茅台(sh600519)',
+  平安: '中国平安(sh601318)',
+  宁德: '宁德时代(sz300750)',
+  比亚迪: '比亚迪(sz002594)',
+  中芯: '中芯国际(sh688981)',
+  腾讯: '腾讯控股(港股)',
+  阿里: '阿里巴巴(港股/美股)',
 
   // Technical term abbreviations
-  'MA': '移动平均线(MA)',
-  'KDJ': 'KDJ随机指标',
-  'BOLL': '布林带(Bollinger Bands)',
-  'VOL': '成交量(Volume)',
+  MA: '移动平均线(MA)',
+  KDJ: 'KDJ随机指标',
+  BOLL: '布林带(Bollinger Bands)',
+  VOL: '成交量(Volume)',
 };
 
 // ─── Complexity Detection (for task planning) ───────────────────────────────
@@ -187,8 +197,11 @@ function formatPlanDisplay(planText) {
  * Check if a task response contains a plan structure.
  */
 function isPlanResponse(text) {
-  return text.includes('## 任务分解') || text.includes('## 执行计划') ||
-         (text.includes('1.') && text.includes('2.') && text.includes('3.'));
+  return (
+    text.includes('## 任务分解') ||
+    text.includes('## 执行计划') ||
+    (text.includes('1.') && text.includes('2.') && text.includes('3.'))
+  );
 }
 
 // ─── Internal Helpers ───────────────────────────────────────────────────────
@@ -218,7 +231,7 @@ function _normalizeStockCodes(text, metadata) {
 }
 
 function _expandAbbreviations(text, metadata) {
-  let result = text;
+  const result = text;
 
   // Only expand if the abbreviation is a standalone word/phrase
   for (const [abbr, expanded] of Object.entries(ABBREVIATIONS)) {
@@ -251,8 +264,10 @@ function _fixCommonIssues(text, metadata) {
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   });
 
-  // Remove excessive punctuation
-  result = result.replace(/([。！？!?]){3,}/g, '$1');
+  // Remove excessive punctuation: collapse RUNS OF THE SAME punctuation char to
+  // one (`???!!!` → `?!`), not the whole mixed run to a single char — collapsing
+  // across distinct types would drop the intent conveyed by the combination.
+  result = result.replace(/([。！？!?])\1{2,}/g, '$1');
 
   return result;
 }
@@ -266,13 +281,19 @@ function _fixCommonIssues(text, metadata) {
  * - Input patterns (stock code presence, keywords)
  */
 function _inferIntent(text, metadata) {
-  if (!text || text.length > 60) return text; // Clear enough if long
+  if (!text || text.length > 60) {
+    return text;
+  } // Clear enough if long
 
   // Greetings are not ambiguous — skip inference to avoid misrouting
   try {
     const { isGreeting } = require('./textHeuristics');
-    if (isGreeting(text)) return text;
-  } catch { /* best effort */ }
+    if (isGreeting(text)) {
+      return text;
+    }
+  } catch {
+    /* best effort */
+  }
 
   let inferred = null;
 
@@ -280,16 +301,39 @@ function _inferIntent(text, metadata) {
   // Intent: likely wants current quote or quick analysis
   if (/^(sh|sz)\d{6}$/i.test(text.trim())) {
     inferred = `查询 ${text} 的当前行情和简要分析`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'bare_stock_code' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'bare_stock_code',
+    });
     return inferred;
   }
 
   // Pattern: single Chinese stock name (short, no verb)
-  const KNOWN_STOCKS = ['茅台', '平安', '宁德', '比亚迪', '中芯', '腾讯', '阿里', '招商', '格力', '万科', '恒瑞', '五粮液'];
-  const matchedStock = KNOWN_STOCKS.find(s => text.trim() === s);
+  const KNOWN_STOCKS = [
+    '茅台',
+    '平安',
+    '宁德',
+    '比亚迪',
+    '中芯',
+    '腾讯',
+    '阿里',
+    '招商',
+    '格力',
+    '万科',
+    '恒瑞',
+    '五粮液',
+  ];
+  const matchedStock = KNOWN_STOCKS.find((s) => text.trim() === s);
   if (matchedStock) {
     inferred = `分析${matchedStock}的当前行情走势`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'stock_name_only' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'stock_name_only',
+    });
     return inferred;
   }
 
@@ -303,14 +347,26 @@ function _inferIntent(text, metadata) {
       if (topics.length > 0) {
         const recentTopic = topics[0];
         inferred = `${text}（结合最近分析的内容回答，如果不确定请询问具体标的）`;
-        metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'ambiguous_question_with_context' });
+        metadata.enhancements.push({
+          type: 'intent_infer',
+          from: text,
+          to: inferred,
+          reason: 'ambiguous_question_with_context',
+        });
         return inferred;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Fallback: ask AI to clarify but also attempt to answer
     inferred = `${text}（请结合上下文理解，若无法确定则礼貌询问指的是哪只股票或哪个策略）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'ambiguous_no_context' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'ambiguous_no_context',
+    });
     return inferred;
   }
 
@@ -325,13 +381,25 @@ function _inferIntent(text, metadata) {
       if (prefs.frequentSymbols && prefs.frequentSymbols.length > 0) {
         const recent = prefs.frequentSymbols[0];
         inferred = `${action} ${recent}（用户最近关注的标的）`;
-        metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'verb_only_with_recent_symbol' });
+        metadata.enhancements.push({
+          type: 'intent_infer',
+          from: text,
+          to: inferred,
+          reason: 'verb_only_with_recent_symbol',
+        });
         return inferred;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     inferred = `${text}（请询问用户想${action}哪个标的）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'verb_only_no_symbol' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'verb_only_no_symbol',
+    });
     return inferred;
   }
 
@@ -340,15 +408,35 @@ function _inferIntent(text, metadata) {
     // Already handled by stock code normalization, but add intent
     const normalized = text.trim();
     inferred = `查询 ${normalized} 的行情`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'bare_digits' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'bare_digits',
+    });
     return inferred;
   }
 
   // Pattern: "那个"/"这个" referencing something from context
+  // 当 referenceDisambiguation 叶子启用时(KHY_REFERENCE_DISAMBIGUATION 默认开),指代歧义由它在
+  // 系统提示词侧统一处理(注入候选实体/AskUserQuestion 指令),此处不再附加自然语言提示,
+  // 避免重复;关闭时逐字节保持原行为。
   if (/^(那个|这个|上次那个|之前的)/.test(text.trim())) {
-    inferred = `${text}（请根据对话上下文理解用户指代的对象，如果不确定请询问）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'pronoun_reference' });
-    return inferred;
+    const _refDisambigOn = !['0', 'false', 'off', 'no'].includes(
+      String(process.env.KHY_REFERENCE_DISAMBIGUATION || 'true')
+        .trim()
+        .toLowerCase()
+    );
+    if (!_refDisambigOn) {
+      inferred = `${text}（请根据对话上下文理解用户指代的对象，如果不确定请询问）`;
+      metadata.enhancements.push({
+        type: 'intent_infer',
+        from: text,
+        to: inferred,
+        reason: 'pronoun_reference',
+      });
+      return inferred;
+    }
   }
 
   return text;
@@ -366,12 +454,16 @@ function _enrichContext(text, context, metadata) {
 
     // Add frequent symbols context
     if (prefs.frequentSymbols && prefs.frequentSymbols.length > 0) {
-      const mentioned = prefs.frequentSymbols.filter(s => text.includes(s.replace(/^(sh|sz)/, '')));
+      const mentioned = prefs.frequentSymbols.filter((s) =>
+        text.includes(s.replace(/^(sh|sz)/, ''))
+      );
       if (mentioned.length > 0) {
         enrichments.push(`[用户常关注: ${mentioned.join(', ')}]`);
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Add knowledge level context
   try {
@@ -380,7 +472,9 @@ function _enrichContext(text, context, metadata) {
     if (level.level !== 'beginner') {
       enrichments.push(`[用户量化水平: ${level.levelName}]`);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   if (enrichments.length > 0) {
     metadata.enhancements.push({ type: 'context', items: enrichments });
@@ -404,7 +498,7 @@ function _assessComplexity(text) {
   // Check multi-step indicators (these are inherently complex)
   for (const pattern of COMPLEXITY_INDICATORS.multiStep) {
     if (pattern.test(evalText)) {
-      score += 2;  // Multi-step tasks always need planning
+      score += 2; // Multi-step tasks always need planning
       reasons.push('multi_step');
       break;
     }
@@ -429,21 +523,36 @@ function _assessComplexity(text) {
   }
 
   // Length-based complexity (long prompts often need planning)
-  if (evalText.length > 80) score += 1;
-  if (evalText.length > 160) { score += 1; reasons.push('long_input'); }
+  if (evalText.length > 80) {
+    score += 1;
+  }
+  if (evalText.length > 160) {
+    score += 1;
+    reasons.push('long_input');
+  }
 
   // Multiple stock codes = comparison task
   const codeCount = (evalText.match(/(sh|sz)\d{6}/gi) || []).length;
-  if (codeCount >= 2) { score += 1; reasons.push('multi_symbol'); }
+  if (codeCount >= 2) {
+    score += 1;
+    reasons.push('multi_symbol');
+  }
 
   // Multiple question marks = multiple questions
   const questionCount = (evalText.match(/[？?]/g) || []).length;
-  if (questionCount >= 2) { score += 1; reasons.push('multi_question'); }
+  if (questionCount >= 2) {
+    score += 1;
+    reasons.push('multi_question');
+  }
 
   // Simple coding/file tasks should NOT trigger plan mode — reduce score
   // when the request is a direct "write file" / "create function" task.
-  if (/^(帮我|请|写|创建|生成|实现|添加).{0,10}(写|创建|生成|实现|添加|修改|修复|删除)/.test(evalText)
-      || /\.(js|ts|py|c|h|vue|css|json|md)\b/.test(evalText)) {
+  if (
+    /^(帮我|请|写|创建|生成|实现|添加).{0,10}(写|创建|生成|实现|添加|修改|修复|删除)/.test(
+      evalText
+    ) ||
+    /\.(js|ts|py|c|h|vue|css|json|md)\b/.test(evalText)
+  ) {
     score = Math.max(0, score - 1);
     reasons.push('simple_coding_task');
   }
@@ -472,13 +581,17 @@ function getContextEnrichment(userMessage) {
         enrichments.push(`用户历史最佳策略: ${best.map(([k, v]) => `${k}→${v}`).join(', ')}`);
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   try {
     const { getLevelProgress } = require('./knowledgeTeachingService');
     const level = getLevelProgress();
     enrichments.push(`用户量化水平: ${level.levelName} (XP: ${level.xp})`);
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return enrichments.length > 0 ? `\n\n[用户画像]\n${enrichments.join('\n')}` : '';
 }
@@ -487,49 +600,112 @@ function getContextEnrichment(userMessage) {
 
 const INTENT_MAP = [
   // 每条：{ tokens: string[], route: string, label: string }
-  { tokens: ['密钥', 'key', 'apikey', 'api-key', 'api_key', 'api密钥'], route: 'gateway config', label: 'API 密钥配置' },
-  { tokens: ['模型', 'model', 'models', '模型状态', 'modelstatus', 'model-status'], route: 'gateway status', label: '模型状态' },
-  { tokens: ['代理', 'proxy', 'clash', '翻墙', '梯子', '代理设置'], route: 'proxy', label: '代理设置' },
+  {
+    tokens: ['密钥', 'key', 'apikey', 'api-key', 'api_key', 'api密钥'],
+    route: 'gateway config',
+    label: 'API 密钥配置',
+  },
+  {
+    tokens: ['模型', 'model', 'models', '模型状态', 'modelstatus', 'model-status'],
+    route: 'gateway status',
+    label: '模型状态',
+  },
+  {
+    tokens: ['代理', 'proxy', 'clash', '翻墙', '梯子', '代理设置'],
+    route: 'proxy',
+    label: '代理设置',
+  },
   { tokens: ['初始化', 'init', 'setup', '搭建', '项目初始化'], route: 'init', label: '项目初始化' },
-  { tokens: ['帮助', 'help', '怎么用', '怎么使用', '教程', '使用说明'], route: 'help', label: '帮助' },
-  { tokens: ['网关', 'gateway', '网关状态', 'gatewaystatus', 'gateway-status'], route: 'gateway status', label: 'AI 网关状态' },
+  {
+    tokens: ['帮助', 'help', '怎么用', '怎么使用', '教程', '使用说明'],
+    route: 'help',
+    label: '帮助',
+  },
+  {
+    tokens: ['网关', 'gateway', '网关状态', 'gatewaystatus', 'gateway-status'],
+    route: 'gateway status',
+    label: 'AI 网关状态',
+  },
   { tokens: ['历史', 'history', '对话记录', '会话历史'], route: 'history list', label: '对话历史' },
-  { tokens: ['费用', 'cost', 'token', '花费', '余额', '用量', 'token用量'], route: 'cost', label: '费用统计' },
+  {
+    tokens: ['费用', 'cost', 'token', '花费', '余额', '用量', 'token用量'],
+    route: 'cost',
+    label: '费用统计',
+  },
   { tokens: ['更新', 'update', '升级', '检查更新'], route: 'update', label: '检查更新' },
   { tokens: ['诊断', 'doctor', '检查环境', '系统诊断'], route: 'doctor', label: '系统诊断' },
-  { tokens: ['清理', 'cleanup', '清除', '释放空间', '清理存储'], route: 'cleanup status', label: '清理存储' },
-  { tokens: ['技能', 'skill', '插件', 'plugin', '技能管理', '插件管理'], route: 'skill list', label: '技能管理' },
-  { tokens: ['安全', 'security', '权限', 'permission', '安全权限'], route: 'security status', label: '安全权限' },
+  {
+    tokens: ['清理', 'cleanup', '清除', '释放空间', '清理存储'],
+    route: 'cleanup status',
+    label: '清理存储',
+  },
+  {
+    tokens: ['技能', 'skill', '插件', 'plugin', '技能管理', '插件管理'],
+    route: 'skill list',
+    label: '技能管理',
+  },
+  {
+    tokens: ['安全', 'security', '权限', 'permission', '安全权限'],
+    route: 'security status',
+    label: '安全权限',
+  },
   { tokens: ['登录', 'login', 'signin'], route: 'login', label: '登录' },
   { tokens: ['退出登录', 'logout', 'signout'], route: 'logout', label: '退出登录' },
-  { tokens: ['审查', 'review', '代码审查', 'codereview', 'code-review', 'code_review'], route: 'review', label: '代码审查' },
+  {
+    tokens: ['审查', 'review', '代码审查', 'codereview', 'code-review', 'code_review'],
+    route: 'review',
+    label: '代码审查',
+  },
   { tokens: ['定时', 'cron', '定时任务', '计划任务'], route: 'cron list', label: '定时调度' },
   { tokens: ['主题', 'theme', '皮肤', 'skin', '配色'], route: 'skin list', label: '主题皮肤' },
-  { tokens: ['会话', 'session', '搜索会话', '会话搜索'], route: 'session search', label: '会话搜索' },
-  { tokens: ['发布', 'publish', '打包', 'release', '发布工具'], route: 'publish check', label: '发布工具' },
+  {
+    tokens: ['会话', 'session', '搜索会话', '会话搜索'],
+    route: 'session search',
+    label: '会话搜索',
+  },
+  {
+    tokens: ['发布', 'publish', '打包', 'release', '发布工具'],
+    route: 'publish check',
+    label: '发布工具',
+  },
 ];
 
 const INTENT_ROUTE_MODES = new Set(['strict', 'balanced', 'aggressive']);
-const COMMAND_INTENT_PREFIX = /^(查看|看|查|打开|配置|设置|切换|显示|列出|执行|帮我|请|show|check|list|open|get|set|switch|configure|status)/i;
-const CONVERSATIONAL_SIGNAL = /(怎么|为什么|原理|思考|解释|是什么|是啥|如何|可以吗|能吗|吗|呢|？|\?|why|how|what is|explain)/i;
+const COMMAND_INTENT_PREFIX =
+  /^(查看|看|查|打开|配置|设置|切换|显示|列出|执行|帮我|请|show|check|list|open|get|set|switch|configure|status)/i;
+const CONVERSATIONAL_SIGNAL =
+  /(怎么|为什么|原理|思考|解释|是什么|是啥|如何|可以吗|能吗|吗|呢|？|\?|why|how|what is|explain)/i;
 
 function _normalizeIntentToken(text = '') {
-  return String(text || '').trim().toLowerCase().replace(/[\s_-]/g, '');
+  return String(text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 function _resolveIntentRouteMode() {
-  const raw = String(process.env.KHY_INTENT_ROUTE_MODE || 'balanced').trim().toLowerCase();
+  const raw = String(process.env.KHY_INTENT_ROUTE_MODE || 'balanced')
+    .trim()
+    .toLowerCase();
   return INTENT_ROUTE_MODES.has(raw) ? raw : 'balanced';
 }
 
 function _getTokenMatchKind(rawText, entry = null) {
-  if (!entry || !Array.isArray(entry.tokens) || entry.tokens.length === 0) return '';
+  if (!entry || !Array.isArray(entry.tokens) || entry.tokens.length === 0) {
+    return '';
+  }
   const normalizedText = _normalizeIntentToken(rawText);
   for (const token of entry.tokens) {
     const normalizedToken = _normalizeIntentToken(token);
-    if (!normalizedToken) continue;
-    if (normalizedText === normalizedToken) return 'exact';
-    if (normalizedText.includes(normalizedToken)) return 'contains';
+    if (!normalizedToken) {
+      continue;
+    }
+    if (normalizedText === normalizedToken) {
+      return 'exact';
+    }
+    if (normalizedText.includes(normalizedToken)) {
+      return 'contains';
+    }
   }
   return '';
 }
@@ -540,13 +716,19 @@ function _getTokenMatchKind(rawText, entry = null) {
  * @returns {Array<{route: string, label: string}>} 匹配的命令路由（可能 0-N 条）
  */
 function matchIntentRoutes(input) {
-  if (!input || typeof input !== 'string') return [];
+  if (!input || typeof input !== 'string') {
+    return [];
+  }
   const raw = input.trim();
   const text = raw.toLowerCase();
   // 排除已经是 slash 命令或明确的路由命令
-  if (text.startsWith('/')) return [];
+  if (text.startsWith('/')) {
+    return [];
+  }
   // 排除很长输入（很可能是 AI 对话而非命令意图）
-  if (text.length > 40) return [];
+  if (text.length > 40) {
+    return [];
+  }
 
   const mode = _resolveIntentRouteMode();
   const isCommandLike = COMMAND_INTENT_PREFIX.test(raw);
@@ -555,17 +737,27 @@ function matchIntentRoutes(input) {
   const matches = [];
   for (const entry of INTENT_MAP) {
     const matchKind = _getTokenMatchKind(raw, entry);
-    if (!matchKind) continue;
+    if (!matchKind) {
+      continue;
+    }
 
     if (mode === 'strict') {
-      if (matchKind !== 'exact') continue;
+      if (matchKind !== 'exact') {
+        continue;
+      }
     } else if (mode === 'balanced') {
       const allowContains = isCommandLike && !looksConversational && raw.length <= 24;
-      if (matchKind !== 'exact' && !allowContains) continue;
-      if (looksConversational && !isCommandLike) continue;
+      if (matchKind !== 'exact' && !allowContains) {
+        continue;
+      }
+      if (looksConversational && !isCommandLike) {
+        continue;
+      }
     } else {
       // aggressive
-      if (raw.length > 24) continue;
+      if (raw.length > 24) {
+        continue;
+      }
     }
 
     matches.push({ route: entry.route, label: entry.label });
@@ -583,11 +775,17 @@ function matchIntentRoutes(input) {
  * @returns {Promise<{route: string, label: string}|null>} 用户选择的路由，null=发送给 AI
  */
 async function clarifyIntent(candidates, originalInput) {
-  if (!candidates || candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0];
+  if (!candidates || candidates.length === 0) {
+    return null;
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
 
   // 非 TTY 环境直接返回第一匹配
-  if (!process.stdin.isTTY) return candidates[0];
+  if (!process.stdin.isTTY) {
+    return candidates[0];
+  }
 
   const TIMEOUT_MS = 15000;
   let timedOut = false;
@@ -624,9 +822,11 @@ async function _showClarifyMenu(candidates, chalk) {
     // cli/ui/inkComponents via interactiveMenuPort, never required from the service
     // layer. Null when headless → fall through to the inquirer/first-candidate path.
     const selectMenu = require('./interactiveMenuPort').getMenuPrompter();
-    if (!selectMenu) throw new Error('no interactive menu registered');
+    if (!selectMenu) {
+      throw new Error('no interactive menu registered');
+    }
     const choices = [
-      ...candidates.map(c => ({ name: c.label, value: c })),
+      ...candidates.map((c) => ({ name: c.label, value: c })),
       { name: '发送给 AI 对话', value: null },
     ];
     const picked = await selectMenu({ message: '请选择操作:', choices });
@@ -636,12 +836,17 @@ async function _showClarifyMenu(candidates, chalk) {
     try {
       const inquirer = require('inquirer');
       const choices = [
-        ...candidates.map(c => ({ name: c.label, value: c })),
+        ...candidates.map((c) => ({ name: c.label, value: c })),
         { name: '发送给 AI 对话', value: null },
       ];
-      const { picked } = await inquirer.prompt([{
-        type: 'list', name: 'picked', message: '请选择操作:', choices,
-      }]);
+      const { picked } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'picked',
+          message: '请选择操作:',
+          choices,
+        },
+      ]);
       return picked;
     } catch {
       return candidates[0];

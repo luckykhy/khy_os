@@ -16,14 +16,14 @@
  */
 
 const PROVIDER_STALE_MS = Object.freeze({
-  claude:   90_000,
+  claude: 90_000,
   anthropic: 90_000,
-  gpt:      45_000,
-  openai:   45_000,
+  gpt: 45_000,
+  openai: 45_000,
   deepseek: 90_000,
-  ollama:   120_000,
-  gemini:   60_000,
-  default:  90_000,
+  ollama: 120_000,
+  gemini: 60_000,
+  default: 90_000,
 });
 
 // Pre-projected provider keys for the prefix match. Hoisted to a module constant
@@ -46,8 +46,8 @@ const _PROVIDER_STALE_KEYS = Object.keys(PROVIDER_STALE_MS);
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 const _norm = require('../../../utils/normLower');
 const _FAST_PROVIDER_KEYS = new Set(['gpt', 'openai']);
-const _FAST_FLOOR_MS = 90_000;        // gpt/openai 抬齐 default
-const _DEFAULT_GRACE_MS = 120_000;    // 首 token 宽限默认值
+const _FAST_FLOOR_MS = 90_000; // gpt/openai 抬齐 default
+const _DEFAULT_GRACE_MS = 120_000; // 首 token 宽限默认值
 
 /** 门控:默认开,仅显式 0/false/off/no 才关。 */
 function _isStaleTuningEnabled(env) {
@@ -72,13 +72,16 @@ function _resolveStaleTuning(matchedKey, options, env) {
     return { thresholdMs: legacy, graceMs: 0 };
   }
   let base = PROVIDER_STALE_MS[matchedKey] || PROVIDER_STALE_MS.default;
-  if (_FAST_PROVIDER_KEYS.has(matchedKey)) base = Math.max(base, _FAST_FLOOR_MS);
+  if (_FAST_PROVIDER_KEYS.has(matchedKey)) {
+    base = Math.max(base, _FAST_FLOOR_MS);
+  }
   const override = _parseNonNegMs(env && env.KHY_STREAM_STALE_MS, 0);
-  if (override > 0) base = override;
+  if (override > 0) {
+    base = override;
+  }
   const graceMs = _parseNonNegMs(env && env.KHY_STREAM_FIRST_TOKEN_GRACE_MS, _DEFAULT_GRACE_MS);
   return { thresholdMs: base, graceMs };
 }
-
 
 class StreamStaleDetector {
   /**
@@ -91,7 +94,7 @@ class StreamStaleDetector {
   constructor(options = {}) {
     const provider = String(options.provider || 'default').toLowerCase();
     // Match provider prefix (e.g. "claude-3-opus" → "claude")
-    const matchedKey = _PROVIDER_STALE_KEYS.find(k => provider.includes(k));
+    const matchedKey = _PROVIDER_STALE_KEYS.find((k) => provider.includes(k));
     const tuned = _resolveStaleTuning(matchedKey, options, options.env || process.env);
     this._thresholdMs = tuned.thresholdMs;
     // 首 token 宽限:首 chunk 未到之前用 max(阈值, graceMs);首 chunk 一到即回落稳态阈值。
@@ -109,7 +112,7 @@ class StreamStaleDetector {
     // ── Diagnostic latency tracking ──
     this._chunkCount = 0;
     this._totalBytes = 0;
-    this._latencies = [];       // inter-chunk latency samples (ms)
+    this._latencies = []; // inter-chunk latency samples (ms)
     this._minLatency = Infinity;
     this._maxLatency = 0;
     this._sumLatency = 0;
@@ -121,12 +124,16 @@ class StreamStaleDetector {
    * Start monitoring. Call after stream connection is established.
    */
   start() {
-    if (this._timer) return this;
+    if (this._timer) {
+      return this;
+    }
     this._lastChunkTs = Date.now();
     this._warned = false;
     this._stale = false;
     this._timer = setInterval(() => this._check(), Math.min(5000, this._warnMs));
-    if (this._timer.unref) this._timer.unref();
+    if (this._timer.unref) {
+      this._timer.unref();
+    }
     return this;
   }
 
@@ -141,14 +148,18 @@ class StreamStaleDetector {
       const gap = now - this._lastTouchTs;
       this._latencies.push(gap);
       this._sumLatency += gap;
-      if (gap < this._minLatency) this._minLatency = gap;
-      if (gap > this._maxLatency) this._maxLatency = gap;
+      if (gap < this._minLatency) {
+        this._minLatency = gap;
+      }
+      if (gap > this._maxLatency) {
+        this._maxLatency = gap;
+      }
     } else {
       this._firstChunkTs = now;
     }
     this._lastTouchTs = now;
     this._chunkCount++;
-    this._totalBytes += (byteLen || 0);
+    this._totalBytes += byteLen || 0;
     this._lastChunkTs = now;
     this._warned = false;
   }
@@ -174,9 +185,16 @@ class StreamStaleDetector {
           method: `${this._provider}_stream`,
           success: !this._stale,
           elapsed: stats.totalDurationMs,
-          meta: { chunkCount: stats.chunkCount, p50: stats.p50, p95: stats.p95, totalBytes: stats.totalBytes },
+          meta: {
+            chunkCount: stats.chunkCount,
+            p50: stats.p50,
+            p95: stats.p95,
+            totalBytes: stats.totalBytes,
+          },
         });
-      } catch { /* sink unavailable */ }
+      } catch {
+        /* sink unavailable */
+      }
     }
   }
 
@@ -195,16 +213,23 @@ class StreamStaleDetector {
     const count = this._latencies.length;
     if (count === 0) {
       return {
-        chunkCount: this._chunkCount, totalBytes: this._totalBytes,
-        totalDurationMs: 0, minMs: 0, maxMs: 0, avgMs: 0, p50: 0, p95: 0,
-        provider: this._provider, stale: this._stale,
+        chunkCount: this._chunkCount,
+        totalBytes: this._totalBytes,
+        totalDurationMs: 0,
+        minMs: 0,
+        maxMs: 0,
+        avgMs: 0,
+        p50: 0,
+        p95: 0,
+        provider: this._provider,
+        stale: this._stale,
       };
     }
     const sorted = this._latencies.slice().sort((a, b) => a - b);
     const p50 = sorted[Math.floor(count * 0.5)];
     const p95 = sorted[Math.floor(count * 0.95)];
-    const totalDuration = this._lastTouchTs && this._firstChunkTs
-      ? this._lastTouchTs - this._firstChunkTs : 0;
+    const totalDuration =
+      this._lastTouchTs && this._firstChunkTs ? this._lastTouchTs - this._firstChunkTs : 0;
     return {
       chunkCount: this._chunkCount,
       totalBytes: this._totalBytes,
@@ -230,12 +255,20 @@ class StreamStaleDetector {
       this._stale = true;
       this.stop();
       if (this._onStale) {
-        try { this._onStale(elapsed); } catch { /* non-critical */ }
+        try {
+          this._onStale(elapsed);
+        } catch {
+          /* non-critical */
+        }
       }
     } else if (elapsed >= activeWarn && !this._warned) {
       this._warned = true;
       if (this._onWarn) {
-        try { this._onWarn(elapsed); } catch { /* non-critical */ }
+        try {
+          this._onWarn(elapsed);
+        } catch {
+          /* non-critical */
+        }
       }
     }
   }
@@ -255,10 +288,18 @@ function attachStaleDetector(stream, options = {}) {
     ...options,
     onStale: (elapsed) => {
       if (ac) {
-        try { ac.abort(`Stream stale: no data for ${Math.round(elapsed / 1000)}s`); } catch { /* ignore */ }
+        try {
+          ac.abort(`Stream stale: no data for ${Math.round(elapsed / 1000)}s`);
+        } catch {
+          /* ignore */
+        }
       }
       if (options.onStale) {
-        try { options.onStale(elapsed); } catch { /* ignore */ }
+        try {
+          options.onStale(elapsed);
+        } catch {
+          /* ignore */
+        }
       }
     },
   });

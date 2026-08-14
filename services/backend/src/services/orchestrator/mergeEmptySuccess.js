@@ -23,14 +23,18 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 // 各自独立）。门关 → isEmptySuccess 恒返 false = 今日所有成功项都渲「完成」。
 function _emptySuccessEnabled() {
   const v = process.env.KHY_MERGE_EMPTY_SUCCESS;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_FALSY.has(String(v).trim().toLowerCase());
 }
 
 // body 是否为空（text/output trim 后皆空）。
 function _hasNoBody(result) {
   const text = typeof result.text === 'string' ? result.text.trim() : '';
-  if (text) return false;
+  if (text) {
+    return false;
+  }
   const output = typeof result.output === 'string' ? result.output.trim() : '';
   return !output;
 }
@@ -45,13 +49,27 @@ function _hasNoBody(result) {
  * skipped(092)/failed 另有归属，不在此重复标。
  */
 function isEmptySuccess(result) {
-  if (!_emptySuccessEnabled()) return false;
-  if (!result || typeof result !== 'object') return false;
-  if (result.success === false) return false; // 失败另有归属
-  if (result.skipped === true) return false;  // 跳过项(092)另有归属
-  if (!_hasNoBody(result)) return false;       // 有 body = 有产出
-  if (Array.isArray(result.filesModified) && result.filesModified.length > 0) return false; // 改了文件
-  if (result.toolCalls) return false;          // 跑了工具（0/缺失才算无）
+  if (!_emptySuccessEnabled()) {
+    return false;
+  }
+  if (!result || typeof result !== 'object') {
+    return false;
+  }
+  if (result.success === false) {
+    return false;
+  } // 失败另有归属
+  if (result.skipped === true) {
+    return false;
+  } // 跳过项(092)另有归属
+  if (!_hasNoBody(result)) {
+    return false;
+  } // 有 body = 有产出
+  if (Array.isArray(result.filesModified) && result.filesModified.length > 0) {
+    return false;
+  } // 改了文件
+  if (result.toolCalls) {
+    return false;
+  } // 跑了工具（0/缺失才算无）
   return true;
 }
 
@@ -60,7 +78,9 @@ function isEmptySuccess(result) {
  */
 function formatEmptySuccessWarning(count) {
   const n = Number(count);
-  if (!Number.isFinite(n) || n < 1) return '';
+  if (!Number.isFinite(n) || n < 1) {
+    return '';
+  }
   return `⚠️ 完成但无产出: ${n} 项（可能空响应/被截断/no-op，请复查）`;
 }
 

@@ -17,8 +17,9 @@
  * - 返回 null 表示无可用 git（调用方应优雅处理）
  */
 
-const { existsSync } = require('fs');
 const { spawnSync } = require('child_process');
+const { existsSync } = require('fs');
+
 const resolver = require('./gitExecutableResolver');
 
 // 进程级缓存：{ gitPath: string|null, checked: boolean }
@@ -58,10 +59,14 @@ function detectGitExecutable(options = {}) {
     const candidates = resolver.resolveGitCandidates({ platform, env });
 
     for (const candidate of candidates) {
-      if (!candidate || typeof candidate !== 'string') continue;
+      if (!candidate || typeof candidate !== 'string') {
+        continue;
+      }
 
       const trimmed = candidate.trim();
-      if (!trimmed) continue;
+      if (!trimmed) {
+        continue;
+      }
 
       // 'git'（系统 PATH）→ 通过 spawnSync 'git --version' 验证
       if (trimmed === 'git') {
@@ -129,7 +134,8 @@ function getCacheState() {
  * @returns {string}
  */
 function buildNoGitMessage(options = {}) {
-  const platform = options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
+  const platform =
+    options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
 
   if (platform === 'win32') {
     return [

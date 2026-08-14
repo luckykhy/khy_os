@@ -25,10 +25,16 @@
 //   KHY_DROP_DEGENERATE_ECHO
 
 function _flagEnabled(rawValue, defaultValue = true) {
-  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') return defaultValue;
+  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+    return defaultValue;
+  }
   const v = String(rawValue).trim().toLowerCase();
-  if (['1', 'true', 'on', 'yes', 'y'].includes(v)) return true;
-  if (['0', 'false', 'off', 'no', 'n'].includes(v)) return false;
+  if (['1', 'true', 'on', 'yes', 'y'].includes(v)) {
+    return true;
+  }
+  if (['0', 'false', 'off', 'no', 'n'].includes(v)) {
+    return false;
+  }
   return defaultValue;
 }
 
@@ -38,13 +44,20 @@ function degenerateEchoFilterEnabled(env = process.env) {
 
 const _SHELL_NAMES = new Set(['shell_command', 'shellcommand', 'bash', 'shell', 'command']);
 function _isShellCall(call) {
-  if (!call || typeof call !== 'object') return false;
-  const name = String(call.name || '').toLowerCase().replace(/[\s_-]/g, '');
+  if (!call || typeof call !== 'object') {
+    return false;
+  }
+  const name = String(call.name || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
   return _SHELL_NAMES.has(name);
 }
+
 function _commandOf(call) {
   const p = call && call.params;
-  if (!p || typeof p !== 'object') return '';
+  if (!p || typeof p !== 'object') {
+    return '';
+  }
   return String(p.command ?? p.cmd ?? '').trim();
 }
 
@@ -68,17 +81,29 @@ const _ECHO_HEAD_RE = /^echo(?:\s+-[eEn]+)*\s*/i;
  */
 function isDegenerateProseEcho(command) {
   const cmd = String(command || '').trim();
-  if (!cmd) return false;
-  if (!/^echo\b/i.test(cmd)) return false;
-  if (_MEANINGFUL_OP_RE.test(cmd)) return false;
+  if (!cmd) {
+    return false;
+  }
+  if (!/^echo\b/i.test(cmd)) {
+    return false;
+  }
+  if (_MEANINGFUL_OP_RE.test(cmd)) {
+    return false;
+  }
   let payload = cmd.replace(_ECHO_HEAD_RE, '').trim();
-  if (!payload) return false; // `echo` with no args — not our case, leave it
+  if (!payload) {
+    return false;
+  } // `echo` with no args — not our case, leave it
   // Strip one layer of surrounding matched quotes.
-  if ((payload.startsWith('"') && payload.endsWith('"') && payload.length >= 2)
-    || (payload.startsWith("'") && payload.endsWith("'") && payload.length >= 2)) {
+  if (
+    (payload.startsWith('"') && payload.endsWith('"') && payload.length >= 2) ||
+    (payload.startsWith("'") && payload.endsWith("'") && payload.length >= 2)
+  ) {
     payload = payload.slice(1, -1);
   }
-  if (!payload.trim()) return false;
+  if (!payload.trim()) {
+    return false;
+  }
   const hasCjk = /[一-鿿　-〿＀-￯]/.test(payload);
   const hasSpace = /\s/.test(payload.trim());
   return hasCjk || hasSpace;
@@ -96,8 +121,12 @@ function isDegenerateProseEcho(command) {
 const _BARE_NO_OP_COMMANDS = new Set(['true', ':', 'cat']);
 function _isBareNoOpCommand(command) {
   const cmd = String(command || '').trim();
-  if (!cmd) return false;
-  if (_MEANINGFUL_OP_RE.test(cmd)) return false; // has real effect → keep
+  if (!cmd) {
+    return false;
+  }
+  if (_MEANINGFUL_OP_RE.test(cmd)) {
+    return false;
+  } // has real effect → keep
   return _BARE_NO_OP_COMMANDS.has(cmd); // exact whole command, no args
 }
 
@@ -116,19 +145,27 @@ function isDegenerateNoOp(command) {
  * revert).
  */
 function filterDegenerateEchoCalls(toolCalls, env = process.env) {
-  if (!Array.isArray(toolCalls)) return { toolCalls, dropped: 0 };
-  if (!degenerateEchoFilterEnabled(env)) return { toolCalls, dropped: 0 };
+  if (!Array.isArray(toolCalls)) {
+    return { toolCalls, dropped: 0 };
+  }
+  if (!degenerateEchoFilterEnabled(env)) {
+    return { toolCalls, dropped: 0 };
+  }
   try {
     let dropped = 0;
     const kept = toolCalls.filter((call) => {
-      if (!_isShellCall(call)) return true;
+      if (!_isShellCall(call)) {
+        return true;
+      }
       if (isDegenerateNoOp(_commandOf(call))) {
         dropped += 1;
         return false;
       }
       return true;
     });
-    if (dropped === 0) return { toolCalls, dropped: 0 };
+    if (dropped === 0) {
+      return { toolCalls, dropped: 0 };
+    }
     return { toolCalls: kept, dropped };
   } catch {
     return { toolCalls, dropped: 0 };

@@ -150,7 +150,7 @@ async function main() {
     await com1.waitFor('khy>', 9000);
 
     // Built-in agent, brain backed by the (fake) project AI gateway.
-    const brain = makeGatewayBrain({ url: gw.url, token: TOKEN, model: 'claude/claude-sonnet-4-20250514' });
+    const brain = makeGatewayBrain({ url: gw.url, token: TOKEN, model: 'claude/claude-sonnet-4-6' });
     agent = await new KhyAgent({ socketPath: COM2_SOCK, brain, requestTimeoutMs: 6000 }).start();
 
     check(await com1.waitFor('khy>', 1000) || true, 'kernel up; built-in agent attached with gateway brain');

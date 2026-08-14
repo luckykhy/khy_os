@@ -31,13 +31,25 @@ const debugInfo = ref('等待调试...')
 
 const testLogin = async () => {
   try {
+    // Hardcoded debug credentials were removed — the default admin password
+    // is generated per machine (see .khy/credentials/default-admin.json).
+    const username = window.prompt('请输入测试用户名（默认管理员密码见数据目录 .khy/credentials/default-admin.json）')
+    if (!username) {
+      debugInfo.value = '已取消登录测试（未输入用户名）'
+      return
+    }
+    const password = window.prompt('请输入测试密码')
+    if (!password) {
+      debugInfo.value = '已取消登录测试（未输入密码）'
+      return
+    }
+
     debugInfo.value = '正在测试登录...'
     
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // 登记:'admin123' 为调试用登录测试的示范默认口令,非真实凭据。pragma: allowlist secret
-      body: JSON.stringify({ username: 'admin', password: 'admin123' }) // pragma: allowlist secret
+      body: JSON.stringify({ username, password })
     })
     
     const data = await response.json()

@@ -11,22 +11,47 @@
  * an approvable block so the user can override deliberately.
  */
 
-const { godFileLoc } = require('./thresholds');
 const { extOf } = require('./symbols');
+const { godFileLoc } = require('./thresholds');
 
 // Extensions worth a LOC ceiling — source code, not data/lockfiles/generated
 // blobs (a 10k-line package-lock.json or .csv is not a "god file").
 const ASSESSABLE_EXTS = new Set([
-  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts',
-  'py', 'go', 'rs', 'java', 'kt', 'rb', 'php', 'c', 'cc', 'cpp', 'h', 'hpp',
-  'cs', 'swift', 'scala', 'vue', 'svelte',
+  'js',
+  'jsx',
+  'mjs',
+  'cjs',
+  'ts',
+  'tsx',
+  'mts',
+  'cts',
+  'py',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'rb',
+  'php',
+  'c',
+  'cc',
+  'cpp',
+  'h',
+  'hpp',
+  'cs',
+  'swift',
+  'scala',
+  'vue',
+  'svelte',
 ]);
 
 // Paths that are legitimately long by nature — never flagged as god files.
-const EXEMPT_RE = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|.*\.min\.(js|css)|.*\.bundle\.js|.*\.generated\..*|.*\.lock)$/i;
+const EXEMPT_RE =
+  /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|.*\.min\.(js|css)|.*\.bundle\.js|.*\.generated\..*|.*\.lock)$/i;
 
 function countLines(content) {
-  if (!content) return 0;
+  if (!content) {
+    return 0;
+  }
   const s = String(content);
   // Count newlines + 1 for a trailing non-empty line; an all-blank file counts
   // its lines honestly (matches archDebtScan's `split('\n').length`).

@@ -7,8 +7,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const { AGENT_COLORS } = require('./types');
 
@@ -35,23 +35,34 @@ function parseFrontmatter(content) {
 
   for (const line of rawFM.split('\n')) {
     const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
+    if (colonIdx === -1) {
+      continue;
+    }
     const key = line.slice(0, colonIdx).trim();
     let value = line.slice(colonIdx + 1).trim();
 
     // Strip quotes
-    if ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
 
     // Parse boolean-like
-    if (value === 'true') value = true;
-    else if (value === 'false') value = false;
+    if (value === 'true') {
+      value = true;
+    } else if (value === 'false') {
+      value = false;
+    }
 
     // Parse arrays (comma-separated inline)
     if (typeof value === 'string' && value.startsWith('[') && value.endsWith(']')) {
-      value = value.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      value = value
+        .slice(1, -1)
+        .split(',')
+        .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
     }
 
     frontmatter[key] = value;
@@ -89,11 +100,17 @@ function parseAgentFromMarkdown(filePath, source) {
     const agentType = frontmatter.name;
     const whenToUse = frontmatter.description;
 
-    if (!agentType || typeof agentType !== 'string') return null;
-    if (!whenToUse || typeof whenToUse !== 'string') return null;
+    if (!agentType || typeof agentType !== 'string') {
+      return null;
+    }
+    if (!whenToUse || typeof whenToUse !== 'string') {
+      return null;
+    }
 
     const systemPrompt = body.trim();
-    if (!systemPrompt) return null;
+    if (!systemPrompt) {
+      return null;
+    }
 
     // Parse tools
     let tools;
@@ -101,7 +118,10 @@ function parseAgentFromMarkdown(filePath, source) {
       tools = Array.isArray(frontmatter.tools)
         ? frontmatter.tools
         : typeof frontmatter.tools === 'string'
-          ? frontmatter.tools.split(',').map(s => s.trim()).filter(Boolean)
+          ? frontmatter.tools
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
           : undefined;
     }
 
@@ -110,13 +130,17 @@ function parseAgentFromMarkdown(filePath, source) {
       disallowedTools = Array.isArray(frontmatter.disallowedTools)
         ? frontmatter.disallowedTools
         : typeof frontmatter.disallowedTools === 'string'
-          ? frontmatter.disallowedTools.split(',').map(s => s.trim()).filter(Boolean)
+          ? frontmatter.disallowedTools
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
           : undefined;
     }
 
     const color = frontmatter.color;
     const model = frontmatter.model ? String(frontmatter.model) : undefined;
-    const background = frontmatter.background === true || frontmatter.background === 'true' ? true : undefined;
+    const background =
+      frontmatter.background === true || frontmatter.background === 'true' ? true : undefined;
     const maxTurns = frontmatter.maxTurns ? parseInt(frontmatter.maxTurns, 10) : undefined;
     const permissionMode = frontmatter.permissionMode || undefined;
     const filename = path.basename(filePath, '.md');
@@ -154,7 +178,9 @@ function parseAgentFromMarkdown(filePath, source) {
 function _findNestedAgentDirs(rootDir, maxDepth = 6) {
   const found = [];
   const walk = (dir, depth) => {
-    if (depth > maxDepth) return;
+    if (depth > maxDepth) {
+      return;
+    }
     let entries;
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -162,9 +188,13 @@ function _findNestedAgentDirs(rootDir, maxDepth = 6) {
       return;
     }
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory()) {
+        continue;
+      }
       const sub = path.join(dir, entry.name);
-      if (entry.name === 'agents') found.push(sub);
+      if (entry.name === 'agents') {
+        found.push(sub);
+      }
       walk(sub, depth + 1);
     }
   };
@@ -192,7 +222,16 @@ async function loadCustomAgents(cwd) {
   const failedFiles = [];
 
   const searchDirs = [
-    { dir: path.join(os.homedir(), '.khy', 'agents'), source: 'userSettings' },
+    {
+      dir: (() => {
+        try {
+          return path.join(require('../utils/dataHome').getDataHome(), 'agents');
+        } catch {
+          return path.join(os.homedir(), '.khy', 'agents');
+        }
+      })(),
+      source: 'userSettings',
+    },
     { dir: path.join(cwd, '.claude', 'agents'), source: 'projectSettings' },
     { dir: path.join(cwd, '.khy', 'agents'), source: 'projectSettings' },
   ];
@@ -216,13 +255,27 @@ async function loadCustomAgents(cwd) {
         }
       }
     }
-  } catch { /* bridge unavailable → khy-only agent discovery */ }
+  } catch {
+    /* bridge unavailable → khy-only agent discovery */
+  }
+
+  // OpenClaw agent bridge: INTENTIONALLY NOT WIRED (deferred — format待验证).
+  // Phase-0 verification could NOT confirm OpenClaw's on-disk subagent format
+  // (candidate root ~/.agents/, but whether entries are markdown-frontmatter
+  // like CC or JSON is unconfirmed). Per task scope we do NOT hardcode a guessed
+  // format: skills + MCP are bridged (formats confirmed) while the agent bridge
+  // stays deferred to avoid mis-parsing. If/when OpenClaw's agent format is
+  // confirmed as markdown frontmatter, add an `openclawAgentBridge` leaf here
+  // gated by KHY_OPENCLAW_AGENT_BRIDGE (default OFF until verified), mirroring
+  // ccAgentBridge above (see skills/ocSkillBridge + services/mcp/ocMcpBridge).
 
   for (const { dir, source } of searchDirs) {
     try {
-      if (!fs.existsSync(dir)) continue;
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
 
-      const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
       for (const file of files) {
         const filePath = path.join(dir, file);
         try {

@@ -27,9 +27,10 @@
  * live system prompt / chat pipeline yet — that is a deliberate Phase 2.
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+
 const { getDataHome } = require('../../utils/dataHome');
 
 const SCHEMA_VERSION = 1;
@@ -51,11 +52,27 @@ const SCAFFOLD_DIRS = Object.freeze(['memory', 'skills', 'workflows', 'tools', '
 // source of truth that maps DesireCore's taxonomy onto AgentFS layout. `dirs`
 // are scanned for arbitrary files; `files` are fixed single-file assets.
 const ASSET_MODEL = Object.freeze([
-  Object.freeze({ key: 'persona',  label: 'Persona（人格）',     files: ['persona.md', 'principles.md'], dirs: [] }),
+  Object.freeze({
+    key: 'persona',
+    label: 'Persona（人格）',
+    files: ['persona.md', 'principles.md'],
+    dirs: [],
+  }),
   Object.freeze({ key: 'playbook', label: 'Playbook（行为手册）', files: [], dirs: ['workflows'] }),
-  Object.freeze({ key: 'memory',   label: 'Memory（记忆账本）',   files: [], dirs: ['memory'] }),
-  Object.freeze({ key: 'toolBody', label: 'Tool Body（工具身体）', files: [path.join('tools', 'permissions.json')], dirs: ['skills'] }),
-  Object.freeze({ key: 'receipts', label: 'Receipts（行动回执）', files: [], dirs: [], external: 'receipts' }),
+  Object.freeze({ key: 'memory', label: 'Memory（记忆账本）', files: [], dirs: ['memory'] }),
+  Object.freeze({
+    key: 'toolBody',
+    label: 'Tool Body（工具身体）',
+    files: [path.join('tools', 'permissions.json')],
+    dirs: ['skills'],
+  }),
+  Object.freeze({
+    key: 'receipts',
+    label: 'Receipts（行动回执）',
+    files: [],
+    dirs: [],
+    external: 'receipts',
+  }),
 ]);
 
 // Valid agent id: lowercase slug, 1–64 chars, starts alphanumeric.
@@ -80,7 +97,9 @@ function getAgentsRoot() {
  */
 function _agentDir(id) {
   if (typeof id !== 'string' || !ID_RE.test(id)) {
-    throw new Error(`非法的 agent id: ${JSON.stringify(id)}（要求小写字母/数字/-/_，1–64 位，且不以 -/_ 开头）`);
+    throw new Error(
+      `非法的 agent id: ${JSON.stringify(id)}（要求小写字母/数字/-/_，1–64 位，且不以 -/_ 开头）`
+    );
   }
   const root = getAgentsRoot();
   const dir = path.resolve(root, id);
@@ -130,7 +149,9 @@ function _git(dir, args) {
       if (!_gitMissingWarned) {
         _gitMissingWarned = true;
         // eslint-disable-next-line no-console
-        console.warn('[agentFs] 未找到 git，AgentFS 将在无版本化模式下工作（只读写文件，不做快照）。');
+        console.warn(
+          '[agentFs] 未找到 git，AgentFS 将在无版本化模式下工作（只读写文件，不做快照）。'
+        );
       }
       return { gitless: true, ok: false };
     }
@@ -141,8 +162,12 @@ function _git(dir, args) {
 /** Initialise a git repo in `dir` (no-op if already one / git absent). */
 function _gitInit(dir) {
   const inside = _git(dir, ['rev-parse', '--is-inside-work-tree']);
-  if (inside.gitless) return { gitless: true };
-  if (inside.ok && inside.stdout.trim() === 'true') return { ok: true };
+  if (inside.gitless) {
+    return { gitless: true };
+  }
+  if (inside.ok && inside.stdout.trim() === 'true') {
+    return { ok: true };
+  }
   return _git(dir, ['init', '-q']);
 }
 
@@ -154,14 +179,28 @@ function _gitInit(dir) {
  */
 function _gitCommit(dir, message) {
   const add = _git(dir, ['add', '-A']);
-  if (add.gitless) return { gitless: true };
-  if (!add.ok) return { committed: false, error: add.error };
+  if (add.gitless) {
+    return { gitless: true };
+  }
+  if (!add.ok) {
+    return { committed: false, error: add.error };
+  }
   const commit = _git(dir, [
-    '-c', 'user.name=khy', '-c', 'user.email=khy@local',
-    '-c', 'commit.gpgsign=false',
-    'commit', '-q', '--allow-empty', '-m', message,
+    '-c',
+    'user.name=khy',
+    '-c',
+    'user.email=khy@local',
+    '-c',
+    'commit.gpgsign=false',
+    'commit',
+    '-q',
+    '--allow-empty',
+    '-m',
+    message,
   ]);
-  if (commit.gitless) return { gitless: true };
+  if (commit.gitless) {
+    return { gitless: true };
+  }
   return { committed: commit.ok, error: commit.error };
 }
 
@@ -240,11 +279,15 @@ function _hasManifest(dir) {
  */
 function createAgent(opts = {}) {
   const name = String(opts.name || '').trim();
-  if (!name) throw new Error('createAgent: name 必填');
+  if (!name) {
+    throw new Error('createAgent: name 必填');
+  }
 
-  let id = opts.id ? String(opts.id).trim() : slugify(name);
+  const id = opts.id ? String(opts.id).trim() : slugify(name);
   if (!id) {
-    throw new Error(`无法从名称 "${name}" 推导出 id（可能是非 ASCII 名称），请用 --id 显式指定一个英文 id。`);
+    throw new Error(
+      `无法从名称 "${name}" 推导出 id（可能是非 ASCII 名称），请用 --id 显式指定一个英文 id。`
+    );
   }
   const dir = _agentDir(id); // validates id + traversal
 
@@ -271,11 +314,16 @@ function createAgent(opts = {}) {
   _writeFile(path.join(dir, ASSET_FILES.persona), _personaSeed());
   _writeFile(path.join(dir, ASSET_FILES.principles), _principlesSeed(name));
   _writeFile(path.join(dir, ASSET_FILES.memoryIndex), _memoryIndexSeed(name));
-  _writeFile(path.join(dir, ASSET_FILES.permissions), JSON.stringify({ rules: [] }, null, 2) + '\n');
+  _writeFile(
+    path.join(dir, ASSET_FILES.permissions),
+    JSON.stringify({ rules: [] }, null, 2) + '\n'
+  );
   _writeFile(path.join(dir, ASSET_FILES.heartbeat), _heartbeatSeed());
 
   const initRes = _gitInit(dir);
-  const commitRes = initRes.gitless ? { gitless: true } : _gitCommit(dir, `chore(agentfs): create agent ${id}`);
+  const commitRes = initRes.gitless
+    ? { gitless: true }
+    : _gitCommit(dir, `chore(agentfs): create agent ${id}`);
   const versioned = !initRes.gitless && !commitRes.gitless && commitRes.committed === true;
 
   return { id, dir, manifest, versioned };
@@ -292,11 +340,17 @@ function listAgents() {
   }
   const out = [];
   for (const e of entries) {
-    if (!e.isDirectory() || !ID_RE.test(e.name)) continue;
+    if (!e.isDirectory() || !ID_RE.test(e.name)) {
+      continue;
+    }
     const dir = path.join(root, e.name);
-    if (!_hasManifest(dir)) continue;
+    if (!_hasManifest(dir)) {
+      continue;
+    }
     const manifest = _readManifest(dir);
-    if (manifest) out.push(manifest);
+    if (manifest) {
+      out.push(manifest);
+    }
   }
   out.sort((a, b) => String(a.id).localeCompare(String(b.id)));
   return out;
@@ -305,9 +359,13 @@ function listAgents() {
 /** Get one agent's manifest + dir, or null if it does not exist. */
 function getAgent(id) {
   const dir = _agentDir(id);
-  if (!_hasManifest(dir)) return null;
+  if (!_hasManifest(dir)) {
+    return null;
+  }
   const manifest = _readManifest(dir);
-  if (!manifest) return null;
+  if (!manifest) {
+    return null;
+  }
   return { id, dir, manifest };
 }
 
@@ -325,7 +383,9 @@ function _readManifest(dir) {
 
 /** Resolve an asset path inside an agent dir, guarding against traversal. */
 function _assetPath(dir, rel) {
-  if (typeof rel !== 'string' || !rel) throw new Error('asset 相对路径必填');
+  if (typeof rel !== 'string' || !rel) {
+    throw new Error('asset 相对路径必填');
+  }
   const resolved = path.resolve(dir, rel);
   if (!(resolved + path.sep).startsWith(dir + path.sep) && resolved !== dir) {
     throw new Error(`asset 路径穿越被拒绝: ${rel}`);
@@ -355,7 +415,9 @@ function readAsset(id, rel) {
  */
 function writeAsset(id, rel, content, options = {}) {
   const dir = _agentDir(id);
-  if (!_hasManifest(dir)) throw new Error(`agent 不存在: ${id}`);
+  if (!_hasManifest(dir)) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   const abs = _assetPath(dir, rel);
   _writeFile(abs, typeof content === 'string' ? content : String(content));
   const message = options.message || `chore(agentfs): update ${rel}`;
@@ -370,17 +432,23 @@ function writeAsset(id, rel, content, options = {}) {
 const LEVELS = Object.freeze(['L0', 'L1', 'L2']);
 
 function _firstHeadingBlock(md) {
-  if (!md) return '';
+  if (!md) {
+    return '';
+  }
   const lines = md.split('\n');
   const out = [];
   let started = false;
   for (const line of lines) {
     const isHeading = /^#{1,6}\s/.test(line);
     if (isHeading) {
-      if (started) break; // stop at the second heading
+      if (started) {
+        break;
+      } // stop at the second heading
       started = true;
     }
-    if (started) out.push(line);
+    if (started) {
+      out.push(line);
+    }
   }
   return out.join('\n').trim();
 }
@@ -397,7 +465,9 @@ function _firstHeadingBlock(md) {
 function loadLayered(id, level = 'L0') {
   const lvl = LEVELS.includes(level) ? level : 'L0';
   const agent = getAgent(id);
-  if (!agent) throw new Error(`agent 不存在: ${id}`);
+  if (!agent) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   const { dir, manifest } = agent;
   const want = LEVELS.indexOf(lvl);
   const parts = [];
@@ -406,36 +476,52 @@ function loadLayered(id, level = 'L0') {
   parts.push(
     `# Agent: ${manifest.name} (${manifest.id})`,
     manifest.description ? `\n${manifest.description}` : '',
-    manifest.model ? `\nModel: ${manifest.model}` : '',
+    manifest.model ? `\nModel: ${manifest.model}` : ''
   );
   const persona = readAsset(id, ASSET_FILES.persona) || '';
   const personaBlock = _firstHeadingBlock(persona);
-  if (personaBlock) parts.push('\n## Persona\n' + personaBlock);
+  if (personaBlock) {
+    parts.push('\n## Persona\n' + personaBlock);
+  }
   const principles = readAsset(id, ASSET_FILES.principles) || '';
-  if (principles.trim()) parts.push('\n## Principles (red lines)\n' + principles.trim());
+  if (principles.trim()) {
+    parts.push('\n## Principles (red lines)\n' + principles.trim());
+  }
 
   // ── L1: summaries ──
   if (want >= 1) {
     const memIndex = readAsset(id, ASSET_FILES.memoryIndex) || '';
-    if (memIndex.trim()) parts.push('\n## Memory index\n' + memIndex.trim());
+    if (memIndex.trim()) {
+      parts.push('\n## Memory index\n' + memIndex.trim());
+    }
 
     const skills = _skillCatalog(dir);
-    if (skills) parts.push('\n## Skills\n' + skills);
+    if (skills) {
+      parts.push('\n## Skills\n' + skills);
+    }
 
     const heartbeat = readAsset(id, ASSET_FILES.heartbeat) || '';
-    const hbActive = heartbeat.split('\n').some(l => l.trim() && !l.trim().startsWith('#'));
+    const hbActive = heartbeat.split('\n').some((l) => l.trim() && !l.trim().startsWith('#'));
     parts.push(`\n## Heartbeat\n${hbActive ? 'active' : 'idle (no active checks)'}`);
   }
 
   // ── L2: full content ──
   if (want >= 2) {
-    if (persona.trim()) parts.push('\n## Persona (full)\n' + persona.trim());
+    if (persona.trim()) {
+      parts.push('\n## Persona (full)\n' + persona.trim());
+    }
     const memFull = _allMemoryFiles(dir);
-    if (memFull) parts.push('\n## Memory (full)\n' + memFull);
+    if (memFull) {
+      parts.push('\n## Memory (full)\n' + memFull);
+    }
     const skillPrompts = _allSkillPrompts(dir);
-    if (skillPrompts) parts.push('\n## Skill prompts (full)\n' + skillPrompts);
+    if (skillPrompts) {
+      parts.push('\n## Skill prompts (full)\n' + skillPrompts);
+    }
     const workflows = _allWorkflows(dir);
-    if (workflows) parts.push('\n## Workflows\n' + workflows);
+    if (workflows) {
+      parts.push('\n## Workflows\n' + workflows);
+    }
   }
 
   const text = parts.filter(Boolean).join('\n').trim() + '\n';
@@ -451,9 +537,13 @@ function _statRel(dir, rel) {
   try {
     const abs = _assetPath(dir, rel);
     const st = fs.statSync(abs);
-    if (!st.isFile()) return null;
+    if (!st.isFile()) {
+      return null;
+    }
     return { rel, bytes: st.size, exists: true };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** List files (one level deep) under an agent subdir, with sizes. */
@@ -461,14 +551,25 @@ function _listDirFiles(dir, sub) {
   const out = [];
   const walk = (absBase, relBase) => {
     let entries = [];
-    try { entries = fs.readdirSync(absBase, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(absBase, { withFileTypes: true });
+    } catch {
+      return;
+    }
     for (const e of entries) {
       const rel = path.join(relBase, e.name);
       const abs = path.join(absBase, e.name);
-      if (e.isDirectory()) { walk(abs, rel); continue; }
+      if (e.isDirectory()) {
+        walk(abs, rel);
+        continue;
+      }
       if (e.isFile()) {
         let bytes = 0;
-        try { bytes = fs.statSync(abs).size; } catch { /* skip */ }
+        try {
+          bytes = fs.statSync(abs).size;
+        } catch {
+          /* skip */
+        }
         out.push({ rel, bytes, exists: true });
       }
     }
@@ -489,7 +590,9 @@ function _listDirFiles(dir, sub) {
  */
 function describeAssets(id, opts = {}) {
   const agent = getAgent(id);
-  if (!agent) throw new Error(`agent 不存在: ${id}`);
+  if (!agent) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   const { dir } = agent;
   // Receipts is an external asset: the caller (which already owns the
   // receiptService dependency) injects the counter, so agentFsService keeps no
@@ -501,27 +604,39 @@ function describeAssets(id, opts = {}) {
       let count = 0;
       try {
         count = countReceipts ? countReceipts(id) : 0;
-      } catch { /* receipts optional */ }
+      } catch {
+        /* receipts optional */
+      }
       return {
-        key: a.key, label: a.label, external: 'receipts',
-        present: count > 0, files: [], bytes: 0, count,
+        key: a.key,
+        label: a.label,
+        external: 'receipts',
+        present: count > 0,
+        files: [],
+        bytes: 0,
+        count,
         summary: count > 0 ? `${count} 条回执` : '尚无回执',
       };
     }
 
     const files = [];
-    for (const rel of (a.files || [])) {
+    for (const rel of a.files || []) {
       const s = _statRel(dir, rel);
-      if (s) files.push(s);
+      if (s) {
+        files.push(s);
+      }
     }
-    for (const sub of (a.dirs || [])) {
+    for (const sub of a.dirs || []) {
       files.push(..._listDirFiles(dir, sub));
     }
     const bytes = files.reduce((n, f) => n + (f.bytes || 0), 0);
     const present = files.length > 0;
     return {
-      key: a.key, label: a.label,
-      present, files, bytes,
+      key: a.key,
+      label: a.label,
+      present,
+      files,
+      bytes,
       summary: present ? `${files.length} 个文件 · ${bytes} bytes` : '（空）',
     };
   });
@@ -531,8 +646,10 @@ function _skillCatalog(dir) {
   const skillsDir = path.join(dir, 'skills');
   let names = [];
   try {
-    names = fs.readdirSync(skillsDir, { withFileTypes: true })
-      .filter(e => e.isDirectory()).map(e => e.name);
+    names = fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
   } catch {
     return '';
   }
@@ -542,7 +659,9 @@ function _skillCatalog(dir) {
     try {
       const man = JSON.parse(fs.readFileSync(path.join(skillsDir, n, 'manifest.json'), 'utf-8'));
       desc = man.description || man.whenToUse || '';
-    } catch { /* no manifest */ }
+    } catch {
+      /* no manifest */
+    }
     lines.push(`- ${n}${desc ? ` — ${desc}` : ''}`);
   }
   return lines.join('\n');
@@ -552,7 +671,10 @@ function _allMemoryFiles(dir) {
   const memDir = path.join(dir, 'memory');
   let files = [];
   try {
-    files = fs.readdirSync(memDir).filter(f => f.endsWith('.md') && f !== 'MEMORY.md').sort();
+    files = fs
+      .readdirSync(memDir)
+      .filter((f) => f.endsWith('.md') && f !== 'MEMORY.md')
+      .sort();
   } catch {
     return '';
   }
@@ -560,7 +682,9 @@ function _allMemoryFiles(dir) {
   for (const f of files) {
     try {
       blocks.push(`### ${f}\n` + fs.readFileSync(path.join(memDir, f), 'utf-8').trim());
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return blocks.join('\n\n');
 }
@@ -569,16 +693,23 @@ function _allSkillPrompts(dir) {
   const skillsDir = path.join(dir, 'skills');
   let names = [];
   try {
-    names = fs.readdirSync(skillsDir, { withFileTypes: true })
-      .filter(e => e.isDirectory()).map(e => e.name).sort();
+    names = fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
   } catch {
     return '';
   }
   const blocks = [];
   for (const n of names) {
     try {
-      blocks.push(`### ${n}\n` + fs.readFileSync(path.join(skillsDir, n, 'prompt.md'), 'utf-8').trim());
-    } catch { /* skip */ }
+      blocks.push(
+        `### ${n}\n` + fs.readFileSync(path.join(skillsDir, n, 'prompt.md'), 'utf-8').trim()
+      );
+    } catch {
+      /* skip */
+    }
   }
   return blocks.join('\n\n');
 }
@@ -587,7 +718,10 @@ function _allWorkflows(dir) {
   const wfDir = path.join(dir, 'workflows');
   let files = [];
   try {
-    files = fs.readdirSync(wfDir).filter(f => f.endsWith('.md')).sort();
+    files = fs
+      .readdirSync(wfDir)
+      .filter((f) => f.endsWith('.md'))
+      .sort();
   } catch {
     return '';
   }
@@ -595,7 +729,9 @@ function _allWorkflows(dir) {
   for (const f of files) {
     try {
       blocks.push(`### ${f}\n` + fs.readFileSync(path.join(wfDir, f), 'utf-8').trim());
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return blocks.join('\n\n');
 }
@@ -613,16 +749,23 @@ function _allWorkflows(dir) {
  */
 function history(id, opts = {}) {
   const dir = _agentDir(id);
-  if (!_hasManifest(dir)) throw new Error(`agent 不存在: ${id}`);
+  if (!_hasManifest(dir)) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   const limit = Number.isFinite(opts.limit) ? Math.max(1, Math.floor(opts.limit)) : 50;
   const res = _git(dir, ['log', `-n${limit}`, '--pretty=format:%h\t%s']);
-  if (!res.ok || !res.stdout) return [];
-  return res.stdout.split('\n').filter(Boolean).map(line => {
-    const tab = line.indexOf('\t');
-    return tab === -1
-      ? { hash: line, subject: '' }
-      : { hash: line.slice(0, tab), subject: line.slice(tab + 1) };
-  });
+  if (!res.ok || !res.stdout) {
+    return [];
+  }
+  return res.stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const tab = line.indexOf('\t');
+      return tab === -1
+        ? { hash: line, subject: '' }
+        : { hash: line.slice(0, tab), subject: line.slice(tab + 1) };
+    });
 }
 
 /**
@@ -631,13 +774,19 @@ function history(id, opts = {}) {
  */
 function revertTo(id, commit) {
   const dir = _agentDir(id);
-  if (!_hasManifest(dir)) throw new Error(`agent 不存在: ${id}`);
+  if (!_hasManifest(dir)) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   if (!/^[0-9a-f]{4,40}$/i.test(String(commit || ''))) {
     throw new Error(`非法 commit: ${commit}`);
   }
   const restore = _git(dir, ['restore', '--source', commit, '--', '.']);
-  if (restore.gitless) return { reverted: false, versioned: false };
-  if (!restore.ok) throw new Error(`revert 失败: ${restore.error || 'git restore'}`);
+  if (restore.gitless) {
+    return { reverted: false, versioned: false };
+  }
+  if (!restore.ok) {
+    throw new Error(`revert 失败: ${restore.error || 'git restore'}`);
+  }
   const res = _gitCommit(dir, `chore(agentfs): revert to ${commit}`);
   return { reverted: true, versioned: !res.gitless && res.committed === true };
 }
@@ -659,8 +808,12 @@ function getActiveAgentId() {
   try {
     const raw = fs.readFileSync(_activePointerPath(), 'utf-8');
     const id = JSON.parse(raw).id;
-    if (typeof id !== 'string' || !ID_RE.test(id)) return null;
-    if (!_hasManifest(_agentDir(id))) return null;
+    if (typeof id !== 'string' || !ID_RE.test(id)) {
+      return null;
+    }
+    if (!_hasManifest(_agentDir(id))) {
+      return null;
+    }
     return id;
   } catch {
     return null;
@@ -670,7 +823,9 @@ function getActiveAgentId() {
 /** Mark a companion active. Throws if it does not exist. */
 function setActiveAgent(id) {
   const dir = _agentDir(id);
-  if (!_hasManifest(dir)) throw new Error(`agent 不存在: ${id}`);
+  if (!_hasManifest(dir)) {
+    throw new Error(`agent 不存在: ${id}`);
+  }
   const root = getAgentsRoot();
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(_activePointerPath(), JSON.stringify({ id }) + '\n', 'utf-8');
@@ -679,7 +834,11 @@ function setActiveAgent(id) {
 
 /** Clear the active companion pointer (idempotent). */
 function clearActiveAgent() {
-  try { fs.unlinkSync(_activePointerPath()); } catch { /* already clear */ }
+  try {
+    fs.unlinkSync(_activePointerPath());
+  } catch {
+    /* already clear */
+  }
   return { cleared: true };
 }
 
@@ -692,15 +851,24 @@ function clearActiveAgent() {
  */
 function activeStamp(level = 'L1') {
   const id = getActiveAgentId();
-  if (!id) return 'none';
+  if (!id) {
+    return 'none';
+  }
   const dir = _agentDir(id);
   const parts = [id, level];
-  const files = [ASSET_FILES.manifest, ASSET_FILES.persona, ASSET_FILES.principles, ASSET_FILES.memoryIndex];
+  const files = [
+    ASSET_FILES.manifest,
+    ASSET_FILES.persona,
+    ASSET_FILES.principles,
+    ASSET_FILES.memoryIndex,
+  ];
   for (const rel of files) {
     try {
       const st = fs.statSync(path.join(dir, rel));
       parts.push(`${st.mtimeMs}:${st.size}`);
-    } catch { parts.push('?'); }
+    } catch {
+      parts.push('?');
+    }
   }
   return parts.join('|');
 }
@@ -715,7 +883,9 @@ function activeStamp(level = 'L1') {
  */
 function companionPromptSection(opts = {}) {
   const id = getActiveAgentId();
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   const level = LEVELS.includes(opts.level) ? opts.level : 'L1';
   let view;
   try {
@@ -723,11 +893,13 @@ function companionPromptSection(opts = {}) {
   } catch {
     return null;
   }
-  if (!view || !view.text || !view.text.trim()) return null;
+  if (!view || !view.text || !view.text.trim()) {
+    return null;
+  }
   return [
     '# Active Companion',
     'The following describes the currently active companion (an AgentFS agent:',
-    "its persona, red lines, and memory). It shapes HOW you respond. Project",
+    'its persona, red lines, and memory). It shapes HOW you respond. Project',
     'instructions and explicit user requests take precedence on any conflict;',
     'never cross a red line listed under Principles.',
     '',

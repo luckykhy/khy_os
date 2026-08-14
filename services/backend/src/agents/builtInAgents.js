@@ -8,24 +8,24 @@
  * getSystemPrompt(), and optional metadata (color, background, omitClaudeMd).
  */
 
-const { GENERAL_PURPOSE_AGENT } = require('./built-in/generalPurposeAgent');
-const { STATUSLINE_SETUP_AGENT } = require('./built-in/statuslineSetup');
-const { EXPLORE_AGENT } = require('./built-in/exploreAgent');
-const { PLAN_AGENT } = require('./built-in/planAgent');
-const { KHY_GUIDE_AGENT } = require('./built-in/khyGuideAgent');
-const { VERIFICATION_AGENT } = require('./built-in/verificationAgent');
 const { AUDIT_AGENT } = require('./built-in/auditAgent');
-const { FIX_AGENT } = require('./built-in/fixAgent');
-const { RESEARCH_AGENT } = require('./built-in/researchAgent');
-const { READING_AGENT } = require('./built-in/readingAgent');
-const { MAP_AGENT } = require('./built-in/mapAgent');
 const { SECURITY_AGENT } = require('./built-in/securityAgent');
 const { PERFORMANCE_AGENT } = require('./built-in/performanceAgent');
 const { DEBUG_AGENT } = require('./built-in/debugAgent');
 const { DOC_AGENT } = require('./built-in/docAgent');
 const { REFACTOR_AGENT } = require('./built-in/refactorAgent');
 const { DEPLOY_AGENT } = require('./built-in/deployAgent');
+const { EXPLORE_AGENT } = require('./built-in/exploreAgent');
+const { FIX_AGENT } = require('./built-in/fixAgent');
+const { GENERAL_PURPOSE_AGENT } = require('./built-in/generalPurposeAgent');
+const { KHY_GUIDE_AGENT } = require('./built-in/khyGuideAgent');
+const { MAP_AGENT } = require('./built-in/mapAgent');
+const { PLAN_AGENT } = require('./built-in/planAgent');
+const { READING_AGENT } = require('./built-in/readingAgent');
+const { RESEARCH_AGENT } = require('./built-in/researchAgent');
 const { REVIEW_AGENT } = require('./built-in/reviewAgent');
+const { STATUSLINE_SETUP_AGENT } = require('./built-in/statuslineSetup');
+const { VERIFICATION_AGENT } = require('./built-in/verificationAgent');
 
 /**
  * Returns the list of built-in agents.
@@ -79,10 +79,7 @@ function getBuiltInAgents(opts = {}) {
     return [];
   }
 
-  const agents = [
-    GENERAL_PURPOSE_AGENT,
-    STATUSLINE_SETUP_AGENT,
-  ];
+  const agents = [GENERAL_PURPOSE_AGENT, STATUSLINE_SETUP_AGENT];
 
   if (enableExplorePlan) {
     agents.push(EXPLORE_AGENT, PLAN_AGENT);
@@ -155,12 +152,12 @@ function getBuiltInAgents(opts = {}) {
  * @returns {Array<import('./types').AgentDefinition>}
  */
 function getActiveAgentsFromList(allAgents) {
-  const builtIn = allAgents.filter(a => a.source === 'built-in');
-  const plugin = allAgents.filter(a => a.source === 'plugin');
-  const user = allAgents.filter(a => a.source === 'userSettings');
-  const project = allAgents.filter(a => a.source === 'projectSettings');
-  const managed = allAgents.filter(a => a.source === 'policySettings');
-  const flag = allAgents.filter(a => a.source === 'flagSettings');
+  const builtIn = allAgents.filter((a) => a.source === 'built-in');
+  const plugin = allAgents.filter((a) => a.source === 'plugin');
+  const user = allAgents.filter((a) => a.source === 'userSettings');
+  const project = allAgents.filter((a) => a.source === 'projectSettings');
+  const managed = allAgents.filter((a) => a.source === 'policySettings');
+  const flag = allAgents.filter((a) => a.source === 'flagSettings');
 
   const groups = [builtIn, plugin, user, project, flag, managed];
   const agentMap = new Map();
@@ -189,7 +186,7 @@ function formatAgentLine(agent) {
   let toolsDescription;
   if (hasAllowlist && hasDenylist) {
     const denySet = new Set(disallowedTools);
-    const effective = tools.filter(t => !denySet.has(t));
+    const effective = tools.filter((t) => !denySet.has(t));
     toolsDescription = effective.length === 0 ? 'None' : effective.join(', ');
   } else if (hasAllowlist) {
     toolsDescription = tools.join(', ');

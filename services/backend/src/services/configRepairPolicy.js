@@ -23,10 +23,12 @@
 const _OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 门控:KHY_CONFIG_REPAIR 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_CONFIG_REPAIR;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -55,9 +57,13 @@ const _str = require('../utils/toStr').toStrSafe;
 function detectEnvCorruption(lines, opts = {}) {
   try {
     const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return { isCorrupted: false, issues: [] };
+    if (!isEnabled(env)) {
+      return { isCorrupted: false, issues: [] };
+    }
 
-    if (!Array.isArray(lines)) return { isCorrupted: false, issues: [] };
+    if (!Array.isArray(lines)) {
+      return { isCorrupted: false, issues: [] };
+    }
 
     const issues = [];
     const seenKeys = new Map(); // key → [line numbers]
@@ -68,7 +74,9 @@ function detectEnvCorruption(lines, opts = {}) {
       const lineNum = i + 1;
 
       // 跳过空行和注释
-      if (!trimmed || trimmed.startsWith('#')) continue;
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
 
       // 检查是否包含 =
       const eqIdx = raw.indexOf('=');
@@ -153,9 +161,13 @@ function detectEnvCorruption(lines, opts = {}) {
 function repairEnvLines(lines, issues, opts = {}) {
   try {
     const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return { repaired: lines || [], removed: 0 };
+    if (!isEnabled(env)) {
+      return { repaired: lines || [], removed: 0 };
+    }
 
-    if (!Array.isArray(lines)) return { repaired: [], removed: 0 };
+    if (!Array.isArray(lines)) {
+      return { repaired: [], removed: 0 };
+    }
     if (!Array.isArray(issues) || issues.length === 0) {
       return { repaired: lines.slice(), removed: 0 };
     }
@@ -170,7 +182,10 @@ function repairEnvLines(lines, issues, opts = {}) {
         // 从 message 中提取行号列表
         const match = issue.message.match(/行:\s*([\d,\s]+)/);
         if (match) {
-          const lineNums = match[1].split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+          const lineNums = match[1]
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
           if (lineNums.length > 1) {
             // 提取键名
             const keyMatch = issue.message.match(/键\s*"([^"]+)"/);
@@ -193,7 +208,11 @@ function repairEnvLines(lines, issues, opts = {}) {
 
     // 其他类型的问题:直接移除
     for (const issue of issues) {
-      if (issue.type === 'malformed-line' || issue.type === 'empty-key' || issue.type === 'unclosed-quote') {
+      if (
+        issue.type === 'malformed-line' ||
+        issue.type === 'empty-key' ||
+        issue.type === 'unclosed-quote'
+      ) {
         linesToRemove.add(issue.line);
       }
     }

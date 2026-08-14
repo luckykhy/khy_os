@@ -27,16 +27,27 @@ const MB = 1024 * 1024;
 
 // 安装包 / 可执行分发常见扩展名(小写,含点)。跨平台并集。
 const INSTALLER_EXTS = new Set([
-  '.exe', '.msi', '.msix', '.appx',          // Windows
-  '.dmg', '.pkg',                            // macOS
-  '.deb', '.rpm', '.appimage', '.snap', '.flatpak', // Linux
-  '.apk',                                    // Android
-  '.iso', '.img',                            // 光盘/镜像(常为安装介质)
-  '.bin', '.run',                            // 通用自解压安装器
+  '.exe',
+  '.msi',
+  '.msix',
+  '.appx', // Windows
+  '.dmg',
+  '.pkg', // macOS
+  '.deb',
+  '.rpm',
+  '.appimage',
+  '.snap',
+  '.flatpak', // Linux
+  '.apk', // Android
+  '.iso',
+  '.img', // 光盘/镜像(常为安装介质)
+  '.bin',
+  '.run', // 通用自解压安装器
 ]);
 
 // 文件名(不含扩展名)命中即视为安装器:setup / install / installer / *_setup 等。
-const INSTALLER_NAME_RE = /(^|[^a-z])(setup|installer?|update|patch|redist|vc_redist|xinstall)([^a-z]|$)/i;
+const INSTALLER_NAME_RE =
+  /(^|[^a-z])(setup|installer?|update|patch|redist|vc_redist|xinstall)([^a-z]|$)/i;
 
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
@@ -68,9 +79,15 @@ function resolveHashCaps(env) {
 /** 取小写扩展名(含点);无扩展名返 ''。 */
 function extOf(path) {
   const p = String(path || '');
-  const base = p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+  const base =
+    p
+      .replace(/[\\/]+$/, '')
+      .split(/[\\/]/)
+      .pop() || '';
   const i = base.lastIndexOf('.');
-  if (i <= 0) return '';                       // 无点或以点开头(隐藏文件,非扩展名)
+  if (i <= 0) {
+    return '';
+  } // 无点或以点开头(隐藏文件,非扩展名)
   return base.slice(i).toLowerCase();
 }
 
@@ -81,11 +98,21 @@ function extOf(path) {
  */
 function isInstaller(path, env) {
   try {
-    if (!isCatalogEnabled(env)) return false;
+    if (!isCatalogEnabled(env)) {
+      return false;
+    }
     const p = String(path || '');
-    if (!p) return false;
-    if (INSTALLER_EXTS.has(extOf(p))) return true;
-    const base = p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+    if (!p) {
+      return false;
+    }
+    if (INSTALLER_EXTS.has(extOf(p))) {
+      return true;
+    }
+    const base =
+      p
+        .replace(/[\\/]+$/, '')
+        .split(/[\\/]/)
+        .pop() || '';
     return INSTALLER_NAME_RE.test(base);
   } catch {
     return false;
@@ -100,10 +127,14 @@ function isInstaller(path, env) {
  */
 function isOldInstaller(file, nowMs, env) {
   try {
-    if (!file || !isInstaller(file.path, env)) return false;
+    if (!file || !isInstaller(file.path, env)) {
+      return false;
+    }
     const mtime = Number(file.mtimeMs);
     const now = Number(nowMs);
-    if (!Number.isFinite(mtime) || !Number.isFinite(now)) return false;
+    if (!Number.isFinite(mtime) || !Number.isFinite(now)) {
+      return false;
+    }
     const ageDays = (now - mtime) / (24 * 3600 * 1000);
     return ageDays >= resolveOldInstallerDays(env);
   } catch {
@@ -119,20 +150,33 @@ function isOldInstaller(file, nowMs, env) {
  */
 function groupBySize(files, env) {
   try {
-    if (!isCatalogEnabled(env)) return [];
-    if (!Array.isArray(files)) return [];
+    if (!isCatalogEnabled(env)) {
+      return [];
+    }
+    if (!Array.isArray(files)) {
+      return [];
+    }
     const bySize = new Map();
     for (const f of files) {
-      if (!f) continue;
+      if (!f) {
+        continue;
+      }
       const size = Number(f.size);
-      if (!Number.isFinite(size) || size <= 0) continue;
+      if (!Number.isFinite(size) || size <= 0) {
+        continue;
+      }
       let arr = bySize.get(size);
-      if (!arr) { arr = []; bySize.set(size, arr); }
+      if (!arr) {
+        arr = [];
+        bySize.set(size, arr);
+      }
       arr.push(f);
     }
     const groups = [];
     for (const [sizeBytes, arr] of bySize.entries()) {
-      if (arr.length >= 2) groups.push({ sizeBytes, files: arr });
+      if (arr.length >= 2) {
+        groups.push({ sizeBytes, files: arr });
+      }
     }
     groups.sort((a, b) => b.sizeBytes - a.sizeBytes);
     return groups;
@@ -155,21 +199,37 @@ function groupBySize(files, env) {
 function selectHashCandidates(sizeGroups, env) {
   const out = { toHash: [], skippedTooBig: 0, skippedOverCount: 0 };
   try {
-    if (!isCatalogEnabled(env)) return out;
-    if (!Array.isArray(sizeGroups)) return out;
+    if (!isCatalogEnabled(env)) {
+      return out;
+    }
+    if (!Array.isArray(sizeGroups)) {
+      return out;
+    }
     const { maxFiles, maxFileBytes } = resolveHashCaps(env);
     for (const g of sizeGroups) {
-      if (!g || !Array.isArray(g.files)) continue;
+      if (!g || !Array.isArray(g.files)) {
+        continue;
+      }
       // 单文件超上限:整组按大小相同,但内容 hash 成本过高 → 该组内超限文件全跳过并计数。
       const eligible = [];
       for (const f of g.files) {
-        if (!f) continue;
-        if (Number(f.size) > maxFileBytes) { out.skippedTooBig += 1; continue; }
+        if (!f) {
+          continue;
+        }
+        if (Number(f.size) > maxFileBytes) {
+          out.skippedTooBig += 1;
+          continue;
+        }
         eligible.push(f);
       }
-      if (eligible.length < 2) continue;         // 剔除超限后不足两个,已无重复可能
+      if (eligible.length < 2) {
+        continue;
+      } // 剔除超限后不足两个,已无重复可能
       for (const f of eligible) {
-        if (out.toHash.length >= maxFiles) { out.skippedOverCount += 1; continue; }
+        if (out.toHash.length >= maxFiles) {
+          out.skippedOverCount += 1;
+          continue;
+        }
         out.toHash.push({ path: f.path, size: Number(f.size), sizeBytes: g.sizeBytes });
       }
     }

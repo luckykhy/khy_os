@@ -17,9 +17,9 @@
  * Git Bash 在 Windows 上的典型安装路径（按优先级排序）。
  */
 const GIT_BASH_CANDIDATE_PATHS_WINDOWS = [
-  'C:\\Program Files\\Git\\bin\\git.exe',           // 默认安装路径（64位）
-  'C:\\Program Files (x86)\\Git\\bin\\git.exe',    // 32位系统或32位安装
-  'C:\\Git\\bin\\git.exe',                          // 便携式/自定义安装
+  'C:\\Program Files\\Git\\bin\\git.exe', // 默认安装路径（64位）
+  'C:\\Program Files (x86)\\Git\\bin\\git.exe', // 32位系统或32位安装
+  'C:\\Git\\bin\\git.exe', // 便携式/自定义安装
 ];
 
 /**
@@ -38,7 +38,8 @@ const GIT_BASH_CANDIDATE_PATHS_WINDOWS = [
  * @returns {string[]} 候选路径列表（按优先级排序，至少包含 'git' 回退）
  */
 function resolveGitCandidates(options = {}) {
-  const platform = options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
+  const platform =
+    options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
   const env = options.env || (typeof process !== 'undefined' ? process.env : {});
 
   const candidates = [];
@@ -69,7 +70,8 @@ function resolveGitCandidates(options = {}) {
  * @returns {boolean} Windows 平台返回 true，其他平台 false
  */
 function shouldPreferGitBash(options = {}) {
-  const platform = options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
+  const platform =
+    options.platform || (typeof process !== 'undefined' ? process.platform : 'linux');
   return platform === 'win32';
 }
 
@@ -89,7 +91,9 @@ function classifyCandidates(candidates) {
 
   for (const c of candidates) {
     const path = String(c || '').trim();
-    if (!path) continue;
+    if (!path) {
+      continue;
+    }
 
     // 'git' 是系统回退（不含路径分隔符）
     if (path === 'git') {

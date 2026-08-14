@@ -8,17 +8,35 @@ const { defineTool } = require('./_baseTool');
 
 module.exports = defineTool({
   name: 'verify_artifact',
-  description: 'Check whether a project can be delivered on macOS, Linux, and Windows. Returns score (0-100), issues, and per-platform readiness. Supports Node.js, Python, WASM, Docker projects.',
+  description:
+    'Check whether a project can be delivered on macOS, Linux, and Windows. Returns score (0-100), issues, and per-platform readiness. Supports Node.js, Python, WASM, Docker projects.',
   category: 'execution',
   risk: 'safe',
+  searchHint: 'checksum hash validate integrity 校验 产物验证 哈希',
   isReadOnly: true,
   isConcurrencySafe: true,
 
   inputSchema: {
-    cwd: { type: 'string', required: false, description: 'Project directory (defaults to process.cwd)' },
-    type: { type: 'string', required: false, description: 'Force project type: nodejs, python, wasm, docker (auto-detect if omitted)' },
-    platform: { type: 'string', required: false, description: 'Check specific platform only: darwin, linux, win32' },
-    verbose: { type: 'boolean', required: false, description: 'Include info-level issues (default false)' },
+    cwd: {
+      type: 'string',
+      required: false,
+      description: 'Project directory (defaults to process.cwd)',
+    },
+    type: {
+      type: 'string',
+      required: false,
+      description: 'Force project type: nodejs, python, wasm, docker (auto-detect if omitted)',
+    },
+    platform: {
+      type: 'string',
+      required: false,
+      description: 'Check specific platform only: darwin, linux, win32',
+    },
+    verbose: {
+      type: 'boolean',
+      required: false,
+      description: 'Include info-level issues (default false)',
+    },
   },
 
   getActivityDescription(input) {

@@ -20,8 +20,9 @@
 const { spawn, execSync } = require('child_process');
 const os = require('os');
 const path = require('path');
-const log = require('../utils/logger');
+
 const { searchExecutable, safeKill } = require('../tools/platformUtils');
+const log = require('../utils/logger');
 
 // ── Backend Detection ──
 
@@ -44,9 +45,15 @@ function detectBackends() {
  */
 function selectBackend(preferred) {
   const available = detectBackends();
-  if (preferred && available[preferred]) return preferred;
-  if (available.tmux) return 'tmux';
-  if (available.iterm2) return 'iterm2';
+  if (preferred && available[preferred]) {
+    return preferred;
+  }
+  if (available.tmux) {
+    return 'tmux';
+  }
+  if (available.iterm2) {
+    return 'iterm2';
+  }
   return 'inProcess';
 }
 
@@ -64,13 +71,17 @@ class TmuxBackend {
     this._initialized = false;
   }
 
-  get sessionName() { return this._sessionName; }
+  get sessionName() {
+    return this._sessionName;
+  }
 
   /**
    * Initialize the tmux session.
    */
   async init() {
-    if (this._initialized) return;
+    if (this._initialized) {
+      return;
+    }
     if (process.platform === 'win32') {
       throw new Error('TmuxBackend is not supported on Windows — use inProcess backend');
     }
@@ -110,28 +121,42 @@ class TmuxBackend {
     let paneId;
     if (this._panes.size === 0) {
       // Use the initial pane
-      execSync(`tmux send-keys -t "${this._sessionName}" "${_escapeShell(fullCommand)}" Enter`, { stdio: 'pipe' });
-      const output = execSync(`tmux list-panes -t "${this._sessionName}" -F "#{pane_id}"`, { stdio: 'pipe' }).toString().trim();
+      execSync(`tmux send-keys -t "${this._sessionName}" "${_escapeShell(fullCommand)}" Enter`, {
+        stdio: 'pipe',
+      });
+      const output = execSync(`tmux list-panes -t "${this._sessionName}" -F "#{pane_id}"`, {
+        stdio: 'pipe',
+      })
+        .toString()
+        .trim();
       paneId = output.split('\n')[0];
     } else {
       // Split and run in new pane
       const splitOutput = execSync(
         `tmux split-window ${splitFlag} -t "${this._sessionName}" -P -F "#{pane_id}" "${_escapeShell(fullCommand)}"`,
         { cwd: opts.cwd, stdio: 'pipe' }
-      ).toString().trim();
+      )
+        .toString()
+        .trim();
       paneId = splitOutput;
 
       // Re-balance layout
       try {
         execSync(`tmux select-layout -t "${this._sessionName}" tiled`, { stdio: 'pipe' });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     // Set pane title
     if (opts.title || agentId) {
       try {
-        execSync(`tmux select-pane -t "${paneId}" -T "${opts.title || agentId}"`, { stdio: 'pipe' });
-      } catch { /* older tmux versions may not support -T */ }
+        execSync(`tmux select-pane -t "${paneId}" -T "${opts.title || agentId}"`, {
+          stdio: 'pipe',
+        });
+      } catch {
+        /* older tmux versions may not support -T */
+      }
     }
 
     this._panes.set(agentId, paneId);
@@ -145,7 +170,9 @@ class TmuxBackend {
    */
   sendKeys(agentId, keys) {
     const paneId = this._panes.get(agentId);
-    if (!paneId) throw new Error(`Agent "${agentId}" not found`);
+    if (!paneId) {
+      throw new Error(`Agent "${agentId}" not found`);
+    }
     execSync(`tmux send-keys -t "${paneId}" "${_escapeShell(keys)}" Enter`, { stdio: 'pipe' });
   }
 
@@ -157,8 +184,12 @@ class TmuxBackend {
    */
   captureOutput(agentId, lines) {
     const paneId = this._panes.get(agentId);
-    if (!paneId) throw new Error(`Agent "${agentId}" not found`);
-    return execSync(`tmux capture-pane -t "${paneId}" -p -S -${lines || 50}`, { stdio: 'pipe' }).toString();
+    if (!paneId) {
+      throw new Error(`Agent "${agentId}" not found`);
+    }
+    return execSync(`tmux capture-pane -t "${paneId}" -p -S -${lines || 50}`, {
+      stdio: 'pipe',
+    }).toString();
   }
 
   /**
@@ -166,11 +197,15 @@ class TmuxBackend {
    */
   killAgent(agentId) {
     const paneId = this._panes.get(agentId);
-    if (!paneId) return;
+    if (!paneId) {
+      return;
+    }
 
     try {
       execSync(`tmux kill-pane -t "${paneId}"`, { stdio: 'pipe' });
-    } catch { /* already dead */ }
+    } catch {
+      /* already dead */
+    }
 
     this._panes.delete(agentId);
   }
@@ -196,7 +231,9 @@ class TmuxBackend {
   destroy() {
     try {
       execSync(`tmux kill-session -t "${this._sessionName}"`, { stdio: 'pipe' });
-    } catch { /* already dead */ }
+    } catch {
+      /* already dead */
+    }
     this._panes.clear();
     this._initialized = false;
   }
@@ -254,7 +291,9 @@ class ITermBackend {
     `;
     try {
       execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, { stdio: 'pipe' });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   listAgents() {
@@ -271,7 +310,9 @@ class ITermBackend {
     `;
     try {
       execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, { stdio: 'pipe' });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     this._tabs.delete(agentId);
   }
 
@@ -295,6 +336,12 @@ class InProcessBackend {
       cwd: opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, KHY_AGENT_ID: agentId },
+    });
+    // Never let a spawn failure become an unhandled 'error' event (crashes the
+    // whole process on Windows when a cmd builtin like `echo` is used).
+    child.on('error', (err) => {
+      log.warn(`Agent "${agentId}" failed to spawn: ${err && err.message ? err.message : err}`);
+      this._processes.delete(agentId);
     });
 
     this._processes.set(agentId, child);
@@ -354,10 +401,13 @@ function createBackend(type, options) {
   const resolved = type === 'auto' || !type ? selectBackend() : type;
 
   switch (resolved) {
-    case 'tmux': return new TmuxBackend(options);
-    case 'iterm2': return new ITermBackend(options);
+    case 'tmux':
+      return new TmuxBackend(options);
+    case 'iterm2':
+      return new ITermBackend(options);
     case 'inProcess':
-    default: return new InProcessBackend(options);
+    default:
+      return new InProcessBackend(options);
   }
 }
 

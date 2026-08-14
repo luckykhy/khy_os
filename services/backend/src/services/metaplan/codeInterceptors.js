@@ -29,19 +29,31 @@ const vm = require('vm');
 let _babel = null;
 let _babelTried = false;
 function _getBabel() {
-  if (_babelTried) return _babel;
+  if (_babelTried) {
+    return _babel;
+  }
   _babelTried = true;
-  try { _babel = require('@babel/parser'); } catch { _babel = null; }
+  try {
+    _babel = require('@babel/parser');
+  } catch {
+    _babel = null;
+  }
   return _babel;
 }
 
 /** Validate JS/TS/JSX via @babel/parser. */
 function validateJs(code, { typescript = false, jsx = true } = {}) {
   const babel = _getBabel();
-  if (!babel) return _vmProbe(code); // fall back to vm compile probe
+  if (!babel) {
+    return _vmProbe(code);
+  } // fall back to vm compile probe
   const plugins = [];
-  if (jsx) plugins.push('jsx');
-  if (typescript) plugins.push('typescript');
+  if (jsx) {
+    plugins.push('jsx');
+  }
+  if (typescript) {
+    plugins.push('typescript');
+  }
   try {
     babel.parse(String(code == null ? '' : code), {
       sourceType: 'unambiguous',
@@ -81,18 +93,30 @@ function validatePython(code) {
   const py = process.env.KHY_PYTHON_BIN || 'python3';
   let res;
   try {
-    res = spawnSync(
-      py,
-      ['-c', 'import sys,ast; ast.parse(sys.stdin.read())'],
-      { input: src, encoding: 'utf8', timeout: 8000 },
-    );
+    res = spawnSync(py, ['-c', 'import sys,ast; ast.parse(sys.stdin.read())'], {
+      input: src,
+      encoding: 'utf8',
+      timeout: 8000,
+    });
   } catch (e) {
-    return { ok: true, validator: 'python_ast', skipped: true, note: `无法启动 ${py}：${e.message}` };
+    return {
+      ok: true,
+      validator: 'python_ast',
+      skipped: true,
+      note: `无法启动 ${py}：${e.message}`,
+    };
   }
   if (res.error) {
-    return { ok: true, validator: 'python_ast', skipped: true, note: `python 不可用：${res.error.message}` };
+    return {
+      ok: true,
+      validator: 'python_ast',
+      skipped: true,
+      note: `python 不可用：${res.error.message}`,
+    };
   }
-  if (res.status === 0) return { ok: true, validator: 'python_ast' };
+  if (res.status === 0) {
+    return { ok: true, validator: 'python_ast' };
+  }
   return {
     ok: false,
     validator: 'python_ast',
@@ -110,21 +134,32 @@ function validateBalance(code) {
   let prev = '';
   for (const ch of src) {
     if (inStr) {
-      if (ch === inStr && prev !== '\\') inStr = null;
+      if (ch === inStr && prev !== '\\') {
+        inStr = null;
+      }
       prev = ch;
       continue;
     }
-    if (ch === '"' || ch === "'" || ch === '`') { inStr = ch; prev = ch; continue; }
-    if (opens.has(ch)) stack.push(ch);
-    else if (pairs[ch]) {
+    if (ch === '"' || ch === "'" || ch === '`') {
+      inStr = ch;
+      prev = ch;
+      continue;
+    }
+    if (opens.has(ch)) {
+      stack.push(ch);
+    } else if (pairs[ch]) {
       if (stack.pop() !== pairs[ch]) {
         return { ok: false, validator: 'balance', error: `括号不配平：意外的 '${ch}'。` };
       }
     }
     prev = ch;
   }
-  if (inStr) return { ok: false, validator: 'balance', error: '字符串引号未闭合。' };
-  if (stack.length) return { ok: false, validator: 'balance', error: `括号不配平：${stack.length} 个未闭合。` };
+  if (inStr) {
+    return { ok: false, validator: 'balance', error: '字符串引号未闭合。' };
+  }
+  if (stack.length) {
+    return { ok: false, validator: 'balance', error: `括号不配平：${stack.length} 个未闭合。` };
+  }
   return { ok: true, validator: 'balance', note: '仅做结构配平探测（该语言无 AST 校验器）。' };
 }
 
@@ -136,8 +171,12 @@ function validateBalance(code) {
  * @returns {{ok:boolean, validator?:string, error?:string, skipped?:boolean, note?:string}}
  */
 function runInterceptor(validatorKey, content, ctx = {}) {
-  const lang = String(ctx.language || '').trim().toLowerCase();
-  if (!validatorKey) return { ok: true, validator: 'none', note: '无 AST 校验（裸执行器，风险自担）。' };
+  const lang = String(ctx.language || '')
+    .trim()
+    .toLowerCase();
+  if (!validatorKey) {
+    return { ok: true, validator: 'none', note: '无 AST 校验（裸执行器，风险自担）。' };
+  }
 
   switch (validatorKey) {
     case 'babel':
@@ -148,20 +187,35 @@ function runInterceptor(validatorKey, content, ctx = {}) {
     case 'python_ast':
       return validatePython(content);
     case 'vm_or_native':
-      if (['javascript', 'typescript', 'jsx', 'tsx', ''].includes(lang)) return _vmProbe(content);
-      if (lang === 'python') return validatePython(content);
+      if (['javascript', 'typescript', 'jsx', 'tsx', ''].includes(lang)) {
+        return _vmProbe(content);
+      }
+      if (lang === 'python') {
+        return validatePython(content);
+      }
       return validateBalance(content);
     default:
-      return { ok: true, validator: validatorKey, skipped: true, note: `未知校验器 ${validatorKey}，跳过。` };
+      return {
+        ok: true,
+        validator: validatorKey,
+        skipped: true,
+        note: `未知校验器 ${validatorKey}，跳过。`,
+      };
   }
 }
 
 function _fmtErr(e) {
-  return String(e && e.message ? e.message : e).split('\n')[0].slice(0, 200);
+  return String(e && e.message ? e.message : e)
+    .split('\n')[0]
+    .slice(0, 200);
 }
+
 function _firstSyntaxLine(stderr) {
   const text = String(stderr || '');
-  const m = text.split('\n').reverse().find((l) => /Error/.test(l));
+  const m = text
+    .split('\n')
+    .reverse()
+    .find((l) => /Error/.test(l));
   return m ? m.trim().slice(0, 200) : '';
 }
 

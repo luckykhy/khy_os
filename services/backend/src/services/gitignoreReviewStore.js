@@ -27,14 +27,16 @@ const fs = require('fs');
 const path = require('path');
 
 const _OFF = new Set(['0', 'false', 'off', 'no']);
-const MAX_PENDING = 200;          // 队列上限,防失控堆积。
-const MAX_PATTERNS = 100;         // 单条候选内 pattern 数上限。
-const MAX_PATTERN_CHARS = 300;    // 单个 pattern 长度上限。
+const MAX_PENDING = 200; // 队列上限,防失控堆积。
+const MAX_PATTERNS = 100; // 单条候选内 pattern 数上限。
+const MAX_PATTERN_CHARS = 300; // 单个 pattern 长度上限。
 
 /** 门控:KHY_GITIGNORE_REVIEW 默认开,仅 {0,false,off,no} 关。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_GITIGNORE_REVIEW;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.has(v);
 }
 
@@ -46,7 +48,9 @@ function _pendingFile() {
 function _readPending() {
   try {
     const file = _pendingFile();
-    if (!fs.existsSync(file)) return [];
+    if (!fs.existsSync(file)) {
+      return [];
+    }
     const raw = fs.readFileSync(file, 'utf-8');
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr : [];
@@ -72,15 +76,34 @@ function _sanitizePatterns(patterns) {
   const out = [];
   for (const p of raw) {
     let s;
-    try { s = String(p == null ? '' : p).trim(); } catch { s = ''; }
-    if (!s) continue;
-    if (s.length > MAX_PATTERN_CHARS) return { ok: false, error: `pattern 过长(>${MAX_PATTERN_CHARS}): ${s.slice(0, 40)}…` };
-    if (/[\n\r\0]/.test(s)) return { ok: false, error: 'pattern 含非法字符(换行/NUL)' };
-    if (s === '/' || s === '.' || s === '..') return { ok: false, error: `拒绝忽略过宽的路径: ${s}` };
-    if (!seen.has(s)) { seen.add(s); out.push(s); }
+    try {
+      s = String(p == null ? '' : p).trim();
+    } catch {
+      s = '';
+    }
+    if (!s) {
+      continue;
+    }
+    if (s.length > MAX_PATTERN_CHARS) {
+      return { ok: false, error: `pattern 过长(>${MAX_PATTERN_CHARS}): ${s.slice(0, 40)}…` };
+    }
+    if (/[\n\r\0]/.test(s)) {
+      return { ok: false, error: 'pattern 含非法字符(换行/NUL)' };
+    }
+    if (s === '/' || s === '.' || s === '..') {
+      return { ok: false, error: `拒绝忽略过宽的路径: ${s}` };
+    }
+    if (!seen.has(s)) {
+      seen.add(s);
+      out.push(s);
+    }
   }
-  if (out.length === 0) return { ok: false, error: '没有可用的 pattern(全为空或非法)' };
-  if (out.length > MAX_PATTERNS) return { ok: false, error: `pattern 过多(>${MAX_PATTERNS})` };
+  if (out.length === 0) {
+    return { ok: false, error: '没有可用的 pattern(全为空或非法)' };
+  }
+  if (out.length > MAX_PATTERNS) {
+    return { ok: false, error: `pattern 过多(>${MAX_PATTERNS})` };
+  }
   return { ok: true, patterns: out };
 }
 
@@ -88,7 +111,9 @@ function _sanitizePatterns(patterns) {
 function _makeId(list, patterns) {
   let h = 5381;
   const s = patterns.join('\n');
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  }
   const hash = h.toString(36).slice(0, 6);
   const seq = list.length + 1;
   return `g${seq}-${hash}`;
@@ -96,7 +121,9 @@ function _makeId(list, patterns) {
 
 /** 两组 pattern 是否等价(归一排序后相同)——去重判定用。 */
 function _sameSet(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+    return false;
+  }
   const sa = [...a].sort();
   const sb = [...b].sort();
   return sa.every((v, i) => v === sb[i]);
@@ -115,15 +142,25 @@ function _sameSet(a, b) {
  */
 function enqueue(entry = {}) {
   try {
-    if (!isEnabled()) return { success: false, error: 'gitignore review disabled (KHY_GITIGNORE_REVIEW=off)' };
+    if (!isEnabled()) {
+      return { success: false, error: 'gitignore review disabled (KHY_GITIGNORE_REVIEW=off)' };
+    }
 
     const san = _sanitizePatterns(entry && entry.patterns);
-    if (!san.ok) return { success: false, error: san.error };
+    if (!san.ok) {
+      return { success: false, error: san.error };
+    }
     const patterns = san.patterns;
 
-    const reason = String((entry && entry.reason) || 'manual').trim().slice(0, 40) || 'manual';
-    const source = String((entry && entry.source) || 'auto').trim().slice(0, 40) || 'auto';
-    const cwd = (entry && entry.cwd) ? String(entry.cwd) : '';
+    const reason =
+      String((entry && entry.reason) || 'manual')
+        .trim()
+        .slice(0, 40) || 'manual';
+    const source =
+      String((entry && entry.source) || 'auto')
+        .trim()
+        .slice(0, 40) || 'auto';
+    const cwd = entry && entry.cwd ? String(entry.cwd) : '';
 
     const list = _readPending();
 
@@ -132,7 +169,10 @@ function enqueue(entry = {}) {
       return { success: true, skipped: true };
     }
     if (list.length >= MAX_PENDING) {
-      return { success: false, error: `待审核队列已满(>=${MAX_PENDING}),请先 /gitignore review 处理` };
+      return {
+        success: false,
+        error: `待审核队列已满(>=${MAX_PENDING}),请先 /gitignore review 处理`,
+      };
     }
 
     const stamp = (entry.now instanceof Date ? entry.now : new Date()).toISOString();
@@ -152,7 +192,11 @@ function list() {
 
 /** pending 条数。fail-soft → 0。 */
 function count() {
-  try { return _readPending().length; } catch { return 0; }
+  try {
+    return _readPending().length;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -166,16 +210,22 @@ function count() {
 function approve(id, opts = {}) {
   try {
     const wanted = String(id || '').trim();
-    if (!wanted) return { success: false, error: '需提供要批准的候选 id' };
+    if (!wanted) {
+      return { success: false, error: '需提供要批准的候选 id' };
+    }
 
     const listArr = _readPending();
     const idx = listArr.findIndex((e) => e && e.id === wanted);
-    if (idx === -1) return { success: false, error: `未找到候选: ${wanted}` };
+    if (idx === -1) {
+      return { success: false, error: `未找到候选: ${wanted}` };
+    }
 
     const entry = listArr[idx];
     const cwd = (opts && opts.cwd) || entry.cwd || undefined;
     const gis = require('./gitignoreService');
-    const res = gis.appendPatterns(cwd, entry.patterns, { header: `khy 待审核批准的忽略项(${entry.reason})` });
+    const res = gis.appendPatterns(cwd, entry.patterns, {
+      header: `khy 待审核批准的忽略项(${entry.reason})`,
+    });
     if (!res || !res.success) {
       return { success: false, error: (res && res.error) || '写入 .gitignore 失败' };
     }
@@ -192,10 +242,14 @@ function approve(id, opts = {}) {
 function discard(id) {
   try {
     const wanted = String(id || '').trim();
-    if (!wanted) return { success: false, error: '需提供要丢弃的候选 id' };
+    if (!wanted) {
+      return { success: false, error: '需提供要丢弃的候选 id' };
+    }
     const listArr = _readPending();
     const idx = listArr.findIndex((e) => e && e.id === wanted);
-    if (idx === -1) return { success: false, error: `未找到候选: ${wanted}` };
+    if (idx === -1) {
+      return { success: false, error: `未找到候选: ${wanted}` };
+    }
     listArr.splice(idx, 1);
     _writePending(listArr);
     return { success: true };

@@ -1,7 +1,7 @@
 'use strict';
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const authTime = require('../authTimeFormat');
 
@@ -23,7 +23,11 @@ test('formatAuthTimestamp: valid ISO → localized non-empty, never "Invalid Dat
 
 test('formatAuthTimestamp: undefined/null/empty/invalid → fallback 未知', () => {
   for (const bad of [undefined, null, '', 'not-a-date', NaN]) {
-    assert.strictEqual(authTime.formatAuthTimestamp(bad), '未知', `expected fallback for ${String(bad)}`);
+    assert.strictEqual(
+      authTime.formatAuthTimestamp(bad),
+      '未知',
+      `expected fallback for ${String(bad)}`
+    );
   }
 });
 
@@ -40,14 +44,17 @@ test('formatAuthTimestamp: markExpired appends (已过期) for past expiry', () 
 });
 
 test('formatAuthTimestamp: markExpired invalid value still → fallback (no crash)', () => {
-  assert.strictEqual(authTime.formatAuthTimestamp(undefined, { markExpired: true, now: 1 }), '未知');
+  assert.strictEqual(
+    authTime.formatAuthTimestamp(undefined, { markExpired: true, now: 1 }),
+    '未知'
+  );
 });
 
 test('deriveSessionExpiry: existing valid expiresAt preferred', () => {
   const exp = '2026-12-31T00:00:00.000Z';
   assert.strictEqual(
     authTime.deriveSessionExpiry(exp, '2026-06-01T00:00:00.000Z', WEEK),
-    new Date(exp).toISOString(),
+    new Date(exp).toISOString()
   );
 });
 

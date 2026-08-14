@@ -5,8 +5,9 @@
  * Manages modular packaging — list, info, and build standalone executables.
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
 const chalk = require('chalk');
 
 // Path to module catalog
@@ -59,7 +60,11 @@ function listModules() {
       chalk.green(mod.id),
       mod.name,
       mod.platforms.length + ' targets',
-      Array.isArray(mod.handlers) ? (mod.handlers[0] === '*' ? 'ALL' : mod.handlers.length.toString()) : '0',
+      Array.isArray(mod.handlers)
+        ? mod.handlers[0] === '*'
+          ? 'ALL'
+          : mod.handlers.length.toString()
+        : '0',
     ]);
   }
 
@@ -81,10 +86,10 @@ function infoModule(moduleId) {
     return;
   }
 
-  const mod = catalog.modules.find(m => m.id === moduleId);
+  const mod = catalog.modules.find((m) => m.id === moduleId);
   if (!mod) {
     console.log(chalk.red(`模块 "${moduleId}" 未找到。`));
-    console.log('可用模块: ' + catalog.modules.map(m => m.id).join(', '));
+    console.log('可用模块: ' + catalog.modules.map((m) => m.id).join(', '));
     return;
   }
 
@@ -92,7 +97,9 @@ function infoModule(moduleId) {
   console.log(`  ${chalk.dim('Description:')} ${mod.description}`);
   console.log(`  ${chalk.dim('Entry:')}       ${mod.entry}`);
   console.log(`  ${chalk.dim('Platforms:')}   ${mod.platforms.join(', ')}`);
-  console.log(`  ${chalk.dim('Handlers:')}    ${Array.isArray(mod.handlers) ? (mod.handlers[0] === '*' ? 'ALL' : mod.handlers.join(', ')) : 'none'}`);
+  console.log(
+    `  ${chalk.dim('Handlers:')}    ${Array.isArray(mod.handlers) ? (mod.handlers[0] === '*' ? 'ALL' : mod.handlers.join(', ')) : 'none'}`
+  );
   if (mod.excludeDeps && mod.excludeDeps.length > 0) {
     console.log(`  ${chalk.dim('Excluded:')}    ${mod.excludeDeps.join(', ')}`);
   }
@@ -106,7 +113,7 @@ async function buildModule(moduleId) {
     return;
   }
 
-  if (moduleId && !catalog.modules.find(m => m.id === moduleId)) {
+  if (moduleId && !catalog.modules.find((m) => m.id === moduleId)) {
     console.log(chalk.red(`模块 "${moduleId}" 未找到。`));
     return;
   }
@@ -120,7 +127,9 @@ async function buildModule(moduleId) {
 
   const { spawn } = require('child_process');
   const spawnArgs = [buildScript];
-  if (moduleId) spawnArgs.push('--module', moduleId);
+  if (moduleId) {
+    spawnArgs.push('--module', moduleId);
+  }
 
   const target = moduleId || '所有模块';
   console.log(chalk.cyan(`\n  正在构建 ${target}...\n`));

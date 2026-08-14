@@ -4,11 +4,12 @@
  * Creates structured tasks for the current session. Tracks progress,
  * organizes complex multi-step work, and demonstrates thoroughness.
  */
-const { BaseTool } = require('../_baseTool');
-const path = require('path');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
-const crypto = require('crypto');
+const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 // Persistent task store (largeTaskRuntimeStore-backed), shared across all task tools
 const _taskStore = require('../_taskStore');
@@ -21,8 +22,12 @@ class TaskCreateTool extends BaseTool {
   static searchHint = 'create task todo track progress plan';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Use this tool to create a structured task list for your current session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
@@ -74,7 +79,8 @@ All tasks are created with status \`pending\`.
       properties: {
         subject: {
           type: 'string',
-          description: 'A brief, actionable title in imperative form (e.g., "Fix authentication bug in login flow")',
+          description:
+            'A brief, actionable title in imperative form (e.g., "Fix authentication bug in login flow")',
         },
         description: {
           type: 'string',
@@ -82,7 +88,8 @@ All tasks are created with status \`pending\`.
         },
         activeForm: {
           type: 'string',
-          description: 'Present continuous form for progress display (e.g., "Fixing authentication bug")',
+          description:
+            'Present continuous form for progress display (e.g., "Fixing authentication bug")',
         },
       },
       required: ['subject'],

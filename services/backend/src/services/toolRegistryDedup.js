@@ -38,7 +38,9 @@ const REDUNDANT_FAMILIES = [
 ];
 
 function _enabled() {
-  const v = String(process.env.KHY_TOOL_DEDUP || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_DEDUP || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -52,14 +54,20 @@ const _normalize = require('../utils/trimLowerStripUnderscores');
 function buildRedundancyIndex() {
   const idx = new Map();
   for (const fam of REDUNDANT_FAMILIES) {
-    const canonical = String(fam && fam.canonical || '').trim();
+    const canonical = String((fam && fam.canonical) || '').trim();
     const canonicalNorm = _normalize(canonical);
-    if (!canonical) continue;
+    if (!canonical) {
+      continue;
+    }
     const reds = Array.isArray(fam.redundant) ? fam.redundant : [];
     for (const r of reds) {
       const norm = _normalize(r);
-      if (!norm || norm === canonicalNorm) continue; // 自指/空名跳过
-      if (!idx.has(norm)) idx.set(norm, { canonical, canonicalNorm, raw: String(r).trim() });
+      if (!norm || norm === canonicalNorm) {
+        continue;
+      } // 自指/空名跳过
+      if (!idx.has(norm)) {
+        idx.set(norm, { canonical, canonicalNorm, raw: String(r).trim() });
+      }
     }
   }
   return idx;
@@ -70,14 +78,24 @@ function _mergeAliases(existing, extra) {
   const seen = new Set();
   const push = (name) => {
     const s = String(name || '').trim();
-    if (!s) return;
+    if (!s) {
+      return;
+    }
     const k = _normalize(s);
-    if (seen.has(k)) return;
+    if (seen.has(k)) {
+      return;
+    }
     seen.add(k);
     out.push(s);
   };
-  if (Array.isArray(existing)) for (const a of existing) push(a);
-  for (const a of extra) push(a);
+  if (Array.isArray(existing)) {
+    for (const a of existing) {
+      push(a);
+    }
+  }
+  for (const a of extra) {
+    push(a);
+  }
   return out;
 }
 
@@ -92,17 +110,25 @@ function _mergeAliases(existing, extra) {
  * 不就地破坏入参:仅对获得新别名的规范 def 浅克隆。
  */
 function collapseRedundant(defs) {
-  if (!_enabled()) return defs;
-  if (!Array.isArray(defs)) return defs;
+  if (!_enabled()) {
+    return defs;
+  }
+  if (!Array.isArray(defs)) {
+    return defs;
+  }
   try {
     const idx = buildRedundancyIndex();
-    if (idx.size === 0) return defs;
+    if (idx.size === 0) {
+      return defs;
+    }
 
     // 哪些规范工具确实在列表里(决定能否安全折叠)
     const presentNorms = new Set();
     for (const d of defs) {
       const n = _normalize(d && d.name);
-      if (n) presentNorms.add(n);
+      if (n) {
+        presentNorms.add(n);
+      }
     }
 
     // 规范工具 -> 需要并入的别名名列表
@@ -115,7 +141,9 @@ function collapseRedundant(defs) {
         foldInto.set(info.canonicalNorm, list);
       }
     }
-    if (foldInto.size === 0) return defs;
+    if (foldInto.size === 0) {
+      return defs;
+    }
 
     const dropNorms = new Set(idx.keys()); // 候选丢弃集(仅当 canonical 在场才真丢)
 
@@ -134,9 +162,11 @@ function collapseRedundant(defs) {
           const i = idx.get(rn);
           return i ? i.raw : rn;
         });
-        out.push(Object.assign({}, def, {
-          aliases: _mergeAliases(def && def.aliases, originalNames),
-        }));
+        out.push(
+          Object.assign({}, def, {
+            aliases: _mergeAliases(def && def.aliases, originalNames),
+          })
+        );
         continue;
       }
       out.push(def);

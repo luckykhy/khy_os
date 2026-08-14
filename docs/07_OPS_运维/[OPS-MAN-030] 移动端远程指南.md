@@ -192,7 +192,7 @@ https://ai.khyquant.top/remote/
 
 ## 安全说明
 
-> ⚠️ **务必先改默认管理员口令。** bridge 首次启动会自动播种一个出厂默认管理员账号 **`admin05` / `012003`**（`services/backend/src/services/bridge/bridgeAuth.js`，无环境变量开关、非测试专用）。任何能访问到 `:9222` 的人都可能用它登录。**第一次使用就请注册你自己的账号并停用/修改默认账号**，公网部署尤其如此。
+> ⚠️ **务必先改默认管理员口令。** bridge 首次启动会自动播种一个出厂默认管理员账号（用户名与密码由 `services/backend/src/services/credentialGenerator.js` 动态生成：密码为机器指纹 + 随机熵的强密码，保存于数据目录 `.khy/credentials/default-admin.json`；用户名默认取 OS 用户名，也可用 `KHY_ADMIN_USERNAME` / `BRIDGE_DEFAULT_ADMIN_PASSWORD` 覆盖）。**已移除历史固定的 `admin05 / 012003` 默认账号**。任何能访问到 `:9222` 的人都可能用默认凭据登录，**第一次使用就请注册你自己的账号并停用/修改默认账号**，公网部署尤其如此。
 
 - **密码**使用 bcrypt（10 轮）哈希，并存储在服务器本地
 - **JWT 会话**在 7 天后过期；token 存储在 `sessionStorage` 中（浏览器标签页关闭时清除）

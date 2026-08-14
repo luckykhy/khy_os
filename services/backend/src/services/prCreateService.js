@@ -10,6 +10,7 @@
  */
 
 const { execSync, spawnSync } = require('child_process');
+
 const log = require('../utils/logger');
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -26,12 +27,16 @@ function detectPlatform() {
   try {
     execSync('gh --version', { stdio: 'ignore', timeout: 5000 });
     return 'github';
-  } catch { /* not github */ }
+  } catch {
+    /* not github */
+  }
 
   try {
     execSync('glab --version', { stdio: 'ignore', timeout: 5000 });
     return 'gitlab';
-  } catch { /* not gitlab */ }
+  } catch {
+    /* not gitlab */
+  }
 
   return null;
 }
@@ -58,14 +63,20 @@ function getBaseBranch(cwd) {
   try {
     const remote = execSync('git remote show origin', { cwd, encoding: 'utf-8', timeout: 10000 });
     const match = remote.match(/HEAD branch:\s*(\S+)/);
-    if (match) return match[1];
-  } catch { /* ignore */ }
+    if (match) {
+      return match[1];
+    }
+  } catch {
+    /* ignore */
+  }
 
   // Fallback: check if main or master exists
   try {
     execSync('git rev-parse --verify main', { cwd, stdio: 'ignore', timeout: 3000 });
     return 'main';
-  } catch { /* not main */ }
+  } catch {
+    /* not main */
+  }
   return 'master';
 }
 
@@ -83,18 +94,24 @@ function collectPRContext(cwd, baseBranch) {
 
   try {
     commitLog = execSync(`git log ${baseBranch}..HEAD --oneline`, opts);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   try {
     diffStat = execSync(`git diff ${baseBranch}...HEAD --stat`, opts);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   try {
     diff = execSync(`git diff ${baseBranch}...HEAD`, opts);
     if (diff.length > MAX_DIFF_CHARS) {
       diff = diff.slice(0, MAX_DIFF_CHARS) + '\n... (truncated)';
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return { log: commitLog, diffStat, diff };
 }
@@ -187,7 +204,10 @@ async function createPR(deps, options = {}) {
   const cwd = options.cwd || process.env.KHYQUANT_CWD || process.cwd();
   const platform = detectPlatform();
   if (!platform) {
-    return { success: false, error: 'No GitHub CLI (gh) or GitLab CLI (glab) found. Install gh: https://cli.github.com/' };
+    return {
+      success: false,
+      error: 'No GitHub CLI (gh) or GitLab CLI (glab) found. Install gh: https://cli.github.com/',
+    };
   }
 
   const branch = getCurrentBranch(cwd);
@@ -197,13 +217,23 @@ async function createPR(deps, options = {}) {
 
   const base = options.base || getBaseBranch(cwd);
   if (branch === base) {
-    return { success: false, error: `Current branch "${branch}" is the same as base "${base}". Create a feature branch first.` };
+    return {
+      success: false,
+      error: `Current branch "${branch}" is the same as base "${base}". Create a feature branch first.`,
+    };
   }
 
   // Push branch if not yet pushed
   try {
-    execSync(`git push -u origin ${branch}`, { cwd, encoding: 'utf-8', timeout: 30000, stdio: 'pipe' });
-  } catch { /* might already be pushed */ }
+    execSync(`git push -u origin ${branch}`, {
+      cwd,
+      encoding: 'utf-8',
+      timeout: 30000,
+      stdio: 'pipe',
+    });
+  } catch {
+    /* might already be pushed */
+  }
 
   // Generate title/body if not provided
   let title = options.title || '';
@@ -232,7 +262,9 @@ async function createPR(deps, options = {}) {
     let cmd;
     if (platform === 'github') {
       const args = ['pr', 'create', '--title', title, '--body', body || '', '--base', base];
-      if (options.draft) args.push('--draft');
+      if (options.draft) {
+        args.push('--draft');
+      }
       const result = spawnSync('gh', args, execOpts);
       if (result.status !== 0) {
         return { success: false, error: (result.stderr || result.stdout || '').trim() };
@@ -241,8 +273,21 @@ async function createPR(deps, options = {}) {
       return { success: true, url, title };
     } else {
       // GitLab
-      const args = ['mr', 'create', '--title', title, '--description', body || '', '--source-branch', branch, '--target-branch', base];
-      if (options.draft) args.push('--draft');
+      const args = [
+        'mr',
+        'create',
+        '--title',
+        title,
+        '--description',
+        body || '',
+        '--source-branch',
+        branch,
+        '--target-branch',
+        base,
+      ];
+      if (options.draft) {
+        args.push('--draft');
+      }
       const result = spawnSync('glab', args, execOpts);
       if (result.status !== 0) {
         return { success: false, error: (result.stderr || result.stdout || '').trim() };

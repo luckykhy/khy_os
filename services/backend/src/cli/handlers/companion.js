@@ -29,12 +29,16 @@ function _usage() {
   printInfo('  khy companion show <id> [--level L0|L1|L2]');
   printInfo('  khy companion history <id> [--limit <n>]');
   printInfo('  khy companion path <id>');
-  printInfo('  khy companion assets <id>   # 五类资产视图 (Persona/Playbook/Memory/Tool Body/Receipts)');
+  printInfo(
+    '  khy companion assets <id>   # 五类资产视图 (Persona/Playbook/Memory/Tool Body/Receipts)'
+  );
   printInfo('  khy companion receipts <id> [--limit <n>]  # 该同伴的行动回执');
   printInfo('  khy companion use <id>      # 设为当前激活同伴（注入系统提示词）');
   printInfo('  khy companion unuse         # 取消激活');
   printInfo('  khy companion active        # 查看当前激活同伴');
-  printInfo('  khy companion heartbeat [status|run|reset]  # 声明式巡检（HEARTBEAT.md，只提醒不执行）');
+  printInfo(
+    '  khy companion heartbeat [status|run|reset]  # 声明式巡检（HEARTBEAT.md，只提醒不执行）'
+  );
 }
 
 async function handleCompanion(subCommand, args, options = {}) {
@@ -43,7 +47,10 @@ async function handleCompanion(subCommand, args, options = {}) {
   switch (subCommand) {
     case 'create': {
       const name = (args.join(' ') || options.name || '').trim();
-      if (!name) { printError('缺少名称。用法: khy companion create <name> [--id <id>]'); return true; }
+      if (!name) {
+        printError('缺少名称。用法: khy companion create <name> [--id <id>]');
+        return true;
+      }
       try {
         const res = svc.createAgent({
           name,
@@ -54,8 +61,12 @@ async function handleCompanion(subCommand, args, options = {}) {
         });
         printSuccess(`已创建 companion: ${res.manifest.name} (${res.id})`);
         printInfo(`目录: ${res.dir}`);
-        printInfo(res.versioned ? '已 git 初始化并提交首个快照。' : '已创建文件（git 不可用 → 未版本化）。');
-        printInfo(`下一步: 编辑 persona.md / principles.md，或 \`khy companion show ${res.id} --level L2\``);
+        printInfo(
+          res.versioned ? '已 git 初始化并提交首个快照。' : '已创建文件（git 不可用 → 未版本化）。'
+        );
+        printInfo(
+          `下一步: 编辑 persona.md / principles.md，或 \`khy companion show ${res.id} --level L2\``
+        );
       } catch (err) {
         printError(err.message || String(err));
       }
@@ -72,19 +83,27 @@ async function handleCompanion(subCommand, args, options = {}) {
       const activeId = svc.getActiveAgentId();
       printTable(
         ['', 'ID', 'Name', 'Model', 'Description'],
-        agents.map(a => [
+        agents.map((a) => [
           a.id === activeId ? '●' : '',
-          a.id, a.name || '', a.model || '-', (a.description || '').slice(0, 48),
-        ]),
+          a.id,
+          a.name || '',
+          a.model || '-',
+          (a.description || '').slice(0, 48),
+        ])
       );
-      if (activeId) console.log(chalk.dim(`  ● = 当前激活同伴 (${activeId})`));
+      if (activeId) {
+        console.log(chalk.dim(`  ● = 当前激活同伴 (${activeId})`));
+      }
       console.log('');
       return true;
     }
 
     case 'show': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion show <id> [--level L0|L1|L2]'); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion show <id> [--level L0|L1|L2]');
+        return true;
+      }
       const level = String(options.level || 'L0').toUpperCase();
       try {
         const view = svc.loadLayered(id, level);
@@ -100,7 +119,10 @@ async function handleCompanion(subCommand, args, options = {}) {
 
     case 'history': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion history <id>'); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion history <id>');
+        return true;
+      }
       try {
         const limit = options.limit ? parseInt(options.limit, 10) : 50;
         const log = svc.history(id, { limit });
@@ -122,16 +144,25 @@ async function handleCompanion(subCommand, args, options = {}) {
 
     case 'path': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion path <id>'); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion path <id>');
+        return true;
+      }
       const agent = svc.getAgent(id);
-      if (!agent) { printError(`agent 不存在: ${id}`); return true; }
+      if (!agent) {
+        printError(`agent 不存在: ${id}`);
+        return true;
+      }
       console.log(agent.dir);
       return true;
     }
 
     case 'assets': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion assets <id>'); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion assets <id>');
+        return true;
+      }
       try {
         const rcpt = require('../../services/receiptService');
         const assets = svc.describeAssets(id, {
@@ -147,7 +178,7 @@ async function handleCompanion(subCommand, args, options = {}) {
         for (const a of assets) {
           const mark = a.present ? chalk.green('✅') : chalk.dim('—');
           console.log(`  ${mark} ${chalk.bold(padLabel(a.label))} ${chalk.dim(a.summary)}`);
-          for (const f of (a.files || [])) {
+          for (const f of a.files || []) {
             console.log(chalk.dim(`        ${f.rel}  (${f.bytes}B)`));
           }
         }
@@ -161,8 +192,14 @@ async function handleCompanion(subCommand, args, options = {}) {
 
     case 'receipts': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion receipts <id> [--limit <n>]'); return true; }
-      if (!svc.getAgent(id)) { printError(`agent 不存在: ${id}`); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion receipts <id> [--limit <n>]');
+        return true;
+      }
+      if (!svc.getAgent(id)) {
+        printError(`agent 不存在: ${id}`);
+        return true;
+      }
       try {
         const limit = options.limit ? parseInt(options.limit, 10) : 20;
         const rcpt = require('../../services/receiptService');
@@ -174,8 +211,12 @@ async function handleCompanion(subCommand, args, options = {}) {
         console.log(chalk.bold(`\n  🧾 ${id} 行动回执\n`));
         for (const r of rows) {
           const risk = r.maxRisk && r.maxRisk !== 'safe' ? chalk.yellow(` [${r.maxRisk}]`) : '';
-          console.log('  ' + chalk.yellow(r.id) + chalk.dim(`  ${r.status} · ${r.tools} 工具`) + risk);
-          if (r.goal) console.log(`     ${chalk.dim(r.goal)}`);
+          console.log(
+            '  ' + chalk.yellow(r.id) + chalk.dim(`  ${r.status} · ${r.tools} 工具`) + risk
+          );
+          if (r.goal) {
+            console.log(`     ${chalk.dim(r.goal)}`);
+          }
         }
         console.log('');
         return true;
@@ -187,7 +228,10 @@ async function handleCompanion(subCommand, args, options = {}) {
 
     case 'use': {
       const id = args[0];
-      if (!id) { printError('缺少 id。用法: khy companion use <id>'); return true; }
+      if (!id) {
+        printError('缺少 id。用法: khy companion use <id>');
+        return true;
+      }
       try {
         svc.setActiveAgent(id);
         printSuccess(`已激活同伴: ${id}`);
@@ -206,7 +250,10 @@ async function handleCompanion(subCommand, args, options = {}) {
 
     case 'active': {
       const id = svc.getActiveAgentId();
-      if (!id) { printInfo('当前没有激活的同伴。`khy companion use <id>` 激活一个。'); return true; }
+      if (!id) {
+        printInfo('当前没有激活的同伴。`khy companion use <id>` 激活一个。');
+        return true;
+      }
       const agent = svc.getAgent(id);
       printInfo(`当前激活: ${agent ? agent.manifest.name : ''} (${id})`);
       return true;
@@ -215,7 +262,10 @@ async function handleCompanion(subCommand, args, options = {}) {
     case 'heartbeat': {
       const hb = require('../../services/heartbeatService');
       const action = (args[0] || 'status').toLowerCase();
-      const globalOn = String(process.env.KHY_HEARTBEAT || 'on').trim().toLowerCase() !== 'off';
+      const globalOn =
+        String(process.env.KHY_HEARTBEAT || 'on')
+          .trim()
+          .toLowerCase() !== 'off';
 
       if (action === 'reset') {
         hb.reset();
@@ -224,28 +274,46 @@ async function handleCompanion(subCommand, args, options = {}) {
       }
 
       const id = svc.getActiveAgentId();
-      if (!id) { printInfo('当前没有激活的同伴。`khy companion use <id>` 激活一个再巡检。'); return true; }
+      if (!id) {
+        printInfo('当前没有激活的同伴。`khy companion use <id>` 激活一个再巡检。');
+        return true;
+      }
       const md = svc.readAsset(id, svc.ASSET_FILES.heartbeat) || '';
       const list = hb.parseChecklist(md);
 
       console.log(chalk.bold(`\n  💓 ${id} 心跳巡检 (HEARTBEAT.md)\n`));
       console.log(`  开关: ${globalOn ? chalk.green('on') : chalk.dim('off (KHY_HEARTBEAT=off)')}`);
-      console.log(`  清单: ${list.enabled ? chalk.green('已启用') : chalk.dim('未启用（留空或全为注释 → 静默）')}`);
+      console.log(
+        `  清单: ${list.enabled ? chalk.green('已启用') : chalk.dim('未启用（留空或全为注释 → 静默）')}`
+      );
       if (list.sources.length) {
         console.log(chalk.bold('\n  数据源:'));
-        for (const s of list.sources) console.log(`    - ${s}`);
+        for (const s of list.sources) {
+          console.log(`    - ${s}`);
+        }
       }
       if (list.criteria.length) {
         console.log(chalk.bold('\n  判断标准:'));
-        for (const c of list.criteria) console.log(`    - ${c}`);
+        for (const c of list.criteria) {
+          console.log(`    - ${c}`);
+        }
       }
 
       if (action === 'run') {
         // dry-run：无真实探针 → 空 findings，演示静默/通知二态。真实数据源探针留后续。
         const res = hb.patrol({ companionId: id, findings: [] });
-        const pill = res.status === 'notify' ? chalk.yellow('● 有事 (notify)') : chalk.green('● 静默 (silent)');
-        console.log(chalk.bold('\n  巡检结果: ') + pill + chalk.dim(res.reason ? `  (${res.reason})` : ''));
-        console.log(chalk.dim('  说明: 心跳只提醒，任何操作仍走审批；当前为 dry-run（未接入真实数据源探针）。'));
+        const pill =
+          res.status === 'notify'
+            ? chalk.yellow('● 有事 (notify)')
+            : chalk.green('● 静默 (silent)');
+        console.log(
+          chalk.bold('\n  巡检结果: ') + pill + chalk.dim(res.reason ? `  (${res.reason})` : '')
+        );
+        console.log(
+          chalk.dim(
+            '  说明: 心跳只提醒，任何操作仍走审批；当前为 dry-run（未接入真实数据源探针）。'
+          )
+        );
       } else {
         const events = hb.getEvents();
         const n = Object.keys(events.events || {}).length;
@@ -257,7 +325,9 @@ async function handleCompanion(subCommand, args, options = {}) {
     }
 
     default:
-      if (subCommand) printError(`未知子命令: companion ${subCommand}`);
+      if (subCommand) {
+        printError(`未知子命令: companion ${subCommand}`);
+      }
       _usage();
       return true;
   }

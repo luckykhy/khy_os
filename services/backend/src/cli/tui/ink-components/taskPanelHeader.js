@@ -30,7 +30,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  * @returns {boolean}
  */
 function taskPanelHeaderEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_PANEL_HEADER) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_PANEL_HEADER) || '')
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(flag);
 }
 
@@ -46,22 +48,32 @@ function taskPanelHeaderEnabled(env = process.env) {
  *                   无法诚实覆盖全量或门控关 → ''(调用方回退静态标题)
  */
 function buildTaskPanelHeader(opts = {}, env = process.env) {
-  if (!taskPanelHeaderEnabled(env)) return '';
-  if (!opts || typeof opts !== 'object') return '';
+  if (!taskPanelHeaderEnabled(env)) {
+    return '';
+  }
+  if (!opts || typeof opts !== 'object') {
+    return '';
+  }
 
   const lines = Array.isArray(opts.lines) ? opts.lines : [];
-  if (lines.length === 0) return ''; // 空清单不渲染(调用方本就 return null)
+  if (lines.length === 0) {
+    return '';
+  } // 空清单不渲染(调用方本就 return null)
 
   const hidden = Math.max(0, Number(opts.hidden) || 0);
   const hiddenLines = Array.isArray(opts.hiddenLines) ? opts.hiddenLines : [];
 
   // 诚实红线:有隐藏项却拿不到等长隐藏行 → 无法覆盖全量 → 回退静态标题。
-  if (hidden > 0 && hiddenLines.length !== hidden) return '';
+  if (hidden > 0 && hiddenLines.length !== hidden) {
+    return '';
+  }
 
   const visible = countTaskLinesByStatus(lines);
   const hide = countTaskLinesByStatus(hiddenLines);
   // 任一行行首非已知图标 → 无法逐行归类 → 回退(绝不把它静默并进某一类)。
-  if (visible.unknown > 0 || hide.unknown > 0) return '';
+  if (visible.unknown > 0 || hide.unknown > 0) {
+    return '';
+  }
 
   const completed = visible.completed + hide.completed;
   const inProgress = visible.in_progress + hide.in_progress;
@@ -71,9 +83,13 @@ function buildTaskPanelHeader(opts = {}, env = process.env) {
 
   // CC 头行结构:完成(总在) → 进行中(仅 >0) → 待办(总在);khy 诚实扩展 错误(仅 >0)。
   const parts = [`${completed} 完成`];
-  if (inProgress > 0) parts.push(`${inProgress} 进行中`);
+  if (inProgress > 0) {
+    parts.push(`${inProgress} 进行中`);
+  }
   parts.push(`${pending} 待办`);
-  if (error > 0) parts.push(`${error} 错误`);
+  if (error > 0) {
+    parts.push(`${error} 错误`);
+  }
 
   return `任务清单（共 ${total} 项:${parts.join('、')}）`;
 }

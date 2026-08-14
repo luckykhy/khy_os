@@ -16,11 +16,11 @@
  * fail-closed 是铁律：网关自身任何异常都判 DENY，绝不因网关崩溃而放行（防呆④）。
  */
 
-const { buildIntent, validateIntent } = require('./intentSchema');
-const { classify, LEVELS, isExemptible } = require('./resourceClassifier');
-const { PermissionCache } = require('./permissionCache');
-const { BreachBreaker } = require('./breachBreaker');
 const { route, DECISIONS, DEFAULT_L2_CONFIRM, DENY_CAUSES } = require('./approvalRouter');
+const { BreachBreaker } = require('./breachBreaker');
+const { buildIntent, validateIntent } = require('./intentSchema');
+const { PermissionCache } = require('./permissionCache');
+const { classify, LEVELS, isExemptible } = require('./resourceClassifier');
 
 // sessionId -> { cache, breaker }；进程级内存，绝不落盘。
 const _sessions = new Map();
@@ -50,9 +50,12 @@ function submitManifest(sessionId, items, opts = {}) {
 function registerChild(sessionId, pid, opts = {}) {
   _session(sessionId, opts.breakerOpts).breaker.registerChild(pid);
 }
+
 function unregisterChild(sessionId, pid) {
   const s = _sessions.get(sessionId || '__default__');
-  if (s) s.breaker.unregisterChild(pid);
+  if (s) {
+    s.breaker.unregisterChild(pid);
+  }
 }
 
 /**
@@ -77,8 +80,13 @@ async function evaluate(call = {}, io = {}) {
     if (v.bypass && v.bypass.length > 0) {
       // 零容忍：硬编码跳过审批 → 立即跳闸 + 拒绝。
       breaker.reportBypass(v.bypass);
-      return _result(false, DECISIONS.DENY, 'L2',
-        [`检测到旁路注入标记 ${v.bypass.join(',')}，熔断并拒绝`], true);
+      return _result(
+        false,
+        DECISIONS.DENY,
+        'L2',
+        [`检测到旁路注入标记 ${v.bypass.join(',')}，熔断并拒绝`],
+        true
+      );
     }
 
     // 2) 分级。
@@ -112,11 +120,17 @@ async function evaluate(call = {}, io = {}) {
         try {
           const { buildDenialGuidance } = require('./denialGuidance');
           const g = buildDenialGuidance(r.cause, intent, process.env);
-          if (g) reasons.push(g);
-        } catch { /* 指引可选，失败不影响拒绝 */ }
+          if (g) {
+            reasons.push(g);
+          }
+        } catch {
+          /* 指引可选，失败不影响拒绝 */
+        }
       }
       const tripped = _environmental ? false : breaker.reportDeniedL2();
-      if (tripped) reasons.push(`已熔断: ${breaker.reason}`);
+      if (tripped) {
+        reasons.push(`已熔断: ${breaker.reason}`);
+      }
       return _result(false, r.decision, level, reasons, breaker.tripped);
     }
 
@@ -124,7 +138,13 @@ async function evaluate(call = {}, io = {}) {
     return _result(allow, r.decision, level, reasons, breaker.tripped);
   } catch (e) {
     // 防呆④：网关自身崩溃绝不放行。
-    return _result(false, DECISIONS.DENY, 'L2', [`网关异常 fail-closed: ${e && e.message}`], breaker.tripped);
+    return _result(
+      false,
+      DECISIONS.DENY,
+      'L2',
+      [`网关异常 fail-closed: ${e && e.message}`],
+      breaker.tripped
+    );
   }
 }
 
@@ -136,7 +156,10 @@ function _result(allow, decision, level, reasons, tripped) {
 function resetSession(sessionId) {
   const key = sessionId || '__default__';
   const s = _sessions.get(key);
-  if (s) { s.cache.clear(); s.breaker.reset(); }
+  if (s) {
+    s.cache.clear();
+    s.breaker.reset();
+  }
   _sessions.delete(key);
 }
 
@@ -152,18 +175,27 @@ function resetAllSessions() {
   let n = 0;
   try {
     for (const s of _sessions.values()) {
-      try { s.cache.clear(); s.breaker.reset(); } catch { /* per-session best effort */ }
+      try {
+        s.cache.clear();
+        s.breaker.reset();
+      } catch {
+        /* per-session best effort */
+      }
       n += 1;
     }
     _sessions.clear();
-  } catch { /* never throw */ }
+  } catch {
+    /* never throw */
+  }
   return n;
 }
 
 /** 仅供测试/诊断：读会话状态（不可变快照）。 */
 function inspect(sessionId) {
   const s = _sessions.get(sessionId || '__default__');
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   return {
     manifest: s.cache.describeManifest(),
     tripped: s.breaker.tripped,
@@ -180,7 +212,9 @@ function inspect(sessionId) {
  * 不修改 TUI 即可安全运行：未实现键入确认的宿主下，typed='' → L2 恒拒绝（安全方向）。
  */
 function makeControlPrompter(onControlRequest) {
-  if (typeof onControlRequest !== 'function') return null;
+  if (typeof onControlRequest !== 'function') {
+    return null;
+  }
   const ask = async (input) => {
     let resp = null;
     try {
@@ -188,18 +222,28 @@ function makeControlPrompter(onControlRequest) {
         requestId: `sg_${input.__seq || ''}${input.tool || ''}_${input.level || ''}`,
         request: { subtype: 'can_use_tool', tool_name: input.tool, input },
       });
-    } catch { resp = null; }
+    } catch {
+      resp = null;
+    }
     return resp;
   };
   const decode = (resp) => {
     // Tolerate the Ink overlay's primitive resolutions (true | 'always' | false)
     // as well as the SDK/{behavior} object shape — same contract as
     // toolCalling._decisionFromControl, so any host channel works.
-    if (resp === true) return { behavior: 'allow' };
-    if (resp === 'always' || resp === 'allow-always') return { behavior: 'allow-always' };
-    if (resp === false) return { behavior: 'deny' };
-    const r = (resp && resp.response) ? resp.response : resp;
-    if (!r || typeof r !== 'object') return { behavior: 'deny' };
+    if (resp === true) {
+      return { behavior: 'allow' };
+    }
+    if (resp === 'always' || resp === 'allow-always') {
+      return { behavior: 'allow-always' };
+    }
+    if (resp === false) {
+      return { behavior: 'deny' };
+    }
+    const r = resp && resp.response ? resp.response : resp;
+    if (!r || typeof r !== 'object') {
+      return { behavior: 'deny' };
+    }
     return r;
   };
   // 面向小白的执行前说明：随 input 一并送达宿主渲染层。fail-soft——生成失败
@@ -214,22 +258,43 @@ function makeControlPrompter(onControlRequest) {
   return {
     async askL1(intent) {
       const explanation = _explain(intent);
-      const r = decode(await ask({ tool: intent.tool, level: 'L1', action: intent.action, scope: intent.scope, resource: intent.resource, explanation }));
+      const r = decode(
+        await ask({
+          tool: intent.tool,
+          level: 'L1',
+          action: intent.action,
+          scope: intent.scope,
+          resource: intent.resource,
+          explanation,
+        })
+      );
       const b = String(r.behavior || '').toLowerCase();
-      if (b === 'allow-always' || r.scope === 'session') return 'session';
-      if (b === 'allow') return 'once';
+      if (b === 'allow-always' || r.scope === 'session') {
+        return 'session';
+      }
+      if (b === 'allow') {
+        return 'once';
+      }
       return 'deny';
     },
     async confirmL2(intent) {
       const explanation = _explain(intent);
-      const r = decode(await ask({
-        tool: intent.tool, level: 'L2', action: intent.action, scope: intent.scope,
-        resource: intent.resource, requireTyped: DEFAULT_L2_CONFIRM, explanation,
-      }));
+      const r = decode(
+        await ask({
+          tool: intent.tool,
+          level: 'L2',
+          action: intent.action,
+          scope: intent.scope,
+          resource: intent.resource,
+          requireTyped: DEFAULT_L2_CONFIRM,
+          explanation,
+        })
+      );
       // 返回 { typed, session }：typed=只认显式回传的键入串（其余视为未确认，fail-closed 不变）；
       // session=用户选了「本会话内总是允许此类」（behavior=allow-always 或 scope=session）。
       const typed = typeof r.typed === 'string' ? r.typed : '';
-      const session = String(r.behavior || '').toLowerCase() === 'allow-always' || r.scope === 'session';
+      const session =
+        String(r.behavior || '').toLowerCase() === 'allow-always' || r.scope === 'session';
       return { typed, session };
     },
   };

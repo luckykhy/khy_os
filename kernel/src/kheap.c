@@ -86,6 +86,7 @@ void *kmalloc(size_t size) {
                 curr->size = size;
                 curr->next = new_block;
             }
+            curr->magic   = 0xBEEFCAFE;   /* restore magic (cleared by kfree) */
             curr->is_free = 0;
             result = (void *)((uint8_t *)curr + sizeof(struct block_header));
             break;
@@ -114,6 +115,10 @@ void kfree(void *ptr) {
         serial_print("[HEAP] ERROR: Invalid free (bad magic)\n");
         return;
     }
+    if (block->is_free) {
+        serial_print("[HEAP] ERROR: Double free detected\n");
+        return;
+    }
 
     /* [SAFE] Same shared-free-list hazard as kmalloc: marking the block free and
      * walking the list to coalesce must not be interrupted by a preempting
@@ -122,6 +127,7 @@ void kfree(void *ptr) {
     uint64_t flags;
     __asm__ volatile("pushfq; pop %0; cli" : "=r"(flags) :: "memory");
 
+    block->magic   = 0;   /* invalidate magic so double-free is detectable */
     block->is_free = 1;
 
     /* Coalesce adjacent free blocks */
@@ -163,11 +169,16 @@ void *realloc(void *ptr, size_t size) {
 
     if (block->size >= size)
         return ptr; /* Current block is large enough */
+    /* Bound the source size so a corrupted block header cannot drive a
+     * massive memcpy past the heap (defence-in-depth). */
+    size_t copy_size = block->size;
+    if (copy_size > HEAP_SIZE)
+        copy_size = HEAP_SIZE;
 
     /* Allocate new, copy, free old */
     void *new_ptr = kmalloc(size);
     if (new_ptr) {
-        memcpy(new_ptr, ptr, block->size);
+        memcpy(new_ptr, ptr, copy_size);
         kfree(ptr);
     }
     return new_ptr;

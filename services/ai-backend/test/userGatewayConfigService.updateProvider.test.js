@@ -32,12 +32,21 @@ let userA;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'upd-a', email: 'upd-a@test.local', password: 'pw-a-123456', status: 'active' });
+  userA = await User.create({
+    username: 'upd-a',
+    email: 'upd-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
+  });
 });
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 // Fresh decrypted key for an entry id (mapProviderRow masks it, so read the row).
@@ -48,14 +57,23 @@ async function rawKey(id) {
 
 describe('updateProviderEntry — metadata + key rotation', () => {
   test('patches metadata while keeping the current key when key is empty', async () => {
-    const entry = await svc.addProviderEntry(userA.id, { provider: 'acme', key: 'sk-acme-1', baseUrl: 'https://api.acme.com/v1' });
+    const entry = await svc.addProviderEntry(userA.id, {
+      provider: 'acme',
+      key: 'sk-acme-1',
+      baseUrl: 'https://api.acme.com/v1',
+    });
     const out = await svc.updateProviderEntry(userA.id, entry.id, {
       displayName: 'Acme Cloud',
       apiFormat: 'anthropic',
       baseUrl: 'https://api.acme.com/v2',
       key: '', // keep current
     });
-    expect(out).toMatchObject({ provider: 'acme', displayName: 'Acme Cloud', apiFormat: 'anthropic', baseUrl: 'https://api.acme.com/v2' });
+    expect(out).toMatchObject({
+      provider: 'acme',
+      displayName: 'Acme Cloud',
+      apiFormat: 'anthropic',
+      baseUrl: 'https://api.acme.com/v2',
+    });
     expect(await rawKey(entry.id)).toBe('sk-acme-1'); // unchanged
   });
 
@@ -66,28 +84,32 @@ describe('updateProviderEntry — metadata + key rotation', () => {
   });
 
   test('404 for an unknown entry id', async () => {
-    await expect(svc.updateProviderEntry(userA.id, 999999, { displayName: 'x' }))
-      .rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      svc.updateProviderEntry(userA.id, 999999, { displayName: 'x' })
+    ).rejects.toMatchObject({ statusCode: 404 });
   });
 
   test('400 for an invalid apiFormat', async () => {
     const entry = await svc.addProviderEntry(userA.id, { provider: 'fmt', key: 'sk-fmt' });
-    await expect(svc.updateProviderEntry(userA.id, entry.id, { apiFormat: 'not-a-format' }))
-      .rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      svc.updateProviderEntry(userA.id, entry.id, { apiFormat: 'not-a-format' })
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   test('400 for an invalid provider rename target', async () => {
     const entry = await svc.addProviderEntry(userA.id, { provider: 'renamebad', key: 'sk-rb' });
-    await expect(svc.updateProviderEntry(userA.id, entry.id, { provider: 'A!!' }))
-      .rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      svc.updateProviderEntry(userA.id, entry.id, { provider: 'A!!' })
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   test('409 when the resulting (provider, key) collides with a sibling', async () => {
     await svc.addProviderEntry(userA.id, { provider: 'dup', key: 'sk-keep' });
     const second = await svc.addProviderEntry(userA.id, { provider: 'dup', key: 'sk-other' });
     // Rotating second's key to the first's value collides within provider 'dup'.
-    await expect(svc.updateProviderEntry(userA.id, second.id, { key: 'sk-keep' }))
-      .rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      svc.updateProviderEntry(userA.id, second.id, { key: 'sk-keep' })
+    ).rejects.toMatchObject({ statusCode: 409 });
   });
 });
 
@@ -103,7 +125,7 @@ describe('updateProviderEntry — provider rename migrates models', () => {
     const oldModels = await svc.listModels(userA.id, { provider: 'oldname' });
     const newModels = await svc.listModels(userA.id, { provider: 'newname' });
     expect(oldModels).toHaveLength(0);
-    expect(newModels.map(m => m.model).sort()).toEqual(['m-1', 'm-2']);
+    expect(newModels.map((m) => m.model).sort()).toEqual(['m-1', 'm-2']);
   });
 
   test('rename de-duplicates models the target provider already serves', async () => {
@@ -116,7 +138,7 @@ describe('updateProviderEntry — provider rename migrates models', () => {
 
     await svc.updateProviderEntry(userA.id, entry.id, { provider: 'dst' });
     const dstModels = await svc.listModels(userA.id, { provider: 'dst' });
-    expect(dstModels.map(m => m.model).sort()).toEqual(['shared', 'unique']);
+    expect(dstModels.map((m) => m.model).sort()).toEqual(['shared', 'unique']);
     expect(await svc.listModels(userA.id, { provider: 'src' })).toHaveLength(0);
   });
 });

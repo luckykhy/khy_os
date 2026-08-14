@@ -10,8 +10,8 @@ const fs = require('fs');
 const path = require('path');
 
 function _logsDir() {
-  const { getDataDir } = require('../utils/dataHome');
-  return getDataDir('memory', 'logs');
+  const { getMemoryDataDir } = require('../utils/dataHome');
+  return getMemoryDataDir('logs');
 }
 
 /**
@@ -24,7 +24,11 @@ function _logPath(date = new Date()) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   const dir = path.join(_logsDir(), String(y), m);
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* exists */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* exists */
+  }
   return path.join(dir, `${y}-${m}-${d}.md`);
 }
 
@@ -64,7 +68,9 @@ function readTodayLog() {
 function readLogForDate(date) {
   const logFile = _logPath(date);
   try {
-    if (!fs.existsSync(logFile)) return null;
+    if (!fs.existsSync(logFile)) {
+      return null;
+    }
     return fs.readFileSync(logFile, 'utf-8');
   } catch {
     return null;
@@ -103,11 +109,13 @@ function getLogFileCount() {
   try {
     const baseDir = _logsDir();
     let count = 0;
-    const years = fs.readdirSync(baseDir).filter(f => /^\d{4}$/.test(f));
+    const years = fs.readdirSync(baseDir).filter((f) => /^\d{4}$/.test(f));
     for (const year of years) {
-      const months = fs.readdirSync(path.join(baseDir, year)).filter(f => /^\d{2}$/.test(f));
+      const months = fs.readdirSync(path.join(baseDir, year)).filter((f) => /^\d{2}$/.test(f));
       for (const month of months) {
-        const files = fs.readdirSync(path.join(baseDir, year, month)).filter(f => f.endsWith('.md'));
+        const files = fs
+          .readdirSync(path.join(baseDir, year, month))
+          .filter((f) => f.endsWith('.md'));
         count += files.length;
       }
     }
@@ -118,5 +126,9 @@ function getLogFileCount() {
 }
 
 module.exports = {
-  appendLog, readTodayLog, readLogForDate, getRecentLogs, getLogFileCount,
+  appendLog,
+  readTodayLog,
+  readLogForDate,
+  getRecentLogs,
+  getLogFileCount,
 };

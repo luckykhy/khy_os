@@ -21,12 +21,19 @@
  */
 
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
-const { mergeTaskLines, summarizeHiddenTaskLines, taskPriorityCapEnabled, splitTaskLinesBySource } = require('./taskPanelLines');
+
 // 刀23:每行样式(含 completed ✓ 的 strikethrough,对齐 CC TaskListV2)由纯叶子 SSOT 收敛。
 const { taskLineStyle } = require('./taskLineStyle');
 // 刀28:头行按状态计数(total/完成/进行中/待办[/错误],对齐 CC TaskListV2 isStandalone 头行)。
 const { buildTaskPanelHeader } = require('./taskPanelHeader');
+const {
+  mergeTaskLines,
+  summarizeHiddenTaskLines,
+  taskPriorityCapEnabled,
+  splitTaskLinesBySource,
+} = require('./taskPanelLines');
 
 function TaskListPanel(props = {}) {
   // Two render modes:
@@ -41,7 +48,9 @@ function TaskListPanel(props = {}) {
   let lines;
   let hidden = 0;
   if (coordinated) {
-    if (process.env.KHY_TASK_PANEL === '0') return null;
+    if (process.env.KHY_TASK_PANEL === '0') {
+      return null;
+    }
     lines = props.lines;
     hidden = Math.max(0, Number(props.hidden) || 0);
   } else {
@@ -49,7 +58,9 @@ function TaskListPanel(props = {}) {
     let snap = '';
     let planTasks = null;
     try {
-      if (process.env.KHY_TASK_PANEL === '0') return null;
+      if (process.env.KHY_TASK_PANEL === '0') {
+        return null;
+      }
       const taskStore = require('../../../tools/_taskStore');
       snap = typeof taskStore.snapshot === 'function' ? taskStore.snapshot() : '';
       if (process.env.KHY_PLAN_TASK_PANEL !== '0') {
@@ -64,13 +75,25 @@ function TaskListPanel(props = {}) {
 
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
-  if (!lines.length) return null;
+  if (!lines.length) {
+    if (process.env.KHY_DEBUG_TASK_PANEL === '1') {
+      try {
+        process.stderr.write(
+          `[task-debug] TaskListPanel: lines empty, returning null (coordinated=${coordinated})\n`
+        );
+      } catch {
+        /* non-critical */
+      }
+    }
+    return null;
+  }
 
   // 刀28:头行从静态 `任务清单` 升级为 CC 对齐的按状态计数。计数覆盖全量(可见
   // lines + 隐藏 hiddenLines);无法诚实覆盖全量或门控关 → buildTaskPanelHeader 返
   // '' → 逐字节回退静态标题 `任务清单`。
-  const header = buildTaskPanelHeader(
-    { lines, hidden, hiddenLines: props.hiddenLines }, process.env) || '任务清单';
+  const header =
+    buildTaskPanelHeader({ lines, hidden, hiddenLines: props.hiddenLines }, process.env) ||
+    '任务清单';
 
   // 语义分区(缺口②):把「本会话清单」(计划步骤 + V1 TodoWrite)与「项目任务 · 跨会话」
   // (持久化 large-task store)拆成带标签的两段,不再当成一种任务混显示。分组只在展示层进行,
@@ -88,13 +111,12 @@ function TaskListPanel(props = {}) {
       }
     }
   } else {
-    lines.forEach((line, i) => body.push(h(Text, { key: `task-${i}`, ...taskLineStyle(line, process.env) }, line)));
+    lines.forEach((line, i) =>
+      body.push(h(Text, { key: `task-${i}`, ...taskLineStyle(line, process.env) }, line))
+    );
   }
 
-  const children = [
-    h(Text, { key: 'task-title', dimColor: true }, header),
-    ...body,
-  ];
+  const children = [h(Text, { key: 'task-title', dimColor: true }, header), ...body];
   if (hidden > 0) {
     // 尾切提示:与 StreamingBlock「实时仅显示末尾」同款诚实告知,完整清单在本轮历史可回看。
     // 刀19:隐藏项按状态分解(对齐 CC TaskListV2.hiddenSummary)。分解来自被丢弃行的行首
@@ -103,14 +125,34 @@ function TaskListPanel(props = {}) {
     // (进行中/待办优先),故去掉「末尾」二字以免谎称尾切;门控关回退「末尾」措辞。
     const bd = summarizeHiddenTaskLines(props.hiddenLines, process.env);
     const _tail = taskPriorityCapEnabled(process.env) ? '' : '末尾';
-    children.push(h(Text, { key: 'task-hidden', dimColor: true },
-      bd
-        ? `⋯ 仅显示${_tail} ${lines.length} 项（另有 ${bd}）`
-        : `⋯ 仅显示${_tail} ${lines.length} 项（另有 ${hidden} 项未显示）`));
+    children.push(
+      h(
+        Text,
+        { key: 'task-hidden', dimColor: true },
+        bd
+          ? `⋯ 仅显示${_tail} ${lines.length} 项（另有 ${bd}）`
+          : `⋯ 仅显示${_tail} ${lines.length} 项（另有 ${hidden} 项未显示）`
+      )
+    );
   }
 
-  return h(Box, { flexDirection: 'column', marginTop: 1, borderStyle: 'round', borderColor: 'gray', paddingX: 1 },
-    ...children,
+  if (process.env.KHY_DEBUG_TASK_PANEL === '1') {
+    try {
+      process.stderr.write(
+        `[task-debug] TaskListPanel: rendering ${lines.length} lines, hidden=${hidden}\n`
+      );
+    } catch {
+      /* non-critical */
+    }
+  }
+
+  // No marginTop: the panel sits directly above the prompt and its height is
+  // fed into liveRegionBudget's ledger as line counts only — an extra margin
+  // row would be unaccounted for and squeeze the prompt.
+  return h(
+    Box,
+    { flexDirection: 'column', borderStyle: 'round', borderColor: 'gray', paddingX: 1 },
+    ...children
   );
 }
 

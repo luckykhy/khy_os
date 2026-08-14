@@ -26,7 +26,9 @@ function _moaEnabled(env = process.env) {
     return isFlagEnabled(_MOA_FLAG, env);
   } catch {
     const raw = env && env[_MOA_FLAG];
-    if (raw == null || String(raw).trim() === '') return true;
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    }
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   }
@@ -44,7 +46,9 @@ function _disabledResult() {
  * Resolve the real gateway singleton, fail-soft.
  */
 function _resolveGateway(provided) {
-  if (provided) return provided;
+  if (provided) {
+    return provided;
+  }
   try {
     return require('./gateway/aiGateway');
   } catch {
@@ -59,16 +63,27 @@ function _resolveGateway(provided) {
  * already expose chat/chatStream/query, in which case we pass them through.
  */
 function _arenaGatewayShim(gateway) {
-  if (!gateway) return null;
-  if (typeof gateway.chatStream === 'function' || typeof gateway.chat === 'function' || typeof gateway.query === 'function') {
+  if (!gateway) {
+    return null;
+  }
+  if (
+    typeof gateway.chatStream === 'function' ||
+    typeof gateway.chat === 'function' ||
+    typeof gateway.query === 'function'
+  ) {
     return gateway; // already arena-compatible
   }
   if (typeof gateway.generate === 'function') {
     const shim = {
-      query: (prompt, opts = {}) => gateway.generate(prompt, { model: opts.model, signal: opts.signal }),
+      query: (prompt, opts = {}) =>
+        gateway.generate(prompt, { model: opts.model, signal: opts.signal }),
     };
-    if (typeof gateway.listModels === 'function') shim.listModels = gateway.listModels.bind(gateway);
-    if (typeof gateway.getAvailableModels === 'function') shim.getAvailableModels = gateway.getAvailableModels.bind(gateway);
+    if (typeof gateway.listModels === 'function') {
+      shim.listModels = gateway.listModels.bind(gateway);
+    }
+    if (typeof gateway.getAvailableModels === 'function') {
+      shim.getAvailableModels = gateway.getAvailableModels.bind(gateway);
+    }
     return shim;
   }
   return gateway;
@@ -79,14 +94,20 @@ function _arenaGatewayShim(gateway) {
  * generation-interface variants. Returns the answer text ('' on failure).
  */
 async function _callAggregator(gateway, model, prompt) {
-  if (!gateway) return '';
+  if (!gateway) {
+    return '';
+  }
   try {
     if (typeof gateway.generate === 'function') {
       const r = await gateway.generate(prompt, { model, temperature: 0.3 });
       return typeof r === 'string' ? r : _str(r && (r.content || r.text || r.reply));
     }
     if (typeof gateway.chat === 'function') {
-      const r = await gateway.chat({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.3 });
+      const r = await gateway.chat({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+      });
       return _str(r && (r.content || r.text || r.reply));
     }
     if (typeof gateway.query === 'function') {
@@ -119,7 +140,9 @@ const _str = require('../utils/toStr').toStr;
 async function runMoa(params = {}) {
   const { prompt, models, aggregatorModel, onProgress } = params;
 
-  if (!_moaEnabled(params.env)) return _disabledResult();
+  if (!_moaEnabled(params.env)) {
+    return _disabledResult();
+  }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return { ok: false, error: 'MoA 需要一个非空 prompt' };
@@ -143,7 +166,10 @@ async function runMoa(params = {}) {
     }
     arenaResult = await arena.run({ prompt, models, onProgress });
   } catch (err) {
-    return { ok: false, error: `多模型扇出失败: ${err && err.message ? err.message : String(err)}` };
+    return {
+      ok: false,
+      error: `多模型扇出失败: ${err && err.message ? err.message : String(err)}`,
+    };
   }
 
   const entries = (arenaResult && arenaResult.entries) || [];

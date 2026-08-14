@@ -1,0 +1,33 @@
+# fly.toml — khy-os staging deployment config
+#
+# Deploy the khy-os Docker image to a staging Fly.io app.
+# The staging app is separate from production to avoid accidental data
+# corruption during CI-driven deploys.
+#
+# Usage:
+#   flyctl launch --config fly.staging.toml --no-deploy
+#   flyctl deploy --config fly.staging.toml
+#
+# Or via the GitHub Actions workflow (deploy-staging.yml).
+
+app = 'khy-os-staging'
+primary_region = 'sjc'  # San Jose — nearest to CN with good latency
+
+[build]
+  image = 'ghcr.io/khy-os/khy-os:main'  # Built by docker.yml on every push to main
+
+[env]
+  # Minimal env for smoke tests — no secrets needed for --version / --help.
+  KHY_HOME = '/tmp/khy-home'
+
+[http_service]
+  internal_port = 3000        # khy-os TUI HTTP gateway port
+  force_https = true
+  auto_stop_machines = true    # Scale to zero when idle (staging cost control)
+  auto_start_machines = true
+  min_machines_count = 0
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1

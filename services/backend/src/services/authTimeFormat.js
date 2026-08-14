@@ -24,16 +24,22 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_AUTH_DATE_SANE 默认开,仅 {0,false,off,no} 关。env 由调用方注入以便测试。 */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_AUTH_DATE_SANE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 /** 把任意输入解析为有效 Date;无效/缺失 → null。绝不抛。 */
 function _toValidDate(value) {
   try {
-    if (value === undefined || value === null || value === '') return null;
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
     const d = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
+    if (Number.isNaN(d.getTime())) {
+      return null;
+    }
     return d;
   } catch {
     return null;
@@ -55,12 +61,18 @@ function formatAuthTimestamp(value, opts = {}) {
   const fallback = opts.fallback !== undefined ? opts.fallback : '未知';
   try {
     const d = _toValidDate(value);
-    if (!d) return fallback;
+    if (!d) {
+      return fallback;
+    }
     let text = d.toLocaleString(locale);
-    if (typeof text !== 'string' || text.toLowerCase().includes('invalid')) return fallback;
+    if (typeof text !== 'string' || text.toLowerCase().includes('invalid')) {
+      return fallback;
+    }
     if (opts.markExpired) {
       const now = typeof opts.now === 'number' ? opts.now : Date.now();
-      if (d.getTime() < now) text += ' (已过期)';
+      if (d.getTime() < now) {
+        text += ' (已过期)';
+      }
     }
     return text;
   } catch {
@@ -78,10 +90,16 @@ function formatAuthTimestamp(value, opts = {}) {
 function deriveSessionExpiry(expiresAt, loginAt, maxAgeMs) {
   try {
     const existing = _toValidDate(expiresAt);
-    if (existing) return existing.toISOString();
+    if (existing) {
+      return existing.toISOString();
+    }
     const base = _toValidDate(loginAt);
-    if (!base) return null;
-    if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return null;
+    if (!base) {
+      return null;
+    }
+    if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) {
+      return null;
+    }
     return new Date(base.getTime() + maxAgeMs).toISOString();
   } catch {
     return null;

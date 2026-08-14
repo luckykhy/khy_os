@@ -18,7 +18,9 @@
  */
 
 function docSuggestEnabled(env = process.env) {
-  const v = String((env && env.KHY_DOCS_AI_SUGGEST) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_DOCS_AI_SUGGEST) || '')
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes'].includes(v);
 }
 
@@ -29,15 +31,18 @@ function docSuggestEnabled(env = process.env) {
  */
 function buildSuggestionPrompt(input = {}) {
   const doc = String(input.doc || '(未指定文档)');
-  const sources = Array.isArray(input.matchedSources) && input.matchedSources.length
-    ? input.matchedSources.join(', ')
-    : '(未提供)';
+  const sources =
+    Array.isArray(input.matchedSources) && input.matchedSources.length
+      ? input.matchedSources.join(', ')
+      : '(未提供)';
   const section = String(input.docSection || '').trim();
   const diff = String(input.sourceDiff || '').trim();
 
   const parts = [];
   parts.push('你是文档维护助手。以下源码文件发生了改动,可能使某篇文档过时。');
-  parts.push('你的任务:**只输出改稿建议**(具体到「把 X 改成 Y」),绝不直接改文件,绝不虚构未在 diff 中出现的事实。');
+  parts.push(
+    '你的任务:**只输出改稿建议**(具体到「把 X 改成 Y」),绝不直接改文件,绝不虚构未在 diff 中出现的事实。'
+  );
   parts.push('');
   parts.push(`文档: ${doc}`);
   parts.push(`改动的源码: ${sources}`);

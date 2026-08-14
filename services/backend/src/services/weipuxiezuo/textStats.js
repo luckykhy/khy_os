@@ -44,7 +44,9 @@ function paragraphsWithOffsets(text) {
     }
     single.push({ text: text.slice(last2), start: last2 });
     const filtered = single.filter((p) => p.text.trim().length > 0);
-    if (filtered.length > paras.length) paras = filtered;
+    if (filtered.length > paras.length) {
+      paras = filtered;
+    }
   }
   return paras;
 }
@@ -67,7 +69,9 @@ function sentences(text) {
  * @returns {number}
  */
 function naturalLength(s) {
-  return String(s || '').replace(STRIP_MARKUP, '').replace(/\s+/g, '').length;
+  return String(s || '')
+    .replace(STRIP_MARKUP, '')
+    .replace(/\s+/g, '').length;
 }
 
 /**
@@ -78,9 +82,13 @@ function naturalLength(s) {
  */
 function lengthVariation(lengths) {
   const n = lengths.length;
-  if (n === 0) return { mean: 0, std: 0, cv: 0 };
+  if (n === 0) {
+    return { mean: 0, std: 0, cv: 0 };
+  }
   const mean = lengths.reduce((a, b) => a + b, 0) / n;
-  if (mean === 0) return { mean: 0, std: 0, cv: 0 };
+  if (mean === 0) {
+    return { mean: 0, std: 0, cv: 0 };
+  }
   const variance = lengths.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
   const std = Math.sqrt(variance);
   return { mean, std, cv: std / mean };
@@ -100,7 +108,9 @@ const NUMBER_UNIT = /\d+(?:\.\d+)?\s*(?:%|％|ms|s|分|项|个|人|次|倍|元|k
 function _countMatches(re, text) {
   re.lastIndex = 0;
   let c = 0;
-  while (re.exec(text) !== null) c += 1;
+  while (re.exec(text) !== null) {
+    c += 1;
+  }
   return c;
 }
 
@@ -108,7 +118,9 @@ function _collectNumbers(re, text) {
   re.lastIndex = 0;
   const set = new Set();
   let m;
-  while ((m = re.exec(text)) !== null) set.add(m[1] !== undefined ? m[1] : m[0]);
+  while ((m = re.exec(text)) !== null) {
+    set.add(m[1] !== undefined ? m[1] : m[0]);
+  }
   return set;
 }
 

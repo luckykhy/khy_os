@@ -64,9 +64,13 @@ function _syntaxErrors(file, cwd) {
  */
 function captureBaseline(filePath, cwd) {
   try {
-    if (!_enabled()) return;
+    if (!_enabled()) {
+      return;
+    }
     const key = _key(filePath, cwd);
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     let set;
     try {
       const leaf = require('./postEditDiagnosticsSummary');
@@ -90,8 +94,12 @@ function captureBaseline(filePath, cwd) {
 function collectNewDiagnostics(files, cwd) {
   const empty = { issueCount: 0, fileCount: 0, perFile: [] };
   try {
-    if (!_enabled()) return empty;
-    if (!Array.isArray(files) || files.length === 0) return empty;
+    if (!_enabled()) {
+      return empty;
+    }
+    if (!Array.isArray(files) || files.length === 0) {
+      return empty;
+    }
     const leaf = require('./postEditDiagnosticsSummary');
     // dedupe(并行批次同一文件可能出现两次)
     const seenKey = new Set();
@@ -100,9 +108,13 @@ function collectNewDiagnostics(files, cwd) {
     let fileCount = 0;
     for (const f of files) {
       const key = _key(f, cwd);
-      if (!key || seenKey.has(key)) continue;
+      if (!key || seenKey.has(key)) {
+        continue;
+      }
       seenKey.add(key);
-      if (!_baseline.has(key)) continue; // 无基线的文件(未插桩工具/apply_patch 等)不产新增行
+      if (!_baseline.has(key)) {
+        continue;
+      } // 无基线的文件(未插桩工具/apply_patch 等)不产新增行
       const before = _baseline.get(key);
       const afterLines = _syntaxErrors(f, cwd);
       const news = leaf.diffNewErrors(before, afterLines);
@@ -133,6 +145,6 @@ module.exports = {
   captureBaseline,
   collectNewDiagnostics,
   reset,
-  _key,          // 导出供测试断言键归一
-  _baseline,     // 导出供测试内省(只读用途)
+  _key, // 导出供测试断言键归一
+  _baseline, // 导出供测试内省(只读用途)
 };

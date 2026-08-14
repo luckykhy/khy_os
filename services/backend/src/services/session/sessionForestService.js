@@ -29,8 +29,12 @@ function getCurrentSessionId() {
   try {
     const ai = require('../../cli/ai');
     const liveId = ai.getLiveSessionId && ai.getLiveSessionId();
-    if (liveId) return liveId;
-  } catch { /* fall through */ }
+    if (liveId) {
+      return liveId;
+    }
+  } catch {
+    /* fall through */
+  }
   try {
     const sp = _persistence();
     const all = sp.listPersistedSessions({ limit: 200 });
@@ -38,9 +42,13 @@ function getCurrentSessionId() {
       const cwd = process.cwd();
       const scoped = all.filter((s) => s && s.cwd === cwd);
       const pick = (scoped.length > 0 ? scoped : all)[0];
-      if (pick && pick.sessionId) return pick.sessionId;
+      if (pick && pick.sessionId) {
+        return pick.sessionId;
+      }
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return null;
 }
 
@@ -58,8 +66,12 @@ function _statusThresholds(env) {
 /** 由 updatedAt 新近度派生会话状态(khy 无显式会话状态机)。 */
 function _deriveStatus(updatedAt, now, th) {
   const age = now - (Number(updatedAt) || 0);
-  if (age <= th.activeMs) return 'active';
-  if (age <= th.idleMs) return 'idle';
+  if (age <= th.activeMs) {
+    return 'active';
+  }
+  if (age <= th.idleMs) {
+    return 'idle';
+  }
   return 'archived';
 }
 
@@ -84,14 +96,24 @@ function listForest(opts) {
   const records = [];
   const byMeta = Object.create(null);
   for (const s of listed) {
-    if (!s || !s.sessionId) continue;
+    if (!s || !s.sessionId) {
+      continue;
+    }
     let meta = null;
-    try { meta = sp.loadSessionMeta(s.sessionId); } catch { /* skip */ }
+    try {
+      meta = sp.loadSessionMeta(s.sessionId);
+    } catch {
+      /* skip */
+    }
     const m = (meta && meta.metadata) || {};
     byMeta[s.sessionId] = meta || { sessionId: s.sessionId, metadata: {} };
-    const label = s.title && s.title !== '(untitled)'
-      ? s.title
-      : (meta && meta.title) || (typeof m.title === 'string' && m.title) || s.title || '(untitled)';
+    const label =
+      s.title && s.title !== '(untitled)'
+        ? s.title
+        : (meta && meta.title) ||
+          (typeof m.title === 'string' && m.title) ||
+          s.title ||
+          '(untitled)';
     records.push({
       id: s.sessionId,
       parentId: m.forkedFrom || null,
@@ -119,7 +141,9 @@ function listDigests(opts) {
   const wantStatus = o.status ? String(o.status) : null;
   const out = [];
   for (const node of forest.nodes) {
-    if (wantStatus && node.status !== wantStatus) continue;
+    if (wantStatus && node.status !== wantStatus) {
+      continue;
+    }
     const m = (byMeta[node.id] && byMeta[node.id].metadata) || {};
     out.push({
       id: node.id,
@@ -137,10 +161,14 @@ function listDigests(opts) {
 
 /** 取单个节点(forest 节点 + 其 metadata 槽)。 */
 function getNode(sessionId) {
-  if (!sessionId) return null;
+  if (!sessionId) {
+    return null;
+  }
   const { forest, byMeta } = listForest({});
   const node = forest.byId[sessionId];
-  if (!node) return null;
+  if (!node) {
+    return null;
+  }
   const m = (byMeta[sessionId] && byMeta[sessionId].metadata) || {};
   return { node, metadata: m };
 }
@@ -158,16 +186,72 @@ function _slots() {
  * @param {object} [opts]
  * @returns {string}
  */
+// SWR cache for the submit-path injection: listForest() synchronously reads
+// every persisted session file (readdir + N× readFile/JSON.parse), which
+// showed up as a 100-200ms slice of the submit-path event-loop stall. The
+// cache holds the forest scan itself (so an idle prewarm can fill it even
+// before a session exists); buildHereLine on top is pure in-memory. Other
+// listForest callers stay uncached.
+let _forestCache = { value: null, at: 0 };
+let _forestRefreshing = false;
+const _FOREST_TTL_MS = 15000;
+
+function _forestCached(o) {
+  const now = Date.now();
+  if (_forestCache.value) {
+    if (now - _forestCache.at >= _FOREST_TTL_MS && !_forestRefreshing) {
+      _forestRefreshing = true;
+      setImmediate(() => {
+        try {
+          _forestCache = { value: listForest(o || {}), at: Date.now() };
+        } catch {
+          /* keep stale */
+        }
+        _forestRefreshing = false;
+      });
+    }
+    return _forestCache.value;
+  }
+  const value = listForest(o || {});
+  _forestCache = { value, at: Date.now() };
+  return value;
+}
+
+/** 空闲预热：提前把会话森林扫描结果填进 SWR 缓存，避免首次提交路径冷建。 */
+function prewarmForest() {
+  try {
+    _forestCached({});
+  } catch {
+    /* best-effort */
+  }
+}
+
 function buildHereLineForCurrent(opts) {
   try {
     const o = opts || {};
     const env = o.env || process.env;
     const topo = _topology();
-    if (!topo.topologyEnabled(env)) return '';
+    if (!topo.topologyEnabled(env)) {
+      return '';
+    }
     const current = o.currentId || getCurrentSessionId();
-    if (!current) return '';
-    const { forest } = listForest(o);
-    if (!forest.byId[current]) return '';
+    if (!current) {
+      return '';
+    }
+    let { forest } = _forestCached(o);
+    if (!forest.byId[current]) {
+      // Cache predates this session (fresh session's file was written after
+      // the prewarm scan). Do ONE synchronous rescan so the very first turn
+      // of a new session still gets its here-line injected (old contract:
+      // inject whenever the session file exists). This costs ~150ms but only
+      // fires once per new session; subsequent turns hit the refreshed cache.
+      const rescanned = listForest(o);
+      _forestCache = { value: rescanned, at: Date.now() };
+      forest = rescanned.forest;
+      if (!forest.byId[current]) {
+        return '';
+      }
+    }
     return topo.buildHereLine(forest, current);
   } catch {
     return '';
@@ -185,16 +269,24 @@ function consumeInsightForCurrent(opts) {
     const o = opts || {};
     const env = o.env || process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) return { insightText: '', changed: false };
+    if (!slots.slotsEnabled(env)) {
+      return { insightText: '', changed: false };
+    }
     const current = o.currentId || getCurrentSessionId();
-    if (!current) return { insightText: '', changed: false };
+    if (!current) {
+      return { insightText: '', changed: false };
+    }
     const sp = _persistence();
     const meta = sp.loadSessionMeta(current);
     const m = (meta && meta.metadata) || {};
     const { insightText, changed } = slots.applyInsightOnce(m);
     if (changed) {
       // 清空 insight 槽(一次性);best-effort 回写,失败不影响本轮已取到的注入文本。
-      try { sp.updateSessionMetadata(current, { insight: '' }); } catch { /* best-effort */ }
+      try {
+        sp.updateSessionMetadata(current, { insight: '' });
+      } catch {
+        /* best-effort */
+      }
     }
     return { insightText, changed };
   } catch {
@@ -214,15 +306,23 @@ function putMemory(sessionId, text) {
 
 function _putSlot(sessionId, slot, text) {
   try {
-    if (!sessionId) return false;
+    if (!sessionId) {
+      return false;
+    }
     const env = process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) return false;
+    if (!slots.slotsEnabled(env)) {
+      return false;
+    }
     const sp = _persistence();
     const meta = sp.loadSessionMeta(sessionId);
-    if (!meta) return false;
+    if (!meta) {
+      return false;
+    }
     const next = slots.writeSlot((meta && meta.metadata) || {}, slot, text);
-    if (!next) return false;
+    if (!next) {
+      return false;
+    }
     return sp.updateSessionMetadata(sessionId, { [slot]: next[slot] }) !== false;
   } catch {
     return false;
@@ -255,23 +355,31 @@ async function consolidateCurrent(opts) {
     const o = opts || {};
     const env = o.env || process.env;
     const slots = _slots();
-    if (!slots.slotsEnabled(env)) return { distilled: false, reason: 'disabled' };
+    if (!slots.slotsEnabled(env)) {
+      return { distilled: false, reason: 'disabled' };
+    }
 
     const messages = Array.isArray(o.messages) ? o.messages : [];
     const sessionId = o.sessionId || getCurrentSessionId();
-    if (!sessionId || messages.length === 0) return { distilled: false, reason: 'empty' };
+    if (!sessionId || messages.length === 0) {
+      return { distilled: false, reason: 'empty' };
+    }
 
     // 节拍:仅每 N 轮(轮 = user 消息)蒸馏一次。
     const turnCount = messages.filter((m) => m && m.role === 'user').length;
     const every = _consolidateEvery(env);
-    if (turnCount === 0 || turnCount % every !== 0) return { distilled: false, reason: 'skip' };
+    if (turnCount === 0 || turnCount % every !== 0) {
+      return { distilled: false, reason: 'skip' };
+    }
 
     // 蒸馏:确定性底座 → 可选 LLM 升级。
     let memoryText = '';
     try {
       const recap = require('../sessionRecapService').generateRecap(messages);
       memoryText = (recap && recap.summary) || '';
-    } catch { /* recap best-effort */ }
+    } catch {
+      /* recap best-effort */
+    }
     try {
       const llmGenerate = require('../llmGenerateSink').getLlmGenerateProvider();
       if (typeof llmGenerate === 'function') {
@@ -281,12 +389,18 @@ async function consolidateCurrent(opts) {
           memoryText = String(res.content).trim();
         }
       }
-    } catch { /* LLM upgrade best-effort → keep deterministic base */ }
+    } catch {
+      /* LLM upgrade best-effort → keep deterministic base */
+    }
 
-    if (!memoryText) return { distilled: false, reason: 'nothing' };
+    if (!memoryText) {
+      return { distilled: false, reason: 'nothing' };
+    }
 
     const next = slots.writeSlot({}, 'memory', memoryText);
-    if (!next) return { distilled: false, reason: 'nothing' };
+    if (!next) {
+      return { distilled: false, reason: 'nothing' };
+    }
     const sp = _persistence();
     sp.updateSessionMetadata(sessionId, { memory: next.memory });
     return { distilled: true, memory: next.memory };
@@ -297,11 +411,14 @@ async function consolidateCurrent(opts) {
 
 /** 确定性拼装 consolidate 提示串(零 LLM 副作用;只取最近若干轮,避免超长)。 */
 function _consolidatePrompt(messages, base) {
-  const recent = messages.slice(-20).map((m) => {
-    const role = m && m.role === 'assistant' ? 'AI' : '用户';
-    const content = typeof (m && m.content) === 'string' ? m.content : '';
-    return `${role}: ${content.slice(0, 600)}`;
-  }).join('\n');
+  const recent = messages
+    .slice(-20)
+    .map((m) => {
+      const role = m && m.role === 'assistant' ? 'AI' : '用户';
+      const content = typeof (m && m.content) === 'string' ? m.content : '';
+      return `${role}: ${content.slice(0, 600)}`;
+    })
+    .join('\n');
   return [
     '把下面这段对话蒸馏成一段「外向摘要」(memory):它会被其它分支/orchestrator 读取,',
     '用来理解本分支聊了什么、得出什么结论、还留着什么待办。要点式、客观、不超过 6 行。',
@@ -309,7 +426,9 @@ function _consolidatePrompt(messages, base) {
     base ? `已有粗摘要(供参考):${base}` : '',
     '---',
     recent,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ── 刀 3:跨支综合 ────────────────────────────────────────────────────────
@@ -330,18 +449,28 @@ async function synthesize(opts) {
   const o = opts || {};
   const env = o.env || process.env;
   let cbs;
-  try { cbs = require('../../cli/crossBranchSynthesis'); } catch { return { ok: false, reason: 'error' }; }
-  if (!cbs.synthesisEnabled(env)) return { ok: false, reason: 'disabled' };
+  try {
+    cbs = require('../../cli/crossBranchSynthesis');
+  } catch {
+    return { ok: false, reason: 'error' };
+  }
+  if (!cbs.synthesisEnabled(env)) {
+    return { ok: false, reason: 'disabled' };
+  }
 
   const digests = listDigests(o);
-  if (!digests.length) return { ok: false, reason: 'empty' };
+  if (!digests.length) {
+    return { ok: false, reason: 'empty' };
+  }
 
   const { prompt, targetIds } = cbs.planSynthesis(digests);
 
   let raw = null;
   try {
     const llmGenerate = require('../llmGenerateSink').getLlmGenerateProvider();
-    if (typeof llmGenerate !== 'function') return { ok: false, reason: 'no-model', targetIds };
+    if (typeof llmGenerate !== 'function') {
+      return { ok: false, reason: 'no-model', targetIds };
+    }
     const res = await llmGenerate(prompt, { maxTokens: 800, strictPreferred: false });
     if (!res || !res.success || !res.content || !String(res.content).trim()) {
       return { ok: false, reason: 'no-model', targetIds };
@@ -357,7 +486,9 @@ async function synthesize(opts) {
   let insightCount = 0;
   for (const id of Object.keys(perNodeInsight)) {
     const txt = perNodeInsight[id];
-    if (txt && putInsight(id, txt)) insightCount += 1;
+    if (txt && putInsight(id, txt)) {
+      insightCount += 1;
+    }
   }
 
   // 根节点回写网级 memory(对齐 Stello:综合落在根的外向摘要)。
@@ -366,8 +497,13 @@ async function synthesize(opts) {
     try {
       const { forest } = listForest(o);
       const root = forest.roots && forest.roots[0];
-      if (root) { rootId = root.id; putMemory(rootId, rootSynthesis); }
-    } catch { /* best-effort */ }
+      if (root) {
+        rootId = root.id;
+        putMemory(rootId, rootSynthesis);
+      }
+    } catch {
+      /* best-effort */
+    }
   }
 
   return {
@@ -386,6 +522,7 @@ module.exports = {
   getNode,
   // 刀 2:注入 + 槽。
   buildHereLineForCurrent,
+  prewarmForest,
   consumeInsightForCurrent,
   putInsight,
   putMemory,

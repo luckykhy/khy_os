@@ -36,14 +36,21 @@ function grepWinDriveDedupEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_GREP_WIN_DRIVE_DEDUP', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_GREP_WIN_DRIVE_DEDUP;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -62,8 +69,12 @@ function grepWinDriveDedupEnabled(env = process.env) {
  */
 function resolveGrepSeparatorIndex(line, env = process.env) {
   try {
-    if (!grepWinDriveDedupEnabled(env)) return null;
-    if (typeof line !== 'string') return null;
+    if (!grepWinDriveDedupEnabled(env)) {
+      return null;
+    }
+    if (typeof line !== 'string') {
+      return null;
+    }
     if (_WIN_DRIVE_PREFIX.test(line)) {
       return line.indexOf(':', 2); // 跳过盘符冒号(下标 1),取其后第一个
     }

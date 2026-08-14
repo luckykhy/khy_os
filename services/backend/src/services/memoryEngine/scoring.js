@@ -13,9 +13,11 @@
 'use strict';
 
 const memdir = require('../../memdir');
-const memoryTier = require('../memoryTier');
 const staleness = require('../memoryStaleness');
+const memoryTier = require('../memoryTier');
+
 const recallTokens = require('./memoryRecallTokens');
+const vectorRecall = require('./vectorRecall');
 
 const VALID_TYPES = ['user', 'feedback', 'project', 'reference'];
 
@@ -25,7 +27,12 @@ const VALID_TYPES = ['user', 'feedback', 'project', 'reference'];
 // query). Rank = tier-priority × recency × type-preference, stale entries
 // excluded. Reuses the same recency SSOT as rankMemories.
 const TIER_RANK = Object.freeze({ permanent: 3, cross_session: 2, short_term: 1 });
-const PRIMING_TYPE_BONUS = Object.freeze({ user: 1.3, feedback: 1.2, project: 1.1, reference: 0.9 });
+const PRIMING_TYPE_BONUS = Object.freeze({
+  user: 1.3,
+  feedback: 1.2,
+  project: 1.1,
+  reference: 0.9,
+});
 
 // Field weights for keyword overlap (mirror selectRelevantMemories).
 const WEIGHT_NAME = 3;
@@ -74,10 +81,10 @@ function keywordScore(queryTokens, frontmatter, body) {
   // byte-identical to the prior keyword-overlap behavior.
   const ef = (t) => recallTokens.enrichTokens(tok(t), t);
   return (
-    overlap(queryTokens, ef(fm.name)) * WEIGHT_NAME
-    + overlap(queryTokens, ef(fm.description)) * WEIGHT_DESC
-    + overlap(queryTokens, ef(fm.type)) * WEIGHT_TYPE
-    + overlap(queryTokens, ef(body)) * WEIGHT_BODY
+    overlap(queryTokens, ef(fm.name)) * WEIGHT_NAME +
+    overlap(queryTokens, ef(fm.description)) * WEIGHT_DESC +
+    overlap(queryTokens, ef(fm.type)) * WEIGHT_TYPE +
+    overlap(queryTokens, ef(body)) * WEIGHT_BODY
   );
 }
 
@@ -88,16 +95,26 @@ function keywordScore(queryTokens, frontmatter, body) {
  * @returns {Set<string>|null}
  */
 function normalizeTypeFilter(types) {
-  if (!types) return null;
+  if (!types) {
+    return null;
+  }
   const list = Array.isArray(types) ? types : String(types).split(/[,\s]+/);
-  const valid = list.map((t) => String(t).trim().toLowerCase()).filter((t) => VALID_TYPES.includes(t));
+  const valid = list
+    .map((t) => String(t).trim().toLowerCase())
+    .filter((t) => VALID_TYPES.includes(t));
   return valid.length ? new Set(valid) : null;
 }
 
 /**
  * Rank all memories by combined relevance = keywordScore × recencyMultiplier,
- * after applying an optional type filter. Returns entries above `minScore`
- * sorted by combined score, capped at `limit`.
+ * after applying an optional type filter. When `opts.enableVector` is truthy
+ * (or KHY_MEMORY_VECTOR_RECALL env is on), the ranking is post-enhanced with
+ * embedding cosine similarity — memories semantically close to the query get
+ * a boost proportional to their keyword score, so both signals reinforce each
+ * other. Falls back to pure keyword scoring when the embedding service is
+ * unreachable (fail-soft: zero behavior change).
+ *
+ * Returns entries above `minScore` sorted by combined score, capped at `limit`.
  *
  * @param {string} query
  * @param {object} [opts]
@@ -105,34 +122,48 @@ function normalizeTypeFilter(types) {
  * @param {number} [opts.minScore=1]    - minimum *keyword* overlap to qualify
  * @param {string|string[]} [opts.types] - restrict to these memory types
  * @param {number} [opts.nowMs]          - injectable clock for tests
- * @returns {Array<{filename,frontmatter,body,score,keywordScore,recency,modifiedAt}>}
+ * @param {boolean} [opts.enableVector]  - force vector enhancement on/off
+ * @returns {Array<{filename,frontmatter,body,score,keywordScore,recency,modifiedAt,vectorScore?}>}
  */
-function rankMemories(query, opts = {}) {
+async function rankMemories(query, opts = {}) {
   const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : 5;
   const minScore = Number.isFinite(opts.minScore) ? opts.minScore : 1;
   const typeFilter = normalizeTypeFilter(opts.types);
   const nowMs = Number.isFinite(opts.nowMs) ? opts.nowMs : Date.now();
 
   const queryTokens = recallTokens.enrichTokens(memdir._tokenizeForRecall(query), query);
-  if (queryTokens.size === 0) return [];
+  if (queryTokens.size === 0) {
+    return [];
+  }
 
   const scored = [];
   let list;
-  try { list = memdir.listMemories(); } catch { list = []; }
+  try {
+    list = memdir.listMemories();
+  } catch {
+    list = [];
+  }
 
   for (const entry of list) {
     const fm = entry.frontmatter || {};
-    if (typeFilter && !typeFilter.has(String(fm.type || '').toLowerCase())) continue;
+    if (typeFilter && !typeFilter.has(String(fm.type || '').toLowerCase())) {
+      continue;
+    }
 
     const parsed = memdir.readMemory(entry.filename);
-    if (!parsed.exists) continue;
+    if (!parsed.exists) {
+      continue;
+    }
 
     const kw = keywordScore(queryTokens, fm, parsed.body);
-    if (kw < minScore) continue;
+    if (kw < minScore) {
+      continue;
+    }
 
-    const modifiedAtMs = entry.modifiedAt instanceof Date
-      ? entry.modifiedAt.getTime()
-      : Number(entry.modifiedAt) || nowMs;
+    const modifiedAtMs =
+      entry.modifiedAt instanceof Date
+        ? entry.modifiedAt.getTime()
+        : Number(entry.modifiedAt) || nowMs;
     const recency = recencyMultiplier(modifiedAtMs, nowMs);
 
     scored.push({
@@ -146,8 +177,26 @@ function rankMemories(query, opts = {}) {
     });
   }
 
-  scored.sort((a, b) => b.score - a.score || b.modifiedAt - a.modifiedAt || a.filename.localeCompare(b.filename));
-  return scored.slice(0, limit);
+  scored.sort(
+    (a, b) =>
+      b.score - a.score || b.modifiedAt - a.modifiedAt || a.filename.localeCompare(b.filename)
+  );
+  const result = scored.slice(0, limit);
+
+  // ── Vector-enhanced re-ranking (optional, fail-soft) ────────────────────
+  const enableVector = opts.enableVector ?? vectorRecall.VECTOR_RECALL_ENABLED;
+  if (enableVector && result.length > 0) {
+    try {
+      const enhanced = await vectorRecall.enhanceWithVectors(query, result, { vectorWeight: 0.5 });
+      if (enhanced && enhanced.length > 0) {
+        return enhanced;
+      }
+    } catch {
+      /* fail-soft: keep keyword-only ranking */
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -174,27 +223,42 @@ function rankForPriming(opts = {}) {
   const typeFilter = normalizeTypeFilter(opts.types);
 
   let list;
-  try { list = memdir.listMemories(); } catch { list = []; }
-  if (!Array.isArray(list) || list.length === 0) return [];
+  try {
+    list = memdir.listMemories();
+  } catch {
+    list = [];
+  }
+  if (!Array.isArray(list) || list.length === 0) {
+    return [];
+  }
 
   const scored = [];
   for (const entry of list) {
-    if (!entry || !entry.filename) continue;
+    if (!entry || !entry.filename) {
+      continue;
+    }
     const fm = entry.frontmatter || {};
     const type = String(fm.type || '').toLowerCase();
-    if (typeFilter && !typeFilter.has(type)) continue;
+    if (typeFilter && !typeFilter.has(type)) {
+      continue;
+    }
 
-    const modifiedAtMs = entry.modifiedAt instanceof Date
-      ? entry.modifiedAt.getTime()
-      : Number(entry.modifiedAt) || nowMs;
+    const modifiedAtMs =
+      entry.modifiedAt instanceof Date
+        ? entry.modifiedAt.getTime()
+        : Number(entry.modifiedAt) || nowMs;
 
     // Exclude stale memories (respects KHY_MEMORY_STALENESS via the SSOT; when
     // that gate is off, assessStaleness never reports stale → nothing dropped).
     const updatedMs = staleness.parseUpdatedMs(fm.updated);
     const effUpdatedMs = updatedMs == null ? modifiedAtMs : updatedMs;
     try {
-      if (staleness.assessStaleness({ type, updatedMs: effUpdatedMs, nowMs }, env).stale) continue;
-    } catch { /* fail-soft: never drop a memory on assessment error */ }
+      if (staleness.assessStaleness({ type, updatedMs: effUpdatedMs, nowMs }, env).stale) {
+        continue;
+      }
+    } catch {
+      /* fail-soft: never drop a memory on assessment error */
+    }
 
     const tier = memoryTier.classifyTier(fm);
     const tierRank = TIER_RANK[tier] || TIER_RANK.cross_session;
@@ -212,15 +276,20 @@ function rankForPriming(opts = {}) {
     });
   }
 
-  scored.sort((a, b) => b.score - a.score || b.modifiedAt - a.modifiedAt || a.filename.localeCompare(b.filename));
+  scored.sort(
+    (a, b) =>
+      b.score - a.score || b.modifiedAt - a.modifiedAt || a.filename.localeCompare(b.filename)
+  );
   const top = scored.slice(0, limit);
 
   // Read bodies only for the survivors (bounded IO).
   for (const m of top) {
     try {
       const parsed = memdir.readMemory(m.filename);
-      m.body = (parsed && parsed.exists) ? parsed.body : '';
-    } catch { m.body = ''; }
+      m.body = parsed && parsed.exists ? parsed.body : '';
+    } catch {
+      m.body = '';
+    }
   }
   return top;
 }

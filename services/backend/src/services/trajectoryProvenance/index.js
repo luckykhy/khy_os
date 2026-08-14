@@ -13,12 +13,12 @@
  * 后续阶段（traceChain/claimReconciler）落地后在此补充 re-export。
  */
 
+const claimReconciler = require('./claimReconciler');
 const khyTrace = require('./khyTrace');
 const provenanceClassifier = require('./provenanceClassifier');
-const traceProjection = require('./traceProjection');
-const traceChain = require('./traceChain');
 const quarantinePolicy = require('./quarantinePolicy');
-const claimReconciler = require('./claimReconciler');
+const traceChain = require('./traceChain');
+const traceProjection = require('./traceProjection');
 
 module.exports = {
   ...khyTrace,

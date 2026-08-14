@@ -27,25 +27,38 @@ let sendError = null;
 let parseBody = null;
 let authenticateRequest = null;
 function setProxyEgressDeps(deps = {}) {
-  if (typeof deps.sendJson === 'function') sendJson = deps.sendJson;
-  if (typeof deps.sendError === 'function') sendError = deps.sendError;
-  if (typeof deps.parseBody === 'function') parseBody = deps.parseBody;
-  if (typeof deps.authenticateRequest === 'function') authenticateRequest = deps.authenticateRequest;
+  if (typeof deps.sendJson === 'function') {
+    sendJson = deps.sendJson;
+  }
+  if (typeof deps.sendError === 'function') {
+    sendError = deps.sendError;
+  }
+  if (typeof deps.parseBody === 'function') {
+    parseBody = deps.parseBody;
+  }
+  if (typeof deps.authenticateRequest === 'function') {
+    authenticateRequest = deps.authenticateRequest;
+  }
 }
 
 // 机器级出站真源(单机「本机主人」模式)。懒加载以对齐 daemon boot-order。
 let _proxyConfig = null;
 function getProxyConfig() {
-  if (!_proxyConfig) _proxyConfig = require('./proxyConfigService');
+  if (!_proxyConfig) {
+    _proxyConfig = require('./proxyConfigService');
+  }
   return _proxyConfig;
 }
 
 // 解析已认证用户 id(0 为本机主人旁路)。认证失败发 401 并返 null;合法 id 0 放行。
 // 与 aiManagementProjects.resolveAuthUserId 同契约。
 async function resolveAuthUserId(req, res) {
-  const auth = req.authContext || await authenticateRequest(req);
+  const auth = req.authContext || (await authenticateRequest(req));
   if (!auth || !auth.ok) {
-    sendJson(res, 401, { success: false, message: (auth && auth.error) || 'Authentication required' });
+    sendJson(res, 401, {
+      success: false,
+      message: (auth && auth.error) || 'Authentication required',
+    });
     return null;
   }
   return auth.user?.id ?? 0;
@@ -54,7 +67,9 @@ async function resolveAuthUserId(req, res) {
 // GET /api/proxy-egress — 当前出站状态(enabled/activeNode/coreStatus)。
 async function handleGetProxyEgressStatus(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = getProxyConfig().getStatus();
     sendJson(res, 200, { success: true, data });
@@ -67,7 +82,9 @@ async function handleGetProxyEgressStatus(req, res) {
 // 前端从订阅组里取**整个节点对象**传入(clash-native 字段:type/server/port/uuid/...)。
 async function handleEnableProxyEgress(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const node = body && typeof body === 'object' ? body.node : null;
@@ -76,7 +93,9 @@ async function handleEnableProxyEgress(req, res) {
       return;
     }
     const options = {};
-    if (body.mixedPort !== undefined) options.mixedPort = body.mixedPort;
+    if (body.mixedPort !== undefined) {
+      options.mixedPort = body.mixedPort;
+    }
     const result = await getProxyConfig().activateNode(node, options);
     // activateNode 已带 success/reason/guidance;失败也返 200 让前端读结构化 reason(不谎报生效)。
     sendJson(res, 200, { success: !!result.success, data: result });
@@ -88,7 +107,9 @@ async function handleEnableProxyEgress(req, res) {
 // POST /api/proxy-egress/disable — 停用出站(清 env + 停内核)。
 async function handleDisableProxyEgress(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const result = await getProxyConfig().deactivate();
     sendJson(res, 200, { success: !!result.success, data: result });

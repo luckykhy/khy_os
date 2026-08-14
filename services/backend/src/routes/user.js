@@ -1,26 +1,27 @@
 const express = require('express');
+
 const router = express.Router();
-const { User } = require('../models');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { User } = require('../models');
 
 // 获取用户列表（需要管理员权限）
 router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
     });
 
     res.json({
       success: true,
-      data: users
+      data: users,
     });
   } catch (error) {
     console.error('获取用户列表错误:', error);
     res.status(500).json({
       success: false,
       message: '获取用户列表失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -32,16 +33,13 @@ router.put('/sendkey', authMiddleware, async (req, res) => {
     const { sendKey } = req.body;
 
     // Allow null/empty to unbind
-    const value = (sendKey && sendKey.trim()) ? sendKey.trim() : null;
+    const value = sendKey && sendKey.trim() ? sendKey.trim() : null;
 
-    await User.update(
-      { sendKey: value },
-      { where: { id: req.user.id } }
-    );
+    await User.update({ sendKey: value }, { where: { id: req.user.id } });
 
     res.json({
       success: true,
-      message: value ? 'SendKey saved' : 'SendKey unbound'
+      message: value ? 'SendKey saved' : 'SendKey unbound',
     });
   } catch (error) {
     console.error('SendKey update error:', error);
@@ -53,12 +51,12 @@ router.put('/sendkey', authMiddleware, async (req, res) => {
 router.get('/sendkey-status', authMiddleware, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['sendKey']
+      attributes: ['sendKey'],
     });
 
     res.json({
       success: true,
-      data: { bound: !!user?.sendKey }
+      data: { bound: !!user?.sendKey },
     });
   } catch (error) {
     console.error('SendKey status error:', error);
@@ -72,13 +70,13 @@ router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findByPk(id, {
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password'] },
     });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: '用户不存在',
       });
     }
 
@@ -86,20 +84,20 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.id !== parseInt(id)) {
       return res.status(403).json({
         success: false,
-        message: '无权访问该用户信息'
+        message: '无权访问该用户信息',
       });
     }
 
     res.json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
     console.error('获取用户详情错误:', error);
     res.status(500).json({
       success: false,
       message: '获取用户详情失败',
-      error: error.message
+      error: error.message,
     });
   }
 });

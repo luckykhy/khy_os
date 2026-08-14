@@ -4,9 +4,24 @@
  * Delegates to the existing readFile tool's logic for actual file I/O,
  * but exposes the Claude Code-compatible name, prompt, and input schema.
  */
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { compress, wouldCompress } = require('../../utils/sourceTextCompressor');
+const { BaseTool } = require('../_baseTool');
+
+let _lastCompressStats = null;
+
+/**
+ * Compress source text: strip trailing whitespace + merge consecutive blank lines.
+ * Saves 10-20% tokens for code content. Compressed text is NOT byte-identical
+ * to the source — the model must re-read with compress=false before Edit.
+ */
+function _compressSourceText(text) {
+  const result = compress(text);
+  _lastCompressStats = result.stats;
+  return result;
+}
 
 const LEGACY_MAX_LINES_TO_READ = 2000;
 const LEGACY_MAX_FILE_SIZE = 500 * 1024; // 500 KB (historical hard cap)
@@ -15,17 +30,37 @@ const LEGACY_MAX_FILE_SIZE = 500 * 1024; // 500 KB (historical hard cap)
 // 字面量 Set 仅为 `.has(ext)` 一次成员测试。提升到模块作用域,构造一次、只读消费,不 mutate、
 // 不逃逸,逐字节等价。注意与 ocrSnippetService 的同名集刻意不同(此处含 .gif/.webp/.svg),
 // 故不跨文件共享,只在本文件内提升。
-const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg']);
+const IMAGE_EXTS = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.tiff',
+  '.tif',
+  '.svg',
+]);
 
 // 文件读取上限的单一真源(纯叶子)。fail-soft:缺失则回退 legacy 常量 + 超限硬报错。
 let _fileReadLimit;
-try { _fileReadLimit = require('../fileReadLimit'); } catch { _fileReadLimit = null; }
+try {
+  _fileReadLimit = require('../fileReadLimit');
+} catch {
+  _fileReadLimit = null;
+}
 function _maxBytes() {
-  return _fileReadLimit ? _fileReadLimit.resolveMaxBytes(process.env, LEGACY_MAX_FILE_SIZE) : LEGACY_MAX_FILE_SIZE;
+  return _fileReadLimit
+    ? _fileReadLimit.resolveMaxBytes(process.env, LEGACY_MAX_FILE_SIZE)
+    : LEGACY_MAX_FILE_SIZE;
 }
+
 function _maxLines() {
-  return _fileReadLimit ? _fileReadLimit.resolveMaxLines(process.env, LEGACY_MAX_LINES_TO_READ) : LEGACY_MAX_LINES_TO_READ;
+  return _fileReadLimit
+    ? _fileReadLimit.resolveMaxLines(process.env, LEGACY_MAX_LINES_TO_READ)
+    : LEGACY_MAX_LINES_TO_READ;
 }
+
 function _partialOnOversize() {
   return _fileReadLimit ? _fileReadLimit.partialOnOversizeEnabled(process.env) : false;
 }
@@ -37,9 +72,19 @@ function _listDirHintEnabled(env) {
   try {
     const e = env || process.env;
     let flagRegistry;
-    try { flagRegistry = require('../../services/flagRegistry'); } catch { flagRegistry = null; }
-    if (flagRegistry) return flagRegistry.isFlagEnabled('KHY_FILEREAD_LISTDIR_HINT', e);
-    return !['0', 'false', 'off', 'no'].includes(String(e.KHY_FILEREAD_LISTDIR_HINT || '').trim().toLowerCase());
+    try {
+      flagRegistry = require('../../services/flagRegistry');
+    } catch {
+      flagRegistry = null;
+    }
+    if (flagRegistry) {
+      return flagRegistry.isFlagEnabled('KHY_FILEREAD_LISTDIR_HINT', e);
+    }
+    return !['0', 'false', 'off', 'no'].includes(
+      String(e.KHY_FILEREAD_LISTDIR_HINT || '')
+        .trim()
+        .toLowerCase()
+    );
   } catch {
     return true;
   }
@@ -54,8 +99,12 @@ class FileReadTool extends BaseTool {
   static alwaysLoad = true;
   static maxResultSizeChars = Infinity; // never truncate reads
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     const maxLines = _maxLines();
@@ -91,11 +140,18 @@ ${dirLine}
         },
         offset: {
           type: 'number',
-          description: 'The line number to start reading from (1-based). Only provide if the file is too large to read at once.',
+          description:
+            'The line number to start reading from (1-based). Only provide if the file is too large to read at once.',
         },
         limit: {
           type: 'number',
-          description: 'The number of lines to read. Only provide if the file is too large to read at once.',
+          description:
+            'The number of lines to read. Only provide if the file is too large to read at once.',
+        },
+        compress: {
+          type: 'boolean',
+          description:
+            'Enable lossless source text compression (strip trailing whitespace + merge blank lines, saves 10-20% tokens). Compressed text is NOT byte-identical — re-read with compress=false before Edit.',
         },
       },
       required: ['file_path'],
@@ -104,10 +160,14 @@ ${dirLine}
 
   async validateInput(params) {
     try {
-      const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('../inputValidators');
+      const {
+        validateNotDevicePath,
+        validateNotUNCPath,
+        composeValidations,
+      } = require('../inputValidators');
       return composeValidations(
         validateNotDevicePath(params.file_path),
-        validateNotUNCPath(params.file_path),
+        validateNotUNCPath(params.file_path)
       );
     } catch {
       return { valid: true };
@@ -119,7 +179,9 @@ ${dirLine}
   }
 
   getToolUseSummary(input) {
-    if (!input.file_path) return null;
+    if (!input.file_path) {
+      return null;
+    }
     return `读取 ${path.basename(input.file_path)}`;
   }
 
@@ -148,14 +210,24 @@ ${dirLine}
       // `fs.statSync` **触碰设备之前**。门控 KHY_READFILE_WIN_DEVICE_GUARD(默认开、与 readFile.js 同门);
       // 关 → 逐字节回退历史行为(照旧走 statSync)。非 win32 平台 classify 恒返 null → 零影响。
       try {
-        const { winDeviceGuardEnabled, classifyWindowsDevice, buildWinDeviceRefusal } = require('../winDeviceReadGuard');
+        const {
+          winDeviceGuardEnabled,
+          classifyWindowsDevice,
+          buildWinDeviceRefusal,
+        } = require('../winDeviceReadGuard');
         if (winDeviceGuardEnabled(process.env)) {
           const _wkind = classifyWindowsDevice(filePath);
           if (_wkind) {
-            return { success: false, error: buildWinDeviceRefusal({ kind: _wkind, path: filePath }), winDevice: _wkind };
+            return {
+              success: false,
+              error: buildWinDeviceRefusal({ kind: _wkind, path: filePath }),
+              winDevice: _wkind,
+            };
           }
         }
-      } catch { /* 判定失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定失败 → 回退历史读取行为 */
+      }
 
       if (!fs.existsSync(filePath)) {
         return { success: false, error: `File not found: ${filePath}` };
@@ -175,14 +247,25 @@ ${dirLine}
       // (等写端/无尽输入)。它们 size=0 且非二进制格式,会溜过后续所有守卫。`fs.statSync` 对
       // FIFO/设备只读元数据、瞬时返回不阻塞,故此处用已算好的 stat 类型谓词安全判定。fail-soft。
       try {
-        const { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = require('../specialFileReadGuard');
+        const {
+          specialReadGuardEnabled,
+          classifySpecialFile,
+          buildSpecialFileRefusal,
+        } = require('../specialFileReadGuard');
         if (specialReadGuardEnabled(process.env)) {
           const _kind = classifySpecialFile(stat);
           if (_kind) {
-            return { success: false, error: buildSpecialFileRefusal({ kind: _kind, path: filePath, size: stat.size }), specialFile: _kind, size: stat.size };
+            return {
+              success: false,
+              error: buildSpecialFileRefusal({ kind: _kind, path: filePath, size: stat.size }),
+              specialFile: _kind,
+              size: stat.size,
+            };
           }
         }
-      } catch { /* 判定失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定失败 → 回退历史读取行为 */
+      }
 
       // 伪文件系统(/proc·/sys)阻塞文件读前防护(与 readFile.js 同门 KHY_READFILE_PSEUDO_GUARD)。
       // Linux `/proc`·`/sys` 下是常规文件(isFile=true)、size=0、内容读时现生成,其中一部分
@@ -194,9 +277,13 @@ ${dirLine}
         const _pkind = shouldBoundedRead({ absPath: filePath, stat, env: process.env });
         if (_pkind) {
           const routed = readPseudoFileBounded({ filePath, kind: _pkind, env: process.env });
-          if (routed && routed.handled) return routed.result;
+          if (routed && routed.handled) {
+            return routed.result;
+          }
         }
-      } catch { /* 判定/有界读失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定/有界读失败 → 回退历史读取行为 */
+      }
 
       // Image detection — return base64 for vision or OCR fallback
       const ext = path.extname(filePath).toLowerCase();
@@ -209,26 +296,46 @@ ${dirLine}
       // 解码成乱码注入模型上下文(会拖垮模型请求)。两门都关 → 逐字节回退历史文本读取。fail-soft。
       if (!isImage) {
         try {
-          const { binaryReadGuardEnabled, isBinaryForRead, buildBinaryReadRefusal } = require('../readBinaryGuard');
+          const {
+            binaryReadGuardEnabled,
+            isBinaryForRead,
+            buildBinaryReadRefusal,
+          } = require('../readBinaryGuard');
           if (binaryReadGuardEnabled(process.env)) {
             const { detectFile } = require('../../services/formatInspect/fileFormatDetector');
             const fmt = detectFile(filePath);
             if (isBinaryForRead(fmt)) {
               try {
                 const { routeFormatRead } = require('../readFileFormatRouter');
-                const routed = await routeFormatRead({ filePath, fmt, size: stat.size, env: process.env });
-                if (routed && routed.handled) return routed.result;
-              } catch { /* 路由失败 → 落 OPS-121 拒绝兜底 */ }
+                const routed = await routeFormatRead({
+                  filePath,
+                  fmt,
+                  size: stat.size,
+                  env: process.env,
+                });
+                if (routed && routed.handled) {
+                  return routed.result;
+                }
+              } catch {
+                /* 路由失败 → 落 OPS-121 拒绝兜底 */
+              }
               return {
                 success: false,
-                error: buildBinaryReadRefusal({ format: fmt.format, magicFormat: fmt.magicFormat, category: fmt.category, size: stat.size }),
+                error: buildBinaryReadRefusal({
+                  format: fmt.format,
+                  magicFormat: fmt.magicFormat,
+                  category: fmt.category,
+                  size: stat.size,
+                }),
                 binary: true,
                 format: fmt.magicFormat || fmt.format || null,
                 size: stat.size,
               };
             }
           }
-        } catch { /* 探测失败 → 回退历史文本读取行为 */ }
+        } catch {
+          /* 探测失败 → 回退历史文本读取行为 */
+        }
       }
 
       const maxSize = isImage ? 5 * 1024 * 1024 : _maxBytes();
@@ -272,7 +379,9 @@ ${dirLine}
                 _ocrFallback: true,
               };
             }
-          } catch { /* OCR not available */ }
+          } catch {
+            /* OCR not available */
+          }
           return { success: false, error: `Cannot read image: ${imgErr.message}` };
         }
       }
@@ -289,12 +398,26 @@ ${dirLine}
       // 编码自适应：合法 UTF-8 恒判 utf-8（行为不变），非 UTF-8 文本探测后经
       // iconv 解码，避免 GBK/Shift-JIS/Big5 等遗留编码源码整篇乱码。超限时只读前 maxSize 字节。
       const { readTextFileSmart } = require('../../utils/fileEncoding');
-      const { text: raw } = readTextFileSmart(filePath, { maxBytes: oversize ? maxSize : undefined });
-      const allLines = raw.split('\n');
+      const { text: raw } = readTextFileSmart(filePath, {
+        maxBytes: oversize ? maxSize : undefined,
+      });
 
       // Apply offset/limit
       const offset = params.offset || 1;
       const limit = params.limit || _maxLines();
+      const shouldCompress = params.compress === true;
+
+      // Y-code inspired source text compression: strip trailing whitespace +
+      // merge consecutive blank lines before sending to LLM. Saves 10-20%
+      // tokens. Returns compressed=true with compression stats in the result.
+      // IMPORTANT: compressed text is NOT byte-identical to the source file.
+      // The model must re-read with compress=false before calling Edit.
+      let allLines = raw.split('\n');
+      if (shouldCompress) {
+        const compressed = _compressSourceText(raw);
+        allLines = compressed.text.split('\n');
+      }
+
       const start = Math.max(0, offset - 1);
       const end = Math.min(allLines.length, start + limit);
       const sliced = allLines.slice(start, end);
@@ -302,13 +425,20 @@ ${dirLine}
       // Format with line numbers (cat -n style)
       let numbered = sliced.map((line, i) => `${start + i + 1}\t${line}`).join('\n');
       if (oversize && _fileReadLimit) {
-        numbered += _fileReadLimit.buildOversizeNotice({ totalBytes: stat.size, maxBytes: maxSize });
+        numbered += _fileReadLimit.buildOversizeNotice({
+          totalBytes: stat.size,
+          maxBytes: maxSize,
+        });
       }
 
       // 记录已读路径 + mtime，供 FileEditTool/FileWriteTool 写前检查
-      try { require('../_readTracker').markRead(filePath, stat.mtimeMs); } catch { /* best-effort */ }
+      try {
+        require('../_readTracker').markRead(filePath, stat.mtimeMs);
+      } catch {
+        /* best-effort */
+      }
 
-      return {
+      const result = {
         success: true,
         content: numbered,
         size: stat.size,
@@ -316,12 +446,27 @@ ${dirLine}
         totalLines: allLines.length,
         truncated: oversize,
       };
+
+      // Attach compression stats when compress=true
+      if (shouldCompress) {
+        result.compressed = true;
+        result.compressionStats = _lastCompressStats;
+      }
+
+      return result;
     } catch (err) {
       // Humanize fs errno (EISDIR/EACCES/ENOENT/...) — gated KHY_FS_ERROR_HUMANIZE
       // (default on); off / unknown errno → byte-identical to `err.message`.
       let _msg;
-      try { _msg = require('../../services/fsReadErrorGuard').humanizeReadError(err, params && params.file_path, process.env); }
-      catch { _msg = err.message; }
+      try {
+        _msg = require('../../services/fsReadErrorGuard').humanizeReadError(
+          err,
+          params && params.file_path,
+          process.env
+        );
+      } catch {
+        _msg = err.message;
+      }
       return { success: false, error: _msg };
     }
   }

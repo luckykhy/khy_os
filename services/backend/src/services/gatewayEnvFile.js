@@ -16,9 +16,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const resolveEnvPaths = require('../utils/resolveGatewayEnvPaths');
-
 const patchEnvContent = require('../utils/patchEnvContent');
+const resolveEnvPaths = require('../utils/resolveGatewayEnvPaths');
 
 function writeEnvPatch(envMap = {}, unsetKeys = [], options = {}) {
   const resolved = resolveEnvPaths();
@@ -27,7 +26,11 @@ function writeEnvPatch(envMap = {}, unsetKeys = [], options = {}) {
 
   for (const targetPath of targets) {
     let content = '';
-    try { content = fs.readFileSync(targetPath, 'utf-8'); } catch { /* no .env yet */ }
+    try {
+      content = fs.readFileSync(targetPath, 'utf-8');
+    } catch {
+      /* no .env yet */
+    }
     const patched = patchEnvContent(content, envMap, unsetKeys);
     fs.writeFileSync(targetPath, patched);
   }
@@ -51,10 +54,14 @@ function unsetEnvKeys(keys = [], options = {}) {
 
 function parseJsonObject(raw, fallback = {}) {
   const text = String(raw || '').trim();
-  if (!text) return { ...fallback };
+  if (!text) {
+    return { ...fallback };
+  }
   try {
     const parsed = JSON.parse(text);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
   } catch {
     return { ...fallback };
   }
@@ -77,7 +84,9 @@ function mergeJsonEnvVar(envKey, newEntries) {
  */
 function removeJsonEnvVarKey(envKey, keyToRemove) {
   const existing = parseJsonObject(process.env[envKey], {});
-  if (!(keyToRemove in existing)) return existing;
+  if (!(keyToRemove in existing)) {
+    return existing;
+  }
   delete existing[keyToRemove];
   if (Object.keys(existing).length > 0) {
     writeEnvMap({ [envKey]: JSON.stringify(existing) });

@@ -34,11 +34,14 @@
  */
 
 const { rankSlashCommands } = require('../repl/slashCommandFilter');
+
 // 整排序结果按 (命令表身份, filter) 记忆,收退格/重键回访的重复全量排序;门控关 → 现算(逐字节回退)。
 const _slashRankResultMemo = require('./slashRankResultMemo');
 
 function slashSubstringEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TUI_SLASH_SUBSTRING) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TUI_SLASH_SUBSTRING) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -64,7 +67,7 @@ function slashMenuCommandNames(value, deps = {}, env = process.env) {
     list,
     value,
     () => rankSlashCommands(list, value).map((sc) => sc.cmd),
-    env,
+    env
   );
 }
 

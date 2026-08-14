@@ -25,17 +25,8 @@
  *               _openaiSseStream, _anthropicSseStream
  */
 
-const { resolveMessages } = require('./_messageBuilder');
 const crypto = require('crypto');
-const {
-  anthropicToOpenAI,
-  openAIToolCallsToAnthropic,
-  convertMessagesAnthropicToOpenAI,
-} = require('./_toolSchemaConverter');
-const {
-  attachImagesToOpenAIMessages,
-  toAnthropicImageBlocks,
-} = require('./_imageCompat');
+
 const {
   extractAnthropicText,
   extractAnthropicToolUses,
@@ -43,10 +34,14 @@ const {
   extractAnthropicImages,
   convertAnthropicTools,
 } = require('./_anthropicFormat');
+const { repairToolUsePairing, parseCWStreamEvents } = require('./_cwStreamParser');
+const { attachImagesToOpenAIMessages, toAnthropicImageBlocks } = require('./_imageCompat');
+const { resolveMessages } = require('./_messageBuilder');
 const {
-  repairToolUsePairing,
-  parseCWStreamEvents,
-} = require('./_cwStreamParser');
+  anthropicToOpenAI,
+  openAIToolCallsToAnthropic,
+  convertMessagesAnthropicToOpenAI,
+} = require('./_toolSchemaConverter');
 
 /** Default adapter request timeout (ms). */
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -62,7 +57,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 
 function _pick(options, ...keys) {
   for (const k of keys) {
-    if (options[k] !== undefined && options[k] !== null) return options[k];
+    if (options[k] !== undefined && options[k] !== null) {
+      return options[k];
+    }
   }
   return undefined;
 }
@@ -72,14 +69,22 @@ function _pick(options, ...keys) {
  * or a passthrough object into the OpenAI tool_choice shape.
  */
 function _toOpenAIToolChoice(tc) {
-  if (tc == null) return undefined;
-  if (typeof tc === 'string') return tc; // 'auto' | 'none' | 'required'
+  if (tc == null) {
+    return undefined;
+  }
+  if (typeof tc === 'string') {
+    return tc;
+  } // 'auto' | 'none' | 'required'
   if (typeof tc === 'object') {
     if (tc.type === 'tool' && tc.name) {
       return { type: 'function', function: { name: tc.name } };
     }
-    if (tc.type === 'any') return 'required';
-    if (tc.type === 'auto') return 'auto';
+    if (tc.type === 'any') {
+      return 'required';
+    }
+    if (tc.type === 'auto') {
+      return 'auto';
+    }
     return tc; // already OpenAI-shaped
   }
   return undefined;
@@ -89,43 +94,67 @@ function _toOpenAIToolChoice(tc) {
  * Convert an OpenAI-style tool_choice into the Anthropic tool_choice shape.
  */
 function _toAnthropicToolChoice(tc) {
-  if (tc == null) return undefined;
+  if (tc == null) {
+    return undefined;
+  }
   if (typeof tc === 'string') {
-    if (tc === 'auto') return { type: 'auto' };
-    if (tc === 'required') return { type: 'any' };
-    if (tc === 'none') return undefined;
+    if (tc === 'auto') {
+      return { type: 'auto' };
+    }
+    if (tc === 'required') {
+      return { type: 'any' };
+    }
+    if (tc === 'none') {
+      return undefined;
+    }
     return { type: 'auto' };
   }
   if (typeof tc === 'object') {
     if (tc.type === 'function' && tc.function?.name) {
       return { type: 'tool', name: tc.function.name };
     }
-    if (tc.type === 'tool' || tc.type === 'auto' || tc.type === 'any') return tc;
+    if (tc.type === 'tool' || tc.type === 'auto' || tc.type === 'any') {
+      return tc;
+    }
   }
   return undefined;
 }
 
 function _applyOpenAISamplingParams(body, options) {
   const topP = _pick(options, 'topP', 'top_p');
-  if (topP != null) body.top_p = topP;
+  if (topP != null) {
+    body.top_p = topP;
+  }
 
   const stop = _pick(options, 'stopSequences', 'stop_sequences', 'stop');
-  if (stop != null) body.stop = stop;
+  if (stop != null) {
+    body.stop = stop;
+  }
 
   const freqPenalty = _pick(options, 'frequencyPenalty', 'frequency_penalty');
-  if (freqPenalty != null) body.frequency_penalty = freqPenalty;
+  if (freqPenalty != null) {
+    body.frequency_penalty = freqPenalty;
+  }
 
   const presPenalty = _pick(options, 'presencePenalty', 'presence_penalty');
-  if (presPenalty != null) body.presence_penalty = presPenalty;
+  if (presPenalty != null) {
+    body.presence_penalty = presPenalty;
+  }
 
   const seed = _pick(options, 'seed');
-  if (seed != null) body.seed = seed;
+  if (seed != null) {
+    body.seed = seed;
+  }
 
   const responseFormat = _pick(options, 'responseFormat', 'response_format');
-  if (responseFormat != null) body.response_format = responseFormat;
+  if (responseFormat != null) {
+    body.response_format = responseFormat;
+  }
 
   const reasoningEffort = _pick(options, 'reasoningEffort', 'reasoning_effort');
-  if (reasoningEffort != null) body.reasoning_effort = reasoningEffort;
+  if (reasoningEffort != null) {
+    body.reasoning_effort = reasoningEffort;
+  }
 
   // OpenAI-compatible reasoning models (e.g. 智谱 GLM-5.2 with thinking:{type:'enabled'})
   // accept a request-side `thinking` field, but the OpenAI path historically dropped it —
@@ -135,11 +164,15 @@ function _applyOpenAISamplingParams(body, options) {
   // unaffected (it already forwards thinking via _applyAnthropicSamplingParams).
   if (_openaiThinkingPassthroughEnabled()) {
     const thinking = _pick(options, 'thinking');
-    if (thinking != null) body.thinking = thinking;
+    if (thinking != null) {
+      body.thinking = thinking;
+    }
   }
 
   const toolChoice = _toOpenAIToolChoice(_pick(options, 'toolChoice', 'tool_choice'));
-  if (toolChoice != null && body.tools) body.tool_choice = toolChoice;
+  if (toolChoice != null && body.tools) {
+    body.tool_choice = toolChoice;
+  }
 }
 
 const _OPENAI_THINKING_OFF = ['0', 'false', 'off', 'no'];
@@ -148,7 +181,9 @@ const _OPENAI_THINKING_OFF = ['0', 'false', 'off', 'no'];
 function _openaiThinkingPassthroughEnabled() {
   try {
     const raw = process.env.KHY_OPENAI_THINKING_PASSTHROUGH;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !_OPENAI_THINKING_OFF.includes(v);
   } catch {
     return true;
@@ -157,16 +192,24 @@ function _openaiThinkingPassthroughEnabled() {
 
 function _applyAnthropicSamplingParams(body, options) {
   const topP = _pick(options, 'topP', 'top_p');
-  if (topP != null) body.top_p = topP;
+  if (topP != null) {
+    body.top_p = topP;
+  }
 
   const stop = _pick(options, 'stopSequences', 'stop_sequences');
-  if (stop != null) body.stop_sequences = stop;
+  if (stop != null) {
+    body.stop_sequences = stop;
+  }
 
   const thinking = _pick(options, 'thinking');
-  if (thinking != null) body.thinking = thinking;
+  if (thinking != null) {
+    body.thinking = thinking;
+  }
 
   const toolChoice = _toAnthropicToolChoice(_pick(options, 'toolChoice', 'tool_choice'));
-  if (toolChoice != null && body.tools) body.tool_choice = toolChoice;
+  if (toolChoice != null && body.tools) {
+    body.tool_choice = toolChoice;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -209,9 +252,15 @@ function _createOpenAIHandler(adapterName) {
         messages,
         stream: options.stream !== false,
       };
-      if (openaiTools) body.tools = openaiTools;
-      if (options.max_tokens) body.max_tokens = options.max_tokens;
-      if (options.temperature != null) body.temperature = options.temperature;
+      if (openaiTools) {
+        body.tools = openaiTools;
+      }
+      if (options.max_tokens) {
+        body.max_tokens = options.max_tokens;
+      }
+      if (options.temperature != null) {
+        body.temperature = options.temperature;
+      }
       _applyOpenAISamplingParams(body, options);
 
       return { body, system };
@@ -230,9 +279,17 @@ function _createOpenAIHandler(adapterName) {
       const toolUseBlocks = openAIToolCallsToAnthropic(choice);
       const thinking = message.reasoning_content || message.thinking || null;
       const usage = rawResponse?.usage || null;
-      const stopReason = choice.finish_reason || (toolUseBlocks.length > 0 ? 'tool_use' : 'end_turn');
+      const stopReason =
+        choice.finish_reason || (toolUseBlocks.length > 0 ? 'tool_use' : 'end_turn');
 
-      return { content, toolUseBlocks, model: rawResponse?.model || null, usage, stopReason, thinking };
+      return {
+        content,
+        toolUseBlocks,
+        model: rawResponse?.model || null,
+        usage,
+        stopReason,
+        thinking,
+      };
     },
 
     /**
@@ -288,9 +345,12 @@ function _createAnthropicHandler(adapterName) {
           for (let i = finalMessages.length - 1; i >= 0; i--) {
             if (finalMessages[i]?.role === 'user') {
               const msg = { ...finalMessages[i] };
-              const existingContent = typeof msg.content === 'string'
-                ? [{ type: 'text', text: msg.content }]
-                : (Array.isArray(msg.content) ? [...msg.content] : []);
+              const existingContent =
+                typeof msg.content === 'string'
+                  ? [{ type: 'text', text: msg.content }]
+                  : Array.isArray(msg.content)
+                    ? [...msg.content]
+                    : [];
               msg.content = [...existingContent, ...imageBlocks];
               finalMessages[i] = msg;
               break;
@@ -305,11 +365,15 @@ function _createAnthropicHandler(adapterName) {
         max_tokens: options.max_tokens || 8192,
         stream: options.stream !== false,
       };
-      if (system) body.system = system;
+      if (system) {
+        body.system = system;
+      }
       if (Array.isArray(options.tools) && options.tools.length > 0) {
         body.tools = options.tools;
       }
-      if (options.temperature != null) body.temperature = options.temperature;
+      if (options.temperature != null) {
+        body.temperature = options.temperature;
+      }
       _applyAnthropicSamplingParams(body, options);
 
       return { body, system };
@@ -350,9 +414,17 @@ function _createAnthropicHandler(adapterName) {
       }
 
       const usage = rawResponse?.usage || null;
-      const stopReason = rawResponse?.stop_reason || (toolUseBlocks.length > 0 ? 'tool_use' : 'end_turn');
+      const stopReason =
+        rawResponse?.stop_reason || (toolUseBlocks.length > 0 ? 'tool_use' : 'end_turn');
 
-      return { content, toolUseBlocks, model: rawResponse?.model || null, usage, stopReason, thinking };
+      return {
+        content,
+        toolUseBlocks,
+        model: rawResponse?.model || null,
+        usage,
+        stopReason,
+        thinking,
+      };
     },
 
     /**
@@ -383,7 +455,10 @@ const _CW_SYSTEM_SANITIZE_RULES = [
   [/\bHIGHEST\s+PRIORITY\b/gi, 'PRIMARY RULE'],
   [/\bNON[- ]NEGOTIABLE\b/gi, 'STRICT'],
   [/\boverride\s+(any|all)\s+(prior|previous)\b/gi, 'take precedence over prior'],
-  [/\bignore\s+(all\s+)?(prior|previous)\s+(instructions?|context)\b/gi, 'supersede earlier context'],
+  [
+    /\bignore\s+(all\s+)?(prior|previous)\s+(instructions?|context)\b/gi,
+    'supersede earlier context',
+  ],
 ];
 
 function _sanitizeCWSystemPrompt(text) {
@@ -423,7 +498,9 @@ function _createCWHandler(adapterName) {
       let system = String(options.system || '').trim();
       if (system.includes('__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__')) {
         try {
-          system = require('../../../constants/systemPromptBoundary').stripSystemPromptBoundary(system);
+          system = require('../../../constants/systemPromptBoundary').stripSystemPromptBoundary(
+            system
+          );
         } catch {
           system = system
             .replace(/\n*__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__\n*/, '\n\n')
@@ -508,8 +585,7 @@ function _createCWHandler(adapterName) {
       if (sysText && currentMessage?.userInputMessage) {
         const original = currentMessage.userInputMessage.content || '';
         const sanitized = _sanitizeCWSystemPrompt(sysText);
-        currentMessage.userInputMessage.content =
-          `<system_context>\n${sanitized}\n</system_context>\n\n${original}`;
+        currentMessage.userInputMessage.content = `<system_context>\n${sanitized}\n</system_context>\n\n${original}`;
       }
 
       // Inject tools into currentMessage context
@@ -578,7 +654,7 @@ function _createResponsesHandler(adapterName) {
       const body = protocolConverter.convertRequestBetween(
         openaiBody,
         protocolConverter.PROTOCOLS.OPENAI,
-        protocolConverter.PROTOCOLS.CODEX,
+        protocolConverter.PROTOCOLS.CODEX
       );
       return { body, system };
     },
@@ -596,13 +672,24 @@ function _createResponsesHandler(adapterName) {
       const content = textParts.join('\n').trim();
       const toolUseBlocks = functionCalls.map((fc) => {
         let input = {};
-        try { input = JSON.parse(fc.arguments); } catch { input = {}; }
+        try {
+          input = JSON.parse(fc.arguments);
+        } catch {
+          input = {};
+        }
         return { type: 'tool_use', id: fc.call_id, name: fc.name, input };
       });
       const usage = rawResponse?.usage || null;
       const thinking = reasoningParts.length > 0 ? reasoningParts.join('\n') : null;
       const stopReason = toolUseBlocks.length > 0 ? 'tool_use' : 'end_turn';
-      return { content, toolUseBlocks, model: rawResponse?.model || null, usage, stopReason, thinking };
+      return {
+        content,
+        toolUseBlocks,
+        model: rawResponse?.model || null,
+        usage,
+        stopReason,
+        thinking,
+      };
     },
 
     /**
@@ -635,7 +722,11 @@ function _createResponsesHandler(adapterName) {
  * @returns {{ buildRequestBody, parseJsonResponse, parseStreamResponse }}
  * @throws {Error} If protocol is not supported
  */
-function createProtocolHandler({ protocol, adapterName = 'unknown', defaultTimeout = DEFAULT_TIMEOUT_MS } = {}) {
+function createProtocolHandler({
+  protocol,
+  adapterName = 'unknown',
+  defaultTimeout = DEFAULT_TIMEOUT_MS,
+} = {}) {
   switch (protocol) {
     case 'openai':
       return _createOpenAIHandler(adapterName);
@@ -647,7 +738,9 @@ function createProtocolHandler({ protocol, adapterName = 'unknown', defaultTimeo
     case 'responses':
       return _createResponsesHandler(adapterName);
     default:
-      throw new Error(`_protocolPipeline: unsupported protocol "${protocol}" (adapter: ${adapterName})`);
+      throw new Error(
+        `_protocolPipeline: unsupported protocol "${protocol}" (adapter: ${adapterName})`
+      );
   }
 }
 

@@ -1,7 +1,7 @@
 'use strict';
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 /**
  * resolveGatewayEnvPaths.js — 「解析网关 .env 写入目标(canonical + 可选 repo 镜像)」共享 helper。
@@ -34,7 +34,11 @@ function resolveGatewayEnvPaths() {
   const syncMirror = String(process.env.KHY_ENV_SYNC_ROOT || 'true').toLowerCase() !== 'false';
 
   const targets = [canonicalPath];
-  if (syncMirror && mirrorPath !== canonicalPath && (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))) {
+  if (
+    syncMirror &&
+    mirrorPath !== canonicalPath &&
+    (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))
+  ) {
     targets.push(mirrorPath);
   }
   return { canonicalPath, targets };
